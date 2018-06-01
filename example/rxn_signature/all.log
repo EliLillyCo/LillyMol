@@ -1,0 +1,46 @@
+radii 0 1 2
+Counts of changing atoms written to 'Cfile'
+Will write failed reactions to 'Ffile'
+Unusual hcount, atom 1(O) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 2(S) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 1(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 4(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 8(C) ncon = 1 nbonds 1 stored = 0 implicit is 3
+Unusual hcount, atom 6(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 3(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 0(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 1(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 2(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 7(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 0(O) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 1(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 4(S) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 2(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 3(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 2(C) ncon = 1 nbonds 1 stored = 0 implicit is 3
+Unusual hcount, atom 1(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 4(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 7(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 6(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 5(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 1(O) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 2(S) ncon = 1 nbonds 1 stored = 0 implicit is 1
+Unusual hcount, atom 1(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 4(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 0(C) ncon = 1 stored = 0 implicit is 3
+Unusual hcount, atom 8(C) ncon = 1 nbonds 1 stored = 0 implicit is 3
+Unusual hcount, atom 6(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 3(C) ncon = 3 nbonds 3 stored = 0 implicit is 1
+Unusual hcount, atom 0(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 1(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 2(C) ncon = 2 nbonds 2 stored = 0 implicit is 2
+Unusual hcount, atom 7(C) ncon = 1 stored = 0 implicit is 3
+Read 3 reactions
+3 reactions had 2 changing atoms
+Changing atom counts btw 2 and 2 ave 2
+Purity 1

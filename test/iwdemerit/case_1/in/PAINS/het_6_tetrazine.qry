@@ -1,0 +1,27 @@
+# This query is for PAINS computation for different types of assay
+# Multiple values are embedded for each query, corresponding to multple assays
+# Alpha => 1, ELISA => 2, FB => 3, FP => 4, FRET => 5, SPA => 6, OverallActivityEnrichment => 7, QCEnrichment => 8
+# Alpha_HS => 9, ELISA_HS => 10, FB_HS => 11, FP_HS => 12, FRET_HS => 13, SPA_HS => 14, HSEnrichment =>15, TotalScore => 0
+# N~C[1]:Hev[IS=N,C(N)]:Hev[IS=N,CH,C(NH)]:C(Hev[IS=NH,OCH2]):N:N:@1<regId="het_6_tetrazine(18)">
+(0 Query
+  (A I Version 2)
+  (A C Comment "het_6_tetrazine")
+# (A C smarts "[#7]~c1[$(n),$(cN)][$(n),$([cH]),$(c[#7H>0])]c([$([#7H>0]),$(O[CH>1])])nn1")
+  (A C smarts "n1ncnnc1")
+  (A D numeric_value 90)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 50)
+)

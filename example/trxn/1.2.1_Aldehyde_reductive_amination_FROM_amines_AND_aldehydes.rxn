@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.2.1_Aldehyde_reductive_amination_FROM_amines_AND_aldehydes")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a")
+  )
+  (1 Sidechain
+     (A C smarts "[OD1]=[CD2T1H]") 
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

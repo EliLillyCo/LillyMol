@@ -1,0 +1,25 @@
+Warning: Any tool under this folder is not guaranteed, documented or supported.
+         Please use them with extreme caution.
+
+REQUIREMENT:
+
+
+BUILD:
+
+
+EXECUTION:
+Example to run the command:
+    cd contrib/sh/
+    ./dopattern.sh
+	
+
+DIRECTORY:
+ruby:    ruby library
+sh:      shell scripts
+
+
+TEST:
+
+LICENSE:
+Consult the LICENSE file for details of the license
+

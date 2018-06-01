@@ -1,0 +1,183 @@
+Will not write product fragments with fewer than 2 atoms
+Connectivity of reaction atoms must be preserved for reaction match
+Will keep going after an individual test failure
+Will preserve Kekule forms
+Will use the reaction file name as the reaction name
+Reading reactions took 0 seconds
+read mol smi eof
+Read 10 molecules, 10 deconstructed
+10 molecules deconstructed at radius 1
+0 deconstructions done at radius 0
+10 deconstructions done at radius 1
+Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
+40 molecules deconstructed at radius 1
+40 molecules deconstructed
+Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
+ 1 US03947458_NA 10 searches, 0 matches found
+ 1 US03947473_NA 10 searches, 0 matches found
+ 1 US03989717_NA 10 searches, 0 matches found
+ 1 US03998829_NA 10 searches, 1 matches found
+ 1 US03992389_NA 10 searches, 1 matches found
+ 1 US03984460_NA 10 searches, 0 matches found
+ 1 US03951970_NA 10 searches, 0 matches found
+ 1 US03969409_NA 10 searches, 0 matches found
+ 1 US03970693_NA 10 searches, 0 matches found
+ 1 US03948892_NA 10 searches, 0 matches found
+ 1 US03971803_NA 10 searches, 0 matches found
+ 1 US03996278_NA 10 searches, 0 matches found
+ 1 US03959322_NA 10 searches, 0 matches found
+ 1 US03981878_NA 10 searches, 0 matches found
+ 1 US04035363_NA 10 searches, 0 matches found
+ 1 US04035385_NA 10 searches, 0 matches found
+ 1 US04035495_NA 10 searches, 0 matches found
+ 1 US04012514_NA 10 searches, 1 matches found
+ 1 US04065471_NA 10 searches, 1 matches found
+ 1 US04061631_NA 10 searches, 0 matches found
+ 1 US04070368_NA 10 searches, 0 matches found
+ 1 US04118567_NA 10 searches, 0 matches found
+ 1 US04088655_NA 10 searches, 0 matches found
+ 1 US04128658_NA 10 searches, 0 matches found
+ 1 US04073911_NA 10 searches, 4 matches found
+ 1 US04148897_NA 10 searches, 0 matches found
+ 1 US04212822_NA 10 searches, 1 matches found
+ 1 US04209517_NA 10 searches, 0 matches found
+ 1 US04209521_NA 10 searches, 0 matches found
+ 1 US04230714_NA 10 searches, 0 matches found
+ 1 US04234595_NA 10 searches, 0 matches found
+ 1 US04233302_NA 10 searches, 0 matches found
+ 1 US04183933_NA 10 searches, 0 matches found
+ 1 US04263293_NA 10 searches, 0 matches found
+ 1 US04250174_NA 10 searches, 0 matches found
+ 1 US04282251_NA 10 searches, 0 matches found
+ 1 US04272533_NA 10 searches, 0 matches found
+ 1 US04315938_NA 10 searches, 0 matches found
+ 1 US04334066_NA 10 searches, 0 matches found
+ 1 US04336391_NA 10 searches, 0 matches found
+ 1 US04395577_NA 10 searches, 0 matches found
+ 1 US04380638_NA 10 searches, 0 matches found
+ 1 US04587342_NA 10 searches, 4 matches found
+ 1 US04568744_NA 10 searches, 0 matches found
+ 1 US04638009_NA 10 searches, 0 matches found
+ 1 US04746669_NA 10 searches, 0 matches found
+ 1 US04737517_NA 10 searches, 0 matches found
+ 1 US04873236_NA 10 searches, 0 matches found
+ 1 US04876262_NA 10 searches, 0 matches found
+ 1 US04874759_NA 10 searches, 0 matches found
+ 1 US04920116_NA 10 searches, 0 matches found
+ 1 US05047411_NA 10 searches, 0 matches found
+ 1 US05026857_NA 10 searches, 0 matches found
+ 1 US04999363_NA 10 searches, 0 matches found
+ 1 US05030646_NA 10 searches, 0 matches found
+ 1 US05068355_NA 10 searches, 0 matches found
+ 1 US05057535_NA 10 searches, 0 matches found
+ 1 US05004758_NA 10 searches, 0 matches found
+ 1 US05075299_NA 10 searches, 0 matches found
+ 1 US05112739_NA 10 searches, 0 matches found
+ 1 US05117000_NA 10 searches, 0 matches found
+ 1 US05173493_NA 10 searches, 0 matches found
+ 1 US05082838_NA 10 searches, 0 matches found
+ 1 US05082847_NA 10 searches, 0 matches found
+ 1 US05120871_NA 10 searches, 0 matches found
+ 1 US05153210_NA 10 searches, 0 matches found
+ 1 US05244908_NA 10 searches, 0 matches found
+ 1 US05219862_NA 10 searches, 0 matches found
+ 1 US05306692_NA 10 searches, 0 matches found
+ 1 US05331006_NA 10 searches, 0 matches found
+ 1 US05464861_NA 10 searches, 0 matches found
+ 1 US05438065_NA 10 searches, 0 matches found
+ 1 US05523299_NA 10 searches, 0 matches found
+ 1 US05623073_NA 10 searches, 0 matches found
+ 1 US05596002_NA 10 searches, 0 matches found
+ 1 US05616604_NA 10 searches, 0 matches found
+ 1 US05889032_NA 10 searches, 0 matches found
+ 1 US05908863_NA 10 searches, 0 matches found
+ 1 US06239142B1_NA 10 searches, 0 matches found
+ 1 US06288120B1_NA 10 searches, 0 matches found
+ 1 US06245761B1_NA 10 searches, 0 matches found
+ 1 US06642383B2_NA 10 searches, 0 matches found
+ 1 US06562969B1_NA 10 searches, 0 matches found
+ 1 US06613760B1_NA 10 searches, 0 matches found
+ 1 US06803362B2_NA 10 searches, 0 matches found
+ 1 US06727261B2_NA 10 searches, 0 matches found
+ 1 US06924278B2_0481 10 searches, 0 matches found
+ 1 US07125901B2_1140 10 searches, 0 matches found
+ 1 US07153889B2_0598 10 searches, 0 matches found
+ 1 US07060822B1_1751 10 searches, 0 matches found
+ 1 US07262202B2_0303 10 searches, 0 matches found
+ 1 US07468437B2_0154 10 searches, 0 matches found
+ 1 US07361658B2_0234 10 searches, 0 matches found
+ 1 US07384961B2_0137 10 searches, 0 matches found
+ 1 US07538111B2_0385 10 searches, 0 matches found
+ 1 US07576094B2_1092 10 searches, 0 matches found
+ 1 US07482346B2_0141 10 searches, 1 matches found
+ 1 US07585875B2_0430 10 searches, 0 matches found
+ 1 US07517532B2_0643 10 searches, 0 matches found
+ 1 US07544697B2_2041 10 searches, 0 matches found
+ 1 US07763602B2_0251 10 searches, 1 matches found
+ 1 US07812017B2_1109 10 searches, 0 matches found
+ 1 US07812017B2_1113 10 searches, 0 matches found
+ 1 US08039627B2_0092 10 searches, 0 matches found
+ 1 US07897778B2_0965 10 searches, 0 matches found
+ 1 US07994203B2_0499 10 searches, 0 matches found
+ 1 US08252859B2_0371 10 searches, 0 matches found
+ 1 US08252859B2_0375 10 searches, 0 matches found
+ 1 US08157950B2_0348 10 searches, 0 matches found
+ 1 US08157950B2_0354 10 searches, 0 matches found
+ 1 US08157950B2_0360 10 searches, 0 matches found
+ 1 US08133889B2_0070 10 searches, 0 matches found
+ 1 US08133889B2_0074 10 searches, 0 matches found
+ 1 US08133995B2_2338 10 searches, 0 matches found
+ 1 US08133995B2_2670 10 searches, 0 matches found
+ 1 US08163767B2_1015 10 searches, 0 matches found
+ 1 US08143393B2_2011 10 searches, 0 matches found
+ 1 US08278482B2_0331 10 searches, 1 matches found
+ 1 US08278482B2_0359 10 searches, 0 matches found
+ 1 US08242151B2_0280 10 searches, 0 matches found
+ 1 US08178490B2_0535 10 searches, 0 matches found
+ 1 US08273882B2_0368 10 searches, 0 matches found
+ 1 US08420636B2_0222 10 searches, 0 matches found
+ 1 US08377895B2_0035 10 searches, 0 matches found
+ 1 US08377895B2_0039 10 searches, 0 matches found
+ 1 US08377895B2_0041 10 searches, 0 matches found
+ 1 US08853224B2_0262 10 searches, 0 matches found
+ 1 US08853224B2_0286 10 searches, 0 matches found
+ 1 US08642614B2_0179 10 searches, 0 matches found
+ 1 US08637536B2_1134 10 searches, 1 matches found
+ 1 US09156827B2_0468 10 searches, 0 matches found
+ 1 US08937091B2_1822 10 searches, 0 matches found
+ 1 US08937091B2_2163 10 searches, 0 matches found
+ 1 US08937091B2_2391 10 searches, 0 matches found
+ 1 US08937060B2_1177 10 searches, 0 matches found
+ 1 US09040691B2_0426 10 searches, 0 matches found
+ 1 US09265769B2_0253 10 searches, 0 matches found
+ 1 US20020037931A1_0056 10 searches, 0 matches found
+ 1 US20020151727A1_0067 10 searches, 0 matches found
+ 1 US20020151727A1_0071 10 searches, 0 matches found
+ 1 US20030114668A1_1341 10 searches, 0 matches found
+ 1 US20030232875A1_0685 10 searches, 0 matches found
+ 1 US20040147612A1_0350 10 searches, 0 matches found
+ 1 US20040180925A1_1050 10 searches, 0 matches found
+ 1 US20050130982A1_0080 10 searches, 1 matches found
+ 1 US20050272036A1_0992 10 searches, 0 matches found
+ 1 US20050282843A1_0247 10 searches, 0 matches found
+ 1 US20060094719A1_0308 10 searches, 0 matches found
+ 1 US20060252945A1_0056 10 searches, 0 matches found
+ 1 US20060252945A1_0063 10 searches, 0 matches found
+ 1 US20070254931A1_0423 10 searches, 0 matches found
+ 1 US20070254931A1_0452 10 searches, 0 matches found
+ 1 US20090093454A1_0315 10 searches, 0 matches found
+ 1 US20090099195A1_0541 10 searches, 0 matches found
+ 1 US20090099195A1_0551 10 searches, 0 matches found
+ 1 US20100010041A1_0147 10 searches, 0 matches found
+ 1 US20100056515A1_0653 10 searches, 0 matches found
+ 1 US20100190824A1_0154 10 searches, 1 matches found
+ 1 US20100197679A1_0597 10 searches, 0 matches found
+ 1 US20100249402A1_0249 10 searches, 0 matches found
+ 1 US20130261270A1_0286 10 searches, 0 matches found
+ 1 US20130261270A1_0288 10 searches, 1 matches found
+ 1 US20160002218A1_0322 10 searches, 0 matches found
+ 1 US20160200725A1_0864 10 searches, 0 matches found
+40 molecules deconstructed at radius 1
+40 molecules deconstructed
+1620 reactions had 0 hits
+20 reactions had 1 hits

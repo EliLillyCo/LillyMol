@@ -1,0 +1,237 @@
+$SMI<ClC1=C(N2C([H])([H])C([H])([H])OC([H])([H])C2([H])[H])C(=C([H])C(=C1[H])N([H])C([H])([H])C1=C([H])C(=C(OC([H])([H])C(=C([H])[H])[H])C(=C1[H])[H])[H])[H]>
+PCN<PBCHM2214928 : D(110) 110:110|anil_di_alk_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<anil_di_alk_A>
+|
+$SMI<ClC1=C([H])C(=C(N=C2SC(=C(N2N=C([H])C2=C([H])C(=C(C([H])([H])[H])S2)[H])C2=C([H])C(=C(N(=O)=O)C(=C2[H])[H])[H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM2385700 : D(60) 60:60|thiaz_ene_A>
+DMRT<60>
+NDMRT<1>
+DMRTYP<thiaz_ene_A>
+|
+$SMI<O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(C(=C1[H])[H])C(=C(C(=O)N([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC([H])([H])[H])C#N)[H])[H]>
+PCN<PBCHM5937157 : D(90) 90:90|anil_di_alk_B>
+DMRT<90>
+NDMRT<1>
+DMRTYP<anil_di_alk_B>
+|
+$SMI<S1C(=NC(=O)C1=C([H])C1=C([H])N(N=C1C1=C([H])C(=C(OC([H])([H])C2=C([H])C(=C(C([H])([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])N1C([H])([H])C([H])(C([H])([H])[H])C([H])([H])C([H])([H])C1([H])[H]>
+PCN<PBCHM6197496 : D(190) 190:190|ene_five_het_B>
+DMRT<190>
+NDMRT<1>
+DMRTYP<ene_five_het_B>
+|
+$SMI<S(=O)(=O)(C([H])([H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])N([H])N=C1C2=C(C(=C([H])C1=O)[H])C(=C([H])C(=C2N([H])C(=O)OC([H])([H])[H])[H])[H]>
+PCN<PBCHM6337280 : D(20) 20:20|imine_one_A>
+DMRT<20>
+NDMRT<1>
+DMRTYP<imine_one_A>
+|
+$SMI<FC1=C(N([H])[H])C2=C(N(C3([H])C([H])([H])C3([H])[H])C(=C(C2=O)C(=O)O[H])[H])C(=C1N1C([H])([H])[C@@]([H])(N([H])C([H])([H])[H])C([H])([H])C1([H])[H])C([H])([H])[H]>
+PCN<PBCHM10833216 : D(140) 140:140|anthranil_one_A>
+DMRT<140>
+NDMRT<1>
+DMRTYP<anthranil_one_A>
+|
+$SMI<S(C([H])([H])[H])C(=NC(=C1C(=O)OC(C([H])([H])[H])(C([H])([H])[H])OC1=O)[H])N([H])N=C(C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H]>
+PCN<PBCHM10927997 : D(70) 70:70|ene_six_het_A>
+DMRT<70>
+NDMRT<1>
+DMRTYP<ene_six_het_A>
+|
+$SMI<S1(=O)(=O)N(C([H])([H])C([H])([H])C([H])([H])C([H])([H])[H])C(=O)C(=C1C1=C([H])C(=C([H])C(=C1[H])[H])[H])N([H])C1=C([H])C(=C(N2C([H])([H])C([H])([H])N(C([H])([H])C2([H])[H])C([H])([H])C2=C([H])C(=C([H])C(=C2[H])[H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM11706422 : D(110) 110:110|anil_di_alk_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<anil_di_alk_A>
+|
+$SMI<O(C([H])([H])C(=O)C(=C1N(C([H])([H])[H])C2=C([H])C(=C([H])C(=C2N1C([H])([H])[H])[H])[H])C#N)C(=O)C1=C([H])C2=C(N([H])C(=C2C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H]>
+PCN<PBCHM24520602 : D(80) 80:80|indol_3yl_alk>
+DMRT<80>
+NDMRT<1>
+DMRTYP<indol_3yl_alk>
+|
+$SMI<O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(C(=C1[H])[H])C(=C([H])C1=NC2=C(C(=C(C([H])([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])[H]>
+PCN<PBCHM27103272 : D(90) 90:90|anil_di_alk_B>
+DMRT<90>
+NDMRT<1>
+DMRTYP<anil_di_alk_B>
+|
+$SMI<O=C(N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(N(=O)=O)C(=C1[H])[H])[H])C([H])([H])OC(=O)C(=C(C([H])([H])[H])C([H])([H])[H])[H]>
+PCN<PBCHM41932526 : D(110) 110:110|anil_di_alk_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<anil_di_alk_A>
+|
+$SMI<[I-].S1C(=[N+](C2=C1C(=C([H])C1=C([H])C(=C([H])C(=C12)[H])[H])[H])C([H])([H])C([H])([H])[H])C(=C1C([H])([H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])C(=C1[H])C(=C([H])C1=C([H])C(=C(N(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H])[H])[H]>
+PCN<PBCHM44669698 : D(90) 90:90|anil_di_alk_B>
+DMRT<90>
+NDMRT<1>
+DMRTYP<anil_di_alk_B>
+|
+$SMI<ClC1=C([H])C(=C([H])C(=C1C(=O)N([H])C1=C([H])C(=C(N2C([H])([H])C([H])([H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H])N([H])C(=O)N([H])C1=C(OC([H])([H])[H])C(=C([H])C(=C1[H])C([H])([H])[H])[H])[H])[H]>
+PCN<PBCHM46326603 : D(110) 110:110|anil_di_alk_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<anil_di_alk_A>
+|
+$SMI<O1[C@@]([H])([C@]([H])(O[H])[C@@]2([H])O[C@]([H])(O[C@@]12[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])[C@@]([H])(N=N#N)C([H])([H])O[H]>
+PCN<PBCHM46833046 : D(260) 260:260|azo_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<azo_A>
+|
+$SMI<O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C(=O)C(=O)N([H])C([H])([H])C1=C2N([H])C(=C(C([H])([H])[H])C2=C([H])C(=C1[H])C([H])([H])[H])C([H])([H])C([H])([H])[H]>
+PCN<PBCHM56880957 : D(80) 80:80|indol_3yl_alk>
+DMRT<80>
+NDMRT<1>
+DMRTYP<indol_3yl_alk>
+|
+$SMI<O1C([H])(N([H])C2=C([H])C(=C([H])C(=C2C2=C1N=C(OC([H])([H])C([H])([H])C([H])([H])[H])N=N2)[H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])O[H]>
+PCN<PBCHM60014145 : D(110) 110:110|catechol_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<catechol_A>
+|
+$SMI<S(=O)(=O)(O[H])O[H].O1[C@@]([H])([C@]([H])(O[H])C([H])([H])C2=C(O[H])C(=C(O[H])C(=C12)[H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])O[H]>
+PCN<PBCHM67898546 : D(110) 110:110|catechol_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<catechol_A>
+|
+$SMI<O([H])C1=C(O[H])C(=C2C(=C1[H])C([H])(C([H])([H])N(C([H])([H])C2([H])[H])C([H])([H])C([H])(C([H])([H])[H])C([H])([H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])[H]>
+PCN<PBCHM71585840 : D(110) 110:110|catechol_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<catechol_A>
+|
+$SMI<O([H])C([H])(C([H])(N([H])C([H])([H])C([H])([H])O[H])C([H])([H])C(=O)OC([H])([H])[H])C1=C([H])C(=C(N(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM82349145 : D(120) 120:120|anil_di_alk_D>
+DMRT<120>
+NDMRT<1>
+DMRTYP<anil_di_alk_D>
+|
+$SMI<N1(C([H])([H])C([H])([H])N([H])C([H])([H])C1([H])[H])C1=C([H])C2=C(N(C([H])([H])[H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H]>
+PCN<PBCHM82538169 : D(110) 110:110|anil_di_alk_A>
+DMRT<110>
+NDMRT<1>
+DMRTYP<anil_di_alk_A>
+|
+$SMI<O(C1=C([H])C(=C(N([H])C([H])([H])C([H])([H])C([H])([H])C2=C([H])C(=C(N3C([H])([H])C([H])([H])C([H])([H])C3([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])C([H])([H])C([H])([H])C([H])([H])[H]>
+PCN<PBCHM83462400 : D(230) 230:120|anil_di_alk_C:110|anil_di_alk_E>
+DMRT<230>
+NDMRT<2>
+DMRTYP<anil_di_alk_C:anil_di_alk_E>
+|
+$SMI<BrC1=C([H])C(=C(C2=C(C([H])([H])[H])SC(=C2C(=O)OC([H])([H])C([H])([H])[H])N([H])C(=O)C([H])([H])C([H])([H])C([H])([H])C([H])([H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM84380412 : D(80) 80:80|thiophene_amino_Ab>
+DMRT<80>
+NDMRT<1>
+DMRTYP<thiophene_amino_Ab>
+|
+$SMI<O=C1C2=C(C(=C([H])C(=C2N(=O)=O)C2([H])C([H])([H])C([H])([H])C([H])(C([H])([H])C2([H])[H])C([H])([H])C([H])([H])C([H])([H])[H])[H])C(=O)C2=C1C(=C([H])C(=C2N(=O)=O)C([H])([H])[H])[H]>
+PCN<PBCHM88756156 : D(250) 250:250|quinone_A>
+DMRT<250>
+NDMRT<1>
+DMRTYP<quinone_A>
+|
+$SMI<O(C1([H])C([H])(O[H])C([H])(O[H])C([H])(OC1([H])OC([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C(=O)N=N#N)C([H])([H])O[H])C1([H])OC([H])(C([H])(O[H])C([H])(O[H])C1([H])O[H])C([H])([H])O[H]>
+PCN<PBCHM89849633 : D(260) 260:260|azo_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<azo_A>
+|
+$SMI<O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=NC(=C1[H])OC([H])([H])C([H])([H])N([H])C([H])([H])[H])C([H])([H])N([H])N=C1C(=C([H])C(=O)C(=C1[H])[H])[H]>
+PCN<PBCHM91193977 : D(250) 250:250|quinone_A>
+DMRT<250>
+NDMRT<1>
+DMRTYP<quinone_A>
+|
+$SMI<S1[C@@]([H])(N=NC2=C([H])C(=C([H])C(=C2C(=O)O[H])[H])[H])C(=O)N(C2=C([H])C(=C([H])C(=C2[H])[H])[H])C1=S>
+PCN<PBCHM95239954 : D(490) 490:260|azo_A:230|rhod_sat_A>
+DMRT<490>
+NDMRT<2>
+DMRTYP<azo_A:rhod_sat_A>
+|
+$SMI<IC1=C([H])C(=C(N2C(=O)[C@@]3([H])[C@@](N([H])[C@]([H])([C@@]3([H])C2=O)C2=C(O[H])C(Cl)=C([H])C(Cl)=C2[H])(C([H])([H])C([H])(C([H])([H])[H])C([H])([H])[H])C(=O)O[H])C(=C1[H])[H])[H]>
+PCN<PBCHM97973690 : D(130) 130:130|mannich_A>
+DMRT<130>
+NDMRT<1>
+DMRTYP<mannich_A>
+|
+$SMI<O([H])C(=O)C1([H])C([H])([H])C([H])([H])C(C([H])([H])[H])(C([H])([H])[H])N(C1([H])[H])C1=C([H])C(=C(OC([H])([H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM117021259 : D(120) 120:120|anil_di_alk_C>
+DMRT<120>
+NDMRT<1>
+DMRTYP<anil_di_alk_C>
+|
+$SMI<FC1=C(F)C(=C([H])C(=C1[H])N=NC(=O)N([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H])[H]>
+PCN<PBCHM122181327 : D(260) 260:260|azo_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<azo_A>
+|
+$SMI<O=C(N([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C([H])(C([H])([H])N([H])N=C1C(=C([H])C(=O)C(=C1[H])[H])[H])C(=O)C([H])([H])[H]>
+PCN<PBCHM123266931 : D(250) 250:250|quinone_A>
+DMRT<250>
+NDMRT<1>
+DMRTYP<quinone_A>
+|
+$SMI<ClC1=C(N([H])C2=NC(=O)C(=C([H])C3=C(OC([H])([H])[H])C(=C(N4C([H])([H])C([H])([H])OC([H])([H])C4([H])[H])C(=C3[H])[H])[H])S2)C(=C([H])C(=C1Cl)[H])[H]>
+PCN<PBCHM126227590 : D(280) 280:190|ene_five_het_B:90|anil_di_alk_B>
+DMRT<280>
+NDMRT<2>
+DMRTYP<ene_five_het_B:anil_di_alk_B>
+|
+$SMI<ClC1=C(Cl)C(=C([H])C(=C1[H])N1C(=O)C(=C([H])C2=C([H])C(=C([H])C(=C2[H])[H])OC([H])([H])C(=O)N([H])C2=C([H])C(=C([H])C(=C2[H])C([H])([H])[H])C([H])([H])[H])SC1=S)[H]>
+PCN<PBCHM126261253 : D(260) 260:260|ene_rhod_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<ene_rhod_A>
+|
+$SMI<BrC1=C(C([H])([H])[H])C(=C(N=NN([H])[H])C(=C1C([H])([H])[H])[H])[H]>
+PCN<PBCHM129016465 : D(260) 260:260|azo_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<azo_A>
+|
+$SMI<ClC1=C(C([H])([H])C([H])(C([H])([H])[H])C([H])([H])C1=C([H])C(=C1C2=C(N(C(=C1[H])[H])C([H])([H])C([H])([H])[H])C(=C([H])C(=C2[H])C([H])([H])[H])[H])[H])C(=C([H])C1=C2C(=[N+](C(=C1[H])[H])C([H])([H])C([H])([H])[H])C(=C([H])C(=C2[H])C([H])([H])[H])[H])[H]>
+PCN<PBCHM132347258 : D(250) 250:250|het_pyridiniums_A>
+DMRT<250>
+NDMRT<1>
+DMRTYP<het_pyridiniums_A>
+|
+$SMI<S(P(=O)(OC([H])(C([H])(C([H])([H])[H])C([H])([H])[H])C#N)OC([H])([H])C([H])([H])[H])C([H])(C([H])([H])[H])C([H])([H])C([H])([H])[H]>
+PCN<PBCHM179291>
+|
+$SMI<S=C(N([H])C1=C([H])C(=C(C([H])([H])N2C([H])([H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H])[H])N([H])C(=O)C1=C([H])C(=C([H])O1)[H]>
+PCN<PBCHM925587>
+|
+$SMI<S1C(=S)N([C@]([H])(C([H])([H])C([H])([H])C(=O)O[H])C(=O)O[H])C(=O)C1=C([H])C1=C([H])C(=C(OC([H])([H])C([H])([H])[H])C(=C1[H])[H])OC([H])([H])[H]>
+PCN<PBCHM1873271 : D(260) 260:260|ene_rhod_A>
+DMRT<260>
+NDMRT<1>
+DMRTYP<ene_rhod_A>
+|
+$SMI<S(C1=NC2=C([H])C(=C([H])C(=C2C(=O)N1C1=C(C([H])([H])[H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H])[H])[H])C([H])([H])C(=O)N([H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])[H]>
+PCN<PBCHM2583913>
+|
+$SMI<S=C(N(C([H])([H])C([H])([H])N1C([H])([H])C([H])([H])C([H])([H])C1([H])[H])C([H])([H])C1=C([H])C2=C(N([H])C1=O)C(=C([H])C(=C2[H])OC([H])([H])C([H])([H])[H])[H])N([H])C([H])([H])C([H])([H])C([H])([H])[H]>
+PCN<PBCHM3186412>
+|
+$SMI<O([H])C(=O)C1=NN(C(=C1[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM3269941>
+|
+$SMI<S(=O)(=O)(C1=C(OC(=N1)C([H])(C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])N([H])C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H]>
+PCN<PBCHM4486165>
+|
+$SMI<O([C@]([H])(C(=O)N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C([H])([H])C([H])([H])[H])C([H])([H])C([H])([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H]>
+PCN<PBCHM9173128>
+|
+$SMI<O(C(=O)N1[C@@]([H])(C([H])([H])[C@@]([H])(C1([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H])C(=O)O[H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])[H]>
+PCN<PBCHM10496006>
+|
+$SMI<O=C(N([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC([H])([H])[H])C([H])(C([H])([H])C([H])([H])C([H])([H])[H])C([H])([H])C([H])([H])C([H])([H])[H]>
+PCN<PBCHM11841482>
+|

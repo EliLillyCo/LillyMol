@@ -1,0 +1,38 @@
+# This query is for PAINS computation for different types of assay
+# Multiple values are embedded for each query, corresponding to multple assays
+# Alpha => 1, ELISA => 2, FB => 3, FP => 4, FRET => 5, SPA => 6, OverallActivityEnrichment => 7, QCEnrichment => 8
+# Alpha_HS => 9, ELISA_HS => 10, FB_HS => 11, FP_HS => 12, FRET_HS => 13, SPA_HS => 14, HSEnrichment =>15, TotalScore => 0
+# C[1]:C(:C:C:C(:C:@1)C=C)N(C[TAC=4])C[TAC=4]<regId="anil_di_alk_B(251)">
+(0 Query
+  (A I Version 2)
+  (A C Comment "anil_di_alk_B")
+# (A C smarts "[CX4]N([CX4])c1ccc(C=C)cc1")
+  (A C smarts "[CX4]N([CX4])c1ccccc1")
+  (0 Environment
+    (A I single_bond 6)
+    (A C smarts "[CR0]=[#6]")
+#   (A C smarts "[/IWrh>0c]=[c,n]c=[O,N,S]")
+#   (A C smarts "[/IWrh>1c]=c[nH]c=O")
+#   (A C smarts "[/IWrh>0c](=c)c(=O)[nH]")
+#   (A C smarts "[/IWrh>0c](=c)[nH]c=O")
+#   (A C smarts "[/IWrh>1c]([nH])=c")
+#   (A C smarts "[/IWrh>0c](c=O)=c[nD3]")
+#   (A C smarts "[/IWrh1c][/IWrid1o]cc=[/IWrid1]")
+  )
+  (A D numeric_value 90)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 50)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+)

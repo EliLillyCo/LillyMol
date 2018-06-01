@@ -1,0 +1,26 @@
+# This query is for PAINS computation for different types of assay
+# Multiple values are embedded for each query, corresponding to multple assays
+# Alpha => 1, ELISA => 2, FB => 3, FP => 4, FRET => 5, SPA => 6, OverallActivityEnrichment => 7, QCEnrichment => 8
+# Alpha_HS => 9, ELISA_HS => 10, FB_HS => 11, FP_HS => 12, FRET_HS => 13, SPA_HS => 14, HSEnrichment =>15, TotalScore => 0
+# N(C[1]:C:C:C:C:C:@1)S(=O)(=O)C[2]:C[3]:N:Any[IS=O,S]:N:C(:@3):C:C:C:@2<regId="diazox_sulfon_A(36)">
+(0 Query
+  (A I Version 2)
+  (A C Comment "diazox_sulfon_A")
+  (A C smarts "N(S(=O)(=O)c1c2n[o,s]nc2ccc1)c1ccccc1")
+  (A D numeric_value 60)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 50)
+)

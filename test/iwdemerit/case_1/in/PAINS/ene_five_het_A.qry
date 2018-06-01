@@ -1,0 +1,26 @@
+# This query is for PAINS computation for different types of assay
+# Multiple values are embedded for each query, corresponding to multple assays
+# Alpha => 1, ELISA => 2, FB => 3, FP => 4, FRET => 5, SPA => 6, OverallActivityEnrichment => 7, QCEnrichment => 8
+# Alpha_HS => 9, ELISA_HS => 10, FB_HS => 11, FP_HS => 12, FRET_HS => 13, SPA_HS => 14, HSEnrichment =>15, TotalScore => 0
+# C[1](=C)C=NHetC(=O)@1<regId="ene_five_het_A(201)">
+(0 Query
+  (A I Version 2)
+  (A C Comment "ene_five_het_A")
+  (A C smarts "[OD1]=[/IWfss1C]1[!#6]N=CC1=C")
+  (A D numeric_value 60)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+)
