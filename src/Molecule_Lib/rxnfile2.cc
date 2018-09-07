@@ -1179,6 +1179,8 @@ RXN_File_Create_Reaction_Options::RXN_File_Create_Reaction_Options()
   _only_create_query_from_first_reagent = 0;
 }
 
+
+ 
 static int
 _remove_duplicates_ignore_atom_map(ISIS_RXN_FILE_Molecule * reagent_or_product,
                                  int & n)
@@ -1382,6 +1384,65 @@ RXN_File::unmap_duplicate_atom_map_numbers()
 
   return _unmap_duplicate_atom_map_numbers(_np, _product, mapped);
 }
+
+
+static void
+_assign_unmapped_atoms(ISIS_RXN_FILE_Molecule & m, int &highestAtomMapping)
+{
+  const int matoms = m.natoms();
+
+  const int * amap = m.atom_map();
+
+  int rc = 0;
+
+  for (int i = 0; i < matoms; ++i)
+  {
+    const int mi = amap[i];
+
+    if (mi > 0)
+      continue;
+
+		highestAtomMapping++;
+    m.set_atom_map(i, highestAtomMapping);
+    m.set_atom_map_number(i, highestAtomMapping);
+
+  }
+
+  return;
+}
+
+static void
+_assign_unmapped_atoms(const int n,
+                    ISIS_RXN_FILE_Molecule * m,
+                    int &highestAtomMapping)
+{
+  for (int i = 0; i < n; ++i)
+  {
+    _assign_unmapped_atoms(m[i], highestAtomMapping);
+    m->invalidate_smiles();
+  }
+
+  return;
+}
+
+/*
+  Note that for each duplicated atom map we leave one atom mapped. We do not do this
+  in any kind of careful way, could be improved substantially
+*/
+
+void
+RXN_File::assign_unmapped_atoms()
+{
+  int h = highest_atom_map_number();
+
+  if (0 == h)
+    return;
+
+  _assign_unmapped_atoms(_nr, _reagent, h);
+
+  _assign_unmapped_atoms(_np, _product, h);
+}
+
 
 static int
 identify_largest_fragment(const int n,

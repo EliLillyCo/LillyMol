@@ -102,8 +102,8 @@ copy_exe: exe
 	$(CP) $(EXECUTABLES) $(EXEDIR)
 	
 clean:
-	-$(RM) $(BUILD_DIR)/*.o 
+	@$(RM) $(BUILD_DIR)/*.o || true
 
 veryclean: clean
-	-$(RM) $(BUILD_DIR)/*.a
-	-$(RM) $(EXECUTABLES)
+	@$(RM) $(BUILD_DIR)/*.a || true
+	@$(RM) $(EXECUTABLES) || true

@@ -57,6 +57,8 @@ Substructure_Atom_Specifier::_default_values()
   _all_rings_kekule = SUBSTRUCTURE_NOT_SPECIFIED;
 
   _symmetry_group = 0;
+  
+  _userAtomType = 0;
 
   return;
 }
@@ -1044,12 +1046,27 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
   {
     if (! _isotope.matches(target.isotope()))
       return 0;
-
+    
     attributes_checked++;
     if (attributes_checked == _attributes_specified)
       return 1;
   }
 
+// user specified atom types - usually set with values from atom_typing_specification.assign_atom_types
+// we used to put these values into the isotope field, but that screws too many things up
+
+  if (_userAtomType != 0)
+  {
+    if (_userAtomType != target.userAtomType())
+    {
+      return 0;
+    }
+      
+    attributes_checked++;
+    if (attributes_checked == _attributes_specified)
+      return 1;
+  }  
+  
 // We can't really check chirality now because the adjoining atoms are
 // not matched yet. If our query says chiral of some kind and the
 // matched atom has no chirality, that's a non-match
@@ -2797,8 +2814,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
   if (fc_encountered)
     _formal_charge.add(fc);
 
-  if (ignore_chirality_in_smarts_input())
-    _chirality = 0;
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMARTS_TOKEN
   cerr << "Consumed " << characters_processed << " characters\n";
@@ -3140,6 +3155,10 @@ Substructure_Atom_Specifier::attributes_specified()
     rc++;
   if (SUBSTRUCTURE_NOT_SPECIFIED != _all_rings_kekule)
     rc++;
+  if (_userAtomType != 0)
+    rc++;
+  if (ignore_chirality_in_smarts_input())
+    _chirality = 0;
 
 //#define DEBUG_ATTRIBUTES_SPECIFIED
 #ifdef DEBUG_ATTRIBUTES_SPECIFIED
@@ -3187,7 +3206,8 @@ Substructure_Atom_Specifier::attributes_specified()
     cerr << "heteroatoms in ring specified\n";
   if (_fused_system_size.is_set())
     cerr << "fused system size is specified\n";
-
+  if (_userAtomType != 0)
+    cerr << "user atom type is specified\n";
   cerr << "Atom has " << rc << " attributes specified\n";
 #endif
 

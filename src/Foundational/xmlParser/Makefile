@@ -57,9 +57,8 @@ copy_library: copy_include library
 	$(CP) $(LIBRARY_NAME) $(LIBDIR)
 	
 clean:
-	-$(RM) $(BUILD_DIR)/*.o 
+	@$(RM) $(BUILD_DIR)/*.o || true
 
 veryclean: clean
-	-$(RM) $(BUILD_DIR)/*.a
-
+	@$(RM) $(BUILD_DIR)/*.a || true
 

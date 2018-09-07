@@ -854,12 +854,15 @@ class Molecule : private resizable_array_p<Atom>
     int   transform_to_non_isotopic_form ();
     int   set_isotope  (atom_number_t, int);
     int   set_isotope_no_perturb_canonical_ordering (atom_number_t a, int iso);
+    int   set_userAtomType(atom_number_t a, int atomType);
     template <typename T> int   set_isotopes (const T *);     // changed 2016. The set the isotope to the value in the array
     int   unset_isotopes (const int *);   // anything > 0 will be set to 0
     int   unset_isotopes () { return transform_to_non_isotopic_form ();}
     int   set_isotope (const Set_of_Atoms &, int);
     void  get_isotopes (int *) const;
     int   isotope (atom_number_t) const;
+    int   userAtomType (atom_number_t) const;
+    
     int   increment_isotope (atom_number_t, int);
     int   maximum_isotope() const;
     atom_number_t atom_with_isotope(int) const;

@@ -90,6 +90,8 @@ static int reactions_containing_duplicate_atom_map_numbers = 0;
 
 static int unmap_duplicate_atom_map_numbers = 0;
 
+static int assign_unmapped_atoms = 0;
+
 static int skip_reactions_where_largest_fragment_is_unchanged = 0;
 
 static int skip_reactions_containing_aromatic_bonds = 0;
@@ -339,6 +341,11 @@ rxn_standardize(RXN_File & rxn,
   cerr << " " << rxn.name() << endl;
 #endif
 
+  if (assign_unmapped_atoms)
+  {
+    rxn.assign_unmapped_atoms();
+  }
+  
   if (rxn.contains_duplicate_atom_map_numbers())
   {
     reactions_containing_duplicate_atom_map_numbers++;
@@ -762,6 +769,7 @@ display_misc_options(std::ostream & output)
   output << " -X igbad        ignore bad reactions (default is to exit)\n";
   output << " -X nclf         skip reactions where there is no change in the largest fragment\n";
   output << " -X rmab         skip reactions that contain aromatic bonds\n";
+  output << " -X fmap         add unique mapping numbers for any atoms that are not mapped\n";
 
   exit(0);
 }
@@ -1016,7 +1024,6 @@ rxn_standardize (int argc, char ** argv)
     if (verbose)
       cerr << "Will discard all chirality input on input\n";
   }
-
   if (cl.option_present('D'))
   {
     const_IWSubstring d = cl.string_value('D');
@@ -1034,6 +1041,7 @@ rxn_standardize (int argc, char ** argv)
       if (verbose)
         cerr << "Will un-map atoms with duplicate atom map numbers\n";
     }
+
     else
     {
       cerr << "Unrecognised -D qualifier '" << d << "'\n";
@@ -1082,6 +1090,12 @@ rxn_standardize (int argc, char ** argv)
         if (verbose)
           cerr << "Will skip reactions containing aromatic bonds\n";
       }
+      else if ("fmap" == x)
+      {
+ 				assign_unmapped_atoms = 1;
+    		if (verbose)
+      		cerr << "Will assign mapping numbers to any atoms that are not mapped\n";
+      }		      
       else if ("help" == x)
       {
         display_misc_options(cerr);

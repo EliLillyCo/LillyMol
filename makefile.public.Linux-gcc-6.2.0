@@ -21,7 +21,9 @@
 # Shell command redefine
 CC = gcc
 RM = /bin/rm -f
-CP = /bin/cp -rf
+# CP = /bin/cp -rf
+# Not allow to override internal code
+CP = /bin/cp -n
 LN = ln
 MKDIR = mkdir -p
 
@@ -47,7 +49,8 @@ EXEDIR = $(IWPROGRAMMES)/bin/$(UNAME)
 # Library folder
 LIB = -L $(IWPROGRAMMES)/lib/$(UNAME)
 # Define ZLIB to point to where zlib.a is located.  Need version 1.2.8 or higher
-ZLIB = /lrlhps/apps/zlib/zlib-1.2.11/lib
+#Exmaple: ZLIB = /zlib/zlib-1.2.11/lib
+ZLIB = 
 LIBZ = -L $(ZLIB) -lz
 
 # Include folder
@@ -60,7 +63,7 @@ USRLIB=
 FLAGS = $(PROF) $(DEBUG) $(COMPILER) $(CPU) $(OPT) $(PROJ) $(INC) -Wl,--no-warn-search-mismatch 
 CFLAGS  =  $(FLAGS)
 CXXFLAGS = $(FLAGS) -std=c++11
-CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DNEED_EXTERN_OPT
 
 # Some programmes want implicit templates
 FLAGS_FOR_TEMPLATE_INSTANTIATORS = $(CXXFLAGS)
@@ -72,4 +75,3 @@ FORT_LD = $(CXX) $(PROF)
 # Fortran flag and library
 FFLAGS = $(OPT) $(DEBUG) $(CPU) $(PROF) 
 FORTRAN_LIBRARY = -lgfortran
-

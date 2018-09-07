@@ -18,7 +18,7 @@ BUILD_DIR ?= .
 UNAME ?= Linux-gcc-6.2.0
 include $(IWPROGRAMMES)/makefile.public.$(UNAME)
 
-PROJECT_NAME = jama
+PROJECT_NAME = tnt
 
 clean veryclean library copy_library exe copy_exe:
 	@echo "Nothing to do for $(PROJECT_NAME) target $@"

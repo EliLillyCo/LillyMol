@@ -73,6 +73,7 @@ using std::endl;
 #define NAME_OF_DAYLIGHT_X_ATTRIBUTE "daylight_x"
 #define NAME_OF_LONE_PAIR_SPECIFIER "lone_pair"
 #define NAME_OF_ISOTOPE_ATTRIBUTE "isotope"
+#define NAME_OF_USER_ATOM_TYPE_ATTRIBUTE "user_atom_type"
 #define NAME_OF_NUMBER_ISOTOPIC_ATOMS_ATTRIBUTE "isotopic_atoms"
 #define NAME_OF_CHIRAL_CENTRE_ATTRIBUTE "chiral_center"
 #define NAME_OF_SORT_MATCHES_BY "sort_matches"
@@ -704,6 +705,20 @@ Substructure_Atom_Specifier::construct_from_msi_object(const msi_object & msi)
 //  Do something to audit the value
   }
 
+  att = msi.attribute(NAME_OF_USER_ATOM_TYPE_ATTRIBUTE);
+  if (att)
+  {
+    if (! att->value(_userAtomType))
+    {
+      cerr << "Substructure_Atom_Specifier::construct_from_msi_object: bad User Atom type\n";
+      cerr << (*att) << endl;
+      return 0;
+    }
+
+    _attributes_specified++;
+
+//  Do something to audit the value
+  }
 // for backward compatibility, parse the deprecated "isolated_ring" attribute
 
   att = msi.attribute(NAME_OF_ISOLATED_RING_ATTRIBUTE);
@@ -1212,6 +1227,8 @@ Substructure_Atom_Specifier::write_msi(std::ostream & os, int indentation,
   _unsaturation.write_msi(os, NAME_OF_UNSATURATION_ATTRIBUTE, indentation);
   _daylight_x.write_msi(os, NAME_OF_DAYLIGHT_X_ATTRIBUTE, indentation);
   _isotope.write_msi(os, NAME_OF_ISOTOPE_ATTRIBUTE, indentation);
+  if (_userAtomType != 0)
+   	os << ind << "(A I " << NAME_OF_USER_ATOM_TYPE_ATTRIBUTE << " " << _userAtomType << ")\n";
   _aryl.write_msi(os, NAME_OF_ARYL_ATTRIBUTE, indentation);
   _vinyl.write_msi(os, NAME_OF_VINYL_ATTRIBUTE, indentation);
   _fused_system_size.write_msi(os, NAME_OF_FUSED_SYSTEM_SIZE_ATTRIBUTE, indentation);
@@ -2870,6 +2887,9 @@ Substructure_Atom::create_from_molecule (Molecule & m,
     ;
   else if (a->isotope())
     _isotope.add(a->isotope());
+    
+  if (a->userAtomType() > 0)      
+    _userAtomType  = a->userAtomType();
 
   int nr = m.nrings(my_atom_number);
 

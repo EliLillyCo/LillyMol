@@ -7,13 +7,13 @@
 #undef _GETOPT_H
 
 //GH:
-#define NEED_EXTERN_OPT
+//#define NEED_EXTERN_OPT
 // Unclear when we need to switch between C and C++ bindings for optxxx
 #if defined(_WIN32) || defined(NEED_EXTERN_OPT)
 /* Global Exportable */
-extern int optind;
-extern char *optarg;
-extern int opterr;
+ extern int optind;
+ extern char *optarg;
+ extern int opterr;
 
 #else
 #include <unistd.h>

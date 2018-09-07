@@ -338,6 +338,7 @@ class Substructure_Atom_Specifier
     Min_Max_Specifier<int> _unsaturation;
     Min_Max_Specifier<int> _daylight_x;
     Min_Max_Specifier<int> _isotope;
+    int                    _userAtomType = 0;
     Min_Max_Specifier<int> _aryl;
     Min_Max_Specifier<int> _fused_system_size;
     Min_Max_Specifier<int> _vinyl;
@@ -508,6 +509,7 @@ class Substructure_Atom_Specifier
     const resizable_array<const Element *> & element () const { return _element;};
     const Min_Max_Specifier<int> & formal_charge () const { return _formal_charge;}
     const Min_Max_Specifier<int> & isotope () const { return _isotope;}
+    const int & userAtomType () const { return _userAtomType;} 
 };
 
 class Atomic_Smarts_Component;

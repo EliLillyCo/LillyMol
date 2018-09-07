@@ -1,5 +1,4 @@
 Will not write product fragments with fewer than 2 atoms
-Connectivity of reaction atoms must be preserved for reaction match
 Will keep going after an individual test failure
 Will preserve Kekule forms
 Will use the reaction file name as the reaction name
@@ -10,8 +9,8 @@ Read 10 molecules, 10 deconstructed
 0 deconstructions done at radius 0
 10 deconstructions done at radius 1
 Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
-40 molecules deconstructed at radius 1
-40 molecules deconstructed
+20 molecules deconstructed at radius 1
+20 molecules deconstructed
 Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US03947458_NA 10 searches, 0 matches found
  1 US03947473_NA 10 searches, 0 matches found
@@ -31,7 +30,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US04035385_NA 10 searches, 0 matches found
  1 US04035495_NA 10 searches, 0 matches found
  1 US04012514_NA 10 searches, 1 matches found
- 1 US04065471_NA 10 searches, 1 matches found
+ 1 US04065471_NA 10 searches, 0 matches found
  1 US04061631_NA 10 searches, 0 matches found
  1 US04070368_NA 10 searches, 0 matches found
  1 US04118567_NA 10 searches, 0 matches found
@@ -39,7 +38,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US04128658_NA 10 searches, 0 matches found
  1 US04073911_NA 10 searches, 4 matches found
  1 US04148897_NA 10 searches, 0 matches found
- 1 US04212822_NA 10 searches, 1 matches found
+ 1 US04212822_NA 10 searches, 0 matches found
  1 US04209517_NA 10 searches, 0 matches found
  1 US04209521_NA 10 searches, 0 matches found
  1 US04230714_NA 10 searches, 0 matches found
@@ -55,7 +54,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US04336391_NA 10 searches, 0 matches found
  1 US04395577_NA 10 searches, 0 matches found
  1 US04380638_NA 10 searches, 0 matches found
- 1 US04587342_NA 10 searches, 4 matches found
+ 1 US04587342_NA 10 searches, 0 matches found
  1 US04568744_NA 10 searches, 0 matches found
  1 US04638009_NA 10 searches, 0 matches found
  1 US04746669_NA 10 searches, 0 matches found
@@ -109,11 +108,11 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US07384961B2_0137 10 searches, 0 matches found
  1 US07538111B2_0385 10 searches, 0 matches found
  1 US07576094B2_1092 10 searches, 0 matches found
- 1 US07482346B2_0141 10 searches, 1 matches found
+ 1 US07482346B2_0141 10 searches, 0 matches found
  1 US07585875B2_0430 10 searches, 0 matches found
  1 US07517532B2_0643 10 searches, 0 matches found
  1 US07544697B2_2041 10 searches, 0 matches found
- 1 US07763602B2_0251 10 searches, 1 matches found
+ 1 US07763602B2_0251 10 searches, 0 matches found
  1 US07812017B2_1109 10 searches, 0 matches found
  1 US07812017B2_1113 10 searches, 0 matches found
  1 US08039627B2_0092 10 searches, 0 matches found
@@ -142,7 +141,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US08853224B2_0262 10 searches, 0 matches found
  1 US08853224B2_0286 10 searches, 0 matches found
  1 US08642614B2_0179 10 searches, 0 matches found
- 1 US08637536B2_1134 10 searches, 1 matches found
+ 1 US08637536B2_1134 10 searches, 0 matches found
  1 US09156827B2_0468 10 searches, 0 matches found
  1 US08937091B2_1822 10 searches, 0 matches found
  1 US08937091B2_2163 10 searches, 0 matches found
@@ -157,7 +156,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US20030232875A1_0685 10 searches, 0 matches found
  1 US20040147612A1_0350 10 searches, 0 matches found
  1 US20040180925A1_1050 10 searches, 0 matches found
- 1 US20050130982A1_0080 10 searches, 1 matches found
+ 1 US20050130982A1_0080 10 searches, 0 matches found
  1 US20050272036A1_0992 10 searches, 0 matches found
  1 US20050282843A1_0247 10 searches, 0 matches found
  1 US20060094719A1_0308 10 searches, 0 matches found
@@ -177,7 +176,7 @@ Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
  1 US20130261270A1_0288 10 searches, 1 matches found
  1 US20160002218A1_0322 10 searches, 0 matches found
  1 US20160200725A1_0864 10 searches, 0 matches found
-40 molecules deconstructed at radius 1
-40 molecules deconstructed
-1620 reactions had 0 hits
-20 reactions had 1 hits
+20 molecules deconstructed at radius 1
+20 molecules deconstructed
+1630 reactions had 0 hits
+10 reactions had 1 hits

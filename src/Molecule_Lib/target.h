@@ -91,6 +91,7 @@ class Target_Atom
     int _attached_heteroatom_count;
     int _fused_system_size;
     int _isotope;
+    int _userAtomType;
     int _heteroatoms_in_ring;
 
 //  private functions
@@ -163,6 +164,7 @@ class Target_Atom
     int multiple_bond_to_heteroatom ();
     int lone_pair_count ();
     int isotope ();
+    int userAtomType ();
     int heteroatoms_in_ring ();
 
     int fragment_membership ();
@@ -191,6 +193,7 @@ class Target_Atom
     void invalidate ();
 
     void set_isotope (int i) { _isotope = i;}
+    void set_userAtomType (int i) { _userAtomType = i;}
     void set_element (const Element * e) { _element = e;}
 
     void set_atom_number(int s) { _my_atom_number = s;}

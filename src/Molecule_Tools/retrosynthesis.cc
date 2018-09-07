@@ -1,5 +1,5 @@
 /*
-  A very rough retrosynthetic thing
+  Performs retrosynthesis based on templates
 */
 
 #include <stdlib.h>
@@ -9,6 +9,8 @@
 #include <atomic>
 #include <algorithm>
 #include <limits>
+#include <vector>
+#include <exception>
 using std::endl;
 using std::cerr;
 
@@ -30,6 +32,18 @@ using std::cerr;
 #include "smiles.h"
 #include "atom_typing.h"
 
+typedef unsigned int atype_t;
+
+struct Error : std::exception
+{
+    char text[1000];
+
+    Error(char const* thisMessage)  {
+        sprintf(text, "%s", thisMessage);
+    }
+
+    char const* what() const throw() { return text; }
+};
 
 const char * prog_name = NULL;
 
@@ -66,8 +80,6 @@ static int take_first_of_multiple_reagents = 1;
 
 static int skip_reactions_with_multiple_ragents = 1;
 
-static int any_changing_bond_means_a_changing_atoms = 1;
-
 static int echo_initial_molecule_before_each_product = 1;
 
 static int discard_existing_atom_map = 0;
@@ -79,12 +91,17 @@ static int ignore_molecules_not_reacting = 1;
 static int molecules_not_reacting = 0;
 
 static IWString_and_File_Descriptor stream_for_non_reacting_molecules;
+static IWString_and_File_Descriptor outputStream;
+static IWString_and_File_Descriptor reactantsStream;
+static IWString_and_File_Descriptor reactant1Stream;
+static IWString_and_File_Descriptor reactant2Stream;
+static IWString_and_File_Descriptor reactantOnly1Stream;
+static IWString outputFilename = "";
+static IWString reactantFilenameBase = "";
 
-static int fragments_produced = 0;
+//static int fragments_produced = 0;
 
 static int found_in_db = 0;
-
-static int all_fragments_found = 0;
 
 static int split_products_into_separate_molecules = 1;
 
@@ -105,13 +122,14 @@ static int regressionFlag = 0;
   Various things for Molecule_to_Query_Specifications
 */
 
-static int fix_connectivity = 0;
+static int fix_connectivity = 1;
 static int aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = 0;
 static int atoms_conserve_ring_membership = 0;
 static int preserve_saturation = 0;
 static int preserve_ring_size = 0;
 
-static IWString stem_for_query_echo;
+std::ofstream *queryEchoStreamPtr = NULL;
+
 
 static int skip_molecules_with_multiple_scaffold_embeddings = 0;
 static int molecules_skipped_for_multiple_scaffold_embeddings = 0;
@@ -283,7 +301,13 @@ usage (int rc)
   cerr << "  -G <fname>    file containing names of sets of reaction files\n";
   cerr << "  -T <fname>    individual reactions\n";
   cerr << "  -I <fname>    reaction smiles input\n";
-  cerr << "  -P ...        atom typing specification - determine changing atoms\n";
+  cerr << "  -s            input reactions are in rxn smiles format\n";
+  cerr << "  -o            output filename - if omitted, output is to stderr.  "
+  															"If specified, the file is only created if hits are found\n";
+  cerr << "  -O            filename base for reactants - if specified, all reactants are written to <base>_all.smi.  "
+  													"If there are two or more reactants, the first two are written to <base>_1.smi and <base.2.smi.  "
+  													"If there is only 1 reactant, it is writen to <base>_only1.smi";
+  cerr << "  -P ...        atom typing specification - determine changing atoms and searching match conditions (default=UST:AZUCORS)\n";
   cerr << "  -q p          use the reaction path name as the reaction name\n";
   cerr << "  -q f          use the reaction file name as the reaction name\n";
   cerr << "  -b            only allow each molecule to be deconstructed by one reaction\n";
@@ -321,26 +345,33 @@ usage (int rc)
 static int
 identify_atoms_within_range(Molecule & m,
                             const int radius,
-                            int * changed)
+                            int * changed,
+                            int * include_atom_map)
 {
   const int matoms = m.natoms();
-
+  int rc = 0;
   for (int i = 0; i < matoms; ++i)
   {
-    if (1 == changed[i])    // we only add things relative to the actual reaction core
-      changed[i] = matoms;
+    //if (1 == changed[i])    // we only add things relative to the actual reaction core
+    if (changed[i]) // add any in the reaction core including changes in kekule
+    {    
+      include_atom_map[i] = 1;
+      rc++;
+    }
+    else
+    	include_atom_map[i] = 0;
   }
 
   for (int i = 0; i < matoms; ++i)
   {
-    if (matoms != changed[i])
+    if (!changed[i])
       continue;
 
     const int i_fragment_membership = m.fragment_membership(i);
 
     for (int j = 0; j < matoms; ++j)
     {
-      if (changed[j])
+      if (include_atom_map[j])
         continue;
 
       if (i_fragment_membership != m.fragment_membership(j))
@@ -349,19 +380,53 @@ identify_atoms_within_range(Molecule & m,
       const int d = m.bonds_between(i, j);
 
       if (d <= radius)
-        changed[j] = 1;
+      {
+        include_atom_map[j] = 1;
+        rc++;
+      }
     }
   }
 
-  int rc = 0;
+// the following code was taken from rxn_signature (which was taken from rxn_fingerprint) to include any atoms that
+// are double or triple bonded to the core+radius atoms.  This was added here to get the reaction seaching in 
+// retrosynthesis to agree with the the production of the template clusters which is based on the signatures
+// Tad Hurst - 20180621
+
+  m.compute_aromaticity_if_needed();
+
+  Set_of_Atoms extras;
+
   for (int i = 0; i < matoms; ++i)
   {
-    if (matoms == changed[i])
+    if (0 == include_atom_map[i])
+      continue;
+
+    const Atom * a = m.atomi(i);
+
+    const int acon = a->ncon();
+
+    if (acon == m.nbonds(i))    // fully saturated, no double bonds here
+      continue;
+
+    for (int j = 0; j < acon; ++j)
     {
+      const Bond * b = a->item(j);
+
+      if (b->is_single_bond() || b->is_aromatic())
+        continue;
+
+      const int k = b->other(i);
+
+      if (include_atom_map[k])
+        continue;
+
+      extras.add(k);
       rc++;
-      changed[i] = 1;
     }
   }
+
+  extras.set_vector(include_atom_map, 1);
+  
 
   return rc;
 }
@@ -370,18 +435,16 @@ identify_atoms_within_range(Molecule & m,
 static int
 identify_changing_atoms_reagent (RXN_File & rxn,
                                  const int reagent,
-                                 Atom_Typing_Specification & atom_typing_specification,
                                  int * changed)
 {
   Changing_Atom_Conditions cac;
-  if (any_changing_bond_means_a_changing_atoms)
-    cac.set_is_changing_if_different_neighbours(1);
+  cac.set_is_changing_if_different_neighbours(1);
   cac.set_ignore_lost_atom_if_isolated(1);
+  
+  cac.set_include_changing_bonds_in_changing_atom_count(1);
+  cac.set_consider_aromatic_bonds(0);  
 
-  if (atom_typing_specification.active())
-    return rxn.identify_atoms_changing_reagent(0, atom_typing_specification, changed, cac);
-  else
-    return rxn.identify_atoms_changing_reagent(0, changed, cac);
+    return rxn.identify_atoms_changing_reagent(reagent, atom_typing_specification, changed, cac);
 }
 
 
@@ -410,10 +473,12 @@ class Set_of_Reactions
 
     int _build (const const_IWSubstring & buffer, const resizable_array<int> & radius);
 
-    int _process (Molecule & m, const int * atype, Molecule_to_Match & target, int * already_reacted,
-                            const int radius, IWString & output);
-    int _process (Molecule & m, const int * atype, Molecule_to_Match & target, const int radius,
-                            Reaction_With_Stats * rxn, IWString & output);
+    int _process (Molecule & m,  Molecule_to_Match & target, int * already_reacted,
+                            const int radius);
+    int _process (Molecule & m,  Molecule_to_Match & target, const int radius,
+                            Reaction_With_Stats * rxn,   std::vector<IWString> &uniqResultSmi);
+		void _reportResultDuplicates (const IWString & nameOfReaction, const IWString & nameOfMolecule, std::vector<IWString> &newResultSmi
+																	, std::vector<IWString> &allUniqResultSmi);
 
   public:
     Set_of_Reactions();
@@ -424,16 +489,16 @@ class Set_of_Reactions
 
     int number_reactions() const { return _number_reactions;}
 
-    template <typename T> int report(T & output) const;
-    template <typename T> int reaction_statistics (T & output) const;
+    int report() const;
+    int reaction_statistics () const;
 
     int build (const char * fname, const resizable_array<int> & radius);
     int build (iwstring_data_source & input, const resizable_array<int> & radius);
     int build_from_reaction_files (const const_IWSubstring &, const resizable_array<int> & radius);
 
-    int process (Molecule & m, const int * atype, Molecule_to_Match & target, IWString & output);
-    int process (Molecule & m, const int * atype, Molecule_to_Match & target, const int radius, IWString & output);
-    int process (Molecule & m, const int * atype, const int radius, IWString & output);
+    int process (Molecule & m,  Molecule_to_Match & target);
+    int process (Molecule & m,  Molecule_to_Match & target, const int radius);
+    int process (Molecule & m,  const int radius);
 
     Reaction_With_Stats * reaction_with_id (const IWString & id, const int radius) const;
 };
@@ -523,7 +588,7 @@ Set_of_Reactions::build (iwstring_data_source & input,
   const_IWSubstring buffer;
   while (input.next_record(buffer))
   {
-//  cerr << "Set_of_Reactions::build:processing '" << buffer << "', input_is_reaction_smiles " << input_is_reaction_smiles << endl;
+    //cerr << "Set_of_Reactions::build:processing '" << buffer << "', input_is_reaction_smiles " << input_is_reaction_smiles << endl;
     if (! _build(buffer, radius))
     {
       cerr << "Set_of_Reactions:build:cannot process '" << buffer << "'\n";
@@ -556,16 +621,6 @@ Set_of_Reactions::build_from_reaction_files(const const_IWSubstring & buffer,
   return _determine_number_reactions();
 }
 
-static int
-do_echo_query(Reaction_With_Stats & r, 
-              const int radius,
-              const IWString & stem_for_query_echo)
-{
-  IWString fname(stem_for_query_echo);
-  fname  << r.comment() << '_' << radius << ".qry";
-
-  return r.write_msi(fname);
-}
 
 static void
 set_all_atom_numbers(const ISIS_RXN_FILE_Molecule & m, 
@@ -587,7 +642,7 @@ int
 Set_of_Reactions::_build(const const_IWSubstring & buffer,
                          const resizable_array<int> & radius)
 {
-//cerr << "Set_of_Reactions::_build: '" << buffer << "' input_is_reaction_smiles " << input_is_reaction_smiles << endl;
+  //cerr << "Set_of_Reactions::_build: '" << buffer << endl << "' input_is_reaction_smiles " << input_is_reaction_smiles << endl;
   RXN_File rxn;
   rxn.set_auto_fix_orphans(1);
 
@@ -679,21 +734,9 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
 //#define DEBUG_RETROSYNTHETIC_Q
 #ifdef DEBUG_RETROSYNTHETIC_Q
   cerr << __LINE__ << " line\n";
-  rxn.debug_print(cerr);
+  rxn.debug_print();
 #endif
 
-  auto & r0 = rxn.reagent(0);
-
-//preprocess(r0);    no, we preprocess the molecules we are reacting, doing it here would be dangerous...
-
-  const int matoms = r0.natoms();
-
-  int * changed = new_int(matoms + matoms + matoms); std::unique_ptr<int[]> free_changed(changed);
-//int * tmp = changed + matoms;
-  int * initial_changed = changed + matoms + matoms;
-
-// We need to create a reaction in order to get the reagent maps and such set up. 
-// Should look at this to see fi there is an easier way
 
   if (! rxn.prepare_for_reaction_construction())
   {
@@ -701,30 +744,8 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
     return 0;
   }
 
-  int c = identify_changing_atoms_reagent(rxn, 0, atom_typing_specification, changed);
-
-  if (verbose > 1)
-    cerr << "Reaction '" << rxn.name() << "' has " << c << " changing atoms\n";
-
-//#define ECHO_CHANGED_ATOMS
-#ifdef ECHO_CHANGED_ATOMS
-  Molecule mcopy(r0);
-  mcopy.set_isotopes(changed);
-  set_include_atom_map_with_smiles(0);
-  cerr << mcopy.smiles() << ' ' << " changing atoms\n";
-  set_include_atom_map_with_smiles(1);
-#endif
-
-  if (0 == c)
-  {
-    cerr << "Reaction '" << r0.name() << "' has no changing atoms, cannot process\n";
-    return ignore_reactions_with_no_changing_atoms;
-  }
-
-  int * include_atom_map = new int[highest_atom_map_number + 1]; std::unique_ptr<int[]> free_include_atom_map(include_atom_map);
-
-  std::copy_n(changed, matoms, initial_changed);   // save for re-use
-
+	// set up the controls for how to create the rxn query
+	
   Molecule_to_Query_Specifications mqs;
   mqs.set_set_element_hits_needed_during_molecule_to_query(0);
   mqs.set_aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic(aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic);
@@ -735,73 +756,191 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
     mqs.set_non_ring_atoms_become_nrings_0(1);
   mqs.set_preserve_saturation(preserve_saturation);
   if (preserve_ring_size)
-    mqs.set_preserve_smallest_ring_size(1);
+	  mqs.set_preserve_smallest_ring_size(1);
 
-  if (fix_connectivity)
-  {
-    for (int i = 0; i < matoms; ++i)
-    {
-      auto * a = r0.mdl_atom_data(i);
-      a->set_exact_change(1);
-    }
-  }
 
   for (int i = 0; i < radius.number_elements(); ++i)
-  {
-    const int r = radius[i];
+	{
+	    const int r = radius[i];
+	    int * include_atom_map = new int[highest_atom_map_number + 1]; std::unique_ptr<int[]> free_include_atom_map(include_atom_map);
+   	  std::fill_n(include_atom_map, highest_atom_map_number + 1, 0);
 
-    std::copy_n(initial_changed, matoms, changed);      // restore
+	  for (int reagentIndex = 0 ; reagentIndex < rxn.number_reagents(); ++reagentIndex)
+	  {
+	    auto & thisReagent = rxn.reagent(reagentIndex);
 
-#ifdef ECHO_CHANGED
-    for (int q = 0; q < matoms; ++q)
+		//preprocess(thisReagent);    no, we preprocess the molecules we are reacting, doing it here would be dangerous...
+
+		  const int matoms = thisReagent.natoms();
+
+		  int * changed = new_int(matoms); std::unique_ptr<int[]> free_changed(changed);
+		  //int * initial_changed = new_int(matoms); std::unique_ptr<int[]> free_initial_changed(initial_changed);
+		  int * inFrag = new_int(matoms); std::unique_ptr<int[]> free_inFrag(inFrag);
+
+		// We need to create a reaction in order to get the reagent maps and such set up. 
+		// Should look at this to see fi there is an easier way
+
+
+		 //int c = identify_changing_atoms_reagent(rxn, reagentIndex, initial_changed);
+		  int c = identify_changing_atoms_reagent(rxn, reagentIndex, changed);
+
+		  if (verbose > 1)
+		    cerr << "Reaction '" << rxn.name() << "' has " << c << " changing atoms\n";
+
+		//#define ECHO_CHANGED 1
+		#ifdef ECHO_CHANGED
+		  for (int q = 0; q < matoms; ++q)
+		  {
+		    //cerr << ' ' << initial_changed[q];
+		    cerr << ' ' << changed[q];
+		  }
+		    cerr << endl;
+		  Molecule mcopy(thisReagent);
+		  mcopy.set_isotopes(changed);
+		  set_include_atom_map_with_smiles(0);
+		  cerr << "Initial Changed:" << mcopy.smiles() << "\n";
+		  set_include_atom_map_with_smiles(1);
+		#endif
+
+		  if (0 == c && reagentIndex == 0)   // after the first one, some reagents may not have any changing atoms
+		  {
+		    cerr << "Reaction '" << thisReagent.name() << "' has no changing atoms, cannot process\n";
+		    return ignore_reactions_with_no_changing_atoms;
+		  }
+
+		  	
+
+		  for (int i = 0; i < matoms; ++i)
+		  {
+		    auto * a = thisReagent.mdl_atom_data(i);
+		    a->set_exact_change(1);
+		  }
+
+
+	    //std::copy_n(initial_changed, matoms, changed);      // restore
+
+	    identify_atoms_within_range(thisReagent, r, changed, inFrag);   // updates the changed array
+
+	#ifdef ECHO_CHANGED
+	    for (int q = 0; q < matoms; ++q)
+	    {
+	      cerr << ' ' << inFrag[q];
+	    }
+	    cerr << endl;
+	    Molecule mcopy1(thisReagent);
+	    mcopy1.set_isotopes(inFrag);
+	    //set_include_atom_map_with_smiles(0);
+	    cerr <<  "Changed after radius applied:"  << mcopy1.smiles() << "changing atoms\n";
+	    set_include_atom_map_with_smiles(1);
+
+	    //write_isotopically_labelled_smiles(mcopy, false, cerr);
+	#endif
+
+
+	    for (int i = 0; i < matoms; ++i)
+	    {
+	//    cerr << " atom " << i << " amap " << thisReagent.atom_map(i) << " " << thisReagent.smarts_equivalent_for_atom(i) << " changed " << changed[i] << endl;
+
+	      if (0 == inFrag[i])
+	        continue;
+
+	      const int amap = thisReagent.atom_map(i);
+	      //if (amap <= 0)
+	      if (amap < 0)
+	      	cerr << "missing amap for atom " << i <<  endl;  
+
+	      thisReagent.set_substitution(i, thisReagent.ncon(i));
+	//      if (1 == inFrag[i])
+	//        thisReagent.set_substitution(i, thisReagent.ncon(i));
+	//      else
+	//      {
+	//        thisReagent.set_substitution(i, -3);   // IAW extention to substitution, that means ignore
+	//        thisReagent.set_ring_bond(i, -3);     // IAW extention to ring bond count, ignore
+	//      }
+
+	      include_atom_map[amap] = 1;
+	    }
+	    
+//		  for (int i = 0; i < matoms; ++i)
+//	    {
+//	      if (changed[i])
+//	        thisReagent.set_substitution(i, 0);
+//	    }
+//	    
+	    
+	#ifdef ECHO_CHANGED
+	    cerr << "atoms maps in frag:";
+	    for (int q = 1; q < highest_atom_map_number + 1; ++q)
+	    {
+	      cerr << " " << include_atom_map[q];
+	    }
+	    cerr << endl;
+	    
+	#endif
+		}
+	
+	
+	
+    //if we have added orphans, they will be additional reagents, make sure to include them
+
+//    for (int i = 1; i < rxn.number_reagents(); ++i)
+//    {
+//      const auto & y = rxn.reagent(i);
+//      set_all_atom_numbers(y, include_atom_map, 1);
+//    }
+
+  #ifdef ECHO_CHANGED
+    cerr << "atoms maps in frag (final):";
+    for (int q = 1; q < highest_atom_map_number + 1; ++q)
     {
-      cerr << ' ' << changed[q];
+      cerr << " " << include_atom_map[q];
     }
     cerr << endl;
-    Molecle mcopy(r0);
-    mcopy.set_isotopes(changed);
-    write_isotopically_labelled_smiles(mcopy, false, cerr);
-#endif
+	    
+	#endif 
+     
 
-    identify_atoms_within_range(r0, r, changed);   // updates the changed array
-
-    std::fill_n(include_atom_map, highest_atom_map_number + 1, 0);
-
-    for (int i = 0; i < matoms; ++i)
+    for (int reagentIndex = 0 ; reagentIndex < rxn.number_reagents(); ++reagentIndex)
     {
-//    cerr << " atom " << i << " amap " << r0.atom_map(i) << " " << r0.smarts_equivalent_for_atom(i) << " changed " << changed[i] << endl;
+        
 
-      if (0 == changed[i])
-        continue;
+        ISIS_RXN_FILE_Molecule *thisMol = &rxn.reagent(reagentIndex);
+        atype_t *atype2 = new atype_t[thisMol->natoms()]; std::unique_ptr<atype_t[]> free_atype2(atype2);
 
-      const int amap = r0.atom_map(i);
-      if (amap <= 0)
-        continue;
 
-      if (1 == changed[i])
-        r0.set_substitution(i, r0.ncon(i));
-      else
-      {
-        r0.set_substitution(i, -3);   // IAW extention to substitution, that means ignore
-        r0.set_ring_bond(i, -3);     // IAW extention to ring bond count, ignore
-      }
+        atom_typing_specification.assign_atom_types(*thisMol, atype2);
 
-      include_atom_map[amap] = 1;
-//    cerr << " atom " << i << " atom map " << amap << " included\n";
+        for (int atomIndex = 0 ; atomIndex != thisMol->natoms() ; ++atomIndex)
+        {
+          thisMol->set_userAtomType(atomIndex, atype2[atomIndex]);  
+          //cerr << "setting reactant #" << reagentIndex << " atom "  << atomIndex << " to atype=" <<   atype2[atomIndex] << endl;
+        }
+        //cerr << "thisMol (reactant): " << *thisMol << endl;  
     }
-
-//  if we have added orphans, they will be additional reagents, make sure to include them
-
-    for (int i = 1; i < rxn.number_reagents(); ++i)
+    
+    for (int productIndex = 0 ; productIndex < rxn.number_products(); ++productIndex)
     {
-      const auto & y = rxn.reagent(i);
-      set_all_atom_numbers(y, include_atom_map, 1);
+        ISIS_RXN_FILE_Molecule *thisMol = &rxn.product(productIndex);
+        atype_t *atype2 = new atype_t[thisMol->natoms()]; std::unique_ptr<atype_t[]> free_atype2(atype2);
+
+
+        atom_typing_specification.assign_atom_types(*thisMol, atype2);
+
+        for (int atomIndex = 0 ; atomIndex != thisMol->natoms() ; ++atomIndex)
+        {
+          thisMol->set_userAtomType(atomIndex, atype2[atomIndex]);  
+          //cerr << "setting product #" << productIndex << " atom "  << atomIndex << " to atype=" <<   atype2[atomIndex] << endl;
+  
+        }
+        //cerr << "thisMol (Product): " << *thisMol << endl;  
     }
+  
 
     Reaction_With_Stats * t = new Reaction_With_Stats;
 
     RXN_File_Create_Reaction_Options rxnfcro;
     rxnfcro.set_only_create_query_from_first_reagent(1);
+    //qqq set the query out file here.
     rxn.set_auto_fix_orphans(1);
     if (! rxn.create_reaction(*t, rxnfcro, mqs, include_atom_map))
     {
@@ -809,18 +948,9 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
       delete t;
       return ignore_bad_reactions;
     }
-
-    for (int i = 0; i < matoms; ++i)
-    {
-      if (changed[i])
-        r0.set_substitution(i, 0);
-    }
-
+    
     t->set_do_not_perceive_symmetry_equivalent_matches(1);
-
-    if (stem_for_query_echo.length())
-      do_echo_query(*t, r, stem_for_query_echo);
-
+    
     _rxn[r].add(t);
 
 //  cerr << "Name '" << rxn.name() << "'\n";  
@@ -832,11 +962,8 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
 }
 
 int
-Set_of_Reactions::process (Molecule & m,
-                           const int * atype,
-                           Molecule_to_Match & target,
-                           
-                           IWString & output)
+Set_of_Reactions::process (Molecule & m, 
+                           Molecule_to_Match & target)
 {
   int * already_reacted = new_int(_number_reactions); std::unique_ptr<int[]> free_already_reacted(already_reacted);
 
@@ -845,7 +972,7 @@ Set_of_Reactions::process (Molecule & m,
     if (0 == _rxn[r].number_elements())
       continue;
 
-    if (_process(m, atype, target, already_reacted, r, output))
+    if (_process(m, target, already_reacted, r))
     {
       _molecules_deconstructed_at_radius[r]++;
       return 1;
@@ -855,34 +982,27 @@ Set_of_Reactions::process (Molecule & m,
   return 0;
 }
 
-int
-Set_of_Reactions::process (Molecule & m,
-                           const int * atype,
-                           const int radius,
-                           
-                           IWString & output)
-{
-  Molecule_to_Match target(&m);
-
-  return process(m, atype, target, output);
-}
 
 int
-Set_of_Reactions::process (Molecule & m,
-                           const int * atype,
+Set_of_Reactions::process (Molecule & m, 
                            Molecule_to_Match & target,
-                           const int radius,
-                           
-                           IWString & output)
+                           const int radius)
 {
   const int nr = _rxn[radius].number_elements();
 
   int rc = 0;
 
+  std::vector<IWString> allUniqResultsSmi;                          
+
   for (int i = 0; i < nr; ++i)
   {
-    if (_process(m, atype, target, radius, _rxn[radius][i], output))
+    std::vector<IWString> newUniqResultSmi;                          
+
+    if (_process(m, target, radius, _rxn[radius][i], newUniqResultSmi))
     {
+
+      _reportResultDuplicates(_rxn[radius][i]->name(), m.name(), newUniqResultSmi, allUniqResultsSmi );          
+       
       _molecules_deconstructed_at_radius[radius]++;
       rc++;
       if (break_after_first_deconstruction)
@@ -893,18 +1013,39 @@ Set_of_Reactions::process (Molecule & m,
   return rc;
 }
 
+
+void
+Set_of_Reactions::_reportResultDuplicates (const IWString & nameOfReaction
+																						, const IWString & molName
+																						, std::vector<IWString> &newResultSmi
+																						, std::vector<IWString> &allUniqResultSmi)
+{
+  for (std::vector<IWString>::const_iterator uniqResultSmiIter = allUniqResultSmi.begin();  uniqResultSmiIter != allUniqResultSmi.end() ; ++uniqResultSmiIter)
+  {
+    for (std::vector<IWString>::const_iterator newSmiIter = newResultSmi.begin();  newSmiIter != newResultSmi.end() ; ++newSmiIter)
+    {
+        if (*newSmiIter == *uniqResultSmiIter)
+        {
+          cerr << "Reaction " << nameOfReaction << " returned a duplicate result for " << molName << endl;          
+        }
+    }
+  }
+  for (std::vector<IWString>::const_iterator newSmiIter = newResultSmi.begin();  newSmiIter != newResultSmi.end() ; ++newSmiIter)
+  { 
+  	allUniqResultSmi.push_back(*newSmiIter);  
+	}      
+}
+      
 int
-Set_of_Reactions::_process (Molecule & m,
-                            const int * atype,
+Set_of_Reactions::_process (Molecule & m, 
                             Molecule_to_Match & target,
                             int * already_reacted,
-                            const int radius,
-                            
-                            IWString & output)
+                            const int radius)
 {
   const int number_reactions = _rxn[radius].number_elements();
 
   int rc = 0;
+  std::vector<IWString> allUniqResultsSmi;                          
 
   for (int i = 0; i < number_reactions; ++i)
   {
@@ -913,10 +1054,15 @@ Set_of_Reactions::_process (Molecule & m,
 
     if (_rxn[radius][i]->matches_found() >= max_matches_each_reaction)   // testing
       continue;
+    
+    std::vector<IWString> newUniqResultSmi;                          
 
-    if (_process(m, atype, target, radius, _rxn[radius][i], output))
+    if (_process(m, target, radius, _rxn[radius][i],  newUniqResultSmi))
     {
       already_reacted[i] = 1;
+      
+      _reportResultDuplicates(_rxn[radius][i]->name(), m.name(), newUniqResultSmi, allUniqResultsSmi );
+   
       rc++;
       if (break_after_first_deconstruction)
         return 1;
@@ -926,32 +1072,12 @@ Set_of_Reactions::_process (Molecule & m,
   return rc;
 }
 
-template <typename T>
-int
-do_output (Molecule & m,
-           const IWString & desc,
-           
-           int & found_here,       // local counter for current parent
-           T & output)
-{
-  fragments_produced++;
-
-  output << m.unique_smiles() << ' ' << desc;
-
-  output << '\n';
-
-  return 1;
-}
-
-template <typename T>
 int
 do_output(Molecule & result,
           const IWString & parent_name,
           const IWString & reaction_family,
           Reaction_With_Stats & rxn,
-          const int radius,
-          
-          T & output)
+          const int radius)
 {
   IWString desc;
 
@@ -959,13 +1085,41 @@ do_output(Molecule & result,
   if (reaction_family.length() && !regressionFlag)
     desc << ' ' << reaction_family;
   desc << " R " << radius;
-
-  output << result.unique_smiles() << ' ' << desc << " ALL\n";
-
-  int fragments_found_here = 0;
+ 
+  if (! outputStream.is_open())
+  	
+  {
+  	if (outputFilename != "")
+  	{
+	  	if (!outputStream.open(outputFilename.null_terminated_chars()))
+	  	{
+		    cerr << "Cannot open outputstream '" << outputFilename << "'\n";
+		    throw Error("Cannot open outputstream");  		  		
+	  	}
+  	}	
+  	else
+ 		{
+ 			outputStream = IWString_and_File_Descriptor(1);  // stderr
+ 		}
+  }
+  
+  if (reactantFilenameBase != "")
+	{
+		if (!reactantsStream.is_open())
+		{
+			if (!reactantsStream.open((reactantFilenameBase + "_all.smi").null_terminated_chars()))
+	  	{
+		    cerr << "Cannot open reactantsStream '" << reactantFilenameBase << "_all.smi" << "'\n";
+		    throw Error("Cannot open reactantsStream");  		  		
+	  	}
+	  }
+	}
+	
+  outputStream << result.unique_smiles() << ' ' << desc << " ALL\n";
 
   const int nf = result.number_fragments();
-
+  
+  IWString thisUniqSmiles = "";
   if (! add_output_record_with_small_fragments_removed)
     ;
   else if (nf > 1)
@@ -990,47 +1144,126 @@ do_output(Molecule & result,
     {
       Molecule mcopy(result);
       mcopy.remove_atoms(remove_atom);
-      output << mcopy.unique_smiles() << ' ' << desc << " SPFRM.1\n";
+      
+      thisUniqSmiles = mcopy.unique_smiles();
+      outputStream << thisUniqSmiles << ' ' << desc << " SPFRM.1\n";
     }
     else
-      output << result.unique_smiles() << ' ' << desc << " SPFRM.0\n";
+    {
+    	thisUniqSmiles = result.unique_smiles();
+      outputStream << thisUniqSmiles << ' ' << desc << " SPFRM.0\n";
+    }
   }
   else
-    output << result.unique_smiles() << ' ' << desc << " SPFRM.0\n";
-
-  if (split_products_into_separate_molecules && nf > 1)
+  {
+  	thisUniqSmiles = result.unique_smiles();
+    outputStream << thisUniqSmiles << ' ' << desc << " SPFRM.0\n";
+  }
+	
+  if (nf > 1 && split_products_into_separate_molecules)
   {
     resizable_array_p<Molecule> f;
     result.create_components(f);
 
     IW_STL_Hash_Set seen;
-
     for (int i = 0; i < nf; ++i)
     {
       if (f[i]->natoms() < lower_atom_count_products)
         continue;
 
-      if (seen.contains(f[i]->unique_smiles()))
+      IWString partSmiles = f[i]->unique_smiles();
+      if (seen.contains(partSmiles))
         continue;
 
-      do_output(*f[i], desc, fragments_found_here, output);
-
-      seen.insert(f[i]->unique_smiles());
-    }
+      outputStream << partSmiles << ' ' << desc << '\n';
+     } 	
   }
   else
-    do_output(result, desc, fragments_found_here, output);
+    outputStream << thisUniqSmiles << ' ' << desc << '\n';
+  
+  IWString reactant1 = "";
+	IWString reactant2 = "";
 
-  if (fragments_found_here == nf)
-    all_fragments_found++;
+  if (reactantFilenameBase != "")
+  {
+  	IW_STL_Hash_Set seen;
+
+  	// split the parts and record the reactants
+  	
+  	iwaray<const_IWSubstring> reactantSmilesParts;
+  	int partCount = thisUniqSmiles.split(reactantSmilesParts, '.');
+
+    for (int i = 0 ; i < partCount ; ++i)
+		{
+			const_IWSubstring thisPart = reactantSmilesParts[i];
+			
+			if (seen.contains(thisPart))
+				continue;
+			reactantsStream << thisPart << '\n';
+      if (reactant1 == "")
+      	reactant1 = thisPart;
+      else if (reactant2 == "")
+      	reactant2 = thisPart;			
+	
+      seen.insert(thisPart);
+    }
+ 
+	  if (reactant2 != "")
+	  {
+			if (!reactant1Stream.is_open())
+			{
+				if (!reactant1Stream.open((reactantFilenameBase + "_R1.smi").null_terminated_chars()))
+		  	{
+			    cerr << "Cannot open reactant1Stream '" << reactantFilenameBase << "_R1.smi" << "'\n";
+			    throw Error("Cannot open reactant1Stream"); 		  		
+		  	}
+				if (!reactant2Stream.open((reactantFilenameBase + "_R2.smi").null_terminated_chars()))
+		  	{
+			    cerr << "Cannot open reactant2Stream '" << reactantFilenameBase + "_R2.smi" << "'\n";
+			    throw Error("Cannot open reactant2Stream"); 		  		
+		  	}	  
+		  }
+		  	
+	    reactant1Stream << reactant1 << "\n";	  
+	    reactant2Stream << reactant2 << "\n";	  
+	  }
+	  
+	  else if (reactant1 != "")
+	  {
+			if (!reactantOnly1Stream.is_open())
+			{
+				if (!reactantOnly1Stream.open((reactantFilenameBase + "_Only1.smi").null_terminated_chars()))
+		  	{
+			    cerr << "Cannot open reactantOnly1Stream '" << reactantFilenameBase + "_Only1.smi" << "'\n";
+			    throw Error("Cannot open reactantOnly1Stream"); 		  		
+		  	}
+				
+		  }
+		  	
+	    reactantOnly1Stream << reactant1 << "\n";	  
+	  }
+	 
+	}
 
   return 1;
 }
 
 static void
-do_echo_initial_molecule_before_each_product(Molecule & m, IWString & output)
+do_echo_initial_molecule_before_each_product( Molecule & m)
 {
-  output << m.smiles() << ' ' << m.name() << " PARENT\n";
+	if (!outputStream.is_open())
+	{
+		if (outputFilename != "")
+		{
+			if (!outputStream.open(outputFilename.null_terminated_chars()))
+		  throw Error("Cannot open outputstream");
+		}	
+		else
+		{
+			outputStream = IWString_and_File_Descriptor(1);  // stderr
+		}
+	}
+	outputStream << m.smiles() << ' ' << m.name() << " PARENT\n";
 
   return;
 }
@@ -1053,14 +1286,12 @@ handle_molecules_skipped_for_multiple_scaffold_embeddings(Molecule & m)
 }
 
 int
-Set_of_Reactions::_process (Molecule & m,
-                            const int * atype,
+Set_of_Reactions::_process (Molecule & m, 
                             Molecule_to_Match & target,
                             const int radius,
-                            Reaction_With_Stats * rxn,
-                            
-                            IWString & output)
-{
+                            Reaction_With_Stats * rxn,  
+                            std::vector<IWString> &uniqResultSmi)
+{   
   Substructure_Results sresults;
 
 //cerr << "Reaction has " << rxn->number_sidechains() << " sidechains\n";
@@ -1092,6 +1323,7 @@ Set_of_Reactions::_process (Molecule & m,
 
   _molecules_deconstructed_at_radius[radius]++;
 
+  uniqResultSmi.clear();
   for (int i = 0; i < nhits; ++i)
   {
     Molecule result;
@@ -1102,17 +1334,31 @@ Set_of_Reactions::_process (Molecule & m,
       return 0;
     }
 
+    IWString thisSmi = result.unique_smiles();
+    bool foundDups = false;
+    for (std::vector<IWString>::const_iterator uniqResultSmiIter = uniqResultSmi.begin();  uniqResultSmiIter != uniqResultSmi.end() ; ++uniqResultSmiIter)
+    {
+        if (thisSmi == *uniqResultSmiIter)
+        	//cerr << "Warning: " << rxn->comment() << " produced duplicate hits for " << m.name() << endl;
+        	foundDups = true;
+          break;  // skip this enbedding - it gives the results already seen
+    }
+    if (foundDups)
+    	continue;
+    
+    uniqResultSmi.push_back(thisSmi);
+  
 
     if (echo_initial_molecule_before_each_product)
-      do_echo_initial_molecule_before_each_product(m, output);
+      do_echo_initial_molecule_before_each_product(m);
 
     if (strip_product_to_largest_fragment)
       result.reduce_to_largest_fragment_carefully();
 
     if (unfix_implicit_hydrogens_in_products)
       result.unset_unnecessary_implicit_hydrogens_known_values();
-
-    do_output(result, m.name(), _name, *rxn, radius, output);
+      
+    do_output(result, m.name(), _name, *rxn, radius);
   }
 
   return nhits;
@@ -1129,14 +1375,13 @@ Set_of_Reactions::reaction_with_id (const IWString & id, const int radius) const
   return _rxn[radius][f->second];
 }
 
-template <typename T>
 int
-Set_of_Reactions::report (T & output) const
+Set_of_Reactions::report () const
 {
   if (regressionFlag)    
-    output << "Set_of_Reactions: "          << " with " << _number_reactions << " reactions\n";
+    cerr << "Set_of_Reactions: "          << " with " << _number_reactions << " reactions\n";
   else
-    output << "Set_of_Reactions: " << _name << " with " << _number_reactions << " reactions\n";
+    cerr << "Set_of_Reactions: " << _name << " with " << _number_reactions << " reactions\n";
 
   int molecules_deconstructed = 0;
 
@@ -1145,23 +1390,22 @@ Set_of_Reactions::report (T & output) const
     if (0 == _rxn[i].number_elements())
       continue;
 
-    output << _molecules_deconstructed_at_radius[i] << " molecules deconstructed at radius " << i << '\n';
+    cerr << _molecules_deconstructed_at_radius[i] << " molecules deconstructed at radius " << i << '\n';
     molecules_deconstructed += _molecules_deconstructed_at_radius[i];
   }
 
-  output << molecules_deconstructed << " molecules deconstructed\n";
+  cerr << molecules_deconstructed << " molecules deconstructed\n";
 
   return 1;
 }
 
-template <typename T>
 int
-Set_of_Reactions::reaction_statistics (T & output) const
+Set_of_Reactions::reaction_statistics () const
 {
   if (regressionFlag)         
-    output << "Set_of_Reactions: " <<          " with " << _number_reactions << " reactions\n";
+    cerr << "Set_of_Reactions: " <<          " with " << _number_reactions << " reactions\n";
   else
-    output << "Set_of_Reactions: " << _name << " with " << _number_reactions << " reactions\n";
+    cerr << "Set_of_Reactions: " << _name << " with " << _number_reactions << " reactions\n";
 
 
   int molecules_deconstructed = 0;
@@ -1177,14 +1421,14 @@ Set_of_Reactions::reaction_statistics (T & output) const
     {
       const Reaction_With_Stats * r = _rxn[i][j];
 
-      output << ' ' << i << ' ' << r->comment() << ' ' << r->searches_done() << " searches, " << r->matches_found() << " matches found\n";
+      cerr << ' ' << i << ' ' << r->comment() << ' ' << r->searches_done() << " searches, " << r->matches_found() << " matches found\n";
     }
 
-    output << _molecules_deconstructed_at_radius[i] << " molecules deconstructed at radius " << i << '\n';
+    cerr << _molecules_deconstructed_at_radius[i] << " molecules deconstructed at radius " << i << '\n';
     molecules_deconstructed += _molecules_deconstructed_at_radius[i];
   }
 
-  output << molecules_deconstructed << " molecules deconstructed\n";
+  cerr << molecules_deconstructed << " molecules deconstructed\n";
 
   return 1;
 }
@@ -1194,18 +1438,24 @@ Set_of_Reactions::reaction_statistics (T & output) const
   In this case, we count the number of nitrogen atoms
 */
 
-
 static int
 retrosynthesis(Molecule & m,
                      const int * atom_map,
-                     const int * atype,
                      const resizable_array_p<Set_of_Reactions> & rxn,
-                     const int max_radius,
-                     IWString_and_File_Descriptor & output)
+                     const int max_radius)
 {
-//cerr << "retrosynthesis processing " << m.smiles() << endl;
+
+  int * atype = new_int(m.natoms()); std::unique_ptr<int[]> free_atype(atype);
+
+  atom_typing_specification.assign_atom_types(m, atype);
+  
+  for (int atomIndex = 0 ; atomIndex != m.natoms() ; ++atomIndex)
+  {
+    m.set_userAtomType(atomIndex, atype[atomIndex]);  
+  }
 
   Molecule_to_Match target(&m);
+ 
 
   const int nr = rxn.number_elements();
 
@@ -1220,8 +1470,8 @@ retrosynthesis(Molecule & m,
     {
       if (deconstucted_by[j])
         continue;
-
-      if (! rxn[j]->process(m, atype, target, r, output))
+        
+      if (! rxn[j]->process(m, target, r))
         continue;
 
       deconstucted_by[j] = 1;
@@ -1250,22 +1500,6 @@ retrosynthesis(Molecule & m,
   return handle_non_reacting_molecule(m);
 }
 
-static int
-retrosynthesis(Molecule & m,
-                     const int * atom_map,
-                     const resizable_array_p<Set_of_Reactions> & rxn,
-                     const int max_radius,
-                     IWString_and_File_Descriptor & output)
-{
-  if (! atom_typing_specification.active())
-    return retrosynthesis(m, atom_map, nullptr, rxn, max_radius, output);
-
-  int * atype = new_int(m.natoms()); std::unique_ptr<int[]> free_atype(atype);
-
-  atom_typing_specification.assign_atom_types(m, atype);
-
-  return retrosynthesis(m, atom_map, atype, rxn, max_radius, output);
-}
 
 static int
 contains_atom_map_values(const Molecule & m)
@@ -1287,11 +1521,10 @@ contains_atom_map_values(const Molecule & m)
 static int
 retrosynthesis (Molecule & m,
                       const resizable_array_p<Set_of_Reactions> & rxn,
-                      const int max_radius,
-                      IWString_and_File_Descriptor & output)
+                      const int max_radius)
 {
   if (! contains_atom_map_values(m))
-    return retrosynthesis(m, nullptr, rxn, max_radius, output);
+    return retrosynthesis(m, nullptr, rxn, max_radius);
 
   const int matoms = m.natoms();
 
@@ -1305,7 +1538,7 @@ retrosynthesis (Molecule & m,
 
   m.unset_unnecessary_implicit_hydrogens_known_values();
 
-  return retrosynthesis(m, atom_map, rxn, max_radius, output);
+  return retrosynthesis(m, atom_map, rxn, max_radius);
 }
 
 
@@ -1314,8 +1547,7 @@ retrosynthesis (Molecule & m,
 static int
 retrosynthesis (data_source_and_type<Molecule> & input,
                       const resizable_array_p<Set_of_Reactions> & rxn,
-                      const int max_radius,
-                      IWString_and_File_Descriptor & output)
+                      const int max_radius)
 {
   Molecule * m;
   while (NULL != (m = input.next_molecule()))
@@ -1327,13 +1559,21 @@ retrosynthesis (data_source_and_type<Molecule> & input,
     preprocess(*m);
 
     int rc;
-
-    rc = retrosynthesis(*m, rxn, max_radius, output);
+    
+    rc = retrosynthesis(*m, rxn, max_radius);
 
     if (0 == rc)
       return 0;
 
-    output.write_if_buffer_holds_more_than(4096);
+    if (outputStream.is_open())
+    	outputStream.write_if_buffer_holds_more_than(4096);
+    	
+    if (queryEchoStreamPtr != NULL && queryEchoStreamPtr->is_open())
+    {
+    	queryEchoStreamPtr->close();
+    	delete queryEchoStreamPtr;
+    	queryEchoStreamPtr = NULL;
+    }
 
     if (report_progress())
       cerr << "Read " << molecules_read << " molecules, " << molecules_deconstructed << " deconstructed, " << molecules_produced << " molecules produced\n";
@@ -1343,29 +1583,6 @@ retrosynthesis (data_source_and_type<Molecule> & input,
 }
 
 
-/*
-  Reading a file that contains a list of reaction sets
-*/
-
-#ifdef ASDOASDLKJAHSDA
-static int
-read_reactions (iwstring_data_source & input,
-                const resizable_array<int> & radius,
-                resizable_array_p<Set_of_Reactions> & rxn)
-{
-  const_IWSubstring buffer;
-  while (input.next_record(buffer))
-  {
-    if (! read_reactions(buffer, radius, rxn))
-    {
-      cerr << "Fatal error processing reaction '" << buffer << "'\n";
-      return 0;
-    }
-  }
-
-  return 1;
-}
-#endif
 
 static int
 read_reactions_buffer (const const_IWSubstring & s,
@@ -1674,8 +1891,7 @@ run_self_react_test (const char * fname, int input_type,
 static int
 retrosynthesis (const char * fname, int input_type, 
                       const resizable_array_p<Set_of_Reactions> & rxn,
-                      const int max_radius,
-                      IWString_and_File_Descriptor & output)
+                      const int max_radius)
 {
   assert(NULL != fname);
 
@@ -1695,7 +1911,7 @@ retrosynthesis (const char * fname, int input_type,
   if (verbose > 1)
     input.set_verbose(1);
 
-  return retrosynthesis(input, rxn, max_radius, output);
+  return retrosynthesis(input, rxn, max_radius);
 }
 
 static int
@@ -1756,40 +1972,30 @@ gather_radii (const const_IWSubstring & buffer,
   return radius.number_elements();
 }
 
-static void
-display_embedding_options(std::ostream & output)
-{
-  output << " -M ring        atoms conserve ring membership\n";
-  output << " -M arom        aromatic only matches aromatic, aliph matches aliph\n";
-  output << " -M ncon        connectivity must match \n";
-  output << " -M unsat       preserve unsaturation of query atoms\n";
-  exit(1);
-}
 
 static void
-display_misc_dash_X_options(std::ostream & output)
+display_misc_dash_X_options()
 {
-  output << " -X ersfrm       add an extra output with small fragments (-a) removed\n";
-  output << " -X nsmfp        do NOT split multi fragment products into individual components\n";
-  output << " -X kekule       preserve Kekule forms\n";
-  output << " -X test         test self reaction - must provide reaction as both Reaction and input\n";
-  output << " -X kg           keep going after a test failure\n";
-  output << " -X oknr         just skip cases where we cannot find a reaction to match the name of the molecule\n";
-  output << " -X maxr=<n>     once a reaction has reacted <n> times, do not try any more. Just for run times during testing\n";
-  output << " -X fastexit     immediate exit - do not de-allocate data structures\n";
-  output << " -X rmiso        remove isotopes from incoming molecules\n";
+  cerr << " -X ersfrm       add an extra output with small fragments (-a) removed\n";
+  cerr << " -X nsmfp        do NOT split multi fragment products into individual components\n";
+  cerr << " -X kekule       preserve Kekule forms\n";
+  cerr << " -X test         test self reaction - must provide reaction as both Reaction and input\n";
+  cerr << " -X kg           keep going after a test failure\n";
+  cerr << " -X oknr         just skip cases where we cannot find a reaction to match the name of the molecule\n";
+  cerr << " -X maxr=<n>     once a reaction has reacted <n> times, do not try any more. Just for run times during testing\n";
+  cerr << " -X fastexit     immediate exit - do not de-allocate data structures\n";
+  cerr << " -X rmiso        remove isotopes from incoming molecules\n";
 
   exit(1);
 }
 
 static void
-report_acc_nhits(const extending_resizable_array<int>  & acc_nhits,
-                 std::ostream & output)
+report_acc_nhits(const extending_resizable_array<int>  & acc_nhits)
 {
   for (int i = 0; i < acc_nhits.number_elements(); ++i)
   {
     if (acc_nhits[i])
-      output << acc_nhits[i] << " reactions had " << i << " hits\n";
+      cerr << acc_nhits[i] << " reactions had " << i << " hits\n";
   }
 
   return;
@@ -1798,7 +2004,7 @@ report_acc_nhits(const extending_resizable_array<int>  & acc_nhits,
 static int
 retrosynthesis (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vA:E:i:g:lR:F:P:xc:D:fbG:r:q:M:Q:U:TSm:a:X:I:Lu:Y:zZS");
+  Command_Line cl(argc, argv, "vA:E:i:g:lR:F:P:xc:D:fbG:r:q:Q:U:TSm:a:X:I:Lu:Y:zZSO:o:s");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -1884,6 +2090,8 @@ retrosynthesis (int argc, char ** argv)
     if (verbose)
       cerr << "Will reduce product molecules to largest fragment\n";
   }
+  
+ 
 
   if (cl.option_present('u'))
   {
@@ -1922,44 +2130,6 @@ retrosynthesis (int argc, char ** argv)
 
     if (verbose)
       cerr << "Will not write product fragments with fewer than " << lower_atom_count_products << " atoms\n";
-  }
-
-  if (cl.option_present('M'))
-  {
-    const_IWSubstring m;
-    for (int i = 0; cl.value('M', m, i); ++i)
-    {
-      if ("ncon" == m)
-      {
-        fix_connectivity = 1;
-
-        if (verbose)
-          cerr << "Connectivity of reaction atoms must be preserved for reaction match\n";
-      }
-      else if ("arom" == m)
-      {
-        aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = 1;
-      }
-      else if ("ring" == m)
-      {
-        atoms_conserve_ring_membership = 1;
-      }
-      else if ("unsat" == m)
-      {
-        preserve_saturation = 1;
-      }
-      else if ("rsize" == m)
-      {
-        preserve_ring_size = 1;
-      }
-      else if ("help" == m)
-        display_embedding_options(cerr);
-      else
-      {
-        cerr << "Unrecognised -M qualifier '" << m << "'\n";
-        display_embedding_options(cerr);
-      }
-    }
   }
 
   int test_mode = 0;
@@ -2039,22 +2209,24 @@ retrosynthesis (int argc, char ** argv)
       }
       else if ("help" == x)
       {
-        display_misc_dash_X_options(cerr);
+        display_misc_dash_X_options();
       }
       else
       {
         cerr << "Unrecognised -X directive '" << x << "'\n";
-        display_misc_dash_X_options(cerr);
+        display_misc_dash_X_options();
       }
     }
   }
 
   if (cl.option_present('Q'))
   {
-    cl.value('Q', stem_for_query_echo);
-
+  	IWString queryFilename("");
+    cl.value('Q', queryFilename);
+    queryEchoStreamPtr = new std::ofstream(queryFilename, std::ofstream::out);
+ 
     if (verbose)
-      cerr << "Queries echo'd to series of files '" << stem_for_query_echo << "'\n";
+      cerr << "Queries echo'd to series of files '" << queryFilename << "'\n";
   }
 
   if (cl.option_present('r'))
@@ -2073,6 +2245,14 @@ retrosynthesis (int argc, char ** argv)
     if (! atom_typing_specification.build(p))
     {
       cerr << "INvalid atom typing specification '" << p << "'\n";
+      return 1;
+    }
+  }
+  else  // set the default atom typing
+  {
+    if (! atom_typing_specification.build("UST:AZUCORS"))
+    {
+      cerr << "Error setting the defalt UST:AZUCORS atom typing specification\n";
       return 1;
     }
   }
@@ -2223,6 +2403,11 @@ retrosynthesis (int argc, char ** argv)
     }
   }
 
+  if (cl.option_present('s'))
+  {
+    input_is_reaction_smiles = 1;
+  }
+  
   if (cl.option_present('I'))
   {
     input_is_reaction_smiles = 1;
@@ -2264,6 +2449,16 @@ retrosynthesis (int argc, char ** argv)
     input_type = SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
+    
+  if (cl.option_present('o'))
+  {
+  	cl.value('o', outputFilename);
+  }  
+  
+  if (cl.option_present('O'))
+  {
+  	cl.value('O', reactantFilenameBase);
+  }  
 
 
   if (cl.option_present('x'))
@@ -2303,26 +2498,26 @@ retrosynthesis (int argc, char ** argv)
     if (0 == rc)
       cerr << "All tests successful\n";
 
-    report_acc_nhits(acc_nhits, cerr);
+    report_acc_nhits(acc_nhits);
 
     return rc;
   }
 
-#ifdef ECHO_QUERIES
-  for (int i = 0; i <= max_radius; ++i)
-  {
-    if (0 == rxn[i].number_elements())
-      continue;
-
-    for (int j = 0; j < rxn[i].number_elements(); ++j)
-    {
-      IWString fname("FOO_");
-      fname << rxn[i][j]->comment() << ".qry";
-      Substructure_Query & q = *(rxn[i][j]);
-      q.write_msi(fname);
-    }
-  }
-#endif
+//#ifdef ECHO_QUERIES
+//  for (int i = 0; i <= max_radius; ++i)
+//  {
+//    if (0 == rxn[i].number_elements())
+//      continue;
+//
+//    for (int j = 0; j < rxn[i].number_elements(); ++j)
+//    {
+//      IWString fname("FOO_");
+//      fname << rxn[i][j]->comment() << ".qry";
+//      Substructure_Query & q = *(rxn[i][j]);
+//      q.write_msi(fname);
+//    }
+//  }
+//#endif
 
   if (cl.option_present('U'))
   {
@@ -2358,12 +2553,10 @@ retrosynthesis (int argc, char ** argv)
     }
   }
 
-  IWString_and_File_Descriptor output(1);
-
   int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++)
   {
-    if (! retrosynthesis(cl[i], input_type, rxn, max_radius, output))
+    if (! retrosynthesis(cl[i], input_type, rxn, max_radius))
     {
       cerr << "Failure processing '" << cl[i] << "'\n";
       rc = i + 1;
@@ -2371,7 +2564,18 @@ retrosynthesis (int argc, char ** argv)
     }
   }
 
-  output.flush();
+  if (outputStream.is_open())
+  	outputStream.flush(); 
+  if (queryEchoStreamPtr != NULL && queryEchoStreamPtr->is_open())
+  	queryEchoStreamPtr->flush();
+  if (reactantsStream.is_open())
+  	reactantsStream.flush();
+  if (reactant1Stream.is_open())
+  	reactant1Stream.flush();
+  if (reactant2Stream.is_open())
+  	reactant2Stream.flush();
+  if (reactantOnly1Stream.is_open())
+  	reactantOnly1Stream.flush();
 
   if (verbose)
   {
@@ -2395,7 +2599,7 @@ retrosynthesis (int argc, char ** argv)
 
     for (int i = 0; i < nr; ++i)
     {
-      rxn[i]->report(cerr);
+      rxn[i]->report();
     }
   }
 
@@ -2403,10 +2607,10 @@ retrosynthesis (int argc, char ** argv)
   {
     for (int i = 0; i < rxn.number_elements(); ++i)
     {
-      rxn[i]->reaction_statistics(cerr);
+      rxn[i]->reaction_statistics();
     }
 
-    report_acc_nhits(acc_nhits, cerr);
+    report_acc_nhits(acc_nhits);
   }
 
   if (immediate_exit)
@@ -2415,6 +2619,19 @@ retrosynthesis (int argc, char ** argv)
       stream_for_molecules_with_multiple_scaffold_embeddings.flush();
     if (stream_for_non_reacting_molecules.is_open())
       stream_for_non_reacting_molecules.flush();
+    if (outputStream.is_open())
+    	outputStream.flush();
+    if (queryEchoStreamPtr != NULL && queryEchoStreamPtr->is_open())
+    	queryEchoStreamPtr->flush();
+    
+    if (reactantsStream.is_open())
+    {
+    	reactantsStream.flush();
+    	reactant1Stream.flush();
+    	reactant2Stream.flush();
+    	reactantOnly1Stream.flush();
+    }
+    	
     cerr.flush();
 
     _exit(0);
@@ -2430,5 +2647,6 @@ main (int argc, char ** argv)
 
   int rc = retrosynthesis(argc, argv);
 
+    
   return rc;
 }

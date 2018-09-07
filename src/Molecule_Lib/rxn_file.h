@@ -5,6 +5,9 @@
 #include "iw_stl_hash_map.h"
 
 #include "iwreaction.h"
+#include <iostream>
+#include <iomanip>
+#include <fstream>
 
 #include "mdl_molecule.h"
 
@@ -75,10 +78,13 @@ class RXN_File_Create_Reaction_Options
 
   public:
     RXN_File_Create_Reaction_Options();
+    ~RXN_File_Create_Reaction_Options(){};
 
     void set_only_create_query_from_first_reagent(const int s) { _only_create_query_from_first_reagent = s;}
 
     int only_create_query_from_first_reagent() const { return _only_create_query_from_first_reagent;}
+   
+    
 };
 
 class Reaction_Site;
@@ -199,12 +205,14 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
     int _parse_link_record (const IWString &);
 
     int _check_non_periodic_table_elements_and_atom_lists ();
-
     int _create_query (Reaction_Site & r,
                            Molecule_to_Query_Specifications & mqs,
                            int ndx);
+                           
+                         
     int _create_query (Reaction_Site & r,
-                           Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
+                           Molecule_to_Query_Specifications & mqs, 
+                           const int * include_these_atoms);
 
 //  int _do_remove_explicit_hydrogens (Set_of_Atoms & contains_explicit_hydrogen);
     int _identify_explicit_hydrogens_to_be_removed (Set_of_Atoms & to_be_removed, int * xref);
@@ -311,8 +319,13 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
 
     int swap_atoms_to_put_rare_atoms_first ();
 
-    int create_query (Reaction_Site & r, const int * include_these_atoms);
-    int create_query (Reaction_Site & r, const int * include_these_atoms, Molecule_to_Query_Specifications & mqs);
+    int create_query (Reaction_Site & r, 
+    									const int * include_these_atoms, 
+    									std::ofstream *queryOutStream);
+    int create_query (Reaction_Site & r, 
+    									const int * include_these_atoms,
+    									Molecule_to_Query_Specifications & mqs, 
+    									std::ofstream *queryOutStream);
 
     int add_chiral_centres_to_be_inverted (Reaction_Site &) const;
 
@@ -555,6 +568,9 @@ class RXN_File
 
     int _mark_atoms_changed_when_kekule_form_of_bond_changes;
 
+// 
+    std::ofstream *_queryOutStream;
+
 //  private functions
 
     int _identify_square_bonding_changes (int highest_atom_map);
@@ -710,8 +726,11 @@ class RXN_File
                                       Sparse_Fingerprint_Creator & sfc) const;
 #endif
 
-    int _create_query (Reaction_Site & r, ISIS_RXN_FILE_Molecule & m, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
-
+    int _create_query (Reaction_Site & r, 
+    										ISIS_RXN_FILE_Molecule & m, 
+    										Molecule_to_Query_Specifications & mqs, 
+    										const int * include_these_atoms);
+                         
     int _look_for_stereo_centres_made (IWReaction &);
 
     int _map_unmapped_atoms (int & highest_atom_map_number);
@@ -745,6 +764,9 @@ class RXN_File
     int number_reagents() const { return _nr;}
     int number_products() const { return _np;}
 
+		void setQueryOutStream(std::ofstream *thisStream){_queryOutStream = thisStream;}
+    //std::ofstream *queryOutStream() { return _queryOutStream;}
+    	
     void set_remove_product_fragments (int s) { _remove_product_fragments = s;}
     void set_remove_unmapped_atoms_that_disappear (int s) { _remove_unmapped_atoms_that_disappear = s;}
     void set_aromatic_bonds_lose_kekule_identity (int s);
@@ -782,6 +804,7 @@ class RXN_File
 
     int contains_duplicate_atom_map_numbers() const;
     int unmap_duplicate_atom_map_numbers();
+    void assign_unmapped_atoms();
 
     int max_atom_in_any_reagent() const;
     int max_atom_in_any_product() const;

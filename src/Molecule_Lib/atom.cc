@@ -103,6 +103,8 @@ Atom::_default_values (const Element * zelement)
   _permanent_aromatic = zelement->permanent_aromatic();
 
   _isotope = 0;
+  
+  _userAtomType = 0;
 
   _user_specified_void_ptr = NULL;
 
@@ -192,6 +194,8 @@ Atom::_constructor_copy_atom_attributes (const Atom & other_atom)
     _implicit_hydrogens = ATOM_PROPERTY_UNKNOWN;
 
   _isotope = other_atom._isotope;
+  
+  _userAtomType = other_atom._userAtomType;
 
   _formal_charge = other_atom._formal_charge;
 

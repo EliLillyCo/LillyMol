@@ -56,13 +56,11 @@ static int bad_reactions_ignored = 0;
 
 static IWString_and_File_Descriptor stream_for_bad_reactions;
 
-static int outputReactantSignature = true;
+static int outputLeftSignature = true;
 
-static int outputProductSignature = false;
+static int outputRightSignature = false;
 
 static int outputAllParts = false;
-
-static int reactionsAreReversed = false;
 
 static void
 usage (int rc)
@@ -73,9 +71,8 @@ usage (int rc)
   cerr << "  -C <fname>    write changed atom counts to <fname>\n";
   cerr << "  -F <fname>    ignore otherwise bad reactions and write them to <fname>\n";
   cerr << "  -P <type>     atom typing specification\n";
-  cerr << "  -O <type>     one of 'r', 'p', 'b' to output the signatures for the reactants, the products, or both, respectively.  (Default 'r')\n";
+  cerr << "  -O <type>     one of 'l', 'r', 'b' to output the signatures for the left-side parts of the reaction, the right-side parts, or both, respectively.  (Default 'l')\n";
   cerr << "  -a            all parts are reported in the signature (otherwise only the first reactant or product is reported \n";
-  cerr << "  -R            reactions are reversed (products>agents>reactants)\n";
   cerr << "  -v            verbose output\n";
 
   exit(rc);
@@ -427,13 +424,11 @@ ensure_locator_arrays_filled(RXN_File & rxn, const int highestMapNumber)
 }
 
 static int
-reactant_signature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int &countOfChangedAtoms)
+leftSideSignature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int &countOfChangedAtoms)
 {
   int molCount;
-  if (reactionsAreReversed)
-    molCount = rxn.number_reagents();
-  else
-    molCount = rxn.number_products();
+
+  molCount = rxn.number_reagents();
 
   for (int reagentIndex = 0 ; reagentIndex < molCount; ++reagentIndex)
   {
@@ -441,11 +436,9 @@ reactant_signature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, in
       break;
 
     ISIS_RXN_FILE_Molecule *thisMol(NULL);
-    if (reactionsAreReversed)     
-      thisMol = &rxn.product(reagentIndex);
-    else
-      thisMol = &rxn.reagent(reagentIndex);
-
+   
+    thisMol = &rxn.reagent(reagentIndex);
+      
     chemical_standardisation.process(*thisMol);
       
     const int matoms = thisMol->natoms();
@@ -466,22 +459,20 @@ reactant_signature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, in
     cac.set_include_changing_bonds_in_changing_atom_count(1);
     cac.set_consider_aromatic_bonds(0);
 
-    if (reactionsAreReversed)
-       countOfChangedAtoms +=  rxn.identify_atoms_changing_product(reagentIndex, atom_typing_specification, changed, cac);
-    else
-       countOfChangedAtoms +=  rxn.identify_atoms_changing_reagent(reagentIndex, atom_typing_specification, changed, cac);   
+
+    countOfChangedAtoms +=  rxn.identify_atoms_changing_reagent(reagentIndex, atom_typing_specification, changed, cac);   
 
     
     if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
     {
       reactions_with_no_reagent_atoms_in_products++;
-      return 1;
+      return 0;
     }
 
     if (rxn.contains_duplicate_atom_map_numbers())
     {
       reactions_containing_duplicate_atom_map_numbers++;
-      return 1;
+      return 0;
     }
 
     if (thisMol->number_fragments() > 1)
@@ -520,15 +511,13 @@ reactant_signature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, in
 }
 
 static int
-product_signature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, int &countOfChangedAtoms)
+rightSideSignature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, int &countOfChangedAtoms)
 {
   countOfChangedAtoms = 0;
   
   int molCount;
-  if (reactionsAreReversed)
-    molCount = rxn.number_reagents();
-  else
-    molCount = rxn.number_products();
+
+  molCount = rxn.number_products();
     
   for (int productIndex = 0 ; productIndex < molCount; ++productIndex)
   {
@@ -536,10 +525,8 @@ product_signature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, in
       break;
     
     ISIS_RXN_FILE_Molecule *thisMol(NULL);
-    if (reactionsAreReversed)     
-      thisMol = &rxn.reagent(productIndex);
-    else
-      thisMol = &rxn.product(productIndex);
+ 
+    thisMol = &rxn.product(productIndex);
 
     chemical_standardisation.process(*thisMol);
       
@@ -561,10 +548,8 @@ product_signature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, in
     cac.set_include_changing_bonds_in_changing_atom_count(1);
     cac.set_consider_aromatic_bonds(0);
 
-    if (reactionsAreReversed)
-       countOfChangedAtoms +=  rxn.identify_atoms_changing_reagent(productIndex, atom_typing_specification, changed, cac);   
-    else
-       countOfChangedAtoms +=  rxn.identify_atoms_changing_product(productIndex, atom_typing_specification, changed, cac);
+
+    countOfChangedAtoms +=  rxn.identify_atoms_changing_product(productIndex, atom_typing_specification, changed, cac);
  
     if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
     {
@@ -635,16 +620,16 @@ rxn_signature(RXN_File & rxn,
   }
   int countOfChangedAtoms = 0 , countOfChangedProductAtoms = 0;
   
-  if (outputReactantSignature)
-    if (!reactant_signature(rxn,signatures, countOfChangedAtoms))
+  if (outputLeftSignature)
+    if (!leftSideSignature(rxn,signatures, countOfChangedAtoms))
       return 0;
  
  
-  if (outputProductSignature)
+  if (outputRightSignature)
   {
-    if (!product_signature(rxn,signatures, countOfChangedProductAtoms))
+    if (!rightSideSignature(rxn,signatures, countOfChangedProductAtoms))
       return 0;
-    if (!outputReactantSignature  || countOfChangedProductAtoms > countOfChangedAtoms)
+    if (!outputLeftSignature  || countOfChangedProductAtoms > countOfChangedAtoms)
       countOfChangedAtoms = countOfChangedProductAtoms;
   }
 
@@ -848,7 +833,7 @@ get_radii (const Command_Line & cl,
 
 static int rxn_signature (int argc, char ** argv) 
 { 
-  Command_Line cl(argc, argv, "vr:C:F:P:O:aR");
+  Command_Line cl(argc, argv, "vr:C:F:P:O:a");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -861,9 +846,7 @@ static int rxn_signature (int argc, char ** argv)
   if (cl.option_present('a'))
     outputAllParts= true;
     
-  if (cl.option_present('R'))
-    reactionsAreReversed = true;
-  
+
   set_global_aromaticity_type(Daylight);
 
   if (cl.option_present('P'))
@@ -949,21 +932,21 @@ static int rxn_signature (int argc, char ** argv)
       
     switch (thisChar)
     {
-        case 'r':
-            outputReactantSignature = true;
-            outputProductSignature = false;
+        case 'l':
+            outputLeftSignature = true;
+            outputRightSignature = false;
             if (verbose)
                 cerr << "Reactant Signatures will be generated\n";
             break;         
-        case 'p':
-            outputReactantSignature = false;
-            outputProductSignature = true;
+        case 'r':
+            outputLeftSignature = false;
+            outputRightSignature = true;
             if (verbose)
                 cerr << "Product Signatures will be generated\n";
             break;         
         case 'b':
-            outputReactantSignature = true;
-            outputProductSignature = true;
+            outputLeftSignature = true;
+            outputRightSignature = true;
             if (verbose)
                 cerr << "Combined Reactant and Product Signatures will be generated\n";
            break;

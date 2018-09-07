@@ -39,6 +39,7 @@ class Atom : public resizable_array <Bond *>, public Coordinates
     short _permanent_aromatic;
 
     int _isotope;
+    int _userAtomType;
 
     void * _user_specified_void_ptr;
 
@@ -69,7 +70,10 @@ class Atom : public resizable_array <Bond *>, public Coordinates
     int  isotope () const { return _isotope;}
     void set_isotope (int i) { _isotope = i;}
     int  is_isotope () const;
-
+    
+    int  userAtomType () const { return _userAtomType;}
+    void set_userAtomType (int i) { _userAtomType = i;}
+ 
     int add (Bond *);
 
     int ncon () const { return _number_elements;}    // how many atoms connected

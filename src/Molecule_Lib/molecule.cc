@@ -3143,6 +3143,17 @@ Molecule::set_isotope (atom_number_t a, int iso)
   return 1;
 }
 
+int
+Molecule::set_userAtomType (atom_number_t a, int atomType)
+{
+  assert(ok_atom_number(a));
+
+  _things[a]->set_userAtomType(atomType);
+  
+  return 1;
+}
+
+
 void
 Molecule::set_isotope_to_atom_number_no_perturb_canonical_ordering()
 {
@@ -3175,6 +3186,14 @@ Molecule::isotope (atom_number_t a) const
   assert(ok_atom_number(a));
 
   return _things[a]->isotope();
+}
+
+int
+Molecule::userAtomType (atom_number_t a) const
+{
+  assert(ok_atom_number(a));
+
+  return _things[a]->userAtomType();
 }
 
 int

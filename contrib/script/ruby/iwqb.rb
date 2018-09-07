@@ -2,16 +2,11 @@
 
 # $Id$
 
-#GH Original
-#c3tk_home = ENV['C3TK_HOME']
 
-c3tk_home = ".."
-
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline.rb"
+lillymol_home = ".."
+require "#{lillymol_home}/ruby/lib/iwcmdline.rb"
 
 stem = "iwqb#{Process.pid}"
-
-$cluster = 'brainiac'
 
 $expert = false
 
@@ -20,7 +15,6 @@ def usage (rc)
   $stderr.print " -stem <stem>   stem to use for temporary files\n"
   $stderr.print " -m             allow multi line scripts\n"
   $stderr.print " -M <n>         group input into multi-job chunks, size <n>\n"
-  $stderr.print " -cluster <cluster> which cluster (default '#{$cluster})'\n"
   $stderr.print " -qsub ... -qsub options passed to qsub\n"
   $stderr.print " -dir ...  -dir  directive(s) to be inserted into the shell script\n"
   $stderr.print " -j              join standard out and standard error\n"
@@ -31,7 +25,7 @@ def usage (rc)
   exit(rc)
 end
 
-cl = IWCmdline.new("-v-expert-stem=s-m-M=ipos-cluster=s-qsub=close-brainiac-dir=close-sync-N=s-j")
+cl = IWCmdline.new("-v-expert-stem=s-m-M=ipos-cluster=s-qsub=close-dir=close-sync-N=s-j")
 
 $expert = cl.option_present('expert')
 
@@ -49,15 +43,6 @@ end
 
 if cl.option_present('stem')
   stem = cl.value('stem')
-end
-
-# not so sure about how to modify this part...
-if cl.option_present('cluster')
-  $cluster = cl.value('cluster')
-elsif cl.option_present('brainiac')
-  $cluster = 'brainiac'
-elsif FileTest.exist?('/llycluster/brainiac') # TODO: should we refactor to point to /lrlhps? NO
-  $cluster = 'brainiac'
 end
 
 multi_line_scripts = cl.option_present('m')
@@ -93,8 +78,9 @@ end
 
 m.print "hostname >&2\n"
 m.print "uname=`uname`\n"
-m.print "export C3TK_HOME=#{c3tk_home}\n"
-m.print "export PATH=$PATH:$C3TK_HOME/bin/sh\n"
+m.print "export LILLYMOL_HOME=#{lillymol_home}\n"
+m.print "export PATH=$PATH:$LILLYMOL_HOME/bin/sh\n"
+
 m.print "\n"
 
 inp = File.open(command_file, mode="r")
@@ -152,7 +138,7 @@ m.close
 
 system("chmod +x #{master}")
 
-cmd = ". /etc/cluster-setup.sh ; qsub -cwd -b y -t 1-#{jobs_created} "
+cmd = " qsub -cwd -b y -t 1-#{jobs_created} "
 
 if cl.option_present('N')
   cmd << ' -N ' << cl.value('N')

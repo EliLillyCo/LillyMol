@@ -77,7 +77,7 @@ $(DO_X):
 					mkdir ./$(UNAME) ; \
 				fi ; \
 			fi; \
-			IWPROGRAMMES=$(IWPROGRAMMES) UNAME=$(UNAME) BUILD_DIR=$(UNAME) CXX=g++ $(MAKE) -f Makefile $${target} ; \
+			IWPROGRAMMES=$(IWPROGRAMMES) UNAME=$(UNAME) BUILD_DIR=$(UNAME) CXX=$(CXX) $(MAKE) -f Makefile $${target} ; \
 			if [ "$${target}" = "veryclean" ] ; \
 			then \
 				if [ -d ./$(UNAME) ] ; \

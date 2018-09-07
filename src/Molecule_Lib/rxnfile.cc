@@ -29,6 +29,8 @@ using std::endl;
 #include "molecule_to_query.h"
 #include "path.h"
 #include "atom_typing.h"
+#include "msi_object.h"
+
 
 static int warn_no_mapped_atoms = 1;
 
@@ -108,6 +110,9 @@ RXN_File::RXN_File ()
   _mol2qry_isotope_special_meaning = 0;
 
   _mark_atoms_changed_when_kekule_form_of_bond_changes = 1;  // by default, consider these atoms changed
+
+  _queryOutStream = NULL;
+  
   return;
 }
 
@@ -141,9 +146,11 @@ RXN_File::~RXN_File ()
 
   if (NULL != _involved_in_square_bond)
     delete [] _involved_in_square_bond;
+ 
 
   return;
 }
+
 
 int
 RXN_File::debug_print (std::ostream & os) const
@@ -3833,7 +3840,8 @@ RXN_File::create_reaction(IWReaction & rxn,
 
 int
 ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
-                                      const int * include_these_atoms)
+                                      const int * include_these_atoms,
+																			std::ofstream *queryOutStream)
 {
   Molecule_to_Query_Specifications mqs;
 
@@ -3843,13 +3851,14 @@ ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
 
   mqs.set_set_element_hits_needed_during_molecule_to_query(0);    // arbitrary choice in Jun 2016. We are doing a lot of small radius things, and the element count is just slowing things down...
 
-  return create_query(r, include_these_atoms, mqs);
+  return create_query(r, include_these_atoms, mqs, queryOutStream);
 }
 
 int
 ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
                                       const int * include_these_atoms,
-                                      Molecule_to_Query_Specifications & mqs)
+                                      Molecule_to_Query_Specifications & mqs,
+																			std::ofstream *queryOutStream)
 {
 //cerr << "ISIS_RXN_FILE_Molecule::create_query: input " << smiles() << endl;
 
@@ -3858,12 +3867,52 @@ ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
     cerr << "ISIS_RXN_FILE_Molecule::create_from_molecule: cannot create query from '" << smiles() << "'\n";
     return 0;
   }
+ 
 
   if (0 == r[0]->root_atoms())
   {
     cerr << "ISIS_RXN_FILE_Molecule::create_from_molecule:no root atoms, impossible\n";
     return 0;
   }
+  
+  if (queryOutStream != NULL && queryOutStream->is_open())
+  	r.write_msi (*queryOutStream);
+  	
+//  std::ofstream queryOut ("queryout.msi", std::ofstream::out);
+//  r.write_msi (queryOut);
+//  queryOut.close();
+//  
+//  iwstring_data_source input("queryout.msi");
+//
+//  if (! input.good())
+//  {
+//    cerr << "Cannot open reaction 'queryout.msi'\n";
+//    return 0;
+//  }
+//
+//  msi_object msi;
+//  msi.set_display_no_data_error_message(0);
+//  Sidechain_Match_Conditions  smc;
+//  
+//  int thisIndex = 1;
+//  while(msi.read(input))
+//  {
+//  	Single_Substructure_Query thisQuery;
+//  	thisQuery.construct_from_msi_object(msi);
+//  	
+//  	std::ostringstream thisFilename;
+//
+//  	thisFilename << "queryout" << thisIndex << ".msi";
+//
+//  	std::ofstream queryOut (thisFilename.str().c_str(),  std::ofstream::out);
+//
+//  	thisQuery.write_msi (queryOut);
+//  	queryOut.close();
+//
+//		thisIndex++;
+//  }
+//  
+  
 
   return 1;
 }
@@ -3874,7 +3923,7 @@ RXN_File::_create_query (Reaction_Site & r,
                          Molecule_to_Query_Specifications & mqs,
                          const int * include_these_atoms)
 {
-  return m.create_query(r, include_these_atoms, mqs);
+  return m.create_query(r, include_these_atoms, mqs, _queryOutStream);
 }
 
 static int
@@ -4002,8 +4051,11 @@ RXN_File::_create_reaction(IWReaction & rxn,
     cerr << "RXN_File::create_reaction:cannot create query from reagent 0\n";
     return 0;
   }
-
-//rxn.write_msi("REAGENT_0.qry");
+  
+ 
+  //rxn.write_msi("REAGENT_0.qry");
+  if (_queryOutStream != NULL && _queryOutStream->is_open())
+  	rxn.write_msi(*_queryOutStream);
 
   _identify_kekule_forms_to_be_toggled(include_these_atom_map_numbers);
 
@@ -5870,9 +5922,20 @@ RXN_File::_look_for_stereo_centres_made (IWReaction & rxn)
         continue;
 
       int rtf = find_reagent(_reagent_locator, mtf);     // in which reagent is mapped atom MTF
+      if (rtf < 0 )
+      {
+          //debug_print(cerr);
+          continue;   
+      }
       int rtb = find_reagent(_reagent_locator, mtb);
+      if (rtb < 0)
+        continue;
       int rld = find_reagent(_reagent_locator, mld);
+      if (rld < 0)
+        continue;
       int rrd = find_reagent(_reagent_locator, mrd);
+      if (rrd < 0)
+        continue;
 
 #ifdef DEBUG_LOOK_FOR_STEREO_CENTRES_MADE
       cerr << "In components " << rc << " tf " << rtf << " tb " << rtb << " ld " << rld << " rd " << rrd << endl;
@@ -7455,6 +7518,7 @@ RXN_File::_identify_atoms_changing_by_bond_reagent(ISIS_RXN_FILE_Molecule & r,
 
 // the following code, when not commented out, causes the two atoms to NOT be marked as changing.
 // Down the line, this causes a core dump in retrosynthetic_quick because the bond between the atoms IS changing.
+//  Tad Hurst - see http://redmine.am.lilly.com/issues/18038
 
     if (!_mark_atoms_changed_when_kekule_form_of_bond_changes)
     {

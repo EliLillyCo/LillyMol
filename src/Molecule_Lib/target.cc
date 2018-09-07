@@ -130,7 +130,7 @@ Target_Atom::_default_values ()
   _chiral_centre = NULL;
 
   _isotope                     = TARGET_ATOM_NOT_COMPUTED;
-
+  _userAtomType                = TARGET_ATOM_NOT_COMPUTED;
   _attached_heteroatom_count   = TARGET_ATOM_NOT_COMPUTED;
   _fused_system_size           = TARGET_ATOM_NOT_COMPUTED;
 
@@ -171,6 +171,7 @@ Target_Atom::invalidate ()
   _vinyl                       = TARGET_ATOM_NOTHING_CAN_MATCH;
   _aryl                        = TARGET_ATOM_NOTHING_CAN_MATCH;
   _isotope                     = TARGET_ATOM_NOTHING_CAN_MATCH;
+  _userAtomType                = TARGET_ATOM_NOTHING_CAN_MATCH;
 
   _lone_pair_count = TARGET_ATOM_NOTHING_CAN_MATCH;
 
@@ -293,6 +294,15 @@ int
 Target_Atom::daylight_x ()
 {
   return _my_atom->implicit_hydrogens() + _ncon;
+}
+
+int
+Target_Atom::userAtomType ()
+{
+  if (TARGET_ATOM_NOT_COMPUTED == _userAtomType)
+    _userAtomType = _my_atom->userAtomType();
+
+  return _userAtomType;
 }
 
 int
