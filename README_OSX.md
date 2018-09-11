@@ -25,19 +25,21 @@ BUILD:
 
 3. Enter the root directory of the code
 
-4. Export compilers
+4. Update the path for the zlib in the makefile.public.OSX-gcc-8
+
+5. Run makeall_osx.sh (Skip rest of the steps if you run this command)
+
+6. Export compilers
  * `export CC=gcc-8`
  * `export CXX=g++-8`
  * `export FC=gfortran-8`
 
 
-5. Export the UNAME for makefile
- * `export UNAME="OSX-gcc-8"`
+7. Export the UNAME for makefile
+ * `export UNAME=OSX-gcc-8`
 
 
-6. Run makeall.sh (Skip step 7 if you run this command)
-
-7. Alternatively, you can run following commands:
+8. Alternatively, you can run following commands:
 ```bash
     make veryclean
     make copy_include
