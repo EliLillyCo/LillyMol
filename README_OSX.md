@@ -1,6 +1,9 @@
-Warning: LillyMol build for Mac OS X is still under development.
-         It will be officially released after test and verification.
-         
+########################################################################################
+                                       Warning: 
+LillyMol build for Mac OS X is still under development. It will be officially released after test and verification.
+########################################################################################         
+
+
 Welcome to the Eli Lilly LillyMol implementation.
 
 REQUIREMENT:
