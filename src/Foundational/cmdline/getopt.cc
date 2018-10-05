@@ -71,11 +71,12 @@
 *
 */
 
+
+
+#ifdef _WIN32
 /* Global Exportable */
 int optind;
 char *optarg;
-
-#ifdef _WIN32
 
 #include <stdio.h>
 #include <stddef.h>
