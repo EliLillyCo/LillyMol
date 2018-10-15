@@ -22,7 +22,7 @@ BUILD:
 4. Enter the root directory of the code
 
 5. Edit the makefile.public.Linux-gcc-6.2.0 to add the local path for the zlib library
-Example: ZLIB = /lrlhps/apps/zlib/zlib-1.2.11/lib
+Example: ZLIB = /zlib/zlib-1.2.11/lib
 
 6. Run makeall.sh (Skip step 7 if you run this command) 
 
