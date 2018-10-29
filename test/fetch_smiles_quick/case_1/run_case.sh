@@ -19,7 +19,7 @@ echo "Testing:  $command"
 
 if [ ! -e "$command" ]
 then
-    echo "Executable is not find"
+    echo "Executable is not found"
     exit 1
 fi
 
@@ -30,7 +30,7 @@ name2=notInIdentifier
 name2_out=out/notInIdentifier
 
 diff_tool=../../fileDiff.sh
-$command -j -c 1 -C 2 -X notInRecord -Y notInIdentifier in/record.w  in/structures.smi >>log.txt 2>>err.txt
+$command -j -c 1 -C 2 -X notInRecord -Y notInIdentifier in/record.w  in/structures.smi >log.txt 2>err.txt
 $diff_tool $name1 $name1_out
 ret1=$?
 $diff_tool $name2 $name2_out

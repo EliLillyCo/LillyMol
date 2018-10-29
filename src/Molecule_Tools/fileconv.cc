@@ -86,6 +86,8 @@ static int reduce_to_largest_fragment = 0;
 static int reduce_to_all_largest_fragments = 0;
 static int reduce_to_largest_organic_fragment = 0;
 static int reduce_to_largest_organic_fragment_carefully = 0;
+static bool keep_all_organic_fragments = false;
+static int molecules_with_nonorganic_fragments_removed = 0;
 static int maximum_fragment_count = 0;
 static int min_size_max_fragment_count = 0;
 static int molecules_chopped = 0;
@@ -429,6 +431,8 @@ reset_file_scope_variables()
   reduce_to_all_largest_fragments = 0;
   reduce_to_largest_organic_fragment = 0;
   reduce_to_largest_organic_fragment_carefully = 0;
+  keep_all_organic_fragments = false;
+  molecules_with_nonorganic_fragments_removed = 0;
   maximum_fragment_count = 0;
   min_size_max_fragment_count = 0;
   molecules_chopped = 0;
@@ -2178,6 +2182,79 @@ do_remove_largest_fragment(Molecule & m)
   return m.remove_atoms(atoms_to_be_removed);;
 }
 
+static void
+_do_remove_nonorganic_fragments (Molecule & m,
+                                const int * frag_membership,
+                                int & fragments_removed)
+{
+  int nf = m.number_fragments ();
+  int matoms = m.natoms ();
+
+  resizable_array<int> fragments_to_remove;
+
+  for (int i = 0; i < nf; i++)
+  {
+    int aif = m.atoms_in_fragment (i);
+
+    Molecule tmp;
+    m.create_subset (tmp, frag_membership, i);
+
+    bool delete_fragment = false;
+    for (int j = 0; j < aif; j++) {
+      const Element * e = tmp.elementi(j);
+      if (e == NULL) {
+        cerr << "NULL pointer found for element " << j << " in molecule " << m.name() << endl;
+        cerr << "This should not happen, please contact c3tk" << endl;
+        return;
+      }
+      if (e->organic()) {
+        continue;
+      }
+      if (! ok_non_organics.matches(e)) {
+        delete_fragment = true;
+        break;
+      }
+      if (! e->is_in_periodic_table()) {
+        delete_fragment = true;
+        break;
+      }
+    }
+
+    if (delete_fragment) {
+      if (verbose)
+        cerr << "Removing fragment " << i << " " << tmp.smiles() << endl;
+
+      fragments_to_remove.add(i);
+      fragments_removed++;
+    }
+  }
+
+  if (nf == fragments_to_remove.number_elements())
+  {
+    m.resize(0);    // remove everything from the molecule
+    return;
+  }
+
+  do_remove_by_fragment(m, fragments_to_remove);
+  return;
+}
+
+static void
+do_remove_nonorganic_fragments (Molecule & m, int & fragments_removed)
+{
+  fragments_removed = 0;
+  int matoms = m.natoms ();
+
+  int * frag_membership = new int[matoms]; 
+  std::unique_ptr<int[]> free_frag_membership(frag_membership);
+  m.fragment_membership (frag_membership);
+
+  _do_remove_nonorganic_fragments (m, frag_membership, fragments_removed);
+
+  if (verbose > 1)
+    cerr << "new number of atoms: " << m.natoms() << endl;
+}
+
 static int
 at_least_one_of_these_queries_matches (Molecule & m,
                                resizable_array_p<Substructure_Query> & q)
@@ -2418,8 +2495,9 @@ process_fragments (Molecule & m)
   
   if (remove_molecules_with_non_largest_fragment_natoms >= 0 && atoms_in_non_largest_fragment_exceed(m, remove_molecules_with_non_largest_fragment_natoms))
   {
-    if (verbose > 1)
+    if (verbose > 1) {
       cerr << "Contains large fragment(s)\n";
+    }
     molecules_with_large_fragments++;
     return 0;
   }
@@ -2432,8 +2510,9 @@ process_fragments (Molecule & m)
 
     if (fragments_removed)
     {
-      if (verbose > 1)
+      if (verbose > 1) {
         cerr << fragments_removed << " duplicate fragments removed\n";
+      }
       molecules_with_duplicate_fragments_removed++;
     }
 
@@ -2505,6 +2584,23 @@ process_fragments (Molecule & m)
     return m.reduce_to_largest_fragment_carefully();
   }
 
+  if (keep_all_organic_fragments) {
+    int fragments_removed;
+
+    do_remove_nonorganic_fragments(m, fragments_removed);
+
+    if (fragments_removed > 0) {
+      if (verbose) {
+        cerr << fragments_removed << " fragments removed for " << m.name() << endl;
+      }
+      molecules_with_nonorganic_fragments_removed++;
+      if (m.number_fragments() < 1) {
+        return 0;
+      }
+    }
+
+    return 1;
+  }
   if (smallest_fragment_queries.number_elements())
     return identify_fragment_by_query(m, smallest_fragment_queries, 0);
 
@@ -2841,7 +2937,9 @@ _apply_all_filters (Molecule & m,
     return 0;
   }
 
-  if (nf < 2)      // cannot reduce the fragment count
+  if ((nf < 2) && (! keep_all_organic_fragments))
+    // cannot reduce the fragment count, except that we may want to remove the
+    // only fragment when it is not organic
     ;
   else if (discard_molecule_if_multiple_fragments_larger_than && 
            too_many_large_fragments(m))
@@ -4498,6 +4596,13 @@ fileconv (int argc, char ** argv)
         if (verbose)
           cerr << "Will reduce to largest organic fragment using desirability rules\n";
       }
+      else if ("allo" == f)
+      {
+        keep_all_organic_fragments = true;
+
+        if (verbose)
+          cerr << "Will remove all fragments with non organic atoms\n";
+      }
       else if (f.starts_with("Q:"))
       {
         f.remove_leading_chars(2);
@@ -4681,6 +4786,7 @@ fileconv (int argc, char ** argv)
 
     int nsel = (fragment_count != 0) + (reduce_to_largest_fragment) + (reduce_to_all_largest_fragments) +
                (reduce_to_largest_organic_fragment) + (reduce_to_largest_organic_fragment_carefully) +
+               (keep_all_organic_fragments) + 
                (largest_fragment_queries.number_elements() > 0) +
                (smallest_fragment_queries.number_elements() > 0) +
                (remove_fragment_queries.number_elements() > 0) +
@@ -4693,7 +4799,7 @@ fileconv (int argc, char ** argv)
 
     if (1 == nsel)     // good, the easy case
       ;
-    else if (remove_fragment_queries.number_elements() > 0 && (reduce_to_largest_fragment || reduce_to_all_largest_fragments || reduce_to_largest_organic_fragment || reduce_to_largest_organic_fragment_carefully))
+    else if (remove_fragment_queries.number_elements() > 0 && (reduce_to_largest_fragment || reduce_to_all_largest_fragments || reduce_to_largest_organic_fragment || reduce_to_largest_organic_fragment_carefully || keep_all_organic_fragments))
       ;
     else if (0 == nsel && sort_by_fragment_size)
       ;
@@ -5662,6 +5768,8 @@ fileconv (int argc, char ** argv)
       cerr << molecules_with_very_small_fragments_removed << " molecules lost fragments with " << remove_fragments_this_size_or_smaller << " or fewer atoms\n";
     if (remove_duplicate_fragments)
       cerr << molecules_with_duplicate_fragments_removed << " molecules had duplicate fragments removed\n";
+    if (keep_all_organic_fragments)
+      cerr << molecules_with_nonorganic_fragments_removed << " molecules had nonorganic fragments removed\n";
     if (discard_molecule_if_multiple_fragments_larger_than)
       cerr << molecules_with_multiple_large_fragments << " molecules had multiple fragments with at least " << discard_molecule_if_multiple_fragments_larger_than << endl;
     if (mixture_if_largest_frags_differ_by >= 0)

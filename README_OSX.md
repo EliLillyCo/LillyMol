@@ -3,9 +3,9 @@
 Please pay special attention to the order of arguments and options when
 you are running command under Mac
 1. All the command options shall be placed right after the command name.
-2. All the other input information for the command shall be appended to the end of the command after options.
+2. All the other input information for the command shall be appended to the end of the command after options
 Sample:
-fetch_smiles_quick -j -c 1 -C 2 -X notInRecord -Y notInIdentifier record.w structures.sm
+fetch_smiles_quick -j -c 1 -C 2 -X notInRecord -Y notInIdentifier record.w structures.sm  
 
 ########################################################################################         
 
@@ -45,7 +45,6 @@ BUILD:
  * `export CC=gcc-8`
  * `export CXX=g++-8`
  * `export FC=gfortran-8`
-
 
 7. Export the UNAME for makefile
  * `export UNAME=OSX-gcc-8`

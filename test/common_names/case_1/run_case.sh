@@ -17,7 +17,7 @@ case_id="Case 1"
 echo "Testing:  $command"
 if [ ! -e "$command" ]
 then
-    echo "Executable is not find"
+    echo "Executable is not found"
     exit 1
 fi
 name1=output.smi

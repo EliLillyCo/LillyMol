@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <fstream>
+#include <exception>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
@@ -3867,6 +3868,7 @@ ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
     cerr << "ISIS_RXN_FILE_Molecule::create_from_molecule: cannot create query from '" << smiles() << "'\n";
     return 0;
   }
+  r.set_comment(this->name());
  
 
   if (0 == r[0]->root_atoms())
@@ -3874,6 +3876,8 @@ ISIS_RXN_FILE_Molecule::create_query (Reaction_Site & r,
     cerr << "ISIS_RXN_FILE_Molecule::create_from_molecule:no root atoms, impossible\n";
     return 0;
   }
+  
+  
   
   if (queryOutStream != NULL && queryOutStream->is_open())
   	r.write_msi (*queryOutStream);
@@ -3923,6 +3927,7 @@ RXN_File::_create_query (Reaction_Site & r,
                          Molecule_to_Query_Specifications & mqs,
                          const int * include_these_atoms)
 {
+	m.set_name(name());
   return m.create_query(r, include_these_atoms, mqs, _queryOutStream);
 }
 
@@ -4052,14 +4057,10 @@ RXN_File::_create_reaction(IWReaction & rxn,
     return 0;
   }
   
- 
-  //rxn.write_msi("REAGENT_0.qry");
-  if (_queryOutStream != NULL && _queryOutStream->is_open())
-  	rxn.write_msi(*_queryOutStream);
 
   _identify_kekule_forms_to_be_toggled(include_these_atom_map_numbers);
 
-  _reagent[0].add_toggle_kekule_forms(rxn, subset, 0);
+  _reagent[0].add_toggle_kekule_forms(rxn, subset, 0, rxnfcro);
 
   rxn.set_find_kekule_forms_for_bad_valence(1);
 
@@ -4098,7 +4099,7 @@ RXN_File::_create_reaction(IWReaction & rxn,
         }
       }
 
-      _reagent[i].add_toggle_kekule_forms(*r, subset, i);
+      _reagent[i].add_toggle_kekule_forms(*r, subset, i, rxnfcro);
     }
   }
 
@@ -4164,8 +4165,11 @@ RXN_File::_create_reaction(IWReaction & rxn,
 
     assert (q1 >= 0 && q2 >= 0);
 
-    q1 = subset.atom_number_in_subset(q1, r);
-    q2 = subset.atom_number_in_subset(q2, r);
+    if (r == 0 || !rxnfcro.only_create_query_from_first_reagent())
+    {
+			q1 = subset.atom_number_in_subset(q1, r);
+			q2 = subset.atom_number_in_subset(q2, r);
+    }
 
     assert (q1 >= 0 && q2 >= 0);
 
@@ -4224,15 +4228,20 @@ RXN_File::_create_reaction(IWReaction & rxn,
 #endif
 
     int q1 = _reagent[r1].which_is_mapped_atom(m1);
-    int q2 = _reagent[r1].which_is_mapped_atom(m2);
+    int q2 = _reagent[r1].which_is_mapped_atom(m2);    	
+
     assert (q1 >= 0 && q2 >= 0);
 
 #ifdef DEBUG_BONDS_TO_BE_MADE
     cerr << "which are atoms " << q1 << " and " << q2 << ' ' << _reagent[r1].smarts_equivalent_for_atom(q1) << ' ' << _reagent[r1].smarts_equivalent_for_atom(q2) << endl;
 #endif
 
-    q1 = subset.atom_number_in_subset(q1, r1);
-    q2 = subset.atom_number_in_subset(q2, r2);
+    if (r2 == 0 || !rxnfcro.only_create_query_from_first_reagent())
+    {
+	    q1 = subset.atom_number_in_subset(q1, r1);
+	    q2 = subset.atom_number_in_subset(q2, r2);
+	  }
+	  
     if (q1 < 0 || q2 < 0) 
     {
       cerr << "Matched atom " << _reagent[r1].which_is_mapped_atom(m1) << " in subset " << q1 << " or " << _reagent[r1].which_is_mapped_atom(m2) << " in subset " << q2 << " invalid\n";
@@ -4299,10 +4308,15 @@ RXN_File::_create_reaction(IWReaction & rxn,
     const ISIS_RXN_FILE_Molecule & mol2 = _reagent[r2];
     int q2 = mol2.which_is_mapped_atom(m2);
 
-//  cerr << " atoms " << q1 << " atnd " << q2 << endl;
-
-    q1 = subset.atom_number_in_subset(q1, r1);
-    q2 = subset.atom_number_in_subset(q2, r2);
+//  cerr << " atoms " << q1 << " and " << q2 << endl;
+    if (r1 == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    {
+    	q1 = subset.atom_number_in_subset(q1, r1);
+    }
+    if (r2 == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    { 	
+    	q2 = subset.atom_number_in_subset(q2, r2);
+    }
 
     if (q1 < 0 || q2 < 0)
       subset.debug_print(cerr);
@@ -4371,8 +4385,10 @@ RXN_File::_create_reaction(IWReaction & rxn,
 
       int q2 = _orphan_atoms.which_is_mapped_atom(m2);
 
-      q1 = subset.atom_number_in_subset(q1, r1);    // note that we do NOT translate q2
-
+      if (r1 == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+      {
+      	q1 = subset.atom_number_in_subset(q1, r1);    // note that we do NOT translate q2
+			}
 //    cerr << "Final addition to " << (r1-1) << " btw " << q1 << " and " << q2 << endl;
       s->add_inter_particle_bond(r1 - 1, q1, q2, b->btype());
     }
@@ -4396,7 +4412,10 @@ RXN_File::_create_reaction(IWReaction & rxn,
 
       int mpd2 = mr.which_is_mapped_atom(mpd1);    // which atom number is it in the query
 
-      mpd2 = subset.atom_number_in_subset(mpd2, r);
+      if (r == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+      {
+				mpd2 = subset.atom_number_in_subset(mpd2, r);
+			}
       assert (mpd2 >= 0);
 
 //    cerr << "Reagent " << r << " will remove the fragment containing matched atom " << mpd2 << endl;
@@ -4462,7 +4481,10 @@ RXN_File::_create_reaction(IWReaction & rxn,
     if (! pe->is_in_periodic_table())    // not sure what to do with these
       continue;
 
-    ra = subset.atom_number_in_subset(ra, r);
+    if (r == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    {
+			ra = subset.atom_number_in_subset(ra, r);
+		}
 
 //  this is kind of difficult, what to do if the elements are different.
 //  Many times, if there was a list on the LHS, they will just draw a carbon in the RHS.
@@ -4513,7 +4535,11 @@ RXN_File::_create_reaction(IWReaction & rxn,
     if (fcr == fcp)    // no change
       continue;
 
-    ra = subset.atom_number_in_subset(ra, r);    // re-use the variable RA
+	  if (r == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    {
+			ra = subset.atom_number_in_subset(ra, r);    // re-use the variable RA
+		}
+		
     if (ra < 0)
     {
       cerr << "formal_charge:atom map " << i << " in reagent " << r << " atom " << ra << " product " << p << " atom " << pa << " charges " << fcr << ' ' << fcp << " not in subset\n";
@@ -4541,7 +4567,11 @@ RXN_File::_create_reaction(IWReaction & rxn,
 
     int a = _reagent[r].which_is_mapped_atom(m);
 
-    a = subset.atom_number_in_subset(a, r);
+	  if (r == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    {
+			a = subset.atom_number_in_subset(a, r);
+		}
+		
     assert (a >= 0);
 
     if (0 == r)
@@ -4556,7 +4586,7 @@ RXN_File::_create_reaction(IWReaction & rxn,
 // Are there any elements that disappear
 
   if (_remove_unmapped_atoms_that_disappear)
-    _look_for_unmapped_atoms_that_disappear(highest_atom_map, rxn, subset);
+    _look_for_unmapped_atoms_that_disappear(highest_atom_map, rxn, subset,rxnfcro);
 
   if (_unconnect_unmapped_atoms_that_exceed_product_valence)
     _look_for_unmapped_atoms_that_exceed_product_valence(highest_atom_map, rxn);
@@ -4620,7 +4650,8 @@ gather_unmapped_elements (int n,
 int
 RXN_File::_look_for_unmapped_atoms_that_disappear (int & highest_atom_map, 
                                                    IWReaction & rxn,
-                                                   const Reaction_Subset & subset)
+                                                   const Reaction_Subset & subset,
+                                                   const RXN_File_Create_Reaction_Options & rxnfcro)
 {
   extending_resizable_array<int> in_reagents;
 
@@ -4666,7 +4697,10 @@ RXN_File::_look_for_unmapped_atoms_that_disappear (int & highest_atom_map,
       int a = _reagent[r].which_is_mapped_atom(i);
       assert(a >= 0);
 
-      a = subset.atom_number_in_subset(a, r);
+      if (r == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+      {
+      	a = subset.atom_number_in_subset(a, r);
+      }
 
       if (0 == r)
         _add_atom_removal(rxn, a);
@@ -5796,7 +5830,7 @@ RXN_File::_specify_stereo_centre_component (Stereo_Centre_Component & s,
   }
 
   assert (our_reagent >= 0 && our_reagent < _nr);
-
+ 
 // Need to get the atom number in that reagent
 
   const ISIS_RXN_FILE_Molecule & r = _reagent[our_reagent];
@@ -5922,19 +5956,16 @@ RXN_File::_look_for_stereo_centres_made (IWReaction & rxn)
         continue;
 
       int rtf = find_reagent(_reagent_locator, mtf);     // in which reagent is mapped atom MTF
-      if (rtf < 0 )
-      {
-          //debug_print(cerr);
-          continue;   
-      }
+      if (mtf >= 0 && rtf < 0 )
+        continue;   
       int rtb = find_reagent(_reagent_locator, mtb);
-      if (rtb < 0)
+      if (mtb >= 0 &&  rtb < 0)
         continue;
       int rld = find_reagent(_reagent_locator, mld);
-      if (rld < 0)
+      if (mld >= 0 && rld < 0)
         continue;
       int rrd = find_reagent(_reagent_locator, mrd);
-      if (rrd < 0)
+      if (mrd >= 0 && rrd < 0)
         continue;
 
 #ifdef DEBUG_LOOK_FOR_STEREO_CENTRES_MADE
@@ -6556,7 +6587,9 @@ ISIS_RXN_FILE_Molecule::add_toggle_kekule_form (atom_number_t a1,
 int
 ISIS_RXN_FILE_Molecule::add_toggle_kekule_forms (Reaction_Site & rxn,
                                                  const Reaction_Subset & subset,
-                                                 const int ndx) const
+                                                 const int ndx,
+                                                 const RXN_File_Create_Reaction_Options & rxnfcro)
+                                                  const
 {
   int nt = _toggle_kekule_form.number_elements();
 
@@ -6566,11 +6599,18 @@ ISIS_RXN_FILE_Molecule::add_toggle_kekule_forms (Reaction_Site & rxn,
   {
     const Bond * b = _toggle_kekule_form[i];
 
-    const atom_number_t a1 = b->a1();
-    const atom_number_t a2 = b->a2();
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+  
+	  if (ndx == 0 || ! rxnfcro.only_create_query_from_first_reagent())
+    {
+	    a1 = subset.atom_number_in_subset(a1, ndx);
+	    a2 = subset.atom_number_in_subset(a2, ndx);
+	  }
+	  
+	  const atom_number_t s1 = a1;
+	  const atom_number_t s2 = a2;
 
-    const atom_number_t s1 = subset.atom_number_in_subset(a1, ndx);
-    const atom_number_t s2 = subset.atom_number_in_subset(a2, ndx);
 
     if (s1 < 0 || s2 < 0)
     {
@@ -7518,7 +7558,6 @@ RXN_File::_identify_atoms_changing_by_bond_reagent(ISIS_RXN_FILE_Molecule & r,
 
 // the following code, when not commented out, causes the two atoms to NOT be marked as changing.
 // Down the line, this causes a core dump in retrosynthetic_quick because the bond between the atoms IS changing.
-//  Tad Hurst - see http://redmine.am.lilly.com/issues/18038
 
     if (!_mark_atoms_changed_when_kekule_form_of_bond_changes)
     {

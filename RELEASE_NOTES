@@ -1,0 +1,101 @@
+2018-10 Release 2.0
+
+New scripts
+===========
+random_smiles - Generate random smiles based on input smiles
+preferred_smiles - Write either unique smiles (if interpretable) or non aromatic unique form
+rotatable_bonds - Calculate the rotatable bonds in the modules
+concat_files - Concatenates descriptor files by joining on identifiers
+msort - Sorts a molecule file by various criteria
+tp_first_pass - Runs molecules through the Lilly medchem rules, skip to next molecule upon crossing a threshold or instant kill rule
+mol2qry - Converts a molecule to a query file
+molecular_scaffold - Chemical structure fragmentation tool to recursively cuts molecules into fragments
+molecule_subset - Extracts a subset of atoms from set of molecules based on a single substructure
+rgroup - Identifies substituents from substructure matched molecule
+ring_extraction - Extracts rings from molecules
+ring_trimming - Exhaustively trim rings from ring systems, preserving aromaticiy
+sp3_filter - Filter molecules according to sp3 content
+tautomer_generation - Enumerate tautomeric forms for molecules
+smiles_mutation - Generate new smiles from a set of input molecules by random strong operations
+rxn_substructure_search - Search substructure over reactions
+activity_consistency - Group identical molecules (including isomers) with varying activity values
+
+Retired scripts
+===============
+
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+
+
+Updates
+=======
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+2018-06 Release 1.0
+
+New scripts
+===========
+common_names - Merge identical chemical structures to one common name in a SMILES file (also see unique_molecules tool). Useful for identifying unique chemical structures in a SMILES file.
+fetch_smiles_quick - Fetches records from one file based on identifiers in another file
+unique_molecules - Filters out duplicate chemical structures based on unique smiles
+unique_rows - Identifies the unique rows in a file
+iwcut - Extract columns from a text file
+fileconv - Structure file utility to clean up SMILES files and filter on specific criteria. It can also be used to convert between chemical file formats including, e.g from SDF to SMILES
+rxn_signature - Generates reaction signatures for input reactions
+rxn_standardize - Checks and standardizes input chemical reactions; converts to a reaction smiles file format
+tsubstructure - Perform 2D substructure searches with SMILES/SMARTS against SMILES files
+retrosynthesis - Defines synthetic routes for input chemical structures by deconstructing input molecules into reactants using a set of known reactions templates. Conceptually, the inverse process of chemical reaction synthesis as implemented by tool trxn
+trxn - Performs reactions between reactant molecules to enumerate product structures. Uses a control reaction file, a scaffold SMILES file and zero or more reactant SMILES files. Conceptually inverse of retrosynthesis process as implemented by tool retrosynthesis
+iwdemerit - Computes demerit of a molecule. In this context demerits refers to non-desirable molecular structure characteristics/features
+
+Retired scripts
+===============
+
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+libaccumulator.a 
+libiwbits.a       
+libiwmolecule.a       
+libiwstring.a                     
+libiwtemplate.a
+libcmdline.a      
+libiwcrex.a       
+libiwnormalisation.a  
+libiwstring_data_source.a         
+libsparsefp.a
+libcmdline_v2.a   
+libiwhistogram.a  
+libiwqsort.a          
+libiwstring_string_data_source.a  
+libxmlParser.a
+libiwaray.a       
+libiwmisc.a       
+libiwrandom.a         
+libiwtdt.a
+
+
+Updates
+=======
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

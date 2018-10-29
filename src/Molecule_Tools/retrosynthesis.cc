@@ -129,6 +129,7 @@ static int preserve_saturation = 0;
 static int preserve_ring_size = 0;
 
 std::ofstream *queryEchoStreamPtr = NULL;
+static IWString rxn_name_header("");
 
 
 static int skip_molecules_with_multiple_scaffold_embeddings = 0;
@@ -237,7 +238,7 @@ add_to_test_results(const const_IWSubstring & buffer,
   Molecule * m = new Molecule();
 
   if (! m->build_from_smiles(smiles))
-  {
+  {		
     cerr << "add_to_test_results:invalid smiles " << buffer << endl;
     delete m;
     return 0;
@@ -306,15 +307,14 @@ usage (int rc)
   															"If specified, the file is only created if hits are found\n";
   cerr << "  -O            filename base for reactants - if specified, all reactants are written to <base>_all.smi.  "
   													"If there are two or more reactants, the first two are written to <base>_1.smi and <base.2.smi.  "
-  													"If there is only 1 reactant, it is writen to <base>_only1.smi";
+  													"If there is only 1 reactant, it is writen to <base>_only1.smi\n";
   cerr << "  -P ...        atom typing specification - determine changing atoms and searching match conditions (default=UST:AZUCORS)\n";
   cerr << "  -q p          use the reaction path name as the reaction name\n";
   cerr << "  -q f          use the reaction file name as the reaction name\n";
   cerr << "  -b            only allow each molecule to be deconstructed by one reaction\n";
-  cerr << "  -M ...        different query match conditions, enter '-M help' for info\n";
   cerr << "  -m .          skip molecules with multiple scaffold embeddings\n";
   cerr << "  -m <fname>    write molecules with multiple scaffold embeddings to <fname>\n";
-  cerr << "  -Q <fname>    file name stem for query echo (debugging only)\n";
+  cerr << "  -Q <fname>    file name into which the queries are saved (optional)\n";
   cerr << "  -U <fname>    write non reacting molecules to <fname>\n";
   cerr << "  -a <natoms>   do NOT write products with  fewer than <natoms> atoms\n";
 //cerr << "  -l            reduce to largest fragment\n";
@@ -330,6 +330,7 @@ usage (int rc)
   cerr << "  -g ...        input molecule chemical standardisation options\n";
   cerr << "  -Y ...        output molecule chemical standardisation options\n";
   cerr << "  -E ...        standard element specifications\n";
+  cerr << "  -n <header>   When queries are written out, this string is pre-pended to the name";
 //cerr << "  -A ...        standard aromaticity specifications\n";
   cerr << "  -v            verbose output\n";
 
@@ -660,6 +661,12 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
     return 0;
   }
 
+  if (rxn_name_header != "")
+  {
+  	IWString newName = rxn_name_header + rxn.name();
+  	rxn.set_name(newName);
+  }
+
   rxn.check_for_widows_and_orphans();
 
   const int initial_nr = rxn.number_reagents();
@@ -710,14 +717,14 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
   if (input_is_reaction_smiles)
     ;
   else if (reaction_name_is_path_name)
-    rxn.set_name(buffer);
+    rxn.set_name(rxn_name_header + buffer);
   else if (reaction_name_is_file_name)
   {
     const_IWSubstring tmp(buffer);     // basename is too complicated to use...
     const int last_dir_separator = tmp.rindex('/');
     if (last_dir_separator > 0)
       tmp += (last_dir_separator+1);
-    rxn.set_name(tmp);
+    rxn.set_name(rxn_name_header + tmp);
   }
   else if (rxn.name().nwords() > 1)
   {
@@ -940,8 +947,11 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
 
     RXN_File_Create_Reaction_Options rxnfcro;
     rxnfcro.set_only_create_query_from_first_reagent(1);
-    //qqq set the query out file here.
+    
+    rxn.setQueryOutStream(queryEchoStreamPtr);
+
     rxn.set_auto_fix_orphans(1);
+
     if (! rxn.create_reaction(*t, rxnfcro, mqs, include_atom_map))
     {
       cerr << "Reaction " << rxn.name() << " cannot create reaction object\n";
@@ -952,7 +962,9 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
     t->set_do_not_perceive_symmetry_equivalent_matches(1);
     
     _rxn[r].add(t);
-
+    
+    //t->write_msi(cerr);
+    
 //  cerr << "Name '" << rxn.name() << "'\n";  
 
     _id_to_ndx[r][rxn.name()] = _rxn[r].number_elements() - 1;
@@ -1611,7 +1623,7 @@ read_reactions_buffer (const const_IWSubstring & s,
 
   Set_of_Reactions * r = new Set_of_Reactions();
 
-  r->set_name(name);
+  r->set_name(rxn_name_header + name);
 
   if (! r->build(input, radius))
   {
@@ -2004,7 +2016,7 @@ report_acc_nhits(const extending_resizable_array<int>  & acc_nhits)
 static int
 retrosynthesis (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vA:E:i:g:lR:F:P:xc:D:fbG:r:q:Q:U:TSm:a:X:I:Lu:Y:zZSO:o:s");
+  Command_Line cl(argc, argv, "vA:E:i:g:lR:F:P:xc:D:fbG:r:q:Q:U:TSm:a:X:I:Lu:Y:zZSO:o:sn:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -2226,7 +2238,15 @@ retrosynthesis (int argc, char ** argv)
     queryEchoStreamPtr = new std::ofstream(queryFilename, std::ofstream::out);
  
     if (verbose)
-      cerr << "Queries echo'd to series of files '" << queryFilename << "'\n";
+      cerr << "Queries echo'd to the files '" << queryFilename << "'\n";
+  }
+
+  if (cl.option_present('n'))
+  {
+    cl.value('n', rxn_name_header);
+ 
+    if (verbose)
+      cerr << "Reaction queries will be saved with names that start with: " << rxn_name_header << "'\n";
   }
 
   if (cl.option_present('r'))
@@ -2267,15 +2287,17 @@ retrosynthesis (int argc, char ** argv)
         cerr << "If the number of changing atoms is not " << c << " will recompute the atom map\n";
     }
   }
-
+  
+ 
   if (cl.option_present('b'))
   {
     break_after_first_deconstruction = 1;
 
     if (verbose)
       cerr << "Will only do one reaction for any input molecule\n";
-  }
-
+  } 
+  
+  
   if (cl.option_present('q'))
   {
     const_IWSubstring q = cl.string_value('q');
@@ -2365,7 +2387,7 @@ retrosynthesis (int argc, char ** argv)
         return 1;
       }
 
-      r->set_name(name);
+      r->set_name(rxn_name_header + name);
       rxn.add(r);
       if (verbose)
         cerr << "read " << r->number_reactions() << " from " << f << endl;
@@ -2502,22 +2524,6 @@ retrosynthesis (int argc, char ** argv)
 
     return rc;
   }
-
-//#ifdef ECHO_QUERIES
-//  for (int i = 0; i <= max_radius; ++i)
-//  {
-//    if (0 == rxn[i].number_elements())
-//      continue;
-//
-//    for (int j = 0; j < rxn[i].number_elements(); ++j)
-//    {
-//      IWString fname("FOO_");
-//      fname << rxn[i][j]->comment() << ".qry";
-//      Substructure_Query & q = *(rxn[i][j]);
-//      q.write_msi(fname);
-//    }
-//  }
-//#endif
 
   if (cl.option_present('U'))
   {

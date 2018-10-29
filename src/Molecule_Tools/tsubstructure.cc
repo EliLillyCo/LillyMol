@@ -25,8 +25,11 @@
 #include "smiles.h"
 #include "numass.h"
 #include "rmele.h"
+#include "atom_typing.h"
 
 #include "tsubstructure_fp.h"
+
+typedef unsigned int atype_t;
 
 static const char * prog_name;
 
@@ -43,6 +46,10 @@ static Charge_Assigner charge_assigner;
 static Element_Transformations element_transformations;
 
 static Elements_to_Remove elements_to_remove;
+
+static Atom_Typing_Specification atom_typing_specification;
+static int useUserAtomTypes = 0;
+
 
 /*
   If we write the results as a fingerprint, we need a dataitem
@@ -101,6 +108,7 @@ usage (int rc)
   cerr << "  -q F:file      specify file of queries\n";
   cerr << "  -q S:file      specify file of smarts\n";
   cerr << "  -q M:file      specify file of molecules\n";
+  cerr << "  -P ...        atom typing specification - determine changing atoms and searching match conditions (default=UST:AZUCORS)\n";
 //cerr << "  -Q <file>      specify a file of queries (same as -q F:<file>)\n";
 //cerr << "  -h             queries are in same directory as -Q <file>\n";
   cerr << "  -s <smarts>    specify smarts for search\n";
@@ -1047,8 +1055,21 @@ do_all_queries (Molecule & m,
 {
   int rc = 0;
 
-  Molecule_to_Match target(&m);
+  if (useUserAtomTypes)
+  {
+		atype_t *atype = new atype_t[m.natoms()]; std::unique_ptr<atype_t[]> free_atype(atype);
 
+		atom_typing_specification.assign_atom_types(m, atype);
+
+		for (int atomIndex = 0 ; atomIndex != m.natoms() ; ++atomIndex)
+		{
+		  m.set_userAtomType(atomIndex, atype[atomIndex]);  
+		}
+	}
+
+  Molecule_to_Match target(&m);
+  
+	
   IWString mname;
   if (! perform_search_even_if_names_the_same)
     mname = m.name();
@@ -1177,7 +1198,8 @@ tsubstructure (Molecule & m,
   }
   else
     atom_isotopic_label = NULL;
-
+    
+ 
   const Element ** new_elements = NULL;
 
   if (matched_atoms_element)
@@ -1738,7 +1760,7 @@ assign_name_if_needed (Substructure_Hit_Statistics & q,
 static int
 tsubstructure (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "w:W:y:R:X:hj:J:E:rcls:S:t:A:K:bBfm:n:uvo:i:q:Q:ag:pkG:Y:N:H:M:x:T:");
+  Command_Line cl (argc, argv, "w:W:y:R:X:hj:J:E:rcls:S:t:A:K:bBfm:n:uvo:i:q:Q:ag:pkG:Y:N:H:M:x:T:P:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -1878,6 +1900,19 @@ tsubstructure (int argc, char ** argv)
     if (verbose)
       cerr << "Will cease processing queries after first non-match\n";
   }
+  
+  if (cl.option_present('P'))
+  {
+    const_IWSubstring p = cl.string_value('P');
+
+    if (! atom_typing_specification.build(p))
+    {
+      cerr << "INvalid atom typing specification '" << p << "'\n";
+      return 1;
+    }
+    useUserAtomTypes = 1;
+  }
+  
 
   int report_environment_matches = 0;
 

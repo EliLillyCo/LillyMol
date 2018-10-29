@@ -3413,7 +3413,10 @@ IWReaction::perform_reaction(const Molecule * scaffold,
 
   if (! _take_first_reagent_from_each_sidechain(etmp))
     return 0;
-
+//  cerr << "Reaction dump:\n";
+//	write_msi(cerr);
+//	cerr << "********************\n";
+  
   _add_molecule(result, *scaffold);
 
   if (! _perform_reaction(result, e, etmp))
@@ -3805,13 +3808,18 @@ IWReaction::_perform_reaction(Molecule & result,
   int chiral_centres_present = result.chiral_centres();
 
   int ns = _sidechains.number_elements();
+//#define DEBUG_PERFORM_REACTION 1
+#ifdef DEBUG_PERFORM_REACTION
+  cerr << "Before _do_intra_particle_replacements, smiles is " << result.smiles() << endl;
+  cerr << "Scaffold embedding " << (*scaffold_embedding) << endl;
+#endif
+
+  _do_intra_particle_replacements(result, scaffold_embedding);
 
 #ifdef DEBUG_PERFORM_REACTION
   cerr << "Before adding " << ns << " sidechains, smiles is " << result.smiles() << endl;
   cerr << "Scaffold embedding " << (*scaffold_embedding) << endl;
 #endif
-
-  _do_intra_particle_replacements(result, scaffold_embedding);
 
 // We must do any stereo preserving substitutions before any makes or breaks.
 // Make sure we do these only for single reagent sidechains (always applied) and

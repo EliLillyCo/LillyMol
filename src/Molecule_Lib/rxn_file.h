@@ -337,7 +337,8 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
 
     int add_toggle_kekule_form (atom_number_t, atom_number_t, bond_type_t);
 
-    int add_toggle_kekule_forms (Reaction_Site & rxn, const Reaction_Subset & subset, const int ndx) const;
+    int add_toggle_kekule_forms (Reaction_Site & rxn, const Reaction_Subset & subset, const int ndx,
+    												const RXN_File_Create_Reaction_Options & rxnfcro) const;
 
     int has_inter_fragment_changes () const;
 
@@ -570,7 +571,7 @@ class RXN_File
 
 // 
     std::ofstream *_queryOutStream;
-
+    	
 //  private functions
 
     int _identify_square_bonding_changes (int highest_atom_map);
@@ -653,7 +654,11 @@ class RXN_File
     void _fill_reagent_and_product_locator_arrays ();
     int _setup_reagent_product_locator_arrays();
 
-    int _look_for_unmapped_atoms_that_disappear (int & highest_atom_map,  IWReaction & rxn, const Reaction_Subset & subset);
+    int _look_for_unmapped_atoms_that_disappear (int & highest_atom_map,  
+    																			IWReaction & rxn, 
+    																			const Reaction_Subset & subset,
+    																			const RXN_File_Create_Reaction_Options & rxnfcro);
+    																			
     int _identify_small_fragments_showing_up_in_products(const int rgnt, int * not_in_largest_fragment) const;
     int _all_atoms_in_fragment_in_products(ISIS_RXN_FILE_Molecule & r, const int f, int * not_in_largest_fragment) const;
 

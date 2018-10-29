@@ -75,6 +75,12 @@ $(BUILD_DIR)/fetch_smiles_quick: $(FSQ_OBJECTS)
 	$(LD) -o $@ $(LDFLAGS) $(PROF) $(FSQ_OBJECTS) $(LIBS) -liwmisc $(SYSTEM_LIBS)
 EXECUTABLES += $(FSQ_EXE)
 
+################# Template for public executables ######################
+CONCAT_FILES_EXE = $(BUILD_DIR)/concat_files
+CONCAT_FILES_OBJECTS = $(BUILD_DIR)/concat_files.o $(BUILD_DIR)/iwtokeniser.o
+$(BUILD_DIR)/concat_files: $(CONCAT_FILES_OBJECTS)
+	$(LD) -o $@ $(CONCAT_FILES_OBJECTS) $(LIBS) -liwstring -lcmdline -liwstring_data_source -liwcrex -liwstring -liwaray -liwmisc $(SYSTEM_LIBS) 
+EXECUTABLES += $(CONCAT_FILES_EXE)
 ###################### Template for build command ######################
 .PHONY: copy_include
 .PHONY: library

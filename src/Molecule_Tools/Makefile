@@ -102,6 +102,130 @@ $(BUILD_DIR)/iwdemerit: $(IWDEMERIT_OBJECTS)
 	$(LD) -o $@ $(IWDEMERIT_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
 EXECUTABLES += $(IWDEMERIT_EXE)
 
+################# Template for public executables ######################
+PREFERRED_SMILES_EXE = $(BUILD_DIR)/preferred_smiles
+PREFERRED_SMILES_OBJECTS = $(BUILD_DIR)/preferred_smiles.o 
+$(BUILD_DIR)/preferred_smiles: $(PREFERRED_SMILES_OBJECTS)
+	$(LD) -o $@  $(PREFERRED_SMILES_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(PREFERRED_SMILES_EXE)
+
+### Release 2
+################# Template for public executables ######################
+ACTIVITY_CONSISTENCY_EXE = $(BUILD_DIR)/activity_consistency
+ACTIVITY_CONSISTENCY_OBJECTS = $(BUILD_DIR)/activity_consistency.o
+$(BUILD_DIR)/activity_consistency.o: activity_consistency.cc
+$(BUILD_DIR)/activity_consistency: $(ACTIVITY_CONSISTENCY_OBJECTS)
+	$(LD) -o $@ $(ACTIVITY_CONSISTENCY_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(ACTIVITY_CONSISTENCY_EXE)
+
+################# Template for public executables ######################
+RANDOM_SMILES_EXE = $(BUILD_DIR)/random_smiles
+RANDOM_SMILES_OBJECTS = $(BUILD_DIR)/random_smiles.o 
+$(BUILD_DIR)/random_smiles.o: random_smiles.cc 
+$(BUILD_DIR)/random_smiles: $(RANDOM_SMILES_OBJECTS)
+	$(LD) -o $@ $(RANDOM_SMILES_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(RANDOM_SMILES_EXE)
+
+################# Template for public executables ######################
+ROTATABLE_BONDS_EXE = $(BUILD_DIR)/rotatable_bonds
+ROTATABLE_BONDS_OBJECTS = $(BUILD_DIR)/rotatable_bonds.o
+$(BUILD_DIR)/rotatable_bonds: $(ROTATABLE_BONDS_OBJECTS)
+	$(LD) -o $@ $(ROTATABLE_BONDS_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(ROTATABLE_BONDS_EXE)
+
+
+################# Template for public executables ######################
+MSORT_EXE = $(BUILD_DIR)/msort
+MSORT_OBJECTS = $(BUILD_DIR)/msort.o
+$(BUILD_DIR)/msort.o: msort.cc
+$(BUILD_DIR)/msort: $(MSORT_OBJECTS)
+	$(LD) -o $@ $(MSORT_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(MSORT_EXE)	
+
+################# Template for public executables ######################
+RXN_SUBSTRUCTURE_SEARCH_EXE = $(BUILD_DIR)/rxn_substructure_search
+RXN_SUBSTRUCTURE_SEARCH_OBJECTS = $(BUILD_DIR)/rxn_substructure_search.o
+$(BUILD_DIR)/rxn_substructure_search: $(RXN_SUBSTRUCTURE_SEARCH_OBJECTS)
+	$(LD) -o $@ $(RXN_SUBSTRUCTURE_SEARCH_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(RXN_SUBSTRUCTURE_SEARCH_EXE)
+
+################# Template for public executables ######################
+SMILES_MUTATION_EXE = $(BUILD_DIR)/smiles_mutation
+SMILES_MUTATION_OBJECTS = $(BUILD_DIR)/smiles_mutation.o  $(BUILD_DIR)/count_atoms_in_smiles.o $(BUILD_DIR)/random_reactions.o
+$(BUILD_DIR)/smiles_mutation.o: smiles_mutation.cc random_reactions.h
+$(BUILD_DIR)/smiles_mutation: $(SMILES_MUTATION_OBJECTS)
+	$(LD) -o $@ $(SMILES_MUTATION_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(SMILES_MUTATION_EXE)
+
+################# Template for public executables ######################
+TP1_EXE = $(BUILD_DIR)/tp_first_pass
+TP1_OBJECTS = $(BUILD_DIR)/tp_first_pass.o 
+$(BUILD_DIR)/tp_first_pass.o: tp_first_pass.cc
+$(BUILD_DIR)/tp_first_pass: $(TP1_OBJECTS) 
+	$(LD) -o $@ $(TP1_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(TP1_EXE)
+
+################# Template for public executables ######################
+MOL2QRY_EXE = $(BUILD_DIR)/mol2qry
+MOL2QRY_OBJECTS = $(BUILD_DIR)/mol2qry.o 
+$(BUILD_DIR)/mol2qry.o:mol2qry.cc 
+$(BUILD_DIR)/mol2qry: $(MOL2QRY_OBJECTS)
+	$(LD) -o $@ $(MOL2QRY_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(MOL2QRY_EXE)
+
+################# Template for public executables ######################
+MOLECULAR_SCAFFOLD_EXE = $(BUILD_DIR)/molecular_scaffold
+MOLECULAR_SCAFFOLD_OBJECTS = $(BUILD_DIR)/molecular_scaffold.o  
+$(BUILD_DIR)/molecular_scaffold: $(MOLECULAR_SCAFFOLD_OBJECTS)
+	$(LD) -o $@ $(MOLECULAR_SCAFFOLD_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(MOLECULAR_SCAFFOLD_EXE)
+
+################# Template for public executables ######################
+MOLECULE_SUBSET_EXE = $(BUILD_DIR)/molecule_subset
+MOLECULE_SUBSET_OBJECTS = $(BUILD_DIR)/molecule_subset.o 
+$(BUILD_DIR)/molecule_subset: $(MOLECULE_SUBSET_OBJECTS)
+	$(LD) -o $@ $(MOLECULE_SUBSET_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(MOLECULE_SUBSET_EXE)
+
+################# Template for public executables ######################
+RGROUP_EXE = $(BUILD_DIR)/rgroup
+RGROUP_OBJECTS = $(BUILD_DIR)/rgroup.o 
+$(BUILD_DIR)/rgroup.o: rgroup.cc
+$(BUILD_DIR)/rgroup: $(RGROUP_OBJECTS) $(TEMPLATE_LIBRARY)
+	$(LD) -o $@ $(RGROUP_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(RGROUP_EXE)
+
+################# Template for public executables ######################
+RING_EXTRACTION_EXE = $(BUILD_DIR)/ring_extraction
+RING_EXTRACTION_OBJECTS = $(BUILD_DIR)/ring_extraction.o $(BUILD_DIR)/ring_ext_rep.o $(BUILD_DIR)/reaction_duplicate.o
+$(BUILD_DIR)/ring_extraction.o: ring_extraction.cc ring_ext_rep.h
+$(BUILD_DIR)/ring_ext_rep.o: ring_ext_rep.cc ring_ext_rep.h
+$(BUILD_DIR)/ring_extraction: $(RING_EXTRACTION_OBJECTS) 
+	$(LD) -o $@ $(RING_EXTRACTION_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(RING_EXTRACTION_EXE)
+
+################# Template for public executables ######################
+RING_TRIMMING_EXE = $(BUILD_DIR)/ring_trimming
+RING_TRIMMING_OBJECTS = $(BUILD_DIR)/ring_trimming.o  
+$(BUILD_DIR)/ring_trimming: $(RING_TRIMMING_OBJECTS)
+	$(LD) -o $@ $(RING_TRIMMING_OBJECTS)  $(LIBS) -liwmisc $(SYSTEM_LIBS) 
+EXECUTABLES += $(RING_TRIMMING_EXE)
+
+################# Template for public executables ######################
+SP3_FILTER_EXE = $(BUILD_DIR)/sp3_filter
+SP3_FILTER_OBJECTS = $(BUILD_DIR)/sp3_filter.o
+$(BUILD_DIR)/sp3_filter: $(SP3_FILTER_OBJECTS)
+	$(LD) -o $@ $(SP3_FILTER_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(SP3_FILTER_EXE)
+
+
+################# Template for public executables ######################
+TAUTOMER_GENERATION_EXE = $(BUILD_DIR)/tautomer_generation
+TAUTOMER_GENERATION_OBJECTS = $(BUILD_DIR)/tautomer_generation.o 
+$(BUILD_DIR)/tautomer_generation.o: tautomer_generation.cc 
+$(BUILD_DIR)/tautomer_generation: $(TAUTOMER_GENERATION_OBJECTS)
+	$(LD) -o $@ $(TAUTOMER_GENERATION_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(TAUTOMER_GENERATION_EXE)
 
 ###################### Template for build command ######################
 .PHONY: copy_include
