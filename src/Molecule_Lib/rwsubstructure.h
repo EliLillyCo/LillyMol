@@ -1,3 +1,4 @@
+
 #ifndef RW_SUBSTRUCTURE_H
 #define RW_SUBSTRUCTURE_H
 
@@ -340,8 +341,27 @@ smarts_from_file(iwstring_data_source & input,
                   resizable_array_p<T> & queries,
                   int verbose)
 {
-  (void) verbose;
+  return smarts_or_smiles_from_file(input,
+                  queries, 
+                  0);  // parse as smarts
+}
 
+template <typename T>
+int
+smiles_from_file(iwstring_data_source & input,
+                  resizable_array_p<T> & queries,
+                  int verbose)
+{
+  return smarts_or_smiles_from_file(input,
+                  queries, 
+                  1);  // parse as smiles
+}
+template <typename T>
+int
+smarts_or_smiles_from_file(iwstring_data_source & input,
+                  resizable_array_p<T> & queries, 
+                  int smilesNotSmarts)
+{
   int rc = 0;
 
   const_IWSubstring buffer;
@@ -356,18 +376,32 @@ smarts_from_file(iwstring_data_source & input,
     if (0 == buffer.length())
       continue;
 
-//  cerr << "Creating smarts from '" << buffer << "'\n";
 
     T * q = new T;
-    if (! q->create_from_smarts(buffer))
+    if (smilesNotSmarts)
     {
-      cerr << "smarts_from_file: cannot parse '" << buffer << "'\n";
-      delete q;
-      return 0;
+      //cerr << "Creating query from smiles '" << buffer << "'\n";
+
+      if (! q->create_from_smiles(buffer))
+      {
+        cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
+        delete q;
+        return 0;
+      }      
+    }
+    else
+    {
+      //cerr << "Creating query from smarts '" << buffer << "'\n";
+      if (! q->create_from_smarts(buffer))
+      {
+        cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
+        delete q;
+        return 0;
+      }
     }
 
     queries.add(q);
-//  cerr << "Created smarts from '" << buffer << "'\n";
+    //cerr << "Created query from '" << buffer << "'\n";
     rc++;
   }
 
@@ -386,6 +420,20 @@ smarts_from_file(const const_IWSubstring & fname, resizable_array_p<T> & queries
   }
 
   return smarts_from_file(input, queries, verbose);
+}
+
+template <typename T>
+int
+smiles_from_file(const const_IWSubstring & fname, resizable_array_p<T> & queries, int verbose)
+{
+  iwstring_data_source input(fname);
+  if (! input.ok())
+  {
+    cerr << "smiles_from_file: cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return smiles_from_file(input, queries, verbose);
 }
 
 template <typename T>

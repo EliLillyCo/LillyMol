@@ -113,11 +113,11 @@ Molecule::btype_to_connection (atom_number_t i, int j) const
 }
 
 bond_type_t
-Molecule::btype_between_atoms (atom_number_t a1, atom_number_t a2) const
+Molecule::btype_between_atoms (atom_number_t myAtomId, atom_number_t otherAtomId) const
 {
-  assert(ok_2_atoms(a1, a2));
+  assert(ok_2_atoms(myAtomId, otherAtomId));
 
-  return _things[a1]->btype_to_atom(a2);
+  return _things[myAtomId]->btype_to_atom(myAtomId,otherAtomId);
 }
 
 int
@@ -196,9 +196,10 @@ Molecule::bond_types (atom_number_t a,
 const Bond *
 Molecule::bond_between_atoms (atom_number_t a1, atom_number_t a2) const
 {
+
   assert(ok_2_atoms(a1, a2));
 
-  const Bond * rc = _things[a1]->bond_to_atom(a2);
+  const Bond * rc = _things[a1]->bond_to_atom(a1, a2);
 
   if (NULL != rc)
     return rc;
@@ -216,9 +217,12 @@ Molecule::bond_between_atoms (atom_number_t a1, atom_number_t a2) const
 const Bond * 
 Molecule::bond_between_atoms_if_present(const atom_number_t a1, const atom_number_t a2) const
 {
+	if (a1 == a2)
+		return NULL;
+		
   assert(ok_2_atoms(a1, a2));
 
-  return _things[a1]->bond_to_atom(a2);
+  return _things[a1]->bond_to_atom(a1,a2);
 }
 
 bool
@@ -788,7 +792,7 @@ Molecule::set_bond_type_between_atoms (atom_number_t a1, atom_number_t a2,
   assert(ok_2_atoms(a1, a2));
   assert(OK_BOND_TYPE(bt));
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));   // loss of const OK
+  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));   // loss of const OK
   if (NULL == b)
   {
     cerr << "Molecule::set_bond_type_between_atoms: atoms " << a1 << " and " << a2 << ", no bond found\n";
@@ -856,7 +860,7 @@ Molecule::set_wedge_bond_between_atoms (atom_number_t a1, atom_number_t a2,
 {
   assert (ok_2_atoms(a1, a2));
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));   // loss of const OK
+  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));   // loss of const OK
   if (NULL == b)
   {
     cerr << "Molecule::set_bond_type_between_atoms: atoms " << a1 << " and " << a2 << ", no bond found\n";

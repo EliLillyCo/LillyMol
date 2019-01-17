@@ -31,10 +31,7 @@ $command -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 1 -I in/CentroidRxnSmi
 $diff_tool $name1 $name1_out
 ret1=$?
 
-$diff_tool $name2 $name2_out
-ret2=$?
-
-if [ $ret1 -eq 1 ] && [ $ret2 -eq 1 ]
+if [ $ret1 -eq 1 ]
 then
     echo "$case_id : TEST PASS"
 else

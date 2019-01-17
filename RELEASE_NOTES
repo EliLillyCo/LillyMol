@@ -1,3 +1,34 @@
+2019-01 Release 2.1
+
+New scripts
+===========
+
+Retired scripts
+===============
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+
+
+Updates
+=======
+rxn_substructure_search - Reorganize and rationalize the interface of the scripts
+                        - Add some missing functionality for example reaction smiles search 
+rxn_standardize - Reorganize and rationalize the interface of the scripts
+                - Add component cleaning option
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 2018-10 Release 2.0
 
 New scripts

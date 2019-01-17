@@ -27,7 +27,7 @@ name1=log.txt
 name1_out=out/log.txt
 
 diff_tool=../../fileDiff.sh
-$command -a in/pubchem_example.smi >log.txt 2>err.txt
+$command -a -k w in/pubchem_example.smi >log.txt 2>err.txt
 $diff_tool $name1 $name1_out
 ret1=$?
 

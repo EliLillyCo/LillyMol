@@ -18,6 +18,9 @@ template int queries_from_file(const_IWSubstring const &, resizable_array_p<Subs
 template int smarts_from_file(const const_IWSubstring &, resizable_array_p<Substructure_Query> &, int);
 template int smarts_from_file(iwstring_data_source &, resizable_array_p<Substructure_Query> &, int);
 
+template int smiles_from_file(const const_IWSubstring &, resizable_array_p<Substructure_Query> &, int);
+template int smiles_from_file(iwstring_data_source &, resizable_array_p<Substructure_Query> &, int);
+
 template int process_files_of_queries(Command_Line &, resizable_array_p<Substructure_Query> &, int, int, char);
 
 template int file_record_is_file(resizable_array_p<Substructure_Query> & queries, const IWString & directory_path, IWString & buffer, int verbose);

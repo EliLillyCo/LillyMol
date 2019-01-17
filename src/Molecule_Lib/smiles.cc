@@ -1956,7 +1956,8 @@ Molecule::_construct_smiles(const Fragment_Information & frag_info,
     }
 
     if (need_dot)
-      smiles += '.';
+    	smiles += getUseThisCharAsDotInSmiles();
+      //smiles += '.';
 
     int nr = frag_info.rings_in_fragment(f);
 
@@ -2887,8 +2888,12 @@ Molecule::_update_ring_membership (const Ring * r)
     cerr << "Molecule::_update_ring_membership: atom " << j << " rm = " << _ring_membership[j] << endl;
     const Atom * aj = _things[j];
 
-    Bond * b = const_cast<Bond *>(aj->bond_to_atom(prev_atom));   // loss of const OK
+    Bond * b = const_cast<Bond *>(aj->bond_to_atom(j,prev_atom));   // loss of const OK
     assert(b);
+    if (b == NULL)
+    {
+    	return 0;
+    }
 
     b->set_nrings(1);
 
@@ -2986,8 +2991,8 @@ Molecule::_add_ring_to_sssr (Ring * ri)
 
 //  _things[j]->in_another_ring();
 
-    Bond * b = const_cast<Bond *>(_things[j]->bond_to_atom(aprev));
-
+    Bond * b = const_cast<Bond *>(_things[j]->bond_to_atom(j,aprev));
+   
     b->in_another_ring();
 
     aprev = j;

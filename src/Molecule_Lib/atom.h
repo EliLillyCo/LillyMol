@@ -89,7 +89,7 @@ class Atom : public resizable_array <Bond *>, public Coordinates
 
     int molecule_being_resized (int);
 
-    const Bond * bond_to_atom (atom_number_t) const;
+    const Bond * bond_to_atom (atom_number_t myAtomId,atom_number_t otherAtomId) const;
 
 //  int is_hydrogen () const;
 //  int is_carbon () const;
@@ -144,7 +144,7 @@ class Atom : public resizable_array <Bond *>, public Coordinates
 
     atom_number_t other (atom_number_t, int) const;    // atom number of i'th connection
     bond_type_t   btype_to_connection (int) const;    // bond order  to i'th connection
-    bond_type_t   btype_to_atom (atom_number_t a2) const;    // bond order of bond to A2
+    bond_type_t   btype_to_atom (atom_number_t myAtomId, atom_number_t otherAtomId) const;    // bond order of bond to otherAtomId
 
     int other_and_type (atom_number_t, int, atom_number_t &, bond_type_t &) const;
 

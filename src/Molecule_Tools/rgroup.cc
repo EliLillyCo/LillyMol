@@ -667,7 +667,8 @@ rgroup_combine_same_atom_substituents (Molecule & m,
 
     atom_number_t j = atoms_in_substituent[0];
 
-    const Bond * b = m.atomi(zatom)->bond_to_atom(j);
+    //const Bond * b = m.atomi(zatom)->bond_to_atom(j);
+    const Bond * b = m.atomi(zatom)->bond_to_atom(zatom,j);
 
     build_molecule (m, j, b->btype(), zatom, embedding, atom_already_done, r);
   }

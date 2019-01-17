@@ -27,7 +27,7 @@ name1=found.rxnsmi
 name1_out=out/found.rxnsmi
 
 diff_tool=../../fileDiff.sh
-$command -b . -q 'C(F)(F)F>>' -m found in/sample_reactions.rsmi
+$command -q 'C(F)(F)F>>' -m found in/sample_reactions.rsmi
 $diff_tool $name1 $name1_out
 ret1=$?
 

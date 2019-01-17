@@ -319,3 +319,46 @@ identify_plus_positions(const const_IWSubstring & buffer,
 
   return pos.number_elements();
 }
+
+int
+splitOnPlusses(const const_IWSubstring & buffer,
+                        resizable_array_p<const_IWSubstring> & parts)
+{
+  parts.resize_keep_storage(0);
+
+  const int n = buffer.length();
+  if ( n <= 0)
+  	return 0;
+  	
+  int cstart = 0;
+  int in_square_bracket = 0;
+  for (int i = 0; i < n; ++i)
+  {
+    if ('[' == buffer[i])
+      in_square_bracket = 1;
+    else if (in_square_bracket)
+    {
+      if (']' == buffer[i])
+        in_square_bracket = 0;
+    }
+    else if ('+' == buffer[i])
+    {
+      const_IWSubstring *componentPtr = new const_IWSubstring;
+
+      if (i > 0)
+      {
+        buffer.from_to(cstart, i-1, *componentPtr);
+        parts.add(componentPtr);
+      }
+      cstart = i+1;      
+    }
+  }  
+  // add whatever came after the last plus
+  
+  const_IWSubstring *lastComponentPtr = new const_IWSubstring;
+   
+  buffer.from_to(cstart, n-1, *lastComponentPtr);
+  parts.add(lastComponentPtr);
+
+  return parts.number_elements();
+}

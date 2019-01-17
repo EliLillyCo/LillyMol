@@ -1040,7 +1040,8 @@ Molecule::set_aromaticity_two_atoms (atom_number_t a1, atom_number_t a2,
     need_to_invalidate_smiles = 1;
   }
 
-  Bond * b = const_cast<Bond *> (_things[a1]->bond_to_atom(a1));
+  //Bond * b = const_cast<Bond *> (_things[a1]->bond_to_atom(a1,a1));
+  Bond * b = const_cast<Bond *> (_things[a1]->bond_to_atom(a1,a2));
   if (IS_AROMATIC_ATOM(arom))
     b->set_aromatic();
   else
@@ -4358,7 +4359,7 @@ Molecule::_find_kekule_form (const resizable_array<const Ring *> & rings,
   {
     atom_number_t j = try_double_bond_to[i];
 
-    Bond * b = const_cast<Bond *>(a->bond_to_atom(j));
+    Bond * b = const_cast<Bond *>(a->bond_to_atom(zatom, j));
 
 #ifdef DEBUG_KEKULE
     cerr << "From atom " << zatom << " what about atom " << j << " vary_bonds = " << vary_bonds[j] << endl;
@@ -4988,7 +4989,7 @@ Molecule::_make_all_unshared_bonds_non_aromatic (const Ring & r)
     atom_number_t a1 = i.a1();
     atom_number_t a2 = i.a2();
 
-    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
+    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
 
     if (! b->is_permanent_aromatic())
       continue;
@@ -5024,7 +5025,7 @@ Molecule::_make_bonds_aromatic (const Ring * zring)
     else
       a2 = r[i - 1];
 
-    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
+    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
 
     b->set_aromatic();
   }
@@ -5040,7 +5041,7 @@ Molecule::_make_all_bonds_aromatic (const Ring & r)
     atom_number_t a1 = i.a1();
     atom_number_t a2 = i.a2();
 
-    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
+    Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
 
     if (! b->is_permanent_aromatic())
       b->set_permanent_aromatic(1);
@@ -5066,7 +5067,7 @@ Molecule::_count_aromatic_bonds_in_just_one_ring (const Ring & r)
     atom_number_t a1 = i.a1();
     atom_number_t a2 = i.a2();
 
-    const Bond * b = _things[a1]->bond_to_atom(a2);
+    const Bond * b = _things[a1]->bond_to_atom(a1,a2);
 
     if (! b->is_permanent_aromatic())
       continue;
@@ -5086,7 +5087,7 @@ Molecule::_all_bonds_aromatic (const Ring & r) const
     atom_number_t a1 = i.a1();
     atom_number_t a2 = i.a2();
 
-    const Bond * b = _things[a1]->bond_to_atom(a2);
+    const Bond * b = _things[a1]->bond_to_atom(a1,a2);
 
 //  cerr << "Bond between " << a1 << " and " << a2 << " aromatic? " << b->is_permanent_aromatic() << endl;
 
@@ -6828,7 +6829,7 @@ Molecule::set_bond_types_for_isis_aromaticity_matching ()
       if (keep_as_is[a1 * _number_elements + a2])
         continue;
 
-      Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
+      Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
 
       Connection * c = b;
 

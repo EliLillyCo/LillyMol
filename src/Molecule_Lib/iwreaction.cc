@@ -2450,7 +2450,7 @@ int
 Molecule_and_Embedding::collect_matched_atoms(const Substructure_Results & sresults,
                                               int embedding)
 {
-  assert (0 == _embedding.number_elements());
+  //assert (0 == _embedding.number_elements());
 
   const Set_of_Atoms * s = sresults.embedding(embedding);
   assert (NULL != s);

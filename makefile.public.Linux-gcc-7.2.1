@@ -14,6 +14,7 @@ PROF=
 # DEBUG = -g -fsanitize=address 
 # DEBUG = -g
 DEBUG = -DNDEBUG
+#DEBUG = -g -gdwarf-3
 
 # CPU = -DUNIX -mtune=sandybridge
 # CPU = -DUNIX -mtune=haswell
@@ -21,6 +22,7 @@ DEBUG = -DNDEBUG
 CPU = -DUNIX -march=westmere -mtune=haswell
 
 OPT = -O2 
+#OPT = -O0 
 
 OPENMP = -fopenmp
 

@@ -21,6 +21,8 @@
 #else
 #include <sstream>
 #endif
+#include <vector>
+#include <string>
 
 using std::cerr;
 using std::endl;
@@ -209,7 +211,8 @@ class const_IWSubstring
     int  remove_leading_chars (char);
     int  remove_leading_words (int, char = ' ');
     int  remove_up_to_first (char);
-
+    void  remove_line_terminators();
+    
     int chop (int = 1);
 
     void strip_leading_blanks ();
@@ -265,6 +268,7 @@ class const_IWSubstring
     int split (const_IWSubstring &, char, const_IWSubstring &) const;
     int split (IWString &, char, IWString &) const;
     int split (IWString *, char = ' ') const;
+    int split (std::vector<std::string> &, std::string) const;
 
     char last_item () const { return *(_data + _nchars - 1);}
 

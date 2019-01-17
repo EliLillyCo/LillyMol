@@ -24,6 +24,7 @@ template int queries_from_file(IWString const &, resizable_array_p<Substructure_
 
 template int smarts_from_file(const const_IWSubstring &, resizable_array_p<Substructure_Hit_Statistics> &, int);
 template int smarts_from_file(iwstring_data_source &, resizable_array_p<Substructure_Hit_Statistics> &, int);
+template int smarts_or_smiles_from_file(iwstring_data_source &, resizable_array_p<Substructure_Hit_Statistics> &, int);
 
 template int file_record_is_file(resizable_array_p<Substructure_Hit_Statistics> & queries, const IWString & directory_path, IWString & buffer, int verbose);
 template int file_record_is_smarts(resizable_array_p<Substructure_Hit_Statistics> & queries, IWString & buffer, int verbose);

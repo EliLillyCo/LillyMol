@@ -1833,6 +1833,14 @@ extern void set_display_already_bonded_error_message(int s);
 
 extern void set_full_distance_matrix(const int s);
 
+
+/* 
+Setting the char to be used for the "dot" in 	SMILES - this is used by LIlly reaction stuff where + is a separator
+*/
+
+extern void setUseThisCharAsDotInSmiles(char thisChar);
+extern char getUseThisCharAsDotInSmiles(void);
+
 /*
   We can temporarily disable such messages with an object. Messages get
   turned back on when this goes out of scope

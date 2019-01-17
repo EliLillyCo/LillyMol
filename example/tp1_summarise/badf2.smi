@@ -1,6 +1,0 @@
-S(C)C(=NC=C1C(=O)OC(C)(C)OC1=O)NN=C(C1=CC=CC=C1)C1=CC=CC=C1 PBCHM10927997 (1 matches to 'enamine')
-OC(C(NCCO)CC(=O)OC)C1=CC=C(N(C)C)C=C1 PBCHM82349145 (1 matches to 'reverse_michael')
-O=C1C2=C(C=CC(=C2N(=O)=O)C2CCC(CC2)CCC)C(=O)C2=C1C=CC(=C2N(=O)=O)C PBCHM88756156 (2 matches to 'multiple_nitro')
-IC1=CC=C(N2C(=O)[C@H]3[C@@](N[C@H]([C@H]3C2=O)C2=C(O)C(Cl)=CC(Cl)=C2)(CC(C)C)C(=O)O)C=C1 PBCHM97973690 (1 matches to 'phenolate')
-ClC1=C(Cl)C=CC(=C1)N1C(=O)C(=CC2=CC(=CC=C2)OCC(=O)NC2=CC(=CC(=C2)C)C)SC1=S PBCHM126261253 (1 matches to 'rhodanine')
-S1C(=S)N([C@H](CCC(=O)O)C(=O)O)C(=O)C1=CC1=CC(=C(OCC)C=C1)OC PBCHM1873271 (1 matches to 'rhodanine')

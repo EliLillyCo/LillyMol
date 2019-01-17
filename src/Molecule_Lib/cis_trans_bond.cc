@@ -1310,10 +1310,14 @@ Molecule::_set_bond_directionality (atom_number_t a1,
 {
   _set_modified();
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
+  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
 
   assert (NULL != b);
-
+  if (b == NULL)
+  {
+    cerr << "Molecule::could not find bond between atoms " << a1 << " and " << a1   << endl;
+    return 0;
+  }	
   if (IW_BOND_DIRECTIONAL_UP == dir)
     b->set_directional_up();
   else if (IW_BOND_DIRECTIONAL_DOWN == dir)

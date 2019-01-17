@@ -5,17 +5,17 @@ FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 373864 26
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 473864 96
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 573864 56
-OC1CCC(C(OCC2CCCCC2)O)CC1  N = 4 min 26 max 96 ave 51 diff 70
-O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 7180 26
-O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 17180 36
-O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 27180 96
-O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 37180 46
 OC1CCC(C(C)(C)C2CCCCC2)CC1  N = 5 min 11 max 81 ave 35 diff 70
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 11742 31
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 111742 21
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 211742 31
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 311742 81
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 411742 11
+OC1CCC(C(OCC2CCCCC2)O)CC1  N = 4 min 35 max 96 ave 53.25 diff 61
+O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 7180 35
+O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 17180 36
+O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 27180 96
+O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 37180 46
 CC(C1CCC(O)CC1)(C1CCC(O)CC1)C1CCC(O)CC1  N = 3 min 0 max 60 ave 30 diff 60
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C(O[H])C(=C2[H])[H])[H])(C2=C([H])C(=C(O[H])C(=C2[H])[H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 93118 30
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C(O[H])C(=C2[H])[H])[H])(C2=C([H])C(=C(O[H])C(=C2[H])[H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 193118 60

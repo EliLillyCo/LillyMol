@@ -32,5 +32,7 @@ template <typename T> int skip_to_string (T & input, const char * target, int re
 // identify the + characters in a reaction smiles. Complicated by the presence of + signs inside square brackets
 
 extern int identify_plus_positions (const const_IWSubstring & buffer, resizable_array<int> & pos);
+extern int splitOnPlusses(const const_IWSubstring & buffer,
+                        resizable_array_p<const_IWSubstring> & parts);
 
 #endif

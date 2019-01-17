@@ -98,6 +98,7 @@ template resizable_array_base<Substructure_Atom_Specifier*>::resizable_array_bas
 template int resizable_array_p<Substructure_Atom_Specifier>::resize(int);
 template int resizable_array_p<Substructure_Atom_Specifier>::resize_no_delete(int);
 
+
 template int resizable_array_base<Substructure_Atom_Specifier*>::add(Substructure_Atom_Specifier*);
 template resizable_array_base<Substructure_Atom_Specifier*>::~resizable_array_base();
 
@@ -112,7 +113,8 @@ template resizable_array_base<Elements_Needed*>::~resizable_array_base();
 template int resizable_array_base<Elements_Needed*>::add(Elements_Needed*);
 template int resizable_array_base<Elements_Needed*>::resize(int);
 template int resizable_array_p<Elements_Needed>::resize(int);
-template int  resizable_array_p<Elements_Needed>::resize_no_delete(int);
+template int resizable_array_p<Elements_Needed>::resize_no_delete(int);
+
 
 //template class resizable_array_p<Link_Atom>;
 //template class resizable_array<Link_Atom *>;
@@ -135,6 +137,7 @@ template int resizable_array_p<Link_Atom>::transfer_in(resizable_array_p<Link_At
 template resizable_array<Link_Atom*>::resizable_array();
 template resizable_array<Link_Atom*>::~resizable_array();
 
+
 template resizable_array_p<ISIS_Link_Atom>::resizable_array_p();
 template resizable_array_p<ISIS_Link_Atom>::resizable_array_p(int);
 template resizable_array_p<ISIS_Link_Atom>::~resizable_array_p();
@@ -145,6 +148,7 @@ template int resizable_array_p<ISIS_Link_Atom>::resize(int);
 template int resizable_array_p<ISIS_Link_Atom>::resize_no_delete(int);
 template int resizable_array_base<ISIS_Link_Atom*>::resize(int);
 template resizable_array_p<Link_Atom> & resizable_array_p<Link_Atom>::operator=(resizable_array_p<Link_Atom> && rhs);
+
 
 template int resizable_array_base<Substructure_Atom*>::add(Substructure_Atom*);
 template int resizable_array_base<Substructure_Atom*>::resize(int);
@@ -166,5 +170,15 @@ template Substructure_Atom * resizable_array_base<Substructure_Atom*>::item(int)
 template Substructure_Chiral_Centre * & resizable_array_base<Substructure_Chiral_Centre*>::operator[](int) const;
 template int resizable_array_base<Substructure_Chiral_Centre*>::ok() const;
 template Link_Atom * & resizable_array_base<Link_Atom*>::operator[](int) const;
+template int resizable_array_base<Query_Atoms_Matched*>::ok() const;
+template int resizable_array_base<Substructure_Bond *>::ok() const;
+template int resizable_array_base<Substructure_Environment*>::ok() const;
+template int resizable_array_base<Substructure_Atom_Specifier>::ok() const;
+template int resizable_array_base<Elements_Needed*>::ok() const;
+template int resizable_array_base<Link_Atom*>::ok() const;
+template int resizable_array_base<ISIS_Link_Atom*>::ok() const;
+template int resizable_array_base<Substructure_Atom_Specifier*>::ok() const;
+
+
 #endif
 

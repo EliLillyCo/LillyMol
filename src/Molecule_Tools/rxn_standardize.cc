@@ -1,5 +1,5 @@
 /*
-  onverts an MDL format reaction to reaction smiles
+  standardizes a reaction
 */
 
 #include <iostream>
@@ -25,7 +25,13 @@ static int reactions_read = 0;
 
 static Chemical_Standardisation chemical_standardisation;
 
-static int reduce_to_largest_fragment = 0;
+static int reduce_to_largest_product = 0;
+
+static int reduce_to_largest_reactant = 0;
+
+static int eliminate_reagents_not_participating = 0;
+
+static int remove_fragments_not_participating = 0;
 
 static int ignore_bad_reactions = 0;
 
@@ -33,9 +39,15 @@ static int bad_reactions_ignored = 0;
 
 static IWString_and_File_Descriptor stream_for_discarded_reactions;
 
-static int skip_reactions_with_multiple_reagents = 0;
+static int skip_reactions_with_multiple_reactants = 0;
 
-static int reactions_with_multiple_reagents_skipped = 0;
+static int skip_reactions_with_no_common_mapped_atoms = 0;
+
+static int reactions_with_multiple_reactants_skipped = 0;
+
+static int skip_reactions_with_multiple_products = 0;
+
+static int reactions_with_multiple_products_skipped = 0;
 
 static int auto_fix_orphans = 0;
 
@@ -43,11 +55,12 @@ static int discard_reactions_with_isotopes = 0;
 
 static int reactions_discarded_for_isotopic_atoms = 0;
 
-static int remove_duplicate_reagents_atom_maps_scrambled = 0;
-
-static int remove_duplicate_reagents_and_products_ignoring_atom_maps = 0;
-
-static int move_small_counterions_to_orphan_status = 0;
+static int remove_duplicate_reactants = 0;
+static int remove_duplicate_products = 0;
+static int remove_duplicate_agents = 0;
+static int remove_all_agents = 0;
+static int remove_unmapped_components = 0;
+static int remove_unchanged_components = 0;
 
 static int use_first_token_of_name = 0;
 static int gsub_reaction_names = 0;
@@ -61,9 +74,9 @@ static int reactions_with_kekule_problems_fixed = 0;
 static int reactions_with_fragments_not_participating = 0;
 static int reactions_with_reagents_not_participating = 0;
 static int reactions_with_duplicate_reagents = 0;
-static int reactions_with_duplicates_but_different_atoms_maps = 0;
 static int reactions_with_reagent_count_changed = 0;
 static int reactions_with_no_common_mapped_atoms = 0;
+
 static int reactions_with_orphan_atoms = 0;
 static int reactions_with_counterions_moved_to_orphan = 0;
 static int reactions_with_duplicates_atom_maps_ignored = 0;
@@ -72,12 +85,12 @@ static int reactions_with_no_products = 0;
 
 static int reactions_written = 0;
 
-static bool plus_rather_than_dot = true;
-static bool orphan_plus_rather_than_dot = true;
+static bool use_all_plusses = false;
+static bool use_all_dots = false;
 
 static Accumulator_Int<int> acc_natoms;
 
-static int max_atoms_in_reagent = 0;
+static int max_atoms_in_reagent_and_product = 0;
 
 static int reactions_discarded_for_too_many_atoms = 0;
 
@@ -100,54 +113,63 @@ static int reactions_containing_aromatic_bonds = 0;
 
 static int reactions_where_largest_fragment_does_not_change = 0;
 
-static int input_is_reaction_smiles = 0;
+//static int input_is_reaction_smiles = 1;
 
 static void
-usage (int rc)
+usage()
 {
+//  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+//  cerr << "Converts an mdl reaction file to reaction smiles\n";
+//  cerr << "  -R            reading multi-reaction RDfile\n";
+//  cerr << "  -s            reading an already formed reaction smiles\n";
+//  cerr << "  -o            create reagent fragments that are orphans\n";
+//  cerr << "  -m            skip reactions that have multiple reagents\n";
+//  cerr << "  -I            discard reactions containing isotopic atoms\n";
+//  cerr << "  -K            fix alternating Kekule issues\n";
+//  cerr << "  -e            move small fragments that show up on products to orphan status\n";
+//  cerr << "  -U <fname>    write discarded reactions to <fname>\n";
+//  cerr << "  -b            remove duplicate reagents, even if atom maps scrambled\n";
+//  cerr << "  -f trunc      truncate reaction names to the first token\n";
+//  cerr << "  -f gsub       replace unusual characters in reaction names with _\n";
+//  cerr << "  -f __         if the name is changed, compress consecutive underscores\n";
+//  cerr << "  -d r          separate reagents and products with . rather than +\n";
+//  cerr << "  -d o          separate orphan atoms from reagents with . rather than +\n";
+//  cerr << "  -C <natoms>   discard any reaction where the largest reagent has more than <natoms> atoms\n";
+//  cerr << "  -X ...        miscellaneous options, enter -X help for help\n";
+//  cerr << "  -c            discard chirality on input\n";
+//  cerr << "  -D x          discard reactions containing duplicate atom map numbers\n";
+//  cerr << "  -D u          unmap   all atoms with duplicate atom map numbers\n";
+//  cerr << "  -l            reduce to largest fragment\n";
+//  cerr << "  -g ...        chemical standardisation options\n";
+//  cerr << "  -E ...        standard element specifications\n";
+//  cerr << "  -A ...        standard aromaticity specifications\n";
+//  cerr << "  -v            verbose output\n";
+
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Converts an mdl reaction file to reaction smiles\n";
+  cerr << "Standarizes a reaction file supplied in MDL format or in Lilly SMILES format\n";
   cerr << "  -R            reading multi-reaction RDfile\n";
-  cerr << "  -s            reading an already formed reaction smiles\n";
-  cerr << "  -o            create reagent fragments that are orphans\n";
-  cerr << "  -m            skip reactions that have multiple reagents\n";
-  cerr << "  -I            discard reactions containing isotopic atoms\n";
+  cerr << "  -s            reading a reaction smiles (default is -s)\n";
+  cerr << "  -c            discard chirality on input\n";
   cerr << "  -K            fix alternating Kekule issues\n";
-  cerr << "  -e            move small fragments that show up on products to orphan status\n";
-  cerr << "  -U <fname>    write discarded reactions to <fname>\n";
-  cerr << "  -b            remove duplicate reagents, even if atom maps scrambled\n";
+  cerr << "  -o            create reactant fragments that are orphans\n";
+  cerr << "  -d d          separate components with . rather than +\n";
+  cerr << "  -d p          separate components with + rather than .\n";
+  cerr << "  -C <natoms>   discard any reaction where the largest reagent has more than <natoms> atoms\n";
   cerr << "  -f trunc      truncate reaction names to the first token\n";
   cerr << "  -f gsub       replace unusual characters in reaction names with _\n";
   cerr << "  -f __         if the name is changed, compress consecutive underscores\n";
-  cerr << "  -d r          separate reagents and products with . rather than +\n";
-  cerr << "  -d o          separate orphan atoms from reagents with . rather than +\n";
-  cerr << "  -C <natoms>   discard any reaction where the largest reagent has more than <natoms> atoms\n";
-  cerr << "  -X ...        miscellaneous options, enter -X help for help\n";
-  cerr << "  -c            discard chirality on input\n";
-  cerr << "  -D x          discard reactions containing duplicate atom map numbers\n";
-  cerr << "  -D u          unmap   all atoms with duplicate atom map numbers\n";
-  cerr << "  -l            reduce to largest fragment\n";
+  cerr << "  -X ...        options related to discarding reactions, enter -X help for help\n";
+  cerr << "  -D ...        options related to discarding reaction components, enter -D help for help\n";
+  cerr << "  -U <fname>    write discarded reactions to <fname>\n";
   cerr << "  -g ...        chemical standardisation options\n";
   cerr << "  -E ...        standard element specifications\n";
   cerr << "  -A ...        standard aromaticity specifications\n";
+  cerr << "  -M            generate atom maps\n";
+  cerr << "  -q            quiet; suppress warnings about no mtched atoms\n";
   cerr << "  -v            verbose output\n";
 
-  exit(rc);
+  exit(1);
 }
-
-#ifdef NOT_USED_HERE_UUUU
-static void
-preprocess (Molecule & m)
-{
-  if (reduce_to_largest_fragment)
-    m.reduce_to_largest_fragment();
-
-  if (chemical_standardisation.active())
-    chemical_standardisation.process(m);
-
-  return;
-}
-#endif
 
 static void
 process_reaction_name(IWString & s)
@@ -155,6 +177,7 @@ process_reaction_name(IWString & s)
   if (! gsub_reaction_names && ! use_first_token_of_name)   // nothing to do
     return;
 
+  //cerr << "Starting - name is : " << s << endl;
   const int n = s.number_elements();
 
   int contains_whitespace = 0;
@@ -175,12 +198,14 @@ process_reaction_name(IWString & s)
     {
       s.iwtruncate(i);
       changes_made++;
+      //cerr << "Truncated: " << s << endl;
       break;
     }
     else if (gsub_reaction_names)
     {
       s[i] = '_';
       changes_made++;
+      //cerr << "fixing a char - name is now: " << s << endl;
     }
     else if (isspace(c))
       contains_whitespace++;
@@ -188,19 +213,22 @@ process_reaction_name(IWString & s)
       contains_non_alpha++;
   }
 
+  //cerr <<"name after fixes:: " << s << endl;
   if (contains_whitespace || contains_non_alpha)
     cerr << "Warning reaction '" << s << "' whitespace or other characters\n";
 
   if (! changes_made)
     return;
-
+  //cerr << "compress_consecutive_underscores: " << compress_consecutive_underscores << endl;
   if (! compress_consecutive_underscores)
     return;
 
-  bool previous_was_underscore = '-' == s[0];
-  int ndx = 1;
-  for (int i = 1; i < n; ++i)
+  bool previous_was_underscore = false;
+  int ndx = 0;
+  for (int i = 0; i < n; ++i)
   {
+    //cerr << "name: " << s << endl;
+  	//cerr << "thisChar: " << s[i] << endl;
     if ('_' == s[i])
     {
       if (! previous_was_underscore)
@@ -209,6 +237,8 @@ process_reaction_name(IWString & s)
         ndx++;
         previous_was_underscore = true;
       }
+      //else
+      	//cerr << "skipping" << endl;
     }
     else
     {
@@ -283,7 +313,7 @@ rxn_standardize(RXN_File & rxn,
   const int initial_nr = rxn.number_reagents();
 
   if (verbose > 1)
-    cerr << "Read '" << rxn.name() << "' with " << initial_nr << " reagents\n";
+    cerr << endl <<  "Read '" << rxn.name() << endl << "' with " << initial_nr << " reagents\n";
 
   IWString tmp(rxn.name());
   process_reaction_name(tmp);
@@ -341,9 +371,209 @@ rxn_standardize(RXN_File & rxn,
   cerr << " " << rxn.name() << endl;
 #endif
 
+  // the order of operations is important - For example: if duplicate reactant are to be removed, then we should do that before checking for 
+  // 	duplicated mapping numbers.  
+  
+  //#define DEBUG_RXN_STANDARDIZE
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+ 
+ 
+  if (max_atoms_in_reagent_and_product > 0 || verbose)    // do first because it may stop various other failures (hide our problems!)
+  {
+    const int x = rxn.max_atom_in_any_reagent();
+    const int y = rxn.max_atom_in_any_product();
+    //cerr << "Reagent atom count: " << x << "    Product atom count: " <<y << endl;
+    if (verbose)
+      acc_natoms.extra(x);
+    if (max_atoms_in_reagent_and_product > 0 && x > max_atoms_in_reagent_and_product && y > max_atoms_in_reagent_and_product)
+    {
+      if (verbose > 1)
+        cerr << rxn.name() << " too many atoms in a reagent and a product " << x << endl;
+
+      reactions_discarded_for_too_many_atoms++;
+      if (stream_for_discarded_reactions.is_open())
+        echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
+      return 1;
+    }
+  }
+  
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
   if (assign_unmapped_atoms)
   {
     rxn.assign_unmapped_atoms();
+  }
+  
+  if (unmap_duplicate_atom_map_numbers && rxn.contains_duplicate_atom_map_numbers())
+  {
+    rxn.unmap_duplicate_atom_map_numbers();
+  }
+
+ 
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+  if (remove_fragments_not_participating && rxn.remove_fragments_not_participating())
+  {
+    if (verbose > 1)
+      cerr << "Removed fragments not reacting from '" << rxn.name() << ", now " << rxn.number_reagents() << " reagents\n";
+    reactions_with_fragments_not_participating++;
+
+    if (0 == rxn.number_reagents())
+    {
+      cerr << "After removing fragments not reacting from " << rxn.name() << ", no reactants remain\n";
+      if (stream_for_discarded_reactions.is_open())
+        echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
+      return 1;
+    }
+  }
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+  if (eliminate_reagents_not_participating && rxn.eliminate_reagents_not_participating())
+  {
+    if (verbose > 1)
+      cerr << "Removed reagents not reacting from '" << rxn.name() << "', now " << rxn.number_reagents() << " reagents\n";
+
+    reactions_with_reagents_not_participating++;
+    
+    if (0 == rxn.number_reagents())
+    {
+      cerr << "After removing reactants not reacting from " << rxn.name() << ", no reactants remain\n";
+      if (stream_for_discarded_reactions.is_open())
+        echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
+      return 1;
+    }
+  }
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+//  if (rxn.all_reagents_the_same())
+//  {
+//    if (verbose > 1)
+//      cerr << "Removed duplicate reagents from '" << rxn.name() << "' now " << rxn.number_reagents() << " reagents\n";
+//
+//    reactions_with_duplicate_reagents++;
+//  }
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+  if (reduce_to_largest_product && rxn.reduce_to_largest_product()) 
+  {
+    if (verbose > 1)
+      cerr << "Reduced to the largest product fragment from '" << rxn.name() << "\n";
+  }
+  
+  if (reduce_to_largest_reactant && rxn.reduce_to_largest_reactant()) 
+  {
+    if (verbose > 1)
+      cerr << "Reduced to the largest reactant fragment from '" << rxn.name() << "\n";
+  }
+  
+  if (remove_duplicate_reactants && rxn.remove_duplicate_reagents_ignore_atom_map())
+  {
+    if (verbose > 1)
+      cerr << "Removed duplicate reactants from '" << rxn.name() << "' now " << rxn.number_reagents() << " reactants\n";
+  }
+  
+  if (remove_duplicate_products && rxn.remove_duplicate_products_ignore_atom_map())  //qqqwwwqqq
+  {
+    if (verbose > 1)
+      cerr << "Removed duplicate products from '" << rxn.name() << "' now " << rxn.number_reagents() << " reactants\n";
+  }
+  
+  if (remove_duplicate_agents && rxn.remove_duplicate_agents()) 
+  {
+    if (verbose > 1)
+      cerr << "Removed duplicate agents from '" << rxn.name() << "' now " << rxn.number_agents() << " agents\n";
+  }
+
+  if (remove_all_agents && rxn.remove_all_agents()) 
+  {
+    if (verbose > 1)
+      cerr << "Removed all agents from '" << rxn.name() << "'\n";
+  }
+  
+  if (remove_unmapped_components && rxn.remove_unmapped_components())   //qqqwwwqqq
+  {
+    if (verbose > 1)
+      cerr << "Removed all unmapped components from '" << rxn.name() << "'\n";
+  }
+
+  if (remove_unchanged_components && rxn.remove_unchanging_components()) 
+  {
+    if (verbose > 1)
+      cerr << "Removed all reactants that also appear as products from  '" << rxn.name() << "'\n";
+  }
+  
+
+#ifdef DEBUG_RXN_STANDARDIZE
+  cerr << "LINE " << __LINE__ << endl;
+  rxn.debug_print(cerr);
+#endif
+
+  if (skip_reactions_with_no_common_mapped_atoms && !rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
+  {
+    if (verbose > 1)
+      cerr << "No reagent mapped atoms in products " << rxn.name() << endl;
+    reactions_with_no_common_mapped_atoms++;
+    return 1;
+  }
+
+  if (auto_fix_orphans)
+  {
+    rxn.set_auto_fix_orphans(1);  // set this here because we only want to fix the orphans after other processing
+    if (rxn.check_for_widows_and_orphans())
+    {
+      if (verbose > 1)
+        cerr << rxn.name() << " identified orphan atoms\n";
+    }
+    rxn.set_auto_fix_orphans(0);  // undo the set to fix orphans
+
+  }
+
+
+  if (fix_kekule_problems)
+  {
+    if (rxn.fix_kekule_differences())
+    {
+      reactions_with_kekule_problems_fixed++;
+
+      if (verbose > 1)
+        cerr << "Fixed Kekule problems in " << rxn.name() << endl;
+    }
+  }
+  
+ 
+//rxn.print_atom_map_into(cerr);
+
+  const int nreagents = rxn.number_reagents();
+
+  if (initial_nr != nreagents)
+  {
+    if (verbose > 1)
+      cerr << "Reagent count changed " << initial_nr << " to " << nreagents << " in " << rxn.name() << endl;
+    reactions_with_reagent_count_changed++;
   }
   
   if (rxn.contains_duplicate_atom_map_numbers())
@@ -358,172 +588,27 @@ rxn_standardize(RXN_File & rxn,
       return 1;
     }
 
-    if (unmap_duplicate_atom_map_numbers)
-    {
-      rxn.unmap_duplicate_atom_map_numbers();
-    }
   }
-
-//#define DEBUG_RXN2RXSMILES
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-
-  if (max_atoms_in_reagent > 0 || verbose)    // do first because it may stop various other failures (hide our problems!)
+ 
+  if (skip_reactions_with_multiple_reactants && rxn.number_reagents() > 1)
   {
-    const int x = rxn.max_atom_in_any_reagent();
-    if (verbose)
-      acc_natoms.extra(x);
-    if (max_atoms_in_reagent > 0 && x > max_atoms_in_reagent)
-    {
-      if (verbose > 1)
-        cerr << rxn.name() << " too many atoms in a reagent " << x << endl;
-
-      reactions_discarded_for_too_many_atoms++;
-      if (stream_for_discarded_reactions.is_open())
-        echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
-      return 1;
-    }
-  }
-
-  if (auto_fix_orphans)
-  {
-    if (rxn.check_for_widows_and_orphans())
-    {
-      if (verbose > 1)
-        cerr << rxn.name() << " identified orphan atoms\n";
-    }
-  }
-
-  if (move_small_counterions_to_orphan_status)
-  {
-    if (rxn.move_small_counterions_to_orphan_status())
-      reactions_with_counterions_moved_to_orphan++;
-  }
-
-#ifdef REMOVE_UNCHANGING_FRAGMENTS_IMPLEMENTED
-  if (rxn.remove_unchanging_fragments())
-  {
-  }
-#endif
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-
-  if (rxn.remove_fragments_not_participating())
-  {
-    if (verbose > 1)
-      cerr << "Removed fragments not reacting from '" << rxn.name() << ", now " << rxn.number_reagents() << " reagents\n";
-    reactions_with_fragments_not_participating++;
-
-    if (0 == rxn.number_reagents())
-    {
-      cerr << "After removing fragments not reacting from " << rxn.name() << " no reagents\n";
-      if (stream_for_discarded_reactions.is_open())
-        echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
-      return 1;
-    }
-  }
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-
-  if (rxn.eliminate_reagents_not_participating())
-  {
-    if (verbose > 1)
-      cerr << "Removed reagents not reacting from '" << rxn.name() << "', now " << rxn.number_reagents() << " reagents\n";
-
-    reactions_with_reagents_not_participating++;
-  }
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-  if (rxn.all_reagents_the_same())
-  {
-    if (verbose > 1)
-      cerr << "Removed duplicate reagents from '" << rxn.name() << "' now " << rxn.number_reagents() << " reagents\n";
-
-    reactions_with_duplicate_reagents++;
-  }
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-
-  if (remove_duplicate_reagents_atom_maps_scrambled && rxn.remove_duplicate_reagents_atom_maps_scrambled())
-  {
-    if (verbose > 1)
-      cerr << "Removed duplicate reagents, but with different atom maps from '" << rxn.name() << "' now " << rxn.number_reagents() << " reagents\n";
-
-    reactions_with_duplicates_but_different_atoms_maps++;
-  }
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-  if (remove_duplicate_reagents_and_products_ignoring_atom_maps)
-  {
-    if (rxn.remove_duplicate_reagents_ignore_atom_map() || rxn.remove_duplicate_products_ignore_atom_map())
-    {
-      if (verbose > 1)
-        cerr << "Removed duplicate items, ignoring atom maps from " << rxn.name() << " now " << rxn.number_reagents() << " reagents and " << rxn.number_products() << " products\n";
-      reactions_with_duplicates_atom_maps_ignored++;
-    }
-  }
-
-#ifdef DEBUG_RXN2RXSMILES
-  cerr << "LINE " << __LINE__ << endl;
-  rxn.debug_print(cerr);
-#endif
-
-  if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
-  {
-    if (verbose > 1)
-      cerr << "No reagent mapped atoms in products " << rxn.name() << endl;
-    reactions_with_no_common_mapped_atoms++;
-//  return 1;
-  }
-
-  if (fix_kekule_problems)
-  {
-    if (rxn.fix_kekule_differences())
-    {
-      reactions_with_kekule_problems_fixed++;
-
-      if (verbose > 1)
-        cerr << "Fixed Kekule problems in " << rxn.name() << endl;
-    }
-  }
-//rxn.print_atom_map_into(cerr);
-
-  const int nreagents = rxn.number_reagents();
-
-  if (initial_nr != nreagents)
-  {
-    if (verbose > 1)
-      cerr << "Reagent count changed " << initial_nr << " to " << nreagents << " in " << rxn.name() << endl;
-    reactions_with_reagent_count_changed++;
-  }
-
-  if (skip_reactions_with_multiple_reagents && rxn.number_reagents() > 1)
-  {
-    reactions_with_multiple_reagents_skipped++;
+    reactions_with_multiple_reactants_skipped++;
 
     if (stream_for_discarded_reactions.is_open())
       echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
 
     return 1;
   }
+  
+  if (skip_reactions_with_multiple_products && rxn.number_products() > 1)
+  {
+    reactions_with_multiple_products_skipped++;
 
+    if (stream_for_discarded_reactions.is_open())
+      echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
+
+    return 1;
+  }
   if (skip_reactions_where_largest_fragment_is_unchanged && ! rxn.largest_fragment_is_changed())
   {
     reactions_where_largest_fragment_does_not_change++;
@@ -560,8 +645,26 @@ rxn_standardize(RXN_File & rxn,
   }
 
   Reaction_Smiles_Options opts;
-  opts.set_reagent_product_plus_rather_than_dot(plus_rather_than_dot);
-  opts.set_orphan_plus_rather_than_dot(orphan_plus_rather_than_dot);
+  
+  if  (use_all_plusses)
+  {
+  	opts.set_reagent_product_plus_rather_than_dot(true);  // controls char between components
+    setUseThisCharAsDotInSmiles('+'); 										// controls char between fragments of each component			
+  }
+  else if  (use_all_dots)
+  {
+  	opts.set_reagent_product_plus_rather_than_dot(false);  // controls char between components
+    setUseThisCharAsDotInSmiles('.'); 										 // controls char between fragments of each component
+  }
+  else  // normal, defalt mode - plusses between cdomponents and dots  between fragments of each component
+  {
+  	opts.set_reagent_product_plus_rather_than_dot(true);  // controls char between components
+    setUseThisCharAsDotInSmiles('.'); 										 // controls char between fragments of each component
+  }  	
+  
+  // old way
+  //opts.set_reagent_product_plus_rather_than_dot(use_all_plusses);
+  //opts.set_orphan_use_all_plusses(orphan_use_all_plusses);
 
   rxn.write_rxn_smiles(opts, output);
 
@@ -576,44 +679,44 @@ static void
 initialise_reaction(RXN_File & rxn)
 {
   rxn.set_do_automatic_atom_mapping(do_automatic_atom_mapping);
-  if (auto_fix_orphans)
-    rxn.set_auto_fix_orphans(1);
+//  if (auto_fix_orphans)
+//    rxn.set_auto_fix_orphans(1);
 
   return;
 }
 
-static int
-rxn_standardize(iwstring_data_source & input,
-              IWString_and_File_Descriptor & output)
-{
-  RXN_File rxn;
-
-  initialise_reaction(rxn);
-
-  const auto initial_offset = input.tellg();
-
-  if (rxn.do_read(input))
-    ;
-  else if (input.eof())
-    return 1;
-  else if (ignore_bad_reactions)
-  {
-    bad_reactions_ignored++;
-
-    if (stream_for_discarded_reactions.is_open())
-      echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
-    return 1;
-  }
-  else
-  {
-    cerr << "Fatal error reading reaction, now at line " << input.lines_read() << endl;
-    return 0;
-  }
-
-  reactions_read++;
-
-  return rxn_standardize(rxn, input, initial_offset, output);
-}
+//static int
+//rxn_standardize(iwstring_data_source & input,
+//              IWString_and_File_Descriptor & output)
+//{
+//  RXN_File rxn;
+//
+//  initialise_reaction(rxn);
+//
+//  const auto initial_offset = input.tellg();
+//
+//  if (rxn.do_read(input))
+//    ;
+//  else if (input.eof())
+//    return 1;
+//  else if (ignore_bad_reactions)
+//  {
+//    bad_reactions_ignored++;
+//
+//    if (stream_for_discarded_reactions.is_open())
+//      echo_bad_data(input, initial_offset, stream_for_discarded_reactions);
+//    return 1;
+//  }
+//  else
+//  {
+//    cerr << "Fatal error reading reaction, now at line " << input.lines_read() << endl;
+//    return 0;
+//  }
+//
+//  reactions_read++;
+//
+//  return rxn_standardize(rxn, input, initial_offset, output);
+//}
 
 static int
 rxn_standardize_reaction_smiles(iwstring_data_source & input,
@@ -761,19 +864,39 @@ rxn_standardize_rdfile (iwstring_data_source & input,
 }
 
 static void
-display_misc_options(std::ostream & output)
+display_misc_X_options(std::ostream & output)
 {
-  output << " -X xnma         suppress warnings about no matched atoms\n";
-  output << " -X amap         generate atom maps\n";
-  output << " -X rmdup        remove duplicate reagents/products regardless of atom maps\n";
-  output << " -X igbad        ignore bad reactions (default is to exit)\n";
-  output << " -X nclf         skip reactions where there is no change in the largest fragment\n";
-  output << " -X rmab         skip reactions that contain aromatic bonds\n";
-  output << " -X fmap         add unique mapping numbers for any atoms that are not mapped\n";
+  output << " -X rmmr         discard reactions that have multiple reactants\n";
+  output << " -X rmmp         discard reactions that have multiple products\n";
+  output << " -X rmiso        discard reactions containing isotopic atoms\n";
+  output << " -X igbad        discard bad reactions (default is to exit)\n";
+  output << " -X nclf         discard reactions where there is no change in the largest fragment\n";
+  output << " -X rmncma       discard reactions that have no common mapped atoms in the reactants and product\n";
+  output << " -X rmab         discard reactions that contain aromatic bonds\n";
+  output << " -X rmdmap       discard reactions containing duplicate atom map numbers\n";
 
   exit(0);
 }
 
+static void
+display_misc_D_options(std::ostream & output)
+{
+  output << " -D rmdr         remove duplicate reactants\n";
+  output << " -D rmdp         remove duplicate products\n";
+  output << " -D rmda         remove duplicate agents\n";
+  output << " -D rmaa         remove all agents\n";
+  output << " -D rmnmap       remove any component with no atom mapping at all\n";
+  output << " -D rmdup        remove components that are shown as both reactants and products\n";
+  output << " -D rdlp         reduce product to largest product\n";  
+  output << " -D rdlr         reduce reactant to largest reactant\n";
+  output << " -D rmrnp        remove reactants not participating\n";
+  output << " -D rmfnp        remove any reactant fragments not participating\n";
+  output << " -D unmap        unmap all atoms with duplicate atom map numbers\n";
+  output << " -D fmap         add unique mapping numbers for any atoms that are not mapped\n";
+
+
+  exit(0);
+}
 static int rxn_standardize(const char * fname, IWString_and_File_Descriptor & output);
 
 static int
@@ -830,21 +953,22 @@ rxn_standardize (const char * fname,
   if (reading_multi_reaction_rdfile)
     return rxn_standardize_rdfile(input, output);
 
-  if (input_is_reaction_smiles)
+  //if (input_is_reaction_smiles)
     return rxn_standardize_reaction_smiles(input, output);
 
-  return rxn_standardize(input, output);
+  //return rxn_standardize(input, output);
 }
 
 static int
 rxn_standardize (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vA:E:g:lomU:Ibf:Kd:C:eRX:cD:s");
+  //Command_Line cl(argc, argv, "vA:E:g:lomU:Ibf:Kd:C:eRX:cD:s");
+  Command_Line cl(argc, argv, "scKod:f:D:F:C:X:U:Rg:E:A:Mqv");
 
   if (cl.unrecognised_options_encountered())
   {
     cerr << "Unrecognised options encountered\n";
-    usage(1);
+    usage();
   }
 
   verbose = cl.option_count('v');
@@ -854,7 +978,7 @@ rxn_standardize (int argc, char ** argv)
     if (! process_standard_aromaticity_options(cl, verbose, 'A'))
     {
       cerr << "Cannot initialise aromaticity specifications\n";
-      usage(5);
+      usage();
     }
   }
   else 
@@ -865,7 +989,7 @@ rxn_standardize (int argc, char ** argv)
     if (! process_elements(cl, verbose, 'E'))
     {
       cerr << "Cannot initialise elements\n";
-      return 6;
+      usage();
     }
   }
 
@@ -874,17 +998,10 @@ rxn_standardize (int argc, char ** argv)
     if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
     {
       cerr << "Cannot process chemical standardisation options (-g)\n";
-      usage(32);
+      usage();
     }
   }
 
-  if (cl.option_present('l'))
-  {
-    reduce_to_largest_fragment = 1;
-
-    if (verbose)
-      cerr << "Will reduce to largest fragment\n";
-  }
 
   if (cl.option_present('o'))
   {
@@ -894,53 +1011,37 @@ rxn_standardize (int argc, char ** argv)
       cerr << "Will fix orphan conditions\n";
   }
 
-  if (cl.option_present('m'))
-  {
-    skip_reactions_with_multiple_reagents = 1;
-    if (verbose)
-      cerr << "Will discard reactions containing multiple reagents\n";
-  }
-
-  if (cl.option_present('I'))
-  {
-    discard_reactions_with_isotopes = 1;
-    if (verbose)
-      cerr << "Will discard reactions containing isotopic atoms\n";
-  }
-
-  if (cl.option_present('b'))
-  {
-    remove_duplicate_reagents_atom_maps_scrambled = 1;
-    if (verbose)
-      cerr << "Will remove duplicate reagents even if atom maps scrambled\n";
-  }
 
   if (cl.option_present('f'))
   {
-    const_IWSubstring f = cl.string_value('f');
-    if ("trunc" == f)
+	  const_IWSubstring f;
+  	for (int i = 0; cl.value('f', f, i); ++i)
     {
-      use_first_token_of_name = 1;
-      if (verbose)
-        cerr << "Will truncate reaction names to the first token\n";
-    }
-    else if ("gsub" == f)
-    {
-      gsub_reaction_names = 1;
-      if (verbose)
-        cerr << "Will replace whitespace with underscores in reaction names\n";
-    }
-    else if ("__" == f)
-    {
-      compress_consecutive_underscores = 1;
-      if (verbose)
-        cerr << "Will compress consecutive underscores in reaction names\n";
-    }
-    else
-    {
-      cerr << "Unrecognised -f qualifier '" << f << "'\n";
-      usage(1);
-    }
+     
+	    if ("trunc" == f)
+	    {
+	      use_first_token_of_name = 1;
+	      if (verbose)
+	        cerr << "Will truncate reaction names to the first token\n";
+	    }
+	    else if ("gsub" == f)
+	    {
+	      gsub_reaction_names = 1;
+	      if (verbose)
+	        cerr << "Will replace whitespace with underscores in reaction names\n";
+	    }
+	    else if ("__" == f)
+	    {
+	      compress_consecutive_underscores = 1;
+	      if (verbose)
+	        cerr << "Will compress consecutive underscores in reaction names\n";
+	    }
+	    else
+	    {
+	      cerr << "Unrecognised -f qualifier '" << f << "'\n";
+	      usage();
+	    }
+	  }
   }
 
   if (cl.option_present('K'))
@@ -956,97 +1057,92 @@ rxn_standardize (int argc, char ** argv)
     const_IWSubstring d;
     for (int i = 0; cl.value('d', d, i); ++i)
     {
-      if ('r' == d)
+      if ('d' == d)
       {
-        plus_rather_than_dot = false;
+      	if (use_all_plusses)
+		    {
+		      cerr << "The options -d d and -d p cannot both be specified\n";
+		      usage();
+		    }  
+		    
+		    use_all_dots = true;
 
         if (verbose)
-          cerr << "reagents and products separated by . rather than +\n";
+          cerr << "reactants and products separated by . rather than +\n";
       }
-      else if ('o' == d)
+      else if ('p' == d)
       {
-        orphan_plus_rather_than_dot = false;
-
+      	if (use_all_dots)
+		    {
+		      cerr << "The options -d d and -d p cannot both be specified\n";
+		      usage();
+		    }      		
+				use_all_plusses = true;
         if (verbose)
-          cerr << "Added orphan reagents separated by . rather than +\n";
-      }
-      else if ("or" == d || "ro" == d)
-      {
-        plus_rather_than_dot = false;
-        orphan_plus_rather_than_dot = false;
-        if (verbose)
-          cerr << "Reagents and orphans separated by . in reaction smiles\n";
+          cerr << "reactants and products separated by + rather than .\n";
       }
       else
       {
         cerr << "Unrecognised -d qualifier '" << d << "'\n";
-        return 1;
+        usage();
       }
     }
   }
 
-  if (cl.option_present('C'))
-  {
-    if (! cl.value('C', max_atoms_in_reagent) || max_atoms_in_reagent < 1)
-    {
-      cerr << "The maximum atoms in a reagent must be a whole +ve number\n";
-      usage(1);
-    }
-
-    if (verbose)
-      cerr << "Will discard reactions with a reagent with more than " << max_atoms_in_reagent << " atoms\n";
-  }
-
-  if (cl.option_present('e'))
-  {
-    move_small_counterions_to_orphan_status = 1;
-    if (verbose)
-      cerr << "Small reagent counterions that show up in products transferred to orphan status\n";
-  }
-
+ 
   if (cl.option_present('R'))
   {
+  	if (cl.option_present('s'))
+  	{
+ 			cerr << "The -R (RD file) and -s (SMILES file) options cannot both be specified'\n";
+      return 1;  	
+  	}
     reading_multi_reaction_rdfile = 1;
+    //input_is_reaction_smiles = 0;
     if (verbose)
       cerr << "Input from multi-reagent RDfile\n";
   }
   else if (cl.option_present('s'))
   {
-    input_is_reaction_smiles = 1;
+    //input_is_reaction_smiles = 1;   // this is the default - we really do not need to set it
     if (verbose)
-      cerr << "Input is an existing reaction smiles\n";
+      cerr << "Input is a reaction smiles\n";
   }
-
+  
   if (cl.option_present('c'))
   {
+  	// for MDL mols:
     set_mdl_molecule_discard_chirality(1);
+    //for smiles:
+    set_ignore_all_chiral_information_on_input(1);
 
     if (verbose)
       cerr << "Will discard all chirality input on input\n";
   }
-  if (cl.option_present('D'))
+  if (cl.option_present('M'))
   {
-    const_IWSubstring d = cl.string_value('D');
-
-    if ('x' == d)
+    do_automatic_atom_mapping = 1;
+    if (verbose)
+      cerr << "Will do automatic atom mapping\n";
+  }
+  
+  if (cl.option_present('q'))  
+	{
+    set_warn_no_mapped_atoms(0);
+    if (verbose)
+      cerr << "Will not warn about no mapped atoms\n";
+  }
+  
+  if (cl.option_present('C'))
+  {
+    if (! cl.value('C', max_atoms_in_reagent_and_product) || max_atoms_in_reagent_and_product < 1)
     {
-      discard_reactions_containing_duplicate_atom_map_numbers = 1;
-
-      if (verbose)
-        cerr << "Will discard reactions containing duplicate atom map numbers\n";
-    }
-    else if ('u' == d)
-    {
-      unmap_duplicate_atom_map_numbers = 1;
-      if (verbose)
-        cerr << "Will un-map atoms with duplicate atom map numbers\n";
+      cerr << "The maximum atoms in a reagent must be a whole +ve number\n";
+      usage();
     }
 
-    else
-    {
-      cerr << "Unrecognised -D qualifier '" << d << "'\n";
-      usage(1);
-    }
+    if (verbose)
+      cerr << "Will discard reactions with a reagent with more than " << max_atoms_in_reagent_and_product << " atoms\n";
   }
 
   if (cl.option_present('X'))
@@ -1054,23 +1150,32 @@ rxn_standardize (int argc, char ** argv)
     const_IWSubstring x;
     for (int i = 0; cl.value('X', x, i); ++i)
     {
-      if ("xnma" == x)
+    	if ("rmmr" == x)
       {
-        set_warn_no_mapped_atoms(0);
-        if (verbose)
-          cerr << "Will not warn about no mapped atoms\n";
+     		skip_reactions_with_multiple_reactants = 1;
+    		if (verbose)
+      		cerr << "Will discard reactions containing multiple reactants\n";
       }
-      else if ("amap" == x)
+      
+    	else if ("rmncma" == x)
       {
-        do_automatic_atom_mapping = 1;
-        if (verbose)
-          cerr << "Will do automatic atom mapping\n";
+     		skip_reactions_with_no_common_mapped_atoms = 1;
+    		if (verbose)
+      		cerr << "Will discard reactions that have not reactant atoms mapped to product atoms\n";
       }
-      else if ("rmdup" == x)
+
+     	else if ("rmmp" == x)
       {
-        remove_duplicate_reagents_and_products_ignoring_atom_maps = 1;
-        if (verbose)
-          cerr << "Will remove duplicate reagents/products regardless of atom maps\n";
+     		skip_reactions_with_multiple_products = 1;
+    		if (verbose)
+      		cerr << "Will discard reactions containing multiple products\n";
+      }
+
+     	else if ("rmiso" == x)
+      {
+     		discard_reactions_with_isotopes = 1;
+    		if (verbose)
+      		cerr << "Will discard reactions containing isotopic atoms\n";
       }
       else if ("igbad" == x)
       {
@@ -1083,26 +1188,126 @@ rxn_standardize (int argc, char ** argv)
         skip_reactions_where_largest_fragment_is_unchanged = 1;
         if (verbose)
           cerr << "Will skip reactions where the largest fragment is unchanged\n";
-      }
+      }    	
       else if ("rmab" == x)
       {
         skip_reactions_containing_aromatic_bonds = 1;
         if (verbose)
           cerr << "Will skip reactions containing aromatic bonds\n";
       }
-      else if ("fmap" == x)
+      else if ("rmdmap" == x)
+      {
+      	discard_reactions_containing_duplicate_atom_map_numbers = 1;
+
+      	if (verbose)
+        	cerr << "Will discard reactions containing duplicate atom map numbers\n";
+      }
+      else if ("unmap" == x)
+      {   
+        unmap_duplicate_atom_map_numbers = 1;
+      	if (verbose)
+        	cerr << "Will un-map atoms with duplicate atom map numbers\n";
+      }
+    
+      else if ("help" == x)
+      {
+        display_misc_X_options(cerr);
+      }
+      else
+      {
+        display_misc_X_options(cerr);
+      }
+    }
+  }
+
+  if (cl.option_present('D'))
+  {
+    const_IWSubstring d;
+    for (int i = 0; cl.value('D', d, i); ++i)
+    {
+      if ("rmdr" == d)
+      {
+      	remove_duplicate_reactants = 1;
+    		if (verbose)
+      		cerr << "Will remove duplicate reactants\n";
+      }
+      else if ("rmdp" == d)
+      {
+      	remove_duplicate_products = 1;
+    		if (verbose)
+      		cerr << "Will remove duplicate products\n";
+      }
+      else if ("rmda" == d)
+      {
+      	remove_duplicate_agents = 1;
+    		if (verbose)
+      		cerr << "Will remove duplicate agents\n";
+      }
+      else if ("rmaa" == d)
+      {
+      	remove_all_agents = 1;
+    		if (verbose)
+      		cerr << "Will remove all agents\n";
+      }
+      else if ("rmnmap" == d)
+      {
+      	remove_unmapped_components = 1;
+    		if (verbose)
+      		cerr << "Will remove all components with no atom mapping\n";
+      }
+      else if ("rmdup" == d)
+      {
+      	remove_unchanged_components = 1;
+    		if (verbose)
+      		cerr << "Will remove all components that are both reactants and product\n";
+      }
+      else if ("rdlr" == d)
+      {  
+   			reduce_to_largest_reactant = 1;
+
+    		if (verbose)
+      		cerr << "Will reduce reactants to largest fragment\n";
+      }
+      else if ("rdlp" == d)
+      {  
+   			reduce_to_largest_product = 1;
+
+    		if (verbose)
+      		cerr << "Will reduce products to largest fragment\n";
+      }
+			else if ("rmrnp" == d)
+      {  
+   			eliminate_reagents_not_participating = 1; 
+ 
+    		if (verbose)
+      		cerr << "Will remove any reactants that are not participating\n";
+      }
+      else if ("rmfnp" == d)
+      {  
+   			remove_fragments_not_participating = 1;
+
+    		if (verbose)
+      		cerr << "Will remove any reactant fragments that are not participating\n";
+      }
+      else if ("help" == d)
+      {
+        display_misc_D_options(cerr);
+      }
+      else if ("unmap" == d)
+      {   
+        unmap_duplicate_atom_map_numbers = 1;
+      	if (verbose)
+        	cerr << "Will un-map atoms with duplicate atom map numbers\n";
+      }
+      else if ("fmap" == d)
       {
  				assign_unmapped_atoms = 1;
     		if (verbose)
       		cerr << "Will assign mapping numbers to any atoms that are not mapped\n";
-      }		      
-      else if ("help" == x)
+      }		          	
+    	else
       {
-        display_misc_options(cerr);
-      }
-      else
-      {
-        display_misc_options(cerr);
+        display_misc_D_options(cerr);
       }
     }
   }
@@ -1110,7 +1315,7 @@ rxn_standardize (int argc, char ** argv)
   if (0 == cl.number_elements())
   {
     cerr << "Insufficient arguments\n";
-    usage(2);
+    usage();
   }
 
   if (cl.option_present('U'))
@@ -1152,8 +1357,10 @@ rxn_standardize (int argc, char ** argv)
       cerr << reactions_with_no_products << " reactions with no products\n";
     if (acc_natoms.n() > 0)
       cerr << "input reactions had btw " << acc_natoms.minval() << " and " << acc_natoms.maxval() << " ave " << static_cast<float>(acc_natoms.average()) << " atoms\n";
-    if (skip_reactions_with_multiple_reagents)
-      cerr << reactions_with_multiple_reagents_skipped << " reactions with multiple reagents skipped\n";
+    if (skip_reactions_with_multiple_reactants)
+      cerr << reactions_with_multiple_reactants_skipped << " reactions with multiple reagents skipped\n";
+    if (skip_reactions_with_multiple_products)
+      cerr << reactions_with_multiple_products_skipped << " reactions with multiple products skipped\n";
     if (discard_reactions_with_isotopes)
       cerr << reactions_discarded_for_isotopic_atoms << " reactions with isotopes skipped\n";
     if (discard_reactions_containing_duplicate_atom_map_numbers)
@@ -1162,18 +1369,14 @@ rxn_standardize (int argc, char ** argv)
     cerr << reactions_with_reagents_not_participating << " reactions with reagents not participating\n";
     cerr << reactions_with_duplicate_reagents << " reactions with duplicate reagents\n";
     cerr << reactions_with_no_common_mapped_atoms << " reactions with no mapped atoms in common btw LHS and RHS\n";
-    if (remove_duplicate_reagents_atom_maps_scrambled)
-      cerr << reactions_with_duplicates_but_different_atoms_maps << " reactions with duplicate reagents, but diff atom maps\n";
     cerr << reactions_with_reagent_count_changed << " reactions where the reagent count was changed\n";
     if (skip_reactions_where_largest_fragment_is_unchanged)
       cerr << reactions_where_largest_fragment_does_not_change << " reactions where the largest fragment did not change\n";
     if (auto_fix_orphans)
       cerr << reactions_with_orphan_atoms << " reactions with orphan atoms\n";
-    if (move_small_counterions_to_orphan_status)
-      cerr << reactions_with_counterions_moved_to_orphan << " reactions with small fragments transferred to orphan status\n";
     if (fix_kekule_problems)
       cerr << reactions_with_kekule_problems_fixed << " reactions with Kekule problems fixed\n";
-    cerr << reactions_discarded_for_too_many_atoms << " reactions discarded for more than " << max_atoms_in_reagent << " atoms in a reagent\n";
+    cerr << reactions_discarded_for_too_many_atoms << " reactions discarded for more than " << max_atoms_in_reagent_and_product << " atoms in a reagent and a product\n";
     cerr << reactions_containing_aromatic_bonds <<  " reactions discarded for aromatic bonds\n";
     cerr << reactions_written << " reactions written (" << (reactions_read - reactions_written) << " discarded)\n";
   }

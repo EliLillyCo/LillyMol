@@ -50,6 +50,20 @@ set_display_already_bonded_error_message(int s)
   display_already_bonded_error_message = s;
 }
 
+static char useThisCharAsDotInSmiles = '.';
+
+void 
+setUseThisCharAsDotInSmiles(char thisChar)
+{
+  useThisCharAsDotInSmiles = thisChar;
+}
+
+char
+getUseThisCharAsDotInSmiles(void)
+{
+  return useThisCharAsDotInSmiles ;
+}
+
 static charge_t _max_reasonble_atomic_partial_charge_value = static_cast<charge_t>(3.0);
 static charge_t _min_reasonble_atomic_partial_charge_value = static_cast<charge_t>(-3.0);
 
@@ -4974,9 +4988,9 @@ Molecule::_convert_set_of_atoms_to_bond_numbers (const Set_of_Atoms & s,
 
     for (int k = i + 1; k < n; k++)
     {
-      atom_number_t l = s[k];
+      atom_number_t j2 = s[k];
 
-      const Bond * b = aj->bond_to_atom(l);
+      const Bond * b = aj->bond_to_atom(j,j2);
 
       if (NULL == b)
         continue;

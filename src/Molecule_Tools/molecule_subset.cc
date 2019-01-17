@@ -170,7 +170,8 @@ identify_bonds_to_include (Molecule & m,
     {
       atom_number_t aj = e[j];
 
-      const Bond * b = atom_ai->bond_to_atom (aj);
+      //const Bond * b = atom_ai->bond_to_atom (aj);
+      const Bond * b = atom_ai->bond_to_atom (ai,aj);
 
       if (NULL == b)
         continue;

@@ -175,7 +175,7 @@ parse_dash_D_option_one_line(const const_IWSubstring & buffer,
   int i = 0;
   const_IWSubstring dname;
 
-  while (buffer.nextword(dname, i))
+  while (buffer.nextword(dname, i, input_token_separator))
   {
     IWString * tmp = new IWString(dname);
 
@@ -1363,15 +1363,15 @@ iwcut (int argc, char ** argv)
       usage(3);
     }
 
-    if (verbose)
-    {
-      cerr << "Will extract these columns\n";
-      for (int i = 0; i < columns_requested.number_elements(); i++)
-      {
-        cerr << ' ' << (columns_requested[i] + 1);
-      }
-      cerr << endl;
-    }
+//    if (verbose)
+//    {
+//      cerr << "Will extract these columns\n";
+//      for (int i = 0; i < columns_requested.number_elements(); i++)
+//      {
+//        cerr << ' ' << (columns_requested[i] + 1);
+//      }
+//      cerr << endl;
+//    }
   }
 
   if (cl.option_present('E'))

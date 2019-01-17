@@ -129,6 +129,7 @@ static int preserve_saturation = 0;
 static int preserve_ring_size = 0;
 
 std::ofstream *queryEchoStreamPtr = NULL;
+//std::ofstream *msiEchoStreamPtr = NULL;
 static IWString rxn_name_header("");
 
 
@@ -963,7 +964,7 @@ Set_of_Reactions::_build(const const_IWSubstring & buffer,
     
     _rxn[r].add(t);
     
-    //t->write_msi(cerr);
+    //t->write_msi(*msiEchoStreamPtr);
     
 //  cerr << "Name '" << rxn.name() << "'\n";  
 
@@ -2230,7 +2231,9 @@ retrosynthesis (int argc, char ** argv)
       }
     }
   }
-
+  
+	//msiEchoStreamPtr = new std::ofstream("MsiRxn.smi", std::ofstream::out);
+  
   if (cl.option_present('Q'))
   {
   	IWString queryFilename("");

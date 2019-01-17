@@ -24,6 +24,7 @@ using std::endl;
 #include "atom.h"
 #include "misc2.h"
 #include "iwrandom.h"
+#include "iwmtypes.h"
 
 static int copy_implicit_hydrogen_count_in_atom_copy_constructor = 1;
 
@@ -32,6 +33,7 @@ set_copy_implicit_hydrogen_count_in_atom_copy_constructor (int s)
 {
   copy_implicit_hydrogen_count_in_atom_copy_constructor = s;
 }
+
 
 static formal_charge_t _min_reasonble_atomic_formal_charge_value = -5;
 static formal_charge_t _max_reasonble_atomic_formal_charge_value =  5;
@@ -600,17 +602,20 @@ Atom::other (atom_number_t a, int i) const
 }
 
 const Bond *
-Atom::bond_to_atom (atom_number_t a) const
+Atom::bond_to_atom (atom_number_t myAtomId,atom_number_t otherAtomId) const
 {
+
+	if ( myAtomId== otherAtomId)
+		return NULL;  // not bonded to itself
+		
   for (int i = 0; i < _number_elements; i++)
   {
-    if (_things[i]->involves(a))
+    if (_things[i]->involves(otherAtomId))
       return _things[i];
   }
 
   return NULL;
 }
-
 bond_type_t
 Atom::btype_to_connection (int i) const
 {
@@ -620,11 +625,13 @@ Atom::btype_to_connection (int i) const
 }
 
 bond_type_t
-Atom::btype_to_atom (atom_number_t a) const
+Atom::btype_to_atom (atom_number_t myAtomId, atom_number_t otherAtomId) const
 {
   assert (ok());
 
-  const Bond * b = bond_to_atom(a);
+  const Bond * b = bond_to_atom(myAtomId, otherAtomId);
+  if (b == NULL)
+  	return UNKNOWN_BOND_TYPE;
   assert (b && b->ok());
 
   return b->btype();

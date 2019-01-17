@@ -235,7 +235,7 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
     int _write_m_sub_records (int n, std::ostream & output) const;
     int _write_m_uns_records (int n, std::ostream & output) const;
     int _write_m_rbc_records (int n, std::ostream & output) const;
-
+		
   public:
     ISIS_RXN_FILE_Molecule ();
     ~ISIS_RXN_FILE_Molecule ();
@@ -349,6 +349,7 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
     const int * atom_type () const { return _atype;}
 
     int gather_mapped_neighbours (const atom_number_t zatom, resizable_array<int> & nbrs) const;
+    
 };
 
 /*
@@ -432,25 +433,25 @@ class Reaction_Smiles_Options
 {
   public:
     int _reagent_product_plus_rather_than_dot;
-    int _orphan_plus_rather_than_dot;
+    //int _orphan_plus_rather_than_dot;
     int _write_reaction_name;
     int _write_agent;
-    IWString _output_separator;
+    //IWString _output_separator;
 
   public:
     Reaction_Smiles_Options();
 
-    void set_reagent_product_plus_rather_than_dot(const int s) { _reagent_product_plus_rather_than_dot = s;}
-    void set_orphan_plus_rather_than_dot(const int s) { _orphan_plus_rather_than_dot = s;}
+    void set_reagent_product_plus_rather_than_dot(const bool s) { _reagent_product_plus_rather_than_dot = s;}
+    //void set_orphan_plus_rather_than_dot(const int s) { _orphan_plus_rather_than_dot = s;}
     void set_write_reaction_name(const int s) { _write_reaction_name = s;}
-    void set_output_separator(const const_IWSubstring & s) { _output_separator = s;}
+    //void set_output_separator(const const_IWSubstring & s) { _output_separator = s;}
     void set_write_agent (const int s) { _write_agent = s;}
 
-    int reagent_product_plus_rather_than_dot() const { return _reagent_product_plus_rather_than_dot;}
-    int orphan_plus_rather_than_dot() const { return _orphan_plus_rather_than_dot;}
+    bool reagent_product_plus_rather_than_dot() const { return _reagent_product_plus_rather_than_dot;}
+    //int orphan_plus_rather_than_dot() const { return _orphan_plus_rather_than_dot;}
     int write_reaction_name() const { return _write_reaction_name;}
     int write_agent() const { return _write_agent;}
-    const IWString & output_separator() const { return _output_separator;}
+    //const IWString & output_separator() const { return _output_separator;}
 };
 
 class RXN_File
@@ -605,6 +606,7 @@ class RXN_File
                                             int centre_atom_reagent,
                                             int our_reagent,
                                             int mapped) const;
+		int _remove_unmapped_components (ISIS_RXN_FILE_Molecule * component,  int & n);
 
 #ifdef COMPILING_RXN_FILE
     int  _number_reagent_atoms () const;
@@ -768,6 +770,7 @@ class RXN_File
 
     int number_reagents() const { return _nr;}
     int number_products() const { return _np;}
+    int number_agents() const { return _na;}
 
 		void setQueryOutStream(std::ofstream *thisStream){_queryOutStream = thisStream;}
     //std::ofstream *queryOutStream() { return _queryOutStream;}
@@ -790,7 +793,6 @@ class RXN_File
     void set_mol2qry_isotope_special_meaning (int s) { _mol2qry_isotope_special_meaning = s;}
     void set_mark_atoms_changed_when_kekule_form_of_bond_changes (int s) { _mark_atoms_changed_when_kekule_form_of_bond_changes = s;}
 
-
     int contains_orphan_atoms() const { return _orphan_atoms.natoms();}
     int check_for_widows_and_orphans ();
 
@@ -798,11 +800,20 @@ class RXN_File
 
     int remove_duplicate_reagents_ignore_atom_map();
     int remove_duplicate_products_ignore_atom_map();
-
+    int remove_duplicate_agents();
+    int remove_all_agents();
+    int reduce_to_largest_product();
+    int reduce_to_largest_reactant();
+    int reduce_to_largest_component(ISIS_RXN_FILE_Molecule *component, int &n);
+    
     int eliminate_reagents_not_participating();
     int remove_fragments_not_participating ();
     int remove_non_participating_fragments ();
     int remove_unchanging_fragments();
+    int remove_unchanging_components();
+
+    
+    
     int move_small_counterions_to_orphan_status();
 
     int remove_cis_trans_bonding();
@@ -861,6 +872,9 @@ class RXN_File
                                const Product_Atom_Types & pat,
                                const int expand,
                                Sparse_Fingerprint_Creator & sfc);
+                               
+    int remove_unmapped_components ();
+
 };
 
 /*

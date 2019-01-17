@@ -8640,8 +8640,8 @@ RXN_File::remove_fragments_not_participating ()
   cerr << "Max frag " << max_frag << endl;
 #endif
 
-  if (1 == max_frag)    // all reagents have one fragment, cannot remove anything
-    return 0;
+//  if (1 == max_frag)    // all reagents have one fragment, cannot remove anything
+//    return 0;
 
   int * atoms_appearing_in_products = new int[max_frag + max_frag + max_atoms_in_any_reagent]; std::unique_ptr<int[]> free_atoms_appearing_in_products(atoms_appearing_in_products);
   int * to_remove = atoms_appearing_in_products + max_frag + max_frag;
@@ -8652,8 +8652,8 @@ RXN_File::remove_fragments_not_participating ()
   {
     const int nf = _reagent[i].number_fragments();
 
-    if (1 == nf)
-      continue;
+//    if (1 == nf)
+//      continue;
 
     std::fill_n(atoms_appearing_in_products, max_frag + max_frag, 0);
     int * atoms_disappearing = atoms_appearing_in_products + max_frag;
@@ -8792,7 +8792,7 @@ RXN_File::eliminate_reagents_not_participating()
       break;
     }
 
-    cerr << "Reagent " << i << " with " << matoms << " atoms has " << atoms_in_rhs << " atoms appearing as products\n";
+    //cerr << "Reagent " << i << " with " << matoms << " atoms has " << atoms_in_rhs << " atoms appearing as products\n";
 
     if (0 == mapped_atoms)
       continue;
@@ -8933,158 +8933,15 @@ RXN_File::_remove_non_participating_fragments(ISIS_RXN_FILE_Molecule & p)   // o
   return rc;
 }
 
-/*
-  consider
 
-  [C:1]1(=[CH:2][CH:3]=[C:4]([CH:5]=[C:6]1[C:7]([F:9])([F:10])[F:11])[C:12](=[O:14])[CH2:13][N+:17]12[CH2:16][N:18]3[CH2:22][N:21]([CH2:23][N:25]([CH2:24]3)[CH2:20]1)[CH2:19]2)[F:8].[Br-:15]>>[C:1]1(=[CH:2][CH:3]=[C:4]([CH:5]=[C:6]1[C:7]([F:9])([F:10])[F:11])[C:12](=[O:14])[CH2:13][Br:15])[F:8]+[CH2:16]1[N:17]2[CH2:19][N:21]3[CH2:22][N:18]1[CH2:24][N:25]([CH2:20]2)[CH2:23]3 ACF-E04722-011
 
-  The Bromine is a counterion of the first reagent. The important distinction is that it appears in the
-  product, so we cannot discard it. But it should be a separate reagent. We transfer the small
-  fragments to the orphan atoms molecule.
-
-  This is designed to be run after remove_non_participating_fragments which will get rid of fragments
-  that really do nothing.
-
-  And even though this is written with a loop, it WILL NOT WORK if we iterate over all
-  reagents. Just being lazy
-*/
-
-int
-RXN_File::move_small_counterions_to_orphan_status()
-{
-  if (NULL == _reagent_locator)
-    prepare_for_reaction_construction();
-
-  int * to_move = new_int(max_atom_in_any_reagent()); std::unique_ptr<int[]> free_to_move(to_move);
-
-  int rc = 0;
-
-  for (int i = 0; i < _nr; ++i)
-  {
-    ISIS_RXN_FILE_Molecule & ri = _reagent[i];
-
-    const int nf = ri.number_fragments();
-
-//  cerr << "RXN_File::move_small_counterions_to_orphan_status:reagent " << i << " had " << nf << " fragments\n";
-
-    if (1 == nf)
-      continue;
-
-    if (0 ==  _identify_small_fragments_showing_up_in_products(i, to_move))
-      continue;
-
-//  cerr << "Yes, removing some atoms\n";
-
-    ri.create_subset(_orphan_atoms, to_move);
-
-    ri.remove_atoms(to_move);
-
-    rc++;
-  }
-
-  if (0 == rc)
-    return 0;
-
-  _reestablish_locator_array(_reagent, _nr, _reagent_locator);
-  _reestablish_locator_array(_product, _np, _product_locator);
-
-  return rc;
-}
-
-/*
-  We need to make sure we only process entire fragments.
-*/
-
-int
-RXN_File::_identify_small_fragments_showing_up_in_products(const int rgnt,
-                                                int * not_in_largest_fragment) const
-{
-  ISIS_RXN_FILE_Molecule & r = _reagent[rgnt];
-
-  const int nf = r.number_fragments();
-
-  const int matoms = r.natoms();
-
-  std::fill_n(not_in_largest_fragment, matoms, 0);
-
-  const int largest_fragment = r.largest_fragment();
-
-  int fragments_moving = 0;
-
-  for (int f = 0; f < nf; ++f)
-  {
-    if (f == largest_fragment)
-      continue;
-
-    if (_all_atoms_in_fragment_in_products(r, f, not_in_largest_fragment))
-      fragments_moving++;
-  }
-
-  return fragments_moving;
-
-  int atoms_in_products = 0;
-
-  for (int i = 0; i < matoms; ++i)
-  {
-    if (r.fragment_membership(i) == largest_fragment)   // do not care about largest fragment
-      continue;
-
-    not_in_largest_fragment[i] = 1;
-
-    const int amap = r.atom_map()[i];
-
-    const int p = _product_locator[amap];
-
-    cerr << " atom map " << amap << " in product " << p << endl;
-
-    if (p < 0)    // atom disappears
-      continue;
-
-    atoms_in_products++;
-  }
-
-  cerr << "RXN_File::_identify_small_fragments_showing_up_in_products:returning " << atoms_in_products << endl;
-
-  return atoms_in_products;
-}
-
-int
-RXN_File::_all_atoms_in_fragment_in_products(ISIS_RXN_FILE_Molecule & r,
-                                             const int f,
-                                             int * not_in_largest_fragment) const
-{
-  const int matoms = r.natoms();
-
-  int product_fragment = -1;
-
-  for (int i = 0; i < matoms; ++i)
-  {
-    if (f != r.fragment_membership(i))
-      continue;
-
-    const int amap = r.atom_map(i);
-
-    const auto p = _product_locator[amap];
-
-    if (p < 0)     // atom disappears, fragment cannot be moved to agent
-      return 0;
-
-    ISIS_RXN_FILE_Molecule & prod = _product[p];
-
-    const int x = prod.which_is_mapped_atom(amap);
-
-    if (product_fragment < 0)
-      product_fragment = prod.fragment_membership(x);
-    else if (product_fragment != prod.fragment_membership(x))   // goes to a different fragment...
-      return 0;
-  }
-
-  return 1;
-}
 
 int
 RXN_File::_reestablish_reagent_locator_array()
 {
+	if (NULL == _reagent_locator)
+    prepare_for_reaction_construction();
+
 #ifdef DEBUG_REESTABLISH_REAGENT_LOCATOR_ARRAY
   cerr << "RXN_File::_reestablish_reagent_locator_array:have " << _nr << " reagents\n";
 #endif
@@ -9243,6 +9100,60 @@ atom_map_numbers_the_same(const ISIS_RXN_FILE_Molecule & r1,
   return 1;
 }
 
+//reduce the product to the largest fragment in any component
+
+int
+RXN_File::reduce_to_largest_product()
+{ 
+	return reduce_to_largest_component(_product,_np);
+}       
+int
+
+RXN_File::reduce_to_largest_reactant()
+{ 
+	return reduce_to_largest_component(_reagent,_nr);
+}       
+	
+int
+RXN_File::reduce_to_largest_component(ISIS_RXN_FILE_Molecule *component, int &n)
+{        
+	 
+  int largestFragmentComponentIndex, largestFragmentFragmentindex, largestFragmentSize = 0;
+  
+  for (int i = 0; i < n; ++i)
+  {
+    auto & pi = component[i];
+
+    const int nf = pi.number_fragments();
+    
+    for (int j=0;  j != nf ; ++j)
+    {
+    	int fragAtoms = pi.atoms_in_fragment (j);
+    	if (fragAtoms > largestFragmentSize)
+    	{
+    		largestFragmentSize = fragAtoms;
+    		largestFragmentComponentIndex = i;
+    		largestFragmentFragmentindex = j;
+    	}
+    }
+  }
+    
+  if (largestFragmentSize == 0)
+  	return 0;  // nothing to remove
+    	
+   if (largestFragmentComponentIndex != 0)
+   	 component[0] = std::move(component[largestFragmentComponentIndex]); 	
+   n = 1;
+	
+	// now we have just the component that has the largest fragment, so just trim it to its largest fragment!
+	
+	component[0].reduce_to_largest_fragment();
+	
+  _reestablish_reagent_locator_array();
+	
+  return 1;
+}
+
 /*
   We may have duplicate reagents, but the atom maps are scrambled.
   The unique smiles must match, AND they must have the same mapped atoms
@@ -9301,3 +9212,55 @@ RXN_File::remove_duplicate_reagents_atom_maps_scrambled ()
   return _reestablish_reagent_locator_array();
 }
 
+int
+RXN_File::_remove_unmapped_components (ISIS_RXN_FILE_Molecule * component, int & n)
+{
+  int rc = 0;
+  
+  for (int i = 0; i < n; ++i)
+  {
+  	const int matoms = component[i].natoms();
+		int foundAMapping = 0;
+
+
+	  for (int j = 0; j < matoms; ++j)
+	  {
+	    if (component[i].atom_map()[j] > 0)
+	    {   	
+	    	foundAMapping = 1;
+	    	break;
+	    }
+	  }
+	  
+	  if (foundAMapping)
+	        continue;
+
+
+    for (int k = i; k < (n-1); ++k)     // reagent J is a duplicate of I. Shift everything down
+    {
+      component[k] = std::move(component[k+1]);
+    }
+    n--;
+    i--;
+    rc++;
+  }
+
+  if (0 == rc)
+    return 0;
+
+  return _reestablish_reagent_locator_array();
+}
+
+int
+RXN_File::remove_unmapped_components ()
+{
+	int rc = 1;
+	if (!_remove_unmapped_components(_reagent, _nr))
+  	rc = 0;
+	if (!_remove_unmapped_components(_agent, _na))
+  	rc = 0;
+	if (!_remove_unmapped_components(_product, _np))
+  	rc = 0;
+
+  return rc;
+}

@@ -26,7 +26,8 @@ fi
 name1=output.rxnsmi
 name1_out=out/output.rxnsmi
 diff_tool=../../fileDiff.sh
-$command -s -c -D x -X igbad -v -C 60 -K -E autocreate -e -o -m -I -b -f gsub in/input.rxnsmi >>output.rxnsmi 2>>err.txt
+#$command -s -c -D x -X igbad -v -C 60 -K -E autocreate -e -o -m -I -b -f gsub in/input.rxnsmi >>output.rxnsmi 2>>err.txt
+$command -s -c -X rmdmap -X igbad -v -C  60 -K -E autocreate -o -X rmmr -X  rmiso -D rmdr -f gsub in/input.rxnsmi >>output.rxnsmi 2>>err.txt
 
 $diff_tool $name1 $name1_out
 ret1=$?

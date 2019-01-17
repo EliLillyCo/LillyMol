@@ -5136,8 +5136,8 @@ Chemical_Standardisation::_do_imidazole (Molecule & m,
   cerr << "Atoms " << nh1 << " " << c1 << " " << nh0 << " " << c2 << " " << c3 << endl;
 #endif
 
-  const Bond * b = atoms[c1]->bond_to_atom(nh0);
-  if (! b->is_double_bond())
+  const Bond * b = atoms[c1]->bond_to_atom(c1,nh0);
+  if (b == NULL || ! b->is_double_bond())
     return 0;
 
 // At this stage we have an imidazole. See if we can resolve it by

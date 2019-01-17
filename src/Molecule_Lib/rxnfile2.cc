@@ -17,11 +17,11 @@
 
 Reaction_Smiles_Options::Reaction_Smiles_Options()
 {
-  _reagent_product_plus_rather_than_dot = 1;
-  _orphan_plus_rather_than_dot = 1;
+  _reagent_product_plus_rather_than_dot = true;
+  //_orphan_plus_rather_than_dot = 1;
   _write_reaction_name = 1;
   _write_agent = 1;
-  _output_separator = ' ';
+  //_output_separator = ' ';
 }
 
 
@@ -58,7 +58,7 @@ RXN_File::write_rxn_smiles(const Reaction_Smiles_Options & opts,
 
   if (_orphan_atoms.natoms())
   {
-    if (opts.orphan_plus_rather_than_dot())
+    if (opts.reagent_product_plus_rather_than_dot())
       output << '+' << _orphan_atoms.smiles();
     else
       output << '.' << _orphan_atoms.smiles();
@@ -74,7 +74,8 @@ RXN_File::write_rxn_smiles(const Reaction_Smiles_Options & opts,
   write_set_of_reactions(_product, _np, opts.reagent_product_plus_rather_than_dot(), output);
 
   if (opts.write_reaction_name())
-    output << opts.output_separator() << _comment << '\n';
+    output << ' ' << _comment << '\n';
+    //output << opts.output_separator() << _comment << '\n';
 
   return 1;
 }
@@ -1144,9 +1145,9 @@ static int
 max_atom_in_any(const int n,
                 ISIS_RXN_FILE_Molecule * m)
 {
-  int rc = m[0].natoms();
+  int rc = 0;
 
-  for (int i = 1; i < n; ++i)
+  for (int i = 0; i < n; ++i)
   {
     if (m[i].natoms() > rc)
       rc = m[i].natoms();
@@ -1188,7 +1189,7 @@ _remove_duplicates_ignore_atom_map(ISIS_RXN_FILE_Molecule * reagent_or_product,
   set_include_chiral_info_in_smiles(0);
   for (int i = 0; i < n; ++i)
   {
-    reagent_or_product[i].unique_smiles();
+    reagent_or_product[i].recompute_unique_smiles(); 
   }
   set_include_chiral_info_in_smiles(1);
 
@@ -1196,13 +1197,21 @@ _remove_duplicates_ignore_atom_map(ISIS_RXN_FILE_Molecule * reagent_or_product,
 
   for (int i = 0; i < n; ++i)
   {
-    const IWString & iusmi = reagent_or_product[i].unique_smiles();
+  	//cerr << "all parts: ";
+  	
+//  	for (int k = 0; k < n; ++k)   
+//    {
+//      const IWString & tempSmi = reagent_or_product[k].unique_smiles();
+//      cerr << " " << tempSmi;
+//    }
+//    cerr << endl << endl;
 
-//  cerr << "Reagent " << i << " usmi " << iusmi << endl;
+    const IWString & iusmi = reagent_or_product[i].unique_smiles();
+    //cerr << "Reagent " << i << " usmi " << iusmi << endl;
 
     for (int j = (i+1); j < n; ++j)
     {
-//    cerr << "  reagent " << j << " usmi " << _reagent[j].unique_smiles() << endl;
+//    	cerr << "  reagent " << j << " usmi " << reagent_or_product[j].unique_smiles() << endl;
 
       if (reagent_or_product[j].unique_smiles() != iusmi)   // definitely not the same
         continue;
@@ -1246,6 +1255,29 @@ RXN_File::remove_duplicate_products_ignore_atom_map()
   _reestablish_reagent_locator_array();
 
   return rc;
+}
+
+int
+RXN_File::remove_duplicate_agents()
+{
+  const int rc = _remove_duplicates_ignore_atom_map(_agent, _na);
+
+  if (0 == rc)
+    return 0;
+
+  _reestablish_reagent_locator_array();
+
+  return rc;
+}
+
+int
+RXN_File::remove_all_agents()
+{
+  _na = 0;
+
+  _reestablish_reagent_locator_array();
+
+  return 1;
 }
 
 static int
@@ -1331,9 +1363,13 @@ _unmap_duplicate_atom_map_numbers(ISIS_RXN_FILE_Molecule & m,
       continue;
 
     m.set_atom_map(i, 0);
-    mapped[mi]--;
+    m.set_atom_map_number(i, 0);
+
+    //mapped[mi]--;   //tad:  this will cause the last of the duplicates to be NOT removed because the mapped count reduced to 1
     rc++;
   }
+  if (rc > 0)
+  	  m.invalidate_smiles();
 
   return rc;
 }
@@ -1352,13 +1388,13 @@ _unmap_duplicate_atom_map_numbers(const int n,
   }
 
   if (0 == contains_dups)
-    return 1;
+    return 0;
 
   for (int i = 0; i < n; ++i)
   {
     _unmap_duplicate_atom_map_numbers(m[i], mapped);
   }
-
+  
   return 1;
 }
 
@@ -1374,15 +1410,19 @@ RXN_File::unmap_duplicate_atom_map_numbers()
 
   if (0 == h)
     return 1;
-
+  int rc = 0;
+  
   int * mapped = new_int(h + 1); std::unique_ptr<int[]> free_mapped(mapped);
 
   if (_unmap_duplicate_atom_map_numbers(_nr, _reagent, mapped))
-    return 1;
+    rc = 1;
 
   std::fill_n(mapped, h+1, 0);
 
-  return _unmap_duplicate_atom_map_numbers(_np, _product, mapped);
+  if (_unmap_duplicate_atom_map_numbers(_np, _product, mapped))
+  	rc = 1;
+  
+  return rc;
 }
 
 
@@ -1483,7 +1523,12 @@ RXN_File::largest_fragment_is_changed() const
 
   set_include_atom_map_with_smiles(0);
 
-  const auto rc = _reagent[largest_reagent].unique_smiles() == _product[largest_product].unique_smiles();
+  _reagent[largest_reagent].recompute_unique_smiles();
+  _product[largest_product].recompute_unique_smiles();
+  auto ruSmi =  _reagent[largest_reagent].unique_smiles();
+  auto puSmi =  _product[largest_product].unique_smiles();
+  
+  const auto rc = (ruSmi != puSmi);
 
   set_include_atom_map_with_smiles(1);
 
@@ -1542,6 +1587,64 @@ RXN_File::remove_unchanging_fragments()
   return rc;
 }
 
+int
+RXN_File::remove_unchanging_components()
+{
+  if (NULL == _product_locator)
+    prepare_for_reaction_construction();
+
+  int rc = 0;
+  
+  set_include_chiral_info_in_smiles(0);
+  for (int i = 0; i < _nr; ++i)
+  {
+    _reagent[i].recompute_unique_smiles();
+  }
+  for (int i = 0; i < _np; ++i)
+  {
+    _product[i].recompute_unique_smiles(); 
+  }
+  set_include_chiral_info_in_smiles(1);
+
+  for (int i = 0; i < _nr; ++i)
+  {
+    const IWString & iusmi = _reagent[i].unique_smiles();
+
+//  cerr << "Reagent " << i << " usmi " << iusmi << endl;
+
+    for (int j = 0; j < _np; ++j)
+    {
+
+      if (_product[j].unique_smiles() != iusmi)   // definitely not the same
+        continue;
+
+//    cerr << "in " << name() << " duplicate reagents i = " << i << " j = " << j << endl;
+
+      for (int k = i; k < (_nr-1); ++k)     // reagent I is and product j are the same.  Remove them
+      {
+        _reagent[k] = std::move(_reagent[k+1]);
+      }
+      for (int k = j; k < (_np-1); ++k)     // reagent I is and product j are the same.  Remove them
+      {
+        _product[k] = std::move(_product[k+1]);
+      }
+      
+      i--;
+      _nr--;
+      j--;
+      _np--;
+      rc++;
+      break;
+    }  
+  }
+  
+  return rc;
+}
+
+
+
+
+
 // Finish this sometime...
 
 int
@@ -1563,6 +1666,7 @@ RXN_File::_remove_common_fragments(ISIS_RXN_FILE_Molecule & r,
 
       if (ar != ap)
         continue;
+                 
 
       r.compute_aromaticity_if_needed();
       p.compute_aromaticity_if_needed();

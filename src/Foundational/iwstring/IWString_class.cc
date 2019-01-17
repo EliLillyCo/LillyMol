@@ -1,13 +1,5 @@
 #include "iwconfig.h"
-#ifdef _WIN32
-#undef __STRICT_ANSI_
 #include <stdlib.h>
-#else
-#include <stdlib.h>
-#endif
-#ifdef sun
-#include <sys/time.h>
-#endif
 #include <iostream>
 #include <utility>
 #include <iomanip>
@@ -15,16 +7,6 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
-
-#ifdef sun
-#include <sys/time.h>
-#include <stdio.h>
-#include <floatingpoint.h>
-#endif
-
-#ifdef mips
-#include <bstring.h>
-#endif
 
 using std::cerr;
 using std::endl;
@@ -315,6 +297,7 @@ IWString::chop(int nchars)
   return;
 }
 
+
 void
 IWString::iwtruncate(int nchars)
 {
@@ -420,6 +403,7 @@ IWString::remove_leading_chars(int nremove, char pad)
   return;
 }
 
+
 static int
 common_count_leading_chars(const char * s, int nchars, char toremove)
 {
@@ -470,6 +454,27 @@ const_IWSubstring::remove_leading_chars(char toremove)
 
   return chars_removed;
 }
+
+void
+const_IWSubstring::remove_line_terminators()
+{
+  if (0 >= _nchars)
+    return;
+
+
+  // make sure the buffer does not end with a \r or \n
+  int i = _nchars - 1;
+  while(_data[i] == '\r' || _data[i] == '\n')
+  {
+     _nchars = i;
+    --i;
+    if (i <= 0)
+      break;
+  }
+
+  return;
+}
+
 
 int
 IWString::shift(int nshift, char pad)
@@ -3059,45 +3064,8 @@ void
 IWString::append_number(float f)
 {
   char buffer[100];
-
-#ifdef sun
-  sgconvert(&f, float_precision, 0, buffer);
-
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-
-#endif
-
-#ifdef mips
-  gcvt(f, float_precision, buffer);
-
-  resizable_array<char>::add(buffer,static_cast<int>(::strlen(buffer)));
-#endif
-
-#ifdef __linux__
   gcvt(static_cast<double>(f), float_precision, buffer);
-
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-#endif
-
-#ifdef IWCYGWIN
-  gcvt(static_cast<double>(f), float_precision, buffer);
-
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-#endif
-
-#ifdef _WIN32
-#ifdef ONCE_I_FIGURE_OUT_GCVT_ON_WINDOWS
-  _gcvt(static_cast<double>(f), float_precision, buffer);
-
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-#else
-#include <sstream>
-  std::ostringstream str;
-  str << f;
-  resizable_array<char>::add(str.str().c_str(), str.str().length());
-#endif
-#endif
-
   return;
 }
 
@@ -3113,27 +3081,7 @@ void
 IWString::append_number(double d)
 {
   char buffer[32];
-
-#ifdef sun
-  gconvert(d, double_precision, 0, buffer);
-#endif
-
-#ifdef mips
   gcvt(d, double_precision, buffer);
-#endif
-
-#ifdef __linux__
-  gcvt(d, double_precision, buffer);
-#endif
-
-#ifdef IWCYGWIN
-  gcvt(d, double_precision, buffer);
-#endif
-
-#ifdef _WIN32
-  _gcvt_s( buffer, 32, d, double_precision );
-#endif
-
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
 
   return;
@@ -3143,23 +3091,8 @@ void
 IWString::append_number(float f, int fprecision)
 {
   char buffer[100];
-
-#ifdef sun
-  sgconvert(&f, fprecision, 0, buffer);
-#endif
-
-#ifdef mips
-  gcvt(f, fprecision, buffer);
-#endif
-
-#ifdef __linux__
   gcvt(static_cast<double>(f), fprecision, buffer);
-#elif WIN32
-  _gcvt(static_cast<double>(f), fprecision, buffer); // C4996
-#endif
-
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-
   return;
 }
 
@@ -3167,29 +3100,8 @@ void
 IWString::append_number(double d, int dprecision)
 {
   char buffer[32];
-
-#ifdef sun
-  gconvert(d, dprecision, 0, buffer);
-#endif
-
-#ifdef mips
   gcvt(d, dprecision, buffer);
-#endif
-
-#ifdef __linux__
-  gcvt(d, dprecision, buffer);
-#endif
-
-#ifdef IWCYGWIN
-  gcvt(d, dprecision, buffer);
-#endif
-
-#ifdef WIN32
-_gcvt(static_cast<double>(d), dprecision, buffer); // C4996
-#endif
-
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-
   return;
 }
 
@@ -4205,6 +4117,39 @@ IWString::split(IWString * tokens, char separator) const
   return common_split(_things, _number_elements, tokens, separator);
 }
 
+int
+const_IWSubstring::split (std::vector<std::string>& tokens, std::string separators) const
+{
+  // I have given up trying to do this in IW world - std::string is easier to understand
+  // create tokens for both strings and separators, i.e. break down
+  // 'reactant1.qry+reactant2.qry>>product.qry' to
+  // 'reactant1.qry', '+', 'reactant2.qry', '>>', 'product.qry'
+  // assuming + and > are separators
+  std::string s(_data, _nchars);  // essential to use the length here
+  tokens.clear();
+  std::string::size_type last_pos = s.find_first_not_of(separators, 0);
+  if (last_pos > 0)
+  {
+    tokens.push_back(s.substr(0, last_pos));
+  }
+  std::string::size_type pos = s.find_first_of(separators, last_pos);
+
+  while (std::string::npos != pos || std::string::npos != last_pos)
+  {
+    tokens.push_back(s.substr(last_pos, pos - last_pos));
+    last_pos = s.find_first_not_of(separators, pos); // string token
+    if (std::string::npos != pos) {
+      if (std::string::npos == last_pos) {  // ends with a separator
+        tokens.push_back(s.substr(pos, s.size() - pos));
+      }
+      else
+      {
+        tokens.push_back(s.substr(pos, last_pos - pos));  // separator token
+      }
+    }
+    pos = s.find_first_of(separators, last_pos);
+  }
+}
 
 int
 IWString::remove_up_to_first(char target)
