@@ -216,7 +216,7 @@ Sparse_Fingerprint_Creator::_write_constant_width_fingerprint (unsigned int nb,
 
   if (iw_little_endian())
   {
-    cerr << "Sparse_Fingerprint_Creator::_write_constant_width_fingerprint: code is broken for Little endian systems, contact Ian\n";
+    cerr << "Sparse_Fingerprint_Creator::_write_constant_width_fingerprint: code is broken for Little endian systems, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     abort();
   }
 

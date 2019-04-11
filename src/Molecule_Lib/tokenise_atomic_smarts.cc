@@ -405,7 +405,7 @@ Atomic_Smarts_Component::_parse (const_IWSubstring & smarts)
       length_of_our_token = characters_in_next_primitive(smarts, 0);
       if (0 == length_of_our_token)
       {
-        cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following negation - see Ian\n";
+        cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following negation - contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
         return 0;
       }
 

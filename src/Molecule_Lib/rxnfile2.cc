@@ -1676,7 +1676,7 @@ RXN_File::_remove_common_fragments(ISIS_RXN_FILE_Molecule & r,
     }
   }
 
-  cerr << "RXN_File::_remove_common_fragments:not implemented, see Ian\n";
+  cerr << "RXN_File::_remove_common_fragments:not implemented, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
   return 0;
 }
 

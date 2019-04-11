@@ -774,7 +774,7 @@ Substructure_Atom_Specifier::_fetch_symmetry_group(const msi_object & msi)
 
   if (1 != att->number_int_values())
   {
-    cerr << "Substructure_Atom_Specifier::_fetch_symmetry_group:multiple values not supported, see Ian\n";
+    cerr << "Substructure_Atom_Specifier::_fetch_symmetry_group:multiple values not supported, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     return 0;
   }
 
@@ -3547,7 +3547,7 @@ Single_Substructure_Query::_create_from_molecule (MDL_Molecule & m,
   {
     if (NULL != include_these_atoms)
     {
-      cerr << "Single_Substructure_Query::_create_from_molecule:include_these_atoms not handled, see Ian\n";
+      cerr << "Single_Substructure_Query::_create_from_molecule:include_these_atoms not handled, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
       exit(1);
     }
     m.remove_explicit_hydrogens();

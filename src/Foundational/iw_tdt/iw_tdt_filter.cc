@@ -4,7 +4,7 @@
 #include "iw_tdt.h"
 #include "iwrandom.h"
 
-#if defined(IWSGI) || defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER)
 int
 display_tdt_filter_syntax (std::ostream & os)
 {

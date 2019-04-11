@@ -81,6 +81,14 @@ CONCAT_FILES_OBJECTS = $(BUILD_DIR)/concat_files.o $(BUILD_DIR)/iwtokeniser.o
 $(BUILD_DIR)/concat_files: $(CONCAT_FILES_OBJECTS)
 	$(LD) -o $@ $(CONCAT_FILES_OBJECTS) $(LIBS) -liwstring -lcmdline -liwstring_data_source -liwcrex -liwstring -liwaray -liwmisc $(SYSTEM_LIBS) 
 EXECUTABLES += $(CONCAT_FILES_EXE)
+
+################# Template for public executables ######################
+DESCRIPTORS_TO_FINGERPRINT_EXE = $(BUILD_DIR)/descriptors_to_fingerprint
+DESCRIPTORS_TO_FINGERPRINT_OBJECTS = $(BUILD_DIR)/descriptors_to_fingerprint.o
+$(BUILD_DIR)/descriptors_to_fingerprint: $(DESCRIPTORS_TO_FINGERPRINT_OBJECTS)
+	$(LD) -o $@ $(PROF) $(DESCRIPTORS_TO_FINGERPRINT_OBJECTS) $(LIBS) -lsparsefp -liwmisc -liwbits $(SYSTEM_LIBS)	
+EXECUTABLES += $(DESCRIPTORS_TO_FINGERPRINT_EXE)
+
 ###################### Template for build command ######################
 .PHONY: copy_include
 .PHONY: library

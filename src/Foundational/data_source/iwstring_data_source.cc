@@ -1758,7 +1758,9 @@ iwstring_data_source::_copy_raw_bytes(void * destination, const size_t bytes_to_
       return bytes_to_copy;
 
     ncopy -= copy_from_read_buffer;
-    destination += copy_from_read_buffer;
+    //Address the compiler issue for void * pointer calculation
+    //destination += copy_from_read_buffer;
+    destination = (unsigned char *)destination + copy_from_read_buffer;
   }
 
 // At this stage the read buffer is empty, so it is just about transferring data
@@ -1771,8 +1773,11 @@ iwstring_data_source::_copy_raw_bytes(void * destination, const size_t bytes_to_
     if (0 == bytes_read)
       break;
 
-    ::memcpy(destination, buf, bytes_read);
-    destination += bytes_read;
+    ::memcpy(destination, buf, bytes_read);    
+    //Address the compiler issue for void * pointer calculation
+    //destination += bytes_read;
+    destination = (unsigned char *)destination + bytes_read;
+
     ncopy -= bytes_read;
 
     if (bytes_read != IWSTRDS_BUF_SIZE)

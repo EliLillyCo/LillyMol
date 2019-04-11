@@ -1,0 +1,112 @@
+ bit 0 set 90 ave 0.4794 not set 910 ave 0.506 diff 0.02662
+ bit 1 set 33 ave 0.5085 not set 967 ave 0.5035 diff 0.005039
+ bit 2 set 42 ave 0.4839 not set 958 ave 0.5045 diff 0.02058
+ bit 3 set 63 ave 0.554 not set 937 ave 0.5003 diff 0.05371
+ bit 4 set 52 ave 0.4357 not set 948 ave 0.5074 diff 0.07165
+ bit 5 set 81 ave 0.479 not set 919 ave 0.5058 diff 0.02677
+ bit 6 set 100 ave 0.5441 not set 900 ave 0.4992 diff 0.04495
+ bit 7 set 41 ave 0.4517 not set 959 ave 0.5059 diff 0.05422
+ bit 8 set 76 ave 0.5431 not set 924 ave 0.5004 diff 0.04265
+ bit 9 set 60 ave 0.5165 not set 940 ave 0.5028 diff 0.01371
+ bit 10 set 75 ave 0.5386 not set 925 ave 0.5008 diff 0.03776
+ bit 11 set 62 ave 0.4822 not set 938 ave 0.5051 diff 0.02291
+ bit 12 set 184 ave 0.5182 not set 816 ave 0.5004 diff 0.01781
+ bit 13 set 88 ave 0.4907 not set 912 ave 0.5049 diff 0.01415
+ bit 14 set 95 ave 0.5205 not set 905 ave 0.5019 diff 0.0186
+ bit 15 set 53 ave 0.4901 not set 947 ave 0.5044 diff 0.01428
+ bit 16 set 112 ave 0.504 not set 888 ave 0.5036 diff 0.0003479
+ bit 17 set 108 ave 0.5036 not set 892 ave 0.5037 diff 3.129e-05
+ bit 18 set 84 ave 0.4838 not set 916 ave 0.5055 diff 0.0217
+ bit 19 set 234 ave 0.4891 not set 766 ave 0.5081 diff 0.01897
+ bit 20 set 140 ave 0.4979 not set 860 ave 0.5046 diff 0.006702
+ bit 21 set 191 ave 0.4986 not set 809 ave 0.5048 diff 0.006291
+ bit 22 set 159 ave 0.5247 not set 841 ave 0.4997 diff 0.02509
+ bit 23 set 95 ave 0.4453 not set 905 ave 0.5098 diff 0.0645
+ bit 24 set 136 ave 0.4953 not set 864 ave 0.505 diff 0.009606
+ bit 25 set 34 ave 0.5481 not set 966 ave 0.5021 diff 0.04605
+ bit 26 set 173 ave 0.4897 not set 827 ave 0.5066 diff 0.01688
+ bit 27 set 75 ave 0.5053 not set 925 ave 0.5035 diff 0.001818
+ bit 28 set 278 ave 0.4738 not set 722 ave 0.5152 diff 0.0414
+ bit 29 set 101 ave 0.5242 not set 899 ave 0.5013 diff 0.02283
+ bit 30 set 62 ave 0.4892 not set 938 ave 0.5046 diff 0.01537
+ bit 31 set 151 ave 0.5358 not set 849 ave 0.4979 diff 0.03784
+ bit 32 set 165 ave 0.5311 not set 835 ave 0.4982 diff 0.03291
+ bit 33 set 188 ave 0.5071 not set 812 ave 0.5028 diff 0.004257
+ bit 34 set 431 ave 0.4674 not set 569 ave 0.5311 diff 0.06362
+ bit 35 set 203 ave 0.4541 not set 797 ave 0.5163 diff 0.06223
+ bit 36 set 117 ave 0.4307 not set 883 ave 0.5133 diff 0.08261
+ bit 37 set 95 ave 0.4403 not set 905 ave 0.5103 diff 0.06999
+ bit 38 set 140 ave 0.4625 not set 860 ave 0.5103 diff 0.0478
+ bit 39 set 129 ave 0.4603 not set 871 ave 0.5101 diff 0.04973
+ bit 40 set 260 ave 0.5252 not set 740 ave 0.4961 diff 0.02919
+ bit 41 set 217 ave 0.5316 not set 783 ave 0.4959 diff 0.03571
+ bit 42 set 492 ave 0.4845 not set 508 ave 0.5222 diff 0.03773
+ bit 43 set 46 ave 0.4393 not set 954 ave 0.5068 diff 0.06749
+ bit 44 set 61 ave 0.4613 not set 939 ave 0.5064 diff 0.04508
+ bit 45 set 325 ave 0.4908 not set 675 ave 0.5098 diff 0.01902
+ bit 46 set 478 ave 0.506 not set 522 ave 0.5015 diff 0.004502
+ bit 47 set 471 ave 0.4942 not set 529 ave 0.5121 diff 0.01785
+ bit 48 set 650 ave 0.5015 not set 350 ave 0.5076 diff 0.006078
+ bit 49 set 370 ave 0.5207 not set 630 ave 0.4936 diff 0.02709
+ bit 50 set 186 ave 0.5056 not set 814 ave 0.5032 diff 0.002453
+ bit 51 set 174 ave 0.5242 not set 826 ave 0.4993 diff 0.02493
+ bit 52 set 260 ave 0.5342 not set 740 ave 0.4929 diff 0.04132
+ bit 53 set 542 ave 0.491 not set 458 ave 0.5186 diff 0.02766
+ bit 54 set 429 ave 0.5078 not set 571 ave 0.5006 diff 0.007204
+ bit 55 set 431 ave 0.4921 not set 569 ave 0.5124 diff 0.02022
+ bit 56 set 200 ave 0.5263 not set 800 ave 0.498 diff 0.02827
+ bit 57 set 334 ave 0.4986 not set 666 ave 0.5062 diff 0.007573
+ bit 58 set 237 ave 0.5223 not set 763 ave 0.4979 diff 0.02438
+ bit 59 set 49 ave 0.5178 not set 951 ave 0.5029 diff 0.01493
+ bit 60 set 503 ave 0.5059 not set 497 ave 0.5014 diff 0.004522
+ bit 61 set 420 ave 0.5014 not set 580 ave 0.5053 diff 0.003873
+ bit 62 set 654 ave 0.4919 not set 346 ave 0.5259 diff 0.03399
+ bit 63 set 547 ave 0.4965 not set 453 ave 0.5123 diff 0.01583
+ bit 64 set 177 ave 0.5379 not set 823 ave 0.4963 diff 0.04166
+ bit 65 set 160 ave 0.4812 not set 840 ave 0.5079 diff 0.02667
+ bit 66 set 293 ave 0.5014 not set 707 ave 0.5046 diff 0.003131
+ bit 67 set 229 ave 0.4881 not set 771 ave 0.5083 diff 0.02011
+ bit 68 set 414 ave 0.5017 not set 586 ave 0.505 diff 0.003351
+ bit 69 set 507 ave 0.4936 not set 493 ave 0.514 diff 0.02032
+ bit 70 set 154 ave 0.4895 not set 846 ave 0.5062 diff 0.01669
+ bit 71 set 247 ave 0.5288 not set 753 ave 0.4954 diff 0.03337
+ bit 72 set 444 ave 0.492 not set 556 ave 0.5129 diff 0.02093
+ bit 73 set 331 ave 0.5112 not set 669 ave 0.4999 diff 0.01135
+ bit 74 set 315 ave 0.5113 not set 685 ave 0.5001 diff 0.01121
+ bit 75 set 259 ave 0.5046 not set 741 ave 0.5033 diff 0.001258
+ bit 76 set 688 ave 0.4962 not set 312 ave 0.5201 diff 0.0239
+ bit 77 set 233 ave 0.5032 not set 767 ave 0.5038 diff 0.000549
+ bit 78 set 277 ave 0.5089 not set 723 ave 0.5016 diff 0.007274
+ bit 79 set 163 ave 0.4849 not set 837 ave 0.5073 diff 0.02244
+ bit 80 set 250 ave 0.4798 not set 750 ave 0.5116 diff 0.03186
+ bit 81 set 252 ave 0.4889 not set 748 ave 0.5086 diff 0.01978
+ bit 82 set 239 ave 0.4828 not set 761 ave 0.5102 diff 0.02734
+ bit 83 set 183 ave 0.4919 not set 817 ave 0.5063 diff 0.01439
+ bit 84 set 193 ave 0.5041 not set 807 ave 0.5036 diff 0.000505
+ bit 85 set 756 ave 0.51 not set 244 ave 0.4838 diff 0.02619
+ bit 86 set 234 ave 0.4991 not set 766 ave 0.505 diff 0.005962
+ bit 87 set 310 ave 0.5014 not set 690 ave 0.5047 diff 0.003249
+ bit 88 set 117 ave 0.4739 not set 883 ave 0.5076 diff 0.03363
+ bit 89 set 225 ave 0.477 not set 775 ave 0.5114 diff 0.03438
+ bit 90 set 305 ave 0.4813 not set 695 ave 0.5135 diff 0.03217
+ bit 91 set 229 ave 0.5022 not set 771 ave 0.5041 diff 0.001916
+ bit 92 set 176 ave 0.5011 not set 824 ave 0.5042 diff 0.003049
+ bit 93 set 146 ave 0.4702 not set 854 ave 0.5094 diff 0.03911
+ bit 94 set 213 ave 0.5028 not set 787 ave 0.5039 diff 0.001081
+ bit 95 set 152 ave 0.4971 not set 848 ave 0.5048 diff 0.007703
+ bit 96 set 454 ave 0.4976 not set 546 ave 0.5086 diff 0.01101
+ bit 97 set 344 ave 0.4908 not set 656 ave 0.5104 diff 0.01964
+ bit 98 set 361 ave 0.502 not set 639 ave 0.5046 diff 0.002503
+ bit 99 set 297 ave 0.5182 not set 703 ave 0.4975 diff 0.02069
+bit 0 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 1 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 2 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 3 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 4 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 5 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 6 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 7 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 8 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 9 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 10 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0
+bit 11 set 1000 btw 0.00188 and 0.9995 ave 0.5036 diff 0

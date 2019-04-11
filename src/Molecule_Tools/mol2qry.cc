@@ -496,7 +496,7 @@ mol2qry (int  argc, char ** argv)
   
   if (cl.option_present('m') && cl.option_present('R'))
   {
-    cerr << "Sorry, the -m and -R options are mutually incompatible, see Ian\n";
+    cerr << "Sorry, the -m and -R options are mutually incompatible, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     return 3;
   }
 

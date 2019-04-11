@@ -1,3 +1,57 @@
+2019-04 Release 3.0
+
+New scripts
+===========
+gfp_add_descriptors - Adds descriptors to the gfp file with matching ID
+gfp_lnearneighbours - Selects near neighbour based on gfp descriptors, uses SMILES, can handle LARGE numbers of cpds
+gfp_to_descriptors - Converts fingerprints to descriptors
+gfp_profile_activity_by_bits - Scans a fingerprint file and computes average activity associated with each bit
+gfp_pairwise_distances - Calculates the pairwise distance between molecule
+gfp_distance_filter - Filters molecules according to how close they are to members of a comparison pool
+gfp_sparse_to_fixed - Converts non-colliding fingerprints to fixed counted, or binary forms
+gfp_spread_v2 - Calculates the distance spread of fingerprints against target fingerprint or group of fingerprints
+gfp_single_linkage - Finds the single linkage in the gfp fingerpint set
+gfp_spread_buckets_v2 - Calculates the distance spread of fingerprints against target fingerprint or group of fingerprints while considering a bucketized variable like activity or CLOGP
+gfp_nearneighbours_single_file - Finds near neighbours within a set of fingerprints
+gfp_nearneighbours - Finds near neighbours of a set of fingerprints
+gfp_leader_v2 - Performs clustering with leader (sphere exclusion) algorithm on gfp descriptors
+gfp_distance_matrix - Computes the distance matrix for a pool of gfp fingerprints; generates a human-readable ascii matrix
+descriptor_file_to_01_fingerprints - Converts a integer descriptor file to fingerprints, either fixed 0/1 or non colliding counted
+nplotnn - Processes the output of several gfp nearneighbour tools into SMILES
+tdt_sort - Sorts fields of a TDT file or stream according to specific tag, properties, or the degree of each node
+tdt_join - Joins two TDT streams, possible with different identifiers
+descriptors_to_fingerprint - Converts a descriptors to a sparse fingerprint
+
+
+Retired scripts
+===============
+
+
+Bug fixes
+=========
+iwdemerit - Fix the crash when smiles contain multiple hydrogen atoms
+
+
+Data
+=========
+
+
+Lib
+=========
+libgfp.a
+
+
+Updates
+=======
+
+Known issues
+============
+The output precision and format for the float point numbers might be different
+on mac and linux os
+The generated fingerprints can not be shared across OS's
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 2019-01 Release 2.1
 
 New scripts
@@ -26,6 +80,8 @@ rxn_substructure_search - Reorganize and rationalize the interface of the script
 rxn_standardize - Reorganize and rationalize the interface of the scripts
                 - Add component cleaning option
 
+Known issues
+============
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -70,6 +126,9 @@ Lib
 
 Updates
 =======
+
+Known issues
+============
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -128,5 +187,8 @@ libiwtdt.a
 
 Updates
 =======
+
+Known issues
+============
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

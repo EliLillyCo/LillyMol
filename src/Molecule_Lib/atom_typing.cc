@@ -2333,132 +2333,6 @@ Atom_Typing_Specification::_ust_assign_atom_types_aromatic_all_the_same (Molecul
   return 1;
 }
 
-#ifdef OLD_STUFF_NOT_USED_ANY_MORE
-static int
-possible_tautomeric_nitrogen (Molecule & m, 
-                              const Ring & r,
-                              const atom_number_t zatom)
-{
-  const auto ring_size = r.size();
-
-  int two_connected_nitrogen_count = 0;
-  int exocyclic_oxygen = 0;
-
-  for (auto i = 0; i < ring_size; ++i)
-  {
-    const auto j = r[i];
-
-    const auto a = m.atomi(j);
-
-    const auto z = a->atomic_number();
-
-    if (7 == z && 2 == a->ncon())
-    {
-      two_connected_nitrogen_count++;
-      if (two_connected_nitrogen_count > 1)
-        return 1;
-      continue;
-    }
-
-    if (6 != z)
-      continue;
-
-    if (3 != a->ncon())
-      continue;
-
-    for (auto k = 0; k < 3; ++k)
-    {
-      const Bond * b = a->item(k);
-
-      if (b->nrings())
-        continue;
-
-      const auto o = b->other(j);
-
-      if (1 == m.ncon(i) && 8 == m.atomic_number(o))
-        exocyclic_oxygen++;
-
-      break;
-    }
-  }
-
-  if (0 == two_connected_nitrogen_count)
-    return 0;
-
-  if (two_connected_nitrogen_count > 1)
-    return 1;
-
-  if (1 == two_connected_nitrogen_count && exocyclic_oxygen)
-    return 1;
-
-  return 0;
-}
-
-template <typename T>
-int
-discern_possible_tautomeric_nitrogen (Molecule & m,
-                                      const atom_number_t zatom,
-                                      T & atype)
-{
-  if (! m.is_aromatic(zatom))
-    return 0;
-
-  if (1 != m.nrings(zatom))
-    return 0;
-
-  const auto r = m.ring_containing_atom(zatom);
-
-  assert (r->is_aromatic());
-
-  if (possible_tautomeric_nitrogen(m, *r, zatom))
-  {
-    atype = 37013;
-    return 1;
-  }
-
-  return 0;
-}
-
-/*
-  An oxygen attached to an aromatic ring, with an adjacent nitrogen
-*/
-
-template <typename T>
-int
-discern_possible_tautomeric_oxygen (Molecule & m,
-                                    const atom_number_t zatom,
-                                    T & atype)
-{
-  const Atom * o = m.atomi(zatom);
-
-  if (1 != o->ncon())
-    return 0;
-
-  const atom_number_t c = o->other(zatom, 0);
-
-  if (! m.is_aromatic(c))
-    return 0;
-
-  const Atom * ac = m.atomi(c);
-
-  if (3 != ac->ncon())
-    return 0;
-
-  for (int i = 0; i < 3; ++i)
-  {
-    const atom_number_t n = ac->other(zatom, i);
-
-    if (7 == m.atomic_number(n) && m.is_aromatic(n))
-    {
-      atype = 29993;
-      return 1;
-    }
-  }
-
-  return 0;
-}
-#endif
-
 /*
   We increment the existing atom type
   Don't like this because it will distinguish quite similar
@@ -3118,9 +2992,16 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(const const_IWSubs
   {
     const char * from_env = getenv("IW_PHARMACAPHORE");
     if (NULL != from_env)
+    {
       myfname = from_env;
+    }
     else
-      myfname = "/home/rx87851/lib/pharmacaphore";
+    {
+      // The default private home directory is removed.
+      // A new directory for the queries may be provided in the future
+      cerr << "Could not find required queries \n";
+      return 0;
+    }
   }
   else if (myfname.starts_with("PP=") || myfname.starts_with("PP:"))
     myfname.remove_leading_chars(3);
@@ -3184,7 +3065,7 @@ string_interpolation (const const_IWSubstring & starting_string,
   cerr << "From '" << starting_string << "'\nget:  '" << before_dollar << "' '" << interior << "' and '" << after_dollar << "'\n";
 #endif
 
-// At this point, it might be a single token ${FOO} or maybe a set of possibilities ${FOO|BAR|/home/rx87851}
+// At this point, it might be a single token ${FOO} or maybe a set of possibilities 
 
   const char * e = getenv(interior.null_terminated_chars());
 

@@ -178,7 +178,7 @@ Reaction_To_Search::buildRxnPart(const_IWSubstring s, vector<Molecule *> & m)
 
 // The Reaction_Query_Component class is one of zero or more components of a reaction 
 // query part (reactants, agents, products).  This component supports two types of input:
-// 1) the original form form Ian Watson that had the >'s and +'s of the reaction specification on 
+// 1) the original form that had the >'s and +'s of the reaction specification on 
 // 		the command line in the form -q "qry+qry+qry>qry+qry>qry+qry+qry"
 //		each part can have any number of qry's, including none.  These has to be at least one qry
 //		somewhere in the overall specification.

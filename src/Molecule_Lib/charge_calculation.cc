@@ -1200,7 +1200,7 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
         atom_type [i] = ATOM_TYPE_H;
         break;
       case 6:
-        // deal with descrepency between Ian's Pealman definition and Concord's definition
+        // deal with descrepency between Pealman definition and Concord's definition
         if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
         else if ((nbonds(i) - ncon(i)) == 0) atom_type [i] = ATOM_TYPE_C3;
         else if ((nbonds(i) - ncon(i)) == 1) atom_type [i] = ATOM_TYPE_C2;
@@ -1571,7 +1571,7 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
         atom_type [i] = ATOM_TYPE_H;
         break;
       case 6:
-        // deal with descrepency between Ian's Pealman definition and Concord's definition
+        // deal with descrepency between Pealman definition and Concord's definition
         if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
         else if ((nbondsi - nconi) == 0) 
           {
@@ -1747,7 +1747,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
         atom_type [i] = ATOM_TYPE_H;
         break;
       case 6:
-        // deal with descrepency between Ian's Pealman definition and Concord's definition
+        // deal with descrepency between Pealman definition and Concord's definition
         if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
         else if ((nbondsi - nconi) == 0) 
           {
@@ -2228,7 +2228,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
           {
             atom_type [i] = ATOM_TYPE_S2;
 
-            /* lifted from Ian's modification  -- need further modification
+            /* lifted from modification  -- need further modification
              
                int notused1, notused2;
                

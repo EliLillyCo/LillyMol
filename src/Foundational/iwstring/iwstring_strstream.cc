@@ -2,14 +2,8 @@
 
 #include "iwstring.h"
 
-/*
-  On SGI, asking for str () results in null terminating the object
-  and increasing the number of chars,
-  which of course increases the character count. Therefore we ask for
-  nchars before we ask for str ()
-*/
  
-#if defined (IWSGIQ) || (__GNUC_MINOR__ == 95)
+#if (__GNUC_MINOR__ == 95)
 #include <strstream>
 using namespace std;
 

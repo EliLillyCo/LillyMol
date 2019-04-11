@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#if defined (IWSGI) || (__GNUC_MINOR__ == 95)
+#if (__GNUC_MINOR__ == 95)
 #include <strstream>
 #else
 #include <sstream>

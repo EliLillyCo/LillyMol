@@ -23,9 +23,9 @@
 *  Project Website:  TBD
 *
 *
-* $Id: getopt.h,v 1.1 2007/07/17 12:31:52 c084034 Exp $
+* getopt.h,v 1.1 2007/07/17 12:31:52
 * $Log: getopt.h,v $
-* Revision 1.1  2007/07/17 12:31:52  c084034
+* Revision 1.1  2007/07/17 12:31:52
 * *** empty log message ***
 *
 * Revision 1.4  2005/05/04 17:54:00  mridge

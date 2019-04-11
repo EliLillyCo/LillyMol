@@ -485,18 +485,3 @@ MDL_File_Data::mdl_bond(int i)
    return _mdl_bond[i];
 }
 
-#ifdef IMPLEMENT_THIS_SOMETIME
-int
-MDL_File_Data::add (const Element * e)
-{
-  MDL_Atom_Data * t = new MDL_Atom_Data();
-
-  t->set_atom_number(_mdl_atom.number_elements());
-
-  t->set_symbol
-
-  _mdl_atom.add(t);
-
-  return 1;
-}
-#endif

@@ -96,7 +96,7 @@ Molecule::_invalidate_attatched_directional_bonds (Molecule & subset,
                                                    const int * xref,
                                                    const Bond * b) const
 {
-  cerr << "Molecule::_invalidate_attatched_directional_bonds:not implemented, see Ian\n";
+  cerr << "Molecule::_invalidate_attatched_directional_bonds:not implemented, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
 
   atom_number_t a1 = b->a1();
   atom_number_t a2 = b->a2();
@@ -465,7 +465,7 @@ Molecule::split_off_fragments (const atom_number_t zatom, Molecule & frags)
 #endif
   if (_charges || _atom_type)
   {
-    cerr << "Molecule::split_off_fragments:does not work with molecules having partial charges and/or atom types. See Ian\n";    // laziness
+    cerr << "Molecule::split_off_fragments:does not work with molecules having partial charges and/or atom types. Contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";    // laziness
     return 0;
   }
 

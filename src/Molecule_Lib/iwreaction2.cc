@@ -624,7 +624,7 @@ IWReaction::_break_bonds_to_atoms_and_fragments_to_be_removed (Molecule & result
 
   for (int i = 0; i < n; i++)
   {
-    cerr << "Implement fragment breakage, see Ian\n";
+    cerr << "Implement fragment breakage, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
   }
 
   return 1;

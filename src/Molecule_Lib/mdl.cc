@@ -270,7 +270,7 @@ fill_atom_property_array (const IWString & buffer,
 
   if (npairs > MAX_PAIRS)
   {
-    cerr << "MDL::fill_atom_property_array:too many pairs on record, cannot process. See Ian " << npairs << endl;
+    cerr << "MDL::fill_atom_property_array:too many pairs on record, cannot process. Contact LillyMol on github (https://github.com/EliLillyCo/LillyMol) " << npairs << endl;
     return 0;
   }
 

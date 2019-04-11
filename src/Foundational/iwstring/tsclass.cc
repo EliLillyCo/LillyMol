@@ -757,7 +757,7 @@ test_split()
 
 #ifdef I_CARE_ABOUT_STRSTREAM
 
-#if defined (IWSGI) || (__GNUC_MINOR__ == 95)
+#if (__GNUC_MINOR__ == 95)
 static int
 test_strstream_stuff()
 {

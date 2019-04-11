@@ -1213,7 +1213,7 @@ extract_rings (int argc, char ** argv)
   {
     if (! cl.value('R', max_ring_size) || max_ring_size < min_ring_size || max_ring_size > 8)
     {
-      cerr << "The maximum ring size option (-R) must be a valid ring size - internal limitation to size 8, see Ian\n";
+      cerr << "The maximum ring size option (-R) must be a valid ring size - internal limitation to size 8, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
       usage(1);
     }
 

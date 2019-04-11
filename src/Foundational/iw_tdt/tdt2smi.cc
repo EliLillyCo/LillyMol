@@ -30,7 +30,7 @@ static void
 usage (int rc)
 {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "$Id: tdt2smi.cc,v 1.1.1.1 2003/09/25 12:35:55 ian Exp $\n";
+  cerr << "tdt2smi.cc,v 1.1.1.1 2003/09/25 12:35:55\n";
   cerr << "Converts TDT file to smiles\n";
   cerr << " -S <tag>       smiles tag (default '" << smiles_tag << "')\n";
   cerr << " -I <tag>       identifier tag (default '" << identifier_tag << "')\n";

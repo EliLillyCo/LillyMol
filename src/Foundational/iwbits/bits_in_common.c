@@ -71,7 +71,6 @@ check_bits_in_common (unsigned int b1, unsigned int b2,
 /*
    Sun   METHOD1    sun compiler
    Linux METHOD4    Intel compiler
-   SGI   METHOD4    SGI compiler
 
    Jun 2015. Some experiments using the Intel compiler with profile guided feedback
    time ./tbic  -n 10000 -b 2048 -d 0.2

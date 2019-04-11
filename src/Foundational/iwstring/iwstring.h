@@ -16,8 +16,6 @@
 
 #if defined(__GNUC__)
 #include <sstream>
-#elif defined(IWSGI)
-#include <strstream>
 #else
 #include <sstream>
 #endif
@@ -27,7 +25,7 @@
 using std::cerr;
 using std::endl;
 
-#if defined (__STRING__) || defined (__SGI_STL_STRING) || defined (_CPP_STRING) || defined (_IOSTREAM_) || defined (__STD_IOSTREAM__) || defined (_STLP_IOSTREAM) || defined (_GLIBCXX_STRING)
+#if defined (__STRING__) || defined (_CPP_STRING) || defined (_IOSTREAM_) || defined (__STD_IOSTREAM__) || defined (_STLP_IOSTREAM) || defined (_GLIBCXX_STRING)
 #define IW_STD_STRING_DEFINED 1
 #endif
 
@@ -390,8 +388,6 @@ class IWString : public resizable_array<char>
     IWString & operator = (const IWString &);
 #if defined(__GNUC__)
     IWString & operator = (std::ostringstream &);
-#elif defined(IWSGI)
-    IWString & operator = (std::ostrstream &);
 #endif
 
 #if defined (IW_STD_STRING_DEFINED)
@@ -601,7 +597,7 @@ class IWString : public resizable_array<char>
     void append_number (double, int);      // 2nd arg is the precision
     void append_number (float, const char *);
 
-    // Ingvar: moved const around to match calls in tsclass and descriptor_file_to_01_fingerprints
+    // Moved const around to match calls in tsclass and descriptor_file_to_01_fingerprints
     // int append_hex(const unsigned char * v, const int n);
     int append_hex(unsigned char const * v, const int n);
 
@@ -1083,8 +1079,6 @@ extern IWString operator + (const IWString &, const IWString &);
 
 #if defined(__GNUC__)
 extern IWString & operator << (IWString &, std::ostringstream &);
-#elif defined(IWSGI)
-extern IWString & operator << (IWString &, std::ostrstream &);
 #endif
 
 extern int operator >> (std::istream &, IWString &);

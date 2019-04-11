@@ -1,10 +1,6 @@
 #include <stdlib.h>
 
-#if defined (IWSGI)
-
-#include <hash_set.h>
-
-#elseif (__GNUC__ == 3)
+#if (__GNUC__ == 3)
 
 #include <ext/hash_set>
 using namespace __gnu_cxx;

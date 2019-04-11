@@ -10,14 +10,14 @@ int
 inchi_to_inchi_key(const char * inchi,
                    IWString & key)
 {
-  cerr << "inchi_to_inchi_key not implemented, see Ian\n";
+  cerr << "inchi_to_inchi_key not implemented, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
   return 0;
 }
 
 int
 Molecule::build_from_inchi (const const_IWSubstring & inchi)
 {
-  cerr << "Molecule::build_from_inchi:not implemented, see Ian\n";
+  cerr << "Molecule::build_from_inchi:not implemented, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
   return 0;
 }
 
@@ -38,7 +38,7 @@ Molecule::read_molecule_inchi_ds (iwstring_data_source & input)
 int
 Molecule::InChI (IWString & inchi_string)      // maybe this could be a const method, depends on what inchi needs...
 {
-  cerr << "Molecule::InChI:not implemented, see Ian\n";
+  cerr << "Molecule::InChI:not implemented, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
 
   return 0;
 }

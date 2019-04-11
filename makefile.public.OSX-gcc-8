@@ -35,7 +35,7 @@ CPU = -DUNIX -mtune=haswell
 OPT = -O2 
 OPENMP = -fopenmp
 
-COMPILER = -msse -mfpmath=sse
+COMPILER = -msse -mfpmath=sse -march=nehalem
 
 # IWPROGRAMMES shall be defined in the Makefile which includes this shared makefile
 # IWPROGRAMMES shall point to the folder where src is located
@@ -62,7 +62,7 @@ USRLIB=
 FLAGS = $(PROF) $(DEBUG) $(COMPILER) $(CPU) $(OPT) $(PROJ) $(INC) -Wl,--no-warn-search-mismatch 
 CFLAGS  =  $(FLAGS)
 CXXFLAGS = $(FLAGS) -std=c++11
-CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LFS64_LARGEFILE
+CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LFS64_LARGEFILE -D__off_t=off_t
 
 # Some programmes want implicit templates
 FLAGS_FOR_TEMPLATE_INSTANTIATORS = $(CXXFLAGS)

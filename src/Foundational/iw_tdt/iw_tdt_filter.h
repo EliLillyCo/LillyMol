@@ -140,7 +140,7 @@ class IW_TDT_Filter_random : public IW_TDT_Filter_Base
     int matches (const IW_TDT &, int);
 };
 
-#if defined(IWSGI) || defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER)
 class IW_TDT_Filter
 {
   private:

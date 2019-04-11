@@ -4125,12 +4125,15 @@ const_IWSubstring::split (std::vector<std::string>& tokens, std::string separato
   // 'reactant1.qry+reactant2.qry>>product.qry' to
   // 'reactant1.qry', '+', 'reactant2.qry', '>>', 'product.qry'
   // assuming + and > are separators
+  // returns the number of tokens
   std::string s(_data, _nchars);  // essential to use the length here
   tokens.clear();
   std::string::size_type last_pos = s.find_first_not_of(separators, 0);
+  int cnt = 0;
   if (last_pos > 0)
   {
     tokens.push_back(s.substr(0, last_pos));
+    cnt++;
   }
   std::string::size_type pos = s.find_first_of(separators, last_pos);
 
@@ -4138,17 +4141,21 @@ const_IWSubstring::split (std::vector<std::string>& tokens, std::string separato
   {
     tokens.push_back(s.substr(last_pos, pos - last_pos));
     last_pos = s.find_first_not_of(separators, pos); // string token
+    cnt++;
     if (std::string::npos != pos) {
       if (std::string::npos == last_pos) {  // ends with a separator
         tokens.push_back(s.substr(pos, s.size() - pos));
+        cnt++;
       }
       else
       {
         tokens.push_back(s.substr(pos, last_pos - pos));  // separator token
+        cnt++;
       }
     }
     pos = s.find_first_of(separators, last_pos);
   }
+  return cnt;
 }
 
 int

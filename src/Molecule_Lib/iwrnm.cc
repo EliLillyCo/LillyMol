@@ -287,38 +287,6 @@ Ring_Number_Manager::_append_ring_closure_digits (IWString & smiles,
 
 */
 
-#ifdef NOT_USED_ANY_MOREZ
-int
-Ring_Number_Manager::store_ring (IWString & smiles,
-                          const Bond * b,
-                          atom_number_t ato)
-{
-  atom_number_t afrom = b->other(ato);
-
-#ifdef DEBUG_STORE_RING
-  cerr << "Storing ring opening from atom " << afrom << " to " << ato << ' ';
-  if (b->is_single_bond())
-    cerr << "single bond\n";
-  else
-    cerr << "multiple bond\n";
-  for (int i = 0; i <= _nr; i++)
-  {
-    cerr << "i = " << i << " ring id = " << _ring_id[i] << endl;
-  }
-#endif
-
-  int free_ring = locate_item_in_array(UNUSED_RING_NUMBER, _nr + 1, _ring_id);
-  assert(free_ring > 0);
-
-  _ring_id[free_ring]   = afrom;
-  _from_atom[free_ring] = ato;
-  _bond[free_ring] = b;
-
-  _append_ring_closure_digits(smiles, free_ring, NULL, ato);   // these are actually ring openings, so no bond
-
-  return 1;
-}
-#endif
 
 int
 Ring_Number_Manager::_generate_ring_opening_chars (IWString & ring_opening_chars,

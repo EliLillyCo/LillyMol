@@ -760,7 +760,7 @@ Molecule::_read_bond_array_mrv (CMarkup & cml)
       bt = TRIPLE_BOND;
     else if ('A' == order)
     {
-      cerr << "Molecule::_read_bond_array_mrv:aromatic input not build, see Ian\n";
+      cerr << "Molecule::_read_bond_array_mrv:aromatic input not build, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
       return 0;
     }
 

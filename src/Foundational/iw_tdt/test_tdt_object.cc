@@ -29,7 +29,7 @@ static void
 usage (int rc)
 {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "$Id: test_tdt_object.cc,v 1.1.1.1 2003/09/25 12:35:55 ian Exp $\n";
+  cerr << "test_tdt_object.cc,v 1.1.1.1 2003/09/25 12:35:55 \n";
   cerr << "Tester for TDT objects\n";
   cerr << " -x <tag>       remove all dataitems with <tag>\n";
   cerr << " -X <tag>       remove all dataitems whose tags match regular expression <tag>\n";

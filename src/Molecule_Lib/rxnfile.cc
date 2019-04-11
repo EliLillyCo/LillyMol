@@ -3965,7 +3965,7 @@ RXN_File::_create_reaction(IWReaction & rxn,
   assert (_nr > 0);
 
 //if (_nr > 1)
-//  cerr << "RXN_File::_create_reaction:warning reaction " << _comment << " contains " << _nr << " reagents, only first one processed. See Ian\n";
+//  cerr << "RXN_File::_create_reaction:warning reaction " << _comment << " contains " << _nr << " reagents, only first one processed. Contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
 
   rxn.set_comment(_comment);
 
@@ -7909,32 +7909,6 @@ RXN_File::_all_bonds_unchanged(const ISIS_RXN_FILE_Molecule & m,
   return 1;    // all bonds unchanged
 }
 
-#ifdef NOT_USED_ANY_MORE_JJJJJ
-int
-RXN_File::_identify_atoms_in_rings_separated_from_changing_atoms(ISIS_RXN_FILE_Molecule & r,
-                                                const int * changed,
-                                                int * just_changed_kekule_form) const
-{
-  const int nr = r.nrings();
-
-  r.compute_aromaticity_if_needed();
-
-  for (int i = 0; i < nr; ++i)
-  {
-    const Ring * ri = r.ringi(i);
-
-    if (! ri->is_aromatic())
-      continue;
-      
-    if (! ri->any_members_set_in_array(changed, 1))    // definitely Kekule only if changing
-      ri->set_vector(just_changed_kekule_form, 1);
-    else                       // let's take a closer look
-      _identify_atoms_in_rings_separated_from_changing_atoms(r, *ri, changed, just_changed_kekule_form);
-  }
-
-  return 1;
-}
-#endif
 
 /*
   We have a ring that involves one or more changing atoms, CHANGED==1
@@ -8406,7 +8380,7 @@ RXN_File::convert_unchanging_fragments_to_agents ()
 
   if (_na > 0)
   {
-    cerr << "RXN_File::convert_unchanging_fragments_to_agents:agents already present, see Ian\n";
+    cerr << "RXN_File::convert_unchanging_fragments_to_agents:agents already present, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     return 0;
   }
 

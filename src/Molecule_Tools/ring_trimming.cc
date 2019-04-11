@@ -276,7 +276,7 @@ ring_description (Molecule & m,
   return;
 }
 
-static int
+static void
 rank_rings (Molecule & m,
             std::pair<int, int> * rings)
 {

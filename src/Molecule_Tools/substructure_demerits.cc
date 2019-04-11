@@ -118,8 +118,9 @@ static int apply_positive_charge_demerit = 1;
 static int apply_negative_charge_demerit = 1;
 
 static int
-too_many_charges(Molecule & m, Demerit & demerit)
+too_many_charges(const Molecule & m_in, Demerit & demerit)
 {
+  Molecule m(m_in);
   if (0 == apply_positive_charge_demerit && 0 == apply_negative_charge_demerit)
     return 0;
 
@@ -311,12 +312,13 @@ static int satcg_count = 0;
 static int apply_satcg = 0;   // turn off until we get this debugged
 
 static int
-large_saturated_carbon_sections_including_rings(Molecule & m,
+large_saturated_carbon_sections_including_rings(const Molecule & m_in,
                              Demerit & demerit,
                              const atomic_number_t * z,
                              const int * ncon,
                              const int * ring_membership)
 {
+  Molecule m(m_in);
   int matoms = m.natoms();
 
   int * attached_heteroatom_count = new_int(matoms); std::unique_ptr<int[]> free_attached_heteroatom_count(attached_heteroatom_count);
@@ -495,11 +497,12 @@ static int c7ring_count = 0;
 static int apply_c7ring = 1;
 
 static int
-determine_c7_ring(Molecule & m,
-                   Demerit & demerit,
-                   const atomic_number_t * z,
-                   const int * ncon)
+determine_c7_ring(const Molecule & m_in,
+                  Demerit & demerit,
+                  const atomic_number_t * z,
+                  const int * ncon)
 {
+  Molecule m(m_in);
   if (! apply_c7ring)
     return 0;
 
@@ -609,9 +612,10 @@ static int c4_count = 0;
 static int apply_c4 = 1;
 
 static int
-long_carbon_chains(Molecule & m, Demerit & demerit,
+long_carbon_chains(const Molecule & m_in, Demerit & demerit,
                     const atomic_number_t * mz, const int * ncon)
 {
+  Molecule m(m_in);
   extending_resizable_array<int> long_chain;
 
   int matoms = m.natoms();
@@ -715,7 +719,7 @@ static int too_many_chlorine_count = 0;
 static int apply_alkyl_halides = 1;
 
 static int
-alkyl_halides(Molecule & m, Demerit & demerit,
+alkyl_halides(const Molecule & m, Demerit & demerit,
                const atomic_number_t * mz, const int * ncon)
 {
   if (! apply_alkyl_halides)
@@ -967,7 +971,7 @@ static int more_than_two_phosporus_count = 0;
 static int apply_more_than_two_phosporus = 1;
 
 static int
-phosphorus (Molecule & m, Demerit & demerit,
+phosphorus (const Molecule & m, Demerit & demerit,
             const atomic_number_t * mz, const int * ncon)
 {
   const int matoms = m.natoms();
@@ -1038,7 +1042,7 @@ static int two_halogens_at_different_attach_points_count = 0;
 static int apply_two_halogens_at_different_attach_points = 1;
 
 static int
-two_halogens_at_different_attach_points (Molecule & m, Demerit & demerit,
+two_halogens_at_different_attach_points (const Molecule & m, Demerit & demerit,
                const atomic_number_t * mz, const int * ncon)
 {
   if (! apply_two_halogens_at_different_attach_points)
@@ -1079,9 +1083,10 @@ static int more_than_two_sulphur_count = 0;
 static int apply_more_than_two_sulphur = 1;
 
 static int
-more_than_two_sulphur (Molecule & m, Demerit & demerit,
+more_than_two_sulphur (const Molecule & m_in, Demerit & demerit,
                        const atomic_number_t * mz, const int * ncon)
 {
+  Molecule m(m_in);
   if (! apply_more_than_two_sulphur)
     return 0;
 
@@ -1116,9 +1121,10 @@ static int sulphur_nitrogen_count = 0;
 static int apply_sulphur_nitrogen = 1;
 
 static int
-sulphur_nitrogen (Molecule & m, Demerit & demerit,
+sulphur_nitrogen (const Molecule & m_in, Demerit & demerit,
                const atomic_number_t * mz, const int * ncon)
 {
+  Molecule m(m_in);
   if (! apply_sulphur_nitrogen)
     return 0;
 
@@ -1176,9 +1182,10 @@ static int two_nitrogens_with_double_bonds_count = 0;
 static int apply_two_nitrogens_with_double_bonds = 1;
 
 static int
-nitrogen_nitrogen (Molecule & m, Demerit & demerit,
+nitrogen_nitrogen (const Molecule & m_in, Demerit & demerit,
                const atomic_number_t * mz, const int * ncon)
 {
+  Molecule m(m_in);
   int matoms = m.natoms();
   for (int i = 0; i < matoms; i++)
   {
@@ -1351,11 +1358,12 @@ is_hydrazone_or_hydrazid (Molecule & m,
 // Make sure we do not hit Hydrazones, or Hydrazids
 
 static int
-nitrogen_single_bond_nitrogen (Molecule & m,
+nitrogen_single_bond_nitrogen (const Molecule & m_in,
                         Demerit & demerit,
                         const atomic_number_t * mz,
                         const int * ncon)
 {
+  Molecule m(m_in);
   if (! apply_nitrogen_single_bond_nitrogen)
     return 0;
 
@@ -1404,9 +1412,10 @@ nitrogen_single_bond_nitrogen (Molecule & m,
 static int apply_too_many_rings_demerit = 1;
 
 static  int
-too_many_rings (Molecule & m,
+too_many_rings (const Molecule & m_in,
                 Demerit & demerit)
 {
+  Molecule m(m_in);
   if (! apply_too_many_rings_demerit)
     return 0;
 

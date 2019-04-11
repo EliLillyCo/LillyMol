@@ -737,6 +737,7 @@ display_f_directives (int rc)
   cerr << "  -f alarge      determine largest fragment. Keep all fragments with that number of atoms\n";
   cerr << "  -f lo          trim to fragment with most organic atoms\n";
   cerr << "  -f lod         trim to fragment with most organic atoms and desirable features\n";
+  cerr << "  -f allo        keep all organic fragments\n";
   cerr << "  -f RMDUP       remove duplicate fragments\n";
   cerr << "  -f rmle=nn     remove fragments with NN or fewer atoms\n";
   cerr << "  -f Q:qfile     keep largest  frag which matches query in <qfile>\n";
@@ -811,7 +812,7 @@ display_dash_y_options (std::ostream & os,
   os << " -" << flag << " tlast=char    truncate name at last <char>\n";
   os << " -" << flag << " NPREPEND=s    prepend <s> to each name\n";
   os << " -" << flag << " maxplen=<n>   discard molecules with max path length > <n>\n";
-//os << " -" << flag << " B4F=<fname>   write frag stripped smiles before filtering to <fname> (Ian)\n";
+//os << " -" << flag << " B4F=<fname>   write frag stripped smiles before filtering to <fname> \n";
   os << " -" << flag << " aclf          atom counts are for the largest fragment only\n";
   os << " -" << flag << " nhsqb         explicit hydrogen atoms in smiles written without square brackets\n";
   os << " -" << flag << " rmsqb         remove unnecessary square bracketed atoms  - Hcount is OK as specified\n";
