@@ -1,0 +1,21 @@
+(0 Query
+  (A I one_embedding_per_start_atom 1)
+  (A I Version 2)
+  (A C Comment "Acid_P_S")
+  (0 Query_Atom
+    (A I atomic_number (15 16))
+    (A I min_unsaturation 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I formal_charge 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A D numeric_value -1.1)
+    (A I single_bond 0)
+  )
+)

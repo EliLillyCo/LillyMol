@@ -7,54 +7,6 @@
 
 #include "iw_stl_hash_map.h"
 
-
-#ifdef OLD_VERSION
-#include "primes.h"
-size_t
-IWStringHash::operator () (const IWString & s) const
-{
-  int lens = s.length ();
-
-  size_t rc = 7927 * lens;
-
-  const unsigned int * q = (const unsigned int *) s.rawchars ();    // beware alignment
-  int nw = lens >> 2;      // divide by four - beware word sizes 32/64
-
-  if (lens <= 4)
-  {
-    for (int i = 0; i < s.length (); i++)
-    {
-      rc += primes[i] * s[i];
-    }
-  }
-  else if (lens < 100)
-  {
-    for (int i = 0; i < nw; i++)
-    {
-      rc += primes[i] * q[i];
-    }
-
-    rc += s.last_item () * 3907;
-  }
-  else if (lens < 500)
-  {
-    nw--;
-    for (int i = 0; i < nw; i += 4)
-    {
-      rc +=  primes[i] * q[i];
-    }
-
-    rc += s.last_item () * s.length () + q[17];
-  }
-  else
-  {
-    rc += 3917 * q[0] + 467 * s[lens >> 1] + s.last_item ();
-  }
-
-  return rc;
-}
-#endif
-
 /*
   This seems to be the fastest one I've found so far
 */

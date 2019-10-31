@@ -73,7 +73,7 @@ SHARED_INC_FILES = molecule.h atom.h element.h bond.h bond_list.h \
 	numass.h is_actually_chiral.h path_scoring.h mdl.h mdl_molecule.h \
 	moleculed.h toggle_kekule_form.h reaction_match_conditions.h iwreaction.h \
 	rxn_file.h rwsubstructure.h charge_calculation.h misc2.h tmpsssr.h \
-	pearlman.h marvin.h
+	pearlman.h marvin.h symmetry.h
 	
 LIBRARY_OBJECTS = $(addprefix $(BUILD_DIR)/, $(LIBRARY_OBJECTS_LIST))
 

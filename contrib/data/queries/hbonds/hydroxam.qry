@@ -1,0 +1,27 @@
+(0 Query
+  (A C Comment "Hydroxam")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I aromatic 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 7)
+    (A I include_in_embedding 0)
+    (A I single_bond 0)
+  )
+  (2 Environment_No_Match
+    (A I single_bond 0)
+    (3 Query_Atom
+    )
+    (4 Query_Atom
+      (A I atomic_number 8)
+      (A I double_bond 3)
+    )
+  )
+  (5 Environment_No_Match
+    (A I double_bond 1)
+    (A C smiles "O")
+  )
+)

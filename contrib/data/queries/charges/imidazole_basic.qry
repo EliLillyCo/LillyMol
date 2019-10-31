@@ -1,0 +1,56 @@
+(6 Query
+  (A C Comment "imidazole_basic")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I hcount 0)
+    (A I ring_size 5)
+    (A I nrings 1)
+    (A D numeric_value 1.1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I max_nrings 1)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I max_nrings 1)
+    (A I double_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 7)
+    (A I min_nrings 1)
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I max_nrings 1)
+    (A I single_bond 3)
+    (A I double_bond 0)
+  )
+  (5 Environment_No_Match
+    (A I single_bond (1 2 4))
+
+    (A C smarts "C=C")
+    (A C smarts "a")
+
+
+    (A C smarts "C(=[O,S])-[D>1]")
+    (A C smarts "S(=O)(=O)-[D>1]")
+
+    (A C smarts "[NG>0]")
+
+    (A C smarts "[F,Cl,Br,I]")
+  )
+
+
+  (7 Environment
+    (A I single_bond (1 2 4))
+    (A C smarts "[ND1H2]")
+    (A C smarts "[ND2H]-[CG0]")
+    (A C smarts "[ND3](-[CG0])-[CG0]")
+    (A C smarts "[OD2]-[CG0]")
+  )
+)

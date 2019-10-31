@@ -1,3 +1,77 @@
+2019-10 Release 4.0
+
+New scripts
+===========
+dbf -  Computes topological and/or 3D distances between features
+dicer - Structure fragmentation tool which can optionally use a query fle
+hydrophobic_sections - Hydrophobic section descriptors
+iwdescr - Calculate 200+ descriptors from a SMILES file
+iwecfp - Extended Connectivity fingerprints for molecules
+iwfp - Hashed path based fingerprints from SMILES file
+jwsadb - Calculate charge surface area related descriptors for molecules
+maccskeys - Generate MACCS keys
+make_these_molecules - Structure enumeration using SMILES and specific reagents. Uses a rxn file, a reagents ID file and two reagent SMILES files.
+molecular_abstraction - Performs molecular transformations associated with various molecular abstractions
+molecular_transformations - Performs any number of molecular transformations on input molecules using reactions supplied
+molecules_from_reagents - Synthesize molecules from isotopically labelled reactant sets; returns those identical to seeds in a given file
+random_molecular_permutations - Chemistry aware molecular perturbation tool
+remove_and_label - Removes atoms and isotopically labels the adjacent atoms
+remove_matched_atoms - Strips fragments/matched atoms from molecules; can be used in place of a simple de-protection reaction
+ring_fingerprint - Computes fingerprints based on ring properties, primarily aromatic rings
+ring_replacement - Companion program to ring_extraction
+ring_substitution - Computes ring substitution fingerprints
+rule_of_five - Computes Pfizer/Lipinski rule-of-five on molecules in input file. Returns molecule id and the values of the properties calculated.
+rxn_fingerprint - Takes a rxnsmi file, and generates reaction fingerprints
+substitutions - Calculate rtable given a scaffold and a set of compounds
+temperature - Computes 'temperature' descriptors
+tnass - Does substructure searches with NEED/AVAILABLE flags
+average - Compute the statistics on columns in a file.
+dfilefilter - Filter a descriptor file with expressions of the descriptors
+distribution - Calculate the distribution based on the input data set.
+fetch_sdf_quick - Fetch records from one file based on the identifiers in another file
+iwsplit - Splits a file into chunks based on regular expressions
+normalise - Normalize the columns in a file
+notenoughvariance - Filter out the data record without enough variance on columns
+random_records - Randomly select records from the provided file
+rearrange_columns - Rearrange the columns in one descriptor file to look like another descriptor file
+tcount - Count number of lines, columns in a file
+whatsmissing - Identifies missing descriptors from a descriptor file
+gfp_distance_matrix_iwdm - Computes the distance matrix for a pool of gfp fingerprints; generates a binary file
+gfp_leader_standard - Leader clustering implementation requiring MPR IW MK MK2
+gfp_lnearneighbours_standard - Find the near neighbours between fingerprints
+gfp_spread_standard - Do a spread design on fingerprint descriptors
+gfp_to_descriptors_multiple - Converts multi component fingerprints to descriptors
+iwstats - Computes Bsquared and other statistics for input file
+nn_leader_and_jp - Performs Leader, Taylor-Butina, Jarvis-Patrick clustering starting from a tdt-formatted near-neighbour list
+gfp_naive_bayesian - Naive Bayes predictive model training and prediction
+
+
+Retired scripts
+===============
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+
+
+
+Updates
+=======
+
+Known issues
+============
+The generated fingerprints can not be shared across OS's
+
+
+
 2019-04 Release 3.0
 
 New scripts

@@ -1,0 +1,19 @@
+Experimental/Measured values in column 2 marvin_logd074. Range -4.01 and 8.4 ave 2.915
+Predicted values in column 3 marvin_logd000. Range -6.75 and 8.4 ave 1.7725 N = 44
+Errors between -6.71 and 6.26 ave 1.1425
+Average absolute error 1.90523
+RMS error 2.69582
+ marvin_logd000 R2 0.475141
+ marvin_logd000 Q2 0.0915631
+ marvin_logd000 Bias 1.1425
+ marvin_logd000 AE50 = 1.64
+ marvin_logd000 AE95 = 5.59
+ marvin_logd000 cMSR95_sd = 210971
+ marvin_logd000 cMSR95_mad = 3660.07
+ marvin_logd000 cMSR90_sd = 30249.9
+ marvin_logd000 cMSR90_mad = 1097.95
+ marvin_logd000 Input Bsquared 0.763605
+Contains duplicate predicted values in column 3, computing best and worst Bsquared
+ marvin_logd000 Best Bsquared 0.763605
+ marvin_logd000 Worst Bsquared 0.763178
+ marvin_logd000 Unbiased Bsquared 0.763391

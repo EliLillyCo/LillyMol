@@ -1,0 +1,25 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "hydroxamic_acid")
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I aromatic 0)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I single_bond 2)
+    (A D numeric_value -1.1)
+  )
+)

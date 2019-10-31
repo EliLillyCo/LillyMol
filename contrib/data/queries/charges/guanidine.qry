@@ -1,0 +1,44 @@
+
+(0 Query
+  (A C Comment "guanidine")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (A I one_embedding_per_start_atom 1)
+  (A D numeric_value 2.70)
+  (1 Element_Hits_Needed
+    (A I atomic_number 7)
+    (A I min_hits_needed 3)
+  )
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I unsaturation 0)
+    (A I aromatic 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I aromatic 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I min_ncon 2)
+    (A I single_bond 1)
+    (A I unsaturation 0)
+    (A I aromatic 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 7)
+    (A I double_bond 1)
+    (A D numeric_value 1.1)
+  )
+
+  (5 Environment_No_Match
+    (A I single_bond (0 2 3))
+    (A C smarts "N(=O)=O")
+    (A C smarts "S=O")
+    (A C smarts "C=[O,S]")
+    (A C smarts "[OH,SH]")
+  )
+)

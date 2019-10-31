@@ -210,6 +210,78 @@ $(BUILD_DIR)/tdt_join: $(TDT_JOIN_OBJECTS)
 	$(LD) -o $@ $(TDT_JOIN_OBJECTS) $(LIBS) -liwmisc $(SYSTEM_LIBS)
 EXECUTABLES += $(TDT_JOIN_EXE)
 
+################## Template for public executables ######################
+#DISTANCE_MATRIX_DMC_EXE = $(BUILD_DIR)/gfp_distance_matrix_iwdm
+#DISTANCE_MATRIX_DMC_OBJECTS = $(BUILD_DIR)/gfp_distance_matrix_iwdm.o 
+#$(BUILD_DIR)/gfp_distance_matrix_iwdm.o: gfp_distance_matrix_iwdm.cc
+#$(BUILD_DIR)/gfp_distance_matrix_iwdm: $(DISTANCE_MATRIX_DMC_OBJECTS)
+#	$(LD) $(PROF) -o $@ $(DISTANCE_MATRIX_DMC_OBJECTS) -liwdistance_matrix $(LIBS)
+#EXECUTABLES += $(DISTANCE_MATRIX_DMC_EXE)	
+
+################# Template for public executables ######################
+LEADER_STD_EXE = $(BUILD_DIR)/gfp_leader_standard
+LEADER_STD_OBJECTS = $(BUILD_DIR)/gfp_leader_standard.o 
+$(BUILD_DIR)/gfp_leader_standard.o: gfp_leader_standard.cc 
+$(BUILD_DIR)/gfp_leader_standard: $(LEADER_STD_OBJECTS)
+	$(LD) $(PROF) -o $@ $(OPENMP) $(LEADER_STD_OBJECTS) $(LIBS) $(SYSTEM_LIBS) -liwmisc
+EXECUTABLES += $(LEADER_STD_EXE)	
+
+################# Template for public executables ######################
+LARGE_NEARNEIGHBOURS_STANDARD_EXE = $(BUILD_DIR)/gfp_lnearneighbours_standard
+LARGE_NEARNEIGHBOURS_STANDARD_OBJECTS = $(BUILD_DIR)/gfp_lnearneighbours_standard.o
+$(BUILD_DIR)/gfp_lnearneighbours_standard.o: gfp_lnearneighbours_standard.cc
+$(BUILD_DIR)/gfp_lnearneighbours_standard: $(LARGE_NEARNEIGHBOURS_STANDARD_OBJECTS)
+	$(LD) $(PROF) -o $@ $(LARGE_NEARNEIGHBOURS_STANDARD_OBJECTS) $(LIBS)
+EXECUTABLES += $(LARGE_NEARNEIGHBOURS_STANDARD_EXE)	
+
+################## Template for public executables ######################
+GFP_NAIVE_BAYESIAN_EXE = $(BUILD_DIR)/gfp_naive_bayesian
+GFP_NAIVE_BAYESIAN_OBJECTS = $(BUILD_DIR)/gfp_naive_bayesian.o 
+$(BUILD_DIR)/gfp_naive_bayesian.o: gfp_naive_bayesian.cc 
+#bit_subset_v2.h
+$(BUILD_DIR)/gfp_naive_bayesian: $(GFP_NAIVE_BAYESIAN_OBJECTS)
+	$(LD) $(PROF) -o $@ $(GFP_NAIVE_BAYESIAN_OBJECTS) $(LIBS) -liwbits   -liwcrex -laccumulator $(LIBTEMPLATE) $(SYSTEM_LIBS)
+EXECUTABLES += $(GFP_NAIVE_BAYESIAN_EXE)
+
+################# Template for public executables ######################
+SPREAD_STANDARD_EXE = $(BUILD_DIR)/gfp_spread_standard
+SPREAD_STANDARD_OBJECTS = $(BUILD_DIR)/gfp_spread_standard.o 
+$(BUILD_DIR)/gfp_spread_standard: $(SPREAD_STANDARD_OBJECTS) 
+	$(LD) $(PROF) -o $@ $(OPENMP) $(SPREAD_STANDARD_OBJECTS) -liwrandom -liwbits -lm $(LIBS) 
+EXECUTABLES += $(SPREAD_STANDARD_EXE)
+
+################# Template for public executables ######################
+FINGERPRINTS_TO_DESCRIPTORS_MULTIPLE_EXE = $(BUILD_DIR)/gfp_to_descriptors_multiple
+FINGERPRINTS_TO_DESCRIPTORS_MULTIPLE_OBJECTS = $(BUILD_DIR)/gfp_to_descriptors_multiple.o
+$(BUILD_DIR)/gfp_to_descriptors_multiple.o: gfp_to_descriptors_multiple.cc 
+$(BUILD_DIR)/gfp_to_descriptors_multiple: $(FINGERPRINTS_TO_DESCRIPTORS_MULTIPLE_OBJECTS)
+	$(LD) $(PROF) -o $@ $(FINGERPRINTS_TO_DESCRIPTORS_MULTIPLE_OBJECTS) $(LIBS)
+EXECUTABLES += $(FINGERPRINTS_TO_DESCRIPTORS_MULTIPLE_EXE)
+
+################# Template for public executables ######################
+LEADER_MULTIPLE_THRESHOLD_EXE = $(BUILD_DIR)/nn_leader_and_jp
+LEADER_MULTIPLE_THRESHOLD_OBJECTS = $(BUILD_DIR)/nn_leader_and_jp.o 
+$(BUILD_DIR)/nn_leader_and_jp.o: nn_leader_and_jp.cc
+$(BUILD_DIR)/nn_leader_and_jp: $(LEADER_MULTIPLE_THRESHOLD_OBJECTS)
+	$(LD) $(PROF) -o $@ $(LEADER_MULTIPLE_THRESHOLD_OBJECTS) $(LIBS) -laccumulator -liwmisc
+EXECUTABLES += $(LEADER_MULTIPLE_THRESHOLD_EXE)
+
+
+################# Template for public executables ######################
+DISTANCE_MATRIX_DMC_EXE = $(BUILD_DIR)/gfp_distance_matrix_iwdm
+DISTANCE_MATRIX_DMC_OBJECTS = $(BUILD_DIR)/gfp_distance_matrix_iwdm.o 
+$(BUILD_DIR)/gfp_distance_matrix_iwdm.o: gfp_distance_matrix_iwdm.cc
+$(BUILD_DIR)/gfp_distance_matrix_iwdm: $(DISTANCE_MATRIX_DMC_OBJECTS)
+	$(LD) $(PROF) -o $@ $(DISTANCE_MATRIX_DMC_OBJECTS) -liwdistance_matrix $(LIBS)
+EXECUTABLES += $(DISTANCE_MATRIX_DMC_EXE)
+
+################# Template for public executables ######################
+IWSTATS_EXE = $(BUILD_DIR)/iwstats
+IWSTATS_OBJECTS = $(BUILD_DIR)/iwstats.o $(BUILD_DIR)/bsquared.o $(BUILD_DIR)/Metric.o $(BUILD_DIR)/Enrichment.o
+$(BUILD_DIR)/iwstats.o: iwstats.cc bsquared.h
+$(BUILD_DIR)/iwstats: $(IWSTATS_OBJECTS)
+	$(LD) $(PROF) -o $@ $(IWSTATS_OBJECTS) -liwmisc $(LIBS) -liwrandom 
+EXECUTABLES += $(IWSTATS_EXE)
 ###################### Template for build command ######################
 .PHONY: copy_include
 .PHONY: library

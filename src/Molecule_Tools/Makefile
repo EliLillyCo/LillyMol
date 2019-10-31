@@ -23,6 +23,7 @@ ML = $(INCDIR)/mol
 
 LIBS = $(LIB) -liwmolecule -liwtemplate -liwrandom -liwstring_data_source -liwcrex -laccumulator\
 	-liwbits -liwmisc -lcmdline -liwstring -liwaray -lxmlParser $(LIBZ)
+GFPLIB = -lgfp -liwmolecule -lsparsefp -liwtdt
 MOLECULE_H = $(ML)/molecule.h $(ML)/element.h $(ML)/atom.h $(ML)/bond.h $(ML)/path.h $(ML)/iwrcb.h $(ML)/coordinates.h $(ML)/set_of_atoms.h
 
 $(BUILD_DIR)/%.o : %.cc
@@ -64,7 +65,8 @@ EXECUTABLES += $(TRXN_EXE)
 ################# Template for public executables ######################
 TSUBSTRUCTURE_EXE = $(BUILD_DIR)/tsubstructure
 # Spliter from internal version
-TSUBSTRUCTURE_OBJECTS = $(BUILD_DIR)/tsubstructure.o
+#TSUBSTRUCTURE_OBJECTS = $(BUILD_DIR)/tsubstructure.o
+TSUBSTRUCTURE_OBJECTS = $(BUILD_DIR)/tsubstructure.o $(BUILD_DIR)/INT_tsubstructure_fp.o
 $(BUILD_DIR)/tsubstructure.o: tsubstructure.cc 
 $(BUILD_DIR)/tsubstructure: $(TSUBSTRUCTURE_OBJECTS)
 	$(LD) $(STATIC) -o $@ $(TSUBSTRUCTURE_OBJECTS) -lsparsefp $(LIBS) $(SYSTEM_LIBS) -liwtdt
@@ -226,6 +228,180 @@ $(BUILD_DIR)/tautomer_generation.o: tautomer_generation.cc
 $(BUILD_DIR)/tautomer_generation: $(TAUTOMER_GENERATION_OBJECTS)
 	$(LD) -o $@ $(TAUTOMER_GENERATION_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
 EXECUTABLES += $(TAUTOMER_GENERATION_EXE)
+
+### Release 4
+################# Template for public executables ###################### 
+DBF_EXE = $(BUILD_DIR)/dbf
+DBF_OBJECTS  = $(BUILD_DIR)/dbf.o
+$(BUILD_DIR)/dbf: $(DBF_OBJECTS)
+	$(LD) -o $@ $(DBF_OBJECTS) -lsparsefp $(LIBS) -liwhistogram 
+EXECUTABLES += $(DBF_EXE)
+
+################# Template for public executables ######################
+HYDROPHOBIC_SECTIONS_EXE = $(BUILD_DIR)/hydrophobic_sections
+HYDROPHOBIC_SECTIONS_OBJECTS = $(BUILD_DIR)/hydrophobic_sections.o
+$(BUILD_DIR)/hydrophobic_sections.o:hydrophobic_sections.cc 
+$(BUILD_DIR)/hydrophobic_sections: $(HYDROPHOBIC_SECTIONS_OBJECTS)
+	$(LD) -o $@ $(HYDROPHOBIC_SECTIONS_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(HYDROPHOBIC_SECTIONS_EXE)
+
+################# Template for public executables ###################### 
+IWECFP_EXE = $(BUILD_DIR)/iwecfp
+IWECFP_OBJECTS = $(BUILD_DIR)/iwecfp.o
+$(BUILD_DIR)/iwecfp: $(IWECFP_OBJECTS) 
+	$(LD) -o $@ $(IWECFP_OBJECTS) -lsparsefp $(LIBS) -liwstring
+EXECUTABLES += $(IWECFP_EXE)
+
+################# Template for public executables ######################
+MAKE_THESE_MOLECULES_EXE = $(BUILD_DIR)/make_these_molecules
+MAKE_THESE_MOLECULES_OBJECTS = $(BUILD_DIR)/make_these_molecules.o  
+$(BUILD_DIR)/make_these_molecules.o: make_these_molecules.cc 
+$(BUILD_DIR)/make_these_molecules: $(MAKE_THESE_MOLECULES_OBJECTS) 
+	$(LD) -o $@ $(MAKE_THESE_MOLECULES_OBJECTS) $(LIBS) -liwmisc $(SYSTEM_LIBS)
+EXECUTABLES += $(MAKE_THESE_MOLECULES_EXE)
+
+################# Template for public executables ###################### 
+MOLECULES_FROM_REAGENTS_EXE = $(BUILD_DIR)/molecules_from_reagents
+MOLECULES_FROM_REAGENTS_OBJECTS = $(BUILD_DIR)/molecules_from_reagents.o 
+$(BUILD_DIR)/molecules_from_reagents: $(MOLECULES_FROM_REAGENTS_OBJECTS)
+	$(LD) -o $@ $(MOLECULES_FROM_REAGENTS_OBJECTS) $(LIBS) $(OPENMP)
+EXECUTABLES += $(MOLECULES_FROM_REAGENTS_EXE)
+
+################# Template for public executables ######################
+REMOVE_AND_LABEL_EXE = $(BUILD_DIR)/remove_and_label
+REMOVE_AND_LABEL_OBJECTS = $(BUILD_DIR)/remove_and_label.o 
+$(BUILD_DIR)/remove_and_label.o: remove_and_label.cc 
+$(BUILD_DIR)/remove_and_label: $(REMOVE_AND_LABEL_OBJECTS)
+	$(LD) -o $@ $(REMOVE_AND_LABEL_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(REMOVE_AND_LABEL_EXE)
+
+################# Template for public executables ######################
+REMOVE_MATCHED_ATOMS_EXE = $(BUILD_DIR)/remove_matched_atoms
+REMOVE_MATCHED_ATOMS_OBJECTS = $(BUILD_DIR)/remove_matched_atoms.o  $(BUILD_DIR)/spatially_common_matched_atoms.o 
+$(BUILD_DIR)/remove_matched_atoms: $(REMOVE_MATCHED_ATOMS_OBJECTS)
+	$(LD) -o $@ $(REMOVE_MATCHED_ATOMS_OBJECTS) $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(REMOVE_MATCHED_ATOMS_EXE)
+
+################# Template for public executables ###################### 
+RING_FINGERPRINT_EXE = $(BUILD_DIR)/ring_fingerprint
+RING_FINGERPRINT_OBJECTS = $(BUILD_DIR)/ring_fingerprint.o 
+$(BUILD_DIR)/ring_fingerprint: $(RING_FINGERPRINT_OBJECTS)
+	$(LD) -o $@ $(RING_FINGERPRINT_OBJECTS) -lsparsefp $(LIBS)
+EXECUTABLES += $(RING_FINGERPRINT_EXE)
+
+################# Template for public executables ######################
+RING_REPLACEMENT_EXE = $(BUILD_DIR)/ring_replacement
+RING_REPLACEMENT_OBJECTS = $(BUILD_DIR)/ring_replacement.o $(BUILD_DIR)/ring_ext_rep.o $(BUILD_DIR)/reaction_duplicate.o
+$(BUILD_DIR)/ring_replacement.o: ring_replacement.cc
+$(BUILD_DIR)/ring_replacement: $(RING_REPLACEMENT_OBJECTS) 
+	$(LD) -o $@ $(RING_REPLACEMENT_OBJECTS)  $(LIBS) $(SYSTEM_LIBS) 
+EXECUTABLES += $(RING_REPLACEMENT_EXE)
+
+################# Template for public executables ######################
+SUBSTITUTIONS_EXE = $(BUILD_DIR)/substitutions
+SUBSTITUTIONS_OBJECTS = $(BUILD_DIR)/substitutions.o 
+$(BUILD_DIR)/substitutions.o: substitutions.cc
+$(BUILD_DIR)/substitutions: $(SUBSTITUTIONS_OBJECTS) 
+	$(LD) -o $@ $(SUBSTITUTIONS_OBJECTS) $(LIBS) $(SYSTEM_LIBS)
+EXECUTABLES += $(SUBSTITUTIONS_EXE)
+
+################# Template for public executables ###################### 
+TEMPERATURE_EXE = $(BUILD_DIR)/temperature
+TEMPERATURE_OBJECTS = $(BUILD_DIR)/temperature.o 
+$(BUILD_DIR)/temperature: $(TEMPERATURE_OBJECTS) 
+	$(LD) -o $@ $(TEMPERATURE_OBJECTS) -lsparsefp $(LIBS)  
+EXECUTABLES += $(TEMPERATURE_EXE)
+
+################# Template for public executables ###################### 
+TNASS_EXE = $(BUILD_DIR)/tnass 
+TNASS_OBJECTS = $(BUILD_DIR)/tnass.o $(BUILD_DIR)/nass.o $(BUILD_DIR)/_resizable_array_nas.o
+$(BUILD_DIR)/tnass: $(TNASS_OBJECTS) 
+	$(LD) -o $@ $(TNASS_OBJECTS) -liwtdt -lsparsefp $(LIBS)
+EXECUTABLES += $(TNASS_EXE)
+
+#second path
+
+################# Template for public executables ###################### 
+DICER_EXE = $(BUILD_DIR)/dicer
+DICER_OBJECTS = $(BUILD_DIR)/dicer.o  $(BUILD_DIR)/swap_kekule_forms.o $(BUILD_DIR)/count_atoms_in_smiles.o
+$(BUILD_DIR)/dicer: $(DICER_OBJECTS) 
+	$(LD) -o $@ $(DICER_OBJECTS) -lsparsefp $(LIBS) 
+EXECUTABLES += $(DICER_EXE)
+
+################# Template for public executables ###################### 
+IWDESCR_EXE = $(BUILD_DIR)/iwdescr 
+IWDESCR_OBJECTS = $(BUILD_DIR)/iwdescr.o $(BUILD_DIR)/qry_wcharge.o $(BUILD_DIR)/path_around_ring.o $(BUILD_DIR)/nvrtspsa.o
+$(BUILD_DIR)/iwdescr: $(IWDESCR_OBJECTS)
+	$(LD) -o $@ $(IWDESCR_OBJECTS) -lsparsefp $(LIBS) -laccumulator -liwstring 
+EXECUTABLES += $(IWDESCR_EXE)
+
+################# Template for public executables ###################### 
+IWFP_EXE = $(BUILD_DIR)/iwfp         
+IWFP_OBJECTS = $(BUILD_DIR)/iwfp.o $(BUILD_DIR)/iwmfingerprint.o
+$(BUILD_DIR)/iwfp: $(IWFP_OBJECTS)
+	$(LD) -o $@ $(IWFP_OBJECTS) -lsparsefp $(LIBS) 
+EXECUTABLES += $(IWFP_EXE)
+
+################## Template for public executables ###################### 
+JWSADB_EXE = $(BUILD_DIR)/jwsadb    
+JWSADB_OBJECTS = $(BUILD_DIR)/jw_sa_db_descriptor.o $(BUILD_DIR)/read_control_file.o $(BUILD_DIR)/comma_related_procedures.o $(BUILD_DIR)/jw_vector_array_operation.o $(BUILD_DIR)/surface_area_molvol.o $(BUILD_DIR)/smolvol.o
+$(BUILD_DIR)/smolvol.o: smolvol.f
+	$(FC) -c -o $@ $< $(FFLAGS)
+$(BUILD_DIR)/jwsadb: $(JWSADB_OBJECTS)
+	$(FORT_LD) -o $@ $(JWSADB_OBJECTS) $(FORTRAN_LIBRARY) $(LIBS) -lsparsefp -liwstring -liwmisc
+EXECUTABLES += $(JWSADB_EXE)
+
+################# Template for public executables ###################### 
+MACCSKEYS_FN5_EXE = $(BUILD_DIR)/maccskeys    
+MACCSKEYS_FN5_OBJECTS = $(BUILD_DIR)/maccskeys_fn5_main.o $(BUILD_DIR)/maccskeys_fn5.o
+$(BUILD_DIR)/maccskeys: $(MACCSKEYS_FN5_OBJECTS)  
+	$(LD) -o $@ $(MACCSKEYS_FN5_OBJECTS) $(LIBS)  -lsparsefp -liwstring -liwmisc
+EXECUTABLES += $(MACCSKEYS_FN5_EXE)
+
+################# Template for public executables ###################### 
+MAV2_EXE = $(BUILD_DIR)/molecular_abstraction 
+MAV2_OBJECTS = $(BUILD_DIR)/mav2.o $(BUILD_DIR)/molecular_abstraction_functions.o $(BUILD_DIR)/molecular_abstraction_specifications.o $(BUILD_DIR)/iwmfingerprint.o
+$(BUILD_DIR)/molecular_abstraction: $(MAV2_OBJECTS)
+	$(LD) -o $@ $(MAV2_OBJECTS) -lsparsefp  $(LIBS) 
+EXECUTABLES += $(MAV2_EXE)
+
+################# Template for public executables ###################### 
+MOLECULAR_TRANSFORMATION_EXE = $(BUILD_DIR)/molecular_transformations
+MOLECULAR_TRANSFORMATION_OBJECTS = $(BUILD_DIR)/molecular_transformations.o $(BUILD_DIR)/iwmfingerprint.o
+$(BUILD_DIR)/molecular_transformations: $(MOLECULAR_TRANSFORMATION_OBJECTS)
+	$(LD) -o $@ $(MOLECULAR_TRANSFORMATION_OBJECTS) $(LIBS) 
+EXECUTABLES += $(MOLECULAR_TRANSFORMATION_EXE)
+
+################# Template for public executables ###################### 
+PERMUTATIONS_EXE = $(BUILD_DIR)/random_molecular_permutations 
+PERMUTATIONS_OBJECTS = $(BUILD_DIR)/random_molecular_permutations.o $(BUILD_DIR)/swap_kekule_forms.o \
+	$(BUILD_DIR)/random_reactions.o $(BUILD_DIR)/set_of_target_molecules.o $(BUILD_DIR)/linear_path_fingerprint.o $(BUILD_DIR)/maccskeys_fn5.o 
+#~ 	$(MOLECULE_TOOLS_BIN_DIR)/random_reactions.o $(BUILD_DIR)/set_of_target_molecules.o $(BUILD_DIR)/linear_path_fingerprint.o $(BUILD_DIR)/maccskeys_fn5.o 
+$(BUILD_DIR)/random_molecular_permutations: $(PERMUTATIONS_OBJECTS)
+	$(LD) -o $@ $(PERMUTATIONS_OBJECTS) $(GFPLIB) $(LIBS) 
+EXECUTABLES += $(PERMUTATIONS_EXE)	
+
+################# Template for public executables ###################### 
+RING_SUBSTITUTION_EXE = $(BUILD_DIR)/ring_substitution      
+RING_SUBSTITUTION_OBJECTS = $(BUILD_DIR)/ring_substitution.o $(BUILD_DIR)/path_around_ring.o
+$(BUILD_DIR)/ring_substitution: $(RING_SUBSTITUTION_OBJECTS) 
+	$(LD) -o $@ $(RING_SUBSTITUTION_OBJECTS) -lsparsefp $(LIBS) 
+EXECUTABLES += $(RING_SUBSTITUTION_EXE)	
+
+################# Template for public executables ###################### 
+RULE_OF_FIVE_EXE = $(BUILD_DIR)/rule_of_five 
+RULE_OF_FIVE_OBJECTS = $(BUILD_DIR)/rule_of_five.o $(BUILD_DIR)/nvrtspsa.o
+$(BUILD_DIR)/rule_of_five: $(RULE_OF_FIVE_OBJECTS)
+	$(LD) -o $@ $(RULE_OF_FIVE_OBJECTS) -liwtdt $(LIBS) -liwstring 
+EXECUTABLES += $(RULE_OF_FIVE_EXE)
+
+################# Template for public executables ###################### 
+RXN_FINGERPRINT_EXE = $(BUILD_DIR)/rxn_fingerprint 
+RXN_FINGERPRINT_OBJECTS = $(BUILD_DIR)/rxn_fingerprint.o $(BUILD_DIR)/rxnfile3.o \
+$(BUILD_DIR)/linear_path_fingerprint.o $(BUILD_DIR)/extended_connectivity_fp.o $(BUILD_DIR)/iwmfingerprint.o 
+$(BUILD_DIR)/rxn_fingerprint: $(RXN_FINGERPRINT_OBJECTS) 
+	$(LD) -o $@ $(RXN_FINGERPRINT_OBJECTS) -lsparsefp $(LIBS) 
+EXECUTABLES += $(RXN_FINGERPRINT_EXE)
 
 ###################### Template for build command ######################
 .PHONY: copy_include

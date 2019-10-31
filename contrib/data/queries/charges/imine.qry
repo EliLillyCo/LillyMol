@@ -1,0 +1,24 @@
+(0 Query
+  (A C Comment "imine")
+  (A I Version 2)
+  (0 Query_atom
+    (A I atomic_number 7)
+    (A I max_ncon 2)
+    (A I unsaturation 1)
+    (A I aryl 0)
+    (A I attached_heteroatom_count 0)
+    (A D numeric_value 1.1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I max_aryl 1)
+    (A I vinyl 0)
+    (A I attached_heteroatom_count 1)
+    (A I double_bond 0)
+  )
+  (0 Environment_no_match
+    (A I single_bond 0)
+    (A C smarts "[C,S]=[O,S,N]")
+    (A C smarts "C#*")
+  )
+)

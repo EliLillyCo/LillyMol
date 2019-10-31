@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "Hydrogen bond donor")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number (7 8))
+    (A I min_hcount 1)
+  )
+  (1 Environment_No_Match
+    (A I single_bond 0)
+    (A C smarts "[ar6]([aD3]-[R0D>1])[aD3]-[R0D>1]")
+  )
+)

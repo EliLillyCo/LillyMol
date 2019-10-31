@@ -1,0 +1,14 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Carbonyl")
+  (0 Query_Atom
+    (A I atomic_number (8 16))
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number (6 15 16))
+    (A I include_in_embedding 0)
+    (A I double_bond 0)
+  )
+)

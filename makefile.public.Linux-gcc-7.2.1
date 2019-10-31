@@ -34,7 +34,11 @@ LIB = -L $(IWPROGRAMMES)/lib/$(UNAME)
 # Define ZLIB to point to where zlib.a is located.  Need version 1.2.8 or higher
 # Example: ZLIB = /zlib/zlib-1.2.11/lib
 ZLIB =
-LIBZ = -L$(ZLIB)/lib -lz
+ifeq ($(ZLIB),)
+    LIBZ = -lz
+else
+    LIBZ = -L$(ZLIB) -lz
+endif
 
 USRLIB=
 

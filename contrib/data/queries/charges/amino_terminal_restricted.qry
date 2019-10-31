@@ -1,0 +1,80 @@
+(0 Query
+  (A C Comment "amino_terminal_restricted")
+  (A I sort_by_preference_value 1)
+  (A I Version 2)
+  (A D numeric_value 0.78)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I max_ncon 3)
+    (A I attached_heteroatom_count 0)
+    (A I unsaturation 0)
+    (A I aromatic 0)
+    (A I vinyl 0)
+    (A I aryl 0)
+    (A I sum_all_preference_hits 1)
+    (A D numeric_value 1.1)
+    (2 Query_atom_Preference
+      (A I ncon 1)
+      (A I preference_value 60)
+    )
+    (3 Query_Atom_Preference
+      (A I ncon 2)
+      (A I preference_value 40)
+    )
+    (4 Query_Atom_Preference
+      (A I ncon 3)
+      (A I preference_value 20)
+    )
+
+
+    (5 Query_Atom_Preference
+      (A I ncon 3)
+      (A I ncon2 5)
+      (A I preference_value 10)
+    )
+    (6 Query_Atom_Preference
+      (A I ncon 3)
+      (A I min_ncon2 6)
+      (A I preference_value 5)
+    )
+
+
+    (7 Query_Atom_Preference
+      (A I ncon 3)
+      (A I fused_system_size 1)
+      (A I preference_value 2)
+    )
+    (8 Query_Atom_Preference
+      (A I ncon 3)
+      (A I min_fused_system_size 2)
+      (A I preference_value 1)
+    )
+
+
+    (9 Query_Atom_Preference
+      (A I ncon 3)
+      (A I attached_heteroatom_count 0)
+      (A I preference_value 4)
+    )
+    (10 Query_Atom_Preference
+      (A I ncon 3)
+      (A I min_attached_heteroatom_count 1)
+      (A I preference_value 2)
+    )
+  )
+  (2 Environment
+    (A I single_bond 0)
+    (A C smarts "CC(=O)N")
+  )
+  (1 Environment_No_Match
+    (A I single_bond 0)
+    (A C smarts "[N+]")
+    (A C smarts "C-[N+]")
+    (A C smarts "C-C-[N+]")
+    (A C smarts "C-[O,F,Cl,Br,I,S,NG>0,P]")
+  )
+  (3 Environment_No_Match
+    (A I single_bond 0)
+    (A C smarts "C-C-[/IWAr0/IWVy0NG0T0]")
+  )
+)

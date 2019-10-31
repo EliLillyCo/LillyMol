@@ -664,8 +664,8 @@ do_getpsf (Molecule & m,
 #endif
 
 /*
-  Apr 99. Bob Coner wanted the ability to get the matched atoms out in a 
-  parsable form. A typical line might look like
+  Apr 99. The ability to get the matched atoms out in a 
+  parsable form is requested. A typical line might look like
 
   ID (1 2 3)(4 5 6),,(2),,,,,,,(3 2 1 4 5 6)
 
@@ -1029,21 +1029,6 @@ do_single_query (Molecule_to_Match & target,
 
   return nmatches;
 }
-
-/*
-static void
-update_atom_coverage (const Substructure_Results & sresults,
-                      int * atom_hit)
-{
-  int nhits = sresults.number_embeddings();
-
-  for (int i = 0; i < nhits; i++)
-  {
-    sresults.embedding(i)->set_vector(atom_hit, 1);
-  }
-
-  return;
-}*/
 
 static int
 do_all_queries (Molecule & m,

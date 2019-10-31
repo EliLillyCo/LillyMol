@@ -1,0 +1,35 @@
+(0 Query
+  (A C Comment "N_acylsulfonamide")
+  (A I unique_embeddings_only 1)
+  (A I Version 2)
+  (A D numeric_value 2.51)
+  (0 Query_Atom
+    (A I atomic_number 16)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I hcount 1)
+    (A I single_bond 0)
+    (A D numeric_value -1.1)
+  )
+  (3 Query_Atom
+    (A I atomic_number (6 15 16))
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 8)
+    (A I double_bond 3)
+  )
+  (5 Environment_No_Match
+    (A I single_bond (0 3))
+    (A C smarts "[N-]")
+    (A C smarts "[O-]")
+    (A C smarts "[OH]")
+  )
+)

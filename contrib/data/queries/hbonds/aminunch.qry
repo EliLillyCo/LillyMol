@@ -1,0 +1,37 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "aminunch")
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I formal_charge 0)
+    (A I unsaturation 0)
+    (A I aromatic 0)
+    (A I max_aryl 1)
+  )
+
+
+  (1 Environment_No_Match
+    (A I single_bond 0)
+    (1 Query_Atom
+      (A I atomic_number (6 7 8 16))
+    )
+    (2 Query_Atom
+      (A I atomic_number (8 16))
+      (A I double_bond 1)
+    )
+  )
+
+
+  (2 Environment_No_Match
+    (A I single_bond 0)
+    (3 Query_Atom
+      (A I atomic_number (6 7 8))
+    )
+    (15 Query_Atom
+      (A I atomic_number 7)
+      (A I formal_charge 1)
+      (A I bond (3 2 4))
+    )
+  )
+)

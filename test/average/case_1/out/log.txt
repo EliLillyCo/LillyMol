@@ -1,0 +1,1 @@
+marvin_logd000 44 values between -6.75 and 8.4, tot 77.99 ave 1.7725 std 3.31543

@@ -13,7 +13,7 @@ else
     BIN_DIR=$LILLYMOL_HOME/bin/$BUILD_DIR
 fi
 
-shared_data_dir=$LILLYMOL_HOME/test/shared_data
+shared_data_dir=$LILLYMOL_HOME/data
 command=$BIN_DIR/descriptor_file_to_01_fingerprints
 case_id="Case 1"
 echo "Testing:  $command"

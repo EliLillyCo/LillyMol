@@ -1,0 +1,49 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "phenolate")
+  (A I one_embedding_per_start_atom 1)
+  (A D numeric_value 2.07)
+  (0 query_atom
+    (A I atomic_number (8 16))
+    (A I hcount 1)
+    (A I ncon 1)
+    (A D numeric_value -1.1)
+  )
+  (1 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I single_bond 0)
+  )
+  (2 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_bond 1)
+  )
+  (3 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_bond 2)
+  )
+  (4 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_bond 3)
+  )
+  (5 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_bond 4)
+  )
+  (6 query_atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_bond 5)
+    (A I aromatic_bond 1)
+  )
+  (0 Environment
+    (A I single_bond 2 4 6)
+    (A I min_hits_needed 2)
+    (A C smarts "N(=O)=O")
+    (A C smarts "[Cl,F,Br,I]")
+  )
+)

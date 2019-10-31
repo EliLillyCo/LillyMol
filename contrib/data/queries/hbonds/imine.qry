@@ -1,0 +1,15 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Imine")
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I formal_charge 0)
+    (A I unsaturation 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number (6 7))
+    (A I include_in_embedding 0)
+    (A I unsaturation 1)
+    (A I double_bond 0)
+  )
+)

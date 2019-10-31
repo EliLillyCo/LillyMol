@@ -1,0 +1,7 @@
+(0 Query
+  (A C Comment "Negative formal charge")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I formal_charge -1)
+  )
+)

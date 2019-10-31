@@ -2,7 +2,7 @@
 #define NEIGHBOUR_LIST_H
 
 #include "smiles_id_dist.h"
-#include "neighbour_list.h"
+//#include "neighbour_list.h"
 
 class SID_Comparator
 {

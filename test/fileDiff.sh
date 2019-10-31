@@ -5,7 +5,9 @@ out_name=$2
 ret=0
 #echo name1
 #echo name1_out
+
 result=$(diff -y -W 72 $in_name $out_name)
+
 if [ $? -eq 0 ]
 then
     #return 1 for file match

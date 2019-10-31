@@ -1,0 +1,6 @@
+1 records had 2 tokens
+1 records had 3 tokens
+2 records had 4 tokens
+3 records had 5 tokens
+3 records had 6 tokens
+10 records read from 'in/input.txt'

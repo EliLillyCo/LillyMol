@@ -1,0 +1,3 @@
+Default all of -j, -e, -s and -a will be turned on
+Since -F option is on, -b and -h will be turned on too
+read mol mdl eof

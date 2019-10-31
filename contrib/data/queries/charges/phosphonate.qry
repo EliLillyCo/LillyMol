@@ -1,0 +1,23 @@
+(0 Query
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (A C Comment "phosphonate")
+  (A D numeric_value 3.53)
+  (0 Query_Atom
+    (A I atomic_number 15)
+  )
+  (1 Query_Atom
+    (A I atomic_number (8 16))
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I single_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I single_bond 0)
+    (A D numeric_value -1.1)
+  )
+)

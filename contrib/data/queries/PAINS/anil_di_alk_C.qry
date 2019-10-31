@@ -1,0 +1,26 @@
+# This query is for PAINS computation for different types of assay
+# Multiple values are embedded for each query, corresponding to multple assays
+# Alpha => 1, ELISA => 2, FB => 3, FP => 4, FRET => 5, SPA => 6, OverallActivityEnrichment => 7, QCEnrichment => 8
+# Alpha_HS => 9, ELISA_HS => 10, FB_HS => 11, FP_HS => 12, FRET_HS => 13, SPA_HS => 14, HSEnrichment =>15, TotalScore => 0
+# C[1]:C(:C:C:C(:C:@1)N(C[TAC=4])Any[IS=H,C[TAC=4]])OC[TAC=4]<regId="anil_di_alk_C(246)">
+(0 Query
+  (A I version 2)
+  (A C Comment "anil_di_alk_C")
+  (A C smarts "c1c(O[CX4])ccc(c1)[/IWVy0/IWAr1NT0G0][CX4]")
+  (A D numeric_value 120)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 20)
+  (A D numeric_value 0)
+  (A D numeric_value 50)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+  (A D numeric_value 10)
+  (A D numeric_value 10)
+  (A D numeric_value 10)
+  (A D numeric_value 0)
+  (A D numeric_value 0)
+)

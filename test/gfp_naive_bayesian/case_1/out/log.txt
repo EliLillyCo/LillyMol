@@ -1,0 +1,3 @@
+Trained on 2406 of 4812 fingerprints, test 2406 (963,1443) : -1 713 0.740395 1 796 0.551629 0.646012
+Trained on 2406 of 4812 fingerprints, test 2406 (993,1413) : -1 729 0.734139 1 780 0.552017 0.643078
+Performed 2 cross validations. Accuracy between 0.643078 and 0.646012 ave 0.644545

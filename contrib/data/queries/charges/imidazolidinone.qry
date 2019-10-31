@@ -1,0 +1,36 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "imidazolidinone")
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I aromatic 1)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I aromatic 1)
+    (A I aromatic_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic_bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I hcount 1)
+    (A I aromatic_bond 4)
+    (A I aromatic_bond 1)
+    (A D numeric_value -1.1)
+  )
+)

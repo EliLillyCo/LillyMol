@@ -1,0 +1,60 @@
+(0 Query
+  (A C Comment "2_amino_pyridine")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I hcount 0)
+    (A I aromatic 1)
+    (A I nrings 1)
+    (A I ncon 2)
+    (A D numeric_value 1.1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 6)
+    (A I bond 4)
+    (A I bond 0)
+  )
+  (6 Query_Atom
+    (A I atomic_number 7)
+    (A I attached_heteroatom_count 0)
+    (A I aromatic 0)
+    (A I unsaturation 0)
+    (A I single_bond 1)
+    (A I vinyl 0)
+  )
+  (6 Environment_No_Match
+    (A I single_bond (2 3 4 5))
+    (A C smarts "[F,Cl,Br,I]")
+    (A C smarts "[N+]")
+    (A C smarts "C(=O)C")
+    (A C smarts "C(=O)N")
+    (A C smarts "C(=O)O[#6]")
+    (A C smarts "S(=O)")
+    (A C smiles "C(F)(F)F")
+    (A C smiles "N(=O)=O")
+    (A C smiles "C#N")
+  )
+  (6 Environment_No_Match
+    (A I single_bond 6)
+    (7 Query_Atom
+      (A I atomic_number 6)
+      (A I unsaturation 1)
+    )
+  )
+)
