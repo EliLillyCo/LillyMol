@@ -9,9 +9,9 @@
 // Unclear when we need to switch between C and C++ bindings for optxxx
 #if defined(_WIN32) || defined(NEED_EXTERN_OPT)
 /* Global Exportable */
- extern int optind;
- extern char *optarg;
- extern int opterr;
+ extern "C" int optind;
+ extern "C" char *optarg;
+ extern "C" int opterr;
 
 #else
 #include <unistd.h>
