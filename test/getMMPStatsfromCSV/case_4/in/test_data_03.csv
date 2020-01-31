@@ -1,0 +1,15 @@
+SMILES,PIC50,ID,TARGET_ID,TARGET_NAME
+O(CC)c1ccc(N2C(=Nc3c(cccc3)C2=O)[C@H](N(C(=O)Cc2ccc(cc2)-c2ccccc2)CCOCC)CC)cc1,8.045757491,230126,4441,C-X-C chemokine receptor type 3
+O(CC)c1ccc(N2C(=Nc3c(cccc3)C2=O)[C@H](N(C(=O)Cc2ccc(cc2)-c2ccccc2)CCOCC)C)cc1,7.124938737,266663,4441,C-X-C chemokine receptor type 3
+O(CC)c1ccc(N2C(=Nc3c(cccc3)C2=O)CN(C(=O)Cc2ccc(cc2)-c2ccccc2)CCOCC)cc1,5.638272164,231487,4441,C-X-C chemokine receptor type 3
+O(CC)c1ccc(N2C(=Nc3c(cccc3)C2=O)[C@H](N(C(=O)Cc2ccc(cc2)-c2ccccc2)CCOCC)c2ccccc2)cc1,5.397940009,230127,4441,C-X-C chemokine receptor type 3
+[nH]1nc(c(c1)-c1cc(ncc1)-c1ccc(cc1)C)-c1ncccc1,7.552841969,205156,4439,TGF-beta receptor type I
+[nH]1nc(c(c1)-c1cc(ncc1)-c1cc(ccc1)C)-c1ncccc1,6.718966633,205260,4439,TGF-beta receptor type I
+[nH]1nc(c(c1)-c1cc(ncc1)-c1ccccc1C)-c1ncccc1,5.400007822,383433,4439,TGF-beta receptor type I
+Clc1cc(cnc1N1C[C@@H]([NH+](CC1)C1CC[NH+](CC1)Cc1ccc(Cl)cc1)CC)C(=O)NC,8.522878745,1681874,4441,C-X-C chemokine receptor type 3
+Clc1cc(cnc1N1C[C@@H]([NH+](CC1)C1CC[NH+](CC1)Cc1ccc(Cl)cc1)C)C(=O)NC,7.494850022,1681841,4441,C-X-C chemokine receptor type 3
+Clc1cc(cnc1N1CC[NH+](CC1)C1CC[NH+](CC1)Cc1ccc(Cl)cc1)C(=O)NC,6.251811973,565761,4441,C-X-C chemokine receptor type 3
+Clc1cc(cnc1N1C[C@@H]([NH+](CC1)C1CC[NH+](CC1)Cc1ccc(Cl)cc1)c1ccccc1)C(=O)NC,6.080921908,1681876,4441,C-X-C chemokine receptor type 3
+FC(F)(F)c1ccc(cc1)-c1nccc(c1)-c1c[nH]nc1-c1ncccc1,7.619788758,383523,4439,TGF-beta receptor type I
+FC(F)(F)c1cc(ccc1)-c1nccc(c1)-c1c[nH]nc1-c1ncccc1,6.619788758,382466,4439,TGF-beta receptor type I
+FC(F)(F)c1ccccc1-c1nccc(c1)-c1c[nH]nc1-c1ncccc1,5.029978734,426852,4439,TGF-beta receptor type I

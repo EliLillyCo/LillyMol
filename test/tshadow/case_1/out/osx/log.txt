@@ -1,0 +1,2 @@
+Name sh_maxdist sh_avedist sh_maxhdist sh_avehdist sh_shadow1 sh_shadow2 sh_shadow3 sh_cigar1 sh_cigar13 sh_cigar23 sh_boxy sh_boxz sh_boxvol sh_sphere sh_nsphere sh_msphere sh_flat sh_nflat sh_mflat sh_tube sh_ntube sh_mtube sh_bow sh_zanisotropy sh_abszanisotropy sh_rgspatl sh_rgmasswt
+240 8.245518 5.977 0 0 19.01 37.3 26.31 0.5097 0.7225 1.418 2.651 5.478e-04 7.299e-03 18.29 0.4903 1.16 10.99 0.2946 0.8618 7.3 0.1957 1.143 1.196e-04 1.48e-04 1 1.873 1.876

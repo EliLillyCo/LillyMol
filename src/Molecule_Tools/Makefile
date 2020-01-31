@@ -403,6 +403,29 @@ $(BUILD_DIR)/rxn_fingerprint: $(RXN_FINGERPRINT_OBJECTS)
 	$(LD) -o $@ $(RXN_FINGERPRINT_OBJECTS) -lsparsefp $(LIBS) 
 EXECUTABLES += $(RXN_FINGERPRINT_EXE)
 
+#Release 5
+################# Template for public executables ###################### 
+ABRAHAM_EXE = $(BUILD_DIR)/abraham    
+ABRAHAM_OBJECTS = $(BUILD_DIR)/abraham.o 
+$(BUILD_DIR)/abraham: $(ABRAHAM_OBJECTS) 
+	$(LD) -o $@ $(ABRAHAM_OBJECTS) $(LIBTEMPLATE) $(LIBS)  -lsparsefp -liwstring -liwmisc
+EXECUTABLES += $(ABRAHAM_EXE)
+
+################# Template for public executables ###################### 
+IWECFP_INTERMOLECULAR_EXE = $(BUILD_DIR)/iwecfp_intermolecular 
+IWECFP_INTERMOLECULAR_OBJECTS = $(BUILD_DIR)/iwecfp_intermolecular.o $(BUILD_DIR)/iwmfingerprint.o
+$(BUILD_DIR)/iwecfp_intermolecular: $(IWECFP_INTERMOLECULAR_OBJECTS)
+	$(LD) -o $@ $(IWECFP_INTERMOLECULAR_OBJECTS) -lsparsefp $(LIBS) 
+EXECUTABLES += $(IWECFP_INTERMOLECULAR_EXE)
+
+################# Template for public executables ###################### 
+TSHADOW_EXE = $(BUILD_DIR)/tshadow 
+TSHADOW_OBJECTS = $(BUILD_DIR)/tshadow.o $(BUILD_DIR)/shadow.o 
+$(BUILD_DIR)/tshadow.o: tshadow.cc 
+	$(CXX) -c -o $@ $< $(CXX_FLAGS_WITH_IMPLICIT_TEMPLATES) $(EIGEN_INC)
+$(BUILD_DIR)/tshadow: $(TSHADOW_OBJECTS)
+	$(LD) -o $@ $(TSHADOW_OBJECTS) -lsparsefp $(LIBS)   
+EXECUTABLES += $(TSHADOW_EXE)	
 ###################### Template for build command ######################
 .PHONY: copy_include
 .PHONY: library

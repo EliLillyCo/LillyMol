@@ -489,7 +489,7 @@ distance_filter (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will fail molecules unless " << lower_threshold_violation_threshold << " times within upper threshold\n";
+      cerr << "Will fail molecules unless " << upper_threshold_success_requirement << " times within upper threshold\n";
   }
 
   if (cl.option_present('f'))

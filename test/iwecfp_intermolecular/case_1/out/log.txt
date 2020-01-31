@@ -1,0 +1,4 @@
+$SMI<C1(=C([H])N=C(N([H])C(=O)C([H])([H])C2=C([H])C(=C3C(=C([H])C(=C([H])C3=C2[H])[H])[H])[H])C(=C1[H])[H])[H]>
+PCN<6HK6_protein_ligand - preprocessed_ligand>
+NCECB3<..tUuU.CP8A.1bVa..uDmW341.M.1czR..umwk.CvMc.1nyH2.g+.k.DGq6.1wlL.+n5xU.QrpdRXk20.+nTPE.R.cA.5Nfm.+sPtk220+g.8oBn.0jPsU.gLBQ.NLrL.E28.E0S966.bepr.Iz8E.3DmYEAFEc5.Ja1a.3NUtk+MnA2.P1Tw.A+.Fg0c0Cq.jS.1UEwoa.7J9R..EM5.EthuSkO....3>
+|

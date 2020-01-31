@@ -1,3 +1,71 @@
+2020-01 Release 6.0
+
+New scripts
+===========
+Under: contrib->script->py->mmp
+getMMPfromSMI.py - For an input SMILES file, generate a CSV of Matched Molecular Pairs
+getMMPStatsfromCSV.py - For an input CSV file, generate a CSV of Matched Molecular Pairs with associated delta for the given data column(s)
+getMMPbasedMCSSfromSMI.py - For an input SMILES file, generate a CSV of the MMP that has the smallest change between the two molecules (by atom count)
+getMMPEnumeratedNewMols.py - For an input SMI file, mutate the molecule to create new idea molecules based on a prebuilt or custom set of Transforms
+getMMPSeriesfromCSV.py - For an input CSV file, generate a CSV of any Matched Molecular Series
+getMMPSeriesSuggestfromCSV.py- For an input SMI file, generate all matched series, then search for any series that can be extended by an equivalent series in the same set 
+
+Retired scripts
+===============
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+
+
+Updates
+=======
+
+Known issues
+============
+
+
+2019-12 Release 5.0
+
+New scripts
+===========
+abraham - Compute Abraham descriptors
+distance_matrix_spread - Spread implementation, distances from a distance matrix file
+distance_matrix_from_distances - Produce a distance matrix file using distance data from file
+iwecfp_intermolecular - Compute protein-ligand interaction fingerprints. Three main types of fingerprints have been implemented: ecfp, path and atom pairs. For ecfp fingerprints, bits represents a circular substructure from the ligand and a circular substructure from the protein (both central atoms from the ligand and the protein must be within a given distance threshold). It is possible to change the radius shell (on both ligand and protein), the distance cut-off between ligand and protein atoms, limit the number of atoms in the protein substructure, to atom types, the atom relationship (atom pairs and atom paths)...
+tshadow - Compute shadow area for molecule
+
+Retired scripts
+===============
+
+
+Bug fixes
+=========
+
+
+Data
+=========
+
+
+Lib
+=========
+
+
+Updates
+=======
+
+Known issues
+============
+
+
 2019-10 Release 4.0
 
 New scripts

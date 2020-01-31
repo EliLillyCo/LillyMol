@@ -1,0 +1,86 @@
+# NAME CG1
+
+# INTERCEPT tcl=0.0 pcl=0.0 vcl=0.0 tbl=0.0 tml=0.0
+
+[CH3] name tcl=1.6781 pcl=0.019904 vcl=0.07504 tbl=0.8894 tml=0.4640
+[CH2] name tcl=3.4920 pcl=0.010558 vcl=0.05576 tbl=0.9225 tml=0.9246
+[CH1] name tcl=4.0330 pcl=0.001315 vcl=0.03153 tbl=0.6033 tml=0.3557
+[CH0] name tcl=4.8823 pcl=-0.010404 vcl=-0.00034 tbl=0.2878 tml=1.6479
+[CH2]=[CH1] name tcl=5.0146 pcl=0.025014 vcl=0.11648 tbl=1.7827 tml=1.6472
+[CH1]=[CH1] name tcl=7.3691 pcl=0.017865 vcl=0.09541 tbl=1.8433 tml=1.6322
+[CH2]=[CH0] name tcl=6.5081 pcl=0.022319 vcl=0.09183 tbl=1.7117 tml=1.7899
+[CH]=[CH0] name tcl=8.9582 pcl=0.012590 vcl=0.07327 tbl=1.7957 tml=2.0018
+[CH0]=[CH0] name tcl=11.3764 pcl=0.002044 vcl=0.07618 tbl=1.8881 tml=5.1175
+[CH2]=[CH0]=,:[#6H1] name tcl=9.9318 pcl=0.031270 vcl=0.14831 tbl=3.1243 tml=3.3439
+[cH] name tcl=3.7337 pcl=0.007542 vcl=0.04215 tbl=0.9297 tml=1.4669
+[cH0] name tcl=14.6409 pcl=0.002136 vcl=0.03985 tbl=1.6254 tml=0.2098
+[c][CH3] name tcl=8.2130 pcl=0.019360 vcl=0.10364 tbl=1.9669 tml=1.86355
+c[CH2] name tcl=10.3239 pcl=0.012200 vcl=0.10099 tbl=1.9478 tml=0.4177
+c[CH1] name tcl=10.4664 pcl=0.002769 vcl=0.07120 tbl=1.7444 tml=-1.7567
+[OH] name tcl=9.7292 pcl=0.005148 vcl=0.03897 tbl=3.2152 tml=3.5979
+c[OH] name tcl=25.9145 pcl=-0.007444 vcl=0.03162 tbl=4.4014 tml=13.7349
+[CH3]CO name tcl=13.2896 pcl=0.025073 vcl=0.13396 tbl=3.5668 tml=4.8776
+[CH2]CO name tcl=14.6273 pcl=0.017841 vcl=0.11195 tbl=3.8967 tml=5.6622
+[CH1]O name tcl=10.1986 pcl=0.014091 vcl=0.08635 tbl=2.8526 tml=4.2927
+[CH3]C(=O)O name tcl=12.5965 pcl=0.029020 vcl=0.15890 tbl=3.6360 tml=4.0823
+[CH2]C(=O)O name tcl=3.8116 pcl=0.021836 vcl=0.13649 tbl=3.3953 tml=3.5572
+[CH1](=O)O name tcl=11.6057 pcl=0.013797 vcl=0.10565 tbl=3.1459 tml=4.2250
+[CH3]O name tcl=6.4737 pcl=0.020440 vcl=0.08746 tbl=2.2536 tml=2.9248
+[CH2]O name tcl=6.0723 pcl=0.015135 vcl=0.07286 tbl=1.6249 tml=2.0695
+[CH1]-O name tcl=5.0663 pcl=0.009857 vcl=0.05865 tbl=1.1557 tml=4.0352
+F[CH2]O name tcl=9.5059 pcl=0.009011 vcl=0.06858 tbl=2.5892 tml=4.5047
+[CH2][NH2] name tcl=12.1726 pcl=0.012558 vcl=0.13128 tbl=3.1656 tml=6.7684
+[CH1][NH2] name tcl=10.2075 pcl=0.010694 vcl=0.07527 tbl=2.5983 tml=4.1187
+[CH3][NH1] name tcl=9.8544 pcl=0.012589 vcl=0.12152 tbl=3.1376 tml=4.5341
+[CH2][NH1] name tcl=10.4677 pcl=0.010390 vcl=0.09956 tbl=2.6127 tml=6.0609
+[CH][NH1] name tcl=7.2121 pcl=-0.000462 vcl=0.09165 tbl=1.5780 tml=3.4100
+[CH3][NH0] name tcl=7.6924 pcl=0.015874 vcl=0.12598 tbl=2.1647 tml=4.0580
+[CH2][NH0] name tcl=5.5172 pcl=0.004917 vcl=0.06705 tbl=1.2171 tml=0.9544
+[c][NH2] name tcl=28.7570 pcl=0.001120 vcl=0.06358 tbl=5.4736 tml=10.1031
+[/IWfss1n]1[cH][cH][cH][cH][cH]1 name tcl=29.1528 pcl=0.029565 vcl=0.24831 tbl=6.2800 tml=*
+[/IWfss2n]1ccccc1 name tcl=27.9464 pcl=0.025653 vcl=0.17027 tbl=5.9234 tml=12.6275
+[CH2]CN name tcl=20.3781 pcl=0.036133 vcl=0.15831 tbl=5.0525 tml=4.1859
+C(=O)[OH] name tcl=23.7593 pcl=0.011507 vcl=0.10188 tbl=5.8337 tml=11.5630
+[CH2]Cl name tcl=11.0752 pcl=0.019789 vcl=0.11564 tbl=2.9637 tml=3.3376
+[CH1]Cl name tcl=10.8632 pcl=0.011360 vcl=0.10350 tbl=2.6948 tml=2.9933
+[CH0]Cl name tcl=11.3959 pcl=0.003086 vcl=0.07922 tbl=2.2073 tml=9.8409
+[CH1](Cl)Cl name tcl=16.3945 pcl=0.026808 vcl=0.16951 tbl=3.9300 tml=5.1638
+[CH0](Cl)Cl name tcl=* pcl=* vcl=* tbl=3.5600 tml=*
+[CD4](Cl)(Cl)Cl name tcl=18.5875 pcl=0.034935 vcl=0.21031 tbl=4.5797 tml=10.2337
+cCl name tcl=14.1565 pcl=0.013135 vcl=0.10158 tbl=2.6293 tml=2.7336
+[CH2]N(=O)=O name tcl=24.7369 pcl=0.020974 vcl=0.16531 tbl=5.7619 tml=5.5424
+[CH1]N(=O)=O name tcl=23.2050 pcl=0.012241 vcl=0.14227 tbl=5.0767 tml=4.9738
+cN(=O)=O name tcl=34.5870 pcl=0.015050 vcl=0.14258 tbl=6.0837 tml=8.4724
+[CH2][SH] name tcl=13.8058 pcl=0.013572 vcl=0.10252 tbl=3.2914 tml=3.0044
+I name tcl=17.3947 pcl=0.002753 vcl=0.10814 tbl=3.6650 tml=4.6089
+Br name tcl=10.5371 pcl=-0.001771 vcl=0.08281 tbl=2.6495 tml=3.7442
+[CH]#C name tcl=7.5433 pcl=0.014827 vcl=0.09331 tbl=2.3678 tml=3.9106
+C#C name tcl=11.4501 pcl=0.004115 vcl=0.07627 tbl=2.5645 tml=9.5793
+Cl-C=C name tcl=5.4334 pcl=0.016004 vcl=0.05687 tbl=1.7824 tml=1.5598
+cF name tcl=2.8977 pcl=0.013027 vcl=0.05672 tbl=0.9442 tml=2.5015
+[CH](=O)N([CH2])[CH2] name tcl=* pcl=* vcl=* tbl=7.2644 tml=*
+C(F)(F)F name tcl=2.4778 pcl=0.044232 vcl=0.11480 tbl=1.2880 tml=3.2411
+C(F)F name tcl=1.7399 pcl=0.012884 vcl=0.09519 tbl=0.6115 tml=*
+CF name tcl=3.5192 pcl=0.004673 vcl=* tbl=1.1739 tml=*
+C(=O)O name tcl=12.1084 pcl=0.011294 vcl=0.08588 tbl=2.6446 tml=3.4448
+C(Cl)(Cl)F name tcl=9.8408 pcl=0.035446 vcl=0.18212 tbl=2.8881 tml=7.4756
+[CH1](Cl)F name tcl=* pcl=* vcl=* tbl=2.3086 tml=*
+C(Cl)(F)F name tcl=4.8923 pcl=0.039004 vcl=0.14753 tbl=1.9163 tml=2.7523
+F name tcl=1.5974 pcl=0.014434 vcl=0.03783 tbl=1.0081 tml=1.9623 // except as above
+C(=O)[NH2] name tcl=65.1053 pcl=0.004266 vcl=0.14431 tbl=10.3428 tml=31.2786
+C(-O)[NH1][CH3] name tcl=* pcl=* vcl=* tbl=* tml=*
+C(=O)[NH1][CH2] name tcl=* pcl=* vcl=* tbl=* tml=*
+C(=O)N([CH3])[CH3] name tcl=36.1403 pcl=0.040149 vcl=0.25031 tbl=7.6904 tml=11.3770
+C(=O)N([CH3])[CH2] name tcl=* pcl=* vcl=* tbl=* tml=*
+C(=O)N([CH2])[CH2] name tcl=* pcl=* vcl=* tbl=6.7822 tml=*
+
+// C2H5O2 name tcl=17.9668 pcl=0.025435 vcl=0.16754 tbl=5.5566 tml=*
+// C2H4O2 name tcl=* pcl=* vcl=* tbl=5.4248 tml=*
+
+[CH3]S name tcl=14.3969 pcl=0.016048 vcl=0.13021 tbl=3.6796 tml=5.0506
+[CH2]S name tcl=17.7916 pcl=0.011105 vcl=0.11650 tbl=3.6763 tml=3.1468
+[CH1]S name tcl=* pcl=* vcl=* tbl=2.6812 tml=*
+
+s1cccc1 C4H3S tcl=* pcl=* vcl=* tbl=5.7093 tml=* NCON=1
+s1cccc1 C4H2S tcl=* pcl=* vcl=* tbl=5.8260 tml=* NCON=2
+

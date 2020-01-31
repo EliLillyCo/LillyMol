@@ -1,0 +1,58 @@
+# NAME ALPHA_2H 
+
+# INTERCEPT alpha2h=0.003
+
+# MIN alpha2h=-0.003
+# MAX alpha2h=0.716
+
+[/IWAr0OD1H] a2OH #1 alpha2h=0.345
+[OD1H]c a2PHENOL #2 NCLAIM=1 alpha2h=0.543
+[NH2]A a2priNH2 #3 NCLAIM=1 alpha2h=0.177
+[NH2]c a2priANIL #4 NCLAIM=1 alpha2h=0.247
+[ND2HR0](A)A a2sec_NHR0 #5 NCLAIM=1 alpha2h=0.087
+[ND2HR](A)A a2sec_NHR #6 NCLAIM=1 alpha2h=0.321
+[ND2H](A)a a2sec_ANIL #7 NCLAIM=1 alpha2h=0.194
+[nH] a2nH #8 alpha2h=0.371
+O=C-[OH] a2COOH #9 alpha2h=0.243
+O=C[NH2] a2priamide #10 alpha2h=0.275
+O=C[ND2H]-[/IWxA] a2secamide #11 alpha2h=0.281
+O=C[ND2H]-[/IWxa] a2secamidear #12 alpha2h=-0.091
+[SD4](=O)(=O)[N;!H0] a2sulphonamide #13 alpha2h=0.356
+[NH]C(=O)[NH] a2priurea #14 alpha2h=-0.165
+[NH]C(=O)[N;H0] a2securea #15 alpha2h=-0.119
+[NH]C(=O)O a2carbamate #16 alpha2h=-0.105
+[NH][C;R0](=N)[N;H0] a2guanidine #17 alpha2h=0.170
+[CD1Hv3] a2ALKYNE #18 alpha2h=0.082
+P[OH] a2Pacid #19 alpha2h=0.493
+[CH]([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)]) a2CHX #20 alpha2h=0.019
+[CH]([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)]) a2CHX2 #21 alpha2h=0.050
+C(C(=O)[OH])CC(=O)[OH] a2diacid #22 alpha2h=-0.362
+C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])C(=O)[OH] a2CXacid #23 alpha2h=0.118
+C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])[OH] a2CXOH #24 alpha2h=0.100
+C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])C[OH] a2CXCOH #25 alpha2h=0.051
+[nH]1[n,o,s]aaa1 a2nHx #26 NCLAIM=1 alpha2h=0.194
+[nH]1c[n,o,s]aa1 a2nHcx #27 NCLAIM=1 alpha2h=0.042
+[OH]CC[O,N] a2HB1 #28 NCLAIM=1 alpha2h=-0.089
+[OH]C[C,N]=[O,S] a2HB2 #29 NCLAIM=1 alpha2h=-0.161
+[OH]c1ccccc1[O,N;!$(N(=O)(=O))] a2HB3 #30 NCLAIM=1 alpha2h=-0.251
+[OH]c1ccccc1C=[O,S] a2HB4 #31 NCLAIM=1 alpha2h=-0.418
+[OH]c1ccccc1N(=O)(=O) a2HB5 #32 NCLAIM=1 alpha2h=-0.450
+[N;!H0]CC[O,N] a2HB6 #33 NCLAIM=1 alpha2h=-0.155
+[N;!H0]c1ccccc1[O,N] a2HB7 #34 NCLAIM=1 alpha2h=0
+[N;!H0]c1ccccc1[#6,#7]=[O,S] a2HB8 #35 NCLAIM=1 alpha2h=-0.093
+[OH]c1ccccc1[Cl,Br,I] a2HB9 #36 NCLAIM=1 alpha2h=-0.110
+[OD1H]-CC~[#6]=O a2HB10 #37 NCLAIM=1 alpha2h=-0.601
+[OH]c1c2ncccc2ccc1 a28OH_quin #38 NCLAIM=1 alpha2h=-0.475
+[OH]-c1cc(ccc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a23X_phenol #39 NCLAIM=1 alpha2h=0.119
+[OH]-c1ccc(cc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a24X_phenol #40 NCLAIM=1 alpha2h=0.176
+[N;!H0]-c1cc(ccc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a23X_anil #41 NCLAIM=1 alpha2h=0.080
+[N;!H0]-c1ccc(cc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a24X_anil #42 NCLAIM=1 alpha2h=0.084
+[OH]C(=O)-c1cc(ccc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a23X_acid #43 NCLAIM=1 alpha2h=0.085
+[OH]C(=O)-c1ccc(cc1)-[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a24X_acid #44 NCLAIM=1 alpha2h=0.055
+[OH]-c1c([CX4])cccc1[CX4] a226C_phenol #45 NCLAIM=1 alpha2h=-0.162
+[N;!H0]-c1c([CX4])cccc1[CX4] a226C_anil #46 NCLAIM=1 alpha2h=-0.181
+[OH]-c1ccccc1C[$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)] a22X_phenol #47 NCLAIM=1 alpha2h=0.195
+[OH]-c1cc(ccc1)C(=O)[OH] a23acid_phenol #48 NCLAIM=1 alpha2h=-0.203
+[OH]-c1ccc(cc1)C(=O)[OH] a24acid_phenol #49 NCLAIM=1 alpha2h=0.096
+[OH]-c1cc(ccc1)C=O a23CO_phenol #50 NCLAIM=1 alpha2h=0.185
+[OH]-c1ccc(cc1)C=O a24CO_phenol #51 NCLAIM=1 alpha2h=0.203

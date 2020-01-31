@@ -2,7 +2,7 @@
 # $Id$
 # 
 # Default compilier
-export UNAME=Linux-gcc-7.2.1
+export UNAME=Linux-gcc-8.3.1
 echo "Start script for build $UNAME"
 echo "Clean gcc"
 IWPROGRAMMES=${PWD} make veryclean

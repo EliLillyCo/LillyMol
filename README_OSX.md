@@ -22,6 +22,11 @@ Example command to intall gcc: `brew install gcc`
 Example command to install zlib: `brew install zlib`
 You need to define the location for zlib.a in makefile.public.*
 
+3. Eigen >= 3.3.7 (see http://eigen.tuxfamily.org/index.php?title=Main_Page)
+Download and unzip Eigen from the above link
+You need to define the include location for Eigen in makefile.public.*
+
+
 
 Note:
 Following command can be used to install commandline build tool on Mac OS X

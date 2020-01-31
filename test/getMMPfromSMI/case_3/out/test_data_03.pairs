@@ -1,0 +1,9 @@
+CUT,MOLID_L,MOLID_R,CONTEXT,FRAG_L,FRAG_R,ATTCHPT_FRAG_L,ATTCHPT_CTX_L,ATTCHPT_FRAG_R,ATTCHPT_CTX_R
+single,1494678,1477460,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n]c1c1cc[1cH]cc1,[1H],[1OH]C,[1:CAR],[1:H],[1:CAR],[1:O3]
+single,1477460,1494678,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n]c1c1cc[1cH]cc1,[1OH]C,[1H],[1:CAR],[1:O3],[1:CAR],[1:H]
+single,472166,69798,OC(CC[n]1[1cH][n]cc1)(c1ccccc1)c1ccccc1,[1H],[1CH4],[1:C2],[1:H],[1:C2],[1:C3]
+single,69798,472166,OC(CC[n]1[1cH][n]cc1)(c1ccccc1)c1ccccc1,[1CH4],[1H],[1:C2],[1:C3],[1:C2],[1:H]
+single,367346,366881,Clc1[1cH]ccc(c2[n]c(sc2C)N)c1,[1H],[1ClH],[1:CAR],[1:H],[1:CAR],[1:CL]
+single,366881,367346,Clc1[1cH]ccc(c2[n]c(sc2C)N)c1,[1ClH],[1H],[1:CAR],[1:CL],[1:CAR],[1:H]
+single,1477460,1441050,COc1[1cH]cc(c2[n]c(sc2C)[n]2c(c(c(c2C)C(=O)C)C(=O)C)C)cc1,[1H],[1OH]C,[1:CAR],[1:H],[1:CAR],[1:O3]
+single,1441050,1477460,COc1[1cH]cc(c2[n]c(sc2C)[n]2c(c(c(c2C)C(=O)C)C(=O)C)C)cc1,[1OH]C,[1H],[1:CAR],[1:O3],[1:CAR],[1:H]

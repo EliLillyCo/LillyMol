@@ -57,6 +57,26 @@ $(LIBRARY_OBJECTS):
 # Rule for making library
 $(LIBRARY_NAME): $(LIBRARY_OBJECTS)
 	$(AR) r $@ $(LIBRARY_OBJECTS)
+	
+#Release 5
+################# Template for public executables ######################
+DMFROMDISTANCES_EXE = $(BUILD_DIR)/distance_matrix_from_distances
+DMFROMDISTANCES_OBJECTS = $(BUILD_DIR)/distance_matrix_from_distances.o
+$(BUILD_DIR)/distance_matrix_from_distances.o: distance_matrix_from_distances.cc
+	$(CXX) -c -o $@ $< $(CXX_FLAGS_WITH_IMPLICIT_TEMPLATES)
+$(BUILD_DIR)/distance_matrix_from_distances: $(DMFROMDISTANCES_OBJECTS)
+	$(LD) -o $@ $(DMFROMDISTANCES_OBJECTS) $(LIBS) -liwdistance_matrix -laccumulator -lcmdline -liwstring_data_source -liwcrex -liwstring -liwmisc -liwaray $(SYSTEM_LIBS)
+EXECUTABLES += $(DMFROMDISTANCES_EXE)
+
+################# Template for public executables ######################
+SPREAD_EXE = $(BUILD_DIR)/distance_matrix_spread
+SPREAD_OBJECTS = $(BUILD_DIR)/distance_matrix_spread.o
+#$(BUILD_DIR)/_iwdistance_matrix_float.o
+$(BUILD_DIR)/distance_matrix_spread.o: distance_matrix_spread.cc
+	$(CXX) -c -o $@ $< $(CXX_FLAGS_WITH_IMPLICIT_TEMPLATES)
+$(BUILD_DIR)/distance_matrix_spread: $(SPREAD_OBJECTS)
+	$(LD) -o $@ $(SPREAD_OBJECTS) $(LIBS) -liwdistance_matrix -liwrandom -lcmdline -liwstring_data_source -liwcrex -liwstring -liwmisc -liwaray $(SYSTEM_LIBS)
+EXECUTABLES += $(SPREAD_EXE)
 
 ###################### Template for build command ######################
 .PHONY: copy_include
@@ -82,11 +102,11 @@ copy_library: copy_include library
 	$(CP) $(LIBRARY_NAME) $(LIBDIR)
 	
 # Rule for making executables
-#exe: $(EXECUTABLES)
+exe: $(EXECUTABLES)
 
 # Rule for install executables
-#copy_exe: exe
-#	$(CP) $(EXECUTABLES) $(EXEDIR)
+copy_exe: exe
+	$(CP) $(EXECUTABLES) $(EXEDIR)
 	
 clean:
 	@$(RM) $(BUILD_DIR)/*.o || true

@@ -1,0 +1,1 @@
+Failed smiles parser as salt on line 7, id 367346

@@ -166,6 +166,7 @@ $(BUILD_DIR)/rearrange_columns: $(REARRANGE_COLUMNS_OBJECTS)
 	$(LD) -o $@ $(REARRANGE_COLUMNS_OBJECTS) $(LIBS) -lcmdline -liwstring_data_source -liwstring -liwcrex -liwaray
 EXECUTABLES += $(REARRANGE_COLUMNS_EXE)
 
+
 ###################### Template for build command ######################
 .PHONY: copy_include
 .PHONY: library

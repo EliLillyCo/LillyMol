@@ -1,0 +1,17 @@
+CUT_TYPE,MOL_ID_L,MOL_ID_R,NATOMS,MCSS,FRAG_L,FRAG_R
+SINGLE,1526778,1494678,19,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][1cH]1,Cc1cc[1cH]cc1C,[1cH]1ccccc1
+DOUBLE,1526778,1477460,20,[1CH4].Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][2cH]1,Cc1[1cH]c[2cH]cc1,[1OH]c1cc[2cH]cc1
+DOUBLE,1526778,1441050,20,[1CH4].Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][2cH]1,Cc1[1cH]c[2cH]cc1,[1OH]c1c(OC)cc[2cH]c1
+SINGLE,1494678,1526778,19,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][1cH]1,[1cH]1ccccc1,Cc1cc[1cH]cc1C
+SINGLE,1494678,1477460,25,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n]c1c1cc[1cH]cc1,[1H],[1OH]C
+SINGLE,1494678,1441050,19,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][1cH]1,[1cH]1ccccc1,COc1cc[1cH]cc1OC
+DOUBLE,1477460,1526778,20,[1CH4].Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][2cH]1,[1OH]c1cc[2cH]cc1,Cc1[1cH]c[2cH]cc1
+SINGLE,1477460,1494678,25,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n]c1c1cc[1cH]cc1,[1OH]C,[1H]
+SINGLE,1477460,1441050,27,COc1[1cH]cc(c2[n]c(sc2C)[n]2c(c(c(c2C)C(=O)C)C(=O)C)C)cc1,[1H],[1OH]C
+DOUBLE,1441050,1526778,20,[1CH4].Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][2cH]1,[1OH]c1c(OC)cc[2cH]c1,Cc1[1cH]c[2cH]cc1
+SINGLE,1441050,1494678,19,Cc1sc([n]2c(c(c(c2C)C(=O)C)C(=O)C)C)[n][1cH]1,COc1cc[1cH]cc1OC,[1cH]1ccccc1
+SINGLE,1441050,1477460,27,COc1[1cH]cc(c2[n]c(sc2C)[n]2c(c(c(c2C)C(=O)C)C(=O)C)C)cc1,[1OH]C,[1H]
+SINGLE,472166,69798,21,OC(CC[n]1[1cH][n]cc1)(c1ccccc1)c1ccccc1,[1H],[1CH4]
+SINGLE,69798,472166,21,OC(CC[n]1[1cH][n]cc1)(c1ccccc1)c1ccccc1,[1CH4],[1H]
+SINGLE,367346,366881,14,Clc1[1cH]ccc(c2[n]c(sc2C)N)c1,[1H],[1ClH]
+SINGLE,366881,367346,14,Clc1[1cH]ccc(c2[n]c(sc2C)N)c1,[1ClH],[1H]

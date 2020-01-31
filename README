@@ -11,6 +11,10 @@ Example command(using module load): module load zlib/1.2.11
 You need to define the location for zlib.a in makefile.public.*
 You may also need to add the location of zlib.h to CPATH
 
+3. Eigen >= 3.3.7 (see http://eigen.tuxfamily.org/index.php?title=Main_Page)
+Download and unzip Eigen from the above link
+You need to define the include location for Eigen in makefile.public.*
+
 
 BUILD:
 1. Start console
@@ -46,6 +50,8 @@ Note: This command shall print out the help menu on screen if it is built succes
 Example to run sample commands:
     cd example/common_names/
     ../../bin/Linux-gcc-7.2.1/common_names input1.smi input2.smi -S ./output -s 10000 -r 10000 -D + -v
+For the python scripts see contrib/scripts/python/README.md, in particular
+note that PYTHONPATH needs to be adjusted
 	
 
 

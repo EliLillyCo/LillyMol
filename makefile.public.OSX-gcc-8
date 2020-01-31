@@ -52,6 +52,9 @@ LIBZ = -L$(ZLIB) -lz
 # Define ZLIB include path
 ZLIB_INC = /usr/local/opt/zlib/include
 
+# Define include folder for Eigen
+EIGEN_INC= 
+
 # Include folder
 INC = -I . -I $(IWPROGRAMMES)/include -I $(IWPROGRAMMES)/include/mol -I $(ZLIB_INC)
 
