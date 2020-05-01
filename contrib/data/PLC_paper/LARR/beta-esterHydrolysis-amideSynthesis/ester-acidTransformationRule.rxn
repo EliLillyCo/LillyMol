@@ -1,0 +1,10 @@
+(0 Reaction
+  (A C Comment "beta Ester Hydrolysis - Amide Synthesis Ester Transformation Rule")
+  (0 Scaffold
+     (A C smarts "[#6][CX3](=O)[OX2][#6]")
+     (A I break_bond (1 3))
+     (A I remove_fragment 3)
+     (A I isotope (1 9))
+  )
+)
+

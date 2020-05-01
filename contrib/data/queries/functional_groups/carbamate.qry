@@ -1,0 +1,5 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "carbamate")
+  (A C smarts "[NX3,NX4+][CX3](=[OX1])[OX2,OX1-]")
+)

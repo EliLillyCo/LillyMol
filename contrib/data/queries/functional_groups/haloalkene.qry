@@ -1,0 +1,5 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "haloalkene")
+  (A C smarts "[F,Cl,Br,I][CX3]=[CX3]")
+)

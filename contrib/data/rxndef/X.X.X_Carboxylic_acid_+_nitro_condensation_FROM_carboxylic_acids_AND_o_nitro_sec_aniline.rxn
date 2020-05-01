@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "X.X.X_Carboxylic_acid_+_nitro_condensation_FROM_carboxylic_acids_AND_o_nitro_sec_aniline.rxn")
+  (0 Scaffold
+     (A C smarts "C([$(c),$([CT1X4])])(=O)([OH])") 
+     (A I remove_atom 3)
+  )
+  (1 Sidechain
+     (A C smarts "N(=O)(=O)a@a[NH][$(c),$([CT1X4])]")
+     (A I remove_atom 1 2)
+     (A I join (0 0))
+  )
+)
+

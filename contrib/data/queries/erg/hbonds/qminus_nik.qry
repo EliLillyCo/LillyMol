@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "Negative formal charge")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I include_in_embedding 0)
+  )
+  (1 Query_Atom
+    (A I formal_charge -1)
+    (A I single_bond 0)
+  )
+)

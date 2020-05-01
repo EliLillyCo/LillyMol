@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/Obiarylation
+rxnFile=Obiarylation.rxn
+reagents=phenol arylBromide
+phenol=phenolFilterRule
+arylBromide=arylBromideFilterRule
+phenolTransformationFile=phenolTransformationRule.rxn
+arylBromideTransformationFile=arylBromideTransformationRule.rxn

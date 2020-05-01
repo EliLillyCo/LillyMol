@@ -1,0 +1,21 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "ncn")
+  (A C Comment "ncn")
+  (A I unique_embeddings_only 1)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ring_id 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ring_id 2)
+    (A I unsaturation 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I ring_id 3)
+    (A I single_bond 1)
+  )
+)

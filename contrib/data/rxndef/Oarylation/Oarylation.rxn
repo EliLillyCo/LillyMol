@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "O-Arylation")
+  (0 Scaffold
+     (A C smarts "[OD1H]-[CX4D2T1]")
+  )
+  (1 Sidechain
+     (A C smarts "[Br,I][/IWhr1ar6]||[Br,I,Cl]c1ncccc1||[Br,I,Cl]c1ccncc1||[Br,I,Cl]C1[S,O,N]C=C[S,O,N]=1")
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

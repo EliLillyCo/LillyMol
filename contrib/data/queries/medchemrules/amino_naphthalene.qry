@@ -1,0 +1,13 @@
+(0 Query
+  (A C Comment "amino_naphthalene")
+  (A C Comment "amino_naphthalene")
+  (A I Version 2)
+  (0 Ring_System_Specifier
+    (A I min_aromatic_ring_count 2)
+  )
+  (A C smarts "[cD3R2r6]12~c~c~c~c~c~1~c~c~c~c~2")
+  (0 Environment
+    (A I single_bond (1 2 3 4 6 7 8 9))
+    (A C smarts "[NH>0]")
+  )
+)

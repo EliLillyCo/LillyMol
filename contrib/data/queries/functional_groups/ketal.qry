@@ -1,0 +1,6 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "ketal")
+  # carbon four substituents, no H; Oxygens can be in a ring
+  (A C smarts "[CD4H0](-O)O")
+)

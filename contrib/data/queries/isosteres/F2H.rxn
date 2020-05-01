@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "F2H")
+  (0 Scaffold
+    (A C smarts "F")
+    (A I remove_atom 0)
+  )
+)

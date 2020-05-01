@@ -1,0 +1,15 @@
+# RuleClass alkylating
+# SubClass misc
+
+(0 Query
+  (A I Version 2)
+  (A I min_nrings 1)
+  (A C Comment "het_3mem_ring")
+  (A C Comment "het_3mem_ring")
+  (1 Ring_Specifier
+    (A I ring_size 3)
+    (A I fused 0)
+    (A I min_heteroatom_count 1)
+  )
+# (A C smarts "[!#6;r3;D2]1-[R1]-[R1]1")
+)

@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.8.5_Thioether_synthesis_FROM_thiophenols_AND_NAS_electrophile")
+  (0 Scaffold
+     (A C smarts "[SD1H]-a")
+  )
+  (1 Sidechain
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/NAS_electrophile.qry")
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

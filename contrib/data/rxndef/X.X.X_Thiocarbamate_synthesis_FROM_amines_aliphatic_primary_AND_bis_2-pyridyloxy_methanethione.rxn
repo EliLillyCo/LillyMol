@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "X.X.X_Thiocarbamate_synthesis_FROM_amines_aliphatic_primary_AND_bis_2-pyridyloxy_methanethione")
+  (0 Scaffold
+     (A C smarts "[NH2]-[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "S=C(Oc1ncccc1)Oc1ncccc1 bis_2-pyridyloxy_methanethione")
+     (A C smarts "S=C(Oc1ncccc1)Oc1ncccc1")
+     (A I break_bond 1 2)
+     (A I remove_fragment 2)
+     (A I join (0 1))
+  )
+)

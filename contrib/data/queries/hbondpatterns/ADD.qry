@@ -1,0 +1,19 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "ADD")
+  (A I min_isotopic_atoms 3)
+  (0 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I isotope (1 2))
+  )
+  (1 Query_Atom
+    (A I atomic_number (7 8))
+    (A I isotope (2 3))
+    (A I bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (7 8))
+    (A I isotope (2 3))
+    (A I bond 1)
+  )
+)

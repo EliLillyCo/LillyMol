@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "amines_heteroaromatic_primary")
+  (A I Version 2)
+  (0 Ring_Specifier
+     (A I aromatic 1)
+     (A I min_heteroatom_count 1)
+     #(A I min_attached_heteroatom_count 1)
+     (A C Environment "1*-[NT0X3H2]")
+  )
+)
+
+

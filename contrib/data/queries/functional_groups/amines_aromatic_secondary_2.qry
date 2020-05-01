@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "amines_aromatic_secondary_2")
+  (A I Version 2)
+  (A C smarts "[NT0D2H](-a)-a")
+)

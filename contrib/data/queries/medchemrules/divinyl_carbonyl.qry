@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "divinyl_carbonyl")
+  (A I version 2)
+# (A C smarts "C=C-C(=O)-C=C")
+  (A C smarts "[OD1]=C(-C=C)-C=C")
+)

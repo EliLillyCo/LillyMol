@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "X.X.X_Triazine_Dichloro_FROM_amines_aliphatic_primary_AND_Null")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H](-[CX4])-[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "c1(Cl)nc(Cl)nc(Cl)n1 triazinediCl")
+     (A C smarts "c1(Cl)nc(Cl)nc(Cl)n1")
+     (A I remove_atom 1)
+     (A I join (0 0))
+  )
+)

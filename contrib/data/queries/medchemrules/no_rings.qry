@@ -1,0 +1,9 @@
+# RuleClass rings
+# SubClass count
+
+(0 Query
+  (A C Comment "no_rings")
+  (A I Version 2)
+  (A I nrings 0)
+  (A D numeric_value 30)
+)

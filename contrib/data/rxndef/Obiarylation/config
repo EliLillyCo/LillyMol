@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/apps/gc3tk/c3tk-core/data/PLC/LARR/Obiarylation
+rxnFile=Obiarylation.rxn
+reagents=phenol arylBromide
+phenol=phenolFilterRule
+arylBromide=arylBromideFilterRule
+phenolTransformationFile=phenolTransformationRule.rxn
+arylBromideTransformationFile=arylBromideTransformationRule.rxn

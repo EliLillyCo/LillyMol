@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "cplus")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I formal_charge 1)
+  )
+)

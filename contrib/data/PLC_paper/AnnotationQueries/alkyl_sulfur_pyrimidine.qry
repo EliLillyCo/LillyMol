@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "alkyl_sulfur_pyrimidine")
+  (A I Version 2)
+  (A C smarts "c(n)(n)S[CX4]")
+)

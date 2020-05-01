@@ -1,0 +1,9 @@
+
+# Mar 2004. Change to demerit
+
+(0 Query
+  (A C Comment "acylurea")
+  (A D numeric_value 35)
+  (A I Version 2)
+  (A C smarts "[N;G0]-C(=[O,S])-N-[CR0]=[O,S]")
+)

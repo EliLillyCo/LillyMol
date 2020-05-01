@@ -1,0 +1,10 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Hydroxy")
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I nbonds 1)
+    (A I aryl 0)
+    (A I ncon 1)
+  )
+)

@@ -1,0 +1,17 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "fmoc")
+  # old this could fail if below matches and 3rd atom connecting to N is aliphatic carbon with double bond to another carbon  
+  #(A C smarts "[NT0]([$(c),$([CT1X4])])C(=O)O[CD2][CD3]1c2[cD2][cD2][cD2][cD2]c2-c3c1[cD2][cD2][cD2][cD2]3")
+
+  (0 Query
+    (A I version 2)
+    (A C Comment "sec_fmoc")
+    (A C smarts "[NHT0]([$(c),$([CT1X4])])C(=O)O[CD2][CD3]1c2[cD2][cD2][cD2][cD2]c2-c3c1[cD2][cD2][cD2][cD2]3")
+  )
+  (1 Query
+    (A I version 2)
+    (A C Comment "tert_fmoc")
+    (A C smarts "[NT0]([$(c),$([CT1X4])])([$(c),$([CT1X4])])C(=O)O[CD2][CD3]1c2[cD2][cD2][cD2][cD2]c2-c3c1[cD2][cD2][cD2][cD2]3")
+  )
+)

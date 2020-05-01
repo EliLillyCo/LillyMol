@@ -1,0 +1,6 @@
+(0 Query
+  (A I only_match_largest_fragment 1)
+  (A I Version 2)
+  (A C Comment "nonorganic")
+  (A C smarts "[!#5&!#6&!#7&!#8&!#9&!#15&!#16&!#17&!#35&!#53&!#1]")
+)

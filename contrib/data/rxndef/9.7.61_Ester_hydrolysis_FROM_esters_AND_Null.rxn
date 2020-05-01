@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "9.7.61_Ester_hydrolysis_FROM_esters_AND_Null")
+  (0 Scaffold
+     #old
+     #(A C smarts "[#6][CX3](=O)[OX2][#6]")
+
+     (A C smarts "O=C([#6])[OX2][#6]")
+     (A I break_bond (3 4))
+     (A I remove_fragment 4)
+  )
+)
+

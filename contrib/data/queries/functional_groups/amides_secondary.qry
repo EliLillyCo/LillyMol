@@ -1,0 +1,9 @@
+(0 query
+  (A I version 2)
+  (A C Comment "amides_secondary")
+  (A C smarts "[OD1]=[CD3R0](-[#6])-[NT0H]")
+  (1 Environment_no_Match 
+       (A I single_bond (3))
+       (A C smarts "C=O")
+  )
+)

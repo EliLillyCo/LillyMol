@@ -1,0 +1,50 @@
+# this was added because some guanidine molecules were not hit
+# by the amidines query..
+# We make this very restrictive so that hopefully it will only
+# hit molecules otherwise missed by the amidine query
+
+(0 Query
+  (A C Comment "Guanidine")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (A I one_embedding_per_start_atom 1)
+  (1 Element_Hits_Needed
+    (A I atomic_number 7)
+    (A I min_hits_needed 3)
+  )
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 1)
+    (A I nbonds 1)
+    (A D numeric_value 1.1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I nrings 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I aryl 0)
+    (A I vinyl 1)
+    (A I attached_heteroatom_count 0)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 7)
+    (A I vinyl 0)
+    (A I attached_heteroatom_count 0)
+    (A I double_bond 1)
+  )
+
+# Jan 2000. Move these from the amidine query
+
+  (5 Environment_No_Match
+    (A I single_bond 2)
+    (A C smarts "N~O")
+    (A C smarts "S~O")
+    (A C smarts "C#N")
+  )
+)

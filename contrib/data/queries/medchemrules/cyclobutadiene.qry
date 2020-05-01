@@ -1,0 +1,36 @@
+(5 Query
+  (A C Comment "cyclobutadiene")
+  (A I Version 2)
+  (A I min_nrings 1)
+  (0 Ring_Specifier
+    (A I ring_size 4)
+  )
+  (0 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I nrings 1)
+    (A I ring_size 4)
+  )
+  (1 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I nrings 1)
+    (A I ring_size 4)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I nrings 1)
+    (A I ring_size 4)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I nrings 1)
+    (A I ring_size 4)
+    (A I double_bond 2)
+    (A I single_bond 0)
+  )
+)

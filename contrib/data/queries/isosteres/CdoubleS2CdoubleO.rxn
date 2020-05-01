@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "C=S to C=O")
+  (0 Scaffold
+    (A C smarts "[SD1]=[#6]")
+    (A C change_element "0 O")
+  )
+)

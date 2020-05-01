@@ -1,0 +1,18 @@
+(0 Reaction
+  (A C Comment "X.X.X_Aminothiazole_synthesis_FROM_amines_aliphatic_primary_AND_ketones_a_h")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]")
+  )
+  (1 Sidechain
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/a_h_ketones.qry")
+     (A I remove_atom 0)
+     (A I double_bond (1 3))
+  )
+  (2 Sidechain
+     (A C smiles "N=CS N=CS")
+     (A C smarts "N=CS") 
+     (A C join "1.1 0")
+     (A C join "1.3 2")
+     (A I join (0 1))
+  )
+)

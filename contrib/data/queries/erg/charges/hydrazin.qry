@@ -1,0 +1,25 @@
+(0 Query
+  (A I unique_embeddings_only 1)
+  (A C Comment "hydrazine")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I attached_heteroatom_count 1)
+    (A I unsaturation 0)
+    (A D numeric_value 1.1)
+    (A I min_ncon 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 7)
+    (A I attached_heteroatom_count 1)
+    (A I unsaturation 0)
+    (A I single_bond 0)
+  )
+  (2 Environment_No_Match
+    (A I single_bond (0 1))
+    (3 Query_Atom
+      (A I atomic_number 6)
+      (A I min_unsaturation 1)
+    )
+  )
+)

@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "3.3.4_Iodo_Sonogashira_coupling_FROM_aryliodide_AND_Null")
+  (0 Scaffold
+     (A C smarts "I-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smiles "CC CC")
+     (A C smarts "CC")
+     (A I join (1 0))
+     (A I triple_bond (0 1))
+  )
+)

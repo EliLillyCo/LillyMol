@@ -1,0 +1,88 @@
+ 1386  ls
+ 1387  lsltm
+ 1388  vf -Z Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi
+ 1389  vf -n 90 -COW -Z Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi
+ 1390  tsubstructure -s '>6[R0]' -m - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1391  tsubstructure -A I -s '>6[R0]' -m - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1392  tsubstructure -A I -s '>6[R0D>1]' -m - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1393  tsubstructure -A I -s '[R0D>1]~[R0D>1]~[R0D>1]~[R0D>1]~[R0D>1]~[R0D>1]' -m - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1394  tsubstructure -A I -s '[R0D>1]~[R0D>1]~[R0D>1]~[R0D>1]~[R0D>1]' -m - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1395  rotatable_bonds_test.sh 
+ 1396  rotatable_bonds_test.sh -A I -f 4 -f breaku -B - 
+ 1397  history
+ 1398  rotatable_bonds_test.sh -A I -f 4 -f breaku -B - Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1399  wc $_
+ 1400  wc Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi
+ 1401  cp Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi /ian/tmp9
+ 1402  cd $_
+ 1403  rotatable_bonds_test.sh -v -A I -f 4 -f breaku -B floppy1 Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi
+ 1404  lslth
+ 1405  rotatable_bonds_test.sh 
+ 1406  rotatable_bonds_test.sh -S ok1 -v -A I -f 4 -f breaku -B floppy1 Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi
+ 1407  msort -a ok1.smi > t &
+ 1408  vf -Z -COW -n 90 floppy1.smi &
+ 1409  vf -Z -COW -n 90 floppy1.smi &
+ 1410  less t
+ 1411  vf -COW -n 60 t
+ 1412  vf -COW -n 60 floppy1.smi 
+ 1413  vf -Z -COW -n 60 ok1.smi 
+ 1414  history
+ 1415  tsubstructure -v -A I -s '[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]' -m viatsubstructure Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1416  wc viatsubstructure.smi floppy1.smi 
+ 1417  head viatsubstructure.smi floppy1.smi 
+ 1418  lslth
+ 1419  fetch_smiles_quick.sh -c 2 -X X -Y Y floppy1.smi viatsubstructure.smi | wc
+ 1420  fetch_smiles_quick.sh -v -c 2 -X X -Y Y floppy1.smi viatsubstructure.smi | wc
+ 1421  lslth
+ 1422  wc X Y
+ 1423  vf -COW X
+ 1424  eval `resize`
+ 1425  echo $COLUMNS
+ 1426  tsubstructure -v -A I -s '[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]' -m viatsubstructure Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1427  wc viatsubstructure.smi floppy1.smi 
+ 1428  fetch_smiles_quick.sh -v -c 2 -X X -Y Y floppy1.smi viatsubstructure.smi | wc
+ 1429  wc X Y
+ 1430  vf -n 90 -Z -COW X
+ 1431  history
+ 1432  vf -n 90 -Z -COW X
+ 1433  tsubstructure -v -A I -s '[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]' -m viatsubstructure Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1434  fetch_smiles_quick.sh -v -c 2 -X X -Y Y floppy1.smi viatsubstructure.smi | wc
+ 1435  wc X Y
+ 1436  vf -n 90 -Z -COW Y
+ 1437  less Y
+ 1438  fetch_smiles_quick.sh 
+ 1439  fetch_smiles_quick.sh -w -v -c 2 -X X -Y Y floppy1.smi viatsubstructure.smi | wc
+ 1440  tsubstructure -v -A I -s '[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>1G0]~[R0D>0G0]' -m viatsubstructure Seeds_all.filtered.RRS.unique.new_IDs.fusedRings.smi | vf -COW -n 90 -
+ 1441  lslth
+ 1442  wc t ok1.smi 
+ 1443  mv t ok1.smi 
+ 1444  vf -n 90 -Z -COW -n 90 ok1.smi 
+ 1445  vf -n 90 -Z -COW -n 90 ok1.smi 
+ 1446  vi strongly_fused.qry
+ 1447  jobs
+ 1448  vi stronly_fused.qry
+ 1449  tsubstructure -q stronly_fused.qry ok1.smi 
+ 1450  echoqry  stronly_fused.qry 
+ 1451  less stronly_fused_echo.qry 
+ 1452  jobs
+ 1453  fg
+ 1454  tsubstructure -q stronly_fused.qry ok1.smi 
+ 1455  tsubstructure -m - -q stronly_fused.qry ok1.smi | vf -COW -n 60 -
+ 1456  fg
+ 1457  mv stronly_fused.qry strongly_fused.qry 
+ 1458  cat strongly_fused.qry 
+ 1459  jobs
+ 1460  rm stronly_fused_echo.qry 
+ 1461  vi strongly_fused.qry 
+ 1462  tsubstructure -m - -q stronly_fused.qry ok1.smi | vf -COW -n 60 -
+ 1463  tsubstructure -m - -q strongly_fused.qry ok1.smi | vf -COW -n 60 -
+ 1464  jobs
+ 1465  vi strongly_fused.qry 
+ 1466  tsubstructure -m - -q strongly_fused.qry ok1.smi | vf -COW -n 60 -
+ 1467  fg
+ 1468  vi strongly_fused.qry 
+ 1469  tsubstructure -m - -q strongly_fused.qry ok1.smi | vf -COW -n 60 -
+ 1470  fg
+ 1471  vi strongly_fused.qry 
+ 1472  cp strongly_fused.qry /home/rx87851/dirk/
+ 1473  history > whatwedid

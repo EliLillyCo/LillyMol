@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/apps/gc3tk/c3tk-core/data/PLC/LARR/Nalkylation
+rxnFile=Nalkylation.rxn
+reagents=amine benzylHalide
+amine=amineFilterRule
+benzylHalide=benzylHalideFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+benzylHalideTransformationFile=benzylHalideTransformationRule.rxn

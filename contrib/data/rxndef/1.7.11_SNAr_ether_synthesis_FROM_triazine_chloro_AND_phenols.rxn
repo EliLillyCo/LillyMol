@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.7.11_SNAr_ether_synthesis_FROM_triazine_chloro_AND_phenols")
+  (0 Scaffold
+     (A C smarts "c1(Cl)ncncn1")
+     (A I remove_atom 1)
+  )
+  (1 Sidechain
+     (A C smarts "[OD1H]-a")
+     (A I join (0 0))
+  )
+)

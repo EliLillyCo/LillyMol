@@ -1,0 +1,30 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "Spiro fused")
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 4)
+    (A I min_nrings 2)
+  )
+  (1 Query_Atom
+    (A I ring_id 1)
+    (A I min_nrings 1)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I ring_id 1)
+    (A I min_nrings 1)
+    (A I single_bond 0)
+  )
+  (3 Query_Atom
+    (A I ring_id 2)
+    (A I min_nrings 1)
+    (A I single_bond 0)
+  )
+  (4 Query_Atom
+    (A I ring_id 2)
+    (A I min_nrings 1)
+    (A I single_bond 0)
+  )
+)

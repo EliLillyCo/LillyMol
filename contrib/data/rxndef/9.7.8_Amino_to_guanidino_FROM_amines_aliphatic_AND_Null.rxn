@@ -1,0 +1,17 @@
+(0 Reaction
+  (A C Comment "9.7.8_Amino_to_guanidino_FROM_amines_aliphatic_AND_Null")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "C=[NH] C=N")
+     (A C smarts "C=[NH]") 
+     (A I join (0 0))
+  )
+  (2 Sidechain
+     (A C smiles "[NH2]C N")
+     (A C smarts "[NH2]C")
+     (A I remove_atom 1)
+     (A C join "1.0 0")
+  )
+)

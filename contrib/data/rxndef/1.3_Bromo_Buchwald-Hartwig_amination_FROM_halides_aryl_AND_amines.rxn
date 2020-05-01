@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.3_Buchwald_Hartwig_amination_FROM_halides_aryl_AND_amines")
+  (0 Scaffold
+     (A C smarts "[Br,I,Cl]-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a") 
+     (A I join (1 0))
+  )
+)

@@ -1,0 +1,16 @@
+(0 Reaction
+  (A C Comment "4.2.17_1,3-Benzoxazole_synthesis_FROM_amines_aliphatic_primary_AND_o_amino_phenols")
+  (0 Scaffold
+     (A C smarts "[NH2]-[CX4]") 
+  )
+  (1 Sidechain
+     (A C smarts "[OD1H]-c1c([NH2])cccc1")
+  )
+  (2 Sidechain
+     (A C smiles "C Carbon")
+     (A C smarts "C") 
+     (A I join (0 0))
+     (A C join "1.0 0")
+     (A C join "1.3 0 2")
+  )
+)

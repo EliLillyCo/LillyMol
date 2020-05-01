@@ -1,0 +1,9 @@
+(0 Query
+  (A C Comment "halides_benzyl")
+  (A I Version 2)
+  (A I embeddings_do_not_overlap 1)
+
+  # Aliphatic C must be fully substituted; any neighboring atom allowed 
+  #(A C smarts "[I,Br,Cl;D1][CX4]-c")
+  (A C smarts "[I,Br,Cl;D1][CH2]-c")
+)

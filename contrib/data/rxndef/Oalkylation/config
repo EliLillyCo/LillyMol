@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/apps/gc3tk/c3tk-core/data/PLC/LARR/Oalkylation
+rxnFile=Oalkylation.rxn
+reagents=phenol benzylHalide
+phenol=phenolFilterRule
+benzylHalide=benzylHalideFilterRule
+phenolTransformationFile=phenolTransformationRule.rxn
+benzylHalideTransformationFile=benzylHalideTransformationRule.rxn

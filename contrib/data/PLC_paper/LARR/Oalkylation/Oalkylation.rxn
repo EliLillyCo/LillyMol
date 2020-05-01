@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "O-Alkylation")
+  (0 Scaffold
+     (A C smarts "[OD1H]-c:[aD2]")
+  )
+  (1 Sidechain
+     (A C smarts "[I,Br,Cl;D1][CH2]-c") 
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

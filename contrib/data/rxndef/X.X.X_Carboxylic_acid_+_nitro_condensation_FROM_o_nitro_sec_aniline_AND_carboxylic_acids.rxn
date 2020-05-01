@@ -1,0 +1,15 @@
+(0 Reaction
+  (A C Comment "X.X.X_Carboxylic_acid_+_nitro_condensation_FROM_o_nitro_sec_aniline_AND_carboxylic_acids.rxn")
+  (0 Scaffold
+     (A C smarts "N(=O)(=O)a@a[NH][$(c),$([CT1X4])]")
+     (A I remove_atom 1 2)
+  )
+  (1 Sidechain
+     # Std query is below in comments; should we update as well:
+     # (A C smarts "[OD1]-[CX3T2](=O)")
+     (A C smarts "C([$(c),$([CT0]),$([CT>0X4])])(=O)([OH])")
+     (A I remove_atom 3)
+     (A I join (0 0))
+  )
+)
+

@@ -1,0 +1,15 @@
+(0 Reaction
+  (A C Comment "4.1.1_1,2,3-Triazole_synthesis_FROM_alkynes_terminal_AND_azide")
+  (0 Scaffold
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/alkynes_terminal.qry")
+     #(A C smarts "[CD1]#[CT0]-[CG0,c]")
+     (A I double_bond (0 1))
+  )
+  (1 Sidechain
+     (A C smarts "N=N#N") 
+     (A I single_bond (0 1))
+     (A I double_bond (1 2))
+     (A I join (0 0))
+     (A I join (1 2))
+  )
+)

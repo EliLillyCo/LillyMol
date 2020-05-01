@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "boronics_aliphatic")
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[BD3](!@C=C)(-O)-O")
+)

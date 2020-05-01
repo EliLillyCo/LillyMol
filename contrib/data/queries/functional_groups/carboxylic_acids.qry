@@ -1,0 +1,9 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "carboxylic_acids")
+  # the other substituent must be a carbon; must have 2 carbons
+  # See def in rxn "X.X.X_Carboxylic_acid_+_nitro_condensation_FROM_o_nitro_sec_aniline_AND_carboxylic_acids.rxn"
+  #(A C smarts "C([$(c),$([CT0]),$([CT>0X4])])(=O)([OH])")
+  (A C smarts "[OD1]-[CX3T2](=O)")
+)
+

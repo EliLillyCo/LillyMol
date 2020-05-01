@@ -1,0 +1,10 @@
+(0 Reaction
+  (A C Comment "9.7.61_Ester_hydrolysis_FROM_esters_methyl_ethyl_AND_Null")
+  (0 Scaffold
+     #(A C smarts "[#6][CX3](=O)[OX2][#6]") 
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/esters_methyl_ethyl.qry")
+     (A I break_bond (3 4))
+     (A I remove_fragment 4)
+  )
+)
+

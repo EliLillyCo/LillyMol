@@ -1,0 +1,14 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "alkynes_internal_non_activated")
+  # [CH0;!$(CC=O);!$(CS=O)]#[CH0;!$(CC=O);!$(CS=O)] - suggestion
+  # (A C smarts "[CH0T0]-([!$(C=O);!$(S=O)])#[CH0T0]-([!$(C=O);!$(S=O)])") - old
+
+  (A C smarts "[CH0]#[CH0]")
+  (1 Environment_no_Match 
+  	(A I single_bond (0 1))
+	(A C smarts "C=O")
+	(A C smarts "S=O")
+	(A C smarts "C#N")
+  )
+)

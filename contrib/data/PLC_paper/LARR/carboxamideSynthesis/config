@@ -1,0 +1,8 @@
+rxnRoot=/lrlhps/users/c148043/aslspace/rxnRepo/LARR_Dev/carboxamideSynthesis
+rxnFile=carboxamideSynthesis.rxn
+reagents=amine carbonMonoxide arylHalide 
+reagentsInherentType=default co.smi default
+amine=amineFilterRule
+arylHalide=arylHalideFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+arylHalideTransformationFile=arylHalideTransformationRule.rxn

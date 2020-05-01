@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "sulfonyl_n_aromatic_nedg")
+  (A C Comment "sulfonyl_n_aromatic_nedg")
+  (A I Version 2)
+  (A I min_aromatic_ring_count 1)
+
+  (0 Ring_Specifier
+    (A I aromatic 1)
+    (A I min_heteroatom_count 1)
+    (A C environment "[nD3]-S(=O)(=O)&&0[aD3]-[G0;CH>0,O,N]")
+  )
+)

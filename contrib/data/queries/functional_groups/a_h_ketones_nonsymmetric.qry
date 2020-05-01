@@ -1,0 +1,7 @@
+(0 Query
+  (A C Comment "a_h_ketones_nonsymmetric")
+  (A I Version 2)
+  (A C smarts "[OD1]=[CD3T1]([$([cT0]),$([CD4T0])])[CH>1T0]")
+#  (A C smarts "[OD1]=[CD3T1]([$(c),$([CX4]),$(C~[!#6])])[CH>1T0]")
+)
+

@@ -1,0 +1,6 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "acrolein")
+  #(A C smarts "[HC](=O)[#6]=[#6]")
+  (A C smarts "[HC](=O)C=C")
+)

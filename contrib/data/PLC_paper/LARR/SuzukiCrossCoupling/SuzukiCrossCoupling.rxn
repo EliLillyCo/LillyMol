@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "Suzuki Cross Coupling")
+  (0 Scaffold
+     (A C smarts "Br-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[BD3](!@[#6]=[#6])(O)-O") 
+     (A I break_bond (0 1))
+     (A I remove_fragment 0)
+     (A I join (1 1))
+  )
+)

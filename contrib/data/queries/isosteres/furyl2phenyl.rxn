@@ -1,0 +1,12 @@
+(0 Reaction
+  (0 Scaffold
+    (A C smarts "[#8,#16;D2]1:c:c:c:c1")
+    (A I remove_atom 0)
+  )
+  (1 Sidechain
+    (A C smiles "C=C")
+    (A C smarts "C=C")
+    (A I join (1 0))
+    (A I join (4 1))
+  )
+)

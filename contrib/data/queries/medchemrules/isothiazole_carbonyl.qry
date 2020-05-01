@@ -1,0 +1,5 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "isothiazole_carbonyl")
+  (A C smarts "[OD1]=c1[nD3][o,s]:[#6]=,:[#6]1")
+)

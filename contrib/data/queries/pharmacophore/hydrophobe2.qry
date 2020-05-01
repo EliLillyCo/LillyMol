@@ -1,0 +1,10 @@
+(0 Query
+  (A C Comment "hydrophobe")
+  (0 Query_Atom
+    (A C smarts "[#6D>1,Cl,Br,I,SD2T0]")
+  )
+  (0 environment_no_match
+    (A I bond 0)
+    (A C smarts "[#8,#7,SH]")
+  )
+)

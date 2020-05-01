@@ -1,0 +1,123 @@
+diaminal_acyclic.qry
+# Added Aug 96 
+sulfonylmichael.qry
+trifluoroacetate_ester.qry
+sulfonyl_n_aromatic_nedg.qry
+steve1.qry
+
+# Omit, Jun 97
+# lots1.qry
+
+vinyl_cyano_2.qry
+vinyl_nitro.qry
+
+cyanine_dye.qry
+
+acyl_aromatic_nn.qry
+
+alkyl_iodide.qry
+acid_halide.qry
+
+allene.qry
+anthracene_phenanthrene.qry
+five_valent_nitrogen.qry
+acyl_arom_n.qry
+polyphenol.qry
+
+# Added Mar 98
+
+diazo_cyclic.qry
+phenol_phosphate_ester.qry
+thio_ester_thione_acyclic.qry
+ccl3.qry
+
+# Added mar 98
+
+diphosphate.qry
+
+# Added Apr 98
+
+isoamide_acyclic.qry
+
+# Added Apr 98
+
+vinyl_ether_thioate_isoamide.qry
+vinyl_sulphide.qry
+
+# Moved from rejections Feb 99
+
+vinyl_sulfone_2.qry
+
+# Jan 2001. 
+
+8_aminoquinoline.qry
+9_aminoacridine.qry
+quaternary_aryl.qry
+activated_ester.qry
+n_oxide.qry
+quat_schiff_base.qry
+melamine.qry
+
+#Jul 2001. 
+
+naphthalene_sulfonate.qry
+amino_naphthalene.qry
+sulfimine.qry
+too_many_sulfonate.qry
+phenylenediamine.qry
+
+# Aug 01
+
+isocyano.qry
+
+# Dec 02. Changed S to never aromatic under Pearlman rules, so some queries
+# now need Daylight aromaticity
+
+dithio_olefin.qry
+
+# Dec 03 
+
+penicillin_cephalosporin.qry
+biotin.qry
+alkyne_michael.qry
+biguanide.qry
+
+# Jan 2004
+
+alkyl_sulfite.qry
+phosphate_ester.qry
+
+# Mar 2004
+
+alkyl_fluoride_activated.qry
+lucifer_yellow.qry
+
+diacylhydrazide.qry
+tropolone.qry
+too_many_aromatic_rings_in_ring_system.qry
+ring_system_too_large.qry
+ring_system_too_large_with_aromatic.qry
+4_valent_sulphur_2_connections.qry
+michael_rejected.qry
+vinyl_halide_3_halogens.qry
+strongly_fused_ring_system.qry
+
+azapteridine.qry
+
+halogenated_aromatic.qry
+
+# Jan 2005
+
+isothiourea_sulfonamide.qry
+
+nitroxyl.qry
+vinyl_thioether.qry
+acyl_enol.qry
+iminal.qry
+michael_thione.qry
+dicyanomethylene.qry
+imino_oxime.qry
+amino_ester.qry
+halo_imine.qry
+sulfonyl_hydrazone.qry
+divinyl_carbonyl.qry

@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "amines_aliphatic_secondary_acyclic")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[NR0D2H](-[CX4])-[CX4]")
+)

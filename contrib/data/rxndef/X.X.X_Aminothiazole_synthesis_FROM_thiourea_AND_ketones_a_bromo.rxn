@@ -1,0 +1,16 @@
+(0 Reaction
+  (A C Comment "X.X.X_Aminothiazole_synthesis_FROM_thiourea_AND_ketones_a_bromo")
+  (0 Scaffold
+     (A C smarts "S=C([NH2])[ND2H]-[CX4]")
+     (A I single_bond (0 1))
+     (A I double_bond (1 2))     
+  )
+  (1 Sidechain
+     (A C smarts "[OD1]=[CD3T1]([$(c),$([CX4]),$(C~[!#6])])[CH>0T1]Br") 
+     (A I remove_atom 0)
+     (A I remove_atom 4)
+     (A I double_bond (1 3))
+     (A I join (0 3))
+     (A I join (2 1))
+  )
+)

@@ -1,0 +1,22 @@
+(0 Query
+  (A C Comment "Hydrogen bond donor")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number (7 8))
+    (A I min_hcount 1)
+    (3 Query_Atom_Specifier
+      (A I Rejection 1) # don't want no 
+      (A I atomic_number 7) #amine if it is
+      (A I ncon (1 2)) # primary or secondary
+      (A I formal_charge 0) #uncharged
+      (A I aromatic 0) #aliphatic
+      (A I vinyl 0) #no vinyl system attached
+      (A I aryl 0) #no aromatic system attached
+      (A I attached_heteroatom_count 0) #and !!!! no heteroatom attached
+    )
+  )
+  (1 Environment_No_Match
+    (A I single_bond 0)
+    (A C smarts "[ar6]([aD3]-[R0D>1])[aD3]-[R0D>1]")
+  )
+)

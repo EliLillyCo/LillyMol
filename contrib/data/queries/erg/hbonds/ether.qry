@@ -1,0 +1,20 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Ether")
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I aryl 0)
+    (A I aromatic 0)
+  )
+  (1 Environment_No_Match
+    (A I single_bond 0)
+    (1 Query_Atom
+    )
+    (2 Query_Atom
+      (A I atomic_number 8)
+      (A I double_bond 1)
+    )
+    (A C smarts "CO")
+  )
+)

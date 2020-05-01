@@ -1,0 +1,25 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "amides")
+  #[N;!$(N(C=O)C=O);!$(N[N,S,O,F,Cl,Br,I])]C(=O)[#6] - suggestion
+  #(A C smarts "[OD1]=[CD3R0](-[#6])-[NT0]-[!$(C=O)]") - old
+
+  # amides_aliphatic
+  (0 Query
+    (A I version 2)
+    (A C smarts "[OD1]=[CD3R0](-C)-[NT0G0]")
+    (1 Environment_no_Match 
+       (A I single_bond (3))
+       (A C smarts "C=O")
+    )
+  )
+  # amides_aromatic
+  (1 Query
+    (A I version 2)
+    (A C smarts "[OD1]=[CD3R0](-c)-[NT0G0]")
+    (1 Environment_no_Match 
+       (A I single_bond (3))
+       (A C smarts "C=O")
+    )
+  )
+)

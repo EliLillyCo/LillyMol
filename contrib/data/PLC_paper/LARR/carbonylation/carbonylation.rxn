@@ -1,0 +1,16 @@
+(0 Reaction
+  (A C Comment "Carbonylation")
+  (0 Scaffold
+     (A C smarts "[Br]-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smiles "O=C=O CarbonDioxide")
+     (A C smarts "O=C=O") 
+     (A I single_bond (1 2))
+     (A I join (1 1))
+  )
+)
+
+
+

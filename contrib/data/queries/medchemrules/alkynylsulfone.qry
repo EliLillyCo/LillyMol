@@ -1,0 +1,33 @@
+(0 Query
+  (A C Comment "alkynylsulfone")
+  (A C Comment "alkynylsulfone")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 4)
+    (A I nbonds 6)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 4)
+    (A I single_bond 0)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I min_nbonds 3)
+    (A I triple_bond 3)
+  )
+)

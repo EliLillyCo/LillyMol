@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "O-Biarylation phenol transformation rule")
+  (0 Scaffold
+     (A C smarts "[OD1H]-c")
+     (A I isotope (0 9))
+  )
+)

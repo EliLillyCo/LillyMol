@@ -1,0 +1,46 @@
+(0 Query
+  (A C Comment "branched")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  
+  #central atom of branched system - must have at least 3
+  #connections, otherwise it is not branched!
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I nrings 0)
+  )
+  #cap atom 1
+  (1 Query_Atom
+    (A I bond 0)
+    (A I atomic_number (6 9 17 35 53)) 
+    (A I ncon 1)
+    (A I ncon 1)
+    (A I isotope 0)
+    (A I include_in_embedding 0)
+  )
+  #cap atom 2
+  (2 Query_Atom
+    (A I bond 0)
+    (A I atomic_number (6 9 17 35 53))
+    (A I ncon 1)
+    (A I isotope 0)
+    (A I include_in_embedding 0)
+  )
+  #cap atom 3
+  (3 Query_Atom
+    (A I bond 0)
+    (A I atomic_number (6 9 17 35 53)) 
+    (A I ncon 1)
+    (A I isotope 0)
+    (A I include_in_embedding 0)
+  )
+  
+  #don't want any isotopically labelled atom attached to the 
+  #central C
+  (4 Environment_No_Match
+    (A I bond 0)
+    (5 Query_Atom
+      (A I min_isotope 1)
+    )
+  )  
+)

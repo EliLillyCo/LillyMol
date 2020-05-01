@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "acyl_oxime")
+  (A I version 2)
+# (A C smarts "[#6]=,:[#7][#8][#6](=O)")
+  (A C smarts "O=[#6][#8][#7]=,:[#6]")
+)

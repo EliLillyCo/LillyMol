@@ -1,0 +1,105 @@
+# RuleClass rings
+# SubClass polyaromatic
+
+# Feb 2004. Change to 60 demerits
+# Sep 2010. Change to rejection
+
+(14 Query
+  (A I min_nrings 3)
+  (A C Comment "anthracene_het")
+  (A I min_nrings 3)
+  (A I one_embedding_per_start_atom 1)
+  (A I min_heteroatom_count 1)
+  (1 Ring_System_Specifier
+    (A I min_nrings 3)
+    (A I min_heteroatom_count 1)
+    (A I min_aromatic_ring_count 3)
+  )
+  (A I Version 2)
+  (0 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+  )
+  (1 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 0)
+  )
+  (2 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 1)
+  )
+  (3 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 2)
+  )
+  (4 Query_Atom
+    (A I ncon 3)
+    (A I min_nrings 2)
+    (A I aromatic 1)
+    (A I bond 3)
+  )
+  (5 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 4)
+  )
+  (6 Query_Atom
+    (A I ncon 3)
+    (A I min_nrings 2)
+    (A I aromatic 1)
+    (A I bond 5)
+  )
+  (7 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 6)
+  )
+  (8 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 7)
+  )
+  (9 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 8)
+  )
+  (10 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 9)
+  )
+  (11 Query_Atom
+    (A I ncon 3)
+    (A I min_nrings 2)
+    (A I aromatic 1)
+    (A I bond 10)
+    (A I bond 6)
+  )
+  (12 Query_Atom
+    (A I min_ncon 2)
+    (A I min_nrings 1)
+    (A I aromatic 1)
+    (A I bond 11)
+  )
+  (13 Query_Atom
+    (A I ncon 3)
+    (A I min_nrings 2)
+    (A I aromatic 1)
+    (A I bond 12)
+    (A I bond 0)
+    (A I bond 4)
+  )
+)

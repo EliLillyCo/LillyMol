@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "halides_hetero")
+  (A I Version 2)
+  (A C smarts "[Br,I][/IWhr1ar6]||[Br,I,Cl]c1ncccc1||[Br,I,Cl]c1ccncc1||[Br,I,Cl]C1[S,O,N]C=C[S,O,N]=1")
+)

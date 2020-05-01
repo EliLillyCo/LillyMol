@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "6.1.6_N-Fmoc_deprotection_FROM_fmoc_AND_Null")
+  (0 Scaffold
+     (A C smarts "N(C)C(=O)OCC1c2ccccc2-c3c1cccc3||[HN](c)(C(=O)OCC1c2ccccc2-c3c1cccc3)") 
+     (A I break_bond 0 2)
+     (A I remove_fragment 2)
+  )
+)
+
+
+

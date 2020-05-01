@@ -1,0 +1,6 @@
+(0 Query
+  (A C comment "Polyhalogenated")
+  (0 Ring_Specifier
+    (A C environment ">1[R]-[F,Cl,Br,I]")
+  )
+)

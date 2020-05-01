@@ -1,0 +1,26 @@
+(0 Query
+  (A C Comment "thiocyanate")
+  (A C Comment "thiocyanate")
+  (A I Version 2)
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 1)
+    (A I nbonds 3)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 4)
+    (A I triple_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I single_bond 1)
+  )
+)

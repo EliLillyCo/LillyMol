@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "alkynes_terminal_activated")
+  # [C;($(CC=O),$(CS=O),$(CC#N))]#[CH] - suggestion
+
+  (A C smarts "[CD1]#C-([$(C=O),$(S=O),$(C#N)])")
+)

@@ -1,0 +1,22 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "alkynes_internal_activated")
+  # [C;($(CC=O),$(CS=O),$(CC#N))]#[CH0] - suggestion
+
+  # one-sided activation 
+  (0 Query
+    (A I version 2)
+    (A C smarts "[CH0]#C-([$(C=O),$(S=O),$(C#N)])")
+    (1 Environment_no_Match 
+       (A I single_bond (0))
+       (A C smarts "C=O")
+       (A C smarts "S=O")
+       (A C smarts "C#N")
+    )
+  )
+  # two-sided activation
+  (1 Query
+    (A I version 2)
+    (A C smarts "([$(C=O),$(S=O),$(C#N)]-C#C-([$(C=O),$(S=O),$(C#N)])")
+  )
+)

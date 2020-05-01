@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/c148043/aslspace/rxnRepo/LARR_Dev/beta-esterHydrolysis-amideSynthesis
+rxnFile=beta-esterHydrolysis-amideSynthesis.rxn
+reagents=amine ester-acid
+amine=amineFilterRule
+ester-acid=ester-acidFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+ester-acidTransformationFile=ester-acidTransformationRule.rxn

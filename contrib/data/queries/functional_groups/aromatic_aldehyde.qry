@@ -1,0 +1,5 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "aromatic_aldehyde")
+  (A C smarts "[HC](=O)c")
+)

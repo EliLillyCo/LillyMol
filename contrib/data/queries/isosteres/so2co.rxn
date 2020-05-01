@@ -1,0 +1,9 @@
+(0 Reaction
+  (A C Comment "SO->CO")
+  (0 Scaffold
+    (A C smarts "[SD<4v<5]=O")
+    (A I one_embedding_per_start_atom 1)
+    (A C change_element "0 C")
+    (A I remove_chiral_centre 0)
+  )
+)

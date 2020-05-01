@@ -1,0 +1,8 @@
+(0 Query
+
+
+  (A C Comment "isothiourea")
+  (A D numeric_value 60)
+  (A I Version 2)
+  (A C smarts "[SD2]-[CR0](=N)-N")
+)

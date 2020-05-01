@@ -1,0 +1,19 @@
+# RuleClass other
+# SubClass DNA
+
+# Mar 2004. Change to demerit
+
+(0 Query
+  (A I Version 2)
+  (A D numeric_value 40)
+  (A C Comment "dna_intercalator_1")
+  (A C Comment "dna_intercalator_1")
+  (A I min_nrings 4)
+  (A I min_natoms 23)
+  (A I min_aromatic_ring_count 4)
+  (0 ring_system_specifier
+    (A I nrings 4)
+#   (A I aromatic_ring_count 4)     // doesn't work for some reason
+  )
+  (A C smarts "N-C-C-N-c1c2c(=O)c3c(n4anc(cc1)c24)cccc3")
+)

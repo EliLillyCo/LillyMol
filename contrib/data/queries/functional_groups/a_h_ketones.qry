@@ -1,0 +1,21 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "a_h_ketones")
+  (0 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 8)
+      (A I min_hits_needed 1)
+    )
+    (A I do_not_perceive_symmetric_equivalents 1)
+    (A C smarts "[OD1]=[CD3]([/IWsymg8CH>1X4T0])[/IWsymg8CH>1X4T0]") ## using new tsubstructure.sh /IW directives
+  )
+  (1 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 8)
+      (A I min_hits_needed 1)
+    )
+  (A C smarts "[OD1]=[CD3T1]([$([cT0]),$([CD4T0])])[CH>1T0]")
+  )
+)

@@ -1,0 +1,9 @@
+(0 Reaction
+  (A C Comment "SO22CO")
+  (0 Scaffold
+    (A C smarts "[Sv6](=O)=O")
+    (A I one_embedding_per_start_atom 1)
+    (A I remove_atom 2)
+    (A C change_element "0 C")
+  )
+)

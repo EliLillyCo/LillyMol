@@ -1,0 +1,32 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C comment "hydrazines")
+  (A I min_heteroatom_count 2)
+
+  # PLC query
+  #(A C smarts "[ND1H2]-[NG0T1]")
+  #(0 Environment_no_match
+  #  (A I single_bond 1)
+  #  (A C smarts "[C,S;G>0]")
+
+  # [N;!$(NC=O);!$(NS)]-[N;!$(NC=O);!$(NS)] - suggestion
+
+  # primary
+  (0 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 7)
+      (A I min_hits_needed 2)
+    )
+    (A C smarts "[ND1H2]-[NG0H][!$(C=O);!$(S)]")
+   )
+  # any, secondary(?)
+  (1 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 7)
+      (A I min_hits_needed 2)
+    )
+    (A C smarts "[NG0H]([!$(C=O);!$(S)])-[NG0H][!$(C=O);!$(S)]")
+  )
+)

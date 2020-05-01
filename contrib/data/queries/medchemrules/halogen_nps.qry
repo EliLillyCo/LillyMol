@@ -1,0 +1,12 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "halogen_nps")
+  (A C Comment "halogen_nps")
+  (0 Query_Atom
+    (A I atomic_number (9 17 35 53))
+  )
+  (1 Query_Atom
+    (A I atomic_number (7 15 16))
+    (A I single_bond 0)
+  )
+)

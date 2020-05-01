@@ -1,0 +1,5 @@
+# We want to allow boronic acids and esters, but no other forms of boron
+
+(0 query
+  (A C smarts "[$(B);!$(B(-O)-O)]")
+)

@@ -1,0 +1,14 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "alkene_non_activated")
+  (A I do_not_perceive_symmetric_equivalents 1)
+  (A I embeddings_do_not_overlap 1)
+
+  (A C smarts "[CX3]=[CX3]")
+  (1 Environment_no_Match 
+  	(A I single_bond (0 1))
+	(A C smarts "C=O")
+	(A C smarts "S=O")
+	(A C smarts "C#N")
+  )
+)

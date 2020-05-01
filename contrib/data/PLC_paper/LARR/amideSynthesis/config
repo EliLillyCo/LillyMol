@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/amideSynthesis
+rxnFile=amideSynthesis.rxn
+reagents=amine acid
+amine=amineFilterRule
+acid=acidFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+acidTransformationFile=acidTransformationRule.rxn

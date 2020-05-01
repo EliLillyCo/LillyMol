@@ -1,0 +1,9 @@
+(0 Reaction
+  (A C Comment "7.1.1_Nitro_to_amino_FROM_nitro_AND_Null")
+  (0 Scaffold
+    (A C smarts "N(=O)=O||[N+](=O)[O-]")
+    (A I remove_atom (1 2))
+    (A I formal_charge (0 0))
+  )
+)
+

@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "esters_methyl_ethyl")
+  # old
+  # (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])[OX2][$([CH3]),$([CH2][CH3])]")
+
+  (A C smarts "O=C([#6])[OX2][$([CH3]),$([CH2][CH3])]")
+)

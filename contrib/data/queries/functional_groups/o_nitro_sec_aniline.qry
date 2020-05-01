@@ -1,0 +1,5 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "o_nitro_sec_aniline")
+  (A C smarts "N(=O)(=O)a@a[NH][$(c),$([CT1X4])]")
+)

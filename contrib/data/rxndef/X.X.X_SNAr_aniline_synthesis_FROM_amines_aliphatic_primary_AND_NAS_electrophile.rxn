@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "X.X.X_SNAr_aniline_synthesis_FROM_amines_aliphatic_primary_AND_NAS_electrophile")
+  (0 Scaffold
+     (A C smarts "[NH2]-[CX4]")
+  )
+  (1 Sidechain
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/NAS_electrophile.qry")
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/Oalkylation
+rxnFile=Oalkylation.rxn
+reagents=phenol benzylHalide
+phenol=phenolFilterRule
+benzylHalide=benzylHalideFilterRule
+phenolTransformationFile=phenolTransformationRule.rxn
+benzylHalideTransformationFile=benzylHalideTransformationRule.rxn

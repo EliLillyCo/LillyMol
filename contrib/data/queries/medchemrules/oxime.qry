@@ -1,0 +1,18 @@
+# Mar 2004. Change to 20 demerits
+
+(2 Query
+  (A C Comment "oxime")
+  (A C Comment "oxime")
+  (A D numeric_value 20)
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I unsaturation 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I nrings 0)
+    (A I formal_charge 0)
+    (A I single_bond 0)
+  )
+)

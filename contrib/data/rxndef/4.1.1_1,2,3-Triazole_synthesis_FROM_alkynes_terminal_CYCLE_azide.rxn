@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "4.1.1_1,2,3-Triazole_synthesis_FROM_alkynes_terminal_CYCLE_azide")
+  (0 Scaffold
+     (A C smarts "[CD1]#[CT0]-[CG0,c].N#N=N")
+     (A I double_bond (0 1))
+     (A I single_bond (4 5))
+     (A I double_bond (3 4))
+     (A I single_bond (0 5))
+     (A I single_bond (1 3))
+  )
+)

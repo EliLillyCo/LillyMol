@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/BuchwaldCrossCoupling
+rxnFile=BuchwaldCrossCoupling.rxn
+reagents=arylHalide amine
+arylHalide=arylHalideFilterRule
+amine=amineFilterRule
+arylHalideTransformationFile=arylHalideTransformationRule.rxn
+amineTransformationFile=amineTransformationRule.rxn

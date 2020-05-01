@@ -1,0 +1,5 @@
+(0 Query
+  (A I version 2)
+  (A C comment "imines_halide_aromatic")
+  (A C smarts "[/IWxn]:c[Cl,Br]")
+)

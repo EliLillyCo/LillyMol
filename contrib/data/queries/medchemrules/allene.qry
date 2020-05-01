@@ -1,0 +1,13 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "allene")
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 4)
+  )
+  (1 Query_Atom
+    (A I double_bond 0)
+  )
+)

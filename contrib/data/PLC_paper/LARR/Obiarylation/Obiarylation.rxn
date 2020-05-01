@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "O-Biarylation")
+  (0 Scaffold
+     (A C smarts "[OD1H]-c")
+  )
+  (1 Sidechain
+     (A C smarts "[Br;D1]-c") 
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

@@ -1,0 +1,6 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "tetrazole")
+  # need substitution in the c and it should be a carbon aliphatic or aromatic
+  (A C smarts "[nH]1nnn[cT2D3]1")
+)

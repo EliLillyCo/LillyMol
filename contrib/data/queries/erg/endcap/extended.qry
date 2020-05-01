@@ -1,0 +1,37 @@
+(0 Query
+  (A C Comment "extended")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  
+  #central atom of extended system - must have 2
+  #connections, otherwise it is not extended!
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I nrings 0)
+    (A I ncon 2)
+  )
+  #cap atom
+  (1 Query_Atom
+    (A I bond 0)
+    (A I atomic_number (6 9 17 35 53)) 
+    (A I ncon 1)
+    (A I include_in_embedding 0)
+  )
+  #bond atom
+  (2 Query_Atom
+    (A I bond 0)
+    (A I atomic_number (6 16))
+    (A I nrings 0)
+    (A I max_ncon 2)
+    (A I include_in_embedding 0)
+  )
+
+  #don't want any isotopically labelled atom
+  # attached to the bond C
+  (4 Environment_No_Match
+    (A I bond 2)
+    (5 Query_Atom
+      (A I min_isotope 1)
+    )
+  )
+)

@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "oxime")
+  (A I Version 2)
+  (A C smarts "[OH]-N=*")
+)

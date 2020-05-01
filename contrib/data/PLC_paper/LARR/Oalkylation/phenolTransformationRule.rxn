@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "O-Alkylation phenol transformation rule")
+  (0 Scaffold
+     (A C smarts "[OD1H]-c:[aD2]")
+     (A I isotope (0 9))
+  )
+)

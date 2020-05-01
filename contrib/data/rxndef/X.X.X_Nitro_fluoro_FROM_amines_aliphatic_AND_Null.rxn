@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "X.X.X_Nitro_fluoro_FROM_amines_aliphatic_AND_Null")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "Fc1c(N(=O)(=O))cc(C=O)cc1 nitroFl") 
+     (A C smarts "Fc1c(N(=O)(=O))[c,n][c,n](C=O)[c,n][c,n]1") 
+     (A I join (0 8))
+  )
+)

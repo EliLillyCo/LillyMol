@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "X.X.X_O_nitro_sec_aniline_WITH_Carboxylic_acid_FROM_amines_aliphatic_primary_AND_Null")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "N(=O)(=O)c1cccc(C(=O)[OH])c1 onitrosecanilcarbacid")
+     (A C smarts "N(=O)(=O)c1cccc(C(=O)[OH])c1")
+     (A I join (0 4))
+  )
+)
+

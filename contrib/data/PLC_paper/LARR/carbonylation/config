@@ -1,0 +1,5 @@
+rxnRoot=/lrlhps/users/c148043/aslspace/rxnRepo/LARR_Dev/carbonylation/
+rxnFile=carbonylation.rxn
+reagents=arylHalide
+arylHalide=arylHalideFilterRule
+arylHalideTransformationFile=arylHalideTransformationRule.rxn

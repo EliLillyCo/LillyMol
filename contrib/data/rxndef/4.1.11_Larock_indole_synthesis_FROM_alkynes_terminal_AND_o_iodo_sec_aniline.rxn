@@ -1,0 +1,14 @@
+(0 Reaction
+  (A C Comment "4.1.11_Larock_indole_synthesis_FROM_alkynes_terminal_AND_o_iodo_sec_aniline")
+  (0 Scaffold
+     (A C smarts "[CD1]#[CT0]-[CG0,c]") 
+     (A I double_bond (0 1))
+  )
+  (1 Sidechain
+     (A C smarts "Ia@a[NH][$([cT1]),$([CT1X4])]")
+     (A I remove_atom 0)
+     (A I join (0 1))
+     (A I join (1 3))
+  )
+)
+

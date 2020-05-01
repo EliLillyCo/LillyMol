@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.7.11_SNAr_ether_synthesis_FROM_NAS_electrophile_AND_phenols")
+  (0 Scaffold
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/NAS_electrophile.qry")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[OD1H]-a")
+     (A I join (1 0))
+  )
+)

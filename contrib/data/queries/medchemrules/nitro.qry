@@ -1,0 +1,38 @@
+# RuleClass nitrogen
+# SubClass nitro
+
+# Feb 2004. Change to 60 demerits
+
+(0 Query
+  (A I Version 2)
+  (A C Comment "nitro")
+  (A D numeric_value 60)
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I nbonds 5)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (3 Query_Atom
+    (A I aromatic 1)
+    (A I single_bond 0)
+  )
+
+  (4 Environment_no_Match
+    (A I single_bond 0)
+    (A C smarts "[OD1]")
+  )
+)

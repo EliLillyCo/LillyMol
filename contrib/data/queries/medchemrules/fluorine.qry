@@ -1,0 +1,10 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "fluorine")
+  (A I subtract_from_rc 4)
+  (A D numeric_value 20)
+  (A I only_match_largest_fragment 1)
+  (0 Query_Atom
+    (A I atomic_number 9)
+  )
+)

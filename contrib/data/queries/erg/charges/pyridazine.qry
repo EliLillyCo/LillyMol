@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "pyridazine")
+  (A I one_embedding_per_start_atom 1)
+  (A I unique_embeddings_only 1)
+  (A C smarts "n1ncccc1")
+)

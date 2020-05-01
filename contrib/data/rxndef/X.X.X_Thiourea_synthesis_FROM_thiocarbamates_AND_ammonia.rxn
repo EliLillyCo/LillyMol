@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "X.X.X_Thiourea_synthesis_FROM_thiocarbamates_AND_ammonia")
+  (0 Scaffold
+     (A C smarts "S=C(Oc1ncccc1)[ND2H]-[CX4]")
+     (A I break_bond 1 2)
+     (A I remove_fragment 2)
+  )
+  (1 Sidechain
+     (A C smiles "[NH3] ammonia")
+     (A C smarts "[NH3]")
+     (A I join (1 0))
+  )
+)

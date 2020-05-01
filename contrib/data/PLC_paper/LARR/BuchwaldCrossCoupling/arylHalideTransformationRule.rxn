@@ -1,0 +1,8 @@
+(0 Reaction
+  (A C Comment "BuchwaldCrossCoupling arylHalideTransformationRule")
+  (0 Scaffold
+     (A C smarts "[Br,I,Cl]-c:[ncos]")
+     (A I remove_atom 0)
+     (A I isotope (1 9))
+  )
+)

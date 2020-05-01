@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/sulfonamideSynthesis
+rxnFile=sulfonamideSynthesis.rxn
+reagents=amine sulfonylChloride
+amine=amineFilterRule
+sulfonylChloride=sulfonylChlorideFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+sulfonylChlorideTransformationFile=sulfonylChlorideTransformationRule.rxn

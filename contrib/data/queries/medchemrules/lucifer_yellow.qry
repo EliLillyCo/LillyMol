@@ -1,0 +1,12 @@
+(0 Query
+# RuleClass colour
+# SubClass misc
+
+  (A C Comment "lucifer_yellow")
+  (A I Version 2)
+  (0 Ring_System_Specifier
+    (A I min_nrings 3)
+    (A I aromatic_ring_count 2)
+  )
+  (A C smarts "O=C1NC(=O)c2cccc3cccc1c23")
+)

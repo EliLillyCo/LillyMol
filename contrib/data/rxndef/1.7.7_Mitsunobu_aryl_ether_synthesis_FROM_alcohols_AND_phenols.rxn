@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.7.7_Mitsunobu_aryl_ether_synthesis_FROM_alcohols_AND_phenols")
+  (0 Scaffold
+     (A C smarts "[OD1H]-[CX4D2T1]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[OD1H]-c:[aD2]")
+     (A I join (1 0))
+  )
+)

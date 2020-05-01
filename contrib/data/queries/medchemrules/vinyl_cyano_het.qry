@@ -1,0 +1,28 @@
+(4 Query
+  (A C Comment "vinyl_cyano_het")
+  (A C Comment "vinyl_cyano_het")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (A D numeric_value 50)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 1)
+    (A I nbonds 3)
+    (A I formal_charge 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 4)
+    (A I formal_charge 0)
+    (A I triple_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I formal_charge 0)
+    (A I aromatic 0)
+    (A I single_bond 1)
+    (A I unsaturation 1)
+    (A I min_attached_heteroatom_count 1)
+  )
+)

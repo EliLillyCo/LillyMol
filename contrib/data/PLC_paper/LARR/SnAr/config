@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/SnAr
+rxnFile=SnAr.rxn
+reagents=amine heteroHalide
+amine=amineFilterRule
+heteroHalide=heteroHalideFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+heteroHalideTransformationFile=heteroHalideTransformationRule.rxn

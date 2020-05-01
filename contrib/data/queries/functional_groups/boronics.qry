@@ -1,0 +1,25 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C Comment "boronics")
+  (A I one_embedding_per_start_atom 1)
+  (0 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 5)
+      (A I min_hits_needed 1)
+    )
+    (A C smarts "[BD3](!@cc)(-O)-O")
+  )
+  (1 Query
+    (A I version 2)
+    (0 Elements_Needed
+      (A I atomic_number 5)
+      (A I min_hits_needed 1)
+    )
+    (A C smarts "[BD3](!@C=C)(-O)-O")
+  )
+)
+
+#(A C smarts "[BD3](-O)-O")  		- very old, partial
+#(A C smarts "[BD3](!@[#6]=[#6])(O)-O")	- old, wrong
+

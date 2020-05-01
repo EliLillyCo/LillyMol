@@ -1,0 +1,16 @@
+(0 Query
+  (A C Comment "too_many_sulfonate")
+  (0 elements_needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 2)
+  )
+  (0 elements_needed
+    (A I atomic_number 8)
+    (A I min_hits_needed 6)
+  )
+  (A I one_embedding_per_start_atom 1)
+  (A I all_hits_in_same_fragment 1)
+  (A C smarts "[SD4](=O)(=O)-O")
+  (A I Version 2)
+  (A I min_hits_needed 2)
+)

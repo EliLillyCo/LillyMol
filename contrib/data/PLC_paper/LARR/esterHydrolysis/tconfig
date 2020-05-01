@@ -1,0 +1,6 @@
+rxnRoot=/lrlhps/users/c148043/aslspace/rxnRepo/LARR_Dev/esterHydrolysis/
+rxnFile=esterHydrolysis.rxn
+reagents=ester
+ester=esterFilterRule
+esterTransformationFile=esterTransformationRule.rxn
+rxnProductSubstructure="[CX3](=O)[OX2H1]"

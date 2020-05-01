@@ -1,0 +1,9 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "hydrazines_primary")
+  # [NX3H2;!$(NC=O);!$(NS)]-[N;!$(NC=O);!$(NS)] - suggestion
+  (A C smarts "[ND1H2]-[NG0H][!$(C=O);!$(S)]")
+
+  # PLC query
+  #(A C smarts "[ND1H2]-[NG0T1H][$(c),$([CT1X4])]")
+)

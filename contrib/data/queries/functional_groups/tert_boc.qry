@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "tert_boc")
+  # old
+  # (A C smarts "N([#6])([#6])C(=O)OC([CH3])([CH3])[CH3]")
+  (A C smarts "[NT0]([$(c),$([CT1X4])])([$(c),$([CT1X4])])C(=O)OC([CH3])([CH3])[CH3]")
+)

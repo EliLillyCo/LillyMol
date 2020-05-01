@@ -1,0 +1,9 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "hydrazines")
+  (A C smarts "[ND1H2]-[NG0T1]")
+  (0 Environment_no_match
+    (A I single_bond 1)
+    (A C smarts "[C,S;G>0]")
+  )
+)

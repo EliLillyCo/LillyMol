@@ -1,0 +1,19 @@
+(0 Query
+  (A C Comment "nitroso")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (6 7))
+    (A C bond_smarts "1 -,#")
+  )
+)

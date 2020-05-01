@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "sec_aniline_boc")
+  # old
+  # (A C smarts "[NH](c)C(=O)OC([CH3])([CH3])[CH3]")
+  (A C smarts "[NHT0](c)C(=O)OC([CH3])([CH3])[CH3]")
+)

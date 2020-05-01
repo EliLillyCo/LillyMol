@@ -1,0 +1,23 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "vinyl_halide_3_halogens")
+  (A D numeric_value 50)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 0)
+    (A I min_unsaturation 1)
+#   (A I vinyl 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 0)
+    (A I double_bond 0)
+#   (A I vinyl 0)
+  )
+
+  (0 Environment
+    (A C smarts "[Cl,Br,I]")
+    (A I min_hits_needed 3)
+    (A I single_bond (0 1))
+  )
+)

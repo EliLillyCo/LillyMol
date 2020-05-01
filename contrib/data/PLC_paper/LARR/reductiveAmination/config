@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/reductiveAmination
+rxnFile=reductiveAmination.rxn
+reagents=amine aldehyde
+amine=amineFilterRule
+aldehyde=aldehydeFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+aldehydeTransformationFile=aldehydeTransformationRule.rxn

@@ -1,0 +1,9 @@
+(0 Reaction
+  (A C Comment "Suzuki Cross Coupling suzukiBoronic transformation rule")
+  (0 Scaffold
+     (A C smarts "[BD3](!@[#6]=[#6])(O)-O") 
+     (A I break_bond (0 1))
+     (A I remove_fragment 0)
+     (A I isotope (1 9))
+  )
+)

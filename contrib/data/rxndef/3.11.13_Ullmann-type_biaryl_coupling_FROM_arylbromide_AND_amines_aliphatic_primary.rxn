@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "3.11.13_Ullmann-type_biaryl_coupling_FROM_arylbromide_AND_amines_aliphatic_primary")
+  (0 Scaffold
+     (A C smarts "Br-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[ND1H2]-[CX4]")
+     (A I join (1 0))
+  )
+)

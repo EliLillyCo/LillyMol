@@ -1,0 +1,5 @@
+(0 Query
+  (A I version 2)
+  (A C comment "amidines_primary")
+  (A C smarts "[ND1H]=[CD3T2](-[NH2])([$(c),$([CX4]),$(C~[!#6]);!$([#6]-[Cl,Br,F])])") 
+)

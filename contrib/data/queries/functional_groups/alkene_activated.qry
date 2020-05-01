@@ -1,0 +1,8 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "alkene_activated")
+  #(A I do_not_perceive_symmetric_equivalents 1)
+  (A I embeddings_do_not_overlap 1)
+
+  (A C smarts "[CX3]=[CX3]-([$(C=O),$(S=O),$(C#N)])")
+)

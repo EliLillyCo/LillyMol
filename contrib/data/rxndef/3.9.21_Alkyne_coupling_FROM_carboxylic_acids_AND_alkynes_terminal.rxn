@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "3.9.21_Alkyne_coupling_FROM_carboxylic_acids_AND_alkynes_terminal")
+  (0 Scaffold
+     #(A C smarts "[C](=O)([OH])") 
+     (A C smarts "[CX3T2](=O)([OD1])")
+     (A I remove_atom 2)
+  )
+  (1 Sidechain
+     #(A C smarts "[CD1]#[CT0]-[CG0,c]")
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/alkynes_terminal.qry")
+     (A I join (0 0))
+  )
+)

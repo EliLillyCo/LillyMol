@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "Multiple anilines")
+  (A I Version 2)
+  (0 Ring_Specifier
+    (A I aromatic 1)
+    (A C environment ">1a-[NH>0R0]")
+  )
+)

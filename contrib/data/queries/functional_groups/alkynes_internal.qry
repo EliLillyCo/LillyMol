@@ -1,0 +1,8 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "alkynes_internal")
+  (A C smarts "[CH0]#[CH0]")
+
+  # PLC query
+  #(A C smarts "[CG0,c]-[CT0]#[CT0]-[CG0,c]")
+)

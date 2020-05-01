@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "4.1.48_Pyrimidine_synthesis_FROM_guanidines_secondary_primary_AND_ynones")
+  (0 Scaffold
+     (A C smarts "[ND1H]=[CD3T3]([NH2])[NHT0]([$([cT1]),$([CT1X4])])")
+  )
+  (1 Sidechain
+     (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])C#C([$(H),$(c),$([CX4]),$(C~[!#6])])") 
+     (A I remove_atom 0)
+     (A I double_bond (3 4))
+     (A I join (2 1 2))
+     (A I join (0 4))
+  )
+)

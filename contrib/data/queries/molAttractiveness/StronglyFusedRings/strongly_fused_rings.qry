@@ -1,0 +1,5 @@
+(0 Query
+  (0 Ring_System_Specifier
+    (A I min_strongly_fused_ring_count 1)
+  )
+)

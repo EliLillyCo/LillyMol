@@ -1,0 +1,8 @@
+(0 Reaction
+  (A C Comment "Urea Synthesis Isocyanates Transformation Rule")
+  (0 Scaffold
+     (A C smarts "[OD1]=C=[ND2]") 
+     (A I single_bond (1 2))
+     (A I isotope (1 9))
+  )
+)

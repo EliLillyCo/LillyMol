@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "1.3.1_Bromo_Buchwald-Hartwig_amination_FROM_amines_aromatic_AND_arylbromide")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a") 
+  )
+  (1 Sidechain
+
+     (A C smarts "Br-c:[ncos]")
+     (A I remove_atom 0)
+     (A I join (0 1))
+  )
+)

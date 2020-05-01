@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "trityl")
+  # 4 substitutions on core carbon, 
+  #    3 substituents to aromatic carbons and 1 sub to aliphatic nitrogen
+  (A C smarts "c1ccc(cc1)C(N)(c2ccccc2)c3ccccc3")
+)

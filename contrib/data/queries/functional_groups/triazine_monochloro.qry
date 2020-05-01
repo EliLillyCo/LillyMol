@@ -1,0 +1,10 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "triazine_monochloro")
+  (A C smarts "c1ncncn1")
+  (1 Environment
+     (A I single_bond (0 2 4))
+     (A C smarts "Cl")
+     (A I hits_needed (1))
+  )
+)

@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/c148043/aslspace/rxnRepo/LARR_Dev/ureaSynthesis
+rxnFile=ureaSynthesis.rxn
+reagents=amine isocyanates
+amine=amineFilterRule
+isocyanates=isocyanatesFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+isocyanatesTransformationFile=isocyanatesTransformationRule.rxn

@@ -1,0 +1,12 @@
+The present folder contains data provided as supporting information to the paper:
+	A retrosynthetic analysis algorithm implementation
+	IA Watson, J Wang, CA Nicolaou
+	Journal of cheminformatics 11 (1), 1
+	https://doi.org/10.1186/s13321-018-0323-6
+
+The data includes example scripts and commands to run RTSA and 
+perform retrosynthetic analysis as described in the paper. 
+
+The data is provided AS IS and no guarantee of correctness is made. Use at your own risk. 
+
+For feedback, comments, suggestions please contact the paper authors.

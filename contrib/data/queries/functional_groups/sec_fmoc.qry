@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "sec_fmoc")
+  # old
+  #(A C smarts "[HN](C)C(=O)OCC1c2ccccc2-c3c1cccc3")
+  (A C smarts "[NT0H]([$(c),$([CT1X4])])C(=O)O[CD2][CD3]1c2[cD2][cD2][cD2][cD2]c2-c3c1[cD2][cD2][cD2][cD2]3")
+)

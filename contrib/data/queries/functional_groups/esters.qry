@@ -1,0 +1,19 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "esters")
+
+  # esters_aliphatic
+  (0 Query
+    (A I Version 2)
+    (A C smarts "O=C(A)[OX2][#6]")
+  )
+  # esters_aromatic
+  (1 Query
+    (A I Version 2)
+    (A C smarts "O=C(a)[OX2][#6]")
+  )
+)
+
+
+
+

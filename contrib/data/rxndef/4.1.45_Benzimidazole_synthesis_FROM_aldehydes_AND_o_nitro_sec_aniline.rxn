@@ -1,0 +1,14 @@
+(0 Reaction
+  (A C Comment "4.1.45_Benzimidazole_synthesis_FROM_aldehydes_AND_o_nitro_sec_aniline.rxn")
+  (0 Scaffold
+     (A C smarts "[OD1]=[CD2T1H]") 
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "N(=O)(=O)a@a[NH][$(c),$([CT1X4])]")
+     (A I remove_atom 1 2)
+     (A I join (1 0 2))
+     (A I join (1 5))
+  )
+)
+

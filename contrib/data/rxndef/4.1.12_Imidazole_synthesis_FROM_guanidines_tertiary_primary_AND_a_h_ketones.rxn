@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "4.1.12_Imidazole_synthesis_FROM_guanidines_tertiary_primary_AND_a_h_ketones")
+ (0 Scaffold
+     (A C smarts "[ND1H]=[CD3T3]([NH2])[NT0]([$([cT1]),$([CT1X4])])([$([cT1]),$([CT1X4])])")
+  )
+  (1 Sidechain
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/a_h_ketones.qry")
+     (A I remove_atom 0)
+     (A I join (0 1))
+     (A I join (2 3))
+     (A I double_bond (1 3))
+  )
+)

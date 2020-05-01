@@ -1,0 +1,13 @@
+(0 Query
+  (A C Comment "n_s_acyclic")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 2)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 7)
+    (A I single_bond 0)
+  )
+)

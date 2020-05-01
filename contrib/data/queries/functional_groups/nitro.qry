@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "nitro")
+  (A I Version 2)
+  # should be connected to a carbon
+  (A C smarts "O=[NT2D3]=O")
+)

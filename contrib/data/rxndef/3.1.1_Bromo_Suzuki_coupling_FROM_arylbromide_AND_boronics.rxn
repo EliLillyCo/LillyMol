@@ -1,0 +1,17 @@
+(0 Reaction
+  (A C Comment "3.1.1_Bromo_Suzuki_coupling_FROM_arylbromide_AND_boronics")
+  (0 Scaffold
+     (A C smarts "Br-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C query_file "/lrlhps/users/c3tk/repo/gc3tk/c3tk-core/data/queries/functional_groups/boronics.qry")
+     (A I break_bond (0 1))
+     (A I remove_fragment 0)
+     (A I join (1 1))
+  )
+)
+
+#(A C smarts "[BD3](*)(O)-O")
+#(A C smarts "[BD3](!@[#6]=[#6])(O)-O")
+ 

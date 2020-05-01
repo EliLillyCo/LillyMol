@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/Nalkylation
+rxnFile=Nalkylation.rxn
+reagents=amine benzylHalide
+amine=amineFilterRule
+benzylHalide=benzylHalideFilterRule
+amineTransformationFile=amineTransformationRule.rxn
+benzylHalideTransformationFile=benzylHalideTransformationRule.rxn

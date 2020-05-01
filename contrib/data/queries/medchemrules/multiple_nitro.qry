@@ -1,0 +1,33 @@
+# RuleClass nitrogen
+# SubClass nitro
+
+# Two nitro's are always bad
+
+(0 Query
+  (A I Version 2)
+  (A C Comment "multiple_nitro")
+  (A I one_embedding_per_start_atom 1)
+  (A I min_hits_needed 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I nbonds 5)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 0)
+  )
+  (4 Environment_no_Match
+    (A I single_bond 0)
+    (A C smarts "[OD1]")
+  )
+)

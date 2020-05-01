@@ -1,0 +1,43 @@
+(4 Query
+  (A C Comment "ketoamide_cyclic")
+  (A C Comment "ketoamide_cyclic")
+  (A I Version 2)
+  (A I min_nrings 1)
+  (A D numeric_value 50)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 3)
+    (A I nbonds 4)
+    (A I formal_charge 0)
+    (A I nrings 1)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 3)
+    (A I nbonds 4)
+    (A I formal_charge 0)
+    (A I nrings 1)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I formal_charge 0)
+    (A I double_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 1)
+  )
+  (5 Query_Atom
+    (A I atomic_number 7)
+    (A I single_bond 2)
+  )
+)

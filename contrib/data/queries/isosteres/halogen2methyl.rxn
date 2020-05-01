@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "Halogen to methyl")
+  (0 Scaffold
+    (A C smarts "[Cl,Br,I]")
+    (A C change_element "0 C")
+  )
+)

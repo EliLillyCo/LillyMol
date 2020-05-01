@@ -1,0 +1,7 @@
+rxnRoot=/lrlhps/users/c148043/rix/rxnRepo/LARR_Dev/Oarylation
+rxnFile=Oarylation.rxn
+reagents=alkylAlcohol heteroHalide
+alkylAlcohol=alkylAlcoholFilterRule
+heteroHalide=heteroHalideFilterRule
+alkylAlcoholTransformationFile=alkylAlcoholTransformationRule.rxn
+heteroHalideTransformationFile=heteroHalideTransformationRule.rxn

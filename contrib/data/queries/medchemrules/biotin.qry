@@ -1,0 +1,12 @@
+
+(0 Query
+  (A C Comment "biotin")
+  (A I min_nrings 2)
+  (A I Version 2)
+  (0 Ring_System_Specifier
+    (A I nrings 2)
+    (A I non_aromatic_ring_count 2)
+    (A I ring_size 5)
+  )
+  (A C smarts "[SD2r5]1-C-[C;R2]2-N-C(=O)-N-C2-C1")
+)

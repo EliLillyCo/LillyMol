@@ -1,0 +1,16 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C Comment "guanidines_sectert_primary")
+  (A I min_heteroatom_count 3)
+
+  # guanidines_secondary_primary
+  (0 Query
+    (A I Version 2)
+    (A C smarts "[ND1H]=[CD3T3]([NH2])[NHT0]([$([cT1]),$([CT1X4])])")
+  )
+  # guanidines_tertiary_primary
+  (1 Query
+    (A I Version 2)
+    (A C smarts "[ND1H]=[CD3T3]([NH2])[NT0]([$([cT1]),$([CT1X4])])([$([cT1]),$([CT1X4])])")
+  )
+)

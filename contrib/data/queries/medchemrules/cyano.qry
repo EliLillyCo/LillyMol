@@ -1,0 +1,18 @@
+# Mar 2004. Change to skip first cyano
+
+(0 Query
+  (A C Comment "cyano")
+  (A D numeric_value 50)
+  (A I Version 2)
+  (A I subtract_from_rc 1)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 1)
+    (A I nbonds 3)
+    (A I formal_charge 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I triple_bond 0)
+  )
+)

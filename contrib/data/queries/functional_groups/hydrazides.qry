@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "hydrazides")
+  # [N;(!$(NC=O),!$(NS=O))]-N - suggestion
+  (A C smarts "N-([$(C=O),$(S=O)])-N")
+  )
+)

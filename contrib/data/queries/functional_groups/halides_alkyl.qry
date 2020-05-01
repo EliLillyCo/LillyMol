@@ -1,0 +1,13 @@
+(0 Query
+  (A C Comment "halides_alkyl")
+  (A I Version 2)
+  # Aliphatic carbon fully substituted, allow N, S, O, C; easier to not allow P (for example)
+  (A C smarts "[I,Br,Cl]-[CX4]")
+  (1 Environment_no_Match 
+  	(A I single_bond (1))
+	(A C smarts "P")
+  )
+
+  # old
+  # (A C smarts "Br-[CX4T1]")
+)

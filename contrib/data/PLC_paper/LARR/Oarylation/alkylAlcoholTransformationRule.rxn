@@ -1,0 +1,7 @@
+(0 Reaction
+  (A C Comment "O-Arylation alkylAlcohol transformation rule")
+  (0 Scaffold
+     (A C smarts "[OD1H]-[CX4D2T1]")
+     (A I isotope (0 9))
+  )
+)

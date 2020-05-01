@@ -1,0 +1,13 @@
+(0 Query
+  (A I version 2)
+  (A C comment "disulfide")
+  (A I do_not_perceive_symmetric_equivalents 1)
+  (A I embeddings_do_not_overlap 1)
+
+  # [#6]S-[S;($(S[#6]),$([SH]))] - suggestion
+
+  (A C smarts "S([#6])-[$(S[#6]),$([SH>0])]")
+
+  # PLC query
+  #(A C smarts "S=S")
+)

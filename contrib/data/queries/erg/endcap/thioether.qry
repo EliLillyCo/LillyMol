@@ -1,0 +1,27 @@
+(0 Query
+  (A C Comment "thioether")
+  (A I Version 2)
+  
+  #S atom
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I aromatic 0)
+    (A I nbonds 2)
+    (A I attached_heteroatom_count 0)
+  )
+  #cap atom
+  (1 Query_Atom
+    (A I bond 0)
+    (A I atomic_number 6)
+    (A I hcount 3)
+    (A I include_in_embedding 0)
+  )
+  #don't want any isotopically labelled atom attached to the S
+  (4 Environment_No_Match
+    (A I bond 0)
+    (5 Query_Atom
+      (A I min_isotope 1)
+    )
+  )  
+    
+)

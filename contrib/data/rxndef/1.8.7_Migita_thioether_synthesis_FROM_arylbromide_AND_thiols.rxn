@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "1.8.7_Migita_thioether_synthesis_FROM_arylbromide_AND_thiols")
+  (0 Scaffold
+     (A C smarts "Br-c:[ncos]")
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smarts "[SD1H][CT1X4][#6]")
+     (A I join (1 0))
+  )
+)

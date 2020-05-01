@@ -1,0 +1,41 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "reverse_michael_quat")
+  (A C Comment "reverse_michael_quat")
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I nrings 0)
+    (5 Query_Atom_Specifier
+      (A I atomic_number 6)
+    )
+    (6 Query_Atom_Specifier
+      (A I atomic_number 16)
+      (A I unsaturation 2)
+      (A I min_nbonds 5)
+      (A I min_attached_heteroatom_count 2)
+    )
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I unsaturation 0)
+    (A I ring_id 1)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I unsaturation 0)
+    (A I ring_id 2)
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 7)
+    (A I formal_charge 1)
+    (A I ring_id 3)
+    (A I single_bond 3)
+  )
+)

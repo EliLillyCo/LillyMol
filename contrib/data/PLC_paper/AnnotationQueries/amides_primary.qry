@@ -1,0 +1,5 @@
+(0 query
+  (A I version 2)
+  (A C Comment "amides_primary")
+  (A C smarts "[OD1]=[CD3R0]-[NH2]")
+)

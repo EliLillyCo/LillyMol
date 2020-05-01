@@ -1,0 +1,24 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C Comment "alkynes_terminal")
+  #(A C smarts "[CD1]#[CT0]-[CG0,c]")  - old, deprecated
+
+  # primary
+  (0 Query
+    (A I version 2)
+    (A C smarts "[CD1]#C-([$(C=O),$(S=O),$(C#N)])")
+  )
+  # secondary 
+  (1 Query
+    (A I version 2)
+    (A C smarts "[CD1]#C-([!$(C=O);!$(S=O)])")
+  )
+)
+
+  #(A I Version 2)
+  #(A C comment "amidines")
+  #(A I min_heteroatom_count 2)
+  ## old q
+  ##(A C smarts "[ND1H]=[CD3T2]-N")
+  #(A I one_embedding_per_start_atom 1)
+

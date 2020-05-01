@@ -1,0 +1,9 @@
+(0 Query
+  (A C Comment "aminomethyl_ketone_peptide")
+  (A I Version 2)
+  (A C smarts "[NG0]-[CD2]-C(=[O,S,N])[CD3H]-NC=O")
+  (0 Environment_no_Match
+    (A I single_bond 0)
+    (A C smarts "[G>0,a]")
+  )
+)

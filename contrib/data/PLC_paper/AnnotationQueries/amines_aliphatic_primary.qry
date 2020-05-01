@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "amines_aliphatic_primary")
+  (A I Version 2)
+  (A C smarts "[NH2]-[CX4]")
+)

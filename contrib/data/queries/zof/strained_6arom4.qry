@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "Cyclobutyl fused to arom")
+  (A I version 2)
+  (A I min_nrings 2)
+  (A C smarts "[cD3R2]1:[cD3]-C-C1")
+)

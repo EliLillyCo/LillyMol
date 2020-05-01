@@ -1,0 +1,14 @@
+(0 Reaction
+  (A C Comment "4.1.60_Pyrazole_synthesis_FROM_ynones_AND_hydrazines_primary")
+  (0 Scaffold
+     (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])C#C([$(H),$(c),$([CX4]),$(C~[!#6])])") 
+     (A I remove_atom 0)
+     (A I double_bond (1 3))
+     (A I single_bond (3 4))
+  )
+  (1 Sidechain
+     (A C smarts "[ND1H2]-[NG0H][!$(C=O);!$(S)]")
+     (A I join (1 1))
+     (A I join (4 0 2))
+  )
+)

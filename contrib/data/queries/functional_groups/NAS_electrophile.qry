@@ -1,0 +1,155 @@
+(0 Composite_Query
+  (A I version 2)
+  (A C Comment "NAS_electrophile")
+  (A I min_aromatic_rings 1)
+  (A I min_attached_heteroatoms_count 1)
+
+  # 2-chloro-1,3 thiazole
+  (0 Query
+      (A I version 2)
+      (A I min_heteroatom_count 3)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 5)
+         # (A I fused 0)
+         #(A C Environment "1*-[F,Cl]")   # limits the number of [F,Cl] substituents to the ring to 1
+      )
+      (A C smarts "[F,Cl]c1naas1")
+  )
+  # single 6-membered aromatic ring; attachments: halogen, ortho Nitro
+  (1 Query
+      (A I version 2)
+      (A I min_heteroatom_count 4)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I heteroatom_count (0))
+         # (A I fused 0)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      #(A C smarts "[F,Cl]c1c(-N(=O)(=O))aaaa1") 
+      (A C smarts "[F,Cl]c1c([$(N(=O)(=O)),$([N+](=O)[O-])])aaaa1")  # this works; accomodate both charged and non-charged/std form of nitro
+      #(A C smarts "[F,Cl]c1c(-N(=O)(=O))aaaa1||[F,Cl]c1c(-[N+](=O)[O-])aaaa1")  # this does not work, || not accepted
+  )
+  # single 6-membered aromatic ring; attachments: halogen, para Nitro
+  (2 Query
+      (A I version 2)
+      (A I min_heteroatom_count 4)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      #(A C smarts "[F,Cl]c1aac(-N(=O)(=O))aa1") 
+      (A C smarts "[F,Cl]c1aac([$(N(=O)(=O)),$([N+](=O)[O-])])aa1")
+  )
+  # pyrimidine; attachments: halogen (4)
+  (3 Query
+      (A I version 2)
+      (A I min_heteroatom_count 3)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      (A C smarts "[F,Cl]c1ncnaa1")
+  )
+  # pyrimidine; attachments: halogen (2)
+  (4 Query
+      (A I version 2)
+      (A I min_heteroatom_count 3)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      (A C smarts "[F,Cl]c1naaan1")
+  )
+  # pyridine; attachments: ortho Nitro, meta halogen
+  (5 Query
+      (A I version 2)
+      (A I min_heteroatom_count 5)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      #(A C smarts "[F,Cl]c1ac(-N(=O)(=O))naa1") 
+      (A C smarts "[F,Cl]c1ac([$(N(=O)(=O)),$([N+](=O)[O-])])naa1")
+  )
+  # V3 - pyrazine fused; attachments: halogen, EWG
+  (6 Query
+      (A I version 2)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         (A I heteroatom_count (2))
+         (A I fused 1)
+         # (A C Environment "1*-[F,Cl]")
+      )
+      (A C smarts "[F,Cl]c1cnc2aaaac2n1")
+  )
+  # pyridine; attachments: (starting from n) ortho halogen, ortho EWG
+  (7 Query
+      (A I version 2)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+      )
+      (A C smarts "[F,Cl]c1aaaan1")
+      # EWG group definitions
+      (1 Environment
+	     (A I single_bond (2 3 4 5))
+	     (A C smarts "N=O")
+	     (A C smarts "C=O")
+	     (A C smarts "C#N")
+	     (A C smarts "S=O")
+      )
+  )
+  # V3 - pyrazine; attachments: halogen, EWG
+  (8 Query
+      (A I version 2)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 6)
+         # (A I fused 0)
+      )
+      (A C smarts "[F,Cl]c1naana1")
+      # Cl_EWG group definitions
+      (1 Environment
+	     (A I single_bond (3 4 6))
+	     (A C smarts "N=O")
+	     (A C smarts "C=O")
+	     (A C smarts "C#N")
+	     (A C smarts "S=O")
+	     (A C smarts "Cl")
+      )
+  )
+  # V3 - 2-chloro-1,3 thiazole fused
+  (9 Query
+      (A I version 2)
+      (A I min_heteroatom_count 4)
+      (0 Ring_Specifier
+         (A I aromatic 1)
+         (A I ring_size 5)
+         (A I heteroatom_count (2))
+         (A I fused 1)
+         (A C Environment "1*-[F,Cl]")   
+      )
+      (A C smarts "[F,Cl]c1nc2aaaac2s1")
+      (1 Environment
+  	     (A I single_bond (4 5 6 7))
+  	     (A C smarts "N=O")
+  	     (A C smarts "C=O")
+  	     (A C smarts "C#N")
+  	     (A C smarts "S=O")
+  	     (A C smarts "Cl")
+      )
+  )
+)
+

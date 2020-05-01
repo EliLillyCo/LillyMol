@@ -1,0 +1,7 @@
+#define	amide (A C smarts "C(=O)N") \
+		(A C smarts "S=O")
+#define sulfonyl "S=O"
+#define	nitro "N(=O)=O"
+#define	sulfo "S(=O)=O"
+#define	cyano "C#N"
+#define	CF3 "C(F)(F)F"

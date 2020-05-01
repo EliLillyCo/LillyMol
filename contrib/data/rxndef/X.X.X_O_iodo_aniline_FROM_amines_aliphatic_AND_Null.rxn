@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "X.X.X_O_iodo_aniline_FROM_amines_aliphatic_AND_Null")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]")
+  )
+  (1 Sidechain
+     (A C smiles "Ic1c([NH2])ccc(C=O)c1 oiodoanil")
+     (A C smarts "Ic1c([NH2])ccc(C=O)c1")
+     (A I join (0 7))
+  )
+)
+

@@ -1,0 +1,15 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C Comment "ynones")
+  # old 
+  # (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])C#C([$(H),$(c),$([CX4]),$(C~[!#6])])")
+
+  (0 Query
+    (A I version 2)
+    (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])C#C([$(c),$([CX4]),$(C~[!#6])])")
+  )
+  (1 Query
+    (A I version 2)
+    (A C smarts "O=C([$(c),$([CX4]),$(C~[!#6])])C#[CD1]")
+  )
+)

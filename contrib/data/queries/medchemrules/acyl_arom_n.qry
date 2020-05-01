@@ -1,0 +1,21 @@
+(0 Query
+  (A C Comment "acyl_arom_n")
+  (A I Version 2)
+  (A I min_aromatic_ring_count 1)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I aromatic 1)
+  )
+  (1 Query_Atom
+    (A I nrings 0)
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (8 16))
+    (A I ncon 1)
+    (A I double_bond 1)
+  )
+)

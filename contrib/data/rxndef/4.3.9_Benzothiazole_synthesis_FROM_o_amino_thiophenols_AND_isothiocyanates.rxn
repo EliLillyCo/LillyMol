@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "4.3.9_Benzothiazole_synthesis_FROM_o_amino_thiophenols_AND_isothiocyanates")
+  (0 Scaffold
+     (A C smarts "[SD1H]-c1c([NH2])cccc1")
+  )
+  (1 Sidechain
+     (A C smarts "[SD1]=C=N") 
+     (A I remove_atom 0)
+     (A I single_bond (1 2))
+     (A I join (0 1))
+     (A I join (3 1 2))
+  )
+)

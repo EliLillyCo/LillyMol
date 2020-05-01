@@ -1,0 +1,7 @@
+(0 Query
+  (A C Comment "scf3")
+  (A I Version 2)
+  (A D numeric_value 50)
+  (A I unique_embeddings_only 1)
+  (A C smarts "[SD2]-C(-F)(-F)-F")
+)

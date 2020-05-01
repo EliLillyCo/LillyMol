@@ -1,0 +1,7 @@
+(0 Query
+  (A C Comment "halides_aryl")
+  (A I Version 2)
+  (A C smarts "[Br,I,Cl]-c:[ncos]")
+#  (A C smarts "[I,Br,Cl;D1]-a")
+# (A C smarts "Br-a")
+)

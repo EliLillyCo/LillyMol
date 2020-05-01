@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "suzuki_boronics")
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[BD3](!@[#6]=[#6])(-O)-O")
+)

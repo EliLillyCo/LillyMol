@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "2.3.2_Isothiocyanate_+_amine_thiourea_coupling_FROM_amines_aliphatic_AND_isothiocyanates")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]")
+  )
+  (1 Sidechain
+     (A C smarts "[SD1]=C=N") 
+     (A I single_bond (1 2))
+     (A I join (0 1))
+  )
+)

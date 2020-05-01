@@ -1,0 +1,9 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "thioaminal_n_unsub_cyclic_2")
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (A C smarts "[SD2][CX4][NR1D2][CX4]C")
+)

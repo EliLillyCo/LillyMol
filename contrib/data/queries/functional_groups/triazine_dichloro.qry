@@ -1,0 +1,14 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "triazine_dichloro")
+  (A C smarts "c1ncncn1")
+  (1 Environment
+     (A I single_bond (0 2 4))
+     (A C smarts "Cl")
+     (A I hits_needed (2))
+  )
+)
+# initial attempts, too goofy
+#  (A C smarts "c1(Cl)nc([!Cl])nc(Cl)n1||c1(Cl)n[cD2]nc(Cl)n1") 
+# second attempt, too complex
+#  (A C smarts "c1(Cl)n[$([cD2]),$(c!@-[!#17])]nc(Cl)n1")

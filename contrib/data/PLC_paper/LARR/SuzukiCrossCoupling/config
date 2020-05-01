@@ -1,0 +1,8 @@
+rxnRoot=/lrlhps/users/rx95937/ASLReagents/ASLReactions/SuzukiCrossCoupling
+rxnFile=SuzukiCrossCoupling.rxn
+reagents=arylBromide suzukiBoronic
+arylBromide=arylBromideFilterRule
+suzukiBoronic=suzukiBoronicFilterRule
+arylBromideTransformationFile=arylBromideTransformationRule.rxn
+suzukiBoronicTransformationFile=suzukiBoronicTransformationRule.rxn
+

@@ -1,0 +1,8 @@
+(0 Reaction
+  (A C Comment "Amide Synthesis")
+  (0 Scaffold
+     (A C smarts "[C](=O)([OH])") 
+     (A I remove_atom 2)
+     (A I isotope (0 9))
+  )
+)

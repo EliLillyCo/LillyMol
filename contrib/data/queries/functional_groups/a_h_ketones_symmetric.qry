@@ -1,0 +1,9 @@
+(0 Query
+  (A C Comment "a_h_ketones_symmetric")
+  (A I Version 2)
+  (A I do_not_perceive_symmetric_equivalents 1)
+  (A C smarts "[OD1]=[CD3]([/IWsymg8CH>1X4T0])[/IWsymg8CH>1X4T0]") ## using new tsubstructure.sh /IW directives
+)
+#  (A C smarts "1[OD1]=[CD3T1]([CH>1T0])[CH>1T0]")
+#  (A C smarts "1[OD1]=[CD3T1R0]([CH>1T0])[CH>1T0]") ## in case we don't want these to be in a ring
+

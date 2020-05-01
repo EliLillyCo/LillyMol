@@ -1,0 +1,18 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "n_o_acyclic")
+  (A D numeric_value 50)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I ring_id 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I ring_id 2)
+    (A I single_bond 0)
+  )
+)

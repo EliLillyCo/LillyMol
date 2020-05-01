@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "X.X.X_Esters_methyl_ethyl_WITH_Amines_FROM_aldehydes_AND_Null")
+  (0 Scaffold
+     (A C smarts "[OD1]=[CD2T1H][#6]") 
+     (A I remove_atom 0)
+  )
+  (1 Sidechain
+     (A C smiles "O=C(O[CH2][CH3])C[NH] esteramine")
+     (A C smarts "O=C(O[CH2][CH3])C[NH]")
+     (A I join (1 6))
+  )
+)

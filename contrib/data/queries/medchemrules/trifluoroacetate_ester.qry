@@ -1,0 +1,56 @@
+# RuleClass acylating
+# SubClass misc
+
+(9 Query
+  (A C Comment "trifluoroacetate_ester")
+  (A C Comment "trifluoroacetate_ester")
+  (A I Version 2)
+  (0 Elements_Needed
+    (A I atomic_number 9)
+    (A I min_hits_needed 3)
+  )
+  (0 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 4)
+    (A I nrings 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nrings 0)
+    (A I single_bond 1)
+  )
+  (5 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nrings 0)
+    (A I double_bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I single_bond 4)
+  )
+  (7 Query_Atom
+#   (A I atomic_number 6)     # commented out Jun 97
+#   (A I aromatic 1)          # commented out Jun 97
+    (A I single_bond 6)
+  )
+)

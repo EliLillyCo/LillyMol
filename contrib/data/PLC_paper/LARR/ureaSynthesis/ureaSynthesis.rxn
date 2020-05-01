@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Urea Synthesis")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a")
+  )
+  (1 Sidechain
+     (A C smarts "[OD1]=C=[ND2]") 
+     (A I single_bond (1 2))
+     (A I join (0 1))
+  )
+)

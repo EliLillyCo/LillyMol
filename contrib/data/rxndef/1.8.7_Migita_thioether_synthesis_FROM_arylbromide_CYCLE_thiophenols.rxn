@@ -1,0 +1,8 @@
+(0 Reaction
+  (A C Comment "1.8.7_Migita_thioether_synthesis_FROM_arylbromide_CYCLE_thiophenols")
+  (0 Scaffold
+     (A C smarts "Br-c:[ncos].a-[SD1H]")
+     (A I remove_atom 0)
+     (A I single_bond (1 4))
+  )
+)

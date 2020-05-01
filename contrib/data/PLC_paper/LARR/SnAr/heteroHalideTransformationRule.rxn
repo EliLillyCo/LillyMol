@@ -1,0 +1,8 @@
+(0 Reaction
+  (A C Comment "SnAr heteroHalide transformation rule")
+  (0 Scaffold
+     (A C smarts "n:c[Cl,Br]") 
+     (A I remove_atom 2)
+     (A I isotope (1 9))
+  )
+)

@@ -1,0 +1,13 @@
+(0 Reaction
+  (A C Comment "5.2.X_CO2H-DMT_protection_FROM_carboxylic_acids_AND_DMT")
+  (0 Scaffold
+     (A C smarts "[C](=O)([OH])") 
+  )
+  (1 Sidechain
+     (A C smiles "COc1nc(OC)nc(n1)[N+]2(C)CCOCC2 DMT")
+     (A C smarts "COc1nc(OC)nc(n1)[N+]2(C)CCOCC2")
+     (A I break_bond 8 10)
+     (A I remove_fragment 10)
+     (A I join (2 8))
+  )
+)

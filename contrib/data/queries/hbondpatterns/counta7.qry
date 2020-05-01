@@ -1,0 +1,10 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "FBacc7")
+  (A I min_hits_needed 7)
+  (A I min_isotopic_atoms 7)
+  (0 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I isotope (1 2))
+  )
+)

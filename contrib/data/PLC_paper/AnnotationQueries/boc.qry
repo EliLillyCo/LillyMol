@@ -1,0 +1,18 @@
+(0 Composite_Query
+  (A I Version 2)
+  (A C Comment "boc")
+  # old
+  # (A C smarts "N([#6])C(=O)OC([CH3])([CH3])[CH3]")
+
+  (0 Query
+    (A I version 2)
+    (A C Comment "sec_boc")
+    (A C smarts "[NHT0]([$(c),$([CT1X4])])C(=O)OC([CH3])([CH3])[CH3]")
+  )
+  (2 Query
+    (A I version 2)
+    (A C Comment "tert_boc")
+    (A C smarts "[NT0]([$(c),$([CT1X4])])([$(c),$([CT1X4])])C(=O)OC([CH3])([CH3])[CH3]")
+  )
+)
+

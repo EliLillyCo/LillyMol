@@ -1,0 +1,5 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "guanidines_tertiary_secondary")
+  (A C smarts "[ND1H]=[CD3T3]([NHT0]([$([cT1]),$([CT1X4])]))[NT0]([$([cT1]),$([CT1X4])])([$([cT1]),$([CT1X4])])")
+)

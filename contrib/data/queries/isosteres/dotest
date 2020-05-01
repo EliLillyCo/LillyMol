@@ -1,0 +1,82 @@
+#! /usr/bin/env ruby
+
+binhome = "/home/<bin>"
+
+require "#{binhome}/ruby/lib/iwcmdline.rb"
+
+uname=`uname`.chomp!
+version=`uname -r`.chomp!
+
+cl = IWCmdline.new ("-v-x=executable")
+
+$verbose = cl.option_present ("v")
+
+if (cl.option_present ("x"))
+  $executable = cl.value ("x")
+else
+  $executable = "#{binhome}/bin/#{uname}-#{version}/molecular_transformations"
+  $stderr.print "What about '#{$executable}'\n"
+  unless FileTest.executable? ($executable)
+    $executable = "#{binhome}/bin/#{uname}/molecular_transformations"
+  $stderr.print "What about '#{$executable}'\n"
+  end
+end
+
+raise "Missing executable '#{$executable}'" unless FileTest.executable? ($executable)
+
+if cl.option_present ("tmpdir")
+  $tmpdir = cl.value ("tmpdir")
+else
+  $tmpdir = "."
+end
+
+ends_with_rxn = Regexp.new ("^(\\S+)\\.rxn$")
+
+def usage rc
+  exit (rc)
+end
+
+if (0 == ARGV.size)
+  $stderr.print "Must specify one or more reaction files to test\n"
+  usage (1)
+end
+
+ARGV.each { |rxn|
+  raise "Missing or empty reaction '#{rxn}'" unless FileTest.size? (rxn)
+
+  m = ends_with_rxn.match (rxn)
+  raise "Invalid reaction name '#{rxn}'" unless m
+
+  stem = m[1]
+
+  $stderr.print "Processing '#{stem}'\n" if ($verbose)
+
+  input = "#{stem}.smi"
+
+  raise "Missing or empty input file '#{input}'" unless FileTest.size? (input)
+
+  correct = "#{stem}.correct"
+
+  raise "Missing or empty correct file '#{correct}'" unless FileTest.size? (correct)
+
+  tmpfile = "#{$tmpdir}/tmt" << $$.to_s
+
+  cmd = "#{$executable} -X H -A D -R #{rxn} -z i -z w -o usmi #{input} > #{tmpfile}"
+
+  $stderr.print "Executing '#{cmd}'\n" if $verbose
+
+  system (cmd)
+
+  raise "'#{cmd}' failed" unless FileTest.size? (tmpfile)
+
+  system ("diff #{correct} #{tmpfile}")
+
+  if (0 == $?)
+    File.unlink (tmpfile)
+    $stderr.print "#{rxn} test OK\n" if ($verbose)
+    next
+  end
+
+  $stderr.print "'#{cmd}' failed\n";
+  exit 3
+}

@@ -1,0 +1,6 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "acetal")
+  # carbon four substituents, H>0 is ok (1H or 2H); Oxygens can be in a ring
+  (A C smarts "[CH>0](-O)O")
+)

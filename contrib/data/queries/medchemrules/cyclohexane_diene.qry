@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "cyclohexane_diene")
+  (A I version 2)
+  (A I min_aliphatic_ring_count 1)
+  (A C smarts "[/IWfss1CR1D2]1=[CD2][CX4][CD2]=[CD2][CX4]1")
+)

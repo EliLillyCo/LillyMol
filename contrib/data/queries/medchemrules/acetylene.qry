@@ -1,0 +1,17 @@
+(3 Query
+  (A C Comment "acetylene")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (A D numeric_value 50)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I min_nbonds 3)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 2)
+    (A I nrings 0)
+    (A I triple_bond 0)
+  )
+)
