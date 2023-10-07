@@ -1,5 +1,4 @@
 #include <iostream>
-using namespace std;
 
 #define ACCUMULATOR_IMPLEMENTATION
 #include "accumulator.h"
@@ -7,4 +6,4 @@ using namespace std;
 template class Accumulator<double>;
 template class Accumulator_Base<double, KahanSum>;
 
-template ostream & operator << (ostream &, const Accumulator<double> &);
+template std::ostream & operator << (std::ostream &, const Accumulator<double> &);

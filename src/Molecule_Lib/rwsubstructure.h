@@ -1,11 +1,12 @@
+#ifndef MOLECULE_LIB_RWSUBSTRUCTURE_H_
+#define MOLECULE_LIB_RWSUBSTRUCTURE_H_
 
-#ifndef RW_SUBSTRUCTURE_H
-#define RW_SUBSTRUCTURE_H
-
+#include <filesystem>
+#include <iostream>
 #include <memory>
+#include <string>
 
-using std::cerr;
-using std::endl;
+#include "google/protobuf/text_format.h"
 
 /*
   Various functions for getting Substructure_Queries (and their derived types)
@@ -15,9 +16,11 @@ using std::endl;
   a separate file.
 */
 
-#include "iwstring.h"
-#include "cmdline.h"
-#include "msi_object.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/tfdatarecord.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/msi_object.h"
+#include "Foundational/iwmisc/proto_support.h"
 
 #include "istream_and_type.h"
 #include "molecule_to_query.h"
@@ -25,10 +28,159 @@ using std::endl;
 #include "mdl_molecule.h"
 
 template <typename T>
+T *
+ReadProtoQueryFile(const const_IWSubstring fname)
+{
+  IWString s(fname);
+  std::optional<SubstructureSearch::SubstructureQuery> maybe_proto =
+      iwmisc::ReadTextProtoCommentsOK<SubstructureSearch::SubstructureQuery>(s);
+  if (! maybe_proto) {
+    return 0;
+  }
+
+  T * to_be_returned = new T;
+
+  if (! to_be_returned->ConstructFromProto(*maybe_proto)) 
+  {
+    std::cerr << "ReadProtoQueryFile:cannot build query from proto\n";
+    std::cerr << maybe_proto->ShortDebugString() << '\n';
+    delete to_be_returned;
+    return nullptr;
+  }
+
+  return to_be_returned;
+}
+
+// Normally, if there are multiple "queries {" directives in a file, that
+// means multiple components of a single composite query. But it is also
+// convenient to have multiple textproto queries in a file.
+// Read the contents of `fname` interpreting individual "query" entries
+// as separate queries.
+template <typename T>
 int
-build_query_from_smiles (const const_IWSubstring & smiles,
-                         resizable_array_p<T> & queries,
-                         int verbose)
+MultipleQueriesFromTextProto(const const_IWSubstring fname,
+                             int verbose,
+                             resizable_array_p<T>& queries) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    std::cerr << "MultipleQueriesFromTextProto:cannot open '" << fname;
+    return 0;
+  }
+
+  return MultipleQueriesFromTextProto(input, verbose, queries);
+}
+
+template <typename T>
+int
+MultipleQueriesFromTextProto(iwstring_data_source& input,
+                             int verbose,
+                             resizable_array_p<T>& queries) {
+  while (true) {
+    std::optional<std::string> string_proto = iwsubstructure::GetNextQueryTextProto(input);
+    if (! string_proto) {
+      break;
+    }
+
+    SubstructureSearch::SubstructureQuery proto;
+    if (! google::protobuf::TextFormat::ParseFromString(*string_proto, &proto)) {
+      std::cerr << "MultipleQueriesFromTextProto:cannot parse proto\n";
+      std::cerr << *string_proto << '\n';
+      return 0;
+    }
+
+    std::unique_ptr<T> query = std::make_unique<T>();
+    if (! query->ConstructFromProto(proto)) {
+      std::cerr << "MultipleQueriesFromTextProto:cannot build query\n";
+      std::cerr << *string_proto << '\n';
+      return 0;
+    }
+    if (query->comment().empty()) {
+      query->set_comment(query->item(0)->comment());
+    }
+    queries << query.release();
+  }
+
+  if (verbose) {
+    std::cerr << "MultipleQueriesFromTextProto::read " << queries.size() << " queries\n";
+  }
+
+  return queries.number_elements();
+}
+
+template <typename T>
+int
+ReadFileOfProtoQueries(const const_IWSubstring fname, resizable_array_p<T>& queries)
+{
+  iwstring_data_source input(fname);
+
+  if (! input.good())
+  {
+    std::cerr << "ReadFileOfProtoQueries:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  const IWString dirname = iwmisc::IWDirname(fname);
+
+  IWString line;
+  while (input.next_record(line))
+  {
+    std::optional<IWString> file_that_exists = iwmisc::FileOrPath(fname, line);
+    if (! file_that_exists) {
+      std::cerr << "ReadFileOfProtoQueries:no file '" << line << "'\n";
+      return 0;
+    }
+//  IWString fname;
+//  fname << dirname << std::filesystem::path::preferred_separator << line;
+    T* q = ReadProtoQueryFile<T>(*file_that_exists);
+
+    if (nullptr == q) {
+      std::cerr << "ReadFileOfProtoQueries:cannot process '" << line << "'\n";
+      return 0;
+    }
+
+    queries.add(q);
+  }
+
+  return 1;
+}
+
+template <typename T>
+int
+ReadQueriesFromTFDataRecordProtoFile(iw_tf_data_record::TFDataReader& input,
+                        resizable_array_p<T>& queries) {
+  while (1) {
+    std::optional<SubstructureSearch::SubstructureQuery> proto =
+         input.ReadProto<SubstructureSearch::SubstructureQuery>();
+    if (! proto) {
+      return queries.number_elements();
+    }
+    std::unique_ptr<T> query = std::make_unique<T>();
+    if (! query->ConstructFromProto(*proto)) {
+      std::cerr << "ReadQueriesFromTFDataRecordProtoFile:cannot build query\n";
+      return 0;
+    }
+    queries.add(query.release());
+  }
+  // Should never come here.
+}
+
+template <typename T>
+int
+ReadQueriesFromTFDataRecordProtoFile(const const_IWSubstring& fname,
+                        resizable_array_p<T>& queries) {
+  iw_tf_data_record::TFDataReader input(fname);
+  if (! input.good()) {
+    std::cerr << "ReadQueriesFromTFDataRecordProtoFile:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return ReadQueriesFromTFDataRecordProtoFile(input, queries);
+}
+template <typename T>
+int
+build_query_from_smiles(const const_IWSubstring & smiles,
+                        resizable_array_p<T> & queries,
+                        int verbose)
 {
   Molecule m;
 
@@ -36,7 +188,7 @@ build_query_from_smiles (const const_IWSubstring & smiles,
 
   if (! m.build_from_smiles(smiles))
   {
-    cerr << "build_query_from_smiles:invalid smiles '" << smiles << "'\n";
+    std::cerr << "build_query_from_smiles:invalid smiles '" << smiles << "'\n";
     return 0;
   }
 
@@ -47,7 +199,7 @@ build_query_from_smiles (const const_IWSubstring & smiles,
 
   if (! q->create_from_molecule(m, mqs))
   {
-    cerr << "build_query_from_smiles:invalid molecule?? '" << smiles << "'\n";
+    std::cerr << "build_query_from_smiles:invalid molecule?? '" << smiles << "'\n";
     delete q;
     return 0;
   }
@@ -59,16 +211,16 @@ build_query_from_smiles (const const_IWSubstring & smiles,
 
 template <typename T>
 int
-queries_from_file_of_molecules (MDL_Molecule & m,
-                                Molecule_to_Query_Specifications & mqs,
-                                resizable_array_p<T> & queries,
-                                int verbose)
+queries_from_file_of_molecules(MDL_Molecule & m,
+                               Molecule_to_Query_Specifications & mqs,
+                               resizable_array_p<T> & queries,
+                               int verbose)
 {
   T * q = new T;
 
   if (! q->create_from_molecule(m, mqs))
   {
-    cerr << "queries_from_file_of_molecules:cannot create query from '" << m.name() << "'\n";
+    std::cerr << "queries_from_file_of_molecules:cannot create query from '" << m.name() << "'\n";
     delete q;
     return 0;
   }
@@ -80,31 +232,32 @@ queries_from_file_of_molecules (MDL_Molecule & m,
 
 template <typename T>
 int
-queries_from_file_of_molecules (data_source_and_type<MDL_Molecule> & input,
-                                Molecule_to_Query_Specifications & mqs,
-                                resizable_array_p<T> & queries,
-                                int verbose)
+queries_from_file_of_molecules(data_source_and_type<MDL_Molecule> & input,
+                               Molecule_to_Query_Specifications & mqs,
+                               resizable_array_p<T> & queries,
+                               int verbose)
 {
   set_input_aromatic_structures(1);
 
   MDL_Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<MDL_Molecule> free_m(m);
 
     if (! queries_from_file_of_molecules(*m, mqs, queries, verbose))
     {
-      cerr << "Cannot create query from '" << m->name() << "'\n";
+      std::cerr << "Cannot create query from '" << m->name() << "'\n";
       return 0;
     }
 
-    if (verbose)
-      cerr << "Created query from '" << m->name() << "'\n";
+    if (verbose > 1) {
+      std::cerr << "Created query from '" << m->name() << "'\n";
+    }
   }
 
   if (verbose)
-    cerr << "Read " << queries.number_elements() << " queries\n";
+    std::cerr << "Read " << queries.number_elements() << " queries\n";
 
   return queries.number_elements();
 }
@@ -131,7 +284,7 @@ queries_from_file_of_isis_queries(const const_IWSubstring & fname,
   data_source_and_type<MDL_Molecule> input(input_type, fname);
   if (! input.good())
   {
-    cerr << "cannot open '" << fname << "'\n";
+    std::cerr << "cannot open '" << fname << "'\n";
     return 1;
   }
 
@@ -149,10 +302,10 @@ queries_from_file_of_molecules (const const_IWSubstring & fname,
                                 resizable_array_p<T> & queries, 
                                 int verbose)
 {
-  int input_type = discern_file_type_from_name(fname);
+  FileType input_type = discern_file_type_from_name(fname);
 
-  if (0 == input_type)
-    input_type = SMI;
+  if (input_type == FILE_TYPE_INVALID)
+    input_type = FILE_TYPE_SMI;
 
 // Don't follow any seeking or such from the command line
 
@@ -163,7 +316,7 @@ queries_from_file_of_molecules (const const_IWSubstring & fname,
   data_source_and_type<MDL_Molecule> input(input_type, fname);
   if (! input.good())
   {
-    cerr << "cannot open '" << fname << "'\n";
+    std::cerr << "cannot open '" << fname << "'\n";
     return 1;
   }
 
@@ -191,11 +344,11 @@ queries_from_file_of_isis_queries (const const_IWSubstring & fname,
 
     fname.split (fname2, DIRECTIVE_SEPARATOR_TOKEN, directives);
 
-    cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
+    std::cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
 
     if (! mqs.parse_directives(directives))
     {
-      cerr << "INvalid molecule to query directives '" << directives << "'\n";
+      std::cerr << "INvalid molecule to query directives '" << directives << "'\n";
       return 0;
     }
 
@@ -223,7 +376,7 @@ query_from_ISIS_query_file(MDL_Molecule & m,
   queries.add(q);
 
   if (verbose > 1 && m.name().length())
-    cerr << "Created query from '" << m.name() << "'\n";
+    std::cerr << "Created query from '" << m.name() << "'\n";
 
   return 1;
 }
@@ -237,13 +390,13 @@ queries_from_ISIS_query_file(data_source_and_type<MDL_Molecule> & input,
 {
   MDL_Molecule *m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<MDL_Molecule> free_m(m);
 
     if (! query_from_ISIS_query_file(*m, mqs, queries, verbose))
     {
-      cerr << "queries_from_ISIS_query_file:cannot process '" << m->name() << "'\n";
+      std::cerr << "queries_from_ISIS_query_file:cannot process '" << m->name() << "'\n";
       return 0;
     }
   }
@@ -258,11 +411,11 @@ queries_from_ISIS_query_file(const const_IWSubstring & fname,
                               resizable_array_p<T> & queries,
                               int verbose)
 {
-  data_source_and_type<MDL_Molecule> input(MDL, fname);
+  data_source_and_type<MDL_Molecule> input(FILE_TYPE_MDL, fname);
 
   if (! input.good())
   {
-    cerr << "queries_from_ISIS_query_file:cannot open '" << fname << "'\n";
+    std::cerr << "queries_from_ISIS_query_file:cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -273,8 +426,9 @@ queries_from_ISIS_query_file(const const_IWSubstring & fname,
   if (0 == rc)
     return 0;
 
-  if (verbose)
-    cerr << "Created " << queries.number_elements() << " queries from '" << fname << "'\n";
+  if (verbose) {
+    std::cerr << "Created " << queries.number_elements() << " queries from '" << fname << "'\n";
+  }
 
   return rc;
 }
@@ -293,11 +447,11 @@ queries_from_ISIS_query_file(const const_IWSubstring & fname,
 
     fname.split (fname2, DIRECTIVE_SEPARATOR_TOKEN, directives);
 
-    cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
+    std::cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
 
     if (! mqs.parse_directives(directives))
     {
-      cerr << "INvalid molecule to query directives '" << directives << "'\n";
+      std::cerr << "INvalid molecule to query directives '" << directives << "'\n";
       return 0;
     }
 
@@ -321,11 +475,11 @@ queries_from_file_of_molecules(const const_IWSubstring & fname,
 
     fname.split(fname2, DIRECTIVE_SEPARATOR_TOKEN, directives);
 
-    cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
+    std::cerr << "Split into '" << fname2 << "' and '" << directives << "'\n";
 
     if (! mqs.parse_directives(directives))
     {
-      cerr << "INvalid molecule to query directives '" << directives << "'\n";
+      std::cerr << "INvalid molecule to query directives '" << directives << "'\n";
       return 0;
     }
 
@@ -380,28 +534,28 @@ smarts_or_smiles_from_file(iwstring_data_source & input,
     T * q = new T;
     if (smilesNotSmarts)
     {
-      //cerr << "Creating query from smiles '" << buffer << "'\n";
+      //std::cerr << "Creating query from smiles '" << buffer << "'\n";
 
       if (! q->create_from_smiles(buffer))
       {
-        cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
+        std::cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
         delete q;
         return 0;
       }      
     }
     else
     {
-      //cerr << "Creating query from smarts '" << buffer << "'\n";
+      //std::cerr << "Creating query from smarts '" << buffer << "'\n";
       if (! q->create_from_smarts(buffer))
       {
-        cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
+        std::cerr << "smarts_or_smiles_from_file: cannot parse '" << buffer << "'\n";
         delete q;
         return 0;
       }
     }
 
     queries.add(q);
-    //cerr << "Created query from '" << buffer << "'\n";
+    //std::cerr << "Created query from '" << buffer << "'\n";
     rc++;
   }
 
@@ -415,7 +569,7 @@ smarts_from_file(const const_IWSubstring & fname, resizable_array_p<T> & queries
   iwstring_data_source input(fname);
   if (! input.ok())
   {
-    cerr << "smarts_from_file: cannot open '" << fname << "'\n";
+    std::cerr << "smarts_from_file: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -429,7 +583,7 @@ smiles_from_file(const const_IWSubstring & fname, resizable_array_p<T> & queries
   iwstring_data_source input(fname);
   if (! input.ok())
   {
-    cerr << "smiles_from_file: cannot open '" << fname << "'\n";
+    std::cerr << "smiles_from_file: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -447,13 +601,13 @@ file_record_is_smarts(resizable_array_p<T> & queries,
 
   if (! tmp->create_from_smarts(buffer))
   {
-    cerr << "Invalid smarts 'SMARTS:" << buffer << "'\n";
+    std::cerr << "Invalid smarts 'SMARTS:" << buffer << "'\n";
     delete tmp;
     return 0;
   }
 
   if (verbose)
-    cerr << "Created query '" << tmp->comment() << "' from SMARTS:" << buffer << endl;
+    std::cerr << "Created query '" << tmp->comment() << "' from SMARTS:" << buffer << '\n';
 
   queries.add(tmp);
 
@@ -475,13 +629,12 @@ read_one_or_more_queries_from_file(resizable_array_p<T> & queries,
   input.set_ignore_pattern("^#");
   input.set_skip_blank_lines(1);
 
-
   while (msi.read(input))
   {
     T * tmp = new T();
     if (! tmp->construct_from_msi_object(msi))
     {
-      cerr << "process_queries: cannot build query from '" << msi << "'\n";
+      std::cerr << "process_queries: cannot build query from '" << msi << "'\n";
       return 0;
     }
 
@@ -489,7 +642,7 @@ read_one_or_more_queries_from_file(resizable_array_p<T> & queries,
     queries.add(tmp);
 
     if (verbose)
-      cerr << "Created query " << (queries.number_elements() - 1) << " '" << tmp->comment() << "'\n";
+      std::cerr << "Created query " << (queries.number_elements() - 1) << " '" << tmp->comment() << "'\n";
 
     rc++;
 
@@ -510,14 +663,14 @@ read_one_or_more_queries_from_file(resizable_array_p<T> & queries,
 
   if (! input.good())
   {
-    cerr << "read_one_or_more_queries_from_file::cannot open '" << fname << "'\n";
+    std::cerr << "read_one_or_more_queries_from_file::cannot open '" << fname << "'\n";
     return 0;
   }
 
   int rc = read_one_or_more_queries_from_file(queries, input, verbose);
 
   if (verbose)
-    cerr << "Read " << rc << " queries from '" << fname << "'\n";
+    std::cerr << "Read " << rc << " queries from '" << fname << "'\n";
 
   return rc;
 }
@@ -532,7 +685,7 @@ file_record_is_file(resizable_array_p<T> & queries,
   IWString fname;
   if (! buffer.word(0, fname))
   {
-    cerr << "file_record_is_file: cannot get first word from '" << buffer << "'\n";
+    std::cerr << "file_record_is_file: cannot get first word from '" << buffer << "'\n";
     return 0;
   }
 
@@ -548,13 +701,13 @@ file_record_is_file(resizable_array_p<T> & queries,
 
   if (! tmp->read(pathname))
   {
-    cerr << "Queries_from_file: cannot read file '" << fname << "'\n";
+    std::cerr << "Queries_from_file: cannot read file '" << fname << "'\n";
     delete tmp;
     return 0;
   }
 
   if (verbose)
-    cerr << "Created query '" << tmp->comment() << "' from '" << pathname << "'\n";
+    std::cerr << "Created query '" << tmp->comment() << "' from '" << pathname << "'\n";
 
   queries.add(tmp);
 
@@ -589,7 +742,7 @@ queries_from_file(iwstring_data_source & input, resizable_array_p<T> & queries,
 
     if (0 == rc_this_record)
     {
-      cerr << "Queries_from_file: fatal error on line " << input.lines_read() << endl;
+      std::cerr << "Queries_from_file: fatal error on line " << input.lines_read() << '\n';
       return 0;
     }
 
@@ -614,7 +767,7 @@ queries_from_file (const char * fname, resizable_array_p<T> & queries,
 
   if (! input.ok())
   {
-    cerr << "Cannot open file '" << fname << "'\n";
+    std::cerr << "Cannot open file '" << fname << "'\n";
     return 0;
   }
 
@@ -631,7 +784,7 @@ queries_from_file (const const_IWSubstring & fname, resizable_array_p<T> & queri
 
   if (! input.ok())
   {
-    cerr << "Cannot open file '" << fname << "'\n";
+    std::cerr << "Cannot open file '" << fname << "'\n";
     return 0;
   }
 
@@ -648,7 +801,37 @@ queries_from_file (const const_IWSubstring & fname, resizable_array_p<T> & queri
     }
   }
 
-  return queries_from_file(input, queries, directory_path, verbose);
+  const int rc = queries_from_file(input, queries, directory_path, verbose);
+  if (rc == 0) {
+    return 0;
+  }
+  if (verbose) {
+    std::cerr << "After processing '" << fname << "' have " << queries.size() << " queries\n";
+  }
+  return rc;
+}
+
+template <typename T>
+int
+ReadTextProtoQuery(const const_IWSubstring& token, 
+                   resizable_array_p<T>& queries) {
+  SubstructureSearch::SubstructureQuery proto;
+
+  const std::string s(token.data(), token.length());
+  if (!google::protobuf::TextFormat::ParseFromString(s, &proto))
+  {
+    std::cerr << "ReadTextProtoQuery::cannot parse proto string '" << token << "'\n";
+    return 0;
+  }
+
+  T * query = new T();
+  if (! query->ConstructFromProto(proto)) {
+    std::cerr << "ReadTextProtoQuery::cannot parse proto data '" << token << "'\n";
+    delete query;
+    return 0;
+  }
+
+  return queries.add(query);
 }
 
 template <typename T>
@@ -689,7 +872,7 @@ process_files_of_queries (Command_Line & cl, resizable_array_p<T> & queries,
 
     if (0 == tmp)
     {
-      cerr << "process_files_of_queries: could not read queries from file '" <<
+      std::cerr << "process_files_of_queries: could not read queries from file '" <<
               cl.option_value(option, i-1) << "'\n";
       return rc;
     }
@@ -708,27 +891,27 @@ process_files_of_queries (Command_Line & cl, resizable_array_p<T> & queries,
 
 template <typename T>
 int
-process_cmdline_token (char option,
-                       const const_IWSubstring & token,
-                       resizable_array_p<T> & queries,
-                       int verbose)
+process_cmdline_token(char option,
+                      const const_IWSubstring & token,
+                      resizable_array_p<T> & queries,
+                      int verbose)
 {
   const_IWSubstring mytoken(token);
 
-//cerr << "Examining token '" << mytoken << "'\n";
+//std::cerr << "Examining token '" << mytoken << "'\n";
   if (mytoken.starts_with("F:") || mytoken.starts_with("Q:"))
   {
     mytoken.remove_leading_chars(2);
 
     if (0 == mytoken.length())
     {
-      cerr << "Must follow S: specification with file name of queries\n";
+      std::cerr << "Must follow S: specification with file name of queries\n";
       return 0;
     }
 
     if (! queries_from_file(mytoken, queries, 1, verbose))   // queries always in same directory as controlling file
     {
-      cerr << "process_queries: cannot read queries from file specifier 'F:" << mytoken << "'\n";
+      std::cerr << "process_queries: cannot read queries from file specifier 'F:" << mytoken << "'\n";
       return 0;
     }
   }
@@ -738,13 +921,13 @@ process_cmdline_token (char option,
 
     if (0 == mytoken.length())
     {
-      cerr << "Must follow S: specification with file name of queries\n";
+      std::cerr << "Must follow S: specification with file name of queries\n";
       return 0;
     }
 
     if (! smarts_from_file(mytoken, queries, verbose))
     {
-      cerr << "process_queries::cannot read smarts from file of smarts specifier 'S:" << mytoken << "'\n";
+      std::cerr << "process_queries::cannot read smarts from file of smarts specifier 'S:" << mytoken << "'\n";
       return 0;
     }
   }
@@ -754,13 +937,13 @@ process_cmdline_token (char option,
 
     if (! mytoken.length())
     {
-      cerr << "Must follow M: specification with file name of molecules\n";
+      std::cerr << "Must follow M: specification with file name of molecules\n";
       return 0;
     }
 
     if (! queries_from_file_of_molecules(mytoken, queries, verbose))
     {
-      cerr << "process_queries::cannot read queries from file of molecules specifier 'M:" << mytoken << "'\n";
+      std::cerr << "process_queries::cannot read queries from file of molecules specifier 'M:" << mytoken << "'\n";
       return 0;
     }
   }
@@ -770,13 +953,13 @@ process_cmdline_token (char option,
 
     if (0 == mytoken.length())
     {
-      cerr << "Must follow smiles: specification with smiles\n";
+      std::cerr << "Must follow smiles: specification with smiles\n";
       return 0;
     }
 
     if (! build_query_from_smiles(mytoken, queries, verbose))
     {
-      cerr << "process_queries:cannot build query from 'smiles:" << mytoken << "'\n";
+      std::cerr << "process_queries:cannot build query from 'smiles:" << mytoken << "'\n";
       return 0;
     }
   }
@@ -785,13 +968,13 @@ process_cmdline_token (char option,
     mytoken.remove_leading_chars(2);
     if (0 == mytoken.length())
     {
-      cerr << "Must follow I: specification with query file\n";
+      std::cerr << "Must follow I: specification with query file\n";
       return 0;
     }
 
     if (! queries_from_ISIS_query_file(mytoken, queries, verbose))
     {
-      cerr << "process_queries::cannot read queries from isis query 'I:" << mytoken << "'\n";
+      std::cerr << "process_queries::cannot read queries from isis query 'I:" << mytoken << "'\n";
       return 0;
     }
   }
@@ -800,25 +983,29 @@ process_cmdline_token (char option,
     mytoken.remove_leading_chars(5);
     if (0 == mytoken.length())
     {
-      cerr << "Must follow ISIS: specification with file name of queries\n";
+      std::cerr << "Must follow ISIS: specification with file name of queries\n";
       return 0;
     }
 
     if (! queries_from_file_of_isis_queries(mytoken, queries, verbose))
     {
-      cerr << "process_queries::cannot read queries from file of isis queries 'ISIS:" << mytoken << "'\n";
+      std::cerr << "process_queries::cannot read queries from file of isis queries 'ISIS:" << mytoken << "'\n";
       return 0;
     }
   }*/
   else if ("help" == mytoken)
   {
-    cerr << "The following query specifications are recognised\n";
-    cerr << " -" << option <<" SMARTS:smarts          smarts (use quotes to hide special characters)\n";
-    cerr << " -" << option <<" S:file                 file of smarts queries\n";
-    cerr << " -" << option <<" Q:file                 file of query object queries (also F: recognised)\n";
-    cerr << " -" << option <<" M:file                 file of molecules that will be converted to query objects\n";
-    cerr << " -" << option <<" I:file                 an ISIS query file\n";
-    cerr << " -" << option <<" file                   single query file\n";
+    std::cerr << "The following query specifications are recognised\n";
+    std::cerr << " -" << option <<" SMARTS:smarts          smarts (use quotes to hide special characters)\n";
+    std::cerr << " -" << option <<" S:file                 file of smarts queries\n";
+    std::cerr << " -" << option <<" Q:file                 file of query object queries (also F: recognised)\n";
+    std::cerr << " -" << option <<" M:file                 file of molecules that will be converted to query objects\n";
+    std::cerr << " -" << option <<" I:file                 an ISIS query file\n";
+    std::cerr << " -" << option <<" proto:proto            inline proto 'proto:query{nrings:3}'\n";
+    std::cerr << " -" << option <<" PROTO:file             a query in text proto form\n";
+    std::cerr << " -" << option <<" PROTOFILE:file         a file containing names of proto query files\n";
+    std::cerr << " -" << option <<" TFPROTO:file           TFDataRecord file containing serialized protos\n";
+    std::cerr << " -" << option <<" file                   single query file\n";
     ::exit (0);
   }
   else if (mytoken.starts_with("SMARTS:"))
@@ -828,18 +1015,52 @@ process_cmdline_token (char option,
     T * q = new T;
     if (! q->create_from_smarts(mytoken))
     {
-      cerr << "process_queries::invalid smarts '" << mytoken << "'\n";
+      std::cerr << "process_queries::invalid smarts '" << mytoken << "'\n";
       delete q;
       return 0;
     }
 
     queries.add(q);
   }
-  else
+  else if (mytoken.starts_with("PROTO:"))
   {
+    mytoken.remove_leading_chars(6);
+    T * q = ReadProtoQueryFile<T>(mytoken);
+    if (nullptr == q) {
+      std::cerr << "process_queries::cannot read proto file '" << mytoken << "'\n";
+      return 0;
+    }
+    queries.add(q);
+  } else if (mytoken.starts_with("PROTOFILE:")) {
+    mytoken.remove_leading_chars(10);
+    if (!ReadFileOfProtoQueries(mytoken, queries)) 
+    {
+      std::cerr << "process_queries:cannot read file of proto files '" << mytoken << "'\n";
+      return 0;
+    }
+  } else if (mytoken.starts_with("TFPROTO:")) {
+    mytoken.remove_leading_chars(8);
+    if (! ReadQueriesFromTFDataRecordProtoFile(mytoken, queries)) {
+      std::cerr << "process_queries::cannot read TFdataREcord proto file '" << mytoken << "'\n";
+      return 0;
+    }
+  } else if (mytoken.starts_with("proto:")) {
+    // for example -q 'proto:query{min_natoms: 4}'
+    mytoken.remove_leading_chars(6);
+    if (! ReadTextProtoQuery(mytoken, queries)) {
+      std::cerr << "process_queries:cannot read text proto option '" << mytoken << "'\n";
+      return 0;
+    }
+  } else if (mytoken.starts_with("MPROTO:")) {
+    mytoken.remove_leading_chars(7);
+    if (! MultipleQueriesFromTextProto(mytoken, verbose, queries)) {
+      std::cerr << "process_queries:cannot read multiple text proto option '" << mytoken << "'\n";
+      return 0;
+    }
+  } else {
     if (! read_one_or_more_queries_from_file(queries, mytoken, verbose))
     {
-      cerr << "process_queries::cannot read query/queries from '" << mytoken << "'\n";
+      std::cerr << "process_queries::cannot read query/queries from '" << mytoken << "'\n";
       return 0;
     }
   }
@@ -868,7 +1089,7 @@ process_queries (Command_Line & cl, resizable_array_p<T> & queries,
   {
     if (! process_cmdline_token(option, c, queries, verbose))
     {
-      cerr << "Cannot process -" << option << " option '" << c << "'\n";
+      std::cerr << "Cannot process -" << option << " option '" << c << "'\n";
       return 0;
     }
   }
@@ -876,4 +1097,4 @@ process_queries (Command_Line & cl, resizable_array_p<T> & queries,
   return queries.number_elements();
 }
 
-#endif
+#endif  // MOLECULE_LIB_RWSUBSTRUCTURE_H_

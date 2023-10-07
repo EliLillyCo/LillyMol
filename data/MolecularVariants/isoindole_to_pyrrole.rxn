@@ -1,0 +1,6 @@
+name: "isoindole_to_pyrrole"
+scaffold {
+  id: 0
+  smarts: "[nx2]1cc2[cD2][cD2][cD2][cD2]c2c1"
+  remove_atoms: [3, 4, 5, 6]
+}

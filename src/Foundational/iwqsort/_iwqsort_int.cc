@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
-using namespace std;
 
 #define IWQS_USE_OPERATOR
 #define IWQSORT_IMPLEMENTATION

@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <iostream>
-using namespace std;
 
 #ifdef USE_IWMALLOC
 #include "iwmalloc.h"

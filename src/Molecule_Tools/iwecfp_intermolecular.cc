@@ -10,34 +10,37 @@
 #include <stdlib.h>
 
 #include <assert.h>
-#include <memory>
 #include <algorithm>
-#include <vector>
+#include <iostream>
 #include <limits>
+#include <memory>
+#include <vector>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define IWQSORT_FO_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
-#include "cmdline.h"
-#include "iwqsort.h"
-#include "sparse_fp_creator.h"
-#include "accumulator.h"
-#include "misc.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwqsort/iwqsort.h"
 
-#include "molecule.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "istream_and_type.h"
-#include "atom_typing.h"
-#include "qry_wstats.h"
-#include "target.h"
-#include "rwsubstructure.h"
-#include "output.h"
-#include "iwmfingerprint.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/iwmfingerprint.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/rwsubstructure.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
 
-using std::unique_ptr;
+using std::cerr;
+using std::endl;
+
 
 static Chemical_Standardisation chemical_standardisation;
 
@@ -63,7 +66,7 @@ static int additive = 1;
 
 static Accumulator_Int<int> nbits_acc;
 
-static int whole_molecule_closest_protein_atom_only = 0;
+static uint32_t whole_molecule_closest_protein_atom_only = 0;
 static int each_ligand_atom_closest_protein_atom_only = 0;
 
 static int remove_hydrogen_from_ligand = 0;
@@ -113,8 +116,13 @@ static int molecules_discarded_for_no_bits_set = 0;
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Compute the Extended Connectivity fingerprints for molecules\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Usage <options> protein ligand1 ligand2 ligand3..., or use the -l option\n";
   cerr << "  -l <query>     ligand and protein in same file, ligand is what matches <query>\n";
   cerr << "  -T <dist>      make intermolecular connections within distance <dist>\n";
@@ -146,6 +154,7 @@ usage(int rc)
   exit(rc);
 }
 
+#ifdef TODO_IMPLEMENT_SOMETIME
 static int
 read_bits_to_investigate (iwstring_data_source & input,
                           IW_STL_Hash_Map<unsigned int, unsigned int> & bits_to_investigate)
@@ -184,6 +193,7 @@ read_bits_to_investigate (const char * fname,
 
   return read_bits_to_investigate (input, bits_to_investigate);
 }
+#endif
 
 static int
 check_against_list (const IWString & name_of_current_molecule,
@@ -542,9 +552,9 @@ produce_fingerprint (Molecule & m,
     generate_atom_paths (m, atom_constant, ligand_matoms, only_fingerprint_isotopic_atoms, atom_weight, sfc);
   else
   {
-    int * processing_status = new int[matoms]; unique_ptr<int> free_processing_status(processing_status);
+    int * processing_status = new int[matoms]; std::unique_ptr<int[]> free_processing_status(processing_status);
 
-    Atom ** atoms = new Atom * [matoms]; unique_ptr<Atom *> free_atoms(atoms);
+    Atom ** atoms = new Atom * [matoms]; std::unique_ptr<Atom *[]> free_atoms(atoms);
 
     m.atoms ((const Atom **) atoms);   // disregard of const OK
 
@@ -668,17 +678,17 @@ add_intra_molecular_bonds (Molecule & m,
                            Atom_and_Distance * ad,
                            std::vector<distance_t> & radii)
 {
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   Accumulator_Int<int> per_atom_interactions;    // keep track of the attachments to the atoms that make interactions
 
   if (each_ligand_atom_closest_protein_atom_only)
   {
-    for (auto i = 0; i < ligand_matoms; ++i)
+    for (int i = 0; i < ligand_matoms; ++i)
     {
       unsigned int ndx = 0;
 
-      for (auto j = ligand_matoms; j < matoms; ++j)
+      for (int j = ligand_matoms; j < matoms; ++j)
       {
 //      cerr << "Atoms " << i << " and " << j << " iso " << m.isotope(j) << " d " << m.distance_between_atoms(i, j) << endl;
         if (0 == m.isotope(j))
@@ -702,11 +712,11 @@ add_intra_molecular_bonds (Molecule & m,
       if (ndx > 1)
         iwqsort(ad, ndx, adc);
 
-      int jstop = each_ligand_atom_closest_protein_atom_only;
+      uint32_t jstop = each_ligand_atom_closest_protein_atom_only;
       if (jstop > ndx)
         jstop = ndx;
 
-      for (auto j = 0; j < jstop; ++j)
+      for (uint32_t j = 0; j < jstop; ++j)
       {
         const Atom_and_Distance & adj = ad[j];
         m.add_bond(adj._a1, adj._a2, intermolecular_bond);
@@ -717,15 +727,15 @@ add_intra_molecular_bonds (Molecule & m,
   }
   else if (whole_molecule_closest_protein_atom_only)
   {
-    const auto matoms = m.natoms();    // the size of our AD array
+    const uint32_t matoms = m.natoms();    // the size of our AD array
 
     unsigned int ndx = 0;
 
-    for (auto i = 0; i < ligand_matoms; ++i)
+    for (int i = 0; i < ligand_matoms; ++i)
     {
-      auto interactions_this_atom = 0;
+      int interactions_this_atom = 0;
 
-      for (auto j = ligand_matoms; j < matoms; ++j)
+      for (uint32_t j = ligand_matoms; j < matoms; ++j)
       {
 //      cerr << "Atoms " << i << " and " << j << " iso " << m.isotope(j) << " d " << m.distance_between_atoms(i, j) << endl;
         if (0 == m.isotope(j))
@@ -764,7 +774,7 @@ add_intra_molecular_bonds (Molecule & m,
 
 //    cerr << "Adding " << jstop << " bonds\n";
 
-      for (auto j = 0; j < jstop; ++j)
+      for (int j = 0; j < jstop; ++j)
       {
         m.add_bond(ad[j]._a1, ad[j]._a2, intermolecular_bond);
         m.set_isotope(ad[j]._a1, 1);
@@ -774,13 +784,11 @@ add_intra_molecular_bonds (Molecule & m,
   }
   else
   {
-    for (auto i = 0; i < ligand_matoms; ++i)
+    for (int i = 0; i < ligand_matoms; ++i)
     {
-      unsigned int ndx = 0;
+      int interactions_this_atom = 0;
 
-      auto interactions_this_atom = 0;
-
-      for (auto j = ligand_matoms; j < matoms; ++j)
+      for (int j = ligand_matoms; j < matoms; ++j)
       {
 //      cerr << "Atoms " << i << " and " << j << " iso " << m.isotope(j) << " d " << m.distance_between_atoms(i, j) << endl;
         if (0 == m.isotope(j))
@@ -838,13 +846,13 @@ place_isotopes_on_matched_atoms (Molecule & m,
 
   int rc = 0;
 
-  for (auto i = 0; i < queries.number_elements(); ++i)
+  for (int i = 0; i < queries.number_elements(); ++i)
   {
     Substructure_Results sresults;
 
     int nhits = queries[i]->substructure_search(target, sresults);
 
-    for (auto j = 0; j < nhits; ++j)
+    for (int j = 0; j < nhits; ++j)
     {
       const Set_of_Atoms * e = sresults.embedding(j);
       m.set_isotope(*e, iso);
@@ -869,13 +877,13 @@ remove_non_participating_atoms (Molecule & m,
                                 int * atom_weight,
                                 int * can_be_part_of_shell)
 {
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   int new_ligand_matoms = -1;
 
   int ndx = 0;
 
-  for (auto i = 0; i < matoms; ++i)
+  for (int i = 0; i < matoms; ++i)
   {
     if (can_be_part_of_shell[i])
     {
@@ -912,7 +920,7 @@ identify_attached_atoms_recursive (const Molecule & m,
 
   int acon = ai->ncon();
 
-  for (auto i = 0; i < acon; ++i)
+  for (int i = 0; i < acon; ++i)
   {
     atom_number_t j = ai->other(zatom, i);
 
@@ -930,21 +938,22 @@ identify_attached_atoms_recursive (const Molecule & m,
   A couple of functions that do basically the same thing - extend the ligand into the protein
 */
 
+#ifdef NOT_USED
 static void
 identify_attached_atoms (const Molecule & m,
                          const int ligand_matoms,
                          int * remove,
                          int radius)
 {
-  for (auto i = 0; i < ligand_matoms; ++i)
+  for (int i = 0; i < ligand_matoms; ++i)
   {
     const Atom * a = m.atomi(i);
 
-    const auto acon = a->ncon();
+    const int acon = a->ncon();
 
-    for (auto j = 0; j < acon; ++j)
+    for (int j = 0; j < acon; ++j)
     {
-      const auto k = a->other(i, j);
+      const int k = a->other(i, j);
 
       if (0 == remove[k])   // alread marked for keeping
         continue;
@@ -959,6 +968,7 @@ identify_attached_atoms (const Molecule & m,
 
   return;
 }
+#endif
 
 static int
 place_isotopes_on_atoms_within_range_of_interacting_atoms_atom (Molecule & m,
@@ -967,13 +977,13 @@ place_isotopes_on_atoms_within_range_of_interacting_atoms_atom (Molecule & m,
 {
   const Atom * a = m.atomi(zatom);
 
-  const auto acon = a->ncon();
+  const int acon = a->ncon();
 
   int rc = 1;
 
-  for (auto i = 0; i < acon; ++i)
+  for (int i = 0; i < acon; ++i)
   {
-    const auto j = a->other(zatom, i);
+    const int j = a->other(zatom, i);
 
     if (m.isotope(j))
       continue;
@@ -993,9 +1003,9 @@ place_isotopes_on_atoms_within_range_of_interacting_atoms (Molecule & m,
                                                   const int ligand_matoms,
                                                   int shells_start_with_atoms_in_range)
 {
-  auto rc = 0;
+  int rc = 0;
 
-  for (auto i = 0; i < ligand_matoms; ++i)
+  for (int i = 0; i < ligand_matoms; ++i)
   {
     if (0 == m.isotope(i))
       continue;
@@ -1014,11 +1024,11 @@ identify_atoms_within_range_of_interacting_atoms_atom (const Molecule & m,    //
 {
   const Atom * a = m.atomi(zatom);
 
-  const auto acon = a->ncon();
+  const int acon = a->ncon();
 
   int rc = 0;
 
-  for (auto i = 0; i < acon; ++i)
+  for (int i = 0; i < acon; ++i)
   {
     atom_number_t j = a->other(zatom, i);
 
@@ -1044,20 +1054,18 @@ identify_atoms_within_range_of_interacting_atoms (const Molecule & m,    // /lig
                                                   int * can_be_part_of_shell,
                                                   int radius_into_protein)
 {
-  const auto matoms = m.natoms();
-
   int rc = 0;
 
-  for (auto i = 0; i < ligand_matoms; ++i)
+  for (int i = 0; i < ligand_matoms; ++i)
   {
     if (0 == m.isotope(i))
       continue;
 
     const Atom * a = m.atomi(i);
 
-    const auto acon = a->ncon();
+    const int acon = a->ncon();
 
-    for (auto j = 0; j < acon; ++j)
+    for (int j = 0; j < acon; ++j)
     {
       atom_number_t k = a->other(i, j);
 
@@ -1133,12 +1141,12 @@ iwecfp_intermolecular (Molecule & protein,
 
   const IWString ligand_smiles(ligand.smiles());
 
-  auto ligand_matoms = ligand.natoms();   // not const because may get changed when we remove non participating atoms
+  int ligand_matoms = ligand.natoms();   // not const because may get changed when we remove non participating atoms
 
   if (verbose)
     cerr << "Ligand contains " << ligand_matoms << " atoms, protein " << protein.natoms() << endl;
 
-  int * atom_constant = new_int(ligand_matoms + protein.natoms()); unique_ptr<int> free_atom_constant(atom_constant);
+  int * atom_constant = new_int(ligand_matoms + protein.natoms()); std::unique_ptr<int[]> free_atom_constant(atom_constant);
 
   if (! do_atom_typing (ligand, protein, atom_constant, ligand_atom_type, protein_atom_type))
   {
@@ -1156,7 +1164,7 @@ iwecfp_intermolecular (Molecule & protein,
 
 // For the things that can later change, set them to default values
 
-  int * atom_weight = new_int(ligand_matoms + protein.natoms()); unique_ptr<int> free_atom_weight(atom_weight);
+  int * atom_weight = new_int(ligand_matoms + protein.natoms()); std::unique_ptr<int[]> free_atom_weight(atom_weight);
   std::fill_n(atom_weight, ligand_matoms, 1);
 
   if (ligand_tag.length())
@@ -1173,7 +1181,7 @@ iwecfp_intermolecular (Molecule & protein,
 
   Molecule copy_ligand(ligand);    // we might want to know bonds btw atoms in the ligand, but don't want to generate a distance matrix for the whole complex
 
-  int * distance_matrix = NULL;
+  int * distance_matrix = nullptr;
   if (produce_atom_pair_fingerprints)
   {
     distance_matrix = new int[ligand_matoms * ligand_matoms];
@@ -1181,6 +1189,7 @@ iwecfp_intermolecular (Molecule & protein,
 //  std::copy_n (ligand.distance_matrix_warning_may_change(), ligand_matoms * ligand_matoms, distance_matrix);
     copy_vector(distance_matrix, ligand.distance_matrix_warning_may_change(), ligand_matoms * ligand_matoms);
   }
+  std::unique_ptr<int[]> free_distance_matrix(distance_matrix);
 
   ligand.add_molecule(&protein);
 
@@ -1190,7 +1199,7 @@ iwecfp_intermolecular (Molecule & protein,
 
   if (0 == protein_atom_query.number_elements())
   {
-    for (auto i = ligand_matoms; i < matoms; ++i)
+    for (int i = ligand_matoms; i < matoms; ++i)
     {
       ligand.set_isotope(i, 1);
     }
@@ -1198,7 +1207,7 @@ iwecfp_intermolecular (Molecule & protein,
 
   if (shells_start_with_atoms_in_range < 0)   // not used, so enable all atoms
   {
-    for (auto i = 0; i < ligand_matoms; ++i)
+    for (int i = 0; i < ligand_matoms; ++i)
     {
       ligand.set_isotope(i, 1);
     }
@@ -1206,11 +1215,11 @@ iwecfp_intermolecular (Molecule & protein,
 
 // Now that the atom types are known, we can start adding bonds
 
-  Atom_and_Distance * ad = new Atom_and_Distance[ligand.natoms()]; unique_ptr<Atom_and_Distance> free_ad(ad);
+  Atom_and_Distance * ad = new Atom_and_Distance[ligand.natoms()]; std::unique_ptr<Atom_and_Distance[]> free_ad(ad);
 
   add_intra_molecular_bonds(ligand, ligand_matoms, ad, radii);
 
-  const auto bonds_added = radii.size();
+  const int bonds_added = radii.size();
 
   interactions_per_molecule[bonds_added]++;
 
@@ -1230,9 +1239,9 @@ iwecfp_intermolecular (Molecule & protein,
 
   if (bits_weighted_by_distance_to_interacting_atoms.number_elements())
   {
-    for (auto i = 0; i < ligand_matoms; ++i)
+    for (int i = 0; i < ligand_matoms; ++i)
     {
-      auto iso = ligand.isotope(i);
+      isotope_t iso = ligand.isotope(i);
       if (iso)
         copy_ligand.set_isotope(i, iso);
     }
@@ -1240,10 +1249,10 @@ iwecfp_intermolecular (Molecule & protein,
     determine_distance_from_interacting_atoms (copy_ligand, bits_weighted_by_distance_to_interacting_atoms, atom_weight);
   }
 
-  int * can_be_part_of_shell = new_int(ligand.natoms(), 1); unique_ptr<int> free_can_be_part_of_shell(can_be_part_of_shell);
+  int * can_be_part_of_shell = new_int(ligand.natoms(), 1); std::unique_ptr<int[]> free_can_be_part_of_shell(can_be_part_of_shell);
 
   std::fill_n(can_be_part_of_shell + ligand_matoms, matoms - ligand_matoms, 0);
-//for (auto i = ligand_matoms; i < ligand.natoms(); ++i)
+//for (int i = ligand_matoms; i < ligand.natoms(); ++i)
 //{
 //  can_be_part_of_shell[i] = 0;
 //}
@@ -1271,7 +1280,7 @@ iwecfp_intermolecular (Molecule & protein,
   if (! stream_for_joined_molecules.active())
     return 1;
 
-  for (auto i = 0; i < ligand.nedges(); ++i)
+  for (int i = 0; i < ligand.nedges(); ++i)
   {
     const Bond * b = ligand.bondi(i);
 
@@ -1296,7 +1305,7 @@ iwecfp_intermolecular (Molecule & m,
   resizable_array_p<Molecule> c;
   m.create_components(c);
 
-  for (auto i = 0; i < c.number_elements() && fragment < 0; ++i)
+  for (int i = 0; i < c.number_elements() && fragment < 0; ++i)
   {
     Molecule & ci = *(c[i]);
 
@@ -1336,11 +1345,11 @@ iwecfp_intermolecular (data_source_and_type<Molecule> & input,
 {
   Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule> free_m(m);
+    std::unique_ptr<Molecule> free_m(m);
 
     if (verbose > 1)
       cerr << molecules_read << " processing '" << m->name() << "'\n";
@@ -1366,21 +1375,21 @@ iwecfp_intermolecular (data_source_and_type<Molecule> & protein_input,
 {
   Molecule * protein = protein_input.next_molecule();
 
-  if (NULL == protein)
+  if (nullptr == protein)
   {
     cerr << "Cannot read protein molecule\n";
     return 0;
   }
 
-  unique_ptr<Molecule> free_protein(protein);
+  std::unique_ptr<Molecule> free_protein(protein);
 
   Molecule * ligand;
 
-  while (NULL != (ligand = ligand_input.next_molecule()))
+  while (nullptr != (ligand = ligand_input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule> free_ligand(ligand);
+    std::unique_ptr<Molecule> free_ligand(ligand);
 
     if (verbose > 1)
       cerr << molecules_read << " processing '" << ligand->name() << "'\n";
@@ -1406,12 +1415,12 @@ iwecfp_intermolecular (data_source_and_type<Molecule> & protein_input,
 {
   Molecule * ligand, * protein;
 
-  while (NULL != (ligand = ligand_input.next_molecule()) && NULL != (protein = protein_input.next_molecule()))
+  while (nullptr != (ligand = ligand_input.next_molecule()) && nullptr != (protein = protein_input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule> free_ligand(ligand);
-    unique_ptr<Molecule> free_protein(protein);
+    std::unique_ptr<Molecule> free_ligand(ligand);
+    std::unique_ptr<Molecule> free_protein(protein);
 
     if (verbose > 1)
       cerr << molecules_read << " processing '" << ligand->name() << "'\n";
@@ -1432,7 +1441,7 @@ iwecfp_intermolecular (data_source_and_type<Molecule> & protein_input,
 
 static int
 iwecfp_intermolecular (const char * fname,
-                       int input_type,
+                       FileType input_type,
                        resizable_array_p<Substructure_Hit_Statistics> & ligand_fragment_query,
                        IWString_and_File_Descriptor & output)
 {
@@ -1450,7 +1459,7 @@ iwecfp_intermolecular (const char * fname,
 static int
 iwecfp_intermolecular (const char * protein_fname,
                        const char * ligand_fname,
-                       int input_type,
+                       FileType input_type,
                        IWString_and_File_Descriptor & output)
 {
   data_source_and_type<Molecule> ligand_input (input_type, ligand_fname);
@@ -1643,7 +1652,7 @@ iwecfp_intermolecular (int argc, char ** argv)
 
     const_IWSubstring token;
 
-    for (auto i = 0; w.nextword(token, i, ','); )
+    for (int i = 0; w.nextword(token, i, ','); )
     {
       int j;
 
@@ -1736,7 +1745,7 @@ iwecfp_intermolecular (int argc, char ** argv)
   {
     const_IWSubstring i = cl.string_value('I');
 
-    stream_for_joined_molecules.add_output_type(SDF);
+    stream_for_joined_molecules.add_output_type(FILE_TYPE_SDF);
 
     if (stream_for_joined_molecules.would_overwrite_input_files(cl, i))
     {
@@ -1783,7 +1792,7 @@ iwecfp_intermolecular (int argc, char ** argv)
   {
     const_IWSubstring h;
 
-    for (auto i = 0; cl.value('H', h, i); ++i)
+    for (int i = 0; cl.value('H', h, i); ++i)
     {
       if ("ligand" == h)
         remove_hydrogen_from_ligand = 1;
@@ -1816,7 +1825,7 @@ iwecfp_intermolecular (int argc, char ** argv)
   if (cl.option_present('P'))
   {
     const_IWSubstring p;
-    for (auto i = 0; cl.value('P', p, i); ++i)
+    for (int i = 0; cl.value('P', p, i); ++i)
     {
       if (p.starts_with("LIG:"))
       {
@@ -1876,7 +1885,7 @@ iwecfp_intermolecular (int argc, char ** argv)
     usage(2);
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -1914,7 +1923,7 @@ iwecfp_intermolecular (int argc, char ** argv)
 
   if (ligand_fragment_query.number_elements())
   {
-    for (auto i = 0; i < cl.number_elements(); ++i)
+    for (int i = 0; i < cl.number_elements(); ++i)
     {
       if (! iwecfp_intermolecular(cl[i], input_type, ligand_fragment_query, output))
         return i + 1;
@@ -1922,7 +1931,7 @@ iwecfp_intermolecular (int argc, char ** argv)
   }
   else
   {
-    for (auto i = 1; i < cl.number_elements(); ++i)
+    for (int i = 1; i < cl.number_elements(); ++i)
     {
       if (! iwecfp_intermolecular(cl[0], cl[i], input_type, output))
         return 1;
@@ -1947,7 +1956,7 @@ iwecfp_intermolecular (int argc, char ** argv)
 
     cerr << "Ligands had between " << coverage.minval() << " and " << coverage.maxval() << " fraction of atoms making interactions, ave " << static_cast<float>(coverage.average()) << endl;
 
-    for (auto i = 0; i < interactions_per_molecule.number_elements(); ++i)
+    for (int i = 0; i < interactions_per_molecule.number_elements(); ++i)
     {
       if (interactions_per_molecule[i])
         cerr << interactions_per_molecule[i] << " molecules had " << i << " interactions within " << max_intermolecular_distance << endl;

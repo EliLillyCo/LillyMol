@@ -1,19 +1,22 @@
+#include <algorithm>
 #include <iostream>
 #include <memory>
-using std::cerr;
-using std::endl;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
+
+#define COMPILING_IS_ACTUALLY_CHIRAL_CC
 
 #include "molecule.h"
 #include "path_scoring.h"
 #include "chiral_centre.h"
 #include "is_actually_chiral.h"
 
+using std::cerr;
+
 static int max_iterations = 0;
 
 void
-set_max_iterations (int m)
+set_max_iterations(int m)
 {
   assert (m > 0);
 
@@ -23,7 +26,7 @@ set_max_iterations (int m)
 static int allow_unsaturated_atoms_to_be_chiral = 0;
 
 void
-set_allow_unsaturated_atoms_to_be_chiral (int s)
+set_allow_unsaturated_atoms_to_be_chiral(int s)
 {
   allow_unsaturated_atoms_to_be_chiral = s;
 }
@@ -34,11 +37,11 @@ set_allow_unsaturated_atoms_to_be_chiral (int s)
 */
 
 static int
-is_actually_chiral (Molecule & m,
-                    atom_number_t zatom,
-                    resizable_array_p<Path_Scoring> & ps,
-                    int * claimed,
-                    Atom * const * atom)
+is_actually_chiral(Molecule & m,
+                   atom_number_t zatom,
+                   resizable_array_p<Path_Scoring> & ps,
+                   int * claimed,
+                   Atom * const * atom)
 {
   const Atom * a = atom[zatom];
 
@@ -133,8 +136,8 @@ is_actually_chiral (Molecule & m,
 */
 
 int
-is_actually_chiral (Molecule & m,
-                    atom_number_t zatom)
+is_actually_chiral(Molecule & m,
+                   atom_number_t zatom)
 {
   resizable_array_p<Path_Scoring> ps;
 
@@ -142,9 +145,9 @@ is_actually_chiral (Molecule & m,
 }
 
 int
-is_actually_chiral (Molecule & m,
-                    atom_number_t zatom,
-                    resizable_array_p<Path_Scoring> & ps)
+is_actually_chiral(Molecule & m,
+                   atom_number_t zatom,
+                   resizable_array_p<Path_Scoring> & ps)
 {
   const Atom * a = m.atomi(zatom);
 
@@ -183,17 +186,18 @@ is_actually_chiral (Molecule & m,
 
   m.atoms( (const Atom **) atoms);
 
-//cerr << "Detailed calculation on " << m.smarts_equivalent_for_atom(zatom) << endl;
+//cerr << "Detailed calculation on " << m.smarts_equivalent_for_atom(zatom) << '\n';
 
   return is_actually_chiral(m, zatom, ps, claimed, atoms);
 }
 
 int
-do_remove_invalid_chiral_centres (Molecule & m)
+do_remove_invalid_chiral_centres(Molecule & m)
 {
   int nc = m.chiral_centres();
-  if (0 == nc)
+  if (0 == nc) {
     return 0;
+  }
 
 // Removing a chiral centre while we are scanning the set would mess things up,
 // so we make a list of the atoms with invalid chiral centres and remove them later
@@ -206,17 +210,186 @@ do_remove_invalid_chiral_centres (Molecule & m)
 
     atom_number_t a = c->a();
 
-    if (! is_actually_chiral(m, a))
+    // cerr << "Atom chiral? " << is_actually_chiral(m, a) << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
+
+    if (! is_actually_chiral(m, a)) {
       centres_to_be_removed.add(a);
+    }
   }
 
-  if (centres_to_be_removed.number_elements())
-  {
-    for (int i = 0; i < centres_to_be_removed.number_elements(); i++)
-    {
+  if (centres_to_be_removed.number_elements()) {
+    for (int i = 0; i < centres_to_be_removed.number_elements(); i++) {
       m.remove_chiral_centre_at_atom(centres_to_be_removed[i]);
     }
   }
 
   return nc;
+}
+
+std::ostream&
+operator<<(std::ostream& os, const CahnIngoldPrelog& cip) {
+  switch (cip) {
+    case CahnIngoldPrelog::kNeither:
+      os << "Neither";
+      return os;
+    case CahnIngoldPrelog::R:
+      os << 'R';
+      return os;
+    case CahnIngoldPrelog::S:
+      os << 'S';
+      return os;
+    case CahnIngoldPrelog::kUnspecified:
+      os << "Unspecified";
+      return os;
+    default:
+      os << '?';
+      return os;
+  }
+}
+
+std::optional<CahnIngoldPrelog>
+Molecule::CahnIngoldPrelogValue(atom_number_t zatom) {
+  const Chiral_Centre* c = chiral_centre_at_atom(zatom);
+  if (c == nullptr) {
+    return std::nullopt;
+  }
+
+  return CahnIngoldPrelogValue(c);
+}
+
+// Convert zatom to an atomic number equivalent for CIP perception.
+// `zatom` must be either
+//   a non-atom part of a chiral centre
+//   a valid atom number.
+// In the case of an implicit hydrogen, return 1.
+// In the case of a lone pair, return 0;
+std::optional<uint32_t>
+Molecule::ChiralCentreMemberToCipInt(int zatom) const {
+  if (zatom >= 0 && zatom < _number_elements) {
+    return _things[zatom]->atomic_number();
+  }
+
+  if (zatom == kChiralConnectionIsImplicitHydrogen) {
+    return 1;
+  } 
+
+  if (zatom == kChiralConnectionIsLonePair) {
+    return 0;
+  }
+
+  return std::nullopt;
+}
+
+CahnIngoldPrelog
+Molecule::CahnIngoldPrelogValue(const Chiral_Centre* c) {
+  CahnIngoldPrelog rc = CahnIngoldPrelog::kNeither;
+
+  auto top_front = ChiralCentreMemberToCipInt(c->top_front());
+  if (! top_front) {
+    return rc;
+  }
+
+  auto top_back = ChiralCentreMemberToCipInt(c->top_back());
+  if (! top_back) {
+    return rc;
+  }
+
+  auto left_down = ChiralCentreMemberToCipInt(c->left_down());
+  if (! left_down) {
+    return rc;
+  }
+
+  auto right_down = ChiralCentreMemberToCipInt(c->right_down());
+  if (! right_down) {
+    return rc;
+  }
+
+  return CahnIngoldPrelogValue(c, *top_front, *top_back, *left_down, *right_down);
+}
+
+enum Position {
+  kTopFront = 0,
+  kTopBack = 1,
+  kLeftDown = 2,
+  kRightDown = 3
+};
+
+// An arbitrary value indicating that during an expansion, an atom is the centre
+// of the Chiral_Centre being resolved.
+static constexpr int kCentre = -11;
+// an arbitrary negative value indicating that an atom has already been visited
+// as part of a shell expansion.
+static constexpr int kVisited = -12;
+static constexpr int kThisExpansion = -13;
+
+// `top_front` etc are all atomic number equivalents.
+CahnIngoldPrelog
+Molecule::CahnIngoldPrelogValue(const Chiral_Centre* c,
+                                int top_front, int top_back, 
+                                int left_down, int right_down) {
+#ifdef DEBUG_CAHN_INGOLD_PRELOG
+  cerr << "top_front " << top_front << " top_back " << top_back <<
+          " left_down " << left_down << " right_down " << right_down << '\n';
+#endif
+
+  // See if resolved by the atoms directly attached.
+  if (top_front == top_back || top_front == left_down || top_front == right_down ||
+      top_back == left_down || top_back == right_down ||
+      left_down == right_down) {
+    // a least two atoms the same, resolve by expansion below.
+  } else if (top_front < top_back && top_front < left_down && top_front < right_down) {
+    return CahnIngoldPrelogValue(top_back, left_down, right_down);
+  } else if (top_back < top_front && top_back < left_down && top_back < right_down) {
+    return CahnIngoldPrelogValue(top_front, right_down, left_down);
+  } else if (right_down < top_front && right_down < top_back && right_down < left_down) {
+    return CahnIngoldPrelogValue(top_front, left_down, top_back);
+  } else if (left_down < top_front && left_down < top_back && left_down < right_down) {
+    return CahnIngoldPrelogValue(top_front, top_back, right_down);
+  } else {
+    cerr << "Molecule::CahnIngoldPrelogValue:internal error\n";
+    return CahnIngoldPrelog::kNeither;
+  }
+
+  cerr << "Molecule::CahnIngoldPrelogValue:shell expansion not implemented\n";
+  CahnIngoldPrelog rc = CahnIngoldPrelog::kNeither;
+  return rc;
+
+  // Atom needs to be resolved by expansion.
+  std::unique_ptr<int[]> tmp = std::make_unique<int[]>(4 * _number_elements);
+  std::fill_n(tmp.get(), 4 * _number_elements, 0);
+  // For each expansion, mark the centre atom.
+  for (int i = 0; i < 4; ++i) {
+    tmp.get()[i * _number_elements + c->a()] = kCentre;
+  }
+
+  // TODO:ianwatson implement shell expansion
+}
+
+// The low priority connection has been identified, and we can set up
+// an ordering of the remaining connections.
+//       north                  *
+//         |                    *
+//         *                    *
+//        / \                   *
+//      /    \                  *
+//    sw      se                *
+// Examine the relative values and return R or S.
+CahnIngoldPrelog
+Molecule::CahnIngoldPrelogValue(int north, int se, int sw) const {
+  if (north > se && se > sw) {
+    return CahnIngoldPrelog::R;
+  } else if (se > sw && sw > north) {
+    return CahnIngoldPrelog::R;
+  } else if (sw > north && north > se) {
+    return CahnIngoldPrelog::R;
+  } else if (north > sw && sw > se) {
+    return CahnIngoldPrelog::S;
+  } else if (sw >  se && se > north) {
+    return CahnIngoldPrelog::S;
+  } else if (se > north && north > sw) {
+    return CahnIngoldPrelog::S;
+  } else {
+    cerr << "CahnIngoldPrelogValue:internal error, north " << north << " se " << se << " sw " << sw << '\n';
+    return CahnIngoldPrelog::kUnspecified;
+  }
 }

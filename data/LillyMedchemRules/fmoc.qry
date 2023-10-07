@@ -1,0 +1,117 @@
+# RuleClass protecting group
+# SubClass count
+
+# Mar 2004. Change to demerit
+
+(0 Query
+  (A C Comment "fmoc")
+  (A I Version 2)
+  (A D numeric_value 60)
+  (A I min_nrings 3)
+  (A I unique_embeddings_only 1)
+  (0 Ring_System_Specifier
+    (A I nrings 3)
+    (A I aromatic_ring_count 2)
+  )
+
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I nrings 0)
+    (A I hcount 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I double_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I single_bond 1)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I single_bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 6)
+    (A I nrings 1)
+    (A I ring_size 5)
+    (A I aryl 2)
+    (A I single_bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I nrings 2)
+    (A I single_bond 5)
+  )
+  (7 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 6)
+  )
+  (8 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 7)
+  )
+  (9 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 8)
+  )
+  (10 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 9)
+  )
+  (11 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 10)
+    (A I bond 6)
+    (A I nrings 2)
+  )
+  (12 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I nrings 2)
+    (A I single_bond 11)
+  )
+  (13 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 12)
+  )
+  (14 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 13)
+  )
+  (15 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 14)
+  )
+  (16 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 15)
+  )
+  (17 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I nrings 2)
+    (A I bond 16)
+    (A I bond 12)
+    (A I single_bond 5)
+  )
+)

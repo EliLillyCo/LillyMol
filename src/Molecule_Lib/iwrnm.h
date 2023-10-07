@@ -1,5 +1,5 @@
-#ifndef IW_RING_NUMBER_MANAGER_H
-#define IW_RING_NUMBER_MANAGER_H
+#ifndef MOLECULE_LIB_IWRNM_H_
+#define MOLECULE_LIB_IWRNM_H_
 
 /*
   This class is used when constructing a smiles.
@@ -8,6 +8,7 @@
     (b) The type of the bond
     (c) The atom which created the ring number
 */
+#include "Foundational/iwstring/iwstring.h"
 
 #include "chiral_centre.h"
 
@@ -64,4 +65,4 @@ class Ring_Number_Manager
                 const Chiral_Centre *);
 };
 
-#endif
+#endif  // MOLECULE_LIB_IWRNM_H_

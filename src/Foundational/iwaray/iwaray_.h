@@ -17,7 +17,7 @@ resizable_array_base<T>::resizable_array_base ()
 {
   _elements_allocated = _number_elements = 0;
   _magic = IWARAY_MAGIC_NUMBER;
-  _things = NULL;
+  _things = nullptr;
 }
 
 template <typename T>
@@ -90,7 +90,7 @@ resizable_array_base<T>::~resizable_array_base ()
   if (_things)
   {
     delete [] _things;
-    _things = NULL;
+    _things = nullptr;
   }
 
   return;
@@ -212,7 +212,7 @@ int
 resizable_array_base<T>::add (const T * extra, int nextra)
 {
   assert (IWARAY_MAGIC_NUMBER == _magic);
-  assert (NULL != extra && nextra > 0);
+  assert (nullptr != extra && nextra > 0);
 
   if (_number_elements + nextra > _elements_allocated)
     resize (_number_elements + nextra);
@@ -244,14 +244,14 @@ resizable_array_base<T>::ok () const
     return 0;
 
   if (_number_elements > 0)
-    return NULL != _things;
+    return nullptr != _things;
 
   if (_number_elements < 0)
     return 0;
 
 // the cases of 0 == _number_elements
 
-  if (0 == _elements_allocated && NULL == _things)
+  if (0 == _elements_allocated && nullptr == _things)
     return 1;
 
   if (_elements_allocated && _things)
@@ -280,10 +280,10 @@ resizable_array_base<T>::remove_item (int item_to_remove)
 
   if (0 == _number_elements)
   {
-    if (NULL != _things)      // free anything already there
+    if (nullptr != _things)      // free anything already there
       delete [] _things;
     _elements_allocated = 0;
-    _things = NULL;
+    _things = nullptr;
   }
 
   return _number_elements;
@@ -347,7 +347,7 @@ template <typename T>
 int
 resizable_array_p<T>::remove (T * thing_to_remove)
 {
-  assert (NULL != thing_to_remove);
+  assert (nullptr != thing_to_remove);
   assert (this->ok ());
 
   for (int i = 0; i < _number_elements; i++)
@@ -366,7 +366,7 @@ template <typename T>
 int
 resizable_array_p<T>::remove_no_delete (T * thing_to_remove)
 {
-  assert (NULL != thing_to_remove);
+  assert (nullptr != thing_to_remove);
   assert (this->ok ());
 
   for (int i = 0; i < _number_elements; i++)
@@ -400,10 +400,10 @@ resizable_array_base<T>::remove_all (const T item_to_remove)
 
   if (0 == _number_elements)
   {
-    if (NULL != _things)      // free anything already there
+    if (nullptr != _things)      // free anything already there
       delete [] _things;
     _elements_allocated = 0;
-    _things = NULL;
+    _things = nullptr;
   }
 
   return items_removed;
@@ -456,11 +456,11 @@ resizable_array_base<T>::resize (int new_size)
 
   if (0 == new_size)
   {
-    if (NULL != _things)      // free anything already there
+    if (nullptr != _things)      // free anything already there
       delete [] _things;
     _elements_allocated = 0;
     _number_elements = 0;
-    _things = NULL;
+    _things = nullptr;
     return 1;
   }
 
@@ -469,9 +469,9 @@ resizable_array_base<T>::resize (int new_size)
   
   if (0 == _elements_allocated)
   {
-    assert (NULL == _things);
+    assert (nullptr == _things);
     _things = new T[new_size];
-    if (NULL == _things)
+    if (nullptr == _things)
     {
       cerr << "resizable_array_base<T>::resize: malloc failure, size " << new_size << endl;
       return 1;
@@ -485,7 +485,7 @@ resizable_array_base<T>::resize (int new_size)
 
   T * new_things = new T[new_size];
 
-  if (NULL == new_things)
+  if (nullptr == new_things)
   {
     cerr << "resizable_array_base<T>::resize: malloc failure, size " << new_size << endl;
     return 1;
@@ -653,7 +653,7 @@ void
 resizable_array_base<T>::sort (int (* comparitor) (const T *, const T *))
 {
   assert (ok ());
-  assert (NULL != comparitor);
+  assert (nullptr != comparitor);
 
   if (_number_elements <= 1)
     return;

@@ -1,0 +1,183 @@
+workspace(name = "lillymol")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+# These external dependencies will have been built by build_third_party.sh
+
+new_local_repository(
+    name = "berkeleydb",
+    path = "../third_party/BDB",
+    build_file_content = """
+cc_library(
+    name = "berkeleydb",
+    srcs = ["lib/libdb_cxx.a", "lib/libdb.a"],
+    hdrs = ["include/db_cxx.h", "include/db.h" ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+#http_archive(
+#   name = "com_github_google_benchmark",
+#    name = "benchmark",
+#    strip_prefix = "benchmark-main",
+#    urls = ["https://github.com/google/benchmark/archive/main.zip"],
+#)
+
+http_archive(
+    name = "com_google_leveldb",
+    build_file = "//third_party:leveldb.BUILD",
+#   sha256 = "6d91bcb96547bd8d43013e5ac9f4c2ad3227e30e3dc472cdafd2910eb43c16f8",
+#   strip_prefix = "leveldb-1cb384088184be9840bd59b4040503a9fa9aee66",
+#   urls = ["https://github.com/google/leveldb/archive/1cb384088184be9840bd59b4040503a9fa9aee66.zip"],
+    urls = ["https://github.com/google/leveldb/archive/main.zip"],
+)
+
+# Change master to the git tag you want.
+http_archive(
+    name = "com_grail_bazel_toolchain",
+    strip_prefix = "bazel-toolchain-master",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/master.tar.gz"],
+)
+
+load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+bazel_toolchain_dependencies()
+
+new_local_repository(
+    name = "local_f2c",
+    path = "../third_party/libf2c",
+    build_file_content = """
+cc_library(
+    name = "f2c",
+    srcs = ["libf2c.a"],
+    hdrs = ["f2c.h"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+local_repository(
+    name = "tbb",
+    path = "../third_party/oneTBB",
+)
+
+new_local_repository(
+    name = "fast_float",
+    path = "../third_party/include/",
+    build_file_content =
+"""
+cc_library(
+    name = "fast_float",
+    hdrs = [
+        "fast_float.h",
+    ],
+    visibility = ['//visibility:public'],
+)
+"""
+)
+
+# If MPI is installed in your environment...
+new_local_repository(
+    name = "mpich",
+    path = "/lrlhps/apps/mpich/mpich-3.1.4/",
+    build_file_content =
+"""
+cc_library (
+    name = "mpich",
+    hdrs = glob(["include/**"]),
+    strip_include_prefix = "include",
+    srcs = glob(["lib/*.a"]),
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+new_local_repository(
+    name = "pybind11",
+    path = "/lrlhps/data/c3tk/dev/virtenv/gc3tk-env/include",
+    build_file_content = """
+cc_library (
+    name = "pybind11",
+    hdrs = glob( 
+        ["pybind11/**/*.h"],
+    ),
+    deps = [
+        "@python",
+    ],
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+# in order to build LillyMol pybind11 bindings you will need a python
+# installation with pybind installed with that. Adjust this to meet
+# local needs.
+new_local_repository(
+    name = "python",
+    path = "/lrlhps/data/c3tk/dev/virtenv/gc3tk-env/include/python3.11",
+    build_file_content = """
+cc_library(
+    name = "python",
+    hdrs = glob(
+            ["**/*.h"]
+    ),
+    includes = [
+        ".",
+    ],
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+new_local_repository(
+    name = "x86-simd-sort",
+    path = "../third_party/x86-simd-sort",
+    build_file_content = """
+cc_library(
+    name = "x86-simd.sort",
+    hdrs = [
+      glob(
+        ["src/*hpp"],
+      )
+    ],
+    strip_include_prefix = "src",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+
+# THESE TARGETS REQUIRE THIRD PARTY LICENSED PRODUCTS.
+# If you have these products available, adjust the file
+# paths to reflect the locations.
+
+# Note that this includes a libf2c that might be different from @local_f2c.
+# definitely possibility of problems...
+new_local_repository(
+    name = "biobyte",
+    path= "/lrlhps/apps/gc3tk/c3tk-core/lib/Linux/BioByte/linux-64/",
+    build_file_content = """
+cc_library (
+    name = "biobyte",
+    srcs = [ "lib/libBB.a", "lib/libf2c.a" ],
+    hdrs = glob(["h/*.h"]),  
+    strip_include_prefix = "h",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+new_local_repository(
+    name = "corina",
+    path = "/lrlhps/apps/corina/corina-4.4.0",
+    build_file_content = """
+cc_library(
+    name = "corina",
+    srcs = ["lib/corina_linux_x86_64.so"],
+    hdrs = ["include/corina_lib.h"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)

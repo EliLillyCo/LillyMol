@@ -1,0 +1,6 @@
+name: "tbutyl_to_methyl"
+scaffold {
+  id: 0
+  smarts: "[CD4x0]([CD1])([CD1])[CD1]"
+  remove_atoms: [1, 2, 3]
+}

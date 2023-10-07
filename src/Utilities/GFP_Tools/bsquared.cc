@@ -2,10 +2,10 @@
 
 #include "bsquared.h"
 
-#include "accumulator.h"
+#include "Foundational/accumulator/accumulator.h"
 
 static int
-predicted_value_comparitor (const void * pe1, const void * pe2)
+predicted_value_comparitor(const void * pe1, const void * pe2)
 {
   float e1 = * ((const float *) pe1);
   float e2 = * ((const float *) pe2);
@@ -20,10 +20,10 @@ predicted_value_comparitor (const void * pe1, const void * pe2)
 }
 
 int
-compute_b_squared (const float * predicted,
-                   float * ybest,
-                   int n,
-                   double & Bsquared)
+compute_b_squared(const float * predicted,
+                  float * ybest,
+                  int n,
+                  double & Bsquared)
 {
   assert (n > 1);
 

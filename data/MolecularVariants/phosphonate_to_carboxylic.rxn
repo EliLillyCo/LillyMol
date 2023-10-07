@@ -1,0 +1,10 @@
+name: "phosphonate_to_carboxylic"
+scaffold {
+  id: 0
+  smarts: "[PD4](=O)(-[OH])-[OH]"
+  remove_atom: 2
+  change_element {
+    atom: 0
+    element: "C"
+  }
+}

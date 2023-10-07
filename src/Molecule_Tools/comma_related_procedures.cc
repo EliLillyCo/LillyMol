@@ -1,8 +1,8 @@
-#include "molecule.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/qry_wstats.h"
+
 #include "jw_vector_array_operation.h"
-#include "qry_wstats.h"
-#include "accumulator.h"
-#include "istream_and_type.h"
 #include "comma_related_procedures.h"
 
 /*

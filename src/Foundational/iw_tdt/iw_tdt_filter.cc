@@ -1,10 +1,11 @@
 #include <stdlib.h>
 
+#include "Foundational/mtrand/iwrandom.h"
+
 #include "iw_tdt_filter.h"
 #include "iw_tdt.h"
-#include "iwrandom.h"
 
-#if defined(__INTEL_COMPILER)
+#if defined(SKIP_TDT_FILTER)
 int
 display_tdt_filter_syntax (std::ostream & os)
 {

@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "acyl_isoamide_aromatic")
+  (A I version 2)
+  (A D numeric_value 60)
+  (A C smarts "O=cocn")
+)

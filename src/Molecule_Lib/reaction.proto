@@ -1,0 +1,534 @@
+syntax = "proto2";
+
+import "Molecule_Lib/substructure.proto";
+import "Molecule_Lib/toggle_kekule_form.proto";
+
+package ReactionProto;
+
+message MatchConditions {
+  optional bool ignore_not_reacting = 1;
+  optional bool find_unique_embeddings = 2;
+  optional int32 process_hit_number = 3;
+  optional bool one_embedding_per_start_atom = 4;
+  optional bool ignore_symmetry_related_matches = 5;
+  optional string multiple_match_string = 6;
+  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 7;
+};
+
+message ScaffoldMatchConditions {
+  optional MatchConditions match_conditions = 1;
+  optional bool enumerate_scaffold_hits_individually = 2;
+  optional int32 combinatorial_expansion_of_scaffold_hits = 3;
+}
+
+message SidechainMatchConditions {
+  optional MatchConditions match_conditions = 1;
+  optional bool make_new_reagent_for_each_hit = 2;
+  optional int32 max_matches_to_find = 3;
+  optional bool strip_reagents_to_largest_fragment = 4;
+}
+
+message PairOfAtoms {
+  optional int32 a1 = 1;
+  optional int32 a2 = 2;
+}
+
+// This is really a oneof, but I want to keep things simple
+// to use.
+// The component refers to the order of the scaffold/sidechain
+// in the reaction, with the scaffold always being 0, and the
+// first sidechain being 1.
+// The string variant might look like "0.2" which means matched
+// atom 2 in component 0, the scaffold.
+message MatchedAtomInComponent
+{
+  optional int32 component = 1;
+  optional int32 atom = 2;
+
+  optional string component_and_atom = 3;
+}
+
+message StereoCenterComponent {
+  oneof AtomOrHydrogen {
+    MatchedAtomInComponent atom = 1;
+    bool implicit_hydrogen = 2;
+  }
+}
+
+message StereoCenter {
+  optional StereoCenterComponent center = 1;
+  optional StereoCenterComponent top_front = 2;
+  optional StereoCenterComponent top_back = 3;
+  optional StereoCenterComponent left_down = 4;
+  optional StereoCenterComponent right_down = 5;
+
+  optional bool optional = 6;
+}
+
+// Scaffolds and sidechains can designate a matched atom as R or S.
+message CipStereoAtom {
+  optional uint32 atom = 1;
+  optional SubstructureSearch.CahnIngoldPrelog rs = 2;
+};
+
+// At the reaction level, we can specify a matched atom
+// that is R or S. The important thing is that this is applied
+// as one of the last steps in the reaction.
+message CipStereoReaction {
+  optional MatchedAtomInComponent atom = 1;
+  optional SubstructureSearch.CahnIngoldPrelog rs = 2;
+};
+
+message BondToBeMade {
+  optional int32 a1 = 1;
+  optional int32 a2 = 2;
+  optional SubstructureSearch.BondType btype = 3;
+}
+
+// When forming a bond betwen fragments there can be constraints on
+// what can be joined to what, based on isotopic labels in the sidechain
+// and/or scaffold.
+
+// Some cases:
+// 1  sidechain atom isotope must match scaffold atom atomic number.
+// 2  sidechain atom isotope must match scaffold atom isotope.
+// 3  sidechain atom isotope must match computed atom type of scaffold atom.
+
+// In the first case, the bond will only be made if the isotope on
+// the sidechain atom is the same as the atomic number of the atom in
+// the scaffold.
+
+// In the second case the isotope on the sidechain atom must match the
+// isotope placed on the scaffold atom.
+
+// The third case is not implemented yet.
+// All these are properties of the sidechain, I think all cases can
+// be handled that way.
+
+// Note that as currently configured, isotope transformations
+// are applied before this is checked, so changing isotopic 
+// labels is incompatible with this. TODO:ianwatson fix...
+enum JoinRequirement {
+  NONE = 1;
+  // Case 1 above.
+  ATOMIC_NUMBER = 2;
+  // Case 2 above.
+  ISOTOPE = 3;
+  // Case 3 above - not implemented
+  ATYPE = 4;
+}
+
+// The most common usage will be something of the form
+// join {
+//   a1: 1
+//   a2: 0
+//   btype:: SS_SINGLE_BOND
+// }
+// which joins matched atom 1 in the scaffold with matched atom 0
+// in the current sidechain. 
+// This is actually equivalent to
+//    id: 1
+//    join {
+//      c1 {
+//        component: 0
+//        atom: 1
+//      }
+//      c2 {
+//        component: 1
+//        atom: 0
+//      }
+//      btype: SS_SINGLE_BOND
+//    }
+// Where the matched atom in the scaffold is specified as being matched
+// atom 1 in component 0. Similarly, rather than a2: 0, we fully specify
+// that the other atom is matched atom 0 in component 1.
+// And of course these can be mixed.
+//   join { c1 {component: 0 atom: 1} a2: 0 btype: SS_SINGLE_BOND}
+//   join { a1 1 c2 { component: 1 atom: 0 btype: SS_SINGLE_BOND} }
+message InterParticleBond {
+  // By default, a matched atom in the scaffold
+  oneof atom1 {
+    uint32 a1 = 1;
+    MatchedAtomInComponent c1 = 2;
+  }
+  // By default, a matched atom in the current component.
+  oneof atom2 {
+    uint32 a2 = 3;
+    MatchedAtomInComponent c2 = 4;
+  }
+
+  // The default bond type to be made is a single bond.
+  optional SubstructureSearch.BondType btype = 5;
+
+  // If operating in 3D, we can specify that the bond
+  // only gets formed if the atoms are closer than...
+  optional float max_distance = 6;
+
+  // A requirement on the scaffold atom and how it relates to an isotope on
+  // the sidechain atom.
+  optional JoinRequirement isotope_join_requirement = 7;
+}
+
+// A stereo preserving atom replacement.
+// In default mode, when a reaction is performed, it identifies the atoms
+// to be removed and bonds to be broken, and does that. But this will
+// necessarily destroy chirality.
+// If joins are specified this way, stereochemistry can be preserved.
+message ReplaceAtom {
+  // By default, an atom in the scaffold.
+  oneof atom1 {
+    uint32 a1 = 1;
+    MatchedAtomInComponent c1 = 2;
+  }
+  // By default, an atom in the current component.
+  oneof atom2 {
+    uint32 a2 = 3;
+    MatchedAtomInComponent c2 = 4;
+  }
+}
+
+message WedgeBond {
+  optional uint32 a1 = 1;
+  optional uint32 a2 = 2;
+
+  optional int32 direction = 3;
+}
+
+message ChangeElement {
+  optional uint32 atom = 1;
+  optional string element = 2;
+}
+
+message FormalCharge {
+  optional uint32 atom = 1;
+  optional int32 formal_charge = 2;
+}
+
+
+message ChangeFormalCharge {
+  optional uint32 atom = 1;
+  optional int32 delta = 2;
+}
+
+message PlaceIsotope {
+  optional uint32 atom = 1;
+  optional int32 isotope = 2;
+}
+
+message IncrementIsotope {
+  optional uint32 atom = 1;
+  optional int32 delta = 2;
+}
+
+message BondLength {
+  oneof first_atom {
+    uint32 a1 = 1;
+    MatchedAtomInComponent c1 = 2;
+  }
+  oneof second_atom {
+    uint32 a2 = 3;
+    MatchedAtomInComponent c2 = 4;
+  }
+
+  optional float distance = 5;
+}
+
+message BondAngle {
+  oneof atom1 {
+    uint32 a1 = 1;
+    MatchedAtomInComponent c1 = 2;
+  }
+
+  oneof atom2 {
+    uint32 a2 = 3;
+    MatchedAtomInComponent c2 = 4;
+  }
+
+  oneof atom3 {
+    uint32 a3 = 5;
+    MatchedAtomInComponent c3 = 6;
+  }
+
+  optional float angle = 7;
+}
+
+message DihedralAngle {
+  oneof atom1 {
+    uint32 a1 = 1;
+    MatchedAtomInComponent c1 = 2;
+  }
+
+  oneof atom2 {
+    uint32 a2 = 3;
+    MatchedAtomInComponent c2 = 4;
+  }
+
+  oneof atom3 {
+    uint32 a3 = 5;
+    MatchedAtomInComponent c3 = 6;
+  }
+
+  oneof atom4 {
+    uint32 a4 = 7;
+    MatchedAtomInComponent c4 = 8;
+  }
+
+  optional float angle = 9;
+}
+
+message RotateFragment {
+  oneof the_atom {
+    uint32 atom = 1;
+    MatchedAtomInComponent cspec = 2;
+  }
+
+  optional float angle = 3;
+}
+
+// Each directive in a CoordinateTransfer is the
+// identity of an atom in some other component and
+// an atom in the local fragment.
+message ComponentAndAtom {
+  optional MatchedAtomInComponent c1 = 1;
+  optional uint32 a2 = 2;
+}
+
+// The coordinate_transfer consists of a number of
+// pairs specifying atoms to be aligned.
+message CoordinateTransfer {
+  repeated ComponentAndAtom atoms = 1;
+}
+
+message NoReaction {
+  optional string comment = 1;
+  optional SubstructureSearch.SubstructureQuery scaffold_no_reaction = 2;
+  optional SubstructureSearch.SubstructureQuery sidechain_no_reaction = 3;
+}
+
+// Both Scaffold_Reaction_Site and Sidechain_Reaction_Site inherit
+// from the Reaction_Site object. But protos do not support inheritance
+// and we do not want to use a 'has a' construct.
+// So, we do a textual replacement of common attributes into those
+// protos. Yes, this is a hack, we could do it via the C preprocessor.
+
+// Text copied to both ScaffoldReactionSite and SidechainReactionSite
+// DO NOT EDIT
+//q  optional int32 id = 1;
+//q  repeated SubstructureSearch.SubstructureQuery query = 2;
+//q  repeated BondToBeMade make_bond = 3;
+//q  repeated PairOfAtoms break_bond = 4;
+//q  repeated int32 remove_atom = 5;
+//q  repeated int32 remove_fragment = 6;
+//q  repeated int32 keep_fragment = 7;
+//q  repeated ChangeElement change_element = 8;
+//q  repeated FormalCharge formal_charge = 9;
+//q  repeated ChangeFormalCharge change_formal_charge = 10;
+//q  repeated PlaceIsotope isotope = 11;
+//q  repeated IncrementIsotope change_isotope = 12;
+//q  repeated PlaceIsotope invert_isotope = 13;
+
+//q  repeated BondLength bond_length = 14;
+//q  repeated BondAngle bond_angle = 15;
+//q  repeated DihedralAngle dihedral_angle = 16;
+//q  repeated CoordinateTransfer coordinate_transfer = 17;
+
+//q  repeated WedgeBond wedge_bonds = 18;
+
+//q  repeated ReplaceAtom replace_atom = 19;
+
+//q  repeated int32 unfix_implicit_hydrogens = 20;
+
+//q  repeated SubstructureSearch.SubstructureQuery inactive = 21;
+
+//q  repeated int32 invert_chirality = 22;
+//q  repeated int32 remove_chirality = 23;
+//q  optional ToggleKekuleForm.ToggleKekuleForm toggle_kekule_form = 24;
+
+//q  optional bool ignore_multiple_matches_involving_atoms_not_changing = 25;
+//q  optional bool ignore_multiple_matches_involving_changing_atoms = 27;
+
+//q  optional bool noop_reaction = 28;
+//q  optional string comment = 29;
+
+//q  repeated string smarts = 30;
+
+//q  For removing multiple atoms. Note, this is a mistake, it is the same as remove_atom
+//q  repeated int32 remove_atoms = 31;
+
+//q  Read the query from a file
+//q  repeated string query_file = 32;
+
+//q  repeated CipStereoAtom cip_stereo = 33;
+// DO NOT EDIT
+
+
+message ReactionSite {
+  optional SubstructureSearch.SubstructureQuery query = 1;
+  optional string comment = 2;
+  repeated BondToBeMade make_bond = 3;
+  repeated PairOfAtoms break_bond = 4;
+  repeated int32 remove_atom = 5;
+  repeated int32 remove_fragment = 6;
+  repeated int32 keep_fragment = 7;
+  repeated ChangeElement change_element = 8;
+  repeated FormalCharge formal_charge = 9;
+  repeated ChangeFormalCharge change_formal_charge = 10;
+  repeated PlaceIsotope isotope = 11;
+  repeated IncrementIsotope change_isotope = 12;
+  repeated PlaceIsotope invert_isotope = 13;
+
+  repeated BondLength bond_length = 14;
+  repeated BondAngle bond_angle = 15;
+  repeated DihedralAngle dihedral_angle = 16;
+  repeated CoordinateTransfer coordinate_transfer = 17;
+
+  repeated WedgeBond wedge_bonds = 18;
+
+  repeated ReplaceAtom replace_atom = 19;
+
+  repeated int32 unfix_implicit_hydrogens = 20;
+
+  repeated SubstructureSearch.SubstructureQuery inactive = 21;
+
+  repeated int32 invert_chirality = 22;
+  repeated int32 remove_chirality = 23;
+  optional ToggleKekuleForm.ToggleKekuleForm toggle_kekule_form = 24;
+
+  optional bool ignore_multiple_matches_involving_atoms_not_changing = 25;
+  optional bool ignore_multiple_matches_involving_changing_atoms = 27;
+
+  optional bool noop_reaction = 28;
+}
+
+message ScaffoldReactionSite {
+// Text copied to both ScaffoldReactionSite and SidechainReactionSite
+// DO NOT EDIT
+  optional int32 id = 1;
+  repeated SubstructureSearch.SubstructureQuery query = 2;
+  repeated BondToBeMade make_bond = 3;
+  repeated PairOfAtoms break_bond = 4;
+  repeated int32 remove_atom = 5;
+  repeated int32 remove_fragment = 6;
+  repeated int32 keep_fragment = 7;
+  repeated ChangeElement change_element = 8;
+  repeated FormalCharge formal_charge = 9;
+  repeated ChangeFormalCharge change_formal_charge = 10;
+  repeated PlaceIsotope isotope = 11;
+  repeated IncrementIsotope change_isotope = 12;
+  repeated PlaceIsotope invert_isotope = 13;
+
+  repeated BondLength bond_length = 14;
+  repeated BondAngle bond_angle = 15;
+  repeated DihedralAngle dihedral_angle = 16;
+  repeated CoordinateTransfer coordinate_transfer = 17;
+
+  repeated WedgeBond wedge_bonds = 18;
+
+  repeated ReplaceAtom replace_atom = 19;
+
+  repeated int32 unfix_implicit_hydrogens = 20;
+
+  repeated SubstructureSearch.SubstructureQuery inactive = 21;
+
+  repeated int32 invert_chirality = 22;
+  repeated int32 remove_chirality = 23;
+  optional ToggleKekuleForm.ToggleKekuleForm toggle_kekule_form = 24;
+
+  optional bool ignore_multiple_matches_involving_atoms_not_changing = 25;
+  optional bool ignore_multiple_matches_involving_changing_atoms = 27;
+
+  optional bool noop_reaction = 28;
+  optional string comment = 29;
+
+  repeated string smarts = 30;
+
+  repeated int32 remove_atoms = 31;
+
+  // Read the query from a file
+  repeated string query_file = 32;
+
+  repeated CipStereoAtom cip_stereo = 33;
+// DO NOT EDIT
+}
+
+message SidechainReactionSite {
+
+// Text copied to both ScaffoldReactionSite and SidechainReactionSite
+// DO NOT EDIT
+  optional int32 id = 1;
+  repeated SubstructureSearch.SubstructureQuery query = 2;
+  repeated BondToBeMade make_bond = 3;
+  repeated PairOfAtoms break_bond = 4;
+  repeated int32 remove_atom = 5;
+  repeated int32 remove_fragment = 6;
+  repeated int32 keep_fragment = 7;
+  repeated ChangeElement change_element = 8;
+  repeated FormalCharge formal_charge = 9;
+  repeated ChangeFormalCharge change_formal_charge = 10;
+  repeated PlaceIsotope isotope = 11;
+  repeated IncrementIsotope change_isotope = 12;
+  repeated PlaceIsotope invert_isotope = 13;
+
+  repeated BondLength bond_length = 14;
+  repeated BondAngle bond_angle = 15;
+  repeated DihedralAngle dihedral_angle = 16;
+  repeated CoordinateTransfer coordinate_transfer = 17;
+
+  repeated WedgeBond wedge_bonds = 18;
+
+  repeated ReplaceAtom replace_atom = 19;
+
+  repeated int32 unfix_implicit_hydrogens = 20;
+
+  repeated SubstructureSearch.SubstructureQuery inactive = 21;
+
+  repeated int32 invert_chirality = 22;
+  repeated int32 remove_chirality = 23;
+  optional ToggleKekuleForm.ToggleKekuleForm toggle_kekule_form = 24;
+
+  optional bool ignore_multiple_matches_involving_atoms_not_changing = 25;
+  optional bool ignore_multiple_matches_involving_changing_atoms = 27;
+
+  optional bool noop_reaction = 28;
+  optional string comment = 29;
+
+  repeated string smarts = 30;
+
+  repeated int32 remove_atoms = 31;
+
+  // Read the query from a file
+  repeated string query_file = 32;
+  
+  repeated CipStereoAtom cip_stereo = 33;
+// DO NOT EDIT
+
+  repeated string reagent = 40;
+  repeated InterParticleBond join = 41;
+  repeated NoReaction no_reaction = 42;
+  optional bool make_implicit_hydrogens_explicit = 43;
+  optional SidechainMatchConditions match_conditions = 44;
+}
+
+message Reaction {
+  optional string comment = 1;
+  optional string name = 2;
+  optional ScaffoldReactionSite scaffold = 3;
+  repeated SidechainReactionSite sidechain = 4;
+  repeated StereoCenter reaction_stereo_center = 5;
+  repeated CipStereoReaction cip_stereo = 6;
+
+  optional bool append_reagent_name = 7;
+
+  optional string append_to_name = 8;
+
+  optional bool query_files_in_current_directory = 9;
+  optional string reaction_directory = 10;
+
+  optional bool find_kekule_forms_for_bad_valence = 11;
+
+  optional bool make_implicit_hydrogens_explicit = 12;
+
+  optional ScaffoldMatchConditions scaffold_match_conditions = 13;
+
+  optional bool noop_reaction = 14;
+}

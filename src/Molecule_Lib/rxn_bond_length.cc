@@ -1,6 +1,10 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "iwreaction.h"
+
+using std::cerr;
+using std::endl;
 
 Reaction_Bond_Length::Reaction_Bond_Length ()
 {

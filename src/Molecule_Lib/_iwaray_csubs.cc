@@ -1,8 +1,7 @@
 #include <iostream>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "path.h"
 #include "substructure.h"
 

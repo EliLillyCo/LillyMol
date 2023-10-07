@@ -1,11 +1,10 @@
-#ifndef MOL2QRY_SPEC_H
-#define MOL2QRY_SPEC_H
+#ifndef MOLECULE_LIB_MOLECULE_TO_QUERY_H_
+#define MOLECULE_LIB_MOLECULE_TO_QUERY_H_
 
-#include "msi_object.h"
+#include "Foundational/iwmisc/msi_object.h"
 
 #include "mdl_file_data.h"
 #include "substructure.h"
-
 
 /*
   To support the ability to specify substructures at atoms, we need a
@@ -19,12 +18,12 @@ class Element_to_Smarts
     IWString _smarts;
 
   public:
-    Element_to_Smarts ();
+    Element_to_Smarts();
 
-    int build (const const_IWSubstring &);
+    int build(const const_IWSubstring &);
 
-    const Element * element () const { return _e;}
-    const IWString & smarts () const { return _smarts;}
+    const Element * element() const { return _e;}
+    const IWString & smarts() const { return _smarts;}
 };
 
 /*
@@ -45,9 +44,9 @@ class Element_to_Smarts
   I'll need to fix this!
 */
 
-#define MQS_ISOTOPE_MEANS_NCON 1
-#define MQS_ISOTOPE_MEANS_RING_BOND_COUNT 2
-#define MQS_ISOTOPE_MEANS_AROMATIC 4
+#define MQS_ISOTOPE_MEANS_NCON static_cast<isotope_t>(1)
+#define MQS_ISOTOPE_MEANS_RING_BOND_COUNT static_cast<isotope_t>(2)
+#define MQS_ISOTOPE_MEANS_AROMATIC static_cast<isotope_t>(4)
 
 class Molecule_to_Query_Specifications : public MDL_File_Data
 {
@@ -93,7 +92,8 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
 
     Substructure_Query _substitutions_only_at;
 
-//  Jan 2005. I want to be able to specify an environment around the _substitutions_only_at.
+    // Jan 2005. I want to be able to specify an environment around the
+    // _substitutions_only_at.
 
     msi_object _environment_near_substitutions_only_at;
     msi_object _environment_no_match_near_substitutions_only_at;
@@ -202,117 +202,131 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
 
     int _bonds_preserve_ring_membership;
 
+    // Nov 2021. Bond type information dropped.
+    int _all_bonds_become_type_any;
+
+    // Jul 2022. An isotope can be interpreted as match any atom.
+    // isotope_t type since this value gets compared to isotope_t values.
+    isotope_t _isotope_means_match_any_atom;
+
 //  private functions
 
 //  template <typename T>
-//  int _common_array_copy (const T * a, int n, T * & v);
+//  int _common_array_copy(const T * a, int n, T * & v);
 
-    int _parse_directive (const_IWSubstring directives);
+    int _parse_directive(const_IWSubstring directives);
 
-    int _parse_onlysub_directive (const const_IWSubstring smarts);
+    int _parse_onlysub_directive(const const_IWSubstring smarts);
 
   public:
-    Molecule_to_Query_Specifications ();
-    ~Molecule_to_Query_Specifications ();
+    Molecule_to_Query_Specifications();
+    ~Molecule_to_Query_Specifications();
 
-    int built_from_isis_reaction_file () const { return _built_from_isis_reaction_file;}
-    void set_built_from_isis_reaction_file (int s) { _built_from_isis_reaction_file = s;}
+    int built_from_isis_reaction_file() const { return _built_from_isis_reaction_file;}
+    void set_built_from_isis_reaction_file(int s) { _built_from_isis_reaction_file = s;}
 
-    void set_ncon (int s) { _ncon = s;}
-    void set_min_ncon (int s) { _min_ncon = s;}
-    void set_max_ncon (int s) { _max_ncon = s;}
+    void set_ncon(int s) { _ncon = s;}
+    void set_min_ncon(int s) { _min_ncon = s;}
+    void set_max_ncon(int s) { _max_ncon = s;}
 
-    int  ncon () const { return _ncon;}
-    int  min_ncon () const { return _min_ncon;}
-    int  max_ncon () const { return _max_ncon;}
+    int  ncon() const { return _ncon;}
+    int  min_ncon() const { return _min_ncon;}
+    int  max_ncon() const { return _max_ncon;}
 
-    int initialise_sub_array_from_only_sub_query (MDL_Molecule &);
+    int initialise_sub_array_from_only_sub_query(MDL_Molecule &);
 
-    int  just_atomic_number_and_connectivity () const { return _just_atomic_number_and_connectivity;}
-    void set_just_atomic_number_and_connectivity (int s) { _just_atomic_number_and_connectivity = s;}
+    int  just_atomic_number_and_connectivity() const { return _just_atomic_number_and_connectivity;}
+    void set_just_atomic_number_and_connectivity(int s) { _just_atomic_number_and_connectivity = s;}
 
     int  discern_hcount() const { return _discern_hcount;}
     void set_discern_hcount(int s) { _discern_hcount = s;}
 
-    int nrings_is_ring_bond_count () const { return _nrings_is_ring_bond_count;}
-    void set_nrings_is_ring_bond_count (int s) { _nrings_is_ring_bond_count = s;}
+    int nrings_is_ring_bond_count() const { return _nrings_is_ring_bond_count;}
+    void set_nrings_is_ring_bond_count(int s) { _nrings_is_ring_bond_count = s;}
 
-    int make_embedding () const { return _make_embedding;}
-    int all_ring_bonds_become_undefined () const { return _all_ring_bonds_become_undefined;}
-    int non_ring_atoms_become_nrings_0 () const { return _non_ring_atoms_become_nrings_0;}
+    int make_embedding() const { return _make_embedding;}
+    int all_ring_bonds_become_undefined() const { return _all_ring_bonds_become_undefined;}
+    int non_ring_atoms_become_nrings_0() const { return _non_ring_atoms_become_nrings_0;}
     int atoms_conserve_ring_membership() const { return _atoms_conserve_ring_membership;}
     int ring_atoms_conserve_ring_membership() const { return _ring_atoms_conserve_ring_membership;}
-    int copy_bond_attributes () const { return _copy_bond_attributes;}
-    int min_extra_atoms_in_target () const { return _min_extra_atoms_in_target;}
-    int max_extra_atoms_in_target () const { return _max_extra_atoms_in_target;}
-    int use_preference_values_to_distinguish_symmetry () const { return _use_preference_values_to_distinguish_symmetry;}
-    int convert_explicit_hydrogens_to_match_any_atom () const { return _convert_explicit_hydrogens_to_match_any_atom;}
-    int convert_explicit_hydrogens_to_match_any_atom_including_hydrogen () const { return _convert_explicit_hydrogens_to_match_any_atom_including_hydrogen;}
-    float min_fraction_atoms_matched () const { return _min_fraction_atoms_matched;}
-    float max_fraction_atoms_matched () const { return _max_fraction_atoms_matched;}
-    int convert_all_aromatic_atoms_to_generic_aromatic () const { return _convert_all_aromatic_atoms_to_generic_aromatic;}
-    int query_must_match_both_explicit_and_implicit_hydrogens () const { return _query_must_match_both_explicit_and_implicit_hydrogens;}
-    int preserve_saturation () const { return _preserve_saturation;}
-    int ignore_molecular_hydrogen_information () const { return _ignore_molecular_hydrogen_information;}
-    int interpret_atom_alias_as_smarts () const { return _interpret_atom_alias_as_smarts;}
-    int substituents_only_at_isotopic_atoms () const { return _substituents_only_at_isotopic_atoms;}
-    int isotopic_label_means () const { return _isotopic_label_means;}
-    int set_element_hits_needed_during_molecule_to_query () const { return _set_element_hits_needed_during_molecule_to_query;}
-    int aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic () const { return _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic;}
+    int copy_bond_attributes() const { return _copy_bond_attributes;}
+    int min_extra_atoms_in_target() const { return _min_extra_atoms_in_target;}
+    int max_extra_atoms_in_target() const { return _max_extra_atoms_in_target;}
+    int use_preference_values_to_distinguish_symmetry() const { return _use_preference_values_to_distinguish_symmetry;}
+    int convert_explicit_hydrogens_to_match_any_atom() const { return _convert_explicit_hydrogens_to_match_any_atom;}
+    int convert_explicit_hydrogens_to_match_any_atom_including_hydrogen() const { return _convert_explicit_hydrogens_to_match_any_atom_including_hydrogen;}
+    float min_fraction_atoms_matched() const { return _min_fraction_atoms_matched;}
+    float max_fraction_atoms_matched() const { return _max_fraction_atoms_matched;}
+    int convert_all_aromatic_atoms_to_generic_aromatic() const { return _convert_all_aromatic_atoms_to_generic_aromatic;}
+    int query_must_match_both_explicit_and_implicit_hydrogens() const { return _query_must_match_both_explicit_and_implicit_hydrogens;}
+    int preserve_saturation() const { return _preserve_saturation;}
+    int ignore_molecular_hydrogen_information() const { return _ignore_molecular_hydrogen_information;}
+    int interpret_atom_alias_as_smarts() const { return _interpret_atom_alias_as_smarts;}
+    int substituents_only_at_isotopic_atoms() const { return _substituents_only_at_isotopic_atoms;}
+    int isotopic_label_means() const { return _isotopic_label_means;}
+    int set_element_hits_needed_during_molecule_to_query() const { return _set_element_hits_needed_during_molecule_to_query;}
+    int aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic() const { return _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic;}
     int preserve_smallest_ring_size() const { return _preserve_smallest_ring_size;}
-    int bonds_preserve_ring_membership () const { return _bonds_preserve_ring_membership;}
+    int bonds_preserve_ring_membership() const { return _bonds_preserve_ring_membership;}
+    int all_bonds_become_type_any() const { return _all_bonds_become_type_any;}
+    isotope_t isotope_means_match_any_atom() const { return _isotope_means_match_any_atom;}
 
-    void set_make_embedding (int s) { _make_embedding = s;}
-    void set_all_ring_bonds_become_undefined (int s) { _all_ring_bonds_become_undefined = s;}
-    void set_non_ring_atoms_become_nrings_0 (int s) { _non_ring_atoms_become_nrings_0 = s;}
+    void set_make_embedding(int s) { _make_embedding = s;}
+    void set_all_ring_bonds_become_undefined(int s) { _all_ring_bonds_become_undefined = s;}
+    void set_non_ring_atoms_become_nrings_0(int s) { _non_ring_atoms_become_nrings_0 = s;}
     void set_atoms_conserve_ring_membership(int s) { _atoms_conserve_ring_membership = s;}
     void set_ring_atoms_conserve_ring_membership(int s) { _ring_atoms_conserve_ring_membership = s;}
-    void set_min_extra_atoms_in_target (int s) { _min_extra_atoms_in_target = s;}
-    void set_max_extra_atoms_in_target (int s) { _max_extra_atoms_in_target = s;}
+    void set_min_extra_atoms_in_target(int s) { _min_extra_atoms_in_target = s;}
+    void set_max_extra_atoms_in_target(int s) { _max_extra_atoms_in_target = s;}
     void set_use_preference_values_to_distinguish_symmetry(int s) { _use_preference_values_to_distinguish_symmetry = s;}
-    void set_convert_explicit_hydrogens_to_match_any_atom (int s) { _convert_explicit_hydrogens_to_match_any_atom = s;}
-    void set_convert_explicit_hydrogens_to_match_any_atom_including_hydrogen (int s) { _convert_explicit_hydrogens_to_match_any_atom_including_hydrogen = s;}
+    void set_convert_explicit_hydrogens_to_match_any_atom(int s) { _convert_explicit_hydrogens_to_match_any_atom = s;}
+    void set_convert_explicit_hydrogens_to_match_any_atom_including_hydrogen(int s) { _convert_explicit_hydrogens_to_match_any_atom_including_hydrogen = s;}
     void set_min_fraction_atoms_matched(float s) { _min_fraction_atoms_matched = s;}
     void set_max_fraction_atoms_matched(float s) { _max_fraction_atoms_matched = s;}
-    void set_convert_all_aromatic_atoms_to_generic_aromatic (int s) { _convert_all_aromatic_atoms_to_generic_aromatic = s;}
-    void set_query_must_match_both_explicit_and_implicit_hydrogens (int s) { _query_must_match_both_explicit_and_implicit_hydrogens = s;}
-    void set_preserve_saturation (int s) { _preserve_saturation = s;}
-    void set_ignore_molecular_hydrogen_information (int s) { _ignore_molecular_hydrogen_information = s;}
-    void set_interpret_atom_alias_as_smarts (int s) { _interpret_atom_alias_as_smarts = s;}
-    void set_substituents_only_at_isotopic_atoms (int s) { _substituents_only_at_isotopic_atoms = s;}
-    void set_isotopic_label_means (int s) { _isotopic_label_means = s;}
-    void set_set_element_hits_needed_during_molecule_to_query (int s) { _set_element_hits_needed_during_molecule_to_query = s;}
-    void set_aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic (int s) { _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = s;}
+    void set_convert_all_aromatic_atoms_to_generic_aromatic(int s) { _convert_all_aromatic_atoms_to_generic_aromatic = s;}
+    void set_query_must_match_both_explicit_and_implicit_hydrogens(int s) { _query_must_match_both_explicit_and_implicit_hydrogens = s;}
+    void set_preserve_saturation(int s) { _preserve_saturation = s;}
+    void set_ignore_molecular_hydrogen_information(int s) { _ignore_molecular_hydrogen_information = s;}
+    void set_interpret_atom_alias_as_smarts(int s) { _interpret_atom_alias_as_smarts = s;}
+    void set_substituents_only_at_isotopic_atoms(int s) { _substituents_only_at_isotopic_atoms = s;}
+    void set_isotopic_label_means(int s) { _isotopic_label_means = s;}
+    void set_set_element_hits_needed_during_molecule_to_query(int s) { _set_element_hits_needed_during_molecule_to_query = s;}
+    void set_aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic(int s) { _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = s;}
     void set_preserve_smallest_ring_size(int s) { _preserve_smallest_ring_size = s;}
     void set_bonds_preserve_ring_membership(int s) { _bonds_preserve_ring_membership = s;}
+    void set_all_bonds_become_type_any(int s) { _all_bonds_become_type_any = s;}
+    void set_isotope_means_match_any_atom(int s) { _isotope_means_match_any_atom = s;}
 
-    int parse_directives (const const_IWSubstring &);
+    int parse_directives(const const_IWSubstring &);
 
-    Substructure_Query & substitutions_only_at () { return _substitutions_only_at;}
-    const Substructure_Query & substitutions_only_at () const { return _substitutions_only_at;}
+    Substructure_Query & substitutions_only_at() { return _substitutions_only_at;}
+    const Substructure_Query & substitutions_only_at() const { return _substitutions_only_at;}
 
-    int read_environment_specification (iwstring_data_source & input) { return _environment_near_substitutions_only_at.read (input);}
-    int read_environment_no_match_specification (iwstring_data_source & input) { return _environment_no_match_near_substitutions_only_at.read (input);}
+    int read_environment_specification(iwstring_data_source & input) { return _environment_near_substitutions_only_at.read(input);}
+    int read_environment_no_match_specification (iwstring_data_source & input) { return _environment_no_match_near_substitutions_only_at.read(input);}
 
-    int environment_near_substitution_points_specified () const { return _environment_near_substitutions_only_at.active ();}
-    int environment_no_match_near_substitution_points_specified () const { return _environment_no_match_near_substitutions_only_at.active ();}
+    int environment_near_substitution_points_specified() const { return _environment_near_substitutions_only_at.active();}
+    int environment_no_match_near_substitution_points_specified() const { return _environment_no_match_near_substitutions_only_at.active();}
 
-    const msi_object & environment_near_substitution_points () const { return _environment_near_substitutions_only_at;}
-    const msi_object & environment_no_match_near_substitution_points () const { return _environment_no_match_near_substitutions_only_at;}
+    const msi_object & environment_near_substitution_points() const { return _environment_near_substitutions_only_at;}
+    const msi_object & environment_no_match_near_substitution_points() const { return _environment_no_match_near_substitutions_only_at;}
 
-    int only_aromatic_atoms_match_aromatic_atoms () const { return _only_aromatic_atoms_match_aromatic_atoms;}
-    void set_only_aromatic_atoms_match_aromatic_atoms (int s) { _only_aromatic_atoms_match_aromatic_atoms = s;}
+    int only_aromatic_atoms_match_aromatic_atoms() const { return _only_aromatic_atoms_match_aromatic_atoms;}
+    void set_only_aromatic_atoms_match_aromatic_atoms(int s) { _only_aromatic_atoms_match_aromatic_atoms = s;}
 
-    const Set_of_Atoms & substitution_points () const { return _substitution_points;}
+    const Set_of_Atoms & substitution_points() const { return _substitution_points;}
 
-    Set_of_Atoms & externally_specified_substitution_points () { return _externally_specified_substitution_points;}
+    Set_of_Atoms & externally_specified_substitution_points() { return _externally_specified_substitution_points;}
 
-    int set_smarts_for_atom (const const_IWSubstring &);
+    int set_smarts_for_atom(const const_IWSubstring &);
 
-    int smarts_for_element (const Element *, IWString &) const;
+    int smarts_for_element(const Element *, IWString &) const;
 
-    int condense_explicit_hydrogens_to_anchor_atoms () const { return _condense_explicit_hydrogens_to_anchor_atoms;}
-    void set_condense_explicit_hydrogens_to_anchor_atoms (int s) { _condense_explicit_hydrogens_to_anchor_atoms = s;}
+    // Returns true if `e` is part of an _element_to_smarts.
+    int is_element_to_smarts(const Element* e) const;
+
+    int condense_explicit_hydrogens_to_anchor_atoms() const { return _condense_explicit_hydrogens_to_anchor_atoms;}
+    void set_condense_explicit_hydrogens_to_anchor_atoms(int s) { _condense_explicit_hydrogens_to_anchor_atoms = s;}
 };
 
 /*
@@ -320,12 +334,12 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
   special meaning
 */
 
-extern void set_substituents_only_at_isotopic_atoms (int);
-extern void set_must_have_substituent_at_every_isotopic_atom (int s);
-extern void set_isotope_count_means_extra_connections (int s);
-extern void set_substitutions_only_at_non_isotopic_atoms (int s);
-extern void set_only_include_isotopically_labeled_atoms (int s);
-extern void set_only_aromatic_atoms_match_aromatic_atoms (int s);
+extern void set_substituents_only_at_isotopic_atoms(int);
+extern void set_must_have_substituent_at_every_isotopic_atom(int s);
+extern void set_isotope_count_means_extra_connections(int s);
+extern void set_substitutions_only_at_non_isotopic_atoms(int s);
+extern void set_only_include_isotopically_labeled_atoms(int s);
+extern void set_only_aromatic_atoms_match_aromatic_atoms(int s);
 
 extern int substituents_only_at_isotopic_atoms();
 extern int must_have_substituent_at_every_isotopic_atom();
@@ -335,6 +349,6 @@ extern int only_include_isotopically_labeled_atoms();
 
 extern void set_respect_ring_membership(int);
 
-extern void set_molecule_to_query_always_condense_explicit_hydrogens_to_anchor_atoms (int);
+extern void set_molecule_to_query_always_condense_explicit_hydrogens_to_anchor_atoms(int);
 
-#endif
+#endif  // MOLECULE_LIB_MOLECULE_TO_QUERY_H_

@@ -1,8 +1,8 @@
 #ifndef ENRICHMENT_H
 #define ENRICHMENT_H
 
-#include <vector>
 #include <iostream>
+#include <vector>
 //class ostream;
 
 /**
@@ -26,17 +26,17 @@ class Enrichment
   /**
    * Return the number of actives.
    */
-  int getNbrActives( void ) const{ return m_nbr_actives; };
+  uint32_t getNbrActives( void ) const{ return m_nbr_actives; };
 
   /**
    * Return the total number of compounds (actives + inactives).
    */
-  int getNbrCompounds( void ) const { return m_nbr_compounds; };
+  uint32_t getNbrCompounds( void ) const { return m_nbr_compounds; };
 
   /**
    * Return the number of inactives.
    */
-  int getNbrInactives( void ) const { return m_nbr_compounds - m_nbr_actives; };
+  uint32_t getNbrInactives( void ) const { return m_nbr_compounds - m_nbr_actives; };
 
   /**
    * Output the current state of the object following the format outlined hereafter.

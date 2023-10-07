@@ -1,25 +1,23 @@
 #include <stdlib.h>
 
-using namespace std;
+#include <iostream>
 
 /*
   Rearrange the columns in one file to be the same as in another
 */
 
-#include "iw_stl_hash_map.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-
-#include "valid_descriptor_name.h"
+using std::cerr;
+using std::endl;
 
 static int verbose = 0;
 
 static int ignore_case_when_comparing_descriptor_names = 0;
 
 static int is_descriptor_file = 1;
-
-static int check_for_valid_descriptors = 0;   // silly feature no longer needed
 
 /*
   What do we do when descriptors are not in the reference file, but
@@ -57,8 +55,6 @@ static IWString_and_File_Descriptor stream_for_discarded_identifiers;
 
 static int trim_leading_zeros_from_identifiers = 0;
 
-static Valid_Descriptor_Name valid_descriptor_name;
-
 static int function_as_cat_if_just_one_file_present = 0;
 
 static int dash_p_option_present = 0;
@@ -66,7 +62,13 @@ static int dash_p_option_present = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
 
   cerr << "Rearranges the columns in one descriptor file to look like another descriptor file\n";
   cerr << " rearrange_columns -l reference_file <other options> <file1> <file2> ... > rearranged_file\n";
@@ -83,8 +85,6 @@ usage (int rc)
   cerr << " -y             do the same as 'cat' if just one file on the command line\n";
   cerr << " -p             do NOT automatically apply a default -f value when multiple files present\n";
   cerr << " -b             fail unless all descriptors in the likefile are present\n";
-  display_standard_valid_descriptor_name_options (cerr, 'm', 'V');
-  cerr << " -C             allow any form of descriptor name\n";
   cerr << " -v             verbose output\n";
 
   exit (rc);
@@ -200,7 +200,7 @@ class Input_File
 
     int gather_descriptor_names (resizable_array_p<IWString> &, IW_STL_Hash_Map_int &) const;
 
-    int print_cross_reference (ostream &) const;
+    int print_cross_reference (std::ostream &) const;
 
     int establish_offsets ();
 
@@ -217,7 +217,7 @@ class Input_File
 
 Input_File::Input_File ()
 {
-  _column_cross_reference = NULL;
+  _column_cross_reference = nullptr;
 
   _columns_in_file = 0;
 
@@ -231,7 +231,7 @@ Input_File::Input_File ()
 
 Input_File::~Input_File ()
 {
-  if (NULL != _column_cross_reference)
+  if (nullptr != _column_cross_reference)
     delete _column_cross_reference;
 
   return;
@@ -289,14 +289,6 @@ Input_File::gather_descriptor_names (resizable_array_p<IWString> & descriptors,
 
   while (_header.nextword (descriptor, i))
   {
-    if (! check_for_valid_descriptors)
-      ;
-    else if (! valid_descriptor_name.valid (descriptor))
-    {
-      cerr << "Input_File::gather_descriptor_names: invalid descriptor name '" << descriptor << "'\n";
-      return 0;
-    }
-
 //  cerr << "Examinining descriptor '" << descriptor << "' in column " << col << " id in " << _identifier_column << endl;
 
     if (col == _identifier_column)
@@ -313,10 +305,6 @@ Input_File::gather_descriptor_names (resizable_array_p<IWString> & descriptors,
     if (descriptors_found_this_file.contains (descriptor))
     {
       cerr << "Input_File::establish_column_cross_reference: duplicate descriptor '" << descriptor << "'\n";
-//    if (check_for_valid_descriptors)
-//      return 0;
-      continue;
-//    return 0;
     }
 
     descriptors_found_this_file[descriptor] = 1;     // should use a hash set since we don't use the value '1' - just don't want to have to compile two headers
@@ -427,7 +415,7 @@ Input_File::establish_column_cross_reference (IW_STL_Hash_Map_int & global_cross
 {
   assert (_header.length () > 0);
   assert (_columns_in_file > 0);
-  assert (NULL == _column_cross_reference);
+  assert (nullptr == _column_cross_reference);
 
   _column_cross_reference = new int[_columns_in_file];
 
@@ -450,7 +438,7 @@ Input_File::establish_column_cross_reference (IW_STL_Hash_Map_int & global_cross
 
 
 int
-Input_File::print_cross_reference (ostream & os) const
+Input_File::print_cross_reference (std::ostream & os) const
 {
   os << "Cross references for '" << _fname << "', " << _columns_in_file << " columns\n";
 
@@ -574,7 +562,7 @@ Input_File::_echo (const const_IWSubstring & buffer,
   return 1;
 }
 
-static Input_File * input_file = NULL;
+static Input_File * input_file = nullptr;
 static int number_input_files = 0;
 
 /*
@@ -643,11 +631,6 @@ collect_likefile_descriptor_names (const const_IWSubstring & header,
 
   while (header.nextword (token, i))
   {
-    if (! check_for_valid_descriptors)
-      ;
-    else if (! valid_descriptor_name.valid (token))
-      cerr << "Invalid descriptor name in reference file '" << token << "', ignored!\n";
-
     if (ignore_case_when_comparing_descriptor_names)
       token.to_lowercase ();
 
@@ -943,26 +926,6 @@ rearrange_columns (int argc, char ** argv)
 
     if (verbose)
       cerr << "Will ignore case when comparing descriptor names\n";
-  }
-
-  if (cl.option_present ('C'))
-  {
-    if (cl.option_present ('m') || cl.option_present ('V'))
-    {
-      cerr << "The -m and -V options are mutually inconsistent with the -C option\n";
-      usage (4);
-    }
-
-    check_for_valid_descriptors = 0;
-
-    if (verbose)
-      cerr << "All checking for valid descriptor names suppressed\n";
-  }
-
-  if (! valid_descriptor_name.construct_from_command_line (cl, 'm', 'V', verbose))
-  {
-    cerr << "Cannot initialise valid descriptor name conditions (-m and -V options)\n";
-    usage (7);
   }
 
   if (cl.option_present ('J'))
@@ -1291,7 +1254,7 @@ rearrange_columns (int argc, char ** argv)
     cerr << "Output will contain " << columns_in_output << " columns\n";
 
   const_IWSubstring * output_tokens = new const_IWSubstring[columns_in_output];
-  assert (NULL != output_tokens);
+  assert (nullptr != output_tokens);
 
   IWString_and_File_Descriptor output(1);
 

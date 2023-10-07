@@ -14,7 +14,7 @@ else
 fi
 
 shared_data_dir=$LILLYMOL_HOME/test/shared_data
-command=$BIN_DIR/gfp_spread_buckets_v2
+command=$BIN_DIR/gfp_spread_buckets
 case_id="Case 1"
 echo "Testing:  $command"
 

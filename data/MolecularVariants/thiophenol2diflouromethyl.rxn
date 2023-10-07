@@ -1,0 +1,15 @@
+scaffold {
+  id: 0
+  smarts: "[S,N;D1H]-c1ccccc1"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  reagent: "C(F)F"
+  smarts: "C"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

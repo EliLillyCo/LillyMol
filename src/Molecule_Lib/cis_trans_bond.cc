@@ -1,17 +1,20 @@
 #include <stdlib.h>
 #include <iomanip>
+#include <iostream>
 #include <memory>
-using namespace std;
 
 #include "assert.h"
 
 #define COMPILING_CTB
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
 #include "smiles.h"
 #include "misc2.h"
+
+using std::cerr;
+using std::endl;
 
 static int File_Scope_discard_directional_bonds_on_input = 0;
 
@@ -79,7 +82,7 @@ Molecule::_atom_being_unbonded_check_directional_bonds (atom_number_t zatom,
 
   resizable_array<Bond *> directional_bonds_found;
 
-  Bond * part_of_cis_trans_grouping = NULL;
+  Bond * part_of_cis_trans_grouping = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -94,10 +97,10 @@ Molecule::_atom_being_unbonded_check_directional_bonds (atom_number_t zatom,
       part_of_cis_trans_grouping = const_cast<Bond *>(b);
   }
 
-  if (NULL != part_of_cis_trans_grouping)      // breaking up the central part of the cis-trans grouping
+  if (nullptr != part_of_cis_trans_grouping)      // breaking up the central part of the cis-trans grouping
     return _invalidate_directional_double_bond(*part_of_cis_trans_grouping);
 
-  if (0 == directional_bonds_found.number_elements())
+  if (directional_bonds_found.empty())
     return 1;
 
 // The atom is not the centre of a cis-trans bond, but is bonded to such a bond
@@ -542,9 +545,9 @@ Molecule::_process_directional_system (atom_number_t lhs1,
   if (acon + 1 != a->nbonds())   // the doubly bonded item must be unsaturated
     return 1;
 
-  const Bond * lhsb1 = NULL;
-  const Bond * lhsb2 = NULL;
-  const Bond * double_bond = NULL;
+  const Bond * lhsb1 = nullptr;
+  const Bond * lhsb2 = nullptr;
+  const Bond * double_bond = nullptr;
   atom_number_t db2 = INVALID_ATOM_NUMBER;
 
   for (int i = 0; i < acon; i++)
@@ -564,7 +567,7 @@ Molecule::_process_directional_system (atom_number_t lhs1,
       lhsb2 = b;
   }
 
-  assert (NULL != lhsb1);
+  assert (nullptr != lhsb1);
   assert (lhsb1->is_directional());
   assert (INVALID_ATOM_NUMBER != db2);
 
@@ -579,8 +582,8 @@ Molecule::_process_directional_system (atom_number_t lhs1,
   else
     return 1;   // not a valid cis-trans system here
 
-  const Bond * rhsb1 = NULL;
-  const Bond * rhsb2 = NULL;
+  const Bond * rhsb1 = nullptr;
+  const Bond * rhsb2 = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -589,7 +592,7 @@ Molecule::_process_directional_system (atom_number_t lhs1,
     if (b->is_double_bond())
       continue;
 
-    if (NULL == rhsb1)
+    if (nullptr == rhsb1)
       rhsb1 = b;
     else
     {
@@ -598,12 +601,12 @@ Molecule::_process_directional_system (atom_number_t lhs1,
     }
   }
 
-  if (NULL == rhsb1)    // no valid directional bond here
+  if (nullptr == rhsb1)    // no valid directional bond here
     return 1;
 
   if (rhsb1->is_directional())   // good
     ;
-  else if (NULL == rhsb2)        // not a valid directional bond here
+  else if (nullptr == rhsb2)        // not a valid directional bond here
     return 1;
   else if (rhsb2->is_directional())   // ensure rhsb1 is directional
     std::swap(rhsb1, rhsb2);
@@ -614,7 +617,7 @@ Molecule::_process_directional_system (atom_number_t lhs1,
 
   int lhs1_direction = discern_bond_directionality(lhsb1, db1);
 
-  if (NULL == lhsb2)   // no second bond on LHS
+  if (nullptr == lhsb2)   // no second bond on LHS
     ;
   else if (lhsb2->is_directional())   // already marked, make sure consistent
   {
@@ -635,7 +638,7 @@ Molecule::_process_directional_system (atom_number_t lhs1,
 
   int rhsb1_direction = discern_bond_directionality(rhsb1, db2);
 
-  if (NULL == rhsb2)
+  if (nullptr == rhsb2)
     ;
   else if (rhsb2->is_directional())
   {
@@ -688,7 +691,7 @@ Molecule::_identify_directional_bonds_across_double_bonds (atom_number_t zatom,
   if (acon == a->nbonds())   // no double bonds here
     return 0;
 
-  const Bond * double_bond = NULL;
+  const Bond * double_bond = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -701,7 +704,7 @@ Molecule::_identify_directional_bonds_across_double_bonds (atom_number_t zatom,
     }
   }
 
-  if (NULL == double_bond)   // maybe someone drew a directional bond to a triple bond
+  if (nullptr == double_bond)   // maybe someone drew a directional bond to a triple bond
     return 0;
 
   atom_number_t db2 = double_bond->other(zatom);
@@ -792,8 +795,8 @@ Molecule::_fill_in_missing_directional_bond_specification (atom_number_t zatom,
   if (3 != acon)   // the only case we can process
     return 0;
 
-  const Bond * directional = NULL;
-  Bond * not_directional = NULL;
+  const Bond * directional = nullptr;
+  Bond * not_directional = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -804,24 +807,24 @@ Molecule::_fill_in_missing_directional_bond_specification (atom_number_t zatom,
 
     if (b->is_directional())
     {
-      if (NULL != directional)   // already got a directional bond, must be OK
+      if (nullptr != directional)   // already got a directional bond, must be OK
         return 1;
 
       directional = b;
     }
     else
     {
-      if (NULL != not_directional)   // nothing directional here
+      if (nullptr != not_directional)   // nothing directional here
         return 1;
 
       not_directional = const_cast<Bond *>(b);
     }
   }
 
-  if (NULL == directional)
+  if (nullptr == directional)
     return 0;
 
-  if (NULL == not_directional)
+  if (nullptr == not_directional)
     return 0;
 
 // The not_directional bond must now be set
@@ -889,7 +892,7 @@ Molecule::_mark_adjacent_double_bond_with_directional_atoms_at_other_end (atom_n
 
   int acon = a->ncon();
 
-  Bond * doubly_bonded = NULL;
+  Bond * doubly_bonded = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -902,7 +905,7 @@ Molecule::_mark_adjacent_double_bond_with_directional_atoms_at_other_end (atom_n
     }
   }
 
-  if (NULL == doubly_bonded)     // should be impossible
+  if (nullptr == doubly_bonded)     // should be impossible
   {
     cerr << "Molecule::_mark_adjacent_double_bond_with_directional_atoms_at_other_end:no doubly bonded connection\n";
     return 0;
@@ -943,7 +946,7 @@ Molecule::_adjacent_directional_bonds_mutually_consistent (atom_number_t zatom)
   int up_bond = 0;
   int down_bond = 0;
 
-  Bond * non_directional_bond_encountered = NULL;
+  Bond * non_directional_bond_encountered = nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -978,7 +981,7 @@ Molecule::_adjacent_directional_bonds_mutually_consistent (atom_number_t zatom)
   if (0 == up_bond && 0 == down_bond)   // how could that happen?
     return 0;
 
-  if (NULL == non_directional_bond_encountered)    // seems unlikely
+  if (nullptr == non_directional_bond_encountered)    // seems unlikely
     return 0;
 
 //cerr << "Non directional bond from " << zatom << " is " << non_directional_bond_encountered->a1() << " to " << non_directional_bond_encountered->a2() << endl;
@@ -1259,12 +1262,12 @@ Molecule::_bond_is_no_longer_directional (const Bond * b)
 {
   const Bond * db = _identify_double_bond(b->a1());
 
-  if (NULL != db)
+  if (nullptr != db)
     _remove_directional_bonding_associated_with_bond(db);
 
   db = _identify_double_bond(b->a2());
 
-  if (NULL != db)
+  if (nullptr != db)
     _remove_directional_bonding_associated_with_bond(db);
 
   return 1;
@@ -1290,7 +1293,7 @@ Molecule::_identify_double_bond (atom_number_t zatom) const
   int acon = a->ncon();
 
   if (acon == a->nbonds())
-    return NULL;
+    return nullptr;
 
   for (int i = 0; i < acon; i++)
   {
@@ -1300,20 +1303,20 @@ Molecule::_identify_double_bond (atom_number_t zatom) const
       return b;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 int
-Molecule::_set_bond_directionality (atom_number_t a1,
+Molecule::_set_bond_directionality(atom_number_t a1,
                                    atom_number_t a2,
                                    int dir)
 {
   _set_modified();
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a1,a2));
+  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
 
-  assert (NULL != b);
-  if (b == NULL)
+  assert (nullptr != b);
+  if (b == nullptr)
   {
     cerr << "Molecule::could not find bond between atoms " << a1 << " and " << a1   << endl;
     return 0;

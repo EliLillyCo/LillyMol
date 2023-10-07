@@ -6,8 +6,8 @@
 
 #define MSI_OBJECT_READ_IMPLEMENTATION
 
-#include "iwstring_data_source.h"
-#include "iwmmap.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/iwmmap.h"
 
 #include "msi_object.h"
 
@@ -250,13 +250,13 @@ msi_attribute::string_multi_value (int i) const
     if (0 == i)
       return &_string;
     else
-      return NULL;
+      return nullptr;
   }
 
   if (_string_values.ok_index(i))
     return _string_values[i];
   else
-    return NULL;
+    return nullptr;
 }
 
 int
@@ -525,7 +525,7 @@ msi_object::ok () const
 int
 msi_object::ignore (const char * c)
 {
-  assert (NULL != c);
+  assert (nullptr != c);
 
   IWString * tmp = new IWString(c);
   return _attributes_to_ignore.add(tmp);
@@ -639,7 +639,7 @@ _locate_attribute (const const_IWSubstring & attribute_name,
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 const msi_attribute *
@@ -661,7 +661,7 @@ msi_object::attribute (int i) const
 
   int number_attributes = _attributes.number_elements();
   if (i >= number_attributes)
-    return NULL;
+    return nullptr;
 
   return _attributes[i];
 }
@@ -784,7 +784,7 @@ msi_object::component (const const_IWSubstring & id, int which_one_to_find) cons
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 void

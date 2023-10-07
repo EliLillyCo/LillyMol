@@ -59,12 +59,12 @@ main ()
 
     fscanf (stdin, "%s", buffer);
     nl = strchr (buffer, '\n');
-    if (NULL == nl)
+    if (nullptr == nl)
       continue;
 
     *nl = '\0';
 
-    rc = hex_to_int (buffer, strlen (buffer), result);
+    rc = hex_to_int(buffer, strlen (buffer), result);
 
     if (0 == rc)
       fprintf (stderr, "Conversion failed\n";

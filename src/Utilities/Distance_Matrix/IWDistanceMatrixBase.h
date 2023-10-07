@@ -1,8 +1,8 @@
 #ifndef IWDM_BASE_H
 #define IWDM_BASE_H
 
-#include <iostream>
 #include <stdint.h>
+#include <iostream>
 
 #if (__GNUC__ == 3) && (__GNUC_MINOR__ > 3)
 #define IW_TWO_PHASE_TEMPLATES
@@ -16,9 +16,9 @@
   Objects for storing pair-wise relationships between objects
 */
 
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
-#include "accumulator.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 /*
   We can convert a distance matrix into a .nn file suitable for nplotnn.
@@ -46,7 +46,7 @@ class DM_to_NN_Conditions
     int ok () const;
     int debug_print (std::ostream &) const;
 
-    int recognised (const IWString & n, int error_occurred);   // parsing command line directives
+    int recognised (const IWString & n, int& error_occurred);   // parsing command line directives
 
     int max_neighbours () const { return _max_neighbours;}
     void set_max_neighbours (int m) { _max_neighbours = m;}
@@ -384,21 +384,21 @@ class Distance_Matrix_Statistics : public Accumulator <T>
 
 #ifdef IWDISTANCE_MATRIX_IMPLEMENTATION
 
-#include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <fstream>
-using std::cerr;
-using std::endl;
 
-#include "iwqsort.h"
-#include "misc.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwqsort/iwqsort.h"
+
 #include "IWDistanceMatrixBase.h"
 #include "iwdmsupport.h"
 
-#include "iwstring_data_source.h"
+using std::cerr;
 
 template <typename T>
 IWDistanceMatrixBase<T>::IWDistanceMatrixBase ()
@@ -453,7 +453,7 @@ template <typename T>
 int
 IWDistanceMatrixBase<T>::debug_print (std::ostream & os) const
 {
-  os << "IWDistanceMatrixBase::debug_print: size " << _number_molecules << endl;
+  os << "IWDistanceMatrixBase::debug_print: size " << _number_molecules << '\n';
 
   return os.good();
 }
@@ -466,7 +466,7 @@ IWDistanceMatrixBase<T>::echo (std::ostream & output) const
 
   if (0 == _number_molecules)
   {
-    cerr << "IWDistanceMatrixBase::echo: empty distance matrix\n";
+    std::cerr << "IWDistanceMatrixBase::echo: empty distance matrix\n";
     return 0;
   }
 
@@ -515,7 +515,7 @@ IWDistanceMatrixBase<T>::_build_row_offset (uint64_t n)
 #ifdef ECHO_ROW_OFFSET
   for (int i = 0; i < n - 1; i++)
   {
-    cerr << " i = " << i << " offset " << _row_offset[i] << '\n';
+    std::cerr << " i = " << i << " offset " << _row_offset[i] << '\n';
   }
 #endif
 
@@ -542,12 +542,12 @@ IWDistanceMatrixBase<T>::resize (int n,
 
   const uint64_t items_needed = un * (un - 1) / 2;
 
-//cerr << "n = " << n << " Allocating " << items_needed << " items of size " << sizeof(T) << endl;
+//std::cerr << "n = " << n << " Allocating " << items_needed << " items of size " << sizeof(T) << '\n';
 
   _zdata = new T[items_needed];
   if (NULL == _zdata)
   {
-    cerr << "IWDistanceMatrixBase::resize: cannot allocate array for size " << n << ", number items = " << items_needed << '\n';
+    std::cerr << "IWDistanceMatrixBase::resize: cannot allocate array for size " << n << ", number items = " << items_needed << '\n';
     return 0;
   }
 
@@ -558,12 +558,12 @@ IWDistanceMatrixBase<T>::resize (int n,
     _zdata[i] = initialiser;
   }
 
-//cerr << "Problem size " << n << " needs " << items_needed << " items stored\n";
+//std::cerr << "Problem size " << n << " needs " << items_needed << " items stored\n";
 
   _row_offset = new uint64_t[n];
   if (NULL == _row_offset)
   {
-    cerr << "IWDistanceMatrixBase::resize: cannot allocate row offset array for size " << n << '\n';
+    std::cerr << "IWDistanceMatrixBase::resize: cannot allocate row offset array for size " << n << '\n';
     return 0;
   }
 
@@ -573,7 +573,7 @@ IWDistanceMatrixBase<T>::resize (int n,
 
   if (NULL == _id)
   {
-    cerr << "IWDistanceMatrixBase::resize:cannot allocate " << n << " ids\n";
+    std::cerr << "IWDistanceMatrixBase::resize:cannot allocate " << n << " ids\n";
     return 0;
   }
 
@@ -616,7 +616,7 @@ IWDistanceMatrixBase<T>::zvalue (int i, int j) const
 {
   unsigned int b = _offset(i, j);
 
-//cerr << "Data for " << i << "," << j << " at " << b << '\n';
+//std::cerr << "Data for " << i << "," << j << " at " << b << '\n';
 
   return _zdata[b];
 }
@@ -629,10 +629,10 @@ IWDistanceMatrixBase<T>::zvalue (const IWString & id1,
   IW_STL_Hash_Map_int::const_iterator f1 = IW_STL_Hash_Map_int::find(id1);
   if (f1 == IW_STL_Hash_Map_int::end())
   {
-    cerr << "IWDistanceMatrixBase::set:no hash value for '" << id1 << "'\n";
+    std::cerr << "IWDistanceMatrixBase::set:no hash value for '" << id1 << "'\n";
     for (IW_STL_Hash_Map_int::const_iterator i = IW_STL_Hash_Map_int::begin(); i != IW_STL_Hash_Map_int::end(); i++)
     {
-      cerr << (*i).first << " is " << (*i).second << '\n';
+      std::cerr << (*i).first << " is " << (*i).second << '\n';
     }
     abort();
     return 0;
@@ -641,7 +641,7 @@ IWDistanceMatrixBase<T>::zvalue (const IWString & id1,
   IW_STL_Hash_Map_int::const_iterator f2 = IW_STL_Hash_Map_int::find(id2);
   if (f2 == IW_STL_Hash_Map_int::end())
   {
-    cerr << "IWDistanceMatrixBase::set:no hash value for '" << id2 << "'\n";
+    std::cerr << "IWDistanceMatrixBase::set:no hash value for '" << id2 << "'\n";
     abort();
     return 0;
   }
@@ -670,10 +670,10 @@ IWDistanceMatrixBase<T>::set (const IWString & id1,
   IW_STL_Hash_Map_int::const_iterator f1 = IW_STL_Hash_Map_int::find(id1);
   if (f1 == IW_STL_Hash_Map_int::end())
   {
-    cerr << "IWDistanceMatrixBase::set:no hash value for '" << id1 << "'\n";
+    std::cerr << "IWDistanceMatrixBase::set:no hash value for '" << id1 << "'\n";
     for (IW_STL_Hash_Map_int::const_iterator i = IW_STL_Hash_Map_int::begin(); i != IW_STL_Hash_Map_int::end(); i++)
     {
-      cerr << (*i).first << " is " << (*i).second << '\n';
+      std::cerr << (*i).first << " is " << (*i).second << '\n';
     }
     return 0;
   }
@@ -681,7 +681,7 @@ IWDistanceMatrixBase<T>::set (const IWString & id1,
   IW_STL_Hash_Map_int::const_iterator f2 = IW_STL_Hash_Map_int::find(id2);
   if (f2 == IW_STL_Hash_Map_int::end())
   {
-    cerr << "IWDistanceMatrixBase::set:no hash value for '" << id2 << "'\n";
+    std::cerr << "IWDistanceMatrixBase::set:no hash value for '" << id2 << "'\n";
     return 0;
   }
 
@@ -743,7 +743,7 @@ IWDistanceMatrixBase<T>::do_read (const const_IWSubstring & fname,
 
   if (! input.good())
   {
-    cerr << "IWDistanceMatrixUse::do_read: cannot open '" << fname << "'\n";
+    std::cerr << "IWDistanceMatrixUse::do_read: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -758,7 +758,7 @@ IWDistanceMatrixBase<T>::_process_size_directive (const const_IWSubstring & sval
   int n;
   if (! svalue.numeric_value(n) || n < 2)
   {
-    cerr << "IWDistanceMatrixBase::_process_size_directive: invalid size directive '" << svalue << "'\n";
+    std::cerr << "IWDistanceMatrixBase::_process_size_directive: invalid size directive '" << svalue << "'\n";
     error = 1;
     return;
   }
@@ -821,8 +821,8 @@ IWDistanceMatrixBase<T>::do_read (iwstring_data_source & input,
     const_IWSubstring directive, zvalue;
     if (! buffer.split(directive, ' ', zvalue))
     {
-      cerr << "IWDistanceMatrixBase::do_read: must have at least two tokens, line " << input.lines_read() << '\n';
-      cerr << buffer << '\n';
+      std::cerr << "IWDistanceMatrixBase::do_read: must have at least two tokens, line " << input.lines_read() << '\n';
+      std::cerr << buffer << '\n';
       return 0;
     }
 
@@ -833,9 +833,9 @@ IWDistanceMatrixBase<T>::do_read (iwstring_data_source & input,
       ;
     else
     {
-      cerr << "error_occurred " << error_occurred << " ignore_unrecognised_header_records " << ignore_unrecognised_header_records << '\n';
-      cerr << "IWDistanceMatrixBase::do_read:unrecognised or invalid input record, line " << input.lines_read() << '\n';
-      cerr << buffer << '\n';
+      std::cerr << "error_occurred " << error_occurred << " ignore_unrecognised_header_records " << ignore_unrecognised_header_records << '\n';
+      std::cerr << "IWDistanceMatrixBase::do_read:unrecognised or invalid input record, line " << input.lines_read() << '\n';
+      std::cerr << buffer << '\n';
       return 0;
     }
   }
@@ -853,7 +853,7 @@ IWDistanceMatrixBase<T>::_read_the_data (iwstring_data_source & input)
   {
     if (! IWDistanceMatrixBase::resize(_number_molecules))
     {
-      cerr << "IWDistanceMatrixUse::cannot allocate data for " << _number_molecules << " items\n";
+      std::cerr << "IWDistanceMatrixUse::cannot allocate data for " << _number_molecules << " items\n";
       return 0;
     }
   }
@@ -864,11 +864,11 @@ IWDistanceMatrixBase<T>::_read_the_data (iwstring_data_source & input)
 
   if (! input.copy_raw_bytes(_zdata, items_to_be_read * sizeof(T)))
   {
-    cerr << "IWDistanceMatrixUse::_read_the_data: cannot read " << items_to_be_read << " items of size " << sizeof(T) << " from input stream\n";
+    std::cerr << "IWDistanceMatrixUse::_read_the_data: cannot read " << items_to_be_read << " items of size " << sizeof(T) << " from input stream\n";
     return 0;
   }
 
-//cerr << "_read_the_data: first values " << _zdata[0] << ' ' << (_zdata[0] - 0.0) << endl;
+//std::cerr << "_read_the_data: first values " << _zdata[0] << ' ' << (_zdata[0] - 0.0) << '\n';
   if (! iw_little_endian())   // do nothing if big endian
     ;
   else if (1 == sizeof(T))
@@ -878,15 +878,15 @@ IWDistanceMatrixBase<T>::_read_the_data (iwstring_data_source & input)
   else if (4 == sizeof(T))
     htonl_unsigned_long(_zdata, items_to_be_read);
   else
-    cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
+    std::cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
 
-//cerr << "_read_the_data: first values after translate " << _zdata[0] << endl;
+//std::cerr << "_read_the_data: first values after translate " << _zdata[0] << '\n';
 //#define ECHO_RAW_VALUES
 #ifdef ECHO_RAW_VALUES
-  cerr << "Read " << items_to_be_read << " items\n";
+  std::cerr << "Read " << items_to_be_read << " items\n";
   for (unsigned int i = 0; i < items_to_be_read; i++)
   {
-    cerr << " i = " << i << " value " << _zdata[i] <<  ' ' << (0.0 == _zdata[i]) << '\n';
+    std::cerr << " i = " << i << " value " << _zdata[i] <<  ' ' << (0.0 == _zdata[i]) << '\n';
   }
 #endif
 
@@ -903,7 +903,7 @@ IWDistanceMatrixBase<T>::do_write (const const_IWSubstring & fname)
 
   if (! output.good())
   {
-    cerr << "IWDistanceMatrixBase::do_write: cannot open '" << fname << "'\n";
+    std::cerr << "IWDistanceMatrixBase::do_write: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -991,7 +991,7 @@ IWDistanceMatrixBase<T>::write_data (std::ostream & output)
 
   int need_to_swap_bytes_back = 1;
 
-//cerr << "Before writing " << _zdata[0] << " endian " << iw_little_endian() << endl;
+//std::cerr << "Before writing " << _zdata[0] << " endian " << iw_little_endian() << '\n';
   if (! iw_little_endian())
     need_to_swap_bytes_back = 0;
   else if (1 == sizeof(T))
@@ -1002,17 +1002,17 @@ IWDistanceMatrixBase<T>::write_data (std::ostream & output)
     htonl_unsigned_long(_zdata, bytes_to_write / 4);
   else
   {
-    cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
+    std::cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
     need_to_swap_bytes_back = 0;
   }
 
-//cerr << "After swapping " << _zdata[0] << endl;
+//std::cerr << "After swapping " << _zdata[0] << '\n';
 
   const uint64_t bsave = bytes_to_write;
 
 //output.write((const char *) _zdata, bytes_to_write);
 
-//cerr << "Writing " << bytes_to_write << " bytes\n";
+//std::cerr << "Writing " << bytes_to_write << " bytes\n";
 
   const char * w = reinterpret_cast<const char *>(_zdata);
 
@@ -1029,7 +1029,7 @@ IWDistanceMatrixBase<T>::write_data (std::ostream & output)
       output.write(w, bytes_to_write);
       bytes_to_write = 0;
     }
-//  cerr << "Still to write " << bytes_to_write << endl;
+//  std::cerr << "Still to write " << bytes_to_write << '\n';
   }
 
   if (! need_to_swap_bytes_back)
@@ -1039,7 +1039,7 @@ IWDistanceMatrixBase<T>::write_data (std::ostream & output)
   else if (4 == sizeof(T))
     ntohl_unsigned_long(_zdata, bsave / 4);
 
-//cerr << "After swapping back  " << _zdata[0] << endl;
+//std::cerr << "After swapping back  " << _zdata[0] << '\n';
   return output.good();
 }
 
@@ -1054,7 +1054,7 @@ IWDistanceMatrixBase<T>::write_data (IWString_and_File_Descriptor & output)
 
   int need_to_swap_bytes_back = 1;
 
-//cerr << "write_data:before swap " << _zdata[0] << ", will write " << bytes_to_write << " bytes\n";
+//std::cerr << "write_data:before swap " << _zdata[0] << ", will write " << bytes_to_write << " bytes\n";
 
   if (! iw_little_endian())
     need_to_swap_bytes_back = 0;
@@ -1066,11 +1066,11 @@ IWDistanceMatrixBase<T>::write_data (IWString_and_File_Descriptor & output)
     htonl_unsigned_long(_zdata, bytes_to_write / 4);
   else
   {
-    cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
+    std::cerr << "Don't know how to byte swap little endian things of size " << sizeof(T) << " bytes\n";
     need_to_swap_bytes_back = 0;
   }
 
-//cerr << "Swapped form " << _zdata[0] << endl;
+//std::cerr << "Swapped form " << _zdata[0] << '\n';
 
   output.write((const char *) _zdata, bytes_to_write);
 
@@ -1081,7 +1081,7 @@ IWDistanceMatrixBase<T>::write_data (IWString_and_File_Descriptor & output)
   else if (4 == sizeof(T))
     ntohl_unsigned_long(_zdata, bytes_to_write / 4);
 
-//cerr << "Swapped back to " << _zdata[0] << endl;
+//std::cerr << "Swapped back to " << _zdata[0] << '\n';
 
   return output.good();
 }
@@ -1114,7 +1114,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::echo (std::ostream & output) const
 {
   if (0 == _number_molecules)
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::echo: empty matrix\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::echo: empty matrix\n";
     return 0;
   }
 
@@ -1164,7 +1164,7 @@ IWDistanceMatrixBase<T>::_process_id_directive (const_IWSubstring directive,    
 {
   if (0 == _number_molecules)
   {
-    cerr << "IWDistanceMatrixBase::recognised: sorry, ID encountered before size\n";
+    std::cerr << "IWDistanceMatrixBase::recognised: sorry, ID encountered before size\n";
     error_encountered = 1;
     return;
   }
@@ -1174,7 +1174,7 @@ IWDistanceMatrixBase<T>::_process_id_directive (const_IWSubstring directive,    
     _id = new IWString[_number_molecules];
     if (NULL == _id)
     {
-      cerr << "IWDistanceMatrixBase::return: sorry, cannot allocate " << _number_molecules << " ID strings\n";
+      std::cerr << "IWDistanceMatrixBase::return: sorry, cannot allocate " << _number_molecules << " ID strings\n";
       error_encountered = 1;
       return;
     }
@@ -1185,17 +1185,17 @@ IWDistanceMatrixBase<T>::_process_id_directive (const_IWSubstring directive,    
   int i;
   if (! directive.numeric_value(i) || i < 0 || static_cast<unsigned int>(i) >= _number_molecules)
   {
-    cerr << "IWDistanceMatrixBase::recognised: invalid identifier '" << directive << "'\n";
+    std::cerr << "IWDistanceMatrixBase::recognised: invalid identifier '" << directive << "'\n";
     error_encountered = 1;
     return;
   }
 
   if (0 != _id[i].length())
-    cerr << "Warning duplicate specification of identifier " << i << " now '" << svalue << "' previous '" << _id[i] << "'\n";
+    std::cerr << "Warning duplicate specification of identifier " << i << " now '" << svalue << "' previous '" << _id[i] << "'\n";
 
   if (contains(svalue))
   {
-    cerr << "IWDistanceMatrixBase::_process_id_directive:duplicate id '" << svalue << "'\n";
+    std::cerr << "IWDistanceMatrixBase::_process_id_directive:duplicate id '" << svalue << "'\n";
     error_encountered = 1;
     return;
   }
@@ -1224,7 +1224,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::do_read (const const_IWSubstring & fnam
 
   if (! input.good())
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read: cannot open '" << fname << "'\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -1238,7 +1238,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::_parse_input_record (const const_IWSubs
   const_IWSubstring directive, svalue;
   if (! buffer.split(directive, ' ', svalue))
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::_parse_input_record: must have at least two tokens\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::_parse_input_record: must have at least two tokens\n";
     return 0;
   }
 
@@ -1254,7 +1254,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::_parse_input_record (const const_IWSubs
   if (Masquerading_as_Byte<T>::recognised(directive, svalue, error_occurred))
     return 1;
 
-  cerr << "IWDistanceMatrixMasquerading_as_Byte::_parse_input_record: unrecognised directive '" << directive << "'\n";
+  std::cerr << "IWDistanceMatrixMasquerading_as_Byte::_parse_input_record: unrecognised directive '" << directive << "'\n";
   return 0;
 }
 
@@ -1262,7 +1262,7 @@ template <typename T>
 int
 IWDistanceMatrixMasquerading_as_Byte<T>::do_read (iwstring_data_source & input)
 {
-//cerr << "IWDistanceMatrixMasquerading_as_Byte:do_read\n";
+//std::cerr << "IWDistanceMatrixMasquerading_as_Byte:do_read\n";
 
   const_IWSubstring buffer;
   while (input.next_record(buffer))
@@ -1278,11 +1278,11 @@ IWDistanceMatrixMasquerading_as_Byte<T>::do_read (iwstring_data_source & input)
     if ('|' == buffer)
       break;
 
-//  cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read:examining '" << buffer << "'\n";
+//  std::cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read:examining '" << buffer << "'\n";
     if (! _parse_input_record(buffer))
     {
-      cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read: invalid record, line " << input.lines_read() << '\n';
-      cerr << buffer << '\n';
+      std::cerr << "IWDistanceMatrixMasquerading_as_Byte::do_read: invalid record, line " << input.lines_read() << '\n';
+      std::cerr << buffer << '\n';
       return 0;
     }
   }
@@ -1296,19 +1296,19 @@ IWDistanceMatrixMasquerading_as_Byte<T>::_read_the_data (iwstring_data_source & 
 {
   if (_maxval < _minval)
   {
-    cerr << "IWDistanceMatrixUse::_read_the_data: max " << _maxval << " and minval " << _minval << " inconsistent\n";
+    std::cerr << "IWDistanceMatrixUse::_read_the_data: max " << _maxval << " and minval " << _minval << " inconsistent\n";
     return 0;
   }
 
   if (! IWDistanceMatrixBase<unsigned char>::_read_the_data(input))
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::_read_the_data: cannot resize/read\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::_read_the_data: cannot resize/read\n";
     return 0;
   }
 
   if (! Masquerading_as_Byte<T>::fully_specified())
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::_read_the_data: ranges not fully specified or invalid\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::_read_the_data: ranges not fully specified or invalid\n";
     return 0;
   }
 
@@ -1323,13 +1323,13 @@ IWDistanceMatrixMasquerading_as_Byte<T>::set (int i, int j,
   unsigned char bvalue;
   if (! Masquerading_as_Byte<T>::convert_to_byte(v, bvalue))
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::set: value for " << i << " " << j << " out of range\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::set: value for " << i << " " << j << " out of range\n";
     return 0;
   }
 
   unsigned int o = _offset(i, j);
 
-//cerr << "i = " << i << " j = " << j << " goes to " << o << " value " << v << " transformed to " << static_cast<int>(bvalue) << '\n';
+//std::cerr << "i = " << i << " j = " << j << " goes to " << o << " value " << v << " transformed to " << static_cast<int>(bvalue) << '\n';
 
   _zdata[o] = bvalue;
 
@@ -1346,7 +1346,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::do_write (const const_IWSubstring & fna
 
   if (! output.good())
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::do_write: cannot open '" << fname << "'\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::do_write: cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -1400,7 +1400,7 @@ IWDistanceMatrixBase<T>::create_nn_file (const IW_STL_Hash_Map_String & id_to_sm
 {
   if (0 == _number_molecules)
   {
-    cerr << "IWDistanceMatrixBase::create_nn_file: empty distance matrix\n";
+    std::cerr << "IWDistanceMatrixBase::create_nn_file: empty distance matrix\n";
     return 1;
   }
 
@@ -1565,7 +1565,7 @@ IWDistanceMatrixBase<T>::swap_items(int i1,
     ;
   else
   {
-    cerr << "IWDistanceMatrixBase::swap_items:identical items " << i1 << " and " << i2 << endl;
+    std::cerr << "IWDistanceMatrixBase::swap_items:identical items " << i1 << " and " << i2 << '\n';
     return 0;
   }
 
@@ -1576,7 +1576,7 @@ IWDistanceMatrixBase<T>::swap_items(int i1,
 
 //#define DEBUG_SWAP_ITEMS
 #ifdef DEBUG_SWAP_ITEMS
-  cerr << "Swapping " << i1 << " and " << i2 << endl;
+  std::cerr << "Swapping " << i1 << " and " << i2 << '\n';
 #endif
 
 // For everything below i1, just swap the I1 and I2 columns
@@ -1586,7 +1586,7 @@ IWDistanceMatrixBase<T>::swap_items(int i1,
     T * r = _zdata + _row_offset[i];
 
 #ifdef DEBUG_SWAP_ITEMS
-    cerr << "Within row " << i << " swap " << (i1 - i - 1) << " with " << (i2 - i - 1) << endl;
+    std::cerr << "Within row " << i << " swap " << (i1 - i - 1) << " with " << (i2 - i - 1) << '\n';
 #endif
     iwswap(r[i1 - i - 1], r[i2 - i - 1]);
   }
@@ -1602,7 +1602,7 @@ IWDistanceMatrixBase<T>::swap_items(int i1,
     T * r = _zdata + _row_offset[i];
 
 #ifdef DEBUG_SWAP_ITEMS
-    cerr << "Within i1 " << i << " swap " << ndx << " with " << (i2 - i - 1) << endl;
+    std::cerr << "Within i1 " << i << " swap " << ndx << " with " << (i2 - i - 1) << '\n';
 #endif
     iwswap(i1row[ndx], r[i2 - i - 1]);
 
@@ -1616,7 +1616,7 @@ IWDistanceMatrixBase<T>::swap_items(int i1,
   for (unsigned int i = i2 + 1; i < _number_molecules; i++)
   {
 #ifdef DEBUG_SWAP_ITEMS
-    cerr << "UPdate " << i << " swap " << ndx << " with " << (i - i2 - 1) << endl;
+    std::cerr << "UPdate " << i << " swap " << ndx << " with " << (i - i2 - 1) << '\n';
 #endif
     iwswap(i1row[ndx], i2row[i - i2 - 1]);
     ndx++;
@@ -1633,7 +1633,7 @@ IWDistanceMatrixMasquerading_as_Byte<T>::create_nn_file (const IW_STL_Hash_Map_S
 {
   if (0 == _number_molecules)
   {
-    cerr << "IWDistanceMatrixMasquerading_as_Byte::create_nn_file: empty distance matrix\n";
+    std::cerr << "IWDistanceMatrixMasquerading_as_Byte::create_nn_file: empty distance matrix\n";
     return 1;
   }
 
@@ -1755,7 +1755,7 @@ IWDistanceMatrixBase<T>::remove_items (const int * to_remove)
 
   if (0 == items_removed)
   {
-    cerr << "IWDistanceMatrixBase::remove_items:nothing removed\n";
+    std::cerr << "IWDistanceMatrixBase::remove_items:nothing removed\n";
     return 0;
   }
 

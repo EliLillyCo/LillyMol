@@ -10,7 +10,7 @@ template <typename T>
 iwaray<T>::iwaray ()
 {
   _number_elements = 0;
-  _things = NULL;
+  _things = nullptr;
 
   return;
 }
@@ -28,7 +28,7 @@ iwaray<T>::iwaray (int qsize)
 template <typename T>
 iwaray<T>::~iwaray ()
 {
-  if (NULL != _things)
+  if (nullptr != _things)
     delete [] _things;
 
   _number_elements = -1;

@@ -1,14 +1,14 @@
 #ifndef SET_OF_TARGET_MOL_H
 #define SET_OF_TARGET_MOL_H
 
-#include "accumulator.h"
+#include "Foundational/accumulator/accumulator.h"
 
-#include "atom_typing.h"
-#include "mpr.h"
-#include "maccskeys_fn5.h"
-#include "istream_and_type.h"
-#include "linear_path_fingerprint.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Tools/mpr.h"
 
+#include "Molecule_Tools/linear_path_fingerprint.h"
+#include "Molecule_Tools/maccskeys_fn5.h"
 
 /*
   The various random molecule creation tools might be trying to get as

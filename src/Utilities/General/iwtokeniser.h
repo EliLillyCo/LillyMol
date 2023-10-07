@@ -1,7 +1,7 @@
 #ifndef IWTOKENISER_H
 #define IWTOKENISER_H
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 /*
   Want a common interface for fetching tokens from a line.

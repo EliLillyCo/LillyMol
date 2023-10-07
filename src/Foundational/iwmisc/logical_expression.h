@@ -35,10 +35,8 @@ class const_IWSubstring;
 #define IW_LOGEXP_LOW_PRIORITY_AND 4
 
 #include <iostream>
-using std::cerr;
-using std::endl;
 
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "set_or_unset.h"
 
 /*
@@ -136,12 +134,18 @@ class IW_Logical_Expression : private resizable_array<int>
 
 //  private functions
 
+    void _default_values();
+
     int _evaluate_single_operator (int & zresult);
 
     int _set_all_operators (int);
     int _all_operators_are (int) const;
 
-    int _initialise ();
+    int _initialise();
+
+    // Run in the constructor to set a single default operator.
+    // Run in RemoveAllOperators to get back to constructor state.
+    void _default_state();
 
   public:
     IW_Logical_Expression ();
@@ -154,7 +158,11 @@ class IW_Logical_Expression : private resizable_array<int>
 
     int evaluate (int &);
 
+    // Get ready to start processing a new query.
     void reset ();
+
+    // Remove all information entered, goes back to the constructor state.
+    int RemoveAllOperators();
 
     int add_operator (int);
     int add_operator (char);
@@ -173,6 +181,9 @@ class IW_Logical_Expression : private resizable_array<int>
     int result_needed (int) const;
     int set_result (int, int);
     int result (int i) const { return _things[i];}
+
+    // The operators. Mostly intended for support type use.
+    const resizable_array<int> Operators() const { return _operator;}
 };
 
 #endif

@@ -1,8 +1,9 @@
 #ifndef STRING_DATA_SOURCE_H
 #define STRING_DATA_SOURCE_H
 
-#include "iwstring.h"
-#include "iwcrex.h"
+#include "re2/re2.h"
+
+#include "Foundational/iwstring/iwstring.h"
 
 /*
   We want to read data from a string rather than a file descriptor
@@ -42,7 +43,7 @@ class String_Data_Source
     int record_buffered() const;
 
     int skip_records();
-    int skip_records (IW_Regular_Expression & rx, int nskip);
+    int skip_records (RE2& rx, int nskip);
 
     void set_strip_trailing_blanks (int s) { _strip_trailing_blanks = s;}
     void set_dos (int s);

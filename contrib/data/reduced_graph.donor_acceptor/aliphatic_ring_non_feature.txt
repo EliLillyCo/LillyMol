@@ -1,0 +1,3 @@
+query: "aliphatic_ring_non_feature.qry"
+element: "Hf"
+ring: true

@@ -1,5 +1,5 @@
-#ifndef IW_SYMMETRY_H
-#define IW_SYMMETRY_H
+#ifndef MOLECULE_LIB_SYMMETRY_H_
+#define MOLECULE_LIB_SYMMETRY_H_
 
 /*
   When perceiving whole molecule symmetry, and large scale symmetry
@@ -77,4 +77,4 @@ class Symmetry_Info : public resizable_array_p<Set_of_Atoms>
     const int * degree () const { return _degree;}
 };
 
-#endif
+#endif  // MOLECULE_LIB_SYMMETRY_H_

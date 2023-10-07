@@ -1,5 +1,7 @@
-#ifndef _IW_BASIC_MOLECULE_TYPES
-#define _IW_BASIC_MOLECULE_TYPES
+#ifndef MOLECULE_LIB_IWMTYPES_H_
+#define MOLECULE_LIB_IWMTYPES_H_
+
+#include "Foundational/iwmisc/iwconfig.h"
 
 /*
   Various typedef's and such used for molecules and others.
@@ -10,12 +12,6 @@ typedef int magic_number_t;
 #else
 typedef long magic_number_t;
 #endif
-
-//typedef long long          int64_t;
-//typedef long unsigned long uint64_t;
-typedef unsigned long long iw_uint64_t;
-
-//typedef unsigned int uint32_t;
 
 typedef float coord_t;
 
@@ -35,9 +31,9 @@ typedef float atomic_mass_t;     // float to include isotopic weighting
 typedef double exact_mass_t;     // these have lots of digits
 typedef float molecular_weight_t;
 
-#define INVALID_ATOMIC_NUMBER -1
+inline constexpr int kInvalidAtomicNumber = -1;
 
-#define INVALID_ATOM_TYPE -8
+inline constexpr int kInvalidAtomType = -8;
 
 #define SINGLE_BOND_SYMBOL '-'
 #define DOUBLE_BOND_SYMBOL '='
@@ -147,8 +143,8 @@ typedef unsigned int bond_type_t;
 
 #define MAX_CONNECTIVITY 8
 
-#define DELETE_IF_NOT_NULL(p) if (NULL != (p)) { delete (p); (p) = NULL; }
-#define DELETE_IF_NOT_NULL_ARRAY(p) if (NULL != (p)) { delete [] (p); (p) = NULL; }
+#define DELETE_IF_NOT_NULL(p) if (nullptr != (p)) { delete (p); (p) = nullptr; }
+#define DELETE_IF_NOT_NULL_ARRAY(p) if (nullptr != (p)) { delete [] (p); (p) = nullptr; }
 
 typedef int boolean;
 
@@ -178,9 +174,9 @@ typedef long int32;
 #define DEG2RAD (M_PI / 180.0)
 #define RAD2DEG (180.0 / M_PI)
 
-#define NRINGS_UNKNOWN -91
-#define IS_NON_RING_ATOM -74
-#define IS_RING_ATOM  -73
+// #define NRINGS_UNKNOWN -91
+// #define IS_NON_RING_ATOM -74
+// #define IS_RING_ATOM  -73
 
 /*
   After running into problems with fused ring systems (specifically
@@ -204,14 +200,11 @@ typedef int aromaticity_type_t;
 #define NOT_AROMATIC _ALIPH_BIT
 #define AROMATIC     _AROM_BIT
 
-#define IS_AROMATIC_ATOM(c) (_AROM_BIT & (c))
-#define IS_ALIPHATIC_ATOM(c) (_ALIPH_BIT & (c))
-#define IS_AROMATIC_ONLY_ATOM(c) (_AROM_BIT == (_AROM_BIT & (c)))
-#define IS_ALIPHATIC_ONLY_ATOM(c) (_ALIPH_BIT == (_ALIPH_BIT & (c)))
-#define IS_AROMATIC_AND_ALIPHATIC_ATOM(c) ((_AROM_BIT & (c)) && (_ALIPH_BIT & (c)))
-
-#define SET_AROMATIC_ATOM(c) ((c) = ((c) | _AROM_BIT))
-#define SET_ALIPHATIC_ATOM(c) ((c) = ((c) |_ALIPH_BIT))
+//#define IS_AROMATIC_ATOM(c) (_AROM_BIT & (c))
+//#define IS_ALIPHATIC_ATOM(c) (_ALIPH_BIT & (c))
+//#define IS_AROMATIC_ONLY_ATOM(c) (_AROM_BIT == (_AROM_BIT & (c)))
+//#define IS_ALIPHATIC_ONLY_ATOM(c) (_ALIPH_BIT == (_ALIPH_BIT & (c)))
+//#define IS_AROMATIC_AND_ALIPHATIC_ATOM(c) ((_AROM_BIT & (c)) && (_ALIPH_BIT & (c)))
 
 #define OK_ATOM_AROMATICITY(c) (((_AROM_BIT | _ALIPH_BIT) == (_AROM_BIT | _ALIPH_BIT | (c))) || \
                            (AROMATICITY_NOT_DETERMINED == (c)))
@@ -232,25 +225,24 @@ typedef unsigned int atom_invariant_type_t;
   I often needed to identity the various file types.
 */
 
-#define MDL    1
-#define PDB    2
-#define MMOD   4
-#define SMI    5
-#define USMI   6
-#define MSI    7
-#define TDT    8
-#define RDF    9
-#define QRY    10
-/*#define BFILE  11*/
-#define RSMI   12
-#define UTDT   13
-#define SDF    14
-#define MOL2   15
-#define IWMTYPE_PSF 16
-#define IWMTYPE_CRD 17
-#define IWMTYPE_CHM 18
-#define IWMTYPE_MRK 19
-#define IWMTYPE_WCHM 21
+//#define MDL    1
+//#define PDB    2
+//#define MMOD   4
+//#define SMI    5
+//#define USMI   6
+//#define MSI    7
+//#define TDT    8
+//#define RDF    9
+//#define QRY    10
+//#define RSMI   12
+//#define UTDT   13
+//#define SDF    14
+//#define MOL2   15
+//#define IWMTYPE_PSF 16
+//#define IWMTYPE_CRD 17
+//#define IWMTYPE_CHM 18
+//#define IWMTYPE_MRK 19
+//#define IWMTYPE_WCHM 21
 
 /*
   Karypis Graph Transaction file
@@ -260,21 +252,21 @@ typedef unsigned int atom_invariant_type_t;
 
 // Unique smiles order, but without aromaticity
 
-#define IWMTYPE_NAUSMI 20
+//#define IWMTYPE_NAUSMI 20
 
 // smarts are only written
 
-#define IWMTYPE_SMT 23
+//#define IWMTYPE_SMT 23
 
-#define IWMTYPE_MRV 24
+//#define IWMTYPE_MRV 24
 
-#define IWMTYPE_INCHI 25
+//#define IWMTYPE_INCHI 25
 
-#define IWMTYPE_TDT_NAUSMI 26
+//#define IWMTYPE_TDT_NAUSMI 26
 
-#define IWMTYPE_CIF 27
+//#define IWMTYPE_CIF 27
 
-/*enum 
+enum FileType
 {
   FILE_TYPE_INVALID,
   FILE_TYPE_MDL,
@@ -282,25 +274,67 @@ typedef unsigned int atom_invariant_type_t;
   FILE_TYPE_MMOD,
   FILE_TYPE_SMI,
   FILE_TYPE_USMI,
+  FILE_TYPE_NAUSMI,
   FILE_TYPE_MSI,
   FILE_TYPE_TDT,
   FILE_TYPE_RDF,
   FILE_TYPE_QRY,
-  FILE_TYPE_BFILE,
-} file_type_t;*/
+  FILE_TYPE_INCHI,
+  FILE_TYPE_RSMI,
+  FILE_TYPE_SMT,
+  FILE_TYPE_UTDT,
+  FILE_TYPE_TDT_NAUSMI,
+  FILE_TYPE_SDF,
+  FILE_TYPE_MOL2,
+  FILE_TYPE_PSF,
+  FILE_TYPE_CRD,
+  FILE_TYPE_CHM,
+  FILE_TYPE_MOE,
+  FILE_TYPE_MRK,
+  FILE_TYPE_MRV,
+  FILE_TYPE_WCHM,
+  FILE_TYPE_CIF,
+  // Smiles and ID header.
+  FILE_TYPE_CSV,
+  FILE_TYPE_TXTPROTO,
+  FILE_TYPE_XYZ,
+  // A special value used internally.
+  FILE_TYPE_NO_ARG_CONSTRUCTOR,
+};
+
+namespace iwmisc {
+// Conversion from degrees to radians.
+template <typename T>
+T
+Deg2Rad(T x) {
+  return DEG2RAD * x;
+}
+
+// Conversion from radians to degrees.
+template <typename T>
+T
+Rad2Deg(T x) {
+  return RAD2DEG * x;
+}
+}  // namespace iwmisc
 
 typedef int chiral_type_t;
 
-#define CHIRALITY_NOT_DETERMINED -99
-#define NON_CHIRAL 0
-#define CHIRAL_BUT_UNSPECIFIED 1
-#define CHIRAL_R   2
-#define CHIRAL_L   3
+// Cahn, Ingold Prelog stereo designators,
+enum class CahnIngoldPrelog {
+  // No specificiation.
+  kUnspecified,
+
+  // Deliberately violating style guide for names.
+  R,
+  S,
+
+  // Specified and the atom is neither R or S.
+  kNeither
+};
 
 #define ATOM_TYPE_SYBYL "SYBYL"
 
-#include "iwconfig.h"
-
 #define NOT_COMPUTED -117
 
-#endif
+#endif  // MOLECULE_LIB_IWMTYPES_H_

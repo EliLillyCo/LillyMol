@@ -2,30 +2,37 @@
   Finds the average of columns of numbers in a file
 */
 
-#include <stdlib.h>
 #include <math.h>
-#include <iostream>
-#include <random>
-#include <algorithm>
+#include <stdlib.h>
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "set_or_unset.h"
-#include "iwstring_data_source.h"
+#include <algorithm>
+#include <iostream>
+#include <optional>
+#include <random>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwre2.h"
 
 #include "iwtokeniser.h"
+
+#include "re2/re2.h"
 
 #ifdef __INTEL_COMPILERdoesnotwork
 #include "istrconv.h"
 #endif
 
-const char * prog_name = NULL;
+using std::cerr;
+
+const char* prog_name = nullptr;
 
 static int verbose = 0;
 
-static IW_Regular_Expression column_rx;
+static std::unique_ptr<re2::RE2> column_rx;
 
-static IW_Regular_Expression descriptor_rx;
+static std::unique_ptr<re2::RE2> descriptor_rx;
 
 static char word_delimeter = ' ';
 
@@ -34,13 +41,15 @@ static int write_as_xydy1dy2 = 0;
 static int brief_output = 0;
 
 static int write_file_name_as_first_token = 0;
+
 /*
   What do we do with a record where there are no matching columns
 */
 
 static int ok_no_matching_columns = 0;
 
-static Set_or_Unset<float> special_number;
+// We can report the number of instances of a number of interest.
+static std::optional<float> special_number;
 
 static int write_column_number = 1;
 
@@ -71,9 +80,14 @@ static IWString prevalence_column_name;
 static double prevalence_multiplier = 1.0;
 
 static void
-usage(int rc)
-{
+usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
   cerr << "Computes statistics on columns in a file\n";
   cerr << " -c <col>       only consider column(s) <col>\n";
   cerr << " -R <rx>        column is the one following a match to <rx>\n";
@@ -95,8 +109,10 @@ usage(int rc)
   cerr << " -a             take absolute value of all input values\n";
   cerr << " -e <pct>       percentile values to compute\n";
   cerr << " -r <number>    if using percentiles, only keep <number> values\n";
-  cerr << " -h <col>       column <col> (number or id) contains prevalence values for values in -c col\n";
-  cerr << " -h mult=<x>    prevalence values should be integer. If not, specify multiplier to convert to int\n";
+  cerr << " -h <col>       column <col> (number or id) contains prevalence values for "
+          "values in -c col\n";
+  cerr << " -h mult=<x>    prevalence values should be integer. If not, specify "
+          "multiplier to convert to int\n";
   cerr << " -q             header record may contain quoted variable names\n";
   cerr << " -y <sting>     used delimiter in the file ie. tab, space\n";
   cerr << " -v             verbose output\n";
@@ -124,99 +140,106 @@ static int skip_first_records = 0;
 
 static int is_descriptor_file = 1;
 
-class AColumn : public Accumulator<double>
-{
-  private:
-    IWString _name;
+class AColumn : public Accumulator<double> {
+ private:
+  IWString _name;
 
-    int _number_missing_values;
-    int _non_numeric_data;
-    int _number_instances_special_value;
+  int _number_missing_values;
+  int _non_numeric_data;
+  int _number_instances_special_value;
 
-    resizable_array<float>_raw_values;
+  resizable_array<float> _raw_values;
 
-    std::mt19937_64 _rng;
-    std::uniform_real_distribution<double> _uniform_01;
-    std::uniform_int_distribution<int> _uniform_nraw;
+  std::mt19937_64 _rng;
+  std::uniform_real_distribution<double> _uniform_01;
+  std::uniform_int_distribution<int> _uniform_nraw;
 
-//  private functions
+  //  private functions
 
-    void _add_to_raw_values (float f);
+  void _add_to_raw_values(float f);
 
-  public:
-    AColumn();
-    ~AColumn();
+ public:
+  AColumn();
+  ~AColumn();
 
-    int extra(const_IWSubstring &, const int prevalence);
+  int extra(const_IWSubstring&, const int prevalence);
 
-    int report(std::ostream &) const;
+  int report(std::ostream&) const;
 
-    void set_name(const const_IWSubstring & s) { _name = s;}
+  void set_name(const const_IWSubstring& s) {
+    _name = s;
+  }
 
-    const IWString & name () const { return _name;}
+  const IWString& name() const {
+    return _name;
+  }
 
-    int non_numeric_data () const { return _non_numeric_data;}
+  int non_numeric_data() const {
+    return _non_numeric_data;
+  }
 
-    void update_global_accumulator (Accumulator<double> &) const;
+  void update_global_accumulator(Accumulator<double>&) const;
 };
 
-AColumn::AColumn() : _rng(rd()), _uniform_01(0.0, 1.0), _uniform_nraw(0, value_buffer_size)
-{
+AColumn::AColumn()
+    : _rng(rd()), _uniform_01(0.0, 1.0), _uniform_nraw(0, value_buffer_size) {
   _number_missing_values = 0;
   _non_numeric_data = 0;
   _number_instances_special_value = 0;
 
-  if (value_buffer_size > 0)
+  if (value_buffer_size > 0) {
     _raw_values.resize(value_buffer_size);
+  }
 
   return;
 }
 
-AColumn::~AColumn ()
-{
+AColumn::~AColumn() {
 }
 
 int
-AColumn::extra(const_IWSubstring & token,
-               const int prevalence)
-{
-  if (' ' != word_delimeter)
+AColumn::extra(const_IWSubstring& token, const int prevalence) {
+  if (' ' != word_delimeter) {
     token.strip_leading_blanks();
+  }
 
   float f;
 #ifdef __INTEL_COMPILERdoesnotwork
-  char * endptr;
+  char* endptr;
   cerr << "Examining '" << token << "'\n";
   f = __IML_str_to_f(token.rawchars(), token.length(), 0, &endptr);
-  cerr << "Value returned " << f << ", errno " << errno << " endptr '" << *endptr << "', diff " << (endptr - token.rawchars()) << endl;
+  cerr << "Value returned " << f << ", errno " << errno << " endptr '" << *endptr
+       << "', diff " << (endptr - token.rawchars()) << '\n';
   if ((EINVAL == errno && isspace(*endptr)) || 0 == errno)
 #else
   if (token.numeric_value(f))
 #endif
   {
-    if (special_number.matches(f))
+    if (special_number && f == *special_number) {
       _number_instances_special_value++;
+    }
 
-    if (take_absolute_value)
+    if (take_absolute_value) {
       f = fabs(f);
+    }
 
-    if (percentiles.number_elements())
+    if (percentiles.number_elements()) {
       _add_to_raw_values(f);
+    }
 
-    if (prevalence_column >= 0)
+    if (prevalence_column >= 0) {
       return Accumulator<double>::extra(f, prevalence);
-    else
+    } else {
       return Accumulator<double>::extra(f);
+    }
   }
 
-  if (missing_value == token || 0 == token.length())
-  {
+  if (missing_value == token || 0 == token.length()) {
     _number_missing_values++;
     return 1;
   }
 
-  if (ignore_bad_data)
-  {
+  if (ignore_bad_data) {
     _non_numeric_data++;
     invalid_data_records_skipped++;
     return 1;
@@ -227,16 +250,15 @@ AColumn::extra(const_IWSubstring & token,
 }
 
 void
-AColumn::_add_to_raw_values (float f)
-{
-  if (_raw_values.number_elements() < value_buffer_size)
-  {
+AColumn::_add_to_raw_values(float f) {
+  if (_raw_values.number_elements() < value_buffer_size) {
     _raw_values.add(f);
     return;
   }
 
-  if (_uniform_01(_rng) > 0.01)    // don't replace an existing value
+  if (_uniform_01(_rng) > 0.01) {  // don't replace an existing value
     return;
+  }
 
   int r = _uniform_nraw(_rng);
 
@@ -246,15 +268,14 @@ AColumn::_add_to_raw_values (float f)
 }
 
 int
-AColumn::report(std::ostream & output) const
-{
-  if (_name.length() > 0)
+AColumn::report(std::ostream& output) const {
+  if (_name.length() > 0) {
     output << _name << ' ';
+  }
 
   const int n = Accumulator<double>::n();
 
-  if (0 == n)
-  {
+  if (0 == n) {
     output << "AColumn::report: no data\n";
     return output.good();
   }
@@ -264,45 +285,47 @@ AColumn::report(std::ostream & output) const
 
   output << n << " values";
 
-  if (1 == n)
-  {
-    if (brief_output)
-      output << " between " << Accumulator<double>::minval() << " and " << Accumulator<double>::maxval() << ", ave " << ave;
-    else
-      output << " between " << Accumulator<double>::minval() << " and " << Accumulator<double>::maxval() << ", tot " << Accumulator<double>::sum() << " ave " << ave << " std " << 0.0;
+  if (1 == n) {
+    if (brief_output) {
+      output << " between " << Accumulator<double>::minval() << " and "
+             << Accumulator<double>::maxval() << ", ave " << ave;
+    } else {
+      output << " between " << Accumulator<double>::minval() << " and "
+             << Accumulator<double>::maxval() << ", tot " << Accumulator<double>::sum()
+             << " ave " << ave << " std " << 0.0;
+    }
+  } else if (write_as_xydy1dy2) {
+    output << " ave " << ave << " dy1 " << (Accumulator<double>::maxval() - ave)
+           << " dy2 " << (ave - Accumulator<double>::minval());
+  } else if (brief_output) {
+    output << " between " << Accumulator<double>::minval() << " and "
+           << Accumulator<double>::maxval() << " ave " << ave;
+  } else {
+    output << " between " << Accumulator<double>::minval() << " and "
+           << Accumulator<double>::maxval() << ", tot " << Accumulator<double>::sum()
+           << " ave " << ave << " std " << std;
   }
-  else if (write_as_xydy1dy2)
-  {
-    output << " ave " << ave << " dy1 " << (Accumulator<double>::maxval() - ave) << " dy2 " << (ave - Accumulator<double>::minval());
-  }
-  else if (brief_output)
-    output << " between " << Accumulator<double>::minval() << " and " << Accumulator<double>::maxval() << " ave " << ave;
-  else
-    output << " between " << Accumulator<double>::minval() << " and " << Accumulator<double>::maxval() << ", tot " << Accumulator<double>::sum() << " ave " << ave << " std " << std;
 
-  if (special_number.is_set() && n > 0)
-  {
-    float s;
-    (void) special_number.value(s);
+  if (special_number && n > 0) {
 
-    float fraction = static_cast<float>(_number_instances_special_value) / static_cast<float>(n);
+    float fraction = iwmisc::Fraction<float>(_number_instances_special_value, n);
 
-    output << ' ' << _number_instances_special_value << " instances of " << s << " fraction " << fraction;
+    output << ' ' << _number_instances_special_value << " instances of " << *special_number
+           << " fraction " << fraction;
 
-    if (0.0f == s)
+    if (0.0f == *special_number) {
       output << " nz " << (1.0f - fraction);
+    }
   }
 
-  if (_raw_values.number_elements() > 1)
-  {
-    float * r = const_cast<float *>(_raw_values.rawdata());
+  if (_raw_values.number_elements() > 1) {
+    float* r = const_cast<float*>(_raw_values.rawdata());
 
     const int nraw = _raw_values.number_elements();
 
     std::random_shuffle(r, r + nraw);
     std::sort(r, r + nraw);
-    for (auto i = 0; i < percentiles.number_elements(); ++i)
-    {
+    for (auto i = 0; i < percentiles.number_elements(); ++i) {
       const auto p = percentiles[i];
       output << ' ' << p << "% " << r[static_cast<int>(p * nraw / 100 + 0.4999)];
     }
@@ -314,80 +337,53 @@ AColumn::report(std::ostream & output) const
 }
 
 void
-AColumn::update_global_accumulator (Accumulator<double> & acc) const
-{
+AColumn::update_global_accumulator(Accumulator<double>& acc) const {
   acc.extra(*this);
 
   return;
 }
 
-static AColumn * acolumn = NULL;
+static AColumn* acolumn = nullptr;
 
-static int 
-get_next_token (const const_IWSubstring & buffer,
-                const_IWSubstring & token,
-                int & i)
-{
-  if (' ' == word_delimeter)
+// If multiple files are processed, some things must be reset.
+void
+ResetFileScopeStaticParams() {
+  prevalence_column = -1;
+  prevalence_column_name.resize(0);
+  prevalence_multiplier = 1.0;
+
+  delete [] acolumn;
+  acolumn = nullptr;
+}
+
+static int
+get_next_token(const const_IWSubstring& buffer, const_IWSubstring& token, int& i) {
+  if (' ' == word_delimeter) {
     return buffer.nextword(token, i);
-  else
+  } else {
     return buffer.nextword_single_delimiter(token, i, word_delimeter);
-}
-
-#ifdef NOT_USEEEEED_ANY_MORE
-static int
-get_next_token_csv (const const_IWSubstring & buffer,
-                    const_IWSubstring & token,
-                    int & i)
-{
-  int in_quote = 0;
-  const int nstart = i;
-
-  for (;i < buffer.length(); ++i)
-  {
-    const char c = buffer[i];
-    if ('"' == c)
-      in_quote = ! in_quote;
-    else if (in_quote)
-      ;
-    else if (',' == c)
-    {
-      buffer.from_to(nstart, i-1, token);
-      ++i;
-      return 1;
-    }
   }
-
-  return 0;
 }
-#endif
 
 static int
-fetch_prevalence_value (const const_IWSubstring & buffer,
-                        const int prevalence_column,
-                        int & prevalence)
-{
+fetch_prevalence_value(const const_IWSubstring& buffer, const int prevalence_column,
+                       int& prevalence) {
   int i = 0;
   const_IWSubstring token;
 
-  for (int col = 0; get_next_token(buffer, token, i); ++col)
-  {
-    if (col != prevalence_column)
+  for (int col = 0; get_next_token(buffer, token, i); ++col) {
+    if (col != prevalence_column) {
       continue;
+    }
 
-    if (1.0 == prevalence_multiplier)
-    {
-      if (! token.numeric_value(prevalence) || prevalence < 0)
-      {
+    if (1.0 == prevalence_multiplier) {
+      if (!token.numeric_value(prevalence) || prevalence < 0) {
         cerr << "Invalid prevalence value '" << token << "'\n";
         return 0;
       }
-    }
-    else
-    {
+    } else {
       double tmp;
-      if (! token.numeric_value(tmp) || tmp < 0.0)
-      {
+      if (!token.numeric_value(tmp) || tmp < 0.0) {
         cerr << "Invalid preference value '" << token << "'\n";
         return 0;
       }
@@ -398,14 +394,13 @@ fetch_prevalence_value (const const_IWSubstring & buffer,
     return 1;
   }
 
-  cerr << "Never found prevalence column " << prevalence_column << endl;
+  cerr << "Never found prevalence column " << prevalence_column << '\n';
 
   return 0;
 }
 
 static int
-average (const const_IWSubstring & buffer)
-{
+average(const const_IWSubstring& buffer) {
   int i = 0;
   const_IWSubstring token;
 
@@ -415,49 +410,43 @@ average (const const_IWSubstring & buffer)
 
   int prevalence = 1.0;
 
-  if (prevalence_column >= 0)
-  {
-    if (! fetch_prevalence_value(buffer, prevalence_column, prevalence))
+  if (prevalence_column >= 0) {
+    if (!fetch_prevalence_value(buffer, prevalence_column, prevalence)) {
       return 0;
+    }
   }
 
-  while (get_next_token(buffer, token, i))
-  {
-    if (column_rx.active())
-    {
-      if (column_rx.matches(token))
-      {
-        if (get_next_token(buffer, token, i))
-        {
-          if (! acolumn[0].extra(token, prevalence))
+  while (get_next_token(buffer, token, i)) {
+    if (column_rx) {
+      if (iwre2::RE2PartialMatch(token, *column_rx)) {
+        if (get_next_token(buffer, token, i)) {
+          if (!acolumn[0].extra(token, prevalence)) {
             return 0;
+          }
 
           found_match_this_record = 1;
           break;
-        }
-        else
-        {
+        } else {
           cerr << "No token following regular expression match '" << buffer << "'\n";
           return 0;
         }
       }
-    }
-    else if (columns_to_process[col])
-    {
-      if (! acolumn[col].extra(token, prevalence))
+    } else if (columns_to_process[col]) {
+      if (!acolumn[col].extra(token, prevalence)) {
         return 0;
+      }
 
       found_match_this_record = 1;
 
-      if (col >= highest_column_number_to_check)
+      if (col >= highest_column_number_to_check) {
         break;
+      }
     }
 
     col++;
   }
 
-  if (! found_match_this_record)
-  {
+  if (!found_match_this_record) {
     cerr << "Did not find any matching columns!!\n";
     return ok_no_matching_columns;
   }
@@ -466,27 +455,25 @@ average (const const_IWSubstring & buffer)
 }
 
 static int
-determine_descriptors_to_process (const const_IWSubstring & buffer)
-{
+determine_descriptors_to_process(const const_IWSubstring& buffer) {
   const_IWSubstring token;
   int col = 0;
 
   int nw;
-  if (' ' == word_delimeter)
+  if (' ' == word_delimeter) {
     nw = buffer.nwords();
-  else
+  } else {
     nw = buffer.nwords_single_delimiter(word_delimeter);
+  }
 
-  if (nw < 2)
-  {
+  if (nw < 2) {
     cerr << "Must be at least two columns in a descriptor file\n";
     return 0;
   }
-  
+
   acolumn = new AColumn[nw];
 
-  if (NULL == acolumn)
-  {
+  if (nullptr == acolumn) {
     cerr << "Cannot allocate " << col << " column data\n";
     return 0;
   }
@@ -497,13 +484,13 @@ determine_descriptors_to_process (const const_IWSubstring & buffer)
 
   IWTokeniser iwtokeniser(buffer);
   iwtokeniser.set_sep(word_delimeter);
-  if (quoted_tokens)
+  if (quoted_tokens) {
     iwtokeniser.set_quoted_tokens(1);
+  }
 
-  while (iwtokeniser.next_token(token))
-  {
-//  cerr << "Examining header token '" << token << "'\n";
-    if (descriptor_rx.matches(token))
+  while (iwtokeniser.next_token(token)) {
+    if (iwre2::RE2PartialMatch(token, *descriptor_rx))
+    //  cerr << "Examining header token '" << token << "'\n";
     {
       columns_to_process[col] = 1;
       matches_found++;
@@ -512,19 +499,20 @@ determine_descriptors_to_process (const const_IWSubstring & buffer)
 
       acolumn[col].set_name(token);
 
-      if (verbose)
+      if (verbose) {
         cerr << "Will process column " << (col + 1) << " descriptor '" << token << "'\n";
+      }
     }
 
-    if (token == prevalence_column_name)
+    if (token == prevalence_column_name) {
       prevalence_column = col;
+    }
 
     col++;
   }
 
-  if (0 == matches_found)
-  {
-    cerr << "No descriptor names match '" << descriptor_rx.source() << "'\n";
+  if (0 == matches_found) {
+    cerr << "No descriptor names match '" << descriptor_rx->pattern() << "'\n";
     return 0;
   }
 
@@ -532,116 +520,102 @@ determine_descriptors_to_process (const const_IWSubstring & buffer)
 }
 
 static int
-assign_column_names_csv (extending_resizable_array<int> & columns_to_process,
-                         const const_IWSubstring & buffer)
-{
+assign_column_names_csv(extending_resizable_array<int>& columns_to_process,
+                        const const_IWSubstring& buffer) {
   bool in_quote = false;
   int col = 0;
   IWString token;
 
   const int n = buffer.length();
 
-  for (int i = 0; i < n; ++i)
-  {
+  for (int i = 0; i < n; ++i) {
     const char c = buffer[i];
 
-    if ('"' == c)
-    {
-      in_quote = ! in_quote;
+    if ('"' == c) {
+      in_quote = !in_quote;
       continue;
     }
 
-    if (in_quote)
-    {
+    if (in_quote) {
       token += c;
       continue;
     }
 
-    if (',' == c)
-    {
-      if (columns_to_process[col])
-      {
+    if (',' == c) {
+      if (columns_to_process[col]) {
         acolumn[col].set_name(token);
       }
       token.resize_keep_storage(0);
       col++;
       continue;
     }
-
   }
 
   return 1;
 }
 
 static int
-assign_column_names (extending_resizable_array<int> & columns_to_process,
-                     const const_IWSubstring & buffer)
-{
-  if (',' == word_delimeter && buffer.contains('"'))
+assign_column_names(extending_resizable_array<int>& columns_to_process,
+                    const const_IWSubstring& buffer) {
+  if (',' == word_delimeter && buffer.contains('"')) {
     return assign_column_names_csv(columns_to_process, buffer);
+  }
 
   int col = 0;
   const_IWSubstring token;
 
-  for (int i = 0; get_next_token(buffer, token, i) && col < columns_to_process.number_elements(); col++)
-  {
-    if (columns_to_process[col])
+  for (int i = 0;
+       get_next_token(buffer, token, i) && col < columns_to_process.number_elements();
+       col++) {
+    if (columns_to_process[col]) {
       acolumn[col].set_name(token);
+    }
   }
 
   return 1;
 }
 
 static int
-average (const char * fname,
-         iwstring_data_source & input,
-         std::ostream & output)
-{
+average(const char* fname, iwstring_data_source& input, std::ostream& output) {
   const_IWSubstring buffer;
 
-  for (int i = 0; i < skip_first_records; i++)
-  {
+  for (int i = 0; i < skip_first_records; i++) {
     input.next_record(buffer);
 
-    if (0 > 0)
+    if (0 > 0) {
       ;
-    else if (descriptor_rx.active())
-    {
-      if (! determine_descriptors_to_process(buffer))
-      {
+    } else if (descriptor_rx) {
+      if (!determine_descriptors_to_process(buffer)) {
         cerr << "Invalid descriptor file header record\n";
         return 0;
       }
-    }
-    else if (is_descriptor_file)
+    } else if (is_descriptor_file) {
       assign_column_names(columns_to_process, buffer);
+    }
   }
 
 #ifdef SHOW_COLUMNS_TO_PROCESS
-  for (int i = 0; i < columns_to_process.number_elements(); i++)
-  {
-    if (columns_to_process[i])
+  for (int i = 0; i < columns_to_process.number_elements(); i++) {
+    if (columns_to_process[i]) {
       cerr << "Will process column " << i << '\n';
+    }
   }
 #endif
 
   int rc = 1;
 
-  while (input.next_record(buffer))
-  {
+  while (input.next_record(buffer)) {
     lines_read++;
 
-    if (! average(buffer))
-    {
+    if (!average(buffer)) {
       cerr << "Fatal error on line " << input.lines_read() << '\n';
       cerr << buffer << '\n';
-      if (lines_read > 2)
-      {
+      if (lines_read > 2) {
         rc = 0;
         break;
-      }
-      else
+      } else {
         return 0;
+      }
     }
   }
 
@@ -649,54 +623,56 @@ average (const char * fname,
 
   int n = columns_to_process.number_elements();
 
-  if (n > 0)
-  {
+  if (n > 0) {
     int columns_processed = 0;
 
-    for (int i = 0; i < n; i++)
-    {
-      if (0 == columns_to_process[i])
+    for (int i = 0; i < n; i++) {
+      if (0 == columns_to_process[i]) {
         continue;
+      }
 
-      const AColumn & ci = acolumn[i];
-  
-      if (0 == ci.n())
+      const AColumn& ci = acolumn[i];
+
+      if (0 == ci.n()) {
         continue;
-  
-      if (write_file_name_as_first_token)
+      }
+
+      if (write_file_name_as_first_token) {
         output << fname << ' ';
+      }
 
-      if (! write_column_number)
+      if (!write_column_number) {
         ;
-      else if (0 == ci.name().length())
+      } else if (0 == ci.name().length()) {
         output << "column " << (i + 1) << '\n';
+      }
       ci.report(output);
 
       ci.update_global_accumulator(global_accumulator);
       columns_processed++;
     }
 
-    if (columns_processed > 1)
-    {
-      if (write_file_name_as_first_token)
+    if (columns_processed > 1) {
+      if (write_file_name_as_first_token) {
         output << fname << ' ';
-      output << "Global: " << global_accumulator.n() << " values between " << static_cast<float>(global_accumulator.minval()) << " and " << static_cast<float>(global_accumulator.maxval()) << " ave " << static_cast<float>(global_accumulator.average()) << "\n";
+      }
+      output << "Global: " << global_accumulator.n() << " values between "
+             << static_cast<float>(global_accumulator.minval()) << " and "
+             << static_cast<float>(global_accumulator.maxval()) << " ave "
+             << static_cast<float>(global_accumulator.average()) << "\n";
     }
-  }
-  else
+  } else {
     acolumn[0].report(output);
+  }
 
   return rc;
 }
 
 static int
-average (const char * fname,
-             std::ostream & output)
-{
+average(const char* fname, std::ostream& output) {
   iwstring_data_source input(fname);
 
-  if (! input.good())
-  {
+  if (!input.good()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
@@ -704,46 +680,41 @@ average (const char * fname,
   return average(fname, input, output);
 }
 
-static int
-build_regular_expression_from_components (Command_Line & cl,
-                                          char flag,
-                                          IW_Regular_Expression & rx)
-{
+static std::unique_ptr<re2::RE2>
+build_regular_expression_from_components(Command_Line& cl, char flag) {
   IWString tmp;
 
   int i = 0;
   const_IWSubstring d;
-  while (cl.value(flag, d, i++))
-  {
-    if (0 == tmp.length())
+  while (cl.value(flag, d, i++)) {
+    if (0 == tmp.length()) {
       tmp << "^(" << d;
-    else
+    } else {
       tmp << "|" << d;
+    }
   }
 
   tmp << ")$";
 
-  return rx.set_pattern(tmp);
+  re2::StringPiece string_piece(tmp.data(), tmp.length());
+  return std::move(std::make_unique<re2::RE2>(string_piece));
 }
 
 static int
-get_range_of_columns (const const_IWSubstring & cs,
-                      extending_resizable_array<int> & col)
-{
+get_range_of_columns(const const_IWSubstring& cs, extending_resizable_array<int>& col) {
   const_IWSubstring r1, r2;
-  if (! cs.split(r1, '-', r2) || 0 == r1.length() || 0 == r2.length())
+  if (!cs.split(r1, '-', r2) || 0 == r1.length() || 0 == r2.length()) {
     return 0;
-  
+  }
+
   int c1;
-  if (! r1.numeric_value(c1) || c1 < 1)
-  {
+  if (!r1.numeric_value(c1) || c1 < 1) {
     cerr << "Invalid start of range '" << r1 << "'\n";
     return 0;
   }
-  
+
   int c2;
-  if (! r2.numeric_value(c2) || c2 < 1 || c2 < c1)
-  {
+  if (!r2.numeric_value(c2) || c2 < 1 || c2 < c1) {
     cerr << "Invalid end of range '" << r2 << "'\n";
     return 0;
   }
@@ -751,8 +722,7 @@ get_range_of_columns (const const_IWSubstring & cs,
   c1--;
   c2--;
 
-  for (int i = c1; i <= c2; i++)
-  {
+  for (int i = c1; i <= c2; i++) {
     col[i] = 1;
   }
 
@@ -760,34 +730,28 @@ get_range_of_columns (const const_IWSubstring & cs,
 }
 
 static int
-get_comma_separated_columns (const const_IWSubstring & cs,
-                             extending_resizable_array<int> & col)
+get_comma_separated_columns(const const_IWSubstring& cs,
+                            extending_resizable_array<int>& col)
 
 {
   const_IWSubstring token;
   int i = 0;
 
-  while (cs.nextword(token, i, ','))
-  {
-//  cerr << "Token is '" << token << "'\n";
-    if (token.contains('-'))
-    {
-      if (! get_range_of_columns(token, col))
-      {
+  while (cs.nextword(token, i, ',')) {
+    //  cerr << "Token is '" << token << "'\n";
+    if (token.contains('-')) {
+      if (!get_range_of_columns(token, col)) {
         cerr << "Invalid range '" << token << "'\n";
         return 0;
       }
-    }
-    else
-    {
+    } else {
       int c;
-      if (! token.numeric_value(c) ||  c < 1)
-      {
+      if (!token.numeric_value(c) || c < 1) {
         cerr << "Invalid column specification '" << token << "'\n";
         return 0;
       }
 
-      col[c-1] = 1;
+      col[c - 1] = 1;
     }
   }
 
@@ -795,18 +759,12 @@ get_comma_separated_columns (const const_IWSubstring & cs,
 }
 
 static int
-fetch_columns (Command_Line & cl,
-               char flag,
-               extending_resizable_array<int> & col)
-{
+fetch_columns(Command_Line& cl, char flag, extending_resizable_array<int>& col) {
   int i = 0;
   const_IWSubstring cs;
-  while (cl.value(flag, cs, i++))
-  {
-    if (cs.contains('-'))
-    {
-      if (! get_range_of_columns(cs, col))
-      {
+  while (cl.value(flag, cs, i++)) {
+    if (cs.contains('-')) {
+      if (!get_range_of_columns(cs, col)) {
         cerr << "Invalid range specification '" << cs << "'\n";
         return 0;
       }
@@ -814,10 +772,8 @@ fetch_columns (Command_Line & cl,
       continue;
     }
 
-    if (cs.contains(','))
-    {
-      if (! get_comma_separated_columns(cs, col))
-      {
+    if (cs.contains(',')) {
+      if (!get_comma_separated_columns(cs, col)) {
         cerr << "Invalid column specification(s) '" << cs << "'\n";
         return 0;
       }
@@ -826,10 +782,9 @@ fetch_columns (Command_Line & cl,
     }
 
     int c;
-    if (! cs.numeric_value(c) || c < 1)
-    {
-       cerr << "Invalid column '" << cs << "'\n";
-       return 0;
+    if (!cs.numeric_value(c) || c < 1) {
+      cerr << "Invalid column '" << cs << "'\n";
+      return 0;
     }
 
     c--;
@@ -843,19 +798,17 @@ fetch_columns (Command_Line & cl,
 }
 
 static int
-interpret_as_int_or_float (const const_IWSubstring p,
-                           resizable_array<percentile_t> & percentiles)
-{
+interpret_as_int_or_float(const const_IWSubstring p,
+                          resizable_array<percentile_t>& percentiles) {
   int i;
-  if (p.numeric_value(i) && i > 0 && i < 100)
-  {
+  if (p.numeric_value(i) && i > 0 && i < 100) {
     percentiles.add(static_cast<percentile_t>(i));
     return 1;
   }
 
   percentile_t f;
-  if (! p.numeric_value(f) || f < static_cast<percentile_t>(0) || f > static_cast<percentile_t>(100))
-  {
+  if (!p.numeric_value(f) || f < static_cast<percentile_t>(0) ||
+      f > static_cast<percentile_t>(100)) {
     cerr << "Invalid percentile '" << p << "'\n";
     return 0;
   }
@@ -866,33 +819,31 @@ interpret_as_int_or_float (const const_IWSubstring p,
 }
 
 static int
-get_percentiles (resizable_array<percentile_t> & percentiles,
-                 const const_IWSubstring & p)
-{
-  if (! p.contains(','))
+get_percentiles(resizable_array<percentile_t>& percentiles, const const_IWSubstring& p) {
+  if (!p.contains(',')) {
     return interpret_as_int_or_float(p, percentiles);
+  }
 
   const_IWSubstring token;
   int i = 0;
-  while (p.nextword_single_delimiter(token, i, ','))
-  {
-    if (0 == token.length())
+  while (p.nextword_single_delimiter(token, i, ',')) {
+    if (0 == token.length()) {
       continue;
+    }
 
-    if (! interpret_as_int_or_float(token, percentiles))
+    if (!interpret_as_int_or_float(token, percentiles)) {
       return 0;
+    }
   }
 
   return 1;
 }
 
 static int
-average (int argc, char ** argv)
-{
+average(int argc, char** argv) {
   Command_Line cl(argc, argv, "vc:R:M:s:kd:y:wp:mjbutafr:e:gh:i:q");
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
@@ -901,323 +852,299 @@ average (int argc, char ** argv)
 
   int specifications = 0;
 
-  if (cl.option_present('c'))
+  if (cl.option_present('c')) {
     specifications++;
-    
-  if (cl.option_present('R'))
-    specifications++;
-    
-  if (cl.option_present('d'))
-    specifications++;
+  }
 
-  if (0 == specifications)
-  {
+  if (cl.option_present('R')) {
+    specifications++;
+  }
+
+  if (cl.option_present('d')) {
+    specifications++;
+  }
+
+  if (0 == specifications) {
     columns_to_process[0] = 1;
     acolumn = new AColumn[2];
-  }
-  else if (1 != specifications)
-  {
+  } else if (1 != specifications) {
     cerr << "Must have just one of -c, -d or -R options\n";
     usage(5);
   }
 
-  if (cl.option_present('r'))    // must do before columns are allocated
+  if (cl.option_present('r'))  // must do before columns are allocated
   {
-    if (! cl.value('r', value_buffer_size) || value_buffer_size < 10)
-    {
-      cerr << "The raw value buffer size (-r) option must be a sensible number of values to store\n";
+    if (!cl.value('r', value_buffer_size) || value_buffer_size < 10) {
+      cerr << "The raw value buffer size (-r) option must be a sensible number of values "
+              "to store\n";
       usage(2);
     }
 
-    if (verbose)
-      cerr << "Median computed based on first " << value_buffer_size << " values in the file\n";
+    if (verbose) {
+      cerr << "Median computed based on first " << value_buffer_size
+           << " values in the file\n";
+    }
   }
 
-  if (cl.option_present('e'))
-  {
+  if (cl.option_present('e')) {
     const_IWSubstring t;
-    for (auto i = 0; cl.value('e', t, i); ++i)
-    {
-      if (! get_percentiles(percentiles, t))
-      {
+    for (auto i = 0; cl.value('e', t, i); ++i) {
+      if (!get_percentiles(percentiles, t)) {
         cerr << "Invalid percentile specification '" << t << "'\n";
         return 2;
       }
     }
   }
 
-  if (cl.option_present('q'))
-  {
+  if (cl.option_present('q')) {
     quoted_tokens = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Column names may have quoted tokens\n";
+    }
   }
 
-  if (cl.option_present('c'))
-  {
-    if (! fetch_columns(cl, 'c', columns_to_process))
+  if (cl.option_present('c')) {
+    if (!fetch_columns(cl, 'c', columns_to_process)) {
       return 4;
+    }
 
     acolumn = new AColumn[columns_to_process.number_elements() + 1];
-  }
-  else if (cl.option_present('R'))
-  {
+  } else if (cl.option_present('R')) {
     const_IWSubstring r = cl.string_value('R');
 
-    if (! column_rx.set_pattern(r))
-    {
+    if (!iwre2::RE2Reset(column_rx, r)) {
       cerr << "Invalid column regexp '" << r << "'\n";
       return 6;
     }
 
-    if (verbose)
-      cerr << "Will check columns that match '" << column_rx.source() << "'\n";
+    if (verbose) {
+      cerr << "Will check columns that match '" << column_rx->pattern() << "'\n";
+    }
 
     acolumn = new AColumn[1];
-  }
-  else if (cl.option_present('d'))
-  {
-    if (cl.option_count('d') > 1)
-    {
-      if (! build_regular_expression_from_components(cl, 'd', descriptor_rx))
-      {
-        cerr << "Invalid descriptor regular expression specifications\n";
+  } else if (cl.option_present('d')) {
+    if (cl.option_count('d') > 1) {
+      descriptor_rx = build_regular_expression_from_components(cl, 'd');
+      if (!descriptor_rx->ok()) {
+        cerr << "Invalid descriptor regular expression specifications (-d)\n";
         usage(5);
       }
-    }
-    else
-    {
-      const_IWSubstring d(cl.string_value ('d'));
+    } else {
+      const_IWSubstring d(cl.string_value('d'));
 
-      int tmp;
-
-      if (cl.option_present('g'))
-        tmp = descriptor_rx.set_pattern(d);
-      else
-      {
+      if (cl.option_present('g')) {
+        const re2::StringPiece string_piece(d.data(), d.length());
+        descriptor_rx = std::make_unique<re2::RE2>(string_piece);
+      } else {
         IWString drx;
         drx << '^' << d << '$';
-        tmp = descriptor_rx.set_pattern(drx);
+        re2::StringPiece string_piece(drx.data(), drx.length());
+        descriptor_rx = std::make_unique<re2::RE2>(string_piece);
       }
 
-      if (! tmp)
-      {
+      if (!descriptor_rx->ok()) {
         cerr << "Invalid descriptor regexp '" << d << "'\n";
         return 2;
       }
-
     }
-    if (verbose)
-      cerr << "Will check descriptors that match '" << descriptor_rx.source() << "'\n";
+    if (verbose) {
+      cerr << "Will check descriptors that match '" << descriptor_rx->pattern() << "'\n";
+    }
 
     skip_first_records = 1;
-  }
-  else if (0 == specifications)
+  } else if (0 == specifications) {
     ;
-  else
-  {
+  } else {
     cerr << "Must specify either the -c or -R options\n";
     usage(6);
   }
 
-  if (cl.option_present('h'))
-  {
+  if (cl.option_present('h')) {
     const_IWSubstring h;
-    for (int i = 0; cl.value('h', h, i); ++i)
-    {
-      if (h.starts_with("mult="))
-      {
+    for (int i = 0; cl.value('h', h, i); ++i) {
+      if (h.starts_with("mult=")) {
         h.remove_leading_chars(5);
-        if (! h.numeric_value(prevalence_multiplier) || prevalence_multiplier < 1.0)
-        {
-          cerr << "The prevalence column multiplier must be a number > 1.0, '" << h << "' invalid\n";
+        if (!h.numeric_value(prevalence_multiplier) || prevalence_multiplier < 1.0) {
+          cerr << "The prevalence column multiplier must be a number > 1.0, '" << h
+               << "' invalid\n";
           return 2;
         }
 
-        if (verbose)
-          cerr << "Prevalence values multiplied by " << prevalence_multiplier << " to conver to counts\n";
-      }
-      else if (h.numeric_value(prevalence_column) && prevalence_column > 0)
+        if (verbose) {
+          cerr << "Prevalence values multiplied by " << prevalence_multiplier
+               << " to conver to counts\n";
+        }
+      } else if (h.numeric_value(prevalence_column) && prevalence_column > 0) {
         prevalence_column = prevalence_column - 1;
-      else
+      } else {
         prevalence_column_name = h;
+      }
     }
-
   }
 
-  if (cl.option_present('m'))
-  {
+  if (cl.option_present('m')) {
     write_as_xydy1dy2 = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will write as x ave dy1 dy2 - for xmgrace\n";
+    }
   }
 
-  if (cl.option_present('b'))
-  {
+  if (cl.option_present('b')) {
     brief_output = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Brief output only\n";
+    }
   }
 
-  if (cl.option_present('y'))
-  {
+  if (cl.option_present('y')) {
     IWString tmp;
     cl.value('y', tmp);
 
-    if (! char_name_to_char(tmp))
-    {
-      cerr << "The word delimiter must be a single character, '" << tmp << "' is invalid\n";
+    if (!char_name_to_char(tmp)) {
+      cerr << "The word delimiter must be a single character, '" << tmp
+           << "' is invalid\n";
       usage(4);
     }
 
     word_delimeter = tmp[0];
 
-    if (verbose)
+    if (verbose) {
       cerr << "Word delimiter '" << word_delimeter << "'\n";
-  }
-  else if (cl.option_present('i'))
-  {
+    }
+  } else if (cl.option_present('i')) {
     IWString tmp;
     cl.value('i', tmp);
 
-    if (! char_name_to_char(tmp))
-    {
-      cerr << "The word delimiter must be a single character, '" << tmp << "' is invalid\n";
+    if (!char_name_to_char(tmp)) {
+      cerr << "The word delimiter must be a single character, '" << tmp
+           << "' is invalid\n";
       usage(4);
     }
 
     word_delimeter = tmp[0];
 
-    if (verbose)
+    if (verbose) {
       cerr << "Word delimiter '" << word_delimeter << "'\n";
-  }
-  else if (cl.option_present('t'))
-  {
+    }
+  } else if (cl.option_present('t')) {
     word_delimeter = '\t';
-    if (verbose)
+    if (verbose) {
       cerr << "Input assumed tab delimited\n";
+    }
   }
 
-  if (cl.option_present('a'))
-  {
+  if (cl.option_present('a')) {
     take_absolute_value = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will take average values\n";
+    }
   }
 
-  if (cl.option_present('w'))
-  {
+  if (cl.option_present('w')) {
     ok_no_matching_columns = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will ignore records where nothing matches the column specification(s)\n";
+    }
   }
 
-  if (cl.option_present('p'))
-  {
+  if (cl.option_present('p')) {
     float p;
-    if (! cl.value('p', p))
-    {
+    if (!cl.value('p', p)) {
       cerr << "Invalid special number to monitor (-p option)\n";
       usage(4);
     }
 
-    special_number.set(p);
+    special_number = p;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will separately report the number of instances of " << p << '\n';
+    }
   }
 
-  if (cl.option_present('u'))
-  {
+  if (cl.option_present('u')) {
     write_column_number = 0;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will not write column numbers\n";
+    }
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (0 == cl.number_elements()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
-  if (cl.option_present('M'))
-  {
+  if (cl.option_present('M')) {
     missing_value = cl.string_value('M');
 
-    if (verbose)
+    if (verbose) {
       cerr << "Missing value string '" << missing_value << "'\n";
+    }
   }
 
-  if (cl.option_present('s'))
-  {
-    if (! cl.value('s', skip_first_records) || skip_first_records < 0)
-    {
+  if (cl.option_present('s')) {
+    if (!cl.value('s', skip_first_records) || skip_first_records < 0) {
       cerr << "Invalid value of the -s option\n";
       usage(8);
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will skip the first " << skip_first_records << " records in the file\n";
-  }
-
-  if (cl.option_present('j'))
-  {
-    is_descriptor_file = 1;
-    skip_first_records = 1;
-
-    if (verbose)
-      cerr << "Will treat as a descriptor file\n";
-  }
-
-  if (cl.option_present('k'))
-  {
-    ignore_bad_data = 1;
-
-    if (verbose)
-      cerr << "Will ignore non-numeric input\n";
-  }
-
-  if (cl.option_present('f'))
-  {
-    write_file_name_as_first_token = 1;
-
-    if (verbose)
-      cerr << "First token of output is file name\n";
-  }
-
-  if (cl.number_elements() > 1)
-  {
-    cerr << "Sorry, only processes one file at a time\n";
-    usage(5);
-  }
-
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (verbose)
-      cerr << "Begin processing '" << cl[i] << "'\n";
-
-    if (! average(cl[i], std::cout))
-    {
-      rc = i + 1;
-      break;
     }
   }
 
-  if (ignore_bad_data && invalid_data_records_skipped)
+  if (cl.option_present('j')) {
+    is_descriptor_file = 1;
+    skip_first_records = 1;
+
+    if (verbose) {
+      cerr << "Will treat as a descriptor file\n";
+    }
+  }
+
+  if (cl.option_present('k')) {
+    ignore_bad_data = 1;
+
+    if (verbose) {
+      cerr << "Will ignore non-numeric input\n";
+    }
+  }
+
+  if (cl.option_present('f')) {
+    write_file_name_as_first_token = 1;
+
+    if (verbose) {
+      cerr << "First token of output is file name\n";
+    }
+  }
+
+  int rc = 0;
+  for (int i = 0; i < cl.number_elements(); i++) {
+    if (verbose) {
+      cerr << "Begin processing '" << cl[i] << "'\n";
+    }
+
+    if (!average(cl[i], std::cout)) {
+      rc = i + 1;
+      break;
+    }
+
+    ResetFileScopeStaticParams();
+  }
+
+  if (ignore_bad_data && invalid_data_records_skipped) {
     cerr << "Skipped " << invalid_data_records_skipped << " invalid data records\n";
+  }
 
   return rc;
 }
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = average(argc, argv);

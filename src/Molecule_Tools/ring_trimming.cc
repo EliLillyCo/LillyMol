@@ -2,23 +2,24 @@
   Exhaustively trim rings from ring systems
 */
 
-#include <stdlib.h>
-#include <memory>
 #include <algorithm>
-using namespace std;
+#include <iostream>
+#include <memory>
 
-#include "cmdline.h"
-#include "iw_auto_array.h"
-#include "iw_stl_hash_set.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 
-#include "istream_and_type.h"
-#include "path.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/standardise.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -55,10 +56,17 @@ static int add_first_removed_atom_number = 0;
 static int remove_strongly_fused_as_a_unit = 0;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Exhaustively trim rings from ring systems, preserving aromaticity\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
+  cerr << "Trims rings from larger ring systems, producing subsets of ring systems\n";
   cerr << "  -w parent     write parent molecule\n";
   cerr << "  -w rings      write isolated ring systems\n";
   cerr << "  -w scaffold   write the molecular scaffold\n";
@@ -78,12 +86,13 @@ usage (int rc)
   cerr << "  -E ...        standard element specifications\n";
   cerr << "  -A ...        standard aromaticity specifications\n";
   cerr << "  -v            verbose output\n";
+// clang-format on
 
   exit(rc);
 }
 
 static void
-preprocess (Molecule & m)
+preprocess(Molecule & m)
 {
   if (reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
@@ -129,12 +138,12 @@ class Parents
     int _next_to_give;
 
   public:
-    Parents ();
+    Parents();
 
     int unique_id();
 };
 
-Parents::Parents ()
+Parents::Parents()
 {
   _next_to_give = 0;
 
@@ -142,7 +151,7 @@ Parents::Parents ()
 }
 
 int
-Parents::unique_id ()
+Parents::unique_id()
 {
   const auto rc = _next_to_give;
   _next_to_give++;
@@ -150,25 +159,33 @@ Parents::unique_id ()
 }
 
 static int
-do_output (Molecule & m,
-           const int parent_id,
-           const int my_id,
-           const int rings_removed,
-           const char preference,
-           IW_STL_Hash_Set & unique_smiles,
-           int first_atom_removed,
-           const IWString & description,
-           IWString_and_File_Descriptor & output)
+do_output(Molecule & m,
+          const int parent_id,
+          const int my_id,
+          const int rings_removed,
+          const char preference,
+          IW_STL_Hash_Set & unique_smiles,
+          int first_atom_removed,
+          const IWString & description,
+          IWString_and_File_Descriptor & output)
 {
   if (suppress_duplicate_structures && unique_smiles.contains(m.unique_smiles()))
     return 1;
 
   unique_smiles.insert(m.unique_smiles());
 
-  output << m.smiles() << ' ' << m.name() << ' ' << rings_removed << " nr=" << m.nrings() << ' ' << parent_id << ' ' << my_id << ' ' << preference << ' ' << description;
+  constexpr char sep = ' ';
+  output << m.smiles() << sep <<
+            m.name() << sep <<
+            rings_removed << sep << 
+            "nr=" << m.nrings() << sep <<
+            parent_id << sep <<
+            my_id << sep <<
+            preference << sep <<
+            description;
 
   if (add_first_removed_atom_number)
-    output << ' ' << first_atom_removed;
+    output << sep << first_atom_removed;
 
   output << '\n';
 
@@ -178,27 +195,21 @@ do_output (Molecule & m,
 }
 
 static int
-heteroatom_count (const Molecule & m,
-                  const Set_of_Atoms & s)
+heteroatom_count(const Molecule & m,
+                 const Set_of_Atoms & s)
 {
-  const auto n = s.size();
-
   int rc = 0;
-
-  for (auto i = 0; i < n; ++i)
-  {
-    const auto j = s[i];
-
-    if (6 != m.atomic_number(j))
-      rc++;
+  for (atom_number_t i : s) {
+    if (m.atomic_number(i) != 6) {
+      ++rc;
+    }
   }
-
   return rc;
 }
 
 static int
-heteroatom_count (const Molecule & m,
-                  const int * being_processed)
+heteroatom_count(const Molecule & m,
+                 const int * being_processed)
 {
   const auto matoms = m.natoms();
 
@@ -217,8 +228,8 @@ heteroatom_count (const Molecule & m,
 }
 
 static int
-size_of_fused_system (Molecule & m,
-                      const int fsid)
+size_of_fused_system(Molecule & m,
+                     const int fsid)
 {
   const auto nr = m.nrings();
 
@@ -234,8 +245,8 @@ size_of_fused_system (Molecule & m,
 }
 
 static int
-ring_preference (Molecule & m,
-                 const int rn)
+ring_preference(Molecule & m,
+                const int rn)
 {
   const Ring & r = *(m.ringi(rn));
 
@@ -254,9 +265,9 @@ ring_preference (Molecule & m,
 }
 
 static void
-ring_description (Molecule & m,
-                  const int rn,
-                  IWString & s)
+ring_description(Molecule & m,
+                 const int rn,
+                 IWString & s)
 {
   const Ring & r = *(m.ringi(rn));
 
@@ -277,8 +288,8 @@ ring_description (Molecule & m,
 }
 
 static void
-rank_rings (Molecule & m,
-            std::pair<int, int> * rings)
+rank_rings(Molecule & m,
+           std::pair<int, int> * rings)
 {
   const auto nr = m.nrings();
 
@@ -302,7 +313,7 @@ rank_rings (Molecule & m,
 }
 
 static int
-first_non_zero (const int * v, const int n)
+first_non_zero(const int * v, const int n)
 {
   for (auto i = 0; i < n; ++i)
   {
@@ -314,10 +325,10 @@ first_non_zero (const int * v, const int n)
 }
 
 static void
-expand_two_connected (const Molecule & m,
-                      const atom_number_t zatom,
-                      int * ring_system,
-                      int * to_remove)
+expand_two_connected(const Molecule & m,
+                     const atom_number_t zatom,
+                     int * ring_system,
+                     int * to_remove)
 {
   if (to_remove[zatom])
     return;
@@ -337,12 +348,12 @@ expand_two_connected (const Molecule & m,
 }
 
 static int
-next_set_of_atoms_from_strongly_fused_ring (Molecule & m,
-                                            int & ndx,
-                                            int * ring_system,
-                                            const int lbl,
-                                            int * to_remove,
-                                            atom_number_t & first_ring_atom_removed)
+next_set_of_atoms_from_strongly_fused_ring(Molecule & m,
+                                           int & ndx,
+                                           int * ring_system,
+                                           const int lbl,
+                                           int * to_remove,
+                                           atom_number_t & first_ring_atom_removed)
 {
   const auto matoms = m.natoms();
 
@@ -377,10 +388,10 @@ next_set_of_atoms_from_strongly_fused_ring (Molecule & m,
 */
 
 static int
-double_bond_to_retained_atoms (const Molecule & m,
-                               const int * atoms_being_removed,
-                               const atom_number_t a1,
-                               const atom_number_t a2)
+double_bond_to_retained_atoms(const Molecule & m,
+                              const int * atoms_being_removed,
+                              const atom_number_t a1,
+                              const atom_number_t a2)
 {
   const Atom * a = m.atomi(a1);
 
@@ -406,10 +417,10 @@ double_bond_to_retained_atoms (const Molecule & m,
 }
 
 static int
-gather_doubly_bonded_offshoots (const Molecule & m,
-                                const atom_number_t zatom,
-                                const int * ignore,
-                                Set_of_Atoms & doubly_bonded_offshoots)
+gather_doubly_bonded_offshoots(const Molecule & m,
+                               const atom_number_t zatom,
+                               const int * ignore,
+                               Set_of_Atoms & doubly_bonded_offshoots)
 {
   const auto a = m.atomi(zatom);
 
@@ -440,9 +451,9 @@ gather_doubly_bonded_offshoots (const Molecule & m,
 
 
 static void
-identify_exposed_chains (const Molecule & m,
-                         const atom_number_t zatom,
-                         int * to_remove)
+identify_exposed_chains(const Molecule & m,
+                        const atom_number_t zatom,
+                        int * to_remove)
 {
   const Atom * a = m.atomi(zatom);
 
@@ -514,8 +525,8 @@ identify_exposed_chains (const Molecule & m,
 */
 
 static void
-identify_exposed_chains (const Molecule & m,
-                         int * to_remove)
+identify_exposed_chains(const Molecule & m,
+                        int * to_remove)
 {
   const auto matoms = m.natoms();
 
@@ -557,9 +568,9 @@ identify_exposed_chains (const Molecule & m,
 */
 
 static void
-identify_doubly_bonded_non_ring_atom (Molecule & m, 
-                                      const atom_number_t zatom,
-                                      int * atoms_to_remove)
+identify_doubly_bonded_non_ring_atom(Molecule & m, 
+                                     const atom_number_t zatom,
+                                     int * atoms_to_remove)
 {
   const auto a = m.atomi(zatom);
 
@@ -588,12 +599,12 @@ identify_doubly_bonded_non_ring_atom (Molecule & m,
 */
 
 static int
-remove_ring (Molecule & m, 
-             const int * ring_membership,
-             const Ring & ring_being_removed,
-             int * to_be_removed,
-             const int removed_ring_was_aromatic,
-             atom_number_t & first_ring_atom_removed)
+remove_ring(Molecule & m, 
+            const int * ring_membership,
+            const Ring & ring_being_removed,
+            int * to_be_removed,
+            const int removed_ring_was_aromatic,
+            atom_number_t & first_ring_atom_removed)
 {
   const auto matoms = m.natoms();
 
@@ -601,7 +612,7 @@ remove_ring (Molecule & m,
 
   int atoms_removed = 0;
 
-  for (Ring_Atom_Iterator i(ring_being_removed); i != ring_being_removed.end(); i++)
+  for (Ring_Atom_Iterator i(ring_being_removed); i != ring_being_removed.zend(); i++)
   {
     atom_number_t j = i.current();
 
@@ -639,7 +650,7 @@ remove_ring (Molecule & m,
   {
     Set_of_Atoms db1, db2;
 
-    for (Ring_Bond_Iterator i(ring_being_removed); i != ring_being_removed.end(); i++)
+    for (Ring_Bond_Iterator i(ring_being_removed); i != ring_being_removed.zend(); i++)
     {
       const auto a1 = i.a1();
 
@@ -675,7 +686,7 @@ remove_ring (Molecule & m,
 
   if (isotope_for_ring_fusion)
   {
-    for (Ring_Atom_Iterator i(ring_being_removed); i != ring_being_removed.end(); i++)
+    for (Ring_Atom_Iterator i(ring_being_removed); i != ring_being_removed.zend(); i++)
     {
       const auto j = i.current();
 
@@ -711,11 +722,12 @@ remove_ring (Molecule & m,
   return 1;
 }
 
+#ifdef NOT_USED_HERE
 static int
-identify_chain_atoms (Molecule & m,
-                      const atom_number_t prev,
-                      const atom_number_t zatom,
-                      int * ring_membership)
+identify_chain_atoms(Molecule & m,
+                     const atom_number_t prev,
+                     const atom_number_t zatom,
+                     int * ring_membership)
 {
   const auto a = m.atomi(zatom);
 
@@ -731,10 +743,11 @@ identify_chain_atoms (Molecule & m,
 
   return 1;
 }
+#endif
 
 
 static int
-identify_strongly_fused_ring_group (Molecule & m, 
+identify_strongly_fused_ring_group(Molecule & m, 
                                   const Ring & r,
                                   int * to_remove,
                                   int * ring_already_done)
@@ -768,11 +781,11 @@ identify_strongly_fused_ring_group (Molecule & m,
 //#define DEBUG_RINT_TRIMMING
 
 static int
-remove_strongly_fused_ring_group (Molecule & m, 
-                                  const Ring & r,
-                                  int * to_remove,
-                                  int * ring_already_done,
-                                  atom_number_t & first_ring_atom_removed)
+remove_strongly_fused_ring_group(Molecule & m, 
+                                 const Ring & r,
+                                 int * to_remove,
+                                 int * ring_already_done,
+                                 atom_number_t & first_ring_atom_removed)
 {
   const auto matoms = m.natoms();
 
@@ -795,9 +808,9 @@ remove_strongly_fused_ring_group (Molecule & m,
 }
 
 static char
-symbol_representing_preference (const std::pair<int, int> * rscore,
-                                const int nr,
-                                int ndx)
+symbol_representing_preference(const std::pair<int, int> * rscore,
+                               const int nr,
+                               int ndx)
 {
   if (0 == ndx)
   {
@@ -824,9 +837,9 @@ symbol_representing_preference (const std::pair<int, int> * rscore,
 */
 
 static int
-mark_all_other_rings_in_system (Molecule & m,
-                                int istart,
-                                int * ring_already_done)
+mark_all_other_rings_in_system(Molecule & m,
+                               int istart,
+                               int * ring_already_done)
 {
   const auto nr = m.nrings();
 
@@ -853,9 +866,9 @@ mark_all_other_rings_in_system (Molecule & m,
 }
 
 static int
-ok_to_keep (Molecule & m,
-            const int aromatic_ring_removed,   // aromaticity of the ring just removed
-            const int parent_aromatic_ring_count)     // total aromatic ring count in parent
+ok_to_keep(Molecule & m,
+           const int aromatic_ring_removed,   // aromaticity of the ring just removed
+           const int parent_aromatic_ring_count)     // total aromatic ring count in parent
 {
   if (0 == m.natoms() || 1 != m.number_fragments())    // definitely no good
     return 0;
@@ -875,7 +888,7 @@ ok_to_keep (Molecule & m,
 }
 
 static int
-ring_membership_preserved (Molecule & m)
+ring_membership_preserved(Molecule & m)
 {
   const auto matoms = m.natoms();
 
@@ -905,13 +918,13 @@ ring_membership_preserved (Molecule & m)
 */
 
 static int
-ring_trimming_from_scaffold (Molecule & m,
-                             int * to_remove,
-                             Parents & parents,
-                             const int parent_id,
-                             IW_STL_Hash_Set & unique_smiles,
-                             int rings_removed_so_far,
-                             IWString_and_File_Descriptor & output)
+ring_trimming_from_scaffold(Molecule & m,
+                            int * to_remove,
+                            Parents & parents,
+                            const int parent_id,
+                            IW_STL_Hash_Set & unique_smiles,
+                            int rings_removed_so_far,
+                            IWString_and_File_Descriptor & output)
 {
   const auto matoms = m.natoms();
 
@@ -919,11 +932,11 @@ ring_trimming_from_scaffold (Molecule & m,
 
   const auto nr = m.nrings();
 
-  int * ring_already_done = new_int(nr); unique_ptr<int[]> free_ring_already_done(ring_already_done);
+  int * ring_already_done = new_int(nr); std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
 
   const auto aromatic_ring_count = m.aromatic_ring_count();
 
-  std::pair<int, int> * rscore = new std::pair<int, int>[nr]; unique_ptr<std::pair<int, int>[] > free_rscore(rscore);
+  std::pair<int, int> * rscore = new std::pair<int, int>[nr]; std::unique_ptr<std::pair<int, int>[] > free_rscore(rscore);
 
   if (do_preference_ranking)
     rank_rings(m, rscore);
@@ -974,7 +987,7 @@ ring_trimming_from_scaffold (Molecule & m,
     cerr << " i = " << i << ", j = " << j << " trying to remove ring " << *ri << " from " << m.smiles() << endl;
 #endif
 
-    atom_number_t first_ring_atom_removed;
+    atom_number_t first_ring_atom_removed = INVALID_ATOM_NUMBER;
 
     if (ri->strongly_fused_ring_neighbours())
       remove_strongly_fused_ring_group(mcopy, *ri, to_remove, ring_already_done, first_ring_atom_removed);
@@ -993,9 +1006,7 @@ ring_trimming_from_scaffold (Molecule & m,
     cerr << "After removing chains " << mcopy.smiles() << endl;
 #endif
 
-    if (! ok_to_keep(mcopy, ri->is_aromatic(), aromatic_ring_count))
-    {
-       cerr << "NOT OK TO KEEP\n";
+    if (! ok_to_keep(mcopy, ri->is_aromatic(), aromatic_ring_count)) {
       continue;
     }
 
@@ -1017,7 +1028,7 @@ ring_trimming_from_scaffold (Molecule & m,
 
   if (strongly_fused_rings_present)
   {
-    int * ring_system = new int[matoms + matoms]; unique_ptr<int[]> free_ring_system(ring_system);   // we share this
+    int * ring_system = new int[matoms + matoms]; std::unique_ptr<int[]> free_ring_system(ring_system);   // we share this
     m.label_atoms_by_ring_system(ring_system);
 
     int * ring_membership = ring_system + matoms;
@@ -1034,7 +1045,7 @@ ring_trimming_from_scaffold (Molecule & m,
 
       std::fill_n(to_remove, matoms, 0);
 
-      int system_size = mark_all_other_rings_in_system(m, i, ring_already_done);
+      /*int system_size =*/ mark_all_other_rings_in_system(m, i, ring_already_done);
 
       int ndx = 0;
       atom_number_t first_ring_atom_removed;
@@ -1069,9 +1080,9 @@ ring_trimming_from_scaffold (Molecule & m,
 }
 
 static void
-assign_atom_status (Molecule & m,
-                    int * spinach,
-                    int * atom_status)
+assign_atom_status(Molecule & m,
+                   int * spinach,
+                   int * atom_status)
 {
   const auto matoms = m.natoms();
 
@@ -1135,8 +1146,8 @@ assign_atom_status (Molecule & m,
 }
 
 static void
-place_isotopes (Molecule & m,
-                const int * spinach)
+place_isotopes(Molecule & m,
+               const int * spinach)
 {
   const auto matoms = m.natoms();
 
@@ -1166,8 +1177,8 @@ place_isotopes (Molecule & m,
 */
 
 static int
-ring_trimming (Molecule & m,
-               IWString_and_File_Descriptor & output)
+ring_trimming(Molecule & m,
+              IWString_and_File_Descriptor & output)
 {
   const auto nr = m.nrings();
 
@@ -1179,7 +1190,7 @@ ring_trimming (Molecule & m,
 
   auto matoms = m.natoms();
 
-  int * spinach = new_int(matoms + matoms); unique_ptr<int[]> free_spinach(spinach);
+  int * spinach = new_int(matoms + matoms); std::unique_ptr<int[]> free_spinach(spinach);
 
   m.identify_spinach(spinach);
 
@@ -1216,19 +1227,19 @@ ring_trimming (Molecule & m,
 
   Parents parents;
 
-  return ring_trimming_from_scaffold (m, spinach, parents, 0, unique_smiles, 0, output);   // don't need spinach array any more
+  return ring_trimming_from_scaffold(m, spinach, parents, 0, unique_smiles, 0, output);   // don't need spinach array any more
 }
 
 static int
-ring_trimming (data_source_and_type<Molecule> & input,
-                IWString_and_File_Descriptor & output)
+ring_trimming(data_source_and_type<Molecule> & input,
+              IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule> free_m(m);
+    std::unique_ptr<Molecule> free_m(m);
 
     preprocess(*m);
 
@@ -1242,15 +1253,15 @@ ring_trimming (data_source_and_type<Molecule> & input,
 }
 
 static int
-ring_trimming (const char * fname, int input_type, 
-                IWString_and_File_Descriptor & output)
+ring_trimming(const char * fname, FileType input_type, 
+              IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -1266,7 +1277,7 @@ ring_trimming (const char * fname, int input_type,
   return ring_trimming(input, output);
 }
 static int
-ring_trimming (int argc, char ** argv)
+ring_trimming(int argc, char ** argv)
 {
   Command_Line cl(argc, argv, "vA:E:i:g:lw:R:j:J:cm:upayf");
 
@@ -1317,8 +1328,7 @@ ring_trimming (int argc, char ** argv)
       cerr << "Will reduce to largest fragment\n";
   }
 
-  int input_type = 0;
-
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -1328,7 +1338,7 @@ ring_trimming (int argc, char ** argv)
     }
   }
   else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 
@@ -1340,7 +1350,7 @@ ring_trimming (int argc, char ** argv)
       cerr << "Chirality removed from all input molecules\n";
   }
 
-  set_copy_atom_based_user_specified_void_pointers_during_add_molecle(1);
+  set_copy_atom_based_user_specified_void_pointers_during_add_molecule(1);
 
   if (cl.option_present('u'))
   {
@@ -1485,7 +1495,7 @@ ring_trimming (int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
   prog_name = argv[0];
 

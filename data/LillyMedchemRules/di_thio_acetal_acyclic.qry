@@ -1,0 +1,26 @@
+(0 Query
+  (A C Comment "di_thio_acetal_acyclic")
+  (A D numeric_value 25)
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nbonds 3)
+    (A I nrings 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I single_bond 1)
+  )
+)

@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "fused_tetrahydroquinoline")
+  (A I min_nrings 2)
+  (A C smarts "C12ccNCC1CC=C2")
+)

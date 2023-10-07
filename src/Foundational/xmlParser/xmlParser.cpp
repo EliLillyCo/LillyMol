@@ -1230,7 +1230,7 @@ char XMLNode::parseClearTag(void *px, void *_pClear)
 void XMLNode::exactMemory(XMLNodeData *d)
 {
     if (d->pOrder)     d->pOrder=(int*)realloc(d->pOrder,(d->nChild+d->nText+d->nClear)*sizeof(int));
-    if (d->pChild)     d->pChild=(XMLNode*)realloc(d->pChild,d->nChild*sizeof(XMLNode));
+    if (d->pChild)     d->pChild=(XMLNode*)realloc((void*)d->pChild,d->nChild*sizeof(XMLNode));
     if (d->pAttribute) d->pAttribute=(XMLAttribute*)realloc(d->pAttribute,d->nAttribute*sizeof(XMLAttribute));
     if (d->pText)      d->pText=(XMLCSTR*)realloc(d->pText,d->nText*sizeof(XMLSTR));
     if (d->pClear)     d->pClear=(XMLClear *)realloc(d->pClear,d->nClear*sizeof(XMLClear));
@@ -2107,7 +2107,7 @@ int XMLNode::detachFromParent(XMLNodeData *d)
     int i=0;
     while (((void*)(pa[i].d))!=((void*)d)) i++;
     d->pParent->nChild--;
-    if (d->pParent->nChild) memmove(pa+i,pa+i+1,(d->pParent->nChild-i)*sizeof(XMLNode));
+    if (d->pParent->nChild) memmove((void*)(pa+i),(void*)(pa+i+1),(d->pParent->nChild-i)*sizeof(XMLNode));
     else { free(pa); d->pParent->pChild=NULL; }
     return removeOrderElement(d->pParent,eNodeChild,i);
 }

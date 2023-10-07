@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package MedchemRules;
+
+message QueryMatch {
+  // The name of the rule
+  string name = 1;
+
+  // Rules assign a numeric demerit, or they may just reject
+  // the molecule.
+  int32 demerit = 2;
+  bool rejected = 3;
+}
+
+message Molecule {
+  // Smiles and name of the molecule.
+  string smiles = 1;
+  string name = 2;
+
+  // Any number of rejection/demerit rules that have matched.
+  repeated QueryMatch query_match = 3;
+
+  // The molecule is rejected if any of the component query_match'es
+  // is a rejection, or if the sum of the demerit values has exceeded
+  // some threshold.
+  bool rejected = 4;
+}

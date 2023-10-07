@@ -2,11 +2,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "iwbits.h"
-#include "iwstring.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #define FIXED_SIZE_COUNTED_FINGERPRINT_IMPLEMENTATION 
 #include "fixed_size_counted_fingerprint.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   The fingerprint may or may not have a value for nset in it
@@ -103,7 +106,7 @@ Fixed_Size_Counted_Fingerprint_uchar::write_daylight_ascii_representation (std::
                                              const const_IWSubstring & tag, 
                                              int include_nset)
 {
-  if (NULL == _count)
+  if (nullptr == _count)
     return 0;
 
   if (include_nset && _nset <= 0)

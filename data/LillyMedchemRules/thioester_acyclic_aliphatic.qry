@@ -1,0 +1,8 @@
+# Aug 2011 : disambiguate from thioester_acyclic
+
+(0 Query
+  (A C Comment "thioester_acyclic_aliphatic")
+  (A D numeric_value 50)
+  (A I Version 2)
+  (A C smarts "[SD2]-[CD3R0](=O)-A")
+)

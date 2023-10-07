@@ -5,8 +5,9 @@
   All the variants of spread need a class like this
 */
 
-#include "accumulator.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+
 #include "gfp.h"
 #include "smiles_id_dist.h"
 

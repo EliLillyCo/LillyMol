@@ -1,5 +1,5 @@
-#ifndef MDL_ATOM_RECORD_H
-#define MDL_ATOM_RECORD_H
+#ifndef MOLECULE_LIB_MDL_ATOM_RECORD_H_
+#define MOLECULE_LIB_MDL_ATOM_RECORD_H_
 
 #include "molecule.h"
 
@@ -84,4 +84,4 @@ class MDL_Bond_Record
     int bond_type_for_query(bond_type_t &) const;
 };
 
-#endif
+#endif  // MOLECULE_LIB_MDL_ATOM_RECORD_H_

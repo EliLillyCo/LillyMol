@@ -4,7 +4,7 @@
 #include "msi_object.h"
 #include "cmdline.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 

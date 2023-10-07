@@ -1,0 +1,9 @@
+name: "cd2_to_n"
+scaffold {
+  id: 0
+  smarts: "[cD2]"
+  change_element {
+    atom: 0
+    element: "N"
+  }
+}

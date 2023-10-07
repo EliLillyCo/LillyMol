@@ -1,7 +1,13 @@
-#include "molecule.h"
-#include "qry_wstats.h"
-#include "accumulator.h"
-#include "istream_and_type.h"
+#include <iostream>
+
+#include "Foundational/accumulator/accumulator.h"
+
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/qry_wstats.h"
+
+using std::cerr;
+using std::endl;
 
 /*
  * By default, the isotopic labels are just the line number in the file.

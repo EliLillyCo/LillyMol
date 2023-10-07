@@ -1,0 +1,10 @@
+name: "sulfonamide_to_amide"
+scaffold {
+  id: 0
+  smarts: "[Nx0]-S(=O)=O"
+  change_element {
+    atom: 1
+    element: "C"
+  }
+  remove_atom: 2
+}

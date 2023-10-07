@@ -1,0 +1,6 @@
+smi: "O1C2[1CH]([1CH]3C1O3)O2" smt: "[ax2r5D2]1:[ax3r3r5D3]2:[ax3r3r5D>3](:[ax3r3r5D>3]3:[ax3r3r5D3]:1:[ax2r3D2]:3):[ax2r3D2]:2" id: "CHEMBL4748715" n: 2 conn: true usmi: "O1C2O[1CH]2[1CH]2OC12" 
+smi: "C12(C[1CH2]1)CCC1([CH2:70]2)C[1CH2]1" smt: "[ax4r3r5D4]12(:[ax2r3D2]:[ax2r3D>2]:1):[ax2r5D2]:[ax2r5D2]:[ax4r3r5D4]1(:[ax2r5D2]:2):[ax2r3D2]:[ax2r3D>2]:1" id: "CHEMBL3220162" n: 5 conn: true exo: "[70O]" usmi: "O=C1C2([1CH2]C2)CCC12[1CH2]C2" 
+smi: "[1CH]12C3C([1CH2]C1C2)O3" smt: "[ax3r3r5D>3]12:[ax3r3r5D3]3:[ax3r3r5D3](:[ax2r5D>2]:[ax3r3r5D3]:1:[ax2r3D2]:2):[ax2r3D2]:3" id: "CHEMBL342926" n: 2 conn: true usmi: "O1C2[1CH2]C3[1CH](C3)C12" 
+smi: "[1CH2]1C2C1[CH2:70]C1C2C1" smt: "[ax2r3D>2]1:[ax3r3r5D3]2:[ax3r3r5D3]:1:[ax2r5D2]:[ax3r3r5D3]1:[ax3r3r5D3]:2:[ax2r3D2]:1" id: "CHEMBL1565569" n: 1 conn: true exo: "[70C]" usmi: "[1CH2]=C1C2CC2C2[1CH2]C12" 
+smi: "[CH2:70]1C2C(C3[1CH2]C13)[1CH2]2" smt: "[ax2r5D2]1:[ax3r3r5D3]2:[ax3r3r5D3](:[ax3r3r5D3]3:[ax2r3D>2]:[ax3r3r5D3]:1:3):[ax2r3D>2]:2" id: "CHEMBL1893335" n: 1 conn: true exo: "[70O]" usmi: "O=C1C2C([1CH2]2)C2C1[1CH2]2" 
+smi: "[CH2:70]1C2([1CH2][1CH2]2)CCC12[1CH2][1CH2]2" smt: "[ax2r5D2]1:[ax4r3r5D4]2(:[ax2r3D>2]:[ax2r3D>2]:2):[ax2r5D2]:[ax2r5D2]:[ax4r3r5D4]:12:[ax2r3D>2]:[ax2r3D>2]:2" id: "CHEMBL1964593" n: 1 conn: true exo: "[70O]" usmi: "O=C1C2(CCC13[1CH2][1CH2]3)[1CH2][1CH2]2" 

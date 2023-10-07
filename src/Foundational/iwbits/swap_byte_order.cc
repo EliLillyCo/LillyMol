@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "iwbits.h"
 
@@ -9,8 +9,9 @@
 // but swapping those would reuquire 4 bytes. Revisit this if it ever
 // matters
 
+#ifdef NOT_IMPLEMENTED
 void
-IW_Bits_Base::swap_byte_order ()
+IW_Bits_Base::swap_byte_order()
 {
   if (0 == _nbits)
     return;
@@ -18,7 +19,7 @@ IW_Bits_Base::swap_byte_order ()
   int whole_words = _whole_bytes / IW_BYTES_PER_WORD;
 
   if (whole_words)
-    rick_higgs_byte_swap (whole_words, _bit);
+    rick_higgs_byte_swap(whole_words, _bit);
 
   int extra_bytes = _whole_bytes % IW_BYTES_PER_WORD;
   if (_extra_bits)
@@ -31,3 +32,4 @@ IW_Bits_Base::swap_byte_order ()
 
   return;
 }
+#endif

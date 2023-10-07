@@ -1,13 +1,12 @@
-#ifndef IW_STREAMTYPE_H
-#define IW_STREAMTYPE_H
+#ifndef MOLECULE_LIB_OSTREAM_AND_TYPE_H_
+#define MOLECULE_LIB_OSTREAM_AND_TYPE_H_
 
 #include <fstream>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "iwmtypes.h"
 
 class Molecule;
-
-#include "iwaray.h"
 
 /*
   This class consists of an ofstream which knows which kind of
@@ -17,7 +16,7 @@ class Molecule;
 class ofstream_and_type : public std::ofstream
 {
   private:
-    int _output_type;
+    FileType _output_type;
     IWString _fname;
     int _valid;
     int _molecules_written;
@@ -29,9 +28,9 @@ class ofstream_and_type : public std::ofstream
 
   public:
     ofstream_and_type ();
-    ofstream_and_type (int);
-    ofstream_and_type (int, const char *);
-    ofstream_and_type (int, IWString &);
+    ofstream_and_type (FileType);
+    ofstream_and_type (FileType, const char *);
+    ofstream_and_type (FileType, IWString &);
     ~ofstream_and_type ();
 
     int ok () const;
@@ -42,7 +41,8 @@ class ofstream_and_type : public std::ofstream
     int open (const char *);
     int open (IWString &);
 
-    int  set_type (int);
+//  int  set_type (int);
+    int  set_type (FileType);
     void set_verbose (int verbose) {_verbose = verbose;}
 
     const IWString & fname () const { return _fname;}
@@ -53,4 +53,4 @@ class ofstream_and_type : public std::ofstream
     int write_molecules (const resizable_array_p<Molecule> &);
 };
 
-#endif
+#endif  // MOLECULE_LIB_OSTREAM_AND_TYPE_H_

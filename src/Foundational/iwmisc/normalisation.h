@@ -1,7 +1,7 @@
 #ifndef IWNORMALISATION_H
 #define IWNORMALISATION_H
 
-#include "accumulator.h"
+#include "Foundational/accumulator/accumulator.h"
 
 #define NRML_MIN_TO_MAX 1
 #define NRML_UNIT_VARIANCE 2

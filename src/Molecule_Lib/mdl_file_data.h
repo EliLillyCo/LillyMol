@@ -1,5 +1,5 @@
-#ifndef MDL_FILE_DATA_H
-#define MDL_FILE_DATA_H
+#ifndef MOLECULE_LIB_MDL_FILE_DATA_H_
+#define MOLECULE_LIB_MDL_FILE_DATA_H_
 
 #include "substructure.h"
 #include "mdl_atom_record.h"
@@ -67,6 +67,9 @@ class MDL_Atom_Data
     int _hcount;
     int _h0designator;
     int _valence;
+    // Sept 2023: Note that while this is being parsed, it is
+    // not being processed. TODO:ianwatson
+    int _chg;
 
 //  These come from M records
 
@@ -165,6 +168,7 @@ class MDL_Atom_Data
     void set_unsaturation (int s) { _unsaturated = s;}
     void set_substitution (int s) { _substitution = s;}
     void set_ring_bond (int s) { _ring_bond = s;}
+    void set_charge(int s) { _chg = s;}
     void set_exact_change (int s) { _exact_change = s;}
 
     void increment_connections_lost () { _connections_lost++;}
@@ -198,6 +202,7 @@ class MDL_Atom_Data
     int inversion () const { return _inversion;}
     int substitution () const { return _substitution;}
     int unsaturated () const { return _unsaturated;}
+    int charge() const { return _chg;}
     int ring_bond () const { return _ring_bond;}
     int h0designator () const { return _h0designator;}
     int valence () const { return _valence;}
@@ -322,4 +327,4 @@ class MDL_File_Data
 
 extern int convert_mdl_bond_type_read_in_to_query (int, bond_type_t & for_query, bond_type_t & for_building_a_molecule);
 
-#endif
+#endif  // MOLECULE_LIB_MDL_FILE_DATA_H_

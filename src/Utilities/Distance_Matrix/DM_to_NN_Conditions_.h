@@ -1,6 +1,8 @@
 #ifndef IW_DM_TO_NN_CONDITIONS_IMPLEMENTATION_H
 #define IW_DM_TO_NN_CONDITIONS_IMPLEMENTATION_H
 
+#include <iostream>
+
 #include "IWDistanceMatrixBase.h"
 #include "iwdmsupport.h"
 
@@ -56,16 +58,16 @@ DM_to_NN_Conditions<T>::debug_print (std::ostream & os) const
 {
   os << "DM_to_NN_Conditions::debug_print\n";
   if (_min_neighbours > 0)
-    os << " min neighbours " << _min_neighbours << endl;
+    os << " min neighbours " << _min_neighbours << '\n';
 
   if (_max_neighbours > 0)
-    os << " max neighbours " << _max_neighbours << endl;
+    os << " max neighbours " << _max_neighbours << '\n';
 
   if (_min_distance > 0)
-    os << " min distance " << _min_distance << endl;
+    os << " min distance " << _min_distance << '\n';
 
   if (_max_distance > 0)
-    os << " max distance " << _max_distance << endl;
+    os << " max distance " << _max_distance << '\n';
 
   if (_dash_ho)
     os << " -h -o\n";
@@ -75,9 +77,10 @@ DM_to_NN_Conditions<T>::debug_print (std::ostream & os) const
 
 template <typename T>
 int
-DM_to_NN_Conditions<T>::recognised (const IWString & n,
-                                    int error_occurred)
+DM_to_NN_Conditions<T>::recognised(const IWString & n,
+                                   int& error_occurred)
 {
+  error_occurred = 0;
   if (n.starts_with ("maxd="))
   {
     if (! parse_directive (n, _max_distance))

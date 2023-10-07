@@ -29,7 +29,6 @@ class IW_Factorial
 
 #include <stdlib.h>
 #include <iostream>
-using namespace std;
 #include <assert.h>
 
 template <typename T>
@@ -38,7 +37,7 @@ IW_Factorial<T>::_default_values ()
 {
   _size = 0;
 
-  _f = NULL;
+  _f = nullptr;
 
   return;
 }
@@ -66,10 +65,10 @@ IW_Factorial<T>::~IW_Factorial ()
 {
   assert (_size >= 0);
 
-  if (NULL != _f)
+  if (nullptr != _f)
   {
     delete [] _f;
-    _f = NULL;
+    _f = nullptr;
   }
 
   _size = -1;
@@ -81,12 +80,12 @@ template <typename T>
 int
 IW_Factorial<T>::resize (int new_size)
 {
-  if (NULL != _f)
+  if (nullptr != _f)
     delete [] _f;
 
   if (0 == new_size)
   {
-    _f = NULL;
+    _f = nullptr;
     _size = 0;
 
     return 1;
@@ -96,9 +95,9 @@ IW_Factorial<T>::resize (int new_size)
 
   _f = new T[new_size + 1];
 
-  if (NULL == _f)
+  if (nullptr == _f)
   {
-    cerr << "IW_Factorial::resize: cannot allocate " << new_size << " items\n";
+    std::cerr << "IW_Factorial::resize: cannot allocate " << new_size << " items\n";
     return 0;
   }
 

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package XLogP;
+
+message XlogpParameter {
+  // Description of the parameter. Ignored
+  optional string description = 1;
+  // The feature number - Table 1 of the paper.
+  optional uint32 index = 2;
+  // the contribution of the group.
+  optional double value = 3;
+  // Maybe we could add a smarts to define other functional groups...
+}
+
+// As this message is consumed, the tool will use default values
+// for all existing indices, and anything specified here will over-ride
+// the default value.
+message XlogpParameters {
+  repeated XlogpParameter contribution = 1;
+}

@@ -1,11 +1,11 @@
 #include <stdlib.h>
-
-#ifdef PARSE_SMARTS_TMP_MALLOC_CHECK
-#include "iwmalloc.h"
-#endif
+#include <iostream>
 
 #include "substructure.h"
 #include "parse_smarts_tmp.h"
+
+using std::cerr;
+using std::endl;
 
 Parse_Smarts_Tmp::Parse_Smarts_Tmp ()
 {
@@ -16,10 +16,7 @@ Parse_Smarts_Tmp::Parse_Smarts_Tmp ()
 
 Parse_Smarts_Tmp::~Parse_Smarts_Tmp ()
 {
-#ifdef PARSE_SMARTS_TMP_MALLOC_CHECK
-  check_malloc_magic ();
-#endif
-
+  DeletePointers();
   return;
 }
 
@@ -33,21 +30,59 @@ Parse_Smarts_Tmp::set_natoms (int n)
   return 1;
 }
 
-#ifdef PARSE_SMARTS_TMP_MALLOC_CHECK
+ThreeDots::ThreeDots(int a1, int a2) : AtomsAndQualifier(a1, a2) {
+}
 
 int
-Parse_Smarts_Tmp::check_malloc_magic () const
+ThreeDots::BuildFromProto(const SubstructureSearch::NoMatchedAtomsBetween& proto)
 {
-  if (_root.number_elements ())
-    iwmalloc_check_malloc_magic (_root.rawdata ());
-  if (_no_matched_atoms_between.number_elements ())
-    iwmalloc_check_malloc_magic (_no_matched_atoms_between.rawdata ());
-  if (_link_atom.number_elements ())
-    iwmalloc_check_malloc_magic (_link_atom.rawdata ());
+  if (! proto.has_a1() || ! proto.has_a2()) {
+    cerr << "ThreeDots::BuildFromProto:proto missing atom(s) " << proto.ShortDebugString() << endl;
+    return 0;
+  }
+
+  _matched_atom_1 = proto.a1();
+  _matched_atom_2 = proto.a2();
+
+  if (_matched_atom_1 == _matched_atom_2) {
+    cerr << "ThreeDots::BuildFromProto:Invalid matched atoms " << proto.ShortDebugString() << endl;
+    return 0;
+  }
+
+  if (proto.has_qualifier()) {
+    _qualifier = proto.qualifier();
+  }
 
   return 1;
 }
 
-#endif
+template <typename T>
+void
+DeleteAll(resizable_array<T*>& values) {
+  for (T * v : values) {
+    delete v;
+  }
+  values.resize(0);
+}
 
-// arch-tag: 3fa138c0-8e33-4af1-b8fa-4074ffbc7818
+void
+Parse_Smarts_Tmp::DeletePointers() {
+  DeleteAll(_no_matched_atoms_between);
+  DeleteAll(_link_atom);
+  DeleteAll(_three_dots);
+}
+
+DownTheBondInfo::DownTheBondInfo(int a1) {
+  _matched_atom_1 = a1;
+}
+
+int
+Parse_Smarts_Tmp::DownTheBondSpecificationsComplete() const {
+  for (const down_the_bond::DownTheBond* dtb : _down_the_bond) {
+    if (! dtb->Complete()) {
+      return 0;
+    }
+  }
+
+  return 1;
+}

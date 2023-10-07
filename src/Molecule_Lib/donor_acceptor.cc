@@ -1,16 +1,24 @@
-#include <stdlib.h>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
 
-#include "iwbits.h"
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 
-#include "rwsubstructure.h"
 #include "donor_acceptor.h"
+#include "rwsubstructure.h"
 #include "qry_wstats.h"
 #include "target.h"
-#include "misc.h"
+
+using std::cerr;
+using std::endl;
 
 void
-display_standard_donor_acceptor_assigner_options (std::ostream & os, char cflag)
+display_standard_donor_acceptor_assigner_options(std::ostream & os, char cflag)
 {
   os << "  -" << cflag << " a=<query>   specify query(s) for acceptors\n";
   os << "  -" << cflag << " d=<query>   specify query(s) for donors\n";
@@ -24,8 +32,7 @@ display_standard_donor_acceptor_assigner_options (std::ostream & os, char cflag)
   return;
 }
 
-
-Donor_Acceptor_Assigner::Donor_Acceptor_Assigner ()
+Donor_Acceptor_Assigner::Donor_Acceptor_Assigner()
 {
   _apply_isotopic_labels = 0;
 
@@ -37,18 +44,17 @@ Donor_Acceptor_Assigner::Donor_Acceptor_Assigner ()
 }
 
 int
-Donor_Acceptor_Assigner::ok () const
+Donor_Acceptor_Assigner::ok() const
 {
   return 1;
 }
 
 int
-Donor_Acceptor_Assigner::construct_from_command_line (Command_Line & cl,
+Donor_Acceptor_Assigner::construct_from_command_line(Command_Line & cl,
                                    char cflag,
                                    int verbose)
 {
-  if (! cl.option_present(cflag))
-  {
+  if (! cl.option_present(cflag)) {
     return 0;
   }
 
@@ -135,7 +141,7 @@ Donor_Acceptor_Assigner::construct_from_command_line (Command_Line & cl,
 }
 
 int
-Donor_Acceptor_Assigner::_assign_acceptors (Molecule_to_Match & target, int * isotope)
+Donor_Acceptor_Assigner::_assign_acceptors(Molecule_to_Match & target, int * isotope)
 {
   int na = _acceptor_queries.number_elements();
 
@@ -171,7 +177,7 @@ Donor_Acceptor_Assigner::_assign_acceptors (Molecule_to_Match & target, int * is
 //#define DEBUG_ASSIGN_DONORS
 
 int
-Donor_Acceptor_Assigner::_assign_donors (Molecule_to_Match & target, int * isotope)
+Donor_Acceptor_Assigner::_assign_donors(Molecule_to_Match & target, int * isotope)
 {
   int na = _donor_queries.number_elements();
 
@@ -222,8 +228,8 @@ Donor_Acceptor_Assigner::_assign_donors (Molecule_to_Match & target, int * isoto
 }
 
 int
-Donor_Acceptor_Assigner::_process (Molecule_to_Match & target,
-                                  int * isotope)
+Donor_Acceptor_Assigner::_process(Molecule_to_Match & target,
+                                 int * isotope)
 {
   int rc = _assign_acceptors(target, isotope);
   rc    += _assign_donors(target, isotope);
@@ -232,8 +238,8 @@ Donor_Acceptor_Assigner::_process (Molecule_to_Match & target,
 }
 
 int
-Donor_Acceptor_Assigner::__process (Molecule & m, 
-                                    int * isotope)
+Donor_Acceptor_Assigner::__process(Molecule & m, 
+                                   int * isotope)
 {
   Molecule_to_Match target(&m);
 
@@ -255,8 +261,8 @@ Donor_Acceptor_Assigner::__process (Molecule & m,
 }
 
 int
-Donor_Acceptor_Assigner::_process (Molecule & m,
-                                  int * isotope)
+Donor_Acceptor_Assigner::_process(Molecule & m,
+                                 int * isotope)
 {
   _temp_detach_hydrogens.detach_atoms(m);
 
@@ -268,13 +274,13 @@ Donor_Acceptor_Assigner::_process (Molecule & m,
 }
 
 int
-Donor_Acceptor_Assigner::process (Molecule & m, int * isotope)
+Donor_Acceptor_Assigner::process(Molecule & m, int * isotope)
 {
   int i_own_the_vector;
 
   const int matoms = m.natoms();
 
-  if (NULL == isotope)
+  if (nullptr == isotope)
   {
     isotope = new int[matoms];
     i_own_the_vector = 1;
@@ -295,7 +301,7 @@ Donor_Acceptor_Assigner::process (Molecule & m, int * isotope)
 }
 
 int
-Donor_Acceptor_Assigner::_do_apply_isotopic_labels (Molecule & m, const int * isotope) const
+Donor_Acceptor_Assigner::_do_apply_isotopic_labels(Molecule & m, const int * isotope) const
 {
   int matoms = m.natoms();
 
@@ -321,8 +327,8 @@ Donor_Acceptor_Assigner::_do_apply_isotopic_labels (Molecule & m, const int * is
 */
 
 void
-Donor_Acceptor_Assigner::_do_apply_atom_type_labels (Molecule & m,
-                                                     const int * isotope) const
+Donor_Acceptor_Assigner::_do_apply_atom_type_labels(Molecule & m,
+                                                    const int * isotope) const
 {
   int matoms = m.natoms();
 
@@ -344,8 +350,8 @@ Donor_Acceptor_Assigner::_do_apply_atom_type_labels (Molecule & m,
 }
 
 int
-Donor_Acceptor_Assigner::_fetch_queries (const_IWSubstring & c,
-                                         resizable_array_p<Substructure_Hit_Statistics> & queries)
+Donor_Acceptor_Assigner::_fetch_queries(const_IWSubstring & c,
+                                        resizable_array_p<Substructure_Hit_Statistics> & queries)
 {
   assert ('=' == c[1]);
 
@@ -377,9 +383,9 @@ Donor_Acceptor_Assigner::_fetch_queries (const_IWSubstring & c,
 }
 
 int
-Donor_Acceptor_Assigner::_open_stream_for_labelled_molecules (const IWString & stem)
+Donor_Acceptor_Assigner::_open_stream_for_labelled_molecules(const IWString & stem)
 {
-  _stream_for_labelled_molecules.add_output_type(SMI);
+  _stream_for_labelled_molecules.add_output_type(FILE_TYPE_SMI);
 
   return _stream_for_labelled_molecules.new_stem(stem, 1);
 }
@@ -399,7 +405,7 @@ Donor_Acceptor_Assigner::deactivate()
 }
 
 int
-Donor_Acceptor_Assigner::build (const const_IWSubstring & s)
+Donor_Acceptor_Assigner::build(const const_IWSubstring & s)
 {
   const_IWSubstring c;
   for (auto i = 0; s.nextword(c, i); )
@@ -427,7 +433,7 @@ Donor_Acceptor_Assigner::build (const const_IWSubstring & s)
     }
   }
 
-  if (0 == _donor_queries.number_elements() || 0 == _acceptor_queries.number_elements())
+  if (_donor_queries.empty() || _acceptor_queries.empty())
   {
     cerr << "Donor_Acceptor_Assigner::build:incomplete specification\n";
     return 0;
@@ -436,4 +442,81 @@ Donor_Acceptor_Assigner::build (const const_IWSubstring & s)
   _apply_isotopic_labels = 1;
 
   return 1;
+}
+
+int
+ReadQuery(IWString& fname,
+          resizable_array_p<Substructure_Hit_Statistics>& queries) {
+  std::optional<SubstructureSearch::SubstructureQuery> proto =
+      iwmisc::ReadTextProto<SubstructureSearch::SubstructureQuery>(fname);
+  if (! proto)  {
+    cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot read query '" << fname << "'\n";
+    return 0;
+  }
+  std::unique_ptr<Substructure_Hit_Statistics> query = std::make_unique<Substructure_Hit_Statistics>();
+  if (! query->ConstructFromProto(*proto)) {
+    cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot parse proto " << proto->ShortDebugString() << '\n';
+    return 0;
+  }
+
+  queries << query.release();
+  return 1;
+}
+
+int
+Donor_Acceptor_Assigner::BuildFromProto(const BrunsDonorAcceptor::BrunsDonorAcceptor& proto,
+                                        const IWString& dirname) {
+  // IAW: open question as to whether both donors and acceptors are required,
+  // or should it valid to have just one.
+  if (proto.donor_size() == 0 || proto.acceptor_size() == 0) {
+    cerr << "Donor_Acceptor_Assigner::BuildFromProto: no data\n";
+    return 0;
+  }
+
+  for (const std::string& as_string : proto.donor()) {
+    IWString fname;
+    if (dirname.empty()) {
+      fname = as_string;
+    } else {
+      fname << dirname << std::filesystem::path::preferred_separator << as_string;
+    }
+    std::optional<IWString> expanded = fname.ExpandEnvironmentVariables();
+    if (! expanded) {
+      cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot expand shell variables '" << fname << "'\n";
+      return 0;
+    }
+    if (! ReadQuery(*expanded, _donor_queries)) {
+      cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot read donor query '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  for (const std::string& as_string : proto.acceptor()) {
+    IWString fname;
+    if (dirname.empty()) {
+      fname = as_string;
+    } else {
+      fname << dirname << std::filesystem::path::preferred_separator << as_string;
+    }
+    std::optional<IWString> expanded = fname.ExpandEnvironmentVariables();
+    if (! expanded) {
+      cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot expand shell variables '" << fname << "'\n";
+      return 0;
+    }
+    if (! ReadQuery(*expanded, _acceptor_queries)) {
+      cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot read acceptor query '" << *expanded << "'\n";
+      return 0;
+    }
+  }
+
+  _apply_isotopic_labels = proto.apply_isotopic_labels();
+  _add_to_existing_isotopic_label = proto.add_to_existing_isotopic_label();
+
+  _apply_atom_type_labels = proto.apply_atom_type_labels();
+
+  if (! proto.check_explicit_hydrogens()) {
+    _temp_detach_hydrogens.set_active(false);
+  }
+
+  return _donor_queries.number_elements() + _acceptor_queries.number_elements();
 }

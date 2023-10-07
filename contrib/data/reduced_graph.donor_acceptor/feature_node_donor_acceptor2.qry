@@ -1,0 +1,6 @@
+# Version of a dual donor/acceptor that also matches a
+# multiply bonded neighbor
+query {
+  name: "feature_node_donor_acceptor"
+  smarts: "[2]!-*"
+}

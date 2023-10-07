@@ -1,7 +1,5 @@
-#include <stdlib.h>
-
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
 #include "path_scoring.h"
 

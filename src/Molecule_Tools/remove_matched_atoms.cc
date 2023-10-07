@@ -3,25 +3,27 @@
 */
 
 #include <iostream>
-#include <memory>
 #include <limits>
+#include <memory>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/target.h"
+
+#include "spatially_common_matched_atoms.h"
+
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "misc.h"
-
-#include "istream_and_type.h"
-#include "output.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "substructure.h"
-#include "target.h"
-#include "spatially_common_matched_atoms.h"
-
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -35,9 +37,12 @@ static Chemical_Standardisation chemical_standardisation;
 
 static int reduce_to_largest_fragment = 0;
 
-static int isotope = 0;
+static isotope_t isotope = 0;
 
-#define ISOTOPE_IS_QUERY_ATOM_NUMBER -3
+// An arbitrary and unlikely value. The isotope will be the
+// query number that matched.
+static constexpr isotope_t kIsotopeIsQueryAtomNumber = 
+                std::numeric_limits<isotope_t>::max() - 100;
 
 static resizable_array_p<Substructure_Query> queries;
 
@@ -61,8 +66,13 @@ static int discern_embedding_via_spatial_location = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Removes matched atoms\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -s <smarts>   query as smarts\n";
   cerr << "  -q <qry>      query specification\n";
   cerr << "  -z i          ignore molecules not matching\n";
@@ -101,9 +111,9 @@ preprocess (Molecule & m)
 }
 
 static int
-do_add_capping_group (Molecule & m,
-                      const int * to_be_removed,
-                      const Molecule & capping_group)
+do_add_capping_group(Molecule & m,
+                     const int * to_be_removed,
+                     const Molecule & capping_group)
 {
   int rc = 0;
 
@@ -137,8 +147,8 @@ do_add_capping_group (Molecule & m,
 }
 
 static int
-do_apply_isotopic_labels (Molecule & m,
-                          int * to_be_removed)
+do_apply_isotopic_labels(Molecule & m,
+                         int * to_be_removed)
 {
   int matoms = m.natoms();
 
@@ -193,7 +203,7 @@ do_apply_isotopic_labels_qam (Molecule & m,
       if (to_be_removed[x])
         continue;
 
-      if ((i+1) != m.isotope(x))
+      if (static_cast<isotope_t>(i+1) != m.isotope(x))
       {
         m.set_isotope(x, i+1);
         rc++;
@@ -220,13 +230,15 @@ do_invert_selection (int * to_be_removed,
 }
 
 static int
-remove_matched_atoms (Molecule & m,
-                      int * to_be_removed,
-                      const Set_of_Atoms & e,
-                      Molecule_Output_Object & output)
+remove_matched_atoms(Molecule & m,
+                     int * to_be_removed,
+                     const Set_of_Atoms & e,
+                     Molecule_Output_Object & output)
 {
   set_vector(to_be_removed, m.natoms(), 0);
   e.set_vector(to_be_removed, 1);
+
+  const int initial_atoms = m.natoms();
 
   if (invert_selection)
     do_invert_selection(to_be_removed, m.natoms());
@@ -236,10 +248,16 @@ remove_matched_atoms (Molecule & m,
 
   if (isotope > 0)
     do_apply_isotopic_labels(m, to_be_removed);
-  else if (ISOTOPE_IS_QUERY_ATOM_NUMBER == isotope)
+  else if (kIsotopeIsQueryAtomNumber == isotope)
     do_apply_isotopic_labels_qam(m, e, to_be_removed);
 
-  m.remove_atoms(to_be_removed);
+  // Cannot use m.remove_atoms(to_be_removed) because capping
+  // groups may have been added.
+  for (int i = initial_atoms - 1; i >= 0; --i) {
+    if (to_be_removed[i]) {
+      m.remove_atom(i);
+    }
+  }
 
   molecules_written++;
 
@@ -290,7 +308,7 @@ do_discern_embedding_via_spatial_location(data_source_and_type<Molecule> & input
   molecules.resize(n);
 
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules.add(m);
   }
@@ -321,11 +339,11 @@ do_discern_embedding_via_spatial_location(data_source_and_type<Molecule> & input
 }
 
 static int
-remove_matched_atoms (Molecule & m,
-                      int * to_be_removed,
-                      const Substructure_Results & sresults,
-                      int & parent_written,
-                      Molecule_Output_Object & output)
+remove_matched_atoms(Molecule & m,
+                     int * to_be_removed,
+                     const Substructure_Results & sresults,
+                     int & parent_written,
+                     Molecule_Output_Object & output)
 {
   if (! parent_written)
   {
@@ -408,7 +426,7 @@ remove_matched_atoms(data_source_and_type<Molecule> & input,
                      Molecule_Output_Object & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -424,12 +442,12 @@ remove_matched_atoms(data_source_and_type<Molecule> & input,
 }
 
 static int
-remove_matched_atoms(const char * fname, int input_type, 
+remove_matched_atoms(const char * fname, FileType input_type, 
                      Molecule_Output_Object & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
     assert (0 != input_type);
@@ -526,7 +544,7 @@ remove_matched_atoms (int argc, char ** argv)
     }
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -544,7 +562,7 @@ remove_matched_atoms (int argc, char ** argv)
     const_IWSubstring i = cl.string_value('I');
 
     if ("q" == i)
-      isotope = ISOTOPE_IS_QUERY_ATOM_NUMBER;
+      isotope = kIsotopeIsQueryAtomNumber; 
     else if (! i.numeric_value(isotope) || isotope <= 0)
     {
       cerr << "The isotopic label to apply (-I) must be a valid isotopic label\n";
@@ -673,7 +691,7 @@ remove_matched_atoms (int argc, char ** argv)
   Molecule_Output_Object output;
 
   if (! cl.option_present('o'))
-    output.add_output_type(SMI);
+    output.add_output_type(FILE_TYPE_SMI);
   else if (! output.determine_output_types(cl))
   {
     cerr << "Cannot determine output types\n";

@@ -3,16 +3,19 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
 
-//#include <pair.h>
-
-#include "cmdline_v2.h"
-#include "iwstring_data_source.h"
-#include "set_or_unset.h"
-#include "iw_tdt.h"
 #define IWQSORT_FO_IMPLEMENTATION
-#include "iwqsort.h"
+
+#include "Foundational/cmdline_v2/cmdline_v2.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwmisc/set_or_unset.h"
+#include "Foundational/iwqsort/iwqsort.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+
+using std::cerr;
 
 static int verbose = 0;
 
@@ -33,7 +36,7 @@ static int default_global_sort_order = 1;
 
 static int default_global_column_for_sort_key = 0;
 
-static IW_Regular_Expression sort_by_grepc;
+static std::unique_ptr<re2::RE2> sort_by_grepc;
 
 /*
   We are often called upon to sort things that look like 'D100' of 'A3'
@@ -175,7 +178,7 @@ TAG_and_Direction::construct_from_command_line_token(const const_IWSubstring & t
     ;
   else
   {
-    cerr << "TAG_and_Direction::construct_from_command_line_token:invalid index " << _which_one_to_retrieve << endl;
+    cerr << "TAG_and_Direction::construct_from_command_line_token:invalid index " << _which_one_to_retrieve << '\n';
     return 0;
   }
 
@@ -270,7 +273,7 @@ TAG_and_Direction::do_comparison(const IWString & s1,
   return s1.strcmp(s2);
 }
 
-static TAG_and_Direction * tag_and_direction = NULL;
+static TAG_and_Direction * tag_and_direction = nullptr;
 static int ntags = 0;
 
 /*
@@ -328,10 +331,10 @@ Offset_Value_Float::build(off_t offset,
 {
   _pos = offset;
 
-  assert(NULL == _value);
+  assert(nullptr == _value);
 
   _value = new float[ntags];
-  if (NULL == _value)
+  if (nullptr == _value)
   {
     cerr << "Offset_Value_Float::build:cannot allocate " << ntags << " float values\n";
     return 0;
@@ -341,7 +344,7 @@ Offset_Value_Float::build(off_t offset,
   {
     if (! tag_and_direction[i].build(tdt, _value[i]))
     {
-      cerr << "Offset_Value_Float:build:invalid tdt " << tdt << endl;
+      cerr << "Offset_Value_Float:build:invalid tdt " << tdt << '\n';
       return 0;
     }
   }
@@ -357,7 +360,7 @@ Offset_Value_String::build(off_t offset,
   _pos = offset;
 
   _value = new IWString[ntags];
-  if (NULL == _value)
+  if (nullptr == _value)
   {
     cerr << "Offset_Value_Float::build:cannot allocate " << ntags << " float values\n";
     return 0;
@@ -367,7 +370,7 @@ Offset_Value_String::build(off_t offset,
   {
     if (! tag_and_direction[i].build(tdt, _value[i]))
     {
-      cerr << "Offset_Value_Float:build:invalid tdt " << tdt << endl;
+      cerr << "Offset_Value_Float:build:invalid tdt " << tdt << '\n';
       return 0;
     }
   }
@@ -381,7 +384,7 @@ template class Offset_Value<IWString>;
 template <typename T>
 Offset_Value<T>::Offset_Value()
 {
-  _value = NULL;
+  _value = nullptr;
 
   _pos = 0;
 
@@ -391,7 +394,7 @@ Offset_Value<T>::Offset_Value()
 template <typename T>
 Offset_Value<T>::~Offset_Value()
 {
-  if (NULL != _value)
+  if (nullptr != _value)
     delete [] _value;
 
   return;
@@ -401,7 +404,7 @@ template <typename T>
 int
 Offset_Value<T>::set_single_value(T v)
 {
-  assert (NULL == _value);
+  assert (nullptr == _value);
 
   _value = new T[1];
 
@@ -432,7 +435,7 @@ TDT_Comparitor_Float::operator ()(const Offset_Value_Float & ov1,
 
   for (int i = 0; i < ntags; i++)
   {
-//  cerr << "i = " << i << " comparing " << v1[i] << " and " << v2[i] << endl;
+//  cerr << "i = " << i << " comparing " << v1[i] << " and " << v2[i] << '\n';
     int tmp = tag_and_direction[i].do_comparison(v1[i], v2[i]);
 
     if (0 != tmp)
@@ -527,7 +530,7 @@ TDT_Comparitor_int::operator()(const Offset_Value_Int & ov1,
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
   cerr << "Sorts a TDT file based on values of a tag\n";
   cerr << " -T <tag>       specify the sort field tag\n";
   cerr << " -T +tag        sort on tag in ascending order\n";
@@ -630,7 +633,7 @@ read_the_tdts (iwstring_data_source & input,
   {
     if (! ov[ntdts].build(offset, tdt, missing_values_found))
     {
-      cerr << "Cannot process tdt " << ntdts << endl;
+      cerr << "Cannot process tdt " << ntdts << '\n';
       cerr << tdt;
       return 0;
     }
@@ -656,7 +659,7 @@ template int read_the_tdts(iwstring_data_source &, Offset_Value_String *, int &)
 
 static int
 do_grepc(const IW_TDT & tdt,
-         IW_Regular_Expression & rx)
+         re2::RE2 & rx)
 {
   int n = tdt.number_elements();
 
@@ -667,7 +670,7 @@ do_grepc(const IW_TDT & tdt,
     const_IWSubstring s;
     tdt.item(i, s);
 
-    if (rx.matches(s))
+    if (iwre2::RE2PartialMatch(s, rx))
       rc++;
   }
 
@@ -685,7 +688,7 @@ read_the_tdts_grepc_version(iwstring_data_source & input,
   IW_TDT tdt;
   while (tdt.next(input))
   {
-    int c = do_grepc(tdt, sort_by_grepc);
+    int c = do_grepc(tdt, *sort_by_grepc);
     ov[ntdts].set_single_value(c);
     ov[ntdts].set_offset(offset);
 
@@ -762,7 +765,7 @@ tdt_sort (iwstring_data_source & input,
   if (sort_by_number_of_records_in_each_tdt)
   {
     Offset_Value_Float * ov = new Offset_Value_Float[ntdts];
-    if (NULL == ov)
+    if (nullptr == ov)
     {
       cerr << "Very bad news, cannot allocate " << ntdts << " offset/value pairs\n";
       return 0;
@@ -781,10 +784,10 @@ tdt_sort (iwstring_data_source & input,
     return echo_the_tdts(input, ov, ntdts, output_fd);
   }
 
-  if (sort_by_grepc.active())
+  if (sort_by_grepc)
   {
     Offset_Value_Int * ov = new Offset_Value_Int[ntdts];
-    if (NULL == ov)
+    if (nullptr == ov)
     {
       cerr << "Very bad news, cannot allocate " << ntdts << " offset/value pairs\n";
       return 0;
@@ -806,7 +809,7 @@ tdt_sort (iwstring_data_source & input,
   if (numeric_sort)
   {
     Offset_Value_Float * ov = new Offset_Value_Float[ntdts]; std::unique_ptr<Offset_Value_Float[]> free_ov(ov);
-    if (NULL == ov)
+    if (nullptr == ov)
     {
       cerr << "Very bad news, cannot allocate " << ntdts << " offset/value pairs\n";
       return 0;
@@ -828,7 +831,7 @@ tdt_sort (iwstring_data_source & input,
   else
   {
     Offset_Value_String * ov = new Offset_Value_String[ntdts];
-    if (NULL == ov)
+    if (nullptr == ov)
     {
       cerr << "Very bad news, cannot allocate " << ntdts << " offset/value pairs\n";
       return 0;
@@ -917,16 +920,16 @@ tdt_sort(int argc, char ** argv)
   }
   else if (cl.option_present("grepc"))
   {
-    const_IWSubstring rx = cl.string_value("grepc");
+    const_IWSubstring pattern = cl.string_value("grepc");
 
-    if (! sort_by_grepc.set_pattern(rx))
+    if (! iwre2::RE2Reset(sort_by_grepc, pattern))
     {
-      cerr << "Invalid sort by count rx '" << rx << "'\n";
+      cerr << "Invalid sort by count rx '" << pattern << "'\n";
       return 4;
     }
 
     if (verbose)
-      cerr << "Will sort by number of matches to '" << sort_by_grepc.source() << "'\n";
+      cerr << "Will sort by number of matches to '" << sort_by_grepc->pattern() << "'\n";
   }
   else
   {
@@ -939,7 +942,7 @@ tdt_sort(int argc, char ** argv)
     }
 
     tag_and_direction = new TAG_and_Direction[ntags];
-    if (NULL == tag_and_direction)
+    if (nullptr == tag_and_direction)
     {
       cerr << "Cannot allocate " << ntags << " tags\n";
       return 4;
@@ -1006,7 +1009,7 @@ tdt_sort(int argc, char ** argv)
 
       missing_value_float.set(tmp);
       if (verbose)
-        cerr << "Missing values will be set to " << tmp << endl;
+        cerr << "Missing values will be set to " << tmp << '\n';
     }
     else
     {
@@ -1031,7 +1034,7 @@ tdt_sort(int argc, char ** argv)
   if (! tdt_sort(cl[0], 1))
     return 31;
 
-  if (NULL != tag_and_direction)
+  if (nullptr != tag_and_direction)
     delete [] tag_and_direction;
 
   return 0;

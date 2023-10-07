@@ -1,0 +1,52 @@
+# Also known as benzofurazan
+name: "nitro_to_benzoxadiazol"
+scaffold_match_conditions {
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+}
+
+scaffold {
+  id: 0
+  smarts: "[ND3](=O)(=O)-c1[cD2]aaaa1"
+  toggle_kekule_form {
+    bond {
+      a1: 3
+      a2: 4
+      btype: SS_DOUBLE_BOND
+    }
+  }
+  change_element {
+    atom: 1
+    element: "N"
+  }
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  make_bond {
+    a1: 0
+    a2: 3
+    btype: SS_DOUBLE_BOND
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 4
+    btype: SS_DOUBLE_BOND
+  }
+  make_bond {
+    a1: 3
+    a2: 4
+    btype: SS_SINGLE_BOND
+  }
+}

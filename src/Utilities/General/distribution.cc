@@ -2,22 +2,27 @@
   We want to get a distribution of a set of numbers
 */
 
-#include <stdlib.h>
-#include <limits>
+#include <string.h>
+
 #include <algorithm>
+#include <iostream>
+#include <limits>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION 1
 //#define IWQSORT_FO_IMPLEMENTATION 1
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iwqsort.h"
-#include "misc.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwqsort/iwqsort.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -31,8 +36,16 @@ static int verbose = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Create distribution based on a larger input set\n";
+  cerr << "For each discrete value encountered, count the number of instances. Writes a histogram\n";
   cerr << " -c <col>       column to process\n";
   cerr << " -d <dname>     descriptor to process\n";
   cerr << " -a             normalise output to unit area\n";
@@ -50,6 +63,7 @@ usage (int rc)
   cerr << " -i <char>      input delimiter (default ' ')\n";
   cerr << " -z             when rounding is in effect, insert zero values\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit(rc);
 }
@@ -73,11 +87,10 @@ class IWFloatHash
 size_t
 IWFloatHash::operator () (float f) const
 {
-  void * v = &f;
+  size_t rc = 0;
+  ::memcpy(&rc, &f, sizeof(f));
 
-  size_t * rc = (size_t *) v;
-
-  return *rc;
+  return rc;
 }
 
 // Basically a scatter operation
@@ -1197,7 +1210,7 @@ Data_From_File::_final_processing (const int col,
   int n = 0;
   int highest = 0;
 
-  for (const auto i : d)
+  for (const auto& i : d)
   {
     float v = i.first;
     int c = i.second;

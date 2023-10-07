@@ -1,7 +1,9 @@
+#include <assert.h>
+#include <math.h>
+#include <errno.h>
+
 #include <iostream>
 #include <memory>
-using std::cerr;
-using std::endl;
 
 #if (__GNUC_MINOR__ == 95)
 #include <strstream>
@@ -9,25 +11,27 @@ using std::endl;
 #include <sstream>
 #endif
 
-#include <assert.h>
-#include <math.h>
-#include <errno.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/text_format.h>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "target.h"
-#include "mass_spec.h"
-#include "smiles.h"
-#include "qry_wstats.h"
-#include "aromatic.h"
-#include "output.h"
-#include "istream_and_type.h"
-#include "charge_assigner.h"
-#include "misc2.h"
-#include "rmele.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/misc2.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/rmele.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/target.h"
 
+#include "Molecule_Tools/demerit.pb.h"
 #include "substructure_demerits.h"
 #include "demerit.h"
+
+using std::cerr;
+using std::endl;
 
 static int verbose = 0;     // visible in substructure_demerits
 
@@ -35,7 +39,7 @@ static int keep_going_after_rejection = 0;
 
 static int molecules_read = 0;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int molecules_receiving_demerits = 0;
 static int molecules_rejected = 0;
@@ -44,6 +48,9 @@ static Elements_to_Remove elements_to_remove;
 
 static Molecule_Output_Object stream_for_non_rejected_molecules;
 static Molecule_Output_Object stream_for_rejected_molecules;
+
+// Write all molecules as protos to a single output stream.
+static IWString_and_File_Descriptor proto_stream;
 
 static IWString stem_for_demerit_file;
 
@@ -75,15 +82,6 @@ static int hard_upper_atom_count_cutoff = 0;
 static int upper_atom_count_demerit = 100;
 
 /*
-  We reject if the atom contains only C, H or S
-  On 20 Nov, we expanded that to be C, H, S, or halogen
-  We reject of we see any strange element types.
-*/
-
-static int atom_types_count = 0;
-static int csxh_count = 0;
-
-/*
   Apr 2017. For PAINS processing
 */
 
@@ -92,8 +90,8 @@ static int demerit_numeric_value_index = 0;
 static int make_implicit_hydrogens_explicit = 0;
 
 static void
-do_atom_count_demerits (Molecule & m,
-                        Demerit & demerit)
+do_atom_count_demerits(Molecule & m,
+                       Demerit & demerit)
 {
   int nf = m.number_fragments();
 
@@ -202,10 +200,10 @@ run_a_set_of_queries(Molecule_to_Match & target,
 }
 
 static void
-iwdemerit (Molecule & m,
-           resizable_array_p<Substructure_Hit_Statistics> & q1,
-           resizable_array_p<Substructure_Hit_Statistics> & q2,
-           Demerit & demerit)
+iwdemerit(Molecule & m,
+          resizable_array_p<Substructure_Hit_Statistics> & q1,
+          resizable_array_p<Substructure_Hit_Statistics> & q2,
+          Demerit & demerit)
 {
   if (soft_lower_atom_count_cutoff > 0 || soft_upper_atom_count_cutoff > 0)
   {
@@ -231,10 +229,10 @@ iwdemerit (Molecule & m,
       return;
   }
 
-  Molecule_to_Match target(&m);
-
   if (q1.number_elements())
   {
+    Molecule_to_Match target(&m);
+
     run_a_set_of_queries(target, demerit, q1);
 
 //  cerr << "After command line queries, score is " << demerit.score() << " rej? " << demerit.rejected() << endl;
@@ -352,13 +350,56 @@ do_append_demerit_text_to_name(Molecule & m,
   return 1;
 }
 
+// Write results in `demerit` to `output`.
+// `mname` will be set if m.name() has been over-written
 static int
-iwdemerit (Molecule & m,
-           resizable_array_p<Substructure_Hit_Statistics> & q1,
-           resizable_array_p<Substructure_Hit_Statistics> & q2,
-           std::ofstream & output)
+WriteAsProto(Molecule& m,
+             const IWString& mname,
+             const Demerit& demerit,
+             IWString_and_File_Descriptor& output) {
+  MedchemRules::Molecule proto;
+  proto.set_smiles(m.smiles().AsString());
+
+  // If the molecule name was NOT saved, then use the regular name.
+  if (mname.empty()) {
+    proto.set_name(m.name().AsString());
+  } else {
+    proto.set_name(mname.AsString());
+  }
+
+  if (demerit.rejected()) {
+    proto.set_rejected(true);
+  }
+
+  const resizable_array_p<Demerit_and_Reason> & demerits = demerit.demerits();
+  for (const Demerit_and_Reason* dar : demerits) {
+    MedchemRules::QueryMatch * q = proto.add_query_match();
+    q->set_name(dar->reason().AsString());
+    q->set_demerit(dar->demerit());
+  }
+
+  google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+  std::string as_string;
+  printer.PrintToString(proto, &as_string);
+  output.write(as_string.data(), as_string.size());
+  output << '\n';
+  output.write_if_buffer_holds_more_than(8192);
+  return 1;
+}
+
+static int
+iwdemerit(Molecule & m,
+          resizable_array_p<Substructure_Hit_Statistics> & q1,
+          resizable_array_p<Substructure_Hit_Statistics> & q2,
+          std::ofstream & output)
 {
   elements_to_remove.process(m);
+
+  IWString save_name;
+  if (proto_stream.active() && append_demerit_text_to_name) {
+    save_name = m.name();
+  }
 
   Demerit demerit;
 
@@ -380,6 +421,11 @@ iwdemerit (Molecule & m,
   }
 
 //cerr << m.name() << " rejected? " << demerit.rejected() << " stream is " << stream_for_non_rejected_molecules.active() << endl;
+
+  if (proto_stream.active()) {
+    WriteAsProto(m, save_name, demerit, proto_stream);
+    // Should we return now?
+  }
 
   if (demerit.rejected())
   {
@@ -410,7 +456,7 @@ iwdemerit (Molecule & m,
 }
 
 static void
-preprocess (Molecule & m)
+preprocess(Molecule & m)
 {
   m.remove_all(1);
 
@@ -421,15 +467,15 @@ preprocess (Molecule & m)
 }
 
 static int
-iwdemerit (data_source_and_type<Molecule> & input,
-           resizable_array_p<Substructure_Hit_Statistics> & q1,
-           resizable_array_p<Substructure_Hit_Statistics> & q2,
-           std::ofstream & output)
+iwdemerit(data_source_and_type<Molecule> & input,
+          resizable_array_p<Substructure_Hit_Statistics> & q1,
+          resizable_array_p<Substructure_Hit_Statistics> & q2,
+          std::ofstream & output)
 {
   assert (input.good());
 
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     if (verbose > 1)
       cerr << input.molecules_read() <<  " processing '" << m->name() << "'\n";
@@ -452,8 +498,6 @@ iwdemerit (data_source_and_type<Molecule> & input,
     cerr << molecules_rejected << " molecules were rejected\n";
 
     cerr << "Details on queries\n";
-    cerr << "atom_types_count = " << atom_types_count << endl;
-    cerr << "only C S X or H = " << csxh_count << endl;
 
     if (do_hard_coded_substructure_queries)
       substructure_demerits::hard_coded_queries_statistics(cerr);
@@ -469,14 +513,14 @@ iwdemerit (data_source_and_type<Molecule> & input,
 }
 
 static int
-iwdemerit (const char * fname, int input_type,
-           resizable_array_p<Substructure_Hit_Statistics> & q1,
-           resizable_array_p<Substructure_Hit_Statistics> & q2)
+iwdemerit(const char * fname, FileType input_type,
+          resizable_array_p<Substructure_Hit_Statistics> & q1,
+          resizable_array_p<Substructure_Hit_Statistics> & q2)
 {
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -506,16 +550,22 @@ iwdemerit (const char * fname, int input_type,
 }
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " <<__TIME__ << endl;
-
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Usage : " << prog_name << " options file1 file2 file3 ....\n";
   cerr << "  -q <file>      specify substructure query file\n";
   cerr << "  -R <stem>      write rejected structures to 'stem.otype'\n";
   cerr << "  -G <stem>      write non rejected (good) structures to 'stem.otype'\n";
   cerr << "  -S <stem>      specify stem for .demerit file\n";
   cerr << "  -M <stem>      write molecules rejected by cumulative demerits to <stem>\n";
+  cerr << "  -P <fname>     write results in proto form to <fname>\n";
   cerr << "  -k             check all criteria even if a molecule is already rejected\n";
   cerr << "  -c <number>    atom count cutoffs - enter -c help for info\n";
   cerr << "  -O hard        skip all the hard coded substructure queries\n";
@@ -523,7 +573,7 @@ usage (int rc)
   cerr << "  -t             append demerit text to molecule names\n";
   cerr << "  -f <n>         molecules are rejected when they have <n> demerits\n";
   cerr << "  -x             atom count demerits remain scaled to 100\n";
-  cerr << "  -I <nrings>    set threshold for too many rings rejection\n";
+//cerr << "  -I <nrings>    set threshold for too many rings rejection\n";  deprecated
   cerr << "  -Z <rsize>     set threshold for C7 ring size (default 7)\n";
   cerr << "  -z <length>    set threshold for long carbon chain (default 7)\n";
   cerr << "  -C <file>      control file for what demerits to apply\n";
@@ -538,18 +588,15 @@ usage (int rc)
   cerr << "  -o <type>      file type for structures written\n";
   cerr << "  -i <type>      specify input file type\n";
   display_standard_aromaticity_options(cerr);
-#ifdef USE_IWMALLOC
-  cerr << "  -d <block>     die when block <block> is allocated\n";
-#endif
   cerr << "  -v             verbose output\n";
 
   exit(rc);
 }
 
 static void
-separate_depending_on_fragment_match (resizable_array_p<Substructure_Hit_Statistics> & queries,
-                                      resizable_array_p<Substructure_Hit_Statistics> & q1,
-                                      resizable_array_p<Substructure_Hit_Statistics> & q2)
+separate_depending_on_fragment_match(resizable_array_p<Substructure_Hit_Statistics> & queries,
+                                     resizable_array_p<Substructure_Hit_Statistics> & q1,
+                                     resizable_array_p<Substructure_Hit_Statistics> & q2)
 {
   int n = queries.number_elements();
 
@@ -591,9 +638,44 @@ display_atom_cutoff_options(std::ostream & output)
 }
 
 int
-iwdemerit (int argc, char ** argv)
+SetupProtoStream(IWString& fname,
+                IWString_and_File_Descriptor& output)  {
+  if (! output.open(fname.null_terminated_chars())) {
+    cerr << "SetupProtoStream:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+SetupOutputFile(Command_Line& cl,
+                const char flag,
+                Molecule_Output_Object& output ) {
+  if (! cl.option_present('o')) {
+    output.add_output_type(FILE_TYPE_SMI);
+  } else if (! output.determine_output_types(cl)) {
+    cerr << "Cannot discern file types for -R output\n";
+    return 0;
+  }
+
+  IWString fname = cl.string_value(flag);
+  if (! output.new_stem(fname)) {
+    cerr << "Cannot set -R output name to '" << fname << "'\n";
+    return 0;
+  }
+
+  if (verbose) {
+    cerr << "Rejected structures written to '" << fname << "'\n";
+  }
+
+  return 1;
+}
+
+int
+iwdemerit(int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "M:VX:tA:S:R:G:O:kd:Dq:E:vi:o:c:C:N:uyf:xrlI:Z:z:W:");
+  Command_Line cl(argc, argv, "M:VX:tA:S:R:G:O:kd:Dq:E:vi:o:c:C:N:uyf:xrlI:Z:z:W:P:");
 
   if (cl.unrecognised_options_encountered())
     usage(1);
@@ -683,7 +765,7 @@ iwdemerit (int argc, char ** argv)
       cerr << "Will reject molecules having a mostly saturated Carbon ring containing " << r << " or more atoms\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
   if (! cl.option_present('i'))
   {
     if (! all_files_recognised_by_suffix(cl))
@@ -700,50 +782,29 @@ iwdemerit (int argc, char ** argv)
   
   if (cl.option_present('R'))
   {
-    const_IWSubstring fname;
-    cl.value('R', fname);
-
-    if (! cl.option_present('o'))
-      stream_for_rejected_molecules.add_output_type(SMI);
-    else if (! stream_for_rejected_molecules.determine_output_types(cl))
-    {
-      cerr << "Cannot discern file types for -R output\n";
-      return 4;
+    if (! SetupOutputFile(cl, 'R', stream_for_rejected_molecules)) {
+      cerr << "Cannot setup file for rejected molecules (-R)\n";
+      return 1;
     }
-
-    if (! stream_for_rejected_molecules.new_stem(fname))
-    {
-      cerr << "Cannot set -R output name to '" << fname << "'\n";
-      return 8;
-    }
-
-    if (verbose)
-      cerr << "Rejected structures written to '" << fname << "'\n";
   }
 
   if (cl.option_present('G'))
   {
-    const_IWSubstring fname;
-    cl.value('G', fname);
-
-    if (! cl.option_present('o'))
-      stream_for_non_rejected_molecules.add_output_type(SMI);
-    else if (! stream_for_non_rejected_molecules.determine_output_types(cl))
-    {
-      cerr << "Cannot discern file types for -G output\n";
-      return 5;
+    if (! SetupOutputFile(cl, 'G', stream_for_non_rejected_molecules)) {
+      cerr << "Cannot setup file for ok molecules (-G)\n";
+      return 1;
     }
+  }
 
-    if (! stream_for_non_rejected_molecules.new_stem(fname))
-    {
-      cerr << "Cannot set -G output name to '" << fname << "'\n";
-      return 8;
+  if (cl.option_present('P')) {
+    IWString fname = cl.option_value('P');
+    if (! SetupProtoStream(fname, proto_stream)) {
+      cerr << "Cannot initialise proto output '" << fname << "\n";
+      return 1;
     }
-
-    if (verbose)
-      cerr << "Non rejected structures written to '" << fname << "'\n";
-
-//  cerr << "stream_for_non_rejected_molecules number types " << file_for_non_rejected_molecules.number_elements() << endl;
+    if (verbose) {
+      cerr << "Output written in proto form to '" << fname << "'\n";
+    }
   }
 
   if (cl.option_present('S'))
@@ -1182,7 +1243,7 @@ iwdemerit (int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
   prog_name = argv[0];
 

@@ -137,9 +137,9 @@ bits_in_common (const unsigned int * b1, const unsigned int * b2,
 
 #elif defined (BIC_METHOD1L)
 
-static int
-bits_in_common_32bit (const unsigned int * b1, const unsigned int * b2,
-                      const int nwords)
+int
+bits_in_common_32bit(const unsigned int * b1, const unsigned int * b2,
+                     const int nwords)
 {
   int i;
   int rc = 0;
@@ -531,14 +531,14 @@ int
 bits_in_commonq (const unsigned int * b1, const unsigned int * b2,
                 const int nwords)
 {
-  static unsigned int * tmp = NULL;
+  static unsigned int * tmp = nullptr;
   static int ntmp = 0;
 
   int i;
 
   if (ntmp >= nwords)
     ;
-  else if (NULL == tmp)
+  else if (nullptr == tmp)
   {
     tmp = (unsigned int *) malloc(nwords * 4);
     ntmp = nwords;
@@ -570,9 +570,9 @@ bits_in_common (const unsigned int * b1, const unsigned int * b2,
     return -1;
   }
 
-  static unsigned int * tmp = NULL;
+  static unsigned int * tmp = nullptr;
 
-  if (NULL == tmp)
+  if (nullptr == tmp)
     tmp = (unsigned int *) malloc(64);
 
 #ifdef DEBUG_BIC7

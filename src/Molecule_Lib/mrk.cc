@@ -11,7 +11,7 @@ using std::endl;
 #endif
 #include <time.h>
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include "molecule.h"
 #include "rwmolecule.h"
@@ -28,9 +28,9 @@ MOL eb90162  O  E =      92.7560   G =  3.39E-01  MMFF94
 */
 
 int
-Molecule::read_molecule_mrk_ds (iwstring_data_source & input)
+Molecule::read_molecule_mrk_ds(iwstring_data_source & input)
 {
-  if (! input.next_record (_molecule_name))
+  if (! input.next_record(_molecule_name))
   {
     cerr << "read mol eof mrk\n";
     return 0;
@@ -41,36 +41,36 @@ Molecule::read_molecule_mrk_ds (iwstring_data_source & input)
     cerr << "Molecule::read_molecule_mrk_ds: column 80 not '1', proceeding...\n";
   }
 
-  if (_molecule_name.length () > 70)
+  if (_molecule_name.length() > 70)
   {
-    _molecule_name.iwtruncate (70);
-    _molecule_name.strip_trailing_blanks ();
+    _molecule_name.iwtruncate(70);
+    _molecule_name.strip_trailing_blanks();
   }
 
   const_IWSubstring buffer;
 
-  if (! input.next_record (buffer))
+  if (! input.next_record(buffer))
   {
     cerr << "Molecule::read_molecule_mrk_ds: cannot read second record\n";
     return 0;
   }
 
-  if (! buffer.starts_with ("MOL "))
+  if (! buffer.starts_with("MOL "))
   {
-    cerr << "molecule::read_molecule_mrk_ds: second record does not start with 'MOL ', line " << input.lines_read () << endl;
+    cerr << "molecule::read_molecule_mrk_ds: second record does not start with 'MOL ', line " << input.lines_read() << endl;
     cerr << buffer << endl;
     return 0;
   }
 
-  if (! input.next_record (buffer))
+  if (! input.next_record(buffer))
   {
     cerr << "Molecule::read_molecule_mrk_ds: cannot read third record\n";
     return 0;
   }
 
-  if (buffer.nwords () < 2)
+  if (buffer.nwords() < 2)
   {
-    cerr << "Molecule::read_molecule_mrk_ds: invalid atoms and bonds record, line " << input.lines_read () << endl;
+    cerr << "Molecule::read_molecule_mrk_ds: invalid atoms and bonds record, line " << input.lines_read() << endl;
     cerr << buffer << endl;
     return 0;
   }
@@ -80,56 +80,56 @@ Molecule::read_molecule_mrk_ds (iwstring_data_source & input)
   const_IWSubstring token;
   int i = 0;
 
-  (void) buffer.nextword (token, i);
+  (void) buffer.nextword(token, i);
 
   int na;
 
-  if (! token.numeric_value (na) || na < 0)
+  if (! token.numeric_value(na) || na < 0)
   {
-    cerr << "Molecule::read_molecule_mrk_ds: invalid number of atoms, line " << input.lines_read () << endl;
+    cerr << "Molecule::read_molecule_mrk_ds: invalid number of atoms, line " << input.lines_read() << endl;
     cerr << buffer << endl;
     return 0;
   }
 
-  (void) buffer.nextword (token, i);
+  (void) buffer.nextword(token, i);
 
   int nb;
-  if (! token.numeric_value (nb) || nb < 0)
+  if (! token.numeric_value(nb) || nb < 0)
   {
-    cerr << "Molecule::read_molecule_mrk_ds: invalid number of bonds, line " << input.lines_read () << endl;
+    cerr << "Molecule::read_molecule_mrk_ds: invalid number of bonds, line " << input.lines_read() << endl;
     cerr << buffer << endl;
     return 0;
   }
 
-  resize (na);
+  resize(na);
 
   for (int i = 0; i < na; i++)
   {
-    if (! input.next_record (buffer))
+    if (! input.next_record(buffer))
     {
       cerr << "Molecule::read_molecule_mrk_ds: premature eof\n";
       return 0;
     }
 
-    if (! _read_mrk_atom_record (buffer))
+    if (! _read_mrk_atom_record(buffer))
     {
-      cerr << "Molecule::read_molecule_mrk_ds: invalid record, line " << input.lines_read () << endl;
+      cerr << "Molecule::read_molecule_mrk_ds: invalid record, line " << input.lines_read() << endl;
       cerr << buffer << endl;
       return 0;
     }
   }
 
-  while (_bond_list.number_elements () < nb)
+  while (_bond_list.number_elements() < nb)
   {
-    if (! input.next_record (buffer))
+    if (! input.next_record(buffer))
     {
       cerr << "Molecule::read_molecule_mrk_ds: premature eof reading bond records\n";
       return 0;
     }
 
-    if (! _read_mrk_bond_record (buffer, na))
+    if (! _read_mrk_bond_record(buffer, na))
     {
-      cerr << "Molecule::read_molecule_mrk_ds: invalid bond record, line " << input.lines_read () << endl;
+      cerr << "Molecule::read_molecule_mrk_ds: invalid bond record, line " << input.lines_read() << endl;
       cerr << buffer << endl;
       return 0;
     }
@@ -139,28 +139,28 @@ Molecule::read_molecule_mrk_ds (iwstring_data_source & input)
 }
 
 int
-Molecule::_read_mrk_bond_record (const const_IWSubstring & buffer, int na)
+Molecule::_read_mrk_bond_record(const const_IWSubstring & buffer, int na)
 {
   const_IWSubstring token;
   int i = 0;
 
-  while (buffer.nextword (token, i))
+  while (buffer.nextword(token, i))
   {
     atom_number_t a1, a2;
-    if (! token.numeric_value (a1) || a1 < 1 || a1 > na)
+    if (! token.numeric_value(a1) || a1 < 1 || a1 > na)
     {
       cerr << "Molecule::_read_mrk_bond_record: invalid a1 specification, " << na << " atoms in molecule\n";
       cerr << buffer << endl;
       return 0;
     }
-    if (! buffer.nextword (token, i) || ! token.numeric_value (a2) || a2 < 1 || a2 > na || a2 == a1)
+    if (! buffer.nextword(token, i) || ! token.numeric_value(a2) || a2 < 1 || a2 > na || a2 == a1)
     {
       cerr << "Molecule::_read_mrk_bond_record: invalid a2 specification, " << na << " atoms in molecule\n";
       cerr << buffer << endl;
       return 0;
     }
 
-    if (! buffer.nextword (token, i))
+    if (! buffer.nextword(token, i))
     {
       cerr << "Molecule::_read_mrk_bond_record: invalid bond specification\n";
       cerr << buffer << endl;
@@ -183,7 +183,7 @@ Molecule::_read_mrk_bond_record (const const_IWSubstring & buffer, int na)
     a1--;
     a2--;
 
-    add_bond (a1, a2, bt, 1);     // 1 means partially built molecule
+    add_bond(a1, a2, bt, 1);     // 1 means partially built molecule
   }
 
   return 1;
@@ -192,9 +192,9 @@ Molecule::_read_mrk_bond_record (const const_IWSubstring & buffer, int na)
 static const formal_charge_t charge_code_to_formal_charge [] = {0, 1, -1, 0, 2, -2, 3, -3, 4, -4};
 
 int
-Molecule::_read_mrk_atom_record (const const_IWSubstring & buffer)
+Molecule::_read_mrk_atom_record(const const_IWSubstring & buffer)
 {
-  if (buffer.nwords () < 6)
+  if (buffer.nwords() < 6)
   {
     cerr << "Molecule::_read_mrk_atom_record: invalid atom record\n";
     return 0;
@@ -206,32 +206,32 @@ Molecule::_read_mrk_atom_record (const const_IWSubstring & buffer)
   coord_t c[3];
   for (int j = 0; j < 3; j++)
   {
-    (void) buffer.nextword (token, i);
-    if (! token.numeric_value (c[j]))
+    (void) buffer.nextword(token, i);
+    if (! token.numeric_value(c[j]))
     {
       cerr << "Molecule::_read_mrk_atom_record: invalid coordinate '" << token << "'\n";
       return 0;
     }
   }
 
-  (void) buffer.nextword (token, i);
+  (void) buffer.nextword(token, i);
 
   atomic_number_t z;
-  if (! token.numeric_value (z) || z < 0 || z > HIGHEST_ATOMIC_NUMBER)
+  if (! token.numeric_value(z) || z < 0 || z > HIGHEST_ATOMIC_NUMBER)
   {
     cerr << "Molecule::_read_mrk_atom_record: invalid atomic number '" << token << "'\n";
     return 0;
   }
   
-  Atom * a = new Atom (z);
-  a->setxyz (c[0], c[1], c[2]);
+  Atom * a = new Atom(z);
+  a->setxyz(c[0], c[1], c[2]);
 
 // We have cases where the atom type column may be absent, so we need to work with strict column numbers
 
-  buffer.from_to (42, 42, token);    // charge code
+  buffer.from_to(42, 42, token);    // charge code
 
   int charge_code;
-  if (! token.numeric_value (charge_code) || charge_code < 0 || charge_code > 9)
+  if (! token.numeric_value(charge_code) || charge_code < 0 || charge_code > 9)
   {
     cerr << "Molecule::_read_mrk_atom_record: invalid charge code '" << token << "'\n";
     return 0;
@@ -239,24 +239,24 @@ Molecule::_read_mrk_atom_record (const const_IWSubstring & buffer)
 
   if (3 == charge_code)    // radical
   {
-    a->set_implicit_hydrogens (0, 1);
-    a->set_implicit_hydrogens_known (1);
+    a->set_implicit_hydrogens(0, 1);
+    a->set_implicit_hydrogens_known(1);
   }
   else if (0 == charge_code)
     ;
   else
   {
     formal_charge_t fc = charge_code_to_formal_charge[charge_code];
-    a->set_formal_charge (fc);
+    a->set_formal_charge(fc);
   }
 
-  add (a);
+  add(a);
 
 // The partial charge is in columns 63-70
   
-  if (buffer.length () < 70)
+  if (buffer.length() < 70)
   {
-    if (NULL != _charges)    // yipes, charges present but nothing for this record
+    if (nullptr != _charges)    // yipes, charges present but nothing for this record
     {
       cerr << "Molecule::_read_mrk_atom_record: missing partial charge\n";
       return 0;
@@ -265,40 +265,40 @@ Molecule::_read_mrk_atom_record (const const_IWSubstring & buffer)
     return 1;    // ok, charges not present
   }
 
-  buffer.from_to (62, 69, token);
-  token.strip_leading_blanks ();
+  buffer.from_to(62, 69, token);
+  token.strip_leading_blanks();
 
   charge_t q;
-  if (! token.numeric_value (q) || ! reasonable_atomic_partial_charge_value(q))
+  if (! token.numeric_value(q) || ! reasonable_atomic_partial_charge_value(q))
   {
     cerr << "Molecule::_read_mrk_atom_record: invalid or unreasonable charge value '" << token << "'\n";
     return 0;
   }
 
-  if (static_cast<charge_t> (0.0) == q && NULL == _charges)    // no non-zero charges encountered yet
+  if (static_cast<charge_t>(0.0) == q && nullptr == _charges)    // no non-zero charges encountered yet
     return 1;
 
-  if (NULL == _charges)
-    allocate_charges ();
+  if (nullptr == _charges)
+    allocate_charges();
 
-  _charges->seti (_number_elements - 1, q);
+  _charges->seti(_number_elements - 1, q);
 
   return 1;
 }
 
-static IWString * digit5 = NULL;
+static IWString * digit5 = nullptr;
 static int max_digit5 = 0;
 
 static IWString digit1[4];
 
 static void
-initialise_digit5 (int m)
+initialise_digit5(int m)
 {
-  assert (m > 0);
+  assert(m > 0);
 
   max_digit5 = m;
 
-  if (NULL != digit5)
+  if (nullptr != digit5)
     delete [] digit5;
 
   digit5 = new IWString[max_digit5];
@@ -307,7 +307,7 @@ initialise_digit5 (int m)
   {
     digit5[i] << i;
 
-    digit5[i].shift (5 - digit5[i].length (), ' ');
+    digit5[i].shift(5 - digit5[i].length(), ' ');
   }
 
   digit1[0] = "0";
@@ -319,9 +319,9 @@ initialise_digit5 (int m)
 }
 
 static void
-append_with_leading_zero (IWString & buffer, 
-                          int i,
-                          int nspaces)
+append_with_leading_zero(IWString & buffer, 
+                         int i,
+                         int nspaces)
 {
   if (i < 10)
     buffer << '0';
@@ -333,8 +333,8 @@ append_with_leading_zero (IWString & buffer,
 }
 
 static void
-write_partial_charge (std::ostream & os,
-                      charge_t q)
+write_partial_charge(std::ostream & os,
+                     charge_t q)
 {
 #if defined(__GNUG__) || defined (IW_INTEL_COMPILER)
   const std::ios::fmtflags old_flags = os.flags(std::ios::fixed);
@@ -353,9 +353,9 @@ write_partial_charge (std::ostream & os,
 }
 
 int
-Molecule::write_molecule_mrk (std::ostream & output)
+Molecule::write_molecule_mrk(std::ostream & output)
 {
-  if (NULL == digit5)
+  if (nullptr == digit5)
     initialise_digit5(200);
   else if (_number_elements >= max_digit5)
     initialise_digit5(_number_elements + 20);
@@ -392,7 +392,7 @@ Molecule::write_molecule_mrk (std::ostream & output)
   if (usr.length() > 8)
     usr.iwtruncate(8);
   else if (usr.length() < 8)
-    usr.extend (8 - usr.length(), ' ');
+    usr.extend(8 - usr.length(), ' ');
 
   output << usr;
 #endif
@@ -410,7 +410,7 @@ Molecule::write_molecule_mrk (std::ostream & output)
 
     a->write_coordinates(output, 1);     // last arg 1 means include space between 10 column groups
 
-    if (INVALID_ATOMIC_NUMBER == a->atomic_number())
+    if (kInvalidAtomicNumber == a->atomic_number())
       buffer << digit5[0];
     else
       buffer << digit5[a->atomic_number()];
@@ -460,7 +460,7 @@ Molecule::write_molecule_mrk (std::ostream & output)
 
 //  Write the buffer if we will use the C++ library for writing charges
 
-    if (NULL != _charges)
+    if (nullptr != _charges)
     {
       output << buffer;
       write_partial_charge(output, _charges->item(i));

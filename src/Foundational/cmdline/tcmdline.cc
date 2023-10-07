@@ -13,7 +13,7 @@ tcmdline (int argc, char ** argv)
   if (cl.option_present ('a'))
   {
     cerr << "Option a present\n";
-    if (NULL == cl.option_value ('a'))
+    if (nullptr == cl.option_value ('a'))
       cerr << "value is correct\n";
     else
       cerr << "OOps, option value a is not null!\n";
@@ -29,7 +29,7 @@ tcmdline (int argc, char ** argv)
     cerr << "OOPS, option b not present\n";
   else
   {
-    if (NULL != cl.option_value ('b'))
+    if (nullptr != cl.option_value ('b'))
       cerr << "Option 'b' value is '" << cl.option_value ('b') << "'\n";
     else
       cerr << "Option 'b' is null\n";

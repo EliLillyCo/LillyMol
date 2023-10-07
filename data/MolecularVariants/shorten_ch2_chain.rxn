@@ -1,0 +1,11 @@
+name: "shorten_ch2_chain"
+scaffold {
+  id: 0
+  smarts: "[CX4x0]-[CD2x0]-[CX4x0]"
+  remove_atom: 1
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

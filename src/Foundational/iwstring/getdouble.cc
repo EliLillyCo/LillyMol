@@ -2,13 +2,13 @@
 #include <assert.h>
 
 int
-getdouble (const char * string, double * value)
+getdouble(const char * string, double * value)
 {
-  assert (NULL != string);
-  assert (NULL != value);
+  assert (nullptr != string);
+  assert (nullptr != value);
 
   char *c;
-  double tmp = strtod (string, &c);
+  double tmp = strtod(string, &c);
 
 // If c is anything but '\0', then we have a problem.
 

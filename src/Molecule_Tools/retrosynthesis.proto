@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package retros;
+
+message Result {
+  // The radius at which this result was generated.
+  uint32 radius = 1;
+
+  // The smiles of the result.
+  // It is repeated when they have requested that products be split
+  // into separate molecules.  To make things easy, if there is a
+  // multi fragment product, it will be written first, and followed
+  // by the individual fragments.
+  repeated string smiles = 2;
+
+  // If retrosynthesis is removing small fragments.
+  string small_fragments_removed = 3;
+
+  // the name of the reaction that generated this result.
+  string reaction = 4;
+
+  // The reaction family
+  string reaction_family = 5;
+}
+
+message Output {
+  // The starting molecule - was deconstructed.
+  string smiles = 1;
+
+  // Name of parent.
+  string name = 2;
+
+  // One or more decompositions.
+  repeated Result result = 3;
+}

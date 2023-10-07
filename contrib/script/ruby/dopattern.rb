@@ -4,7 +4,7 @@
 #tool_home = ENV['C3TK_BIN']
 tool_home = ".."
 
-require "#{tool_home}/ruby/lib/iwcmdline"
+require_relative "#{tool_home}/ruby/lib/iwcmdline"
 
 #GH Original
 #~ cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-parallel=ipos-l=s-V-j-q-submit=xfile-noeval")

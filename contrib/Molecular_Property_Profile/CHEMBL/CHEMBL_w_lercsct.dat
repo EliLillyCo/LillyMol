@@ -1,0 +1,241 @@
+description {
+  feature_name: "w_lercsct"
+  description: "Largest conjugated section"
+  plot_title: "Largest conjugated section"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 50.0
+mean: 14.130846
+median: 13.0
+quantile {
+  quantile: 0.01
+  value: 3.0
+}
+quantile {
+  quantile: 0.05
+  value: 5.0
+}
+quantile {
+  quantile: 0.1
+  value: 7.0
+}
+quantile {
+  quantile: 0.5
+  value: 13.0
+}
+quantile {
+  quantile: 0.9
+  value: 23.0
+}
+quantile {
+  quantile: 0.95
+  value: 26.0
+}
+quantile {
+  quantile: 0.99
+  value: 32.0
+}
+int_values {
+  count: 528
+}
+int_values {
+  value: 1
+  count: 8556
+}
+int_values {
+  value: 2
+  count: 9099
+}
+int_values {
+  value: 3
+  count: 37831
+}
+int_values {
+  value: 4
+  count: 22487
+}
+int_values {
+  value: 5
+  count: 42240
+}
+int_values {
+  value: 6
+  count: 87973
+}
+int_values {
+  value: 7
+  count: 106386
+}
+int_values {
+  value: 8
+  count: 130660
+}
+int_values {
+  value: 9
+  count: 144480
+}
+int_values {
+  value: 10
+  count: 173183
+}
+int_values {
+  value: 11
+  count: 162661
+}
+int_values {
+  value: 12
+  count: 155339
+}
+int_values {
+  value: 13
+  count: 124419
+}
+int_values {
+  value: 14
+  count: 111855
+}
+int_values {
+  value: 15
+  count: 100317
+}
+int_values {
+  value: 16
+  count: 94862
+}
+int_values {
+  value: 17
+  count: 93480
+}
+int_values {
+  value: 18
+  count: 92771
+}
+int_values {
+  value: 19
+  count: 84592
+}
+int_values {
+  value: 20
+  count: 78386
+}
+int_values {
+  value: 21
+  count: 69077
+}
+int_values {
+  value: 22
+  count: 59427
+}
+int_values {
+  value: 23
+  count: 49982
+}
+int_values {
+  value: 24
+  count: 42739
+}
+int_values {
+  value: 25
+  count: 35202
+}
+int_values {
+  value: 26
+  count: 28588
+}
+int_values {
+  value: 27
+  count: 23440
+}
+int_values {
+  value: 28
+  count: 19517
+}
+int_values {
+  value: 29
+  count: 15307
+}
+int_values {
+  value: 30
+  count: 12193
+}
+int_values {
+  value: 31
+  count: 9177
+}
+int_values {
+  value: 32
+  count: 7248
+}
+int_values {
+  value: 33
+  count: 4749
+}
+int_values {
+  value: 34
+  count: 4078
+}
+int_values {
+  value: 35
+  count: 2706
+}
+int_values {
+  value: 36
+  count: 2266
+}
+int_values {
+  value: 37
+  count: 1582
+}
+int_values {
+  value: 38
+  count: 1120
+}
+int_values {
+  value: 39
+  count: 780
+}
+int_values {
+  value: 40
+  count: 752
+}
+int_values {
+  value: 41
+  count: 411
+}
+int_values {
+  value: 42
+  count: 368
+}
+int_values {
+  value: 43
+  count: 172
+}
+int_values {
+  value: 44
+  count: 150
+}
+int_values {
+  value: 45
+  count: 61
+}
+int_values {
+  value: 46
+  count: 100
+}
+int_values {
+  value: 47
+  count: 54
+}
+int_values {
+  value: 48
+  count: 89
+}
+int_values {
+  value: 49
+  count: 22
+}
+int_values {
+  value: 50
+  count: 48
+}

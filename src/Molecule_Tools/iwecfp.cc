@@ -2,29 +2,28 @@
  Implementation of extended connectivity
 */
 
+#include <iostream>
 #include <limits>
-
-#include <assert.h>
 #include <memory>
 #include <unordered_map>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
+#include "Foundational/iwaray/iwaray.h"
 
-#include "iwaray.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
-#include "cmdline.h"
-#include "sparse_fp_creator.h"
-#include "accumulator.h"
-#include "misc.h"
-#include "iw_auto_array.h"
-#include "iwdigits.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/standardise.h"
 
-#include "molecule.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "istream_and_type.h"
-#include "atom_typing.h"
+using std::cerr;
 
 static Chemical_Standardisation chemical_standardisation;
 
@@ -55,7 +54,7 @@ static Accumulator_Int<int> nbits_acc;
 
 static int each_shell_gets_own_fingerprint = 0;
 
-static Sparse_Fingerprint_Creator * global_sparse_fingerprint = NULL;
+static Sparse_Fingerprint_Creator * global_sparse_fingerprint = nullptr;
 
 static int all_bonds_same_type = 0;
 
@@ -77,6 +76,7 @@ static int update_global_fingerprint_presence_only = 0;
 
 static std::unordered_map<unsigned int, unsigned int> bits_to_investigate;
 static int looking_for_bit_meanings = 0;
+static int write_smiles_with_bit_meanings = 0;
 static int bits_found = 0;
 
 static IWString_and_File_Descriptor stream_for_bit_meanings;
@@ -91,36 +91,43 @@ static int equalise_atom_coverage = 0;
 
 static int label_by_visited = 0;
 
+static int flush_after_each_molecule = 0;
+
 typedef unsigned int atype_t;
 
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Compute the Extended Connectivity fingerprints for molecules\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -r <len>       min shell width for writing a fingerprint\n";
   cerr << "  -R <length>    set the maximum step for the connected shell\n";
   cerr << "  -m             multiplicative formation of bits\n";
   cerr << "  -s             each radius gets its own fingerprint\n";
-  cerr << "  -i <type>      input type\n";
   cerr << "  -J <tag>       set the tag for the name tag of the fingerprints\n";
-  cerr << "  -P z           atom types are atomic numbers (default)\n";
-  cerr << "  -P complex     atom types are a convolution of type and environment\n";
-  cerr << "  -P tt          atom types are topological torsion types\n";
-  cerr << "  -P bs          atom types are basic types\n";
+  cerr << "  -P ...         atom typing specification, enter '-P help' for info\n";
   cerr << "  -f             filter existing TDT/fingerprint file\n";
   cerr << "  -G <fname>     write the global fingerprint\n";
   cerr << "  -M READ=<fname>  identify structural features making bits in <fname>\n";
   cerr << "  -M WRITE=<fname> write identified features to <fname>\n";
   cerr << "  -B <fname>     write info on all bits produced to <fname> (large!)\n";
-  cerr << "  -l             reduce to largest fragment\n";
+  cerr << "  -B smiles      include isotopically labelled smiles in the -B file\n";
+  cerr << "  -B smilesm     include atom map number labelled smiles in the -B file\n";
   cerr << "  -x             only set bits for max radius shell\n";
   cerr << "  -b             all bond type info lost\n";
   cerr << "  -Q ...         options controlling equalisation of times atoms are fingerprinted\n";
+  cerr << "  -Y ...         obscure options, enter '-Y help' for info\n";
+  cerr << "  -i <type>      input type\n";
+  cerr << "  -l             reduce to largest fragment\n";
   //  (void) display_standard_aromaticity_options (cerr);
   //  (void) display_standard_chemical_standardisation_options (cerr, 'g');
   //  (void) display_standard_sparse_fingerprint_options (cerr, 'F');
-  cerr << "  -E ...         standard element options\n";
+  //cerr << "  -E ...         standard element options\n";
   cerr << "  -v             verbose output\n";
   
   exit(rc);
@@ -141,7 +148,7 @@ read_bits_to_investigate(iwstring_data_source & input,
     unsigned int b;
     if (! buffer.numeric_value(b))
     {
-      cerr << "Invalid bit number '" << buffer << "', line " << input.lines_read() << endl;
+      cerr << "Invalid bit number '" << buffer << "', line " << input.lines_read() << '\n';
       return 0;
     }
 
@@ -194,6 +201,32 @@ check_against_list(Molecule & m,
   return 1;
 }
 
+void
+WriteLabelledSmiles(const Molecule& m,
+                    int centre_of_shell,
+                    int radius,
+                    IWString_and_File_Descriptor& output)
+{
+  Molecule mcopy(m);
+  mcopy.recompute_distance_matrix();
+  const int matoms = mcopy.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (i == centre_of_shell) {
+      continue;
+    }
+    const int d = mcopy.bonds_between(centre_of_shell, i);
+    if (d > radius) {
+      continue;
+    }
+    if (write_smiles_with_bit_meanings == 1) {
+      mcopy.set_isotope(i, d);
+    } else {
+      mcopy.set_atom_map_number(i, d);
+    }
+  }
+  output << mcopy.smiles();
+}
+
 #define USE_IWDIGITS
 #ifdef USE_IWDIGITS
 static void
@@ -201,13 +234,21 @@ write_bit(const int centre_of_shell,
            const IWString & smarts_for_centre_of_shell,
            const int radius,
            unsigned int b, 
+           Molecule& m,
            IWString_and_File_Descriptor & output)
 {
   iwdigits_center.append_number(output, centre_of_shell);
   iwdigits.append_number(output, radius);
   iwdigits.append_number(output, b);    // caching will hardly ever be useful
 
-  output << ' ' << smarts_for_centre_of_shell << '\n';
+  constexpr char sep = ' ';
+
+  output << sep << smarts_for_centre_of_shell;
+  if (write_smiles_with_bit_meanings) {
+    output << sep;
+    WriteLabelledSmiles(m, centre_of_shell, radius, output);
+  }
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(32768);
 
@@ -219,6 +260,7 @@ write_bit(const int centre_of_shell,
            const IWString & smarts_for_centre_of_shell,
            const int radius,
            unsigned int b, 
+           Molecule& m,
            IWString_and_File_Descriptor & output)
 {
   char sep = ' ';
@@ -290,6 +332,8 @@ increment(unsigned int & sum_so_far,
           const int bc,
           const atype_t atom_constant)
 {
+  // cerr << "Before increment " << sum_so_far << " bc " << bc << " atom_constant " << atom_constant << '\n';
+
   if (additive)
     sum_so_far += bc * atom_constant;
   else
@@ -322,6 +366,7 @@ generate_shells(const int matoms,
                 const atype_t * atom_constant,
                 int * processing_status,
                 unsigned int sum_so_far,
+                Molecule& m,
                 Sparse_Fingerprint_Creator * sfc)
 {
   radius++;
@@ -331,7 +376,7 @@ generate_shells(const int matoms,
 
 //#define DEBUG_ECFP_BITS 1
 #ifdef DEBUG_ECFP_BITS
-  cerr << "On entry sum_so_far " << sum_so_far << " radius " << radius << endl;
+  cerr << "On entry sum_so_far " << sum_so_far << " radius " << radius << '\n';
 #endif
 
 // Check for tail addition outside the loop
@@ -362,9 +407,9 @@ generate_shells(const int matoms,
       if (PROCESSING_FINISHED == processing_status[k])   // we are extending the shell
       {
         int bc = bond_constant(b);
-//      cerr << "     BC " << bc << " atom " << i << " atype " << atom_constant[i] << " begin " << sum_so_far << " extra " << (bc * atom_constant[i]) << " expect " << (sum_so_far + bc*atom_constant[i]) << endl;
+//      cerr << "     BC " << bc << " atom " << i << " atype " << atom_constant[i] << " begin " << sum_so_far << " extra " << (bc * atom_constant[i]) << " expect " << (sum_so_far + bc*atom_constant[i]) << '\n';
         increment(sum_so_far, bc, atom_constant[i]);
-//      cerr << "at level " << radius << " added atom " << i << " atype " << atom_constant[i] << " BC " << bc << " sum " << sum_so_far << endl;
+//      cerr << "at level " << radius << " added atom " << i << " atype " << atom_constant[i] << " BC " << bc << " sum " << sum_so_far << '\n';
         if (add_tails_here)
           sfc->hit_bit(sum_so_far);
       }
@@ -378,7 +423,7 @@ generate_shells(const int matoms,
   if (radius > min_shell_radius)
   {
 #ifdef DEBUG_ECFP_BITS
-    cerr << "Hit bit " << sum_so_far << " at radius " << radius << endl;
+    cerr << "Hit bit " << sum_so_far << " at radius " << radius << '\n';
 #endif
     if (! only_set_bits_for_max_radius_shell || radius == max_radius)
       sfc->hit_bit(sum_so_far);
@@ -386,7 +431,7 @@ generate_shells(const int matoms,
     if (looking_for_bit_meanings)
       check_against_list(*current_molecule, smarts_for_centre_of_shell, centre_of_shell, sum_so_far, radius);   // horrible hack with file scope variable
     else if (stream_for_all_bits.is_open())
-      write_bit(centre_of_shell, smarts_for_centre_of_shell, radius, sum_so_far, stream_for_all_bits);
+      write_bit(centre_of_shell, smarts_for_centre_of_shell, radius, sum_so_far, m, stream_for_all_bits);
   }
 
   if (max_radius > 0 && radius >= max_radius)
@@ -409,9 +454,9 @@ generate_shells(const int matoms,
     return 1;
 
   if (each_shell_gets_own_fingerprint)
-    return generate_shells(matoms, radius, max_radius, a, atom_constant, processing_status, sum_so_far, sfc + 1);
+    return generate_shells(matoms, radius, max_radius, a, atom_constant, processing_status, sum_so_far, m, sfc + 1);
   else
-    return generate_shells(matoms, radius, max_radius, a, atom_constant, processing_status, sum_so_far, sfc);
+    return generate_shells(matoms, radius, max_radius, a, atom_constant, processing_status, sum_so_far, m, sfc);
 }
 
 static int
@@ -481,37 +526,57 @@ write_array_of_fingerprints(Sparse_Fingerprint_Creator * sfc,
   }
   else
   {
-    sfc[0].daylight_ascii_form_with_counts_encoded(tag, tmp);
-    output << tmp << '\n';
+    if (tag.starts_with("FP")) {
+      static constexpr int kNbits = 2048;
+      IW_Bits_Base bits(kNbits);
+      for (const auto& [bit, count] : sfc[0].bits_found()) {
+        bits.set_bit(bit % kNbits);
+      }
+      bits.daylight_ascii_representation_including_nset_info(tmp);
+      output << tag << tmp << ">\n";
+    } else {
+      sfc[0].daylight_ascii_form_with_counts_encoded(tag, tmp);
+      output << tmp << '\n';
+    }
   }
 
   return output.size();
 }
 
+static void
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_each_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(32768);
+  }
+}
+
 static int
-do_output (Molecule &m,
-           Sparse_Fingerprint_Creator * sfc, 
+do_output(Molecule &m,
+          Sparse_Fingerprint_Creator * sfc, 
            IWString_and_File_Descriptor & output)
 {
-  if (verbose)
+  if (verbose) {
     nbits_acc.extra(sfc[0].nbits());
+  }
 
-  if (function_as_filter)
+  if (function_as_filter) {
     write_array_of_fingerprints(sfc, output);
-  else
-  {
+  } else {
     output << smiles_tag << m.smiles() << ">\n";
     write_array_of_fingerprints(sfc, output);
     output << identifier_tag << m.name() << ">\n";
     output << "|\n";
   }
 
-  output.write_if_buffer_holds_more_than(32768);
+  MaybeFlush(output);
 
 //sfc->debug_print(cerr);
 
-  if (NULL != global_sparse_fingerprint)
+  if (nullptr != global_sparse_fingerprint) {
     update_global_sparse_fingerprint(sfc);
+  }
 
   return output.good();
 }
@@ -552,9 +617,9 @@ form_bit(Molecule & m,
   }
 
   if (each_shell_gets_own_fingerprint)
-    generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, sfc + 1);
+    generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, m, sfc + 1);
   else
-    generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, sfc);
+    generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, m, sfc);
 
   return;
 }
@@ -604,7 +669,7 @@ identify_atoms_within_range(Molecule & m,
   {
     for (int r = 0; r <= max_shell_radius; ++r)
     {
-      cerr << " atom " << i << " rad " << r << " atms " << atoms_within_range[i * (max_shell_radius+1)+r] << endl;
+      cerr << " atom " << i << " rad " << r << " atms " << atoms_within_range[i * (max_shell_radius+1)+r] << '\n';
     }
   }
 #endif
@@ -646,7 +711,7 @@ our_own_custom_variance(const int matoms,
   if (rc >= 0)
     return rc;
 
-  cerr << "Negative variance: matoms " << matoms << " sumv " << sumv << " sumv2 " << sumv2 << endl;
+  cerr << "Negative variance: matoms " << matoms << " sumv " << sumv << " sumv2 " << sumv2 << '\n';
 
   return std::numeric_limits<int>::max();
 }
@@ -755,7 +820,7 @@ do_equalise_atom_coverage(Molecule & m,
     {
       m.set_atom_map_number(i, visited[i]);
     }
-    cerr << m.smiles() << ' ' << m.name() << " before equalisation, var " << our_own_custom_variance(matoms, sumv, sumv2) << endl;
+    cerr << m.smiles() << ' ' << m.name() << " before equalisation, var " << our_own_custom_variance(matoms, sumv, sumv2) << '\n';
   }
 
   for (int i = 0; i < equalise_atom_coverage; ++i)
@@ -790,12 +855,12 @@ do_equalise_atom_coverage(Molecule & m,
         mins.add(j);
     }
 
-//  cerr << "Iteration " << i << " nmin " << mins.number_elements() << " var " << min_variance << endl;
+//  cerr << "Iteration " << i << " nmin " << mins.number_elements() << " var " << min_variance << '\n';
 
     for (int j = 0; j < mins.number_elements(); ++j)
     {
       const Set_of_Atoms & s = atoms_within_range[mins[j]];
-//    cerr << "    atoms " << s << endl;
+//    cerr << "    atoms " << s << '\n';
       s.increment_vector(visited, 1);
       form_bit(m, atom_constant, atoms, s[0], s.number_elements() - 1, processing_status, sfc);
     }
@@ -811,7 +876,7 @@ do_equalise_atom_coverage(Molecule & m,
     }
 
     if (verbose > 1)
-      cerr << m.smiles() << ' ' << m.name() << " after equalisation, var " << our_own_custom_variance(matoms, sumv, sumv2) << endl;
+      cerr << m.smiles() << ' ' << m.name() << " after equalisation, var " << our_own_custom_variance(matoms, sumv, sumv2) << '\n';
   }
 
   return 1;
@@ -821,8 +886,8 @@ do_equalise_atom_coverage(Molecule & m,
 */
 
 static int
-iwecfp (Molecule &m, 
-        IWString_and_File_Descriptor & output)
+iwecfp(Molecule &m, 
+       IWString_and_File_Descriptor & output)
 
 {
   m.compute_aromaticity_if_needed();
@@ -830,7 +895,7 @@ iwecfp (Molecule &m,
 //cerr << "Processing " << m.unique_smiles() << "'\n";
   int matoms = m.natoms();
 
-  Atom ** atoms = new Atom * [matoms]; iw_auto_array<Atom *> free_atoms(atoms);
+  Atom ** atoms = new Atom * [matoms]; std::unique_ptr<Atom *[]> free_atoms(atoms);
 
   m.atoms ((const Atom **) atoms);   // disregard of const OK
 
@@ -843,17 +908,23 @@ iwecfp (Molecule &m,
   a2.build("UST:z");
   a2.swap_atomic_number_atom_type_to_atomic_number_prime();
 
-  a1.assign_atom_types(m, atom_constant, NULL);
+  a1.assign_atom_types(m, atom_constant, nullptr);
   iw_write_array(atom_constant, matoms, "C", cerr);
-  a2.assign_atom_types(m, atom_constant, NULL);
+  a2.assign_atom_types(m, atom_constant, nullptr);
   iw_write_array(atom_constant, matoms, "HPAC", cerr);
 #endif
 
-  if (! atom_type.assign_atom_types(m, atom_constant, NULL))
+  if (! atom_type.assign_atom_types(m, atom_constant, nullptr))
   {
     cerr << "Cannot assign atom types '" << m.name() << "'\n";
     return 0;
   }
+
+#ifdef DEBUG_ATOM_TYPES
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << i << ' ' << m.smarts_equivalent_for_atom(i) << ' ' << atom_constant[i] << '\n';
+  }
+#endif
 
   int set_centre_atom_global_variable = 0;
   if (looking_for_bit_meanings || stream_for_all_bits.is_open())
@@ -864,7 +935,7 @@ iwecfp (Molecule &m,
       stream_for_all_bits << m.name() << '\n';
   }
 
-  int * processing_status = new int[matoms]; iw_auto_array<int> free_processing_status(processing_status);
+  int * processing_status = new int[matoms]; std::unique_ptr<int[]> free_processing_status(processing_status);
 
   Sparse_Fingerprint_Creator * sfc;
   if (each_shell_gets_own_fingerprint)
@@ -878,7 +949,7 @@ iwecfp (Molecule &m,
 
 #ifdef DEBUG_ECFP_BITS
     if (0 == min_shell_radius)
-      cerr << "Starting with atom " << i << " bit " << e << endl;
+      cerr << "Starting with atom " << i << " bit " << e << '\n';
 #endif
     if (set_centre_atom_global_variable)
     {
@@ -894,7 +965,7 @@ iwecfp (Molecule &m,
       if (looking_for_bit_meanings)
         check_against_list(m, smarts_for_centre_of_shell, i, e, 0);
       else if (stream_for_all_bits.is_open())
-        write_bit(i, smarts_for_centre_of_shell, 0, e, stream_for_all_bits);
+        write_bit(i, smarts_for_centre_of_shell, 0, e, m, stream_for_all_bits);
     }
 
     std::fill_n(processing_status, matoms, 0);
@@ -913,9 +984,9 @@ iwecfp (Molecule &m,
     }
 
     if (each_shell_gets_own_fingerprint)
-      generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, sfc + 1);
+      generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, m, sfc + 1);
     else
-      generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, sfc);
+      generate_shells(matoms, 0, max_shell_radius, atoms, atom_constant, processing_status, e, m, sfc);
   }
 
 #ifdef DEBUG_ECFP_BITS
@@ -943,7 +1014,7 @@ iwecfp(data_source_and_type<Molecule> & input,
        IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -1008,12 +1079,13 @@ iwecfp_filter(iwstring_data_source & input,
     if (! buffer.starts_with(smiles_tag))
       continue;
     
-    if (! iwecfp_filter(buffer, output))
-      {
-        cerr << "Fatal error on line " << input.lines_read() << endl;
-        cerr << buffer << endl;
-        return 0;
-      }
+    if (! iwecfp_filter(buffer, output)) {
+      cerr << "Fatal error on line " << input.lines_read() << '\n';
+      cerr << buffer << '\n';
+      return 0;
+    }
+
+    MaybeFlush(output);
   }
 
   return output.good();
@@ -1035,7 +1107,7 @@ iwecfp_filter(const char * fname,
 
 static int
 iwecfp(const char * fname,
-         int input_type,
+         FileType input_type,
          IWString_and_File_Descriptor & output)
 {
   if (function_as_filter)
@@ -1062,10 +1134,16 @@ display_dash_G_options(std::ostream & os)
   exit(0);
 }
 
+static void
+DisplayDashYOptions(std::ostream& output) {
+  output << " -Y flush     flush output after each molecule\n";
+  exit(0);
+}
+
 static int
 iwecfp(int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vE:A:g:J:i:fr:R:P:mt:lxsG:M:bB:Q:");
+  Command_Line cl(argc, argv, "vE:A:g:J:i:fr:R:P:mt:lxsG:M:bB:Q:Y:");
   
   if (cl.unrecognised_options_encountered())
   {
@@ -1107,7 +1185,7 @@ iwecfp(int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Max radius " << max_shell_radius << endl;
+      cerr << "Max radius " << max_shell_radius << '\n';
   }
 
   if (cl.option_present('t'))
@@ -1119,7 +1197,7 @@ iwecfp(int argc, char ** argv)
     }
 
     if (verbose)
-     cerr << "Will fingerprint tails out to radius " << add_tails << endl;
+     cerr << "Will fingerprint tails out to radius " << add_tails << '\n';
   }
 
   if (cl.option_present('s'))
@@ -1217,50 +1295,59 @@ iwecfp(int argc, char ** argv)
       cerr<< "Extended connectivity index written as non-colliding sparse fingerprints, tag '"<<tag <<"'\n";
   }
   
-  if (each_shell_gets_own_fingerprint)
+  if (each_shell_gets_own_fingerprint) {
     tag.chop();
+  }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
-  if (cl.option_present('f'))
-  {
+  if (cl.option_present('f')) {
     function_as_filter = 1;
-  }
-  else if (cl.option_present('i'))
-  {
-    if (! process_input_type(cl, input_type))
-      {
-        cerr << "Cannot determine input type\n";
-        usage(6);
-      }
-  }
-  else if (! all_files_recognised_by_suffix(cl))
-  {
+  } else if (cl.option_present('i')) {
+    if (! process_input_type(cl, input_type)) {
+      cerr << "Cannot determine input type\n";
+      usage(6);
+    }
+  } else if (! all_files_recognised_by_suffix(cl)) {
     cerr << "Cannot determine input type(s)\n";
     return 7;
   }
 
-  if (! process_standard_aromaticity_options(cl, verbose))
-  {
+  if (! process_standard_aromaticity_options(cl, verbose)) {
     cerr << "Cannot process aromaticity options (-A)\n";
     usage(5);
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions(cerr);
+      } else {
+        cerr << "Unrecongised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions(cerr);
+      }
+    }
   }
   
   set_global_aromaticity_type(Daylight);
   set_input_aromatic_structures(1);
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
   IWString_and_File_Descriptor stream_for_global_fingerprint;
 
-  if (cl.option_present('G'))
-  {
-    const char * fname = NULL;
-    const char * dbname = NULL;
+  if (cl.option_present('G')) {
+    const char * fname = nullptr;
+    const char * dbname = nullptr;
 
     int i = 0;
     IWString g;
@@ -1286,7 +1373,7 @@ iwecfp(int argc, char ** argv)
       }
     }
 
-    if (NULL == fname)
+    if (nullptr == fname)
     {
       cerr << "No output specified for -G\n";
       return 4;
@@ -1297,7 +1384,7 @@ iwecfp(int argc, char ** argv)
     else
       global_sparse_fingerprint = new Sparse_Fingerprint_Creator[1];
 
-    if (NULL != fname)
+    if (nullptr != fname)
     {
       if (! stream_for_global_fingerprint.open(fname))
       {
@@ -1308,7 +1395,7 @@ iwecfp(int argc, char ** argv)
       if (verbose)
         cerr << "Global fingerprint written to '" << fname << "'\n";
     }
-    else if (NULL != dbname)
+    else if (nullptr != dbname)
     {
     }
   }
@@ -1373,16 +1460,30 @@ iwecfp(int argc, char ** argv)
   
   if (cl.option_present('B'))
   {
-    const char * b = cl.option_value('B');
+    const_IWSubstring b;
+    IWString fname;
+    for (int i = 0; cl.value('B', b, i); ++i) {
+      if (b == "smiles") {
+        write_smiles_with_bit_meanings = 1;
+      } else if (b == "smilesm") {
+        write_smiles_with_bit_meanings = 2;
+      } else {
+        fname = b;
+      }
+    }
 
-    if (! stream_for_all_bits.open(b))
-    {
-      cerr << "Cannot open stream for all bits '" << b << "'\n";
+    if (fname.empty()) {
+      cerr << "No file for bit meanings (-B)\n";
+      return 1;
+    }
+
+    if (! stream_for_all_bits.open(fname)) {
+      cerr << "Cannot open stream for all bits '" << fname << "'\n";
       return 2;
     }
 
     if (verbose)
-      cerr << "Info on all bits written to '" << b << "'\n";
+      cerr << "Info on all bits written to '" << fname << "'\n";
 
     iwdigits_center.initialise(100);
 
@@ -1440,7 +1541,7 @@ iwecfp(int argc, char ** argv)
     }
   }
 
-  if (NULL != global_sparse_fingerprint)
+  if (nullptr != global_sparse_fingerprint)
   {
     int istop;
     if (each_shell_gets_own_fingerprint)

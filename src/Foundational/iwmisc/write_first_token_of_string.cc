@@ -1,22 +1,22 @@
-#include <stdlib.h>
+
+#include "Foundational/iwstring/iwstring.h"
 
 #include "misc.h"
-#include "iwstring.h"
 
 std::ostream &
-write_first_token_of_string (const IWString & zstring,
-                             std::ostream & os)
+write_first_token_of_string(const IWString & zstring,
+                            std::ostream & os)
 {
-  if (zstring.index (' ') < 0)
+  if (zstring.index(' ') < 0)
   {
     os << zstring;
     return os;
   }
 
-  const_IWSubstring tmp (zstring);
+  const_IWSubstring tmp(zstring);
 
-  tmp.strip_leading_blanks ();
-  tmp.truncate_at_first (' ');
+  tmp.strip_leading_blanks();
+  tmp.truncate_at_first(' ');
 
   os << tmp;
 

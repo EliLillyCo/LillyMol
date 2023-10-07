@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "aziridine")
+  (A I version 2)
+# (A C smarts "C1-N=N1")
+  (A C smarts "[Nr3]1=N-C1")
+)

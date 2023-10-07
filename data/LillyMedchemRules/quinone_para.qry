@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "quinone_para")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[O,N,S]=C1-[#6]=,:[#6]-C(=[O,N,S])-[#6]~[#6]1")
+)

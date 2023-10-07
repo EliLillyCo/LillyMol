@@ -1,7 +1,7 @@
-#ifndef BOND_LIST_H
-#define BOND_LIST_H
+#ifndef MOLECULE_LIB_BOND_LIST_H_
+#define MOLECULE_LIB_BOND_LIST_H_
 
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
 #include "bond.h"
 
@@ -69,6 +69,6 @@ class Bond_list : public resizable_array_p<Bond>
     int     new_atom_numbers (const int * xref);   // makeing a subset, adjust the bonds to reflect the new numbering
 };
 
-#define OK_BOND_LIST(b) ( NULL != (b) && b->ok () )
+#define OK_BOND_LIST(b) ( nullptr != (b) && b->ok () )
 
-#endif
+#endif  // MOLECULE_LIB_BOND_LIST_H_

@@ -1,0 +1,20 @@
+name: "carboxyllic acid to sulfonate"
+scaffold {
+  id: 0
+  smarts: "[OD1H]-[CD3T2](=O)-*...{<4;0[#16]}*"
+  break_bond {
+    a1: 1 
+    a2: 3
+  }
+  remove_fragment: 0
+}
+sidechain {
+  id: 1
+  reagent: "S(=O)(=O)O"
+  smarts: "S"
+  join {
+    a1: 3
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

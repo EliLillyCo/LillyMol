@@ -10,7 +10,7 @@
 
 #include "marvin.h"
 
-static const Marvin_Structure_Information * msi = NULL;
+static const Marvin_Structure_Information * msi = nullptr;
 
 void 
 set_marvin_structure_information_for_writing (const Marvin_Structure_Information * s)
@@ -134,7 +134,7 @@ Molecule::write_molecule_mrv (ostream & os)
 {
   os << "<MDocument";
 
-  if (NULL != msi)
+  if (nullptr != msi)
     msi->write_atom_and_bond_colours (os);
 
   os << ">\n";
@@ -143,7 +143,7 @@ Molecule::write_molecule_mrv (ostream & os)
 
   os << "</MDocument>\n";
 
-  msi = NULL;
+  msi = nullptr;
 
   return rc;
 }
@@ -210,7 +210,7 @@ Molecule::_write_atoms_mrv (ostream & os) const
     os << "\"\n";
   }
 
-  if (NULL == msi)   // no atom colours present
+  if (nullptr == msi)   // no atom colours present
     ;
   else if (msi->atom_colour_specifications_present())
   {
@@ -219,7 +219,7 @@ Molecule::_write_atoms_mrv (ostream & os) const
     {
       if (i > 0)
         os << ' ';
-      if (NULL == msi)
+      if (nullptr == msi)
         os << '0';
       else
         os << msi->colour_index_for_atom(i);
@@ -268,7 +268,7 @@ Molecule::_write_bonds_mrv (ostream & os) const
       os << '5';         // HUH!!
 
     os << "\" ";
-    if (NULL == msi)
+    if (nullptr == msi)
     {
       os << "/>\n";
       continue;
@@ -646,7 +646,7 @@ Molecule::_read_atom_array_mrv (CMarkup & cml)
   {
     const Element * e = get_element_from_symbol(elementType_token, notused);
 
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "Molecule::_read_atom_array_mrv:cannot create element from '" << elementType_token << "'\n";
       return 0;
@@ -654,12 +654,12 @@ Molecule::_read_atom_array_mrv (CMarkup & cml)
     
     Atom * a = new Atom(e);
 
-    if (0 == formal_charges.number_elements())
+    if (formal_charges.empty())
       ;
     else if (0 != formal_charges[ndx])
       a->set_formal_charge(formal_charges[ndx]);
 
-    if (0 == isotopes.number_elements())
+    if (isotopes.empty())
       ;
     else if (0 != isotopes[ndx])
       a->set_isotope(isotopes[ndx]);

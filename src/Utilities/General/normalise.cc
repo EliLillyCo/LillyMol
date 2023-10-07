@@ -2,8 +2,6 @@
 #include <iostream>
 #include <stdint.h>
 
-//using namespace std;
-
 using std::cerr;
 using std::endl;
 
@@ -11,14 +9,14 @@ using std::endl;
 #include <math.h>
 #include <assert.h>
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iwstring_data_source.h"
-#include "misc.h"
-#include "minmaxspc.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/minmaxspc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 static IWString missing_value('.');
@@ -150,7 +148,7 @@ class NColumn : private Accumulator<double>
     int write_scaling_information(int col, IWString_and_File_Descriptor & output) const;
 };
 
-static NColumn * column = NULL;
+static NColumn * column = nullptr;
 
 NColumn::NColumn()
 {
@@ -467,7 +465,7 @@ class Data_Item : public Set_or_Unset<double>
     const const_IWSubstring & text_representation() const { return _text_rep;}
 };
 
-static Data_Item * d = NULL;
+static Data_Item * d = nullptr;
 
 Data_Item::Data_Item()
 {
@@ -567,7 +565,7 @@ determine_tokens_per_line_and_allocate_arrays (iwstring_data_source & input)
 
   column = new NColumn[columns_in_input];
 
-  if (NULL == column)
+  if (nullptr == column)
   {
     cerr << "Cannot allocate " << columns_in_input << " columns\n";
     return 0;
@@ -1184,7 +1182,7 @@ static int
 normalise (const char * input_fname,
            IWString_and_File_Descriptor & output)
 {
-  assert (NULL != input_fname);
+  assert (nullptr != input_fname);
 
   iwstring_data_source input(input_fname);
   if (! input.good())
@@ -1204,7 +1202,13 @@ normalise (const char * input_fname,
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Normalises columns\n";
   cerr << " -m <string>        set missing value specifier to <string>\n";
   cerr << " -s <records>       discard <records> from the top of the file\n";

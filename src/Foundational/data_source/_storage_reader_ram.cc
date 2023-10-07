@@ -116,7 +116,6 @@ template int IW_Storage_Reader<IW_File_Contents>::_next_record(const_IWSubstring
 template int IW_Storage_Reader<IW_File_Contents>::_fetch_previous_record(const_IWSubstring&);
 template int IW_Storage_Reader<IW_File_Contents>::_find_next_record(const_IWSubstring&);
 template int IW_Storage_Reader<IW_MMapd_File>::eof() const;
-template int IW_Storage_Reader<IW_MMapd_File>::skip_records(IW_Regular_Expression_Template<IW_grep_25_regex>&, int);
 template int IW_Storage_Reader<IW_MMapd_File>::echo(IWString_and_File_Descriptor&, unsigned long);
 template int IW_Storage_Reader<IW_MMapd_File>::most_recent_record(IWString&);
 template int IW_Storage_Reader<IW_MMapd_File>::set_ignore_pattern(const_IWSubstring const&);

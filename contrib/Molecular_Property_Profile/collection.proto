@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package MolecularPropertyProfile;
+
+// sampled values are stored, either Float or Int type
+message FloatValueCount {
+  float value = 1;
+  int32 count = 2;
+}
+
+message IntValueCount {
+  int32 value = 1;
+  int32 count = 2;
+}
+
+// Some quantile values are stored.
+message Quantile {
+  float quantile = 1;
+  float value = 2;
+}
+
+// Information about a feature/collection.
+// This is shared between Descriptor and Descriptions,
+// but perhaps it would be better to have two different
+// messages.
+message Description {
+  // The name of the feature, column name in the input.
+  string feature_name = 1;
+  // A human appropriate description of this feature.
+  string description = 2;
+  // What to show when this is plotted.
+  string plot_title = 3;
+  // The colour any plot using this data.
+  string line_color = 4;
+  // The source of this data - Chembl, Pubchem, ...
+  string source = 5;
+}
+
+// Information about a specific set of feature values.
+message Descriptor {
+  Description description = 1;
+
+  // The number of samples used to generate this profile.
+  int32 n = 3;
+  // Simple statistics.
+  // Uses float even though the feature itself may only have integral values
+  float minval = 4;
+  float maxval = 5;
+  float mean = 6;
+  float median = 7;
+  repeated Quantile quantile = 8;
+
+  // Depending on the kind of data, only one of these will be populated.
+  repeated IntValueCount int_values = 9;
+  repeated FloatValueCount float_values = 10;
+}
+
+// It can be helpful to transfer information about features
+// from one collection to the next.
+message Descriptions {
+  map<string, Description> feature_to_description = 1;
+}

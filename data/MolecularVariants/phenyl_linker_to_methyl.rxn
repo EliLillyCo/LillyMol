@@ -1,0 +1,11 @@
+name: "phenyl_linker_to_methyl"
+scaffold {
+  id: 0
+  smarts: "C!@[cD3x2]1:[cD2]:[cD2]:[cD3x2](-C):[cD2]:[cD2]1"
+  remove_atoms: [2, 3, 4, 6, 7]
+  make_bond {
+    a1: 1
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+}

@@ -1,0 +1,16 @@
+(0 Query
+  (A C Comment "diphosphate")
+  (A C Comment "diphosphate")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 15)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 15)
+    (A I single_bond 1)
+  )
+)

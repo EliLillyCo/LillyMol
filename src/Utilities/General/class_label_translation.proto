@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package ClassLabelTranslation;
+
+message ClassLabelTranslation {
+  map<string, int32> to_numeric = 1;
+
+  map<string, uint32> class_count = 2;
+}

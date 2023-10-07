@@ -5,33 +5,31 @@
 #include <stdlib.h>
 #include <fstream>
 #include <iomanip>
-#include <memory>
 #include <limits>
-using namespace std;
+#include <memory>
 
-#include "cmdline.h"
-#include "IWDistanceMatrixBase.h"
-
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-#include "iw_tdt_filter.h"
-#include "accumulator.h"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Utilities/Distance_Matrix/IWDistanceMatrixBase.h"
 
 #include "gfp.h"
 #include "tversky.h"
 
+using std::cerr;
+using std::endl;
+
 static int verbose = 0;
 
-static IW_General_Fingerprint * pool = NULL;
+static IW_General_Fingerprint * pool = nullptr;
 
 static int pool_size = 0;
 
 static int nfingerprints = 0;
 
 static Accumulator<similarity_type_t> stats;
-
-static IW_TDT_Filter filter;
 
 static similarity_type_t zero_distance_value = 0.0;
 
@@ -54,7 +52,14 @@ static similarity_type_t singleton_threshold = std::numeric_limits<similarity_ty
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Computes the distance matrix for a pool of fingerprints\n";
   cerr << " -m               output as similarities rather than distances\n";
   cerr << " -b               store as bytes rather than floats\n";
@@ -63,11 +68,11 @@ usage(int rc)
   cerr << " -S <fname>       name of distance matrix file to create\n";
   cerr << " -F -P -W -Q      standard gfp options, enter '-F help' for info\n";
   cerr << " -V ...           standard Tversky options, enter '-V help' for info\n";
-  cerr << " -O <option>      TDT filter options, enter '-O help' for info\n";
   cerr << " -d <number>      round distances to <number> significant digits\n";
   cerr << " -q               use equal weight tanimoto function on composite fingerprints\n";
   cerr << " -T <dist>        discard singletons, things with no nbrs within <dist>\n";
   cerr << " -v               verbose output\n";
+// clang-format on
 
   exit(rc);
 }
@@ -75,14 +80,14 @@ usage(int rc)
 static int
 allocate_pool()
 {
-  assert(pool_size > 0 && NULL == pool);
+  assert(pool_size > 0 && nullptr == pool);
 
   pool = new IW_General_Fingerprint[pool_size];
 
   if (verbose)
     cerr << "Pool sized for " << pool_size << " molecules\n";
 
-  assert (NULL != pool);
+  assert (nullptr != pool);
 
   return 1;
 }
@@ -186,9 +191,6 @@ build_pool (iwstring_data_source & input)
   IW_TDT tdt;
   while (tdt.next(input))
   {
-    if (filter.active() && ! filter.matches(tdt))
-      continue;
-
     if (! build_pool(tdt))
       return 0;
 
@@ -275,7 +277,7 @@ distance_matrix_float (IWString_and_File_Descriptor & output)
 static int
 distance_matrix (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "vs:mV:F:P:W:Q:O:r:S:bd:q");
+  Command_Line cl (argc, argv, "vs:mV:F:P:W:Q:r:S:bd:q");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -301,26 +303,6 @@ distance_matrix (int argc, char ** argv)
 
     if (verbose)
       cerr << "Will report progress every " << report << " steps\n";
-  }
-
-  if (cl.option_present('O'))
-  {
-    const_IWSubstring o = cl.string_value('O');
-
-    if ("help" == o)
-    {
-      display_tdt_filter_syntax(cerr);
-      return 31;
-    }
-
-    if (! filter.build_from_string(o))
-    {
-      cerr << "Cannot construct tdt filter from '" << o << "'\n";
-      return 14;
-    }
-
-    if (verbose)
-      cerr << "Filter built from '" << o << "'\n";
   }
 
   if (cl.option_present('m'))

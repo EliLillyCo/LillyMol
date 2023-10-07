@@ -36,11 +36,11 @@ import tempfile
 import copy
 
 from mmp.mmp_objects import MMPObjectClass
-
 # later clogp method can be licensed biobyte clogp
 # or opensourced abraham's alogp depending on environment var
 if 'LILLYMOL_HOME' in os.environ:
-    import pybase.pyopmo as pymo
+    sys.path.insert(0, os.getenv('LILLYMOL_HOME') + '/contrib/script/py/pybase');
+    import pyopmo as pymo
 else:
     import pybase.pymo as pymo
 

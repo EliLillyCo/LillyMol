@@ -3,23 +3,23 @@
 */
 
 #include <stdlib.h>
-#include <memory>
-#include <limits>
 #include <algorithm>
 #include <fstream>
+#include <limits>
+#include <memory>
 #include <random>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "cmdline.h"
-#include "accumulator.h"
-#include "set_or_unset.h"
-#include "iwstring_data_source.h"
-#include "iw_auto_array.h"
-#include "iw_tdt.h"
-#include "iw_stl_hash_map.h"
-#include "timsort.hpp"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/set_or_unset.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwmisc/timsort.hpp"
+#include "Foundational/iwmisc/misc.h"
 
+using std::cerr;
 using std::cout;
 using std::endl;
 
@@ -763,9 +763,7 @@ Leader_Item::unselected_neighbours(const int * sel, const similarity_type_t with
   if (0 == _nbrs)
     return 0;
 
-  const int last_nbr = _nbr[_nbrs-1];
-
-  if (_dist[last_nbr] <= within)    // all nbrs within distance, no need to check individually
+  if (_dist[_nbrs - 1] <= within)    // all nbrs within distance, no need to check individually
     return unselected_neighbours(sel);
 
   int rc = 0;
@@ -1294,7 +1292,13 @@ build_pool (const char * fname,
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Performs leader clustering, OR Jarvis Patrick clustering on a near neighbour file (from gfp_nearneighbours_single_file for example)\n";
   cerr << "Usage <options> <input_file>\n";
   cerr << " L -t <dis>         specify distance threshold(s)\n";

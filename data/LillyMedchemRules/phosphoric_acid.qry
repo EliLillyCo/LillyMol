@@ -1,0 +1,29 @@
+# RuleClass Phosphorus
+# SubClass  phospho
+
+# Fred Bruns Dec 2003
+
+(0 Query
+  (A C Comment "phosphoric_acid")
+  (A I Version 2)
+  (A D numeric_value 20)
+  (0 Query_Atom
+    (A I atomic_number 15)
+    (A I ncon 4)
+    (A I nbonds 5)
+    (A I min_attached_heteroatom_count 3)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I single_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I single_bond 0)
+  )
+)

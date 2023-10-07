@@ -5,10 +5,11 @@
 #include "iwmalloc.h"
 #endif
 
+#include "Foundational/iwstring/iwstring.h"
 #include "logical_expression.h"
-using namespace std;
-#include "iwstring.h"
 #include "set_or_unset.h"
+
+using std::cerr;
 
 /*
   Results will be stored as 0 and 1's. We need a special value which
@@ -30,27 +31,39 @@ using namespace std;
 
 #define IW_LOGEXP_RESULT_NOT_NEEDED -2
 
-IW_Logical_Expression::IW_Logical_Expression()
-{
-  resize(4);
+void
+IW_Logical_Expression::_default_values() {
 
   _operator.resize(3);
   _unary_operator.resize(3);
 
+  _default_state();
+}
+
+IW_Logical_Expression::IW_Logical_Expression()
+{
+  resize(4);
+
+  _default_values();
+}
+
+void
+IW_Logical_Expression::_default_state()
+{
 // by default, we have a single (as yet unknown) result
 
   add(IW_LOGEXP_UNKNOWN_RESULT);
 
   _unary_operator.add(1);
 
-  _first_low_priority_and_grouping = NULL;
+  _first_low_priority_and_grouping = nullptr;
 
   return;
 }
 
 IW_Logical_Expression::~IW_Logical_Expression()
 {
-  if (NULL != _first_low_priority_and_grouping)
+  if (nullptr != _first_low_priority_and_grouping)
     delete _first_low_priority_and_grouping;
 
   assert(ok());
@@ -138,13 +151,25 @@ IW_Logical_Expression::debug_print(std::ostream & os) const
       os << char_ops[_operator[i]];
   }
 
-  os << endl;
+  os << '\n';
 
-  if (NULL != _first_low_priority_and_grouping)
+  if (nullptr != _first_low_priority_and_grouping)
     _first_low_priority_and_grouping->debug_print(os);
 
   return os.good();
 }
+
+int
+IW_Logical_Expression::RemoveAllOperators()
+{
+  resize_keep_storage(0);
+  _operator.resize_keep_storage(0);
+  _unary_operator.resize_keep_storage(0);
+
+  _default_state();
+
+  return 1;
+}  
 
 int
 IW_Logical_Expression::set_unary_operator(int i, int n)
@@ -170,7 +195,7 @@ IW_Logical_Expression::reset()
     _things[i] = IW_LOGEXP_UNKNOWN_RESULT;
   }
 
-  if (NULL != _first_low_priority_and_grouping)
+  if (nullptr != _first_low_priority_and_grouping)
     _first_low_priority_and_grouping->reset();
 
   return;
@@ -235,7 +260,7 @@ IW_Logical_Expression::add_operator(int op)
     ;
   else
   {
-    cerr << "IW_Logical_Expression::add_operator: invalid operator " << op << endl;
+    cerr << "IW_Logical_Expression::add_operator: invalid operator " << op << '\n';
     abort();
     return 0;
   }
@@ -308,7 +333,7 @@ IW_Logical_Expression::set_all_operators(int op)
   if (IW_LOGEXP_LOW_PRIORITY_AND == op)
     return _set_all_operators(op);
 
-  cerr << "IW_Logical_Expression::_set_all_operators: what operator is this " << op << endl;
+  cerr << "IW_Logical_Expression::_set_all_operators: what operator is this " << op << '\n';
   return 0;
   
 }
@@ -357,7 +382,7 @@ IW_Logical_Expression::all_operators_are(int op) const
   if (IW_LOGEXP_LOW_PRIORITY_AND == op)
     return _all_operators_are(op);
 
-  cerr << "IW_Logical_Expression::all_operators_are: what operator is this " << op << endl;
+  cerr << "IW_Logical_Expression::all_operators_are: what operator is this " << op << '\n';
   return 0;
 }
 
@@ -389,7 +414,7 @@ IW_Logical_Expression::evaluate(int & zresult)
     if (IW_LOGEXP_UNKNOWN_RESULT == _things[0])
       return 0;
 
-//  cerr << "What about " << _unary_operator[0] << " and " << _things[0] << endl;
+//  cerr << "What about " << _unary_operator[0] << " and " << _things[0] << '\n';
     zresult = _things[0];
     return 1;
   }
@@ -408,7 +433,7 @@ IW_Logical_Expression::evaluate(int & zresult)
   if (2 == _number_elements)
     return _evaluate_single_operator(zresult);
 
-  if (NULL == _first_low_priority_and_grouping)
+  if (nullptr == _first_low_priority_and_grouping)
   {
     if (! _initialise())
     {
@@ -431,7 +456,7 @@ IW_Logical_Expression::evaluate(int & zresult)
 
     current = current->next();
 
-  } while (NULL != current);
+  } while (nullptr != current);
 
 // Each low priority and grouping was true
 
@@ -443,7 +468,7 @@ IW_Logical_Expression::evaluate(int & zresult)
 int
 IW_Logical_Expression::_initialise()
 {
-  assert (NULL == _first_low_priority_and_grouping);
+  assert (nullptr == _first_low_priority_and_grouping);
 
 // Maybe we should be more generous with XOR - perhaps enforce this in the low priority and grouping...
 
@@ -520,7 +545,7 @@ IW_Logical_Expression::_evaluate_single_operator(int & zresult)
   }
   else
   {
-    cerr << "IW_Logical_Expression::_evaluate_single_operator: what kind of operator is this " << _operator[0] << endl;
+    cerr << "IW_Logical_Expression::_evaluate_single_operator: what kind of operator is this " << _operator[0] << '\n';
     abort();
   }
 
@@ -532,14 +557,14 @@ IW_Logexp_AND_Grouping::IW_Logexp_AND_Grouping()
   _n = -1;
   _istart = -1;
 
-  _next = NULL;
+  _next = nullptr;
 
   return;
 }
 
 IW_Logexp_AND_Grouping::~IW_Logexp_AND_Grouping ()
 {
-  if (NULL != _next)
+  if (nullptr != _next)
     delete _next;
 
   return;
@@ -552,11 +577,11 @@ IW_Logexp_AND_Grouping::debug_print(std::ostream & os) const
 
   int zresult;
   if (_result.value(zresult))
-    os << zresult << endl;
+    os << zresult << '\n';
   else
     os << "unknown\n";
 
-  if (NULL == _next)
+  if (nullptr == _next)
     return os.good();
 
   return _next->debug_print(os);
@@ -589,7 +614,7 @@ IW_Logexp_AND_Grouping::initialise(const resizable_array<int> & the_operators,
   assert (_n < 0);    // must not have been initialised before
 
 #ifdef DEBUG_AND_GROUP_INITIALISE
-  cerr << "Initialising high priority AND on " << the_operators.number_elements() << " operators, istart = " << istart << endl;
+  cerr << "Initialising high priority AND on " << the_operators.number_elements() << " operators, istart = " << istart << '\n';
 #endif
 
   _istart = istart;
@@ -624,7 +649,7 @@ IW_Logexp_AND_Grouping::evaluate(int * zresults,
 #ifdef DEBUG_AND_GROUP_EVALUATE
   cerr << "Evaluating and group starting at " << _istart;
   if (_result.value(zresult))
-    cerr << ". Result " << zresult << endl;
+    cerr << ". Result " << zresult << '\n';
   else
     cerr << ". Result unknown\n";
 #endif
@@ -637,7 +662,7 @@ IW_Logexp_AND_Grouping::evaluate(int * zresults,
   for (int i = _istart; i < _istart + _n; i++)
   {
 #ifdef DEBUG_AND_GROUP_EVALUATE
-    cerr << "Result " << i << " is " << zresults[i] << endl;
+    cerr << "Result " << i << " is " << zresults[i] << '\n';
 #endif
 
     if (0 == zresults[i])
@@ -668,7 +693,7 @@ void
 IW_Logexp_AND_Grouping::_mark_remaining_results_not_needed(int * zresults, int istart) const
 {
   int istop = _istart + _n;
-//cerr << "Marking results from " << istart << " to " << istop << " _n = " << _n << endl;
+//cerr << "Marking results from " << istart << " to " << istop << " _n = " << _n << '\n';
 
   while (istart < istop)
   {
@@ -697,19 +722,19 @@ IW_Logexp_Low_Priority_and_Grouping::IW_Logexp_Low_Priority_and_Grouping()
 
   _istart = -1;
 
-  _first_and_chunk = NULL;
+  _first_and_chunk = nullptr;
 
-  _next = NULL;
+  _next = nullptr;
 
   return;
 }
 
 IW_Logexp_Low_Priority_and_Grouping::~IW_Logexp_Low_Priority_and_Grouping()
 {
-  if (NULL != _first_and_chunk)
+  if (nullptr != _first_and_chunk)
     delete _first_and_chunk;
 
-  if (NULL != _next)
+  if (nullptr != _next)
     delete _next;
 
   return;
@@ -722,14 +747,14 @@ IW_Logexp_Low_Priority_and_Grouping::debug_print(std::ostream & os) const
 
   int zresult;
   if (_result.value(zresult))
-    os << zresult << endl;
+    os << zresult << '\n';
   else
     os << " unknown\n";
 
   if (_first_and_chunk)
     _first_and_chunk->debug_print(os);
 
-  if (NULL == _next)
+  if (nullptr == _next)
     return os.good();
 
   return _next->debug_print(os);
@@ -765,11 +790,11 @@ IW_Logexp_Low_Priority_and_Grouping::initialise(const resizable_array<int> & the
                                         int & istart)
 {
   assert (0 == _n);
-  assert (NULL == _first_and_chunk);
-  assert (NULL == _next);
+  assert (nullptr == _first_and_chunk);
+  assert (nullptr == _next);
 
 #if defined(DEBUG_LOW_PRIORITY_AND_G_INITIALISE)
-  cerr << "Initialising low priority and grouping with " << the_operators.number_elements() << " operators, istart = " << istart << endl;
+  cerr << "Initialising low priority and grouping with " << the_operators.number_elements() << " operators, istart = " << istart << '\n';
 #endif
 
   _istart = istart;
@@ -789,7 +814,7 @@ IW_Logexp_Low_Priority_and_Grouping::initialise(const resizable_array<int> & the
     }
 
 #ifdef DEBUG_LOW_PRIORITY_AND_G_INITIALISE
-    cerr << "And group consumed " << current->number_results() << " results, istart = " << istart << endl;
+    cerr << "And group consumed " << current->number_results() << " results, istart = " << istart << '\n';
 #endif
 
     if (istart > nop)
@@ -808,7 +833,7 @@ IW_Logexp_Low_Priority_and_Grouping::initialise(const resizable_array<int> & the
   _n = istart - _istart;
 
 #if defined(DEBUG_LOW_PRIORITY_AND_G_INITIALISE)
-  cerr << "At end, istart = " << istart << ", nop = " << nop << ", n = " << _n << endl;
+  cerr << "At end, istart = " << istart << ", nop = " << nop << ", n = " << _n << '\n';
 #endif
 
   if (istart > nop)
@@ -828,7 +853,7 @@ IW_Logexp_Low_Priority_and_Grouping::evaluate(int * the_results,
 #ifdef DEBUG_LOW_P_AND_EVALUATE
   cerr << "Checking lpand grouping starting at " << _istart;
   if (_result.value(zresult))    // already determined
-    cerr << " already determined " << zresult << endl;
+    cerr << " already determined " << zresult << '\n';
   else
     cerr << " unknown\n";
 #endif
@@ -837,17 +862,17 @@ IW_Logexp_Low_Priority_and_Grouping::evaluate(int * the_results,
     return 1;
 
   IW_Logexp_AND_Grouping * current = _first_and_chunk;
-  assert (NULL != current);
+  assert (nullptr != current);
 
 // Since we just have OR operators, we just look for the first grouping
 // that is true
 
-  while (NULL != current)
+  while (nullptr != current)
   {
     int tmpresult;
 
 #ifdef DEBUG_LOW_P_AND_EVALUATE
-    cerr << "Trying to evaluate AND group at " << current->istart() << endl;
+    cerr << "Trying to evaluate AND group at " << current->istart() << '\n';
 #endif
 
     if (! current->evaluate(the_results, tmpresult))    // cannot be evaluated yet

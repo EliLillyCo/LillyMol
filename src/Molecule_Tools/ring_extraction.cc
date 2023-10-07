@@ -1,1401 +1,1399 @@
-/*
-  Extracts rings from molecules
+// Generate a set of ReplacementRing protos from a set of molecules.
+// Protos are written as text_format since there are never that many of them.
 
-  We produce the replacement smiles and the corresponding smarts. The atom ordering
-  in these must be identical
-
-  Sept 2013.
-
-  There is a fatal flaw in here.
-  We extract rings and ring systems. We also include doubly bonded exocyclic atoms.
-  Because we need to keep the smiles and the smarts in sync, we have to put those atoms
-  in he smarts too, but that means those rings will only match original rings
-  that have that same arrangement.
-
-  Bad, but too hard to fix
-*/
-
-#include <stdlib.h>
+#include <algorithm>
+#include <cstdint>
+#include <ctime>
+#include <iostream>
 #include <memory>
-using namespace std;
+#include <optional>
+#include <vector>
 
-#include "cmdline.h"
-#include "misc.h"
+#include "google/protobuf/text_format.h"
 
-#define CHECK_RESDULT
-#ifdef CHECK_RESDULT
-#include "substructure.h"
+#define RESIZABLE_ARRAY_IMPLEMENTATION
+#define IWQSORT_FO_IMPLEMENTATION
+
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwqsort/iwqsort.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rwsubstructure.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
+
+#include "Molecule_Tools/replacement_ring.pb.h"
+
+namespace ring_extraction {
+
+using std::cerr;
+
+constexpr char kOpenSquareBracket = '[';
+constexpr char kCloseSquareBracket = ']';
+
+// Used in file name construction for aromatic and aliphatic rings.
+// Note that some file systems may have trouble with the presence of
+// files 6a.smi and 6A.smi.
+IWString arom_suffix = 'a';
+IWString aliph_suffix = 'A';
+
+void
+Usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
+  // clang-format on
+  // clang-format off
+  cerr << "Extracts rings and ring systems creating ReplacementRing protos that can be used by ring_replacement\n";
+  cerr << " -S <stem>         create ring data files with <stem>\n";
+  cerr << " -R <rsize>        max ring size to process (def 7)\n";
+  cerr << " -Z <size>         max ring system size to process (def 3)\n";
+  cerr << " -k                also generate smarts with connectivity not specified\n";
+  cerr << " -a                transform within ring aliphatic double bonds to type any\n";
+  cerr << " -P <atype>        label atoms by atom type of exocyclic attached atom\n";
+  cerr << " -X ...            more options\n";
+  cerr << " -c                remove chirality\n";
+  cerr << " -g ...            chemical standardisation - enter '-g help' for info\n";
+  cerr << " -l                strip to largest fragment\n";
+  cerr << " -v                verbose output\n";
+  // clang-format on
 
-#include "istream_and_type.h"
-#include "path.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "reaction_duplicate.h"
-
-#include "ring_ext_rep.h"
-
-const char * prog_name = NULL;
-
-static int verbose = 0;
-
-static int molecules_read = 0;
-
-static Chemical_Standardisation chemical_standardisation;
-
-static int reduce_to_largest_fragment = 0;
-
-static extending_resizable_array<int> rings_per_molecule;
-
-static int molecules_with_rings = 0;
-
-static Reaction_Duplicate reaction_duplicate;
-
-static int unique_rings_only = 0;
-
-class Ring_Extraction_Replacement_Conditions rerc;
-
-static int must_match_whole_ring = 1;
-
-static int min_heteroatoms_needed_in_ring = 0;
-
-static int extract_all_isolated_rings = 0;
-static int extract_all_fused_systems = 0;
-
-static int min_ring_size = 4;
-static int max_ring_size = 7;
-
-/*
-  Must keep the numbers here consistent with what is in the header file
-*/
-
-static std::ofstream output_stream[RING_ARRAY_SIZE];
-static IWString suffix[RING_ARRAY_SIZE];
-
-static int check_smiles_formed = 0;
-
-static void
-usage (int rc)
-{
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Extracts rings from molecules\n";
-  display_standard_ring_ext_rep_options(cerr);
-  cerr << "  -h <number>   rings extracted must contain at least <number> heteroatoms\n";
-  cerr << "  -N <stem>     get all rings, write to files starting with <stem>\n";
-  cerr << "  -u            unique rings only\n";
-  cerr << "  -V            check the validity of smiles formed\n";
-  cerr << "  -R <size>     maximum ring size to process (default " << max_ring_size << ")\n";
-  cerr << "  -4            allow four membered aromatics\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
-
-  exit(rc);
+  ::exit(rc);
 }
 
-static int
-append_chain_smiles (Molecule & m,
-                     const int * include_atom,
-                     atom_number_t zatom, 
-                     const atom_number_t previous_atom,
-                     IWString & s)
-{
-  s << m.atomic_symbol(zatom);
+// An exocyclic doubly bonded atom is characterised by its
+//  the atom number in the ring
+//  the atom number of the exocyclic atom
+//  the atomic number of the exocyclic atom
+//  the bond type - which will always be double.
+struct Exocyclic {
+  atom_number_t inside_ring;
+  atom_number_t outside_ring;
+  atomic_number_t atomic_number;
+  bond_type_t btype;
+};
 
-  const Atom * a = m.atomi(zatom);
+enum class ExocyclicStatus {
+  kNotInvolved = 0,
+  kIsBase = 1,
+  kIsExocyclic = 2
+};
 
-  int acon = a->ncon();
+struct PerMoleculeArrays {
+  public:
+    int* ring_sys;
+    int* xref;
+    int* include_atom;
+    uint32_t* atype;
+    ExocyclicStatus* exocyclic_status;
 
-  int branches_so_far = 0;
+    // True if the atom is aromatic in the parent
+    int* aromatic;
 
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a->item(i);
+    // True it an atom in the child is aromatic
+    int* aromatic_in_child;
 
-    atom_number_t j = b->other(zatom);
+  public:
+    PerMoleculeArrays(int matoms);
+    ~PerMoleculeArrays();
 
-    if (! include_atom[j])
-      continue;
-
-    if (previous_atom == j)
-      continue;
-
-    if (branches_so_far)
-      s << '(';
-
-    if (b->is_double_bond())
-      s << '=';
-    else if (b->is_triple_bond())
-      s << '#';
-
-    append_chain_smiles(m, include_atom, j, zatom, s);
-
-    if (branches_so_far)
-      s << ')';
-
-    branches_so_far++;
-  }
-
-  return 1;
-}
-
-static void
-append_smiles_symbol (Molecule & m,
-                      atom_number_t current_atom,
-                      IWString & s)
-{
-  formal_charge_t fc = m.formal_charge(current_atom);
-
-  if (m.isotope(current_atom))
-  {
-    s << '[' << m.isotope(current_atom) << m.atomic_symbol(current_atom);
-    if (0 == fc)
-      ;
-    else if (fc > 0)
-      s << '+';
-    else
-      s << '-';
-
-    s << ']';
-  }
-  else if (0 == fc)
-    s << m.atomic_symbol(current_atom);
-  else if (fc < 0)
-    s << '[' << m.atomic_symbol(current_atom) << "-]";
-  else
-    s << '[' << m.atomic_symbol(current_atom) << "+]";
-
-  return;
-}
-
-static int
-build_smiles (Molecule & m,
-              atom_number_t first_ring_atom,
-              const int * include_atom,
-              int ring_is_aromatic,
-              const Ring_Extraction_Replacement_Conditions & rerc,
-              int build_smarts,
-              IWString & s)
-{
-  atom_number_t current_atom = first_ring_atom;
-  atom_number_t previous_atom = INVALID_ATOM_NUMBER;
-
-  while (1)
-  {
-    if (build_smarts)
-      rerc.append_connectivity_smarts(m, current_atom, include_atom, ring_is_aromatic, s);
-    else
-      append_smiles_symbol(m, current_atom, s);
-
-    if (INVALID_ATOM_NUMBER != previous_atom)    // already written the first atom
-      ;
-    else if (! must_match_whole_ring)    // don't put in ring symbols
-      ;
-    else if (build_smarts)           // use a very unusual ring symbol
-      s << "%99";
-    else
-      s << '1';
-
-    const Atom * a = m.atomi(current_atom);
-
-    int acon = a->ncon();
-
-//  cerr << "Atom " << current_atom << " has " << acon << " neighbours, smiles so var '" << s << "'\n";
-
-    Set_of_Atoms neighbours;    // make sure we take any double bonds first
-    Set_of_Atoms doubly_bonded_outside_ring;
-
-    for (int i = 0; i < acon; i++)
-    {
-      const Bond * b = a->item(i);
-
-      atom_number_t j = b->other(current_atom);
-
-      if (j == previous_atom)
-        continue;
-
-      if (! include_atom[j])
-        continue;
-
-      if (0 == b->nrings() && b->is_double_bond())
-        doubly_bonded_outside_ring.add(i);
-      else if (b->is_aromatic())
-        neighbours.add(i);
-      else if (0 == b->nrings())
-        neighbours.add(i);
-      else if (b->is_double_bond())    // ring double bond
-        neighbours.insert_at_beginning(i);
-      else
-       neighbours.add(i);
+    uint32_t* AssignAtomTypes(int matoms) {
+      atype = new uint32_t[matoms];
+      std::fill_n(atype, matoms, 0);
+      return atype;
     }
+};
 
-    for (int j = 0; j < doubly_bonded_outside_ring.number_elements(); j++)
-    {
-      neighbours.insert_at_beginning(doubly_bonded_outside_ring[j]);
-    }
-
-    atom_number_t next_atom = INVALID_ATOM_NUMBER;
-
-    acon = neighbours.number_elements();
-
-//  cerr << "Acon now " << acon << " atoms " << neighbours << endl;
-
-    for (int i = 0; i < acon; i++)
-    {
-      const Bond * b = a->item(neighbours[i]);
-
-      atom_number_t j = b->other(current_atom);
-
-      if (b->nrings())
-      {
-        if (INVALID_ATOM_NUMBER != next_atom)
-          continue;
-
-        if (build_smarts)
-        {
-          if (b->is_aromatic())
-            s << ':';
-          else if (b->is_double_bond())
-            s << '=';
-        }
-        else if (b->is_double_bond())
-          s << '=';
-
-        if (j == first_ring_atom)   // finished the ring, put any necessary ring closure info
-        {
-          if (! must_match_whole_ring)
-            ;
-          else if (build_smarts)
-            s << "%99";
-          else
-            s << '1';
-          continue;
-        }
-
-        next_atom = j;
-      }
-      else if (b->is_double_bond())
-        s << "(=" << m.atomic_symbol(j) << ')';
-      else
-      {
-        s << '(';
-        if (b->is_double_bond())
-          s << '=';
-
-        append_chain_smiles(m, include_atom, j, current_atom, s);
-
-        s << ')';
-      }
-    }
-
-    if (INVALID_ATOM_NUMBER == next_atom)
-      break;
-
-    previous_atom = current_atom;
-    current_atom = next_atom;
-  }
-  
-  return 1;
+PerMoleculeArrays::PerMoleculeArrays(int matoms) {
+  ring_sys = new int[matoms];
+  xref = new int[matoms];
+  include_atom = new_int(matoms, 1);
+  atype = nullptr;
+  exocyclic_status = new ExocyclicStatus[matoms];
+  std::fill_n(exocyclic_status, matoms, ExocyclicStatus::kNotInvolved);
+  aromatic = new int[matoms];
+  aromatic_in_child = new int[matoms];
 }
 
-static int
-ring_is_duplicate (Molecule & m,
-                   const int * include_atom)
-{
-  Molecule tmp;
-  m.create_subset(tmp, include_atom);
-
-  return reaction_duplicate.is_duplicate(tmp);
+PerMoleculeArrays::~PerMoleculeArrays() {
+  delete [] ring_sys;
+  delete [] xref;
+  delete [] include_atom;
+  delete [] atype;
+  delete [] exocyclic_status;
+  delete [] aromatic;
+  delete [] aromatic_in_child;
 }
 
-static int
-write_ring (Molecule & m,
-            atom_number_t first_ring_atom,
-            const Ring_Extraction_Replacement_Conditions & rerc,
-            const int * include_atom,
-            const int ring_is_aromatic,
-            std::ostream & output)
-{
-  if (unique_rings_only)
-  {
-    if (ring_is_duplicate(m, include_atom))
-      return 1;
+class ExtractRings {
+  private:
+    int _verbose;
+
+    int _molecules_read;
+
+    int _reduce_to_largest_fragment;
+
+    int _remove_chirality;
+
+    // We can optionally mark the attachment point.
+    isotope_t _isotope;
+
+    // We can also have the isotope mean the atom type of what used to be
+    // attached. Note that is creates ambiguity if there were multiple atom
+    // types attached to the ring at a given atom. For now we ignore those rings.
+    // TODO:ianwatson revisit this maybe.
+    Atom_Typing_Specification _atype;
+
+    // We can ignore rings that are too large.
+    uint32_t _max_ring_size;
+
+    // We can ignore ring systems containing too many rings.
+    uint32_t _max_ring_system_size;
+
+    int _transform_ring_double_bonds;
+
+    // For every ring/system type we have a mapping from unique
+    // smiles to protos.
+    IW_STL_Hash_Map<IWString, IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>> _ring;
+
+    // Outputs will be written to a set of files with prefix `_stem`.
+    IWString _stem;
+
+    // As a check, once the smarts for a ring is generated, we can do a search
+    // in the starting molecule.
+    int _substructure_search_starting_molecule;
+    int _substructure_search_failures;
+
+    // Optionally we can generate raw rings, with no substituent information.
+    int _generate_substitution_not_specified;
+
+    Chemical_Standardisation _chemical_standardisation;
+
+    Report_Progress _report_progress;
+
+  // Private functions.
+    int GenerateRing(Molecule& parent, Molecule& m, const IWString& usmi,
+                     const IWString& exocyclic_smiles,
+                     const IWString& label, PerMoleculeArrays& data, int include_d);
+    int GenerateSmarts(Molecule& parent, Molecule& m, PerMoleculeArrays& data,
+                       int include_d, IWString& result) const;
+
+    int ExtendToDoublyBonded(Molecule& m, int * ring_sys,
+                resizable_array_p<Exocyclic>& exocyclic);
+    int ExtendToDoublyBonded(Molecule& m,
+                int* ring_sys,
+                ExocyclicStatus* status);
+
+    int MakeUniqueSmiles(Molecule& m,
+                 int sys,
+                 PerMoleculeArrays& data,
+                 IWString& usmi);
+
+    int LabelAttachmentPoints(Molecule& parent,
+                              Molecule& r,
+                              int sys_num,
+                              const PerMoleculeArrays& data) const;
+
+    int LabelAttachmentPoints(Molecule& parent,
+                              Molecule& r,
+                              const int* ring_sys,
+                              int sys_num,
+                              const int* xref,
+                              const uint32_t* atypes) const;
+    isotope_t IsotopeOfExocyclicAtom(Molecule& m,
+                atom_number_t zatom,
+                const int* ring_sys,
+                int sys_num,
+                const uint32_t* atypes) const;
+
+    std::optional<IWString> CanonicalRingName(Molecule& m,
+                        const int * ring_sys,
+                        int sys) const;
+
+    void ChangeRingDoubleBonds(Molecule& m,
+                      IWString& smt) const;
+    int MaybeCheckSubstructureMatch(Molecule& m, const IWString& smt);
+
+    int WriteRings(IWString& fname,
+                         const IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>& rings) const;
+    int WriteRings(IWString_and_File_Descriptor& output,
+                         const IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>& rings) const;
+    isotope_t IsotopeForAtom(Molecule& m, atom_number_t zatom,
+                             int sys_num,
+                             const PerMoleculeArrays& data) const;
+
+
+  public:
+    ExtractRings();
+
+    int Initialise(Command_Line& cl);
+
+    int Preprocess(Molecule& m);
+
+    // Extract the rings from `m` and accumulate in our internal data structures.
+    int Process(Molecule& m);
+
+    // At the completion of processing, report summary information.
+    int Report(std::ostream& output) const;
+
+    // Once data is assembled, write protos.
+    int WriteRings() const;
+};
+
+ExtractRings::ExtractRings() {
+  _verbose = 0;
+  _molecules_read = 0;
+  _reduce_to_largest_fragment = 0;
+  _remove_chirality = 0;
+  _isotope = 1;
+  _max_ring_size = 7;
+  _max_ring_system_size = 3;
+  _transform_ring_double_bonds = 0;
+  _substructure_search_starting_molecule = 0;
+  _substructure_search_failures = 0;
+  _generate_substitution_not_specified = 0;
+}
+
+void
+DisplayDashXOption(std::ostream& output) {
+  output << " -X sss     substructure search the starting molecule as a check\n";
+  output << " -X a:A     letters assigned to aromatic and aliphatic rings\n";
+
+  ::exit(0);
+}
+
+int
+ExtractRings::Initialise(Command_Line& cl) {
+  _verbose = cl.option_count('v');
+
+  if (cl.option_present('c')) {
+    _remove_chirality = 1;
+    if (_verbose) {
+      cerr << "Will remove chirality from input molecules\n";
+    }
   }
 
-//cerr << "write_ring, aromatic? " << ring_is_aromatic << endl;
-
-  m.compute_aromaticity_if_needed();
-
-  IWString smiles;
-  build_smiles(m, first_ring_atom, include_atom, 0, rerc, 0, smiles);    // no aromaticity in the smiles
-
-  if (check_smiles_formed)
-  {
-    Molecule notused;
-    if (! notused.build_from_smiles(smiles))
-    {
-      cerr << "Yipes, '" << m.name() << " produced invalid smiles\n";
-      cerr << m.smiles() << ' ' << m.name() << endl;
-      cerr << smiles << endl;
+  if (cl.option_present('g')) {
+    if (! _chemical_standardisation.construct_from_command_line(cl, _verbose > 1, 'g')) {
+      cerr << "Cannot initialise chemical standardisation\n";
       return 0;
     }
   }
 
-  IWString smarts;
-  build_smiles(m, first_ring_atom, include_atom, ring_is_aromatic, rerc, 1, smarts);
-
-  output << smiles << ' ' << smarts << ' ' << m.name() << "\n";
-
-  return output.good();
-}
-
-static void
-preprocess (Molecule & m)
-{
-  if (reduce_to_largest_fragment)
-    m.reduce_to_largest_fragment();
-
-  if (chemical_standardisation.active())
-    chemical_standardisation.process(m);
-
-  if (rerc.remove_chirality())
-    m.remove_all_chiral_centres();
-
-  return;
-}
-
-static int
-contains_enough_heteroatoms (const Molecule & m,
-                             const Set_of_Atoms & r,
-                             int min_heteroatoms_needed_in_ring)
-{
-  int n = r.number_elements();
-
-  int rc = 0;
-
-  for (int i = 0; i < n; i++)
-  {
-    if (6 == m.atomic_number(r[i]))
-      continue;
-
-    rc++;
-    if (rc >= min_heteroatoms_needed_in_ring)
-      return 1;
-  }
-
-  return 0;
-}
-
-static void
-append_smiles_bond_symbol (const Bond * b,
-                           IWString & smiles)
-{
-  if (b->is_double_bond())
-    smiles << '=';
-  else if (b->is_single_bond())
-    ;
-  else if (b->is_triple_bond())    // hard to imagine
-    smiles << '#';
-
-  return;
-}
-
-static void
-append_smarts_bond_symbol (const Bond * b,
-                           IWString & smarts)
-{
-  if (b->is_aromatic())
-    smarts << ':';
-  else
-    append_smiles_bond_symbol(b, smarts);
-}
-
-
-static int
-write_ring_system (Molecule & m,
-                   const int * aromatic,
-                   Ring_Extraction_Replacement_Conditions & rerc,
-                   int * completed,
-                   const int stream_index)
-{
-  m.compute_aromaticity_if_needed();
-
-  int istart = -1;
-
-  const auto matoms = m.natoms();
-
-  for (auto i = 0; i < matoms; ++i)
-  {
-    if (1 == m.nrings(i))
-    {
-      istart = i;
-      break;
+  if (cl.option_present('l')) {
+    _reduce_to_largest_fragment = 1;
+    if (_verbose) {
+      cerr << "Will reduce molecules to largest fragment\n";
     }
   }
 
-  if (istart < 0)
-  {
-    cerr << "write_ring_system:huh, did not find any atom in two rings!\n";
+  if (! cl.option_present('S')) {
+    cerr << "Must specify output file name stem via the -S option\n";
     return 0;
   }
 
-  set_vector(completed, matoms, 0);
+  if (cl.option_present('S')) {
+    cl.value('S', _stem);
+    if (_verbose) {
+      cerr << "Output files created with name step '" << _stem << "'\n";
+    }
+  }
 
-  IWString smiles, smarts;
+  if (cl.option_present('R')) {
+    if (! cl.value('R', _max_ring_size) || _max_ring_size < 3) {
+      cerr << "The max ring size (-R) option must be a valid ring size\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "WIll skip rings with more than " << _max_ring_size << " atoms\n";
+    }
+  }
 
-  rerc.append_connectivity_smarts(m, istart, aromatic[istart], smarts);
-  smiles << m.elementi(istart)->symbol();
+  if (cl.option_present('Z')) {
+    if (! cl.value('Z', _max_ring_system_size) || _max_ring_system_size < 1) {
+      cerr << "The max ring system size (-Z) option must be a valid ring system size\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will only extract ring systems containing as many as "
+           << _max_ring_system_size << " rings\n";
+    }
+  }
 
-  smarts << "%99";
-  smiles << "2";
+  if (cl.option_present('a')) {
+    _transform_ring_double_bonds = 1;
+    if (_verbose) {
+      cerr << "Will transform within ring aliphatic double bonds to type any\n";
+    }
+  }
 
-  atom_number_t prev = INVALID_ATOM_NUMBER;
+  if (cl.option_present('k')) {
+    _generate_substitution_not_specified = 1;
+    if (_verbose) {
+      cerr << "Will also generate a smarts variant without connectivity\n";
+    }
+  }
 
-  completed[istart] = 1;
+  if (cl.option_present('P')) {
+    const_IWSubstring p = cl.string_value('P');
+    if (! _atype.build(p)) {
+      cerr << "Invalid atom type '" << p << "'\n";
+      return 0;
+    }
 
-//#define DEBUG_RING_SYSTEM_SMARTS
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-  cerr << "Starting point is " << istart << ", starting smarts '" << smarts << "'\n";
-#endif
+    if (_verbose) {
+      cerr << "Atom typing initialised '" << p << "'\n";
+    }
+  }
 
-  while (INVALID_ATOM_NUMBER != istart)
-  {
-    const Atom * a = m.atomi(istart);
-
-    const auto acon = a->ncon();
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-    cerr << "Current atom is " << istart << ", ncon " << acon << " smiles '" << smiles << "'\n";
-#endif
-
-//  first append any exocyclic or cross ring bonds
-
-    if (acon > 2)
-    {
-      const Bond * across_ring = NULL;
-
-      for (auto j = 0; j < acon; ++j)
-      {
-        const Bond * b = a->item(j);
-  
-        if (2 == b->nrings())
-        {
-          across_ring = b;
-          continue;
+  if (cl.option_present('X')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "sss") {
+        _substructure_search_starting_molecule = 1;
+        if (_verbose) {
+          cerr << "Will perform a substructure search vs the starting molecule\n";
         }
-
-        if (b->nrings())
-          continue;
-
-        const auto k = b->other(istart);
-
-        smarts << '(';
-        smiles << '(';
-        append_smiles_bond_symbol(b, smiles);
-        append_smarts_bond_symbol(b, smarts);
-        append_smiles_symbol(m, k, smiles);
-        rerc.append_connectivity_smarts(m, k, 0, smarts);
-        smarts << ')';
-        smiles << ')';
-      }
-
-      if (across_ring)
-      {
-        append_smiles_bond_symbol(across_ring, smiles);
-        append_smarts_bond_symbol(across_ring, smarts);
-        smarts << "%98";
-        smiles << '1';
-      }
-    }
-
-    atom_number_t next_atom = INVALID_ATOM_NUMBER;
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-    cerr << "Looking for next atom from " << istart << " smarts so far " << smarts << endl;
-#endif
-
-    for (auto j = 0; j < acon; ++j)    // continue around the outside of the ring
-    {
-      const Bond * b = a->item(j);
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-      cerr << "Checking " << b->other(istart) << " rings " << b->nrings() << " complete " << completed[b->other(istart)] << " prev? " << (b->other(istart) == prev) << endl;
-#endif
-
-      if (1 != b->nrings())
-        continue;
-
-      const auto k = b->other(istart);
-
-      if (k == prev)
-        continue;
-
-
-      if (completed[k])     // must be back to start atom
-      {
-        append_smiles_bond_symbol(b, smiles);
-        append_smarts_bond_symbol(b, smarts);
-        smiles << '2';
-        smarts << "%99";
-      }
-      else if (INVALID_ATOM_NUMBER == next_atom)
-      {
-        append_smiles_bond_symbol(b, smiles);
-        append_smarts_bond_symbol(b, smarts);
-        rerc.append_connectivity_smarts(m, k, aromatic[k], smarts);
-        append_smiles_symbol(m, k, smiles);
-
-        next_atom = k;
-      }
-    }
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-    cerr << "from " << istart << " next atom will be " << next_atom << ", smarts '" << smarts << "'\n";
-#endif
-    prev = istart;
-    istart = next_atom;
-  }
-
-  std::ostream & output = output_stream[stream_index];
-
-  output  << m.unique_smiles() << ' ' << smiles << ' ' << smarts << ' ' << m.name() << suffix[stream_index] << "\n";
-
-  if (check_smiles_formed)
-  {
-    Molecule notused;
-
-    if (! notused.build_from_smiles(smiles))
-    {
-      cerr << "Invalid smiles created '" << m.smiles() << ' ' << m.name() << endl;
-      cerr << smiles << endl;
-      return 0;
-    }
-
-    Substructure_Query q;
-    if (! q.create_from_smarts(smarts))
-    {
-      cerr << "INvalid smarts created '" << smarts << "'\n";
-      if (0 == q.substructure_search(&m))
-      {
-        cerr << "No substructure match '" << m.name() << "'\n";
-        cerr << smarts << endl;
-        return 0;
-      }
-    }
-  }
-
-  return 1;
-}
-
-static int
-ok_fused_system_ring_size (const Ring & r,
-                           extending_resizable_array<int> & arom,
-                           extending_resizable_array<int> & aliph)
-{
-  const auto rsize = r.number_elements();
-
-  if (6 == rsize)
-    ;
-  else if (5 == rsize)
-    ;
-  else if (4 == rsize)
-    ;
-  else if (7 == rsize)
-    ;
-  else
-    return 0;
-
-  if (r.is_aromatic())
-    arom[rsize]++;
-  else
-    aliph[rsize]++;
-
-  return 1;
-}
-
-/*
-  Here's where you do whatever you want to do with the molecule
-  In this case, we count the number of nitrogen atoms
-*/
-
-static int
-extract_fused_system (Molecule & m,
-                      int * ring_already_done,
-                      Ring_Extraction_Replacement_Conditions & rerc,
-                      const int rstart,
-                      int * include_atom,
-                      std::ostream & output)
-{
-  extending_resizable_array<int> arom, aliph;
-
-  set_vector(include_atom, m.natoms(), 0);
-
-  int fsid = -1;
-  int fss = 0;
-  bool oksystem = true;
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-  cerr << "Ring system starts with ring " << rstart << endl;
-  iw_write_array(ring_already_done, m.nrings(), " ring already done", cerr);
-#endif
-
-  const auto nr = m.nrings();
-  for (auto i = rstart; i < nr; ++i)
-  {
-    if (ring_already_done[i])
-      continue;
-
-    const auto ri = m.ringi(i);
-
-    if (! ri->is_fused())
-      continue;
-
-#ifdef DEBUG_RING_SYSTEM_SMARTS
-    cerr << " i = " << i << " ring " << (*ri) << endl;
-#endif
-
-    if (fsid < 0)
-      fsid = ri->fused_system_identifier();
-    else if (ri->fused_system_identifier() != fsid)
-      continue;
-
-    ring_already_done[i] = 1;
-    fss++;
-
-    if (ri->strongly_fused_ring_neighbours())
-    {
-      oksystem = false;
-      continue;
-    }
-
-    if (! ok_fused_system_ring_size(*ri, arom, aliph))
-    {
-      oksystem = false;
-      continue;
-    }
-
-    ri->set_vector(include_atom, 1);
-  }
-
-  if (2 != fss || ! oksystem)    // presumably the system contained rings of the wrong size
-    return 0;
-
-  int ndx = -1;
-  if (2 == arom[6])
-    ndx = FUSED_6a6a;
-  else if (1 == arom[5] && 1 == arom[6])
-    ndx = FUSED_5a6a;
-  else if (2 == arom[5])
-    ndx = FUSED_5a5a;
-  else if (2 == aliph[5])
-    ndx = FUSED_5A5A;
-  else if (2 == aliph[6])
-    ndx = FUSED_6A6A;
-  else if (1 == arom[6]  && 1 == aliph[6])
-    ndx = FUSED_6a6A;
-  else if (1 == arom[5]  && 1 == aliph[6])
-    ndx = FUSED_5a6A;
-  else if (1 == arom[5] && 1 == aliph[5])
-    ndx = FUSED_5a5A;
-  else if (1 == aliph[5] && 1 == aliph[6])
-    ndx = FUSED_5A6A;
-  else if (1 == aliph[5] && 1 == arom[6])
-    ndx = FUSED_5A6a;
-  else if (1 == aliph[4] && 1 == aliph[6])
-    ndx = FUSED_4A6A;
-  else if (1 == aliph[4] && 1 == arom[6])
-    ndx = FUSED_4A6a;
-  else if (1 == aliph[4] && 1 == aliph[5])
-    ndx = FUSED_4A5A;
-  else if (1 == arom[6]  && 1 == aliph[7])
-    ndx = FUSED_6a7A;
-  else if (1 == aliph[5] && 1 == aliph[7])
-    ndx = FUSED_5A7A;
-  else if (1 == arom[6]  && 1 == arom[7])
-    ndx = FUSED_6a7a;
-  else if (1 == aliph[6] && 1 == aliph[7])
-    ndx = FUSED_6A7A;
-  else if (1 == arom[5]  && 1 == arom[7])
-    ndx = FUSED_5a7a;
-  else if (1 == arom[5]  && 1 == aliph[7])
-    ndx = FUSED_5a7A;
-  else if (1 == aliph[5]  && 1 == arom[7])
-    ndx = FUSED_5A7a;
-  else if (1 == arom[5] && 1 == aliph[8])
-    ndx = FUSED_5a8A;
-  else if (1 == arom[6] && 1 == aliph[8])
-    ndx = FUSED_6a8A;
-  else if (1 == aliph[4] && 1 == aliph[8])
-    ndx = FUSED_4A8A;
-  else if (1 == aliph[5] && 1 == aliph[8])
-    ndx = FUSED_5A8A;
-  else if (1 == aliph[6] && 1 == aliph[8])
-    ndx = FUSED_6A8A;
-  else if (1 == aliph[7] && 1 == aliph[8])
-    ndx = FUSED_7A8A;
-  else if (1 == aliph[4] && 1 == aliph[7])
-    ndx = FUSED_4A7A;
-  else if (1 == aliph[8] && 1 == aliph[8])
-    ndx = FUSED_8A8A;
-  else if (1 == aliph[6] && 1 == arom[7])
-    ndx = FUSED_6A7a;
-  else if (1 == arom[6] && 1 == aliph[7])
-    ndx = FUSED_6a7A;
-  else if (1 == arom[4] && 1 == arom[6])
-    ndx = FUSED_4a6a;
-  else if (2 == aliph[4])
-    ndx = FUSED_4A4A;
-  else if (1 == arom[7] && 1 == aliph[8])
-    ndx = FUSED_7a8A;
-  else if (1 == aliph[4] && 1 == arom[5])
-    ndx = FUSED_4A5a;
-  else if (1 == aliph[4] && 1 == arom[7])
-    ndx = FUSED_4A7a;
-  else if (1 == aliph[7] && 1 == arom[7])
-    ndx = FUSED_7a7A;
-  else if (2 == aliph[7])
-    ndx = FUSED_7A7A;
-  else if (2 == arom[7])
-    ndx = FUSED_7a7a;
-  else if (2 == arom[4])
-    ndx = FUSED_4a4a;
-  else if (1 == arom[4] && 1 == aliph[6])
-    ndx = FUSED_4a6A;
-  else if (1 == arom[4] && 1 == arom[7])
-    ndx = FUSED_4a7a;
-  else if (1 == arom[4] && 1 == arom[5])
-    ndx = FUSED_4a5a;
-  else if (1 == arom[4] && 1 == aliph[4])
-    ndx = FUSED_4a4A;
-  else if (1 == arom[4] && 1 == aliph[7])
-    ndx = FUSED_4a7A;
-  else
-  {
-    cerr << "Unknown ring size combination in " << m.smiles() << ' ' << m.name() << "\n";
-    for (auto i = 0; i < arom.number_elements(); ++i)
-    {
-      if (arom[i])
-        cerr << " arom[" << i << "] = " << arom[i] << endl;
-    }
-    for (auto i = 0; i < aliph.number_elements(); ++i)
-    {
-      if (aliph[i])
-        cerr << " aliph[" << i << "] = " << aliph[i] << endl;
-    }
-    return 0;
-  }
-
-//cerr << "stream index is " << ndx << endl;
-
-  if (! rerc.identify_atoms_associated_with_ring_system(m, include_atom))
-    return 0;
-
-  const auto matoms = m.natoms();
-
-  int * aromatic = new int[matoms]; std::unique_ptr<int[]> free_aromatic(aromatic);
-  for (auto i = 0; i < matoms; ++i)
-  {
-    if (m.is_aromatic(i))
-      aromatic[i] = 1;
-    else
-      aromatic[i] = 0;
-  }
-
-  Molecule mcopy;
-  m.create_subset(mcopy, include_atom);
-  mcopy.set_name(m.name());
-
-  int aromcount = 0;
-  for (auto i = 0; i < matoms; ++i)
-  {
-    if (include_atom[i])
-    {
-      aromatic[aromcount] = aromatic[i];
-      aromcount++;
-    }
-  }
-
-  return write_ring_system(mcopy, aromatic, rerc, include_atom, ndx);   // the include atom array now used for different purposes
-}
-
-static int
-extract_fused_systems (Molecule & m,
-                       Ring_Extraction_Replacement_Conditions & rerc,
-                       int * include_atom,
-                       std::ostream & output)
-{
-  const auto nr = m.nrings();
-
-  if (nr < 2)
-    return 1;
-
-  int * ring_already_done = new_int(nr); std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
-
-  for (auto i = 0; i < nr; ++i)
-  {
-    if (ring_already_done[i])
-      continue;
-
-    const Ring * ri = m.ringi(i);
-
-//  cerr << "What about ring " << *ri << ", fused " << ri->is_fused() << endl;
-
-    if (! ri->is_fused())
-      continue;
-
-    if (! extract_fused_system(m, ring_already_done, rerc, i, include_atom, output))
-      return 1;    // we always return 1
-  }
-
-  return 1;
-}
-
-static int
-write_ring (Molecule & m,
-            const IWString & mname,
-            const Ring & r,
-            int * completed)
-{
-  m.compute_aromaticity_if_needed();
-
-  const int matoms = m.natoms();
-
-  atom_number_t istart = INVALID_ATOM_NUMBER;
-
-  for (auto i = 0; i < matoms; ++i)
-  {
-    if (2 == m.ncon(i))
-    {
-      istart = i;
-      break;
-    }
-  }
-
-  if (INVALID_ATOM_NUMBER == istart)    // too strange to worry about
-    return 0;
-
-//cerr << "Processing ring " << r << endl;
-
-  const auto aromatic = r.is_aromatic();
-
-  set_vector(completed, m.natoms(), 0);
-
-  IWString smiles, smarts;
-
-  append_smiles_symbol(m, istart, smiles);
-  rerc.append_connectivity_smarts(m, istart, aromatic, smarts);
-
-  smiles << '1';
-  smarts << "%99";
-
-  atom_number_t prev = INVALID_ATOM_NUMBER;
-
-  while (INVALID_ATOM_NUMBER != istart)
-  {
-    completed[istart] = 1;
-
-//  cerr << "Procesing atom " << istart << endl;
-
-    const Atom * a = m.atomi(istart);
-
-    const auto acon = a->ncon();
-
-    for (auto j = 0; j < acon; ++j)    // first any exocyclic bonds
-    {
-      const Bond * b = a->item(j);
-
-      if (b->nrings())
-        continue;
-
-      const auto k = b->other(istart);
-
-      smarts << '(';
-      smiles << '(';
-      append_smiles_bond_symbol(b, smiles);
-      append_smarts_bond_symbol(b, smarts);
-      rerc.append_connectivity_smarts(m, k, aromatic, smarts);
-      append_smiles_symbol(m, k, smiles);
-      smarts << ')';
-      smiles << ')';
-    }
-
-    for (auto j = 0; j < acon; ++j)     // now continue around the ring
-    {
-      const Bond * b = a->item(j);
-
-      if (0 == b->nrings())
-        continue;
-
-      const auto k = b->other(istart);
-
-      if (k == prev)
-        continue;
-
-      if (completed[k])
-      {
-        append_smiles_bond_symbol(b, smiles);
-        append_smarts_bond_symbol(b, smarts);
-        istart = INVALID_ATOM_NUMBER;
-        break;
-      }
-
-      append_smiles_bond_symbol(b, smiles);
-      append_smarts_bond_symbol(b, smarts);
-      append_smiles_symbol(m, k, smiles);
-      rerc.append_connectivity_smarts(m, k, aromatic, smarts);
-
-//    cerr << " from atom " << prev << " to " << istart << " smarts is " << smarts << endl;
-
-      prev = istart;
-      istart = k;
-      break;
-    }
-  }
-
-  smiles << '1';
-  smarts << "%99";
-
-  const auto rsize = r.number_elements();
-
-  int ndx = 0;
-  if (6 == rsize && aromatic)
-    ndx = RING_6a;
-  else if (6 == rsize && ! aromatic)
-    ndx = RING_6A;
-  else if (5 == rsize && aromatic)
-    ndx = RING_5a;
-  else if (5 == rsize && ! aromatic)
-    ndx = RING_5A;
-  else if (7 == rsize && aromatic)
-    ndx = RING_7a;
-  else if (7 == rsize && ! aromatic)
-    ndx = RING_7A;
-  else if (7 == rsize && aromatic)
-    ndx = RING_7a;
-  else if (4 == rsize && ! aromatic)
-    ndx = RING_4A;
-  else if (8 == rsize && ! aromatic)
-    ndx = RING_8A;
-  else
-  {
-    cerr << "Unprocessed ring form " << rsize << " aromatic? " << aromatic << ' ' << m.smiles() << ' ' << m.name() << endl;
-    return 0;
-  }
-  
-  std::ostream & output = output_stream[ndx];
-
-  output << m.unique_smiles() << ' ' << smiles << ' ' << smarts << ' ' << mname << suffix[ndx] << '\n';
-
-  return 1;
-}
-
-static int
-do_extract_all_isolated_rings (Molecule & m)
-{
-  const auto nr = m.nrings();
-
-  const auto matoms = m.natoms();
-
-  int * include_these_atoms = new int[matoms]; std::unique_ptr<int[]> free_include_these_atoms(include_these_atoms);
-
-  for (auto i = 0; i < nr; ++i)
-  {
-    const Ring * ri = m.ringi(i);
-
-    if (ri->is_fused())
-      continue;
-
-    if (ri->number_elements() < min_ring_size)
-      continue;
-    else if (ri->number_elements() > max_ring_size)
-      continue;
-
-//  cerr << "Processing ring " << (*ri) << endl;
-
-    set_vector(include_these_atoms, matoms, 0);
-    ri->set_vector(include_these_atoms, 1);
-    if (! rerc.identify_atoms_associated_with_ring_system(m, include_these_atoms))
-      continue;
-
-    Molecule mcopy;
-    m.create_subset(mcopy, include_these_atoms);
-//  cerr << "Subset is " << mcopy.smiles() << endl;
-    if (mcopy.natoms() < matoms)
-      write_ring(mcopy, m.name(), *ri, include_these_atoms);
-  }
-
-  return 1;
-}
-
-static int
-extract_rings (Molecule & m,
-              std::ostream & output)
-{
-  const auto nr = m.nrings();
-
-  if (0 == nr)
-    return 1;
-
-  m.compute_aromaticity_if_needed();
-
-  if (extract_all_isolated_rings)
-    do_extract_all_isolated_rings(m);
-
-  const auto matoms = m.natoms();
-
-  int * in_same_ring = new_int(matoms * matoms); std::unique_ptr<int[]> free_in_same_ring(in_same_ring);
-
-  initialise_in_same_ring_array(m, in_same_ring);
-
-  int * include_atom = new int[m.natoms()]; std::unique_ptr<int[]> free_include_atom(include_atom);
-
-  if (extract_all_fused_systems)
-    return extract_fused_systems(m, rerc, include_atom, output);
-
-  int rings_this_molecule = 0;
-
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = m.ringi(i);
-
-    if (! rerc.can_be_processed(m, *ri))
-      continue;
-
-    if (0 == min_heteroatoms_needed_in_ring)
-      ;
-    else if (! contains_enough_heteroatoms(m, *ri, min_heteroatoms_needed_in_ring))
-      continue;
-
-    Molecule mcopy(m);
-    mcopy.set_name(m.name());
-    set_vector(include_atom, matoms, 0);
-    rerc.identify_atoms_associated_with_ring(mcopy, *ri, in_same_ring, include_atom);
-    write_ring(mcopy, ri->item(0), rerc, include_atom, ri->is_aromatic(), output);
-    rings_this_molecule++;
-  }
-
-  rings_per_molecule[rings_this_molecule]++;
-  if (rings_this_molecule)
-    molecules_with_rings++;
-
-
-  return output.good();
-}
-
-static int
-extract_rings (data_source_and_type<Molecule> & input,
-               std::ostream & output)
-{
-  Molecule * m;
-  while (NULL != (m = input.next_molecule()))
-  {
-    molecules_read++;
-
-    std::unique_ptr<Molecule> free_m(m);
-
-    preprocess(*m);
-
-    if (! extract_rings(*m, output))
-      return 0;
-  }
-
-  return output.good();
-}
-
-static int
-extract_rings (const char * fname, int input_type, std::ostream & output)
-{
-  assert (NULL != fname);
-
-  if (0 == input_type)
-  {
-    input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
-  }
-
-  data_source_and_type<Molecule> input(input_type, fname);
-  if (! input.good())
-  {
-    cerr << prog_name << ": cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  if (verbose > 1)
-    input.set_verbose(1);
-
-  return extract_rings(input, output);
-}
-
-static int
-open_output_stream (const IWString & prefix,
-                    const char * name,
-                    ofstream & output,
-                    IWString & suffix)
-{
-  IWString tmp(prefix);
-  tmp << '_' << name << ".smi";
-  output.open(tmp.null_terminated_chars(), std::ios::out);
-  if (! output.good())
-  {
-    cerr << "open_output_stream:cannot open '" << tmp << "'\n";
-    return 0;
-  }
-
-  suffix = '.';
-  suffix << name;
-
-  return 1;
-}
-
-static int
-extract_rings (int argc, char ** argv)
-{
-  Command_Line cl(argc, argv, "vA:E:i:g:lr:a:f:F:cub:wh:S:N:VR:4");
-
-  if (cl.unrecognised_options_encountered())
-  {
-    cerr << "Unrecognised options encountered\n";
-    usage(1);
-  }
-
-  verbose = cl.option_count('v');
-
-  if (cl.option_present('A'))
-  {
-    if (! process_standard_aromaticity_options(cl, verbose, 'A'))
-    {
-      cerr << "Cannot initialise aromaticity specifications\n";
-      usage(5);
-    }
-  }
-  else
-    set_global_aromaticity_type(Daylight);
-
-  if (cl.option_present('E'))
-  {
-    if (! process_elements(cl, verbose, 'E'))
-    {
-      cerr << "Cannot initialise elements\n";
-      return 6;
-    }
-  }
-
-  if (cl.option_present('g'))
-  {
-    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
-    {
-      cerr << "Cannot process chemical standardisation options (-g)\n";
-      usage(32);
-    }
-  }
-
-  if (cl.option_present('l'))
-  {
-    reduce_to_largest_fragment = 1;
-
-    if (verbose)
-      cerr << "Will reduce to largest fragment\n";
-  }
-
-  if (cl.option_present('V'))
-  {
-    check_smiles_formed = 1;
-
-    if (verbose)
-      cerr << "Will check the smiles formed for validity\n";
-  }
-
-  if (cl.option_present('R'))
-  {
-    if (! cl.value('R', max_ring_size) || max_ring_size < min_ring_size || max_ring_size > 8)
-    {
-      cerr << "The maximum ring size option (-R) must be a valid ring size - internal limitation to size 8, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
-      usage(1);
-    }
-
-    if (verbose)
-      cerr << "Max ring size " << max_ring_size << endl;
-  }
-
-  if (! rerc.initialise(cl, verbose))
-  {
-    cerr << "Cannot initialise remove and extract option(s)\n";
-    return 4;
-  }
-
-  if (cl.option_present('N'))
-  {
-    IWString n = cl.string_value('N');
-
-    if (! open_output_stream(n, "4A", output_stream[RING_4A], suffix[RING_4A]) ||
-        ! open_output_stream(n, "5A", output_stream[RING_5A], suffix[RING_5A]) ||
-        ! open_output_stream(n, "5a", output_stream[RING_5a], suffix[RING_5a]) ||
-        ! open_output_stream(n, "6a", output_stream[RING_6a], suffix[RING_6a]) ||
-        ! open_output_stream(n, "6A", output_stream[RING_6A], suffix[RING_6A]) ||
-        ! open_output_stream(n, "4A4A", output_stream[FUSED_4A4A], suffix[FUSED_4A4A]) ||
-        ! open_output_stream(n, "4A5A", output_stream[FUSED_4A5A], suffix[FUSED_4A5A]) ||
-        ! open_output_stream(n, "4A6a", output_stream[FUSED_4A6a], suffix[FUSED_4A6a]) ||
-        ! open_output_stream(n, "4A6A", output_stream[FUSED_4A6A], suffix[FUSED_4A6A]) ||
-        ! open_output_stream(n, "4A5a", output_stream[FUSED_4A5a], suffix[FUSED_4A5a]) ||
-        ! open_output_stream(n, "5a5a", output_stream[FUSED_5a5a], suffix[FUSED_5a5a]) ||
-        ! open_output_stream(n, "5a5A", output_stream[FUSED_5a5A], suffix[FUSED_5a5A]) ||
-        ! open_output_stream(n, "5A5A", output_stream[FUSED_5A5A], suffix[FUSED_5A5A]) ||
-
-        ! open_output_stream(n, "5a6a", output_stream[FUSED_5a6a], suffix[FUSED_5a6a]) ||
-        ! open_output_stream(n, "5a6A", output_stream[FUSED_5a6A], suffix[FUSED_5a6A]) ||
-        ! open_output_stream(n, "5A6a", output_stream[FUSED_5A6a], suffix[FUSED_5A6a]) ||
-        ! open_output_stream(n, "5A6A", output_stream[FUSED_5A6A], suffix[FUSED_5A6A]) ||
-
-        ! open_output_stream(n, "6A6A", output_stream[FUSED_6A6A], suffix[FUSED_6A6A]) ||
-        ! open_output_stream(n, "6a6a", output_stream[FUSED_6a6a], suffix[FUSED_6a6a]) ||
-        ! open_output_stream(n, "6a6A", output_stream[FUSED_6a6A], suffix[FUSED_6a6A]))
-    {
-      cerr << "Cannot open one or more output files with stem '" << n << "'\n";
-      return 1;
-    }
-
-    if (max_ring_size > 6)
-    {
-      if (! open_output_stream(n,   "7A", output_stream[RING_7A],    suffix[RING_7A]) ||
-          ! open_output_stream(n,   "7a", output_stream[RING_7a],    suffix[RING_7a]) ||
-          ! open_output_stream(n, "4A7A", output_stream[FUSED_4A7A], suffix[FUSED_4A7A]) ||
-          ! open_output_stream(n, "4A7a", output_stream[FUSED_4A7a], suffix[FUSED_4A7a]) ||
-          ! open_output_stream(n, "5A7A", output_stream[FUSED_5A7A], suffix[FUSED_5A7A]) ||
-          ! open_output_stream(n, "5a7A", output_stream[FUSED_5a7A], suffix[FUSED_5a7A]) ||
-          ! open_output_stream(n, "5A7a", output_stream[FUSED_5A7a], suffix[FUSED_5A7a]) ||
-          ! open_output_stream(n, "5a7a", output_stream[FUSED_5a7a], suffix[FUSED_5a7a]) ||
-          ! open_output_stream(n, "6a7a", output_stream[FUSED_6a7a], suffix[FUSED_6a7a]) ||
-          ! open_output_stream(n, "6a7A", output_stream[FUSED_6a7A], suffix[FUSED_6a7A]) ||
-          ! open_output_stream(n, "6A7A", output_stream[FUSED_6A7A], suffix[FUSED_6A7A]) ||
-          ! open_output_stream(n, "7A7A", output_stream[FUSED_7A7A], suffix[FUSED_7A7A]) ||
-          ! open_output_stream(n, "7a7a", output_stream[FUSED_7a7a], suffix[FUSED_7a7a]) ||
-          ! open_output_stream(n, "7a7A", output_stream[FUSED_7a7A], suffix[FUSED_7a7A]) ||
-          ! open_output_stream(n, "6A7a", output_stream[FUSED_6A7a], suffix[FUSED_6A7a]))
-      {
-        cerr << "Cannot open one or more output files stem '" << n << "' ring size 7\n";
-        return 1;
-      }
-
-      if (max_ring_size > 7)
-      {
-        if (! open_output_stream(n,   "8A", output_stream[RING_8A],    suffix[RING_8A]) ||
-            ! open_output_stream(n, "5A8A", output_stream[FUSED_5A8A], suffix[FUSED_5A8A]) ||
-            ! open_output_stream(n, "5a8A", output_stream[FUSED_5a8A], suffix[FUSED_5a8A]) ||
-            ! open_output_stream(n, "6A8A", output_stream[FUSED_6A8A], suffix[FUSED_6A8A]) ||
-            ! open_output_stream(n, "6a8A", output_stream[FUSED_6a8A], suffix[FUSED_6a8A]) ||
-            ! open_output_stream(n, "7A8A", output_stream[FUSED_7A8A], suffix[FUSED_7A8A]) ||
-            ! open_output_stream(n, "7a8A", output_stream[FUSED_7a8A], suffix[FUSED_7a8A]) ||
-            ! open_output_stream(n, "8A8A", output_stream[FUSED_8A8A], suffix[FUSED_8A8A]) ||
-            ! open_output_stream(n, "4A8A", output_stream[FUSED_4A8A], suffix[FUSED_4A8A]))
-        {
-          cerr << "Cannot open one or more output files stem '" << n << "' ring size 8\n";
+      } else if (x.contains(':')) {
+        if (! x.split(arom_suffix, ':', aliph_suffix)
+            || arom_suffix.empty() || aliph_suffix.empty()) {
+          cerr << "Invalid aromatic:aliphatic file name stub '" << x << "' must be 'a:A' form\n";
           return 1;
         }
+        if (_verbose) {
+          cerr << "aromatic suffix '" << arom_suffix << "' aliphatic suffix '" << aliph_suffix << "'\n";
+        }
+      } else if (x == "help") {
+        DisplayDashXOption(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOption(cerr);
       }
     }
-
-    if (cl.option_present('4'))
-    {
-      if (! open_output_stream(n, "4a4a", output_stream[FUSED_4a4a], suffix[FUSED_4a4a]) ||
-          ! open_output_stream(n, "4a6A", output_stream[FUSED_4a6A], suffix[FUSED_4a6A]) ||
-          ! open_output_stream(n, "4a7a", output_stream[FUSED_4a7a], suffix[FUSED_4a7a]) ||
-          ! open_output_stream(n, "4a4A", output_stream[FUSED_4a4A], suffix[FUSED_4a4A]) ||
-          ! open_output_stream(n, "4a7A", output_stream[FUSED_4a7A], suffix[FUSED_4a7A]) ||
-          ! open_output_stream(n, "4a5a", output_stream[FUSED_4a5a], suffix[FUSED_4a5a]))
-      {
-        cerr << "Cannot open one or more 4a output files stem '" << n << "'\n";
-        return 1;
-      }
-    }
-
-    extract_all_isolated_rings = 1;
-    extract_all_fused_systems = 1;
   }
 
-  if (cl.option_present('u'))
-  {
-    unique_rings_only = 1;
-    if (verbose)
-      cerr << "Will only write unique rings\n";
-  }
-
-  if (cl.option_present('w'))
-  {
-    must_match_whole_ring = 0;
-
-    if (verbose)
-      cerr << "No requirement for matching whole rings\n";
-  }
-
-  if (cl.option_present('h'))
-  {
-    if (! cl.value('h', min_heteroatoms_needed_in_ring) || min_heteroatoms_needed_in_ring < 0)
-    {
-      cerr << "The min heteroatoms in ring (-h) option must have a whole +ve number\n";
-      usage(4);
-    }
-
-    if (verbose)
-      cerr << "Only rings containing at least " << min_heteroatoms_needed_in_ring << " heteroatoms will be processed\n";
-  }
-
-  int input_type = 0;
-
-  if (cl.option_present('i'))
-  {
-    if (! process_input_type(cl, input_type))
-    {
-      cerr << "Cannot determine input type\n";
-      usage(6);
+  if (cl.option_present('r')) {
+    if (! _report_progress.initialise(cl, 'r', _verbose)) {
+      cerr << "Cannot initialise progress reporting (-r)\n";
+      return 0;
     }
   }
-  else if (! all_files_recognised_by_suffix(cl))
-    return 4;
 
-  if (0 == cl.number_elements())
-  {
-    cerr << "Insufficient arguments\n";
-    usage(2);
+  return 1;
+}
+
+int
+ExtractRings::Preprocess(Molecule& m) {
+  if (_reduce_to_largest_fragment) {
+    m.reduce_to_largest_fragment_carefully();
   }
+
+  if (_chemical_standardisation.active()) {
+    _chemical_standardisation.process(m);
+  }
+
+  if (_remove_chirality) {
+    m.remove_all_chiral_centres();
+  }
+
+  if (m.empty()) {
+    return 0;
+  }
+
+  // Do not process phosphorus.
+  if (m.natoms(15) > 0) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+ExtractRings::Report(std::ostream& output) const {
+  output << "ExtractRings:read " << _molecules_read << " molecules\n";
+  if (_molecules_read == 0) {
+    return 1;
+  }
+
+  if (_substructure_search_starting_molecule) {
+    output << _substructure_search_failures << " substructure search failures\n";
+  }
+
+  return 1;
+}
+
+// For each atom, unset implicit hydrogen information.
+void
+UnsetImplicitHydrogenInformation(Molecule& m) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    m.unset_all_implicit_hydrogen_information(i);
+  }
+}
+
+
+// within `m`, `ring_sys` designates a set of atoms comprising a
+// ring system. Extend that to any doubly bonded extensions to the
+// ring system.
+// Update `status` for exocyclic motifs.
+int
+ExtractRings::ExtendToDoublyBonded(Molecule& m,
+                int* ring_sys,
+                ExocyclicStatus* status) {
+  // Force sssr if needed.
+  m.ring_membership();
+
+  // The atoms that get added here - the =O atoms
+  Set_of_Atoms added_here;
+  // For each added atom, the ring systen identifier associated with it.
+  resizable_array<int> sys;
 
   int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (! extract_rings(cl[i], input_type, std::cout))
-    {
-      rc = i + 1;
-      break;
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (ring_sys[i] == 0) {
+      continue;
+    }
+    if (m.ncon(i) < 3) {
+      continue;
+    }
+
+    const Atom& a = m.atom(i);
+    if (a.nbonds() == a.ncon()) {
+      continue;
+    }
+    for (const Bond* b : a) {
+      if (b->is_single_bond()) {
+        continue;
+      }
+      if (b->nrings()) {
+        continue;
+      }
+
+      atom_number_t o = b->other(i);
+      if (ring_sys[o] == ring_sys[i]) {
+        continue;
+      }
+
+      if (ring_sys[o] > 0) {
+        continue;
+      }
+      added_here << o;
+      sys << ring_sys[i];
+
+      status[i] = ExocyclicStatus::kIsBase;
+      status[o] = ExocyclicStatus::kIsExocyclic;
+
+      ++rc;
     }
   }
 
-  if (extract_all_fused_systems)
-  {
-    for (auto i = 0; i < 19; ++i)
-    {
-      output_stream[i].close();
-    }
-  }
-
-  if (verbose)
-  {
-    cerr << "Read " << molecules_read << " molecules\n";
-    if (unique_rings_only)
-      reaction_duplicate.report(cerr);
+  for (int i = 0; i < added_here.number_elements(); ++i) {
+    atom_number_t atom = added_here[i];
+    ring_sys[atom] = sys[i];
+    //cerr << "Atom " << atom << " added as exocyclic, sys " << sys[i] << '\n';
   }
 
   return rc;
 }
 
-int
-main (int argc, char ** argv)
-{
-  prog_name = argv[0];
+// For each member of `ring_sys` that is equal to `sys`, and if that atom
+// is an exocyclic atom, set ring_sys to 0, and an isotopic atom to `exocyclic_smiles`, and
+// place the same isotope on the ring atom to which it is attached.
+void
+TurnOffExocyclic(Molecule& m, int* ring_sys, int sys,
+                 ExocyclicStatus* exocyclic_status,
+                 IWString& exocyclic_smiles,
+                 isotope_t isostart) {
+  const int matoms = m.natoms();
+#ifdef DEBUG_TURN_OFF_EXOCYCLIC
+  cerr << "Turning off exoclic from " << m.smiles() << '\n';
 
-  int rc = extract_rings(argc, argv);
+  for (int i = 0; i < matoms; ++i) {
+    cerr << i << ' ' << m.smarts_equivalent_for_atom(i) << " to ";
+    for (const Bond* b : m[i]) {
+      cerr << ' ' << b->other(i);
+    }
+    cerr << '\n';
+  }
+#endif
+
+  for (int i = 0; i < matoms; ++i) {
+    // cerr << " atom " << i << ' ' << m.smarts_equivalent_for_atom(i) << " status " << '\n';
+    // cerr << " status " << (exocyclic_status[i] != ExocyclicStatus::kIsExocyclic) << '\n';
+    if (exocyclic_status[i] != ExocyclicStatus::kIsExocyclic) {
+      continue;
+    }
+    // cerr << "Exocyclic atom " << i << " sys " << ring_sys[i] << " sys " << sys << '\n';
+    if (ring_sys[i] != sys) {
+      continue;
+    }
+
+    ring_sys[i] = 0;
+    if (exocyclic_smiles.size() > 0) {
+      exocyclic_smiles << '.';
+    }
+    exocyclic_smiles << '[' << isostart << m.atomic_symbol(i) << ']';
+    // cerr << "Update exocyclic smiles to " << exocyclic_smiles << '\n';
+    // Place corresponding isotope on attached atom in system as an atom map number.
+    bool placed = false;
+    for (const Bond* b : m[i]) {
+      if (! b->is_double_bond()) {
+        continue;
+      }
+      atom_number_t j = b->other(i);
+      // This probably never happens.
+      // cerr << " atom " << i << " bonded to " << j << " ring_sys " << ring_sys[j] << " cmp " << sys << '\n';
+      if (ring_sys[j] != sys) {
+        continue;
+      }
+      m.set_atom_map_number(j, isostart);
+      ++isostart;
+      placed = true;
+      break;
+    }
+    if (! placed) {
+      cerr << "TurnOffExocyclic:No ring sys atom for atom " << i << ' '
+           << m.smarts_equivalent_for_atom(i) << ' ' << m.name() << '\n';
+      return;
+    }
+  }
+}
+
+// Create a subset of `m` consisting of those atoms in `data.ring_sys` equal
+// to `sys`. Place the unique smiles of the subset in `usmi`.
+int
+ExtractRings::MakeUniqueSmiles(Molecule& m,
+                 int sys,
+                 PerMoleculeArrays& data,
+                 IWString& usmi) {
+  Molecule subset;
+#ifdef DEBUG_MAKE_UNIQUE_SMILES
+  cerr << "system " << sys << '\n';
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << data.ring_sys[i] << '\n';
+  }
+#endif
+
+  if (! m.create_subset(subset, data.ring_sys, sys, data.xref)) {
+    return 0;
+  }
+
+  if (! LabelAttachmentPoints(m, subset, sys, data)) {
+    return 0;
+  }
+
+  usmi = subset.unique_smiles();
+  return 1;
+}
+
+// Return true if any atom that is in `sys` is joined to the
+// rest of the molecule via a double bond.
+int
+JoinIsViaDoubleBond(Molecule& m,
+                    int sys,
+                    PerMoleculeArrays& data) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (data.ring_sys[i] != sys) {
+      continue;
+    }
+
+    const Atom& a = m[i];
+    if (a.ncon() == 2) {
+      continue;
+    }
+
+    for (const Bond* b : a) {
+      if (! b->is_double_bond()) {
+        continue;
+      }
+
+      atom_number_t o = b->other(i);
+      if (data.ring_sys[o] == sys) {
+        continue;
+      }
+
+      if (m.ncon(o) > 1) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+int
+ExtractRings::Process(Molecule& m) {
+  ++_molecules_read;
+
+  // cerr << "Begin processing " << m.name() << " nrings " << m.nrings() << "\n";
+
+  if (m.nrings() == 0) {
+    return 1;
+  }
+  static std::time_t tzero = std::time(nullptr);
+  if (_report_progress()) {
+    std::time_t tnow = std::time(nullptr);
+    cerr << "ExtractRings::Processed " << _molecules_read <<
+            " molecules " << (tnow - tzero) << " seconds\n";
+  }
+
+  const int matoms = m.natoms();
+  PerMoleculeArrays data(matoms);
+
+  for (int i = 0; i < matoms; ++i) {
+    if (m.is_aromatic(i)) {
+      data.aromatic[i] = 1;
+    } else {
+      data.aromatic[i] = 1;
+    }
+  }
+
+  if (_atype.active()) {
+    _atype.assign_atom_types(m, data.AssignAtomTypes(matoms));
+  }
+
+  m.label_atoms_by_ring_system_including_spiro_fused(data.ring_sys);
+
+  int exocyclic_present = ExtendToDoublyBonded(m, data.ring_sys, data.exocyclic_status);
+
+#ifdef DEBUG_PROCESS
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << " i " << i << " ring_sys " << data.ring_sys[i] << '\n';
+  }
+#endif
+
+  // Handling exocyclic atoms is very problematic. We form an initial unique
+  // smiles of all the atoms in the subset, but then, if there are exocyclic
+  // atoms, form a different subset for the smarts.
+
+  IWString exocyclic_smiles;
+  static constexpr isotope_t kIsotope = 70;
+
+  // For each ring system identified....
+  for (int sys = 1; ; ++sys) {
+    // cerr << "Processing ring sys " << sys << '\n';
+    if (JoinIsViaDoubleBond(m, sys, data)) {
+      continue;
+    }
+
+    // The subset used for uniqueness.
+    IWString usmi;
+    if (!MakeUniqueSmiles(m, sys, data, usmi)) {
+      break;
+    }
+
+    // We want exocyclic atoms not present for the query, but present for the smiles.
+    // We remove the atoms from ring_sys, place an isotope on the attachment points,
+    // and get a list of the exocyclic atoms temporarily removed.
+    // exocyclic_smiles gets a list of the atoms to be attached.
+    exocyclic_smiles.resize_keep_storage(0);
+    if (exocyclic_present) {
+      TurnOffExocyclic(m, data.ring_sys, sys, data.exocyclic_status,
+                       exocyclic_smiles, kIsotope);
+      --exocyclic_present;
+    }
+
+    int* xref = data.xref;
+    Molecule r;
+    if (! m.create_subset(r, data.ring_sys, sys, xref)) {
+      break;
+    }
+
+    for (int i = 0; i < matoms; ++i) {
+      if (xref[i] >= 0){
+        data.aromatic_in_child[xref[i]] = data.aromatic[i];
+      }
+    }
+
+    UnsetImplicitHydrogenInformation(r);
+    // cerr << "Subset created " << m.smiles() << ' ' << r.smiles() << '\n';
+
+    if (! LabelAttachmentPoints(m, r, sys, data)) {
+      continue;
+    }
+
+    std::optional<IWString> label = CanonicalRingName(m, data.ring_sys, sys);
+    if (! label) {
+      continue;
+    }
+    // cerr << "Label '" << label << "' " << r.unique_smiles() << '\n';
+
+    r.set_name(m.name());
+    r << '.' << *label;
+
+    GenerateRing(m, r, usmi, exocyclic_smiles, *label, data, 1);
+    //Maybe also compute the variant with no substition information.
+    // This does not work if we have added exocyclic isotopes. TODO:ianwatson fix.
+    if (_generate_substitution_not_specified && exocyclic_smiles.empty()) {
+      r.transform_to_non_isotopic_form();
+      GenerateRing(m, r, usmi, exocyclic_smiles, *label, data, 0);
+    }
+  }
+
+  return 1;
+}
+
+// Atom `zatom` is part of a ring system where ring_sys[zatom] == sys_num.
+// If it is bonded to an exocyclic atom, return the `atypes` value for
+// that attached atom. If there are no attached atoms outside the ring
+// system, return 0;
+isotope_t
+ExtractRings::IsotopeOfExocyclicAtom(Molecule& m,
+                atom_number_t zatom,
+                const int* ring_sys,
+                int sys_num,
+                const uint32_t* atypes) const {
+  const Atom& atom = m.atom(zatom);
+  // If 2 connected, no exocyclic bonds. Check is redundant, has been
+  // checked before here.
+  if (atom.ncon() == 2) {
+    return 0;
+  }
+
+  for (const Bond* b : atom) {
+    atom_number_t j = b->other(zatom);
+    if (ring_sys[j] == sys_num) {
+      continue;
+    }
+
+    return atypes[j];
+  }
+
+  // All attached atoms are part of the ring system.
+  return 0;
+}
+
+// We are applying some kind of isotope to an atom. If we have atom types
+// use that, otherwise _isotope.
+isotope_t
+ExtractRings::IsotopeForAtom(Molecule& m, atom_number_t zatom, 
+                             int sys_num,
+                             const PerMoleculeArrays& data) const {
+//cerr << "IsotopeForAtom " << atom_number << " atypes " << atypes.get() << " value " << atypes[atom_number] << '\n';
+
+  if (data.atype) {
+    return IsotopeOfExocyclicAtom(m, zatom, data.ring_sys, sys_num, data.atype);
+  }
+  
+  return _isotope;
+}
+
+// Return 1 if there any atoms where ring_sys[i] == sys_num that correspond
+// to more than chain bonds attached to the ring atom.
+int
+AnyMultiplyConnectedAtoms(Molecule& m,
+                const int* ring_sys,
+                int sys_num) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (ring_sys[i] != sys_num) {
+      continue;
+    }
+
+    if (m.is_aromatic(i)) {
+      continue;
+    }
+
+    const Atom& atom = m.atom(i);
+    if (atom.ncon() <= 3) {
+      continue;
+    }
+
+    // There can be just 1 connection that is not in a ring.
+    if (m.ring_bond_count(i) + 1 != atom.ncon()) {
+      return 1;
+    }
+  }
+
+  return 0;  // none detected.
+}
+
+int
+ExtractRings::LabelAttachmentPoints(Molecule& parent,
+                              Molecule& r,
+                              int sys_num,
+                              const PerMoleculeArrays& data) const {
+  const int matoms = parent.natoms();
+
+  // If we are applying isotopes for the attachment point, make sure we do not have
+  // any ring atoms attached to more than 1 exocyclic chain atom.
+  if (data.atype) {
+    if (AnyMultiplyConnectedAtoms(parent, data.ring_sys, sys_num)) {
+      return 0;
+    }
+  }
+
+  // Return the number of isotopes applied.
+  int rc = 0;
+#ifdef DEBUG_LABEL_ATTACHMENT_POINTS
+  cerr << "LabelAttachmentPoints::processing ring " << sys_num << '\n';
+#endif
+  for (int i = 0; i < matoms; ++i) {
+    // cerr << "parent atom " << i << " ring_sys " << data.ring_sys[i] << '\n';
+    if (data.ring_sys[i] != sys_num) {
+      continue;
+    }
+
+    const Atom& a = parent.atom(i);
+    // cerr << "  acon " << a.ncon() << '\n';
+    if (a.ncon() < 3) {
+      continue;
+    }
+
+#ifdef DEBUG_LABEL_ATTACHMENT_POINTS
+    cerr << "exocyclic_status base " << (data.exocyclic_status[i] == ExocyclicStatus::kIsBase) << '\n';
+    cerr << "exocyclic_status exo " << (data.exocyclic_status[i] == ExocyclicStatus::kIsExocyclic) << '\n';
+    cerr << "exocyclic_status not " << (data.exocyclic_status[i] == ExocyclicStatus::kNotInvolved) << '\n';
+#endif
+    // No isotopes at exocyclic ring atoms.
+    if (data.exocyclic_status[i] == ExocyclicStatus::kIsBase) {
+      continue;
+    }
+
+    for (const Bond* b : a) {
+      atom_number_t o = b->other(i);
+
+      // cerr << "   attached to " << o << " ring_sys " << data.ring_sys[o] << '\n';
+      if (data.ring_sys[o] == data.ring_sys[i]) {
+        continue;
+      }
+
+      r.set_isotope(data.xref[i], IsotopeForAtom(parent, i, sys_num, data));
+      ++rc;
+      //cerr << "ring set isotope on atom " << xref[i] << " value " << _isotope << '\n';
+    }
+  }
+
+  return rc;
+}
+
+// When building a canonical label, information needed about the
+// component rings in a ring system.
+struct RType {
+  int rsize;
+  int aromatic;
+
+  RType() {
+    rsize = 0;
+    aromatic = 0;
+  }
+  RType(int s, int a) {
+    rsize = s;
+    aromatic = a;
+  }
+};
+
+IWString
+operator<< (IWString& buffer, const RType& rtype) {
+  buffer << rtype.rsize;
+  if (rtype.aromatic) {
+    buffer << arom_suffix;
+  } else {
+    buffer << aliph_suffix;
+  }
+
+  return buffer;
+}
+
+// For sorting ring types.
+//First on ring size then aromaticity
+struct
+CompareRType {
+  int operator()(const RType& rt1, const RType& rt2) const {
+    if (rt1.rsize < rt2.rsize) {
+      return -1;
+    }
+    if (rt1.rsize > rt2.rsize) {
+      return 1;
+    }
+    if (rt1.aromatic > rt2.aromatic) {
+      return -1;
+    }
+    if (rt1.aromatic < rt2.aromatic) {
+      return 1;
+    }
+    return 0;
+  }
+};
+
+// Maybe return a canonical name for the ring system defined
+// by the atoms `ring_sys[i] == sys`.
+std::optional<IWString>
+ExtractRings::CanonicalRingName(Molecule& m,
+                        const int * ring_sys,
+                        int sys) const {
+  m.compute_aromaticity_if_needed();
+
+  // Gather the rings in the system.
+  std::vector<RType> rtype;
+  for (const Ring* r : m.sssr_rings()) {
+    if (r->count_members_set_in_array(ring_sys, sys) == 0) {
+      continue;
+    }
+    if (r->size() > _max_ring_size) {
+      return std::nullopt;
+    }
+    rtype.emplace_back(RType(r->number_elements(), r->is_aromatic()));
+  }
+
+  if (rtype.size() > 1) {
+    if (rtype.size() > _max_ring_system_size) {
+      return std::nullopt;
+    }
+
+    static CompareRType cmp;
+    iwqsort(rtype.data(), rtype.size(), cmp);
+  }
+
+  IWString result;
+  for (const RType& r: rtype) {
+    result << r;
+  }
+
+  return result;
+}
+
+int
+GetPosition(const resizable_array<atom_number_t>& order, int n) {
+  return order.index(n);
+}
+
+// A smarts `smt` has been formed, if we are doing substructure checks, return
+// true if `smt` matches `m`.
+int
+ExtractRings::MaybeCheckSubstructureMatch(Molecule& m, const IWString& smt) {
+  if (! _substructure_search_starting_molecule) {
+    return 1;
+  }
+
+  Substructure_Query query;
+  if (! query.create_from_smarts(smt)) {
+    cerr << "ExtractRings::MaybeCheckSubstructureMatch:invalid smarts '" << smt << "'\n";
+    return 0;
+  }
+
+  Molecule_to_Match target(&m);
+  Substructure_Results sresults;
+  if (query.substructure_search(target, sresults)) {
+    return 1;
+  }
+
+  cerr << "No substructure match " << m.smiles() << " smt '" << smt << "' matched " <<
+      sresults.max_query_atoms_matched_in_search() << " query atoms\n";
+  cerr << "Contains " << m.aromatic_atom_count() << " aromatic atoms\n";
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+  ++_substructure_search_failures;
+
+  return 0;
+}
+
+// `smt` is a unique smiles for `m`. If there are ring bonds in `smt`
+// that are type double, change to type any.
+void
+ExtractRings::ChangeRingDoubleBonds(Molecule& m,
+                      IWString& smt) const {
+  if (! _transform_ring_double_bonds) {
+    return;
+  }
+
+  if (! smt.contains('=')) {
+    return;
+  }
+
+  const resizable_array<atom_number_t> & atom_order_in_smiles = m.atom_order_in_smiles();
+
+  IWString new_smt;
+  new_smt.reserve(smt.size());
+
+  int atom_number = -1;
+  for (int i = 0; i < smt.number_elements(); ++i) {
+    const char c = smt[i];
+    if (c == kOpenSquareBracket) {
+      ++atom_number;
+      new_smt << c;
+      continue;
+    }
+    if (smt[i] != '=') {
+      new_smt << c;
+      continue;
+    }
+    int previous_atom = atom_order_in_smiles.index(atom_number);
+    if (m.ncon(previous_atom) == 1) {
+      new_smt << '=';
+      continue;
+    }
+    int next_atom = atom_order_in_smiles.index(atom_number + 1);
+    // Trailing ring closures will not have a next atom
+    if (next_atom < 0) {
+      new_smt << '=';
+      continue;
+    }
+
+    if (m.is_aromatic(previous_atom) && m.is_aromatic(next_atom)) {
+      new_smt << ':';
+      continue;
+    }
+    if (m.ncon(next_atom) == 1) {
+      new_smt << '=';
+      continue;
+    }
+    if (m.in_same_ring(previous_atom, next_atom)) {
+      new_smt << '~';
+    }
+  }
+  // cerr << "Convert " << smt << " to " << new_smt << '\n';
+  smt = new_smt;
+}
+
+// Given a subset of atoms in `m` indicated by `include_atom`,
+// generate a smarts.
+// If `include_d` is set, each atomic smarts will include the D directive,
+// either as a fixed value or as a D> directive.
+// This fails for molecules like
+//  O1CC[N+](=C2C=C(C)OC(=C2)C)CC1 74332-96-0
+// where the exocyclic heteroatom is needed in order to make the ring
+// aromatic, but that information is lost here.
+int
+ExtractRings::GenerateSmarts(Molecule& parent,
+               Molecule& m,
+               PerMoleculeArrays& data,
+               int include_d,
+               IWString& result) const {
+
+  m.compute_aromaticity_if_needed();
+  // cerr << "Smiles after arom " << m.aromatic_smiles() << '\n';
+
+  const int matoms = m.natoms();
+
+  Smiles_Information smiles_information(matoms);
+  smiles_information.allocate_user_specified_atomic_smarts();
+  smiles_information.set_smiles_is_smarts(1);
+
+  int aromatic_atoms_encountered = 0;
+
+  for (int i = 0; i < matoms; ++i) {
+    // cerr << "Atom " << i << ' ' << m.smarts_equivalent_for_atom(i) << " included , arom " << m.is_aromatic(i) << '\n';
+
+    IWString smt;
+    smt << kOpenSquareBracket;
+    // this is not quite correct. If the atom is exocyclic and aliphatic here
+    // it prevents matching an aromatic later. Ignore for now.
+    if (data.aromatic_in_child[i]) {
+      smt << 'a';
+      ++aromatic_atoms_encountered;
+    } else {
+      smt << 'A';
+    }
+    if (m.ring_bond_count(i)) {
+      smt << 'x' << m.ring_bond_count(i);
+    }
+    // This is inefficient, we could precomute the string ring membership(s) for each atom.
+    for (const Ring* r : m.sssr_rings()) {
+      if (r->contains(i)) {
+        smt << 'r' << r->size();
+      }
+    }
+
+    if (! include_d) {
+    } else if (_atype.active() && m.isotope(i) > 0) {
+      smt << "D>" << m.ncon(i);
+    }else if (_isotope == m.isotope(i)) {
+      if (m.is_aromatic(i)) {
+        smt << "D3";
+      } else {
+        smt << "D>" << m.ncon(i);
+      }
+    } else if (m.ncon(i) > 1) {
+      smt << "D" << m.ncon(i);
+    }
+    smt << kCloseSquareBracket;
+    smiles_information.set_user_specified_atomic_smarts(i, smt);
+  }
+
+  m.ring_membership();
+
+  if (aromatic_atoms_encountered) {
+    for (const Bond* b : m.bond_list()) {
+      if (b->nrings() == 0) {
+        continue;
+      }
+
+      const atom_number_t a1 = b->a1();
+      const atom_number_t a2 = b->a2();
+      if (data.aromatic_in_child[a1] && data.aromatic_in_child[a2]) {
+        m.set_bond_permanent_aromatic(b->a1(), b->a2());
+      }
+    }
+  }
+
+  set_write_smiles_aromatic_bonds_as_colons(1);
+  m.smiles(smiles_information);
+  set_write_smiles_aromatic_bonds_as_colons(0);
+
+  result = smiles_information.smiles();
+
+  ChangeRingDoubleBonds(m, result);
+
+  return 1;
+}
+
+// `m` is a subset of `parent`, governed by `include_atom`.
+// `usmi` is the unique smiles of `m`, although possibly different in
+// the presence of exocyclic double bonds.
+// Create smiles and smarts from `m` and add to `_hash`.
+// Currently exocyclic double bonds are not handled properly. Ignoring for now.
+// O1CC[N+](=C2C=C(C)OC(=C2)C)CC1 74332-96-0 does not work properly...
+int
+ExtractRings::GenerateRing(Molecule& parent,
+                           Molecule& m,
+                           const IWString& usmi,
+                           const IWString& exocyclic_smiles,
+                           const IWString& label,
+                           PerMoleculeArrays& data,
+                           int include_d) {
+
+  const IWString smi = m.smiles();
+
+  IWString smt;
+  GenerateSmarts(parent, m, data, include_d, smt);
+
+  MaybeCheckSubstructureMatch(parent, smt);
+
+  auto iter_label = _ring.find(label);
+  if (iter_label == _ring.end()) {
+    IW_STL_Hash_Map<IWString, RplRing::ReplacementRing> r;
+    auto [iter, _] = _ring.emplace(std::make_pair(label, std::move(r)));
+    iter_label = iter;
+  }
+
+  auto iter_usmi = iter_label->second.find(usmi);
+  if (iter_usmi == iter_label->second.end()) {
+    RplRing::ReplacementRing r;
+    r.set_smi(smi.data(), smi.length());
+    r.set_smt(smt.data(), smt.length());
+    r.set_id(m.name().AsString());
+    r.set_usmi(usmi.data(), usmi.length());
+    r.set_conn(include_d);
+    if (! exocyclic_smiles.empty()) {
+      r.set_exo(exocyclic_smiles.data(), exocyclic_smiles.size());
+    }
+    r.set_n(1);
+
+    iter_label->second.emplace(std::make_pair(usmi, std::move(r)));
+  } else {
+    const auto n = iter_usmi->second.n();
+    iter_usmi->second.set_n(n + 1);
+  }
+  
+  return 1;
+}
+
+// For each stored ring write the protos to a file
+// with prefix `_stem`.
+int
+ExtractRings::WriteRings() const {
+  for (const auto& [label, rings] : _ring) {
+    IWString fname;
+    fname << _stem << '_' << label << ".smi";
+    if (! WriteRings(fname, rings)) {
+      cerr << "ExtractRings::WriteRings:cannot write '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+// Write a set of rings `rings` to `fname` as text_proto form.
+int
+ExtractRings::WriteRings(IWString& fname,
+                         const IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>& rings) const {
+  IWString_and_File_Descriptor output;
+  if (! output.open(fname.null_terminated_chars())) {
+    cerr << "ExtractRings::WriteRings:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return WriteRings(output, rings);
+}
+
+// Write a set of rings `rings` to `output` as text_proto form.
+int
+ExtractRings::WriteRings(IWString_and_File_Descriptor& output,
+                         const IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>& rings) const {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+
+  for (const auto& [usmi, r] : rings) {
+    printer.PrintToString(r, &buffer);
+    output << buffer << '\n';
+    output.write_if_buffer_holds_more_than(8192);
+  }
+
+  return 1;
+}
+
+int
+ReplaceRings(ExtractRings& extract_rings,
+            Molecule& m,
+            IWString_and_File_Descriptor& output) {
+  return extract_rings.Process(m);
+}
+
+int
+ReplaceRings(ExtractRings& extract_rings,
+            data_source_and_type<Molecule>& input,
+            IWString_and_File_Descriptor& output) {
+  Molecule * m;
+  while ((m = input.next_molecule()) != nullptr) {
+    std::unique_ptr<Molecule> free_m(m);
+
+    if (! extract_rings.Preprocess(*m)) {
+      continue;
+    }
+
+    if (! ReplaceRings(extract_rings, *m, output)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+ReplaceRings(ExtractRings& extract_rings,
+            const char * fname,
+            FileType input_type,
+            IWString_and_File_Descriptor& output) {
+  if (input_type == FILE_TYPE_INVALID) {
+    input_type = discern_file_type_from_name(fname);
+  }
+
+  data_source_and_type<Molecule> input(input_type, fname);
+  if (! input.ok()) {
+    cerr << "Cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return ReplaceRings(extract_rings, input, output);
+}
+
+
+int
+ReplaceRings(ExtractRings& extract_rings,
+            iwstring_data_source& input,
+            FileType input_type,
+            IWString_and_File_Descriptor& output) {
+  IWString fname;
+  while (input.next_record(fname)) {
+    if (! ReplaceRings(extract_rings, fname.null_terminated_chars(), input_type, output)) {
+      cerr << "Fatal error processing '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Main(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vE:A:i:g:lcS:aR:P:kr:X:");
+  if (cl.unrecognised_options_encountered()) {
+    cerr << "unrecognised_options_encountered\n";
+    Usage(1);
+  }
+
+  const int verbose = cl.option_count('v');
+
+  if (! process_standard_aromaticity_options(cl, verbose, 'A')) {
+    cerr << "Cannot process aromaticity options\n";
+    return 1;
+  }
+
+  if (! process_elements(cl, verbose, 'E')) {
+    cerr << "Cannot process standard elements options (-E)\n";
+    return 1;
+  }
+
+  ExtractRings extract_rings;
+  if (! extract_rings.Initialise(cl)) {
+    cerr << "Cannot initialise options\n";
+    Usage(1);
+  }
+
+  if (cl.empty()) {
+    cerr << "Insufficient arguments\n";
+    Usage(1);
+  }
+
+  FileType input_type = FILE_TYPE_INVALID;
+
+  if (cl.option_present('i')) {
+    if (!process_input_type(cl, input_type)) {
+      cerr << "Cannot determine input type\n";
+      return 1;
+    }
+  } else if (!all_files_recognised_by_suffix(cl)) {
+    return 1;
+  }
+
+  IWString_and_File_Descriptor output(1);
+  for (const char* fname : cl) {
+    IWString tmp(fname);
+    if (tmp.starts_with("F:")) {
+      tmp.remove_leading_chars(2);
+      iwstring_data_source input;
+      if (! input.open(tmp.null_terminated_chars())) {
+        cerr << "ReplaceRings:cannot open '" << tmp << "'\n";
+        return 0;
+      }
+      if (! ReplaceRings(extract_rings, input, input_type, output)) {
+        cerr << "Fatal error processing '" << fname << "'\n";
+        return 1;
+      }
+
+      continue;
+    }
+
+    if (! ReplaceRings(extract_rings, fname, input_type, output)) {
+      cerr << "Fatal error processing '" << fname << "'\n";
+      return 1;
+    }
+  }
+
+  extract_rings.WriteRings();
+
+  if (verbose) {
+    extract_rings.Report(cerr);
+  }
+
+  return 0;
+}
+
+}  // namespace ring_extraction
+
+int
+main(int argc, char** argv) {
+  int rc = ring_extraction::Main(argc, argv);
 
   return rc;
 }

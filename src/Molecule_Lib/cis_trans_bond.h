@@ -1,5 +1,5 @@
-#ifndef CIS_TRANS_BOND_H
-#define CIS_TRANS_BOND_H
+#ifndef MOLECULE_LIB_CIS_TRANS_BOND_H_
+#define MOLECULE_LIB_CIS_TRANS_BOND_H_
 
 #include <iostream>
 #include "iwmtypes.h"
@@ -142,4 +142,4 @@ class Cis_Trans_Bond
     int atom_is_now_implicit_hydrogen (atom_number_t);
 };
 
-#endif
+#endif  // MOLECULE_LIB_CIS_TRANS_BOND_H_

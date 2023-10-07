@@ -1,7 +1,10 @@
-#ifndef IW_ATOM_TYPING_H
-#define IW_ATOM_TYPING_H
+#ifndef MOLECULE_LIB_ATOM_TYPING_H_
+#define MOLECULE_LIB_ATOM_TYPING_H_
 
-#include "iwbits.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwstring/iwstring.h"
+
+#include "Molecule_Lib/atom_type_ext.pb.h"
 
 #include "charge_assigner.h"
 #include "donor_acceptor.h"
@@ -32,7 +35,7 @@
 
 /*
   Oct 2009. We introduce an entirely flexible atom typing that can come
-  from the command line. 
+  from the command line.
   There will be two things,
     an atom type that indicates this is the type to use
     and an int that holds the components
@@ -59,9 +62,9 @@
 // carbon or heteroatom
 #define IWATTYPE_USP_E one_bit_32[8]
 // unsaturated - for now, includes arom
-#define IWATTYPE_USP_U one_bit_32[9] 
+#define IWATTYPE_USP_U one_bit_32[9]
 // include isotope information in the atom type
-#define IWATTYPE_USP_I one_bit_32[10] 
+#define IWATTYPE_USP_I one_bit_32[10]
 // isolated or fused ring
 #define IWATTYPE_USP_F one_bit_32[11]
 
@@ -90,6 +93,10 @@
 
 #define IWATTYPE_USP_O one_bit_32[19]
 
+// Unsaturated, but aromatic NOT included.
+
+#define IWATTYPE_USP_B one_bit_32[20]
+
 #define IWATTYPE_PPHORE 262144
 
 // The atomic symbol hash value - useful for non periodic table elements
@@ -98,89 +105,154 @@
 
 class Molecule;
 
-class Atom_Typing_Specification
-{
+// If atom types come from external queries
+class QueryAndValue {
   private:
-    int _type;
-    unsigned int _user_specified_type;
-    int _differentiate_rings;
-    int _perform_shell_iteration;
+    // One or more queries that define the atom(s).
+    // All queries that match are applied.
+    resizable_array_p<Substructure_Query> _query;
 
-    IWString _built_from;
-
-//  For Pharmacaphore types
-
-    Charge_Assigner _charge_assigner;
-    Donor_Acceptor_Assigner _donor_acceptor_assigner;
-    resizable_array_p<Substructure_Query> _hydrophobe;
-    int _assign_other_type;
-    int _combine_donor_and_acceptor;
-
-    Molecule_Output_Object _write_isotopically_labelled;
-
-//  private functions
-
-    int _parse_user_specified_type(const const_IWSubstring & p);
-    int _append_tag_for_user_specified_type (IWString & tag) const;
-    template <typename T> int _assign_user_specified_type    (Molecule & m, T * atype, const int * ncon) const;
-    template <typename T> int _ust_assign_atom_types_z_prime_numbers (const Molecule & m, T * atype, int compress_halogens) const;
-    template <typename T> int _ust_assign_atom_types_x       (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_t       (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_hcount  (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_pi      (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_arom    (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_ncon    (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_ncon    (const Molecule & m, T * atype, const int * ncon) const;
-    template <typename T> int _ust_assign_atom_types_nrings  (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_none    (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_isotope (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_heteroatom (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_unsaturated (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_pi_boolean (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_ring_fusion (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_aromatic_all_the_same (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_smallest_ring (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_largest_ring (Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_connected_atoms_hash(const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_atomic_symbol_hash_value (const Molecule & m, T * atype) const;
-    template <typename T> int _ust_assign_atom_types_formal_charge(const Molecule & m, T * atype) const;
-
-    template <typename T> void _perform_shell_expansion_v1 (Molecule & m, T *) const;
-    template <typename T> void _perform_shell_expansion_v2 (Molecule & m, T * atype) const;
-    template <typename T> int _perform_shell_iteration_v2 (Molecule & m, const atom_number_t zatom,
-                                const T * atype,
-                                int * complete,
-                                int need_to_compute_bond_constants,
-                                int radius) const;
-
-    int _build_pharmacaphore_specification (const const_IWSubstring &);
-    int _build_pharmacaphore_specification (const IWString &, iwstring_data_source &);
-    template <typename T> int _assign_atom_types_pharmacaphore (Molecule & m, T *atype);
+    // The atom type value assigned to all atoms matching the query.
+    uint32_t _value;
 
   public:
-    Atom_Typing_Specification();
+    QueryAndValue();
 
-    int active () const;
+    int Build(const atom_typing_spec::QueryAndValue& proto);
 
-    void set_atom_type (int s) { _type = s;}   // should probably check validity
-    int  atom_type () const { return _type;}
+    template <typename T> int AssignAtomTypes(Molecule_to_Match& target,
+                        T* atype);
+};
 
-    void set_user_specified_type (unsigned int);
+class Atom_Typing_Specification {
+ private:
+  int _type;
+  unsigned int _user_specified_type;
+  int _differentiate_rings;
+  int _perform_shell_iteration;
 
-    int append_to_tag (IWString &) const;
-    int string_representation (IWString &) const;
+  IWString _built_from;
 
-    int build (const const_IWSubstring & s);
+  //  For Pharmacaphore types
 
-    template <typename T> int assign_atom_types (Molecule & m, T * atype, const int * ncon = NULL);   // non const because the pharmacaphore type contains queries
+  Charge_Assigner _charge_assigner;
+  Donor_Acceptor_Assigner _donor_acceptor_assigner;
+  resizable_array_p<Substructure_Query> _hydrophobe;
+  int _assign_other_type;
+  int _combine_donor_and_acceptor;
 
-//  ec fingerprints started with Jibo's prime number atomic number types,
-//  but other programmes do not use that convention.
+  Molecule_Output_Object _write_isotopically_labelled;
 
-    void swap_atomic_number_atom_type_to_atomic_number_prime() {
-      if (_type == IWATTYPE_Z)
-        _type = IWATTYPE_ZP;
+  // Mar 2023. Atom typing can come from external queries.
+
+  resizable_array_p<QueryAndValue> _query_and_value;
+
+  //  private functions
+
+  int _parse_user_specified_type(const const_IWSubstring& p);
+  int _append_tag_for_user_specified_type(IWString& tag) const;
+  template <typename T>
+  int _assign_user_specified_type(Molecule& m, T* atype, const int* ncon) const;
+  template <typename T>
+  int _ust_assign_atom_types_z_prime_numbers(const Molecule& m, T* atype,
+                                             int compress_halogens) const;
+  template <typename T>
+  int _ust_assign_atom_types_x(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_t(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_hcount(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_pi(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_arom(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_ncon(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_ncon(const Molecule& m, T* atype, const int* ncon) const;
+  template <typename T>
+  int _ust_assign_atom_types_nrings(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_none(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_isotope(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_heteroatom(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_unsaturated(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_unsaturated_x_aromatic (Molecule & m, T * atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_pi_boolean(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_ring_fusion(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_aromatic_all_the_same(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_smallest_ring(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_largest_ring(Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_connected_atoms_hash(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_atomic_symbol_hash_value(const Molecule& m, T* atype) const;
+  template <typename T>
+  int _ust_assign_atom_types_formal_charge(const Molecule& m, T* atype) const;
+
+  template <typename T>
+  int AssignExternalAtomTypes(Molecule& m, T* atype);
+
+  template <typename T>
+  void _perform_shell_expansion_v1(Molecule& m, T*) const;
+  template <typename T>
+  void _perform_shell_expansion_v2(Molecule& m, T* atype) const;
+  template <typename T>
+  int _perform_shell_iteration_v2(Molecule& m, const atom_number_t zatom, const T* atype,
+                                  int* complete, int need_to_compute_bond_constants,
+                                  int radius) const;
+
+  int _build_pharmacaphore_specification(const const_IWSubstring&);
+  int _build_pharmacaphore_specification(const IWString&, iwstring_data_source&);
+  template <typename T>
+  int _assign_atom_types_pharmacaphore(Molecule& m, T* atype);
+
+  int ParseExternalQuery(IWString& proto_fname);
+  int BuildExternal(const atom_typing_spec::External& proto);
+
+ public:
+  Atom_Typing_Specification();
+
+  int active() const;
+
+  void set_atom_type(int s) {
+    _type = s;
+  }  // should probably check validity
+
+  int atom_type() const {
+    return _type;
+  }
+
+  void set_user_specified_type(unsigned int);
+
+  int append_to_tag(IWString&) const;
+  int string_representation(IWString&) const;
+
+  int build(const const_IWSubstring& s);
+
+  template <typename T>
+  int assign_atom_types(
+      Molecule& m, T* atype,
+      const int* ncon =
+          nullptr);  // non const because the pharmacaphore type contains queries
+
+  //  ec fingerprints started with Jibo's prime number atomic number types,
+  //  but other programmes do not use that convention.
+
+  void swap_atomic_number_atom_type_to_atomic_number_prime() {
+    if (_type == IWATTYPE_Z) {
+      _type = IWATTYPE_ZP;
     }
+  }
 };
 
 /*
@@ -190,20 +262,22 @@ class Atom_Typing_Specification
   for example, map would pass NCMAP in TAG and it would come out as something like NCMAPC<
 */
 
-extern int determine_atom_type_and_set_tag(const const_IWSubstring & p, IWString & tag, int verbose = 0);
+extern int determine_atom_type_and_set_tag(const const_IWSubstring& p, IWString& tag,
+                                           int verbose = 0);
 
-extern int iwattype_convert_to_string_form (int atype, IWString & s);
-extern int determine_atom_type (const IWString & s);
+extern int iwattype_convert_to_string_form(int atype, IWString& s);
+extern int determine_atom_type(const IWString& s);
 
 /*
   Some programmes have an array of ncon values available. Use it if possible
 */
 
-template <typename T> int assign_atom_types(Molecule & m, int typing_to_use, T * atype, const int * ncon = NULL);
+template <typename T>
+int assign_atom_types(Molecule& m, int typing_to_use, T* atype,
+                      const int* ncon = nullptr);
 
 extern void set_assign_arbitrary_values_to_unclassified_atoms(int s);
 
-extern void set_use_version_2_augmented_atom_algorithm (int s);
+extern void set_use_version_2_augmented_atom_algorithm(int s);
 
-#endif
-
+#endif  // MOLECULE_LIB_ATOM_TYPING_H_

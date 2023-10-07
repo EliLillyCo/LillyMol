@@ -1,9 +1,9 @@
-#ifndef PEARLMAN_SSSR_H
-#define PEARLMAN_SSSR_H
+#ifndef MOLECULE_LIB_PEARLMAN_SSSR_H_
+#define MOLECULE_LIB_PEARLMAN_SSSR_H_
+
+#include "Foundational/iwbits/iwbits.h"
 
 #include "iwmtypes.h"
-
-#include "iwbits.h"
 
 /*
   We simultaneously discover members of the SSSR, and we need some means
@@ -218,4 +218,4 @@ class Tnode
 extern int  perceive_sssr_rings();
 extern void set_perceive_sssr_rings(int s);
 
-#endif
+#endif  // MOLECULE_LIB_PEARLMAN_SSSR_H_

@@ -1,0 +1,6 @@
+name: "adamantane_to_methyl"
+scaffold {
+  id: 0
+  smarts: "[CD4x3]12CC3CC(C1)CC(C2)C3"
+  remove_atoms: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+}

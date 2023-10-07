@@ -95,9 +95,9 @@ Molecule::bondi (int bi) const
   assert (bi >= 0);
 
   if (0 == _number_elements)
-    return NULL;
+    return nullptr;
 
-  static Bond *b = NULL;
+  static Bond *b = nullptr;
 
   DELETE_IF_NOT_NULL (b);
 
@@ -120,7 +120,7 @@ Molecule::bondi (int bi) const
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 /*
@@ -131,7 +131,7 @@ Molecule::bondi (int bi) const
   no bonds in the molecule. We keep one static bond.
 */
 
-static Bond *b = NULL;
+static Bond *b = nullptr;
 
 const Bond *
 Molecule::bondi (atom_number_t i, int j) const

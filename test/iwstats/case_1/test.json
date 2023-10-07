@@ -1,0 +1,6 @@
+{
+    "executable": "iwstats",
+    "options": [ "-j -e 2 -p 3 #{proto.input_file[0]}" ],
+    "input_file": [ "${LILLYMOL_HOME}/data/descriptor.txt" ],
+    "output_file": [ "stdout" ]
+}

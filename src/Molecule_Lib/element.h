@@ -2,8 +2,8 @@
   Elements are mostly defined by their atomic numbers.
 */
 
-#ifndef ELEMENT_H
-#define ELEMENT_H
+#ifndef MOLECULE_LIB_ELEMENT_H_
+#define MOLECULE_LIB_ELEMENT_H_
 
 // Make sure you adjust the alphabetic_element_symbol_order array in molecule.cc when adding new elements
 
@@ -11,12 +11,9 @@
 
 #define REASONABLE_ATOMIC_NUMBER(z) ((z) >= 0 && (z) <= HIGHEST_ATOMIC_NUMBER)
 
-class IWString;
-class const_IWSubstring;
-
 #include <iostream>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "iwmtypes.h"
 
@@ -28,12 +25,15 @@ class const_IWSubstring;
 
 #define VALENCE_NOT_DEFINED -5
 
+// Isotopes are restricted to 32 bit unsigned values.
+using isotope_t = uint32_t;
+
 class Element {
   private:
     atomic_number_t _atomic_number;
     IWString _symbol;
     IWString _aromatic_symbol;        // save doing run-time conversions
-    int _normal_isotope;              // count of protons + neutrons for most abundant
+    isotope_t _normal_isotope;              // count of protons + neutrons for most abundant
     atomic_mass_t _atomic_mass;       // closely related to _normal_isotope
     int _organic;
     int _metal;
@@ -105,9 +105,9 @@ class Element {
 
     int read_ptable_record (const const_IWSubstring &);
 
-    int append_smiles_symbol (IWString & smiles, aromaticity_type_t arom, int isotope) const;
+    int append_smiles_symbol (IWString & smiles, aromaticity_type_t arom, isotope_t isotope) const;
 
-    int normal_isotope () const { return _normal_isotope;}
+    isotope_t normal_isotope () const { return _normal_isotope;}
 
     int organic () const { return _organic;}
     void set_organic (int o) { _organic = o;}
@@ -123,6 +123,9 @@ class Element {
 
     int number_alternate_valences () const { return _alternate_valence.number_elements ();}
     int alternate_valence (int) const;
+    const resizable_array<int>& alternate_valences() const {
+      return _alternate_valence;
+    }
 
 //  Is a valence either the normal or one of the alternate ones?
 
@@ -158,10 +161,10 @@ extern void  debug_print_all_elements (std::ostream &);
   All the get_element_from_symbol variants convert the first char to uppercase
 */
 
-extern const Element * get_element_from_symbol (const char *, int, int &);
-extern const Element * get_element_from_symbol (const char *, int &);
-extern const Element * get_element_from_symbol (const const_IWSubstring &, int &);
-extern const Element * get_element_from_symbol (const IWString &, int &);
+extern const Element * get_element_from_symbol (const char *, int, isotope_t& iso);
+extern const Element * get_element_from_symbol (const char *, isotope_t& iso);
+extern const Element * get_element_from_symbol (const const_IWSubstring &, isotope_t& iso);
+extern const Element * get_element_from_symbol (const IWString &, isotope_t& iso);
 extern const Element * get_element_from_symbol (char);
 
 extern const Element * get_element_from_symbol_no_case_conversion (const char * s, int nchars);
@@ -181,7 +184,7 @@ extern int element_from_smarts_string (const char * smiles, int nchars, const El
 
 extern int element_from_long_smiles_string (const char * smiles, int nchars, const Element * & result);
 
-#define OK_ELEMENT(e) ( (NULL != (e)) && (e)->ok () )
+#define OK_ELEMENT(e) ( (nullptr != (e)) && (e)->ok () )
 
 extern int set_auto_create_new_elements (int);
 extern int auto_create_new_elements ();
@@ -190,23 +193,23 @@ extern int symbol_for_atomic_symbol_hash_value (int, IWString &);
 
 class Command_Line;
 
-extern int process_elements    (const Command_Line &, int = 0, char = 'E');
+extern int process_elements(const Command_Line &, int = 0, char = 'E');
 
-extern void set_include_isotopes_in_smiles (int);
+extern void set_include_isotopes_in_smiles(int);
 
-extern int display_standard_element_options (std::ostream &);
+extern int display_standard_element_options(std::ostream &);
 
 /*
   Daylight insists that explicit Hydrogens have square brackets. We
   can make that optional
 */
 
-extern void set_explicit_hydrogens_need_square_brackets_in_smiles (int);
+extern void set_explicit_hydrogens_need_square_brackets_in_smiles(int);
 
-extern int print_element_hash_table (std::ostream & os);
+extern int print_element_hash_table(std::ostream & os);
 
-extern void set_atomic_symbols_can_have_arbitrary_length (int s);
-extern int  atomic_symbols_can_have_arbitrary_length ();
+extern void set_atomic_symbols_can_have_arbitrary_length(int s);
+extern int  atomic_symbols_can_have_arbitrary_length();
 
 extern void set_display_strange_chemistry_messages(int);
 
@@ -216,9 +219,14 @@ extern void de_allocate_periodic_table();
   Mar 2010, extend the meaning of D and T to input formats other than mdl
 */
 
-extern int interpret_d_as_deuterium ();
-extern int interpret_t_as_tritium ();
+namespace element {
+int interpret_d_as_deuterium();
+void set_interpret_d_as_deuterium(int s);
 
-extern void reset_element_file_scope_variables ();
+int interpret_t_as_tritium();
+void set_interpret_t_as_tritium(int s);
+}  // namespace element
 
-#endif
+extern void reset_element_file_scope_variables();
+
+#endif  // MOLECULE_LIB_ELEMENT_H_

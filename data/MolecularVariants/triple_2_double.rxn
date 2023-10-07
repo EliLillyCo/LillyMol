@@ -1,0 +1,10 @@
+name: "triple_2_double"
+scaffold {
+  id: 0
+  smarts: "[Cx0]#[Cx0]"
+  make_bond {
+    a1: 0
+    a2: 1
+    btype: SS_DOUBLE_BOND
+  }
+}

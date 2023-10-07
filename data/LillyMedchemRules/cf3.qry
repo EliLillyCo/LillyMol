@@ -1,0 +1,31 @@
+(0 Query
+  (A I one_embedding_per_start_atom 1)
+  (A I unique_embeddings_only 1)
+  (A C Comment "cf3")
+  (A I Version 2)
+
+# Jul 98. Get rid of 3 or more CF3 groups, 2 are demerited, and 1 is OK
+
+  (A D numeric_value 60)
+
+  (A I subtract_from_rc 1)
+  (0 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 4)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+)

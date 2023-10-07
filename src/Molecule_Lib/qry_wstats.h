@@ -1,8 +1,8 @@
-#ifndef QRY_WITH_HIT_STATISTICS_H
-#define QRY_WITH_HIT_STATISTICS_H
+#ifndef MOLECULE_LIB_QRY_WSTATS_H_
+#define MOLECULE_LIB_QRY_WSTATS_H_
 
-#include "substructure.h"
 #include "ostream_and_type.h"
+#include "substructure.h"
 
 /*
   This extension of a substructure query keeps track of the number of
@@ -21,6 +21,13 @@ class Substructure_Hit_Statistics : public Substructure_Query
 
     int _use_vertical_bars_for_query_details;
 
+    // Feb 2022. CSR format for query matches. Queries that have names
+    // with multiple tokens will be quoted.
+
+    int _csr_query_details;
+    // Defaults to space.
+    IWString _csr_separator;
+
   protected:
     int _verbose;
     int _molecules_which_match;
@@ -32,7 +39,7 @@ class Substructure_Hit_Statistics : public Substructure_Query
   private:
 
     void _default_values ();
-    int  _set_stream (int, const char *, ofstream_and_type &);
+    int  _set_stream (FileType, const char *, ofstream_and_type &);
     int  _update_matches (int, Molecule *, const Substructure_Results &);
     int  _update_name_if_needed (int, Molecule *);
 
@@ -46,6 +53,13 @@ class Substructure_Hit_Statistics : public Substructure_Query
     int set_verbose (int i) { return _verbose = i;}
 
     void set_use_vertical_bars_for_query_details (int s) { _use_vertical_bars_for_query_details = s;}
+    void set_csr_query_details(int s) {
+      _csr_query_details = s;
+    }
+    void set_csr_separator(const const_IWSubstring& s) {
+      _csr_separator = s;
+      _csr_query_details = 1;
+    }
 
     int substructure_search (Molecule *);
     int substructure_search (Molecule & m) { return substructure_search(&m);}
@@ -54,8 +68,8 @@ class Substructure_Hit_Statistics : public Substructure_Query
     int substructure_search (Molecule_to_Match &);
     int substructure_search (Molecule_to_Match &, Substructure_Results &);
 
-    int set_stream_for_matches     (int, const char *);
-    int set_stream_for_non_matches (int, const char *);
+    int set_stream_for_matches     (FileType, const char *);
+    int set_stream_for_non_matches (FileType, const char *);
 
     int molecules_which_match () const { return _molecules_which_match;}
     int molecules_which_do_not_match () const { return _molecules_which_do_not_match;}
@@ -67,9 +81,11 @@ class Substructure_Hit_Statistics : public Substructure_Query
       {_append_non_match_details_to_molecule_name = ii;}
 
     int report (std::ostream & os, int verbose) const;
+
+    int ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto);
 };
 
 extern std::ostream & operator << (std::ostream &, const Substructure_Hit_Statistics &);
 
 
-#endif
+#endif  // MOLECULE_LIB_QRY_WSTATS_H_

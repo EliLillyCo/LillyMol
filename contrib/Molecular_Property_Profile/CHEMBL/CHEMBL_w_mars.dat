@@ -1,0 +1,229 @@
+description {
+  feature_name: "w_mars"
+  description: "Most atoms in a ring system"
+  plot_title: "Most atoms in a ring system"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 50.0
+mean: 8.566836
+median: 9.0
+quantile {
+  quantile: 0.01
+  value: 4.0
+}
+quantile {
+  quantile: 0.05
+  value: 6.0
+}
+quantile {
+  quantile: 0.1
+  value: 6.0
+}
+quantile {
+  quantile: 0.5
+  value: 9.0
+}
+quantile {
+  quantile: 0.9
+  value: 13.0
+}
+quantile {
+  quantile: 0.95
+  value: 15.0
+}
+quantile {
+  quantile: 0.99
+  value: 21.0
+}
+int_values {
+  count: 21049
+}
+int_values {
+  value: 3
+  count: 1401
+}
+int_values {
+  value: 4
+  count: 921
+}
+int_values {
+  value: 5
+  count: 46646
+}
+int_values {
+  value: 6
+  count: 934792
+}
+int_values {
+  value: 7
+  count: 30710
+}
+int_values {
+  value: 8
+  count: 39601
+}
+int_values {
+  value: 9
+  count: 477157
+}
+int_values {
+  value: 10
+  count: 374830
+}
+int_values {
+  value: 11
+  count: 25307
+}
+int_values {
+  value: 12
+  count: 26923
+}
+int_values {
+  value: 13
+  count: 92343
+}
+int_values {
+  value: 14
+  count: 57969
+}
+int_values {
+  value: 15
+  count: 16398
+}
+int_values {
+  value: 16
+  count: 17402
+}
+int_values {
+  value: 17
+  count: 36292
+}
+int_values {
+  value: 18
+  count: 16048
+}
+int_values {
+  value: 19
+  count: 5686
+}
+int_values {
+  value: 20
+  count: 5615
+}
+int_values {
+  value: 21
+  count: 9021
+}
+int_values {
+  value: 22
+  count: 7767
+}
+int_values {
+  value: 23
+  count: 1657
+}
+int_values {
+  value: 24
+  count: 1810
+}
+int_values {
+  value: 25
+  count: 1709
+}
+int_values {
+  value: 26
+  count: 892
+}
+int_values {
+  value: 27
+  count: 799
+}
+int_values {
+  value: 28
+  count: 609
+}
+int_values {
+  value: 29
+  count: 671
+}
+int_values {
+  value: 30
+  count: 286
+}
+int_values {
+  value: 31
+  count: 147
+}
+int_values {
+  value: 32
+  count: 195
+}
+int_values {
+  value: 33
+  count: 96
+}
+int_values {
+  value: 34
+  count: 91
+}
+int_values {
+  value: 35
+  count: 63
+}
+int_values {
+  value: 36
+  count: 203
+}
+int_values {
+  value: 37
+  count: 78
+}
+int_values {
+  value: 38
+  count: 138
+}
+int_values {
+  value: 39
+  count: 38
+}
+int_values {
+  value: 40
+  count: 45
+}
+int_values {
+  value: 41
+  count: 17
+}
+int_values {
+  value: 42
+  count: 19
+}
+int_values {
+  value: 43
+  count: 8
+}
+int_values {
+  value: 44
+  count: 28
+}
+int_values {
+  value: 45
+  count: 6
+}
+int_values {
+  value: 46
+  count: 11
+}
+int_values {
+  value: 47
+  count: 3
+}
+int_values {
+  value: 48
+  count: 10
+}
+int_values {
+  value: 50
+  count: 3
+}

@@ -51,22 +51,6 @@
                                   const int * include_atom,
                                   Smiles_Information & smi_info);
 
-#ifdef OLD_WAY_WITH_POINTER_TO_MEMBER_FUNCTION
-    int _build_smiles_ordering (int (Molecule::*identify_next_atom) (const int * zorder, atom_number_t, atom_number_t &, const int *),
-                                const atom_number_t previous_atom,
-                                const atom_number_t a,
-                                int & icounter,
-                                const int * include_atom,
-                                Smiles_Information & smi_info);
-    int _build_smiles_ordering (Smiles_First_Atom &,
-                                int (Molecule::* identify_next_atom) (const int * zorder, atom_number_t, atom_number_t &, const int *),
-                                const int * include_atom,
-                                Smiles_Information & smi_info);
-    int _include_atom_in_smiles (atom_number_t) const;
-
-    int _mark_atoms_not_in_smiles (int * zorder);
-    void _find_smiles_start_atoms (const int * zorder, resizable_array<int> & start_atom) const;
-#endif
     int _build_smiles_ordering (Smiles_Information & smi_info, const int * include_atom);
 
 
@@ -89,7 +73,7 @@
                                    atom_number_t & first_atom,
                                    const int *);
 
-    int _all_atoms_are_chain_atoms (const int * process_these_atoms);
+//  int _all_atoms_are_chain_atoms (const int * process_these_atoms);
 
     int _determine_ring_closure_bonds (const int * zorder,
                                         const int * include_atom);
@@ -105,6 +89,11 @@
 
 //  in frag.cc
 
+    int _recursive_fragment_membership(Fragment_Information& fragment_information);
+    int _recursive_fragment_membership(Fragment_Information& fragment_information,
+                atom_number_t zatom,
+                int fragment_number,
+                int & bonds_in_fragment);
     int _compute_fragment_information_subset(Fragment_Information & fragment_information,
                                                const int * include_atom) const;
     int _create_bond_subset_starting_with (Molecule & subset,
@@ -137,4 +126,10 @@
                                       const int atoms_in_residual,
                                       const int atoms_in_fragment,
                                       Molecule & f);
+
+    int SmilesSetName(const char * s, int nchars, int processing_quoted_smiles);
+    int MaybeParseAsChemaxonExtension(const_IWSubstring& name, int processing_quoted_smiles);
+    int ParseChemaxonExtension(const const_IWSubstring& chemaxon);
+    int ParseCoords(const const_IWSubstring& chemaxon, int * claimed);
+    int ParseSpecialAtoms(const const_IWSubstring& chemaxon, int * claimed);
 #endif

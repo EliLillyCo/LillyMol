@@ -5,7 +5,6 @@
  
 #if (__GNUC_MINOR__ == 95)
 #include <strstream>
-using namespace std;
 
 IWString &
 IWString::operator = (ostrstream & zstream)
@@ -48,7 +47,6 @@ operator << (IWString & s, ostrstream & zextra)
 
 #else
 #include <sstream>
-using namespace std;
 
 /*IWString &
 IWString::operator = (ostringstream & zstream)

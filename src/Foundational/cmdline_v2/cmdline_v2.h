@@ -1,7 +1,7 @@
 #ifndef IWNCMDLINE_H
 #define IWNCMDLINE_H
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 class CmdLineDefault
 {

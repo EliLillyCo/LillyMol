@@ -4,8 +4,6 @@
 class const_IWSubstring;
 
 #include <iostream>
-using std::cerr;
-using std::endl;
 
 class IWString;
 
@@ -43,7 +41,7 @@ class IWHistogram
     int initialise (const const_IWSubstring &);
     int initialise (double mn, double mx, double dx);
 
-    int active () const { return NULL != _count;}
+    int active () const { return nullptr != _count;}
 
     int nbuckets () const { return _nbuckets;}
     double minval() const { return _min;}
@@ -57,7 +55,7 @@ class IWHistogram
     int extra (double);
 
     int write (std::ostream &) const;
-    int write_terse (std::ostream &, int = 1) const;
+    int write_terse (std::ostream &, int = 1, char output_separator=' ') const;
 
     int reset ();
 

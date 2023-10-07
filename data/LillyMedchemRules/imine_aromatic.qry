@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "imine_aromatic")
+  (A I version 2)
+  (A D numeric_value 30)
+  (A C smarts "[NR0]=c")
+)

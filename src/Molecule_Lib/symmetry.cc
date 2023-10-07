@@ -3,56 +3,49 @@
 using std::cerr;
 using std::endl;
 
+#include "Foundational/iwmisc/misc.h"
 
-//#define USE_IWMALLOC
-#ifdef USE_IWMALLOC
-#include "iwmalloc.h"
-#endif
-
-#include "misc.h"
-
+#include "misc2.h"
 #include "molecule.h"
 #include "path.h"
-#include "misc2.h"
-
 #include "symmetry.h"
 
 void
-Symmetry_Info::_default_values ()
+Symmetry_Info::_default_values()
 {
   _matoms = 0;
-  _symmetry_class = NULL;
-  _degree = NULL;
+  _symmetry_class = nullptr;
+  _degree = nullptr;
 
   return;
 }
 
-Symmetry_Info::Symmetry_Info ()
+Symmetry_Info::Symmetry_Info()
 {
   _default_values();
 }
 
-Symmetry_Info::~Symmetry_Info ()
+Symmetry_Info::~Symmetry_Info()
 {
-  assert (ok());
+  assert(ok());
 
-  DELETE_IF_NOT_NULL(_symmetry_class);
+  DELETE_IF_NOT_NULL_ARRAY(_symmetry_class);
 
-  DELETE_IF_NOT_NULL(_degree);
+  DELETE_IF_NOT_NULL_ARRAY(_degree);
 
   return;
 }
 
 int
-Symmetry_Info::ok () const
+Symmetry_Info::ok() const
 {
-  if (_number_elements && NULL == _symmetry_class)
+  if (_number_elements && nullptr == _symmetry_class)
     return 0;
 
   if (_symmetry_class && 0 == _number_elements)
     return 0;
 
-  if (NULL == _symmetry_class && 0 == _number_elements && 0 == _matoms)
+  if (nullptr == _symmetry_class && 0 == _number_elements && 0 == _matoms)
     return 1;
 
   if (_number_elements > _matoms)
@@ -62,14 +55,14 @@ Symmetry_Info::ok () const
 }
 
 int
-Symmetry_Info::debug_print (std::ostream & os) const
+Symmetry_Info::debug_print(std::ostream& os) const
 {
-  os << "Info on symmetry info for molecule with " << _matoms << " atoms and " <<
-        _number_elements << " symmetry classes\n";
+  os << "Info on symmetry info for molecule with " << _matoms << " atoms and " << _number_elements
+     << " symmetry classes\n";
 
   for (int i = 0; i < _number_elements; i++)
   {
-    const Set_of_Atoms * a = _things[i];
+    const Set_of_Atoms* a = _things[i];
 
     os << "Symmetry class " << i << " atoms " << (*a) << endl;
   }
@@ -80,7 +73,7 @@ Symmetry_Info::debug_print (std::ostream & os) const
     os << ng << " symmetric groupings\n";
     for (int i = 0; i < ng; i++)
     {
-      const Symmetric_Atoms * s = _symmetry_groupings[i];
+      const Symmetric_Atoms* s = _symmetry_groupings[i];
       os << " grouping " << i << " contains " << s->number_elements();
       if (s->number_elements() == _matoms)
         os << " (all)";
@@ -110,7 +103,7 @@ Symmetry_Info::debug_print (std::ostream & os) const
 */
 
 /*int
-Symmetry_Info::_determine_degree (Molecule & m, atom_number_t zatom)
+Symmetry_Info::_determine_degree(Molecule & m, atom_number_t zatom)
 {
   const Atom * a = m.atomi (zatom);
   int acon = a->ncon ();
@@ -210,15 +203,15 @@ Symmetry_Info::_determine_degree (Molecule & m, atom_number_t zatom)
 //#define DEBUG_SYMINFO_INITIALISE
 
 int
-Symmetry_Info::initialise (Molecule & m)
+Symmetry_Info::initialise(Molecule& m)
 {
-  _matoms = m.natoms ();
+  _matoms = m.natoms();
 
   _symmetry_class = new int[_matoms];
 
-   copy_vector (_symmetry_class, m.symmetry_classes (), _matoms);
+  copy_vector(_symmetry_class, m.symmetry_classes(), _matoms);
 
-  _degree = new_int (_matoms);
+  _degree = new_int(_matoms);
 
 #ifdef DEBUG_SYMINFO_INITIALISE
   cerr << "Symmetry classes\n";
@@ -236,15 +229,15 @@ Symmetry_Info::initialise (Molecule & m)
     if (jstart < 0)
       continue;
 
-    Set_of_Atoms * a = new Set_of_Atoms;
-    a->resize(3);       // just a guess, yes, this is wasteful...
+    Set_of_Atoms* a = new Set_of_Atoms;
+    a->resize(3);    // just a guess, yes, this is wasteful...
     for (int j = jstart; j < _matoms; j++)
     {
       if (_symmetry_class[j] == i)
         a->add(j);
     }
 
-//  and update the _degree array while we are at it.
+    //  and update the _degree array while we are at it.
 
     int na = a->number_elements();
 
@@ -257,38 +250,37 @@ Symmetry_Info::initialise (Molecule & m)
 
     add(a);
 
-//  cerr << "Found group " << (*a) << endl;
+    //  cerr << "Found group " << (*a) << endl;
 
     if (atoms_assigned == _matoms)
       break;
   }
 
-  assert (atoms_assigned <= _matoms);
+  assert(atoms_assigned <= _matoms);
 
   if (! _compute_symmetry_groupings(m))
     return 0;
 
-  assert (ok());
+  assert(ok());
 
   return _number_elements;
 }
 
 int
-Symmetry_Info::_compute_symmetry_groupings (Molecule & m,
-                               const int * symmetric_neighbours,
-                               int * already_done)
+Symmetry_Info::_compute_symmetry_groupings(Molecule& m, const int* symmetric_neighbours,
+                                           int* already_done)
 {
   for (int i = 0; i < _number_elements; i++)
   {
-    const Set_of_Atoms * s = _things[i];
+    const Set_of_Atoms* s = _things[i];
     int ns = s->number_elements();
-    if (1 == ns)     // a possibly asymmetric atom
+    if (1 == ns)    // a possibly asymmetric atom
       continue;
 
     if (already_done[s->item(0)])
       continue;
 
-    Symmetric_Atoms * sa = new Symmetric_Atoms;
+    Symmetric_Atoms* sa = new Symmetric_Atoms;
 
     sa->build(m, s->item(0), ns, symmetric_neighbours, _degree, already_done);
 
@@ -303,17 +295,18 @@ Symmetry_Info::_compute_symmetry_groupings (Molecule & m,
 */
 
 int
-Symmetry_Info::_compute_symmetry_groupings (Molecule & m)
+Symmetry_Info::_compute_symmetry_groupings(Molecule& m)
 {
   if (0 == _number_elements)    // if there is no symmetry, we are done
     return 0;
 
-  int * symmetric_neighbours = new_int(_matoms); std::unique_ptr<int[]> free_symmetric_neighbours(symmetric_neighbours);
+  int* symmetric_neighbours = new_int(_matoms);
+  std::unique_ptr<int[]> free_symmetric_neighbours(symmetric_neighbours);
 
 #ifdef SLOWVERSIONWITHATOMS
   for (int i = 0; i < _matoms; i++)
   {
-    const Atom * a = m.atomi(i);
+    const Atom* a = m.atomi(i);
     int acon = a->ncon();
     int sn = 0;
     for (int j = 0; j < acon; j++)
@@ -330,7 +323,7 @@ Symmetry_Info::_compute_symmetry_groupings (Molecule & m)
 
   for (int i = m.nedges() - 1; i >= 0; i--)
   {
-    const Bond * b = m.bondi(i);
+    const Bond* b = m.bondi(i);
 
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
@@ -341,7 +334,8 @@ Symmetry_Info::_compute_symmetry_groupings (Molecule & m)
       symmetric_neighbours[a1]++;
   }
 
-  int * already_done = new_int(_matoms); std::unique_ptr<int[]> free_already_done(already_done);
+  int* already_done = new_int(_matoms);
+  std::unique_ptr<int[]> free_already_done(already_done);
 
   return _compute_symmetry_groupings(m, symmetric_neighbours, already_done);
 }
@@ -352,18 +346,18 @@ Symmetry_Info::_compute_symmetry_groupings (Molecule & m)
 */
 
 int
-Symmetry_Info::remove_trivial_cf3 (const Molecule & m)
+Symmetry_Info::remove_trivial_cf3(const Molecule& m)
 {
   int rc = 0;
   for (int i = 0; i < _number_elements; i++)
   {
-    const Set_of_Atoms * s = _things[i];
+    const Set_of_Atoms* s = _things[i];
 
     int ns = s->number_elements();
     if (3 != ns)
       continue;
 
-    const Atom * a = m.atomi(s->item(0));
+    const Atom* a = m.atomi(s->item(0));
     if (1 != a->ncon())
       continue;
 
@@ -394,12 +388,11 @@ Symmetry_Info::remove_trivial_cf3 (const Molecule & m)
 }
 
 static int
-is_part_of_benzene_ring (const Set_of_Atoms & s,
-                         const resizable_array<const Ring *> & benzene_rings)
+is_part_of_benzene_ring(const Set_of_Atoms& s, const resizable_array<const Ring*>& benzene_rings)
 {
   for (int i = 0; i < benzene_rings.number_elements(); i++)
   {
-    const Ring * ri = benzene_rings[i];
+    const Ring* ri = benzene_rings[i];
     if (ri->contains(s[0]) && ri->contains(s[1]))    // only really need to check the first one
       return 1;
   }
@@ -412,10 +405,9 @@ is_part_of_benzene_ring (const Set_of_Atoms & s,
 */
 
 static int
-is_benzene_ring (const Molecule & m,
-                 const Ring & ri)
+is_benzene_ring(const Molecule& m, const Ring& ri)
 {
-  assert (6 == ri.number_elements());
+  assert(6 == ri.number_elements());
 
   int three_connected_ring_atoms = 0;
 
@@ -437,7 +429,7 @@ is_benzene_ring (const Molecule & m,
 }
 
 int
-Symmetry_Info::remove_benzene (Molecule & m)
+Symmetry_Info::remove_benzene(Molecule& m)
 {
   if (m.natoms() <= 6)
     return 0;
@@ -448,13 +440,13 @@ Symmetry_Info::remove_benzene (Molecule & m)
 
   m.compute_aromaticity_if_needed();
 
-// Look for benzene rings
+  // Look for benzene rings
 
-  resizable_array<const Ring *> benzene_rings;
+  resizable_array<const Ring*> benzene_rings;
 
   for (int i = 0; i < nr; i++)
   {
-    const Ring * ri = m.ringi(i);
+    const Ring* ri = m.ringi(i);
 
     if (6 != ri->number_elements())
       continue;
@@ -469,24 +461,24 @@ Symmetry_Info::remove_benzene (Molecule & m)
       benzene_rings.add(ri);
   }
 
-  if (0 == benzene_rings.number_elements())
+  if (benzene_rings.empty())
     return 0;
 
 #ifdef DEBUG_REMOVE_BENZENE
   cerr << "Found " << benzene_rings.number_elements() << " benzene rings\n";
 #endif
 
-// Now remove all the 2 member symmetry groupings involving these rings
+  // Now remove all the 2 member symmetry groupings involving these rings
 
   int rc = 0;
   for (int i = _number_elements - 1; i >= 0; i--)
   {
-    const Set_of_Atoms * s = _things[i];
+    const Set_of_Atoms* s = _things[i];
 
 #ifdef DEBUG_REMOVE_BENZENE
 //  cerr << "Examining " << (*s) << endl;
 #endif
-    
+
     int ns = s->number_elements();
 
     if (2 != ns)
@@ -512,7 +504,7 @@ Symmetry_Info::remove_benzene (Molecule & m)
   return rc;
 }
 
-Symmetric_Atoms::Symmetric_Atoms ()
+Symmetric_Atoms::Symmetric_Atoms()
 {
   _degree = 0;
 }
@@ -544,27 +536,23 @@ Symmetric_Atoms::Symmetric_Atoms ()
 */
 
 int
-Symmetric_Atoms::_build (Molecule & m,
-                         atom_number_t zatom,
-                         const int * symmetric_neighbours,
-                         const int * degree,
-                         int myflag,
-                         int * already_done)
+Symmetric_Atoms::_build(Molecule& m, atom_number_t zatom, const int* symmetric_neighbours,
+                        const int* degree, int myflag, int* already_done)
 {
-  assert (0 == already_done[zatom]);
+  assert(0 == already_done[zatom]);
 
   already_done[zatom] = myflag;
   add(zatom);
 
-  if (0 == degree[zatom])   // must be two-fold symmetric (not symmetric by itself)
+  if (0 == degree[zatom])    // must be two-fold symmetric (not symmetric by itself)
     ;
   else if (degree[zatom] < _degree)
     _degree = degree[zatom];    // the lowest degree of any atom component
 
-  const Atom * a = m.atomi(zatom);
+  const Atom* a = m.atomi(zatom);
   int acon = a->ncon();
 
-// First compute the number of unprocessed neighbours with no symmetry
+  // First compute the number of unprocessed neighbours with no symmetry
 
   int non_symmetric_neighbours = 0;
 
@@ -580,19 +568,21 @@ Symmetric_Atoms::_build (Molecule & m,
   }
 
 #ifdef DEBUG_BUILD_SYMMETRIC_ATOMS
-  cerr << "Symmetric_Atoms::_build: continuing with atom " << zatom << " degree " << degree[zatom] << ", " << non_symmetric_neighbours << " non symmetric neighbours\n";
+  cerr << "Symmetric_Atoms::_build: continuing with atom " << zatom << " degree " << degree[zatom]
+       << ", " << non_symmetric_neighbours << " non symmetric neighbours\n";
 #endif
 
   for (int i = 0; i < acon; i++)
   {
-    const Bond * b = a->item(i);
+    const Bond* b = a->item(i);
 
     atom_number_t j = b->other(zatom);
 
     if (myflag == already_done[j])
       continue;
 
-    if (degree[j] && 0 == already_done[j])    // all symmetric attachments to a symmetric atom are included
+    if (degree[j] &&
+        0 == already_done[j])    // all symmetric attachments to a symmetric atom are included
     {
 #ifdef DEBUG_BUILD_SYMMETRIC_ATOMS
       cerr << "Continuing with neighbour " << j << " degree " << degree[j] << endl;
@@ -604,23 +594,23 @@ Symmetric_Atoms::_build (Molecule & m,
 
     int jcon = m.ncon(j);
 
-//  We have a singly connected atom hanging off
+    //  We have a singly connected atom hanging off
 
     if (1 == jcon && 1 == non_symmetric_neighbours)
     {
 #ifdef DEBUG_BUILD_SYMMETRIC_ATOMS
-    if (1 == jcon)
-      cerr << "neighbour " << j << " is singly connected\n";
+      if (1 == jcon)
+        cerr << "neighbour " << j << " is singly connected\n";
 #endif
 
       add(j);
       continue;
     }
 
-// Now the more difficult case where atom J is not symmetric by itself
-// - nor is atom I. Two connected neighbours are always added
+    // Now the more difficult case where atom J is not symmetric by itself
+    // - nor is atom I. Two connected neighbours are always added
 
-//  Continue down a long chain
+    //  Continue down a long chain
 
     if (1 == non_symmetric_neighbours && 2 == jcon && 0 == b->nrings() && 0 == already_done[j])
     {
@@ -633,20 +623,21 @@ Symmetric_Atoms::_build (Molecule & m,
       continue;
     }
 
-//  If atom J is bonded to some (other) symmetric atoms, we continue with it
+    //  If atom J is bonded to some (other) symmetric atoms, we continue with it
 
     if (symmetric_neighbours[j] && 0 == already_done[j])
     {
 #ifdef DEBUG_BUILD_SYMMETRIC_ATOMS
-    if (symmetric_neighbours[j])
-      cerr << "Neighbour " << j << " has " << symmetric_neighbours[j] << " symmetric neighbours\n";
+      if (symmetric_neighbours[j])
+        cerr << "Neighbour " << j << " has " << symmetric_neighbours[j]
+             << " symmetric neighbours\n";
 #endif
 
       _build(m, j, symmetric_neighbours, degree, myflag, already_done);
       continue;
     }
 
-//  If we have come to a ring, that isn't symmetric, just add the atom
+    //  If we have come to a ring, that isn't symmetric, just add the atom
 
     if (0 == b->nrings() && m.nrings(j))
     {
@@ -658,7 +649,7 @@ Symmetric_Atoms::_build (Molecule & m,
       continue;
     }
 
-//  We may be at a stopping point
+    //  We may be at a stopping point
 
     if (1 == non_symmetric_neighbours && 0 == b->nrings())
     {
@@ -672,12 +663,8 @@ Symmetric_Atoms::_build (Molecule & m,
 }
 
 int
-Symmetric_Atoms::build (Molecule & m,
-                        atom_number_t zatom,
-                        int initial_degree,
-                        const int * symmetric_neighbours,
-                        const int * degree,
-                        int * already_done)
+Symmetric_Atoms::build(Molecule& m, atom_number_t zatom, int initial_degree,
+                       const int* symmetric_neighbours, const int* degree, int* already_done)
 {
   int matoms = m.natoms();
 
@@ -694,13 +681,11 @@ Symmetric_Atoms::build (Molecule & m,
 */
 
 static int
-no_more_than_N_atoms_mismatched (const Set_of_Atoms & r1,
-                                 const Set_of_Atoms & r2,
-                                 int max_mismatches)
+no_more_than_N_atoms_mismatched(const Set_of_Atoms& r1, const Set_of_Atoms& r2, int max_mismatches)
 {
   int nr1 = r1.number_elements();
 
-  assert (nr1 < r2.number_elements());
+  assert(nr1 < r2.number_elements());
 
   int mismatches = 0;
 
@@ -717,14 +702,12 @@ no_more_than_N_atoms_mismatched (const Set_of_Atoms & r1,
   return 1;
 }
 
-
 static int
-is_benzene_ring (const resizable_array<const Ring *> & benzene_rings,
-                 const Set_of_Atoms & r)
+is_benzene_ring(const resizable_array<const Ring*>& benzene_rings, const Set_of_Atoms& r)
 {
   for (int i = 0; i < benzene_rings.number_elements(); i++)
   {
-    const Ring * bri = benzene_rings[i];
+    const Ring* bri = benzene_rings[i];
 
     if (no_more_than_N_atoms_mismatched(*bri, r, 1))
       return 1;
@@ -734,14 +717,14 @@ is_benzene_ring (const resizable_array<const Ring *> & benzene_rings,
 }
 
 int
-Symmetry_Info::_remove_symmetry_groupings_that_are_just_benzene (const resizable_array<const Ring *> & benzene_rings,
-                                       int nb)
+Symmetry_Info::_remove_symmetry_groupings_that_are_just_benzene(
+    const resizable_array<const Ring*>& benzene_rings, int nb)
 {
   int rc = 0;
 
   for (int i = _symmetry_groupings.number_elements() - 1; i >= 0; i--)
   {
-    const Symmetric_Atoms * s = _symmetry_groupings[i];
+    const Symmetric_Atoms* s = _symmetry_groupings[i];
 
     if (7 != s->number_elements())
       continue;
@@ -764,13 +747,13 @@ Symmetry_Info::_remove_symmetry_groupings_that_are_just_benzene (const resizable
 */
 
 int
-Symmetry_Info::_remove_symmetry_grouping (const Set_of_Atoms & s)
+Symmetry_Info::_remove_symmetry_grouping(const Set_of_Atoms& s)
 {
-  assert (s.number_elements());
+  assert(s.number_elements());
 
   for (int i = 0; i < _symmetry_groupings.number_elements(); i++)
   {
-    const Symmetric_Atoms * smgpi = _symmetry_groupings[i];
+    const Symmetric_Atoms* smgpi = _symmetry_groupings[i];
 
     if (no_more_than_N_atoms_mismatched(s, *smgpi, 1))
     {
@@ -785,10 +768,9 @@ Symmetry_Info::_remove_symmetry_grouping (const Set_of_Atoms & s)
   return 0;
 }
 
+#ifdef NOT_BEING_USED_NOW
 static int
-all_atoms_separated_enough (Molecule & m,
-                            const Set_of_Atoms & s,
-                            int nb)
+all_atoms_separated_enough(Molecule& m, const Set_of_Atoms& s, int nb)
 {
   int n = s.number_elements();
 
@@ -803,22 +785,21 @@ all_atoms_separated_enough (Molecule & m,
     }
   }
 
-  return 1;   // all separations OK
+  return 1;    // all separations OK
 }
 
-/*int
-Symmetry_Info::remove_symmetry_closer_than (Molecule & m,
-                                            int nb)
+int
+Symmetry_Info::remove_symmetry_closer_than(Molecule& m, int nb)
 {
   int rc = 0;
   for (int i = 0; i < _number_elements; i++)
   {
-    const Set_of_Atoms * si = _things[i];
+    const Set_of_Atoms* si = _things[i];
 
-    int ns = s->number_elements ();
+    int ns = s->number_elements();
 
-    if (all_atoms_separated_enough (m, *s, nb))
+    if (all_atoms_separated_enough(m, *s, nb))
       continue;
   }
-
-}*/
+}
+#endif

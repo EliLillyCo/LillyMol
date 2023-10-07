@@ -1,8 +1,9 @@
 #ifndef IW_TDT_FILTER_H
 #define IW_TDT_FILTER_H
 
-#include "iwcrex.h"
-#include "logical_expression.h"
+#include "re2/re2.h"
+
+#include "Foundational/iwmisc/logical_expression.h"
 
 class IW_TDT;
 
@@ -140,7 +141,9 @@ class IW_TDT_Filter_random : public IW_TDT_Filter_Base
     int matches (const IW_TDT &, int);
 };
 
-#if defined(__INTEL_COMPILER)
+// The filter idea is obsolete.
+#define SKIP_TDT_FILTER
+#if defined(SKIP_TDT_FILTER)
 class IW_TDT_Filter
 {
   private:

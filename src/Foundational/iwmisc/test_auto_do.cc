@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <iostream>
 #include <functional>
-using namespace std;
 
 #include "iw_auto_do.h"
 

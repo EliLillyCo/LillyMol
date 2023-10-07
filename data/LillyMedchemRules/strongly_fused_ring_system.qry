@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "strongly_fused_ring_system")
+  (0 Ring_System_Specifier
+    (A I min_strongly_fused_ring_count 3)
+    (A I min_nrings 4)
+  )
+)

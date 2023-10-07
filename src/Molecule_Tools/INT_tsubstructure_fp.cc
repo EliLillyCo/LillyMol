@@ -1,7 +1,7 @@
-#include "sparse_fp_creator.h"
-#include "iwbits.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwbits/iwbits.h"
 
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
 #include "tsubstructure_fp.h"
 
 TSubstructure_FP::TSubstructure_FP()

@@ -2,11 +2,9 @@
 #include <iomanip>
 #include <memory>
 #include <algorithm>
-using std::cerr;
-using std::endl;
 
-#include "iwminmax.h"
-#include "misc.h"
+#include "Foundational/iwmisc/iwminmax.h"
+#include "Foundational/iwmisc/misc.h"
 
 // get the private functions
 
@@ -20,10 +18,13 @@ using std::endl;
 class Smiles_First_Atom;
 class CRDM_args;
 
-#include "molecule.h"
-#include "pearlman.h"
-#include "path.h"
 #include "misc2.h"
+#include "molecule.h"
+#include "path.h"
+#include "pearlman.h"
+
+using std::cerr;
+using std::endl;
 
 static int full_distance_matrix = 1;
 
@@ -36,7 +37,7 @@ set_full_distance_matrix(const int s)
 int
 Molecule::_initialise_distance_matrix()
 {
-  assert(NULL == _distance_matrix);
+  assert(nullptr == _distance_matrix);
   assert(_number_elements > 0);
 
   _distance_matrix = new_int(_number_elements * _number_elements);
@@ -54,7 +55,7 @@ Molecule::_bonds_between (atom_number_t a1, atom_number_t a2)
 {
   assert(a1 < a2);
 
-  if (NULL == _distance_matrix)
+  if (nullptr == _distance_matrix)
     _initialise_distance_matrix();
 
   int * row = &_distance_matrix[_number_elements * a1];
@@ -175,7 +176,7 @@ Molecule::bonds_between (atom_number_t a1, atom_number_t a2)
 
 //cerr << "Molecule::bonds_between: atoms " << a1 << " and " << a2 << " dm = " << _distance_matrix << endl;
 
-  if (NULL == _distance_matrix)
+  if (nullptr == _distance_matrix)
     _initialise_distance_matrix();
   else
   {
@@ -203,9 +204,9 @@ Molecule::bonds_between (atom_number_t a1, atom_number_t a2)
 //#define DEBUG_ATOMS_BETWEEN
 
 int
-Molecule::atoms_between (atom_number_t a1,
-                         atom_number_t a2,
-                         Set_of_Atoms & s)
+Molecule::atoms_between(atom_number_t a1,
+                        atom_number_t a2,
+                        Set_of_Atoms & s)
 {
   int d = bonds_between(a1, a2);
 
@@ -228,27 +229,25 @@ Molecule::atoms_between (atom_number_t a1,
 }
 
 int
-Molecule::_atoms_between (atom_number_t a1,
-                          atom_number_t a2,
-                          int distance_needed,
-                          Set_of_Atoms & s)
+Molecule::_atoms_between(atom_number_t a1,
+                         atom_number_t a2,
+                         int distance_needed,
+                         Set_of_Atoms & s)
 {
 #ifdef DEBUG_ATOMS_BETWEEN
   cerr << "Molecule::_atoms_between:contine to atom " << a1 << " '" << smarts_equivalent_for_atom(a1) << "' and " << a2 << " '" << smarts_equivalent_for_atom(a2) << "' d = " << distance_needed << endl;
 #endif
 
-  assert(NULL != _distance_matrix);
+  assert(nullptr != _distance_matrix);
 
   const Atom * a = _things[a1];
 
-  int acon = a->ncon();
+  for (const Bond* b : *a) {
+    atom_number_t j = b->other(a1);
 
-  for (int i = 0; i < acon; i++)
-  {
-    atom_number_t j = a->other(a1, i);
-
-    if (j == a2)     // done, we got to A2
+    if (j == a2) {     // done, we got to A2
       return 1;
+    }
 
 #ifdef DEBUG_ATOMS_BETWEEN
     cerr << "Distance between " << j << " and " << a2 << " is " << _distance_matrix[j * _number_elements + a2] << endl;
@@ -279,10 +278,8 @@ Molecule::longest_path()
 {
   iwmax<int> rc(0);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    for (int j = i + 1; j < _number_elements; j++)
-    {
+  for (int i = 0; i < _number_elements; i++) {
+    for (int j = i + 1; j < _number_elements; j++) {
       rc.extra(_bonds_between(i, j));
     }
   }
@@ -522,6 +519,7 @@ Molecule::_compute_distance_matrix()
 
 #define VERSION_WITH_FRONTIER
 #ifdef VERSION_WITH_FRONTIER
+#ifdef FOR_DEBUGGING
 static void
 print_frontier(const int zatom,
                const int d,
@@ -539,6 +537,7 @@ print_frontier(const int zatom,
   
   return;
 }
+#endif
 
 void
 Molecule::_compute_distance_matrix()
@@ -800,7 +799,7 @@ CRDM_args::CRDM_args (int matoms)
 
 CRDM_args::~CRDM_args()
 {
-  DELETE_IF_NOT_NULL(_atom_stack);
+  DELETE_IF_NOT_NULL_ARRAY(_atom_stack);
 }
 
 int
@@ -910,7 +909,7 @@ CRDM_args::look_for_sssr_rings (int * ring_membership,
   for (int i = 0; i < _raw_rings_found.number_elements(); i++)
   {
     const Ring * r = _raw_rings_found[i];
-    r->set_vector(ring_membership, IW_RING_MEMBERSHIP_IS_A_RING_ATOM);
+    r->set_vector(ring_membership, kRingMembershipIsRingAtom);
   }
 
   raw_rings.transfer_in(_raw_rings_found);
@@ -1002,17 +1001,17 @@ Molecule::_recompute_distance_matrix (int (Molecule::*identify_first_atom) (cons
                int (Molecule::*identify_next_atom) (const int *, atom_number_t, atom_number_t &))
 {
   cerr << "Entering _recompute_distance_matrix\n";
-  if (NULL == _smiles_order)
+  if (nullptr == _smiles_order)
     _smiles_order = new_int (_number_elements, -1);
   else
     set_vector (_smiles_order, _number_elements, -1);
 
-  if (NULL == _ring_membership)
+  if (nullptr == _ring_membership)
     _ring_membership = new_int (_number_elements);
   else
     set_vector (_ring_membership, _number_elements, 0);
 
-  if (NULL == _distance_matrix)
+  if (nullptr == _distance_matrix)
     _distance_matrix = new_int (_number_elements * _number_elements, _number_elements + 9);
   else
     set_vector (_distance_matrix, _number_elements * _number_elements, _number_elements + 9);
@@ -1090,7 +1089,7 @@ Molecule::recompute_distance_matrix()
   if (! _fragment_information.contains_valid_data())
     (void) number_fragments();
 
-  if (NULL == _distance_matrix)
+  if (nullptr == _distance_matrix)
     _distance_matrix = new_int(_number_elements * _number_elements, _number_elements + 9);
   else
     set_vector(_distance_matrix, _number_elements * _number_elements, _number_elements + 9);
@@ -1151,5 +1150,3 @@ Molecule::recompute_distance_matrix()
 
   return rc;
 }
-
-// arch-tag: c8079359-e517-4d71-8303-1697d2ab7377

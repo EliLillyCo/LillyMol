@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include <fstream>
-using namespace std;
 
 #include "iw_tdt.h"
 

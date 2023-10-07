@@ -1,0 +1,21 @@
+name: "phenyl_to_propyl_ring"
+scaffold {
+  id: 0
+  smarts: "[cD3]1:[cD2]:[cD2]:[cD2]:[cD2]:[cD2]1"
+  remove_atoms: [3, 4, 5]
+  make_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

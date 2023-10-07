@@ -1,6 +1,8 @@
-#include <stdlib.h>
+#include "Foundational/iwmisc/iwre2.h"
 
 #include "iwstring_string_data_source.h"
+
+using std::cerr;
 
 void
 String_Data_Source::_default_values()
@@ -15,9 +17,9 @@ String_Data_Source::_default_values()
   return;
 }
 
-String_Data_Source::String_Data_Source (const char * s)
+String_Data_Source::String_Data_Source(const char * s)
 {
-  assert (NULL != s);
+  assert (nullptr != s);
 
   _default_values();
 
@@ -29,7 +31,7 @@ String_Data_Source::String_Data_Source (const char * s)
 String_Data_Source::String_Data_Source(const char * s,
                                        int notused)
 {
-  assert (NULL != s);
+  assert (nullptr != s);
 
   _default_values();
 
@@ -40,7 +42,7 @@ String_Data_Source::String_Data_Source(const char * s,
 
 template <typename T>
 int
-String_Data_Source::next_record (T & buffer)
+String_Data_Source::next_record(T & buffer)
 {
   if ('\0' == _src[_iptr])
     return 0;
@@ -56,10 +58,11 @@ String_Data_Source::next_record (T & buffer)
   {
     int zend = newline - 1;
 
-    while (isspace(_src[zend]) && zend >= _iptr)
-      zend--;
+    while (zend >= _iptr && isspace(_src[zend])) {
+      --zend;
+    }
 
-    buffer.set(_src + _iptr, zend - _iptr);
+    buffer.set(_src + _iptr, zend - _iptr + 1);
   }
   else
     buffer.set(_src + _iptr, newline - _iptr);
@@ -67,6 +70,8 @@ String_Data_Source::next_record (T & buffer)
   _iptr = newline + 1;
 
   _lines_read++;
+
+  _most_recent_record = buffer;
 
   return 1;
 }
@@ -83,31 +88,27 @@ String_Data_Source::push_record()
     return 0;
   }
 
-  assert ('\n' == _src[_iptr] - 1);
+  assert ('\n' == _src[_iptr - 1]);
 
   _iptr = _iptr - 2;    // skip back past newline
 
-  while (1)
-  {
-    if (0 == _iptr)
-      return 1;
-
+  for ( ; _iptr > 0; --_iptr) {
     if ('\n' == _src[_iptr])
     {
       _iptr++;
       return 1;
     }
-
-    _iptr--;
   }
+
+  return 1;
 }
 
 int
-String_Data_Source::seekg (off_t o)
+String_Data_Source::seekg(off_t o)
 {
-  size_t s = strlen(_src);
+  const size_t s = strlen(_src);
 
-  if (o > s)
+  if (o > static_cast<off_t>(s))
   {
     cerr << "String_Data_Source::seekg:cannot seek to " << o << ", len " << strlen(_src) << '\n';
     return 0;
@@ -116,4 +117,79 @@ String_Data_Source::seekg (off_t o)
   _iptr = o;
 
   return 1;
+}
+
+int
+String_Data_Source::good() const {
+  return 1;
+}
+
+int
+String_Data_Source::records_remaining() const {
+  int result = 0;
+  for (int myptr = _iptr; _src[myptr] != '\0'; ++myptr) {
+    if (_src[myptr] == '\n') {
+      ++result;
+    }
+  }
+
+  return result;
+}
+
+#ifdef TEMPLATES_DID_NOT_WORK_WITH_CNAME
+template <typename T>
+int
+String_Data_Source::most_recent_record(T& buffer) const {
+  buffer = _most_recent_record;
+  return 1;
+}
+
+template int String_Data_Source::most_recent_record<IWString>(IWString&) const;
+template int String_Data_Source::most_recent_record<const_IWSubstring>(const_IWSubstring&) const;
+#endif
+
+int
+String_Data_Source::most_recent_record(IWString& buffer) const {
+  buffer = _most_recent_record;
+  return 1;
+}
+
+int
+String_Data_Source::most_recent_record(const_IWSubstring& buffer) const {
+  buffer = _most_recent_record;
+  return 1;
+}
+
+// Note that _most_recent_record is not saved, so after skipping
+// records, most_recent_record() will return the last record
+// skipped.
+int
+String_Data_Source::skip_records(int nskip) {
+  const_IWSubstring buffer;
+  for (int i = 0; i < nskip; ++i) {
+    if (! next_record(buffer)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+String_Data_Source::skip_records(re2::RE2& rx, int nskip) {
+  int found = 0;
+  const_IWSubstring buffer;
+  while(true) {
+    if (! next_record(buffer)) {
+      return 0;
+    }
+    if (iwre2::RE2PartialMatch(buffer, rx)) {
+      ++found;
+      if (found == nskip) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
 }

@@ -1,0 +1,49 @@
+# Jan 2004
+# Only reject these when there is an ortho or para electron withdrawing group
+
+(0 Query
+  (A C Comment "halo_next_to_aryl_n_w_ewg")
+  (A I min_aromatic_ring_count 1)
+  (A D numeric_value 20)
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number (17 35 53))
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I aromatic 1)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I aromatic 1)
+    (A I aromatic_bond 1)
+  )
+  (3 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 2)
+  )
+  (4 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 3)
+  )
+  (5 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 4)
+  )
+  (6 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 5)
+    (A I aromatic_bond 1)
+  )
+  (0 Environment
+    (A C smarts "C#N")
+    (A C smarts "N(=O)=O")
+    (A C smarts "C(F)(F)F")
+#   (A C smarts "[F,Cl,Br,I]")
+    (A C smarts "[CD3](=O)-[OD2]")
+    (A I single_bond (4 6))
+  )
+)

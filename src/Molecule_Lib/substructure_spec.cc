@@ -1,13 +1,21 @@
 #include <cctype>
+#include <iostream>
 
-#include "misc.h"
+#include "re2/re2.h"
+
+#include "aromatic.h"
 #include "misc2.h"
 #include "smiles.h"
 #include "path.h"
-
 #include "substructure.h"
 #include "target.h"
 #include "tokenise_atomic_smarts.h"
+
+using std::cerr;
+using std::endl;
+
+static constexpr char kOpenBrace = '{';
+static constexpr char kCloseBrace = '}';
 
 /*
   Feb 2005. Want to be able to modify the behaviour of the H
@@ -25,13 +33,13 @@ h_means_exactly_one_hydrogen()
 }
 
 void
-set_h_means_exactly_one_hydrogen (int s)
+set_h_means_exactly_one_hydrogen(int s)
 {
   _h_means_exactly_one_hydrogen = s;
 }
 
 int
-Substructure_Atom_Specifier::atomic_number (atomic_number_t & z) const
+Substructure_Atom_Specifier::atomic_number(atomic_number_t & z) const
 {
   if (_element.number_elements())
   {
@@ -60,6 +68,14 @@ Substructure_Atom_Specifier::_default_values()
   
   _userAtomType = 0;
 
+  _atom_type = 0;
+
+  _match_non_organic = 0;
+
+  _spiro = -1;
+  
+  _cip_chirality = CahnIngoldPrelog::kUnspecified;
+
   return;
 }
 
@@ -70,7 +86,7 @@ Substructure_Atom_Specifier::Substructure_Atom_Specifier()
   return;
 }
 
-Substructure_Atom_Specifier::Substructure_Atom_Specifier (const Element * e)
+Substructure_Atom_Specifier::Substructure_Atom_Specifier(const Element * e)
 {
   _default_values();
 
@@ -109,7 +125,7 @@ Substructure_Atom_Specifier::debug_print(std::ostream & os,
   os << indentation << "Substructure Atom Specifier, " << _attributes_specified << " attributes specified\n";
 
   if (_preference_value)
-    os << indentation << "  Preference " << _preference_value << endl;
+    os << indentation << "  Preference " << _preference_value << '\n';
 
   if (! ok())
     os << "Warning, OK fails\n";
@@ -121,50 +137,52 @@ Substructure_Atom_Specifier::debug_print(std::ostream & os,
     {
       os << " " << _element[i]->atomic_number();
     }
-    os << endl;
+    os << '\n';
   }
   else
     os << " not specified\n";
 
   if (_ncon.is_set())
-    os << indentation << "  ncon " << _ncon << endl;
+    os << indentation << "  ncon " << _ncon << '\n';
   if (_nbonds.is_set())
-    os << indentation << "  nbonds " << _nbonds << endl;
+    os << indentation << "  nbonds " << _nbonds << '\n';
+  if (_valence.is_set())
+    os << indentation << "  valence " << _valence << '\n';
   if (_ncon2.is_set())
-    os << indentation << "  ncon2 " << _ncon2 << endl;
+    os << indentation << "  ncon2 " << _ncon2 << '\n';
   if (_formal_charge.is_set())
-    os << indentation << "  Formal charge " << _formal_charge << endl;
+    os << indentation << "  Formal charge " << _formal_charge << '\n';
   if (_nrings.is_set())
-    os << indentation << "  Nrings " << _nrings << endl;
+    os << indentation << "  Nrings " << _nrings << '\n';
   if (_ring_bond_count.is_set())
-    os << indentation << "  RingBondCount " << _ring_bond_count << endl;
+    os << indentation << "  RingBondCount " << _ring_bond_count << '\n';
   if (_hcount.is_set())
-    os << indentation << "  Hcount " << _hcount << endl;
+    os << indentation << "  Hcount " << _hcount << '\n';
   if (_isotope.is_set())
-    os << indentation << "  Isotope " << _isotope << endl;
+    os << indentation << "  Isotope " << _isotope << '\n';
   if (_lone_pair_count.is_set())
-    os << indentation << "  Lone Pair " << _lone_pair_count << endl;
+    os << indentation << "  Lone Pair " << _lone_pair_count << '\n';
   if (_unsaturation.is_set())
-    os << indentation << "  unsaturation " << _unsaturation << endl;
+    os << indentation << "  unsaturation " << _unsaturation << '\n';
   if (_attached_heteroatom_count.is_set())
-  os << indentation << "  Attached heteroatom count " << _attached_heteroatom_count << endl;
+  os << indentation << "  Attached heteroatom count " << _attached_heteroatom_count << '\n';
   if (SUBSTRUCTURE_NOT_SPECIFIED != _aromaticity)
-    os << indentation << "  Aromaticity = " << _aromaticity << endl;
+    os << indentation << "  Aromaticity = " << _aromaticity << '\n';
 
   if (SUBSTRUCTURE_NOT_SPECIFIED != _chirality)
-    os << indentation << "  chiral " << _chirality << endl;
+    os << indentation << "  chiral " << _chirality << '\n';
   if (_symmetry_degree.is_set())
-    os << indentation << "  symmd " << _symmetry_degree << endl;
+    os << indentation << "  symmd " << _symmetry_degree << '\n';
   if (_symmetry_group > 0)
-    os << indentation << "  symmg " <<  _symmetry_group << endl;
+    os << indentation << "  symmg " <<  _symmetry_group << '\n';
 
-  os << endl;
+//os << '\n';
 
   return 1;
 }
 
 int
-Substructure_Atom_Specifier::terse_details (std::ostream & os,
+Substructure_Atom_Specifier::terse_details(std::ostream & os,
                                const IWString & indentation) const
 {
   assert (os.good());
@@ -176,34 +194,36 @@ Substructure_Atom_Specifier::terse_details (std::ostream & os,
 
   os << indentation << "Substructure atom specifications\n";
   if (_preference_value)
-    os << indentation << " preference " << _preference_value << endl;
+    os << indentation << " preference " << _preference_value << '\n';
   if (_element.number_elements())
   {
     os << indentation << " atomic number";
     for (int i = 0; i < _element.number_elements(); i++)
     {
-      os << ' ' << _element[i]->atomic_number();
+      os << ' ' << _element[i]->symbol();
     }
-    os << endl;
+    os << '\n';
   }
   if (_ncon.is_set())
-    os << indentation << " ncon " << _ncon << endl;
+    os << indentation << " ncon " << _ncon << '\n';
   if (_nbonds.is_set())
-    os << indentation << " nbonds " << _nbonds << endl;
+    os << indentation << " nbonds " << _nbonds << '\n';
+  if (_valence.is_set())
+    os << indentation << " valence " << _valence << '\n';
   if (_ncon2.is_set())
-    os << indentation << " ncon2 " << _ncon2 << endl;
+    os << indentation << " ncon2 " << _ncon2 << '\n';
   if (_formal_charge.is_set())
-    os << indentation << " Formal charge " << _formal_charge << endl;
+    os << indentation << " Formal charge " << _formal_charge << '\n';
   if (_nrings.is_set())
-    os << indentation << " Nrings " << _nrings << endl;
+    os << indentation << " Nrings " << _nrings << '\n';
   if (_ring_bond_count.is_set())
-    os << indentation << " RingBondCount " << _ring_bond_count << endl;
+    os << indentation << " RingBondCount " << _ring_bond_count << '\n';
   if (_hcount.is_set())
-    os << indentation << " Hcount " << _hcount << endl;
+    os << indentation << " Hcount " << _hcount << '\n';
   if (_lone_pair_count.is_set())
-    os << indentation << " Lone Pair " << _lone_pair_count << endl;
+    os << indentation << " Lone Pair " << _lone_pair_count << '\n';
   if (SUBSTRUCTURE_NOT_SPECIFIED != _aromaticity)
-    os << indentation << "Aromaticity = " << _aromaticity << endl;
+    os << indentation << "Aromaticity = " << _aromaticity << '\n';
 
   return 1;
 }
@@ -211,7 +231,7 @@ Substructure_Atom_Specifier::terse_details (std::ostream & os,
 int
 Substructure_Atom_Specifier::involves_rings() const
 {
-  assert (NULL == "This is not working");
+  assert (nullptr == "This is not working");
 
   if (_nrings.is_set())
   {
@@ -231,7 +251,7 @@ Substructure_Atom_Specifier::involves_rings() const
 */
 
 int
-Substructure_Atom_Specifier::_adjust_nrings (int nr)
+Substructure_Atom_Specifier::_adjust_nrings(int nr)
 {
 //  There is nothing we can do in this case. Even if the atom in the query
 //  does not appear in a ring, the query can ultimately be embedded in a ring.
@@ -263,9 +283,9 @@ Substructure_Atom_Specifier::_adjust_nrings (int nr)
 */
 
 int
-Substructure_Atom_Specifier::_adjust_ring_sizes (const List_of_Ring_Sizes & ring_sizes_perceived)
+Substructure_Atom_Specifier::_adjust_ring_sizes(const List_of_Ring_Sizes & ring_sizes_perceived)
 {
-  if (0 == ring_sizes_perceived.number_elements())
+  if (ring_sizes_perceived.empty())
     return 1;
 
   if (! _ring_size.is_set())
@@ -292,7 +312,7 @@ Substructure_Atom_Specifier::_adjust_ring_sizes (const List_of_Ring_Sizes & ring
 */
 
 int
-Substructure_Atom_Specifier::adjust_ring_specifications (int nr, 
+Substructure_Atom_Specifier::adjust_ring_specifications(int nr, 
                                   const List_of_Ring_Sizes & ring_sizes)
 {
   assert (nr >= 0);
@@ -356,13 +376,14 @@ Substructure_Atom_Specifier::min_nbonds() const
 }
 
 int
-Substructure_Atom_Specifier::set_element (const Element * e)
+Substructure_Atom_Specifier::set_element(const Element * e)
 {
   assert (ok());
   assert (e->ok());
 
-  if (!  _element.add_if_not_already_present(e))
+  if (! _element.add_if_not_already_present(e)) {
     return 0;
+  }
 
   _element_unique_id.add(e->unique_id());
 
@@ -370,7 +391,7 @@ Substructure_Atom_Specifier::set_element (const Element * e)
 }
 
 int
-Substructure_Atom_Specifier::set_ncon (int ncon)
+Substructure_Atom_Specifier::set_ncon(int ncon)
 {
   assert (ok());
   assert (ncon >= 0);
@@ -379,7 +400,7 @@ Substructure_Atom_Specifier::set_ncon (int ncon)
 }
 
 int
-Substructure_Atom_Specifier::set_min_ncon (int ncon)
+Substructure_Atom_Specifier::set_min_ncon(int ncon)
 {
   assert (ok());
   assert (ncon >= 0);
@@ -388,7 +409,7 @@ Substructure_Atom_Specifier::set_min_ncon (int ncon)
 }
 
 int
-Substructure_Atom_Specifier::set_max_ncon (int ncon)
+Substructure_Atom_Specifier::set_max_ncon(int ncon)
 {
   assert (ok());
   assert (ncon >= 0);
@@ -397,7 +418,7 @@ Substructure_Atom_Specifier::set_max_ncon (int ncon)
 }
 
 int
-Substructure_Atom_Specifier::set_min_nbonds (int nbonds)
+Substructure_Atom_Specifier::set_min_nbonds(int nbonds)
 {
   assert (ok());
   assert (nbonds >= 0);
@@ -406,7 +427,16 @@ Substructure_Atom_Specifier::set_min_nbonds (int nbonds)
 }
 
 int
-Substructure_Atom_Specifier::set_max_nbonds (int nbonds)
+Substructure_Atom_Specifier::set_min_valence(int valence)
+{
+  assert (ok());
+  assert (valence >= 0);
+
+  return _valence.set_min(valence);
+}
+
+int
+Substructure_Atom_Specifier::set_max_nbonds(int nbonds)
 {
   assert (ok());
   assert (nbonds >= 0);
@@ -415,7 +445,16 @@ Substructure_Atom_Specifier::set_max_nbonds (int nbonds)
 }
 
 int
-Substructure_Atom_Specifier::set_nbonds (int nbonds)
+Substructure_Atom_Specifier::set_max_valence(int valence)
+{
+  assert (ok());
+  assert (valence >= 0);
+
+  return _valence.set_max(valence);
+}
+
+int
+Substructure_Atom_Specifier::set_nbonds(int nbonds)
 {
   assert (ok());
   assert (nbonds >= 0);
@@ -424,7 +463,15 @@ Substructure_Atom_Specifier::set_nbonds (int nbonds)
 }
 
 int
-Substructure_Atom_Specifier::set_ncon2 (int ncon2)
+Substructure_Atom_Specifier::set_valence(int valence) {
+  assert (ok());
+  assert (valence >= 0);
+
+  return _valence.add(valence);
+}
+
+int
+Substructure_Atom_Specifier::set_ncon2(int ncon2)
 {
   assert (ok());
   assert (ncon2 >= 0);
@@ -433,7 +480,7 @@ Substructure_Atom_Specifier::set_ncon2 (int ncon2)
 }
 
 int
-Substructure_Atom_Specifier::set_nrings (int nrings)
+Substructure_Atom_Specifier::set_nrings(int nrings)
 {
   assert (ok());
   assert (nrings >= 0);
@@ -442,7 +489,7 @@ Substructure_Atom_Specifier::set_nrings (int nrings)
 }
 
 int
-Substructure_Atom_Specifier::set_min_nrings (int nr)
+Substructure_Atom_Specifier::set_min_nrings(int nr)
 {
   assert (ok());
   assert (nr > 0);
@@ -451,7 +498,7 @@ Substructure_Atom_Specifier::set_min_nrings (int nr)
 }
 
 int
-Substructure_Atom_Specifier::set_formal_charge (formal_charge_t fc)
+Substructure_Atom_Specifier::set_formal_charge(formal_charge_t fc)
 {
   assert (ok());
 
@@ -459,7 +506,7 @@ Substructure_Atom_Specifier::set_formal_charge (formal_charge_t fc)
 }
 
 int
-Substructure_Atom_Specifier::set_attached_heteroatom_count (int ahc)
+Substructure_Atom_Specifier::set_attached_heteroatom_count(int ahc)
 {
   assert (ok());
 
@@ -469,7 +516,7 @@ Substructure_Atom_Specifier::set_attached_heteroatom_count (int ahc)
 }
 
 int
-Substructure_Atom_Specifier::set_chirality (int c)
+Substructure_Atom_Specifier::set_chirality(int c)
 {
   assert (ok());
 
@@ -481,7 +528,7 @@ Substructure_Atom_Specifier::set_chirality (int c)
 }
 
 int
-Substructure_Atom_Specifier::formal_charge (formal_charge_t & fc) const
+Substructure_Atom_Specifier::formal_charge(formal_charge_t & fc) const
 {
   assert (ok());
 
@@ -505,7 +552,7 @@ Substructure_Atom_Specifier::formal_charge (formal_charge_t & fc) const
 */
 
 int
-Substructure_Atom_Specifier::set_aromaticity (aromaticity_type_t arom)
+Substructure_Atom_Specifier::set_aromaticity(aromaticity_type_t arom)
 {
   assert (OK_ATOM_AROMATICITY(arom));
 
@@ -515,24 +562,24 @@ Substructure_Atom_Specifier::set_aromaticity (aromaticity_type_t arom)
 }
 
 int
-Substructure_Atom_Specifier::update_aromaticity (aromaticity_type_t arom)
+Substructure_Atom_Specifier::update_aromaticity(aromaticity_type_t arom)
 {
   assert (OK_ATOM_AROMATICITY(arom));
 
-  if (IS_AROMATIC_ATOM(arom))
+  if (is_aromatic_atom(arom))
   {
     if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity)
       _aromaticity = AROMATIC;
     else
-      SET_AROMATIC_ATOM(_aromaticity);
+      add_aromatic(_aromaticity);
   }
 
-  if (IS_ALIPHATIC_ATOM(arom))
+  if (is_aliphatic_atom(arom))
   {
     if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity)
       _aromaticity = NOT_AROMATIC;
     else
-      SET_ALIPHATIC_ATOM(_aromaticity);
+      add_aliphatic(_aromaticity);
   }
 
   return 1;
@@ -559,10 +606,9 @@ match_ring_sizes(const Min_Max_Specifier<int> & ring_sizes_in_query,
          ", match = " << ring_sizes_in_query.matches(ring_sizes_in_molecule->item(i)) << endl;
 #endif
 
-  for (int i = 0; i < ring_sizes_in_molecule->number_elements(); i++)
+  for (const auto rs : *ring_sizes_in_molecule)
   {
-    int nr = ring_sizes_in_molecule->item(i);
-    if (ring_sizes_in_query.matches(nr))
+    if (ring_sizes_in_query.matches(rs))
       return 1;
   }
 
@@ -592,6 +638,8 @@ Substructure_Atom_Specifier::_match_scaffold_bonds_attached_to_ring(Target_Atom 
   return 0;
 }
 
+//#define DEBUG_MATCH_SYMMETRY_DEGREE
+
 int
 Substructure_Atom_Specifier::_match_symmetry_degree(Target_Atom & target_atom) const
 {
@@ -605,12 +653,23 @@ Substructure_Atom_Specifier::_match_symmetry_degree(Target_Atom & target_atom) c
 
   const int sa = s[a];
 
+#ifdef DEBUG_MATCH_SYMMETRY_DEGREE
+  cerr << "Atom " << a << " symmetry group " << sa << endl;
+#endif
+
   int symmetric_atoms = 0;
   for (int i = 0; i < matoms; ++i)
   {
+#ifdef DEBUG_MATCH_SYMMETRY_DEGREE
+    cerr << "  check atom " << i << " symmetry group " << s[i] << endl;
+#endif
     if (sa == s[i])
       symmetric_atoms++;
   }
+
+#ifdef DEBUG_MATCH_SYMMETRY_DEGREE
+  cerr << "Atom " << a << " has " << symmetric_atoms << " symmetry related atoms\n";
+#endif
 
   return _symmetry_degree.matches(symmetric_atoms);
 }
@@ -621,10 +680,11 @@ Substructure_Atom_Specifier::_match_scaffold_bonds_attached_to_ring(Target_Atom 
 {
   Molecule & m = *(target_atom.m());
 
-  int ring_size = r.number_elements();
+  const int ring_size = r.number_elements();
 
   int exocyclic_scaffold_bonds = 0;
 
+  // cerr << "Checking ring " << r << '\n';
   for (auto i = 0; i < ring_size; ++i)
   {
     atom_number_t j = r[i];
@@ -633,34 +693,35 @@ Substructure_Atom_Specifier::_match_scaffold_bonds_attached_to_ring(Target_Atom 
 
     int jcon = aj->ncon();
 
-    if (2 == jcon)
+    if (2 == jcon) {
       continue;
+    }
 
-    for (int k = 0; k < jcon; ++k)
-    {
-      const Bond * b = aj->item(k);
-
+    for (const Bond* b : *aj) {
       atom_number_t l = b->other(j);
 
-      if (r.contains(l))
+      if (r.contains(l)) {
         continue;
+      }
 
-      if (b->nrings())    // fused to another ring. By convention this is an exocyclic scaffold bond
-      {
+      // fused to another ring. By convention this is an exocyclic scaffold bond
+      if (b->nrings()) {
         exocyclic_scaffold_bonds++;
         continue;
       }
 
       Target_Atom & al = target_atom.atom(l);
 
-      if (al.is_spinach())
+      // cerr << "        atom " << l << " spinach? " << al.is_spinach() << '\n';
+      if (al.is_spinach()) {
         continue;
+      }
 
-      exocyclic_scaffold_bonds++;
+      ++exocyclic_scaffold_bonds;
     }
   }
 
-//cerr << "Ring " << r << " has " << exocyclic_scaffold_bonds <<  " exocyclic_scaffold_bonds, match? " << _scaffold_bonds_attached_to_ring.matches(exocyclic_scaffold_bonds) << endl;
+  // cerr << "Ring " << r << " has " << exocyclic_scaffold_bonds <<  " exocyclic_scaffold_bonds, match? " << _scaffold_bonds_attached_to_ring.matches(exocyclic_scaffold_bonds) << endl;
 
   return _scaffold_bonds_attached_to_ring.matches(exocyclic_scaffold_bonds);
 }
@@ -674,7 +735,7 @@ Substructure_Atom_Specifier::_match_scaffold_bonds_attached_to_ring(Target_Atom 
 //#define DEBUG_ATOM_MATCHES
 
 int
-Substructure_Atom_Specifier::_matches (Target_Atom & target)
+Substructure_Atom_Specifier::_matches(Target_Atom & target)
 {
 // Check all attributes
 
@@ -689,6 +750,7 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
   }
 #endif
 
+// We no longer use _element for matching.
 #ifdef USING_ELEMENT
    if (_element.number_elements())
    {
@@ -703,16 +765,15 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
 
 #ifdef DEBUG_ATOM_MATCHES
    if (_element_unique_id.number_elements())
-     cerr << "check ASHV, target " << target.element_unique_id() << " check " << _element_unique_id.number_elements() << " match " << _element_unique_id.contains(target.element_unique_id()) << endl;
+     cerr << "check ASHV, target " << target.element()->symbol() << " UID " << target.element_unique_id() << " check " << _element_unique_id.number_elements() << " match " << _element_unique_id.contains(target.element_unique_id()) << endl;
    for (int i = 0; i < _element_unique_id.number_elements(); ++i)
    {
      cerr << ' ' << _element_unique_id[i] << endl;
    }
 #endif
 
-   if (_element_unique_id.number_elements())
-   {
-     if ( ! _element_unique_id.contains(target.element_unique_id()))
+   if (_element_unique_id.number_elements()) {
+     if (! _element_unique_id.contains(target.element_unique_id()))
        return 0;
 
      attributes_checked++;
@@ -836,13 +897,13 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
 
   if (SUBSTRUCTURE_NOT_SPECIFIED != _aromaticity)
   {
-    aromaticity_type_t tmp = target.aromaticity();
+    aromaticity_type_t target_aromaticity = target.aromaticity();
 
-    if (tmp == _aromaticity)
+    if (target_aromaticity == _aromaticity)
       ;
-    else if (IS_AROMATIC_ATOM(_aromaticity) && IS_AROMATIC_ATOM(tmp))
+    else if (is_aromatic_atom(_aromaticity) && is_aromatic_atom(target_aromaticity))
       ;
-    else if (IS_ALIPHATIC_ATOM(_aromaticity) && IS_ALIPHATIC_ATOM(tmp))
+    else if (is_aliphatic_atom(_aromaticity) && is_aliphatic_atom(target_aromaticity))
       ;
     else
       return 0;
@@ -870,6 +931,38 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
       return 1;
   }
 
+#ifdef DEBUG_ATOM_MATCHES
+  if (_spiro >= 0) {
+    cerr << "Try spiro: " << _spiro << " target =" << target.spiro() << 
+            " match is " << (_spiro == target.spiro()) << '\n';
+  }
+#endif
+  if (_spiro >= 0) {
+    if (_spiro != target.spiro()) {
+      return 0;
+    }
+
+    ++attributes_checked;
+    if (attributes_checked == _attributes_specified) {
+      return 1;
+    }
+  }
+
+#ifdef DEBUG_ATOM_MATCHES
+  if (_cip_chirality != CahnIngoldPrelog::kUnspecified) {
+    cerr << "Try CIP chirality " << (_cip_chirality == target.m()->CahnIngoldPrelogValue(target.atom_number())) << '\n';
+  }
+#endif
+
+  if (_cip_chirality != CahnIngoldPrelog::kUnspecified) {
+    if (_cip_chirality != target.m()->CahnIngoldPrelogValue(target.atom_number())) {
+      return 0;
+    }
+    ++attributes_checked;
+    if (attributes_checked == _attributes_specified) {
+      return 1;
+    }
+  }
 
 #ifdef DEBUG_ATOM_MATCHES
   if (_unsaturation.is_set())
@@ -997,14 +1090,14 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
   }
 
 #ifdef DEBUG_ATOM_MATCHES
-  if (_aromatic_ring_sizes.is_set())
-    cerr << " aromatic ring sizes = " << _aromatic_ring_sizes.is_set();
+  if (_aromatic_ring_size.is_set())
+    cerr << " aromatic ring sizes = " << _aromatic_ring_size.is_set();
 #endif
 
-  if (_aromatic_ring_sizes.is_set())
+  if (_aromatic_ring_size.is_set())
   {
     const List_of_Ring_Sizes * ring_sizes_in_molecule = target.aromatic_ring_sizes();
-    if (! match_ring_sizes(_aromatic_ring_sizes, ring_sizes_in_molecule, "aromatic ring size"))
+    if (! match_ring_sizes(_aromatic_ring_size, ring_sizes_in_molecule, "aromatic ring size"))
       return 0;
 
     attributes_checked++;
@@ -1013,14 +1106,14 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
   }
 
 #ifdef DEBUG_ATOM_MATCHES
-  if (_aliphatic_ring_sizes.is_set())
-    cerr << "Aliphatic ring sizes " << _aliphatic_ring_sizes.is_set() << endl;
+  if (_aliphatic_ring_size.is_set())
+    cerr << "Aliphatic ring sizes " << _aliphatic_ring_size.is_set() << endl;
 #endif
 
-  if (_aliphatic_ring_sizes.is_set())
+  if (_aliphatic_ring_size.is_set())
   {
     const List_of_Ring_Sizes * ring_sizes_in_molecule = target.aliphatic_ring_sizes();
-    if (! match_ring_sizes(_aliphatic_ring_sizes, ring_sizes_in_molecule, "aliphatic ring size"))
+    if (! match_ring_sizes(_aliphatic_ring_size, ring_sizes_in_molecule, "aliphatic ring size"))
       return 0;
 
     attributes_checked++;
@@ -1065,7 +1158,33 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
     attributes_checked++;
     if (attributes_checked == _attributes_specified)
       return 1;
-  }  
+  }
+
+  if (_valence.is_set()) {
+    if (! _valence.matches(target.valence())) {
+      return 0;
+    }
+
+    attributes_checked++;
+    if (attributes_checked == _attributes_specified) {
+      return 1;
+    }
+  }
+
+#ifdef DEBUG_ATOM_MATCHES
+  cerr << "Do we need to check atom type " << _atom_type << " cmp " << target.atom_type() << endl;
+#endif
+  if (_atom_type != 0)
+  {
+    if (_atom_type != target.atom_type())
+    {
+      return 0;
+    }
+      
+    attributes_checked++;
+    if (attributes_checked == _attributes_specified)
+      return 1;
+  }
   
 // We can't really check chirality now because the adjoining atoms are
 // not matched yet. If our query says chiral of some kind and the
@@ -1078,7 +1197,7 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
 
   if (SUBSTRUCTURE_NOT_SPECIFIED != _chirality)
   {
-    if (NULL == target.chiral_centre())    // no chiral centre on matched atom
+    if (nullptr == target.chiral_centre())    // no chiral centre on matched atom
     {
       if (_chirality)
         return 0;
@@ -1135,11 +1254,31 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
       return 1;
   }
 
+  if (_atom_type != 0)
+  {
+    if (_atom_type != target.atom_type())
+      return 0;
+
+    attributes_checked++;
+    if (attributes_checked == _attributes_specified)
+      return 1;
+  }
+
+  if (_match_non_organic != 0) {
+    if (target.element()->organic()) {
+      return 0;
+    }
+    attributes_checked++;
+    if (attributes_checked == _attributes_specified) {
+      return 1;
+    }
+  }
+
   if (_attributes_specified != attributes_checked)
   {
     cerr << "Oops, attributes specified = " << _attributes_specified << " processed = " << attributes_checked << endl;
     debug_print(cerr);
-    assert (NULL == "This should not happen");
+    assert (nullptr == "This should not happen");
   }
 
 #ifdef DEBUG_ATOM_MATCHES
@@ -1155,7 +1294,7 @@ Substructure_Atom_Specifier::_matches (Target_Atom & target)
 */
 
 int
-Substructure_Atom_Specifier::matches (Target_Atom & target)
+Substructure_Atom_Specifier::matches(Target_Atom & target)
 {
   int rc = _matches(target);
 
@@ -1202,7 +1341,7 @@ Substructure_Atom_Specifier::determine_ring_or_non_ring (int & result) const
     return 1;
   }
 
-  if (0 == _nrings.number_elements())    // must just be a max value specified
+  if (_nrings.empty())    // must just be a max value specified
     return 0;
 
 // There are multiple values for nrings. If they are all > 0, then ok.
@@ -1300,9 +1439,9 @@ Substructure_Atom_Specifier::check_internal_consistency (int connections) const
 int
 Substructure_Atom_Specifier::ring_sizes_specified (resizable_array<int> & ring_sizes) const
 {
-  ring_sizes.add_non_duplicated_elements(_aromatic_ring_sizes);
+  ring_sizes.add_non_duplicated_elements(_aromatic_ring_size);
 
-  ring_sizes.add_non_duplicated_elements(_aliphatic_ring_sizes);
+  ring_sizes.add_non_duplicated_elements(_aliphatic_ring_size);
 
   return ring_sizes.number_elements();
 }
@@ -1381,7 +1520,7 @@ Substructure_Atom::_parse_smarts_environment (const Atomic_Smarts_Component & en
 */
 
 int
-Substructure_Atom::_extract_initial_atom_number (const_IWSubstring & mysmarts)
+Substructure_Atom::_extract_initial_atom_number(const_IWSubstring & mysmarts)
 {
   if (mysmarts.ends_with(':'))
     return 0;
@@ -1420,9 +1559,9 @@ Substructure_Atom::_extract_initial_atom_number (const_IWSubstring & mysmarts)
 */
 
 /*static int
-fetch_atom_number (const_IWSubstring & smarts,
-                   int istart, 
-                   int & unique_id)
+fetch_atom_number(const_IWSubstring & smarts,
+                  int istart, 
+                  int & unique_id)
 {
   assert (':' == smarts[istart]);
 
@@ -1465,7 +1604,7 @@ fetch_atom_number (const_IWSubstring & smarts,
 */
 
 static int
-fetch_environment (const_IWSubstring & env)
+fetch_environment(const_IWSubstring & env)
 {
   assert (env.starts_with ("$("));
 
@@ -1551,14 +1690,14 @@ fetch_environment (const const_IWSubstring & env, int & characters_processed,
 static int respect_aliphatic_smarts = 1;
 
 void
-set_respect_aliphatic_smarts (int s)
+set_respect_aliphatic_smarts(int s)
 {
   respect_aliphatic_smarts = s;
 }
 
 static void
-truncate_after_digits (const const_IWSubstring & ignore_these,
-                       const_IWSubstring & s)
+truncate_after_digits(const const_IWSubstring & ignore_these,
+                      const_IWSubstring & s)
 {
   int nchars = s.length();
 
@@ -1607,8 +1746,6 @@ truncate_after_digits (const const_IWSubstring & ignore_these,
 
   Jan 2006: This is still broken. Not sure how to fix it. Get back to this...
 */
-
-static IW_Regular_Expression elemental_hydrogen_rx("^(H|H\\+|H-|[0-9]+H)$");
 
 #define SMARTS_PREVIOUS_TOKEN_UNSPECIFIED            0
 
@@ -1668,13 +1805,13 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
       continue;
     }
 
-    if ('{' == smarts[i])
+    if (kOpenBrace == smarts[i])
     {
       curly_brace_level++;
       continue;
     }
 
-    if ('}' == smarts[i])
+    if (kCloseBrace == smarts[i])
     {
       curly_brace_level--;
       continue;
@@ -1732,8 +1869,6 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
     return 0;
   }
 
-// Make our own local copy
-
   const_IWSubstring mysmarts = smarts;
 
   mysmarts.remove_leading_chars(1);    // get rid of the leading '['
@@ -1790,13 +1925,22 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
       }
       _ring_id = c[0] - '0';
     }
+    else if (c.starts_with("gid")) {
+      c.remove_leading_chars(3);
+      if (! isdigit(c[0]))    // only single digit global ids are allowed in smarts
+      {
+        cerr << "Substructure_Atom::construct_from_smarts_token:invalid gid qualifier '" << c << "'\n";
+        return 0;
+      }
+      _global_match_id = c[0] - '0';
+    }
     else if (c.starts_with("fss"))
       ;
     else if (c.starts_with("Vy"))
       ;
     else if (c.starts_with("Ar"))
       ;
-    else if (c.starts_with("spch"))
+    else if (c.starts_with("spch") || c.starts_with("scaf"))
       ;
     else if (c.starts_with("hr") || c.starts_with("rh"))
       ;
@@ -1807,6 +1951,14 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
     else if (c.starts_with("symg"))
       ;
     else if (c.starts_with("Kl"))
+      ;
+    else if (c.starts_with("organic"))
+      ;
+    else if (c.starts_with("nonorganic"))
+      ;
+    else if (c.starts_with("spiro"))
+      ;
+    else if (c.starts_with("cipR") || c.starts_with("cipS"))
       ;
     else if (c.starts_with("Nv"))
     {
@@ -1904,7 +2056,7 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
 #endif
     }
 
-  } while (NULL != (asc = asc->next()));
+  } while (nullptr != (asc = asc->next()));
 
 #ifdef DEBUG_ATOM_CONSTRUCT_FROM_SMARTS_TOKEN
   cerr << "After building, operator is\n";
@@ -1948,21 +2100,76 @@ Substructure_Atom::construct_from_smarts_token (const char * smarts, int nchars)
   return construct_from_smarts_token(tmp);
 }
 
+namespace substructure_spec {
+
+// Check whether `ring_sizes` contains valid ring size specifications.
+// Just checks for ring sizes < 3
+int
+ValidRingSizes(const Min_Max_Specifier<int>& ring_sizes) {
+  if (! ring_sizes.is_set()) {
+    return 1;
+  }
+
+  int value;
+  if (ring_sizes.min(value) && value < 3) {
+    return 0;
+  }
+  if (ring_sizes.max(value) && value < 3) {
+    return 0;
+  }
+
+  for (int r : ring_sizes) {
+    if (r < 3) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+bool
+ValidRingBondCount(const Min_Max_Specifier<int>& ring_bond_count) {
+  if (! ring_bond_count.is_set()) {
+    return true;
+  }
+
+  return true;
+}
+
+
+#ifdef DIDNOTWORKASNEEDED
+bool
+ValidNcon(const Min_Max_Specifier<int>& min_max_spec) {
+  if (! min_max_spec.is_set()) {
+    return true;
+  }
+  if (min_max_spec.number_elements()) {
+    for (int d : min_max_spec) {
+      if (d < 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+#endif
+
 /*
-  This is a variant of the fetch_numeric in misc2.cc
-  The only difference is that we allow a leading '>' or '<' before the digit
-
-  We return the number of characters processed
-
-  When gcc fixes namespaces, change this to get the leading '>' or '<' and
-  then call the function from misc2
-
-  Need to be careful here too, parsing just the '>' or '<' is an error
+  Parse `string` into a possible leading < or >, followed by a whole
+  number.
+  If a leading qualifier is present, set `qualifier` to be -1 for <
+  and +1 for >.
+  Returns the number of characters consumed.
+  `value` will be assigned the numeric.
+  Returns 0 on any error.
+  Note there is no checking on the length of `string`, it
+  comes from a well controlled environment where it is known
+  to terminate with a non digit.
 */
 
 int
-smarts_fetch_numeric (const char * string, int & value, 
-                      int & qualifier)
+SmartsFetchNumeric(const char * string, int & value, 
+                     int & qualifier)
 {
   int rc;
 
@@ -1988,8 +2195,6 @@ smarts_fetch_numeric (const char * string, int & value,
   while (isdigit(*string))
   {
     int tmp = *string - '0';
-    if (tmp < 0 || tmp > 9)    // how could this happen?
-      return 0;
 
     value = value * 10 + tmp;
 
@@ -2003,18 +2208,113 @@ smarts_fetch_numeric (const char * string, int & value,
 
   if (qualifier < 0 && 0 == value)
   {
-    cerr << "smarts_fetch_numeric: < 0 not allowed\n";
+    cerr << "SmartsFetchNumeric: < 0 not allowed\n";
     return 0;
   }
 
   return rc;
 }
 
+// Parse `input` as an RDKit smarts range specification.
+// max_chars is the max number of characters to be considered.
+// {3-} {-4} {3-4}
+int
+SmartsParseRange(const char * input,
+                 int max_chars,
+                 Min_Max_Specifier<int>& result) {
+  assert (*input == kOpenBrace);
+  std::string to_parse;
+  for (int i = 0; i < max_chars; ++i) {
+    to_parse += input[i];
+    if (input[i] == kCloseBrace) {
+      break;
+    }
+  }
+  if (to_parse.back() != kCloseBrace) {
+    cerr << "SmartsParseRange:no closing brace\n";
+    return 0;
+  }
+
+  // The three different patterns this can be.
+  static re2::RE2 min_only("^{([0-9]+)-}");
+  static re2::RE2 max_only("^{-\([0-9]+)}");
+  static re2::RE2 range("^{([0-9]+)-([0-9]+)}");
+
+  int zmin, zmax;
+  if (RE2::FullMatch(to_parse, min_only, &zmin)) {
+    result.set_min(zmin);
+  } else if (RE2::FullMatch(to_parse, max_only, &zmax)) {
+    result.set_max(zmax);
+  } else if (RE2::FullMatch(to_parse, range, &zmin, &zmax)) {
+    if (zmin > zmax) {
+      cerr << "SmartsParseRange:invalid range [" << zmin << ',' << zmax << "]\n";
+      return 0;
+    }
+    result.set_min(zmin);
+    result.set_max(zmax);
+  } else {
+    cerr << "SmartsParseRange:unrecognised range '" << to_parse << "'\n";
+    return 0;
+  }
+  return to_parse.size();
+}
+
+// Parse smarts numeric qualifiers in `input` into a Min_Max_Specifier.
+// If input starts wtih < or > it sets the min or max.
+// If input starts with { then it is parsed as an RDKit range.
+// Returns the number of characters processed.
+int
+SmartsNumericQualifier(const char * input,
+                       int max_chars,
+                       Min_Max_Specifier<int>& result) {
+
+  if (*input == '<' || *input == '>') {
+    int value;
+    int ltgt;
+    int chars_consumed = SmartsFetchNumeric(input, value, ltgt);
+    if (ltgt < 0) {
+      result.set_max(value - 1);
+    } else if (ltgt > 0) {
+      result.set_min(value + 1);
+    } else {
+      result.add(value);
+    }
+    return chars_consumed;
+  }
+
+  if (*input == kOpenBrace) {
+    return substructure_spec::SmartsParseRange(input, max_chars, result);
+  }
+
+  // Input might be a number.
+
+  int value = 0;
+  int rc = 0;
+  for (int i = 0; i < max_chars; ++i) {
+    if (! isdigit(input[i])) {
+      break;
+    }
+    value = value * 10 + input[i] - '0';
+    ++rc;
+  }
+
+  // No number detected.
+  if (rc == 0) {
+    return 0;
+  }
+
+  result.add(value);
+
+  return rc;
+}
+
+}  // namespace substructure_spec
+
 //#define DEBUG_GET_ATOMIC_NUMBER_OR_SYMBOL
 
 int
-Substructure_Atom_Specifier::_get_atomic_number_or_symbol (const char * smarts,
-                                                           const int characters_to_process) 
+Substructure_Atom_Specifier::_get_atomic_number_or_symbol(const char * smarts,
+                                                          const int characters_to_process) 
 {
   if (0 == characters_to_process)
     return 0;
@@ -2030,16 +2330,16 @@ Substructure_Atom_Specifier::_get_atomic_number_or_symbol (const char * smarts,
 
   int nchars = 0;
 
-  const Element * e = NULL;
+  const Element * e = nullptr;
 
-  if ('{' == smarts[0] && characters_to_process > 2)
+  if (kOpenBrace == smarts[0] && characters_to_process > 2)
   {
-    const_IWSubstring s(smarts+1, characters_to_process-1);   // skip over '{'
+    const_IWSubstring s(smarts+1, characters_to_process-1);   // skip over open_brace
 
-    int close_brace = s.index('}');
-    if (close_brace <= 0)
+    int close_brace_pos = s.index(kCloseBrace);
+    if (close_brace_pos <= 0)
       return 0;
-    s.iwtruncate(close_brace);
+    s.iwtruncate(close_brace_pos);
 #ifdef DEBUG_GET_ATOMIC_NUMBER_OR_SYMBOL
     cerr << "getting element for '" << s << "'\n";
 #endif
@@ -2048,12 +2348,12 @@ Substructure_Atom_Specifier::_get_atomic_number_or_symbol (const char * smarts,
     {
       e = get_element_from_symbol_no_case_conversion(token);
 
-      if (NULL != e)
+      if (nullptr != e)
         _add_element(e);
       else if (auto_create_new_elements())
       {
         e = create_element_with_symbol(token);
-        if (NULL == e)
+        if (nullptr == e)
           return 0;
 
         _add_element(e);
@@ -2064,7 +2364,7 @@ Substructure_Atom_Specifier::_get_atomic_number_or_symbol (const char * smarts,
         return 0;
       }
     }
-    nchars = 1 + close_brace + 1;
+    nchars = 1 + close_brace_pos + 1;
   }
   else
   {
@@ -2094,21 +2394,43 @@ Substructure_Atom_Specifier::_add_element (const atomic_number_t z)
 {
   const Element * e = get_element_from_atomic_number(z);
 
-  if (NULL == e)
+  if (nullptr == e)
     return 0;
 
   return _add_element(e);
 }
 
 int
-Substructure_Atom_Specifier::_add_element (const Element * e)
+Substructure_Atom_Specifier::_add_element(const Element * e)
 {
   _element.add(e);
   _element_unique_id.add(e->unique_id());
 
-//cerr << "Substructure_Atom_Specifier::_add_element:added " << e->symbol() << " unique_id " << e->unique_id() << endl;
+  // cerr << "Substructure_Atom_Specifier::_add_element:added " << e->symbol() << " unique_id " << e->unique_id() << endl;
    
   return 1;
+}
+
+// Add all organic elements to the _atomic_number matcher.
+// Note this will fail if any non periodic elements have been
+// designated organic.
+void
+Substructure_Atom_Specifier::AddOrganicElements() {
+  for (int i = 1; i <= HIGHEST_ATOMIC_NUMBER; ++i) {
+    const Element* e = get_element_from_atomic_number(i);
+    if (e->organic()) {
+      _add_element(e);
+    }
+  }
+}
+void
+Substructure_Atom_Specifier::AddNonOrganicElements() {
+  for (int i = 1; i <= HIGHEST_ATOMIC_NUMBER; ++i) {
+    const Element* e = get_element_from_atomic_number(i);
+    if (! e->organic()) {
+      _add_element(e);
+    }
+  }
 }
 
 //#define DEBUG_CONSTRUCT_FROM_SMARTS_TOKEN
@@ -2122,10 +2444,11 @@ Substructure_Atom_Specifier::_add_element (const Element * e)
 */
 
 int
-Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstring & zsmarts)
+Substructure_Atom_Specifier::construct_from_smarts_token(const const_IWSubstring & zsmarts)
 {
-  int not_operator = 0;
-  int characters_to_process = zsmarts.length();
+  int not_operator = 0;   // Not being handled here, remove sometime.
+
+  const int characters_to_process = zsmarts.length();
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMARTS_TOKEN
   cerr << "Specifier parsing smarts '" << zsmarts << "' " << characters_to_process << " chars\n";
@@ -2168,6 +2491,10 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 
   int first_elemental_primitive_encountered = 0;
 
+  // Non organic matches are hard. That is because when the query is formed, likely
+  // the non organic atoms will not have been defined yet.
+  int _match_non_organic = 0;
+
   while (characters_processed < characters_to_process)
   {
     const char s = *smarts;
@@ -2196,7 +2523,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
         next_char_is_lowercase_letter = 1;
       else if (isdigit(cnext))
         next_char_is_digit = 1;
-      else if ('>' == cnext || '<' == cnext)
+      else if ('>' == cnext || '<' == cnext || kOpenBrace == cnext)
         next_char_is_relational = 1;
       else if ('+' == cnext || '-' == cnext)
         next_char_is_charge = 1;
@@ -2210,20 +2537,10 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 
     if ('H' == s && (next_char_is_digit || next_char_is_relational))
     {
-      int hh;
-      int gtlt;
-      nchars = smarts_fetch_numeric(smarts + 1, hh, gtlt);
-      if (0 == nchars)
-      {
-        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Bad H qualifier");
-        return 0;
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed, _hcount);
+      if (nchars == 0) {
+        _hcount.add(1);
       }
-      if (1 == gtlt) //// '>' found
-        _hcount.set_min(hh + 1);
-      else if (-1 == gtlt)
-        _hcount.set_max(hh - 1);
-      else
-        _hcount.add(hh);
     }
     else if ('H' == s && next_char_is_lowercase_letter && (nchars = element_from_smarts_string(smarts, characters_to_process - characters_processed, e)))
     {
@@ -2298,7 +2615,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 
     else if (isupper(s) && next_char_is_lowercase_letter && 
              ('r' == smarts[1] || 'v' == smarts[1] || 'x' == smarts[1]) &&
-             (NULL != (e = get_element_from_symbol_no_case_conversion(s))))
+             (nullptr != (e = get_element_from_symbol_no_case_conversion(s))))
     {
       _add_element(e);
       first_elemental_primitive_encountered = 1;
@@ -2307,25 +2624,11 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
     }
     else if ('D' == s)       // degree specifier (note that Deuterium is not valid in a smarts)
     {
-      int ncon;
-      int gtlt;
-      nchars = smarts_fetch_numeric(smarts + 1, ncon, gtlt);
-      if (0 == nchars || ncon < 0)
-      {
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _ncon);
+      if (nchars == 0) {
         smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "D specifier has no default");
         return 0;
       }
-
-      if (1 == gtlt)    // '>' found
-      {
-        _ncon.set_min(ncon + 1);
-      }
-      else if (-1 == gtlt)    // '<' found
-      {
-        _ncon.set_max(ncon - 1);
-      }
-      else
-        _ncon.add(ncon);
     }
     else if (isdigit(s))       // atomic mass specifier
     {
@@ -2371,7 +2674,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
       if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity)
         _aromaticity = AROMATIC;
       else
-        SET_AROMATIC_ATOM(_aromaticity);
+        add_aromatic(_aromaticity);
 
       first_elemental_primitive_encountered = 1;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
@@ -2381,7 +2684,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
       if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity)
         _aromaticity = NOT_AROMATIC;
       else
-        SET_ALIPHATIC_ATOM(_aromaticity);
+        add_aliphatic(_aromaticity);
       first_elemental_primitive_encountered = 1;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     }
@@ -2418,20 +2721,23 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
       _aromaticity = AROMATIC;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     }
+    else if (s == 'R' && ! next_char_is_relational && ! next_char_is_digit) {
+      _ring_bond_count.set_min(1);  // In a ring.
+      previous_token_was = SMARTS_PREVIOUS_TOKEN_RING;
+    }
     else if ('R' == s)     // number of rings specifier
     {
-      int rr;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, rr, ltgt);
-      if (0 == nchars)
-        _nrings.set_min(1);
-      else if (ltgt > 0)
-        _nrings.set_min(rr + 1);
-      else if (ltgt < 0)
-        _nrings.set_max(rr - 1);
-      else
-        _nrings.add(rr);
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _nrings);
+      if (nchars == 0) {
+        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid R qualificiaton");
+        return 0;
+      }
+      previous_token_was = SMARTS_PREVIOUS_TOKEN_RING;
+    }
 
+    // unqualified 'r' means any ring size.
+    else if (s == 'r' && ! next_char_is_relational && ! next_char_is_digit) {
+      _ring_bond_count.set_min(2);
       previous_token_was = SMARTS_PREVIOUS_TOKEN_RING;
     }
 
@@ -2439,87 +2745,47 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 
     else if ('r' == s)     // ring size specifier
     {
-      int rr;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, rr, ltgt);
-      if (0 == nchars)      // just 'r' by itself means in a ring
-        _nrings.set_min(1);
-      else if (0 == rr)     // 'r0' means not in a ring
-        _nrings.add(0);
-      else if (rr + ltgt < 3)
-      {
-        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "ring sizes must be >= 3");
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _ring_size);
+      if (nchars == 0) {
+        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid r qualificiaton");
         return 0;
       }
-      else if (ltgt > 0)
-        _ring_size.set_min(rr + 1);
-      else if (ltgt < 0)
-      {
-        assert (rr > 3);      // no such thing as a 2 membered ring, so 'r<3' is nonsensical
-        _ring_size.set_max(rr - 1);
+      if (! substructure_spec::ValidRingSizes(_ring_size)) {
+        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid r sizes");
+        return 0;
       }
-      else
-        _ring_size.add(rr);
       previous_token_was = SMARTS_PREVIOUS_TOKEN_RING;
     }
     else if ('X' == s)     // connectivity - total connections
     {
-      int xx;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, xx, ltgt);
-      if (0 == xx)
-      {
-        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "the 'X' specifier must be followed by a whole number");
-        return 0;
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _daylight_x);
+      if (nchars == 0) {
+        _daylight_x.set_min(1);
       }
-      if (ltgt > 0)
-        _daylight_x.set_min(xx + 1);
-      else if (ltgt < 0)
-        _daylight_x.set_max(xx - 1);
-      else
-        _daylight_x.add(xx);
-
       previous_token_was = SMARTS_PREVIOUS_TOKEN_X;
     }
-    else if ('x' == s)     // ring bond count
+    // Default for unqualified x is at least one. But 1 does not make sense.
+    else if (s == 'x' && ! next_char_is_relational && ! next_char_is_digit) {
+      _ring_bond_count.set_min(2);
+    }
+    else if ('x' == s)     // qualified ring bond count
     {
-      int xx;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, xx, ltgt);
-      if (0 == nchars)
-      {
-        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "the 'x' specifier must be followed by a whole number");
-        return 0;
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _ring_bond_count);
+      if (0 == nchars || ! substructure_spec::ValidRingBondCount(_ring_bond_count)) {
+        _daylight_x.set_min(2);
       }
-
-      if (ltgt > 0)
-        _ring_bond_count.set_min(xx + 1);
-      else if (ltgt < 0)
-        _ring_bond_count.set_max(xx - 1);
-      else
-        _ring_bond_count.add(xx);
-
       previous_token_was = SMARTS_PREVIOUS_TOKEN_RBC;
     }
-    else if ('v' == s)     // total valence (nbonds)
+    // Unqualified 'v'
+    else if (s == 'v' && ! next_char_is_relational && ! next_char_is_digit) {
+      _valence.add(1);
+    }
+    else if ('v' == s)     // qualified total valence (nbonds)
     {
-      int vv;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, vv, ltgt);
-      if (0 == vv)
-      {
-        smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "the 'v' specifier must be followed by a whole number");
-        return 0;
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _valence);
+      if (0 == nchars) {
+        _valence.add(1);
       }
-      else if (ltgt > 0)
-        _nbonds.set_min(vv + 1);
-      else if (ltgt < 0)
-      {
-        _nbonds.set_max(vv - 1);
-      }
-      else
-        _nbonds.add(vv);
-
       previous_token_was = SMARTS_PREVIOUS_TOKEN_V;
     }
     else if ('-' == s)     // negative charge specifier
@@ -2533,7 +2799,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
       fc_encountered++;
 
       int ff;
-      nchars = fetch_numeric_char (smarts + 1, ff, zsmarts.length() - characters_processed - 1);
+      nchars = fetch_numeric_char(smarts + 1, ff, zsmarts.length() - characters_processed - 1);
       if (nchars)             // should do more error checking
         fc = -ff;
       else
@@ -2583,40 +2849,22 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 
       previous_token_was = SMARTS_PREVIOUS_TOKEN_CHIRALITY;
     }
-    else if ('G' == s)    // unsaturation, iaw extension to smarts. Note we cannot use 'U' because that would be potentially ambiguous with Uranium
+    else if ('G' == s)    // unsaturation, iaw extension to smarts. Note we cannot use 'U' because that would be potentially ambiguous with Uranium. Chemaxon uses 'u', perhaps enable...
     {
-      int u;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, u, ltgt);
-      if (0 == nchars)
-      {
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _unsaturation);
+      if (0 == nchars) {
         smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "The unsaturation specifier 'G' has no default");
         return 0;
       }
-      if (0 == ltgt)
-        _unsaturation.add(u);
-      else if (ltgt > 0)
-        _unsaturation.set_min(u + 1);
-      else if (ltgt < 0)
-        _unsaturation.set_max(u - 1);
-      previous_token_was = SMARTS_PREVIOUS_TOKEN_CHIRALITY;
+      previous_token_was = SMARTS_PREVIOUS_TOKEN_CHIRALITY;  // not really, but oK
     }
-    else if ('T' == s)   // attached heteroatom count, iaw extension to smarts
+    else if ('T' == s || s == 'z')   // attached heteroatom count, iaw extension to smarts, 'z' for rdkit
     {
-      int a;
-      int ltgt;
-      nchars = smarts_fetch_numeric(smarts + 1, a, ltgt);
-      if (0 == nchars)
-      {
+      nchars = substructure_spec::SmartsNumericQualifier(smarts + 1, characters_to_process - characters_processed - 1, _attached_heteroatom_count);
+      if (0 == nchars) {
         smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "The attached heteroatom count specifier 'T' has no default");
         return 0;
       }
-      if (0 == ltgt)
-        _attached_heteroatom_count.add(a);
-      else if (ltgt > 0)
-        _attached_heteroatom_count.set_min(a + 1);
-      else if (ltgt < 0)
-        _attached_heteroatom_count.set_max(a - 1);
       previous_token_was = SMARTS_PREVIOUS_TOKEN_T;
     }
 
@@ -2659,11 +2907,11 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
     else if ('/' == s && (characters_processed + 3) < characters_to_process && 'I' == smarts[1] && 'W' == smarts[2])
     {
       const_IWSubstring c(smarts + 3, characters_to_process - characters_processed - 3);    // handy here
+//    cerr << "Token to examine '" << c << "'\n";
 
-      if ('x' == c[0])
+      if ('x' == c[0]) {
         nchars = 3 + 1 - 1;
-      else if (c.length() > 3 && c.starts_with("fss"))
-      {
+      } else if (c.length() > 3 && c.starts_with("fss")) {
         c.remove_leading_chars(3);
         truncate_after_digits("=><,", c);
         if (! _fused_system_size.initialise(c))
@@ -2699,17 +2947,20 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
       else if (c.length() > 3 && c.starts_with("rid"))
         nchars = 3 + 3 + 1 - 1;                     // will fail if more than two digits for rid
       else if (c.length() > 4 && c.starts_with("fsid"))
-        nchars = 3 + 4 + 1 - 1;                     // will fail if more than two digits for rid
-      else if (c.length() > 4 && c.starts_with("spch"))
+        nchars = 3 + 4 + 1 - 1;                     // will fail if more than two digits for fsid
+      else if (c.length() > 3 && c.starts_with("gid"))
+        nchars = 3 + 3 + 1 - 1;                     // will fail if more than two digits for gid
+      else if (c.length() > 4 && (c.starts_with("spch") || c.starts_with("scaf")))
       {
+        const int is_spch = c.starts_with("spch");
         c.remove_leading_chars(4);
         if ('1' == c[0])
-          _match_spinach_only = 1;
+          _match_spinach_only = is_spch;
         else if ('0' == c[0])
-          _match_spinach_only = 0;
+          _match_spinach_only = !is_spch;
         else
         {
-          smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid spch qualifier");
+          smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid scaf/spch qualifier");
           return 0;
         }
         nchars = 3 + 4 + 1 - 1;
@@ -2785,6 +3036,32 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
         nchars = 3 + 2 + 1 - 1;
 //      _attributes_specified++;
       }
+      else if (c.starts_with("organic")) {
+        AddOrganicElements();
+        nchars = 3 + 7 - 1;
+        _attributes_specified++;
+      }
+      else if (c.starts_with("nonorganic")) {
+//      AddNonOrganicElements();
+        nchars = 3 + 10 - 1;
+        ++_match_non_organic;
+        _attributes_specified++;
+      }
+      else if (c.starts_with("spiro")) {
+        _spiro = 1;
+        nchars = 3 + 5 - 1;
+        _attributes_specified++;
+      }
+      else if (c.starts_with("cipR")) {
+        _cip_chirality = CahnIngoldPrelog::R;
+        nchars = 3 + 4 - 1;
+        ++_attributes_specified;
+      }
+      else if (c.starts_with("cipS")) {
+        _cip_chirality = CahnIngoldPrelog::S;
+        nchars = 3 + 4 - 1;
+        ++_attributes_specified;
+      }
       else
       {
         smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "unrecognised /IW qualifier");
@@ -2828,7 +3105,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token (const const_IWSubstrin
 */
 
 int
-Substructure_Atom_Specifier::construct_from_smiles_token (const char * smi, int nchars)
+Substructure_Atom_Specifier::construct_from_smiles_token(const char * smi, int nchars)
 {
   const_IWSubstring tmp;
   tmp.set(smi, nchars);
@@ -2837,7 +3114,7 @@ Substructure_Atom_Specifier::construct_from_smiles_token (const char * smi, int 
 }
 
 int
-Substructure_Atom_Specifier::construct_from_smiles_token (const const_IWSubstring & smiles)
+Substructure_Atom_Specifier::construct_from_smiles_token(const const_IWSubstring & smiles)
 {
   _attributes_specified++;
 
@@ -2856,7 +3133,7 @@ Substructure_Atom_Specifier::construct_from_smiles_token (const const_IWSubstrin
   const Element * e;
 
   int nchars = parse_smiles_token(smiles.rawchars(), smiles.length(), e, _aromaticity);
-  if (0 == nchars || NULL == e)
+  if (0 == nchars || nullptr == e)
   {
     cerr << "Substructure_Atom_Specifier::construct_from_smiles_token: cannot parse '" << smiles << "'\n";
 //  iwabort();
@@ -2872,7 +3149,7 @@ Substructure_Atom_Specifier::construct_from_smiles_token (const const_IWSubstrin
 
   _add_element(e);
 
-  _attributes_specified++;
+//_attributes_specified++;
     
   return nchars;
 }
@@ -2886,7 +3163,7 @@ Substructure_Atom_Specifier::construct_from_smiles_token (const const_IWSubstrin
 */
 
 int
-Substructure_Atom_Specifier::reconcile_and_conditions (const Substructure_Atom_Specifier * s)
+Substructure_Atom_Specifier::reconcile_and_conditions(const Substructure_Atom_Specifier * s)
 {
   if (s->_element.number_elements())
   {
@@ -2930,6 +3207,14 @@ Substructure_Atom_Specifier::reconcile_and_conditions (const Substructure_Atom_S
     }
 
     _nbonds = s->_nbonds;
+  }
+
+  if (s->_valence.is_set()) {
+    if (_valence.is_set()) {
+      cerr << "Substructure_Atom_Specifier::reconcile_and_conditions: valence conflict\n";
+      return 0;
+    }
+    _valence = s->_valence;
   }
 
   if (s->_formal_charge.is_set())
@@ -3000,26 +3285,26 @@ Substructure_Atom_Specifier::reconcile_and_conditions (const Substructure_Atom_S
     _attached_heteroatom_count = s->_attached_heteroatom_count;
   }
 
-  if (s->_aromatic_ring_sizes.is_set())
+  if (s->_aromatic_ring_size.is_set())
   {
-    if (_aromatic_ring_sizes.is_set())
+    if (_aromatic_ring_size.is_set())
     {
-      cerr << "Substructure_Atom_Specifier::reconcile_and_conditions: aromatic_ring_sizes conflict\n";
+      cerr << "Substructure_Atom_Specifier::reconcile_and_conditions: aromatic_ring_size conflict\n";
       return 0;
     }
 
-    _aromatic_ring_sizes = s->_aromatic_ring_sizes;
+    _aromatic_ring_size = s->_aromatic_ring_size;
   }
 
-  if (s->_aliphatic_ring_sizes.is_set())
+  if (s->_aliphatic_ring_size.is_set())
   {
-    if (_aliphatic_ring_sizes.is_set())
+    if (_aliphatic_ring_size.is_set())
     {
-      cerr << "Substructure_Atom_Specifier::reconcile_and_conditions: aliphatic_ring_sizes conflict\n";
+      cerr << "Substructure_Atom_Specifier::reconcile_and_conditions: aliphatic_ring_size conflict\n";
       return 0;
     }
 
-    _aliphatic_ring_sizes = s->_aliphatic_ring_sizes;
+    _aliphatic_ring_size = s->_aliphatic_ring_size;
   }
 
   if (s->_unsaturation.is_set())
@@ -3076,7 +3361,7 @@ Substructure_Atom_Specifier::smarts (IWstring & s) const
 
   if (! _ncon.is_set())
     ;
-  else if (0 == _ncon.number_elements())
+  else if (_ncon.empty())
     s += "{ncon min or max"};
   else
   {
@@ -3093,16 +3378,16 @@ Substructure_Atom_Specifier::smarts (IWstring & s) const
 }*/
 
 /*
-  Before initiating a search, we need to determin the number of attributes
+  Before initiating a search, we need to determine the number of attributes
   which have been specified.
 */
 
 int
-Substructure_Atom_Specifier::attributes_specified()
+Substructure_Atom_Specifier::count_attributes_specified()
 {
+  _attributes_specified = 0;
+
   int rc = 0;
-//if (_element.number_elements())
-//  rc++;
   if (_element_unique_id.number_elements())
     rc++;
   if (_ncon.is_set())
@@ -3110,6 +3395,8 @@ Substructure_Atom_Specifier::attributes_specified()
   if (_ncon2.is_set())
     rc++;
   if (_nbonds.is_set())
+    rc++;
+  if (_valence.is_set())
     rc++;
   if (_formal_charge.is_set())
     rc++;
@@ -3125,9 +3412,9 @@ Substructure_Atom_Specifier::attributes_specified()
     rc++;
   if (SUBSTRUCTURE_NOT_SPECIFIED != _chirality)
     rc++;
-  if (_aromatic_ring_sizes.is_set())
+  if (_aromatic_ring_size.is_set())
     rc++;
-  if (_aliphatic_ring_sizes.is_set())
+  if (_aliphatic_ring_size.is_set())
     rc++;
   if (_attached_heteroatom_count.is_set())
     rc++;
@@ -3157,19 +3444,30 @@ Substructure_Atom_Specifier::attributes_specified()
     rc++;
   if (_userAtomType != 0)
     rc++;
+  if (_atom_type != 0)
+    rc++;
+  if (_spiro >= 0) {
+    ++rc;
+  }
+  if (_cip_chirality != CahnIngoldPrelog::kUnspecified) {
+    ++rc;
+  }
   if (ignore_chirality_in_smarts_input())
     _chirality = 0;
 
 //#define DEBUG_ATTRIBUTES_SPECIFIED
 #ifdef DEBUG_ATTRIBUTES_SPECIFIED
-  if (_element.number_elements())
-    cerr << "ele is specified \n";
+  if (_element_unique_id.number_elements()) {
+    cerr << "ele unique_id is specified \n";
+  }
   if (_ncon.is_set())
     cerr << "nc is specified \n";
   if (_ncon2.is_set())
     cerr << "nc2 is specified \n";
   if (_nbonds.is_set())
     cerr << "nb is specified \n";
+  if (_valence.is_set())
+    cerr << "valence is specified \n";
   if (_formal_charge.is_set())
     cerr << "fc is specified \n";
   if (_nrings.is_set())
@@ -3184,9 +3482,9 @@ Substructure_Atom_Specifier::attributes_specified()
     cerr << "ar is specified \n";
   if (SUBSTRUCTURE_NOT_SPECIFIED != _chirality)
     cerr << "chir is specified \n";
-  if (_aromatic_ring_sizes.is_set())
+  if (_aromatic_ring_size.is_set())
     cerr << "ars is specified \n";
-  if (_aliphatic_ring_sizes.is_set())
+  if (_aliphatic_ring_size.is_set())
     cerr << "alrs is specified \n";
   if (_attached_heteroatom_count.is_set())
     cerr << "ahc is specified \n";
@@ -3208,11 +3506,15 @@ Substructure_Atom_Specifier::attributes_specified()
     cerr << "fused system size is specified\n";
   if (_userAtomType != 0)
     cerr << "user atom type is specified\n";
+  if (_atom_type != 0)
+    cerr << "Atom type is specified\n";
+  if (_spiro >= 0) {
+    cerr << "spiro is " << _spiro << '\n';
+  }
   cerr << "Atom has " << rc << " attributes specified\n";
 #endif
 
   _attributes_specified = rc;
-
 
   return rc;
 }

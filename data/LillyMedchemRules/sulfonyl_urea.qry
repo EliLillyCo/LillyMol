@@ -1,0 +1,22 @@
+# RuleClass 
+# SubClass 
+
+# Fred Bruns Dec 2003
+
+#Feb 2004 Changed to 50 demerits
+
+(0 Query
+  (A C Comment "sulfonyl_urea")
+  (A I Version 2)
+  (A D numeric_value 35)
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (0 Elements_Needed
+    (A I atomic_number 7)
+    (A I min_hits_needed 2)
+  )
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "N[CR0](=[O,S])-N-[S;R0]=[O,S]")
+)

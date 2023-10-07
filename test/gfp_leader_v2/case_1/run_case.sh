@@ -14,7 +14,7 @@ else
 fi
 
 shared_data_dir=$LILLYMOL_HOME/data
-command=$BIN_DIR/gfp_leader_v2
+command=$BIN_DIR/gfp_leader
 case_id="Case 1"
 echo "Testing:  $command"
 

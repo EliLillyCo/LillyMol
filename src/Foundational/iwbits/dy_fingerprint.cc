@@ -1,6 +1,7 @@
-#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 
     /**********************************************************************
@@ -37,15 +38,11 @@
 ===========================================================================*/
 
 
-#include <stdlib.h>
-#include <stdio.h>
-//#include "du_utils.h"
-
-//#define ERROR(f,e) {fprintf(stderr, "%s: %e\n"); return NULL;}
+//#define ERROR(f,e) {fprintf(stderr, "%s: %e\n"); return nullptr;}
 
 // Change definition, IAW
 
-#define ERROR(f,e) {fprintf(stderr, "%s: %s\n", "DEATH", (e)); return NULL;}
+#define ERROR(f,e) {fprintf(stderr, "%s: %s\n", "DEATH", (e)); return nullptr;}
 
 
 #define BIN2ASCII(s,c,d,e) \
@@ -220,7 +217,7 @@ du_bin2ascii(int *palen, int blen, const char *b)
   *palen = ntriples * 4 + 1;
   if (nleftover != 0)
     *palen += 4;
-  if (NULL == (ascii = (char *) malloc(*palen + 1)))		/* 1 more for '\0' */
+  if (nullptr == (ascii = (char *) malloc(*palen + 1)))		/* 1 more for '\0' */
     ERROR("du_bin2ascii", "malloc failed\n");
   p = ascii;
   
@@ -295,7 +292,7 @@ du_ascii2bin(int *pblen, int alen, char *ascii)
 
   *pblen = (alen - 1) / 4;
   *pblen *= 3;
-  if (NULL == (binary = malloc(*pblen)))
+  if (nullptr == (binary = malloc(*pblen)))
     ERROR("du_ascii2bin", "malloc failed");
 
   p = ascii;
@@ -316,7 +313,7 @@ int
 du_ascii2bin(const char *ascii, const int nchars,
              unsigned char * binary, unsigned int & nbytes)
 {
-  assert (NULL != binary);
+  assert (nullptr != binary);
 
   if ((nchars % 4) != 1)
     ERROR("du_ascii2bin", "Invalid ASCII string (length wrong)");

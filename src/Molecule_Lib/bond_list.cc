@@ -34,7 +34,7 @@ Bond_list::ok() const
 }
 
 int
-Bond_list::debug_print (std::ostream & os) const
+Bond_list::debug_print(std::ostream & os) const
 {
   assert(os.good());
 
@@ -45,7 +45,6 @@ Bond_list::debug_print (std::ostream & os) const
     os << " Bond " << i << " ";
     const Bond *b = _things[i];
     b->debug_print(os);
-    os << endl;
   }
 
   return 1;
@@ -186,7 +185,7 @@ Bond_list::invalidate_ring_info()
 int
 Bond_list::copy_bond_types (bond_type_t * b) const
 {
-  assert(NULL != b);
+  assert(nullptr != b);
 
   for (int i = 0; i < _number_elements; i++)
   {

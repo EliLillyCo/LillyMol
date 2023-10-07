@@ -1,0 +1,22 @@
+(0 Query
+  (A C Comment "acetal_acyclic")
+  (A C Comment "acetal_acyclic")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I ncon 2)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I unsaturation 0)
+    (A I nrings 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I ncon 2)
+    (A I nrings 0)
+    (A I single_bond 1)
+  )
+)

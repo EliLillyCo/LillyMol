@@ -1,0 +1,3 @@
+query: "link_node.qry"
+element: "Zn"
+ring: false

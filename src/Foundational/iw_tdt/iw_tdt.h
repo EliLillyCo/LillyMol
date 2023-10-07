@@ -1,10 +1,11 @@
 #ifndef IWCONST_TDT_H
 #define IWCONST_TDT_H
 
-#include "iwstring.h"
-#include "iwstring_data_source.h"
-#include "set_or_unset.h"
-#include "iwcrex.h"
+#include "re2/re2.h"
+
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/set_or_unset.h"
 
 /*
   Variant on the TDT class, hopefully with better efficiency
@@ -53,8 +54,8 @@ class IW_TDT
 
     int next (iwstring_data_source &);
 
-    int build (const const_IWSubstring &);    // build from string with embedded newlines
-    int build (const char *, int);    // build from string with embedded newlines
+    int Build(const const_IWSubstring & s);    // build from string with embedded newlines
+    int Build(const char *, int);    // build from string with embedded newlines
 
     int next_dataitem (const_IWSubstring &, int &) const;
 
@@ -98,9 +99,9 @@ class IW_TDT
     int dataitem_value (const const_IWSubstring & tag, double & s, int which_one = 0) const { return _dataitem_value (tag.rawchars (), tag.length (),                   s, which_one);}
     int dataitem_value (const IWString & tag,          double & s, int which_one = 0) const { return _dataitem_value (tag.rawchars (), tag.length (),                   s, which_one);}
 
-    int remove_all (IW_Regular_Expression &);
+    int remove_all (RE2 &);
 
-    int dataitem_value (IW_Regular_Expression & rx,
+    int dataitem_value (RE2 & rx,
                         const_IWSubstring & dataitem,
                         const_IWSubstring & zresult,
                         int which_to_return) const;
@@ -128,7 +129,7 @@ class IW_TDT
     int count_dataitems (const const_IWSubstring & tag) const { return count_dataitems (tag.rawchars (), tag.length ());}
     int count_dataitems (const IWString & tag) const { return count_dataitems (tag.rawchars (), tag.length ());}
 
-    int count_dataitems (IW_Regular_Expression &) const;
+    int count_dataitems (RE2 &) const;
 
     bool operator == (const IW_TDT &) const;
 };
@@ -149,6 +150,10 @@ extern int include_newlines_in_tdt ();
 */
 
 //#define DEBUG_DATAITEM_VALUE
+#ifdef DEBUG_DATAITEM_VALUE
+using std::cerr;
+using std::endl;
+#endif
 
 template <typename S>
 int
@@ -317,8 +322,8 @@ IW_TDT::set_dataitem_value (const char * tag,
   int i = _find_index_in_end_array (tag, len_tag, which_one);
   if (i < 0)
   {
-    cerr << "IW_TDT::set_dataitem_value:no " << which_one << " instance of ";
-    cerr.write (tag, len_tag) << "' found\n";
+    std::cerr << "IW_TDT::set_dataitem_value:no " << which_one << " instance of ";
+    std::cerr.write (tag, len_tag) << "' found\n";
     return 0;
   }
 

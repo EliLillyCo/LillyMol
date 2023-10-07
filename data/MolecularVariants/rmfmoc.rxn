@@ -1,0 +1,14 @@
+comment: "rmfmoc"
+scaffold {
+  id: 0
+  smarts: "*!@[CD3](=O)-[OD2]-[CD2][CD3x2]1c2ccccc2c2ccccc12"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}

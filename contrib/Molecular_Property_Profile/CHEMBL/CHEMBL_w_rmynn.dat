@@ -1,0 +1,115 @@
+description {
+  feature_name: "w_rmynn"
+  description: "Number of Nitrogen atoms"
+  plot_title: "Number of Nitrogen atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 20.0
+mean: 3.1262124
+median: 3.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+  value: 1.0
+}
+quantile {
+  quantile: 0.5
+  value: 3.0
+}
+quantile {
+  quantile: 0.9
+  value: 6.0
+}
+quantile {
+  quantile: 0.95
+  value: 6.0
+}
+quantile {
+  quantile: 0.99
+  value: 8.0
+}
+int_values {
+  count: 149651
+}
+int_values {
+  value: 1
+  count: 285671
+}
+int_values {
+  value: 2
+  count: 468559
+}
+int_values {
+  value: 3
+  count: 479507
+}
+int_values {
+  value: 4
+  count: 383366
+}
+int_values {
+  value: 5
+  count: 245010
+}
+int_values {
+  value: 6
+  count: 136775
+}
+int_values {
+  value: 7
+  count: 60268
+}
+int_values {
+  value: 8
+  count: 28434
+}
+int_values {
+  value: 9
+  count: 10692
+}
+int_values {
+  value: 10
+  count: 3797
+}
+int_values {
+  value: 11
+  count: 997
+}
+int_values {
+  value: 12
+  count: 481
+}
+int_values {
+  value: 13
+  count: 148
+}
+int_values {
+  value: 14
+  count: 111
+}
+int_values {
+  value: 15
+  count: 20
+}
+int_values {
+  value: 16
+  count: 9
+}
+int_values {
+  value: 17
+  count: 2
+}
+int_values {
+  value: 18
+  count: 2
+}
+int_values {
+  value: 20
+  count: 10
+}

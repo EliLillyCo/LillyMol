@@ -2,8 +2,6 @@
 
 #include <vector>
 
-using namespace std;
-
 #include "iwstring.h"
 
 #ifdef __GNUG__

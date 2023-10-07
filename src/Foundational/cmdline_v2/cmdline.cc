@@ -1,7 +1,11 @@
 #include <stdlib.h>
 
+
 #include "cmdline_v2.h"
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   All the different qualifiers that can follow an option
@@ -35,7 +39,7 @@ CmdLineDefault cmdlinedefault;
 
 CmdLine_Option_and_Value::CmdLine_Option_and_Value ()
 {
-  _opt = NULL;
+  _opt = nullptr;
   _valid_as = IWCMDLINE_NONE;
 
   return;
@@ -45,7 +49,7 @@ int
 CmdLine_Option_and_Value::is_option (const char * o,
                                      int leno) const
 {
-  if (NULL == _opt)   // happens with erroneous initialisations
+  if (nullptr == _opt)   // happens with erroneous initialisations
     return 0;
 
   if (static_cast<size_t>(leno) != strlen(_opt))
@@ -255,7 +259,7 @@ Command_Line_v2::Command_Line_v2 (int argc,
                   const CmdLineDefault & c)
 {
   _number_option_value_pairs = 0;
-  _clov = NULL;
+  _clov = nullptr;
 
   _unrecognised_options_encountered = 0;
 
@@ -317,7 +321,7 @@ Command_Line_v2::Command_Line_v2 (int argc,
 
 Command_Line_v2::~Command_Line_v2 ()
 {
-  if (NULL != _clov)
+  if (nullptr != _clov)
     delete [] _clov;
 
   if (-5 == _number_option_value_pairs)
@@ -346,7 +350,7 @@ find_corresponding_option_and_type (const Option_Type * ot,
       return &(ot[i]);
   }
 
-  return NULL;
+  return nullptr;
 }
 
 int
@@ -434,7 +438,7 @@ Command_Line_v2::_constructor (const int argc,
 
     const Option_Type * o = find_corresponding_option_and_type(ot, number_options, opt);
 
-    if (NULL == o)
+    if (nullptr == o)
     {
       _good = 0;
       _unrecognised_options_encountered++;
@@ -603,7 +607,7 @@ Command_Line_v2::option_value (int len_opt,
     number_found++;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 const const_IWSubstring 
@@ -756,7 +760,7 @@ Command_Line_v2::_initialise_old_form (int argc,
 
     const Option_Type * o = find_corresponding_option_and_type(ot, nopt, opt);
 
-    if (NULL == o)
+    if (nullptr == o)
     {
     cerr << "No option for '" << opt << "'\n";
       _good = 0;

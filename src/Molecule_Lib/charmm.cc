@@ -2,12 +2,12 @@
   Charmm output
 */
 
-#include "iwconfig.h"
 #include <stdlib.h>
 #include <time.h>
 
+#include "Foundational/iwmisc/misc.h"
+
 #include "molecule.h"
-#include "misc.h"
 
 int
 Molecule::write_molecule_crd(std::ostream & os)
@@ -24,20 +24,20 @@ Molecule::write_molecule_crd(std::ostream & os)
   os<<n_atoms<<'\n';
   for (int i=0; i<n_atoms; i++)
     {
-      IWString name = molecule_name();
-      int name_length = name.length();
+      IWString my_name = name();
+      int name_length = my_name.length();
 
       if (name_length>3)
 	;
       else
 	{
 	  for (int j=0; j<4-name_length; j++)
-	    name.insert(' ', 0);
+	    my_name.insert(' ', 0);
 	  //	    output_name = output_name + " ";
-	  //	  output_name = output_name + name;
+	  //	  output_name = output_name + my_name;
 	}
 
-      name.to_uppercase();
+      my_name.to_uppercase();
       // atom number, "1", and molecule name
       os.width(5);
       os<<i+1;
@@ -135,20 +135,20 @@ Molecule::write_molecule_psf (std::ostream & os)
   os<<n_atoms<<" !NATOM"<<'\n';
   for (int i=0; i<n_atoms; i++)
     {
-      IWString name = molecule_name();
-      int name_length = name.length();
+      IWString my_name = name();
+      int name_length = my_name.length();
 
       if (name_length>3)
 	;
       else
 	{
 	  for (int j=0; j<4-name_length; j++)
-	    name.insert(' ', 0);
+	    my_name.insert(' ', 0);
 	  //	    output_name = output_name + " ";
-	  //	  output_name = output_name + name;
+	  //	  output_name = output_name + my_name;
 	}
 
-      name.to_uppercase();
+      my_name.to_uppercase();
       // atom number and molecule name
       os.width(8);
       os<<i+1;
@@ -157,7 +157,7 @@ Molecule::write_molecule_psf (std::ostream & os)
       os.width(4);
       os<<"LIGA";
       //per Dan's request, only ouput LIGA
-      //os<<name;
+      //os<<my_name;
 
       // always 1
       os<<" 1   ";
@@ -166,7 +166,7 @@ Molecule::write_molecule_psf (std::ostream & os)
       os<<" LIGA";
 
       // per Dan's request, only output LIGA
-      //      os<<" "<<name;
+      //      os<<" "<<my_name;
       
       // atom symbol and atom number
       os<<" ";
@@ -182,7 +182,7 @@ Molecule::write_molecule_psf (std::ostream & os)
 	  for (int j=0; j<5-temp_length; j++)
 	    temp.append(1, " ");
 	  //	    output_name = output_name + " ";
-	  //	  output_name = output_name + name;
+	  //	  output_name = output_name + my_name;
 	}
 
       os<<temp;
@@ -196,7 +196,7 @@ Molecule::write_molecule_psf (std::ostream & os)
       charge_t q;
 
       // template charge
-      if (NULL == _charges)
+      if (nullptr == _charges)
         q = static_cast<charge_t>(0.0);
       else
         q = _charges->item(i);

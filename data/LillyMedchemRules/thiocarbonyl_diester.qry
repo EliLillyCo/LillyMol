@@ -1,0 +1,31 @@
+(0 Query
+  (A C Comment "thiocarbonyl_diester")
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (9 Element_Hits_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number (8 16))
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number (8 16))
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number (8 16))
+    (A I single_bond 1)
+  )
+)

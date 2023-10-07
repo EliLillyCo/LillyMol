@@ -4,10 +4,10 @@
   Used for instantiating templates associated with substructure_Queries.
 */
 
+#include "Foundational/cmdline/cmdline.h"
+
 #include "substructure.h"
 #include "rwsubstructure.h"
-
-#include "cmdline.h"
 
 template int process_queries(Command_Line &, resizable_array_p<Substructure_Query> &, int, char);
 template int process_cmdline_token(const char, const const_IWSubstring &, resizable_array_p<Substructure_Query> &, int);

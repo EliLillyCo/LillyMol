@@ -5,9 +5,9 @@
   I have several programmes that read activity data from a file
 */
 
-#include "cmdline.h"
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 template <typename T>
 class Activity_Data_From_File : public IW_STL_Hash_Map<IWString, T>
@@ -39,6 +39,8 @@ class Activity_Data_From_File : public IW_STL_Hash_Map<IWString, T>
 
 #ifdef ACTIVITY_DATA_IMPLEMENATION_H
 
+using std::cerr;
+
 template <typename T>
 Activity_Data_From_File<T>::Activity_Data_From_File()
 {
@@ -63,16 +65,30 @@ Activity_Data_From_File<T>::construct_from_command_line(const C & cl,
 
   int i = 0;
   const_IWSubstring fname;
-  while (cl.value (flag, fname, i++))
+  while (cl.value(flag, fname, i++))
   {
-    if (! _read_activity_data(fname))
+    if (fname.starts_with("col=")) {
+      fname.remove_leading_chars(4);
+      if (! fname.numeric_value(_activity_column) || _activity_column < 1) {
+        cerr << "Activity_Data_From_File::construct_from_command_line:invalid column directive '" << fname << "'\n";
+        return 0;
+      }
+      _activity_column--;
+      continue;
+    }
+
+    if (! read_activity_data(fname))
     {
       cerr << "Activity_Data_From_File::construct_from_command_line:could not read activity data from '" << fname << "'\n";
       return 0;
     }
   }
 
-  return static_cast<int>((*this).size());
+  int rc = static_cast<int>((*this).size());
+  if (verbose)
+    cerr << "Read " << rc << " activity values from " << fname << '\n';  // Wrong if multiple files read.
+
+  return rc;
 }
 
 template <typename T>
@@ -105,7 +121,7 @@ Activity_Data_From_File<T>::_read_activity_data (iwstring_data_source & input)
 
     if (! _read_activity_data_record(buffer))
     {
-      cerr << "Activity_Data_From_File::_read_activity_data_record:cannot read activity data, line " << input.lines_read() << endl;
+      cerr << "Activity_Data_From_File::_read_activity_data_record:cannot read activity data, line " << input.lines_read() << '\n';
       cerr << "'" << buffer << "'\n";
       return 0;
     }

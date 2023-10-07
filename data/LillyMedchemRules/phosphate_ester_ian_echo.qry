@@ -1,0 +1,46 @@
+(0 Query
+  (A I version 2)
+  (A C comment "phosphate_ester")
+  (A I one_embedding_per_start_atom 1)
+  (0 query_atom
+    (A I initial_atom_number 0)
+    (A I atomic_number 15)
+    (A I ncon 4)
+    (A I nbonds 5)
+  )
+  (1 query_atom
+    (A I initial_atom_number 1)
+    (A I atomic_number 8)
+    (A I double_bond 0)
+  )
+  (2 query_atom
+    (A I initial_atom_number 2)
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I attached_heteroatom_count 1)
+    (A I single_bond 0)
+  )
+  (3 query_atom
+    (A I initial_atom_number 3)
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I attached_heteroatom_count 1)
+    (A I single_bond 0)
+  )
+  (4 query_atom
+    (A I initial_atom_number 4)
+    (1 Query_Atom_Specifier
+      (A I atomic_number 8)
+      (A I ncon 2)
+    )
+    (2 Query_Atom_Specifier
+      (A C operator "or")
+      (A I atomic_number 6)
+    )
+    (3 Query_Atom_Specifier
+      (A C operator "or")
+      (A I atomic_number 7)
+    )
+    (A I single_bond 0)
+  )
+)

@@ -6,11 +6,9 @@
   floats as bytes. We need to know the range
 */
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include <iostream>
-using std::cerr;
-using std::endl;
 
 template <typename T>
 class Masquerading_as_Byte
@@ -67,7 +65,7 @@ class Masquerading_as_Byte
 
 #ifdef MASQUERADING_AS_BYTE_IMPLEMENTATION
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "Masquerading_as_Byte.h"
 
@@ -97,12 +95,12 @@ Masquerading_as_Byte<T>::debug_print (std::ostream & os) const
     return os.good ();
   }
 
-  os << " minval " << _minval << " maxval " << _maxval << endl;
+  os << " minval " << _minval << " maxval " << _maxval << '\n';
 
   os << "Translation table\n";
   for (int i = 0; i < 256; i++)
   {
-    os << "  byte " << i << " translated to " << _byte_to_T[i] << endl;
+    os << "  byte " << i << " translated to " << _byte_to_T[i] << '\n';
   }
 
   return os.good ();
@@ -128,13 +126,13 @@ Masquerading_as_Byte<T>::convert_to_byte (T v,
 {
   if (v < _minval)
   {
-    cerr << "Masquerading_as_Byte::convert_to_byte: value " << v << " out of range, minval = " << _minval << endl;
+    std::cerr << "Masquerading_as_Byte::convert_to_byte: value " << v << " out of range, minval = " << _minval << '\n';
     return 0;
   }
 
   if (v > _maxval)
   {
-    cerr << "Masquerading_as_Byte::convert_to_byte: value " << v << " out of range, maxval = " << _maxval << endl;
+    std::cerr << "Masquerading_as_Byte::convert_to_byte: value " << v << " out of range, maxval = " << _maxval << '\n';
     return 0;
   }
 
@@ -155,7 +153,7 @@ Masquerading_as_Byte<T>::convert_to_byte (T f) const
   
   if (f < _minval || f > _maxval)
   {
-    cerr << "Masquerading_as_Byte::_convert_to_byte: out of range " << f << " range is " << _minval << " to " << _maxval << endl;
+    std::cerr << "Masquerading_as_Byte::_convert_to_byte: out of range " << f << " range is " << _minval << " to " << _maxval << '\n';
     abort ();
   }
 
@@ -245,22 +243,22 @@ Masquerading_as_Byte<T>::_parse_map_directive (const const_IWSubstring & buffer)
   const_IWSubstring s, sv;
   if (! buffer.split (s, ' ', sv))
   {
-    cerr << "Masquerading_as_Byte::_parse_map_directive: must be at least two tokens in a map directive\n";
-    cerr << buffer << endl;
+    std::cerr << "Masquerading_as_Byte::_parse_map_directive: must be at least two tokens in a map directive\n";
+    std::cerr << buffer << '\n';
     return 0;
   }
 
   int ndx;
   if (! s.numeric_value (ndx) || ndx < 0 || ndx > 255)
   {
-    cerr << "Masquerading_as_Byte::_parse_map_directive: invalid index '" << buffer << "'\n";
+    std::cerr << "Masquerading_as_Byte::_parse_map_directive: invalid index '" << buffer << "'\n";
     return 0;
   }
 
   T v;
   if (! sv.numeric_value (v))
   {
-    cerr << "Masquerading_as_Byte::_parse_map_directive: invalid numeric '" << buffer << "'\n";
+    std::cerr << "Masquerading_as_Byte::_parse_map_directive: invalid numeric '" << buffer << "'\n";
     return 0;
   }
 
@@ -305,13 +303,13 @@ Masquerading_as_Byte<T>::fully_specified ()
 {
   if (0.0 == _minval && 0.0 == _maxval)
   {
-    cerr << "Masquerading_as_Byte::fully_specified: zero extremeties\n";
+    std::cerr << "Masquerading_as_Byte::fully_specified: zero extremeties\n";
     return 0;
   }
 
   if (_minval >= _maxval)
   {
-    cerr << "Masquerading_as_Byte::fully_specified: invalid extremeties " <<_minval << " to " << _maxval << endl;
+    std::cerr << "Masquerading_as_Byte::fully_specified: invalid extremeties " <<_minval << " to " << _maxval << '\n';
     return 0;
   }
 
@@ -326,7 +324,7 @@ Masquerading_as_Byte<T>::initialise_from_distance_matrix_header_records (const c
 
   if (! input.good ())
   {
-    cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:cannot open '" << fname << "'\n";
+    std::cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -376,14 +374,14 @@ Masquerading_as_Byte<T>::initialise_from_distance_matrix_header_records (iwstrin
 
     if (error_encountered)
     {
-      cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:invalid input '" << buffer << "'\n";
+      std::cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:invalid input '" << buffer << "'\n";
       return 0;
     }
   }
 
   if (_minval < 0.0 && _maxval < 0.0)
   {
-    cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:not initialised\n";
+    std::cerr << "Masquerading_as_Byte::initialise_from_distance_matrix_header_records:not initialised\n";
     return 0;
   }
 

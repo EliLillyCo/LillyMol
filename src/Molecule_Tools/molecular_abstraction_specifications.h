@@ -2,11 +2,10 @@
 #define MOLECULAR_ABS_SPECS_H
 
 #include <iostream>
-using namespace std;
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
 
 class Molecule_With_Info_About_Parent : public Molecule
 {
@@ -109,6 +108,9 @@ class Molecule_With_Info_About_Parent : public Molecule
 #define MAD_SPINACH "spinach"
 #define MAD_TYPE_SPINACH 23
 
+extern void DisplayAbstractionNames(std::ostream& output);
+extern void DisplayUsageExamples(std::ostream& output);
+
 class Molecular_Abstraction_Directives_Node
 {
   private:
@@ -133,7 +135,7 @@ class Molecular_Abstraction_Directives_Node
 
     const IWString & args() const { return _args;}
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int ztype() const { return _type;}
 

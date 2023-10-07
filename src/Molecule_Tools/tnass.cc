@@ -5,34 +5,41 @@
 #include <iostream>
 #include <memory>
 #include <limits>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/donor_acceptor.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/element.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/smiles.h"
+
+#include "nass.h"
+
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iwdigits.h"
-#include "iwbits.h"
-#include "misc.h"
-
-#include "aromatic.h"
-#include "element.h"
-#include "nass.h"
-#include "smiles.h"
-#include "charge_assigner.h"
-#include "iwstandard.h"
-#include "etrans.h"
-#include "output.h"
-#include "sparse_fp_creator.h"
-#include "istream_and_type.h"
-#include "donor_acceptor.h"
-
-static const char * prog_name = NULL;
+static const char * prog_name = nullptr;
 
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Does substructure searches with NEED/AVAILABLE flags\n";
 
   cerr << prog_name << " <options> <input_file1> <input_file2> ... > cout\n";
@@ -59,11 +66,8 @@ usage (int rc)
   cerr << "  -k             special processing for CNK descriptor\n";
   (void) display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -l             reduce to largest fragment\n";
-  cerr << "  -M ...         miscellaneous options, enter '-M help' for info\n";
+  cerr << "  -X ...         miscellaneous options, enter '-Y help' for info\n";
   cerr << "  -x <nhits>     when producing descriptors, limit to <nhits> occurrences\n";
-#ifdef USE_IWMALLOC
-   display_standard_debug_options(cerr, 'd');
-#endif
   cerr << "  -v             verbose output\n";
 
   exit(rc);
@@ -102,11 +106,11 @@ static Molecule_Output_Object stream_for_matching_structures;
 
 static Set_of_NA_Substructure_Query queries;
 
-static int * results = NULL;
+static int * results = nullptr;
 
 static Donor_Acceptor_Assigner donor_acceptor_assigner;
 
-static int * hits_per_molecule = NULL;
+static int * hits_per_molecule = nullptr;
 
 static int max_hits = std::numeric_limits<int>::max();
 
@@ -122,6 +126,17 @@ static int special_processing_for_cnk = 0;
 static int ignore_available_queries = 0;
 
 static IWString_and_File_Descriptor bob_coner_stream;
+
+static int flush_after_each_molecule = 0;
+
+static void
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_each_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(8192);
+  }
+}
 
 static int
 write_bob_coner_special (const IWString & mname)
@@ -356,7 +371,7 @@ tnass (data_source_and_type<Molecule> & input,
        IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -370,7 +385,7 @@ tnass (data_source_and_type<Molecule> & input,
     if (write_as_array || fingerprint_tag.length() || non_colliding_fingerprint_tag.length())
     {
       do_output(*m, output);
-      output.write_if_buffer_holds_more_than(32768);
+      MaybeFlush(output);
     }
   }
 
@@ -429,7 +444,7 @@ tnass_filter (const char * fname,
 }
 
 static int
-tnass (const char * fname, int input_type,
+tnass (const char * fname, FileType input_type,
        IWString_and_File_Descriptor & output)
 {
   data_source_and_type<Molecule> input(input_type, fname);
@@ -451,7 +466,7 @@ handle_file_opening(Molecule_Output_Object & zstream,
   cl.value(cflag, fname);
 
   if (! cl.option_present('o'))
-    zstream.add_output_type(SMI);
+    zstream.add_output_type(FILE_TYPE_SMI);
   else if (! zstream.determine_output_types(cl))
   {
     cerr << "Cannot determine output types\n";
@@ -513,10 +528,16 @@ create_header (IWString & header,
   return;
 }
 
+static void
+DisplayDashXOptions(std::ostream& output) {
+  output << " -X flush        flush output after each molecule\n";
+  ::exit(0);
+}
+
 static int
 tnass (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "N:vA:E:i:o:q:lm:n:g:t:W:D:ruG:bH:aJ:y:Y:FM:x:k");
+  Command_Line cl (argc, argv, "N:vA:E:i:o:q:lm:n:g:t:W:D:ruG:bH:aJ:y:Y:Fx:kY:X:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -797,7 +818,24 @@ tnass (int argc, char ** argv)
       cerr << "Matched atom lists written to '" << g << "'\n";
   }
 
-  int input_type = 0;
+  if (cl.option_present('X')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (x == "help") {
+        DisplayDashXOptions(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOptions(cerr);
+      }
+    }
+  }
+
+  FileType input_type = FILE_TYPE_INVALID;
   if (is_filter)     // working as a filter, no need to check input type
     ;
   else if (cl.option_present('i'))
@@ -811,10 +849,10 @@ tnass (int argc, char ** argv)
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
-    usage(3);
+    usage(1);
   }
 
   IWString_and_File_Descriptor output(1);

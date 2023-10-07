@@ -1,15 +1,18 @@
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
-using namespace std;
 
-#include "cmdline.h"
-#include "msi_object.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/msi_object.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
+#include "Molecule_Lib/target.h"
 #include "nass.h"
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
-#include "target.h"
+
+using std::cerr;
+using std::endl;
 
 NA_Substructure_Query::NA_Substructure_Query()
 {
@@ -65,7 +68,7 @@ NA_Substructure_Query::read (iwstring_data_source & input)
 
   const msi_attribute * att;
   int i = 0;
-  while (NULL != (att = msi.attribute(NASS_NAME_OF_NEEDS_ATTRIBUTE, i++)))
+  while (nullptr != (att = msi.attribute(NASS_NAME_OF_NEEDS_ATTRIBUTE, i++)))
   {
     IWString * n = new IWString;
     att->value(*n);
@@ -101,7 +104,7 @@ Set_of_NA_Substructure_Query::Set_of_NA_Substructure_Query()
 {
   _queries_not_needing_anything = NASS_UNDETERMINED;
 
-  _sresults = NULL;
+  _sresults = nullptr;
 
   _break_at_first_match = 0;
 
@@ -119,7 +122,7 @@ Set_of_NA_Substructure_Query::~Set_of_NA_Substructure_Query()
 }
 
 int
-Set_of_NA_Substructure_Query::debug_print (ostream & os) const
+Set_of_NA_Substructure_Query::debug_print (std::ostream & os) const
 {
   os << "Set of N/A queries with " << _number_elements << " queries\n";
 
@@ -159,7 +162,7 @@ Set_of_NA_Substructure_Query::_count_queries_not_needing_anything()
   _queries_not_needing_anything = 0;
   for (int i = 0; i < _number_elements; i++)
   {
-    if (0 == _things[i]->string_needs().number_elements())
+    if (_things[i]->string_needs().empty())
       _queries_not_needing_anything++;
   }
 
@@ -631,7 +634,7 @@ Set_of_NA_Substructure_Query::_find_circular_dependencies (int * already_hit)
 
     const resizable_array<int> & needs = q.needs();
 
-    if (0 == needs.number_elements())
+    if (needs.empty())
       continue;
       
     set_vector(already_hit, _number_elements, 0);
@@ -658,7 +661,7 @@ int
 Set_of_NA_Substructure_Query::substructure_search (Molecule & m,
                                                    int * result)
 {
-  assert (NULL != result);
+  assert (nullptr != result);
 
   if (NASS_UNDETERMINED == _queries_not_needing_anything)
   {
@@ -667,7 +670,7 @@ Set_of_NA_Substructure_Query::substructure_search (Molecule & m,
       return 0;
   }
 
-  if (NULL == _sresults)
+  if (nullptr == _sresults)
   {
     _sresults = new Substructure_Results[_number_elements];
     for (int i = 0; i < _number_elements; i++)

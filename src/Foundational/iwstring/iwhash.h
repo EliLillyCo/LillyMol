@@ -1,7 +1,7 @@
 #ifndef IW_HASH_H
 #define IW_HASH_H
 
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 
 class IWStringHash
 {

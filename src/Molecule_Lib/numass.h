@@ -1,5 +1,5 @@
-#ifndef IW_NUMBER_ASSIGNER_H
-#define IW_NUMBER_ASSIGNER_H
+#ifndef MOLECULE_LIB_NUMASS_H_
+#define MOLECULE_LIB_NUMASS_H_
 
 #include <iostream>
 #include <fstream>
@@ -59,4 +59,4 @@ class Number_Assigner
 
 int display_standard_number_assigner_options (std::ostream &, char = 'n');
 
-#endif
+#endif  // MOLECULE_LIB_NUMASS_H_

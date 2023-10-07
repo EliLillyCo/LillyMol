@@ -1,0 +1,110 @@
+description {
+  feature_name: "w_brunsdon"
+  description: "Number of Hydrogen bond donors, Bruns"
+  plot_title: "Number of Hydrogen bond donors, Bruns"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 18.0
+mean: 1.5819907
+median: 1.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 1.0
+}
+quantile {
+  quantile: 0.9
+  value: 3.0
+}
+quantile {
+  quantile: 0.95
+  value: 4.0
+}
+quantile {
+  quantile: 0.99
+  value: 6.0
+}
+int_values {
+  count: 422833
+}
+int_values {
+  value: 1
+  count: 805628
+}
+int_values {
+  value: 2
+  count: 597541
+}
+int_values {
+  value: 3
+  count: 265109
+}
+int_values {
+  value: 4
+  count: 100930
+}
+int_values {
+  value: 5
+  count: 32775
+}
+int_values {
+  value: 6
+  count: 15349
+}
+int_values {
+  value: 7
+  count: 5520
+}
+int_values {
+  value: 8
+  count: 3991
+}
+int_values {
+  value: 9
+  count: 1626
+}
+int_values {
+  value: 10
+  count: 1134
+}
+int_values {
+  value: 11
+  count: 545
+}
+int_values {
+  value: 12
+  count: 277
+}
+int_values {
+  value: 13
+  count: 153
+}
+int_values {
+  value: 14
+  count: 49
+}
+int_values {
+  value: 15
+  count: 34
+}
+int_values {
+  value: 16
+  count: 13
+}
+int_values {
+  value: 17
+  count: 2
+}
+int_values {
+  value: 18
+  count: 1
+}

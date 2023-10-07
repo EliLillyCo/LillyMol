@@ -1,0 +1,11 @@
+(0 Query
+  (A C Comment "chlorine")
+  (A I Version 2)
+  (A D numeric_value 34)
+  (A I min_hits_needed 3)
+  (A I subtract_from_rc 2)
+  (A I only_match_largest_fragment 1)
+  (0 Query_Atom
+    (A I atomic_number 17)
+  )
+)

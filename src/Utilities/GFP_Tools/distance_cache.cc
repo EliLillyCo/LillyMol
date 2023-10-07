@@ -8,24 +8,24 @@
 IW_Distance_Cache_Line::IW_Distance_Cache_Line ()
 {
   _id = -1;
-  _cache = NULL;
+  _cache = nullptr;
 
   return;
 }
 
 IW_Distance_Cache::IW_Distance_Cache ()
 {
-  _cache = NULL;
+  _cache = nullptr;
   _ncols = 0;
   _nrows = 0;
-  _next_open_slot = NULL;
+  _next_open_slot = nullptr;
 
   return;
 }
 
 IW_Distance_Cache::~IW_Distance_Cache ()
 {
-  if (NULL != _cache)
+  if (nullptr != _cache)
     delete [] _cache;
 
   return;
@@ -52,7 +52,7 @@ IW_Distance_Cache::resize (int ncols, size_t bytes)
     return 0;
   }
 
-  if (NULL != _cache)
+  if (nullptr != _cache)
     delete [] _cache;
 
   _cache = new iw_cache_t[bytes];
@@ -83,7 +83,7 @@ IW_Distance_Cache::resize (int ncols, size_t bytes)
 int
 IW_Distance_Cache::clear ()
 {
-  assert (NULL != _cache);
+  assert (nullptr != _cache);
 
   unsigned char * v = reinterpret_cast<unsigned char *>(_cache);
 

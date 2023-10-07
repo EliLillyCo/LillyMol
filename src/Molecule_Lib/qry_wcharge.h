@@ -1,5 +1,5 @@
-#ifndef IW_QSTAT_H
-#define IW_QSTAT_H
+#ifndef MOLECULE_LIB_QRY_WCHARGE_H_
+#define MOLECULE_LIB_QRY_WCHARGE_H_
 
 #include "accumulator.h"
 #include "iwmtypes.h"
@@ -44,4 +44,4 @@ class Query_and_Charge_Stats: public Substructure_Query
     int report (int, std::ostream &) const;
 };
 
-#endif
+#endif  // MOLECULE_LIB_QRY_WCHARGE_H_

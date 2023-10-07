@@ -1,9 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "Foundational/data_source/iwstring_data_source.h"
 #include "molecule.h"
-#include "iwstring_data_source.h"
 #include "rwmolecule.h"
 
 /*
@@ -192,10 +192,10 @@
 
 */
 static atomic_number_t
-convert_from_mmod_atom_type (int mmod_type)
+convert_from_mmod_atom_type(int mmod_type)
 {
   if (mmod_type <= 0)
-    return INVALID_ATOMIC_NUMBER;
+    return kInvalidAtomicNumber;
 
   if (mmod_type <= 14)
     return 6;
@@ -248,97 +248,99 @@ convert_from_mmod_atom_type (int mmod_type)
   if (69 == mmod_type)
     return 55;
 
-  return INVALID_ATOMIC_NUMBER;
+  return kInvalidAtomicNumber;
 }
 
 int
-Molecule::read_molecule_mmod_ds (iwstring_data_source & input)
+Molecule::read_molecule_mmod_ds(iwstring_data_source& input)
 {
-  assert (ok ());
-  assert (input.good ());
+  assert(ok());
+  assert(input.good());
 
   IWString buffer;
-  if (! input.next_record (buffer))
+  if (! input.next_record(buffer))
     return 0;
 
-  set_name (buffer);
+  set_name(buffer);
 
   int atoms_read = 0;
-  while (input.next_record (buffer))
+  while (input.next_record(buffer))
   {
     int atom_type;
     atom_number_t c1, c2, c3, c4, c5, c6;
-    bond_type_t   b1, b2, b3, b4, b5, b6;
+    bond_type_t b1, b2, b3, b4, b5, b6;
     coord_t x, y, z;
-    int tokens = 
-        IW_SSCANF (buffer.chars (), "%d %d %d %d %d %d %d %d %d %d %d %d %d %f %f %f",
-                &atom_type,
-                &c1, &b1, &c2, &b2, &c3, &b3, &c4, &b4, &c5, &b5, &c6, &b6,
-                &x, &y, &z);
+    int tokens =
+        IW_SSCANF(buffer.chars(), "%d %d %d %d %d %d %d %d %d %d %d %d %d %f %f %f", &atom_type,
+                  &c1, &b1, &c2, &b2, &c3, &b3, &c4, &b4, &c5, &b5, &c6, &b6, &x, &y, &z);
     if (16 != tokens)
-      return rwmolecule_error ("read molecule mmod ds: incorrect token count", input);
+      return rwmolecule_error("read molecule mmod ds: incorrect token count", input);
 
-    atomic_number_t zz = convert_from_mmod_atom_type (atom_type);
-    if (INVALID_ATOMIC_NUMBER == zz)
-      return rwmolecule_error ("read molecule mmod ds: Unknown atom type", input);
+    atomic_number_t zz = convert_from_mmod_atom_type(atom_type);
+    if (kInvalidAtomicNumber == zz)
+      return rwmolecule_error("read molecule mmod ds: Unknown atom type", input);
 
-    Atom * a = new Atom (zz);
-    assert (NULL != a);
-    a->setxyz (x, y, z);
-    add (a);
-//  cerr << "Doing bonds " << c1 << " " << c2 << " " << c3 << " " << c4 << " " << c5 << " " << c6 << "\n";
-//  cerr << "atoms read = " << atoms_read << "\n";
+    Atom* a = new Atom(zz);
+    assert(nullptr != a);
+    a->setxyz(x, y, z);
+    add(a);
+    //  cerr << "Doing bonds " << c1 << " " << c2 << " " << c3 << " " << c4 << " " << c5 << " " << c6 << "\n";
+    //  cerr << "atoms read = " << atoms_read << "\n";
 
     if (c1 > 0 && c1 > atoms_read)
-      add_bond (atoms_read, c1 - 1, b1, 1);
+      add_bond(atoms_read, c1 - 1, b1, 1);
     if (c2 > 0 && c2 > atoms_read)
-      add_bond (atoms_read, c2 - 1, b2, 1);
+      add_bond(atoms_read, c2 - 1, b2, 1);
     if (c3 > 0 && c3 > atoms_read)
-      add_bond (atoms_read, c3 - 1, b3, 1);
+      add_bond(atoms_read, c3 - 1, b3, 1);
     if (c4 > 0 && c4 > atoms_read)
-      add_bond (atoms_read, c4 - 1, b4, 1);
+      add_bond(atoms_read, c4 - 1, b4, 1);
     if (c5 > 0 && c5 > atoms_read)
-      add_bond (atoms_read, c5 - 1, b5, 1);
+      add_bond(atoms_read, c5 - 1, b5, 1);
     if (c6 > 0 && c6 > atoms_read)
-      add_bond (atoms_read, c6 - 1, b6, 1);
+      add_bond(atoms_read, c6 - 1, b6, 1);
     atoms_read++;
   }
 
-  finished_bond_addition ();
-  check_bonding ();
+  finished_bond_addition();
+  check_bonding();
 
-  if (natoms ())
+  if (natoms())
     return 1;
   else
     return 0;
 }
 
-static const int MMOD_MAX_CON = 6;
-
+// Not actually implemented.
+#ifdef IMPLEMENT_THIS_SOMETIME
 static int
-macromodel_atom_type (const Molecule *m, atom_number_t i)
+macromodel_atom_type(const Molecule* m, atom_number_t i)
 {
-  assert (OK_ATOM_NUMBER (m, i));
+  assert(OK_ATOM_NUMBER(m, i));
 
-//atomic_number_t zi = m->atomic_number (i);
+  //atomic_number_t zi = m->atomic_number (i);
 
   return 0;
 }
+#endif
 
 int
-Molecule::write_molecule_mmod (std::ostream & output) const
+Molecule::write_molecule_mmod(std::ostream& output) const
 {
-  assert (ok ());
-  if (! output.good ())
+#ifdef IMPLEMENT_THIS_SOMETIME
+  assert(ok());
+  if (! output.good())
     return 0;
 
-  output << name () << "\n";
+  output << name() << "\n";
 
-  int matoms = natoms ();
-  for (int i = 0; i < matoms && output.good (); i++)
+  int matoms = natoms();
+  for (int i = 0; i < matoms && output.good(); i++)
   {
-//  int j = macromodel_atom_type (this, i);
+    int j = macromodel_atom_type (this, i);
   }
 
-  return output.good () ? 1 : 0;
+  return output.good() ? 1 : 0;
+#endif
+  return 1;
 }

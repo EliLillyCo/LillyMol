@@ -1,0 +1,16 @@
+name: "mvjoin"
+scaffold {
+  id: 0
+# smarts: "[/IWspch0R0]-a:[aD2H]"
+# smarts: "[cD2H]:a-!@[/IWspch0x0]"
+  smarts: "[cD2H]:a-!@*"
+  break_bond {
+    a1: 1
+    a2: 2
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

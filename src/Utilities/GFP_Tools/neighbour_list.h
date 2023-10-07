@@ -1,6 +1,8 @@
 #ifndef NEIGHBOUR_LIST_H
 #define NEIGHBOUR_LIST_H
 
+#include <iostream>
+
 #include "smiles_id_dist.h"
 //#include "neighbour_list.h"
 
@@ -25,8 +27,10 @@ class SID_Comparator
 template <typename D, typename N, typename H>
 class Neighbour_List
 {
-  private:
+  protected:
     resizable_array_p<Smiles_ID_Dist> _neighbours;
+
+  private:
 
     int _neighbours_to_find;
 
@@ -246,19 +250,19 @@ void
 Neighbour_List<D, N, H>::sort_neighbour_list ()
 {
   if (_verbose > 2)
-    cerr << "Neighbour_List::sorting " << _neighbours.number_elements() << " nbrs\n";
+    std::cerr << "Neighbour_List::sorting " << _neighbours.number_elements() << " nbrs\n";
 
   SID_Comparator sid_comparator;
   _neighbours.iwqsort(sid_comparator);
 
   if (_verbose > 2)
-   cerr << "Sort complete, resizing\n";
+   std::cerr << "Sort complete, resizing\n";
 
   if (_neighbours_to_find > 0)
     _neighbours.resize(_neighbours_to_find);
 
   if (_verbose > 2)
-    cerr << "Resize complete\n";
+    std::cerr << "Resize complete\n";
 
   return;
 }
@@ -283,7 +287,7 @@ Neighbour_List<D, N, H>::_binary_search (D distance) const
       }
 
       D dmid = _neighbours[middle]->distance ();
-//    cerr << "Left = " << left << " d = " << _neighbours[left]->distance () << " middle " << middle << " d = " << _neighbours[middle].distance () << " right " << right << " d = " << _neighbours[right].distance () << endl;
+//    std::cerr << "Left = " << left << " d = " << _neighbours[left]->distance () << " middle " << middle << " d = " << _neighbours[middle].distance () << " right " << right << " d = " << _neighbours[right].distance () << '\n';
       if (distance < dmid)
         right = middle;
       else if (distance > dmid)
@@ -310,8 +314,8 @@ Neighbour_List<D, N, H>::_check_insertion ()
   {
     if (_neighbours[i - 1]->distance () > _neighbours[i]->distance ())
     {
-      cerr << "Sort/insertion failed, out of order, i = " << i << endl;
-      cerr << _neighbours[i - 1]->distance () << " vs " << _neighbours[i]->distance () << endl;
+      std::cerr << "Sort/insertion failed, out of order, i = " << i << '\n';
+      std::cerr << _neighbours[i - 1]->distance () << " vs " << _neighbours[i]->distance () << '\n';
       if (_keep_going_after_fatal_error)
       {
         _neighbours.remove_item (i);
@@ -331,7 +335,7 @@ Neighbour_List<D, N, H>::_check_insertion ()
   {
     for (int i = 0; i < _neighbours.number_elements (); i++)
     {
-      cerr << "i = " << i << " distance " << _neighbours[i]->distance () << endl;
+      std::cerr << "i = " << i << " distance " << _neighbours[i]->distance () << '\n';
     }
 
     exit (87);
@@ -349,7 +353,7 @@ Neighbour_List<D, N, H>::extra (const H & rhs, D distance)
     ;
   else
   {
-    cerr << "Neighbour_List::extra: fatal error, distance " << distance << " to '" << rhs.id () << "'\n";
+    std::cerr << "Neighbour_List::extra: fatal error, distance " << distance << " to '" << rhs.id () << "'\n";
     if (_keep_going_after_fatal_error)
     {
       _fatal_errors_encountered++;
@@ -359,7 +363,7 @@ Neighbour_List<D, N, H>::extra (const H & rhs, D distance)
     abort ();
   }
 
-//cerr << "d = " << distance << " at end? " << _sort_neighbour_list_at_end << endl;
+//std::cerr << "d = " << distance << " at end? " << _sort_neighbour_list_at_end << '\n';
   if (_sort_neighbour_list_at_end)
   {
     Smiles_ID_Dist * sidi = new Smiles_ID_Dist (rhs.smiles (), rhs.id (), distance);
@@ -367,7 +371,7 @@ Neighbour_List<D, N, H>::extra (const H & rhs, D distance)
     return;
   }
 
-//cerr << "d = " << distance << " to find " << _neighbours_to_find << endl;
+//std::cerr << "d = " << distance << " to find " << _neighbours_to_find << '\n';
   if (0 == _neighbours_to_find)
   {
     _extra_no_max_number_neighbours (rhs.smiles(), rhs.id(), distance);
@@ -413,7 +417,7 @@ Neighbour_List<D, N, H>::extra (const IWString & smiles, const IWString & id, D 
     ;
   else
   {
-    cerr << "Neighbour_List::extra: fatal error, distance " << distance << " to '" << id << "'\n";
+    std::cerr << "Neighbour_List::extra: fatal error, distance " << distance << " to '" << id << "'\n";
     if (_keep_going_after_fatal_error)
     {
       _fatal_errors_encountered++;
@@ -424,7 +428,7 @@ Neighbour_List<D, N, H>::extra (const IWString & smiles, const IWString & id, D 
   }
 #endif
 
-//cerr << "d = " << distance << " at end? " << _sort_neighbour_list_at_end << endl;
+//std::cerr << "d = " << distance << " at end? " << _sort_neighbour_list_at_end << '\n';
   if (_sort_neighbour_list_at_end)
   {
     Smiles_ID_Dist * sidi = new Smiles_ID_Dist (smiles, id, distance);
@@ -432,7 +436,7 @@ Neighbour_List<D, N, H>::extra (const IWString & smiles, const IWString & id, D 
     return 1;
   }
 
-//cerr << "d = " << distance << " to find " << _neighbours_to_find << endl;
+//std::cerr << "d = " << distance << " to find " << _neighbours_to_find << '\n';
   if (0 == _neighbours_to_find)
   {
     _extra_no_max_number_neighbours (smiles, id, distance);

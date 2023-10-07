@@ -1,5 +1,5 @@
-#ifndef IWFACTORIAL_H
-#define IWFACTORIAL_H
+#ifndef MOLECULE_LIB_IWFACTORIAL_H_
+#define MOLECULE_LIB_IWFACTORIAL_H_
 
 #include "iwmtypes.h"
 
@@ -27,4 +27,4 @@ class IW_Factorial
     inline T operator [] (int i) const { return _f[i];}
 };
 
-#endif
+#endif  // MOLECULE_LIB_IWFACTORIAL_H_

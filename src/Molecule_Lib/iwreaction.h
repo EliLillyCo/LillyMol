@@ -1,15 +1,15 @@
-#ifndef IWREACTION_H
-#define IWREACTION_H
+#ifndef MOLECULE_LIB_IWREACTION_H_
+#define MOLECULE_LIB_IWREACTION_H_
 
 #include <random>
 
-#include "cmdline.h"
-#include "msi_object.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/msi_object.h"
 
-#include "substructure.h"
 #include "istream_and_type.h"
-
 #include "reaction_match_conditions.h"
+#include "Molecule_Lib/reaction.pb.h"
+#include "substructure.h"
 #include "toggle_kekule_form.h"
 
 /*
@@ -77,6 +77,8 @@
 
 #define NAME_OF_QUERY_FILE_ATTRIBUTE "query_file"
 
+class Enumeration_Temporaries;
+
 /*
   When specifying inter-particle bonds and substitution bonds we
   cannot use Bond objects, because the two atom numbers may be the
@@ -127,12 +129,17 @@ class Matched_Atom_in_Component
     int _matched_atom;
     int _component;
 
+  // private functions.
+
+    int _construct_from_string(const const_IWSubstring& s);
+
   public:
     Matched_Atom_in_Component ();
 
     int debug_print(std::ostream & os) const;
 
     int construct (const const_IWSubstring &, int = -1);
+    int ConstructFromProto(const ReactionProto::MatchedAtomInComponent& proto);
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> & xref);
 
@@ -151,12 +158,29 @@ extern std::ostream &
 operator << (std::ostream &, const Matched_Atom_in_Component &);
 
 
+// These will be instantiated from the "join" directive.
 class Inter_Particle_Bond
 {
   private:
     Matched_Atom_in_Component _a1;
     Matched_Atom_in_Component _a2;
     bond_type_t   _bt;
+
+    // If working in 3d, we can specify that the bond only
+    // gets formed if the distance is less than `_distance`.
+    float _distance;
+
+    // If there are constraints on what can be joined, this enum
+    // will be set. See the proto definition for what these mean.
+
+    enum class SidechainIsotopeRequirement {
+      kUndefined,
+      kAtomicNumber,
+      kIsotope,
+      kAtype  // not implemented.
+    };
+
+    SidechainIsotopeRequirement _sidechain_isotope_requirement;
 
   public:
     Inter_Particle_Bond ();
@@ -174,10 +198,25 @@ class Inter_Particle_Bond
     int write_msi (std::ostream & os, const IWString & ind) const;
 
     int construct_from_msi_attribute (const msi_attribute &);
+    int ConstructFromProto(const ReactionProto::InterParticleBond& proto, int component);
+
+    int has_sidechain_isotope_requirement() const {
+      return _sidechain_isotope_requirement != SidechainIsotopeRequirement::kUndefined;
+    }
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
 
     int is_part_of_component (int);
+
+    // Returns true if _distance is not set.
+    // If _distance is set, and the distance between `a1` and
+    // `a2` is less than `_distance`, then return true.
+    int OkDistance(const Molecule& m, atom_number_t a1,
+                   atom_number_t a2) const;
+
+    // if _sidechain_isotope_requirement is set, return true if it is OK
+    // to join atoms `a1` (scaffold) and `a2` (sidechain) in `m`.
+    int OkSidechainIsotopeConstraint(Molecule& m, atom_number_t a1, atom_number_t a2) const;
 };
 
 std::ostream & operator << (std::ostream &, const Inter_Particle_Bond &);
@@ -191,6 +230,7 @@ class Reaction_Wedge_Bond : public Pair_of_Atoms
     Reaction_Wedge_Bond ();
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::WedgeBond& proto);
 
     int write_msi (std::ostream &, const IWString &, const const_IWSubstring &) const;
 
@@ -238,6 +278,7 @@ class Reaction_Change_Element
     int atom () const { return _atom;}
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::ChangeElement& proto);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 };
@@ -263,6 +304,7 @@ class Reaction_Formal_Charge
     int process (Molecule &, const Set_of_Atoms &, int);
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::FormalCharge& proto);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 };
@@ -285,6 +327,7 @@ class Reaction_Change_Formal_Charge
     int process (Molecule &, const Set_of_Atoms &, int);
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::ChangeFormalCharge& proto);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 };
@@ -308,6 +351,7 @@ class Reaction_Place_Isotope
     int process (Molecule &, const Set_of_Atoms &, int);
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::PlaceIsotope& proto);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 };
@@ -325,6 +369,8 @@ class Reaction_Increment_Isotope : public Reaction_Place_Isotope
     Reaction_Increment_Isotope (int a, int iso) : Reaction_Place_Isotope (a, iso) {}
 
     int process (Molecule &, const Set_of_Atoms &, int);
+
+    int ConstructFromProto(const ReactionProto::IncrementIsotope& proto);
 };
 
 /*
@@ -340,6 +386,8 @@ class Reaction_Invert_Isotope : public Reaction_Place_Isotope
     Reaction_Invert_Isotope (int a, int iso) : Reaction_Place_Isotope (a, iso) {}
 
     int process (Molecule &, const Set_of_Atoms &, int);
+
+    int ConstructFromProto(const ReactionProto::PlaceIsotope& proto);
 };
 
 /*
@@ -408,6 +456,7 @@ class No_Reaction
     int debug_print (std::ostream &) const;
 
     int construct_from_msi_object (const msi_object &);
+    int ConstructFromProto(const ReactionProto::NoReaction& proto);
     int write_msi (std::ostream &, int &, int);
 };
 
@@ -424,6 +473,7 @@ class Replace_Atom
 
   public:
     int construct_from_msi_object (const msi_attribute *, int);
+    int ConstructFromProto(const ReactionProto::ReplaceAtom& proto, int component);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
@@ -432,6 +482,10 @@ class Replace_Atom
 
     Matched_Atom_in_Component & a1 () { return _a1;}
     Matched_Atom_in_Component & a2 () { return _a2;}
+
+    int DoReplacement(Molecule& result,
+                            const Set_of_Atoms* scaffold_embedding,
+                            const Enumeration_Temporaries& etmp) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
 
@@ -503,6 +557,7 @@ class Stereo_Centre_Component : public Matched_Atom_in_Component
     int debug_print (std::ostream &) const;
 
     int construct (const const_IWSubstring &);
+    int ConstructFromProto(const ReactionProto::StereoCenterComponent&);
 
     void set_matched_atom (int m);
 
@@ -540,6 +595,7 @@ class Reaction_Stereo_Centre
     void all_atoms_in_scaffold ();
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::StereoCenter& proto);
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     void set_optional (int s) { _optional = s;}
@@ -568,6 +624,49 @@ class Reaction_Stereo_Centre
     int atom () const { return _ssc[0].matched_atom ();}
 };
 
+// A scaffold or sidechain can designate a matched atom as R or S.
+class SiteCipStereo {
+  private:
+    int _atom;
+    CahnIngoldPrelog _rs;
+
+  public:
+    SiteCipStereo();
+
+    int ConstructFromProto(const ReactionProto::CipStereoAtom& proto);
+
+    int atom() const {
+      return _atom;
+    }
+
+    CahnIngoldPrelog cip() const {
+      return _rs;
+    }
+};
+
+// We can also associate a CIP specification with the reaction. this
+// transformation will be performed after all other transformations are dne.
+class ReactionCipStereo {
+  private:
+    // the atom can be anywhere in the reaction.
+    Matched_Atom_in_Component _atom;
+
+    CahnIngoldPrelog _rs;
+
+  public:
+    ReactionCipStereo();
+
+    int ConstructFromProto(const ReactionProto::CipStereoReaction& proto);
+
+    const Matched_Atom_in_Component& matched_atom() const {
+      return _atom;
+    }
+
+    CahnIngoldPrelog cip() const {
+      return _rs;
+    }
+};
+
 /*
   Feb 2001, Minmin needed to do geometrically correct reactions
 */
@@ -589,6 +688,7 @@ class Reaction_Dihedral_Angle
     void all_atoms_in_scaffold ();
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::DihedralAngle& proto, const int component);
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
@@ -609,6 +709,7 @@ class Reaction_Bond_Angle
     void all_atoms_in_scaffold ();
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::BondAngle& proto, int component);
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
@@ -634,6 +735,7 @@ class Reaction_Bond_Length {
     void all_atoms_in_scaffold ();
 
     int construct_from_msi_attribute (const msi_attribute *);
+    int ConstructFromProto(const ReactionProto::BondLength& proto, int component);
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     int process (Molecule &, const Set_of_Atoms *, const int *, const Molecule_and_Embedding **) const;
@@ -676,11 +778,20 @@ class Reaction_3D_Replace
 
     double * _weight;
 
+  // Private functions.
+
+  int DoTranslation(Molecule& m,
+                const double * initial,
+                const double * destination,
+                const int* moving) const;
+
   public:
     Reaction_3D_Replace();
     ~Reaction_3D_Replace();
 
     int construct_from_msi_attribute (const msi_attribute * att);
+    int ConstructFromProto(const ReactionProto::CoordinateTransfer& proto,
+                int component);
 
     int write_msi (std::ostream & os, const const_IWSubstring & ind,
                    const const_IWSubstring & attribute_name) const;
@@ -719,6 +830,14 @@ class Reaction_Site : public Substructure_Query
 {
 
   protected:
+
+    // Mar 2022. There is no real reason a reaction site can only be
+    // described by a single query. Allow any number. The matching is
+    // via looking at the first query that matches.
+    // We override the substructure_search method to apply these
+    // queries rather than the base instance - which can then be removed.
+
+    resizable_array_p<Substructure_Query> _queries;
 
 //  When reading reaction files, each component has a unique identifier
 
@@ -805,6 +924,9 @@ class Reaction_Site : public Substructure_Query
 
     int _match_via_atom_map;
 
+    // Aut 2023. Cahn Ingold Prelog stereochemistry
+    resizable_array_p<SiteCipStereo> _cip_stereo;
+
 //  private functions
 
     int _write_msi (std::ostream & os, int &, const IWString & ind);
@@ -848,6 +970,17 @@ class Reaction_Site : public Substructure_Query
                                             Enumeration_Temporaries & etmp,
                                             Chiral_Centre * c);
 
+    int _perform_substructure_search(Molecule_to_Match& target, Substructure_Results& sresults);
+
+
+    int do_cahn_ingold_prelog_stereo(Molecule& result,
+        const Set_of_Atoms& embedding,
+        const int offset) const;
+    int do_cahn_ingold_prelog_stereo(Molecule& result,
+        const Set_of_Atoms& embedding,
+        const int offset,
+        const SiteCipStereo& cips) const;
+
   protected:
 
 //  int _do_toggle_kekule_form (Molecule & m, const Substructure_Results & sresults);
@@ -872,12 +1005,22 @@ class Reaction_Site : public Substructure_Query
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> & xref);
 
     int construct_from_msi_object (const msi_object &, int, const IWString &);
+    template <typename P>
+    int ConstructFromProto(const P& proto, const IWString& fname);
 
     int determine_which_matched_atoms_are_changed ();
     int another_reagent_changes_your_matched_atom (int);
 
     void set_ignore_multiple_matches_involving_atoms_not_changing (int s) { _ignore_multiple_matches_involving_atoms_not_changing = s;}
     void set_ignore_multiple_matches_involving_changing_atoms (int s) { _ignore_multiple_matches_involving_changing_atoms = s;}
+
+    // Overload some methods that used to work directly with the base class.
+    // These will all pass info to either `_queries` or `this`.
+    void set_find_unique_embeddings_only(int s);
+    void set_find_one_embedding_per_atom(int s);
+    void set_do_not_perceive_symmetry_equivalent_matches(int s);
+    void set_max_matches_to_find(int s);
+    void set_embeddings_do_not_overlap(int s);
 
     void set_match_via_atom_map(const int s) { _match_via_atom_map = s;}
 
@@ -935,6 +1078,20 @@ class Reaction_Site : public Substructure_Query
     const Replace_Atom * replace_atom (int i) const { return _replace_atom[i];}
 
     int add_toggle_kekule_form (int, int, bond_type_t);
+
+    int is_noop_reaction () const {
+      return _noop_reaction;
+    }
+
+    // Overload substructure searching so we can use the _queries vector if present.
+    int substructure_search(Molecule& m);
+    int substructure_search(Molecule* m, Substructure_Results& sresults);
+    int substructure_search(Molecule& m, Substructure_Results& sresults);
+    int substructure_search(Molecule_to_Match& target, Substructure_Results& sresults);
+
+    int DoReplacements(Molecule& result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             Enumeration_Temporaries & etmp) const;
 };
 
 /*
@@ -960,6 +1117,7 @@ class Scaffold_Reaction_Site : public Reaction_Site
 
     int construct_from_msi_object (const msi_object & msi, int, const IWString &);
     int write_msi (std::ostream &, int &, int);
+    int ConstructFromProto(const ReactionProto::ScaffoldReactionSite& proto, const IWString& fname);
 };
 
 /*
@@ -1002,6 +1160,9 @@ class Sidechain_Reaction_Site : public Reaction_Site
     int _add_reagents_from_smiles (const msi_attribute & att);
     int _add_reagents_from_file (const msi_attribute & att, const Sidechain_Match_Conditions & smc);
 
+    // Used during construction from proto.
+    int _add_reagent(const std::string& smiles);
+
   public:
     Sidechain_Reaction_Site ();
     ~Sidechain_Reaction_Site ();
@@ -1021,8 +1182,12 @@ class Sidechain_Reaction_Site : public Reaction_Site
 
     int construct_from_msi_object (const msi_object & msi, int, const IWString &,
                                    const Sidechain_Match_Conditions & smc);
+    int ConstructFromProto(const ReactionProto::SidechainReactionSite& proto, const IWString& fname);
 
     int number_reagents () const { return _reagents.number_elements ();}
+
+    // return true if any of our _inter_particle_bonds has a sidechain isotope requirement.
+    int has_sidechain_isotope_requirement() const;
 
     int single_reagent_only () const { return 1 == _reagents.number_elements ();}
 
@@ -1031,7 +1196,7 @@ class Sidechain_Reaction_Site : public Reaction_Site
     int remove_first_reagent_no_delete();
 
     int add_reagent  (Molecule_and_Embedding * m, const Sidechain_Match_Conditions & smc);
-    int add_reagents (const char *, int, const Sidechain_Match_Conditions &);
+    int add_reagents (const char *, FileType, const Sidechain_Match_Conditions &);
     int add_reagents (data_source_and_type<Molecule_and_Embedding> &, const Sidechain_Match_Conditions &);
     int add_reagents_with_stringbuffer (const char * fname, int input_type,
                                        const Sidechain_Match_Conditions & smc, const char* stringbuffer, int stringbuffer_size, const char ** options, int optionsCount);
@@ -1102,6 +1267,7 @@ class Reaction_Iterator
 
   public:
     Reaction_Iterator ();
+    Reaction_Iterator (const IWReaction& rxn);
     ~Reaction_Iterator ();
 
     int ok () const;
@@ -1115,9 +1281,10 @@ class Reaction_Iterator
 
     int reagent (int i) const { assert (i >= 0 && i < _number_sidechains); return _reagent[i];}
 
-#if (GCC_VERSION >= 40900)
     void randomise (std::mt19937_64 & rng);
-#endif
+
+    // In order to enable re-use.
+    void reset();
 };
 
 extern std::ostream & operator << (std::ostream &, const Reaction_Iterator &);
@@ -1145,6 +1312,9 @@ class IWReaction : public Scaffold_Reaction_Site
 // atoms in the scaffold and/or any number of sidechains
 
     resizable_array_p<Reaction_Stereo_Centre> _reaction_stereo_centre;
+
+    // Aug 2023. Cahn Ingold Prelog stereo forms.
+    resizable_array_p<ReactionCipStereo> _cip_stereo;
 
 //  Do we want names appended or not
 
@@ -1179,6 +1349,13 @@ class IWReaction : public Scaffold_Reaction_Site
 //  indices or atom map numbers
 
     int _match_via_atom_map;
+
+    // If any of our sidechains holds a _sidechain_isotope_requirement then
+    // reactions that look like they should work, by matched atoms, can still
+    // fail. We do a one-time examination of _sidechain and record whether or
+    // not any of them have a _sidechain_isotope_requirement condition.
+
+    int _has_sidechain_isotope_requirement;
 
 //  private functions
 
@@ -1239,7 +1416,7 @@ class IWReaction : public Scaffold_Reaction_Site
                              const Enumeration_Temporaries & etmp) const;
     int _do_replacements (Molecule & result,
                               const Set_of_Atoms * scaffold_embedding,
-                              Enumeration_Temporaries & etmp) const;
+                              const Enumeration_Temporaries & etmp) const;
     int _make_inter_particle_bond (Molecule & result,
                                        const Set_of_Atoms * scaffold_embedding,
                                        const Inter_Particle_Bond & b,
@@ -1250,6 +1427,13 @@ class IWReaction : public Scaffold_Reaction_Site
     int _make_stereo_centres (Molecule & result,
                                   const Set_of_Atoms * scaffold_embedding,
                                   const Enumeration_Temporaries & etmp) const;
+    int _make_cip_stereo_centres(Molecule & result,
+                                  const Set_of_Atoms&  scaffold_embedding,
+                                  const Enumeration_Temporaries & etmp) const;
+    int _make_cip_stereo_centre(Molecule & result,
+                                  const Set_of_Atoms&  scaffold_embedding,
+                                  const Enumeration_Temporaries & etmp,
+                                  const ReactionCipStereo& cip) const;
     int _set_bond_length (Molecule & result,
                               const Set_of_Atoms * scaffold_embedding,
                               const Reaction_Bond_Length & b,
@@ -1323,6 +1507,8 @@ class IWReaction : public Scaffold_Reaction_Site
     Reaction_Site * _component_with_bond_between_mapped_atoms (const int a1, const int a2);
     int _sidechain_with_mapped_atom(const int x) const;
 
+    int _determine_has_sidechain_isotope_requirement();
+
   public:
     IWReaction ();
     ~IWReaction ();
@@ -1340,9 +1526,17 @@ class IWReaction : public Scaffold_Reaction_Site
 
     int number_sidechains () const { return _sidechains.number_elements ();}
 
+    int has_sidechain_isotope_requirement() const {
+      return _has_sidechain_isotope_requirement;
+    }
+
     int set_number_sidechains (int s);
 
     Sidechain_Reaction_Site * sidechain (int s) const { return _sidechains[s];}
+
+    // Add reagents to a sidechain.
+    int add_sidechain_reagents(int sidechain, const char* fname,
+                     FileType file_type, const Sidechain_Match_Conditions& smc);
 
     int number_sidechains_with_reagents () const;
 
@@ -1354,6 +1548,15 @@ class IWReaction : public Scaffold_Reaction_Site
 
     int construct_from_smirks (const const_IWSubstring & smirks);
     int construct_from_smirks (const const_IWSubstring & reagents, const const_IWSubstring & products);
+
+    // The `file_name` argument is needed in case there are files referenced in the proto, and one
+    // possibility is that those files are assumed to be in the same directory as `proto`.
+    int ConstructFromProto(const ReactionProto::Reaction& proto, const IWString& file_name);
+
+    // Read a reaction from `fname`.
+    // Unfortunately there is currently not a variant that takes
+    // a Scaffold_Match_Conditions specification, but that can be in the proto.
+    int Read(IWString& fname);
 
     int write_msi (const char * fname);
     int write_msi (std::ostream &);
@@ -1367,11 +1570,13 @@ class IWReaction : public Scaffold_Reaction_Site
     Scaffold_Match_Conditions & scaffold_match_conditions () { return _match_conditions;}
     const Scaffold_Match_Conditions & scaffold_match_conditions () const { return _match_conditions;}
 
-    int do_read (iwstring_data_source &, const Sidechain_Match_Conditions &);
-    int do_read (const const_IWSubstring &, const Sidechain_Match_Conditions &);
-    int do_read (const char *, const Sidechain_Match_Conditions &);
-    int do_read (const IWString &, const Sidechain_Match_Conditions &);
-    int do_read_with_stringbuffer (const const_IWSubstring & fname, const Sidechain_Match_Conditions & sidechain_match_conditions, const char* stringbuffer, int stringbuffer_size, const char ** options, int optionsCount);
+    int do_read (iwstring_data_source& input, const Sidechain_Match_Conditions& smc);
+    int do_read (const const_IWSubstring &, const Sidechain_Match_Conditions & smc);
+    int do_read (const char *, const Sidechain_Match_Conditions & smc);
+    int do_read (const IWString &, const Sidechain_Match_Conditions & smc);
+    int do_read_with_stringbuffer(const const_IWSubstring & fname, const Sidechain_Match_Conditions & sidechain_match_conditions,
+                const char* stringbuffer, int stringbuffer_size, const char ** options,
+                int optionsCount);
 
     void set_one_embedding_per_start_atom(const int s);
 
@@ -1393,10 +1598,11 @@ class IWReaction : public Scaffold_Reaction_Site
 //  Sometimes we are just making changes to a single molecule and don't
 //  need to preserve the "scaffold" for the next reagent.
 
-    int in_place_transformation  (Molecule & m, const Set_of_Atoms * scaffold_embedding);
-    int in_place_transformation  (Molecule & m, const Set_of_Atoms * scaffold_embedding, const Reaction_Iterator &);
-    int in_place_transformations (Molecule & m, const Substructure_Results & sresults);
-    int in_place_transformations (Molecule & m);
+    int in_place_transformation (Molecule & m, const Set_of_Atoms * scaffold_embedding);
+    int in_place_transformation (Molecule & m, const Set_of_Atoms * scaffold_embedding, const Reaction_Iterator &);
+    int in_place_transformations(Molecule & m, const Substructure_Results & sresults);
+    int in_place_transformations(Molecule& m, const resizable_array<const Set_of_Atoms*>& scaffold_embedding);
+    int in_place_transformations(Molecule & m);
 
     int perform_reaction (Molecule & m, const Substructure_Results & sresults);
 
@@ -1428,6 +1634,8 @@ extern void set_strip_reagents_to_largest_fragment (int);
 extern void set_component_separator (const const_IWSubstring &);
 extern void set_reaction_transfer_text_info_to_products (int);
 extern int set_stream_for_sidechains_not_matching_query (const const_IWSubstring & fname);
+extern void set_warn_duplicate_atom_deletion(int s);
+extern void set_warn_non_bonded_breaks(int s);
 
 extern int
 determine_atom_number (const Set_of_Atoms & scaffold_embedding,
@@ -1459,8 +1667,4 @@ extern void set_smirks_lost_atom_means_remove_frgment(int s);
 
 extern void set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(const int s);
 
-#endif
-
-/* arch-tag: faea2f4a-364f-4841-b65b-158d34ea3a17
-
-*/
+#endif  // MOLECULE_LIB_IWREACTION_H_

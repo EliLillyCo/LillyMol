@@ -1,0 +1,10 @@
+(0 Query
+  (A C Comment "four_valent_s_h")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 2)
+    (A I nbonds 3)
+    (A I hcount 1)
+  )
+)

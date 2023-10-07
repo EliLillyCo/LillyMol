@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "keto_carbonyl")
+
+# One of the C=O must be a ketone, so T1 for 1st carbon
+
+  (A C smarts "[O,N,SD1]=[#6;T1]~[#6]=[O,N,SD1]")
+)

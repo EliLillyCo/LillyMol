@@ -15,7 +15,7 @@ dash_x (const char * fname)
   if (0 == stbuf.st_size)    // an executable file must have finite size
     return 0;
 
-  if (0 != ((stbuf.st_mode) | S_IEXEC))
+  if (0 != ((stbuf.st_mode) & S_IEXEC))
     return 1;
 
   return 0;

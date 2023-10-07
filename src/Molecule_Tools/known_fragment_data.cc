@@ -3,10 +3,10 @@
 using std::cerr;
 using std::endl;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
-#include "istream_and_type.h"
-#include "smiles.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/smiles.h"
 #include "known_fragment_data.h"
 
 //#define FD_MAX_NATOMS 100
@@ -75,7 +75,7 @@ Known_Fragment_Data::_common_read(const const_IWSubstring & fname,
                              _formula_usmi & mf,
                              _formula_usmi & usmi)
 {
-  data_source_and_type<Molecule> input(SMI, fname);
+  data_source_and_type<Molecule> input(FILE_TYPE_SMI, fname);
 
   if (! input.good())
   {
@@ -95,7 +95,7 @@ Known_Fragment_Data::_common_read(data_source_and_type<Molecule> & input,
 
   Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -319,7 +319,7 @@ Known_Fragment_Data::_remove_non_organic(Molecule & m) const
     fragments_to_be_removed.add_if_not_already_present(f);
   }
 
-  if (0 == fragments_to_be_removed.number_elements())
+  if (fragments_to_be_removed.empty())
     return 0;
 
   return _delete_set_of_fragments(m, fragments_to_be_removed);
@@ -328,7 +328,7 @@ Known_Fragment_Data::_remove_non_organic(Molecule & m) const
 int
 Known_Fragment_Data::_remove_soap(Molecule & m) const
 {
-  int * fragment_membership = new int[m.natoms()]; std::unique_ptr<int> free_fragment_membership(fragment_membership);
+  int * fragment_membership = new int[m.natoms()]; std::unique_ptr<int[]> free_fragment_membership(fragment_membership);
 
   m.fragment_membership(fragment_membership);
 
@@ -347,7 +347,7 @@ Known_Fragment_Data::_remove_soap(Molecule & m) const
 //if (fragments_to_be_removed.number_elements())
 //  cerr << m.smiles() << ' ' << m.name() << " SOAP or QUAT\n";
 
-  if (0 == fragments_to_be_removed.number_elements())
+  if (fragments_to_be_removed.empty())
     return 0;
 
   return _delete_set_of_fragments(m, fragments_to_be_removed);
@@ -404,7 +404,7 @@ Known_Fragment_Data::process(Molecule & m)
 
   _scan_known_fragments(m, mf, fragments, _known_parent_mf, _known_parent_usmi, fragments_to_keep);
 
-  if (0 == fragments_to_keep.number_elements())
+  if (fragments_to_keep.empty())
   {
     if (fragments_to_be_removed.number_elements())
       return m.delete_fragments(fragments_to_be_removed);
@@ -444,7 +444,7 @@ Known_Fragment_Data::_scan_known_fragments(Molecule & m,
 
 //  Need to check the unique smiles
 
-    if (0 == fragments.number_elements())   // something has the formula, need to do more...
+    if (fragments.empty())   // something has the formula, need to do more...
       m.create_components(fragments);
 
     Molecule * fi = fragments[frag];

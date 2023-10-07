@@ -2,25 +2,27 @@
   Single linkage clustering of a gfp file
 */
 
-#include <stdlib.h>
+#include <iostream>
 #include <limits>
 
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
-#include "cmdline.h"
-#include "iwqsort.h"
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwqsort/iwqsort.h"
 #include "gfp.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char *prog_name = nullptr;
 
 static int verbose = 0;
 
 static IWString smiles_tag("$SMI<");
-static IWString identifier_tag ("PCN<");
+static IWString identifier_tag("PCN<");
 static IWString distance_tag("DIST<");
 static IWString csize_tag("CSIZE<");
 static IWString maxdist_tag("MAXDIST<");
@@ -51,109 +53,143 @@ static int squeeze_selected_every = 0;
 static float expansion_ratio = static_cast<float>(2.0);
 
 static void
-usage (int rc)
-{
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Single linkage clustering\n";
   cerr << " -t <rad>       threshold for grouping\n";
   cerr << " -c             sort clusters by distance to threshold\n";
-//cerr << " -p             identify pure clusters\n";
+  // cerr << " -p             identify pure clusters\n";
   cerr << " -s <number>    squeeze out already selected items every <n> items selected\n";
   cerr << " -r <float>     per shell radius distance expansion factor (def 2.0)\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit(rc);
 }
 
-class Single_Linkage_Object : public IW_General_Fingerprint
-{
-  private:
-    IWString _smiles;
+class Single_Linkage_Object : public IW_General_Fingerprint {
+ private:
+  IWString _smiles;
 
-    int _selected;
+  int _selected;
 
-//  Each item needs to keep track of the sum of distances to other
-//  cluster members, and the longest distance encountered
+  //  Each item needs to keep track of the sum of distances to other
+  //  cluster members, and the longest distance encountered
 
-    similarity_type_t _sumd;
-    similarity_type_t _maxd;
+  similarity_type_t _sumd;
+  similarity_type_t _maxd;
 
-    similarity_type_t _dist_to_current_cluster;
+  similarity_type_t _dist_to_current_cluster;
 
-  public:
-    Single_Linkage_Object ();
+ public:
+  Single_Linkage_Object();
 
-    int construct_from_tdt (IW_TDT &);
+  int construct_from_tdt(IW_TDT &);
 
-    void set_selected (int s) { _selected = s;}
-    int  selected () const { return _selected;}
+  void set_selected(int s) {
+    _selected = s;
+  }
 
-    void reset () { _sumd = static_cast<float>(0.0); _maxd = static_cast<float>(0.0);}
+  int selected() const {
+    return _selected;
+  }
 
-    void extra (similarity_type_t s) { _sumd += s; if (s > _maxd) _maxd = s;}
+  void reset() {
+    _sumd = static_cast<float>(0.0);
+    _maxd = static_cast<float>(0.0);
+  }
 
-    similarity_type_t dist_to_current_cluster () const { return _dist_to_current_cluster;}
-    void set_dist_to_current_cluster(similarity_type_t s) { _dist_to_current_cluster = s;}
-    void decrement_dist_to_current_cluster(similarity_type_t s) { _dist_to_current_cluster -= s;}
+  void extra(similarity_type_t s) {
+    _sumd += s;
+    if (s > _maxd) {
+      _maxd = s;
+    }
+  }
 
-    void notify_dist_to_current_cluster (similarity_type_t s);
+  similarity_type_t dist_to_current_cluster() const {
+    return _dist_to_current_cluster;
+  }
 
-    float sumd () const { return _sumd;}
-    void  set_sumd (float f) { _sumd = f;}
+  void set_dist_to_current_cluster(similarity_type_t s) {
+    _dist_to_current_cluster = s;
+  }
 
-    float maxd () const { return _maxd;}
+  void decrement_dist_to_current_cluster(similarity_type_t s) {
+    _dist_to_current_cluster -= s;
+  }
 
-    const IWString & smiles () const { return _smiles;}
+  void notify_dist_to_current_cluster(similarity_type_t s);
+
+  float sumd() const {
+    return _sumd;
+  }
+
+  void set_sumd(float f) {
+    _sumd = f;
+  }
+
+  float maxd() const {
+    return _maxd;
+  }
+
+  const IWString &smiles() const {
+    return _smiles;
+  }
 };
 
 #ifdef __GNUG__
 template class resizable_array<Single_Linkage_Object *>;
 #endif
 
-Single_Linkage_Object::Single_Linkage_Object ()
-{
+Single_Linkage_Object::Single_Linkage_Object() {
   _selected = 0;
 
   return;
 }
 
 void
-Single_Linkage_Object::notify_dist_to_current_cluster (similarity_type_t s)
-{
-  if (s < _dist_to_current_cluster)
+Single_Linkage_Object::notify_dist_to_current_cluster(similarity_type_t s) {
+  if (s < _dist_to_current_cluster) {
     _dist_to_current_cluster = s;
+  }
 
   return;
 }
 
-class Single_Linkage_Object_Comparator
-{
-  private:
-  public:
-    int operator () (const Single_Linkage_Object *, const Single_Linkage_Object *) const;
+class Single_Linkage_Object_Comparator {
+ private:
+ public:
+  int operator()(const Single_Linkage_Object *, const Single_Linkage_Object *) const;
 };
 
 int
-Single_Linkage_Object_Comparator::operator () (const Single_Linkage_Object * s1, const Single_Linkage_Object * s2) const
-{
-  if (s1->sumd() < s2->sumd())
+Single_Linkage_Object_Comparator::operator()(const Single_Linkage_Object *s1,
+                                             const Single_Linkage_Object *s2) const {
+  if (s1->sumd() < s2->sumd()) {
     return -1;
-  else if (s1->sumd() > s2->sumd())
+  } else if (s1->sumd() > s2->sumd()) {
     return 1;
-  else
+  } else {
     return 0;
+  }
 }
 
 int
-Single_Linkage_Object::construct_from_tdt (IW_TDT & tdt)
-{
+Single_Linkage_Object::construct_from_tdt(IW_TDT &tdt) {
   int fatal;
 
-  if (! IW_General_Fingerprint::construct_from_tdt(tdt, fatal))
+  if (!IW_General_Fingerprint::construct_from_tdt(tdt, fatal)) {
     return 0;
+  }
 
-  if (! tdt.dataitem_value(smiles_tag, _smiles))
-  {
+  if (!tdt.dataitem_value(smiles_tag, _smiles)) {
     cerr << "Single_Linkage_Object::construct_from_tdt:no smiles\n";
     return 0;
   }
@@ -161,20 +197,20 @@ Single_Linkage_Object::construct_from_tdt (IW_TDT & tdt)
   return 1;
 }
 
-static Single_Linkage_Object ** pool = NULL;
+template void resizable_array_base<Single_Linkage_Object *>::iwqsort(
+    Single_Linkage_Object_Comparator &);
+
+static Single_Linkage_Object **pool = nullptr;
 static int pool_size = 0;
 static int initial_pool_size = 0;
 
 static int
-squeeze_out_selected_items()
-{
+squeeze_out_selected_items() {
   int ndx = 0;
-  for (int i = 0; i < pool_size; i++)
-  {
-    Single_Linkage_Object * pi = pool[i];
+  for (int i = 0; i < pool_size; i++) {
+    Single_Linkage_Object *pi = pool[i];
 
-    if (! pi->selected())
-    {
+    if (!pi->selected()) {
       pool[ndx] = pi;
       ndx++;
     }
@@ -182,16 +218,16 @@ squeeze_out_selected_items()
 
   pool_size = ndx;
 
-  if (verbose > 1)
+  if (verbose > 1) {
     cerr << "Pool squeezed to " << ndx << " active items\n";
+  }
 
   return ndx;
 }
 
 static int
-write_smiles_and_id (const Single_Linkage_Object * f,
-                     IWString_and_File_Descriptor & output)
-{
+write_smiles_and_id(const Single_Linkage_Object *f,
+                    IWString_and_File_Descriptor &output) {
   output << smiles_tag << f->smiles() << ">\n";
   output << identifier_tag << f->id() << ">\n";
 
@@ -199,10 +235,9 @@ write_smiles_and_id (const Single_Linkage_Object * f,
 }
 
 static int
-write_smiles_id_distance (const Single_Linkage_Object * f,
-                          IWString_and_File_Descriptor & output)
-{
-  write_smiles_and_id (f, output);
+write_smiles_id_distance(const Single_Linkage_Object *f,
+                         IWString_and_File_Descriptor &output) {
+  write_smiles_and_id(f, output);
 
   output << distance_tag << f->sumd() << ">\n";
 
@@ -212,46 +247,42 @@ write_smiles_id_distance (const Single_Linkage_Object * f,
 }
 
 static int
-move_centroid_to_first (resizable_array<Single_Linkage_Object *> & cluster,
-                        IWString_and_File_Descriptor & output)
-{
+move_centroid_to_first(resizable_array<Single_Linkage_Object *> &cluster,
+                       IWString_and_File_Descriptor &output) {
   int n = cluster.number_elements();
 
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
     cluster[i]->reset();
   }
 
-  write_smiles_and_id (cluster[0], output);
+  write_smiles_and_id(cluster[0], output);
   output << csize_tag << n << ">\n";
 
-  if (n > 2)
-  {
+  if (n > 2) {
     similarity_type_t largest_pairwise_distance = static_cast<float>(0.0);
 
-    for (int i = 0; i < n; i++)
-    {
-      Single_Linkage_Object * pi = cluster[i];
+    for (int i = 0; i < n; i++) {
+      Single_Linkage_Object *pi = cluster[i];
 
-      for (int j = i + 1; j < n; j++)
-      {
-        Single_Linkage_Object * pj = cluster[j];
+      for (int j = i + 1; j < n; j++) {
+        Single_Linkage_Object *pj = cluster[j];
 
         similarity_type_t d = static_cast<similarity_type_t>(1.0) - pi->tanimoto(*pj);
 
         pi->extra(d);
         pj->extra(d);
 
-        if (d > largest_pairwise_distance)
+        if (d > largest_pairwise_distance) {
           largest_pairwise_distance = d;
+        }
       }
     }
 
     int purity_count = 0;
-    for (int i = 0; i < n; i++)
-    {
-      if (cluster[i]->maxd() <= threshold)
+    for (int i = 0; i < n; i++) {
+      if (cluster[i]->maxd() <= threshold) {
         purity_count++;
+      }
     }
 
     Single_Linkage_Object_Comparator sloc;
@@ -261,15 +292,14 @@ move_centroid_to_first (resizable_array<Single_Linkage_Object *> & cluster,
     output << maxdist_tag << largest_pairwise_distance << ">\n";
   }
 
-  for (int i = 1; i < n; i++)
-  {
-    Single_Linkage_Object * ci = cluster[i];
+  for (int i = 1; i < n; i++) {
+    Single_Linkage_Object *ci = cluster[i];
 
-    float f = ci->sumd() / static_cast<float>(n);   // normalise to ave dist
+    float f = ci->sumd() / static_cast<float>(n);  // normalise to ave dist
 
     ci->set_sumd(f);
 
-    write_smiles_id_distance (cluster[i], output);
+    write_smiles_id_distance(cluster[i], output);
   }
 
   output << "|\n";
@@ -278,25 +308,26 @@ move_centroid_to_first (resizable_array<Single_Linkage_Object *> & cluster,
 }
 
 static int
-process_cluster (resizable_array<Single_Linkage_Object *> & cluster,
-                 IWString_and_File_Descriptor & output)
-{
+process_cluster(resizable_array<Single_Linkage_Object *> &cluster,
+                IWString_and_File_Descriptor &output) {
   int n = cluster.number_elements();
 
   clusters_formed++;
   cluster_size[n]++;
   items_selected += n;
 
-  if (verbose > 1)
-    cerr << "Formed cluster " << clusters_formed << ", size " << n << ", nsel " << items_selected << endl;
+  if (verbose > 1) {
+    cerr << "Formed cluster " << clusters_formed << ", size " << n << ", nsel "
+         << items_selected << endl;
+  }
 
-  if (centroid_first)
-    return move_centroid_to_first (cluster, output);
+  if (centroid_first) {
+    return move_centroid_to_first(cluster, output);
+  }
 
   output << cluster[0]->id();
 
-  for (int i = 1; i < n; i++)
-  {
+  for (int i = 1; i < n; i++) {
     output << ' ' << cluster[i]->id();
   }
 
@@ -308,11 +339,9 @@ process_cluster (resizable_array<Single_Linkage_Object *> & cluster,
 }
 
 static void
-reset_all_distance_to_current_cluster_values (Single_Linkage_Object ** pool,
-                                int pool_size)
-{
-  for (int j = 0; j < pool_size; j++)
-  {
+reset_all_distance_to_current_cluster_values(Single_Linkage_Object **pool,
+                                             int pool_size) {
+  for (int j = 0; j < pool_size; j++) {
     pool[j]->set_dist_to_current_cluster(static_cast<similarity_type_t>(1.0));
   }
 
@@ -320,19 +349,14 @@ reset_all_distance_to_current_cluster_values (Single_Linkage_Object ** pool,
 }
 
 static int
-gfp_single_linkage (Single_Linkage_Object * ldr,
-                    IWString_and_File_Descriptor & output)
-{
+gfp_single_linkage(Single_Linkage_Object *ldr, IWString_and_File_Descriptor &output) {
   static resizable_array<Single_Linkage_Object *> cluster;
   static resizable_array<Single_Linkage_Object *> next_shell;
 
-  if (0 == cluster.number_elements())
-  {
+  if (cluster.empty()) {
     cluster.resize(pool_size);
     next_shell.resize(pool_size);
-  }
-  else
-  {
+  } else {
     cluster.resize_keep_storage(0);
     next_shell.resize_keep_storage(0);
   }
@@ -343,52 +367,51 @@ gfp_single_linkage (Single_Linkage_Object * ldr,
 
 #define EXPANSION_RATIO_ACTIVE
 #ifdef EXPANSION_RATIO_ACTIVE
-  for (int i = 0; i < pool_size; i++)
-  {
+  for (int i = 0; i < pool_size; i++) {
     pool[i]->set_dist_to_current_cluster(static_cast<similarity_type_t>(0.0));
   }
 #endif
 
-// We alternate between having to compute all distances and checking them
+  // We alternate between having to compute all distances and checking them
 
   int need_to_compute = 1;
 
   int iterations_this_cluster = 0;
 
-  while (next_shell.number_elements())
-  {
+  while (next_shell.number_elements()) {
     int n = next_shell.number_elements();
 
 #ifdef EXPANSION_RATIO_ACTIVE
-    if (need_to_compute)
+    if (need_to_compute) {
       reset_all_distance_to_current_cluster_values(pool, pool_size);
+    }
 #endif
 
-    for (int i = 0; i < n; i++)
-    {
-      Single_Linkage_Object * ni = next_shell[i];
+    for (int i = 0; i < n; i++) {
+      Single_Linkage_Object *ni = next_shell[i];
 
-      for (int j = 0; j < pool_size; j++)
-      {
-        Single_Linkage_Object * pj = pool[j];
+      for (int j = 0; j < pool_size; j++) {
+        Single_Linkage_Object *pj = pool[j];
 
-        if (pj->selected())
+        if (pj->selected()) {
           continue;
+        }
 
 #ifdef EXPANSION_RATIO_ACTIVE
-        if (need_to_compute)
+        if (need_to_compute) {
           ;
-        else if (pj->dist_to_current_cluster() > expansion_ratio * threshold)
+        } else if (pj->dist_to_current_cluster() > expansion_ratio * threshold) {
           continue;
+        }
 #endif
 
-        if (! can_be_compared (*ni, *pj))
+        if (!can_be_compared(*ni, *pj)) {
           continue;
+        }
 
         similarity_type_t d = static_cast<similarity_type_t>(1.0) - ni->tanimoto(*pj);
 
-        if (d > threshold)
-        {
+        if (d > threshold) {
           pj->notify_dist_to_current_cluster(d);
           continue;
         }
@@ -399,32 +422,30 @@ gfp_single_linkage (Single_Linkage_Object * ldr,
       }
     }
 
-    next_shell.erase (0, n - 1);   // remove the first N to leave only what we just added
+    next_shell.erase(0, n - 1);  // remove the first N to leave only what we just added
 
     iterations_this_cluster++;
 
-    need_to_compute = ! need_to_compute;
+    need_to_compute = !need_to_compute;
   }
 
   iterations[iterations_this_cluster]++;
 
-  return process_cluster (cluster, output);
+  return process_cluster(cluster, output);
 }
 
 static int
-gfp_single_linkage (IWString_and_File_Descriptor & output)
-{
-  for (int i = 0; i < pool_size; i++)
-  {
-    Single_Linkage_Object * pi = pool[i];
+gfp_single_linkage(IWString_and_File_Descriptor &output) {
+  for (int i = 0; i < pool_size; i++) {
+    Single_Linkage_Object *pi = pool[i];
 
-    if(pi->selected())
+    if (pi->selected()) {
       continue;
+    }
 
-    gfp_single_linkage (pi, output);
+    gfp_single_linkage(pi, output);
 
-    if (items_selected > next_time_to_squeeze)
-    {
+    if (items_selected > next_time_to_squeeze) {
       squeeze_out_selected_items();
       next_time_to_squeeze = items_selected + squeeze_selected_every;
     }
@@ -433,21 +454,16 @@ gfp_single_linkage (IWString_and_File_Descriptor & output)
   return 1;
 }
 
-
 static int
-build_pool (iwstring_data_source & input)
-{
+build_pool(iwstring_data_source &input) {
   int ndx = 0;
   IW_TDT tdt;
-  while (tdt.next(input))
-  {
-    Single_Linkage_Object * s = new Single_Linkage_Object;
+  while (tdt.next(input)) {
+    Single_Linkage_Object *s = new Single_Linkage_Object;
 
-    if (s->construct_from_tdt (tdt))
+    if (s->construct_from_tdt(tdt)) {
       pool[ndx++] = s;
-    else
-    {
-      delete s;
+    } else {
       return 0;
     }
   }
@@ -459,150 +475,139 @@ build_pool (iwstring_data_source & input)
 }
 
 static int
-build_pool (const char * fname)
-{
+build_pool(const char *fname) {
   iwstring_data_source input(fname);
 
-  if (! input.good())
-  {
+  if (!input.good()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
 
-  assert (NULL == pool);
+  assert(nullptr == pool);
 
   IWString tmp = '^';
   tmp << identifier_tag;
 
-  pool_size = input.grep (tmp);
-  if (0 == pool_size)
-  {
+  pool_size = input.grep(tmp);
+  if (0 == pool_size) {
     cerr << "Yipes, cannot find any '" << tmp << "' in the input\n";
     return 0;
   }
 
   pool = new Single_Linkage_Object *[pool_size];
 
-  if (verbose)
+  if (verbose) {
     cerr << "Input contains " << pool_size << " fingerprints\n";
+  }
 
-  return build_pool (input);
+  return build_pool(input);
 }
 
 static int
-gfp_single_linkage (int argc, char ** argv)
-{
-  Command_Line cl (argc, argv, "vF:P:G:t:W:cs:r:");
+gfp_single_linkage(int argc, char **argv) {
+  Command_Line cl(argc, argv, "vF:P:G:t:W:cs:r:");
 
-  if (cl.unrecognised_options_encountered ())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
-    usage (1);
+    usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  if (! cl.option_present('t'))
-  {
+  if (!cl.option_present('t')) {
     cerr << "Must specify clustering threshold via the -t option\n";
     usage(3);
   }
 
-  if (cl.option_present('t'))
-  {
-    if (! cl.value('t', threshold) || threshold < 0.0 || threshold >= 1.0)
-    {
+  if (cl.option_present('t')) {
+    if (!cl.value('t', threshold) || threshold < 0.0 || threshold >= 1.0) {
       cerr << "The threshold (-t) must be a valid distance\n";
       return 4;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Threshold set to " << threshold << endl;
-  }
-
-  if (need_to_call_initialise_fingerprints (cl))
-  {
-    if (! initialise_fingerprints (cl, verbose))
-    {
-      cerr << "Cannot initialise GFP options\n";
-      usage (23);
     }
   }
 
-  if (cl.option_present('c'))
-  {
-    centroid_first = 1;
-
-    if (verbose)
-      cerr << "Will move the centroid to the beginning of each cluster\n";
+  if (need_to_call_initialise_fingerprints(cl)) {
+    if (!initialise_fingerprints(cl, verbose)) {
+      cerr << "Cannot initialise GFP options\n";
+      usage(23);
+    }
   }
 
-  if (cl.option_present('s'))
-  {
-    if (! cl.value('s', squeeze_selected_every) || squeeze_selected_every < 1)
-    {
+  if (cl.option_present('c')) {
+    centroid_first = 1;
+
+    if (verbose) {
+      cerr << "Will move the centroid to the beginning of each cluster\n";
+    }
+  }
+
+  if (cl.option_present('s')) {
+    if (!cl.value('s', squeeze_selected_every) || squeeze_selected_every < 1) {
       cerr << "The squeeze every option (-s) must be a whole +ve number\n";
       usage(3);
     }
 
-    if (verbose)
-      cerr << "Will squeeze out already selected items every " << squeeze_selected_every << " items selected\n";
+    if (verbose) {
+      cerr << "Will squeeze out already selected items every " << squeeze_selected_every
+           << " items selected\n";
+    }
 
     next_time_to_squeeze = squeeze_selected_every;
   }
 
-  if (cl.option_present('r'))
-  {
-    if (! cl.value('r', expansion_ratio) || expansion_ratio < 1.0)
-    {
+  if (cl.option_present('r')) {
+    if (!cl.value('r', expansion_ratio) || expansion_ratio < 1.0) {
       cerr << "The shell radius expansion factor (-r) must be a number >= 1.0\n";
       usage(3);
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Shell radius expansion factor set to " << expansion_ratio << endl;
+    }
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
-    usage (2);
+    usage(2);
   }
 
-  if (cl.number_elements() > 1)
-  {
+  if (cl.number_elements() > 1) {
     cerr << "Only one command line argument allowed\n";
     return 3;
   }
 
-  if (! build_pool (cl[0]))
-  {
+  if (!build_pool(cl[0])) {
     cerr << "Cannot read fingerprints from '" << cl[0] << "'\n";
     return 3;
   }
 
-  if (verbose)
-    cerr << "Read " << pool_size << " fingerprints from '" <<cl[0] << "'\n";
+  if (verbose) {
+    cerr << "Read " << pool_size << " fingerprints from '" << cl[0] << "'\n";
+  }
 
   IWString_and_File_Descriptor output(1);
 
-  gfp_single_linkage (output);
+  gfp_single_linkage(output);
 
   output.flush();
 
-  if (verbose)
-  {
-    cerr << "Grouped " << initial_pool_size << " items into " << clusters_formed << " clusters\n";
-    for (int i = 0; i < cluster_size; i++)
-    {
-      if (cluster_size[i])
+  if (verbose) {
+    cerr << "Grouped " << initial_pool_size << " items into " << clusters_formed
+         << " clusters\n";
+    for (int i = 0; i < cluster_size; i++) {
+      if (cluster_size[i]) {
         cerr << cluster_size[i] << " clusters of size " << i << endl;
+      }
     }
 
-    for (int i = 0; i < iterations.number_elements(); i++)
-    {
-      if (iterations[i])
+    for (int i = 0; i < iterations.number_elements(); i++) {
+      if (iterations[i]) {
         cerr << iterations[i] << " clusters took " << i << " expansion iterations\n";
+      }
     }
   }
 
@@ -610,8 +615,7 @@ gfp_single_linkage (int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char **argv) {
   prog_name = argv[0];
 
   int rc = gfp_single_linkage(argc, argv);

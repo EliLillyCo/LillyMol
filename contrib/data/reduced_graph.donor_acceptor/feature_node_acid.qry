@@ -1,0 +1,5 @@
+# All atoms in a carboxyllic acid should be negative
+query {
+  name: "feature_node_acid"
+  smarts: "[OD1]-C=O"
+}

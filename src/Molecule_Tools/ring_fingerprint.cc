@@ -4,22 +4,22 @@
 
 #include <iostream>
 #include <memory>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
+
 using std::cerr;
 using std::endl;
-
-#include "cmdline.h"
-#include "accumulator.h"
-#include "misc.h"
-
-#include "istream_and_type.h"
-#include "molecule.h"
-#include "path.h"
-#include "aromatic.h"
-#include "sparse_fp_creator.h"
-#include "iwstandard.h"
-#include "smiles.h"
-
-static const char * prog_name = NULL;
+static const char * prog_name = nullptr;
 
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
@@ -42,36 +42,36 @@ class Ring_Fingerprint
 // private functions
 
     void _default_values();
-    void _usage (int rc);
-    void _preprocess (Molecule & m);
+    void _usage(int rc);
+    void _preprocess(Molecule & m);
 
-    int _perform_tests (Molecule & m);
+    int _perform_tests(Molecule & m);
 
-    int _process (Molecule & m, IWString_and_File_Descriptor & output);
-    int _process (data_source_and_type<Molecule> & input,
+    int _process(Molecule & m, IWString_and_File_Descriptor & output);
+    int _process(data_source_and_type<Molecule> & input,
                              IWString_and_File_Descriptor & output);
-    int _process (const char * fname, int input_type,
+    int _process(const char * fname, FileType input_type,
                              IWString_and_File_Descriptor & output);
-    int _write_fingerprint (Molecule & m, const Sparse_Fingerprint_Creator & sfc,
+    int _write_fingerprint(Molecule & m, const Sparse_Fingerprint_Creator & sfc,
                                       IWString_and_File_Descriptor & output) const;
 
-    int _process_filter (const char * fname, IWString_and_File_Descriptor & output);
-    int _process_filter (iwstring_data_source & input, IWString_and_File_Descriptor & output);
+    int _process_filter(const char * fname, IWString_and_File_Descriptor & output);
+    int _process_filter(iwstring_data_source & input, IWString_and_File_Descriptor & output);
 
-    void _form_fingerprint (Molecule & m, Sparse_Fingerprint_Creator & sfc) const;
+    void _form_fingerprint(Molecule & m, Sparse_Fingerprint_Creator & sfc) const;
 
-    int  _fingerprint_aromatic_ring  (Molecule & m, const int * arom, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
-    int  _fingerprint_aliphatic_ring (Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
-    void _discern_exocyclic_bond (Molecule & m, const int * arom, const atom_number_t zatom, int & exocyclic_double_bond, int & substituents, int & biphenyl, int & to_aliphatic_ring) const;
-    int  _aromatic_ring_fusion_bits (Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
-    void _ring_fusion_bit (int bstart, const int rs1, const int rs2, Sparse_Fingerprint_Creator & sfc) const;
-    void _bits_for_distances_between_aromatic_rings (Molecule & m, Sparse_Fingerprint_Creator & sfc) const;
-    void _bits_for_distances_aromatic_to_aliphatic (Molecule & m, const int *, Sparse_Fingerprint_Creator & sfc) const;
-    int  _shortest_distance_between (Molecule & m, const Set_of_Atoms & r1, const Set_of_Atoms & r2) const;
-    int _do_aliphatic_ring_bits (Molecule & m, const int * arom, Sparse_Fingerprint_Creator & sfc) const;
-    void _do_single_aliphatic_ring (Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
+    int  _fingerprint_aromatic_ring(Molecule & m, const int * arom, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
+    int  _fingerprint_aliphatic_ring(Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
+    void _discern_exocyclic_bond(Molecule & m, const int * arom, const atom_number_t zatom, int & exocyclic_double_bond, int & substituents, int & biphenyl, int & to_aliphatic_ring) const;
+    int  _aromatic_ring_fusion_bits(Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
+    void _ring_fusion_bit(int bstart, const int rs1, const int rs2, Sparse_Fingerprint_Creator & sfc) const;
+    void _bits_for_distances_between_aromatic_rings(Molecule & m, Sparse_Fingerprint_Creator & sfc) const;
+    void _bits_for_distances_aromatic_to_aliphatic(Molecule & m, const int *, Sparse_Fingerprint_Creator & sfc) const;
+    int  _shortest_distance_between(Molecule & m, const Set_of_Atoms & r1, const Set_of_Atoms & r2) const;
+    int _do_aliphatic_ring_bits(Molecule & m, const int * arom, Sparse_Fingerprint_Creator & sfc) const;
+    void _do_single_aliphatic_ring(Molecule & m, const Ring & r, Sparse_Fingerprint_Creator & sfc) const;
 
-    void _discern_exocyclic_bond_aliph (Molecule & m, const atom_number_t zatom,
+    void _discern_exocyclic_bond_aliph(Molecule & m, const atom_number_t zatom,
                                 int & exocyclic_double_bond,
                                 int & substituents,
                                 int & to_aliphatic_ring,
@@ -83,10 +83,10 @@ class Ring_Fingerprint
   public:
     Ring_Fingerprint();
 
-    int operator() (int argc, char ** argv);
+    int operator()(int argc, char ** argv);
 };
 
-Ring_Fingerprint::Ring_Fingerprint ()
+Ring_Fingerprint::Ring_Fingerprint()
 {
   _default_values();
 
@@ -114,10 +114,15 @@ Ring_Fingerprint::_default_values()
 }
 
 void
-Ring_Fingerprint::_usage (int rc)
+Ring_Fingerprint::_usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Computes fingerprints based on ring properties - primarily aromatic rings\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << " -p            form aliphatic ring bits\n";
   cerr << " -d            form inter-ring distance bits\n";
   cerr << " -e            echo the bits in each fingerprint (debugging only)\n";
@@ -133,7 +138,7 @@ Ring_Fingerprint::_usage (int rc)
 }
 
 void
-Ring_Fingerprint::_preprocess (Molecule & m)
+Ring_Fingerprint::_preprocess(Molecule & m)
 {
   if (_reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
@@ -147,8 +152,8 @@ Ring_Fingerprint::_preprocess (Molecule & m)
 }
 
 static int
-write_fingerprint_differences (const Sparse_Fingerprint_Creator & sfc1,
-                               const Sparse_Fingerprint_Creator & sfc2)
+write_fingerprint_differences(const Sparse_Fingerprint_Creator & sfc1,
+                              const Sparse_Fingerprint_Creator & sfc2)
 { 
   const auto b1 = sfc1.bits_found();
   const auto b2 = sfc2.bits_found();
@@ -170,7 +175,7 @@ write_fingerprint_differences (const Sparse_Fingerprint_Creator & sfc1,
 
   for (auto f = b2.cbegin(); f != b2.cend(); ++f)
   {
-    const auto ib1 = b1.find(f->first);
+    // const auto ib1 = b1.find(f->first);
 
     if (f != b1.cend())
       continue;
@@ -184,7 +189,7 @@ write_fingerprint_differences (const Sparse_Fingerprint_Creator & sfc1,
 
 
 int
-Ring_Fingerprint::_perform_tests (Molecule & m)
+Ring_Fingerprint::_perform_tests(Molecule & m)
 {
   if (0 == m.aromatic_ring_count())
     return 1;
@@ -193,7 +198,7 @@ Ring_Fingerprint::_perform_tests (Molecule & m)
 
   Sparse_Fingerprint_Creator sfc;
 
-  _form_fingerprint (m, sfc);
+  _form_fingerprint(m, sfc);
 
   for (auto i = 0; i < _ntest; ++i)
   {
@@ -230,7 +235,7 @@ Ring_Fingerprint::_perform_tests (Molecule & m)
 }
 
 void
-Ring_Fingerprint::_discern_exocyclic_bond_aliph (Molecule & m,
+Ring_Fingerprint::_discern_exocyclic_bond_aliph(Molecule & m,
                                 const atom_number_t zatom,
                                 int & exocyclic_double_bond,
                                 int & substituents,
@@ -270,13 +275,13 @@ Ring_Fingerprint::_discern_exocyclic_bond_aliph (Molecule & m,
 }
 
 void
-Ring_Fingerprint::_discern_exocyclic_bond (Molecule & m,
-                                           const int * arom,
-                                           const atom_number_t zatom,
-                                           int & exocyclic_double_bond,
-                                           int & substituents,
-                                           int & biphenyl,
-                                           int & to_aliphatic_ring) const
+Ring_Fingerprint::_discern_exocyclic_bond(Molecule & m,
+                                          const int * arom,
+                                          const atom_number_t zatom,
+                                          int & exocyclic_double_bond,
+                                          int & substituents,
+                                          int & biphenyl,
+                                          int & to_aliphatic_ring) const
 {
   const auto a = m.atomi(zatom);
   assert (3 == a->ncon());
@@ -310,9 +315,9 @@ Ring_Fingerprint::_discern_exocyclic_bond (Molecule & m,
 }
 
 int
-Ring_Fingerprint::_write_fingerprint (Molecule & m,
-                                      const Sparse_Fingerprint_Creator & sfc,
-                                      IWString_and_File_Descriptor & output) const
+Ring_Fingerprint::_write_fingerprint(Molecule & m,
+                                     const Sparse_Fingerprint_Creator & sfc,
+                                     IWString_and_File_Descriptor & output) const
 {
   if (_echo_fingerprints)
     sfc.debug_print(cerr);
@@ -413,10 +418,10 @@ Ring_Fingerprint::_write_fingerprint (Molecule & m,
 #define RING_BOND_COUNT_3 1561
 
 int
-Ring_Fingerprint::_fingerprint_aromatic_ring (Molecule & m,
-                                              const int * arom,
-                                              const Ring & r,
-                                              Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_fingerprint_aromatic_ring(Molecule & m,
+                                             const int * arom,
+                                             const Ring & r,
+                                             Sparse_Fingerprint_Creator & sfc) const
 {
   const auto rsize = r.size();
 
@@ -532,9 +537,9 @@ Ring_Fingerprint::_fingerprint_aromatic_ring (Molecule & m,
 }
 
 int
-Ring_Fingerprint::_do_aliphatic_ring_bits (Molecule & m,
-                                           const int * arom,
-                                           Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_do_aliphatic_ring_bits(Molecule & m,
+                                          const int * arom,
+                                          Sparse_Fingerprint_Creator & sfc) const
 {
   const auto nr = m.nrings();
 
@@ -544,7 +549,7 @@ Ring_Fingerprint::_do_aliphatic_ring_bits (Molecule & m,
 
   int * fsid = new int[matoms]; std::unique_ptr<int[]> free_fsid(fsid);
 
-  const auto ring_systems = m.label_atoms_by_ring_system_including_spiro_fused(fsid);
+  // const auto ring_systems = m.label_atoms_by_ring_system_including_spiro_fused(fsid);
 
   for (auto i = 0; i < nr; ++i)
   {
@@ -607,9 +612,9 @@ Ring_Fingerprint::_do_aliphatic_ring_bits (Molecule & m,
 }
 
 void
-Ring_Fingerprint::_do_single_aliphatic_ring (Molecule & m,
-                                           const Ring & r,
-                                           Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_do_single_aliphatic_ring(Molecule & m,
+                                            const Ring & r,
+                                            Sparse_Fingerprint_Creator & sfc) const
 {
   const auto rsize = r.size();
 
@@ -692,10 +697,10 @@ Ring_Fingerprint::_do_strongly_fused_aliphatic_system(Molecule & m,
 }
 
 void
-Ring_Fingerprint::_ring_fusion_bit (int bstart,
-                                    const int rs1,
-                                    const int rs2,
-                                    Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_ring_fusion_bit(int bstart,
+                                   const int rs1,
+                                   const int rs2,
+                                   Sparse_Fingerprint_Creator & sfc) const
 {
   sfc.hit_bit(bstart);    // indicates presence of these kinds of fused rings
 
@@ -708,9 +713,9 @@ Ring_Fingerprint::_ring_fusion_bit (int bstart,
 }
 
 int
-Ring_Fingerprint::_aromatic_ring_fusion_bits (Molecule & m,
-                                              const Ring & r,
-                                              Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_aromatic_ring_fusion_bits(Molecule & m,
+                                             const Ring & r,
+                                             Sparse_Fingerprint_Creator & sfc) const
 {
   const auto rsize = r.size();
 
@@ -762,8 +767,8 @@ Ring_Fingerprint::_aromatic_ring_fusion_bits (Molecule & m,
 */
 
 int
-Ring_Fingerprint::_process (Molecule & m,
-                            IWString_and_File_Descriptor & output)
+Ring_Fingerprint::_process(Molecule & m,
+                           IWString_and_File_Descriptor & output)
 {
   Sparse_Fingerprint_Creator sfc;
 
@@ -773,8 +778,8 @@ Ring_Fingerprint::_process (Molecule & m,
 }
 
 void
-Ring_Fingerprint::_form_fingerprint (Molecule & m,
-                                     Sparse_Fingerprint_Creator & sfc) const
+Ring_Fingerprint::_form_fingerprint(Molecule & m,
+                                    Sparse_Fingerprint_Creator & sfc) const
 {
 
   const auto nr = m.nrings();
@@ -848,7 +853,7 @@ Ring_Fingerprint::_form_fingerprint (Molecule & m,
       sfc.hit_bit(ALIPHATIC_RING_BIT);
     }
 
-    if (rsize > largest_ring_size)
+    if (static_cast<int>(rsize) > largest_ring_size)
       largest_ring_size = rsize;
   }
 
@@ -919,7 +924,7 @@ Ring_Fingerprint::_form_fingerprint (Molecule & m,
 }
 
 void
-Ring_Fingerprint::_bits_for_distances_between_aromatic_rings (Molecule & m,
+Ring_Fingerprint::_bits_for_distances_between_aromatic_rings(Molecule & m,
                                 Sparse_Fingerprint_Creator & sfc) const
 {
   const auto nr = m.nrings();
@@ -963,7 +968,7 @@ Ring_Fingerprint::_bits_for_distances_between_aromatic_rings (Molecule & m,
 }
 
 void
-Ring_Fingerprint::_bits_for_distances_aromatic_to_aliphatic (Molecule & m,
+Ring_Fingerprint::_bits_for_distances_aromatic_to_aliphatic(Molecule & m,
                                                 const int * arom,
                                                 Sparse_Fingerprint_Creator & sfc) const
 {
@@ -1003,9 +1008,9 @@ Ring_Fingerprint::_bits_for_distances_aromatic_to_aliphatic (Molecule & m,
 }
 
 int
-Ring_Fingerprint::_shortest_distance_between (Molecule & m,
-                                              const Set_of_Atoms & r1,
-                                              const Set_of_Atoms & r2) const
+Ring_Fingerprint::_shortest_distance_between(Molecule & m,
+                                             const Set_of_Atoms & r1,
+                                             const Set_of_Atoms & r2) const
 {
   const auto rs1 = r1.size();
   const auto rs2 = r2.size();
@@ -1029,8 +1034,8 @@ Ring_Fingerprint::_shortest_distance_between (Molecule & m,
 }
 
 int
-Ring_Fingerprint::_process_filter (iwstring_data_source & input,
-                                   IWString_and_File_Descriptor & output)
+Ring_Fingerprint::_process_filter(iwstring_data_source & input,
+                                  IWString_and_File_Descriptor & output)
 {
   const_IWSubstring buffer;
 
@@ -1060,8 +1065,8 @@ Ring_Fingerprint::_process_filter (iwstring_data_source & input,
 }
 
 int
-Ring_Fingerprint::_process_filter (const char * fname,
-                                   IWString_and_File_Descriptor & output)
+Ring_Fingerprint::_process_filter(const char * fname,
+                                  IWString_and_File_Descriptor & output)
 {
   iwstring_data_source input(fname);
 
@@ -1075,11 +1080,11 @@ Ring_Fingerprint::_process_filter (const char * fname,
 }
 
 int
-Ring_Fingerprint::_process (data_source_and_type<Molecule> & input,
-                            IWString_and_File_Descriptor & output)
+Ring_Fingerprint::_process(data_source_and_type<Molecule> & input,
+                           IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     _molecules_read++;
 
@@ -1103,15 +1108,15 @@ Ring_Fingerprint::_process (data_source_and_type<Molecule> & input,
 }
 
 int
-Ring_Fingerprint::_process (const char * fname, int input_type,
+Ring_Fingerprint::_process(const char * fname, FileType input_type,
                  IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -1130,7 +1135,7 @@ Ring_Fingerprint::_process (const char * fname, int input_type,
 int
 Ring_Fingerprint::operator() (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "vA:E:i:g:lwt:s:depfJ:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lwt:s:depfJ:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -1188,7 +1193,7 @@ Ring_Fingerprint::operator() (int argc, char ** argv)
       cerr << "Fingerprint written with tag '" << _tag << "'\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -1201,7 +1206,7 @@ Ring_Fingerprint::operator() (int argc, char ** argv)
   else if (cl.option_present('f'))
     _work_as_tdt_filter = 1;
   else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 
@@ -1294,11 +1299,11 @@ Ring_Fingerprint::operator() (int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
   prog_name = argv[0];
 
   Ring_Fingerprint ring_fingerprint;
   
-  return ring_fingerprint (argc, argv);
+  return ring_fingerprint(argc, argv);
 }

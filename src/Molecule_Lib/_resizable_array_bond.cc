@@ -1,8 +1,6 @@
-#include <iostream>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "bond.h"
 
 //template class resizable_array<Bond *>;

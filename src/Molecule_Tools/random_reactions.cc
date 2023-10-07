@@ -1,4 +1,9 @@
+#include <iostream>
+
 #include "random_reactions.h"
+
+using std::cerr;
+using std::endl;
 
 Random_Reactions:: Random_Reactions()
 {

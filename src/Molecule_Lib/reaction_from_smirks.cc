@@ -1,16 +1,20 @@
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 //#define TESTING_STUFF
 #ifdef TESTING_STUFF
-#include "cmdline.h"
-#include "aromatic.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Molecule_Lib/aromatic.h"
 #endif
 
 #include "iwreaction.h"
 #include "molecule_to_query.h"
+
+using std::cerr;
+using std::endl;
 
 static int smirks_lost_atom_means_remove_frgment = 0;
 
@@ -176,13 +180,17 @@ tokenise_smarts_into_components(const_IWSubstring smarts,    // pass by value
 //      cerr << "Found '" << *s << "'\n";
         components.add(s);
 
-        smarts += i;
+        smarts += (i + 1);
 //      cerr << "Smarts updated to " << smarts << endl;
+        s = nullptr;
         break;
       }
-      if (s->length())
+
+      if (s != nullptr && s->length() > 0)
       {
+//      cerr << "At end of loop '" << *s << "'\n";
         components.add(s);
+//      cerr << "Smarts now " << smarts << " s '" << *s << "' s->length() " << s->length() << '\n';
         smarts += s->length();
       }
     }
@@ -356,7 +364,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
   extending_resizable_array<int> pamn(0);
   product_molecule.identify_atom_map_numbers(pamn);
 
-  if (0 == pamn.number_elements())
+  if (pamn.empty())
   {
     cerr << "IWReaction::construct_from_smirks:No mapped atoms on RHS, cannot continue\n";
     return 0;
@@ -478,10 +486,10 @@ IWReaction::_create_orphan_molecule(const resizable_array<int> & orphan_atoms,  
     else                                    // was simple
       si = qi;
 
-    assert (NULL != qi);
+    assert (nullptr != qi);
 
     const auto & e = si->element();
-    if (0 == e.number_elements())
+    if (e.empty())
     {
       cerr << "IWReaction::_create_orphan_molecule:RHS orphan atom has no element specified, impossible. Atom map " << oi << endl;
       return 0;
@@ -582,14 +590,14 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
       continue;
 
     Reaction_Site * r1 = _reaction_site_with_atom_map_number(i);
-    assert (NULL != r1);
+    assert (nullptr != r1);
 
     const Substructure_Atom * q1 = r1->query_atom_with_atom_map_number(i);
-    assert (NULL != q1);
+    assert (nullptr != q1);
 
     const Substructure_Atom * q2 = product_molecule.query_atom_with_atom_map_number(i);
 
-    if (NULL == q2)     // atom eliminated in products
+    if (nullptr == q2)     // atom eliminated in products
       atoms_lost.add(i);
     else
       _discern_atomic_changes(*r1, *q1, *q2);
@@ -602,10 +610,10 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
       const int j = atoms_lost[i];
 
       Reaction_Site * r = _reaction_site_with_atom_map_number(j);
-      assert (NULL != r);
+      assert (nullptr != r);
 
       const Substructure_Atom * s = r->query_atom_with_atom_map_number(j);
-      assert (NULL != s);
+      assert (nullptr != s);
 
       const int x = s->initial_atom_number();
 
@@ -641,7 +649,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
       Reaction_Site * j_site = _reaction_site_with_atom_map_number(j);    // may be NULL
 
-      if (NULL == i_site && NULL == j_site)          // should not happen
+      if (nullptr == i_site && nullptr == j_site)          // should not happen
         continue;
 
       const Substructure_Bond * bonded_in_product = product_molecule.bond_between_atom_map_numbers(i, j);  
@@ -651,15 +659,15 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
       if (i_site == j_site)           // two mapped atoms in same reagent
         bonded_in_reagent = i_site->bond_between_atom_map_numbers(i, j);
       else           // not in same reagent, therefore not bonded
-        bonded_in_reagent = NULL; 
+        bonded_in_reagent = nullptr; 
 
 //    cerr << "bonded? " << bonded_in_reagent << ' ' << bonded_in_product << endl;
 
-      if (NULL == bonded_in_reagent && NULL == bonded_in_product)    // no bond btw I and J either side
+      if (nullptr == bonded_in_reagent && nullptr == bonded_in_product)    // no bond btw I and J either side
         continue;
 
-      bond_type_t btr = NULL == bonded_in_reagent ? INVALID_BOND_TYPE : BOND_TYPE_ONLY(bonded_in_reagent->types_matched());
-      bond_type_t btp = NULL == bonded_in_product ? INVALID_BOND_TYPE : BOND_TYPE_ONLY(bonded_in_product->types_matched());
+      bond_type_t btr = nullptr == bonded_in_reagent ? INVALID_BOND_TYPE : BOND_TYPE_ONLY(bonded_in_reagent->types_matched());
+      bond_type_t btp = nullptr == bonded_in_product ? INVALID_BOND_TYPE : BOND_TYPE_ONLY(bonded_in_product->types_matched());
 
       if (btr == btp)     // same bond type, no need to change anything
         continue;
@@ -682,7 +690,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
         continue;
       }
 
-      if (NULL != i_site && NULL != j_site)     // new inter partile bond btw existing reagents
+      if (nullptr != i_site && nullptr != j_site)     // new inter partile bond btw existing reagents
       {
 //      cerr << "Adding inter particle bond btw " << i << " and " << j << endl;
         if (! _from_smirks_add_inter_particle_bond(i, i_site, j, j_site, btp))
@@ -695,7 +703,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 //    cerr << "Bond involves different sites. I " << i_site << " J " << j_site << " type " << btp << endl;
       assert (INVALID_BOND_TYPE != btp);
 
-      if (NULL == i_site)
+      if (nullptr == i_site)
       {
         const Substructure_Atom * q2 = j_site->query_atom_with_atom_map_number(j);
         const atom_number_t x2 = q2->initial_atom_number();
@@ -705,7 +713,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
         _sidechains.last_item()->add_inter_particle_bond(r, x2, x1, btp);
       }
-      else if (NULL == j_site)
+      else if (nullptr == j_site)
       {
         const Substructure_Atom * q1 = i_site->query_atom_with_atom_map_number(i);
         const atom_number_t x1 = q1->initial_atom_number();
@@ -738,13 +746,13 @@ IWReaction::_from_smirks_add_inter_particle_bond(int amap1,
                                                  Reaction_Site * a2site,
                                                  bond_type_t bt)
 {
-  assert (NULL != a1site);
-  assert (NULL != a2site);
+  assert (nullptr != a1site);
+  assert (nullptr != a2site);
 
   const Substructure_Atom * a1 = a1site->query_atom_with_atom_map_number(amap1);
   const Substructure_Atom * a2 = a2site->query_atom_with_atom_map_number(amap2);
-  assert (NULL != a1);
-  assert (NULL != a2);
+  assert (nullptr != a1);
+  assert (nullptr != a2);
 
 // If either one of the sites is the scaffold, handle specially
 
@@ -781,7 +789,7 @@ IWReaction::_from_smirks_add_inter_particle_bond_involves_scaffold(int a1, int a
   for (auto i = 0; i < _sidechains.number_elements(); ++i)
   {
     Substructure_Atom * x = _sidechains[i]->query_atom_with_atom_map_number(a2);
-    if (NULL == x)
+    if (nullptr == x)
       continue;
 
     r2 = i;
@@ -858,9 +866,9 @@ IWReaction::_discern_atomic_changes_specifier(Reaction_Site & r,
 
   int need_to_set_formal_charge = 99;
 
-  if (0 == fc1.number_elements() && 0 == fc2.number_elements())   // not specified either side
+  if (fc1.empty() && fc2.empty())   // not specified either side
     ;
-  else if (fc1.number_elements() > 0 && 0 == fc2.number_elements())    // set on LHS, but not on right
+  else if (fc1.number_elements() > 0 && fc2.empty())    // set on LHS, but not on right
     need_to_set_formal_charge = 0;
   else if (fc2.number_elements() > 0)        // set on RHS, must set
     need_to_set_formal_charge = fc2[0];
@@ -879,9 +887,9 @@ IWReaction::_discern_atomic_changes_specifier(Reaction_Site & r,
 
   int need_to_set_isotope = 2776704;
 
-  if (0 == iso1.number_elements() && 0 == iso2.number_elements())
+  if (iso1.empty() && iso2.empty())
     ;
-  else if (iso1.number_elements() > 0 && 0 == iso2.number_elements())
+  else if (iso1.number_elements() > 0 && iso2.empty())
     need_to_set_isotope = 0;
   else if (iso2.number_elements())
     need_to_set_isotope = iso2[0];
@@ -916,7 +924,7 @@ Substructure_Atom::first_specified_element() const
       return c->element()[0];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 int
@@ -1052,7 +1060,7 @@ test_reaction_from_smirks(const int argc,
     }
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(1);

@@ -160,11 +160,11 @@ class IWCmdline
         next
       end
 
-      if ("close" == qualifiers)
+      if 'close' == qualifiers
         gotclose = false
         closing_option = Regexp.new("^-+#{opt}$")
         tmp1 = String.new("")
-        while (iptr < ARGV.size)
+        while iptr < ARGV.size
           tmp2 = ARGV[iptr]
           ARGV.delete_at(iptr)
           if (closing_option.match(tmp2))
@@ -180,6 +180,15 @@ class IWCmdline
         end
         raise "No closing -#{opt}" unless gotclose
         @_option_value[opt].push(tmp1)
+        next
+      end
+
+      if qualifiers == 'list'
+        raise "Must specify value for list" unless ARGV[iptr]
+        ARGV[iptr].split(',').each do |list_member|
+          @_option_value[opt].push(list_member)
+        end
+        ARGV.delete_at(iptr)
         next
       end
 

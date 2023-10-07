@@ -5,12 +5,15 @@
 #include <stdlib.h>
 #include <fstream>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
-#include "fetch_via_regexp.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwmisc/fetch_via_regexp.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -66,7 +69,14 @@ static int input_contains_conformations = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Fetches records from one file based on identifiers in another file\n";
   cerr << prog_name << " identifier_file sd_file > newfile\n";
   cerr << " -c <col>       identifier column in identifier file\n";
@@ -74,6 +84,7 @@ usage (int rc)
   cerr << " -f <col>       identifier column in name field of .sdf file (default whole record)\n";
   cerr << " -d             ignore duplicate identifiers in identifier file\n";
   cerr << " -g             ignore possibly invalid sd records with no identifier\n";
+  cerr << "                repeat to suppress warning messages about empty identifiers\n";
   cerr << " -a             write all instances of identifiers in sd file\n";
   cerr << "                by default, only the first is written\n";
   cerr << " -X <fname>     write sd records not in <identifier_file> to <fname>\n";
@@ -87,6 +98,7 @@ usage (int rc)
   cerr << " -p <string>    record separator (default '" << record_separator << "')\n";
   cerr << " -e             input contains conformers with names ID_n. Remove _n part to match names\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit (rc);
 }
@@ -490,18 +502,20 @@ read_next_sd(iwstring_data_source & input,
     return 0;
   }
 
-  if (0 == id.length())
-  {
-    cerr << "No identifier '" << identifier_tag_in_sd_file << "'\n";
-    cerr << sd;
-    return ignore_sdfs_with_no_identifier;
+  if (id.empty()) {
+    if (ignore_sdfs_with_no_identifier > 1) {
+      return 1;
+    } else {
+      cerr << "No identifier '" << identifier_tag_in_sd_file << "'\n";
+      cerr << sd;
+      return ignore_sdfs_with_no_identifier;
+    } 
   }
 
   if (identifier_column_in_sdf_name < 0)
     return 1;
 
-  if (0 == identifier_column_in_sdf_name)
-  {
+  if (0 == identifier_column_in_sdf_name) {
     id.truncate_at_first(' ');
     return 1;
   }
@@ -632,9 +646,12 @@ fetch_sdf_quick_rx (iwstring_data_source & input,
   {
     sdfile_records_read++;
 
-    if (0 == id.length ())
-    {
-      cerr << "Possibly erroneous structure, ending line " << input.lines_read () << endl;
+    if (0 == id.length ()) {
+      if (ignore_sdfs_with_no_identifier) {
+        continue;
+      }
+
+      cerr << "Possibly erroneous structure, ending line " << input.lines_read () << '\n';
       continue;
     }
 
@@ -666,7 +683,11 @@ fetch_sdf_quick(iwstring_data_source & input,
 
     if (0 == id.length ())
     {
-      cerr << "Possibly erroneous structure, ending line " << input.lines_read () << endl;
+      if (ignore_sdfs_with_no_identifier) {
+        continue;
+      }
+
+      cerr << "Possibly erroneous structure, ending line " << input.lines_read () << '\n';
       continue;
     }
 
@@ -900,7 +921,7 @@ fetch_sdf_quick (int argc, char ** argv)
 
   if (cl.option_present ('g'))
   {
-    ignore_sdfs_with_no_identifier = 1;
+    ignore_sdfs_with_no_identifier = cl.option_count('g');
 
     if (verbose)
       cerr << "Will ignore possibly invalid sdf records with missing or empty identifier\n";

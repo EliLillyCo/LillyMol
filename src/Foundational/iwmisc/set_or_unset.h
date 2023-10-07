@@ -19,6 +19,7 @@ class Set_or_Unset
     Set_or_Unset & operator= (const Set_or_Unset &);
 
     int operator== (const Set_or_Unset &) const;
+    int operator!= (const Set_or_Unset &) const;
 
     int set (const T v) { _value = v; return _is_set = 1;}
     int unset () { return _is_set = 0;}
@@ -96,6 +97,11 @@ Set_or_Unset<T>::operator == (const Set_or_Unset<T> & rhs) const
     return _value == rhs._value;
 
   return 0;
+}
+template <typename T>
+int
+Set_or_Unset<T>::operator!=(const Set_or_Unset<T>& rhs) const {
+  return ! (*this == rhs);
 }
 
 #endif

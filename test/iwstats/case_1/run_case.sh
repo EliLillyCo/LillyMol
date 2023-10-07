@@ -23,10 +23,11 @@ then
     exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
+name1='stdout'
+name1_out='out/stdout'
+stderr='stderr'
 diff_tool=../../fileDiff.sh
-$command -j -e 2 -p 3 $LILLYMOL_HOME/data/descriptor.txt >>$name1 2>>err.txt
+$command -j -e 2 -p 3 $LILLYMOL_HOME/data/descriptor.txt >$name1 2> $stderr
 $diff_tool $name1 $name1_out
 ret=$?
 if [ $ret -eq 1 ]
@@ -35,5 +36,5 @@ then
 else
     echo "$case_id : TEST FAIL"
 fi
-rm $name1
-rm err.txt
+rm ${name1}
+rm ${stderr}

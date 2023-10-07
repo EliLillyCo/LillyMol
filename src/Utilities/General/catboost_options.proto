@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message CatboostOptions {
+  // Options that are passed as strings.
+  map<string, string> string_option = 1;
+
+  // Options that are passed as ints
+  map<string, int32> int_option = 2;
+
+  // Options that are passed as floats
+  map<string, float> float_option = 3;
+}

@@ -1,0 +1,23 @@
+name: "mvspinach1"
+scaffold {
+  id: 0
+  smarts: "[D1G0]-a:a-[D1G0]"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 2
+    a2: 3
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

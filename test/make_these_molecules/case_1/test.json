@@ -1,0 +1,8 @@
+{
+    "executable": "make_these_molecules",
+    "options": [ "-E autocreate -A D -z i -z f -l -R #{input_file[0]}",
+                 "-M #{input_file[1]} #{input_file[2]} #{input_file[3]}"
+               ],
+    "input_file": [ "amideFormation.rxn", "products.lbl", "amines.smi", "acids.smi" ],
+    "output_file": [ "stdout" ]
+}

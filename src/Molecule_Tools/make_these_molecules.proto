@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package MakeTheseMoleculesData;
+
+message Product {
+  // The names of the reagents being used in a molecule.
+  repeated string reagent = 1;
+
+  // A common name component that might be associated with each product.
+  optional string name_stem = 2;
+}

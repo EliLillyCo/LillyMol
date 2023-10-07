@@ -1,7 +1,7 @@
-#ifndef MDL_MOLECULE_H
-#define MDL_MOLECULE_H
+#ifndef MOLECULE_LIB_MDL_MOLECULE_H_
+#define MOLECULE_LIB_MDL_MOLECULE_H_
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 /*
   An MDL_Molecule carries with it all the query information read from an MDL file
@@ -57,7 +57,7 @@ class MDL_Molecule : public Molecule, public MDL_File_Data
 
     const ISIS_Atom_List * atom_list_for_atom (atom_number_t a) const;
 
-    int read_molecule_ds (iwstring_data_source &, int notused);
+    int read_molecule_ds (iwstring_data_source &, FileType notused);
     int read_molecule_mdl_ds (iwstring_data_source &, int return_on_m_end = 0);
 
     int initialise_mqs (Molecule_to_Query_Specifications & mqs) const;
@@ -112,4 +112,4 @@ extern void set_convert_not_atom_lists_to_organic_lists(int);
 void reset_mdl_molecule_file_scope_variables();
 extern void set_mdl_molecule_discard_chirality(const int s);
 
-#endif
+#endif  // MOLECULE_LIB_MDL_MOLECULE_H_

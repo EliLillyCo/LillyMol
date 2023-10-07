@@ -1,9 +1,13 @@
 #include <stdlib.h>
+#include <iostream>
 
-#include "path.h"
+#include "Molecule_Lib/path.h"
 
 #include "ring_ext_rep.h"
 
+using std::cerr;
+
+namespace ring_replacement {
 
 Ring_Extraction_Replacement_Conditions::Ring_Extraction_Replacement_Conditions()
 {
@@ -13,7 +17,7 @@ Ring_Extraction_Replacement_Conditions::Ring_Extraction_Replacement_Conditions()
 
   _isotope_for_ring_fusion = 0;
 
-  _ring_fusion_element = NULL;
+  _ring_fusion_element = nullptr;
 
   _isotope_for_substitution_points = 0;
 
@@ -48,7 +52,7 @@ Ring_Extraction_Replacement_Conditions::initialise (Command_Line & cl,
     }
 
     if (verbose)
-      cerr << "Will only extract rings of size " << _ring_size_needed << endl;
+      cerr << "Will only extract rings of size " << _ring_size_needed << '\n';
   }
 
   if (cl.option_present('f'))
@@ -60,22 +64,22 @@ Ring_Extraction_Replacement_Conditions::initialise (Command_Line & cl,
       if (_isotope_for_ring_fusion <= 0)
       {
         cerr << "Invalid isotope for ring fusion '" << f << "'\n";
-        return 3;
+        return 0;
       }
 
       if (verbose)
-        cerr << "Will label ring fusion points with isotope '" << _isotope_for_ring_fusion << endl;
+        cerr << "Will label ring fusion points with isotope '" << _isotope_for_ring_fusion << '\n';
     }
     else
     {
       _ring_fusion_element = get_element_from_symbol_no_case_conversion(f);
-      if (NULL == _ring_fusion_element)
+      if (nullptr == _ring_fusion_element)
         _ring_fusion_element = create_element_with_symbol(f);
 
-      if (NULL == _ring_fusion_element)
+      if (nullptr == _ring_fusion_element)
       {
         cerr << "INvalid ring fusion element '" << f << "'\n";
-        return 4;
+        return 0;
       }
 
       if (verbose)
@@ -147,7 +151,7 @@ Ring_Extraction_Replacement_Conditions::initialise (Command_Line & cl,
     else
     {
       cerr << "Unrecognised -a qualifier '" << a << "'\n";
-      return 4;
+      return 0;
     }
   }
 
@@ -160,7 +164,7 @@ Ring_Extraction_Replacement_Conditions::initialise (Command_Line & cl,
     }
 
     if (verbose)
-      cerr << "Substitution points labelled with isotope " << _isotope_for_substitution_points << endl;
+      cerr << "Substitution points labelled with isotope " << _isotope_for_substitution_points << '\n';
   }
 
   return 1;
@@ -246,7 +250,7 @@ Ring_Extraction_Replacement_Conditions::identify_atoms_associated_with_ring (Mol
 
       if (in_same_ring[j * matoms + l])   // part of a fusion
       {
-        if (NULL != _ring_fusion_element)
+        if (nullptr != _ring_fusion_element)
         {
           m.set_element (l, _ring_fusion_element);
           include_atom[l] = 1;
@@ -269,6 +273,12 @@ Ring_Extraction_Replacement_Conditions::identify_atoms_associated_with_ring (Mol
   return 1;
 }
 
+// Note this is broken.
+// Consider
+// N1=C(C)C=C(O1)C=C1CNC1 CHEMBL358535
+// The ring is joined via a double bond, but we make the assumption that exocyclic double bonds
+// are part of the ring.
+// Ignoring this for now.
 int
 Ring_Extraction_Replacement_Conditions::identify_atoms_associated_with_ring_system (Molecule & m,
                                               int * include_atom) const
@@ -279,9 +289,11 @@ Ring_Extraction_Replacement_Conditions::identify_atoms_associated_with_ring_syst
 
   int join_to_ring_atom = 0;
 
+  int isotopes_set = 0;
+
   for (int i = 0; i < matoms; i++)
   {
-//  cerr << "Atom " << i << " type " << m.smarts_equivalent_for_atom(i) << " inc? " << include_atom[i] << endl;
+//  cerr << "Atom " << i << " type " << m.smarts_equivalent_for_atom(i) << " inc? " << include_atom[i] << '\n';
 
     if (! include_atom[i])
       continue;
@@ -307,18 +319,26 @@ Ring_Extraction_Replacement_Conditions::identify_atoms_associated_with_ring_syst
       else   // something outside the ring
       {
         join_to_ring_atom++;
-        if (_isotope_for_substitution_points)
+        if (_isotope_for_substitution_points) {
           m.set_isotope(i, _isotope_for_substitution_points);
+          ++isotopes_set;
+        }
 //      if (_include_substituents)     does not work because it alters the include atom array
 //        _add_substituents (m, i, k, include_atom);
       }
     }
   }
 
-//cerr << "to_be_added " << to_be_added << endl;
+//cerr << "to_be_added " << to_be_added << '\n';
 
-  if (to_be_added.size() > 0)
+  // Cover the known case of failure where the isolated ring is attached via a double bond.
+  if (_isotope_for_substitution_points && isotopes_set == 0) {
+    return 0;
+  }
+
+  if (to_be_added.size() > 0) {
     to_be_added.set_vector(include_atom, 1);
+  }
 
   return 1;
 }
@@ -360,6 +380,7 @@ Ring_Extraction_Replacement_Conditions::can_be_processed (Molecule & m,
   return 1;
 }
 
+#ifdef NOT_USED_ASDAD
 static int
 count_included_connections (const Molecule & m,
                             atom_number_t zatom,
@@ -381,6 +402,7 @@ count_included_connections (const Molecule & m,
 
   return rc;
 }
+#endif
 
 int 
 Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m,
@@ -389,7 +411,7 @@ Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m
                                                         int aromatic,
                                                         IWString & smarts) const
 {
-//cerr << "append_connectivity_smarts, aromatic? " << aromatic << endl;
+//cerr << "append_connectivity_smarts, aromatic? " << aromatic << '\n';
 
   smarts << '[';
   if (! m.is_ring_atom(zatom))
@@ -399,7 +421,7 @@ Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m
   else
     smarts << 'A';
 
-  int iso = m.isotope(zatom);
+  const isotope_t iso = m.isotope(zatom);
 
   if (0 == iso)
 //  smarts << "R1D" << count_included_connections(m, zatom, include_atom) << ']';
@@ -417,10 +439,10 @@ Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m
 */
 
 void
-Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m,
-                                                                    atom_number_t zatom,
-                                                                    int aromatic,
-                                                                    IWString & smarts) const
+Ring_Extraction_Replacement_Conditions::append_connectivity_smarts(Molecule & m,
+                                                                   atom_number_t zatom,
+                                                                   int aromatic,
+                                                                   IWString & smarts) const
 {
   smarts << '[';
 
@@ -433,16 +455,25 @@ Ring_Extraction_Replacement_Conditions::append_connectivity_smarts (Molecule & m
 
   smarts << 'R' << m.nrings(zatom);
 
-  const auto iso = m.isotope(zatom);
+  const isotope_t iso = m.isotope(zatom);
 
-  if (0 == iso)
+  // Consider C12=[N+](C)CCCN1CCC2 CHEMBL3558617.
+  // It is a +ve nitrogen, but only has 3 connections.
+
+  if (0 == iso) {
     smarts << 'D' << m.ncon(zatom);
-  else if (_isotope_for_substitution_points == iso)
-  {
-    if (1 == m.formal_charge(zatom) && 7 == m.atomic_number(zatom))
-      smarts << "D4";
-    else
+  } else if (_isotope_for_substitution_points == iso) {
+    if (1 == m.formal_charge(zatom) && 7 == m.atomic_number(zatom)) {
+      if (m.ncon(zatom) == 3) {
+        smarts << "D3";
+      } else if (m.ncon(zatom) == 2) {
+        smarts << "D>2";
+      } else {
+        smarts << "D4";
+      }
+    } else {
       smarts << "D>2";
+    }
   }
 
   smarts << ']';
@@ -477,3 +508,70 @@ initialise_in_same_ring_array (Molecule & m,
 
   return 1;
 }
+
+constexpr int kMaxRingSize = 7;
+
+uint32_t
+RingHash(const extending_resizable_array<int>& aliph,
+         const extending_resizable_array<int>& arom) {
+  uint32_t result = 0;
+  for (int i = 3; i <= kMaxRingSize; ++i) {
+    if (i < aliph.number_elements()) {
+      for (int j = 0; j < aliph[i]; ++j) {
+        result = 100 * result  + 10 * i;
+      }
+    }
+    if (i < arom.number_elements()) {
+      for (int j = 0; j < arom[i]; ++j) {
+        result = 100 * result  + 10 * i + 1;
+      }
+    }
+  }
+
+  return result;
+}
+
+IWString
+RingHashName(const extending_resizable_array<int>& aliph,
+             const extending_resizable_array<int>& arom) {
+  IWString result;
+  for (int i = 3; i <= kMaxRingSize; ++i) {
+    if (i < aliph.number_elements()) {
+      for (int j = 0; j < aliph[i]; ++j) {
+        result << i << 'A';
+      }
+    }
+    if (i < arom.number_elements()) {
+      for (int j = 0; j < arom[i]; ++j) {
+        result << i << 'a';
+      }
+    }
+  }
+
+  return result;
+}
+
+
+IWString
+RingHashName(const extending_resizable_array<int>& aliph,
+             const IWString& aliph_suffix,
+             const extending_resizable_array<int>& arom,
+             const IWString& arom_suffix) {
+  IWString result;
+  for (int i = 3; i <= kMaxRingSize; ++i) {
+    if (i < aliph.number_elements()) {
+      for (int j = 0; j < aliph[i]; ++j) {
+        result << i << aliph_suffix;
+      }
+    }
+    if (i < arom.number_elements()) {
+      for (int j = 0; j < arom[i]; ++j) {
+        result << i << arom_suffix;
+      }
+    }
+  }
+
+  return result;
+}
+
+}  // namespace ring_replacement

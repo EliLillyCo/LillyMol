@@ -2,10 +2,9 @@
  * Funcitons and subroutines from fortran code (connolly.f) 
  * All of the arrays are 3-dimension
  */
-#include "molecule.h"
-#include "coordinates.h"
-#include "iwmtypes.h"
-#include "iwaray.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/coordinates.h"
+#include "Molecule_Lib/iwmtypes.h"
 
 double distance_square (const double [3], const double [3]);
 

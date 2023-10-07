@@ -1,0 +1,24 @@
+# RuleClass acylating
+# SubClass thio
+
+# Feb 2004. new rule
+
+(0 Query
+  (A C Comment "thio_ester_thione_cyclic")
+  (A I Version 2)
+  (A D numeric_value 60)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I nrings 1)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 16)
+    (A I single_bond 1)
+  )
+)

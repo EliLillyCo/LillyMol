@@ -4,17 +4,18 @@
 
 #include <stdlib.h>
 #include <iostream>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iw_stl_hash_map.h"
-#include "iw_stl_hash_set.h"
-#include "iw_tdt.h"
-#include "iwstring_data_source.h"
-
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 

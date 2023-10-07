@@ -9,9 +9,14 @@
 #include <assert.h>
 #include <iostream>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "shadow.h"
+
+namespace shadow {
+
+using std::cerr;
+using std::endl;
 
 static double default_grid_resolution = 0.1;
 
@@ -21,17 +26,17 @@ Shadow_Area::Shadow_Area ()
 
   _ny = _nz = 0;
 
-  _grid = NULL;
+  _grid = nullptr;
 
   return;
 }
 
 Shadow_Area::~Shadow_Area ()
 {
-  if (NULL != _grid)
+  if (nullptr != _grid)
     delete [] _grid;
 
-  _grid = NULL;
+  _grid = nullptr;
 
   return;
 }
@@ -42,7 +47,7 @@ Shadow_Area::ok () const
   if (_resolution <= 0.0)
     return 0;
 
-  if (NULL == _grid)
+  if (nullptr == _grid)
     return 1;
 
   if (_ny <= 0 || _nz <= 0)
@@ -85,10 +90,10 @@ Shadow_Area::shadow_area (const Molecule & m,
 {
   assert (ok ());
 
-  if (NULL != _grid)
+  if (nullptr != _grid)
   {
     delete [] _grid;
-    _grid = NULL;
+    _grid = nullptr;
   }
 
   int matoms = m.natoms ();
@@ -355,7 +360,7 @@ Shadow_Area::print_grid (std::ostream & os,
 {
   assert (ok ());
 
-  assert (NULL != _grid);
+  assert (nullptr != _grid);
 
   os << "Grid " << _ny << " x " << _nz << " total " << (_ny * _nz) << endl;
 
@@ -451,3 +456,5 @@ Shadow_Area::_print_grid_z (std::ostream & os,
 
   return os.good ();
 }
+
+} // namespace shadow

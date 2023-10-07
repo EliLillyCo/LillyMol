@@ -1,0 +1,228 @@
+description {
+  feature_name: "w_rotbond"
+  description: "Number of rotatable bonds"
+  plot_title: "Number of rotatable bonds"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 47.0
+mean: 5.7611513
+median: 5.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+  value: 2.0
+}
+quantile {
+  quantile: 0.1
+  value: 2.0
+}
+quantile {
+  quantile: 0.5
+  value: 5.0
+}
+quantile {
+  quantile: 0.9
+  value: 10.0
+}
+quantile {
+  quantile: 0.95
+  value: 12.0
+}
+quantile {
+  quantile: 0.99
+  value: 18.0
+}
+int_values {
+  count: 31843
+}
+int_values {
+  value: 1
+  count: 76569
+}
+int_values {
+  value: 2
+  count: 164418
+}
+int_values {
+  value: 3
+  count: 261263
+}
+int_values {
+  value: 4
+  count: 336940
+}
+int_values {
+  value: 5
+  count: 343678
+}
+int_values {
+  value: 6
+  count: 304002
+}
+int_values {
+  value: 7
+  count: 227664
+}
+int_values {
+  value: 8
+  count: 161456
+}
+int_values {
+  value: 9
+  count: 105810
+}
+int_values {
+  value: 10
+  count: 70376
+}
+int_values {
+  value: 11
+  count: 47367
+}
+int_values {
+  value: 12
+  count: 32842
+}
+int_values {
+  value: 13
+  count: 22504
+}
+int_values {
+  value: 14
+  count: 16300
+}
+int_values {
+  value: 15
+  count: 11729
+}
+int_values {
+  value: 16
+  count: 8893
+}
+int_values {
+  value: 17
+  count: 7090
+}
+int_values {
+  value: 18
+  count: 5476
+}
+int_values {
+  value: 19
+  count: 4127
+}
+int_values {
+  value: 20
+  count: 2989
+}
+int_values {
+  value: 21
+  count: 2307
+}
+int_values {
+  value: 22
+  count: 1603
+}
+int_values {
+  value: 23
+  count: 1351
+}
+int_values {
+  value: 24
+  count: 875
+}
+int_values {
+  value: 25
+  count: 992
+}
+int_values {
+  value: 26
+  count: 656
+}
+int_values {
+  value: 27
+  count: 545
+}
+int_values {
+  value: 28
+  count: 382
+}
+int_values {
+  value: 29
+  count: 334
+}
+int_values {
+  value: 30
+  count: 186
+}
+int_values {
+  value: 31
+  count: 235
+}
+int_values {
+  value: 32
+  count: 112
+}
+int_values {
+  value: 33
+  count: 135
+}
+int_values {
+  value: 34
+  count: 69
+}
+int_values {
+  value: 35
+  count: 107
+}
+int_values {
+  value: 36
+  count: 63
+}
+int_values {
+  value: 37
+  count: 64
+}
+int_values {
+  value: 38
+  count: 43
+}
+int_values {
+  value: 39
+  count: 42
+}
+int_values {
+  value: 40
+  count: 14
+}
+int_values {
+  value: 41
+  count: 32
+}
+int_values {
+  value: 42
+  count: 7
+}
+int_values {
+  value: 43
+  count: 7
+}
+int_values {
+  value: 44
+  count: 1
+}
+int_values {
+  value: 45
+  count: 4
+}
+int_values {
+  value: 46
+  count: 6
+}
+int_values {
+  value: 47
+  count: 2
+}

@@ -5,7 +5,7 @@
   (A I min_nrings 1)
   (A D max_fraction_atoms_matched 1)
   (1 elements_needed
-    (A I atomic_number 6)
+    (A C atomic_symbol "C")
     (A I min_hits_needed 10)
   )
   (0 query_atom

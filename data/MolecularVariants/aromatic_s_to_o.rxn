@@ -1,0 +1,9 @@
+name: "aromatic_s_to_o"
+scaffold {
+  id: 0
+  smarts: "s"
+  change_element {
+    atom: 0
+    element: "O"
+  }
+}

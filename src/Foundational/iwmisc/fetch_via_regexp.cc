@@ -1,29 +1,30 @@
 #include <ostream>
 
 #include "fetch_via_regexp.h"
+#include "iwre2.h"
 
 Fetch_via_Regexp::Fetch_via_Regexp()
 {
   _n = 0;
-  _rx = NULL;
-  _matches_found = NULL;
+  _rx = nullptr;
+  _matches_found = nullptr;
 
   return;
 }
 
 Fetch_via_Regexp::~Fetch_via_Regexp()
 {
-  if (NULL != _rx)
+  if (nullptr != _rx)
     delete [] _rx;
 
-  if (NULL != _matches_found)
+  if (nullptr != _matches_found)
     delete [] _matches_found;
 
   return;
 }
 
 int
-Fetch_via_Regexp::build (Command_Line & cl, const char flag)
+Fetch_via_Regexp::build(Command_Line & cl, const char flag)
 {
   assert (0 == _n);
 
@@ -31,20 +32,19 @@ Fetch_via_Regexp::build (Command_Line & cl, const char flag)
 
   if (0 == _n)
   {
-    cerr << "Fetch_via_Regexp::build:no option '" << flag << "' specified\n";
+    std::cerr << "Fetch_via_Regexp::build:no option '" << flag << "' specified\n";
     return 0;
   }
 
-  _rx = new IW_Regular_Expression[_n];
+  _rx = new std::unique_ptr<re2::RE2>[_n];
 
   for (int i = 0; i < _n; ++i)
   {
     const_IWSubstring s;
     cl.value(flag, s);
 
-    if (! _rx[i].set_pattern(s))
-    {
-      cerr << "Fetch_via_Regexp::build:invalid regular expression '" << s << "'\n";
+    if (! iwre2::RE2Reset(_rx[i], s)) {
+      std::cerr << "Fetch_via_Regexp::build:invalid regular expression '" << s << "'\n";
       return 0;
     }
   }
@@ -55,12 +55,12 @@ Fetch_via_Regexp::build (Command_Line & cl, const char flag)
 }
 
 int
-Fetch_via_Regexp::matches (const IWString & s)
+Fetch_via_Regexp::matches(const IWString & s)
 {
+  const re2::StringPiece tmp(s.data(), s.length());
   for (int i = 0; i < _n; ++i)
   {
-    if (_rx[i].matches(s))
-    {
+    if (iwre2::RE2PartialMatch(s, *_rx[i])) {
       _matches_found[i]++;
       return 1;
     }
@@ -70,14 +70,13 @@ Fetch_via_Regexp::matches (const IWString & s)
 }
 
 int
-Fetch_via_Regexp::report (std::ostream & output) const
+Fetch_via_Regexp::report(std::ostream & output) const
 {
   output << "Fetch_via_Regexp::report\n";
   for (int i = 0; i < _n; ++i)
   {
-    output << " rx   " << _rx[i].source() << ' ' << _matches_found[i] << '\n';
+    output << " rx   " << _rx[i]->pattern() << ' ' << _matches_found[i] << '\n';
   }
 
   return 1;
 }
-

@@ -50,7 +50,7 @@ Bond::adjust_for_loss_of_atom (atom_number_t i)
   {
     cerr << "Bond::adjust_for_loss_of_atom: involves atom " << i << endl;
     debug_print(cerr);
-    assert(NULL == "This should not happen");
+    assert(nullptr == "This should not happen");
   }
 
   if (_a2 > i)
@@ -59,7 +59,7 @@ Bond::adjust_for_loss_of_atom (atom_number_t i)
   {
     cerr << "Bond::adjust_for_loss_of_atom: involves atom " << i << endl;
     debug_print(cerr);
-    assert(NULL == "This should not happen");
+    assert(nullptr == "This should not happen");
   }
 
   return;
@@ -420,7 +420,7 @@ Bond::number_of_bonds() const
   if (IS_COORDINATION_BOND(_btype))
     return 1;
 
-  cerr << "What kind of bond is this " << _btype << endl;
+  cerr << "Bond::number_of_bonds:what kind of bond is this " << _btype << '\n';
   debug_print(cerr);
   iwabort();
 
@@ -610,6 +610,10 @@ Bond::append_bond_type (IWString & smiles,
   return;
 }
 
+// The bond is being used to form a smiles. If this bond results in there
+// being a character added to `smiles` add it, otherwise add a space.
+// For example if single bonds are not being written, or of the bond
+// is aromatic and aromatic bonds are not written, then add a space.
 void
 Bond::append_bond_type_space_for_nothing(IWString & smiles,
                         atom_number_t ato,
@@ -759,11 +763,11 @@ Bond::copy_directionality_specifications (const Bond * rhs)
 }
 
 int
-Bond::set_part_of_cis_trans_grouping (int s)
+Bond::set_part_of_cis_trans_grouping(int s)
 {
   if (0 == s)
     _directional = (_directional ^ IW_BOND_DIRECTIONAL_DOUBLE_BOND);
-  else if (0 == (_btype | DOUBLE_BOND))
+  else if (0 == (_btype & DOUBLE_BOND))
   {
     cerr << "Bond::set_part_of_cis_trans_grouping:can only apply to double bonds\n";
     return 0;

@@ -1,0 +1,433 @@
+description {
+  feature_name: "w_hcount"
+  description: "Number of Hydrogen atoms"
+  plot_title: "Number of Hydrogen atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 102.0
+mean: 22.574533
+median: 21.0
+quantile {
+  quantile: 0.01
+  value: 7.0
+}
+quantile {
+  quantile: 0.05
+  value: 11.0
+}
+quantile {
+  quantile: 0.1
+  value: 13.0
+}
+quantile {
+  quantile: 0.5
+  value: 21.0
+}
+quantile {
+  quantile: 0.9
+  value: 34.0
+}
+quantile {
+  quantile: 0.95
+  value: 39.0
+}
+quantile {
+  quantile: 0.99
+  value: 51.0
+}
+int_values {
+  count: 132
+}
+int_values {
+  value: 1
+  count: 155
+}
+int_values {
+  value: 2
+  count: 380
+}
+int_values {
+  value: 3
+  count: 852
+}
+int_values {
+  value: 4
+  count: 1966
+}
+int_values {
+  value: 5
+  count: 3525
+}
+int_values {
+  value: 6
+  count: 6824
+}
+int_values {
+  value: 7
+  count: 10764
+}
+int_values {
+  value: 8
+  count: 18636
+}
+int_values {
+  value: 9
+  count: 26561
+}
+int_values {
+  value: 10
+  count: 38385
+}
+int_values {
+  value: 11
+  count: 47667
+}
+int_values {
+  value: 12
+  count: 61167
+}
+int_values {
+  value: 13
+  count: 69904
+}
+int_values {
+  value: 14
+  count: 84902
+}
+int_values {
+  value: 15
+  count: 90235
+}
+int_values {
+  value: 16
+  count: 103186
+}
+int_values {
+  value: 17
+  count: 105438
+}
+int_values {
+  value: 18
+  count: 115316
+}
+int_values {
+  value: 19
+  count: 114622
+}
+int_values {
+  value: 20
+  count: 119884
+}
+int_values {
+  value: 21
+  count: 114725
+}
+int_values {
+  value: 22
+  count: 116431
+}
+int_values {
+  value: 23
+  count: 107038
+}
+int_values {
+  value: 24
+  count: 104265
+}
+int_values {
+  value: 25
+  count: 92073
+}
+int_values {
+  value: 26
+  count: 88122
+}
+int_values {
+  value: 27
+  count: 74968
+}
+int_values {
+  value: 28
+  count: 70412
+}
+int_values {
+  value: 29
+  count: 57978
+}
+int_values {
+  value: 30
+  count: 56089
+}
+int_values {
+  value: 31
+  count: 43615
+}
+int_values {
+  value: 32
+  count: 43438
+}
+int_values {
+  value: 33
+  count: 32355
+}
+int_values {
+  value: 34
+  count: 32512
+}
+int_values {
+  value: 35
+  count: 23588
+}
+int_values {
+  value: 36
+  count: 24200
+}
+int_values {
+  value: 37
+  count: 17265
+}
+int_values {
+  value: 38
+  count: 18141
+}
+int_values {
+  value: 39
+  count: 12470
+}
+int_values {
+  value: 40
+  count: 13913
+}
+int_values {
+  value: 41
+  count: 9472
+}
+int_values {
+  value: 42
+  count: 10762
+}
+int_values {
+  value: 43
+  count: 7114
+}
+int_values {
+  value: 44
+  count: 8609
+}
+int_values {
+  value: 45
+  count: 5531
+}
+int_values {
+  value: 46
+  count: 6910
+}
+int_values {
+  value: 47
+  count: 4161
+}
+int_values {
+  value: 48
+  count: 5822
+}
+int_values {
+  value: 49
+  count: 3069
+}
+int_values {
+  value: 50
+  count: 4575
+}
+int_values {
+  value: 51
+  count: 2514
+}
+int_values {
+  value: 52
+  count: 3361
+}
+int_values {
+  value: 53
+  count: 2008
+}
+int_values {
+  value: 54
+  count: 2597
+}
+int_values {
+  value: 55
+  count: 1549
+}
+int_values {
+  value: 56
+  count: 1947
+}
+int_values {
+  value: 57
+  count: 1144
+}
+int_values {
+  value: 58
+  count: 1549
+}
+int_values {
+  value: 59
+  count: 785
+}
+int_values {
+  value: 60
+  count: 1092
+}
+int_values {
+  value: 61
+  count: 548
+}
+int_values {
+  value: 62
+  count: 846
+}
+int_values {
+  value: 63
+  count: 402
+}
+int_values {
+  value: 64
+  count: 576
+}
+int_values {
+  value: 65
+  count: 243
+}
+int_values {
+  value: 66
+  count: 504
+}
+int_values {
+  value: 67
+  count: 147
+}
+int_values {
+  value: 68
+  count: 337
+}
+int_values {
+  value: 69
+  count: 110
+}
+int_values {
+  value: 70
+  count: 221
+}
+int_values {
+  value: 71
+  count: 59
+}
+int_values {
+  value: 72
+  count: 146
+}
+int_values {
+  value: 73
+  count: 35
+}
+int_values {
+  value: 74
+  count: 112
+}
+int_values {
+  value: 75
+  count: 36
+}
+int_values {
+  value: 76
+  count: 90
+}
+int_values {
+  value: 77
+  count: 25
+}
+int_values {
+  value: 78
+  count: 102
+}
+int_values {
+  value: 79
+  count: 15
+}
+int_values {
+  value: 80
+  count: 54
+}
+int_values {
+  value: 81
+  count: 13
+}
+int_values {
+  value: 82
+  count: 38
+}
+int_values {
+  value: 83
+  count: 23
+}
+int_values {
+  value: 84
+  count: 38
+}
+int_values {
+  value: 85
+  count: 8
+}
+int_values {
+  value: 86
+  count: 32
+}
+int_values {
+  value: 87
+  count: 5
+}
+int_values {
+  value: 88
+  count: 14
+}
+int_values {
+  value: 89
+  count: 3
+}
+int_values {
+  value: 90
+  count: 26
+}
+int_values {
+  value: 91
+  count: 1
+}
+int_values {
+  value: 92
+  count: 6
+}
+int_values {
+  value: 93
+  count: 1
+}
+int_values {
+  value: 94
+  count: 6
+}
+int_values {
+  value: 95
+  count: 2
+}
+int_values {
+  value: 97
+  count: 2
+}
+int_values {
+  value: 98
+  count: 8
+}
+int_values {
+  value: 102
+  count: 6
+}

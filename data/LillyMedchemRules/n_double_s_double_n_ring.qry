@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "n_double_s_double_n_ring")
+# (A C smarts "[#6]1~[#6]N=S=N1")
+  (A C smarts "N1=S=N[#6]~[#6]1")
+)

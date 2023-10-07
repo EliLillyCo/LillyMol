@@ -22,10 +22,11 @@ then
     exit 1
 fi
 
+in=in/input.smi
 name1=output0.qry
 name1_out=out/output.qry
 diff_tool=../../fileDiff.sh
-$command  -M 'C1=CC=CC=C1CCCC' -S output >log.txt 2>err.txt
+$command -S output "$in" >log.txt 2>err.txt
 # Need sort before comparision for the order issue
 $diff_tool $name1 $name1_out
 ret=$?

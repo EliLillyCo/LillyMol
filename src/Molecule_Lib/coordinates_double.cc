@@ -3,8 +3,6 @@
 #include "coordinates.h"
 #include "atom.h"
 
-using namespace std;
-
 Coordinates_double::Coordinates_double (const Atom & a) : Space_Vector<double> (a.x (), a.y (), a.z ())
 {
 }

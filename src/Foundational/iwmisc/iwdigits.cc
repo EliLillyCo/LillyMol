@@ -4,22 +4,22 @@
 #include "iwdigits.h"
 
 void
-IWDigits::_default_values ()
+IWDigits::_default_values()
 {
   return;
 }
 
-IWDigits::IWDigits ()
+IWDigits::IWDigits()
 {
 }
 
-IWDigits::IWDigits (int mysize) : iwaray<IWString> (mysize)
+IWDigits::IWDigits(int mysize) : iwaray<IWString>(mysize)
 {
-  _fill_in_the_digits ();
+  _fill_in_the_digits();
 }
 
 void
-IWDigits::debug_print (std::ostream & output) const
+IWDigits::debug_print(std::ostream & output) const
 {
   output << "IWDigits::storing " << _number_elements << " precomputed digits\n";
   if (_leading_space.length())
@@ -40,49 +40,49 @@ IWDigits::debug_print (std::ostream & output) const
 }
 
 int
-IWDigits::set_include_leading_space (int s)
+IWDigits::set_include_leading_space(int s)
 {
   if (s && ' ' == _leading_space)   // no change
     return 1;
 
-  if (! s && 0 == _leading_space.length ())   // no change
+  if (! s && 0 == _leading_space.length())   // no change
     return 1;
 
   if (s)
     _leading_space = ' ';
   else
-    _leading_space.resize (0);
+    _leading_space.resize(0);
 
-  _fill_in_the_digits ();
+  _fill_in_the_digits();
 
   return 1;
 }
 
 int
-IWDigits::initialise (int mysize)
+IWDigits::initialise(int mysize)
 {
-  if (! iwaray<IWString>::resize (mysize))
+  if (! iwaray<IWString>::resize(mysize))
   {
-    cerr << "IWDigits::initialise: cannot size to " << mysize << endl;
+    std::cerr << "IWDigits::initialise: cannot size to " << mysize << '\n';
     return 0;
   }
 
-  _fill_in_the_digits ();
+  _fill_in_the_digits();
 
   return 1;
 }
 
 void
-IWDigits::_fill_in_the_digits ()
+IWDigits::_fill_in_the_digits()
 {
   for (int i = 0; i < _number_elements; i++)
   {
     IWString & d = _things[i];
 
-    if (_leading_space.length ())
+    if (_leading_space.length())
       d = _leading_space;
 
-    d.append_number (i);
+    d.append_number(i);
 
     if (_appended_string.length())
       d << _appended_string;
@@ -95,17 +95,17 @@ IWDigits::_fill_in_the_digits ()
 
 /*template <typename T>
 int
-IWDigits::append_number (T & buffer, int zdigit) const
+IWDigits::append_number(T & buffer, int zdigit) const
 {
   if (zdigit < 0)
   {
     zdigit = - zdigit;     // convert to something >= 0
 
-    if (_leading_space.length () > 0)
+    if (_leading_space.length() > 0)
     {
       buffer << _leading_space;
       buffer << '-';
-      buffer.append_number ( zdigit);
+      buffer.append_number( zdigit);
       return 1;
     }
     else
@@ -118,10 +118,10 @@ IWDigits::append_number (T & buffer, int zdigit) const
     return 1;
   }
 
-  if (_leading_space.length ())
+  if (_leading_space.length())
     buffer << _leading_space << zdigit;
   else
-    buffer.append_number (zdigit);
+    buffer.append_number(zdigit);
 
   if (_appended_string.length())
     buffer << _appended_string;
@@ -131,10 +131,10 @@ IWDigits::append_number (T & buffer, int zdigit) const
 
 template <typename T, typename I>
 int
-IWDigits::append_number (T & buffer, I zdigit) const
+IWDigits::append_number(T & buffer, I zdigit) const
 {
   if (zdigit < 0)
-    return _append_negative_number (buffer, zdigit);
+    return _append_negative_number(buffer, zdigit);
 
   return _append_number(buffer, zdigit);
 }
@@ -145,7 +145,7 @@ IWDigits::append_number (T & buffer, I zdigit) const
 
 template <typename T, typename I>
 int
-IWDigits::_append_negative_number (T & buffer, I zdigit) const
+IWDigits::_append_negative_number(T & buffer, I zdigit) const
 {
   if (0 == _leading_space.length())
   {
@@ -165,7 +165,7 @@ IWDigits::_append_negative_number (T & buffer, I zdigit) const
 
 template <typename T, typename I>
 int
-IWDigits::_append_number (T & buffer, I zdigit) const
+IWDigits::_append_number(T & buffer, I zdigit) const
 {
   assert (zdigit >= 0);
 
@@ -198,7 +198,7 @@ template int IWDigits::append_number<IWString, unsigned int>(IWString&, unsigned
 template int IWDigits::append_number<std::ostream, unsigned int>(std::ostream&, unsigned int) const;
 
 const IWString &
-IWDigits::string_for_digit (int zdigit) const
+IWDigits::string_for_digit(int zdigit) const
 {
   assert (zdigit >= 0 && zdigit < _number_elements);
 
@@ -206,21 +206,27 @@ IWDigits::string_for_digit (int zdigit) const
 }
 
 int
-IWDigits::set_leading_string (const const_IWSubstring & s)
+IWDigits::set_leading_string(const const_IWSubstring & s)
 {
   if (_leading_space == s)    // no change
     return 1;
 
   _leading_space = s;
 
-  if (NULL != _things)
-    _fill_in_the_digits ();
+  if (nullptr != _things)
+    _fill_in_the_digits();
     
   return 1;
 }
 
 int
-IWDigits::append_to_each_stored_string (const const_IWSubstring & s)
+IWDigits::set_leading_string(char s) {
+  IWString tmp(s);
+  return set_leading_string(tmp);
+}
+
+int
+IWDigits::append_to_each_stored_string(const const_IWSubstring & s)
 {
   for (int i = 0; i < _number_elements; i++)    // may be empty
   {
@@ -231,3 +237,16 @@ IWDigits::append_to_each_stored_string (const const_IWSubstring & s)
 
   return 1;
 }
+
+int
+IWDigits::append_to_each_stored_string(char s) {
+  for (int i = 0; i < _number_elements; i++)    // may be empty
+  {
+    _things[i] << s;
+  }
+
+  _appended_string = s;
+
+  return 1;
+}
+

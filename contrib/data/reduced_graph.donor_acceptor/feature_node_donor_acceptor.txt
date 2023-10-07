@@ -1,0 +1,4 @@
+query: "feature_node_donor_acceptor1.qry"
+query: "feature_node_donor_acceptor2.qry"
+element: "Cu"
+ring: false

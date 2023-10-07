@@ -1,5 +1,5 @@
-#ifndef COLLECTION_TEMPLATE_H
-#define COLLECTION_TEMPLATE_H
+#ifndef MOLECULE_LIB_COLLECTION_TEMPLATE_H_
+#define MOLECULE_LIB_COLLECTION_TEMPLATE_H_
 
 /*
   There are a couple of instances where we need a collection of
@@ -7,7 +7,7 @@
   The first two examples are partial charges, and atom types
 */
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 template <typename T>
 class Collection_Template : public resizable_array<T>
@@ -31,4 +31,4 @@ class Collection_Template : public resizable_array<T>
     void set_type (const IWString & t) { _type = t;}
 };
 
-#endif
+#endif  // MOLECULE_LIB_COLLECTION_TEMPLATE_H_

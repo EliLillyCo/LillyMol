@@ -1,0 +1,3 @@
+query: "aliphatic_ring_donor.qry"
+element: "Ta"
+ring: true

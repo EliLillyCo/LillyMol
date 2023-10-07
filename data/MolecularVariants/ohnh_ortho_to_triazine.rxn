@@ -1,0 +1,32 @@
+name: "ohnh_ortho_to_triazine"
+scaffold {
+  id: 0
+  smarts: "[OD1H,N1H2]-c1[cD3]([CD3](=O)-N)cccc1"
+  toggle_kekule_form {
+    bond {
+      a1: 1
+      a2: 2
+      btype: SS_DOUBLE_BOND
+    }
+  }
+  remove_atom: [0, 4]
+  change_element {
+    atom: 0
+    element: "N"
+  }
+}
+sidechain {
+  id: 1
+  reagent: "N=NN"
+  smarts: "N=NN"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 2
+    btype: SS_DOUBLE_BOND
+  }
+}

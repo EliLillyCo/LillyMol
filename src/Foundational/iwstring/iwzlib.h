@@ -1,6 +1,8 @@
 #ifndef IWZLIB_H
 #define IWZLIB_H
 
+#include <optional>
+
 /*
   I need a wrapper for zlib so we can do record oriented I/O
 */
@@ -40,7 +42,7 @@ class IW_ZLib_Wrapper
 
     void set_record_delimiter (char s) { _record_delimiter = s;}
 
-    size_t next_record (IWString &) { return 0;};
+    std::optional<size_t> next_record (IWString& destination) { return 0;};
 
     int seekg (z_off_t) { return 0;}
     z_off_t tellg () const { return 0;}
@@ -67,7 +69,7 @@ class IW_ZLib_Wrapper
     int open_file (const char *);
     int close_file ();
 
-    int active () const { return NULL != _gzfile;}
+    int active () const { return nullptr != _gzfile;}
 
     int eof () const;
 
@@ -75,7 +77,9 @@ class IW_ZLib_Wrapper
 
     void set_record_delimiter (char s) { _record_delimiter = s;}
 
-    size_t next_record (IWString &);
+    // If data can be read, place in `destination` and return the number
+    // of bytes. Otherwise return std::nullopt.
+    std::optional<size_t> next_record (IWString& destination);
 
     int seekg (z_off_t);
     z_off_t tellg () const;

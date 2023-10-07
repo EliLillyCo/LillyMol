@@ -1,0 +1,13 @@
+name: "oxazole_to_isoxazole"
+scaffold {
+  id: 0
+  smarts: "o1[cD2][nD2]cc1"
+  change_element {
+    atom: 1
+    element: "N"
+  }
+  change_element {
+    atom: 2
+    element: "C"
+  }
+}

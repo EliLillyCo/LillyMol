@@ -57,15 +57,17 @@ std::istream& operator>>(std::istream &s, Array2D<T> &A)
 
     s >> M >> N;
 
-	Array2D<T> B(M,N);
+    Array2D<T> B(M,N);
 
     for (int i=0; i<M; i++)
+    {
         for (int j=0; j<N; j++)
         {
             s >>  B[i][j];
         }
+    }
 
-	A = B;
+    A = B;
     return s;
 }
 
@@ -280,6 +282,20 @@ Array2D<T> matmult(const Array2D<T> &A, const Array2D<T> &B)
 
     return C;
 
+}
+
+// Lifted from
+// http://wiki.cs.princeton.edu/index.php/TNT
+
+template<class T>
+TNT::Array2D<T> transpose(const TNT::Array2D<T> &M)
+{
+  TNT::Array2D<T> tran(M.dim2(), M.dim1() );
+  for(int r=0; r<M.dim1(); ++r)
+    for(int c=0; c<M.dim2(); ++c)
+      tran[c][r] = M[r][c];
+
+  return tran;
 }
 
 } // namespace TNT

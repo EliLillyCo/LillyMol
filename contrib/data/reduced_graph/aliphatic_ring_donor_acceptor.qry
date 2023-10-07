@@ -1,0 +1,11 @@
+query {
+  name: "aliphatic_donor_acceptor"
+  ring_specifier {
+    aromatic: false
+    base {
+      environment: "[NH]&&[NH0,O,S]"
+      set_global_id: 1
+    }
+  }
+  smarts: "[/IWgid1]"
+}

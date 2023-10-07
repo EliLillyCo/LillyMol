@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package dicer_data;
+
+// Dicer fragments can be stored with or without isotopic information.
+// If isotopes are present, that can mean different things.
+// Note that all names are short since we store these as text_format.
+enum Isotope {
+  // the default dicer where no isotopic labels are applied.
+  NONE = 0;
+  // Where isotopes mean the points of attachment.
+  ATT = 1;
+  // The isotope is the atomic number of what as adjacent
+  Z = 2;
+  // Where the isotopes indicate the atom type of the lost atom.
+  ENV = 3;
+  // The atom type of the atom in the fragment.
+  ATYPE = 4;
+
+  // smi2linker uses this proto and needs some more options.
+  // Al and Ar atoms added to indicate aromaticity of adjacent atoms.
+  ALAR = 5;
+}
+
+message DicerFragment {
+  // What kind of smiles is this?
+  Isotope iso = 1;
+  // The unique smiles of the fragment.
+  // What is in there will be governed by what is in `iso`.
+  string smi = 2;
+  // The parent molecule that generated the first occurrence of
+  // this fragment
+  string par = 3;
+  // the number of atoms in the fragment.
+  uint32 nat = 4;
+  // The number of instances of this frgment.
+  uint32 n = 5;
+
+  // If fragments have been assigned unique ids
+  uint32 id = 6;
+};
+
+// For each pair of fragments, the number of atoms in common.
+message FragmentOverlap {
+  // Id's of the two fragments.
+  uint32 f1 = 1;
+  uint32 f2 = 2;
+  // the number of atoms in common.
+  uint32 ov = 3;
+}
+
+message DicedMolecule {
+  string name = 1;
+  string smiles = 2;
+  uint32 natoms = 3;
+  // the number of breakable bonds.
+  uint32 nbonds = 4;
+  repeated DicerFragment fragment = 5;
+
+  repeated FragmentOverlap overlap = 6;
+}

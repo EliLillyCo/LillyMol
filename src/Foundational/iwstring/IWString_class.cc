@@ -1,17 +1,26 @@
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
+
 #include <stdlib.h>
-#include <iostream>
-#include <utility>
-#include <iomanip>
-#include <limits>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 
-using std::cerr;
-using std::endl;
+#include <charconv>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <utility>
+
+#ifdef USE_FAST_FLOAT
+// Somewhat surprisingly fast_float is slower than
+// what we have. That does not make sense, debug sometime.
+#include "fast_float.h"
+#endif
 
 #include "iwstring.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   The philosophy of this class is that everything is inherited from
@@ -34,7 +43,7 @@ IWString::IWString(const char * s)
 {
   _default_values();
 
-  if (NULL == s)
+  if (nullptr == s)
     return;
 
   IWString::strncpy(s, static_cast<int>(::strlen(s)));
@@ -74,6 +83,19 @@ IWString::IWString(const char * s, int n)
   _default_values();
 
   IWString::strncpy(s, n);
+
+  return;
+}
+
+IWString::IWString(IWString&& rhs) {
+  _default_values();
+  _number_elements = rhs._number_elements;
+  _elements_allocated = rhs._elements_allocated;
+  _things = rhs._things;
+
+  rhs._number_elements = 0;
+  rhs._elements_allocated = 0;
+  rhs._things = nullptr;
 
   return;
 }
@@ -168,7 +190,7 @@ const_IWSubstring::strip_leading_blanks()
   }
 
   if (0 == _nchars)
-    _data = NULL;
+    _data = nullptr;
 
   return;
 }
@@ -206,7 +228,7 @@ const_IWSubstring::strip_trailing_blanks()
   }
 
   if (0 == _nchars)
-    _data = NULL;
+    _data = nullptr;
 
   return;
 }
@@ -600,7 +622,7 @@ const_IWSubstring::operator=(const char * rhs)
 {
   _data = rhs;
 
-  if (NULL == rhs)
+  if (nullptr == rhs)
     _nchars = 0;
   else
     _nchars = static_cast<int>(::strlen(rhs));
@@ -1545,17 +1567,25 @@ IWString::is_double(double & result) const
 int
 IWString::numeric_value(float & result) const
 {
+#ifdef USE_FAST_FLOAT
+  auto conv = fast_float::from_chars(_things, _things + _number_elements, result);
+  if (conv.ec != std::errc()) {
+    return 0;
+  }
+  return 1;
+#endif
   double tmp;
 
   if (! numeric_value(tmp))
     return 0;
 
+  // Check for overflow.
   static const double maxfloat = static_cast<double>(std::numeric_limits<float>::max());
 
   if (fabs(tmp) > maxfloat)
     return 0;
 
-  result = static_cast<float>(tmp);    // check for overflow!!!
+  result = tmp;
 
   return 1;
 }
@@ -1563,6 +1593,13 @@ IWString::numeric_value(float & result) const
 int
 IWString::numeric_value(double & result) const
 {
+#ifdef USE_FAST_FLOAT
+  auto conv = fast_float::from_chars(_things, _things + _number_elements, result);
+  if (conv.ec != std::errc()) {
+    return 0;
+  }
+  return 1;
+#endif
   return iw_parse_numeric(_things, _number_elements, result);
 }
 
@@ -2064,9 +2101,9 @@ IWString::locate_word_beginnings_single_delimiter(resizable_array<int> & word_be
 */
 
 static int
-internal_nextword (const char * s, int nchars, int & i,
-                   char separator,
-                   int & istart, int & istop)
+internal_nextword(const char * s, int nchars, int & i,
+                  char separator,
+                  int & istart, int & istop)
 {
   if (i >= nchars)
     return 0;
@@ -2100,22 +2137,22 @@ internal_nextword (const char * s, int nchars, int & i,
 }
   
 static int
-internal_nextword (IWString & result, int & i,
-                   char separator,
-                   const char * s, int nchars)
+internal_nextword(IWString & result, int & i,
+                  char separator,
+                  const char * s, int nchars)
 {
-  result.resize_keep_storage (0);
+  result.resize_keep_storage(0);
 
   int istart, istop;
 
-  if (! internal_nextword (s, nchars, i, separator, istart, istop))
+  if (! internal_nextword(s, nchars, i, separator, istart, istop))
     return 0;
 
 //cerr << "After STRING determination, istart = " << istart << " istop = " << istop << endl;
 
-  result.resize (istop - istart + 1);
+  result.resize(istop - istart + 1);
 
-  result.set (s + istart, istop - istart + 1);
+  result.set(s + istart, istop - istart + 1);
 
   return 1;
 }
@@ -2125,20 +2162,20 @@ internal_nextword (IWString & result, int & i,
 static
 #endif
 int
-internal_nextword (const_IWSubstring & result, int & i,
-                   char separator,
-                   const char * s, int nchars)
+internal_nextword(const_IWSubstring & result, int & i,
+                  char separator,
+                  const char * s, int nchars)
 {
-  result.set (NULL, 0);
+  result.set(nullptr, 0);
 
   int istart, istop;
 
-  if (! internal_nextword (s, nchars, i, separator, istart, istop))
+  if (! internal_nextword(s, nchars, i, separator, istart, istop))
     return 0;
 
 //cerr << "After determination, istart = " << istart << " istop = " << istop << endl;
 
-  result.set (&s[istart], istop - istart + 1);
+  result.set(&s[istart], istop - istart + 1);
 
   return 1;
 }
@@ -2150,9 +2187,9 @@ internal_nextword (const_IWSubstring & result, int & i,
 */
 
 static int
-internal_prevword (IWString & result, int & i,
-                   char separator,
-                   const char * s)
+internal_prevword(IWString & result, int & i,
+                  char separator,
+                  const char * s)
 {
   if (i <= 0)
     return 0;
@@ -2310,17 +2347,17 @@ IWString::from_to(int istart, const char * s) const
   assert (istart >= 0 && istart < _number_elements);
 
   if (0 == _number_elements)
-    return const_IWSubstring(NULL, 0);
+    return const_IWSubstring(nullptr, 0);
 
   int lens = static_cast<int>(strlen(s));
 
   if (0 == lens)
-    return const_IWSubstring(NULL, 0);
+    return const_IWSubstring(nullptr, 0);
 
   int i = do_find(_things, _number_elements, s, lens);
 
   if (i < 0)
-    return const_IWSubstring(NULL, 0);
+    return const_IWSubstring(nullptr, 0);
 
   return const_IWSubstring(&_things[istart], i - istart + 1);
 }
@@ -2424,7 +2461,7 @@ IWString::operator=(char c)
 
 const_IWSubstring::const_IWSubstring()
 {
-  _data = NULL;
+  _data = nullptr;
   _nchars = 0;
 
   return;
@@ -2439,7 +2476,7 @@ const_IWSubstring::const_IWSubstring(const char * data, int nchars) :
 const_IWSubstring::const_IWSubstring(const char * data) :
           _data(data)
 {
-  if (NULL != data)
+  if (nullptr != data)
     _nchars = static_cast<int>(::strlen(data));
   else
     _nchars = 0;
@@ -3061,12 +3098,20 @@ set_default_iwstring_float_concatenation_precision (int s)
 }
 
 void
-IWString::append_number(float f)
+IWString::append_number(float f, int fprecision)
 {
-  char buffer[100];
-  gcvt(static_cast<double>(f), float_precision, buffer);
+  char buffer[32];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+  gcvt(static_cast<double>(f), fprecision, buffer);
+#pragma GCC diagnostic pop
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
   return;
+}
+
+void
+IWString::append_number(float f) {
+  append_number(f, float_precision);
 }
 
 static int double_precision = 10;
@@ -3080,27 +3125,17 @@ set_default_iwstring_double_concatenation_precision (int s)
 void
 IWString::append_number(double d)
 {
-  char buffer[32];
-  gcvt(d, double_precision, buffer);
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-
-  return;
-}
-
-void
-IWString::append_number(float f, int fprecision)
-{
-  char buffer[100];
-  gcvt(static_cast<double>(f), fprecision, buffer);
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-  return;
+  append_number(d, double_precision);
 }
 
 void
 IWString::append_number(double d, int dprecision)
 {
   char buffer[32];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
   gcvt(d, dprecision, buffer);
+#pragma GCC diagnostic pop
   resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
   return;
 }
@@ -3390,7 +3425,7 @@ expand_environment_variables (const char * old_name, IWString & expanded_name)
 
   const char * env = getenv(buffer);
 
-  if (NULL == env)
+  if (nullptr == env)
   {
     cerr << "expand_environment_variables: no env value for '" << buffer << "'\n";
     return 0;
@@ -3638,7 +3673,7 @@ IWString::append_with_spacer(const const_IWSubstring zextra, char spacer)
   }
 
   if (_elements_allocated < _number_elements + 1 + zextra.nchars())
-    resize (_number_elements + 1 + zextra.nchars());
+    resize(_number_elements + 1 + zextra.nchars());
 
   *this << spacer << zextra;
 
@@ -4088,7 +4123,7 @@ common_split (const char * s,
               IWString * tokens,
               char separator)
 {
-  assert (NULL != tokens);
+  assert (nullptr != tokens);
 
   int i = 0;
   const_IWSubstring token;
@@ -5252,6 +5287,11 @@ char_name_to_char(IWString & s)
     s = '`';
     return 1;
   }
+
+  else if (s == "empty") {
+    s.resize(0);
+    return 1;
+  }
   
   if ("help" == s)
   {
@@ -5313,7 +5353,7 @@ const_IWSubstring::expand_environment_variables(IWString & destination) const
     }
 
     const char * env = getenv(v.null_terminated_chars());
-    if (NULL == env)
+    if (nullptr == env)
     {
       cerr << "const_IWSubstring::expand_environment_variables:no value for '" << env << "'\n";
       return 0;
@@ -5327,3 +5367,91 @@ const_IWSubstring::expand_environment_variables(IWString & destination) const
   return rc;
 }
 
+constexpr char open_brace = '{';
+constexpr char close_brace = '}';
+
+std::optional<IWString>
+IWString::ExpandEnvironmentVariables() const {
+  IWString result;
+  // Must contain at least ${x}.
+  if (_number_elements < 4) {
+    result = *this;
+    return result;
+  }
+
+  result.resize(_number_elements + 50);  // just a guess, might even shrink...
+
+  for (int i = 0; i < _number_elements; ++i) {
+    if ('$' != _things[i]) {
+      result += _things[i];
+      continue;
+    }
+
+    if (i == _number_elements - 1) {  // ends with $.
+      result += '$';
+      return result;
+    }
+
+    if (_things[i + 1] != open_brace) {  // $ without following braces, not expanded.
+      result += '$';
+      continue;
+    }
+
+    i += 2;  // skip over $ and opening brace
+
+    int start_of_variable = i;
+    int closing_brace = -1;
+    for ( ; i < _number_elements; ++i) {
+      if (_things[i] == close_brace) {
+        closing_brace = i;
+        break;
+      }
+    }
+    if (closing_brace < 0) {
+      cerr << "IWString::ExpandEnvironmentVariables:no closing brace '" << *this << "'\n";
+      return std::nullopt;
+    }
+
+    if (start_of_variable == closing_brace) {
+      cerr << "IWString::ExpandEnvironmentVariables:empty variable spec '" << *this << "'\n";
+      return std::nullopt;
+    }
+
+    // cerr << "varname from " << start_of_variable << " to " << closing_brace << '\n';
+    IWString vname(_things + start_of_variable, closing_brace - start_of_variable);
+    // cerr << "Variable is '" << vname << "'\n";
+
+    const char * env = getenv(vname.null_terminated_chars());
+    if (nullptr == env)
+    {
+      cerr << "IWString::ExpandEnvironmentVariables:no value for '" << vname << "'\n";
+      return std::nullopt;
+    }
+    // cerr << "Expanded '" << vname << "' to '" << env << "'\n";
+
+    result += env;
+    i = closing_brace;
+  }
+
+  return result;
+}
+
+std::string
+IWString::AsString() const {
+  if (_number_elements == 0) {
+    return std::string();
+  }
+
+  return std::string(_things, _number_elements);
+}
+
+std::string
+const_IWSubstring::AsString() const {
+  if (_nchars == 0) {
+    return std::string();
+  }
+
+  char * copy = new char[_nchars];
+  std::copy_n(_data, _nchars, copy);
+  return std::string(copy, _nchars);
+}

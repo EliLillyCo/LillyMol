@@ -1,0 +1,6 @@
+name: "ortho_para_halogen_to_para"
+scaffold {
+  id: 0
+  smarts: "[cD3x2]1:[cD3](-[F,Cl,Br,I]):[cD2]:[cD3](-[F,Cl,Br,I]):[cD2]:[cD2]1"
+  remove_atom: 2
+}

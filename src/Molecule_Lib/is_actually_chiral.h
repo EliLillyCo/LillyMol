@@ -1,5 +1,5 @@
-#ifndef IS_ACTUALLY_CHIRAL_H
-#define IS_ACTUALLY_CHIRAL_H
+#ifndef MOLECULE_LIB_IS_ACTUALLY_CHIRAL_H_
+#define MOLECULE_LIB_IS_ACTUALLY_CHIRAL_H_
 
 #include "iwmtypes.h"
 #include "path_scoring.h"
@@ -17,4 +17,4 @@ extern void set_allow_unsaturated_atoms_to_be_chiral (int s);
 
 extern void set_max_iterations (int m);
 
-#endif
+#endif  // MOLECULE_LIB_IS_ACTUALLY_CHIRAL_H_

@@ -1,0 +1,35 @@
+// Proto describing molecule to Graph transformations.
+
+syntax = "proto3";
+
+package LLYMol;
+
+message Mol2Graph {
+    // Triple bonds are usually isolated and do not need to be
+    // converted to single bonds.
+    bool exclude_triple_bonds_from_graph_reduction = 1;
+
+    // Almost always chiral centres will be removed.
+    bool remove_chiral_centres = 2;
+
+    // Almost certainly directional bonds should be made non
+    // directional.
+    bool revert_all_directional_bonds_to_non_directional = 3;
+
+    // If a C=C bond is attached to fuly saturated neighbors, then
+    // there will be no need to convert that bond to single.
+    bool preserve_cc_double_bonds_saturated = 4;
+
+    // If a C=C bond is attached to fully saturated Carbon neighbors,
+    // there will be no need to convert that bond to single.
+    bool preserve_cc_double_bonds_no_heteroatoms = 5;
+    
+    // Append the molecular formula to the smiles.
+    bool append_molecular_formula = 6;
+
+    // Whether this an aromatic variant of the molecular formula is used.
+    bool aromatic_distinguishing_formula = 7;
+
+    // If any of the other attributes are set, this should also be set.
+    bool active = 8;
+}

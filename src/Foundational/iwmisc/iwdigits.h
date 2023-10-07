@@ -1,7 +1,7 @@
 #ifndef IWDIGITS_H
 #define IWDIGITS_H
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 class IWDigits : public iwaray<IWString>
 {
@@ -35,8 +35,10 @@ class IWDigits : public iwaray<IWString>
     const IWString & string_for_digit (int) const;
 
     int set_leading_string (const const_IWSubstring &);
+    int set_leading_string (char s);
 
     int append_to_each_stored_string (const const_IWSubstring &);
+    int append_to_each_stored_string (char s);
 };
 
 /*
@@ -64,30 +66,31 @@ class Fraction_as_String
 
 //  private functions
 
-   void _append_number_no_string_rep (IWString & s, float f) const;
-   int  _fill_string_data ();
+   void _append_number_no_string_rep(IWString & s, float f) const;
+   int  _fill_string_data();
 
   public:
-    Fraction_as_String ();
-    ~Fraction_as_String ();
+    Fraction_as_String();
+    ~Fraction_as_String();
 
-    int initialise (float, float, int);
+    int initialise(float minval, float maxval, int digits);
 
     int nbuckets() const { return _nbuckets;}
 
-    int active () const { return NULL != _fraction;}
+    int active() const { return nullptr != _fraction;}
 
-    int set_include_leading_space (int);
+    int set_include_leading_space(int);
 
-    int append_to_each_stored_string (const const_IWSubstring &);
+    int append_to_each_stored_string(const const_IWSubstring &);
 
-    int set_leading_string (const const_IWSubstring &);
+    int set_leading_string(const const_IWSubstring &);
+    int set_leading_string(char c);
 
-    const IWString & string_for_fraction (float f) const;
+    const IWString & string_for_fraction(float f) const;
 
-    void append_number (IWString &, float) const;
+    void append_number(IWString &, float) const;
 
-    void set_small_non_zero_numbers_written_as_zero (int s) { _small_non_zero_numbers_written_as_zero = s;}
+    void set_small_non_zero_numbers_written_as_zero(int s) { _small_non_zero_numbers_written_as_zero = s;}
 };
 
 #endif

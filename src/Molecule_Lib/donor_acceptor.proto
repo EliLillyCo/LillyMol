@@ -1,0 +1,33 @@
+syntax = "proto2";
+
+package BrunsDonorAcceptor;
+
+// Description of the Bruns Hbond donor acceptor assignment class.
+message BrunsDonorAcceptor {
+  // Names of the query files describing donors.
+  repeated string donor = 1;
+  // Names of the query files describing acceptors.
+  repeated string acceptor = 2;
+
+  // The default isotopes applied.
+  optional uint32 acceptor_isotope = 3 [default = 1];
+  optional uint32 dual_isotope = 4 [default = 2];
+  optional uint32 donor_isotope = 5 [default = 3];
+
+  // Various controls on how to pass information back to the caller.
+
+  optional bool apply_isotopic_labels = 6;
+
+  // Rather than overwrite any existing isotopic label, we can increment
+  // what is already there.
+  optional bool add_to_existing_isotopic_label = 7;
+
+  // By default, explicit Hydrogens are temporarily detached during computation.
+  // If it is known that the imput molecules have no explicit Hydrogens,
+  // checking for them can be skipped.
+  optional bool check_explicit_hydrogens = 8 [default = true];
+
+  // Instead of applying isotopic labels, we can set bits in an int.
+  // (IAW) Unsure of how this is being used.
+  optional bool apply_atom_type_labels = 9;
+}

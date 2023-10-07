@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <iostream>
-using namespace std;
 
 #include "iwaray.h"
 #include "iwrandom.h"

@@ -4,8 +4,8 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "System variables LILLYMOL_HOME and BUILD_DIR are required for running the test"
     echo "Please export LILLYMOL_HOME (local path to LillyMol code)"
     echo "Please export BUILD_DIR (the folder name under the bin folder after build)"
-    echo "Example: export LILLYMOL_HOME=/home/user/LillyMol"
-    echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
+    echo "Example: export LILLYMOL_HOME=/path/to/LillyMolPrivate"
+    echo "Example: export BUILD_DIR=Linux" 
     exit 1
 else
     BIN_DIR="$LILLYMOL_HOME/bin/$BUILD_DIR"
@@ -49,7 +49,7 @@ $command \
    -N F:${queries_dir}/charges/queries \
    -H a=F:${queries_dir}/hbonds/acceptor \
    -H d=${queries_dir}/hbonds/donor.qry -H label \
-   -l -g all -A D -u 0 -b 5 -O complex -O dm -O quiet -E autocreate \
+   -l -g all -A D -u 0 -b 5 -O complex -O dm -B quiet -E autocreate \
    "$in" > "$out" 2>> err.txt
 $diff_tool "$out" "$cmp_out"
 ret=$?

@@ -1,0 +1,17 @@
+query {
+  ring_system_specifier {
+    rings_in_system: 2
+    aromatic_ring_count: 1
+    ring_systems_extend_across_spiro_fusions: true
+    ring_size_requirement {
+      ring_size: 5
+      count: 1
+    }
+    base {
+      environment: "[/IWrid1r5AG0]@[/IWrid1r5AG0]@[/IWrid1r5AG0]&&[$([r5N]);!$(N-[C,S]=O);!$(N!@a)]"
+      environment_can_match_in_ring_atoms: true
+      set_global_id: 1
+    }
+  }
+  smarts: "[/IWgid1A]"
+}

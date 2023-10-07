@@ -1,0 +1,6 @@
+(5 Query
+  (A C Comment "cyano_methyl_amine")
+
+  (A I Version 2)
+  (A C smarts "[ND1]#C-[CG0]-[NG0]")
+)

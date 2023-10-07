@@ -1,0 +1,93 @@
+# NAME Abraham 
+
+# INTERCEPT r2=0.248 pi2h=0.277 beta2h=0.071 beta2o=0.064 logl=0.130 
+
+# MIN r2=0.273 pi2h=0.547 beta2h=0.217 beta2o=0.212 logl=4.138
+
+# MAX r2=4.746 pi2h=5.643 beta2h=3.938 beta2o=4.052 logl=23.448
+
+[CD1H3] CSP33 #1 ISO=1 r2=-0.104 pi2h=-0.075 beta2h=0.007 beta2o=0 logl=0.321
+[CD2H2] CSP32 #2 ISO=2 r2=0 pi2h=0 beta2h=0 beta2o=0 logl=0.499
+[CD3H1] CSP31 #3 ISO=3 r2=0.089 pi2h=0.036 beta2h=0.011 beta2o=0.020 logl=0.449
+[CD4H0] CSP30 #4 ISO=4 r2=0.187 pi2h=0.071 beta2h=0.037 beta2o=0.047 logl=0.443
+[CD1H2] CSP22 #5 ISO=5 r2=-0.045 pi2h=-0.085 beta2h=0.019 beta2o=0.024 logl=0.244
+[$([CD2H1]),$([cH])] CSP21 #6 ISO=6 r2=0.068 pi2h=0.050 beta2h=0.011 beta2o=0.012 logl=0.469
+[$([CD3H0]),$([cH0R1])] CSP20 #7 ISO=7 r2=0.180 pi2h=0.101 beta2h=0 beta2o=0 logl=0.624
+[cH0&!R1] CFA #8 ISO=8 r2=0.3 pi2h=0.121 beta2h=0.019 beta2o=0.018 logl=0.744
+[CD2G2] CSP #9 ISO=9 r2=0.040 pi2h=0.034 beta2h=0.028 beta2o=0.032 logl=0.332
+
+
+[NH2]-[/IWxA] NSP32 #10 ISO=10 r2=0.085 pi2h=0.175 beta2h=0.481 beta2o=0.486 logl=0.781
+[NH2]-[/IWxa] NSP32A #11 ISO=11 r2=0.163 pi2h=0.383 beta2h=0.275 beta2o=0.326 logl=0.949
+[ND2H]([/IWxA])-[/IWxA] NSP31 #12 ISO=12 r2=0.138 pi2h=0.265 beta2h=0.541 beta2o=0.543 logl=0.568
+[ND2H]([/IWxA])-[/IWxa] NSP31A #13 ISO=13 r2=0.192 pi2h=0.311 beta2h=0.415 beta2o=0.426 logl=0.912
+[nH] PYRROLH #14 ISO=14 r2=-0.030 pi2h=0.221 beta2h=0.316 beta2o=0.267 logl=1.250
+[ND3H0](-[/IWxA])(-[/IWxA])-[/IWxA] NSP30 #15 ISO=15 r2=0.220 pi2h=0.323 beta2h=0.653 beta2o=0.655 logl=0.400
+[#7D3H0G0]~[/IWxa] NSP30A #16 ISO=16 r2=0.346 pi2h=0.295 beta2h=0.321 beta2o=0.388 logl=0.869
+[nD3] PYRROL #17 ISO=17 r2=0.083 pi2h=0.265 beta2h=0.392 beta2o=0.388 logl=0.794
+[NR0D2v3] NSP2_r0 #18 ISO=18 r2=0.117 pi2h=0.125 beta2h=0.200 beta2o=0.202 logl=-0.235
+[NRD2v3] NSP2_r #19 ISO=19 r2=0.121 pi2h=0.254 beta2h=0.596 beta2o=0.589 logl=-0.240
+[nH0D2] NPYRI #20 ISO=20 r2=0.046 pi2h=0.223 beta2h=0.321 beta2o=0.300 logl=0.574
+N#C-[/IWxA] CYNAL #21 NCLAIM=1 NCHECK=1 ISO=21 r2=0 pi2h=0.694 beta2h=0.242 beta2o=0.245 logl=0.757
+N#C-[/IWxa] CYNAR #22 NCLAIM=1 NCHECK=1 ISO=22 r2=0 pi2h=0.390 beta2h=0.103 beta2o=0.093 logl=0.732
+N(=O)(=O)-[/IWxA] NITRAL #23 NCLAIM=1 NCHECK=1 ISO=23 r2=0.200 pi2h=0 beta2h=-0.476 beta2o=-0.595 logl=0.278
+N(=O)(=O)-[/IWxa] NITRAR #24 NCLAIM=1 NCHECK=1 ISO=24 r2=0.210 pi2h=-0.231 beta2h=-0.525 beta2o=-0.533 logl=0.347
+ON(=O)(=O) NITRATE #25 ISO=25 r2=0 pi2h=-0.476 beta2h=-0.204 beta2o=-0.202 logl=0
+[OH] HYDROX #26 ISO=26 r2=0.061 pi2h=0.247 beta2h=0.307 beta2o=0.311 logl=0.672
+[OD2R0] ETHNC #27 ISO=27 r2=0.014 pi2h=0.185 beta2h=0.211 beta2o=0.226 logl=0.360
+[OD2R] ETHC #28 ISO=28 r2=0.013 pi2h=0.185 beta2h=0.331 beta2o=0.330 logl=0.359
+[o] OAROM #29 ISO=29 r2=-0.125 pi2h=0 beta2h=0.047 beta2o=0.060 logl=0.057
+[OD1v2] OSP2 #30 ISO=30 r2=-0.041 pi2h=0.370 beta2h=0.334 beta2o=0.339 logl=0.495
+[SD2G0] SSP3 #31 ISO=31 r2=0.330 pi2h=0.189 beta2h=0.168 beta2o=0.175 logl=1.258
+s Sar #32 ISO=32 r2=0.116 pi2h=0 beta2h=0.043 beta2o=0.083 logl=0.848
+[SD1v2] SSP21 #33 ISO=33 r2=0.364 pi2h=0.618 beta2h=0.071 beta2o=0.069 logl=0.954
+[SD3v4] SSP2 #34 ISO=34 r2=0.413 pi2h=1.065 beta2h=0.448 beta2o=0.319 logl=2.196
+O[SD4](=O)(=O) Sulphon #35 ISO=35 r2=0 pi2h=-0.505 beta2h=-0.188 beta2o=-0.190 logl=0
+[#16] Sother #36 ISO=36 r2=0.465 pi2h=0.643 beta2h=0 beta2o=0 logl=0.554
+P P #37 ISO=37 r2=0.295 pi2h=0.703 beta2h=1.183 beta2o=1.189 logl=2.051
+[F]-[/IWxA] FLUAL #38 ISO=38 r2=-0.180 pi2h=-0.042 beta2h=-0.036 beta2o=-0.033 logl=-0.143
+[F]-[/IWxa] FLUAR #39 ISO=39 r2=-0.230 pi2h=0 beta2h=0 beta2o=0 logl=-0.147
+Cl CL #40 ISO=40 r2=0.023 pi2h=0.082 beta2h=0 beta2o=0 logl=0.669
+Br BR #41 ISO=41 r2=0.196 pi2h=0.161 beta2h=-0.011 beta2o=0 logl=1.097
+I IOD #42 ISO=42 r2=0.533 pi2h=0.198 beta2h=0 beta2o=0 logl=1.590
+[OD2R0]-[CD3R0]=O ESTER_r0 #43 ISO=43 r2=-0.113 pi2h=-0.225 beta2h=-0.206 beta2o=-0.223 logl=-0.390
+[OD2R]-[CR]=O ESTER_r #44 ISO=44 r2=0 pi2h=0.360 beta2h=-0.214 beta2o=-0.169 logl=0.406
+O=P[O;H0] PHOSPHON #45 ISO=45 r2=-0.100 pi2h=-0.240 beta2h=-0.394 beta2o=-0.408 logl=-0.483
+OC(=O)O CARBONATE #46 ISO=46 r2=0 pi2h=-0.190 beta2h=-0.267 beta2o=-0.298 logl=0
+[OD1]=C-[OH] CACID #47 ISO=47 r2=-0.192 pi2h=-0.412 beta2h=-0.308 beta2o=-0.312 logl=-0.369
+O=C!@N-[/IWxa] AMIDEar #48 ISO=48 r2=0.221 pi2h=-0.076 beta2h=-0.095 beta2o=-0.038 logl=0
+O=C!@[$([NH2]),$([NH]([A;!H])-[A;!H]);!$([NH]([A;!H])-a)] AMIDEal #49 ISO=49 r2=0 pi2h=0.175 beta2h=-0.287 beta2o=-0.292 logl=0.603
+[OD1]=[C;r4]@N lactam #50 ISO=50 r2=0.061 pi2h=-0.100 beta2h=-0.231 beta2o=-0.242 logl=0.583
+[SD4](=O)(=O)N SULPHONAMIDE #51 ISO=51 r2=-0.111 pi2h=-0.569 beta2h=-0.446 beta2o=-0.443 logl=0
+NC(=O)N UREA #52 ISO=52 r2=-0.110 pi2h=-0.553 beta2h=-0.076 beta2o=-0.054 logl=0
+[OD2]C(=O)N CARBAMATE #53 ISO=53 r2=0 pi2h=-0.588 beta2h=-0.252 beta2o=-0.251 logl=0
+O=CNC=O IMIDE #54 ISO=54 r2=0 pi2h=-0.510 beta2h=-0.148 beta2o=-0.149 logl=0
+[OD1]=[#6R]1@[#6]!-[#6]~[#6](=[O;D1])~[#6]!-[#6]~1 QUINONE #55 ISO=55 r2=0 pi2h=-0.411 beta2h=-0.051 beta2o=-0.050 logl=0
+C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)]) CX2 #56 ISO=56 NCLAIM=1 r2=-0.017 pi2h=-0.050 beta2h=-0.014 beta2o=-0.016 logl=-0.111
+C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)])C([$([F,Cl,I,Br]),$(N(=O)(=O)),$(C(F)(F)F),$(C#N)]) XCCX #57 ISO=57 NCLAIM=1 r2=0.012 pi2h=0 beta2h=0.013 beta2o=0.010 logl=0.054
+C1CCC2C1C1CCC3CCCCC3C1CC2 STEROID #58 ISO=58 r2=0.285 pi2h=1.029 beta2h=0.267 beta2o=0.218 logl=0.488
+
+[OH]CC[O,N] HB1 #59 ISO=59 NCLAIM=0 NCHECK=0 r2=0.029 pi2h=-0.067 beta2h=0 beta2o=0 logl=-0.072
+[OH]C[C,N]=[O,S] HB2 #60 ISO=60 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.095 beta2h=-0.068 beta2o=-0.090 logl=-0.337
+[OH]c1ccccc1[O,N;!$(N(=O)(=O))] HB3 #61 ISO=61 NCLAIM=0 NCHECK=0 r2=-0.069 pi2h=-0.237 beta2h=-0.079 beta2o=-0.122 logl=0
+[OH]c1ccccc1C=[O,S] HB4 #62 ISO=62 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.344 beta2h=-0.387 beta2o=-0.403 logl=-0.303
+[OH]c1ccccc1[$(N(=O)(=O))] HB5 #63 ISO=63 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.276 beta2h=-0.126 beta2o=-0.120 logl=-0.364
+[N;!H0]CC[O,N] HB6 #64 ISO=64 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.102 beta2h=0 beta2o=0 logl=0.062
+[N;!H0]c1ccccc1[O,N] HB7 #65 ISO=65 NCLAIM=0 NCHECK=0 r2=0 pi2h=0 beta2h=-0.059 beta2o=-0.027 logl=0
+[N;!H0]c1ccccc1[#6,#7]=[O,S] HB8 #66 ISO=66 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.140 beta2h=-0.045 beta2o=-0.069 logl=0.169
+[OH]c1ccccc1[Cl,Br,I] HB9 #67 ISO=67 NCLAIM=0 NCHECK=0 r2=-0.100 pi2h=-0.120 beta2h=-0.130 beta2o=-0.130 logl=-0.400
+
+[OD1H]-C-C-[OH] DIOL #68 ISO=68 r2=-0.043 pi2h=0.052 beta2h=0 beta2o=-0.018 logl=0.100
+n1naaaa1 NarNar #69 ISO=69  NCLAIM=0 r2=0.092 pi2h=0.024 beta2h=-0.132 beta2o=-0.094 logl=-0.179
+n1[o,s]aaa1 NarOS #70 ISO=70 NCLAIM=0 r2=-0.113 pi2h=0.047 beta2h=-0.157 beta2o=-0.141 logl=0
+n1cnaaa1 NCN #71 ISO=71 NCLAIM=0 r2=0 pi2h=-0.040 beta2h=-0.098 beta2o=-0.113 logl=0.042
+n1c[o,s]aa1 NarcOS #72 ISO=72 NCLAIM=0 r2=0.052 pi2h=0.087 beta2h=-0.170 beta2o=-0.184 logl=0.209
+n1ccnaa1 NarccNar #73 ISO=73 NCLAIM=0 r2=0 pi2h=-0.051 beta2h=-0.089 beta2o=-0.073 logl=-0.058
+[F,Cl,Br,I,N,O,S]-c1ccccc1-[F,Cl,Br,I,N,O,S] ORTHO #74 ISO=74 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.043 beta2h=0.031 beta2o=0.025 logl=-.081
+[F,Cl,Br,I,N,O,S]-c1cc([F,Cl,Br,I,N,O,S])ccc1 META #75 ISO=75 NCLAIM=0 NCHECK=0 r2=0 pi2h=-0.038 beta2h=-0.035 beta2o=-0.033 logl=-0.026
+[F,Cl,Br,I,N,O,S]-c1ccc([F,Cl,Br,I,N,O,S])cc1 PARA #76 ISO=76 NCLAIM=0 NCHECK=0 r2=0 pi2h=0 beta2h=-0.023 beta2o=-0.025 logl=0
+O=PN PHOSPHAMIDE #77 ISO=77 r2=-0.080 pi2h=-0.452 beta2h=-0.668 beta2o=-0.668 logl=0
+N-c:n oNH2pyridine #78 ISO=78 r2=0.185 pi2h=0.098 beta2h=-0.042 beta2o=-0.057 logl=0.149
+[OH]-[CX4]-[/IWxc] BENZYLOH #79 ISO=79 r2=0 pi2h=0 beta2h=0.131 beta2o=0.129 logl=-0.145
+[OD1]=[#7v<5] NOXIDE #80 ISO=80 r2=0 pi2h=0.434 beta2h=-0.408 beta2o=-0.405 logl=0
+[/IWxA]-O-c:c-O-[/IWxA] DIMEOXY #81 ISO=81 r2=0 pi2h=0.380 beta2h=-0.216 beta2o=-0.218 logl=0

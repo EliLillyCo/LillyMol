@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "string_data_source.h"
 
@@ -15,9 +16,9 @@ String_Data_Source::_default_values()
   return;
 }
 
-String_Data_Source::String_Data_Source (const char * s)
+String_Data_Source::String_Data_Source(const char * s)
 {
-  assert (NULL != s);
+  assert (nullptr != s);
 
   _default_values();
 
@@ -29,7 +30,7 @@ String_Data_Source::String_Data_Source (const char * s)
 String_Data_Source::String_Data_Source(const char * s,
                                        int notused)
 {
-  assert (NULL != s);
+  assert (nullptr != s);
 
   _default_values();
 
@@ -43,14 +44,14 @@ String_Data_Source::String_Data_Source(const char * s,
 */
 
 int
-String_Data_Source::good () const
+String_Data_Source::good() const
 {
   return 1;
 }
 
 template <typename T>
 int
-String_Data_Source::next_record (T & buffer)
+String_Data_Source::next_record(T & buffer)
 {
   if ('\0' == _src[_iptr])
     return 0;
@@ -89,7 +90,7 @@ String_Data_Source::push_record()
 {
   if (0 == _iptr)
   {
-    cerr << "String_Data_Source::push_record:at beginning\n";
+    std::cerr << "String_Data_Source::push_record:at beginning\n";
     return 0;
   }
 
@@ -113,13 +114,13 @@ String_Data_Source::push_record()
 }
 
 int
-String_Data_Source::seekg (off_t o)
+String_Data_Source::seekg(off_t o)
 {
-  size_t s = strlen(_src);
+  const size_t s = strlen(_src);
 
-  if (o > s)
+  if (o > static_cast<off_t>(s))
   {
-    cerr << "String_Data_Source::seekg:cannot seek to " << o << ", len " << strlen(_src) << '\n';
+    std::cerr << "String_Data_Source::seekg:cannot seek to " << o << ", len " << strlen(_src) << '\n';
     return 0;
   }
 
@@ -129,7 +130,7 @@ String_Data_Source::seekg (off_t o)
 }
 
 int
-String_Data_Source::most_recent_record (IWString & buffer) const
+String_Data_Source::most_recent_record(IWString & buffer) const
 {
   if ('\0' == _src[_iptr])
     return 0;

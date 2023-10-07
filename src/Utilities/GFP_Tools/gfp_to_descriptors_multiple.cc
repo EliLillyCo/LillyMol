@@ -1,24 +1,23 @@
-/*
-  Echo's fingerpints from a fingerprint file
-*/
+// Converts multiple fingerprints to descriptor form.
 
-#include <memory>
-#include <limits>
 #include <iostream>
-using std::cerr;
-using std::endl;
+#include <limits>
+#include <memory>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iwdigits.h"
-#include "iw_stl_hash_map.h"
-#include "accumulator.h"
-#include "iw_tdt.h"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "gfp.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -79,7 +78,13 @@ static char output_separator = ' ';
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Converts a fingerprint set from a gfp file to a descriptor file\n";
   cerr << " -F <tag>       specify tag of the fingerprint to be processed, standard .gfp syntax\n";
 //cerr << " -m             molecular properties\n";
@@ -134,26 +139,26 @@ static int
 write_descriptors(const IWString & pcn,
                   const int * tmp, 
                   const int number_descriptors, 
-                  IWString_and_File_Descriptor & output_buffer)
+                  IWString_and_File_Descriptor & output)
 {
-  output_buffer << pcn;
+  output << pcn;
 
   for (int i = 0; i < number_descriptors; i++)
   {
     if (tmp[i] >= 0)
-      iwdigits.append_number(output_buffer, tmp[i]);
+      iwdigits.append_number(output, tmp[i]);
     else if (write_zero_count_as_negative_one)
-      output_buffer << output_separator << "-1";
+      output << output_separator << "-1";
     else
     {
       cerr << "Unexpected negative value, i = " << i << " value " << tmp[i] << endl;
-      output_buffer << ' ' << tmp[i];
+      output << ' ' << tmp[i];
     }
   }
 
-  output_buffer.add('\n');
+  output.add('\n');
 
-  output_buffer.write_if_buffer_holds_more_than(4096);
+  output.write_if_buffer_holds_more_than(4096);
 
   return 1;
 }

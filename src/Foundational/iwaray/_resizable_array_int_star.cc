@@ -13,7 +13,7 @@ unused ()
   resizable_array_base<int *> foo;
 
   foo.item (0);
-  foo.add (static_cast<int *> (NULL));
+  foo.add (static_cast<int *> (nullptr));
 }
 
 #endif

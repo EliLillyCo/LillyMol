@@ -1,5 +1,5 @@
-#ifndef PATH_SCORING_H
-#define PATH_SCORING_H
+#ifndef MOLECULE_LIB_PATH_SCORING_H_
+#define MOLECULE_LIB_PATH_SCORING_H_
 
 class Atom;
 #include "iwmtypes.h"
@@ -170,4 +170,4 @@ extern int resolved (resizable_array_p<Path_Scoring> &, int &);
 
 extern int assign_ranks (resizable_array_p<Path_Scoring> & ps);
 
-#endif
+#endif  // MOLECULE_LIB_PATH_SCORING_H_

@@ -1,0 +1,73 @@
+# RuleClass rings
+# SubClass cycloalkyl
+
+# Feb 2004. Change to 40 each beyond 2
+
+(7 Query
+  (A C Comment "cyclohexane")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (A I one_embedding_per_start_atom 1)
+  (A D numeric_value 40)
+  (A I min_nrings 3)
+  (A I min_aliphatic_ring_count 3)
+  (A I min_hits_needed 3)
+  (A I embeddings_do_not_overlap 1)
+# We are interested in three or more cyclohexanes
+  (A I subtract_from_rc 2)
+  (0 Query_Atom
+    (A I atomic_number 6)
+# Change oct 96 to allow 4 connections at attachment point
+    (A I min_ncon 3)
+    (A I nrings 1)
+    (A I unsaturation 0)
+    (A I ring_size 6)
+    (A I isolated_ring 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 0)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 0)
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 0)
+    (A I single_bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 0)
+    (A I single_bond 4)
+    (A I single_bond 0)
+  )
+)

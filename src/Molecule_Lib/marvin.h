@@ -1,8 +1,7 @@
-#ifndef IW_MARVIN_H
-#define IW_MARVIN_H
+#ifndef MOLECULE_LIB_MARVIN_H_
+#define MOLECULE_LIB_MARVIN_H_
 
-#include "iwstring.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 class Marvin_Structure_Information
 {
@@ -41,4 +40,4 @@ class Marvin_Structure_Information
 
 void set_marvin_structure_information_for_writing (const Marvin_Structure_Information *);
 
-#endif
+#endif  // MOLECULE_LIB_MARVIN_H_

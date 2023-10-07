@@ -1,0 +1,42 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "quinone_methide")
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I min_nrings 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I double_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 2)
+  )
+  (5 Query_Atom
+    (A I atomic_number 6)
+    (A I double_bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 5)
+    (A I single_bond 0)
+  )
+  (7 Query_Atom
+    (A I atomic_number (7 8 16))
+    (A I double_bond 6)
+  )
+  (0 Environment_no_Match
+    (A C smarts "[O,N,S]")
+    (A I single_bond (0 1 4 5))
+  )
+)

@@ -45,7 +45,8 @@ c 156 "rms.for"
       if (i .eq. j) d = one
       u(i,j) = d
       a(i,j) = d
-    1 r(i,j) = zero
+      r(i,j) = zero
+    1 end do
       ier = -1
 c**** DETERMINE CENTROIDS OF BOTH VECTOR SETS X AND Y
 c 170 "rms.for"
@@ -57,13 +58,15 @@ c 172 "rms.for"
       wc = wc + w(m)
       do 2 i = 1, 3
       xc(i) = xc(i) + (w(m) * x(i,m))
-    2 yc(i) = yc(i) + (w(m) * y(i,m))
+      yc(i) = yc(i) + (w(m) * y(i,m))
+    2 end do
       if (wc .le. zero) return 
       do 3 i = 1, 3
       xc(i) = xc(i) / wc
 c**** DETERMINE CORRELATION MATRIX R BETWEEN VECTOR SETS Y AND X
 c 182 "rms.for"
-    3 yc(i) = yc(i) / wc
+      yc(i) = yc(i) / wc
+    3 end do
 c 184 "rms.for"
       do 4 m = 1, n
       do 4 i = 1, 3
@@ -74,7 +77,8 @@ c 187 "rms.for"
       do 4 j = 1, 3
 c**** CALCULATE DETERMINANT OF R(I,J)
 c 189 "rms.for"
-    4 r(i,j) = r(i,j) + (d * (x(j,m) - xc(j)))
+      r(i,j) = r(i,j) + (d * (x(j,m) - xc(j)))
+    4 end do
 c 191 "rms.for"
       det = ((r(1,1) * ((r(2,2) * r(3,3)) - (r(2,3) * r(3,2)))) - (r(1,2
      &) * ((r(2,1) * r(3,3)) - (r(2,3) * r(3,1))))) + (r(1,3) * ((r(2,1)
@@ -90,8 +94,9 @@ c 196 "rms.for"
 c***************** EIGENVALUES *****************************************
 c**** FORM CHARACTERISTIC CUBIC  X**3-3*SPUR*X**2+3*COF*X-DET=0
 c 200 "rms.for"
-    5 rr(m) = ((r(1,i) * r(1,j)) + (r(2,i) * r(2,j))) + (r(3,i) * r(3,j)
+      rr(m) = ((r(1,i) * r(1,j)) + (r(2,i) * r(2,j))) + (r(3,i) * r(3,j)
      &)
+    5 end do
 c 203 "rms.for"
       spur = ((rr1 + rr3) + rr6) / three
       cof = ((((((rr3 * rr6) - (rr5 * rr5)) + (rr1 * rr6)) - (rr4 * rr4)
@@ -99,7 +104,8 @@ c 203 "rms.for"
 c 205 "rms.for"
       det = det * det
       do 6 i = 1, 3
-    6 e(i) = spur
+      e(i) = spur
+    6 end do
 c**** REDUCE CUBIC TO STANDARD FORM Y**3-3HY+2G=0 BY PUTTING X=Y+SPUR
 c 208 "rms.for"
       if (spur .le. zero) goto 40
@@ -147,10 +153,12 @@ c 228 "rms.for"
       do 14 i = 1, 3
       k = ip(i + j)
       a(i,l) = ss(k)
-   14 d = d + (ss(k) * ss(k))
+      d = d + (ss(k) * ss(k))
+   14 end do
       if (d .gt. zero) d = one / dsqrt(d)
       do 15 i = 1, 3
-   15 a(i,l) = a(i,l) * d
+      a(i,l) = a(i,l) * d
+   15 end do
       d = ((a(1,1) * a(1,3)) + (a(2,1) * a(2,3))) + (a(3,1) * a(3,3))
       m1 = 3
       m = 1
@@ -160,11 +168,13 @@ c 228 "rms.for"
    16 p = zero
       do 17 i = 1, 3
       a(i,m1) = a(i,m1) - (d * a(i,m))
-   17 p = p + (a(i,m1) ** 2)
+      p = p + (a(i,m1) ** 2)
+   17 end do
       if (p .le. tol) goto 19
       p = one / dsqrt(p)
       do 18 i = 1, 3
-   18 a(i,m1) = a(i,m1) * p
+      a(i,m1) = a(i,m1) * p
+   18 end do
       goto 21
    19 p = one
       do 20 i = 1, 3
@@ -194,16 +204,19 @@ c 288 "rms.for"
    31 d = d + (b(i,l) ** 2)
       if (d .gt. zero) d = one / dsqrt(d)
       do 32 i = 1, 3
-   32 b(i,l) = b(i,l) * d
+      b(i,l) = b(i,l) * d
+   32 end do
       d = ((b(1,1) * b(1,2)) + (b(2,1) * b(2,2))) + (b(3,1) * b(3,2))
       p = zero
       do 33 i = 1, 3
       b(i,2) = b(i,2) - (d * b(i,1))
-   33 p = p + (b(i,2) ** 2)
+      p = p + (b(i,2) ** 2)
+   33 end do
       if (p .le. tol) goto 35
       p = one / dsqrt(p)
       do 34 i = 1, 3
-   34 b(i,2) = b(i,2) * p
+      b(i,2) = b(i,2) * p
+   34 end do
       goto 37
    35 p = one
       do 36 i = 1, 3
@@ -225,16 +238,19 @@ c 288 "rms.for"
       do 39 j = 1, 3
 c****************** TRANSLATION VECTOR *********************************
 c 320 "rms.for"
-   39 u(i,j) = ((b(i,1) * a(j,1)) + (b(i,2) * a(j,2))) + (b(i,3) * a(j,3
+      u(i,j) = ((b(i,1) * a(j,1)) + (b(i,2) * a(j,2))) + (b(i,3) * a(j,3
      &))
+   39 end do
    40 do 41 i = 1, 3
 c********************** RMS ERROR **************************************
 c 323 "rms.for"
-   41 t(i) = ((yc(i) - (u(i,1) * xc(1))) - (u(i,2) * xc(2))) - (u(i,3)
+      t(i) = ((yc(i) - (u(i,1) * xc(1))) - (u(i,2) * xc(2))) - (u(i,3)
      & * xc(3))
+   41 end do
    50 do 51 i = 1, 3
       if (e(i) .lt. zero) e(i) = zero
-   51 e(i) = dsqrt(e(i))
+      e(i) = dsqrt(e(i))
+   51 end do
       ier = 0
       if (e2 .le. (e1 * 1.0d-05)) ier = -1
       d = e3

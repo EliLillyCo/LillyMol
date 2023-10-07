@@ -28,7 +28,7 @@ name1=out.gfp
 name1_out=out/out.gfp
 
 diff_tool=../../fileDiff.sh
-$command -F NCFP -S in/pubchem.smi $shared_data_dir/cleaned_descriptor.txt >out.gfp 2>err.txt
+$command -F FPDS -S in/pubchem.smi $shared_data_dir/cleaned_descriptor.txt >out.gfp 2>err.txt
 $diff_tool $name1 $name1_out
 ret1=$?
 

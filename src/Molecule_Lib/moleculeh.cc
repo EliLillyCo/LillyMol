@@ -5,21 +5,74 @@ using std::endl;
 
 #define COMPILING_MOLECULEH_H
 
+#include "Foundational/cmdline/cmdline.h"
+
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
 #endif
 
 #include "molecule.h"
 
-#include "misc.h"
 #include "misc2.h"
 
 //#define DEBUG_COMPUTE_IMPLICIT_HYDROGENS
 
 static int _display_messages_about_unable_to_compute_implicit_hydgogens = 1;
 
+namespace moleculeh {
+
+// Disallow things like =[SH]- where the implicit hydrogen is used to
+// satisfy an alternate valence.
+int implicit_hydrogens_cannot_satisfy_alternate_valence = 1;
+
+void
+set_implicit_hydrogens_cannot_satisfy_alternate_valence(int s) {
+  implicit_hydrogens_cannot_satisfy_alternate_valence = s;
+}
+
+// Return true if the molecule contains things like =S-
+// where the implicit Hydrogen on the S makes up the valence.
+// This is more likely a structure error.
+int
+ImplicitHydrogenSatisfiesAlternateValence(Molecule& m)
+{
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    int ih = m.implicit_hydrogens(i);
+    if (ih == 0) {
+      continue;
+    }
+    const Atom& a = m.atom(i);
+    const Element* e = a.element();
+    const resizable_array<int>& alternate_valences = e->alternate_valences();
+    if (alternate_valences.empty()) {
+      continue;
+    }
+
+    int existing_connections = a.nbonds() + ih - a.formal_charge();
+    if (existing_connections == e->normal_valence()) {
+      continue;
+    }
+
+    // Special case for Phorphorus.  P(=O)(OC)OC CHEMBL3183964
+    if (e->atomic_number() == 15 && ih == 1) {
+      continue;
+    }
+    // CC1=CC=C(C=C1)N1N=C(C=C1NC(=O)C1=C2N=CC=CN2N=C1)C1=CC=C(NS(=O)=O)C=C1 CHEMBL3917931
+    if (e->atomic_number() == 16 && a.ncon() == 3 && existing_connections == 6 && ih == 1) {
+      continue;
+    }
+
+    return 1;
+  }
+
+  return 0;  // No instances found
+}
+
+}  // namespace moleculeh
+
 void 
-set_display_messages_about_unable_to_compute_implicit_hydgogens (int s)
+set_display_messages_about_unable_to_compute_implicit_hydgogens(int s)
 {
   _display_messages_about_unable_to_compute_implicit_hydgogens = s;
 
@@ -27,7 +80,7 @@ set_display_messages_about_unable_to_compute_implicit_hydgogens (int s)
 }
 
 int
-Molecule::_compute_and_store_implicit_hydrogens (atom_number_t zatom)
+Molecule::_compute_and_store_implicit_hydrogens(atom_number_t zatom)
 {
   Atom * a = _things[zatom];
 
@@ -54,17 +107,18 @@ Molecule::_compute_and_store_implicit_hydrogens (atom_number_t zatom)
 }
 
 int
-Molecule::_compute_implicit_hydrogens (atom_number_t i, int & result) const
+Molecule::_compute_implicit_hydrogens(atom_number_t i, int & result) const
 {
   return _things[i]->compute_implicit_hydrogens(result);
 }
 
 int
-Molecule::_compute_implicit_hydrogens (atom_number_t a)
+Molecule::_compute_implicit_hydrogens(atom_number_t a)
 {
   int ih;
-  if (! _compute_implicit_hydrogens(a, ih))
+  if (! _compute_implicit_hydrogens(a, ih)) {
     return 0;
+  }
 
   return ih;
 }
@@ -91,7 +145,7 @@ Molecule::compute_implicit_hydrogens()
 }*/
 
 int
-Molecule::recompute_implicit_hydrogens (atom_number_t a)
+Molecule::recompute_implicit_hydrogens(atom_number_t a)
 {
   return _compute_and_store_implicit_hydrogens(a);
 }
@@ -114,8 +168,7 @@ Molecule::implicit_hydrogens()
 {
   int rc = 0;
   
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     rc += _things[i]->implicit_hydrogens();
   }
 
@@ -134,7 +187,7 @@ Molecule::implicit_hydrogens()
 */
 
 int
-Molecule::set_implicit_hydrogens (atom_number_t i, int ih,
+Molecule::set_implicit_hydrogens(atom_number_t i, int ih,
                                   int override)
 {
   assert(ih < 6);     // hard to imagine > 5 implicit H's
@@ -225,8 +278,6 @@ Molecule::explicit_hydrogens (atom_number_t i) const
   
   return hcount;
 }
-
-#include "cmdline.h"
 
 /*
   Lots of choices for the coordinates to be assigned to newly created H
@@ -370,6 +421,59 @@ Molecule::_place_chiral_h_atom (Chiral_Centre * c,
   return 1;
 }*/
 
+int
+Molecule::GeometryIsSp2(atom_number_t zatom) const {
+  const int acon = _things[zatom]->ncon();
+
+  if (acon < 2) {
+    return -1;
+  }
+  if (acon >= 4) {
+    return 0;
+  }
+
+  // Make the decision to NOT check for unsaturation. This is
+  // a geometry based method.
+#ifdef CONSIDER_UNSATURATION
+  if (_things[zatom]->nbonds() > acon) {
+    return 0;
+  }
+#endif
+
+  Set_of_Atoms conn;
+  _things[zatom]->connections(zatom, conn);
+
+  // If any bond angle is less than this, we assume `zatom` is tetrahedral
+  static constexpr float kTetrahedral = 112.0f;
+
+  // The angles must all be larger than this
+  static constexpr float kFlat = 118.0f;
+
+  const float a01 = bond_angle(conn[0], zatom, conn[1]) * RAD2DEG;
+  if (a01 < kTetrahedral) {
+    return 0;
+  }
+  if (acon == 2) {
+    return a01 > kFlat;
+  }
+
+  const float a02 = bond_angle(conn[0], zatom, conn[2]) * RAD2DEG;
+  if (a02 < kTetrahedral) {
+    return 0;
+  }
+
+  const float a12 = bond_angle(conn[1], zatom, conn[2]) * RAD2DEG;
+  if (a12 < kTetrahedral) {
+    return 0;
+  }
+
+  if (a01 < kFlat || a02 < kFlat || a12 < kFlat) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /*
   We need to set the coordinates for newly created Hydrogen atom H
   It is bonded to atom ANCHOR
@@ -388,8 +492,7 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
 // implicit and one was explicit. Should be shot.
 
   Chiral_Centre * c = chiral_centre_at_atom(anchor);
-  if (NULL != c && 1 != c->implicit_hydrogen_count())
-  {
+  if (nullptr != c && 1 != c->implicit_hydrogen_count()) {
     cerr << "Molecule::_place_1_hydrogen: Hmmm, adding one H to chiral centre at atom " << anchor << endl;
     cerr << "Chiral centre is ";
     c->debug_print(cerr);
@@ -397,20 +500,25 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
     return 0;
   }
 
+  if (acon >= 2 && GeometryIsSp2(anchor) > 0) {
+    return 0;
+  }
+
   Atom * h = mihe.new_atom();
 
   add(h);
   add_bond(anchor, _number_elements - 1, SINGLE_BOND);
-  if (NULL != c && c->implicit_hydrogen_count())
+  if (nullptr != c && c->implicit_hydrogen_count()) {
     c->implicit_hydrogen_is_now_atom_number(_number_elements - 1);
+  }
 
-  int dimensionality = mihe.dimensionality();
+  const int dimensionality = mihe.dimensionality();
 
-  if (dimensionality < 2)    // no need to worry about coordinates
+  if (dimensionality < 2) {    // no need to worry about coordinates
     return 1;
+  }
 
-  if (2 == dimensionality || 0 == acon || acon > 3)
-  {
+  if (2 == dimensionality || 0 == acon || acon > 3) {
     coord_t z;
     if ((anchor & 1))       // slightly random
       z = - default_h_bond_length;
@@ -432,8 +540,9 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
 //cerr << "Just about to put 1 Hydrogen, acon " << acon << " nbonds " << a->nbonds() << endl;
 
   coord_t blen = default_h_bond_length;
-  if (6 != a->atomic_number())
+  if (6 != a->atomic_number()) {
     blen = static_cast<coord_t>(blen*0.9);
+  }
 
   if (1 == acon && 4 != a->nbonds())      // straight bond OK for acetylene
   {
@@ -481,8 +590,8 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
 }
 
 int
-Molecule::set_coordinates_of_singly_connected_atom (atom_number_t zatom,
-                                                    coord_t default_bond_length)
+Molecule::set_coordinates_of_singly_connected_atom(atom_number_t zatom,
+                                                   coord_t default_bond_length)
 {
   assert(1 == _things[zatom]->ncon());
 
@@ -512,8 +621,9 @@ Molecule::set_coordinates_of_singly_connected_atom (atom_number_t zatom,
   for (int i = 0; i < acon; i++)
   {
     atom_number_t j = a->other(anchor, i);
-    if (j == zatom)
+    if (j == zatom) {
       continue;
+    }
 
     Coordinates v = *(_things[j]);
   
@@ -527,13 +637,14 @@ Molecule::set_coordinates_of_singly_connected_atom (atom_number_t zatom,
 
   _things[zatom]->setxyz(a->x() - vsum.x(), a->y() - vsum.y(), a->z() - vsum.z());
 
-// If 2 == acon, we want to avoid straight bonds unless there is a triple bond present
+// If 2 == acon, we want to avoid straight bonds unless there is a
+// triple bond present
 
-  if (2 == acon && 4 != a->nbonds())
-  {
+  if (2 == acon && 4 != a->nbonds()) { 
     atom_number_t j = a->other(anchor, 0);
-    if (j == zatom)
+    if (j == zatom) {
       j = a->other(anchor, 1);
+    }
 
     set_bond_angle(j, anchor, zatom, static_cast<angle_t>(120.0 * DEG2RAD) );
   }
@@ -546,13 +657,14 @@ Molecule::set_coordinates_of_singly_connected_atom (atom_number_t zatom,
 */
 
 int
-Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
-{
-  atom_number_t anchor = mihe.a();
-  int dimensionality = mihe.dimensionality();
+Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe) {
 
-  const Atom * a = _things[anchor];
-  int acon = a->ncon();
+  atom_number_t anchor = mihe.a();
+
+  const int dimensionality = mihe.dimensionality();
+
+  const Atom * a = _things[anchor]; 
+  const int acon = a->ncon();
 
   Atom * h1 = mihe.new_atom();
   Atom * h2 = mihe.new_atom();
@@ -564,8 +676,8 @@ Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
 
 // take care of water before checking the dimensionality
 
-  if (0 == acon)    // adding hydrogens to a water
-  {
+  // Adding Hydrogens to water.
+  if (0 == acon) {
     h1->setxyz(a->x() + default_h_bond_length, a->y(), a->z());
     coord_t dx = 0.95 * default_h_bond_length;
     coord_t dy = 0.31 * default_h_bond_length;
@@ -574,27 +686,27 @@ Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
     return 1;
   }
 
-  if (dimensionality < 2)
+  if (dimensionality < 2) {
     return 1;
+  }
 
 // The 2D case will never come up so just do something silly
 
-  if (2 == dimensionality)
-  {
+  if (2 == dimensionality) {
     h1->setxyz(a->x(), a->y(), default_h_bond_length);
     h2->setxyz(a->x(), a->y(), - default_h_bond_length);
 
     return 1;
   }
 
-  if (acon > 2 || 0 == acon)
-  {
-    cerr << "Molecule::_place_2_hydrogens: sorry, don't know how to place 2 Hydrogens on something with " << acon << " existing connections\n";
-    return 0;
-  }
+  if (acon > 2 || 0 == acon) {
+    cerr << "Molecule::_place_2_hydrogens: sorry, don't know how to place 2 Hydrogens on something with " <<
+    acon << " existing connections\n"; return 0;
+ }
 
-// We need to set two vectors. vsum we just add all the vectors departing from anchor and take the opposite direction
-// vperp must be a vector normal to vsum
+// We need to set two vectors.  vsum we just add all the vectors
+// departing from anchor and take the opposite direction vperp must be
+// a vector normal to vsum
 
   Coordinates va = *(a);
 
@@ -606,8 +718,7 @@ Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
   Coordinates vsum;
   Coordinates vperp;
 
-  if (2 == acon)
-  {
+  if (2 == acon) {
     Coordinates v1;
     get_coords(other(anchor, 1), v1);
     v1 -= va;
@@ -624,38 +735,40 @@ Molecule::_place_2_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
   {
     vsum = v0;
 
-    vperp.setxyz( static_cast<coord_t>(va.x() + 1.0), static_cast<coord_t>(va.y() + 1.0), static_cast<coord_t>(va.z() + 1.0) );
+    vperp.setxyz(static_cast<coord_t>(va.x() + 1.0),
+                 static_cast<coord_t>(va.y() + 1.0),
+                 static_cast<coord_t>(va.z() + 1.0));
+    vperp.normalise();  // is this needed?
     vperp.cross_product(v0);
   }
 
   vperp.normalise();
 
   coord_t blen = default_h_bond_length;
-  if ( 6 != a->atomic_number() ) 
-  {
-	  blen *= static_cast<coord_t>(0.9);
+  if (6 != a->atomic_number()) {
+    blen *= static_cast<coord_t>(0.9);
   }
 
-  float factor = static_cast<float>( blen / sqrt(2.0) );
+  float factor = static_cast<float>(blen / sqrt(2.0));
   vsum *= factor;
   vperp *= factor;
 
 //cerr << "Angle between vectors " << vsum.angle_between(vperp) << " acon = " << acon << endl;
 
   h1->setxyz(a->x() - vsum.x() + vperp.x(),
-              a->y() - vsum.y() + vperp.y(),
-              a->z() - vsum.z() + vperp.z());
+             a->y() - vsum.y() + vperp.y(),
+             a->z() - vsum.z() + vperp.z());
   h2->setxyz(a->x() - vsum.x() - vperp.x(),
-              a->y() - vsum.y() - vperp.y(),
-              a->z() - vsum.z() - vperp.z());
+             a->y() - vsum.y() - vperp.y(),
+             a->z() - vsum.z() - vperp.z());
 
   return 1;
 }
 
 int
-Molecule::set_coordinates_of_singly_connected_atoms (atom_number_t a1,
-                                                     atom_number_t a2,
-                                                     coord_t default_h_bond_length)
+Molecule::set_coordinates_of_singly_connected_atoms(atom_number_t a1,
+                                                    atom_number_t a2,
+                                                    coord_t default_h_bond_length)
 {
   assert(1 == _things[a1]->ncon());
   assert(1 == _things[a2]->ncon());
@@ -741,13 +854,15 @@ Molecule::set_coordinates_of_singly_connected_atoms (atom_number_t a1,
 
 
 int
-Molecule::_place_3_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
+Molecule::_place_3_hydrogens(const Make_Implicit_Hydrogens_Explicit & mihe)
 {
   atom_number_t anchor = mihe.a();
-  int dimensionality = mihe.dimensionality();
+  const int dimensionality = mihe.dimensionality();
 
   const Atom * a = _things[anchor];
-  int acon = a->ncon();
+  const int acon = a->ncon();
+
+  int first_h = _number_elements;
 
   Atom * atoms[3];
   for (int i = 0; i < 3; i++)
@@ -757,11 +872,11 @@ Molecule::_place_3_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
     add_bond(anchor, _number_elements - 1, SINGLE_BOND);
   }
 
-  if (dimensionality < 2)
+  if (dimensionality < 2) {
     return 1;
+  }
 
-  if (2 == dimensionality)
-  {
+  if (2 == dimensionality) {
     atoms[0]->setxyz(a->x(), a->y(), - default_h_bond_length);
     atoms[1]->setxyz(static_cast<coord_t>( a->x() - 0.25 * default_h_bond_length ), a->y(), default_h_bond_length);
     atoms[2]->setxyz(static_cast<coord_t>( a->x() + 0.25 * default_h_bond_length ), a->y(), default_h_bond_length);
@@ -770,40 +885,68 @@ Molecule::_place_3_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
   }
 
   coord_t blen = default_h_bond_length;
-  if (6 != a->atomic_number()) 
+  if (6 != a->atomic_number())  {
     blen *= static_cast<coord_t>(0.9);
-
-  if (1 == acon)
-  {
-    Coordinates va = *a;
-//  get_coords(anchor, va);
-
-    Coordinates v0 = *(_things[a->other(anchor, 0)]);
-    get_coords(other(anchor, 0), v0);
-
-    va -= v0;
-    va.normalise();
-
-//  We need a vector normal to the plane
-
-    Coordinates perp(0.0, 0.0, 1.0);
-    perp.cross_product(va);
-
-    atoms[0]->setxyz(static_cast<coord_t>( a->x() + va.x() * blen * 0.25 ),
-                      static_cast<coord_t>( a->y() + va.y() * blen * 0.25 ),
-                      static_cast<coord_t>( a->z() - blen * 0.5) );
-
-    atoms[1]->setxyz(static_cast<coord_t>( a->x() + 0.5 * va.x() * blen - perp.x() * 0.4 ),
-                      static_cast<coord_t>( a->y() + 0.5 * va.y() * blen - perp.y() * 0.4 ),
-                      static_cast<coord_t>( a->z() + blen * 0.5) );
-
-    atoms[2]->setxyz(static_cast<coord_t>( a->x() + 0.5 * va.x() * blen + perp.x() * 0.4 ),
-                      static_cast<coord_t>( a->y() + 0.5 * va.y() * blen + perp.y() * 0.4 ),
-                      static_cast<coord_t>( a->z() +  blen * 0.5) );
-
-    return 1;
   }
 
+  if (acon != 1) {
+    cerr << "Molecule::_place_3_hydrogens:cannot place onto atom with " << acon <<
+            " connections " << smarts_equivalent_for_atom(anchor) << '\n';
+    // Should randomly place coords near the atom.
+    return 0;
+  }
+
+  Set_of_Atoms h{first_h, first_h + 1, first_h + 2};
+
+  const atom_number_t previous_atom = a->other(anchor, 0);
+
+  // Place the added Hydrogens in the xy plane, centered on `a`.
+  _things[first_h]->setxyz(0.9, 0.5196, 0.0);
+  _things[first_h + 1]->setxyz(-0.9, 0.5196, 0.0);
+  _things[first_h + 2]->setxyz(0, -1.0392, 0.0);
+#ifdef DEBUG_PLACE_3_HYDROGENS
+  cerr << "Btw hydrogens " << distance_between_atoms(first_h, first_h + 1) << '\n';
+  cerr << "Btw hydrogens " << distance_between_atoms(first_h, first_h + 2) << '\n';
+  cerr << "Btw hydrogens " << distance_between_atoms(first_h + 1, first_h + 2) << '\n';
+#endif
+
+  // Get a unit vector along the bond.
+
+  Coordinates va = *a;
+  Coordinates v0 = *(_things[previous_atom]);
+  va -= v0;
+  va.normalise();
+
+  // Find a rotation axis that is perpendicular to the Z axis and the bond, and rotate around that.
+  Coordinates vperp(0.0, 0.0, 1.0);
+  const angle_t angle = va.angle_between_unit_vectors(vperp);
+  vperp.cross_product(va);
+  vperp.normalise();
+  rotate_atoms(vperp, angle, h);
+#ifdef DEBUG_PLACE_3_HYDROGENS
+  cerr << "After rotation\n";
+  cerr << "btw " << first_h << " and " << anchor << " " << distance_between_atoms(first_h, anchor) << '\n';
+  cerr << "btw " << (first_h+1) << " and " << anchor << " "  << distance_between_atoms(first_h+1, anchor) << '\n';
+  cerr << "btw " << (first_h+2) << " and " << anchor << " "  << distance_between_atoms(first_h+2, anchor) << '\n';
+  cerr << vperp << '\n';
+#endif
+
+  Coordinates& h0 = *_things[first_h];
+  h0 += *a;
+  Coordinates& h1 = *_things[first_h + 1];
+  h1 += *a;
+  Coordinates& h2 = *_things[first_h + 2];
+  h2 += *a;
+  va *= 0.40;  // Empirically derived.
+  h0 += va;
+  h1 += va;
+  h2 += va;
+#ifdef DEBUG_PLACE_3_HYDROGENS
+  cerr << "After tralsnation\n";
+  cerr << "btw " << first_h << " and " << anchor << " " << distance_between_atoms(first_h, anchor) << '\n';
+  cerr << "btw " << (first_h+1) << " and " << anchor << " "  << distance_between_atoms(first_h+1, anchor) << '\n';
+  cerr << "btw " << (first_h+2) << " and " << anchor << " "  << distance_between_atoms(first_h+2, anchor) << '\n';
+#endif
   return 1;
 }
 
@@ -885,7 +1028,7 @@ Molecule::make_implicit_hydrogens_explicit()
 }
 
 int 
-Molecule::make_implicit_hydrogens_explicit (atom_number_t a)
+Molecule::make_implicit_hydrogens_explicit(atom_number_t a)
 {
   Make_Implicit_Hydrogens_Explicit mihe;
   mihe.set_atom(a);
@@ -894,7 +1037,7 @@ Molecule::make_implicit_hydrogens_explicit (atom_number_t a)
 }
 
 int
-Molecule::valence_ok (atom_number_t a)
+Molecule::valence_ok(atom_number_t a)
 {
   assert(ok_atom_number(a));
 
@@ -904,16 +1047,25 @@ Molecule::valence_ok (atom_number_t a)
 int
 Molecule::valence_ok()
 {
+  bool need_to_check_alternative_valences = false;
   for (int i = 0; i < _number_elements; i++)
   {
-//  cerr << "Checking atom " << i << " type " << smarts_equivalent_for_atom(i) << endl;
-
-    if (! _things[i]->valence_ok())
+    if (! _things[i]->valence_ok()) {
       return 0;
+    }
 
-// Aug 2005. The valence check does not catch errors
-// For now, just forget it...
+    if (_things[i]->element()->number_alternate_valences()) {
+      need_to_check_alternative_valences = true;
+    }
+  }
 
+  if (! need_to_check_alternative_valences) {
+    return 1;
+  }
+
+  if (moleculeh::implicit_hydrogens_cannot_satisfy_alternate_valence &&
+      moleculeh::ImplicitHydrogenSatisfiesAlternateValence(*this)) {
+      return 0;
   }
 
   return 1;
@@ -940,19 +1092,17 @@ Make_Implicit_Hydrogens_Explicit::new_atom() const
 }
 
 int
-Molecule::make_implicit_hydrogens_explicit (Make_Implicit_Hydrogens_Explicit & mihe)
-{
-  int na = _number_elements;
+Molecule::make_implicit_hydrogens_explicit(Make_Implicit_Hydrogens_Explicit & mihe) {
+  int initial_atoms = _number_elements;
 
-  if (mihe.dimensionality() < 0)
+  // Assume that the first molecule encountered indicates the dimensionality of
+  // everything that follows... Almost always correct.
+  if (mihe.dimensionality() < 0) {
     mihe.set_dimensionality(highest_coordinate_dimensionality());
+  }
 
-  atom_number_t a = mihe.a();
-
-  if (INVALID_ATOM_NUMBER != a)
-  {
-    if (a < 0 || a >= _number_elements)
-    {
+  if (const atom_number_t a = mihe.a(); a != INVALID_ATOM_NUMBER) {
+    if (a < 0 || a >= _number_elements) {
       cerr << "Molecule::make_implicit_hydrogens_explicit: atom number " << a << " is invalid\n";
       return 0;
     }
@@ -979,29 +1129,132 @@ Molecule::make_implicit_hydrogens_explicit (Make_Implicit_Hydrogens_Explicit & m
     return rc;
   }
 
-  int rc = 1;
+  for (int i = 0; i < initial_atoms; ++i) {
+    const int ih = implicit_hydrogens(i);
+    if (ih == 0) {
+      continue;
+    }
 
-  for (int i = 0; i < na; i++)
-  {
     mihe.set_atom(i);
 
-    if (! make_implicit_hydrogens_explicit(mihe))    // recursive call
-      rc = 0;
+    int rc;
+
+    if (1 == ih) {
+      rc = _place_1_hydrogen(mihe);
+    } else if (2 == ih) {
+      rc = _place_2_hydrogens(mihe);
+    } else if (3 == ih) {
+      rc = _place_3_hydrogens(mihe);
+    } else if (4 == ih) {
+      rc = _place_4_hydrogens(mihe);
+    } else {
+      rc = _place_lots_of_hydrogens(mihe, ih);
+    }
+
+    _things[i]->set_implicit_hydrogens(0, 1);    // 1 means override known value
+    if (rc == 0) {
+      return 0;
+    }
   }
 
-  for (int i = na; i < _number_elements; i++)
-  {
+  if (mihe.dimensionality() < 3) {
+    return _number_elements - initial_atoms;
+  }
+
+  // A funbling effort to clear any major geometry problems. This is kind of
+  // futile. Delete or fix...
+
+  for (int i = initial_atoms; i < _number_elements; i++) {
     const Atom * ai = _things[i];
-    if (1 != ai->atomic_number())
+    // This test should never happen, they are all H atoms out here.
+    if (1 != ai->atomic_number()) {
       continue;
+    }
 
     atom_number_t j = ai->other(i, 0);
     Atom * aj = _things[j];
 
-    if (ai->distance(*aj) < default_h_bond_length * 1.5)
+    if (ai->distance(*aj) < default_h_bond_length * 1.5) {
       continue;
+    }
 
-    cerr << "Hydrogen " << i << " bonded to atom " << j << " distance " << ai->distance(*aj) << ". Coordinates changed\n";
+//  cerr << "Hydrogen " << i << " bonded to atom " << j << " distance " << ai->distance(*aj) << ". Coordinates changed\n";
+
+    aj->setxyz(static_cast<coord_t>( ai->x() + 0.5 ),
+                static_cast<coord_t>( ai->y() + 0.5 ),
+                static_cast<coord_t>( ai->z() + 0.5) );
+  }
+
+  return _number_elements - initial_atoms;
+}
+
+#ifdef OLD_VERSION_MIHE
+int
+Molecule::make_implicit_hydrogens_explicit(Make_Implicit_Hydrogens_Explicit & mihe)
+{
+  // The initial number of atoms.
+  int na = _number_elements;
+
+  if (mihe.dimensionality() < 0) {
+    mihe.set_dimensionality(highest_coordinate_dimensionality());
+  }
+
+  atom_number_t a = mihe.a();
+
+  if (INVALID_ATOM_NUMBER != a) {
+    if (a < 0 || a >= _number_elements) {
+      cerr << "Molecule::make_implicit_hydrogens_explicit: atom number " << a << " is invalid\n";
+      return 0;
+    }
+
+    int ih = implicit_hydrogens(a);
+    // cerr << "ATom " << a << " " << smarts_equivalent_for_atom(a) << " has " << ih << " imp H\n";
+    if (0 == ih) {
+      return 1;
+    }
+
+    int rc;
+
+    if (1 == ih)
+      rc = _place_1_hydrogen(mihe);
+    else if (2 == ih)
+      rc = _place_2_hydrogens(mihe);
+    else if (3 == ih)
+      rc = _place_3_hydrogens(mihe);
+    else if (4 == ih)
+      rc = _place_4_hydrogens(mihe);
+    else
+      rc = _place_lots_of_hydrogens(mihe, ih);
+
+    _things[a]->set_implicit_hydrogens(0, 1);    // 1 means override known value
+
+    return rc;
+  }
+
+  int rc = 1;
+
+  for (int i = 0; i < na ; i++) {
+    mihe.set_atom(i);
+
+    if (! make_implicit_hydrogens_explicit(mihe)) {    // recursive call
+      rc = 0;
+    }
+  }
+
+  for (int i = na; i < _number_elements; i++) {
+    const Atom * ai = _things[i];
+    if (1 != ai->atomic_number()) {
+      continue;
+    }
+
+    atom_number_t j = ai->other(i, 0);
+    Atom * aj = _things[j];
+
+    if (ai->distance(*aj) < default_h_bond_length * 1.5) {
+      continue;
+    }
+
+//  cerr << "Hydrogen " << i << " bonded to atom " << j << " distance " << ai->distance(*aj) << ". Coordinates changed\n";
 
     aj->setxyz(static_cast<coord_t>( ai->x() + 0.5 ),
                 static_cast<coord_t>( ai->y() + 0.5 ),
@@ -1010,12 +1263,13 @@ Molecule::make_implicit_hydrogens_explicit (Make_Implicit_Hydrogens_Explicit & m
 
   return rc;
 }
+#endif
 
-// We try to preserve the ordering as much as possible. There are probably a bunch of
-// Hydrogens already at the end of the list of atoms
+// We try to preserve the ordering as much as possible.
+// There are may already be Hydrogens at the end of the list of atoms.
 
 int
-Molecule::move_hydrogens_to_end_of_connection_table (atomic_number_t z)
+Molecule::move_hydrogens_to_end_of_connection_table(atomic_number_t z)
 {
   int rc = 0;
 
@@ -1051,6 +1305,65 @@ Molecule::move_hydrogens_to_end_of_connection_table (atomic_number_t z)
   return rc;
 }
 
+int
+Molecule::MoveToEndOfConnectionTable(atomic_number_t z) {
+  int first_H = -1;
+  int last_H = -1;
+  int number_hydrogens = 0;
+  for (int i = 0; i < _number_elements; ++i) {
+    if (_things[i]->atomic_number() != z) {
+      continue;
+    }
+    ++number_hydrogens;
+    if (first_H < 0) {
+      first_H = i;
+    }
+    last_H = i;
+  }
+  // If none found we are done.
+  if (number_hydrogens == 0) {
+    return 0;
+  }
+  // If all the H atoms are already at the end, we are done.
+  if (_number_elements - first_H == number_hydrogens) {
+    return 0;
+  }
+  // If just one found, easy...
+  if (first_H == last_H) {
+    move_atom_to_end_of_atom_list(first_H);
+    return 1;
+  }
+  // Multiple Hydrogens are found, preserve their order.
+  int * xref = new int[_number_elements]; std::unique_ptr<int[]> free_xref(xref);
+  Atom ** original_order = new Atom *[_number_elements]; std::unique_ptr<Atom *[]> free_original_order(original_order);
+  int heavy_atom_index = 0;
+  int hydrogen_index = _number_elements - number_hydrogens;
+  for (int i = 0; i < _number_elements; ++i) {
+    original_order[i] = _things[i];
+    if (_things[i]->atomic_number() == z) {
+      xref[i] = hydrogen_index;
+      ++hydrogen_index;
+    } else {
+      xref[i] = heavy_atom_index;
+      ++heavy_atom_index;
+    }
+  }
+  for (int i = 0; i < _number_elements; ++i) {
+    _things[xref[i]] = original_order[i];
+//  _things[i] = original_order[xref[i]];
+  }
+  for (Bond * b : _bond_list) {
+    b->new_atom_numbers(xref);
+  }
+  for (int i = 0; i < _chiral_centres.number_elements(); i++) {
+    _chiral_centres[i]->adjust_atom_numbers(xref);
+  }
+  // cis-trans bonds?
+  _set_modified();
+
+  return 1;
+}
+
 /*
   Someone has a smiles like CC[C]CC where the only thing wrong
   is the implicit hydrogens known attribute
@@ -1065,11 +1378,13 @@ Molecule::remove_hydrogens_known_flag_to_fix_valence_errors()
   {
     Atom * a = _things[i];
 
-    if (! a->implicit_hydrogens_known())
+    if (! a->implicit_hydrogens_known()) {
       continue;
+    }
 
-    if (a->valence_ok())
+    if (a->valence_ok()) {
       continue;
+    }
 
     int current_value = a->implicit_hydrogens();
 
@@ -1096,11 +1411,13 @@ Molecule::unset_unnecessary_implicit_hydrogens_known_values()
   {
     Atom * a = _things[i];
 
-    if (! a->implicit_hydrogens_known())
+    if (! a->implicit_hydrogens_known()) {
       continue;
+    }
 
-    if (a->isotope() || a->formal_charge())
+    if (a->isotope() || a->formal_charge()) {
       continue;
+    }
 
     if (a->element()->organic())
       ;
@@ -1110,14 +1427,17 @@ Molecule::unset_unnecessary_implicit_hydrogens_known_values()
       continue;
 
     int ih;
-    if (! a->compute_implicit_hydrogens(ih))
+    if (! a->compute_implicit_hydrogens(ih)) {
       continue;
+    }
 
-    if (ih != a->implicit_hydrogens())
+    if (ih != a->implicit_hydrogens()) {
       continue;
+    }
 
-    if (! valence_ok(i))    // being very careful
+    if (! valence_ok(i)) {   // being very careful
       continue;
+    }
 
     a->set_implicit_hydrogens_known(0);
     rc++;

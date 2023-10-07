@@ -1,0 +1,21 @@
+**/Linux-gcc-6.2.0
+**/Linux-gcc-7.2.1
+**/Linux-gcc-8.3.0
+**/Linux
+**/__pycache__
+**/.idea
+*_pb.rb
+*.pyc
+lib
+include
+.gdb_history
+third_party
+.venv
+.vscode
+
+./src/WORKSPACE
+
+## vs code workspace 
+./LillyMolPrivate.code-workspace
+*ruby-version
+lib64

@@ -1,0 +1,104 @@
+# This is a control file for random_molecular_transformations
+
+# Blank lines and lines starting with # are ignored
+
+# Each line must have two tokens. The first is the kind of transformation
+# and the second is the relative probability of that transformation
+# taking place
+
+# Change a single bond to a double bond
+
+add_double_bond 0.5
+
+# Remove an atom
+
+remove_atom 1.0
+
+# Find a multiple bond and change to a single bond
+
+lower_bond_order 0.8
+
+break_aliphatic_ring 0.4
+
+make_ring 0.4
+
+add_carbon 0.2
+
+# Find a chain single bond and break it. Then find another atom onto which it can be re-attached
+
+probability_move_fragment 1.0
+
+# Change the sequence of atoms A1-A2-A3-A4 to A1-A3-A2-A4
+
+swap_adjacent_atoms 1.0
+
+# Aromatic rings are generally desirable, so make their destruction a low probability event
+
+destroy_aromatic_ring 0.1
+
+change_carbon_to_nitrogen 0.4
+
+change_nitrogen_to_carbon 0.6
+
+change_carbon_to_oxygen 0.4
+
+# We will randomly change an oxygen to either a Nitrogen or Carbon
+
+change_oxygen_to_something 0.6
+
+# The single attachment fragment library has molecules that are attached to a single
+# atom that has a Hydrogen
+
+add_from_single_attachment_library 0.6
+
+# Aromatic attachments are only added to aromatic rings. Halogens are good for this library
+
+add_from_aromatic_attachment_library 0.4
+
+# Doubly attached fragments get inserted between two existing atoms. The first atom is
+# one attachment point and there must be an * atom somewhere else in the fragment to
+# designate the other attachment point
+
+add_from_double_attachment_library 0.5
+
+# Pick up a ring substituent and move it to another place on the same ring
+
+change_ring_substitution 1.0
+
+# A terminal functional group is something like a Nitro, Carboxyllic Acid, or Sulph* acid
+
+remove_terminal_functional_group 0.8
+
+# An embedded functional group is something like -S(=O)(=O)-, an amide, or ester
+
+remove_embedded_functional_group 0.6
+
+# Remove a terminal ring - one that is either unsubstituted or which has just simple
+# substituents
+
+remove_terminal_ring 0.5
+
+# Swap out one aromatic ring for another.
+
+switch_aromatic_ring 0.4
+
+# Swap out one aliphatic ring for another.
+
+switch_aliphatic_ring 0.4
+
+# single_bond crossover of two molecules (breed)
+
+breed 1.0
+
+# split apart a fused aromatic ring
+
+split_fused_ring 0.12
+
+# Add one of the fused aromatic ring library - creates fused aromatic
+
+create_fused_ring 0.18
+
+# inter molecular permutation fraction
+
+inter_molecular 0.5
+

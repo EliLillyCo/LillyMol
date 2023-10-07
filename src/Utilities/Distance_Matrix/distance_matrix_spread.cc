@@ -4,15 +4,17 @@
 
 #include <stdlib.h>
 #include <memory>
-using namespace std;
+#include <random>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iwrandom.h"
-#include "iw_stl_hash_map.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "IWDistanceMatrixBase.h"
+
+using std::cerr;
+using std::endl;
 
 const char * prog_name = NULL;
 
@@ -403,6 +405,9 @@ choose_next_item (const int * nearest_previously_selected_neighbour,
 
   T largest_distance = static_cast<T>(-1.0);
 
+  std::random_device rd;
+  std::uniform_int_distribution<int> u01(0, 1);
+
   for (int i = 0; i < n; i++)
   {
     if (nearest_previously_selected_neighbour[i] < 0)   // already selected
@@ -420,7 +425,7 @@ choose_next_item (const int * nearest_previously_selected_neighbour,
 
     if (largest_distance == distance_to_previously_selected[i])
     {
-      if (1 == intbtwij(0, 1))
+      if (1 == u01(rd))
         continue;
 
       largest_distance = distance_to_previously_selected[i];
@@ -430,7 +435,7 @@ choose_next_item (const int * nearest_previously_selected_neighbour,
 
     if (largest_distance - distance_to_previously_selected[i] < distance_fuzz)
     {
-      if (1 == intbtwij(0, 1))
+      if (1 == u01(rd))
         continue;
 
       largest_distance = distance_to_previously_selected[i];
@@ -592,8 +597,8 @@ distance_matrix_spread (Command_Line & cl,
   if (0 == items_to_select)
     items_to_select = n;
 
-  T * tmp = new T[n]; unique_ptr<T[]> free_tmp(tmp);
-  int * itmp = new int[n]; unique_ptr<int[]> free_itmp(itmp);
+  T * tmp = new T[n]; std::unique_ptr<T[]> free_tmp(tmp);
+  int * itmp = new int[n]; std::unique_ptr<int[]> free_itmp(itmp);
 
   set_vector(tmp, n, static_cast<T>(1.0));
 
@@ -685,7 +690,9 @@ distance_matrix_spread (Command_Line & cl,
   }
   else if (cl.option_present('r'))
   {
-    int i = intbtwij(0, n - 1);
+    std::random_device rd;
+    std::uniform_int_distribution<int> u(0, n - 1);
+    int i = u(rd);
     item_is_selected(dm, i, tmp, itmp, output);
   }
   else if (cl.option_present('A'))
@@ -763,9 +770,6 @@ distance_matrix_spread(int argc, char ** argv)
     if (verbose)
       cerr << "Distances within " << distance_fuzz << " will be decided randomly\n";
   }
-
-  if (cl.option_present('r') || cl.option_present('f'))
-    iw_random_seed();
 
   const_IWSubstring k;
 

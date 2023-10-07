@@ -1,6 +1,11 @@
 #ifndef TSUBSTRUCTURE_FP_H
 #define TSUBSTRUCTURE_FP_H
 
+#include <ostream>
+
+#include "Foundational/iwstring/iwstring.h"
+#include "Molecule_Lib/molecule.h"
+
 class TSubstructure_FP
 {
   private:
@@ -11,19 +16,23 @@ class TSubstructure_FP
 
 //  private functions
 
-    int _do_fingerprint_output(int nq, const int * hits, std::ostream & output);
-    int _do_sparse_fingerprint_output (int nq, const int * hits, std::ostream & output);
+    template <typename OUTPUT> int _do_fingerprint_output(int nq, const int * hits, OUTPUT& output) const ;
+    template <typename OUTPUT> int _do_sparse_fingerprint_output (int nq, const int * hits, OUTPUT& output) const ;
 
   public:
     TSubstructure_FP();
+
     void set_work_as_filter(int s) { _work_as_filter = s;}
     void set_bit_replicates(int s) { _bit_replicates = s;}
     void set_fingerprint_tag(const const_IWSubstring & s) { _tag = s;}
     void set_default_fingerprint_nbits(int s) { _default_fingerprint_nbits = s;}
-    int do_fingerprint_output(Molecule &, int nq, const int * hits, std::ostream & output);
+
+    template <typename OUTPUT>
+      int do_fingerprint_output(Molecule &, int nq, const int * hits, OUTPUT& output) const;
 
     int active() const { return _tag.length();}
 };
-extern int write_smiles_and_pcn(Molecule & m, std::ostream & output);
+
+template <typename OUTPUT> int write_smiles_and_pcn(Molecule& m, OUTPUT& output);
 
 #endif

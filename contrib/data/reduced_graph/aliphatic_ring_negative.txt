@@ -1,0 +1,3 @@
+query: "aliphatic_ring_negative.qry"
+element: "Zr"
+ring: true

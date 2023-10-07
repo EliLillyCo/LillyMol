@@ -19,7 +19,7 @@ echo "Testing:  $command"
 
 if [ ! -e "$command" ]
 then
-    echo "Executable is not found"
+    echo "Executable ${command} is not found"
     exit 1
 fi
 

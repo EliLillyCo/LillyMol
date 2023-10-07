@@ -1,0 +1,8 @@
+{
+    "executable": "unique_molecules",
+    "options": ["-l -v -S #{output_file[0].delete_suffix('.smi')}",
+               "-D #{output_file[1].delete_suffix('.smi')}",
+               "#{input_file[0]}"],
+    "input_file": [ "input.smi" ],
+    "output_file": [ "unique.smi", "duplicate.smi"]
+}

@@ -21,7 +21,7 @@ template <typename T>
 resizable_array_iterator<T>::~resizable_array_iterator ()
 {
   _index = -1;
-  _array = NULL;
+  _array = nullptr;
 }
 
 template <typename T>
@@ -84,6 +84,7 @@ resizable_array_iterator<T>::previous (T & result)
   return 0;
 }
 
+#ifdef NOT_IMPLEMENTED_JJ
 template <typename T>
 resizable_array_p_np<T>::resizable_array_p_np () : resizable_array_iterator<T *> (this)
 {
@@ -105,5 +106,6 @@ resizable_array_np<T>::resizable_array_np (int initial_size) : resizable_array<T
             resizable_array_iterator<T> (this)
 {
 }
+#endif
 
 #endif

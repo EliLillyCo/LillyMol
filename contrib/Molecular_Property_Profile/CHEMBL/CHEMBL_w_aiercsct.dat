@@ -1,0 +1,241 @@
+description {
+  feature_name: "w_aiercsct"
+  description: "Atoms in conjugated sections"
+  plot_title: "Atoms in conjugated sections"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 50.0
+mean: 20.601805
+median: 21.0
+quantile {
+  quantile: 0.01
+  value: 5.0
+}
+quantile {
+  quantile: 0.05
+  value: 10.0
+}
+quantile {
+  quantile: 0.1
+  value: 12.0
+}
+quantile {
+  quantile: 0.5
+  value: 21.0
+}
+quantile {
+  quantile: 0.9
+  value: 29.0
+}
+quantile {
+  quantile: 0.95
+  value: 32.0
+}
+quantile {
+  quantile: 0.99
+  value: 37.0
+}
+int_values {
+  count: 528
+}
+int_values {
+  value: 1
+  count: 1186
+}
+int_values {
+  value: 2
+  count: 2182
+}
+int_values {
+  value: 3
+  count: 4196
+}
+int_values {
+  value: 4
+  count: 7392
+}
+int_values {
+  value: 5
+  count: 9625
+}
+int_values {
+  value: 6
+  count: 12802
+}
+int_values {
+  value: 7
+  count: 16942
+}
+int_values {
+  value: 8
+  count: 23955
+}
+int_values {
+  value: 9
+  count: 31689
+}
+int_values {
+  value: 10
+  count: 43709
+}
+int_values {
+  value: 11
+  count: 51988
+}
+int_values {
+  value: 12
+  count: 61289
+}
+int_values {
+  value: 13
+  count: 72576
+}
+int_values {
+  value: 14
+  count: 84639
+}
+int_values {
+  value: 15
+  count: 92477
+}
+int_values {
+  value: 16
+  count: 103103
+}
+int_values {
+  value: 17
+  count: 112160
+}
+int_values {
+  value: 18
+  count: 121471
+}
+int_values {
+  value: 19
+  count: 128617
+}
+int_values {
+  value: 20
+  count: 135826
+}
+int_values {
+  value: 21
+  count: 133917
+}
+int_values {
+  value: 22
+  count: 133925
+}
+int_values {
+  value: 23
+  count: 124656
+}
+int_values {
+  value: 24
+  count: 118453
+}
+int_values {
+  value: 25
+  count: 104654
+}
+int_values {
+  value: 26
+  count: 94453
+}
+int_values {
+  value: 27
+  count: 80208
+}
+int_values {
+  value: 28
+  count: 70047
+}
+int_values {
+  value: 29
+  count: 58321
+}
+int_values {
+  value: 30
+  count: 49216
+}
+int_values {
+  value: 31
+  count: 38661
+}
+int_values {
+  value: 32
+  count: 32187
+}
+int_values {
+  value: 33
+  count: 24177
+}
+int_values {
+  value: 34
+  count: 19449
+}
+int_values {
+  value: 35
+  count: 13858
+}
+int_values {
+  value: 36
+  count: 11792
+}
+int_values {
+  value: 37
+  count: 7923
+}
+int_values {
+  value: 38
+  count: 6138
+}
+int_values {
+  value: 39
+  count: 4073
+}
+int_values {
+  value: 40
+  count: 3356
+}
+int_values {
+  value: 41
+  count: 1878
+}
+int_values {
+  value: 42
+  count: 1530
+}
+int_values {
+  value: 43
+  count: 797
+}
+int_values {
+  value: 44
+  count: 621
+}
+int_values {
+  value: 45
+  count: 266
+}
+int_values {
+  value: 46
+  count: 276
+}
+int_values {
+  value: 47
+  count: 115
+}
+int_values {
+  value: 48
+  count: 140
+}
+int_values {
+  value: 49
+  count: 23
+}
+int_values {
+  value: 50
+  count: 48
+}

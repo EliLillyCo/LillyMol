@@ -20,7 +20,7 @@
     int _mdl_atom_is_chiral_centre (atom_number_t zatom, int cfg, MDL_File_Supporting_Material &);
 
   private:
-    int _contains_isotope_above (int) const;
+    int _contains_isotope_above (isotope_t) const;
 
 
     int _has_delocalised_neighbours (atom_number_t zatom, const int * aromatic_atoms, const int * aromatic_bonds,
@@ -61,6 +61,15 @@
                                  atom_number_t a4,
                                  int direction);
     int _create_unspecified_chirality_object (atom_number_t zatom);
+
+    int _discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
+                                atom_number_t up,
+                                atom_number_t down,
+                                const Set_of_Atoms& also_connected);
+    int GeometricSide(atom_number_t zatom,
+                      atom_number_t up,
+                      atom_number_t down,
+                      atom_number_t also_connected) const;
 
     int _mdl_atom_stereo_value (atom_number_t a, const MDL_File_Supporting_Material & mdlfos) const;
 

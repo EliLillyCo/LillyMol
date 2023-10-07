@@ -1,0 +1,9 @@
+name: "br2cl"
+scaffold {
+  id: 0
+  smarts: "Br"
+  change_element {
+    atom: 0
+    element: "Cl"
+  }
+}

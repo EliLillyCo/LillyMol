@@ -116,3 +116,7 @@ cyano.qry
 cyano_amine.qry
 cyano_aryl.qry
 cyano_alkyl.qry
+sulfonamides.qry
+sulfonamides_primary.qry
+sulfonamides_acyl.qry
+sulfonamides_aryl.qry

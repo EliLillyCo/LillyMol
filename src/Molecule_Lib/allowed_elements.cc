@@ -1,10 +1,14 @@
 #include <stdlib.h>
+#include <iostream>
 
-#include "cmdline.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
 #include "allowed_elements.h"
+
+using std::cerr;
+using std::endl;
 
 void
 Allowed_Elements::_default_values()
@@ -44,9 +48,9 @@ Allowed_Elements::reset_to_defaults()
 }
 
 int
-Allowed_Elements::build_from_command_line (Command_Line & cl,
-                                           char flag,
-                                           int verbose)
+Allowed_Elements::build_from_command_line(Command_Line & cl,
+                                          char flag,
+                                          int verbose)
 {
   int i = 0;
   IWString e;
@@ -54,7 +58,7 @@ Allowed_Elements::build_from_command_line (Command_Line & cl,
   while (cl.value(flag, e, i++))
   {
     const Element * o = get_element_from_symbol_no_case_conversion(e);
-    if (NULL == o)
+    if (nullptr == o)
     {
       cerr << "Sorry, non periodic table element '" << e << "', cannot be OK\n";
       return 0;
@@ -90,7 +94,7 @@ Allowed_Elements::build_from_command_line (Command_Line & cl,
 }
 
 int
-Allowed_Elements::contains_non_allowed_atoms (const Molecule & m) const
+Allowed_Elements::contains_non_allowed_atoms(const Molecule & m) const
 {
   for (int i = m.natoms() - 1; i >= 0; i--)
   {
@@ -107,9 +111,24 @@ Allowed_Elements::contains_non_allowed_atoms (const Molecule & m) const
 }
 
 void
-Allowed_Elements::set_allow (atomic_number_t z, int s)
+Allowed_Elements::set_allow(atomic_number_t z, int s)
 {
   _allowed_element[z] = s;
 
   return;
+}
+
+void
+Allowed_Elements::exclude_metals() {
+  for (int i = 0; i <= HIGHEST_ATOMIC_NUMBER; ++i) {
+    const Element* e = get_element_from_atomic_number(i);
+    if (e->is_metal()) {
+      _allowed_element[i] = 0;
+    }
+  }
+}
+
+void
+Allowed_Elements::Clear() {
+  std::fill_n(_allowed_element, HIGHEST_ATOMIC_NUMBER + 1, 0);
 }

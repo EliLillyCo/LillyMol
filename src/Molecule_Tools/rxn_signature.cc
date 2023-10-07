@@ -3,23 +3,27 @@
   changing atoms
 */
 
+#include <iostream>
 #include <memory>
-
-#include "cmdline.h"
-#include "misc.h"
-#include "accumulator.h"
-#define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
-#include "iwqsort.h"
-
-#include "molecule_to_query.h"
-#include "rxn_file.h"
-#include "aromatic.h"
-#include "atom_typing.h"
-#include "iwstandard.h"
 #include <vector>
 
+#define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
+#include "Foundational/accumulator/accumulator.h"
 
-const char * prog_name = NULL;
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwqsort/iwqsort.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/rxn_file.h"
+#include "Molecule_Lib/standardise.h"
+
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -65,8 +69,13 @@ static int outputAllParts = false;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Produces signatures around the atoms that change in a reaction\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -r <rad>      radius from changing atoms to signature\n";
   cerr << "  -C <fname>    write changed atom counts to <fname>\n";
   cerr << "  -F <fname>    ignore otherwise bad reactions and write them to <fname>\n";
@@ -153,7 +162,13 @@ identify_atoms_in_signature(Molecule & m,
   return 1;
 }
 
-typedef class BondAtoms
+// In order to better characterise reactions, a string is appended to
+// the reaction smarts that encodes pairs of atoms that are joined
+// by ring bonds.
+// Note that it seems this is only used in clustering reactions.
+// This could have been done several different ways, but for now, this
+// seems to work.
+class BondAtoms
 {
     public:
     BondAtoms(int first,int second)
@@ -192,11 +207,11 @@ typedef class BondAtoms
     }
     
     int atoms[2];
-} BondAtoms;
+};
   
   
   
-typedef class SignatureListItem
+class SignatureListItem
 {
   private:
     std::vector<IWString> reactantList;
@@ -255,7 +270,7 @@ typedef class SignatureListItem
       return returnVal;   
           
     }
-} SignatureListItem;
+};
   
   
   
@@ -314,14 +329,12 @@ get_unique_smiles_core(ISIS_RXN_FILE_Molecule & r,
     if (x1 < 0 || x2 < 0)    // not in the subset
       continue;
 
-    if (b->nrings() > 0)
-    {
+    if (b->nrings() > 0) {
         //printf("\nBond between atoms %i and %i is in a ring\n", x1,x2);
         Bond * subsetBond = const_cast<Bond *>(subset.bond_between_atoms(x1, x2));
         ringBonds.push_back(BondAtoms(x1,x2));
         
-        if (b->is_aromatic())
-        {
+        if (b->is_aromatic()) {
           //Bond * b = const_cast<Bond *>(subset.bond_between_atoms(x1, x2));
           subsetBond->set_bond_type(AROMATIC_BOND);
           subsetBond->set_permanent_aromatic(1);
@@ -345,42 +358,62 @@ get_unique_smiles_core(ISIS_RXN_FILE_Molecule & r,
   
   int *smilesAtomOrder = new int[newAtomCount]; std::unique_ptr<int[]> free_imilesAtomOrder(smilesAtomOrder);
   
-  subset.smiles_atom_order (smilesAtomOrder);
+  subset.smiles_atom_order(smilesAtomOrder);
 
-  // add the information about any ring bonds to the fragment "smiles".  This looks like this
+  // add the information about any ring bonds to the fragment "smiles".
+  // This looks like
   //  [4982C][11741O][6684C](:[4979C]):[4979C]::3,4:3,5::
-  // indicating the the bonds between smiles atoms 3 and 4 and between 3 and 5 are ring bonds
+  // indicating the the bonds between smiles atoms 3 and 4
+  // and between 3 and 5 are ring bonds
 
-  // first, replace the atoms indices that are relative to the subset with the indices related to position in the smiles
+  // first, replace the atoms indices that are relative to the
+  // subset with the indices related to position in the smiles
   
   std::ostringstream ss;
   ss <<  s;
   if (ringBonds.size())
   {
+#ifdef B4ITERATORS
     for(std::vector<BondAtoms>::iterator thisOne = ringBonds.begin() ; thisOne != ringBonds.end() ; ++thisOne)  
       *thisOne = BondAtoms(smilesAtomOrder[thisOne->atoms[0]], smilesAtomOrder[thisOne->atoms[1]]);
+#endif
+    for (BondAtoms& bond_atoms : ringBonds) {
+      bond_atoms = BondAtoms(smilesAtomOrder[bond_atoms.atoms[0]], smilesAtomOrder[bond_atoms.atoms[1]]);
+    }
       
     ss << "::";
  
     // sort them so that the result is still cannonical
  
+#ifdef B4ITERATORS
     for(std::vector<BondAtoms>::iterator firstOne = ringBonds.begin() ; firstOne != ringBonds.end() ; ++firstOne)   
       for(std::vector<BondAtoms>::iterator secondOne = firstOne + 1 ; secondOne != ringBonds.end() ; ++secondOne)
         if(*secondOne < *firstOne)
             secondOne->swap(*firstOne);
+#endif
+    // Easthetically I find using indices easier to read in this case.
+    const uint32_t nring_bonds = ringBonds.size();
+    for (uint32_t i = 0; i < nring_bonds; ++i) {
+      BondAtoms& iter1 = ringBonds[i];
+      for (uint32_t j = i + 1; j < nring_bonds; ++j) {
+        if (ringBonds[j] < iter1) {
+          iter1.swap(ringBonds[j]);
+        }
+      }
+    }
     
     
+#ifdef B4ITERATORS
     for(std::vector<BondAtoms>::iterator firstOne = ringBonds.begin() ; firstOne != ringBonds.end() ; ++firstOne)
         ss << firstOne->atoms[0] <<","  << firstOne->atoms[1] << ":";
-  
+#endif
+    for (const BondAtoms& iter : ringBonds) {
+      ss << iter.atoms[0] << ","  << iter.atoms[1] << ":";
+    }
   }
 
   return IWString(ss.str());
-
 }
-
-
-
 
 static int
 write_changing_atom_count(RXN_File & rxn,
@@ -424,18 +457,18 @@ ensure_locator_arrays_filled(RXN_File & rxn, const int highestMapNumber)
 }
 
 static int
-leftSideSignature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int &countOfChangedAtoms)
+leftSideSignature(RXN_File & rxn,
+                  std::vector<SignatureListItem> &signatures,
+                  int &countOfChangedAtoms)
 {
-  int molCount;
-
-  molCount = rxn.number_reagents();
+  int molCount = rxn.number_reagents();
 
   for (int reagentIndex = 0 ; reagentIndex < molCount; ++reagentIndex)
   {
     if (!outputAllParts && reagentIndex > 0)
       break;
 
-    ISIS_RXN_FILE_Molecule *thisMol(NULL);
+    ISIS_RXN_FILE_Molecule *thisMol(nullptr);
    
     thisMol = &rxn.reagent(reagentIndex);
       
@@ -449,7 +482,8 @@ leftSideSignature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int
 
     int * changed = new_int(matoms); std::unique_ptr<int[]> free_changed(changed);
     
-  // We need to create a reaction in order for the reagent and product locator arrays to be filled
+  // We need to create a reaction in order for the reagent and product locator arrays
+  // to be filled
 
     ensure_locator_arrays_filled(rxn, xx);
 
@@ -462,46 +496,37 @@ leftSideSignature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int
 
     countOfChangedAtoms +=  rxn.identify_atoms_changing_reagent(reagentIndex, atom_typing_specification, changed, cac);   
 
-    
-    if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
-    {
+    if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products()) {
       reactions_with_no_reagent_atoms_in_products++;
       return 0;
     }
 
-    if (rxn.contains_duplicate_atom_map_numbers())
-    {
+    if (rxn.contains_duplicate_atom_map_numbers()) {
       reactions_containing_duplicate_atom_map_numbers++;
       return 0;
     }
 
-    if (thisMol->number_fragments() > 1)
-    {
+    if (thisMol->number_fragments() > 1) {
       cerr << "Caution, first reagent has multiple fragments\n";
     }
-   
       
     atype_t *atype = new atype_t[matoms]; std::unique_ptr<atype_t[]> free_atype(atype);
 
-    if (! atom_typing_specification.assign_atom_types(*thisMol, atype))
-    {
+    if (! atom_typing_specification.assign_atom_types(*thisMol, atype)) {
       cerr << "Cannot assign atom types '" << rxn.name() << "'\n";
       return 0;
     }
 
   // Now we can do what we came here for
 
-    for (int i = 0; i < matoms; ++i)
-    {
-      if (changed[i])
-      {
+    for (int i = 0; i < matoms; ++i) {
+      if (changed[i]) {
         thisMol->set_isotope(i, 1);
         changed[i] = 1;  // the atoms that changed because of aromatic changes too. These will be "2" in the changed array, we need them to be 1
       }
     }
     
-    for (int i = 0; i < nr; ++i)
-    {
+    for (int i = 0; i < nr; ++i) {
       IWString thisSig = get_unique_smiles_core(*thisMol, radius[i], atype, changed);
       signatures[i].addReactantSignature(thisSig); 
     }
@@ -511,20 +536,20 @@ leftSideSignature(RXN_File & rxn,std::vector<SignatureListItem> &signatures, int
 }
 
 static int
-rightSideSignature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, int &countOfChangedAtoms)
+rightSideSignature(RXN_File & rxn,
+                   std::vector<SignatureListItem>& signatures,
+                   int &countOfChangedAtoms)
 {
   countOfChangedAtoms = 0;
   
-  int molCount;
-
-  molCount = rxn.number_products();
+  int molCount = rxn.number_products();
     
   for (int productIndex = 0 ; productIndex < molCount; ++productIndex)
   {
     if (!outputAllParts && productIndex > 0)
       break;
     
-    ISIS_RXN_FILE_Molecule *thisMol(NULL);
+    ISIS_RXN_FILE_Molecule *thisMol(nullptr);
  
     thisMol = &rxn.product(productIndex);
 
@@ -549,47 +574,39 @@ rightSideSignature(RXN_File & rxn,std::vector<SignatureListItem>  &signatures, i
     cac.set_consider_aromatic_bonds(0);
 
 
-    countOfChangedAtoms +=  rxn.identify_atoms_changing_product(productIndex, atom_typing_specification, changed, cac);
+    countOfChangedAtoms += rxn.identify_atoms_changing_product(productIndex, atom_typing_specification, changed, cac);
  
-    if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
-    {
+    if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products()) {
       reactions_with_no_reagent_atoms_in_products++;
       return 1;
     }
 
-    if (rxn.contains_duplicate_atom_map_numbers())
-    {
+    if (rxn.contains_duplicate_atom_map_numbers()) {
       reactions_containing_duplicate_atom_map_numbers++;
       return 1;
     }
 
-    if (thisMol->number_fragments() > 1)
-    {
+    if (thisMol->number_fragments() > 1) {
       cerr << "Caution, first product has multiple fragments\n";
     }
    
-   
     atype_t *atype = new atype_t[matoms]; std::unique_ptr<atype_t[]> free_atype(atype);
 
-    if (! atom_typing_specification.assign_atom_types(*thisMol, atype))
-    {
+    if (! atom_typing_specification.assign_atom_types(*thisMol, atype)) {
       cerr << "Cannot assign atom types '" << rxn.name() << "'\n";
       return 0;
     }
 
   // Now we can do what we came here for
 
-    for (int i = 0; i < matoms; ++i)
-    {
-      if (changed[i])
-      {
+    for (int i = 0; i < matoms; ++i) {
+      if (changed[i]) {
         thisMol->set_isotope(i, 1);
         changed[i] = 1;  // the atoms that changed because of aromatic changes too. These will be "2" in the changed array, we need them to be 1
       }
     }
     
-    for (int i = 0; i < nr; ++i)
-    {
+    for (int i = 0; i < nr; ++i) {
       IWString thisSig = get_unique_smiles_core(*thisMol, radius[i], atype, changed);
       signatures[i].addProductSignature(thisSig); 
     }
@@ -605,37 +622,37 @@ rxn_signature(RXN_File & rxn,
 {
   const int initial_nr = rxn.number_reagents();
 
-  if (0 == initial_nr)
-  {
+  if (0 == initial_nr) {
     cerr << "Skipping reaction with no reagents " << rxn.name() << endl;
- 
     return 1;
   }
   
   std::vector<SignatureListItem> signatures;
   
-  for (int i = 0; i < nr; ++i)
-  {
+  for (int i = 0; i < nr; ++i) {
     signatures.push_back(SignatureListItem());
   }
-  int countOfChangedAtoms = 0 , countOfChangedProductAtoms = 0;
+
+  int countOfChangedAtoms = 0, countOfChangedProductAtoms = 0;
   
-  if (outputLeftSignature)
+  if (outputLeftSignature) {
     if (!leftSideSignature(rxn,signatures, countOfChangedAtoms))
       return 0;
- 
- 
-  if (outputRightSignature)
-  {
-    if (!rightSideSignature(rxn,signatures, countOfChangedProductAtoms))
+  }
+
+  if (outputRightSignature) {
+    if (!rightSideSignature(rxn,signatures, countOfChangedProductAtoms)) {
       return 0;
-    if (!outputLeftSignature  || countOfChangedProductAtoms > countOfChangedAtoms)
+    }
+    if (!outputLeftSignature  || countOfChangedProductAtoms > countOfChangedAtoms) {
       countOfChangedAtoms = countOfChangedProductAtoms;
+    }
   }
 
      
-  if (stream_for_changing_atoms.is_open())
+  if (stream_for_changing_atoms.is_open()) {
     write_changing_atom_count(rxn, countOfChangedAtoms, stream_for_changing_atoms);
+  }
       
   acc_changing_atoms[countOfChangedAtoms]++;
   
@@ -694,8 +711,7 @@ next_reaction_smiles(iwstring_data_source & input,
 
 //cerr << "SMILES INPUT '" << buffer << "'\n";
 
-  if (! rxn.build_from_reaction_smiles(buffer))
-  {
+  if (! rxn.build_from_reaction_smiles(buffer, 1)) {
     cerr << "Cannot interpret " << buffer << endl;
     return 0;
   }
@@ -737,12 +753,11 @@ rxn_signature_file_containing_reaction_files(const char * fname,
 }
 
 static int
-rxn_signature (const char * fname,
-                 IWString_and_File_Descriptor & output)
+rxn_signature(const char * fname,
+              IWString_and_File_Descriptor & output)
 {
   iwstring_data_source input(fname);
-  if (! input.good())
-  {
+  if (! input.good()) {
     cerr << prog_name << ": cannot open '" << fname << "'\n";
     return 0;
   }
@@ -754,16 +769,15 @@ rxn_signature (const char * fname,
 
     const auto initial_offset = input.tellg();
 
-    if (! next_reaction_smiles(input, rxn))
-    {
-      if (input.eof())
+    if (! next_reaction_smiles(input, rxn)) {
+      if (input.eof()) {
         return 1;
+      }
 
       return 0;
     }
 
-    if (rxn.contains_isotopic_reagent_atoms())
-    {
+    if (rxn.contains_isotopic_reagent_atoms()) {
       if (verbose)
         cerr << rxn.name() << " contains isotopic atoms\n";
       reactions_discarded_for_isotopic_atoms++;
@@ -775,28 +789,28 @@ rxn_signature (const char * fname,
     if (verbose > 1)
       cerr << "Processing " << rxn.name() << "\n";
 
-    if (! rxn_signature(rxn, output))
-    {
+    if (! rxn_signature(rxn, output)) {
       cerr << "rxn_signature:fatal error processing '" << rxn.name() << "' now at line " << input.lines_read() << endl;
 
-      if (! ignore_bad_reactions)
+      if (! ignore_bad_reactions) {
         return 0;
+      }
 
-      if (stream_for_bad_reactions.is_open())
+      if (stream_for_bad_reactions.is_open()) {
         echo_bad_data(input, initial_offset, stream_for_bad_reactions);
+      }
 
       bad_reactions_ignored++;
     }
   }
 
   return 1;
-
 }
 
 static int
-get_radii (const Command_Line & cl,
-           const char flag,
-           resizable_array<int> & radii)
+get_radii(const Command_Line & cl,
+          const char flag,
+          resizable_array<int> & radii)
 {
   const_IWSubstring r;
   for (int i = 0; cl.value(flag, r, i); ++i)
@@ -843,8 +857,9 @@ static int rxn_signature (int argc, char ** argv)
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('a'))
+  if (cl.option_present('a')) {
     outputAllParts= true;
+  }
     
 
   set_global_aromaticity_type(Daylight);
@@ -991,7 +1006,7 @@ static int rxn_signature (int argc, char ** argv)
   for (int i = 0; i < cl.number_elements(); i++)
   {
     const char *fname = cl[i];
-    assert(NULL != fname);
+    assert(nullptr != fname);
 
     const_IWSubstring tmp(fname);
     if (tmp.starts_with("F:"))

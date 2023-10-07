@@ -1,8 +1,11 @@
+#include <iostream>
 #include <memory>
 
-#include "gfp_standard.h"
+#include "Utilities/GFP_Tools/gfp_standard.h"
 
 #include "set_of_target_molecules.h"
+
+using std::cerr;
 
 template <typename F>
 Set_of_Target_Molecules<F>::Set_of_Target_Molecules() : _lfp(&_lfpd)
@@ -34,12 +37,12 @@ template <typename F>
 int
 Set_of_Target_Molecules<F>::build(const char * fname)
 {
-  int itype = discern_file_type_from_name(fname);
+  FileType itype = discern_file_type_from_name(fname);
 
-  if (0 == itype)
+  if (FILE_TYPE_INVALID == itype)
   {
     cerr << "Set_of_Target_Molecules::build:cannot discern type '" << fname << "', assuming smiles\n";
-    itype = SMI;
+    itype = FILE_TYPE_SMI;
   }
 
   data_source_and_type<Molecule> input(itype, fname);
@@ -85,9 +88,9 @@ Set_of_Target_Molecules<F>::_compute_fingerprint(Molecule & m,
   _mpr(m, fp.molecular_properties());
 
   _mk(m, _tmp);
-  fp.build_mk(_tmp);
+  fp.build_mk(_tmp, _mk.nbits());
   _mk.set_level_2_fingerprint(_tmp);
-  fp.build_mk2(_tmp);
+  fp.build_mk2(_tmp, _mk.nbits());
 
   const int matoms = m.natoms();
 
@@ -119,7 +122,7 @@ Set_of_Target_Molecules<F>::closest_distance(F & f) const
       highest_similarity = s;
   }
 
-//cerr << "Set_of_Target_Molecules::closest_distance:scanned " << n << " fingerprints, highest_similarity " << highest_similarity << endl;
+//cerr << "Set_of_Target_Molecules::closest_distance:scanned " << n << " fingerprints, highest_similarity " << highest_similarity << '\n';
 
   return 1.0f - highest_similarity;
 }
@@ -130,7 +133,7 @@ Set_of_Target_Molecules<F>::build(data_source_and_type<Molecule> & input)
 {
   Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     _m.add(m);
   }
@@ -174,25 +177,25 @@ Set_of_Target_Molecules<F>::closest_distance(Molecule & m,
 
   const int n = _m.number_elements();
 
-//cerr << "Set_of_Target_Molecules::closest_distance:n = " << n << endl;
+//cerr << "Set_of_Target_Molecules::closest_distance:n = " << n << '\n';
 
   if (nullptr == _match_already_found)
   {
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
       acc.extra(1.0f - fp.tanimoto(_fp[i]));
     }
   }
   else
   {
-    for (int i = 0; i < n; ++i)
-    {
-      if (_match_already_found[i])
+    for (int i = 0; i < n; ++i) {
+      if (_match_already_found[i]) {
         continue;
+      }
 
       const float d = 1.0f - fp.tanimoto(_fp[i]);
-      if (d < _turn_off_if_within)
+      if (d < _turn_off_if_within) {
         _match_already_found[i] = 1;
+      }
 
       acc.extra(d);
     }

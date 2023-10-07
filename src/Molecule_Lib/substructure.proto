@@ -1,0 +1,1284 @@
+syntax = "proto2";
+
+package SubstructureSearch;
+
+import "Molecule_Lib/geometric_constraints.proto";
+
+// Many of these protos fairly closely match correspondingly named
+// classes in the C++ code.
+
+enum Aromaticity {
+  SS_ALIPHATIC = 1;
+  SS_AROMATIC = 2;
+}
+
+// Names need to be chosen so as to not collide with existing
+// symbols.
+enum BondType {
+  // Single bond.
+  SS_SINGLE_BOND = 3;
+  // Double bond.
+  SS_DOUBLE_BOND = 4;
+  // Triple bond.
+  SS_TRIPLE_BOND = 5;
+  // Aromatic Bond.
+  SS_AROMATIC_BOND = 6;
+  // Any kind of bond.
+  SS_BOND = 7;
+}
+
+// For specifying logical expressions
+enum Operator {
+  // Or operator.
+  SS_OR = 8;
+  // And operator.
+  SS_AND = 9;
+  // XOR operator.
+  SS_XOR = 10;
+  // Low priority AND.
+  SS_LP_AND = 11;
+}
+
+// For specifying CahnIngoldPrelog chirality
+enum CahnIngoldPrelog {
+  CIP_NEITHER = 0;
+  CIP_R = 1;
+  CIP_S = 2;
+}
+
+// In a chirality specification, some positions are atom
+// numbers, and others may be an implicit Hydrogen. Leaving
+// the door open to future lone pair specifications.
+message AtomNumberHydrogenLonePair {
+  enum HorLP {
+    HYDROGEN = 1;
+    LONEPAIR = 2;
+  }
+  oneof AtomNumberOr {
+    uint32 atom_number = 1;
+    HorLP h_or_lp = 2;
+  }
+}
+
+message SubstructureChiralCenter {
+  // Central atom, required.
+
+  optional uint32 center = 1;
+
+  optional AtomNumberHydrogenLonePair top_front = 2;
+
+  optional AtomNumberHydrogenLonePair top_back = 3;
+
+  optional AtomNumberHydrogenLonePair left_down = 4;
+
+  optional AtomNumberHydrogenLonePair right_down = 5;
+}
+
+// A Substructure Bond has one or more bond specifications, combined
+// via an OR operator, and the unique id of the atom at the other end.
+message SubstructureBond {
+  repeated BondType btype = 1;
+  optional uint32 other_end = 2;
+}
+
+// When specifying how an environment is attached, there can be multiple
+// points of attachment.
+message SubstructureEnvironmentBond {
+  repeated BondType bond_type = 1;
+  repeated uint32 other_end = 2;
+}
+
+// For a given element, how many are needed?
+message ElementsNeeded {
+  // Both means of specifying an element are processed.
+  repeated uint32 atomic_number = 1;
+  repeated string atomic_symbol = 2;
+
+  // If multiple elements are specified, is that an AND, OR, or XOR condition?
+  // Deliberate decision to NOT enable more complex logic within this message.
+  // So, XOR only makes sense if there are two elements specified.
+  repeated Operator multiple_values_operator = 3;
+
+  repeated uint32 hits_needed = 4;
+  optional uint32 min_hits_needed = 5;
+  optional uint32 max_hits_needed = 6;
+}
+
+message NoMatchedAtomsBetween {
+  optional uint32 a1 = 1;
+  optional uint32 a2 = 2;
+  // Must mimic the ...{...} syntax of a smarts.
+  // Must start and end with braces.
+  // {3-5}, {3[c]}, {>4[c]}, {>5}
+  optional string qualifier = 3;
+}
+
+// A region is defined by some number of matched atoms. The atoms
+// that comprise the region are all atoms that can be reached by
+// going between the matched atoms. For example in the "molecule"
+//  xxxxxNCC(CC)(CCC)CCNxxxxx
+// if we were matching Nitrogen atoms, then the region between the
+// two matched Nitrogen atoms would be all the Carbon atoms. Note
+// that this is not just the shortest path.
+
+// Note that currently only regions defined by two matched atoms
+// are processed.
+// Note that the region includes the matched atoms that define it.
+message Region {
+  repeated uint32 atom = 1;
+
+  // The number of atoms in the region - including the matched atoms.
+  optional uint32 min_natoms = 2;
+  optional uint32 max_natoms = 3;
+  repeated uint32 natoms = 4;
+
+  // The number of rings fully contained in the region. All ring
+  // atoms must be in the region.
+  optional uint32 min_nrings = 5;
+  optional uint32 max_nrings = 6;
+  repeated uint32 nrings = 7;
+
+  // Many more things could be added here....
+}
+
+message LinkAtoms {
+  optional uint32 a1 = 1;
+  optional uint32 a2 = 2;
+  repeated uint32 distance = 3;
+  optional uint32 min_distance = 4;
+  optional uint32 max_distance = 5;
+}
+
+// The -{} directive in smarts is parsed into this structure.
+// The perception is looking from a1->a2. Atom 2 is counted.
+message DownTheBond {
+  // The matched atoms that describe the bond
+  optional uint32 a1 = 1;
+  optional uint32 a2 = 2;
+
+  // The number of atoms that appear after the bond in question.
+  optional uint32 min_natoms = 3;
+  optional uint32 max_natoms = 4;
+  repeated uint32 natoms = 5;
+
+}
+
+// How an environment is attached to matched atoms.
+// There are two ways of specifying an environment
+// attachment. One via a proto, and the other as a string.
+//   1.
+//      SubstructureEnvironmentBond
+//   2.
+//      substructure_bond: "-!@ 1 2 3"
+// Only one of these means of specifying the bonding can be present.
+// I should make this a oneof directive, but things start to get too
+// complex.
+// Note that there is no means of saying attach
+// via a single bond to matched atom 1, and via a double
+// bond to matched atom 2.
+message EnvironmentAttachment {
+  // Scheme 1.
+  repeated uint32 attachment_point = 1;
+
+  repeated BondType btype = 2;
+
+  // Scheme 2.
+  optional string substructure_bond = 3;
+}
+
+// Not being used now.
+message SubstructureRingEnvironment {
+  optional SubstructureAtom substructure_atom = 1;
+
+  optional uint32 min_hits_needed = 2;
+  optional uint32 max_hits_needed = 3;
+}
+
+// Properties of a ring that are shared between ring specifiers
+// and ring system specifiers.
+message SubstructureRingBase {
+  // Positive or negative match.
+  optional bool match_as_match = 1;
+
+  repeated uint32 hits_needed = 2;
+  optional uint32 min_hits_needed = 3;
+  optional uint32 max_hits_needed = 4;
+
+  // The number of heteroatoms attached to the ring.
+  repeated uint32 attached_heteroatom_count = 5;
+  optional uint32 min_attached_heteroatom_count = 6;
+  optional uint32 max_attached_heteroatom_count = 7;
+
+  // The number of heteroatoms in the ring.
+  repeated uint32 heteroatom_count = 8;
+  optional uint32 min_heteroatom_count = 9;
+  optional uint32 max_heteroatom_count = 10;
+
+  // Number of exoclcylic connections. Atoms in a
+  // fused system count towards ncon.
+  repeated uint32 ncon = 11;
+  optional uint32 min_ncon = 12;
+  optional uint32 max_ncon = 13;
+
+  // If multiple rings are being tested, they must all
+  // be in the same fragment.
+  optional bool all_hits_in_same_fragment = 14;
+
+  // The number of ring bonds that are NOT single bonds.
+  // Note that single, aromatic bonds do NOT count.
+  // So, N1=CC=CO1, contains 2 within ring unsaturated bonds.
+  repeated uint32 within_ring_unsaturation = 16;
+  optional uint32 min_within_ring_unsaturation = 17;
+  optional uint32 max_within_ring_unsaturation = 18;
+
+  // An isolated ring will have zero, naphthalene will have 1, and adamantane
+  // will have 2
+  repeated uint32 largest_number_of_bonds_shared_with_another_ring = 19;
+  optional uint32 min_largest_number_of_bonds_shared_with_another_ring = 20;
+  optional uint32 max_largest_number_of_bonds_shared_with_another_ring = 21;
+
+  // The number of atoms in the ring that have pi electrons.
+  repeated uint32 atoms_with_pi_electrons = 26;
+  optional uint32 min_atoms_with_pi_electrons = 27;
+  optional uint32 max_atoms_with_pi_electrons = 28;
+
+  // Number of fully saturated atoms. Use case is a little
+  // unclear. For example a pyrrole nitrogen is fully saturated
+  // but also has pi electrons. This could also be done via
+  // an environment, '[G0]'
+  repeated uint32 fully_saturated_atoms = 29;
+  optional uint32 min_fully_saturated_atoms = 30;
+  optional uint32 max_fully_saturated_atoms = 31;
+
+  // The number of neighbors sharing two or more bonds.
+  repeated uint32 strongly_fused_ring_neighbours = 32;
+  optional uint32 min_strongly_fused_ring_neighbours = 33;
+  optional uint32 max_strongly_fused_ring_neighbours = 34;
+
+  // Conditions that must match the an atom in the ring and
+  // what is joined.
+  // For example, to look for a phenolic Oxygen, c-[OD1]
+  // What is unusual here is that the first matched atom
+  // in a ring environment is a ring atom. That is different
+  // from how regular query environments match.
+  optional string environment = 22;
+
+  // By default, only the first atom in a ring environment can
+  // be in the ring. If that condition is relaxed, then matched
+  // atoms can include ring atoms.
+  optional bool environment_can_match_in_ring_atoms = 23;
+
+  // By default, matches to rings and ring systems do not create
+  // matched atoms. But if requested, they can set a per-atom
+  // value for the global_match_id.
+  optional uint32 set_global_id = 24;
+
+  // When the global id is set, but default it only sets a value
+  // for atoms that are in the ring/ring system.
+  // Optionally we can extend the ring to things like =O and =N
+  optional bool ring_extends_to_carbonyl = 25;
+
+// Not supported from proto. Seems unnecessary.
+//optional string define_heteroatoms = 24;
+//optional string heteroatoms = 25;
+
+  // By default, all substituents must be matched. TODO: do
+  // we need to implement logical operators between them?
+  // Do we need a negation - something that if present
+  // inhibits matching?
+  repeated Substituent substituent = 35;
+}
+
+message SubstructureRingSpecification {
+  optional SubstructureRingBase base = 1;
+
+  // The number of atoms in the ring.
+  repeated uint32 ring_size = 2;
+  optional uint32 min_ring_size = 3;
+  optional uint32 max_ring_size = 4;
+
+  // Whether or not the ring is aromatic.
+  // If not specified, there are no restrictions.
+  optional bool aromatic = 5;
+
+  // the number of fused ring neighbors.
+  repeated uint32 fused = 6;
+  optional uint32 min_fused = 7;
+  optional uint32 max_fused = 8;
+
+  // Number of fused aromatic neighbors.
+  // Note that if you have a molecule with zero rings,
+  // these criteria will always fail, even something like
+  // fused_aromatic_neighbours < 2
+  // Think of this as requiring "there is a ring which...".
+  repeated uint32 fused_aromatic_neighbours = 9;
+  optional uint32 min_fused_aromatic_neighbours = 10;
+  optional uint32 max_fused_aromatic_neighbours = 11;
+
+  repeated uint32 fused_non_aromatic_neighbours = 12;
+  optional uint32 min_fused_non_aromatic_neighbours = 13;
+  optional uint32 max_fused_non_aromatic_neighbours = 14;
+
+  // The number of spiro fusions to this ring.
+  optional uint32 spiro_fusion_count = 15;
+}
+
+// Rings and ring systems can have a substituent specification.
+// There is commonality between this and DownTheBond, and perhaps
+// it might make sense to combine them. Maybe...
+message Substituent {
+  // Constraints on the number of atoms in a substituent.
+  optional uint32 min_natoms = 1;
+  optional uint32 max_natoms = 2;
+  repeated uint32 natoms = 3;
+
+  // Constraints on the number of rings in a substituent.
+  optional uint32 min_nrings = 4;
+  optional uint32 max_nrings = 5;
+  repeated uint32 nrings = 6;
+
+  // The number of instances of this substituent.
+  optional uint32 min_hits_needed = 7;
+  optional uint32 max_hits_needed = 8;
+  repeated uint32 hits_needed = 9;
+  // TODO logical operator?
+
+  // Constraints on the max bonds_between from the attachment point.
+  optional uint32 min_length = 10;
+  optional uint32 max_length = 11;
+  repeated uint32 length = 12;
+
+  optional uint32 set_global_id = 13;
+
+  // If any of `required_smarts` match, the substituent this is accepted.
+  repeated string required_smarts = 14;
+  // If any of `disqualifying_smarts` match, the substituent is rejected.
+  repeated string disqualifying_smarts = 15;
+}
+
+// When describing an inter-ring region with > 2 rings connected, we need to
+// be able to specify multiple distances from 1 ring to another.
+message BondsAcrossInterRingRegion {
+  optional uint32 min_length = 1;
+  optional uint32 max_length = 2;
+  repeated uint32 length = 3;
+}
+
+// Just as rings and ring systems are abstract concepts, so too is the
+// concept of an inter-ring region. This is defined by a connected set
+// of atoms, that are in the scaffold, but not in a ring. If the atoms
+// are between just two rings, then it is a linker.
+message InterRingAtoms {
+  // Constraints on the number of atoms in a substituent.
+  optional uint32 min_natoms = 1;
+  optional uint32 max_natoms = 2;
+  repeated uint32 natoms = 3;
+
+  // The number of ring connections. A linker will have 2.
+  optional uint32 min_ring_connections = 4;
+  optional uint32 max_ring_connections = 5;
+  repeated uint32 ring_connections = 6;
+
+  // The number of instances of a group matching these criteria.
+  optional uint32 min_hits_needed = 7;
+  optional uint32 max_hits_needed = 8;
+  repeated uint32 hits_needed = 9;
+  // TODO logical operator?
+
+  // The length of an InterRingAtoms region is defined by the distance
+  // (bonds) between ring atoms. If this is a linker, 2 ring connections,
+  // then it is the bonds_between those two ring atoms, and the length
+  // constraint is unambiguous.
+  
+  //  If there are > 2 ring_connections, then there can be any number of
+  // the bond separations within an inter ring region. There are many ways
+  // in which this can be specified.
+
+  // A list of inter ring lengths that must each be present. This enables
+  // complete specification of lengths. If there are multiple instances of
+  // a length, there must be 2+ instances of that distance.
+  // Extra inter-ring separations are ignored - specify ring_connections if
+  // needed.
+  repeated uint32 required_length = 10;
+
+  // Looser specifications of inter ring lengths. This is very hard to
+  // specify, just because of the almost unlimited number of types of
+  // requirements that could be needed.
+
+  // If each of the between ring lengths satisfy these constraints, that
+  // is a match. Note that if we had specified
+  //   length: 7, 8
+  // and all lengths were 7, that is a match.
+  optional uint32 min_length = 11;
+  optional uint32 max_length = 12;
+  repeated uint32 length = 13;
+
+  // If there is a need to specify multiple values for bonds between ring
+  // atoms. Each constraint here must be matched.
+  repeated BondsAcrossInterRingRegion bonds_between_ring_atoms = 14;
+
+  // If any of `required_smarts` match, the substituent is accepted.
+  // Note that the ring atoms can be searched in both the required and
+  // disqualifying smarts. So, [R]-[D2]-[R] is a valid query. But this
+  // would just be a less efficient version of 'length: 2'.
+  repeated string required_smarts = 15;
+  // If any of `disqualifying_smarts` match, the substituent is rejected.
+  repeated string disqualifying_smarts = 16;
+
+  optional uint32 set_global_id = 17;
+
+  // This is not implemented yet, might need some surgery on the current
+  // implementation to make it work.
+  // An inter-ring region can be defined by global_id's set by ring or
+  // ring systems. What this means is that internally, rings and ring systems
+  // must be perceived beofre inter-ring regions are perceived.
+  // There must be at least two values specified. ALL atoms between those rings
+  // are included - even if that includes ring atoms.
+  // what happens if we specify two numbers, but there is another ring attached? That fails?
+  repeated uint32 defined_by_ring_global_id = 18;
+
+  // Next id to assign = 19.
+}
+
+// In a SubstructureRingSystemSpecification we can specify ring sizes as well as
+// the number of occurrences needed.  Note that if multiple ring sizes are
+// specified, or if there is a range, there is no guarantee that all items will
+// be matched.  Use a separate RingSizeRequirement if multiple specific sizes
+// must match.
+// If multiple ring sizes are specified, the count of all present are summed and
+// compared to the count requirement.
+
+message RingSizeRequirement {
+  repeated uint32 ring_size = 1;
+  optional uint32 min_ring_size = 2;
+  optional uint32 max_ring_size = 3;
+
+  repeated uint32 count = 4;
+  optional uint32 min_count = 5;
+  optional uint32 max_count = 6;
+}
+
+message SubstructureRingSystemSpecification {
+  optional SubstructureRingBase base = 1;
+
+  // the number of SSSR rings in the system.
+  repeated uint32 rings_in_system = 2;
+  optional uint32 min_rings_in_system = 3;
+  optional uint32 max_rings_in_system = 4;
+
+  // Ring sizes that must be in the matched system.
+  // min_ring_size_count and max_ring_size_count refer to
+  // all ring sizes found.
+  repeated uint32 ring_size = 5;
+  optional uint32 min_ring_size_count = 6;
+  optional uint32 max_ring_size_count = 7;
+
+  // Detailed specification of how many instances of any ring
+  // size to find.
+  repeated RingSizeRequirement ring_size_requirement = 8;
+
+  // Number of aromatic rings - any size.
+  repeated uint32 aromatic_ring_count = 11;
+  optional uint32 min_aromatic_ring_count = 12;
+  optional uint32 max_aromatic_ring_count = 13;
+
+  // Number of non aromatic rings - any size
+  repeated uint32 non_aromatic_ring_count = 14;
+  optional uint32 min_non_aromatic_ring_count = 15;
+  optional uint32 max_non_aromatic_ring_count = 16;
+
+  // The maximum number of fused neighbors associated with
+  // any ring in the system. Naphthalene would be 1.
+  repeated uint32 degree_of_fusion = 17;
+  optional uint32 min_degree_of_fusion = 18;
+  optional uint32 max_degree_of_fusion = 19;
+
+  // The number of atoms in the system.
+  repeated uint32 atoms_in_system = 20;
+  optional uint32 min_atoms_in_system = 21;
+  optional uint32 max_atoms_in_system = 22;
+
+  // Number of substituent groups attached. Not
+  // inter-ring groups.
+  repeated uint32 number_spinach_groups = 23;
+  optional uint32 min_number_spinach_groups = 24;
+  optional uint32 max_number_spinach_groups = 25;
+
+  // Number of inter-ring groups off the ring system.
+  repeated uint32 number_non_spinach_groups = 26;
+  optional uint32 min_number_non_spinach_groups = 27;
+  optional uint32 max_number_non_spinach_groups = 28;
+
+  // There exists a spinach group that has this many atoms.
+  repeated uint32 atoms_in_spinach_group = 29;
+  optional uint32 min_atoms_in_spinach_group = 30;
+  optional uint32 max_atoms_in_spinach_group = 31;
+
+  // If set, then the atoms_in_spinach_group directive
+  // is applied to all substituents.
+  optional bool every_group_matches_atoms_in_spinach = 42;
+
+  // The length of a spinach group - max bonds from the ring.
+  repeated uint32 length_of_spinach_group = 32;
+  optional uint32 min_length_of_spinach_group = 33;
+  optional uint32 max_length_of_spinach_group = 34;
+
+  // If set, then the length_of_spinach_group directive
+  // is applied to all substituents.
+  optional bool every_group_matches_length_of_spinach = 43;
+
+  // The number of bonds to another ring. Note that
+  // any match is considered OK.
+  repeated uint32 distance_to_another_ring = 35;
+  optional uint32 min_distance_to_another_ring = 36;
+  optional uint32 max_distance_to_another_ring = 37;
+
+  // The number of rings in the system that are strongly
+  // fused to another ring n the system
+  repeated uint32 strongly_fused_ring_count = 38;
+  optional uint32 min_strongly_fused_ring_count = 39;
+  optional uint32 max_strongly_fused_ring_count = 40;
+
+  // Sometimes it is convenient to have ring systems bridge across
+  // spiro fusions.
+  optional bool ring_systems_extend_across_spiro_fusions = 41;
+}
+
+message SubstructureAtomSpecifier {
+  // The Element to match as symbol.
+  repeated string atomic_symbol = 1;
+
+  // The Element to match as atomic number.
+  repeated uint32 atomic_number = 2;
+
+  // Number of explicit connections.
+  repeated uint32 ncon = 3;
+  optional uint32 min_ncon = 4;
+  optional uint32 max_ncon = 5;
+
+  // Number of explicit connections out to 2 bonds.
+  repeated uint32 ncon2 = 6;
+  optional uint32 min_ncon2 = 7;
+  optional uint32 max_ncon2 = 8;
+
+  // Number of bonds - single=1, double=2, aromatic undefined
+  repeated uint32 nbonds = 9;
+  optional uint32 min_nbonds = 10;
+  optional uint32 max_nbonds = 11;
+
+  // Formal charge.
+  repeated int32 formal_charge = 12;
+  optional int32 min_formal_charge = 13;
+  optional int32 max_formal_charge = 14;
+
+  // Number of SSSR rings.
+  repeated uint32 nrings = 15;
+  optional uint32 min_nrings = 16;
+  optional uint32 max_nrings = 17;
+
+  // Number of ring bonds.
+  repeated uint32 ring_bond_count = 18;
+  optional uint32 min_ring_bond_count = 19;
+  optional uint32 max_ring_bond_count = 20;
+
+  repeated uint32 ring_size = 21;
+  optional uint32 min_ring_size = 22;
+  optional uint32 max_ring_size = 23;
+
+  repeated uint32 hcount = 24;
+  optional uint32 min_hcount = 25;
+  optional uint32 max_hcount = 26;
+
+  // Aromaticity.
+  optional bool aromatic = 27;
+
+  // Chiral or not.
+  optional bool chirality = 28;
+
+  // Aromatic ring sizes.
+  repeated uint32 aromatic_ring_size = 30;
+  optional uint32 min_aromatic_ring_size = 31;
+  optional uint32 max_aromatic_ring_size = 32;
+
+  // Aliphatic ring sizes.
+  repeated uint32 aliphatic_ring_size = 33;
+  optional uint32 min_aliphatic_ring_size = 34;
+  optional uint32 max_aliphatic_ring_size = 35;
+
+  // Attached heteroatom count.
+  repeated uint32 attached_heteroatom_count = 36;
+  optional uint32 min_attached_heteroatom_count = 37;
+  optional uint32 max_attached_heteroatom_count = 38;
+
+  // Lone pair count.
+  repeated uint32 lone_pair_count = 39;
+  optional uint32 min_lone_pair_count = 40;
+  optional uint32 max_lone_pair_count = 41;
+
+  // Unsaturation = nbonds() - ncon().
+  repeated uint32 unsaturation = 42;
+  optional uint32 min_unsaturation = 43;
+  optional uint32 max_unsaturation = 44;
+
+  // Daylight X value - ncon including implicit Hydrogens.
+  repeated uint32 daylight_x = 45;
+  optional uint32 min_daylight_x = 46;
+  optional uint32 max_daylight_x = 47;
+
+  // Isotope.
+  repeated uint32 isotope = 48;
+  optional uint32 min_isotope = 49;
+  optional uint32 max_isotope = 50;
+
+  // Aryl neighbors.
+  repeated uint32 aryl = 51;
+  optional uint32 min_aryl = 52;
+  optional uint32 max_aryl = 53;
+
+  // Number of vinyl neighbors.
+  repeated uint32 vinyl = 54;
+  optional uint32 min_vinyl = 55;
+  optional uint32 max_vinyl = 56;
+
+  // Fused System Size.
+  repeated uint32 fused_system_size = 57;
+  optional uint32 min_fused_system_size = 58;
+  optional uint32 max_fused_system_size = 59;
+
+  // All aromatic rings containing atom must have Kekule forms.
+  optional bool all_rings_kekule = 60;
+
+  // Heteroatoms in ring.
+  repeated uint32 heteroatoms_in_ring = 61;
+  optional uint32 min_heteroatoms_in_ring = 62;
+  optional uint32 max_heteroatoms_in_ring = 63;
+
+  // Spinach related matching.
+  //   -1 -> unspecified
+  //    0 -> matched atom must not be in spinach
+  //    1 -> matched atom must     be in spinach
+  // In a molecule with no rings, there is no positive
+  // match to spinach, but there will be a negative
+  // match to a spinach specification.
+  optional int32 match_spinach_only = 64;
+
+  // Scaffold atoms attached to ring. Useful for distinguishing
+  // "internal" and "terminal" rings.
+  // Matches all atoms in a ring if a ring holding the atom
+  // has this many scaffold bonds attached.
+  repeated uint32 scaffold_bonds_attached_to_ring = 65;
+  optional uint32 min_scaffold_bonds_attached_to_ring = 66;
+  optional uint32 max_scaffold_bonds_attached_to_ring = 67;
+
+  // Preference value associated with matching.
+  optional int32 preference_value = 68;
+
+  // Symmetry degree
+  repeated uint32 symmetry_degree = 69;
+  optional uint32 min_symmetry_degree = 70;
+  optional uint32 max_symmetry_degree = 71;
+
+  // Symmetry group for enforcing symmetry group matches.
+  optional int32 symmetry_group = 72;
+
+  // SubstructureAtomSpecifier's after the first one must
+  // have an operator specified.
+  optional Operator logical_operator = 76;
+
+  // Atom type stored with the Atom.
+  optional uint32 user_atom_type = 77;
+
+  // Atom typing specification, done within the query.
+  optional uint32 atom_type = 78;
+
+  // This will be instantiated from the 'v' directive in a smarts.
+  repeated uint32 valence = 79;
+  optional uint32 min_valence = 80;
+  optional uint32 max_valence = 81;
+
+  // Will only match if the atom is spiro fused. If unset,
+  // no specification. Note that unset is different from false.
+  optional bool spiro = 82;
+
+  // CIP type stereochemistry. Note that UNDEFINED is matched,
+  // so if you specify CIP_UNDEFINED, the atom will only
+  // match atoms that are NOT R or S.
+
+  optional CahnIngoldPrelog cip = 83;
+}
+
+message SubstructureAtomEnvironment {
+  optional uint32 id = 1;
+
+  repeated SubstructureAtom substructure_atom = 2;
+
+  optional string op = 3;
+}
+
+message SubstructureAtom {
+  // The id must be present, and must be unique across SubstructureAtom's.
+  optional int32 id = 1;
+
+  optional bool match_as_match = 2;
+
+  optional string text_identifier = 3;
+
+  optional uint32 atom_map_number = 4;
+
+  optional uint32 initial_atom_number = 5;
+
+  // I do not understand what this is for. As implemented, the functionality
+  // seems strange. Omitting for now.
+  // optional uint32 or_id = 6;
+  //optional int32 or_operator = 8;
+
+
+  // A SubstructureAtom can consist of any number of individual choices of properties.
+  repeated SubstructureAtomSpecifier atom_properties = 7;
+
+  optional int32 ring_id = 9;
+
+  // Matched atoms given the same fused_system_id must be
+  // in the same fused system.
+  optional uint32 fused_system_id = 10;
+
+  // Matched atoms in the same fragment_id, must be in
+  // the same fragment.
+  optional int32 fragment_id = 11;
+
+  optional double numeric_value = 12;
+
+  // Matched atoms can be excluded from the embedings reported.
+  optional bool include_in_embedding = 13;
+
+  // An atom can be specified as a smarts, which might specify
+  // multiple atoms, the smarts for a single atom, or a smiles,
+  // which might also describe multiple atoms.
+  oneof SmilesOrSmarts {
+    string smarts = 14;
+    string atom_smarts = 15;
+    string smiles = 16;
+  }
+
+  // Specifications about atoms that are adjacent to the matched atoms.
+  repeated SubstructureAtomEnvironment environment = 17;
+
+  // Bonds can be specified either by a SubstructureBond or a bond smarts.
+  // Repeated because there can be multiple bonds from an atom.
+  repeated SubstructureBond query_bond = 21;
+
+  // For convenience, bonding can be described as text bond smarts.
+  // bond_smarts: "@^= 0", which is a ring XOR doublebond to matched atom 0.
+  repeated string bond_smarts = 22;
+
+  // Single bond type specifications.
+  repeated uint32 single_bond = 25;
+  repeated uint32 double_bond = 26;
+  repeated uint32 triple_bond = 27;
+  repeated uint32 aromatic_bond = 28;
+  repeated uint32 bond = 29;
+
+  // The preferences that might be associated with this atom.
+  repeated SubstructureAtomSpecifier preference = 23;
+
+  // By default, low preference embeddings are discarded. Optionally
+  // they can be summed.
+  optional bool sum_all_preference_hits = 24;
+
+  // Unmatched atoms attached.
+  repeated uint32 unmatched_atoms_attached = 30;
+  optional uint32 min_unmatched_atoms_attached = 31;
+  optional uint32 max_unmatched_atoms_attached =  32;
+
+  // We can do searches on atom types, giving a specific value
+  // for an atom type. But often we just want to ensure that
+  // one or more atoms are either the same or different.
+  // Matched atoms with the same atom_type_group must have
+  // the same atom types. If different groups, then the atom types
+  // assigned must be different.
+  optional uint32 atom_type_group = 33;
+
+  // Per atom global match id value, used for matching query atoms
+  // to atoms marked by global match conditions.
+  optional uint32 global_match_id = 34;
+}
+
+// Specifications of the atoms adjacent to the matched atoms.
+message SubstructureEnvironment {
+  optional uint32 id = 1;
+
+  // Various ways of describing the atoms that comprise the env.
+  repeated string smarts = 3;
+  repeated string smiles = 4;
+  repeated SubstructureAtom query_atom = 5;
+
+  // How the environment is attached.
+  optional EnvironmentAttachment attachment = 6;
+
+  repeated string bond = 7;
+
+  // Different environments can be related by and and or groups.
+  optional uint32 or_id = 8;
+  optional uint32 and_id = 9;
+
+  // The number of instances the environment must match each
+  // embedding.
+  repeated uint32 hits_needed = 10;
+  optional uint32 min_hits_needed = 11;
+  optional uint32 max_hits_needed = 12;
+
+  // Examine the anchor atoms. If there are any other, unmatched
+  // atoms at that site, reject the match.
+  optional bool no_other_substituents_allowed = 13;
+
+  // by default, environments can share the same attachment
+  // point. That can be turned off.
+  optional bool env_matches_can_share_attachment_points = 15;
+
+  // Stop searching once a given number of matches are found.
+  optional uint32 max_matches_to_find = 16;
+
+  // When attempting to match an environment, if there is
+  // not a match at an atom, then if there are only H atoms,
+  // record that as a match.
+  optional bool hydrogen_ok = 17;
+
+  // If 2 environment matches are needed, you can ensure that
+  // the come from 2 different matched atoms.
+  optional uint32 max_env_matches_per_anchor = 18;
+}
+
+// Environments work if there is just one attachment point, but I
+// ran into a case where what needed to be excluded involved two
+// different connections to the matched nitrogen atom, N(~O)~[NH1]
+// This could have been done with multiple environments combined
+// with a logical operator, but that seems too complex.
+// The assumption is that the first atom in the smarts
+// matches a matched atom from the main query.
+// Also useful for specifying exclusions. 
+// We have an amine group that should NOT be certain types.
+// Here the and operator is desirable.
+//  
+//  smarts: "[ND2H1]a@aC(=O)[OH]"
+//  matched_atom_must_be {
+//    atom: 0
+//    smarts: "!N-C=[O,S]"
+//    smarts: "!N[SD4](=*)(=*)"
+//    smarts: "!N[#6H0X4]"
+
+message MatchedAtomMatch {
+  // The matched atom number. required.
+  // If repeated, ALL such atoms must match. Should allow or conditions...
+  repeated int32 atom = 1;
+
+  // Smarts that must match at that atom.
+  // First query atom must match the matched atom.
+  // If the first character of the smarts is '!' that becomes
+  // part of a rejection list, any match causes a rejection (any).
+  // If it does not start with '!', then it is a positive
+  // match, and we then require at least one of the positive
+  // matches to match (or).
+  repeated string smarts = 2;
+
+  // Many of these can be combined in a logical expression.
+  // The default will be AND.
+  // Not currently implemented.
+  optional Operator logexp = 3;
+}
+
+// Specifications for pairs of matched atoms.
+// This is redundant with linkers - as currently implemented.
+message SeparatedAtoms {
+  // A pair of matched atoms
+  optional uint32 a1 = 1;
+  optional uint32 a2 = 2;
+
+  // And the required bonds between them.
+  repeated uint32 bonds_between = 3;
+  optional uint32 min_bonds_between = 4;
+  optional uint32 max_bonds_between = 5;
+}
+
+// Before atom matching is attempted we can quickly check some whole
+// molecule properties, and those requirements are not satisfied, no
+// atom matching is attempted.
+message RequiredMolecularProperties {
+
+  // Only search the molecule if the natoms constraint
+  // is matched.
+  repeated uint32 natoms = 1;
+  optional uint32 min_natoms = 2;
+  optional uint32 max_natoms = 3;
+
+  // Only search the molecule if the nrings constraint is
+  // satisfied.
+  repeated uint32 nrings = 4;
+  optional uint32 min_nrings = 5;
+  optional uint32 max_nrings = 6;
+
+  // Only search the molecule if the number of heteroatoms
+  // is satisfied.
+  repeated uint32 heteroatoms_in_molecule = 7;
+  optional uint32 min_heteroatoms_in_molecule = 8;
+  optional uint32 max_heteroatoms_in_molecule = 9;
+
+  // Only search the molecule if the fused_rings attribute is
+  // satisfied.
+  // Note that this can never be 1.
+  repeated uint32 fused_rings = 10;
+  optional uint32 min_fused_rings = 11;
+  optional uint32 max_fused_rings = 12;
+
+  // Onlysearch the molecule if the strongly_fused_rings
+  // attribute is satisfied.
+  // Note that this can never be 1.
+  repeated uint32 strongly_fused_rings = 13;
+  optional uint32 min_strongly_fused_rings = 14;
+  optional uint32 max_strongly_fused_rings = 15;
+
+  // Onlysearch the molecule if the isolated_rings attribute
+  // is satisfied.
+  repeated uint32 isolated_rings = 16;
+  optional uint32 min_isolated_rings = 17;
+  optional uint32 max_isolated_rings = 18;
+
+  // The number of ring systems in the molecule.
+  // A ring systems is either an isolated ring or a fused system.
+  // Note that by default, ring fusions do not span spiro fusions.
+  repeated uint32 ring_systems = 19;
+  optional uint32 min_ring_systems = 20;
+  optional uint32 max_ring_systems = 21;
+
+  // Onlysearch the molecule if the aromatic_rings attribute
+  // is satisfied.
+  repeated uint32 aromatic_rings = 22;
+  optional uint32 min_aromatic_rings = 23;
+  optional uint32 max_aromatic_rings = 24;
+
+  // Only search the molecule if the aromatic atom count matches.
+  repeated uint32 aromatic_atoms = 25;
+  optional uint32 min_aromatic_atoms = 26;
+  optional uint32 max_aromatic_atoms = 27;
+
+  // Only search the molecule if the non_aromatic_rings attribute
+  // is satisfied.
+  repeated uint32 non_aromatic_rings = 28;
+  optional uint32 min_non_aromatic_rings = 29;
+  optional uint32 max_non_aromatic_rings = 30;
+
+  // Only search the molecule if number_isotopic_atoms attribute
+  // is satisfied.
+  repeated uint32 number_isotopic_atoms = 31;
+  optional uint32 min_number_isotopic_atoms = 32;
+  optional uint32 max_number_isotopic_atoms = 33;
+
+  // Only search the molecule if number_fragments attribute
+  // is satisfied.
+  repeated uint32 number_fragments = 34;
+  optional uint32 min_number_fragments = 35;
+  optional uint32 max_number_fragments = 36;
+
+  // Only search the molecule if the atoms_in_spinach property
+  // is satisfied.
+  repeated uint32 atoms_in_spinach = 37;
+  optional uint32 min_atoms_in_spinach = 38;
+  optional uint32 max_atoms_in_spinach = 39;
+
+  // Only search the molecule if the inter_ring_atoms property
+  // is satisfied.
+  repeated uint32 inter_ring_atoms = 40;
+  optional uint32 min_inter_ring_atoms = 41;
+  optional uint32 max_inter_ring_atoms = 42;
+
+  // Only search the molecule if the net_formal_charge property
+  // is satisfied.
+  repeated int32 net_formal_charge = 43;
+  optional int32 min_net_formal_charge = 44;
+  optional int32 max_net_formal_charge = 45;
+
+  // The most common use case is looking for molecules that have
+  // any net formal charge, so make that easy.
+  // If set, will match if there is any formal charge.
+  optional bool any_net_formal_charge = 46;
+
+  // Only search the molecule if elements_needed is satisfied.
+  repeated ElementsNeeded elements_needed = 47;
+}
+
+message SingleSubstructureQuery {
+  // Must be present, and unique across all SingleSubstructureQuery.
+  optional int32 id = 1;
+
+  // Free text stored with the query.
+  optional string label = 2;
+  repeated string comment = 3;
+  optional string name = 4;
+
+  optional RequiredMolecularProperties required_molecular_properties = 5;
+
+  // Once an embedding has been found, do not try to find
+  // more embeddings starting with that first matched atom.
+  optional bool one_embedding_per_start_atom = 6;
+
+  // Not sure if this is needed. Not tested.
+  optional uint32 normalise_rc_per_hits_needed = 7;
+
+  // Subtract subtract_from_rc from the return code of a
+  // substructure search. But note that the number of embeddings
+  // will remain unchanged.
+  optional uint32 subtract_from_rc = 8;
+
+  // Stop searching once max_matches_to_find embeddings have been found.
+  optional uint32 max_matches_to_find = 9;
+
+  // Set true by default.
+  optional bool save_matched_atoms = 10;
+
+  // Seems too specific, not tested. Do not use.
+  optional bool ncon_ignore_singly_connected = 11;
+
+  // Set true by default. Benzene will have 24 matches.
+  optional bool perceive_symmetric_equivalents = 12;
+
+  // the matched atoms in an embedding must form a
+  // ring, even though there was no ring specified
+  // in the query. All pairs of matched atoms are
+  // checked to see if there is a ring.
+  optional uint32 implicit_ring_condition = 13;
+
+  // Once a match has been found in one fragment, only
+  // look for matches in that fragment. Note that this
+  // makes matching dependent on atom(fragment) ordering.
+  optional bool all_hits_in_same_fragment = 14;
+
+  // Restrict matching to the largest fragment. If there
+  // are multiple largest fragment, it will choose the
+  // first, even though there may be no matches there.
+  optional bool only_match_largest_fragment = 15;
+
+  // As embeddings are found, if a new embedding overlaps
+  // with a previously found embedding, it is discarded.
+  // Note that this may introduce an atom ordering dependence.
+  optional bool embeddings_do_not_overlap = 16;
+
+  // By default, low preference matches are discarded.
+  // Instead, they can be sorted by their preference values.
+  optional bool sort_by_preference_value = 17;
+
+  // A query can be specified by a smarts or a smiles.
+  oneof smiles_or_smarts {
+     string smiles = 18;
+     string smarts = 19;
+  }
+
+  // There can be any number of numeric values associated
+  // with a query.
+  repeated double numeric_value = 20;
+
+  // Reject an embedding if there are any matched atoms between
+  // two specified matched atoms. Useful for discerning directionality
+  // in things like amides, esters and such.
+  repeated NoMatchedAtomsBetween no_matched_atoms_between = 21;
+
+  optional bool no_matched_atoms_between_exhaustive = 22;
+
+  // Specify constraints on the distance between any two matched atoms.
+  repeated LinkAtoms link_atoms = 23;
+
+  repeated DownTheBond down_the_bond = 24;
+
+  // A substituent can be anywhere there is a chain bond.
+  // This might generate a large number of matches.
+  repeated Substituent substituent = 25;
+
+  optional bool fail_if_embeddings_too_close = 26;
+
+  // The number of matched atoms that are used for determining
+  // the distance between hits. By default, all matched
+  // atoms are used. If any distance violates the constraint
+  // the embedding is discarded. Note atom ordering dependency.
+  optional uint32 distance_between_hits_ncheck = 27;
+
+  // Unclear if this is useful or not. Use preferences.
+  optional string sort_matches = 28;
+
+  // Once embeddings are determined, check the number of
+  // unmatched heteroatoms attached to the matched atoms. Discard
+  // embedding unless this is satisfied.
+  repeated uint32 attached_heteroatom_count = 29;
+  optional uint32 min_attached_heteroatom_count = 30;
+  optional uint32 max_attached_heteroatom_count = 31;
+
+  // The number of hits that must be found. Return failure
+  // unless satisfied.
+  repeated uint32 hits_needed = 32;
+  optional uint32 min_hits_needed = 33;
+  optional uint32 max_hits_needed = 34;
+
+  // Within each embedding, the number of ring atoms matched.
+  repeated uint32 ring_atoms_matched = 35;
+  optional uint32 min_ring_atoms_matched = 36;
+  optional uint32 max_ring_atoms_matched = 37;
+
+  // Within each embedding, the number of heteroatoms matched.
+  repeated uint32 heteroatoms_matched = 38;
+  optional uint32 min_heteroatoms_matched = 39;
+  optional uint32 max_heteroatoms_matched = 40;
+
+  // The number of non matched attached to matched atoms.
+  repeated uint32 ncon = 41;
+  optional uint32 min_ncon = 42;
+  optional uint32 max_ncon = 43;
+
+  // Matches that violate distance_between_hits will be discarded.
+  // Beware that this depends on the order in which embeddings are
+  // discovered, so you can get different results by reordering
+  // the atoms in the molecule.
+  // Note the interaction with distance_between_hits_ncheck.
+  repeated uint32 distance_between_hits = 44;
+  optional uint32 min_distance_between_hits = 45;
+  optional uint32 max_distance_between_hits = 46;
+
+  repeated uint32 distance_between_root_atoms = 47;
+  optional uint32 min_distance_between_root_atoms = 48;
+  optional uint32 max_distance_between_root_atoms = 49;
+
+  // Once matching is complete, only report matches if the
+  // number of unmatched atoms condition is met.
+  repeated uint32 unmatched_atoms = 50;
+  optional uint32 min_unmatched_atoms = 51;
+  optional uint32 max_unmatched_atoms = 52;
+
+  // Within an individual embedding, what fraction of the
+  // atoms in the molecule do the matched atoms comprise.
+  // Note that similar effects could be gained by using
+  // min_natoms or max_natoms, but people often think
+  // in terms of fraction of atoms matched.
+  optional float min_fraction_atoms_matched = 53;
+  optional float max_fraction_atoms_matched = 54;
+
+  // Once the matches are made, only accept if, across all
+  // embeddings, this fraction of the atoms in the target
+  // is satisfied.
+  optional float min_all_matches_fraction_atoms_matched = 55;
+  optional float max_all_matches_fraction_atoms_matched = 56;
+
+  repeated SubstructureEnvironment environment = 57;
+  repeated SubstructureEnvironment environment_no_match = 58;
+
+  // By default the atoms in an environment only match unmatched
+  // atoms. That can be changed.
+  optional bool environment_must_match_unmatched_atoms = 59;
+
+  // If specified in the query, will be passed to all
+  // environments.
+  optional bool env_matches_can_share_attachment_points = 60;
+
+  // Specific requirements or restrictions on a particular matched atom.
+  // These can all be done via recursive smarts, but the intent is to
+  // lessen the need for complex recursive smarts.
+  repeated MatchedAtomMatch matched_atom_must_be = 61;
+
+  repeated SubstructureRingSpecification ring_specifier = 62;
+  repeated Operator ring_specification_logexp = 63;
+
+  repeated SubstructureRingSystemSpecification ring_system_specifier = 64;
+  repeated Operator ring_system_specifier_logexp = 65;
+
+  // Among the matched atoms, what elements must be present.
+  repeated ElementsNeeded element_hits_needed = 66;
+
+  // As embeddings are found, discard those that are duplicates
+  // of embeddings already found.
+  optional bool unique_embeddings_only = 70;
+
+  // When the attached_heteroatom_count attribute is specified,
+  // we can define which atomic numbers are to be considered
+  // attached_heteroatom's.
+  repeated uint32 heteroatoms = 71;
+
+  // If set, then each match will set the id: atom in the
+  // embedding.
+  optional bool respect_initial_atom_numbering = 72;
+
+  // If set, all hits will be merged into one. Yields a single
+  // embedding with all atoms matched by any of the embeddings.
+  optional bool compress_embeddings = 73;
+
+  // Will be transferred to any substructure_Environment
+  optional bool environments_can_share_attachment_points = 74;
+
+  // Remember to assign a unique id to each.
+  repeated SubstructureAtom query_atom = 75;
+
+  // Chirality specification(s).
+  repeated SubstructureChiralCenter chiral_centre = 76;
+
+  // Atom typing specification, done within the query.
+  optional string atom_type = 77;
+
+  repeated GeometricConstraints.SetOfConstraints geometric_constraints = 78;
+
+  // Bond separation between matched atoms.
+  repeated SeparatedAtoms separated_atoms = 79;
+
+  // By default, all inter_ring_regions must be matched. 
+  repeated InterRingAtoms inter_ring_region = 80;
+
+  // Regions defined by matched atoms.
+  repeated Region region = 81;
+
+  // Next to assign 82
+}
+
+// A SubstructureQuery is merely a collection of individual
+// queries, held together with a logical expression.
+message SubstructureQuery {
+  repeated string comment = 1;
+  optional string name = 2;
+
+  // Individual components of the substructure query. In a smarts
+  // these are the components between the || and && operators.
+  repeated SingleSubstructureQuery query = 3;
+
+  // If there are N `query` messages there should be `N-1` logexp
+  // messages. The default operator is SS_OR.
+  repeated Operator logexp = 4;
+
+  // If there are a number of queries that are to be matched via
+  // an AND condition, rather than having to specify all those
+  // logexp: [SS_AND, SS_AND...] this says that the default operator
+  // is SS_AND.
+  optional int32 match_each_component = 5;
+
+  // Rather than having textproto queries, we can have files.
+  repeated string query_file = 6;
+}
+
+// An interesting design choice. Should the various properties
+// be specified as a message like this, or as is currently
+// implemented. What really drove the decision was more about
+// wishing to avoid too many layers of parentheses.
+message MinMaxSpecifierInt {
+  repeated int32 value = 1;
+  optional int32 min = 2;
+  optional int32 max = 3;
+}
+
+message MinMaxSpecifierUInt {
+  repeated uint32 value = 1;
+  optional uint32 min = 2;
+  optional uint32 max = 3;
+}
+
+// When a query is matched, this proto describes the results.
+message QueryMatchResults {
+  optional string smiles = 1;
+  optional string name = 2;
+  message Matches {
+    optional string name = 1;
+    optional uint32 nhits = 2;
+  }
+
+  repeated Matches matches = 3;
+}

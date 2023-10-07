@@ -4,14 +4,18 @@
 
 #include <stdlib.h>
 #include <fstream>
-using namespace std;
+#include <iostream>
+#include <memory>
 
-#include "cmdline.h"
-#include "iw_stl_hash_map.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/fetch_via_regexp.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "iw_tdt.h"
-#include "fetch_via_regexp.h"
+
+using std::cerr;
+using std::endl;
 
 const char * prog_name = NULL;
 
@@ -427,8 +431,8 @@ read_identifiers_to_fetch (const char * fname,
 }
 
 static int
-report_occurrences_of_identifiers (const extending_resizable_array<int> & occurrences_of_identifier,
-                                   ostream & output)
+report_occurrences_of_identifiers(const extending_resizable_array<int> & occurrences_of_identifier,
+                                  std::ostream & output)
 {
   for (int i = 0; i < occurrences_of_identifier.number_elements (); i++)
   {

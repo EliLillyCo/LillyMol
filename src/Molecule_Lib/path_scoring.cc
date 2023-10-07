@@ -1,17 +1,19 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <iostream>
 #include <memory>
-using namespace std;
 
 #define COMPILING_CTB
 
-#include "molecule.h"
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "misc2.h"
-
+#include "molecule.h"
 #include "path_scoring.h"
+
+using std::cerr;
+using std::endl;
 
 Atomic_Numbers_Encounterd::Atomic_Numbers_Encounterd()
 {
@@ -21,7 +23,7 @@ Atomic_Numbers_Encounterd::Atomic_Numbers_Encounterd()
 }
 
 static atomic_number_t
-atomic_number_from_element (const Element * e)
+atomic_number_from_element(const Element * e)
 {
   const IWString s = e->symbol();
 
@@ -46,8 +48,8 @@ atomic_number_from_element (const Element * e)
   return z;
 }
 
-ostream &
-operator << (ostream & os, const Atomic_Numbers_Encounterd & ane)
+std::ostream &
+operator << (std::ostream & os, const Atomic_Numbers_Encounterd & ane)
 {
   os << "Atomic numbers";
 
@@ -91,8 +93,8 @@ operator << (ostream & os, const Atomic_Numbers_Encounterd & ane)
   return os;
 }
 
-ostream &
-operator << (ostream & os, const Path_Scoring & ps)
+std::ostream &
+operator << (std::ostream & os, const Path_Scoring & ps)
 {
   ps.debug_print(os);
 
@@ -108,7 +110,7 @@ Atomic_Numbers_Encounterd::initialise()
 }
 
 /*int
-Atomic_Numbers_Encounterd::extra (const Bond * b, atomic_number_t z)
+Atomic_Numbers_Encounterd::extra(const Bond * b, atomic_number_t z)
 {
   assert (z >= 0 && z <= HIGHEST_ATOMIC_NUMBER);
 
@@ -130,7 +132,7 @@ Atomic_Numbers_Encounterd::extra (const Bond * b, atomic_number_t z)
 }*/
 
 int
-Atomic_Numbers_Encounterd::extra (const Element * e)
+Atomic_Numbers_Encounterd::extra(const Element * e)
 {
   const atomic_number_t z = atomic_number_from_element(e);
 
@@ -144,9 +146,9 @@ Atomic_Numbers_Encounterd::extra (const Element * e)
 */
 
 int
-Atomic_Numbers_Encounterd::extra (const Bond * b,
-                                  const Element * e,
-                                  int ncon)
+Atomic_Numbers_Encounterd::extra(const Bond * b,
+                                 const Element * e,
+                                 int ncon)
 {
   assert (ncon > 0);
 
@@ -281,7 +283,7 @@ Path_Scoring::Path_Scoring()
 }
 
 int
-Path_Scoring::debug_print (ostream & os) const
+Path_Scoring::debug_print (std::ostream & os) const
 {
   os << "Path_Scoring object with " << _number_elements << " steps\n";
 
@@ -442,7 +444,7 @@ Path_Scoring::advance (Atom * const * atom,
 
   _edge_atom.resize_keep_storage(0);
 
-  if (0 == new_edge_atoms.number_elements())
+  if (new_edge_atoms.empty())
     return 0;
 
   _nsteps++;
@@ -575,8 +577,8 @@ identify_attached_bonds (const Atom * a,
                          Bond * & b12,
                          Bond * & b13)
 {
-  b12 = NULL;
-  b13 = NULL;     // may not exist
+  b12 = nullptr;
+  b13 = nullptr;     // may not exist
 
   int acon = a->ncon();
 
@@ -587,16 +589,16 @@ identify_attached_bonds (const Atom * a,
     if (b->is_double_bond())
       continue;
 
-    if (NULL == b12)
+    if (nullptr == b12)
       b12 = const_cast<Bond *>(b);
-    else if (NULL == b13)
+    else if (nullptr == b13)
     {
       b13 = const_cast<Bond *>(b);
       return 2;
     }
   }
 
-  return (NULL != b12);
+  return (nullptr != b12);
 }
 
 /*static int
@@ -1090,7 +1092,7 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
 
   atom_number_t a2;
   int a2_direction;
-  if (NULL == b32)
+  if (nullptr == b32)
   {
     a2 = INVALID_ATOM_NUMBER;
     a2_direction = 0;
@@ -1106,7 +1108,7 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
 
   atom_number_t a6;
   int a6_direction;
-  if (NULL == b46)
+  if (nullptr == b46)
   {
     a6 = INVALID_ATOM_NUMBER;
     a6_direction = 0;
@@ -1211,11 +1213,11 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
   if (0 == a1_direction && 0 == a2_direction && 0 == a5_direction && 0 == a6_direction)   // hopefully the most common case
   {
     b31->set_directional_up(a3, a1);
-    if (NULL != b32)
+    if (nullptr != b32)
       b32->set_directional_down(a3, a2);
-    if (NULL != b45)
+    if (nullptr != b45)
       b45->set_directional_up(a4, a5);
-    if (NULL != b46)
+    if (nullptr != b46)
       b46->set_directional_down(a4, a6);
   }
   else     // we assume that just one of the directions is set
@@ -1273,28 +1275,28 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
     if (D12_ONE_ON_TOP == d12)
     {
       b31->set_directional_up(a3, a1);
-      if (NULL != b32)
+      if (nullptr != b32)
         b32->set_directional_down(a3, a2);
     }
     else
     {
       b31->set_directional_down(a3, a1);
-      if (NULL != b32)
+      if (nullptr != b32)
         b32->set_directional_up(a3, a2);
     }
 
     if (D56_FIVE_ON_TOP == d56)
     {
-      if (NULL != b45)
+      if (nullptr != b45)
         b45->set_directional_up(a4, a5);
-      if (NULL != b46)
+      if (nullptr != b46)
         b46->set_directional_down(a4, a6);
     }
     else
     {
-      if (NULL != b45)
+      if (nullptr != b45)
         b45->set_directional_down(a4, a5);
-      if (NULL != b46)
+      if (nullptr != b46)
         b46->set_directional_up(a4, a6);
     }
   }
@@ -1305,7 +1307,7 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
   if (0 == a1_direction && 0 == a2_direction)
   {
     b31->set_directional_up (a3, a1);
-    if (NULL != b32)
+    if (nullptr != b32)
       b32->set_directional_down (a3, a2);
   }
   else if (0 != a2_direction)    
@@ -1315,7 +1317,7 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
     else
       b31->set_directional_down (a3, a1);
   }
-  else if (NULL != b32)
+  else if (nullptr != b32)
   {
     if (a1_direction < 0)
       b32->set_directional_up (a3, a2);
@@ -1325,21 +1327,21 @@ Molecule::_discern_cis_trans_bond_from_depiction (Bond * b)
 
   if (0 == a5_direction && 0 == a6_direction)
   {
-    if (NULL != b45)
+    if (nullptr != b45)
       b45->set_directional_up (a4, a5);
-    if (NULL != b46)
+    if (nullptr != b46)
       b46->set_directional_down (a4, a6);
   }
   else if (0 != a6_direction)    
   {
-    if (NULL == b45)
+    if (nullptr == b45)
       ;
     else if (a6_direction < 0)
       b45->set_directional_up (a4, a5);
     else
       b45->set_directional_down (a4, a5);
   }
-  else if (NULL != b46)
+  else if (nullptr != b46)
   {
     if (a5_direction < 0)
       b46->set_directional_up (a4, a6);
@@ -1471,7 +1473,7 @@ Molecule::remove_invalid_directional_bonds()
 {
   int rc = 0;    // number of invalid cis-trans bonds we remove
 
-  int * already_done = NULL;
+  int * already_done = nullptr;
 
   int nb = _bond_list.number_elements();
 
@@ -1496,7 +1498,7 @@ Molecule::remove_invalid_directional_bonds()
       ;
     else
     {
-      if (NULL == already_done)
+      if (nullptr == already_done)
         already_done = new_int(_number_elements);
 
       atom_number_t a1, a2;
@@ -1526,7 +1528,7 @@ Molecule::remove_invalid_directional_bonds()
       ps[0].initialise(a5, _things[a5]);
       ps[1].initialise(a6, _things[a6]);
 
-      if (NULL == already_done)
+      if (nullptr == already_done)
         already_done = new_int(_number_elements);
 
       already_done[a5] = already_done[a6] = 1;
@@ -1549,7 +1551,7 @@ Molecule::remove_invalid_directional_bonds()
     rc++;
   }
 
-  if (NULL == already_done)
+  if (nullptr == already_done)
     delete [] already_done;
 
   return rc;

@@ -1,0 +1,13 @@
+name: "move_aromatic_nitrogen"
+scaffold {
+  id: 0
+  smarts: "[nD2](:[cD2]):c"
+  change_element {
+    atom: 0
+    element: "C"
+  }
+  change_element {
+    atom: 1
+    element: "N"
+  }
+}

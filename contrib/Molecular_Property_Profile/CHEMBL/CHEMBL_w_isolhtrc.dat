@@ -1,0 +1,70 @@
+description {
+  feature_name: "w_isolhtrc"
+  description: "Number of isolated heterocycles"
+  plot_title: "Number of isolated heterocycles"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 8.0
+mean: 0.8949807
+median: 1.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 1.0
+}
+quantile {
+  quantile: 0.9
+  value: 2.0
+}
+quantile {
+  quantile: 0.95
+  value: 3.0
+}
+quantile {
+  quantile: 0.99
+  value: 3.0
+}
+int_values {
+  count: 880338
+}
+int_values {
+  value: 1
+  count: 863114
+}
+int_values {
+  value: 2
+  count: 394471
+}
+int_values {
+  value: 3
+  count: 99015
+}
+int_values {
+  value: 4
+  count: 15281
+}
+int_values {
+  value: 5
+  count: 1163
+}
+int_values {
+  value: 6
+  count: 91
+}
+int_values {
+  value: 7
+  count: 34
+}
+int_values {
+  value: 8
+  count: 3
+}

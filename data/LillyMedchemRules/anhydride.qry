@@ -1,0 +1,32 @@
+(5 Query
+  (A C Comment "anhydride")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (0 Query_Atom
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I atomic_number 8)
+  )
+  (1 Query_Atom
+    (A I ncon 3)
+    (A I double_bond 0)
+    (A I atomic_number 6)
+  )
+  (2 Query_Atom
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I single_bond 1)
+    (A I atomic_number 8)
+  )
+  (3 Query_Atom
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I single_bond 2)
+    (A I atomic_number 6)
+  )
+  (4 Query_Atom
+    (A I ncon 1)
+    (A I double_bond 3)
+    (A I atomic_number 8)
+  )
+)

@@ -24,18 +24,22 @@ then
 fi
 
 name1=log.txt
-name1_out=out/output.txt
 diff_tool=../../fileDiff.sh
-$command in/pubchem_example.smi >log.txt 2>err.txt
-# Need sort before comparision for the order issue
-$diff_tool $name1 $name1_out
-ret=$?
-if [ $ret == 1 ]
-then
-    echo "$case_id : TEST PASS"
-else
-    echo "$case_id : TEST FAIL"
-fi
+
+pid=${$}
+$command -X Ar:Al -R 7 -k -c -v -S /tmp/${pid}ring in/rings.smi >log.txt 2>err.txt
+
+status='PASS'
+for file in /tmp/${pid}ring_*smi ; do
+  # echo "Processing ${file}"
+  diff -q $file out/$(basename ${file/${pid}/})
+  if [[ $? -ne 0 ]] ; then
+    status='FAIL'
+  fi
+done
+echo "$case_id : TEST ${status}"
+
 #rm $name1
+rm /tmp/${pid}ring_*smi
 rm log.txt
 rm err.txt

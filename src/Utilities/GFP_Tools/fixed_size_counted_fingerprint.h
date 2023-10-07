@@ -101,8 +101,8 @@ extern const unsigned char bic_table[];
 
 #ifdef FIXED_SIZE_COUNTED_FINGERPRINT_IMPLEMENTATION 
 
-#include "iwstring.h"
-#include "misc.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "various_distance_metrics.h"
 #include "tversky.h"
@@ -112,7 +112,7 @@ template <typename T>
 Fixed_Size_Counted_Fingerprint_Base<T>::Fixed_Size_Counted_Fingerprint_Base ()
 {
   _n = 0;
-  _count = NULL;
+  _count = nullptr;
   _nset = 0;
   _nbits = 0;
 }
@@ -122,7 +122,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::~Fixed_Size_Counted_Fingerprint_Base ()
 {
   _n = -3;
 
-  if (NULL != _count)
+  if (nullptr != _count)
     delete _count;
 
   return;
@@ -134,7 +134,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::compute_nset ()
 {
   _nset = 0;
 
-  if (NULL == _count)
+  if (nullptr == _count)
     return 0;
 
   for (int i = 0; i < _n; i++)
@@ -152,25 +152,25 @@ Fixed_Size_Counted_Fingerprint_Base<T>::resize (int s)
   _nset = 0;
   _nbits = 0;
 
-  if (NULL != _count && _n == s)   // already the correct size
+  if (nullptr != _count && _n == s)   // already the correct size
     return 1;
 
-  if (NULL != _count)
+  if (nullptr != _count)
     delete _count;
 
   if (0 == s)
   {
-    cerr << "Fixed_Size_Counted_Fingerprint_Base::resize: zero size requested, wierd\n";
-    _count = NULL;
+    std::cerr << "Fixed_Size_Counted_Fingerprint_Base::resize: zero size requested, wierd\n";
+    _count = nullptr;
     _n = 0;
     return 1;
   }
   
   _count = new T[s];
 
-  if (NULL == _count)
+  if (nullptr == _count)
   {
-    cerr << "Fixed_Size_Counted_Fingerprint_Base::resize: cannot allocate " << s << " items of size " << sizeof (T) << endl;
+    std::cerr << "Fixed_Size_Counted_Fingerprint_Base::resize: cannot allocate " << s << " items of size " << sizeof (T) << '\n';
     return 0;
   }
 
@@ -257,7 +257,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::_parse_nset_and_nbits (const const_IWSub
 
   if (! token.numeric_value (_nset) || _nset < 0)
   {
-    cerr << "Fixed_Size_Counted_Fingerprint_uint::construct_from_tdt_record:invalid nset value '" << token << "'\n";
+    std::cerr << "Fixed_Size_Counted_Fingerprint_uint::construct_from_tdt_record:invalid nset value '" << token << "'\n";
     return 0;
   }
   else
@@ -267,7 +267,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::_parse_nset_and_nbits (const const_IWSub
   {
     if (! token.numeric_value (_nbits) || _nbits < 0)
     {
-      cerr << "Fixed_Size_Counted_Fingerprint_uint::construct_from_tdt_record:invalid nbits value '" << token << "'\n";
+      std::cerr << "Fixed_Size_Counted_Fingerprint_uint::construct_from_tdt_record:invalid nbits value '" << token << "'\n";
       return 0;
     }
   }
@@ -281,9 +281,9 @@ template <typename T>
 int
 Fixed_Size_Counted_Fingerprint_Base<T>::construct_from_array_of_ints (const int * c, int nb)
 {
-  if (NULL == _count)
+  if (nullptr == _count)
     _count = new T[nb];
-  else if (NULL != _count && _n == nb)
+  else if (nullptr != _count && _n == nb)
     ;
   else
   {

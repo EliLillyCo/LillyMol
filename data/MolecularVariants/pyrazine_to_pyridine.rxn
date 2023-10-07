@@ -1,0 +1,9 @@
+name: "pyrazine_to_pyridine"
+scaffold {
+  id: 0
+  smarts: "[nD2x2]1cc[nD2x2]cc1"
+  change_element {
+    atom: 0
+    element: "C"
+  }
+}

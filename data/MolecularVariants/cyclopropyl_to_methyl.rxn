@@ -1,0 +1,6 @@
+name: "cyclopropyl_to_methyl"
+scaffold {
+  id: 0
+  smarts: "[CD3r3x2]1-[CD2]-[CD2]1"
+  remove_atoms: [1, 2]
+}

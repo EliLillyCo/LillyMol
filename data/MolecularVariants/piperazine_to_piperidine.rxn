@@ -1,0 +1,9 @@
+name: "piperazine_to_piperidine"
+scaffold {
+  id: 0
+  smarts: "[ND2x2]1CCNCC1"
+  change_element {
+    atom: 3
+    element: "C"
+  }
+}

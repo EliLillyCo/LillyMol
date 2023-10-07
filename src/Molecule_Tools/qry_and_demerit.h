@@ -1,9 +1,8 @@
 #ifndef QRY_AND_DEMERIT_H
 #define QRY_AND_DEMERIT_H
 
-#include "iwaray.h"
 
-#include "substructure.h"
+#include "Molecule_Lib/substructure.h"
 
 class IWString;
 class Demerit;

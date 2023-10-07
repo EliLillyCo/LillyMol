@@ -2,16 +2,18 @@ Will not write product fragments with fewer than 2 atoms
 Will keep going after an individual test failure
 Will preserve Kekule forms
 Will use the reaction file name as the reaction name
+name now 'CentroidRxnSmi_1'
+SetName:name is CentroidRxnSmi_1'
 Reading reactions took 0 seconds
 read mol smi eof
 Read 10 molecules, 10 deconstructed
 10 molecules deconstructed at radius 1
 0 deconstructions done at radius 0
 10 deconstructions done at radius 1
-Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
+Set_of_Reactions: CentroidRxnSmi_1 with 164 reactions
 20 molecules deconstructed at radius 1
 20 molecules deconstructed
-Set_of_Reactions: in/CentroidRxnSmi_1 with 164 reactions
+Set_of_Reactions: CentroidRxnSmi_1 with 164 reactions
  1 US03947458_NA 10 searches, 0 matches found
  1 US03947473_NA 10 searches, 0 matches found
  1 US03989717_NA 10 searches, 0 matches found

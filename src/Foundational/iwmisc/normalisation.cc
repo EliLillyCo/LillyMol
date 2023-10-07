@@ -1,8 +1,12 @@
-#include <stdlib.h>
-#include <math.h>
+#include <cmath>
+#include <iostream>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
+
 #include "normalisation.h"
+
+using std::cerr;
+using std::endl;
 
 static int scaling_type = NRML_MIN_TO_MAX;
 
@@ -382,9 +386,9 @@ parse_normalisation_file_record (const const_IWSubstring & buffer,
 }
 
 int
-parse_normalisation_options (Command_Line & cl,
-                             char flag,
-                             int verbose)
+parse_normalisation_options(Command_Line & cl,
+                            char flag,
+                            int verbose)
 {
 
   int i = 0;

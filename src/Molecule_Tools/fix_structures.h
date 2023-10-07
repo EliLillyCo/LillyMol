@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
-#include "substructure.h"
+#include "Molecule_Lib/substructure.h"
 
 /*
   Correct various structural defects that are most likely just 
@@ -39,7 +39,7 @@ class Structure_Fixing
 
     int _directive_add_positive_charge_to_three_valent_sulphur;
 
-//  ID2G0 is a valence error, but with a _ve charge it is OK
+//  ID2G0 is a valence error, but with a -ve charge it is OK
 
     int _directive_add_positive_charge_to_two_valent_halogen;
 
@@ -48,6 +48,9 @@ class Structure_Fixing
     int _directive_remove_charges_from_carbon_atoms;
 
     int _directive_remove_charges_from_halogen_atoms;
+
+    // de-novo molecules may have bad implicit Hydrogens =[OH]
+    int _directive_fix_obviously_wrong_implicit_hydrogens;
 
     Substructure_Query _pyridine_query;
 

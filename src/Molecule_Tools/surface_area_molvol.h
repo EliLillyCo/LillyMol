@@ -1,10 +1,10 @@
 #ifndef SAF_MOLVOL_H
 #define SAF_MOLVOL_H
 
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
-#include "iwmtypes.h"
-#include "iw_vdw.h"
+#include "Molecule_Lib/iw_vdw.h"
+#include "Molecule_Lib/iwmtypes.h"
 
 class Surface_Area_Molvol
 {

@@ -1,10 +1,11 @@
-#include <memory>
 #include <limits>
+#include <memory>
 
-#include "accumulator.h"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/iwmisc/misc.h"
 
-#include "substructure.h"
+#include "Molecule_Lib/substructure.h"
+
 #include "spatially_common_matched_atoms.h"
 
 static double

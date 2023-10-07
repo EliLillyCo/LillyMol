@@ -14,11 +14,16 @@
   #include <netinet/in.h>
 #endif
 
+#include <iostream>
 #include <memory>
 
-#include "iwbits.h"
+#include "Foundational/iwbits/iwbits.h"
+
 #include "misc.h"
 #include "sparse_fp_creator.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   When writing out fingerprints that include counts, we write out groups of

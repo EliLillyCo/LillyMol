@@ -1,26 +1,30 @@
 #include <stdlib.h>
-#include <math.h>
-#include <unordered_map>
-#include <memory>
-#include <unordered_set>
 #include <algorithm>
-#include <random>
+#include <iostream>
 #include <limits>
+#include <math.h>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
+#include <random>
 
 #define IWQSORT_FO_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-#include "accumulator.h"
-#include "report_progress.h"
-#include "iw_stl_hash_map.h"
-#include "iw_stl_hash_set.h"
-#include "iwqsort.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwqsort/iwqsort.h"
 
 #include "gfp.h"
 #include "bit_subset_v2.h"
+
+using std::cerr;
+using std::endl;
 
 #define HEADER_RECORD "# written by gfp_naive_bayesian"
 #define COUNT_FIXED "count_fixed"
@@ -42,7 +46,7 @@
 
 static char output_separator = ' ';
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 static int verbose = 0;
 
 static int strip_leading_zeros = 0;
@@ -209,6 +213,7 @@ read_activity_data (iwstring_data_source & input,
   }
 
   activity_name.remove_leading_words(1);
+  activity_name.gsub(' ', '_');
 
   const_IWSubstring buffer;
 
@@ -1461,7 +1466,14 @@ Bayesian_Classification::do_write (const IWString * class_label,
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Naive Bayesian training and prediction\n";
   cerr << " Use one of : -A file.activity train.gfp test.gfp\n";
   cerr << "            : -A file.activity -S xxx -R test1.id -R test2.id ... all.gfp\n";
@@ -1486,6 +1498,7 @@ usage (int rc)
   cerr << " -d             denominator in NB formula is number of molecules with feature\n";
   cerr << " -D <b1,b2...>  write out detailed information on bits b1, b2, ... Use '-D all' for all bits\n";
   cerr << " -v             verbose output\n";
+// clang-format on
   
   exit (rc);
 }
@@ -1667,7 +1680,14 @@ write_header (const IWString activity_name,
               const int nclasses,
               IWString_and_File_Descriptor & output)
 {
-  output << "ID" << output_separator << activity_name << " logPr";
+  output << "ID" << output_separator << activity_name;
+
+  if (brief_output) {
+    output << '\n';
+    return;
+  }
+
+  output << output_separator << "logPr";
   for (auto i = 1; i < nclasses; ++i)
   {
     output << output_separator << "C" << i << output_separator << "lPr";
@@ -2220,8 +2240,9 @@ NB_Cross_Validation::_update_performance_measures (int ndx)
 }
 
 int
-NB_Cross_Validation::do_cross_validation (const IWString & output_file_name_stem)
+NB_Cross_Validation::do_cross_validation(const IWString & output_file_name_stem)
 {
+  cerr << "Begin " << _nsplit << " cross validation runs\n";
   for (auto i = 0; i < _nsplit; ++i)
   {
     _reset_performance_measures();
@@ -2651,24 +2672,24 @@ gfp_naive_bayesian (int argc, char ** argv)
       return 2;
     }
 
-    if (! nbcv.read_all_fingerprints (cl[0]))
+    if (! nbcv.read_all_fingerprints(cl[0]))
     {
       cerr << "Cannot read fingerprints '" << cl[0] << "'\n";
       return 2;
     }
 
-    if (! nbcv.assign_activity (activity, cname))
+    if (! nbcv.assign_activity(activity, cname))
     {
       cerr << "Cannot associate activity data with fingerprints\n";
       return 2;
     }
 
     IWString output_file_name_stem;
-    if (cl.option_present('S'))
+    if (cl.option_present('S')) {
       cl.value('S', output_file_name_stem);
+    }
 
-    if (! nbcv.do_cross_validation (output_file_name_stem))
-    {
+    if (! nbcv.do_cross_validation(output_file_name_stem)) {
       cerr << "Cross validation failed\n";
       return 2;
     }

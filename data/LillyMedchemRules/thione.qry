@@ -1,0 +1,19 @@
+(0 Query
+# Feb 2004. Changed to 40 demerits
+
+# Fred Bruns Dec 2003
+
+  (A C Comment "thione")
+  (A D numeric_value 40)
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I attached_heteroatom_count 1)
+    (A I double_bond 0)
+  )
+)

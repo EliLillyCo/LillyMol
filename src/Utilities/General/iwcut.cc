@@ -14,14 +14,21 @@
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "misc.h"
-#include "iwstring_data_source.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwre2.h"
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Extracts columns - like cut\n";
   cerr << " -f <col>         extract single column\n";
   cerr << " -f <col1,col2>   extract multiple columns\n";
@@ -87,7 +94,7 @@ static IWString extra_stuff_each_record;
   The regular expression associated with the -R option
 */
 
-static IW_Regular_Expression token_regexp;
+static std::unique_ptr<RE2> token_regexp;
 
 static int consecutive_delimiters_mean_empty_words_between = 0;
 
@@ -572,7 +579,8 @@ iwcut_token_regexp(const const_IWSubstring & buffer,
 
     if (columns_requested.contains(col))
       m = 1;
-    else if (token_regexp.matches(token))
+//  else if (token_regexp.matches(token))
+    else if (iwre2::RE2PartialMatch(token, *token_regexp))
       m = 1;
     else
       m = 0;
@@ -961,9 +969,9 @@ identify_column (const IWString & descriptor,
   if (! match_descriptor_names_as_regular_expressions)
     return find_column_number(descriptor, header, columns_requested);
 
-  IW_Regular_Expression rx;
-
-  if (! rx.set_pattern(descriptor))
+  re2::StringPiece tmp(descriptor.data(), descriptor.length());
+  RE2 rx(tmp);
+  if (! rx.ok())
   {
     cerr << "INvalid regular expression '" << descriptor << "'\n";
     return 0;
@@ -979,7 +987,7 @@ identify_column (const IWString & descriptor,
 
 //  cerr << "Comparing '" << descriptor << "' with '" << d << "'\n";
 
-    if (rx.matches(d))
+    if (iwre2::RE2PartialMatch(d, rx))
     {
       columns_requested.add_if_not_already_present(i);
       rc++;
@@ -1212,7 +1220,7 @@ iwcut(const char * fname,
 
   input.set_dos(1);
 
-  if (token_regexp.active())
+  if (token_regexp)
     return iwcut_token_regexp(input, columns_requested, output);
 
   return iwcut(input, columns_requested, descriptors_requested, output);
@@ -1484,14 +1492,14 @@ iwcut (int argc, char ** argv)
 
     const_IWSubstring r = cl.string_value('R');
 
-    if (! token_regexp.set_pattern(r))
+    if (! iwre2::RE2Reset(token_regexp, r))
     {
       cerr << "Invalid token regular expression '" << r << "'\n";
       return 3;
     }
 
     if (verbose)
-      cerr << "Columns matching '" << token_regexp.source() << "' will be output\n";
+      cerr << "Columns matching '" << token_regexp->pattern() << "' will be output\n";
   }
 
   if (! ignore_case)

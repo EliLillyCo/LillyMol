@@ -1,0 +1,6 @@
+name: "ethoxy_to_methoxy"
+scaffold {
+  id: 0
+  smarts: "[OD2x0]-[CD2]-[CD1]"
+  remove_atom: 2
+}

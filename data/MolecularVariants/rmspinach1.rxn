@@ -1,0 +1,6 @@
+name: "rmspinach1"
+scaffold {
+  id: 0
+  smarts: "[D1G0]-[R]"
+  remove_atom: 0
+}

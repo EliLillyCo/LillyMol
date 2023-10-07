@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+// Atomic coordinates can be representes as a single point inside
+// a box, rather than as 3 floating point numbers. The idea being
+// that the resulting file should be smaller.
+// Turns out this really does not save that much space, because
+// the numbers needed to designate the points are usually 64 bit
+// in length, so the file is not that different in size.
+// While this may still work, it is not recommended.
+message CoordinateBox {
+  double resolution = 1;
+
+  // The lengths of the sides of the box.
+  // It is assumed that they will be pretty close to an
+  // even multiple of `resolution`.
+  double xlength = 2;
+  double ylength = 3;
+  double zlength = 4;
+
+  // The position in space of this box.
+  double xorigin = 5;
+  double yorigin = 6;
+  double zorigin = 7;
+}

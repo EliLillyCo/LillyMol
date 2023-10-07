@@ -1,7 +1,5 @@
-#include <stdlib.h>
-#include <assert.h>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 static const char b64_tab[256] =
 {
@@ -40,10 +38,9 @@ static const char b64_tab[256] =
 };
 
 int
-IWuudecode (const unsigned char * p, int nchars, unsigned char * destination)
+IWuudecode(const unsigned char * p, int nchars, unsigned char * destination)
 {
-  assert (NULL != destination);
-
+  assert (nullptr != destination);
 
 /* The following implementation of the base64 decoding might look
    a bit clumsy but I only try to follow the POSIX standard:
@@ -106,15 +103,15 @@ IWuudecode_bytes_needed (int nchars)
 }
 
 int
-IWuudecode (const IWString & s,
-            unsigned char * destination)
+IWuudecode(const IWString & s,
+           unsigned char * destination)
 {
-  return IWuudecode (reinterpret_cast<const unsigned char *> (s.rawchars ()), s.length (), destination);
+  return IWuudecode(reinterpret_cast<const unsigned char *> (s.rawchars ()), s.length (), destination);
 }
 
 int
-IWuudecode (const const_IWSubstring & s,
-            unsigned char * destination)
+IWuudecode(const const_IWSubstring & s,
+           unsigned char * destination)
 {
-  return IWuudecode (reinterpret_cast<const unsigned char *> (s.rawchars ()), s.length (), destination);
+  return IWuudecode(reinterpret_cast<const unsigned char *> (s.rawchars ()), s.length (), destination);
 }

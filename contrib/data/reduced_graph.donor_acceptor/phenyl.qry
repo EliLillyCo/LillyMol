@@ -1,0 +1,10 @@
+query {
+  ring_system_specifier {
+    rings_in_system: 1
+    aromatic_ring_count: 1
+    base {
+      heteroatom_count: 0
+      set_global_id: 1
+    }
+  }
+}

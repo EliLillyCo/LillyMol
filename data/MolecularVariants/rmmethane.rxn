@@ -1,0 +1,6 @@
+name: "rmmethane"
+scaffold {
+  id: 0
+  smarts: "[CD1][CD2G0]"
+  remove_atom: 0
+}

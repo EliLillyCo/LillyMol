@@ -1,0 +1,24 @@
+name: "tetrazole_to_acid"
+# Scaffold removes the tetrazole, except for the last carbon
+scaffold {
+  id: 0
+  smarts: "[nx2H]1[nD2][nD2][nD2][cD3x2]1"
+  remove_atoms: [0, 1, 2, 3]
+}
+# The sidechain is just the addition of two oxygen atoms, both
+# to the same atom in the scaffold
+sidechain {
+  id: 1
+  reagent: "O.O"
+  smarts: "O.O"
+  join {
+    a1: 4
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 4
+    a2: 1
+    btype: SS_DOUBLE_BOND
+  }
+}

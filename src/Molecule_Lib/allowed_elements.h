@@ -1,5 +1,5 @@
-#ifndef ALLOWED_ELEMENTS_H
-#define ALLOWED_ELEMENTS_H
+#ifndef MOLECULE_LIB_ALLOWED_ELEMENTS_H_
+#define MOLECULE_LIB_ALLOWED_ELEMENTS_H_
 
 #include "element.h"
 
@@ -17,7 +17,6 @@ class Allowed_Elements
 
   public:
     Allowed_Elements();
-//  Allowed_Elements();
 
     int build_from_command_line (Command_Line & c, char flag, int verbose);
 
@@ -25,7 +24,13 @@ class Allowed_Elements
 
     void set_allow (atomic_number_t, int);
 
+    // Any element that is a metal will be set to exclude.
+    void exclude_metals();
+
     void reset_to_defaults();
+
+    // Set all elements to disallowed.
+    void Clear();
 };
 
-#endif
+#endif  // MOLECULE_LIB_ALLOWED_ELEMENTS_H_

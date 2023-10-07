@@ -1,7 +1,7 @@
-#ifndef ASMARTS_COMPONENT_H
-#define ASMARTS_COMPONENT_H
+#ifndef MOLECULE_LIB_TOKENISE_ATOMIC_SMARTS_H_
+#define MOLECULE_LIB_TOKENISE_ATOMIC_SMARTS_H_
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 class Atomic_Smarts_Component : public const_IWSubstring
 {
@@ -31,5 +31,4 @@ class Atomic_Smarts_Component : public const_IWSubstring
 
 std::ostream & operator << (std::ostream &, const Atomic_Smarts_Component &);
 
-
-#endif
+#endif  // MOLECULE_LIB_TOKENISE_ATOMIC_SMARTS_H_

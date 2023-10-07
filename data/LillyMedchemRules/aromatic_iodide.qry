@@ -1,0 +1,17 @@
+# RuleClass halogen
+# SubClass misc
+
+# Feb 2004. Change to 60 demerits
+
+(0 Query
+  (A C Comment "aromatic_iodide")
+  (A D numeric_value 60)
+  (A I min_aromatic_ring_count 1)
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 53)
+    (A I min_ncon 1)
+    (A I aryl 1)
+  )
+)
+

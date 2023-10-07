@@ -1,30 +1,33 @@
+#include <iostream>
 #include <memory>
 
-#include "misc.h"
-#include "iw_auto_array.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "iwreaction.h"
+
+using std::cerr;
+using std::endl;
 
 Reaction_3D_Replace::Reaction_3D_Replace()
 {
   _n = 0;
-  _weight = NULL;
+  _weight = nullptr;
 
-  _a1 = NULL;
-  _a2 = NULL;
+  _a1 = nullptr;
+  _a2 = nullptr;
 
   return;
 }
 
 Reaction_3D_Replace::~Reaction_3D_Replace()
 {
-  if (NULL != _weight)
+  if (nullptr != _weight)
     delete [] _weight;
 
-  if (NULL != _a1)
+  if (nullptr != _a1)
     delete [] _a1;
 
-  if (NULL != _a2)
+  if (nullptr != _a2)
     delete [] _a2;
 
   return;
@@ -90,6 +93,7 @@ Reaction_3D_Replace::construct_from_msi_attribute(const msi_attribute * att)
 
   return 1;
 }
+
 int
 Reaction_3D_Replace::write_msi (std::ostream & os,
                                 const const_IWSubstring & ind,
@@ -189,15 +193,15 @@ Reaction_3D_Replace::process(Molecule & m,
 //#define DEBUG_PROCESS_3D_REPLACE
 #ifdef DEBUG_PROCESS_3D_REPLACE
   write_msi(cerr, " ", "process");
-  if (NULL != scaffold_embedding)
+  if (nullptr != scaffold_embedding)
     cerr << "Scaffold embedding " << (*scaffold_embedding) << endl;
   cerr << m.smiles() << endl;
+  atom_number_t first_fixed_atom;
 #endif
 
   double * c1 = new double[_n * 3 * 2]; std::unique_ptr<double[]> free_c1(c1);
   double * c2 = c1 + (_n * 3);
 
-  atom_number_t first_fixed_atom;
   Set_of_Atoms moving_atoms;
 
   for (int i = 0; i < _n; i++)
@@ -207,8 +211,10 @@ Reaction_3D_Replace::process(Molecule & m,
       return 0;
 
     const Atom * a = m.atomi(j);
+#ifdef DEBUG_PROCESS_3D_REPLACE
     if (0 == i)
      first_fixed_atom = j;
+#endif
 
     c1[3 * i] = a->x();
     c1[3 * i + 1] = a->y();
@@ -224,6 +230,18 @@ Reaction_3D_Replace::process(Molecule & m,
     c2[3 * i + 2] = a->z();
 
     moving_atoms.add(j);
+  }
+
+  const int matoms = m.natoms();
+
+  // Which atoms will be moved.
+  int * moving = new_int(matoms); std::unique_ptr<int[]> free_moving(moving);
+
+  // u3b_ will fail if given just one atom. In that case we can do a simple
+  // translation.
+  if (moving_atoms.size() == 1) {
+    identify_moving_atoms_by_atom_number(m, moving_atoms[0], moving_atoms[0], moving);
+    return DoTranslation(m, c1, c2, moving);
   }
 
   int mode = 1;
@@ -264,18 +282,10 @@ Reaction_3D_Replace::process(Molecule & m,
   }
 #endif
 
-// identify the bond that separates the moving from non-moving part of the molecule.
-// We assume that it is attached to the first of the moving atoms
-// If there is just one atom in the alignment, we assume that everything connected and with a higher atom number is moving
-
-  int matoms = m.natoms();
-
-  int * moving = new_int(matoms); iw_auto_array<int> free_moving(moving);
-  if (NULL == moving)
-  {
-    cerr << "Reaction_Rotate_Fragment::process:memory failure for " << matoms << " atoms\n";
-    return 0;
-  }
+  // Identify the bond that separates the moving from non-moving part of
+  // the molecule.  We assume that it is attached to the first of the
+  // moving atoms If there is just one atom in the alignment, we assume
+  // that everything connected and with a higher atom number is moving
 
 #ifdef DEBUG_PROCESS_3D_REPLACE
   cerr << "There are " << moving_atoms.number_elements() << " moving atoms\n";
@@ -322,6 +332,35 @@ Reaction_3D_Replace::process(Molecule & m,
     double zz = rotmat31 * x0 + rotmat32 * y0 + rotmat33 * z0;
 
     m.setxyz( i, static_cast<coord_t> (xx), static_cast<coord_t> (yy), static_cast<coord_t> (zz) );
+  }
+
+  return 1;
+}
+
+// There was only one matched atom specified in the 3d replacement
+// so all we need do is translate the molecule.
+// The coodinates of two positions are in `initial` and `destination`.
+// For those atoms that are set in `moving`, translate those
+// atoms according to the diff btw `initial` and `destination`.
+int
+Reaction_3D_Replace::DoTranslation(Molecule& m,
+                const double * initial,
+                const double * destination,
+                const int* moving) const {
+  Coordinates initial_c(initial[0], initial[1], initial[2]);
+  Coordinates destination_c(destination[0], destination[1], destination[2]);
+
+  Coordinates delta = destination_c - initial_c;
+
+  const int matoms = m.natoms();
+
+  for (int i = 0; i < matoms; ++i) {
+    if (! moving[i]) {
+      continue;
+    }
+    m.setx(i, m.x(i) - delta.x());
+    m.sety(i, m.y(i) - delta.y());
+    m.setz(i, m.z(i) - delta.z());
   }
 
   return 1;

@@ -1,9 +1,9 @@
 #ifndef JAMA_QR_H
 #define JAMA_QR_H
 
-#include "tnt_array1d.h"
-#include "tnt_array2d.h"
-#include "tnt_math_utils.h"
+#include "Foundational/tnt/tnt_array1d.h"
+#include "Foundational/tnt/tnt_array2d.h"
+#include "Foundational/tnt/tnt_math_utils.h"
 
 namespace JAMA
 {

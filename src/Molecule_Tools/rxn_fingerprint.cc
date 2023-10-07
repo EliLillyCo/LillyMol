@@ -1,37 +1,39 @@
 /*
-  main purpose is to generate fingerprint information around the raction core, defined by the
-  changing atoms
+  Main purpose is to generate fingerprint information around the raction core, defined by the
+  changing atoms.
 */
 
-#include <memory>
 #include <algorithm>
 #include <cctype>
-
-#include "md5.h"
-#include "cmdline.h"
-#include "misc.h"
-#include "accumulator.h"
-#include "sparse_fp_creator.h"
-#include "iw_stl_hash_map.h"
-#define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
-#include "iwqsort.h"
-
-#include "target.h"
-#include "molecule_to_query.h"
-#include "linear_path_fingerprint.h"
-#include "extended_connectivity_fp.h"
-#include "istream_and_type.h"
-#include "rxn_file.h"
-#include "aromatic.h"
-#include "iwmfingerprint.h"
-#include "atom_typing.h"
-#include "iwstandard.h"
-#include <vector>
+#include <iostream>
+#include <memory>
 #include <string>
-#include <sstream>
 
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/md5.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
+#include "Foundational/iwqsort/iwqsort.h"
 
-const char * prog_name = NULL;
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/iwmfingerprint.h"
+#include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/rxn_file.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
+
+#include "Molecule_Tools/extended_connectivity_fp.h"
+#include "Molecule_Tools/linear_path_fingerprint.h"
+
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -296,13 +298,18 @@ Columnar_Output_Specifications::display_help_message(const char flag, std::ostre
   return 1;
 }
 
-static struct Columnar_Output_Specifications columnar_output_specifications;
+static class Columnar_Output_Specifications columnar_output_specifications;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Produces fingerprints around the atoms that change in a reaction\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -i            input is reaction smiles\n";
   cerr << "  -r <rad>      radius from changing atoms to fingerprint\n";
   cerr << "  -J <tag>      tag for each radius (FP, NC), one per each -r option. NCEC means circular\n";
@@ -315,7 +322,7 @@ usage (int rc)
   cerr << "  -P <type>     atom typing specification\n";
   cerr << "  -x            discard existing atom mapping in input files\n";
   cerr << "  -j .          discard reaction if atom mapping does not map all atoms\n";
-  cerr << "  -C <fname>    write changed atom counts to <fname>\n";
+  cerr << "  -C <fname>    write changed atom counts to <fname> (csv)\n";
   cerr << "  -a            append changing atoms count to name\n";
   cerr << "  -c <n>        if the computed number of changing atoms is NOT <n>, recompute atom map\n";
   cerr << "  -I <iso>      mark changing atoms with <isotope>\n";
@@ -330,7 +337,7 @@ usage (int rc)
   cerr << "  -f            truncate reaction names to the first token\n";
   cerr << "  -B            remove duplicate reagents, even if atom maps scrambled\n";
   cerr << "  -y            do NOT include ring information in fingerprints\n";
-//cerr << "  -X <fname>    write reaction smiles\n";
+  cerr << "  -X <fname>    write reaction smiles\n";
   cerr << "  -e            only look at reagent atoms in the largest fragment when discerning changing atoms\n";
   cerr << "  -M ...        miscellaneous options, enter '-M help' for info\n";
   cerr << "  -F <fname>    ignore otherwise bad reactions and write them to <fname>\n";
@@ -345,7 +352,7 @@ usage (int rc)
 }
 
 static void
-preprocess (Molecule & m)
+preprocess(Molecule & m)
 {
   if (chemical_standardisation.active())
     chemical_standardisation.process(m);
@@ -384,7 +391,7 @@ class RXNFP_Temporary_Arrays
 
     void save_and_change_atom_types_of_changed_atoms(const int offset);
     void restore_changed_atom_types();
-    void dump();  // for debugging
+    void dump(std::ostream& output) const;  // for debugging
 };
 
 RXNFP_Temporary_Arrays::RXNFP_Temporary_Arrays(const int n, const int x) : _natoms(n)
@@ -406,15 +413,16 @@ RXNFP_Temporary_Arrays::~RXNFP_Temporary_Arrays()
   return;
 }
 
-void RXNFP_Temporary_Arrays::dump(void)
+void
+RXNFP_Temporary_Arrays::dump(std::ostream& output) const
 {
-    cerr << "\n#Atoms: " << _natoms<< "\n";
-    cerr << "#\tatype\tchanged\ttmp\n";
+  output << "\n#Atoms: " << _natoms<< "\n";
+  output << "#\tatype\tchanged\ttmp\n";
     
-    for(int i=0; i < _natoms ; ++i)
-    {
-        cerr  << i << "\t " << _atype[i] << "\t" << _changed[i]<<  "\t" << _tmp[i]<<"\n";
-    }  
+  for(int i=0; i < _natoms ; ++i)
+  {
+      output  << i << "\t " << _atype[i] << "\t" << _changed[i]<<  "\t" << _tmp[i]<<"\n";
+  }  
 }
 
 /*
@@ -449,6 +457,7 @@ RXNFP_Temporary_Arrays::restore_changed_atom_types()
 
   return;
 }
+
 static int
 do_apply_isotopes(Molecule & m, 
                   const int * changed,
@@ -962,9 +971,9 @@ generate_externally_visible_reaction_name(const RXN_File & rxn,
 }
 
 static void
-add_changing_atom_smarts_to_hash (ISIS_RXN_FILE_Molecule & r,
-                                  const int * changed,
-                                  IW_STL_Hash_Map_int & h)
+add_changing_atom_smarts_to_hash(ISIS_RXN_FILE_Molecule & r,
+                                 const int * changed,
+                                 IW_STL_Hash_Map_int & h)
 {
   const int matoms = r.natoms();
 
@@ -982,9 +991,9 @@ add_changing_atom_smarts_to_hash (ISIS_RXN_FILE_Molecule & r,
 }
 
 static int
-all_changing_atoms_in_embedding (const int matoms,
-                                 const int * changed,
-                                 const Set_of_Atoms * e)
+all_changing_atoms_in_embedding(const int matoms,
+                                const int * changed,
+                                const Set_of_Atoms * e)
 {
   for (int i = 0; i < matoms; ++i)
   {
@@ -1005,10 +1014,10 @@ all_changing_atoms_in_embedding (const int matoms,
 */
 
 static int
-changing_atoms_match (ISIS_RXN_FILE_Molecule & r,
-                      const int c,
-                      const int * changed,
-                      resizable_array_p<Substructure_Query> & changing_atoms_must_match)
+changing_atoms_match(ISIS_RXN_FILE_Molecule & r,
+                     const int c,
+                     const int * changed,
+                     resizable_array_p<Substructure_Query> & changing_atoms_must_match)
 {
   const int matoms = r.natoms();
 
@@ -1030,7 +1039,7 @@ changing_atoms_match (ISIS_RXN_FILE_Molecule & r,
       if (c != e->number_elements())   // cannot match
         continue;
 
-      if (all_changing_atoms_in_embedding (matoms, changed, e))
+      if (all_changing_atoms_in_embedding(matoms, changed, e))
         return 1;
     }
   }
@@ -1091,7 +1100,7 @@ write_changing_atom_count(RXN_File & rxn,
   generate_externally_visible_reaction_name(rxn, s, false);
 
   output << s;
-  output << ' ' << c << '\n';
+  output << ',' << c << '\n';   // Note csv, in case reaction name is multiple tokens.
    
   output.write_if_buffer_holds_more_than(4096);
 
@@ -1162,7 +1171,6 @@ write_reaction_and_maybe_changing_atom_count(RXN_File & rxn,
   return 1;
 }
 
-
 static int
 ensure_locator_arrays_filled(RXN_File & rxn,
                              int * tmp)
@@ -1185,8 +1193,7 @@ ensure_locator_arrays_filled(RXN_File & rxn,
 }
 
 /*
-  Here's where you do whatever you want to do with the molecule
-  In this case, we count the number of nitrogen atoms
+  Generate reaction fingerprints.
 */
 
 static int
@@ -1199,7 +1206,7 @@ rxn_fingerprint(RXN_File & rxn,
   {
     cerr << "Skipping reaction with no reagents " << rxn.name() << endl;
     if (stream_for_reagent_count.is_open())
-      stream_for_reagent_count << rxn.name() << " 0\n";
+      write_changing_atom_count(rxn, 0, stream_for_reagent_count);
     return 1;
   }
 
@@ -1299,6 +1306,16 @@ rxn_fingerprint(RXN_File & rxn,
     }
   }
 
+  // Check for duplicate atom maps before anything else.
+  // If left to later, this reaction caused problems.
+  // CC1N=CC2C(C=1)=C([N+]([O-])=O)C=CC=2.[Cl:15][C:16]1[C:25]2[C:20](=[CH:21][CH:22]=[CH:23][CH:24]=2)[CH:19]=[CH:18][N:17]=1>>[ClH:15].[Cl:15][C:16]1[C:25]2[C:20](=[CH:21][CH:22]=[CH:23][CH:24]=2)[CH:19]=[CH:18][N:17]=1 |f:2.3|	US03930837		1976		
+
+  if (rxn.contains_duplicate_atom_map_numbers())
+  {
+    reactions_containing_duplicate_atom_map_numbers++;
+    return 1;
+  }
+
   Changing_Atom_Conditions cac;
   if (any_changing_bond_means_a_changing_atoms)
     cac.set_is_changing_if_different_neighbours(1);
@@ -1321,7 +1338,8 @@ rxn_fingerprint(RXN_File & rxn,
   if (verbose > 1)
     cerr << rxn.name() << " changing atom count " << c << " with " << rxn.number_reagents() << " reagents\n";
 
-  if (changing_atoms_should_be.number_elements() > 0 && ! changing_atoms_should_be.contains(c))
+  if (changing_atoms_should_be.number_elements() > 0 &&
+      ! changing_atoms_should_be.contains(c))
   {
     reactions_with_unexpected_changing_atom_counts++;
 
@@ -1339,12 +1357,12 @@ rxn_fingerprint(RXN_File & rxn,
     if (changing_atoms_should_be.contains(c))
     {
       reactions_with_corrected_atom_counts++;
-      if (verbose)
+      if (verbose > 1)
         cerr << rxn.name() << " corrected changing atom count\n";
     }
     else 
     {
-      if (verbose)
+      if (verbose > 1)
         cerr << rxn.name() << " cannot correct changing atom count, now " << c << endl;
       if (stream_for_reactions.is_open() && write_failed_changing_atom_counts_to_wfile)
         rxn.do_write(stream_for_reactions);
@@ -1355,12 +1373,6 @@ rxn_fingerprint(RXN_File & rxn,
   if (! rxn.at_least_some_mapped_atoms_common_btw_reagents_and_products())
   {
     reactions_with_no_reagent_atoms_in_products++;
-    return 1;
-  }
-
-  if (rxn.contains_duplicate_atom_map_numbers())
-  {
-    reactions_containing_duplicate_atom_map_numbers++;
     return 1;
   }
 
@@ -1378,6 +1390,8 @@ rxn_fingerprint(RXN_File & rxn,
   if (0 == c && discard_reactions_with_no_changing_atoms)
   {
     reactions_with_no_changing_atoms_discarded++;
+    if (verbose > 2)
+      cerr << "No changing atoms\n";
     return 1;
   }
 
@@ -1411,7 +1425,7 @@ rxn_fingerprint(RXN_File & rxn,
   if (stream_for_reaction_smiles.is_open())
     write_reaction_smiles(rxn, stream_for_reaction_smiles);
 
-  if (c < 100)    // yuck!
+  if (c < 100)    // Fixed size array, horrible.
     add_changing_atom_smarts_to_hash(r, changed, changing_atom_smarts[c]);
 
   write_reaction_and_maybe_changing_atom_count(rxn, r, c, output);
@@ -1465,7 +1479,7 @@ next_reaction_smiles(iwstring_data_source & input,
 
 //cerr << "SMILES INPUT '" << buffer << "'\n";
 
-  if (! rxn.build_from_reaction_smiles(buffer))
+  if (! rxn.build_from_reaction_smiles(buffer, 1))
   {
     cerr << "Cannot interpret " << buffer << endl;
     return 0;
@@ -1511,6 +1525,8 @@ rxn_fingerprint(iwstring_data_source & input,
                 const char * fname,
                 IWString_and_File_Descriptor & output)
 {
+  input.set_translate_tabs(1);
+
   while (1)
   {
     RXN_File rxn;
@@ -1602,10 +1618,10 @@ rxn_fingerprint_file_containing_reaction_files(const char * fname,
 }
 
 static int
-rxn_fingerprint (const char * fname,
-                 IWString_and_File_Descriptor & output)
+rxn_fingerprint(const char * fname,
+                IWString_and_File_Descriptor & output)
 {
-  assert(NULL != fname);
+  assert(nullptr != fname);
 
   const_IWSubstring tmp(fname);
   if (tmp.starts_with("F:"))
@@ -1621,10 +1637,42 @@ rxn_fingerprint (const char * fname,
   return rxn_fingerprint(input, fname, output);
 }
 
+void
+WriteSortedByValueHashMap(const IW_STL_Hash_Map_int& hash,
+                          std::ostream& output)
+{
+  const auto n = hash.size();
+  int * tmp = new int[n + n]; std::unique_ptr<int[]> free_tmp(tmp);
+  const_IWSubstring * keys = new const_IWSubstring[n]; std::unique_ptr<const_IWSubstring[]> free_keys(keys);
+
+  // Load smarts and counts into arrays.
+  int ndx = 0;
+  for (const auto& kv : hash)
+  {
+    keys[ndx] = kv.first;
+    tmp[ndx] = kv.second;
+    ndx++;
+  }
+
+  int * permutations = tmp + n;
+  std::iota(permutations, permutations + n, 0);
+
+  std::sort(permutations, permutations + n, [&tmp](const int x1, const int x2) {
+    return tmp[x1] > tmp[x2];
+  });
+
+  for (size_t i = 0; i < n; ++i)
+  {
+    output << ' ' << tmp[permutations[i]] << " occurrences of " << keys[permutations[i]] << "\n";
+  }
+
+  return;
+}
+
 static int
-get_radii (const Command_Line & cl,
-           const char flag,
-           resizable_array<int> & radii)
+get_radii(const Command_Line & cl,
+          const char flag,
+          resizable_array<int> & radii)
 {
   const_IWSubstring r;
   for (int i = 0; cl.value(flag, r, i); ++i)
@@ -1678,7 +1726,7 @@ display_misc_options(std::ostream & output)
 }
 
 static int
-rxn_fingerprint (int argc, char ** argv)
+rxn_fingerprint(int argc, char ** argv)
 {
   Command_Line cl(argc, argv, "vA:E:g:m:r:J:P:I:xduC:W:ahc:ws:q:j:fbD:U:ByeX:F:M:RiK:V:");
 
@@ -1890,15 +1938,14 @@ rxn_fingerprint (int argc, char ** argv)
     const_IWSubstring s;
     for (int i = 0; cl.value('s', s, i); ++i)
     {
-      Substructure_Query * q = new Substructure_Query;
+      std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
       if (! q->create_from_smarts(s))
       {
         cerr << "Invalid matched atoms should be smarts '" << s << "'\n";
-        delete q;
         return 1;
       }
 
-      changing_atoms_must_match.add(q);
+      changing_atoms_must_match.add(q.release());
     }
   }
 
@@ -2282,7 +2329,6 @@ rxn_fingerprint (int argc, char ** argv)
     cerr << "Read " << reactions_read << " reactions\n";
     Accumulator_Int<int> acc;
 
-    int most_common = 0;
     int most_common_count = 0;
     for (int i = 0; i < acc_changing_atoms.number_elements(); ++i)
     {
@@ -2294,10 +2340,7 @@ rxn_fingerprint (int argc, char ** argv)
       cerr << c << " reactions had " << i << " changing atoms\n";
 
       if (c > most_common_count)
-      {
         most_common_count = c;
-        most_common = i;
-      }
     }
 
     if (acc.n() > 0)
@@ -2341,15 +2384,13 @@ rxn_fingerprint (int argc, char ** argv)
         continue;
 
       cerr << "When " << i << " changing atoms\n";
-      for (auto f : hi)
-      {
-        cerr << ' ' << f.second << " occurrences of " << f.first << ' ' << i << endl;
-      }
+      WriteSortedByValueHashMap(hi, cerr);
     }
 
     cerr << reagents_with_multiple_reagents_skipped << " reactions skipped for multiple reagents\n";
 
-    cerr << " took the first of multiple reagents " << took_first_of_multiple_reagents << " times\n";
+    if (took_first_of_multiple_reagents)
+      cerr << " took the first of multiple reagents " << took_first_of_multiple_reagents << " times\n";
   }
 
   if (bad_reactions_ignored)
@@ -2363,6 +2404,9 @@ rxn_fingerprint (int argc, char ** argv)
 
   if (reactions_with_no_reagent_atoms_in_products)
     cerr << "SKIPPED " << reactions_with_no_reagent_atoms_in_products << " reactions_with_no_reagent_atoms_in_products\n";
+
+  if (reactions_containing_duplicate_atom_map_numbers)
+    cerr << "SKIPPED " << reactions_containing_duplicate_atom_map_numbers << " reactions with duplicate atom map numbers\n";
 
   return rc;
 }

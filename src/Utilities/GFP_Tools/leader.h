@@ -1,8 +1,9 @@
 #ifndef GFP_LEADER_H
 #define GFP_LEADER_H
 
+#include "Foundational/iwmisc/set_or_unset.h"
+
 #include "gfp.h"
-#include "set_or_unset.h"
 
 typedef float score_t;
 

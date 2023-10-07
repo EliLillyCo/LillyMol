@@ -1,0 +1,76 @@
+# RuleClass nuisance
+# SubClass misc
+
+# Feb 2004. Change to demerit
+
+(0 Query
+  (A I min_nrings 2)
+  (A I Version 2)
+  (A I min_fused_ring_system_size 2)
+  (A D numeric_value 50)
+  (A C Comment "coumarin")
+  (0 Ring_System_Specifier
+    (A I min_nrings 2)
+    (A I min_aromatic_ring_count 2)
+    (A I min_heteroatoms 1)
+  )
+  (0 Query_Atom
+    (A I atomic_number (7 8))
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I aromatic 1)
+    (A I attached_heteroatom_count 2)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I min_nrings 2)
+    (A I aromatic 1)
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 5)
+  )
+  (7 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 6)
+  )
+  (8 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond 7)
+    (A I bond 3)
+  )
+  (9 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I single_bond 8)
+  )
+  (10 Query_Atom
+    (A I atomic_number 6)
+    (A I double_bond 9)
+    (A I single_bond 1)
+  )
+)

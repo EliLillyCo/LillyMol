@@ -9,17 +9,17 @@
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "misc.h"
-#include "sparse_fp_creator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
-#include "istream_and_type.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "rotbond_common.h"
-#include "atom_typing.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/rotbond_common.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -53,8 +53,13 @@ static IWString_and_File_Descriptor stream_for_rbcount;
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Generates atom pair fingerprints, distance is rotatable bond count\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << " -c <number>    shortest bond distance to process\n";
   cerr << " -C <number>    longest  bond distance to process\n";
   cerr << " -P <type>      atom type specification, enter '-P help' for info\n";
@@ -497,7 +502,7 @@ rotatable_bond_fingerprint(data_source_and_type<Molecule> & input,
                            IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -520,15 +525,15 @@ rotatable_bond_fingerprint(data_source_and_type<Molecule> & input,
 }
 
 static int
-rotatable_bond_fingerprint(const char * fname, int input_type, 
+rotatable_bond_fingerprint(const char * fname, FileType input_type, 
                            IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -659,7 +664,7 @@ rotatable_bond_fingerprint(int argc, char ** argv)
       cerr << "Will only fingerprint atom pairs with all rotatable bonds between\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('f'))
   {
@@ -674,7 +679,7 @@ rotatable_bond_fingerprint(int argc, char ** argv)
     }
   }
   else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 

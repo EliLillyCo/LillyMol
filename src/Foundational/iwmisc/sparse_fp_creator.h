@@ -1,17 +1,12 @@
 #ifndef SPARSE_FP_CREATOR_H
 #define SPARSE_FP_CREATOR_H
 
-#include <ostream>
 #include <algorithm>
+#include <ostream>
+
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "timsort.hpp"
-
-#include "iwstring.h"
-
-#include "iw_stl_hash_map.h"
-
-using std::cerr;
-using std::endl;
 
 class IW_Unsigned_Int_Hash_Fn
 {
@@ -24,7 +19,7 @@ class Sparse_Fingerprint_Creator
 {
   public:
 
-    typedef IW_Hash_Map<unsigned int, int> FPHash;
+    using FPHash = IW_Hash_Map<unsigned int, int>;
 
   private:
     FPHash _fp;
@@ -66,6 +61,12 @@ class Sparse_Fingerprint_Creator
     int daylight_ascii_form_with_counts_encoded (const const_IWSubstring & tag, IWString & dyascii) const;    // first argument is the TDT tag
     int append_daylight_ascii_form_with_counts_encoded (const const_IWSubstring & tag, IWString & dyascii) const;    // first argument is the TDT tag
     int create_from_array_of_ints (const int *, int);
+
+    // Return a Daylight encoded string of a dense vector of the bits hashed to `nbits`.
+    IWString FixedWidthFingerprint(int nbits) const;
+
+    // A Daylight encoded string of the sorted bit numbers.
+    IWString BitsWithoutCounts() const;
 
     template <typename O> int write_as_feature_count(const char sep, O &) const;
     template <typename O> int write_as_md5_sum(O & output) const;
@@ -127,7 +128,7 @@ unordered_map_to_md5(const std::unordered_map<unsigned int, C> & h, O & output)
   }
 
   if (ndx != sz)
-    cerr << "Yipes, ndx " << ndx << " vs size " << sz << endl;
+    std::cerr << "Yipes, ndx " << ndx << " vs size " << sz << '\n';
 
   assert (sz == static_cast<unsigned int>(ndx));
 

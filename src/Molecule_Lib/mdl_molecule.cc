@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #define COMPILING_MDL_CC
 
@@ -16,10 +18,16 @@
 #include "mdl_atom_record.h"
 #include "molecule_to_query.h"
 
+using std::cerr;
+using std::endl;
+
+static constexpr char kOpenParen = '(';
+static constexpr char kCloseParen = ')';
+
 static int convert_a_and_q_atoms_to_atom_lists = 1;
 
 void
-set_convert_a_and_q_atoms_to_atom_lists (int s)
+set_convert_a_and_q_atoms_to_atom_lists(int s)
 {
   convert_a_and_q_atoms_to_atom_lists = s;
 }
@@ -27,7 +35,7 @@ set_convert_a_and_q_atoms_to_atom_lists (int s)
 static int convert_not_atom_lists_to_organic_lists = 0;
 
 void
-set_convert_not_atom_lists_to_organic_lists (int s)
+set_convert_not_atom_lists_to_organic_lists(int s)
 {
   convert_not_atom_lists_to_organic_lists = s;
 }
@@ -45,7 +53,7 @@ MDL_Molecule::MDL_Molecule()
 
 #ifdef USE_IWMALLOC
   cerr << "Checking MDL_Molecule\n";
-  iwmalloc_check_all_malloced (stderr);
+  iwmalloc_check_all_malloced(stderr);
 #endif
 
   return;
@@ -90,10 +98,10 @@ MDL_Molecule::_parse_atom_alias(iwstring_data_source & input,
 }
 
 int
-MDL_Molecule::_parse_M_record (iwstring_data_source & input,
-                               const const_IWSubstring & buffer,
-                               ::resizable_array_p<ISIS_Link_Atom> & ltmp,
-                               int & fatal)
+MDL_Molecule::_parse_M_record(iwstring_data_source & input,
+                              const const_IWSubstring & buffer,
+                              ::resizable_array_p<ISIS_Link_Atom> & ltmp,
+                              int & fatal)
 {
   if (buffer.starts_with("A  "))
   {
@@ -253,8 +261,8 @@ MDL_Molecule::_parse_atom_list(const IWString & buffer)
 }
 
 int
-MDL_Molecule::_parse_link_record (const IWString & buffer,
-                                  ::resizable_array_p<ISIS_Link_Atom> & ltmp)
+MDL_Molecule::_parse_link_record(const IWString & buffer,
+                                 ::resizable_array_p<ISIS_Link_Atom> & ltmp)
 {
   assert (buffer.starts_with("M  LIN"));
 
@@ -396,13 +404,13 @@ MDL_Molecule::remove_atoms(const int * to_remove)
 
 int
 MDL_Molecule::read_molecule_ds(iwstring_data_source & input,
-                               int input_type)
+                               FileType input_type)
 {
 //cerr << "MDL_Molecule::read_molecule_ds:type " << input_type << endl;
 
-  if (SDF == input_type)
+  if (FILE_TYPE_SDF == input_type)
     ;
-  else if (MDL == input_type)
+  else if (FILE_TYPE_MDL == input_type)
     ;
   else
   {
@@ -423,9 +431,9 @@ MDL_Molecule::read_molecule_ds(iwstring_data_source & input,
   encountered...
 */
 
-static const Element * element_a = NULL;
-static const Element * element_q = NULL;
-static const Element * element_l = NULL;
+static const Element * element_a = nullptr;
+static const Element * element_q = nullptr;
+static const Element * element_l = nullptr;
 
 void
 do_create_special_elements_for_mdl_stuff()
@@ -436,15 +444,15 @@ do_create_special_elements_for_mdl_stuff()
     set_auto_create_new_elements(1);
 
   element_a = get_element_from_symbol_no_case_conversion("A");
-  if (NULL == element_a)
+  if (nullptr == element_a)
     element_a = create_element_with_symbol("A");
 
   element_q = get_element_from_symbol_no_case_conversion("Q");
-  if (NULL == element_q)
+  if (nullptr == element_q)
     element_q = create_element_with_symbol("Q");
 
   element_l = get_element_from_symbol_no_case_conversion("L");
-  if (NULL == element_l)
+  if (nullptr == element_l)
     element_l = create_element_with_symbol("L");
 
   set_auto_create_new_elements(isave);
@@ -462,7 +470,7 @@ int
 MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
                                     int return_on_m_end)
 {
-  if (NULL == element_a)
+  if (nullptr == element_a)
     do_create_special_elements_for_mdl_stuff();
 
   const_IWSubstring buffer;
@@ -539,7 +547,7 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
 
     Atom * a = mdlar.create_atom();
 
-    if (NULL == a)
+    if (nullptr == a)
     {
       cerr << "MDL_Molecule::read_molecule_ds:cannot create atom, line " << input.lines_read() << endl;
       return 0;
@@ -625,8 +633,8 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
       return 0;
   }
 
-  int got_mend = 0;
-  int got_dollars = 0;
+//int got_mend = 0;
+//int got_dollars = 0;
 
   ::resizable_array_p<ISIS_Link_Atom> ltmp;
 
@@ -634,13 +642,13 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
   {
     if ("$$$$" == buffer)
     {
-      got_dollars = 1;
+//    got_dollars = 1;
       break;
     }
 
     if ("M  END" == buffer)
     {
-      got_mend = 1;
+//    got_mend = 1;
       if (return_on_m_end)
         break;
       else
@@ -724,7 +732,7 @@ MDL_Molecule::atom_list_for_atom (atom_number_t a) const
   const ISIS_Atom_List & rc = _mdl_atom[a]->atom_list();
 
   if (! rc.active())
-    return NULL;
+    return nullptr;
 
   return &rc;
 }
@@ -795,7 +803,7 @@ MDL_Molecule::_set_ring_bond_specifications (const Aprop * atom_properties,
 /*int
 MDL_Molecule::initialise_mqs (Molecule_to_Query_Specifications & mqs) const
 {
-  if (NULL == _hcount)    // we've never been initialised
+  if (nullptr == _hcount)    // we've never been initialised
     return 1;
 
   int matoms = natoms();
@@ -812,7 +820,7 @@ MDL_Molecule::initialise_mqs (Molecule_to_Query_Specifications & mqs) const
   if (_link_atom.number_elements())
     mqs.set_link_atoms(_link_atom);
 
-  if (NULL != _bond_topology)
+  if (nullptr != _bond_topology)
     mqs.set_bond_topology (_bond_topology, nedges());
 
   return 1;
@@ -1292,7 +1300,7 @@ MDL_Molecule::mdl_bond_between_atoms (atom_number_t a1,
   if (j < 0)
   {
     cerr << "MDL_Molecule::mdl_bond_between_atoms:no bond between " << a1 << " and " << a2 << endl;
-    return NULL;
+    return nullptr;
   }
 
   return _mdl_bond[j];
@@ -1616,7 +1624,7 @@ MDL_Molecule::_convert_symbol_to_element (int ndx,
   if (s.length() <= 2)
   {
     const Element * e = get_element_from_symbol_no_case_conversion(s);
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "MDL_Molecule::_convert_symbol_to_element:cannot get element for '" << s << "'\n";
       return 0;
@@ -1672,6 +1680,10 @@ MDL_Molecule::_look_for_atom_query_directives (int ndx,
       mad->set_ring_bond(v);
       continue;
     }
+    else if (directive == "CHG") {
+      mad->set_charge(v);
+      continue;
+    }
     else
     {
       cerr << "MDL_Molecule::_look_for_query_directives:unrecognised directive '" << token << "'\n";
@@ -1682,30 +1694,92 @@ MDL_Molecule::_look_for_atom_query_directives (int ndx,
   return 1;
 }
 
-int
-MDL_Molecule::_look_for_bond_query_directives (int ndx,
-                                               const IWString & buffer)
-{
+// Parse extra directives on an MDL_V3000 bond record.
+// Make sure we can parse things like.
+// M  V30 35 1 33 34 ENDPTS=(3 31 32 30) ATTACH=ALL
+
+static int
+ParseV3000BondDirective(const const_IWSubstring& buffer,
+                        IW_STL_Hash_Map_String& directive_value) {
   int i = 0;
-  const_IWSubstring token;
+  IWString token;
+  // Skip over first 5 tokens.
+  for (int col = 0; buffer.nextword(token, i); ++col) {
+    if (col == 5) {
+      break;
+    }
+  }
+
+  if (i == buffer.length()) {
+    return 1;
+  }
+
+  // If accumulating a multi-token directive.
+  IWString directive;
+  IWString value;
+  while (buffer.nextword(token, i)) {
+    // cerr << "Examining '" << token << "'\n";
+    token.split(directive, '=', value);
+    if (directive.empty() || value.empty()) {
+      cerr << "ParseV3000BondDirective:invalid token '" << token << "'\n";
+      return 0;
+    }
+
+    // The easy case.
+    if (! value.starts_with(kOpenParen)) {
+      directive_value[directive] = value;
+      continue;
+    }
+
+    // Accumulate a multi token value  ENDPTS=(3
+    value.remove_leading_chars(1);
+    bool got_close = false;
+    while (buffer.nextword(token, i)) {
+      if (token.ends_with(kCloseParen)) {
+        token.chop();
+        value << ' ' << token;
+        directive_value[directive] = value;
+        got_close = true;
+        break;
+      } else {
+        value << ' ' << token;
+      }
+    }
+
+    if (! got_close) {
+      cerr << "ParseV3000BondDirective:no close to multi token directive '" << buffer << "'\n";
+      return 0;
+    }
+  }
+
+#ifdef DEBUG_PARSEV3000BONDDIRECTIVE
+  for (const auto& [k, v] : directive_value) {
+    cerr << " directive '" << k << "' value '" << v << "'\n";
+  }
+#endif
+
+  return directive_value.size();
+}
+
+int
+MDL_Molecule::_look_for_bond_query_directives(int ndx, const IWString & buffer) {
+  IW_STL_Hash_Map_String directive_value;
+  if (! ParseV3000BondDirective(buffer, directive_value)) {
+    cerr << "MDL_Molecule::_look_for_bond_query_directives:cannot parse bond record\n";
+    cerr << buffer << '\n';
+    return 0;
+  }
 
   MDL_Bond_Data * b = _mdl_bond[ndx];
 
-  while (buffer.nextword(token, i))
-  {
-    if (token.index('=') <= 0)
-      continue;
-
-    const_IWSubstring directive;
-    int v;
-    if (! token.split_into_directive_and_value(directive, '=', v))
-      continue;
-
-    if ("TOPO" == directive)
-    {
-      b->set_bond_topology(v);
-      continue;
-
+  for (const auto& [k, v] : directive_value) {
+    if (k == "TOPO") {
+      int topo;
+      if (! v.numeric_value(topo) || topo < 0) {
+        cerr << "MDL_Bond_Data::_look_for_bond_query_directives:invalid topo " << buffer << '\n';
+        return 0;
+      }
+      b->set_bond_topology(topo);
     }
   }
 
@@ -1767,7 +1841,7 @@ reset_mdl_molecule_file_scope_variables()
 {
 	convert_a_and_q_atoms_to_atom_lists=0;
 	convert_not_atom_lists_to_organic_lists=0;
-	 element_a = NULL;
-	element_q = NULL;
-	element_l = NULL;
+	 element_a = nullptr;
+	element_q = nullptr;
+	element_l = nullptr;
 }

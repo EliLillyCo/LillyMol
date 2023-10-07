@@ -1,0 +1,3 @@
+query: "aromatic_ring_donor_acceptor.qry"
+element: "Cr"
+ring: true

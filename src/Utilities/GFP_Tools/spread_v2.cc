@@ -1,21 +1,25 @@
-#include <stdlib.h>
+#include <iostream>
 
-#include "iw_tdt.h"
-#include "numeric_data_from_file.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwmisc/numeric_data_from_file.h"
+
 #include "spread_v2.h"
+
+using std::cerr;
+using std::endl;
 
 static IWString scale_tag;
 
-static IWString smiles_tag ("$SMI<");
+static IWString smiles_tag("$SMI<");
 
 int
-set_scale_tag (const const_IWSubstring & tag)
+set_scale_tag(const const_IWSubstring & tag)
 {
   scale_tag = tag;
 
   if (0 == scale_tag.length())   // has been turned off
     ;
-  else if (! scale_tag.ends_with ('<'))
+  else if (! scale_tag.ends_with('<'))
     scale_tag += '<';
 
   return 1;
@@ -26,7 +30,7 @@ static Numeric_Data_From_File<float> id_to_scale;
 static int scaling_factor_column = -1;
 
 void
-set_scaling_factor_column (int c)
+set_scaling_factor_column(int c)
 {
   if (c >= 1)
     scaling_factor_column = c - 1;   // convert to word index
@@ -41,7 +45,7 @@ set_scaling_factor_column (int c)
 static int every_object_must_have_a_scale_factor = 1;
 
 void
-set_every_object_must_have_a_scale_factor (int s)
+set_every_object_must_have_a_scale_factor(int s)
 {
   every_object_must_have_a_scale_factor = s;
 }
@@ -49,14 +53,14 @@ set_every_object_must_have_a_scale_factor (int s)
 static int include_scale_of_nsn_with_scale = 0;
 
 void
-set_include_scale_of_nsn_with_scale (int s)
+set_include_scale_of_nsn_with_scale(int s)
 {
   include_scale_of_nsn_with_scale = s;
 }
 
 int
-read_scaling_data (const char * fname,
-                   int verbose)
+read_scaling_data(const char * fname,
+                  int verbose)
 {
   if (! id_to_scale.read_data(fname))
   {
@@ -112,12 +116,12 @@ Spread_Object::operator=(const Spread_Object & rhs)
 }
 
 void
-Spread_Object::_update_nsn_stuff (const Spread_Object & fpsel,
-                                  similarity_type_t d)
+Spread_Object::_update_nsn_stuff(const Spread_Object & fpsel,
+                                 similarity_type_t d)
 {
-  _nearest_selected_neighbour.set_distance (d);
-  _nearest_selected_neighbour.set_smiles (fpsel.smiles());
-  _nearest_selected_neighbour.set_id (fpsel.id());
+  _nearest_selected_neighbour.set_distance(d);
+  _nearest_selected_neighbour.set_smiles(fpsel.smiles());
+  _nearest_selected_neighbour.set_id(fpsel.id());
 
   if (include_scale_of_nsn_with_scale)
   {
@@ -132,9 +136,9 @@ Spread_Object::_update_nsn_stuff (const Spread_Object & fpsel,
 }
 
 int
-Spread_Object::object_has_been_selected (Spread_Object & fpsel)
+Spread_Object::object_has_been_selected(Spread_Object & fpsel)
 {
-  similarity_type_t new_distance = IW_General_Fingerprint::distance (fpsel);
+  similarity_type_t new_distance = IW_General_Fingerprint::distance(fpsel);
 
   if (new_distance >= _nearest_selected_neighbour.distance())
     return 0;
@@ -145,12 +149,12 @@ Spread_Object::object_has_been_selected (Spread_Object & fpsel)
 }
 
 int
-Spread_Object::object_has_been_selected (Spread_Object & fpsel,
-                                         float blurr_distances)
+Spread_Object::object_has_been_selected(Spread_Object & fpsel,
+                                        float blurr_distances)
 {
-  similarity_type_t new_distance = IW_General_Fingerprint::distance (fpsel);
+  similarity_type_t new_distance = IW_General_Fingerprint::distance(fpsel);
 
-  new_distance = do_blurring (new_distance, blurr_distances);
+  new_distance = do_blurring(new_distance, blurr_distances);
 
   if (new_distance >= _nearest_selected_neighbour.distance())
     return 0;
@@ -161,10 +165,10 @@ Spread_Object::object_has_been_selected (Spread_Object & fpsel,
 }
 
 int
-Spread_Object::object_has_been_selected (Spread_Object & fpsel,
-                                         const Tversky & tversky)
+Spread_Object::object_has_been_selected(Spread_Object & fpsel,
+                                        const Tversky & tversky)
 {
-  similarity_type_t new_distance = static_cast<similarity_type_t> (1.0) - IW_General_Fingerprint::tversky (fpsel, tversky);
+  similarity_type_t new_distance = static_cast<similarity_type_t>(1.0) - IW_General_Fingerprint::tversky(fpsel, tversky);
 
   if (new_distance >= _nearest_selected_neighbour.distance())
     return 0;
@@ -175,13 +179,13 @@ Spread_Object::object_has_been_selected (Spread_Object & fpsel,
 }
 
 int
-Spread_Object::object_has_been_selected (Spread_Object & fpsel,
-                                         const Tversky & tversky,
-                                         float blurr_distances)
+Spread_Object::object_has_been_selected(Spread_Object & fpsel,
+                                        const Tversky & tversky,
+                                        float blurr_distances)
 {
-  similarity_type_t new_distance = static_cast<similarity_type_t> (1.0) - IW_General_Fingerprint::tversky (fpsel, tversky);
+  similarity_type_t new_distance = static_cast<similarity_type_t>(1.0) - IW_General_Fingerprint::tversky(fpsel, tversky);
 
-  new_distance = do_blurring (new_distance, blurr_distances);
+  new_distance = do_blurring(new_distance, blurr_distances);
 
   if (new_distance >= _nearest_selected_neighbour.distance())
     return 0;
@@ -193,10 +197,10 @@ Spread_Object::object_has_been_selected (Spread_Object & fpsel,
 
 
 int
-Spread_Object::object_has_been_selected_max_distance (Spread_Object & fpsel,
+Spread_Object::object_has_been_selected_max_distance(Spread_Object & fpsel,
                                          similarity_type_t max_dist)
 {
-  similarity_type_t new_distance = IW_General_Fingerprint::distance (fpsel);
+  similarity_type_t new_distance = IW_General_Fingerprint::distance(fpsel);
 
   if (new_distance > max_dist)
     new_distance = max_dist;
@@ -210,7 +214,7 @@ Spread_Object::object_has_been_selected_max_distance (Spread_Object & fpsel,
 }
 
 int
-Spread_Object::_determine_scale_from_column (int c)
+Spread_Object::_determine_scale_from_column(int c)
 {
   if (_id.nwords() > c)   // great, our token is there
     ;
@@ -242,7 +246,7 @@ Spread_Object::_determine_scale_from_column (int c)
 }
 
 int
-Spread_Object::_determine_scale_from_hash (const IW_STL_Hash_Map_float & id_to_scale)
+Spread_Object::_determine_scale_from_hash(const IW_STL_Hash_Map_float & id_to_scale)
 {
   IW_STL_Hash_Map_float::const_iterator f;
   
@@ -259,7 +263,7 @@ Spread_Object::_determine_scale_from_hash (const IW_STL_Hash_Map_float & id_to_s
   {
     _scale = (*f).second;
 
-    scale_stats.extra (_scale);
+    scale_stats.extra(_scale);
 
     return 1;
   }
@@ -274,33 +278,33 @@ Spread_Object::_determine_scale_from_hash (const IW_STL_Hash_Map_float & id_to_s
 }
 
 int
-Spread_Object::_determine_scale_from_tag (const IW_TDT & tdt,
-                                          const IWString & scale_tag)
+Spread_Object::_determine_scale_from_tag(const IW_TDT & tdt,
+                                         const IWString & scale_tag)
 {
   const_IWSubstring s;
-  if (! tdt.dataitem_value (scale_tag, s))   // no scale tag present
+  if (! tdt.dataitem_value(scale_tag, s))   // no scale tag present
     return 1;
 
-  if (! s.numeric_value (_scale) || _scale <= 0.0)
+  if (! s.numeric_value(_scale) || _scale <= 0.0)
   {
     cerr << "Spread_Object::create_from_tdt: invalid scale/demerit value\n";
     return 0;
   }
 
-  scale_stats.extra (_scale);
+  scale_stats.extra(_scale);
 
   return 1;
 }
 
 int
-Spread_Object::construct_from_tdt (IW_TDT & tdt, int & fatal)
+Spread_Object::construct_from_tdt(IW_TDT & tdt, int & fatal)
 {
-  if (! IW_General_Fingerprint::construct_from_tdt (tdt, fatal))
+  if (! IW_General_Fingerprint::construct_from_tdt(tdt, fatal))
     return 0;
 
   _scale = 1.0;
 
-  if (! tdt.dataitem_value (smiles_tag, _smiles))
+  if (! tdt.dataitem_value(smiles_tag, _smiles))
   {
     cerr << "Spread_Object::construct_from_tdt: no smiles tag '" << smiles_tag << "' in TDT\n";
     return 0;
@@ -316,7 +320,7 @@ Spread_Object::construct_from_tdt (IW_TDT & tdt, int & fatal)
   }
   else if (id_to_scale.size())
   {
-    if (! _determine_scale_from_hash (id_to_scale))
+    if (! _determine_scale_from_hash(id_to_scale))
     {
       fatal = 1;
       return 0;
@@ -337,13 +341,13 @@ Spread_Object::construct_from_tdt (IW_TDT & tdt, int & fatal)
 }
 
 void
-Spread_Object::set_nearest_previously_selected_neighbour (const IWString & nnsmiles,
+Spread_Object::set_nearest_previously_selected_neighbour(const IWString & nnsmiles,
                             const IWString & nnid,
                             similarity_type_t d)
 {
-  _nearest_selected_neighbour.set_smiles   (nnsmiles);
-  _nearest_selected_neighbour.set_id       (nnid);
-  _nearest_selected_neighbour.set_distance (d);
+  _nearest_selected_neighbour.set_smiles(nnsmiles);
+  _nearest_selected_neighbour.set_id(nnid);
+  _nearest_selected_neighbour.set_distance(d);
 
   _scaled_distance = d;
   _scale_of_nearest_selected_nbr = d;
@@ -352,8 +356,8 @@ Spread_Object::set_nearest_previously_selected_neighbour (const IWString & nnsmi
 }
 
 similarity_type_t
-do_blurring (similarity_type_t d,
-             float blurr_distances)
+do_blurring(similarity_type_t d,
+            float blurr_distances)
 {
   float tmp = d * blurr_distances + static_cast<float>(0.499999);
 
@@ -363,7 +367,7 @@ do_blurring (similarity_type_t d,
 }
 
 int
-Spread_Object::set_distance_to_previously_selected_from_column (int col)
+Spread_Object::set_distance_to_previously_selected_from_column(int col)
 {
   const_IWSubstring token;
 

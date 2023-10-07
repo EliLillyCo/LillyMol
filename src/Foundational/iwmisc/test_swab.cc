@@ -8,7 +8,6 @@
 #endif
 
 #include "cmdline.h"
-#include "iwrandom.h"
 #include "misc.h"
 
 using std::numeric_limits;

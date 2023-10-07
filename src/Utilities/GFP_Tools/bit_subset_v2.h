@@ -1,12 +1,13 @@
 #ifndef BIT_SUBSET_V2_H
 #define BIT_SUBSET_V2_H
 
+#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 
 #define BIT_SUBSET_HEADER_RECORD "BitSubSet"
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include "sparsefp.h"
 #include "dyfp.h"
@@ -107,7 +108,7 @@ Dense_Subset<T>::Dense_Subset()
 template <typename T>
 Dense_Subset<T>::~Dense_Subset()
 {
-   return;
+  return;
 }
 
 template <typename T>
@@ -134,7 +135,7 @@ common_build (std::unordered_map<unsigned int, T> & v,
     {
       if (! buffer.numeric_value(b))
       {
-        cerr << "GFP_Bit_Subset::common_build:invalid bit '" << buffer << "'\n";
+        std::cerr << "GFP_Bit_Subset::common_build:invalid bit '" << buffer << "'\n";
         return 0;
       }
       x = static_cast<T>(1);
@@ -145,13 +146,13 @@ common_build (std::unordered_map<unsigned int, T> & v,
       const_IWSubstring token;
       if (! buffer.nextword(token, i) || ! token.numeric_value(b))
       {
-        cerr << "GFP_Bit_Subset::comm_build:invalid bit '" << buffer << "'\n";
+        std::cerr << "GFP_Bit_Subset::comm_build:invalid bit '" << buffer << "'\n";
         return 0;
       }
 
       if (! buffer.nextword(token, i) || ! token.numeric_value(x))
       {
-        cerr << "GFP_Bit_Subset::common_build:invalid numeric qualifier '" << buffer << "'\n";
+        std::cerr << "GFP_Bit_Subset::common_build:invalid numeric qualifier '" << buffer << "'\n";
         return 0;
       }
     }
@@ -242,7 +243,7 @@ GFP_Bit_Subset<T>::build (const char * fname)
 
   if (! input.good())
   {
-    cerr << "GFP_Bit_Subset::build:cannot open '" << fname << "'\n";
+    std::cerr << "GFP_Bit_Subset::build:cannot open '" << fname << "'\n";
     return 0;
   }
 
@@ -260,7 +261,7 @@ GFP_Bit_Subset<T>::_build_fingerprint (const IWString & buffer,
     {
       if (! _sparse[i].build (input))
       {
-        cerr << "GFP_Bit_Subset::_build_fingerprint:cannot build data for '" << buffer << "'\n";
+        std::cerr << "GFP_Bit_Subset::_build_fingerprint:cannot build data for '" << buffer << "'\n";
         return 0;
       }
 
@@ -276,14 +277,14 @@ GFP_Bit_Subset<T>::_build_fingerprint (const IWString & buffer,
 
     if (! _fixed[i].build(input))
     {
-      cerr << "GFP_Bit_Subset::_build_fingerprint:cannot process fixed fingerprint '" << buffer << "'\n";
+      std::cerr << "GFP_Bit_Subset::_build_fingerprint:cannot process fixed fingerprint '" << buffer << "'\n";
       return 0;
     }
 
     return 1;
   }
 
-  cerr << "GFP_Bit_Subset::_build_fingerprint:no match to '" << buffer << "'\n";
+  std::cerr << "GFP_Bit_Subset::_build_fingerprint:no match to '" << buffer << "'\n";
   return 0;
 }
 
@@ -300,13 +301,13 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
 
   if (! input.next_record (buffer))
   {
-    cerr << "GFP_Bit_Subset::build:cannot read header record\n";
+    std::cerr << "GFP_Bit_Subset::build:cannot read header record\n";
     return 0;
   }
 
   if (BIT_SUBSET_HEADER_RECORD != buffer)
   {
-    cerr << "GFP_Bit_Subset::build:invalid header '" << buffer << "'\n";
+    std::cerr << "GFP_Bit_Subset::build:invalid header '" << buffer << "'\n";
     return 0;
   }
 
@@ -327,7 +328,7 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
 
     if (! buffer.nextword(token1, i) || ! buffer.nextword(token2, i))
     {
-      cerr << "GFP_Bit_Subset:build:record must consist of directive and value, '" << buffer << "' invalid\n";
+      std::cerr << "GFP_Bit_Subset:build:record must consist of directive and value, '" << buffer << "' invalid\n";
       return 0;
     }
 
@@ -337,7 +338,7 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
       int nb;
       if (! buffer.nextword(s, i) || ! s.numeric_value(nb) || nb < 1)
       {
-        cerr << "GFP_Bit_Subset::build:invalid fixed width fingerprint specification '" << buffer << "'\n";
+        std::cerr << "GFP_Bit_Subset::build:invalid fixed width fingerprint specification '" << buffer << "'\n";
         return 0;
       }
 
@@ -350,7 +351,7 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
     }
     else
     {
-      cerr << "GFP_Bit_Subset::build:unrecognised directive '" << buffer << "'\n";
+      std::cerr << "GFP_Bit_Subset::build:unrecognised directive '" << buffer << "'\n";
       return 0;
     }
   }
@@ -360,7 +361,7 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
 
   if (0 == _nfixed && 0 == _nsparse)
   {
-    cerr << "GFP_Bit_Subset::build:no fingerprints\n";
+    std::cerr << "GFP_Bit_Subset::build:no fingerprints\n";
     return 0;
   }
 
@@ -388,7 +389,7 @@ GFP_Bit_Subset<T>::build (iwstring_data_source & input)
   {
     if (! _build_fingerprint(tag, input))
     {
-      cerr << "GFP_Bit_Subset::build:cannot process '" << tag << "'\n";
+      std::cerr << "GFP_Bit_Subset::build:cannot process '" << tag << "'\n";
       return 0;
     }
   }
@@ -473,7 +474,7 @@ GFP_Bit_Subset<T>::process_record (const_IWSubstring buffer,        // note loca
 {
   if (! buffer.ends_with('>'))
   {
-    cerr << "GFP_Bit_Subset::process_record:must be TDT form, '" << buffer << "' invalid\n";
+    std::cerr << "GFP_Bit_Subset::process_record:must be TDT form, '" << buffer << "' invalid\n";
     return 0;
   }
 
@@ -481,7 +482,7 @@ GFP_Bit_Subset<T>::process_record (const_IWSubstring buffer,        // note loca
 
   if (openangle < 1)
   {
-    cerr << "GFP_Bit_Subset::process_record:no TDT tag detected '" << buffer << "'\n";
+    std::cerr << "GFP_Bit_Subset::process_record:no TDT tag detected '" << buffer << "'\n";
     return 0;
   }
 
@@ -505,7 +506,7 @@ GFP_Bit_Subset<T>::process_record (const_IWSubstring buffer,        // note loca
     return _fixed[i].process_record(buffer, op, remove_bits_not_mentioned, output);
   }
 
-  cerr << "GFP_Bit_Subset::process_record:unrecognised tag '" << buffer << "'\n";
+  std::cerr << "GFP_Bit_Subset::process_record:unrecognised tag '" << buffer << "'\n";
   return 0;
 }
 
@@ -520,7 +521,7 @@ Dense_Subset<T>::process_record (const const_IWSubstring & buffer,
 
   if (! dyfp.construct_from_tdt_record(buffer))
   {
-    cerr << "Dense_Subset::process_record:invalid fingerprint '" << buffer << "'\n";
+    std::cerr << "Dense_Subset::process_record:invalid fingerprint '" << buffer << "'\n";
     return 0;
   }
 
@@ -537,9 +538,9 @@ Dense_Subset<T>::process_record (const const_IWSubstring & buffer,
     int c = op(i.first, dyfp.is_set(b), i.second);
 
     if (c)
-      dyfp.set(b, 1);
+      dyfp.set_bit(b);
     else
-      dyfp.set(b, 0);
+      dyfp.set_bit(b, 0);
   }
 
   IWString tmp;
@@ -563,7 +564,7 @@ Sparse_Subset<T>::process_record (const const_IWSubstring & buffer,
 
   if (! sfp.construct_from_tdt_record(buffer))
   {
-    cerr << "Sparse_Subset::process_record:cannot interpret '" << buffer << "'\n";
+    std::cerr << "Sparse_Subset::process_record:cannot interpret '" << buffer << "'\n";
     return 0;
   }
 
@@ -604,13 +605,13 @@ Sparse_Subset<T>::process (Sparse_Fingerprint & sfp,
       continue;
 
 #ifdef DEBUG_BS_PROCESS
-    cerr << "bit " << b << " old value " << c << " delta " << i.second;
+    std::cerr << "bit " << b << " old value " << c << " delta " << i.second;
 #endif
     
     c = op(b, c, i.second);
 
 #ifdef DEBUG_BS_PROCESS
-    cerr << " updat4ed to " << c << endl;
+    std::cerr << " updat4ed to " << c << '\n';
 #endif
 
     if (0 == c)
@@ -634,7 +635,7 @@ Sparse_Subset<T>::process (Sparse_Fingerprint & sfp,
   {
     const auto f = _v.find(b);
 
-//  cerr << "What about bit " << b << " " << (f == _v.end()) << endl;
+//  std::cerr << "What about bit " << b << " " << (f == _v.end()) << '\n';
     if (f == _v.end())
       to_remove.insert(b);
   }
@@ -642,13 +643,13 @@ Sparse_Subset<T>::process (Sparse_Fingerprint & sfp,
   if (0 == to_remove.size())
     return rc;
 
-//cerr << "Need to remove " << to_remove.size() << " bits, sfp starts with " << sfp.nbits() << " bits\n";
+//std::cerr << "Need to remove " << to_remove.size() << " bits, sfp starts with " << sfp.nbits() << " bits\n";
   for (const auto i : to_remove)
   {
     sfp.remove_bit(i);
   }
 
-//cerr << "After removing " << to_remove.size() << " bits, sfp has " << sfp.nbits() << " bits\n";
+//std::cerr << "After removing " << to_remove.size() << " bits, sfp has " << sfp.nbits() << " bits\n";
 
   return rc + to_remove.size();   // really just an arbitrary thing
 }

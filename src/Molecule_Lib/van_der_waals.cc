@@ -3,11 +3,16 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "molecule.h"
+#include "aromatic.h"
 #include "iw_vdw.h"
+#include "molecule.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   VDW parameters from Shrake and Rupley, J Mol Bio, 79, 351-371 (1973)
@@ -103,8 +108,8 @@ assign_wiki_vdw_radii(Molecule & m,
 }
 
 static int
-assign_savol_vdw_radii (Molecule & m,
-                        vdw_radius_t * vdw)
+assign_savol_vdw_radii(Molecule & m,
+                       vdw_radius_t * vdw)
 {
   int matoms = m.natoms();
   for (int i = 0; i < matoms; i++)
@@ -164,7 +169,7 @@ assign_shrake_and_rupley_vdw_radii (Molecule & m,
     else if (6 == z)
     {
       aromaticity_type_t arom;
-      if (m.aromaticity(i, arom) && IS_AROMATIC_ATOM(arom))
+      if (m.aromaticity(i, arom) && is_aromatic_atom(arom))
         vdw[i] = sr_vdw_aromc;
       else if (m.hcount(i))
         vdw[i] = sr_vdw_ch;
@@ -203,8 +208,8 @@ assign_shrake_and_rupley_vdw_radii (Molecule & m,
 }
 
 static int
-assign_molvol_vdw_radii (Molecule & m,
-                         vdw_radius_t * vdw)
+assign_molvol_vdw_radii(Molecule & m,
+                        vdw_radius_t * vdw)
 {
   int matoms = m.natoms();
 
@@ -260,16 +265,16 @@ assign_molvol_vdw_radii (Molecule & m,
 }
 
 static int
-assign_sybyl63_vdw_radii (Molecule & m, 
-                          vdw_radius_t * vdw)
+assign_sybyl63_vdw_radii(Molecule & m, 
+                         vdw_radius_t * vdw)
 {
-  int matoms = m.natoms ();
+  int matoms = m.natoms();
 
   int rc = 1;      // will be set to 0 if anything is inclassified
 
   for (int i = 0; i < matoms; i++)
   {
-    atomic_number_t z = m.atomic_number (i);
+    atomic_number_t z = m.atomic_number(i);
 
     if (1 == z)
       vdw[i] = 1.08;
@@ -327,8 +332,9 @@ assign_vdw_radii (Molecule & m,
   return 0;
 }
 
+
 int
-display_standard_vdw_radius_types (std::ostream & os, char flag, int full_details)
+display_standard_vdw_radius_types(std::ostream & os, char flag, int full_details)
 {
   os << "  -" << flag << " <type>      specify Van der Waals radius type\n";
 
@@ -345,10 +351,10 @@ display_standard_vdw_radius_types (std::ostream & os, char flag, int full_detail
 }
 
 int
-set_default_van_der_waals_radius_type (Command_Line & cl,
-                                       char flag,
-                                       int & vdw_type,
-                                       int verbose)
+set_default_van_der_waals_radius_type(Command_Line & cl,
+                                      char flag,
+                                      int & vdw_type,
+                                      int verbose)
 {
   IWString v = cl.string_value(flag);
 
@@ -402,3 +408,31 @@ set_default_van_der_waals_radius_type (Command_Line & cl,
 
   return 1;
 }
+
+namespace vdw {
+
+int
+AssignVdwRadii(Molecule& m, vdw::VdwType vdw_type, vdw_radius_t* vdw) {
+  switch (vdw_type) {
+    case VdwType::kUndefined:
+      cerr << "AssignVdwRadii:invalid type\n";
+      return 0;
+    case VdwType::kShrakeAndRupley:
+      return assign_shrake_and_rupley_vdw_radii(m, vdw);
+    case VdwType::kSavol:
+      return assign_savol_vdw_radii(m, vdw);
+    case VdwType::kMolvol:
+      return assign_molvol_vdw_radii(m, vdw);
+    case VdwType::kWiki:
+      return assign_wiki_vdw_radii(m, vdw);
+    default:
+      cerr << "AssignVdwRadii:Unrecongised type\n";
+      return 0;
+  }
+}
+std::optional<vdw_radius_t>
+vdw_radius(Molecule& m, atom_number_t zatom, VdwType vdw_type) {
+  return 0.0;
+}
+
+}  // namespace vdw

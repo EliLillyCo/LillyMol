@@ -1,5 +1,5 @@
-#ifndef ATOM_COORDINATES_H
-#define ATOM_COORDINATES_H
+#ifndef MOLECULE_LIB_COORDINATES_H_
+#define MOLECULE_LIB_COORDINATES_H_
 
 #include "space_vector.h"
 #include "iwmtypes.h"
@@ -32,4 +32,4 @@ class Coordinates_double : public Space_Vector<double>
     Coordinates_double (const Atom & a);
 };
 
-#endif
+#endif  // MOLECULE_LIB_COORDINATES_H_

@@ -1,0 +1,10 @@
+name: "sulfonic_acid_to_carboxylic"
+scaffold {
+  id: 0
+  smarts: "[SD4](=O)(=O)-[OD1H]"
+  remove_atom: 1
+  change_element {
+    atom: 0
+    element: "C"
+  }
+}

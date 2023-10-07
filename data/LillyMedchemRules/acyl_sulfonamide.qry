@@ -1,0 +1,19 @@
+# RuleClass 
+# SubClass 
+
+# Fred Bruns Dec 2003
+
+(0 Query
+  (A C Comment "acyl_sulfonamide")
+  (A D numeric_value 30)
+  (A I Version 2)
+  (0 Elements_needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+
+# Last atom is !#7 to differentiate this from sulfonylurea
+
+  (A I embeddings_do_not_overlap 1)
+  (A C smarts "[O,S]=[S;R0]-N-[C;R0](=[O,S])-[!#7]")
+)

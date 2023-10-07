@@ -11,7 +11,7 @@
   It is up to the array object to convert these to array items
 */
 
-#include "qry_wstats.h"
+#include "Molecule_Lib/qry_wstats.h"
 
 class NA_Substructure_Query : public Substructure_Hit_Statistics
 {

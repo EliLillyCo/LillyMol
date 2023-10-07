@@ -8,8 +8,9 @@
   is saving time or not.
 */
 
-#include "iw_stl_hash_set.h"
-#include "molecule.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+
+#include "Molecule_Lib/molecule.h"
 
 class Reaction_Duplicate
 {

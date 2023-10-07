@@ -1,0 +1,1 @@
+smi: "S1C2=C(C3=C1[1NH]C(=O)CN=[1CH]3)CCC2" smt: "[ax2r5D2]1:[ax3r5r5D3]2:[ax3r5r5D3](:[ax3r5r7D3]3:[ax3r5r7D3]:1:[ax2r7D>2]:[ax2r7D3](=[a]):[ax2r7D2]:[ax2r7D2]:[ax2r7D>2]:3):[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:2" id: "CHEMBL4170739.5Ar5Al7Al" n: 2 conn: true usmi: "O=C1[1NH]c2sc3c(c2[1CH]=NC1)CCC3" 

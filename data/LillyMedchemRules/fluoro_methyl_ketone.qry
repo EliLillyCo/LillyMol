@@ -1,0 +1,24 @@
+(0 Query
+  (A C Comment "fluoro_methyl_ketone")
+  (A C Comment "fluoro_methyl_ketone")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 0)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I double_bond 2)
+  )
+)

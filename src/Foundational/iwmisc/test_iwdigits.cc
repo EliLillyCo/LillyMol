@@ -5,10 +5,13 @@
 #include <iostream>
 #include <random>
 
-#include "cmdline_v2.h"
+#include "Foundational/cmdline_v2/cmdline_v2.h"
 #include "iwdigits.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 

@@ -4,8 +4,8 @@
 
 template class Foo<int>;
 
-//Foo<int>::(Foo<int>::*iwqsort_mfn) (const Foo<int> &) const = NULL;
-int (Foo<int>::*iwqsort_mfn) = NULL;
+//Foo<int>::(Foo<int>::*iwqsort_mfn) (const Foo<int> &) const = nullptr;
+int (Foo<int>::*iwqsort_mfn) = nullptr;
 
 template <> int Foo<int>::_static_variable = 0;
 

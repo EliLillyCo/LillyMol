@@ -1,9 +1,9 @@
-#ifndef IW_CHIRAL_CENTRE_H
-#define IW_CHIRAL_CENTRE_H
+#ifndef MOLECULE_LIB_CHIRAL_CENTRE_H_
+#define MOLECULE_LIB_CHIRAL_CENTRE_H_
+
+#include "Foundational/iwaray/iwaray.h"
 
 #include "iwmtypes.h"
-
-#include "iwaray.h"
 
 class IWString;
 class Molecule;
@@ -11,6 +11,16 @@ class Bond;
 
 #define CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN (INVALID_ATOM_NUMBER - 4)
 #define CHIRAL_CONNECTION_IS_LONE_PAIR         (INVALID_ATOM_NUMBER - 5)
+
+inline constexpr int kChiralConnectionIsImplicitHydrogen = (INVALID_ATOM_NUMBER - 4);
+inline constexpr int kChiralConnectionIsLonePair = (INVALID_ATOM_NUMBER - 5);
+
+enum class ChiralPoint {
+  kTopFront,
+  kTopBack,
+  kLeftDown,
+  kRightDown
+};
 
 /*
   There is an unusual twist to the Chiral_Centre class.
@@ -162,7 +172,14 @@ class Chiral_Centre
     int set_vector (int *, int) const;
 
     void new_atom_numbers (const int *);     // someone is changing the atoms in the molecule
+
+    // Swap two atoms.
+    int swap_atoms(ChiralPoint a1, ChiralPoint a2);
 };
 
-#endif
+// return true if `c == kChiralConnectionIsImplicitHydrogen`.
+extern bool IsChiralImplicitHydrogen(int c);
+// return true if `c == kChiralConnectionIsLonePair`.
+extern bool IsChiralLonePair(int c);
 
+#endif  // MOLECULE_LIB_CHIRAL_CENTRE_H_

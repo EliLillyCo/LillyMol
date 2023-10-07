@@ -2,14 +2,18 @@
 #include <ctype.h>
 #include <iostream>
 
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/iwre2.h"
+
 #include "ematch.h"
-#include "iwstring.h"
+
+using std::cerr;
+using std::endl;
 
 void
 Element_Matcher::_default_values ()
 {
-  _e = NULL;
-  _isotope = -1;
+  _e = nullptr;
 
   _match_organic_only = 0;
   _match_non_organic_only = 0;
@@ -70,8 +74,9 @@ Element_Matcher::operator_less_less (std::ostream & os) const
 {
   os << "Element Matcher:match";
 
-  if (_isotope >= 0)
-    os << " isotope " << _isotope;
+  if (_isotope) {
+    os << " isotope " << *_isotope;
+  }
      
   if (_e)
   {
@@ -133,20 +138,20 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
   if (0 == s.length())
     return 1;
 
-  _isotope = -1;
+  isotope_t maybe_isotope = 0;
 
   while (s.length() > 0 && isdigit(s[0]))
   {
-    if (_isotope < 0)
-      _isotope = s[0] - '0';
-    else
-      _isotope = 10 * _isotope + s[0] - '0';
+    maybe_isotope = 10 * maybe_isotope + s[0] - '0';
 
     s++;
   }
 
-  if (0 == s.length())   // just an isotope specification
+  // If the string is consumed, it is just an isotope specification
+  if (0 == s.length()) {
+    _isotope = maybe_isotope;
     return 1;
+  }
 
   if ("organic" == s)
   {
@@ -179,8 +184,7 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
   if (s.starts_with("RX="))
   {
     s += 3;
-    if (! _symbol_rx.set_pattern(s))
-    {
+    if (! iwre2::RE2Reset(_symbol_rx, s)) {
       cerr << "Element_Matcher::construct_from_string:invalid symbol regular expression '" << s << "'\n";
       return 0;
     }
@@ -198,9 +202,13 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
     return 0;
   }
 
-  const Element * e = get_element_from_symbol(s, _isotope);
+  maybe_isotope = 0;
+  const Element * e = get_element_from_symbol(s, maybe_isotope);
+  if (maybe_isotope > 0) {
+    _isotope = maybe_isotope;
+  }
 
-  if (NULL == e)
+  if (nullptr == e)
     e = create_element_with_symbol(s);
 
   set_element(e);
@@ -247,7 +255,7 @@ Element_Matcher::Element_Matcher (atomic_number_t z)
 int
 Element_Matcher::ok() const
 {
-  if (NULL == _e)
+  if (nullptr == _e)
     ;
   else if (! _e->ok())
     return 0;
@@ -261,9 +269,9 @@ Element_Matcher::debug_print (std::ostream & os) const
   assert (os.good());
 
   os << "Element matcher ";
-  if (_isotope >= 0)
-    os << "isotope " << _isotope << ' ';
-  if (NULL != _e)
+  if (_isotope)
+    os << "isotope " << *_isotope << ' ';
+  if (nullptr != _e)
     os << "element '" << _e->symbol() << "'";
 
   os << endl;
@@ -275,8 +283,8 @@ Element_Matcher::debug_print (std::ostream & os) const
   if (_match_non_organic_only)
     os << "Non organic only\n";
 
-  if (_symbol_rx.active())
-    os << " matched symbol rx '" << _symbol_rx.source() << "'\n";
+  if (_symbol_rx.get() != nullptr)
+    os << " matched symbol rx '" << _symbol_rx->pattern() << "'\n";
 
   return os.good();
 }
@@ -284,7 +292,7 @@ Element_Matcher::debug_print (std::ostream & os) const
 void
 Element_Matcher::set_element (const Element * e)
 {
-  assert (NULL != e);
+  assert (nullptr != e);
 
   assert (e->ok());
 
@@ -293,25 +301,25 @@ Element_Matcher::set_element (const Element * e)
   return;
 }
 
-//#define DEBUG_ELEMENT_MATCHER_MATCHES
+// #define DEBUG_ELEMENT_MATCHER_MATCHES
 
 int
-Element_Matcher::matches (const Element * e, int iso)
+Element_Matcher::matches(const Element * e, isotope_t iso)
 {
   assert (e->ok());
 
 #ifdef DEBUG_ELEMENT_MATCHER_MATCHES
-  cerr << "Trying to match '" << e->symbol() << "' iso " << iso << endl;
+  cerr << "Trying to match '" << e->symbol() << "' iso " << iso << '\n';
   debug_print(cerr);
 #endif
 
   int isotope_matched = 0;   // we need to record the fact that something matched
 
-  if (_isotope < 0)    // not active, do not check
+  if (! _isotope)    // not active, do not check
     ;
-  else if (iso != _isotope)
+  else if (iso != *_isotope)
     return 0;
-  else if (NULL == _e)    // need to check other attributes
+  else if (nullptr == _e)    // need to check other attributes
     return isotope_matched = 1;
 
 #ifdef DEBUG_ELEMENT_MATCHER_MATCHES
@@ -319,7 +327,7 @@ Element_Matcher::matches (const Element * e, int iso)
     cerr << "Element matcher returning 1 on exact match\n";
 #endif
 
-  if (NULL == _e)    // do not check
+  if (nullptr == _e)    // do not check
     ;
   else if (_e == e)
     return 1;
@@ -327,19 +335,19 @@ Element_Matcher::matches (const Element * e, int iso)
   if (_match_organic_only)
     return e->organic();
 
+  //cerr << "_match_non_organic_only " << _match_non_organic_only << " ele " << e->symbol() << " organic " << e->organic() << '\n';
   if (_match_non_organic_only)
     return ! e->organic();
 
   if (_match_non_periodic_only)
     return ! e->is_in_periodic_table();
 
-  if (_symbol_rx.active())
-    return _symbol_rx.matches(e->symbol());
+  if (_symbol_rx) {
+    return iwre2::RE2FullMatch(e->symbol(), *_symbol_rx);
+  }
 
   return isotope_matched;
 }
-
-#include "cmdline.h"
 
 /*
   Note special treatment for the zero length string.

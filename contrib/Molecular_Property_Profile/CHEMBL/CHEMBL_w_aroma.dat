@@ -1,0 +1,219 @@
+description {
+  feature_name: "w_aroma"
+  description: "Number of aromatic atoms"
+  plot_title: "Number of aromatic atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 48.0
+mean: 13.415375
+median: 12.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+  value: 6.0
+}
+quantile {
+  quantile: 0.5
+  value: 12.0
+}
+quantile {
+  quantile: 0.9
+  value: 21.0
+}
+quantile {
+  quantile: 0.95
+  value: 23.0
+}
+quantile {
+  quantile: 0.99
+  value: 28.0
+}
+int_values {
+  count: 115079
+}
+int_values {
+  value: 4
+  count: 165
+}
+int_values {
+  value: 5
+  count: 54022
+}
+int_values {
+  value: 6
+  count: 292019
+}
+int_values {
+  value: 7
+  count: 242
+}
+int_values {
+  value: 8
+  count: 857
+}
+int_values {
+  value: 9
+  count: 58566
+}
+int_values {
+  value: 10
+  count: 68711
+}
+int_values {
+  value: 11
+  count: 172852
+}
+int_values {
+  value: 12
+  count: 410691
+}
+int_values {
+  value: 13
+  count: 12261
+}
+int_values {
+  value: 14
+  count: 32579
+}
+int_values {
+  value: 15
+  count: 166035
+}
+int_values {
+  value: 16
+  count: 140875
+}
+int_values {
+  value: 17
+  count: 151493
+}
+int_values {
+  value: 18
+  count: 180909
+}
+int_values {
+  value: 19
+  count: 30099
+}
+int_values {
+  value: 20
+  count: 46829
+}
+int_values {
+  value: 21
+  count: 103613
+}
+int_values {
+  value: 22
+  count: 62686
+}
+int_values {
+  value: 23
+  count: 41864
+}
+int_values {
+  value: 24
+  count: 36265
+}
+int_values {
+  value: 25
+  count: 13407
+}
+int_values {
+  value: 26
+  count: 15063
+}
+int_values {
+  value: 27
+  count: 17410
+}
+int_values {
+  value: 28
+  count: 9847
+}
+int_values {
+  value: 29
+  count: 5329
+}
+int_values {
+  value: 30
+  count: 4706
+}
+int_values {
+  value: 31
+  count: 2154
+}
+int_values {
+  value: 32
+  count: 2583
+}
+int_values {
+  value: 33
+  count: 1660
+}
+int_values {
+  value: 34
+  count: 936
+}
+int_values {
+  value: 35
+  count: 375
+}
+int_values {
+  value: 36
+  count: 516
+}
+int_values {
+  value: 37
+  count: 164
+}
+int_values {
+  value: 38
+  count: 272
+}
+int_values {
+  value: 39
+  count: 107
+}
+int_values {
+  value: 40
+  count: 100
+}
+int_values {
+  value: 41
+  count: 16
+}
+int_values {
+  value: 42
+  count: 67
+}
+int_values {
+  value: 43
+  count: 2
+}
+int_values {
+  value: 44
+  count: 53
+}
+int_values {
+  value: 45
+  count: 5
+}
+int_values {
+  value: 46
+  count: 18
+}
+int_values {
+  value: 47
+  count: 3
+}
+int_values {
+  value: 48
+  count: 5
+}

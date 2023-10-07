@@ -1,10 +1,14 @@
 #include <stdlib.h>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
-#include "string_data_source.h"
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/data_source/string_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include "atom_alias.h"
+
+using std::cerr;
+using std::endl;
 
 Atom_Alias::Atom_Alias ()
 {

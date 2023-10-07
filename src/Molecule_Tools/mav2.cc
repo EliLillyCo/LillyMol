@@ -3,28 +3,25 @@
 */
 
 #include <iostream>
-#include <memory>
 #include <limits>
-using std::cerr;
-using std::endl;
+#include <memory>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "molecule.h"
-#include "smiles.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "smiles.h"
-#include "iwmfingerprint.h"
-
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/iwmfingerprint.h"
 #define ISTREAM_AND_TYPE_IMPLEMENTATION
-
-#include "istream_and_type.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
 
 #include "molecular_abstraction_specifications.h"
 #include "molecular_abstraction_functions.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -44,7 +41,7 @@ static int unfix_implicit_hydrogens = 0;
 
 static int number_abstraction_sets = 0;
 
-static Set_of_Molecular_Abstractions * mabs = NULL;
+static Set_of_Molecular_Abstractions * mabs = nullptr;
 
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
@@ -64,24 +61,32 @@ static Molecule_Output_Object final_molecule_stream;
 
 static int min_atoms_in_final_molecule = 0;
 
+static int flush_after_each_molecule = 0;
+
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Generates molecular abstractions\n";
-  cerr << "  -a ...        specify abstraction(s) to be created\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+  cerr << "  -a ...        specify abstraction(s) to be created, enter '-a help for info\n";
   cerr << "  -B <fname>    specify abstraction(s) in a file, same syntax\n";
   cerr << "  -p            write the parent molecule\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -Y            standard fingerprint options, enter '-Y help' for info\n";
-  cerr << "  -c            remove all chirality from input molecules\n";
-  cerr << "  -C            remove invalid chirality from output molecules\n";
-  cerr << "  -t            remove cis-trans bonds from input\n";
-  cerr << "  -h            unfix any explicit implicit hydrogen specifications\n";
-  cerr << "  -f            work as a TDT filter\n";
   cerr << "  -z ...        options for what to do when no changes during a stage\n";
+  cerr << "  -C            remove invalid chirality from output molecules\n";
+  cerr << "  -h            unfix any explicit implicit hydrogen specifications\n";
+  cerr << "  -c            remove all chirality from input molecules\n";
+  cerr << "  -l            reduce to largest fragment\n";
+  cerr << "  -t            remove cis-trans bonds from input\n";
+  cerr << "  -Y            standard fingerprint options, enter '-Y help' for info\n";
+  cerr << "  -f            work as a TDT filter\n";
   cerr << "  -F <stem>     write final molecule to file <stem>\n";
   cerr << "  -o <type>     type for -F file\n";
+  cerr << "  -X ...        miscellaneous options, enter '-X help' for info\n";
   cerr << "  -i <type>     input specification\n";
   cerr << "  -g ...        chemical standardisation options\n";
   cerr << "  -E ...        standard element specifications\n";
@@ -93,7 +98,7 @@ usage(int rc)
 }
 
 static void
-preprocess (Molecule & m)
+preprocess(Molecule & m)
 {
   if (reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
@@ -132,7 +137,7 @@ mav2(Molecule_With_Info_About_Parent & m,
   {
     if (! mabs[i].process(m, output))
     {
-      cerr << "Fatal error '" << m.name() << "' set " << i << endl;
+      cerr << "Fatal error '" << m.name() << "' set " << i << '\n';
       return 0;
     }
   }
@@ -156,16 +161,25 @@ write_smiles_and_identifier(Molecule & m,
   return 1;
 }
 
+static void
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_each_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(8192);
+  }
+}
+
 static int
 mav2 (data_source_and_type<Molecule_With_Info_About_Parent> & input,
                 IWString_and_File_Descriptor & output)
 {
   Molecule_With_Info_About_Parent * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule_With_Info_About_Parent> free_m(m);
+    std::unique_ptr<Molecule_With_Info_About_Parent> free_m(m);
 
     preprocess(*m);
 
@@ -175,10 +189,11 @@ mav2 (data_source_and_type<Molecule_With_Info_About_Parent> & input,
     if (! mav2(*m, output))
       return 0;
 
-    if (writing_fingerprints)
+    if (writing_fingerprints) {
       output << "|\n";
+    }
 
-    output.write_if_buffer_holds_more_than(32768);
+    MaybeFlush(output);
   }
 
   return 1;
@@ -229,15 +244,15 @@ mav2_filter(iwstring_data_source & input,
 }
 
 static int
-mav2 (const char * fname, int input_type, 
+mav2 (const char * fname, FileType input_type, 
                 IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule_With_Info_About_Parent> input(input_type, fname);
@@ -258,6 +273,7 @@ mav2 (const char * fname, int input_type,
   Change this sometime to just get rid of trailing #.... things
 */
 
+#ifdef STRIP_TRAILING_COMMENTS_IF_PRESENT_BROKEN
 static void
 strip_trailing_comments_if_present (const_IWSubstring & buffer)
 {
@@ -287,6 +303,7 @@ strip_trailing_comments_if_present (const_IWSubstring & buffer)
 
   return;    // should not come to here
 }
+#endif
 
 static int
 read_abstraction_directives_from_file (iwstring_data_source & input,
@@ -362,6 +379,12 @@ display_dash_z_options (std::ostream & os)
   os << " -z 0empty      write an empty molecule if the selection criterion does not match\n";
 
   exit(1);
+}
+
+static void
+DisplayDashXOptions(std::ostream& output) {
+  output << " -X flush        flush output after each molecule\n";
+  ::exit(0);
 }
 
 static int
@@ -460,13 +483,30 @@ mav2 (int argc, char ** argv)
       cerr << "Any explicit specification of implicit hydrogens will be discarded\n";
   }
 
+  if (cl.option_present('X')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (x == "help") {
+        DisplayDashXOptions(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOptions(cerr);
+      }
+    }
+  }
+
   if (cl.option_present('i') && cl.option_present('f'))
   {
     cerr << "Sorry, the -i and -f options are mutually exclusive\n";
     usage(4);
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -481,7 +521,7 @@ mav2 (int argc, char ** argv)
     work_as_tdt_filter = 1;
   }
   else if (1 == cl.number_elements() && 0 == strncmp("-", cl[0], 1))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 
@@ -542,6 +582,11 @@ mav2 (int argc, char ** argv)
   for (int i = 0; i < cl.option_count('a'); i++)
   {
     const_IWSubstring a = cl.string_value('a', i);
+
+    if (a == "help") {
+      DisplayUsageExamples(cerr);
+      return 0;
+    }
 
     Molecular_Abstraction_Directives_Node madn;
 
@@ -605,7 +650,7 @@ mav2 (int argc, char ** argv)
       }
     }
     else
-      final_molecule_stream.add_output_type(SMI);
+      final_molecule_stream.add_output_type(FILE_TYPE_SMI);
 
     const_IWSubstring f = cl.string_value('F');
 

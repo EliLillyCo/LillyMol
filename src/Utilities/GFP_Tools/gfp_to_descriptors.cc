@@ -2,27 +2,30 @@
   Echo's fingerpints from a fingerprint file
 */
 
-#include <stdlib.h>
+#include <iostream>
 #include <memory>
-using namespace std;
+#include <utility>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iwdigits.h"
-#include "iw_stl_hash_map.h"
-#include "accumulator.h"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "dyfp.h"
 #include "sparsefp.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char* prog_name = nullptr;
 
 static int verbose = 0;
 
 static IWString fptag;
 
-static IWString identifier_tag ("PCN<");
+static IWString identifier_tag("PCN<");
 
 static unsigned int fingerprints_read = 0;
 
@@ -32,7 +35,7 @@ static int input_is_hex_encoded = 0;
 
 static unsigned int nbits = 0;    // for fixed width fingerprints
 
-static const float zero = static_cast<float> (0.0);
+static const float zero = static_cast<float>(0.0);
 
 static float lower_population_cutoff = zero;
 
@@ -54,7 +57,7 @@ static int gsub_multi_token_names = 0;
 
 static int produce_sparse_form_for_nikil = 0;
 
-static IWString descriptor_prefix (" F");
+static IWString descriptor_prefix(" F");
 
 static IWDigits iwdigits;
 
@@ -77,14 +80,20 @@ static int sort_by_frequency = 0;
 static int write_zero_count_as_negative_one = 0;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Converts a fingerprint set from a gfp file to a descriptor file\n";
   cerr << " -F <tag>       specify tag of the fingerprint to be processed\n";
   cerr << " -f             fixed width fingerprints (use the underlying programme instead)\n";
   cerr << " -h             fixed width hex encoded fingerprints\n";
-//cerr << " -m             molecular properties\n";
+  //cerr << " -m             molecular properties\n";
   cerr << " -x <fraction>  discard bits that hit less than <fraction> of the time\n";
   cerr << " -n <number>    discard bits hit in less than <number> of the fingerprints\n";
   cerr << " -X <fraction>  discard bits that hit more than <fraction> of the time\n";
@@ -97,23 +106,25 @@ usage (int rc)
   cerr << " -w <n>         interpret fixed width fp's as numbers of width <n> bytes\n";
   cerr << " -u             gsub space to _ in multi-token names\n";
   cerr << " -d <nbits>     fold sparse fingerprints to constant width <nbits>\n";
+  cerr << " -p             add a decimal point to all values written (remove sometime)\n";
   cerr << " -q             if a bit is absent write as -1 rather than 0\n";
   cerr << " -v             verbose output\n";
 
-  exit (rc);
+  exit(rc);
 }
 
 class Bit_and_Count
 {
-  private:
-    unsigned int _bit;
-    unsigned int _count;
-  public:
-    unsigned int bit() const { return _bit;}
-    void set_bit(unsigned int s) { _bit = s;}
+ private:
+  unsigned int _bit;
+  unsigned int _count;
 
-    unsigned int count() const { return _count;}
-    void set_count(unsigned int s) { _count = s;}
+ public:
+  unsigned int bit() const { return _bit; }
+  void set_bit(unsigned int s) { _bit = s; }
+
+  unsigned int count() const { return _count; }
+  void set_count(unsigned int s) { _count = s; }
 };
 
 /*static int
@@ -139,10 +150,8 @@ not_enough_non_zero_values(const int * tmp,
 }*/
 
 static int
-write_descriptors(const IWString & pcn,
-                  const Bit_and_Count * bac, 
-                  int number_descriptors, 
-                  IWString & output_buffer)
+write_descriptors(const IWString& pcn, const Bit_and_Count* bac, int number_descriptors,
+                  IWString& output_buffer)
 {
   output_buffer << '"' << pcn << '"';
 
@@ -159,7 +168,7 @@ write_descriptors(const IWString & pcn,
 
   for (int i = 0; i < number_descriptors; i++)
   {
-    const Bit_and_Count & baci = bac[i];
+    const Bit_and_Count& baci = bac[i];
 
     if (0 == baci.count())
       break;
@@ -173,8 +182,7 @@ write_descriptors(const IWString & pcn,
 }
 
 static int
-discard_because_of_dash_y (const IWString & pcn,
-                           int nbits)
+discard_because_of_dash_y(const IWString& pcn, int nbits)
 {
   if (0 == min_non_zero_values_needed_on_each_row)
     return 0;
@@ -199,17 +207,15 @@ discard_because_of_dash_y (const IWString & pcn,
 */
 
 static int
-write_descriptors (const IWString & pcn,
-                   const int * tmp, 
-                   int number_descriptors, 
-                   IWString & output_buffer)
+write_descriptors(const IWString& pcn, const int* tmp, int number_descriptors,
+                  IWString& output_buffer)
 {
   output_buffer << pcn;
 
   for (int i = 0; i < number_descriptors; i++)
   {
     if (tmp[i] >= 0)
-      iwdigits.append_number (output_buffer, tmp[i]);
+      iwdigits.append_number(output_buffer, tmp[i]);
     else if (write_zero_count_as_negative_one)
       output_buffer << " -1";
     else
@@ -219,18 +225,17 @@ write_descriptors (const IWString & pcn,
     }
   }
 
-  output_buffer.add ('\n');
+  output_buffer.add('\n');
 
   return 1;
 }
 
 static int
-fill_non_colliding_fingerprint_output (const const_IWSubstring & buffer,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_non_colliding_fingerprint_output(const const_IWSubstring& buffer,
+                                      const IW_Hash_Map<unsigned int, unsigned int>& col, int* tmp)
 {
   Sparse_Fingerprint fp;
-  (void) fp.construct_from_daylight_ascii_representation (buffer);
+  (void)fp.construct_from_daylight_ascii_representation(buffer);
 
   int istart = 0;
   unsigned int zbit;
@@ -238,13 +243,13 @@ fill_non_colliding_fingerprint_output (const const_IWSubstring & buffer,
 
   int rc = 0;
 
-  while (fp.next_bit_set (istart, zbit, zcount))
+  while (fp.next_bit_set(istart, zbit, zcount))
   {
-    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find (zbit);
+    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find(zbit);
     if (f == col.end())
       continue;
 
-//  cerr << "Bit " << zbit << " found in column " << f->second << endl;
+    //  cerr << "Bit " << zbit << " found in column " << f->second << endl;
     tmp[(*f).second] = zcount;
     rc++;
   }
@@ -253,10 +258,9 @@ fill_non_colliding_fingerprint_output (const const_IWSubstring & buffer,
 }
 
 static int
-fill_fixed_width_fingerprint_output_numeric2(const unsigned short * s,
-                         int nbits,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_fixed_width_fingerprint_output_numeric2(const unsigned short* s, int nbits,
+                                             const IW_Hash_Map<unsigned int, unsigned int>& col,
+                                             int* tmp)
 {
   int nshort = nbits / 16;
 
@@ -279,10 +283,9 @@ fill_fixed_width_fingerprint_output_numeric2(const unsigned short * s,
 }
 
 static int
-fill_fixed_width_fingerprint_output_numeric1(const unsigned char * s,
-                         int nbits,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_fixed_width_fingerprint_output_numeric1(const unsigned char* s, int nbits,
+                                             const IW_Hash_Map<unsigned int, unsigned int>& col,
+                                             int* tmp)
 {
   int nbytes = nbits / 8;
 
@@ -305,31 +308,32 @@ fill_fixed_width_fingerprint_output_numeric1(const unsigned char * s,
 }
 
 static int
-fill_fixed_width_fingerprint_output_numeric(const IWDYFP & fp,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_fixed_width_fingerprint_output_numeric(const IWDYFP& fp,
+                                            const IW_Hash_Map<unsigned int, unsigned int>& col,
+                                            int* tmp)
 {
-  if (0 != fp.nbits() % 8)
-  {
+  if (0 != fp.nbits() % 8) {
     cerr << "Sorry, cannot handle fingerprint with " << fp.nbits() << " bits\n";
     return 0;
   }
 
-  if (1 == interpret_fixed_width_as_numeric)
-    return fill_fixed_width_fingerprint_output_numeric1(fp.bits(), fp.nbits(), col, tmp);
-  else if (2 == interpret_fixed_width_as_numeric)
-    return fill_fixed_width_fingerprint_output_numeric2(reinterpret_cast<const unsigned short *>(fp.bits()), fp.nbits(), col, tmp);
+  if (1 == interpret_fixed_width_as_numeric) {
+    const unsigned char * as_char = reinterpret_cast<const unsigned char*>(fp.bits());
+    return fill_fixed_width_fingerprint_output_numeric1(as_char, fp.nbits(), col, tmp);
+  } else if (2 == interpret_fixed_width_as_numeric) {
+    const unsigned short * as_short = reinterpret_cast<const unsigned short*>(fp.bits());
+    return fill_fixed_width_fingerprint_output_numeric2(as_short, fp.nbits(), col, tmp);
+  }
   else
     return 0;
 }
 
 static int
-fill_fixed_width_fingerprint_output (const const_IWSubstring & buffer,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_fixed_width_fingerprint_output(const const_IWSubstring& buffer,
+                                    const IW_Hash_Map<unsigned int, unsigned int>& col, int* tmp)
 {
   IWDYFP fp;
-  (void) fp.construct_from_daylight_ascii_representation (buffer);
+  (void)fp.construct_from_daylight_ascii_representation(buffer);
 
   int rc = 0;
 
@@ -338,10 +342,10 @@ fill_fixed_width_fingerprint_output (const const_IWSubstring & buffer,
 
   for (unsigned int i = 0; i < nbits; i++)
   {
-    if (! fp.is_set (i))
+    if (! fp.is_set(i))
       continue;
 
-    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find (i);
+    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find(i);
     if (f == col.end())
       continue;
 
@@ -353,16 +357,15 @@ fill_fixed_width_fingerprint_output (const const_IWSubstring & buffer,
 }
 
 static int
-fill_fingerprint_output(const const_IWSubstring & buffer,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         Bit_and_Count * bac)
+fill_fingerprint_output(const const_IWSubstring& buffer,
+                        const IW_Hash_Map<unsigned int, unsigned int>& col, Bit_and_Count* bac)
 {
-  const_IWSubstring tmp (buffer);
-  tmp.remove_leading_chars (fptag.length());
+  const_IWSubstring tmp(buffer);
+  tmp.remove_leading_chars(fptag.length());
   tmp.chop();
 
   Sparse_Fingerprint fp;
-  (void) fp.construct_from_daylight_ascii_representation (tmp);
+  (void)fp.construct_from_daylight_ascii_representation(tmp);
 
   int istart = 0;
   unsigned int zbit;
@@ -370,9 +373,9 @@ fill_fingerprint_output(const const_IWSubstring & buffer,
 
   int ndx = 0;
 
-  while (fp.next_bit_set (istart, zbit, zcount))
+  while (fp.next_bit_set(istart, zbit, zcount))
   {
-    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find (zbit);
+    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find(zbit);
     if (f == col.end())
       continue;
 
@@ -391,12 +394,11 @@ fill_fingerprint_output(const const_IWSubstring & buffer,
 }
 
 static int
-fill_fingerprint_output (const const_IWSubstring & buffer,
-                         const IW_Hash_Map<unsigned int, unsigned int> & col,
-                         int * tmp)
+fill_fingerprint_output(const const_IWSubstring& buffer,
+                        const IW_Hash_Map<unsigned int, unsigned int>& col, int* tmp)
 {
-  const_IWSubstring fp (buffer);
-  fp.remove_leading_chars (fptag.length());
+  const_IWSubstring fp(buffer);
+  fp.remove_leading_chars(fptag.length());
   fp.chop();
 
   int n = col.size();
@@ -410,18 +412,16 @@ fill_fingerprint_output (const const_IWSubstring & buffer,
     std::fill_n(tmp, n, 0);
 
   if (non_colliding_form)
-    return fill_non_colliding_fingerprint_output (fp, col, tmp);
+    return fill_non_colliding_fingerprint_output(fp, col, tmp);
   else
-    return fill_fixed_width_fingerprint_output (fp, col, tmp);
+    return fill_fixed_width_fingerprint_output(fp, col, tmp);
 }
 
 static int
-rejected_by_upper_or_lower_population (unsigned int zbit,
-                                       unsigned int zcount,
-                                       int & bits_below_threshold,
-                                       int & bits_above_threshold)
+rejected_by_upper_or_lower_population(unsigned int zbit, unsigned int zcount,
+                                      int& bits_below_threshold, int& bits_above_threshold)
 {
-  float ratio = static_cast<float> (zcount) / static_cast<float> (fingerprints_read);
+  float ratio = static_cast<float>(zcount) / static_cast<float>(fingerprints_read);
 
   if (verbose > 2)
     cerr << "Fingerprint " << zbit << " in " << zcount << " molecules, ratio " << ratio << endl;
@@ -442,13 +442,12 @@ rejected_by_upper_or_lower_population (unsigned int zbit,
 }
 
 static int
-report_bits_above_and_below_threshold (ostream & os,
-                                       int bits_below_threshold,
-                                       int bits_above_threshold)
+report_bits_above_and_below_threshold(std::ostream& os, int bits_below_threshold,
+                                      int bits_above_threshold)
 {
   if (lower_support_cutoff_number > 0)
     os << bits_below_threshold << " bits below threshold " << lower_support_cutoff_number << '\n';
-    
+
   if (upper_support_cutoff_number > 0)
     os << bits_above_threshold << " bits above threshold " << upper_support_cutoff_number << '\n';
 
@@ -456,10 +455,12 @@ report_bits_above_and_below_threshold (ostream & os,
 }
 
 static int
-bit_and_count_comparitor (const void * v1, const void * v2)
+bit_and_count_comparitor(const void* v1, const void* v2)
 {
-  const pair<unsigned int, unsigned int> * p1 = (const pair<unsigned int, unsigned int> *) v1;
-  const pair<unsigned int, unsigned int> * p2 = (const pair<unsigned int, unsigned int> *) v2;
+  const std::pair<unsigned int, unsigned int>* p1 =
+      (const std::pair<unsigned int, unsigned int>*)v1;
+  const std::pair<unsigned int, unsigned int>* p2 =
+      (const std::pair<unsigned int, unsigned int>*)v2;
 
   if (p1->second < p2->second)
     return 1;
@@ -471,41 +472,42 @@ bit_and_count_comparitor (const void * v1, const void * v2)
 }
 
 static int
-do_sort_by_frequency (const IW_Hash_Map<unsigned int, unsigned int> & fpcount,
-                      IW_Hash_Map<unsigned int, unsigned int> & col,
-                      IWString & header,
-                      pair<unsigned int, unsigned int> * bit_and_count)
+do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
+                     IW_Hash_Map<unsigned int, unsigned int>& col, IWString& header,
+                     std::pair<unsigned int, unsigned int>* bit_and_count)
 {
   int number_descriptors = 0;
   int bits_below_threshold = 0;
   int bits_above_threshold = 0;
 
-//for (IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = fpcount.begin(); f != fpcount.end(); ++f)
+  //for (IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = fpcount.begin(); f != fpcount.end(); ++f)
   for (auto f = fpcount.cbegin(); f != fpcount.cend(); ++f)
   {
     if (0 == lower_support_cutoff_number && 0 == upper_support_cutoff_number)
       ;
-    else if (rejected_by_upper_or_lower_population ((*f).first, (*f).second, bits_below_threshold, bits_above_threshold))
+    else if (rejected_by_upper_or_lower_population((*f).first, (*f).second, bits_below_threshold,
+                                                   bits_above_threshold))
       continue;
 
-    pair<unsigned int, unsigned int> & pi = bit_and_count[number_descriptors];
+    std::pair<unsigned int, unsigned int>& pi = bit_and_count[number_descriptors];
     number_descriptors++;
 
-    pi.first  = (*f).first;
+    pi.first = (*f).first;
     pi.second = (*f).second;
   }
 
   if (verbose)
-    report_bits_above_and_below_threshold (cerr, bits_below_threshold, bits_above_threshold);
+    report_bits_above_and_below_threshold(cerr, bits_below_threshold, bits_above_threshold);
 
   if (0 == number_descriptors)
     return 0;
 
-  qsort (bit_and_count, number_descriptors, sizeof (pair<unsigned int, unsigned int>), bit_and_count_comparitor);
+  qsort(bit_and_count, number_descriptors, sizeof(std::pair<unsigned int, unsigned int>),
+        bit_and_count_comparitor);
 
   for (int i = 0; i < number_descriptors; i++)
   {
-    const pair<unsigned int, unsigned int> & pi = bit_and_count[i];
+    const std::pair<unsigned int, unsigned int>& pi = bit_and_count[i];
 
     unsigned int b = pi.first;
 
@@ -521,25 +523,24 @@ do_sort_by_frequency (const IW_Hash_Map<unsigned int, unsigned int> & fpcount,
 }
 
 static int
-do_sort_by_frequency (const IW_Hash_Map<unsigned int, unsigned int> & fpcount,
-                      IW_Hash_Map<unsigned int, unsigned int> & col,
-                      IWString & header)
+do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
+                     IW_Hash_Map<unsigned int, unsigned int>& col, IWString& header)
 {
-  pair<unsigned int, unsigned int> * bit_and_count = new pair<unsigned int, unsigned int>[fpcount.size()];
+  std::pair<unsigned int, unsigned int>* bit_and_count =
+      new std::pair<unsigned int, unsigned int>[fpcount.size()];
 
-  int rc = do_sort_by_frequency (fpcount, col, header, bit_and_count);
+  int rc = do_sort_by_frequency(fpcount, col, header, bit_and_count);
 
-  delete [] bit_and_count;
+  delete[] bit_and_count;
 
   return rc;
 }
 
 template <typename T>
 int
-fingerprints_to_descriptors (iwstring_data_source & input,
-                             const IW_Hash_Map<unsigned int, unsigned int> & col,
-                             T * tmp,
-                             IWString_and_File_Descriptor & output)
+fingerprints_to_descriptors(iwstring_data_source& input,
+                            const IW_Hash_Map<unsigned int, unsigned int>& col, T* tmp,
+                            IWString_and_File_Descriptor& output)
 {
   const_IWSubstring input_buffer;
 
@@ -550,9 +551,9 @@ fingerprints_to_descriptors (iwstring_data_source & input,
     ncols = col.size();
 
   IWString pcn;
-  int nbits;
+  int nbits = 0;
 
-  while (input.next_record (input_buffer))
+  while (input.next_record(input_buffer))
   {
     if ('|' == input_buffer)
     {
@@ -565,23 +566,23 @@ fingerprints_to_descriptors (iwstring_data_source & input,
       if (discard_because_of_dash_y(pcn, nbits))
         ;
       else
-        write_descriptors (pcn, tmp, ncols, output);
+        write_descriptors(pcn, tmp, ncols, output);
 
-      pcn.resize_keep_storage (0);
+      pcn.resize_keep_storage(0);
 
       output.write_if_buffer_holds_more_than(32768);
     }
-    else if (input_buffer.starts_with (fptag))
+    else if (input_buffer.starts_with(fptag))
     {
-      nbits = fill_fingerprint_output (input_buffer, col, tmp);
+      nbits = fill_fingerprint_output(input_buffer, col, tmp);
     }
-    else if (input_buffer.starts_with (identifier_tag))
+    else if (input_buffer.starts_with(identifier_tag))
     {
       pcn = input_buffer;
-      pcn.remove_leading_chars (identifier_tag.length());
+      pcn.remove_leading_chars(identifier_tag.length());
       pcn.chop();
       if (gsub_multi_token_names)
-        pcn.gsub (' ', '_');
+        pcn.gsub(' ', '_');
       else
         pcn.truncate_at_first(' ');
     }
@@ -593,9 +594,8 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 }
 
 static int
-scan_fixed_width_fingerprint_numeric2(const unsigned short * s,
-                                      int nbits,
-                                      IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fixed_width_fingerprint_numeric2(const unsigned short* s, int nbits,
+                                      IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   int nshort = nbits / 16;
 
@@ -609,9 +609,8 @@ scan_fixed_width_fingerprint_numeric2(const unsigned short * s,
 }
 
 static int
-scan_fixed_width_fingerprint_numeric1(const unsigned char * s,
-                                      int nbits,
-                                      IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fixed_width_fingerprint_numeric1(const unsigned char* s, int nbits,
+                                      IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   int nbytes = nbits / 8;
 
@@ -625,20 +624,22 @@ scan_fixed_width_fingerprint_numeric1(const unsigned char * s,
 }
 
 static int
-scan_fixed_width_fingerprint_numeric(const IWDYFP & fp,
-                          IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fixed_width_fingerprint_numeric(const IWDYFP& fp,
+                                     IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
-  if (1 == interpret_fixed_width_as_numeric)
-    return scan_fixed_width_fingerprint_numeric1(fp.bits(), fp.nbits(), fpcount);
-  else if (2 == interpret_fixed_width_as_numeric)
-    return scan_fixed_width_fingerprint_numeric2(reinterpret_cast<const unsigned short *>(fp.bits()), fp.nbits(), fpcount);
-  else
+  if (1 == interpret_fixed_width_as_numeric) {
+    const unsigned char * as_char = reinterpret_cast<const unsigned char*>(fp.bits());
+    return scan_fixed_width_fingerprint_numeric1(as_char, fp.nbits(), fpcount);
+  } else if (2 == interpret_fixed_width_as_numeric) {
+    const unsigned short * as_short = reinterpret_cast<const unsigned short*>(fp.bits());
+    return scan_fixed_width_fingerprint_numeric2(as_short, fp.nbits(), fpcount);
+  } else {
     return 0;
+  }
 }
 
 static int
-scan_fixed_width_fingerprint (const IWDYFP & fp,
-                  IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fixed_width_fingerprint(const IWDYFP& fp, IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   unsigned int nb = fp.nbits();
 
@@ -667,44 +668,44 @@ scan_fixed_width_fingerprint (const IWDYFP & fp,
 }
 
 static int
-scan_fixed_width_fingerprint (const const_IWSubstring & buffer,
-                  IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fixed_width_fingerprint(const const_IWSubstring& buffer,
+                             IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   IWDYFP fp;
 
-  if (! fp.construct_from_daylight_ascii_representation (buffer))
+  if (! fp.construct_from_daylight_ascii_representation(buffer))
   {
     cerr << "Invalid fixed width fingerprint '" << buffer << "'\n";
     return 0;
   }
 
-  return scan_fixed_width_fingerprint (fp, fpcount);
+  return scan_fixed_width_fingerprint(fp, fpcount);
 }
 
 static int
-scan_hex_encoded_fixed_width_fingerprint (const const_IWSubstring & buffer,
-                  IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_hex_encoded_fixed_width_fingerprint(const const_IWSubstring& buffer,
+                                         IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   IWDYFP fp;
 
-  if (! fp.construct_from_hex (buffer))
+  if (! fp.construct_from_hex(buffer))
   {
     cerr << "Invalid hex encoding\n";
     return 0;
   }
 
-  return scan_fixed_width_fingerprint (fp, fpcount);
+  return scan_fixed_width_fingerprint(fp, fpcount);
 }
 
 static int
-scan_non_colliding_fingerprint (const const_IWSubstring & buffer,
-                  IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_non_colliding_fingerprint(const const_IWSubstring& buffer,
+                               IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
   if (0 == buffer.length())    // empty fingerprint
     return 1;
 
   Sparse_Fingerprint fp;
-  if (! fp.construct_from_daylight_ascii_representation (buffer))
+  if (! fp.construct_from_daylight_ascii_representation(buffer))
   {
     cerr << "Invalid sparse fingerprint specification '" << buffer << "'\n";
     return 0;
@@ -714,7 +715,7 @@ scan_non_colliding_fingerprint (const const_IWSubstring & buffer,
   unsigned int zbit;
   int zcount;
 
-  while (fp.next_bit_set (istart, zbit, zcount))
+  while (fp.next_bit_set(istart, zbit, zcount))
   {
     fpcount[zbit]++;
   }
@@ -723,33 +724,31 @@ scan_non_colliding_fingerprint (const const_IWSubstring & buffer,
 }
 
 static int
-scan_fingerprint (const const_IWSubstring & buffer,
-                  IW_Hash_Map<unsigned int, unsigned int> & fpcount)
+scan_fingerprint(const const_IWSubstring& buffer, IW_Hash_Map<unsigned int, unsigned int>& fpcount)
 {
-  assert (buffer.ends_with ('>'));
+  assert(buffer.ends_with('>'));
 
-  const_IWSubstring fp (buffer);
-  fp.remove_leading_chars (fptag.length());
+  const_IWSubstring fp(buffer);
+  fp.remove_leading_chars(fptag.length());
   fp.chop();
 
   if (non_colliding_form)
-    return scan_non_colliding_fingerprint (fp, fpcount);
+    return scan_non_colliding_fingerprint(fp, fpcount);
   else if (input_is_hex_encoded)
-    return scan_hex_encoded_fixed_width_fingerprint (fp, fpcount);
+    return scan_hex_encoded_fixed_width_fingerprint(fp, fpcount);
   else
-    return scan_fixed_width_fingerprint (fp, fpcount);
+    return scan_fixed_width_fingerprint(fp, fpcount);
 }
 
 static int
-fingerprints_to_descriptors (iwstring_data_source & input,
-                             IWString_and_File_Descriptor & output)
+fingerprints_to_descriptors(iwstring_data_source& input, IWString_and_File_Descriptor& output)
 {
   IW_Hash_Map<unsigned int, unsigned int> fpcount;
 
   int got_fingerprint_this_tdt = 0;
 
   const_IWSubstring buffer;
-  while (input.next_record (buffer))
+  while (input.next_record(buffer))
   {
     if ('|' == buffer)
     {
@@ -767,7 +766,7 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 
       got_fingerprint_this_tdt = 0;
     }
-    else if (buffer.starts_with (fptag))
+    else if (buffer.starts_with(fptag))
     {
       if (got_fingerprint_this_tdt)
       {
@@ -775,7 +774,7 @@ fingerprints_to_descriptors (iwstring_data_source & input,
         return 0;
       }
 
-      if (! scan_fingerprint (buffer, fpcount))
+      if (! scan_fingerprint(buffer, fpcount))
       {
         cerr << "Fatal error scanning fingerprint on line " << input.lines_read() << endl;
         cerr << buffer << endl;
@@ -797,46 +796,50 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 
   if (verbose > 1)
   {
-    for (const auto i : fpcount)
+    for (const auto& i : fpcount)
     {
       cerr << " bit " << i.first << " hit " << i.second << " time\n";
     }
   }
 
-// Convert any ratios specified for support levels to numbers
+  // Convert any ratios specified for support levels to numbers
 
   if (zero != lower_population_cutoff)
   {
-    lower_support_cutoff_number = static_cast<unsigned int> (lower_population_cutoff * static_cast<double>(fingerprints_read) + 0.4999);
+    lower_support_cutoff_number = static_cast<unsigned int>(
+        lower_population_cutoff * static_cast<double>(fingerprints_read) + 0.4999);
     if (0 == lower_population_cutoff)
       lower_population_cutoff = 1;
 
     if (verbose)
-      cerr << "Will discard bits that occur in fewer than " << lower_population_cutoff << " molecules\n";
+      cerr << "Will discard bits that occur in fewer than " << lower_population_cutoff
+           << " molecules\n";
   }
 
   if (zero != upper_population_cutoff)
   {
-    upper_support_cutoff_number = static_cast<unsigned int> (upper_population_cutoff * static_cast<double>(fingerprints_read) + 0.4999);
-    assert (upper_support_cutoff_number > 1);
+    upper_support_cutoff_number = static_cast<unsigned int>(
+        upper_population_cutoff * static_cast<double>(fingerprints_read) + 0.4999);
+    assert(upper_support_cutoff_number > 1);
     if (fingerprints_read == upper_support_cutoff_number)
       upper_support_cutoff_number = fingerprints_read - 1;
 
     if (verbose)
-      cerr << "Will discard bits that occur in more than " << upper_support_cutoff_number << " molecules\n";
+      cerr << "Will discard bits that occur in more than " << upper_support_cutoff_number
+           << " molecules\n";
   }
 
   int number_descriptors = 0;
 
-  IWString header ("Name");
-  header.resize (10 * fpcount.size());
+  IWString header("Name");
+  header.resize(10 * fpcount.size());
 
   IW_Hash_Map<unsigned int, unsigned int> col;
 
-//cerr << "Building header, lower_support_cutoff_number " << lower_support_cutoff_number << " upper_support_cutoff_number " << upper_support_cutoff_number << ", fold_to_constant_width " << fold_to_constant_width << endl;
+  //cerr << "Building header, lower_support_cutoff_number " << lower_support_cutoff_number << " upper_support_cutoff_number " << upper_support_cutoff_number << ", fold_to_constant_width " << fold_to_constant_width << endl;
 
   if (sort_by_frequency)
-    number_descriptors = do_sort_by_frequency (fpcount, col, header);
+    number_descriptors = do_sort_by_frequency(fpcount, col, header);
   else if (lower_support_cutoff_number > 0 || upper_support_cutoff_number > 0)
   {
     int bits_below_threshold = 0;
@@ -860,11 +863,12 @@ fingerprints_to_descriptors (iwstring_data_source & input,
     }
 
     if (verbose)
-      report_bits_above_and_below_threshold (cerr, bits_below_threshold, bits_above_threshold);
+      report_bits_above_and_below_threshold(cerr, bits_below_threshold, bits_above_threshold);
   }
   else if (fold_to_constant_width > 0)
   {
-    int * to_col = new_int(fold_to_constant_width); unique_ptr<int[]> free_to_col(to_col);
+    int* to_col = new_int(fold_to_constant_width);
+    std::unique_ptr<int[]> free_to_col(to_col);
 
     for (auto f = fpcount.cbegin(); f != fpcount.cend(); ++f)
     {
@@ -880,7 +884,8 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 
     if (verbose)
     {
-      cerr << "After folding to " << fold_to_constant_width << " bits, how many of the initial bits hit each fixed width bit\n";
+      cerr << "After folding to " << fold_to_constant_width
+           << " bits, how many of the initial bits hit each fixed width bit\n";
       int zero_bits_map_here = 0;
       Accumulator_Int<int> acc;
 
@@ -895,8 +900,10 @@ fingerprints_to_descriptors (iwstring_data_source & input,
           cerr << " " << to_col[i] << " non colliding bits hashed to bit " << i << endl;
       }
 
-      cerr << zero_bits_map_here << " of " << fold_to_constant_width << " fixed width bits never set\n";
-      cerr << "Of bits set, set between " << acc.minval() << " and " << acc.maxval() << " ave " << static_cast<float>(acc.average()) << endl;
+      cerr << zero_bits_map_here << " of " << fold_to_constant_width
+           << " fixed width bits never set\n";
+      cerr << "Of bits set, set between " << acc.minval() << " and " << acc.maxval() << " ave "
+           << static_cast<float>(acc.average()) << endl;
     }
 
     number_descriptors = fold_to_constant_width;
@@ -920,7 +927,8 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 
   if (0 == number_descriptors)
   {
-    cerr << "Bad news, support levels " << lower_support_cutoff_number << " and " << upper_support_cutoff_number << " leave no fingerprints\n";
+    cerr << "Bad news, support levels " << lower_support_cutoff_number << " and "
+         << upper_support_cutoff_number << " leave no fingerprints\n";
     return 0;
   }
 
@@ -932,7 +940,7 @@ fingerprints_to_descriptors (iwstring_data_source & input,
   if (verbose)
     cerr << "Will produce " << number_descriptors << " descriptors\n";
 
-  if (! input.seekg (static_cast<off_t> (0)))
+  if (! input.seekg(static_cast<off_t>(0)))
   {
     cerr << "Yipes, cannot seek back to start of file\n";
     return 0;
@@ -942,14 +950,15 @@ fingerprints_to_descriptors (iwstring_data_source & input,
 
   if (produce_sparse_form_for_nikil)
   {
-    Bit_and_Count * bac = new Bit_and_Count[number_descriptors];
+    Bit_and_Count* bac = new Bit_and_Count[number_descriptors];
     rc = fingerprints_to_descriptors(input, col, bac, output);
-    delete [] bac;
+    delete[] bac;
   }
   else
   {
-    int * tmp = new_int (number_descriptors); std::unique_ptr<int[]> free_tmp (tmp);
-    if (NULL == tmp)
+    int* tmp = new_int(number_descriptors);
+    std::unique_ptr<int[]> free_tmp(tmp);
+    if (nullptr == tmp)
     {
       cerr << "Bad news, cannot allocate " << number_descriptors << " objects\n";
       return 0;
@@ -961,52 +970,50 @@ fingerprints_to_descriptors (iwstring_data_source & input,
   return rc;
 }
 
-
 static int
-fingerprints_to_descriptors (const char * fname,
-                             IWString_and_File_Descriptor & output)
+fingerprints_to_descriptors(const char* fname, IWString_and_File_Descriptor& output)
 {
-  iwstring_data_source input (fname);
+  iwstring_data_source input(fname);
   if (! input.ok())
   {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
 
-  return fingerprints_to_descriptors (input, output);
+  return fingerprints_to_descriptors(input, output);
 }
 
 static int
-fingerprints_to_descriptors (int argc, char ** argv)
+fingerprints_to_descriptors(int argc, char** argv)
 {
-  Command_Line cl (argc, argv, "vF:fhx:X:P:sbmy:Y:un:N:kw:d:q");
+  Command_Line cl(argc, argv, "vF:fhx:X:P:sbmy:Y:un:N:kw:d:qp");
 
   if (cl.unrecognised_options_encountered())
   {
     cerr << "Unrecognised options encountered\n";
-    usage (1);
+    usage(1);
   }
 
-  verbose = cl.option_count ('v');
+  verbose = cl.option_count('v');
 
-  if (! cl.option_present ('F'))
+  if (! cl.option_present('F'))
   {
     cerr << "Must specify fingerprint to echo via the -F option\n";
-    usage (7);
+    usage(7);
   }
 
-  if (cl.option_present ('F'))
+  if (cl.option_present('F'))
   {
-    fptag = cl.string_value ('F');
+    fptag = cl.string_value('F');
 
-    if (! fptag.ends_with ('<'))
+    if (! fptag.ends_with('<'))
       fptag += '<';
 
     if (verbose)
       cerr << "Will process fingerprint '" << fptag << "'\n";
   }
 
-  if (cl.option_present ('f'))
+  if (cl.option_present('f'))
   {
     non_colliding_form = 0;
 
@@ -1022,11 +1029,12 @@ fingerprints_to_descriptors (int argc, char ** argv)
       }
 
       if (verbose)
-        cerr << "Will interpret fixed width fingerprints as numeric of width " << interpret_fixed_width_as_numeric << " bytes\n";
+        cerr << "Will interpret fixed width fingerprints as numeric of width "
+             << interpret_fixed_width_as_numeric << " bytes\n";
     }
   }
 
-  if (cl.option_present ('h'))
+  if (cl.option_present('h'))
   {
     non_colliding_form = 0;
 
@@ -1051,7 +1059,8 @@ fingerprints_to_descriptors (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will fold fingerprints to a constant width of " << fold_to_constant_width << " bits\n";
+      cerr << "Will fold fingerprints to a constant width of " << fold_to_constant_width
+           << " bits\n";
   }
 
   if (cl.option_present('q'))
@@ -1061,7 +1070,6 @@ fingerprints_to_descriptors (int argc, char ** argv)
     if (verbose)
       cerr << "Will write zero count bits as negative one\n";
   }
-
 
   int support_level_specified = 0;
   if (cl.option_present('x'))
@@ -1081,18 +1089,20 @@ fingerprints_to_descriptors (int argc, char ** argv)
       usage(4);
     }
 
-    if (! cl.value('y', min_non_zero_values_needed_on_each_row) || min_non_zero_values_needed_on_each_row < 1)
+    if (! cl.value('y', min_non_zero_values_needed_on_each_row) ||
+        min_non_zero_values_needed_on_each_row < 1)
     {
       cerr << "The minimum number of non zero columns (-y) must be a whole +ve number\n";
       usage(4);
     }
 
     if (verbose)
-      cerr << "Will discard records that don't have " << min_non_zero_values_needed_on_each_row << " or more non-zero values\n";
+      cerr << "Will discard records that don't have " << min_non_zero_values_needed_on_each_row
+           << " or more non-zero values\n";
 
     if (cl.option_present('Y'))
     {
-      const char * y = cl.option_value('Y');
+      const char* y = cl.option_value('Y');
 
       stream_for_not_enough_non_zero_values.open(y);
 
@@ -1121,12 +1131,13 @@ fingerprints_to_descriptors (int argc, char ** argv)
     usage(4);
   }
 
-  if (cl.option_present ('x'))
+  if (cl.option_present('x'))
   {
-    if (! cl.value ('x', lower_population_cutoff) || lower_population_cutoff < 0.0 || lower_population_cutoff >= 1.0)
+    if (! cl.value('x', lower_population_cutoff) || lower_population_cutoff < 0.0 ||
+        lower_population_cutoff >= 1.0)
     {
       cerr << "The lower population cutoff must be a valid fraction\n";
-      usage (7);
+      usage(7);
     }
 
     if (verbose)
@@ -1141,15 +1152,17 @@ fingerprints_to_descriptors (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will discard bits with fewer than " << lower_support_cutoff_number << " molecules hit\n";
+      cerr << "Will discard bits with fewer than " << lower_support_cutoff_number
+           << " molecules hit\n";
   }
 
-  if (cl.option_present ('X'))
+  if (cl.option_present('X'))
   {
-    if (! cl.value ('X', upper_population_cutoff) || upper_population_cutoff < 0.0 || upper_population_cutoff >= 1.0)
+    if (! cl.value('X', upper_population_cutoff) || upper_population_cutoff < 0.0 ||
+        upper_population_cutoff >= 1.0)
     {
       cerr << "The upper population cutoff must be a valid fraction\n";
-      usage (7);
+      usage(7);
     }
 
     if (verbose)
@@ -1164,11 +1177,14 @@ fingerprints_to_descriptors (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will discard bits with more than " << upper_support_cutoff_number << " molecules hit\n";
+      cerr << "Will discard bits with more than " << upper_support_cutoff_number
+           << " molecules hit\n";
 
-    if (lower_support_cutoff_number > 0 && lower_support_cutoff_number > upper_support_cutoff_number)
+    if (lower_support_cutoff_number > 0 &&
+        lower_support_cutoff_number > upper_support_cutoff_number)
     {
-      cerr << "Inconsistent -n (" << lower_support_cutoff_number << ") and -N (" << upper_support_cutoff_number << ") option values\n";
+      cerr << "Inconsistent -n (" << lower_support_cutoff_number << ") and -N ("
+           << upper_support_cutoff_number << ") option values\n";
       return 4;
     }
   }
@@ -1177,19 +1193,20 @@ fingerprints_to_descriptors (int argc, char ** argv)
     ;
   else if (lower_population_cutoff > upper_population_cutoff)
   {
-    cerr << "Impossible lower (" << lower_population_cutoff << ") and upper (" << upper_population_cutoff << ") specification\n";
+    cerr << "Impossible lower (" << lower_population_cutoff << ") and upper ("
+         << upper_population_cutoff << ") specification\n";
     return 9;
   }
 
-  if (cl.option_present ('P'))
+  if (cl.option_present('P'))
   {
-    descriptor_prefix = cl.string_value ('P');
+    descriptor_prefix = cl.string_value('P');
 
     if (verbose)
       cerr << "Descriptors will have the prefix '" << descriptor_prefix << "'\n";
 
-    if (! descriptor_prefix.starts_with (' '))
-      descriptor_prefix.insert_before (0, ' ');
+    if (! descriptor_prefix.starts_with(' '))
+      descriptor_prefix.insert_before(0, ' ');
   }
 
   if (cl.option_present('u'))
@@ -1199,7 +1216,7 @@ fingerprints_to_descriptors (int argc, char ** argv)
       cerr << "Will gsub to _ any multi-token names\n";
   }
 
-  if (cl.option_present ('s'))
+  if (cl.option_present('s'))
   {
     sort_by_frequency = 1;
 
@@ -1207,7 +1224,7 @@ fingerprints_to_descriptors (int argc, char ** argv)
       cerr << "Bits will be output in order of frequency of occurrence in the set\n";
   }
 
-  if (cl.option_present ('b'))
+  if (cl.option_present('b'))
   {
     write_actual_bit_numbers = 1;
 
@@ -1222,13 +1239,19 @@ fingerprints_to_descriptors (int argc, char ** argv)
       cerr << "Will produce sparse form for Nikil\n";
   }
 
-  iwdigits.set_include_leading_space (1);
-  iwdigits.initialise (100);
+  iwdigits.set_include_leading_space(1);
+  iwdigits.initialise(100);
+  if (cl.option_present('p'))
+  {
+    iwdigits.append_to_each_stored_string(".");
+    if (verbose)
+      cerr << "Decimal point added to all numbers\n";
+  }
 
   if (0 == cl.number_elements())
   {
     cerr << "Insufficient arguments\n";
-    usage (2);
+    usage(2);
   }
 
   IWString_and_File_Descriptor output(1);
@@ -1246,18 +1269,19 @@ fingerprints_to_descriptors (int argc, char ** argv)
   if (verbose)
   {
     if (records_discarded_for_not_enough_non_zero_values)
-      cerr << records_discarded_for_not_enough_non_zero_values << " discarded for not enough non-zero values\n";
+      cerr << records_discarded_for_not_enough_non_zero_values
+           << " discarded for not enough non-zero values\n";
   }
 
   return rc;
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char** argv)
 {
   prog_name = argv[0];
 
-  int rc = fingerprints_to_descriptors (argc, argv);
+  int rc = fingerprints_to_descriptors(argc, argv);
 
   return rc;
 }

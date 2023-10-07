@@ -1,0 +1,40 @@
+# J. Med. Chem. 2020, 63, 21, 12290–
+name: "amide_D2_to_14triazole"
+scaffold {
+  id: 0
+  smarts: "[!$(C=O)]-[ND2R0]-C(=[O,S])-C"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 2
+    a2: 4
+  }
+  remove_fragment: 1
+}
+sidechain {
+  id: 1
+  reagent: "C1N=NNC=1"
+  smarts: "c1nnnc1"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 4
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  match_conditions {
+    match_conditions {
+      one_embedding_per_start_atom: true
+    }
+  }
+}
+scaffold_match_conditions {
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+}

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package Smi2Rings;
+
+// Stored in a database built by buildsmidb
+
+// We can store one of these kinds of information about a ring/ring system
+enum Type {
+  // Must have item 0.
+  NOTUSED = 0;
+
+  // the atoms int he ring
+  RING = 1;
+  // The ring with isotopic labels at the attachment points.
+  SUBSTITUTED_RING = 2;
+  // The ring with contextual information about the attachments as isotopes.
+  CONTEXTUAL_RING = 3;
+}
+
+// This message gets stored in the database as a textproto representation.
+// Therefore we deliberately choose short variable names.
+message Ring {
+  // What kind of entry is this.
+  Type ring_type = 1;
+
+  // the number of exemplars in this database.
+  uint32 n = 2;
+
+  // Optionally the name of a molecule that exemplifies this ring
+  string ex = 3;
+}
+
+message Result {
+  optional uint32 urs = 1;
+
+  optional string ex = 2;
+
+  Type match_type = 3;
+}
+
+message Results {
+  optional string smiles = 1;
+  optional string id = 2;
+  repeated Result result = 3;
+}

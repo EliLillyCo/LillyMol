@@ -4,7 +4,6 @@
 
 #include <stdlib.h>
 #include <iostream>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define IWARAY_EACH_IMPLEMENTATION

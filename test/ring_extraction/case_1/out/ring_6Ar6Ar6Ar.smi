@@ -1,0 +1,1 @@
+smi: "[1CH]1=C2C(=[1CH]C3=CC=CC=C13)C=CC=C2" smt: "[ax2r6D3]1:[ax3r6r6D3]2:[ax3r6r6D3](:[ax2r6D3]:[ax3r6r6D3]3:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax3r6r6D3]:1:3):[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:2" id: "CHEMBL1592159.6Ar6Ar6Ar" n: 2 conn: true usmi: "[1cH]1c2c([1cH]c3c1cccc3)cccc2" 

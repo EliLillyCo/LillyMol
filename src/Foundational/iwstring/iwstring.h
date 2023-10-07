@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <optional>
 
 #include <assert.h>
 
@@ -22,14 +23,11 @@
 #include <vector>
 #include <string>
 
-using std::cerr;
-using std::endl;
-
 #if defined (__STRING__) || defined (_CPP_STRING) || defined (_IOSTREAM_) || defined (__STD_IOSTREAM__) || defined (_STLP_IOSTREAM) || defined (_GLIBCXX_STRING)
 #define IW_STD_STRING_DEFINED 1
 #endif
 
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
 extern void strip_leading_blanks (char *);
 extern void strip_trailing_blanks (char *);
@@ -104,16 +102,21 @@ class const_IWSubstring
 
 #if defined (IW_STD_STRING_DEFINED)
     const_IWSubstring & operator = (const std::string &);
+    // Return an std::string from this.
+    // Creates a newly allocated copy.
+    std::string AsString() const ;
 #endif
 
     int debug_print (std::ostream &) const;
 
-    void make_empty () { _data = NULL; _nchars = 0;};
+    void make_empty () { _data = nullptr; _nchars = 0;};
     void set (const char * s, int l) { _data = s; _nchars = l;}
     void set (const char * s, size_t l) { _data = s; _nchars = static_cast<int>(l);}
 
     int length () const { return _nchars;}
     int nchars () const { return _nchars;}
+
+    bool empty() const { return _nchars == 0;}
 
     const char * cend () const { return _data + _nchars;}
     const char * cbegin () const { return _data;}
@@ -364,6 +367,7 @@ class IWString : public resizable_array<char>
     IWString (const const_IWSubstring &);
     IWString (int);                // resize operation
     IWString (unsigned int);                // resize operation
+    IWString (IWString&&);
 
 #if defined (IW_STD_STRING_DEFINED)
     IWString (const std::string &);
@@ -392,6 +396,8 @@ class IWString : public resizable_array<char>
 
 #if defined (IW_STD_STRING_DEFINED)
     IWString & operator = (const std::string &);
+    // Creates a newly allocated copy.
+    std::string AsString() const;
 #endif
 
     IWString & operator = (IWString &&);
@@ -429,6 +435,7 @@ class IWString : public resizable_array<char>
 
     int length () const { return _number_elements;}
     int nchars () const { return _number_elements;}
+    uint32_t size() const { return _number_elements;}
 
     int  next (const char, int &) const;
 
@@ -513,7 +520,7 @@ class IWString : public resizable_array<char>
     const char * chars ();
     const char * null_terminated_chars ();
     const char * c_str() { return null_terminated_chars();}
-    operator const char * () { if (0 == _number_elements) return NULL; else return null_terminated_chars ();}
+    operator const char * () { if (0 == _number_elements) return nullptr; else return null_terminated_chars ();}
     const char * rawchars () const { return _things;}
 
     const char * data () const { return _things;}    // for compatability with std::string
@@ -710,6 +717,10 @@ class IWString : public resizable_array<char>
     int change (int istart, int istop, const const_IWSubstring & s) { return change (istart, istop, s.rawchars (), s.length ());}
 
     template <typename T> int split_into_directive_and_value (const_IWSubstring & d, char separator, T & dvalue) const;
+
+    // Try to interpolate any ${varname}.
+    std::optional<IWString> ExpandEnvironmentVariables() const;
+
 };
 
 inline int
@@ -964,6 +975,27 @@ const_IWSubstring::operator != (const char * rhs) const
   return 0 != ::strncmp (_data, rhs, l2);
 }
 
+namespace iwstring {
+// When I tried to instantiate all operator== types with IWString and const_IWSubstring
+// inside Google, I quickly ran into all kinds of problems.
+// So, a couple of functions to facilitate string comparisons.
+inline bool
+Equals(const IWString& lhs, const std::string& rhs) {
+  if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
+    return false;
+  }
+  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+}
+inline bool
+Equals(const const_IWSubstring& lhs, const std::string& rhs) {
+  if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
+    return false;
+  }
+  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+}
+
+}  // namespace iwstring
+
 inline std::ostream &
 operator << (std::ostream & os, const IWString & s)
 {
@@ -1032,8 +1064,8 @@ class IWString_and_File_Descriptor : public IWString
 
     int fd() const { return _fd;}
 
-    int active () const { return _fd > 0 || NULL != _gzfile;}
-    int is_open() const { return _fd > 0 || NULL != _gzfile;}
+    int active () const { return _fd > 0 || nullptr != _gzfile;}
+    int is_open() const { return _fd > 0 || nullptr != _gzfile;}
 
     int open(const char *);
     int close();
@@ -1178,7 +1210,7 @@ const_IWSubstring::split_into_directive_and_value (const_IWSubstring & directive
 
   if (! nextword (directive, i, separator))
   {
-    cerr << "IWString::split_into_directive_and_value:cannot split directive on '" << separator << "'\n";
+    std::cerr << "IWString::split_into_directive_and_value:cannot split directive on '" << separator << "'\n";
     return 0;
   }
 
@@ -1186,14 +1218,14 @@ const_IWSubstring::split_into_directive_and_value (const_IWSubstring & directive
 
   if (! nextword (tmp, i, separator))
   {
-    cerr << "const_IWSubstring::split_into_directive_and_value:cannot split value on '" << separator << "'\n";
+    std::cerr << "const_IWSubstring::split_into_directive_and_value:cannot split value on '" << separator << "'\n";
     return 0;
   }
 
   if (tmp.numeric_value (v))
     return 1;
 
-  cerr << "const_IWSubstring::split_into_directive_and_value:invalid numeric '" << tmp << "'\n";
+  std::cerr << "const_IWSubstring::split_into_directive_and_value:invalid numeric '" << tmp << "'\n";
   return 0;
 }
 

@@ -1,7 +1,14 @@
+#include <iomanip>
+using std::setw;
+using std::setprecision;
 
-#include "iwaray.h"
+
+#include "Molecule_Lib/path.h"
+
 #include "qry_wcharge.h"
-#include "path.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   We must have the same number of charge accumulators as there are query atoms
@@ -106,9 +113,6 @@ Query_and_Charge_Stats::tally_embedding (const Molecule & m,
   return 1;
 }
 
-#include <iomanip>
-using namespace std;
-
 int
 Query_and_Charge_Stats::report (int query_number, std::ostream & os) const
 {
@@ -130,7 +134,7 @@ Query_and_Charge_Stats::report (int query_number, std::ostream & os) const
   for (int i = 0; i < _charge_distributions.number_elements (); i++)
   {
     Charge_Distribution * dist = _charge_distributions[i];
-    assert (_embeddings == dist->n ());
+    assert (static_cast<uint32_t>(_embeddings) == dist->n ());
 
     os << "Atom " << setw (3) << i;
     os << setprecision (3) << " min " << setw (8) << dist->minval () << 

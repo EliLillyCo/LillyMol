@@ -1,15 +1,16 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <iostream>
+#include <memory>
 
 #ifdef UNIX
 #include <unistd.h>
 #endif
 
-#include "iwstring_data_source.h"
-#include "string_data_source.h"
+#include "Foundational/data_source/string_data_source.h"
+#include "Foundational/iwmisc/iwconfig.h"
 
 #include "misc2.h"
-#include "iwconfig.h"
+
+using std::cerr;
 
 /*
   This file contains miscelaneous functions which cannot go in misc1.cc
@@ -17,20 +18,18 @@
 */
 
 int
-iw_rename (const char * old_name, const char * new_name)
-{
-  assert (NULL != old_name);
-  assert (NULL != new_name);
+iw_rename(const char* old_name, const char* new_name) {
+  assert(nullptr != old_name);
+  assert(nullptr != new_name);
 
-  assert (strlen(old_name));
-  assert (strlen(new_name));
+  assert(strlen(old_name));
+  assert(strlen(new_name));
 
   return rename(old_name, new_name);
 }
 
 int
-iw_getpid ()
-{
+iw_getpid() {
   return IW_GETPID();
 }
 
@@ -39,34 +38,30 @@ iw_getpid ()
 */
 
 int
-int_comparitor_larger (const int * pi1, const int * pi2)
-{
-  if (*pi1 < *pi2)
+int_comparitor_larger(const int* pi1, const int* pi2) {
+  if (*pi1 < *pi2) {
     return -1;
-  else if (*pi1 == *pi2)
+  } else if (*pi1 == *pi2) {
     return 0;
-  else   
+  } else {
     return 1;
+  }
 }
 
 int
-uint64_comparitor_smaller (const iw_uint64_t * pi1, const iw_uint64_t * pi2)
-{
-  if (*pi1 < *pi2)
+uint64_comparitor_smaller(const uint64_t* pi1, const uint64_t* pi2) {
+  if (*pi1 < *pi2) {
     return 1;
-  else if (*pi1 == *pi2)
+  } else if (*pi1 == *pi2) {
     return 0;
-  else   
+  } else {
     return -1;
+  }
 }
 
 void
-iwxor (const int * i1,
-       int * i2,
-       int n)
-{
-  for (int i = 0; i < n; i++)
-  {
+iwxor(const int* i1, int* i2, int n) {
+  for (int i = 0; i < n; i++) {
     i2[i] = (i2[i] ^ i1[i]);
   }
 
@@ -95,7 +90,7 @@ try_shortening (const int * i1,
   for (int i = 0; i < n; i++)
   {
 #ifdef DEBUG_SHORTENING
-    cerr << "i = " << i << " i1 = " << i1[i] << " i2 = " << i2[i] << endl;
+    cerr << "i = " << i << " i1 = " << i1[i] << " i2 = " << i2[i] << '\n';
 #endif
 
     if (i2[i])
@@ -113,7 +108,7 @@ try_shortening (const int * i1,
   }
 
 #ifdef DEBUG_SHORTENING
-  cerr << "i2 contains " << bits_in_i2 << " bits, xor has " << bits_in_xor << endl;
+  cerr << "i2 contains " << bits_in_i2 << " bits, xor has " << bits_in_xor << '\n';
 #endif
 
   if (0 == bits_in_common)
@@ -133,43 +128,57 @@ try_shortening (const int * i1,
 */
 
 int
-fetch_numeric (const const_IWSubstring & zstring, int & result, int max_chars)
-{
-  if (max_chars > zstring.length())
+fetch_numeric(const const_IWSubstring& zstring, int& result, int max_chars) {
+  if (max_chars > zstring.length()) {
     max_chars = zstring.length();
-  else if (0 == max_chars)
+  } else if (0 == max_chars) {
     max_chars = zstring.length();
+  }
 
   return fetch_numeric_char(zstring.rawchars(), result, max_chars);
 }
 
 int
-fetch_numeric_char (const char * zstring, int & result, int max_chars)
-{
-  int rc = 0;
+fetch_numeric_char(const char* zstring, int& result, int max_chars) {
+  int consumed = 0;
   result = 0;
 
-  int characters_to_search = max_chars;
-  if (max_chars > 0 && max_chars < characters_to_search)
-    characters_to_search = max_chars;
-
-  for (int i = 0; i < characters_to_search; i++)
-  {
+  for (int i = 0; i < max_chars; i++) {
     int tmp = zstring[i] - '0';
-    if (tmp < 0 || tmp > 9)
-      return rc;
+    if (tmp < 0 || tmp > 9) {
+      return consumed;
+    }
 
     result = result * 10 + tmp;
-    rc++;
+    consumed++;
   }
 
-  return rc;
+  return consumed;
+}
+
+std::optional<int>
+FetchNumeric(const const_IWSubstring& s, int& ndx) {
+  int result = 0;
+  int consumed = 0;
+
+  for (; ndx < s.length(); ++ndx, ++consumed) {
+    const int tmp = s[ndx] - '0';
+    if (tmp < 0 || tmp > 9) {
+      break;
+    }
+    result = result * 10 + tmp;
+  }
+
+  if (consumed == 0) {
+    return std::nullopt;
+  }
+
+  return result;
 }
 
 void
-iwabort ()
-{
-  abort ();
+iwabort() {
+  abort();
 }
 
 /*
@@ -184,48 +193,45 @@ iwabort ()
 #ifdef IW_COMBINATORIAL_COMBINATIONS_NEEDED
 #include "iwfactorial.h"
 
-static IW_Factorial<iw_uint64_t> iwfactorial(60);
+static IW_Factorial<uint64_t> iwfactorial(60);
 
-iw_uint64_t
-iw_combinatorial_combinations (int n, int k)
-{
-  assert (n > 0);
-  assert (k > 0);
-  assert (n >= k);
+uint64_t
+iw_combinatorial_combinations(int n, int k) {
+  assert(n > 0);
+  assert(k > 0);
+  assert(n >= k);
 
-// Some simple boundary cases first
+  // Some simple boundary cases first
 
-  if (k == n)
+  if (k == n) {
     return 1;
+  }
 
-  if (1 == k)
+  if (1 == k) {
     return n;
+  }
 
   int larger_denominator, smaller_denominator;
 
-  if (k > n - k)
-  {
+  if (k > n - k) {
     larger_denominator = k;
     smaller_denominator = n - k;
-  }
-  else
-  {
+  } else {
     larger_denominator = n - k;
     smaller_denominator = k;
   }
 
-// Work out N! / LARGER_DENOMINATOR!
+  // Work out N! / LARGER_DENOMINATOR!
 
-  iw_uint64_t rc = static_cast<iw_uint64_t>(n);
+  uint64_t rc = static_cast<uint64_t>(n);
 
   int j = n - 1;
-  while (j > larger_denominator)
-  {
-    iw_uint64_t tmp = rc * static_cast<iw_uint64_t>(j);
+  while (j > larger_denominator) {
+    uint64_t tmp = rc * static_cast<uint64_t>(j);
 
-    if (tmp < rc)    // must have overflowed
+    if (tmp < rc)  // must have overflowed
     {
-      cerr << "Overflow in iw_combinatorial_combinations " << n << "," << k << endl;
+      cerr << "Overflow in iw_combinatorial_combinations " << n << "," << k << '\n';
       return 0;
     }
 
@@ -236,17 +242,17 @@ iw_combinatorial_combinations (int n, int k)
 
   rc = rc / iwfactorial[smaller_denominator];
 
-//cerr << "Dividing by " << iwfactorial[smaller_denominator] << " to yield " << rc << endl;
+// cerr << "Dividing by " << iwfactorial[smaller_denominator] << " to yield " << rc << '\n';
 
-//#define DEBUG_IW_COMBINATORIAL_COMBINATIONS
+// #define DEBUG_IW_COMBINATORIAL_COMBINATIONS
 #ifdef DEBUG_IW_COMBINATORIAL_COMBINATIONS
 
-// Note this doesn't work if things overflow the factorial object
+  // Note this doesn't work if things overflow the factorial object
 
-  cerr << n << " choose " << k << " is " << rc << endl;
-  iw_uint64_t bf = (iwfactorial[n] / (iwfactorial[k] * iwfactorial[n - k]));
-  cerr << "Brute force " << bf << endl;
-  assert (bf == rc);
+  cerr << n << " choose " << k << " is " << rc << '\n';
+  uint64_t bf = (iwfactorial[n] / (iwfactorial[k] * iwfactorial[n - k]));
+  cerr << "Brute force " << bf << '\n';
+  assert(bf == rc);
 
 #endif
 
@@ -262,103 +268,125 @@ iw_combinatorial_combinations (int n, int k)
 
 template <typename T>
 int
-skip_to_string (T & input,
-                const char * target,
-                int report_discard)
-{
-  if (input.at_eof())
+skip_to_string(T& input, const char* target, int report_discard) {
+  if (input.at_eof()) {
     return 0;
+  }
 
   int records_discarded = 0;
   int start_record = input.lines_read();
 
   const_IWSubstring buffer;
-  while (input.next_record(buffer))
-  {
-    if (buffer.starts_with(target))
-    {
-      if (records_discarded && report_discard)
-        cerr << "skip to string: '" << target << "' discarded " <<
-                 records_discarded << " records starting at " << start_record << endl;
+  while (input.next_record(buffer)) {
+    if (buffer.starts_with(target)) {
+      if (records_discarded && report_discard) {
+        cerr << "skip to string: '" << target << "' discarded " << records_discarded
+             << " records starting at " << start_record << '\n';
+      }
       return 1;
     }
 
     records_discarded++;
   }
 
-  if (report_discard)
+  if (report_discard) {
     cerr << "skip to string: reached EOF, no '" << target << "' found\n";
+  }
 
   return 0;
 }
-template int skip_to_string<iwstring_data_source>(iwstring_data_source&, char const*, int);
+
+template int skip_to_string<iwstring_data_source>(iwstring_data_source&, char const*,
+                                                  int);
 template int skip_to_string<String_Data_Source>(String_Data_Source&, char const*, int);
 
 int
-identify_plus_positions(const const_IWSubstring & buffer,
-                        resizable_array<int> & pos)
-{
+identify_plus_positions(const const_IWSubstring& buffer, resizable_array<int>& pos,
+                        const char needle) {
   pos.resize_keep_storage(0);
 
   const int n = buffer.length();
 
   int in_square_bracket = 0;
-  for (int i = 0; i < n; ++i)
-  {
-    if ('[' == buffer[i])
+  for (int i = 0; i < n; ++i) {
+    if ('[' == buffer[i]) {
       in_square_bracket = 1;
-    else if (in_square_bracket)
-    {
-      if (']' == buffer[i])
+    } else if (in_square_bracket) {
+      if (']' == buffer[i]) {
         in_square_bracket = 0;
-    }
-    else if ('+' == buffer[i])
+      }
+    } else if (needle == buffer[i]) {
       pos.add(i);
-
+    }
   }
 
   return pos.number_elements();
 }
 
 int
-splitOnPlusses(const const_IWSubstring & buffer,
-                        resizable_array_p<const_IWSubstring> & parts)
-{
+SplitOnPlusses(const const_IWSubstring& buffer,
+               resizable_array_p<const_IWSubstring>& parts, const char split) {
   parts.resize_keep_storage(0);
 
   const int n = buffer.length();
-  if ( n <= 0)
-  	return 0;
-  	
+  if (n <= 0) {
+    return 0;
+  }
+
   int cstart = 0;
   int in_square_bracket = 0;
-  for (int i = 0; i < n; ++i)
-  {
-    if ('[' == buffer[i])
+  for (int i = 0; i < n; ++i) {
+    if ('[' == buffer[i]) {
       in_square_bracket = 1;
-    else if (in_square_bracket)
-    {
-      if (']' == buffer[i])
+    } else if (in_square_bracket) {
+      if (']' == buffer[i]) {
         in_square_bracket = 0;
-    }
-    else if ('+' == buffer[i])
-    {
-      const_IWSubstring *componentPtr = new const_IWSubstring;
-
-      if (i > 0)
-      {
-        buffer.from_to(cstart, i-1, *componentPtr);
-        parts.add(componentPtr);
       }
-      cstart = i+1;      
+    } else if (split == buffer[i]) {
+      const_IWSubstring* componentPtr = new const_IWSubstring;
+
+      if (i > 0 && i > cstart) {
+        buffer.from_to(cstart, i - 1, *componentPtr);
+      }
+
+      parts.add(componentPtr);
+      cstart = i + 1;
     }
-  }  
-  // add whatever came after the last plus
-  
-  const_IWSubstring *lastComponentPtr = new const_IWSubstring;
-   
-  buffer.from_to(cstart, n-1, *lastComponentPtr);
+  }
+
+  // Add whatever came after the last plus.
+
+  const_IWSubstring* lastComponentPtr = new const_IWSubstring;
+
+  if (n > cstart) {
+    buffer.from_to(cstart, n - 1, *lastComponentPtr);
+  }
+
   parts.add(lastComponentPtr);
 
   return parts.number_elements();
 }
+
+namespace misc2 {
+
+int
+MatchingOpenCloseChar(const const_IWSubstring& s, int i, const char open,
+                      const char close) {
+  assert(s[i] == open);
+
+  int level = 0;
+  for (; i < s.length(); ++i) {
+    if (s[i] == close) {
+      level--;
+      if (level == 0) {
+        return i;
+      }
+    } else if (s[i] == open) {
+      level++;
+    }
+  }
+
+  return -1;  // Did not find matching char.
+}
+
+}  // namespace misc2

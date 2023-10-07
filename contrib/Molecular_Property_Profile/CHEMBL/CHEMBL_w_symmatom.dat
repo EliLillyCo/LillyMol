@@ -1,0 +1,230 @@
+description {
+  feature_name: "w_symmatom"
+  description: "Number of symmetric atoms"
+  plot_title: "Number of symmetric atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 50.0
+mean: 5.703157
+median: 4.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 4.0
+}
+quantile {
+  quantile: 0.9
+  value: 12.0
+}
+quantile {
+  quantile: 0.95
+  value: 15.0
+}
+quantile {
+  quantile: 0.99
+  value: 28.0
+}
+int_values {
+  count: 480943
+}
+int_values {
+  value: 2
+  count: 204398
+}
+int_values {
+  value: 3
+  count: 49310
+}
+int_values {
+  value: 4
+  count: 496546
+}
+int_values {
+  value: 5
+  count: 19130
+}
+int_values {
+  value: 6
+  count: 229440
+}
+int_values {
+  value: 7
+  count: 52454
+}
+int_values {
+  value: 8
+  count: 273555
+}
+int_values {
+  value: 9
+  count: 25536
+}
+int_values {
+  value: 10
+  count: 125643
+}
+int_values {
+  value: 11
+  count: 25241
+}
+int_values {
+  value: 12
+  count: 100543
+}
+int_values {
+  value: 13
+  count: 12946
+}
+int_values {
+  value: 14
+  count: 44295
+}
+int_values {
+  value: 15
+  count: 8023
+}
+int_values {
+  value: 16
+  count: 30836
+}
+int_values {
+  value: 17
+  count: 3756
+}
+int_values {
+  value: 18
+  count: 15331
+}
+int_values {
+  value: 19
+  count: 1917
+}
+int_values {
+  value: 20
+  count: 10654
+}
+int_values {
+  value: 21
+  count: 923
+}
+int_values {
+  value: 22
+  count: 7059
+}
+int_values {
+  value: 23
+  count: 505
+}
+int_values {
+  value: 24
+  count: 5488
+}
+int_values {
+  value: 25
+  count: 244
+}
+int_values {
+  value: 26
+  count: 4113
+}
+int_values {
+  value: 27
+  count: 160
+}
+int_values {
+  value: 28
+  count: 3783
+}
+int_values {
+  value: 29
+  count: 56
+}
+int_values {
+  value: 30
+  count: 3224
+}
+int_values {
+  value: 31
+  count: 48
+}
+int_values {
+  value: 32
+  count: 2743
+}
+int_values {
+  value: 33
+  count: 102
+}
+int_values {
+  value: 34
+  count: 2461
+}
+int_values {
+  value: 35
+  count: 27
+}
+int_values {
+  value: 36
+  count: 2230
+}
+int_values {
+  value: 37
+  count: 15
+}
+int_values {
+  value: 38
+  count: 1887
+}
+int_values {
+  value: 39
+  count: 39
+}
+int_values {
+  value: 40
+  count: 1702
+}
+int_values {
+  value: 41
+  count: 6
+}
+int_values {
+  value: 42
+  count: 1714
+}
+int_values {
+  value: 43
+  count: 5
+}
+int_values {
+  value: 44
+  count: 1412
+}
+int_values {
+  value: 45
+  count: 43
+}
+int_values {
+  value: 46
+  count: 1236
+}
+int_values {
+  value: 47
+  count: 1
+}
+int_values {
+  value: 48
+  count: 1185
+}
+int_values {
+  value: 50
+  count: 602
+}

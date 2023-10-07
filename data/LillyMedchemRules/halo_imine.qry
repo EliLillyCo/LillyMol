@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "halo_imine")
+  (A I version 2)
+# (A C smarts "C([F,Br,I,Cl])=N")
+  (A C smarts "[F,Br,I,Cl]-C=N")
+)

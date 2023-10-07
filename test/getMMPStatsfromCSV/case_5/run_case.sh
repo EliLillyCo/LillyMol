@@ -34,7 +34,8 @@ gold_out="$test_cmd_top/$case/out/dalke_c5.pairs.sum"
 echo "Testing: $command"
 
 $command -i "$in" -o "$out" -s SMILES -n CHEMBL_ID -a hERG_pIC50 -A DIFF60 2>>err.txt
-$diff_tool $out.sum $gold_out
+
+$diff_tool ${$gold_out} ${out}.sum
 ret=$?
 
 if [ $ret -eq 1 ]
