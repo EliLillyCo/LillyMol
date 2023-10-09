@@ -7,19 +7,25 @@
 #include <algorithm>
 #include <memory>
 
-#include "cmdline_v2.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_set.h"
-#include "iw_stl_hash_map.h"
-#include "accumulator.h"
-#include "misc.h"
+#include "re2/re2.h"
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline_v2/cmdline_v2.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+
 #include "iwtokeniser.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
-static IW_Regular_Expression column_rx;
+static std::unique_ptr<RE2> column_rx;
 
 static int strip_leading_zeros = 0;
 
@@ -39,8 +45,6 @@ static int process_all_columns = 0;
 
 static int sort_dash_o_output = 0;
 
-static int process_whole_row = 0;
-
 static double probability_reject_duplicate = 1.0;
 
 static int is_descriptor_file = 0;
@@ -57,10 +61,22 @@ static resizable_array_p<IWString> descriptors_to_process;
 
 static int header_records_to_skip = 0;
 
+// Want the ability to only examine part of a token. If this is set,
+// then only the characters that match the regex are added to the hash
+// of already seen things.
+// If this does not match, it is a fatal error.
+static std::unique_ptr<RE2> text_subset;
+
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Identifies the unique rows in a file\n";
   cerr << " -c <col>       only consider column(s) <col>\n";
   cerr << " -x <col>       consider all column(s) except <col>\n";
@@ -79,6 +95,7 @@ usage (int rc)
   cerr << " -tab,-csv      deal with differently formatted files\n";
   cerr << " -i <...>       input column separator\n";
   cerr << " -nwz           No Warnings about Zero length text comparisons\n";
+  cerr << " -subset        regexp specifying which part of the column to consider '(..*)...' would be all except last 3 chars\n";
   cerr << " -h <n>         first <n> records in file\n";
   cerr << " -j             treat as descriptor file\n";
   cerr << " -v             verbose output\n";
@@ -149,6 +166,21 @@ read_previously_found_identifiers(const char * fname)
   }
 
   return read_previously_found_identifiers(input);
+}
+
+// Alter `comparison_text` to be only the parts that are matched by `text_subset`.
+int
+TruncateToSubset(RE2* text_subset, IWString& text) {
+  const re2::StringPiece tmp(text.data(), text.length());
+  std::string submatch;
+  if (! RE2::FullMatch(tmp, *text_subset, &submatch)) {
+    cerr << "TruncateToSubset:no match to " << text_subset->pattern() << " in '" << text << "'\n";
+    return 0;
+  }
+
+  text = submatch;
+
+  return 1;
 }
 
 /*
@@ -310,7 +342,6 @@ unique_rows(const const_IWSubstring & buffer,
   if (input_is_quoted_tokens)
     iwt.set_quoted_tokens(1);
 
-  int i = 0;
   const_IWSubstring token;
 
 //cerr << "Line " << __LINE__ << endl;
@@ -324,9 +355,10 @@ unique_rows(const const_IWSubstring & buffer,
 //    cerr << " col " << col << " token '" << token << "'\n";
       int append_token = 0;    // if this column will be part of the matching
   
-      if (column_rx.active())
+      if (column_rx)
       {
-        if (column_rx.matches(token))
+        re2::StringPiece tmp(token.data(), token.length());
+        if (RE2::PartialMatch(tmp, *column_rx))
           append_token = 1;
       }
       else if (negative_column_numbers_present)
@@ -371,6 +403,12 @@ unique_rows(const const_IWSubstring & buffer,
     cerr << "Cannot truncate '" << comparison_text << "' at first '" << truncate_at << "'\n";
   else
     comparison_text.truncate_at_first(truncate_at);
+
+  if (text_subset) {
+    if (! TruncateToSubset(text_subset.get(), comparison_text)) {
+      return 0;
+    }
+  }
 
   if (! show_counts)
     ;
@@ -709,7 +747,6 @@ write_count_data(const IW_STL_Hash_Map_int & times_seen,
   {
       const int c = (*i).second;
 
-      cerr << "LINE " << __LINE__ << endl;
       if (c >= show_counts)
         os << (*i).first << " seen " << c << " times\n";
 
@@ -727,7 +764,7 @@ static int
 unique_rows (int argc, char ** argv)
 {
 //Command_Line cl (argc, argv, "vc:x:D:R:z");
-  Command_Line_v2 cl(argc, argv, "-v-c=s-x=ipos-D=s-R=s-z-nc-o-trunc=s-n-r=ipos-whash-P=sfile-O=s-tab-csv-vbar-comma-s-all-p=f-q-nwz-d=s-h=ipos-j=ipos-i=s");
+  Command_Line_v2 cl(argc, argv, "-v-c=s-x=ipos-D=s-R=s-z-nc-o-trunc=s-n-r=ipos-whash-P=sfile-O=s-tab-csv-vbar-comma-s-all-p=f-q-nwz-d=s-h=ipos-j=ipos-i=s-subset=s");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -859,14 +896,16 @@ unique_rows (int argc, char ** argv)
   {
     const_IWSubstring r = cl.string_value('R');
 
-    if (! column_rx.set_pattern(r))
+    re2::StringPiece tmp(r.data(), r.length());
+    column_rx.reset(new RE2(tmp));
+    if (! column_rx->ok())
     {
       cerr << "Invalid column regexp '" << r << "'\n";
       return 6;
     }
 
     if (verbose)
-      cerr << "Will check columns that match '" << column_rx.source() << "'\n";
+      cerr << "Will check columns that match '" << column_rx->pattern() << "'\n";
   }
   else if (cl.option_present('d'))
   {
@@ -1015,6 +1054,21 @@ unique_rows (int argc, char ** argv)
 
     if (verbose)
       cerr << "Duplicates written to '" << d << "'\n";
+  }
+
+  if (cl.option_present("subset")) {
+    const_IWSubstring r = cl.string_value("subset");
+
+    re2::StringPiece tmp(r.data(), r.length());
+    text_subset.reset(new RE2(tmp));
+    if (! text_subset->ok())
+    {
+      cerr << "Invalid text subset regexp '" << r << "'\n";
+      return 6;
+    }
+
+    if (verbose)
+      cerr << "Only the parts of a column that match " << text_subset->pattern() << " will be considered for uniqueness\n";
   }
 
   IWString_and_File_Descriptor output(1);

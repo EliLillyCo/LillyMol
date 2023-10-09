@@ -8,17 +8,21 @@
 #include <limits>
 #include <cmath>
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-#include "iwhistogram.h"
-#include "iwdigits.h"
-#include "report_progress.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/histogram/iwhistogram.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "gfp.h"
 #include "sparse_collection.h"
 #include "tversky.h"
+
+using std::cerr;
+using std::endl;
 
 static int verbose = 0;
 
@@ -61,9 +65,7 @@ static Tversky tversky;
 
 static IWString smiles_tag("$SMI<");
 
-/*
-  The identifier tag used in each TDT
-*/
+//  The identifier tag used in each TDT
 
 static IWString identifier_tag("PCN<");
 
@@ -84,9 +86,7 @@ static IWString tag_for_average_distance;
 
 static const_IWSubstring distance_tag("DIST<");
 
-/*
-  We ignore distances longer than DISTANCE_THRESHOLD
-*/
+//  We ignore distances longer than DISTANCE_THRESHOLD
 
 static similarity_type_t upper_distance_threshold = std::numeric_limits<float>::max();
 
@@ -158,7 +158,7 @@ IW_GFP_D_ID::write_smiles_and_id (IWString & output) const
   Our pool is an array of FP objects
 */
 
-static IW_GFP_D_ID * pool = NULL;
+static IW_GFP_D_ID * pool = nullptr;
 
 static int pool_size = 0;
 
@@ -241,7 +241,7 @@ build_pool (const char * fname)
     }
 
     pool = new IW_GFP_D_ID[pool_size];
-    if (NULL == pool)
+    if (nullptr == pool)
     {
       cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
       return 62;
@@ -264,7 +264,7 @@ write_average_neighbour_distance(IW_GFP_D_ID ** neighbours,
   for (int i = 0; i < number_neighbours; i++)
   {
     IW_GFP_D_ID * n = neighbours[i];
-    assert (NULL != neighbours[i]);
+    assert (nullptr != neighbours[i]);
 
     acc.extra(n->distance());
   }
@@ -292,7 +292,7 @@ write_neighbour_list (const IW_GFP_D_ID & target,
   for (int i = 0; i < number_neighbours; i++)
   {
     IW_GFP_D_ID * n = neighbours[i];
-    assert (NULL != neighbours[i]);
+    assert (nullptr != neighbours[i]);
 
     if (write_smiles)
       output << smiles_tag << n->smiles() << ">\n";
@@ -553,7 +553,7 @@ nearneighbours(IW_GFP_D_ID & fp,
 
   for (int i = 0; i < neighbours_to_find_this_fingerprint; i++)
   {
-    neighbours[i] = NULL;
+    neighbours[i] = nullptr;
   }
 
   neighbours_found = 0;
@@ -652,8 +652,15 @@ nearneighbours(IWString_and_File_Descriptor & output)
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
 
+// clang-format off
   cerr << "Finds near neighbours of a set of fingerprints\n";
   cerr << "Usage <options> <input_file>\n";
   cerr << " -s <number>      specify max pool size\n";
@@ -679,6 +686,7 @@ usage (int rc)
   cerr << " -y               allow arbitrary distances\n";
   cerr << " -R <number>      report progress every <number> items processed\n";
   cerr << " -v               verbose output\n";
+// clang-format on
 
   exit(rc);
 }
@@ -778,7 +786,7 @@ nearneighbours(int argc, char ** argv)
     }
 
     pool = new IW_GFP_D_ID[pool_size];
-    if (NULL == pool)
+    if (nullptr == pool)
     {
       cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
       return 62;

@@ -1,19 +1,22 @@
 #include <stdlib.h>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "distance_scaling.h"
 
+using std::cerr;
+using std::endl;
+
 Distance_Scaling::Distance_Scaling()
 {
-  _conv = NULL;
+  _conv = nullptr;
 
   return;
 }
 
 Distance_Scaling::~Distance_Scaling()
 {
-  if (NULL != _conv)
+  if (nullptr != _conv)
     delete [] _conv;
 }
 
@@ -34,7 +37,7 @@ Distance_Scaling::build (const char * fname)
 int
 Distance_Scaling::build (iwstring_data_source & input)
 {
-  if (NULL == _conv)
+  if (nullptr == _conv)
   {
     _conv = new float[1001];
     set_vector(_conv, 1001, static_cast<float>(-1.0));

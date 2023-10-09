@@ -1,7 +1,7 @@
 #ifndef IWVDM_H
 #define IWVDM_H
 
-#include "iwbits.h"
+#include "Foundational/iwbits/iwbits.h"
 
 extern similarity_type_t fligner_verducci_blower (int nb,
                          int nset1,

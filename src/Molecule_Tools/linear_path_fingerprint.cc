@@ -4,18 +4,19 @@
 using std::cerr;
 using std::endl;
 
-#include "md5.h"
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "misc.h"
-#include "iwdigits.h"
-#include "iwbits.h"
-#include "sparse_fp_creator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/md5.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
-#include "molecule.h"
-#include "path.h"
-#include "linear_path_fingerprint.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+
+#include "Molecule_Tools/linear_path_fingerprint.h"
 
 namespace LFP {
 
@@ -259,7 +260,7 @@ class MFingerprint
 
     int * _hcount;
 
-    int * _isotope;
+    isotope_t * _isotope;
 
     int _path_length;     // the length (in bonds) of the current path
 
@@ -364,11 +365,11 @@ MFingerprint::MFingerprint (Molecule & m,
 
   if (lfpd->max_path_length_isotopic_bits() >= 0)
   {
-    _isotope = new int[_matoms];
+    _isotope = new isotope_t[_matoms];
     m.get_isotopes(_isotope);
   }
   else
-    _isotope = NULL;
+    _isotope = nullptr;
 
   _nrings = new int[_matoms];
   m.ring_membership(_nrings);
@@ -396,7 +397,7 @@ MFingerprint::MFingerprint (Molecule & m,
   _first_path = new resizable_array<int> * [bits_per_iwmfingerprint];
   for (int i = 0; i < bits_per_iwmfingerprint; i++)
   {
-    _first_path[i] = NULL;
+    _first_path[i] = nullptr;
   }
 #endif
 
@@ -420,10 +421,10 @@ MFingerprint::~MFingerprint()
   delete [] _path;
   delete [] _bond;
   delete [] _in_path;
-  if (NULL != _arom)
+  if (nullptr != _arom)
     delete [] _arom;
   delete [] _ncon;
-  if (NULL != _atomic_number)
+  if (nullptr != _atomic_number)
     delete [] _atomic_number;
 
   delete [] _unsaturation;
@@ -433,10 +434,10 @@ MFingerprint::~MFingerprint()
   delete [] _path_hash_value;
   delete [] _ch2;
 
-  if (NULL != _hcount)
+  if (nullptr != _hcount)
     delete [] _hcount;
 
-  if (NULL != _isotope)
+  if (nullptr != _isotope)
     delete [] _isotope;
 
   _path_length = -4;
@@ -444,7 +445,7 @@ MFingerprint::~MFingerprint()
 #ifdef CHECK_COLLISIONS
   for (int i = 0; i < bits_per_iwmfingerprint; i++)
   {
-    if (NULL != _first_path[i])
+    if (nullptr != _first_path[i])
       delete [] _first_path[i];
   }
   
@@ -670,7 +671,7 @@ MFingerprint::_compute_atom_hash_value_non_periodic_table (atom_number_t zatom,
 {
   atomic_number_t z = _atomic_number[zatom];
 
-  if (INVALID_ATOMIC_NUMBER == z)
+  if (kInvalidAtomicNumber == z)
   {
     int h = _atoms[zatom]->element()->atomic_symbol_hash_value();
 
@@ -816,11 +817,11 @@ template <typename T>
 void
 MFingerprint::_do_isotope_bits (T & bits) const
 {
-  assert (NULL != _isotope);
+  assert (nullptr != _isotope);
 
   atom_number_t astart = _path[0];
 
-  int i0 = _isotope[astart];
+  isotope_t i0 = _isotope[astart];
   if (0 == _path_length)
   {
     unsigned int b = 77265 + _path_hash_value[0] * 87 + i0 % 87;
@@ -836,7 +837,7 @@ MFingerprint::_do_isotope_bits (T & bits) const
 
   atom_number_t astop = _path[_path_length];
 
-  int i1 = _isotope[astop];
+  isotope_t i1 = _isotope[astop];
 
   if (i0 > i1)
     _do_isotope_bits(0, _path_length, 1, bits);

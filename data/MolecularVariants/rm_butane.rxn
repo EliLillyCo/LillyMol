@@ -1,0 +1,11 @@
+name: "rm_butane"
+scaffold {
+  id: 0
+  smarts: "[Cx0G0]-[CD2]-[CD2]-[CD2]-[CD2]-[Cx0G0]"
+  remove_atoms: [1, 2, 3, 4]
+  make_bond {
+    a1: 0
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+}

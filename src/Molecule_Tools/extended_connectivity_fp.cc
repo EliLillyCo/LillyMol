@@ -1,10 +1,13 @@
 #include <stdint.h>
+#include <iostream>
 #include <memory>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
-#include "molecule.h"
 #include "extended_connectivity_fp.h"
+
+using std::cerr;
+using std::endl;
 
 class Gather_Single_Bit
 {
@@ -49,26 +52,9 @@ EC_Fingerprint_Generator::EC_Fingerprint_Generator()
 #define EC_NEXT_TIME -1
 #define EC_CURRENT_SHELL -2
 
-
-#ifdef CQANNOT_USETHIS
-template <typename T>
-void
-EC_Fingerprint_Generator::_set_bit_depending_on_radius (const unsigned int b,
-                                                        const int radius,
-                                                        T & sfc) const
-{
-  if (radius < _min_radius)
-    return;
-
-  sfc.hit_bit(b, _bit_increment);
-
-  return;
-}
-#endif
-
 template <typename T>
 int
-EC_Fingerprint_Generator::generate_fingerprint (Molecule & m,
+EC_Fingerprint_Generator::generate_fingerprint(Molecule & m,
                               const T * atype,
                               const int * include_atom,
                               const int flag,
@@ -91,11 +77,11 @@ EC_Fingerprint_Generator::generate_fingerprint(Molecule & m,
 //#define DEBUG_EXTENDED_CONNECTIVITY
 #ifdef DEBUG_EXTENDED_CONNECTIVITY
 static void
-write_labelled_by_inclusion (const Molecule & m,
-                             const int * include_atom,
-                             const int flag,
-                             const char * s,
-                             std::ostream & output)
+write_labelled_by_inclusion(const Molecule & m,
+                            const int * include_atom,
+                            const int flag,
+                            const char * s,
+                            std::ostream & output)
 {
   Molecule mcopy(m);
 
@@ -119,7 +105,7 @@ write_labelled_by_inclusion (const Molecule & m,
 
 template <typename T>
 int
-EC_Fingerprint_Generator::_generate_fingerprint (Molecule & m,
+EC_Fingerprint_Generator::_generate_fingerprint(Molecule & m,
                               const int each_shell_gets_different_fingerprint,
                               const T * atype,
                               const int * include_atom,
@@ -194,7 +180,7 @@ EC_Fingerprint_Generator::_generate_fingerprint (Molecule & m,
 }
 
 int
-EC_Fingerprint_Generator::_bond_constant (const Bond * b) const
+EC_Fingerprint_Generator::_bond_constant(const Bond * b) const
 {
   if (b->is_aromatic())
     return 11;
@@ -215,7 +201,7 @@ EC_Fingerprint_Generator::_bond_constant (const Bond * b) const
 
 template <typename T>
 int
-EC_Fingerprint_Generator::_prepare_first_shell (const Molecule & m,
+EC_Fingerprint_Generator::_prepare_first_shell(const Molecule & m,
                                    const atom_number_t zatom,
                                    Set_of_Atoms & first_shell,
                                    const ECFP_Args<T> & ecfp_args) const
@@ -263,13 +249,13 @@ EC_Fingerprint_Generator::_prepare_first_shell (const Molecule & m,
 
 template <typename S, typename T>
 void
-EC_Fingerprint_Generator::_expand_shell (const Molecule & m,
-                                         const Set_of_Atoms & expand_from,
-                                         const int radius,
-                                         const ECFP_Args<T> & ecfp_args,
-                                         unsigned int sum_so_far,
-                                         const int each_shell_gets_different_fingerprint,
-                                         S * sfc) const
+EC_Fingerprint_Generator::_expand_shell(const Molecule & m,
+                                        const Set_of_Atoms & expand_from,
+                                        const int radius,
+                                        const ECFP_Args<T> & ecfp_args,
+                                        unsigned int sum_so_far,
+                                        const int each_shell_gets_different_fingerprint,
+                                        S * sfc) const
 {
   if (_add_tails)
     _do_add_tails(m, expand_from, radius, ecfp_args, sum_so_far, each_shell_gets_different_fingerprint, sfc);
@@ -375,7 +361,7 @@ EC_Fingerprint_Generator::_expand_shell (const Molecule & m,
 
 template <typename T>
 void
-EC_Fingerprint_Generator::generate_fingerprint (Molecule & m,
+EC_Fingerprint_Generator::generate_fingerprint(Molecule & m,
                               const atom_number_t zatom,
                               const T * atype,
                               const int * include_atom,
@@ -415,7 +401,7 @@ EC_Fingerprint_Generator::generate_fingerprint (Molecule & m,
 
 template <typename T>
 void
-EC_Fingerprint_Generator::_generate_fingerprint (Molecule & m,
+EC_Fingerprint_Generator::_generate_fingerprint(Molecule & m,
                               const atom_number_t zatom,
                               const T * atype,
                               const int * include_atom,
@@ -497,13 +483,13 @@ ECFP_Args<T>::~ECFP_Args()
 
 template <typename S, typename T>
 void
-EC_Fingerprint_Generator::_do_add_tails (const Molecule & m,
-                                         const Set_of_Atoms & expand_from,
-                                         const int radius,
-                                         const ECFP_Args<T> & ecfp_args,
-                                         unsigned int sum_so_far,
-                                         const int each_shell_gets_different_fingerprint,
-                                         S * sfc) const
+EC_Fingerprint_Generator::_do_add_tails(const Molecule & m,
+                                        const Set_of_Atoms & expand_from,
+                                        const int radius,
+                                        const ECFP_Args<T> & ecfp_args,
+                                        unsigned int sum_so_far,
+                                        const int each_shell_gets_different_fingerprint,
+                                        S * sfc) const
 {
   const int n = expand_from.number_elements();
 

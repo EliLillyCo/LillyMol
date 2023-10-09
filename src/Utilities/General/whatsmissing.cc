@@ -2,13 +2,14 @@
   We often want to know what's missing from a descriptor file
 */
 
-#include <stdlib.h>
 #include <limits>
-using namespace std;
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+
+using std::cerr;
+using std::endl;
 
 static int verbose = 0;
 
@@ -50,7 +51,13 @@ static int header_written_to_missing_values_stream_this_file = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Identifies which descriptors are missing from a descriptor file\n";
   cerr << " -m <string>    missing value (default '" << missing_value << "')\n";
   cerr << " -x <int>       maximum number of times to report each column\n";
@@ -72,16 +79,16 @@ static int ncols = 0;
 
 static int allow_non_rectangular_files = 1;
 
-static int * items_missing_in_column = NULL;
+static int * items_missing_in_column = nullptr;
 
-static int * items_missing_per_id = NULL;
+static int * items_missing_per_id = nullptr;
 
 /*
   To cut down the amount of stuff coming to the screen, we can limit the number
   of times any descriptor is reported
 */
 
-static int max_report = numeric_limits<int>::max();
+static int max_report = std::numeric_limits<int>::max();
 
 static int break_after_finding_first_missing_value = 0;
 
@@ -260,7 +267,7 @@ establish_column_identities (const const_IWSubstring & header)
 }
 
 static int
-report_overall_column_statistics (ostream & os,
+report_overall_column_statistics (std::ostream & os,
                         int ncols,
                         const int * items_missing_in_column)
 {
@@ -332,15 +339,15 @@ whatsmissing (const char * fname,
 static int
 whatsmissing (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "vx:m:bn:M:qur");
+  Command_Line cl(argc, argv, "vx:m:bn:M:qur");
 
-  if (cl.unrecognised_options_encountered ())
+  if (cl.unrecognised_options_encountered())
   {
     cerr << "unrecognised_options_encountered\n";
-    usage (1);
+    usage(1);
   }
 
-  verbose = cl.option_count ('v');
+  verbose = cl.option_count('v');
 
   if (cl.option_present ('m'))
   {

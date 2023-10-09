@@ -5,29 +5,28 @@
 #endif
 #include <sys/types.h>
 #include <iostream>
-using namespace std;
 
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 #include "iwstring.h"
 
 //#define DEBUG_GETLINE
 
 int
-IWString::getline (istream & is, char record_delimiter)
+IWString::getline(std::istream & is, char record_delimiter)
 {
-  if (! is.good ())
+  if (! is.good())
   {
-    if (is.eof ())
+    if (is.eof())
       return 0;
-    cerr << "IWString::getline: input stream not good\n";
+    std::cerr << "IWString::getline: input stream not good\n";
     return 0;
   }
 
-  if (is.eof ())
+  if (is.eof())
     return 0;
 
   if (0 == _elements_allocated)
-    resize (256);
+    resize(256);
 
   _number_elements = 0;
 
@@ -35,29 +34,29 @@ IWString::getline (istream & is, char record_delimiter)
   {
     int bytes_available = _elements_allocated - _number_elements;
     is.get (&(_things[_number_elements]), bytes_available, record_delimiter);
-    int nchars = is.gcount ();
+    int nchars = is.gcount();
     _number_elements += nchars;
 
 #ifdef DEBUG_GETLINE
-    cerr << "Just read " << nchars << " characters from stream\n";
-    cerr << "n = " << _number_elements << " alloc = " << _elements_allocated << endl;
+    std::cerr << "Just read " << nchars << " characters from stream\n";
+    std::cerr << "n = " << _number_elements << " alloc = " << _elements_allocated << '\n';
 #endif
 
-    if (is.eof ())
+    if (is.eof())
     {
       if (_number_elements)
-        cerr << "Incomplete last record, have " << _number_elements << " chars\n";
+        std::cerr << "Incomplete last record, have " << _number_elements << " chars\n";
 
       return _number_elements;
     }
 
 //  Important change gcc-3.0.1 
-//  When a blank line is encountered, is.good () is set to bad....
+//  When a blank line is encountered, is.good() is set to bad....
 
-    if (0 == nchars && ! is.good ())
+    if (0 == nchars && ! is.good())
     {
-      is.clear ();
-      if (record_delimiter == is.get ())
+      is.clear();
+      if (record_delimiter == is.get())
         return 1;
       
       return 0;
@@ -65,31 +64,31 @@ IWString::getline (istream & is, char record_delimiter)
 
     if (_number_elements < _elements_allocated - 1)   // whole record fit into buffer
     {
-      (void) is.get ();     // fetch the next character just to check for EOF
-      if (is.eof ())
+      (void) is.get();     // fetch the next character just to check for EOF
+      if (is.eof())
       {
-        cerr << "IWString::getline: record not terminated\n";
+        std::cerr << "IWString::getline: record not terminated\n";
         return _number_elements;
       }
 
       return _number_elements;
     }
 
-    resize (_elements_allocated * 2);
-//  cerr << "Buffer expanded to " << _elements_allocated << endl;
+    resize(_elements_allocated * 2);
+//  std::cerr << "Buffer expanded to " << _elements_allocated << '\n';
   }
 }
 
 int
-operator >> (istream & input, IWString & rhs)
+operator >> (std::istream & input, IWString & rhs)
 {
-  return rhs.getline (input);
+  return rhs.getline(input);
 }
 
 //#ifndef linux
 
 static int
-_bytes_to_char (int fd, char zchar)
+_bytes_to_char(int fd, char zchar)
 {
   char rdbuf[4096];
 
@@ -97,11 +96,11 @@ _bytes_to_char (int fd, char zchar)
 
   int rc = 0;
 
-  while ( (chars_read = IW_FD_READ (fd, rdbuf, sizeof (rdbuf))) > 0)
+  while ( (chars_read = IW_FD_READ(fd, rdbuf, sizeof(rdbuf))) > 0)
   {
-    char * c = static_cast<char *> (memchr (rdbuf, zchar, chars_read));
+    char * c = static_cast<char *>(memchr(rdbuf, zchar, chars_read));
 
-    if (NULL != c)
+    if (nullptr != c)
       return static_cast<int>(rc + (c - rdbuf + 1));   // we include ZCHAR itself
 
      rc += chars_read;
@@ -111,50 +110,50 @@ _bytes_to_char (int fd, char zchar)
 }
 
 static int
-bytes_to_char (int fd, char zchar)
+bytes_to_char(int fd, char zchar)
 {
-//off_t current_position = tell (fd);
-  off_t current_offset = IW_FD_LSEEK (fd, 0, SEEK_CUR);
+//off_t current_position = tell(fd);
+  off_t current_offset = IW_FD_LSEEK(fd, 0, SEEK_CUR);
 
-  int rc = _bytes_to_char (fd, zchar);
+  int rc = _bytes_to_char(fd, zchar);
 
-  IW_FD_LSEEK (fd, current_offset, 0);
+  IW_FD_LSEEK(fd, current_offset, 0);
 
-//cerr << "At " << current_offset << " need " << rc << " bytes to newline\n";
+//std::cerr << "At " << current_offset << " need " << rc << " bytes to newline\n";
 
   return rc;
 }
 
 int
-IWString::getline (int fd, char newline)
+IWString::getline(int fd, char newline)
 {
-  resize_keep_storage (0);
+  resize_keep_storage(0);
 
-  int bytes_to_newline = bytes_to_char (fd, newline);
+  int bytes_to_newline = bytes_to_char(fd, newline);
 
   if (0 == bytes_to_newline)
     return 0;
 
   if (_elements_allocated < bytes_to_newline)
   {
-    if (! resize (bytes_to_newline))
+    if (! resize(bytes_to_newline))
     {
-      cerr << "IWString::getline: cannot allocate " << bytes_to_newline << " bytes\n";
+      std::cerr << "IWString::getline: cannot allocate " << bytes_to_newline << " bytes\n";
       return 0;
     }
   }
 
-  ssize_t chars_read = IW_FD_READ (fd, _things, bytes_to_newline);
+  ssize_t chars_read = IW_FD_READ(fd, _things, bytes_to_newline);
 
   if (chars_read <= 0)
   {
-    cerr << "IWString::getline: cannot read " << bytes_to_newline << " bytes from fd\n";
+    std::cerr << "IWString::getline: cannot read " << bytes_to_newline << " bytes from fd\n";
     return 0;
   }
 
   if (newline != _things[bytes_to_newline - 1])
   {
-    cerr << "IWString::getline_fd: record not terminated\n";
+    std::cerr << "IWString::getline_fd: record not terminated\n";
     _number_elements = bytes_to_newline;
   }
   else

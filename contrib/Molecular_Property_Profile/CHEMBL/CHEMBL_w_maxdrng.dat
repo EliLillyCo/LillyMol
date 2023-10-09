@@ -1,0 +1,201 @@
+description {
+  feature_name: "w_maxdrng"
+  description: "Max distance between any two rings"
+  plot_title: "Max distance between any two rings"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 41.0
+mean: 11.505899
+median: 12.0
+quantile {
+  quantile: 0.01
+  value: 2.0
+}
+quantile {
+  quantile: 0.05
+  value: 3.0
+}
+quantile {
+  quantile: 0.1
+  value: 6.0
+}
+quantile {
+  quantile: 0.5
+  value: 12.0
+}
+quantile {
+  quantile: 0.9
+  value: 17.0
+}
+quantile {
+  quantile: 0.95
+  value: 19.0
+}
+quantile {
+  quantile: 0.99
+  value: 22.0
+}
+int_values {
+  count: 21049
+}
+int_values {
+  value: 1
+  count: 1246
+}
+int_values {
+  value: 2
+  count: 21961
+}
+int_values {
+  value: 3
+  count: 84863
+}
+int_values {
+  value: 4
+  count: 30681
+}
+int_values {
+  value: 5
+  count: 41467
+}
+int_values {
+  value: 6
+  count: 56523
+}
+int_values {
+  value: 7
+  count: 94016
+}
+int_values {
+  value: 8
+  count: 144283
+}
+int_values {
+  value: 9
+  count: 196119
+}
+int_values {
+  value: 10
+  count: 205511
+}
+int_values {
+  value: 11
+  count: 219075
+}
+int_values {
+  value: 12
+  count: 223962
+}
+int_values {
+  value: 13
+  count: 203117
+}
+int_values {
+  value: 14
+  count: 183199
+}
+int_values {
+  value: 15
+  count: 146786
+}
+int_values {
+  value: 16
+  count: 119096
+}
+int_values {
+  value: 17
+  count: 86110
+}
+int_values {
+  value: 18
+  count: 60315
+}
+int_values {
+  value: 19
+  count: 41704
+}
+int_values {
+  value: 20
+  count: 26595
+}
+int_values {
+  value: 21
+  count: 17148
+}
+int_values {
+  value: 22
+  count: 9920
+}
+int_values {
+  value: 23
+  count: 6834
+}
+int_values {
+  value: 24
+  count: 4198
+}
+int_values {
+  value: 25
+  count: 2688
+}
+int_values {
+  value: 26
+  count: 1890
+}
+int_values {
+  value: 27
+  count: 1232
+}
+int_values {
+  value: 28
+  count: 592
+}
+int_values {
+  value: 29
+  count: 524
+}
+int_values {
+  value: 30
+  count: 207
+}
+int_values {
+  value: 31
+  count: 275
+}
+int_values {
+  value: 32
+  count: 76
+}
+int_values {
+  value: 33
+  count: 127
+}
+int_values {
+  value: 34
+  count: 25
+}
+int_values {
+  value: 35
+  count: 63
+}
+int_values {
+  value: 36
+  count: 6
+}
+int_values {
+  value: 37
+  count: 7
+}
+int_values {
+  value: 38
+  count: 4
+}
+int_values {
+  value: 39
+  count: 12
+}
+int_values {
+  value: 41
+  count: 4
+}

@@ -1,0 +1,72 @@
+description {
+  feature_name: "w_excydbond"
+  description: "Exocyclic double bonds"
+  plot_title: "Exocyclic double bonds"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 15.0
+mean: 0.40733168
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+}
+quantile {
+  quantile: 0.9
+  value: 1.0
+}
+quantile {
+  quantile: 0.95
+  value: 2.0
+}
+quantile {
+  quantile: 0.99
+  value: 3.0
+}
+int_values {
+  count: 1593846
+}
+int_values {
+  value: 1
+  count: 449393
+}
+int_values {
+  value: 2
+  count: 175171
+}
+int_values {
+  value: 3
+  count: 25260
+}
+int_values {
+  value: 4
+  count: 7687
+}
+int_values {
+  value: 5
+  count: 1376
+}
+int_values {
+  value: 6
+  count: 688
+}
+int_values {
+  value: 7
+  count: 64
+}
+int_values {
+  value: 8
+  count: 24
+}
+int_values {
+  value: 15
+  count: 1
+}

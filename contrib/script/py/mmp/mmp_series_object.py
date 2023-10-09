@@ -637,7 +637,7 @@ class MMPSeriesObjectClass(MMPDataObjectClass):
 
                         # py2>3 explicit sort=False https://github.com/pandas-dev/pandas/issues/4588#issue-18183895
                         # use False because I control column order and should be aligned
-                        results_df = results_df.append(a_result, sort=False)
+                        results_df = pd.concat([results_df, a_result], sort=False)
 
                         # sanity check
                         # for idx, item in enumerate(matching_series_fragids):
@@ -1206,7 +1206,7 @@ class MMPSeriesObjectClass(MMPDataObjectClass):
             return_dataframe = pd.DataFrame(results_rows, columns=header_row)
 
         else:
-            return_dataframe = return_dataframe.append(pd.DataFrame(results_rows, columns=header_row), sort=False)
+            return_dataframe = pd.concat([return_dataframe, pd.DataFrame(results_rows, columns=header_row)], sort=False)
             # return_dataframe = return_dataframe.rename_axis(None)
 
         # add enumerated product
@@ -1318,7 +1318,7 @@ class MMPSeriesObjectClass(MMPDataObjectClass):
             temp_df['SOURCE_FILE'] = os.path.basename(series_file)
 
             # py2>3 explicit sort=False added
-            self.ref_series_df = self.ref_series_df.append(temp_df, sort=False)
+            self.ref_series_df = pd.concat([self.ref_series_df, temp_df], sort=False)
             self.logger.info('Appended dataframe shape %s to master dataframe %s' %
                              (str(temp_df.shape), str(self.ref_series_df.shape)))
             # print ('Appended dataframe shape %s to master dataframe %s' % (str(temp_df.shape),
@@ -1602,7 +1602,7 @@ class MMPSeriesObjectClass(MMPDataObjectClass):
                                         reformatted_result_df['SOURCE_FILE'] = matching_series_source
                                         # [matching_series_source] * num_items
 
-                                    all_results = all_results.append(reformatted_result_df)
+                                    all_results = pd.concat([all_results, reformatted_result_df])
 
                                     self.logger.debug("series %s, search iteration %s using frag_id list %s" %
                                                         (series_fragids, series_id, query_fragids))

@@ -1,0 +1,90 @@
+# INTERCEPT hl=0.0 gl=0.0  hv=0.0
+
+[CH3] CH3 hl=-45.947 gl=-8.030 hv=4.116
+[CH2] CH2 hl=-20.763 gl=8.231 hv=4.650
+[CH1] CH1 hl=-3.766 gl=19.848 hv=2.771
+[CH0] CH0 hl=17.1 gl=19 hv=37.977 hv=1.284
+[CH2]=[CH1] CH2=CH1 hl=53.712 gl=84.926 hv=6.714
+[CH1]=[CH1] CH1=CH1 hl=69.939 gl=92.900 hv=7.370
+[CH2]=C CH2=C hl=64.145 gl=88.402 hv=6.797
+[CH1]=C CH1=C hl=82.528 gl=93.745 hv=8.178
+C=C C=C hl=104.293 gl=116.613 hv=9.342
+[CH2]=C=[CH1] CH2=C=CH1 hl=197.322 gl=221.308 hv=12.318
+[cH] cH hl=11.189 gl=22.533 hv=4.098
+c[CH3] cCH3 hl=-19.243 gl=22.505 hv=9.776
+c[CH2] cCH2 hl=9.404 gl=41.228 hv=10.185
+c[CH] cCH hl=27.671 gl=52.948 hv=8.834
+c c hl=27.016 gl=30.485 hv=12.552
+[OH] OH hl=-181.422 gl=-158.589 hv=24.529
+c[OH] cOH hl=-164.609 gl=-132.097 hv=40.246
+[CH3]C=O CH3C=O hl=-182.329 gl=-131.366 hv=18.999
+[CH2]C=O CH2C=O hl=-164.410 gl=-132.386 hv=20.041
+[CH]=O CH=O hl=-129.158 gl=-107.858 hv=12.909
+[CH3]C(=O)O CH3C(=O)O hl=-389.737 gl=-318.616 hv=22.709
+[CH2]C(=O)O CH2C(=O)O hl=-359.258 gl=-291.188 hv=17.759
+[CH](=O)O CH(=O)O hl=-332.822 gl=-288.902 hv=*
+[CH3]O CH3O hl=-163.569 gl=-105.767 hv=10.919
+[CH2]O CH2O hl=-151.143 gl=-101.563 hv=7.478
+[CH1]-O CH1O hl=-129.488 gl=-92.099 hv=5.708
+F[CH2]O FCH2O hl=-140.313 gl=-90.883 hv=11.227
+[CH2][NH2] CH2NH2 hl=-15.505 gl=58.085 hv=14.599
+[CH1][NH2] CH1NH2 hl=3.320 gl=63.05 hv=1 hv=11.876
+[CH3][NH1] CH3NH1 hl=5.432 gl=82.47 hv=1 hv=14.452
+[CH2][NH1] CH2NH1 hl=23.101 gl=95.888 hv=14.481
+[CH1][NH1] CH1NH1 hl=26.718 gl=85.001 hv=*
+[CH3]N CH3N hl=54.929 gl=128.602 hv=6.947
+[CH2]N CH2N hl=69.885 gl=132.756 hv=6.918
+c[NH2] cNH2 hl=20.079 gl=68.861 hv=28.453
+[/IWfss1n]1ccccc1 pyridine1 hl=134.062 gl=199.958 hv=31.523 NCON=1
+[/IWfss1n]1ccccc1 pyridine2 hl=139.758 gl=199.288 hv=31.005 NCON=2
+[CH2]C#N CH2C#N hl=88.298 gl=121.544 hv=23.340
+C(=O)[OH] C(=O)O hl=-396.242 gl=-349.439 hv=43.046
+
+[CH2]Cl CH2Cl hl=-73.568 gl=-33.373 hv=13.780
+C(Cl)(Cl)Cl CCl3 hl=-107.188 gl=-53.332 hv=*
+[CH1](Cl)Cl CH1Cl2 hl=-82.921 gl=-35.814 hv=19.208
+C(Cl)Cl CCl2 hl=* gl=* hv=17.574
+[CH1]Cl CH1Cl hl=-63.795 gl=-31.502 hv=11.985
+CCl CCl hl=-57.795 gl=-25.261 hv=9.818
+Cl-C=C Cl-C=C hl=-36.097 gl=-28.148 hv=*
+
+cCc cCc hl=-16.752 gl=-0.596 hv=11.883
+[CH2]N(=O)=O CH2-nitro hl=-66.138 gl=17.963 hv=30.644
+[CH1]N(=O)=O CH1-nitro hl=-59.142 gl=18.088 hv=26.277
+cN(=O)=O cN(=O)=O hl=-7.365 gl=60.161 hv=*
+[CH2][SH] CH2SH hl=-8.253 gl=16.731 hv=14.931
+I I hl=57.546 gl=46.945 hv=14.364
+Br Br hl=1.834 gl=-1.721 hv=11.423
+[CH1]=C CH1=C hl=220.803 gl=217.003 hv=7.751
+C#C C#C hl=227.368 gl=216.328 hv=11.549
+cF cF hl=-161.740 gl=-144.549 hv=4.877
+
+[CH1](=O)N([CH2])[CH2] name hl=* gl=* hv=*
+C(F)(F)F CF3 hl=-679.195 gl=-626.580 hv=8.901
+C(F)F CF2 hl=* gl=* hv=1.860
+CF CF hl=* gl=* hv=8.901
+C(=O)[OD2] C(=O)[OD2] hl=-313.545 gl=-281.495 hv=*
+C(Cl)(Cl)F CCl2F hl=-258.960 gl=-209.337 hv=13.322
+[CH1](Cl)F CH1(Cl)F hl=* gl=* hv=*
+C(Cl)(F)F C(Cl)(F)F hl=-446.835 gl=-392.975 hv=8.301
+F F hl=-223.398 gl=-212.718 hv=*
+
+C(=O)[NH2] C(=O)NH2 hl=-203.188 gl=-136.742 hv=*
+C(=O)[NH][CH3] C(=O)NHCH3 hl=-67.778 gl=* hv=*
+C(=O)[NH][CH2] C(=O)NHCH2 hl=-182.096 gl=* hv=51.787
+C(=O)N([CH3])[CH3] C(=O)N(CH3)2 hl=-189.888 gl=-65.642 hv=*
+C(=O)N([CH3])[CH2] C(=O)N(CH3)CH2 hl=-46.562 gl=* hv=*
+C(=O)ON([CH2])[CH2] C(=O)N(CH2)2 hl=* gl=* hv=*
+// C2H5O2 name hl=-344.125 gl=-241.373 hv=*
+// C2H402 name hl=* gl=* hv=*
+[CH3]S CH3S hl=-2.084 gl=30.222 hv=16.921
+[CH2]S CH2S hl=18.022 gl=38.346 hv=17.117
+[CH1]S CH1S hl=* gl=* hv=13.265
+
+# gl=Furan hv=is hv=kind of hard. The formula is C4H3S, which is
+# gl=a hv=furan hv=with just one connection. The second one was C4H2S
+# gl=which hv=is hv=a furan with two connections
+
+[/IWfss1s]1cccc1 furan1 hl=* gl=* hv=27.966 NCON=1 
+[/IWfss2s]1cccc1 furan2 hl=* gl=* hv=* NCON=2
+

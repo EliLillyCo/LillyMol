@@ -14,7 +14,8 @@
 # limitations under the License. 
 ########################################################################
 IWPROGRAMMES ?= $(PWD)
-UNAME ?= Linux-gcc-6.2.0
+UNAME ?= Linux-gcc-8.3.0
+#Linux-gcc-6.2.0
 
 prefix = $(IWPROGRAMMES)
 exec_prefix = $(prefix)
@@ -128,3 +129,19 @@ copy_exe: do-copy_exe
 library: do-library
 
 copy_library: do-copy_library
+
+
+build_docker:
+	docker build  -f Dockerfile -t lillymolprivate .
+     
+test_lillymol:
+	docker container exec  lilly_mol  bash -c "cd test/ && ./run_all_test.sh"
+
+start_s3:
+	docker-compose up -d
+	sleep 10
+	echo 'run s3 commannd with: aws s3 --endpoint "http://localhost:4566" <s3 command>'
+stop_s3:
+	docker-compose down
+
+	

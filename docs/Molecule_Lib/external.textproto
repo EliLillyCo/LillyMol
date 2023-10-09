@@ -1,0 +1,78 @@
+query_and_value {
+  comment: "terminal"
+  query: "SMARTS:[D0]"
+  value: 1
+}
+query_and_value {
+  comment: "aromatic"
+  query: "SMARTS:a"
+  value: 2
+}
+query_and_value {
+  comment: "nitro"
+  query: "SMARTS:[ND3](=O)=O"
+  value: 13
+}
+query_and_value {
+  comment: "amide carbon or sulfonamide sulphur"
+  query: "SMARTS:[CD3](=O)-[/IWxN]"
+  query: "SMARTS:[SD4](=O)(=O)-[/IWxN]"
+  value: 9
+}
+query_and_value {
+  comment: "nitrogen in amide or sulfonamide"
+  comment: "note that we do not perceive terminal N's"
+  query: "SMARTS:[ND2]-[/IWxCD3]=O"
+  query: "SMARTS:[ND2]-[/IWxSD4](=O)(=O)"
+  value: 10
+}
+query_and_value {
+  comment: "ring carbon aliphatic"
+  query: "SMARTS:[Cx>0]"
+  value: 14
+}
+query_and_value {
+  comment: "ring nitrogen aliphatic"
+  query: "SMARTS:[Nx>0]"
+  value: 15
+}
+query_and_value {
+  comment: "saturated carbon"
+  query: "SMARTS:[CG0]"
+  value: 3
+}
+query_and_value {
+  comment: "saturated nitrogen"
+  query: "SMARTS:[NG0]"
+  value: 4
+}
+query_and_value {
+  comment: "saturated oxygen"
+  query: "SMARTS:[OG0]"
+  value: 5
+}
+query_and_value {
+  comment: "unsaturated carbon"
+  query: "SMARTS:[CG>0]"
+  value: 6
+}
+query_and_value {
+  comment: "unsaturated nitrogen"
+  query: "SMARTS:[NG>0]"
+  value: 7
+}
+query_and_value {
+  comment: "unsaturated oxygen"
+  query: "SMARTS:[OG>0]"
+  value: 8
+}
+query_and_value {
+  comment: "CF3"
+  query: "SMARTS:[CD4](-F)(-F)-F"
+  value: 11
+}
+query_and_value {
+  comment: "Halogen"
+  query: "SMARTS:[F,Cl,Br,I]"
+  value: 12
+}

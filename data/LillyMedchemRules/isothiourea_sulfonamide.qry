@@ -1,0 +1,9 @@
+(0 Query
+  (A C Comment "isothiourea_sulfonamide")
+  (A I version 2)
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (A C smarts "N-C(-S)=N-[C,S](=O)")
+)

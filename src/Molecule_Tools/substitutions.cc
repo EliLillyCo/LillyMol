@@ -3,40 +3,38 @@
   query match
 */
 
+#include <algorithm>
+#include <deque>
+#include <iomanip>
+#include <limits>
+#include <map>
 #include <memory>
 #include <ostream>
-#include <iomanip>
-#include <deque>
 #include <set>
-#include <map>
 #include <vector>
-#include <algorithm>
-#include <limits>
-using std::pair;
-using std::endl;
 
-#include "cmdline.h"
-#include "minmaxspc.h"
-#include "iwbits.h"
-#include "iwhistogram.h"
-#include "iw_stl_hash_map.h"
-#include "iwminmax.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/histogram/iwhistogram.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwmisc/iwminmax.h"
+#include "Foundational/iwmisc/minmaxspc.h"
+#include "Foundational/iwmisc/misc.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/mdl_molecule.h"
+#include "Molecule_Lib/misc2.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
 
 using std::cerr;
-
-#include "molecule.h"
-#include "target.h"
-#include "istream_and_type.h"
-#include "mdl_molecule.h"
-#include "molecule_to_query.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "qry_wstats.h"
-#include "output.h"
-#include "misc2.h"
-#include "path.h"
-
+using std::endl;
 
 static int add_properties_to_groups = 0;
 static const char * prop_header[] = {"natoms", "nrings", "amw", "ro5_ohnh", "ro5_on", "nvrtspsa",  "halogen",  "fcsp3",  "ringsys",  "arring",  "alring", "ringatom",  "mxdst"};
@@ -492,7 +490,8 @@ namespace {
       if (r2idx.find(i) == r2idx.end()) {
         for (int j = 0; j < natoms; ++j) {
           const Atom* atom_j = &mm.atom(j);
-          if (atom_j->isotope() == i+1 && atom_j->atomic_number() == 6 && atom_j->size() == 1) {
+          if (atom_j->isotope() == static_cast<isotope_t>(i+1) &&
+              atom_j->atomic_number() == 6 && atom_j->size() == 1) {
             discard_atoms.add(j);
           }
         }
@@ -716,7 +715,7 @@ Fragments_Found::extra (const IWString & s)
   IW_STL_Hash_Map_int::iterator f = find(s);
 
   if (f == end())
-    insert(pair<IWString, int>(s, 1));
+    insert(std::pair<IWString, int>(s, 1));
   else
     (*f).second++;
 
@@ -779,24 +778,24 @@ class Matched_Atoms_From_Which_to_Grow : public resizable_array<int>
   look for substituents
 */
 
-static Matched_Atoms_From_Which_to_Grow * matched_atoms_from_which_to_grow = NULL;
+static Matched_Atoms_From_Which_to_Grow * matched_atoms_from_which_to_grow = nullptr;
 
 Matched_Atoms_From_Which_to_Grow::Matched_Atoms_From_Which_to_Grow()
 {
   _n = 0;
 
-  _a1 = NULL;
-  _a2 = NULL;
+  _a1 = nullptr;
+  _a2 = nullptr;
 
   return;
 }
 
 Matched_Atoms_From_Which_to_Grow::~Matched_Atoms_From_Which_to_Grow()
 {
-  if (NULL != _a1)
+  if (nullptr != _a1)
     delete [] _a1;
 
-  if (NULL != _a2)
+  if (nullptr != _a2)
     delete [] _a2;
 
   return;
@@ -805,7 +804,7 @@ Matched_Atoms_From_Which_to_Grow::~Matched_Atoms_From_Which_to_Grow()
 int
 Matched_Atoms_From_Which_to_Grow::is_single_attachment_point(int i) const
 {
-  if (NULL == _a2)
+  if (nullptr == _a2)
     return 1;
 
   return _a2[i] < 0;
@@ -814,7 +813,7 @@ Matched_Atoms_From_Which_to_Grow::is_single_attachment_point(int i) const
 int 
 Matched_Atoms_From_Which_to_Grow::build (const const_IWSubstring & s)
 {
-  assert(NULL == _a1);
+  assert(nullptr == _a1);
 
   if (0 == s.length())    // huh
     return 0;
@@ -880,13 +879,13 @@ Matched_Atoms_From_Which_to_Grow::add (const Set_of_Atoms & s)
 int
 Matched_Atoms_From_Which_to_Grow::set_single_attachment_point(int s)
 {
-  assert(NULL == _a1);
+  assert(nullptr == _a1);
 
   _n = 1;
   _a1 = new int[1];
   _a2 = new int[1];
 
-  assert(NULL != _a1 && NULL != _a2);
+  assert(nullptr != _a1 && nullptr != _a2);
 
   _a1[0] = s;
   _a2[0] = -1;
@@ -897,13 +896,13 @@ Matched_Atoms_From_Which_to_Grow::set_single_attachment_point(int s)
 int
 Matched_Atoms_From_Which_to_Grow::set_double_attachment_point(int s1, int s2)
 {
-  assert(NULL == _a1);
+  assert(nullptr == _a1);
 
   _n = 1;
   _a1 = new int[1];
   _a2 = new int[1];
 
-  assert(NULL != _a1 && NULL != _a2);
+  assert(nullptr != _a1 && nullptr != _a2);
 
   _a1[0] = s1;
   _a2[0] = s2;
@@ -925,8 +924,13 @@ static int compute_unique_smiles_of_fragments = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Computes degree of substitution around a substructure match\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
 
   cerr << "  -q <query>     identify features as queries\n";
   cerr << "  -s <smarts>    identify features as smarts\n";
@@ -2021,6 +2025,7 @@ gp_add_scaffold_iw_v2(const Molecule & m,
 }
 
 
+#ifdef NOT_USED_ERQWER
 static int
 gp_add_scaffold (const Molecule & m,
                  int query_number,
@@ -2071,6 +2076,7 @@ gp_add_scaffold (const Molecule & m,
 
   return 1;
 }
+#endif
 
 static int
 identify_substituents (Molecule & m,
@@ -2320,7 +2326,7 @@ substitutions(Molecule & m,
   IWString data_for_jibo;
 
   if (gp_group_r) {
-    IWString ss1 = m.smiles(), ss2 = m.molecule_name();
+    IWString ss1 = m.smiles(), ss2 = m.name();
     gp_group_r->push_molecule(ss1.c_str(), ss2.c_str());
   }
 
@@ -2330,7 +2336,7 @@ substitutions(Molecule & m,
     ;
   else if (data_for_jibo.length())  // information added
   {
-    stream_for_jw << m.smiles() << ' ' << m.molecule_name(); // << '\n';
+    stream_for_jw << m.smiles() << ' ' << m.name(); // << '\n';
     stream_for_jw << data_for_jibo;
     stream_for_jw << '\n';
     stream_for_jw.write_if_buffer_holds_more_than(32768);
@@ -2374,7 +2380,7 @@ substitutions(data_source_and_type<Molecule> & input,
          std::ostream & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -2400,10 +2406,10 @@ substitutions(data_source_and_type<Molecule> & input,
 
 static int
 substitutions(const char * fname,
-         int input_type,
+         FileType input_type,
          std::ostream & output)
 {
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
     input_type = discern_file_type_from_name(fname);
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -2512,7 +2518,7 @@ read_isotopically_labelled_query_molecule (MDL_Molecule & m,
       iso.add(i);
   }
 
-  if (0 == iso.number_elements())
+  if (iso.empty())
   {
     cerr << "No isotopic atoms in '" << m.name() << "'\n";
     return 0;
@@ -2559,7 +2565,7 @@ read_isotopically_labelled_query_molecules (data_source_and_type<MDL_Molecule> &
                       resizable_array_p<Substructure_Hit_Statistics> & queries)
 {
   MDL_Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<MDL_Molecule> free_m(m);
 
@@ -2574,13 +2580,13 @@ read_isotopically_labelled_query_molecules (data_source_and_type<MDL_Molecule> &
 }
 
 static int
-read_isotopically_labelled_query_molecules (const const_IWSubstring & fname,
+read_isotopically_labelled_query_molecules(const const_IWSubstring & fname,
                       resizable_array_p<Substructure_Hit_Statistics> & queries)
 {
-  assert(0 == queries.number_elements());
+  assert(queries.empty());
 
-  int input_type = discern_file_type_from_name(fname);
-  assert (0 != input_type);
+  const FileType input_type = discern_file_type_from_name(fname);
+  assert (FILE_TYPE_INVALID != input_type);
 
   data_source_and_type<MDL_Molecule> input(input_type, fname);
   if (! input.good())
@@ -2600,7 +2606,6 @@ read_isotopically_labelled_query_molecules (const const_IWSubstring & fname,
 
   return read_isotopically_labelled_query_molecules(input, queries);
 }
-
 
 static void
 build_header (IWString & header)
@@ -2908,7 +2913,7 @@ substitutions (int argc, char ** argv)
       cerr << "Will NOT write NO_MATCH data\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -2923,7 +2928,7 @@ substitutions (int argc, char ** argv)
   // If we are reading isotopically labelled molecules, the
   // matched_atoms_from_which_to_grow array will already have been set up
 
-  if (NULL == matched_atoms_from_which_to_grow)
+  if (nullptr == matched_atoms_from_which_to_grow)
     matched_atoms_from_which_to_grow = new Matched_Atoms_From_Which_to_Grow[nq];
 
   // We can optionally keep track of the substituents found
@@ -2939,7 +2944,7 @@ substitutions (int argc, char ** argv)
       }
     }
     else
-      stream_for_substituents.add_output_type(SMI);
+      stream_for_substituents.add_output_type(FILE_TYPE_SMI);
 
     const_IWSubstring s = cl.string_value('S');
 
@@ -2970,7 +2975,7 @@ substitutions (int argc, char ** argv)
       }
     }
     else
-      stream_for_molecules_not_matching.add_output_type(SMI);
+      stream_for_molecules_not_matching.add_output_type(FILE_TYPE_SMI);
 
     const_IWSubstring s = cl.string_value('Z');
 
@@ -3093,7 +3098,7 @@ substitutions (int argc, char ** argv)
       cerr << "Tibault output written to '" << t << "'\n";
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(2);

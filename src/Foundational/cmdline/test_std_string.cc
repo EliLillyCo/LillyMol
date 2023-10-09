@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string>
-using namespace std;
 
 #include "cmdline.h"
 

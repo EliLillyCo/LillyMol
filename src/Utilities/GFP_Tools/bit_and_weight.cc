@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "bit_and_weight.h"
 
 void
@@ -30,10 +28,10 @@ Fixed_and_Sparse_Bit_and_Weight::Fixed_and_Sparse_Bit_and_Weight()
 
 Fixed_and_Sparse_Bit_and_Weight::~Fixed_and_Sparse_Bit_and_Weight()
 {
-  if (NULL != _fp)
+  if (nullptr != _fp)
     delete [] _fp;
 
-  if (NULL != _sparsefp)
+  if (nullptr != _sparsefp)
     delete [] _sparsefp;
 
   return;

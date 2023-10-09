@@ -129,7 +129,7 @@ move_in_from_left (T ** t,
 template <typename T>
 void
 #ifdef IWQS_USER_FUNCTION_SUPPLIED
-IWSORT_FN (T ** t, int n)
+IWSORT_FN (T ** t, int n,
          int (*mfn) (T &, T &))
 #else
 IWSORT_FN (T ** t, int n)

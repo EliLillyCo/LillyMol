@@ -1,0 +1,306 @@
+# Values from Abraham and Platts, J Org Chem 2001,66,3484-349  
+
+# Aromatic things from table
+
+# omit queries that contribute only very small amount  
+
+[CD1]-[CD4](-[CD1])(-[CD1])-a  ap_sa=0.0 ap_sb=0.04 ISO=8
+
+# -C#C  
+
+[CD1v3]#C-a  ap_sa=0.12 ap_sb=0.10  ISO=12
+
+F-a  ap_sa=0.0 ap_sb=-0.04  ISO=17
+Cl-a  ap_sa=0.0 ap_sb=-0.07  ISO=18
+Br-a  ap_sa=0.0 ap_sb=-0.05  ISO=19
+I-a  ap_sa=0.0 ap_sb=-0.02 ISO=20
+
+# CF3
+
+F-[CD4](-F)(-F)-a  ap_sa=0.0 ap_sb=-0.03  ISO=21
+
+# -CCl3 
+
+Cl-[CD4](-Cl)(-Cl)-a  ap_sa=0.0 ap_sb=0.09  ISO=24
+
+# -OMe
+
+[OD2](-[CD1])-a  ap_sa=0.0 ap_sb=0.15  ISO=27
+[OD2](-[CD2]-[CD1])-a  ap_sa=0.0 ap_sb=0.18  ISO=28
+
+[OD2](-[CD1])-[CD2H2]-a  ap_sa=0.0 ap_sb=0.34  ISO=29
+
+[OD1]=[CD2H]-a  ap_sa=0.0 ap_sb=0.25  ISO=30
+
+# -COMe 
+
+[OD1]=[CD3](-[CD1])-a  ap_sa=0.00 ap_sb=0.34  ISO=32
+[OD1]=[CD3](-[CD2]-[CD1])-a  ap_sa=0.00 ap_sb=0.37  ISO=33
+
+# -CH2CO2Me 
+
+[OD1]=C(-O-[CD1])-[CD2H2]-a  ap_sa=0.0 ap_sb=0.52  ISO=36
+
+[OD1]=C(-O-[CD1])-a  ap_sa=0.0 ap_sb=0.32 ISO=38
+[OD1]=C(-O-[CD2]-[CD1])-a  ap_sa=0.0 ap_sb=0.32 ISO=39
+
+[OD1]=C(-[OD2]-[CD3](-[CD1])-[CD1])-a ap_sa=0.0 ap_sb=0.34 ISO=40
+[OD1]=C(-[OD2]-[CD1])-[CD2]-a  ap_sa=0.0 ap_sb=0.44 ISO=42
+[OD1]=C(-[OD2]-[CD2]-[CD1])-[CD2]-a  ap_sa=0.0 ap_sb=0.43 ISO=43
+
+[OD1]=C(-[CD1])-[OD2]-[CD2]-a  ap_sa=0.0 ap_sb=0.51 ISO=46
+
+[ND1v3]#C-a  ap_sa=0.0 ap_sb=0.19  ISO=50
+
+[ND1v3]#C-[CD2H2]-a  ap_sa=0.0 ap_sb=0.31  ISO=51
+
+[ND1H2]-a  ap_sa=0.26 ap_sb=0.27  ISO=53
+
+[ND2H1](-[CD1])-a  ap_sa=0.17 ap_sb=0.29  ISO=54
+[ND2H1](-[CD2H2]-[CD1])-a  ap_sa=0.17 ap_sb=0.29  ISO=55
+[ND3](-[CD1])(-[CD1])-a  ap_sa=0.00 ap_sb=0.27  ISO=56
+[ND3](-[CD2H2]-[CD1])(-[CD2H2]-[CD1])-a  ap_sa=0.00 ap_sb=0.27  ISO=57
+[ND3](-[CD1])(-[CD1])-[CD2]-a  ap_sa=0.00 ap_sb=0.55  ISO=58
+
+# -NH.CO.H 
+
+[OD1]=[CD2]-[ND2H]-a  ap_sa=0.5 ap_sb=0.36  ISO=59
+[OD1]=[CD3](-[CD1])-[ND2H]-a  ap_sa=0.5 ap_sb=0.53 ISO=60
+[OD1]=[CD3](-[CD2H2]-[CD1])-[ND2H]-a  ap_sa=0.5 ap_sb=0.55  ISO=61
+
+# -NH.CO.NH2 
+
+[ND1H2]-C(=O)-[NH]-a  ap_sa=0.77 ap_sb=0.63 ISO=65
+
+# -NH.CO.NHMe 
+
+[ND2H1](-[CD1])-C(=O)-[NH]-a  ap_sa=0.70 ap_sb=0.66  ISO=66
+[ND3](-[CD1])(-[CD1])-C(=O)-[NH]-a  ap_sa=0.36 ap_sb=0.83 ISO=67
+
+# -O.CO.NH2 
+
+[NH2]-C(=O)-O-a  ap_sa=0.50 ap_sb=0.55 ISO=69
+
+[ND3v5](=O)(=O)-a  ap_sa=0.0 ap_sb=0.14 ISO=70
+
+# -CONH2 
+
+[ND1H2]-C(=O)-a  ap_sa=0.49 ap_sb=0.53 ISO=71
+[ND2H1](-[CD1])-C(=O)-a  ap_sa=0.40 ap_sb=0.57 ISO=72
+[ND2H1](-[CD2]-[CD1])-C(=O)-a  ap_sa=0.39 ap_sb=0.58 ISO=73
+
+# -CONMe2 
+
+[OD1]=C(-[ND3](-[CD1])-[CD1])-a  ap_sa=0.0 ap_sb=0.84 ISO=74
+[OD1]=C(-[ND3](-[CD2H2]-[CD1])-[CD2H2]-[CD1])-a  ap_sa=0.0 ap_sb=0.96 ISO=75
+
+# -CH2-CONH2 
+
+[ND1H2]-C(=O)-[CD2H2]-a  ap_sa=0.44 ap_sb=0.75 ISO=79
+[ND1H2]-C(=O)-[CD2H2]-[CD2H2]-a  ap_sa=0.52 ap_sb=0.66 ISO=80
+[OD1]=C(-[CD1])-[NH]-[CD2H2]-a  ap_sa=0.32 ap_sb=0.61 ISO=81
+
+# -S  
+
+[SH]-a  ap_sa=0.09 ap_sb=0.02 ISO=85
+[SD2](-[CD1])-a  ap_sa=0.00 ap_sb=0.19 ISO=86
+[SH]-[CD2H2]-a  ap_sa=0.00 ap_sb=0.23 ISO=87
+[SD1]=N=C-a  ap_sa=0.00 ap_sb=-0.03 ISO=88
+[SD1]=C(-[ND1H2])-a  ap_sa=0.46 ap_sb=0.27 ISO=89
+[SD1]=C(-[ND1H2])-[ND2H]-a  ap_sa=0.49 ap_sb=0.64 ISO=91
+[SD3](=O)(-[CD1])-a  ap_sa=0.00 ap_sb=0.83 ISO=92
+[SD4](=O)(=O)(-[CD1])-a  ap_sa=0.00 ap_sb=0.62 ISO=93
+[SD4](=O)(=O)(-[ND1])-a  ap_sa=0.55 ap_sb=0.66 ISO=95
+[SD4](=O)(=O)(-[ND2]-[CD1])-a  ap_sa=0.30 ap_sb=0.68 ISO=96
+[SD4](=O)(=O)(-[ND3](-[CD1])-[CD1])-a  ap_sa=0.00 ap_sb=0.72 ISO=97
+
+# -OH 
+
+[OD1H]-a  ap_sa=0.60 ap_sb=0.16 ISO=102
+[OD1H]-[CD2]-a  ap_sa=0.39 ap_sb=0.42 ISO=103
+[OD1H]-[CD2]-[CD2]-a  ap_sa=0.30 ap_sb=0.50 ISO=104
+[OD1H]-[CD2]-[CD2]-[CD2]-a  ap_sa=0.30 ap_sb=0.53 ISO=105
+
+# -CO2H 
+
+[OD1]=C(-[OD1])-a  ap_sa=0.59 ap_sb=0.26 ISO=109
+[OD1]=C(-[OD1])-[CD2]-a  ap_sa=0.60 ap_sb=0.47 ISO=110
+
+# Do aliphatic things section  
+
+F-[/IWxC]             ap_sa=0.0 ap_sb=0.10 ISO=112
+[ClD1]-[/IWxC]        ap_sa=0.0 ap_sb=0.10 ISO=113
+[BrD1]-[/IWxC]        ap_sa=0.0 ap_sb=0.12 ISO=114
+[ID1]-[/IWxC]         ap_sa=0.0 ap_sb=0.15 ISO=115
+
+Cl-[CD3H](-Cl)-[/IWxC] ap_sa=0.10 ap_sb=0.10 ISO=116
+
+# omit -CHBr2 
+
+Cl-[CD4](-Cl)(-Cl)-[/IWxC] ap_sa=0.0 ap_sb=0.09 ISO=118
+
+[CH2]=[CD2]-[/IWxC] ap_sa=0.0 ap_sb=0.07 ISO=119
+[CD1H1]#C-[/IWxC]   ap_sa=0.12 ap_sb=0.10 ISO=120
+
+[CD1H3]-[CD2H2]-[CD2]#C-[/IWxC] ap_sa=0.0 ap_sb=0.15 ISO=121
+[CD1H3]-O-[/IWxC]    ap_sa=0.0 ap_sb=0.44 ISO=122
+[CD1H3]-[CD2H2]-O-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=123
+
+# for this one, use the a2 value 
+
+[CH3D1]-[CD4](-[CD1H3])(-[CD1H3])-O-[/IWxC] ap_sa=0.0 ap_sb=0.49 ISO=124
+
+# skip (Me)-OCH(CF3)2 
+
+# Rearrange the order so that the amides don't get hit by the aldehyde querie  
+
+# -NHCOMe 
+
+[ND2H](-C(=O)-[CD1])-[/IWxC] ap_sa=0.40 ap_sb=0.74 ISO=156
+
+# -N(Me)COMe 
+
+[ND3](-[CD1])(-C(=O)-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.78 ISO=157
+
+# -CONH2 
+
+[OD1]=[CD3](-[ND1H2])-[/IWxC] ap_sa=0.55 ap_sb=0.68 ISO=158
+
+# -CONHMe 
+
+[OD1]=[CD3](-[ND2H]-[CD1])-[/IWxC] ap_sa=0.40 ap_sb=0.71 ISO=159
+
+# -CONHMe2 
+
+[OD1]=[CD3](-[ND3](-[CD1])-[CD1])-[/IWxC] ap_sa=0.40 ap_sb=0.78 ISO=160
+
+# -OCONH2 
+
+[OD1]=C(-[ND1])-O-[/IWxC] ap_sa=0.35 ap_sb=0.64 ISO=165
+[OD1]=C(-[ND2]-[CD2]-[CD1])-O-[/IWxC] ap_sa=0.35 ap_sb=0.61 ISO=166
+[OD1]=C(-[ND3](-[CD1])-[CD1])-O-[/IWxC] ap_sa=0.35 ap_sb=0.64 ISO=167
+[OD1]=C(-[ND3](-[CD2]-[CD1])-[CD2]-[CD1])-O-[/IWxC] ap_sa=0.35 ap_sb=0.68 ISO=168
+
+# -N=[CH]NMe2 
+
+[ND2](=[CH]-[ND3](-[CD1])-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.80 ISO=169
+
+
+# -OCH=CH2 
+
+[CD1H2]=[CD2]-O-[/IWxC] ap_sa=0.0 ap_sb=0.41 ISO=125
+
+# -OCH2CH=CH2 
+
+[CD1H2]=[CD2H]-[CD2H2]-O-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=127
+
+[OD1]=[CD3](-O-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=135
+
+# -CO2Et 
+
+[OD1]=[CD3](-O-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=136
+
+# -CHO 
+
+[OD1]=[CD2H]-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=128
+
+# -COMe 
+
+[CD1H3]-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.51 ISO=129
+
+# -COEt 
+
+[CD1H3]-[CD2H2]-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.51 ISO=130
+
+# -COCF3   use the b2 value 
+
+F-[CD4](-F)(-F)-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.22 ISO=131
+
+# -COCCl3 
+
+Cl-[CD4](-Cl)(-Cl)-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.24 ISO=132
+
+# -coxhcl  
+
+Cl-[CD3](-Cl)-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.29 ISO=133
+
+# -coch2cl 
+
+Cl-[CD2H2]-[CD3](=O)-[/IWxC] ap_sa=0.0 ap_sb=0.38 ISO=134
+
+# -CO2Me 
+
+# -O.COH 
+
+[OD1]=[CD2H]-O-[/IWxC] ap_sa=0.0 ap_sb=0.38 ISO=137
+
+# -O.COMe 
+
+[OD1]=[CD3](-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=138
+
+# -O.COEt 
+
+[OD1]=[CD3](-[CD2]-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=139
+
+# -O.COi-Pr 
+
+[OD1]=[CD3](-[CD3H](-[CD1])-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.47 ISO=140
+
+# -O.COt-Bu 
+
+[OD1]=[CD3](-[CD4](-[CD1])(-[CD1])-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.45 ISO=141
+
+# -O.COCH2F 
+
+[OD1]=[CD3](-[CD2H2]-F)-O-[/IWxC] ap_sa=0.0 ap_sb=0.40 ISO=142
+[OD1]=[CD3](-[CD2H2]-Cl)-O-[/IWxC] ap_sa=0.0 ap_sb=0.38 ISO=143
+[OD1]=[CD3](-[CD4](-F)(-F)-F)-O-[/IWxC] ap_sa=0.0 ap_sb=0.25 ISO=144
+[OD1]=[CD3](-[CD4](-Cl)(-Cl)-Cl)-O-[/IWxC] ap_sa=0.0 ap_sb=0.36  ISO=145
+[OD1]=[CD3](-[CD2]#[CD1])-O-[/IWxC] ap_sa=0.19 ap_sb=0.37 ISO=146
+
+# -O.CO.OEt 
+
+[OD1]-[CD3](-O-[CD2]-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.55 ISO=147
+
+F-C(=O)-[/IWxC] ap_sa=0.0 ap_sb=0.21 ISO=148
+
+[ND1]#C-[/IWxC] ap_sa=0.0 ap_sb=0.36 ISO=149
+[ND1H2]-[/IWxC] ap_sa=0.16 ap_sb=0.61 ISO=150
+[HD2H](-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.08 ap_sb=0.69 ISO=151
+[ND3](-[CD1])(-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.64 ISO=152
+[ND3](-[CD2H2]-[CD1])(-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.79 ISO=153
+
+# - NO2 
+
+[ND3v5](=O)(=O)-[/IWxC] ap_sa=0.00 ap_sb=0.31 ISO=154
+
+[SH]-[/IWxC] ap_sa=0.0 ap_sb=0.24 ISO=170
+
+[SD2](-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.32 ISO=171
+
+# Paper says butyl, let's assume propyl is the same  
+
+[SD2](-[CD2H2]-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.32 ISO=171
+
+# -OSO2OEt 
+
+[SD4](=O)(=O)(-O-[CD2]-[CD1])-O-[/IWxC] ap_sa=0.0 ap_sb=0.41 ISO=176
+
+# -SOMe 
+
+[SD3](=O)(-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.97 ISO=177
+
+# -SO2Me 
+
+[SD4](=O)(=O)(-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.76 ISO=179
+[SD4](=O)(=O)(-[CD2H2]-[CD1])-[/IWxC] ap_sa=0.0 ap_sb=0.76 ISO=180
+
+# -NCS 
+
+[ND2](=C=S)-[/IWxC] ap_sa=0.0 ap_sb=0.22 ISO=189
+
+[OD1]=[CD3](-[OD1])-[/IWxC] ap_sa=0.60 ap_sb=0.45 ISO=197
+
+[OD1H]-[/IWxCD2]  ap_sa=0.37 ap_sb=0.48 ISO=194
+[OD1H]-[/IWxCD3]  ap_sa=0.33 ap_sb=0.56 ISO=195
+[OD1H]-[/IWxCD4]  ap_sa=0.31 ap_sb=0.60 ISO=196

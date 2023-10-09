@@ -1,0 +1,7 @@
+(0 Query
+  (A C Comment "too_many_aromatic_rings_in_ring_system")
+  (A I Version 2)
+  (0 Ring_System_Specifier
+    (A I min_aromatic_ring_count 4)
+  )
+)

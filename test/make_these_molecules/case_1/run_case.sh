@@ -27,8 +27,8 @@ if [ ! -x "$command" ]; then
     exit 1
 fi
 
-out=test.smi
-cmp_out="$test_cmd_top/$case/out/test.smi"
+out='stdout'
+cmp_out="$test_cmd_top/$case/out/${out}"
 
 echo "Testing: $command"
 

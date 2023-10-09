@@ -1,9 +1,10 @@
-#ifndef IW_PATH_H
-#define IW_PATH_H 1
+#ifndef MOLECULE_LIB_PATH_H_
+#define MOLECULE_LIB_PATH_H_
 
 #include <iostream>
 
 #include "molecule.h"
+#include "path.h"
 
 class Path : public resizable_array<atom_number_t>
 {
@@ -58,6 +59,8 @@ class Ring : public Set_of_Atoms
 
     int ok () const;
 
+    int DebugPrint(std::ostream& output) const;
+
     int ring_number () const { return _ring_number;};
     void set_ring_number (int n) { _ring_number = n;};
 
@@ -101,7 +104,7 @@ class Ring : public Set_of_Atoms
     int  spiro_fused (const int * ring_membership) const;
     int  fused_ring_check_for_spiro_fusion (const int *) const;
 
-    int  end () const { return _number_elements;}    // used by the iterator
+    int  zend () const { return _number_elements;}    // used by the iterator
 
 // In aromatic.cc I need a means of computing whether an SSSR ring is
 // fused to a non-sssr ring.  The non-sssr ring will not be in the
@@ -191,4 +194,4 @@ extern int find_adjacent_atoms_in_common_between_two_rings (const Ring & ri,
                       atom_number_t & a1,
                       atom_number_t & a2);
 
-#endif
+#endif  // MOLECULE_LIB_PATH_H_

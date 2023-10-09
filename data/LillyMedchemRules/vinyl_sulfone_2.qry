@@ -1,0 +1,38 @@
+(5 Query
+  (A C Comment "vinyl_sulfone_2")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 4)
+    (A I nbonds 6)
+    (A I nrings 0)
+    (A I aromatic 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I formal_charge 0)
+    (A I double_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I formal_charge 0)
+    (A I aromatic 0)
+    (A I attached_heteroatom_count 1)
+    (A I single_bond 0)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I min_nbonds 2)
+    (A I aromatic 0)
+    (A I attached_heteroatom_count 0)
+    (A I double_bond 3)
+  )
+)

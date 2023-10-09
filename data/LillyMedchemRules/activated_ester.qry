@@ -1,0 +1,28 @@
+# RuleClass acylating
+# SubClass acyl-QQ
+
+(0 Query
+  (A I Version 2)
+  (A C Comment "activated_ester")
+  (A I unique_embeddings_only 1)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number (6 16 15))
+    (A I min_ncon 3)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number (7 16 15))
+    (A I single_bond 2)
+  )
+)

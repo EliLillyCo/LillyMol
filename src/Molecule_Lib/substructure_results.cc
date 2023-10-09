@@ -1,11 +1,16 @@
 #include <stdlib.h>
-#include <memory>
 #include <algorithm>
+#include <iostream>
+#include <memory>
+
+#include "Foundational/iwmisc/misc.h"
 
 #include "substructure.h"
 #include "target.h"
-#include "misc.h"
 #include "misc2.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   June 2010. We get undesirable behaviour when there are multiple fragments each
@@ -23,15 +28,15 @@ set_remove_hits_not_in_largest_fragment_behaviour(int s)
   remove_hits_not_in_largest_fragment_behaviour = s;
 }
 
-Substructure_Results::Substructure_Results ()
+Substructure_Results::Substructure_Results()
 {
   _save_matched_atoms = 1;
 
-  _symmetry_class = NULL;
+  _symmetry_class = nullptr;
 
-  _already_matched = NULL;
+  _already_matched = nullptr;
 
-  _just_matched = NULL;
+  _just_matched = nullptr;
 
   _save_query_atoms_matched = 1;
 
@@ -42,19 +47,19 @@ Substructure_Results::Substructure_Results ()
   return;
 }
 
-Substructure_Results::~Substructure_Results ()
+Substructure_Results::~Substructure_Results()
 {
-  if (NULL != _already_matched)
+  if (nullptr != _already_matched)
     delete [] _already_matched;
 
-  if (NULL != _just_matched)
+  if (nullptr != _just_matched)
     delete [] _just_matched;
 
   return;
 }
 
 int
-Substructure_Results::ok () const
+Substructure_Results::ok() const
 {
   return 1;
 }
@@ -72,13 +77,13 @@ Substructure_Results::return_code() const
 }
 
 int
-Substructure_Results::copy_embeddings (const Substructure_Results & rhs)
+Substructure_Results::copy_embeddings(const Substructure_Results & rhs)
 {
-  _symmetry_class = NULL;
+  _symmetry_class = nullptr;
 
-  _already_matched = NULL;    // should we check to see if it needs to be deleted??
+  _already_matched = nullptr;    // should we check to see if it needs to be deleted??
 
-  _just_matched = NULL;
+  _just_matched = nullptr;
 
   _save_matched_atoms = rhs._save_matched_atoms;
 
@@ -114,7 +119,7 @@ Substructure_Results::copy_embeddings (const Substructure_Results & rhs)
 */
 
 int
-Substructure_Results::add_embeddings (const Substructure_Results & rhs)
+Substructure_Results::add_embeddings(const Substructure_Results & rhs)
 {
   int ne = rhs._embedding.number_elements();
 
@@ -144,7 +149,7 @@ Substructure_Results::add_embeddings (const Substructure_Results & rhs)
 }
 
 int
-Substructure_Results::set_save_matched_atoms (int s)
+Substructure_Results::set_save_matched_atoms(int s)
 {
   _save_matched_atoms = s;
 
@@ -152,7 +157,7 @@ Substructure_Results::set_save_matched_atoms (int s)
 }
 
 int
-Substructure_Results::set_save_query_atoms_matched (int s)
+Substructure_Results::set_save_query_atoms_matched(int s)
 {
   _save_query_atoms_matched = s;
 
@@ -189,7 +194,7 @@ Substructure_Results::initialise(int m)
 */
 
 void
-Substructure_Results::reset ()
+Substructure_Results::reset()
 {
   _hits_found = 0;
   _embedding.resize_keep_storage(0);
@@ -197,18 +202,18 @@ Substructure_Results::reset ()
   if (_save_query_atoms_matched)
     _query_atoms_matched.resize_keep_storage(0);
 
-  _symmetry_class = NULL;
+  _symmetry_class = nullptr;
 
-  if (NULL != _already_matched)
+  if (nullptr != _already_matched)
   {
     delete [] _already_matched;
-    _already_matched = NULL;
+    _already_matched = nullptr;
   }
 
-  if (NULL != _just_matched)
+  if (nullptr != _just_matched)
   {
     delete [] _just_matched;
-    _just_matched = NULL;
+    _just_matched = nullptr;
   }
 
   _hits_per_fragment.resize_keep_storage(0);
@@ -224,7 +229,7 @@ Substructure_Results::reset ()
 int
 Substructure_Results::embedding_is_unique(const Set_of_Atoms & new_embedding)
 {
-  if (NULL == _just_matched)
+  if (nullptr == _just_matched)
     _just_matched = new int[_atoms_in_target_molecule];
 
   std::fill_n(_just_matched, _atoms_in_target_molecule, 0);
@@ -242,9 +247,9 @@ Substructure_Results::embedding_is_unique(const Set_of_Atoms & new_embedding)
 }
 
 int 
-Substructure_Results::embedding_overlaps_previous_embeddings (const Set_of_Atoms & new_embedding)
+Substructure_Results::embedding_overlaps_previous_embeddings(const Set_of_Atoms & new_embedding)
 {
-  if (NULL == _already_matched)
+  if (nullptr == _already_matched)
   {
     _already_matched = new_int(_atoms_in_target_molecule);
     new_embedding.set_vector(_already_matched, 1);
@@ -268,7 +273,7 @@ Substructure_Results::add_embedding(Set_of_Atoms * e,
   if (_hits_found > 9999 && 0 == _hits_found % 10000)
     cerr << "Query got " << _hits_found << " embeddings so far\n";
 
-//cerr << "_save_matched_atoms " << _save_matched_atoms << " _save_query_atoms_matched " << _save_query_atoms_matched << endl;
+//cerr << "_save_matched_atoms " << _save_matched_atoms << " _save_query_atoms_matched " << _save_query_atoms_matched << '\n';
 
   if (! _save_matched_atoms)
     return 1;
@@ -301,7 +306,7 @@ Substructure_Results::add_embedding(Set_of_Atoms * e,
 //#define DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
 
 int
-Substructure_Results::_are_symmetry_related (const Set_of_Atoms & e1, const Set_of_Atoms & e2) const
+Substructure_Results::_are_symmetry_related(const Set_of_Atoms & e1, const Set_of_Atoms & e2) const
 {
 
   const int n = e1.number_elements();
@@ -334,7 +339,7 @@ Substructure_Results::_are_symmetry_related (const Set_of_Atoms & e1, const Set_
 */
 
 int
-Substructure_Results::embedding_is_symmetry_related (const Set_of_Atoms & new_embedding) const
+Substructure_Results::embedding_is_symmetry_related(const Set_of_Atoms & new_embedding) const
 {
   assert (_symmetry_class);
 
@@ -383,21 +388,21 @@ class QamSa
     Set_of_Atoms        * _sa;
     int                   _sort_value;
   public:
-    QamSa (Query_Atoms_Matched * qam, Set_of_Atoms * s) : _qam (qam), _sa (s) {}
-    QamSa () { _qam = NULL; _sa = NULL; _sort_value = 0;}
+    QamSa(Query_Atoms_Matched * qam, Set_of_Atoms * s) : _qam(qam), _sa(s) {}
+    QamSa() { _qam = nullptr; _sa = nullptr; _sort_value = 0;}
 
-    void set_sort_value (int s) { _sort_value = s;}
-    int  sort_value () const { return _sort_value;}
+    void set_sort_value(int s) { _sort_value = s;}
+    int  sort_value() const { return _sort_value;}
 
-    Query_Atoms_Matched * qam () const { return _qam;}
-    Set_of_Atoms * sa () const { return _sa;}
+    Query_Atoms_Matched * qam() const { return _qam;}
+    Set_of_Atoms * sa() const { return _sa;}
 
-    void set_qam (Query_Atoms_Matched * q) { _qam = q;}
-    void set_sa  (Set_of_Atoms * s)        { _sa  = s;}
+    void set_qam(Query_Atoms_Matched * q) { _qam = q;}
+    void set_sa(Set_of_Atoms * s)        { _sa  = s;}
 };
 
 static int
-QamSa_comparitor (const QamSa * q1, const QamSa * q2)
+QamSa_comparitor(const QamSa * q1, const QamSa * q2)
 {
   if (q1->sort_value() < q2->sort_value())
     return 1;
@@ -411,7 +416,7 @@ QamSa_comparitor (const QamSa * q1, const QamSa * q2)
 //#define DEBUG_DO_SORT_BY_PREFERENCE_VALUE
 
 int
-Substructure_Results::sort_by_preference_value ()
+Substructure_Results::sort_by_preference_value()
 {
   assert (_save_query_atoms_matched);
 
@@ -425,7 +430,7 @@ Substructure_Results::sort_by_preference_value ()
     Set_of_Atoms * s = _embedding[i];
 
     cerr << "Embedding " << i << " preference value " << qam->preference_value() << 
-            " atoms " << (*s) << endl;
+            " atoms " << (*s) << '\n';
   }
 #endif
 
@@ -437,7 +442,7 @@ Substructure_Results::sort_by_preference_value ()
     t.set_qam(_query_atoms_matched[i]);
     t.set_sa (_embedding[i]);
     t.set_sort_value(_query_atoms_matched[i]->preference_value());
-//  cerr << "Preference " << t.sort_value() << endl;
+//  cerr << "Preference " << t.sort_value() << '\n';
   }
 
   ::qsort(qamsa, ne, sizeof(QamSa), (int (*) (const void *, const void *) ) QamSa_comparitor);
@@ -458,7 +463,7 @@ Substructure_Results::sort_by_preference_value ()
     Set_of_Atoms * s = _embedding[i];
 
     cerr << "Embedding " << i << " preference value " << qam->preference_value() << 
-            " atoms " << (*s) << endl;
+            " atoms " << (*s) << '\n';
   }
 #endif
 
@@ -475,7 +480,7 @@ Substructure_Results::sort_by_preference_value ()
 */
 
 int
-Substructure_Results::remove_hits_violating_distance (Molecule_to_Match & target,
+Substructure_Results::remove_hits_violating_distance(Molecule_to_Match & target,
                               const Min_Max_Specifier<int> & distance_between_hits,
                               int ncheck)
 {
@@ -507,7 +512,7 @@ Substructure_Results::remove_hits_violating_distance (Molecule_to_Match & target
 
 #ifdef DEBUG_REMOVE_HITS_VIOLATING_DISTANCE
       cerr << "Hit " << i << " atom " << ai << " and hit " << j << " atom " << aj << 
-              " are separated by " << d << " bonds, matches = " << distance_between_hits.matches(d) << endl;
+              " are separated by " << d << " bonds, matches = " << distance_between_hits.matches(d) << '\n';
 #endif
 
       if (! distance_between_hits.matches(d))
@@ -533,11 +538,11 @@ Substructure_Results::remove_hits_violating_distance (Molecule_to_Match & target
 }
 
 static int
-embeddings_too_close (Molecule & m,
-                      const Set_of_Atoms & e1,
-                      const Set_of_Atoms & e2,
-                      const Min_Max_Specifier<int> & distance_between_hits,
-                      int ncheck)
+embeddings_too_close(Molecule & m,
+                     const Set_of_Atoms & e1,
+                     const Set_of_Atoms & e2,
+                     const Min_Max_Specifier<int> & distance_between_hits,
+                     int ncheck)
 {
   int n1 = e1.number_elements();
   int n2 = e2.number_elements();
@@ -574,7 +579,7 @@ embeddings_too_close (Molecule & m,
 }
 
 int
-Substructure_Results::_remove_hits_violating_distance_check_all_atoms (Molecule & m,
+Substructure_Results::_remove_hits_violating_distance_check_all_atoms(Molecule & m,
                               const Min_Max_Specifier<int> & distance_between_hits,
                               int ncheck)
 {
@@ -604,7 +609,7 @@ Substructure_Results::_remove_hits_violating_distance_check_all_atoms (Molecule 
     {
       const Set_of_Atoms * ej = _embedding[j];
 
-//    cerr << " i = " << i << " ai " << ei->item(0) << " j = " << j << " aj " << ej->item(0) << endl;
+//    cerr << " i = " << i << " ai " << ei->item(0) << " j = " << j << " aj " << ej->item(0) << '\n';
 
       if (! embeddings_too_close(m, *ei, *ej, distance_between_hits, ncheck))
         continue;
@@ -628,7 +633,7 @@ Substructure_Results::_remove_hits_violating_distance_check_all_atoms (Molecule 
 }
 
 int
-Substructure_Results::remove_hits_not_in_largest_fragment (Molecule_to_Match & target)
+Substructure_Results::remove_hits_not_in_largest_fragment(Molecule_to_Match & target)
 {
   Molecule * m = target.molecule();
 
@@ -670,7 +675,7 @@ Substructure_Results::remove_hits_not_in_largest_fragment (Molecule_to_Match & t
 }
 
 int
-Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest (Molecule & m)
+Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest(Molecule & m)
 {
   int nf = m.number_fragments();
   assert (nf > 1);
@@ -701,7 +706,7 @@ Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest (Mol
   cerr << atoms_in_largest_fragment << " atoms in largest fragment\n";
   for (int i = 0; i < nf; i++)
   {
-    cerr << "frag " << i << " largest " << is_largest[i] << endl;
+    cerr << "frag " << i << " largest " << is_largest[i] << '\n';
   }
 #endif
 
@@ -714,7 +719,7 @@ Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest (Mol
     atom_number_t j = e->item(0);
 
 #ifdef DEBUG_REMOVE_HITS_NOT_IN_LARGEST_FRAGMENT_MULTIPLE_LARGEST
-    cerr << "Embedding " << i << " in frag " << m.fragment_membership(j) << endl;
+    cerr << "Embedding " << i << " in frag " << m.fragment_membership(j) << '\n';
 #endif
 
     if (0 == is_largest[m.fragment_membership(j)])
@@ -725,14 +730,14 @@ Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest (Mol
   }
 
 #ifdef DEBUG_REMOVE_HITS_NOT_IN_LARGEST_FRAGMENT_MULTIPLE_LARGEST
-  cerr << "Embedding contains " << _embedding.number_elements() << endl;
+  cerr << "Embedding contains " << _embedding.number_elements() << '\n';
 #endif
 
   return rc;
 }
 
 int
-Substructure_Results::print_embeddings (std::ostream & os, int print_query_atoms) const
+Substructure_Results::print_embeddings(std::ostream & os, int print_query_atoms) const
 {
   assert (ok());
   assert (os.good ());
@@ -743,7 +748,7 @@ Substructure_Results::print_embeddings (std::ostream & os, int print_query_atoms
   {
     const Set_of_Atoms & p = *(_embedding[i]);
     os << "Embedding " << i << ": " << p;
-    os << endl;
+    os << '\n';
     if (print_query_atoms && _save_query_atoms_matched)
     {
       os << "Query atoms:      ";
@@ -753,7 +758,7 @@ Substructure_Results::print_embeddings (std::ostream & os, int print_query_atoms
         os << " " << q[j]->unique_id();
       }
 
-      os << endl;
+      os << '\n';
     }
   }
 
@@ -779,7 +784,7 @@ Substructure_Results::query_atoms_in_match (int i) const
 //#define DEBUG_REMOVE_LOW_PREFERENCE_HITS
 
 int
-Substructure_Results::remove_low_preference_hits ()
+Substructure_Results::remove_low_preference_hits()
 {
   assert (_save_query_atoms_matched);
 
@@ -794,7 +799,7 @@ Substructure_Results::remove_low_preference_hits ()
     int p = qam->preference_value();
 
 #ifdef DEBUG_REMOVE_LOW_PREFERENCE_HITS
-    cerr << "Embedding " << i << " has preference value " << p << ' ' << *(_embedding[i]) << endl;
+    cerr << "Embedding " << i << " has preference value " << p << ' ' << *(_embedding[i]) << '\n';
 #endif
 
     if (0 == i)
@@ -837,7 +842,7 @@ Substructure_Results::remove_low_preference_hits ()
 }
 
 int
-Substructure_Results::remove_embedding (int e)
+Substructure_Results::remove_embedding(int e)
 {
   assert (_hits_found> 0);
 
@@ -853,7 +858,7 @@ Substructure_Results::remove_embedding (int e)
 }
 
 void
-Substructure_Results::size_hits_per_fragment_array (int s)
+Substructure_Results::size_hits_per_fragment_array(int s)
 {
   if (_hits_per_fragment.number_elements())
     _hits_per_fragment.resize(0);
@@ -864,7 +869,7 @@ Substructure_Results::size_hits_per_fragment_array (int s)
 }
 
 void
-Substructure_Results::each_embedding_set_vector (int * v,
+Substructure_Results::each_embedding_set_vector(int * v,
                                                  int s) const
 {
   for (int i = 0; i < _embedding.number_elements(); i++)
@@ -875,14 +880,26 @@ Substructure_Results::each_embedding_set_vector (int * v,
   return;
 }
 
+std::vector<int>
+Substructure_Results::EachEmbeddingSetVector(int matoms, int value) const {
+  std::vector<int> result(matoms);
+  std::fill(result.begin(), result.end(), 0);
+
+  for (const Set_of_Atoms* e : _embedding) {
+    e->set_vector(result, value);
+  }
+
+  return result;
+}
+
 /*
   Max distance from a matched atom to an unmatched atom.
   Would be much faster with an array
 */
 
 static int
-compute_maxd (Molecule & m,
-              const Set_of_Atoms & s)
+compute_maxd(Molecule & m,
+             const Set_of_Atoms & s)
 {
   int n = s.number_elements();
 
@@ -910,8 +927,8 @@ compute_maxd (Molecule & m,
 }
 
 static int
-compute_ncon (const Molecule & m,
-              const Set_of_Atoms & s)
+compute_ncon(const Molecule & m,
+             const Set_of_Atoms & s)
 {
   int n = s.number_elements();
 
@@ -938,8 +955,8 @@ compute_ncon (const Molecule & m,
 }
 
 int
-Substructure_Results::sort_matches (Molecule_to_Match & target,
-                                    int sort_specification)
+Substructure_Results::sort_matches(Molecule_to_Match & target,
+                                   int sort_specification)
 {
   int ne = _embedding.number_elements();
 
@@ -974,10 +991,10 @@ Substructure_Results::sort_matches (Molecule_to_Match & target,
       else
         s += 1000 * maxd;
 
-//    cerr << *(_embedding[i]) << " maxd " << maxd << endl;
+//    cerr << *(_embedding[i]) << " maxd " << maxd << '\n';
     }
 
-//  cerr << "Sort value " << s << endl;
+//  cerr << "Sort value " << s << '\n';
     t.set_sort_value(s);
   }
 
@@ -988,7 +1005,7 @@ Substructure_Results::sort_matches (Molecule_to_Match & target,
     QamSa & t = qamsa[i];
 
     _embedding[i] = t.sa();
-//  cerr << "Now " << *(_embedding[i]) << " sort value " << t.sort_value() << endl;
+//  cerr << "Now " << *(_embedding[i]) << " sort value " << t.sort_value() << '\n';
     _query_atoms_matched[i] = t.qam();
   }
 
@@ -1008,9 +1025,9 @@ Substructure_Results::set_embeddings(Set_of_Atoms const** e, const int s)
 int
 Substructure_Results::overlaps_with_existing_embedding(const Set_of_Atoms & s)
 {
-  cerr << "Substructure_Results::overlaps_with_existing_embedding:checking " << s << ", atoms_in_target_molecule " << _atoms_in_target_molecule << endl;
+  cerr << "Substructure_Results::overlaps_with_existing_embedding:checking " << s << ", atoms_in_target_molecule " << _atoms_in_target_molecule << '\n';
 
-  if (NULL == _already_matched)
+  if (nullptr == _already_matched)
   {
     _already_matched = new_int(_atoms_in_target_molecule);
     s.set_vector(_already_matched, 1);
@@ -1022,7 +1039,7 @@ Substructure_Results::overlaps_with_existing_embedding(const Set_of_Atoms & s)
     cerr << "Hits previously matched atoms\n";
     for (int i = 0; i < _atoms_in_target_molecule; ++i)
     {
-      cerr << " matched atom " << i << " " << _already_matched[i] << endl;
+      cerr << " matched atom " << i << " " << _already_matched[i] << '\n';
     }
   }
 
@@ -1032,4 +1049,79 @@ Substructure_Results::overlaps_with_existing_embedding(const Set_of_Atoms & s)
   s.set_vector(_already_matched, 1);
 
   return 0;
+}
+
+int
+Substructure_Results::CompressToSingleEmbedding()
+{
+  const int number_embeddings = _embedding.number_elements();
+
+  if (0 == number_embeddings)
+    return 0;
+
+  if (1 == number_embeddings)  // No compression possible.
+    return 1;
+
+  Set_of_Atoms* e0 = _embedding[0];
+
+  for (int i = 1; i < number_embeddings; ++i)
+  {
+    e0->add_non_duplicated_elements(*_embedding[i]);
+  }
+
+  _embedding.resize(1);
+
+  return 1;
+}
+
+// Examing a query match described by `embedding` and `qam` and decide
+// if this embedding is consistent with `matched_by_global_conditions`.
+// Args:
+//   embedding: set of atom numbers
+//   qam: corresponding Substructure_Atom* for each atom.
+//   matched_by_global_conditions: per atom value that must be matched.
+// Check each member of `qam` and if it specifies a global id, check it.
+// Returns 1 if all the query atoms with global ids specified match.
+int
+EmbeddingMatchesGlobalIds(const Set_of_Atoms& embedding,
+                          const Query_Atoms_Matched& qam,
+                          const int * matched_by_global_conditions) {
+  const int n = embedding.number_elements();
+
+  assert(n == qam.number_elements());
+
+  for (int i = 0; i < n; ++i) {
+    const Substructure_Atom * a = qam[i];
+    int gmid = a->global_match_id();
+    if (gmid <= 0) {
+      continue;
+    }
+    const atom_number_t matched_atom = embedding[i];
+    if (matched_by_global_conditions[matched_atom] != gmid) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Substructure_Results::RemoveEmbeddingsNotSatisfyingGlobalId(const int * matched_by_global_conditions) {
+  if (_embedding.empty()) {
+    return 0;
+  }
+  if (_query_atoms_matched.empty()) {
+    cerr << "Substructure_Results::RemoveEmbeddingsNotSatisfyingGlobalId:query atoms not stored\n";
+    return 0;
+  }
+
+  for (int i = _embedding.number_elements() - 1; i >= 0; --i) {
+    if (! EmbeddingMatchesGlobalIds(*_embedding[i], *_query_atoms_matched[i], matched_by_global_conditions)) {
+      remove_embedding(i);
+    }
+  }
+
+  _hits_found = _embedding.number_elements();
+
+  return _hits_found;
 }

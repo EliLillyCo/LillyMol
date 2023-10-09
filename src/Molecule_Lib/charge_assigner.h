@@ -1,10 +1,8 @@
-#ifndef CHARGE_ASSIGNER_H
-#define CHARGE_ASSIGNER_H
+#ifndef MOLECULE_LIB_CHARGE_ASSIGNER_H_
+#define MOLECULE_LIB_CHARGE_ASSIGNER_H_
 
 /*
 */
-
-#include "iwaray.h"
 
 #include "iwmtypes.h"
 #include "temp_detach_atoms.h"
@@ -35,9 +33,9 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 //  Another possibility is to replace the atoms with a different element
 
     const Element * _positive_element;
-    int _positive_isotope;
+    isotope_t _positive_isotope;
     const Element * _negative_element;
-    int _negative_isotope;
+    isotope_t _negative_isotope;
 
 //  We can isotopically label the positive and negative atoms with
 //  the atomic number of the atom from which they were derived
@@ -144,7 +142,7 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
 //  array is actual charges assigned
 
-    int process (Molecule &, formal_charge_t * = NULL);
+    int process (Molecule &, formal_charge_t * = nullptr);
     int process (Molecule &, resizable_array_p<Molecule> & charged_forms);
 
     int number_queries () const { return _number_elements;}
@@ -157,4 +155,4 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
 extern void display_standard_charge_assigner_options (std::ostream &, char);
 
-#endif
+#endif  // MOLECULE_LIB_CHARGE_ASSIGNER_H_

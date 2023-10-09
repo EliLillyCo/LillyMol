@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 
 #if (GCC_VERSION >= 40405)
 #include <unordered_map>
@@ -18,12 +18,8 @@ using namespace __gnu_cxx;
 #define IW_Hash_Map hash_map
 #else
 #include <hash_map>
-using namespace stdext;
 #define IW_Hash_Map hash_map
 #endif
-
-using std::cerr;
-using std::endl;
 
 #include "iwstring.h"
 #include "iwhash.h"

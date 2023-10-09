@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 #ifdef _WIN32
 #else
 #include <unistd.h>
@@ -8,22 +8,26 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <optional>
+
 #include "zlib.h"
 
 #include "iwstring.h"
+
+using std::cerr;
 
 IWString_and_File_Descriptor::IWString_and_File_Descriptor()
 {
   _fd = -9;
 
-  _gzfile = NULL;
+  _gzfile = nullptr;
 
   return;
 }
 
 IWString_and_File_Descriptor::IWString_and_File_Descriptor(int f) : _fd (f)
 {
-  _gzfile = NULL;
+  _gzfile = nullptr;
 
   return;
 }
@@ -34,7 +38,7 @@ IWString_and_File_Descriptor::~IWString_and_File_Descriptor()
   {
     _compress_and_write();
     gzclose(_gzfile);
-    _gzfile = NULL;
+    _gzfile = nullptr;
   }
   else if (_fd < 0)
     ;
@@ -98,7 +102,14 @@ IWString_and_File_Descriptor::open(const char * fname)
   int flags = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 #endif
 
-  _fd = IW_FD_OPEN(fname, mode, flags);
+  // See if we need to expand any shell variables.
+  IWString myfname(fname);
+  std::optional<IWString> maybe_expanded = myfname.ExpandEnvironmentVariables();
+  if (maybe_expanded) {
+    _fd = IW_FD_OPEN(maybe_expanded->null_terminated_chars(), mode, flags);
+  } else {
+    _fd = IW_FD_OPEN(fname, mode, flags);
+  }
 
   if (_fd < 0)
   {
@@ -118,7 +129,7 @@ IWString_and_File_Descriptor::_open_gzipd_stream(const char * fname)
   _gzfile = gzopen(fname, "wb");
 #endif
 
-  if (NULL != _gzfile)
+  if (nullptr != _gzfile)
     return 1;
 
   cerr << "IWString_and_File_Descriptor::_open_gzipd_stream:cannot open '" << fname << "'\n";
@@ -190,7 +201,7 @@ IWString_and_File_Descriptor::close()
   {
     _compress_and_write();
     gzclose (_gzfile);
-    _gzfile = NULL;
+    _gzfile = nullptr;
     _do_resize(0);
     return 1;
   }
@@ -226,10 +237,12 @@ IWString_and_File_Descriptor::_compress_and_write()
   return 0;
 }
 ssize_t
-IWString_and_File_Descriptor::write (const char * s, size_t nchars)
+IWString_and_File_Descriptor::write(const char * s, size_t nchars)
 {
-  if (nchars + _number_elements < 32768)
-    return IWString::strncat(s, nchars);
+  if (nchars + _number_elements < 32768) {
+    IWString::strncat(s, nchars);
+    return nchars;
+  }
 
   if (! is_open())
   {
@@ -242,10 +255,15 @@ IWString_and_File_Descriptor::write (const char * s, size_t nchars)
 
   ssize_t rc = 0;
 
+  // If everything works, we will return the initial number of bytes requested.
+  ssize_t initial_nchars = nchars;
+
   while (nchars)
   {
-    if (nchars < 32768)
-      return IWString::strncat(s, nchars);
+    if (nchars < 32768) {
+      IWString::strncat(s, nchars);
+      return nchars;
+    }
 
     int chars_to_write;
     if (nchars >= 32768)
@@ -264,6 +282,11 @@ IWString_and_File_Descriptor::write (const char * s, size_t nchars)
 
     s += chars_to_write;
     nchars -= chars_to_write;
+  }
+
+  if (rc != initial_nchars) {
+    cerr << "IWString_and_File_Descriptor::write:wrote " << rc << " of " << initial_nchars << " bytes\n";
+    return 0;
   }
 
   return rc;

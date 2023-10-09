@@ -1,11 +1,14 @@
-#ifndef RING_EXT_REP_H
-#define RING_EXT_REP_H
+#ifndef MOLECULE_TOOLS_RING_EXT_REP_H
+#define MOLECULE_TOOLS_RING_EXT_REP_H
 
+#include <cstdint>
 #include <fstream>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
+
+namespace ring_replacement {
 
 #define RING_4A 0
 #define RING_5a 1
@@ -69,9 +72,101 @@
 #define FUSED_4a4A 52
 #define FUSED_4a7A 53
 
+// 3 membere fused systems.
+#define FUSED_4A4A4A 54
+#define FUSED_4A4A5A 55
+#define FUSED_4A4A6A 56
+#define FUSED_4A4A7A 57
+
+#define FUSED_4A4A4a 58
+#define FUSED_4A4A5a 59
+#define FUSED_4A4A6a 60
+#define FUSED_4A4A7a 61
+
+#define FUSED_4A4a4A 62
+#define FUSED_4A4a5A 63
+#define FUSED_4A4a6A 64
+#define FUSED_4A4a7A 65
+
+#define FUSED_4A4a4a 66
+#define FUSED_4A4a5a 67
+#define FUSED_4A4a6a 68
+#define FUSED_4A4a7a 69
+
+#define FUSED_4A5A5A 70
+#define FUSED_4A5A6A 71
+#define FUSED_4A5A7A 72
+
+#define FUSED_4A5A5a 73
+#define FUSED_4A5A6a 74
+#define FUSED_4A5A7a 75
+
+#define FUSED_4A5a5A 76
+#define FUSED_4A5a6A 77
+#define FUSED_4A5a7A 78
+
+#define FUSED_4A5a5a 79
+#define FUSED_4A5a6a 80
+#define FUSED_4A5a7a 81
+
+#define FUSED_4A6A6A 82
+#define FUSED_4A6A7A 83
+
+#define FUSED_4A6A6a 84
+#define FUSED_4A6A7a 85
+
+#define FUSED_4A7A7A 86
+#define FUSED_4A7A7a 87
+
+#define FUSED_4A7a7A 88
+#define FUSED_4A7a7a 89
+
+#define FUSED_4a4A4a 90
+#define FUSED_4a4A5a 91
+#define FUSED_4a4A6a 92
+#define FUSED_4a4A7a 93
+
+#define FUSED_4a4a4A 94
+#define FUSED_4a4a5A 95
+#define FUSED_4a4a6A 96
+#define FUSED_4a4a7A 97
+
+#define FUSED_4a4a4a 98
+#define FUSED_4a4a5a 99
+#define FUSED_4a4a6a 100
+#define FUSED_4a4a7a 101
+
+#define FUSED_4a5A5A 102
+#define FUSED_4a5A6A 103
+#define FUSED_4a5A7A 104
+
+#define FUSED_4a5A5a 105
+#define FUSED_4a5A6a 106
+#define FUSED_4a5A7a 107
+
+#define FUSED_4a5a5A 108
+#define FUSED_4a5a6A 109
+#define FUSED_4a5a7A 110
+
+#define FUSED_4a5a5a 111
+#define FUSED_4a5a6a 112
+#define FUSED_4a5a7a 113
+
+#define FUSED_4a6A6A 114
+#define FUSED_4a6A7A 115
+
+#define FUSED_4a6A6a 116
+#define FUSED_4a6A7a 117
+
+#define FUSED_4a7A7A 118
+#define FUSED_4a7A7a 119
+
+#define FUSED_4a7a7A 120
+#define FUSED_4a7a7a 121
+
 // Must be the number of ring types above - one larger than the largest enum...
 
-#define RING_ARRAY_SIZE 54
+#define RING_ARRAY_SIZE 122
 
 class Ring_Extraction_Replacement_Conditions
 {
@@ -80,11 +175,11 @@ class Ring_Extraction_Replacement_Conditions
 
     int _ring_aromaticity_needed;
 
-    int _isotope_for_ring_fusion;
+    isotope_t _isotope_for_ring_fusion;
 
     const Element * _ring_fusion_element;
 
-    int _isotope_for_substitution_points;
+    isotope_t _isotope_for_substitution_points;
 
     int _include_substituents;
 
@@ -132,13 +227,22 @@ class Ring_Extraction_Replacement_Conditions
     void append_connectivity_smarts (Molecule & m, atom_number_t zatom, int aromatic, IWString & smarts) const;
 };
 
-/*
-  When producing partial smiles or smarts, we have lots of 
-  info to be passed, so we build a class
-*/
+// When producing partial smiles or smarts, we have lots of 
+// info to be passed, so we build a class
 
-extern int display_standard_ring_ext_rep_options (std::ostream & os);
+int display_standard_ring_ext_rep_options (std::ostream & os);
 
-extern int
-initialise_in_same_ring_array (Molecule & m, int * in_same_ring);
-#endif
+int initialise_in_same_ring_array (Molecule & m, int * in_same_ring);
+
+uint32_t RingHash(const extending_resizable_array<int>& aliph, const extending_resizable_array<int>& arom);
+
+// Generate a name like '4A5a' from lists of aliphatic and aromatic ring sizes.
+IWString RingHashName(const extending_resizable_array<int>& aliph, const extending_resizable_array<int>& arom);
+// same as RingHashName, except now we can specify the 'a' and 'A' strings.
+IWString RingHashName(const extending_resizable_array<int>& aliph, 
+                      const IWString& aliph_suffix,
+                      const extending_resizable_array<int>& arom,
+                      const IWString& arom_suffix);
+
+}  // namespace ring_replacement
+#endif  // MOLECULE_TOOLS_RING_EXT_REP_H

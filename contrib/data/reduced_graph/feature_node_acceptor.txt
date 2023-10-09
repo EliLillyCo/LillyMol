@@ -1,0 +1,5 @@
+query: "feature_node_acceptor1.qry"
+query: "feature_node_acceptor2.qry"
+query: "feature_node_acceptor_nitro.qry"
+element: "Ni"
+ring: false

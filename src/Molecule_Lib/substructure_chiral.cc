@@ -1,18 +1,21 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "substructure.h"
 #include "target.h"
 
+using std::cerr;
+using std::endl;
 
 Substructure_Chiral_Centre::Substructure_Chiral_Centre()
 {
-  _numeric = NULL;
+  _numeric = nullptr;
 
-  _centre = NULL;
-  _top_front = NULL;
-  _top_back = NULL;
-  _left_down = NULL;
-  _right_down = NULL;
+  _centre = nullptr;
+  _top_front = nullptr;
+  _top_back = nullptr;
+  _left_down = nullptr;
+  _right_down = nullptr;
 
   _number_explicit_connections = 0;
 
@@ -21,7 +24,7 @@ Substructure_Chiral_Centre::Substructure_Chiral_Centre()
 
 Substructure_Chiral_Centre::~Substructure_Chiral_Centre()
 {
-  if (NULL != _numeric)
+  if (nullptr != _numeric)
     delete _numeric;
 
   return;
@@ -30,21 +33,21 @@ int
 Substructure_Chiral_Centre::debug_print (std::ostream & os) const
 {
   os << "Substructure_Chiral_Centre::debug_print:has " << _number_explicit_connections << " explicit connections\n";
-  if (NULL != _numeric)
+  if (nullptr != _numeric)
   {
     os << "Numeric is object allocated\n";
     _numeric->debug_print (cerr);
   }
 
-  if (NULL != _centre)
+  if (nullptr != _centre)
     os << " centre " << _centre->unique_id() << endl;
-  if (NULL != _top_front)
+  if (nullptr != _top_front)
     os << " top_front " << _top_front->unique_id() << endl;
-  if (NULL != _top_back)
+  if (nullptr != _top_back)
     os << " top_back " << _top_back->unique_id() << endl;
-  if (NULL != _left_down)
+  if (nullptr != _left_down)
     os << " left_down " << _left_down->unique_id() << endl;
-  if (NULL != _right_down)
+  if (nullptr != _right_down)
     os << " right_down " << _right_down->unique_id() << endl;
 
   return os.good ();
@@ -54,7 +57,7 @@ void
 Substructure_Chiral_Centre::set_top_front(const Substructure_Atom * s)
 {
   _top_front = s;
-  if (NULL != _top_front)
+  if (nullptr != _top_front)
     _number_explicit_connections++;
 
   return;
@@ -64,7 +67,7 @@ void
 Substructure_Chiral_Centre::set_top_back(const Substructure_Atom * s)
 {
   _top_back = s;
-  if (NULL != _top_back)
+  if (nullptr != _top_back)
     _number_explicit_connections++;
 
   return;
@@ -74,7 +77,7 @@ void
 Substructure_Chiral_Centre::set_left_down(const Substructure_Atom * s)
 {
   _left_down = s;
-  if (NULL != _left_down)
+  if (nullptr != _left_down)
     _number_explicit_connections++;
 
   return;
@@ -84,7 +87,7 @@ void
 Substructure_Chiral_Centre::set_right_down(const Substructure_Atom * s)
 {
   _right_down = s;
-  if (NULL != _right_down)
+  if (nullptr != _right_down)
     _number_explicit_connections++;
 
   return;
@@ -118,7 +121,7 @@ Single_Substructure_Query::_build_chirality_specification_from_msi_attribute (co
   }
 
   const Substructure_Atom * a = query_atom_with_initial_atom_number(uid);
-  if (NULL == a)
+  if (nullptr == a)
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:no centre atom '" << s << "'\n";
     return 0;
@@ -137,7 +140,7 @@ Single_Substructure_Query::_build_chirality_specification_from_msi_attribute (co
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:invalid TF '" << s << "'\n";
     return 0;
   }
-  else if (NULL == (a = query_atom_with_initial_atom_number(uid)))
+  else if (nullptr == (a = query_atom_with_initial_atom_number(uid)))
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:no TF atom '" << s << "'\n";
     return 0;
@@ -157,7 +160,7 @@ Single_Substructure_Query::_build_chirality_specification_from_msi_attribute (co
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:invalid TB '" << s << "'\n";
     return 0;
   }
-  else if (NULL == (a = query_atom_with_initial_atom_number(uid)))
+  else if (nullptr == (a = query_atom_with_initial_atom_number(uid)))
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:no TB atom '" << s << "'\n";
     return 0;
@@ -177,7 +180,7 @@ Single_Substructure_Query::_build_chirality_specification_from_msi_attribute (co
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:invalid LD '" << s << "'\n";
     return 0;
   }
-  else if (NULL == (a = query_atom_with_initial_atom_number(uid)))
+  else if (nullptr == (a = query_atom_with_initial_atom_number(uid)))
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:no LD atom '" << s << "'\n";
     return 0;
@@ -197,7 +200,7 @@ Single_Substructure_Query::_build_chirality_specification_from_msi_attribute (co
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:invalid RD '" << s << "'\n";
     return 0;
   }
-  else if (NULL == (a = query_atom_with_initial_atom_number(uid)))
+  else if (nullptr == (a = query_atom_with_initial_atom_number(uid)))
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_msi_attribute:no RD atom '" << s << "'\n";
     return 0;
@@ -224,7 +227,7 @@ get_matched_atom_number (const Substructure_Atom * a,
                          atom_number_t & matched_atom,
                          atom_number_t what_to_add_if_not_matched)
 {
-  if (NULL == a)
+  if (nullptr == a)
   {
     matched_atom = what_to_add_if_not_matched;
     return 0;
@@ -278,7 +281,7 @@ Single_Substructure_Query::_chiral_atoms_matched (Query_Atoms_Matched & matched_
 {
   const Molecule * m = target_molecule.molecule();
 
-  if (NULL == m)
+  if (nullptr == m)
   {
 //  cerr << "Single_Substructure_Query::_chiral_atoms_matched:ignoring chirality\n";
     return 1;
@@ -301,7 +304,7 @@ Single_Substructure_Query::_chiral_atoms_matched (Query_Atoms_Matched & matched_
 static int
 write_null_or_current_hold_atom (const Substructure_Atom * a)
 {
-  if (NULL == a)
+  if (nullptr == a)
     return -1;
   else
     return a->current_hold_atom()->atom_number();
@@ -315,9 +318,9 @@ write_null_or_current_hold_atom (const Substructure_Atom * a)
 int
 Substructure_Chiral_Centre::is_matched (const Molecule * m) const
 {
-  assert (NULL != _centre);
+  assert (nullptr != _centre);
 
-  if (NULL == _centre->current_hold_atom())    // hard to imagine
+  if (nullptr == _centre->current_hold_atom())    // hard to imagine
     return 0;
 
   atom_number_t centre_atom = _centre->current_hold_atom()->atom_number();
@@ -327,7 +330,7 @@ Substructure_Chiral_Centre::is_matched (const Molecule * m) const
 #endif
 
   const Chiral_Centre * c = m->chiral_centre_at_atom(centre_atom);
-  if (NULL == c)
+  if (nullptr == c)
     return 0;
 
 #ifdef DEBUG_SUBSTURE_CHIRAL_CENTRE_IS_MATCHED
@@ -497,7 +500,7 @@ Substructure_Chiral_Centre::is_matched (const Molecule * m) const
 /*int
 Substructure_Chiral_Centre::construct_from_msi_attribute (const msi_attribute & att)
 {
-  assert (NULL == _numeric);
+  assert (nullptr == _numeric);
 
   const IWString & s = att.stringval();
 
@@ -602,7 +605,7 @@ Substructure_Chiral_Centre::write_msi (std::ostream & os,
                                      const IWString & ind,
                                      const char * attribute_name) const
 {
-  if (NULL == _centre)
+  if (nullptr == _centre)
   {
     cerr << "Substructure_Chiral_Centre::write_msi:centre not initialised\n";
     return 0;
@@ -612,22 +615,22 @@ Substructure_Chiral_Centre::write_msi (std::ostream & os,
 
   os << _centre->unique_id () << ' ';
 
-  if (NULL == _top_front)
+  if (nullptr == _top_front)
     os << "H ";
   else
     os << _top_front->unique_id() << ' ';
 
-  if (NULL == _top_back)
+  if (nullptr == _top_back)
     os << "H ";
   else
     os << _top_back->unique_id() << ' ';
 
-  if (NULL == _left_down)
+  if (nullptr == _left_down)
     os << "H ";
   else
     os << _left_down->unique_id() << ' ';
 
-  if (NULL == _right_down)
+  if (nullptr == _right_down)
     os << "H";
   else
     os << _right_down->unique_id();
@@ -638,70 +641,70 @@ Substructure_Chiral_Centre::write_msi (std::ostream & os,
 }
 
 int
-Single_Substructure_Query::_add_chiral_centre (const Molecule & m,
-                                               const Chiral_Centre & c)
+Single_Substructure_Query::_add_chiral_centre(const Molecule & m,
+                                              const Chiral_Centre & c)
 {
   Substructure_Chiral_Centre * tmp = new Substructure_Chiral_Centre();
 
   atom_number_t zatom = c.a();
 
   const Substructure_Atom * a = query_atom_with_initial_atom_number(zatom);
-  if (NULL == a)
-  {
+  if (nullptr == a) {
     cerr << "Single_Substructure_Query::_add_chiral_centre:no centre atom\n";
     return 0;
   }
 
   tmp->set_centre(a);
 
+  int unspecified = 0;
+
   zatom = c.top_front();
 
-  if (zatom < 0)
-    ;
-  else if (NULL == (a = query_atom_with_initial_atom_number(zatom)))
-  {
+  if (zatom < 0) {
+    ++unspecified;
+  } else if (nullptr == (a = query_atom_with_initial_atom_number(zatom))) {
     cerr << "Single_Substructure_Query::_add_chiral_centre:no TF atom " << zatom << endl;
     return 0;
-  }
-  else
+  } else {
     tmp->set_top_front(a);
+  }
 
   zatom = c.top_back();
 
-  if (zatom < 0)
-    ;
-  else if (NULL == (a = query_atom_with_initial_atom_number(zatom)))
-  {
+  if (zatom < 0) {
+    ++unspecified;
+  } else if (nullptr == (a = query_atom_with_initial_atom_number(zatom))) {
     cerr << "Single_Substructure_Query::_add_chiral_centre:no TB atom " << zatom << endl;
     return 0;
-  }
-  else
+  } else {
     tmp->set_top_back(a);
+  }
 
   zatom = c.left_down();
 
-  if (zatom < 0)
-    ;
-  else if (NULL == (a = query_atom_with_initial_atom_number(zatom)))
-  {
+  if (zatom < 0) {
+    ++unspecified;
+  } else if (nullptr == (a = query_atom_with_initial_atom_number(zatom))) {
     cerr << "Single_Substructure_Query::_add_chiral_centre:no LD atom " << zatom << endl;
     return 0;
-  }
-  else
+  } else {
     tmp->set_left_down(a);
+  }
 
   zatom = c.right_down();
 
-  if (zatom < 0)
-    ;
-  else if (NULL == (a = query_atom_with_initial_atom_number(zatom)))
-  {
+  if (zatom < 0) {
+    ++unspecified;
+  } else if (nullptr == (a = query_atom_with_initial_atom_number(zatom))) {
     cerr << "Single_Substructure_Query::_add_chiral_centre:no RD atom " << zatom << endl;
     return 0;
-  }
-  else
+  } else {
     tmp->set_right_down(a);
+  }
 
+  if (unspecified > 1) {
+    cerr << "Single_Substructure_Query:_add_chiral_centre:warning " << unspecified << " unspecified components\n";
+  }
   _chirality.add(tmp);
 
   return 1;
@@ -715,7 +718,7 @@ Single_Substructure_Query::_add_chiral_centre (const Molecule & m,
 /*int
 Substructure_Chiral_Centre::extract_connections(const Chiral_Centre & c)
 {
-  assert (NULL == _numeric);
+  assert (nullptr == _numeric);
 
   _numeric = new Chiral_Centre(c.a());
 
@@ -745,7 +748,7 @@ Substructure_Atom::first_chirality_value_in_any_component() const
 int
 Substructure_Chiral_Centre::invert()
 {
-  assert (NULL != _centre);
+  assert (nullptr != _centre);
 
   const Substructure_Atom * tmp = _top_front;
   _top_front = _top_back;
@@ -805,7 +808,7 @@ Single_Substructure_Query::_build_chirality_specification_from_atom_chiral_info(
 
   const Substructure_Atom * p = a->parent();
 
-  if (NULL != p)
+  if (nullptr != p)
     tmp->set_top_front(p);
 
   int nc = a->number_children() + a->nbonds() - 1;   // children + ring closure bonds
@@ -813,7 +816,7 @@ Single_Substructure_Query::_build_chirality_specification_from_atom_chiral_info(
   if (nc < 1 || nc > 4)
   {
     cerr << "Single_Substructure_Query::_build_chirality_specification_from_atom_chiral_info:not enough connections, nc = " << nc << endl;
-    cerr << "Atom " << a->initial_atom_number() << " children " << a->number_children() << " bonds " << a->nbonds() << " parent? " << (NULL != p) << " ring closure bonds " << a->number_ring_closure_bonds() << endl;
+    cerr << "Atom " << a->initial_atom_number() << " children " << a->number_children() << " bonds " << a->nbonds() << " parent? " << (nullptr != p) << " ring closure bonds " << a->number_ring_closure_bonds() << endl;
     return 0;
   }
 
@@ -988,7 +991,7 @@ Single_Substructure_Query::_initialise_chirality_info(Substructure_Chiral_Centre
   atom_number_t zatom = numeric->a();
 
   const Substructure_Atom * centre_query_atom = query_atom_with_initial_atom_number (zatom);
-  if (NULL == centre_query_atom)
+  if (nullptr == centre_query_atom)
   {
     cerr << "Single_Substructure_Query::_initialise_chirality_info:no atom number " << zatom << "'\n";
     return 0;
@@ -1008,7 +1011,7 @@ Single_Substructure_Query::_initialise_chirality_info(Substructure_Chiral_Centre
   if (zatom >= 0)
   {
     a = query_atom_with_initial_atom_number (zatom);
-    if (NULL == a)
+    if (nullptr == a)
     {
       cerr << "Single_Substructure_Query::_initialise_chirality_info:no atom number " << zatom << "'\n";
       return 0;
@@ -1020,7 +1023,7 @@ Single_Substructure_Query::_initialise_chirality_info(Substructure_Chiral_Centre
   if (zatom >= 0)
   {
     a = query_atom_with_initial_atom_number (zatom);
-    if (NULL == a)
+    if (nullptr == a)
     {
       cerr << "Single_Substructure_Query::_initialise_chirality_info:no atom number " << zatom << "'\n";
       return 0;
@@ -1032,7 +1035,7 @@ Single_Substructure_Query::_initialise_chirality_info(Substructure_Chiral_Centre
   if (zatom >= 0)
   {
     a = query_atom_with_initial_atom_number (zatom);
-    if (NULL == a)
+    if (nullptr == a)
     {
       cerr << "Single_Substructure_Query::_initialise_chirality_info:no atom number " << zatom << "'\n";
       return 0;
@@ -1044,7 +1047,7 @@ Single_Substructure_Query::_initialise_chirality_info(Substructure_Chiral_Centre
   if (zatom >= 0)
   {
     a = query_atom_with_initial_atom_number (zatom);
-    if (NULL == a)
+    if (nullptr == a)
     {
       cerr << "Single_Substructure_Query::_initialise_chirality_info:no atom number " << zatom << "'\n";
       return 0;

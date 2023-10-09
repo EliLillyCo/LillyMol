@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package common_names;
+
+// Output from common_names.
+
+message CommonNames {
+  // The starting smiles of the first exemplar molecule.
+  string smiles = 1;
+
+  // The comparison key used for unique smiles. For example
+  // `smiles` might contain fragments, but if fragments are excluded
+  // from the comparison, `key` will not contain the fragments.
+  string key = 2;
+
+  // A list of the id's that share the same `key`.
+  repeated string id = 3;
+}

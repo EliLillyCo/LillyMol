@@ -137,7 +137,7 @@ Reaction_Rotate_Fragment::process (Molecule & m,
 #ifdef DEBUG_PROCESS_ROTATE_FRAGMENT
   write_msi (cerr, " ", "process");
   cerr << "Processing bond angle " << _desired_angle << endl;
-  if (NULL != scaffold_embedding)
+  if (nullptr != scaffold_embedding)
     cerr << "Scaffold embedding " << (*scaffold_embedding) << endl;
   cerr << m.smiles() << endl;
 #endif

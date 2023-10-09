@@ -1,0 +1,214 @@
+description {
+  feature_name: "w_lflxchn"
+  description: "Length of longest flexible chain"
+  plot_title: "Length of longest flexible chain"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 47.0
+mean: 1.7574393
+median: 1.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 1.0
+}
+quantile {
+  quantile: 0.9
+  value: 4.0
+}
+quantile {
+  quantile: 0.95
+  value: 5.0
+}
+quantile {
+  quantile: 0.99
+  value: 10.0
+}
+int_values {
+  count: 524656
+}
+int_values {
+  value: 1
+  count: 647628
+}
+int_values {
+  value: 2
+  count: 572890
+}
+int_values {
+  value: 3
+  count: 279039
+}
+int_values {
+  value: 4
+  count: 108734
+}
+int_values {
+  value: 5
+  count: 47399
+}
+int_values {
+  value: 6
+  count: 25205
+}
+int_values {
+  value: 7
+  count: 11940
+}
+int_values {
+  value: 8
+  count: 7645
+}
+int_values {
+  value: 9
+  count: 5292
+}
+int_values {
+  value: 10
+  count: 4025
+}
+int_values {
+  value: 11
+  count: 3493
+}
+int_values {
+  value: 12
+  count: 2820
+}
+int_values {
+  value: 13
+  count: 2701
+}
+int_values {
+  value: 14
+  count: 2336
+}
+int_values {
+  value: 15
+  count: 1799
+}
+int_values {
+  value: 16
+  count: 2225
+}
+int_values {
+  value: 17
+  count: 993
+}
+int_values {
+  value: 18
+  count: 1152
+}
+int_values {
+  value: 19
+  count: 403
+}
+int_values {
+  value: 20
+  count: 391
+}
+int_values {
+  value: 21
+  count: 159
+}
+int_values {
+  value: 22
+  count: 103
+}
+int_values {
+  value: 23
+  count: 173
+}
+int_values {
+  value: 24
+  count: 44
+}
+int_values {
+  value: 25
+  count: 96
+}
+int_values {
+  value: 26
+  count: 15
+}
+int_values {
+  value: 27
+  count: 26
+}
+int_values {
+  value: 28
+  count: 19
+}
+int_values {
+  value: 29
+  count: 10
+}
+int_values {
+  value: 30
+  count: 16
+}
+int_values {
+  value: 31
+  count: 26
+}
+int_values {
+  value: 32
+  count: 8
+}
+int_values {
+  value: 33
+  count: 8
+}
+int_values {
+  value: 34
+  count: 6
+}
+int_values {
+  value: 35
+  count: 10
+}
+int_values {
+  value: 37
+  count: 7
+}
+int_values {
+  value: 38
+  count: 2
+}
+int_values {
+  value: 39
+  count: 1
+}
+int_values {
+  value: 40
+  count: 3
+}
+int_values {
+  value: 41
+  count: 3
+}
+int_values {
+  value: 42
+  count: 1
+}
+int_values {
+  value: 43
+  count: 1
+}
+int_values {
+  value: 46
+  count: 1
+}
+int_values {
+  value: 47
+  count: 6
+}

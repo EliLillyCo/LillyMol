@@ -1,0 +1,20 @@
+name: "ethylamine2piperazine"
+scaffold {
+  id: 0
+  smarts: "[ND2R0]!@[CD2]!@[CD2][ND2R0]"
+}
+sidechain {
+  id: 1
+  reagent: "CC"
+  smarts: "CC"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

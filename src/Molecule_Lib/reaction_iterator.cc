@@ -1,26 +1,33 @@
+#include <iostream>
 #include <random>
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "iwreaction.h"
+
+using std::cerr;
 
 Reaction_Iterator::Reaction_Iterator ()
 {
   _number_sidechains = 0;
 
-  _reagents_in_sidechain = NULL;
+  _reagents_in_sidechain = nullptr;
 
-  _reagent = NULL;
+  _reagent = nullptr;
 
   return;
 }
 
+Reaction_Iterator::Reaction_Iterator(const IWReaction& rxn) {
+  initialise(rxn);
+}
+
 Reaction_Iterator::~Reaction_Iterator ()
 {
-  if (NULL != _reagents_in_sidechain)
+  if (nullptr != _reagents_in_sidechain)
     delete [] _reagents_in_sidechain;
 
-  if (NULL != _reagent)
+  if (nullptr != _reagent)
     delete [] _reagent;
 
   return;
@@ -38,14 +45,14 @@ Reaction_Iterator::debug_print (std::ostream & os) const
   os << "Iterator for " << _number_sidechains << " sidechains\n";
   for (int i = 0; i < _number_sidechains; i++)
   {
-    os << _reagents_in_sidechain[i] << " reagents, current " << _reagent[i] << endl;
+    os << _reagents_in_sidechain[i] << " reagents, current " << _reagent[i] << '\n';
   }
 
   return os.good ();
 }
 
 int
-Reaction_Iterator::initialise (const IWReaction & r)
+Reaction_Iterator::initialise(const IWReaction & r)
 {
   _number_sidechains = r.number_sidechains ();
 
@@ -98,9 +105,8 @@ Reaction_Iterator::operator++ (int notused)
   return;
 }
 
-#if (GCC_VERSION >= 40900)
 void
-Reaction_Iterator::randomise (std::mt19937_64 & rng)
+Reaction_Iterator::randomise(std::mt19937_64 & rng)
 {
   for (int i = 0; i < _number_sidechains; ++i)
   {
@@ -113,4 +119,8 @@ Reaction_Iterator::randomise (std::mt19937_64 & rng)
 
   return;
 }
-#endif
+
+void
+Reaction_Iterator::reset() {
+  std::fill_n(_reagent, _number_sidechains, 0);
+}

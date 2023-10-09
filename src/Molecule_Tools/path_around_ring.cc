@@ -1,12 +1,15 @@
 #include <stdlib.h>
 #include <memory>
-using namespace std;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
-#include "molecule.h"
-#include "path.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+
 #include "path_around_ring.h"
+
+using std::cerr;
+using std::endl;
 
 //#define DEBUG_PATH_AROUND_EDGE_OF_RING_SYSTEM
 
@@ -143,7 +146,7 @@ path_around_edge_of_ring_system (Molecule & m,
   cerr << "path_around_edge_of_ring_system:no termination\n";
   cerr << s << endl;
 
-  assert (NULL == "Should not come to here");
+  assert (nullptr == "Should not come to here");
 
   return 0;
 }

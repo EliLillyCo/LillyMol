@@ -23,21 +23,21 @@ then
     exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
+name1=stdout
+name1_out=out/${name1}
 
 # Support linux and mac 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/log.txt
+    name1_out=out/linux/${name1}
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    name1_out=out/osx/log.txt
+    name1_out=out/osx/${name1}
 else
     echo "OS is not supported"
 fi
 
 diff_tool=../../fileDiff.sh
-$command -i 1 -j $LILLYMOL_HOME/data/descriptor.txt >>log.txt 2>>err.txt
-$diff_tool $name1 $name1_out
+$command -i 1 -j $LILLYMOL_HOME/data/descriptor.txt >${name1} 2>err.txt
+$diff_tool ${name1} ${name1_out}
 ret=$?
 if [ $ret -eq 1 ]
 then

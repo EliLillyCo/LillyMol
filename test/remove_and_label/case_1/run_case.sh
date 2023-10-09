@@ -33,7 +33,7 @@ cmp_out="$test_cmd_top/$case/out/test.sdf"
 echo "Testing: $command"
 
 $command -p -e 1 -E anylength -E autocreate -R nonorganic=0 \
-         -i ignore_bad_m -i sdf "$in" 1>> "$out" 2>> err.txt
+         -i ignore_bad_m -i sdf "$in" 1> "$out" 2> err.txt
 $diff_tool "$out" "$cmp_out"
 ret=$?
 

@@ -1,7 +1,9 @@
-#ifndef MATCH_CONDITIONS_H
-#define MATCH_CONDITIONS_H
+#ifndef MOLECULE_LIB_REACTION_MATCH_CONDITIONS_H_
+#define MOLECULE_LIB_REACTION_MATCH_CONDITIONS_H_
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
+
+#include "Molecule_Lib/reaction.pb.h"
 
 /*
   We need a means of passing around what to do with the different
@@ -38,6 +40,8 @@ class Match_Conditions
     Match_Conditions ();
 
     Match_Conditions & operator = (const Match_Conditions &);
+
+    int ConstructFromProto(const ReactionProto::MatchConditions& proto);
 
     int verbose () const { return _verbose;}
     void set_verbose (int v) { _verbose = v;}
@@ -76,6 +80,8 @@ class Scaffold_Match_Conditions : public Match_Conditions
   public:
     Scaffold_Match_Conditions ();
 
+    int ConstructFromProto(const ReactionProto::ScaffoldMatchConditions& proto);
+
     int enumerate_scaffold_hits_individually () const { return _enumerate_scaffold_hits_individually;}
     void set_enumerate_scaffold_hits_individually (int e) { _enumerate_scaffold_hits_individually = e;}
 
@@ -100,6 +106,8 @@ class Sidechain_Match_Conditions : public Match_Conditions
 
     Sidechain_Match_Conditions & operator= (const Sidechain_Match_Conditions &);
 
+    int ConstructFromProto(const ReactionProto::SidechainMatchConditions& proto);
+
     int make_new_reagent_for_each_hit () const { return _make_new_reagent_for_each_hit;}
     void set_make_new_reagent_for_each_hit (int m) { _make_new_reagent_for_each_hit = m;}
 
@@ -110,5 +118,4 @@ class Sidechain_Match_Conditions : public Match_Conditions
     void set_strip_reagents_to_largest_fragment (int p) { _strip_reagents_to_largest_fragment = p;}
 };
 
-
-#endif
+#endif  // MOLECULE_LIB_REACTION_MATCH_CONDITIONS_H_

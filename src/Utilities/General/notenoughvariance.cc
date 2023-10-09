@@ -1,15 +1,18 @@
 #include <iostream>
 #include <math.h>
 #include <memory>
+#include <random>
 using std::cerr;
 using std::endl;
 
+#include "re2/re2.h"
+
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwstring.h"
-#include "iwrandom.h"
-#include "accumulator.h"
-#include "set_or_unset.h"
-#include "iwcrex.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/iwmisc/set_or_unset.h"
 
 /*
   As the buffers get larger, it may be advantageous to sort the stored values
@@ -137,7 +140,7 @@ class value_count : public resizable_array<T>, public Accumulator<T>
 template <typename T>
 value_count<T>::value_count()
 {
-  _count = NULL;
+  _count = nullptr;
 
   _missing_values = 0;
 
@@ -148,14 +151,14 @@ template <typename T>
 value_count<T>::~value_count()
 {
   delete [] _count;
-  _count = NULL;
+  _count = nullptr;
 }
 
 template <typename T>
 int
 value_count<T>::initialise(int nkeep)
 {
-  assert (NULL == _count);
+  assert (nullptr == _count);
 
   resizable_array_base<T>::resize(nkeep);
 
@@ -847,7 +850,7 @@ value_count<T>::_find_quantile(int number_needed) const
     return _interpolate(number_needed, number_encountered, i);    // found too many, need to interpolate back
   }
 
-  assert (NULL == "Should not come here");
+  assert (nullptr == "Should not come here");
 
   return 0.0;
 }
@@ -988,13 +991,13 @@ template class resizable_array_base<value_count_float *>;
 template class value_count<float>;
 #endif
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
 static int print_statistics = 0;
 
-static value_count_float * counters = NULL;
+static value_count_float * counters = nullptr;
 
 static int translate_tabs = 0;
 
@@ -1008,13 +1011,13 @@ static int translate_tabs = 0;
 
 static resizable_array<int> ignore_columns_from_cl;
 
-static int * ignore_column = NULL;
+static int * ignore_column = nullptr;
 
 /*
   Alternatively, we can process only columns which match a regexp (descriptor files only)
 */
 
-static IW_Regular_Expression process_column_regexp;
+static std::unique_ptr<re2::RE2> process_column_regexp;
 
 static extending_resizable_array<int> missing_value_counter;
 
@@ -1104,9 +1107,7 @@ static int remove_if_all_greater_than_zero = 0;
 
 static float remove_if_all_values_less_than = static_cast<float>(0.0);
 
-#include "iwstring_data_source.h"
-
-static IWString * column_title = NULL;
+static IWString * column_title = nullptr;
 
 /*
   Generic routine for writing column info.
@@ -1236,7 +1237,7 @@ static int
 establish_column_titles(const const_IWSubstring & buffer)
 {
   assert (columns_in_input > 0);
-  assert (NULL != ignore_column);
+  assert (nullptr != ignore_column);
 
   column_title = new IWString[columns_in_input + 1];    // need an extra one at the end for the last call
 
@@ -1246,9 +1247,9 @@ establish_column_titles(const const_IWSubstring & buffer)
   {
     if (ignore_column[column])
       ;
-    else if (! process_column_regexp.active())
+    else if (! process_column_regexp)
       ;
-    else if (! process_column_regexp.matches(column_title[column]))
+    else if (const re2::StringPiece string_piece(column_title[column].data(), column_title[column].length()); ! RE2::PartialMatch(string_piece, *process_column_regexp))
       ignore_column[column] = 1;
     else if (verbose)
     {
@@ -1351,9 +1352,12 @@ notenoughvariance(iwstring_data_source & input,
 
   int records_examined = 0;    // different from records read with probability
 
+  std::random_device rd;
+  std::default_random_engine generator(rd());
+  std::uniform_real_distribution<float> u(0.0f, 1.0f);
   while (get_next_record(input, all_data, ndx, buffer))
   {
-    if (probability < 1.0  && iwrandom() > probability)
+    if (probability < 1.0 && u(generator) > probability)
       continue;
 
     records_examined++;
@@ -1687,7 +1691,7 @@ notenoughvariance(iwstring_data_source & input,
 //    figure out all the cases in which we need to convert to an actual number
 
       if (normalise_output && (nlines > nskip) &&
-          (NULL == ignore_column || 0 == ignore_column[iword])
+          (nullptr == ignore_column || 0 == ignore_column[iword])
           && missing_value != token)
       {
         float tmp;
@@ -1764,7 +1768,7 @@ notenoughvariance(const char * fname,
     return 13;
   }
 
-  if (ignore_columns_from_cl.number_elements() || process_column_regexp.active() || 
+  if (ignore_columns_from_cl.number_elements() || process_column_regexp || 
       ignore_columns_with_non_numeric_data)
   {
     ignore_column = new int[columns_in_input];
@@ -1789,7 +1793,7 @@ notenoughvariance(const char * fname,
   {
     value_count_float & v = counters[i];
 
-    if (NULL == ignore_column || ! ignore_column[i])
+    if (nullptr == ignore_column || ! ignore_column[i])
       v.initialise(nkeep);
   }
 
@@ -1802,7 +1806,13 @@ notenoughvariance(const char * fname,
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Usage:  <options> <input_file>\n";
   cerr << " -n <buffer>    specify buffer size - number of different values stored (mandatory)\n";
   cerr << " -m <string>    specify missing value string (default '" << missing_value << "')\n";
@@ -1852,8 +1862,6 @@ usage(int rc)
 
   exit (rc);
 }
-
-#include "cmdline.h"
 
 /*
   The -V option is so complex that we put it in its own function
@@ -2037,8 +2045,6 @@ notenoughvariance(int argc, char ** argv)
       usage(14);
     }
 
-    (void) iw_random_seed();
-
     if (verbose)
       cerr << "Will examine records with a probability of " << probability << endl;
   }
@@ -2153,7 +2159,10 @@ notenoughvariance(int argc, char ** argv)
 
     (void) cl.value('P', p);
 
-    if (! process_column_regexp.set_pattern(p))
+    const re2::StringPiece string_piece(p.data(), p.length());
+    process_column_regexp = std::make_unique<re2::RE2>(string_piece);
+
+    if (! process_column_regexp->ok())
     {
       cerr << "Cannot parse process column regexp '" << p << "'\n";
       usage(4);
@@ -2162,7 +2171,7 @@ notenoughvariance(int argc, char ** argv)
     is_descriptor_file = 1;
 
     if (verbose)
-      cerr << "Only columns matching '" << process_column_regexp.source() << "' will be processed\n";
+      cerr << "Only columns matching '" << process_column_regexp->pattern() << "' will be processed\n";
   }
 
   if (cl.option_present('b'))
@@ -2289,10 +2298,10 @@ notenoughvariance(int argc, char ** argv)
     }
   }
 
-  if (NULL != ignore_column)
+  if (nullptr != ignore_column)
     delete [] ignore_column;
 
-  if (NULL != column_title)
+  if (nullptr != column_title)
     delete [] column_title;
 
   return rc;

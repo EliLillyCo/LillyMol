@@ -34,7 +34,7 @@ echo "Testing: $command"
 
 # take 10 copies, do 100 mutations, max ring size 8, 10-40 atoms,
 # max num rings 6, remove duplicates, use seed for deterministic test
-$command -x 10 -p 100 -c 10 -c 40 -R 8 -Y 6 -U all -s 1234567 "$in" > "$out" 2>> err.txt
+$command -x 10 -p 100 -c 10 -c 40 -R 8 -Y 7 -U all -s 1234567 "$in" > "$out" 2>> err.txt
 $diff_tool "$out" "$cmp_out"
 ret=$?
 

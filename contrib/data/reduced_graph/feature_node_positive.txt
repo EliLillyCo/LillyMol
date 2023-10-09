@@ -1,0 +1,3 @@
+query: "feature_node_positive.qry"
+element: "Nb"
+ring: false

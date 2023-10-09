@@ -1,29 +1,27 @@
-/*
-  Fingerprint generation
-*/
+//  Linear Fingerprint generation
 
 #include <iostream>
 #include <memory>
+
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/iwmfingerprint.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
+
 using std::cerr;
-using std::endl;
 
-#include "cmdline.h"
-#include "accumulator.h"
-#include "iwbits.h"
-#include "sparse_fp_creator.h"
-#include "iw_auto_array.h"
-#include "iwdigits.h"
-
-#include "molecule.h"
-#include "smiles.h"
-#include "aromatic.h"
-#include "istream_and_type.h"
-#include "etrans.h"
-#include "iwmfingerprint.h"
-#include "charge_assigner.h"
-#include "iwstandard.h"
-
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -111,12 +109,19 @@ static int times_in_path_optimsation = 0;
 static IWDigits iwdigits;
 static IWDigits iwdigits_count;
 
+static int flush_after_each_molecule = 0;
+
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-
-  cerr << "Produces hashed path based fingerprints\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+  cerr << "Produces hashed linear path fingerprints\n";
 
   cerr << prog_name << " <options> <input_file1> <input_file2> ... > newfile\n";
 //cerr << "  -s min/max     min and max path length (default: 0/7) - obsolete\n";
@@ -129,7 +134,7 @@ usage (int rc)
   cerr << "  -B             accumulate statistics\n";
   cerr << "  -c <nbits>     creation size of fingerprint, bits (default: " << nbits << ")\n";
   cerr << "  -J <tag>       specify fingerprint tag (default '" << fingerprint_tag << "')\n";
-  cerr << "  -V             add Version TDT to output\n";
+  //cerr << "  -V             add Version TDT to output\n";
   cerr << "  -O <pathlen>   add formal charge bits to paths up to length <pathlen>\n";
   cerr << "  -e             include the number of bits set as a descriptor\n";
   cerr << "  -M ...         munge options, enter '-M help' for info\n";
@@ -141,6 +146,7 @@ usage (int rc)
   cerr << "  -P <atype>     specify atom typing\n";
   cerr << "  -x <nhits>     when producing descriptors, limit to <nhits> occurrences\n";
   cerr << "  -Y ...         standard fingerprint generation options, '-Y help' for info\n";
+  cerr << "  -U ...         miscellaneous and obscure options, enter '-U help' for info\n";
 #ifdef COUNT_TIMES_ATOM_IN_PATH
   cerr << "  -z <n>         perform <n> iterations of atom in path counter optimisation\n";
 #endif
@@ -295,7 +301,11 @@ do_write_non_zero_bits(const Molecule & m,
                        const IWMFingerprint & fp,
                        IWString & output_buffer)
 {
-  output_buffer << m.name();
+  if (m.name().empty()) {
+    output_buffer << '.';
+  } else {
+    append_first_token_of_name(m.name(), output_buffer);
+  }
 
   int * b = const_cast<int *>(fp.vector());     // loss of const OK
 
@@ -319,14 +329,13 @@ do_output_numbers (const Molecule & m,
                    const IWMFingerprint & fp,
                    IWString & output_buffer)
 {
-  IWString buffer = m.name();
+  if (m.name().empty()) {
+    output_buffer << '.';
+  } else {
+    append_first_token_of_name(m.name(), output_buffer);
+  }
 
-  buffer.strip_leading_blanks();
-  buffer.strip_trailing_blanks();
-
-//buffer.gsub (' ', '_');
-
-  output_buffer << buffer << ' ';
+  output_buffer << ' ';
 
   int rc;
   if (1 == write_as_numbers)
@@ -360,6 +369,15 @@ do_write_level2_fingerprint (IWMFingerprint & fp,
   append_fingerprint_to_output_buffer(fp, level2_fingerprint_tag, output_buffer);
 
   return 1;
+}
+
+static void
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_each_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(4096);
+  }
 }
 
 static int
@@ -435,7 +453,7 @@ iwfp_tester (Molecule & m,
       if (rc)      // write header on first error
         cerr << "Bit value mismatch for random smiles " << i << " '" << rsmiles << "'\n";
 
-      cerr << "Bit value difference, bit " << j << " expected " << expected_value[j] << " got " << myresult[j] << endl;
+      cerr << "Bit value difference, bit " << j << " expected " << expected_value[j] << " got " << myresult[j] << '\n';
       rc = 0;
     }
 
@@ -484,7 +502,7 @@ static void
 do_accumulate_statistics (const IWMFingerprint & fp)
 {
   const int * bvector = fp.vector();
-  assert (NULL != bvector);
+  assert (nullptr != bvector);
 
   int bits_set_this_fingerprint = 0;
 
@@ -512,7 +530,7 @@ iwfp (Molecule & m, IWMFingerprint & fp)
     fp.set_min_heteroatoms_at_path_ends(min_heteroatoms_at_ends);
 
   if (atom_typing_specification.active())
-    fp.construct_fingerprint(m, atom_typing_specification, NULL);
+    fp.construct_fingerprint(m, atom_typing_specification, nullptr);
   else
     fp.construct_fingerprint(m);
 
@@ -552,6 +570,8 @@ iwfp (Molecule & m,
     do_munging(m, output);
 
   output << "|\n";
+
+  MaybeFlush(output);
 
   return 1;
 }
@@ -611,7 +631,7 @@ iwfp (iwstring_data_source & input,
 
     if (! iwfp(buffer, output))
     {
-      cerr << "Fatal error processing smiles '" << buffer << "', line " << input.lines_read() << endl;
+      cerr << "Fatal error processing smiles '" << buffer << "', line " << input.lines_read() << '\n';
       return 0;
     }
   }
@@ -657,7 +677,7 @@ iwfp (data_source_and_type<Molecule> & input,
       IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -668,25 +688,25 @@ iwfp (data_source_and_type<Molecule> & input,
     if (! iwfp(*m, output))
       return 0;
 
-    output.write_if_buffer_holds_more_than(4096);
+    MaybeFlush(output);
   }
 
   return 1;
 }
 
 static int
-iwfp (const char * fname, int input_type, 
+iwfp (const char * fname, FileType input_type, 
       IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
   if (function_as_filter)
     return iwfp(fname, output);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -705,17 +725,24 @@ iwfp (const char * fname, int input_type,
 static void
 display_standard_munging_options (std::ostream & os, char mflag)
 {
-  cerr << "  -" << mflag << " single       munge to all single bonds\n";
-  cerr << "  -" << mflag << " graph        munge to graph form\n";
-  cerr << "  -" << mflag << " carbon       munge to all carbon\n";
+  os << "  -" << mflag << " single       munge to all single bonds\n";
+  os << "  -" << mflag << " graph        munge to graph form\n";
+  os << "  -" << mflag << " carbon       munge to all carbon\n";
 
   exit(1);
+}
+
+static void
+DisplayDashUOptions(std::ostream& output) {
+  output << " -U flush             flush output after each molecule\n";
+
+  ::exit(0);
 }
 
 static int
 iwfp (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vVc:E:aA:k:t:J:s:i:T:t:BfoN:O:g:lS:d:eM:x:Y:p:P:r:R:qz:");
+  Command_Line cl(argc, argv, "vVc:E:aA:k:t:J:s:i:T:t:BfoN:O:g:lS:d:eM:x:Y:p:P:r:R:qz:U:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -791,15 +818,7 @@ iwfp (int argc, char ** argv)
 
     set_include_formal_charge_bits(oo);
     if (verbose)
-      cerr << "Formal charge bits set for paths up to length " << oo << endl;
-  }
-
-  if (cl.option_present('e'))
-  {
-    append_nset = 1;
-
-    if (verbose)
-      cerr << "Will include the number of bits set as a descriptor\n";
+      cerr << "Formal charge bits set for paths up to length " << oo << '\n';
   }
 
   if (cl.option_present('c'))
@@ -954,7 +973,24 @@ iwfp (int argc, char ** argv)
     }
   }
 
-  int input_type = 0;
+  if (cl.option_present('U')) {
+    const_IWSubstring u;
+    for (int i = 0; cl.value('U', u, i); ++i) {
+      if (u == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule processed\n";
+        }
+      } else if (u == "help") {
+        DisplayDashUOptions(cerr);
+      } else {
+        cerr << "Unrecognised -U qualifier '" << u << "'\n";
+        DisplayDashUOptions(cerr);
+      }
+    }
+  }
+
+  FileType input_type = FILE_TYPE_INVALID;
   if (function_as_filter)     // no need to check input type
     ;
   else if (cl.option_present('i'))
@@ -1047,7 +1083,7 @@ iwfp (int argc, char ** argv)
 
     set_min_path_length(p);
     if (verbose)
-      cerr << "Min path length set to " << p << endl;
+      cerr << "Min path length set to " << p << '\n';
   }
 
   if (cl.option_present('R'))
@@ -1061,7 +1097,7 @@ iwfp (int argc, char ** argv)
 
     set_max_path_length(p);
     if (verbose)
-      cerr << "Max path length set to " << p << endl;
+      cerr << "Max path length set to " << p << '\n';
   }
 
   if (cl.option_present('x'))
@@ -1073,7 +1109,7 @@ iwfp (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Max hits per bit set to " << max_hits << endl;
+      cerr << "Max hits per bit set to " << max_hits << '\n';
   }
 
   if (write_sparse_fingerprints && iwmfingerprint_nbits() <= 2048)
@@ -1093,6 +1129,16 @@ iwfp (int argc, char ** argv)
   {
     cerr << "The -a and -q options are mutually exclusive\n";
     usage(1);
+  }
+
+  if (cl.option_present('e')) {
+    if (write_non_zero_bits == 0) {
+      write_as_numbers = 1;
+    }
+    append_nset = 1;
+
+    if (verbose)
+      cerr << "Will include the number of bits set as a descriptor\n";
   }
 
   if (write_non_zero_bits)
@@ -1171,7 +1217,7 @@ iwfp (int argc, char ** argv)
     cerr << "Bits hit between " << bits_hit.minval() << " and " << bits_hit.maxval();
     if (bits_hit.n())
       cerr << " average " << bits_hit.average();
-    cerr << endl;
+    cerr << '\n';
   }
 
 #ifdef CHECK_COLLISIONS

@@ -5,14 +5,19 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "cmdline.h"
-#include "misc.h"
-#include "iw_stl_hash_map.h"
-#include "iw_stl_hash_set.h"
+#include <iostream>
+
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/iwmmap.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 #include "IWDistanceMatrixBase.h"
-#include "iwstring_data_source.h"
-#include "iwmmap.h"
-#include "report_progress.h"
+
+using std::cerr;
+using std::endl;
 
 const char * prog_name = NULL;
 

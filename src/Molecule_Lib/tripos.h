@@ -1,4 +1,5 @@
-#ifndef IW_TRIPOS_H
+#ifndef MOLECULE_LIB_TRIPOS_H_
+#define MOLECULE_LIB_TRIPOS_H_
 
 /*
   We need a class to describe the residue information in a .mol2 file
@@ -22,4 +23,4 @@ class Tripos_Residue_Information
     int remove_all_atoms_except (Molecule & m, const IWString & rname) const;
 };
 
-#endif
+#endif  // MOLECULE_LIB_TRIPOS_H_

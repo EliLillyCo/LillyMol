@@ -1,7 +1,7 @@
 #include <iostream>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "pearlman.h"
 
 //template class resizable_array_p<Beep>;

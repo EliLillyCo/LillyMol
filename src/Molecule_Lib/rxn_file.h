@@ -1,14 +1,14 @@
-#ifndef IWRXN_FILE_H
-#define IWRXN_FILE_H
+#ifndef MOLECULE_LIB_RXN_FILE_H_
+#define MOLECULE_LIB_RXN_FILE_H_
 
-#include "sparse_fp_creator.h"
-#include "iw_stl_hash_map.h"
-
-#include "iwreaction.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+
+#include "iwreaction.h"
 #include "mdl_molecule.h"
 
 class Atom_Typing_Specification;
@@ -42,8 +42,8 @@ class Reaction_Subset
 
     int debug_print(std::ostream &) const;
 
-    const int * include_atom (const int i) const { if (NULL == _include_atom)
-                                                     return NULL;
+    const int * include_atom (const int i) const { if (nullptr == _include_atom)
+                                                     return nullptr;
                                                    return _include_atom + _reagent_offset[i];}
 
     void convert_cross_reference_to_boolean_include();
@@ -134,7 +134,7 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
 //  When deciding whether we need to toggle Kekule forms, we need to know whether
 //  ring membership changes or not
 
-    resizable_array_p<Bond> _toggle_kekule_form;
+    ::resizable_array_p<Bond> _toggle_kekule_form;
 
 //  For some reactions, it is better to forget Kekule forms.
 
@@ -235,7 +235,7 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
     int _write_m_sub_records (int n, std::ostream & output) const;
     int _write_m_uns_records (int n, std::ostream & output) const;
     int _write_m_rbc_records (int n, std::ostream & output) const;
-		
+                
   public:
     ISIS_RXN_FILE_Molecule ();
     ~ISIS_RXN_FILE_Molecule ();
@@ -319,15 +319,15 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
 
     int swap_atoms_to_put_rare_atoms_first ();
 
-    int create_query (Reaction_Site & r, 
-    									const int * include_these_atoms, 
-    									std::ofstream *queryOutStream);
-    int create_query (Reaction_Site & r, 
-    									const int * include_these_atoms,
-    									Molecule_to_Query_Specifications & mqs, 
-    									std::ofstream *queryOutStream);
+    int create_query(Reaction_Site & r, 
+                     const int * include_these_atoms, 
+                     std::ofstream *queryOutStream);
+    int create_query(Reaction_Site & r, 
+                     const int * include_these_atoms,
+                     Molecule_to_Query_Specifications & mqs, 
+                     std::ofstream *queryOutStream);
 
-    int add_chiral_centres_to_be_inverted (Reaction_Site &) const;
+    int add_chiral_centres_to_be_inverted(Reaction_Site &) const;
 
     int nbonds_for_mapped_atom (int);
 
@@ -338,7 +338,7 @@ class ISIS_RXN_FILE_Molecule : public MDL_Molecule
     int add_toggle_kekule_form (atom_number_t, atom_number_t, bond_type_t);
 
     int add_toggle_kekule_forms (Reaction_Site & rxn, const Reaction_Subset & subset, const int ndx,
-    												const RXN_File_Create_Reaction_Options & rxnfcro) const;
+                                                                                                const RXN_File_Create_Reaction_Options & rxnfcro) const;
 
     int has_inter_fragment_changes () const;
 
@@ -436,7 +436,7 @@ class Reaction_Smiles_Options
     //int _orphan_plus_rather_than_dot;
     int _write_reaction_name;
     int _write_agent;
-    //IWString _output_separator;
+    IWString _output_separator;
 
   public:
     Reaction_Smiles_Options();
@@ -444,14 +444,123 @@ class Reaction_Smiles_Options
     void set_reagent_product_plus_rather_than_dot(const bool s) { _reagent_product_plus_rather_than_dot = s;}
     //void set_orphan_plus_rather_than_dot(const int s) { _orphan_plus_rather_than_dot = s;}
     void set_write_reaction_name(const int s) { _write_reaction_name = s;}
-    //void set_output_separator(const const_IWSubstring & s) { _output_separator = s;}
+    void set_output_separator(const const_IWSubstring & s) { _output_separator = s;}
     void set_write_agent (const int s) { _write_agent = s;}
 
     bool reagent_product_plus_rather_than_dot() const { return _reagent_product_plus_rather_than_dot;}
     //int orphan_plus_rather_than_dot() const { return _orphan_plus_rather_than_dot;}
     int write_reaction_name() const { return _write_reaction_name;}
     int write_agent() const { return _write_agent;}
-    //const IWString & output_separator() const { return _output_separator;}
+    const IWString & output_separator() const { return _output_separator;}
+};
+
+// It is convenient to capture a string representation of a reaction smiles/smirks.
+// Note that all info is const_IWSubstring so make sure the initial reaction string
+// stays in scope.
+class ReactionStringRep
+{
+  private:
+    resizable_array_p<const_IWSubstring> _reagent;
+    resizable_array_p<const_IWSubstring> _agent;
+    resizable_array_p<const_IWSubstring> _product;
+
+    // private functions.
+
+    // Reset the array variables.
+    void _reset();
+
+  public:
+    ReactionStringRep();
+    ~ReactionStringRep();
+
+    // It is important what the component_separator is. If it is '+' and
+    // there are no '+' in the input, then all '.' separated strings
+    // become a single, multi-fragment molecule.
+    int Build(const const_IWSubstring& rxn, char component_separator);
+
+    int number_reagents() const {
+      return _reagent.number_elements();
+    }
+    int number_products() const {
+      return _product.number_elements();
+    }
+    int number_agents() const {
+      return _agent.number_elements();
+    }
+
+    const resizable_array_p<const_IWSubstring>& reagents() const {
+      return _reagent;
+    }
+    const resizable_array_p<const_IWSubstring>& agents() const {
+      return _agent;
+    }
+    const resizable_array_p<const_IWSubstring>& products() const {
+      return _product;
+    }
+};
+
+
+// ChemAxon reaction smiles extension. Fragment grouping "f:0.1,5.6".
+// Connected groups are separated by ",".
+// A connected group is a "." separated list of fragment indexes.
+// A class to build and hold that data.
+class ChemAxonFragmentData
+{
+  // For each fragment, we need to know if it is in reagents/agents/products
+
+  private:
+    enum RAP {
+      Reagent,
+      Agent,
+      Product,
+    };
+
+  public:
+    using ConnectedGroup = resizable_array<int>;
+  private:
+    resizable_array_p<ConnectedGroup> _connected_group;
+    // There are two ways of handling fragments when there is a grouping
+    // directive present in (reagents, agents, procucts).
+    // 1. Fragments that are NOT grouped, become components.
+    // 2. Only fragments that are grouped become components.
+
+    int _only_fragents_that_are_grouped_become_components;
+
+    // Private functions.
+
+    // Does fragment 'f' belong to any of _connected_group.
+    int _is_in_group(const int f)  const;
+
+    // Add extra ConnectedGroup's for ungrouped fragments.
+    int _create_groups_for_ungrouped(const resizable_array<RAP>& rap);
+
+    // Build a group from something that should look like '2.5.7'
+    int _add_group(const const_IWSubstring& buffer);
+
+  public:
+    ChemAxonFragmentData();
+    ~ChemAxonFragmentData();
+
+    void set_only_fragents_that_are_grouped_become_components(int s) {
+      _only_fragents_that_are_grouped_become_components = s;
+    }
+
+    int Build(const const_IWSubstring& buffer);
+
+    void debug_print(std::ostream& output) const;
+
+    int active() const { return _connected_group.number_elements();}
+    int number_connected_groups() const { return _connected_group.number_elements();}
+
+    const resizable_array_p<ConnectedGroup>& connected_group() const {
+      return _connected_group;
+    }
+
+    // Given that a Chemaxon connected group specification spans all sides
+    // of a reaction, and the agents, the easy way to deal with it is to
+    // create a new reaction smiles with + separators.
+    // Non const because it ungrouped fragments are grouped, it will change internal state.
+    int ChangeToPlusForm(const const_IWSubstring& buffer, char sep, IWString& new_rxnsmiles);
 };
 
 class RXN_File
@@ -555,24 +664,26 @@ class RXN_File
 
     int _auto_fix_orphans;     // jan 2016
 
-// Mar 2016. When creating subsets, we need to pass info to the molecule_to_query object that
-// controls generation of the substructure query. But the Molecule_to_Query_Specifications object is 
-// not visible outside. Rather than changing a whole bunch of signatures to allow it, we have
-// a bit of a kludge
+// Mar 2016.  When creating subsets, we need to pass info to the
+// molecule_to_query object that controls generation of the
+// substructure query.  But the Molecule_to_Query_Specifications
+// object is not visible outside.  Rather than changing a whole bunch
+// of signatures to allow it, we have a bit of a kludge
 
     int _mol2qry_isotope_special_meaning;
     
-// Mar 2018.  retrosynthetic_quick had a core dump when atoms that are parts of a bond that only changed
-// its kekule form were NOT considered changed atoms. However, this code is used in many programs, and could
-// cause changes in expected hehavior.  A complete test of regression tests did NOT reveal any issues, so the default
-// has been set to make these atoms as changed.
-//  Tad Hurst
+// Mar 2018.  retrosynthetic_quick had a core dump when atoms that are
+// parts of a bond that only changed its kekule form were NOT
+// considered changed atoms.  However, this code is used in many
+// programs, and could cause changes in expected hehavior.  A complete
+// test of regression tests did NOT reveal any issues, so the default
+// has been set to make these atoms as changed.  Tad Hurst
 
     int _mark_atoms_changed_when_kekule_form_of_bond_changes;
 
 // 
     std::ofstream *_queryOutStream;
-    	
+        
 //  private functions
 
     int _identify_square_bonding_changes (int highest_atom_map);
@@ -606,13 +717,13 @@ class RXN_File
                                             int centre_atom_reagent,
                                             int our_reagent,
                                             int mapped) const;
-		int _remove_unmapped_components (ISIS_RXN_FILE_Molecule * component,  int & n);
+    int _remove_unmapped_components(ISIS_RXN_FILE_Molecule * component, int & n);
 
 #ifdef COMPILING_RXN_FILE
     int  _number_reagent_atoms () const;
     int  _number_product_atoms () const;
 
-    int _parse_ChemAxon_Extensions(const_IWSubstring buffer, IWString & smiles);
+    int _parse_ChemAxon_Extensions(const_IWSubstring buffer, ChemAxonFragmentData & cxfd);
 
     int _establish_atom_mapping (int & highest_atom_map_number);
 
@@ -651,16 +762,17 @@ class RXN_File
 
     int _identify_kekule_forms_to_be_toggled (const int * include_these_atom_numbers);
 
-    int _changes_in_ring_membership (ISIS_RXN_FILE_Molecule & mfrom, const Ring & r) const;
+//  int _changes_in_ring_::membership (ISIS_RXN_FILE_Molecule & mfrom, const Ring & r) const;
+    int _need_to_preserve_kekule_form(ISIS_RXN_FILE_Molecule & mfrom, const Ring & r) const;
 
     void _fill_reagent_and_product_locator_arrays ();
     int _setup_reagent_product_locator_arrays();
 
     int _look_for_unmapped_atoms_that_disappear (int & highest_atom_map,  
-    																			IWReaction & rxn, 
-    																			const Reaction_Subset & subset,
-    																			const RXN_File_Create_Reaction_Options & rxnfcro);
-    																			
+                                                                                                                                                        IWReaction & rxn, 
+                                                                                                                                                        const Reaction_Subset & subset,
+                                                                                                                                                        const RXN_File_Create_Reaction_Options & rxnfcro);
+                                                                                                                                                        
     int _identify_small_fragments_showing_up_in_products(const int rgnt, int * not_in_largest_fragment) const;
     int _all_atoms_in_fragment_in_products(ISIS_RXN_FILE_Molecule & r, const int f, int * not_in_largest_fragment) const;
 
@@ -677,6 +789,7 @@ class RXN_File
 
     int _do_read_v3000(iwstring_data_source & input);
     int _fix_orphan_condition (const Set_of_Atoms & orphans, const int p);
+    int _fix_widow_condition(const Set_of_Atoms& widows, int reagent);
     int _identify_bonding_changes_involving_matched_atom (const int mstart,
                                       ISIS_RXN_FILE_Molecule & reagent,
                                       ISIS_RXN_FILE_Molecule & product,
@@ -733,10 +846,10 @@ class RXN_File
                                       Sparse_Fingerprint_Creator & sfc) const;
 #endif
 
-    int _create_query (Reaction_Site & r, 
-    										ISIS_RXN_FILE_Molecule & m, 
-    										Molecule_to_Query_Specifications & mqs, 
-    										const int * include_these_atoms);
+    int _create_query(Reaction_Site & r,
+                      ISIS_RXN_FILE_Molecule & m, 
+                      Molecule_to_Query_Specifications & mqs, 
+                      const int * include_these_atoms);
                          
     int _look_for_stereo_centres_made (IWReaction &);
 
@@ -772,9 +885,9 @@ class RXN_File
     int number_products() const { return _np;}
     int number_agents() const { return _na;}
 
-		void setQueryOutStream(std::ofstream *thisStream){_queryOutStream = thisStream;}
+    void setQueryOutStream(std::ofstream *thisStream){_queryOutStream = thisStream;}
     //std::ofstream *queryOutStream() { return _queryOutStream;}
-    	
+        
     void set_remove_product_fragments (int s) { _remove_product_fragments = s;}
     void set_remove_unmapped_atoms_that_disappear (int s) { _remove_unmapped_atoms_that_disappear = s;}
     void set_aromatic_bonds_lose_kekule_identity (int s);
@@ -794,7 +907,12 @@ class RXN_File
     void set_mark_atoms_changed_when_kekule_form_of_bond_changes (int s) { _mark_atoms_changed_when_kekule_form_of_bond_changes = s;}
 
     int contains_orphan_atoms() const { return _orphan_atoms.natoms();}
+    // If _auto_fix_orphans is set, orphans are brought into the
+    // reaction scheme.
     int check_for_widows_and_orphans ();
+
+    // Widow atoms are just removed from the LHS.
+    int remove_widow_atoms();
 
     int all_reagents_the_same();   // identify duplicated reagents (drawing errors we have encountered). Will reset _nr to 1 if everything the same
 
@@ -812,8 +930,6 @@ class RXN_File
     int remove_unchanging_fragments();
     int remove_unchanging_components();
 
-    
-    
     int move_small_counterions_to_orphan_status();
 
     int remove_cis_trans_bonding();
@@ -829,40 +945,45 @@ class RXN_File
 
     int remove_duplicate_reagents_atom_maps_scrambled ();
 
-    void discard_atom_map ();
+    void discard_atom_map();
 
-    void set_fname_for_echo (const const_IWSubstring & s) { _fname_for_echo = s;}
+    void set_fname_for_echo(const const_IWSubstring & s) { _fname_for_echo = s;}
 
-    int highest_atom_map_number () const;
+    int highest_atom_map_number() const;
 
-    int do_read (iwstring_data_source &);
-    int do_read (const const_IWSubstring &);
+    int do_read(iwstring_data_source &);
+    int do_read(const const_IWSubstring &);
 
-    int build_from_reaction_smiles (const const_IWSubstring & buffer);
+    // When building from reaction smiles, the input may, or may not
+    // contain + signs for component grouping.
+    int build_from_reaction_smiles(const const_IWSubstring & buffer,
+                                   int component_grouping_is_plus);
 
-    int do_write (std::ostream &) const;
-    int do_write (const char * fname) const;
+    int do_write(std::ostream &) const;
+    int do_write(const char * fname) const;
 
     template <typename T> int write_rxn_smiles(const Reaction_Smiles_Options &, T & output);
 
-    int prepare_for_reaction_construction ();   // allocates arrays, filly reagent/product locator arrays, does atom mapping
+    int prepare_for_reaction_construction();   // allocates arrays, filly reagent/product locator arrays, does atom mapping
 
-    int create_reaction (IWReaction &, const RXN_File_Create_Reaction_Options & rxnfcro, const int * include_these_atoms = NULL);
-    int create_reaction (IWReaction &, const RXN_File_Create_Reaction_Options & rxnfcro, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms = NULL);
+    int create_reaction(IWReaction &, const RXN_File_Create_Reaction_Options & rxnfcro, const int * include_these_atoms = nullptr);
+    int create_reaction(IWReaction &, const RXN_File_Create_Reaction_Options & rxnfcro, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms = nullptr);
 
-    int transfer_atom_aliases_to_isotopes ();
+    int transfer_atom_aliases_to_isotopes();
 
-    int convert_unchanging_fragments_to_agents ();
+    int convert_unchanging_fragments_to_agents();
 
-    ISIS_RXN_FILE_Molecule & reagent (const int i) { return _reagent[i];}
-    ISIS_RXN_FILE_Molecule & product (const int i) { return _product[i];}
+    ISIS_RXN_FILE_Molecule & reagent(const int i) { return _reagent[i];}
+    ISIS_RXN_FILE_Molecule & agent(const int i) { return _agent[i];}
+    ISIS_RXN_FILE_Molecule & product(const int i) { return _product[i];}
 
-    int identify_atoms_changing_reagent (const int r, int *, const Changing_Atom_Conditions & cac);
-    int identify_atoms_changing_product (const int p, int *, const Changing_Atom_Conditions & cac);
-    int identify_atoms_changing_reagent (const int r, Atom_Typing_Specification & ats, int *, const Changing_Atom_Conditions & cac);
-    int identify_atoms_changing_product (const int p, Atom_Typing_Specification & ats, int *, const Changing_Atom_Conditions & cac);
+    int identify_atoms_changing_reagent(const int r, int *, const Changing_Atom_Conditions & cac);
+    int identify_atoms_changing_product(const int p, int *, const Changing_Atom_Conditions & cac);
+    int identify_atoms_changing_reagent(const int r, Atom_Typing_Specification & ats, int *, const Changing_Atom_Conditions & cac);
+    int identify_atoms_changing_product(const int p, Atom_Typing_Specification & ats, int *, const Changing_Atom_Conditions & cac);
 
     int contains_isotopic_reagent_atoms() const;
+    int contains_isotopic_product_atoms() const;
     int at_least_some_mapped_atoms_common_btw_reagents_and_products();
 
     int largest_fragment_is_changed() const;
@@ -908,4 +1029,4 @@ write_isis_reaction_file_header (int nr,
                                  int np,
                                  std::ostream &);
 
-#endif
+#endif  // MOLECULE_LIB_RXN_FILE_H_

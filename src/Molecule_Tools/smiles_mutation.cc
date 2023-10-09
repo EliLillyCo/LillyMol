@@ -12,24 +12,25 @@ using std::endl;
 
 #define REPORT_PROGRESS_IMPLEMENTATION
 
-#include "cmdline.h"
-#include "iw_stl_hash_set.h"
-#include "accumulator.h"
-#include "misc.h"
-#include "report_progress.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 
-#include "istream_and_type.h"
-#include "molecule.h"
-#include "target.h"
-#include "smiles.h"
-#include "path.h"
-#include "substructure.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "numass.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/numass.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/target.h"
+
 #include "random_reactions.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -129,15 +130,20 @@ static Random_Reactions rxn;
 
 static double probability_do_reaction = 0.0;
 
-static std::random_device(rd);
+static std::random_device rd;
 
 static std::mt19937_64 rng(rd());
 
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Random mutations of smiles strings\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -N <n>        number of iterations to run\n";
   cerr << "  -n <n>        complete refresh from initial smiles every <n> iterations\n";
   cerr << "  -x <nchar>    max number of characters to remove during excisions\n";
@@ -434,7 +440,7 @@ fill_smiles_array (data_source_and_type<Molecule> & input,
   IW_STL_Hash_Set already_seen;
 
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -471,15 +477,15 @@ fill_smiles_array (data_source_and_type<Molecule> & input,
 }
 
 static int
-fill_smiles_array (const char * fname, int input_type,
+fill_smiles_array (const char * fname, FileType input_type,
                    resizable_array_p<IWString> & smiles)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -928,7 +934,7 @@ valid_smiles(IWString & s,
 static int
 do_intra_molecular_change(IWString & s)
 {
-  random_number_t r = random_number_between_01();
+  auto r = random_number_between_01();
 
   if (r < 0.33)
     excise_characters(s);
@@ -955,10 +961,10 @@ do_inter_molecular_change(IWString & s1,
 }
 
 static int
-do_refresh (resizable_array_p<IWString> & smiles,
-            const IWString * r,
-            int * times_since_last_valid_smiles,
-            random_number_t p)
+do_refresh(resizable_array_p<IWString> & smiles,
+           const IWString * r,
+           int * times_since_last_valid_smiles,
+           float threshold)
 {
   int n = smiles.number_elements();
 
@@ -969,7 +975,7 @@ do_refresh (resizable_array_p<IWString> & smiles,
     if (0 == times_since_last_valid_smiles[i])
       continue;
 
-    if (random_number_between_01() > p)
+    if (random_number_between_01() > threshold)
     {
       *(smiles[i]) = r[i];
       times_since_last_valid_smiles[i] = 0;
@@ -1237,8 +1243,7 @@ smiles_mutation (int argc, char ** argv)
       cerr << "Will reduce to largest fragment\n";
   }
 
-  int input_type = 0;
-
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -1611,13 +1616,11 @@ smiles_mutation (int argc, char ** argv)
       probability_do_reaction = 0.05;
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
-
-  iw_random_seed();
 
   set_include_aromaticity_in_smiles(1);   // turned off below. Use to populate the pool
   set_input_aromatic_structures(1);

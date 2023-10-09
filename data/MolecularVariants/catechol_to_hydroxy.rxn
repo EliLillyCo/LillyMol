@@ -1,0 +1,6 @@
+name: "catechol_to_methoxy"
+scaffold {
+  id: 0
+  smarts: "[OH1]-c:c-[OH]"
+  remove_atom: 2
+}

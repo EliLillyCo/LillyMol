@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package LigandProtein;
+
+// Several specifications need a range for a disance and an angle.
+
+message DistanceAngleRanges {
+  optional float min_distance = 1;
+  optional float max_distance = 2;
+
+  // Angles are in degrees.
+  optional float min_angle = 3;
+  optional float max_angle = 4;
+}
+
+message InteractionConfig {
+  optional DistanceAngleRanges hbond_spec = 1;
+
+  optional DistanceAngleRanges hpi_spec = 2;
+
+  optional DistanceAngleRanges pipi_spec = 3;
+
+  // When writing fragments, all atoms in the other side that are
+  // within this distance must be included.
+  optional float include_all_within = 4;
+
+  // During preprocessing, unconnected atoms are connected with
+  // a nearby neighbour if they are within this distance.
+  optional float reconnect_within = 5;
+
+  // The number of bonds from an interaction atom that are always
+  // included with the fragment.
+  optional int32 bond_extent = 6;
+}
+
+message HydrogenBondResult {
+  optional int32 ligand_atom = 1;
+  repeated int32 ligand_fragment = 2;
+  optional int32 protein_atom = 3;
+  optional string protein_residue = 4;
+  optional float distance = 5;
+  optional float angle = 6;
+}

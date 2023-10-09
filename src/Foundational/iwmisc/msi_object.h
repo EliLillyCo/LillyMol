@@ -3,11 +3,9 @@
 
 #include <iostream>
 
-using std::cerr;
-using std::endl;
 
-#include "iwstring.h"
-#include "iwstring_data_source.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #define MSI_ATTRIBUTE_TYPE_INT     3
 #define MSI_ATTRIBUTE_TYPE_FLOAT   4
@@ -171,7 +169,7 @@ msi_object::read (T & input)
   if (! input.next_record(buffer))
   {
     if (_display_no_data_error_message)
-      cerr << "msi_object::read:no data\n";
+      std::cerr << "msi_object::read:no data\n";
     return 0;
   }
 
@@ -186,7 +184,7 @@ msi_object::read (T & input)
 
   if (! is_int(buffer.chars() + 1, &_object_id))
   {
-    cerr << "msi_object: cannot discern object id '" << buffer << "'\n";
+    std::cerr << "msi_object: cannot discern object id '" << buffer << "'\n";
     return 0;
   }
 
@@ -225,8 +223,8 @@ msi_object::read (T & input)
       msi_attribute * att = new msi_attribute();
       if (! att->build(buffer))
       {
-        cerr << "msi_object::read: cannot build msi attribute\n";
-        cerr << buffer << endl;
+        std::cerr << "msi_object::read: cannot build msi attribute\n";
+        std::cerr << buffer << '\n';
         return 0;
       }
       add_attribute(att);
@@ -235,12 +233,12 @@ msi_object::read (T & input)
       ;
     else
     {
-      cerr << "msi_object::read:unrecognised input '" << buffer << "'\n";
-      cerr << "IGNORED\n";
+      std::cerr << "msi_object::read:unrecognised input '" << buffer << "'\n";
+      std::cerr << "IGNORED\n";
     }
   }
 
-  cerr << "msi_object::read  unterminated object\n";
+  std::cerr << "msi_object::read  unterminated object\n";
   return 0;
 }
 

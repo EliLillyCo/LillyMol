@@ -12,7 +12,7 @@ using std::cout;
 using std::endl;
 using std::ostream;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int tests_performed = 0;
 

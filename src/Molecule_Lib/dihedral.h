@@ -1,5 +1,5 @@
-#ifndef DIHEDRAL_H
-#define DIHEDRAL_H
+#ifndef MOLECULE_LIB_DIHEDRAL_H_
+#define MOLECULE_LIB_DIHEDRAL_H_
 
 /*
   We often need a specifier for dihedral atoms, and the atom
@@ -48,7 +48,7 @@ class Dihedral_Atoms
 
 #define TWIST_MAGIC -117722
 
-#define OK_TWIST(t) (NULL != (t) && (t)->ok ())
+#define OK_TWIST(t) (nullptr != (t) && (t)->ok ())
 
 #define OK_MOL_TWIST(m, t) \
           ( OK_MOL_DIHEDRAL((m), (t)) && \
@@ -75,4 +75,4 @@ class Twist_Atoms : public Dihedral_Atoms
 extern ostream &
 operator << (ostream &, const Twist_Atoms &);
 
-#endif
+#endif  // MOLECULE_LIB_DIHEDRAL_H_

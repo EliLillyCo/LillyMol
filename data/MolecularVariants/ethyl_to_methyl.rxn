@@ -1,0 +1,6 @@
+name: "ethyl_to_methyl"
+scaffold {
+  id: 0
+  smarts: "[CD1H3]-[CD2H2]"
+  remove_atom: 0
+}

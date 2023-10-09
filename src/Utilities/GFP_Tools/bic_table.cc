@@ -9,7 +9,7 @@
 unsigned char bic_table[256*256];
 
 static int
-initialise_bic ()
+initialise_bic()
 {
   for (int i = 0; i < 256; i++)
   {
@@ -29,16 +29,14 @@ class Just_to_Get_Something_Initialised
 {
   private:
   public:
-    Just_to_Get_Something_Initialised ();
+    Just_to_Get_Something_Initialised();
 };
 
 Just_to_Get_Something_Initialised::Just_to_Get_Something_Initialised ()
 {
-  initialise_bic ();
+  initialise_bic();
 
   return;
 }
 
 static Just_to_Get_Something_Initialised notused;
-
-

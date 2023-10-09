@@ -13,29 +13,32 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
 #include <limits>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 
-#include "cmdline.h"
-#include "misc.h"
-#include "iw_stl_hash_set.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 
 #define ISTREAM_AND_TYPE_IMPLEMENTATION 1
 
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "output.h"
-#include "substructure.h"
-#include "path.h"
-#include "target.h"
-#include "toggle_kekule_form.h"
-#include "istream_and_type.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/target.h"
+#include "Molecule_Lib/toggle_kekule_form.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -96,7 +99,7 @@ static int rejected_for_hydrogen_change = 0;
 
 static Molecule_Output_Object stream_for_invalid_valence;
 
-static int max_tautomers_per_molecule = numeric_limits<int>::max();
+static int max_tautomers_per_molecule = std::numeric_limits<int>::max();
 
 static int terminated_by_max_tautomers = 0;
 
@@ -141,8 +144,8 @@ class Molecule_Proc : public Molecule
 
 Molecule_Proc::Molecule_Proc()
 {
-  _process_these_atoms = NULL;
-  _hcount = NULL;
+  _process_these_atoms = nullptr;
+  _hcount = nullptr;
 
   return;
 }
@@ -157,17 +160,17 @@ Molecule_Proc::Molecule_Proc (const Molecule_Proc & rhs) : Molecule (rhs)
 
   copy_vector(_process_these_atoms, rhs._process_these_atoms, matoms);
 
-  _hcount = NULL;
+  _hcount = nullptr;
 
   return;
 }
 
 Molecule_Proc::~Molecule_Proc()
 {
-  if (NULL != _process_these_atoms)
+  if (nullptr != _process_these_atoms)
     delete [] _process_these_atoms;
 
-  if (NULL != _hcount)
+  if (nullptr != _hcount)
     delete [] _hcount;
 
   return;
@@ -176,7 +179,7 @@ Molecule_Proc::~Molecule_Proc()
 int
 Molecule_Proc::initialise (Set_of_Queries & queries)
 {
-  assert (NULL == _process_these_atoms);
+  assert (nullptr == _process_these_atoms);
 
   int matoms = Molecule::natoms();
 
@@ -208,7 +211,7 @@ Molecule_Proc::initialise (Set_of_Queries & queries)
 int
 Molecule_Proc::determine_hcount ()
 {
-  assert (NULL == _hcount);
+  assert (nullptr == _hcount);
 
   int matoms = natoms();
 
@@ -238,10 +241,10 @@ Molecule_Proc::all_atoms_to_be_processed (const Set_of_Atoms & s) const
 int
 Molecule_Proc::operator== (Molecule_Proc & rhs) 
 {
-  if (NULL == rhs._hcount)
+  if (nullptr == rhs._hcount)
     rhs.determine_hcount();
 
-  if (NULL == _hcount)
+  if (nullptr == _hcount)
     determine_hcount();
 
   int matoms = natoms();
@@ -258,8 +261,13 @@ Molecule_Proc::operator== (Molecule_Proc & rhs)
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Enumerate tautomeric forms\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -T KE         enumerate Keto-Enol forms\n";
   cerr << "  -T ACID       enumerate acid tautomer forms\n";
   cerr << "  -T PY         enumerate pyrrole N tautomer forms\n";
@@ -337,7 +345,7 @@ identify_fused_aromatic_neighbour(Molecule_Proc & m,
       return n;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 #ifdef NOT_USED_HERE
@@ -508,7 +516,7 @@ walk_pyrrole_around_ring_system (resizable_array_p<Molecule_Proc> & m,
     const Ring * fsdnbr = identify_fused_aromatic_neighbour(*m0, *ri);
 
     ri->set_vector(atom_in_system, 1);
-    if (NULL != fsdnbr)
+    if (nullptr != fsdnbr)
       fsdnbr->set_vector(atom_in_system, 1);
   }
 
@@ -706,7 +714,7 @@ do_pyrazoles (resizable_array_p<Molecule_Proc> & molecules)
     if (! m0->all_atoms_to_be_processed(*ri))
       continue;
 
-    if (NULL != identify_fused_aromatic_neighbour(*m0, *ri))
+    if (nullptr != identify_fused_aromatic_neighbour(*m0, *ri))
       continue;
 
     int n1_ndx, n2_ndx;
@@ -720,7 +728,7 @@ do_pyrazoles (resizable_array_p<Molecule_Proc> & molecules)
     rings_to_process.add(tmp);
   }
 
-  if (0 == rings_to_process.number_elements())
+  if (rings_to_process.empty())
     return 0;
 
   if (verbose > 1)
@@ -937,7 +945,7 @@ do_tetrazoles (resizable_array_p<Molecule_Proc> & molecules)
     rings_to_process.add(i);
   }
 
-  if (0 == rings_to_process.number_elements())
+  if (rings_to_process.empty())
     return 1;
 
   if (verbose > 1)
@@ -1291,7 +1299,7 @@ do_isolated_124_triazoles (resizable_array_p<Molecule_Proc> & molecules)
       rings_to_process.add(t);
   }
 
-  if (0 == rings_to_process.number_elements())
+  if (rings_to_process.empty())
     return 1;
 
   if (verbose > 1)
@@ -1711,7 +1719,7 @@ do_123_triazoles (resizable_array_p<Molecule_Proc> & molecules)
       rings_to_process.add(tmp);
   }
 
-  if (0 == rings_to_process.number_elements())
+  if (rings_to_process.empty())
     return 0;
 
   if (verbose > 1)
@@ -1931,7 +1939,7 @@ do_imidazoles_nv (resizable_array_p<Molecule_Proc> & molecules)
     identify_imidazoles_in_ring (*m0, *ri, sites_to_process);
   }
 
-  if (0 == sites_to_process.number_elements())
+  if (sites_to_process.empty())
     return 0;
 
   if (verbose > 1)
@@ -2412,7 +2420,7 @@ do_keto_enol_forms_nv (resizable_array_p<Molecule_Proc> & molecules)
       sites_to_process.add(tmp);
   }
 
-  if (0 == sites_to_process.number_elements())
+  if (sites_to_process.empty())
     return 0;
 
   if (verbose > 1)
@@ -2897,7 +2905,7 @@ tautomer_generation (data_source_and_type<Molecule_Proc> & input,
                      Molecule_Output_Object & output)
 {
   Molecule_Proc * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -2914,15 +2922,15 @@ tautomer_generation (data_source_and_type<Molecule_Proc> & input,
 }
 
 static int
-tautomer_generation (const char * fname, int input_type, 
+tautomer_generation (const char * fname, FileType input_type, 
                      Molecule_Output_Object & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule_Proc> input(input_type, fname);
@@ -2988,8 +2996,7 @@ tautomer_generation (int argc, char ** argv)
       cerr << "Will reduce to largest fragment\n";
   }
 
-  int input_type = 0;
-
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -3123,7 +3130,7 @@ tautomer_generation (int argc, char ** argv)
       ;
     else
     {
-      stream_for_invalid_valence.add_output_type(SMI);
+      stream_for_invalid_valence.add_output_type(FILE_TYPE_SMI);
       if (stream_for_invalid_valence.would_overwrite_input_files(cl, v))
       {
         cerr << "Invalid valence rejection stream '" << v << "' cannot overwrite input file(s)\n";
@@ -3192,7 +3199,7 @@ tautomer_generation (int argc, char ** argv)
       cerr << "Will insert '" << prepend_before_sequence << "' before sequence number\n";
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(2);
@@ -3201,7 +3208,7 @@ tautomer_generation (int argc, char ** argv)
   Molecule_Output_Object output;
 
   if (! cl.option_present('o'))
-    output.add_output_type(SMI);
+    output.add_output_type(FILE_TYPE_SMI);
   else if (! output.determine_output_types(cl))
   {
     cerr << "Cannot determine output type(s), (-o)\n";

@@ -2,35 +2,34 @@
   Implementation of Abraham Descriptors.
   Initial (wrong) implementation from Richard Lewis
 
-  James A Platts, Darko Butina, Michael Abraham Anne Hersey. 
+  James A Platts, Darko Butina, Michael Abraham Anne Hersey.
   J Chem Inf Comput Sci 1999, 39, 835-845
 */
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
-#include <algorithm>
 using std::cerr;
 using std::endl;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
-#include "cmdline.h"
-#include "iwdigits.h"
-#include "misc.h"
-#include "iw_stl_hash_map.h"
-#include "accumulator.h"
-#include "sparse_fp_creator.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
-#include "istream_and_type.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
-#include "qry_wstats.h"
-#include "aromatic.h"
-#include "output.h"
-#include "target.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
 
-const char * prog_name = nullptr;
+const char *prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -72,7 +71,7 @@ static double max_logp = 7.00;
 
 static char output_separator = ' ';
 
-static Accumulator<double> * acc = nullptr;
+static Accumulator<double> *acc = nullptr;
 
 /*
   A debugging tool to see how queries overlap
@@ -119,34 +118,35 @@ static int ap_alpha2h = -1;
 
 // These two we just have to place manually
 
-static int ap_vx      = -1;
-static int ap_logp    = -1;
+static int ap_vx = -1;
+static int ap_logp = -1;
 
 static int ap_cg[5];
 
-class Abraham_Parameters
-{
-  protected:
-    double * _p;
-    const int _n;
+class Abraham_Parameters {
+ protected:
+  double *_p;
+  const int _n;
 
-  public:
-    Abraham_Parameters(int);
-    ~Abraham_Parameters();
+ public:
+  Abraham_Parameters(int);
+  ~Abraham_Parameters();
 
-    void operator += (const Abraham_Parameters & rhs);
+  void operator+=(const Abraham_Parameters &rhs);
 
-    void increment_results (double *) const;
+  void increment_results(double *) const;
 
-    int write_header (IWString_and_File_Descriptor & output) const;
+  int write_header(IWString_and_File_Descriptor &output) const;
 
-//  int write_fingerprint (Molecule & m, const IWString & tag, IWString_and_File_Descriptor & output) const;
+  //  int write_fingerprint (Molecule & m, const IWString & tag,
+  //  IWString_and_File_Descriptor & output) const;
 
-    double operator [] (int ndx) const { return _p[ndx];}
+  double operator[](int ndx) const {
+    return _p[ndx];
+  }
 };
 
-Abraham_Parameters::Abraham_Parameters(int n) : _n(n)
-{
+Abraham_Parameters::Abraham_Parameters(int n) : _n(n) {
   _p = new double[n];
 
   std::fill_n(_p, n, 0.0);
@@ -154,10 +154,10 @@ Abraham_Parameters::Abraham_Parameters(int n) : _n(n)
   return;
 }
 
-Abraham_Parameters::~Abraham_Parameters ()
-{
-  if (nullptr != _p)
-    delete [] _p;
+Abraham_Parameters::~Abraham_Parameters() {
+  if (nullptr != _p) {
+    delete[] _p;
+  }
 
   return;
 }
@@ -172,7 +172,7 @@ Abraham_Parameters::logp () const
          + 0.03814 * _p[AP_VX] + 0.088;
 }*/
 
-/*static float 
+/*static float
 abraham_logp (const double * v)
 {
   return    0.562   * (v[AP_R2] + intercept_r2)
@@ -182,20 +182,18 @@ abraham_logp (const double * v)
           + 0.03814 * v[AP_VX] + 0.088;
 }*/
 
-static float 
-abraham_logp (const double r2,
-              const double pi2h,
-              const double alpha2h,
-              const double beta2o,
-              const double vx)
-{
-//cerr << r2 << ' ' << pi2h << ' ' << alpha2h << ' ' << beta2o << ' ' << vx << endl;
+static float
+abraham_logp(const double r2, const double pi2h, const double alpha2h,
+             const double beta2o, const double vx) {
+  // cerr << r2 << ' ' << pi2h << ' ' << alpha2h << ' ' << beta2o << ' ' << vx << endl;
 
+  // clang-format off
   return    0.562   * r2
           - 1.054   * pi2h
           + 0.034   * alpha2h
           - 3.460   * beta2o
           + 0.03814 * vx + 0.088;
+  // clang-format off
 }
 
 static float mcgowan_coefficient[HIGHEST_ATOMIC_NUMBER + 1];
@@ -241,11 +239,12 @@ convert_to_int_count (const double v,
   return;
 }
 
+#ifdef ABRAHAM_SET_BIT_REPLICATES_NOT_USED
 static void
-set_bit_replicates (int bstart,
-                    int c,
-                    int n,
-                    Sparse_Fingerprint_Creator & sfc)
+set_bit_replicates(int bstart,
+                   int c,
+                   int n,
+                   Sparse_Fingerprint_Creator & sfc)
 {
   if (c < 1)
     c = 1;
@@ -257,14 +256,14 @@ set_bit_replicates (int bstart,
 
   return;
 }
-
+#endif
 
 static int
-write_fingerprint (Molecule & m,
-                   const IWString & tag,
-                   const int * b,
-                   const int nb,
-                   IWString_and_File_Descriptor & output) 
+write_fingerprint(Molecule & m,
+                  const IWString & tag,
+                  const int * b,
+                  const int nb,
+                  IWString_and_File_Descriptor & output) 
 {
   if (! function_as_tdt_filter)
   {
@@ -303,7 +302,7 @@ write_fingerprint (Molecule & m,
 }
 
 void
-Abraham_Parameters::increment_results (double * v) const
+Abraham_Parameters::increment_results(double * v) const
 {
   for (auto i = 0; i < _n; ++i)
   {
@@ -381,9 +380,9 @@ template int Abraham_Substructure_Query::_parse_specifier(const const_IWSubstrin
 template int Abraham_Substructure_Query::_parse_specifier(const const_IWSubstring &, double &);
 
 int
-Abraham_Substructure_Query::build (const const_IWSubstring & buffer,
-                                   const IW_STL_Hash_Map_int & mname_to_ndx,
-                                   int * recognised)
+Abraham_Substructure_Query::build(const const_IWSubstring & buffer,
+                                  const IW_STL_Hash_Map_int & mname_to_ndx,
+                                  int * recognised)
 {
   if (buffer.nwords() < 3)   // smiles name directive
   {
@@ -529,8 +528,14 @@ static IWString atom_label_tag;
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __TIME__ << " " << __DATE__ << endl;
-  cerr << "Usage: " << prog_name << " <options> <file1> <file2> ...\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << " Abraham Descriptors\n";
   cerr << "  -F <file>      specify control file of queries and values\n";
   cerr << "  -P <file>      control file for alpha2H queries\n";
@@ -543,44 +548,29 @@ usage(int rc)
   cerr << "  -J <tag>       fingerprint tag\n";
   cerr << "  -p <int>       bit replicates when producing fingerprints\n";
   cerr << "  -y m,n         display query matches (m) and/or non matches (n)\n";
-  (void) display_standard_chemical_standardisation_options(cerr, 'g');
-  (void) display_standard_aromaticity_options(cerr);
+  (void)display_standard_chemical_standardisation_options(cerr, 'g');
+  (void)display_standard_aromaticity_options(cerr);
   cerr << "  -f             work as a tdt filter\n";
   cerr << "  -l             reduce to largest fragment\n";
   cerr << "  -i <type>      specify input file type\n";
   cerr << "  -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
 
 static void
-display_dash_G_qualifiers (std::ostream & os)
-{
+display_dash_G_qualifiers(std::ostream &os) {
+  // clang-format off
   os << " -G blki         aromatic bonds lose their Kekule identity\n";
   os << " -G qndn         use query names as descriptor names\n";
   os << " -G tovl         run in a mode to test query overlaps\n";
   os << " -G ncpm         do NOT check previously matched atoms\n";
   os << " -G ql2f         process queries last to first\n";
+  // clang-format on
 
   return;
 }
-
-#ifdef NOT_USED_ANY_MORE_QWEQWEQWE
-static int
-write_the_identifier (const IWString & mname,
-                      IWString_and_File_Descriptor & output)
-{
-  if (1 == mname.nwords())
-  {
-    output << mname;
-    return 1;
-  }
-
-  output << mname.word(0);
-
-  return output.good();
-}
-#endif
 
 /*
   Do any of the atoms in this embedding hit atoms already hit.
@@ -588,125 +578,137 @@ write_the_identifier (const IWString & mname,
 */
 
 int
-Abraham_Substructure_Query::all_atoms_unmatched(const Set_of_Atoms & e,
-                     const int * already_hit) const
-{
-  if (! check_for_previously_matched_atoms)
+Abraham_Substructure_Query::all_atoms_unmatched(const Set_of_Atoms &e,
+                                                const int *already_hit) const {
+  if (!check_for_previously_matched_atoms) {
     return 1;
+  }
 
-  if (0 == _number_atoms_to_check)   // don't check anything
+  if (0 == _number_atoms_to_check) {  // don't check anything
     return 1;
+  }
 
   auto n = e.number_elements();
 
-  if (_number_atoms_to_check < 0)
+  if (_number_atoms_to_check < 0) {
     ;
-  else if (n > _number_atoms_to_check)
+  } else if (n > _number_atoms_to_check) {
     n = _number_atoms_to_check;
+  }
 
 #ifdef DEBUG_ALL_ATOMS_UNMATCHED
   cerr << "all_atoms_unmatched:checking " << n << " atoms\n";
 #endif
 
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
     atom_number_t j = e[i];
 
 #ifdef DEBUG_ALL_ATOMS_UNMATCHED
     cerr << "Matched atom i = " << i << " j = " << j << endl;
 #endif
 
-    if (INVALID_ATOM_NUMBER == j)
+    if (INVALID_ATOM_NUMBER == j) {
       continue;
+    }
 
-    if (already_hit[j])
+    if (already_hit[j]) {
       return 0;
+    }
   }
 
-  return 1;   // all unmatched
+  return 1;  // all unmatched
 }
 
 template class resizable_array_p<Abraham_Substructure_Query>;
 template class resizable_array_base<Abraham_Substructure_Query *>;
 
-class Queries_and_Additive_Models
-{
-  private:
-    int _nmodels;
+class Queries_and_Additive_Models {
+ private:
+  int _nmodels;
 
-    IWString * _model_name;
+  IWString *_model_name;
 
-    double * _intercept;
+  double *_intercept;
 
-    int * _result_column;    // where to put our results
+  int *_result_column;  // where to put our results
 
-    resizable_array_p<Abraham_Substructure_Query> _queries;
+  resizable_array_p<Abraham_Substructure_Query> _queries;
 
-//  when producing fingerprints, we need to know the min and max possible values for each model
+  //  when producing fingerprints, we need to know the min and max possible values for
+  //  each model
 
-    double * _global_min;
-    double * _global_max;
+  double *_global_min;
+  double *_global_max;
 
-    IW_STL_Hash_Map_int _model_name_to_number;
+  IW_STL_Hash_Map_int _model_name_to_number;
 
-    IWString _name;
+  IWString _name;
 
-    int _show_all_query_matches, _show_all_query_non_matches;
+  int _show_all_query_matches, _show_all_query_non_matches;
 
-//  While not a great idea to make this part of the object, it is already not thread safe
-//  due to the substructure search objects
+  //  While not a great idea to make this part of the object, it is already not thread
+  //  safe due to the substructure search objects
 
-    int _molecules_processed;
+  int _molecules_processed;
 
-    extending_resizable_array<int> _unclassified_atoms;
+  extending_resizable_array<int> _unclassified_atoms;
 
-    int * _hit_matrix;
+  int *_hit_matrix;
 
-//  private functions
+  //  private functions
 
-    int _parse_intercept_record (const const_IWSubstring &);
-    int _parse_global_min_max (const IWString & buffer, double * v);
+  int _parse_intercept_record(const const_IWSubstring &);
+  int _parse_global_min_max(const IWString &buffer, double *v);
 
-    int _process(Molecule_to_Match & target, 
-                 int * already_hit,
-                 int * isotope,
-                 double * results);
+  int _process(Molecule_to_Match &target, int *already_hit, int *isotope,
+               double *results);
 
-  public:
-    Queries_and_Additive_Models ();
-    ~Queries_and_Additive_Models ();
+ public:
+  Queries_and_Additive_Models();
+  ~Queries_and_Additive_Models();
 
-    int build (const char * fname);
-    int build (iwstring_data_source & input);
+  int build(const char *fname);
+  int build(iwstring_data_source &input);
 
-    void set_name (const char * s) { _name = s;}
+  void set_name(const char *s) {
+    _name = s;
+  }
 
-    void set_result_column(int &);
+  void set_result_column(int &);
 
-    void set_show_all_query_matches     (int s) {_show_all_query_matches = s;}
-    void set_show_all_query_non_matches (int s) {_show_all_query_non_matches = s;}
+  void set_show_all_query_matches(int s) {
+    _show_all_query_matches = s;
+  }
 
-    int examine_query_overlap_behaviour(Molecule & m);
+  void set_show_all_query_non_matches(int s) {
+    _show_all_query_non_matches = s;
+  }
 
-    template <typename T> int append_model_names (const IWString & prefix, T & output) const;
+  int examine_query_overlap_behaviour(Molecule &m);
 
-    int nmodels () const { return _nmodels;}
+  template <typename T>
+  int append_model_names(const IWString &prefix, T &output) const;
 
-    int result_column (const char *) const;
+  int nmodels() const {
+    return _nmodels;
+  }
 
-    int number_queries () const { return _queries.number_elements();}
+  int result_column(const char *) const;
 
-    int process (Molecule & m, Molecule_to_Match & target, int *, int *, double *);
+  int number_queries() const {
+    return _queries.number_elements();
+  }
 
-    void convert_to_int_count (const double * v, int *) const;
+  int process(Molecule &m, Molecule_to_Match &target, int *, int *, double *);
 
-    int report (const Accumulator<double> * acc, std::ostream & os) const;
+  void convert_to_int_count(const double *v, int *) const;
 
-    int report_overlaps(std::ostream & output) const;
+  int report(const Accumulator<double> *acc, std::ostream &os) const;
+
+  int report_overlaps(std::ostream &output) const;
 };
 
-Queries_and_Additive_Models::Queries_and_Additive_Models ()
-{
+Queries_and_Additive_Models::Queries_and_Additive_Models() {
   _nmodels = 0;
   _model_name = nullptr;
   _intercept = nullptr;
@@ -724,47 +726,50 @@ Queries_and_Additive_Models::Queries_and_Additive_Models ()
   return;
 }
 
-Queries_and_Additive_Models::~Queries_and_Additive_Models ()
-{
-  if (nullptr != _model_name)
-    delete [] _model_name;
+Queries_and_Additive_Models::~Queries_and_Additive_Models() {
+  if (nullptr != _model_name) {
+    delete[] _model_name;
+  }
 
-  if (nullptr != _intercept)
-    delete [] _intercept;
+  if (nullptr != _intercept) {
+    delete[] _intercept;
+  }
 
-  if (nullptr != _result_column)
-    delete [] _result_column;
+  if (nullptr != _result_column) {
+    delete[] _result_column;
+  }
 
-  if (nullptr != _global_min)
-    delete [] _global_min;
+  if (nullptr != _global_min) {
+    delete[] _global_min;
+  }
 
-  if (nullptr != _global_max)
-    delete [] _global_max;
+  if (nullptr != _global_max) {
+    delete[] _global_max;
+  }
 
-  if (nullptr != _hit_matrix)
-    delete [] _hit_matrix;
+  if (nullptr != _hit_matrix) {
+    delete[] _hit_matrix;
+  }
 
   return;
 }
 
 int
-Queries_and_Additive_Models::result_column (const char * s) const
-{
+Queries_and_Additive_Models::result_column(const char *s) const {
   IWString mname(s);
 
   const auto f = _model_name_to_number.find(mname);
 
-  if (f == _model_name_to_number.end())
+  if (f == _model_name_to_number.end()) {
     return -1;
+  }
 
   return _result_column[f->second];
 }
 
 void
-Queries_and_Additive_Models::set_result_column (int & ndx)
-{
-  for (int i = 0; i < _nmodels; ++i)
-  {
+Queries_and_Additive_Models::set_result_column(int &ndx) {
+  for (int i = 0; i < _nmodels; ++i) {
     _result_column[i] = ndx;
     ndx++;
   }
@@ -774,10 +779,8 @@ Queries_and_Additive_Models::set_result_column (int & ndx)
 
 template <typename T>
 int
-Queries_and_Additive_Models::append_model_names (const IWString & prefix, T & output) const
-{
-  for (auto i = 0; i < _nmodels; ++i)
-  {
+Queries_and_Additive_Models::append_model_names(const IWString &prefix, T &output) const {
+  for (auto i = 0; i < _nmodels; ++i) {
     output << output_separator << prefix << _model_name[i];
   }
 
@@ -785,12 +788,10 @@ Queries_and_Additive_Models::append_model_names (const IWString & prefix, T & ou
 }
 
 int
-Queries_and_Additive_Models::build (const char * fname)
-{
+Queries_and_Additive_Models::build(const char *fname) {
   iwstring_data_source input(fname);
 
-  if (! input.good())
-  {
+  if (!input.good()) {
     cerr << "Queries_and_Additive_Models::build:cannot open '" << fname << "'\n";
     return 0;
   }
@@ -806,13 +807,13 @@ Queries_and_Additive_Models::build (const char * fname)
 */
 
 int
-Queries_and_Additive_Models::_parse_intercept_record (const const_IWSubstring & buffer)
-{
+Queries_and_Additive_Models::_parse_intercept_record(const const_IWSubstring &buffer) {
   const auto nw = buffer.nwords();
 
-  if (nw <= 2)
-  {
-    cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid intercept specification '" << buffer << "'\n";
+  if (nw <= 2) {
+    cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid intercept "
+            "specification '"
+         << buffer << "'\n";
     return 0;
   }
 
@@ -827,34 +828,37 @@ Queries_and_Additive_Models::_parse_intercept_record (const const_IWSubstring & 
   const_IWSubstring token;
   int i = 0;
 
-  buffer.nextword(token, i);     // '#' token
+  buffer.nextword(token, i);  // '#' token
 
   buffer.nextword(token, i);
-  if ("INTERCEPT" != token)
-  {
-    cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid intercetp record '" << buffer << "'\n";
+  if ("INTERCEPT" != token) {
+    cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid intercetp "
+            "record '"
+         << buffer << "'\n";
     return 0;
   }
 
-  while (buffer.nextword(token, i))
-  {
+  while (buffer.nextword(token, i)) {
     IWString mname, s;
     double v;
-    if (! token.split(mname, '=', s) || 0 == mname.length() || 0 == s.length() || ! s.numeric_value(v))
-    {
-      cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid model specification '" << buffer << "'\n";
+    if (!token.split(mname, '=', s) || 0 == mname.length() || 0 == s.length() ||
+        !s.numeric_value(v)) {
+      cerr << "Queries_and_Additive_Models::_parse_intercept_record:invalid model "
+              "specification '"
+           << buffer << "'\n";
       return 0;
     }
 
-    if (_model_name_to_number.contains(mname))
-    {
-      cerr << "Queries_and_Additive_Models::_parse_intercept_record:duplicate model specification '" << buffer << "'\n";
+    if (_model_name_to_number.contains(mname)) {
+      cerr << "Queries_and_Additive_Models::_parse_intercept_record:duplicate model "
+              "specification '"
+           << buffer << "'\n";
       return 0;
     }
 
     const int ndx = _model_name_to_number.size();
 
-    assert (ndx >= 0 && ndx < _nmodels);
+    assert(ndx >= 0 && ndx < _nmodels);
 
     _model_name_to_number[mname] = ndx;
     _model_name[ndx] = mname;
@@ -863,8 +867,7 @@ Queries_and_Additive_Models::_parse_intercept_record (const const_IWSubstring & 
   }
 
 #ifdef ECHO_INTERCEPTS
-  for (auto i = 0; i < _nmodels; ++i)
-  {
+  for (auto i = 0; i < _nmodels; ++i) {
     cerr << "Model " << i << " intercept " << _intercept[i] << endl;
   }
 #endif
@@ -873,80 +876,79 @@ Queries_and_Additive_Models::_parse_intercept_record (const const_IWSubstring & 
 }
 
 int
-Queries_and_Additive_Models::build (iwstring_data_source & input)
-{
+Queries_and_Additive_Models::build(iwstring_data_source &input) {
   const_IWSubstring buffer;
 
   IWString intercepts, global_min, global_max;
 
-  while (input.next_record(buffer))
-  {
-    if (0 == buffer.length())
+  while (input.next_record(buffer)) {
+    if (0 == buffer.length()) {
       continue;
+    }
 
-    if (! buffer.starts_with('#'))
-    {
+    if (!buffer.starts_with('#')) {
       input.push_record();
       break;
     }
 
-    if (buffer.starts_with("# INTERCEPT"))
+    if (buffer.starts_with("# INTERCEPT")) {
       intercepts = buffer;
-    else if (buffer.starts_with("# MIN"))
+    } else if (buffer.starts_with("# MIN")) {
       global_min = buffer;
-    else if (buffer.starts_with("# MAX"))
+    } else if (buffer.starts_with("# MAX")) {
       global_max = buffer;
-    else if (buffer.starts_with("# DM"))
+    } else if (buffer.starts_with("# DM")) {
       _show_all_query_matches = 1;
-    else if (buffer.starts_with("# DN"))
+    } else if (buffer.starts_with("# DN")) {
       _show_all_query_non_matches = 1;
-    else if (buffer.starts_with("# NAME"))
-    {
+    } else if (buffer.starts_with("# NAME")) {
       _name = buffer;
       _name.remove_leading_chars(6);
     }
   }
 
-  if (0 == intercepts.length())
-  {
+  if (0 == intercepts.length()) {
     cerr << "Queries_and_Additive_Models::build:did not find intercepts record\n";
     return 0;
   }
 
-  if (! _parse_intercept_record(intercepts))
-  {
-    cerr << "Queries_and_Additive_Models::build:cannot parse intercepts record '" << intercepts << "'\n";
+  if (!_parse_intercept_record(intercepts)) {
+    cerr << "Queries_and_Additive_Models::build:cannot parse intercepts record '"
+         << intercepts << "'\n";
     return 0;
   }
 
-  if (0 == global_max.length() && 0 == global_max.length())
+  if (0 == global_max.length() && 0 == global_max.length()) {
     ;
-  else if (! _parse_global_min_max(global_max, _global_max) || ! _parse_global_min_max(global_min, _global_min))
-  {
+  } else if (!_parse_global_min_max(global_max, _global_max) ||
+             !_parse_global_min_max(global_min, _global_min)) {
     cerr << "Queries_and_Additive_Models::build:cannot determine model global min/max\n";
     cerr << "MIN: " << global_min << endl;
     cerr << "MAX: " << global_max << endl;
     return 0;
   }
 
-  int * recognised = new int[_nmodels]; std::unique_ptr<int[]> free_recognised(recognised);
+  int *recognised = new int[_nmodels];
+  std::unique_ptr<int[]> free_recognised(recognised);
 
-  while (input.next_record(buffer))
-  {
-    if (buffer.starts_with('#'))
+  while (input.next_record(buffer)) {
+    if (buffer.starts_with('#')) {
       continue;
+    }
 
-    if (buffer.starts_with("//"))
+    if (buffer.starts_with("//")) {
       continue;
+    }
 
-    if (0 == buffer.length())
+    if (0 == buffer.length()) {
       continue;
+    }
 
-    Abraham_Substructure_Query * q = new Abraham_Substructure_Query(_nmodels);
+    Abraham_Substructure_Query *q = new Abraham_Substructure_Query(_nmodels);
 
-    if (! q->build(buffer, _model_name_to_number, recognised))
-    {
-      cerr << "Queries_and_Additive_Models::build:invalid query '" << buffer << "', line " << input.lines_read() << endl;
+    if (!q->build(buffer, _model_name_to_number, recognised)) {
+      cerr << "Queries_and_Additive_Models::build:invalid query '" << buffer << "', line "
+           << input.lines_read() << endl;
       delete q;
 
       return 0;
@@ -959,37 +961,34 @@ Queries_and_Additive_Models::build (iwstring_data_source & input)
 }
 
 int
-Queries_and_Additive_Models::_parse_global_min_max (const IWString & buffer,
-                                               double * v)
-{
+Queries_and_Additive_Models::_parse_global_min_max(const IWString &buffer, double *v) {
   int i = 0;
   const_IWSubstring token;
 
-  buffer.nextword(token, i);    // skip #
-  buffer.nextword(token, i);    // skip MIN/MAX
+  buffer.nextword(token, i);  // skip #
+  buffer.nextword(token, i);  // skip MIN/MAX
 
-  for (auto col = 0; buffer.nextword(token, i); ++col)
-  {
+  for (auto col = 0; buffer.nextword(token, i); ++col) {
     IWString mname, s;
 
-    if (! token.split(mname, '=', s) || 0 == mname.length() || 0 == s.length())
-    {
-      cerr << "Queries_and_Additive_Models::_parse_global_min_max:invalid token form '" << buffer << "'\n";
+    if (!token.split(mname, '=', s) || 0 == mname.length() || 0 == s.length()) {
+      cerr << "Queries_and_Additive_Models::_parse_global_min_max:invalid token form '"
+           << buffer << "'\n";
       return 0;
     }
 
     double x;
-    if (! s.numeric_value(x))
-    {
-      cerr << "Queries_and_Additive_Models::_parse_global_min_max:invalid numeric '" << buffer << "'\n";
+    if (!s.numeric_value(x)) {
+      cerr << "Queries_and_Additive_Models::_parse_global_min_max:invalid numeric '"
+           << buffer << "'\n";
       return 0;
     }
 
     const auto f = _model_name_to_number.find(mname);
 
-    if (f == _model_name_to_number.end())
-    {
-      cerr << "Queries_and_Additive_Models::_parse_global_min_max:unrecognised model '" << mname << "' from '" << buffer << "'\n";
+    if (f == _model_name_to_number.end()) {
+      cerr << "Queries_and_Additive_Models::_parse_global_min_max:unrecognised model '"
+           << mname << "' from '" << buffer << "'\n";
       return 0;
     }
 
@@ -999,15 +998,11 @@ Queries_and_Additive_Models::_parse_global_min_max (const IWString & buffer,
   return 1;
 }
 
-//#define DEBUG_PROCESS
+// #define DEBUG_PROCESS
 
 int
-Queries_and_Additive_Models::process(Molecule & m,
-                                 Molecule_to_Match & target,
-                                 int * already_hit,
-                                 int * isotope,
-                                 double * v)
-{
+Queries_and_Additive_Models::process(Molecule &m, Molecule_to_Match &target,
+                                     int *already_hit, int *isotope, double *v) {
   _molecules_processed++;
 
   std::copy_n(_intercept, _nmodels, v + _result_column[0]);
@@ -1015,26 +1010,26 @@ Queries_and_Additive_Models::process(Molecule & m,
   const auto matoms = m.natoms();
 
   std::fill_n(already_hit, matoms, 0);
-  std::fill_n(isotope,     matoms, 0);
+  std::fill_n(isotope, matoms, 0);
 
   const auto rc = _process(target, already_hit, isotope, v);
 
   int unclassified = 0;
 
-  if (verbose || stream_for_labeled_atoms.active())
-  {
-    unclassified = std::count_if(already_hit, already_hit + matoms, [] (const int s) { return 0 == s;});
-/*  for (int i = 0; i < matoms; ++i)
-    {
-      cerr << " atom " << i << " already_hit " << already_hit[i] << ' ' << m.smarts_equivalent_for_atom(i) << endl;
-    }
-    cerr << unclassified << " unclassified\n"; */
+  if (verbose || stream_for_labeled_atoms.active()) {
+    unclassified = std::count_if(already_hit, already_hit + matoms,
+                                 [](const int s) { return 0 == s; });
+    /*  for (int i = 0; i < matoms; ++i)
+        {
+          cerr << " atom " << i << " already_hit " << already_hit[i] << ' ' <<
+       m.smarts_equivalent_for_atom(i) << endl;
+        }
+        cerr << unclassified << " unclassified\n"; */
 
     _unclassified_atoms[unclassified]++;
   }
 
-  if (stream_for_labeled_atoms.active())
-  {
+  if (stream_for_labeled_atoms.active()) {
     Molecule mcopy(m);
     IWString tmp;
     tmp << m.name() << ' ' << _name << " UNC " << unclassified;
@@ -1045,8 +1040,7 @@ Queries_and_Additive_Models::process(Molecule & m,
 
 #ifdef DEBUG_PROCESS
   cerr << "Queries_and_Additive_Models::process: finished\n";
-  for (auto i = 0; i < _nmodels; ++i)
-  {
+  for (auto i = 0; i < _nmodels; ++i) {
     cerr << " model " << i << " value " << v[i] << endl;
   }
 #endif
@@ -1055,62 +1049,65 @@ Queries_and_Additive_Models::process(Molecule & m,
 }
 
 int
-Queries_and_Additive_Models::report (const Accumulator<double> * acc,
-                                     std::ostream & output) const
-{
-  output << "Set of Queries " << _name << " processed " << _molecules_processed << " molecules\n";
+Queries_and_Additive_Models::report(const Accumulator<double> *acc,
+                                    std::ostream &output) const {
+  output << "Set of Queries " << _name << " processed " << _molecules_processed
+         << " molecules\n";
 
-  for (int i = 0; i < unclassified_atom_count.number_elements(); i++)
-  {
-    if (_unclassified_atoms[i])
-      output << _unclassified_atoms[i] << " molecules had " << i << " unclassified atoms\n";
+  for (int i = 0; i < unclassified_atom_count.number_elements(); i++) {
+    if (_unclassified_atoms[i]) {
+      output << _unclassified_atoms[i] << " molecules had " << i
+             << " unclassified atoms\n";
+    }
   }
 
-  if (0 == _molecules_processed)
+  if (0 == _molecules_processed) {
     return 0;
+  }
 
-  for (int i = 0; i < _nmodels; ++i)
-  {
-    const auto & ai = acc[_result_column[i]];
+  for (int i = 0; i < _nmodels; ++i) {
+    const auto &ai = acc[_result_column[i]];
 
-    if (0 == ai.n())
+    if (0 == ai.n()) {
       continue;
+    }
 
-    output << _model_name[i] << ' ' << ai.n() << " results bwt " << ai.minval() << " and " << ai.maxval() << " ave " << static_cast<float>(ai.average()) << '\n';
+    output << _model_name[i] << ' ' << ai.n() << " results bwt " << ai.minval() << " and "
+           << ai.maxval() << " ave " << static_cast<float>(ai.average()) << '\n';
   }
 
   return 1;
 }
 
 int
-Abraham_Substructure_Query::mark_matched_atoms(const Set_of_Atoms & e,
-                                               int * already_hit,
-                                               int flag) const
-{
-  if (0 == _number_atoms_to_claim)   // don't mark any
+Abraham_Substructure_Query::mark_matched_atoms(const Set_of_Atoms &e, int *already_hit,
+                                               int flag) const {
+  if (0 == _number_atoms_to_claim) {  // don't mark any
     return 1;
+  }
 
   int n = e.number_elements();
 
-  if (_number_atoms_to_claim < 0)
+  if (_number_atoms_to_claim < 0) {
     ;
-  else if (n > _number_atoms_to_claim)
+  } else if (n > _number_atoms_to_claim) {
     n = _number_atoms_to_claim;
+  }
 
 #ifdef DEBUG_MARK_MATCHED_ATOMS
   cerr << "Marking " << n << " matched atoms\n";
 #endif
 
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
     atom_number_t j = e[i];
 
 #ifdef DEBUG_MARK_MATCHED_ATOMS
     cerr << "How about i = " << i << " j = " << j << endl;
 #endif
 
-    if (INVALID_ATOM_NUMBER == j)
+    if (INVALID_ATOM_NUMBER == j) {
       continue;
+    }
 
     already_hit[j] = flag;
   }
@@ -1119,72 +1116,73 @@ Abraham_Substructure_Query::mark_matched_atoms(const Set_of_Atoms & e,
 }
 
 int
-Abraham_Substructure_Query::place_isotopes(const Set_of_Atoms & e, int * isotope) const
-{
-  if (0 == _isotope)
+Abraham_Substructure_Query::place_isotopes(const Set_of_Atoms &e, int *isotope) const {
+  if (0 == _isotope) {
     return 1;
+  }
 
   return mark_matched_atoms(e, isotope, _isotope);
 }
 
 int
-Queries_and_Additive_Models::examine_query_overlap_behaviour(Molecule & m)
-{
+Queries_and_Additive_Models::examine_query_overlap_behaviour(Molecule &m) {
   const int nq = _queries.size();
 
-  if (nullptr == _hit_matrix)
+  if (nullptr == _hit_matrix) {
     _hit_matrix = new_int(nq * nq);
+  }
 
   Molecule_to_Match target(&m);
 
   const int matoms = m.natoms();
 
-  resizable_array<int> * queries_matching_atom = new resizable_array<int>[matoms]; std::unique_ptr<resizable_array<int>[]> free_queries_matching_atom(queries_matching_atom);
+  resizable_array<int> *queries_matching_atom = new resizable_array<int>[matoms];
+  std::unique_ptr<resizable_array<int>[]> free_queries_matching_atom(
+      queries_matching_atom);
 
-  for (int i = 0; i < nq; i++)
-  {
+  for (int i = 0; i < nq; i++) {
     Substructure_Results sresults;
 
     int nhits = _queries[i]->substructure_search(target, sresults);
 
-    if (0 == nhits)
+    if (0 == nhits) {
       continue;
+    }
 
-    for (int j = 0; j < nhits; ++j)
-    {
-      const Set_of_Atoms * e = sresults.embedding(j);
+    for (int j = 0; j < nhits; ++j) {
+      const Set_of_Atoms *e = sresults.embedding(j);
 
-      for (auto k : *e)
-      {
-        if (k < 0)
+      for (auto k : *e) {
+        if (k < 0) {
           continue;
+        }
 
-        queries_matching_atom[k].add_if_not_already_present(i);     // query i has matched atom k
+        queries_matching_atom[k].add_if_not_already_present(
+            i);  // query i has matched atom k
       }
     }
   }
 
-  for (int i = 0; i < matoms; ++i)
-  {
-    const resizable_array<int> & qmai = queries_matching_atom[i];
-    
+  for (int i = 0; i < matoms; ++i) {
+    const resizable_array<int> &qmai = queries_matching_atom[i];
+
     const int n = qmai.number_elements();
 
- // cerr << n << " of " << nq << " queries matched atom " << i << '\n';
-    if (n <= 1)
+    // cerr << n << " of " << nq << " queries matched atom " << i << '\n';
+    if (n <= 1) {
       continue;
+    }
 
-    for (int j = 0; j < n; ++j)
-    {
+    for (int j = 0; j < n; ++j) {
       const int q1 = qmai[j];
 
-      for (int k = (j+1); k < n; ++k)
-      {
+      for (int k = (j + 1); k < n; ++k) {
         const int q2 = qmai[k];
         _hit_matrix[q1 * nq + q2]++;
         _hit_matrix[q2 * nq + q1]++;
 
-//      cerr << "Queries " << q1 << " and " << q2 << " both hit atom " << i << endl;
+        //      cerr << "Queries " << q1 << " and " << q2 << " both hit atom " << i <<
+        //      endl;
       }
     }
   }
@@ -1193,10 +1191,8 @@ Queries_and_Additive_Models::examine_query_overlap_behaviour(Molecule & m)
 }
 
 int
-Queries_and_Additive_Models::report_overlaps(std::ostream & output) const
-{
-  if (nullptr == _hit_matrix)
-  {
+Queries_and_Additive_Models::report_overlaps(std::ostream &output) const {
+  if (nullptr == _hit_matrix) {
     cerr << "Queries_and_Additive_Models::report_overlaps:no data\n";
     return 0;
   }
@@ -1205,11 +1201,9 @@ Queries_and_Additive_Models::report_overlaps(std::ostream & output) const
 
   const int nq = _queries.number_elements();
 
-  for (int i = 0; i < nq; ++i)
-  {
+  for (int i = 0; i < nq; ++i) {
     output << i << ':';
-    for (int j = 0; j < nq; ++j)
-    {
+    for (int j = 0; j < nq; ++j) {
       output << ' ' << _hit_matrix[i * nq + j];
     }
     output << '\n';
@@ -1219,56 +1213,54 @@ Queries_and_Additive_Models::report_overlaps(std::ostream & output) const
 }
 
 int
-Queries_and_Additive_Models::_process(Molecule_to_Match & target,
-                                 int * already_hit,
-                                 int * isotope,
-                                 double * results)
-{
+Queries_and_Additive_Models::_process(Molecule_to_Match &target, int *already_hit,
+                                      int *isotope, double *results) {
   const int nq = _queries.size();
 
 #ifdef DEBUG_PROCESS
-  cerr << "On entry, processing " << nq << " queries " << target.molecule()->smiles() << " mih " << make_implicit_hydrogens_implicit << endl;
-  for (auto k = 0; k < _nmodels; ++k)
-  {
+  cerr << "On entry, processing " << nq << " queries " << target.molecule()->smiles()
+       << " mih " << make_implicit_hydrogens_implicit << endl;
+  for (auto k = 0; k < _nmodels; ++k) {
     cerr << " " << k << " " << results[k] << endl;
   }
 #endif
 
   int istart, istep, istop;
 
-  if (process_queries_first_to_last)
-  {
+  if (process_queries_first_to_last) {
     istart = 0;
     istop = nq;
     istep = 1;
-  }
-  else
-  {
+  } else {
     istart = nq - 1;
     istop = -1;
     istep = -1;
   }
 
-  for (int i = istart; i != istop; i += istep)
-  {
+  for (int i = istart; i != istop; i += istep) {
     Substructure_Results sresults;
 
     int nhits = _queries[i]->substructure_search(target, sresults);
 
-    if (_show_all_query_matches && nhits)
-      cerr << "Query " << i << ' ' << _queries[i]->comment() << " " << nhits << " matches\n";
-    else if (_show_all_query_non_matches && 0 == nhits)
-      cerr << "Query " << i << ' ' << _queries[i]->comment() << " only matched " << sresults.max_query_atoms_matched_in_search() << endl;
+    if (_show_all_query_matches && nhits) {
+      cerr << "Query " << i << ' ' << _queries[i]->comment() << " " << nhits
+           << " matches\n";
+    } else if (_show_all_query_non_matches && 0 == nhits) {
+      cerr << "Query " << i << ' ' << _queries[i]->comment() << " only matched "
+           << sresults.max_query_atoms_matched_in_search() << endl;
+    }
 
-    for (int j = 0; j < nhits; j++)
-    {
-      Set_of_Atoms * e =  const_cast<Set_of_Atoms *>(sresults.embedding(j));   // loss of const OK
+    for (int j = 0; j < nhits; j++) {
+      Set_of_Atoms *e =
+          const_cast<Set_of_Atoms *>(sresults.embedding(j));  // loss of const OK
 
-      if (verbose > 1)
+      if (verbose > 1) {
         cerr << " hit " << j << ' ' << *e << endl;
+      }
 
-      if (! _queries[i]->all_atoms_unmatched(*e, already_hit))
+      if (!_queries[i]->all_atoms_unmatched(*e, already_hit)) {
         continue;
+      }
 
       _queries[i]->mark_matched_atoms(*e, already_hit, i + 1);
       _queries[i]->place_isotopes(*e, isotope);
@@ -1276,8 +1268,7 @@ Queries_and_Additive_Models::_process(Molecule_to_Match & target,
       _queries[i]->increment_results(results + _result_column[0]);
 #ifdef DEBUG_PROCESS
       cerr << i << " after nit " << j << " to '" << _queries[i]->comment() << "'\n";
-      for (auto k = 0; k < _nmodels; ++k)
-      {
+      for (auto k = 0; k < _nmodels; ++k) {
         cerr << " " << k << " " << results[k] << endl;
       }
 #endif
@@ -1288,24 +1279,25 @@ Queries_and_Additive_Models::_process(Molecule_to_Match & target,
 }
 
 void
-Queries_and_Additive_Models::convert_to_int_count(const double * v, 
-                                                  int * b) const
-{
-//cerr << "Queries_and_Additive_Models:::convert_to_int_count:writing " << _nmodels << " models\n";
+Queries_and_Additive_Models::convert_to_int_count(const double *v, int *b) const {
+  // cerr << "Queries_and_Additive_Models:::convert_to_int_count:writing " << _nmodels <<
+  // " models\n";
 
-  b += _result_column[0];    // shift to where our results start
+  b += _result_column[0];  // shift to where our results start
 
-  for (auto i = 0; i < _nmodels; ++i)
-  {
-//  cerr << "line " << __LINE__ << " i = " << i << " cmp " << _global_min[i] << " max " << _global_max[i] << endl;
+  for (auto i = 0; i < _nmodels; ++i) {
+    //  cerr << "line " << __LINE__ << " i = " << i << " cmp " << _global_min[i] << " max
+    //  " << _global_max[i] << endl;
 
-    if (v[i] <= _global_min[i])
+    if (v[i] <= _global_min[i]) {
       b[i] = 1;
-    else if (v[i] >= _global_max[i])
+    } else if (v[i] >= _global_max[i]) {
       b[i] = bit_count_dynamic_range + 1;
-    else
-    {
-      b[i] = static_cast<int>((v[i] - _global_min[i]) / (_global_max[i] - _global_min[i]) * bit_count_dynamic_range + 1.4999);
+    } else {
+      b[i] =
+          static_cast<int>((v[i] - _global_min[i]) / (_global_max[i] - _global_min[i]) *
+                               bit_count_dynamic_range +
+                           1.4999);
     }
   }
 
@@ -1330,14 +1322,16 @@ run_a_set_of_queries(const resizable_array_p<Abraham_Substructure_Query> & q,
     int nhits = q[i]->substructure_search(target, sresults);
 
     if (0 == nhits && verbose > 2)
-      cerr << "Query " << q[i]->comment() << " only matched " << sresults.max_query_atoms_matched_in_search() << endl;
+      cerr << "Query " << q[i]->comment() << " only matched " <<
+sresults.max_query_atoms_matched_in_search() << endl;
 
     if (verbose > 1 && nhits)
       cerr << ' ' << nhits << " hits to query " << i << " '" << q[i]->comment() << "'\n";
 
     for (int j = 0; j < nhits; j++)
     {
-      Set_of_Atoms * e =  const_cast<Set_of_Atoms *>(sresults.embedding(j));   // loss of const OK
+      Set_of_Atoms * e =  const_cast<Set_of_Atoms *>(sresults.embedding(j));   // loss of
+const OK
 
       if (verbose > 1)
         cerr << " hit " << j << ' ' << *e << endl;
@@ -1349,7 +1343,8 @@ run_a_set_of_queries(const resizable_array_p<Abraham_Substructure_Query> & q,
       q[i]->place_isotopes(*e, isotope);
 
       ap += api;
-//    cerr << "After '" << q[i]->comment() << "' value R2 " << ap.r2() << " alpha2H " << ap.alpha2h() << ", pi2H " << ap.pi2h() << endl;
+//    cerr << "After '" << q[i]->comment() << "' value R2 " << ap.r2() << " alpha2H " <<
+ap.alpha2h() << ", pi2H " << ap.pi2h() << endl;
     }
   }
 
@@ -1357,12 +1352,9 @@ run_a_set_of_queries(const resizable_array_p<Abraham_Substructure_Query> & q,
 }*/
 
 static int
-compute_number_results (const Queries_and_Additive_Models * models,
-                        const int nmodels)
-{
+compute_number_results(const Queries_and_Additive_Models *models, const int nmodels) {
   int rc = 0;
-  for (auto i = 0; i < nmodels; ++i)
-  {
+  for (auto i = 0; i < nmodels; ++i) {
     rc += models[i].nmodels();
   }
 
@@ -1374,75 +1366,74 @@ compute_number_results (const Queries_and_Additive_Models * models,
   size and do not need to be allocated/deallocated
 */
 
-static int * int_output_for_fingerprints = nullptr;
-static double * v = nullptr;
+static int *int_output_for_fingerprints = nullptr;
+static double *v = nullptr;
 
 static int
-abraham (Molecule & m,
-         int * already_hit,
-         int * isotope,
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
-  if (verbose > 1)
+abraham(Molecule &m, int *already_hit, int *isotope, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
+  if (verbose > 1) {
     cerr << "Processing '" << m.name() << "'\n";
+  }
 
   Molecule_to_Match target(&m);
 
   int failures = 0;
 
-  for (auto i = 0; i < number_query_sets; ++i)
-  {
-    if (! models[i].process(m, target, already_hit, isotope, v))
+  for (auto i = 0; i < number_query_sets; ++i) {
+    if (!models[i].process(m, target, already_hit, isotope, v)) {
       failures++;
+    }
 
-    if (nullptr != int_output_for_fingerprints)
+    if (nullptr != int_output_for_fingerprints) {
       models[i].convert_to_int_count(v, int_output_for_fingerprints);
+    }
   }
 
   v[ap_vx] = mcgowan(m);
 
-  if (nullptr != int_output_for_fingerprints)
+  if (nullptr != int_output_for_fingerprints) {
     convert_to_int_count(v[ap_vx], int_output_for_fingerprints[ap_vx], min_Vx, max_Vx);
+  }
 
-//cerr << "Indices " << ap_r2 << ' ' << ap_pi2h << ' ' << ap_alpha2h << ' ' << ap_beta2o << " ndx " << ndx << endl;
+  // cerr << "Indices " << ap_r2 << ' ' << ap_pi2h << ' ' << ap_alpha2h << ' ' <<
+  // ap_beta2o << " ndx " << ndx << endl;
 
-//cerr << "Setting logp at " << ap_logp << endl;
+  // cerr << "Setting logp at " << ap_logp << endl;
   v[ap_logp] = abraham_logp(v[ap_r2], v[ap_pi2h], v[ap_alpha2h], v[ap_beta2o], v[ap_vx]);
 
-  if (nullptr != int_output_for_fingerprints)
-    convert_to_int_count(v[ap_logp], int_output_for_fingerprints[ap_logp], min_logp, max_logp);
+  if (nullptr != int_output_for_fingerprints) {
+    convert_to_int_count(v[ap_logp], int_output_for_fingerprints[ap_logp], min_logp,
+                         max_logp);
+  }
 
-// Now we need to combine the first order Constantinou Gani models
+  // Now we need to combine the first order Constantinou Gani models
 
-  if (constantinou_gani_models_present)
-  {
+  if (constantinou_gani_models_present) {
     v[ap_cg[1]] += v[ap_cg[3]];
     v[ap_cg[2]] += v[ap_cg[4]];
 
-//  and shift down the other models
+    //  and shift down the other models
 
     v[ap_cg[3]] = v[ap_cg[4] + 1];
     v[ap_cg[4] + 1] = v[ap_cg[4] + 2];
   }
 
-  if (verbose)
-  {
-    for (int i = 0; i < nmodels; ++i)
-    {
+  if (verbose) {
+    for (int i = 0; i < nmodels; ++i) {
       acc[i].extra(v[i]);
     }
   }
 
-  if (nullptr != int_output_for_fingerprints)
-    return write_fingerprint(m, fingerprint_tag, int_output_for_fingerprints, nmodels, output);
+  if (nullptr != int_output_for_fingerprints) {
+    return write_fingerprint(m, fingerprint_tag, int_output_for_fingerprints, nmodels,
+                             output);
+  }
 
   append_first_token_of_name(m.name(), output);
 
-  for (auto i = 0; i < nmodels; ++i)
-  {
+  for (auto i = 0; i < nmodels; ++i) {
     output << output_separator << static_cast<float>(v[i]);
   }
 
@@ -1452,53 +1443,49 @@ abraham (Molecule & m,
 }
 
 static void
-preprocess(Molecule & m)
-{
-  if (reduce_to_largest_fragment)
+preprocess(Molecule &m) {
+  if (reduce_to_largest_fragment) {
     m.reduce_to_largest_fragment();
+  }
 
-  if (chemical_standardisation.active())
+  if (chemical_standardisation.active()) {
     chemical_standardisation.process(m);
+  }
 
   return;
 }
 
 static int
-abraham (Molecule & m, 
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
+abraham(Molecule &m, Queries_and_Additive_Models *models, const int number_query_sets,
+        const int nmodels, IWString_and_File_Descriptor &output) {
   molecules_read++;
 
   preprocess(m);
 
-  if (make_implicit_hydrogens_implicit)
+  if (make_implicit_hydrogens_implicit) {
     m.make_implicit_hydrogens_explicit();
+  }
 
   const auto matoms = m.natoms();
 
-  if (0 == matoms)
-  {
+  if (0 == matoms) {
     cerr << "Ignoring empty molecule\n";
     return 1;
   }
 
-  int * tmp = new_int(matoms + matoms); std::unique_ptr<int[]> free_tmp(tmp);   // one for already_hit and one for isotopes
+  int *tmp = new_int(matoms + matoms);
+  std::unique_ptr<int[]> free_tmp(tmp);  // one for already_hit and one for isotopes
 
-  const auto rc = abraham(m, tmp, tmp + matoms, models, number_query_sets, nmodels, output);
+  const auto rc =
+      abraham(m, tmp, tmp + matoms, models, number_query_sets, nmodels, output);
 
   return rc;
 }
 
 static int
-do_discern_query_overlaps(Molecule & m,
-                          Queries_and_Additive_Models * models, 
-                          const int number_query_sets)
-{
-  for (int i = 0; i < number_query_sets; ++i)
-  {
+do_discern_query_overlaps(Molecule &m, Queries_and_Additive_Models *models,
+                          const int number_query_sets) {
+  for (int i = 0; i < number_query_sets; ++i) {
     models[i].examine_query_overlap_behaviour(m);
   }
 
@@ -1506,15 +1493,11 @@ do_discern_query_overlaps(Molecule & m,
 }
 
 static int
-abraham (data_source_and_type<Molecule> & input,
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
-  Molecule * m;
-  while (NULL != (m = input.next_molecule()) && output.good())
-  {
+abraham(data_source_and_type<Molecule> &input, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
+  Molecule *m;
+  while (nullptr != (m = input.next_molecule()) && output.good()) {
     std::unique_ptr<Molecule> free_m(m);
 
 #ifdef TEST_MCGOWAN
@@ -1523,39 +1506,36 @@ abraham (data_source_and_type<Molecule> & input,
     continue;
 #endif
 
-    if (discern_query_overlaps)
-    {
+    if (discern_query_overlaps) {
       do_discern_query_overlaps(*m, models, number_query_sets);
       continue;
     }
 
-    if (! abraham(*m, models, number_query_sets, nmodels, output))
+    if (!abraham(*m, models, number_query_sets, nmodels, output)) {
       return 0;
+    }
 
-    if (verbose)
+    if (verbose) {
       output.flush();
-    else 
+    } else {
       output.write_if_buffer_holds_more_than(8192);
+    }
   }
 
   return output.good();
 }
 
 static int
-abraham_record (const_IWSubstring buffer,     // local copy
-                Queries_and_Additive_Models * models,
-                const int number_query_sets,
-                const int nmodels,
-                IWString_and_File_Descriptor & output)
-{
+abraham_record(const_IWSubstring buffer,  // local copy
+               Queries_and_Additive_Models *models, const int number_query_sets,
+               const int nmodels, IWString_and_File_Descriptor &output) {
   buffer.remove_leading_chars(smiles_tag.length());
-  assert (buffer.ends_with('>'));
+  assert(buffer.ends_with('>'));
   buffer.chop();
 
   Molecule m;
 
-  if (! m.build_from_smiles(buffer))
-  {
+  if (!m.build_from_smiles(buffer)) {
     cerr << "Invalid smiles '" << buffer << "'\n";
     return 0;
   }
@@ -1564,20 +1544,15 @@ abraham_record (const_IWSubstring buffer,     // local copy
 }
 
 static int
-abraham (iwstring_data_source & input,
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
+abraham(iwstring_data_source &input, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
   const_IWSubstring buffer;
 
-  while (input.next_record(buffer))
-  {
-    if (! buffer.starts_with(smiles_tag))
+  while (input.next_record(buffer)) {
+    if (!buffer.starts_with(smiles_tag)) {
       output << buffer << '\n';
-    else if (! abraham_record(buffer, models, number_query_sets, nmodels, output))
-    {
+    } else if (!abraham_record(buffer, models, number_query_sets, nmodels, output)) {
       cerr << "Fatal error processing '" << buffer << "'\n";
       return 0;
     }
@@ -1589,16 +1564,12 @@ abraham (iwstring_data_source & input,
 }
 
 static int
-abraham (const char * fname,
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
+abraham(const char *fname, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
   iwstring_data_source input(fname);
 
-  if (! input.good())
-  {
+  if (!input.good()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
@@ -1606,17 +1577,12 @@ abraham (const char * fname,
   return abraham(input, models, number_query_sets, nmodels, output);
 }
 
-
 static int
-abraham (const char * fname, int input_type, 
-         Queries_and_Additive_Models * models,
-         const int number_query_sets,
-         const int nmodels,
-         IWString_and_File_Descriptor & output)
-{
+abraham(const char *fname, FileType input_type, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
   data_source_and_type<Molecule> input(input_type, fname);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
@@ -1625,15 +1591,12 @@ abraham (const char * fname, int input_type,
 }
 
 static int
-write_header_records (const Queries_and_Additive_Models * models,
-                      const int number_query_sets,
-                      const int nmodels,
-                      IWString_and_File_Descriptor & output)
-{
+write_header_records(const Queries_and_Additive_Models *models,
+                     const int number_query_sets, const int nmodels,
+                     IWString_and_File_Descriptor &output) {
   output << "Name";
 
-  for (auto i = 0; i < number_query_sets; ++i)
-  {
+  for (auto i = 0; i < number_query_sets; ++i) {
     models[i].append_model_names(descriptor_prefix, output);
   }
 
@@ -1650,113 +1613,96 @@ write_header_records (const Queries_and_Additive_Models * models,
 */
 
 static int
-abraham (int argc, char ** argv)
-{
+abraham(int argc, char **argv) {
   Command_Line cl(argc, argv, "vA:E:i:o:g:F:L:lhJ:rP:G:fp:d:C:y:");
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('A'))
-  {
-    if (! process_standard_aromaticity_options(cl, verbose, 'A'))
-    {
+  if (cl.option_present('A')) {
+    if (!process_standard_aromaticity_options(cl, verbose, 'A')) {
       return 17;
     }
-  }
-  else
+  } else {
     set_global_aromaticity_type(Daylight);
+  }
 
-  if (cl.option_present('E'))
-  {
-    if (! process_elements(cl, verbose, 'E'))
-    {
+  if (cl.option_present('E')) {
+    if (!process_elements(cl, verbose, 'E')) {
       cerr << "Cannot process element specification option(s), -E option\n";
       return 6;
     }
   }
 
-  if (cl.option_present('g'))
-  {
-    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
-    {
+  if (cl.option_present('g')) {
+    if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       return 62;
     }
   }
 
-  if (cl.option_present('l'))
-  {
+  if (cl.option_present('l')) {
     reduce_to_largest_fragment = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will reduce multi-fragment molecules to largest fragment\n";
+    }
   }
 
-  if (cl.option_present('G'))
-  {
+  if (cl.option_present('G')) {
     int i = 0;
     const_IWSubstring g;
-    while (cl.value('G', g, i++))
-    {
-      if ("blki" == g)
-      {
+    while (cl.value('G', g, i++)) {
+      if ("blki" == g) {
         set_aromatic_bonds_lose_kekule_identity(1);
-        if (verbose)
+        if (verbose) {
           cerr << "Will use strict Daylight rules for aliphatic atoms\n";
-      }
-      else if ("qndn" == g)
-      {
+        }
+      } else if ("qndn" == g) {
         use_query_name_as_descriptor_name = 1;
-        if (verbose)
+        if (verbose) {
           cerr << "Will use query names as descriptor names\n";
-      }
-      else if ("tovl" == g)
-      {
+        }
+      } else if ("tovl" == g) {
         discern_query_overlaps = 1;
-        if (verbose)
+        if (verbose) {
           cerr << "Will study query overlaps\n";
-      }
-      else if ("ncpm" == g)
-      {
+        }
+      } else if ("ncpm" == g) {
         check_for_previously_matched_atoms = 0;
-        if (verbose)
+        if (verbose) {
           cerr << "Will NOT check for previously matched atoms\n";
-      }
-      else if ("ql2f" == g)
-      {
+        }
+      } else if ("ql2f" == g) {
         process_queries_first_to_last = 0;
-        if (verbose)
+        if (verbose) {
           cerr << "Will process queries last to first\n";
-      }
-      else if ("help" == g)
-      {
+        }
+      } else if ("help" == g) {
         display_dash_G_qualifiers(cerr);
         return 0;
-      }
-      else
-      {
+      } else {
         cerr << "Unrecognised -G qualifier '" << g << "'\n";
         return 5;
       }
     }
   }
 
-  if (cl.option_present('r'))
-  {
+  if (cl.option_present('r')) {
     set_aromatic_bonds_lose_kekule_identity(1);
-    if (verbose)
-      cerr << "Will use strict Daylight rules for aliphatic atoms - use '-G blki' instead\n";
+    if (verbose) {
+      cerr << "Will use strict Daylight rules for aliphatic atoms - use '-G blki' "
+              "instead\n";
+    }
   }
 
-  if (cl.option_present('h'))
-  {
+  if (cl.option_present('h')) {
     make_implicit_hydrogens_implicit = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Implicit hydrogens will be made explicit\n";
+    }
   }
 
   std::fill_n(mcgowan_coefficient, HIGHEST_ATOMIC_NUMBER + 1, 0.0f);
@@ -1767,48 +1713,50 @@ abraham (int argc, char ** argv)
   mcgowan_coefficient[7] = 14.39;
   mcgowan_coefficient[8] = 12.43;
   mcgowan_coefficient[9] = 10.48;
-  mcgowan_coefficient[14] = 26.83;     // Si
-  mcgowan_coefficient[15] = 24.87;     // P
-  mcgowan_coefficient[16] = 22.91;     // S
-  mcgowan_coefficient[17] = 20.95;     // Cl
-  mcgowan_coefficient[32] = 31.02;     // Ge
-  mcgowan_coefficient[33] = 29.42;     // As
-  mcgowan_coefficient[34] = 27.81;     // Se
-  mcgowan_coefficient[35] = 26.21;     // Br
-  mcgowan_coefficient[50] = 39.35;     // Sn
-  mcgowan_coefficient[51] = 37.73;     // Sb
-  mcgowan_coefficient[52] = 36.14;     // Te
-  mcgowan_coefficient[53] = 34.53;     // I
+  mcgowan_coefficient[14] = 26.83;  // Si
+  mcgowan_coefficient[15] = 24.87;  // P
+  mcgowan_coefficient[16] = 22.91;  // S
+  mcgowan_coefficient[17] = 20.95;  // Cl
+  mcgowan_coefficient[32] = 31.02;  // Ge
+  mcgowan_coefficient[33] = 29.42;  // As
+  mcgowan_coefficient[34] = 27.81;  // Se
+  mcgowan_coefficient[35] = 26.21;  // Br
+  mcgowan_coefficient[50] = 39.35;  // Sn
+  mcgowan_coefficient[51] = 37.73;  // Sb
+  mcgowan_coefficient[52] = 36.14;  // Te
+  mcgowan_coefficient[53] = 34.53;  // I
 
-  if (! cl.option_present('F') || ! cl.option_present('P'))
-  {
+  if (!cl.option_present('F') || !cl.option_present('P')) {
     cerr << "Needs at least two files, -F and -P\n";
     usage(19);
   }
 
-// Each set of queries can contain multiple models.
+  // Each set of queries can contain multiple models.
 
   int number_query_sets = 2;
-  if (cl.option_present('C'))
+  if (cl.option_present('C')) {
     number_query_sets += 4;
+  }
 
-  Queries_and_Additive_Models * models = new Queries_and_Additive_Models[number_query_sets]; std::unique_ptr<Queries_and_Additive_Models[]> free_models(models);
+  Queries_and_Additive_Models *models =
+      new Queries_and_Additive_Models[number_query_sets];
+  std::unique_ptr<Queries_and_Additive_Models[]> free_models(models);
 
   int next_result_column = 0;
   int next_query_set = 0;
 
-  if (cl.option_present('F'))
-  {
-    const char * f = cl.option_value('F');
+  if (cl.option_present('F')) {
+    const char *f = cl.option_value('F');
 
-    if (! models[ABRAHAM_INDEX].build(f))
-    {
+    if (!models[ABRAHAM_INDEX].build(f)) {
       cerr << "Cannot read Abraham models control file '" << f << "'\n";
       return 73;
     }
 
-    if (verbose)
-      cerr << "Read " << models[ABRAHAM_INDEX].number_queries() << " queries for Abraham models\n";
+    if (verbose) {
+      cerr << "Read " << models[ABRAHAM_INDEX].number_queries()
+           << " queries for Abraham models\n";
+    }
 
     models[ABRAHAM_INDEX].set_result_column(next_result_column);
 
@@ -1820,18 +1768,18 @@ abraham (int argc, char ** argv)
     next_query_set++;
   }
 
-  if (cl.option_present('P'))
-  {
-    const char * p = cl.option_value('P');
+  if (cl.option_present('P')) {
+    const char *p = cl.option_value('P');
 
-    if (! models[ALPHA2A_INDEX].build(p))
-    {
+    if (!models[ALPHA2A_INDEX].build(p)) {
       cerr << "Cannot read alpha2H queries '" << p << "'\n";
       return 0;
     }
 
-    if (verbose)
-      cerr << "Read " << models[ALPHA2A_INDEX].number_queries() << " Alpha2A queries from '" << p << "'\n";
+    if (verbose) {
+      cerr << "Read " << models[ALPHA2A_INDEX].number_queries()
+           << " Alpha2A queries from '" << p << "'\n";
+    }
 
     models[ALPHA2A_INDEX].set_result_column(next_result_column);
 
@@ -1840,40 +1788,35 @@ abraham (int argc, char ** argv)
     next_query_set++;
   }
 
-  if (cl.option_present('C'))
-  {
-    if (cl.option_present('J'))
-    {
-      cerr << "Sorry, cannot run Constantinou Gani models and generate fingerprints, see Ian\n";
+  if (cl.option_present('C')) {
+    if (cl.option_present('J')) {
+      cerr << "Sorry, cannot run Constantinou Gani models and generate fingerprints, see "
+              "Ian\n";
       return 1;
     }
 
     IWString table[5];
 
     const_IWSubstring c;
-    for (auto i = 0; cl.value('C', c, i); ++i)
-    {
-      if (c.starts_with("table1="))
-        table[1]=c;
-      else if (c.starts_with("table2="))
-        table[2]=c;
-      else if (c.starts_with("table3="))
-        table[3]=c;
-      else if (c.starts_with("table4="))
-        table[4]=c;
-      else
-      {
+    for (auto i = 0; cl.value('C', c, i); ++i) {
+      if (c.starts_with("table1=")) {
+        table[1] = c;
+      } else if (c.starts_with("table2=")) {
+        table[2] = c;
+      } else if (c.starts_with("table3=")) {
+        table[3] = c;
+      } else if (c.starts_with("table4=")) {
+        table[4] = c;
+      } else {
         cerr << "Unrecognised Constantinou Gani file directive '" << c << "'\n";
         return 1;
       }
     }
 
-    for (auto i = 1; i <= 4; ++i)
-    {
+    for (auto i = 1; i <= 4; ++i) {
       table[i].remove_leading_chars(7);
 
-      if (0 == table[i].length())
-      {
+      if (0 == table[i].length()) {
         cerr << "No specification for Constantinou Gani table " << i << endl;
         return 2;
       }
@@ -1882,14 +1825,16 @@ abraham (int argc, char ** argv)
 
       next_query_set++;
 
-      if (! models[ap_cg[i]].build(table[i]))
-      {
+      if (!models[ap_cg[i]].build(table[i])) {
         cerr << "Cannot read Constantinou Gani Table 1 queries '" << table[i] << "'\n";
         return 0;
       }
 
-      if (verbose)
-        cerr << "Constantinou Gani Table " << i << " read " << models[CG1_INDEX + i - 1].number_queries() << " from '" << table[i] << "'\n";
+      if (verbose) {
+        cerr << "Constantinou Gani Table " << i << " read "
+             << models[CG1_INDEX + i - 1].number_queries() << " from '" << table[i]
+             << "'\n";
+      }
 
       models[ap_cg[i]].set_result_column(next_result_column);
     }
@@ -1897,42 +1842,42 @@ abraham (int argc, char ** argv)
     constantinou_gani_models_present = 1;
   }
 
-  ap_vx = next_result_column;    // McGowan
+  ap_vx = next_result_column;  // McGowan
   next_result_column++;
-  ap_logp = next_result_column;    // clogp
-  next_result_column++; 
+  ap_logp = next_result_column;  // clogp
+  next_result_column++;
 
   const int nmodels = next_result_column;
 
-// We compute all the results that come from Queries_and_Additive_Models's, then the extra ones
+  // We compute all the results that come from Queries_and_Additive_Models's, then the
+  // extra ones
 
-  int tmp = compute_number_results(models, number_query_sets);   // do not change till the 'y' option is done
+  int tmp = compute_number_results(
+      models, number_query_sets);  // do not change till the 'y' option is done
 
-  if (cl.option_present('y'))
-  {
+  if (cl.option_present('y')) {
     int show_all_query_matches = 0;
     int show_all_query_non_matches = 0;
 
     const_IWSubstring y;
-    for (auto i = 0; cl.value('y', y, i); ++i)
-    {
-      if ('m' == y)
+    for (auto i = 0; cl.value('y', y, i); ++i) {
+      if ('m' == y) {
         show_all_query_matches = 1;
-      else if ('n' == y)
+      } else if ('n' == y) {
         show_all_query_non_matches = 1;
-      else
-      {
+      } else {
         cerr << "Unrecognised -y qualifier '" << y << "'\n";
         usage(2);
       }
     }
 
-    for (auto i = 0; i < tmp; ++i)
-    {
-      if (show_all_query_matches)
+    for (auto i = 0; i < tmp; ++i) {
+      if (show_all_query_matches) {
         models[i].set_show_all_query_matches(1);
-      if (show_all_query_non_matches)
+      }
+      if (show_all_query_non_matches) {
         models[i].set_show_all_query_non_matches(1);
+      }
     }
   }
 
@@ -1946,84 +1891,80 @@ abraham (int argc, char ** argv)
 
   const auto nresults = tmp;
 
-//cerr << "Have " << nresults << " results, nmodels " << nmodels << endl;
+  // cerr << "Have " << nresults << " results, nmodels " << nmodels << endl;
 
-  v = new double[nresults]; std::unique_ptr<double[]> free_v(v);
+  v = new double[nresults];
+  std::unique_ptr<double[]> free_v(v);
 
-  if (verbose)
+  if (verbose) {
     cerr << "Output will have " << nresults << " results\n";
+  }
 
-  if (cl.option_present('J'))
-  {
+  if (cl.option_present('J')) {
     cl.value('J', fingerprint_tag);
 
-    if (! fingerprint_tag.ends_with('<'))
+    if (!fingerprint_tag.ends_with('<')) {
       fingerprint_tag << '<';
-
-    if (verbose)
-      cerr << "Results written as fingerprint with tag '" << fingerprint_tag << "'\n";
-
-    if (cl.option_present('f'))
-    {
-      function_as_tdt_filter = 1;
-
-      if (verbose)
-        cerr << "Will function as a TDT filter\n";
     }
 
-    if (cl.option_present('p'))
-    {
-      if (! cl.value('p', bit_replicates) || bit_replicates < 1)
-      {
+    if (verbose) {
+      cerr << "Results written as fingerprint with tag '" << fingerprint_tag << "'\n";
+    }
+
+    if (cl.option_present('f')) {
+      function_as_tdt_filter = 1;
+
+      if (verbose) {
+        cerr << "Will function as a TDT filter\n";
+      }
+    }
+
+    if (cl.option_present('p')) {
+      if (!cl.value('p', bit_replicates) || bit_replicates < 1) {
         cerr << "The number of bit replicates (-p) option must be a whole +ve number\n";
         usage(2);
       }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Will produce " << bit_replicates << " bit replicates\n";
+      }
     }
 
-    if (cl.option_present('d'))
-    {
-      if (! cl.value('d', bit_count_dynamic_range) || bit_count_dynamic_range <= 1.0f)
-      {
+    if (cl.option_present('d')) {
+      if (!cl.value('d', bit_count_dynamic_range) || bit_count_dynamic_range <= 1.0f) {
         cerr << "The bit count dynamic range (-d) must be a +ve value\n";
         usage(2);
       }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Each replicate will scale to " << bit_count_dynamic_range << endl;
+      }
     }
 
     int_output_for_fingerprints = new int[nresults];
   }
 
-  int input_type = 0;
-  if (function_as_tdt_filter)
+  FileType input_type = FILE_TYPE_INVALID;
+  if (function_as_tdt_filter) {
     ;
-  else if (cl.option_present('i'))
-  {
-    if (! process_input_type(cl, input_type))
-    {
+  } else if (cl.option_present('i')) {
+    if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
       usage(6);
     }
-  }
-  else if (! all_files_recognised_by_suffix(cl))
+  } else if (!all_files_recognised_by_suffix(cl)) {
     return 4;
+  }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
-  if (cl.option_present('L'))
-  {
-    if (! cl.option_present('o'))
-      stream_for_labeled_atoms.add_output_type(SMI);
-    else if (! stream_for_labeled_atoms.determine_output_types(cl))
-    {
+  if (cl.option_present('L')) {
+    if (!cl.option_present('o')) {
+      stream_for_labeled_atoms.add_output_type(FILE_TYPE_SMI);
+    } else if (!stream_for_labeled_atoms.determine_output_types(cl)) {
       cerr << "Cannot determine output types for labeled atom molecules\n";
       return 0;
     }
@@ -2031,37 +1972,34 @@ abraham (int argc, char ** argv)
     const_IWSubstring l;
     cl.value('L', l);
 
-    if (! stream_for_labeled_atoms.new_stem(l, 1))
-    {
+    if (!stream_for_labeled_atoms.new_stem(l, 1)) {
       cerr << "Cannot open -L file(s) with stem '" << l << "'\n";
       return 53;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Molecules with labeled atoms written to '" << l << "'\n";
+    }
   }
 
-  if (verbose)
+  if (verbose) {
     acc = new Accumulator<double>[nmodels];
+  }
 
   IWString_and_File_Descriptor output(1);
 
-  if (0 == fingerprint_tag.length())
+  if (0 == fingerprint_tag.length()) {
     write_header_records(models, number_query_sets, nmodels, output);
+  }
 
   int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (function_as_tdt_filter)
-    {
-      if (! abraham(cl[i], models, number_query_sets, nmodels, output))
-      {
+  for (int i = 0; i < cl.number_elements(); i++) {
+    if (function_as_tdt_filter) {
+      if (!abraham(cl[i], models, number_query_sets, nmodels, output)) {
         rc = i + 1;
         break;
       }
-    }
-    else if (! abraham(cl[i], input_type, models, number_query_sets, nmodels, output))
-    {
+    } else if (!abraham(cl[i], input_type, models, number_query_sets, nmodels, output)) {
       rc = i + 1;
       break;
     }
@@ -2069,35 +2007,31 @@ abraham (int argc, char ** argv)
 
   output.flush();
 
-  if (verbose)
-  {
-    for (auto i = 0; i < number_query_sets; ++i)
-    {
+  if (verbose) {
+    for (auto i = 0; i < number_query_sets; ++i) {
       models[i].report(acc, cerr);
     }
   }
 
-  if (discern_query_overlaps)
-  {
-    for (int i = 0; i < number_query_sets; ++i)
-    {
+  if (discern_query_overlaps) {
+    for (int i = 0; i < number_query_sets; ++i) {
       models[i].report_overlaps(std::cerr);
     }
   }
 
-  if (nullptr != int_output_for_fingerprints)
-    delete [] int_output_for_fingerprints;
+  if (nullptr != int_output_for_fingerprints) {
+    delete[] int_output_for_fingerprints;
+  }
 
-  if (nullptr != acc)
-    delete [] acc;
+  if (nullptr != acc) {
+    delete[] acc;
+  }
 
   return rc;
 }
 
-
 int
-main (int argc, char ** argv)
-{
+main(int argc, char **argv) {
   prog_name = argv[0];
 
   int rc = abraham(argc, argv);

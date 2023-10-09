@@ -1,0 +1,5 @@
+# Link node
+query {
+  name: "link_node"
+  smarts: "[$(C);$([G0]),$([T0]),!$(C!-[!#6])]"
+}

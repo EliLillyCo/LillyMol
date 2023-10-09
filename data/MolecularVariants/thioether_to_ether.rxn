@@ -1,0 +1,9 @@
+name: "thioether_to_ether"
+scaffold {
+  id: 0
+  smarts: "[SD2G0T0x0]"
+  change_element {
+    atom: 0
+    element: "O"
+  }
+}

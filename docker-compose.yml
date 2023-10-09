@@ -1,0 +1,7 @@
+  lilly_mol:
+    image: lillymolprivate
+    container_name: lilly_mol
+    volumes:
+      - .:/test
+    command: >
+      bash -c "tail -f /dev/null"

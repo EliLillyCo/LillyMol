@@ -1,7 +1,7 @@
 #ifndef SMILES_HASH_H
 #define SMILES_HASH_H
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 class Smiles_Hash_Linked_List
 {

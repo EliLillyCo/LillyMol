@@ -2,7 +2,7 @@
 #define IW_DEMERIT_H
 
 #include <iostream>
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #define DEFAULT_REJECTION_THRESHOLD 100
 
@@ -48,6 +48,7 @@ class Demerit
 
   public:
     Demerit();
+    Demerit(Demerit&& rhs);
     ~Demerit();
 
     int ok() const;

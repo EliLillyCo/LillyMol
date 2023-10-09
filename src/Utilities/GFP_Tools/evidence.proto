@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package EvidenceData;
+
+message PiecewiseLinear {
+  // A piecewise linear weighting scheme needs two parameters, min and max.
+  // All disances less than min get a weight of one.
+  // All distances greater than max get a weight of zero.
+  // There is a linear interpolation of weights in the range.
+  float min = 1;
+  float max = 2;
+}
+
+message Options {
+  // Discard any neighbours beyond this distance.
+  optional float max_distance = 1;
+
+  // Truncate neighbour lists to this many neigbours.
+  optional uint32 max_nbrs = 2;
+
+  // The average activity across this many neighbours.
+  repeated uint32 knn = 3;
+
+  // The closest activity across this many neighbours.
+  repeated uint32 closest_value = 4;
+
+  // The average value within a distance
+  repeated float average_within_distance = 5;
+
+  repeated PiecewiseLinear piecewise_linear = 6;
+
+  // similarity weighted sum of N neighbours.
+  repeated uint32 weighted_average = 7;
+}

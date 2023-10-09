@@ -1,0 +1,6 @@
+{
+    "executable": "normalise",
+    "options": ["-i 1 -j #{input_file[0]}" ],
+    "input_file": [ "${LILLYMOL_HOME}/data/descriptor.txt" ],
+    "output_file": [ "stdout" ]
+}

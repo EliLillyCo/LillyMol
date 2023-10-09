@@ -1,8 +1,11 @@
-#include <stdlib.h>
+#include <iostream>
+
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include "smiles_id_dist.h"
 
-#include "iwstring_data_source.h"
+using std::cerr;
+using std::endl;
 
 #define MAX_DISTANCE 1.0
 

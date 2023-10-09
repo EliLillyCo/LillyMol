@@ -1,13 +1,13 @@
 #include <iostream>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
+#include "Foundational/cmdline/cmdline.h"
+
+#include "molecule_to_query.h"
 #include "qry_wstats.h"
 #include "rwsubstructure.h"
-#include "molecule_to_query.h"
 
-#include "cmdline.h"
 
 template class resizable_array_p<Substructure_Hit_Statistics>;
 template class resizable_array_base<Substructure_Hit_Statistics *>;

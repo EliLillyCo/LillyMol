@@ -8,13 +8,13 @@
 using std::cerr;
 using std::endl;
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iwhash.h"
-#include "report_progress.h"
-#include "iw_tdt.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iwhash.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -430,7 +430,7 @@ tdt_join(int argc, char ** argv)
 
   TDT_File * files = new TDT_File[nfiles - 1]; std::unique_ptr<TDT_File[]> free_files(files);
 
-  assert (NULL != files);
+  assert (nullptr != files);
 
   for (int i = 1; i < cl.number_elements(); i++)
   {

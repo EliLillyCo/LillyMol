@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <iostream>
 
 /*
   All these programmes need to build an in-memory pool
@@ -7,10 +7,12 @@
   may fix it to allow the pool to be built from multiple files
 */
 
-#include "iw_tdt.h"
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "gfp.h"
+
+using std::cerr;
 
 int
 build_pool (iwstring_data_source & input,
@@ -23,7 +25,7 @@ build_pool (iwstring_data_source & input,
 
   if (pool_size >= max_pool_size)
   {
-    cerr << "Build pool, pool already full, max size " << max_pool_size << " current size " << pool_size << endl;
+    cerr << "Build pool, pool already full, max size " << max_pool_size << " current size " << pool_size << '\n';
     return 0;
   }
 
@@ -51,7 +53,7 @@ build_pool (iwstring_data_source & input,
 
     if (pool_size >= max_pool_size)
     {
-      cerr << "Pool is full, max " << max_pool_size << endl;
+      cerr << "Pool is full, max " << max_pool_size << '\n';
       return 1;
     }
 
@@ -76,29 +78,30 @@ build_pool (const const_IWSubstring & fname,
     return 0;
   }
 
-  if (0 == max_pool_size)
+  if (0 == max_pool_size)  // Need to determine size
   {
     IWString tmp;
     tmp << '^' << identifier_tag;
 
-    IW_Regular_Expression pcn (tmp);
-    max_pool_size = input.grep (pcn);
+    re2::StringPiece tmpsp(tmp.data(), tmp.length());
+    RE2 pcn(tmp);
+    max_pool_size = input.grep(pcn);
 
     if (0 == max_pool_size)
     {
-      cerr << "No occurrences of " << pcn.source () << "' in input\n";
+      cerr << "No occurrences of " << pcn.pattern() << "' in input\n";
       return 0;
     }
 
     pool = new IW_General_Fingerprint[max_pool_size];
-    if (NULL == pool)
+    if (nullptr == pool)
     {
-      cerr << "Yipes, could not allocate pool of size " << max_pool_size << endl;
+      cerr << "Yipes, could not allocate pool of size " << max_pool_size << '\n';
       return 62;
     }
 
-    cerr << "Pool automatically sized to " << max_pool_size << endl;
+    cerr << "Pool automatically sized to " << max_pool_size << '\n';
   }
 
-  return build_pool (input, pool, max_pool_size, pool_size);
+  return build_pool(input, pool, max_pool_size, pool_size);
 }

@@ -12,7 +12,7 @@ class Tversky;
 
 #define IWDYFP_NSET_NOT_COMPUTED -9
 
-#include "iwbits.h"
+#include "Foundational/iwbits/iwbits.h"
 
 class IWDYFP : public IW_Bits_Base
 {
@@ -84,6 +84,10 @@ class IWDYFP : public IW_Bits_Base
     void iwor  (const IWDYFP &);
     void iwor  (const IWDYFP &, int &);
     void iwxor (const IWDYFP &);
+
+    // We can fairly quickly see if a fingerprint can be compared with another
+    // to achieve a given similarity or larger.
+    int SimilarityMightBeGreaterThan(const IWDYFP& rhs, similarity_type_t threshold) const;
 
 //  Sometimes this is useful
 

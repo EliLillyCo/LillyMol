@@ -4,7 +4,6 @@
 #include <math.h>
 #include <time.h>
 #include <fstream>
-using namespace std;
 
 #ifdef USE_IWMALLOC
 #include "iwmalloc.h"
@@ -14,7 +13,7 @@ using namespace std;
 #include "iwrandom.h"
 #include "iwstring.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -437,7 +436,7 @@ test_sparse_things (int nb, int * tmp)
 static int
 test_sparse_things ()
 {
-  int * tmp = NULL;
+  int * tmp = nullptr;
 
   int bsize = 0;
   for (int i = 0; i < fewer_iterations_split; i++)
@@ -449,7 +448,7 @@ test_sparse_things ()
       if (verbose)
         cerr << "test_sparse_things bsize " << bsize << endl;
 
-      if (NULL != tmp)
+      if (nullptr != tmp)
         delete tmp;
 
       tmp = new int[bsize];
@@ -458,7 +457,7 @@ test_sparse_things ()
     (void) test_sparse_things (bsize, tmp);
   }
 
-  if (NULL != tmp)
+  if (nullptr != tmp)
     delete tmp;
 
   return 1;
@@ -874,7 +873,7 @@ test_setting_ranges ()
 static int
 test_construct_from_array_of_ints ()
 {
-  int * ii = NULL;
+  int * ii = nullptr;
 
   int bsize = 0;
   for (int i = 0; i < iterations; i++)
@@ -885,7 +884,7 @@ test_construct_from_array_of_ints ()
       if (verbose)
         cerr << "test_construct_from_array_of_ints using vectors of length " << bsize << endl;
 
-      if (NULL != ii)
+      if (nullptr != ii)
         delete ii;
 
       ii = new int[bsize];
@@ -894,7 +893,7 @@ test_construct_from_array_of_ints ()
     test_construct_from_array_of_ints (bsize, ii);
   }
 
-  if (NULL != ii)
+  if (nullptr != ii)
     delete ii;
 
   return 0;
@@ -932,7 +931,7 @@ test_compute_weight (const int bsize, float * x)
 static int
 test_compute_weight ()
 {  
-  float * x = NULL;
+  float * x = nullptr;
 
   int bsize = 0;
   for (int i = 0; i < iterations; i++)
@@ -943,7 +942,7 @@ test_compute_weight ()
       if (verbose)
         cerr << "test_compute_weight using vectors of length " << bsize << endl;
 
-      if (NULL != x)
+      if (nullptr != x)
         delete x;
 
       x = new float[bsize];
@@ -952,7 +951,7 @@ test_compute_weight ()
     test_compute_weight (bsize, x);
   }
 
-  if (NULL != x)
+  if (nullptr != x)
     delete x;
 
   return 0;
@@ -994,8 +993,8 @@ test_increment_vector (int bsize,
 static int
 test_increment_vector ()
 {
-  int * i1 = NULL;
-  int * i2 = NULL;
+  int * i1 = nullptr;
+  int * i2 = nullptr;
 
   int bsize = 0;
   for (int i = 0; i < iterations; i++)
@@ -1006,9 +1005,9 @@ test_increment_vector ()
       if (verbose)
         cerr << "test_increment_vector using vectors of length " << bsize << endl;
 
-      if (NULL != i1)
+      if (nullptr != i1)
         delete i1;
-      if (NULL != i2)
+      if (nullptr != i2)
         delete i2;
 
       i1 = new int[bsize];
@@ -1018,9 +1017,9 @@ test_increment_vector ()
     test_increment_vector (bsize, i1, i2);
   }
 
-  if (NULL != i1)
+  if (nullptr != i1)
     delete i1;
-  if (NULL != i2)
+  if (nullptr != i2)
     delete i2;
 
   return 0;
@@ -1069,8 +1068,8 @@ test_set_vector (const int bsize, int * ii,
 static int
 test_set_vector ()
 {
-  int * i1 = NULL;
-  int * i2 = NULL;
+  int * i1 = nullptr;
+  int * i2 = nullptr;
 
   int bsize = 0;
   for (int i = 0; i < iterations; i++)
@@ -1081,9 +1080,9 @@ test_set_vector ()
       if (verbose)
         cerr << "Test set vector being done with vectors of size " << bsize << endl;
 
-      if (NULL != i1)
+      if (nullptr != i1)
         delete i1;
-      if (NULL != i2)
+      if (nullptr != i2)
         delete i2;
 
       i1 = new int[bsize];
@@ -1093,9 +1092,9 @@ test_set_vector ()
     (void) test_set_vector (bsize, i1, i2);
   }
 
-  if (NULL != i1)
+  if (nullptr != i1)
     delete i1;
-  if (NULL != i2)
+  if (nullptr != i2)
     delete i2;
 
   return 0;

@@ -1,7 +1,8 @@
-#ifndef TOGGLE_KEKULE_FORM_H
-#define TOGGLE_KEKULE_FORM_H
+#ifndef MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
+#define MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
 
 #include "molecule.h"
+#include "Molecule_Lib/toggle_kekule_form.pb.h"
 
 class Command_Line;
 class msi_attribute;
@@ -171,6 +172,8 @@ class Toggle_Kekule_Form
     int add_bond (int, int, bond_type_t);
     int add_bond (Bond * b);
 
+    int ConstructFromProto(const ToggleKekuleForm::ToggleKekuleForm& proto);
+
     void set_allow_pyrrole_to_change (int s) { _allow_pyrrole_to_change = s;}
 
     int write_msi (std::ostream &, const IWString &, const char *) const;
@@ -186,4 +189,4 @@ class Toggle_Kekule_Form
     void reset () { _bond.resize(0); return;}
 };
 
-#endif
+#endif  // MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_

@@ -46,3 +46,4 @@ fi
 
 rm -f "$out"
 rm -f err.txt
+rm -f test_data_01.log

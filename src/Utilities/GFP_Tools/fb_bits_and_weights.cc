@@ -1,15 +1,14 @@
-#include <stdlib.h>
-#include <math.h>
+#include <cmath>
 
-#include "iwstring_data_source.h"
-#include "cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/cmdline/cmdline.h"
 #include "fb_bits_and_weights.h"
 
 FB_Bits_and_Weights_Fixed_Width::FB_Bits_and_Weights_Fixed_Width()
 {
   _nbits = -1;
-  _wmatch = NULL;
-  _wnmatch = NULL;
+  _wmatch = nullptr;
+  _wnmatch = nullptr;
 
   _include_non_matching_bits_in_similarity = 1;
 
@@ -18,7 +17,7 @@ FB_Bits_and_Weights_Fixed_Width::FB_Bits_and_Weights_Fixed_Width()
 
 FB_Bits_and_Weights_Fixed_Width::~FB_Bits_and_Weights_Fixed_Width()
 {
-  if (NULL != _wmatch)
+  if (nullptr != _wmatch)
   {
     delete [] _wmatch;
     delete [] _wnmatch;

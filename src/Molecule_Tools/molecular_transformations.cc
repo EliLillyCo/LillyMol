@@ -2,26 +2,30 @@
   Do a series of transformations on molecules
 */
 
-#include <stdlib.h>
-#include <memory>
 #include <algorithm>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
 #include <random>
-#include <vector>
 #include <set>
+#include <vector>
 
-#include "cmdline.h"
-#include "iw_stl_hash_set.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 
-#include "path.h"
-#include "istream_and_type.h"
-#include "output.h"
-#include "aromatic.h"
-#include "etrans.h"
-#include "iwstandard.h"
-#include "iwreaction.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/iwreaction.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rmele.h"
+#include "Molecule_Lib/standardise.h"
 
-#include "rmele.h"
+using std::cerr;
 
 static int verbose = 0;
 
@@ -133,8 +137,13 @@ static IW_STL_Hash_Set seen;
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __TIME__ << " " << __DATE__ << endl;
-  cerr << "Performs any number of molecular transformations\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -R <rxn>       specify reaction file(s)\n";
   cerr << "  -T <fname>     read reaction and sidechain information from <fname>\n";
   cerr << "  -z i           ignore molecules not reacting, passed to subsequent reactions\n";
@@ -212,8 +221,8 @@ class AndORProb
     AndORProb(const int g, const int ao, const double p = 0.0, const int ri=0) :
       _group(g)
       , _andor(ao)
-      , _probability(p)
       , _regioIsomer(ri)
+      , _probability(p)
       , _active(1)
     {
  //     _active = 1;
@@ -279,16 +288,21 @@ class Set_of_Reactions
     int _read_file_of_reactions(iwstring_data_source & input, const IWString & dirname, Sidechain_Match_Conditions & smc);
     int _add_reaction(const_IWSubstring & fname, Sidechain_Match_Conditions & smc);
     int _add_reaction_from_smirks(const_IWSubstring & smirks, Sidechain_Match_Conditions & smc);
+    int _add_reaction_from_proto_file(const_IWSubstring& fname, Sidechain_Match_Conditions& smc);
+    int _add_reaction_from_file_of_proto_reactions(iwstring_data_source& input,
+                const IWString& dirname,
+                Sidechain_Match_Conditions& smc);
+    int _add_reaction_from_file_of_proto_reactions(const_IWSubstring& fname, Sidechain_Match_Conditions& smc);
     int _build(const resizable_array_p<IWString> & zdata, Sidechain_Match_Conditions & smc);
-		int prepOneSideChain(IWString &rxn_string,
-																 std::vector<std::vector<IWString>> & smilesLists,
-																 int sideChainIndex,
-																 std::vector<Molecule_and_Embedding *> &currentMolAndEmbeddings,
-                                 Sidechain_Match_Conditions & smc,
-                                 int & thisGroup,
-                                 const int thisAndor,
-                                 const double current_group_probability,
-                                 int &regioIsomer);
+               int prepOneSideChain(IWString &rxn_string,
+               std::vector<std::vector<IWString>> & smilesLists,
+               int sideChainIndex,
+               std::vector<Molecule_and_Embedding *> &currentMolAndEmbeddings,
+               Sidechain_Match_Conditions & smc,
+               int & thisGroup,
+               const int thisAndor,
+               const double current_group_probability,
+               int &regioIsomer);
   public:
     Set_of_Reactions();
     ~Set_of_Reactions();
@@ -422,7 +436,7 @@ Set_of_Reactions::debug_print(std::ostream & output) const
     output << ' ' << i << ' ' << _reaction[i]->comment();
 
     const auto ao = reinterpret_cast<const AndORProb *>(_reaction[i]->user_specified_void_ptr());
-    if (NULL != ao)
+    if (nullptr != ao)
       output << " group " << ao->group() << " regioIsomer " << ao->regioIsomer()<< " and/or " << ao->andor();
 
     output << '\n';
@@ -434,8 +448,9 @@ Set_of_Reactions::debug_print(std::ostream & output) const
 int
 Set_of_Reactions::report_matches(std::ostream & output) const
 {
-  if (nullptr == _hits_to_query)
+  if (nullptr == _hits_to_query) {
     return 0;
+  }
 
   for (int i = 0; i < _number_reactions; i++)
   {
@@ -444,7 +459,7 @@ Set_of_Reactions::report_matches(std::ostream & output) const
 
     if (c.length())
       output << " '" << c << "'";
-    output << endl;
+    output << '\n';
   }
 
   return 1;
@@ -465,7 +480,7 @@ Set_of_Reactions::reactions_have_starting_molecules()
 
   if (! _input.seekg(o))
   {
-    cerr << "Set_of_Reactions::reactions_have_starting_molecules:cannot seek back to " << o << endl;
+    cerr << "Set_of_Reactions::reactions_have_starting_molecules:cannot seek back to " << o << '\n';
     return 0;
   }
 
@@ -514,7 +529,7 @@ Set_of_Reactions::_maybe_prepend_directory_name(IWString & file) const
 
   IWString tmp(_input.fname());
 
-//cerr << tmp << endl;
+//cerr << tmp << '\n';
 
   int i = tmp.rindex('/');
 
@@ -643,7 +658,7 @@ Set_of_Reactions::members_in_group(const int reaction_number) const
   const int current_group = curr_andor->group();
 
 #ifdef DEBUG_MEMBERS_IN_GROUP
-  cerr << "begin and group " << current_group << " with reaction " << reaction_number << endl;
+  cerr << "begin and group " << current_group << " with reaction " << reaction_number << '\n';
 #endif
 
   int ndx = reaction_number + 1;     // the index of the last member of the group, decrement at end of loop
@@ -654,7 +669,7 @@ Set_of_Reactions::members_in_group(const int reaction_number) const
       break;
 
 #ifdef DEBUG_MEMBERS_IN_GROUP
-    cerr << " reaction " << ndx << " group " << next_andor->group() << endl;
+    cerr << " reaction " << ndx << " group " << next_andor->group() << '\n';
 #endif
 
     if (next_andor->group() != current_group)
@@ -680,7 +695,7 @@ Set_of_Reactions::set_probability_group(const int reaction_number)
     return 1;
 
 #ifdef DEBUG_SET_PROBABILITY_GROUP
-  cerr << " from " << reaction_number << " gsize " << gsize << endl;
+  cerr << " from " << reaction_number << " gsize " << gsize << '\n';
 #endif
 
   int still_active = 0;
@@ -772,7 +787,7 @@ Set_of_Reactions::set_probability(const double p)
   for (int i = 0; i < _number_reactions; ++i)
   {
     const AndORProb * ao = reinterpret_cast<const AndORProb *>(_reaction[i]->user_specified_void_ptr());
-    if (NULL == ao)
+    if (nullptr == ao)
       continue;
 
     if (OR_GROUPING != ao->andor())
@@ -787,7 +802,7 @@ Set_of_Reactions::set_probability(const double p)
 
   for (int i = 0; i < _number_reactions; ++i)
   {
-    cerr << ' ' << i << " active " << _active[i] << ' ' << _reaction[i]->comment() << endl;
+    cerr << ' ' << i << " active " << _active[i] << ' ' << _reaction[i]->comment() << '\n';
   }
 #endif
 
@@ -857,9 +872,7 @@ do_append(Molecule & m,
           const IWString & zextra)
 {
   IWString tmp(m.name());
-
-  do_append(tmp, name_separator, zextra);
-
+  tmp.append_with_spacer(zextra, name_separator);
   m.set_name(tmp);
 
   return 1;
@@ -877,11 +890,11 @@ Set_of_Reactions::append_reagent_names(Molecule & m,
                                        const int * changed_by) const
 {
   IWString new_name(m.name());
-  cerr << "Appending reagent names " << _number_reactions << endl;
+  cerr << "Appending reagent names " << _number_reactions << '\n';
 
   for (int i = 0; i < _number_reactions; ++i)
   {
-//  cerr << changed_by[i] << " changed_by " << i << endl;
+//  cerr << changed_by[i] << " changed_by " << i << '\n';
 
     if (! changed_by[i])
       continue;
@@ -891,7 +904,7 @@ Set_of_Reactions::append_reagent_names(Molecule & m,
 
     if (0 == _reaction[i]->number_sidechains())
     {
-      do_append(new_name, name_separator, _reaction[i]->comment());
+      new_name.append_with_spacer(_reaction[i]->comment, name_separator);
       continue;
     }
 
@@ -900,9 +913,9 @@ Set_of_Reactions::append_reagent_names(Molecule & m,
       const auto & s = _reaction[i]->sidechain(j);
 
       if (1 == s->number_reagents())
-        do_append(new_name, name_separator, s->reagent(0)->name());
+        new_name.append_with_spacer(s->reagent(0)->name(), name_separator);
       else
-        do_append(new_name, name_separator, _reaction[i]->comment());
+        new_name.append_with_spacer(_reaction[i]->comment(), name_separator);
     }
   }
 
@@ -917,7 +930,7 @@ do_append_to_name(Molecule & m)
 {
   IWString tmp = m.name();
 
-  tmp.append_with_spacer(append_to_changed_molecules);
+  tmp.append_with_spacer(append_to_changed_molecules, name_separator);
 
   m.set_name(tmp);
 
@@ -1055,7 +1068,7 @@ final_processing(Molecule & m,
   if (element_transformations.active())
     element_transformations.process(m);
 
-//cerr << "final_processing  changes_this_molecule " << changes_this_molecule << endl;
+//cerr << "final_processing  changes_this_molecule " << changes_this_molecule << '\n';
   if (changes_this_molecule)
   {
 //  sor.append_reagent_names(m, changed_by);
@@ -1333,7 +1346,7 @@ Molecular_Transformations_Random_Set_Generator::_already_seen(const resizable_ar
   {
     cerr << '_' << do_rxn[i];
   }
-  cerr << " N " << do_rxn.size() << " hash value " << h << " seen " << (f != seen.end()) << endl;
+  cerr << " N " << do_rxn.size() << " hash value " << h << " seen " << (f != seen.end()) << '\n';
 #endif
 
   if (f != _seen.end())   // seen before, is dup
@@ -1411,7 +1424,7 @@ Molecular_Transformations_Random_Set_Generator::_process(Molecule & m,
     {
       cerr << ' ' << actually_made[i];
     }
-    cerr << " hash " << compute_hash(actually_made, sor.number_reactions()) << endl;
+    cerr << " hash " << compute_hash(actually_made, sor.number_reactions()) << '\n';
     cerr << "actually_made cotains " << actually_made.size() << " items\n";
 #endif
 
@@ -1421,7 +1434,7 @@ Molecular_Transformations_Random_Set_Generator::_process(Molecule & m,
       cerr << "DISC DUP";
       for (auto x : actually_made)
         cerr << ' ' << x;
-      cerr << endl;
+      cerr << '\n';
 #endif
       return 1;
     }
@@ -1445,24 +1458,27 @@ Molecular_Transformations_Random_Set_Generator::_process(Molecule & m,
 
   const int nhits = ri.determine_matched_atoms(m, sresults);
 
-  if (0 == nhits)
+  if (0 == nhits) {
     return _process(m, changes_this_molecule, ndx+1, do_rxn, actually_made, output);
+  }
 
   actually_made.add(reaction_number);
-  if (verbose > 2)
-    cerr << nhits << " hits for reaction " << reaction_number << " level " << ndx << endl;
+  if (verbose > 2) {
+    cerr << nhits << " hits for reaction " << reaction_number << " level " << ndx << '\n';
+  }
 
   _sor.another_match_to_query(reaction_number);
   changes_this_molecule++;
   _changed_by[reaction_number] = 1;
 
-  if (1 == changes_this_molecule && write_parent_of_changed_molecules)
+  if (1 == changes_this_molecule && write_parent_of_changed_molecules) {
     do_write_original_molecule_to_output_stream(m, output);
+  }
 
   int hdo = 0;
-
-  if (nhits > 1)
+  if (nhits > 1) {
     hdo = random_number_between(0, nhits-1);
+  }
 
   Molecule mcopy(m);
 
@@ -1485,7 +1501,7 @@ Molecular_Transformations_Random_Set_Generator::_final_processing(Molecule & m,
   if (element_transformations.active())
     element_transformations.process(m);
 
-//cerr << "final_processing  changes_this_molecule " << changes_this_molecule << endl;
+//cerr << "final_processing  changes_this_molecule " << changes_this_molecule << '\n';
   if (changes_this_molecule)
   {
 //  sor.append_reagent_names(m, changed_by);
@@ -1517,7 +1533,7 @@ molecular_transformations_random_set(Molecule & m,
 
     for (int i = 0; i < rpg.number_elements(); ++i)
     {
-      cerr << rpg[i] << " reactions in group " << i << endl;
+      cerr << rpg[i] << " reactions in group " << i << '\n';
     }
   }
 
@@ -1553,6 +1569,7 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
 // loop over the the hits to process
 
   int hitsToDo = lastHit - firstHit + 1;
+  // cerr << "In _doAllRegioIsomersAndSitesRecurs do hits btw " << firstHit << " and " << lastHit << " hitsToDo " << hitsToDo << '\n';
 
   for (int thisHit = firstHit; thisHit <= lastHit; ++thisHit)
   {
@@ -1560,10 +1577,11 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
 
     for (int reactionNumber = firstReactionNumber; reactionNumber <= lastReactionNumber; ++reactionNumber)
     {
-      if (verbose > 1)
-        cerr << "level: " << level << endl
-          << " thisHit=" << thisHit << " of " << firstHit << " to " << lastHit << endl
-          << "reactionNumber=" << reactionNumber << " of " << firstReactionNumber << " to " << lastReactionNumber << endl;
+      if (verbose > 1) {
+        cerr << "level: " << level << '\n';
+        cerr << " thisHit=" << thisHit << " of " << firstHit << " to " << lastHit << '\n';
+        cerr << "reactionNumber=" << reactionNumber << " of " << firstReactionNumber << " to " << lastReactionNumber << '\n';
+      }
 
 
       IWReaction & ri = sor.reaction(reactionNumber);
@@ -1588,42 +1606,39 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
 
         // nHits should be one (or more) less than the hitsToDo passed in
 
-        if (nhits > hitsLeftToDo)
-        {
-          cerr << "molecular_transformations::_doAllRegioIsomersAndSites, number of hits has INCREASED.  The side chain might have added a core match. "
-              << reactionNumber << " '" << ri.comment() << endl
-              << "  molecule was: " << mcopy.smiles() << endl
-              << "  previous Molecule was: " << m.smiles() << endl
-              << " expected " << hitsLeftToDo << " left to do, but found " << nhits  << endl;
+        if (nhits > hitsLeftToDo) {
+          cerr << "molecular_transformations::_doAllRegioIsomersAndSites, number of hits has INCREASED.\n";
+          cerr << "The side chain might have added a core match. "
+              << reactionNumber << " '" << ri.comment() << '\n'
+              << "  molecule was: " << mcopy.smiles() << '\n'
+              << "  previous Molecule was: " << m.smiles() << '\n'
+              << " expected " << hitsLeftToDo << " left to do, but found " << nhits  << '\n';
 
-          if (ignore_sidechains_causing_increased_core_hit_count)
+          if (ignore_sidechains_causing_increased_core_hit_count) {
             return 1;
+          }
 
           return 0;
-
         }
         hitsLeftToDo = nhits;  // should be at least one less hit
       }
-
 
       // See if we have already seen this one - if so do not repeat it
 
       Molecule umcopy(mcopy);   // so the uniqing does not alter the one we are really working with
       const IWString & uniqSmiles = umcopy.unique_smiles();
-      if (smilesAlreadyDone->find(uniqSmiles) != smilesAlreadyDone->end())
-      {
-        if (verbose)
-          cerr << "Skipping a duplicate: " << uniqSmiles << endl;
+      if (smilesAlreadyDone->find(uniqSmiles) != smilesAlreadyDone->end()) {
+        if (verbose > 1)
+          cerr << "Skipping a duplicate: " << uniqSmiles << '\n';
       }
       else
       {
         smilesAlreadyDone->insert(uniqSmiles);
 
-        if (enumerate_scaffold_hits_individually ||  hitsLeftToDo == 0 )
-        {
+        if (enumerate_scaffold_hits_individually ||  hitsLeftToDo == 0 ) {
           // if doing all intermediate conversions , or this is the final level for this hit/regio set, proceed with this one
 
-          smilesAlreadyDone->insert(uniqSmiles);
+//        smilesAlreadyDone->insert(uniqSmiles);  IAW done above
           sor.set_active_status(reactionNumber, 0);
           if (!molecular_transformations(mcopy, changes_this_molecule, changed_by, sor, reactionNumber + 1))
             return 0;
@@ -1632,11 +1647,9 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
 
       // recursively call this routine to do the next mapping on the core
 
-        if (hitsLeftToDo)
-        {
-          if (! _doAllRegioIsomersAndSitesRecurs(mcopy, changes_this_molecule, changed_by, sor, firstReactionNumber, lastReactionNumber,
-                              newSresults, 0, hitsLeftToDo-1,smilesAlreadyDone, level+1))
-          {
+        if (hitsLeftToDo) {
+          if (! _doAllRegioIsomersAndSitesRecurs(mcopy, changes_this_molecule, changed_by, sor, firstReactionNumber,
+                        lastReactionNumber, newSresults, 0, hitsLeftToDo-1,smilesAlreadyDone, level+1)) {
             return 0;
           }
         }
@@ -1645,7 +1658,6 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
   }
 
   return 1;
-
 }
 
 static int
@@ -1659,7 +1671,7 @@ _doAllRegioIsomersAndSites(Molecule & m,
                           int firstHit,
                           int lastHit)
 {
-  std::set<IWString> smilesAlreadyDone;  // this is local so it will do away when this routine terminates.  It MAY not be used, if one was passed in
+  std::set<IWString> smilesAlreadyDone;  // this is local so it will go away when this routine terminates.  It MAY not be used, if one was passed in
 
   return _doAllRegioIsomersAndSitesRecurs(m, changes_this_molecule, changed_by, sor, firstReactionNumber, lastReactionNumber,
                               sresults,  firstHit, lastHit, &smilesAlreadyDone, 1);
@@ -1674,20 +1686,23 @@ molecular_transformations(Molecule & m,
 {
 //#define DEBUG_MOLECULAR_TRANDFORMATIONS
 #ifdef DEBUG_MOLECULAR_TRANDFORMATIONS
-  cerr << "molecular_transformations processing reaction number " << reaction_number << " of " << sor.number_reactions() << " start " << m.smiles() << ' ' << m.name() << endl;
+  cerr << "molecular_transformations processing reaction number " << reaction_number << " of " << sor.number_reactions() << " start " << m.smiles() << ' ' << m.name() << '\n';
 #endif
 
-  if (reaction_number >= sor.number_reactions())
+  if (reaction_number >= sor.number_reactions()) {
     return final_processing(m, changes_this_molecule, sor, changed_by);
+  }
 
-  if (break_after_first_match && changes_this_molecule)
+  if (break_after_first_match && changes_this_molecule) {
     return final_processing(m, 1, sor, changed_by);
+  }
 
-  if (sor.is_start_of_and_group(reaction_number) && probability_sample_reactions < 1.0)
+  if (sor.is_start_of_and_group(reaction_number) &&
+      probability_sample_reactions < 1.0) {
     sor.set_probability_group(reaction_number);
+  }
 
-  if (! sor.reaction_is_active(reaction_number))
-  {
+  if (! sor.reaction_is_active(reaction_number)) {
     return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
   }
 
@@ -1695,13 +1710,17 @@ molecular_transformations(Molecule & m,
 
   const AndORProb * ao = reinterpret_cast<const AndORProb *>(ri.user_specified_void_ptr());    // may be null
 
-  if (! ao->active())
+#ifdef DEBUG_MOLECULAR_TRANDFORMATIONS
+  cerr << "Begin reaction " << reaction_number << " ao active " << ao->active() << '\n';
+#endif
+
+  if (! ao->active()) {
     return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
+  }
 
   const int andor = ao->andor();
 
-  if (NO_OP_RXN == ri.comment())
-  {
+  if (NO_OP_RXN == ri.comment()) {
     changed_by[reaction_number] += 1;
     sor.another_match_to_query(reaction_number);
     return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
@@ -1712,62 +1731,62 @@ molecular_transformations(Molecule & m,
   const int nhits = ri.determine_matched_atoms(m, sresults);
 
 #ifdef DEBUG_MOLECULAR_TRANDFORMATIONS
-  cerr << nhits << " searching reaction " << reaction_number << " in " << m.smiles() << ' ' << m.name() << endl;
+  cerr << nhits << " searching reaction " << reaction_number << " in " << m.smiles() << ' ' << m.name() << '\n';
 #endif
 
   if (0 == nhits)
   {
-//  cerr << "zero hits, andor " << andor << " rxn " << reaction_number << " in " << m.smiles() << ' ' << m.name() << endl;
+//  cerr << "zero hits, andor " << andor << " rxn " << reaction_number << " in " << m.smiles() << ' ' << m.name() << '\n';
     if (OR_GROUPING == andor)
     {
       if (! sor.grouping_is_exhausted(reaction_number, ao))
         return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);   // try next member of OR group
     }
 
-    if (discard_molecules_not_reacting)
+    if (discard_molecules_not_reacting) {
       return 1;
+    }
 
-    if (! ignore_molecules_not_reacting)
-    {
+    if (! ignore_molecules_not_reacting) {
       cerr << "molecular_transformations::yipes, zero hits for reaction " << reaction_number << " '" << ri.comment() << "', molecule " << m.smiles() << ' ' << m.name() << "'\n";
       return 0;
     }
 
-    if (verbose > 2)
-      cerr << m.smiles() << ' ' << m.name() << " no hits to reaction " << reaction_number << endl;
+    if (verbose > 2) {
+      cerr << m.smiles() << ' ' << m.name() << " no hits to reaction " << reaction_number << '\n';
+    }
 
     return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
   }
 
-  if (verbose > 2)
-    cerr << nhits << " hits for reaction " << reaction_number << endl;
+  if (verbose > 2) {
+    cerr << nhits << " hits for reaction " << reaction_number << '\n';
+  }
 
-  if (ignore_scaffold_multiple_substucture_matches && nhits > 1)
-  {
-
-    if (0 == verbose )
-
-       cerr <<  "'" << m.name() << "' " << " " << nhits << " hits in scaffold, ignored"  << endl;
+  if (ignore_scaffold_multiple_substucture_matches && nhits > 1) {
+    if (0 == verbose ) {
+       cerr <<  "'" << m.name() << "' " << " " << nhits << " hits in scaffold, ignored"  << '\n';
+    }
     return 1;
-
   }
 
   sor.another_match_to_query(reaction_number);
   changes_this_molecule++;
   changed_by[reaction_number] = 1;
 
-  if (1 == changes_this_molecule && write_parent_of_changed_molecules)
+  if (1 == changes_this_molecule && write_parent_of_changed_molecules) {
     do_write_original_molecule_to_output_stream(m, std::cout);
+  }
 
 // Can we process a specific hit number?
   int hit_number = -1;
 
-  if (1 == nhits)
+  if (1 == nhits) {
     hit_number = 0;
+  }
   else if (mdo >= 0)
   {
-    if (mdo >= sresults.number_embeddings())
-    {
+    if (mdo >= sresults.number_embeddings()) {
       cerr << "Reaction '" << ri.comment() << "' only " << nhits << " hits, so embedding " << mdo << " invalid\n";
       return 0;
     }
@@ -1793,10 +1812,10 @@ molecular_transformations(Molecule & m,
        return 0;
   }
 
-  if (AND_GROUPING == andor)
-  {
-    if (sor.grouping_is_exhausted(last_reaction_number, ao))
+  if (AND_GROUPING == andor) {
+    if (sor.grouping_is_exhausted(last_reaction_number, ao)) {
       return 1;
+    }
 
     return molecular_transformations(m, changes_this_molecule, changed_by, sor, last_reaction_number + 1);
   }
@@ -1808,211 +1827,6 @@ molecular_transformations(Molecule & m,
   {
     return 1;
   }
-}
-
-
-static int
-molecular_transformationsOLD(Molecule & m,
-                          int & changes_this_molecule,
-                          int * changed_by,
-                          Set_of_Reactions & sor,
-                          int reaction_number)
-{
-//#define DEBUG_MOLECULAR_TRANDFORMATIONS
-#ifdef DEBUG_MOLECULAR_TRANDFORMATIONS
-  cerr << "molecular_transformations processing reaction number " << reaction_number << " of " << sor.number_reactions() << " start " << m.smiles() << ' ' << m.name() << endl;
-#endif
-
-  if (reaction_number >= sor.number_reactions())
-    return final_processing(m, changes_this_molecule, sor, changed_by);
-
-  if (break_after_first_match && changes_this_molecule)
-    return final_processing(m, 1, sor, changed_by);
-
-  if (sor.is_start_of_and_group(reaction_number) && probability_sample_reactions < 1.0)
-    sor.set_probability_group(reaction_number);
-
-  if (! sor.reaction_is_active(reaction_number))
-  {
-    return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-  }
-
-  IWReaction & ri = sor.reaction(reaction_number);
-
-  const AndORProb * ao = reinterpret_cast<const AndORProb *>(ri.user_specified_void_ptr());    // may be null
-
-  if (! ao->active())
-    return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-
-  const int andor = ao->andor();
-
-  if (NO_OP_RXN == ri.comment())
-  {
-    changed_by[reaction_number] += 1;
-    sor.another_match_to_query(reaction_number);
-    return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-  }
-
-  Substructure_Results sresults;
-
-  const int nhits = ri.determine_matched_atoms(m, sresults);
-
-#ifdef DEBUG_MOLECULAR_TRANDFORMATIONS
-  cerr << nhits << " searching reaction " << reaction_number << " in " << m.smiles() << ' ' << m.name() << endl;
-#endif
-
-  if (0 == nhits)
-  {
-//  cerr << "zero hits, andor " << andor << " rxn " << reaction_number << " in " << m.smiles() << ' ' << m.name() << endl;
-    if (OR_GROUPING == andor)
-    {
-      if (! sor.grouping_is_exhausted(reaction_number, ao))
-        return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);   // try next member of OR group
-    }
-
-    if (discard_molecules_not_reacting)
-      return 1;
-
-    if (! ignore_molecules_not_reacting)
-    {
-      cerr << "molecular_transformations::yipes, zero hits for reaction " << reaction_number << " '" << ri.comment() << "', molecule " << m.smiles() << ' ' << m.name() << "'\n";
-      return 0;
-    }
-
-    if (verbose > 2)
-      cerr << m.smiles() << ' ' << m.name() << " no hits to reaction " << reaction_number << endl;
-
-    return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-  }
-
-  if (verbose > 2)
-    cerr << nhits << " hits for reaction " << reaction_number << endl;
-
-  if (ignore_scaffold_multiple_substucture_matches && nhits > 1)
-  {
-
-    if (0 == verbose )
-
-       cerr <<  "'" << m.name() << "' " << " " << nhits << " hits in scaffold, ignored"  << endl;
-    return 1;
-
-  }
-
-
-  sor.another_match_to_query(reaction_number);
-  changes_this_molecule++;
-  changed_by[reaction_number] = 1;
-
-  if (1 == changes_this_molecule && write_parent_of_changed_molecules)
-    do_write_original_molecule_to_output_stream(m, std::cout);
-
-// Can we process a specific hit number?
-  int hit_number = -1;
-
-  if (1 == nhits)
-    hit_number = 0;
-  else if (mdo >= 0)
-  {
-    if (mdo >= sresults.number_embeddings())
-    {
-      cerr << "Reaction '" << ri.comment() << "' only " << nhits << " hits, so embedding " << mdo << " invalid\n";
-      return 0;
-    }
-
-    hit_number = mdo;
-  }
-
-  if (hit_number >= 0)
-  {
-    if (AND_GROUPING == andor)
-    {
-//    cerr << "Processing reaction number " << reaction_number << ' ' << ri.comment() << " begin " << m.smiles() << endl;
-      Molecule mcopy(m);
-
-      in_place_transformation_maybe_append_to_name(ri, mcopy, sresults.embedding(hit_number));
-//    cerr << "result " << mcopy.smiles() << ' ' << mcopy.name() << endl;
-      sor.set_active_status(reaction_number, 0);
-      molecular_transformations(mcopy, changes_this_molecule, changed_by, sor, reaction_number + 1);
-      sor.set_active_status(reaction_number, 1);
-
-      if (sor.grouping_is_exhausted(reaction_number, ao))
-        return 1;
-
-      return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-    }
-    else if (OR_GROUPING == andor)
-    {
-
-      in_place_transformation_maybe_append_to_name(ri, m, sresults.embedding(hit_number));
-
-      sor.set_active_status(reaction_number, 0);
-      molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-      sor.set_active_status(reaction_number, 1);
-      return 1;
-    }
-    else
-    {
-
-
-      in_place_transformation_maybe_append_to_name(ri, m, sresults.embedding(hit_number));
-
-      return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-    }
-  }
-
-
-
-  if (enumerate_scaffold_hits_individually)
-  {
-    for (int i = 0; i < nhits; i++)
-    {
-      Molecule mcopy(m);
-      //cerr << "About to try enumerating" << endl;
-
-      in_place_transformation_maybe_append_to_name(ri, mcopy, sresults.embedding(i));
-      //cerr << "Done enumerating" << endl;
-
-      //if (! molecular_transformations(mcopy, changes_this_molecule, changed_by, sor, reaction_number + 1))
-      //  return 0;
-      sor.set_active_status(reaction_number, 0);
-      molecular_transformations(mcopy, changes_this_molecule, changed_by, sor, reaction_number + 1);
-      sor.set_active_status(reaction_number, 1);
-    }
-
-    if (! sor.grouping_is_exhausted(reaction_number, ao))
-      molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-
-    // if we are NOT to generate the combination hit of multiple matches, or if we have already hit the max, exit here
-
-    //if (1 == enumerate_scaffold_hits_individually || (mmx > 0 && mmx <= nhits))
-    //   return 1;
-  }
-
-  if (AND_GROUPING == andor)
-  {
-   Molecule mcopy(m);
-    in_place_transformations_maybe_append_to_name(ri, mcopy, sresults);
-//  cerr << "result " << mcopy.smiles() << endl;
-    sor.set_active_status(reaction_number, 0);
-    molecular_transformations(mcopy, changes_this_molecule, changed_by, sor, reaction_number + 1);
-    sor.set_active_status(reaction_number, 1);
-    if (sor.grouping_is_exhausted(reaction_number, ao))
-      return 1;
-  }
-  else if (OR_GROUPING == andor)
-  {
-    in_place_transformations_maybe_append_to_name(ri, m, sresults);
-
-    sor.set_active_status(reaction_number, 0);
-    molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
-    sor.set_active_status(reaction_number, 1);
-    return 1;
-  }
-  else
-  {
-    in_place_transformations_maybe_append_to_name(ri, m, sresults);
-  }
-  return molecular_transformations(m, changes_this_molecule, changed_by, sor, reaction_number + 1);
 }
 
 /*
@@ -2139,13 +1953,12 @@ MT_OR_Data::identify_matched_atoms(Set_of_Reactions & sor,
   {
     const auto nhits = reaction[i]->determine_matched_atoms(m, _sresults[i]);
 
-    if (0 == nhits)
-    {
-      if (discard_molecules_not_reacting)
+    if (0 == nhits) {
+      if (discard_molecules_not_reacting) {
         continue;
+      }
 
-      if (! ignore_molecules_not_reacting)
-      {
+      if (! ignore_molecules_not_reacting) {
         cerr << "Yipes, zero hits for reaction '" << reaction[i]->comment() << "', molecule " << m.name() << "'\n";
         return 0;
       }
@@ -2153,8 +1966,9 @@ MT_OR_Data::identify_matched_atoms(Set_of_Reactions & sor,
       continue;
     }
 
-    if (verbose > 2)
+    if (verbose > 2) {
       cerr << nhits << " hits for reaction " << i << " '" << reaction[i]->comment() << "'\n";
+    }
 
     _changed_by[i] = 1;
 
@@ -2251,14 +2065,14 @@ MT_OR_Data::aromaticity_preserved(Molecule & m)
 
 //#define DEBUG_AROMATICITY_PRESEVRATION
 #ifdef DEBUG_AROMATICITY_PRESEVRATION
-  cerr << "New molecule " << m.smiles() << endl;
+  cerr << "New molecule " << m.smiles() << '\n';
 #endif
 
   for (int i = 0; i < _matoms; ++i)
   {
 #ifdef DEBUG_AROMATICITY_PRESEVRATION
     if (_initial_aromaticity[i])
-      cerr << "Initially atom " << i << " aromatic " << m.smarts_equivalent_for_atom(i) << " now " << m.is_aromatic(i) << endl;
+      cerr << "Initially atom " << i << " aromatic " << m.smarts_equivalent_for_atom(i) << " now " << m.is_aromatic(i) << '\n';
 #endif
 
     if (_initial_aromaticity[i] && m.is_aromatic(i))
@@ -2316,12 +2130,12 @@ MT_OR_Data::aromaticity_preserved(Molecule & m)
   {
     if (a[i] && ! m.is_ring_atom(i))
     {
-      cerr << "HUH, non ring atom " << i << " in " << m.smiles() << ' ' << m.name() << ' ' << m.smarts_equivalent_for_atom(i) << endl;
+      cerr << "HUH, non ring atom " << i << " in " << m.smiles() << ' ' << m.name() << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
     }
 
     if (a[i] && m.ncon(i) > 3)
     {
-      cerr << "HUH, 4 connected aromatic atom " << i << " in " << m.smiles() << ' ' << m.name() << ' ' << m.smarts_equivalent_for_atom(i) << endl;
+      cerr << "HUH, 4 connected aromatic atom " << i << " in " << m.smiles() << ' ' << m.name() << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
     }
   }
 
@@ -2351,7 +2165,7 @@ molecular_transformations_or_operation(Molecule & m,
 
   resizable_array_p<IWReaction> & reaction = sor.reactions();
 
-//cerr << "Starting recursion depth " << depth << " istart " << istart << " jstart " << jstart << endl;
+//cerr << "Starting recursion depth " << depth << " istart " << istart << " jstart " << jstart << '\n';
 
   Substructure_Results * sresults = mtord.sresults();
   int * changed_by = mtord.changed_by();
@@ -2369,7 +2183,7 @@ molecular_transformations_or_operation(Molecule & m,
     {
       const Set_of_Atoms * e = sresults[i].embedding(j);
 
-//    cerr << "Hit " << j << endl;
+//    cerr << "Hit " << j << '\n';
 
       if (mtord.overlapping_embeddings(*e))
         continue;
@@ -2383,7 +2197,7 @@ molecular_transformations_or_operation(Molecule & m,
 
       final_processing(mcopy, 1, sor, mtord.changed_by());
 
-//    cerr << " i = " << i << " j = " << j << " depth " << depth << endl;
+//    cerr << " i = " << i << " j = " << j << " depth " << depth << '\n';
 
       if (or_depth == mtord.depth())
         continue;
@@ -2456,7 +2270,6 @@ static int
 molecular_transformations(Molecule & m,
                           Set_of_Reactions & sor)
 {
-
   int changes_this_molecule = 0;
 
   int * changed_by = new_int(sor.number_reactions()); std::unique_ptr<int[]> free_changed_by(changed_by);
@@ -2494,7 +2307,7 @@ molecular_transformations(Set_of_Reactions & sor,
 
     reaction_schemes_read++;
 
-//  cerr << "after NEXT: start molecule " << s.smiles() << ' ' << s.name() << endl;
+//  cerr << "after NEXT: start molecule " << s.smiles() << ' ' << s.name() << '\n';
     if (! molecular_transformations(s, sor))
       return 0;
   }
@@ -2527,7 +2340,7 @@ molecular_transformations(data_source_and_type<Molecule> & input,
 {
   Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -2606,14 +2419,14 @@ molecular_transformations_tdt(iwstring_data_source & input,
   {
     if (! buffer.starts_with(smiles_in))
     {
-      std::cout << buffer << endl;
+      std::cout << buffer << '\n';
       continue;
     }
 
     molecules_read++;
 
     if (write_original_molecule_to_output_stream)
-      std::cout << buffer << endl;
+      std::cout << buffer << '\n';
 
     if (! molecular_transformations_tdt(buffer, sor))
       return 0;
@@ -2624,14 +2437,14 @@ molecular_transformations_tdt(iwstring_data_source & input,
 
 static int
 molecular_transformations(const char * fname,
-                          int input_type,
+                          FileType input_type,
                           Set_of_Reactions & sor,
                           Sidechain_Match_Conditions & smc)
 {
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -2647,7 +2460,7 @@ molecular_transformations(const char * fname,
 static int
 report_results(const Set_of_Reactions & sor, std::ostream & os)
 {
-  os << "Read " << molecules_read << " molecules, changed " << molecules_changed << endl;
+  os << "Read " << molecules_read << " molecules, changed " << molecules_changed << '\n';
 
   sor.report_matches(os);
 
@@ -2756,6 +2569,22 @@ Set_of_Reactions::_read_file_of_reactions(iwstring_data_source & input,
   return 1;
 }
 
+// Return the directory name of `fname`.
+template <typename T>
+IWString
+GetDirName(const T & fname) {
+  IWString dirname(fname);
+
+  int i = dirname.rindex(std::filesystem::path::preferred_separator);
+
+  if (i < 0)
+    dirname = ".";
+  else
+    dirname.iwtruncate(i);
+
+  return dirname;
+}
+
 int
 Set_of_Reactions::_read_file_of_reactions(const const_IWSubstring & fname,
                                           Sidechain_Match_Conditions & smc)
@@ -2784,19 +2613,18 @@ Set_of_Reactions::_read_file_of_reactions(const const_IWSubstring & fname,
 
 int
 Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
-																	std::vector<std::vector<IWString>> & smilesLists,
-																	int sideChainIndex,
-																	std::vector<Molecule_and_Embedding *> &currentMolAndEmbeddings,
-																	Sidechain_Match_Conditions & smc,
-																	int & thisGroup,
-																	const int thisAndor,
-																	const double current_group_probability,
-																	int &regioIsomer)
-
+                  std::vector<std::vector<IWString>> & smilesLists,
+                  int sideChainIndex,
+                  std::vector<Molecule_and_Embedding *> &currentMolAndEmbeddings,
+                  Sidechain_Match_Conditions & smc,
+                  int & thisGroup,
+                  const int thisAndor,
+                  const double current_group_probability,
+                  int &regioIsomer)
 {
-  if (sideChainIndex >= smilesLists.size())
+  if (sideChainIndex >= static_cast<int>(smilesLists.size()))
   {
-		// done with side chains - so add the new reaction with the chosen mappings
+    // done with side chains - so add the new reaction with the chosen mappings
 
     // get a local copy of Sidechain_Match_Conditions - We manually handle the settings for multiple embeddings, so
     // we always send a particular embedding into each reaction
@@ -2810,75 +2638,76 @@ Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
     if (! r->do_read(rxn_string, smcLocal))
     {
       cerr << "Set_of_Reactions::prepOneSideChain:cannot read '" << rxn_string << "'\n";
+      delete r;
       return 0;
     }
+
     set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);  //do not show the message
 
     if (verbose > 1)
-      cerr << "adding new reaction - thisGroup: " << thisGroup << "  thisAndor: " << thisAndor << "   regioIsomer: " << regioIsomer << endl;
+      cerr << "adding new reaction - thisGroup: " << thisGroup << "  thisAndor: " << thisAndor << "   regioIsomer: " << regioIsomer << '\n';
     r->set_user_specified_void_ptr(new AndORProb(thisGroup, thisAndor, current_group_probability,regioIsomer));
     _reaction.add(r);
 
-    if (currentMolAndEmbeddings.size() != r->number_sidechains())
-	  {
-	    cerr << "Set_of_Reactions::prepOneSideChain:number of sidechains in rxn does not match directive from config file " << endl;
-	    return 0;
-	  }
+    if (static_cast<int>(currentMolAndEmbeddings.size()) != r->number_sidechains())
+    {
+      cerr << "Set_of_Reactions::prepOneSideChain:number of sidechains in rxn does not match directive from config file " << '\n';
+      return 0;
+    }
 
-	  r->setup_to_skip_multiple_embeddings_involving_non_changing_atoms();
-	  for (int sideIndex = 0 ; sideIndex < r->number_sidechains(); ++sideIndex)
-	  {
-			if  (r->sidechain(sideIndex)->single_reagent_only())
-		  	continue;
+    r->setup_to_skip_multiple_embeddings_involving_non_changing_atoms();
+    for (int sideIndex = 0 ; sideIndex < r->number_sidechains(); ++sideIndex)
+    {
+      if (r->sidechain(sideIndex)->single_reagent_only())
+        continue;
 
-		  // make a deep copy of the Molecule and embedding - the reaction thinks it owns this and will try to delete it,
-		  // so there must be a copy for each one
+       // make a deep copy of the Molecule and embedding - the reaction thinks it owns this and will try to delete it,
+       // so there must be a copy for each one
 
-		  	// make a copy of the mol and embedding  - these are handed to the reaction
+       // make a copy of the mol and embedding  - these are handed to the reaction
 
-			Molecule *mCopy(currentMolAndEmbeddings[sideIndex]);
-			Set_of_Atoms *eCopy = new Set_of_Atoms(*(currentMolAndEmbeddings[sideIndex]->embedding()));
+       Molecule *mCopy(currentMolAndEmbeddings[sideIndex]);
+       Set_of_Atoms *eCopy = new Set_of_Atoms(*(currentMolAndEmbeddings[sideIndex]->embedding()));
 
-	    Molecule_and_Embedding *qCopy = new Molecule_and_Embedding();
-			qCopy->add_molecule(mCopy);
-		  qCopy->set_name(mCopy->name());
-		  qCopy->set_embedding(*eCopy);
+       Molecule_and_Embedding *qCopy = new Molecule_and_Embedding();
+       qCopy->add_molecule(mCopy);
+       qCopy->set_name(mCopy->name());
+       qCopy->set_embedding(*eCopy);
 
-	    if (!r->sidechain(sideIndex)->add_reagent(qCopy, smc))
-	      return 0;
-	  }
+       if (!r->sidechain(sideIndex)->add_reagent(qCopy, smc))
+         return 0;
+     }
 
     return 1;
   }
 
-	std::vector<IWString> &smilesList = smilesLists[sideChainIndex];
+  std::vector<IWString> &smilesList = smilesLists[sideChainIndex];
 
-	// still more sidechains to prep  if the next side chain does not take smiles (it has its own smiles defined), just go
-	// to the next one
+  // still more sidechains to prep  if the next side chain does not take smiles (it has its own smiles defined), just go
+  // to the next one
 
-	if (smilesList.size() == 0)
-	{
-				  currentMolAndEmbeddings[sideChainIndex] = NULL;
+  if (smilesList.size() == 0)
+  {
+    currentMolAndEmbeddings[sideChainIndex] = nullptr;
 
-		    	// process the next side chain recursively
+    // process the next side chain recursively
 
-      	if (!prepOneSideChain(rxn_string,smilesLists,sideChainIndex+1,currentMolAndEmbeddings
-      												,smc,thisGroup,thisAndor,current_group_probability,regioIsomer))
-      	  return 0;
+    if (!prepOneSideChain(rxn_string,smilesLists,sideChainIndex+1,currentMolAndEmbeddings
+           ,smc,thisGroup,thisAndor,current_group_probability,regioIsomer))
+      return 0;
     return 1;
-	}
+  }
 
   for (std::vector<IWString>::const_iterator smiIter = smilesList.begin() ; smiIter != smilesList.end(); ++smiIter)
   {
     regioIsomer++;
-
 
     IWString smiles;
     IWString id;
     (*smiIter).split(smiles,' ',id);
 
     if (verbose > 1)
-      cerr << "smiles: " << smiles << "    id: " << id << endl;
+      cerr << "smiles: " << smiles << "    id: " << id << '\n';
 
     Molecule m;
 
@@ -2898,21 +2727,22 @@ Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
       cerr << "Set_of_Reactions::prepOneSideChain:cannot read '" << rxn_string << "'\n";
       return 0;
     }
+    // IAW: note this is a memory leak...
     rxn.set_user_specified_void_ptr(new AndORProb(thisGroup, thisAndor, current_group_probability));
 
     // see how many mappings for this reaction  there are
 
     Substructure_Results sresults;
     if (verbose > 1)
-      cerr << "smc.process_hit_number(): " << smc.process_hit_number() << endl;
+      cerr << "smc.process_hit_number(): " << smc.process_hit_number() << '\n';
     const int nhits = rxn.sidechain(sideChainIndex)->substructure_search(m, sresults);
 
     if (verbose > 1)
-      cerr << "nhits: " << nhits << endl;
+      cerr << "nhits: " << nhits << '\n';
 
     if (0 == nhits)
     {
-      cerr << "no hits to query 0 " << rxn.comment() << ' ' << m.smiles() << endl;
+      cerr << "no hits to query 0 " << rxn.comment() << ' ' << m.smiles() << '\n';
       if (smc.ignore_not_reacting ())
         return 1;
       return 0;
@@ -2920,16 +2750,15 @@ Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
 
     int thisHit = smc.process_hit_number ();
 
-
     if (nhits > 1 && !(smc.make_new_reagent_for_each_hit() ||  thisHit >= 0))  // multiple hits, but not doing all hits and do= not specified
     {
-      cerr << " smc.suppress_if_more_than_this_many_substructure_search_hits()= " << smc.suppress_if_more_than_this_many_substructure_search_hits() << endl;
+      cerr << " smc.suppress_if_more_than_this_many_substructure_search_hits()= " << smc.suppress_if_more_than_this_many_substructure_search_hits() << '\n';
       if (smc.suppress_if_more_than_this_many_substructure_search_hits() < nhits)
       {
-        cerr << "multiple hits to query 0 " << ' ' << rxn.comment() << ' ' << m.smiles() << ".  Ignored."<< endl;
+        cerr << "multiple hits to query 0 " << ' ' << rxn.comment() << ' ' << m.smiles() << ".  Ignored."<< '\n';
         return 1;
       }
-      cerr << "Error: multiple hits to query 0 " << ' ' << rxn.comment() << ' ' << m.smiles() << endl;
+      cerr << "Error: multiple hits to query 0 " << ' ' << rxn.comment() << ' ' << m.smiles() << '\n';
       return 0;
     }
 
@@ -2938,7 +2767,7 @@ Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
 
     if (thisHit >= nhits)
     {
-      cerr << "Error: hit requested (" << thisHit << ") is out of range.  #hits=" << nhits << " for " << rxn.comment() << ' ' << m.smiles() << endl;
+      cerr << "Error: hit requested (" << thisHit << ") is out of range.  #hits=" << nhits << " for " << rxn.comment() << ' ' << m.smiles() << '\n';
       return 0;
     }
     for (int i=0; i<nhits; ++i)
@@ -2947,25 +2776,21 @@ Set_of_Reactions::prepOneSideChain(IWString &rxn_string,
         continue;
 
       Molecule_and_Embedding q;
-			q.add_molecule(&m);
-		  q.set_name(m.name());
-		  q.set_embedding(*sresults.embedding(i));
-		  currentMolAndEmbeddings[sideChainIndex] = &q;
+      q.add_molecule(&m);
+      q.set_name(m.name());
+      q.set_embedding(*sresults.embedding(i));
+      currentMolAndEmbeddings[sideChainIndex] = &q;
 
-     	// process the next side chain recursively
+      // process the next side chain recursively
 
-    	if (!prepOneSideChain(rxn_string,smilesLists,sideChainIndex+1,currentMolAndEmbeddings
-    												,smc,thisGroup,thisAndor,current_group_probability,regioIsomer))
-    	  return 0;
-
+      if (!prepOneSideChain(rxn_string,smilesLists,sideChainIndex+1,currentMolAndEmbeddings
+                            ,smc,thisGroup,thisAndor,current_group_probability,regioIsomer))
+        return 0;
     }
   }
 
   return 1;
-
 }
-
-
 
 /*
   Buffer will look like
@@ -2985,7 +2810,7 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
   if (! buffer.contains(sep))
   {
     if (verbose > 1)
-      cerr << "Found reaction without sidechain information: " << buffer << endl;
+      cerr << "Found reaction without sidechain information: " << buffer << '\n';
 
     IWReaction * r = new IWReaction();
     set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);  //do not show the message
@@ -3012,21 +2837,14 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
 
   buffer.nextword_single_delimiter(rxn_string, i, sep);
 
-  std::size_t end = 0;
-
   // Bug #19912: quick fix to trim trailing spaces
-  for (std::size_t i = rxn_string.length() - 1; i >= 0; i--) {
-      if (rxn_string[i] != ' ') {        // FIXME: may be other whitespace?
-          end = i + 1;
-          break;
-      }
+  while (rxn_string.back() == ' ') {
+    rxn_string.chop();
   }
-
-  rxn_string = rxn_string.substr(0, end);
   // Bug #19912: end
 
   if (verbose > 1)
-    cerr << "Reaction: " << rxn_string << endl;
+    cerr << "Reaction: " << rxn_string << '\n';
 
   _maybe_prepend_directory_name(rxn_string);
 
@@ -3038,7 +2856,7 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
 
   // get a reaction for checking things
 
-	IWReaction rxn;
+  IWReaction rxn;
   set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);  //do not show the message
   if (! rxn.do_read(rxn_string, smc))
   {
@@ -3047,45 +2865,43 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
   }
   rxn.set_user_specified_void_ptr(new AndORProb(group, andor, current_group_probability));
 
-
   for (int ndx = 0; ; ++ndx)
   {
-  	const_IWSubstring token;
-  	if (! buffer.nextword_single_delimiter(token, i, sep))
-  		break;
+    const_IWSubstring token;
+    if (! buffer.nextword_single_delimiter(token, i, sep))
+      break;
 
-		// make sure the number of sidechains in the reactin is at least as big as the ndx index we are processing now
+    // make sure the number of sidechains in the reactin is at least as big as the ndx index we are processing now
 
-  	if (rxn.number_sidechains() <= ndx)
-  	{
-			cerr << "Set_of_Reactions::_read_reaction:too many |'s (tokens) in " << buffer <<".  Rxn only has " << rxn.number_sidechains()
-						<< "sidechains\n";
+    if (rxn.number_sidechains() <= ndx)
+    {
+      cerr << "Set_of_Reactions::_read_reaction:too many |'s (tokens) in " << buffer <<".  Rxn only has " << rxn.number_sidechains()
+           << "sidechains\n";
       return 0;
-  	}
+    }
 
-  	smilesLists.push_back(std::vector<IWString>());
-  	std::vector<IWString> &thisSmilesList = smilesLists.back();
+    smilesLists.push_back(std::vector<IWString>());
+    std::vector<IWString> &thisSmilesList = smilesLists.back();
 
     token.strip_leading_blanks();
 
     Sidechain_Reaction_Site * s = rxn.sidechain(ndx);
 
-
     // see if the reaction needs smiles from the config file.  If not, the token should be blank
 
-  	if (s->single_reagent_only())
+    if (s->single_reagent_only())
     {
-    	if (token.length() > 0)
-	    {
-	      if (verbose > 1)
-	        cerr << "Set_of_Reactions::_read_reaction:in '" << buffer << "', the smiles specifiecation for sidechain "
-	        << ndx+1 << " should be blank - the rxn does not require a regaent\n";
-	      return 0;
-	    }
+        if (token.length() > 0)
+            {
+              if (verbose > 1)
+                cerr << "Set_of_Reactions::_read_reaction:in '" << buffer << "', the smiles specifiecation for sidechain "
+                << ndx+1 << " should be blank - the rxn does not require a regaent\n";
+              return 0;
+            }
       continue;  // go the next sidechain
-	  }
+    }
 
- 		if (0 == token.length())
+    if (0 == token.length())
     {
       cerr << "Error:Set_of_Reactions::_read_reaction:warning: zero length sidechain specification '" << buffer << "'\n";
       return 0;
@@ -3094,40 +2910,37 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
     if (token.starts_with("file="))
     {
       if (verbose > 1)
-        cerr << "found a file specification for the sidechain structures:" << token << endl;
+        cerr << "found a file specification for the sidechain structures:" << token << '\n';
 
       IWString thisFile = token;
       thisFile.remove_leading_chars(5);
+      _maybe_prepend_directory_name(thisFile);
 
-	 		_maybe_prepend_directory_name(thisFile);
+      iwstring_data_source input(thisFile.null_terminated_chars());
 
-	    iwstring_data_source input(thisFile.null_terminated_chars());
+      if (! input.good())
+      {
+        cerr << "Set_of_Reactions::_read_reaction:cannot open '" << thisFile << "'\n";
+        return 0;
+      }
 
-	    if (! input.good())
-	    {
-	      cerr << "Set_of_Reactions::_read_reaction:cannot open '" << thisFile << "'\n";
-	      return 0;
-	    }
+      const_IWSubstring thisSmilesAndName;
+      while (input.next_record(thisSmilesAndName))
+      {
+        if (verbose > 1)
+          cerr << "Read smiles: " << thisSmilesAndName << '\n';
+        thisSmilesList.push_back(thisSmilesAndName);
+      }
 
-	    const_IWSubstring thisSmilesAndName;
-	    while (input.next_record(thisSmilesAndName))
-	    {
-	      if (verbose > 1)
-	        cerr << "Read smiles: " << thisSmilesAndName << endl;
-	      thisSmilesList.push_back(thisSmilesAndName);
-	    }
-
-	    input.do_close();
-
+      input.do_close();
     }
     else
     {
       if (verbose > 1)
-        cerr << "found an explicit smiles definition: " << token << endl;
+        cerr << "found an explicit smiles definition: " << token << '\n';
 
       thisSmilesList.push_back(token);
     }
-
   }
 
   //collect all the smiles to process - it might be only one from a direct smiles spec, or several from a file
@@ -3161,13 +2974,14 @@ Set_of_Reactions::_read_reaction(const IWString & buffer,
   }
 
   if (verbose > 1)
-    cerr << "thisGroup: "<< thisGroup << "  thisAndor: " << thisAndor << endl;
+    cerr << "thisGroup: "<< thisGroup << "  thisAndor: " << thisAndor << '\n';
 
   // now process each smiles for each sidechain - recursively
 
   std::vector<Molecule_and_Embedding *> currentMolAndEmbeddings(smilesLists.size());
   if (!prepOneSideChain(rxn_string, smilesLists, 0 /* first sidechain - rest are done recursively*/
-  															,currentMolAndEmbeddings, smc, thisGroup, thisAndor, current_group_probability, regioIsomer))
+                        ,currentMolAndEmbeddings, smc, thisGroup, thisAndor,
+                        current_group_probability, regioIsomer))
   {
      return 0;
   }
@@ -3182,7 +2996,7 @@ Set_of_Reactions::_read_start_molecule(const IWString & s)
   if (s.contains(','))
     sep = ',';
 
-//cerr << "Set_of_Reactions::_read_start_molecule:start " << s << endl;
+//cerr << "Set_of_Reactions::_read_start_molecule:start " << s << '\n';
 
   int i = 0;
   const_IWSubstring token;
@@ -3192,7 +3006,7 @@ Set_of_Reactions::_read_start_molecule(const IWString & s)
 
   if (! _start_molecule.build_from_smiles(token))
   {
-    cerr << "Invalid smiles " << token << endl;
+    cerr << "Invalid smiles " << token << '\n';
     return 0;
   }
 
@@ -3306,7 +3120,7 @@ Set_of_Reactions::_build(const resizable_array_p<IWString> & zdata,
 
   for (int i = 0; i < _number_reactions; ++i)
   {
-    if (NULL != _reaction[i]->user_specified_void_ptr())
+    if (nullptr != _reaction[i]->user_specified_void_ptr())
       continue;
 
     cerr << "Reaction " << i << " no andor\n";
@@ -3346,7 +3160,7 @@ Set_of_Reactions::build(Sidechain_Match_Conditions & smc,
   if (verbose)
     cerr << "Read " << zdata.number_elements() << " records from control file\n";
 
-  if (0 == zdata.number_elements())
+  if (zdata.empty())
   {
     cerr << "Set_of_Reactions::build:no data\n";
     return 0;
@@ -3386,6 +3200,57 @@ Set_of_Reactions::open(const char * fname)
 }
 
 int
+Set_of_Reactions::_add_reaction_from_proto_file(const_IWSubstring& fname, Sidechain_Match_Conditions& smc) {
+  IWString tmp(fname);  // Call below needs an IWString.
+  std::optional<ReactionProto::Reaction> maybe_rxn = iwmisc::ReadTextProto<ReactionProto::Reaction>(tmp);
+  if (! maybe_rxn) {
+    cerr << "Set_of_Reactions::_add_reaction_from_proto_file:cannot read '" << fname << "'\n";
+    return 0;
+  }
+  std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+  if (! rxn->ConstructFromProto(*maybe_rxn, fname)) {
+    cerr << "Set_of_Reactions::_add_reaction_from_proto_file:cannot parse proto\n";
+    return 0;
+  }
+  _reaction.add(rxn.release());
+
+  return 1;
+}
+
+int
+Set_of_Reactions::_add_reaction_from_file_of_proto_reactions(const_IWSubstring& fname,
+                Sidechain_Match_Conditions& smc) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "Set_of_Reactions::_add_reaction_from_file_of_proto_reactions:cannot open '" << fname << "'\n";
+    return 0;
+  }
+  const IWString dirname = GetDirName(fname);
+  return _add_reaction_from_file_of_proto_reactions(input, dirname, smc);
+}
+
+int
+Set_of_Reactions::_add_reaction_from_file_of_proto_reactions(iwstring_data_source& input,
+                const IWString& dirname,
+                Sidechain_Match_Conditions& smc) {
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    if (buffer.starts_with("#")) {
+      continue;
+    }
+    IWString fname;
+    fname << dirname << std::filesystem::path::preferred_separator << buffer;
+    const_IWSubstring tmp(fname);
+    if (! _add_reaction_from_proto_file(tmp, smc)) {
+      cerr << "Set_of_Reactions::_add_reaction_from_file_of_proto_reactions:cannot process '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
 Set_of_Reactions::_add_reaction_from_smirks(const_IWSubstring & smirks,
                                             Sidechain_Match_Conditions & smc)
 {
@@ -3393,7 +3258,7 @@ Set_of_Reactions::_add_reaction_from_smirks(const_IWSubstring & smirks,
 
   if (! r->construct_from_smirks(smirks))
   {
-    cerr << "Set_of_Reactions::_add_reaction_from_smirks;invalid smirks " << smirks << endl;
+    cerr << "Set_of_Reactions::_add_reaction_from_smirks;invalid smirks " << smirks << '\n';
     delete r;
     return 0;
   }
@@ -3411,7 +3276,7 @@ Set_of_Reactions::_add_reaction(const_IWSubstring & fname,
 
   if (! r->do_read(fname, smc))
   {
-    cerr << "Set_of_Reactions::_add_reaction:cannot read reaction " << fname << endl;
+    cerr << "Set_of_Reactions::_add_reaction:cannot read reaction " << fname << '\n';
     delete r;
     return 0;
   }
@@ -3432,9 +3297,8 @@ Set_of_Reactions::build(Command_Line & cl,
 
   _number_reactions = count_number_of_reactions(cl, opt);
 
-  if (0 == _number_reactions)
-  {
-    cerr << "Set_of_Reactions::build:no reactions on command line -" << opt << endl;
+  if (0 == _number_reactions) {
+    cerr << "Set_of_Reactions::build:no reactions on command line -" << opt << '\n';
     return 0;
   }
 
@@ -3471,6 +3335,20 @@ Set_of_Reactions::build(Command_Line & cl,
         return 0;
       }
     }
+    else if (r.starts_with("proto:")) {
+      r.remove_leading_chars(6);
+      if (! _add_reaction_from_proto_file(r, smc)) {
+        cerr << "Invalid proto file '" << r << "'\n";
+        return 0;
+      }
+    }
+    else if (r.starts_with("PROTO:")) {
+      r.remove_leading_chars(6);
+      if (! _add_reaction_from_file_of_proto_reactions(r, smc)) {
+        cerr << "Invalid proto file '" << r << "'\n";
+        return 0;
+      }
+    }
     else if (! _add_reaction(r, smc))
     {
       cerr << "Cannot create reaction from '" << r << "'\n";
@@ -3480,14 +3358,14 @@ Set_of_Reactions::build(Command_Line & cl,
 
   _number_reactions = _reaction.number_elements();
 
-//cerr << "LINE " << __LINE__ << " j " << j << " _number_reactions " << _number_reactions << endl;
+//cerr << "LINE " << __LINE__ << " j " << j << " _number_reactions " << _number_reactions << '\n';
 
-// this should not be necessary
+// Set a default AndORProb if needed.
 
   const int grp = 1;
   for (int i = 0; i < _number_reactions; ++i)
   {
-    if (NULL != _reaction[i]->user_specified_void_ptr())   //
+    if (nullptr != _reaction[i]->user_specified_void_ptr())   //
       continue;
 
     AndORProb * a = new AndORProb(grp, 0);
@@ -3843,7 +3721,7 @@ molecular_transformations(int argc, char ** argv)
   {
     const_IWSubstring u = cl.string_value('U');
 
-    stream_for_molecules_not_reacting.add_output_type(SMI);
+    stream_for_molecules_not_reacting.add_output_type(FILE_TYPE_SMI);
 
     if (stream_for_molecules_not_reacting.would_overwrite_input_files(cl, u))
     {
@@ -3863,7 +3741,7 @@ molecular_transformations(int argc, char ** argv)
 
   set_copy_name_in_molecule_copy_constructor(1);
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (smiles_in.length())
     ;
@@ -3872,7 +3750,7 @@ molecular_transformations(int argc, char ** argv)
     if (all_files_recognised_by_suffix(cl))
       ;
     else if (1 == cl.number_elements() && 0 == strcmp("-", cl[0]))
-      input_type = SMI;
+      input_type = FILE_TYPE_SMI;
     else
     {
       cerr << "Cannot discern file types from names\n";
@@ -3971,7 +3849,6 @@ molecular_transformations(int argc, char ** argv)
 
   if (cl.option_present('R'))
   {
-
     if (! sor.build(cl, 'R', sidechain_match_conditions, verbose))
     {
       cerr << "Cannot read reactions (-R)\n";
@@ -4139,7 +4016,7 @@ molecular_transformations(int argc, char ** argv)
 //    {
 //      if (mdo >= mmx)
 //      {
-//        cerr << "You asked to process scaffold hit number " << mdo << endl;
+//        cerr << "You asked to process scaffold hit number " << mdo << '\n';
 //        cerr << "You asked to process a maximum of " << mmx << " scaffold hits\n";
 //        cerr << "Impossible\n";
 //        usage(28);
@@ -4149,7 +4026,7 @@ molecular_transformations(int argc, char ** argv)
 //    {
 //      //sor.set_max_matches_to_find(mmx);   //sor is not yet loaded
 //      if (verbose)
-//        cerr << "Max matches to find is " << m << endl;
+//        cerr << "Max matches to find is " << m << '\n';
 //    }
 
     if (mdo >= 0)
@@ -4177,7 +4054,7 @@ molecular_transformations(int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will sample reactions with probability " << p << endl;
+      cerr << "Will sample reactions with probability " << p << '\n';
 
     probability_sample_reactions = p;
   }
@@ -4223,7 +4100,7 @@ molecular_transformations(int argc, char ** argv)
     ;
   else if (! cl.option_present('o'))
   {
-    output_stream.add_output_type(SMI);
+    output_stream.add_output_type(FILE_TYPE_SMI);
   }
   else if (! output_stream.determine_output_types(cl, 'o'))
   {
@@ -4275,7 +4152,7 @@ molecular_transformations(int argc, char ** argv)
   }
 
   int rc = 0;
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     if (! sor.reactions_have_starting_molecules())
     {

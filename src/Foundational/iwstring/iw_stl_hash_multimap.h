@@ -12,7 +12,6 @@ using namespace __gnu_cxx;
 #define IW_Hash_Multimap hash_map
 #else
 #include <hash_map>
-using namespace stdext;
 #define IW_Hash_Multimap hash_map
 #endif
 

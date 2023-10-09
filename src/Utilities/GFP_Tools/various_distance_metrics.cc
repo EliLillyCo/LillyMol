@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "various_distance_metrics.h"
+
+using std::cerr;
 
 /*
   FVB define the similarity measure as a linear combination of the on-bit Tversky and the off-bit tversky.
@@ -27,7 +29,7 @@ set_fvb_ratios (similarity_type_t b1, similarity_type_t b2)
 
   r1r2 = r1 + r2;
 
-  cerr << "FVB ratios set to " << r1 << " " << r2 << " sum " << r1r2 << endl;
+  cerr << "FVB ratios set to " << r1 << " " << r2 << " sum " << r1r2 << '\n';
 
   return 1;
 }
@@ -85,12 +87,12 @@ fligner_verducci_blower (int nb,
   similarity_type_t rc = (r1 - phat) / r1r2 * t1 + (r2 + phat) / r1r2 * t0;
 
 #ifdef DEBUG_FVB
-  cerr << "t0 " << t0 << " and t1 " << t1 << " phat " << phat << endl;
-  cerr << "Returning " << rc << endl;
+  cerr << "t0 " << t0 << " and t1 " << t1 << " phat " << phat << '\n';
+  cerr << "Returning " << rc << '\n';
 #endif
 
   if (rc < static_cast<similarity_type_t> (0.0) || rc > static_cast<similarity_type_t> (1.0))
-    cerr << "INvalid similarity " << rc << " nb = " << nb << " nset1 " << nset1 << " nset2 " << nset2 << " n00 " << n00 << " n11 " << n11 << endl;
+    cerr << "INvalid similarity " << rc << " nb = " << nb << " nset1 " << nset1 << " nset2 " << nset2 << " n00 " << n00 << " n11 " << n11 << '\n';
   assert (rc >= static_cast<similarity_type_t> (0.0) && rc <= static_cast<similarity_type_t> (1.0));
 
   return rc;

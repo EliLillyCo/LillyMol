@@ -1,0 +1,3 @@
+query: "aliphatic_ring_donor_acceptor.qry"
+element: "Re"
+ring: true

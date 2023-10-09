@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package atomic_distance_fingerprint;
+
+message AtomicDistanceConfig {
+  optional float min_distance = 1;
+
+  optional float max_distance = 2;
+
+  optional float distance_range = 3;
+
+  optional string atype = 4;
+}
+
+// For a set of atom types, the distances.
+// Should be sorted, duplicate values might happen.
+message Distances {
+  repeated float distance = 1;
+}
+
+message Fingerprint {
+  // The name of the molecule.
+  optional string name = 1;
+  // Smiles
+  optional string smiles = 2;
+
+  // For atom type pairs, the disances.
+  map<uint32, Distances> distances = 3;
+}

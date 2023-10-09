@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+import "Molecule_Lib/substructure.proto";
+
+package ToggleKekuleForm;
+
+message KekuleBond {
+  optional int32 a1 = 1;
+  optional int32 a2 = 2;
+  optional SubstructureSearch.BondType btype = 3;
+}
+
+message ToggleKekuleForm {
+  repeated KekuleBond bond = 1;
+}

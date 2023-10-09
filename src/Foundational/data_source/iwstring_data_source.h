@@ -3,10 +3,13 @@
 
 #include <sys/types.h>
 #include <iostream>
-#include "iwzlib.h"
+#include <memory>
+
+#include "re2/re2.h"
+
+#include "Foundational/iwstring/iwzlib.h"
 // IL #include "lzma.h"
-#include "iwstring.h"
-#include "iwcrex.h"
+#include "Foundational/iwstring/iwstring.h"
 
 //#define STRING_DEFAULT_BUF_SIZE 4096
 #define STRING_DEFAULT_BUF_SIZE 8192
@@ -58,8 +61,8 @@ class iwstring_data_source
     int      _compress_spaces;
     int      _skip_blank_lines;
 
-    IW_Regular_Expression _ignore_pattern;
-    IW_Regular_Expression _filter_pattern;
+    std::unique_ptr<RE2> _ignore_pattern;
+    std::unique_ptr<RE2> _filter_pattern;
 
     int      _convert_to_lowercase;
     int      _convert_to_uppercase;
@@ -89,6 +92,8 @@ class iwstring_data_source
     int   _write_read_buffer (std::ostream & output, size_t & nbytes);
     int   _write_read_buffer (IWString_and_File_Descriptor & output, size_t & nbytes);
     int   _copy_read_buffer_to_destination (void * destination, int & nbytes);
+    int   _matches_ignore_pattern(const const_IWSubstring& buffer) const;
+    int   _matches_filter_pattern(const const_IWSubstring& buffer) const;
 
     int   _save_state (IWSDS_State &);
     int   _restore_state (IWSDS_State &);
@@ -125,6 +130,8 @@ protected:
     int open (IWString & f) { return open (f.null_terminated_chars ());}
 
     int do_close ();
+
+    int fd() const { return _fd;}
 
     int is_open () const { return _open;}
 
@@ -182,8 +189,8 @@ protected:
 
     int  grep (char);
     int  grep (const const_IWSubstring &);
-    int  grep (IW_Regular_Expression &);
-    int  grep (int n, IW_Regular_Expression *, int *);   // look for N regular expressions at once
+    int  grep (RE2 &);
+    int  grep (int n, RE2 *, int *);   // look for N regular expressions at once
 
     int  count_records_starting_with(const const_IWSubstring &);   // the most common thing we do with regexps
 
@@ -195,7 +202,7 @@ protected:
 
     int skip_records (int nskip);
 
-    int skip_records (IW_Regular_Expression & rx, int nskip);
+    int skip_records (RE2& rx, int nskip);
 
     int read_bytes (void *, size_t);
 
@@ -203,5 +210,3 @@ protected:
 };
 
 #endif
-
-/* arch-tag: 4df1f9cb-b50a-4beb-a150-9bee1e280d41 */

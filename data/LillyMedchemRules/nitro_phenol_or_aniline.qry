@@ -1,0 +1,46 @@
+(8 Query
+  (A C Comment "nitro_phenol_or_aniline")
+  (A I Version 2)
+  (A I unique_embeddings_only 1)
+  (A I one_embedding_per_start_atom 1)
+  (A I min_nrings 1)
+  (A I min_aromatic_ring_count 1)
+  (0 Query_Atom
+    (A I atomic_number (7 8))
+    (A I min_hcount 1)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I nrings 1)
+    (A I ring_size 6)
+    (A I aromatic 1)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 1)
+  )
+  (3 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 2)
+  )
+  (4 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 3)
+  )
+  (5 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 4)
+  )
+  (6 Query_Atom
+    (A I aromatic 1)
+    (A I aromatic_bond 5)
+    (A I aromatic_bond 1)
+  )
+  (9 Environment
+    (A I single_bond (2 4))
+    (A C smiles "N(=O)=O")
+  )
+)

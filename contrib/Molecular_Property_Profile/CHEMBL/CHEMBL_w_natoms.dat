@@ -1,0 +1,223 @@
+description {
+  feature_name: "w_natoms"
+  description: "Number of heavy atoms"
+  plot_title: "Number of heavy atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+minval: 5.0
+maxval: 50.0
+mean: 27.639246
+median: 27.0
+quantile {
+  quantile: 0.01
+  value: 12.0
+}
+quantile {
+  quantile: 0.05
+  value: 16.0
+}
+quantile {
+  quantile: 0.1
+  value: 19.0
+}
+quantile {
+  quantile: 0.5
+  value: 27.0
+}
+quantile {
+  quantile: 0.9
+  value: 38.0
+}
+quantile {
+  quantile: 0.95
+  value: 41.0
+}
+quantile {
+  quantile: 0.99
+  value: 47.0
+}
+int_values {
+  value: 5
+  count: 274
+}
+int_values {
+  value: 6
+  count: 509
+}
+int_values {
+  value: 7
+  count: 823
+}
+int_values {
+  value: 8
+  count: 1636
+}
+int_values {
+  value: 9
+  count: 2655
+}
+int_values {
+  value: 10
+  count: 4287
+}
+int_values {
+  value: 11
+  count: 6496
+}
+int_values {
+  value: 12
+  count: 9534
+}
+int_values {
+  value: 13
+  count: 12619
+}
+int_values {
+  value: 14
+  count: 17814
+}
+int_values {
+  value: 15
+  count: 25287
+}
+int_values {
+  value: 16
+  count: 33702
+}
+int_values {
+  value: 17
+  count: 43915
+}
+int_values {
+  value: 18
+  count: 57072
+}
+int_values {
+  value: 19
+  count: 70362
+}
+int_values {
+  value: 20
+  count: 86013
+}
+int_values {
+  value: 21
+  count: 93779
+}
+int_values {
+  value: 22
+  count: 106830
+}
+int_values {
+  value: 23
+  count: 116061
+}
+int_values {
+  value: 24
+  count: 125255
+}
+int_values {
+  value: 25
+  count: 127382
+}
+int_values {
+  value: 26
+  count: 125562
+}
+int_values {
+  value: 27
+  count: 117256
+}
+int_values {
+  value: 28
+  count: 115570
+}
+int_values {
+  value: 29
+  count: 109974
+}
+int_values {
+  value: 30
+  count: 105887
+}
+int_values {
+  value: 31
+  count: 98678
+}
+int_values {
+  value: 32
+  count: 91096
+}
+int_values {
+  value: 33
+  count: 81513
+}
+int_values {
+  value: 34
+  count: 73755
+}
+int_values {
+  value: 35
+  count: 63128
+}
+int_values {
+  value: 36
+  count: 54171
+}
+int_values {
+  value: 37
+  count: 45005
+}
+int_values {
+  value: 38
+  count: 38645
+}
+int_values {
+  value: 39
+  count: 32146
+}
+int_values {
+  value: 40
+  count: 27977
+}
+int_values {
+  value: 41
+  count: 23376
+}
+int_values {
+  value: 42
+  count: 20990
+}
+int_values {
+  value: 43
+  count: 17032
+}
+int_values {
+  value: 44
+  count: 15323
+}
+int_values {
+  value: 45
+  count: 12379
+}
+int_values {
+  value: 46
+  count: 11063
+}
+int_values {
+  value: 47
+  count: 8805
+}
+int_values {
+  value: 48
+  count: 8327
+}
+int_values {
+  value: 49
+  count: 6796
+}
+int_values {
+  value: 50
+  count: 6751
+}

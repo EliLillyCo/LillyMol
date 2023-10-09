@@ -39,5 +39,5 @@ else
         echo "$case_id : TEST FAIL"
 fi
 
-#rm log.txt
-#rm err.txt
+rm log.txt
+rm err.txt

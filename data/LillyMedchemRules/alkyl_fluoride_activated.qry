@@ -1,0 +1,22 @@
+(0 Query
+  (A C Comment "alkyl_fluoride_activated")
+  (A I Version 2)
+  (0 Query_Atom
+     (A I atomic_number 9)
+     (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 2)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 3)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I aromatic 1)
+    (A I single_bond 2)
+  )
+)

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
+#include "Foundational/iwmisc/misc.h"
 #include "iwrcb.h"
-#include "misc.h"
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
@@ -18,18 +18,18 @@ Ring_Closure_Bonds::Ring_Closure_Bonds()
 {
   _atoms_in_molecule = 0;
 
-  _present = NULL;
+  _present = nullptr;
 
   return;
 }
 
-Ring_Closure_Bonds::Ring_Closure_Bonds (const Ring_Closure_Bonds & rhs) : _atoms_in_molecule(rhs._atoms_in_molecule)
+Ring_Closure_Bonds::Ring_Closure_Bonds(const Ring_Closure_Bonds & rhs) : _atoms_in_molecule(rhs._atoms_in_molecule)
 {
   _atoms_in_molecule = rhs._atoms_in_molecule;
 
   if (0 == rhs._atoms_in_molecule)
   {
-    _present = NULL;
+    _present = nullptr;
     return;
   }
 
@@ -45,7 +45,7 @@ Ring_Closure_Bonds::Ring_Closure_Bonds (const Ring_Closure_Bonds & rhs) : _atoms
 
 Ring_Closure_Bonds::~Ring_Closure_Bonds()
 {
-  if (NULL != _present)
+  if (nullptr != _present)
     delete [] _present;
 
   return;
@@ -57,13 +57,13 @@ Ring_Closure_Bonds::ok() const
   if (_atoms_in_molecule < 0)
     return 0;
 
-  if (NULL == _present && _number_elements > 0 && 0 == _atoms_in_molecule)    // empty
+  if (nullptr == _present && _number_elements > 0 && 0 == _atoms_in_molecule)    // empty
     return 1;
 
-  if (NULL != _present && _atoms_in_molecule > 0 && 0 == _number_elements)    // the ring openings never touch the same atom twice
+  if (nullptr != _present && _atoms_in_molecule > 0 && 0 == _number_elements)    // the ring openings never touch the same atom twice
     return 1;
 
-  if (NULL != _present && _number_elements > 0 && _atoms_in_molecule > 0)    // in use
+  if (nullptr != _present && _number_elements > 0 && _atoms_in_molecule > 0)    // in use
     return 1;
 
   return 0;    // should not happen
@@ -74,13 +74,13 @@ Ring_Closure_Bonds::operator= (const Ring_Closure_Bonds & rhs)
 {
   assert (rhs.ok());
 
-  if (NULL != _present)
+  if (nullptr != _present)
   {
     delete [] _present;
-    _present = NULL;
+    _present = nullptr;
   }
 
-  if (NULL == rhs._present)
+  if (nullptr == rhs._present)
   {
     _atoms_in_molecule = 0;
     resizable_array<int>::resize(0);
@@ -98,7 +98,7 @@ Ring_Closure_Bonds::operator= (const Ring_Closure_Bonds & rhs)
 }
 
 int 
-Ring_Closure_Bonds::write_bonds (std::ostream & output) const
+Ring_Closure_Bonds::write_bonds(std::ostream & output) const
 {
   output << "Ring_Closure_Bonds::write_bonds:molecule has " << _atoms_in_molecule << " atoms\n";
 
@@ -128,11 +128,11 @@ Ring_Closure_Bonds::write_bonds (std::ostream & output) const
 }
 
 int
-Ring_Closure_Bonds::activate (int s)
+Ring_Closure_Bonds::activate(int s)
 {
   _atoms_in_molecule = s;
 
-  if (NULL != _present)
+  if (nullptr != _present)
     delete [] _present;
 
   _present = new_int(_atoms_in_molecule, -1);
@@ -165,8 +165,8 @@ Ring_Closure_Bonds::invalidate()
 }
 
 int
-Ring_Closure_Bonds::_form_corresponding_integer (atom_number_t a1,
-                                                 atom_number_t a2) const
+Ring_Closure_Bonds::_form_corresponding_integer(atom_number_t a1,
+                                                atom_number_t a2) const
 {
   if (a1 < a2)
     return a1 * _atoms_in_molecule + a2;
@@ -175,9 +175,9 @@ Ring_Closure_Bonds::_form_corresponding_integer (atom_number_t a1,
 }
 
 int
-Ring_Closure_Bonds::add (atom_number_t a1, atom_number_t a2)
+Ring_Closure_Bonds::add(atom_number_t a1, atom_number_t a2)
 {
-  assert (NULL != _present);
+  assert (nullptr != _present);
 
   if (-1 == _present[a1] && -1 == _present[a2])    // neigher one been seen before
   {
@@ -203,9 +203,9 @@ Ring_Closure_Bonds::add (atom_number_t a1, atom_number_t a2)
 }
 
 int
-Ring_Closure_Bonds::contains (atom_number_t a1, atom_number_t a2) const
+Ring_Closure_Bonds::contains(atom_number_t a1, atom_number_t a2) const
 {
-  assert (NULL != _present);
+  assert (nullptr != _present);
 
   if (-1 == _present[a1] || -1 == _present[a2])
     return 0;
@@ -221,13 +221,13 @@ Ring_Closure_Bonds::contains (atom_number_t a1, atom_number_t a2) const
 }
 
 int
-Ring_Closure_Bonds::is_the_same (const Ring_Closure_Bonds & rhs) const
+Ring_Closure_Bonds::is_the_same(const Ring_Closure_Bonds & rhs) const
 {
-  if (NULL == _present && NULL == rhs._present)
+  if (nullptr == _present && nullptr == rhs._present)
     ;
-  else if (NULL == _present && NULL != rhs._present)
+  else if (nullptr == _present && nullptr != rhs._present)
     return 0;
-  else if (NULL != _present && NULL == rhs._present)
+  else if (nullptr != _present && nullptr == rhs._present)
     return 0;
   else
   {
@@ -254,10 +254,10 @@ Ring_Closure_Bonds::is_the_same (const Ring_Closure_Bonds & rhs) const
 }
 
 int
-Ring_Closure_Bonds::report_differences (const Ring_Closure_Bonds & rhs,
-                                        std::ostream & output) const
+Ring_Closure_Bonds::report_differences(const Ring_Closure_Bonds & rhs,
+                                       std::ostream & output) const
 {
-  if (NULL == _present || NULL == rhs._present)
+  if (nullptr == _present || nullptr == rhs._present)
     return output.good();
 
   output << "Ring_Closure_Bonds::report_differences:comparing items for " << _atoms_in_molecule << " atoms\n";
@@ -325,11 +325,11 @@ Ring_Closure_Bonds::report_differences (const Ring_Closure_Bonds & rhs,
 */
 
 int
-Ring_Closure_Bonds::is_subset_of (const Ring_Closure_Bonds & parent) const
+Ring_Closure_Bonds::is_subset_of(const Ring_Closure_Bonds & parent) const
 {
   assert (_atoms_in_molecule == parent._atoms_in_molecule);
 
-  if (NULL == _present)    // should not happen
+  if (nullptr == _present)    // should not happen
     return 0;
 
   int rc = 1;

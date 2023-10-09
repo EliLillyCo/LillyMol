@@ -1,0 +1,82 @@
+description {
+  feature_name: "w_intrnlrng"
+  description: "Number of internal (non terminal) rings"
+  plot_title: "Number of internal (non terminal) rings"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 13.0
+mean: 1.3872515
+median: 1.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 1.0
+}
+quantile {
+  quantile: 0.9
+  value: 3.0
+}
+quantile {
+  quantile: 0.95
+  value: 3.0
+}
+quantile {
+  quantile: 0.99
+  value: 4.0
+}
+int_values {
+  count: 470133
+}
+int_values {
+  value: 1
+  count: 870477
+}
+int_values {
+  value: 2
+  count: 594377
+}
+int_values {
+  value: 3
+  count: 232647
+}
+int_values {
+  value: 4
+  count: 65761
+}
+int_values {
+  value: 5
+  count: 15955
+}
+int_values {
+  value: 6
+  count: 3222
+}
+int_values {
+  value: 7
+  count: 705
+}
+int_values {
+  value: 8
+  count: 188
+}
+int_values {
+  value: 9
+  count: 40
+}
+int_values {
+  value: 11
+  count: 1
+}
+int_values {
+  value: 13
+  count: 4
+}

@@ -1,0 +1,22 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "five_valent_nitrogen")
+  (A I one_embedding_per_start_atom 1)
+  (A I embeddings_do_not_overlap 1)
+  (0 Element_Hits_Needed
+    (A I atomic_number 8)
+    (A I max_hits_needed 1)
+  )
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I nbonds 5)
+    (A I aromatic 0)
+  )
+  (1 Query_Atom
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I double_bond 0)
+  )
+)

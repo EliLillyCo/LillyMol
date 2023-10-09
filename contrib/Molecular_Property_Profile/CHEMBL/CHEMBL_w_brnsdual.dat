@@ -1,0 +1,92 @@
+description {
+  feature_name: "w_brnsdual"
+  description: "Number of Hydrogen bond donor/acceptors, Bruns"
+  plot_title: "Number of Hydrogen bond donor/acceptors, Bruns"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 14.0
+mean: 0.3877245
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+}
+quantile {
+  quantile: 0.9
+  value: 1.0
+}
+quantile {
+  quantile: 0.95
+  value: 2.0
+}
+quantile {
+  quantile: 0.99
+  value: 4.0
+}
+int_values {
+  count: 1641567
+}
+int_values {
+  value: 1
+  count: 451109
+}
+int_values {
+  value: 2
+  count: 102365
+}
+int_values {
+  value: 3
+  count: 32261
+}
+int_values {
+  value: 4
+  count: 17380
+}
+int_values {
+  value: 5
+  count: 4597
+}
+int_values {
+  value: 6
+  count: 2368
+}
+int_values {
+  value: 7
+  count: 1026
+}
+int_values {
+  value: 8
+  count: 572
+}
+int_values {
+  value: 9
+  count: 119
+}
+int_values {
+  value: 10
+  count: 81
+}
+int_values {
+  value: 11
+  count: 37
+}
+int_values {
+  value: 12
+  count: 10
+}
+int_values {
+  value: 13
+  count: 12
+}
+int_values {
+  value: 14
+  count: 6
+}

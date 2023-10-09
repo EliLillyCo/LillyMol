@@ -1,13 +1,14 @@
-#ifndef IW_ELEMENT_TRANS_H
-#define IW_ELEMENT_TRANS_H
+#ifndef MOLECULE_LIB_ETRANS_H_
+#define MOLECULE_LIB_ETRANS_H_
 
 #include <iostream>
 
-#include "iwaray.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
 
 class Element;
 class Molecule;
-class IWString;
 class Molecule_to_Match;
 
 #include "ematch.h"
@@ -54,6 +55,9 @@ class Element_Transformations : public resizable_array_p<Element_Transformation>
 
     int construct_from_command_line (Command_Line &, int = 0, char = 't');
 
+    // Add a transformation directive 'Br=Cl' for example.
+    int Add(const IWString& token);
+
     int process (Molecule *);
 
     int process (Molecule &);
@@ -61,12 +65,10 @@ class Element_Transformations : public resizable_array_p<Element_Transformation>
     int process (Molecule_to_Match &);
 };
 
-class Command_Line;
-
 extern int display_standard_etrans_options (std::ostream &, char = 't');
 
 extern int process_element_transformations (Command_Line &,
                                             Element_Transformations &,
                                             int = 0,
                                             char = 't');
-#endif
+#endif  // MOLECULE_LIB_ETRANS_H_

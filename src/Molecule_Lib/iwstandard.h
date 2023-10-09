@@ -1,5 +1,5 @@
-#ifndef IW_CHEMSTD_H
-#define IW_CHEMSTD_H
+#ifndef MOLECULE_LIB_IWSTANDARD_H_
+#define MOLECULE_LIB_IWSTANDARD_H_
 
 /*
   For each transformation we keep track of things processed
@@ -259,6 +259,49 @@ class IWStandard_Current_Molecule
     int fused_system_identifier (const atom_number_t s) const { return _fsid[s];}
 };
 
+// Names of chemical standardisations. Pass to Activate() to turn on
+// individual transformations. Should transition to an enum.
+#define CS_NITRO "nitro"
+#define CS_NpOm  "n+o-"
+#define CS_NpNm  "n+n-"
+#define CS_SpCm  "s+c-"
+#define CS_ALLpm "all+-"
+#define CS_XH    "xh"
+#define CS_NpH3  "n+h3"
+#define CS_AMINE "amine"
+#define CS_Om    "o-"
+#define CS_Nm    "n-"
+#define CS_ALL   "all"
+#define CS_NRMCH "nrmch"
+#define CS_COVM  "covm"
+#define CS_ISOLC "isolc"
+#define CS_GUAND "guan"
+#define CS_GUANDR "Rguan"
+#define CS_SPOM  "s+o-"
+#define CS_ACID  "acid"
+#define CS_EHLST "ehlast"
+#define CS_FMRK  "fmrk"
+#define CS_AZID  "azid"
+#define CS_MSDUR "msdur"
+#define CS_MSDSA "msdsa"
+#define CS_FCRN  "fcor"
+#define CS_RNPNM "Rn+n-"
+#define CS_FWIH  "fwih"
+#define CS_IMIDAZOLE  "imidazole"
+#define CS_CHARGED_IMIDAZOLE  "charged_imidazole"
+#define CS_PYRAZOLE  "pyrazole"
+#define CS_TRIAZOLE  "triazole"
+#define CS_TETRAZOLE  "tetrazole"
+#define CS_LACTIM_LACTAM "ltlt"
+#define CS_LACTIM_LACTAM_RING "ltltr"
+#define CS_REVERSE_NITRO "rvnitro"
+#define CS_REVERSE_NV5 "rvnv5"
+#define CS_ISOXAZOLE  "isoxazole"
+#define CS_ARGUAN "arguan"
+#define CS_PYRAZOLONE "pirazolone"
+#define CS_AMINO_THIAZOLE "aminothazole"
+
+
 /*
   As you add standardisations, make sure you update the code around the "all" directive
 */
@@ -299,8 +342,10 @@ class Chemical_Standardisation
     Chemical_Transformation _transform_tetrazole;
     Chemical_Transformation _transform_azid;
     Chemical_Transformation _transform_isoxazole;
+    Chemical_Transformation _transform_misdrawn_sulfonamide;
     Chemical_Transformation _transform_misdrawn_urea;
     Chemical_Transformation _transform_imidazole;
+    Chemical_Transformation _transform_charged_imidazole;
     Chemical_Transformation _transform_pyrazole;
     Chemical_Transformation _transform_triazole;
     Chemical_Transformation _transform_lactim_lactam;
@@ -368,6 +413,8 @@ class Chemical_Standardisation
     int  _do_from_mrk_standardisations (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_tetrazole (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_tetrazole (Molecule &, const Set_of_Atoms &, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_charged_imidazole(Molecule &, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_charged_imidazole(Molecule &, const int ring_number, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_imidazole (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_imidazole (Molecule &, const int, IWStandard_Current_Molecule & current_molecule_data);
     int  _swap_imidazole (Molecule & m, atom_number_t n1, atom_number_t c, atom_number_t n2) const;
@@ -383,6 +430,8 @@ class Chemical_Standardisation
     int  _do_isoxazole (Molecule &, const Set_of_Atoms &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_azid  (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_misdrawn_urea (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_transform_misdrawn_sulfonamide (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_transform_misdrawn_sulfonamide (Molecule & m, const atom_number_t s, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_back_to_nplus_nminus  (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_explicit_hydrogens_last (Molecule &);
     int  _do_amino_thiazole (Molecule &, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
@@ -433,6 +482,9 @@ class Chemical_Standardisation
 
     int construct_from_command_line (Command_Line &, int = 0, char = 'g');
 
+    // Turn on individual chemical transformations based on the name.
+    int Activate(const IWString& directive, const int verbose);
+
     int process (Molecule &);
 
     int report (std::ostream &) const;
@@ -454,4 +506,4 @@ extern int display_standard_chemical_standardisation_options (std::ostream &, ch
 
 extern void set_update_chemical_standardisation_accumulators (int s);
 
-#endif
+#endif  // MOLECULE_LIB_IWSTANDARD_H_

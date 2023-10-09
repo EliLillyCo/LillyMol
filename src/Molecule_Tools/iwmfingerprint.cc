@@ -247,8 +247,8 @@ set_differentiate_ring_and_chain_bonds(const int s)
 void
 IWMFingerprint::_default_values()
 {
-  _bvector = NULL;
-  _auxiliary_bvector = NULL;
+  _bvector = nullptr;
+  _auxiliary_bvector = nullptr;
 
   _min_heteroatoms_at_path_ends = 0;
 
@@ -275,9 +275,9 @@ IWMFingerprint::IWMFingerprint (int s) : IW_Bits_Base (s)
 
 IWMFingerprint::~IWMFingerprint()
 {
-  if (NULL != _bvector)
+  if (nullptr != _bvector)
     delete [] _bvector;
-  if (NULL != _auxiliary_bvector)
+  if (nullptr != _auxiliary_bvector)
     delete [] _auxiliary_bvector;
 
   return;
@@ -296,16 +296,16 @@ IWMFingerprint::set_min_heteroatoms_at_path_ends (int m)
 int
 IWMFingerprint::delete_vector_representation()
 {
-  if (NULL != _bvector)
+  if (nullptr != _bvector)
   {
     delete [] _bvector;
-    _bvector = NULL;
+    _bvector = nullptr;
   }
 
-  if (NULL != _auxiliary_bvector)
+  if (nullptr != _auxiliary_bvector)
   {
     delete [] _auxiliary_bvector;
-    _auxiliary_bvector = NULL;
+    _auxiliary_bvector = nullptr;
   }
   
   return 1;
@@ -367,7 +367,7 @@ IWMFingerprint::write_as_zero_and_one (IWString & buffer) const
 int
 IWMFingerprint::write_count (std::ostream & os) const
 {
-  assert (NULL != _bvector);
+  assert (nullptr != _bvector);
 
   IWString buffer;
   buffer.resize(bits_per_iwmfingerprint * 3);
@@ -388,7 +388,7 @@ IWMFingerprint::write_count (std::ostream & os) const
 int
 IWMFingerprint::write_count (IWString & buffer) const
 {
-  assert (NULL != _bvector);
+  assert (nullptr != _bvector);
 
 
   buffer += _bvector[0];
@@ -420,7 +420,7 @@ IWMFingerprint::truncate_to_max_hits (int m)
 int
 IWMFingerprint::nset() const
 {
-  assert (NULL != _bvector);
+  assert (nullptr != _bvector);
 
   int rc = 0;
 
@@ -572,7 +572,7 @@ MFingerprint::MFingerprint (Molecule & m,
 
   _arom = new aromaticity_type_t[_matoms];
 
-  if (ats.active() || NULL != atype)
+  if (ats.active() || nullptr != atype)
     set_vector(_arom, _matoms, 0);
   else
     m.aromaticity(_arom);
@@ -585,7 +585,7 @@ MFingerprint::MFingerprint (Molecule & m,
   if (bits_for_hydrogen_attachments >= 0)
     _hcount = new int[_matoms];
   else
-    _hcount = NULL;
+    _hcount = nullptr;
 
   if (max_path_length_isotopic_bits >= 0)
   {
@@ -593,23 +593,23 @@ MFingerprint::MFingerprint (Molecule & m,
     m.get_isotopes(_isotope);
   }
   else
-    _isotope = NULL;
+    _isotope = nullptr;
 
   _nrings = new int[_matoms];
   m.ring_membership(_nrings);
 
-  if (NULL != atype)
+  if (nullptr != atype)
   {
     copy_vector(_atom_hash_value, atype, _matoms);
     set_vector(_unsaturation, _matoms, 0);
-    if (NULL != _hcount)
+    if (nullptr != _hcount)
       set_vector(_hcount, _matoms, 0);
   }
   else if (ats.active())
   {
     ats.assign_atom_types(m, _atom_hash_value);
     set_vector(_unsaturation, _matoms, 0);
-    if (NULL != _hcount)
+    if (nullptr != _hcount)
       set_vector(_hcount, _matoms, 0);
   }
   else
@@ -663,7 +663,7 @@ MFingerprint::MFingerprint (Molecule & m,
   _first_path = new resizable_array<int> * [bits_per_iwmfingerprint];
   for (int i = 0; i < bits_per_iwmfingerprint; i++)
   {
-    _first_path[i] = NULL;
+    _first_path[i] = nullptr;
   }
 #endif
 
@@ -687,10 +687,10 @@ MFingerprint::~MFingerprint()
   delete [] _path;
   delete [] _bond;
   delete [] _in_path;
-  if (NULL != _arom)
+  if (nullptr != _arom)
     delete [] _arom;
   delete [] _ncon;
-  if (NULL != _atomic_number)
+  if (nullptr != _atomic_number)
     delete [] _atomic_number;
 
   delete [] _unsaturation;
@@ -700,10 +700,10 @@ MFingerprint::~MFingerprint()
   delete [] _path_hash_value;
   delete [] _ch2;
 
-  if (NULL != _hcount)
+  if (nullptr != _hcount)
     delete [] _hcount;
 
-  if (NULL != _isotope)
+  if (nullptr != _isotope)
     delete [] _isotope;
 
   _path_length = -4;
@@ -711,7 +711,7 @@ MFingerprint::~MFingerprint()
 #ifdef CHECK_COLLISIONS
   for (int i = 0; i < bits_per_iwmfingerprint; i++)
   {
-    if (NULL != _first_path[i])
+    if (nullptr != _first_path[i])
       delete [] _first_path[i];
   }
   
@@ -980,7 +980,7 @@ MFingerprint::_check_collision_forward (int zbit, const int * bvector) const
 {
   if (1 == bvector[zbit])
   {
-    assert (NULL == _first_path[zbit]);
+    assert (nullptr == _first_path[zbit]);
     _first_path[zbit] = new resizable_array<int>;
     _first_path[zbit]->resize(2 * _path_length);
     for (int i = 0; i <= _path_length; i++)
@@ -996,7 +996,7 @@ MFingerprint::_check_collision_forward (int zbit, const int * bvector) const
 // We already have a path which hit this bit. Is this a duplicate?
 
   const resizable_array<int> * fp = _first_path[zbit];
-  assert (NULL != fp);
+  assert (nullptr != fp);
 
   int nfp = fp->number_elements();
 
@@ -1037,7 +1037,7 @@ MFingerprint::_check_collision_backward (int zbit, const int * bvector) const
 {
   if (1 == bvector[zbit])
   {
-    assert (NULL == _first_path[zbit]);
+    assert (nullptr == _first_path[zbit]);
     _first_path[zbit] = new resizable_array<int>;
     _first_path[zbit]->resize(2 * _path_length);
     _first_path[zbit]->add(_path_hash_value[_path_length]);
@@ -1053,7 +1053,7 @@ MFingerprint::_check_collision_backward (int zbit, const int * bvector) const
 // We already have a path which hit this bit. Is this a duplicate?
 
   const resizable_array<int> * fp = _first_path[zbit];
-  assert (NULL != fp);
+  assert (nullptr != fp);
 
   int nfp = fp->number_elements();
 
@@ -1217,7 +1217,7 @@ MFingerprint::_do_isotope_bits (int istart,
 void
 MFingerprint::_do_isotope_bits (int * bvector) const
 {
-  assert (NULL != _isotope);
+  assert (nullptr != _isotope);
 
   atom_number_t astart = _path[0];
 
@@ -1352,7 +1352,7 @@ MFingerprint::_build_branched_paths (int * bvector,
     if (a0 == j || a2 == j)     // we are looking for atoms outside the path
       continue;
 
-    if (NULL != include_these_atoms && 0 == include_these_atoms[j])
+    if (nullptr != include_these_atoms && 0 == include_these_atoms[j])
       continue;
 
     _set_cluster_bit(bvector, a1, _bond[0], a0, _bond[1], a2, numeric_bond_code(b), j);
@@ -1988,7 +1988,7 @@ MFingerprint::_build(atom_number_t aprev, int * bvector, int * auxiliary_bvector
     if (aprev == j)      // cannot turn back on ourselves
       continue;
 
-    if (NULL != include_these_atoms && 0 == include_these_atoms[j])
+    if (nullptr != include_these_atoms && 0 == include_these_atoms[j])
       continue;
 
     _bond[_path_length - 1] = numeric_bond_code(b);
@@ -2017,7 +2017,7 @@ MFingerprint::build (atom_number_t astart, int * bvector, int * auxiliary_bvecto
 
   set_vector(_in_path, _matoms, 0);
 
-  if (NULL != include_these_atoms)
+  if (nullptr != include_these_atoms)
   {
     if (! include_these_atoms[astart])
     {
@@ -2267,7 +2267,7 @@ IWMFingerprint::construct_fingerprint (Molecule & m,
                                        Atom_Typing_Specification & ats,
                                        const int * inc)
 {
-  return _construct_fingerprint(m, ats, NULL, inc);
+  return _construct_fingerprint(m, ats, nullptr, inc);
 }
 
 int 
@@ -2282,20 +2282,20 @@ int
 IWMFingerprint::construct_fingerprint (Molecule & m,
                                        const int * atype)
 {
-  return _construct_fingerprint(m, _atom_typing_specification, atype, NULL);
+  return _construct_fingerprint(m, _atom_typing_specification, atype, nullptr);
 }
 
 int
 IWMFingerprint::construct_fingerprint (Molecule & m)
 {
-  return _construct_fingerprint(m, _atom_typing_specification, NULL, NULL);
+  return _construct_fingerprint(m, _atom_typing_specification, nullptr, nullptr);
 }
 
 #ifdef COUNT_TIMES_ATOM_IN_PATH
 int
 IWMFingerprint::construct_fingerprint_label_by_times_in_path (Molecule & m)
 {
-  int rc = _construct_fingerprint(m, _atom_typing_specification, NULL);
+  int rc = _construct_fingerprint(m, _atom_typing_specification, nullptr);
 
 
   return rc;
@@ -2308,7 +2308,7 @@ IWMFingerprint::_construct_fingerprint (Molecule & m,
                                         const int * atype,
                                         const int * include_these_atoms)
 {
-  assert (NULL == _bvector);
+  assert (nullptr == _bvector);
   assert (0 == _nbits);
 
   allocate_space_for_bits(bits_per_iwmfingerprint);
@@ -2343,7 +2343,7 @@ IWMFingerprint::_construct_fingerprint (Molecule & m,
     }
   }
 
-  if (NULL == include_these_atoms)
+  if (nullptr == include_these_atoms)
   {
     for (int i = 0; i < matoms; i++)    // do all atoms
     {
@@ -2784,7 +2784,7 @@ IWMFingerprint::_extra_bits_to_equalise_times_in_path_3(Molecule & m,
       if (times_in_path[j] > cutoff)
         continue;
 
-      if (NULL != include_these_atoms && 0 == include_these_atoms[j])
+      if (nullptr != include_these_atoms && 0 == include_these_atoms[j])
         continue;
   
       _all_3_paths_with_centre(m, j, include_these_atoms, times_in_path, possible_additions);
@@ -2829,7 +2829,7 @@ IWMFingerprint::_all_3_paths_with_centre(const Molecule & m,
 
     const atom_number_t ci = b1->other(zatom);
 
-    if (NULL != include_these_atoms && 0 == include_these_atoms[ci])
+    if (nullptr != include_these_atoms && 0 == include_these_atoms[ci])
       continue;
 
     for (int j = i + 1; j < acon; ++j)
@@ -2838,7 +2838,7 @@ IWMFingerprint::_all_3_paths_with_centre(const Molecule & m,
 
       const atom_number_t cj = b2->other(zatom);
 
-      if (NULL != include_these_atoms && 0 == include_these_atoms[cj])
+      if (nullptr != include_these_atoms && 0 == include_these_atoms[cj])
         continue;
 
       Possible_Fingerprint_Addition * p = new Possible_Fingerprint_Addition();
@@ -2881,7 +2881,7 @@ IWMFingerprint::_all_4_paths_from_bond(const Molecule & m,
     if (a2 == x1)
       continue;
 
-    if (NULL != include_these_atoms && 0 == include_these_atoms[x1])
+    if (nullptr != include_these_atoms && 0 == include_these_atoms[x1])
       continue;
 
     for (int j = 0; j < a2con; ++j)
@@ -2893,7 +2893,7 @@ IWMFingerprint::_all_4_paths_from_bond(const Molecule & m,
       if (a1 == x2)
         continue;
 
-      if (NULL != include_these_atoms && 0 == include_these_atoms[x2])
+      if (nullptr != include_these_atoms && 0 == include_these_atoms[x2])
         continue;
 
       Possible_Fingerprint_Addition * p = new Possible_Fingerprint_Addition();
@@ -2945,7 +2945,7 @@ IWMFingerprint::_extra_bits_to_equalise_times_in_path_4(Molecule & m,
       if (times_in_path[a1] > cutoff && times_in_path[a2] > cutoff)
         continue;
 
-      if (NULL != include_these_atoms && (0 == include_these_atoms[a1] || 0 == include_these_atoms[a2]))
+      if (nullptr != include_these_atoms && (0 == include_these_atoms[a1] || 0 == include_these_atoms[a2]))
         continue;
 
       _all_4_paths_from_bond(m, b, include_these_atoms, times_in_path, possible_additions);

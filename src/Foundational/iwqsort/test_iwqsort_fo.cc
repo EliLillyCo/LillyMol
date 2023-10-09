@@ -187,7 +187,7 @@ test_array_of_pointers (int n)
 {
   Foo ** f = new Foo *[n];
 
-  if (NULL == f)
+  if (nullptr == f)
   {
     cerr << "Memory failure trying to allocate " << n << " Foo pointers\n";
     return 0;
@@ -241,7 +241,7 @@ test_array (int n)
 {
   Foo * f = new Foo[n];
 
-  if (NULL == f)
+  if (nullptr == f)
   {
     cerr << "Bad news, cannot allocate array of " << n << " Foo objects\n";
     return 0;

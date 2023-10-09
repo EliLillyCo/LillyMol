@@ -1,0 +1,6 @@
+# Just matches the acceptor atom that is not multiply
+# bonded to another atom.
+query {
+  name: "feature_node_acceptor"
+  smarts: "[1G0]"
+}

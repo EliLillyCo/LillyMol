@@ -1,26 +1,15 @@
 #ifndef IW_EC_GENERATOR_H
 #define IW_EC_GENERATOR_H
 
-#include "sparse_fp_creator.h"
-#include "molecule.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
+#include "Molecule_Lib/molecule.h"
 
 /*
   To avoid passing around a lot of arguments, we just put them all in a struct
 */
 
 class Gather_Single_Bit;
-
-#ifdef ASkdjojh
-struct ECFP_Args
-{
-  const int * include_atom;
-  int flag;
-  const int * atype;
-  int * processing_status;
-
-//int include_atom(const int a) const { return flag == include_atom[a];}
-};
-#endif
 
 template <typename T>
 class ECFP_Args

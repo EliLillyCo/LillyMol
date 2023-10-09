@@ -1,6 +1,8 @@
 #ifndef NVRTSPSA_H
 #define NVRTSPSA_H
 
+#include "Molecule_Lib/molecule.h"
+
 extern double novartis_polar_surface_area (Molecule & m);
 
 extern double novartis_polar_surface_area (Molecule & m, 

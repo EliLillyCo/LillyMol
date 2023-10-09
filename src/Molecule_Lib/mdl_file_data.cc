@@ -1,14 +1,15 @@
 #include <stdlib.h>
+#include <iostream>
 
-#include "misc.h"
-#ifdef USE_IWMALLOC
-#include "iwmalloc.h"
-#endif
+#include "Foundational/iwmisc/misc.h"
 
 #include "mdl_file_data.h"
 
+using std::cerr;
+using std::endl;
+
 void
-MDL_Atom_Data::_default_values ()
+MDL_Atom_Data::_default_values()
 {
   _atom_number = INVALID_ATOM_NUMBER;
 
@@ -18,6 +19,7 @@ MDL_Atom_Data::_default_values ()
   _substitution = 0;
   _ring_bond = 0;
   _valence = 0;
+  _chg = 0;
 
   _atom_map = -1;
   _inversion = 0;
@@ -36,7 +38,7 @@ MDL_Atom_Data::_default_values ()
 
   _aromatic = -1;
 
-  _atom = NULL;
+  _atom = nullptr;
 
   _nbonds = -1;
 
@@ -53,7 +55,7 @@ MDL_Atom_Data::MDL_Atom_Data()
 }
 
 void
-MDL_Atom_Data::_do_copy (const MDL_Atom_Data & rhs)
+MDL_Atom_Data::_do_copy(const MDL_Atom_Data & rhs)
 {
   _atom_number = rhs._atom_number;
 
@@ -88,13 +90,13 @@ MDL_Atom_Data::_do_copy (const MDL_Atom_Data & rhs)
   return;
 }
 
-MDL_Atom_Data::MDL_Atom_Data (const MDL_Atom_Data & rhs)
+MDL_Atom_Data::MDL_Atom_Data(const MDL_Atom_Data & rhs)
 {
   _do_copy(rhs);
 }
 
 MDL_Atom_Data &
-MDL_Atom_Data::operator= (const MDL_Atom_Data & rhs)
+MDL_Atom_Data::operator=(const MDL_Atom_Data & rhs)
 {
   _do_copy(rhs);
 
@@ -125,10 +127,12 @@ MDL_Bond_Data::MDL_Bond_Data()
 
   _reacting_centre_status = 0;    // not used anywhere
 
+  _cfg = 0;   // Not used anywhere.
+
   return;
 }
 
-MDL_Bond_Data::MDL_Bond_Data (const MDL_Bond_Data & rhs)
+MDL_Bond_Data::MDL_Bond_Data(const MDL_Bond_Data & rhs)
 {
   _bond_type_read_in = rhs._bond_type_read_in;
   _bond_topology = rhs._bond_topology;
@@ -170,7 +174,7 @@ MDL_File_Data::MDL_File_Data()
 }
 
 int
-MDL_File_Data::_do_copy (const MDL_File_Data & rhs)
+MDL_File_Data::_do_copy(const MDL_File_Data & rhs)
 {
   int na = rhs._mdl_atom.number_elements();
 
@@ -218,7 +222,7 @@ MDL_File_Data::~MDL_File_Data()
 }
 
 MDL_File_Data &
-MDL_File_Data::operator= (MDL_File_Data && rhs)
+MDL_File_Data::operator=(MDL_File_Data && rhs)
 {
   _third_line_of_input_sdf_file = std::move(rhs._third_line_of_input_sdf_file);
   _mdl_atom = std::move(rhs._mdl_atom);
@@ -284,7 +288,7 @@ MDL_File_Data::or_aromatic_bonds_present() const
 }
 
 int
-MDL_File_Data::build (Molecule & m)
+MDL_File_Data::build(Molecule & m)
 {
   _mdl_atom.resize_keep_storage(0);
   _mdl_bond.resize_keep_storage(0);
@@ -336,7 +340,7 @@ MDL_Atom_Data::initialise_atom_list_from_symbol(const const_IWSubstring & token)
 }
 
 int
-MDL_Atom_Data::convert_a_or_q_atoms_to_atom_list (const IWString & s)
+MDL_Atom_Data::convert_a_or_q_atoms_to_atom_list(const IWString & s)
 {
 //cerr << "MDL_Atom_Data::convert_a_or_q_atoms_to_atom_list:string is '" << s << "'\n";
 
@@ -353,7 +357,7 @@ MDL_Atom_Data::convert_a_or_q_atoms_to_atom_list (const IWString & s)
 }
 
 int
-MDL_Atom_Data::convert_not_atom_lists_to_organic_lists ()
+MDL_Atom_Data::convert_not_atom_lists_to_organic_lists()
 {
   if (_atom_list.active() && ! _atom_list.normal_list())
     return _atom_list.convert_not_atom_lists_to_organic_lists();
@@ -369,7 +373,7 @@ MDL_Atom_Data::write_M_ALS(atom_number_t zatom,
 }
 
 int
-MDL_Atom_Data::swap_atoms (atom_number_t a1, atom_number_t a2)
+MDL_Atom_Data::swap_atoms(atom_number_t a1, atom_number_t a2)
 {
   if (_atom_number == a1)
     _atom_number = a2;
@@ -380,7 +384,7 @@ MDL_Atom_Data::swap_atoms (atom_number_t a1, atom_number_t a2)
 }
 
 int
-MDL_Atom_Data::connected_atom_is_being_removed (atomic_number_t zremove)
+MDL_Atom_Data::connected_atom_is_being_removed(atomic_number_t zremove)
 {
   if (_substitution > 0)
     _substitution--;
@@ -397,7 +401,7 @@ MDL_Atom_Data::connected_atom_is_being_removed (atomic_number_t zremove)
 }
 
 int
-MDL_File_Data::swap_atoms (atom_number_t a1, atom_number_t a2)
+MDL_File_Data::swap_atoms(atom_number_t a1, atom_number_t a2)
 {
   int n = _mdl_atom.number_elements();
 
@@ -438,7 +442,7 @@ MDL_File_Data::swap_atoms (atom_number_t a1, atom_number_t a2)
 }
 
 void
-MDL_File_Data::discard_atom_map ()
+MDL_File_Data::discard_atom_map()
 {
   const auto n = _mdl_atom.number_elements();
 

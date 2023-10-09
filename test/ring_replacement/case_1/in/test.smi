@@ -1,1 +1,6 @@
-O=C1C(=C([H])C2=C([H])N(N=C2C2=C([H])C(=C(C(=C2[H])[H])OC([H])([H])C2=C([H])C(=C(C(=C2[H])[H])C([H])([H])[H])[H])[H])C2=C([H])C(=C([H])C(=C2[H])[H])[H])SC(=N1)N1C([H])([H])C([H])([H])C([H])([H])C([H])(C1([H])[H])C([H])([H])[H] PBCHM6197496
+Cc1ccc(C)cc1 6
+Cc1cc(C)cc(C)c1 6a
+Cc1ccccc1 6b
+Cc1c(C)cccc1 6-ortho
+Cc1ccc(C)cc1C 1,3,5
+

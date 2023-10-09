@@ -1,19 +1,22 @@
 #include <stdlib.h>
 
+#include <iostream>
 #include <limits>
 #include <memory>
-#include "xmlParser.h"
 
-#include "iwstring_data_source.h"
-#include "misc.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/xmlParser/xmlParser.h"
 
 #define COMPILING_MARVIN_CC
 
 #include "molecule.h"
-
 #include "marvin.h"
 
-static const Marvin_Structure_Information * msi = NULL;
+using std::cerr;
+using std::endl;
+
+static const Marvin_Structure_Information * msi = nullptr;
 
 void 
 set_marvin_structure_information_for_writing (const Marvin_Structure_Information * s)
@@ -137,7 +140,7 @@ Molecule::write_molecule_mrv (std::ostream & os)
 {
   os << "<MDocument";
 
-  if (NULL != msi)
+  if (nullptr != msi)
     msi->write_atom_and_bond_colours (os);
 
   os << ">\n";
@@ -146,7 +149,7 @@ Molecule::write_molecule_mrv (std::ostream & os)
 
   os << "</MDocument>\n";
 
-  msi = NULL;
+  msi = nullptr;
 
   return rc;
 }
@@ -213,7 +216,7 @@ Molecule::_write_atoms_mrv (std::ostream & os) const
     os << "\"\n";
   }
 
-  if (NULL == msi)   // no atom colours present
+  if (nullptr == msi)   // no atom colours present
     ;
   else if (msi->atom_colour_specifications_present())
   {
@@ -222,7 +225,7 @@ Molecule::_write_atoms_mrv (std::ostream & os) const
     {
       if (i > 0)
         os << ' ';
-      if (NULL == msi)
+      if (nullptr == msi)
         os << '0';
       else
         os << msi->colour_index_for_atom(i);
@@ -271,7 +274,7 @@ Molecule::_write_bonds_mrv (std::ostream & os) const
       os << '5';         // HUH!!
 
     os << "\" ";
-    if (NULL != msi)
+    if (nullptr != msi)
     {
       int c = msi->colour_index_for_bond (i);
       if (c > 0)
@@ -368,7 +371,7 @@ Molecule::read_molecule_mrv_ds (iwstring_data_source & input)
 
   XMLNode xNode=xMainNode.getChildNode("MChemicalStruct");
 
-  if (NULL == xNode.getName())
+  if (nullptr == xNode.getName())
   {
     cerr << "molecule::read_molecule_mrv_ds:could not get 'MChemicalStruct' attribute\n";
     return 0;
@@ -386,7 +389,7 @@ Molecule::read_molecule_mrv_mchemical (XMLNode & mchemicalstruct)
 {
   XMLNode molecule = mchemicalstruct.getChildNode("molecule");
 
-  if (NULL == molecule.getName())
+  if (nullptr == molecule.getName())
   {
     cerr << "molecule::read_molecule_mrv:no 'molecule' tag in xml\n";
     return 0;
@@ -400,14 +403,14 @@ Molecule::read_molecule_mrv_molecule (XMLNode & xml)
 {
   XMLCSTR mname = xml.getAttribute("title", 0);
 
-  if (NULL != mname)
+  if (nullptr != mname)
     _molecule_name = mname;
 
 //cerr << "Molecule name set to '" << _molecule_name << "'\n";
 
   XMLNode atomArray = xml.getChildNode("atomArray");
 
-  if (NULL == atomArray.getName())
+  if (nullptr == atomArray.getName())
   {
     cerr << "Molecule::_read_molecule_mrv:no atomArray in xml\n";
     return 0;
@@ -430,7 +433,7 @@ Molecule::read_molecule_mrv_molecule (XMLNode & xml)
   int * aromatic_bonds = new_int(_number_elements + _number_elements); std::unique_ptr<int[]> free_aromatic_bonds(aromatic_bonds);
 
   XMLNode bondarray = xml.getChildNode("bondArray");
-  if (NULL == bondarray.getName())
+  if (nullptr == bondarray.getName())
     ;
   else if (! _read_bond_array_mrv(bondarray, aromatic_bonds))
   {
@@ -440,7 +443,7 @@ Molecule::read_molecule_mrv_molecule (XMLNode & xml)
 
   if (locate_item_in_array(1, _bond_list.number_elements(), aromatic_bonds) < 0)   // no aromatic bonds
     ;
-  else if (! _final_processing_of_aromatic_mdl_input(NULL, aromatic_bonds))
+  else if (! _final_processing_of_aromatic_mdl_input(nullptr, aromatic_bonds))
   {
     cerr << "Molecule::_read_molecule_mrv:cannot resolve aromatic bonds\n";
     return 0;
@@ -513,15 +516,15 @@ convert_to_numeric (const IWString & s,
 */
 
 int
-Molecule::_read_atom_array_mrv (XMLNode & xml)
+Molecule::_read_atom_array_mrv(XMLNode & xml)
 {
   XMLCSTR xml_atomID = xml.getAttribute("atomID", 0);
 
-  if (NULL == xml_atomID)
-    return _read_atom_array_mrv_individual_attributes (xml);
+  if (nullptr == xml_atomID)
+    return _read_atom_array_mrv_individual_attributes(xml);
 
   XMLCSTR xml_elementType = xml.getAttribute("elementType");
-  if (NULL == xml_elementType)
+  if (nullptr == xml_elementType)
   {
     cerr << "Molecule::_read_atom_array_mrv:no elementType\n";
     return 0;
@@ -538,6 +541,7 @@ Molecule::_read_atom_array_mrv (XMLNode & xml)
 
   IWString isotope = xml.getAttribute("isotope");
   IWString formalCharge = xml.getAttribute("formalCharge");
+  IWString mrvMap = xml.getAttribute("mrvMap");
 
   int dimensionality = 0;
 
@@ -574,11 +578,11 @@ Molecule::_read_atom_array_mrv (XMLNode & xml)
     return 0;
 
   int elementType_i = 0;
-  int x2_i = 0;
-  int x3_i = 0;
-  int y2_i = 0;
-  int y3_i = 0;
-  int z3_i = 0;
+//int x2_i = 0;
+//int x3_i = 0;
+//int y2_i = 0;
+//int y3_i = 0;
+//int z3_i = 0;
 
   resizable_array<int> isotopes;
   if (! convert_to_numeric(isotope, isotopes, static_cast<int>(0)))
@@ -638,7 +642,7 @@ Molecule::_read_atom_array_mrv (XMLNode & xml)
   {
     const Element * e = get_element_from_symbol_no_case_conversion(elementType_token);
 
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "Molecule::_read_atom_array_mrv:cannot create element from '" << elementType_token << "'\n";
       return 0;
@@ -646,12 +650,12 @@ Molecule::_read_atom_array_mrv (XMLNode & xml)
     
     Atom * a = new Atom(e);
 
-    if (0 == formal_charges.number_elements())
+    if (formal_charges.empty())
       ;
     else if (0 != formal_charges[ndx])
       a->set_formal_charge(formal_charges[ndx]);
 
-    if (0 == isotopes.number_elements())
+    if (isotopes.empty())
       ;
     else if (0 != isotopes[ndx])
       a->set_isotope(isotopes[ndx]);
@@ -683,12 +687,12 @@ convert_to_numeric (XMLCSTR & s,
 }
 
 int
-Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
+Molecule::_read_atom_array_mrv_individual_attributes(const XMLNode & xml)
 {
   for (int i = 0; ; i++)
   {
     XMLNode xml_a = xml.getChildNode(i);
-    if (NULL == xml_a.getName())
+    if (nullptr == xml_a.getName())
       break;
 
 //  cerr << "Processing atom node '" << xml_a.getName() << "'\n";
@@ -700,7 +704,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
 
 //  cerr << "Element is '" << elementType << "'\n";
 
-    if (NULL == elementType)
+    if (nullptr == elementType)
     {
       cerr << "Molecule::_read_atom_array_mrv_individual_attributes:no elementType attribute\n";
       return 0;
@@ -717,7 +721,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
 
     const Element * e = get_element_from_symbol_no_case_conversion(elementType);
 
-    if (NULL != e)
+    if (nullptr != e)
       ;
     else if (! auto_create_new_elements())
     {
@@ -727,7 +731,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
     else
     {
       e = create_element_with_symbol(elementType);
-      if (NULL == e)
+      if (nullptr == e)
       {
         cerr << "Molecule::read_molecule_mrv_molecule:cannot create element '" << elementType << "'\n";
         return 0;
@@ -736,7 +740,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
 
     Atom * a = new Atom(e);
 
-    if (NULL != formalCharge)
+    if (nullptr != formalCharge)
     {
       formal_charge_t q;
       if (! convert_to_numeric(formalCharge, q) || ! reasonable_formal_charge_value(q))
@@ -748,7 +752,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
       a->set_formal_charge(q);
     }
 
-    if (NULL != isotope)
+    if (nullptr != isotope)
     {
       int iso;
       if (! convert_to_numeric(isotope, iso) || iso < 0)
@@ -760,7 +764,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
       a->set_isotope(iso);
     }
 
-    if (NULL != x2)    // 2D coordinates specified
+    if (nullptr != x2)    // 2D coordinates specified
     {
       coord_t x;
       if (! convert_to_numeric(x2, x))
@@ -771,7 +775,7 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
 
       coord_t y;
 
-      if (NULL == y2)              // silently ignore this!!?
+      if (nullptr == y2)              // silently ignore this!!?
         y = static_cast<coord_t>(0.0);
       else if (! convert_to_numeric(y2, y))
       {
@@ -781,9 +785,9 @@ Molecule::_read_atom_array_mrv_individual_attributes (const XMLNode & xml)
 
       a->setxyz(x, y, static_cast<coord_t>(0.0));
     }
-    else if (NULL != x3)
+    else if (nullptr != x3)
     {
-      if (NULL == y3 || NULL == z3)
+      if (nullptr == y3 || nullptr == z3)
       {
         cerr << "Molecule::_read_atom_array_mrv_individual_attributes:incomplete 3d specification\n";
         return 0;
@@ -816,7 +820,7 @@ Molecule::_read_bond_array_mrv (XMLNode & xml,
   for (int i = 0; ; i++)
   {
     XMLNode xml_b = xml.getChildNode(i);
-    if (NULL == xml_b.getName())
+    if (nullptr == xml_b.getName())
       break;
 
 #ifdef DEBUG_MARVIN_BOND_LIST
@@ -898,7 +902,7 @@ Molecule::_read_bond_array_mrv (XMLNode & xml,
     for (int j = 0; ; j++)
     {
       XMLNode xml_bs = xml_b.getChildNode(j);
-      if (NULL == xml_bs.getName())
+      if (nullptr == xml_bs.getName())
         break;
 
 //    cerr << "Processing '" << xml_bs.getName() << "'\n";

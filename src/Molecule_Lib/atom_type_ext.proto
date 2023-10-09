@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package atom_typing_spec;
+
+message QueryAndValue {
+  // A query type that defines one or more queries.
+  // SMARTS:C for example.
+  repeated string query = 1;
+
+  // The atom type value assigned to atoms that match
+  // the query.
+  optional uint32 value = 2;
+
+  // Ignored
+  repeated string comment = 3;
+}
+
+// Note that when atom types are assigned, the first
+// query to match an atom sets the type, so the order in
+// which queries are entered matters. Generally place composite
+// types ahead of single atom types.
+message External {
+  repeated QueryAndValue query_and_value = 1;
+
+  // Ignored
+  repeated string comment = 2;
+}

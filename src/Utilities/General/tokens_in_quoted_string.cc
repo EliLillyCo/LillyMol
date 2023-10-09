@@ -1,4 +1,4 @@
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "tokens_in_quoted_string.h"
 
@@ -54,7 +54,7 @@ tokens_in_quoted_string(const const_IWSubstring & buffer,
   }
 
   if (in_quote)
-    cerr << "tokens_in_quoted_string:warning still quoted '" << buffer << "' line " << line_no << endl;
+    std::cerr << "tokens_in_quoted_string:warning still quoted '" << buffer << "' line " << line_no << '\n';
 
   return rc;
 }

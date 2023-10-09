@@ -1,0 +1,13 @@
+name: "1,2,4-triazine_to_pyridine"
+scaffold {
+  id: 0
+  smarts: "[nD2]1[nD2]c[nD2]cc1"
+  change_element {
+    atom: 1
+    element: "C"
+  }
+  change_element {
+    atom: 3
+    element: "C"
+  }
+}

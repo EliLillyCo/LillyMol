@@ -32,14 +32,13 @@ cmp_out="$test_cmd_top/$case/out/test.smi"
 
 echo "Testing: $command"
 
-data_dir="$LILLYMOL_HOME/contrib/data/ring_replacement"
+data_dir='.'
 
-$command -g all -A D -u -P ${data_dir}/PUBCHEM.5a.smi "$in" 1>> "$out" 2>>err.txt
+$command -R ${data_dir}/rings_6a.smi -s a "$in" 1>> "$out" 2>>err.txt
 $diff_tool "$out" "$cmp_out"
 ret=$?
 
-if [ $ret -eq 1 ]
-then
+if [[ $ret -eq 1 ]] ; then
     echo "$case_id : TEST PASS"
 else
     echo "$case_id : TEST FAIL"

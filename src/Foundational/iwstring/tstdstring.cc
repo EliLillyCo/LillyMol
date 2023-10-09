@@ -91,7 +91,7 @@ test_tokenise ()
 {
   const char *buffer = "";
   resizable_array_p<string> *tk = tokenise (buffer, " ");
-  if (NULL != tk)
+  if (nullptr != tk)
   {
     cerr << "tokenise failed on empty string\n";
     handle_failure ();
@@ -99,7 +99,7 @@ test_tokenise ()
 
   buffer = "                    ";
   tk = tokenise (buffer, " ");
-  if (NULL != tk)
+  if (nullptr != tk)
   {
     cerr << "tokenise failed on blank string\n";
     handle_failure ();
@@ -109,7 +109,7 @@ test_tokenise ()
   if (verbose)
     cout << "Testing tokenise on '" << buffer << "'\n";
   tk = tokenise (buffer, " ");
-  if (NULL == tk)
+  if (nullptr == tk)
   {
     cerr << "tokenise failed on '" << buffer << "'\n";
     handle_failure ();

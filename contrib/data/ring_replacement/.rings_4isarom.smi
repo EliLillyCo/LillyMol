@@ -1,0 +1,7 @@
+smi: "[CH2:70]1[CH2:71]C=[1CH]1" smt: "[ax2r4D2]1:[ax2r4D2]:[ax2r4D2]:[ax2r4D>2]:1" id: "CHEMBL1977616" n: 1 conn: true exo: "[70O].[71O]" usmi: "O=c1[1cH]cc1=O" 
+smi: "[CH2:70]1[CH2:71][1CH]=[1CH]1" smt: "[ax2r4D2]1:[ax2r4D2]:[ax2r4D>2]:[ax2r4D>2]:1" id: "CHEMBL9332" n: 202 conn: true exo: "[70N].[71N]" usmi: "N=c1c(=N)[1cH][1cH]1" 
+smi: "[1CH]1=[1CH][CH2:70][CH2:71]1" smt: "[ax2r4D>2]1:[ax2r4D>2]:[ax2r4D2]:[ax2r4D2]:1" id: "CHEMBL2003612" n: 1 conn: true exo: "[70O].[71N]" usmi: "O=c1c(=[1N+])[1cH][1cH]1" 
+smi: "[1CH]1=[1CH][CH2:70][CH2:71]1" smt: "[ax2r4D>2]1:[ax2r4D>2]:[ax2r4D2]:[ax2r4D2]:1" id: "CHEMBL9587" n: 1246 conn: true exo: "[70O].[71O]" usmi: "O=c1c(=O)[1cH][1cH]1" 
+smi: "[CH2:70]1[1CH]=[1CH][CH2:71]1" smt: "[ax2r4D2]1:[ax2r4D>2]:[ax2r4D>2]:[ax2r4D2]:1" id: "CHEMBL9866" n: 67 conn: true exo: "[70N].[71O]" usmi: "O=c1c(=N)[1cH][1cH]1" 
+smi: "[1CH]1=[1CH][CH2:70][CH2:71]1" smt: "[ax2r4D>2]1:[ax2r4D>2]:[ax2r4D2]:[ax2r4D2]:1" id: "CHEMBL4851371" n: 4 conn: true exo: "[70S].[71S]" usmi: "S=c1c(=S)[1cH][1cH]1" 
+smi: "[1CH]1=[1CH][CH2:70][CH2:71]1" smt: "[ax2r4D>2]1:[ax2r4D>2]:[ax2r4D2]:[ax2r4D2]:1" id: "CHEMBL5220101" n: 2 conn: true exo: "[70O].[71S]" usmi: "S=c1c(=O)[1cH][1cH]1" 

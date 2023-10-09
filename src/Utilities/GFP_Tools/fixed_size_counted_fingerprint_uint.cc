@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "iwbits.h"
-#include "iwstring.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "fixed_size_counted_fingerprint.h"
 
@@ -83,7 +83,7 @@ Fixed_Size_Counted_Fingerprint_uint::write_daylight_ascii_representation (std::o
                                              const const_IWSubstring & tag, 
                                              int include_nset)
 {
-  if (NULL == _count)
+  if (nullptr == _count)
     return 0;
 
   if (include_nset && _nset <= 0)

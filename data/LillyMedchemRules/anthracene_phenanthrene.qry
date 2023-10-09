@@ -1,0 +1,15 @@
+# RuleClass rings
+# SubClass polyaromatic
+
+(0 Query
+  (A I Version 2)
+  (A C Comment "anthracene_phenanthrene")
+  (A C Comment "anthracene_phenanthrene")
+  (A I min_nrings 3)
+  (1 Ring_System_Specifier
+    (A I nrings 3)
+    (A I ring_size 6)
+    (A I aromatic_ring_count 3)
+    (A I heteroatom_count 0)
+  )
+)

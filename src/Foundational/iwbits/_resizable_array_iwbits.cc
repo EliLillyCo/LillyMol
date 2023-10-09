@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "iwbits.h"
 
 template class resizable_array_p<IW_Bits_Base>;

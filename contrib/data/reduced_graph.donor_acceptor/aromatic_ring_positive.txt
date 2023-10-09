@@ -1,0 +1,3 @@
+query: "aromatic_ring_positive.qry"
+element: "Mn"
+ring: true

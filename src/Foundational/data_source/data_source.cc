@@ -11,8 +11,8 @@
 void
 data_source::_default_values ()
 {
-  _fp = NULL;
-  _buffer = NULL;
+  _fp = nullptr;
+  _buffer = nullptr;
   _buf_size = 0;
   _record_buffered = 0;
   _longest_record = 0;
@@ -22,12 +22,12 @@ data_source::_default_values ()
   _strip_leading_blanks = 0;
   _strip_trailing_blanks = 0;
   _skip_blank_lines = 0;
-  _ignore_pattern = NULL;
+  _ignore_pattern = nullptr;
   _strlen_ignore_pattern = 0;
-  _filter_pattern = NULL;
+  _filter_pattern = nullptr;
   _strlen_filter_pattern = 0;
   _match_filter_at_start = 0;
-  _filter_match_position = NULL;
+  _filter_match_position = nullptr;
   _created_from_fp = 0;
   _convert_to_lowercase = 0;
   _convert_to_uppercase = 0;
@@ -36,7 +36,7 @@ data_source::_default_values ()
 data_source *
 new_data_source (FILE *fp, int lrecl)
 {
-  assert (NULL != fp);
+  assert (nullptr != fp);
   assert (lrecl > 1);
 
   data_source *tmp = new data_source (lrecl);
@@ -49,15 +49,15 @@ new_data_source (FILE *fp, int lrecl)
 data_source *
 new_data_source (const char *fname, int lrecl)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
   assert (lrecl > 1);
 
   FILE *fp = fopen (fname, "r");
-  if (NULL == fp)
+  if (nullptr == fp)
   {
     (void) fprintf (stderr, "new data source: cannot open '%s'\n", fname);
     perror ("");
-    return NULL;
+    return nullptr;
   }
 
   return new_data_source (fp, lrecl);
@@ -80,7 +80,7 @@ data_source::data_source (int lrecl)
   return;
 }
 
-#define DELETE_IF_NOT_NULL(p) { if (NULL != (p)) delete (p); }
+#define DELETE_IF_NOT_NULL(p) { if (nullptr != (p)) delete (p); }
 
 data_source::~data_source ()
 {
@@ -96,7 +96,7 @@ data_source::~data_source ()
 int
 data_source::_line_is_blank () const
 {
-  assert (NULL != _buffer);
+  assert (nullptr != _buffer);
 
   char *c = _buffer;
   while (*c)
@@ -112,7 +112,7 @@ data_source::_line_is_blank () const
 int
 data_source::push_record ()
 {
-  assert (NULL != _buffer);
+  assert (nullptr != _buffer);
 
   _record_buffered = 1;
 
@@ -130,10 +130,10 @@ data_source::set_ignore_pattern (const char *pattern)
 {
   DELETE_IF_NOT_NULL (_ignore_pattern);
 
-  _ignore_pattern = NULL;
+  _ignore_pattern = nullptr;
   _strlen_ignore_pattern = 0;
 
-  if (NULL == pattern)
+  if (nullptr == pattern)
     return;
 
   int i = strlen (pattern);
@@ -148,15 +148,15 @@ data_source::set_ignore_pattern (const char *pattern)
 void
 data_source::set_filter_pattern (const char *pattern)
 {
-  if (NULL != _filter_pattern)
+  if (nullptr != _filter_pattern)
     delete _filter_pattern;
 
-  _filter_pattern = NULL;
+  _filter_pattern = nullptr;
   _strlen_filter_pattern = 0;
   _match_filter_at_start = 0;
-  _filter_match_position = NULL;
+  _filter_match_position = nullptr;
 
-  if (NULL == pattern)
+  if (nullptr == pattern)
     return;
 
   int i = strlen (pattern);
@@ -190,7 +190,7 @@ data_source::set_filter_pattern (const char *pattern)
 int
 data_source::_apply_all_filters ()
 {
-  assert (NULL != _buffer);
+  assert (nullptr != _buffer);
 
   if (_strip_trailing_blanks)
     strip_trailing_blanks (_buffer);
@@ -221,7 +221,7 @@ data_source::_apply_all_filters ()
   else if (_match_filter_at_start &&
            0 != strncmp (_buffer, _filter_pattern, _strlen_filter_pattern))
     return 0;
-  else if (NULL == (_filter_match_position = strstr (_buffer, _filter_pattern)))
+  else if (nullptr == (_filter_match_position = strstr (_buffer, _filter_pattern)))
     return 0;
 
   return 1;
@@ -236,12 +236,12 @@ data_source::_apply_all_filters ()
 int
 data_source::next_record_matches (const char *pattern)
 {
-  assert (NULL != pattern);
+  assert (nullptr != pattern);
 
   if (! _record_buffered)
   {
     const char *c = next_record ();
-    if (NULL == c)     // reached EOF
+    if (nullptr == c)     // reached EOF
       return 0;
   }
 
@@ -301,14 +301,14 @@ data_source::_handle_eof_processing ()
 int
 data_source::_fetch_record ()
 {
-  assert (NULL != _buffer);
+  assert (nullptr != _buffer);
 
   _buffer[0] = '\0';
-  if (NULL == fgets (_buffer, _buf_size - 1, _fp))
+  if (nullptr == fgets (_buffer, _buf_size - 1, _fp))
     return _handle_eof_processing ();
 
   char *c = strchr (_buffer, '\n');
-  if (NULL != c)
+  if (nullptr != c)
     return _got_complete_record (c);
 
 /*
@@ -328,10 +328,10 @@ data_source::_fetch_record ()
     _buffer = nb;
     _buf_size = 2 * _buf_size;
 
-    if (NULL == rc)
+    if (nullptr == rc)
       return _handle_eof_processing ();
 
-    if (NULL != (c = strchr (_buffer, '\n')))
+    if (nullptr != (c = strchr (_buffer, '\n')))
       return _got_complete_record (c);
   }
 
@@ -350,7 +350,7 @@ data_source::most_recent_record ()
 const char *
 data_source::next_record ()
 {
-  assert (NULL != _buffer);
+  assert (nullptr != _buffer);
 
   if (_record_buffered)
   {
@@ -368,14 +368,14 @@ data_source::next_record ()
   while (1)
   {
     if (! _fetch_record ())
-      return NULL;
+      return nullptr;
 
     if (_apply_all_filters ())
       return _buffer;
   }
 
   abort ();     // should never come here
-  return NULL;
+  return nullptr;
 }
 
 /*
@@ -390,7 +390,7 @@ data_source::next_record ()
 int
 data_source::skip_past (const char *pattern)
 {
-  assert (NULL != pattern);
+  assert (nullptr != pattern);
 
   if (_at_eof)
     return 0;
@@ -418,10 +418,10 @@ data_source::skip_past (const char *pattern)
 
   const char *buffer;
 
-  while (NULL != (buffer = next_record ()))
+  while (nullptr != (buffer = next_record ()))
   {
     const char *c = strstr (buffer, lpattern);
-    if (NULL != c)
+    if (nullptr != c)
     {
       if (match_anywhere)
         return 1;

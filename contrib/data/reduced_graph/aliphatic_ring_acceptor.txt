@@ -1,0 +1,3 @@
+query: "aliphatic_ring_acceptor.qry"
+element: "W"
+ring: true

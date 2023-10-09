@@ -1,8 +1,11 @@
 #ifndef MULTICONFORMER_H
 #define MULTICONFORMER_H
 
+#include <iostream>
+
 #include "gfp.h"
 #include "fixed_size_counted_fingerprint.h"
+#include "sparsefp.h"
 
 template <typename T>
 class
@@ -55,7 +58,7 @@ template <typename T>
 Multiconformer_Base<T>::Multiconformer_Base()
 {
   _n = 0;
-  _fp = NULL;
+  _fp = nullptr;
 
   return;
 }
@@ -67,7 +70,7 @@ Multiconformer_Base<T>::~Multiconformer_Base()
 
   _n = -87;
 
-  if (NULL != _fp)
+  if (nullptr != _fp)
     delete [] _fp;
 
   return;
@@ -92,7 +95,7 @@ Multiconformer_Base<T>::tanimoto(const Multiconformer_Base<T> & rhs) const
     for (int j = 0; j < rhs._n; j++)
     {
       double tmp = _fp[i].tanimoto(rhs._fp[j]);
-//    cerr << "Between component " << i << " and " << j << " value " << tmp << endl;
+//    std::cerr << "Between component " << i << " and " << j << " value " << tmp << std::endl;
       if (tmp > rc)
         rc = tmp;
     }
@@ -120,7 +123,7 @@ Multiconformer_Base<T>::average_tanimoto(const Multiconformer_Base<T> & rhs) con
     for (int j = 0; j < rhs._n; j++)
     {
       double tmp = _fp[i].tanimoto(rhs._fp[j]);
-      cerr << " i = " << i << " j = " << j << " value " << tmp << endl;
+      std::cerr << " i = " << i << " j = " << j << " value " << tmp << std::endl;
       rc += tmp;
     }
   }

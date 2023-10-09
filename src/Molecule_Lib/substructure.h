@@ -1,34 +1,36 @@
-#ifndef IW_SUBSTRUCTURE_H
-#define IW_SUBSTRUCTURE_H 1
+#ifndef MOLECULE_LIB_SUBSTRUCTURE_H_
+#define MOLECULE_LIB_SUBSTRUCTURE_H_
 
 #include <iostream>
+#include <memory>
+#include <optional>
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
 #endif
 
-#include "iwmtypes.h"
-#include "iwaray.h"
-#include "minmaxspc.h"
-#include "iwminmax.h"
-#include "iwbits.h"
-#include "logical_expression.h"
-#include "msi_object.h"
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwmisc/matcher.h"
+#include "Foundational/iwmisc/minmaxspc.h"
+#include "Foundational/iwmisc/iwminmax.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/logical_expression.h"
+#include "Foundational/iwmisc/msi_object.h"
 
 #include "atom_alias.h"
+#include "iwmtypes.h"
+#include "geometric_constraints.h"
 
 class Molecule_to_Match;
 class Target_Atom;
 class MDL_Molecule;
+class Atom_Typing_Specification;
 
-#ifndef IW_MOLECULE_H
 #include "molecule.h"
-#else
-class Molecule;
-#endif
 
 #include "chiral_centre.h"
 #include "set_of_atoms.h"
+#include "Molecule_Lib/substructure.pb.h"
 
 class MDL_File_Data;
 class MDL_Atom_Data;
@@ -43,6 +45,33 @@ class ISIS_Atom_List;
 #define NAME_OF_OPERATOR_ATTRIBUTE "operator"
 
 class Substructure_Atom;
+
+class Atomic_Smarts_Component;
+
+class ThreeDots;
+
+/*
+  Whenever we get an embedding, we need to keep the identity of the
+  Substructure_Atom objects which made the match.
+
+  _preference_value will be derived from the preference values of the
+  atoms which comprise the match
+*/
+
+class Query_Atoms_Matched : public resizable_array<Substructure_Atom *>
+{
+  private:
+    int _preference_value;
+
+  public:
+    Query_Atoms_Matched ();
+    ~Query_Atoms_Matched ();
+
+    int preference_value () const { return _preference_value;}
+
+    int increment_preference_value (int p) {_preference_value += p; return _preference_value;}
+};
+
 
 /*
   The chiral centre object is a little strange. During building, all
@@ -90,9 +119,224 @@ class Substructure_Chiral_Centre
 
     int construct_from_msi_attribute (const msi_attribute &);
     int write_msi (std::ostream &, const IWString &, const char *) const;
+    int BuildProto(SubstructureSearch::SubstructureChiralCenter& proto) const;
 
     int is_matched (const Molecule * m) const;
 };
+
+// Class describing the ... directive from a smarts.
+// That can be either
+//  [smarts]...[smarts] which just means no matched atoms
+//                      between those matched atoms, with no
+//                      constraints on what is between.
+// The ... directive can be qualified with a {} modifier
+//   [smarts]...{}[smarts]
+// That modifier can contain:
+//   <digit>           exact distance between atoms.
+//   <digit>,<digit>   set of distances.
+//   <digit>-<digit>   range of distances.
+//  e.g.  OC(=O)...C(=O)-O   to find esters "facing away" from each other.
+//  e.g.  OC(=O)...{2}C(=O)-O  exactly two unmatched atoms between the carbons.
+//  e.g.  OC(=O)...{3,5}C(=O)-O  3 or 5 unmatched atoms between the carbons.
+//  e.g.  OC(=O)...{3-5}C(=O)-O  3 - 5 unmatched atoms between the carbons.
+//  e.g.  OC(=O)...{>3}C(=O)-O  4 or more unmatched atoms between the carbons.
+// We can also specify what kinds of atoms are (not) found in the 
+// ... atoms. This is specified with single atom smarts.
+// {[c]}   every one of the atoms must be an aromatic carbon.
+// {0[c]}  none of the atoms can be an aromatic carbon.
+// {>0[c]} there must be at least one atom that is an aromatic carbon.
+// {1[c]}  there must be exactly one atom that is an aromatic carbon.
+// {2[c]}  there must be exactly two atoms that are aromatic carbon.
+// {>2[c]}  there must more than two atoms that are aromatic carbon.
+// {1[c]&0[#7]} Exactly 1 c, and no Nitrogens.
+// {1[c];0[#7]} Exactly 1 c, and no Nitrogens.
+// {4;0[#7]}  Four bonds separating, but no Nitrogens.
+// {4&0[#7]}  Four bonds separating, but no Nitrogens.
+// {0[#7];4}  Four bonds separating, but no Nitrogens.
+// {0[#7]&4}  Four bonds separating, but no Nitrogens.
+// {>3;0[c]}  More than 3 bonds, and no aromatic Carbons.
+// {3-5;[c]}  Between 3 and 5 bonds, all atoms must be aromatic carbon.
+// {3;2[C]}   Three bonds separating, two Aliphatic Carbon - same as {3;[C]}.
+// {3,4}      3 or 4 bonds between.
+// {>0[$(C(=O)N)]}  an aimde carbon atom in ...
+// So a fully specified query might look like
+// N-c...{>4[c]}c-N which would be two nitrogen substituents, separated
+// by more than 4 aromatic carbons (not counting the two shown here).
+
+// A class used for parsing these directives.
+// Each token in the {} directive can be parsed into a NMAB_Token.
+class NMAB_Token 
+{
+  private:
+    // The two matched atoms that define the region.
+    const int _a1;
+    const int _a2;
+
+    // One of IW_LOGEXP_* logical operators.
+    int _op;
+    // An optional < (-1) or > (+1)
+    int _relational ;
+    // Any numbers perceived. If a range, it will be enumerated.
+    resizable_array<int> _number;
+
+    // The smarts. Must be enclosed in [].
+    IWString _smarts;
+
+    // Private functions.
+
+    bool IsComplete() const;
+    // Look for either a single number, or a range starting at s[i].
+    // s[i] must be a digit.
+    // Returns 0 if failure.
+    int GetNumberOrRange(const const_IWSubstring& s, int & i);
+
+  public:
+    NMAB_Token(int a1, int a2);
+
+    int op() const { return _op;}
+    int relational() const { return _relational;}
+    const resizable_array<int>& numbers() const { return _number;}
+    int IsRange() const {
+      return _number.size() >= 1;
+    }
+
+    // If this is a single number, and 'rhs' is also a single number
+    // with an or operator, consolidate with 'this'.
+    int CombineAsRange(const NMAB_Token& rhs);
+
+    // Parse starting at s[i].
+    // Returns 1 if successful, zero otherwise.
+    // Updates i if successful.
+    int Parse(const const_IWSubstring& s, int& i);
+    int Parse(const const_IWSubstring& s);
+
+    // Mostlu used for debugging.
+    const IWString& smarts() const { return _smarts;}
+};
+
+// Once the NMAB directive is parsed into NMAB_Token's, those can be transformed
+// into NMAB_Operator's.
+// If query_ is not set, then _number is interpreted as match atom count.
+// Kind of a lkudge, I did think of having a base class and virtual...
+class NMAB_Operator 
+{
+  private:
+    // An optional < (-1) or > (+1)
+    int _relational;
+
+    // Any numbers perceived. If a range, it will be enumerated.
+    resizable_array<int> _number;
+
+    // If built from smarts.
+    std::unique_ptr<Substructure_Atom> _query;
+
+    // Private functions.
+
+    // Does 's' match the numeric specifications.
+    int _relational_matches(const int s) const;
+
+  public:
+    NMAB_Operator();
+
+    int Build(const NMAB_Token& token);
+
+    int Matches(Molecule_to_Match& target, const Set_of_Atoms& unmatched_atoms);
+};
+  
+// A testable function for parsing the {} directive.
+// Note argument is a local copy.
+extern int
+TokeniseNMABSpecification(const_IWSubstring s, resizable_array_p<NMAB_Token>& tokens);
+
+// A resizable_array_p<NMAB_Token> can be turned into one of these, that is actually
+// used for matching. 
+
+class No_Matched_Atoms_Between {
+  private:
+    // The matched atoms that define the ends of the no matched atoms between segment.
+    const int _a1;
+    const int _a2;
+
+    IW_Logical_Expression _logexp;
+
+    resizable_array_p<NMAB_Operator> _specs;
+
+  // Private functions
+
+    int _matches_exhaustive(Molecule_to_Match& target,
+                                              const Query_Atoms_Matched& matched_atoms,
+                                              const int * matched,
+                                              int * in_path,
+                                              const atom_number_t my_atom,
+                                              const atom_number_t destination,
+                                              const int current_distance);
+    int _is_a_match(Molecule_to_Match& target,
+                                const Query_Atoms_Matched& matched_atoms,
+                                const int * in_path);
+  public:
+    No_Matched_Atoms_Between(const int a1, const int a2);
+
+    // Parse any {...} directive given.
+    int Initialise(const ThreeDots& three_dots);
+
+    // Given that 'matched_atoms' is an embedding, and 'matched'
+    // contains the atoms matched by 'matched_atoms', do we
+    // match this molecule.
+    // 'tmp' will be a scratch array sized to the number of atoms
+    // in the molecule being searched.
+    int Matches(Molecule_to_Match& target,
+                        Query_Atoms_Matched & matched_atoms,
+                        const int * matched,
+                        int * tmp);
+    // The Matches method looks only at the first shortest path
+    // between the atoms found. Sometimes it will be important
+    // to examine all paths found.
+    int MatchesExhaustive(Molecule_to_Match& target,
+                        Query_Atoms_Matched & matched_atoms,
+                        const int * matched,
+                        int * tmp);
+};
+
+namespace down_the_bond {
+
+// Looking down from one matched atom to another, how many atoms are
+// there - matched or otherwise. Includes matched atom _a2.
+// the -{} directive is parsed into one of these.
+// TODO: expand to other concepts.
+class DownTheBond {
+  private:
+    int _a1;
+    int _a2;
+
+    Min_Max_Specifier<int> _natoms;
+
+  public:
+    DownTheBond();
+    DownTheBond(int a1);
+
+    int ConstructFromProto(const SubstructureSearch::DownTheBond& proto);
+    int BuildProto(SubstructureSearch::DownTheBond& proto) const;
+
+    // Called when parsing a smarts. The opening and closing {}
+    // should have been removed.
+    int Build(const const_IWSubstring& buffer);
+
+    // When parsing smarts the identity of the atom at the other end
+    // is not yet known, so it must be settable.
+    void set_a2(int s) {
+      _a2 = s;
+    }
+
+    int Complete() const {
+      return _a2 >= 0;
+    }
+
+    int Matches(Molecule_to_Match& target,
+                Query_Atoms_Matched & matched_atoms,
+                int * visited);
+};
+
+}  // namespace down_the_bond
 
 /*
   A bond can be one of several kinds.
@@ -127,7 +371,10 @@ class Substructure_Bond_Specifier_Base
 
 //  virtual int write_msi (std::ostream &, int &, int = 0) = 0;
 
+    // Write smarts to a stream.
     virtual int smarts (std::ostream &) const = 0;
+    // Append smarts to a string.
+    virtual int Smarts(IWString& smt) const = 0;
 
     virtual int matches (Bond_and_Target_Atom & b) const = 0;
 
@@ -154,6 +401,7 @@ class Substructure_Bond_Specifier_Type : public Substructure_Bond_Specifier_Base
     int debug_print (std::ostream &, const IWString &) const;
 
     int smarts (std::ostream &) const;
+    int Smarts(IWString& smt) const;
 
     int involves_aromatic_bond_specification (int & r) const;
 
@@ -179,6 +427,7 @@ class Substructure_Bond_Specifier_Ring : public Substructure_Bond_Specifier_Base
     int debug_print (std::ostream &, const IWString &) const;
 
     int smarts (std::ostream &) const;
+    int Smarts(IWString& smt) const;
 
     int involves_aromatic_bond_specification (int & r) const;
 
@@ -200,6 +449,7 @@ class Substructure_Bond_Specifier_NRings : public Substructure_Bond_Specifier_Ba
     int debug_print (std::ostream &, const IWString &) const;
 
     int smarts (std::ostream &) const;
+    int Smarts(IWString& smt) const;
 
     int involves_aromatic_bond_specification (int & r) const;
 
@@ -220,6 +470,7 @@ class Substructure_Bond_Specifier_Aromatic : public Substructure_Bond_Specifier_
     int debug_print (std::ostream &, const IWString &) const;
 
     int smarts (std::ostream &) const;
+    int Smarts(IWString& smt) const;
 
     int involves_aromatic_bond_specification (int & r) const;
 
@@ -262,12 +513,20 @@ class Substructure_Bond
 
   public:
     Substructure_Bond ();
+    ~Substructure_Bond ();
 
     int ok () const;
     int debug_print (std::ostream &, const IWString &) const;
 
+    int construct_from_smarts (const char * smarts, int chars_to_process, int & characters_processed);
     int construct_from_msi_attribute (const msi_object *, extending_resizable_array<Substructure_Atom *> &);
+    int construct_from_msi_attribute (const msi_attribute *);
     int write_as_msi_attribute (std::ostream & os, int indentation) const;
+    // Since the bond is represented either as a SubstructureBond or 
+    // as a bond smarts, building the proto requires access to the parent.
+    int BuildProto(SubstructureSearch::SubstructureAtom& proto) const;
+
+    int BuildProtoNoBond(SubstructureSearch::SubstructureBond& proto) const;
 
     int make_single_or_aromatic ();
 
@@ -285,17 +544,16 @@ class Substructure_Bond
 
     int involves_aromatic_bond_specification (int & r) const;
 
-    int construct_from_msi_attribute (const msi_attribute *);
-
     int can_be_written_as_attribute () const;
 
     int copy (const Bond *, int);
 
     int matches (Bond_and_Target_Atom & b);
 
-    int construct_from_smarts (const char * smarts, int chars_to_process, int & characters_processed);
-
     void set_bond_type (bond_type_t b) { _bond_types = b;}
+
+    // Represent the bond as a smarts component.
+    IWString Smarts() const;
 };
 
 /*
@@ -319,11 +577,15 @@ class Substructure_Atom_Specifier
 //  This next group of things can either be specified for the Substructure_Atom,
 //  or with individual Substructure_Atom_Specifiers.
 
+    // _element is no longer used for matching, _element_unique_id is now used.
+    // The _element array is retained so elemental properties can be retrieved.
     resizable_array<const Element *> _element;
     resizable_array<int>   _element_unique_id;
+
     Min_Max_Specifier<int> _ncon;
     Min_Max_Specifier<int> _ncon2;
     Min_Max_Specifier<int> _nbonds;
+    Min_Max_Specifier<int> _valence;  // From the 'v' directive in smarts.
     Min_Max_Specifier<int> _formal_charge;
     Min_Max_Specifier<int> _nrings;
     Min_Max_Specifier<int> _ring_bond_count;
@@ -331,8 +593,8 @@ class Substructure_Atom_Specifier
     Min_Max_Specifier<int> _hcount;
     aromaticity_type_t     _aromaticity;
     int                    _chirality;
-    Min_Max_Specifier<int> _aromatic_ring_sizes;
-    Min_Max_Specifier<int> _aliphatic_ring_sizes;
+    Min_Max_Specifier<int> _aromatic_ring_size;
+    Min_Max_Specifier<int> _aliphatic_ring_size;
     Min_Max_Specifier<int> _attached_heteroatom_count;
     Min_Max_Specifier<int> _lone_pair_count;
     Min_Max_Specifier<int> _unsaturation;
@@ -343,10 +605,16 @@ class Substructure_Atom_Specifier
     Min_Max_Specifier<int> _fused_system_size;
     Min_Max_Specifier<int> _vinyl;
     int                    _all_rings_kekule;
+    // initialise to negative to indicate no specification.
+    // 0 means NOT spiro.
+    // 1 means IS spiro.
+    int                    _spiro;
 
 //  int                    _carbocycle;
 
     Min_Max_Specifier<int> _heteroatoms_in_ring;
+
+    CahnIngoldPrelog _cip_chirality;
 
 //  We can specify that an atom only match an atom in the molecular
 //  spinach or not. Note that this is not an atom property, but can
@@ -360,6 +628,13 @@ class Substructure_Atom_Specifier
 //  We want to be able to look for an atom in a "terminal" ring.
 
     Min_Max_Specifier<int> _scaffold_bonds_attached_to_ring;
+
+    // If the query contains atom typing.
+    atom_type_t _atom_type;
+
+    // Matching non organic atoms is done as a special case. This is because
+    // when a query is defined, not all non-organic elements may be known;
+    int _match_non_organic;
 
 //  Every atom specifier has a preference value. When a Substructure_Atom
 //  is matched, it will determine an aggregate preference value for that
@@ -404,6 +679,10 @@ class Substructure_Atom_Specifier
     int _add_element (const atomic_number_t z);
     int _add_element (const Element * e);
 
+    int _fetch_aromaticity(const SubstructureSearch::SubstructureAtomSpecifier & proto);
+    void AddOrganicElements();
+    void AddNonOrganicElements();
+
   public:
     Substructure_Atom_Specifier ();
     Substructure_Atom_Specifier (const Element *);
@@ -413,6 +692,8 @@ class Substructure_Atom_Specifier
     int ok () const;
     int debug_print (std::ostream &, const IWString & = "") const;
     int terse_details (std::ostream &, const IWString &) const;
+
+    int BuildProto(SubstructureSearch::SubstructureAtomSpecifier& proto) const;
 
     int  preference_value () const { return _preference_value;}
     void set_preference_value (int s) { _preference_value = s;}
@@ -424,9 +705,15 @@ class Substructure_Atom_Specifier
     int construct_from_smiles_token (const const_IWSubstring &);
     int construct_from_smiles_token (const char *, int);
 
+    int construct_from_proto(const SubstructureSearch::SubstructureAtomSpecifier&);
+
     int smarts (IWString &) const;
 
-    int attributes_specified ();
+    // Non const method that will count everthing and set _attributes_specified.
+    int count_attributes_specified ();
+    int attributes_specified() const {
+      return _attributes_specified;
+    }
 
     int spinach_match_specified () const { return _match_spinach_only >= 0;}
     int spinach_match_value () const { return _match_spinach_only;}
@@ -472,6 +759,10 @@ class Substructure_Atom_Specifier
     int set_min_nbonds (int);
     int set_max_nbonds (int);
 
+    int set_valence (int);
+    int set_min_valence (int);
+    int set_max_valence (int);
+
     int set_nrings (int);
     int set_min_nrings (int i);
     int set_max_nrings (int i);
@@ -510,30 +801,10 @@ class Substructure_Atom_Specifier
     const Min_Max_Specifier<int> & formal_charge () const { return _formal_charge;}
     const Min_Max_Specifier<int> & isotope () const { return _isotope;}
     const int & userAtomType () const { return _userAtomType;} 
-};
 
-class Atomic_Smarts_Component;
-
-/*
-  Whenever we get an embedding, we need to keep the identity of the
-  Substructure_Atom objects which made the match.
-
-  _preference_value will be derived from the preference values of the
-  atoms which comprise the match
-*/
-
-class Query_Atoms_Matched : public resizable_array<Substructure_Atom *>
-{
-  private:
-    int _preference_value;
-
-  public:
-    Query_Atoms_Matched ();
-    ~Query_Atoms_Matched ();
-
-    int preference_value () const { return _preference_value;}
-
-    int increment_preference_value (int p) {_preference_value += p; return _preference_value;}
+    int spiro() const {
+      return _spiro;
+    }
 };
 
 class Substructure_Atom_Environment : public resizable_array_p<Substructure_Atom>
@@ -591,6 +862,9 @@ class Molecule_to_Query_Specifications;
   object into two types, but this lead to too many other problems. These
   problems could have been solved with virtual functions, but I was unwilling
   to incur the associated run-time inefficiencies.
+
+  TODO:ianwatson Not a good decision to make this inherit from a Substructure_Atom_Specifier.
+  Instead, rely on the _components array.
 */
 
 class Parse_Smarts_Tmp;
@@ -610,6 +884,12 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int _initial_atom_number;
 
     int _atom_map_number;
+
+    // Global matching conditions, like ring systems, can set global match numbers
+    // for each atom. If requested, we can only match with an atom that has a given
+    // global match id.
+    // Note that in smarts, these are restricted to single digits.
+    int _global_match_id;
 
     resizable_array_p<Substructure_Atom> _children;
 
@@ -677,6 +957,10 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 
     int _sum_all_preference_hits;
 
+    // The number of unmatched atoms attached.
+    // Note this is matched once all atoms have been matched.
+    Min_Max_Specifier<int> _unmatched_atoms_attached;
+
     Substructure_Atom * _parent;
     Substructure_Bond * _bond_to_parent;
 
@@ -685,6 +969,11 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 //  for efficiency, the fragment ID is propagated to the root atom
 
     int _fragment_id;
+
+    // Atoms can be assigned an atom type group. All matched atoms with the
+    // same atom type group must have the same atom type.
+    // atom_type_group values must be positive.
+    unsigned int _atom_type_group;
 
 //  connections to other atoms. First is same as _bond_to_parent. Here
 //  is where ring closing bonds in the query will be found.
@@ -729,7 +1018,11 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int _fill_min_ncon (Molecule & m, atom_number_t a) const;
 
     int _create_preference_from_msi_object (const msi_object & msi);
-    int _create_environment_from_msi_object (const msi_object & , extending_resizable_array<Substructure_Atom *> &);
+    int _create_preference_from_proto (const SubstructureSearch::SubstructureAtomSpecifier& proto);
+    int _create_environment_from_msi_object (const msi_object & ,
+                                             extending_resizable_array<Substructure_Atom *> &);
+    int _create_environment_from_proto(const SubstructureSearch::SubstructureAtomEnvironment& proto,
+                                       extending_resizable_array<Substructure_Atom *> & completed);
     int _construct_from_msi_object (const msi_object &, extending_resizable_array<Substructure_Atom *> &);
 
     int _parse_smarts_environment (const Atomic_Smarts_Component &);
@@ -762,11 +1055,24 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 
     int _ring_closure_bonds_match (Target_Atom * a) const;
 
-    int _add_bond (const msi_object * msi, extending_resizable_array<Substructure_Atom *> & completed);
-    int _add_bond       (Substructure_Bond * b);
-    int _process_attribute_smarts_bond  (const msi_attribute *, extending_resizable_array<Substructure_Atom *> &);
-    int _process_attribute_bond  (const msi_attribute *, bond_type_t, extending_resizable_array<Substructure_Atom *> &);
-    int _process_attribute_bonds (const msi_object &, extending_resizable_array<Substructure_Atom *> &);
+    int _add_bond(const msi_object * msi, extending_resizable_array<Substructure_Atom *> & completed);
+    int _add_bond(Substructure_Bond * b);
+    int _add_bonds(const google::protobuf::RepeatedField<uint32_t>& atoms,
+                   const bond_type_t btype,
+                   extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_smarts_bond(const IWString& input,
+                             extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_attribute_bond(const msi_attribute *, bond_type_t, extending_resizable_array<Substructure_Atom *> &);
+    int _process_attribute_bonds(const SubstructureSearch::SubstructureAtom& proto,
+                                 extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_attribute_bonds(const msi_object & msi, 
+                                 extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_attribute_smarts_bond (const msi_attribute * att,
+                                        extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_substructure_bond(const SubstructureSearch::SubstructureBond& bond,
+                                        extending_resizable_array<Substructure_Atom *> & completed);
+    int _construct_from_proto(const SubstructureSearch::SubstructureAtom& proto,
+                              extending_resizable_array<Substructure_Atom *> & completed);
 
     int _add_ncon_query_atom_preferences(const Molecule & m, atom_number_t my_atom_number);
 
@@ -786,12 +1092,15 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int terse_details (std::ostream &, const IWString &) const;
     int recursive_terse_details (std::ostream &, const IWString &) const;
     int print_connectivity_graph(std::ostream &) const;
+    // Transfer attributes to `proto`.
+    int BuildProto(SubstructureSearch::SubstructureAtom& proto) const;
 
     void set_match_as_match_or_rejection (int s) { _match_as_match_or_rejection = s;}
 
     int  add_ncon_preference_object (int n, int p);
 
     int atom_map_number() const { return _atom_map_number;}
+    int global_match_id() const { return _global_match_id;}
 
     int number_descendants () const;
 
@@ -803,11 +1112,18 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int symmetry_groups_present() const;
     int first_symmetry_group() const;
 
+    int atom_type_groups_present() const;
+    unsigned int atom_type_group() const {
+      return _atom_type_group;
+    }
+
     int spinach_match_specified () const;
 
     void adjust_initial_atom_numbers (const int * xref);     // subset of molecule has been used, need to adjust initial atom numbers
 
     void assign_unique_atom_numbers (int &);
+    // Non const method that counts values and sets _attributes_specified.
+    int  count_attributes_specified ();
     int  attributes_specified ();
     int  unique_id () const { return _unique_id;}
     int  initial_atom_number () const { return _initial_atom_number;}
@@ -846,19 +1162,21 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 
     int parse_smarts_specifier (const msi_attribute * msi);
     int parse_smarts_specifier (const const_IWSubstring &, Parse_Smarts_Tmp &, int);
-    int parse_smarts_specifier (const_IWSubstring &);
+    int parse_smarts_specifier (const const_IWSubstring &);
 
     int parse_smiles_specifier (const msi_attribute * msi);
     int parse_smiles_specifier (const IWString & smiles);
 
     int construct_from_msi_object (const msi_object &, extending_resizable_array<Substructure_Atom *> &);
+    int construct_from_proto (const SubstructureSearch::SubstructureAtom & proto, extending_resizable_array<Substructure_Atom *> & completed);
+    int FormBonds(const SubstructureSearch::SubstructureAtom& proto, extending_resizable_array<Substructure_Atom *> & completed);
     int create_from_molecule (Molecule & m, 
                               const MDL_File_Data & mdlfd,
                               atom_number_t my_atom_number,
                               Substructure_Atom * my_parent,
                               const Molecule_to_Query_Specifications &,
                               extending_resizable_array<Substructure_Atom *> & completed,
-                              const int * include_these_atoms = NULL);
+                              const int * include_these_atoms = nullptr);
 
     int construct_from_smarts_token (const const_IWSubstring & smarts);
     int construct_from_smarts_token (const char * smarts, int nchars);
@@ -870,6 +1188,7 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int check_internal_consistency (int) const;
 
     int or_id () const { return _or_id;}
+
     int ring_id () const { return _ring_id;}
     int fused_system_id () const { return _fused_system_id;}
 
@@ -913,7 +1232,7 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 
     Target_Atom * current_hold_atom () const { return _current_hold_atom;}
     atom_number_t atom_number_matched () const;
-    int is_matched () const { return NULL != _current_hold_atom;}
+    int is_matched () const { return nullptr != _current_hold_atom;}
 
     int unmatched_connections (const int *) const;
 
@@ -932,10 +1251,13 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int ring_sizes_specified (resizable_array<int> &) const;
     int involves_ring_specifications_for_bonds () const;
     int involves_aromatic_bond_specifications (int &) const;
+    int unmatched_atom_counts_present() const;
+    int unmatched_atoms_attached_specified() const;
 
     int adjust_ring_specifications (int, const List_of_Ring_Sizes &);
 
     int write_msi (std::ostream &, int &, const const_IWSubstring &, int = 0);
+    int write_proto (std::ostream &, int &, const const_IWSubstring &, int = 0);
 
     int matches (Target_Atom &, const int *);
 
@@ -947,8 +1269,8 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 //  of an environment
 
     int matches (int * previously_matched_atoms);
-    int environment_search (Query_Atoms_Matched & matched_query_atoms,
-                                       int * previously_matched_atoms);
+    int environment_search(Query_Atoms_Matched & matched_query_atoms,
+                           int * previously_matched_atoms);
 
     int add_your_children (Query_Atoms_Matched &);
     int remove_your_children (Query_Atoms_Matched &, int *);
@@ -987,7 +1309,7 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 //  this function is used in the environment
 
     void set_parent (Substructure_Atom * a, Substructure_Bond * b, int add_bond_to_bonds_array = 0);
-    void no_parent () { _parent = NULL; _bond_to_parent = NULL;};
+    void no_parent () { _parent = nullptr; _bond_to_parent = nullptr;};
 
 //  Used during building from smarts
 
@@ -1005,6 +1327,14 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int query_atom_with_isotope (int) const;   // first query atom that specifies a given isotope
 
     template <typename T> int any_query_atom(T) const;
+
+    // If there is a specification of unmatched query atoms, does it match?
+    int unmatched_atoms_attached_matches(const Query_Atoms_Matched& matched_query_atoms,
+                                         const int * already_matched,
+                                         const Molecule_to_Match& target);
+
+    // Used when parsing environments. Note that we take ownership of `spec`.
+    int add_component(Substructure_Atom_Specifier* spec);
 };
 
 extern std::ostream & operator << (std::ostream &, const Substructure_Atom &);
@@ -1091,6 +1421,12 @@ class Substructure_Environment : public resizable_array_p<Substructure_Atom>
                                             extending_resizable_array<Substructure_Atom *> & completed);
     int _process_attribute_bonds (const msi_object & msi,
                                              extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_how_connected(const SubstructureSearch::SubstructureEnvironment& proto,
+                                             extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_attachment_bonds(const SubstructureSearch::EnvironmentAttachment& proto,
+                                             extending_resizable_array<Substructure_Atom *> & completed);
+    int _process_attachment_via_substructure_bond(const SubstructureSearch::EnvironmentAttachment& proto,
+                                             extending_resizable_array<Substructure_Atom *> & completed);
     int _add_possible_parent (atom_number_t possible_parent,
                                                 bond_type_t possible_parent_bond_type,
                                                 extending_resizable_array<Substructure_Atom *> & completed);
@@ -1108,26 +1444,71 @@ class Substructure_Environment : public resizable_array_p<Substructure_Atom>
     int and_id () const { return _and_id;}
     int or_id  () const { return _or_id;}
 
-    void assign_unique_atom_numbers (int &);
-    int  attributes_specified ();
+    void assign_unique_atom_numbers(int &);
+    int  count_attributes_specified();
 
-    void set_environments_can_share_attachment_points (int s) { _environments_can_share_attachment_points = s;}
+    void set_environments_can_share_attachment_points(int s) { _environments_can_share_attachment_points = s;}
 
-    int involves_aromatic_bond_specifications (int &) const;
+    int involves_aromatic_bond_specifications(int &) const;
 
-    int no_other_substituents_allowed () const { return _no_other_substituents_allowed;}
+    int no_other_substituents_allowed() const { return _no_other_substituents_allowed;}
 
-    int construct_from_msi_object (const msi_object & msi,
+    int construct_from_msi_object(const msi_object & msi,
+                               extending_resizable_array<Substructure_Atom *> & completed,
+                               atom_number_t possible_parent = INVALID_ATOM_NUMBER,
+                               bond_type_t possible_parent_bond_type = INVALID_BOND_TYPE);
+    int construct_from_proto(const SubstructureSearch::SubstructureEnvironment& proto,
                                extending_resizable_array<Substructure_Atom *> & completed,
                                atom_number_t possible_parent = INVALID_ATOM_NUMBER,
                                bond_type_t possible_parent_bond_type = INVALID_BOND_TYPE);
 
-    int write_msi (std::ostream & os, int & object_id, int indentation);
+    int write_msi(std::ostream & os, int & object_id, int indentation);
+    int BuildProto(SubstructureSearch::SubstructureEnvironment& proto) const;
 
-    int matches (int *, int *);
+    int matches(int * previously_matched_atoms,
+                const std::unique_ptr<int[]>& matched_by_global_specs,
+                int * anchor_atom_available);
 
-    int print_environment_matches (std::ostream &) const;
+    int print_environment_matches(std::ostream &) const;
 };
+
+class Single_Substructure_Query;
+
+class MatchedAtomMatch
+{
+  private:
+    int _unique_id;
+
+    // The matched atom numbers that we must match
+    resizable_array<int> _atoms;
+
+    // Queries derived from the 'smarts' directive in the proto are
+    // divided into positive and netagive matches, depending on whether
+    // the smarts starts with ! or not.
+
+    // If any of the _positive_matches queries matches, that is a match.
+    resizable_array_p<Single_Substructure_Query> _positive_matches;
+    // If any of the _negative_matches queries matches, that is a non match.
+    resizable_array_p<Single_Substructure_Query> _negative_matches;
+
+  public:
+    MatchedAtomMatch();
+
+    void set_id(int s) {
+      _unique_id = s;
+    }
+    int id() const {
+      return _unique_id;
+    }
+
+    int ConstructFromProto(const SubstructureSearch::MatchedAtomMatch& proto);
+    int BuildProto(SubstructureSearch::MatchedAtomMatch& proto) const;
+
+    int Matches(Query_Atoms_Matched& matched_query_atoms,
+                Molecule_to_Match& target,
+                int* already_matched);
+};
+
 
 /*
   We can specify how many of a given atom type must match
@@ -1135,23 +1516,45 @@ class Substructure_Environment : public resizable_array_p<Substructure_Atom>
   Should make this inherit from the Element_Matcher object
 */
 
-class Elements_Needed : public Min_Max_Specifier<int>
+class Elements_Needed
 {
   private:
-    atomic_number_t _z;
+    resizable_array<const Element*> _elements;
+
+    enum class Op {
+      NOT_SET,
+      AND,
+      OR,
+      XOR
+    };
+    Op _operator;
+
+    Min_Max_Specifier<int> _hits_needed;
+
+    // private functions;
+    int _matches_single_element(const Query_Atoms_Matched& qam) const;
+    int _determine_match(const int * found, const int nhits) const;
+    int _matches_single_element(Molecule_to_Match & target_molecule) const;
 
   public:
-    Elements_Needed ();
-    Elements_Needed (atomic_number_t);
+    Elements_Needed();
 
-    int ok () const;
-    int debug_print (std::ostream &, const IWString &) const;
+    int add_atomic_number(int atomic_number);
 
-    int construct_from_msi_object (const msi_object &);
-    int write_msi (std::ostream & os, const char *, int & object_id, int indentation) const;
+    int ok() const;
+    int debug_print(std::ostream &, const IWString &) const;
 
-    int matches (Query_Atoms_Matched & qam) const;
-    int matches (Molecule_to_Match & target) const;
+    void set_min(int s) {
+      _hits_needed.set_min(s);
+    }
+
+    int construct_from_msi_object(const msi_object &);
+    int ConstructFromProto(const SubstructureSearch::ElementsNeeded& proto);
+    int write_msi(std::ostream & os, const char *, int & object_id, int indentation) const;
+    int BuildProto(SubstructureSearch::ElementsNeeded& proto) const;
+
+    int matches(Query_Atoms_Matched & qam) const;
+    int matches(Molecule_to_Match & target) const;
 };
 
 /*
@@ -1209,6 +1612,150 @@ class Substructure_Ring_Environment : public Substructure_Atom
     int matches (Molecule_to_Match &, const int *);
 };
 
+class Substructure_Query;
+// A ring or ring system can have any number of Substituent's.
+class Substituent {
+  private:
+    // How many of these must there be attached to a ring.
+    Min_Max_Specifier<int> _hits_needed;
+    // the atoms in the substituent.
+    Min_Max_Specifier<int> _natoms;
+    // the number of rings in the substituent.
+    Min_Max_Specifier<int> _nrings;
+    // The max bond separation from attachment point.
+    Min_Max_Specifier<int> _length;
+
+    // Substituent's can set a global_id.
+    int _set_global_id;
+
+    // Queries that are applied to the atoms in the substituent.
+    resizable_array_p<Substructure_Query> _required;
+    resizable_array_p<Substructure_Query> _disqualifying;
+
+    // In order to enable writing a proto that is the same as the
+    // input, keep a copy of the smarts.
+    resizable_array_p<IWString> _required_smarts;
+    resizable_array_p<IWString> _disqualifying_smarts;
+
+    // private functions.
+    int OkNrings(Molecule& m, const int* storage, int flag) const;
+    int OkLength(Molecule& m, const int* storage, atom_number_t anchor, int flag) const;
+    int RunQueries(Molecule_to_Match& target, const int * storage, int flag,
+                       int& got_required_match,
+                       int& got_rejected_match);
+    int MatchesInner(Molecule_to_Match& target, const int * ring_atoms, int * storage);
+    void SetTargetGlobalIds(int * storage, int flag, Molecule_to_Match& target) const;
+    void FillMatchedAtomsArray(std::unique_ptr<int[]>& matched_by_global_specs,
+                        const int matoms,
+                        const int * storage,
+                        int flag) const;
+
+  public:
+    Substituent();
+
+    int ConstructFromProto(const SubstructureSearch::Substituent& proto);
+    int BuildProto(SubstructureSearch::Substituent& proto) const;
+
+    // Given a set of matched atoms (which may, or may not) describe
+    // a ring, or ring system, does this specification match?
+    // `storage` is an array of m.natoms() that each Substituent uses to
+    // hold the identities of the atoms it is processing.
+    int Matches(Molecule_to_Match& target, const int * ring_atoms, int * storage,
+                std::unique_ptr<int[]>& matched_by_global_specs);
+};
+
+// In processing inter-ring regions, there are a number of attributes
+// that are computed. Keeping them all in a struct avoids having
+// too many function arguments.
+
+struct InterRingRegionData {
+  // The molecule being examined.
+  Molecule* m;
+  // The value that will be set for entries in `region`.
+  int region_number;
+  int * region = nullptr;
+
+  // Counters that are updated as atoms in the region are identified.
+  int atoms_in_region = 0;
+  // The ring atoms that define this region.
+  Set_of_Atoms ring_connections;
+
+  public:
+    InterRingRegionData(Molecule* mol, int * r) : m(mol), region(r) {
+    }
+
+    // At the start of identifying a new region, set the region number
+    // and initialise per-region counters.
+    void BeginNewRegion(int number);
+};
+
+class InterRingAtoms {
+  private:
+    // The number of atoms in an inter-ring region.
+    Min_Max_Specifier<int> _natoms;
+
+    // The number of ring atoms connected. If 2, then a traditional
+    // linker group.
+    Min_Max_Specifier<int> _ring_connections;
+
+    // The number of instances of this needed for a match.
+    Min_Max_Specifier<int> _hits_needed;
+
+    // The longest bonds_between between the ring atoms defining an inter-ring
+    // region. If there are > 2 ring atoms connected, then all inter-ring
+    // distances must satisfy this constraint.
+    Min_Max_Specifier<int> _length;
+
+    // If specified, all lengths specified here must be matched. This enables
+    // specification of AND conditions.
+    resizable_array<int> _required_length;
+
+    // An inter-ring region can be defined by global_id values set by ring
+    // or ring system specifications.
+    resizable_array<int> _defined_by_ring_global_id;
+
+    // InterRingAtoms can set a global_id.
+    int _set_global_id;
+
+    // Queries that are applied to the atoms in the region.
+    resizable_array_p<Substructure_Query> _required;
+    resizable_array_p<Substructure_Query> _disqualifying;
+
+    // In order to enable writing a proto that is the same as the
+    // input, keep a copy of the smarts.
+    resizable_array_p<IWString> _required_smarts;
+    resizable_array_p<IWString> _disqualifying_smarts;
+
+  // private functions.
+
+    // Returns true of the ring_connections in `data` satisfy _length.
+    int OkLengths(Molecule& m, InterRingRegionData& data, int region_number);
+    int OkRequiredLengths(Molecule& m, InterRingRegionData& data, int region_number);
+    int RunQueries(Molecule_to_Match& target, InterRingRegionData& data, int region_number);
+    int RunQueriesInner(Molecule_to_Match& subset_target, InterRingRegionData& data, int region_number);
+
+  public:
+    InterRingAtoms();
+
+    int global_id() const {
+      return _set_global_id;
+    }
+
+    int ConstructFromProto(const SubstructureSearch::InterRingAtoms& proto);
+    int BuildProto(SubstructureSearch::InterRingAtoms& proto) const;
+
+    // Given a set of matched atoms, does this specification match?
+    // The atoms where data.region[i] == region_number are examined.
+    int Matches(Molecule_to_Match& target,
+                int region_number,
+                InterRingRegionData& data,
+                std::unique_ptr<int[]>& matched_by_global_specs);
+    // After all InterRingAtoms are checked against all possible inter ring
+    // regions, we need to check whether the number of matches found is 
+    // consistent with any specification of _hits_needed.
+    int MatchesNhits(int nhits) const;
+};
+
 /*
   We can specify details of either a ring, or a ring system. Those
   specifications have certain elements in common
@@ -1244,6 +1791,7 @@ class Substructure_Ring_Base
     Min_Max_Specifier<int> _within_ring_unsaturation;
 
     Min_Max_Specifier<int> _atoms_with_pi_electrons;
+    Min_Max_Specifier<int> _fully_saturated_atoms;
 
     Min_Max_Specifier<int> _largest_number_of_bonds_shared_with_another_ring;
 
@@ -1259,42 +1807,60 @@ class Substructure_Ring_Base
     resizable_array_p<Substructure_Atom> _environment_atom;
     IW_Logical_Expression _environment_logexp;
 
-    int _environment_can_match_in_ring_atoms;     // aug 2014. Need to be able to describe the ring itself
+    int _environment_can_match_in_ring_atoms;     // Aug 2014. Need to be able to describe the ring itself.
+
+    // Jan 2022. Optionally set a global match id value for each member of the ring/system.
+    int _set_global_id;
+
+    // May 2022. Extend atoms covered by a global id to attached carbonyl and similar.
+    bool _ring_extends_to_carbonyl;
+
+    // June 2022. Implement substituent idea.
+    resizable_array_p<Substituent> _substituent;
 
     IWString _comment;
 
 //  private functions
 
-    int _construct_environment (const const_IWSubstring &);
-
-  public:
-    Substructure_Ring_Base ();
-    ~Substructure_Ring_Base ();
-
-    int ok () const;
+    int _construct_environment(const const_IWSubstring &);
 
   protected:
-    int debug_print (std::ostream &) const;
+    int ExtendToCarbonyl(const Molecule& m, int* in_system) const;
 
-    int write_msi_attributes (std::ostream & os, int & object_id, const const_IWSubstring & ind) const;
-    int construct_from_msi_object (const msi_object &, int &);
+  public:
+    Substructure_Ring_Base();
+    ~Substructure_Ring_Base();
 
-    int _environment_matches (Molecule_to_Match &, int *);
-    int _environment_matches (Molecule_to_Match & target,
-                                              int * ring,
-                                              int * already_matched);
-    int _environment_matches (Molecule_to_Match &, const int *, Substructure_Atom &);
-    int _environment_matches (Molecule_to_Match & target,
-                                              const int * ring,
-                                              Substructure_Atom & root_atom,
-                                              int * already_matched);
-    int _environment_matches (Molecule_to_Match & target,
-                                              Substructure_Atom & root_atom,
-                                              const int * ring,
-                                              int * already_matched);
-    int _environment_matches (Molecule_to_Match & target,
-                              Query_Atoms_Matched & matched_query_atoms,
-                              int * previously_matched_atoms);
+    int ok() const;
+
+    int set_global_id() const {
+      return _set_global_id;
+    }
+
+  protected:
+    int debug_print(std::ostream &) const;
+
+    int write_msi_attributes(std::ostream & os, int & object_id, const const_IWSubstring & ind) const;
+    int construct_from_msi_object(const msi_object &, int &);
+    int ConstructFromProto(const SubstructureSearch::SubstructureRingBase& proto);
+    int BuildProto(SubstructureSearch::SubstructureRingBase& proto) const;
+
+    int _environment_matches(Molecule_to_Match &, int *);
+    int _environment_matches(Molecule_to_Match & target,
+                             int * ring,
+                             int * already_matched);
+    int _environment_matches(Molecule_to_Match &, const int *, Substructure_Atom &);
+    int _environment_matches(Molecule_to_Match & target,
+                             const int * ring,
+                             Substructure_Atom & root_atom,
+                             int * already_matched);
+    int _environment_matches(Molecule_to_Match & target,
+                             Substructure_Atom & root_atom,
+                             const int * ring,
+                             int * already_matched);
+    int _environment_matches(Molecule_to_Match & target,
+                             Query_Atoms_Matched & matched_query_atoms,
+                             int * previously_matched_atoms);
 
 };
 
@@ -1322,22 +1888,74 @@ class Substructure_Ring_Specification : public Substructure_Ring_Base
 
     Min_Max_Specifier<int> _fused_non_aromatic_neighbours;
 
+    int _spiro_fusion_count;
+
 //  private functions
 
-    int _environment_matches (Molecule_to_Match &, const Ring &);
+    int _environment_matches(Molecule_to_Match &, const Ring &);
+
+  // private functions.
+    int OkSpiroFusionCount(Molecule& m, const Ring& ring) const;
 
   public:
-    Substructure_Ring_Specification ();
-    ~Substructure_Ring_Specification ();
+    Substructure_Ring_Specification();
+    ~Substructure_Ring_Specification();
 
-    int ok () const;
-    int debug_print (std::ostream &, const IWString &) const;
-    int terse_details (std::ostream &, const IWString &) const;
+    int ok() const;
+    int debug_print(std::ostream &, const IWString &) const;
+    int terse_details(std::ostream &, const IWString &) const;
 
-    int construct_from_msi_object (const msi_object &);
-    int write_msi (std::ostream & os, int & object_id, int indentation) const;
+    int construct_from_msi_object(const msi_object &);
+    int ConstructFromProto(const SubstructureSearch::SubstructureRingSpecification& proto);
+    int BuildProto(SubstructureSearch::SubstructureRingSpecification& proto) const;
+    int write_msi(std::ostream & os, int & object_id, int indentation) const;
 
-    int matches (Molecule_to_Match &);
+    int matches(Molecule_to_Match &, std::unique_ptr<int[]>& matched_by_global_specs);
+};
+
+/*
+  Within a Substructure_Ring_System_Specification we can specify how many
+  of individual ring sizes are needed.
+  The ring size can be one or more values as well as a range.
+  But the overall RingSizeRequirement matches, with no requirement that any
+  individual values specified will be matched. If you need to make sure
+  there are two six membered rings and one five membered ring, that will
+  take two RingSizeRequirement.
+*/
+
+class RingSizeRequirement
+{
+  private:
+    // The size of the ring.
+    Min_Max_Specifier<int> _ring_size;
+
+    // For any/all ring size(s) that satisifies _ring_size, the number needed.
+    Min_Max_Specifier<int> _count;
+
+  public:
+    RingSizeRequirement();
+
+    //int ring_size() const { return _ring_size;}
+
+    int ConstructFromProto(const SubstructureSearch::RingSizeRequirement&);
+    int BuildProto(SubstructureSearch::RingSizeRequirement& proto) const;
+
+    // Given a set of ring sizes that are in a ring system, return whether
+    // or not we match that state.
+    int Matches(const int * ring_sizes_encountered,
+                int max_ring_size) const;
+
+    // Does this specification apply to rings of size `ring_size`.
+    int MatchRingSize(int ring_size) const {
+      return _ring_size.matches(ring_size);
+    }
+
+    // Do we match `count` occurrences. Presumably the caller will first
+    // call MatchRingSize to determine if this specifiation applies to
+    // the ring size under consideration.
+    int MatchesCount(const int count) const {
+      return _count.matches(count);
+    }
 };
 
 class Substructure_Ring_System_Specification : public Substructure_Ring_Base
@@ -1354,6 +1972,10 @@ class Substructure_Ring_System_Specification : public Substructure_Ring_Base
 //  match one of the ring_sizes specified in _ring_sizes. Make that flexible
 
     Min_Max_Specifier<int> _rings_that_must_match_ring_sizes;
+
+    // Jul 2019. Allow specifying a numerical requirement for any ring size.
+
+    resizable_array_p<RingSizeRequirement> _ring_size_requirement;
 
     Min_Max_Specifier<int> _aromatic_ring_count;
     Min_Max_Specifier<int> _non_aromatic_ring_count;
@@ -1377,9 +1999,17 @@ class Substructure_Ring_System_Specification : public Substructure_Ring_Base
 
     Min_Max_Specifier<int> _atoms_in_spinach_group;
 
+    // If set, every spinach group must match `_atoms_in_spinach_group`.
+    // Defaults to false since that is the historical behaviour.
+    bool _every_group_matches_atoms_in_spinach_group;
+
 //  Or the longest distance of a spinach atom to the attachment point
 
     Min_Max_Specifier<int> _length_of_spinach_group;
+
+    // If set, every spinach group must match `_length_of_spinach_group`.
+    // Defaults to false since that is the historical behaviour.
+    int _every_group_matches_length_of_spinach_group;
 
 //  Once we have spinach identified, atoms that aren't in a ring, and aren't spinach
 //  are atoms between ring systems
@@ -1396,32 +2026,48 @@ class Substructure_Ring_System_Specification : public Substructure_Ring_Base
 
     int _need_per_atom_array;
 
+    // Optionally, ring systems can span spiro fusions.
+    bool _ring_systems_extend_across_spiro_fusions;
+
 //  private functions
 
-    int _matches (Molecule_to_Match &, int *, atom_number_t *);
+    int _matches(Molecule_to_Match &, atom_number_t *, std::unique_ptr<int[]>& matched_by_global_specs);
 
-    int _spinach_matches (Molecule_to_Match & target, const atom_number_t *) const;
-    int _check_length_of_spinach (const Molecule & m, const int * in_system, atom_number_t atom_in_ring, atom_number_t first_spinach_atom) const;
-    int _match_distance_to_another_ring (Molecule_to_Match & target, const int * in_ring_system) const;
+    int _spinach_matches(Molecule_to_Match & target, const atom_number_t *) const;
+    int _check_length_of_spinach(const Molecule & m, const int * in_system, atom_number_t atom_in_ring, atom_number_t first_spinach_atom) const;
+    int _match_distance_to_another_ring(Molecule_to_Match & target, const int * in_ring_system) const;
 
-    int _check_heteroatoms (const int * tmp,
+    int _check_heteroatoms(const int * tmp,
                     Molecule_to_Match & target) const;
 
-    int _check_ncon (const int * tmp,
+    int _check_ncon(const int * tmp,
                     Molecule_to_Match & target) const;
+
+    int _ring_size_requirements_matched(const int * ring_sizes_encountered,
+                int largest_ring_size);
+
+    int GetRingSize(const SubstructureSearch::SubstructureRingSystemSpecification& proto);
+
+    int IdentifyRingsInSystem(
+        Molecule_to_Match& target,
+        int* ring_already_done,
+        resizable_array<int>& rings_in_system,
+        int * atoms_in_system) const;
 
   public:
-    Substructure_Ring_System_Specification ();
-    ~Substructure_Ring_System_Specification ();
+    Substructure_Ring_System_Specification();
+    ~Substructure_Ring_System_Specification();
 
-    int ok () const;
-    int debug_print (std::ostream &, const IWString &) const;
-    int terse_details (std::ostream &, const IWString &) const;
+    int ok() const;
+    int debug_print(std::ostream &, const IWString &) const;
+    int terse_details(std::ostream &, const IWString &) const;
 
-    int construct_from_msi_object (const msi_object &);
-    int write_msi (std::ostream & os, int & object_id, int indentation) const;
+    int construct_from_msi_object(const msi_object &);
+    int ConstructFromProto(const SubstructureSearch::SubstructureRingSystemSpecification& proto);
+    int BuildProto(SubstructureSearch::SubstructureRingSystemSpecification& proto) const;
+    int write_msi(std::ostream & os, int & object_id, int indentation) const;
 
-    int matches (Molecule_to_Match &);
+    int matches(Molecule_to_Match &, std::unique_ptr<int[]>& matched_by_global_specs);
 };
 
 /*
@@ -1449,20 +2095,20 @@ class Link_Atom_Current_State
     Link_Atom_Current_State();
     Link_Atom_Current_State(atom_number_t a1, atom_number_t a2) : _lhs(a1), _rhs(a2) {};
 
-    int initialise (const Link_Atom *);
+    int initialise(const Link_Atom *);
 
-    atom_number_t lhs () const { return _lhs;}
-    atom_number_t rhs () const { return _rhs;}
+    atom_number_t lhs() const { return _lhs;}
+    atom_number_t rhs() const { return _rhs;}
 
     bond_type_t btype_for_molecule() const { return _bt;}
 
-    void reset () {_placed.resize_keep_storage(0);}
+    void reset() {_placed.resize_keep_storage(0);}
 
     atom_number_t last_atom_placed() const { return _placed.last_item();}
 
     int number_placed() const { return _placed.number_elements();}
 
-    void add (atom_number_t a) { _placed.add(a);} 
+    void add(atom_number_t a) { _placed.add(a);} 
 };
 
 /*
@@ -1483,7 +2129,7 @@ class Link_Atom
 
     int _bond_topology;
 
-    Min_Max_Specifier<int> _d;
+    Min_Max_Specifier<int> _distance;
 
 //  the symbol could be almost anything. C, N, O, [OD2], *, A, Q, etc
 
@@ -1499,47 +2145,50 @@ class Link_Atom
     MDL_Atom_Data * _mdl_atom_data;
 
   public:
-    Link_Atom ();
-    Link_Atom (const Link_Atom &);
+    Link_Atom();
+    Link_Atom(const Link_Atom &);
+    ~Link_Atom();
 
-    int debug_print (std::ostream &) const;
+    int debug_print(std::ostream &) const;
 
-    void set_a1 (int a) { _a1 = a;}
-    void set_a2 (int a) { _a2 = a;}
+    void set_a1(int a) { _a1 = a;}
+    void set_a2(int a) { _a2 = a;}
 
-    int a1 () const { return _a1;}
-    int a2 () const { return _a2;}
+    int a1() const { return _a1;}
+    int a2() const { return _a2;}
 
     bond_type_t btype() const { return _bt;}
-    void set_bond_type (bond_type_t b) { _bt = b;}
+    void set_bond_type(bond_type_t b) { _bt = b;}
 
-    int set_symbol (const const_IWSubstring & s);
+    int set_symbol(const const_IWSubstring & s);
 
-    int set_mdl_atom_data (const MDL_Atom_Data * s);
+    int set_mdl_atom_data(const MDL_Atom_Data * s);
 
-    void set_bond_topology (int s) { _bond_topology = s;}
+    void set_bond_topology(int s) { _bond_topology = s;}
 
     int max_distance() const;
 
-    int construct_from_msi_attribute (const msi_attribute *);
-    int write_msi (std::ostream &, const IWString &, const char *) const;
-    int initialise_from_mdl_record (const const_IWSubstring & buffer, int matoms, int & a);
+    int construct_from_msi_attribute(const msi_attribute *);
+    int ConstructFromProto(const SubstructureSearch::LinkAtoms & proto);
+    int write_msi(std::ostream &, const IWString &, const char *) const;
+    int initialise_from_mdl_record(const const_IWSubstring & buffer, int matoms, int & a);
     int write_M_LIN(atom_number_t, std::ostream &) const;
+    int BuildProto(SubstructureSearch::LinkAtoms& proto) const;
 
-    int initialise_from_smarts (const const_IWSubstring &);
+    int initialise_from_smarts(const const_IWSubstring &);
 
-    int condition_satisfied (Molecule &, atom_number_t, atom_number_t) const;
+    int condition_satisfied(Molecule &, atom_number_t, atom_number_t) const;
 
-//  void set_no_matched_atoms_between (int s) { _no_matched_atoms_between = s;}
-//  int no_matched_atoms_between () const { return _no_matched_atoms_between;}
+//  void set_no_matched_atoms_between(int s) { _no_matched_atoms_between = s;}
+//  int no_matched_atoms_between() const { return _no_matched_atoms_between;}
 
-    int satisfies_separation (int d) const { return _d.matches (d);}
+    int satisfies_separation(int d) const { return _distance.matches(d);}
 
-    int swap_atoms (atom_number_t, atom_number_t);
+    int swap_atoms(atom_number_t, atom_number_t);
 
     int atom_is_being_removed(atom_number_t);
 
-    int create_next_variant (MDL_Molecule &, Link_Atom_Current_State &) const;
+    int create_next_variant(MDL_Molecule &, Link_Atom_Current_State &) const;
 };
 
 extern std::ostream & operator << (std::ostream &, const Link_Atom &);
@@ -1558,25 +2207,25 @@ class ISIS_Link_Atom : public Link_Atom
 
 // private functions
 
-    int _adjust_atom_number (const int * xref, atom_number_t & a);
+    int _adjust_atom_number(const int * xref, atom_number_t & a);
 
-    void _default_values ();
+    void _default_values();
 
   public:
-    ISIS_Link_Atom ();
-    ISIS_Link_Atom (const ISIS_Link_Atom &);
+    ISIS_Link_Atom();
+    ISIS_Link_Atom(const ISIS_Link_Atom &);
 
-    int debug_print (std::ostream &) const;
+    int debug_print(std::ostream &) const;
 
-    int write_M_LIN (std::ostream &) const;
+    int write_M_LIN(std::ostream &) const;
 
-    int central_atom () const { return _a;}
+    int central_atom() const { return _a;}
 
-    int construct_from_M_ISIS_record (const IWString &);
+    int construct_from_M_ISIS_record(const IWString &);
 
-    int adjust_atom_numbers (const int *);
+    int adjust_atom_numbers(const int *);
 
-    int swap_atoms (atom_number_t, atom_number_t);
+    int swap_atoms(atom_number_t, atom_number_t);
 };
 
 extern std::ostream & operator << (std::ostream &, const ISIS_Link_Atom &);
@@ -1584,8 +2233,9 @@ extern std::ostream & operator << (std::ostream &, const ISIS_Link_Atom &);
 /*
   We need an object to hold the results of a substructure query, as well as
   the intermediate working data used by a substructure query. This is for
-  thread safety and const'ness, so a substructure_search can be a const
-  method
+  thread safety and const'ness.
+  Unfortunately the object holds a mixture of things that are relevent
+  while matches are being found mixed in with the actual results.
 */
 
 class Substructure_Results
@@ -1647,89 +2297,243 @@ class Substructure_Results
 
 //  private functions
 
-    int _are_symmetry_related (const Set_of_Atoms & e1, const Set_of_Atoms & e2) const;
+    int _are_symmetry_related(const Set_of_Atoms & e1, const Set_of_Atoms & e2) const;
 
-    int _remove_hits_violating_distance_check_all_atoms (Molecule & m,
+    int _remove_hits_violating_distance_check_all_atoms(Molecule & m,
                               const Min_Max_Specifier<int> & distance_between_hits, int ncheck);
 
-    int _remove_hits_not_in_largest_fragment_multiple_largest (Molecule & m);
+    int _remove_hits_not_in_largest_fragment_multiple_largest(Molecule & m);
 
   public:
-    Substructure_Results ();
-    ~Substructure_Results ();
+    Substructure_Results();
+    ~Substructure_Results();
 
-    int ok () const;
+    int ok() const;
 
-    void reset ();            // clears out previous results
-    void initialise (int);    // called before a search
+    void reset();            // clears out previous results
+    void initialise(int);    // called before a search
 
-    int copy_embeddings (const Substructure_Results & rhs);   // pretty close to operator=
-    int add_embeddings (const Substructure_Results & rhs);    // just does the embeddings, nothing else changed
+    int copy_embeddings(const Substructure_Results & rhs);   // pretty close to operator=
+    int add_embeddings(const Substructure_Results & rhs);    // just does the embeddings, nothing else changed
 
-    int set_save_matched_atoms (int s);
-    int set_save_query_atoms_matched (int s);
+    int set_save_matched_atoms(int s);
+    int set_save_query_atoms_matched(int s);
 
     int save_matched_atoms() const { return _save_matched_atoms;}
-    int save_query_atoms_matched () const { return _save_query_atoms_matched;}
+    int save_query_atoms_matched() const { return _save_query_atoms_matched;}
 
-    void set_remove_invalid_atom_numbers_from_new_embeddings (int s) { _remove_invalid_atom_numbers_from_new_embeddings = s;}
-    unsigned int hits_found () const { return _hits_found;}
+    void set_remove_invalid_atom_numbers_from_new_embeddings(int s) { _remove_invalid_atom_numbers_from_new_embeddings = s;}
+    unsigned int hits_found() const { return _hits_found;}
 
     int return_code() const;
 
-    int matching_complete () const { return _complete;}
-    void set_complete () { _complete = 1;}
+    int matching_complete() const { return _complete;}
+    void set_complete() { _complete = 1;}
 
-    void matched_this_many_query_atoms (int m) { if (m > _max_query_atoms_matched_in_search) _max_query_atoms_matched_in_search = m;}
-    int  max_query_atoms_matched_in_search () const { return _max_query_atoms_matched_in_search;}
+    void matched_this_many_query_atoms(int m) { if (m > _max_query_atoms_matched_in_search) _max_query_atoms_matched_in_search = m;}
+    int  max_query_atoms_matched_in_search() const { return _max_query_atoms_matched_in_search;}
 
-    void set_symmetry_class (const int * s) { _symmetry_class = s;}
+    void set_symmetry_class(const int * s) { _symmetry_class = s;}
 
     int embedding_is_unique(const Set_of_Atoms & new_embedding);
     int embedding_overlaps_previous_embeddings(const Set_of_Atoms & new_embedding);
 
-    int embedding_is_symmetry_related (const Set_of_Atoms & embedding) const;
+    int embedding_is_symmetry_related(const Set_of_Atoms & embedding) const;
 
 //  When the matched atoms are not being saved, getting a hit is just a matter
 //  of incrementing the counter.
 
-    void got_embedding () { _hits_found++;}
+    void got_embedding() { _hits_found++;}
 
-    int add_embedding (Set_of_Atoms * embedding, const Query_Atoms_Matched & qam);
+    int add_embedding(Set_of_Atoms * embedding, const Query_Atoms_Matched & qam);
 
-    int sort_by_preference_value ();
-    int sort_matches (Molecule_to_Match & target, int sort_specification);
+    int sort_by_preference_value();
+    int sort_matches(Molecule_to_Match & target, int sort_specification);
 
-    int remove_hits_violating_distance (Molecule_to_Match & target,
+    int remove_hits_violating_distance(Molecule_to_Match & target,
               const Min_Max_Specifier<int> & distance_between_hits, int ncheck);
 
     int overlaps_with_existing_embedding(const Set_of_Atoms & s);     // used by embeddings_do_not_overlap
 
-    int remove_hits_not_in_largest_fragment (Molecule_to_Match & target);
+    int remove_hits_not_in_largest_fragment(Molecule_to_Match & target);
 
-    int remove_low_preference_hits ();
+    int remove_low_preference_hits();
 
-    int remove_embedding (int);
+    int remove_embedding(int);
 
-    const Set_of_Atoms * embedding (int i) const { return _embedding[i];}
-    const Query_Atoms_Matched * query_atoms_matching (int i) const { return _query_atoms_matched[i];}
+    const Set_of_Atoms * embedding(int i) const { return _embedding[i];}
+    const Query_Atoms_Matched * query_atoms_matching(int i) const { return _query_atoms_matched[i];}
 
-    int number_embeddings () const { return _embedding.number_elements ();};
-    int print_embeddings (std::ostream &, int = 0) const;
-    int print_embeddings (std::ostream &, const Molecule *) const;
+    int number_embeddings() const { return _embedding.number_elements();};
+    int print_embeddings(std::ostream &, int = 0) const;
+    int print_embeddings(std::ostream &, const Molecule *) const;
 
-    void size_hits_per_fragment_array (int s);
-    void got_hit_in_fragment (int f) { _hits_per_fragment[f]++;}
-    const extending_resizable_array<int> & hits_per_fragment () const { return _hits_per_fragment;}
+    void size_hits_per_fragment_array(int s);
+    void got_hit_in_fragment(int f) { _hits_per_fragment[f]++;}
+    const extending_resizable_array<int> & hits_per_fragment() const { return _hits_per_fragment;}
 
 //  A common operation is to mark each atom hit by a substructure query
 
-    void each_embedding_set_vector (int * v, int s) const;
+    void each_embedding_set_vector(int * v, int s) const;
+    // A version that is used for python bindings.
+    std::vector<int> EachEmbeddingSetVector(int matoms, int value) const;
 
 //  We may need to re-order the embeddings - trxn. The strategy would be for the caller to
 //  get all the embeddings, then pass them back 
 
     int set_embeddings(const Set_of_Atoms **, const int n);
+
+    const resizable_array_p<Set_of_Atoms>& embeddings() const { 
+      return _embedding;
+    }
+
+    // If multiple embeddings, compress them to just one.
+    int CompressToSingleEmbedding();
+
+    // If per-atom global id values have been set, remove embeddings whose matched query
+    // atoms do not match those global match conditions.
+    int RemoveEmbeddingsNotSatisfyingGlobalId(const int * matched_by_global_conditions);
+};
+
+// Specify the bond separation between pairs of matched atoms.
+// This is likely to be most useful in the case of a query that consists
+// of multiple fragments, but can be applied to any query.
+class SeparatedAtoms {
+  private:
+    // A pair of matched atoms - indices within the embedding.
+    int _a1;
+    int _a2;
+    // The bonds_between value that must be met.
+    Min_Max_Specifier<int> _separation;
+
+  public:
+    SeparatedAtoms();
+
+    int Build(const SubstructureSearch::SeparatedAtoms& proto);
+    int BuildProto(SubstructureSearch::SeparatedAtoms& proto) const;
+
+    // Return true if atoms molecule[embedding[separated_atoms.a1]]
+    //                  and molecule[embedding[aseparated_atoms.2]]
+    // are compatible with the bond separation constraint in
+    // separated_atoms.separation.
+    int Matches(Molecule& m,
+                const Set_of_Atoms& embedding) const;
+};
+
+// See the proto for description of what this is.
+class Region {
+  private:
+    // The two or more matched atoms that define the region.
+    resizable_array<int> _matched_atom;
+
+    // The number of atoms that are present in the region.
+    // This includes the matched atoms that define it.
+    Min_Max_Specifier<int> _natoms;
+
+    // The number of rings fully contained within the region
+    Min_Max_Specifier<int> _nrings;
+
+  public:
+    int ConstructFromProto(const SubstructureSearch::Region& proto);
+    int BuildProto(SubstructureSearch::Region& proto) const;
+
+    // Given an embedding, return true if we match.
+    int Matches(Molecule_to_Match& target,
+                Query_Atoms_Matched & matched_atoms,
+                const int* already_matched) const;
+};
+
+// Before atom matching is attempted, we can quickly check a number
+// whole molecule properties.
+// For example if the query specifies atoms in two different aromatic
+// rings, we can restrict searches to just  molecules having at least
+// two aromatic rings.
+class RequiredMolecularProperties {
+  private:
+    // When doing matches, if nothing is specified, quick exit.
+    int _attributes_specified;
+
+    // The number of atoms in the molecule.
+    iwmatcher::Matcher<int> _natoms;
+
+    // The number of rings in the molecule.
+    iwmatcher::Matcher<int> _nrings;
+
+    // The number of heteroatoms in the molecule.
+    iwmatcher::Matcher<int> _heteroatoms_in_molecule;
+
+    // The number of fused rings in the molecule.
+    // Note that this can never be 1.
+    iwmatcher::Matcher<int> _fused_rings;
+
+    // The number of strongly fused rings in the molecule.
+    // Note that this can never be 1.
+    iwmatcher::Matcher<int> _strongly_fused_rings;
+
+    // The number of isolated rings in the molecule.
+    iwmatcher::Matcher<int> _isolated_rings;
+
+    // The number of ring systems in the molecule.
+    // Note that by default, ring fusions do not span spiro fusions.
+    iwmatcher::Matcher<int> _ring_systems;
+
+    // The number of aromatic rings in the molecule.
+    iwmatcher::Matcher<int> _aromatic_rings;
+
+    // The number of non aromatic rings in the molecule.
+    iwmatcher::Matcher<int> _non_aromatic_rings;
+
+    // The number of aromatic atoms in the molecule.
+    iwmatcher::Matcher<int> _aromatic_atoms;
+
+    // The number of isotopic atoms in the molecule.
+    iwmatcher::Matcher<int> _number_isotopic_atoms;
+
+    // The number of fragments in the molecule.
+    iwmatcher::Matcher<int> _number_fragments;
+
+    // The number of atoms in the spinach (non scaffold) in the molecule.
+    iwmatcher::Matcher<int> _atoms_in_spinach;
+
+    // The number of atoms in between rings in the molecule.
+    iwmatcher::Matcher<int> _inter_ring_atoms;
+
+    // The net formal charge of the molecule.
+    iwmatcher::Matcher<int> _net_formal_charge;
+
+    // Requirements on counts of certain elements.
+    resizable_array_p<Elements_Needed> _elements_needed;
+
+    // The most common use for net formal charge is to look for molecules
+    // that have a net formal charge, either positive or negative, so make
+    // that easy to specify.
+    int _any_net_formal_charge;
+
+    // If further conditions are added they must be accounted for in at 
+    // least two places.
+    //    Matches
+    //    DiscernAttributesSpecified
+
+  // private functions
+    int ParseElementsNeeded(const SubstructureSearch::RequiredMolecularProperties& proto);
+
+    int MatchElementsNeeded(Molecule_to_Match & target_molecule) const;
+  
+    int DiscernAttributesSpecified();
+
+    int SpinachAtomsMatch(Molecule_to_Match & target) const;
+
+  public:
+    RequiredMolecularProperties();
+
+    int ConstructFromProto(const SubstructureSearch::RequiredMolecularProperties& proto);
+    int BuildProto(SubstructureSearch::RequiredMolecularProperties& proto) const;
+
+    int attributes_specified() const {
+      return _attributes_specified;
+    }
+
+    int Matches(Molecule_to_Match & target_molecule);
 };
 
 /*
@@ -1790,23 +2594,7 @@ class Single_Substructure_Query
 
 //  Various whole molecule conditions for a match
 
-    Min_Max_Specifier<int> _natoms;
-    Min_Max_Specifier<int> _nrings;
-
-//  Simple counts of the number of each type of ring
-
-    Min_Max_Specifier<int> _aromatic_rings;
-    Min_Max_Specifier<int> _aromatic_atoms;
-    Min_Max_Specifier<int> _non_aromatic_rings;
-    Min_Max_Specifier<int> _fused_rings;
-    Min_Max_Specifier<int> _strongly_fused_rings;
-    Min_Max_Specifier<int> _isolated_rings;
-    Min_Max_Specifier<int> _number_isotopic_atoms;
-
-//  Nov 98. Needed something to get molecules with two isolated rings or
-//  ring systems.
-
-    Min_Max_Specifier<int> _isolated_ring_objects;
+    RequiredMolecularProperties _required_molecular_properties;
 
     resizable_array_p<Substructure_Ring_Specification> _ring_specification;
 
@@ -1837,16 +2625,6 @@ class Single_Substructure_Query
     Min_Max_Specifier<int> _attached_heteroatom_count;
     resizable_array<atomic_number_t> _heteroatoms;
 
-//  We can also put constraints on the number of heteroatoms in the molecule.
-//  These will depend on the definition of heteroatoms stored in _heteroatoms
-
-    Min_Max_Specifier<int> _heteroatoms_in_molecule;
-
-//  Before examining the molecule, we can make sure that we have
-//  a certain number of elements
-
-    resizable_array_p<Elements_Needed> _elements_needed;
-
 //  Sometimes it is useful to put constraints on the number of ring
 //  atoms which are matched
 
@@ -1868,26 +2646,75 @@ class Single_Substructure_Query
 
     int _fail_if_embeddings_too_close;
 
+    // START OF WHAT IS NOW IN REQUIRED_MOLECULAR_PROPERTIES
 //  We can only check molecules that have a given number of fragments
-
     Min_Max_Specifier<int> _number_fragments;
 
 //  We can set constraints on the number of spinach atoms
-
     Min_Max_Specifier<int> _atoms_in_spinach;
 
 //  The atoms between rings
-
     Min_Max_Specifier<int> _inter_ring_atoms;
+
+//  We can also put constraints on the number of heteroatoms in the molecule.
+//  These will depend on the definition of heteroatoms stored in _heteroatoms
+
+    // Only attempt matching if this may heteroatoms in the molecule.
+    Min_Max_Specifier<int> _heteroatoms_in_molecule;
+
+    // Only attempt matching if the net formal charge of the molecule matches.
+    Min_Max_Specifier<int> _net_formal_charge;
+
+    Min_Max_Specifier<int> _natoms;
+    Min_Max_Specifier<int> _nrings;
+
+//  Simple counts of the number of each type of ring
+
+    Min_Max_Specifier<int> _aromatic_rings;
+    Min_Max_Specifier<int> _aromatic_atoms;
+    Min_Max_Specifier<int> _non_aromatic_rings;
+    Min_Max_Specifier<int> _fused_rings;
+    Min_Max_Specifier<int> _strongly_fused_rings;
+    Min_Max_Specifier<int> _isolated_rings;
+
+    Min_Max_Specifier<int> _number_isotopic_atoms;
+
+//  Nov 98. Needed something to get molecules with two isolated rings or
+//  ring systems.
+
+    Min_Max_Specifier<int> _isolated_ring_objects;
+
+    // Requirements on counts of certain elements.
+    resizable_array_p<Elements_Needed> _elements_needed;
+
+    // END OF WHAT IS NOW IN REQUIRED_MOLECULAR_PROPERTIES
 
 //  Jan 2005. We may have constraints on the number of unmatched atoms
 
     Min_Max_Specifier<int> _unmatched_atoms;
 
+    // Within each embedding, what fraction of the atoms in the
+    // molecule are matched.
     float _min_fraction_atoms_matched;
     float _max_fraction_atoms_matched;
 
-    Min_Max_Specifier<int> _net_formal_charge;
+    // Oct 2022. Across all embeddings, what is the fraction of
+    // atoms in the molecule that are hit by one or more embeddings.
+    float _min_all_matches_fraction_atoms_matched;
+    float _max_all_matches_fraction_atoms_matched;
+
+    // If atom types are specified this will be active.
+    // Incorporate as pointer to lessen the dependency on this.
+    // Not sure it is a good idea yet.
+    Atom_Typing_Specification* _atom_typing;
+
+    // May 2022.
+    // Given 2 matched atoms, we can count the number of atoms in between them.
+    // Not just the shortest path, but all atoms that are reachable
+    // starting at one and arriving at the other.
+    // Note this will be confounded if atoms are in the same ring system.
+
+    Min_Max_Specifier<int> _atoms_in_region;
 
     protected:
 
@@ -1994,6 +2821,10 @@ class Single_Substructure_Query
 
     int _need_to_compute_aromaticity;
 
+//  If any of out Substructure_Atom's have an atom type group, those must
+//  be reconciled at the end of matching.
+    int _need_to_check_atom_type_groups;
+
 //  We also keep track of the largest number of atoms matched during a substructure search
 
     iwmax<int> _max_query_atoms_matched;
@@ -2029,6 +2860,26 @@ class Single_Substructure_Query
     resizable_array_p<Bond> _no_matched_atoms_between;
 
     resizable_array_p<Link_Atom> _link_atom;
+
+    resizable_array_p<down_the_bond::DownTheBond> _down_the_bond;
+
+    // Substituents that are not anchored to a ring.
+    resizable_array_p<Substituent> _substituent;
+
+    // The no matched atoms between matching can be done on either the
+    // first path between the ends of the No_Matched_Atoms_Between, or
+    // an exhaustive enumeration of all possible paths.
+    // Consider the molecule (same moleule, just different smiles)
+    // "Oc1cnc(O)cc1"
+    // "Oc1ccc(O)nc1"
+    // with the smarts
+    // "[OH]-c...{>0[n]}c-[OH]". Without exhaustive enumeration of the
+    // shortest paths, the first path between the matched atoms in the
+    // first smiles will not include the nitrogen atom. Exhaustive
+    // enumeration will check all shortest paths found, until a match
+    // is found.
+    int _no_matched_atoms_between_exhaustive;
+    resizable_array_p<No_Matched_Atoms_Between> _nmab;
 
 //  We can also impose distance constraints among matched atoms. Again, we use
 //  the bond object just for convenience
@@ -2076,7 +2927,7 @@ class Single_Substructure_Query
     int _sort_matches_by;
 
 //  Mar 2016. Can we gain some efficiencies by keeping track of whether any of the global
-//  conditions are set. Aslo useful for detecting completely unspecified queries
+//  conditions are set. Also useful for detecting completely unspecified queries
 
     int _global_conditions_present;
 
@@ -2084,316 +2935,441 @@ class Single_Substructure_Query
 
     int _first_root_atom_with_symmetry_group;
 
+//  One can set a query to report 0 matches unless there are at least
+//  a specified number of matches actually present. Seems redundant, not
+//  sure why this exists, just use min_hits_needed.
+
+    int _no_match_unless_nhits;
+
+    // If set, all hits will be merged into one. Yields a single
+    // embedding with all atoms matched by any of the embeddings.
+    int _compress_embeddings;
+
+//  Dec 2019. If per-atom unmatched atom counts are present, store that info
+//  in a class variable.
+
+    int _unmatched_atoms_attached_specified;
+
+//  If any of our component Substructure_Atom's have atom type groups,
+//  those will need to be checked after matching.
+    int _atom_type_groups_present;
+
+    // Jul 2021. Introduce geometric constraints.
+
+    resizable_array_p<geometric_constraints::SetOfGeometricConstraints> _geometric_constraints;
+
+    // Aug 2021. Bond separation between individual matched atoms.
+    resizable_array_p<SeparatedAtoms> _separated_atoms;
+
+    // May 2022. MatchedAtomMatch, as an alternative to recursive smarts.
+    resizable_array_p<MatchedAtomMatch> _matched_atom_match;
+    IW_Logical_Expression _matched_atom_match_operator;
+
+    // Dec 2021. If this query was constructed from a smarts,
+    // store that.
+    IWString _originating_smarts;
+
+    // June 2022. Implement inter-ring regions
+    resizable_array_p<InterRingAtoms> _inter_ring_region;
+
+    // May 2023. Regions
+    resizable_array_p<Region> _region;
+
 //  private functions
 
-    void _default_values ();
+    void _default_values();
 
-    int _compute_attribute_counts ();
-    int _locate_chiral_atoms ();
+    int _compute_attribute_counts();
+    int _locate_chiral_atoms();
 
-    void _collect_all_atoms (extending_resizable_array<Substructure_Atom *> &) const;
+    void _collect_all_atoms(extending_resizable_array<Substructure_Atom *> &) const;
 
-    int _add_environment_according_to_matched_atoms (Molecule_to_Query_Specifications & mqs);
+    int _add_environment_according_to_matched_atoms(Molecule_to_Query_Specifications & mqs);
 
 //  When creating from smiles or smarts, we need a means of turning off all
 //  the global conditions
 
-    int _relax_all_global_conditions ();
+    int _relax_all_global_conditions();
 
-    int _parse_and_consume_optional_leading_numeric_qualifiers (const_IWSubstring & smarts);
+    int _parse_and_consume_optional_leading_numeric_qualifiers(const_IWSubstring & smarts);
 
-//  int _initialise_sub_array (Molecule & m, Substructure_Query & substitutions_only_at,
+//  int _initialise_sub_array(Molecule & m, Substructure_Query & substitutions_only_at,
 //                             Molecule_to_Query_Specifications & mqs);
 
-    int _embedding_is_symmetry_related (const Set_of_Atoms * new_embedding) const;
-    int _embedding_is_unique (const Set_of_Atoms *, int *) const;
-    int _embedding_is_unique (int, const Set_of_Atoms *) const;
+    int _embedding_is_symmetry_related(const Set_of_Atoms * new_embedding) const;
+    int _embedding_is_unique(const Set_of_Atoms *, int *) const;
+    int _embedding_is_unique(int, const Set_of_Atoms *) const;
 
-    int _add_embedding (Query_Atoms_Matched & matched_atoms,
+    int _add_embedding(Query_Atoms_Matched & matched_atoms,
                         Set_of_Atoms *,
                         Substructure_Results & results);
-    int _find_next_root_atom_embedding (Query_Atoms_Matched & matched_atoms,
+    int _find_next_root_atom_embedding(Query_Atoms_Matched & matched_atoms,
                                     Molecule_to_Match & target_molecule,
                                     int * already_matched,
+                                    std::unique_ptr<int[]>& matched_by_global_specs,
                                     Substructure_Results & results);
-    int _got_embedding (Query_Atoms_Matched & matched_atoms,
+    int _got_embedding(Query_Atoms_Matched & matched_atoms,
                             Molecule_to_Match & target_molecule,
                             int * already_matched,
+                            std::unique_ptr<int[]>& matched_by_global_specs,
                             Substructure_Results & results);
+    std::unique_ptr<Set_of_Atoms> _make_new_embedding(const Query_Atoms_Matched& matched_atoms) const;
 
-    int _set_start_atom (Target_Atom *);
+    int _set_start_atom(Target_Atom *);
 
-    int _ncon2_specified () const;
-    int _ring_sizes_specified (resizable_array<int> &) const;
+    int _ring_sizes_specified(resizable_array<int> &) const;
 
-    int _examine_bond_specifications ();
+    int _examine_bond_specifications();
+
+    int _atom_numbers_in_geometric_constraints_ok(const geometric_constraints::SetOfGeometricConstraints* constraints) const;
 
     void _determine_if_ring_ids_are_present();
-    void _determine_if_spinach_specifications_are_present ();
+    void _determine_if_spinach_specifications_are_present();
     void _determine_if_fused_system_ids_are_present();
-    void _determine_if_symmetry_groups_present ();
+    void _determine_if_symmetry_groups_present();
+    void _determine_if_unmatched_atom_counts_are_present();
+    void _determine_if_atom_type_groups_are_present();
+    int _one_time_initialisations();
 
-    int _match_elements_needed (Molecule_to_Match & target_molecule) const;
+    int _match_elements_needed(Molecule_to_Match & target_molecule) const;
+
+    int _aromatic_atoms_matches(Molecule_to_Match& target_molecule) const;
 
 //  Function to handle _ring_specification
 
-    int _match_ring_specifications (Molecule_to_Match & target_molecule);
+    int _match_ring_specifications(Molecule_to_Match & target_molecule, std::unique_ptr<int[]>& matched_by_global_specs);
 
 //  Function to handle _ring_system_specification
 
-    int _match_ring_system_specifications (Molecule_to_Match & target_molecule);
+    int _match_ring_system_specifications(Molecule_to_Match & target_molecule, std::unique_ptr<int[]>& matched_by_global_specs);
 
-    int _discern_global_conditions_present ();
+    int _discern_global_conditions_present();
 
 //  Function to process the fused_ring_sizes query specifier
 
-    int _match_ring_type_specifications (Molecule_to_Match & target_molecule);
-    int _match_nrings_specifications    (Molecule_to_Match & target_molecule);
-    int _match_global_specifications    (Molecule_to_Match & target_molecule);
-    int _spinach_atoms_match (Molecule_to_Match & target) const;
+    int _match_ring_type_specifications(Molecule_to_Match & target_molecule);
+    int _match_nrings_specifications   (Molecule_to_Match & target_molecule);
+    int _match_global_specifications   (Molecule_to_Match & target_molecule, std::unique_ptr<int[]>& matched_by_global_specs);
+    int _spinach_atoms_match(Molecule_to_Match & target) const;
 
 //  Function to process the heteroatoms specifier
 
-    int _match_heteroatom_specifications (Molecule_to_Match & target_molecule);
+    int _match_heteroatom_specifications(Molecule_to_Match & target_molecule);
 
 //  We pre-compute various properties of the molecule.
 
-    void _allocate_rings_of_sizes (resizable_array<int> &, Molecule *);
-    int  _adjust_for_internal_consistency ();
-    int  _set_ring_membership (Molecule &);
+    void _allocate_rings_of_sizes(resizable_array<int> &, Molecule *);
+    int  _adjust_for_internal_consistency();
+    int  _set_ring_membership(Molecule &);
 
-    int _substructure_atoms_known (const Substructure_Atom *, const Substructure_Atom *) const;
-
-//  One can set a query to report 0 matches unless there are at least
-//  a specified number of matches actually present
-
-    int _no_match_unless_nhits;
+    int _substructure_atoms_known(const Substructure_Atom *, const Substructure_Atom *) const;
 
 //  Find am embedding, with a given atom number matched to query atom 0
 
-    int _find_embedding (Molecule_to_Match & target_molecule, Target_Atom & a,
+    int _find_embedding(Molecule_to_Match & target_molecule, Target_Atom & a,
                                      Query_Atoms_Matched & matched_atoms,
                                      int * already_matched,
+                                     std::unique_ptr<int[]>& matched_by_global_specs,
                                      Substructure_Atom * root_atom,
                                      Substructure_Results & results);
-    int _find_embedding (Molecule_to_Match & target_molecule, Target_Atom & a, int *, Substructure_Atom *, Substructure_Results &);
-    int _find_embedding (Molecule_to_Match &, Query_Atoms_Matched &, int *, Substructure_Atom *, Substructure_Results &);
+    int _find_embedding(Molecule_to_Match & target_molecule,
+                        Target_Atom & a, int *,
+                        std::unique_ptr<int[]>& matched_by_global_specs,
+                        Substructure_Atom *root_atom, Substructure_Results & sresults);
+    int _find_embedding(Molecule_to_Match &, Query_Atoms_Matched &,
+                        int * already_matched,
+                        std::unique_ptr<int[]>& matched_by_global_specs,
+                        Substructure_Atom * root_atom, 
+                        Substructure_Results & sresults);
                                                  
-    int _remove_atoms_with_same_or (Query_Atoms_Matched & matched_atoms,
+    int _remove_atoms_with_same_or(Query_Atoms_Matched & matched_atoms,
                                     int atom_to_process, int);
-    int _substructure_search (Molecule_to_Match &, int *, Substructure_Results &);
-    int _substructure_search (Molecule_to_Match &, Substructure_Results &);
+    int _substructure_search(Molecule_to_Match & target, int * already_matched, std::unique_ptr<int[]>& matched_by_global_specs, Substructure_Results & sresults);
+    int _substructure_search(Molecule_to_Match &, Substructure_Results &);
 
-    int _parse_ring_specifier_object        (const msi_object & msi);
-    int _parse_ring_system_specifier_object (const msi_object & msi);
-    int _parse_element_hits_needed_object   (const msi_object & msi);
-    int _parse_elements_needed_object   (const msi_object & msi);
-    int _construct_from_msi_object (const msi_object &, int *);
-    int _construct_environment_from_msi_object (const msi_object &, 
+    int _parse_ring_specifier_object(const msi_object & msi);
+    int _parse_ring_specifier(const SubstructureSearch::SingleSubstructureQuery& proto);
+    int _parse_ring_system_specifier_object(const msi_object & msi);
+    int _parse_ring_system_specifier(const SubstructureSearch::SingleSubstructureQuery& proto);
+    int _parse_element_hits_needed_object(const msi_object & msi);
+    int _parse_element_hits_needed(const SubstructureSearch::SingleSubstructureQuery& proto);
+    int _parse_elements_needed_object(const msi_object & msi);
+    int _construct_from_msi_object(const msi_object &, int *);
+    int _construct_from_proto(const SubstructureSearch::SingleSubstructureQuery & proto);
+    int _construct_environment_from_msi_object(const msi_object &, 
                                extending_resizable_array<Substructure_Atom *> &,
                                resizable_array_p<Substructure_Environment> & env);
-    int _parse_smarts_specifier (const const_IWSubstring & smarts);
-    int _create_from_molecule (MDL_Molecule & m, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms = NULL);
-    int _build_element_hits_needed (const MDL_Molecule & m, const Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
+    int _construct_environment_from_proto(
+    const google::protobuf::RepeatedPtrField<SubstructureSearch::SubstructureEnvironment>& env,
+    extending_resizable_array<Substructure_Atom *> & completed,
+    resizable_array_p<Substructure_Environment> & destination);
+    int _construct_matched_atoms_match(
+        const google::protobuf::RepeatedPtrField<SubstructureSearch::MatchedAtomMatch>& matched_atoms_match);
+    int _parse_smarts_specifier(const const_IWSubstring & smarts);
+    int ParseRange(const_IWSubstring& smarts);
+    int _create_from_molecule(MDL_Molecule & m, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms = nullptr);
+    int _build_element_hits_needed(const MDL_Molecule & m, const Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
 
-    int _add_chiral_centre (const Molecule & m, const Chiral_Centre & c);
-    int _build_chirality_specification_from_msi_attribute (const IWString & s);
+    int _add_chiral_centre(const Molecule & m, const Chiral_Centre & c);
+    int _build_chirality_specification_from_msi_attribute(const IWString & s);
+    int _build_chirality_component(const SubstructureSearch::SubstructureChiralCenter& proto,
+                                                      void (Substructure_Chiral_Centre::* ptrmfn)(const Substructure_Atom *),
+                                                      const SubstructureSearch::AtomNumberHydrogenLonePair& atom_or,
+                                                      Substructure_Chiral_Centre& c,
+                                                      resizable_array<int>& numbers_encountered);
+    int _build_chirality_specification_from_proto(const SubstructureSearch::SubstructureChiralCenter & proto);
     int _build_chirality_specifications_from_atom_chiral_info();
     int _build_chirality_specifications_from_atom_chiral_info(const Substructure_Atom * r);
     int _build_chirality_specification_from_atom_chiral_info(const Substructure_Atom * a);
     int _initialise_chirality_info();
     int _initialise_chirality_info(Substructure_Chiral_Centre * c);
+  
+    int _build_no_matched_atoms_between(const resizable_array<ThreeDots*>& three_dots);
 
 //  Check global query conditions (attached heteroatom count, etc)
 
-    int  _has_implicit_rings (Query_Atoms_Matched & matched_query_atoms, const int * already_matched) const;
-    int  _no_matched_atoms_between_satisfied (Query_Atoms_Matched & matched_atoms) const;
-    int  _link_atoms_satisfied (Query_Atoms_Matched & matched_atoms) const;
-    int  _link_atom_satisfied (const Link_Atom & l,
+    int  _has_implicit_rings(Query_Atoms_Matched & matched_query_atoms, const int * already_matched) const;
+    int  _no_matched_atoms_between_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _nmab_satisfied(Molecule_to_Match& target, Query_Atoms_Matched & matched_atoms) const;
+    int  _down_the_bond_satisfied(Molecule_to_Match& target_molecule, Query_Atoms_Matched& matched_query_atoms) const;
+    int  _substituent_satisfied(Molecule_to_Match& target_molecule, Query_Atoms_Matched& matched_query_atoms) const;
+    int  _link_atoms_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _link_atom_satisfied(const Link_Atom & l,
                                Query_Atoms_Matched & matched_atoms) const;
-//  int  _no_matched_atoms_between_satisfied (Molecule * m, const int * matched, atom_number_t a1, atom_number_t a2) const;
-    int  _heteroatoms_matched_satisfied (Query_Atoms_Matched & matched_atoms) const;
-    int  _ring_atoms_matched_satisfied (Query_Atoms_Matched & matched_atoms) const;
-    int  _distance_between_root_atoms_satisfied (Query_Atoms_Matched & matched_atoms) const;
-    int  _fragment_id_conditions_satisfied      (Query_Atoms_Matched & matched_atoms) const;
-    int  _ring_id_conditions_satisfied (Query_Atoms_Matched & matched_query_atoms) const;
-    int  _fused_system_id_conditions_satisfied (Query_Atoms_Matched & matched_query_atoms) const;
-    int  _spinach_match_requirements_satisfied (Query_Atoms_Matched & matched_query_atoms, Molecule_to_Match & target_molecule) const;
-    int  _attached_heteroatom_count_satisfied   (Query_Atoms_Matched & matched_atoms,
+//  int  _no_matched_atoms_between_satisfied(Molecule * m, const int * matched, atom_number_t a1, atom_number_t a2) const;
+    int  _heteroatoms_matched_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _ring_atoms_matched_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _distance_between_root_atoms_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _fragment_id_conditions_satisfied(Query_Atoms_Matched & matched_atoms) const;
+    int  _ring_id_conditions_satisfied(Query_Atoms_Matched & matched_query_atoms) const;
+    int  _fused_system_id_conditions_satisfied(Query_Atoms_Matched & matched_query_atoms) const;
+    int  _spinach_match_requirements_satisfied(Query_Atoms_Matched & matched_query_atoms, Molecule_to_Match & target_molecule) const;
+    int  _attached_heteroatom_count_satisfied(Query_Atoms_Matched & matched_atoms,
                            const int * already_matched) const;
-    int  _embedding_ncon_satisfied (Query_Atoms_Matched & matched_atoms,
+    int  _embedding_ncon_satisfied(Query_Atoms_Matched & matched_atoms,
                            const int * already_matched) const;
-    int  _global_query_conditions_also_matched (Query_Atoms_Matched & matched_atoms,
+    int  _global_query_conditions_also_matched(Query_Atoms_Matched & matched_atoms,
                            const int * already_matched,
                            Molecule_to_Match & target_molecule) const;
-    int _chiral_atoms_matched (Query_Atoms_Matched & matched_atoms,
+    int _chiral_atoms_matched(Query_Atoms_Matched & matched_atoms,
                                Molecule_to_Match & target_molecule) const;
+    int AllMatchesFractionAtomsMatched(const Substructure_Results & sresults,
+                Molecule_to_Match& target_molecule) const;
     int _symmetry_group_specifications_matches(const Query_Atoms_Matched & query_atoms_matched,
                                         Molecule_to_Match & target) const;
+    int _unmatched_atoms_attached_matched(const Query_Atoms_Matched& matched_query_atoms,
+                                          const int * already_matched,
+                                          Molecule_to_Match& target) const;
+
+    int _atom_type_groupings_matched(const Query_Atoms_Matched& matched_query_atoms) const;
+
+    int InterRingRegionsMatch(Molecule_to_Match& target,
+                std::unique_ptr<int[]>& matched_by_global_specs);
+
+    int RegionsMatch(Molecule_to_Match& target, const Query_Atoms_Matched& matched_atoms,
+                        const int* already_matched);
 
 //  Various functions for query environments
 
-    int _match_member_of_query_environment (Query_Atoms_Matched & matched_query_atoms,
+    int _match_member_of_query_environment(Query_Atoms_Matched & matched_query_atoms,
                         int * previously_matched_atoms,
                         Substructure_Environment * e);
-    int _query_environment_xor_group_matched (int * previously_matched_atoms,
+    int _query_environment_xor_group_matched(int * previously_matched_atoms,
+                        const std::unique_ptr<int[]>& matched_by_global_specs,
                         const resizable_array<Substructure_Environment *> & xor_group,
                         int * anchor_atom_available);
-    int _query_environment_and_group_matched (int * previously_matched_atoms,
+    int _query_environment_and_group_matched(int * previously_matched_atoms,
+                        const std::unique_ptr<int[]>& matched_by_global_specs,
                         const resizable_array<Substructure_Environment *> & or_group,
                         int * anchor_atom_available);
-    int _query_environment_or_group_matched (int * previously_matched_atoms,
+    int _query_environment_or_group_matched(int * previously_matched_atoms,
+                        const std::unique_ptr<int[]>& matched_by_global_specs,
                         const resizable_array<Substructure_Environment *> & or_group,
                         int * anchor_atom_available);
-    int _environment_rejections_matched (const int atoms_in_target_molecule, int * previously_matched_atoms,
+    int _environment_rejections_matched(const int atoms_in_target_molecule, int * previously_matched_atoms,
+                        const std::unique_ptr<int[]>& matched_by_global_specs,
                         int * env_already_done);
-    int _query_environment_also_matched (const int atoms_in_target_molecule, int * previously_matched_atoms,
+    int _query_environment_also_matched(const int atoms_in_target_molecule, int * previously_matched_atoms,
+                        const std::unique_ptr<int[]>& matched_by_global_specs,
                         int * env_already_done);
-    int _query_environment_also_matched (Query_Atoms_Matched &, int atoms_in_target_molecule);
+    int _matched_atoms_match_also_matched(Query_Atoms_Matched & matched_query_atoms, 
+                Molecule_to_Match& target);
+    int _query_environment_also_matched(Query_Atoms_Matched &, int atoms_in_target_molecule,
+                        const std::unique_ptr<int[]>& matched_by_global_specs);
 
   public:
-    Single_Substructure_Query ();
-    Single_Substructure_Query (const char *);
-    Single_Substructure_Query (const IWString &);
-    Single_Substructure_Query (const const_IWSubstring &);
-    Single_Substructure_Query (iwstring_data_source &);
+    Single_Substructure_Query();
+    Single_Substructure_Query(const char *);
+    Single_Substructure_Query(const IWString &);
+    Single_Substructure_Query(const const_IWSubstring &);
+    Single_Substructure_Query(iwstring_data_source &);
 
-    ~Single_Substructure_Query ();
+    ~Single_Substructure_Query();
 
-    int valid () const;
-    int ok () const;
-    int debug_print (std::ostream &, const IWString & = "");    // not const for this class
-    int terse_details (std::ostream &, const IWString &);  // not const for this class
+    int valid() const;
+    int ok() const;
+    int debug_print(std::ostream &, const IWString & = "");    // not const for this class
+    int terse_details(std::ostream &, const IWString &);  // not const for this class
     int print_connectivity_graph(std::ostream &) const;
 
-    int construct_from_msi_object (const msi_object &);
+    int construct_from_msi_object(const msi_object &);
+    int ConstructFromProto(const SubstructureSearch::SingleSubstructureQuery& proto);
 
 //  We can create a molecule from a query. This will necessarily be very crude.
 
-    int create_molecule (Molecule &, int = 0, int = 0);   // used for ring perception and fragment identification
+    int create_molecule(Molecule &, int = 0, int = 0);   // used for ring perception and fragment identification
 
 //  And we can create a query from a molecule. Again, just approximate
 
-    int create_from_molecule (const Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = NULL);
-    int create_from_molecule (MDL_Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = NULL);
+    int create_from_molecule(const Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = nullptr);
+    int create_from_molecule(MDL_Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = nullptr);
 
-    void set_comment (const IWString & string) { _comment = string;}
-    const IWString & comment () const { return _comment;}
+    void set_comment(const IWString & string) { _comment = string;}
+    const IWString & comment() const { return _comment;}
 
-    int numeric_value (double & d, int = 0) const;     // fetch value of I'th numeric value
-    void add_numeric_value (double d) { _numeric_value.add (d);}
-    void set_numeric_value (double d, int ndx) { _numeric_value[ndx] = d;}
-    void discard_all_numeric_values () { _numeric_value.resize (0);}
-    void set_respect_initial_atom_numbering (int s) { _respect_initial_atom_numbering = s;}
+    int numeric_value(double & d, int = 0) const;     // fetch value of I'th numeric value
+    void add_numeric_value(double d) { _numeric_value.add(d);}
+    void set_numeric_value(double d, int ndx) { _numeric_value[ndx] = d;}
+    void discard_all_numeric_values() { _numeric_value.resize(0);}
+    void set_respect_initial_atom_numbering(int s) { _respect_initial_atom_numbering = s;}
 
-    void set_embeddings_do_not_overlap (int s) { _embeddings_do_not_overlap = s;}
+    void set_embeddings_do_not_overlap(int s) { _embeddings_do_not_overlap = s;}
 
-    void set_only_keep_matches_in_largest_fragment (int s) { _only_keep_matches_in_largest_fragment = s;}
-    int  only_keep_matches_in_largest_fragment () const { return _only_keep_matches_in_largest_fragment;}
+    void set_only_keep_matches_in_largest_fragment(int s) { _only_keep_matches_in_largest_fragment = s;}
+    int  only_keep_matches_in_largest_fragment() const { return _only_keep_matches_in_largest_fragment;}
 
-    int set_min_atoms_to_match (int);
-    int set_max_atoms_to_match (int);
+    int set_min_atoms_to_match(int);
+    int set_max_atoms_to_match(int);
 
-    int assign_unique_numbers ();
-    void assign_unique_id_from_atom_number_if_set (extending_resizable_array<int> & numbers_in_use);
+    int assign_unique_numbers();
+    void assign_unique_id_from_atom_number_if_set(extending_resizable_array<int> & numbers_in_use);
 
-    int unique_numbers_from_initial_atom_numbers ();
+    int unique_numbers_from_initial_atom_numbers();
 
     int find_one_embedding_per_start_atom() const { return _find_one_embedding_per_start_atom;}
 
-    Substructure_Atom * query_atom_with_initial_atom_number (atom_number_t) const;
-    Substructure_Atom * query_atom_with_atom_map_number (int) const;
+    Substructure_Atom * query_atom_with_initial_atom_number(atom_number_t) const;
+    Substructure_Atom * query_atom_with_atom_map_number(int) const;
 
-    const Substructure_Bond * bond_between_atoms (int, int) const;
+    const Substructure_Bond * bond_between_atoms(int, int) const;
     const Substructure_Bond * bond_between_atom_map_numbers(int a1, int a2) const;
 
-    int  highest_initial_atom_number () const;    // always computed, even though the variable _highest_initial_atom_number is in the object. Problem of when determined....
-    void identify_atom_numbers (extending_resizable_array<int> &) const;
-    void identify_atom_map_numbers (extending_resizable_array<int> &) const;
+    int  highest_initial_atom_number() const;    // always computed, even though the variable _highest_initial_atom_number is in the object. Problem of when determined....
+    void identify_atom_numbers(extending_resizable_array<int> &) const;
+    void identify_atom_map_numbers(extending_resizable_array<int> &) const;
     int  assign_atom_map_numbers(int & amap);
-    int  highest_atom_map_number () const;
+    int  highest_atom_map_number() const;
 
-    int set_find_one_embedding_per_atom (int);
-    int set_find_unique_embeddings_only (int);
-    int set_min_matches_to_find (int);
-    int set_max_matches_to_find (int);
-    int set_save_matched_atoms (int);
-    void set_ncon (const Min_Max_Specifier<int> & n) {_ncon = n;}
-    void set_ncon (int s);
-    void set_distance_between_hits (const Min_Max_Specifier<int> & n) { _distance_between_hits = n;}
+    int set_find_one_embedding_per_atom(int);
+    int set_find_unique_embeddings_only(int);
+    int set_min_matches_to_find(int);
+    int set_max_matches_to_find(int);
+    int set_save_matched_atoms(int);
+    void set_ncon(const Min_Max_Specifier<int> & n) {_ncon = n;}
+    void set_ncon(int s);
+    void set_distance_between_hits(const Min_Max_Specifier<int> & n) { _distance_between_hits = n;}
+    void set_no_matched_atoms_between_exhaustive(int s) { _no_matched_atoms_between_exhaustive = s;}
 
-    int add_link_atom (const Link_Atom &);
-    int add_no_matched_atoms_between_initial_atom_numbers (int, int);
+    int add_link_atom(const Link_Atom &);
+    int add_no_matched_atoms_between_initial_atom_numbers(int, int);
 
-    int set_normalise_rc_per_hits_needed (int);
+    int set_normalise_rc_per_hits_needed(int);
 
-    int set_do_not_perceive_symmetry_equivalent_matches (int s);
+    int set_do_not_perceive_symmetry_equivalent_matches(int s);
+    int set_perceive_symmetry_equivalent_matches(int s) {
+      return set_do_not_perceive_symmetry_equivalent_matches(!s);
+    }
 
-    int involves_rings () const;
-    int involves_ring_specifications_for_bonds () const;
+    int involves_rings() const;
+    int involves_ring_specifications_for_bonds() const;
 
-    int max_atoms_in_query ();
-    int min_atoms_in_query ();
+    int max_atoms_in_query();
+    int min_atoms_in_query();
 
 //  Search all atoms in the molecule for a match to the query.
 
-    int substructure_search (Molecule *, Substructure_Results &);
-    int substructure_search (Molecule_to_Match &, Substructure_Results &);
+    int substructure_search(Molecule *, Substructure_Results &);
+    int substructure_search(Molecule_to_Match &, Substructure_Results &);
 
 //  Once we allow decisions into a query, there can be a different number
 //  of query atoms which are matched for each match.
 
-    int query_atoms_in_match (int) const;
+    int query_atoms_in_match(int) const;
 
 //  The set of query atoms which made a given match
 
-    const Query_Atoms_Matched * query_atoms_matching (int) const;
+    const Query_Atoms_Matched * query_atoms_matching(int) const;
 
-    const Substructure_Atom *   query_atom_matching  (int, int) const;
+    const Substructure_Atom *   query_atom_matching(int, int) const;
 
-    int   root_atoms () const { return _root_atoms.number_elements ();}
-    const Substructure_Atom * root_atom (int i) const { return _root_atoms[i];}
-    int   add_root_atom (Substructure_Atom * r) { return _root_atoms.add(r);}
+    int   root_atoms() const { return _root_atoms.number_elements();}
+    const Substructure_Atom * root_atom(int i) const { return _root_atoms[i];}
+    int   add_root_atom(Substructure_Atom * r) { return _root_atoms.add(r);}
 
 //  Does a particular atom match the query?
 
-//  int match_atom (Molecule *, atom_number_t);
+//  int match_atom(Molecule *, atom_number_t);
 
 //  The list of all atoms which match this query
 
-    int matching_atoms (Molecule *, resizable_array<atom_number_t> &);
+    int matching_atoms(Molecule *, resizable_array<atom_number_t> &);
 
-    int max_query_atoms_matched_in_search () const { return _max_query_atoms_matched.maxval ();}
+    int max_query_atoms_matched_in_search() const { return _max_query_atoms_matched.maxval();}
 
-    int print_environment_matches (std::ostream &) const;
+    int print_environment_matches(std::ostream &) const;
 
-    int matches_before_checking_environment () const { return _matches_before_checking_environment;}
-    int no_match_to_environment () const { return _no_match_to_environment;}
-    int match_to_environemt_rejection () const { return _match_to_environemt_rejection;}
-    int environment_present () const { return _environment.number_elements () || _environment_rejections.number_elements ();}
+    int matches_before_checking_environment() const { return _matches_before_checking_environment;}
+    int no_match_to_environment() const { return _no_match_to_environment;}
+    int match_to_environemt_rejection() const { return _match_to_environemt_rejection;}
+    int environment_present() const { return _environment.number_elements() || _environment_rejections.number_elements();}
 
 //  We may want to ask how many unmatched atoms are bonded to the atoms
 //  of the I'th embedding
 
-    int  connections_to_embedding (const Molecule &, int) const;
+    int  connections_to_embedding(const Molecule &, int) const;
 
-    int write (const char *);
-    int write_msi (std::ostream &);
-    int write_msi (std::ostream &, int &, const const_IWSubstring &, int = 0);
+    int write(const char *);
+    int WriteProto(const char *);
+    int write_msi(std::ostream &);
+    int WriteProto(std::ostream &);
+    int write_msi(std::ostream &, int &, const const_IWSubstring &, int = 0);
 
-    int read (iwstring_data_source &);
-    int read (const char *);
-    int read (const IWString &);
-    int next (iwstring_data_source &);
+    int read(iwstring_data_source &);
+    int read(const char *);
+    int read(const IWString &);
+    int ReadProto(const char *);
+    int ReadProto(const IWString &);
+    int ReadProto(iwstring_data_source& input);
+    int next(iwstring_data_source &);
 
-    int create_from_smiles (const IWString & smiles);
-    int create_from_smarts (const IWString & smarts);
+    // Fill in 'proto' with all settings available.
+    int BuildProto(SubstructureSearch::SingleSubstructureQuery& proto) const;
 
-    void set_implicit_ring_condition (int i) { _implicit_ring_condition = i;}
+    int create_from_smiles(const IWString & smiles);
+    int create_from_smarts(const IWString & smarts);
 
-    int query_atom_with_isotope (int) const;   // first query atom that specifies a given isotope
+    void set_implicit_ring_condition(int i) { _implicit_ring_condition = i;}
+
+    int query_atom_with_isotope(int) const;   // first query atom that specifies a given isotope
 
     template <typename T> int any_query_atom(T) const;
+
+    // It can be convenient to forget about any smarts used to build a query.
+    // Returns 1 if there was an _originating_smarts to clear.
+    int ForgetOriginatingSmarts();
+
+    // THis is a public interface to a private function.
+    // If you have a Substructure_Atom and you want to start
+    // a substructure search with `root_atom` matched to 'a',
+    // this can do that.
+    // Implemented this to support the MatchedAtomMatch functionality
+    // where we have Substructure_Atom's as the query form.
+    int find_embedding(Molecule_to_Match & target_molecule,
+                                     Target_Atom & a,
+                                     Query_Atoms_Matched & matched_atoms,
+                                     int * already_matched,
+                                     Substructure_Atom * root_atom,
+                                     Substructure_Results & results);
 };
 
 /*
@@ -2408,21 +3384,24 @@ class Substructure_Query : public resizable_array_p<Single_Substructure_Query>
 
   private:
 
+    // Describes the logical operator relationship between the
+    // component Single_Substructure_Query.
     IW_Logical_Expression _operator;
 
-//  Jan 2003. What kind of search to do for identifying the matched atoms
+//  If set, the Substructure_Results returned by substructure_search will be the
+//  aggregate of all atoms matched by all the component queries that match.
 
     int _each_component_search;
 
 //  private functions
 
-    void _default_values ();
-    int _parse_smarts_components (const IWString & smarts, char separator);
-    int _single_query_construct_from_msi_object (const msi_object & msi);
-    int _composite_query_construct_from_msi_object (const msi_object & msi);
-    int _add_component_from_smarts (const const_IWSubstring & smarts, int op);
-    int _create_query_and_add (MDL_Molecule & m, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
-    int _enumerate_list_atom_possibilities (const MDL_Molecule & m,
+    void _default_values();
+    int _parse_smarts_components(const IWString & smarts, char separator);
+    int _single_query_construct_from_msi_object(const msi_object & msi);
+    int _composite_query_construct_from_msi_object(const msi_object & msi);
+    int _add_component_from_smarts(const const_IWSubstring & smarts, int op);
+    int _create_query_and_add(MDL_Molecule & m, Molecule_to_Query_Specifications & mqs, const int * include_these_atoms);
+    int _enumerate_list_atom_possibilities(const MDL_Molecule & m,
                                                         Molecule_to_Query_Specifications & mqs,
                                                         const resizable_array_p<Link_Atom> & link_atoms,
                                                         Link_Atom_Current_State * lacc,
@@ -2430,123 +3409,152 @@ class Substructure_Query : public resizable_array_p<Single_Substructure_Query>
                                                         int ndx,
                                                         const int * include_these_atoms);
 
-    int _substructure_search (Molecule_to_Match &, Substructure_Results &);
+    int _substructure_search(Molecule_to_Match &, Substructure_Results &);
 
   public:
-    Substructure_Query ();
-    Substructure_Query (const char *);
-    Substructure_Query (const const_IWSubstring &);
-    Substructure_Query (const IWString &);
-    ~Substructure_Query ();
+    Substructure_Query();
+    Substructure_Query(const char *);
+    Substructure_Query(const const_IWSubstring &);
+    Substructure_Query(const IWString &);
+    ~Substructure_Query();
 
-    int ok () const;
-    int debug_print (std::ostream &) const;
-    int terse_details (std::ostream &) const;
-    int active () const { return _number_elements;}
+    int ok() const;
+    int debug_print(std::ostream &) const;
+    int terse_details(std::ostream &) const;
+    int active() const { return _number_elements;}
     int print_connectivity_graph(std::ostream &) const;
 
-    const IWString & comment () const { return _comment;}
-    void set_comment (const IWString & cm) { _comment = cm;}
+    const IWString & comment() const { return _comment;}
+    void set_comment(const IWString & cm) { _comment = cm;}
 
-    int highest_initial_atom_number () const;
-    int highest_atom_map_number () const;
-    void identify_atom_numbers (extending_resizable_array<int> &) const;
-    void identify_atom_map_numbers (extending_resizable_array<int> &) const;
-    void assign_unique_id_from_atom_number_if_set (extending_resizable_array<int> & numbers_in_use);
+    int highest_initial_atom_number() const;
+    int highest_atom_map_number() const;
+    void identify_atom_numbers(extending_resizable_array<int> &) const;
+    void identify_atom_map_numbers(extending_resizable_array<int> &) const;
+    void assign_unique_id_from_atom_number_if_set(extending_resizable_array<int> & numbers_in_use);
     int  assign_atom_map_numbers(int & amap);
 
-    const Substructure_Bond * bond_between_atoms (int, int) const;
+    const Substructure_Bond * bond_between_atoms(int, int) const;
     const Substructure_Bond * bond_between_atom_map_numbers(int a1, int a2) const;
 
-    void set_each_component_search (int s) { _each_component_search = s;}
+    void set_each_component_search(int s) { _each_component_search = s;}
 
-    void set_respect_initial_atom_numbering (int s);
+    void set_respect_initial_atom_numbering(int s);
 
-    void set_only_keep_matches_in_largest_fragment (int s);
-    int  only_keep_matches_in_largest_fragment () const;
+    void set_only_keep_matches_in_largest_fragment(int s);
+    int  only_keep_matches_in_largest_fragment() const;
 
-    void set_embeddings_do_not_overlap (int s);
+    void set_embeddings_do_not_overlap(int s);
 
-    int add (Single_Substructure_Query *, int = IW_LOGEXP_OR);    // add a component and include the operator
+    int add(Single_Substructure_Query *, int = IW_LOGEXP_OR);    // add a component and include the operator
 
-    int read (iwstring_data_source &);
-    int read (const char *);
-    int read (const IWString &);
-    int read (const const_IWSubstring &);
+    int read(iwstring_data_source &);
+    int read(const char *);
+    int read(const IWString &);
+    int read(const const_IWSubstring &);
 
-    int construct_from_msi_object (const msi_object &);
+    int ReadProto(iwstring_data_source& input);
+    int ReadProto(const IWString& fname);
 
-    int create_from_smiles (const IWString & smiles);
-    int create_from_smarts (const IWString & smarts);
+    int construct_from_msi_object(const msi_object &);
+    int ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto);
 
-    int create_from_molecule (const Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = NULL);
-    int create_from_molecule (MDL_Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = NULL);
-//  int create_from_molecule (Molecule_to_Query_Specifications &,
+    int create_from_smiles(const IWString & smiles);
+    int create_from_smarts(const IWString & smarts);
+    int CreateFromSmarts(const std::string & smarts);
+
+    int create_from_molecule(const Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = nullptr);
+    int create_from_molecule(MDL_Molecule &, Molecule_to_Query_Specifications &, const int * include_these_atoms = nullptr);
+//  int create_from_molecule(Molecule_to_Query_Specifications &,
 //                            Molecule &,
 //                            const MDL_File_Data &);
-    int unique_numbers_from_initial_atom_numbers ();
+    int unique_numbers_from_initial_atom_numbers();
 
-    Substructure_Atom * query_atom_with_initial_atom_number (int) const;
-    Substructure_Atom * query_atom_with_atom_map_number (int) const;
+    Substructure_Atom * query_atom_with_initial_atom_number(int) const;
+    Substructure_Atom * query_atom_with_atom_map_number(int) const;
 
-    int write_msi (IWString &);
-    int write_msi (std::ostream &);
-    int write_msi (std::ostream &, int &, int = 0);
+    int write_msi(IWString& fname);
+    int write_msi(std::ostream& fname);
+    int write_msi(std::ostream& fname, int &, int = 0);
 
-    void set_ncon (const Min_Max_Specifier<int> &);
-    void set_distance_between_hits (const Min_Max_Specifier<int> &);
+    // Write proto representation to 'os'.
+    int WriteProto(std::ostream& os) const;
+    int WriteProto(IWString& fname) const;
+    int WriteProto(IWString_and_File_Descriptor& output) const;
 
-    int substructure_search (Molecule *);
-    int substructure_search (Molecule *, Substructure_Results &);
-    int substructure_search (Molecule &);
-    int substructure_search (Molecule &, Substructure_Results &);
-    int substructure_search (Molecule_to_Match &);
-    int substructure_search (Molecule_to_Match &, Substructure_Results &);
+    // Return a proto containing the contents of the Substructure_Query;
+    SubstructureSearch::SubstructureQuery BuildProto() const;
+
+    void set_ncon(const Min_Max_Specifier<int> &);
+    void set_distance_between_hits(const Min_Max_Specifier<int> &);
+
+    // Substructure searching with a composite query is complex.
+    // If there is only one component, the return value will be what that
+    // single component found, and Substructure_Results will contain
+    // the matched atoms for that query.
+    // If there are multiple components, there can only be a yes/no return
+    // value. And in that case, Substructure_Results will be undefined.
+    // On a negative match, it might contain some matched atoms (the 
+    // expression was an XOR).
+    // On a positive match, it may (or may not) contain some matched atoms,
+    // because the last component matched might have been a non-match in
+    // an XOR.
+    int substructure_search(Molecule *);
+    int substructure_search(Molecule *, Substructure_Results &);
+    int substructure_search(Molecule &);
+    int substructure_search(Molecule &, Substructure_Results &);
+    int substructure_search(Molecule_to_Match &);
+    int substructure_search(Molecule_to_Match &, Substructure_Results &);
 
 //  Sometimes we want to search each component of a query regardless of what operators
 //  might be present.
 
-    int substructure_search_do_each_component (Molecule_to_Match & target, Substructure_Results & sresults);
+    int substructure_search_do_each_component(Molecule_to_Match & target, Substructure_Results & sresults);
 
-    int set_find_one_embedding_per_atom (int);
-    int set_find_unique_embeddings_only (int);
-    int set_min_matches_to_find (int);
-    int set_max_matches_to_find (int);
-    int set_do_not_perceive_symmetry_equivalent_matches (int);
-    int set_save_matched_atoms (int);
-    int set_min_atoms_to_match (int);   // set the _natoms attribute
-    int set_max_atoms_to_match (int);   // set the _natoms attribute
+    int set_find_one_embedding_per_atom(int);
+    int set_find_unique_embeddings_only(int);
+    int set_min_matches_to_find(int);
+    int set_max_matches_to_find(int);
+    int set_do_not_perceive_symmetry_equivalent_matches(int);
+    int set_perceive_symmetry_equivalent_matches(int s) {
+      return set_do_not_perceive_symmetry_equivalent_matches(!s);
+    }
+    int set_save_matched_atoms(int);
+    int set_min_atoms_to_match(int);   // set the _natoms attribute
+    int set_max_atoms_to_match(int);   // set the _natoms attribute
 
-    int max_query_atoms_matched_in_search () const;
-    int max_atoms_in_query ();
+    int max_query_atoms_matched_in_search() const;
+    int max_atoms_in_query();
 
-    int print_environment_matches (std::ostream &) const;
+    int print_environment_matches(std::ostream &) const;
 
-    int numeric_value (double & d, int = 0) const;
-    void set_numeric_value (double d, int ndx);
-    void discard_all_numeric_values ();
-    void add_numeric_value (double d);
+    int numeric_value(double & d, int = 0) const;
+    void set_numeric_value(double d, int ndx);
+    void discard_all_numeric_values();
+    void add_numeric_value(double d);
 
     template <typename T> int any_query_atom(T) const;
     template <typename T> void each_query_atom(T) const;
 
+    // Applied to each component Single_Substructure_Query
+    int ForgetOriginatingSmarts();
 };
 
 
-//extern Substructure_Query * create_query (Molecule *, int = 0, int = 0, int = 0);
-//extern int create_query (Molecule *, Substructure_Query &, int = 0, int = 0);
+//extern Substructure_Query * create_query(Molecule *, int = 0, int = 0, int = 0);
+//extern int create_query(Molecule *, Substructure_Query &, int = 0, int = 0);
 
-//extern Single_Substructure_Query * new_substructure_query (const char *, int);
-//extern Single_Substructure_Query * next_substructure_query (iwstring_data_source &, int);
+//extern Single_Substructure_Query * new_substructure_query(const char *, int);
+//extern Single_Substructure_Query * next_substructure_query(iwstring_data_source &, int);
 
-extern int atom_matches_queries (Molecule *, atom_number_t, resizable_array_p<Single_Substructure_Query> &);
+extern int atom_matches_queries(Molecule *, atom_number_t, resizable_array_p<Single_Substructure_Query> &);
 
-extern void set_respect_aliphatic_smarts (int);
+extern void set_respect_aliphatic_smarts(int);
 
-extern void set_report_multiple_hits_threshold (unsigned int s);
+extern void set_report_multiple_hits_threshold(unsigned int s);
 
-extern int use_fingerprints_for_screening_substructure_searches ();
-extern void set_use_fingerprints_for_screening_substructure_searches (int);
+extern int use_fingerprints_for_screening_substructure_searches();
+extern void set_use_fingerprints_for_screening_substructure_searches(int);
 
 /*
   0 means initial behaviour - if there are multiple largest fragments with the same atom
@@ -2562,59 +3570,59 @@ extern void set_remove_hits_not_in_largest_fragment_behaviour(int s);
   We can change that behaviour so it means a minimum of one
 */
 
-extern void set_h_means_exactly_one_hydrogen (int s);
+extern void set_h_means_exactly_one_hydrogen(int s);
 
-extern void set_atom_environment_only_matches_unmatched_atoms (int);
+extern void set_atom_environment_only_matches_unmatched_atoms(int);
 
-extern void set_ignore_chirality_in_smarts_input (int);
-extern int  ignore_chirality_in_smarts_input ();
+extern void set_ignore_chirality_in_smarts_input(int);
+extern int  ignore_chirality_in_smarts_input();
 extern void set_query_environment_must_match_unmatched_atoms(const int s);
 
 // This is an internal thing used during matches. Not for external use
 
-extern int remove_atoms_with_same_or (Query_Atoms_Matched & matched_atoms,
+extern int remove_atoms_with_same_or(Query_Atoms_Matched & matched_atoms,
                            int istart, int orid);
 
 template <typename T>
 int
-process_queries (Command_Line & cl, resizable_array_p<T> & queries,
+process_queries(Command_Line & cl, resizable_array_p<T> & queries,
                  int verbose = 0, char option = 'q');
 
 template <typename T>
 int
-process_files_of_queries (Command_Line & cl, resizable_array_p<T> & queries,
+process_files_of_queries(Command_Line & cl, resizable_array_p<T> & queries,
                  int inherit_directory_path, int verbose = 0, char option = 'Q');
 
 template <typename T>
 int
-queries_from_file (const const_IWSubstring & fname, resizable_array_p<T> & queries,
+queries_from_file(const const_IWSubstring & fname, resizable_array_p<T> & queries,
                    int inherit_directory_path, int verbose = 0);
 template <typename T>
 int
-queries_from_file (const IWString & fname, resizable_array_p<T> & queries,
+queries_from_file(const IWString & fname, resizable_array_p<T> & queries,
                    int inherit_directory_path, int verbose = 0);
 template <typename T>
 int
-queries_from_ISIS_query_file (const const_IWSubstring & fname,
+queries_from_ISIS_query_file(const const_IWSubstring & fname,
                               resizable_array_p<T> & queries,
                               int verbose);
 template <typename T>
 int
-query_from_ISIS_query_file (MDL_Molecule & m,
+query_from_ISIS_query_file(MDL_Molecule & m,
                             Molecule_to_Query_Specifications & mqs,
                             resizable_array_p<T> & queries, int verbose);
 template <typename T>
 int
-queries_from_ISIS_query_file (const const_IWSubstring & fname,
+queries_from_ISIS_query_file(const const_IWSubstring & fname,
                               resizable_array_p<T> & queries, int verbose);
 template <typename T>
 int
-queries_from_file_of_molecules (const const_IWSubstring & fname,
+queries_from_file_of_molecules(const const_IWSubstring & fname,
                                 resizable_array_p<T> & queries,
                                 int verbose);
 template <typename T>
 int
-process_cmdline_token (const char, const const_IWSubstring & token,
+process_cmdline_token(const char, const const_IWSubstring & token,
                        resizable_array_p<T> & queries, int verbose);
 /*
   When parsing the form '-q M:fname' we can add directives in the form
@@ -2626,7 +3634,7 @@ process_cmdline_token (const char, const const_IWSubstring & token,
 
 template <typename M, typename Q>
 int
-first_query_to_match (M & m, resizable_array_p<Q> & q)
+first_query_to_match(M & m, resizable_array_p<Q> & q)
 {
   for (auto i = 0; i < q.number_elements(); ++i)
   {
@@ -2672,5 +3680,41 @@ Substructure_Atom::any_query_atom(T todo) const
   return 0;
 }
 
-#endif
+namespace substructure_spec {
 
+// Exposed only for testing
+int SmartsNumericQualifier(const char * input,
+                       int max_chars,
+                       Min_Max_Specifier<int>& result);
+int SmartsFetchNumeric(const char * string, int & value, 
+                     int & qualifier);
+
+int
+SmartsNumericQualifier(const char * input,
+                 int max_chars,
+                 Min_Max_Specifier<int>& result);
+
+}  // namespace substructure_spec
+
+namespace ss_ring {
+void
+FillMatchedAtomsArray(const Ring& r, 
+                      int value,
+                      int matoms,
+                      std::unique_ptr<int[]>& matched_by_global_specs);
+void
+SetTargetGlobalIds(const Set_of_Atoms& r, 
+                   int value,
+                   Molecule_to_Match& target);
+}  // namespace ss_ring
+
+namespace iwsubstructure {
+// Return the contents of the next
+// query {
+// ...
+// }
+// grouping found in `input`.
+std::optional<std::string> GetNextQueryTextProto(iwstring_data_source& input);
+}
+
+#endif  // MOLECULE_LIB_SUBSTRUCTURE_H_

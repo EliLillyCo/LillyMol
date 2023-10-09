@@ -1,0 +1,8 @@
+# Mar 2004. Fred Bruns
+
+(0 Query
+  (A I Version 2)
+  (A D numeric_value 30)
+  (A C Comment "acetal_1_in_ring")
+  (A C smarts "C[O,S;R1]C[O,S;R0]C")
+)

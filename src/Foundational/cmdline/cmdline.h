@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 typedef int clov_magic_number_t;
 
@@ -30,7 +30,7 @@ class Option_and_Value
     int _discern_numeric_values ();
 
   public:
-    Option_and_Value (int, const char * = NULL);
+    Option_and_Value (int, const char * = nullptr);
     ~Option_and_Value ();
 
     int ok () const;
@@ -84,7 +84,7 @@ class Command_Line : public resizable_array<const char *>
     int value (const char, char *, int = 0) const;
 
 //#ifdef IW_STD_STRING_DEFINED
-    int value (const char, std::string &, int = 0) const;
+    int value_as_std_string (const char, std::string &, int = 0) const;
     std::string std_string_value(const char, int = 0) const;
 //#endif
 
@@ -100,7 +100,7 @@ template <typename T>
 int
 Option_and_Value::value (T & rc) const
 {
-  if (NULL == _value)
+  if (nullptr == _value)
     return 0;
 
   const_IWSubstring tmp(_value);

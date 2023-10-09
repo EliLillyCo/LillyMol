@@ -3,7 +3,7 @@
 using std::cerr;
 using std::endl;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "rxn_environment.h"
 
@@ -154,7 +154,7 @@ RXN_Environment::_do_store_value(Db & db,
   Dbt dbkey((char *) key, ::strlen(key));
   Dbt dbdata((char *) &v, sizeof(v));
 
-  const int rc = db.put(NULL, &dbkey, &dbdata, 0);
+  const int rc = db.put(nullptr, &dbkey, &dbdata, 0);
 
   if (0 == rc)
     return 1;
@@ -184,7 +184,7 @@ RXN_Environment::do_store(Db & db) const
   Dbt dbkey((char *) MAX_RADIUS_KEY, ::strlen(MAX_RADIUS_KEY));
   Dbt dbdata((char *) &_max_radius, sizeof(_max_radius));
 
-  const int rc = db.put(NULL, &dbkey, &dbdata, 0);
+  const int rc = db.put(nullptr, &dbkey, &dbdata, 0);
 
   if (0 == rc)
     return 1;
@@ -221,7 +221,7 @@ RXN_Environment::_do_store(Db & database,
 
 //cerr << "JUst about to call put\n";
 
-  const int rc = database.put(NULL, &dbkey, &dbdata, 0);
+  const int rc = database.put(nullptr, &dbkey, &dbdata, 0);
 
   if (0 == rc)
     return 1;
@@ -241,7 +241,7 @@ RXN_Environment::do_read (Db & database)
 
   Dbt dbvalue;
 
-  auto rc = database.get(NULL, &dbkey, &dbvalue, 0);
+  auto rc = database.get(nullptr, &dbkey, &dbvalue, 0);
   if (0 != rc)
   {
     cerr << "RXN_Environment::do_read:cannot retrieve radius " << MAX_RADIUS_KEY << "\n";
@@ -250,9 +250,9 @@ RXN_Environment::do_read (Db & database)
 
   ::memcpy(&_max_radius, dbvalue.get_data(), sizeof(_max_radius));
 
-  Dbc * cursor = NULL;
+  Dbc * cursor = nullptr;
 
-  rc = database.cursor(NULL, &cursor, 0);
+  rc = database.cursor(nullptr, &cursor, 0);
   if (0 != rc)
   {
     database.err(rc, "cannot acquire cursor");

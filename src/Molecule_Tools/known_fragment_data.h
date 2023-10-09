@@ -5,9 +5,9 @@
   We have a list of known parent molecules and known counterions.
 */
 
-#include "iw_stl_hash_set.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
 
 /*
   Data about an individual fragment.

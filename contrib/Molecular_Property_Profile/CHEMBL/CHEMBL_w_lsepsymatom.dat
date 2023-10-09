@@ -1,0 +1,226 @@
+description {
+  feature_name: "w_lsepsymatom"
+  description: "Longest separation between symmetric atoms"
+  plot_title: "Longest separation between symmetric atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 49.0
+mean: 2.1600983
+median: 2.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 2.0
+}
+quantile {
+  quantile: 0.9
+  value: 4.0
+}
+quantile {
+  quantile: 0.95
+  value: 6.0
+}
+quantile {
+  quantile: 0.99
+  value: 15.0
+}
+int_values {
+  count: 480943
+}
+int_values {
+  value: 1
+  count: 21272
+}
+int_values {
+  value: 2
+  count: 1478968
+}
+int_values {
+  value: 3
+  count: 14498
+}
+int_values {
+  value: 4
+  count: 121128
+}
+int_values {
+  value: 5
+  count: 1171
+}
+int_values {
+  value: 6
+  count: 60233
+}
+int_values {
+  value: 7
+  count: 2191
+}
+int_values {
+  value: 8
+  count: 22321
+}
+int_values {
+  value: 9
+  count: 1453
+}
+int_values {
+  value: 10
+  count: 11072
+}
+int_values {
+  value: 11
+  count: 1840
+}
+int_values {
+  value: 12
+  count: 5466
+}
+int_values {
+  value: 13
+  count: 2172
+}
+int_values {
+  value: 14
+  count: 4553
+}
+int_values {
+  value: 15
+  count: 2152
+}
+int_values {
+  value: 16
+  count: 3493
+}
+int_values {
+  value: 17
+  count: 2154
+}
+int_values {
+  value: 18
+  count: 2513
+}
+int_values {
+  value: 19
+  count: 2114
+}
+int_values {
+  value: 20
+  count: 1841
+}
+int_values {
+  value: 21
+  count: 1722
+}
+int_values {
+  value: 22
+  count: 1279
+}
+int_values {
+  value: 23
+  count: 1465
+}
+int_values {
+  value: 24
+  count: 950
+}
+int_values {
+  value: 25
+  count: 1033
+}
+int_values {
+  value: 26
+  count: 552
+}
+int_values {
+  value: 27
+  count: 763
+}
+int_values {
+  value: 28
+  count: 339
+}
+int_values {
+  value: 29
+  count: 473
+}
+int_values {
+  value: 30
+  count: 219
+}
+int_values {
+  value: 31
+  count: 357
+}
+int_values {
+  value: 32
+  count: 121
+}
+int_values {
+  value: 33
+  count: 246
+}
+int_values {
+  value: 34
+  count: 54
+}
+int_values {
+  value: 35
+  count: 142
+}
+int_values {
+  value: 36
+  count: 37
+}
+int_values {
+  value: 37
+  count: 71
+}
+int_values {
+  value: 38
+  count: 19
+}
+int_values {
+  value: 39
+  count: 56
+}
+int_values {
+  value: 40
+  count: 13
+}
+int_values {
+  value: 41
+  count: 18
+}
+int_values {
+  value: 42
+  count: 2
+}
+int_values {
+  value: 43
+  count: 12
+}
+int_values {
+  value: 44
+  count: 3
+}
+int_values {
+  value: 45
+  count: 8
+}
+int_values {
+  value: 47
+  count: 2
+}
+int_values {
+  value: 49
+  count: 6
+}

@@ -6,19 +6,19 @@
   dname:B<n>:R,min,max,dx
 */
 
-#include <stdlib.h>
+#include <iostream>
 #include <limits>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
-#include "sparse_fp_creator.h"
-#include "iw_auto_array.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
 using std::numeric_limits;
+using std::cerr;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -54,7 +54,13 @@ static int range_sets_bit_count = 1;
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Converts descriptors to a sparse fingerprint\n";
   cerr << " -D ...         specify descriptor(s) to be converted;\n";
   cerr << "                descriptor name(s) found in descriptor file header line\n";
@@ -141,11 +147,11 @@ Descriptor::Descriptor()
 
   _bstart = 0;
 
-  _min = numeric_limits<float>::max();
-  _max = -numeric_limits<float>::max();
+  _min = std::numeric_limits<float>::max();
+  _max = -std::numeric_limits<float>::max();
   _dx = 0.0f;
 
-  _bucket_count = NULL;
+  _bucket_count = nullptr;
 
   _range_specified = 0;
 
@@ -154,7 +160,7 @@ Descriptor::Descriptor()
 
 Descriptor::~Descriptor()
 {
-  if (NULL != _bucket_count)
+  if (nullptr != _bucket_count)
     delete [] _bucket_count;
 
   return;
@@ -177,8 +183,8 @@ Descriptor::debug_print(std::ostream & os) const
 int
 Descriptor::report(std::ostream & os) const
 {
-  os << "Descriptor '" << _name << "' range " << _min << ',' << _max << ',' << _dx << endl;
-  if (NULL == _bucket_count)
+  os << "Descriptor '" << _name << "' range " << _min << ',' << _max << ',' << _dx << '\n';
+  if (nullptr == _bucket_count)
   {
     cerr << "constant\n";
     return 1;
@@ -201,7 +207,7 @@ Descriptor::report(std::ostream & os) const
 int
 Descriptor::allocate_bucket_counter()
 {
-  assert (NULL == _bucket_count);
+  assert (nullptr == _bucket_count);
 
   if (_min == _max)
     return 0;
@@ -210,7 +216,7 @@ Descriptor::allocate_bucket_counter()
 
   if (nb <= 0)
   {
-    cerr << "Descriptor::allocate_bucket_counter:invalid bucket count, min " << _min << " max " << _max << " dx " << _dx << " nb " << nb << endl;
+    cerr << "Descriptor::allocate_bucket_counter:invalid bucket count, min " << _min << " max " << _max << " dx " << _dx << " nb " << nb << '\n';
     return 0;
   }
 
@@ -373,7 +379,7 @@ Descriptor::build(const const_IWSubstring & s)
 
       if (_min >= _max)
       {
-        cerr << "Descriptor::build:max is invalid, min = " << _min << " max = " << _max << endl;
+        cerr << "Descriptor::build:max is invalid, min = " << _min << " max = " << _max << '\n';
         return 0;
       }
     }
@@ -426,7 +432,7 @@ Descriptor::set_bits(float v,
     b = static_cast<int>((v - _min) / _dx + 0.4999F);
   }
 
-  if (NULL != _bucket_count)
+  if (nullptr != _bucket_count)
     _bucket_count[b]++;
 
   if (range_sets_bit_count)
@@ -467,7 +473,7 @@ Descriptor::set_bits(const const_IWSubstring & buffer,
     return 0;
   }
 
-//cerr << "Descriptor processing '" << buffer << "' got value " << v << endl;
+//cerr << "Descriptor processing '" << buffer << "' got value " << v << '\n';
 
   return set_bits(v, sfc);
 }
@@ -536,14 +542,14 @@ class Set_of_Descriptors
 Set_of_Descriptors::Set_of_Descriptors()
 {
   _nd = 0;
-  _d = NULL;
+  _d = nullptr;
 
   return;
 }
 
 Set_of_Descriptors::~Set_of_Descriptors()
 {
-  if (NULL != _d)
+  if (nullptr != _d)
     delete [] _d;
 
   return;
@@ -794,7 +800,7 @@ Set_of_Descriptors::_initialise_already_specified (const const_IWSubstring & buf
       for (int j = 0; j < _nd; j++)
       {
         if (_d[j].column() <= 0)
-          cerr << "No match for '" << _d[j].name() << endl;
+          cerr << "No match for '" << _d[j].name() << '\n';
       }
 
       return 0;
@@ -816,7 +822,7 @@ Set_of_Descriptors::_initialise_already_specified (const const_IWSubstring & buf
 
   if (nfound != _nd)
   {
-    cerr << "Set_of_Descriptors::initialise::problems initialising columns, have " << _nd << " descriptors, matched " << nfound <<endl;
+    cerr << "Set_of_Descriptors::initialise::problems initialising columns, have " << _nd << " descriptors, matched " << nfound << '\n';
     return 0;
   }
 
@@ -902,7 +908,7 @@ descriptors_to_fingerprint (iwstring_data_source & input,
 
     if (! descriptors_to_fingerprint_record (buffer, sod, output))
     {
-      cerr << "Fatal error processing line " << input.lines_read() << endl;
+      cerr << "Fatal error processing line " << input.lines_read() << '\n';
       return 0;
     }
 
@@ -949,11 +955,11 @@ Set_of_Descriptors::identify_descriptors_being_processed (const const_IWSubstrin
   }
 
   cerr << "Yipes, only identified " << nfound << " of " << _nd << " descriptors in record\n";
-  cerr << buffer << endl;
+  cerr << buffer << '\n';
 
   for (int i = 0; i < _nd; i++)
   {
-    cerr << " descriptor in column " << _d[i].column() << endl;
+    cerr << " descriptor in column " << _d[i].column() << '\n';
   }
 
   return 0;
@@ -1175,7 +1181,7 @@ descriptors_to_fingerprint (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Default bit replicate count set to " << default_nbits << endl;
+      cerr << "Default bit replicate count set to " << default_nbits << '\n';
   }
 
   if (cl.option_present('d'))
@@ -1188,7 +1194,7 @@ descriptors_to_fingerprint (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Default range division count set to " << tmp << endl;
+      cerr << "Default range division count set to " << tmp << '\n';
 
     default_number_divisions = static_cast<float>(tmp);
   }

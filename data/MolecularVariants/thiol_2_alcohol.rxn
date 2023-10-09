@@ -1,0 +1,9 @@
+name: "thiol_2_alcohol"
+scaffold {
+  id: 0
+  smarts: "[SD1G0]-C"
+  change_element {
+    atom: 0
+    element: "O"
+  }
+}

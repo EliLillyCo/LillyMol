@@ -4,19 +4,18 @@
 
 #include <stdlib.h>
 #include <fstream>
-using namespace std;
 
 #include "cmdline.h"
 #include "iwstring_data_source.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
 static int flush_every = 32768;
 
 static void
-usage (int rc)
+usage(int rc)
 {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
   cerr << "Tester for I/O, specify one or more files on command line (like cat)\n";
@@ -29,8 +28,8 @@ usage (int rc)
 }
 
 static int
-write_test (iwstring_data_source & input,
-            ostream & output)
+write_test(iwstring_data_source & input,
+           ostream & output)
 {
   const_IWSubstring buffer;
 
@@ -43,7 +42,7 @@ write_test (iwstring_data_source & input,
 }
 
 static int
-write_test_stdlib (const char * fname,
+write_test_stdlib(const char * fname,
             ostream & output)
 {
   iwstring_data_source input(fname);
@@ -58,8 +57,8 @@ write_test_stdlib (const char * fname,
 }
 
 static int
-write_test (iwstring_data_source & input,
-            IWString_and_File_Descriptor & output)
+write_test(iwstring_data_source & input,
+           IWString_and_File_Descriptor & output)
 {
   const_IWSubstring buffer;
 
@@ -73,8 +72,8 @@ write_test (iwstring_data_source & input,
 }
 
 static int
-write_test_iwstring (const char * fname,
-                     IWString_and_File_Descriptor & output)
+write_test_iwstring(const char * fname,
+                    IWString_and_File_Descriptor & output)
 {
   iwstring_data_source input(fname);
 
@@ -88,8 +87,8 @@ write_test_iwstring (const char * fname,
 }
 
 static int
-write_test_iwstring (Command_Line & cl,
-                     IWString_and_File_Descriptor & output)
+write_test_iwstring(Command_Line & cl,
+                    IWString_and_File_Descriptor & output)
 {
   for (int i = 0; i < cl.number_elements(); i++)
   {
@@ -100,8 +99,8 @@ write_test_iwstring (Command_Line & cl,
 }
 
 static int
-write_test_stdlib (Command_Line & cl,
-                   ostream & output)
+write_test_stdlib(Command_Line & cl,
+                  ostream & output)
 {
   for (int i = 0; i < cl.number_elements(); i++)
   {
@@ -112,12 +111,12 @@ write_test_stdlib (Command_Line & cl,
 }
 
 static int
-write_test_iwstring (Command_Line & cl)
+write_test_iwstring(Command_Line & cl)
 {
   if (! cl.option_present('S'))
   {
     IWString_and_File_Descriptor output(1);
-    return write_test_iwstring (cl, output);
+    return write_test_iwstring(cl, output);
   }
 
   IWString_and_File_Descriptor output;
@@ -134,10 +133,10 @@ write_test_iwstring (Command_Line & cl)
 }
 
 static int
-write_test_stdlib (Command_Line & cl)
+write_test_stdlib(Command_Line & cl)
 {
   if (! cl.option_present('S'))
-    return write_test_stdlib (cl, cout);
+    return write_test_stdlib(cl, cout);
 
   const char * fname = cl.option_value('S');
 
@@ -155,14 +154,14 @@ write_test_stdlib (Command_Line & cl)
 }
 
 static int
-write_test (int argc, char ** argv)
+write_test(int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "vb:gS:");
+  Command_Line cl(argc, argv, "vb:gS:");
 
-  if (cl.unrecognised_options_encountered ())
+  if (cl.unrecognised_options_encountered())
   {
     cerr << "Unrecognised options encountered\n";
-    usage (1);
+    usage(1);
   }
 
   verbose = cl.option_count('v');
@@ -182,13 +181,13 @@ write_test (int argc, char ** argv)
   if (0 == cl.number_elements())
   {
     cerr << "Insufficient arguments\n";
-    usage (2);
+    usage(2);
   }
 
   if (cl.option_present('g'))
-    write_test_stdlib (cl);
+    write_test_stdlib(cl);
   else
-    write_test_iwstring (cl);
+    write_test_iwstring(cl);
 
   if (verbose)
   {
@@ -198,7 +197,7 @@ write_test (int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
   prog_name = argv[0];
 

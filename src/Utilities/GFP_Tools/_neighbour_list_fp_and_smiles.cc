@@ -12,13 +12,14 @@ static IWString distance_tag("DIST<");
   We can save time by pre-computing the string representations of distances
 */
 
-static IWString * string_distance = NULL;
+#ifdef NO_LONGER_USED____
+static IWString * string_distance = nullptr;
 
 int
 initialise_string_distances ()
 {
   string_distance = new IWString[1001];
-  if (NULL == string_distance)
+  if (nullptr == string_distance)
   {
     cerr << "Yipes, cannot allocate 1000 strings for distances\n";
     return 0;
@@ -46,6 +47,7 @@ append_string_distance (similarity_type_t d,
 
   return;
 }
+#endif
 
 #define NEIGHBOUR_LIST_IMPLEMENTATION
 

@@ -1,5 +1,5 @@
-#ifndef IW_OUTPUT_H
-#define IW_OUTPUT_H
+#ifndef MOLECULE_LIB_OUTPUT_H_
+#define MOLECULE_LIB_OUTPUT_H_
 
 /*
   This is an attempt at generalised molecule output.
@@ -13,23 +13,20 @@
   type.
 */
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "ostream_and_type.h"
-#include "iwaray.h"
 
 class Command_Line;
 class Molecule;
 class MDL_File_Supporting_Material;
 
-
 class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
 {
   private:
-    int _single_file_per_molecule;
     int _molecules_per_file;
 
-    resizable_array<int> _output_types;
+    resizable_array<FileType> _output_types;
 
     int _verbose;
 
@@ -59,7 +56,11 @@ class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
 
     int _suffix_already_used (const char * suffix);
 
-    int _add_output_type (int, const const_IWSubstring &, MDL_File_Supporting_Material &);
+    int _add_output_type (FileType, const const_IWSubstring &, MDL_File_Supporting_Material &);
+
+    // Some file types might have header records (csv).
+    int _write_any_header_records() const;
+    int _read_any_header_records() const;
 
   public:
     Molecule_Output_Object ();
@@ -73,7 +74,7 @@ class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
 
     int good () const;
 
-    int set_verbose (int i) { return _verbose = i;}
+    void set_verbose (int i) { _verbose = i;}
 
     int set_molecules_per_file (int);
     int molecules_per_file () const { return _molecules_per_file;}
@@ -83,7 +84,7 @@ class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
 
     int molecules_written () const { return _molecules_written;}
 
-    int new_stem (const const_IWSubstring &, int = 0);
+    int new_stem (const const_IWSubstring &, int keep_suffix = 0);
     const IWString & stem () const {return _stem;}
 
     int would_use_name (const char *) const;
@@ -92,7 +93,7 @@ class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
     int would_overwrite_input_files (const Command_Line &, const const_IWSubstring &) const;
 
     int determine_output_types (const Command_Line &, char = 'o');
-    int add_output_type (int);
+    int add_output_type (FileType);
     int number_output_types () const { return _output_types.number_elements ();}
 
     int write (Molecule *);
@@ -105,7 +106,7 @@ class Molecule_Output_Object : public resizable_array_p<ofstream_and_type>
     int do_close();
     int do_flush();
 
-    int first_output_type () const { return _output_types[0];}
+    FileType first_output_type () const { return _output_types[0];}
 };
 
-#endif
+#endif  // MOLECULE_LIB_OUTPUT_H_

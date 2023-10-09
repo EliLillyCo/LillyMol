@@ -1,0 +1,11 @@
+query {
+  name: "aromatic_ring_acceptor"
+  ring_specifier {
+    aromatic: true
+    base {
+      environment: "[nH0,o,s]&&0[nH]&&0[+]&&0[-]"
+      set_global_id: 1
+    }
+  }
+  smarts: "[/IWgid1]"
+}

@@ -1,0 +1,5 @@
+# Positive charge on a non ring atom
+query {
+  name: "feature_node_positive"
+  smarts: "[+R0]"
+}

@@ -1,0 +1,9 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "trivalent_phosphorus")
+  (0 Query_Atom
+    (A I atomic_number 15)
+    (A I ncon 3)
+    (A I nbonds 3)
+  )
+)

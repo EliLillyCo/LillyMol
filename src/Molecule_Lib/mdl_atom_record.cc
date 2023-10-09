@@ -1,7 +1,11 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "mdl.h"
 #include "mdl_atom_record.h"
+
+using std::cerr;
+using std::endl;
 
 MDL_Atom_Record::MDL_Atom_Record()
 {
@@ -254,8 +258,8 @@ MDL_Atom_Record::create_atom() const
 
   Atom * a = mdlfos->create_mdl_atom(_atomic_symbol, _msdiff, formal_charge, is_radical);
 
-  if (NULL == a)
-    return NULL;
+  if (nullptr == a)
+    return nullptr;
 
   a->setxyz(_x, _y, _z);
 

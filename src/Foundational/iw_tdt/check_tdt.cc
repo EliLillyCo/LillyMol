@@ -2,11 +2,9 @@
   Check and report on characteristics of a tdt
 */
 
-#include <stdlib.h>
-
-#include "cmdline.h"
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 using std::cerr;
 using std::cout;
 using std::endl;

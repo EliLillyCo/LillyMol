@@ -27,7 +27,7 @@ using std::cout;
 using std::ostream;
 using std::setw;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -91,7 +91,7 @@ usage (int rc)
 #include "iwstring_data_source.h"
 
 static int population_count_vector_length = 0;
-static int * population = NULL;
+static int * population = nullptr;
 static int fingerprints_summed = 0;
 
 static int bits_in_fingerprints = 0;
@@ -101,7 +101,7 @@ nnetin (iwstring_data_source & input, ostream & output)
 {
   IWString buffer;
   IWString name;
-  IW_Bits_Base * fp = NULL;
+  IW_Bits_Base * fp = nullptr;
 
   while (input.next_record (buffer))
   {
@@ -159,7 +159,7 @@ nnetin (iwstring_data_source & input, ostream & output)
 
     if (buffer == '|')
     {
-      if (name.nchars () && NULL != fp)
+      if (name.nchars () && nullptr != fp)
       {
         if (write_01_representation)
         {
@@ -197,14 +197,14 @@ nnetin (iwstring_data_source & input, ostream & output)
       }
       else
       {
-        if (name.nchars () || NULL != fp)
+        if (name.nchars () || nullptr != fp)
           cerr << "Name or fp missing\n";
       }
       
-      if (NULL != fp)
+      if (nullptr != fp)
       {
         delete fp;
-        fp = NULL;
+        fp = nullptr;
       }
       name = "";
 

@@ -1,14 +1,12 @@
-#ifndef BOND_H
-#define BOND_H
+#ifndef MOLECULE_LIB_BOND_H_
+#define MOLECULE_LIB_BOND_H_
 
 #include <iostream>
 #include <functional>
 
 #include "iwmtypes.h"
 
-#ifndef MOLECULE_H
 class Molecule;
-#endif
 
 class IWString;
 
@@ -19,22 +17,25 @@ class Connection
     bond_type_t   _btype;
 
   public:
-    Connection ();
-    Connection (atom_number_t, bond_type_t);
-    ~Connection ();
+    Connection();
+    Connection(atom_number_t, bond_type_t);
+    ~Connection();
 
-    int           debug_print (std::ostream &);
+    int debug_print(std::ostream &) const;
 
-    atom_number_t a2 () const { return _a2; }
+    atom_number_t a2() const { return _a2; }
 
-    bond_type_t   btype () const { return _btype; }
+    bond_type_t btype() const { return _btype; }
 
-    void        set_bond_type   (bond_type_t);
+    void set_atom(atom_number_t s) {
+      _a2 = s;
+    }
+    void set_bond_type(bond_type_t);
 
-    void        set_aromatic ();
-    void        set_non_aromatic ();
+    void set_aromatic();
+    void set_non_aromatic();
 
-    void        set_permanent_aromatic (int);    // 0 or 1 values only
+    void set_permanent_aromatic(int);    // 0 or 1 values only
 };
 
 #define BOND_PROPERTY_UNKNOWN -3
@@ -126,6 +127,11 @@ class Bond: public Connection
         return _a2;
 
       return _a1;
+    }
+
+    // Enable structured bindings.
+    std::tuple<atom_number_t, atom_number_t> atoms() const {
+      return {_a1, _a2};
     }
 
 //  If both bonds aromatic they are the same, else compare by bond type
@@ -231,4 +237,4 @@ class Bond: public Connection
     int            new_atom_numbers (const int * xref);   // makeing a subset, adjust the bonds to reflect the new numbering
 };
 
-#endif
+#endif  // MOLECULE_LIB_BOND_H_

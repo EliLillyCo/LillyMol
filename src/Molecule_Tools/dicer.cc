@@ -1,46 +1,59 @@
 /*
-   recursive breaking
- */
+   Recursive breaking of a molecule.
+*/
 
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include <memory>
-#include <limits>
-#include <vector>
+
 #include <algorithm>
 #include <iostream>
-using std::cerr;
-using std::endl;
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+#include "google/protobuf/text_format.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 #define IWQSORT_FO_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 #define IW_IMPLEMENTATIONS_EXPOSED 1
 
-#include "cmdline.h"
-#include "iw_stl_hash_map.h"
-#include "iw_time.h"
-#include "accumulator.h"
-#include "sparse_fp_creator.h"
-//#include "accumulator.h"
-#include "misc.h"
-#include "iwqsort.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/tfdatarecord.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwmisc/iw_time.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwqsort/iwqsort.h"
 
-#include "istream_and_type.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "molecule_to_query.h"
-#include "iwstandard.h"
-#include "target.h"
-#include "qry_wstats.h"
-#include "etrans.h"
-#include "path.h"
-#include "atom_typing.h"
-#include "misc2.h"
-#include "output.h"
-#include "mdl.h"
-#include "smiles.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/mdl.h"
+#include "Molecule_Lib/misc2.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
+
+#include "Molecule_Tools/dicer_fragments.pb.h"
+
+using std::cerr;
+using std::endl;
 
 //#define SPECIAL_THING_FOR_PARENT_AND_FRAGMENTS
 #ifdef SPECIAL_THING_FOR_PARENT_AND_FRAGMENTS
@@ -50,7 +63,7 @@ static Molecule_Output_Object stream_for_parent_joinged_to_fragment;
 
 #endif
 
-static const char * prog_name = NULL;
+static const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -72,6 +85,8 @@ static int fragments_discarded_for_not_containing_user_specified_queries = 0;
 
 static int include_amide_like_bonds_in_hard_coded_queries = 1;
 
+static int break_ring_chain_bonds = 0;
+
 static resizable_array_p<Substructure_Hit_Statistics> queries_for_bonds_to_not_break;
 
 static int nq = 0;
@@ -90,7 +105,9 @@ static int ignore_molecules_not_matching_any_queries = 0;
 
 static int molecules_not_hitting_any_queries = 0;
 
+// Global mapping from fragment unique smiles to fragment id.
 static IW_STL_Hash_Map_uint smiles_to_id;
+// Given a fragment id, what is the smiles.
 static resizable_array_p<IWString> id_to_smiles;
 
 static int add_new_strings_to_hash = 1;
@@ -98,8 +115,8 @@ static int add_new_strings_to_hash = 1;
 static IW_STL_Hash_Map_uint molecules_containing;
 
 /*
-   During writing the fragstat file, we want to know the identity of the
-   molecule that gives rise to each fragment.
+ During writing the fragstat file, we want to know the identity of the
+ molecule that gives rise to each fragment.
  */
 
 static IW_STL_Hash_Map_String starting_parent;
@@ -108,7 +125,20 @@ static IW_STL_Hash_Map_int atoms_in_parent;
 
 static int accumulate_starting_parent_information = 0;
 
+static int write_fragstat_as_proto = 0;
+// It can be convenient to be able to read the proto file
+// as a smiles. But the leading token will need to be stripped
+// before parsing as a textproto.
+static int prepend_smiles_to_fragstat_proto = 0;
+
+// If we are writing binary protos - recommended for larger
+// datasets.
+static int write_fragstat_as_binary_proto = 0;
+iw_tf_data_record::TFDataWriter tfdata_writer;
+
 static int work_like_recap = 0;
+
+static int write_diced_molecules = 1;
 
 static Accumulator_Base<clock_t, unsigned long> time_acc;
 
@@ -128,7 +158,7 @@ static IWString_and_File_Descriptor stream_for_post_breakage;
 
 static int record_presence_and_absence_only = 0;
 
-static int isotope_for_join_points = 0;
+static isotope_t isotope_for_join_points = 0;
 
 static int increment_isotope_for_join_points = 0;
 
@@ -163,6 +193,14 @@ static extending_resizable_array<int> global_counter_bonds_to_be_broken;
 static int lower_atom_count_cutoff = 1;
 static int upper_atom_count_cutoff = std::numeric_limits<int>::max();
 
+// When limiting the size of fragments produced, we might want to make
+// sure we get ring systems, but having a fixed upper_atom_count_cutoff can
+// make that difficult. Limiting the number of non ring atoms allows
+// flexibility.
+// A value of -1 means not specified. Note that a value of 0 is OK, and
+// would result in only rings being produced.
+static int max_non_ring_atoms = -1;
+
 static int max_atoms_lost_from_parent = -1;
 
 static float min_atom_fraction = -1.0f;
@@ -175,6 +213,8 @@ static int reject_breakages_that_result_in_fragments_too_small = 0;
 
 static int write_smiles = 1;
 static int write_parent_smiles = 1;
+
+static int output_is_proto = 0;
 
 /*
    When viewing fragments, it is convenient to have the parent
@@ -196,9 +236,9 @@ static int change_element_for_heteroatoms_with_hydrogens = 0;
 
 static int eliminate_fragment_subset_relations = 0;
 
-static const Element * holmium = NULL;
-static const Element * neptunium = NULL;
-static const Element * strontium = NULL;
+static const Element * holmium = nullptr;
+static const Element * neptunium = nullptr;
+static const Element * strontium = nullptr;
 
 static int break_fused_rings = 0;
 
@@ -229,6 +269,135 @@ static Atom_Typing_Specification atom_typing_specification;
 
 static Molecule_Output_Object stream_for_fully_broken_parents;
 
+// Feb 2022
+// When writing the file of all fragments discovered, we can control
+/// what tokens are written to that file.
+class AllFragmentsStream {
+  // Output token separator. Could be made configurable.
+  static constexpr char kSep = ' ';
+
+  private:
+    // Which columns/features to write.
+    IW_STL_Hash_Set _fragment_directives_selected;
+
+    // Destination for output.
+    IWString_and_File_Descriptor _output;
+
+    // Names of valid columns/features. Used during setup to identify
+    // valid names.
+    IW_STL_Hash_Set _valid_all_fragments_directives;
+
+  // private functions
+    int OpenFile(const const_IWSubstring& fname);
+    int GetFeatureToWrite(const const_IWSubstring& token);
+
+  public:
+    AllFragmentsStream();
+
+    int ParseDirective(const_IWSubstring b);  // By value.
+
+    // If no features have been selected, use a default set.
+    void UseDefaultFeaturesUnlessSpecified();
+
+    int active() const {
+      return _output.is_open();
+    }
+
+    // If feature `feature_name` has been selected for writing, write `feature_value`.
+    // If `need_separator` is true, prepend output with kSep, and set `need_separator`
+    // to true.
+    template <typename T> int MaybeWrite(const char * feature_name,
+                                         const T& feature_value, bool& need_separator);
+    int newline() {
+      _output << '\n';
+      _output.write_if_buffer_holds_more_than(8192);
+      return _output.good();
+    }
+};
+
+AllFragmentsStream::AllFragmentsStream() {
+  _valid_all_fragments_directives.insert("smiles");
+  _valid_all_fragments_directives.insert("name");
+  _valid_all_fragments_directives.insert("rdepth");
+  _valid_all_fragments_directives.insert("psmiles");
+  _valid_all_fragments_directives.insert("frag");
+  _valid_all_fragments_directives.insert("frag_id");
+}
+
+int
+AllFragmentsStream::ParseDirective(const_IWSubstring b) {
+  if (b.starts_with("WRITEALL=")) {
+    b.remove_leading_chars(9);
+    return OpenFile(b);
+  } else if (b.starts_with("WRITEALL:")) {
+    b.remove_leading_chars(9);
+    return GetFeatureToWrite(b);
+  } else {
+    return 1;
+  }
+}
+
+int
+AllFragmentsStream::OpenFile(const const_IWSubstring& fname) {
+  if (_output.is_open()) {
+    cerr << "AllFragmentsStream::OpenFile:already open\n";
+    return 0;
+  }
+
+  IWString tmp(fname);
+  if (! _output.open(tmp.null_terminated_chars())) {
+    cerr << "AllFragmentsStream:OpenFile:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+AllFragmentsStream::GetFeatureToWrite(const const_IWSubstring& token) {
+  int i = 0;
+  IWString feature;
+  while (token.nextword(feature, i, ',')) {
+    if (! _valid_all_fragments_directives.contains(feature)) {
+      cerr << "AllFragmentsStream::GetFeatureToWrite:unrecognised feature '" << feature << "'\n";
+      return 0;
+    }
+    _fragment_directives_selected.insert(feature);
+  }
+  return 1;
+}
+
+void
+AllFragmentsStream::UseDefaultFeaturesUnlessSpecified() {
+  if (! _fragment_directives_selected.empty()) {
+    return;
+  }
+
+  _fragment_directives_selected.insert("name");
+  _fragment_directives_selected.insert("frag");
+  _fragment_directives_selected.insert("frag_id");
+}
+
+template <typename T>
+int
+AllFragmentsStream::MaybeWrite(const char * feature_name,
+                               const T & feature_value,
+                               bool& need_separator) {
+  if (! _fragment_directives_selected.contains(feature_name)) {
+    return 1;
+  }
+
+  if (need_separator) {
+    _output << kSep;
+  } else {
+    need_separator = true;
+  }
+  _output << feature_value;
+  return _output.good();
+}
+
+static AllFragmentsStream all_fragments;
+
 static void
 reset_variables()
 {
@@ -239,6 +408,7 @@ reset_variables()
      add_user_specified_queries_to_default_rules = 0;
      fragments_discarded_for_not_containing_user_specified_queries = 0;
      include_amide_like_bonds_in_hard_coded_queries = 1;
+     break_ring_bonds = 0;
      nq = 0;
      append_atom_count = 0;
      max_recursion_depth = 1;
@@ -264,6 +434,7 @@ reset_variables()
      function_as_filter = 0;
      lower_atom_count_cutoff = 1;
      upper_atom_count_cutoff = std::numeric_limits<int>::max();
+     max_non_ring_atoms = 0;
      max_atoms_lost_from_parent = -1;
      min_atom_fraction = -1.0f;
      lower_atom_count_cutoff_current_molecule = 0;
@@ -271,6 +442,7 @@ reset_variables()
      reject_breakages_that_result_in_fragments_too_small = 0;
      write_smiles = 1;
      write_parent_smiles = 1;
+     output_is_proto = 0;
      vf_structures_per_page = 0;
      write_smiles_and_complementary_smiles = 0;
      allow_cc_bonds_to_break = 0;
@@ -278,9 +450,9 @@ reset_variables()
      perceive_terminal_groups_only_in_original_molecule = 0;
      change_element_for_heteroatoms_with_hydrogens = 0;
      eliminate_fragment_subset_relations = 0;
-     holmium = NULL;
-     neptunium = NULL;
-     strontium = NULL;
+     holmium = nullptr;
+     neptunium = nullptr;
+     strontium = nullptr;
      break_fused_rings = 0;
      break_ring_bonds = 0;
      break_spiro_rings = 0;
@@ -354,7 +526,7 @@ Fragment_Statistics_Report_Support_Specification::debug_print (std::ostream & os
   if (_int > 0)
     os << "Support level is " << _int << " items\n";
   else if (_fraction >= 0.0F)
-    os << "Support level is fractional " << _fraction << endl;
+    os << "Support level is fractional " << _fraction << '\n';
   else
     os << "Support level not specified\n";
 
@@ -473,7 +645,7 @@ Fragments_At_Recursion_Depth::Fragments_At_Recursion_Depth()
   _max_recursion = 0;
   _max_bonds = 0;
 
-  _fragments = NULL;
+  _fragments = nullptr;
 }
 
 /*
@@ -530,27 +702,27 @@ Fragments_At_Recursion_Depth::initialise (int k, int b)
 int
 Fragments_At_Recursion_Depth::debug_print (std::ostream & os) const
 {
-  os << "Fragments_At_Recursion_Depth:_max_recursion " << _max_recursion << " _max_bonds " << _max_bonds << endl;
+  os << "Fragments_At_Recursion_Depth:_max_recursion " << _max_recursion << " _max_bonds " << _max_bonds << '\n';
   for (int b = 1; b <= _max_bonds; b++)
   {
     for (int k = 0; k <= _max_recursion; k++)
     {
       int f = fragments_at_recursion_depth(k, b);
 
-      os << "For " << b << " bonds and k = " << k << " will get " << f << endl;
+      os << "For " << b << " bonds and k = " << k << " will get " << f << '\n';
       if (0 == f)
         break;
     }
   }
 
-  os << endl;
+  os << '\n';
 
   return 1;
 }
 
 Fragments_At_Recursion_Depth::~Fragments_At_Recursion_Depth()
 {
-  if (NULL != _fragments)
+  if (nullptr != _fragments)
     delete [] _fragments;
 
   return;
@@ -578,11 +750,11 @@ static Fragments_At_Recursion_Depth fard;
   This gets passed down to the fragments
 */
 
-class USPVPTR
+struct USPVPTR
 {
-  private:
+  public:
     atom_number_t _atom_number_in_parent;
-    int _atom_type_in_parent;
+    uint32_t _atom_type_in_parent;
 
   public:
     USPVPTR();
@@ -590,10 +762,26 @@ class USPVPTR
     void set_atom_number_in_parent(const atom_number_t s) { _atom_number_in_parent = s;}
     atom_number_t atom_number_in_parent() const { return _atom_number_in_parent;}
 
-    void set_atom_type_in_parent(const int s) { _atom_type_in_parent = s;}
-    int atom_type_in_parent() const { return _atom_type_in_parent;}
+    void set_atom_type_in_parent(const uint32_t s) { _atom_type_in_parent = s;}
+    uint32_t atom_type_in_parent() const { return _atom_type_in_parent;}
 
 };
+
+USPVPTR::USPVPTR() {
+  _atom_number_in_parent = -1;
+  _atom_type_in_parent = 0;
+}
+
+static std::optional<atom_number_t>
+InitialAtomNumber(const Atom* a) {
+  const void * v = a->user_specified_void_ptr();
+  if (v == nullptr) {
+    return std::nullopt;
+  }
+
+  const USPVPTR* uspvptr = reinterpret_cast<const USPVPTR*>(v);
+  return uspvptr->_atom_number_in_parent;
+}
 
 /*
    We need a means of passing around arguments
@@ -663,12 +851,20 @@ class Dicer_Arguments
 
 //  When we have an atom typing active, we record the types assigned
 
-    int * _atom_type;
+    uint32_t * _atom_type;
 
-    int * _isosave;           // for quickly saving and restoring isotopes - not allocated separately
+    uint32_t * _isosave;           // for quickly saving and restoring isotopes - not allocated separately
 
     int _lower_atom_count_cutoff_current_molecule;
     int _upper_atom_count_cutoff_current_molecule;
+    int _max_non_ring_atoms;
+
+    // If the task is to just generate a cross reference file, we may
+    // not need the usual output.
+    int _write_diced_molecules;
+
+    // Rather than a (ragged) tabular output, we can write a proto.
+    int _output_is_proto = 0;
 
 // private functions
 
@@ -688,11 +884,13 @@ class Dicer_Arguments
     int _is_smallest_fragment(const IW_Bits_Base & b) const;
     void _add_new_smiles_to_global_hashes (const IWString & smiles);
 
+    int WriteAsProto(Molecule& n, int breakable_bonds, IWString_and_File_Descriptor& output) const;
+
   public:
     Dicer_Arguments (int mrd);            // arg is max recursion depth
     ~Dicer_Arguments ();
 
-    void set_current_molecule (Molecule * m)
+    void set_current_molecule(Molecule * m)
     {
       _current_molecule = m;
     }
@@ -736,6 +934,14 @@ class Dicer_Arguments
     }
 
     int ok_atom_count (int) const;
+    int OkAtomCount(Molecule& m) const;
+
+    void set_write_diced_molecules(int s) {
+      _write_diced_molecules = s;
+    }
+    void set_output_is_proto(int s) {
+      _output_is_proto = s;
+    }
 
     int max_recursion_depth_this_molecule () const
     {
@@ -797,7 +1003,7 @@ class Dicer_Arguments
 
     int try_more_ring_splitting ();
 
-    int write_fragments_found_this_molecule (const Molecule & m, IWString_and_File_Descriptor & output) const;
+    int write_fragments_found_this_molecule(Molecule & m, int breakable_bonds, IWString_and_File_Descriptor & output) const;
 
     int produce_fingerprint(Molecule & m, IWString_and_File_Descriptor & output) const;
 
@@ -805,55 +1011,67 @@ class Dicer_Arguments
 
     int store_atom_types (Molecule & m,  Atom_Typing_Specification & ats);
 
-    const int * atom_types() const { return _atom_type;}
+    const uint32_t * atom_types() const { return _atom_type;}
 
     int fragments_found () const
     {
       return _fragments_found_this_molecule.size();
     }
+
+    // If `all_fragments_stream` is active, write information to it.
+    int WriteAllFragments(Molecule& parent,
+                          Molecule& fragment,
+                          AllFragmentsStream& all_fragments_stream) const;
 };
 
 Dicer_Arguments::Dicer_Arguments(int mrd)
 {
-  _current_molecule = NULL;
+  _current_molecule = nullptr;
 
-  _aromatic_in_parent = NULL;
+  _aromatic_in_parent = nullptr;
 
   _recursion_depth = 0;
 
   _max_recursion_depth_this_molecule = mrd;
 
-  _atom_number_in_initial_molecule = NULL;
+  _atom_number_in_initial_molecule = nullptr;
 
-  _xref = NULL;
+  _xref = nullptr;
 
-  _local_xref = NULL;
-  _local_xref2 = NULL;
+  _local_xref = nullptr;
+  _local_xref2 = nullptr;
 
   _ring_splitting_attempted = 0;
 
-  _atom_type = NULL;
+  _atom_type = nullptr;
+
+  _write_diced_molecules = 1;
+
+  _output_is_proto = 0;
+
+  // Copy from file scope value.
+  _max_non_ring_atoms = max_non_ring_atoms;
 
   return;
 }
 
 Dicer_Arguments::~Dicer_Arguments()
 {
-  if (NULL != _aromatic_in_parent)
+  if (nullptr != _aromatic_in_parent)
     delete [] _aromatic_in_parent;
 
-  if (NULL != _xref)
+  if (nullptr != _xref)
     delete [] _xref;
 
-  if (NULL != _local_xref)
+  if (nullptr != _local_xref)
     delete [] _local_xref;
 
   delete []_local_xref2;
 
-  if (NULL != _atom_number_in_initial_molecule)
+  if (nullptr != _atom_number_in_initial_molecule)
     delete [] _atom_number_in_initial_molecule;
 
-  if (NULL != _atom_type)
+  if (nullptr != _atom_type)
     delete [] _atom_type;
 
   return;
@@ -882,7 +1100,7 @@ Dicer_Arguments::set_array_size(int s)
   else
     array_size = s + s;
 
-  //cerr << "array_size " << array_size << endl;
+  //cerr << "array_size " << array_size << '\n';
 
   _atom_number_in_initial_molecule = new int [array_size];
 
@@ -898,7 +1116,7 @@ Dicer_Arguments::set_array_size(int s)
   _local_xref = new int[_atoms_in_molecule];
   _local_xref2 = new int[_atoms_in_molecule];
 
-  return (NULL != _xref && NULL != _local_xref);
+  return (nullptr != _xref && nullptr != _local_xref);
 }
 
 int
@@ -917,10 +1135,8 @@ Dicer_Arguments::initialise_parent_molecule_aromaticity (Molecule & m)
   return 1;
 }
 
-/*
-   Fill in a cross reference array that converts from atom numbers n the parent
-   to atom numbers in the current molecule
- */
+// Fill in a cross reference array that converts from atom numbers n the parent
+// to atom numbers in the current molecule
 
 static void
 initialise_xref (const Molecule & m,
@@ -930,23 +1146,17 @@ initialise_xref (const Molecule & m,
   std::fill_n(xref, dicer_args.atoms_in_molecule(), -1);
 
   const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    std::optional<atom_number_t> x = InitialAtomNumber(m.atomi(i));
 
-  for (int i = 0; i < matoms; i++)
-  {
-    const Atom * a = m.atomi(i);
-
-    atom_number_t x = *(reinterpret_cast<const atom_number_t *>(a->user_specified_void_ptr()));
-
-    xref[x] = i;
+    xref[*x] = i;
   }
 
   return;
 }
 
-/*
-   Gets used by all transformations to convert atom numbers in the
-   starting structure to atom numbers in the current structure
- */
+// Gets used by all transformations to convert atom numbers in the
+// starting structure to atom numbers in the current structure
 
 static int
 convert_to_atom_numbers_in_child (const Set_of_Atoms & rbb,
@@ -1001,7 +1211,7 @@ class Dicer_Transformation
       return _process(m, dicer_args, b, bi);
     }
 
-    int break_bonds (Molecule & m) const 
+    int break_bonds (Molecule & m) const
     {
       return _break_bonds(m);
     }
@@ -1103,7 +1313,7 @@ class Chain_Bond_Breakage : public Bond_Breakage
     int _process (Molecule &, Dicer_Arguments &, Breakages &, Breakages_Iterator &) const;
     int _debug_print (std::ostream &) const;
     int _write_bonds_to_be_broken (std::ostream &) const;
-    int _process (resizable_array<Molecule *> & components, const IWString & mname,
+    int _process(Molecule& m0, resizable_array<Molecule *> & components, const IWString & mname,
                                Dicer_Arguments & dicer_args, Breakages & breakages,
                                Breakages_Iterator & bi) const;
     int _break_bonds(Molecule & m) const;
@@ -1122,7 +1332,7 @@ Chain_Bond_Breakage::Chain_Bond_Breakage(atom_number_t j1, atom_number_t j2) : B
 int
 Chain_Bond_Breakage::_debug_print (std::ostream & os) const
 {
-  os << "Chain_Bond_Breakage: atoms " << _a1 << " and " << _a2 << endl;
+  os << "Chain_Bond_Breakage: atoms " << _a1 << " and " << _a2 << '\n';
 
   return 1;
 }
@@ -1211,8 +1421,8 @@ Fused_Ring_Breakage::Fused_Ring_Breakage (atom_number_t z11, atom_number_t z1, a
 int
 Fused_Ring_Breakage::_debug_print (std::ostream & os) const
 {
-  os << "Fused_Ring_Breakage: atoms a11 " << _a11 << " a1 " << _a1 << " a12 " << _a12 << endl;
-  os << "                           a21 " << _a21 << " a2 " << _a2 << " a22 " << _a22 << endl;
+  os << "Fused_Ring_Breakage: atoms a11 " << _a11 << " a1 " << _a1 << " a12 " << _a12 << '\n';
+  os << "                           a21 " << _a21 << " a2 " << _a2 << " a22 " << _a22 << '\n';
 
   return 1;
 }
@@ -1332,8 +1542,8 @@ Spiro_Ring_Breakage::Spiro_Ring_Breakage (atom_number_t zCenter, atom_number_t z
 int
 Spiro_Ring_Breakage::_debug_print (std::ostream & os) const
 {
-  os << "Spiro_Ring_Breakage: Center:   " << _aCenter << endl
-     << "                     Neighbors:" << _a11 << ", " << _a12 << ", " << _a21 << ", " << _a22 << endl;
+  os << "Spiro_Ring_Breakage: Center:   " << _aCenter << '\n'
+     << "                     Neighbors:" << _a11 << ", " << _a12 << ", " << _a21 << ", " << _a22 << '\n';
 
   return 1;
 }
@@ -1668,7 +1878,7 @@ Breakages::write_bonds_to_be_broken (Molecule & m,
   bbrk_file.write(m);
   mdlfs->set_write_mdl_dollars (1);
 
-  std::ostream & os = bbrk_file.stream_for_type(SDF);
+  std::ostream & os = bbrk_file.stream_for_type(FILE_TYPE_SDF);
 
   os << ">  <" << bbrk_tag << ">\n";
   for (int i = 0; i < _transformations.number_elements(); i++)
@@ -1748,7 +1958,7 @@ const Dicer_Transformation *
 Breakages_Iterator::current_transformation (const Breakages & b)
 {
   if (_state >= _n)
-    return NULL;
+    return nullptr;
 
   const Dicer_Transformation * rc = b.transformation(_state);
 
@@ -1757,9 +1967,10 @@ Breakages_Iterator::current_transformation (const Breakages & b)
   return rc;
 }
 
+#ifdef NO_LONGER_USED_ADAS
 static int
-initialise_atom_pointers (Molecule & m,
-                          int * atom_number)
+initialise_atom_pointers(Molecule & m,
+                         int * atom_number)
 {
   int matoms = m.natoms();
 
@@ -1771,27 +1982,23 @@ initialise_atom_pointers (Molecule & m,
 
   return 1;
 }
+#endif
 
 static int
-initialise_atom_pointers (Molecule & m,
-                          const int * atype,
-                          USPVPTR * uspvptr)
+initialise_atom_pointers(Molecule & m,
+                         const uint32_t * atype,
+                         USPVPTR * uspvptr)
 {
   const int matoms = m.natoms();
 
-  if (NULL != atype)
-  {
-    for (int i = 0; i < matoms; ++i)
-    {
-      uspvptr[i].set_atom_number_in_parent(i);
-      uspvptr[i].set_atom_type_in_parent(atype[i]);
-    }
+  for (int i = 0; i < matoms; ++i) {
+    uspvptr[i].set_atom_number_in_parent(i);
+    m.set_user_specified_atom_void_ptr(i, (void*)(uspvptr + i));
   }
-  else
-  {
-    for (int i = 0; i < matoms; ++i)
-    {
-      uspvptr[i].set_atom_number_in_parent(i);
+
+  if (nullptr != atype) {
+    for (int i = 0; i < matoms; ++i) {
+      uspvptr[i].set_atom_type_in_parent(atype[i]);
     }
   }
 
@@ -1806,7 +2013,7 @@ initialise_atom_pointers (Molecule & m,
    If just one bond, there are two fragments that can be formed.
  */
 
-static int * fragments_expected = NULL;
+static int * fragments_expected = nullptr;
 
 static int
 initialise_fragments_per_number_of_bonds_array()
@@ -1833,7 +2040,7 @@ initialise_fragments_per_number_of_bonds_array()
   {
     for (int i = 0; i <= max_recursion_depth; i++)
     {
-      cerr << "Max fragments for " << i << " bonds " << fragments_expected[i] << endl;
+      cerr << "Max fragments for " << i << " bonds " << fragments_expected[i] << '\n';
     }
   }
 
@@ -1863,16 +2070,44 @@ Dicer_Arguments::ok_atom_count (int matoms) const
   return 1;
 }
 
+int
+Dicer_Arguments::OkAtomCount(Molecule& m) const {
+  const int matoms = m.natoms();
+  if (matoms < _lower_atom_count_cutoff_current_molecule) {
+    return 0;
+  }
+
+  if (matoms > _upper_atom_count_cutoff_current_molecule) {
+    return 0;
+  }
+
+  if (_max_non_ring_atoms < 0) {
+    return 1;
+  }
+
+  int non_ring_atoms = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (m.ring_bond_count(i) > 0) {
+      continue;
+    }
+
+    ++non_ring_atoms;
+    if (non_ring_atoms > _max_non_ring_atoms) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 /*
    For a given number of bonds (B), and simultaneous breaks (K), generate
    the number of fragments produced at each -k value
- */
-
-
+*/
 
 uint64_t
-Dicer_Arguments::adjust_max_recursion_depth (int bonds_to_break_this_molecule,
-                                             uint64_t max_fragments_per_molecule)
+Dicer_Arguments::adjust_max_recursion_depth(int bonds_to_break_this_molecule,
+                                            uint64_t max_fragments_per_molecule)
 {
 #ifdef NO_LONGER_USEDQWEUQYWE
   int m = max_recursion_depth;
@@ -1905,7 +2140,7 @@ Dicer_Arguments::adjust_max_recursion_depth (int bonds_to_break_this_molecule,
     fragments_that_will_be_produced = fragments_that_will_be_produced / _max_recursion_depth_this_molecule;
 
 #ifdef DEBUG_ADJUST_MAX_RECURSION_DEPTH
-    cerr << "at " << _max_recursion_depth_this_molecule << ", " << bonds_to_break_this_molecule << " will produce " << fragments_that_will_be_produced << endl;
+    cerr << "at " << _max_recursion_depth_this_molecule << ", " << bonds_to_break_this_molecule << " will produce " << fragments_that_will_be_produced << '\n';
 #endif
   }
 
@@ -1917,7 +2152,7 @@ Dicer_Arguments::adjust_max_recursion_depth (int bonds_to_break_this_molecule,
 }
 
 void
-Dicer_Arguments::_add_new_smiles_to_global_hashes (const IWString & smiles)
+Dicer_Arguments::_add_new_smiles_to_global_hashes(const IWString & smiles)
 {
   if (!add_new_strings_to_hash)
     return;
@@ -1939,9 +2174,9 @@ Dicer_Arguments::_add_new_smiles_to_global_hashes (const IWString & smiles)
 }
 
 static void
-add_name_of_parent_to_starting_parent_array (const IWString & smiles,
-                                             const IWString & name_of_parent,
-                                             IW_STL_Hash_Map_String & starting_parent)
+add_name_of_parent_to_starting_parent_array(const IWString & smiles,
+                                            const IWString & name_of_parent,
+                                            IW_STL_Hash_Map_String & starting_parent)
 {
   if (! name_of_parent.contains(' '))
   {
@@ -2033,7 +2268,7 @@ Dicer_Arguments::contains_fragment(Molecule & m)
   if (! contains_user_specified_queries(m))
     return 0;
 
-  if (! ok_atom_count(m.natoms())) {
+  if (! OkAtomCount(m)) {
     return 0;
   }
 
@@ -2041,7 +2276,7 @@ Dicer_Arguments::contains_fragment(Molecule & m)
     return 0;
 
   if (check_for_lost_chirality)
-    do_check_for_lost_chirality (m);
+    do_check_for_lost_chirality(m);
 
   const IWString & smiles = m.unique_smiles();
 
@@ -2054,7 +2289,7 @@ Dicer_Arguments::contains_fragment(Molecule & m)
     if (! add_new_strings_to_hash)
       return 0;
 
-    _add_new_smiles_to_global_hashes (smiles);
+    _add_new_smiles_to_global_hashes(smiles);
 
     //  cerr << "New fragment generated from '" << _current_molecule->name() << "', acc " << accumulate_starting_parent_information <<endl;
     if (accumulate_starting_parent_information)
@@ -2078,7 +2313,7 @@ Dicer_Arguments::contains_fragment(Molecule & m)
 //#define DEBUG_BIT_COMPARISONS
 
 int
-Dicer_Arguments::is_unique (Molecule & m)
+Dicer_Arguments::is_unique(Molecule & m)
 {
 #ifdef DEBUG_BIT_COMPARISONS
   cerr << "Examining '" << m.smiles() << "'\n";
@@ -2086,15 +2321,24 @@ Dicer_Arguments::is_unique (Molecule & m)
 
   IW_Bits_Base * b = new IW_Bits_Base(_nbits);
 
+  for (const Atom* a: m) {
+    std::optional<atom_number_t> x = InitialAtomNumber(a);
+    if (! x) {
+      continue;
+    }
+
+    b->set(*x);
+  }
+
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; i++)
   {
-    const void * v = m.atomi(i)->user_specified_void_ptr();
-    if (NULL == v)
+    std::optional<atom_number_t> x = InitialAtomNumber(m.atomi(i));
+    if (! x) {
       continue;
+    }
 
-    atom_number_t x = *(reinterpret_cast<const atom_number_t *>(v));
-    b->set(x);
+    b->set(*x);
   }
 
 //assert (b->nset() == matoms);    if we have added environment atoms, this will not be true
@@ -2107,18 +2351,15 @@ Dicer_Arguments::is_unique (Molecule & m)
 
   int n = _stored_bit_vectors.number_elements();
 
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
 #ifdef DEBUG_BIT_COMPARISONS
     cerr << "Compare with ";
     _stored_bit_vectors[i]->printon(cerr);
     cerr << " ? " << ((*b) == (*(_stored_bit_vectors[i]))) << endl;
 #endif
 
-    if ((*b) == *(_stored_bit_vectors[i]))
-    {
-      if (record_presence_and_absence_only)                     // sept 2011, I don't think is useful, make both branches do the same thing
-      {
+    if ((*b) == *(_stored_bit_vectors[i])) {
+      if (record_presence_and_absence_only) {                     // sept 2011, I don't think is useful, make both branches do the same thing
         delete b;
         return 1;
       }
@@ -2137,7 +2378,6 @@ Dicer_Arguments::is_unique (Molecule & m)
 
   _stored_bit_vectors.add(b);
 
-
   // The following code was changed by madlee@20120801.
   // we set the -B atype=<atomtype> new meaning now.
   // Maybe we will create a new opiton for this function in future.
@@ -2148,15 +2388,22 @@ Dicer_Arguments::is_unique (Molecule & m)
 }
 
 int
-Dicer_Arguments::write_fragments_found_this_molecule (const Molecule & m,
+Dicer_Arguments::write_fragments_found_this_molecule(Molecule & m,
+                                          int breakable_bonds,
                                           IWString_and_File_Descriptor & output) const
 {
+  if (! _write_diced_molecules) {
+    return 1;
+  }
+
+  if (_output_is_proto) {
+    return WriteAsProto(m, breakable_bonds, output);
+  }
+
   int smiles_written = write_parent_smiles;
 
-  for (ff_map::const_iterator f = _fragments_found_this_molecule.begin(); f != _fragments_found_this_molecule.end(); ++f)
-  {
-    if (vf_structures_per_page)
-    {
+  for (ff_map::const_iterator f = _fragments_found_this_molecule.begin(); f != _fragments_found_this_molecule.end(); ++f) {
+    if (vf_structures_per_page) {
       if (smiles_written > 0 && 0 == smiles_written % vf_structures_per_page)
         output << _current_molecule->smiles() << ' ' << _current_molecule->name() << " PARENT\n";
       smiles_written++;
@@ -2168,8 +2415,7 @@ Dicer_Arguments::write_fragments_found_this_molecule (const Molecule & m,
     const IWString * s = id_to_smiles[fragment_number];
 
     output << (*s) << ' ' << m.name() << " FRAGID=" << fragment_number << " N= " << count;
-    if (append_atom_count)
-    {
+    if (append_atom_count) {
       const int n = count_atoms_in_smiles(*s);
       output << " NATOMS " << n;
       output << " FF " << (static_cast<float>(n) / static_cast<float>(m.natoms()));
@@ -2186,6 +2432,43 @@ Dicer_Arguments::write_fragments_found_this_molecule (const Molecule & m,
     }
     while (0 != smiles_written % vf_structures_per_page);
   }
+
+  return 1;
+}
+
+int
+Dicer_Arguments::WriteAsProto(Molecule& m,
+                              int breakable_bonds,
+                              IWString_and_File_Descriptor& output) const {
+  dicer_data::DicedMolecule proto;
+  proto.set_name(m.name().data(), m.name().length());
+  const IWString& usmi = m.unique_smiles();
+  proto.set_smiles(usmi.data(), usmi.length());
+  proto.set_natoms(m.natoms());
+  proto.set_nbonds(breakable_bonds);
+
+  for (const auto& [fragment_number, count] : _fragments_found_this_molecule) {
+    const IWString * s = id_to_smiles[fragment_number];
+
+    dicer_data::DicerFragment* frag = proto.add_fragment();
+    frag->set_smi(s->data(), s->length());
+    frag->set_nat(count_atoms_in_smiles(*s));
+    frag->set_n(count);
+    frag->set_id(fragment_number);
+  }
+
+  static google::protobuf::TextFormat::Printer printer;  
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "WriteFragmentStatisticsAsProto:cannot write '" << proto.ShortDebugString() << "'\n";
+    return 0;
+  }
+  output << buffer;
+  output << '\n';
+
+  output.write_if_buffer_holds_more_than(4096);
 
   return 1;
 }
@@ -2223,14 +2506,14 @@ Dicer_Arguments::produce_fingerprint(Molecule & m,
 }
 
 int
-Dicer_Arguments::store_atom_types (Molecule & m,
-                                   Atom_Typing_Specification & ats)
+Dicer_Arguments::store_atom_types(Molecule & m,
+                                  Atom_Typing_Specification & ats)
 {
-  if (NULL == _atom_type)
+  if (nullptr == _atom_type)
   {
     const int matoms = m.natoms();
 
-    _atom_type = new int[matoms+matoms];
+    _atom_type = new uint32_t[matoms+matoms];
     _isosave = _atom_type + matoms;
   }
 
@@ -2448,7 +2731,7 @@ create_fused_ring_breakage(Molecule& m,
   }
   else
   {
-    return NULL;
+    return nullptr;
   }
 
 
@@ -2662,23 +2945,23 @@ static Ring_Bond_Breakage*
 create_ring_bond_breakage (Molecule & m, const Ring* r)
 {
   if (r->strongly_fused_ring_neighbours())         // too complex
-    return NULL;
+    return nullptr;
 
   if (1 != r->fused_ring_neighbours())         // not a terminal fing
-    return NULL;
+    return nullptr;
 
   if (r->fused_ring_neighbours() > 1)          // too complex, but, potentially limiting
-    return NULL;
+    return nullptr;
 
   if (r->is_aromatic() && !r->is_fused())          // don't handle these
-    return NULL;
+    return nullptr;
 
   //  At this stage, we have a "terminal" fused ring. Identify the atoms that are NOT
   //  part or adjacent to the ring
 
   Set_of_Atoms not_part_of_adjacent_ring;
   if (!identify_ring_edge (m, *r, not_part_of_adjacent_ring))
-    return NULL;
+    return nullptr;
 
   not_part_of_adjacent_ring.add(not_part_of_adjacent_ring[0]);        // close the ring, we will be processing bonds
 
@@ -2829,8 +3112,13 @@ Breakages::identify_ring_bonds_to_be_broken(Molecule & m)
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Recursively cuts molecules based on queries\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -s <smarts>   smarts for cut points - breaks bond between 1st and 2nd matched atom\n";
   cerr << "  -q <...>      query specification (alternative to -s option)\n";
   cerr << "  -n <smarts>   smarts for bonds to NOT break\n";
@@ -2843,6 +3131,7 @@ usage (int rc)
   cerr << "  -K <fname>    READ=<fname>, WRITE=<fname> manage cross reference files bit#->smiles\n";
   cerr << "  -m <natoms>   discard fragments with fewer than <natoms> atoms\n";
   cerr << "  -M <natoms>   discard fragments with more than <natoms> atoms\n";
+  cerr << "  -M maxnr=<nat> discard fragments with more than <nat> non ring atoms\n";
   cerr << "  -c            discard chirality from input molecules - also discards cis-trans bonds\n";
   cerr << "  -C def        write smiles and complementary smiles\n";
   cerr << "  -C auto       write smiles and complementary smiles with auto label on break points.\n";
@@ -2873,7 +3162,7 @@ usage (int rc)
    being very careful about which molecules can actually be compared
  */
 
-static int * atomic_number_to_array_position = NULL;
+static int * atomic_number_to_array_position = nullptr;
 
 static int
 initialise_atomic_number_to_array_position()
@@ -2902,7 +3191,7 @@ class Fragment_Info
     int _natoms;            // atoms in fragment
 
     int _ndx;
-    
+
     int _times_hit;
 
     int _is_subset_of_another;
@@ -3108,7 +3397,7 @@ do_eliminate_fragment_subset_relations()
 
   Fragment_Info * frag_info = new Fragment_Info[n];
 
-  if (NULL == frag_info)
+  if (nullptr == frag_info)
   {
     cerr << "Cannot allocate " << n << " fragment info objects\n";
     return 0;
@@ -3206,26 +3495,32 @@ do_eliminate_fragment_subset_relations()
   return rc;
 }
 
-/*
-   We can try to capture the environment in which the fragments are
-   embedded by defining some atom types.
- */
 
-#define ENV_IS_TERMINAL 1
-#define ENV_IS_AROMATIC 2
-#define ENV_IS_SATURATED_CARBON 3
-#define ENV_IS_SATURATED_HETEROATOM 4
-#define ENV_IS_UNSATURATED_CARBON 5
-#define ENV_IS_UNSATURATED_HETEROATOM 6
-#define ENV_IS_AMIDE 7
+enum class Env {
+  kUndefined = 0,
+  kTerminal = 1,
+  kAromatic = 2,
+  kSaturatedCarbon = 3,
+  kSaturatedNitrogen = 4,
+  kSaturatedOxygen = 5,
+  kUnsaturatedCarbon = 6,
+  kUnsaturatedNitrogen = 7,
+  // This will likely never be used, since we usually
+  // do not break =O bonds.
+  kUnsaturatedOxygen = 8,
+  kAmideCarbon = 9,
+  kAmideNitrogen = 10,
+  kHalogen = 11,
+  kNitro = 12,
+  kAliphaticRingCarbon = 13,
+  kAliphaticRingNitrogen = 14,
+  // Used to size the elemements array.
+  kSize = 15,
+};
 
-static const Element * element_te = NULL;
-static const Element * element_ar = NULL;
-static const Element * element_cs = NULL;
-static const Element * element_cu = NULL;
-static const Element * element_hs = NULL;
-static const Element * element_hu = NULL;
-static const Element * element_am = NULL;
+// An array of the environment elements, index by the Env enum.
+// set up in InitialiseEnvironmentElements
+static const Element* env_element[static_cast<int>(Env::kSize)];
 
 static int
 do_apply_atomic_number_isotopic_labels(Molecule & m,
@@ -3256,67 +3551,354 @@ do_apply_isotopic_labels (Molecule & m,
   return;
 }
 
-static int
-identify_environment (Molecule & m,
-                      const atom_number_t j1)
-{
-  if (use_terminal_atom_type && 0 == m.ncon(j1))
-    return ENV_IS_TERMINAL;
+// Return a result if `zatom` is singly bonded to an
+// atom with atomic number `target`.
+std::optional<atom_number_t>
+SinglyBondedTo(const Molecule& m,
+               atom_number_t zatom,
+               atomic_number_t target) {
+  for (const Bond* b : m.atom(zatom)) {
+    if (! b->is_single_bond()) {
+      continue;
+    }
 
-  if (m.is_aromatic(j1))
-    return ENV_IS_AROMATIC;
-
-  const Atom * a1 = m.atomi(j1);
-
-  if (a1->ncon() == a1->nbonds())         // fully saturated
-  {
-    if (6 == a1->atomic_number())
-      return ENV_IS_SATURATED_CARBON;
-    else
-      return ENV_IS_SATURATED_HETEROATOM;
-  }
-  else
-  {
-    if (6 == a1->atomic_number())
-      return ENV_IS_UNSATURATED_CARBON;
-    else
-      return ENV_IS_UNSATURATED_HETEROATOM;
+    atom_number_t j = b->other(zatom);
+    if (m.atomic_number(j) == target) {
+      return j;
+    }
   }
 
-  assert (NULL == "Could not assign type");
+  return std::nullopt;
+}
+
+// Return a result if `zatom` is doubly bonded to an
+// atom with atomic number `target`.
+std::optional<atom_number_t>
+DoublyBondedTo(const Molecule& m,
+               atom_number_t zatom,
+               atomic_number_t target) {
+  for (const Bond* b : m.atom(zatom)) {
+    if (! b->is_double_bond()) {
+      continue;
+    }
+
+    atom_number_t j = b->other(zatom);
+    if (m.atomic_number(j) == target) {
+      return j;
+    }
+  }
+
+  return std::nullopt;
+}
+
+int
+IsAmideCarbon(const Molecule& m,
+              atom_number_t zatom) {
+  const Atom* a = m.atomi(zatom);
+  if (a->ncon() != 3) {
+    return 0;
+  }
+
+  atom_number_t doubly_bonded_oxygen = INVALID_ATOM_NUMBER;
+  atom_number_t nitrogen = INVALID_ATOM_NUMBER;
+  for (const Bond* b : *a) {
+    atom_number_t j = b->other(zatom);
+    if (b->is_double_bond() && m.atomic_number(j) == 8) {
+      doubly_bonded_oxygen = j;
+    } else if (b->is_single_bond() && m.atomic_number(j) == 7) {
+      nitrogen = j;
+    }
+  }
+
+  if (INVALID_ATOM_NUMBER == doubly_bonded_oxygen) {
+    return 0;
+  }
+
+  if (INVALID_ATOM_NUMBER == nitrogen) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+IsAmideNitrogen(const Molecule& m,
+                atom_number_t zatom) {
+  std::optional<atom_number_t> carbon = SinglyBondedTo(m, zatom, 6);
+  if (! carbon) {
+    return 0;
+  }
+
+  std::optional<atom_number_t> oxygen = DoublyBondedTo(m, *carbon, 8);
+  if (! oxygen) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+IsAmideOxygen(const Molecule& m,
+              atom_number_t zatom) {
+  std::optional<atom_number_t>carbon = DoublyBondedTo(m, zatom, 6);
+  if (! carbon) {
+    return 0;
+  }
+
+  std::optional<atom_number_t> nitrogen = SinglyBondedTo(m, *carbon, 7);
+  if (! nitrogen) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+IsAmide(const Molecule& m,
+        atom_number_t zatom) {
+  const Atom* a = m.atomi(zatom);
+  if (a->atomic_number() == 6) {
+    return IsAmideCarbon(m, zatom);
+  } else if (a->atomic_number() == 7) {
+    return IsAmideNitrogen(m, zatom);
+  } else if (a->atomic_number() == 8) {
+    return IsAmideOxygen(m, zatom);
+  }
 
   return 0;
 }
 
-static int
-do_add_environment_atoms (Molecule & m,
-                          const atom_number_t j1,
-                          const atom_number_t j2)
-{
-  const int i = identify_environment(m, j1);
-
-  if (i <= 0)
-    return 1;
-
-  if (ENV_IS_TERMINAL == i)
-    m.add(element_te);
-  else if (ENV_IS_AROMATIC == i)
-    m.add(element_ar);
-  else if (ENV_IS_SATURATED_CARBON == i)
-    m.add(element_cs);
-  else if (ENV_IS_UNSATURATED_CARBON == i)
-    m.add(element_cu);
-  else if (ENV_IS_SATURATED_HETEROATOM == i)
-    m.add(element_hs);
-  else if (ENV_IS_UNSATURATED_HETEROATOM == i)
-    m.add(element_hu);
-  else if (ENV_IS_AMIDE == i)
-    m.add(element_am);
-  else
-  {
-    cerr << "Not sure what kind of attachment " << i << endl;
+int
+IsSulfonamideNitrogen(const Molecule& m,
+                      atom_number_t zatom) {
+  std::optional<atom_number_t> sulphur = SinglyBondedTo(m, zatom, 16);
+  if (! sulphur) {
     return 0;
   }
+
+  const Atom* a = m.atomi(*sulphur);
+  if (a->ncon() != 4) {
+    return 0;
+  }
+
+  int doubly_bonded_oxygens = 0;
+  for (const Bond * b : *a) {
+    if (! b->is_double_bond()) {
+      continue;
+    }
+
+    atom_number_t j = b->other(*sulphur);
+    if (m.atomic_number(j) == 8) {
+      ++doubly_bonded_oxygens;
+    }
+  }
+
+  return doubly_bonded_oxygens == 2;
+}
+
+int
+IsSulfonamideSulphur(const Molecule& m,
+                     atom_number_t zatom) {
+  int doubly_bonded_oxygens = 0;
+  int nitrogens = 0;
+  for (const Bond* b : m.atom(zatom)) {
+    atom_number_t j = b->other(zatom);
+    if (b->is_double_bond() && m.atomic_number(j) == 8) {
+      ++doubly_bonded_oxygens;
+    } else if (b->is_single_bond() && m.atomic_number(j) == 7) {
+      ++nitrogens;
+    }
+  }
+
+  // We also captures sulfamid
+  if (doubly_bonded_oxygens == 2 && nitrogens > 0) {
+    return 1;
+  }
+
+  return 0;
+}
+
+int
+IsSulfonamideOxygen(const Molecule& m,
+                    atom_number_t zatom) {
+  std::optional<atom_number_t> sulphur = DoublyBondedTo(m, zatom, 16);
+  if (! sulphur) {
+    return 0;
+  }
+
+  return IsSulfonamideSulphur(m, *sulphur);
+}
+
+int IsSulfonamide(const Molecule& m,
+                  atom_number_t zatom) {
+  const atomic_number_t z = m.atomic_number(zatom);
+  if (z == 7) {
+    return IsSulfonamideNitrogen(m, zatom);
+  }
+  if (z == 8) {
+    return IsSulfonamideOxygen(m, zatom);
+  }
+  if (z == 16) {
+    return IsSulfonamideSulphur(m, zatom);
+  }
+
+  return 0;
+}
+
+int
+IsNitroNitrogen(const Molecule& m,
+                atom_number_t zatom) {
+  const Atom& a = m.atom(zatom);
+  if (a.ncon() != 3) {
+    return 0;
+  }
+
+  int doubly_bonded_oxygen = 0;
+  for (const Bond* b : a) {
+    if (! b->is_double_bond()) {
+      continue;
+    }
+
+    atom_number_t j = b->other(zatom);
+    if (m.atomic_number(j) != 8) {
+      return 0;
+    }
+
+    ++doubly_bonded_oxygen;
+  }
+
+  return doubly_bonded_oxygen == 2;
+}
+
+int
+IsNitroOxygen(const Molecule& m,
+              atom_number_t zatom) {
+  const Atom& a = m.atom(zatom);
+  if (a.ncon() != 1) {
+    return 0;
+  }
+
+  const Bond* b = a[0];
+  if (! b->is_double_bond()) {
+    return 0;
+  }
+
+  atom_number_t nitrogen = b->other(zatom);
+  if (m.atomic_number(nitrogen) != 7) {
+    return 0;
+  }
+
+  return IsNitroNitrogen(m, b->other(zatom));
+}
+
+int
+IsNitro(const Molecule& m,
+        atom_number_t zatom) {
+  if (m.atomic_number(zatom) == 7) {
+    return IsNitroNitrogen(m, zatom);
+  }
+  if (m.atomic_number(zatom) == 8) {
+    return IsNitroOxygen(m, zatom);
+  }
+
+  return 0;
+}
+
+// Return true if `zatom` is atomic number `target` and
+// it is in an aliphatic ring.
+int
+IsAliphaticRingAtom(Molecule& m,
+                const atom_number_t zatom,
+                atomic_number_t target) {
+  if (m.atomic_number(zatom) != target) {
+    return 0;
+  }
+
+  // Must be in a ring.
+  if (m.ring_bond_count(zatom) == 0) {
+    return 0;
+  }
+
+  // Must not be aromatic.
+  return ! m.is_aromatic(zatom);
+}
+
+static Env
+IdentifyEnvironment(Molecule& m,
+                    const atom_number_t zatom) {
+  if (use_terminal_atom_type && m.ncon(zatom) == 0) {
+    return Env::kTerminal;
+  }
+
+  if (m.is_aromatic(zatom))
+    return Env::kAromatic;
+
+  if (IsAmideNitrogen(m, zatom)) {
+    return Env::kAmideNitrogen;
+  }
+  if (IsAmideCarbon(m, zatom)) {
+    return Env::kAmideCarbon;
+  }
+  if (IsSulfonamideNitrogen(m, zatom)) {
+    return Env::kAmideNitrogen;
+  }
+  if (IsSulfonamideSulphur(m, zatom)) {
+    return Env::kAmideCarbon;
+  }
+
+  if (IsAliphaticRingAtom(m, zatom, 6)) {
+    return Env::kAliphaticRingCarbon;
+  }
+
+  if (IsAliphaticRingAtom(m, zatom, 7)) {
+    return Env::kAliphaticRingNitrogen;
+  }
+
+  const Atom * atom = m.atomi(zatom);
+
+  if (atom->is_halogen()) {
+    return Env::kHalogen;
+  }
+
+  if (IsNitro(m, zatom)) {
+    return Env::kNitro;
+  }
+
+  if (atom->ncon() == atom->nbonds()) {         // fully saturated
+    if (atom->atomic_number() == 6) {
+      return Env::kSaturatedCarbon;
+    } else if (atom->atomic_number() == 7) {
+      return Env::kSaturatedNitrogen;
+    } else if (atom->atomic_number() == 8 || atom->atomic_number() == 16) {
+      return Env::kSaturatedOxygen;
+    }
+  } else {
+    if (atom->atomic_number() == 6) {
+      return Env::kUnsaturatedCarbon;
+    } else if (atom->atomic_number() == 7) {
+      return Env::kUnsaturatedNitrogen;
+    } else if (atom->atomic_number() == 8 || atom->atomic_number() == 16) {
+      return Env::kUnsaturatedOxygen;
+    }
+  }
+
+  return Env::kUndefined;
+}
+
+static int
+do_add_environment_atoms(Molecule & m,
+                         const atom_number_t j1,
+                         const atom_number_t j2)
+{
+  const auto env = static_cast<int>(IdentifyEnvironment(m, j1));
+ 
+  const int ndx = static_cast<int>(env);
+
+  if (ndx == 0) {
+    return 0;
+  }
+
+  m.add(env_element[ndx]);
 
   return m.add_bond(m.natoms() - 1, j2, SINGLE_BOND);
 }
@@ -3326,63 +3908,75 @@ do_apply_environment_isotopic_labels(Molecule & m,
                                      const atom_number_t j1,
                                      const atom_number_t j2)
 {
-  const int i = identify_environment(m, j1);
+  const int e = static_cast<int>(IdentifyEnvironment(m, j1));
 
-  if (i > 0)
-    m.set_isotope(j2, i);
+  if (e > 0) {
+    m.set_isotope(j2, e);
+  }
 
   return 1;
 }
 
+static void
+ApplyAtomTypeIsotopicLabel(Molecule& m,
+                const atom_number_t j1,
+                const atom_number_t j2,
+                const uint32_t* atype) {
+  m.set_isotope(j1, atype[j2]);
+}
+
 int
-set_isotopes_if_needed (Molecule & m,
-                        atom_number_t j1,
-                        atom_number_t j2,
-                        const Dicer_Arguments & dicer_args)
+set_isotopes_if_needed(Molecule & m,
+                       atom_number_t j1,
+                       atom_number_t j2,
+                       const Dicer_Arguments & dicer_args)
 {
-  if (isotope_for_join_points > 0)
+  if (isotope_for_join_points > 0) {
     do_apply_isotopic_labels(m, j1, j2);
 
-  if (apply_environment_isotopic_labels)
-  {
+    return 1;
+  }
+
+  if (apply_environment_isotopic_labels) {
     do_apply_environment_isotopic_labels(m, j1, j2);
     do_apply_environment_isotopic_labels(m, j2, j1);
 
     return 1;
   }
-  else if (apply_atom_type_isotopic_labels)
-  {
 
+  if (apply_atom_type_isotopic_labels) {
+    ApplyAtomTypeIsotopicLabel(m, j1, j2, dicer_args.atom_types());
+    ApplyAtomTypeIsotopicLabel(m, j2, j1, dicer_args.atom_types());
+    return 1;
   }
 
-  if (add_environment_atoms)
-  {
+  if (add_environment_atoms) {
     do_add_environment_atoms(m, j1, j2);
     do_add_environment_atoms(m, j2, j1);
 
     return 1;
   }
 
-  if (apply_atomic_number_isotopic_labels)
-  {
+  if (apply_atomic_number_isotopic_labels) {
     do_apply_atomic_number_isotopic_labels(m, j1, j2);
     do_apply_atomic_number_isotopic_labels(m, j2, j1);
 
     return 1;
   }
 
-  if (isotopic_label_is_recursion_depth)
-  {
+  if (isotopic_label_is_recursion_depth) {
     m.set_isotope(j1, dicer_args.recursion_depth());
     m.set_isotope(j2, dicer_args.recursion_depth());
+
+    return 1;
   }
 
   return 0;         // nothing to do
 }
 
 int
-Breakages::do_recap (Molecule & m,
-                     Dicer_Arguments & dicer_args) const
+Breakages::do_recap(Molecule & m,
+                    Dicer_Arguments & dicer_args) const
 {
   const int n = _transformations.number_elements();
 
@@ -3417,13 +4011,13 @@ Breakages::do_recap (Molecule & m,
     Molecule & ci = *(c[i]);
 //  cerr << "checking component " << ci.smiles() <<endl;
 
-    if (!dicer_args.ok_atom_count(ci.natoms()))
+    if (!dicer_args.OkAtomCount(ci))
       continue;
 
     dicer_args.is_unique(ci);
   }
 
-  // now put things back together
+  // Now put things back together. Not sure this is necessary...
 
   for (int i = 0; i < n; i++)
   {
@@ -3465,9 +4059,9 @@ Breakages::identify_symmetry_exclusions(Molecule & m)
 
     Chain_Bond_Breakage * b = dynamic_cast<Chain_Bond_Breakage *>(ti);
 
-    if (NULL == b)
+    if (nullptr == b)
     {
-      cerr << "Skipping NULL chain bond breakage ptr\n";
+      cerr << "Skipping nullptr chain bond breakage ptr\n";
       continue;
     }
 
@@ -3485,9 +4079,9 @@ Breakages::identify_symmetry_exclusions(Molecule & m)
         continue;
 
       Chain_Bond_Breakage * bj = dynamic_cast<Chain_Bond_Breakage *>(tj);
-      if (NULL == bj)
+      if (nullptr == bj)
       {
-        cerr << "Skipping NULL ptr chain bond breakage\n";
+        cerr << "Skipping nullptr ptr chain bond breakage\n";
         continue;
       }
 
@@ -3552,7 +4146,7 @@ Dicer_Arguments::write_fragments_and_complements (Molecule & m,
 
 static void
 dump_iw_atom_type (Molecule& frag, const Molecule& comp,
-                   const int parent_atoms, const int xref[], const int atypes[],
+                   const int parent_atoms, const int xref[], const uint32_t atypes[],
                    IWString_and_File_Descriptor & output)
 {
 //Molecule mcopy(comp);
@@ -3563,12 +4157,10 @@ dump_iw_atom_type (Molecule& frag, const Molecule& comp,
     if (xref[i] < 0)
       continue;
 
-    int atype = atypes[i];
-    if (atype < 0)
-      atype = 0;
+    const uint32_t atype = atypes[i];
 
 //  cerr << " i = " << i << " xref " << xref[i] << " iso " << comp.isotope(xref[i]) << " atype " << atypes[i] << endl;
-    for (int iso = comp.isotope(xref[i]); iso > 0; iso /= 10) 
+    for (int iso = comp.isotope(xref[i]); iso > 0; iso /= 10)
     {
       int breakage = iso % 10;
 
@@ -3588,7 +4180,7 @@ dump_iw_atom_type (Molecule& frag, const Molecule& comp,
   assert (atom_order_in_smiles.number_elements() == matoms);
 
   int count = 0;
-  for (int i = 0; i < matoms; ++i) 
+  for (int i = 0; i < matoms; ++i)
   {
     const atom_number_t j = atom_order_in_smiles[i];
 
@@ -3617,9 +4209,13 @@ dump_iw_atom_type (Molecule& frag, const Molecule& comp,
 
 static void
 dump_atom_type (Molecule& frag, const Molecule& comp,
-                const int parent_atoms, const int xref[], const int atypes[],
+                const int parent_atoms, const int xref[], const uint32_t atypes[],
                 IWString_and_File_Descriptor & output)
 {
+  if (atypes == nullptr) {
+    return;
+  }
+
   if (ISO_CF_ATYPE == apply_isotopes_to_complementary_fragments)
   {
     dump_iw_atom_type(frag, comp, parent_atoms, xref, atypes, output);
@@ -3632,19 +4228,19 @@ dump_atom_type (Molecule& frag, const Molecule& comp,
     "BR", "CL", "F", "I", "SO", "SO2", "OCO2", "CCAT", "X"
   };
 
-  static int NUMBER_OF_SYBYL_TYPES = sizeof(SYBYL_TYPES) / sizeof(SYBYL_TYPES[0])-1;
+  static int NUMBER_OF_SYBYL_TYPES = sizeof(SYBYL_TYPES) / sizeof(SYBYL_TYPES[0]) - 1;
 
   IWString v[10];
   for (int i = 0; i < parent_atoms; ++i) {
     if (xref[i] != -1) {
       const Atom& atom_i = comp.atom(xref[i]);
-      int type = atypes[i];
-      if (type < 0 || type > NUMBER_OF_SYBYL_TYPES) {
-        type = NUMBER_OF_SYBYL_TYPES;
+      uint32_t atype = atypes[i];
+      if (atype > static_cast<uint32_t>(NUMBER_OF_SYBYL_TYPES)) {
+        atype = NUMBER_OF_SYBYL_TYPES;
       }
       for (int iso = atom_i.isotope(); iso > 0; iso /= 10) {
         int breakage = iso % 10;
-        v[breakage].append_with_spacer(SYBYL_TYPES[type], ',');
+        v[breakage].append_with_spacer(SYBYL_TYPES[atype], ',');
       }
     }
   }
@@ -3659,22 +4255,22 @@ dump_atom_type (Molecule& frag, const Molecule& comp,
   assert (atom_order_in_smiles.number_elements() == matoms);
 
   int count = 0;
-  for (int i = 0; i < matoms; ++i) 
+  for (int i = 0; i < matoms; ++i)
   {
     const atom_number_t j = atom_order_in_smiles[i];
 
     const Atom& atom_j = frag.atom(j);
 
     for (int iso = atom_j.isotope(); iso > 0; iso /= 10) {
-      if (count > 0) 
+      if (count > 0)
         output << "|";
 
       count++;
 
       int breakage = iso % 10;
-      if (breakage == 0 || v[breakage] == "" || v[breakage].c_str() == NULL) 
+      if (breakage == 0 || v[breakage] == "" || v[breakage].c_str() == nullptr)
         output << breakage << ":" << "INVALID";
-      else 
+      else
         output << breakage << ":" << v[breakage];
     }
   }
@@ -3717,15 +4313,13 @@ Dicer_Arguments::_write_fragment_and_hydrogen(Molecule & m,
     if (append_atom_count)
       output << " 1 " << 1.0f / static_cast<float>(m.natoms());
 
-    if (NULL == _atom_type)
-      ;
-    else if (apply_isotopes_to_complementary_fragments < 0) 
+    if (apply_isotopes_to_complementary_fragments < 0)
       dump_atom_type(s1, s1, matoms, _local_xref, _atom_type, output);
 
     output << ' ';
     output << s1.unique_smiles() << " COMP " << m.name();
 
-    if (NULL == _atom_type)
+    if (nullptr == _atom_type)
       ;
     else if (apply_isotopes_to_complementary_fragments < 0)
       output << " AT=[1:H]";
@@ -3776,7 +4370,7 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
     cerr << endl;
   }
 #endif
- 
+
   Molecule s1;
   m.create_subset(s1, subset_specification, 1, _local_xref);
 
@@ -3799,16 +4393,12 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
   if (append_atom_count)
     output << ' ' << s1.natoms() << ' ' << (static_cast<float>(s1.natoms())/static_cast<float>(matoms));
 
-  if (NULL == _atom_type)
-    ;
-  else if (apply_isotopes_to_complementary_fragments == -1) 
+  if (apply_isotopes_to_complementary_fragments == -1)
     dump_atom_type(s1, s2, matoms, _local_xref2, _atom_type, output);
 
   output << ' ' << s2.unique_smiles() << " COMP " << m.name();
 
-  if (NULL == _atom_type)
-    ;
-  else if (apply_isotopes_to_complementary_fragments < 0)
+  if (apply_isotopes_to_complementary_fragments < 0)
     dump_atom_type(s2, s1, matoms, _local_xref, _atom_type, output);
 
   if (append_atom_count)
@@ -3998,7 +4588,7 @@ class Atom_Rank_Atom
   public:
     Atom_Rank_Atom () {};
 
-    void set (atom_number_t af, int c, atom_number_t ac) 
+    void set (atom_number_t af, int c, atom_number_t ac)
     {
       _in_frag = af;
       _canon = c;
@@ -4059,7 +4649,7 @@ class Atom_Rank_Atom_Comparator
 */
 
 int
-Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical (Molecule & parent,
+Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecule & parent,
                                                   int n,
                                                   Molecule & frag, Molecule& comp) const
 {
@@ -4142,7 +4732,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical (Molecu
       in_order = 0;
       break;
     }
-    
+
     prev_isotope = iso;
   }
 
@@ -4206,14 +4796,87 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical (Molecu
   return 1;
 }
 
+
+int
+OpenStreaForAllFragments(IWString& fname,
+                         IWString_and_File_Descriptor& stream_for_all_fragments) {
+  return stream_for_all_fragments.open(fname.null_terminated_chars());
+}
+
+template <typename T>
+void
+AppendMaybeWithSeparator(bool& need_separator,
+                        char sep,
+                        const T& s,
+                        IWString_and_File_Descriptor& output) {
+
+  if (need_separator) {
+    output << sep;
+  } else {
+    need_separator = true;
+  }
+  output << s;
+}
+
+int
+Dicer_Arguments::WriteAllFragments(Molecule& parent,
+                                   Molecule& fragment,
+                                   AllFragmentsStream& all_fragments_stream) const {
+  if (! all_fragments_stream.active()) {
+    return 1;
+  }
+
+  auto iter_frag = smiles_to_id.find(fragment.unique_smiles());
+
+  if (iter_frag == smiles_to_id.end()) {
+    // Should complain here.
+    return 0;
+  }
+
+  bool need_separator = false;
+  all_fragments_stream.MaybeWrite("smiles", _current_molecule->unique_smiles(), need_separator);
+  all_fragments_stream.MaybeWrite("name", _current_molecule->name(), need_separator);
+  all_fragments_stream.MaybeWrite("rdepth", _recursion_depth, need_separator);
+  all_fragments_stream.MaybeWrite("psmiles", parent.unique_smiles(), need_separator);
+  all_fragments_stream.MaybeWrite("frag", fragment.unique_smiles(), need_separator);
+  all_fragments_stream.MaybeWrite("frag_id", iter_frag->second, need_separator);
+
+  return all_fragments_stream.newline();
+}
+
+int
+WriteAllFragments(Molecule& parent,
+                  Molecule& fragment,
+                  IWString_and_File_Descriptor& stream_for_all_fragments) {
+  if (! stream_for_all_fragments.active()) {
+    return 1;
+  }
+
+  auto iter_frag = smiles_to_id.find(fragment.unique_smiles());
+
+  if (iter_frag == smiles_to_id.end()) {
+    // Should complain here.
+    return 0;
+  }
+
+  constexpr char kSep = ' ';
+
+  stream_for_all_fragments << parent.unique_smiles() << kSep << parent.name() << kSep <<
+                               fragment.unique_smiles() << kSep << iter_frag->second << '\n';
+
+  stream_for_all_fragments.write_if_buffer_holds_more_than(4096);
+
+  return stream_for_all_fragments.good();
+}
+
 /*
    We need to group together bonds that are missing
  */
 
 
 static int
-write_hash_data (IWString_and_File_Descriptor & output,
-                 const IW_STL_Hash_Map_uint & smiles_to_bit)
+write_hash_data(IWString_and_File_Descriptor & output,
+                const IW_STL_Hash_Map_uint & smiles_to_bit)
 {
   if (verbose)
     cerr << "Writing " << smiles_to_bit.size() << " smiles->bit relationships\n";
@@ -4231,47 +4894,151 @@ write_hash_data (IWString_and_File_Descriptor & output,
   return 1;
 }
 
+// Populate `proto` with information about a fragment `smiles` found `count`
+// times in the current molecule.
+void
+ToProto(const IWString& smiles,
+        uint32_t count,
+        const IW_STL_Hash_Map_String& starting_parent,
+        dicer_data::DicerFragment& proto) {
+  proto.set_smi(smiles.AsString());
+  proto.set_n(count);
+  proto.set_nat(count_atoms_in_smiles(smiles));
+  if (auto f = starting_parent.find(smiles);
+      f != starting_parent.end()) {
+    proto.set_par(f->second.AsString());
+  }
+
+  if (isotope_for_join_points) {
+    proto.set_iso(dicer_data::ATT);
+  } else if (apply_atomic_number_isotopic_labels) {
+    proto.set_iso(dicer_data::Z);
+  } else if (apply_environment_isotopic_labels) {
+    proto.set_iso(dicer_data::ENV);
+  }
+}
+
 static int
-write_fragment_statistics (const IW_STL_Hash_Map_uint & molecules_containing,
-                           Fragment_Statistics_Report_Support_Specification & fsrss,
-                           IWString_and_File_Descriptor & output)
+WriteFragmentStatisticsAsProto(const IWString& smiles,
+                               uint32_t count,
+                               IWString_and_File_Descriptor& output) {
+  dicer_data::DicerFragment proto;
+  ToProto(smiles, count, starting_parent, proto);
+
+  static google::protobuf::TextFormat::Printer printer;  
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "WriteFragmentStatisticsAsProto:cannot write '" << proto.ShortDebugString() << "'\n";
+    return 0;
+  }
+
+  if (prepend_smiles_to_fragstat_proto) {
+    output << smiles << ' ';
+  }
+
+  if (buffer.ends_with(' ')) {
+    buffer.pop_back();
+  }
+
+  output << buffer;
+  output << '\n';
+
+  output.write_if_buffer_holds_more_than(8192);
+
+  return 1;
+}
+
+static int
+WriteFragmentStatisticsAsBinaryProto(const IWString& fragment_smiles,
+                                     const uint32_t count,
+                                     iw_tf_data_record::TFDataWriter& output) {
+  dicer_data::DicerFragment proto;
+  ToProto(fragment_smiles, count, starting_parent, proto);
+
+  return output.WriteSerializedProto<dicer_data::DicerFragment>(proto);
+}
+
+static void
+ReportSuppressed(const IW_STL_Hash_Map_uint& molecules_containing,
+                 uint32_t suppressed_by_support_requirement,
+                 std::ostream& output) {
+  float fraction = iwmisc::Fraction<float>(suppressed_by_support_requirement,
+                        static_cast<uint32_t>(molecules_containing.size()));
+
+  output << "Suppressed " << suppressed_by_support_requirement << " of "
+            << molecules_containing.size() <<
+            " fragments (" << fraction << ") because of support requirement\n";
+}
+
+static int
+WriteFragmentStatisticsAsBinaryProto(const IW_STL_Hash_Map_uint & molecules_containing,
+                          Fragment_Statistics_Report_Support_Specification & fsrss,
+                          iw_tf_data_record::TFDataWriter& output) {
+  fsrss.set_population_size(molecules_read);
+
+  uint32_t suppressed_by_support_requirement = 0;
+
+  for (const auto& [s, count] : molecules_containing) {
+    if (!fsrss.meets_support_requirement(count)) {
+      suppressed_by_support_requirement++;
+      continue;
+    }
+
+    WriteFragmentStatisticsAsBinaryProto(s, count, output);
+  }
+
+  if (verbose && fsrss.initialised()) {
+    ReportSuppressed(molecules_containing, suppressed_by_support_requirement, cerr);
+  }
+
+  return 1;
+}
+
+static int
+write_fragment_statistics(const IW_STL_Hash_Map_uint & molecules_containing,
+                          Fragment_Statistics_Report_Support_Specification & fsrss,
+                          IWString_and_File_Descriptor & output)
 {
   fsrss.set_population_size(molecules_read);
 
   //float float_molecules_read = static_cast<float>(molecules_read);
 
-  int suppressed_by_support_requirement = 0;
+  uint32_t suppressed_by_support_requirement = 0;
 
-  for (IW_STL_Hash_Map_uint::const_iterator i = molecules_containing.begin(); i != molecules_containing.end(); ++i)
-  {
-    const IWString & s = (*i).first;
-
-    unsigned int c = (*i).second;
-
-    if (!fsrss.meets_support_requirement(c))
-    {
+  for (const auto& [s, count] : molecules_containing) {
+    if (!fsrss.meets_support_requirement(count)) {
       suppressed_by_support_requirement++;
+      continue;
+    }
+
+    if (write_fragstat_as_binary_proto) {
+      WriteFragmentStatisticsAsBinaryProto(s, count, tfdata_writer);
+      continue;
+    } else if (write_fragstat_as_proto) {
+      WriteFragmentStatisticsAsProto(s, count, output);
       continue;
     }
 
     output << s << " FRAGID=" << smiles_to_id[s];
 
-    if (append_atom_count)
+    if (append_atom_count) {
       output << " natoms " << count_atoms_in_smiles(s);
+    }
 
-    output << " in " << c << " molecules";
+    output << " in " << count << " molecules";
 
     //  Nice idea, but it makes the output too messy
 
     //  if (fsrss.fractional_support_level_specified())
     //  {
     //    set_default_iwstring_float_concatenation_precision(3);
-    //    output << ' ' << static_cast<float>(c) / float_molecules_read;
+    //    output << ' ' << static_cast<float>(count) / float_molecules_read;
     //    set_default_iwstring_float_concatenation_precision(7);
     //  }
 
-    if (accumulate_starting_parent_information)
-    {
+    if (accumulate_starting_parent_information) {
       IW_STL_Hash_Map_String::const_iterator f = starting_parent.find(s);
       if (f == starting_parent.end())
         cerr << "Huh, no starting parent for '" << s << "'\n";
@@ -4287,7 +5054,7 @@ write_fragment_statistics (const IW_STL_Hash_Map_uint & molecules_containing,
 
     output << "\n";
 
-    if (c > static_cast<unsigned int>(molecules_read))
+    if (count > static_cast<unsigned int>(molecules_read))
       cerr << "Warning, out of range, " << molecules_read << " molecules read\n";
 
     output.write_if_buffer_holds_more_than(32768);
@@ -4295,20 +5062,18 @@ write_fragment_statistics (const IW_STL_Hash_Map_uint & molecules_containing,
 
   output.flush();
 
-  if (verbose && fsrss.initialised())
-  {
-    float fraction = static_cast<float>(suppressed_by_support_requirement) / static_cast<float>(molecules_containing.size());
-
-    cerr << "Suppressed " << suppressed_by_support_requirement << " of " << molecules_containing.size() << " fragments (" << fraction << ") because of support requirement\n";
+  if (verbose && fsrss.initialised()) {
+    ReportSuppressed(molecules_containing, suppressed_by_support_requirement, cerr);
   }
 
   return 1;
 }
 
+// Printable output, either free text or text proto.
 static int
-write_fragment_statistics (const IW_STL_Hash_Map_uint & molecules_containing,
-                           Fragment_Statistics_Report_Support_Specification & fsrss,
-                           IWString & name_for_fragment_statistics_file)
+write_fragment_statistics(const IW_STL_Hash_Map_uint & molecules_containing,
+                          Fragment_Statistics_Report_Support_Specification & fsrss,
+                          IWString & name_for_fragment_statistics_file)
 {
   IWString_and_File_Descriptor output;
 
@@ -4319,6 +5084,19 @@ write_fragment_statistics (const IW_STL_Hash_Map_uint & molecules_containing,
   }
 
   return write_fragment_statistics(molecules_containing, fsrss, output);
+}
+
+static int
+WriteFragmentStatisticsAsBinaryProto(const IW_STL_Hash_Map_uint& molecules_containing,
+                Fragment_Statistics_Report_Support_Specification& fsrss,
+                IWString& fname) {
+  iw_tf_data_record::TFDataWriter output;
+  if (! output.Open(fname)) {
+    cerr << "WriteFragmentStatisticsAsBinaryProto:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return WriteFragmentStatisticsAsBinaryProto(molecules_containing, fsrss, output);
 }
 
 static int
@@ -4402,8 +5180,8 @@ read_existing_hash_data (const IWString & fname,
 }
 
 static int
-do_write_to_stream_for_post_breakage (Molecule & m,
-                                      IWString_and_File_Descriptor & stream_for_post_breakage)
+do_write_to_stream_for_post_breakage(Molecule & m,
+                                     IWString_and_File_Descriptor & stream_for_post_breakage)
 {
   stream_for_post_breakage << m.unique_smiles() << ' ' << m.name() << '\n';
   stream_for_post_breakage.write_if_buffer_holds_more_than(32768);
@@ -4412,11 +5190,11 @@ do_write_to_stream_for_post_breakage (Molecule & m,
 }
 
 static int
-convert_to_atom_numbers_in_current_molecule (const Molecule & m,
-                                             const atom_number_t a1,
-                                             atom_number_t & t1,
-                                             const atom_number_t a2,
-                                             atom_number_t & t2)
+convert_to_atom_numbers_in_current_molecule(const Molecule & m,
+                                            const atom_number_t a1,
+                                            atom_number_t & t1,
+                                            const atom_number_t a2,
+                                            atom_number_t & t2)
 {
   t1 = INVALID_ATOM_NUMBER;
   t2 = INVALID_ATOM_NUMBER;
@@ -4426,7 +5204,7 @@ convert_to_atom_numbers_in_current_molecule (const Molecule & m,
     const Atom * a = m.atomi(i);
 
     const void * v = a->user_specified_void_ptr();
-    if (NULL == v)
+    if (nullptr == v)
       continue;
 
     atom_number_t x = *(reinterpret_cast<const atom_number_t *>(v));
@@ -4515,10 +5293,10 @@ int PairTransformation::_process (Molecule & mol, Dicer_Arguments & arg, Breakag
 
 
 int
-Chain_Bond_Breakage::_process (Molecule & m0,
-                               Dicer_Arguments & dicer_args,
-                               Breakages & breakages,
-                               Breakages_Iterator & bi) const
+Chain_Bond_Breakage::_process(Molecule & m0,
+                              Dicer_Arguments & dicer_args,
+                              Breakages & breakages,
+                              Breakages_Iterator & bi) const
 {
   if (0 != dicer_args.recursion_depth())         // can only do symmetry suppression at first level
     ;
@@ -4546,20 +5324,18 @@ Chain_Bond_Breakage::_process (Molecule & m0,
 
   resizable_array<Molecule *> components;
 
-  if (stream_for_post_breakage.is_open())
-  {
+  if (stream_for_post_breakage.is_open()) {
     do_write_to_stream_for_post_breakage(m, stream_for_post_breakage);
 
     resizable_array_p<Molecule> c;
-    if (2 != m.create_components(c))
-    {
+    if (2 != m.create_components(c)) {
       cerr << "Huh, created " << c.number_elements() << " fragments during chain bond breakage " << m.smiles() << endl;
       return 0;
     }
 
     components.add(c[0]);
     components.add(c[1]);
-    _process(components, m.name(), dicer_args, breakages, bi);
+    _process(m0, components, m.name(), dicer_args, breakages, bi);
   }
   else
   {
@@ -4577,18 +5353,19 @@ Chain_Bond_Breakage::_process (Molecule & m0,
 //  frags.unique_smiles();
 //  cerr << "Created " << m.unique_smiles() << " and " << frags.unique_smiles() << endl;
 
-    _process(components, m.name(), dicer_args, breakages, bi);
+    _process(m0, components, m.name(), dicer_args, breakages, bi);
   }
 
   return 1;
 }
 
 int
-Chain_Bond_Breakage::_process (resizable_array<Molecule *> & components,
-                               const IWString & mname,
-                               Dicer_Arguments & dicer_args,
-                               Breakages & breakages,
-                               Breakages_Iterator & bi) const
+Chain_Bond_Breakage::_process(Molecule& m0,
+                              resizable_array<Molecule *> & components,
+                              const IWString & mname,
+                              Dicer_Arguments & dicer_args,
+                              Breakages & breakages,
+                              Breakages_Iterator & bi) const
 {
   assert (2 == components.number_elements());
 
@@ -4620,6 +5397,8 @@ Chain_Bond_Breakage::_process (resizable_array<Molecule *> & components,
     else if (!dicer_args.is_unique(c))
       continue;
 
+    dicer_args.WriteAllFragments(m0, c, all_fragments);
+
 #ifdef DEBUG_BOND_BREAKING
     cerr << "Produced '" << c.smiles() << "'\n";
 #endif
@@ -4629,7 +5408,6 @@ Chain_Bond_Breakage::_process (resizable_array<Molecule *> & components,
 
   return 1;
 }
-
 
 static int
 remove_fragments_not_containing (Molecule & m,
@@ -4653,11 +5431,11 @@ remove_fragments_not_containing (Molecule & m,
 //#define DEBUG_DO_RING_BREAKING
 
 int
-Ring_Bond_Breakage::_do_ring_breaking (Molecule & m,
-                                       const Set_of_Atoms & rbb,
-                                       Dicer_Arguments & dicer_args,
-                                       Breakages & breakages,
-                                       Breakages_Iterator & bi) const
+Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
+                                      const Set_of_Atoms & rbb,
+                                      Dicer_Arguments & dicer_args,
+                                      Breakages & breakages,
+                                      Breakages_Iterator & bi) const
 {
   int * xref = dicer_args.xref_array_this_level();
 
@@ -4733,7 +5511,7 @@ Ring_Bond_Breakage::_do_ring_breaking (Molecule & m,
     if (need_to_look_for_fragments)
       remove_fragments_not_containing(mcopy, r[0]);
 
-    if (!dicer_args.ok_atom_count(mcopy.natoms()))
+    if (!dicer_args.OkAtomCount(mcopy))
       break;
 
     if (!dicer_args.is_unique(mcopy))
@@ -4786,9 +5564,9 @@ identify_extra_ring_attachment (const Molecule & m,
 }
 
 static int
-atoms_in_two_aromatic_rings (Molecule & m,
-                             atom_number_t a1,
-                             atom_number_t a2)
+atoms_in_two_aromatic_rings(Molecule & m,
+                            atom_number_t a1,
+                            atom_number_t a2)
 {
   int nr = m.nrings();
 
@@ -4814,7 +5592,7 @@ atoms_in_two_aromatic_rings (Molecule & m,
 }
 
 int
-Ring_Bond_Breakage::_process (Molecule & m,
+Ring_Bond_Breakage::_process(Molecule & m,
                              Dicer_Arguments & dicer_args,
                              Breakages & breakages,
                              Breakages_Iterator & bi) const
@@ -4827,7 +5605,7 @@ Ring_Bond_Breakage::_process (Molecule & m,
 
   Set_of_Atoms r;           // we make this variable do a bunch of different things...
 
-  if (! convert_to_atom_numbers_in_child(*this, xref, r) || 0 == r.number_elements())
+  if (! convert_to_atom_numbers_in_child(*this, xref, r) || r.empty())
   {
     call_dicer(m, dicer_args, breakages, bi);
     return 0;
@@ -4970,7 +5748,7 @@ Ring_Bond_Breakage::_process (Molecule & m,
 }
 
 int
-Fused_Ring_Breakage::_process (Molecule & m,
+Fused_Ring_Breakage::_process(Molecule & m,
                              Dicer_Arguments & dicer_args,
                              Breakages & breakages,
                              Breakages_Iterator & bi) const
@@ -5052,7 +5830,7 @@ Fused_Ring_Breakage::_process (Molecule & m,
   cerr << "From '" << m.smiles() << "' generate '" << mcopy.smiles() << "'\n";
 #endif
 
-  if (!dicer_args.ok_atom_count(mcopy.natoms()))
+  if (!dicer_args.OkAtomCount(mcopy))
     return 1;
 
   if (!dicer_args.is_unique(mcopy))
@@ -5073,7 +5851,7 @@ Fused_Ring_Breakage::_process (Molecule & m,
 // Spiro_Ring_Breakage::_process
 // by madlee @ 2011.12.01
 int
-Spiro_Ring_Breakage::_process (Molecule & m,
+Spiro_Ring_Breakage::_process(Molecule & m,
                              Dicer_Arguments & dicer_args,
                              Breakages & breakages,
                              Breakages_Iterator & bi) const
@@ -5140,15 +5918,13 @@ Spiro_Ring_Breakage::_process (Molecule & m,
   cerr << "From '" << m.smiles() << "' generate '" << mcopy.smiles() << "'\n";
 #endif
 
-  if (dicer_args.ok_atom_count(mcopy.natoms()))
+  if (dicer_args.OkAtomCount(mcopy)) {
     dicer_args.is_unique(mcopy);
-
-  if (mcopy.natoms() > dicer_args.lower_atom_count_cutoff())
-  {
-    return call_dicer(mcopy, dicer_args, breakages, bi);
   }
-  else
-  {
+
+  if (mcopy.natoms() > dicer_args.lower_atom_count_cutoff()) {
+    return call_dicer(mcopy, dicer_args, breakages, bi);
+  } else {
     return 0;
   }
 }
@@ -5157,14 +5933,14 @@ Spiro_Ring_Breakage::_process (Molecule & m,
 
 
 int
-Dearomatise::_process (Molecule & m,
-                             Dicer_Arguments & dicer_args,
-                             Breakages & breakages,
-                             Breakages_Iterator & bi) const
+Dearomatise::_process(Molecule & m,
+                      Dicer_Arguments & dicer_args,
+                      Breakages & breakages,
+                      Breakages_Iterator & bi) const
 {
   int * xref = dicer_args.xref_array_this_level();
 
-  initialise_xref (m, dicer_args, xref);
+  initialise_xref(m, dicer_args, xref);
 
   Set_of_Atoms r;
   r.resize(_ring.number_elements() + 1);
@@ -5215,8 +5991,8 @@ Dearomatise::_process (Molecule & m,
 }
 
 static int
-dicer (Molecule & m, Dicer_Arguments & dicer_args,
-       Breakages & breakages, Breakages_Iterator bi)
+dicer(Molecule & m, Dicer_Arguments & dicer_args,
+      Breakages & breakages, Breakages_Iterator bi)
 {
 //#define DEBUG_DICER
 #ifdef DEBUG_DICER
@@ -5224,7 +6000,7 @@ dicer (Molecule & m, Dicer_Arguments & dicer_args,
 #endif
 
   const Dicer_Transformation * dt = bi.current_transformation(breakages);
-  while (NULL != dt)
+  while (nullptr != dt)
   {
 #ifdef DEBUG_DICER
     std::cerr << "####" << dicer_args.recursion_depth() << "  --  " << bi.state() << std::endl;
@@ -5671,14 +6447,15 @@ count_side_of_bond (const Molecule & m,
 }
 
 static int
-atoms_on_side_of_bond_satisfy_min_frag_size (const Molecule & m,
+atoms_on_side_of_bond_satisfy_min_frag_size(const Molecule & m,
                                   const Dicer_Arguments & dicer_args,
                                   atom_number_t b1,
                                   atom_number_t b2,
                                   int * tmp)
 {
-  if (1 == m.ncon(b1))
+  if (1 == m.ncon(b1)) {
     return 1 >= dicer_args.lower_atom_count_cutoff();
+  }
 
   int matoms = m.natoms();
 
@@ -5693,18 +6470,21 @@ atoms_on_side_of_bond_satisfy_min_frag_size (const Molecule & m,
 
   //cerr << "From " << b2 << " to " << b1 << " count " << c << ", ring " << encountered_ring << endl;
 
-  if (encountered_ring)          // no violation of lower_atom_count_cutoff possible
+  // If there is a ring, no violation of lower_atom_count_cutoff possible
+  if (encountered_ring) {
     return 1;
+  }
 
-  if (c < dicer_args.lower_atom_count_cutoff())        // does not satisfy constraint
+  if (c < dicer_args.lower_atom_count_cutoff()) {  // does not satisfy constraint
     return 0;
+  }
 
   //cerr << "Constraint is OK!\n";
   return 1;
 }
 
 int
-Breakages::discard_breakages_that_result_in_fragments_too_small (Molecule & m,
+Breakages::discard_breakages_that_result_in_fragments_too_small(Molecule & m,
                                           const Dicer_Arguments & dicer_args)
 {
   int matoms = m.natoms();
@@ -5718,8 +6498,9 @@ Breakages::discard_breakages_that_result_in_fragments_too_small (Molecule & m,
   {
     const Dicer_Transformation * dti = _transformations[i];
 
-    if (TRANSFORMATION_TYPE_BREAK_CHAIN_BOND != dti->ttype())
+    if (TRANSFORMATION_TYPE_BREAK_CHAIN_BOND != dti->ttype()) {
       continue;
+    }
 
     const Chain_Bond_Breakage * b = dynamic_cast<const Chain_Bond_Breakage *>(dti);
 
@@ -5760,30 +6541,30 @@ Breakages::discard_breakages_that_result_in_fragments_too_small (Molecule & m,
  */
 
 int
-Breakages::identify_bonds_to_break_hard_coded_rules (Molecule & m)
+Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
 {
   m.compute_aromaticity_if_needed();
 
   int rc = 0;
 
-  int ne = m.nedges();
-
-  for (int i = 0; i < ne; i++)
-  {
-    const Bond * b = m.bondi(i);
-
-    if (b->nrings())
+  for (const Bond* b : m.bond_list()) {
+    if (b->nrings()) {
       continue;
+    }
 
-    if (!b->is_single_bond())
+    if (!b->is_single_bond()) {
       continue;
+    }
 
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
 
+    const int rbc1 = m.ring_bond_count(a1);
+    const int rbc2 = m.ring_bond_count(a2);
+
     if (include_amide_like_bonds_in_hard_coded_queries)
       ;
-    else if (m.nrings(a1) || m.nrings(a2))
+    else if (rbc1 || rbc2)
       ;
     else if (is_amide(m, a1, a2))
       continue;
@@ -5796,8 +6577,15 @@ Breakages::identify_bonds_to_break_hard_coded_rules (Molecule & m)
       continue;
     }
 
-    if (!m.saturated(a1) || !m.saturated(a2))
-    {
+    if (!m.saturated(a1) || !m.saturated(a2)) {
+      Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
+      _transformations.add(b);
+      rc++;
+      continue;
+    }
+
+    if (! break_ring_chain_bonds) {
+    } else if ((rbc1 == 0 && rbc2 > 0) || (rbc1 > 0 && rbc2 == 0)) {
       Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
@@ -5807,8 +6595,8 @@ Breakages::identify_bonds_to_break_hard_coded_rules (Molecule & m)
     atomic_number_t z1 = m.atomic_number(a1);
     atomic_number_t z2 = m.atomic_number(a2);
 
-    if (6 != z1 && 6 != z2)                // heteroatoms at both ends of bond
-    {
+    // heteroatoms at both ends of bond
+    if (6 != z1 && 6 != z2) {
       Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
@@ -6048,15 +6836,14 @@ Breakages::identify_bonds_to_not_break(Molecule & m)
 }
 
 static void
-preprocess (Molecule & m)
+preprocess(Molecule & m)
 {
   if (reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
 
   m.revert_all_directional_bonds_to_non_directional();         // by default
 
-  if (discard_chirality)
-  {
+  if (discard_chirality) {
     m.remove_all_chiral_centres();
   }
 
@@ -6066,8 +6853,7 @@ preprocess (Molecule & m)
   if (chemical_standardisation.active())
     chemical_standardisation.process(m);
 
-  if (perceive_terminal_groups_only_in_original_molecule)
-  {
+  if (perceive_terminal_groups_only_in_original_molecule) {
     int matoms = m.natoms();
 
     for (int i = 0; i < matoms; i++)
@@ -6076,9 +6862,10 @@ preprocess (Molecule & m)
         continue;
 
       if (m.nbonds(i) == m.ncon(i))
-        m.set_isotope(i, ENV_IS_TERMINAL);
+        m.set_isotope(i, static_cast<int>(Env::kTerminal));
     }
   }
+
   return;
 }
 
@@ -6097,9 +6884,9 @@ do_number_by_initial_atom_number(Molecule & m)
 }
 
 static int
-write_fully_broken_parent (const Molecule & m,
-                           const Breakages &breakages,
-                           Molecule_Output_Object & stream_for_fully_broken_parents)
+write_fully_broken_parent(const Molecule & m,
+                          const Breakages &breakages,
+                          Molecule_Output_Object & stream_for_fully_broken_parents)
 {
   Molecule mcopy(m);
 
@@ -6135,9 +6922,16 @@ add_parent_atom_count_to_global_array(const IWString & mname,
 }
 
 static int
-dicer (Molecule & m,
-       IWString_and_File_Descriptor & output)
+dicer(Molecule & m,
+      IWString_and_File_Descriptor & output)
 {
+  static bool first_call = true;
+  if (first_call) {
+    if (m.highest_coordinate_dimensionality() > 1) {
+      set_append_coordinates_after_each_atom(1);
+    }
+  }
+
   preprocess(m);
   // std::cerr << "####" << m.name() << std::endl;
 
@@ -6189,7 +6983,12 @@ dicer (Molecule & m,
   else
     dicer_args.set_lower_atom_count_cutoff(lower_atom_count_cutoff);
 
-  dicer_args.set_upper_atom_count_cutoff(std::min(upper_atom_count_cutoff, int(max_atom_fraction*m.natoms())));
+  if (output_is_proto) {
+    dicer_args.set_output_is_proto(output_is_proto);
+  }
+
+  dicer_args.set_upper_atom_count_cutoff(std::min(upper_atom_count_cutoff,
+                                                  int(max_atom_fraction*m.natoms())));
 
   if (0 == lower_atom_count_cutoff)         // no need to check
     ;
@@ -6214,10 +7013,11 @@ dicer (Molecule & m,
      return 1;
      }*/
 
-  if (fingerprint_tag.length())
-    ;
-  else if (write_parent_smiles)
+  if (fingerprint_tag.length()) {
+  } else if (! write_diced_molecules) {
+  } else if (write_parent_smiles) {
     output << m.smiles() << ' ' << m.name() << " B=" << bonds_to_break_this_molecule << '\n';
+  }
 
   if (0 == bonds_to_break_this_molecule)
   {
@@ -6235,11 +7035,14 @@ dicer (Molecule & m,
   if (change_element_for_heteroatoms_with_hydrogens)
     do_change_element_for_heteroatoms_with_hydrogens(m);
 
-  if (atom_typing_specification.active())
+  if (atom_typing_specification.active()) {
     (void) dicer_args.store_atom_types(m, atom_typing_specification);
+  }
 
   if (max_fragments_per_molecule > 0)
     dicer_args.adjust_max_recursion_depth(bonds_to_break_this_molecule, max_fragments_per_molecule);
+
+  dicer_args.set_write_diced_molecules(write_diced_molecules);
 
   breakages.identify_symmetry_exclusions(m);
 
@@ -6248,21 +7051,25 @@ dicer (Molecule & m,
   if (break_fused_rings)
     dicer_args.initialise_parent_molecule_aromaticity(m);
 
-//USPVPTR * uspvptr = new USPVPTR[m.natoms()]; std::unique_ptr<USPVPTR[]> free_uspvptr(uspvptr);
+  USPVPTR * uspvptr = new USPVPTR[m.natoms()]; std::unique_ptr<USPVPTR[]> free_uspvptr(uspvptr);
 
-//initialise_atom_pointers(m, dicer_args.atom_types(), uspvptr);
+  initialise_atom_pointers(m, dicer_args.atom_types(), uspvptr);
 
-  int * atom_numbers = new int[m.natoms()];
-  std::unique_ptr<int[]> free_atom_numbers(atom_numbers);
-
-  initialise_atom_pointers(m, atom_numbers);
+  // int * atom_numbers = new int[m.natoms()];
+  // std::unique_ptr<int[]> free_atom_numbers(atom_numbers);
+  // initialise_atom_pointers(m, atom_numbers);
 
   if (work_like_recap)
   {
     breakages.do_recap(m, dicer_args);
 
-    if (write_smiles)
-      dicer_args.write_fragments_found_this_molecule(m, output);
+    // The number of breakable bonds is not used with recap output, set to -1.
+    if (write_smiles) {
+      dicer_args.write_fragments_found_this_molecule(m, -1, output);
+    }
+    if (fingerprint_tag.length()) {
+      dicer_args.produce_fingerprint(m, output);
+    }
 
     return 1;
   }
@@ -6282,8 +7089,9 @@ dicer (Molecule & m,
   //if (write_smiles || || verbose)
   //  dicer_args.sort_fragments_found_this_molecule();
 
-  if (write_smiles)
-    dicer_args.write_fragments_found_this_molecule(m, output);
+  if (write_smiles) {
+    dicer_args.write_fragments_found_this_molecule(m, bonds_to_break_this_molecule, output);
+  }
 
   if (fingerprint_tag.length())
     dicer_args.produce_fingerprint(m, output);
@@ -6298,11 +7106,11 @@ dicer (Molecule & m,
 }
 
 static int
-dicer (data_source_and_type<Molecule> & input,
-       IWString_and_File_Descriptor & output)
+dicer(data_source_and_type<Molecule> & input,
+      IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -6400,6 +7208,32 @@ dicer_tdt_filter (const char * fname,
 }
 
 static int
+InitialiseEnvironmentElements() {
+  env_element[0] = nullptr;
+
+  env_element[static_cast<int>(Env::kTerminal)] = get_element_from_symbol_no_case_conversion("Te");
+  env_element[static_cast<int>(Env::kAromatic)] = get_element_from_symbol_no_case_conversion("Ar");
+  env_element[static_cast<int>(Env::kSaturatedCarbon)] = get_element_from_symbol_no_case_conversion("Cs");
+  env_element[static_cast<int>(Env::kSaturatedNitrogen)] = get_element_from_symbol_no_case_conversion("Nh");
+  env_element[static_cast<int>(Env::kSaturatedOxygen)] = get_element_from_symbol_no_case_conversion("Os");
+
+  env_element[static_cast<int>(Env::kUnsaturatedCarbon)] = get_element_from_symbol_no_case_conversion("Cu");
+  env_element[static_cast<int>(Env::kUnsaturatedNitrogen)] = get_element_from_symbol_no_case_conversion("Ne");
+  env_element[static_cast<int>(Env::kUnsaturatedOxygen)] = get_element_from_symbol_no_case_conversion("Og");
+
+  env_element[static_cast<int>(Env::kAmideCarbon)] = get_element_from_symbol_no_case_conversion("Ac");
+  env_element[static_cast<int>(Env::kAmideNitrogen)] = get_element_from_symbol_no_case_conversion("Am");
+
+  env_element[static_cast<int>(Env::kHalogen)] = get_element_from_symbol_no_case_conversion("Hg");
+  env_element[static_cast<int>(Env::kNitro)] = get_element_from_symbol_no_case_conversion("No");
+
+  env_element[static_cast<int>(Env::kAliphaticRingCarbon)] = get_element_from_symbol_no_case_conversion("Rb");
+  env_element[static_cast<int>(Env::kAliphaticRingNitrogen)] = get_element_from_symbol_no_case_conversion("Rn");
+
+  return 1;
+}
+
+static int
 display_misc_B_options (std::ostream & os)
 {
   os << " -B atype=<tag>    Calculate atom type and dump it in frag/comp pairs\n";
@@ -6418,20 +7252,26 @@ display_misc_B_options (std::ostream & os)
   os << " -B BBRK_FILE=<fname> write bonds to break to <fname> - no computation\n";
   os << " -B BBRK_TAG=<tag> read bonds to be broken from sdf tag <tag> (def DICER_BBRK)\n";
   os << " -B nbamide        do NOT break amide and amide-like bonds\n";
-  os << " -B nbfts          do NOT break bonds that would yield fragments too small\n";
+  os << " -B brcb           break all bonds from a chain to a ring\n";
+  // the nbfts option is not working, TODO ianwatson fix.
+  //os << " -B nbfts          do NOT break bonds that would yield fragments too small\n";
   os << " -B appnatoms      append the atom count to each fragment produced\n";
   os << " -B MAXAL=<n>      max atoms lost when creating any fragment\n";
   os << " -B MINFF=<f>      discard fragments that comprise less than <f> fraction of atoms in parent\n";
   os << " -B MAXFF=<f>      discard fragments that comprise more than <f> fraction of atoms in parent\n";
   os << " -B fragstat=<fname> write fragment statistics to <fname>\n";
   os << " -B fstsp=<float>  fractional support level for inclusion in fragstat= file\n";
+  os << " -B fragstatproto  write the fragstat file as a DicerFragments text proto\n";
+  os << " -B fragstatbinproto write the fragstat file as TFDatarecord DicerFragments serialized proto's\n";
+  os << " -B smiles_proto   write the fragstat file as 'smiles DicerFragments text proto'\n";
+  os << " -B WRITEALL=<fname> write all fragments found to <fname>. Can be HUGE!\n";
   os << " -B FMC:<qry>      queries that fragments reported must contain\n";
   os << " -B FMC:heteroatom fragments reported must contain a heteroatom, :n for count\n";
   os << " -B VF=<n>         output will be viewed in vf with <n> structures per page\n";
   os << " -B flush          flush output after each molecule\n";
   os << " -B lostchiral     check each fragment for lost chirality\n";
   os << " -B recap          work like Recap - break all breakable bonds at once\n";
-  os << " -B fusmi          use a faster unique smiles determination - but incompatible with default\n";
+  os << " -B nooutput       suppress writing diced fragments, useful with the '-B fragstat' option\n";
   os << " -B help           this message\n";
 
   exit(3);
@@ -6451,15 +7291,15 @@ display_dash_K_options(char flag, std::ostream & os)
 }
 
 static int
-dicer(const char * fname, int input_type,
+dicer(const char * fname, FileType input_type,
       IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -6479,9 +7319,23 @@ static void
 display_dash_i_options(std::ostream & os)
 {
   os << " -I env           atoms get isotopic labels according to their environment\n";
-  os << "                  1 terminal, 2 aromatic, 3 CG0, 4 !#6G0, 5 Unsat Carbon, 6 Unsat hetero, 7 Amide\n";
   os << " -I enva          specific atoms are added to indicate the environment\n";
-  os << "                    Te,         Ar,         Cs,    Hs,      Cu,             Hu,             Am\n";
+  os << " When the 'env' or 'enva' directives are used, these isotopes or elements are added\n";
+  os << " Descripton               iso element\n";
+  os << " Terminal                 1   Te\n";
+  os << " Aromatic                 2   Ar\n";
+  os << " SaturatedCarbon          3   Cs\n";
+  os << " SaturatedNitrogen        4   Nh\n";
+  os << " SaturatedOxygen          5   Os\n";
+  os << " UnsaturatedCarbon        6   Cu\n";
+  os << " UnsaturatedNitrogen      7   Cu\n";
+  os << " UnsaturatedOxygen        8   Cu\n";
+  os << " AmideCarbon              9   Ac\n";
+  os << " AmideNitrogen           10   Am\n";
+  os << " Halogen                 11   Hg\n";
+  os << " Nitro                   12   No\n";
+  os << " RingCarbonAliphatic     13   Cr\n";
+  os << " RingNitrogenAliphatic   14   Na\n";
   os << " -I z             atoms labelled by atomic number of neighbour\n";
   os << " -I ini           atoms labelled by initial atom number (debugging uses)\n";
   os << " -I <number>      constant isotopic label applied to all join points\n";
@@ -6503,16 +7357,14 @@ dicer (int argc, char ** argv)
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('A'))
-  {
-    if (!process_standard_aromaticity_options(cl, verbose, 'A'))
-    {
+  if (cl.option_present('A')) {
+    if (!process_standard_aromaticity_options(cl, verbose, 'A')) {
       cerr << "Cannot initialise aromaticity specifications\n";
       usage(5);
     }
-  }
-  else
+  } else {
     set_global_aromaticity_type(Daylight);
+  }
 
   if (cl.option_present('E'))
   {
@@ -6561,7 +7413,7 @@ dicer (int argc, char ** argv)
   }
 
   set_copy_user_specified_atom_void_ptrs_during_create_subset(1);
-  set_copy_atom_based_user_specified_void_pointers_during_add_molecle (1);
+  set_copy_atom_based_user_specified_void_pointers_during_add_molecule(1);
 
   if (cl.option_present('k'))
   {
@@ -6636,7 +7488,7 @@ dicer (int argc, char ** argv)
           cerr << "The increment isotope values for attachment points directive (-I inc=) must be a whole +ve number\n";
           return 2;
         }
-  
+
         if (verbose)
           cerr << "Will add " << increment_isotope_for_join_points << " to existing isotopic labels at join points\n";
       }
@@ -6663,29 +7515,14 @@ dicer (int argc, char ** argv)
       }
     }
 
-    if (add_environment_atoms && apply_environment_isotopic_labels)
-    {
+    if (add_environment_atoms && apply_environment_isotopic_labels) {
       cerr << "Adding environment atoms and applying isotopic labels doesn't make sense\n";
       usage(4);
     }
 
     if (add_environment_atoms)
-    {
-      set_auto_create_new_elements(1);
-
-      element_ar = get_element_from_symbol_no_case_conversion("Ar");
-      element_te = get_element_from_symbol_no_case_conversion("Te");
-      element_cs = get_element_from_symbol_no_case_conversion("Cs");
-      element_cu = get_element_from_symbol_no_case_conversion("Cu");
-      element_hs = get_element_from_symbol_no_case_conversion("Hs");
-      element_hu = create_element_with_symbol("Hu");
-      element_am = get_element_from_symbol_no_case_conversion("Am");
-      cerr << "AM " << element_am <<endl;
-      cerr << "HU " << element_hu <<endl;
-    }
-
-    if (increment_isotope_for_join_points && 0 == isotope_for_join_points)
-    {
+      InitialiseEnvironmentElements();
+    if (increment_isotope_for_join_points && 0 == isotope_for_join_points) {
       cerr << "Increment specified for existing isotopes, but no isotope for join points\n";
       display_dash_i_options(cerr);
     }
@@ -6702,6 +7539,11 @@ dicer (int argc, char ** argv)
   if (cl.option_present('J'))
   {
     cl.value('J', fingerprint_tag);
+
+    if (! fingerprint_tag.starts_with("NC")) {
+      cerr << "Dicer produces sparse fingerprints only, tag must start with 'NC', '" << fingerprint_tag << " invalid\n";
+      return 1;
+    }
 
     if (verbose)
       cerr << "Will create fingerprints with tag '" << fingerprint_tag << "'\n";
@@ -6735,16 +7577,26 @@ dicer (int argc, char ** argv)
 
   if (cl.option_present('M'))
   {
-    if (!cl.value('M', upper_atom_count_cutoff) || upper_atom_count_cutoff < 1 || upper_atom_count_cutoff < lower_atom_count_cutoff)
-    {
-      cerr << "The maximum number of atoms in a fragment (-M) option must be a whole +ve number\n";
-      usage(4);
+    const_IWSubstring m;
+    for (int i = 0; cl.value('M', m, i); ++i) {
+      if (m.starts_with("maxnr=")) {
+        m.remove_leading_chars(6);
+        if (! m.numeric_value(max_non_ring_atoms) || max_non_ring_atoms < 0) {
+          cerr << "Invalid maxnr= qualifier '" << m << "'\n";
+          return 1;
+        }
+      } else if (! m.numeric_value(upper_atom_count_cutoff) ||
+                upper_atom_count_cutoff < 1 || upper_atom_count_cutoff < lower_atom_count_cutoff) {
+        cerr << "The maximum number of atoms in a fragment (-M) option must be a whole +ve number\n";
+        return 1;
+      } else if (verbose) {
+        if (verbose) {
+          cerr << "Will discard fragments with more than " << upper_atom_count_cutoff << " atoms\n";
+        }
+      }
+
+      upper_atom_count_cutoff_current_molecule = upper_atom_count_cutoff;
     }
-
-    if (verbose)
-      cerr << "Will discard fragments with more than " << upper_atom_count_cutoff << " atoms\n";
-
-    upper_atom_count_cutoff_current_molecule = upper_atom_count_cutoff;
   }
 
   if (cl.option_present('c'))
@@ -6842,6 +7694,31 @@ dicer (int argc, char ** argv)
         if (verbose)
           fsrss.debug_print(cerr);
       }
+      else if (b == "fragstatproto") {
+        write_fragstat_as_proto = 1;
+        if (verbose) {
+          cerr << "Fragstat file written as proto\n";
+        }
+      }
+      else if (b == "smiles_proto") {
+        write_fragstat_as_proto = 1;
+        prepend_smiles_to_fragstat_proto = 1;
+        if (verbose) {
+          cerr << "Will prepend the smiles to the fragstat proto\n";
+        }
+      }
+      else if (b == "fragstatbinproto") {
+        write_fragstat_as_binary_proto = 1;
+        if (verbose) {
+          cerr << "Will write fragstat file as a TFDatarecord proto\n";
+        }
+      }
+      else if (b.starts_with("WRITEALL")) {
+        if (! all_fragments.ParseDirective(b)) {
+          cerr << "Unrecognosed '" << b << "'\n";
+          return 0;
+        }
+      }
       else if (b == "addq")
       {
         add_user_specified_queries_to_default_rules = 1;
@@ -6923,6 +7800,7 @@ dicer (int argc, char ** argv)
       else if ("nbfts" == b)
       {
         reject_breakages_that_result_in_fragments_too_small = 1;
+        cerr << "Warning the nbfts option is not working\n";
 
         if (verbose)
           cerr << "Breakages that would yield fragments too small not allowed\n";
@@ -7011,6 +7889,12 @@ dicer (int argc, char ** argv)
           return 3;
         }
       }
+      else if (b == "brcb") {
+        break_ring_chain_bonds = 1;
+        if (verbose) {
+          cerr << "Will break ring/chain bonds\n";
+        }
+      }
       else if (b.starts_with("VF="))
       {
         b.remove_leading_chars(3);
@@ -7036,9 +7920,18 @@ dicer (int argc, char ** argv)
         if (verbose)
           cerr << "Will work like Recap\n";
       }
-      else if ("fusmi" == b)
-      {
-        set_unique_determination_version(2);
+      else if (b == "nooutput") {
+        write_diced_molecules = 0;
+        if (verbose) {
+          cerr << "Normal output suppressed\n";
+        }
+      }
+      else if (b == "proto") {
+        output_is_proto = 1;
+        write_parent_smiles = 0;
+        if (verbose) {
+          cerr << "Output is dicer_data::DicedMolecule textproto\n";
+        }
       }
       else if("help" == b)
       {
@@ -7065,7 +7958,7 @@ dicer (int argc, char ** argv)
       if (!bond_break_file.ends_with(".sdf"))
         bond_break_file << ".sdf";
 
-      bbrk_file.add_output_type(SDF);
+      bbrk_file.add_output_type(FILE_TYPE_SDF);
       if (!bbrk_file.new_stem(bond_break_file))
       {
         cerr << "Cannot open stream for bond breaks '" << bond_break_file << "'\n";
@@ -7083,14 +7976,15 @@ dicer (int argc, char ** argv)
       MDL_File_Supporting_Material * mdlfs = global_default_MDL_File_Supporting_Material();
       mdlfs->set_report_unrecognised_records(0);
     }
+
+    all_fragments.UseDefaultFeaturesUnlessSpecified();
   }
 
   if (cl.option_present('P'))
   {
     const_IWSubstring p = cl.string_value('P');
 
-    if (! atom_typing_specification.build(p))
-    {
+    if (! atom_typing_specification.build(p)) {
       cerr << "Cannot initialise atom typing '" << p << "'\n";
       return 1;
     }
@@ -7269,7 +8163,7 @@ dicer (int argc, char ** argv)
     usage(4);
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -7282,13 +8176,13 @@ dicer (int argc, char ** argv)
   else if (function_as_filter)
     ;
   else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (all_files_recognised_by_suffix(cl))
     ;
   else
     return 4;
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage (2);
@@ -7363,7 +8257,7 @@ dicer (int argc, char ** argv)
   }
 
 #ifdef SPECIAL_THING_FOR_PARENT_AND_FRAGMENTS
-  stream_for_parent_joinged_to_fragment.add_output_type(SDF);
+  stream_for_parent_joinged_to_fragment.add_output_type(FILE_TYPE_SDF);
   if (!stream_for_parent_joinged_to_fragment.new_stem("dcpjoined"))
   {
     cerr << "Cannot open 'dcpjoined' file\n";
@@ -7378,13 +8272,13 @@ dicer (int argc, char ** argv)
     cl.value('Z', z);
 
     if (z.ends_with(".smi"))
-      stream_for_fully_broken_parents.add_output_type(SMI);
+      stream_for_fully_broken_parents.add_output_type(FILE_TYPE_SMI);
     else if (z.ends_with(".sdf"))
-      stream_for_fully_broken_parents.add_output_type(SDF);
+      stream_for_fully_broken_parents.add_output_type(FILE_TYPE_SDF);
     else
     {
       z << ".sdf";
-      stream_for_fully_broken_parents.add_output_type(SDF);
+      stream_for_fully_broken_parents.add_output_type(FILE_TYPE_SDF);
     }
 
     if (stream_for_fully_broken_parents.would_overwrite_input_files(cl, z))
@@ -7481,8 +8375,13 @@ dicer (int argc, char ** argv)
 
   if (0 == molecules_containing.size())
     ;
-  else if (name_for_fragment_statistics_file.length())
-    write_fragment_statistics (molecules_containing, fsrss, name_for_fragment_statistics_file);
+  else if (name_for_fragment_statistics_file.empty()) {
+  } else if (write_fragstat_as_binary_proto) {
+    WriteFragmentStatisticsAsBinaryProto(molecules_containing, fsrss, name_for_fragment_statistics_file);
+  }
+  else if (name_for_fragment_statistics_file.length()) {
+    write_fragment_statistics(molecules_containing, fsrss, name_for_fragment_statistics_file);
+  }
 
   if (stream_for_post_breakage.is_open())
     stream_for_post_breakage.close();
@@ -7502,8 +8401,7 @@ dicer (int argc, char ** argv)
 #ifndef _WIN32_
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char ** argv) {
   prog_name = argv[0];
 
   int rc = dicer(argc, argv);
@@ -7511,9 +8409,7 @@ main (int argc, char ** argv)
   return rc;
 }
 
-
 #else
-
 
 extern "C"
 {
@@ -7524,16 +8420,14 @@ extern "C"
 
 }
 
-
 int
 Extern_Dicer::extern_dicer(int argc, char ** argv)
 {
-	
-	reset_variables();
-	verbose=1;
-	int rc = dicer(argc, argv);
-	
-	return rc;
+  reset_variables();
+
+  verbose=1;
+  int rc = dicer(argc, argv);
+        
+  return rc;
 }
 #endif
-

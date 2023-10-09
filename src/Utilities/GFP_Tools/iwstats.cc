@@ -2,30 +2,32 @@
   Tester for Bsquared
 */
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <iostream>
 #include <limits>
-#include <algorithm>
+#include <random>
 using std::cerr;
 using std::endl;
 
 //#include "iwmalloc.h"
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
-#include "iwqsort.h"
-#include "cmdline.h"
-#include "iwrandom.h"
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
-#include "accumulator.h"
-#include "misc.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwqsort/iwqsort.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "bsquared.h"
 
 #include "Metric.h"
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::cerr;
 
 static Enrichment enrichment;
 
@@ -83,7 +85,6 @@ static double bedroc_alpha = 20.0;
 static double enrichment_factor_fraction = 0.5;
 
 static double discard_measured_values_below = -std::numeric_limits<double>::max();
-static double keep_most_active_fraction = 0.0;
 
 static int proper_median = 1;
 
@@ -112,7 +113,13 @@ static IWString_and_File_Descriptor stream_for_residuals;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Computes Bsquared and other statistics - allows missing values\n";
   cerr << " -e <col>       column for experimental (measured) values\n";
   cerr << " -E <file>      activities are in a different file <file>\n";
@@ -127,8 +134,7 @@ usage (int rc)
   cerr << " -j             treat as a descriptor file\n";
   cerr << " -M <string>    missing value string\n";
   cerr << " -q             quietly ignore missing values\n";
-  cerr << " -R <seed>      randomise the sort when duplicate predicted values present\n";
-  cerr << " -R .           to use a random seed\n";
+  cerr << " -R .           randomise the sort when duplicate predicted values present\n";
   cerr << " -c <number>    number of valid pairs needed for producing correlations (default " << values_needed_for_reporting_correlations << ")\n";
   cerr << " -w             when duplicate values present, suppress computation of best\n";
   cerr << "                and worst BSquared values\n";
@@ -178,7 +184,7 @@ static int is_descriptor_file = 0;
 
 static int columns_in_input = 0;
 
-static IWString * column_titles = NULL;
+static IWString * column_titles = nullptr;
 
 /*
   Since Bsquared can vary depending on the input order, we can do various things...
@@ -236,7 +242,7 @@ establish_column_titles (const const_IWSubstring & buffer,
                          int & marker_column,
                          const IWString & marker_column_name)
 {
-  if (NULL != column_titles)
+  if (nullptr != column_titles)
     delete [] column_titles;
 
   columns_in_input = buffer.nwords(input_separator);
@@ -275,7 +281,7 @@ establish_column_titles (const const_IWSubstring & buffer,
   {
     column_titles[col] = token;
 
-    if (col == experimental_column && 0 == id_activity_hash.size())    // expt column doesn't really mean the same thing when just a name cross reference
+    if (col == experimental_column && id_activity_hash.empty())    // expt column doesn't really mean the same thing when just a name cross reference
       cerr << "Experimental column is '" << column_titles[col] << "'\n";
 
     if (marker_column_name.length() > 0 && marker_column < 0 && token == marker_column_name)
@@ -327,7 +333,9 @@ class Predicted_Values
     int valid(int i) const { return _valid[i];}
 
     experimental_value_t random_value() const { return _random;}
-    void assign_random_value();
+    void assign_random_value(experimental_value_t r) {
+      _random = r;
+    }
 
     const IWString marker() const { return _marker;}
 
@@ -353,10 +361,10 @@ Predicted_Values::Predicted_Values()
 
 Predicted_Values::~Predicted_Values()
 {
-  if (NULL != _valid)
+  if (nullptr != _valid)
     delete [] _valid;
 
-  if (NULL != _predicted)
+  if (nullptr != _predicted)
     delete [] _predicted;
 
   return;
@@ -474,7 +482,7 @@ int
 Predicted_Values::debug_print (std::ostream & os) const
 {
   os << "expt: " << _experimental;
-  if (NULL != _predicted)
+  if (nullptr != _predicted)
   {
     os << " pred:";
     for (int i = 0; i < columns_in_input; i++)
@@ -489,12 +497,6 @@ Predicted_Values::debug_print (std::ostream & os) const
   os << '\n';
 
   return os.good();
-}
-
-void
-Predicted_Values::assign_random_value()
-{
-  _random = iwrandom();
 }
 
 template class resizable_array_p<Predicted_Values>;
@@ -534,6 +536,7 @@ static int
 determine_numbers_to_check_by_activity(const resizable_array_p<Predicted_Values> & zdata,
                                        resizable_array<int> & numbers_to_check)
 {
+#ifdef NOT_IMPLEMENTED
   int n = zdata.number_elements();
 
   for (int i = 0; i < activities_to_check.number_elements(); i++)
@@ -546,6 +549,7 @@ determine_numbers_to_check_by_activity(const resizable_array_p<Predicted_Values>
     {
     }
   }
+#endif
 
   return 1;
 }
@@ -1105,16 +1109,17 @@ echo_the_data (const resizable_array_p<Predicted_Values> & zdata,
 }
 
 static void
-do_sort_by_predicted_value (resizable_array_p<Predicted_Values> & zdata,
-                            int which_predicted_set,
-                            int predicted_column)
+do_sort_by_predicted_value(resizable_array_p<Predicted_Values> & zdata,
+                           int which_predicted_set,
+                           int predicted_column)
 {
   if (randomise_ties)
   {
-    int n = zdata.number_elements();
-    for (int j = 0; j < n; j++)
-    {
-      zdata[j]->assign_random_value();
+    std::random_device rd;
+    std::default_random_engine generator(rd());
+    std::uniform_real_distribution<double> u(0.0, 1.0);
+    for (auto * item : zdata) {
+      item->assign_random_value(u(generator));
     }
   }
 
@@ -1736,7 +1741,7 @@ iwstats (unsigned int number_records,
   else
     cerr << "Duplicate prediced values present in column " << (predicted_column + 1) << endl;
 
-  if (NULL != chunk_title)     // we are dealing with a subset
+  if (nullptr != chunk_title)     // we are dealing with a subset
     output << " first " << *(chunk_title) << " (" << number_records << " records)\n";
 
   for (int i = 0; i < ndx; ++i)
@@ -1752,6 +1757,9 @@ iwstats (unsigned int number_records,
 
   write_something_identifying_the_column(predicted_column, output);
   output << " AE50 = " << tmp1[ndx/2] << "\n";
+
+  write_something_identifying_the_column(predicted_column, output);
+  output << " AE75 = " << tmp1[ndx * 75 / 100] << "\n";
 
   write_something_identifying_the_column(predicted_column, output);
   output << " AE95 = " << tmp1[ndx * 95 / 100] << "\n";
@@ -1882,8 +1890,8 @@ iwstats (int which_predicted_set,
          resizable_array_p<Predicted_Values> & zdata,
          std::ostream & output)
 {
-  if (0 == numbers_to_check.number_elements())   // no subsetting, doing the whole file at once
-    return iwstats(zdata.number_elements(), NULL, which_predicted_set, predicted_column, experimental_column, tmp1, tmp2, tmpr, zdata, output);
+  if (numbers_to_check.empty())   // no subsetting, doing the whole file at once
+    return iwstats(zdata.number_elements(), nullptr, which_predicted_set, predicted_column, experimental_column, tmp1, tmp2, tmpr, zdata, output);
 
   for (int i = 0; i < numbers_to_check.number_elements(); i++)
   {
@@ -1921,7 +1929,7 @@ iwstats (const resizable_array<int> & predicted_column,
   float * tmp2 = new float[records_in_file]; std::unique_ptr<float[]> free_tmp2(tmp2);
   float * tmpr = new float[records_in_file]; std::unique_ptr<float[]> free_tmpr(tmpr);
 
-  if (NULL == tmp1 || NULL == tmp2 || NULL == tmpr)
+  if (nullptr == tmp1 || nullptr == tmp2 || nullptr == tmpr)
   {
     cerr << "Memory failure, cannot allocate data for " << records_in_file << " records\n";
     return 9;
@@ -1960,7 +1968,7 @@ iwstats (const IW_STL_Hash_Map_int::const_iterator & f,
       tmp.add(zdata[i]);
   }
 
-  if (0 == tmp.number_elements())
+  if (tmp.empty())
   {
     cerr << "Very strange, no records retrieved for marker '" << (*f).first << "'\n";
     return 0;
@@ -2129,7 +2137,7 @@ identify_most_active_fraction (const IW_STL_Hash_Map<IWString, IWString> & activ
 {
   const auto s = activity.size();
 
-  float * v = new float[s]; unique_ptr<float[]> free_v(v);
+  float * v = new float[s]; std::unique_ptr<float[]> free_v(v);
 
   int ndx = 0;
   for (auto f : activity)
@@ -2337,7 +2345,7 @@ iwstats (int argc, char ** argv)
     }
   }
 
-  if (experimental_column < 0 && 0 == predicted_column.number_elements())
+  if (experimental_column < 0 && predicted_column.empty())
   {
     if (is_descriptor_file)
       experimental_column = -1;
@@ -2361,7 +2369,7 @@ iwstats (int argc, char ** argv)
     }
   }
 
-  if (0 == predicted_column.number_elements())
+  if (predicted_column.empty())
     predicted_column.add(-1);
 
   if (cl.option_present('h'))
@@ -2626,23 +2634,9 @@ iwstats (int argc, char ** argv)
   {
     const_IWSubstring r = cl.string_value('R');
 
-    if ('.' == r)
-    {
-      iw_random_seed();
-    }
-    else
-    {
-      int tmp;
-      if (! r.numeric_value(tmp))
-      {
-        cerr << "Invalid random number seed '" << r << "'\n";
-        usage(14);
-      }
-
-      iw_set_rnum_seed(static_cast<random_number_seed_t>(tmp));
-
-      if (verbose)
-        cerr << "Using seed " << tmp << "\n";
+    if ('.' == r) {
+    } else {
+      cerr << "Setting random seed no longer supported, ignored\n";
     }
 
     randomise_ties = 1;
@@ -2715,7 +2709,7 @@ iwstats (int argc, char ** argv)
       cerr << "Compute cMSD rather than cMSR\n";
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "INsufficient arguments\n";
     usage(1);
@@ -2797,7 +2791,7 @@ iwstats (int argc, char ** argv)
   if (items_with_no_activity_data)
     cerr << "Encountered " << items_with_no_activity_data << " items with no activity data\n";
 
-  if (NULL != column_titles)
+  if (nullptr != column_titles)
     delete [] column_titles;
 
   return rc;

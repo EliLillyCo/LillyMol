@@ -10,16 +10,22 @@ using std::cout;
 
 #include <omp.h>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-#include "iw_auto_array.h"
-#include "report_progress.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwmisc/report_progress.h"
+
+#include "Utilities/GFP_Tools/nearneighbours.pb.h"
 
 #include "gfp_standard.h"
+#include "nndata.h"
 #include "smiles_id_dist.h"
+#include "sparse_collection.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -27,12 +33,12 @@ static int clusters_to_form = std::numeric_limits<int>::max();
 
 static Report_Progress report_progress;
 
-static IWString smiles_tag ("$SMI<");
-static IWString identifier_tag ("PCN<");
-static IWString distance_tag ("DIST<");
-static IWString mk_tag ("FPMK<");
-static IWString mk2_tag ("FPMK2<");
-static IWString iw_tag ("FPIW<");
+static IWString smiles_tag("$SMI<");
+static IWString identifier_tag("PCN<");
+static IWString distance_tag("DIST<");
+static IWString mk_tag("FPMK<");
+static IWString mk2_tag("FPMK2<");
+static IWString iw_tag("FPIW<");
 
 static float threshold = 0.0;
 
@@ -44,42 +50,54 @@ class Leader_Item : public Smiles_ID_Dist
   public:
     Leader_Item();
 
-    void set_gfp (const GFP_Standard * s) { _gfp = s;}
+    void set_gfp(const GFP_Standard * s) { _gfp = s;}
 };
 
 Leader_Item::Leader_Item()
 {
-  _gfp = NULL;
+  _gfp = nullptr;
 
   return;
 }
 
 static int pool_size = 0;
 
-static Leader_Item * leader_item = NULL;
-static GFP_Standard * fingerprints = NULL;
-static int * selected = NULL;
-static float * distances = NULL;
+static Leader_Item * leader_item = nullptr;
+static GFP_Standard * fingerprints = nullptr;
+static int * selected = nullptr;
+static float * distances = nullptr;
+
+static int write_neighbours_as_protos = 0;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Leader implementation requiring MPR IW MK MK2\n";
   cerr << " -t <dist>      distance threshold\n";
+  cerr << " -n <number>    number of clusters to form\n";
   cerr << " -A <fname>     file of previously selected fingerprints\n";
   cerr << " -s <size>      size of fingerprint file\n";
   cerr << " -p <n>         process <n> leaders at once (max 2 for now)\n";
   cerr << " -h <n>         maximum number of OMP threads to use\n";
   cerr << " -r <n>         report progress every <n> clusters formed\n";
+  cerr << " -k .           write neighbours as textproto form\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit(rc);
 }
 
 static int
-choose_next_leader (const int * selected,
-                    int n)
+choose_next_leader(const int * selected,
+                   int n)
 {
   for (int i = 0; i < n; i++)
   {
@@ -92,10 +110,10 @@ choose_next_leader (const int * selected,
 }
 
 static int
-choose_next_leaders (const int * selected,
-                     int n,
-                     int * leaders,
-                     int leaders_requested)
+choose_next_leaders(const int * selected,
+                    int n,
+                    int * leaders,
+                    int leaders_requested)
 {
   int leader_count = 0;
 
@@ -115,7 +133,7 @@ choose_next_leaders (const int * selected,
 }
 
 static int
-leader ()
+leader()
 {
   int cluster_id = 0;
 
@@ -130,7 +148,7 @@ leader ()
   }
 #endif
 
-  while ((icentre = choose_next_leader (selected + start, pool_size - start)) >= 0)
+  while ((icentre = choose_next_leader(selected + start, pool_size - start)) >= 0)
   {
     cluster_id++;
 
@@ -176,16 +194,16 @@ leader ()
 }
 
 static int
-leader (int * leaders,
-        int leaders_requested,
-        float * cand_distances)
+leader(int * leaders,
+       int leaders_requested,
+       float * cand_distances)
 {
   int cluster_id = 0;
 
   int leaders_found;
   int start = 0;
 
-  while ((leaders_found = choose_next_leaders (selected + start, pool_size - start, leaders, leaders_requested)))
+  while ((leaders_found = choose_next_leaders(selected + start, pool_size - start, leaders, leaders_requested)))
   {
     for (int i = 0; i < leaders_found; i++)
     {
@@ -248,15 +266,15 @@ leader (int * leaders,
 }
 
 static int
-do_previously_selected (const IW_General_Fingerprint & gfp,
-                        float threshold)
+do_previously_selected(const IW_General_Fingerprint & gfp,
+                       float threshold)
 {
   GFP_Standard sgfp;
 
   sgfp.build_molecular_properties(gfp.molecular_properties_integer());
-  sgfp.build_mk(gfp[1]);
-  sgfp.build_mk2(gfp[2]);
-  sgfp.build_iw(gfp[0]);
+  sgfp.build_mk(gfp[kMkFp]);
+  sgfp.build_mk2(gfp[kMk2Fp]);
+  sgfp.build_iw(gfp[kIwFp]);
 
   for (int i = 0; i < pool_size; i++)
   {
@@ -275,8 +293,8 @@ do_previously_selected (const IW_General_Fingerprint & gfp,
 }
 
 static int
-do_previously_selected (iwstring_data_source & input,
-                        float threshold)
+do_previously_selected(iwstring_data_source & input,
+                      float threshold)
 {
   IW_TDT tdt;
 
@@ -298,10 +316,10 @@ do_previously_selected (iwstring_data_source & input,
 }
 
 static int
-do_previously_selected (const char * fname,
-                        float threshold)
+do_previously_selected(const char * fname,
+                       float threshold)
 {
-  iwstring_data_source input (fname);
+  iwstring_data_source input(fname);
 
   if (! input.good())
   {
@@ -313,7 +331,7 @@ do_previously_selected (const char * fname,
 }
 
 static int
-read_pool (iwstring_data_source & input)
+read_pool(iwstring_data_source & input)
 {
   IW_TDT tdt;
 
@@ -326,10 +344,10 @@ read_pool (iwstring_data_source & input)
     leader_item[ndx].set_gfp(fingerprints+ndx);
 
     tdt.dataitem_value(smiles_tag, tmp);
-    leader_item[ndx].set_smiles (tmp);
+    leader_item[ndx].set_smiles(tmp);
 
     tdt.dataitem_value(identifier_tag, tmp);
-    leader_item[ndx].set_id (tmp);
+    leader_item[ndx].set_id(tmp);
 
     IW_General_Fingerprint gfp;
 
@@ -364,14 +382,62 @@ read_pool (iwstring_data_source & input)
 }
 
 static int
-allocate_pool (int s)
+WriteNeighboursAsProtos(int clusters_formed,
+                        IWString_and_File_Descriptor& output) {
+  int start = 0;
+  for (int c = 1; c <= clusters_formed; c++) {
+    int items_in_cluster = 0;
+
+    for (int j = start; j < pool_size; j++) {
+      if (selected[j] != c)
+        continue;
+
+      if (0  == items_in_cluster)
+        start = j;
+
+      items_in_cluster++;
+    }
+
+    nnbr::NearNeighbours cluster;
+    const IWString& smi = leader_item[start].smiles();
+    cluster.set_smiles(smi.data(), smi.length());
+    const IWString& id = leader_item[start].id();
+    cluster.set_name(id.data(), id.length());
+    cluster.set_cluster(c-1);
+
+    start++;
+
+    for (int j = start; j < pool_size; j++)
+    {
+      if (c != selected[j])
+        continue;
+
+      nnbr::Nbr* nbr = cluster.add_nbr();
+      const IWString& smi = leader_item[j].smiles();
+      nbr->set_smi(smi.data(), smi.length());
+      const IWString& id = leader_item[j].id();
+      nbr->set_id(id.data(), id.length());
+      nbr->set_dist(distances[j]);
+    }
+
+    if (!gfp::WriteNNData(cluster, output)) {
+      cerr << "Cannot write cluster " << (c-1) << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+allocate_pool(int s)
 {
   leader_item = new Leader_Item[s];
   selected = new_int(s);
   fingerprints = new GFP_Standard[s];
   distances = new float[s];
 
-  if (NULL == leader_item || NULL == selected || NULL == fingerprints || NULL == distances)
+  if (nullptr == leader_item || nullptr == selected || nullptr == fingerprints || nullptr == distances)
   {
     cerr << "Yipes, could not allocate " << pool_size << " fingerprints\n";
     return 0;
@@ -382,19 +448,19 @@ allocate_pool (int s)
   return 1;
 }
 static int
-gfp_leader_standard (int argc, char ** argv)
+gfp_leader_standard(int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "vt:A:s:p:r:h:n:");
+  Command_Line cl(argc, argv, "vt:A:s:p:r:h:n:k:");
 
-  if (cl.unrecognised_options_encountered ())
+  if (cl.unrecognised_options_encountered())
   {
     cerr << "Unrecognised options encountered\n";
-    usage (1);
+    usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  set_report_fingerprint_status (0);
+  set_report_fingerprint_status(0);
 
   if (! cl.option_present('t'))
   {
@@ -447,10 +513,16 @@ gfp_leader_standard (int argc, char ** argv)
     }
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.option_present('k')) {
+    write_neighbours_as_protos = 1;
+    if (verbose)  {
+      cerr << "Will generate output in proto form\n";
+    }
+  }
+
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
-    usage (2);
+    usage(2);
   }
 
   if (cl.number_elements() > 1)
@@ -471,7 +543,7 @@ gfp_leader_standard (int argc, char ** argv)
 
   if (0 == pool_size)
   {
-    pool_size = input.count_records_starting_with (identifier_tag);
+    pool_size = input.count_records_starting_with(identifier_tag);
 
     if (0 == pool_size)
     {
@@ -512,7 +584,7 @@ gfp_leader_standard (int argc, char ** argv)
   {
     const char * fname = cl.option_value('A');
 
-    if (! do_previously_selected (fname, threshold))
+    if (! do_previously_selected(fname, threshold))
     {
       cerr << "Cannot process previously selected file '" << fname << "'\n";
       return 0;
@@ -533,8 +605,8 @@ gfp_leader_standard (int argc, char ** argv)
     if (verbose)
       cerr << "Will process " << p << " leaders at each step\n";
 
-    int * leaders = new int[p]; iw_auto_array<int> free_leaders(leaders);
-    float * cand_distances = new float[p]; iw_auto_array<float> free_cand_distances(cand_distances);
+    int * leaders = new int[p]; std::unique_ptr<int[]> free_leaders(leaders);
+    float * cand_distances = new float[p]; std::unique_ptr<float[]> free_cand_distances(cand_distances);
 
     clusters_formed = leader(leaders, p, cand_distances);
   }
@@ -543,6 +615,12 @@ gfp_leader_standard (int argc, char ** argv)
 
   if (verbose)
     cerr << "Clustered " << pool_size << " fingerprints into " << clusters_formed << " clusters\n";
+
+  IWString_and_File_Descriptor output(1);
+
+  if (write_neighbours_as_protos) {
+    WriteNeighboursAsProtos(clusters_formed, output);
+  }
 
   int start = 0;
   for (int c = 1; c <= clusters_formed; c++)
@@ -560,16 +638,16 @@ gfp_leader_standard (int argc, char ** argv)
       items_in_cluster++;
     }
 
-    cout << smiles_tag << leader_item[start].smiles() << ">\n";
-    cout << identifier_tag << leader_item[start].id() << ">\n";
-    cout << "CLUSTER<" << (c-1) << ">\n";
-    cout << "CSIZE<" << items_in_cluster << ">\n";
+    output << smiles_tag << leader_item[start].smiles() << ">\n";
+    output << identifier_tag << leader_item[start].id() << ">\n";
+    output << "CLUSTER<" << (c-1) << ">\n";
+    output << "CSIZE<" << items_in_cluster << ">\n";
 
     start++;
 
     if (start == pool_size)
     {
-      cout << "|\n";
+      output << "|\n";
       break;
     }
 
@@ -578,19 +656,20 @@ gfp_leader_standard (int argc, char ** argv)
       if (c != selected[j])
         continue;
 
-      cout << smiles_tag << leader_item[j].smiles() << ">\n";
-      cout << identifier_tag << leader_item[j].id() << ">\n";
-      cout << distance_tag << distances[j] << ">\n";
+      output << smiles_tag << leader_item[j].smiles() << ">\n";
+      output << identifier_tag << leader_item[j].id() << ">\n";
+      output << distance_tag << distances[j] << ">\n";
+      output.write_if_buffer_holds_more_than(32768);
     }
 
-    cout << "|\n";
+    output << "|\n";
   }
 
   return 0;
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
   prog_name = argv[0];
 

@@ -1,33 +1,31 @@
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
-using namespace std;
 
-#include "cmdline.h"
-#include "iwbits.h"
-#include "sparse_fp_creator.h"
-#include "misc.h"
-#include "accumulator.h"
-#include "report_progress.h"
-#include "iwdigits.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
-
-#include "molecule.h"
-#include "smiles.h"
-#include "path.h"
-#include "istream_and_type.h"
-#include "aromatic.h"
-#include "iwstandard.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
 
 #include "maccskeys_fn5.h"
 
-//#define USE_IWMALLOC
-#ifdef USE_IWMALLOC
-#include "iwmalloc.h"
-#endif
+using std::cerr;
 
 static int number_maccs_keys = 192;
 
-static int strip_to_largest_fragment = 0;
+// Always strip to largest fragment, the library uses several
+// bonds_between calls.
+static int strip_to_largest_fragment = 1;
 
 static int revert_all_directional_bonds_to_non_directional = 0;
 
@@ -53,11 +51,13 @@ static int append_nset = 0;
 
 static IWDigits iwdigits;
 
+#ifdef NO_LONGER_USED
 /*
   Aug 2005. We may want to delocalise H atoms on aromatic Nitrogen atoms.
 */
 
 static int aromatic_nitrogens_do_not_have_hydrogens = 0;
+#endif
 
 /*
   MAY 2000. Introduce the concept of multi-stage fingerprints. For now, we
@@ -70,7 +70,7 @@ static IWString non_colliding_fingerprint_tag;
 
 static IWString fixed_size_counted_fingerprint_tag;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -103,6 +103,8 @@ static int molecules_with_test_failures = 0;
 static int test_failures = 0;
 
 static Chemical_Standardisation chemical_standardisation;
+
+static int flush_after_each_molecule = 0;
 
 /*
   If we are reporting statistics, we need some accumulators
@@ -161,7 +163,7 @@ int_accumulator::average_number_of_hits() const
   return Accumulator_Int<int>::sum() / static_cast<double>(number_non_zero);
 }
 
-static int_accumulator * accumulators = NULL;
+static int_accumulator * accumulators = nullptr;
 
 static extending_resizable_array<int> keys_hit;
 
@@ -192,6 +194,15 @@ do_write_header (IWString_and_File_Descriptor & output)
   output << '\n';
 
   return 1;
+}
+
+static void
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_each_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(4096);
+  }
 }
 
 static int
@@ -277,7 +288,7 @@ do_comparison_between_key_values (Molecule & m1,
     return 0;
 
   cerr << "Yipes, key mismatch on permutation " << permutation << '\n';
-  cerr << "Molecule '" << m1.molecule_name() << "'\n";
+  cerr << "Molecule '" << m1.name() << "'\n";
   cerr << initial_smiles << '\n';
   cerr << random_smiles << '\n';
 
@@ -299,7 +310,7 @@ do_comparison_between_key_values (Molecule & m1,
   int nr = m1.nrings();
   if (nr != m2.nrings())
   {
-    cerr << "Ring count mismatch!, " << nr << " vs " << m2.nrings() << endl;
+    cerr << "Ring count mismatch!, " << nr << " vs " << m2.nrings() << '\n';
     return 1;
   }
 
@@ -406,7 +417,7 @@ test_maccskeys (Molecule & m,
     cerr << m.smiles() << ' ' << m.name() << " FAILED\n";
     for (int i = 0; i < problematic_keys.number_elements(); ++i)
     {
-      cerr << " kfail " << problematic_keys[i] << endl;
+      cerr << " kfail " << problematic_keys[i] << '\n';
     }
   }
 
@@ -420,9 +431,6 @@ static int
 maccskeys (Molecule & m, 
            int * keys)
 {
-//iwmalloc_malloc_status (stderr);
-//iwmalloc_check_all_malloced (stderr);
-
   int rc = mk (m, keys);
 
   if (rc && ntest)
@@ -431,7 +439,7 @@ maccskeys (Molecule & m,
   if (0 == rc)   // failure
     return 0;
 
-  if (NULL != accumulators)
+  if (nullptr != accumulators)
   {
     int non_zero_keys = 0;
     for (int i = 0; i < number_maccs_keys; i++)
@@ -530,6 +538,9 @@ preprocess (Molecule & m)
   if (revert_all_directional_bonds_to_non_directional)
     m.revert_all_directional_bonds_to_non_directional();
 
+  // Ensure computed - to avoid incremental updates.
+  m.recompute_distance_matrix();
+
   return;
 }
 
@@ -616,7 +627,7 @@ maccskeys_filter (iwstring_data_source & input,
       output << buffer << '\n';
     }
 
-    output.write_if_buffer_holds_more_than(32768);
+    MaybeFlush(output);
   }
 
   return 1;
@@ -627,21 +638,21 @@ maccskeys (data_source_and_type<Molecule> & input,
            IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while ((NULL != (m = input.next_molecule())))
+  while ((nullptr != (m = input.next_molecule())))
   {
-    unique_ptr<Molecule> free_m(m);
+    std::unique_ptr<Molecule> free_m(m);
 
     molecules_read++;
 
     if (verbose > 1)
-      cerr << molecules_read << ' ' << m->molecule_name() << '\n';
+      cerr << molecules_read << ' ' << m->name() << '\n';
 
     preprocess(*m);
 
     if (! maccskeys(*m, output))
       return 0;
 
-    output.write_if_buffer_holds_more_than(32768);
+    MaybeFlush(output);
   }
 
   return molecules_read;
@@ -666,7 +677,7 @@ maccskeys_filter (const char * fname,
 
 static int
 maccskeys (const char * fname,
-           int input_type,
+           FileType input_type,
            IWString_and_File_Descriptor & output)
 {
   data_source_and_type<Molecule> input(input_type, fname);
@@ -682,8 +693,13 @@ maccskeys (const char * fname,
 static void
 usage(int rc)
 {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
-  cerr << "Generates MACCS keys\n";
+#endif
+// clang-format on
   cerr << "Usage: " << prog_name << " <options> <file1> <file2> ...\n";
   cerr << "  -t <number>    generate <number> random smiles for testing\n";
   cerr << "  -t rpt=<r>     report test progress every <r> molecules\n";
@@ -697,25 +713,29 @@ usage(int rc)
   cerr << "  -b <nbits>     number of bits to produce (default 192)\n";
   cerr << "  -e             include the number of bits set as a descriptor\n";
   cerr << "  -x             remove cis trans bonds\n";
-  cerr << "  -i <type>      specify input type\n";
   cerr << "  -f             work as a filter\n";
+  cerr << "  -i <type>      specify input type\n";
+  cerr << "  -X ...         miscellaneous options, enter '-X help' for info\n";
   (void) display_standard_chemical_standardisation_options (cerr, 'g');
   cerr << "  -l             strip to largest fragment\n";
   cerr << "  -c             remove chiral centres\n";
   cerr << "  -E <el>        process element <el>\n";
   (void) display_standard_aromaticity_options (cerr);
-#ifdef USE_IWMALLOC
-  display_standard_debug_options (cerr, 'D');
-#endif
   cerr << "  -v             verbose output\n";
 
   exit (rc);
+}
+static void
+DisplayDashXOptions(std::ostream& output) {
+  output << " -X flush         flush output after each molecule\n";
+
+  ::exit(0);
 }
 
 static int
 maccskeys (int argc, char ** argv)
 {
-  Command_Line cl (argc, argv, "Y:b:nS:K:kt:J:D:fFvi:A:Clg:E:ehxc");
+  Command_Line cl (argc, argv, "Y:b:nS:K:kt:J:fFvi:A:Clg:E:ehxcX:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -724,17 +744,6 @@ maccskeys (int argc, char ** argv)
   }
 
   verbose = cl.option_count('v');
-
-#ifdef USE_IWMALLOC
-  if (cl.option_present('D'))
-  {
-    if (! parse_standard_debug_options(cl, verbose, 'D'))
-    {
-      cerr << "Cannot parse -D options\n";
-      usage(3);
-    }
-  }
-#endif
 
   if (cl.option_present('g'))
   {
@@ -773,7 +782,7 @@ maccskeys (int argc, char ** argv)
 
     if (! mk.set_nbits(number_maccs_keys))
     {
-      cerr << "Invalid input for number MACCS keys " << number_maccs_keys << endl;
+      cerr << "Invalid input for number MACCS keys " << number_maccs_keys << '\n';
       return 2;
     }
 
@@ -818,20 +827,6 @@ maccskeys (int argc, char ** argv)
       {
         if (verbose)
           cerr << "Will perform " << ntest << " random permutation tests on each molecule\n";
-      }
-      else if (t.starts_with("seed="))
-      {
-        t.remove_leading_chars(5);
-        unsigned int s;
-        if (! t.numeric_value(s))
-        {
-          cerr << "invalid seed '" << t << "'\n";
-          return 5;
-        }
-
-        iw_set_rnum_seed(s);
-        if (verbose)
-          cerr << "using random number seed " << s << endl;
       }
       else
       {
@@ -892,7 +887,7 @@ maccskeys (int argc, char ** argv)
 
   if (cl.option_present('h'))
   {
-    mk.set_aromatic_nitrogens_do_not_have_hydrogens (1);
+    mk.set_aromatic_nitrogens_do_not_have_hydrogens(1);
     if (verbose)
       cerr << "Will not consider Hydrogen atoms on aromatic Nitrogens\n";
   }
@@ -1013,7 +1008,26 @@ maccskeys (int argc, char ** argv)
     nbits = number_maccs_keys;
   }
 
+  if (cl.option_present('X')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (x == "help") {
+        DisplayDashXOptions(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOptions(cerr);
+      }
+    }
+  }
+
   IWString_and_File_Descriptor output(1);
+
+  FileType input_type = FILE_TYPE_INVALID;
 
   int rc = 0;
 
@@ -1048,7 +1062,7 @@ maccskeys (int argc, char ** argv)
 
   }
 
-  int input_type;
+//int input_type;
   if (! process_input_type(cl, input_type))
   {
     cerr << "Cannot determine input type\n";
@@ -1076,7 +1090,7 @@ maccskeys (int argc, char ** argv)
 
   if (stream_for_statistics.is_open())
   {
-    assert (NULL != accumulators);
+    assert (nullptr != accumulators);
 
     stream_for_statistics << "Key statistics";
     if (0 == verbose)
@@ -1135,7 +1149,7 @@ maccskeys (int argc, char ** argv)
 
   output.flush();
 
-  if (NULL != accumulators)
+  if (nullptr != accumulators)
     delete [] accumulators;
 
   return rc;
@@ -1147,15 +1161,6 @@ main (int argc, char ** argv)
   prog_name = argv[0];
 
   int rc = maccskeys(argc, argv);
-
-#ifdef USE_IWMALLOC
-  iwmalloc_check_all_malloced(stderr);
-  if (iwmalloc_memory_tracking_active())
-  {
-    iwmalloc_malloc_status(stderr);
-    iwmalloc_terminate_memory_tracking();
-  }
-#endif
 
   return rc;
 }

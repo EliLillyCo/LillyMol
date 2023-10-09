@@ -1,5 +1,5 @@
-#ifndef MOLECULE_SMARTS_H
-#define MOLECULE_SMARTS_H
+#ifndef MOLECULE_LIB_MOLECULE_SMARTS_H_
+#define MOLECULE_LIB_MOLECULE_SMARTS_H_
 
   private:
     int _smarts (atom_number_t astart,
@@ -19,8 +19,4 @@
                                               IWString & s) const;
 
 
-#endif
-
-/* arch-tag: 12f3775a-c3d9-4d19-a884-b63de1606b98
-
-*/
+#endif  // MOLECULE_LIB_MOLECULE_SMARTS_H_

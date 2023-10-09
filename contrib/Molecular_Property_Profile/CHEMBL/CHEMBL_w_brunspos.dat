@@ -1,0 +1,76 @@
+description {
+  feature_name: "w_brunspos"
+  description: "Number of positively charged atoms, Bruns"
+  plot_title: "Number of positively charged atoms, Bruns"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 10.0
+mean: 0.33208683
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+}
+quantile {
+  quantile: 0.9
+  value: 1.0
+}
+quantile {
+  quantile: 0.95
+  value: 1.0
+}
+quantile {
+  quantile: 0.99
+  value: 2.0
+}
+int_values {
+  count: 1585757
+}
+int_values {
+  value: 1
+  count: 598205
+}
+int_values {
+  value: 2
+  count: 62364
+}
+int_values {
+  value: 3
+  count: 4398
+}
+int_values {
+  value: 4
+  count: 2088
+}
+int_values {
+  value: 5
+  count: 415
+}
+int_values {
+  value: 6
+  count: 232
+}
+int_values {
+  value: 7
+  count: 17
+}
+int_values {
+  value: 8
+  count: 17
+}
+int_values {
+  value: 9
+  count: 10
+}
+int_values {
+  value: 10
+  count: 7
+}

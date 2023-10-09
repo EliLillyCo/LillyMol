@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package FeatureScaling;
+
+message FeatureScaling {
+  // The range of the features
+  double min = 1;
+  double max = 2;
+
+  // The number of samples. Not necessary, but easy to compute.
+  uint32 nsamples = 3;
+
+  // The mean. Not necessary, but if quick to compute, why not.
+  double mean = 4;
+
+  // The original values can be scaled to either [0,1] or [-1,1]
+  enum RangeType {
+    UNSPECIFIED = 0;
+    R01 = 1;
+    R11 = 2;
+  }
+  optional RangeType range_type = 5;
+};

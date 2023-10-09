@@ -1,32 +1,37 @@
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
 
 /*
   Implementation of the Substructure_Atom_Environment class
 */
 
+#include "Foundational/iwmisc/misc.h"
+
 #include "substructure.h"
 #include "tokenise_atomic_smarts.h"
 #include "target.h"
-#include "misc.h"
+
+using std::cerr;
+using std::endl;
 
 static int environment_only_matches_unmatched_atoms = 0;
 
 void
-set_atom_environment_only_matches_unmatched_atoms (int s)
+set_atom_environment_only_matches_unmatched_atoms(int s)
 {
   environment_only_matches_unmatched_atoms = s;
 
   return;
 }
 
-Substructure_Atom_Environment::Substructure_Atom_Environment ()
+Substructure_Atom_Environment::Substructure_Atom_Environment()
 {
   _all_components_single_atoms = 1;
 }
 
 int
-Substructure_Atom_Environment::ok () const
+Substructure_Atom_Environment::ok() const
 {
   if (1 == _number_elements && 0 == _operator.number_operators())
     ;
@@ -39,7 +44,7 @@ Substructure_Atom_Environment::ok () const
 }
 
 int
-Substructure_Atom_Environment::debug_print (std::ostream & os) const
+Substructure_Atom_Environment::debug_print(std::ostream & os) const
 {
   os << "Details on Substructure_Atom_Environment object with " << _number_elements << " components\n";
 
@@ -52,7 +57,7 @@ Substructure_Atom_Environment::debug_print (std::ostream & os) const
 }
 
 int
-Substructure_Atom_Environment::involves_aromatic_bond_specifications (int & _need_to_compute_ring_membership) const
+Substructure_Atom_Environment::involves_aromatic_bond_specifications(int & _need_to_compute_ring_membership) const
 { 
   for (int i = 0; i < _number_elements; i++)
   {
@@ -66,7 +71,7 @@ Substructure_Atom_Environment::involves_aromatic_bond_specifications (int & _nee
 //#define DEBUG_SS_ATOM_ENV_CREATE_FROM_SMARTS
 
 int
-Substructure_Atom_Environment::create_from_smarts (const Atomic_Smarts_Component & env)
+Substructure_Atom_Environment::create_from_smarts(const Atomic_Smarts_Component & env)
 {
   assert (env.starts_with("$(") && env.ends_with(')'));
 
@@ -114,7 +119,7 @@ Substructure_Atom_Environment::create_from_smarts (const Atomic_Smarts_Component
 //#define DEBUG_SS_ATOM_ENV_MATCHES
 
 int
-Substructure_Atom_Environment::matches (Target_Atom & target_atom,
+Substructure_Atom_Environment::matches(Target_Atom & target_atom,
                                         int atoms_in_target,
                                         const int * already_matched)
 {
@@ -130,7 +135,7 @@ Substructure_Atom_Environment::matches (Target_Atom & target_atom,
   vector for all searches
 
   if (_all_components_single_atoms)
-    tmp = NULL;
+    tmp = nullptr;
   else */
 
   tmp = new int[atoms_in_target]; std::unique_ptr<int[]> free_tmp(tmp);
@@ -145,7 +150,7 @@ Substructure_Atom_Environment::matches (Target_Atom & target_atom,
 }
 
 int
-Substructure_Atom_Environment::_matches (Target_Atom & target_atom,
+Substructure_Atom_Environment::_matches(Target_Atom & target_atom,
                                          int atoms_in_target,
                                          const int * already_matched_by_query,
                                          int * already_matched)
@@ -194,7 +199,7 @@ Substructure_Atom_Environment::_matches (Target_Atom & target_atom,
 }
 
 int
-Substructure_Atom_Environment::_match_component (Target_Atom & target_atom,
+Substructure_Atom_Environment::_match_component(Target_Atom & target_atom,
                                                  int which_component,
                                                  const int * already_matched_by_query,
                                                  int * already_matched)

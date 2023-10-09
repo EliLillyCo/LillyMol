@@ -1,0 +1,325 @@
+workspace(name = "lillymol")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+http_archive(
+    name = "bazel_skylib",
+    urls = [
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
+    ],
+    sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
+)
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+bazel_skylib_workspace()
+
+# The next were all copied from Riegeli's WORKSPACE to enable riegeli
+http_archive(
+    name = "com_google_absl",
+    sha256 = "6a6eee57ce3375e26d49c542d191ceb90822984d5b587f0ea8e0d0c77016b02b",
+    strip_prefix = "abseil-cpp-20200225.3",
+    urls = [
+        "https://mirror.bazel.build/github.com/abseil/abseil-cpp/archive/20200225.3.zip",
+        "https://github.com/abseil/abseil-cpp/archive/20200225.3.zip",  # 2020-10-09
+    ],
+)
+http_archive(
+    name = "highwayhash",
+    build_file = "//third_party:highwayhash.BUILD",
+#   sha256 = "cf891e024699c82aabce528a024adbe16e529f2b4e57f954455e0bf53efae585",
+    strip_prefix = "highwayhash-276dd7b4b6d330e4734b756e97ccfb1b69cc2e12",
+    urls = [
+        "https://mirror.bazel.build/github.com/google/highwayhash/archive/276dd7b4b6d330e4734b756e97ccfb1b69cc2e12.zip",
+        "https://github.com/google/highwayhash/archive/276dd7b4b6d330e4734b756e97ccfb1b69cc2e12.zip",  # 2019-02-22
+    ],
+)
+http_archive(
+    name = "org_brotli",
+#   sha256 = "6e69be238ff61cef589a3fa88da11b649c7ff7a5932cb12d1e6251c8c2e17a2f",
+    strip_prefix = "brotli-1.0.7",
+    urls = [
+        "https://mirror.bazel.build/github.com/google/brotli/archive/v1.0.7.zip",
+        "https://github.com/google/brotli/archive/v1.0.7.zip",  # 2018-10-23
+        "https://github.com/google/brotli/releases/tag/v1.0.9",
+    ],
+)
+http_archive(
+    name = "snappy",
+    build_file = "//third_party:snappy.BUILD",
+    sha256 = "38b4aabf88eb480131ed45bfb89c19ca3e2a62daeb081bdf001cfb17ec4cd303",
+    strip_prefix = "snappy-1.1.8",
+    urls = [
+        "https://mirror.bazel.build/github.com/google/snappy/archive/1.1.8.zip",
+        "https://github.com/google/snappy/archive/1.1.8.zip",  # 2020-01-14
+    ],
+)
+
+# rules_cc defines rules for generating C++ code from Protocol Buffers.
+http_archive(
+    name = "rules_cc",
+#   sha256 = "35f2fb4ea0b3e61ad64a369de284e4fbbdcdba71836a5555abb5e194cf119509",
+#   strip_prefix = "rules_cc-624b5d59dfb45672d4239422fa1e3de1822ee110",
+    strip_prefix = "rules_cc-heads-main",
+    urls = [
+#       "https://mirror.bazel.build/github.com/bazelbuild/rules_cc/archive/624b5d59dfb45672d4239422fa1e3de1822ee110.tar.gz",
+#       "https://github.com/bazelbuild/rules_cc/archive/624b5d59dfb45672d4239422fa1e3de1822ee110.tar.gz",
+        "https://github.com/bazelbuild/rules_cc/archive/heads/main.zip",
+    ],
+)
+
+# rules_java defines rules for generating Java code from Protocol Buffers.
+#http_archive(
+#    name = "rules_java",
+#    sha256 = "ccf00372878d141f7d5568cedc4c42ad4811ba367ea3e26bc7c43445bbc52895",
+#    strip_prefix = "rules_java-d7bf804c8731edd232cb061cb2a9fe003a85d8ee",
+#    urls = [
+#        "https://mirror.bazel.build/github.com/bazelbuild/rules_java/archive/d7bf804c8731edd232cb061cb2a9fe003a85d8ee.tar.gz",
+#        "https://github.com/bazelbuild/rules_java/archive/d7bf804c8731edd232cb061cb2a9fe003a85d8ee.tar.gz",
+#    ],
+#)
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "rules_proto",
+    sha256 = "66bfdf8782796239d3875d37e7de19b1d94301e8972b3cbd2446b332429b4df1",
+    strip_prefix = "rules_proto-4.0.0",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
+    ],
+)
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+rules_proto_dependencies()
+rules_proto_toolchains()
+
+# rules_proto defines abstract rules for building Protocol Buffers.
+#load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
+#rules_java_dependencies()
+#rules_java_toolchains()
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+rules_proto_dependencies()
+rules_proto_toolchains()
+
+new_local_repository(
+    name = "crc32",
+    path = "/workspaces/LillyMolPrivate/third_party/crc32c",
+#   path = "/lrlhps/users/rx87690/third_party/crc32c",
+    build_file_content = """
+cc_library(
+    name = "crc32",
+    srcs = ["build/libcrc32c.so"],
+    strip_include_prefix = "include",
+    hdrs = ["include/crc32c/crc32c.h"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+new_local_repository(
+    name = "berkeleydb",
+    path = "/workspaces/LillyMolPrivate/third_party/",
+    build_file_content = """
+cc_library(
+    name = "berkeleydb",
+    srcs = ["lib/libdb_cxx-18.1.so", "lib/libdb-18.1.so"],
+    hdrs = ["include/db_cxx.h", "include/db.h" ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+# copied from
+# https://chromium.googlesource.com/external/github.com/google/protobuf/+/HEAD/examples/WORKSPACE
+
+#load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "googletest",
+    strip_prefix = "googletest-main",
+    urls = ["https://github.com/google/googletest/archive/main.zip"],
+)
+http_archive(
+#   name = "com_github_google_benchmark",
+    name = "benchmark",
+    strip_prefix = "benchmark-master",
+    urls = ["https://github.com/google/benchmark/archive/master.zip"],
+)
+http_archive(
+    name = "rules_python",
+    strip_prefix = "rules_python-main",
+    urls = ["https://github.com/bazelbuild/rules_python/archive/main.zip"],
+)
+http_archive(
+    name = "com_google_absl",
+    strip_prefix = "abseil-cpp-master",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/master.zip"],
+)
+
+new_local_repository(
+    name = "re2",
+    path = "/workspaces/LillyMolPrivate/third_party/",
+    build_file_content = """
+cc_library(
+    name = "re2",
+    srcs = ["lib/libre2.so"],
+    hdrs = glob(["include/re2/*.h"]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+#http_archive(
+#    name = "re2",
+#    strip_prefix = "re2-main",
+#    urls = ["https://github.com/google/re2/archive/refs/heads/main.zip"],
+#)
+#http_archive(
+#    name = "com_google_leveldb",
+#    build_file = "//third_party:leveldb.BUILD",
+#   sha256 = "6d91bcb96547bd8d43013e5ac9f4c2ad3227e30e3dc472cdafd2910eb43c16f8",
+#   strip_prefix = "leveldb-1cb384088184be9840bd59b4040503a9fa9aee66",
+#   urls = ["https://github.com/google/leveldb/archive/1cb384088184be9840bd59b4040503a9fa9aee66.zip"],
+#    urls = ["https://github.com/google/leveldb/archive/main.zip"],
+#)
+new_local_repository(
+    name = "com_google_leveldb",
+    path = "/workspaces/LillyMolPrivate/third_party",
+    build_file_content = """
+cc_library(
+    name = "leveldb",
+    srcs = ["lib/libleveldb.a"],
+    hdrs = glob(["include/leveldb/*.h"]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+#http_archive(
+#    name = "com_google_protobuf",
+#   sha256 = "e28570de66bd308d8d06ba24df8fd375f6c584331003be98a34dade2215f9291",
+#   sha256 = "a8c0e4211725bf3cb8ed3252b456301b9dfcd6fbef5a081a1e8ab7bc3b2b1301",
+#    strip_prefix = "protobuf-master",
+#    urls = ["https://github.com/protocolbuffers/protobuf/archive/master.zip"],
+#)
+# local repository instead
+new_local_repository(
+    name = "qcom_google_protobuf",
+    path = "/workspaces/LillyMolPrivate/third_party",
+    build_file_content = """
+cc_library(
+    name = "protobuf",
+    srcs = ["lib/libproto.so"],
+    hdrs = glob(["/include/google/protobuf/*.h"]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+# This com_google_protobuf_cc repository is required for cc_proto_library
+# rule. It provides protobuf C++ runtime. Note that it actually is the same
+# repo as com_google_protobuf but has to be given a different name as
+# required by bazel.
+http_archive(
+    name = "com_google_protobuf_cc",
+    strip_prefix = "protobuf-master",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/master.zip"],
+)
+#http_archive(
+#    name = "bazel_skylib",
+#    sha256 = "bbccf674aa441c266df9894182d80de104cabd19be98be002f6d478aaa31574d",
+#    strip_prefix = "bazel-skylib-2169ae1c374aab4a09aa90e65efe1a3aad4e279b",
+#    urls = ["https://github.com/bazelbuild/bazel-skylib/archive/2169ae1c374aab4a09aa90e65efe1a3aad4e279b.tar.gz"],
+#)
+#load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+#protobuf_deps()
+#load("@bazel_skylib//lib:versions.bzl", "versions")
+#versions.check(minimum_bazel_version = "0.5.4")
+
+# Change master to the git tag you want.
+http_archive(
+    name = "com_grail_bazel_toolchain",
+#   sha256 = "b97d2e691eafef5a0d08327307f944a5ff41ede7dd5192f76b5b607711d2ca59",
+#   sha256 = "feb750290e408cf56bddff2cd81a075dfc94ac997d4c0b21c36d863f2ac4536f",
+    strip_prefix = "bazel-toolchain-master",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/master.tar.gz"],
+)
+
+load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+
+bazel_toolchain_dependencies()
+
+#load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
+#
+#llvm_toolchain(
+#    name = "llvm_toolchain",
+#    llvm_version = "9.0.0",
+#)
+#
+#load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+#
+#llvm_register_toolchains()
+#
+
+#new_local_repository(
+#    name = "localsnappy",
+#    path = "/lrlhps/users/rx87690/third_party/SNAPPY/",
+#     build_file_content = """
+#cc_library(
+#   name = "snappy",
+#   srcs = ["lib/libsnappy.a"],
+#   hdrs = ["include/snappy.h"],
+#   visibility = ["//visibility:public"],
+#)
+#""",
+#)
+
+new_local_repository(
+    name = "local_f2c",
+    path = "/workspaces/LillyMolPrivate/third_party/libf2c",
+    build_file_content = """
+cc_library(
+    name = "f2c",
+    srcs = ["libf2c.a"],
+    hdrs = glob(["*.h"]),
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+http_archive(
+    name = "com_gitlab_libeigen_eigen",
+    sha256 = "0215c6593c4ee9f1f7f28238c4e8995584ebf3b556e9dbf933d84feb98d5b9ef",
+    strip_prefix = "eigen-3.3.8",
+    urls = [
+        "https://gitlab.com/libeigen/eigen/-/archive/3.3.8/eigen-3.3.8.tar.bz2",
+    ],
+    build_file_content =
+"""
+# TODO(keir): Replace this with a better version, like from TensorFlow.
+# See https://github.com/ceres-solver/ceres-solver/issues/337.
+cc_library(
+    name = 'eigen',
+    srcs = [],
+    includes = ['.'],
+    hdrs = glob(['Eigen/**']),
+    visibility = ['//visibility:public'],
+)
+"""
+)
+
+new_local_repository(
+    name = "tbb",
+    path = "/workspaces/LillyMolPrivate/third_party/",
+    build_file_content = """
+cc_library(
+    name = "tbb",
+    srcs = glob(["lib/libtbb.so*"]),
+    hdrs = glob(["include/tbb/*.h"]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)

@@ -8,7 +8,6 @@ using namespace __gnu_cxx;
 #else
 
 #include <hash_set>
-using namespace std;
 
 #endif
 

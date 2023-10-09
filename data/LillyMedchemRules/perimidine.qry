@@ -1,0 +1,16 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "perimidine")
+  (A I min_nrings 3)
+  (A I min_aromatic_ring_count 3)
+  (0 Ring_System_Specifier
+    (A I min_aromatic_ring_count 3)
+    (A I min_heteroatom_count 2)
+  )
+  (0 Elements_Needed
+    (A I atomic_number 6)
+    (A I min_hits_needed 11)
+  )
+# (A C smarts "c1ccc3ncnc2cccc1c23")
+  (A C smarts "[cR3D3]12c3ncnc2cccc1ccc3")
+)

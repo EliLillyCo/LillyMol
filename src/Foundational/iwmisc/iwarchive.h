@@ -2,13 +2,11 @@
 #define IW_ARCHIVE1_H
 
 #include <iostream>
-using std::cerr;
-using std::endl;
 
 class msi_object;
 class const_IWSubstring;
 
-#include "iwaray.h"
+#include "Foundational/iwaray/iwaray.h"
 
 template <typename T>
 class iwarchive : public resizable_array<T>
@@ -28,7 +26,7 @@ class iwarchive : public resizable_array<T>
     iwarchive (const iwarchive<T> &);
 
     int ok () const;
-    int debug_print (std::ostream & = cerr) const;
+    int debug_print (std::ostream & = std::cerr) const;
 
     int set_match_any (int i);
     int match_any () const { return _match_any;};
@@ -36,12 +34,14 @@ class iwarchive : public resizable_array<T>
     int add_values_from_msi_object (const msi_object *, const char *);
     int write_msi (std::ostream &, const char *, int) const;
 
-    int add (T);      // we need to override the default add ()
+    int add(T);      // we need to override the default add ()
+    int add_if_not_already_present(T);
 
     int matches (T) const;
     int matches (const resizable_array<T> &) const;
 
     iwarchive<T> & operator= (const iwarchive<T> &);
+    bool operator== (const iwarchive<T> &) const;
 
 //  Specifications look like 'x' or 'x,y'
 
@@ -53,36 +53,36 @@ template <typename T>  std::ostream &
 
 #if (IW_IMPLEMENTATIONS_EXPOSED) || defined(IWARCHIVE_IMPLEMENTATION)
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 template <typename T>
-iwarchive<T>::iwarchive ()
+iwarchive<T>::iwarchive()
 {
   _match_any = 1;
 }
 
 template <typename T>
-iwarchive<T>::iwarchive (const iwarchive<T> & other)
+iwarchive<T>::iwarchive(const iwarchive<T> & other)
 {
   operator= (other);
 }
 
 template <typename T>
 int
-iwarchive<T>::ok () const
+iwarchive<T>::ok() const
 {
   if (_match_any && _number_elements)
     return 0;
 
-  return resizable_array<T>::ok ();
+  return resizable_array<T>::ok();
 }
 
 template <typename T>
 int
-iwarchive<T>::debug_print (std::ostream & os) const
+iwarchive<T>::debug_print(std::ostream & os) const
 {
   os << "iwarchive<T>::debug_print:\n";
-  if (! ok ())
+  if (! ok())
     os << "Warning, ok fails\n";
 
   if (_match_any)
@@ -90,7 +90,7 @@ iwarchive<T>::debug_print (std::ostream & os) const
   
   for (int i = 0; i < _number_elements; i++)
   {
-    os << "Item " << i << " will match " << _things[i] << endl;
+    os << "Item " << i << " will match " << _things[i] << '\n';
   }
 
   return 1;
@@ -98,28 +98,36 @@ iwarchive<T>::debug_print (std::ostream & os) const
 
 template <typename T>
 int
-iwarchive<T>::set_match_any (int i)
+iwarchive<T>::set_match_any(int i)
 {
   if (0 == i)
     return _match_any = i;
 
   if (_number_elements)    // should be fatal, ok() will fail
-    cerr << "iwarchive<T>::set_match_any: warning, " << _number_elements << " values present\n";
+    std::cerr << "iwarchive<T>::set_match_any: warning, " << _number_elements << " values present\n";
 
   return _match_any = i;
 }
 
 template <typename T>
 int
-iwarchive<T>::add (T i)
+iwarchive<T>::add(T i)
 {
   _match_any = 0;
-  return resizable_array<T>::add (i);
+  return resizable_array<T>::add(i);
 }
 
 template <typename T>
 int
-iwarchive<T>::matches (T x) const
+iwarchive<T>::add_if_not_already_present(T i)
+{
+  _match_any = 0;
+  return resizable_array<T>::add_if_not_already_present(i);
+}
+
+template <typename T>
+int
+iwarchive<T>::matches(T x) const
 {
   if (_match_any)
     return 1;
@@ -135,12 +143,12 @@ iwarchive<T>::matches (T x) const
 
 template <typename T>
 int
-iwarchive<T>::matches (const resizable_array<T> & x) const
+iwarchive<T>::matches(const resizable_array<T> & x) const
 {
   if (_match_any)
     return 1;
 
-  int xn = x.number_elements ();
+  int xn = x.number_elements();
   for (int i = 0; i < _number_elements; i++)
   {
     const T tmp = _things[i];
@@ -160,7 +168,7 @@ iwarchive<T>::operator = (const iwarchive<T> & other)
 {
   _match_any = other._match_any;
 
-  this->resize (other._elements_allocated);
+  this->resize(other._elements_allocated);
   for (int i = 0; i < other._number_elements; i++)
   {
     _things[i] = other._things[i];
@@ -172,22 +180,32 @@ iwarchive<T>::operator = (const iwarchive<T> & other)
 }
 
 template <typename T>
+bool
+iwarchive<T>::operator==(const iwarchive<T>& rhs) const {
+  if (_match_any && rhs._match_any) {
+    return true;
+  }
+
+  return resizable_array<T>::operator==(rhs);
+}
+
+template <typename T>
 int
-iwarchive<T>::specification_from_string (const const_IWSubstring & s)
+iwarchive<T>::specification_from_string(const const_IWSubstring & s)
 {
   int i = 0;
   const_IWSubstring token;
 
-  while (s.nextword (token, i, ','))
+  while (s.nextword(token, i, ','))
   {
     T v;
-    if (! token.numeric_value (v))
+    if (! token.numeric_value(v))
     {
-      cerr << "iwarchive::specification_from_string:invalid numeric '" << token << "'\n";
+      std::cerr << "iwarchive::specification_from_string:invalid numeric '" << token << "'\n";
       return 0;
     }
 
-    resizable_array<T>::add (v);
+    resizable_array<T>::add(v);
   }
 
   return _number_elements;
@@ -201,22 +219,22 @@ iwarchive<T>::specification_from_string (const const_IWSubstring & s)
 
 template <typename T>
 int
-iwarchive<T>::add_values_from_msi_object (const msi_object * msi,
-                                          const char * attribute_name)
+iwarchive<T>::add_values_from_msi_object(const msi_object * msi,
+                                         const char * attribute_name)
 {
   int i = 0;
   const msi_attribute * msi_attribute;
-  while (NULL != (msi_attribute = msi->attribute (attribute_name, i++)))
+  while (nullptr != (msi_attribute = msi->attribute(attribute_name, i++)))
   {
     T x;
-    if (! msi_attribute->value (x))
+    if (! msi_attribute->value(x))
     {
-      cerr << "iwarchive<T>::add_values_from_msi_object: invalid value " <<
-             (*msi_attribute) << endl;
+      std::cerr << "iwarchive<T>::add_values_from_msi_object: invalid value " <<
+             (*msi_attribute) << '\n';
       return 0;
     }
 
-    add (x);
+    add(x);
   }
 
   if (_number_elements)
@@ -227,23 +245,23 @@ iwarchive<T>::add_values_from_msi_object (const msi_object * msi,
 
 template <typename T>
 int
-iwarchive<T>::write_msi (std::ostream & os,
-                         const char * attribute_name,
-                         int indentation) const
+iwarchive<T>::write_msi(std::ostream & os,
+                        const char * attribute_name,
+                        int indentation) const
 {
-  assert (ok ());
-  assert (os.good ());
+  assert (ok());
+  assert (os.good());
 
   IWString ind;
   if (indentation)
-    ind.extend (indentation, ' ');
+    ind.extend(indentation, ' ');
 
   for (int i = 0; i < _number_elements; i++)
   {
     os << ind << "(A I " <<  attribute_name << " " << _things[i] << ")\n";    // only works with T == int
   }
 
-  return os.good ();
+  return os.good();
 }
 
 #endif
@@ -255,14 +273,14 @@ std::ostream &
 operator << (std::ostream & os, const iwarchive<T> & qq)
 {
   os << "iwarchive: ";
-  if (qq.match_any ())
+  if (qq.match_any())
     os << "matches any value";
-  else if (0 == qq.number_elements ())
+  else if (0 == qq.number_elements())
     os << "nothing set";
   else
   {
     os << "matches";
-    for (int i = 0; i < qq.number_elements (); i++)
+    for (int i = 0; i < qq.number_elements(); i++)
       os << " " << qq[i];
   }
 

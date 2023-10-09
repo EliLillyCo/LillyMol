@@ -1,14 +1,16 @@
-#ifndef IW_TARGET_H
-#define IW_TARGET_H
+#ifndef MOLECULE_LIB_TARGET_H_
+#define MOLECULE_LIB_TARGET_H_
 
 #include <iostream>
 
-#include "iwbits.h"
+#include "Foundational/iwbits/iwbits.h"
 
 #include "iwmtypes.h"
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/molecule.h"
 
 class Target_Atom;
+class Atom_Typing_Specification;
 
 class Bond_and_Target_Atom
 {
@@ -64,7 +66,7 @@ class Target_Atom
     formal_charge_t _formal_charge;
     int _nrings;
     int _ring_bond_count;
-    int _ncon2;
+    int _spiro;
     int _hcount;
     aromaticity_type_t _aromaticity;
     int _multiple_bond_to_heteroatom;
@@ -83,6 +85,12 @@ class Target_Atom
 
     int                _all_rings_kekule;
 
+    // If a query specifies atom typing.
+    atom_type_t       _atom_type;
+
+    // Valence always includes implicit Hydrogens.
+    int _valence;
+
     List_of_Ring_Sizes _sssr_ring_sizes;
     List_of_Ring_Sizes _aromatic_ring_sizes;
     List_of_Ring_Sizes _aliphatic_ring_sizes;
@@ -90,9 +98,12 @@ class Target_Atom
     List_of_Ring_Sizes _ring_sizes_including_non_sssr;
     int _attached_heteroatom_count;
     int _fused_system_size;
-    int _isotope;
+    isotope_t _isotope;
     int _userAtomType;
     int _heteroatoms_in_ring;
+
+    // A global_id value might be assigned by a ring_specifier
+    int _global_id;
 
 //  private functions
 
@@ -125,6 +136,8 @@ class Target_Atom
     void set_ncon (int s) { _ncon = s;}   // could get out of sync with _number_elements
     int nbonds ();
     void set_nbonds(int s) { _nbonds = s;}
+    int valence();
+    void set_valence(int s) { _valence = s;}
     int nrings ();
     void set_nrings (int s) { _nrings = s;}
     int ring_bond_count ();
@@ -132,8 +145,7 @@ class Target_Atom
     int is_ring_atom ();
     int is_non_ring_atom ();
     int ncon2 ();
-    void set_ncon2(int s) { _ncon2 = s;}
-    int  ncon2_value_set() const;   // ask whether or not the value has been computed/set
+    int spiro();
     formal_charge_t formal_charge ();
     void set_formal_charge (formal_charge_t s) { _formal_charge = s;}
     atom_number_t atom_number () const { return _my_atom_number;}
@@ -146,6 +158,8 @@ class Target_Atom
     int vinyl ();
     int aryl ();
     void set_aryl (int s) { _aryl = s;}
+
+    int aryl_value_set() const;
 
     int all_rings_kekule();
     void set_all_rings_kekule(const int s);
@@ -163,9 +177,16 @@ class Target_Atom
     int fused_system_size ();
     int multiple_bond_to_heteroatom ();
     int lone_pair_count ();
-    int isotope ();
+    isotope_t isotope ();
     int userAtomType ();
     int heteroatoms_in_ring ();
+
+    void set_global_id(int s) {
+      _global_id = s;
+    }
+    int global_id() const {
+      return _global_id;
+    }
 
     int fragment_membership ();
 
@@ -192,13 +213,18 @@ class Target_Atom
 
     void invalidate ();
 
-    void set_isotope (int i) { _isotope = i;}
+    void set_isotope (isotope_t i) { _isotope = i;}
     void set_userAtomType (int i) { _userAtomType = i;}
     void set_element (const Element * e) { _element = e;}
 
     void set_atom_number(int s) { _my_atom_number = s;}
 
     int  is_spinach ();
+
+    atom_type_t atom_type() const { return _atom_type;}
+    void set_atom_type(atom_type_t a) {
+      _atom_type = a;
+    }
 
     Target_Atom & atom (int i) const;
 
@@ -283,6 +309,9 @@ class Molecule_to_Match
 
     void discard_chirality_information();
 
+    // Assign an atom type to each of our Target_Atom's.
+    int AssignAtomTypes(Atom_Typing_Specification&);
+
     int first (atomic_number_t) const;
     int last  (atomic_number_t) const;
     int first_atomic_symbol_hash_value (int) const;
@@ -344,4 +373,4 @@ extern void set_initialise_element_counts (int);
 extern void set_global_setting_nrings_includes_non_sssr_rings(int s);
 extern void set_global_setting_nbonds_includes_implicit_hydrogens(int s);
 
-#endif
+#endif  // MOLECULE_LIB_TARGET_H_

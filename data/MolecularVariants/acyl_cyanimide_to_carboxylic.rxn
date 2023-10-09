@@ -1,0 +1,11 @@
+name: "acyl_cyanimide_to_carboxylic"
+scaffold {
+  id: 0
+  smarts: "[ND1G2]#C-[ND2H]-[CD3G1]=O"
+  remove_atoms: [0, 1]
+  change_element {
+    atom: 2
+    element: "O"
+  }
+  unfix_implicit_hydrogens: 2
+}

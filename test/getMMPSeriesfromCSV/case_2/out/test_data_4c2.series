@@ -1,9 +1,9 @@
 SERIES_ID,SERIES_SEQ_ID,MOL_ID,CONTEXT,FRAG,ACTIVITY
-1,1,1,CS(=O)(=O)c1ccc(C2=C(c3c[1cH]c(OC)cc3)CC3(C2)CC3)cc1,[1H],7.0
-1,2,2,CS(=O)(=O)c1ccc(C2=C(c3c[1cH]c(OC)cc3)CC3(C2)CC3)cc1,[1FH],7.68
-1,3,3,CS(=O)(=O)c1ccc(C2=C(c3c[1cH]c(OC)cc3)CC3(C2)CC3)cc1,[1ClH],8.51
-1,4,4,CS(=O)(=O)c1ccc(C2=C(c3c[1cH]c(OC)cc3)CC3(C2)CC3)cc1,[1BrH],8.77
-1,5,5,CS(=O)(=O)c1ccc(C2=C(c3c[1cH]c(OC)cc3)CC3(C2)CC3)cc1,[1OH]CCC,8.99
+1,1,1,COc1[1cH]cc(C2=C(c3ccc(S(=O)(=O)C)cc3)CC3(C2)CC3)cc1,[1H],7.0
+1,2,2,COc1[1cH]cc(C2=C(c3ccc(S(=O)(=O)C)cc3)CC3(C2)CC3)cc1,[1FH],7.68
+1,3,3,COc1[1cH]cc(C2=C(c3ccc(S(=O)(=O)C)cc3)CC3(C2)CC3)cc1,[1ClH],8.51
+1,4,4,COc1[1cH]cc(C2=C(c3ccc(S(=O)(=O)C)cc3)CC3(C2)CC3)cc1,[1BrH],8.77
+1,5,5,COc1[1cH]cc(C2=C(c3ccc(S(=O)(=O)C)cc3)CC3(C2)CC3)cc1,[1OH]CCC,8.99
 2,1,81,Clc1cc2c([n]c[n]c2Nc2cc[1cH]cc2)cc1,[1H],6.8
 2,2,82,Clc1cc2c([n]c[n]c2Nc2cc[1cH]cc2)cc1,[1FH],7.2
 2,3,83,Clc1cc2c([n]c[n]c2Nc2cc[1cH]cc2)cc1,[1ClH],7.81

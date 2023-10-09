@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package GfpBitSubset;
+
+// There are two translation functionalities to be supported.
+// 1. Given a .gfp file, create a subset that consists only of a
+//    subset of the bits in the input.
+// 2. Given a .gfp file, create an svm lite input file.
+// In case 1, only the identity of the bits to be preserved needs
+// to be stored.
+// In case 2, we need a mapping from the .gfp bits to the svml feature
+// numbers.
+
+// Just a subset of bits.
+message BitSubset {
+  // The name of the fingerprint that generated this mapping.
+  // Not really needed since it is the key and we are the value in the
+  // outer hash.
+  string fp_name = 1;
+
+  // We just keep track of the bits to keep.
+  repeated uint32 bits = 2 [packed = true];
+}
+
+// Cross reference from .gfp bit number to svml feature number
+message BitXref {
+  // The name of the fingerprint that generated this mapping.
+  // Not really needed since it is the key and we are the value in the
+  // outer hash.
+  string fp_name = 1;
+
+  // Mapping from bit number to feature number.
+  map<uint32, uint32> bit_to_feature = 2;
+};
+
+// Parameters recorded about the creation of the subset.
+message Params {
+  // The support level that was used in generating the data.
+  uint32 support = 1;
+
+  // When the model is built, sparse counted fingerprints
+  // can have their count values set to 1.
+  bool flatten_sparse_fingerprints = 2;
+
+  // BitXref manipulations may need the highest feature number.
+  uint32 highest_feature_number = 3;
+};
+
+message GfpBitSubset {
+  // Mappings from fingerprint tag to bit subset.
+  map<string, BitSubset> xref = 1;
+
+  Params params = 2;
+};
+
+message GfpBitToFeature {
+  // Mapping from fingerprint tag to bit cross reference.
+  map<string, BitXref> xref = 1;
+
+  Params params = 2;
+};

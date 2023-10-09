@@ -1,13 +1,12 @@
-#ifndef ATOM_ALIAS_H
-#define ATOM_ALIAS_H
+#ifndef MOLECULE_LIB_ATOM_ALIAS_H_
+#define MOLECULE_LIB_ATOM_ALIAS_H_
 
 /*
   From an ISIS reaction file we may have an atom alias 
 */
 
+#include "Foundational/iwstring/iwstring.h"
 #include "iwmtypes.h"
-#include "iwstring.h"
-#include "iwstring_data_source.h"
 
 class Atom_Alias
 {
@@ -32,4 +31,4 @@ class Atom_Alias
     const IWString & alias () const { return _alias;}
 };
 
-#endif
+#endif  // MOLECULE_LIB_ATOM_ALIAS_H_

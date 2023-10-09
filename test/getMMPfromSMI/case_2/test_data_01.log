@@ -1,51 +1,306 @@
-01/06/2020 12:07:41 PM INFO getMMPfromSMI: Instantiating MMP Objects
-01/06/2020 12:07:41 PM INFO mmp_objects: Beginning pre-scan of input smiles file
-01/06/2020 12:07:41 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
-01/06/2020 12:07:41 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
-01/06/2020 12:07:41 PM INFO mmp_dicer_functions: Attempting execution of dicer:
- $LILLYMOL_HOME/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/ye91224/repo/gc3tk/c3tk-core/src/smallmolecule/src/External//test/getMMPfromSMI/case_2/in/test_data_02.smi
-01/06/2020 12:07:41 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
-01/06/2020 12:07:41 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
-01/06/2020 12:07:41 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
-01/06/2020 12:07:41 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
-01/06/2020 12:07:41 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
-01/06/2020 12:07:41 PM INFO getMMPfromSMI: Write out final pairs
-01/06/2020 12:07:41 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
-01/06/2020 12:07:41 PM INFO mmp_objects: Iterating over single cut pairs dictionary
-01/06/2020 12:07:41 PM INFO mmp_objects: Iterating over double cut pairs dictionary
-01/06/2020 12:07:41 PM INFO mmp_objects: All done!
-01/06/2020 12:07:41 PM INFO getMMPfromSMI: Complete.
-01/07/2020 11:18:30 AM INFO getMMPfromSMI: Instantiating MMP Objects
-01/07/2020 11:18:30 AM INFO mmp_objects: Beginning pre-scan of input smiles file
-01/07/2020 11:18:30 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
-01/07/2020 11:18:30 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
-01/07/2020 11:18:30 AM INFO mmp_dicer_functions: Attempting execution of dicer:
- $LILLYMOL_HOME/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/ye91224/repo/gc3tk/c3tk-core/src/smallmolecule/src/External//test/getMMPfromSMI/case_2/in/test_data_02.smi
-01/07/2020 11:18:30 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
-01/07/2020 11:18:30 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
-01/07/2020 11:18:30 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
-01/07/2020 11:18:30 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
-01/07/2020 11:18:30 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
-01/07/2020 11:18:30 AM INFO getMMPfromSMI: Write out final pairs
-01/07/2020 11:18:30 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
-01/07/2020 11:18:30 AM INFO mmp_objects: Iterating over single cut pairs dictionary
-01/07/2020 11:18:30 AM INFO mmp_objects: Iterating over double cut pairs dictionary
-01/07/2020 11:18:30 AM INFO mmp_objects: All done!
-01/07/2020 11:18:30 AM INFO getMMPfromSMI: Complete.
-01/09/2020 09:18:00 PM INFO getMMPfromSMI: Instantiating MMP Objects
-01/09/2020 09:18:00 PM INFO mmp_objects: Beginning pre-scan of input smiles file
-01/09/2020 09:18:00 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
-01/09/2020 09:18:00 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
-01/09/2020 09:18:00 PM INFO mmp_dicer_functions: Attempting execution of dicer:
- $LILLYMOL_HOME/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/ye91224/repo/gc3tk/c3tk-core/src/smallmolecule/src/External//test/getMMPfromSMI/case_2/in/test_data_02.smi
-01/09/2020 09:18:00 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
-01/09/2020 09:18:00 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
-01/09/2020 09:18:00 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
-01/09/2020 09:18:00 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
-01/09/2020 09:18:00 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
-01/09/2020 09:18:00 PM INFO getMMPfromSMI: Write out final pairs
-01/09/2020 09:18:00 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
-01/09/2020 09:18:00 PM INFO mmp_objects: Iterating over single cut pairs dictionary
-01/09/2020 09:18:00 PM INFO mmp_objects: Iterating over double cut pairs dictionary
-01/09/2020 09:18:00 PM INFO mmp_objects: All done!
-01/09/2020 09:18:00 PM INFO getMMPfromSMI: Complete.
+06/08/2023 09:51:38 PM INFO getMMPfromSMI: Instantiating MMP Objects
+06/08/2023 09:51:38 PM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/08/2023 09:51:38 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/08/2023 09:51:38 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/08/2023 09:51:38 PM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/apps/gc3tk/c3tk-core/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/08/2023 09:51:38 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/08/2023 09:51:38 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/08/2023 09:51:38 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/08/2023 09:51:38 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/08/2023 09:51:38 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/08/2023 09:51:38 PM INFO getMMPfromSMI: Write out final pairs
+06/08/2023 09:51:38 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/08/2023 09:51:38 PM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/08/2023 09:51:38 PM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/08/2023 09:51:38 PM INFO mmp_objects: All done!
+06/08/2023 09:51:38 PM INFO getMMPfromSMI: Complete.
+06/08/2023 09:57:47 PM INFO getMMPfromSMI: Instantiating MMP Objects
+06/08/2023 09:57:47 PM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/08/2023 09:57:47 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/08/2023 09:57:47 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/08/2023 09:57:47 PM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/apps/gc3tk/c3tk-core/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/08/2023 09:57:47 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/08/2023 09:57:47 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/08/2023 09:57:47 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/08/2023 09:57:47 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/08/2023 09:57:47 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/08/2023 09:57:47 PM INFO getMMPfromSMI: Write out final pairs
+06/08/2023 09:57:47 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/08/2023 09:57:47 PM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/08/2023 09:57:47 PM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/08/2023 09:57:47 PM INFO mmp_objects: All done!
+06/08/2023 09:57:47 PM INFO getMMPfromSMI: Complete.
+06/13/2023 02:10:59 PM INFO getMMPfromSMI: Instantiating MMP Objects
+06/13/2023 02:10:59 PM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/13/2023 02:10:59 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/13/2023 02:10:59 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/13/2023 02:10:59 PM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/apps/gc3tk/c3tk-core/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate//test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/13/2023 02:10:59 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/13/2023 02:10:59 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/13/2023 02:10:59 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/13/2023 02:10:59 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/13/2023 02:10:59 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/13/2023 02:10:59 PM INFO getMMPfromSMI: Write out final pairs
+06/13/2023 02:10:59 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/13/2023 02:10:59 PM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/13/2023 02:10:59 PM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/13/2023 02:10:59 PM INFO mmp_objects: All done!
+06/13/2023 02:10:59 PM INFO getMMPfromSMI: Complete.
+06/16/2023 08:48:24 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 08:48:24 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 08:48:24 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 08:48:24 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 08:48:24 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 08:48:24 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 08:48:24 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 08:48:24 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 08:48:24 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 08:48:24 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 08:48:24 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 08:48:24 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 08:48:24 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 08:48:24 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 08:48:24 AM INFO mmp_objects: All done!
+06/16/2023 08:48:24 AM INFO getMMPfromSMI: Complete.
+06/16/2023 08:51:40 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 08:51:40 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 08:51:40 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 08:51:40 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 08:51:40 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 08:51:40 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 08:51:40 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 08:51:40 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 08:51:40 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 08:51:40 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 08:51:40 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 08:51:40 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 08:51:40 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 08:51:40 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 08:51:40 AM INFO mmp_objects: All done!
+06/16/2023 08:51:40 AM INFO getMMPfromSMI: Complete.
+06/16/2023 09:42:09 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 09:42:09 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 09:42:09 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 09:42:09 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 09:42:09 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 09:42:09 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 09:42:09 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 09:42:09 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 09:42:09 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 09:42:09 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 09:42:09 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 09:42:09 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 09:42:09 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 09:42:09 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 09:42:09 AM INFO mmp_objects: All done!
+06/16/2023 09:42:09 AM INFO getMMPfromSMI: Complete.
+06/16/2023 09:49:47 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 09:49:47 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 09:49:47 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 09:49:47 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 09:49:47 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 09:49:47 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 09:49:47 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 09:49:47 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 09:49:47 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 09:49:47 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 09:49:47 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 09:49:47 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 09:49:47 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 09:49:47 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 09:49:47 AM INFO mmp_objects: All done!
+06/16/2023 09:49:47 AM INFO getMMPfromSMI: Complete.
+06/16/2023 09:53:06 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 09:53:06 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 09:53:06 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 09:53:06 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 09:53:06 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 09:53:06 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 09:53:06 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 09:53:06 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 09:53:06 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 09:53:06 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 09:53:06 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 09:53:06 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 09:53:06 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 09:53:06 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 09:53:06 AM INFO mmp_objects: All done!
+06/16/2023 09:53:06 AM INFO getMMPfromSMI: Complete.
+06/16/2023 09:55:26 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 09:55:26 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 09:55:26 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 09:55:26 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 09:55:26 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 09:55:26 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 09:55:26 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 12
+06/16/2023 09:55:26 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 12
+06/16/2023 09:55:26 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 3
+06/16/2023 09:55:26 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 09:55:26 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 09:55:26 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 09:55:26 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 09:55:26 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 09:55:26 AM INFO mmp_objects: All done!
+06/16/2023 09:55:26 AM INFO getMMPfromSMI: Complete.
+06/16/2023 10:07:47 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 10:07:47 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 10:07:47 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 10:07:47 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 10:07:47 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/apps/gc3tk/c3tk-core/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 10:07:47 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 10:07:47 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 10:07:47 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 10:07:47 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 10:07:47 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 10:07:47 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 10:07:47 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 10:07:47 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 10:07:47 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 10:07:47 AM INFO mmp_objects: All done!
+06/16/2023 10:07:47 AM INFO getMMPfromSMI: Complete.
+06/16/2023 10:10:42 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 10:10:42 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 10:10:42 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 10:10:42 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 10:10:42 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 10:10:42 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 10:10:42 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 10:10:42 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 10:10:42 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 10:10:42 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 10:10:42 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 10:10:42 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 10:10:42 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 10:10:42 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 10:10:42 AM INFO mmp_objects: All done!
+06/16/2023 10:10:42 AM INFO getMMPfromSMI: Complete.
+06/16/2023 10:15:42 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 10:15:42 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 10:15:42 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 10:15:42 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 10:15:42 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 10:15:42 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 10:15:42 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 10:15:42 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 10:15:42 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 10:15:42 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 10:15:42 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 10:15:42 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 10:15:42 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 10:15:42 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 10:15:42 AM INFO mmp_objects: All done!
+06/16/2023 10:15:42 AM INFO getMMPfromSMI: Complete.
+06/16/2023 10:17:46 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 10:17:46 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 10:17:46 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 10:17:46 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 10:17:46 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 10:17:46 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 10:17:46 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 10:17:46 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 10:17:46 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 10:17:46 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 10:17:46 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 10:17:46 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 10:17:46 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 10:17:46 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 10:17:46 AM INFO mmp_objects: All done!
+06/16/2023 10:17:46 AM INFO getMMPfromSMI: Complete.
+06/16/2023 10:25:10 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 10:25:10 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 10:25:10 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 10:25:10 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 10:25:10 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 10:25:10 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 10:25:10 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 10:25:10 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 10:25:10 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 10:25:10 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 10:25:10 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 10:25:10 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 10:25:10 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 10:25:10 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 10:25:10 AM INFO mmp_objects: All done!
+06/16/2023 10:25:10 AM INFO getMMPfromSMI: Complete.
+06/16/2023 11:28:17 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 11:28:17 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 11:28:17 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 11:28:17 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 11:28:17 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 11:28:17 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 11:28:17 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 11:28:17 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 11:28:17 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 11:28:17 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 11:28:17 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 11:28:17 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 11:28:17 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 11:28:17 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 11:28:17 AM INFO mmp_objects: All done!
+06/16/2023 11:28:17 AM INFO getMMPfromSMI: Complete.
+06/16/2023 11:42:46 AM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 11:42:46 AM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 11:42:46 AM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 11:42:46 AM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 11:42:46 AM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 11:42:46 AM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 11:42:46 AM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 11:42:46 AM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 11:42:46 AM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 11:42:46 AM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 11:42:46 AM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 11:42:46 AM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 11:42:46 AM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 11:42:46 AM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 11:42:46 AM INFO mmp_objects: All done!
+06/16/2023 11:42:46 AM INFO getMMPfromSMI: Complete.
+06/16/2023 12:47:05 PM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 12:47:05 PM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 12:47:05 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 12:47:05 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 12:47:05 PM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 12:47:05 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 12:47:05 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 12:47:05 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 12:47:05 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 12:47:05 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 12:47:05 PM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 12:47:05 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 12:47:05 PM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 12:47:05 PM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 12:47:05 PM INFO mmp_objects: All done!
+06/16/2023 12:47:05 PM INFO getMMPfromSMI: Complete.
+06/16/2023 12:51:42 PM INFO getMMPfromSMI: Instantiating MMP Objects
+06/16/2023 12:51:42 PM INFO mmp_objects: Beginning pre-scan of input smiles file
+06/16/2023 12:51:42 PM INFO mmp_objects: Completed pre-scan of input smiles file with no errors
+06/16/2023 12:51:42 PM INFO getMMPfromSMI: Parse Dicer Fragments to Pairs
+06/16/2023 12:51:42 PM INFO mmp_dicer_functions: Attempting execution of dicer:
+ /lrlhps/users/rx87690/LillyMolPrivate/bin/Linux/dicer -B atype=sb -B MAXFF=0.3 -C auto -s "ClC" -s "BrC" -s "FC" -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D -B nosmi -G iso01 -c -i ICTE -k 2 /lrlhps/users/rx87690/LillyMolPrivate/test/getMMPfromSMI/case_2/in/test_data_02.smi
+06/16/2023 12:51:42 PM INFO mmp_objects: Done reading dicer output into single and double pair dicts
+06/16/2023 12:51:42 PM INFO mmp_objects: mem_trace refsmi_dict entries: 328, mem usage: 9.32
+06/16/2023 12:51:42 PM INFO mmp_objects: mem_trace query_dict single entries: 106, mem usage: 4.704
+06/16/2023 12:51:42 PM INFO mmp_objects: mem_trace query_dict double entries: 24, mem usage: 1.184
+06/16/2023 12:51:42 PM INFO mmp_objects: Removed 48 and 0 duplicate fragmentation patterns from single_pairs_dict & double_pairs_dict
+06/16/2023 12:51:42 PM INFO getMMPfromSMI: Write out final pairs
+06/16/2023 12:51:42 PM INFO mmp_objects: Opening output file for write: test_data_02.pairs
+06/16/2023 12:51:42 PM INFO mmp_objects: Iterating over single cut pairs dictionary
+06/16/2023 12:51:42 PM INFO mmp_objects: Iterating over double cut pairs dictionary
+06/16/2023 12:51:42 PM INFO mmp_objects: All done!
+06/16/2023 12:51:42 PM INFO getMMPfromSMI: Complete.

@@ -2,10 +2,9 @@
 
 #define COMPILING_MOLECULE_SMARTS
 
-#include "misc.h"
-
-#include "path.h"
+#include "aromatic.h"
 #include "molecule.h"
+#include "path.h"
 #include "smiles.h"
 
 /*
@@ -16,7 +15,7 @@
 static int make_smarts_embedding_value = 0;
 
 void
-set_make_smarts_embedding (int s)
+set_make_smarts_embedding(int s)
 {
   make_smarts_embedding_value = s;
 
@@ -24,7 +23,7 @@ set_make_smarts_embedding (int s)
 }
 
 int
-make_smarts_embedding ()
+make_smarts_embedding()
 {
   return make_smarts_embedding_value;
 }
@@ -32,13 +31,13 @@ make_smarts_embedding ()
 static int include_unsaturation_in_embeddings_value = 0;
 
 int
-include_unsaturation_in_smarts_embeddings ()
+include_unsaturation_in_smarts_embeddings()
 {
   return include_unsaturation_in_embeddings_value;
 }
 
 void
-set_include_unsaturation_in_smarts_embeddings (int s)
+set_include_unsaturation_in_smarts_embeddings(int s)
 {
   include_unsaturation_in_embeddings_value = s;
 }
@@ -46,13 +45,13 @@ set_include_unsaturation_in_smarts_embeddings (int s)
 static int include_whole_molecule_ring_membership_in_subset_smarts_value = 0;
 
 int
-include_whole_molecule_ring_membership_in_subset_smarts ()
+include_whole_molecule_ring_membership_in_subset_smarts()
 {
   return include_whole_molecule_ring_membership_in_subset_smarts_value;
 }
 
 void
-set_include_whole_molecule_ring_membership_in_subset_smarts (int s)
+set_include_whole_molecule_ring_membership_in_subset_smarts(int s)
 {
   include_whole_molecule_ring_membership_in_subset_smarts_value = s;
 }
@@ -60,39 +59,39 @@ set_include_whole_molecule_ring_membership_in_subset_smarts (int s)
 static int include_D_in_smarts_value = 1;
 
 void 
-set_include_D_in_smarts (int s)
+set_include_D_in_smarts(int s)
 {
   include_D_in_smarts_value = s;
 }
 
 int
-include_D_in_smarts ()
+include_D_in_smarts()
 {
   return include_D_in_smarts_value;
 }
 
 IWString
-Molecule::smarts_equivalent_for_atom (atom_number_t zatom)
+Molecule::smarts_equivalent_for_atom(atom_number_t zatom)
 {
   IWString s;
 
   append_smarts_equivalent_for_atom(zatom, s);
 
-  return IWString(s);
+  return s;
 }
 
 IWString
-Molecule::smarts_equivalent_for_atom (atom_number_t zatom) const
+Molecule::smarts_equivalent_for_atom(atom_number_t zatom) const
 {
   IWString s;
 
   append_smarts_equivalent_for_atom(zatom, s);
 
-  return IWString(s);
+  return s;
 }
 
 IWString
-Molecule::const_smarts_equivalent_for_atom (atom_number_t zatom) const
+Molecule::const_smarts_equivalent_for_atom(atom_number_t zatom) const
 {
   IWString s;
 
@@ -101,10 +100,11 @@ Molecule::const_smarts_equivalent_for_atom (atom_number_t zatom) const
   return IWString(s);
 }
 
+#ifdef NOT_NEEDED_NOW_MAYBE_SOMETIME
 static void
-append_D_smarts (IWString & s,
-                 int ncon,
-                 int eh)
+append_D_smarts(IWString & s,
+                int ncon,
+                int eh)
 {
   if (eh)
   {
@@ -117,11 +117,12 @@ append_D_smarts (IWString & s,
 
   return;
 }
+#endif
 
 
 static void
-append_formal_charge (IWString & s,
-                      formal_charge_t fc)
+append_formal_charge(IWString & s,
+                     formal_charge_t fc)
 {
   if (0 == fc)
     ;
@@ -134,10 +135,10 @@ append_formal_charge (IWString & s,
 }
 
 int
-Molecule::_append_smarts_equivalent_for_atom (atom_number_t zatom,
-                                              int ncon,
-                                              int rm,
-                                              IWString & s) const
+Molecule::_append_smarts_equivalent_for_atom(atom_number_t zatom,
+                                             int ncon,
+                                             int rm,
+                                             IWString & s) const
 {
   const Atom * a = _things[zatom];
 
@@ -148,7 +149,7 @@ Molecule::_append_smarts_equivalent_for_atom (atom_number_t zatom,
 
   if (1 == a->atomic_number())
     s << "#1";
-  else if (NULL != _aromaticity && IS_AROMATIC_ATOM(_aromaticity[zatom]))
+  else if (nullptr != _aromaticity && is_aromatic_atom(_aromaticity[zatom]))
     s << a->element()->aromatic_symbol();
   else if (a->element()->symbol().length() > 2)
   {
@@ -179,7 +180,7 @@ Molecule::_append_smarts_equivalent_for_atom (atom_number_t zatom,
     ;
   else if (a->ncon() == a->nbonds())
     ;
-  else if (NULL != _aromaticity && IS_AROMATIC_ATOM(_aromaticity[zatom]))
+  else if (nullptr != _aromaticity && is_aromatic_atom(_aromaticity[zatom]))
     ;
   else
     s << "G>0";
@@ -190,8 +191,8 @@ Molecule::_append_smarts_equivalent_for_atom (atom_number_t zatom,
 }
 
 int
-Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
-                                             IWString & s) const
+Molecule::append_smarts_equivalent_for_atom(atom_number_t zatom,
+                                            IWString & s) const
 {
   assert (ok_atom_number(zatom));
   
@@ -201,10 +202,10 @@ Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
 }
 
 void
-Molecule::_compute_ncon_and_explicit_hydrogens (atom_number_t zatom,
-                                                int & ncon,
-                                                int & eh,
-                                                const int * include_atom) const
+Molecule::_compute_ncon_and_explicit_hydrogens(atom_number_t zatom,
+                                               int & ncon,
+                                               int & eh,
+                                               const int * include_atom) const
 {
   ncon = 0;
   eh = 0;
@@ -226,8 +227,8 @@ Molecule::_compute_ncon_and_explicit_hydrogens (atom_number_t zatom,
 }
 
 void
-Molecule::_append_isotope_and_atomic_symbol (atom_number_t zatom,
-                                             IWString & s)
+Molecule::_append_isotope_and_atomic_symbol(atom_number_t zatom,
+                                            IWString & s)
 {
   const Atom * a = _things[zatom];
 
@@ -249,9 +250,9 @@ Molecule::_append_isotope_and_atomic_symbol (atom_number_t zatom,
 }
 
 int
-Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
-                                             IWString & s,
-                                             const int * include_atom)
+Molecule::append_smarts_equivalent_for_atom(atom_number_t zatom,
+                                            IWString & s,
+                                            const int * include_atom)
 {
   int ncon, eh;
 
@@ -279,7 +280,7 @@ Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
     }
   }
 
-  return _append_smarts_equivalent_for_atom (zatom, ncon - eh, ring_membership, s);
+  return _append_smarts_equivalent_for_atom(zatom, ncon - eh, ring_membership, s);
 }
 
 /*
@@ -287,8 +288,8 @@ Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
 */
 
 int
-Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
-                                             IWString & s)
+Molecule::append_smarts_equivalent_for_atom(atom_number_t zatom,
+                                            IWString & s)
 {
   assert (ok_atom_number(zatom));
   
@@ -336,33 +337,33 @@ Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
   Seems like a good idea, flesh this out sometime
 
 int
-Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
-                                             IWString & s,
-                                             const Smiles_Formation_Info & sfi)
+Molecule::append_smarts_equivalent_for_atom(atom_number_t zatom,
+                                            IWString & s,
+                                            const Smiles_Formation_Info & sfi)
 {
   s << '[';
 
-  _append_isotope_and_atomic_symbol (zatom, s);
+  _append_isotope_and_atomic_symbol(zatom, s);
 
   const Atom * a = _things[zatom];
 
-  const int * include_atom = sfi.include_atom ();
+  const int * include_atom = sfi.include_atom();
 
   int ncon, eh;
 
-  if (NULL == include_atom)
+  if (nullptr == include_atom)
   {
-    ncon = a->ncon ();
-    eh = explicit_hydrogens (zatom);
+    ncon = a->ncon();
+    eh = explicit_hydrogens(zatom);
   }
   else
-     _compute_ncon_and_explicit_hydrogens (zatom, ncon, eh, include_atom);
+     _compute_ncon_and_explicit_hydrogens(zatom, ncon, eh, include_atom);
 
-  append_D_smarts (s, ncon, eh);
+  append_D_smarts(s, ncon, eh);
 
-  append_formal_charge (s, a->formal_charge ());
+  append_formal_charge(s, a->formal_charge());
 
-  if (is_ring_atom (zatom))
+  if (is_ring_atom(zatom))
     s << 'R';
 
    s << ']';
@@ -371,14 +372,14 @@ Molecule::append_smarts_equivalent_for_atom (atom_number_t zatom,
 }*/
 
 const IWString &
-Molecule::smarts ()
+Molecule::smarts()
 {
-  return smarts(_smiles_information, NULL);
+  return smarts(_smiles_information, nullptr);
 }
 
 const IWString &
-Molecule::smarts (Smiles_Information & smi_info,
-                  const int * include_atom)
+Molecule::smarts(Smiles_Information & smi_info,
+                 const int * include_atom)
 {
   smi_info.set_smiles_is_smarts(1);
 
@@ -408,9 +409,9 @@ Molecule::smarts (Smiles_Information & smi_info,
 }
 
 const IWString &
-Molecule::smarts_starting_with_atom (atom_number_t a,
-                                     Smiles_Information & smi_info,
-                                     const int * include_atom)
+Molecule::smarts_starting_with_atom(atom_number_t a,
+                                    Smiles_Information & smi_info,
+                                    const int * include_atom)
 {
   (void) ring_membership();    // lots of problems without this - because the smiles subset building does not properly populate the fragment info
 
@@ -436,7 +437,7 @@ Molecule::smarts_starting_with_atom (atom_number_t a,
 }
 
 int
-Molecule::write_molecule_smarts (std::ostream & os)
+Molecule::write_molecule_smarts(std::ostream & os)
 {
   invalidate_smiles();
 

@@ -3,18 +3,22 @@
 */
 
 #include <stdlib.h>
-#include <memory>
+#include <iostream>
 #include <limits>
-
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
-#include "iwbits.h"
-#include "misc.h"
-#include "sparse_fp_creator.h"
+#include <memory>
 using std::numeric_limits;
 
-const char * prog_name = NULL;
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -30,7 +34,7 @@ static int columns_in_input = 0;
 
 static int nbits = 0;
 
-static int * numeric_value = NULL;
+static int * numeric_value = nullptr;
 
 static IWString missing_value('.');
 
@@ -47,10 +51,18 @@ static IWString insert_dummy_smiles;
 
 static int work_as_tdt_filter = 0;
 
+
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+  // clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Converts a integer descriptor file to fingerprints, either fixed 0/1 or non colliding counted\n";
   cerr << " -F <tag>       tag to create (default '" << tag << "', use NC... to get non colliding, counted fingerprints\n";
   cerr << " -S <fname>     fetch smiles from <fname>\n";
@@ -61,6 +73,7 @@ usage (int rc)
 //cerr << " -t <int>       numeric values above <int> will be set to 1\n";   // not sure what this was designed to do
   cerr << " -k             input file does NOT have a header record\n";
   cerr << " -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -182,14 +195,22 @@ descriptor_file_to_01_fingerprints_record (const const_IWSubstring & buffer,
 
   output << identifier_tag << id << ">\n";
 
-  IW_Bits_Base fp(nbits);
+  if (tag.starts_with("NC")) {
+    Sparse_Fingerprint_Creator sfc;
+    sfc.create_from_array_of_ints(numeric_value, nbits);
+    sfc.write_fingerprint(tag, output);
+//  IWString tmp;
+//  sfc.daylight_ascii_form_with_counts_encoded(tag, tmp);
+//  output << tag << tmp << ">\n";
+  } else {
+    IW_Bits_Base fp(nbits);
 
-  fp.construct_from_array_of_ints(numeric_value, nbits);
+    fp.construct_from_array_of_ints(numeric_value, nbits);
 
-  IWString tmp;
-  fp.daylight_ascii_representation_including_nset_info(tmp);
-
-  output << tag << tmp << ">\n";
+    IWString tmp;
+    fp.daylight_ascii_representation_including_nset_info(tmp);
+    output << tag << tmp << ">\n";
+  }
 
   output << "|\n";
 
@@ -285,7 +306,6 @@ descriptor_file_to_01_fingerprints_filter_record_sparse (const IWString & tag,
                                         const int * c,
                                         IWString_and_File_Descriptor & output)
 {
-
   Sparse_Fingerprint_Creator sfp;
 
   sfp.create_from_array_of_ints(c, nbits);
@@ -317,7 +337,7 @@ descriptor_file_to_01_fingerprints_filter_record_dense (const IWString & tag,
 }
 
 static int
-descriptor_file_to_01_fingerprints_filter_record (const_IWSubstring & buffer,
+descriptor_file_to_01_fingerprints_filter_record(const_IWSubstring & buffer,
                                            const ID_and_Vector & id_and_vector,
                                            IWString_and_File_Descriptor & output)
 {
@@ -339,9 +359,9 @@ descriptor_file_to_01_fingerprints_filter_record (const_IWSubstring & buffer,
 }
 
 static int
-descriptor_file_to_01_fingerprints_filter (iwstring_data_source & input,
-                                           const ID_and_Vector & id_and_vector,
-                                           IWString_and_File_Descriptor & output)
+descriptor_file_to_01_fingerprints_filter(iwstring_data_source & input,
+                                          const ID_and_Vector & id_and_vector,
+                                          IWString_and_File_Descriptor & output)
 {
   const_IWSubstring buffer;
 

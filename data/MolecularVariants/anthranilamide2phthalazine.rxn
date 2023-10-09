@@ -1,0 +1,40 @@
+name: "anthranilamide2phthalazine"
+scaffold {
+  id: 0
+  smarts: "[ND2HR0]-[/IWfss1cr6]:&=[cr6]-C(=O)N"
+  change_element {
+    atom: 4
+    element: "N"
+  }
+  make_bond {
+    a1: 3
+    a2: 4
+    btype: SS_DOUBLE_BOND
+  }
+  change_element {
+    atom: 0
+    element: "C"
+  }
+  toggle_kekule_form {
+    bond {
+      a1: 1
+      a2: 2
+      btype: SS_DOUBLE_BOND
+    }
+  }
+}
+sidechain {
+  id: 1
+  reagent: "N"
+  smarts: "N"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_DOUBLE_BOND
+  }
+  join {
+    a1: 4
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

@@ -8,8 +8,6 @@
 #include <iostream>
 #include <iomanip>
 
-using namespace std;
-
 static const unsigned char one_bit_8[8] = {128, 64, 32, 16, 8, 4, 2, 1};
 static const unsigned short one_bit_16[16] = {32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
 

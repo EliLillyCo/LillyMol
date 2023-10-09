@@ -1,0 +1,11 @@
+name: "hydroxamic_to_carboxylic"
+scaffold {
+  id: 0
+  smarts: "[OD1]=[CD3]-[ND2H]-[OH]"
+  remove_atom: 2
+  make_bond {
+    a1: 1
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

@@ -4,18 +4,21 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
 #include <memory>
-using namespace std;
 
-#include "cmdline.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
 
-#include "istream_and_type.h"
-#include "molecule.h"
-#include "aromatic.h"
-#include "iwstandard.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/molecule.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -32,10 +35,15 @@ static int remove_chirality = 0;
 static IWString_and_File_Descriptor stream_for_failed_reinterpretation;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Writes either unique smiles (if interpretable) or non aromatic unique form\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -U <fname>    write failed interpretation molecules to <fname>\n";
   cerr << "  -c            remove chirality\n";
   cerr << "  -l            reduce to largest fragment\n";
@@ -100,11 +108,11 @@ preferred_smiles (data_source_and_type<Molecule> & input,
                   IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
-    unique_ptr<Molecule> free_m(m);
+    std::unique_ptr<Molecule> free_m(m);
 
     preprocess(*m);
 
@@ -118,15 +126,15 @@ preferred_smiles (data_source_and_type<Molecule> & input,
 }
 
 static int
-preferred_smiles (const char * fname, int input_type, 
+preferred_smiles (const char * fname, FileType input_type, 
                   IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -200,7 +208,7 @@ preferred_smiles (int argc, char ** argv)
       cerr << "Will remove chirality\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (cl.option_present('i'))
   {
@@ -211,7 +219,7 @@ preferred_smiles (int argc, char ** argv)
     }
   }
   else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
-    input_type = SMI;
+    input_type = FILE_TYPE_SMI;
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 

@@ -29,30 +29,33 @@
 #include <time.h>
 #include <assert.h>
 
+#include <iostream>
 #include <memory>
-using namespace std;
 
-#include "cmdline.h"
-#include "misc.h"
-#include "sparse_fp_creator.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
-#include "molecule.h"
-#include "etrans.h"
-#include "rmele.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "istream_and_type.h"
-#include "donor_acceptor.h"
-#include "accumulator.h"
-#include "surface_area_molvol.h"
-#include "iw_vdw.h"
-#include "charge_assigner.h"
-#include "smiles.h"
-#include "jw_vector_array_operation.h"
-#include "qry_wstats.h"
-#include "target.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/donor_acceptor.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/rmele.h"
+#include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/target.h"
+
 #include "comma_related_procedures.h"
+#include "jw_vector_array_operation.h"
 #include "read_control_file.h"
+#include "surface_area_molvol.h"
+
+using std::cerr;
+using std::endl;
 
 #define NUMBER_OF_COMMA_DESCRIPTOR 53
 #define NUMBER_OF_HYDROPHOBIC_JURS 28
@@ -1373,7 +1376,7 @@ jwsa (Molecule &m,
     if (0==rc) 
     {
       if (verbose)
-        cerr<<m.molecule_name()<<"\tERROR in calculation of partial charge\n";
+        cerr<<m.name()<<"\tERROR in calculation of partial charge\n";
       return rc;
     }
 
@@ -1391,7 +1394,7 @@ jwsa (Molecule &m,
       if (0==rc) 
       {
         if (verbose)
-          cerr<<m.molecule_name()<<"\tERROR in calculation of partial charge\n";
+          cerr<<m.name()<<"\tERROR in calculation of partial charge\n";
         return rc;
       }
     }
@@ -1406,8 +1409,6 @@ jwsa (Molecule &m,
 
   Sparse_Fingerprint_Creator sfc;
 
-    int qq = -35;
-
   // calculate the surface area, result stored in atom_area
 
   if (compute_jurs_descriptor || compute_savol_like_descriptor || compute_aromaticity_related_descriptor || compute_electronic_descriptor || compute_hydrophobic_jurs_descriptor)
@@ -1417,7 +1418,7 @@ jwsa (Molecule &m,
     
     if (0==rc) 
     {
-      cerr<<m.molecule_name()<<"\tERROR in calculation of surface area\n";
+      cerr<<m.name()<<"\tERROR in calculation of surface area\n";
       return rc;
     }
 
@@ -1664,16 +1665,16 @@ jwsa (Molecule &m,
     if (compute_savol_like_descriptor)
     {
       rc = compute_solvation_energy (m, atom_area, JW_SovEn);
-      if (0==rc) { if (verbose) cerr<<m.molecule_name()<<"\tERROR in calculation of solvation energy\n"; return rc;}
+      if (0==rc) { if (verbose) cerr<<m.name()<<"\tERROR in calculation of solvation energy\n"; return rc;}
       rc = compute_polar_surface_area_1 (m, atom_area, JW_PSA1);
-      if (0==rc) { if (verbose) cerr<<m.molecule_name()<<"\tERROR in calculation of polar surface area 1\n";return rc;}
+      if (0==rc) { if (verbose) cerr<<m.name()<<"\tERROR in calculation of polar surface area 1\n";return rc;}
       rc = compute_polar_surface_area_2 (m, atom_area, JW_PSA2);
-      if (0==rc) { if (verbose) cerr<<m.molecule_name()<<"\tERROR in calculation of polar surface area 2\n";return rc;}
+      if (0==rc) { if (verbose) cerr<<m.name()<<"\tERROR in calculation of polar surface area 2\n";return rc;}
       rc = compute_polar_surface_area_3 (m, atom_area, JW_PSA3);
-      if (0==rc) { if (verbose) cerr<<m.molecule_name()<<"\tERROR in calculation of polar surface area 3\n";return rc;}
+      if (0==rc) { if (verbose) cerr<<m.name()<<"\tERROR in calculation of polar surface area 3\n";return rc;}
       
       rc = compute_hydrophobic_surface_area (m, atom_area, JW_HpbSA);
-      if (0==rc) {if (verbose) cerr<<m.molecule_name()<<"\tERROR in calculation of hydrophobic surface area\n";return rc;}
+      if (0==rc) {if (verbose) cerr<<m.name()<<"\tERROR in calculation of hydrophobic surface area\n";return rc;}
     }
     
     // start computing the aromaticity related descriptors
@@ -2079,9 +2080,9 @@ jwsa (data_source_and_type<Molecule> & input,
 {
   Molecule * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
-    unique_ptr<Molecule> free_m(m);
+    std::unique_ptr<Molecule> free_m(m);
 
     molecules_read++;
 
@@ -2100,7 +2101,7 @@ jwsa (data_source_and_type<Molecule> & input,
 }
 
 static int
-jwsa (const char * fname, int input_type, 
+jwsa (const char * fname, FileType input_type, 
       IWString_and_File_Descriptor & output)
 {
   data_source_and_type<Molecule> input (input_type, fname);
@@ -2341,7 +2342,7 @@ jwsa (int argc, char ** argv)
     }
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present ('i'))
   {
     if (! process_input_type (cl, input_type))

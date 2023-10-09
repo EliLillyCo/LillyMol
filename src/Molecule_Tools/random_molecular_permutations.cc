@@ -2,46 +2,48 @@
   Randomly change molecules
 */
 
-#include <iostream>
-#include <memory>
-#include <limits>
 #include <algorithm>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <optional>
 #include <random>
-using std::cerr;
-using std::endl;
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "cmdline.h"
-#include "iwrandom.h"
-#include "accumulator.h"
-#include "iw_stl_hash_map.h"
-#include "iw_stl_hash_set.h"
-#include "misc.h"
-#include "gfp_standard.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 
-#include "molecule.h"
-#include "target.h"
-#include "path.h"
-#include "numass.h"
-#include "output.h"
-#include "aromatic.h"
-#include "istream_and_type.h"
-#include "target.h"
-#include "qry_wstats.h"
-#include "set_of_target_molecules.h"
+#include "Utilities/GFP_Tools/gfp_standard.h"
+#include "Utilities/GFP_Tools/sparse_collection.h"
 
-static int
-check_probability(double p)
-{
-  if (1.0 == p)
-    return 1;
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/numass.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/target.h"
 
-  return p > iwrandom();
-}
+#include "Molecule_Tools/random_molecular_permutations.pb.h"
+#include "Molecule_Tools/set_of_target_molecules.h"
+
+using std::cerr;
 
 static int verbose = 0;
 
 static int molecules_read = 0;
+static int molecules_written = 0;
 
 static int molecules_made = 0;
 
@@ -84,6 +86,9 @@ static double probability_shrink_ring = 0.06;
 
 static double probability_inter_permutation=0.5;
 
+static rmp::Config config;
+using rmp::Config;
+
 static Number_Assigner number_assigner;
 
 static int can_form_strongly_fused_ring_systems = 0;
@@ -105,6 +110,8 @@ static time_t tzero;    // not initialised
 
 static int stop_after_producing = std::numeric_limits<int>::max();
 
+static int warn_invalid_valence = 1;
+
 /*
   Destroying an aromatic ring is done within lower_bond_order
 */
@@ -113,7 +120,102 @@ static double probability_destroy_aromatic_ring = 0.2;
 
 static int append_permutation_number_to_name = 0;
 
+class RandomState {
+  private:
+    std::default_random_engine _rng;
+    std::uniform_real_distribution<float> _fraction;
 
+    // By having a number of pre-existing uniform_int_distribution
+    // we can easily generate random integers in those ranges.
+    std::vector<std::uniform_int_distribution<int>> _uniform;
+
+  public:
+    RandomState();
+
+    float operator()() { 
+      return _fraction(_rng);
+    }
+
+    float Fraction() {
+      return _fraction(_rng);
+    }
+
+    template <typename T>
+    int RandomInt(std::uniform_int_distribution<T>& dist) {
+      return dist(_rng);
+    }
+
+    int OkProbability(const float threshold) {
+      return threshold > _fraction(_rng);
+    }
+
+    // Return a random number in the range [0, max).
+    int RandomInt(int max);
+
+    // Return a random number in the range [min, max).
+    int RandomInt(int min, int max);
+
+    template <typename T>
+    T * RandomItem(const resizable_array_p<T>& items);
+    template <typename T>
+    T RandomItem(const resizable_array<T>& items);
+};
+
+RandomState::RandomState() : _fraction(0.0f, 1.0f) {
+  _uniform.reserve(50);
+  for (int i = 0; i < 50; ++i) {
+    _uniform.emplace_back(std::uniform_int_distribution<int>(0, i));
+  }
+}
+
+int
+RandomState::RandomInt(int max) {
+  if (max < static_cast<int>(_uniform.size())) {
+    return _uniform[max](_rng);
+  }
+
+  std::uniform_int_distribution<int> u(0, max);
+  return u(_rng);
+}
+
+int
+RandomState::RandomInt(int min, int max) {
+  std::uniform_int_distribution<int> u(min, max);
+  return u(_rng);
+}
+
+template <typename T>
+T*
+RandomState::RandomItem(const resizable_array_p<T>& items) {
+  if (items.empty()) {
+    return nullptr;
+  }
+  if (items.size() == 1) {
+    return items[0];
+  }
+  int ndx = RandomInt(items.size() - 1);
+  return items[ndx];
+}
+
+template <typename T>
+T
+RandomState::RandomItem(const resizable_array<T>& items) {
+  if (items.empty()) {
+    return T{};
+  }
+  if (items.size() == 1) {
+    return items[0];
+  }
+  int ndx = RandomInt(items.size() - 1);
+  return items[ndx];
+}
+
+// THis whole concept is broken.
+// The idea was to identify some atoms that cannot change, and store them
+// in this class.
+// but as the molecule changes, atoms are removed and added, this array will
+// quickly become wrong, either indices wrong, or too short for the actual
+// molecule.
 class Can_Change
 {
   private:
@@ -128,6 +230,10 @@ class Can_Change
 
     const int * rawdata() const { return _can_change;}
     int * rawdata() { return _can_change;}
+
+    int matoms() const { return _matoms;}
+
+    int AnyMembersSet(const Set_of_Atoms& atom_numbers, int value) const;
 };
 
 Can_Change::Can_Change(const int m) : _matoms(m)
@@ -148,6 +254,17 @@ Can_Change::operator[](const int s) const
 {
   if (s < _matoms)
     return _can_change[s];
+
+  return 0;
+}
+
+int
+Can_Change::AnyMembersSet(const Set_of_Atoms& atom_numbers, int value) const {
+  for (int atom_number : atom_numbers) {
+    if (operator[](atom_number) == value) {
+      return 1;
+    }
+  }
 
   return 0;
 }
@@ -226,6 +343,11 @@ Iterate_Atom_Pairs::Iterate_Atom_Pairs(const int s) :_matoms(s)
   _a2 = -1;
 }
 
+std::optional<Config>
+ReadConfiguration(IWString& fname) {
+  return iwmisc::ReadTextProtoCommentsOK<Config>(fname);
+}
+
 /*
   We can run in a mode where many of the sidechains must present themselves
   with the first atom being the attachment point - and having an implicit hydrogen.
@@ -246,9 +368,11 @@ class Molecular_Transformation
 
     double _probability;
 
+    RandomState _random_state;
+
 //  protected functions
 
-    int _check_probability() const;
+    int _check_probability();
 
     virtual int _do_transformation(Molecule & m, const Can_Change & can_change) = 0;
 
@@ -282,11 +406,12 @@ Molecular_Transformation::~Molecular_Transformation ()
 }
 
 int
-Molecular_Transformation::determine_probability (const const_IWSubstring & token,
+Molecular_Transformation::determine_probability(const const_IWSubstring & token,
                                   double p)
 {
-  if (token == _name)
+  if (token == _name) {
     return 0;
+  }
 
   assert (p >= 0.0 && p <= 1.0);
 
@@ -296,9 +421,9 @@ Molecular_Transformation::determine_probability (const const_IWSubstring & token
 }
 
 int
-Molecular_Transformation::_check_probability() const
+Molecular_Transformation::_check_probability()
 {
-  return _probability > iwrandom();
+  return _random_state.OkProbability(_probability);
 }
 
 class Molecular_Transformation_Add_Double_Bond : public Molecular_Transformation
@@ -1051,6 +1176,85 @@ Molecular_Transformation_Switch_Aliphatic_Ring::_do_transformation (Molecule & m
   return 1;
 }
 
+// Return a map from name to probability for all the
+// entries in `config.probability`.
+std::unordered_map<std::string, float>
+Probabilities(const Config& config) {
+  std::unordered_map<std::string, float> result;
+
+  // const /*Descriptor*/auto* descriptor = config.probability().GetDescriptor();
+  const /*Reflection*/auto* reflection = config.probability().GetReflection();
+  using google::protobuf::FieldDescriptor;
+  std::vector<const FieldDescriptor*> fields;
+  reflection->ListFields(config.probability(), &fields);
+
+  for (const FieldDescriptor* f : fields) {
+    cerr << f->name() << '\n';
+    float tmp = reflection->GetFloat(config.probability(), f);
+    result[f->name()] = tmp;
+  }
+
+  return result;
+}
+
+class Transformations {
+  private:
+    int _verbose;
+
+    // Read from the proto via the -N option.
+    Config _config;
+
+    std::vector<Molecular_Transformation> _transformation;
+
+  public:
+    Transformations();
+
+    int Initialise(Command_Line& cl);
+};
+
+Transformations::Transformations() {
+  _verbose = 0;
+}
+
+float
+SumValues(const std::unordered_map<std::string, float>& hash) {
+  float result= 0.0;
+  for (auto& [_, value] : hash) {
+    result += value;
+  }
+  return result;
+}
+
+int
+Transformations::Initialise(Command_Line& cl) {
+  _verbose = cl.option_count('v');
+
+  if (! cl.option_present('N')) {
+    cerr << "Transformations::Initialise:must specify config file via the -N option\n";
+    return 0;
+  }
+
+  if (cl.option_present('N')) {
+    IWString fname = cl.string_value('N');
+    std::optional<Config> tmp = ReadConfiguration(fname);
+    if (! tmp) {
+      cerr << "Transformations::Initialise:cannot read config '" << fname << "'\n";
+      return 0;
+    }
+    _config = *tmp;
+  }
+
+  std::unordered_map<std::string, float> probabilities = 
+        Probabilities(_config);
+
+  float sum_probabilties = SumValues(probabilities);
+  // Normalize the probabilities to the range 1000
+  for (auto& [_, value] : probabilities) {
+    value /= sum_probabilties * 1000.0f;
+  }
+  return 1;
+}
+
 static resizable_array_p<Molecule> input_molecules;
 
 static int max_attempts = 10;
@@ -1107,6 +1311,7 @@ static IWString changed_by;
 
 static int changed_by_contains_full_history = 1;
 
+#ifdef NOT_USED
 static int
 initialise_never_change_atoms (Molecule & m,
                                Can_Change & can_change)
@@ -1130,6 +1335,7 @@ initialise_never_change_atoms (Molecule & m,
 
   return 1;
 }
+#endif
 
 /*
   The convention is that each member of the double attachment library
@@ -1175,7 +1381,7 @@ permutation_add_double_bond(Molecule & m,
   if (verbose > 1)
     changed_by << " Double_bond";
   if (verbose > 2)
-    cerr << "Double bond added between atoms " << a1 << " and " << a2 << endl;
+    cerr << "Double bond added between atoms " << a1 << " and " << a2 << '\n';
 
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert( m.valence_ok());
@@ -1186,18 +1392,20 @@ permutation_add_double_bond(Molecule & m,
 
 static int
 permutation_add_double_bond(Molecule & m,
-                            const Can_Change & can_change)
+                            const Can_Change & can_change,
+                            RandomState& random_state)
 {
-  if (! check_probability(probability_add_double_bond))
+  if (! random_state.OkProbability(probability_add_double_bond)) {
     return 0;
+  }
 
   const int nedges = m.nedges();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, nedges - 1);
+    const int bond_number = random_state.RandomInt(nedges - 1);
 
-    if (permutation_add_double_bond(m, j, can_change))
+    if (permutation_add_double_bond(m, bond_number, can_change))
       return 1;
   }
 
@@ -1318,23 +1526,24 @@ permutation_remove_atom(Molecule & m,
   if (verbose > 1)
     changed_by << " Rm_atom";
   if (verbose > 2)
-    cerr << "Removed atom " << j << endl;
+    cerr << "Removed atom " << j << '\n';
 
   return 1;
 }
 
 static int
 permutation_remove_atom(Molecule & m,
-                        const Can_Change & can_change)
+                        const Can_Change & can_change,
+                        RandomState& random_state)
 {
-  if (! check_probability(probability_remove_atom))
+  if (! random_state.OkProbability(probability_remove_atom)) {
     return 0;
-
+  }
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; ++i)
   {
-    atom_number_t j = intbtwij(0, matoms - 1);
+    atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -1354,9 +1563,9 @@ permutation_remove_atom(Molecule & m,
 */
 
 static int
-would_break_up_nice_group (const Molecule & m,
-                           atom_number_t a1,
-                           atom_number_t a2)
+would_break_up_nice_group(const Molecule & m,
+                          atom_number_t a1,
+                          atom_number_t a2)
 {
   const Atom * aa1 = m.atomi(a1);
   const Atom * aa2 = m.atomi(a2);
@@ -1402,8 +1611,8 @@ would_break_up_nice_group (const Molecule & m,
 }
 
 static int
-bonded_to_halogen (const Molecule & m,
-                   atom_number_t zatom)
+bonded_to_halogen(const Molecule & m,
+                  atom_number_t zatom)
 {
   const Atom * a = m.atomi(zatom);
 
@@ -1428,7 +1637,8 @@ bonded_to_halogen (const Molecule & m,
 static int
 permutation_lower_bond_order(Molecule & m,
                              const int bnumber,
-                             const Can_Change & can_change)
+                             const Can_Change & can_change,
+                             RandomState& random_state)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
@@ -1436,14 +1646,16 @@ permutation_lower_bond_order(Molecule & m,
 
   const Bond * b = m.bondi(bnumber);
 
-  if (b->is_single_bond())
+  if (b->is_single_bond()) {
     return 0;
+  }
 
   const atom_number_t a1 = b->a1();
   const atom_number_t a2 = b->a2();
 
-  if (! can_change[a1] || ! can_change[a2])
+  if (! can_change[a1] || ! can_change[a2]) {
     return 0;
+  }
 
   const Atom * aa1 = m.atomi(a1);
   const Atom * aa2 = m.atomi(a2);
@@ -1459,13 +1671,16 @@ permutation_lower_bond_order(Molecule & m,
 
   if (b->is_aromatic())
   {
-    if (! check_probability(probability_destroy_aromatic_ring))
+
+    if (! random_state.OkProbability(probability_destroy_aromatic_ring)) {
       return 0;
+    }
     if (bonded_to_halogen(m, a1) || bonded_to_halogen(m, a2))   // don't create alkyl halides
       return 0;
   }
-  else if (would_break_up_nice_group(m, a1, a2))
+  else if (would_break_up_nice_group(m, a1, a2)) {
     return 0;
+  }
 
   m.set_bond_type_between_atoms(a1, a2, SINGLE_BOND);
 
@@ -1476,7 +1691,7 @@ permutation_lower_bond_order(Molecule & m,
 
 #ifdef FREQUENTLY_CHECK_VALENCES
   if (! m.valence_ok())
-    cerr << "Lowering bond order bad v " << m.smiles() << endl;
+    cerr << "Lowering bond order bad v " << m.smiles() << '\n';
   assert (m.valence_ok());
 #endif
 
@@ -1485,25 +1700,29 @@ permutation_lower_bond_order(Molecule & m,
 
 static int
 permutation_lower_bond_order(Molecule & m,
-                             const Can_Change & can_change)
+                             const Can_Change & can_change,
+                             RandomState& random_state)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
 #endif
 
-  if (! check_probability(probability_lower_bond_order))
+  if (! random_state.OkProbability(probability_lower_bond_order)) {
     return 0;
+  }
 
   const int nedges = m.nedges();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j = intbtwij(0, nedges - 1);
+    atom_number_t j = random_state.RandomInt(nedges - 1);
 
-    if (! can_change[j])
+    const Bond * b = m.bondi(j);
+
+    if (! can_change[b->a1()] || ! can_change[b->a2()])
       continue;
 
-    if (permutation_lower_bond_order(m, j, can_change))
+    if (permutation_lower_bond_order(m, j, can_change, random_state))
       return 1;
   }
 
@@ -1534,17 +1753,19 @@ permutation_break_aliphatic_ring(Molecule & m,
   if (verbose > 1)
     changed_by << " Break_Aliph";
   if (verbose > 2)
-    cerr << "Broke aliphatic ring between atoms " << a1 << " and " << a2 << endl;
+    cerr << "Broke aliphatic ring between atoms " << a1 << " and " << a2 << '\n';
 
   return 1;
 }
 
 static int
 permutation_break_aliphatic_ring(Molecule & m,
-                                 const Can_Change & can_change)
+                                 const Can_Change & can_change,
+                                 RandomState& random_state)
 {
-  if (! check_probability(probability_break_aliphatic_ring))
+  if (! random_state.OkProbability(probability_break_aliphatic_ring)) {
     return 0;
+  }
 
   (void) m.ring_membership();    // force ring computation
 
@@ -1552,7 +1773,7 @@ permutation_break_aliphatic_ring(Molecule & m,
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, nedges - 1);
+    const atom_number_t j = random_state.RandomInt(nedges - 1);
 
     if (permutation_break_aliphatic_ring(m, j, can_change))
       return 1;
@@ -1737,17 +1958,19 @@ permutation_make_ring(Molecule & m,
   if (verbose > 1)
     changed_by << " Make_ring";
   if (verbose > 2)
-    cerr << "made ring by joining atoms " << a1 << " and " << a2 << endl;
+    cerr << "made ring by joining atoms " << a1 << " and " << a2 << '\n';
 
   return 1;
 }
 
 static int
 permutation_make_ring(Molecule & m,
-                      const Can_Change & can_change)
+                      const Can_Change & can_change,
+                      RandomState& random_state)
 {
-  if (! check_probability(probability_make_ring))
+  if (! random_state.OkProbability(probability_make_ring)) {
     return 0;
+  }
 
   if (max_rings_in_each_permutation > 0 && m.nrings() + 1 >= max_rings_in_each_permutation)
     return 0;
@@ -1763,12 +1986,12 @@ permutation_make_ring(Molecule & m,
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
 
-    const atom_number_t k = intbtwij(0, matoms - 1);
+    const atom_number_t k = random_state.RandomInt(matoms - 1);
     if (j == k)
       continue;
 
@@ -1782,10 +2005,10 @@ permutation_make_ring(Molecule & m,
   return 0;
 }
 
-static const Element * element_carbon = NULL;
-static const Element * element_oxygen = NULL;
-static const Element * element_nitrogen = NULL;
-static const Element * element_sulphur = NULL;
+static const Element * element_carbon = nullptr;
+static const Element * element_oxygen = nullptr;
+static const Element * element_nitrogen = nullptr;
+static const Element * element_sulphur = nullptr;
 
 static int
 permutation_change_nitrogen_to_carbon(Molecule & m,
@@ -1814,16 +2037,18 @@ permutation_change_nitrogen_to_carbon(Molecule & m,
 
 static int
 permutation_change_nitrogen_to_carbon(Molecule & m,
-                                      const Can_Change & can_change)
+                                      const Can_Change & can_change,
+                                      RandomState& random_state)
 {
-  if (! check_probability(probability_change_nitrogen_to_carbon))
+  if (! random_state.OkProbability(probability_change_nitrogen_to_carbon)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -1886,8 +2111,9 @@ alpha_to_oxygen_or_nitrogen(Molecule & m,
 }
 
 /*
-  We are contemplating changing a carbon to an oxygen. The carbon has no attached heteroatoms,
-  but we want to avoid Nitrogen and Oxygen and Sulphur atoms in the beta position
+  We are contemplating changing a carbon to an oxygen.  The carbon has
+  no attached heteroatoms, but we want to avoid Nitrogen and Oxygen
+  and Sulphur atoms in the beta position
 */
 
 static int
@@ -1912,7 +2138,6 @@ beta_to_oxygen_or_nitrogen(Molecule & m,
 
   return 0;
 }
-
 
 static int
 permutation_change_carbon_to_nitrogen(Molecule & m,
@@ -1946,16 +2171,18 @@ permutation_change_carbon_to_nitrogen(Molecule & m,
 
 static int
 permutation_change_carbon_to_nitrogen(Molecule & m,
-                                      const Can_Change & can_change)
+                                      const Can_Change & can_change,
+                                      RandomState& random_state)
 {
-  if (! check_probability(probability_change_carbon_to_nitrogen))
+  if (! random_state.OkProbability(probability_change_carbon_to_nitrogen)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j = intbtwij(0, matoms - 1);
+    atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -2024,16 +2251,18 @@ permutation_change_carbon_to_oxygen(Molecule & m,
 
 static int
 permutation_change_carbon_to_oxygen(Molecule & m,
-                                    const Can_Change & can_change)
+                                    const Can_Change & can_change,
+                                    RandomState& random_state)
 {
-  if (! check_probability(probability_change_carbon_to_oxygen))
+  if (! random_state.OkProbability(probability_change_carbon_to_oxygen)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -2048,7 +2277,8 @@ permutation_change_carbon_to_oxygen(Molecule & m,
 static int
 permutation_change_oxygen_to_something(Molecule & m,
                                        const atom_number_t j,
-                                       const Can_Change & can_change)
+                                       const Can_Change & can_change,
+                                       RandomState& random_state)
 {
   const Atom * aj = m.atomi(j);
 
@@ -2061,7 +2291,7 @@ permutation_change_oxygen_to_something(Molecule & m,
   if (1 == aj->ncon() && 2 == aj->nbonds())   // don't change carbonyls
     return 0;
 
-  random_number_t rand = iwrandom();
+  const float rand = random_state();
 
   if (rand < 0.2)
     m.set_element(j, element_nitrogen);
@@ -2080,21 +2310,23 @@ permutation_change_oxygen_to_something(Molecule & m,
 
 static int
 permutation_change_oxygen_to_something(Molecule & m,
-                                      const Can_Change & can_change)
+                                      const Can_Change & can_change,
+                                      RandomState& random_state)
 {
-  if (! check_probability(probability_change_oxygen_to_something))
+  if (! random_state.OkProbability(probability_change_oxygen_to_something)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
 
-    if (permutation_change_oxygen_to_something(m, j, can_change))
+    if (permutation_change_oxygen_to_something(m, j, can_change, random_state))
       return 1;
   }
 
@@ -2122,16 +2354,18 @@ permutation_add_carbon(Molecule & m,
 
 static int
 permutation_add_carbon(Molecule & m,
-                       const Can_Change & can_change)
+                       const Can_Change & can_change,
+                       RandomState& random_state)
 {
-  if (! check_probability(probability_add_carbon))
+  if (! random_state.OkProbability(probability_add_carbon)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -2146,13 +2380,14 @@ permutation_add_carbon(Molecule & m,
 static int
 identify_chain_single_bond(Molecule & m,
                            atom_number_t & a1,
-                           atom_number_t & a2)
+                           atom_number_t & a2,
+                           RandomState& random_state)
 {
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const int j = intbtwij(0, matoms - 1);
+    const int j = random_state.RandomInt(matoms - 1);
 
     const Atom * aj = m.atomi(j);
 
@@ -2189,7 +2424,8 @@ identify_chain_single_bond(Molecule & m,
 static int
 identify_join_atom_in_other_fragment(Molecule & m, 
                                      const atom_number_t & a3,
-                                     atom_number_t & a4)
+                                     atom_number_t & a4,
+                                     RandomState& random_state)
 {
   const int matoms = m.natoms();
 
@@ -2197,7 +2433,7 @@ identify_join_atom_in_other_fragment(Molecule & m,
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const int j = intbtwij(0, matoms - 1);
+    const int j = random_state.RandomInt(matoms - 1);
 
     if (f == m.fragment_membership(j))
       continue;
@@ -2246,28 +2482,28 @@ static int
 permutation_move_fragment(Molecule & m,
                           const atom_number_t a1,
                           const atom_number_t a2,
-                          const Can_Change & can_change)
+                          const Can_Change & can_change,
+                          RandomState& random_state)
 {
-  if (! can_change[a1] || ! can_change[a2])
+  if (! can_change[a1] || ! can_change[a2]) {
     return 0;
+  }
 
   m.remove_bond_between_atoms(a1, a2);
 
   atom_number_t a3;
-  if (iwrandom() < 0.5)
+  if (random_state() < 0.5)
     a3 = a1;
   else
     a3 = a2;
   
   atom_number_t a4 = INVALID_ATOM_NUMBER;
-  if (! identify_join_atom_in_other_fragment(m, a3, a4))
-  {
+  if (! identify_join_atom_in_other_fragment(m, a3, a4, random_state)) {
     m.add_bond(a1, a2, SINGLE_BOND);
     return 0;
   }
 
-  if (any_undesirable_adjacencies(m, a3, a4))
-  {
+  if (any_undesirable_adjacencies(m, a3, a4)) {
     m.add_bond(a1, a2, SINGLE_BOND);
     return 0;
   }
@@ -2277,7 +2513,7 @@ permutation_move_fragment(Molecule & m,
   if (verbose > 1)
     changed_by << " Move_Frag";
   if (verbose > 2)
-    cerr << "moved fragment " << a1 << ',' << a2 << ',' << a3 << ',' << a4 << endl;
+    cerr << "moved fragment " << a1 << ',' << a2 << ',' << a3 << ',' << a4 << '\n';
 
   return 1;
 }
@@ -2285,21 +2521,22 @@ permutation_move_fragment(Molecule & m,
 
 static int
 permutation_move_fragment(Molecule & m,
-                          const Can_Change & can_change)
+                          const Can_Change & can_change,
+                          RandomState& random_state)
 {
-  if (! check_probability(probability_move_fragment))
+  if (! random_state.OkProbability(probability_move_fragment)) {
     return 0;
+  }
 
   m.ring_membership();
 
-  for (int i = 0; i < max_attempts; i++)
-  {
+  for (int i = 0; i < max_attempts; i++) {
     atom_number_t a1, a2;
 
-    if (! identify_chain_single_bond(m, a1, a2))
+    if (! identify_chain_single_bond(m, a1, a2, random_state))
       continue;
 
-    if (permutation_move_fragment(m, a1, a2, can_change))
+    if (permutation_move_fragment(m, a1, a2, can_change, random_state))
       return 1;
   }
 
@@ -2404,7 +2641,7 @@ is_part_of_ring_system(Molecule & m,
 
   const Ring * r = m.ring_containing_atom(zatom);
 
-  assert (NULL != r);
+  assert (nullptr != r);
 
   if (r->fused_system_identifier() >= 0)
     return 1;
@@ -2514,7 +2751,7 @@ permutation_swap_adjacent_atoms(Molecule & m,
   if (verbose > 1)
     changed_by << " Swap_Adj";
   if (verbose > 2)
-    cerr << "Swapping adjacent atoms " << a1 << ',' << j << ',' << a2 << ',' << a3 << endl;
+    cerr << "Swapping adjacent atoms " << a1 << ',' << j << ',' << a2 << ',' << a3 << '\n';
 
   return 1;
 }
@@ -2601,17 +2838,19 @@ permutation_swap_adjacent_atoms(Molecule & m,
   if (verbose > 1)
     changed_by << " Swap_Adj";
   if (verbose > 2)
-    cerr << "Swapping adjacent atoms " << a0 << ',' << a1 << ',' << a2 << ',' << a3 << endl;
+    cerr << "Swapping adjacent atoms " << a0 << ',' << a1 << ',' << a2 << ',' << a3 << '\n';
 
   return 1;
 }
 
 static int
 permutation_swap_adjacent_atoms(Molecule & m,
-                                const Can_Change & can_change)
+                                const Can_Change & can_change,
+                                RandomState& random_state)
 {
-  if (! check_probability(probability_swap_adjacent_atoms))
+  if (! random_state.OkProbability(probability_swap_adjacent_atoms)) {
     return 0;
+  }
 
   m.compute_aromaticity_if_needed();
 
@@ -2619,7 +2858,7 @@ permutation_swap_adjacent_atoms(Molecule & m,
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, nedges - 1);
+    const atom_number_t j = random_state.RandomInt(nedges - 1);
 
     if (permutation_swap_adjacent_atoms(m, j, can_change))
       return 1;
@@ -2656,13 +2895,14 @@ any_undesirable_adjacencies(const Molecule & m1,
 }
 
 static atom_number_t 
-choose_random_attachment_point(Molecule & m)
+choose_random_attachment_point(Molecule & m,
+                               RandomState& random_state)
 {
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t rc = intbtwij(0, matoms - 1);
+    atom_number_t rc = random_state.RandomInt(matoms - 1);
 
     int h = m.hcount(rc);
 
@@ -2675,7 +2915,7 @@ choose_random_attachment_point(Molecule & m)
       ;
     else if (9 == z || 17 == z || 35 == z || 53 == z)   // halogens
       continue;
-    else if (iwrandom() > 0.2)   // allow some possibility for joining
+    else if (random_state() > 0.2)   // allow some possibility for joining
       continue;
 
 //  dis-favour forming 4 connected, fully saturated carbons
@@ -2685,7 +2925,7 @@ choose_random_attachment_point(Molecule & m)
       if (m.nrings(rc))   // never make these
         continue;
       
-      if (iwrandom() > 0.2)
+      if (random_state() > 0.2)
         continue;
     }
 
@@ -2727,27 +2967,26 @@ static int
 permutation_add_from_single_attachment_library(Molecule & m,
                                         const Can_Change & can_change,
                                         const resizable_array_p<Molecule> & library,
-                                        int random_atom_in_fragment)
+                                        int random_atom_in_fragment,
+                                        RandomState& random_state)
 {
-  if (0 == library.number_elements())
+  if (library.empty())
     return 0;
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j1 = choose_random_attachment_point(m);
+    atom_number_t j1 = choose_random_attachment_point(m, random_state);
 
     if (INVALID_ATOM_NUMBER == j1)
       continue;
 
-    int k = intbtwij(0, library.number_elements() - 1);
-
-    Molecule * f = library[k];   // we do not change it, but choose_random_attachment_point uses some non const methods
+    Molecule * f = random_state.RandomItem(library);   // we do not change it, but choose_random_attachment_point uses some non const methods
 
     atom_number_t j2;
 
     if (random_atom_in_fragment)
     {
-      j2 = choose_random_attachment_point(*f);
+      j2 = choose_random_attachment_point(*f, random_state);
       if (INVALID_ATOM_NUMBER == j2)
         continue;
     }
@@ -2763,29 +3002,40 @@ permutation_add_from_single_attachment_library(Molecule & m,
 
 static int
 permutation_add_from_single_attachment_library(Molecule & m,
-                                               const Can_Change & can_change)
+                                               const Can_Change & can_change,
+                                               RandomState& random_state)
 {
-  if (! check_probability(probability_add_from_single_attachment_library))
+  if (! random_state.OkProbability(probability_add_from_single_attachment_library)) {
     return 0;
+  }
 
-  return permutation_add_from_single_attachment_library(m, can_change, single_attachment_fragment_library_join_at_first_atom, choose_attachment_points_randomly);  // 0 means take first atom in fragment
+  return permutation_add_from_single_attachment_library(m, can_change,
+              single_attachment_fragment_library_join_at_first_atom,
+              choose_attachment_points_randomly,
+              random_state);  // 0 means take first atom in fragment
 }
 
 static int
 permutation_add_from_single_attachment_library_random_join(Molecule & m,
-                                                           const Can_Change & can_change)
+                                             const Can_Change & can_change,
+                                             RandomState& random_state)
 {
-  if (! check_probability(probability_add_from_single_attachment_library))
+  if (! random_state.OkProbability(probability_add_from_single_attachment_library)) {
     return 0;
+  }
 
-  return permutation_add_from_single_attachment_library(m, can_change, single_attachment_fragment_library_join_from_any_atom, 1);   // 1 means use random atom in fragment
+  return permutation_add_from_single_attachment_library(m, can_change,
+                        single_attachment_fragment_library_join_from_any_atom,
+                        1,
+                        random_state);   // 1 means use random atom in fragment
 }
 
 static int
 permutation_add_from_aromatic_attachment_library(Molecule & m,
                                                  const atom_number_t j,
                                                  Molecule * f,
-                                                 const Can_Change & can_change)
+                                                 const Can_Change & can_change,
+                                                 RandomState& random_state)
 {
   if (0 == m.hcount (j))
     return 0;
@@ -2795,7 +3045,7 @@ permutation_add_from_aromatic_attachment_library(Molecule & m,
 
   atom_number_t a;
   if (choose_attachment_points_randomly)
-    a = choose_random_attachment_point(*f);
+    a = choose_random_attachment_point(*f, random_state);
   else
     a = 0;
 
@@ -2817,20 +3067,22 @@ permutation_add_from_aromatic_attachment_library(Molecule & m,
 
 static int
 permutation_add_from_aromatic_attachment_library(Molecule & m,
-                                                 const Can_Change & can_change)
+                                                 const Can_Change & can_change,
+                                                 RandomState& random_state)
 {
-  if (! check_probability(probability_add_from_aromatic_attachment_library))
+  if (! random_state.OkProbability(probability_add_from_aromatic_attachment_library)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j = intbtwij(0, matoms - 1);
+    atom_number_t j = random_state.RandomInt(matoms - 1);
 
-    const int n = intbtwij(0, aromatic_attachment_fragment_library.number_elements() - 1);
-
-    if (permutation_add_from_aromatic_attachment_library(m, j, aromatic_attachment_fragment_library[n], can_change))
+    if (permutation_add_from_aromatic_attachment_library(m, j, 
+             random_state.RandomItem(aromatic_attachment_fragment_library),
+             can_change, random_state))
       return 1;
   }
 
@@ -2886,19 +3138,21 @@ permutation_add_from_double_attachment_library(Molecule & m,
 
 static int
 permutation_add_from_double_attachment_library(Molecule & m,
-                                               const Can_Change & can_change)
+                                               const Can_Change & can_change,
+                                               RandomState& random_state)
 {
-  if (! check_probability(probability_add_from_double_attachment_library))
+  if (! random_state.OkProbability(probability_add_from_double_attachment_library))
     return 0;
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; ++i)
   {
-    int n = intbtwij(0, double_attachment_fragment_library.number_elements() - 1);
+    const int n = random_state.RandomInt(double_attachment_fragment_library.number_elements() - 1);
+
     const Molecule * f = double_attachment_fragment_library[n];
 
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (permutation_add_from_double_attachment_library(m, j, f, index_of_star_atom_attachment[n], can_change))
       return 1;
@@ -2923,23 +3177,21 @@ permutation_change_ring_substitution(Molecule & m,
   {
     atom_number_t k = ri->item(j);
 
-    if (m.hcount(k))
-    {
+    if (m.hcount(k)) {
       has_hydrogen = k;
       continue;
     }
 
     const Atom * ak = m.atomi(k);
 
-    if (3 != ak->ncon())
+    if (3 != ak->ncon()) {
       continue;
+    }
 
-    for (int l = 0; l < ak->ncon(); l++)
-    {
-      const Bond * b = ak->item(l);
-
-      if (b->nrings())
+    for (const Bond* b : *ak) {
+      if (b->nrings()) {
         continue;
+      }
 
       non_ring_bond1 = k;
       non_ring_bond2 = b->other(k);
@@ -2947,11 +3199,14 @@ permutation_change_ring_substitution(Molecule & m,
     }
   }
 
-  if (INVALID_ATOM_NUMBER == has_hydrogen || INVALID_ATOM_NUMBER == non_ring_bond1)
+  if (INVALID_ATOM_NUMBER == has_hydrogen ||
+      INVALID_ATOM_NUMBER == non_ring_bond1) {
     return 0;
+  }
 
-  if (! can_change[has_hydrogen] && ! can_change[non_ring_bond1] && ! can_change[non_ring_bond2])
+  if (! can_change[has_hydrogen] && ! can_change[non_ring_bond1] && ! can_change[non_ring_bond2]) {
     return 0;
+  }
 
   m.remove_bond_between_atoms(non_ring_bond1, non_ring_bond2);
   m.add_bond(has_hydrogen, non_ring_bond2, SINGLE_BOND);
@@ -2959,7 +3214,7 @@ permutation_change_ring_substitution(Molecule & m,
   if (verbose > 1)
     changed_by << " Chg_Ring_Sub";
   if (verbose > 2)
-    cerr << "Changed ring substitution, atoms " << endl;
+    cerr << "Changed ring substitution, atoms " << '\n';
 
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
@@ -2969,31 +3224,24 @@ permutation_change_ring_substitution(Molecule & m,
 }
 
 static int
-random_ring_number(Molecule & m)
-{
-  const int nr = m.nrings();
-
-  if (0 == nr)
-    return -1;
-
-  return intbtwij(0, nr-1);
-}
-
-static int
 permutation_change_ring_substitution(Molecule & m,
-                                     const Can_Change & can_change)
+                                     const Can_Change & can_change,
+                                     RandomState& random_state)
 {
   if (1.0 == probability_change_ring_substitution)
     ;
-  else if (! check_probability(probability_change_ring_substitution))
+  else if (! random_state.OkProbability(probability_change_ring_substitution)) {
     return 0;
+  }
 
-  if (0 == m.nrings())
+  const int nr = m.nrings();
+  if (nr == 0) {
     return 0;
+  }
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const int r = random_ring_number(m);
+    const int r = random_state.RandomInt(nr - 1);
 
     if (permutation_change_ring_substitution(m, r, can_change))
       return 1;
@@ -3014,29 +3262,23 @@ identify_terminal_functional_group(Molecule & m,
 
   const Atom * a1 = m.atomi(a);
 
-  const int acon = a1->ncon();
-
   int single_bond_to_carbon_found = 0;
 
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a1->item (i);
-
+  for (const Bond * b : *a1) {
     const atom_number_t j = b->other(a);
 
-    if (j == xstart)
+    if (j == xstart) {
       continue;
+    }
 
     const int jcon = m.ncon(j);
 
-    if (1 == jcon)
-    {
+    if (1 == jcon) {
       s.add(j);
       continue;
     }
 
-    if (b->is_single_bond () && 6 == m.atomic_number(j))
-    {
+    if (b->is_single_bond () && 6 == m.atomic_number(j)) {
       single_bond_to_carbon_found++;
       continue;
     }
@@ -3067,8 +3309,9 @@ permutation_remove_terminal_functional_group(Molecule & m,
 
   Set_of_Atoms s;
 
-  if (! identify_terminal_functional_group(m, j, s))
+  if (! identify_terminal_functional_group(m, j, s)) {
     return 0;
+  }
 
   m.remove_atoms(s);
 
@@ -3082,16 +3325,18 @@ permutation_remove_terminal_functional_group(Molecule & m,
 
 static int
 permutation_remove_terminal_functional_group(Molecule & m,
-                                             const Can_Change & can_change)
+                                             const Can_Change & can_change,
+                                             RandomState& random_state)
 {
-  if (! check_probability(probability_remove_terminal_functional_group))
+  if (! random_state.OkProbability(probability_remove_terminal_functional_group)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (! can_change[j])
       continue;
@@ -3117,37 +3362,31 @@ remove_embedded_functional_group(Molecule & m,
 
   const Atom * am = m.atomi(middle);
 
-  int mcon = am->ncon();
-
 // Since we are excising the group, we need the attachment points on either side
 
 //#define DEBUG_EXCISE_FUNCTIONAL_GROUP
 #ifdef DEBUG_EXCISE_FUNCTIONAL_GROUP
-  cerr << "Starting with atom " << zstart << endl;
+  cerr << "Starting with atom " << zstart << '\n';
 #endif
 
   atom_number_t singly_connected_carbon1 = INVALID_ATOM_NUMBER;
   atom_number_t singly_connected_carbon2 = INVALID_ATOM_NUMBER;
 
-  for (int i = 0; i < mcon; i++)
-  {
-    const Bond * b = am->item (i);
-
+  for (const Bond*b : *am) {
     atom_number_t j = b->other(middle);
 
-    if (j == zstart)
+    if (j == zstart) {
       continue;
+    }
 
     const Atom * aj = m.atomi(j);
 
-    if (1 == aj->ncon())
-    {
+    if (1 == aj->ncon()) {
       s.add(j);
       continue;
     }
 
-    if (b->is_single_bond () && 6 == aj->atomic_number())
-    {
+    if (b->is_single_bond () && 6 == aj->atomic_number()) {
       if (INVALID_ATOM_NUMBER == singly_connected_carbon1)
         singly_connected_carbon1 = j;
       else if (INVALID_ATOM_NUMBER == singly_connected_carbon2)
@@ -3161,8 +3400,7 @@ remove_embedded_functional_group(Molecule & m,
 
 //  think of the Nitrogen in an amide. We want to remove the Nitrogen and identify the atom next in the chain from it
 
-    if (6 != aj->atomic_number() && 2 == aj->ncon() && 2 == aj->nbonds())
-    {
+    if (6 != aj->atomic_number() && 2 == aj->ncon() && 2 == aj->nbonds()) {
       atom_number_t atom_on_other_side_of_j = aj->other(j, 0);
       if (middle == atom_on_other_side_of_j)
         atom_on_other_side_of_j = aj->other(j, 1);
@@ -3180,16 +3418,20 @@ remove_embedded_functional_group(Molecule & m,
   }
 
 #ifdef DEBUG_EXCISE_FUNCTIONAL_GROUP
-  cerr << "Group is " << s << endl;
+  cerr << "Group is " << s << '\n';
 #endif
 
-  if (INVALID_ATOM_NUMBER == singly_connected_carbon1 || INVALID_ATOM_NUMBER == singly_connected_carbon2)    // we need to have two connections
+  // we need to have two connections
+  if (INVALID_ATOM_NUMBER == singly_connected_carbon1 ||
+      INVALID_ATOM_NUMBER == singly_connected_carbon2) {
     return 0;
+  }
 
 // If we are in a 5 membered ring, this can happen
 
-  if (m.are_bonded(singly_connected_carbon1, singly_connected_carbon2))
+  if (m.are_bonded(singly_connected_carbon1, singly_connected_carbon2)) {
     return 0;
+  }
 
   m.add_bond(singly_connected_carbon1, singly_connected_carbon2, SINGLE_BOND);   // temporary invalid valence
 
@@ -3212,32 +3454,37 @@ permutation_remove_embedded_functional_group(Molecule & m,
                                              const atom_number_t j,
                                              const Can_Change & can_change)
 {
-  if (! can_change[j])
+  if (! can_change[j]) {
     return 0;
+  }
 
   const Atom * aj = m.atomi(j);
 
-  if (1 != aj->ncon())
+  if (1 != aj->ncon()) {
     return 0;
+  }
 
-  if (1 == aj->nbonds())    // we start with unsaturated atoms
+  if (1 == aj->nbonds()) {    // we start with unsaturated atoms
     return 0;
+  }
 
   return remove_embedded_functional_group(m, j);
 }
 
 static int
 permutation_remove_embedded_functional_group(Molecule & m,
-                                             const Can_Change & can_change)
+                                             const Can_Change & can_change,
+                                             RandomState& random_state)
 {
-  if (! check_probability(probability_remove_embedded_functional_group))
+  if (! random_state.OkProbability(probability_remove_embedded_functional_group)) {
     return 0;
+  }
 
   const int matoms = m.natoms();
 
   for (int i = 0; i < max_attempts; i++)
   {
-    const atom_number_t j = intbtwij(0, matoms - 1);
+    const atom_number_t j = random_state.RandomInt(matoms - 1);
 
     if (permutation_remove_embedded_functional_group(m, j, can_change))
       return 1;
@@ -3295,17 +3542,16 @@ can_also_be_removed(Molecule & m,
   {
     const atom_number_t j = a->other(astart, i);
 
-    if (r.contains(j))
+    if (r.contains(j)) {
       continue;
+    }
 
-    if (1 == m.ncon(j))
-    {
+    if (1 == m.ncon(j)) {
       to_be_removed.add(j);
       continue;
     }
 
-    if (all_terminal_atoms(m, astart, j, to_be_removed))
-    {
+    if (all_terminal_atoms(m, astart, j, to_be_removed)) {
       to_be_removed.add(j);
       continue;
     }
@@ -3323,18 +3569,20 @@ permutation_remove_terminal_ring(Molecule & m,
 {
   const Ring & r = *m.ringi(ring_number);
 
-  if (r.is_fused())
+  if (r.is_fused()) {
     return 0;
+  }
 
+#ifdef CAN_CHANGE_BROKEN
   if (r.count_members_set_in_array(can_change.rawdata(), 0))
     return 0;
+#endif
 
   int ring_size = r.number_elements();
 
   Set_of_Atoms to_be_removed;
 
-  for (int i = 0; i < ring_size; i++)
-  {
+  for (int i = 0; i < ring_size; i++) {
     to_be_removed.add(r[i]);
   }
 
@@ -3346,17 +3594,19 @@ permutation_remove_terminal_ring(Molecule & m,
 
     const Atom * aj = m.atomi(j);
 
-    if (2 == aj->ncon())
+    if (2 == aj->ncon()) {
       continue;
+    }
 
-    if (! can_also_be_removed(m, r, j, to_be_removed))
-    {
-      if (4 == aj->ncon())
+    if (! can_also_be_removed(m, r, j, to_be_removed)) {
+      if (4 == aj->ncon()) {
         return 0;
+      }
 
       attachment_points_found++;
-      if (attachment_points_found > 1)
+      if (attachment_points_found > 1) {
         return 0;
+      }
     }
   }
 
@@ -3365,8 +3615,8 @@ permutation_remove_terminal_ring(Molecule & m,
 
   m.remove_atoms(to_be_removed);
 
-    if (verbose > 1)
-      changed_by << " Rm_Terminal_Ring";
+  if (verbose > 1)
+    changed_by << " Rm_Terminal_Ring";
   if (verbose > 2)
     cerr << "Removed " << to_be_removed.number_elements() << " atoms associated with terminal ring with " << ring_size << " atoms\n";
 
@@ -3375,11 +3625,11 @@ permutation_remove_terminal_ring(Molecule & m,
 
 static int
 permutation_remove_terminal_ring(Molecule & m,
-                                 const Can_Change & can_change)
-{
-  if (! check_probability(probability_remove_terminal_ring))
+                                 const Can_Change & can_change,
+                                 RandomState& random_state) {
+  if (! random_state.OkProbability(probability_remove_terminal_ring)) {
     return 0;
-
+  }
   int nr = m.nrings();
 
   if (0 == nr)
@@ -3405,7 +3655,7 @@ permutation_remove_terminal_ring(Molecule & m,
 
   for (int i = 0; i < max_attempts; i++)
   {
-    int j = random_ring_number(m);
+    const int j = random_state.RandomInt(nr - 1);
 
     if (permutation_remove_terminal_ring(m, j, can_change))
       return 1;
@@ -3417,17 +3667,7 @@ permutation_remove_terminal_ring(Molecule & m,
 static void
 randomly_permute(Set_of_Atoms & s)
 {
-  int ns = s.number_elements();
-  int np = ns / 2;
-  for (int i = 0; i < np; i++)
-  {
-    int j1 = intbtwij(0, ns - 1);
-    int j2 = intbtwij(0, ns - 1);
-
-    if (j1 != j2)
-      s.swap_elements(j1, j2);
-  }
-
+  std::random_shuffle(s.begin(), s.end());
   return;
 }
 
@@ -3447,6 +3687,7 @@ next_after_wrap(int i,
   return 0;
 }
 
+#ifdef NOT_USED
 static void
 set_atoms_to_remove(const Ring & r, 
                     atom_number_t exclude1,
@@ -3460,16 +3701,18 @@ set_atoms_to_remove(const Ring & r,
 
   return;
 }
+#endif
 
 static int
 identify_doubly_bonded_atoms_in_ring(const Molecule & m,
                                      const Ring & r,
                                      atom_number_t & a1,
-                                     atom_number_t & a2)
+                                     atom_number_t & a2,
+                                     RandomState& random_state)
 {
   const int n = r.number_elements();
 
-  int istart = intbtwij(0, n - 1);
+  int istart = random_state.RandomInt(n - 1);
 
   atom_number_t prev;
 
@@ -3509,7 +3752,8 @@ static int
 permutation_create_fused_ring(Molecule & m,
                               const Ring * ri,
                               const Molecule * parial_ring,
-                              const Can_Change & can_change)
+                              const Can_Change & can_change,
+                              RandomState& random_state)
 {
   m.compute_aromaticity_if_needed();
 
@@ -3525,11 +3769,13 @@ permutation_create_fused_ring(Molecule & m,
     return 0;
 
   atom_number_t a1, a2;
-  if (! identify_doubly_bonded_atoms_in_ring(m, *ri, a1, a2))
+  if (! identify_doubly_bonded_atoms_in_ring(m, *ri, a1, a2, random_state))
     return 0;
 
+#ifdef CAN_CHANGE_BROKEN
   if (0 == can_change[a1] || 0 == can_change[a2])
     return 0;
+#endif
 
   int initial_natoms = m.natoms();
 
@@ -3548,14 +3794,14 @@ permutation_create_fused_ring(Molecule & m,
   }
 
 #ifdef DEBUG_FORM_FUSED_AROMATIC
-  cerr << "MAKE FUSED AROMATIC initial " << initial_smiles << endl;
-  cerr << "                    created " << m.smiles() << endl;
+  cerr << "MAKE FUSED AROMATIC initial " << initial_smiles << '\n';
+  cerr << "                    created " << m.smiles() << '\n';
 #endif
 
 #ifdef FREQUENTLY_CHECK_VALENCES
   if (! m.valence_ok())
   {
-    cerr << "GACK, formed bad valence '" << m.smiles() << endl;
+    cerr << "GACK, formed bad valence '" << m.smiles() << '\n';
     abort();
   }
 #endif
@@ -3565,32 +3811,35 @@ permutation_create_fused_ring(Molecule & m,
 
 static int
 permutation_create_fused_ring(Molecule & m,
-                              const Can_Change & can_change)
+                              const Can_Change & can_change,
+                              RandomState& random_state)
 {
-  if (! check_probability(probability_create_fused_ring))
+  if (! random_state.OkProbability(probability_create_fused_ring)) {
     return 0;
+  }
 
-  int nr = m.nrings();
+  const int nr = m.nrings();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
-  if (max_rings_in_each_permutation > 0 && nr >= max_rings_in_each_permutation)
+  if (max_rings_in_each_permutation > 0 && nr >= max_rings_in_each_permutation) {
     return 0;
+  }
 
-  int l = intbtwij(0, aromatic_ring_fusions.number_elements() - 1);
+  const Molecule * parial_ring = random_state.RandomItem(aromatic_ring_fusions);
 
-  const Molecule * parial_ring = aromatic_ring_fusions[l];
+  const int r = random_state.RandomInt(nr - 1);
 
-  const int r = random_ring_number(m);
-
-  return permutation_create_fused_ring(m, m.ringi(r), parial_ring, can_change);
+  return permutation_create_fused_ring(m, m.ringi(r), parial_ring, can_change, random_state);
 }
 
 static int
 permutation_split_apart_fused_ring(Molecule & m,
                                    const int ring_number,
-                                   const Can_Change & can_change)
+                                   const Can_Change & can_change,
+                                   RandomState& random_state)
 {
   const Ring * ri = m.ringi(ring_number);
 
@@ -3620,7 +3869,7 @@ permutation_split_apart_fused_ring(Molecule & m,
       return 0;
   }
 
-  if (iwrandom() < 0.5)
+  if (random_state() < 0.5)
     to_remove = *ri;
   else
     to_remove = *r2;
@@ -3635,8 +3884,10 @@ permutation_split_apart_fused_ring(Molecule & m,
       ;
     else if (a == a2 && prev == a1)   // ring fusion bond
       ;
+#ifdef CAN_CHANGE_BROKEN
     else if (0 == can_change[a] || 0 == can_change[prev])
       ;
+#endif
     else
     {
       if (a == a1)   // break bond adjacent to ring
@@ -3650,7 +3901,9 @@ permutation_split_apart_fused_ring(Molecule & m,
 
   if (! m.valence_ok())
   {
-    cerr << "Splitting aromatic ring yields bad valence " << m.smiles() << endl;
+    if (warn_invalid_valence) {
+      cerr << "Splitting aromatic ring yields bad valence " << m.smiles() << '\n';
+    }
   }
 
 #ifdef DEBUG_SPLIT_FUSED_RINGS
@@ -3662,10 +3915,12 @@ permutation_split_apart_fused_ring(Molecule & m,
 
 static int
 permutation_split_apart_fused_ring(Molecule & m,
-                                   const Can_Change & can_change)
+                                   const Can_Change & can_change,
+                                   RandomState& random_state)
 {
-  if (! check_probability(probability_split_fused_ring))
+  if (! random_state.OkProbability(probability_split_fused_ring)) {
     return 0;
+  }
 
   int nr = m.nrings();
 
@@ -3681,11 +3936,11 @@ permutation_split_apart_fused_ring(Molecule & m,
 
   m.compute_aromaticity_if_needed();
 
-  int istart = random_ring_number(m);
+  int istart = random_state.RandomInt(nr - 1);
 
   for (int i = 0; i < nr; istart = next_after_wrap(istart, nr), i++)
   {
-    if (permutation_split_apart_fused_ring(m, istart, can_change))
+    if (permutation_split_apart_fused_ring(m, istart, can_change, random_state))
       return 1;
   }
 
@@ -3701,18 +3956,16 @@ switch_ring(Molecule & m,
 
   Set_of_Atoms attachment_points_for_old_ring;
 
-  int atoms_in_old_ring = ring_to_remove.number_elements();
-  for (int i = 0; i < atoms_in_old_ring; i++)
-  {
-    const atom_number_t j = ring_to_remove[i];
-
+  for (atom_number_t j : ring_to_remove) {
     const int jcon = m.ncon(j);
     
-    if (4 == jcon)     // can't do these right now
+    if (4 == jcon) {     // can't do these right now
       return 0;
+    }
 
-    if (2 != jcon)
+    if (2 != jcon) {
       attachment_points_for_old_ring.add(j);
+    }
   }
 
   Set_of_Atoms attachment_points_open;   // must be in a ring and have an implicit Hydrogen
@@ -3720,15 +3973,18 @@ switch_ring(Molecule & m,
   int ratoms = ring_to_add.natoms();
   for (int i = 0; i < ratoms; i++)
   {
-    if (! ring_to_add.is_ring_atom(i))
+    if (! ring_to_add.is_ring_atom(i)) {
       continue;
+    }
 
-    if (ring_to_add.hcount(i))
+    if (ring_to_add.hcount(i)) {
       attachment_points_open.add(i);
+    }
   }
 
-  if (attachment_points_open.number_elements() < attachment_points_for_old_ring.number_elements())
+  if (attachment_points_open.size() < attachment_points_for_old_ring.size()) {
     return 0;
+  }
 
   randomly_permute(attachment_points_open);
 
@@ -3743,10 +3999,7 @@ switch_ring(Molecule & m,
 
   int apo = 0;
 
-  for (int i = 0; i < atoms_in_old_ring; i++)
-  {
-    atom_number_t j = ring_to_remove[i];
-
+  for (atom_number_t j : ring_to_remove) {
     const Atom * aj = m.atomi(j);
 
     for (int k = 0; k < aj->ncon(); k++)
@@ -3769,22 +4022,24 @@ switch_ring(Molecule & m,
 static int
 permutation_switch_ring(Molecule & m,
                         int aromatic_rings_only,
-                        Molecule & ring_to_add)
+                        Molecule & ring_to_add,
+                        RandomState& random_state)
 {
   int nr = m.nrings();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
   m.compute_aromaticity_if_needed();
 
   resizable_array<const Ring *> rings_to_try;
 
-  for (int i = 0; i < nr; i++)
-  {
+  for (int i = 0; i < nr; i++) {
     const Ring * ri = m.ringi(i);
-    if (ri->is_fused())
+    if (ri->is_fused()) {
       continue;
+    }
     
     int arom = ri->is_aromatic();
 
@@ -3796,14 +4051,13 @@ permutation_switch_ring(Molecule & m,
 
 //cerr << "There are " << rings_to_try.number_elements() << " rings to try\n";
 
-  if (0 == rings_to_try.number_elements())
+  if (rings_to_try.empty()) {
     return 0;
+  }
 
   for (int i = 0; i < max_attempts; i++)
   {
-    int j = intbtwij(0, rings_to_try.number_elements() - 1);
-
-    const Ring * rj = rings_to_try[j];
+    const Ring * rj = random_state.RandomItem(rings_to_try);
 
     if (switch_ring(m, *rj, ring_to_add))
       return 1;
@@ -3814,41 +4068,41 @@ permutation_switch_ring(Molecule & m,
 
 static int
 permutation_switch_aromatic_ring(Molecule & m,
-                                 const Can_Change & can_change)
+                                 const Can_Change & can_change,
+                                 RandomState& random_state)
 {
-//cerr << "Can we switch aromatic rings " << probability_switch_aromatic_ring << endl;
-  if (! check_probability(probability_switch_aromatic_ring))
+//cerr << "Can we switch aromatic rings " << probability_switch_aromatic_ring << '\n';
+  if (! random_state.OkProbability(probability_switch_aromatic_ring)) {
     return 0;
+  }
 
-  int j = intbtwij(0, aromatic_rings.number_elements() - 1);
+  Molecule * f = random_state.RandomItem(aromatic_rings);
 
-  Molecule * f = aromatic_rings[j];
-
-  return permutation_switch_ring(m, 1, *f);
+  return permutation_switch_ring(m, 1, *f, random_state);
 }
 
 static int
 permutation_switch_aliphatic_ring(Molecule & m,
-                                  const Can_Change & can_change)
+                                  const Can_Change & can_change,
+                                  RandomState& random_state)
 {
-//cerr << "Can we switch aliphatic rings " << probability_switch_aliphatic_ring << endl;
-  if (! check_probability(probability_switch_aliphatic_ring))
+//cerr << "Can we switch aliphatic rings " << probability_switch_aliphatic_ring << '\n';
+  if (! random_state.OkProbability(probability_switch_aliphatic_ring)) {
     return 0;
+  }
 
-  int j = intbtwij(0, aliphatic_rings.number_elements() - 1);
-   
-  
-  Molecule * f = aliphatic_rings[j];
+  Molecule * f = random_state.RandomItem(aliphatic_rings);
 
-  return permutation_switch_ring(m, 0, *f);
+  return permutation_switch_ring(m, 0, *f, random_state);
 }
 
 static int
 find_random_single_bond(Molecule & m,
-                        const Can_Change & can_change)
+                        const Can_Change & can_change,
+                        RandomState& random_state)
 {
   const int n = m.nedges();
-  const int i = intbtwij(0, n-1);
+  const int i = random_state.RandomInt(n - 1);
 
   for(int j=0;j<n;j++)
   {
@@ -3862,11 +4116,13 @@ find_random_single_bond(Molecule & m,
     if (b->nrings())
       continue;
 
+#ifdef CAN_CHANGE_BROKEN
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
 
     if (0 == can_change[a1] || 0 == can_change[a2])
       continue;
+#endif
 
     return k;
   }
@@ -3877,127 +4133,127 @@ find_random_single_bond(Molecule & m,
 int
 Molecular_Transformation_Add_Double_Bond::random_transformation(Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_double_bond(m, can_change);
+  return permutation_add_double_bond(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Atom::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_atom(m, can_change);
+  return permutation_remove_atom(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Lower_Bond_Order::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_lower_bond_order(m, can_change);
+  return permutation_lower_bond_order(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Break_Aliphatic_Ring::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_break_aliphatic_ring(m, can_change);
+  return permutation_break_aliphatic_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Make_Ring::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_make_ring(m, can_change);
+  return permutation_make_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_Carbon::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_carbon(m, can_change);
+  return permutation_add_carbon(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Move_Fragment::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_move_fragment(m, can_change);
+  return permutation_move_fragment(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Swap_Adjacent_Atoms::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_swap_adjacent_atoms(m, can_change);
+  return permutation_swap_adjacent_atoms(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Carbon_to_Nitrogen::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_carbon_to_nitrogen(m, can_change);
+  return permutation_change_carbon_to_nitrogen(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Nitrogen_to_Carbon::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_nitrogen_to_carbon(m, can_change);
+  return permutation_change_nitrogen_to_carbon(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Carbon_to_Oxygen::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_carbon_to_oxygen(m, can_change);
+  return permutation_change_carbon_to_oxygen(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Oxygen_to_Something::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_oxygen_to_something(m, can_change);
+  return permutation_change_oxygen_to_something(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Single_Attachment_Library::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_single_attachment_library(m, can_change);
+  return permutation_add_from_single_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Aromatic_Attachment_Library::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_aromatic_attachment_library(m, can_change);
+  return permutation_add_from_aromatic_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Double_Attachment_Library::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_double_attachment_library(m, can_change);
+  return permutation_add_from_double_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Ring_Substitution::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_ring_substitution(m, can_change);
+  return permutation_change_ring_substitution(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Terminal_Functional_Group::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_terminal_functional_group(m, can_change);
+  return permutation_remove_terminal_functional_group(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Embedded_Functional_Group::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_embedded_functional_group(m, can_change);
+  return permutation_remove_embedded_functional_group(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Terminal_Ring::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_terminal_ring(m, can_change);
+  return permutation_remove_terminal_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Switch_Aromatic_Ring::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_switch_aromatic_ring(m, can_change);
+  return permutation_switch_aromatic_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Switch_Aliphatic_Ring::random_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_switch_aliphatic_ring(m, can_change);
+  return permutation_switch_aliphatic_ring(m, can_change, _random_state);
 }
 
 
@@ -4005,127 +4261,127 @@ Molecular_Transformation_Switch_Aliphatic_Ring::random_transformation (Molecule 
 int
 Molecular_Transformation_Add_Double_Bond::next_transformation(Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_double_bond(m, can_change);
+  return permutation_add_double_bond(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Atom::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_atom(m, can_change);
+  return permutation_remove_atom(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Lower_Bond_Order::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_lower_bond_order(m, can_change);
+  return permutation_lower_bond_order(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Break_Aliphatic_Ring::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_break_aliphatic_ring(m, can_change);
+  return permutation_break_aliphatic_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Make_Ring::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_make_ring(m, can_change);
+  return permutation_make_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_Carbon::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_carbon(m, can_change);
+  return permutation_add_carbon(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Move_Fragment::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_move_fragment(m, can_change);
+  return permutation_move_fragment(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Swap_Adjacent_Atoms::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_swap_adjacent_atoms(m, can_change);
+  return permutation_swap_adjacent_atoms(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Carbon_to_Nitrogen::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_carbon_to_nitrogen(m, can_change);
+  return permutation_change_carbon_to_nitrogen(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Nitrogen_to_Carbon::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_nitrogen_to_carbon(m, can_change);
+  return permutation_change_nitrogen_to_carbon(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Carbon_to_Oxygen::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_carbon_to_oxygen(m, can_change);
+  return permutation_change_carbon_to_oxygen(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Oxygen_to_Something::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_oxygen_to_something(m, can_change);
+  return permutation_change_oxygen_to_something(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Single_Attachment_Library::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_single_attachment_library(m, can_change);
+  return permutation_add_from_single_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Aromatic_Attachment_Library::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_aromatic_attachment_library(m, can_change);
+  return permutation_add_from_aromatic_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Add_From_Double_Attachment_Library::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_add_from_double_attachment_library(m, can_change);
+  return permutation_add_from_double_attachment_library(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Change_Ring_Substitution::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_change_ring_substitution(m, can_change);
+  return permutation_change_ring_substitution(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Terminal_Functional_Group::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_terminal_functional_group(m, can_change);
+  return permutation_remove_terminal_functional_group(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Embedded_Functional_Group::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_embedded_functional_group(m, can_change);
+  return permutation_remove_embedded_functional_group(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Remove_Terminal_Ring::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_remove_terminal_ring(m, can_change);
+  return permutation_remove_terminal_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Switch_Aromatic_Ring::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_switch_aromatic_ring(m, can_change);
+  return permutation_switch_aromatic_ring(m, can_change, _random_state);
 }
 
 int
 Molecular_Transformation_Switch_Aliphatic_Ring::next_transformation (Molecule & m, const Can_Change & can_change)
 {
-  return permutation_switch_aliphatic_ring(m, can_change);
+  return permutation_switch_aliphatic_ring(m, can_change, _random_state);
 }
 
 
@@ -4135,7 +4391,8 @@ Molecular_Transformation_Switch_Aliphatic_Ring::next_transformation (Molecule & 
 static int
 breed(Molecule & m,
       const Can_Change & can_change,
-      Molecule & f)
+      Molecule & f,
+      RandomState& random_state)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
@@ -4144,11 +4401,11 @@ breed(Molecule & m,
 
   m.ring_membership();
 
-  const int i=find_random_single_bond(m, can_change);
+  const int i=find_random_single_bond(m, can_change, random_state);
   if (i < 0)
     return 0;
 
-  int j=find_random_single_bond(f, can_change);
+  int j=find_random_single_bond(f, can_change, random_state);
   if (j < 0)
     return 0;
 
@@ -4173,7 +4430,7 @@ breed(Molecule & m,
     cerr << "Huh, one fragment after removing bonds\n";
     m.resize(initial_matoms);
     m.add_bond(a1, a2, SINGLE_BOND);
-    cerr << m.smiles() << " and " << f.smiles() << endl;
+    cerr << m.smiles() << " and " << f.smiles() << '\n';
     return 0;
   }
 
@@ -4220,8 +4477,8 @@ breed(Molecule & m,
   if (! m.valence_ok())
   {
     cerr << "Invalid valence in breed '" << m.smiles() << "'\n";
-    cerr << smiles1 << endl;
-    cerr << smiles2 << endl;
+    cerr << smiles1 << '\n';
+    cerr << smiles2 << '\n';
     abort();
   }
 #endif
@@ -4231,21 +4488,20 @@ breed(Molecule & m,
 
 static int
 permutation_breed(Molecule & m,
-                  const Can_Change & can_change)
+                  const Can_Change & can_change,
+                  RandomState& random_state)
 {
   if (1.0 == probability_breed)
     ;
-  else if (! check_probability(probability_breed))
+  else if (! random_state.OkProbability(probability_breed)) 
     return 0;
 
-  int j = intbtwij(0, input_molecules.number_elements() - 1);
+  // DO not select the last molecule.
+  int j = random_state.RandomInt(input_molecules.number_elements() - 1);
 
-  if(j==(molecules_read-1))
-  	return 0;
-	
-  Molecule  *f =input_molecules[j];
+  Molecule *f =input_molecules[j];
 
-  return breed(m, can_change, *f);
+  return breed(m, can_change, *f, random_state);
 }
 
 
@@ -4269,16 +4525,16 @@ static int number_known_permutations = NUMBER_KNOWN_PERMUTATIONS;
   call one at random
 */
 
-static int (*known_permutation[NUMBER_KNOWN_PERMUTATIONS]) (Molecule &, const Can_Change &);
+static int (*known_permutation[NUMBER_KNOWN_PERMUTATIONS]) (Molecule &, const Can_Change &, RandomState& random_state);
 
 /*
   We make NSTART copies of the molecule and make NUMBER_PERTURBATIONS to each
   of those copies
 */
 
-static int nstart = 10;
+static int nstart = 1000;
 
-static int number_perturbations = 1000;
+static int number_perturbations = 5;
 
 static extending_resizable_array<int> molecules_made_per_copy;
 
@@ -4330,6 +4586,7 @@ class Molecule_and_Distance_Comparator
 class Set_of_Closer_Molecules
 {
   private:
+    // Seems this should be a resizable_array_p<Molecule_and_Distance>
     Molecule_and_Distance ** _m;
     int _n;
     int _capacity;
@@ -4348,7 +4605,7 @@ class Set_of_Closer_Molecules
     Set_of_Closer_Molecules();
     ~Set_of_Closer_Molecules();
 
-    int initialise (const int s);
+    int initialise(const int s);
 
     int number_molecules() const { return _n;}
 
@@ -4356,9 +4613,9 @@ class Set_of_Closer_Molecules
 
     void set_max_distance(const float s) { _max_distance = s;}
 
-    Molecule_and_Distance * a_random_molecule() const;
+    Molecule_and_Distance * a_random_molecule(RandomState& random_state) const;
 
-    int would_retain (const float s) const;
+    int would_retain(const float s) const;
 
     int consider(Molecule & m, const float d);
 };
@@ -4389,10 +4646,11 @@ Set_of_Closer_Molecules::initialise(const int s)
 }
 
 int
-Set_of_Closer_Molecules::would_retain (const float s) const
+Set_of_Closer_Molecules::would_retain(const float s) const
 {
-  if (0 == _n)
+  if (0 == _n) {
     return 0;
+  }
 
   return s < _m[_n-1]->dist();
 }
@@ -4400,16 +4658,18 @@ Set_of_Closer_Molecules::would_retain (const float s) const
 int
 Set_of_Closer_Molecules::consider(Molecule & m, const float d)
 {
-  if (d > _max_distance)
+  if (d > _max_distance) {
     return 0;
+  }
 
   if (_n < _capacity)   // have space, will store it
     ;
   else if (d >= _m[_n-1]->dist())    // longer than our farthest distance, do not want
     return 0;
 
-  if (_smiles.contains(m.unique_smiles()))
+  if (_smiles.contains(m.unique_smiles())) {
     return 0;
+  }
 
   _smiles.emplace(m.unique_smiles());
 
@@ -4425,7 +4685,7 @@ Set_of_Closer_Molecules::consider(Molecule & m, const float d)
 
   const auto f = std::upper_bound(_m, _m + _n, d, _cmp);
 
-  cerr << "Looking for " << d << " in " << _n << " items, iterator " << (f - _m) << " short " << _m[0]->dist() << " long " << _m[_n-1]->dist() << endl;
+//cerr << "Looking for " << d << " in " << _n << " items, iterator " << (f - _m) << " short " << _m[0]->dist() << " long " << _m[_n-1]->dist() << '\n';
   if (f == _m + _n)   // nothing in the list is shorter
   {
     _m[_n] = mad;
@@ -4435,8 +4695,9 @@ Set_of_Closer_Molecules::consider(Molecule & m, const float d)
 
 // list is full, we must insert somewhere
 
-  if (_n == _capacity)
+  if (_n == _capacity) {
     delete _m[_n-1];
+  }
 
   const auto ndx = f - _m;
 
@@ -4449,8 +4710,9 @@ Set_of_Closer_Molecules::consider(Molecule & m, const float d)
 
   _check_sorted();
 
-  if (_n < _capacity)
+  if (_n < _capacity) {
     _n++;
+  }
 
   return 1;
 }
@@ -4458,11 +4720,9 @@ Set_of_Closer_Molecules::consider(Molecule & m, const float d)
 int
 Set_of_Closer_Molecules::_check_sorted() const
 {
-  for (int i = 1; i < _n; ++i)
-  {
-    if (_m[i-1]->dist() > _m[i]->dist())
-    {
-      cerr << "Set_of_Closer_Molecules::_check_sorted:out of order, i = " << i << " prev " << _m[i-1]->dist() << " curr " << _m[i]->dist() << endl;
+  for (int i = 1; i < _n; ++i) {
+    if (_m[i-1]->dist() > _m[i]->dist()) {
+      cerr << "Set_of_Closer_Molecules::_check_sorted:out of order, i = " << i << " prev " << _m[i-1]->dist() << " curr " << _m[i]->dist() << '\n';
       return 0;
     }
   }
@@ -4471,13 +4731,13 @@ Set_of_Closer_Molecules::_check_sorted() const
 }
 
 Molecule_and_Distance *
-Set_of_Closer_Molecules::a_random_molecule() const
+Set_of_Closer_Molecules::a_random_molecule(RandomState& random_state) const
 {
-  if (0 == _n)
+  if (_n == 0) {
     return nullptr;
+  }
 
-  const int j = intbtwij(0, _n-1);
- 
+  int j = random_state.RandomInt(_n - 1);
   return _m[j];
 }
 
@@ -4498,10 +4758,16 @@ static Accumulator<double> acc_dist_to_target;
 static int iterations_through_new_molecules = 0;
 
 static void
-usage (int rc)
+usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "  -x <number>    number of copies of the starting molecule to use (default " << nstart << ")\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+  cerr << "  -x <number>    number of copies of the starting molecule to use (" << nstart << ")\n";
   cerr << "  -p <perm>      number of permutations to make on each molecule (default " << number_perturbations << ")\n";
   cerr << "  -F query       never change fragments labelled with isotope <isotope>\n";
   cerr << "  -f <isotope>   use <isotope> to label the atoms not to be changed\n";
@@ -4530,11 +4796,10 @@ usage (int rc)
   cerr << "  -U each        discard duplicate molecules - check molecules separately\n";
   cerr << "  -U all         global checking for duplicate molecules\n";
   cerr << "  -M ...         miscellaneous fine control options\n";
-  cerr << "  -T <fname>     file of target molecules to try to make\n";
-  (void) display_standard_aromaticity_options(cerr);
-  cerr << "  -E <symbol>    create an element with symbol <symbol>\n";
-  cerr << "  -E autocreate  automatically create new elements when encountered\n";
-  cerr << "  -s <seed>      seed value for random number generator\n";
+  cerr << "  -T <fname>     file of target molecules to try to make, enter -T help for info\n";
+  //(void) display_standard_aromaticity_options(cerr);
+  //cerr << "  -E <symbol>    create an element with symbol <symbol>\n";
+  //cerr << "  -E autocreate  automatically create new elements when encountered\n";
   cerr << "  -v             verbose output\n";
 
   exit(rc);
@@ -4542,17 +4807,19 @@ usage (int rc)
 
 static int
 permutation_breed_with_close_to_target(Molecule & m,
-                                       const Can_Change & can_change)
+                                       const Can_Change & can_change,
+                                       RandomState& random_state)
 {
-  if (! check_probability(probability_breed_close_to_target))
+  if (! random_state.OkProbability(probability_breed_close_to_target)) {
     return 0;
+  }
 
-  Molecule_and_Distance * mad = closer_molecules.a_random_molecule();
+  Molecule_and_Distance * mad = closer_molecules.a_random_molecule(random_state);
 
   if (nullptr == mad)
     return 0;
 
-  return breed(m, can_change, *mad);
+  return breed(m, can_change, *mad, random_state);
 }
 
 static void
@@ -4706,8 +4973,8 @@ Transformation_Make_Ring : public Transformation_and_Iterator<T, Iterate_Range>
 
 template <typename T>
 Transformation_Make_Ring<T>::Transformation_Make_Ring(T & t, Molecule & m) : 
-                                          Transformation_and_Iterator<T, Iterate_Range>(t),
-                                          Transformation_and_Iterator<T, Iterate_Range>(m.natoms()),
+                                          Transformation_and_Iterator<T, Iterate_Range>::_transform(Transformation_and_Iterator<T, Iterate_Range>(t)),
+                                          Transformation_and_Iterator<T, Iterate_Range>::_iterator(Transformation_and_Iterator<T, Iterate_Range>(m.natoms())),
                                           _a2(m.natoms())
 {
   return;
@@ -4753,8 +5020,8 @@ Transformation_Create_Fused_Ring : public Transformation_and_Iterator<T, Iterate
 template <typename T>
 Transformation_Create_Fused_Ring<T>::Transformation_Create_Fused_Ring(T & t, Molecule & m,
                                         resizable_array_p<Molecule> & f) : 
-                                          Transformation_and_Iterator<T, Iterate_Range>(t),
-                                          Transformation_and_Iterator<T, Iterate_Range>(m.nrings()),
+                                          Transformation_and_Iterator<T, Iterate_Range>::_transform(Transformation_and_Iterator<T, Iterate_Range>(t)),
+                                          Transformation_and_Iterator<T, Iterate_Range>::_iterator(Transformation_and_Iterator<T, Iterate_Range>(m.nrings())),
                                           _aromatic_ring_fusions(f)
 {
 }
@@ -4802,8 +5069,8 @@ template <typename T>
 Transformation_Add_Lib_Member<T>::Transformation_Add_Lib_Member(T & t, Molecule & m,
                                         resizable_array_p<Molecule> & lib,
                                         const bond_type_t bt) :
-                                            Transformation_and_Iterator<T, Iterate_Range>(t),
-                                            Transformation_and_Iterator<T, Iterate_Range>(m.nrings()),
+                                            Transformation_and_Iterator<T, Iterate_Range>::_transform(Transformation_and_Iterator<T, Iterate_Range>(t)),
+                                            Transformation_and_Iterator<T, Iterate_Range>::_iterator(Transformation_and_Iterator<T, Iterate_Range>(m.nrings())),
                                             _lib(lib),
                                             _bt(bt)
 {
@@ -4846,6 +5113,7 @@ Transformation_Add_Lib_Member<T>::reset()
   Some that are driven by a ring number
 */
 
+#ifdef TODO_IMPLEMENT_THIS_SOMETIME
 static int
 exhaustive_application(Molecule & m,
                        const Can_Change & can_change,
@@ -4860,6 +5128,7 @@ exhaustive_application(Molecule & m,
 
   return 1;
 }
+#endif
 
 /*
   If the molecule looks closer to our target, we can add it to the global INPUT_MOLECULES array
@@ -4868,7 +5137,7 @@ exhaustive_application(Molecule & m,
 static int
 check_proximity_to_target_set(Molecule & m,
                               const int perturbation_number,
-                              Set_of_Target_Molecules<GFP_Standard> & set_of_target_molecules)
+                              Set_of_Target_Molecules<GFP_Standard>& set_of_target_molecules)
 {
   Accumulator<float> acc;
   set_of_target_molecules.closest_distance(m, acc);
@@ -4877,11 +5146,11 @@ check_proximity_to_target_set(Molecule & m,
 
   acc_dist_to_target.extra(d);
 
-  if (! closer_molecules.consider(m, d))
+  if (! closer_molecules.consider(m, d)) {
     return 0;
+  }
 
-  if (stream_for_more_proximal_molecules.is_open())
-  {
+  if (stream_for_more_proximal_molecules.is_open()) {
     stream_for_more_proximal_molecules << m.smiles() << ' ' << m.name() << ' ' << perturbation_number << ' ' << d << '\n';
     stream_for_more_proximal_molecules.write_if_buffer_holds_more_than(4096);
   }
@@ -4959,14 +5228,14 @@ template <typename C>
 int
 do_a_single_random_permutation(Molecule & m,
                                const Can_Change & can_change,
-                               C & transformation_chooser)
+                               C & transformation_chooser,
+                               RandomState& random_state)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
 #endif
 
-  if (0 == m.natoms())
-  {
+  if (m.empty()) {
     cerr << "Yipes, empty structure, cannot continue\n";
     return 0;
   }
@@ -4978,19 +5247,19 @@ do_a_single_random_permutation(Molecule & m,
   while (1)
   {
     int p =0;
-    if(check_probability(probability_inter_permutation)) {
-      p=intbtwij(NUMBER_KNOWN_INTRA_PERMUTATIONS, number_known_permutations - 1);
+    if (random_state.OkProbability(probability_inter_permutation)) {
+      p=random_state.RandomInt(NUMBER_KNOWN_INTRA_PERMUTATIONS, number_known_permutations - 1);
     }
     else {     // an intra molecular transformation
       p = transformation_chooser();
     } 
 
     if (verbose > 2)
-      cerr << "Trying permutation " << p << endl;
+      cerr << "Trying permutation " << p << '\n';
 
-    int (*f) (Molecule &, const Can_Change &) = known_permutation[p];
+    int (*f) (Molecule &, const Can_Change &, RandomState&) = known_permutation[p];
 
-    if (f(m, can_change))
+    if (f(m, can_change, random_state))
     {
 #ifdef FREQUENTLY_CHECK_VALENCES
       assert (m.valence_ok());
@@ -5003,8 +5272,9 @@ do_a_single_random_permutation(Molecule & m,
     assert (m.valence_ok());
 #endif
 
-    if (attempts > max_attempts)
+    if (attempts > max_attempts) {
       return 0;
+    }
   }
 
   return 1;
@@ -5022,8 +5292,9 @@ do_the_output(Molecule & m,
     ;
   else
   {
-    if (stream_for_discarded_molecules.active())
+    if (stream_for_discarded_molecules.active()) {
       return stream_for_discarded_molecules.write(m);
+    }
 
     return 1;
   }
@@ -5032,8 +5303,7 @@ do_the_output(Molecule & m,
 
   const IWString mname(m.name());
 
-  if (number_assigner.active())
-  {
+  if (number_assigner.active()) {
     number_assigner.process(m);
 
     IWString tmp(m.name());
@@ -5069,20 +5339,23 @@ do_the_output(Molecule & m,
 
   m.set_name(mname);
 
+  ++molecules_written;
+
   return rc;
 }
 
 static int
 violates_uniqueness(Molecule & m)
 {
-  if (0 == discard_duplicates_across_all_molecules && 0 == discard_duplicates_within_each_molecule)
+  if (0 == discard_duplicates_across_all_molecules &&
+      0 == discard_duplicates_within_each_molecule)
     return 0;
 
   IWString smi = m.unique_smiles();
 
-  if (! usmi.contains(smi))
-  {
-    usmi[smi] = 1;
+  if (! usmi.contains(smi)) {
+    //usmi[smi] = 1;
+    usmi.emplace(std::make_pair(smi, 1));
     return 0;
   }
 
@@ -5097,6 +5370,9 @@ _violates_query_constraints(Molecule & m,
                             const int max_rings_this_molecule)
 {
   const int nr = m.nrings();
+#ifdef DEBUG_VIOLATES_QUERY_CONSTRAINTS
+  cerr << nr << " rings, min_rings_this_molecule " << min_rings_this_molecule << " max_rings_this_molecule " << max_rings_this_molecule << '\n';
+#endif
 
   if (min_rings_this_molecule > 0 && nr <= min_rings_this_molecule)
   {
@@ -5112,8 +5388,10 @@ _violates_query_constraints(Molecule & m,
 
   if (! m.valence_ok())
   {
-    cerr << "Warning invalid valence encountered " << molecules_made << endl;
-    cerr << m.smiles() << ' ' << m.name() << endl;
+    if (warn_invalid_valence) {
+      cerr << "Warning invalid valence encountered " << molecules_made << '\n';
+      cerr << m.smiles() << ' ' << m.name() << '\n';
+    }
     return 1;
   }
 
@@ -5154,27 +5432,26 @@ _violates_query_constraints(Molecule & m,
     }
   }
 
-  int nqm = queries_to_match.number_elements();
-  int nqa = queries_to_avoid.number_elements();
-  if (0 == nqm && 0 == nqa)
+  if (queries_to_match.empty() && queries_to_avoid.empty()) {
     return 0;
+  }
 
   Molecule_to_Match target(&m);
 
-  for (int i = 0; i < nqm; i++)    // the must match queries
-  {
-    Substructure_Hit_Statistics * qi = queries_to_match[i];
-
-    if (0 == qi->substructure_search(target))
+  // If multiple must match queries are present, all must be matched.
+  // A non-match means we have violated the constraint.
+  // That seems harsh, an OR match would seem better.
+  for (Substructure_Hit_Statistics * q : queries_to_match) {
+    if (0 == q->substructure_search(target)) {
       return 1;
+    }
   }
 
-  for (int i = 0; i < nqa; i++)    // the must match queries
-  {
-    Substructure_Hit_Statistics * qi = queries_to_avoid[i];
-
-    if (qi->substructure_search(target))
+  // If any avoid query is present, we are violating the constraint.
+  for (Substructure_Hit_Statistics * q : queries_to_avoid) {
+    if (q->substructure_search(target)) {
       return 1;
+    }
   }
 
   return 0;    // no violations
@@ -5185,25 +5462,31 @@ violates_query_constraints(Molecule & m,
                            const int min_rings_this_molecule,
                            const int max_rings_this_molecule)
 {
+  if (m.empty()) {
+    return 1;
+  }
+
   const int matoms = m.natoms();
 
-  if (0 == m.natoms())
+  if (lower_atom_count_cutoff > 0 && matoms < lower_atom_count_cutoff) {
     return 1;
+  }
 
-  if (lower_atom_count_cutoff > 0 && matoms < lower_atom_count_cutoff)
+  if (matoms > upper_atom_count_cutoff) {
     return 1;
+  }
 
-  if (matoms > upper_atom_count_cutoff)
+  if (violates_uniqueness(m)) {
     return 1;
+  }
 
-  if (violates_uniqueness(m))
-    return 1;
-
-  if (! _violates_query_constraints(m, min_rings_this_molecule, max_rings_this_molecule))
+  if (! _violates_query_constraints(m, min_rings_this_molecule, max_rings_this_molecule)) {
     return 0;
+  }
 
-  if (stream_for_discarded_molecules.active())
+  if (stream_for_discarded_molecules.active()) {
     stream_for_discarded_molecules.write(m);
+  }
 
   return 1;
 }
@@ -5217,34 +5500,32 @@ random_molecular_permutations(Molecule & m,
                               const int min_rings_this_molecule,
                               const int max_rings_this_molecule,
                               C & transformation_chooser,
+                              RandomState& random_state,
                               Molecule_Output_Object & output)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
 #endif
 
-  if (discard_duplicates_within_each_molecule)
-    usmi.clear();
-
   int molecules_made_this_molecule = 0;
 
-  for (int i = 0; i < number_perturbations; i++)
-  {
-    if (0 == do_a_single_random_permutation(m, can_change, transformation_chooser))   // nothing could proceed
+  for (int i = 0; i < number_perturbations; i++) {
+    if (! do_a_single_random_permutation(m, can_change, transformation_chooser, random_state))  {
       continue;
+    }
 
     molecules_made++;
     molecules_made_this_molecule++;
 
-    if (violates_query_constraints(m, min_rings_this_molecule, max_rings_this_molecule))
-    {
+    if (violates_query_constraints(m, min_rings_this_molecule, max_rings_this_molecule)) {
       if (verbose > 2)
         cerr << "Permutation " << i << " violates constraints\n";
       break;
     }
 
-    if (set_of_target_molecules.number_molecules())
+    if (set_of_target_molecules.number_molecules()) {
       check_proximity_to_target_set(m, i, set_of_target_molecules);
+    }
 
 #ifdef FREQUENTLY_CHECK_VALENCES
     assert (m.valence_ok());
@@ -5265,40 +5546,51 @@ random_molecular_permutations(Molecule & m,
                               int min_rings_this_molecule,
                               int max_rings_this_molecule,
                               C & transformation_chooser,
+                              RandomState& random_state,
                               Molecule_Output_Object & output)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
 #endif
 
-  if (write_starting_molecule_once)
+  if (discard_duplicates_within_each_molecule) {
+    usmi.clear();
+  }
+
+  if (write_starting_molecule_once) {
     output.write(m);
+  }
 
-  Molecule mcopy(m);
-  mcopy.set_name(m.name());
+  if (write_starting_molecule_before_every_copy) {
+    output.write(m);
+  }
 
-#ifdef FREQUENTLY_CHECK_VALENCES
-  assert (mcopy.valence_ok());
-#endif
-
-// We need to jump through some hoops to make sure we only write the starting molecule when
-// there has been some output from a previous perturbation
+// We need to jump through some hoops to make sure we only write the
+// starting molecule when there has been some output from a previous
+// perturbation
 
   int molecules_previously_made = molecules_made;
 
-  for (int i = 0; i < nstart; i++)
-  {
-    if (i > 0)
-    {
-      if (write_starting_molecule_before_every_copy && molecules_previously_made < molecules_made)
+  // For each copy of the starting molecule.
+  for (int i = 0; i < nstart; i++) {
+    if (i > 0) {
+      if (write_starting_molecule_before_every_copy
+          && molecules_previously_made < molecules_made) {
         output.write(m);
+      }
 
       molecules_previously_made = molecules_made;
-
-      mcopy = m;
+      changed_by.resize_keep_storage(0);
     }
 
-    if (! random_molecular_permutations(mcopy, can_change, i, min_rings_this_molecule, max_rings_this_molecule, transformation_chooser, output))
+    Molecule mcopy(m);
+    mcopy.set_name(m.name());
+
+    if (! random_molecular_permutations(mcopy, can_change, i, 
+                min_rings_this_molecule, max_rings_this_molecule,
+                transformation_chooser,
+                random_state,
+                output))
       return 0;
   }
 
@@ -5310,14 +5602,15 @@ determine_min_and_max_rings(int nrings,
                             int & min_rings_this_molecule,
                             int & max_rings_this_molecule)
 {
-  if (min_rings_in_each_permutation > 0)
+  if (min_rings_in_each_permutation > 0) {
     min_rings_this_molecule = min_rings_in_each_permutation;
+  }
 
-  if (max_rings_in_each_permutation > 0)
+  if (max_rings_in_each_permutation > 0) {
     max_rings_this_molecule = max_rings_in_each_permutation;
+  }
 
-  if (max_rings_to_add >= 0)
-  {
+  if (max_rings_to_add >= 0) {
     int r = nrings + max_rings_to_add;
     if (max_rings_in_each_permutation > 0 && r > max_rings_in_each_permutation)
       r = max_rings_in_each_permutation;
@@ -5325,14 +5618,15 @@ determine_min_and_max_rings(int nrings,
     max_rings_this_molecule = r;
   }
 
-  if (max_rings_to_remove >= 0)
-  {
+  if (max_rings_to_remove >= 0) {
     int r = nrings - max_rings_to_remove;
-    if (r < 0)
+    if (r < 0) {
       r = 0;
+    }
 
-    if (min_rings_in_each_permutation > 0 && r < min_rings_in_each_permutation)
+    if (min_rings_in_each_permutation > 0 && r < min_rings_in_each_permutation) {
       r = min_rings_in_each_permutation;
+    }
 
     min_rings_this_molecule = r;
   }
@@ -5355,29 +5649,25 @@ preprocess(Molecule & m)
 }
 
 static int
-stop_for_any_reason()
-{
+stop_for_any_reason() {
   if (run_for > 0)
   {
     time_t tnow = time(NULL);
 
-    if (tnow - tzero > run_for)
-    {
+    if (tnow - tzero > run_for) {
       if (verbose)
         cerr << "Computation complete after " << run_for << " seconds\n";
       return 1;
     }
   }
 
-  if (molecules_made > stop_after_producing)
-  {
+  if (molecules_made > stop_after_producing) {
     if (verbose)
       cerr << "Computation complete having produced " << molecules_made << " molecules\n";
     return 1;
   }
 
-  if (stop_file.length() && dash_s(stop_file.null_terminated_chars()))
-  {
+  if (stop_file.length() && dash_s(stop_file.null_terminated_chars())) {
     cerr << "Processing stopped by '" << stop_file << "'\n";
     return 1;
   }
@@ -5389,23 +5679,27 @@ template <typename C>
 int
 random_molecular_permutations(Molecule & m,
                               C & transformation_chooser,
+                              RandomState& random_state,
                               Molecule_Output_Object & output)
 {
 #ifdef FREQUENTLY_CHECK_VALENCES
     assert (m.valence_ok());
 #endif
 
-  changed_by.resize_keep_storage(0);
-
-  if (verbose > 1)
+  if (verbose > 1) {
     cerr << "Processing '" << m.name() << "'\n";
+  }
 
   const int matoms = m.natoms();
 
   Can_Change can_change(matoms);
 
-  if (never_change_query.number_elements())
+  if (never_change_query.number_elements()) {
+    cerr << "The never change query option does not work now. See Ian\n";
+#ifdef CAN_CHANGE_BROKEN
     initialise_never_change_atoms(m, can_change);
+#endif
+  }
 
   atoms_in_starting_molecules.extra(matoms);
 
@@ -5414,48 +5708,56 @@ random_molecular_permutations(Molecule & m,
   determine_min_and_max_rings(m.nrings(), min_rings_this_molecule, max_rings_this_molecule);
 
   if (verbose > 2)
-    cerr << "For a molecule with " << m.nrings() << " rings, nrings must be between " << min_rings_this_molecule << " and " << max_rings_this_molecule << endl;
+    cerr << "For a molecule with " << m.nrings() << " rings, nrings must be between " << min_rings_this_molecule << " and " << max_rings_this_molecule << '\n';
 
 #ifdef FREQUENTLY_CHECK_VALENCES
   assert (m.valence_ok());
 #endif
 
-  return random_molecular_permutations(m, can_change, min_rings_this_molecule, max_rings_this_molecule, transformation_chooser, output);
+  return random_molecular_permutations(m, can_change,
+                                min_rings_this_molecule, max_rings_this_molecule,
+                                transformation_chooser,
+                                random_state,
+                                output);
 }
 
 
 template <typename C>
 int
 random_molecular_permutations(C & transformation_chooser,
+                              RandomState& random_state,
                               Molecule_Output_Object & output)
 {
   for (int i = 0; i < input_molecules.number_elements(); i++)   // not fixed size since it may grow
   {
-    if (stop_for_any_reason())
+    if (stop_for_any_reason()) {
       return 1;
+    }
 
     molecules_read++;
     
     Molecule * m=input_molecules[i];
 
-    if (! random_molecular_permutations(*m, transformation_chooser, output))
+    if (! random_molecular_permutations(*m, transformation_chooser,
+                random_state, output)) {
       break;
+    }
 
-    if (run_for > 0 && (input_molecules.number_elements()-1) == i)
+    if (run_for > 0 && (input_molecules.number_elements()-1) == i) {
       i = 0;
+    }
   }
 
-  for (int i = 0; i < iterations_through_new_molecules; ++i)
-  {
+  for (int i = 0; i < iterations_through_new_molecules; ++i) {
     const int n = closer_molecules.number_molecules();
 
-    for (int j = 0; j < n; ++j)
-    {
+    for (int j = 0; j < n; ++j) {
       Molecule mcopy(*closer_molecules.moleculei(j));   // need to create a copy since we might replace ourselves in the closer set
       mcopy.set_name(closer_molecules.moleculei(j)->name());
 
-      if (! random_molecular_permutations(mcopy, transformation_chooser, output))
+      if (! random_molecular_permutations(mcopy, transformation_chooser, random_state, output)) {
         break;
+      }
     }
   }
 
@@ -5466,15 +5768,16 @@ template <typename C>
 int
 random_molecular_permutations(data_source_and_type<Molecule> & input,
                               C & transformation_chooser,
+                              RandomState& random_state,
                               Molecule_Output_Object & output)
 {
+  // Read all the molecules in `input` into `input_molecules`.
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     preprocess(*m);
 
-    if (! m->valence_ok())
-    {
+    if (! m->valence_ok()) {
       cerr << "Invalid valence in input\n";
       cerr << m->smiles() << ' ' << m->name() << "\n";
       cerr << "Skipped\n";
@@ -5484,24 +5787,27 @@ random_molecular_permutations(data_source_and_type<Molecule> & input,
 
     input_molecules.add(m);
 
-    if (discard_duplicates_across_all_molecules)
+    // Avoid regenerating starting molecules.
+    if (discard_duplicates_across_all_molecules) {
       usmi[m->unique_smiles()] = 1;
+    }
   }
 
-  return random_molecular_permutations(transformation_chooser, output);
+  return random_molecular_permutations(transformation_chooser, random_state, output);
 }
 
 template <typename C>
 int
-random_molecular_permutations (const Command_Line& cl, 
-                               int input_type,
-                               C & transformation_chooser,
-                               Molecule_Output_Object & output)
+random_molecular_permutations(const Command_Line& cl, 
+                              FileType input_type,
+                              C & transformation_chooser,
+                              RandomState& random_state,
+                              Molecule_Output_Object & output)
 {
   int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++)
   {
-    if (! random_molecular_permutations(cl[i], input_type, transformation_chooser, output))
+    if (! random_molecular_permutations(cl[i], input_type, transformation_chooser, random_state, output))
     {
       rc = i + 1;
       break;
@@ -5512,15 +5818,16 @@ random_molecular_permutations (const Command_Line& cl,
 
 template <typename C>
 int
-random_molecular_permutations (const char * fname, 
-                               int input_type,
-                               C & transformation_chooser,
-                               Molecule_Output_Object & output)
+random_molecular_permutations(const char * fname, 
+                              FileType input_type,
+                              C & transformation_chooser,
+                              RandomState& random_state,
+                              Molecule_Output_Object & output)
 {
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
-    assert (0 != input_type);
+    assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
@@ -5530,7 +5837,7 @@ random_molecular_permutations (const char * fname,
     return 0;
   }
 
-  return random_molecular_permutations(input, transformation_chooser, output);
+  return random_molecular_permutations(input, transformation_chooser, random_state, output);
 }
 
 /*
@@ -5541,7 +5848,7 @@ random_molecular_permutations (const char * fname,
 */
 
 static int
-read_transformation_probability_file_record (const const_IWSubstring & buffer)
+read_transformation_probability_file_record(const const_IWSubstring & buffer)
 {
   const_IWSubstring directive, prob;
 
@@ -5563,157 +5870,157 @@ read_transformation_probability_file_record (const const_IWSubstring & buffer)
   {
     probability_add_double_bond = p;
     if (verbose)
-      cerr << "Probability of adding double bond " << probability_add_double_bond << endl;
+      cerr << "Probability of adding double bond " << probability_add_double_bond << '\n';
   }
   else if ("remove_atom" == directive)
   {
     probability_remove_atom = p;
     if (verbose)
-      cerr << "Probability of removing atom " << probability_remove_atom << endl;
+      cerr << "Probability of removing atom " << probability_remove_atom << '\n';
   }
   else if ("lower_bond_order" == directive)
   {
     probability_lower_bond_order = p;
     if (verbose)
-      cerr << "Probability of lowering bond order " << probability_lower_bond_order << endl;
+      cerr << "Probability of lowering bond order " << probability_lower_bond_order << '\n';
   }
   else if ("break_aliphatic_ring" == directive)
   {
     probability_break_aliphatic_ring = p;
     if (verbose)
-      cerr << "Probability of breaking aliphatic ring " << probability_break_aliphatic_ring << endl;
+      cerr << "Probability of breaking aliphatic ring " << probability_break_aliphatic_ring << '\n';
   }
   else if ("make_ring" == directive)
   {
     probability_make_ring = p;
     if (verbose)
-      cerr << "Probability of making ring " << probability_make_ring << endl;
+      cerr << "Probability of making ring " << probability_make_ring << '\n';
   }
   else if ("add_carbon" == directive)
   {
     probability_add_carbon = p;
     if (verbose)
-      cerr << "Probability of adding carbon " << probability_add_carbon << endl;
+      cerr << "Probability of adding carbon " << probability_add_carbon << '\n';
   } 
   else if ("probability_move_fragment" == directive)
   {
     probability_move_fragment = p;
     if (verbose)
-      cerr << "Probability of moving fragment " << probability_move_fragment << endl;
+      cerr << "Probability of moving fragment " << probability_move_fragment << '\n';
   }
   else if ("swap_adjacent_atoms" == directive)
   {
     probability_swap_adjacent_atoms = p;
     if (verbose)
-      cerr << "Probability of swapping adjacent atoms " << probability_swap_adjacent_atoms << endl;
+      cerr << "Probability of swapping adjacent atoms " << probability_swap_adjacent_atoms << '\n';
   }
   else if ("destroy_aromatic_ring" == directive)
   {
     probability_destroy_aromatic_ring = p;
     if (verbose)
-      cerr << "Probability of destroying an aromatic ring " << probability_destroy_aromatic_ring << endl;
+      cerr << "Probability of destroying an aromatic ring " << probability_destroy_aromatic_ring << '\n';
   }
   else if ("change_carbon_to_nitrogen" == directive)
   {
     probability_change_carbon_to_nitrogen = p;
     if (verbose)
-      cerr << "Probability of changing carbon to nitrogen " << probability_change_carbon_to_nitrogen << endl;
+      cerr << "Probability of changing carbon to nitrogen " << probability_change_carbon_to_nitrogen << '\n';
   }
   else if ("change_nitrogen_to_carbon" == directive)
   {
     probability_change_nitrogen_to_carbon = p;
     if (verbose)
-      cerr << "Probability of changing nitrogen to carbon " << probability_change_nitrogen_to_carbon << endl;
+      cerr << "Probability of changing nitrogen to carbon " << probability_change_nitrogen_to_carbon << '\n';
   }
   else if ("change_carbon_to_oxygen" == directive)
   {
     probability_change_carbon_to_oxygen = p;
     if (verbose)
-      cerr << "Probability of changing carbon to oxygen " << probability_change_carbon_to_oxygen << endl;
+      cerr << "Probability of changing carbon to oxygen " << probability_change_carbon_to_oxygen << '\n';
   }
   else if ("change_oxygen_to_something" == directive)
   {
     probability_change_oxygen_to_something = p;
     if (verbose)
-      cerr << "Probability of changing Oxygen to something else " << probability_change_oxygen_to_something << endl;
+      cerr << "Probability of changing Oxygen to something else " << probability_change_oxygen_to_something << '\n';
   }
   else if ("add_from_single_attachment_library" == directive)
   {
     probability_add_from_single_attachment_library = p;
     if (verbose)
-      cerr << "Probability of adding from single attachment library " << probability_add_from_single_attachment_library << endl;
+      cerr << "Probability of adding from single attachment library " << probability_add_from_single_attachment_library << '\n';
   }
   else if ("add_from_aromatic_attachment_library" == directive)
   {
     probability_add_from_aromatic_attachment_library = p;
     if (verbose)
-      cerr << "Probability of adding from aromatic attachment library " << probability_add_from_aromatic_attachment_library << endl;
+      cerr << "Probability of adding from aromatic attachment library " << probability_add_from_aromatic_attachment_library << '\n';
   }
   else if ("add_from_double_attachment_library" == directive)
   {
     probability_add_from_double_attachment_library = p;
     if (verbose)
-      cerr << "Probability of adding from double attachment library " << probability_add_from_double_attachment_library << endl;
+      cerr << "Probability of adding from double attachment library " << probability_add_from_double_attachment_library << '\n';
   }
   else if ("change_ring_substitution" == directive)
   {
     probability_change_ring_substitution = p;
     if (verbose)
-      cerr << "Probability of changing ring substitution " << probability_change_ring_substitution << endl;
+      cerr << "Probability of changing ring substitution " << probability_change_ring_substitution << '\n';
   }
   else if ("remove_terminal_functional_group" == directive)
   {
     probability_remove_terminal_functional_group = p;
     if (verbose)
-      cerr << "Probability of removing a terminal functional group " << probability_remove_terminal_functional_group << endl;
+      cerr << "Probability of removing a terminal functional group " << probability_remove_terminal_functional_group << '\n';
   }
   else if ("remove_embedded_functional_group" == directive)
   {
     probability_remove_embedded_functional_group = p;
     if (verbose)
-      cerr << "Probability of removing an embedded functional group " << probability_remove_embedded_functional_group << endl;
+      cerr << "Probability of removing an embedded functional group " << probability_remove_embedded_functional_group << '\n';
   }
   else if ("remove_terminal_ring" == directive)
   {
     probability_remove_terminal_ring = p;
     if (verbose)
-      cerr << "Probability of removing a terminal ring " << probability_remove_terminal_ring << endl;
+      cerr << "Probability of removing a terminal ring " << probability_remove_terminal_ring << '\n';
   }
   else if ("switch_aromatic_ring" == directive)
   {
     probability_switch_aromatic_ring = p;
     if (verbose)
-      cerr << "Probability of switching an aromatic ring " << probability_switch_aromatic_ring << endl;
+      cerr << "Probability of switching an aromatic ring " << probability_switch_aromatic_ring << '\n';
   }
   else if ("switch_aliphatic_ring" == directive)
   {
     probability_switch_aliphatic_ring = p;
     if (verbose)
-      cerr << "Probability of switching an aliphatic ring " << probability_switch_aliphatic_ring << endl;
+      cerr << "Probability of switching an aliphatic ring " << probability_switch_aliphatic_ring << '\n';
   }
   else if("breed" == directive)
   {
     probability_breed=p;
     if (verbose)
-      cerr << "Probability of breed " << probability_breed << endl; 
+      cerr << "Probability of breed " << probability_breed << '\n'; 
   }
   else if("inter_molecular" == directive)
   {
     probability_inter_permutation=p;
     if(verbose)
-      cerr << "Probability of inter molecular permutation " << probability_inter_permutation << endl; 
+      cerr << "Probability of inter molecular permutation " << probability_inter_permutation << '\n'; 
   }
   else if ("split_fused_ring" == directive)
   {
     probability_split_fused_ring = p;
     if (verbose)
-      cerr << "Probability of splitting a fused ring " << probability_split_fused_ring << endl;
+      cerr << "Probability of splitting a fused ring " << probability_split_fused_ring << '\n';
   }
   else if ("create_fused_ring" == directive)
   {
     probability_create_fused_ring = p;
     if (verbose)
-      cerr << "Probability of creating a fused ring " << probability_create_fused_ring << endl;
+      cerr << "Probability of creating a fused ring " << probability_create_fused_ring << '\n';
   }
   else
   {
@@ -5725,7 +6032,7 @@ read_transformation_probability_file_record (const const_IWSubstring & buffer)
 }
 
 static int
-read_transformation_probability_file (iwstring_data_source & input)
+read_transformation_probability_file(iwstring_data_source & input)
 {
   const_IWSubstring buffer;
   while (input.next_record(buffer))
@@ -5746,7 +6053,7 @@ read_transformation_probability_file (iwstring_data_source & input)
 }
 
 static int
-read_transformation_probability_file (const IWString & fname)
+read_transformation_probability_file(const IWString & fname)
 {
   iwstring_data_source input(fname);
 
@@ -5761,12 +6068,12 @@ read_transformation_probability_file (const IWString & fname)
 
 template <typename M>
 int
-read_fragments (data_source_and_type<M> & input,
-                resizable_array_p<M> & molecules)
+read_fragments(data_source_and_type<M> & input,
+               resizable_array_p<M> & molecules)
 {
   M * m;
 
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules.add(m);
   }
@@ -5776,10 +6083,10 @@ read_fragments (data_source_and_type<M> & input,
 
 template <typename M>
 int
-read_fragments (const IWString & fname,
-                resizable_array_p<M> & m)
+read_fragments(const IWString & fname,
+               resizable_array_p<M> & m)
 {
-  data_source_and_type<M> input(SMI, fname);
+  data_source_and_type<M> input(FILE_TYPE_SMI, fname);
 
   if (! input.good())
   {
@@ -5791,8 +6098,8 @@ read_fragments (const IWString & fname,
 }
 
 static int
-read_double_attachment_library (const const_IWSubstring & fname,
-                                resizable_array_p<Molecule> & lib)
+read_double_attachment_library(const const_IWSubstring & fname,
+                               resizable_array_p<Molecule> & lib)
 {
   if (! read_fragments(fname, lib))
   {
@@ -5843,9 +6150,9 @@ read_double_attachment_library (const const_IWSubstring & fname,
 }
 
 static int
-read_single_attachment_library (const const_IWSubstring & fname,
-                                resizable_array_p<Molecule> & lib,
-                                int first_atom_number_have_hydrogen)
+read_single_attachment_library(const const_IWSubstring & fname,
+                               resizable_array_p<Molecule> & lib,
+                               int first_atom_number_have_hydrogen)
 {
   if (! read_fragments(fname, lib))
   {
@@ -5881,8 +6188,8 @@ read_single_attachment_library (const const_IWSubstring & fname,
 }
 
 static int
-read_aromatic_ring_fusions (const_IWSubstring & fname,
-                            resizable_array_p<Molecule> & lib)
+read_aromatic_ring_fusions(const_IWSubstring & fname,
+                           resizable_array_p<Molecule> & lib)
 {
   if (! read_fragments(fname, lib))
   {
@@ -5908,67 +6215,62 @@ display_dash_T_options(std::ostream & output)
 }
 
 static int
-random_molecular_permutations (int argc, char ** argv)
+random_molecular_permutations(int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vo:A:E:x:c:C:p:S:L:f:F:P:r:R:s:q:Q:K:y:Y:G:J:U:M:a:T:");
+  Command_Line cl(argc, argv, "vo:A:E:x:c:C:p:S:L:f:F:P:r:R:s:q:Q:K:y:Y:G:J:U:M:a:T:N:");
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised_options_encountered\n";
     usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('A'))
-  {
+  if (cl.option_present('A')) {
     if (! process_standard_aromaticity_options(cl, verbose > 1))
     {
       cerr << "Cannot process -A option\n";
       usage(11);
     }
   }
-  else
+  else {
     set_global_aromaticity_type(Daylight);
+  }
 
-  if (cl.option_present('x'))
-  {
-    if (! cl.value('x', nstart)  || nstart < 1)
-    {
+  set_copy_name_in_molecule_copy_constructor(1);
+
+  if (cl.option_present('x')) {
+    if (! cl.value('x', nstart)  || nstart < 1) {
       cerr << "The number of copies of each molecule to start with (-x) must be a whole positive number\n";
       usage(15);
     }
   }
 
-  if (cl.option_present('p'))
-  {
-    if (! cl.value('p', number_perturbations) || number_perturbations < 1)
-    {
+  if (cl.option_present('p')) {
+    if (! cl.value('p', number_perturbations) || number_perturbations < 1) {
       cerr << "The number of permutations of each copy (-p) must be a positive whole number\n";
       usage(15);
     }
   }
 
-  if (verbose)
-    cerr << "Will make " << nstart << " copies of each input molecule and make " << number_perturbations << " permutations of that molecule\n";
+  if (verbose) {
+    cerr << "Will make " << nstart << " copies of each input molecule and make "
+         << number_perturbations << " permutations of that molecule\n";
+  }
 
-  if (cl.option_present('P'))
-  {
+  if (cl.option_present('P')) {
     IWString p = cl.string_value('P');
 
-    if (! read_transformation_probability_file(p))
-    {
+    if (! read_transformation_probability_file(p)) {
       cerr << "Cannot open transformation probability file '" << p << "'\n";
       return 8;
     }
   }
 
-  if (cl.option_present('U'))
-  {
+  if (cl.option_present('U')) {
     const_IWSubstring u = cl.string_value('U');
 
-    if ("each" == u)
-    {
+    if ("each" == u) {
       discard_duplicates_within_each_molecule = 1;
       if (verbose)
         cerr << "Duplidates within each molecule will be discarded\n";
@@ -6026,8 +6328,7 @@ random_molecular_permutations (int argc, char ** argv)
       {
         m.remove_leading_chars(4);
 
-        if (! m.numeric_value(run_for) || run_for < 1)
-        {
+        if (! m.numeric_value(run_for) || run_for < 1) {
           cerr << "The '-M run=nnn' option must specify a valid +ve number of seconds\n";
           return 3;
         }
@@ -6041,8 +6342,7 @@ random_molecular_permutations (int argc, char ** argv)
       {
         m.remove_leading_chars(4);
 
-        if (! m.numeric_value(stop_after_producing) || stop_after_producing < 1)
-        {
+        if (! m.numeric_value(stop_after_producing) || stop_after_producing < 1) {
           cerr << "Will stop after producing " << stop_after_producing << " valid molecules\n";
           return 3;
         }
@@ -6069,6 +6369,10 @@ random_molecular_permutations (int argc, char ** argv)
 
         if (verbose)
           cerr << "All transformations will always happen\n";
+      }
+      else if (m == "nowarnvalence")
+      {
+        warn_invalid_valence = 0;
       }
       else
       {
@@ -6144,7 +6448,7 @@ random_molecular_permutations (int argc, char ** argv)
 
     for (int i = 0; cl.value('T', t, i); ++i)
     {
-//    cerr << "TVALUE " << t << endl;
+//    cerr << "TVALUE " << t << '\n';
       if (t.starts_with("nmax="))
       {
         t.remove_leading_chars(5);
@@ -6158,25 +6462,24 @@ random_molecular_permutations (int argc, char ** argv)
       {
         t.remove_leading_chars(5);
         float d;
-        if (! t.numeric_value(d) || d < 0.0f || d > 1.0f)
-        {
+        if (! t.numeric_value(d) || d < 0.0f || d > 1.0f) {
           cerr << "The dmax (max distance to consider) option must contain a valid distance\n";
           usage(1);
         }
 
         closer_molecules.set_max_distance(d);
         if (verbose)
-          cerr << "Newly created molecules added to proximal list if closer than " << d << endl;
+          cerr << "Newly created molecules added to proximal list if closer than " << d << '\n';
       }
       else if (t.starts_with("write="))
       {
         t.remove_leading_chars(6);
 
-        if (! t.ends_with(".smi"))
+        if (! t.ends_with(".smi")) {
           t << ".smi";
+        }
 
-        if (! stream_for_more_proximal_molecules.open(t.null_terminated_chars()))
-        {
+        if (! stream_for_more_proximal_molecules.open(t.null_terminated_chars())) {
           cerr << "Cannot open stream for more proximal molecules '" << t << "'\n";
           return 1;
         }
@@ -6187,8 +6490,7 @@ random_molecular_permutations (int argc, char ** argv)
       else if (t.starts_with("fdbk="))
       {
         t.remove_leading_chars(5);
-        if (! t.numeric_value(iterations_through_new_molecules) || iterations_through_new_molecules < 1)
-        {
+        if (! t.numeric_value(iterations_through_new_molecules) || iterations_through_new_molecules < 1) {
           cerr << "The number of feedback iterations (fdbk=) must be a whole +ve number\n";
           display_dash_T_options(cerr);
         }
@@ -6206,47 +6508,44 @@ random_molecular_permutations (int argc, char ** argv)
         if (verbose)
           cerr << "Ay target molecule matched to within " << set_turn_off_molecules_matched_to_within << " will no longer be examined\n";
       }
-      else if ("help" == t)
-      {
+      else if ("help" == t) {
         display_dash_T_options(cerr);
       }
-      else if (0 == fname.length())
+      else if (0 == fname.length()) {
         fname = t;
-      else
-      {
+      }
+      else {
         cerr << "Unrecognised -T qualifier '" << t << "'\n";
         display_dash_T_options(cerr);
       }
     }
 
-    if (0 == fname.length())
-    {
+    if (fname.empty()) {
       cerr << "Must specify name of the target molecules file via the -T option\n";
       usage(1);
     }
 
-    set_bits_in_mk(192);
     initialise_properties_ratios();
 
-    if (! set_of_target_molecules.build(fname.null_terminated_chars()))
-    {
+    if (! set_of_target_molecules.build(fname.null_terminated_chars())) {
       cerr << "Cannot build set of target molecules '" << fname << "'\n";
       return 1;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Read " << set_of_target_molecules.number_molecules() << " target molecules from '" << fname << "'\n";
+    }
 
-    if (0 == max_size_extra_molecules)
-    {
+    if (0 == max_size_extra_molecules) {
       cerr << "New proximal molecules being saved, must specify max size of container\n";
       display_dash_T_options(cerr);
     }
 
     closer_molecules.initialise(max_size_extra_molecules);
 
-    if (set_turn_off_molecules_matched_to_within > 0.0f)
+    if (set_turn_off_molecules_matched_to_within > 0.0f) {
       set_of_target_molecules.set_turn_off_molecules_matched_to_within(set_turn_off_molecules_matched_to_within);
+    }
   }
 
   if (cl.option_present('G'))
@@ -6291,21 +6590,16 @@ random_molecular_permutations (int argc, char ** argv)
     }
   }
 
-  random_number_seed_t seed;  // need to pass this on to the other rng
   bool use_seed = false;
-  if (cl.option_present('s'))
-  {
-    if (! cl.value('s', seed))
-    {
-      cerr << "Invalid random number seed (-s option)\n";
-      usage(8);
+  uint32_t seed = 0;
+  if (cl.option_present('s')) {
+    if (! cl.value('s', seed)) {
+      cerr << "Invalid random number seed value\n";
+      return 1;
     }
+    if (verbose)
+      cerr << "Random number seed " << seed << '\n';
     use_seed = true;
-    iw_set_rnum_seed(seed);
-  }
-  else
-  {
-    iw_random_seed();
   }
 
   if (cl.option_present('q'))
@@ -6460,42 +6754,42 @@ random_molecular_permutations (int argc, char ** argv)
 
 // Note that this next case does not consider the join at any point library...
 
-  if (0 == single_attachment_fragment_library_join_at_first_atom.number_elements() && 0.0 != probability_add_from_single_attachment_library)
+  if (single_attachment_fragment_library_join_at_first_atom.empty() && 0.0 != probability_add_from_single_attachment_library)
   {
     cerr << "No single attachment fragments available, probability set to 0.0\n";
     
     probability_add_from_single_attachment_library = 0.0;
   }
 
-  if (0 == double_attachment_fragment_library.number_elements() && 0.0 != probability_add_from_double_attachment_library)
+  if (double_attachment_fragment_library.empty() && 0.0 != probability_add_from_double_attachment_library)
   {
     cerr << "No double attachment fragments available, probability set to 0.0\n";
     
     probability_add_from_double_attachment_library = 0.0;
   }
 
-  if (0 == aromatic_attachment_fragment_library.number_elements() && 0.0 != probability_add_from_aromatic_attachment_library)
+  if (aromatic_attachment_fragment_library.empty() && 0.0 != probability_add_from_aromatic_attachment_library)
   {
     cerr << "No aromatic attachment fragments available, probability set to 0.0\n";
     
     probability_add_from_aromatic_attachment_library = 0.0;
   }
 
-  if (0 == aromatic_rings.number_elements() && 0.0 != probability_switch_aromatic_ring)
+  if (aromatic_rings.empty() && 0.0 != probability_switch_aromatic_ring)
   {
     cerr << "No aromatic rings available, probability set to 0.0\n";
     
     probability_switch_aromatic_ring = 0.0;
   }
 
-  if (0 == aliphatic_rings.number_elements() && 0.0 != probability_switch_aliphatic_ring)
+  if (aliphatic_rings.empty() && 0.0 != probability_switch_aliphatic_ring)
   {
     cerr << "No aliphatic rings available, probability set to 0.0\n";
     
     probability_switch_aliphatic_ring = 0.0;
   }
 
-  if (0 == aromatic_ring_fusions.number_elements())
+  if (aromatic_ring_fusions.empty())
   {
     cerr << "No aromatic rings to fuse, probability set to 0.0\n";
 
@@ -6514,7 +6808,7 @@ random_molecular_permutations (int argc, char ** argv)
       cerr << "Defined " << never_change_query.number_elements() << " queries for fixed atoms\n";
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -6526,7 +6820,7 @@ random_molecular_permutations (int argc, char ** argv)
   else if (! all_files_recognised_by_suffix(cl))
     return 4;
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(2);
@@ -6578,7 +6872,7 @@ random_molecular_permutations (int argc, char ** argv)
 	;
   else if (! cl.value('C',upper_atom_count_cutoff) || upper_atom_count_cutoff < lower_atom_count_cutoff)
   {
-    cerr << "The upper atom count cutoff must be a whole positive number >= " << lower_atom_count_cutoff << endl;
+    cerr << "The upper atom count cutoff must be a whole positive number >= " << lower_atom_count_cutoff << '\n';
     usage(5);
   }
   else if (verbose)
@@ -6592,7 +6886,7 @@ random_molecular_permutations (int argc, char ** argv)
     const_IWSubstring j = cl.string_value('J');
 
     if (! cl.option_present('o'))
-      stream_for_discarded_molecules.add_output_type(SMI);
+      stream_for_discarded_molecules.add_output_type(FILE_TYPE_SMI);
     else if (! stream_for_discarded_molecules.determine_output_types(cl, 'o'))
     {
       cerr << "Cannot determine output type(s) for rejection file\n";
@@ -6619,7 +6913,7 @@ random_molecular_permutations (int argc, char ** argv)
 
   if (! cl.option_present('o'))
   {
-    output.add_output_type(SMI);
+    output.add_output_type(FILE_TYPE_SMI);
 
     if (verbose)
       cerr << "Default smiles output\n";
@@ -6652,6 +6946,8 @@ random_molecular_permutations (int argc, char ** argv)
     return 4;
   }
 
+  RandomState random_state;
+
   int rc = 0;
   if (sequential_scan_of_transformations)
   {
@@ -6659,7 +6955,7 @@ random_molecular_permutations (int argc, char ** argv)
 
     for (int i = 0; i < cl.number_elements(); i++)
     {
-      if (! random_molecular_permutations(cl[i], input_type, s, output))
+      if (! random_molecular_permutations(cl[i], input_type, s, random_state, output))
       {
         rc = i + 1;
         break;
@@ -6670,12 +6966,12 @@ random_molecular_permutations (int argc, char ** argv)
   {
     if (use_seed) {
       Stream_of_Random_Numbers srn(NUMBER_KNOWN_INTRA_PERMUTATIONS, seed);
-      rc = random_molecular_permutations(cl, input_type, srn, output);
+      rc = random_molecular_permutations(cl, input_type, srn, random_state, output);
     }
     else
     {
       Stream_of_Random_Numbers srn(NUMBER_KNOWN_INTRA_PERMUTATIONS);
-      rc = random_molecular_permutations(cl, input_type, srn, output);
+      rc = random_molecular_permutations(cl, input_type, srn, random_state, output);
     }
   }
 
@@ -6683,6 +6979,7 @@ random_molecular_permutations (int argc, char ** argv)
   {
     cerr << "Processed " << molecules_read << " molecules\n";
     cerr << "Created " << molecules_made << " molecules\n";
+    cerr << "Wrote " << molecules_written << " molecules\n";
     cerr << "Input molecules had between " << atoms_in_starting_molecules.minval() << " and " << atoms_in_starting_molecules.maxval();
     if (atoms_in_starting_molecules.n() > 1)
       cerr << " ave " << atoms_in_starting_molecules.average();
@@ -6694,8 +6991,9 @@ random_molecular_permutations (int argc, char ** argv)
 
     for (int i = 0; i < molecules_made_per_copy.number_elements(); i++)
     {
-      if (molecules_made_per_copy[i])
+      if (molecules_made_per_copy[i]) {
         cerr << molecules_made_per_copy[i] << " copies made " << i << " permutations\n";
+      }
     }
 
     if (verbose > 1)
@@ -6708,7 +7006,7 @@ random_molecular_permutations (int argc, char ** argv)
 
     if (acc_dist_to_target.n())
     {
-      cerr << acc_dist_to_target.n() << " shortest distances to target molecules, btw " << acc_dist_to_target.minval() << " and " << acc_dist_to_target.maxval() << " ave " << static_cast<float>(acc_dist_to_target.average()) << endl;
+      cerr << acc_dist_to_target.n() << " shortest distances to target molecules, btw " << acc_dist_to_target.minval() << " and " << acc_dist_to_target.maxval() << " ave " << static_cast<float>(acc_dist_to_target.average()) << '\n';
     }
   }
 

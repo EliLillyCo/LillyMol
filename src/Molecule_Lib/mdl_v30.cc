@@ -1,22 +1,26 @@
 #include <stdlib.h>
+#include <iostream>
 
 
 #define COMPILING_MDL_CC
 
-#include "mdl.h"
-#include "molecule.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/string_data_source.h"
+
 #include "aromatic.h"
 #include "chiral_centre.h"
-#include "iwstring_data_source.h"
-#include "string_data_source.h"
+#include "mdl.h"
+#include "molecule.h"
 #include "readmdl.h"
 
-int
-Molecule::_fill_empty_molecule_with_null_atoms (int na)
-{
-  assert (0 == _number_elements);
+using std::cerr;
 
-  resize (na);
+int
+Molecule::_fill_empty_molecule_with_null_atoms(int na)
+{
+  assert(0 == _number_elements);
+
+  resize(na);
 
 // In general, it is a very bad idea to put NULL pointers into a resizable_array_p,
 // but we do it as a check to make sure all atoms are assigned. It will be a
@@ -24,7 +28,7 @@ Molecule::_fill_empty_molecule_with_null_atoms (int na)
 
   for (int i = 0; i < na; i++)
   {
-    resizable_array_p<Atom>::add (NULL);
+    resizable_array_p<Atom>::add(nullptr);
   }
 
   return na;
@@ -40,14 +44,14 @@ int
 read_next_v30_record(T & input,
                      IWString & buffer)
 {
-  if (! input.next_record (buffer))
+  if (! input.next_record(buffer))
     return 0;
 
-  while (buffer.ends_with (" _"))
+  while (buffer.ends_with(" -"))
   {
     const_IWSubstring cline;
 
-    if (! input.next_record (cline))
+    if (! input.next_record(cline))
     {
       cerr << "Premature eof in V30 record after continuation\n";
       return 0;
@@ -55,7 +59,7 @@ read_next_v30_record(T & input,
 
     if (! cline.starts_with("M  V30"))
     {
-      cerr << "V30 continuation line doesn't start with 'M  V30', line " << input.lines_read() << endl;
+      cerr << "V30 continuation line doesn't start with 'M  V30', line " << input.lines_read() << '\n';
       cerr << buffer;
       return  0;
     }
@@ -96,7 +100,7 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
   if ("M  V30 BEGIN CTAB" != buffer)
   {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: possibly bad BEGIN CTAB record\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     cerr << "Ignore possible error, continuing....\n";
   }
 
@@ -108,8 +112,8 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
 
   if (! buffer.starts_with("M  V30 COUNTS "))
   {
-    cerr << "Molecule::_read_mdl_atom_connection_table_v30: this should be the counts record, line " << input.lines_read() << endl;
-    cerr << buffer << endl;
+    cerr << "Molecule::_read_mdl_atom_connection_table_v30: this should be the counts record, line " << input.lines_read() << '\n';
+    cerr << buffer << '\n';
     return 0;
   }
 
@@ -117,15 +121,19 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
   if (! buffer.word(3, token))
   {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: cannot extract atom count from count record\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     return 0;
   }
 
   int na;
   if (! token.numeric_value(na) || na < 0)
   {
-    cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid NA value '" << token << "' line " << input.lines_read() << endl;
+    cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid NA value '" << token << "' line " << input.lines_read() << '\n';
     return 0;
+  }
+
+  if (na == 0) {
+    return 1;
   }
 
   if (_elements_allocated < na)
@@ -134,26 +142,24 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
   if (! buffer.word(4, token))
   {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: cannot extract bond count from count record\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     return 0;
   }
 
   if (! token.numeric_value(nb) || nb < 0)
   {
-    cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid NB value '" << token << "' line " << input.lines_read() << endl;
+    cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid NB value '" << token << "' line " << input.lines_read() << '\n';
     return 0;
   }
 
-  if (! read_next_v30_record(input, buffer))
-  {
+  if (! read_next_v30_record(input, buffer)) {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: premature EOF\n";
     return 0;
   }
 
 // skip down (if necessary) until we get to the start of the atom table
 
-  while ("M  V30 BEGIN ATOM" != buffer)
-  {
+  while ("M  V30 BEGIN ATOM" != buffer) {
     if (! read_next_v30_record(input, buffer))
     {
       cerr << "Molecule::_read_mdl_atom_connection_table_v30: premature EOF\n";
@@ -161,34 +167,29 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
     }
   }
 
-  for (int i = 0; i < na; i++)
-  {
-    if (! read_next_v30_record(input, buffer))
-    {
+  for (int i = 0; i < na; i++) {
+    if (! read_next_v30_record(input, buffer)) {
       cerr << "Molecule::_read_mdl_atom_connection_table_v30: premature eof\n";
       return 0;
     }
 
-    if (! _parse_v30_atom_record(buffer, 1, mdlfos))
-    {
-      cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid atom record, line " << input.lines_read() << endl;
-      cerr << buffer << endl;
+    if (! _parse_v30_atom_record(buffer, 1, mdlfos)) {
+      cerr << "Molecule::_read_mdl_atom_connection_table_v30: invalid atom record, line " << input.lines_read() << '\n';
+      cerr << buffer << '\n';
       return 0;
     }
   }
 
 // There should be 'END ATOM' at the end of the atom set
 
-  if (! read_next_v30_record(input, buffer))
-  {
+  if (! read_next_v30_record(input, buffer)) {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: premature eof\n";
     return 0;
   }
 
-  if ("M  V30 END ATOM" != buffer)
-  {
+  if ("M  V30 END ATOM" != buffer) {
     cerr << "Molecule::_read_mdl_atom_connection_table_v30: hmmm, atom set not followed by 'END ATOM'\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     return 0;
   }
 
@@ -198,7 +199,7 @@ Molecule::_read_mdl_atom_connection_table_v30(T & input,
 
   for (int i = 0; i < _number_elements; i++)
   {
-    if (NULL == _things[i])
+    if (nullptr == _things[i])
     {
       cerr << "Molecule::_read_mdl_atom_connection_table_v30: atom " << i << " not assigned!!!\n";
       return 0;
@@ -248,7 +249,7 @@ Molecule::_parse_v30_atom_record(const IWString & buffer,
     {
       if (! token.numeric_value(ndx) || ndx < 0 || ndx > _number_elements)
       {
-        cerr << "Molecule::_parse_v30_atom_record: invalid atom index '" << token << "', max " << _number_elements << endl;
+        cerr << "Molecule::_parse_v30_atom_record: invalid atom index '" << token << "', max " << _number_elements << '\n';
         return 0;
       }
 
@@ -338,7 +339,7 @@ Molecule::_parse_v30_atom_record(const IWString & buffer,
     return 0;
   }
 
-  if (NULL != _things[ndx])
+  if (nullptr != _things[ndx])
   {
     cerr << "Molecule::_parse_v30_atom_record: atom " << ndx << " multiply defined\n";
     return 0;
@@ -347,23 +348,23 @@ Molecule::_parse_v30_atom_record(const IWString & buffer,
   if (convert_symbol_to_element)
   {
     _things[ndx] = mdlfos.create_mdl_atom(zsymbol, mass, chg, rad);
-    if (NULL == _things[ndx])
+    if (nullptr == _things[ndx])
     {
       cerr << "Molecule::_parse_v30_atom_record: cannot create atom\n";
       return 0;
     }
   }
-  else
+  else {
     _things[ndx] = mdlfos.create_mdl_atom("*", mass, chg, rad);   // just to get something there
+  }
 
   _things[ndx]->setxyz(x, y, z);
 
-  if (0 == cfg)
+  if (0 == cfg) {
     ;
-  else if (! _mdl_atom_is_chiral_centre(ndx, cfg, mdlfos))
-  {
-    cerr << "Molecule::_parse_v30_atom_record: invalid chirality " << cfg << endl;
-    cerr << buffer << endl;
+  } else if (! _mdl_atom_is_chiral_centre(ndx, cfg, mdlfos)) {
+    cerr << "Molecule::_parse_v30_atom_record: invalid chirality " << cfg << '\n';
+    cerr << buffer << '\n';
     return 0;
   }
 
@@ -409,8 +410,8 @@ Molecule::_read_v30_bond_list (T & input,
 
     if (! _parse_v30_bond_record(buffer, aromatic_atom, aromatic_bond[i]))
     {
-      cerr << "Molecule::_read_v30_bond_list: invalid bond record, line " << input.lines_read() << endl;
-      cerr << buffer << endl;
+      cerr << "Molecule::_read_v30_bond_list: invalid bond record, line " << input.lines_read() << '\n';
+      cerr << buffer << '\n';
       return 0;
     }
 
@@ -423,7 +424,7 @@ Molecule::_read_v30_bond_list (T & input,
     if ("M  V30 END BOND" != buffer)
     {
       cerr << "Molecule::_read_v30_bond_list: bond list improperly terminated\n";
-      cerr << buffer << endl;
+      cerr << buffer << '\n';
       return 0;
     }
   }
@@ -434,10 +435,10 @@ Molecule::_read_v30_bond_list (T & input,
 }
 
 int
-Molecule::_parse_v30_bond_record (const const_IWSubstring & buffer,
-                                  int * aromatic_atom,
-                                  int & aromatic_bond,
-                                  int reading_query_file)
+Molecule::_parse_v30_bond_record(const const_IWSubstring & buffer,
+                                 int * aromatic_atom,
+                                 int & aromatic_bond,
+                                 int reading_query_file)
 {
   int ntokens = 0;
 
@@ -480,17 +481,15 @@ Molecule::_parse_v30_bond_record (const const_IWSubstring & buffer,
     else if (token.starts_with("CFG="))
     {
       token.remove_leading_chars(4);
-      if (! token.numeric_value(cfg) || cfg < 0 || cfg > 3)
-      {
+      if (! token.numeric_value(cfg) || cfg < 0 || cfg > 3) {
         cerr << "Molecule::_parse_v30_bond_record: invalid cfg value '" << token << "'\n";
         return 0;
       }
     }
   }
 
-  if (ntokens < 4)
-  {
-    cerr << "Molecule::_parse_v30_bond_record: too few tokens on record " << ntokens << endl;
+  if (ntokens < 4) {
+    cerr << "Molecule::_parse_v30_bond_record: too few tokens on record " << ntokens << '\n';
     return 0;
   }
 
@@ -503,8 +502,7 @@ Molecule::_parse_v30_bond_record (const const_IWSubstring & buffer,
       btype = AROMATIC_BOND;
     else
     {
-      if (! input_aromatic_structures())
-      {
+      if (! input_aromatic_structures()) {
         cerr << "Molecule::_parse_v30_bond_record:aromatic input not enabled\n";
         return 0;
       }
@@ -530,29 +528,38 @@ Molecule::_parse_v30_bond_record (const const_IWSubstring & buffer,
     btype = SINGLE_BOND | DOUBLE_BOND | TRIPLE_BOND;
   else
   {
-    cerr << "Molecule::_read_v30_bond_list:unrecognised bond type " << btype << endl;
+    cerr << "Molecule::_read_v30_bond_list:unrecognised bond type " << btype << '\n';
     return 0;
   }
 
-  if (! add_bond(a1, a2, btype, 1))     // 1 means partially built molecule
-  {
-    if (are_bonded(a1, a2) && static_cast<bond_type_t>(btype) == bond_between_atoms(a1, a2)->btype())
+  // 1 means partially build molecule.
+  if (! add_bond(a1, a2, btype, 1)) {
+    if (are_bonded(a1, a2) && static_cast<bond_type_t>(btype) == bond_between_atoms(a1, a2)->btype()) {
       cerr << "molecule::_parse_v30_bond_record:ignoring duplicate bond specification\n";
-    else
-    {
-      cerr << "Molecule::_parse_v30_bond_record: cannot add bond between " << a1 << " and " << a2 << endl;
+    } else {
+      cerr << "Molecule::_parse_v30_bond_record: cannot add bond between " << a1 << " and " << a2 << '\n';
       return 0;
     }
   }
 
-  if (cfg)     // for backward compatibility, we need to convert badk to V2 numbers
-  {
+  // for backward compatibility, we need to convert back to V2 numbers
+  if (cfg) {
+#define CORRECT
+#ifdef CORRECT
     if (1 == cfg)
       ;
     else if (2 == cfg)
       cfg = 4;
     else if (3 == cfg)
       cfg = 6;
+#else
+    if (1 == cfg)
+      cfg = 6;
+    else if (2 == cfg)
+      cfg = 4;
+    else if (3 == cfg)
+      cfg = 1;
+#endif
 
     _mdl_set_bond_directionality(a1, a2, cfg);
   }
@@ -560,32 +567,6 @@ Molecule::_parse_v30_bond_record (const const_IWSubstring & buffer,
   return 1;
 }
 
-/*
-  Complicated by the fact that input lines are a maximum of 80 characters long
-*/
-
-int
-write_v30_record (IWString & buffer,
-                  std::ostream & output)
-{
-  if (buffer.length() <= 80)
-  {
-    output << buffer << '\n';
-
-    return output.good();
-  }
-
-  int max_length = 80;
-  while (buffer.length() > max_length)
-  {
-    buffer.insert("-\nM  V30 ", max_length - 1);
-    max_length += 80;
-  }
-
-  output << buffer << '\n';
-
-  return output.good();
-}
 template int Molecule::write_molecule_mdl_v30<std::ostream>(std::ostream&, IWString const&, int) const;
 
 int
@@ -652,9 +633,9 @@ get_atoms_in_set(const IWString & buffer,
     cerr << "get_atoms_in_set::end of group not found\n";
 
   if (n != atoms.number_elements())
-    cerr << "get_atoms_in_set:count mismatch, expected " << n << " atoms, got " << atoms.number_elements() << endl;
+    cerr << "get_atoms_in_set:count mismatch, expected " << n << " atoms, got " << atoms.number_elements() << '\n';
 
-//cerr << " atoms " << atoms << endl;
+//cerr << " atoms " << atoms << '\n';
 
   return atoms.number_elements();
 }
@@ -735,15 +716,15 @@ Molecule::_convert_sgroup_to_elements(const IWString & sgroup)
   if (0 == label.length())     // not all SGROUP blocks have a label. Might be just for display
   {
 //  cerr << "Molecule::_convert_sgroup_to_elements:no LABEL\n";
-//  cerr << sgroup << endl;
+//  cerr << sgroup << '\n';
 //  return 0;
     return 1;
   }
 
-  if (0 == atoms.number_elements())
+  if (atoms.empty())
   {
     cerr << "Molecule::_convert_sgroup_to_elements:no ATOMS\n";
-    cerr << sgroup << endl;
+    cerr << sgroup << '\n';
     return 0;
   }
 
@@ -754,7 +735,7 @@ Molecule::_convert_sgroup_to_elements(const IWString & sgroup)
     return 1;
 
   const Element * e = get_element_from_symbol_no_case_conversion(label);
-  if (NULL == e)
+  if (nullptr == e)
   {
     if (! auto_create_new_elements())
     {
@@ -763,7 +744,7 @@ Molecule::_convert_sgroup_to_elements(const IWString & sgroup)
     }
 
     e = create_element_with_symbol(label);
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "Molecule::_convert_sgroup_to_elements:cannot create element '" << label << "'\n";
       return 0;
@@ -773,4 +754,97 @@ Molecule::_convert_sgroup_to_elements(const IWString & sgroup)
   _things[atoms[0]]->set_element(e);
 
   return 1;
+}
+
+int
+Molecule::write_set_of_bonds_as_mdl_v30_collection(const resizable_array<int> & b,
+                                                   const const_IWSubstring & zname,
+                                                   const const_IWSubstring & subname,
+                                                   std::ostream & output) const
+{
+  output << "M  V30 BEGIN COLLECTION\n";
+  output << "M  V30 " << zname;
+  if (subname.length() > 0)
+    output << '/' << subname;
+  output << '\n';
+
+  IWString output_buffer;
+  output_buffer.resize(200);
+
+  int n = b.number_elements();
+
+  assert(n <= _bond_list.number_elements());
+
+  output_buffer << "M  V30 BONDS=" << n;
+
+  for (int i = 0; i < n; i++)
+  {
+    output_buffer << ' ' << (b[i] + 1);
+  }
+
+  write_v30_record(output_buffer, output);
+
+  output << "M  V30 END COLLECTION\n";
+
+  return output.good();
+}
+
+int
+Molecule::write_set_of_bonds_as_mdl_v30_collection(const int * b, const const_IWSubstring & zname,
+                                                   const const_IWSubstring & subname,
+                                                   std::ostream & output) const
+{
+  output << "M  V30 BEGIN COLLECTION\n";
+  output << "M  V30 " << zname;
+  if (subname.length() > 0)
+    output << '/' << subname;
+  output << '\n';
+
+  IWString output_buffer;
+  output_buffer.resize(200);
+
+  int nb = _bond_list.number_elements();
+
+  int n = count_non_zero_occurrences_in_array(b, nb);
+
+  output_buffer << "M  V30 BONDS=" << n;
+
+  for (int i = 0; i < nb; i++)
+  {
+    if (0 != b[i])
+      output_buffer << ' ' << (i + 1);
+  }
+
+  write_v30_record(output_buffer, output);
+
+  output << "M  V30 END COLLECTION\n";
+
+  return output.good();
+}
+
+/*
+  Complicated by the fact that input lines are a maximum of 80 characters long
+*/
+
+int
+write_v30_record(IWString & buffer,
+                 std::ostream & output)
+{
+  if (buffer.length() <= 80)
+  {
+    output << buffer << '\n';
+
+    return output.good();
+  }
+
+  int max_length = 80;
+  while (buffer.length() > max_length)
+  {
+    buffer.insert("-\nM  V30 ", max_length - 1);
+    max_length += 80;
+  }
+
+  output << buffer << '\n';
+
+  return output.good();
 }

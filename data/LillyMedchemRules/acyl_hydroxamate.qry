@@ -1,0 +1,55 @@
+# RuleClass acylating
+# SubClass acyl-QQ
+
+(0 Query
+  (A C Comment "acyl_hydroxamate")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I nbonds 3)
+    (A I single_bond 2)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 3)
+    (A I min_nbonds 3)
+    (A I single_bond 3)
+  )
+  (5 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 3)
+    (A I min_nbonds 3)
+    (A I single_bond 3)
+  )
+  (7 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 6)
+  )
+)

@@ -1,0 +1,27 @@
+(5 Query
+  (A C Comment "vinyl_ether_thioate_isoamide")
+  (A I Version 2)
+  (A I max_ring_atoms_matched 2)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I attached_heteroatom_count 0)
+    (A I vinyl 1)
+    (A I formal_charge 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I unsaturation 1)
+    (A I aromatic 0)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I double_bond 1)
+    (3 Query_Atom_Specifier
+      (A I Rejection 1)
+      (A I atomic_number 8)
+      (A I ncon 1)
+    )
+  )
+)

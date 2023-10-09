@@ -1,0 +1,12 @@
+name: "nh2tooh"
+scaffold {
+  smarts: "[ND1H2]-[CG0T1]"
+  change_element {
+    atom: 0
+    element: "O"
+  }
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}

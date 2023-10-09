@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package reduced_graph;
+
+import "Molecule_Lib/substructure.proto";
+
+message GraphReduction {
+  // Query file that defines the group.
+  repeated string query = 1;
+
+  // The element to which this feature is transformed.
+  string element = 2;
+
+  // Whether or not this is describes a ring
+  bool ring = 3;
+}

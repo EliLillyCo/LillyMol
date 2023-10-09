@@ -2,17 +2,18 @@
   
 */
 
-#include <stdlib.h>
+#include <ostream>
 
-#include "cmdline.h"
-#include "iw_stl_hash_map.h"
-#include "iwstring_data_source.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 using std::cerr;
 using std::cout;
+using std::endl;
 using std::ostream;
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -29,8 +30,14 @@ static int truncate_descriptor_file_identifiers_at_first_underscore = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "gfp_add_descriptors.cc,v 1.1 2004/03/22 13:05:43 \n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Adds a descriptor file to a gfp file\n";
   cerr << prog_name << " gfp_file descriptor_file > newfile\n";
   cerr << " -D <tag>       tag to use for descriptors ( default '" << descriptor_tag << "')\n";
@@ -38,6 +45,7 @@ usage (int rc)
   cerr << " -I <tag>       identifier tag (default '" << identifier_tag << "'\n";
   cerr << " -u             truncate descriptor file identifiers at first underscore\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit (rc);
 }

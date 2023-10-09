@@ -1,0 +1,23 @@
+name: "swap_chain_carbons"
+scaffold {
+  id: 0
+  smarts: "[/IWspch0#6]-!@[/IWspch0Cx0]-!@[/IWspch0Cx0]-!@[/IWspch0#6]"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 2
+    a2: 3
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

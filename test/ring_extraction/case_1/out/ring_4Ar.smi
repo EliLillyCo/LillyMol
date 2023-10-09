@@ -1,0 +1,1 @@
+smi: "[CH2:70]1[1CH]=[1CH][CH2:71]1" smt: "[ax2r4D2]1:[ax2r4D>2]:[ax2r4D>2]:[ax2r4D2]:1" id: "CHEMBL1546318.4Ar" n: 1 conn: true exo: "[70O].[71O]" usmi: "O=c1c(=O)[1cH][1cH]1" 

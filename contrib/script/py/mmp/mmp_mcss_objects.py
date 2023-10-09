@@ -32,7 +32,8 @@ from builtins import range
 from mmp.mmp_data_objects import MMPDataObjectClass
 
 if 'LILLYMOL_HOME' in os.environ:
-    import pybase.pyopmo as pymo
+    sys.path.insert(0, os.getenv('LILLYMOL_HOME') + '/contrib/script/py/pybase');
+    import pyopmo as pymo
 else:
     import pybase.pymo as pymo
 

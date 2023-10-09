@@ -16,28 +16,28 @@ using std::endl;
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 
-#include "iwaray.h"
-#include "iwqsort.h"
-#include "cmdline.h"
-#include "minmaxspc.h"
-#include "iwhistogram.h"
-#include "iwdigits.h"
-#include "accumulator.h"
-#include "misc.h"
-#include "sparse_fp_creator.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/histogram/iwhistogram.h"
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwmisc/minmaxspc.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwqsort/iwqsort.h"
 
-#include "molecule.h"
-#include "target.h"
-#include "path.h"
-#include "istream_and_type.h"
-#include "etrans.h"
-#include "rmele.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "substructure.h"
-#include "donor_acceptor.h"
-#include "charge_assigner.h"
-#include "output.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/donor_acceptor.h"
+#include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rmele.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/target.h"
 
 #ifdef DBF_MOLVOL
 #include "surface_area_molvol.h"
@@ -163,6 +163,7 @@ static int positive_negative_acceptor_donor = 0;
 
 static float bit_count_scaling_factor = 1.0f;
 
+#ifdef MAX_DBF_NOT_USED
 static float max_dbf [] = {2,
 2,
 7,
@@ -257,6 +258,7 @@ static float max_dbf [] = {2,
 1.23,
 1.245,
 1.23};
+#endif
 
 
 template <typename T>
@@ -308,8 +310,8 @@ Distances<T>::Distances ()
   }
   else
   {
-    _global_histogram = NULL;
-    _current_molecule_histogram = NULL;
+    _global_histogram = nullptr;
+    _current_molecule_histogram = nullptr;
   }
 
   return;
@@ -319,7 +321,7 @@ template <typename T>
 int
 Distances<T>::activate_current_molecule_histogram ()
 {
-  assert (NULL == _current_molecule_histogram);
+  assert (nullptr == _current_molecule_histogram);
   assert (0 != histogram_specification.length());
 
   _current_molecule_histogram = new IWHistogram;
@@ -330,10 +332,10 @@ Distances<T>::activate_current_molecule_histogram ()
 template <typename T>
 Distances<T>::~Distances ()
 {
-  if (NULL != _global_histogram)
+  if (nullptr != _global_histogram)
     delete [] _global_histogram;
 
-  if (NULL != _current_molecule_histogram)
+  if (nullptr != _current_molecule_histogram)
     delete [] _current_molecule_histogram;
 
   return;
@@ -350,9 +352,9 @@ Distances<T>::reset ()
 {
   Accumulator_Base<T, T>::reset();
 
-  if (NULL != _current_molecule_histogram)
+  if (nullptr != _current_molecule_histogram)
   {
-    if (NULL != _global_histogram)
+    if (nullptr != _global_histogram)
       _global_histogram->add(*_current_molecule_histogram);
 
     _current_molecule_histogram->reset();
@@ -369,7 +371,7 @@ Distances<T>::extra (T v)
 {
   Accumulator_Base<T, T>::extra(v);
 
-  if (NULL != _current_molecule_histogram)
+  if (nullptr != _current_molecule_histogram)
     _current_molecule_histogram->extra(static_cast<double>(v));
 
   if (0 == nkeep)
@@ -607,7 +609,7 @@ template <typename T>
 void
 Distances<T>::append_current_molecule_histogram_results (IWString & buffer) const
 {
-  assert (NULL != _current_molecule_histogram);
+  assert (nullptr != _current_molecule_histogram);
 
   const unsigned int * c = _current_molecule_histogram->raw_counts();
   int nbuckets = _current_molecule_histogram->nbuckets();
@@ -625,8 +627,8 @@ Distances<T>::append_current_molecule_histogram_results (IWString & buffer) cons
 template class Distances<int>;
 template class Distances<coord_t>;
 
-static Distances<int> * bond_distances = NULL;
-static Distances<coord_t> * spatial_distances = NULL;
+static Distances<int> * bond_distances = nullptr;
+static Distances<coord_t> * spatial_distances = nullptr;
 
 /*
   We can optionally do the ratio between the spatial and bond distances
@@ -634,13 +636,18 @@ static Distances<coord_t> * spatial_distances = NULL;
 
 static int compute_spatial_topological_ratio = 0;
 
-static Distances<coord_t> * spatial_bond_ratio = NULL;
+static Distances<coord_t> * spatial_bond_ratio = nullptr;
 
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Computes topological and/or 3D distances between features\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
 
   cerr << "  -p 2d          compute topological distances\n";
   cerr << "  -p 3d          compute spatial     distances\n";
@@ -736,8 +743,7 @@ write_atom_hit_info (Molecule & m,
 
   const int matoms = m.natoms();
 
-  for (int i = 0; i < matoms; ++i)
-  {
+  for (int i = 0; i < matoms; ++i) {
     m.set_isotope(i, i);
   }
 
@@ -896,7 +902,7 @@ do_positive_negative_acceptor_donor (const Molecule & m,
       pnad_matches[1] += add_matched_atom(m, i, 1, c);
     }
 
-    const int iso = m.isotope(i);
+    const isotope_t iso = m.isotope(i);
     if (0 == iso)
       continue;
 
@@ -931,7 +937,7 @@ do_positive_negative_acceptor_donor (const Molecule & m,
 
 static int
 identify_matched_atoms (Molecule & m,
-                        const int * isotope,
+                        const isotope_t * isotope,
                         resizable_array_p<Coords_and_Stuff> & c)
 {
   int matches_this_molecule = 0;     // the number of queries finding a match
@@ -1384,7 +1390,7 @@ write_all_distances (Molecule & m,
                      Distances<T> * distances,
                      IWString_and_File_Descriptor & output)
 {
-  if (NULL == distances)
+  if (nullptr == distances)
     return 0;
 
   int name_written = 0;
@@ -1422,7 +1428,7 @@ write_all_distances (Molecule & m,
 
 static int
 distance_between_features (Molecule & m,
-                           const int * isotopes,
+                           const isotope_t * isotopes,
                            const int nfeatures,
                            IWString & output)
 {
@@ -1474,10 +1480,10 @@ distance_between_features (Molecule & m,
   return 1;
 }
 
+// If isotopes are encountered, they will be stored in `isotopes`.
 static int
-preprocess (Molecule & m,
-            int * & isotopes)
-{
+preprocess(Molecule & m,
+           std::unique_ptr<isotope_t[]>& isotopes) {
   if (reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
 
@@ -1491,8 +1497,7 @@ preprocess (Molecule & m,
   {
     if (queries.number_elements())    // may contain an isotopic query, so shield the isotopes
     {
-      isotopes = new int[m.natoms()];
-      m.get_isotopes(isotopes);
+      isotopes = m.GetIsotopes();
       m.transform_to_non_isotopic_form();
     }
 
@@ -1524,7 +1529,7 @@ distance_between_features (data_source_and_type<Molecule> & input,
                            IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -1536,13 +1541,10 @@ distance_between_features (data_source_and_type<Molecule> & input,
     if (do_spatial_distances && 1 == molecules_read)
       check_for_coordinates(*m);
 
-    int * isotopes = nullptr;
-
+    std::unique_ptr<isotope_t[]> isotopes;
     preprocess(*m, isotopes);
 
-    std::unique_ptr<int[]> free_isotopes(isotopes);    // may be nullptr
-
-    if (! distance_between_features(*m, isotopes, nfeatures, output))
+    if (! distance_between_features(*m, isotopes.get(), nfeatures, output))
       return 0;
 
     output.write_if_buffer_holds_more_than(32768);
@@ -1553,7 +1555,7 @@ distance_between_features (data_source_and_type<Molecule> & input,
 
 static int
 distance_between_features (const char * fname,
-                           int input_type,
+                           FileType input_type,
                            const int nfeatures,
                            IWString_and_File_Descriptor & output)
 {
@@ -1572,13 +1574,11 @@ distance_between_features_filter_process (Molecule & m,
                                           const int nfeatures,
                                           IWString_and_File_Descriptor & output)
 {
-  int * isotopes = nullptr;
+  std::unique_ptr<isotope_t[]> isotopes;
 
   preprocess(m, isotopes);
 
-  std::unique_ptr<int[]> free_isotopes(isotopes);
-
-  return distance_between_features(m, isotopes, nfeatures, output);
+  return distance_between_features(m, isotopes.get(), nfeatures, output);
 }
 
 static int
@@ -2208,7 +2208,7 @@ distance_between_features (int argc, char ** argv)
     }
   }
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i'))
   {
     if (! process_input_type(cl, input_type))
@@ -2253,8 +2253,8 @@ distance_between_features (int argc, char ** argv)
   if (cl.option_present('L'))
   {
     const_IWSubstring l = cl.option_value('L');
-    stream_for_labelled_atoms.add_output_type(SMI);
-    stream_for_labelled_atoms.add_output_type(SDF);
+    stream_for_labelled_atoms.add_output_type(FILE_TYPE_SMI);
+    stream_for_labelled_atoms.add_output_type(FILE_TYPE_SDF);
     if (stream_for_labelled_atoms.would_overwrite_input_files(cl, l))
     {
       cerr << "Labelled atoms file -L " << l << " cannot overwrite input file(s)\n";
@@ -2327,7 +2327,7 @@ distance_between_features (int argc, char ** argv)
     }
   }
 
-  if (histogram_specification.length() && NULL != spatial_distances)
+  if (histogram_specification.length() && nullptr != spatial_distances)
   {
     for (int i = 0; i < nfeatures; i++)
     {
@@ -2337,7 +2337,7 @@ distance_between_features (int argc, char ** argv)
 
         const IWHistogram * h = dist.global_histogram();
 
-        assert (NULL != h);
+        assert (nullptr != h);
 
         cerr << "i = " << i << " j = " << j << endl;
         h->debug_print(cerr);

@@ -1,0 +1,10 @@
+(0 Query
+  (A C Comment "quat_n_heteroatom")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 4)
+    (A I formal_charge 1)
+    (A I min_attached_heteroatom_count 1)
+  )
+)

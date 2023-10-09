@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+// short for random_molecular_permutations
+// too long otherwise.
+package rmp;
+
+// The probability that a given transformation
+// will be applied, given that it is selected.
+message TransformationProbabilities {
+  // Remove a randomly selected atom.
+  float remove_atom = 2;
+
+  // Lower an existing bond order.
+  // Note that if the bond randomly selected is in an aromatic
+  // ring, that then subject to `probability_destroy_aromatic_ring`
+  // defined in the Config message below.
+  float lower_bond_order = 3;
+
+  // Convert an existing single bond to double. Could perhaps
+  // be generalized to increment_bond_order, but making triple
+  // bonds does not seem to be an urgent need.
+  float make_double_bond = 4;
+
+  // Remove a bond that defines an aliphatic ring.
+  float break_aliphatic_ring = 5;
+
+  // Subject to any minimum ring size constraint, insert
+  // a single bond between two atoms not already bonded.
+  float make_ring = 6;
+
+  // Anywhere there is an available implicit H atom, add a C.
+  float add_carbon = 7;
+
+  // Identify a single, chain bond. Break it. Randomly choose
+  // one of the atoms, and attach it to a random atom in the
+  // fragment that was created when the bond was broken.
+  // For example, if the broken bond was to a methyl group
+  // the result would be for the methyl group to migrate
+  // elsewhere in the molecule, but clearly much larger
+  // changes could be induced.
+  float move_fragment = 8;
+
+  // Swap two atoms that are bonded - subject to valence
+  // checks on both sides.
+  float swap_adjacent_atoms = 9;
+
+  // Various element transformation options.
+  float change_carbon_to_nitrogen = 10;
+  float change_nitrogen_to_carbon = 11;
+  float change_carbon_to_oxygen = 12;
+
+  // Currently changes oxygen to carbon, nitrogen or sulphur.
+  // Should add more possibilities.
+  float change_oxygen_to_something = 13;
+
+  // Identify two atoms in the same ring, one with a Hydrogen, and
+  // the other with a substituent, and move the substituent to the
+  // ring atom that used to have a Hydrogen.
+  float change_ring_substitution = 14;
+
+  // A terminal group is centered on an unsaturated atom that is
+  // only bonded to singly connected atoms, as well as to a single
+  // carbon atom. The bond to the carbon atom is removed.
+  float remove_terminal_functional_group = 15;
+
+  // An embedded functional group is an unsaturated atom that is
+  // singly bonded to two carbon atoms.
+  float remove_embedded_functional_group = 16;
+
+  // Remove a ring that has no substituents, or only small substituents.
+  // Things like F, OC, NO2, CF3 will be removed, OC, OCC will not.
+  // Perhaps should only remove unsubstituted rings, or make
+  // a transformation that does that.
+  float remove_terminal_ring = 17;
+
+  // Ring switching functions work like ring_replacement. An aromatic
+  // or aliphatic ring in the molecule is identified. Then the library
+  // of aromatic or aliphatic rings generates a random member. We attempt
+  // to swap the existing ring for one from the library. Much less
+  // precise and controlled than ring replacement.
+  float switch_aromatic_ring = 18;
+  float switch_aliphatic_ring = 19;
+
+  // Fragments are randomly selected from the library and attached to
+  // a random atom in the molecule.
+  float add_from_single_attachment_library = 20;
+  float add_from_aromatic_attachment_library = 21;
+  float add_from_double_attachment_library = 22;
+
+  // Take the current molecule and breed with one of the other
+  // starting molecules.
+  float breed = 23;
+
+  // at each point, we can do either an intra-molecular transformation,
+  // or a breeding operation between starting molecules. this is the
+  // first probability decision.
+  // bad idea, not implemented.
+  // float inter_molecular = 24;
+
+  // Destroy a fused ring.
+  float split_fused_ring = 25;
+
+  // Create a fused ring.  Fuses a partial ring from the fused rings
+  // library to an existing ring.
+  float create_fused_ring = 26;
+
+  // Next to assign 27.
+}
+
+// The libraries are sets of external molecules used for various
+// purposes.
+message Libraries {
+  // Fragments to be attached via single bonds.
+  // The join point is the first atom in the molecule.
+  string single = 1;
+  // Joined via a single bond, but to any atom in the molecule.
+  string single_random = 2;
+
+  // Fragments to be attached via double bonds.
+  string double = 3;
+
+  // Fragments that can only be attached to aromatic atoms.
+  // The join point is the first atom in the molecule.
+  string aromatic = 4;
+
+  // Joined via a single bond, but to any atom in the molecule.
+  string aromatic_random = 5;
+
+  // Joined from any atom to an alipathic ring atom.
+  string aliphatic_random = 6;
+
+  // Partial aromatic rings that are available for making fused rings.
+  // The first and last atoms are fused onto an existing ring.
+  // Success fill depend on Kekule forms.
+  string fused_arom = 7;
+}
+
+message Config {
+  TransformationProbabilities probability = 1;
+
+  Libraries libraries = 2;
+
+  // Many transformations may destroy an aromatic ring.
+  // any such transformation that is about to destroy
+  // aromaticity needs to check this probability to see
+  // whether or not it should proceed.
+  float probability_destroy_aromatic_ring = 3;
+
+}

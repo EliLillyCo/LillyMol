@@ -1,26 +1,31 @@
+#include <iostream>
+#include <optional>
+
 #include "ostream_and_type.h"
 
 #include "molecule.h"
 
+using std::cerr;
+
 int
-ofstream_and_type::_default_values ()
+ofstream_and_type::_default_values()
 {
   _valid = 0;
 
   _molecules_written = 0;
   _verbose = 0;
 
-  _output_type = -1;
+  _output_type = FILE_TYPE_INVALID;
 
   return 1;
 }
 
-ofstream_and_type::ofstream_and_type ()
+ofstream_and_type::ofstream_and_type()
 {
   _default_values();
 }
 
-ofstream_and_type::ofstream_and_type (int output_type)
+ofstream_and_type::ofstream_and_type(FileType output_type)
 {
   if (_default_values())
     return;
@@ -33,7 +38,7 @@ ofstream_and_type::ofstream_and_type (int output_type)
   return;
 }
 
-ofstream_and_type::ofstream_and_type (int output_type, const char * fname)
+ofstream_and_type::ofstream_and_type(FileType output_type, const char * fname)
 {
   if (!_default_values())
     return;
@@ -45,7 +50,7 @@ ofstream_and_type::ofstream_and_type (int output_type, const char * fname)
     _valid = 1;
 }
 
-ofstream_and_type::ofstream_and_type (int output_type, IWString & fname)
+ofstream_and_type::ofstream_and_type(FileType output_type, IWString & fname)
 {
   if (!_default_values())
     return;
@@ -57,20 +62,17 @@ ofstream_and_type::ofstream_and_type (int output_type, IWString & fname)
     _valid = 1;
 }
 
-ofstream_and_type::~ofstream_and_type ()
+ofstream_and_type::~ofstream_and_type()
 {
-//if (_valid && good () && BFILE == _output_type)
-//  (*this) << "-1\n";
-
   return;
 }
 
 int
-ofstream_and_type::set_type (int t)
+ofstream_and_type::set_type(FileType t)
 {
   if (valid_file_type(_output_type))
   {
-    cerr << "ofstream_and_type::set_type: file type already set to " << _output_type << endl;
+    cerr << "ofstream_and_type::set_type: file type already set to " << _output_type << '\n';
     return 0;
   }
 
@@ -88,20 +90,27 @@ ofstream_and_type::set_type (int t)
 }
 
 int
-ofstream_and_type::open (const char * fname)
+ofstream_and_type::open(const char * fname)
 {
   if ('>' == *fname && strlen(fname) > 1 && '>' == fname[1])
   {
     fname += 2;
     std::ofstream::open(fname, std::ios::app);
   }
-  else
-    std::ofstream::open(fname, std::ios::out);
+  else {
+    IWString myfname(fname);
+    std::optional<IWString> maybe_expanded = myfname.ExpandEnvironmentVariables();
+    if (maybe_expanded) {
+      std::ofstream::open(maybe_expanded->null_terminated_chars(), std::ios::out);
+    } else {
+      std::ofstream::open(fname, std::ios::out);
+    }
+  }
 
   if (good())
     _fname = fname;
 
-//cerr << "ofstream_and_type: opened '" << fname << "' good = " << good() << endl;
+//cerr << "ofstream_and_type: opened '" << fname << "' good = " << good() << '\n';
 
   return good();
 }

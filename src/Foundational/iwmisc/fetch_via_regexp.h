@@ -1,15 +1,19 @@
 #if ! defined(FETCH_VIA_REGEXP_H)
 #define FETCH_VIA_REGEXP_H
 
-#include "cmdline.h"
-#include "iwcrex.h"
+#include <memory>
+#include <ostream>
+
+#include "re2/re2.h"
+
+#include "Foundational/cmdline/cmdline.h"
 #include "misc.h"
 
 class Fetch_via_Regexp
 {
   private:
     int _n;
-    IW_Regular_Expression * _rx;
+    std::unique_ptr<re2::RE2> * _rx;
     int * _matches_found;         // not thread safe
 
   public:

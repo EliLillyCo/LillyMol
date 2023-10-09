@@ -52,7 +52,7 @@ IWString::unhtml()
 
     int semicolon = next_instance(_things + i, nlook, ';');
 
-//  cerr << "Examining " << nlook << " characters starting at " << i << " semicolon " << semicolon << endl;
+//  std::cerr << "Examining " << nlook << " characters starting at " << i << " semicolon " << semicolon << endl;
 
     if (semicolon < 0)
     {
@@ -64,7 +64,7 @@ IWString::unhtml()
 
     const_IWSubstring s;
     from_to(i + 1, i + semicolon - 1, s);
-//  cerr << "Checking s '" << s << "'\n";
+//  std::cerr << "Checking s '" << s << "'\n";
 
     if ("nbsp" == s)
     {
@@ -92,7 +92,7 @@ IWString::unhtml()
     }
     else
     {
-      cerr << "IWString::unhtml:unrecognised directive '" << s << "'\n";
+      std::cerr << "IWString::unhtml:unrecognised directive '" << s << "'\n";
       return 0;
     }
 

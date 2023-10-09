@@ -5,12 +5,16 @@
 #include <stdlib.h>
 #include <fstream>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
-#include "iw_stl_hash_set.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_set.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -18,7 +22,7 @@ static int identifier_column_in_identifier_file = 0;
 
 static int identifier_column_in_smiles_file = 1;
 
-static IW_Regular_Expression identifier_regexp_in_smiles_file;
+static std::unique_ptr<RE2> identifier_regexp_in_smiles_file;
 
 static int ignore_duplicate_identifiers_in_identifier_file = 0;
 
@@ -54,7 +58,13 @@ static char smiles_file_column_separator = ' ';
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "Fetches records from one file based on identifiers in one or more other file(s)\n";
   cerr << prog_name << " identifier_file smiles_file > newfile\n";
   cerr << " -c <col>       identifier column in identifier file\n";
@@ -322,16 +332,14 @@ fetch_smiles_quick (const const_IWSubstring & buffer,
 {
   IWString id, zdata;
 
-  if (identifier_regexp_in_smiles_file.active())
+  if (identifier_regexp_in_smiles_file)
   {
-    assert (identifier_regexp_in_smiles_file.active());
-
     int i = 0;
     const_IWSubstring token;
     int col = 0;
     while (buffer.nextword(token, i))
     {
-      if (! identifier_regexp_in_smiles_file.matches(token))
+      if (! iwre2::RE2PartialMatch(token, *identifier_regexp_in_smiles_file))
         continue;
 
       if (! identifiers_to_fetch.contains(token))
@@ -744,14 +752,14 @@ fetch_smiles_quick (int argc, char ** argv)
     if (c.starts_with("RX="))
     {
       c.remove_leading_chars(3);
-      if (! identifier_regexp_in_smiles_file.set_pattern(c))
+      if (! iwre2::RE2Reset(identifier_regexp_in_smiles_file, c))
       {
         cerr << "Invalid smiles file identifier regexp '" << c << "'\n";
         return 5;
       }
 
       if (verbose)
-        cerr << "Identifiers in smiles file must match '" << identifier_regexp_in_smiles_file.source() << "'\n";
+        cerr << "Identifiers in smiles file must match '" << identifier_regexp_in_smiles_file->pattern() << "'\n";
 
       identifier_column_in_smiles_file = -1;
     }

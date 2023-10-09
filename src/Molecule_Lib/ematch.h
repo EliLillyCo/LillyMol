@@ -1,8 +1,10 @@
-#ifndef E_MATCH_H
-#define E_MATCH_H
+#ifndef MOLECULE_LIB_E_MATCH_H_
+#define MOLECULE_LIB_E_MATCH_H_
 
-#include "iwaray.h"
-#include "iwcrex.h"
+#include <memory>
+#include <optional>
+
+#include "re2/re2.h"
 
 #include "element.h"
 
@@ -15,13 +17,13 @@ class Element_Matcher
   private:
     const Element * _e;
 
-    int _isotope;
+    std::optional<isotope_t> _isotope;
 
     int _match_organic_only;
     int _match_non_organic_only;
     int _match_non_periodic_only;
 
-    IW_Regular_Expression _symbol_rx;
+    std::unique_ptr<RE2> _symbol_rx;
 
 //  private functions
 
@@ -47,9 +49,9 @@ class Element_Matcher
 
     const Element * element () const { return _e;}
 
-    int isotope () const { return _isotope;}
+    const std::optional<isotope_t>& isotope () const { return _isotope;}
 
-    int matches (const Element *, int = 0);    // = 0 parameter is isotope
+    int matches (const Element *, isotope_t iso = 0);
 };
 
 extern std::ostream &
@@ -69,4 +71,4 @@ class Set_of_Element_Matches : public resizable_array_p<Element_Matcher>
 
 extern void display_element_matcher_syntax (std::ostream & os);
 
-#endif
+#endif  // MOLECULE_LIB_E_MATCH_H_

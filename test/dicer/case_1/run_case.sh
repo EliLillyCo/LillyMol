@@ -42,12 +42,12 @@ fi
 
 echo "Testing: $command"
 
-$command -k 2 -X 5000 -m 5 -M 20 -A I -A D "$in" > "$out" 2>>err.txt
-$diff_tool "$out" "$cmp_out"
-ret=$?
+# sort the output to avoid dependencies on hash ordering.
 
-if [ $ret -eq 1 ]
-then
+$command -k 2 -X 5000 -m 5 -M 20 -A D "$in" 2> err.txt | sort > "$out" 
+$diff_tool "$out" "$cmp_out"
+
+if [[ $? -eq 1 ]] ; then
     echo "$case_id : TEST PASS"
 else
     echo "$case_id : TEST FAIL"

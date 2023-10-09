@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package GeometricConstraints;
+
+message Range {
+  // Min and max values allowed in a range.
+  float min = 1;
+  float max = 2;
+}
+
+// This started out as something complicated involving van der waals
+// radii, but the implementation ended up to ocomplicated, so for
+// now the constraint is a fixed radius cylinder between that atoms.
+
+// When imposing distance constraints we usually want there to be
+// empty space between the two points. This is defined by the VDW
+// radii of the atoms + an extra distance.
+enum VdwTtype {
+  UNDEFINED = 0;
+  SHRAKE_AND_RUPLEY = 1;
+  SAVOL = 2;
+  MOLVOL = 3;
+  SYBYL63 = 4;
+  WIKI = 5;
+}
+
+message LineOfSight {
+  // The kind of VDW radius used.
+  optional VdwTtype vdw_type = 1;    // required
+
+  // The extra distance required beyond the cylinder defined
+  // by the pair of atoms.
+  optional float delta = 2;
+
+}
+
+// We can define a virtual atom as being the geometric center of
+// a number of matched query atoms.
+// WIP, not working yet, not entirely sure it will work...
+message VirtualAtom {
+  // The atoms defining the virtual atom.
+  repeated uint32 atom = 1;
+  
+  // We can assign this virtual atom an id so it can be matched.
+  optional int32 set_global = 2;
+}
+
+// All the geometric constraints follow a similar pattern.
+// One or more atoms, and a range of allowed values.
+
+message Distance {
+  int32 a1 = 1;
+  int32 a2 = 2;
+  Range range = 3;
+
+  // The radius of the tube between atoms a1 and a2. There must be
+  // no other atoms in this tube.
+  optional float tube_radius = 4;
+}
+
+// Note that with angles, the Range is interpreted as Radians.
+// TODO:ianwatson radians do not make sense, change sometime.
+
+message BondAngle {
+  uint32 a1 = 1;
+  uint32 a2 = 2;
+  uint32 a3 = 3;
+  Range range = 4;
+}
+
+message TorsionAngle {
+  uint32 a1 = 1;
+  uint32 a2 = 2;
+  uint32 a3 = 3;
+  uint32 a4 = 4;
+  Range range = 5;
+}
+
+// A position in space.
+// These become possible if we are dealing with a set
+// of molecules that have been forced to common spatial
+// positions. This enables queries like "make sure there
+// is a positive charge within 5 Angstroms of residue X'
+// where the spatial position of the residue is known.
+message Position {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+// When defining a spatial constraint, what is needed in
+// order for there to be a match.
+enum SpatialConstraintMatchType {
+  // The average position of all matched atoms must match.
+  AVERAGE = 0;
+  // If any of the matched atoms satisfies the constraint, that
+  // is a match.
+  ANY = 1;
+  // All matched atoms must satisfy the constraint.
+  ALL = 2;
+}
+
+// In order for a query to match, all PositiveSpatialConstraint
+// must be matched. TODO:ianwatson should we add logical operators?
+message PositiveSpatialConstraint {
+  // The atoms to which the constraint applies.
+  repeated uint32 atom = 1;
+
+  // the spatial position defining the constraint.
+  Position position = 2;
+
+  Range range = 3;
+
+  SpatialConstraintMatchType match_type = 4;
+}
+
+// If any NegativeSpatialConstraint fails, then the query
+// will not match.
+message NegativeSpatialConstraint {
+  // The atoms to which the constraint applies.
+  repeated uint32 atom = 1;
+
+  // the spatial position defining the constraint.
+  Position position = 2;
+
+  Range range = 3;
+
+  SpatialConstraintMatchType match_type = 4;
+}
+
+
+message SetOfConstraints {
+  repeated Distance distance = 1;
+  repeated BondAngle bond_angle = 2;
+  repeated TorsionAngle torsion_angle = 3;
+
+  repeated PositiveSpatialConstraint positive_spatial_constraint = 4;
+  repeated NegativeSpatialConstraint negative_spatial_constraint = 5;
+
+  // The number of the above constraints that must match.
+  uint32 number_to_match = 6;
+
+  repeated VirtualAtom virtual_atom = 7;
+}

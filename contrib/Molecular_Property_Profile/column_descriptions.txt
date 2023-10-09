@@ -1,0 +1,426 @@
+feature_to_description {
+  key: "w_amw"
+  value {
+    description: "Molecular weight"
+  }
+}
+feature_to_description {
+  key: "w_aromdens"
+  value {
+    description: "aromatic density"
+  }
+}
+feature_to_description {
+  key: "w_fsymmatom"
+  value {
+    description: "Fraction of symmetric atoms"
+  }
+}
+feature_to_description {
+  key: "w_htroaf"
+  value {
+    description: "Heteroatom fraction"
+  }
+}
+feature_to_description {
+  key: "w_mxdst"
+  value {
+    description: "longest separation"
+  }
+}
+feature_to_description {
+  key: "w_natoms"
+  value {
+    description: "Number of heavy atoms"
+  }
+}
+feature_to_description {
+  key: "w_nrings"
+  value {
+    description: "Number of rings"
+  }
+}
+feature_to_description {
+  key: "w_nelem"
+  value {
+    description: "Number of different elements"
+  }
+}
+feature_to_description {
+  key: "w_ncon1"
+  value {
+    description: "Number of atoms with 1 connection"
+  }
+}
+feature_to_description {
+  key: "w_fncon1"
+  value {
+    description: "Fraction of atoms with 1 connection"
+  }
+}
+feature_to_description {
+  key: "w_ncon2"
+  value {
+    description: "Number of atoms with 2 connections"
+  }
+}
+feature_to_description {
+  key: "w_fncon2"
+  value {
+    description: "Fraction of atoms with 2 connections"
+  }
+}
+feature_to_description {
+  key: "w_ncon3"
+  value {
+    description: "Number of atoms with 3 connections"
+  }
+}
+feature_to_description {
+  key: "w_fncon3"
+  value {
+    description: "Fraction of atoms with 3 connections"
+  }
+}
+feature_to_description {
+  key: "w_ncon4"
+  value {
+    description: "Number of atoms with 4 connections"
+  }
+}
+feature_to_description {
+  key: "w_fncon4"
+  value {
+    description: "Fraction of atoms with 4 connections"
+  }
+}
+feature_to_description {
+  key: "w_avcon"
+  value {
+    description: "Average connectivity"
+  }
+}
+feature_to_description {
+  key: "w_mxdst"
+  value {
+    description: "Longest topological distance"
+  }
+}
+feature_to_description {
+  key: "w_rotbond"
+  value {
+    description: "Number of rotatable bonds"
+  }
+}
+feature_to_description {
+  key: "w_rngatmf"
+  value {
+    description: "Fraction of atoms that are in a ring"
+  }
+}
+feature_to_description {
+  key: "w_aroma"
+  value {
+    description: "Number of aromatic atoms"
+  }
+}
+feature_to_description {
+  key: "w_aromha"
+  value {
+    description: "Number of aromatic heteroatoms"
+  }
+}
+feature_to_description {
+  key: "w_aromdens"
+  value {
+    description: "Fraction of atoms that are aromatic"
+  }
+}
+feature_to_description {
+  key: "w_htroaf"
+  value {
+    description: "Fraction of atoms that are not carbon"
+  }
+}
+feature_to_description {
+  key: "w_frspch"
+  value {
+    description: "Fraction of atoms that are in substituent groups"
+  }
+}
+feature_to_description {
+  key: "w_intrnlrng"
+  value {
+    description: "Number of internal (non terminal) rings"
+  }
+}
+feature_to_description {
+  key: "w_ringsys"
+  value {
+    description: "Number of ring systems"
+  }
+}
+feature_to_description {
+  key: "w_arring"
+  value {
+    description: "Number of aromatic rings"
+  }
+}
+feature_to_description {
+  key: "w_alring"
+  value {
+    description: "Number of aliphatic rings"
+  }
+}
+feature_to_description {
+  key: "w_halogen"
+  value {
+    description: "Number of halogen atoms"
+  }
+}
+feature_to_description {
+  key: "w_fcsp3"
+  value {
+    description: "Fraction of all atoms that are CSP3"
+  }
+}
+feature_to_description {
+  key: "w_lflxchn"
+  value {
+    description: "Length of longest flexible chain"
+  }
+}
+feature_to_description {
+  key: "w_maxdrng"
+  value {
+    description: "Max distance between any two rings"
+  }
+}
+feature_to_description {
+  key: "w_nrings3"
+  value {
+    description: "Number of 3 membered rings"
+  }
+}
+feature_to_description {
+  key: "w_nrings4"
+  value {
+    description: "Number of 4 membered rings"
+  }
+}
+feature_to_description {
+  key: "w_nrings5"
+  value {
+    description: "Number of 5 membered rings"
+  }
+}
+feature_to_description {
+  key: "w_nrings6"
+  value {
+    description: "Number of 6 membered rings"
+  }
+}
+feature_to_description {
+  key: "w_nrings7"
+  value {
+    description: "Number of 7 membered rings"
+  }
+}
+feature_to_description {
+  key: "w_nspiro"
+  value {
+    description: "Number of spiro fused atoms"
+  }
+}
+feature_to_description {
+  key: "w_nsfsdsys"
+  value {
+    description: "Number of strongly fused (cage) ring systems"
+  }
+}
+feature_to_description {
+  key: "w_symmatom"
+  value {
+    description: "Number of symmetric atoms"
+  }
+}
+feature_to_description {
+  key: "w_lsepsymatom"
+  value {
+    description: "Longest separation between symmetric atoms"
+  }
+}
+feature_to_description {
+  key: "w_maxpsymd"
+  value {
+    description: "Max distance between atoms in partial symmetry relations"
+  }
+}
+feature_to_description {
+  key: "w_nvrtspsa"
+  value {
+    description: "Topological total polar surface area from Novartis"
+  }
+}
+feature_to_description {
+  key: "w_hcount"
+  value {
+    description: "Number of Hydrogen atoms"
+  }
+}
+feature_to_description {
+  key: "w_rmync"
+  value {
+    description: "Number of Carbon atoms"
+  }
+}
+feature_to_description {
+  key: "w_rmynn"
+  value {
+    description: "Number of Nitrogen atoms"
+  }
+}
+feature_to_description {
+  key: "w_rmyno"
+  value {
+    description: "Number of Oxygen atoms"
+  }
+}
+feature_to_description {
+  key: "w_rmynf"
+  value {
+    description: "Number of Flourine atoms"
+  }
+}
+feature_to_description {
+  key: "w_rmyns"
+  value {
+    description: "Number of Sulphur atoms"
+  }
+}
+feature_to_description {
+  key: "w_mxsdlp"
+  value {
+    description: "Maximum shortest distance to longest path"
+  }
+}
+feature_to_description {
+  key: "w_frafus"
+  value {
+    description: "Fraction of ring atoms that are fused"
+  }
+}
+feature_to_description {
+  key: "w_mhr"
+  value {
+    description: "Max number of heteratoms in a ring"
+  }
+}
+feature_to_description {
+  key: "w_lrsysz"
+  value {
+    description: "Rings in the largest ring system"
+  }
+}
+feature_to_description {
+  key: "w_excydbond"
+  value {
+    description: "Exocyclic double bonds"
+  }
+}
+feature_to_description {
+  key: "w_isolrc"
+  value {
+    description: "Number of isolated (unfused) rings"
+  }
+}
+feature_to_description {
+  key: "w_brunsneg"
+  value {
+    description: "Number of negatively charged atoms, Bruns"
+  }
+}
+feature_to_description {
+  key: "w_brunspos"
+  value {
+    description: "Number of positively charged atoms, Bruns"
+  }
+}
+feature_to_description {
+  key: "w_brunsacc"
+  value {
+    description: "Number of Hydrogen bond acceptors, Bruns"
+  }
+}
+feature_to_description {
+  key: "w_brnsdual"
+  value {
+    description: "Number of Hydrogen bond donor/acceptors, Bruns"
+  }
+}
+feature_to_description {
+  key: "w_brunsdon"
+  value {
+    description: "Number of Hydrogen bond donors, Bruns"
+  }
+}
+feature_to_description {
+  key: "w_xlogp"
+  value {
+    description: "xlogP"
+  }
+}
+feature_to_description {
+  key: "w_bbr1"
+  value {
+    description: "One bond between two rings"
+  }
+}
+feature_to_description {
+  key: "w_bbr2"
+  value {
+    description: "Two bonds (one atom) between two rings"
+  }
+}
+feature_to_description {
+  key: "w_lrsz"
+  value {
+    description: "Size of largest ring"
+  }
+}
+feature_to_description {
+  key: "w_lrsysz"
+  value {
+    description: "Rings in largest ring system"
+  }
+}
+feature_to_description {
+  key: "w_mars"
+  value {
+    description: "Most atoms in a ring system"
+  }
+}
+feature_to_description {
+  key: "w_isolhtrc"
+  value {
+    description: "Number of isolated heterocycles"
+  }
+}
+feature_to_description {
+  key: "w_aiercsct"
+  value {
+    description: "Atoms in conjugated sections"
+  }
+}
+feature_to_description {
+  key: "w_lercsct"
+  value {
+    description: "Largest conjugated section"
+  }
+}
+feature_to_description {
+  key: "w_rng7atoms"
+  value {
+    description: "Number of rings with 7 or more atoms"
+  }
+}

@@ -1,8 +1,10 @@
-#ifndef IW_RING_CLOSURE_BONDS_H
-#define IW_RING_CLOSURE_BONDS_H
+#ifndef MOLECULE_LIB_IWRCB_H_
+#define MOLECULE_LIB_IWRCB_H_
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
 #include "bond.h"
-#include "iwaray.h"
 
 /*
   We need to keep track of whether or not given pairs of atoms are
@@ -51,4 +53,4 @@ class Ring_Closure_Bonds : public resizable_array<int>
     int is_subset_of (const Ring_Closure_Bonds &) const;
 };
 
-#endif
+#endif  // MOLECULE_LIB_IWRCB_H_

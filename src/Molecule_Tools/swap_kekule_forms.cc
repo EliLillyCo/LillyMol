@@ -1,8 +1,12 @@
 #include <stdlib.h>
+#include <iostream>
 
-#include "molecule.h"
-#include "path.h"
-#include "toggle_kekule_form.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/toggle_kekule_form.h"
+
+using std::cerr;
+using std::endl;
 
 int
 find_adjacent_atoms_in_common_between_two_rings (const Ring & ri, 
@@ -13,7 +17,7 @@ find_adjacent_atoms_in_common_between_two_rings (const Ring & ri,
   a1 = INVALID_ATOM_NUMBER;
   a2 = INVALID_ATOM_NUMBER;
 
-  for (Ring_Bond_Iterator i(ri); i != ri.end(); ++i)
+  for (Ring_Bond_Iterator i(ri); i != ri.zend(); ++i)
   {
     if (! rj.contains_bond(i.a1(), i.a2()))
       continue;

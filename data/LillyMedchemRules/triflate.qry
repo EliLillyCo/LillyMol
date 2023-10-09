@@ -1,0 +1,66 @@
+(8 Query
+  (A C Comment "triflate")
+  (A C Comment "triflate")
+  (A I Version 2)
+  (A I one_embedding_per_start_atom 1)
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
+  (0 Elements_Needed
+    (A I atomic_number 9)
+    (A I min_hits_needed 3)
+  )
+  (0 Elements_Needed
+    (A I atomic_number 8)
+    (A I min_hits_needed 3)
+  )
+  (0 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 4)
+    (A I nbonds 4)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 9)
+    (A I ncon 1)
+    (A I single_bond 1)
+  )
+  (4 Query_Atom
+    (A I atomic_number 16)
+    (A I ncon 4)
+    (A I nbonds 6)
+    (A I single_bond 1)
+  )
+  (5 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 4)
+  )
+  (6 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I double_bond 4)
+  )
+  (7 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I nbonds 2)
+    (A I single_bond 4)
+  )
+  (8 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 7)
+  )
+)

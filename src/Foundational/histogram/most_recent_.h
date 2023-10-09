@@ -6,9 +6,9 @@
 
 template <typename T>
 void
-IWMost_Recent<T>::_default_values ()
+IWMost_Recent<T>::_default_values()
 {
-  _things = NULL;
+  _things = nullptr;
 
   _elements_allocated = 0;
 
@@ -20,27 +20,27 @@ IWMost_Recent<T>::_default_values ()
 }
 
 template <typename T>
-IWMost_Recent<T>::IWMost_Recent ()
+IWMost_Recent<T>::IWMost_Recent()
 {
-  _default_values ();
+  _default_values();
 
   return;
 } 
 
 template <typename T>
-IWMost_Recent<T>::IWMost_Recent (int initial_size)
+IWMost_Recent<T>::IWMost_Recent(int initial_size)
 {
-  _default_values ();
+  _default_values();
 
-  resize (initial_size);
+  resize(initial_size);
 
   return;
 }
 
 template <typename T>
-IWMost_Recent<T>::IWMost_Recent (const IWMost_Recent<T> & rhs)     // copy constructor
+IWMost_Recent<T>::IWMost_Recent(const IWMost_Recent<T> & rhs)     // copy constructor
 {
-  _default_values ();
+  _default_values();
 
   operator = (rhs);
 
@@ -49,7 +49,7 @@ IWMost_Recent<T>::IWMost_Recent (const IWMost_Recent<T> & rhs)     // copy const
 
 template <typename T>
 int
-IWMost_Recent<T>::resize (int new_size)
+IWMost_Recent<T>::resize(int new_size)
 {
   assert (ok ());
 
@@ -81,9 +81,9 @@ IWMost_Recent<T>::resize (int new_size)
 
 template <typename T>
 void
-IWMost_Recent<T>::clear ()
+IWMost_Recent<T>::clear()
 {
-  assert (ok ());
+  assert (ok());
 
   _items_added = 0;
   _next_ptr = 0;
@@ -93,17 +93,17 @@ IWMost_Recent<T>::clear ()
 
 template <typename T>
 IWMost_Recent<T> &
-IWMost_Recent<T>::operator = (const IWMost_Recent<T> & rhs)
+IWMost_Recent<T>::operator =(const IWMost_Recent<T> & rhs)
 {
-  assert (ok ());
-  assert (rhs.ok ());
+  assert (ok());
+  assert (rhs.ok());
 
-  clear ();
+  clear();
 
-  if (_elements_allocated != rhs._elements_allocated && NULL != _things)    // we will need to resize ourselves
+  if (_elements_allocated != rhs._elements_allocated && nullptr != _things)    // we will need to resize ourselves
   {
     delete _things;
-    _things = NULL;
+    _things = nullptr;
     _elements_allocated = 0;
   }
 
@@ -130,9 +130,9 @@ IWMost_Recent<T>::operator = (const IWMost_Recent<T> & rhs)
 
 template <typename T>
 int
-IWMost_Recent<T>::ok () const
+IWMost_Recent<T>::ok() const
 {
-  if (0 == _elements_allocated && NULL == _things)    // probably empty
+  if (0 == _elements_allocated && nullptr == _things)    // probably empty
   {
     return (0 == _items_added && 0 == _next_ptr);
   }
@@ -140,7 +140,7 @@ IWMost_Recent<T>::ok () const
   if (_next_ptr >= _elements_allocated)
     return 0;
 
-  if (0 == _elements_allocated || NULL == _things)
+  if (0 == _elements_allocated || nullptr == _things)
     return 0;
 
   return 1;
@@ -148,7 +148,7 @@ IWMost_Recent<T>::ok () const
 
 template <typename T>
 int
-IWMost_Recent<T>::debug_print (ostream & os) const
+IWMost_Recent<T>::debug_print(ostream & os) const
 {
   os << "Most Recent object with " << _elements_allocated << " items allocated, sampled " << _items_added << endl;
 
@@ -167,12 +167,12 @@ IWMost_Recent<T>::debug_print (ostream & os) const
     os << endl;
   }
 
-  return os.good ();
+  return os.good();
 }
 
 template <typename T>
 void
-IWMost_Recent<T>::extra (T e)
+IWMost_Recent<T>::extra(T e)
 {
   assert (ok ());
   assert (_elements_allocated > 0);
@@ -189,7 +189,7 @@ IWMost_Recent<T>::extra (T e)
 
 template <typename T>
 int
-IWMost_Recent<T>::items_stored () const
+IWMost_Recent<T>::items_stored() const
 {
   if (_items_added <= _elements_allocated)
     return _items_added;
@@ -203,7 +203,7 @@ IWMost_Recent<T>::items_stored () const
 
 template <typename T>
 int
-IWMost_Recent<T>::_get_index (int ndx) const
+IWMost_Recent<T>::_get_index(int ndx) const
 {
   assert (ndx >= 0);
 
@@ -225,7 +225,7 @@ template <typename T>
 typename IWMost_Recent<T>::const_reference
 IWMost_Recent<T>::operator [] (int ndx) const
 {
-  ndx = _get_index (ndx);
+  ndx = _get_index(ndx);
 
   return _things[ndx];
 }
@@ -234,7 +234,7 @@ template <typename T>
 typename IWMost_Recent<T>::reference
 IWMost_Recent<T>::operator [] (int ndx)
 {
-  ndx = _get_index (ndx);
+  ndx = _get_index(ndx);
 
   return _things[ndx];
 }

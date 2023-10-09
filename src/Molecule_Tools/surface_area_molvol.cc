@@ -3,15 +3,17 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
 
-#include "iwrandom.h"
-#include "molecule.h"
-#include "iw_vdw.h"
+#include "Molecule_Lib/molecule.h"
 
 #include "surface_area_molvol.h"
 #include "jwrandom_preset_array.h"
 
 extern "C" void volume_ (int &);
+
+using std::cerr;
+using std::endl;
 
 // n_Max must be the same as in volume.f
 
@@ -94,9 +96,7 @@ Surface_Area_Molvol::report (std::ostream & os) const
 static coord_t
 delta (coord_t amplitude, int counter)
 {
-  //  random_number r = iwrandom ();
-
-  random_number_t r = random_number_preset_array [counter];
+  auto r = random_number_preset_array [counter];
   //  cout<<r<<" ";
 
   if (r < 0.0)
@@ -225,10 +225,10 @@ Surface_Area_Molvol::_molvol (Molecule & m,
 }
 
 int
-Surface_Area_Molvol::surface_area (Molecule & m,
-                                   area_t * area,
-                                   area_t & total_area,
-                                   volume_t & volume)
+Surface_Area_Molvol::surface_area(Molecule & m,
+                                  area_t * area,
+                                  area_t & total_area,
+                                  volume_t & volume)
 {
   int matoms = m.natoms ();
 
@@ -254,14 +254,14 @@ Surface_Area_Molvol::surface_area (Molecule & m,
     m.get_coords (coords);
   }
   else
-    coords = NULL;
+    coords = nullptr;
 
   if (_wobble_first)
     _wobble_structure (m);    // found things work better if we do a first wobble
 
   int rc = _molvol (m, area, total_area, volume);
 
-  if (NULL != coords)
+  if (nullptr != coords)
   {
     m.setxyz (coords);
     delete [] coords;

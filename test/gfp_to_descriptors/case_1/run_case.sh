@@ -36,7 +36,7 @@ else
 fi
 
 diff_tool=../../fileDiff.sh
-$command -f -F FPDSC $shared_data_dir/pubchem.gfp >out.txt 2>err.log
+$command -b -n 50 -f -F FPDSC $shared_data_dir/pubchem.gfp >out.txt 2>err.log
 $diff_tool $name1 $name1_out
 ret1=$?
 

@@ -1,0 +1,50 @@
+description {
+  feature_name: "w_nsfsdsys"
+  description: "Number of strongly fused (cage) ring systems"
+  plot_title: "Number of strongly fused (cage) ring systems"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 4.0
+mean: 0.038696967
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+}
+quantile {
+  quantile: 0.9
+}
+quantile {
+  quantile: 0.95
+}
+quantile {
+  quantile: 0.99
+  value: 1.0
+}
+int_values {
+  count: 2170142
+}
+int_values {
+  value: 1
+  count: 79559
+}
+int_values {
+  value: 2
+  count: 3784
+}
+int_values {
+  value: 3
+  count: 23
+}
+int_values {
+  value: 4
+  count: 2
+}

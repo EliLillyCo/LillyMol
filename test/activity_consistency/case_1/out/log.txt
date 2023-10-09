@@ -1,4 +1,4 @@
-FC(C(C(F)(F)F)(C1CCC(O)CC1)C1CCC(O)CC1)(F)F  N = 6 min 16 max 96 ave 54.33333 diff 80
+OC1CCC(C(C2CCC(O)CC2)(C(F)(F)F)C(F)(F)F)CC1  N = 6 min 16 max 96 ave 54.33333 diff 80
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 73864 46
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 173864 86
 FC(F)(F)C(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])(C1=C([H])C(=C(O[H])C(=C1[H])[H])[H])C(F)(F)F 273864 16
@@ -11,7 +11,7 @@ O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])(
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 211742 31
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 311742 81
 O([H])C1=C([H])C(=C(C(C2=C([H])C(=C([H])C(=C2[H])[H])[H])(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] 411742 11
-OC1CCC(C(OCC2CCCCC2)O)CC1  N = 4 min 35 max 96 ave 53.25 diff 61
+OC(OCC1CCCCC1)C1CCC(O)CC1  N = 4 min 35 max 96 ave 53.25 diff 61
 O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 7180 35
 O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 17180 36
 O(C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C(=O)C1=C([H])C(=C(O[H])C(=C1[H])[H])[H] 27180 96

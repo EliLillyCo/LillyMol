@@ -1,0 +1,6 @@
+# Just matches the donor atom that is not multiply
+# bonded to another atom.
+query {
+  name: "feature_node_donor"
+  smarts: "[3G0]"
+}

@@ -83,9 +83,9 @@ std::ostream& Enrichment::printROCCoordinates( std::ostream & p_out ) const
   rank_type::const_iterator rank_iter = m_rank.begin();
   int count_actives = 0;
   int count_decoys = 0;
-  int active_rank = m_rank[0];
+  uint32_t active_rank = m_rank[0];
   p_out << "0.0 0.0" << std::endl;
-  for( int k = 1; k <= getNbrCompounds() - 1; k++ )
+  for( uint32_t k = 1; k <= getNbrCompounds() - 1; k++ )
   {
     if( active_rank > k )
     {
@@ -167,12 +167,12 @@ void Enrichment::buildFromExponential( const int p_nbr_actives, const int p_nbr_
 void Enrichment::buildSubset( const double p_fraction, Enrichment& p_enrich ) const
 {
   assert( p_fraction > 0.0 );
-  int nbr_to_delete = static_cast<int>( p_fraction * static_cast<double>( getNbrCompounds() ) );
+  uint32_t nbr_to_delete = static_cast<uint32_t>( p_fraction * static_cast<double>( getNbrCompounds() ) );
   
   // Generate nbr_to_delete different random positions
   std::set<int> bag;
   std::set<int>::iterator i_bag;
-  srand( time(NULL) );
+  srand( time(nullptr) );
 
   while( bag.size() < nbr_to_delete )
   {

@@ -1,0 +1,3 @@
+query: "aliphatic_ring_positive.qry"
+element: "Y"
+ring: true

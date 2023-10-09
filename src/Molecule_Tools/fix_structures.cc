@@ -1,16 +1,20 @@
-#include <stdlib.h>
+#include <array>
+#include <iostream>
+#include <memory>
 
 /*
   There are various structure errors that we can fix.
   These aren't really chemical standardisations, but are changes
 */
 
-#include "cmdline.h"
-#include "iw_auto_array.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "molecule.h"
+#include "Molecule_Lib/molecule.h"
 #include "fix_structures.h"
-#include "substructure.h"
+#include "Molecule_Lib/substructure.h"
+
+using std::cerr;
+using std::endl;
 
 Structure_Fixing::Structure_Fixing()
 {
@@ -23,6 +27,7 @@ Structure_Fixing::Structure_Fixing()
   _directive_try_removing_charges_on_atoms_with_bad_valences = 0;
   _directive_add_positive_charge_to_three_valent_sulphur = 0;
   _directive_add_positive_charge_to_two_valent_halogen = 0;
+  _directive_fix_obviously_wrong_implicit_hydrogens = 0;
 
   _molecules_examined = 0;
   _molecules_changed = 0;
@@ -123,6 +128,7 @@ Structure_Fixing::initialise (Command_Line & cl, char c, int verbose)
       _directive_add_positive_charge_to_two_valent_halogen = 1;
       _directive_remove_charges_from_carbon_atoms = 1;
       _directive_remove_charges_from_halogen_atoms = 1;
+      _directive_fix_obviously_wrong_implicit_hydrogens = 1;
       _active = 1;
 
       if (verbose)
@@ -170,6 +176,13 @@ Structure_Fixing::initialise (Command_Line & cl, char c, int verbose)
 
       if (verbose)
         cerr << "Will try removing formal charges on atoms with bad valences\n";
+
+      _active = 1;
+    }
+    else if (f == "fcih") {
+      _directive_fix_obviously_wrong_implicit_hydrogens = 1;
+      if (verbose)
+        cerr << "Will fix obviously incorrect implicit hydrogen specifications\n";
 
       _active = 1;
     }
@@ -227,9 +240,12 @@ int
 Structure_Fixing::_do_try_removing_charges_on_atoms_with_bad_valences (Molecule & m,
                      const Atom ** atom)
 {
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
   int rc = 0;
+
+  // Try placing these formal charges in order
+  static std::array<formal_charge_t, 3> to_try{0, -1, 1};
 
   for (int i = 0; i < matoms; i++)
   {
@@ -239,26 +255,28 @@ Structure_Fixing::_do_try_removing_charges_on_atoms_with_bad_valences (Molecule 
     if (0 == atom[i]->formal_charge())
       continue;
 
-    formal_charge_t initial_formal_charge = atom[i]->formal_charge();
+    const formal_charge_t initial_formal_charge = atom[i]->formal_charge();
 
-    for (formal_charge_t j = -1; j <= 1; j++)
-    {
-      if (j == initial_formal_charge)
+    bool fixed = false;
+    for (formal_charge_t charge : to_try) {
+      if (charge == initial_formal_charge)
         continue;
 
-      m.set_formal_charge(i, j);
+      m.set_formal_charge(i, charge);
 
-      if (m.valence_ok(i))
+      if (m.valence_ok(i)) {
+        fixed = true;
         break;
+      }
     }
 
-    if (m.valence_ok(i))
-    {
+    if (fixed) {
       _charges_removed++;
       rc++;
     }
-    else
+    else {
       m.set_formal_charge(i, initial_formal_charge);
+    }
   }
 
   return rc;
@@ -525,7 +543,7 @@ Structure_Fixing::_do_remove_charges_from_carbon_atoms(Molecule & m, const Atom 
 */
 
 int
-Structure_Fixing::_process (Molecule & m, const Atom ** atom)
+Structure_Fixing::_process(Molecule & m, const Atom ** atom)
 {
   int rc = 0;
 
@@ -578,16 +596,17 @@ Structure_Fixing::_process (Molecule & m, const Atom ** atom)
 }
 
 int
-Structure_Fixing::process (Molecule & m)
+Structure_Fixing::process(Molecule & m)
 {
+//cerr << "Structure_Fixing::process " << _directive_fix_obviously_wrong_implicit_hydrogens << '\n';
   _molecules_examined++;
 
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
   if (matoms < 4)
     return 0;
 
-  const Atom ** atoms = new const Atom *[matoms]; iw_auto_array<const Atom *> free_atoms(atoms);
+  const Atom ** atoms = new const Atom *[matoms]; std::unique_ptr<const Atom *[]> free_atoms(atoms);
 
   m.atoms(atoms);
 

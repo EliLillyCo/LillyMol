@@ -9,20 +9,20 @@
 #include <assert.h>
 #include <random>
 #include <memory>
+#include <random>
+
+#include "Foundational/cmdline/cmdline.h"
 
 #include "iwstring_data_source.h"
-#include "iwrandom.h"
-
-#ifdef USE_IWMALLOC
-#include "iwmalloc.h"
-#endif
 
 using std::cout;
+using std::cerr;
+using std::endl;
 
 static int verbose= 0;
 static int abort_on_error = 0;
 
-char * prog_name = NULL;
+char * prog_name = nullptr;
 
 static IWString filter_pattern("^#");
 
@@ -153,7 +153,7 @@ test4 (const char * fname)
   size_t * offset = new size_t[nr + 1];
   IWString * line = new IWString[nr + 1];
 
-  assert (NULL != offset && NULL != line);
+  assert (nullptr != offset && nullptr != line);
 
   size_t o = input.tellg ();
   cerr << "Initial offset " << o << endl;
@@ -220,19 +220,24 @@ test4 (const char * fname)
   if (0 == random_tests)
     random_tests = nr;
 
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> whole_file_distribution(1, nr - 1);
+  std::uniform_int_distribution<int> zero_to_three(0, 3);
+
+
   for (int i = 0; i < random_tests; i++)
   {
-    int j = intbtwij (0, nr - 1);
+    int j = whole_file_distribution(generator);
 
     size_t o = offset[j];
 
-    if (! input.seekg (o))
+    if (! input.seekg(o))
     {
       cerr << "Gack, cannot seek to " << o << endl;
       return 0;
     }
 
-    if (! input.next_record (buffer))
+    if (! input.next_record(buffer))
     {
       cerr << "Cannot fetch record " << j << " at " << o << endl;
       return 0;
@@ -246,7 +251,7 @@ test4 (const char * fname)
 
 //  Do some more reading so we test reading after a seek
 
-    int kstop = intbtwij (0, 3);
+    int kstop = zero_to_three(generator);
     for (int k = 0; k < kstop; k++)
     {
       (void) input.next_record (buffer);
@@ -403,14 +408,14 @@ do_rx_test (const char * fname, const const_IWSubstring & rx)
   if (verbose)
     cerr << "Input file '" << fname << "' has " << nr << " records\n";
 
-  IW_Regular_Expression iwcrx (rx);
-  if (! iwcrx.ok ())
-  {
+  re2::StringPiece rxs(rx.data(), rx.length());
+  RE2 regex(rxs);
+  if (! regex.ok()) {
     cerr << "Could not compile '" << rx << "'\n";
     return 0;
   }
 
-  int ng = input.grep (iwcrx);
+  int ng = input.grep(regex);
 
   if (verbose)
     cerr << "Found " << ng << " instances of '" << rx << "'\n";
@@ -454,8 +459,6 @@ usage (int rc = 0)
   exit (rc);
 }
 
-#include "cmdline.h"
-
 int
 tdss (int argc, char **argv)
 {
@@ -464,11 +467,6 @@ tdss (int argc, char **argv)
   verbose = cl.option_count ('v');
 
   cerr << "Size of off_t " << sizeof(off_t) << " and streampos " << sizeof (std::streampos) << endl;
-
-#ifdef USE_IWMALLOC
-  if (cl.option_present ('d'))
-    iwmalloc_set_debug (1);
-#endif
 
   if (cl.option_present ('a'))
     abort_on_error = 1;
@@ -480,10 +478,6 @@ tdss (int argc, char **argv)
     if (verbose)
       cerr << "Filter pattern set to '" << filter_pattern << "'\n";
   }
-
-#ifdef USE_IWMALLOC
-  terse_malloc_status (stdout);
-#endif
 
   if (0 == cl.number_elements ())
   {
@@ -498,19 +492,11 @@ tdss (int argc, char **argv)
     failures++;
   }
 
-#ifdef USE_IWMALLOC
-  terse_malloc_status (stdout);
-#endif
-
   if (! test2 (cl[0]))
   {
     cerr << "test2 failed\n";
     failures++;
   }
-
-#ifdef USE_IWMALLOC
-  terse_malloc_status (stdout);
-#endif
 
   if (! test3 (cl[0]))
   {
@@ -536,10 +522,6 @@ tdss (int argc, char **argv)
     failures++;
   }
 
-#ifdef USE_IWMALLOC
-  terse_malloc_status (stdout);
-#endif
-
   if (cl.option_present ('r'))
   {
     const_IWSubstring r;
@@ -553,10 +535,6 @@ tdss (int argc, char **argv)
   else
     cout << "All tests successful\n";
 
-#ifdef USE_IWMALLOC
-  check_all_malloced (stdout);
-#endif
-
   return failures;
 }
 
@@ -566,10 +544,6 @@ main (int argc, char ** argv)
   prog_name = argv[0];
 
   int rc = tdss (argc, argv);
-
-#ifdef USE_IWMALLOC
-  terse_malloc_status (stderr);
-#endif
 
   return rc;
 }

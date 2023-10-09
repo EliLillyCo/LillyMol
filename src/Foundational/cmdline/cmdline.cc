@@ -1,17 +1,18 @@
 //#include <unistd.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <iostream>
 #include <limits>
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 
 #undef _GETOPT_H
 
 // Unclear when we need to switch between C and C++ bindings for optxxx
 #if defined(_WIN32) || defined(NEED_EXTERN_OPT)
 /* Global Exportable */
- extern int optind;
- extern char *optarg;
- extern int opterr;
+ extern "C" int optind;
+ extern "C" char *optarg;
+ extern "C" int opterr;
 
 #else
 #include <unistd.h>
@@ -21,7 +22,6 @@ using std::cerr;
 using std::endl;
 
 #include "cmdline.h"
-#include "iwstring.h"
 
 #define CL_MAGIC 97531
 #define OV_MAGIC 97532
@@ -57,7 +57,7 @@ Option_and_Value::~Option_and_Value ()
 int
 Option_and_Value::value (IWString & result)
 {
-  if (NULL == _value)
+  if (nullptr == _value)
     return 0;
 
   result = _value;
@@ -68,7 +68,7 @@ Option_and_Value::value (IWString & result)
 int
 Option_and_Value::value (const_IWSubstring & result)
 {
-  if (NULL == _value)
+  if (nullptr == _value)
     return 0;
 
   result = _value;
@@ -79,7 +79,7 @@ Option_and_Value::value (const_IWSubstring & result)
 int
 Option_and_Value::value (char * buffer)
 {
-  if (NULL == _value)
+  if (nullptr == _value)
     return 0;
 
   IW_STRCPY(buffer, _value);
@@ -93,7 +93,7 @@ operator << (std::ostream & os, const Option_and_Value & ov)
   return os << "Option '" << ov.option() << "', value '" << ov.value() << "'";
 }
 
-Command_Line::Command_Line (int argc, char ** argv, const char * options)
+Command_Line::Command_Line(int argc, char ** argv, const char * options)
 {
   _magic = CL_MAGIC;
 
@@ -104,7 +104,7 @@ Command_Line::Command_Line (int argc, char ** argv, const char * options)
 
 #endif
 
-  optarg = NULL;
+  optarg = nullptr;
 
 #if defined(_WIN32) || defined(NEED_EXTERN_OPT)
   optind = 0;
@@ -439,7 +439,7 @@ Command_Line::string_value (const char c, int occurrence) const
       if (nfound == occurrence)
       {
         const char * v = oo->value();
-        if (NULL == v)
+        if (nullptr == v)
           return "";
         else
           return oo->value();

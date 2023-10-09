@@ -1,70 +1,75 @@
 #include <stdlib.h>
+#include <iostream>
 #include <iomanip>
-using namespace std;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
+
 #include "mdl_molecule.h"
 
-ISIS_Atom_List::ISIS_Atom_List ()
+using std::cerr;
+using std::endl;
+
+ISIS_Atom_List::ISIS_Atom_List()
 {
   return;
 }
 
 bool
-ISIS_Atom_List::operator== (const ISIS_Atom_List & rhs) const
+ISIS_Atom_List::operator==(const ISIS_Atom_List & rhs) const
 {
   if (_normal_list != rhs._normal_list)
     return false;
 
-  int n = _element.number_elements ();
+  int n = _element.number_elements();
 
-  if (n != rhs._element.number_elements ())
+  if (n != rhs._element.number_elements())
     return false;
 
   for (int i = 0; i < n; i++)
   {
     const Element * e = _element[i];
 
-    if (! rhs._element.contains (e))
+    if (! rhs._element.contains(e))
       return false;
   }
   return true;
 }
 
 static int
-fetch_int_value (const IWString & buffer,
-                 int zfrom,
-                 int zto,
-                 int & zresult)
+fetch_int_value(const IWString & buffer,
+                int zfrom,
+                int zto,
+                int & zresult)
 {
   const_IWSubstring token;
 
-  buffer.from_to (zfrom, zto, token);
+  buffer.from_to(zfrom, zto, token);
 
 //cerr << "Token " << zfrom << " to " << zto << " in '" << buffer << "' is '" << token << "'\n";
 
-  token.strip_leading_blanks ();
+  token.strip_leading_blanks();
 
-  return token.numeric_value (zresult);
+  return token.numeric_value(zresult);
 }
 
 int
-ISIS_Atom_List::create_from_ALS_record (const IWString & buffer)
+ISIS_Atom_List::create_from_ALS_record(const IWString & buffer)
 {
-  assert (buffer.starts_with ("M  ALS "));
+  assert (buffer.starts_with("M  ALS "));
 
-//if (buffer.length () < 24)
-  if (buffer.length () < 20)   // ISIS Draw will create atom lists with just one member!
+  if (buffer.length() < 17)   // ISIS Draw will create atom lists with just one member!
   {
-    cerr << "ISIS_Atom_List::create_from_ALS_record: must be at least 24 chars\n";
+    cerr << "ISIS_Atom_List::create_from_ALS_record: must be at least 17 chars\n";
     return 0;
   }
 
-// M  ALS   1  2 F O   S   
+  // 012345678901234567890
+  // M  ALS   1  2 F O   S   
+  // M  ALS   9  1 T O'
 
   atom_number_t not_used_here;
 
-  if (! fetch_int_value (buffer, 7, 9, not_used_here) || not_used_here < 1)
+  if (! fetch_int_value(buffer, 7, 9, not_used_here) || not_used_here < 1)
   {
     cerr << "ISIS_Atom_List::create_from_ALS_record: invalid atom number designation\n";
     return 0;
@@ -72,7 +77,7 @@ ISIS_Atom_List::create_from_ALS_record (const IWString & buffer)
 
   int n;
 
-  if (! fetch_int_value (buffer, 10, 12, n) || n < 1)
+  if (! fetch_int_value(buffer, 10, 12, n) || n < 1)
   {
     cerr << "ISIS_Atom_List::create_from_ALS_record: invalid number of entries\n";
     return 0;
@@ -90,17 +95,21 @@ ISIS_Atom_List::create_from_ALS_record (const IWString & buffer)
     return 0;
   }
 
-  _element.resize (n);
+  _element.resize(n);
 
   for (int i = 0; i < n; i++)
   {
     const_IWSubstring token;
-    buffer.from_to (16 + i * 4, 16 + i * 4 + 3, token);
+    int token_end = 16 + i * 4 + 3;
+    if (token_end >= buffer.length()) {
+      token_end = buffer.length() - 1;
+    }
+    buffer.from_to(16 + i * 4, token_end, token);
 
-    token.strip_leading_blanks ();
-    token.strip_trailing_blanks ();
+    token.strip_leading_blanks();
+    token.strip_trailing_blanks();
 
-    if (0 == token.length ())
+    if (0 == token.length())
     {
       cerr << "ISIS_Atom_List::create_from_ALS_record: empty token '" << buffer << "'\n";
       cerr << " n = " << n << " i = " << i << " from " << (16 + i * 4) << " to " << (16 + i * 4 + 3) << endl;
@@ -109,24 +118,24 @@ ISIS_Atom_List::create_from_ALS_record (const IWString & buffer)
 
     const Element * e = get_element_from_symbol_no_case_conversion(token);
 
-    if (NULL == e)   // should not happen
+    if (nullptr == e)   // should not happen
     {
       cerr << "ISIS_RXN_FILE_Molecule::create_from_ALS_record: invalid element '" << token << "'\n";
       return 0;
     }
 
-    _element.add (e);
+    _element.add(e);
   }
 
   return 1;
 }
 
 int
-ISIS_Atom_List::debug_print (ostream & os) const
+ISIS_Atom_List::debug_print(std::ostream & os) const
 {
   os << "Atom list: normal " << _normal_list << endl;
 
-  for (int i = 0; i < _element.number_elements (); i++)
+  for (int i = 0; i < _element.number_elements(); i++)
   {
     const Element * e = _element[i];
 
@@ -135,17 +144,17 @@ ISIS_Atom_List::debug_print (ostream & os) const
 
   os << '\n';
 
-  return os.good ();
+  return os.good();
 }
 
 int
-ISIS_Atom_List::write_M_ALS (atom_number_t zatom,
-                             ostream & output) const
+ISIS_Atom_List::write_M_ALS(atom_number_t zatom,
+                            std::ostream & output) const
 {
-  if (0 == _element.number_elements())
+  if (_element.empty())
     return 1;
 
-  output << "M  ALS" << setw (4) << (zatom + 1) << setw (3) << _element.number_elements ();
+  output << "M  ALS" << std::setw(4) << (zatom + 1) << std::setw(3) << _element.number_elements();
 
   if (_normal_list)
     output << " F";
@@ -154,14 +163,14 @@ ISIS_Atom_List::write_M_ALS (atom_number_t zatom,
 
   output << ' ';
 
-  for (int i = 0; i < _element.number_elements (); i++)
+  for (int i = 0; i < _element.number_elements(); i++)
   {
     const Element * e = _element[i];
 
-    assert (NULL != e);
+    assert (nullptr != e);
 
-    output << e->symbol ();
-    for (int j = e->symbol ().length (); j < 4; j++)
+    output << e->symbol();
+    for (int j = e->symbol().length(); j < 4; j++)
     {
       output << ' ';
     }
@@ -169,7 +178,7 @@ ISIS_Atom_List::write_M_ALS (atom_number_t zatom,
 
   output << '\n';
 
-  return output.good ();
+  return output.good();
 }
 
 /*
@@ -177,7 +186,7 @@ ISIS_Atom_List::write_M_ALS (atom_number_t zatom,
 */
 
 int
-ISIS_Atom_List::initialise_from_mdl_A_symbol ()
+ISIS_Atom_List::initialise_from_mdl_A_symbol()
 {
   _normal_list = 1;
 
@@ -193,7 +202,7 @@ ISIS_Atom_List::initialise_from_mdl_A_symbol ()
 */
 
 int
-ISIS_Atom_List::initialise_from_mdl_AH_symbol ()
+ISIS_Atom_List::initialise_from_mdl_AH_symbol()
 {
   _normal_list = 1;
 
@@ -210,7 +219,7 @@ ISIS_Atom_List::initialise_from_mdl_AH_symbol ()
 */
 
 int
-ISIS_Atom_List::initialise_from_mdl_Q_symbol ()
+ISIS_Atom_List::initialise_from_mdl_Q_symbol()
 {
   _normal_list = 1;
 
@@ -229,7 +238,7 @@ ISIS_Atom_List::initialise_from_mdl_Q_symbol ()
 }
 
 int
-ISIS_Atom_List::initialise_from_mdl_QH_symbol ()
+ISIS_Atom_List::initialise_from_mdl_QH_symbol()
 {
   initialise_from_mdl_Q_symbol();
 
@@ -239,7 +248,7 @@ ISIS_Atom_List::initialise_from_mdl_QH_symbol ()
 }
 
 int
-ISIS_Atom_List::convert_not_atom_lists_to_organic_lists ()
+ISIS_Atom_List::convert_not_atom_lists_to_organic_lists()
 {
   int n = _element.number_elements();
 
@@ -287,7 +296,7 @@ ISIS_Atom_List::convert_not_atom_lists_to_organic_lists ()
 // M  V30 4 NOT[O,S,F,Cl,Br,I] 0.65 -1.80417 0 0
 
 int
-ISIS_Atom_List::initialise_atom_list_from_symbol (const const_IWSubstring & s)
+ISIS_Atom_List::initialise_atom_list_from_symbol(const const_IWSubstring & s)
 {
   const_IWSubstring mys(s);
 
@@ -322,7 +331,7 @@ ISIS_Atom_List::initialise_atom_list_from_symbol (const const_IWSubstring & s)
   while (mys.nextword(token, i, ','))
   {
     const Element * e = get_element_from_symbol_no_case_conversion(token);
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "ISIS_Atom_List::initialise_atom_list_from_symbol:unrecognised element '" << token << "'\n";
       return 0;

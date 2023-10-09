@@ -1,0 +1,10 @@
+(0 Query
+  (A C Comment "sulphur")
+  (A I Version 2)
+  (A D numeric_value 50)
+  (A I subtract_from_rc 2)
+  (A I only_match_largest_fragment 1)
+  (0 Query_Atom
+    (A I atomic_number 32)
+  )
+)

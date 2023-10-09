@@ -1,0 +1,6 @@
+(0 query
+  (A I Version 2)
+  (A D numeric_value 20)
+  (A C Comment "alkylthio_N_aromatic")
+  (A C smarts "[SD2R0T0]-c:n")
+)

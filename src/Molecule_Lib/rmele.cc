@@ -1,11 +1,11 @@
-#include <stdlib.h>
-
-#include "assert.h"
-
-#include "cmdline.h"
+#include <iostream>
+#include "Foundational/cmdline/cmdline.h"
 
 #include "molecule.h"
 #include "rmele.h"
+
+using std::cerr;
+using std::endl;
 
 void
 Element_to_Remove::_default_values()

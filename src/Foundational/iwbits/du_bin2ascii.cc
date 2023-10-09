@@ -217,8 +217,8 @@ char *du_bin2ascii(int *palen, int blen, char *b)
   *palen = ntriples * 4 + 1;
   if (nleftover != 0)
     *palen += 4;
-//if (NULL == (ascii = (char *) malloc(*palen + 1)))		/* 1 more for '\0' */
-  if (NULL == (ascii = new char[*palen + 1]))		/* 1 more for '\0' */
+//if (nullptr == (ascii = (char *) malloc(*palen + 1)))		/* 1 more for '\0' */
+  if (nullptr == (ascii = new char[*palen + 1]))		/* 1 more for '\0' */
     ERROR("du_bin2ascii", "malloc failed\n");
   p = ascii;
   
@@ -299,7 +299,7 @@ char *du_ascii2bin(int *pblen, int alen, char *ascii)
     binary = (char *) malloc(1);
   else
     binary = (char *) malloc(*pblen);
-  if (NULL == binary)
+  if (nullptr == binary)
     ERROR("du_ascii2bin", "malloc failed");
 
   /**** Convert the ascii to binary ****/
@@ -327,7 +327,7 @@ int
 du_ascii2bin(char const * ascii, int nchars, 
              unsigned char * binary, unsigned int & nbytes)
 {
-  assert (NULL != binary);
+  assert (nullptr != binary);
 
   if ((nchars % 4) != 1)
     ERROR("du_ascii2bin", "Invalid ASCII string (length wrong)");
@@ -349,6 +349,8 @@ du_ascii2bin(char const * ascii, int nchars,
     ascii += 4;
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
   if (1 == valid_bytes_in_last_3)
   {
     unsigned char notused1, notused2;
@@ -361,6 +363,7 @@ du_ascii2bin(char const * ascii, int nchars,
     ASCII2BIN (ascii, binary[nbytes - 3], binary[nbytes - 2], notused);
     nbytes--;
   }
+#pragma GCC diagnostic pop
 
   return 1;
 }

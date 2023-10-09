@@ -1,16 +1,22 @@
 #include <stdlib.h>
-#include <ctype.h>
+#include <iostream>
+#include <memory>
 
-#include "molecule.h"
+#include "Foundational/cmdline/cmdline.h"
+
 #include "element.h"
-#include "target.h"
 #include "etrans.h"
+#include "molecule.h"
+#include "target.h"
+
+using std::cerr;
 
 int
-display_standard_etrans_options (std::ostream & os, char cflag)
-{
+display_standard_etrans_options(std::ostream & os, char cflag) {
+  // clang-format off
   os << "  -" << cflag << " E1=E2       specify elemental transformation, all E1 become E2\n";
   os << "               Special elements 'organic', 'nonorganic' and 'nonperiodic' are recognised\n";
+  // clang-format on
 
   return os.good();
 }
@@ -18,7 +24,7 @@ display_standard_etrans_options (std::ostream & os, char cflag)
 void
 Element_Transformation::_default_values()
 {
-  _to = NULL;
+  _to = nullptr;
 
   _molecules_processed = 0;
   _molecules_changed  = 0;
@@ -39,14 +45,14 @@ Element_Transformation::Element_Transformation()
 int
 Element_Transformation::ok() const
 {
-  if (_from.element() && NULL == _to)
+  if (_from.element() && nullptr == _to)
     return 0;
 
   return 1;
 }
 
 int
-Element_Transformation::debug_print (std::ostream & os) const
+Element_Transformation::debug_print(std::ostream & os) const
 {
   assert(ok());
   
@@ -75,7 +81,7 @@ Element_Transformation::debug_print (std::ostream & os) const
 }
 
 int
-Element_Transformation::build (const IWString & esource) 
+Element_Transformation::build(const IWString & esource) 
 {
   int i = esource.index('=');
   if (i <= 0 || i == esource.length() - 1)
@@ -106,11 +112,9 @@ Element_Transformation::build (const IWString & esource)
     return 0;
   }
 
-  cerr << "Element is " << ee << "'\n";
-
   _to = get_element_from_symbol_no_case_conversion(ee);
 
-  if (NULL == _to)
+  if (nullptr == _to)
   {
     _to = create_element_with_symbol(ee);
   }
@@ -119,7 +123,7 @@ Element_Transformation::build (const IWString & esource)
 }
 
 int
-Element_Transformation::process (Molecule & m)
+Element_Transformation::process(Molecule & m)
 {
   assert(ok());
   assert(m.ok());
@@ -162,7 +166,7 @@ Element_Transformation::process (Molecule & m)
 }
 
 int
-Element_Transformation::process (Molecule_to_Match & m)
+Element_Transformation::process(Molecule_to_Match & m)
 {
   assert(ok());
   assert(m.ok());
@@ -206,10 +210,8 @@ Element_Transformation::process (Molecule_to_Match & m)
   return rc;
 }
 
-#include "cmdline.h"
-
 int
-process_element_transformations (Command_Line & cl,
+process_element_transformations(Command_Line & cl,
                 Element_Transformations & element_transformations,
                 int verbose,
                 char eflag)
@@ -248,37 +250,45 @@ process_element_transformations (Command_Line & cl,
 }
 
 int
-Element_Transformations::construct_from_command_line (Command_Line & cl,
+Element_Transformations::construct_from_command_line(Command_Line & cl,
                 int verbose,
                 char eflag)
 {
   IWString c;
-  int i = 0;
-  int rc = 0;
-  while (cl.value(eflag, c, i++))
-  {
-    if ("help" == c)
-    {
+  for (int i = 0; cl.value(eflag, c, i); ++i) {
+    if ("help" == c) {
       display_standard_etrans_options(cerr, eflag);
       exit(2);
     }
 
-    Element_Transformation * tmp = new Element_Transformation;
-    cerr << "Element_Transformation::construct_from_command_line:building " << c << endl;
-    if (! tmp->build(c))
-    {
+    std::unique_ptr<Element_Transformation> tmp = std::make_unique<Element_Transformation>();
+    if (! tmp->build(c)) {
       cerr << "Cannot process option '" << eflag << "' number " << i << " '" << c << "'\n";
       return 0;
     }
 
-    if (verbose)
+    if (verbose) {
       tmp->debug_print(cerr);
+    }
 
-    add(tmp);
-    rc++;
+    add(tmp.release());
   }
 
-  return rc + 1;
+  return _number_elements;
+}
+
+int
+Element_Transformations::Add(const IWString& directive) {
+  std::unique_ptr<Element_Transformation> tmp = std::make_unique<Element_Transformation>();
+  if (! tmp->build(directive)) {
+    cerr << "Element_Transformations::Add:cannot interpret '" << directive << "'\n";
+    return 0;
+  }
+
+  add(tmp.release());
+
+
+  return 1;
 }
 
 int
@@ -305,15 +315,15 @@ Element_Transformations::debug_print (std::ostream & os) const
 }
 
 int
-Element_Transformations::process (Molecule * m)
+Element_Transformations::process(Molecule * m)
 {
-  assert(NULL != m);
+  assert(nullptr != m);
 
   return process(*m);
 }
 
 int
-Element_Transformations::process (Molecule & m)
+Element_Transformations::process(Molecule & m)
 {
   int rc = 0;
   for (int i = 0; i < _number_elements; i++)
@@ -325,7 +335,7 @@ Element_Transformations::process (Molecule & m)
 }
 
 int
-Element_Transformations::process (Molecule_to_Match & m)
+Element_Transformations::process(Molecule_to_Match & m)
 {
   int rc = 0;
   for (int i = 0; i < _number_elements; i++)

@@ -1,0 +1,40 @@
+(5 Query
+  (A C Comment "tbutyl")
+  (A I Version 2)
+  (A D numeric_value 45)
+  (A I subtract_from_rc 2)
+
+# Apr 98, one t-butyl OK
+# Apr 2004. Start counting with 3rd one
+
+  (A I min_hits_needed 3)
+
+  (A I one_embedding_per_start_atom 1)
+  (0 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 4)
+    (A I nbonds 4)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 1)
+    (A I nbonds 1)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 1)
+    (A I nbonds 1)
+    (A I single_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I ncon 1)
+    (A I nbonds 1)
+    (A I single_bond 0)
+  )
+  (4 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 0)
+  )
+)

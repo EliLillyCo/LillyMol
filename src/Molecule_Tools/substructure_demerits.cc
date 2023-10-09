@@ -1,18 +1,20 @@
 #include <iostream>
 #include <memory>
-using std::cerr;
-using std::endl;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
-#include "path.h"
+#include "Molecule_Lib/charge_assigner.h"
+#include "Molecule_Lib/path.h"
+
 #include "demerit.h"
-#include "charge_assigner.h"
 
 #include "qry_and_demerit.h"
+
+using std::cerr;
+using std::endl;
 
 namespace substructure_demerits
 {
@@ -40,7 +42,7 @@ initialise_charge_assigner(const char * s)
   return _charge_assigner.build(s);
 }
 
-static int too_many_rings_cutoff = 6;
+static int too_many_rings_cutoff = std::numeric_limits<int>::max();
 
 void
 set_substructure_demerits_too_many_rings(int s)
@@ -182,7 +184,7 @@ compute_max_nrings(Molecule & m,
 {
   int rc = 0;
 
-  for (Ring_Bond_Iterator i(r); i != r.end(); ++i)
+  for (Ring_Bond_Iterator i(r); i != r.zend(); ++i)
   {
     const Bond * b = m.bond_between_atoms(i.a1(), i.a2());
 
@@ -455,7 +457,7 @@ is_rejectable_large_ring(Molecule & m,
   int fused_ring_atoms_encountered = 0;
   int heteroatom_outside_ring = 0;
 
-  for (Ring_Atom_Iterator i(ri); i != ri.end(); i++)
+  for (Ring_Atom_Iterator i(ri); i != ri.zend(); i++)
   {
     atom_number_t j = i.current();
 
@@ -1182,7 +1184,7 @@ static int two_nitrogens_with_double_bonds_count = 0;
 static int apply_two_nitrogens_with_double_bonds = 1;
 
 static int
-nitrogen_nitrogen (const Molecule & m_in, Demerit & demerit,
+nitrogen_nitrogen(const Molecule & m_in, Demerit & demerit,
                const atomic_number_t * mz, const int * ncon)
 {
   Molecule m(m_in);
@@ -1357,8 +1359,9 @@ is_hydrazone_or_hydrazid (Molecule & m,
 
 // Make sure we do not hit Hydrazones, or Hydrazids
 
+#ifdef VERSION_THAT_SCANS_ATOMS
 static int
-nitrogen_single_bond_nitrogen (const Molecule & m_in,
+nitrogen_single_bond_nitrogen(const Molecule & m_in,
                         Demerit & demerit,
                         const atomic_number_t * mz,
                         const int * ncon)
@@ -1400,20 +1403,62 @@ nitrogen_single_bond_nitrogen (const Molecule & m_in,
     }
   }
 
-  if (NNcount)
-  {
+  if (NNcount) {
     demerit.extra(NNcount * demerit_or_default_if_specified(75), "N-N");   // jun97 change from 50 to 75 each
     nitrogen_single_bond_nitrogen_count++;
   }
 
   return 0;
 }
+#endif
+
+static int
+nitrogen_single_bond_nitrogen(Molecule & m,
+                        Demerit & demerit,
+                        const atomic_number_t * mz,
+                        const int * ncon)
+{
+  int NNcount = 0;
+
+  const int nedges = m.nedges();
+  for (int i = 0; i < nedges; ++i) {
+    const Bond * b = m.bondi(i);
+    if (! b->is_single_bond()) {
+      continue;
+    }
+    const atom_number_t a1 = b->a1();
+    if (mz[a1] != 7) {
+      continue;
+    }
+    const atom_number_t a2 = b->a2();
+    if (mz[a2] != 7) {
+      continue;
+    }
+    if (1 == ncon[a1] && is_hydrazone_or_hydrazid(m, a2, mz, ncon)) {
+      continue;
+    }
+    if (1 == ncon[a2] && is_hydrazone_or_hydrazid(m, a1, mz, ncon)) {
+      continue;
+    }
+
+    if (! m.in_same_rings(a1, a2)) {
+      NNcount++;
+    }
+  }
+
+  if (NNcount) {
+    demerit.extra(NNcount * demerit_or_default_if_specified(75), "N-N");   // jun97 change from 50 to 75 each
+    nitrogen_single_bond_nitrogen_count++;
+  }
+
+  return demerit.rejected();
+}
 
 static int apply_too_many_rings_demerit = 1;
 
 static  int
-too_many_rings (const Molecule & m_in,
-                Demerit & demerit)
+too_many_rings(const Molecule & m_in,
+               Demerit & demerit)
 {
   Molecule m(m_in);
   if (! apply_too_many_rings_demerit)

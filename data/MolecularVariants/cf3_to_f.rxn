@@ -1,0 +1,10 @@
+name: "cf3_to_f"
+scaffold {
+  id: 0
+  smarts: "[#6](F)(F)F"
+  remove_atoms: [1, 2, 3]
+  change_element {
+    atom: 0
+    element: "F"
+  }
+}

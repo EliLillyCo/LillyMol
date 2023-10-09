@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "unsat_n_plus")
+  (A I Version 2)
+  (A D numeric_value 70)
+  (0 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I nbonds 4)
+    (A I formal_charge 1)
+    (A I attached_heteroatom_count 0)
+  )
+)

@@ -18,8 +18,14 @@
 
     int __compute_aromaticity_for_ring (const Ring &, aromaticity_type_t &,
                                         int &, int *, int &, int);
+    int __compute_aromaticity_for_ring(const Ring & p, aromaticity_type_t & arom,
+                                         int & impossible_aromatic,
+                                         int& unshared_pi_electrons, AromData& arom_data);
     int _compute_aromaticity_for_ring (int, aromaticity_type_t &,
                                        int &, int *, int &, int);
+    int _compute_aromaticity_for_ring(int ring_number, aromaticity_type_t & arom,
+                                        int & impossible_aromatic, AromData& arom_data,
+                                        int & unshared_pi_electrons);
 
     int _compute_aromaticity_with_fused_rings (int *, const int *, int *, int);
 
@@ -45,10 +51,15 @@
                                                     int * ok_to_include,
                                                     const int * impossible_aromatic,
                                                     const Ring * r);
+    int _determine_aromaticity_by_single_fusions_to_ring(AromData& arom,
+                   int * rings_in_fused_system,
+                   int * ok_to_include,
+                   const Ring * r);
     int _determine_aromaticity_by_single_fusions (int * ring_already_done, 
                                                     int * pi_electron_count,
                                                     const int * impossible_aromatic,
                                                     int aromaticity_rules);
+    int _determine_aromaticity_by_single_fusions(AromData& arom_data);
 
     int _assemble_super_ring (Set_of_Atoms & super_ring,
                                 int * to_be_processed,
@@ -72,17 +83,23 @@
                                   const int * impossible_aromaticic,
                                   const int aromaticity_rules,
                                   int * rings_in_ring_system);
+    int _combine_non_arom_ring(int zring, int system_identifier, AromData& arom_data,
+                                 const int * include_in_ring_systems,
+                                 int * rings_in_system);
 
+    int _determine_aromaticity_of_fused_systems(AromData& arom_data);
     int _determine_aromaticity_of_fused_systems (int * already_done,
                                                  int * pi_electron_count,
                                                  const int * impossible_aromatic,
                                                  const int aromaticity_rules,
                                                  int & fused_system_identifier);
+    int _determine_aromaticity_of_fused_systems(AromData& arom_data,
+                                                  const int * include_in_ring_systems,
+                                                  int & fused_system_identifier);
     int _determine_aromaticity_of_fused_systems (int * already_done,
                                                  int * pi_electron_count,
                                                  const int * impossible_aromatic,
-                                                 const int aromaticity_rules,
-                                                 int *);
+                                                 const int aromaticity_rules);
     int _determine_aromaticity (const Set_of_Atoms &,
                                 aromaticity_type_t &,
                                 int &,
@@ -93,6 +110,9 @@
                                 int & impossible_aromatic,
                                 int * pi_electron_count,
                                 int);
+    int _determine_aromaticity(const Set_of_Atoms & p, aromaticity_type_t & result,
+                               int & impossible_aromatic,
+                               AromData& arom_data);
 
 //  All the private functions needed for kekule determinations
 
@@ -112,6 +132,11 @@
                                    aromaticity_type_t * atom_aromaticity,
                                    int * pi_electrons,
                                    int * unshared_pi_electrons);
+    int __kekule_arom_test_rings(const int * process_these_atoms,
+                                   const resizable_array<const Ring *> & rings,
+                                   aromaticity_type_t * ring_aromaticity,
+                                   aromaticity_type_t * atom_aromaticity, 
+                                   AromData& arom_data);
     int _kekule_arom_test_rings (Kekule_Temporary_Arrays & kta,
                                  const resizable_array<const Ring *> & rings);
 
@@ -143,7 +168,7 @@
 
     int _kekule_identify_non_arom_rings (Kekule_Temporary_Arrays &);
 
-    int _kekule_cannot_be_aromatic (int *, int &, int &);
+    int _kekule_could_be_aromatic(int *, int &);
 
     int _convert_chain_aromatic_bonds (int * aromatic_atoms, const int * rm);
     int _convert_any_chain_aromatic_atoms_to_permanent_aromatic (const int * process_these_atoms);
@@ -235,4 +260,9 @@
 
     int _has_kekule_forms(const Set_of_Atoms & r) const;
 
-/* arch-tag: 37e305b3-dfa5-44ea-8f3c-c036cab21fa5 */
+    int _identify_atoms_in_all_pi_rings(int * in_all_pi_ring);
+    int _identify_atoms_in_all_pi_rings(const int * aromatic_atoms, int * in_all_pi_ring);
+    int _compute_aromaticity(AromData& arom_data);
+    int _in_all_pi_ring(AromData& arom_data, atom_number_t zatom);
+    int _determine_in_all_pi_ring(AromData& arom_data);
+    int _amide_like(atom_number_t in_ring, atom_number_t maybe_n) const;

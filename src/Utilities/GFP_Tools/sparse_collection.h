@@ -8,8 +8,8 @@
   some fixed number
 */
 
-#include "accumulator.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "gfp.h"
 
@@ -86,9 +86,15 @@ class Set_of_Sparse_Fingerprint_Collection_Profile
 
     int finished_profiling (int verbose);
 
-    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, IWDYFP & fpto, int & nextra) const;
-    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, Fixed_Size_Counted_Fingerprint_uchar & fpto, int & extra_bits, int & extra_count) const;
-    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, Fixed_Size_Counted_Fingerprint_uint & fpto, int & extra_bits, int & extra_count) const;
+    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, IWDYFP & fpto, int & nextra) const {
+      return _sfcp[which_collection].convert_to_fixed_width(fpfrom, fpto, nextra);
+    }
+    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, Fixed_Size_Counted_Fingerprint_uchar & fpto, int & extra_bits, int & extra_count) const {
+      return _sfcp[which_collection].convert_to_fixed_width(fpfrom, fpto, extra_bits, extra_count);
+    }
+    int convert_to_fixed_width (int which_collection, const Sparse_Fingerprint & fpfrom, Fixed_Size_Counted_Fingerprint_uint & fpto, int & extra_bits, int & extra_count) const {
+      return _sfcp[which_collection].convert_to_fixed_width(fpfrom, fpto, extra_bits, extra_count);
+    }
 };
 
 class Command_Line;

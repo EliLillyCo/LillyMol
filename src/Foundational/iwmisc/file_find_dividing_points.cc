@@ -1,14 +1,16 @@
 #include <stdlib.h>
 
+#include "re2/re2.h"
+
+#include "Foundational/data_source/iwstring_data_source.h"
+
 #include "misc.h"
 
-#include "iwstring_data_source.h"
-
 int
-find_dividing_points (const char * fname, 
-                      int n,
-                      resizable_array<off_t> & offset,
-                      IW_Regular_Expression & rx)
+find_dividing_points(const char * fname, 
+                     int n,
+                     resizable_array<off_t> & offset,
+                     re2::RE2& rx)
 {
   assert (n > 1);
 
@@ -49,7 +51,8 @@ find_dividing_points (const char * fname,
 
     while (input.next_record(buffer))
     {
-      if (rx.matches(buffer))
+      const re2::StringPiece tmp(buffer.data(), buffer.length());
+      if (RE2::PartialMatch(tmp, rx))
       {
         offset.add(o);
         break;

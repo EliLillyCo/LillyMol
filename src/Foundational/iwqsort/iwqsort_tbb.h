@@ -51,7 +51,7 @@ struct quick_sort_range
       } while ( comp(array[i], *key0));
       if (i == j)
         goto partition;
-        std::swap(array[i], array[j]);
+      std::swap(array[i], array[j]);
     }
 
     partition:

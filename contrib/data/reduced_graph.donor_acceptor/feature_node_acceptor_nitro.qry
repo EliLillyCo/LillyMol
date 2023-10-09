@@ -1,0 +1,5 @@
+# The Harpe paper includes Nitro groups as acceptors
+query {
+  name: "feature_node_acceptor_nitro"
+  smarts: "O=N=O"
+}

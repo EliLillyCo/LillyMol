@@ -1,7 +1,7 @@
 #ifndef DISTANCE_SCALING_H
 #define DISTANCE_SCALING_H 1
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 /*
   We want to be able to convert from some other fingerprint
@@ -24,7 +24,7 @@ class Distance_Scaling
     int build (const char *);
     int build (iwstring_data_source &);
 
-    int active() const { return NULL != _conv;}
+    int active() const { return nullptr != _conv;}
 
     float convert (float) const;
 };

@@ -15,17 +15,16 @@ using std::endl;
   #include <netinet/in.h>
 #endif
 
-#include "iwstring.h"
-#include "iwbits.h"
-#include "dy_fingerprint.h"
-#include "misc.h"
-#include "md5.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwbits/dy_fingerprint.h"
 #define IWQSORT_FO_IMPLEMENTATION
-#include "iwqsort.h"
-#include "timsort.hpp"
-
-#include "iwdigits.h"
-#include "iwstring_data_source.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/md5.h"
+#include "Foundational/iwmisc/timsort.hpp"
+#include "Foundational/iwqsort/iwqsort.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "sparse_fp_creator.h"
 
@@ -68,7 +67,7 @@ Sparse_Fingerprint_Creator::operator == (const Sparse_Fingerprint_Creator & rhs)
 #endif
 
 void
-Sparse_Fingerprint_Creator::hit_bit (unsigned int b)
+Sparse_Fingerprint_Creator::hit_bit(unsigned int b)
 {
   auto f = _fp.find(b);
   if (f == _fp.end())
@@ -112,7 +111,7 @@ Sparse_Fingerprint_Creator::operator == (const Sparse_Fingerprint_Creator & rhs)
 }
 
 void
-Sparse_Fingerprint_Creator::copy_bits_to_unsigned_int_array (unsigned int * tmp,
+Sparse_Fingerprint_Creator::copy_bits_to_unsigned_int_array(unsigned int * tmp,
                                      int & ndx) const
 {
   ndx = 0;
@@ -132,7 +131,7 @@ Sparse_Fingerprint_Creator::copy_bits_to_unsigned_int_array (unsigned int * tmp,
 }
 
 int
-Sparse_Fingerprint_Creator::fill_count_array (const unsigned int * b,
+Sparse_Fingerprint_Creator::fill_count_array(const unsigned int * b,
                                         int * c, 
                                         int n) const
 {
@@ -155,7 +154,7 @@ Sparse_Fingerprint_Creator::fill_count_array (const unsigned int * b,
 }
 
 static int
-unsigned_int_comparitor (const void * p1, const void * p2)
+unsigned_int_comparitor(const void * p1, const void * p2)
 {
   const unsigned int u1 = *(reinterpret_cast<const unsigned int *>(p1));
   const unsigned int u2 = *(reinterpret_cast<const unsigned int *>(p2));
@@ -186,7 +185,7 @@ class Unsigned_Int_Comparitor
 static Unsigned_Int_Comparitor uic;
 
 int
-Sparse_Fingerprint_Creator::write_constant_width_fingerprint (unsigned int nb,
+Sparse_Fingerprint_Creator::write_constant_width_fingerprint(unsigned int nb,
                                  const IWString & tag,
                                  std::ostream & os) const
 {
@@ -196,7 +195,7 @@ Sparse_Fingerprint_Creator::write_constant_width_fingerprint (unsigned int nb,
 }
 
 int
-Sparse_Fingerprint_Creator::_write_constant_width_fingerprint (unsigned int nb,
+Sparse_Fingerprint_Creator::_write_constant_width_fingerprint(unsigned int nb,
                                  int * tmp,
                                  const IWString & tag,
                                  std::ostream & os) const
@@ -229,7 +228,7 @@ Sparse_Fingerprint_Creator::_write_constant_width_fingerprint (unsigned int nb,
 }
 
 inline void
-Sparse_Fingerprint_Creator::_convert_to_unsigned_char (unsigned int b,
+Sparse_Fingerprint_Creator::_convert_to_unsigned_char(unsigned int b,
                                      unsigned char & count) const
 {
   FPHash::const_iterator f = _fp.find(b);
@@ -249,7 +248,7 @@ Sparse_Fingerprint_Creator::_convert_to_unsigned_char (unsigned int b,
 //#define DEBUG_ENCODE_WITH_COUNTS
 
 int
-Sparse_Fingerprint_Creator::daylight_ascii_form_with_counts_encoded (IWString & dyascii) const
+Sparse_Fingerprint_Creator::daylight_ascii_form_with_counts_encoded(IWString & dyascii) const
 {
   unsigned int * s = new unsigned int[_fp.size()]; std::unique_ptr<unsigned int[]> free_s(s);
 
@@ -281,7 +280,7 @@ Sparse_Fingerprint_Creator::daylight_ascii_form_with_counts_encoded (IWString & 
 */
 
 int
-Sparse_Fingerprint_Creator::_daylight_ascii_form_with_counts_encoded (const unsigned int * s,
+Sparse_Fingerprint_Creator::_daylight_ascii_form_with_counts_encoded(const unsigned int * s,
                                   unsigned int * tmp,
                                   IWString & dyascii) const
 {
@@ -400,9 +399,9 @@ int
 Sparse_Fingerprint_Creator::debug_print (std::ostream & os) const
 {
   os << "Sparse fingerprint with " << _fp.size() << " bits set\n";
-  for (IW_Hash_Map<unsigned int, int>::const_iterator i = _fp.begin(); i != _fp.end(); i++)
+  for (const auto& iter : _fp)
   {
-    os << (*i).second << " hits to bit " << (*i).first << endl;
+    os << iter.second << " hits to bit " << iter.first << endl;
   }
 
   return os.good();
@@ -474,7 +473,7 @@ Sparse_Fingerprint_Creator::write_in_svml_form(IWString & output) const
     iwdigits.initialise(256);
   }
 
-  unsigned int * s = new unsigned int[_fp.size()]; std::unique_ptr<unsigned int> free_s(s);
+  unsigned int * s = new unsigned int[_fp.size()]; std::unique_ptr<unsigned int[]> free_s(s);
 
   int ndx = 0;
   copy_bits_to_unsigned_int_array(s, ndx);
@@ -571,6 +570,43 @@ int
 Sparse_Fingerprint_Creator::write_as_md5_sum(O & output) const
 {
   return unordered_map_to_md5(_fp, output);
+}
+
+IWString
+Sparse_Fingerprint_Creator::FixedWidthFingerprint(int nbits) const {
+  IW_Bits_Base bits(nbits);
+  bits.clear();
+  for (auto [bit, _] : _fp) {
+    int b = bit % nbits;
+    bits.set(b);
+  }
+  IWString result;
+  bits.daylight_ascii_representation_including_nset_info(result);
+  return result;
+}
+
+IWString
+Sparse_Fingerprint_Creator::BitsWithoutCounts() const {
+  unsigned int * bits = new unsigned int[_fp.size()]; std::unique_ptr<unsigned int[]> free_bits(bits);
+
+  int ndx = 0;
+  for (auto [bit, _] : _fp) {
+    bits[ndx] = bit;
+    ++ndx;
+  }
+  gfx::timsort(bits, bits + ndx);
+
+  for (int i = 0; i < ndx; ++i) {
+    bits[i] = htonl(bits[i]);
+  }
+
+  int allocated = 0;
+  char * daylight = du_bin2ascii(&allocated, ndx * IW_BYTES_PER_WORD,
+                                 reinterpret_cast<char *>(bits));
+
+  IWString result;
+  result.set_and_assume_ownership(daylight, allocated);
+  return result;
 }
 
 #ifdef __GNUG__

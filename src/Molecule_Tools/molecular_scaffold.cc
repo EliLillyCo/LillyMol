@@ -2,21 +2,25 @@
   Identify the scaffold(s) in a molecule
 */
 
+#include <iostream>
 #include <memory>
 
-#include "iw_stl_hash_map.h"
-#include "cmdline.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
-#include "molecule.h"
-#include "smiles.h"
-#include "iwstandard.h"
-#include "aromatic.h"
-#include "path.h"
-#include "istream_and_type.h"
-#include "rotbond_common.h"
+#include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/standardise.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rotbond_common.h"
+#include "Molecule_Lib/smiles.h"
 
-const char * prog_name = NULL;
+using std::cerr;
+using std::endl;
+
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -211,7 +215,7 @@ molecular_scaffold(Molecule & m,
                    O & output)
 {
   IWString original;
-  original <<  m.molecule_name () <<  ' ' << m.unique_smiles() << ' ' << m.natoms();
+  original <<  m.name () << ' ' << m.unique_smiles() << ' ' << m.natoms();
   int * spinach = new_int(m.natoms());std::unique_ptr<int[]> free_spinach(spinach);
   
   if (! remove_spinach(m,spinach))
@@ -290,7 +294,7 @@ molecular_scaffold(data_source_and_type<Molecule> & input,
 
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule ()))
+  while (nullptr != (m = input.next_molecule ()))
   {
     std::unique_ptr<Molecule> free_m(m);
 
@@ -299,7 +303,7 @@ molecular_scaffold(data_source_and_type<Molecule> & input,
     preprocess(*m);
 
     if (verbose > 1)
-      cerr << "Processing '" << m->molecule_name () << "'\n";
+      cerr << "Processing '" << m->name () << "'\n";
 
     if (! molecular_scaffold(*m, output))
       return 0;
@@ -312,7 +316,7 @@ molecular_scaffold(data_source_and_type<Molecule> & input,
 
 template <typename O>
 int
-molecular_scaffold (const char * fname, int input_type, O & output)
+molecular_scaffold (const char * fname, FileType input_type, O & output)
 {
   data_source_and_type<Molecule> input (input_type, fname);
 
@@ -331,8 +335,13 @@ molecular_scaffold (const char * fname, int input_type, O & output)
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Usage: " << prog_name << " <options> <input_file1> <input_file2>...\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
   cerr << "  -i <type>      specify input type\n";
   cerr << "  -S <string>    create output files with name <string>\n";
   display_standard_aromaticity_options (cerr);
@@ -367,7 +376,7 @@ molecular_scaffold (int argc, char ** argv)
   if (! process_standard_aromaticity_options (cl, verbose))
     usage (6);
 
-  int input_type = 0;
+  FileType input_type = FILE_TYPE_INVALID;
 
   if (! cl.option_present ('i'))
   {

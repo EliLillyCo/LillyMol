@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package nnbr;
+
+// Protos for holding nearneighbour results.
+
+// For each neighbour.
+message Nbr {
+  string smi = 1;
+  string id = 2;
+  float dist = 3;
+}
+
+// Each needle has some number of neighbours.
+message NearNeighbours {
+  optional string smiles = 1;
+  optional string name = 2;
+
+  // When used as cluster output, a cluster number may be present.
+  // This will be the same as the line number in textproto output
+  optional uint32 cluster = 3;
+
+  // If this is written as a textproto, having the size of the
+  // cluster can assist sorting.
+  optional uint32 csize = 4;
+
+  // The members of the cluster
+  repeated Nbr nbr = 5;
+}
+
+message ListOfNearNeighbours {
+  repeated NearNeighbours nearneighbours = 1;
+}

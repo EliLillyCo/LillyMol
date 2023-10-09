@@ -1,0 +1,6 @@
+name: "open3ring"
+scaffold {
+  id: 0
+  smarts: "[CD2r3]1-[CD3]-[CD3]1"
+  remove_atom: 0
+}

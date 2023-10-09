@@ -1,5 +1,6 @@
 #ifndef IWCONFIG_H
 #define IWCONFIG_H
+#define IW_IMPLEMENTATIONS_EXPOSED 1
 
 #ifdef _WIN32
 
@@ -37,6 +38,8 @@
 
 #else
 
+#include <unistd.h>
+
 #define IW_STRCPY ::strcpy
 #define IW_STRNCPY ::strncpy
 
@@ -50,7 +53,7 @@
 #define IW_GETPID ::getpid
 
 #define	String2I64(cTmp) atoll(cTmp);
-typedef long long INT64;
+//typedef long long INT64;
 
 #endif
 

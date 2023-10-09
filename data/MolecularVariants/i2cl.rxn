@@ -1,0 +1,9 @@
+name: "i2cl"
+scaffold {
+  id: 0
+  smarts: "I"
+  change_element {
+    atom: 0
+    element: "Cl"
+  }
+}

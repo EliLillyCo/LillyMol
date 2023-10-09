@@ -1,0 +1,152 @@
+description {
+  feature_name: "w_ncon1"
+  description: "Number of atoms with 1 connection"
+  plot_title: "Number of atoms with 1 connection"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 28.0
+mean: 4.6181135
+median: 4.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+  value: 1.0
+}
+quantile {
+  quantile: 0.1
+  value: 2.0
+}
+quantile {
+  quantile: 0.5
+  value: 4.0
+}
+quantile {
+  quantile: 0.9
+  value: 8.0
+}
+quantile {
+  quantile: 0.95
+  value: 9.0
+}
+quantile {
+  quantile: 0.99
+  value: 12.0
+}
+int_values {
+  count: 28430
+}
+int_values {
+  value: 1
+  count: 120023
+}
+int_values {
+  value: 2
+  count: 269117
+}
+int_values {
+  value: 3
+  count: 378522
+}
+int_values {
+  value: 4
+  count: 414637
+}
+int_values {
+  value: 5
+  count: 353840
+}
+int_values {
+  value: 6
+  count: 265470
+}
+int_values {
+  value: 7
+  count: 168532
+}
+int_values {
+  value: 8
+  count: 104820
+}
+int_values {
+  value: 9
+  count: 58826
+}
+int_values {
+  value: 10
+  count: 36122
+}
+int_values {
+  value: 11
+  count: 21783
+}
+int_values {
+  value: 12
+  count: 14077
+}
+int_values {
+  value: 13
+  count: 8074
+}
+int_values {
+  value: 14
+  count: 5154
+}
+int_values {
+  value: 15
+  count: 2777
+}
+int_values {
+  value: 16
+  count: 1643
+}
+int_values {
+  value: 17
+  count: 809
+}
+int_values {
+  value: 18
+  count: 467
+}
+int_values {
+  value: 19
+  count: 159
+}
+int_values {
+  value: 20
+  count: 100
+}
+int_values {
+  value: 21
+  count: 52
+}
+int_values {
+  value: 22
+  count: 34
+}
+int_values {
+  value: 23
+  count: 15
+}
+int_values {
+  value: 24
+  count: 15
+}
+int_values {
+  value: 25
+  count: 5
+}
+int_values {
+  value: 26
+  count: 3
+}
+int_values {
+  value: 27
+  count: 2
+}
+int_values {
+  value: 28
+  count: 2
+}

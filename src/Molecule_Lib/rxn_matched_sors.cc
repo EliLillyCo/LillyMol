@@ -1,6 +1,10 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "iwreaction.h"
+
+using std::cerr;
+using std::endl;
 
 Matched_Atom_in_Component::Matched_Atom_in_Component ()
 {

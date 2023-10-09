@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 #include "normalisation.h"
 
 static int scaling_type = NRML_MIN_TO_MAX;

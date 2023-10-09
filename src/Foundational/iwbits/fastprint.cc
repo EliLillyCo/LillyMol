@@ -3,7 +3,7 @@
 #include "iwbits.h"
 #include "iwbits_support.h"
 
-#include "iwstring.h"
+#include "Foundational/iwstring/iwstring.h"
 
 static const char * byte_form_space [] = {
          " 0 0 0 0 0 0 0 0",

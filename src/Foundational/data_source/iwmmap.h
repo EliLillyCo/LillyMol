@@ -2,8 +2,13 @@
 #define IWSTRING_DS_MMAP_H
 
 #include<algorithm>
+#include<memory>
 
-#include "iwcrex.h"
+#include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwstring/iwstring.h"
+
+using std::cerr;
+using std::endl;
 
 class IW_MMapd_File
 {
@@ -96,8 +101,8 @@ class IW_Storage_Reader : public T
     int _strip_trailing_blanks;
     int _skip_blank_lines;    // not implemented yet
 
-    IW_Regular_Expression _ignore_pattern;
-    IW_Regular_Expression _filter_pattern;
+    std::unique_ptr<RE2> _ignore_pattern;
+    std::unique_ptr<RE2> _filter_pattern;
 
 //  private functions
 
@@ -106,6 +111,7 @@ class IW_Storage_Reader : public T
     int  _fetch_previous_record (const_IWSubstring & buffer);
     int _next_record (const_IWSubstring & buffer);
     int _next_record_inner (const_IWSubstring & buffer);
+    int _skip_for_ignore_pattern(const const_IWSubstring& buffer) const;
 
   public:
     IW_Storage_Reader();
@@ -133,7 +139,7 @@ class IW_Storage_Reader : public T
     int  set_ignore_pattern (const const_IWSubstring &);
 
     int skip_records (const int nskip);
-    int skip_records (IW_Regular_Expression & rx, int nskip);
+    int skip_records (RE2 & rx, int nskip);
 
     int skip_to   (const char *);
     int skip_past (const char *);
@@ -147,7 +153,7 @@ class IW_Storage_Reader : public T
     int echo_records (std::ostream & os, int necho);    // echo's records
     int echo_records (IWString_and_File_Descriptor & os, int necho);    // echo's records
 
-    int grep (IW_Regular_Expression & rx);
+    int grep (RE2 & rx);
 
     int most_recent_record (IWString &);
 
@@ -323,7 +329,7 @@ template <typename T>
 int
 IW_Storage_Reader<T>::set_ignore_pattern (const const_IWSubstring & s)
 {
-  return _ignore_pattern.set_pattern(s);
+  return iwre2::RE2Reset(_ignore_pattern, s);
 }
 
 template <typename T>
@@ -351,7 +357,7 @@ IW_Storage_Reader<T>::_next_record (const_IWSubstring & buffer)
       buffer.strip_leading_blanks();
     if (_skip_blank_lines && 0 == buffer.length())
       continue;
-    if (_ignore_pattern.active() && _ignore_pattern.matches(buffer))
+    if (_skip_for_ignore_pattern(buffer))
       continue;
     return 1;
   }
@@ -359,6 +365,15 @@ IW_Storage_Reader<T>::_next_record (const_IWSubstring & buffer)
   buffer.make_empty();
 
   return 0;
+}
+
+template <typename T>
+int
+IW_Storage_Reader<T>::_skip_for_ignore_pattern(const const_IWSubstring& buffer) const {
+  if (!_ignore_pattern)
+    return 0;
+
+  return iwre2::RE2PartialMatch(buffer, *_ignore_pattern);
 }
 
 template <typename T>
@@ -620,7 +635,7 @@ IW_Storage_Reader<T>::count_records_starting_with(const const_IWSubstring & s)
 
 template <typename T>
 int
-IW_Storage_Reader<T>::grep (IW_Regular_Expression & rx)
+IW_Storage_Reader<T>::grep (RE2 & rx)
 {
   if (! T::_good || nullptr == T::_p)
     return 0;
@@ -632,7 +647,7 @@ IW_Storage_Reader<T>::grep (IW_Regular_Expression & rx)
   int rc = 0;
   while (_next_record(buffer))
   {
-    if (rx.matches(buffer))
+    if (iwre2::RE2PartialMatch(buffer, rx))
       rc++;
   }
 
@@ -662,7 +677,7 @@ IW_Storage_Reader<T>::skip_records (const int nskip)
 
 template <typename T>
 int
-IW_Storage_Reader<T>::skip_records (IW_Regular_Expression & rx, const int nskip)
+IW_Storage_Reader<T>::skip_records (RE2 & rx, const int nskip)
 {
   if (! T::_good || nullptr == T::_p)
     return 0;
@@ -673,7 +688,7 @@ IW_Storage_Reader<T>::skip_records (IW_Regular_Expression & rx, const int nskip)
 
   while (_next_record(buffer))
   {
-    if (! rx.matches(buffer))
+    if (iwre2::RE2PartialMatch(buffer, rx))
       continue;
 
     rc++;
@@ -686,7 +701,7 @@ IW_Storage_Reader<T>::skip_records (IW_Regular_Expression & rx, const int nskip)
 
 template <typename T>
 int
-IW_Storage_Reader<T>::skip_past (const char * pattern)
+IW_Storage_Reader<T>::skip_past(const char * pattern)
 {
   if (! T::_good || nullptr == T::_p)
     return 0;
@@ -697,7 +712,7 @@ IW_Storage_Reader<T>::skip_past (const char * pattern)
   if (0 == strlen(pattern))
     return 0;
 
-  IW_Regular_Expression regexp(pattern);
+  RE2 regexp(pattern);
 
   if (_record_buffered)
   {
@@ -706,7 +721,7 @@ IW_Storage_Reader<T>::skip_past (const char * pattern)
       return 0;
     _record_buffered = 0;
 
-    if ( regexp.matches(buffer))
+    if (iwre2::RE2PartialMatch(buffer, regexp))
       return 1;
   }
 
@@ -717,7 +732,7 @@ IW_Storage_Reader<T>::skip_past (const char * pattern)
   while (_next_record(buffer))
   {
     rc++;
-    if (regexp.matches(buffer))
+    if (iwre2::RE2PartialMatch(buffer, regexp))
       return rc;
   }
 
@@ -726,7 +741,7 @@ IW_Storage_Reader<T>::skip_past (const char * pattern)
 
 template <typename T>
 int
-IW_Storage_Reader<T>::skip_to (const char * pattern)
+IW_Storage_Reader<T>::skip_to(const char * pattern)
 {
   const int rc = skip_past(pattern);
 
@@ -740,7 +755,7 @@ IW_Storage_Reader<T>::skip_to (const char * pattern)
 
 template <typename T>
 int
-IW_Storage_Reader<T>::most_recent_record (IWString & s)
+IW_Storage_Reader<T>::most_recent_record(IWString & s)
 {
   if (! T::_good || nullptr == T::_p)
     return 0;
@@ -757,7 +772,7 @@ IW_Storage_Reader<T>::most_recent_record (IWString & s)
 
 template <typename T>
 size_t
-IW_Storage_Reader<T>::copy_raw_bytes (void * dest, const size_t nbytes) const
+IW_Storage_Reader<T>::copy_raw_bytes(void * dest, const size_t nbytes) const
 {
   if (! T::_good || nullptr == T::_p)
     return 0;

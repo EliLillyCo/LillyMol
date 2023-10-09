@@ -1,8 +1,8 @@
 #ifndef IW_TABULAR_DATA_H
 #define IW_TABULAR_DATA_H
 
-#include "iwstring_data_source.h"
-#include "iwbits.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwbits/iwbits.h"
 
 template <typename T>
 class IW_Tabular_Data

@@ -1,13 +1,14 @@
-#ifndef IWSHADOW_H
-#define IWSHADOW_H
+#ifndef MOLECULE_TOOLS_SHADOW_H
+#define MOLECULE_TOOLS_SHADOW_H
 
 /*
   Several places in the code I need to compute shadow areas
 */
 
-#include "molecule.h"
-#include "iw_vdw.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/iw_vdw.h"
 
+namespace shadow {
 class Shadow_Area 
 {
   private:
@@ -25,37 +26,38 @@ class Shadow_Area
 
 //  private functions
 
-    area_t _shadow_area (int matoms, const Atom * const * atom, const vdw_radius_t vdw []);
-    void _project_atoms_to_grid (int matoms,
-                                 const Atom * const * atom,
-                                 const vdw_radius_t * vdw);
+    area_t _shadow_area(int matoms, const Atom * const * atom, const vdw_radius_t vdw []);
+    void _project_atoms_to_grid(int matoms,
+                                const Atom * const * atom,
+                                const vdw_radius_t * vdw);
 
-    void _project_atom (const Atom * a, vdw_radius_t vdw);
-    void _project_atom_y (const Atom * a, vdw_radius_t vdw);
-    void _project_atom_z (const Atom * a, vdw_radius_t vdw);
+    void _project_atom(const Atom * a, vdw_radius_t vdw);
+    void _project_atom_y(const Atom * a, vdw_radius_t vdw);
+    void _project_atom_z(const Atom * a, vdw_radius_t vdw);
 
-    area_t _determine_area () const;
+    area_t _determine_area() const;
 
-    int _print_grid_y (std::ostream &, char, char) const;
-    int _print_grid_z (std::ostream &, char, char) const;
+    int _print_grid_y(std::ostream &, char, char) const;
+    int _print_grid_z(std::ostream &, char, char) const;
 
-    int _nearest_y_grid_point (coord_t) const;
-    int _nearest_z_grid_point (coord_t) const;
+    int _nearest_y_grid_point(coord_t) const;
+    int _nearest_z_grid_point(coord_t) const;
 
   public:
-    Shadow_Area ();
-    ~Shadow_Area ();
+    Shadow_Area();
+    ~Shadow_Area();
 
-    int ok () const;
-    int debug_print (std::ostream &) const;
+    int ok() const;
+    int debug_print(std::ostream &) const;
 
-    int active () const;
+    int active() const;
 
-    void set_resolution (float r) { _resolution = r;}
+    void set_resolution(float r) { _resolution = r;}
 
-    area_t shadow_area (const Molecule &, const vdw_radius_t *);
+    area_t shadow_area(const Molecule &, const vdw_radius_t *);
 
-    int print_grid (std::ostream &, char, char) const;
+    int print_grid(std::ostream &, char, char) const;
 };
+}  // namespace shadow
 
-#endif
+#endif  // MOLECULE_TOOLS_SHADOW_H

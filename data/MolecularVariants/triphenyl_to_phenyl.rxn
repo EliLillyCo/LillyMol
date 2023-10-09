@@ -1,0 +1,15 @@
+name: "triphenyl_to_phenyl"
+scaffold {
+  id: 0
+  smarts: "[CD4](c1ccccc1)(c1ccccc1)c1ccccc1"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 0
+    a2: 7
+  }
+  remove_fragment: 1
+  remove_fragment: 7
+}

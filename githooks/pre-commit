@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Makes sure that the file compile_time.cc has today's date.
+# The current git hash is also added.
+
+# Redirect output to stderr.
+exec 1>&2
+
+# The file containing the CompileDate function.
+cdate_file="src/Foundational/iwmisc/compile_time.cc"
+if [[ ! -s "${cdate_file}" ]] ; then
+  echo "NO compile date file ${cdate_file}"
+  exit 1
+fi
+
+# Generate a new file with the date now and see if it needs
+# updating. The relevant line in that file looks like
+#  "2022-Sep-06"   // date
+# where there is an arbitrary date for the current date.
+
+today=$(date +%Y-%b-%d)
+githash=$(git rev-parse --short --verify HEAD)
+
+cdate_file="src/Foundational/iwmisc/compile_time.cc"
+
+tmpfile="/tmp/cdate$$.cc"
+cat > ${tmpfile} <<EOF
+// Do not edit, overwritten by pre-commit githook.
+#include <string>
+
+#include "compile_time.h"
+
+namespace compile_time {
+const std::string&
+CompileDate() {
+  static const std::string compiled = "${today}";
+  return compiled;
+}
+
+const std::string&
+GitHash() {
+  static const std::string git_hash = "${githash}";
+  return git_hash;
+}
+
+}  // namespace compile_time
+EOF
+
+if [[ ! -f "${tmpfile}" ]] ; then
+  echo "Could not create ${tmpfile}"
+  exit 1
+fi
+
+mv -b "${tmpfile}" "${cdate_file}"
+if [[ $? -ne '0' ]] ; then
+  echo "Count not mv ${tmpfile} to ${cdate_file}"
+  exit 1
+fi
+
+exit 0

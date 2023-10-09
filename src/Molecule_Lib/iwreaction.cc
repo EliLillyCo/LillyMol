@@ -6,21 +6,19 @@
 using std::cerr;
 using std::endl;
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #define ISTREAM_AND_TYPE_IMPLEMENTATION
 
-#include "molecule.h"
-#include "istream_and_type.h"
-#include "target.h"
-#include "path.h"
-#include "output.h"
-#include "istream_and_type.h"
-#include "molecule_to_query.h"
-
-#include "iwreaction.h"
 #include "chiral_centre.h"
+#include "istream_and_type.h"
+#include "iwreaction.h"
 #include "misc2.h"
+#include "molecule.h"
+#include "molecule_to_query.h"
+#include "output.h"
+#include "path.h"
+#include "target.h"
 
 template class data_source_and_type<Molecule_and_Embedding>;
 
@@ -37,7 +35,7 @@ set_reaction_transfer_text_info_to_products (int s)
 static IWString component_separator = " + ";
 
 void
-set_component_separator (const const_IWSubstring & s)
+set_component_separator(const const_IWSubstring & s)
 {
   if ("NONE" == s)
     component_separator.resize(0);
@@ -58,7 +56,7 @@ static Molecule_Output_Object stream_for_sidechains_not_matching_query;
 int
 set_stream_for_sidechains_not_matching_query (const const_IWSubstring & fname)
 {
-  stream_for_sidechains_not_matching_query.add_output_type(SMI);
+  stream_for_sidechains_not_matching_query.add_output_type(FILE_TYPE_SMI);
 
   if (! stream_for_sidechains_not_matching_query.new_stem(fname))
   {
@@ -89,6 +87,18 @@ set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(co
 }
 //#endif
 
+static int warn_duplicate_atom_deletion = 1;
+void
+set_warn_duplicate_atom_deletion(int s) {
+  warn_duplicate_atom_deletion = s;
+}
+
+static int warn_non_bonded_breaks = 1;
+void
+set_warn_non_bonded_breaks(int s) {
+  warn_non_bonded_breaks = s;
+}
+
 #define WRITE_NUMBERED_SMILES_ON_ERROR
 #ifdef WRITE_NUMBERED_SMILES_ON_ERROR
 
@@ -117,8 +127,8 @@ Enumeration_Temporaries::Enumeration_Temporaries (int s)
 
   if (0 == s)
   {
-    _atoms_in_growing_molecule = NULL;
-    _reagent = NULL;
+    _atoms_in_growing_molecule = nullptr;
+    _reagent = nullptr;
 
     return;
   }
@@ -129,7 +139,7 @@ Enumeration_Temporaries::Enumeration_Temporaries (int s)
 
   for (int i = 0; i < s; i++)    // remove this loop once things are debugged
   {
-    _reagent[i] = NULL;
+    _reagent[i] = nullptr;
   }
 
   return;
@@ -137,7 +147,7 @@ Enumeration_Temporaries::Enumeration_Temporaries (int s)
 
 Enumeration_Temporaries::~Enumeration_Temporaries()
 {
-  if (NULL != _atoms_in_growing_molecule)
+  if (nullptr != _atoms_in_growing_molecule)
   {
     delete [] _atoms_in_growing_molecule;
     delete [] _reagent;
@@ -159,6 +169,8 @@ IWReaction::IWReaction()
   _user_specified_void_ptr = nullptr;
 
   _match_via_atom_map = 0;
+
+  _has_sidechain_isotope_requirement = 0;
 
   return;
 }
@@ -235,10 +247,10 @@ IWReaction::reagent (const Reaction_Iterator & iterator) const
 
   int ns = _sidechains.number_elements();
   if (0 == ns)
-    return NULL;
+    return nullptr;
 
   if (ns > 1)      // ambiguous as to what is the "current" sidechain. Should be more careful and see if there is just one sidechain with varying reagents...
-    return NULL;
+    return nullptr;
 
   int s = 0;
 
@@ -286,7 +298,7 @@ IWReaction::number_sidechains_with_reagents() const
 Reaction_Change_Element::Reaction_Change_Element()
 {
   _atom = -1;
-  _element = NULL;
+  _element = nullptr;
 }
 
 /*
@@ -298,7 +310,7 @@ Reaction_Change_Element::Reaction_Change_Element()
 */
 
 int
-Reaction_Change_Element::construct_from_msi_attribute (const msi_attribute * att)
+Reaction_Change_Element::construct_from_msi_attribute(const msi_attribute * att)
 {
   const IWString & rce = att->stringval();
 
@@ -323,7 +335,7 @@ Reaction_Change_Element::construct_from_msi_attribute (const msi_attribute * att
   (void) rce.word(1, token);    // get the new element type
 
   _element = get_element_from_symbol_no_case_conversion(token);
-  if (NULL == _element)
+  if (nullptr == _element)
   {
     cerr << "Reaction_Change_Element::construct_from_msi_attribute: unrecognised element '" << token << "'\n";
     cerr << (*att) << endl;
@@ -537,9 +549,9 @@ Reaction_Increment_Isotope::process (Molecule & result,
 }
 
 int
-Reaction_Invert_Isotope::process (Molecule & result,
-                                  const Set_of_Atoms & embedding,
-                                  int offset)
+Reaction_Invert_Isotope::process(Molecule & result,
+                                 const Set_of_Atoms & embedding,
+                                 int offset)
 {
   assert (embedding.ok_index(_atom));
 
@@ -636,10 +648,70 @@ check_bonds (const resizable_array_p<Bond> & bond,
   return 1;
 }
 
+void
+Reaction_Site::set_find_unique_embeddings_only(int s) {
+  if (_queries.number_elements() > 0) {
+    for (Substructure_Query * q : _queries) {
+      q->set_find_unique_embeddings_only(s);
+    }
+  } else {
+    Substructure_Query::set_find_unique_embeddings_only(s);
+  }
+}
+
+void
+Reaction_Site::set_find_one_embedding_per_atom(int s) {
+  if (_queries.number_elements() > 0) {
+    for (Substructure_Query * q : _queries) {
+      q->set_find_one_embedding_per_atom(s);
+    }
+  } else {
+    Substructure_Query::set_find_one_embedding_per_atom(s);
+  }
+}
+
+void
+Reaction_Site::set_do_not_perceive_symmetry_equivalent_matches(int s) {
+  if (_queries.number_elements() > 0) {
+    for (Substructure_Query * q : _queries) {
+      q->set_do_not_perceive_symmetry_equivalent_matches(s);
+    }
+  } else {
+    Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches(s);
+  }
+}
+
+void
+Reaction_Site::set_max_matches_to_find(int s) {
+  if (_queries.number_elements() > 0) {
+    for (Substructure_Query * q : _queries) {
+      q->set_max_matches_to_find(s);
+    }
+  } else {
+    Substructure_Query::set_max_matches_to_find(s);
+  }
+}
+
+void
+Reaction_Site::set_embeddings_do_not_overlap(int s) {
+  if (_queries.number_elements() > 0) {
+    for (Substructure_Query * q : _queries) {
+      q->set_embeddings_do_not_overlap(s);
+    }
+  } else {
+    Substructure_Query::set_embeddings_do_not_overlap(s);
+  }
+}
+
 int
 Reaction_Site::check_internal_consistency()
 {
-  int atoms_in_query = max_atoms_in_query();
+  int atoms_in_query = 0;
+  if (_queries.empty()) {
+    atoms_in_query = Substructure_Query::max_atoms_in_query();
+  } else {
+    atoms_in_query = _queries[0]->max_atoms_in_query();
+  }
 
   if (atoms_in_query > 0)
     ;
@@ -796,7 +868,7 @@ Reaction_Site::Reaction_Site()
 
   _ignore_multiple_matches_involving_changing_atoms = 0;
 
-  _matched_atom_changed = NULL;
+  _matched_atom_changed = nullptr;
 
   _noop_reaction = 0;
 
@@ -807,7 +879,9 @@ Reaction_Site::Reaction_Site()
 
 Reaction_Site::~Reaction_Site()
 {
-  DELETE_IF_NOT_NULL (_matched_atom_changed);
+  if (_matched_atom_changed != nullptr) {
+    delete [] _matched_atom_changed;
+  }
 
   return;
 }
@@ -868,7 +942,7 @@ Reaction_Site::ok() const
 
   if (_atoms_to_be_removed.number_elements() || _fragments_to_be_removed.number_elements())
   {
-    if (_fragments_to_be_removed.number_elements() && 0 == _bonds_to_be_broken.number_elements())
+    if (_fragments_to_be_removed.number_elements() && _bonds_to_be_broken.empty())
     {
       cerr << "Reaction_Site::ok: fragments to be removed, but no bonds broken\n";
       return 0;
@@ -932,9 +1006,9 @@ Reaction_Site::add_bond_to_be_made(const int a1, const int a2, const bond_type_t
 }
 
 int
-Reaction_Site::add_toggle_kekule_form (int a1,
-                                       int a2, 
-                                       bond_type_t bt)
+Reaction_Site::add_toggle_kekule_form(int a1,
+                                      int a2, 
+                                      bond_type_t bt)
 {
   return _toggle_kekule_form.add_bond(a1, a2, bt);
 }
@@ -1131,6 +1205,11 @@ Reaction_Site::debug_print(std::ostream & os,
   os << ind << "Reaction Site '" << _comment << "'\n";
   if (Substructure_Query::comment().nchars())
     os << ind << "  Query '" << Substructure_Query::comment() << "'\n";
+  for (const Substructure_Query * q : _queries) {
+    if (q->comment().length() > 0) {
+      os << q->comment() << '\n';
+    }
+  }
 
   if (_bonds_to_be_made.number_elements())
   {
@@ -1200,7 +1279,7 @@ Reaction_Site::debug_print(std::ostream & os,
     os << endl;
   }
 
-  if (NULL != _matched_atom_changed)
+  if (nullptr != _matched_atom_changed)
   {
     cerr << "Atom changed values\n";
     int h = highest_initial_atom_number();
@@ -1404,10 +1483,10 @@ Reaction_Site::_read_inactive_from_query_file (const IWString & fname)
 int
 Reaction_Site::_read_query_file_from_molecule(IWString & fname)
 {
-  int input_type = discern_file_type_from_name(fname);
+  FileType input_type = discern_file_type_from_name(fname);
 
-  if (0 == input_type)
-    input_type = SMI;
+  if (FILE_TYPE_INVALID == input_type)
+    input_type = FILE_TYPE_SMI;
 
   data_source_and_type<Molecule> input(input_type, fname.null_terminated_chars());
 
@@ -1419,7 +1498,7 @@ Reaction_Site::_read_query_file_from_molecule(IWString & fname)
 
   Molecule * m = input.next_molecule();
 
-  if (NULL == m)
+  if (nullptr == m)
   {
     cerr << "Reaction_Site::_read_query_file_from_molecule:cannot read molecule from '" << fname << "'\n";
     return 0;
@@ -1429,11 +1508,16 @@ Reaction_Site::_read_query_file_from_molecule(IWString & fname)
 
   Molecule_to_Query_Specifications mqs;
 
+  // Duplicate this until we eliminate the inheritance.
   if (! Substructure_Query::create_from_molecule(*m, mqs))
   {
     cerr << "Reaction_Site::_read_query_file_from_molecule:cannot build query from " << m->smiles() << endl;
     return 0;
   }
+
+  Substructure_Query * q = new Substructure_Query();
+  q->create_from_molecule(*m, mqs);
+  _queries.add(q);
 
   return 1;
 }
@@ -1452,14 +1536,18 @@ Reaction_Site::_read_query_file(const IWString & fname,
 
   IWString query_fname;
 
-// cerr << "Parsing query file attribute, same " << query_files_in_current_directory << " rxn dir " << reaction_directory << endl;
+   // cerr << "Parsing query file attribute, same " << query_files_in_current_directory << " rxn dir " << reaction_directory << " name '" << fname << "'\n";
   if (query_files_in_current_directory)
     query_fname = fname;
   else if (fname.starts_with('/'))
     query_fname = fname;
-  else if (fname.contains("$")) {
+  else if (fname.contains("${")) {
+    // shell variables will be expanded
+    query_fname = fname;
+  } else if (fname.starts_with("$")) {
+    // Old style shell variable expansion, starts with $NAME
     IWString temp(fname);
-    expand_environment_variables (temp.c_str(),query_fname);
+    expand_environment_variables(temp.c_str(),query_fname);
   }
   else if (0 == reaction_directory.length())
     query_fname = fname;
@@ -1530,14 +1618,14 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     for (int i = 0; i <= h; ++i)
     {
       const Substructure_Atom * a = query_atom_with_initial_atom_number(i);
-      if (NULL == a)
+      if (nullptr == a)
       {
         cerr << "Reaction_Site::construct_from_msi_object:no query atom with initial atom number " << i << endl;
         return 0;
       }
 
       const int amap = a->atom_map_number();
-      if (a >= 0)
+      if (amap >= 0)
         atom_map_to_unique_id[amap] = i;
 
     }
@@ -1637,7 +1725,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_BOND_TO_BREAK_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_broken.add(b);
@@ -1645,7 +1733,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_SINGLE_BOND_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_made.add(b);
@@ -1653,7 +1741,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_AROMATIC_BOND_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att, AROMATIC_BOND);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_made.add(b);
@@ -1661,7 +1749,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_DOUBLE_BOND_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att, DOUBLE_BOND);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_made.add(b);
@@ -1669,7 +1757,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_TRIPLE_BOND_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att, TRIPLE_BOND);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_made.add(b);
@@ -1677,7 +1765,7 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
     else if (NAME_OF_BOND_TO_BREAK_ATTRIBUTE == att->name())
     {
       Bond * b = parse_bond_attribute(att);
-      if (NULL == b)
+      if (nullptr == b)
         return 0;
 
       _bonds_to_be_broken.add(b);
@@ -1849,11 +1937,11 @@ Reaction_Site::construct_from_msi_object(const msi_object & msi,
   if (found_query)
   {
     if (unique_embeddings)
-      Substructure_Query::set_find_unique_embeddings_only(1);
+      set_find_unique_embeddings_only(1);
     if (ignore_symmetry)
-      Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches(1);
+      set_do_not_perceive_symmetry_equivalent_matches(1);
     if (one_embedding)
-      Substructure_Query::set_find_one_embedding_per_atom(1);
+      set_find_one_embedding_per_atom(1);
     if (max_matches_allowed)
       set_max_matches_to_find(max_matches_allowed);
     if (embeddings_do_not_overlap)
@@ -1909,10 +1997,14 @@ Inter_Particle_Bond::Inter_Particle_Bond()
 {
   _bt = SINGLE_BOND;
 
+  _distance = 0.0f;
+
+  _sidechain_isotope_requirement = SidechainIsotopeRequirement::kUndefined;
+
   return;
 }
 
-Inter_Particle_Bond::Inter_Particle_Bond (int frag1, atom_number_t z1,
+Inter_Particle_Bond::Inter_Particle_Bond(int frag1, atom_number_t z1,
                           atom_number_t z2,
                           bond_type_t b)
 {
@@ -1924,11 +2016,54 @@ Inter_Particle_Bond::Inter_Particle_Bond (int frag1, atom_number_t z1,
 
   _bt = b;
 
+  _distance = 0.0f;
+
   return;
 }
 
+// If 3D constraints are in effect, return true if the distance
+// between `a1` and `a2` is less than our distance.
 int
-Inter_Particle_Bond::build (const IWString & s)
+Inter_Particle_Bond::OkDistance(const Molecule& m, atom_number_t a1,
+                   atom_number_t a2) const {
+  if (_distance <= 0.0f) {
+    return 1;
+  }
+
+  float d = m.distance_between_atoms(a1, a2);
+
+  return d <= _distance;
+}
+
+// a1 is in the scaffold, a2 in the sidechain.
+int
+Inter_Particle_Bond::OkSidechainIsotopeConstraint(Molecule& m,
+                atom_number_t a1,
+                atom_number_t a2) const {
+  if (_sidechain_isotope_requirement == SidechainIsotopeRequirement::kUndefined) {
+    return 1;
+  }
+
+  const isotope_t iso2 = m.isotope(a2);
+
+  // If no isotope on a2, nothing to check.
+  if (iso2 == 0) {
+    return 1;
+  }
+
+  if (_sidechain_isotope_requirement == SidechainIsotopeRequirement::kAtomicNumber) {
+    return iso2 == static_cast<isotope_t>(m.atomic_number(a1));
+  }
+
+  if (_sidechain_isotope_requirement == SidechainIsotopeRequirement::kIsotope) {
+    return iso2 == m.isotope(a1);
+  }
+
+  return 1;
+}
+
+int
+Inter_Particle_Bond::build(const IWString & s)
 {
   const_IWSubstring token;
   int i = 0;
@@ -1984,7 +2119,7 @@ Inter_Particle_Bond::build (const IWString & s)
 }
 
 int
-Inter_Particle_Bond::debug_print (std::ostream & os) const
+Inter_Particle_Bond::debug_print(std::ostream & os) const
 {
   os << "Inter particle bond between " << _a1 << " and " << _a2 << endl;
   os << "Type " << _bt << endl;
@@ -2003,27 +2138,27 @@ Inter_Particle_Bond::debug_print (std::ostream & os) const
 */
 
 static Inter_Particle_Bond *
-parse_inter_particle_bond_attribute (const IWString & s)
+parse_inter_particle_bond_attribute(const IWString & s)
 {
   Inter_Particle_Bond * rc = new Inter_Particle_Bond;
   if (! rc->build(s))
   {
     delete rc;
-    return NULL;
+    return nullptr;
   }
 
   return rc;
 }
 
 static Replace_Atom *
-parse_replace_atom_attribute (const msi_attribute * att,
-                              int default_component)
+parse_replace_atom_attribute(const msi_attribute * att,
+                             int default_component)
 {
   Replace_Atom * r = new Replace_Atom;
   if (! r->construct_from_msi_object(att, default_component))
   {
     delete r;
-    return NULL;
+    return nullptr;
   }
 
   return r;
@@ -2055,8 +2190,8 @@ operator << (std::ostream & os, const Replace_Atom & r)
 */
 
 int
-Replace_Atom::construct_from_msi_object (const msi_attribute * att,
-                                         int default_component)
+Replace_Atom::construct_from_msi_object(const msi_attribute * att,
+                                        int default_component)
 {
   const IWString & s = att->stringval();
 
@@ -2085,7 +2220,7 @@ Replace_Atom::construct_from_msi_object (const msi_attribute * att,
 }
 
 int
-Replace_Atom::adjust_matched_atoms_in_component (const extending_resizable_array<int> & xref)
+Replace_Atom::adjust_matched_atoms_in_component(const extending_resizable_array<int> & xref)
 {
   _a1.adjust_matched_atoms_in_component(xref);
   _a2.adjust_matched_atoms_in_component(xref);
@@ -2106,50 +2241,98 @@ Replace_Atom::change_so_highest_component_number_is_a2()
   return 1;
 }*/
 
+// A substructure search of `target` has been done, and the results are in
+// `sresults`. If any of those embeddings touch atoms matched by any of
+// the queries in `inactive_qry`, remove those embeddings from `sresults`.
 static int
 remove_hits_that_touch_inactive_matches (Molecule_to_Match & target,
                                      const resizable_array_p<Substructure_Query> & inactive_qry,
-                                     Substructure_Results & sresults,
-                                     int * inactive)
+                                     Substructure_Results & sresults)
 {
-  int n = inactive_qry.number_elements();
+//int * inactive = new_int(target.natoms()); std::unique_ptr<int[]> free_inactive(inactive);
 
-  int inactive_matches_found = 0;
+  std::unique_ptr<int[]> inactive_matches;  // will be allocated if needed.
 
 //cerr << "Checking " << n << " inactive queries\n";
 
-  for (int i = 0; i < n; i++)
-  {
-    Substructure_Results s;
+  for (Substructure_Query* q : inactive_qry) {
+    Substructure_Results inactive_result;
 
-    int nhits = inactive_qry[i]->substructure_search(target, s);
+    const int nhits = q->substructure_search(target, inactive_result);
 
     if (0 == nhits)
       continue;
 
-    inactive_matches_found++;
-    
-    for (int j = 0; j < nhits; j++)
-    {
-      const Set_of_Atoms * e = s.embedding(j);
-
-      e->set_vector(inactive, 1);
+    if (! inactive_matches) {
+      inactive_matches.reset(new_int(target.natoms()));
     }
+
+    inactive_result.each_embedding_set_vector(inactive_matches.get(), 1);
   }
 
   int nhits = sresults.number_embeddings();
 
-  if (0 == inactive_matches_found)
+  if (! inactive_matches) {
     return nhits;
+  }
 
   for (int i = nhits - 1; i >= 0; i--)
   {
     const Set_of_Atoms * e = sresults.embedding(i);
-    if (e->any_members_set_in_array(inactive))
+    if (e->any_members_set_in_array(inactive_matches.get()))
       sresults.remove_embedding(i);
   }
 
   return sresults.number_embeddings();
+}
+
+// Variations on the substructure search interface.
+
+int
+Reaction_Site::substructure_search(Molecule& m) {
+  Molecule_to_Match target(&m);
+  Substructure_Results sresults;
+  return substructure_search(target, sresults);
+}
+
+int
+Reaction_Site::substructure_search(Molecule& m,
+                                   Substructure_Results& sresults) {
+  Molecule_to_Match target(&m);
+  return _perform_substructure_search(target, sresults);
+}
+
+int
+Reaction_Site::substructure_search(Molecule* m,
+                                   Substructure_Results& sresults) {
+  Molecule_to_Match target(m);
+  return _perform_substructure_search(target, sresults);
+}
+
+int
+Reaction_Site::substructure_search(Molecule_to_Match& target,
+                                   Substructure_Results& sresults) {
+  return _perform_substructure_search(target, sresults);
+}
+
+// Search through `_queries` until a match is found to `target`.
+// Embeddings are stored in `sresults` and the number of matches
+//is returned.
+int
+Reaction_Site::_perform_substructure_search(Molecule_to_Match& target,
+                        Substructure_Results& sresults) {
+  if (_queries.empty()) {
+    return Substructure_Query::substructure_search(target, sresults);
+  }
+
+  for (Substructure_Query * q : _queries) {
+    int nhits = q->substructure_search(target, sresults);
+    if (nhits) {
+      return nhits;
+    }
+  }
+
+  return 0;
 }
 
 int
@@ -2158,18 +2341,15 @@ Reaction_Site::_determine_matched_atoms_checking_inactives(Molecule & m,
 {
   Molecule_to_Match target(&m);
 
-  int nhits = substructure_search(target, sresults);
+  int nhits = _perform_substructure_search(target, sresults);
 
 //cerr << "Nhits " << nhits << " embeddings " << sresults.number_embeddings() << endl;
 
   if (0 == nhits)
     return 0;
 
-  if (_inactive.number_elements())
-  {
-    int * tmp = new_int(m.natoms()); std::unique_ptr<int[]> free_tmp(tmp);
-
-    remove_hits_that_touch_inactive_matches(target, _inactive, sresults, tmp);
+  if (_inactive.number_elements()) {
+    remove_hits_that_touch_inactive_matches(target, _inactive, sresults);
   }
 
   int rc = sresults.number_embeddings();
@@ -2181,7 +2361,7 @@ Reaction_Site::_determine_matched_atoms_checking_inactives(Molecule & m,
 
   if (1 == rc)    // only one hit, nothing to worry about
     ;
-  else if (NULL == _matched_atom_changed)    // not doing any filtering
+  else if (nullptr == _matched_atom_changed)    // not doing any filtering
     ;
   else
   {
@@ -2198,7 +2378,7 @@ Reaction_Site::_determine_matched_atoms_checking_inactives(Molecule & m,
 int
 Sidechain_Reaction_Site::remove_first_reagent_no_delete()
 {
-  if (0 == _reagents.number_elements())
+  if (_reagents.empty())
   {
     cerr << "Sidechain_Reaction_Site:remove_first_reagent_no_delete:no reagents\n";
     return 0;
@@ -2224,10 +2404,10 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
 
   const msi_attribute * att;
   int i = 0;
-  while (NULL != (att = msi.attribute(NAME_OF_INTER_PARTICLE_BOND_ATTRIBUTE, i++)))
+  while (nullptr != (att = msi.attribute(NAME_OF_INTER_PARTICLE_BOND_ATTRIBUTE, i++)))
   {
     Inter_Particle_Bond * b = parse_inter_particle_bond_attribute(att->stringval());
-    if (NULL == b)
+    if (nullptr == b)
       return 0;
 
     b->is_part_of_component(_unique_id);
@@ -2237,16 +2417,16 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
 
 
   i = 0;
-  while (NULL != (att = msi.attribute(NAME_OF_SUBSTITUTE_ATOM_ATTRIBUTE, i++)))
+  while (nullptr != (att = msi.attribute(NAME_OF_SUBSTITUTE_ATOM_ATTRIBUTE, i++)))
   {
     Replace_Atom * b = parse_replace_atom_attribute(att, _sidechain_number);
-    if (NULL == b)
+    if (nullptr == b)
       return 0;
 
     _replace_atom.add(b);
   }
 
-  if (0 == _inter_particle_bonds.number_elements())
+  if (_inter_particle_bonds.empty())
   {
     if (! _noop_reaction)
       cerr << "Sidechain_Reaction_Site::construct_from_msi_object: no joins specified\n";
@@ -2254,7 +2434,7 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
 
   const msi_object * nr;
   i = 0;
-  while (NULL != (nr = msi.component(NAME_OF_NO_REACTION_OBJECT, i++)))
+  while (nullptr != (nr = msi.component(NAME_OF_NO_REACTION_OBJECT, i++)))
   {
     No_Reaction * tmp = new No_Reaction;
     if (! tmp->construct_from_msi_object(*nr))
@@ -2267,17 +2447,17 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
   }
 
   att = msi.attribute(NAME_OF_MAKE_IMPLICIT_HYDROGEN_EXPLICIT_ATTRIBUTE);
-  if (NULL != att)
+  if (nullptr != att)
     att->value (_make_implicit_hydrogens_explicit);
 
 // Is the fragment to add present?
 
   att = msi.attribute(NAME_OF_SIDECHAIN_SMILES);
-  if (NULL != att)
+  if (nullptr != att)
     return _add_reagents_from_smiles(*att);
 
   att = msi.attribute(NAME_OF_SIDECHAIN_FILE);
-  if (NULL != att)
+  if (nullptr != att)
     return _add_reagents_from_file(*att, smc);
 
   return 1;
@@ -2286,10 +2466,10 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
 int
 Sidechain_Reaction_Site::_add_reagents_from_smiles(const msi_attribute & att)
 {
-  Molecule_and_Embedding * reagent = new Molecule_and_Embedding;
-
   const_IWSubstring smiles;
   att.value(smiles);
+
+  Molecule_and_Embedding * reagent = new Molecule_and_Embedding;
 
   if (! reagent->build_from_smiles(smiles))
   {
@@ -2348,7 +2528,7 @@ Sidechain_Reaction_Site::_add_reagents_from_file(const msi_attribute & att,
   IWString fname;
   att.value(fname);
 
-  data_source_and_type<Molecule_and_Embedding> input(SMI, fname);
+  data_source_and_type<Molecule_and_Embedding> input(FILE_TYPE_SMI, fname);
 
   if (! input.good())
   {
@@ -2356,7 +2536,7 @@ Sidechain_Reaction_Site::_add_reagents_from_file(const msi_attribute & att,
     return 0;
   }
 
-  return add_reagents(fname.null_terminated_chars(), SMI, smc);
+  return add_reagents(fname.null_terminated_chars(), FILE_TYPE_SMI, smc);
 }
 
 int
@@ -2368,7 +2548,7 @@ Sidechain_Reaction_Site::set_single_reagent(Molecule & m)
     return 0;
   }
 
-  if (! Substructure_Query::active())    // no queries to perform
+  if (! Substructure_Query::active() && _queries.empty())    // no queries to perform
   {
     Set_of_Atoms s;
 
@@ -2390,18 +2570,17 @@ Sidechain_Reaction_Site::set_single_reagent(Molecule & m)
     return _reagents.add(tmp);
   }
 
+  Molecule_to_Match target(&m);
   Substructure_Results sresults;
 
-  const int nhits = this->substructure_search(&m, sresults);
+  const int nhits = _perform_substructure_search(target, sresults);
 
-  if (0 == nhits)
-  {
+  if (0 == nhits) {
     cerr << "Sidechain_Reaction_Site::set_single_reagent:no hits to query in " << m.smiles() << endl;
     return 0;
   }
 
-  if (nhits > 1)
-  {
+  if (nhits > 1) {
     cerr << "Sidechain_Reaction_Site::set_single_reagent: " << nhits << " hits to query in " << m.smiles() << endl;
     return 0;
   }
@@ -2420,7 +2599,7 @@ Sidechain_Reaction_Site::set_single_reagent(Molecule & m)
 */
 
 int
-Inter_Particle_Bond::is_part_of_component (int c)
+Inter_Particle_Bond::is_part_of_component(int c)
 {
   assert (c >= 0);
 
@@ -2441,7 +2620,7 @@ Inter_Particle_Bond::adjust_matched_atoms_in_component(const extending_resizable
 
 Molecule_and_Embedding::Molecule_and_Embedding()
 {
-  _owning_sidechain = NULL;
+  _owning_sidechain = nullptr;
 
   return;
 }
@@ -2450,10 +2629,10 @@ int
 Molecule_and_Embedding::collect_matched_atoms(const Substructure_Results & sresults,
                                               int embedding)
 {
-  //assert (0 == _embedding.number_elements());
+  //assert (_embedding.empty());
 
   const Set_of_Atoms * s = sresults.embedding(embedding);
-  assert (NULL != s);
+  assert (nullptr != s);
 
   _embedding += *s;
 
@@ -2469,8 +2648,7 @@ Molecule_and_Embedding::set_embedding (const Set_of_Atoms & s)
 }
 
 int
-Molecule_and_Embedding::do_toggle_kekule_form (Toggle_Kekule_Form & tkf)
-{
+Molecule_and_Embedding::do_toggle_kekule_form(Toggle_Kekule_Form & tkf) {
   int changed;
 
   return tkf.process(*this, _embedding, changed);
@@ -2587,7 +2765,7 @@ character_representation_of_bond (bond_type_t bt)
 
 int
 Inter_Particle_Bond::write_msi(std::ostream & os,
-                                const IWString & ind) const
+                               const IWString & ind) const
 {
   os << ind << "  (A C " << NAME_OF_INTER_PARTICLE_BOND_ATTRIBUTE << " \"" << _a1 << ' ' << _a2 << ' ' << character_representation_of_bond(_bt) << "\")\n";
 
@@ -2790,7 +2968,7 @@ IWReaction::ok() const
 }
 
 int
-IWReaction::debug_print (std::ostream & os) const
+IWReaction::debug_print(std::ostream & os) const
 {
   os << "Reaction";
   if (_comment.length())
@@ -2812,7 +2990,7 @@ IWReaction::debug_print (std::ostream & os) const
 }
 
 int
-IWReaction::set_number_sidechains (int s)
+IWReaction::set_number_sidechains(int s)
 {
   assert (s >= 0);
 
@@ -2839,7 +3017,7 @@ int
 IWReaction::_construct_from_msi_object(const msi_object & msi,
                                        const Sidechain_Match_Conditions & sidechain_match_conditions)
 {
-  assert (0 == _sidechains.number_elements());
+  assert (_sidechains.empty());
 
   int nmsi = msi.number_elements();
 //if (nmsi < 2)
@@ -2849,7 +3027,7 @@ IWReaction::_construct_from_msi_object(const msi_object & msi,
 //}
 
   const msi_attribute * att = msi.attribute(NAME_OF_MATCH_VIA_ATOM_MAP);
-  if (NULL != att)               // should probably check the value
+  if (nullptr != att)               // should probably check the value
     _match_via_atom_map = 1; 
 
   extending_resizable_array<int> unique_id_encountered;    // must have unique object ID's
@@ -3007,8 +3185,8 @@ IWReaction::_convert_from_msi_object_numbers_to_internal_indices()
 
 template <typename T>
 void
-do_adjust_matched_atoms_in_component (resizable_array_p<T> & items,
-                                      const extending_resizable_array<int> & xref)
+do_adjust_matched_atoms_in_component(resizable_array_p<T> & items,
+                                     const extending_resizable_array<int> & xref)
 {
   for (int i = 0; i < items.number_elements(); i++)
   {
@@ -3175,7 +3353,7 @@ IWReaction::do_read (const IWString & fname,
 }
 
 int
-Reaction_Site::do_unfix_implicit_hydrogens (Molecule & result, 
+Reaction_Site::do_unfix_implicit_hydrogens(Molecule & result, 
                         const Set_of_Atoms & embedding,
                         int atom_offset) const
 {
@@ -3276,10 +3454,12 @@ IWReaction::_assemble_reagents (const Reaction_Iterator & riter,
 }*/
 
 void
-IWReaction::_copy_iterator_data_to_etmp (const Reaction_Iterator & iter,
-                                         Enumeration_Temporaries & etmp) const
+IWReaction::_copy_iterator_data_to_etmp(const Reaction_Iterator & iter,
+                                        Enumeration_Temporaries & etmp) const
 {
   int ns = _sidechains.number_elements();
+
+//cerr << "Copying " << ns << " sidechains to etmp\n";
 
   const Molecule_and_Embedding ** reagent = etmp.reagent();
 
@@ -3300,7 +3480,7 @@ IWReaction::_copy_iterator_data_to_etmp (const Reaction_Iterator & iter,
 */
 
 int
-IWReaction::_take_first_reagent_from_each_sidechain (Enumeration_Temporaries & etmp) const
+IWReaction::_take_first_reagent_from_each_sidechain(Enumeration_Temporaries & etmp) const
 {
   const Molecule_and_Embedding ** reagent = etmp.reagent();
 
@@ -3473,15 +3653,18 @@ IWReaction::_do_atom_removals(Molecule & result,
 
   const resizable_array<const Atom *> & fragments_to_be_removed = etmp.fragments_to_be_removed();
 
-  int nf = fragments_to_be_removed.number_elements();
+  const int nf = fragments_to_be_removed.number_elements();
 
+#ifdef THIS_TEST_IS_NOT_NEEDED
   if (nf > result.number_fragments())
   {
     cerr << "IWReaction::_do_atom_removals: processing " << nf << " fragment removals\n";
     cerr << "BUT, molecule contains only " << result.number_fragments() << " fragments\n";
     cerr << "This is impossible\n";
+    cerr << result.smiles() << '\n';
     return 0;
   }
+#endif
 
 // Since removing one fragment is so simple, do it by itself
 
@@ -3521,7 +3704,7 @@ IWReaction::_do_atom_removals(Molecule & result,
     {
       cerr << "IWReaction::_do_atom_removals: very bad news, removing fragment " << i << " of " << nf << " fragments to be removed\n";
       cerr << "Result molecule cannot find atom\n";
-      assert (NULL == "This is very bad");
+      assert (nullptr == "This is very bad");
     }
 
     int jfm = result.fragment_membership(j);
@@ -3530,16 +3713,15 @@ IWReaction::_do_atom_removals(Molecule & result,
     cerr << "Fragment " << i << " is atom " << j << " in fragment " << jfm << endl;
 #endif
 
-    if (0 == i)
+    if (0 == i) {
       fragments_removed.add(jfm);
-    else if (fragments_removed.contains(jfm))
-    {
+    } else if (fragments_removed.contains(jfm)) {
       cerr << "IWReaction::_do_atom_removals: fragment " << jfm << " being deleted multiple times, atom " << j << ", OK\n";
-      cerr << _comment << endl;
+      cerr << _comment << '\n';
       continue;
-    }
-    else
+    } else {
       fragments_removed.add(jfm);
+    }
 
     result.add_atoms_in_fragment(atoms_to_be_removed, jfm);
   }
@@ -3568,7 +3750,6 @@ IWReaction::_in_place_transformation(Molecule & m,
     Sidechain_Reaction_Site * s = _sidechains[i];
     //cerr << "Number_reagents= " << s->number_reagents() << endl;
       
-
     if (1 != s->number_reagents())   /// cannot do in place transformation
     {
       cerr << "IWReaction::_in_place_transformation:sidechain has multiple reagents, cannot do in place\n";
@@ -3583,8 +3764,10 @@ IWReaction::_in_place_transformation(Molecule & m,
   if (! _make_inter_particle_bonds(m, scaffold_embedding, etmp))
     return 0;
 
-  for (int i = 0; i < ns; ++i)
-  {
+  if (!DoReplacements(m, scaffold_embedding, etmp))
+    return 0;
+
+  for (int i = 0; i < ns; ++i) {
     Sidechain_Reaction_Site * s = _sidechains[i];
 
     const int aap = atoms_in_growing_molecule[i];
@@ -3596,10 +3779,18 @@ IWReaction::_in_place_transformation(Molecule & m,
 
     if (! s->do_unfix_implicit_hydrogens(m, *(x->embedding()), aap))
       return 0;
+
+    if (! s->DoReplacements(m, scaffold_embedding, etmp))
+      return 0;
   }
 
-  if (! _perform_scaffold_transformations(m, scaffold_embedding, etmp))
+  if (! _perform_scaffold_transformations(m, scaffold_embedding, etmp)) {
     return 0;
+  }
+
+  if (! _make_cip_stereo_centres(m, *scaffold_embedding, etmp)) {
+    return 0;
+  }
 
   return 1;
 }
@@ -3608,18 +3799,18 @@ int
 IWReaction::in_place_transformation(Molecule & m,
                                     const Set_of_Atoms * scaffold_embedding)
 {
-  assert (NULL != scaffold_embedding);
+  assert (nullptr != scaffold_embedding);
 
-  if (scaffold_embedding->max_val() >= m.natoms())
-  {
+  if (scaffold_embedding->max_val() >= m.natoms()) {
     cerr << "IWReaction::in_place_transformation:invalid embedding " << (*scaffold_embedding) << " for reagent with " << m.natoms() << " atoms\n";
     return 0;
   }
 
   Enumeration_Temporaries etmp(_sidechains.number_elements());
   
-  if (! _take_first_reagent_from_each_sidechain(etmp))
+  if (! _take_first_reagent_from_each_sidechain(etmp)) {
     return 0;
+  }
 
   if (! Reaction_Site::do_makes_breaks(m, *scaffold_embedding, 0, etmp))
     return 0;
@@ -3637,7 +3828,7 @@ IWReaction::in_place_transformation(Molecule & m,
                                     const Set_of_Atoms * scaffold_embedding,
                                     const Reaction_Iterator & iter)
 {
-  assert (NULL != scaffold_embedding);
+  assert (nullptr != scaffold_embedding);
 
   if (scaffold_embedding->max_val() >= m.natoms())
   {
@@ -3662,6 +3853,8 @@ IWReaction::in_place_transformation(Molecule & m,
     m.add_molecule(r);
   }
 
+  cerr << "Resnot now " << m.smiles() << " append " << _append_to_name << endl;
+
   if (! Reaction_Site::do_makes_breaks(m, *scaffold_embedding, 0, etmp))
     return 0;
 
@@ -3679,12 +3872,54 @@ IWReaction::in_place_transformation(Molecule & m,
 
 int
 IWReaction::in_place_transformations(Molecule & m,
+                                     const resizable_array<const Set_of_Atoms*> & embeddings)
+{
+  Enumeration_Temporaries etmp(_sidechains.number_elements());
+
+  if (! _take_first_reagent_from_each_sidechain(etmp))
+    return 0;
+
+  int rc = 0;
+
+  for (const Set_of_Atoms* e : embeddings) {
+    if (_toggle_kekule_form.active()) {
+      int changed;
+      if (! _toggle_kekule_form.process(m, *e, changed))
+        return 0;
+    }
+
+    if (! Reaction_Site::do_makes_breaks(m, *e, 0, etmp)) {
+      return 0;
+    }
+
+    if (! _in_place_transformation(m, e, etmp)) {
+      return 0;
+    }
+
+    rc++;
+  }
+
+  if (! _do_atom_removals(m, etmp)) {
+    return 0;
+  }
+
+  if (_append_to_name.length() && rc) {
+    m.append_to_name(_append_to_name);
+  }
+
+  return rc;
+}
+
+int
+IWReaction::in_place_transformations(Molecule & m,
                                      const Substructure_Results & sresults)
 {
   Enumeration_Temporaries etmp(_sidechains.number_elements());
 
   if (! _take_first_reagent_from_each_sidechain(etmp))
     return 0;
+
+  int rc = 0;
 
   for (int i = 0; i < sresults.number_embeddings(); i++)
   {
@@ -3703,12 +3938,16 @@ IWReaction::in_place_transformations(Molecule & m,
     if (! _in_place_transformation(m, sresults.embedding(i), etmp))
       return 0;
 
+    rc++;
   }
 
   if (! _do_atom_removals(m, etmp))
     return 0;
 
-  return 1;
+  if (_append_to_name.length() && rc)
+    m.append_to_name(_append_to_name);
+
+  return rc;
 }
 
 int
@@ -3718,6 +3957,8 @@ IWReaction::in_place_transformations(Molecule & m)
 
   if (0 == _determine_matched_atoms_checking_inactives(m, sresults)) 
     return 0;
+
+//cerr << "Query got " << sresults.number_embeddings() << " embeddings\n";
 
   return in_place_transformations(m, sresults);
 }
@@ -3757,10 +3998,13 @@ IWReaction::_perform_scaffold_transformations(Molecule & result,
   if (! _set_dihedral_angles(result, scaffold_embedding, etmp))
     return 0;
 
+  if (! _do_replacements(result, scaffold_embedding, etmp))
+    return 0;
+
   if (_make_implicit_hydrogens_explicit)
     result.remove_all_atoms_with_isotope(_make_implicit_hydrogens_explicit);
 
-  if (0 == _reaction_stereo_centre.number_elements())
+  if (_reaction_stereo_centre.empty())
     ;
   else if (_make_stereo_centres(result, scaffold_embedding, etmp))
     ;
@@ -3790,15 +4034,13 @@ IWReaction::_perform_reaction(Molecule & result,
                               const Set_of_Atoms * scaffold_embedding,
                               Enumeration_Temporaries & etmp)
 {
-  assert (NULL != scaffold_embedding);
+  assert (nullptr != scaffold_embedding);
 
   Temporarily_Disable_Messages_About_Unable_to_Compute_Implicit_Hydrogens tdmaucih;
 
-  if (_toggle_kekule_form.active())
-  {
+  if (_toggle_kekule_form.active()) {
     int changed;
-    if (! _toggle_kekule_form.process(result, *scaffold_embedding, changed))
-    {
+    if (! _toggle_kekule_form.process(result, *scaffold_embedding, changed)) {
       cerr << "IWReaction::_perform_reaction:cannot toggle Kekule form " << result.smiles() << endl;
       cerr << "LINE " << __LINE__ << ' ' << _comment << '\n';
       return 0;
@@ -3828,13 +4070,12 @@ IWReaction::_perform_reaction(Molecule & result,
   int * atoms_in_growing_molecule = etmp.atoms_in_growing_molecule();
   const Molecule_and_Embedding ** reagent = etmp.reagent();
 
-  for (int i = 0; i < ns; i++)
-  {
+  for (int i = 0; i < ns; i++) {
     atoms_in_growing_molecule[i] = result.natoms();
 
     const Molecule_and_Embedding * r = reagent[i];
 
-    assert (NULL != r);
+    assert (nullptr != r);
 
     _add_molecule(result, *r);
 
@@ -3848,8 +4089,9 @@ IWReaction::_perform_reaction(Molecule & result,
 
 // Now that all stereo preserving substitutions are done, start pulling things apart
 
-  if (! Reaction_Site::do_makes_breaks(result, *scaffold_embedding, 0, etmp))
+  if (! Reaction_Site::do_makes_breaks(result, *scaffold_embedding, 0, etmp)) {
     return 0;
+  }
 
   if (_append_to_name.length())
     result.append_to_name(_append_to_name);
@@ -3858,8 +4100,9 @@ IWReaction::_perform_reaction(Molecule & result,
   cerr << "After makes and breaks " << result.smiles() << "\n";
 #endif
 
-  if (! _make_inter_particle_bonds(result, scaffold_embedding, etmp))
+  if (! _make_inter_particle_bonds(result, scaffold_embedding, etmp)) {
     return 0;
+  }
 
   for (int i = 0; i < ns; i++)
   {
@@ -3896,13 +4139,20 @@ IWReaction::_perform_reaction(Molecule & result,
   cerr << _reaction_stereo_centre.number_elements() << " reaction stereo centres\n";
 #endif
 
-  if (0 == _reaction_stereo_centre.number_elements())
+  if (_reaction_stereo_centre.empty())
     ;
   else if (_make_stereo_centres(result, scaffold_embedding, etmp))
     ;
   else
   {
     cerr << "IWReaction::perform_reaction:reaction stereo centre problem\n";
+    return 0;
+  }
+
+  if (_cip_stereo.empty()) {
+  } else if (_make_cip_stereo_centres(result, *scaffold_embedding, etmp)) {
+  } else {
+    cerr << "IWReaction::perform_reaction:CIP reaction stereo centre problem\n";
     return 0;
   }
 
@@ -3916,25 +4166,12 @@ IWReaction::_perform_reaction(Molecule & result,
     _sidechains[i]->remove_and_invert_stereo_centres(result, *(reagent[i]->embedding()), aap);
   }
 
-  if (! _perform_scaffold_transformations(result, scaffold_embedding, etmp))
+  if (! _perform_scaffold_transformations(result, scaffold_embedding, etmp)) {
     return 0;
+  }
 
 #ifdef DEBUG_PERFORM_REACTION
   cerr << "After performing scaffold transformations " << result.smiles() << endl;
-#endif
-
-#ifdef THESE_ARE_DONE_IN_PERFORM_SCAFFOLD_TRANSFORMATIONS
-  if (! _set_bond_lengths(result, scaffold_embedding, etmp))
-    return 0;
-
-  if (! _set_dihedral_angles(result, scaffold_embedding, etmp))
-    return 0;
-
-  if (! _set_bond_angles(result, scaffold_embedding, etmp))
-    return 0;
-
-  if (_make_implicit_hydrogens_explicit)
-    result.remove_all_atoms_with_isotope(_make_implicit_hydrogens_explicit);
 #endif
 
   if (_find_kekule_forms_for_bad_valence && ! result.valence_ok())
@@ -3961,7 +4198,7 @@ IWReaction::_perform_reaction (Molecule & result,
   resizable_array<const Atom *> fragments_to_be_removed;
   fragments_to_be_removed.resize (atoms_already_present);
 
-  if (! _perform_reaction (result, NULL, scaffold_embedding, sidechain, sidechain_embedding,
+  if (! _perform_reaction (result, nullptr, scaffold_embedding, sidechain, sidechain_embedding,
                            atoms_to_be_removed, fragments_to_be_removed))
     return 0;
 
@@ -3987,10 +4224,10 @@ valid_member_of_embedding (const Set_of_Atoms & embedding,
 }*/
 
 static int
-valid_member_of_embedding (const Set_of_Atoms & embedding,
-                           int i,
-                           const char * caller,
-                           atom_number_t & zatom)
+valid_member_of_embedding(const Set_of_Atoms & embedding,
+                          int i,
+                          const char * caller,
+                          atom_number_t & zatom)
 {
   if (embedding.ok_index(i))
   {
@@ -4028,7 +4265,7 @@ valid_member_of_embedding (const Set_of_Atoms & embedding,
 
   EMBEDDING is the embedding in the sidechain which has been added.
   If we are a single reagent then our reagent should have been
-  the one added and on input, EMBEDDING should be NULL;
+  the one added and on input, EMBEDDING should be nullptr;
 */
 
 int
@@ -4040,8 +4277,6 @@ Reaction_Site::do_makes_breaks(Molecule & result,
 #ifdef DEBUG_DO_MAKES_AND_BREAKS
   cerr << "do_makes_breaks:begin " << result.smiles() << ' ' << result.name() << endl;
 #endif
-
-  const int matoms = result.natoms();
 
   const int chiral_centres_present = result.chiral_centres();
 
@@ -4060,7 +4295,7 @@ Reaction_Site::do_makes_breaks(Molecule & result,
 
 // Make sure we never remove the same chiral centre twice!
 
-  int * chiral_centre_available = new_int(matoms); std::unique_ptr<int[]> free_chiral_centre_available(chiral_centre_available);
+  int * chiral_centre_available = new_int(result.natoms()); std::unique_ptr<int[]> free_chiral_centre_available(chiral_centre_available);
 
   if (chiral_centres_present)
   {
@@ -4120,15 +4355,14 @@ Reaction_Site::do_makes_breaks(Molecule & result,
 //  same bond - and that bond was removed. The second time we tried to remove
 //  the bond we got a fatal error. Therefore only try the removal if the atoms are bonded
 
-    if (! result.are_bonded(a1, a2))
-    {
+    if (result.are_bonded(a1, a2)) {
+      result.remove_bond_between_atoms(a1, a2);
+    } else if (warn_non_bonded_breaks) {
       cerr << "Reaction_Site::do_makes_breaks: atoms " << a1 << " and " << a2 << " are not bonded. IGNORED. " << _comment << endl;
       cerr << result.smiles() << endl;
       cerr << result.smarts_equivalent_for_atom(a1) << ' ' << result.smarts_equivalent_for_atom(a2) << endl;
-      abort();
+      // abort();
     }
-    else
-      result.remove_bond_between_atoms(a1, a2);
   }
 
 #ifdef PRINT_SAVED_CHIRAL_CENTRES
@@ -4204,8 +4438,9 @@ Reaction_Site::do_makes_breaks(Molecule & result,
 //  atoms_to_be_removed.add(a);
     if (atoms_to_be_removed.add_if_not_already_present(a))
       result.remove_bonds_to_atom(a);   // added Aug 2003
-    else
+    else if (warn_duplicate_atom_deletion) {
       cerr << "Reaction_Site::do_makes_breaks:ignoring duplicate deletion, atom " << a << " in '" << result.name() << "'\n";
+    }
   }
 
 // The order in which we do the fragment related stuff is important
@@ -4288,7 +4523,95 @@ Reaction_Site::do_makes_breaks(Molecule & result,
 //do_transformations(result, embedding, offset, _isotopes_to_increment);
   do_transformations(result, embedding, offset, _wedge_bonds_to_place);
 
+  do_cahn_ingold_prelog_stereo(result, embedding, offset);
+
   return 1;
+}
+
+int
+Reaction_Site::do_cahn_ingold_prelog_stereo(Molecule& result,
+        const Set_of_Atoms& embedding,
+        const int offset) const {
+  int rc = 1;
+  for (const SiteCipStereo* cips : _cip_stereo) {
+    if (! do_cahn_ingold_prelog_stereo(result, embedding, offset, *cips)) {
+      cerr << "Reaction_Site::do_cahn_ingold_prelog_stereo failed\n";
+      rc = 0;
+    }
+  }
+
+  return rc;
+}
+
+// Create a Chiral_Center at atom `zatom` and ensure that its CIP stereo
+// value matches `rs`
+static int
+CreateChiralCentreMatchingCip(Molecule& m,
+                atom_number_t zatom,
+                CahnIngoldPrelog rs) {
+  Chiral_Centre* c = m.create_chiral_centre(zatom);
+  if (c == nullptr) {
+    cerr << "CreateChiralCentreMatchingCip:chiral centre not created atom " << zatom << '\n';
+    return 0;
+  }
+
+  // Note that we cannot just call CahnIngoldPrelog(c) because it is
+  // changed by the invert_chirality_on_atom call - the CIP value
+  // is in fact unchanged according to that measure. That would be
+  // more efficient, this is clearer. Change if ever a problem.
+  std::optional<CahnIngoldPrelog> cip = m.CahnIngoldPrelogValue(zatom);
+  if (! cip) {
+    return 0;
+  }
+  if (cip == CahnIngoldPrelog::kNeither) {
+    return 0;
+  }
+  if (*cip == rs) {
+    return 1;
+  }
+  m.invert_chirality_on_atom(zatom);
+  cip = m.CahnIngoldPrelogValue(zatom);
+  if (*cip == rs) {
+    return 1;
+  }
+
+  cerr << "CreateChiralCentreMatchingCip:no match after switching chirality " << rs << '\n';
+  cerr << "Current " << m.CahnIngoldPrelogValue(c) << '\n';
+  return 0;
+}
+
+int
+Reaction_Site::do_cahn_ingold_prelog_stereo(Molecule& result,
+        const Set_of_Atoms& embedding,
+        const int offset,
+        const SiteCipStereo& cips) const {
+  if (! embedding.ok_index(cips.atom())) {
+    cerr << "Reaction_Site::do_cahn_ingold_prelog_stereo:invalid embedding member " <<
+        cips.atom() << " in " << embedding << '\n';
+    return 0;
+  }
+
+  atom_number_t a = embedding[cips.atom()];
+  if (! result.ok_atom_number(a)) {
+    cerr << "Reaction_Site::do_cahn_ingold_prelog_stereo:invalid atom number in result " <<
+        cips.atom() << " in " << embedding << " result has " << result.natoms() << " atoms\n";
+    return 0;
+  }
+
+  Set_of_Atoms connections;
+  result.connections(a, connections);
+  if (connections.size() < 3) {
+    cerr << "Reaction_Site::do_cahn_ingold_prelog_stereo:insufficient connections " <<
+        result.smarts_equivalent_for_atom(a) << '\n';
+    return 0;
+  }
+  if (connections.size() > 4) {
+    cerr << "Reaction_Site::do_cahn_ingold_prelog_stereo:excessive connections " <<
+        result.smarts_equivalent_for_atom(a) << '\n';
+    return 0;
+  }
+
+  return CreateChiralCentreMatchingCip(result, a, cips.cip());
 }
 
 int
@@ -4375,7 +4698,7 @@ Reaction_Site::_do_invert_stereo_centres (Molecule & result,
 
 //  cerr << "Embedding member " << m << " is atom " << a << " present " << result.chiral_centre_at_atom(a) << " offset = " << offset << endl;
 
-    if (NULL != result.chiral_centre_at_atom(a))
+    if (nullptr != result.chiral_centre_at_atom(a))
       result.invert_chirality_on_atom(a);
   }
 
@@ -4396,7 +4719,7 @@ Reaction_Site::_do_remove_stereo_centres (Molecule & result,
 
     atom_number_t a = embedding[m] + offset;
 
-    if (NULL != result.chiral_centre_at_atom(a))
+    if (nullptr != result.chiral_centre_at_atom(a))
       result.remove_chiral_centre_at_atom(a);
   }
 
@@ -4405,10 +4728,10 @@ Reaction_Site::_do_remove_stereo_centres (Molecule & result,
 
 int
 Sidechain_Reaction_Site::add_reagents(const char * fname,
-                                      int input_type,
+                                      FileType input_type,
                                       const Sidechain_Match_Conditions & smc)
 {
-  if (0 == input_type)
+  if (FILE_TYPE_INVALID == input_type)
   {
     input_type = discern_file_type_from_name(fname);
     if (0 == input_type)
@@ -4432,17 +4755,17 @@ int
 Sidechain_Reaction_Site::_copy_match_conditions_to_query()
 {
   if (_match_conditions.one_embedding_per_start_atom())
-    Substructure_Query::set_find_one_embedding_per_atom(1);
+    Reaction_Site::set_find_one_embedding_per_atom(1);
 
   if (_match_conditions.ignore_symmetry_related_matches())
-    Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches(1);
+    Reaction_Site::set_do_not_perceive_symmetry_equivalent_matches(1);
 
   if (_match_conditions.find_unique_embeddings_only())
-    Substructure_Query::set_find_unique_embeddings_only(1);
+    Reaction_Site::set_find_unique_embeddings_only(1);
 
   int p = _match_conditions.process_hit_number();
   if (p >= 0)
-    Substructure_Query::set_max_matches_to_find(p + 1);
+    Reaction_Site::set_max_matches_to_find(p + 1);
 
   return 1;
 }
@@ -4463,7 +4786,7 @@ Sidechain_Reaction_Site::add_reagents(data_source_and_type<Molecule_and_Embeddin
 
   _reagents.resize(nm);
 
-  Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches(1);   // let's just make this the default
+  Reaction_Site::set_do_not_perceive_symmetry_equivalent_matches(1);   // let's just make this the default
 
   _copy_match_conditions_to_query();
 
@@ -4472,7 +4795,7 @@ Sidechain_Reaction_Site::add_reagents(data_source_and_type<Molecule_and_Embeddin
     mihe.set_isotope(_make_implicit_hydrogens_explicit);
 
   Molecule_and_Embedding * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     if (_make_implicit_hydrogens_explicit)
     {
@@ -4502,7 +4825,7 @@ Sidechain_Reaction_Site::add_reagent(Molecule_and_Embedding * m,
 
   Substructure_Results sresults;
 
-  int nhits = Substructure_Query::substructure_search(*m, sresults);  
+  int nhits = substructure_search(*m, sresults);  
   int reagent_is_ok = 1;
 
   if (0 == nhits)     // cannot be used by this sidechain
@@ -4536,7 +4859,7 @@ Sidechain_Reaction_Site::add_reagent(Molecule_and_Embedding * m,
 
   //cerr << "Sidechain_Reaction_Site::add_reagent:_matched_atom_changed? " << _matched_atom_changed << endl;
 
-  if (NULL != _matched_atom_changed)
+  if (nullptr != _matched_atom_changed)
   {
     _remove_multiple_hits_that_do_not_involve_changing_atoms(*m, sresults);
     nhits = sresults.number_embeddings();
@@ -4559,8 +4882,9 @@ Sidechain_Reaction_Site::add_reagent(Molecule_and_Embedding * m,
   {  
     m->collect_matched_atoms(sresults);
 
-    if (_toggle_kekule_form.active() && ! m->do_toggle_kekule_form(_toggle_kekule_form))
+    if (_toggle_kekule_form.active() && ! m->do_toggle_kekule_form(_toggle_kekule_form)) {
         return 0;
+    }
 
     _reagents.add(m);
 
@@ -4672,11 +4996,11 @@ Sidechain_Reaction_Site::do_makes_breaks (Molecule & result,
 //#define DEBUG_MAKE_INTER_PARTICLE_BONDS
 
 int
-determine_atom_number (const Set_of_Atoms & scaffold_embedding,
-                       const Matched_Atom_in_Component & ma,
-                       const Enumeration_Temporaries & etmp,
-                       const char * caller,
-                       atom_number_t & zresult)
+determine_atom_number(const Set_of_Atoms & scaffold_embedding,
+                      const Matched_Atom_in_Component & ma,
+                      const Enumeration_Temporaries & etmp,
+                      const char * caller,
+                      atom_number_t & zresult)
 {
   if (ma.in_scaffold())
     return valid_member_of_embedding(scaffold_embedding, ma.matched_atom(), caller, zresult);
@@ -4687,14 +5011,18 @@ determine_atom_number (const Set_of_Atoms & scaffold_embedding,
 
 //const Molecule_and_Embedding * sc = etmp.reagent()[c];
 
-//cerr << "The atom is in component " << c << endl;
-//cerr << "Reagent contains " << etmp.reagent()[c]->natoms() << " atoms\n";
+#ifdef DEBUG_MAKE_INTER_PARTICLE_BONDS
+  cerr << "The atom is in component " << c << endl;
+  cerr << "Reagent contains " << etmp.reagent()[c]->natoms() << " atoms\n";
+#endif
 
   assert (etmp.reagent()[c]->ok());
 
   const Set_of_Atoms * e = etmp.reagent()[c]->embedding();
 
-//cerr << "Embedding contains " << e->number_elements() << " atoms\n";
+#ifdef DEBUG_MAKE_INTER_PARTICLE_BONDS
+  cerr << "Embedding contains " << e->number_elements() << " atoms\n";
+#endif
 
   if (! valid_member_of_embedding(*e, ma.matched_atom(), "Sidechain_Reaction_Site::make_inter_particle_bonds: a1", zresult))
     return 0;
@@ -4712,12 +5040,14 @@ determine_atom_number (const Set_of_Atoms & scaffold_embedding,
 }
 
 int
-IWReaction::_make_inter_particle_bond (Molecule & result,
-                                       const Set_of_Atoms * scaffold_embedding,
-                                       const Inter_Particle_Bond & b,
-                                       const Enumeration_Temporaries & etmp) const
+IWReaction::_make_inter_particle_bond(Molecule & result,
+                                      const Set_of_Atoms * scaffold_embedding,
+                                      const Inter_Particle_Bond & b,
+                                      const Enumeration_Temporaries & etmp) const
 {
-//cerr << "IWReaction::_make_inter_particle_bond: bond " << b.a1() << " to " << b.a2() << " embedding " << *scaffold_embedding << endl;
+#ifdef DEBUG_MAKE_INTER_PARTICLE_BONDS
+  cerr << "IWReaction::_make_inter_particle_bond: bond " << b.a1() << " to " << b.a2() << " embedding " << *scaffold_embedding << endl;
+#endif
 
   atom_number_t a1;
   if (! determine_atom_number(*scaffold_embedding, b.a1(), etmp, "IWReaction::_make_inter_particle_bonds: a1", a1))
@@ -4730,6 +5060,14 @@ IWReaction::_make_inter_particle_bond (Molecule & result,
 #ifdef DEBUG_MAKE_INTER_PARTICLE_BONDS
   cerr << "Making " << b << " atoms " << a1 << " and " << a2 << endl;
 #endif
+
+  if (! b.OkSidechainIsotopeConstraint(result, a1, a2)) {
+    return 0;
+  }
+
+  if (! b.OkDistance(result, a1, a2)) {
+    return 0;
+  }
 
   if (! result.add_bond(a1, a2, b.btype()))
   {
@@ -4807,10 +5145,10 @@ IWReaction::_make_stereo_centres (Molecule & result,
 //#define DEBUG_SET_BOND_LENGTH
 
 int
-IWReaction::_set_bond_length (Molecule & result,
-                              const Set_of_Atoms * scaffold_embedding,
-                              const Reaction_Bond_Length & b,
-                              const Enumeration_Temporaries & etmp) const
+IWReaction::_set_bond_length(Molecule & result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             const Reaction_Bond_Length & b,
+                             const Enumeration_Temporaries & etmp) const
 {
 #ifdef DEBUG_SET_BOND_LENGTH
   cerr << "set bond length atoms are " << b.a1() << " and " << b.a2() << endl;
@@ -4841,10 +5179,10 @@ IWReaction::_set_bond_length (Molecule & result,
 }
 
 int
-IWReaction::_set_bond_lengths (Molecule & result,
-                               const Set_of_Atoms * scaffold_embedding,
-                               const Enumeration_Temporaries & etmp,
-                               const Reaction_Site & r) const
+IWReaction::_set_bond_lengths(Molecule & result,
+                              const Set_of_Atoms * scaffold_embedding,
+                              const Enumeration_Temporaries & etmp,
+                              const Reaction_Site & r) const
 {
   int nb = r.number_bond_length_specifications();
 
@@ -4862,9 +5200,9 @@ IWReaction::_set_bond_lengths (Molecule & result,
 }
 
 int
-IWReaction::_set_bond_lengths (Molecule & result,
-                               const Set_of_Atoms * scaffold_embedding,
-                               const Enumeration_Temporaries & etmp) const
+IWReaction::_set_bond_lengths(Molecule & result,
+                              const Set_of_Atoms * scaffold_embedding,
+                              const Enumeration_Temporaries & etmp) const
 {
 //cerr << "Setting scaffold bond lengths\n";
   if (! _set_bond_lengths(result, scaffold_embedding, etmp, *this))
@@ -4884,10 +5222,10 @@ IWReaction::_set_bond_lengths (Molecule & result,
 }
 
 int
-IWReaction::_set_dihedral_angles (Molecule & result,
-                                  const Set_of_Atoms * scaffold_embedding,
-                                  const Enumeration_Temporaries & etmp,
-                                  const Reaction_Site & r) const
+IWReaction::_set_dihedral_angles(Molecule & result,
+                                 const Set_of_Atoms * scaffold_embedding,
+                                 const Enumeration_Temporaries & etmp,
+                                 const Reaction_Site & r) const
 {
   int nd = r.number_dihedral_angle_specifications();
 
@@ -4903,9 +5241,9 @@ IWReaction::_set_dihedral_angles (Molecule & result,
 }
 
 int
-IWReaction::_set_dihedral_angles (Molecule & result,
-                                  const Set_of_Atoms * scaffold_embedding,
-                                  const Enumeration_Temporaries & etmp) const
+IWReaction::_set_dihedral_angles(Molecule & result,
+                                 const Set_of_Atoms * scaffold_embedding,
+                                 const Enumeration_Temporaries & etmp) const
 {
   if (! _set_dihedral_angles(result, scaffold_embedding, etmp, *this))
     return 0;
@@ -4924,10 +5262,10 @@ IWReaction::_set_dihedral_angles (Molecule & result,
 }
 
 int
-IWReaction::_set_bond_angles (Molecule & result,
-                              const Set_of_Atoms * scaffold_embedding,
-                              const Enumeration_Temporaries & etmp,
-                              const Reaction_Site & r) const
+IWReaction::_set_bond_angles(Molecule & result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             const Enumeration_Temporaries & etmp,
+                             const Reaction_Site & r) const
 {
   int nd = r.number_bond_angle_specifications();
 
@@ -4943,9 +5281,9 @@ IWReaction::_set_bond_angles (Molecule & result,
 }
 
 int
-IWReaction::_set_bond_angles (Molecule & result,
-                              const Set_of_Atoms * scaffold_embedding,
-                              const Enumeration_Temporaries & etmp) const
+IWReaction::_set_bond_angles(Molecule & result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             const Enumeration_Temporaries & etmp) const
 {
   if (! _set_bond_angles(result, scaffold_embedding, etmp, *this))
     return 0;
@@ -4965,7 +5303,7 @@ IWReaction::_set_bond_angles (Molecule & result,
 
 
 int
-IWReaction::_do_3d_replacements (Molecule & result,
+IWReaction::_do_3d_replacements(Molecule & result,
                               const Set_of_Atoms * scaffold_embedding,
                               const Enumeration_Temporaries & etmp,
                               const Reaction_Site & r) const
@@ -4984,7 +5322,7 @@ IWReaction::_do_3d_replacements (Molecule & result,
 }
 
 int
-IWReaction::_do_3d_replacements (Molecule & result,
+IWReaction::_do_3d_replacements(Molecule & result,
                               const Set_of_Atoms * scaffold_embedding,
                               const Enumeration_Temporaries & etmp) const
 {
@@ -5009,18 +5347,17 @@ IWReaction::_do_3d_replacements (Molecule & result,
 */
 
 int
-Scaffold_Reaction_Site::_do_intra_particle_replacements (Molecule & result,
+Scaffold_Reaction_Site::_do_intra_particle_replacements(Molecule & result,
                                           const Set_of_Atoms * scaffold_embedding) const
 {
-  int nr = _replace_atom.number_elements();
+//cerr << "Scaffold_Reaction_Site:have " << _replace_atom.number_elements() << " replacements\n";
 
-  for (int i = 0; i < nr; i++)
+  for (const Replace_Atom* r : _replace_atom)
   {
-    const Replace_Atom * r = _replace_atom[i];
-
     const Matched_Atom_in_Component & a1 = r->a1();
     const Matched_Atom_in_Component & a2 = r->a2();
 
+//  cerr << "in scaffold? " << a1.in_scaffold() << ' ' << a2.in_scaffold() << endl;
     if (a1.in_scaffold() || a2.in_scaffold())    // HUH, appears exactly wrong!
       continue;
 
@@ -5043,46 +5380,73 @@ Scaffold_Reaction_Site::_do_intra_particle_replacements (Molecule & result,
 }
 
 int
-IWReaction::_do_replacement (Molecule & result,
-                             const Set_of_Atoms * scaffold_embedding,
-                             const Replace_Atom & r,
-                             const Enumeration_Temporaries & etmp) const
+IWReaction::_do_replacement(Molecule & result,
+                            const Set_of_Atoms * scaffold_embedding,
+                            const Replace_Atom & r,
+                            const Enumeration_Temporaries & etmp) const
 {
-  atom_number_t a1;
-  if (! determine_atom_number(*scaffold_embedding, r.a1(), etmp, "IWReaction::_do_replacement: a1", a1))
-    return 0;
-
-  atom_number_t a2;
-  if (! determine_atom_number(*scaffold_embedding, r.a2(), etmp, "IWReaction::_do_replacement: a2", a2))
-    return 0;
-
-  if (! result.stereo_preserving_substitute(a1, a2))
-  {
-    cerr << "IWReaction::_do_replacement: failure, scaffold embedding " << (*scaffold_embedding) << endl;
-    cerr << r << endl;
+  if (!r.DoReplacement(result, scaffold_embedding, etmp)) {
+    cerr << "IWReaction::_do_replacement:replacement failed " << r << endl;
     return 0;
   }
 
   if (_3d)
   {
-    assert (NULL == "implement this some time");
+    assert (nullptr == "implement this some time");
   }
 
   return 1;
 }
 
 int
-IWReaction::_do_replacements (Molecule & result,
-                              const Set_of_Atoms * scaffold_embedding,
-                              Enumeration_Temporaries & etmp) const
+Replace_Atom::DoReplacement(Molecule& result,
+                            const Set_of_Atoms* scaffold_embedding,
+                            const Enumeration_Temporaries& etmp) const
 {
-  int ns = _sidechains.number_elements();
+  atom_number_t a1;
+  if (! determine_atom_number(*scaffold_embedding, _a1, etmp, "Replace_Atom::DoReplacement:a1", a1))
+    return 0;
 
-  for (int i = 0; i < ns; i++)
+  atom_number_t a2;
+  if (! determine_atom_number(*scaffold_embedding, _a2, etmp, "Replace_Atom::DoReplacement:a2", a2))
+    return 0;
+
+//cerr << "Atoms are " << a1 << " and " << a2 << endl;
+  if (! result.stereo_preserving_substitute(a1, a2))
   {
-    const Sidechain_Reaction_Site * s = _sidechains[i];
+    cerr << "Replace_Atom::DoReplacement:failed, scaffold embedding " << (*scaffold_embedding) << endl;
+    cerr << *this << endl;
+    return 0;
+  }
 
-    int nr = s->number_atom_replacements();
+  // no 3d.
+
+  return 1;
+}
+
+int
+Reaction_Site::DoReplacements(Molecule& result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             Enumeration_Temporaries & etmp) const
+{
+  for (const auto* r : _replace_atom)
+  {
+//  cerr << *r << " doing atom replacements\n";
+    if (! r->DoReplacement(result, scaffold_embedding, etmp))
+      return 0;
+  }
+
+  return 1;
+}
+
+int
+IWReaction::_do_replacements(Molecule & result,
+                             const Set_of_Atoms * scaffold_embedding,
+                             const Enumeration_Temporaries & etmp) const
+{
+  for (const Sidechain_Reaction_Site* s : _sidechains)
+  {
+    const int nr = s->number_atom_replacements();
 
     for (int j = 0; j < nr; j++)
     {
@@ -5146,9 +5510,9 @@ No_Reaction::construct_from_msi_object(const msi_object & msi)
     }
 
     int j = 0;       // processing scaffold or sidechain?
-    if (0 == _scaffold_no_reaction.number_elements())
+    if (_scaffold_no_reaction.empty())
       j = 0;
-    else if (0 == _sidechain_no_reaction.number_elements())
+    else if (_sidechain_no_reaction.empty())
       j = 1;
 
     int success = 1;
@@ -5180,7 +5544,7 @@ No_Reaction::construct_from_msi_object(const msi_object & msi)
     }
   }
 
-  if (0 == _scaffold_no_reaction.number_elements() || 0 == _sidechain_no_reaction.number_elements())
+  if (_scaffold_no_reaction.empty() || _sidechain_no_reaction.empty())
   {
     cerr << "No_Reaction::construct_from_msi_object: one or both queries not specified\n";
     return 0;
@@ -5415,56 +5779,63 @@ IWReaction::_make_stereo_centres (Molecule & result,
                                   const Set_of_Atoms * scaffold_embedding,
                                   const Enumeration_Temporaries & etmp) const
 {
-//cerr << "Processing " << _reaction_stereo_centre.number_elements() << " stereo centres\n";
+//cerr << "Processing " << _reaction_stereo_centre.size() << " stereo centres\n";
 
-  for (int i = 0; i < _reaction_stereo_centre.number_elements(); i++)
-  {
-    if (! _reaction_stereo_centre[i]->process(result, scaffold_embedding, etmp))
-      return 0;
-  }
-
-  return 1;
-}
-
-static int
-identify_atoms_in_ring_system (Molecule & m,
-                               atom_number_t astart,
-                               int * aromatic_atoms,
-                               int * initially_aromatic_atoms)
-{
-  aromatic_atoms[astart] = 1;
-
-  const Atom * a = m.atomi(astart);
-
-  int acon = a->ncon();
-
-  cerr << "Atom " << astart << " with " << acon << " connections in the aromatic system\n";
   int rc = 1;
-
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a->item(i);
-
-    cerr << "Bond in " << b->nrings() << " rings\n";
-
-    if (0 == b->nrings())
-      continue;
-
-    atom_number_t j = b->other(astart);
-
-    cerr << "Atom is " << j << " value " << aromatic_atoms[j] << endl;
-
-    if (aromatic_atoms[j])    // already got it
-      continue;
-
-    cerr << "Atom " << j << " bonded to atom " << astart << endl;
-
-    m.set_bond_type_between_atoms(astart, j, SINGLE_BOND);
-
-    rc += identify_atoms_in_ring_system(m, j, aromatic_atoms, initially_aromatic_atoms);
+  for (Reaction_Stereo_Centre* r : _reaction_stereo_centre) {
+    if (! r->process(result, scaffold_embedding, etmp)) {
+      rc = 0;
+    }
   }
 
   return rc;
+}
+ 
+int
+IWReaction::_make_cip_stereo_centres(Molecule & result,
+                                  const Set_of_Atoms&  scaffold_embedding,
+                                  const Enumeration_Temporaries & etmp) const {
+//  cerr << "Processing " << _cip_stereo.size() << " CIP stereo centres, scaffold_embedding " << scaffold_embedding << '\n';
+
+  int rc = 1;
+  for (const ReactionCipStereo* cip : _cip_stereo) {
+    if (! _make_cip_stereo_centre(result, scaffold_embedding, etmp, *cip)) {
+      rc = 0;
+    }
+  }
+
+  return rc;
+}
+
+int
+IWReaction::_make_cip_stereo_centre(Molecule & result,
+                                  const Set_of_Atoms&  scaffold_embedding,
+                                  const Enumeration_Temporaries & etmp,
+                                  const ReactionCipStereo& cip) const {
+  atom_number_t a;
+  if (! determine_atom_number(scaffold_embedding, cip.matched_atom(), etmp,
+      "_make_cip_stereo_centre", a)) {
+  }
+
+  if (! result.ok_atom_number(a)) {
+    cerr << "IWReaction::_make_cip_stereo_centre:invalid atom " << a << '\n';
+    return 0;
+  }
+
+  const Chiral_Centre* existing = result.chiral_centre_at_atom(a);
+  if (existing != nullptr) {
+    if (result.CahnIngoldPrelogValue(existing) == cip.cip()) {
+      return 1;
+    }
+    result.invert_chirality_on_atom(a);
+    if (result.CahnIngoldPrelogValue(existing) == cip.cip()) {
+      return 1;
+    }
+    cerr << "IWReaction::_make_cip_stereo_centre:not matched " << a << '\n';
+    return 0;
+  }
+
+  return CreateChiralCentreMatchingCip(result, a, cip.cip());
 }
 
 /*
@@ -5535,7 +5906,7 @@ could_extend_aromatic_system (Molecule & m,
 {
   int new_double_bonds = 0;    // to possibly be aromatic, must have at least 1 double bond not already fully counted
 
-  for (Ring_Bond_Iterator i(r); i != r.end(); i++)
+  for (Ring_Bond_Iterator i(r); i != r.zend(); i++)
   {
     atom_number_t a1 = i.a1();
     atom_number_t a2 = i.a2();
@@ -5586,7 +5957,7 @@ find_kekule_forms_for_bad_valence (Molecule & m,
                                    int * process_these)
 {
   const Ring * r = m.ring_containing_atom(c);
-  assert (NULL != r);
+  assert (nullptr != r);
 
   if (r->is_fused())
     identify_fused_system(m, *r, process_these);
@@ -5726,7 +6097,7 @@ Reaction_Stereo_Centre::_find_missing_connection (Molecule & m,
 
   if (3 == acon)    // let's assume it is an implicit hydrogen (could be lone pair?)
   {
-    c->set_right_down(CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN);
+    c->set_right_down(kChiralConnectionIsImplicitHydrogen);
     return 1;
   }
 
@@ -5834,21 +6205,21 @@ Reaction_Stereo_Centre::process (Molecule & result,
   int acon = result.ncon(c->a());
 
   if (_ssc[1].implicit_hydrogen())
-    c->set_top_front(CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN);
+    c->set_top_front(kChiralConnectionIsImplicitHydrogen);
   else if (! determine_atom_number(*scaffold_embedding, _ssc[1], etmp, "Reaction_Stereo_Centre::process: top front", a))
     return 0;
   else
     c->set_top_front(a);
 
   if (_ssc[2].implicit_hydrogen())
-    c->set_top_back(CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN);
+    c->set_top_back(kChiralConnectionIsImplicitHydrogen);
   else if (! determine_atom_number(*scaffold_embedding, _ssc[2], etmp, "Reaction_Stereo_Centre::process: top back", a))
     return 0;
   else
     c->set_top_back(a);
 
   if (_ssc[3].implicit_hydrogen())
-    c->set_left_down(CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN);
+    c->set_left_down(kChiralConnectionIsImplicitHydrogen);
   else if (! determine_atom_number(*scaffold_embedding, _ssc[3], etmp, "Reaction_Stereo_Centre::process: left down", a))
     return 0;
   else
@@ -5873,7 +6244,7 @@ Reaction_Stereo_Centre::process (Molecule & result,
     }
   }
   else if (_ssc[4].implicit_hydrogen())
-    c->set_right_down(CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN);
+    c->set_right_down(kChiralConnectionIsImplicitHydrogen);
   else if (! determine_atom_number(*scaffold_embedding, _ssc[4], etmp, "Reaction_Stereo_Centre::process: right down", a))
     return 0;
   else
@@ -5928,7 +6299,7 @@ Reaction_Stereo_Centre::process (Molecule & result,
 
 // Remove any existing chiral centre
 
-  if (NULL != result.chiral_centre_at_atom(c->a()))
+  if (nullptr != result.chiral_centre_at_atom(c->a()))
     result.remove_chiral_centre_at_atom(c->a());
 
   if (! result.add_chiral_centre(c))
@@ -6042,7 +6413,7 @@ IWReaction::perform_reaction(Molecule & m,
 {
   Substructure_Results sresults;
 
-  int nhits = substructure_search(&m);
+  int nhits = substructure_search(m);
 
   if (0 == nhits)
     return 0;
@@ -6121,9 +6492,9 @@ Reaction_Site::_do_toggle_kekule_form (Molecule & m,
 */
 
 int 
-IWReaction::_do_restore_saved_chiral_centres (Molecule & result,
-                                              const Set_of_Atoms & scaffold_embedding,
-                                              Enumeration_Temporaries & etmp)
+IWReaction::_do_restore_saved_chiral_centres(Molecule & result,
+                                             const Set_of_Atoms & scaffold_embedding,
+                                             Enumeration_Temporaries & etmp)
 {
   Reaction_Site::do_restore_saved_chiral_centres(result, scaffold_embedding, etmp);
 
@@ -6229,7 +6600,7 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 
 // The same atoms still attached, and there were 4 of them - should not happen - we know a bond was broken
 
-  if (0 == atoms_no_longer_attached.number_elements() && 4 == atoms_in_chiral_centre)    // should not happen, all atoms the same, but we know a bond was broken? Maybe they broke and re-formed something???
+  if (atoms_no_longer_attached.empty() && 4 == atoms_in_chiral_centre)    // should not happen, all atoms the same, but we know a bond was broken? Maybe they broke and re-formed something???
   {
     cerr << "IWReaction::_possibly_add_back_chiral_centre:strange, nothing has changed at atom " << zatom << endl;
     return 1;
@@ -6257,7 +6628,7 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 
 // The case where an atom is replacing an implicit Hydrogen. All atoms the same, only 3 explicit atoms in the chiral centre, but now 4 connections
 
-  if (0 == atoms_no_longer_attached.number_elements() && 3 == atoms_in_chiral_centre && 4 == a->ncon())
+  if (atoms_no_longer_attached.empty() && 3 == atoms_in_chiral_centre && 4 == a->ncon())
   {
     atom_number_t t = atoms_newly_appeared[0];
 
@@ -6284,7 +6655,7 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 
 // If one atom has disappeared, we can turn that position into an implicit hydrogen
 
-  if (0 == atoms_newly_appeared.number_elements() && 1 == atoms_no_longer_attached.number_elements() &&
+  if (atoms_newly_appeared.empty() && 1 == atoms_no_longer_attached.number_elements() &&
       0 == c->implicit_hydrogen_count())
   {
     atom_number_t afrom = atoms_no_longer_attached[0];
@@ -6296,20 +6667,19 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 
 // Unless we have any replacement specifications, we can't do anything
 
-  if (0 == _replace_atom.number_elements())
+  if (_replace_atom.empty())
     return 0;
 
 // If there is an implicit Hydrogen on the chiral centre, we can have one atom that isn't
 // specified as a replacement
 
-  atom_number_t possible_implicit_hydrogen = INVALID_ATOM_NUMBER;
+//atom_number_t possible_implicit_hydrogen = INVALID_ATOM_NUMBER;
 
 // Identify the replacements
 
   int replacements_identified = 0;
 
-  for (int i = 0; i < _replace_atom.number_elements(); i++)
-  {
+  for (int i = 0; i < _replace_atom.number_elements(); i++) {
     const Replace_Atom * r = _replace_atom[i];
 
     atom_number_t a1;
@@ -6336,13 +6706,14 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 
 // If we found a one-to-one correspondence, we are done
 
-  if (0 == atoms_no_longer_attached.number_elements() && 0 == atoms_newly_appeared.number_elements())
+  if (atoms_no_longer_attached.empty() && atoms_newly_appeared.empty()) {
     return 1;
+  }
 
 // If there is one unmatched newly appeared atom, and the chiral centre had a lone pair, make that match
 
-  if (0 == atoms_no_longer_attached.number_elements() && 1 == atoms_newly_appeared.number_elements() && 1 == c->implicit_hydrogen_count())
-  {
+  if (atoms_no_longer_attached.empty() && 1 == atoms_newly_appeared.number_elements()
+      && 1 == c->implicit_hydrogen_count()) {
     atom_number_t a = atoms_newly_appeared[0];
 
     c->implicit_hydrogen_is_now_atom_number(a);
@@ -6357,4 +6728,13 @@ Reaction_Site::_do_restore_saved_chiral_centre (Molecule & result,
 #endif
 
   return 0;
+}
+
+SiteCipStereo::SiteCipStereo() {
+  _atom = -1;
+  _rs = CahnIngoldPrelog::kUnspecified;
+}
+
+ReactionCipStereo::ReactionCipStereo() {
+  _rs = CahnIngoldPrelog::kUnspecified;
 }

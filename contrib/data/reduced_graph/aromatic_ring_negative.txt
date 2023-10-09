@@ -1,0 +1,3 @@
+query: "aromatic_ring_negative.qry"
+element: "Fe"
+ring: true

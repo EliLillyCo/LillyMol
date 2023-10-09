@@ -1,0 +1,11 @@
+query {
+  name: "aromatic_ring_non_feature"
+  ring_specifier {
+    aromatic: true
+    base {
+      set_global_id: 1
+      environment: "0[>0]"
+    }
+  }
+  smarts: "[/IWgid1]"
+}

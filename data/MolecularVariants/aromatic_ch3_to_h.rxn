@@ -1,0 +1,6 @@
+name: "aromatic_ch3_to_h"
+scaffold {
+  id: 0
+  smarts: "[CD1G0]-c"
+  remove_atom: 0
+}

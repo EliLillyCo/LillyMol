@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package SvmLiteModel;
+
+import "Utilities/GFP_Tools/gfp_to_svm_lite.proto";
+
+
+message SvmLiteModel {
+  optional int32 kernel_type = 1;
+
+  repeated double kernel_parameter = 2;
+
+  optional double dash_u = 3;
+
+  optional int32 highest_feature__index = 4;
+
+  optional int32 number_training_documents = 5;
+
+  optional double threshold_b = 6;
+
+  repeated SupportVector support_vector = 7;
+}

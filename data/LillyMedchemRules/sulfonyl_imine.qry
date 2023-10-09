@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "sulfonyl_imine")
+  (A I version 2)
+  (A D numeric_value 25)
+# (A C smarts "C=N-S(=O)(=O)")
+  (A I unique_embeddings_only 1)
+  (A C smarts "S(=O)(=O)-N=C")
+)

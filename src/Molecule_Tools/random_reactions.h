@@ -6,9 +6,9 @@
 
 #include <random>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
-#include "iwreaction.h"
+#include "Molecule_Lib/iwreaction.h"
 
 class Random_Reactions
 {

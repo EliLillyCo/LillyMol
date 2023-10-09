@@ -1,0 +1,40 @@
+(6 Query
+  (A C Comment "perchlorate")
+  (A I Version 2)
+  (0 Query_Atom
+    (A I atomic_number 17)
+    (A I ncon 4)
+    (A I nbonds 7)
+    (A I nrings 0)
+  )
+  (1 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (3 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 2)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (4 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+    (A I nbonds 1)
+#   Remove the charge restriction 30 Aug 96. They were being protonated during earlier processing
+#   (A I formal_charge -1)
+    (A I nrings 0)
+    (A I single_bond 0)
+  )
+)

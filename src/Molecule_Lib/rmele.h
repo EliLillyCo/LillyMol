@@ -1,5 +1,5 @@
-#ifndef IW_RMELE_H
-#define IW_RMELE_H
+#ifndef MOLECULE_LIB_RMELE_H_
+#define MOLECULE_LIB_RMELE_H_
 
 /*
   When removing elements, we need a means of keeping track of the
@@ -82,4 +82,4 @@ class Elements_to_Remove : public resizable_array_p<Element_to_Remove>
     int process (Molecule &, const int *, int);
 };
 
-#endif
+#endif  // MOLECULE_LIB_RMELE_H_

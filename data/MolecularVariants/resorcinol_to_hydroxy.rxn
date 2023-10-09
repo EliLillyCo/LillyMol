@@ -1,0 +1,6 @@
+name: "resorcinol_to_hydroxy"
+scaffold {
+  id: 0
+  smarts: "[OH1]-[/IWrid1]:c:[/IWrid1]-[OH]"
+  remove_atom: 3
+}

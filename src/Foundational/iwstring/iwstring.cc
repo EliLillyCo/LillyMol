@@ -8,7 +8,6 @@
 #include <assert.h>
 
 #include <iostream>
-using namespace std;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #include "iwstring.h"
@@ -57,13 +56,14 @@ void
 no_newline (char *cc)
 {
   char *c = strchr (cc, '\n');
-  if (NULL != c)
+  if (nullptr != c)
     *c = '\0';
   return;
 }
 
+#ifdef CONFLICTS_WITH_STDLIB
 char *
-basename (char *path_name)
+basename(char *path_name)
 {
   char *c, *file_name;
 
@@ -77,6 +77,7 @@ basename (char *path_name)
 
   return (file_name);
 }
+#endif
 
 int
 remove_blanks (char *cc)
@@ -245,8 +246,8 @@ is_int (const char *buffer, int *i)
 int
 is_double (const char *buffer, double *x)
 {
-  assert (NULL != buffer);
-  assert (NULL != x);
+  assert (nullptr != buffer);
+  assert (nullptr != x);
   char *c;
   double tmp = strtod (buffer, &c);
 
@@ -273,7 +274,7 @@ is_double (const char *buffer, double *x)
 int
 ccount (const char *haystack, char needle)
 {
-  assert (NULL != haystack);
+  assert (nullptr != haystack);
 
   int count = 0;
 
@@ -290,7 +291,7 @@ ccount (const char *haystack, char needle)
 char *
 make_copy (const char *c)
 {
-  assert (NULL != c);
+  assert (nullptr != c);
   int lenc = static_cast<int>(strlen (c));
 
   char * copyc = new char[lenc + 1];
@@ -315,24 +316,24 @@ template class resizable_array_base<char *>;   // instantiate the template
 /*resizable_array_p<char> *
 tokenise_char (const char *buffer, const char *pattern)
 {
-  assert (NULL != buffer);
-  assert (NULL != pattern);
+  assert (nullptr != buffer);
+  assert (nullptr != pattern);
 
   int lenbuf = strlen (buffer);
   if (0 == lenbuf)
-    return NULL;
+    return nullptr;
 
   char * copy_buf = new char[lenbuf + 1];
   strcpy (copy_buf, buffer);
 
   char *c = strtok (copy_buf, pattern);
 
-  if (NULL == c)
-    return NULL;
+  if (nullptr == c)
+    return nullptr;
 
   resizable_array_p<char> *a = new resizable_array_p<char> (make_copy (c));
 
-  while (NULL != (c = strtok (NULL, pattern)))
+  while (nullptr != (c = strtok (nullptr, pattern)))
   {
     a->add (make_copy (c));
   }
@@ -353,18 +354,18 @@ resizable_array_p<T> *
 tokenise_as (const char *buffer, const char *pattern,
              int (* is_t) (const char *, T *))
 {
-  assert (NULL != buffer);
-  assert (NULL != pattern);
+  assert (nullptr != buffer);
+  assert (nullptr != pattern);
 
   resizable_array_p<char> * tk = tokenise (buffer, pattern);
 
-  if (NULL == tk)
-    return NULL;
+  if (nullptr == tk)
+    return nullptr;
 
   if (0 == tk->number_elements ())
   {
     delete tk;
-    return NULL;
+    return nullptr;
   }
 
   resizable_array_p<T> * r = new resizable_array_p<T>;
@@ -380,7 +381,7 @@ tokenise_as (const char *buffer, const char *pattern,
     }
     else
     {
-      r->add (NULL);
+      r->add (nullptr);
     }
   }
 
@@ -456,7 +457,7 @@ words (const char *string, const char separator)
 }
 
 const char *
-iwbasename (const char * fname)
+iwbasename(const char * fname)
 {
   const char * rc = fname;
   int previous_char_was_slash = 0;

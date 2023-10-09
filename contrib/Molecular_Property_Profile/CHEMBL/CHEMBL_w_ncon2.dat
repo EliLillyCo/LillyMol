@@ -1,0 +1,233 @@
+description {
+  feature_name: "w_ncon2"
+  description: "Number of atoms with 2 connections"
+  plot_title: "Number of atoms with 2 connections"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 48.0
+mean: 14.014318
+median: 14.0
+quantile {
+  quantile: 0.01
+  value: 4.0
+}
+quantile {
+  quantile: 0.05
+  value: 7.0
+}
+quantile {
+  quantile: 0.1
+  value: 8.0
+}
+quantile {
+  quantile: 0.5
+  value: 14.0
+}
+quantile {
+  quantile: 0.9
+  value: 20.0
+}
+quantile {
+  quantile: 0.95
+  value: 22.0
+}
+quantile {
+  quantile: 0.99
+  value: 27.0
+}
+int_values {
+  count: 678
+}
+int_values {
+  value: 1
+  count: 1669
+}
+int_values {
+  value: 2
+  count: 4357
+}
+int_values {
+  value: 3
+  count: 8749
+}
+int_values {
+  value: 4
+  count: 16196
+}
+int_values {
+  value: 5
+  count: 27061
+}
+int_values {
+  value: 6
+  count: 42653
+}
+int_values {
+  value: 7
+  count: 61523
+}
+int_values {
+  value: 8
+  count: 87988
+}
+int_values {
+  value: 9
+  count: 116797
+}
+int_values {
+  value: 10
+  count: 147811
+}
+int_values {
+  value: 11
+  count: 171194
+}
+int_values {
+  value: 12
+  count: 188098
+}
+int_values {
+  value: 13
+  count: 195392
+}
+int_values {
+  value: 14
+  count: 198159
+}
+int_values {
+  value: 15
+  count: 187944
+}
+int_values {
+  value: 16
+  count: 171101
+}
+int_values {
+  value: 17
+  count: 143713
+}
+int_values {
+  value: 18
+  count: 119965
+}
+int_values {
+  value: 19
+  count: 93288
+}
+int_values {
+  value: 20
+  count: 74133
+}
+int_values {
+  value: 21
+  count: 55379
+}
+int_values {
+  value: 22
+  count: 41520
+}
+int_values {
+  value: 23
+  count: 28638
+}
+int_values {
+  value: 24
+  count: 21846
+}
+int_values {
+  value: 25
+  count: 14193
+}
+int_values {
+  value: 26
+  count: 10836
+}
+int_values {
+  value: 27
+  count: 6903
+}
+int_values {
+  value: 28
+  count: 5534
+}
+int_values {
+  value: 29
+  count: 2963
+}
+int_values {
+  value: 30
+  count: 2510
+}
+int_values {
+  value: 31
+  count: 1309
+}
+int_values {
+  value: 32
+  count: 1175
+}
+int_values {
+  value: 33
+  count: 449
+}
+int_values {
+  value: 34
+  count: 643
+}
+int_values {
+  value: 35
+  count: 268
+}
+int_values {
+  value: 36
+  count: 346
+}
+int_values {
+  value: 37
+  count: 115
+}
+int_values {
+  value: 38
+  count: 178
+}
+int_values {
+  value: 39
+  count: 59
+}
+int_values {
+  value: 40
+  count: 52
+}
+int_values {
+  value: 41
+  count: 42
+}
+int_values {
+  value: 42
+  count: 51
+}
+int_values {
+  value: 43
+  count: 8
+}
+int_values {
+  value: 44
+  count: 13
+}
+int_values {
+  value: 45
+  count: 1
+}
+int_values {
+  value: 46
+  count: 3
+}
+int_values {
+  value: 47
+  count: 1
+}
+int_values {
+  value: 48
+  count: 6
+}

@@ -1,22 +1,88 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "molecular_abstraction_specifications.h"
 
+using std::cerr;
+
 #define MA_OPEN_PAREN '('
 #define MA_CLOSE_PAREN ')'
+
+void
+DisplayAbstractionNames(std::ostream& output) {
+  output << "Recognised abstraction functions\n";
+  output << " allatoms    transformations applied to all atoms\n";
+  output << " allbonds    transformations applied to all bonds\n";
+  output << " bigring     remove all atoms except those in the largest ring\n";
+  output << " arf         create an abstract ring form\n";
+  output << " cbt         change bond types\n";
+  output << " charge      placement, removal and changing formal charges\n";
+  output << " comprconsec compress consecutive groups\n";
+  output << " frag        fragment removal\n";
+  output << " invscaf     invert scaffold\n";
+  output << " isotope     placement, removal and changing isotopic labels\n";
+  output << " rings       remove all non ring atoms, keep just the rings\n";
+  output << " ringsys     generate ring systems\n";
+  output << " rmat        remove specified atoms\n";
+  output << " rmatoms     remove specified atoms\n";
+  output << " rmbond      remove specified bonds\n";
+  output << " rmrd2       remove two connected ring atoms - make rings smaller\n";
+  output << " rmscaffold  remove the scaffold atoms\n";
+  output << " rmspinach   same as scaffold\n";
+  output << " rplink      replace a linker\n";
+  output << " scaffold    reduce the molecule to scaffold atoms\n";
+  output << " sss         perform substructure search\n";
+  output << " translate   translate all atoms of a type to another element\n";
+  return;
+}
+
+void
+DisplayUsageExamples(std::ostream& output) {
+  output << "Specify a set of operations that are performed in a pipeline\n";
+  output << "allbonds(<1,2,3>)    change all bonds to type <1,2,3>\n";
+  output << "arf(<lrs,lhc,ELE=,AROM=,ALIPH=>)\n";
+  output << "bigring(spiro)\n";
+  output << "cbt(<smarts>=<1,2,3>)  change the bond between first two matched atoms to <1,2,3>\n";
+  output << "charge(<smarts, CHARGE=, SMARTS=, n=q, *>)\n";
+  output << "compress(<>)\n";
+  output << "fragment(KEEP=<smt> REMOVE=<smt>) fragment filtering\n";
+  output << "isotope(<ISO=<i> SMARTS=<i=n> <i>)\n";
+  output << "invscaf(SCH=<ele>)  keep the atoms that are NOT the scaffold\n";
+  output << "rings()\n";
+  output << "ringsys(<>)\n";
+  output << "rmrd2(<e>)  remove [eRD2] atoms in ring\n";
+  output << "rplink(ELE=<e>)\n";
+  output << "scafold(keepfirst)  keepfirst means keep first ring attachment\n";
+  output << "spinach(RMDBSC, AROM=<e>, ALIPH=<e>, CHAIN=<e>\n";
+  output << "sss(SMARTS=<smt>, NONM, ...)   substructure search, ... is a query file, NONM pass non matches\n";
+  output << "translate()\n";
+  output << "\n";
+  output << "Recognised by all operators...\n";
+  output << " WRITE     write the current molecule\n";
+  output << " FP        generate fingerprint for the current molecule\n";
+  output << " WRITEC    append number of changes to output\n";
+  output << " WRITEIF   write if the molecule is changed\n";
+  output << " WRITE_MIN_ATOMS=<nn>   write if the molecule contains at least nn atoms\n";
+  output << " WRITE_MAX_ATOMS=<nn>   write if the molecule contains at most  nn atoms\n";
+  output << " WRITE_MIN_PARENT_ATOM_RATIO=<frac>   write if ratio of atoms now to parent > frac\n";
+  output << " WRITE_MAX_PARENT_ATOM_RATIO=<frac>   write if ratio of atoms now to parent < frac\n";
+  output << " ISO=<n>       apply atom typing\n";
+  output << " AT=<atype>       apply atom typing\n";
+  return;
+}
 
 Molecular_Abstraction_Directives_Node::Molecular_Abstraction_Directives_Node()
 {
   _type = 0;
 
-  _next = NULL;
+  _next = nullptr;
 
   return;
 }
 
 Molecular_Abstraction_Directives_Node::~Molecular_Abstraction_Directives_Node()
 {
-  if (NULL != _next)
+  if (nullptr != _next)
     delete _next;
 
   return;
@@ -234,10 +300,10 @@ Molecular_Abstraction_Directives_Node::_extract_directive_and_args(const const_I
 }
 
 int
-Molecular_Abstraction_Directives_Node::debug_print(ostream & os) const
+Molecular_Abstraction_Directives_Node::debug_print(std::ostream & os) const
 {
   os << "Directive '" << _directive << "', args '" << _args << "'\n";
-  if (NULL != _next)
+  if (nullptr != _next)
   {
     os << " next\n";
     return _next->debug_print(os);
@@ -249,7 +315,7 @@ Molecular_Abstraction_Directives_Node::debug_print(ostream & os) const
 int
 Molecular_Abstraction_Directives_Node::number_abstractions() const
 {
-  if (NULL == _next)
+  if (nullptr == _next)
     return 1;
 
   return 1 + _next->number_abstractions();
@@ -315,7 +381,7 @@ Molecular_Abstraction_Directives_Node::directive_recognised()
     return 0;
   }
 
-  if (NULL != _next)
+  if (nullptr != _next)
     return _next->directive_recognised();
 
   return 1;

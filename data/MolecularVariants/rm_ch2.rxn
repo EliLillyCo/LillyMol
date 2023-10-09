@@ -1,0 +1,11 @@
+name: "rm_ch2"
+scaffold {
+  id: 0
+  smarts: "[Cx0G0]-[CD2]-[Cx0G0]"
+  remove_atom: 1
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

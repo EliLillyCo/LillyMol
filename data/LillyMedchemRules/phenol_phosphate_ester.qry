@@ -1,0 +1,31 @@
+(0 Query
+  (A C Comment "phenol_phosphate_ester")
+  (A I Version 2)
+  (A I min_aromatic_ring_count 1)
+  (0 Elements_Needed
+    (A I atomic_number 15)
+    (A I min_hits_needed 1)
+  )
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 2)
+    (A I attached_heteroatom_count 1)
+    (A I vinyl 1)
+    (A I aryl 1)
+  )
+  (1 Query_Atom
+    (A I atomic_number 15)
+    (A I single_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 8)
+    (A I double_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I aromatic_ring_size 6)
+    (A I isolated_ring 1)
+    (A I single_bond 0)
+  )
+)

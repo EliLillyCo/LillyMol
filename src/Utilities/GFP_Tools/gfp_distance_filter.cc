@@ -1,20 +1,25 @@
-#include <stdlib.h>
+#include <iostream>
+
+#include "re2/re2.h"
 
 /*
   Sometimes we want all those molecules from one file which are within
   a given distance of those in another file
 */
 
-#include "iwstring_data_source.h"
-#include "iw_tdt.h"
-#include "cmdline.h"
-#include "accumulator.h"
+#include "Foundational/accumulator/accumulator.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 #define IWMINMAX_IMPLEMENTATION
-#include "iwminmax.h"
-#include "report_progress.h"
+#include "Foundational/iwmisc/iwminmax.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "gfp.h"
 #include "tversky.h"
+
+using std::cerr;
+using std::endl;
 
 #ifdef __GNUG__
 template iwminid<float, int>::iwminid(float, int);
@@ -25,7 +30,7 @@ template int iwminid<float, int>::try_this(float, int);
   Our pool is an array of FP objects
 */
 
-static IW_General_Fingerprint * pool = NULL;
+static IW_General_Fingerprint * pool = nullptr;
 
 static int pool_size = 0;
 
@@ -164,17 +169,18 @@ build_pool (const const_IWSubstring & fname)
     IWString tmp;
     tmp << '^' << identifier_tag;
 
-    IW_Regular_Expression pcn (tmp);
-    pool_size = input.grep (pcn);
+    re2::StringPiece string_piece(tmp.data(), tmp.length());
+    re2::RE2 pcn(string_piece);
+    pool_size = input.grep(pcn);
 
     if (0 == pool_size)
     {
-      cerr << "No occurrences of " << pcn.source() << "' in input\n";
+      cerr << "No occurrences of " << pcn.pattern() << "' in input\n";
       return 0;
     }
 
     pool = new IW_General_Fingerprint[pool_size];
-    if (NULL == pool)
+    if (nullptr == pool)
     {
       cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
       return 62;
@@ -376,7 +382,14 @@ distance_filter (const char * fname,
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+// clang-format on
+// clang-format off
   cerr << "Filter molecules according to how close they come to members of a pool\n";
   cerr << prog_name << ": usage <options> <input_file>\n";
   cerr << " -p <file>        specify file against which input is to be compared\n";
@@ -397,6 +410,7 @@ usage (int rc)
   cerr << " -r <n>           report progress every <n> items processed\n";
   cerr << " -F ...           standard fingerprint options, enter '-F help'\n";
   cerr << " -v               verbose output\n";
+// clang-format on
 
   exit (rc);
 }
@@ -489,7 +503,7 @@ distance_filter (int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Will fail molecules unless " << upper_threshold_success_requirement << " times within upper threshold\n";
+      cerr << "Will fail molecules unless " << lower_threshold_violation_threshold << " times within upper threshold\n";
   }
 
   if (cl.option_present('f'))
@@ -651,7 +665,7 @@ distance_filter (int argc, char ** argv)
     }
 
     pool = new IW_General_Fingerprint[pool_size];
-    if (NULL == pool)
+    if (nullptr == pool)
     {
       cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
       return 62;

@@ -1,6 +1,10 @@
 #include <stdlib.h>
 
+#include "Foundational/iwmisc/iwre2.h"
 #include "iw_tdt.h"
+
+using std::cerr;
+using std::endl;
 
 IW_TDT::IW_TDT()
 {
@@ -300,7 +304,7 @@ operator << (IWString & output, const IW_TDT & tdt)
 }
 
 int
-IW_TDT::remove_all (IW_Regular_Expression & rx)
+IW_TDT::remove_all(RE2 & rx)
 {
   assert (ok());
 
@@ -317,7 +321,7 @@ IW_TDT::remove_all (IW_Regular_Expression & rx)
   {
 //  cerr << "Does '" << token << "' match '" << rx.source() << "'\n";
 
-    if (! rx.matches(token))    // we remove all the ones that match rx
+    if (! iwre2::RE2PartialMatch(token, rx))  // we remove all the ones that match rx
     {
       if (new_data.length())
         new_end.add(new_data.length());
@@ -355,7 +359,7 @@ IW_TDT::remove_all (IW_Regular_Expression & rx)
 }
 
 int
-IW_TDT::dataitem_value (IW_Regular_Expression & rx,
+IW_TDT::dataitem_value (RE2 & rx,
                         const_IWSubstring & dataitem,
                         const_IWSubstring & zresult,
                         int which_to_return) const
@@ -398,7 +402,7 @@ IW_TDT::dataitem_value (IW_Regular_Expression & rx,
     cerr << "Does '" << rx.source() << "' match '" << tag << "'\n";
 #endif
 
-    if (! rx.matches(tag))
+    if (iwre2::RE2PartialMatch(tag, rx))
       continue;
 
     if (nfound == which_to_return)
@@ -636,7 +640,7 @@ IW_TDT::count_dataitems (const char * tag,
 }
 
 int
-IW_TDT::count_dataitems(IW_Regular_Expression & rx) const
+IW_TDT::count_dataitems(RE2 & rx) const
 {
   int i = 0;
   const_IWSubstring token;
@@ -644,7 +648,7 @@ IW_TDT::count_dataitems(IW_Regular_Expression & rx) const
   int rc = 0;
   while (next_dataitem(token, i))
   {
-    if (rx.matches(token))
+    if (iwre2::RE2PartialMatch(token, rx))
       rc++;
   }
 
@@ -667,4 +671,49 @@ IW_TDT::operator == (const IW_TDT & rhs) const
 #endif
 
   return _end == rhs._end;
+}
+
+int
+IW_TDT::Build(const const_IWSubstring& input) {
+
+  _zdata.resize_keep_storage(0);
+  _end.resize_keep_storage(0);
+
+  int got_vbar = 0;
+
+  const_IWSubstring line;
+  int i = 0;
+  while (input.nextword(line, i, '\n'))
+  {
+//  cerr << "Read ---'" << buffer << "'---\n";
+    if (_zdata.length())
+      _end.add(_zdata.length());
+      
+    _zdata += line;
+
+//  cerr << "Data now '" << _zdata << "'\n";
+
+    if (_include_newlines_in_tdt)
+      _zdata += '\n';
+
+    if ('|' == line)
+    {
+      got_vbar = 1;
+      break;
+    }
+
+    if (iwtdt_careful_mode && ! valid_tdt_form(line))
+    {
+      cerr << "Invalid tdt form '" << line << "'\n";
+      return 0;
+    }
+  }
+
+  if (_zdata.length() > 0 && ! got_vbar)
+  {
+    cerr << "IW_TDT::Build:improperly terminated TDT, " << input << "\n";
+    return 0;
+  }
+
+  return _end.number_elements();
 }

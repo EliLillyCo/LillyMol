@@ -1,0 +1,5 @@
+(0 Query
+  (A C Comment "acyl_hydroxamate_3")
+  (A I version 2)
+  (A C smarts "[#6](=O)-[#7](-[#8])-[#6](=O)")
+)

@@ -1,18 +1,24 @@
 #include <stdlib.h>
 
+#include <iostream>
 #include <limits>
 
-#include "misc.h"
+#include "re2/re2.h"
 
-//#include "iwmalloc.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwre2.h"
 
-#include "molecule.h"
-#include "rwsubstructure.h"
-#include "target.h"
-#include "path.h"
-#include "iwmfingerprint.h"
+#include "Molecule_Lib/is_actually_chiral.h"
+#include "Molecule_Lib/iwmfingerprint.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rwsubstructure.h"
+#include "Molecule_Lib/target.h"
+
 #include "molecular_abstraction_functions.h"
-#include "is_actually_chiral.h"
+
+using std::cerr;
+using std::endl;
 
 static int default_append_count_to_tag = 0;
 
@@ -62,7 +68,7 @@ Molecular_Abstraction_Base_Class::Molecular_Abstraction_Base_Class()
   _write_only_if_changes = default_write_only_if_changes;
 
    _min_atoms_needed_for_write = 0;
-   _max_atoms_allowed_for_write = numeric_limits<int>::max();
+   _max_atoms_allowed_for_write = std::numeric_limits<int>::max();
 
    _min_atom_ratio_needed_for_write = 0.0f;
    _max_atom_ratio_allowed_for_write = 0.0f;
@@ -88,7 +94,7 @@ Molecular_Abstraction_Base_Class::ok() const
 }
 
 int
-Molecular_Abstraction_Base_Class::report(ostream & os) const
+Molecular_Abstraction_Base_Class::report(std::ostream & os) const
 {
   os << "Abstraction processed " << _molecules_processed << " changed " << _molecules_changed << '\n';
 
@@ -97,10 +103,10 @@ Molecular_Abstraction_Base_Class::report(ostream & os) const
 
 template <typename T>
 int
-numeric_value_after_equals (const_IWSubstring token,   // note local copy
-                            T & v,
-                            T minval,
-                            T maxval)
+numeric_value_after_equals(const_IWSubstring token,   // note local copy
+                           T & v,
+                           T minval,
+                           T maxval)
 {
   token.remove_up_to_first('=');
 
@@ -135,7 +141,7 @@ Molecular_Abstraction_Base_Class::_process(const const_IWSubstring & token,
   }
   else if (token.starts_with("WRITE_MIN_ATOMS="))
   {
-    if (! numeric_value_after_equals(token, _min_atoms_needed_for_write, 1, numeric_limits<int>::max()))
+    if (! numeric_value_after_equals(token, _min_atoms_needed_for_write, 1, std::numeric_limits<int>::max()))
     {
       cerr << "Molecular_Abstraction_Base_Class::_process:invalid WRITE_MIN_ATOMS directive '" << token << "'\n";
       return 0;
@@ -144,7 +150,7 @@ Molecular_Abstraction_Base_Class::_process(const const_IWSubstring & token,
   }
   else if (token.starts_with("WRITE_MAX_ATOMS="))
   {
-    if (! numeric_value_after_equals(token, _max_atoms_allowed_for_write, 1, numeric_limits<int>::max()))
+    if (! numeric_value_after_equals(token, _max_atoms_allowed_for_write, 1, std::numeric_limits<int>::max()))
     {
       cerr << "Molecular_Abstraction_Base_Class::_process:invalid WRITE_MAX_ATOMS directive '" << token << "'\n";
       return 0;
@@ -399,9 +405,9 @@ Molecular_Abstraction_Base_Class::_do_any_writing_needed (Molecule_With_Info_Abo
 
     if (_atom_typing_specification.active())
     {
-      int * atype = new int[matoms]; unique_ptr<int[]> free_atype(atype);
+      int * atype = new int[matoms]; std::unique_ptr<int[]> free_atype(atype);
       _atom_typing_specification.assign_atom_types(m, atype);
-      fp.construct_fingerprint(m, atype, NULL);
+      fp.construct_fingerprint(m, atype, nullptr);
     }
     else
       fp.construct_fingerprint(m);
@@ -430,7 +436,7 @@ Molecular_Abstraction_Change_Bond_Type::Molecular_Abstraction_Change_Bond_Type()
 }
 
 int
-Molecular_Abstraction_Transform::debug_print(ostream & os) const
+Molecular_Abstraction_Transform::debug_print(std::ostream & os) const
 {
   os << "Molecular_Abstraction_Transform::with " << _eto.number_elements() << " components\n";
 
@@ -530,13 +536,13 @@ Molecular_Abstraction_Transform::build(const Molecular_Abstraction_Directives_No
     _smarts.add(q);
 
     const Element * e = get_element_from_symbol_no_case_conversion(ele);
-    if (NULL == e)
+    if (nullptr == e)
       e = create_element_with_symbol(ele);
 
     _eto.add(e);
   }
 
-  if (0 == _smarts.number_elements())
+  if (_smarts.empty())
   {
     cerr << "Molecular_Abstraction_Transform::build:no substructure\n";
     return 0;
@@ -572,7 +578,7 @@ Molecular_Abstraction_Transform::process (Molecule_With_Info_About_Parent & m,
   const Element ** new_element = new const Element *[matoms]; std::unique_ptr<const Element *[]> free_new_element(new_element);
   for (int i = 0; i < matoms; i++)
   {
-    new_element[i] = NULL;
+    new_element[i] = nullptr;
   }
 
   int rc = 0;
@@ -603,7 +609,7 @@ Molecular_Abstraction_Transform::process (Molecule_With_Info_About_Parent & m,
     _molecules_changed++;
     for (int i = 0; i < matoms; i++)
     {
-      if (NULL != new_element[i])
+      if (nullptr != new_element[i])
         m.set_element(i, new_element[i]);
     }
   }
@@ -613,7 +619,7 @@ Molecular_Abstraction_Transform::process (Molecule_With_Info_About_Parent & m,
 
 Molecular_Abstraction_All_Transform::Molecular_Abstraction_All_Transform()
 {
-  _eto = NULL;
+  _eto = nullptr;
 
   return;
 }
@@ -637,19 +643,18 @@ Molecular_Abstraction_All_Transform::build(const Molecular_Abstraction_Directive
 //  Must be an element
 
     _eto = get_element_from_symbol_no_case_conversion(token);
-    if (NULL == _eto)
+    if (nullptr == _eto)
     {
       _eto = create_element_with_symbol(token);
-      if (NULL == _eto)
+      if (nullptr == _eto)
       {
         cerr << "Molecular_Abstraction_Base_Class::build:invalid element '" << token << "'\n";
         return 0;
       }
     }
-
   }
 
-  if (NULL == _eto)
+  if (nullptr == _eto)
   {
     cerr << "Molecular_Abstraction_Base_Class::build:no element, assuming Carbon\n";
     _eto = get_element_from_atomic_number(6);
@@ -709,18 +714,15 @@ Molecular_Abstraction_Remove_Atom::build(const Molecular_Abstraction_Directives_
     else if (fatal)
       return 0;
 
-    if ("rejoin" == token)
-    {
+    if ("rejoin" == token) {
       _rejoin_all = 1;
       continue;
     }
 
-    if (token.starts_with("RJ="))
-    {
+    if (token.starts_with("RJ=")) {
       token.remove_leading_chars(3);
       int j;
-      if (! token.numeric_value(j) || j < 1)
-      {
+      if (! token.numeric_value(j) || j < 1) {
         cerr << "Molecular_Abstraction_Remove_Atom:build:invalid rejoin '" << token << "'\n";
         return 0;
       }
@@ -1037,6 +1039,9 @@ Molecular_Abstraction_Scaffold::build(const Molecular_Abstraction_Directives_Nod
     else if ("keepfirst" == token)
     {
       _keep_first_ring_attachment = 1;
+    } else {
+      cerr << "Molecular_Abstraction_Scaffold::build:unrecognised directive '" << token << "'\n";
+      return 0;
     }
   }
 
@@ -1592,7 +1597,7 @@ Molecular_Abstraction_Rings::process(Molecule_With_Info_About_Parent & m,
 Set_of_Molecular_Abstractions::Set_of_Molecular_Abstractions()
 {
   _n = 0;
-  _a = NULL;
+  _a = nullptr;
 
   return;
 }
@@ -1707,8 +1712,8 @@ Molecular_Abstraction_Largest_Ring_System::process(Molecule_With_Info_About_Pare
 
 Molecular_Abstraction_Abstract_Ring_Form::Molecular_Abstraction_Abstract_Ring_Form()
 {
-  _arom_ele = NULL;
-  _aliph_ele = NULL;
+  _arom_ele = nullptr;
+  _aliph_ele = nullptr;
   _label_by_ring_size = 0;
 
   return;
@@ -1753,7 +1758,7 @@ Molecular_Abstraction_Abstract_Ring_Form::build (const Molecular_Abstraction_Dir
     }
 
     const Element * e = get_element_from_symbol_no_case_conversion(t2);
-    if (NULL == e)
+    if (nullptr == e)
       e = create_element_with_symbol(t2);
 
     if ("ELE" == t1)
@@ -1772,13 +1777,13 @@ Molecular_Abstraction_Abstract_Ring_Form::build (const Molecular_Abstraction_Dir
     }
   }
 
-  if (NULL == _arom_ele && NULL == _aliph_ele)
+  if (nullptr == _arom_ele && nullptr == _aliph_ele)
   {
 //  cerr << "Molecular_Abstraction_Abstract_Ring_Form::build:no element\n";
     _arom_ele = get_element_from_symbol_no_case_conversion("Ar");
     _aliph_ele = get_element_from_symbol_no_case_conversion("Al");
   }
-  else if (NULL != _arom_ele && NULL != _aliph_ele)
+  else if (nullptr != _arom_ele && nullptr != _aliph_ele)
     ;
   else
   {
@@ -2258,7 +2263,7 @@ identify_spiro_atom_and_attachments(Molecule_With_Info_About_Parent & m,
 
 //#define DEBUG_SPREAD_APART_ANY_SPIRO_RINGS
 
-static const Element * spiro_element = NULL;
+static const Element * spiro_element = nullptr;
 
 int
 Molecular_Abstraction_Abstract_Ring_Form::_spread_apart_any_spiro_rings(Molecule_With_Info_About_Parent & m,
@@ -2302,7 +2307,7 @@ Molecular_Abstraction_Abstract_Ring_Form::_spread_apart_any_spiro_rings(Molecule
   if (n > 1)
     n = eliminate_duplicate_fusions(spiro_joined, conn1, conn2);
 
-  if (NULL == spiro_element)
+  if (nullptr == spiro_element)
     spiro_element = get_element_from_symbol_no_case_conversion("Sg");
 
 #ifdef DEBUG_SPREAD_APART_ANY_SPIRO_RINGS
@@ -2408,7 +2413,7 @@ Molecular_Abstraction_Abstract_Ring_Form::process(Molecule_With_Info_About_Paren
 
 Molecular_Abstraction_Replace_Linker::Molecular_Abstraction_Replace_Linker()
 {
-  _linker_atom = NULL;
+  _linker_atom = nullptr;
 
   return;
 }
@@ -2435,18 +2440,18 @@ Molecular_Abstraction_Replace_Linker::build(const Molecular_Abstraction_Directiv
     {
       token.remove_leading_chars(4);
       _linker_atom = get_element_from_symbol_no_case_conversion(token);
-      if (NULL == _linker_atom)
+      if (nullptr == _linker_atom)
         _linker_atom = create_element_with_symbol(token);
 
-      assert (NULL != _linker_atom);
+      assert (nullptr != _linker_atom);
     }
     else
     {
       _linker_atom = get_element_from_symbol_no_case_conversion(token);
-      if (NULL == _linker_atom)
+      if (nullptr == _linker_atom)
         _linker_atom = create_element_with_symbol(token);
 
-      assert (NULL != _linker_atom);
+      assert (nullptr != _linker_atom);
     }
 //  else
 //  {
@@ -2455,7 +2460,7 @@ Molecular_Abstraction_Replace_Linker::build(const Molecular_Abstraction_Directiv
 //  }
   }
 
-  if (NULL == _linker_atom)
+  if (nullptr == _linker_atom)
     _linker_atom = get_element_from_atomic_number(3);  //  Lithium
 
   return 1;
@@ -2802,13 +2807,13 @@ Molecular_Abstraction_Place_Isotope::Molecular_Abstraction_Place_Isotope()
 }
 
 void
-Molecular_Abstraction_Place_Isotope::_initialise_isotope_on_first_matched_atom()
+Molecular_Abstraction_Place_Isotope::_initialise_isotope_on_first_matched_atom(int iso)
 {
   _matched_atom.add(0);
   if (Molecular_Abstraction_Base_Class::_isotope > 0)
     _isotope.add(Molecular_Abstraction_Base_Class::_isotope);
   else
-    _isotope.add(1);
+    _isotope.add(iso);
 
   return;
 }
@@ -2822,7 +2827,7 @@ Molecular_Abstraction_Place_Charge::_initialise_charge_on_first_matched_atom()
   return;
 }
 
-static IW_Regular_Expression number_equals_number("^[0-9]+=[-]*[0-9]+$");
+static RE2 number_equals_number("^[0-9]+=[-]*[0-9]+$");
 
 int
 Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directives_Node & madn)
@@ -2840,46 +2845,56 @@ Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directive
     return 1;
   }
 
-  if (1 == s.nwords())    // if just one token, put isotope 1 on first matched atom
-  {
-    if (! _smarts.create_from_smarts(s) || _smarts.highest_initial_atom_number() < 0)
-    {
-      cerr << "Molecular_Abstraction_Place_Isotope::build:invalid smarts '" << s << "'\n";
-      return 0;
-    }
+  // Collect all the directives that are not recognised by the base class.
+  resizable_array<IWString> not_in_base;
 
-    _smarts.set_find_unique_embeddings_only(1);
-
-    _initialise_isotope_on_first_matched_atom();
-    
-    return 1;
-  }
-
-// Severe confusion between the base class _isotope variable, and our array of isotopes.
-
+  // Severe confusion between the base class _isotope variable,
+  // and our array of isotopes.
   int iso_specified_here = 0;
 
   int i = 0;
   const_IWSubstring token;
-
-  while (s.nextword(token, i))
-  {
-    if (token.starts_with("ISO="))
+  while (s.nextword(token, i)) {
+    if (token.starts_with("ISO=")) {
       iso_specified_here = 1;
+    }
 
     int fatal;
-    if (Molecular_Abstraction_Base_Class::_process(token, "ISOTOPE", fatal))  // great
+    if (Molecular_Abstraction_Base_Class::_process(token, "ISOTOPE", fatal))  { // great
       continue;
-    else if (fatal)
-    {
-      cerr << "Molecular_Abstraction_Place_Isotope::build:cannot process '" << token << "'\n";
+    } else if (fatal) {
+      cerr << "Molecular_Abstraction_Place_Charge::build:cannot process '" << token << "'\n";
+      return 0;
+    } else {
+      not_in_base << IWString(token);
+    }
+  }
+
+  if (not_in_base.empty()) {
+    _smarts.create_from_smarts("*");
+    _initialise_isotope_on_first_matched_atom(0);
+    return 1;
+  }
+
+  // if just one token assume smarts, and put isotope 1 on first matched atom
+  if (not_in_base.size() == 1 && ! not_in_base[0].starts_with("SMARTS=")) {
+    if (! _smarts.create_from_smarts(not_in_base[0]) ||
+        _smarts.highest_initial_atom_number() < 0) {
+      cerr << "Molecular_Abstraction_Place_Isotope::build:invalid default smarts '"
+           << not_in_base[0] << "'\n";
       return 0;
     }
-    else if (token.starts_with("SMARTS="))
-    {
+
+    _smarts.set_find_unique_embeddings_only(1);
+    _initialise_isotope_on_first_matched_atom(1);
+    
+    return 1;
+  }
+
+  for (IWString& token : not_in_base) {
+    if (token.starts_with("SMARTS=")) {
       token.remove_leading_chars(7);
-      if (! _smarts.create_from_smarts(token))
-      {
+      if (! _smarts.create_from_smarts(token)) {
         cerr << "Molecular_Abstraction_Place_Isotope::build:invalid smarts '" << token << "'\n";
         return 0;
       }
@@ -2888,8 +2903,8 @@ Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directive
       continue;
     }
 
-    if (number_equals_number.matches(token))
-    {
+    // TODO:ianwatson change to use RE2's numeric parsing.
+    if (iwre2::RE2PartialMatch(token, number_equals_number)) {
       const_IWSubstring sndx, siso;
       token.split(sndx, '=', siso);
 
@@ -2900,8 +2915,7 @@ Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directive
         return 0;
       }
 
-      if (! siso.numeric_value(iso) || iso < 0)
-      {
+      if (! siso.numeric_value(iso) || iso < 0) {
         cerr << "Molecular_Abstraction_Place_Isotope::buid:invalid isotope '" << token << "'\n";
         return 0;
       }
@@ -2921,6 +2935,7 @@ Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directive
   {
     _smarts.create_from_smarts("*");
     _matched_atom.add(0);
+    _isotope.add(0);
 
     return 1;
   }
@@ -2929,22 +2944,20 @@ Molecular_Abstraction_Place_Isotope::build(const Molecular_Abstraction_Directive
 
   if (_isotope.number_elements() > 0)
     ;
-  else if (iso_specified_here && 0 == _matched_atom.number_elements())
+  else if (iso_specified_here && _matched_atom.empty())
   {
     _isotope.add(Molecular_Abstraction_Base_Class::_isotope);
     _matched_atom.add(0);
   }
   else
   {
-    _initialise_isotope_on_first_matched_atom();
+    _initialise_isotope_on_first_matched_atom(1);
     return 1;
   }
 
-  for (int i = 0; i < _matched_atom.number_elements(); i++)
-  {
+  for (int i = 0; i < _matched_atom.number_elements(); i++) {
     atom_number_t j = _matched_atom[i];
-    if (j > _smarts.highest_initial_atom_number())
-    {
+    if (j > _smarts.highest_initial_atom_number()) {
       cerr << "Molecular_Abstraction_Place_Isotope::build:matched atom " << j << " is invalid " << _smarts.highest_initial_atom_number() << endl;
       return 0;
     }
@@ -2998,20 +3011,8 @@ Molecular_Abstraction_Place_Charge::build(const Molecular_Abstraction_Directives
 {
   const IWString & s = madn.args();
 
-  if (1 == s.nwords())    // if just one token, put isotope 1 on first matched atom
-  {
-    if (! _smarts.create_from_smarts(s) || _smarts.highest_initial_atom_number() < 0)
-    {
-      cerr << "Molecular_Abstraction_Place_Charge::build:invalid smarts '" << s << "'\n";
-      return 0;
-    }
-
-    _smarts.set_find_unique_embeddings_only(1);
-
-    _initialise_charge_on_first_matched_atom();
-    
-    return 1;
-  }
+  // Collect all the directives that are not recognised by the base class.
+  resizable_array<IWString> not_in_base;
 
   int i = 0;
   const_IWSubstring token;
@@ -3026,7 +3027,36 @@ Molecular_Abstraction_Place_Charge::build(const Molecular_Abstraction_Directives
       cerr << "Molecular_Abstraction_Place_Charge::build:cannot process '" << token << "'\n";
       return 0;
     }
-    else if (token.starts_with("SMARTS="))
+    else {
+      not_in_base << IWString(token);
+    }
+  }
+
+  // If no directives, place zero charge on everything.
+  if (not_in_base.empty()) {
+    _smarts.create_from_smarts("*");
+    _smarts.set_find_unique_embeddings_only(1);
+    _initialise_charge_on_first_matched_atom();
+    return 1;
+  }
+
+  // If just one token, assume it is a smarts, and we will put a
+  // zero charge on the first matched atom.
+  if (s.nwords() == 1) {
+    if (! _smarts.create_from_smarts(s) || _smarts.highest_initial_atom_number() < 0) {
+      cerr << "Molecular_Abstraction_Place_Charge::build:invalid smarts '" << s << "'\n";
+      return 0;
+    }
+
+    _smarts.set_find_unique_embeddings_only(1);
+    _initialise_charge_on_first_matched_atom();
+    
+    return 1;
+  }
+
+  // Parse remaining tokens.
+  for (IWString& token : not_in_base) {
+    if (token.starts_with("SMARTS="))
     {
       token.remove_leading_chars(7);
       if (! _smarts.create_from_smarts(token))
@@ -3044,8 +3074,13 @@ Molecular_Abstraction_Place_Charge::build(const Molecular_Abstraction_Directives
       _smarts.set_find_unique_embeddings_only(1);
       continue;
     }
+    else if (int single_charge_value; token.numeric_value(single_charge_value)) {
+      _matched_atom.add(0);
+      _charge << single_charge_value;
+      continue;
+    }
 
-    if (number_equals_number.matches(token))
+    if (iwre2::RE2PartialMatch(token, number_equals_number))
     {
       const_IWSubstring sndx, siso;
       token.split(sndx, '=', siso);
@@ -3070,26 +3105,28 @@ Molecular_Abstraction_Place_Charge::build(const Molecular_Abstraction_Directives
       continue;
     }
         
-    cerr << "Molecular_Abstraction_Place_Charge::build:unrecognised directive '" << token << "'\n";
-    return 0;
+    // Then it must be a smarts. Should check to make sure
+    // we have not processed a smarts before.
+    if (! _smarts.create_from_smarts(token)) {
+      cerr << "Molecular_Abstraction_Place_Charge::build:invalid smarts '" << token << "'\n";
+      return 0;
+    }
   }
 
-  if (_smarts.highest_initial_atom_number() < 0)
+  if (_smarts.highest_initial_atom_number() < 0) {
     _smarts.create_from_smarts("*");
+  }
 
   assert (_matched_atom.number_elements() == _charge.number_elements());
 
-  if (0 == _charge.number_elements())
-  {
+  if (_charge.empty()) {
     _initialise_charge_on_first_matched_atom();
     return 1;
   }
 
-  for (int i = 0; i < _matched_atom.number_elements(); i++)
-  {
+  for (int i = 0; i < _matched_atom.number_elements(); i++) {
     atom_number_t j = _matched_atom[i];
-    if (j > _smarts.highest_initial_atom_number())
-    {
+    if (j > _smarts.highest_initial_atom_number()) {
       cerr << "Molecular_Abstraction_Place_Charge::build:matched atom " << j << " is invalid " << _smarts.highest_initial_atom_number() << endl;
       return 0;
     }
@@ -3396,7 +3433,7 @@ Molecular_Abstraction_Compress_Consecutive::process(Molecule_With_Info_About_Par
 
 Set_of_Molecular_Abstractions::~Set_of_Molecular_Abstractions()
 {
-  if (NULL != _a)
+  if (nullptr != _a)
   {
     for (int i = 0; i < _n; i++)
     {
@@ -3642,7 +3679,7 @@ Set_of_Molecular_Abstractions::build(const Molecular_Abstraction_Directives_Node
 
   for (int i = 0; i < _n; i++)
   {
-    assert (NULL != m);
+    assert (nullptr != m);
 
     int t = m->ztype();
 //  cerr << "Type t is " << t <<endl;
@@ -3763,7 +3800,7 @@ Set_of_Molecular_Abstractions::what_is_being_written(int & writing_smiles,
 }
 
 int
-Set_of_Molecular_Abstractions::report(ostream & os) const
+Set_of_Molecular_Abstractions::report(std::ostream & os) const
 {
   os << "Report on set of " << _n << " abstractions\n";
 
@@ -3846,7 +3883,7 @@ Molecular_Abstraction_Remove_Ring_CH2::Molecular_Abstraction_Remove_Ring_CH2()
 
 Molecular_Abstraction_Inverse_Scaffold::Molecular_Abstraction_Inverse_Scaffold ()
 {
-  _scaffold_chain_element = NULL;
+  _scaffold_chain_element = nullptr;
 
   return;
 }
@@ -3862,9 +3899,9 @@ Molecular_Abstraction_Spinach::Molecular_Abstraction_Spinach ()
 {
   _remove_doubly_bonded_atoms_in_spinach = 0;
 
-  _aromatic_element_replacement = NULL;
-  _aliphatic_element_replacement = NULL;
-  _chain_element_replacement = NULL;
+  _aromatic_element_replacement = nullptr;
+  _aliphatic_element_replacement = nullptr;
+  _chain_element_replacement = nullptr;
 
   return;
 }
@@ -3900,7 +3937,7 @@ Molecular_Abstraction_Remove_Ring_CH2::build (const Molecular_Abstraction_Direct
 
   if (0 == zsymbol.length())
     ;
-  else if (NULL != (_element = get_element_from_symbol_no_case_conversion(zsymbol)))
+  else if (nullptr != (_element = get_element_from_symbol_no_case_conversion(zsymbol)))
     ;
   else
   {
@@ -3945,7 +3982,7 @@ Molecular_Abstraction_Inverse_Scaffold::build (const Molecular_Abstraction_Direc
 
   if (0 == zsymbol.length())
     ;
-  else if (NULL != (_scaffold_chain_element = get_element_from_symbol_no_case_conversion(zsymbol)))
+  else if (nullptr != (_scaffold_chain_element = get_element_from_symbol_no_case_conversion(zsymbol)))
     ;
   else
   {
@@ -4002,7 +4039,7 @@ Molecular_Abstraction_Substructure_Search::build (const Molecular_Abstraction_Di
     }
   }
 
-  if (0 == _queries.number_elements())
+  if (_queries.empty())
   {
     cerr << "Molecular_Abstraction_Substructure_Search::build:no queries\n";
     return 0;
@@ -4032,7 +4069,7 @@ Molecular_Abstraction_Spinach::build (const Molecular_Abstraction_Directives_Nod
       continue;
     else if (fatal)
     {
-      cerr << "Molecular_Abstraction_Substructure_Search::build:cannot process '" << token << "'\n";
+      cerr << "Molecular_Abstraction_Spinach::build:cannot process '" << token << "'\n";
       return 0;
     }
 
@@ -4183,7 +4220,7 @@ Molecular_Abstraction_Remove_Ring_CH2::process (Molecule_With_Info_About_Parent 
         a2 = lhs.pop();
       else if (lhs.number_elements() < rhs.number_elements())
         a2 = rhs.pop();
-      else if (0 == lhs.number_elements() && m.are_bonded(a1, a2))   // already 3 membered ring
+      else if (lhs.empty() && m.are_bonded(a1, a2))   // already 3 membered ring
         continue;
       else
         continue;
@@ -4267,7 +4304,7 @@ all_bonds_single (Molecule_With_Info_About_Parent & m,
 #define SCAFFOLD_ALIPHATIC 3
 
 int
-Molecular_Abstraction_Inverse_Scaffold::process (Molecule_With_Info_About_Parent & m,
+Molecular_Abstraction_Inverse_Scaffold::process(Molecule_With_Info_About_Parent & m,
                                 IWString_and_File_Descriptor & output)
 {
   _molecules_processed++;
@@ -4288,7 +4325,7 @@ Molecular_Abstraction_Inverse_Scaffold::process (Molecule_With_Info_About_Parent
 
   int * scaffold = new_int(matoms); std::unique_ptr<int[]> free_scaffold(scaffold);
 
-  _identify_scaffold (m, scaffold, 0);    // 0 means exclude attachment point
+  _identify_scaffold(m, scaffold, 0);    // 0 means exclude attachment point
 
   for (int i = 0; i < matoms; i++)
   {
@@ -4320,14 +4357,14 @@ Molecular_Abstraction_Inverse_Scaffold::process (Molecule_With_Info_About_Parent
     }
     else if (SCAFFOLD_CHAIN == scaffold[i])
     {
-      if (NULL != _scaffold_chain_element)
+      if (nullptr != _scaffold_chain_element)
         m.set_element(i, _scaffold_chain_element);
     }
     else
       m.remove_atom(i);
   }
 
-  if (NULL != _scaffold_chain_element)    // remove doubly bonded connections to scaffold
+  if (nullptr != _scaffold_chain_element)    // remove doubly bonded connections to scaffold
   {
     for (int i = m.natoms() - 1; i >= 0; i--)
     {
@@ -4418,7 +4455,7 @@ Molecular_Abstraction_Spinach::process (Molecule_With_Info_About_Parent & m,
     m.set_bond_type_between_atoms(a1, a2, SINGLE_BOND);
   }
 
-  if (NULL != _aromatic_element_replacement || NULL != _aliphatic_element_replacement || NULL != _chain_element_replacement || _remove_doubly_bonded_atoms_in_spinach)
+  if (nullptr != _aromatic_element_replacement || nullptr != _aliphatic_element_replacement || nullptr != _chain_element_replacement || _remove_doubly_bonded_atoms_in_spinach)
   {
     for (auto i = matoms - 1; i >= 0; --i)
     {
@@ -4429,17 +4466,17 @@ Molecular_Abstraction_Spinach::process (Molecule_With_Info_About_Parent & m,
 
       if (_remove_doubly_bonded_atoms_in_spinach && 1 == a->ncon())
         m.remove_atom(i);
-      else if (NULL != _aromatic_element_replacement && arom[i])
+      else if (nullptr != _aromatic_element_replacement && arom[i])
       {
         m.set_element(i, _aromatic_element_replacement);
         m.set_formal_charge_if_different(i, 0);
       }
-      else if (NULL != _chain_element_replacement && 0 == nrings[i])
+      else if (nullptr != _chain_element_replacement && 0 == nrings[i])
       {
         m.set_element(i, _chain_element_replacement);
         m.set_formal_charge_if_different(i, 0);
       }
-      else if (NULL != _aliphatic_element_replacement && nrings[i] && 0 == arom[i])
+      else if (nullptr != _aliphatic_element_replacement && nrings[i] && 0 == arom[i])
       {
         m.set_element(i, _aliphatic_element_replacement);
         m.set_formal_charge_if_different(i, 0);

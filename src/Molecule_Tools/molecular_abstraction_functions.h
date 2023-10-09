@@ -1,7 +1,7 @@
 #ifndef MOLECULAR_ABSTRACTION_FUNCTIONS_H
 #define MOLECULAR_ABSTRACTION_FUNCTIONS_H
 
-#include "substructure.h"
+#include "Molecule_Lib/substructure.h"
 
 #include "molecular_abstraction_specifications.h"
 
@@ -57,7 +57,7 @@ class Molecular_Abstraction_Base_Class
 
     int ok() const;
 
-    int report(ostream &) const;
+    int report(std::ostream &) const;
 
     const IWString & fingerprint_tag() const { return _fingerprint_tag;}
     const IWString & write_tag() const { return _write_tag;}
@@ -76,7 +76,7 @@ class Molecular_Abstraction_Transform : public Molecular_Abstraction_Base_Class
   public:
     Molecular_Abstraction_Transform();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -93,7 +93,7 @@ class Molecular_Abstraction_All_Transform : public Molecular_Abstraction_Base_Cl
   public:
     Molecular_Abstraction_All_Transform();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -114,7 +114,7 @@ class Molecular_Abstraction_Remove_Atom : public Molecular_Abstraction_Base_Clas
   public:
     Molecular_Abstraction_Remove_Atom();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -141,7 +141,7 @@ class Molecular_Abstraction_Delete_Atoms : public Molecular_Abstraction_Base_Cla
   public:
     Molecular_Abstraction_Delete_Atoms();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -156,7 +156,7 @@ class Molecular_Abstraction_Largest_Ring_System : public Molecular_Abstraction_B
   public:
     Molecular_Abstraction_Largest_Ring_System();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -172,7 +172,7 @@ class Molecular_Abstraction_Rings : public Molecular_Abstraction_Base_Class
   public:
     Molecular_Abstraction_Rings();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -190,7 +190,7 @@ class Molecular_Abstraction_Scaffold : public Molecular_Abstraction_Base_Class
   public:
     Molecular_Abstraction_Scaffold();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -206,7 +206,7 @@ class Molecular_Abstraction_Change_Bond_Type : public Molecular_Abstraction_Base
   public:
     Molecular_Abstraction_Change_Bond_Type();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -221,7 +221,7 @@ class Molecular_Abstraction_Change_All_Bonds : public Molecular_Abstraction_Base
   public:
     Molecular_Abstraction_Change_All_Bonds();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -237,7 +237,7 @@ class Molecular_Abstraction_Replace_Linker : public Molecular_Abstraction_Base_C
   public:
     Molecular_Abstraction_Replace_Linker();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -268,7 +268,7 @@ class Molecular_Abstraction_Abstract_Ring_Form : public Molecular_Abstraction_Ba
   public:
     Molecular_Abstraction_Abstract_Ring_Form();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -288,7 +288,7 @@ class Molecular_Abstraction_Fragment : public Molecular_Abstraction_Base_Class
   public:
     Molecular_Abstraction_Fragment();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -309,12 +309,12 @@ class Molecular_Abstraction_Place_Isotope : public Molecular_Abstraction_Base_Cl
 
 //  private functions
 
-    void _initialise_isotope_on_first_matched_atom();
+    void _initialise_isotope_on_first_matched_atom(int iso);
 
   public:
     Molecular_Abstraction_Place_Isotope();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -339,7 +339,7 @@ class Molecular_Abstraction_Place_Charge : public Molecular_Abstraction_Base_Cla
   public:
     Molecular_Abstraction_Place_Charge();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -360,7 +360,7 @@ class Molecular_Abstraction_Compress_Consecutive : public Molecular_Abstraction_
   public:
     Molecular_Abstraction_Compress_Consecutive();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -384,7 +384,7 @@ class Molecular_Abstraction_Ring_Systems : public Molecular_Abstraction_Base_Cla
   public:
     Molecular_Abstraction_Ring_Systems();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -403,7 +403,7 @@ class Molecular_Abstraction_Remove_Bond : public Molecular_Abstraction_Base_Clas
   public:
     Molecular_Abstraction_Remove_Bond();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -427,7 +427,7 @@ class Molecular_Abstraction_Remove_Ring_CH2 : public Molecular_Abstraction_Base_
   public:
     Molecular_Abstraction_Remove_Ring_CH2();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -444,7 +444,7 @@ class Molecular_Abstraction_Inverse_Scaffold : public Molecular_Abstraction_Base
   public:
     Molecular_Abstraction_Inverse_Scaffold();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -463,7 +463,7 @@ class Molecular_Abstraction_Substructure_Search : public Molecular_Abstraction_B
   public:
     Molecular_Abstraction_Substructure_Search();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -485,7 +485,7 @@ class Molecular_Abstraction_Spinach : public Molecular_Abstraction_Base_Class
   public:
     Molecular_Abstraction_Spinach();
 
-    int debug_print(ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int build(const Molecular_Abstraction_Directives_Node &);
 
@@ -503,7 +503,7 @@ class Set_of_Molecular_Abstractions
     Set_of_Molecular_Abstractions();
     ~Set_of_Molecular_Abstractions();
 
-    int report(ostream &) const;
+    int report(std::ostream &) const;
 
     int build (const Molecular_Abstraction_Directives_Node &);
 

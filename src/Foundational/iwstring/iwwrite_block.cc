@@ -10,7 +10,7 @@
 using std::cerr;
 using std::endl;
 
-#include "iwconfig.h"
+#include "Foundational/iwmisc/iwconfig.h"
 #include "iwstring.h"
 
 #define IWWRITE_BLKSIZE 4096

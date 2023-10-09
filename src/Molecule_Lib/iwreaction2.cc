@@ -6,16 +6,16 @@ using std::endl;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
-#include "cmdline.h"
-#include "misc.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/misc.h"
 
+#include "chiral_centre.h"
 #include "iwreaction.h"
 #include "mdl_molecule.h"
-#include "chiral_centre.h"
 
 static void
-add_changes (const resizable_array<int> & stuff,
-             int * v)
+add_changes(const resizable_array<int> & stuff,
+            int * v)
 {
   for (int i = 0; i < stuff.number_elements(); i++)
   {
@@ -30,7 +30,7 @@ add_changes (const resizable_array<int> & stuff,
 int
 Reaction_Site::determine_which_matched_atoms_are_changed ()
 {
-  assert (NULL == _matched_atom_changed);
+  assert (nullptr == _matched_atom_changed);
 
   int h = highest_initial_atom_number();
 
@@ -157,7 +157,7 @@ IWReaction::_determine_which_matched_atoms_are_changed ()
 int
 Reaction_Site::another_reagent_changes_your_matched_atom (int a)
 {
-  assert (NULL != _matched_atom_changed);
+  assert (nullptr != _matched_atom_changed);
 
   assert (a >= 0);
 
@@ -170,7 +170,7 @@ int
 Reaction_Site::_remove_multiple_hits_that_do_not_involve_changing_atoms (Molecule & m,
                                         Substructure_Results & sresults) const
 {
-  assert (NULL != _matched_atom_changed);
+  assert (nullptr != _matched_atom_changed);
 
 //#define DEBUG_REMOVE_MULTIPLE_HITS_THAT_DO_NOT_INVOLVE_CHANGING_ATOMS
 #ifdef DEBUG_REMOVE_MULTIPLE_HITS_THAT_DO_NOT_INVOLVE_CHANGING_ATOMS
@@ -401,7 +401,7 @@ int
 Reaction_Site::_remove_multiple_hits_that_hit_atoms_being_changed (int matoms,
                                                 Substructure_Results & sresults) const
 {
-  assert (NULL != _matched_atom_changed);
+  assert (nullptr != _matched_atom_changed);
 
   int * tmp = new int[matoms]; std::unique_ptr<int[]> freetmp(tmp);
 
@@ -812,7 +812,7 @@ write_isotopically_labelled_smiles(Molecule & m,
 {
   int matoms = m.natoms();
 
-  int * isosave = new int[matoms]; std::unique_ptr<int[]> free_isosave(isosave);
+  isotope_t * isosave = new isotope_t[matoms]; std::unique_ptr<isotope_t[]> free_isosave(isosave);
 
   m.get_isotopes(isosave);
 
@@ -834,53 +834,53 @@ IWReaction::query_atom_with_initial_atom_number(atom_number_t z) const
   const Substructure_Query & q = *this;
   const Substructure_Atom * rc = q.query_atom_with_initial_atom_number(z);
 
-  if (NULL != rc)
+  if (nullptr != rc)
     return rc;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
     const Substructure_Atom * rc = _sidechains[i]->query_atom_with_initial_atom_number(z);
-    if (NULL != rc)
+    if (nullptr != rc)
       return rc;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 Reaction_Site *
 IWReaction::_reaction_site_with_initial_atom_number(atom_number_t z)
 {
   const Substructure_Atom * a = this->query_atom_with_initial_atom_number(z);
-  if (NULL != a)
+  if (nullptr != a)
     return this;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
     const Substructure_Atom * a = _sidechains[i]->query_atom_with_initial_atom_number(z);
 
-    if (NULL != a)
+    if (nullptr != a)
       return _sidechains[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 Reaction_Site *
 IWReaction::_reaction_site_with_atom_map_number(const int amap)
 {
   const Substructure_Atom * a = this->query_atom_with_atom_map_number(amap);
-  if (NULL != a)
+  if (nullptr != a)
     return this;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
     const Substructure_Atom * a = _sidechains[i]->query_atom_with_atom_map_number(amap);
 
-    if (NULL != a)
+    if (nullptr != a)
       return _sidechains[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 const Substructure_Bond *
@@ -891,13 +891,13 @@ IWReaction::bond_between_atoms (atom_number_t a1, atom_number_t a2) const
 
   const Substructure_Bond * rc = q.bond_between_atoms(a1, a2);
 
-  if (NULL != rc)
+  if (nullptr != rc)
     return rc;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
     rc = _sidechains[i]->bond_between_atoms(a1, a2);
-    if (NULL != rc)
+    if (nullptr != rc)
       return rc;
   }
 
@@ -909,16 +909,16 @@ IWReaction::_component_with_bond (const atom_number_t a1, const atom_number_t a2
 {
   const Substructure_Query & q = *this;
 
-  if (NULL != q.bond_between_atoms(a1, a2))
+  if (nullptr != q.bond_between_atoms(a1, a2))
     return this;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
-    if (NULL != _sidechains[i]->bond_between_atoms(a1, a2))
+    if (nullptr != _sidechains[i]->bond_between_atoms(a1, a2))
       return _sidechains[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 Reaction_Site *
@@ -926,16 +926,16 @@ IWReaction::_component_with_bond_between_mapped_atoms (const int a1, const int a
 {
   const Substructure_Query & q = *this;
 
-  if (NULL != q.bond_between_atom_map_numbers(a1, a2))
+  if (nullptr != q.bond_between_atom_map_numbers(a1, a2))
     return this;
 
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
-    if (NULL != _sidechains[i]->bond_between_atom_map_numbers(a1, a2))
+    if (nullptr != _sidechains[i]->bond_between_atom_map_numbers(a1, a2))
       return _sidechains[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 int
@@ -943,9 +943,14 @@ IWReaction::_sidechain_with_mapped_atom(const int x) const
 {
   for (unsigned int i = 0; i < _sidechains.size(); ++i)
   {
-    if (NULL != _sidechains[i]->query_atom_with_atom_map_number(x))
+    if (nullptr != _sidechains[i]->query_atom_with_atom_map_number(x))
       return i;
   }
 
   return -1;
 }
+
+int
+IWReaction::add_sidechain_reagents(int sidechain, const char* fname, FileType input_type,
+                         const Sidechain_Match_Conditions& smc) {
+  return _sidechains[sidechain]->add_reagents(fname, input_type, smc); }

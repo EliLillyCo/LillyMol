@@ -1,0 +1,5 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "phenolic_ester_or_carbamate")
+  (A C smarts "[OD1]=C(-*)-[OD2]-a")
+)

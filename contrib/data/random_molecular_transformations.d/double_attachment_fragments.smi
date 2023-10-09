@@ -1,0 +1,13 @@
+N1CCN(*)CC1 piperzine
+N1CCC(*)CC1 piperdine
+C(=O)-N-* amide
+S(=O)(=O)-N-* sulfonamide
+O-* ether
+C(=O)-O-* ester
+N-* N
+C1=CC=C(-*)C=C1 p-benzene
+C1=CC(-*)=CC=C1 m-benzene
+C1=C(-*)C=CC=C1 o-benzene
+C1=CC=C(N1)* pyrrole
+C1=CN=C(N1)* imidazole
+N1C=CN=C1* imidazole

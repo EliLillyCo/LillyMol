@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package JustForTesting;
+
+message TestMessage {
+  double d = 1;
+  float f = 2;
+  int32 i = 3;
+  string s = 4;
+  uint32 u = 5;
+}

@@ -17,14 +17,15 @@
 #include <iomanip>
 #include <iostream>
 
-using namespace std;
-
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "charge_calculation.h"
 #include "path.h"
 #include "molecule.h"
 #include "aromatic.h"
+
+using std::cerr;
+using std::endl;
 
 //DEBUG_SWITCH is used to print out debugging msgs
 #ifndef DEBUG_SWITCH
@@ -32,11 +33,11 @@ using namespace std;
 #endif
 
 // define the values for huckel charge calculation
-static const double huckel_parameters [NUMBER_OF_ATOM_TYPE] = 
+static const double huckel_parameters[NUMBER_OF_ATOM_TYPE] = 
 { 0, 2.0, 0.0, 0, 0.0, 0.3, 2.0, 0.4, 1.0, 0.4, 1.6, 1.1, 2.0, 0.7, 2.0, 0.35, -1.0, 2.2, 2.4, 2.6, 2.0 , 0.35, 0.35, 0.7, -1};
 
 // defube the number of electrons
-static const double electron_parameters [NUMBER_OF_ATOM_TYPE] =
+static const double electron_parameters[NUMBER_OF_ATOM_TYPE] =
 { 0, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 2, 2, 2, 2,1,0};
 // the following are defined for the partial charge calculation (Abraham's method)
 // first defined are the constants
@@ -64,17 +65,17 @@ static const double std_state_charge[JURS_NUMBER_OF_ATOMS]={0.034, -0.068, -0.12
 // end of constants and arrays for the partial charge calculation
 
 // The following are defined for the partial charge calculation (Gasteiger's method) sigma charge
-static const double gasteiger_constant_a [NUMBER_OF_ATOM_TYPE] =                       {7.17, 7.98,  8.79, 8.79, 10.39,  0.00, 11.54, 12.87, 15.68, 12.87, 12.32, 12.32, 14.18, 17.07, 10.14, 10.88,  8.9, 10.08, 11.00, 14.66, 9.90, 10.14, 12.00, 17.07,  8.79};
-static const double gasteiger_constant_b [NUMBER_OF_ATOM_TYPE] =                       {6.24, 9.18,  9.32, 9.32,  9.45, 11.86, 10.82, 11.15, 11.70, 11.15, 11.20, 11.20, 12.92, 13.79,  9.13,  9.49,  8.24, 8.47,  9.69, 13.85, 7.96,  9.13, 10.80, 13.79,  9.32};
-static const double gasteiger_constant_c [NUMBER_OF_ATOM_TYPE] =                       {-0.56,1.88,  1.51, 1.51,  0.73, 11.86,  1.36,  0.85, -0.27,  0.85,  1.34,  1.34,  1.39,  0.47,  1.38,  1.33,  0.96, 1.16,  1.35,  2.31, 0.96,  1.38,  1.20,  0.47,  1.51};
+static const double gasteiger_constant_a[NUMBER_OF_ATOM_TYPE] =                       {7.17, 7.98,  8.79, 8.79, 10.39,  0.00, 11.54, 12.87, 15.68, 12.87, 12.32, 12.32, 14.18, 17.07, 10.14, 10.88,  8.9, 10.08, 11.00, 14.66, 9.90, 10.14, 12.00, 17.07,  8.79};
+static const double gasteiger_constant_b[NUMBER_OF_ATOM_TYPE] =                       {6.24, 9.18,  9.32, 9.32,  9.45, 11.86, 10.82, 11.15, 11.70, 11.15, 11.20, 11.20, 12.92, 13.79,  9.13,  9.49,  8.24, 8.47,  9.69, 13.85, 7.96,  9.13, 10.80, 13.79,  9.32};
+static const double gasteiger_constant_c[NUMBER_OF_ATOM_TYPE] =                       {-0.56,1.88,  1.51, 1.51,  0.73, 11.86,  1.36,  0.85, -0.27,  0.85,  1.34,  1.34,  1.39,  0.47,  1.38,  1.33,  0.96, 1.16,  1.35,  2.31, 0.96,  1.38,  1.20,  0.47,  1.51};
 
 // The following are defined for the partial charge calculation (Gasteiger's method)  pi charges
-static const double gasteiger_pi_constant_a [NUMBER_OF_ATOM_TYPE] = {0,0,5.6,5.6,5.64,0,4.54,7.95,7.92,7.95,3.57,3.57,7.91,10.09,6.6,7.73,0,5.2,6.5,7.34,8.81,6.6,6.6,10.09,5.6};
-static const double gasteiger_pi_constant_b [NUMBER_OF_ATOM_TYPE] = {0,0,8.93,8.93,8.4,11.86,11.86,9.73,9.775,9.73,10.17,10.17,14.76,11.73,10.32,8.16,0,9.68,9.69,13.86,8.81,10.32,10.32,11.73,8.93};
-static const double gasteiger_pi_constant_c [NUMBER_OF_ATOM_TYPE] = {0,0,2.94,2.94,2.81,11.86,7.32,2.67,2.685,2.67,6.6,6.6,6.85,2.87,3.72,1.81,0,4.48,5.49,9.64,0,3.72,3.72,2.87,2.94};
+static const double gasteiger_pi_constant_a[NUMBER_OF_ATOM_TYPE] = {0,0,5.6,5.6,5.64,0,4.54,7.95,7.92,7.95,3.57,3.57,7.91,10.09,6.6,7.73,0,5.2,6.5,7.34,8.81,6.6,6.6,10.09,5.6};
+static const double gasteiger_pi_constant_b[NUMBER_OF_ATOM_TYPE] = {0,0,8.93,8.93,8.4,11.86,11.86,9.73,9.775,9.73,10.17,10.17,14.76,11.73,10.32,8.16,0,9.68,9.69,13.86,8.81,10.32,10.32,11.73,8.93};
+static const double gasteiger_pi_constant_c[NUMBER_OF_ATOM_TYPE] = {0,0,2.94,2.94,2.81,11.86,7.32,2.67,2.685,2.67,6.6,6.6,6.85,2.87,3.72,1.81,0,4.48,5.49,9.64,0,3.72,3.72,2.87,2.94};
 // For everything except hydrogen, cation's electronegativity is the additon of constant a, b and c
 // for hydrogen it is 20.02
-static const double gasteiger_element_cation_electronegativity [NUMBER_OF_ATOM_TYPE] = {20.02,19.04,19.62,19.62, 20.57, 23.72, 23.72, 24.87, 27.11, 24.87, 24.86, 24.86, 28.49, 31.33, 20.65, 21.70, 18.1, 30.82, 22.04, 19.71,18.82,  20.65,24.00, 31.33, 19.62};
+static const double gasteiger_element_cation_electronegativity[NUMBER_OF_ATOM_TYPE] = {20.02,19.04,19.62,19.62, 20.57, 23.72, 23.72, 24.87, 27.11, 24.87, 24.86, 24.86, 28.49, 31.33, 20.65, 21.70, 18.1, 30.82, 22.04, 19.71,18.82,  20.65,24.00, 31.33, 19.62};
 // end of constant for Gasteiger's partial charge 
 /*
  * This funciton find out the a constant to be used in the partial_charge calculation (except special cases)
@@ -460,8 +461,8 @@ Molecule::_calculate_two_and_three_bond_partial_charge(arrays_holder neighbors[]
 {
   int n_atoms = natoms();
   
-  double * current_tmp_charge  = new double [n_atoms]; std::unique_ptr<double[]> free_current_tmp_charge(current_tmp_charge);
-  double * previous_tmp_charge = new double [n_atoms]; std::unique_ptr<double[]> free_previous_tmp_charge(previous_tmp_charge);
+  double * current_tmp_charge  = new double[n_atoms]; std::unique_ptr<double[]> free_current_tmp_charge(current_tmp_charge);
+  double * previous_tmp_charge = new double[n_atoms]; std::unique_ptr<double[]> free_previous_tmp_charge(previous_tmp_charge);
   
   return _calculate_two_and_three_bond_partial_charge(neighbors, charge, current_tmp_charge, previous_tmp_charge);
 }
@@ -473,9 +474,9 @@ Molecule::_calculate_two_and_three_bond_partial_charge(arrays_holder neighbors[]
   int n_atoms = natoms();
   
   for (int i=0; i<n_atoms;i++) 
-    current_tmp_charge [i] = 0.0;
+    current_tmp_charge[i] = 0.0;
   for (int i=0; i<n_atoms;i++) 
-    previous_tmp_charge [i] = 0.0;
+    previous_tmp_charge[i] = 0.0;
 #if (DEBUG_SWITCH)
   cerr<<"inside calculate_two_and_three_bond_partial_charge"<<endl;
 #endif
@@ -543,8 +544,8 @@ Molecule::_calculate_two_and_three_bond_partial_charge(arrays_holder neighbors[]
                   double tmp_charge = (jth_atom_electronegativity-electronegativity[H_ATOM])*ith_atom_polarizability/constant_b;
                   
                   // move charge from current atom to its corresponding one_bond_neighbor (two_bond)
-                  current_tmp_charge [i] += tmp_charge;
-                  current_tmp_charge [neighbors[i].two_bond_neighbors_predecessor.item(j)] += -tmp_charge;
+                  current_tmp_charge[i] += tmp_charge;
+                  current_tmp_charge[neighbors[i].two_bond_neighbors_predecessor.item(j)] += -tmp_charge;
                 }
               
               int n_neighbor2 = neighbors[i].three_bond_neighbors.number_elements();
@@ -567,7 +568,7 @@ Molecule::_calculate_two_and_three_bond_partial_charge(arrays_holder neighbors[]
                   
                   // move charge from current atom to its corresponding one_bond_neighbor (three_bond)
                   current_tmp_charge[i] += tmp_charge;
-                  current_tmp_charge [neighbors[i].three_bond_neighbors_predecessor.item(j)] += -tmp_charge;
+                  current_tmp_charge[neighbors[i].three_bond_neighbors_predecessor.item(j)] += -tmp_charge;
                 }
             }
 #if (DEBUG_SWITCH)
@@ -621,7 +622,7 @@ Molecule::_calculate_two_and_three_bond_partial_charge(arrays_holder neighbors[]
 int
 Molecule::_find_conjugated_fragment_for_atom(int ith_atom_number, int fragment_array[], int &fragment_no, int is_double)
 {
-  if (fragment_array [ith_atom_number]) 
+  if (fragment_array[ith_atom_number]) 
     return 0;
 
   const Atom * ith_atom = _things[ith_atom_number];
@@ -705,7 +706,7 @@ Molecule :: _find_conjugated_fragment (int conjugated_fragment_array[])
   // If any conjugated fragments are found, label it with fragment number
   int fragment_i = 1;
 
-  for (int i=0;i<n_atoms;i++) conjugated_fragment_array [i]=0;
+  for (int i=0;i<n_atoms;i++) conjugated_fragment_array[i]=0;
 
   for (int i=0;i<n_atoms;i++) 
     if (_find_conjugated_fragment_for_atom(i, conjugated_fragment_array, fragment_i, 2)) fragment_i++;
@@ -719,11 +720,11 @@ Molecule :: _find_conjugated_fragment (int conjugated_fragment_array[])
  */
 
 int
-Molecule :: _calculate_abraham_partial_charge (double partial_charge [])
+Molecule :: _calculate_abraham_partial_charge (double partial_charge[])
 {
   int n_atom = natoms();
 
-  arrays_holder *neighbors = new arrays_holder [n_atom];
+  arrays_holder *neighbors = new arrays_holder[n_atom];
 
   int rc = _calculate_abraham_partial_charge (partial_charge, neighbors);
 
@@ -733,7 +734,7 @@ Molecule :: _calculate_abraham_partial_charge (double partial_charge [])
 }
 
 int
-Molecule::_calculate_abraham_partial_charge (double partial_charge[], arrays_holder neighbors [])
+Molecule::_calculate_abraham_partial_charge (double partial_charge[], arrays_holder neighbors[])
 {
   int rc;
 
@@ -853,7 +854,7 @@ Molecule :: _gasteiger_row_number (atom_number_t ith_atom)
 Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[])
 {
   int n_atoms = natoms();
-  int * atom_type = new int [n_atoms];
+  int * atom_type = new int[n_atoms];
   if (find_simplified_sybyl_atom_type_sybyl_style (atom_type))
     {
       _gasteiger_partial_charge_procedure (partial_charge, atom_type);
@@ -862,7 +863,7 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[])
   else
     {
       delete [] atom_type;
-      cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+      cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
       return 0;
     }
 
@@ -887,17 +888,17 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], atom_t
 {
   int n_atom = natoms();
 
-  double * atom_elec = new double [n_atom];
-  Set_of_Atoms * neighbors = new Set_of_Atoms [n_atom];
+  double * atom_elec = new double[n_atom];
+  Set_of_Atoms * neighbors = new Set_of_Atoms[n_atom];
 
-  //  resizable_array<int> * neighbors = new resizable_array<int> [n_atom];
-  double * old_charge = new double [n_atom];
-  double * const_a = new double [n_atom];
-  double * const_b = new double [n_atom];
-  double * const_c = new double [n_atom];
-  double * cation_elec = new double [n_atom];
+  //  resizable_array<int> * neighbors = new resizable_array<int>[n_atom];
+  double * old_charge = new double[n_atom];
+  double * const_a = new double[n_atom];
+  double * const_b = new double[n_atom];
+  double * const_c = new double[n_atom];
+  double * cation_elec = new double[n_atom];
 
-  int rc = _gasteiger_partial_charge_procedure  (partial_charge, atom_elec, neighbors, old_charge, const_a, const_b, const_c, cation_elec, atom_type);
+  int rc = _gasteiger_partial_charge_procedure(partial_charge, atom_elec, neighbors, old_charge, const_a, const_b, const_c, cation_elec, atom_type);
 
   //  cerr<<"THERE "<<rc<<endl;
   //release memory
@@ -913,15 +914,15 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], atom_t
 }
 
 int
-Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double gasteiger_atom_electronegativity [],
+Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double gasteiger_atom_electronegativity[],
                                                  //resizable_array<int> one_bond_neighbors[],
-                                                 Set_of_Atoms one_bond_neighbors [],
-                                                 double previous_partial_charge [],
-                                                 double constant_a [],
-                                                 double constant_b [],
-                                                 double constant_c [],
-                                                 double gasteiger_atom_cation_electronegativity [],
-                                                 atom_type_t atom_type [])
+                                                 Set_of_Atoms one_bond_neighbors[],
+                                                 double previous_partial_charge[],
+                                                 double constant_a[],
+                                                 double constant_b[],
+                                                 double constant_c[],
+                                                 double gasteiger_atom_cation_electronegativity[],
+                                                 atom_type_t atom_type[])
 {
   int rc;
 
@@ -931,12 +932,12 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double
 
   for (int i=0; i<n_atom; i++)
     {
-      int tmp= atom_type [i];
+      int tmp= atom_type[i];
       if (tmp==OUT_OF_RANGE) return 0;  // if there is unrecognized atom, return
       constant_a[i]=gasteiger_constant_a[tmp];
       constant_b[i]=gasteiger_constant_b[tmp];
       constant_c[i]=gasteiger_constant_c[tmp];
-      gasteiger_atom_cation_electronegativity [i] = gasteiger_element_cation_electronegativity[tmp];
+      gasteiger_atom_cation_electronegativity[i] = gasteiger_element_cation_electronegativity[tmp];
     }
 
   // find all bonding partners  -- NECESSARY???
@@ -967,13 +968,13 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double
 #if (DEBUG_PRINT)
       cerr<<"loop number ="<<loop_number<<endl;
       for (int i=0; i<n_atom; i++)
-        cerr<<"Atom "<<i<<"\tcharge ="<<partial_charge [i]<<endl;
+        cerr<<"Atom "<<i<<"\tcharge ="<<partial_charge[i]<<endl;
       cerr<<endl<<endl;
 #endif
       for (int i=0; i<n_atom; i++)
         {
-          gasteiger_atom_electronegativity [i] = constant_a[i] + (constant_b[i] + constant_c[i] * partial_charge[i])* partial_charge[i];
-          //      cout<<"atom i="<<i<<"  electronegativity ="<<gasteiger_atom_electronegativity [i]<<endl;
+          gasteiger_atom_electronegativity[i] = constant_a[i] + (constant_b[i] + constant_c[i] * partial_charge[i])* partial_charge[i];
+          //      cout<<"atom i="<<i<<"  electronegativity ="<<gasteiger_atom_electronegativity[i]<<endl;
         }
 
       for (int i=0; i<n_atom; i++)
@@ -985,9 +986,9 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double
           for (int j=0; j<number_of_neighbors; j++)
             {
               if (gasteiger_atom_electronegativity[i]>gasteiger_atom_electronegativity[one_bond_neighbors[i].item(j)])
-                cation_electronegativity_current = gasteiger_atom_cation_electronegativity [one_bond_neighbors[i].item(j)];
+                cation_electronegativity_current = gasteiger_atom_cation_electronegativity[one_bond_neighbors[i].item(j)];
               else 
-                cation_electronegativity_current = gasteiger_atom_cation_electronegativity [i];
+                cation_electronegativity_current = gasteiger_atom_cation_electronegativity[i];
               //              cout<<"Atom "<<i<<"  charge increase ="<<(gasteiger_atom_electronegativity[one_bond_neighbors[i].item(j)] - gasteiger_atom_electronegativity[i])/cation_electronegativity_current*factor<<endl;
               partial_charge[i] += (gasteiger_atom_electronegativity[one_bond_neighbors[i].item(j)] - gasteiger_atom_electronegativity[i])/cation_electronegativity_current*factor;
             }
@@ -1032,7 +1033,7 @@ Molecule::compute_Gasteiger_partial_charges ()
 {
   /*  int rc;
   int n_atoms = natoms();
-  int * atom_type = new int [n_atoms];
+  int * atom_type = new int[n_atoms];
 
   if (find_simplified_sybyl_atom_type_sybyl_style (atom_type))
     {
@@ -1042,20 +1043,20 @@ Molecule::compute_Gasteiger_partial_charges ()
   else
     {
       delete [] atom_type;
-      cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+      cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
       return 0;
     }
   */
   // new version
 
   int n_atoms = natoms();
-  atom_type_t * sybyl_atom_type = new unsigned int [n_atoms];
+  atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms];
   std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
 
-  if (NULL == _atom_type)
+  if (nullptr == _atom_type)
     {
-      allocate_atom_types ();
-      assert ( NULL != _atom_type);
+      allocate_atom_types();
+      assert ( nullptr != _atom_type);
     }
 
   if ("SYBYL" == _atom_type->ztype())
@@ -1067,20 +1068,20 @@ Molecule::compute_Gasteiger_partial_charges ()
   {
     if (0 == find_simplified_sybyl_atom_type_sybyl_style(sybyl_atom_type))
     {
-      cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+      cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
       return 0;
     }
     if (0 == _atom_type->ztype().length())
     {
       for (int i=0; i<n_atoms; i++)
       {
-        set_atom_type (i, sybyl_atom_type[i]);
+        set_atom_type(i, sybyl_atom_type[i]);
       }
-      _atom_type->set_type ("SYBYL");
+      _atom_type->set_type("SYBYL");
     }
   }
  
-  int rc = compute_Gasteiger_partial_charges (sybyl_atom_type, 0);
+  int rc = compute_Gasteiger_partial_charges(sybyl_atom_type, 0);
 
 #if (DEBUG_PRINT)
   for (int i=0; i<natoms(); i++)
@@ -1092,42 +1093,42 @@ Molecule::compute_Gasteiger_partial_charges ()
 // function for jon to include the pi charge part of the gasteiger partial charge computation
 
 int
-Molecule:: compute_Gasteiger_partial_charges_with_pi_charges ()
+Molecule:: compute_Gasteiger_partial_charges_with_pi_charges()
 {
   int n_atoms = natoms();
-  atom_type_t * sybyl_atom_type = new unsigned int [n_atoms];
+  atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms];
   std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
 
-  if (NULL == _atom_type)
+  if (nullptr == _atom_type)
     {
-      allocate_atom_types ();
-      assert ( NULL != _atom_type);
+      allocate_atom_types();
+      assert ( nullptr != _atom_type);
     }
 
   if ("SYBYL" == _atom_type->ztype())
     {
       for (int i=0; i<n_atoms; i++)
-        sybyl_atom_type [i] = atom_type (i);
+        sybyl_atom_type[i] = atom_type(i);
     }
   else 
     {
       int rc = find_simplified_sybyl_atom_type_sybyl_style(sybyl_atom_type);
       if (0==rc)
         {
-          cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+          cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
           return 0;
         }
       if (!_atom_type->ztype().length())
         {
           for (int i=0; i<n_atoms; i++)
             {
-              set_atom_type (i, sybyl_atom_type[i]);
+              set_atom_type(i, sybyl_atom_type[i]);
             }
-          _atom_type->set_type ("SYBYL");
+          _atom_type->set_type("SYBYL");
         }
     }
  
-  int rc = compute_Gasteiger_partial_charges (sybyl_atom_type, 1);
+  int rc = compute_Gasteiger_partial_charges(sybyl_atom_type, 1);
 
 #if (DEBUG_PRINT)
   for (int i=0; i<natoms(); i++)
@@ -1139,47 +1140,47 @@ Molecule:: compute_Gasteiger_partial_charges_with_pi_charges ()
 
 
 void
-Molecule :: _assign_initial_charge (double partial_charge[], atom_type_t atom_type[])
+Molecule :: _assign_initial_charge(double partial_charge[], atom_type_t atom_type[])
 {
   int n_atoms = natoms();
   for (int i=0; i<n_atoms; i++)
     {
       // deal with the special case for carboxyl group here
-      if (atom_type [i] != ATOM_TYPE_OCO2)
-        partial_charge[i]=formal_charge (i);
+      if (atom_type[i] != ATOM_TYPE_OCO2)
+        partial_charge[i]=formal_charge(i);
       else
-        partial_charge [i] = -0.5;
+        partial_charge[i] = -0.5;
     }
 }
 
 int
-Molecule::_pi_gasteiger_partial_charge_computation_procedure (double partial_charge [], atom_type_t atom_type[])
+Molecule::_pi_gasteiger_partial_charge_computation_procedure(double partial_charge[], atom_type_t atom_type[])
 {
   return 1;
 } 
 int
-Molecule:: compute_Gasteiger_partial_charges (atom_type_t atom_type [], int compute_pi_charge)
+Molecule:: compute_Gasteiger_partial_charges(atom_type_t atom_type[], int compute_pi_charge)
 {
   int n_atoms = natoms();
 
-  double * partial_charge = new double [n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
+  double * partial_charge = new double[n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
 
-  _assign_initial_charge (partial_charge, atom_type);
+  _assign_initial_charge(partial_charge, atom_type);
 
-  int rc = _gasteiger_partial_charge_procedure (partial_charge, atom_type);
+  int rc = _gasteiger_partial_charge_procedure(partial_charge, atom_type);
 
   if (compute_pi_charge)
   {
-    (void) _pi_gasteiger_partial_charge_computation_procedure (partial_charge, atom_type);
+    (void) _pi_gasteiger_partial_charge_computation_procedure(partial_charge, atom_type);
   }
 
   for (int i=0; i<n_atoms; i++)
   {
-    set_charge(i, static_cast<charge_t> (partial_charge[i]) );
+    set_charge(i, static_cast<charge_t>(partial_charge[i]) );
   }
 
   // assign _charge_type and array of _charge;
-  _charges->set_type ("GASTEIGER");
+  _charges->set_type("GASTEIGER");
 
   return rc;// successful
 }
@@ -1187,7 +1188,7 @@ Molecule:: compute_Gasteiger_partial_charges (atom_type_t atom_type [], int comp
 
 // for this procedure, the atom type setting is the same as concord 4.02
 // there is another function that set the atom type as sybyl called find_simplified_sybyl_atom_type_sybyl_style
-int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
+int Molecule :: find_simplified_sybyl_atom_type(atom_type_t atom_type[])
 {
   int rc = 1;
   int n_atoms = natoms();
@@ -1197,33 +1198,33 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
       //      cout<<"Atom Number"<<ith_atom->atomic_number()<<"  Atom i="<<i<<" Connection="<<ncon(i)<<" Bond="<<nbonds(i)<<endl;
       switch (ith_atom->atomic_number()) {
       case 1: 
-        atom_type [i] = ATOM_TYPE_H;
+        atom_type[i] = ATOM_TYPE_H;
         break;
       case 6:
         // deal with descrepency between Pealman definition and Concord's definition
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
-        else if ((nbonds(i) - ncon(i)) == 0) atom_type [i] = ATOM_TYPE_C3;
-        else if ((nbonds(i) - ncon(i)) == 1) atom_type [i] = ATOM_TYPE_C2;
-        else if ((nbonds(i) - ncon(i)) == 2) atom_type [i] = ATOM_TYPE_C1; 
-        else atom_type [i] = ATOM_TYPE_C3;
+        if (is_aromatic(i) && in_ring_of_given_size(i, 6)) atom_type[i] = ATOM_TYPE_CAR; 
+        else if ((nbonds(i) - ncon(i)) == 0) atom_type[i] = ATOM_TYPE_C3;
+        else if ((nbonds(i) - ncon(i)) == 1) atom_type[i] = ATOM_TYPE_C2;
+        else if ((nbonds(i) - ncon(i)) == 2) atom_type[i] = ATOM_TYPE_C1; 
+        else atom_type[i] = ATOM_TYPE_C3;
         break;
       case 7:
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_NAR;
-        else if (ncon(i) == 4) atom_type [i] = ATOM_TYPE_N4;
-        else if ((ncon(i) == 3) && (nbonds(i) == 5)) atom_type [i] = ATOM_TYPE_NPL3;
-        else if ((ncon(i) == 2) && (nbonds(i) == 3)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((ncon(i) == 3) && (nbonds(i) == 4) && (atomi(i)->formal_charge() == 1)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((ncon(i) == 1) && (nbonds(i) == 3)) atom_type [i] = ATOM_TYPE_N1;
-        else if (is_aromatic(i)) atom_type [i] = ATOM_TYPE_NPL3;
+        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type[i] = ATOM_TYPE_NAR;
+        else if (ncon(i) == 4) atom_type[i] = ATOM_TYPE_N4;
+        else if ((ncon(i) == 3) && (nbonds(i) == 5)) atom_type[i] = ATOM_TYPE_NPL3;
+        else if ((ncon(i) == 2) && (nbonds(i) == 3)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((ncon(i) == 3) && (nbonds(i) == 4) && (atomi(i)->formal_charge() == 1)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((ncon(i) == 1) && (nbonds(i) == 3)) atom_type[i] = ATOM_TYPE_N1;
+        else if (is_aromatic(i)) atom_type[i] = ATOM_TYPE_NPL3;
         else 
           {
-            atom_type [i] = ATOM_TYPE_N3;
+            atom_type[i] = ATOM_TYPE_N3;
             if (ncon(i)==3)
               {
                 int car_count =0;
                 int hetero_atom_count =0;
                 int c2_count = 0;
-                if (is_ring_atom (i))
+                if (is_ring_atom(i))
                   {
                     for (int j=0; j<3; j++)
                       {
@@ -1232,21 +1233,21 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
                           {
                             // special case N-S(=O)(=O)-C, this S does not count as c2 count
                             int no_special_case =1;
-                            if ((atomic_number(atomj) == 16) && is_ring_atom (i))
+                            if ((atomic_number(atomj) == 16) && is_ring_atom(i))
                               {
                                 int O2_count = 0;
                                 int tmp_connection = ncon(atomj);
                                 for (int jj=0; jj<tmp_connection; jj++)
                                   {
-                                    int jjth_atom = other (atomj, jj);
-                                    if ((atomic_number (jjth_atom) == 8) && (ncon(jjth_atom) == 1) && (nbonds(jjth_atom) == 2))
+                                    int jjth_atom = other(atomj, jj);
+                                    if ((atomic_number(jjth_atom) == 8) && (ncon(jjth_atom) == 1) && (nbonds(jjth_atom) == 2))
                                       O2_count ++;
                                   }
                                 if ((2==O2_count) && (0==hcount(atomj))) no_special_case = 0;
                               }
                             if (no_special_case) c2_count ++;
                           }
-                        else if (is_aromatic(atomj) && ((!in_ring_of_given_size(i, 6)) || (!in_same_ring (i, atomj)))) car_count ++;
+                        else if (is_aromatic(atomj) && ((!in_ring_of_given_size(i, 6)) || (!in_same_ring(i, atomj)))) car_count ++;
                         
                         if ((atomic_number(atomj) != 6) && (atomic_number(atomj) != 1))
                           hetero_atom_count ++;
@@ -1264,7 +1265,7 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
                         hetero_atom_count ++;
                     }
                 //              cerr<<"HERE Atom ="<<i<<"  c2 count ="<<c2_count<<"   car count ="<<car_count<<"   heter count ="<<hetero_atom_count<<endl;
-                if ((c2_count>1) || (car_count>1) || ((1==car_count) && (0==hetero_atom_count))) atom_type [i] = ATOM_TYPE_NPL3;
+                if ((c2_count>1) || (car_count>1) || ((1==car_count) && (0==hetero_atom_count))) atom_type[i] = ATOM_TYPE_NPL3;
               }
           }
         {
@@ -1272,13 +1273,13 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
           int tmp_connection = ncon(i);
           for (int j=0; j<tmp_connection; j++)
             {
-              int atomj = other (i, j);
+              int atomj = other(i, j);
               if ((atomi(atomj)->atomic_number() !=6) || (ncon(atomj) != 3))  continue;
               else
                 for (int k=0; k<3; k++)
-                  if ((atomi(other (atomj, k))->atomic_number() == 16) && (btype_to_connection (atomj, k) == 2))
+                  if ((atomi(other(atomj, k))->atomic_number() == 16) && (btype_to_connection(atomj, k) == 2))
                     {
-                      atom_type [i] = ATOM_TYPE_NPL3;
+                      atom_type[i] = ATOM_TYPE_NPL3;
                       break;
                     }
             }
@@ -1286,56 +1287,56 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
           // special case N-C=O  (Nam)
           for (int j=0; j<tmp_connection; j++)
             {
-              int atomj = other (i, j);
+              int atomj = other(i, j);
               if ((atomi(atomj)->atomic_number() !=6) || (ncon(atomj) != 3))  continue;
               else
                 for (int k=0; k<3; k++)
-                  if ((atomi(other (atomj, k))->atomic_number() == 8) && (btype_to_connection (atomj, k) == 2))
+                  if ((atomi(other(atomj, k))->atomic_number() == 8) && (btype_to_connection(atomj, k) == 2))
                     {
-                      atom_type [i] = ATOM_TYPE_NAM;
+                      atom_type[i] = ATOM_TYPE_NAM;
                       break;
                     }
             }
         }
         break;
       case 8:
-        if ((ncon(i) == 1) && (nbonds(i) == 2)) atom_type [i] = ATOM_TYPE_O2;
-        else atom_type [i] = ATOM_TYPE_O3;
+        if ((ncon(i) == 1) && (nbonds(i) == 2)) atom_type[i] = ATOM_TYPE_O2;
+        else atom_type[i] = ATOM_TYPE_O3;
         break;
       case 9:
-        atom_type [i] = ATOM_TYPE_F;
+        atom_type[i] = ATOM_TYPE_F;
         break;
       case 15:
-        atom_type [i] = ATOM_TYPE_P3;
+        atom_type[i] = ATOM_TYPE_P3;
         break;
       case 16:
-        if (ncon(i) == nbonds(i)) atom_type [i] = ATOM_TYPE_S3;
+        if (ncon(i) == nbonds(i)) atom_type[i] = ATOM_TYPE_S3;
         else 
           {
-            atom_type [i] = ATOM_TYPE_S2;
+            atom_type[i] = ATOM_TYPE_S2;
             int O2_count = 0;
             int tmp_connection = ncon(i);
             for (int j=0; j<tmp_connection; j++)
               {
-                int jth_atom = other (i, j);
-                if ((atomic_number (jth_atom) == 8) && (ncon(jth_atom) == 1) && (nbonds(jth_atom) == 2))
+                int jth_atom = other(i, j);
+                if ((atomic_number(jth_atom) == 8) && (ncon(jth_atom) == 1) && (nbonds(jth_atom) == 2))
                   O2_count ++;
               }
-            if (1==O2_count) atom_type [i] = ATOM_TYPE_SO;
-            if (2==O2_count) atom_type [i] = ATOM_TYPE_SO2;
+            if (1==O2_count) atom_type[i] = ATOM_TYPE_SO;
+            if (2==O2_count) atom_type[i] = ATOM_TYPE_SO2;
           }
         break;
       case 17:
-        atom_type [i] = ATOM_TYPE_CL;
+        atom_type[i] = ATOM_TYPE_CL;
         break;
       case 35:
-        atom_type [i] = ATOM_TYPE_BR;
+        atom_type[i] = ATOM_TYPE_BR;
         break;
       case 53:
-        atom_type [i] = ATOM_TYPE_I;
+        atom_type[i] = ATOM_TYPE_I;
         break;
       default:
-        atom_type [i] = OUT_OF_RANGE;
+        atom_type[i] = OUT_OF_RANGE;
         rc = 0;
       }
     }
@@ -1348,24 +1349,24 @@ int Molecule :: find_simplified_sybyl_atom_type (atom_type_t atom_type [])
  */
 
 static int
-count_doubly_bonded_oxygens_attached (const Molecule & m,
-                                      atom_number_t centre,
-                                      atom_number_t & o1,
-                                      atom_number_t & o2)
+count_doubly_bonded_oxygens_attached(const Molecule & m,
+                                     atom_number_t centre,
+                                     atom_number_t & o1,
+                                     atom_number_t & o2)
 {
   int doubly_bonded_oxygens_found = 0;
   
-  const Atom * acs = m.atomi (centre);
+  const Atom * acs = m.atomi(centre);
   
-  for (int i = 0; i < acs->ncon (); i++)
+  for (int i = 0; i < acs->ncon(); i++)
     {
-      const Bond * b = acs->item (i);
-      if (! b->is_double_bond ())
+      const Bond * b = acs->item(i);
+      if (! b->is_double_bond())
         continue;
       
-      atom_number_t j = b->other (centre);
+      atom_number_t j = b->other(centre);
       
-      if (8 != m.atomic_number (j))
+      if (8 != m.atomic_number(j))
         continue;
       
       if (0 == doubly_bonded_oxygens_found)
@@ -1392,40 +1393,40 @@ count_doubly_bonded_oxygens_attached (const Molecule & m,
  */
 
 static int
-is_charged_acid (const Molecule & m,
-                 atom_number_t o1,
-                 atom_type_t atom_type [])
+is_charged_acid(const Molecule & m,
+                atom_number_t o1,
+                atom_type_t atom_type[])
 {
-  const Atom * a1 = m.atomi (o1);
+  const Atom * a1 = m.atomi(o1);
   
-  assert (8 == a1->atomic_number ());
-  assert (-1 == a1->formal_charge ());
+  assert (8 == a1->atomic_number());
+  assert (-1 == a1->formal_charge());
   
-  atom_number_t centre = a1->other (o1, 0);    // 1 negatively charged oxygen has only one connection
+  atom_number_t centre = a1->other(o1, 0);    // 1 negatively charged oxygen has only one connection
   
-  const Atom * acs = m.atomi (centre);
+  const Atom * acs = m.atomi(centre);
   
-  if (acs->ncon () < 3)
+  if (acs->ncon() < 3)
     return 0;
   
-  if (acs->ncon () == acs->nbonds ())    // central must be unsaturated
+  if (acs->ncon() == acs->nbonds())    // central must be unsaturated
     return 0;
   
-  if (6 == acs->atomic_number ())     // possible carboxyllic acid
+  if (6 == acs->atomic_number())     // possible carboxyllic acid
     {
-      if (3 != acs->ncon ())
+      if (3 != acs->ncon())
         return 0;
     }
-  else if (16 == acs->atomic_number ())    // possible sulph* acid
+  else if (16 == acs->atomic_number())    // possible sulph* acid
     {
-      if (4 != acs->ncon ())
+      if (4 != acs->ncon())
         return 0;
     }
   else
     return 0;
   
   atom_number_t o2, o3;
-  int no = count_doubly_bonded_oxygens_attached (m, centre, o2, o3);
+  int no = count_doubly_bonded_oxygens_attached(m, centre, o2, o3);
   
   //  cerr << "Atom " << centre << " has " << no << " doubly bonded oxygens\n";
   if (0 == no)
@@ -1435,7 +1436,7 @@ is_charged_acid (const Molecule & m,
   
   // Carboxyllic or sulph* type acid?
   
-  if (16 == acs->atomic_number ())
+  if (16 == acs->atomic_number())
     atom_type[centre] = ATOM_TYPE_SO2;
   else
     atom_type[centre] = ATOM_TYPE_C2;
@@ -1452,7 +1453,7 @@ is_charged_acid (const Molecule & m,
  * this is the function checking if this aromatic ring has substitute in its neighbors
  */
 
-int number_neighbor_has_branched_aromatic_atoms (const Molecule &m, atom_number_t this_atom, atom_number_t N_atom)
+int number_neighbor_has_branched_aromatic_atoms(const Molecule &m, atom_number_t this_atom, atom_number_t N_atom)
 {
   int number = 0;
 
@@ -1469,7 +1470,7 @@ int number_neighbor_has_branched_aromatic_atoms (const Molecule &m, atom_number_
           for (int j=0; j<n_con_atomi; j++)
             if (1 == m.atomic_number(m.other(atomi, j)))
               continue;
-            else if ((8 == m.atomic_number(m.other(atomi, j))) && (m.btype_to_connection (atomi, j) ==2))
+            else if ((8 == m.atomic_number(m.other(atomi, j))) && (m.btype_to_connection(atomi, j) ==2))
               return 0;
             else n_not_h_atom ++;
         }
@@ -1478,15 +1479,15 @@ int number_neighbor_has_branched_aromatic_atoms (const Molecule &m, atom_number_
   return number;
 }
 
-void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (atom_number_t i, int & c2_count, int & car_count, 
+void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor(atom_number_t i, int & c2_count, int & car_count, 
                                                                 atom_number_t & one_car_atom)
 {
   c2_count = 0;
   car_count =0;
   one_car_atom = 0;
 
-  int nconi = ncon (i);
-  if (is_ring_atom (i))
+  int nconi = ncon(i);
+  if (is_ring_atom(i))
     {
       for (int j=0; j<nconi; j++)
         {
@@ -1497,13 +1498,13 @@ void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (atom_n
               car_count ++;
               one_car_atom = atomj;
             }
-          else if ((nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size (atomj, 5) && is_part_of_fused_ring_system (atomj) && (!in_same_ring(i, atomj)))
+          else if ((nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size(atomj, 5) && is_part_of_fused_ring_system(atomj) && (!in_same_ring(i, atomj)))
             {
               car_count ++;
               one_car_atom = atomj;
             }
 
-          else if ((nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size (atomj, 5) && !is_part_of_fused_ring_system (atomj) && (!in_same_ring(i, atomj)))
+          else if ((nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size(atomj, 5) && !is_part_of_fused_ring_system(atomj) && (!in_same_ring(i, atomj)))
             {
               car_count ++;
               one_car_atom = atomj;
@@ -1519,7 +1520,7 @@ void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (atom_n
               car_count++;
               one_car_atom = atomj;
             }
-          else if (is_aromatic(atomj) && ((!in_ring_of_given_size(i, 6)) || (!in_same_ring (i, atomj)))) 
+          else if (is_aromatic(atomj) && ((!in_ring_of_given_size(i, 6)) || (!in_same_ring(i, atomj)))) 
             {
               car_count ++;
               one_car_atom = atomj;
@@ -1535,7 +1536,7 @@ void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (atom_n
       {
         int atomj = other(i, j);
         // cerr<<"in ring 5 ="<<in_ring_of_given_size(atomj, 5)<<"    is part of fused ring ="<<is_part_of_fused_ring_system(atomj)<<endl;
-        if ((is_aromatic(atomj)) || ( (nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size (atomj, 5)/* && is_part_of_fused_ring_system (atomj)*/))
+        if ((is_aromatic(atomj)) || ( (nbonds(atomj) > ncon(atomj)) && in_ring_of_given_size(atomj, 5)/* && is_part_of_fused_ring_system (atomj)*/))
           {
             car_count ++;
             one_car_atom = atomj;
@@ -1546,11 +1547,11 @@ void Molecule :: _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (atom_n
         //                      hetero_atom_count ++;
       }
   //cerr<<"HERE Atom ="<<i<<"  c2 count ="<<c2_count<<"   car count ="<<car_count<<endl;
-  //            if ((c2_count>1) || (car_count>1) || ((1==car_count) && (0==hetero_atom_count))) atom_type [i] = ATOM_TYPE_NPL3;
+  //            if ((c2_count>1) || (car_count>1) || ((1==car_count) && (0==hetero_atom_count))) atom_type[i] = ATOM_TYPE_NPL3;
 }
 
 // set the atom type for MCS computation, much simplier than sybyl style
-int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
+int Molecule :: find_mcs_atom_type_similar_to_sybyl(int atom_type[])
 {
   int n_atoms = natoms();
 
@@ -1563,41 +1564,41 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
       
       Atom * ith_atom = _things[i];
 
-      int nconi = ith_atom->ncon ();
+      int nconi = ith_atom->ncon();
       int nbondsi = ith_atom->nbonds();
 
       switch (ith_atom->atomic_number()) {
       case 1: 
-        atom_type [i] = ATOM_TYPE_H;
+        atom_type[i] = ATOM_TYPE_H;
         break;
       case 6:
         // deal with descrepency between Pealman definition and Concord's definition
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
+        if (is_aromatic(i) && in_ring_of_given_size(i, 6)) atom_type[i] = ATOM_TYPE_CAR; 
         else if ((nbondsi - nconi) == 0) 
           {
-            if (1 ==formal_charge(i)) atom_type [i] = ATOM_TYPE_CCAT;
-            else if (-1==formal_charge(i)) atom_type [i] = ATOM_TYPE_C2; 
-            else atom_type [i] = ATOM_TYPE_C3;
+            if (1 ==formal_charge(i)) atom_type[i] = ATOM_TYPE_CCAT;
+            else if (-1==formal_charge(i)) atom_type[i] = ATOM_TYPE_C2; 
+            else atom_type[i] = ATOM_TYPE_C3;
           }
-        else if ((nbondsi - nconi) == 1) atom_type [i] = ATOM_TYPE_C2;
-        else if ((nbondsi - nconi) == 2) atom_type [i] = ATOM_TYPE_C1; 
-        else atom_type [i] = ATOM_TYPE_C3;
+        else if ((nbondsi - nconi) == 1) atom_type[i] = ATOM_TYPE_C2;
+        else if ((nbondsi - nconi) == 2) atom_type[i] = ATOM_TYPE_C1; 
+        else atom_type[i] = ATOM_TYPE_C3;
         break;
       case 7:
         //      cerr<<"atom i="<<i<<"\tncon="<<nconi<<"\tnbonds="<<nbondsi<<endl;
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_NAR;
-        else if ((nconi == 4) && (nbondsi == 5)) atom_type [i] = ATOM_TYPE_N3;
-        else if (nconi == 4) atom_type [i] = ATOM_TYPE_N4;
-        else if ((nconi == 2) && (nbondsi == 4)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 3) && (nbondsi == 5)) atom_type [i] = ATOM_TYPE_NPL3;
-        else if ((nconi == 2) && (nbondsi == 3)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 2) && (nbondsi == 2) && (atomi(i)->formal_charge() ==-1)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 3) && (nbondsi == 4) && (atomi(i)->formal_charge() == 1)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 1) && (nbondsi == 3)) atom_type [i] = ATOM_TYPE_N1;
-        else if (is_aromatic(i)) atom_type [i] = ATOM_TYPE_NPL3;
+        if (is_aromatic(i) && in_ring_of_given_size(i, 6)) atom_type[i] = ATOM_TYPE_NAR;
+        else if ((nconi == 4) && (nbondsi == 5)) atom_type[i] = ATOM_TYPE_N3;
+        else if (nconi == 4) atom_type[i] = ATOM_TYPE_N4;
+        else if ((nconi == 2) && (nbondsi == 4)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 3) && (nbondsi == 5)) atom_type[i] = ATOM_TYPE_NPL3;
+        else if ((nconi == 2) && (nbondsi == 3)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 2) && (nbondsi == 2) && (atomi(i)->formal_charge() ==-1)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 3) && (nbondsi == 4) && (atomi(i)->formal_charge() == 1)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 1) && (nbondsi == 3)) atom_type[i] = ATOM_TYPE_N1;
+        else if (is_aromatic(i)) atom_type[i] = ATOM_TYPE_NPL3;
         else 
           {
-            atom_type [i] = ATOM_TYPE_N3;
+            atom_type[i] = ATOM_TYPE_N3;
           }
 
         break;
@@ -1605,7 +1606,7 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
       case 8:
         if ((nconi == 1) && (nbondsi == 2))
           {
-            atom_type [i] = ATOM_TYPE_O2;
+            atom_type[i] = ATOM_TYPE_O2;
             int atomj = other(i, 0);
             
             // Deal with Oco2 type
@@ -1613,10 +1614,10 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
             if ((atomic_number(atomj) == 6) && (ncon(atomj) >2))
               for (int k = 0; k<ncon(atomj); k++)
                 {
-                  int atomk = other (atomj, k);
+                  int atomk = other(atomj, k);
                   if ((atomic_number(atomk) == 8) && (formal_charge(atomk) == -1))
                     {
-                      atom_type [i] = ATOM_TYPE_OCO2;
+                      atom_type[i] = ATOM_TYPE_OCO2;
                       break;
                     }
                 }
@@ -1627,19 +1628,19 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
                 int double_bond_O_count =0;
                 for (int k = 0; k<ncon(atomj); k++)
                   {
-                    int atomk = other (atomj, k);
+                    int atomk = other(atomj, k);
                     if ((atomic_number(atomk) == 8) && (formal_charge(atomk) == -1))
                       O_minus_count ++;
                     else if ((atomic_number(atomk) ==8) && (ncon(atomk) == 1) && (nbonds(atomk) == 2))
                       double_bond_O_count ++;
                   }
                 if ((1==O_minus_count) && (2== double_bond_O_count))
-                  atom_type [i] = ATOM_TYPE_OCO2;
+                  atom_type[i] = ATOM_TYPE_OCO2;
               }
           }
         else if ((nconi == 1) && (formal_charge(i) == -1))
           {
-            atom_type [i] = ATOM_TYPE_O3;
+            atom_type[i] = ATOM_TYPE_O3;
             int atomj = other(i, 0);
 
             // Deal with Oco2 type
@@ -1647,10 +1648,10 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
             if ((atomic_number(atomj) == 6) && (ncon(atomj) >1))
               for (int k = 0; k<ncon(atomj); k++)
                 {
-                  int atomk = other (atomj, k);
+                  int atomk = other(atomj, k);
                   if ((atomic_number(atomk) == 8) && (ncon(atomk) == 1) && (nbonds(atomk) == 2))
                     {
-                      atom_type [i] = ATOM_TYPE_OCO2;
+                      atom_type[i] = ATOM_TYPE_OCO2;
                       break;
                     }
                 }
@@ -1660,53 +1661,53 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
                 int double_bond_O_count =0;
                 for (int k=0; k<ncon(atomj); k++)
                   {
-                    int atomk = other (atomj, k);
+                    int atomk = other(atomj, k);
                     if ((atomic_number(atomk) == 8) && (ncon(atomk) == 1) && (nbonds(atomk) == 2))
                       double_bond_O_count ++;
                   }
-                if (2==double_bond_O_count) atom_type [i] = ATOM_TYPE_OCO2;
+                if (2==double_bond_O_count) atom_type[i] = ATOM_TYPE_OCO2;
               }
           }
-           else atom_type [i] = ATOM_TYPE_O3;
+           else atom_type[i] = ATOM_TYPE_O3;
         break;
       case 9:
-        atom_type [i] = ATOM_TYPE_F;
+        atom_type[i] = ATOM_TYPE_F;
         break;
       case 15:
-        atom_type [i] = ATOM_TYPE_P3;
+        atom_type[i] = ATOM_TYPE_P3;
         break;
       case 16:
-        if (nconi == nbondsi) atom_type [i] = ATOM_TYPE_S3;
+        if (nconi == nbondsi) atom_type[i] = ATOM_TYPE_S3;
         else 
           {
-            atom_type [i] = ATOM_TYPE_S2;
+            atom_type[i] = ATOM_TYPE_S2;
 
             int O2_S2_count = 0;
             int tmp_connection = nconi;
             for (int j=0; j<tmp_connection; j++)
               {
-                int jth_atom = other (i, j);
-                if (((atomic_number (jth_atom) == 8) || (atomic_number (jth_atom) == 16)) && (ncon(jth_atom) == 1) && (nbonds(jth_atom) == 2))
+                int jth_atom = other(i, j);
+                if (((atomic_number(jth_atom) == 8) || (atomic_number(jth_atom) == 16)) && (ncon(jth_atom) == 1) && (nbonds(jth_atom) == 2))
                   O2_S2_count ++;
               }
-            if (1==O2_S2_count) atom_type [i] = ATOM_TYPE_SO;
+            if (1==O2_S2_count) atom_type[i] = ATOM_TYPE_SO;
             if (2==O2_S2_count) 
               {
-                atom_type [i] = ATOM_TYPE_SO2;
+                atom_type[i] = ATOM_TYPE_SO2;
               }
           }
         break;
       case 17:
-        atom_type [i] = ATOM_TYPE_CL;
+        atom_type[i] = ATOM_TYPE_CL;
         break;
       case 35:
-        atom_type [i] = ATOM_TYPE_BR;
+        atom_type[i] = ATOM_TYPE_BR;
         break;
       case 53:
-        atom_type [i] = ATOM_TYPE_I;
+        atom_type[i] = ATOM_TYPE_I;
         break;
       default:
-        atom_type [i] = OUT_OF_RANGE;
+        atom_type[i] = OUT_OF_RANGE;
         return 0;
       }
     }
@@ -1716,21 +1717,21 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl (int atom_type [])
 
 // set the atom type as defined by sybyl66
 // there is another function that set the atom type as concord4.02 called find_simplified_sybyl_atom_type
-int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (int atom_type [])
+int Molecule :: find_simplified_sybyl_atom_type_sybyl_style(int atom_type[])
 {
-  return find_simplified_sybyl_atom_type_sybyl_style ((atom_type_t *) atom_type);
+  return find_simplified_sybyl_atom_type_sybyl_style((atom_type_t *) atom_type);
   //  int n_atoms = natoms();
-  //  atom_type_t * sybyl_atom_type = new atom_type_t [n_atoms];
+  //  atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms];
   
 }
 
 // set the atom type as defined by sybyl66
 // there is another function that set the atom type as concord4.02 called find_simplified_sybyl_atom_type
-int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_type [])
+int Molecule :: find_simplified_sybyl_atom_type_sybyl_style(atom_type_t atom_type[])
 {
   int n_atoms = natoms();
 
-  set_vector ((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
+  set_vector((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
 
   for (int i=0; i<n_atoms; i++)
     {
@@ -1739,42 +1740,42 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
       
       Atom * ith_atom = _things[i];
 
-      int nconi = ith_atom->ncon ();
+      int nconi = ith_atom->ncon();
       int nbondsi = ith_atom->nbonds();
 
       switch (ith_atom->atomic_number()) {
       case 1: 
-        atom_type [i] = ATOM_TYPE_H;
+        atom_type[i] = ATOM_TYPE_H;
         break;
       case 6:
         // deal with descrepency between Pealman definition and Concord's definition
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_CAR; 
+        if (is_aromatic(i) && in_ring_of_given_size(i, 6)) atom_type[i] = ATOM_TYPE_CAR; 
         else if ((nbondsi - nconi) == 0) 
           {
-            if (1 ==formal_charge(i)) atom_type [i] = ATOM_TYPE_CCAT;
-            else if (-1==formal_charge(i)) atom_type [i] = ATOM_TYPE_C2; 
-            else atom_type [i] = ATOM_TYPE_C3;
+            if (1 ==formal_charge(i)) atom_type[i] = ATOM_TYPE_CCAT;
+            else if (-1==formal_charge(i)) atom_type[i] = ATOM_TYPE_C2; 
+            else atom_type[i] = ATOM_TYPE_C3;
           }
-        else if ((nbondsi - nconi) == 1) atom_type [i] = ATOM_TYPE_C2;
-        else if ((nbondsi - nconi) == 2) atom_type [i] = ATOM_TYPE_C1; 
-        else atom_type [i] = ATOM_TYPE_C3;
+        else if ((nbondsi - nconi) == 1) atom_type[i] = ATOM_TYPE_C2;
+        else if ((nbondsi - nconi) == 2) atom_type[i] = ATOM_TYPE_C1; 
+        else atom_type[i] = ATOM_TYPE_C3;
         break;
       case 7:
         //      cerr<<"atom i="<<i<<"\tncon="<<nconi<<"\tnbonds="<<nbondsi<<endl;
-        if (is_aromatic(i) && in_ring_of_given_size (i, 6)) atom_type [i] = ATOM_TYPE_NAR;
-        else if ((nconi == 4) && (nbondsi == 5)) atom_type [i] = ATOM_TYPE_N3;
-        else if (nconi == 4) atom_type [i] = ATOM_TYPE_N4;
-        else if ((nconi == 2) && (nbondsi == 4)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 3) && (nbondsi == 5)) atom_type [i] = ATOM_TYPE_NPL3;
-        else if ((nconi == 2) && (nbondsi == 3)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 2) && (nbondsi == 2) && (atomi(i)->formal_charge() ==-1)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 3) && (nbondsi == 4) && (atomi(i)->formal_charge() == 1)) atom_type [i] = ATOM_TYPE_N2;
-        else if ((nconi == 1) && (nbondsi == 3)) atom_type [i] = ATOM_TYPE_N1;
-        else if (is_aromatic(i)) atom_type [i] = ATOM_TYPE_NPL3;
+        if (is_aromatic(i) && in_ring_of_given_size(i, 6)) atom_type[i] = ATOM_TYPE_NAR;
+        else if ((nconi == 4) && (nbondsi == 5)) atom_type[i] = ATOM_TYPE_N3;
+        else if (nconi == 4) atom_type[i] = ATOM_TYPE_N4;
+        else if ((nconi == 2) && (nbondsi == 4)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 3) && (nbondsi == 5)) atom_type[i] = ATOM_TYPE_NPL3;
+        else if ((nconi == 2) && (nbondsi == 3)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 2) && (nbondsi == 2) && (atomi(i)->formal_charge() ==-1)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 3) && (nbondsi == 4) && (atomi(i)->formal_charge() == 1)) atom_type[i] = ATOM_TYPE_N2;
+        else if ((nconi == 1) && (nbondsi == 3)) atom_type[i] = ATOM_TYPE_N1;
+        else if (is_aromatic(i)) atom_type[i] = ATOM_TYPE_NPL3;
         else 
           {
 
-            atom_type [i] = ATOM_TYPE_N3;
+            atom_type[i] = ATOM_TYPE_N3;
             if (nconi==3)
               {
                 int car_count =0;
@@ -1783,18 +1784,18 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
 
                 _find_number_of_unsaturated_carbon_of_nitrogen_neighbor (i, c2_count, car_count, one_car_atom);
 
-                if (c2_count >1) atom_type [i] = ATOM_TYPE_NPL3;
+                if (c2_count >1) atom_type[i] = ATOM_TYPE_NPL3;
                 else if (c2_count >0)
                   {
-                    atom_type [i] = ATOM_TYPE_NPL3;
+                    atom_type[i] = ATOM_TYPE_NPL3;
                   }
                 else if (c2_count + car_count >1)
                   {
-                    if (!in_ring_of_given_size(i, 7)) atom_type [i] = ATOM_TYPE_NPL3;
+                    if (!in_ring_of_given_size(i, 7)) atom_type[i] = ATOM_TYPE_NPL3;
                     else
                       {
                         const Ring * this_ring = ring_containing_atom (i);
-                        if (this_ring->number_elements() !=7) atom_type [i] = ATOM_TYPE_NPL3;
+                        if (this_ring->number_elements() !=7) atom_type[i] = ATOM_TYPE_NPL3;
                         else
                           {
                             int n_c_double_bond_in_the_ring =0;
@@ -1811,7 +1812,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                   }
                               }
                             if ((number_of_double_bond_in_the_ring ==2) || (n_c_double_bond_in_the_ring))
-                              atom_type [i] = ATOM_TYPE_NPL3;
+                              atom_type[i] = ATOM_TYPE_NPL3;
                           }
                       }
                     
@@ -1819,11 +1820,11 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                 
                 else if (car_count == 1)
                   {
-                    if (hcount(i)>1) atom_type [i] = ATOM_TYPE_NPL3;
+                    if (hcount(i)>1) atom_type[i] = ATOM_TYPE_NPL3;
                     else if ((hcount(i) == 1) && (number_neighbor_has_branched_aromatic_atoms(*this, one_car_atom, i)<2))
-                      atom_type [i] = ATOM_TYPE_NPL3; 
+                      atom_type[i] = ATOM_TYPE_NPL3; 
 
-                    else if (is_ring_atom (i) && (!is_part_of_fused_ring_system (i)) && (!in_same_ring(i, one_car_atom) || in_ring_of_given_size(i, 5)))
+                    else if (is_ring_atom(i) && (!is_part_of_fused_ring_system(i)) && (!in_same_ring(i, one_car_atom) || in_ring_of_given_size(i, 5)))
                       {
                         // there is problem in aromaticity
                         /*                      if (!in_same_ring(i, one_car_atom) && in_ring_of_given_size(one_car_atom, 6))
@@ -1844,17 +1845,17 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                       all_atoms_unsaturated = 0;
                                   }
                                 if ((2==double_bond_in_ring) && (all_carbon_in_ring) && (all_atoms_unsaturated))
-                                  atom_type [i] = ATOM_TYPE_NPL3;
+                                  atom_type[i] = ATOM_TYPE_NPL3;
                               }
                               }*/
-                        if ((ATOM_TYPE_NPL3 != atom_type [i]) && !in_same_ring(i, one_car_atom) && in_ring_of_given_size(one_car_atom, 5))
+                        if ((ATOM_TYPE_NPL3 != atom_type[i]) && !in_same_ring(i, one_car_atom) && in_ring_of_given_size(one_car_atom, 5))
                           {
                             const Ring * this_ring = ring_containing_atom(one_car_atom);
                             
                             int not_exception = 1;
                             if (this_ring->number_elements() ==5)
                               {
-                                int all_carbon_in_ring = 1;
+//                              int all_carbon_in_ring = 1;
                                 int double_bond_in_ring = 0;
                                 int single_bonded_item = -1;
                                 for (int j=0; j<5; j++)
@@ -1864,21 +1865,21 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                       single_bonded_item = (j+1) % 5;
                                     if ((btype_between_atoms(this_ring->item(j), this_ring->item((j+1) %5)) % 8) > 1)
                                       double_bond_in_ring++;
-                                    if (6!=atomic_number(this_ring->item(j)))
-                                      all_carbon_in_ring = 0;
+//                                  if (6!=atomic_number(this_ring->item(j)))
+//                                    all_carbon_in_ring = 0;
                                   }
                                 
                                 if ((2==double_bond_in_ring) && (-1 != single_bonded_item)) 
                                   {
                                     atom_number_t atomj = this_ring->item(single_bonded_item);
-                                    if (nbonds(atomj) != ncon(atomj)) atom_type [i] = ATOM_TYPE_NPL3;
+                                    if (nbonds(atomj) != ncon(atomj)) atom_type[i] = ATOM_TYPE_NPL3;
                                     else not_exception = 0;
                                   }
                                 //cerr<<"atomi="<<i<<"\t double bond="<<double_bond_in_ring<<"\tsigle="<<single_bonded_item<<"\tnot exception ="<<not_exception<<endl;
                               }
                             
 
-                            if (ATOM_TYPE_NPL3 != atom_type [i])
+                            if (ATOM_TYPE_NPL3 != atom_type[i])
                               {
 
                                 if (6==atomic_number(one_car_atom) && not_exception)
@@ -1887,8 +1888,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                     
                                     for (int j=0; j<conn; j++)
                                       {
-                                        if ((6==atomic_number(other(one_car_atom,j))) && in_same_ring(one_car_atom, other (one_car_atom, j)) && ((btype_to_connection (one_car_atom, j) % 8) >1))
-                                          atom_type [i] = ATOM_TYPE_NPL3;
+                                        if ((6==atomic_number(other(one_car_atom,j))) && in_same_ring(one_car_atom, other(one_car_atom, j)) && ((btype_to_connection(one_car_atom, j) % 8) >1))
+                                          atom_type[i] = ATOM_TYPE_NPL3;
                                       }
                                   }
                                 
@@ -1897,13 +1898,13 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                               }                     
                           }
                         
-                        if (ATOM_TYPE_NPL3 != atom_type [i])
+                        if (ATOM_TYPE_NPL3 != atom_type[i])
                           {
-                            if (( 3 == ncon(one_car_atom)) && (4 == nbonds(one_car_atom)) && (6== atomic_number(one_car_atom)) && in_ring_of_given_size (one_car_atom, 5))
+                            if (( 3 == ncon(one_car_atom)) && (4 == nbonds(one_car_atom)) && (6== atomic_number(one_car_atom)) && in_ring_of_given_size(one_car_atom, 5))
                               {
-                                int is_in_fused_ring = is_part_of_fused_ring_system (one_car_atom);
+                                int is_in_fused_ring = is_part_of_fused_ring_system(one_car_atom);
                                 
-                                int one_car_not_in_exception_ring_for_c7_above_ring = 1;
+//                              int one_car_not_in_exception_ring_for_c7_above_ring = 1;
                                 int one_car_in_exception_ring_for_c5_c6_ring = 0;
                                 
                                 const Ring * this_ring = ring_containing_atom(one_car_atom);
@@ -1915,27 +1916,27 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                     for (int j=0; j<5; j++)
                                       {
                                         if (7 == atomic_number(this_ring->item(j))) n_of_n ++; 
-                                        if ((8 == atomic_number(this_ring->item (j))) || (16 == atomic_number(this_ring->item (j))))
+                                        if ((8 == atomic_number(this_ring->item(j))) || (16 == atomic_number(this_ring->item(j))))
                                           n_of_o_or_s ++;
 
                                         if ((btype_between_atoms(this_ring->item(j), this_ring->item((j+1) %5)) %8) > 1)
                                           double_bond_in_ring++;
                                       }
                                 //cerr<<"o or s="<<n_of_o_or_s<<"    no of n="<<n_of_n<<endl;
-                                if ((1==n_of_o_or_s) && (n_of_n ==2)) one_car_not_in_exception_ring_for_c7_above_ring = 0;
+//                              if ((1==n_of_o_or_s) && (n_of_n ==2)) one_car_not_in_exception_ring_for_c7_above_ring = 0;
                                 if ((n_of_o_or_s<2) && (n_of_n == 1) && (!is_in_fused_ring) && (double_bond_in_ring<2)) 
                                   one_car_in_exception_ring_for_c5_c6_ring = 1;
                                   }
                                 
                                 //  cerr<<"HERE atom="<<i<<"   ring size="<<ring_containing_atom(i)->number_elements()<<endl;
-                                if (((ring_containing_atom (i)->number_elements() > 6) /*&& (one_car_not_in_exception_ring_for_c7_above_ring)*/) || (((ring_containing_atom (i)->number_elements() ==5) || (ring_containing_atom (i)->number_elements() ==6)) && (one_car_in_exception_ring_for_c5_c6_ring)))
+                                if (((ring_containing_atom(i)->number_elements() > 6) /*&& (one_car_not_in_exception_ring_for_c7_above_ring)*/) || (((ring_containing_atom(i)->number_elements() ==5) || (ring_containing_atom(i)->number_elements() ==6)) && (one_car_in_exception_ring_for_c5_c6_ring)))
                                   {
                                     for (int j=0; j<3; j++)
                                       {
-                                        atom_number_t atomj = other (one_car_atom, j);
-                                        if ((7== atomic_number (atomj)) && ((btype_to_connection(one_car_atom, j) %8)>1))
+                                        atom_number_t atomj = other(one_car_atom, j);
+                                        if ((7== atomic_number(atomj)) && ((btype_to_connection(one_car_atom, j) %8)>1))
                                           {
-                                            atom_type [i] = ATOM_TYPE_NPL3;
+                                            atom_type[i] = ATOM_TYPE_NPL3;
                                             break;
                                           }
                                       }                         
@@ -1943,7 +1944,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                               }
                           }
                         
-                        if (ATOM_TYPE_NPL3 != atom_type [i])
+                        if (ATOM_TYPE_NPL3 != atom_type[i])
                           {
                             int npl3_type = 0;
                             const Ring * this_ring = ring_containing_atom (i);
@@ -1988,8 +1989,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                             if ((number_of_atoms_in_ring == 6) && (number_of_unsaturated_atom >1) && (n_in_ring>1)) npl3_type = 1;
                             else if ((number_of_atoms_in_ring == 5) && (number_of_unsaturated_atom >1) && (n_in_ring>1)) npl3_type = 1;
                             
-                            if (npl3_type) atom_type [i] = ATOM_TYPE_NPL3;
-                            else atom_type [i] = ATOM_TYPE_N3;
+                            if (npl3_type) atom_type[i] = ATOM_TYPE_NPL3;
+                            else atom_type[i] = ATOM_TYPE_N3;
                           }
                       }
                     
@@ -2009,8 +2010,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
 
                         if ((number_of_atoms_in_ring == 5) && (number_of_unsaturated_atom >2) && (n_in_ring>1)) npl3_type = 1;
                         
-                        if (npl3_type) atom_type [i] = ATOM_TYPE_NPL3;
-                        else atom_type [i] = ATOM_TYPE_N3;
+                        if (npl3_type) atom_type[i] = ATOM_TYPE_NPL3;
+                        else atom_type[i] = ATOM_TYPE_N3;
                         
                       }
                     else if ( (is_part_of_fused_ring_system (i)) && (!in_same_ring(i, one_car_atom)))
@@ -2031,8 +2032,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                           if (this_ring->contains (other (i, ii)) && (atomic_number(other(i, ii)) ==7))
                             n_in_ring ++;
                         
-                        if ((number_of_atoms_in_ring == 6) && (number_of_unsaturated_atom >1) && (n_in_ring>0)) atom_type [i] = ATOM_TYPE_NPL3;
-                        else atom_type [i] = ATOM_TYPE_N3;
+                        if ((number_of_atoms_in_ring == 6) && (number_of_unsaturated_atom >1) && (n_in_ring>0)) atom_type[i] = ATOM_TYPE_NPL3;
+                        else atom_type[i] = ATOM_TYPE_N3;
                       }
 
                     else if (!is_ring_atom (i))
@@ -2050,13 +2051,13 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                     if ((7== atomic_number (atomj)) && ((btype_to_connection(one_car_atom, j) % 8)>1))
                                       {
                                         has_C_N_double_bond ++;
-                                        //                                      atom_type [i] = ATOM_TYPE_NPL3;
+                                        //                                      atom_type[i] = ATOM_TYPE_NPL3;
                                         break;
                                       }
                                   }
                               }
                             
-                            if ((is_part_of_fused_ring_system (one_car_atom)))// && (ATOM_TYPE_NPL3 != atom_type [i]))
+                            if ((is_part_of_fused_ring_system (one_car_atom)))// && (ATOM_TYPE_NPL3 != atom_type[i]))
                               {
                                 const Ring * this_ring = ring_containing_atom (one_car_atom);
                             
@@ -2071,20 +2072,20 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                                   }
 
                                 if (5 == number_of_unsaturated_atom)
-                                  atom_type [i] = ATOM_TYPE_NPL3;
+                                  atom_type[i] = ATOM_TYPE_NPL3;
                                 if (((1==number_of_nitrogen_atom) || (3==number_of_nitrogen_atom)) && (has_C_N_double_bond))
-                                  atom_type [i] = ATOM_TYPE_NPL3;
+                                  atom_type[i] = ATOM_TYPE_NPL3;
                               }
                           }
                       
                         if (number_neighbor_has_branched_aromatic_atoms (*this, one_car_atom, i)==0)
-                          atom_type [i] = ATOM_TYPE_NPL3;
+                          atom_type[i] = ATOM_TYPE_NPL3;
                       }
                     
                     else if (is_part_of_fused_ring_system (i))
                       {
                         if ((number_neighbor_has_branched_aromatic_atoms (*this, one_car_atom, i)==0) && (number_neighbor_has_branched_aromatic_atoms (*this, i, one_car_atom)==0))
-                          atom_type [i] = ATOM_TYPE_NPL3;
+                          atom_type[i] = ATOM_TYPE_NPL3;
                         //else if (in_ring_of_given_size(one_car_atom))
                     // {
 
@@ -2095,7 +2096,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
           }
         
         // take care of special cases for NPL3 and Nam types
-        if ((atom_type [i] != ATOM_TYPE_N2) && (atom_type [i] != ATOM_TYPE_N4) && (atom_type [i] != ATOM_TYPE_N1) && (atom_type [i] != ATOM_TYPE_NAR) && (nbondsi <4)) 
+        if ((atom_type[i] != ATOM_TYPE_N2) && (atom_type[i] != ATOM_TYPE_N4) && (atom_type[i] != ATOM_TYPE_N1) && (atom_type[i] != ATOM_TYPE_NAR) && (nbondsi <4)) 
           {
             // special case N-C=S  (NPL3)
             for (int j=0; j<nconi; j++)
@@ -2106,7 +2107,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                   for (int k=0; k<3; k++)
                     if ((atomi(other (atomj, k))->atomic_number() == 16) && (btype_to_connection (atomj, k) == 2))
                       {
-                        atom_type [i] = ATOM_TYPE_NPL3;
+                        atom_type[i] = ATOM_TYPE_NPL3;
                         break;
                       }
               }
@@ -2124,13 +2125,13 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                       
                       if (1 == count_doubly_bonded_oxygens_attached (*this, atomj, notused1, notused2))
                         {
-                          atom_type [i] = ATOM_TYPE_NAM;
+                          atom_type[i] = ATOM_TYPE_NAM;
                           break;
                         }
                       // N-C=S
                       if ((atomi(other (atomj, k))->atomic_number() == 16) && (btype_to_connection (atomj, k) == 2))
                         {
-                          atom_type [i] = ATOM_TYPE_NAM;
+                          atom_type[i] = ATOM_TYPE_NAM;
                           break;
                         }
 
@@ -2144,15 +2145,15 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
         if (-1 == ith_atom->formal_charge () && is_charged_acid (*this, i, atom_type))
           ;
         else if ((nconi == 1) && (nbondsi == 2))
-          atom_type [i] = ATOM_TYPE_O2;
-        else atom_type [i] = ATOM_TYPE_O3;
+          atom_type[i] = ATOM_TYPE_O2;
+        else atom_type[i] = ATOM_TYPE_O3;
           break;
 
           /*
 
         if ((nconi == 1) && (nbondsi == 2))
           {
-            atom_type [i] = ATOM_TYPE_O2;
+            atom_type[i] = ATOM_TYPE_O2;
             int atomj = other(i, 0);
             
             // Deal with Oco2 type
@@ -2163,7 +2164,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                   int atomk = other (atomj, k);
                   if ((atomic_number(atomk) == 8) && (formal_charge(atomk) == -1))
                     {
-                      atom_type [i] = ATOM_TYPE_OCO2;
+                      atom_type[i] = ATOM_TYPE_OCO2;
                       break;
                     }
                 }
@@ -2181,12 +2182,12 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                       double_bond_O_count ++;
                   }
                 if ((1==O_minus_count) && (2== double_bond_O_count))
-                  atom_type [i] = ATOM_TYPE_OCO2;
+                  atom_type[i] = ATOM_TYPE_OCO2;
               }
           }
         else if ((nconi == 1) && (formal_charge(i) == -1))
           {
-            atom_type [i] = ATOM_TYPE_O3;
+            atom_type[i] = ATOM_TYPE_O3;
             int atomj = other(i, 0);
 
             // Deal with Oco2 type
@@ -2197,7 +2198,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                   int atomk = other (atomj, k);
                   if ((atomic_number(atomk) == 8) && (ncon(atomk) == 1) && (nbonds(atomk) == 2))
                     {
-                      atom_type [i] = ATOM_TYPE_OCO2;
+                      atom_type[i] = ATOM_TYPE_OCO2;
                       break;
                     }
                 }
@@ -2211,22 +2212,22 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                     if ((atomic_number(atomk) == 8) && (ncon(atomk) == 1) && (nbonds(atomk) == 2))
                       double_bond_O_count ++;
                   }
-                if (2==double_bond_O_count) atom_type [i] = ATOM_TYPE_OCO2;
+                if (2==double_bond_O_count) atom_type[i] = ATOM_TYPE_OCO2;
               }
           }
-          else atom_type [i] = ATOM_TYPE_O3;
+          else atom_type[i] = ATOM_TYPE_O3;
           break;*/
           case 9:
-        atom_type [i] = ATOM_TYPE_F;
+        atom_type[i] = ATOM_TYPE_F;
         break;
       case 15:
-        atom_type [i] = ATOM_TYPE_P3;
+        atom_type[i] = ATOM_TYPE_P3;
         break;
       case 16:
-        if (nconi == nbondsi) atom_type [i] = ATOM_TYPE_S3;
+        if (nconi == nbondsi) atom_type[i] = ATOM_TYPE_S3;
         else 
           {
-            atom_type [i] = ATOM_TYPE_S2;
+            atom_type[i] = ATOM_TYPE_S2;
 
             /* lifted from modification  -- need further modification
              
@@ -2234,8 +2235,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                
             int O2_count = count_doubly_bonded_oxygens_attached (*this, i, notused1, notused2);
 
-            if (1==O2_count) atom_type [i] = ATOM_TYPE_SO;
-            if (2==O2_count) atom_type [i] = ATOM_TYPE_SO2;
+            if (1==O2_count) atom_type[i] = ATOM_TYPE_SO;
+            if (2==O2_count) atom_type[i] = ATOM_TYPE_SO2;
           }
         break;
         
@@ -2249,26 +2250,26 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
                 if (((atomic_number (jth_atom) == 8) || (atomic_number (jth_atom) == 16)) && (ncon(jth_atom) == 1) && (nbonds(jth_atom) == 2))
                   O2_S2_count ++;
               }
-            if (1==O2_S2_count) atom_type [i] = ATOM_TYPE_SO;
+            if (1==O2_S2_count) atom_type[i] = ATOM_TYPE_SO;
             if (2==O2_S2_count) 
               {
-                atom_type [i] = ATOM_TYPE_SO2;
+                atom_type[i] = ATOM_TYPE_SO2;
               }
 
             
           }
         break;
           case 17:
-        atom_type [i] = ATOM_TYPE_CL;
+        atom_type[i] = ATOM_TYPE_CL;
         break;
       case 35:
-        atom_type [i] = ATOM_TYPE_BR;
+        atom_type[i] = ATOM_TYPE_BR;
         break;
       case 53:
-        atom_type [i] = ATOM_TYPE_I;
+        atom_type[i] = ATOM_TYPE_I;
         break;
       default:
-        atom_type [i] = OUT_OF_RANGE;
+        atom_type[i] = OUT_OF_RANGE;
         return 0;
       }
     }
@@ -2279,8 +2280,8 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
   /*  Set_of_Atoms ring_n3_atoms;
   Set_of_Atoms car_atoms;
   for (int i=0; i<n_atoms; i++)
-    if ((atom_type [i] == ATOM_TYPE_N3) && is_ring_atom (i)) ring_n3_atoms.add(i);
-    else if (atom_type [i] == ATOM_TYPE_CAR) car_atoms.add(i);
+    if ((atom_type[i] == ATOM_TYPE_N3) && is_ring_atom (i)) ring_n3_atoms.add(i);
+    else if (atom_type[i] == ATOM_TYPE_CAR) car_atoms.add(i);
   
   int n_ring_n3_atoms = ring_n3_atoms.number_elements();
   int n_car_atoms = car_atoms.number_elements();
@@ -2294,7 +2295,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
               int car_1_atom = car_atoms.item(j);
               int car_2_atom = car_atoms.item(k);
               if (in_same_ring (n3_atom, car_1_atom) && in_same_ring (n3_atom, car_2_atom) && in_same_aromatic_ring (car_1_atom, car_2_atom))
-                atom_type [n3_atom] = ATOM_TYPE_NPL3;
+                atom_type[n3_atom] = ATOM_TYPE_NPL3;
             }
             }*/
 
@@ -2303,7 +2304,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style (atom_type_t atom_ty
   for (int i=0; i<n_atoms; i++)
     {
       // all the neighbor nitrogen atom of Nam type, if car =1 then it is NPL3 type 
-      if (ATOM_TYPE_NAM == atom_type [i])
+      if (ATOM_TYPE_NAM == atom_type[i])
         {
           int nconi = ncon (i);
           for (int j=0; j<nconi; j++)
@@ -3150,24 +3151,24 @@ Molecule ::  _setup_molecule_huckel_matrix (resizable_array<int> * column_number
       huckel_matrix [i][j] = 0;
 
   for (int i=0; i<matrix_size; i++)
-    _setup_huckel_diagonal_element (i, column_number_to_atomi, atom_type, huckel_matrix, number_of_electron);
+    _setup_huckel_diagonal_element(i, column_number_to_atomi, atom_type, huckel_matrix, number_of_electron);
 
-  int rc;
+  int rc = 0;
 
   int n_bonds = nedges();
 
   for (int i=0; i<n_bonds; i++)
     {
       const Bond * ith_bond = bondi(i);
-      rc = _setup_huckel_element_per_bond (ith_bond, column_number_to_atomi, atomi_to_column_number, atom_type, huckel_matrix);
+      rc = _setup_huckel_element_per_bond(ith_bond, column_number_to_atomi, atomi_to_column_number, atom_type, huckel_matrix);
     }
 
-  return 1;
+  return rc;
 }
 
 int
-Molecule :: _householder_tri_diagonalization (int matrix_size, double ** transformation_matrix, double ** huckel_matrix, 
-                                              double temp_array [], double huckel_tmp_vector1[], double huckel_tmp_vector2[])
+Molecule :: _householder_tri_diagonalization(int matrix_size, double ** transformation_matrix, double ** huckel_matrix, 
+                                             double temp_array [], double huckel_tmp_vector1[], double huckel_tmp_vector2[])
 {
   for (int i=0; i<matrix_size-2; i++)
     {
@@ -3197,7 +3198,7 @@ Molecule :: _householder_tri_diagonalization (int matrix_size, double ** transfo
       if (fabs(huckel_matrix [i][i+1]) < 1e-5) huckel_matrix [i][i+1] = huckel_matrix [i+1][i] = 0;
       sum += huckel_matrix[i][i+1] * huckel_matrix[i][i+1];
       
-      double sum_sqrt = sqrt (sum);
+      double sum_sqrt = sqrt(sum);
 
       // keep the sign the same as a [i][i+1]
       if (huckel_matrix[i][i+1]<0) sum_sqrt = -sum_sqrt;
@@ -3265,13 +3266,13 @@ Molecule :: _householder_tri_diagonalization (int matrix_size, double ** transfo
 }
  
 int 
-Molecule :: _householder_tri_diagonalization (int matrix_size, double ** transformation_matrix, double ** huckel_matrix)
+Molecule :: _householder_tri_diagonalization(int matrix_size, double ** transformation_matrix, double ** huckel_matrix)
 {
   double * temp_array = new double [matrix_size];
   double * tmp_vector1 = new double [matrix_size];
   double * tmp_vector2 = new double [matrix_size];
 
-  int rc = _householder_tri_diagonalization (matrix_size, transformation_matrix, huckel_matrix, temp_array, tmp_vector1, tmp_vector2);
+  int rc = _householder_tri_diagonalization(matrix_size, transformation_matrix, huckel_matrix, temp_array, tmp_vector1, tmp_vector2);
 
   delete [] temp_array;
   delete [] tmp_vector1;
@@ -3280,22 +3281,22 @@ Molecule :: _householder_tri_diagonalization (int matrix_size, double ** transfo
   return rc;
 }
 
-double Molecule :: _infinite_norm (int matrix_size, double ** huckel_matrix)
+double Molecule :: _infinite_norm(int matrix_size, double ** huckel_matrix)
 {
   double norm = 0;
   for (int i=0; i<matrix_size; i++)
     {
       double column_value = 0; 
       for (int j=0; j<matrix_size; j++)
-        column_value += fabs (huckel_matrix [i][j]);
+        column_value += fabs(huckel_matrix [i][j]);
       if (column_value > norm) norm = column_value;
     }
   return norm;
 }
 
 int
-Molecule :: _number_of_sign_agreement (int size_of_matrix, double median, double sub_alpha[], double sub_beta_squared[], 
-                                       double principal_minor_serie [])
+Molecule :: _number_of_sign_agreement(int size_of_matrix, double median, double sub_alpha[], double sub_beta_squared[], 
+                                      double principal_minor_serie [])
 {
   int number_of_sign_agreement = 0;
   
@@ -3319,10 +3320,10 @@ Molecule :: _number_of_sign_agreement (int size_of_matrix, double median, double
 
 
 int
-Molecule :: _number_of_sign_agreement (int size_of_matrix, double median, double sub_alpha[], double sub_beta_squared[])
+Molecule :: _number_of_sign_agreement(int size_of_matrix, double median, double sub_alpha[], double sub_beta_squared[])
 {
   double * principal_minor_serie = new double [size_of_matrix + 1];
-  int number_of_sign_agreement = _number_of_sign_agreement (size_of_matrix, median, sub_alpha, sub_beta_squared, principal_minor_serie);
+  int number_of_sign_agreement = _number_of_sign_agreement(size_of_matrix, median, sub_alpha, sub_beta_squared, principal_minor_serie);
   delete [] principal_minor_serie;
   
   return number_of_sign_agreement;
@@ -3330,13 +3331,13 @@ Molecule :: _number_of_sign_agreement (int size_of_matrix, double median, double
 
 
 void
-Molecule :: _compute_sub_eigen_value (int number_of_eigen_value, int starting, 
-                                      int size_of_matrix, int number_of_eigen_value_above_region,
-                                      double sub_alpha[], double sub_beta_squared[], 
-                                      double min_eigen_value, double max_eigen_value, 
-                                      double sub_eigen_value[])
+Molecule :: _compute_sub_eigen_value(int number_of_eigen_value, int starting, 
+                                     int size_of_matrix, int number_of_eigen_value_above_region,
+                                     double sub_alpha[], double sub_beta_squared[], 
+                                     double min_eigen_value, double max_eigen_value, 
+                                     double sub_eigen_value[])
 {
-  if ((number_of_eigen_value == 1) && ((max_eigen_value - min_eigen_value)<1e-11*fabs (max_eigen_value)))
+  if ((number_of_eigen_value == 1) && ((max_eigen_value - min_eigen_value)<1e-11*fabs(max_eigen_value)))
     {
       sub_eigen_value[starting] = (min_eigen_value + max_eigen_value) /2;
     }
@@ -3350,22 +3351,22 @@ Molecule :: _compute_sub_eigen_value (int number_of_eigen_value, int starting,
     {
       double median = (min_eigen_value + max_eigen_value) /2;
 
-      int number_of_sign_agreement = _number_of_sign_agreement (size_of_matrix, median, sub_alpha, sub_beta_squared);
+      int number_of_sign_agreement = _number_of_sign_agreement(size_of_matrix, median, sub_alpha, sub_beta_squared);
 
       if ( 0 == number_of_sign_agreement - number_of_eigen_value_above_region)
-        _compute_sub_eigen_value (number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
+        _compute_sub_eigen_value(number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
       else if (number_of_eigen_value == number_of_sign_agreement - number_of_eigen_value_above_region)
-        _compute_sub_eigen_value (number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
+        _compute_sub_eigen_value(number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
       else
         {
           int new_number_of_eigen_value = number_of_eigen_value - number_of_sign_agreement + number_of_eigen_value_above_region;
 
-          _compute_sub_eigen_value (new_number_of_eigen_value, starting, size_of_matrix, number_of_sign_agreement, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
+          _compute_sub_eigen_value(new_number_of_eigen_value, starting, size_of_matrix, number_of_sign_agreement, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
 
           int new_starting = starting + new_number_of_eigen_value;
           new_number_of_eigen_value = number_of_sign_agreement - number_of_eigen_value_above_region;
 
-          _compute_sub_eigen_value (new_number_of_eigen_value, new_starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
+          _compute_sub_eigen_value(new_number_of_eigen_value, new_starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
         }
 
 
@@ -3374,8 +3375,8 @@ Molecule :: _compute_sub_eigen_value (int number_of_eigen_value, int starting,
 
 // sort the eigen vector according to the desending order of corresponding eigen value
 
-void Molecule :: _sort_eigenvalue_eigenvector (int matrix_size, double eigenvalue[], 
-                                               double ** eigen_vector, double tmp_array[])
+void Molecule :: _sort_eigenvalue_eigenvector(int matrix_size, double eigenvalue[], 
+                                              double ** eigen_vector, double tmp_array[])
 {
   for (int i=0; i<matrix_size; i++)
     {
@@ -3403,17 +3404,17 @@ void Molecule :: _sort_eigenvalue_eigenvector (int matrix_size, double eigenvalu
     }
 }
 
-void Molecule :: _sort_eigenvalue_eigenvector (int matrix_size, double eigenvalue[], double ** eigen_vector)
+void Molecule :: _sort_eigenvalue_eigenvector(int matrix_size, double eigenvalue[], double ** eigen_vector)
 {
   double * tmp_array = new double [matrix_size]; std::unique_ptr<double[]> free_tmp_array(tmp_array);
 
-  _sort_eigenvalue_eigenvector (matrix_size, eigenvalue, eigen_vector, tmp_array);
+  _sort_eigenvalue_eigenvector(matrix_size, eigenvalue, eigen_vector, tmp_array);
 
   return;
 }
 
 
-void Molecule :: _triangulation (int matrix_size, double ** matrix)
+void Molecule :: _triangulation(int matrix_size, double ** matrix)
 {
 
   for (int i=1; i<matrix_size; i++)
@@ -3482,7 +3483,7 @@ void Molecule :: _triangulation (int matrix_size, double ** matrix)
     }
 }
 
-void Molecule :: _normalize_vector (int vector_size, double vector [])
+void Molecule :: _normalize_vector(int vector_size, double vector [])
 {
   double squared_sum = 0;
   double sum_sqrt = 0;
@@ -3492,14 +3493,14 @@ void Molecule :: _normalize_vector (int vector_size, double vector [])
   if (0 == squared_sum) return;
   else 
     {
-      sum_sqrt = sqrt (squared_sum);
+      sum_sqrt = sqrt(squared_sum);
       for (int i=0; i<vector_size; i++)
         vector [i] = vector [i]/sum_sqrt;
       return;
     }
 }
 
-void Molecule :: _inverse_iteration (int matrix_size, double ** matrix, double eigen_vector [], double tmp_solution [])
+void Molecule :: _inverse_iteration(int matrix_size, double ** matrix, double eigen_vector [], double tmp_solution [])
 {
   // initialize the vector
   for (int i=0; i<matrix_size; i++)
@@ -3514,32 +3515,32 @@ void Molecule :: _inverse_iteration (int matrix_size, double ** matrix, double e
       tmp_solution [matrix_size-2] = (tmp_solution [matrix_size-2] - matrix [matrix_size-2][matrix_size-1] * tmp_solution [matrix_size -1])/matrix [matrix_size-2][matrix_size-2];
       
       for (int i=matrix_size-3; i>-1; i--)
-        tmp_solution [i] =  (tmp_solution [i] - tmp_solution [i+1]*matrix [i][i+1] - tmp_solution [i+2]*matrix[i][i+2]) /matrix [i][i];
+        tmp_solution [i] = (tmp_solution [i] - tmp_solution [i+1]*matrix [i][i+1] - tmp_solution [i+2]*matrix[i][i+2]) /matrix [i][i];
 
-      _normalize_vector (matrix_size, tmp_solution);      
+      _normalize_vector(matrix_size, tmp_solution);      
     }
 
   for (int i=0; i<matrix_size; i++)
     if (fabs(tmp_solution [i]) > 1e-12)
-      eigen_vector [i] = tmp_solution [i];
+      eigen_vector[i] = tmp_solution [i];
     else
-      eigen_vector [i] = 0;
+      eigen_vector[i] = 0;
   return;
 }
 
 void
-Molecule :: _inverse_iteration (int matrix_size, double ** matrix, double eigen_vector [])
+Molecule :: _inverse_iteration(int matrix_size, double ** matrix, double eigen_vector [])
 {
   double * tmp_solution = new double [matrix_size]; std::unique_ptr<double[]> free_tmp_solution(tmp_solution);
 
-  _inverse_iteration (matrix_size, matrix, eigen_vector, tmp_solution);
+  _inverse_iteration(matrix_size, matrix, eigen_vector, tmp_solution);
 
   return;
 }
 
 void
-Molecule :: _compute_sub_eigenvector (int matrix_size, double eigen_value[], double alpha[], 
-                                      double beta [], double **sub_eigen_vector, double ** matrix)
+Molecule :: _compute_sub_eigenvector(int matrix_size, double eigen_value[], double alpha[], 
+                                     double beta [], double **sub_eigen_vector, double ** matrix)
 {
 
   for (int eigen_no = 0; eigen_no<matrix_size; eigen_no++)
@@ -3564,7 +3565,7 @@ Molecule :: _compute_sub_eigenvector (int matrix_size, double eigen_value[], dou
         }
 #endif
 
-      _triangulation (matrix_size, matrix);
+      _triangulation(matrix_size, matrix);
 
 #if (DEBUG_PRINT)
       cerr<<"After Triangulation -- Matrix"<<endl;
@@ -3578,18 +3579,18 @@ Molecule :: _compute_sub_eigenvector (int matrix_size, double eigen_value[], dou
 #endif
 
       // each row stores 1 eigen vector for 1 eigen value
-      _inverse_iteration (matrix_size, matrix, sub_eigen_vector [eigen_no]);
+      _inverse_iteration(matrix_size, matrix, sub_eigen_vector [eigen_no]);
     }
 }
 
-void Molecule :: _compute_sub_eigenvector (int matrix_size, double eigen_value[], double alpha[], 
-                                           double beta [], double **sub_eigen_vector)
+void Molecule :: _compute_sub_eigenvector(int matrix_size, double eigen_value[], double alpha[], 
+                                          double beta [], double **sub_eigen_vector)
 {
   double ** matrix = new double * [matrix_size];
   for (int i=0; i<matrix_size; i++)
     matrix [i] = new double [matrix_size];
 
-  _compute_sub_eigenvector (matrix_size, eigen_value, alpha, beta, sub_eigen_vector, matrix);
+  _compute_sub_eigenvector(matrix_size, eigen_value, alpha, beta, sub_eigen_vector, matrix);
 
   // housekeeping
   for (int i=0; i<matrix_size; i++)
@@ -3603,7 +3604,7 @@ void Molecule :: _compute_eigenvector_procedure
  double sub_beta[], double ** sub_eigen_vector)
 {
   int number_of_eigen_value = ending_point - starting_point;
-  double max_eigen_value = _infinite_norm (matrix_size, huckel_matrix);
+  double max_eigen_value = _infinite_norm(matrix_size, huckel_matrix);
 
   for (int i=0; i<number_of_eigen_value; i++)
     {
@@ -3612,13 +3613,13 @@ void Molecule :: _compute_eigenvector_procedure
     }
   
   double min_eigen_value = - max_eigen_value;
-  _compute_sub_eigen_value (number_of_eigen_value, 0, number_of_eigen_value, 0, sub_alpha, sub_beta_squared, min_eigen_value, max_eigen_value, sub_eigen_value);
+  _compute_sub_eigen_value(number_of_eigen_value, 0, number_of_eigen_value, 0, sub_alpha, sub_beta_squared, min_eigen_value, max_eigen_value, sub_eigen_value);
   
   for (int i=1; i<number_of_eigen_value; i++)
     sub_beta [i] = huckel_matrix[starting_point+i-1][starting_point+i];
   
   // for i th eigenvalue, eigen vector is stored in ith row
-  _compute_sub_eigenvector (number_of_eigen_value, sub_eigen_value, sub_alpha, sub_beta, sub_eigen_vector); 
+  _compute_sub_eigenvector(number_of_eigen_value, sub_eigen_value, sub_alpha, sub_beta, sub_eigen_vector); 
   
   for (int i=0; i<number_of_eigen_value; i++)
     {
@@ -3628,8 +3629,8 @@ void Molecule :: _compute_eigenvector_procedure
     }
 } 
   
-void Molecule :: _transform_eigen_vector (int matrix_size, double ** eigen_vector, 
-                                          double **transformation_matrix, double **tmp_eigen_vector)
+void Molecule :: _transform_eigen_vector(int matrix_size, double ** eigen_vector, 
+                                         double **transformation_matrix, double **tmp_eigen_vector)
 {
   for (int i=0; i<matrix_size; i++)
     {
@@ -3651,9 +3652,9 @@ void Molecule :: _transform_eigen_vector (int matrix_size, double ** eigen_vecto
       eigen_vector [i][j] = tmp_eigen_vector [j][i];
 }
 
-void Molecule :: _compute_eigenvector (int matrix_size, double ** huckel_matrix, 
-                                       double ** eigen_vector, double eigenvalue[],
-                                       double ** transformation_matrix)
+void Molecule :: _compute_eigenvector(int matrix_size, double ** huckel_matrix, 
+                                      double ** eigen_vector, double eigenvalue[],
+                                      double ** transformation_matrix)
 {
   int starting_point;
   int ending_point;
@@ -3687,7 +3688,7 @@ void Molecule :: _compute_eigenvector (int matrix_size, double ** huckel_matrix,
           for (int i=0; i<number_of_eigen_value; i++)
             sub_eigen_vector [i] = new double [number_of_eigen_value];
           
-          _compute_eigenvector_procedure (matrix_size, huckel_matrix, eigen_vector, eigenvalue, starting_point, ending_point, sub_alpha, sub_beta_squared, sub_eigen_value, sub_beta, sub_eigen_vector);
+          _compute_eigenvector_procedure(matrix_size, huckel_matrix, eigen_vector, eigenvalue, starting_point, ending_point, sub_alpha, sub_beta_squared, sub_eigen_value, sub_beta, sub_eigen_vector);
           
           delete [] sub_alpha;
           delete [] sub_beta_squared;
@@ -3707,13 +3708,13 @@ void Molecule :: _compute_eigenvector (int matrix_size, double ** huckel_matrix,
   for (int i=0; i<matrix_size; i++)
     tmp_eigen_vector [i] = new double [matrix_size];
 
-  _transform_eigen_vector (matrix_size, eigen_vector, transformation_matrix, tmp_eigen_vector);
+  _transform_eigen_vector(matrix_size, eigen_vector, transformation_matrix, tmp_eigen_vector);
 
   for (int i=0; i<matrix_size; i++)
     delete [] tmp_eigen_vector [i];
   delete [] tmp_eigen_vector;
 
-  _sort_eigenvalue_eigenvector (matrix_size, eigenvalue, eigen_vector);
+  _sort_eigenvalue_eigenvector(matrix_size, eigenvalue, eigen_vector);
   
 #if (DEBUG_PRINT)
   cerr<<"After sorting"<<endl;
@@ -3733,7 +3734,7 @@ void Molecule :: _compute_eigenvector (int matrix_size, double ** huckel_matrix,
 }
 
 int
-Molecule :: _assign_huckel_charge_to_atom (resizable_array<int> * huckel_matrix_column_number_to_atomi, 
+Molecule :: _assign_huckel_charge_to_atom(resizable_array<int> * huckel_matrix_column_number_to_atomi, 
                                          double number_of_electron [],
                                          double **eigenvector,
                                          double partial_charge [],
@@ -3770,7 +3771,7 @@ Molecule :: _assign_huckel_charge_to_atom (resizable_array<int> * huckel_matrix_
 }
 
 int
-Molecule::_assign_huckel_charge_to_atom (resizable_array<int> * huckel_matrix_column_number_to_atomi,
+Molecule::_assign_huckel_charge_to_atom(resizable_array<int> * huckel_matrix_column_number_to_atomi,
                         double number_of_electron [],
                         double **eigenvector,
                         double partial_charge [])
@@ -3782,7 +3783,7 @@ Molecule::_assign_huckel_charge_to_atom (resizable_array<int> * huckel_matrix_co
   return _assign_huckel_charge_to_atom(huckel_matrix_column_number_to_atomi, number_of_electron, eigenvector, partial_charge, electron_density);
 }
 
-int Molecule :: find_eigen_value_for_matrix (int matrix_size,
+int Molecule :: find_eigen_value_for_matrix(int matrix_size,
                                              double ** matrix,
                                              double eigenvalue [],
                                              double ** eigenvector_matrix)
@@ -3791,7 +3792,7 @@ int Molecule :: find_eigen_value_for_matrix (int matrix_size,
   for (int i=0; i<matrix_size; i++)
     transformation_matrix[i] = new double [matrix_size+1];
 
-  int rc = _householder_tri_diagonalization (matrix_size, transformation_matrix, matrix);
+  int rc = _householder_tri_diagonalization(matrix_size, transformation_matrix, matrix);
 
   for (int i=0; i<matrix_size-1; i++)
     if (fabs(matrix[i][i+1]) < 1e-7)
@@ -3804,7 +3805,7 @@ int Molecule :: find_eigen_value_for_matrix (int matrix_size,
       for (int j=0; j<matrix_size; j++)
         eigenvector_matrix [i][j] = 0.0;
     }
-  _compute_eigenvector (matrix_size, matrix, eigenvector_matrix, eigenvalue, transformation_matrix);
+  _compute_eigenvector(matrix_size, matrix, eigenvector_matrix, eigenvalue, transformation_matrix);
 
   for (int i=0; i<matrix_size; i++)
     delete [] transformation_matrix [i];
@@ -3821,13 +3822,13 @@ int Molecule :: find_eigen_value_for_matrix (int matrix_size,
 // new method
 
 void
-Molecule :: _compute_sub_eigen_value_with_low_accuracy (int number_of_eigen_value,
+Molecule :: _compute_sub_eigen_value_with_low_accuracy(int number_of_eigen_value,
                         int starting, int size_of_matrix, int number_of_eigen_value_above_region,
                          double sub_alpha[], double sub_beta_squared[], 
                          double min_eigen_value, double max_eigen_value,
                          double sub_eigen_value[])
 {
-  if ((number_of_eigen_value == 1) && ((max_eigen_value - min_eigen_value)<1e-7*fabs (max_eigen_value)))
+  if ((number_of_eigen_value == 1) && ((max_eigen_value - min_eigen_value)<1e-7*fabs(max_eigen_value)))
     {
       sub_eigen_value[starting] = (min_eigen_value + max_eigen_value) /2.0;
     }
@@ -3841,22 +3842,22 @@ Molecule :: _compute_sub_eigen_value_with_low_accuracy (int number_of_eigen_valu
     {
       double median = (min_eigen_value + max_eigen_value) /2.0;
 
-      int number_of_sign_agreement = _number_of_sign_agreement (size_of_matrix, median, sub_alpha, sub_beta_squared);
+      int number_of_sign_agreement = _number_of_sign_agreement(size_of_matrix, median, sub_alpha, sub_beta_squared);
 
       if ( 0 == number_of_sign_agreement - number_of_eigen_value_above_region)
-        _compute_sub_eigen_value_with_low_accuracy (number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
+        _compute_sub_eigen_value_with_low_accuracy(number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
       else if (number_of_eigen_value == number_of_sign_agreement - number_of_eigen_value_above_region)
-        _compute_sub_eigen_value_with_low_accuracy (number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
+        _compute_sub_eigen_value_with_low_accuracy(number_of_eigen_value, starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
       else
         {
           int new_number_of_eigen_value = number_of_eigen_value - number_of_sign_agreement + number_of_eigen_value_above_region;
 
-          _compute_sub_eigen_value_with_low_accuracy (new_number_of_eigen_value, starting, size_of_matrix, number_of_sign_agreement, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
+          _compute_sub_eigen_value_with_low_accuracy(new_number_of_eigen_value, starting, size_of_matrix, number_of_sign_agreement, sub_alpha, sub_beta_squared, min_eigen_value, median, sub_eigen_value);
 
           int new_starting = starting + new_number_of_eigen_value;
           new_number_of_eigen_value = number_of_sign_agreement - number_of_eigen_value_above_region;
 
-          _compute_sub_eigen_value_with_low_accuracy (new_number_of_eigen_value, new_starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
+          _compute_sub_eigen_value_with_low_accuracy(new_number_of_eigen_value, new_starting, size_of_matrix, number_of_eigen_value_above_region, sub_alpha, sub_beta_squared, median, max_eigen_value, sub_eigen_value);
         }
     }
 }
@@ -3864,8 +3865,8 @@ Molecule :: _compute_sub_eigen_value_with_low_accuracy (int number_of_eigen_valu
 
 // sort the eigen according to the desending order of corresponding eigen value
 void
-Molecule :: _sort_eigenvalue_without_eigenvector (int matrix_size,
-                                                  double eigenvalue[])
+Molecule :: _sort_eigenvalue_without_eigenvector(int matrix_size,
+                                                 double eigenvalue[])
 {
   for (int i=0; i<matrix_size; i++)
     {
@@ -3886,7 +3887,7 @@ Molecule :: _sort_eigenvalue_without_eigenvector (int matrix_size,
 }
 
 void
-Molecule :: _compute_eigen_value_without_eigen_vector_procedure (int matrix_size,
+Molecule :: _compute_eigen_value_without_eigen_vector_procedure(int matrix_size,
                                         double ** huckel_matrix,
                                         double eigenvalue[], 
                                         int starting_point,
@@ -3896,7 +3897,7 @@ Molecule :: _compute_eigen_value_without_eigen_vector_procedure (int matrix_size
                                         double sub_eigen_value[])
 {
   int number_of_eigen_value = ending_point - starting_point;
-  double max_eigen_value = _infinite_norm (matrix_size, huckel_matrix);
+  double max_eigen_value = _infinite_norm(matrix_size, huckel_matrix);
   
   for (int i=0; i<number_of_eigen_value; i++)
     {
@@ -3906,15 +3907,15 @@ Molecule :: _compute_eigen_value_without_eigen_vector_procedure (int matrix_size
   
   double min_eigen_value = - max_eigen_value;
 
-  _compute_sub_eigen_value_with_low_accuracy (number_of_eigen_value, 0, number_of_eigen_value, 0, sub_alpha, sub_beta_squared, min_eigen_value, max_eigen_value, sub_eigen_value);
+  _compute_sub_eigen_value_with_low_accuracy(number_of_eigen_value, 0, number_of_eigen_value, 0, sub_alpha, sub_beta_squared, min_eigen_value, max_eigen_value, sub_eigen_value);
   
   for (int i=0; i<number_of_eigen_value; i++)
     eigenvalue [starting_point +i] = sub_eigen_value [i];
 } 
 
 
-void Molecule :: _compute_eigen_value_without_eigen_vector (int matrix_size, double ** huckel_matrix, 
-                                                            double eigenvalue[], double ** transformation_matrix)
+void Molecule :: _compute_eigen_value_without_eigen_vector(int matrix_size, double ** huckel_matrix, 
+                                                           double eigenvalue[], double ** transformation_matrix)
 {
   int starting_point;
   int ending_point;
@@ -3941,7 +3942,7 @@ void Molecule :: _compute_eigen_value_without_eigen_vector (int matrix_size, dou
           double * sub_beta_squared = new double [number_of_eigen_value];
           double * sub_eigen_value = new double [number_of_eigen_value];
           
-          _compute_eigen_value_without_eigen_vector_procedure (matrix_size, huckel_matrix, eigenvalue, starting_point, ending_point, sub_alpha, sub_beta_squared, sub_eigen_value);
+          _compute_eigen_value_without_eigen_vector_procedure(matrix_size, huckel_matrix, eigenvalue, starting_point, ending_point, sub_alpha, sub_beta_squared, sub_eigen_value);
           
           delete [] sub_alpha;
           delete [] sub_beta_squared;
@@ -3952,7 +3953,7 @@ void Molecule :: _compute_eigen_value_without_eigen_vector (int matrix_size, dou
         }
     }
   
-  _sort_eigenvalue_without_eigenvector (matrix_size, eigenvalue);
+  _sort_eigenvalue_without_eigenvector(matrix_size, eigenvalue);
   
 #if (DEBUG_PRINT)
   cerr<<"After sorting"<<endl;
@@ -3972,13 +3973,13 @@ void Molecule :: _compute_eigen_value_without_eigen_vector (int matrix_size, dou
 }
 
 
-int Molecule :: find_eigen_value_for_matrix_without_eigen_vector (int matrix_size, double ** matrix, double eigenvalue [])
+int Molecule :: find_eigen_value_for_matrix_without_eigen_vector(int matrix_size, double ** matrix, double eigenvalue [])
 {
   double ** transformation_matrix = new double * [matrix_size];
   for (int i=0; i<matrix_size; i++)
     transformation_matrix [i] = new double [matrix_size+1];
   
-  int rc = _householder_tri_diagonalization (matrix_size, transformation_matrix, matrix);
+  int rc = _householder_tri_diagonalization(matrix_size, transformation_matrix, matrix);
   
   for (int i=0; i<matrix_size-1; i++)
     if (fabs(matrix[i][i+1]) < 1e-7)
@@ -3988,7 +3989,7 @@ int Molecule :: find_eigen_value_for_matrix_without_eigen_vector (int matrix_siz
   for (int i=0; i<matrix_size; i++)
     eigenvalue [i] =0.0;
 
-  _compute_eigen_value_without_eigen_vector (matrix_size, matrix, eigenvalue, transformation_matrix);
+  _compute_eigen_value_without_eigen_vector(matrix_size, matrix, eigenvalue, transformation_matrix);
 
   for (int i=0; i<matrix_size; i++)
     delete [] transformation_matrix [i];
@@ -4021,7 +4022,7 @@ int Molecule :: _compute_charge_for_fragment
           huckel_matrix [i][j] = huckel_matrix [j][i] = molecule_huckel_matrix [i_to_molecule][j_to_molecule];
         }
     }
-  int rc = _householder_tri_diagonalization (matrix_size, transformation_matrix, huckel_matrix);
+  int rc = _householder_tri_diagonalization(matrix_size, transformation_matrix, huckel_matrix);
 
   for (int i=0; i<matrix_size-1; i++)
     if (fabs(huckel_matrix[i][i+1]) < 1e-7)
@@ -4051,7 +4052,7 @@ int Molecule :: _compute_charge_for_fragment
     for (int j=0; j<matrix_size; j++)
       eigenvector_matrix [i][j] = 0;
 
-  _compute_eigenvector (matrix_size, huckel_matrix, eigenvector_matrix, eigen_value, transformation_matrix);
+  _compute_eigenvector(matrix_size, huckel_matrix, eigenvector_matrix, eigen_value, transformation_matrix);
 
 #if (DEBUG_PRINT)
   cerr<< "Eigen Value "<<endl;
@@ -4069,7 +4070,7 @@ int Molecule :: _compute_charge_for_fragment
 
 #endif
 
-  rc = _assign_huckel_charge_to_atom (fragment_matrix_no_to_atomi, fragment_electron, eigenvector_matrix, partial_charge);
+  rc = _assign_huckel_charge_to_atom(fragment_matrix_no_to_atomi, fragment_electron, eigenvector_matrix, partial_charge);
 
   return rc;
 }
@@ -4093,7 +4094,7 @@ int Molecule :: _compute_charge_for_fragment
   double * fragment_electron = new double [matrix_size];
   double * eigen_value = new double [matrix_size];
 
-  int rc = _compute_charge_for_fragment (partial_charge, atomi_to_huckel_matrix_column_number, molecule_huckel_matrix, number_of_electron, fragment_matrix_no_to_atomi, huckel_matrix, transformation_matrix, eigenvector_matrix, fragment_electron, eigen_value);
+  int rc = _compute_charge_for_fragment(partial_charge, atomi_to_huckel_matrix_column_number, molecule_huckel_matrix, number_of_electron, fragment_matrix_no_to_atomi, huckel_matrix, transformation_matrix, eigenvector_matrix, fragment_electron, eigen_value);
 
   for (int i=0; i<matrix_size; i++)
     {
@@ -4130,18 +4131,18 @@ int Molecule :: _compute_charge_for_fragment
         fragment_matrix_no_to_atomi.add(i);
       }
 
-  rc = _compute_charge_for_fragment (partial_charge, atomi_to_huckel_matrix_column_number, molecule_huckel_matrix, number_of_electron, &fragment_matrix_no_to_atomi);
+  rc = _compute_charge_for_fragment(partial_charge, atomi_to_huckel_matrix_column_number, molecule_huckel_matrix, number_of_electron, &fragment_matrix_no_to_atomi);
 
   fragment_matrix_no_to_atomi.resize(0);
   return rc;
 }
 
-int Molecule :: _adjust_with_formal_charge (double partial_charge [], int fragment_array [], int fragment_no)
+int Molecule :: _adjust_with_formal_charge(double partial_charge [], int fragment_array [], int fragment_no)
 {
   int n_atoms = natoms();
   if (0==fragment_no)
     for (int i=0; i<n_atoms; i++)
-        partial_charge [i] +=formal_charge (i);
+        partial_charge [i] +=formal_charge(i);
   else 
     {
       double total_formal_charge =0;
@@ -4150,7 +4151,7 @@ int Molecule :: _adjust_with_formal_charge (double partial_charge [], int fragme
       for (int i=0; i<n_atoms; i++)
         if ((1 != atomic_number(i)) && (fragment_no == fragment_array[i]))
           {
-            total_formal_charge += formal_charge (i);
+            total_formal_charge += formal_charge(i);
             number_of_atom_in_fragment ++;
           }
       if (total_formal_charge > 0)
@@ -4164,11 +4165,11 @@ int Molecule :: _adjust_with_formal_charge (double partial_charge [], int fragme
 
 // this method deal with O=N, O=S, O=P group 
 // to conform it to the sybyl definition for the huckel charge calculation
-void Molecule :: _specific_modification_of_conjugated_fragment (int conjugated_fragment[], atom_type_t atom_type [])
+void Molecule::_specific_modification_of_conjugated_fragment(int conjugated_fragment[], atom_type_t atom_type [])
 {
   int n_atom = natoms();
   for (int i=0; i<n_atom; i++)
-    if ((atom_type [i] == ATOM_TYPE_O2) && (ncon (i) == 1))
+    if ((atom_type [i] == ATOM_TYPE_O2) && (ncon(i) == 1))
       { 
         int neighbor_type = atom_type [other(i, 0)];
         if ((neighbor_type == ATOM_TYPE_NPL3) || (neighbor_type == ATOM_TYPE_S2) || (neighbor_type == ATOM_TYPE_SO) || (neighbor_type == ATOM_TYPE_SO2))
@@ -4183,11 +4184,11 @@ double ** huckel_matrix, double number_of_electron [])
 {
   int rc;
 
-  rc = _setup_molecule_huckel_matrix (huckel_matrix_column_number_to_atomi, atomi_to_huckel_matrix_column_number, atom_type, huckel_matrix, number_of_electron);
+  rc = _setup_molecule_huckel_matrix(huckel_matrix_column_number_to_atomi, atomi_to_huckel_matrix_column_number, atom_type, huckel_matrix, number_of_electron);
 
   if (rc ==0)
     {
-      cerr<<"Error in setting up huckel matrix  -- "<<molecule_name()<<endl;
+      cerr<<"Error in setting up huckel matrix  -- "<<name()<<endl;
       return 0;
     }
 #if (DEBUG_PRINT)
@@ -4206,26 +4207,26 @@ double ** huckel_matrix, double number_of_electron [])
 #endif
 
   //Find all of the conjugated fragment
-  int number_of_fragment = _find_conjugated_fragment ( conjugated_fragment_array);
+  int number_of_fragment = _find_conjugated_fragment( conjugated_fragment_array);
 
 #if (DEBUG_PRINT)
   for (int i=0; i<natoms(); i++)
     cerr<<"Atom "<<i<<"   Fragment="<<conjugated_fragment_array[i]<<endl;
 #endif
 
-  _specific_modification_of_conjugated_fragment (conjugated_fragment_array, atom_type);
+  _specific_modification_of_conjugated_fragment(conjugated_fragment_array, atom_type);
 
   for (int i=1; i<=number_of_fragment; i++)
-    rc =_compute_charge_for_fragment (partial_charge, atomi_to_huckel_matrix_column_number, conjugated_fragment_array, huckel_matrix, number_of_electron, i);
+    rc =_compute_charge_for_fragment(partial_charge, atomi_to_huckel_matrix_column_number, conjugated_fragment_array, huckel_matrix, number_of_electron, i);
   
   // if molecule has formal charge, distribute among conjugated fragments
   if (has_formal_charges())
     for (int i=0; i<=number_of_fragment; i++)
-      rc =_adjust_with_formal_charge (partial_charge, conjugated_fragment_array, i);
+      rc =_adjust_with_formal_charge(partial_charge, conjugated_fragment_array, i);
   return rc;
 }
 
-int Molecule :: _calculate_Huckel_partial_charges (double partial_charge [], atom_type_t atom_type [])
+int Molecule :: _calculate_Huckel_partial_charges(double partial_charge [], atom_type_t atom_type [])
 {
   int n_atoms = natoms();
 
@@ -4236,7 +4237,7 @@ int Molecule :: _calculate_Huckel_partial_charges (double partial_charge [], ato
   int * conjugated_fragment_array = new int [n_atoms];
 
   resizable_array<int> huckel_matrix_column_number_to_atomi; 
-  _setup_conversion_array_between_huckel_matrix_and_atomi (&huckel_matrix_column_number_to_atomi, atomi_to_huckel_matrix_column_number);
+  _setup_conversion_array_between_huckel_matrix_and_atomi(&huckel_matrix_column_number_to_atomi, atomi_to_huckel_matrix_column_number);
 
   int matrix_size = huckel_matrix_column_number_to_atomi.number_elements();
 
@@ -4261,41 +4262,41 @@ int Molecule :: _calculate_Huckel_partial_charges (double partial_charge [], ato
 }
 
 int
-Molecule:: compute_Huckel_partial_charges ()
+Molecule:: compute_Huckel_partial_charges()
 {
   int n_atoms = natoms();
-  atom_type_t * sybyl_atom_type = new unsigned int [n_atoms]; std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
+  atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms]; std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
 
-  if (NULL == _atom_type)
+  if (nullptr == _atom_type)
     {
-      allocate_atom_types ();
-      assert ( NULL != _atom_type);
+      allocate_atom_types();
+      assert ( nullptr != _atom_type);
     }
 
   if ("SYBYL" == _atom_type->ztype())
     {
       for (int i=0; i<n_atoms; i++)
-        sybyl_atom_type [i] = atom_type (i);
+        sybyl_atom_type[i] = atom_type(i);
     }
   else 
     {
       int rc = find_simplified_sybyl_atom_type_sybyl_style(sybyl_atom_type);
       if (0==rc)
         {
-          cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+          cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
           return 0;
         }
       if (!_atom_type->ztype().length())
         {
           for (int i=0; i<n_atoms; i++)
             {
-              set_atom_type (i, sybyl_atom_type[i]);
+              set_atom_type(i, sybyl_atom_type[i]);
             }
-          _atom_type->set_type ("SYBYL");
+          _atom_type->set_type("SYBYL");
         }
     }
  
-  (void) compute_Huckel_partial_charges (sybyl_atom_type);
+  (void) compute_Huckel_partial_charges(sybyl_atom_type);
 
 #if (DEBUG_PRINT)
   for (int i=0; i<natoms(); i++)
@@ -4305,19 +4306,19 @@ Molecule:: compute_Huckel_partial_charges ()
 }
 
 int
-Molecule:: compute_Huckel_partial_charges (atom_type_t atom_type [])
+Molecule:: compute_Huckel_partial_charges(atom_type_t atom_type[])
 {
   compute_aromaticity_if_needed();
 
   int n_atoms = natoms();
 
-  double * partial_charge = new double [n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
+  double * partial_charge = new double[n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
 
-  int rc = _calculate_Huckel_partial_charges (partial_charge, atom_type);
+  int rc = _calculate_Huckel_partial_charges(partial_charge, atom_type);
 
 #if (DEBUG_PRING)
   for (int i=0; i<n_atoms; i++)
-    cerr<<partial_charge [i]<<"   ";
+    cerr<<partial_charge[i]<<"   ";
   cerr<<endl;
 #endif
 
@@ -4325,42 +4326,42 @@ Molecule:: compute_Huckel_partial_charges (atom_type_t atom_type [])
 
   for (int i=0; i<n_atoms; i++) 
   {
-    set_charge(i, static_cast<charge_t> (partial_charge[i]) );
+    set_charge(i, static_cast<charge_t>(partial_charge[i]) );
   }
 
   // assign _charge_type and array of _charge;
-  _charges->set_type ("HUCKEL");
+  _charges->set_type("HUCKEL");
 
   return rc;
 }
 
 int
-Molecule:: compute_Gasteiger_Huckel_partial_charges ()
+Molecule:: compute_Gasteiger_Huckel_partial_charges()
 {
   int rc;
   compute_aromaticity_if_needed();
   int n_atoms = natoms();
   
-  atom_type_t * sybyl_atom_type = new atom_type_t [n_atoms]; std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
+  atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms]; std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);
   
-  if (NULL == _atom_type)
+  if (nullptr == _atom_type)
     {
-      allocate_atom_types ();
-      assert ( NULL != _atom_type);
+      allocate_atom_types();
+      assert ( nullptr != _atom_type);
     }
   
   if ("SYBYL" == _atom_type->ztype())
   {
     for (int i=0; i<n_atoms; i++)
     {
-      sybyl_atom_type [i] = atom_type (i);
+      sybyl_atom_type[i] = atom_type(i);
     }
   }
   else 
   {
     if (0 == find_simplified_sybyl_atom_type_sybyl_style(sybyl_atom_type))
     {
-      cerr<<"Unreconized Atom Type Encountered  -- "<<molecule_name()<<endl;
+      cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
       return 0;
     }
 
@@ -4368,13 +4369,13 @@ Molecule:: compute_Gasteiger_Huckel_partial_charges ()
     {
       for (int i=0; i<n_atoms; i++)
       {
-        set_atom_type (i, sybyl_atom_type[i]);
+        set_atom_type(i, sybyl_atom_type[i]);
       }
-      _atom_type->set_type ("SYBYL");
+      _atom_type->set_type("SYBYL");
     }
   }
 
-  rc = compute_Gasteiger_Huckel_partial_charges (sybyl_atom_type);
+  rc = compute_Gasteiger_Huckel_partial_charges(sybyl_atom_type);
 
 #if (DEBUG_PRINT)
   for (int i=0; i<natoms(); i++)
@@ -4384,18 +4385,18 @@ Molecule:: compute_Gasteiger_Huckel_partial_charges ()
 }
 
 int
-Molecule:: compute_Gasteiger_Huckel_partial_charges (atom_type_t atom_type [])
+Molecule:: compute_Gasteiger_Huckel_partial_charges(atom_type_t atom_type[])
 { 
   int n_atoms = natoms();
 
   compute_aromaticity_if_needed();
 
-  double * partial_charge = new double [n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
+  double * partial_charge = new double[n_atoms]; std::unique_ptr<double[]> free_partial_charge(partial_charge);
 
-  if (!_calculate_Huckel_partial_charges (partial_charge, atom_type))
+  if (!_calculate_Huckel_partial_charges(partial_charge, atom_type))
     return 0;
       
-  if (! _gasteiger_partial_charge_procedure (partial_charge, atom_type))   // failed
+  if (! _gasteiger_partial_charge_procedure(partial_charge, atom_type))   // failed
     return 0;     
 
   // assign _charge;
@@ -4403,7 +4404,7 @@ Molecule:: compute_Gasteiger_Huckel_partial_charges (atom_type_t atom_type [])
   for (int i=0; i<n_atoms; i++)
   {
     if ((partial_charge[i]<3.0) && (partial_charge[i]>-3.0)) 
-      set_charge(i, static_cast<charge_t> (partial_charge[i]) );
+      set_charge(i, static_cast<charge_t>(partial_charge[i]) );
     else 
       return 0;
   }

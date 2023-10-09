@@ -1,0 +1,6 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "sulfonamides_aryl")
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[#6]S(=O)(=O)[NH]c")
+)

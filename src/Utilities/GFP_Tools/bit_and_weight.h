@@ -1,9 +1,9 @@
 #ifndef BIT_AND_WEIGHT_H
 #define BIT_AND_WEIGHT_H
 
-#include <math.h>
+#include <cmath>
 
-#include "iw_stl_hash_map.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "gfp.h"
 

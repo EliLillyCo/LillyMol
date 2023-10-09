@@ -1,0 +1,11 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "phenolate")
+  (A C smarts "[OD1H]-c1ccccc1")
+  (A I one_embedding_per_start_atom 1)
+  (0 Environment
+    (A I single_bond (2 4))
+    (A I min_hits_needed 2)
+    (A C smarts "[$(N(=O)=O),$(C#N),$([C,S]=O),$([F,Cl,Br,I])]")
+  )
+)

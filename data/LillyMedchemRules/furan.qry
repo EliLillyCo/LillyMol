@@ -1,0 +1,7 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "furan")
+  (A D numeric_value 50)
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "o1cccc1")
+)

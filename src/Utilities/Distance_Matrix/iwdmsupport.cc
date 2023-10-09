@@ -1,8 +1,12 @@
 #include <stdlib.h>
 
+#include <iostream>
+
 #include "iwdmsupport.h"
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+
+using std::cerr;
 
 void
 write_index_and_id (int i,

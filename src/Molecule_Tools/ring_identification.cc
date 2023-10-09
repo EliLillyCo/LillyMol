@@ -4,7 +4,6 @@
 
 #include <stdlib.h>
 #include <memory>
-using namespace std;
 
 #include "cmdline.h"
 #include "iw_auto_array.h"
@@ -20,7 +19,7 @@ using namespace std;
 #include "substructure.h"
 #include "output.h"
 
-const char * prog_name = NULL;
+const char * prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -132,26 +131,26 @@ class Ring_Identification
 
 Ring_Identification::Ring_Identification()
 {
-  _rs = NULL;
-  _spinach = NULL;
-  _results_for_must_match_queries = NULL;
-  _results_for_must_not_match_queries = NULL;
+  _rs = nullptr;
+  _spinach = nullptr;
+  _results_for_must_match_queries = nullptr;
+  _results_for_must_not_match_queries = nullptr;
 
   return;
 }
 
 Ring_Identification::~Ring_Identification()
 {
-  if (NULL != _rs)
+  if (nullptr != _rs)
     delete [] _rs;
 
-  if (NULL != _spinach)
+  if (nullptr != _spinach)
     delete [] _spinach;
 
-  if (NULL != _results_for_must_match_queries)
+  if (nullptr != _results_for_must_match_queries)
     delete [] _results_for_must_match_queries;
 
-  if (NULL != _results_for_must_not_match_queries)
+  if (nullptr != _results_for_must_not_match_queries)
     delete [] _results_for_must_not_match_queries;
 
   return;
@@ -663,7 +662,7 @@ ring_identification (data_source_and_type<Molecule> & input,
                 IWString_and_File_Descriptor & output)
 {
   Molecule * m;
-  while (NULL != (m = input.next_molecule()))
+  while (nullptr != (m = input.next_molecule()))
   {
     molecules_read++;
 
@@ -684,7 +683,7 @@ static int
 ring_identification (const char * fname, int input_type, 
                 IWString_and_File_Descriptor & output)
 {
-  assert (NULL != fname);
+  assert (nullptr != fname);
 
   if (0 == input_type)
   {

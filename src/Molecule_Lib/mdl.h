@@ -1,11 +1,13 @@
-#ifndef MDL_FUNCTIONS_H
-#define MDL_FUNCTIONS_H
+#ifndef MOLECULE_LIB_MDL_H_
+#define MOLECULE_LIB_MDL_H_
 
-#include "iwstring.h"
-#include "iwmtypes.h"
+#include <memory>
+
+#include "re2/re2.h"
 
 #include "atom.h"
 #include "atom_alias.h"
+#include "iwmtypes.h"
 #include "set_of_atoms.h"
 
 /*
@@ -33,6 +35,7 @@ class MDL_File_Supporting_Material
     int _fetch_all_sdf_identifiers;
     int _take_first_tag_as_name;
     int _prepend_sdfid;
+    int _sdf_tags_to_json;
     int _discard_sdf_molecule_name;
     int _multi_record_tag_data_present;
     int _mdl_write_aromatic_bonds;
@@ -55,7 +58,7 @@ class MDL_File_Supporting_Material
     int _convert_single_atom_sgroup_to_element;
     IWString _change_long_symbols_to;
     IWString _insert_between_sdf_name_tokens;
-    IW_Regular_Expression _sdf_identifier;
+    std::unique_ptr<RE2> _sdf_identifier;
     IWString _name_in_m_tag;
     IWString _replace_first_sdf_tag;
     int * _input_bond_type_translation_table;
@@ -115,6 +118,7 @@ class MDL_File_Supporting_Material
     void set_fetch_all_sdf_identifiers (int s) { _fetch_all_sdf_identifiers = s;}
     void set_take_first_tag_as_name (int s) { _take_first_tag_as_name = s;}
     void set_prepend_sdfid (int s) { _prepend_sdfid = s;}
+    void set_sdf_tags_to_json(int s) { _sdf_tags_to_json = s;}
     void set_discard_sdf_molecule_name (int s) { _discard_sdf_molecule_name = s;}
     void set_multi_record_tag_data_present (int s) { _multi_record_tag_data_present = s;}
     void set_mdl_write_aromatic_bonds (int s) { _mdl_write_aromatic_bonds = s;}
@@ -157,6 +161,7 @@ class MDL_File_Supporting_Material
     int fetch_all_sdf_identifiers () const { return _fetch_all_sdf_identifiers;}
     int take_first_tag_as_name () const { return _take_first_tag_as_name;}
     int prepend_sdfid () const { return _prepend_sdfid;}
+    int sdf_tags_to_json() const { return _sdf_tags_to_json;}
     int discard_sdf_molecule_name () const { return _discard_sdf_molecule_name;}
     int multi_record_tag_data_present () const { return _multi_record_tag_data_present;}
     int mdl_write_aromatic_bonds () const { return _mdl_write_aromatic_bonds;}
@@ -229,7 +234,7 @@ extern MDL_File_Supporting_Material * global_default_MDL_File_Supporting_Materia
   A couple of supporting functions used by the various mdl routines
 */
 
-extern int int3d (const const_IWSubstring &, int &, int &, int * = NULL);
+extern int int3d (const const_IWSubstring &, int &, int &, int * = nullptr);
 
 #define MDL_RADICAL -998
 
@@ -244,6 +249,7 @@ extern int convert_from_mdl_number_to_bond_type (int int_rep, bond_type_t & bt);
 /*
   When reading the M lines in MDL files, we have pairs of atom numbers and atom properties.
   This class describes such a grouping.
+  Note that while LillyMol allows unsigned int isotopes, we read mdl files as int's.
 */
 
 struct Aprop
@@ -273,6 +279,4 @@ extern int parse_bond_record (const_IWSubstring & buffer,
                    int & bond_type_read_in,
                    int & directionality);
 
-class Atom;
-
-#endif
+#endif  // MOLECULE_LIB_MDL_H_

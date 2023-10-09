@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package RingClosure;
+
+// The kinds of bonds that can be used as the ring closure bond.
+enum BondType {
+  SS_UNSPECIFIED = 0;
+  SS_SINGLE_BOND = 1;
+  SS_DOUBLE_BOND = 2;
+}
+
+message Range {
+  // If we are considering 3d constraints
+  float min = 1;
+  float max = 2;
+}
+
+message ring_closure {
+  // When making a bond between two atoms we can impose a range on
+  // the distance apart the atoms are, which will therefore specify
+  // the size of the ring formed.
+  optional uint32 min_bonds_between = 1;
+  optional uint32 max_bonds_between = 2;
+
+  // By default, a single bond is placed, but both single and
+  // double can be tried.
+  repeated BondType btype = 3;
+
+  // If the input contains 3D info, we can impose geometric constraints.
+  optional Range distance_constraint = 4;
+
+  // If we are working in 3D, there is a risk of forming unrealistic
+  // geometries. We can impose limits in the allowed bond angles formed.
+  optional Range bond_angle_constraint = 5;
+
+  // By default, we generate all possible rings in a starting molecule.
+  optional uint32 max_variants_formed = 6;
+
+  // We can specify 0, 1 or 2 queries that define the two atoms that
+  // be at the end of the bond formed.
+  // These must be tokens recognised by process_cmdline_token in rwsubstructure.h
+  //  SMARTS:c
+  //  file.qry
+  //  PROTO:file.txt
+  repeated string connection = 7;
+
+  // We can specify motifs that must be present in the product.
+  // If any query matches, the product is OK.
+  // Again, values are tokens recognised by process_cmdline_token.
+  repeated string product_must_have = 8;
+
+  // Discard the newly formed molecule if any of these queries match.
+  // Again, values are tokens recognised by process_cmdline_token.
+  repeated string product_must_not_have = 9;
+
+  // In order to assist debugging, we can place isotopes on the ends of
+  // newly created bonds.
+  optional uint32 isotope = 10;
+
+  // By default, we do not allow strongly fused aromatics to be
+  // formed.
+  optional bool allow_caged_aromatic_rings = 11;
+
+  // By default, we do NOT allow all aromatic substitutents to form 3
+  // membered rings.
+  // If this is true, then toluene will form (2) 3 membered rings fused
+  // to the aromatic.
+  optional bool allow_aromatic_3_membered_ring_fusions = 12;
+
+  // By default we do not generate 3 membered rings with double bonds.
+  optional bool allow_cyclopropene = 13;
+
+  // By default, we allow spiro fusions to form.
+  optional bool allow_spiro_fusions = 14;
+
+  // If requested, we can attempt to aromatize newly formed isolated
+  // rings if they are not already aromatic.
+  optional bool attempt_aromatization = 15;
+
+  // If we have an [ND3x2] group in a ring, changing it to a carbon may enable
+  // interesting ring formation.
+  optional bool nd3x2_to_c = 16;
+
+  // Same idea for oxygen.
+  optional bool od2x2_to_n = 17;
+}

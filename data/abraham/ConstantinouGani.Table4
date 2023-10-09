@@ -1,0 +1,57 @@
+# INTERCEPT hl=0.0 gl=0.0  hv=0.0
+# Second order terms, page 1703
+
+[r3] r3 hl=34.93 gl=31.52 hv=* NCHECK=0 NCLAIM=0             // 104.800 94.564 *
+[r4] r4 hl=24.86 gl=23.14 hv=* NCHECK=0 NCLAIM=0             // 99.455 92.573 *
+[r5] r5 hl=2.7564 gl=1.1466 hv=-0.1136 NCHECK=0 NCLAIM=0      // 13.782 5.733 -0.568
+[r6] r6 hl=-1.61 gl=-1.363 hv=-0.1508 NCHECK=0 NCLAIM=0      // -9.660 -8.180 -0.905
+[r7] r7 hl=2.209 gl=2.942 hv=-0.121 NCHECK=0 NCLAIM=0        // 15.465 20.597 -0.847
+
+[CH1]([CH3])[CH3] (CH3)2CH hl=-0.860 gl=0.297 hv=0.292 
+[CH0]([CH3])([CH3])[CH3] t-butyl hl=-1.338 gl=-0.399 hv=-0.720 
+[CH3][CH1][CH1][CH3] CH3CH1CH1CH3 hl=6.771 gl=6.342 hv=0.868 
+[CH3][CH1][CH0][CH3] CH3CH1CH0CH3 hl=7.205 gl=7.466 hv=1.027 
+[CH3][CH0]([CH3])[CH0]([CH3])[CH3] name hl=14.271 gl=16.224 hv=2.426 
+
+C=C-C=C CHn=CHm-CHp=CHk hl=-8.392 gl=-5.505 hv=2.057 
+[CH3]-C=C CH3-CHm=CHn hl=0.474 gl=0.950 hv=-0.073 
+[CH2]-C=C CH2-CHm=CHn hl=1.472 gl=0.699 hv=-0.369 
+[CH1]-C=C CH1-CHm=CHn_OR_C-CHm=CHn hl=4.504 gl=1.013 hv=0.345 
+
+[CR]-[CR0]-[CR0] CR0-CR0-CR0 hl=1.252 gl=1.041 hv=-0.114 
+
+[CH3][CH3] ethane hl=-2.792 gl=-1.062 hv=* 
+
+[CH0,CH1]-[CH]=O CHCHO_OR_CCHO hl=-2.092 gl=-1.359 hv=0.207 
+[CH3]C(=O)[CH2] CH3COCH2 hl=0.975 gl=0.075 hv=-0.668 
+[CH3]-C(=O)[CH1,CH0] CH3COCH_OR_CH3COC hl=4.753 gl=* hv=0.071 
+[#6R]=O [#6R]=O hl=14.145 gl=23.539 hv=0.744 
+c[CH]=O c[CH]=O hl=-3.173 gl=-2.602 hv=-3.410 
+[CH0,CH1]C(=O)[OH] name hl=1.279 gl=2.149 hv=* 
+
+//  page 1704
+
+cC(=O)[OH] cC(=O)OH hl=12.245 gl=10.715 hv=8.502 
+[CH3]C(=O)-O-[CH0,CH1] name hl=-7.807 gl=-6.208 hv=-3.345 
+O=CCC(=O)-O name hl=37.462 gl=29.181 hv=* 
+O=C-O-C=O O=C-O-C=O hl=-16.097 gl=-11.309 hv=1.517 
+cC(=O)-[OD2] cC(=O)-O- hl=-9.874 gl=-7.415 hv=* 
+[CH1][OH] [CH1][OH] hl=-3.887 gl=-6.770 hv=-1.398 
+[CH0][OH] [CH0][OH] hl=-24.125 gl=-20.770 hv=0.320 
+
+[OH]-C-C[OH] OH-C-C-[OH] hl=0.366 gl=3.805 hv=-3.661 
+
+[CR]-[OH] [CR]-[OH] hl=-16.333 gl=-5.487 hv=4.626 
+
+[OH]-C-C-N CHm(OH)CHn(NHp) hl=-2.992 gl=-1.600 hv=* 
+N-C-C-N CHm(NH2)(CHn)(NH2) hl=2.855 gl=1.858 hv=* 
+[CR]-N-[CR] CHm-NHp-CH hl=0.351 gl=8.846 hv=2.311 
+C-O-C=C CHm-O-CHn=CHp hl=-8.644 gl=-13.167 hv=* 
+c-O-C c-O-C hl=1.532 gl=-0.654 hv=* 
+[CR]-[SR0]-[CR] [CR]-S-[CR] hl=-0.329 gl=-2.091 hv=0.972 
+C=C-F CHm=CHnF hl=* gl=* hv=* 
+C=C-Br CHm=CHnBr hl=11.989 gl=12.373 hv=* 
+C=C-I CHm=CHnI hl=* gl=* hv=* 
+cBr cBr hl=12.285 gl=14.161 hv=-7.488 
+cI cI hl=11.207 gl=12.530 hv=-4.864 
+NCC(=O)-[OH] CHm(NH2)-COOH hl=11.740 gl=* hv=* 

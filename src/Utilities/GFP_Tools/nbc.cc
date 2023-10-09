@@ -1,8 +1,15 @@
+// Naieve Bayesian Classifier
 #include <stdlib.h>
+#include <iostream>
+#include <memory>
 
-#include "iwstring_data_source.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwre2.h"
 
 #include "nbc.h"
+
+using std::cerr;
+using std::endl;
 
 Naive_Bayesian_Classifier::Naive_Bayesian_Classifier()
 {
@@ -45,7 +52,6 @@ Naive_Bayesian_Classifier::build(iwstring_data_source & input)
 }
 
 /*
-
   Unfortunately, these models can come from multiple sources.
   gfp_profile_activity_by_bits produces output like
 
@@ -58,46 +64,46 @@ FP 0 bit 0 class FOO NB 1.003
 SFP 0 bit 0 class FOO NB 0.649
 */
 
-static IW_Regular_Expression build1_rx("(SFP|FP) ([0-9]+) bit ([0-9]+) N = [0-9]+ in class ");
-static IW_Regular_Expression build2_rx("(SFP|FP) ([0-9]+) bit ([0-9]+) NB ([^ ]+)");
+static std::unique_ptr<RE2> build1_rx = std::make_unique<RE2>("(SFP|FP) ([0-9]+) bit ([0-9]+) N = [0-9]+ in class ");
+static std::unique_ptr<RE2> build2_rx = std::make_unique<RE2>("(SFP|FP) ([0-9]+) bit ([0-9]+) NB ([^ ]+)");
 
 int
 Naive_Bayesian_Classifier::_build(const const_IWSubstring & buffer)
 {
-  if (build1_rx.matches_save_subexpressions(buffer))
-    return _build_from_gfp_profile_activity_by_bits(build1_rx, buffer);
+  re2::StringPiece tmp(buffer.data(), buffer.length());
 
-  if (build2_rx.matches_save_subexpressions(buffer))
-    return _build_from_naive_bayesian_classifier_group(build2_rx, buffer);
+  std::string fptype;
+  uint32_t fpnum;
+  uint32_t bitnum;
+  if (RE2::PartialMatch(tmp, *build1_rx, &fptype, &fpnum, &bitnum)) {
+    return _build_from_gfp_profile_activity_by_bits(buffer, fptype, fpnum, bitnum);
+  }
+
+  float nb;
+  if (RE2::PartialMatch(tmp, *build2_rx, &fptype, &fpnum, &bitnum, &nb)) {
+    return _build_from_naive_bayesian_classifier_group(buffer, fptype, fpnum, bitnum, nb);
+  }
 
   cerr << "Naive_Bayesian_Classifier::_build:invalid input\n";
   return 0;
 }
 
 int
-Naive_Bayesian_Classifier::_build_from_gfp_profile_activity_by_bits(const IW_Regular_Expression & build_rx,
-                                        const const_IWSubstring & buffer)
+Naive_Bayesian_Classifier::_build_from_gfp_profile_activity_by_bits(const const_IWSubstring& buffer,
+    const std::string& fptype,
+    uint32_t fpnum,
+    uint32_t bitnum)
 {
-  const_IWSubstring fptype = build_rx.dollar(1);   // Sbit or Bit
 
-  const_IWSubstring token = build_rx.dollar(2);
-
-  int ndx;
-  token.numeric_value(ndx);
-
-  if (ndx < 0 || ndx > (NBC_FIXED_ARRAY_SIZE - 1))
+  if (fpnum < 0 || fpnum > (NBC_FIXED_ARRAY_SIZE - 1))
   {
     cerr << "Naive_Bayesian_Classifier::_build:fixed array size overflow, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     return 0;
   }
 
-  token = build_rx.dollar(3);
-
-  unsigned int b;
-  token.numeric_value(b);
 
   int i = 0;
-
+  const_IWSubstring token;
   for (int j = 0; j < 7; j++)
   {
     buffer.nextword(token, i);
@@ -148,9 +154,9 @@ Naive_Bayesian_Classifier::_build_from_gfp_profile_activity_by_bits(const IW_Reg
     }
 
     if ("SFP" == fptype)
-      _fsbw._sparsefp[ndx].set_weight(b, w);
+      _fsbw._sparsefp[fpnum].set_weight(bitnum, w);
     else if ("FP" == fptype)
-      _fsbw._fp[ndx].set_weight(b, w);
+      _fsbw._fp[fpnum].set_weight(bitnum, w);
     else
       abort();
 
@@ -163,43 +169,25 @@ Naive_Bayesian_Classifier::_build_from_gfp_profile_activity_by_bits(const IW_Reg
 }
 
 int
-Naive_Bayesian_Classifier::_build_from_naive_bayesian_classifier_group(const IW_Regular_Expression & build_rx,
-                                                const const_IWSubstring & buffer)
+Naive_Bayesian_Classifier::_build_from_naive_bayesian_classifier_group(const const_IWSubstring& buffer,
+        const std::string& fptype,
+        uint32_t fpnum,
+        uint32_t bitnum,
+        float nb)
 {
-  const_IWSubstring fptype = build_rx.dollar(1);   // FP or SFP
-
-  const_IWSubstring token = build_rx.dollar(2);
-
-  int ndx;
-  token.numeric_value(ndx);
-
-  if (ndx < 0 || ndx > (NBC_FIXED_ARRAY_SIZE - 1))
-  {
+  if (fpnum < 0 || fpnum > (NBC_FIXED_ARRAY_SIZE - 1)) {
     cerr << "Naive_Bayesian_Classifier::_build:fixed array size overflow, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
     return 0;
   }
 
-  token = build_rx.dollar(3);
-
-  unsigned int b;
-  token.numeric_value(b);
-
-  const_IWSubstring token = build_rx.dollar(4);
-
-  double d;
-  if (! token.numeric_value(d) || d <= 0.0)
-  {
-    cerr << "Naive_Bayesian_Classifier::_build_from_naive_bayesian_classifier_group:invalid weight '" << token << "'\n";
-    return 0;
+  if ("SFP" == fptype)
+    _fsbw._sparsefp[fpnum].set_weight(bitnum, nb);
+  else if ("FP" == fptype)
+    _fsbw._fp[fpnum].set_weight(bitnum, nb);
+  else {
+    cerr << "Naive_Bayesian_Classifier::_build_from_naive_bayesian_classifier_group:huh?\n";
+    abort();
   }
-
-    if ("SFP" == fptype)
-      _fsbw._sparsefp[ndx].set_weight(b, w);
-    else if ("FP" == fptype)
-      _fsbw._fp[ndx].set_weight(b, w);
-    else
-      abort();
-
 
   return 1;
 }

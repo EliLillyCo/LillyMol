@@ -13,10 +13,10 @@
 resizable_array_p<String> *
 tokenise (const String &buffer, const char *pattern, int ntokens)
 {
-  assert (NULL != pattern);
+  assert (nullptr != pattern);
 
   if (0 == buffer.length ())
-    return NULL;
+    return nullptr;
 
   if (NTOKENS_UNSPECIFIED != ntokens)
   {
@@ -43,7 +43,7 @@ tokenise (const String &buffer, const char *pattern, int ntokens)
   if (0 == result->number_elements ())
   {
     delete result;
-    return NULL;
+    return nullptr;
   }
 
   return result;
@@ -55,13 +55,13 @@ template class resizable_array_base<String *>;
 resizable_array_p<String> *
 tokenise (const char *buffer, const char *pattern, int ntokens)
 {
-  assert (NULL != buffer);
+  assert (nullptr != buffer);
   int buflen = strlen (buffer);
 
   if (0 == buflen)
-    return NULL;
+    return nullptr;
 
-  assert (NULL != pattern);
+  assert (nullptr != pattern);
   int len_pattern = strlen (pattern);
   assert (len_pattern > 0);
 
@@ -103,7 +103,7 @@ tokenise (const char *buffer, const char *pattern, int ntokens)
   if (0 == result->number_elements ())
   {
     delete result;
-    result = NULL;
+    result = nullptr;
   }
 
   return result;
@@ -119,12 +119,12 @@ main ()
   input->set_strip_newlines ();
 
   const char *buffer;
-  while (NULL != (buffer = input->next_record ()))
+  while (nullptr != (buffer = input->next_record ()))
   {
     cout << "Buffer: " << buffer;
 
     resizable_array_p<String> *tk = tokenise (buffer, " ");
-    if (NULL == tk)
+    if (nullptr == tk)
     {
       (void) fprintf (stderr, "No tokens\n");
     }

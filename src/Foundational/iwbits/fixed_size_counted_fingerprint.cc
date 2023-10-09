@@ -1,16 +1,17 @@
-#include <stdlib.h>
+#include <iostream>
 #include <memory>
-using namespace std;
 
+#include "Foundational/iwstring/iwstring.h"
 #include "iwbits.h"
-#include "iwstring.h"
-
 #include "dy_fingerprint.h"
 
+using std::ostream;
+using std::cerr;
+
 static void
-convert_to_byte_range (const int * c,
-                       int n,
-                       unsigned char * b)
+convert_to_byte_range(const int * c,
+                      int n,
+                      unsigned char * b)
 {
   for (int i = 0; i < n; i++)
   {
@@ -32,13 +33,13 @@ convert_to_byte_range (const int * c,
 }
 
 int
-write_fixed_size_counted_fingerprint (const int * c,
-                                      int n,
-                                      int nset,
-                                      int bits_in_original_fingerprint,
-                                      ostream & output)
+write_fixed_size_counted_fingerprint(const int * c,
+                                     int n,
+                                     int nset,
+                                     int bits_in_original_fingerprint,
+                                     ostream & output)
 {
-  if (0 == n || NULL == c)
+  if (0 == n || nullptr == c)
   {
     cerr << "write_fixed_size_counted_fingerprint:invalid input\n";
     return 0;
@@ -52,7 +53,7 @@ write_fixed_size_counted_fingerprint (const int * c,
 
   char * bytes = du_bin2ascii (&bytes_allocated, n, reinterpret_cast<char *> (b));
 
-  if (NULL == bytes)
+  if (nullptr == bytes)
   {
     cerr << "write_fixed_size_counted_fingerprint:cannot allocate fingerprint\n";
     return 0;
@@ -74,13 +75,13 @@ append_fixed_size_counted_fingerprint (const int * c,
                                       int bits_in_original_fingerprint,
                                       IWString & output)
 {
-  if (0 == n || NULL == c)
+  if (0 == n || nullptr == c)
   {
     cerr << "write_fixed_size_counted_fingerprint:invalid input\n";
     return 0;
   }
 
-  unsigned char * b = new unsigned char[n]; unique_ptr<unsigned char[]> free_b (b);
+  unsigned char * b = new unsigned char[n]; std::unique_ptr<unsigned char[]> free_b (b);
 
   convert_to_byte_range (c, n, b);
 
@@ -88,7 +89,7 @@ append_fixed_size_counted_fingerprint (const int * c,
 
   char * bytes = du_bin2ascii (&bytes_allocated, n, reinterpret_cast<char *> (b));
 
-  if (NULL == bytes)
+  if (nullptr == bytes)
   {
     cerr << "write_fixed_size_counted_fingerprint:cannot allocate fingerprint\n";
     return 0;

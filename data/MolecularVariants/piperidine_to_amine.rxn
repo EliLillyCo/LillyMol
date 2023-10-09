@@ -1,0 +1,10 @@
+name: "piperidine_to_amine"
+scaffold {
+  id: 0
+  smarts: "[ND2x2]1CC[CD3](C)CC1"
+  remove_atoms: [1, 2, 5, 6]
+  change_element {
+    atom: 3
+    element: "N"
+  }
+}

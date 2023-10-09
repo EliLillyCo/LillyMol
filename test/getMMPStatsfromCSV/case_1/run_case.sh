@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then 
+if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ] ; then
     echo "System variables LILLYMOL_HOME and BUILD_DIR are required for running the test"
     echo "Please export LILLYMOL_HOME (local path to LillyMol code)"
     echo "Please export BUILD_DIR (the folder name under the bin folder after build)"

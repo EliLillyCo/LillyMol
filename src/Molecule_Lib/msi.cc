@@ -4,8 +4,8 @@
 using std::cerr;
 using std::endl;
 
-#include "msi_object.h"
-#include "misc.h"
+#include "Foundational/iwmisc/msi_object.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
 #include "rwmolecule.h"
@@ -15,7 +15,7 @@ using std::endl;
 */
 
 static int
-_determine_atomic_number (const IWString & buffer, int & anum)
+_determine_atomic_number(const IWString & buffer, int & anum)
 {
   if (! buffer.is_int(anum))
   {
@@ -31,27 +31,27 @@ _determine_atomic_number (const IWString & buffer, int & anum)
 #define NAME_OF_MSI_BOND_OBJECT "Bond"
 
 Atom *
-_convert_to_atom (const msi_object * msi)
+_convert_to_atom(const msi_object * msi)
 {
-  assert (NULL != msi && msi->ok());
-  assert (NAME_OF_MSI_MOLECULE_OBJECT == msi->name());
+  assert(nullptr != msi && msi->ok());
+  assert(NAME_OF_MSI_MOLECULE_OBJECT == msi->name());
 
   const msi_attribute * acl = msi->attribute("ACL");
-  if (NULL == acl)
+  if (nullptr == acl)
   {
     cerr << "convert to atom: no ACL type for object\n";
-    return NULL;
+    return nullptr;
   }
 
   int zz;
   if (! _determine_atomic_number(acl->stringval(), zz))
   {
     cerr << "_convert to atom: cannot convert '" << acl->stringval() << "' to atomic number\n";
-    return NULL;
+    return nullptr;
   }
 
   Atom * rc = new Atom(zz);
-  assert (NULL != rc);
+  assert(nullptr != rc);
 
 // get the coordinates.
 
@@ -61,7 +61,7 @@ _convert_to_atom (const msi_object * msi)
   y = 0.0;
   z = 0.0;
 
-  if (NULL == msi_coords)
+  if (nullptr == msi_coords)
   {
     cerr << "process msi atom: no XYZ attribute, coordinates set to 0.0\n";
   }
@@ -84,14 +84,14 @@ _convert_to_atom (const msi_object * msi)
 }
 
 static int
-_process_msi_atom_to_molecule (const msi_object * msi, Molecule & m)
+_process_msi_atom_to_molecule(const msi_object * msi, Molecule & m)
 {
-  assert (NULL != msi && msi->ok());
-  assert (NAME_OF_MSI_ATOM_OBJECT == msi->name());
-  assert (m.ok());
+  assert(nullptr != msi && msi->ok());
+  assert(NAME_OF_MSI_ATOM_OBJECT == msi->name());
+  assert(m.ok());
 
   Atom * a = _convert_to_atom(msi);
-  if (NULL == a)
+  if (nullptr == a)
   {
     cerr << "process atom to molecule: cannot convert to atom\n";
     return 0;
@@ -99,7 +99,7 @@ _process_msi_atom_to_molecule (const msi_object * msi, Molecule & m)
 
   m.add(a);
   const msi_attribute * chg = msi->attribute("Charge");
-  if (NULL != chg)
+  if (nullptr != chg)
   {
     int a = m.natoms() - 1;
     charge_t q;
@@ -112,18 +112,18 @@ _process_msi_atom_to_molecule (const msi_object * msi, Molecule & m)
     m.set_charge(a, q);
   }
 
-  assert (m.ok());
+  assert(m.ok());
 
   return 1;
 }
 
 static int
-_convert_msi_atoms_to_molecule (const msi_object & msi_molecule_object,
+_convert_msi_atoms_to_molecule(const msi_object & msi_molecule_object,
                                 Molecule & m, int * xref)
 {
-  assert (msi_molecule_object.ok());
-  assert (NAME_OF_MSI_MOLECULE_OBJECT == msi_molecule_object.name());
-  assert (m.ok());
+  assert(msi_molecule_object.ok());
+  assert(NAME_OF_MSI_MOLECULE_OBJECT == msi_molecule_object.name());
+  assert(m.ok());
 
   int n = msi_molecule_object.number_elements();
   int natoms = 0;
@@ -131,7 +131,7 @@ _convert_msi_atoms_to_molecule (const msi_object & msi_molecule_object,
   for (int i = 0; i < n && 1 == rc; i++)
   {
     const msi_object * msi = msi_molecule_object[i];
-    assert (NULL != msi && msi->ok());
+    assert(nullptr != msi && msi->ok());
 
     if (NAME_OF_MSI_ATOM_OBJECT == msi->name())
     {
@@ -145,26 +145,26 @@ _convert_msi_atoms_to_molecule (const msi_object & msi_molecule_object,
 }
 
 static int
-_process_msi_bond_to_molecule (const msi_object * msi, Molecule & m,
-                               const int * xref)
+_process_msi_bond_to_molecule(const msi_object * msi, Molecule & m,
+                              const int * xref)
 {
-  assert (msi->ok());
-  assert (NAME_OF_MSI_BOND_OBJECT == msi->name());
-  assert (m.ok());
-  assert (NULL != xref);
+  assert(msi->ok());
+  assert(NAME_OF_MSI_BOND_OBJECT == msi->name());
+  assert(m.ok());
+  assert(nullptr != xref);
 
   const msi_attribute * a1o = msi->attribute("Atom1");
   const msi_attribute * a2o = msi->attribute("Atom2");
-  assert (NULL != a1o);
-  assert (NULL != a2o);
+  assert(nullptr != a1o);
+  assert(nullptr != a2o);
 
   const msi_attribute * boo = msi->attribute("Order");
-  if (NULL == boo)
+  if (nullptr == boo)
     boo = msi->attribute("Type");
 
   bond_type_t bt;
   int tmp;
-  if (NULL == boo)
+  if (nullptr == boo)
     bt = SINGLE_BOND;
   else if (! boo->value(tmp))
   {
@@ -185,19 +185,19 @@ _process_msi_bond_to_molecule (const msi_object * msi, Molecule & m,
 }
 
 static int
-_convert_msi_bonds_to_molecule (const msi_object & msi_molecule_object,
-                                Molecule & m, const int * xref)
+_convert_msi_bonds_to_molecule(const msi_object & msi_molecule_object,
+                               Molecule & m, const int * xref)
 {
-  assert (NAME_OF_MSI_MOLECULE_OBJECT == msi_molecule_object.name());
-  assert (m.ok());
-  assert (NULL != xref);
+  assert(NAME_OF_MSI_MOLECULE_OBJECT == msi_molecule_object.name());
+  assert(m.ok());
+  assert(nullptr != xref);
 
   int n = msi_molecule_object.number_elements();
   int rc = 1;
   for (int i = 0; i < n && 1 == rc; i++)
   {
     const msi_object * msi = msi_molecule_object[i];
-    assert (msi->ok());
+    assert(msi->ok());
 
     if (NAME_OF_MSI_BOND_OBJECT == msi->name())
       rc = _process_msi_bond_to_molecule(msi, m, xref);
@@ -207,11 +207,11 @@ _convert_msi_bonds_to_molecule (const msi_object & msi_molecule_object,
 }
 
 static int
-_convert_msi_object_to_molecule (const msi_object & msi, Molecule & m,
-                                 int * xref)
+_convert_msi_object_to_molecule(const msi_object & msi, Molecule & m,
+                                int * xref)
 {
-  assert (msi.ok());
-  assert (m.ok());
+  assert(msi.ok());
+  assert(m.ok());
 
   int rc = _convert_msi_atoms_to_molecule(msi, m, xref);
 
@@ -221,7 +221,7 @@ _convert_msi_object_to_molecule (const msi_object & msi, Molecule & m,
   if (1 == rc)
   {
     const msi_attribute * msi_name = msi.attribute("Label");
-    if (NULL != msi_name)
+    if (nullptr != msi_name)
       m.set_name(msi_name->stringval());
   }
 
@@ -229,10 +229,10 @@ _convert_msi_object_to_molecule (const msi_object & msi, Molecule & m,
 }
 
 static int
-_convert_msi_object_to_molecule (const msi_object & msi, Molecule & m)
+_convert_msi_object_to_molecule(const msi_object & msi, Molecule & m)
 {
-  assert (msi.ok());
-  assert (m.ok());
+  assert(msi.ok());
+  assert(m.ok());
 
 // We need a temporary array to cross reference msi object numbers
 // to atom numbers
@@ -247,10 +247,10 @@ _convert_msi_object_to_molecule (const msi_object & msi, Molecule & m)
 }
 
 int
-Molecule::read_molecule_msi_ds (iwstring_data_source & input)
+Molecule::read_molecule_msi_ds(iwstring_data_source & input)
 {
-  assert (ok());
-  assert (input.good());
+  assert(ok());
+  assert(input.good());
 
   input.set_ignore_pattern("#");   // when regexp works, change to "^#"
   input.set_strip_leading_blanks(1);

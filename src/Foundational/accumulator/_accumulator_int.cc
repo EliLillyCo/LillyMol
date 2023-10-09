@@ -1,5 +1,4 @@
 #include <iostream>
-using namespace std;
 
 #define ACCUMULATOR_IMPLEMENTATION
 #include "accumulator.h"

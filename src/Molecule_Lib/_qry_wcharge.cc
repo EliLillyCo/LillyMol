@@ -1,10 +1,9 @@
 #define RESIZABLE_ARRAY_IMPLEMENTATION
-#include "iwaray.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwaray/iwaray.h"
 
 #include "qry_wcharge.h"
 #include "rwsubstructure.h"
-
-#include "cmdline.h"
 
 template class resizable_array_p<Charge_Distribution>;
 template class resizable_array_base<Charge_Distribution *>;

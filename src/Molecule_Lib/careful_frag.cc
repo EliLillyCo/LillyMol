@@ -1,10 +1,9 @@
 #include <stdlib.h>
 #include <memory>
-using namespace std;
 
 #define COMPILING_CAREFUL_FRAG
 
-#include "misc.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
 
@@ -123,7 +122,7 @@ static int organic_desirability[HIGHEST_ATOMIC_NUMBER] = {
 };
 
 int
-Molecule::_identify_fragment_undesirable_groups (int * exclude) const
+Molecule::_identify_fragment_undesirable_groups(int * exclude) const
 {
   for (int i = 0; i < _number_elements; i++)
   {
@@ -148,8 +147,8 @@ Molecule::_identify_fragment_undesirable_groups (int * exclude) const
 }
 
 int
-Molecule::identify_largest_organic_fragment (Set_of_Atoms & atoms_to_be_removed,
-                                             int & fragments_same_size_as_largest_organic)
+Molecule::identify_largest_organic_fragment(Set_of_Atoms & atoms_to_be_removed,
+                                            int & fragments_same_size_as_largest_organic)
 {
   int nf = number_fragments();
 
@@ -168,7 +167,7 @@ Molecule::identify_largest_organic_fragment (Set_of_Atoms & atoms_to_be_removed,
 
   int * exclude = new_int(_number_elements); std::unique_ptr<int[]> free_exclude(exclude);
 
-  _identify_fragment_undesirable_groups (exclude);
+  _identify_fragment_undesirable_groups(exclude);
 
   for (int i = 0; i < nf; i++)
   {
@@ -233,12 +232,12 @@ Molecule::identify_largest_organic_fragment (Set_of_Atoms & atoms_to_be_removed,
 
 //cerr << "Keeping fragment " << fragment_to_keep << endl;
    
-  atoms_to_be_removed.resize (max_atoms_in_fragment);
+  atoms_to_be_removed.resize(max_atoms_in_fragment);
 
   for (int i = 0; i < _number_elements; i++)
   {
     if (fragment_membership[i] != fragment_to_keep)
-      atoms_to_be_removed.add (i);
+      atoms_to_be_removed.add(i);
   }
 
 //cerr << "Removing atoms " << atoms_to_be_removed << endl;
@@ -253,10 +252,10 @@ Molecule::reduce_to_largest_organic_fragment()
 
   int notused;
 
-  (void) identify_largest_organic_fragment (atoms_to_be_removed, notused);
+  (void) identify_largest_organic_fragment(atoms_to_be_removed, notused);
 
   if (atoms_to_be_removed.number_elements())
-    remove_atoms (atoms_to_be_removed);
+    remove_atoms(atoms_to_be_removed);
 
   return 1;
 }
@@ -278,10 +277,10 @@ class Fragment_Data
   public:
     Fragment_Data();
 
-    int debug_print (ostream &) const;
+    int debug_print(std::ostream &) const;
 
     int  frag_id() const { return _frag_id;}
-    void set_frag_id (int f) { _frag_id = f;}
+    void set_frag_id(int f) { _frag_id = f;}
 
     void another_organic_atom() { _organic_atoms++;}
     int  organic_atoms() const { return _organic_atoms;}
@@ -292,8 +291,8 @@ class Fragment_Data
     void another_sulphate() { _sulphate++;}
     void another_oxygen() { _oxygen++;};
     void another_phosphorus() { _phosphorus++;};
-    void extra_hydrogens (int h) { _hydrogens++;}
-    void another_non_organic_atom () { _non_organic_atoms++;}
+    void extra_hydrogens(int h) { _hydrogens++;}
+    void another_non_organic_atom() { _non_organic_atoms++;}
 
     int phosphorus_atoms() const { return _phosphorus;}
     int nitro_groups() const { return _nitro;}
@@ -321,7 +320,7 @@ Fragment_Data::Fragment_Data()
 }
 
 int
-Fragment_Data::debug_print (ostream & os) const
+Fragment_Data::debug_print(std::ostream & os) const
 {
   os << "Fragment data for fragment " << _frag_id << ", " << _organic_atoms << " organic atoms\n";
   os << "  " << _nitro << " nitro groups\n";
@@ -353,16 +352,16 @@ Molecule::reduce_to_largest_fragment_carefully()
   Set_of_Atoms atoms_to_be_removed;
   int number_instances_of_largest_fragment;
 
-  identify_largest_organic_fragment (atoms_to_be_removed, number_instances_of_largest_fragment);
+  identify_largest_organic_fragment(atoms_to_be_removed, number_instances_of_largest_fragment);
 
-  if (0 == atoms_to_be_removed.number_elements())
+  if (atoms_to_be_removed.empty())
     return 1;
 
 // If there are no organic fragments, NUMBER_INSTANCES_OF_LARGEST_FRAGMENT will be 0
 
   if (number_instances_of_largest_fragment <= 1)
   {
-    remove_atoms (atoms_to_be_removed);
+    remove_atoms(atoms_to_be_removed);
 
     return 1;
   }
@@ -372,17 +371,17 @@ Molecule::reduce_to_largest_fragment_carefully()
 
   Fragment_Data * fd = new Fragment_Data[nf]; std::unique_ptr<Fragment_Data[]> free_fd(fd);
 
-  int * already_counted = new_int (_number_elements); std::unique_ptr<int[]> free_already_counted (already_counted);
+  int * already_counted = new_int(_number_elements); std::unique_ptr<int[]> free_already_counted(already_counted);
 
 #ifdef DEBUG_CAREFUL_FRAG
   cerr << _molecule_name << " has " << number_instances_of_largest_fragment << " instances of largest fragment\n";
 #endif
 
-  return _reduce_to_largest_fragment_carefully (fd, already_counted);
+  return _reduce_to_largest_fragment_carefully(fd, already_counted);
 }
 
 static int
-fragment_data_comparitor (const void * v1, const void * v2)
+fragment_data_comparitor(const void * v1, const void * v2)
 {
   const Fragment_Data * f1 = (const Fragment_Data *) v1;
   const Fragment_Data * f2 = (const Fragment_Data *) v2;
@@ -464,14 +463,14 @@ fragment_data_comparitor (const void * v1, const void * v2)
 }
 
 int
-Molecule::_reduce_to_largest_fragment_carefully (Fragment_Data * fd,
-                                                 int * already_counted)
+Molecule::_reduce_to_largest_fragment_carefully(Fragment_Data * fd,
+                                                int * already_counted)
 {
   int nf = number_fragments();
 
   for (int i = 0; i < nf; i++)
   {
-    fd[i].set_frag_id (i);
+    fd[i].set_frag_id(i);
   }
 
   const int * fragment_membership = _fragment_information.fragment_membership();
@@ -512,29 +511,29 @@ Molecule::_reduce_to_largest_fragment_carefully (Fragment_Data * fd,
 
     if (7 == a->atomic_number())
     {
-      if (_is_nitro (i, already_counted))
+      if (_is_nitro(i, already_counted))
         fdi.another_nitro();
       else
       {
         fdi.another_nitrogen();
         already_counted[i] = 1;
-        fdi.extra_hydrogens (a->implicit_hydrogens());
+        fdi.extra_hydrogens(a->implicit_hydrogens());
       }
     }
     else if (16 == a->atomic_number())
     {
-      if (_is_sulphate_like (i, already_counted))
+      if (_is_sulphate_like(i, already_counted))
         fdi.another_sulphate();
       else
       {
-        fdi.extra_hydrogens (a->implicit_hydrogens());
+        fdi.extra_hydrogens(a->implicit_hydrogens());
         fdi.another_sulphur();
       }
     }
     else if (15 == a->atomic_number())
       fdi.another_phosphorus();
     else if (1 == a->atomic_number())
-      fdi.extra_hydrogens (1);
+      fdi.extra_hydrogens(1);
   }
 
 // Now do oxygens, as some of them will have been consumed by Nitro and Sulphates
@@ -559,29 +558,29 @@ Molecule::_reduce_to_largest_fragment_carefully (Fragment_Data * fd,
     fdi.another_oxygen();
   }
 
-  qsort (fd, nf, sizeof (Fragment_Data), fragment_data_comparitor);
+  qsort(fd, nf, sizeof(Fragment_Data), fragment_data_comparitor);
 
 #ifdef DEBUG_CAREFUL_FRAG
   for (int i = 0; i < nf; i++)
   {
-    fd[i].debug_print (cerr);
+    fd[i].debug_print(cerr);
   }
 #endif
 
   int fragment_to_keep = fd[0].frag_id();
 
   Set_of_Atoms atoms_to_be_removed;
-  atoms_to_be_removed.resize (_number_elements);
+  atoms_to_be_removed.resize(_number_elements);
 
   for (int i = 0; i < _number_elements; i++)
   {
     int f = fragment_membership[i];
 
     if (f != fragment_to_keep)
-      atoms_to_be_removed.add (i);
+      atoms_to_be_removed.add(i);
   }
 
-  return remove_atoms (atoms_to_be_removed);
+  return remove_atoms(atoms_to_be_removed);
 }
 
 /*
@@ -589,7 +588,7 @@ Molecule::_reduce_to_largest_fragment_carefully (Fragment_Data * fd,
 */
 
 int
-Molecule::_is_nitro (atom_number_t n, int * already_done) const
+Molecule::_is_nitro(atom_number_t n, int * already_done) const
 {
   const Atom * an = _things[n];
 
@@ -605,12 +604,12 @@ Molecule::_is_nitro (atom_number_t n, int * already_done) const
 
   for (int i = 0; i < 3; i++)
   {
-    const Bond * b = an->item (i);
+    const Bond * b = an->item(i);
 
     if (! b->is_double_bond())
       continue;
 
-    atom_number_t o = b->other (n);
+    atom_number_t o = b->other(n);
 
     if (8 != _things[o]->atomic_number())
       continue;
@@ -635,7 +634,7 @@ Molecule::_is_nitro (atom_number_t n, int * already_done) const
 */
 
 int
-Molecule::_is_sulphate_like (atom_number_t s, int * already_done) const
+Molecule::_is_sulphate_like(atom_number_t s, int * already_done) const
 {
   const Atom * as = _things[s];
 
@@ -645,31 +644,31 @@ Molecule::_is_sulphate_like (atom_number_t s, int * already_done) const
     return 0;
 
   Set_of_Atoms oxygens;
-  oxygens.resize (scon);
+  oxygens.resize(scon);
 
   int double_bonds_found = 0;
 
   for (int i = 0; i < scon; i++)
   {
-    const Bond * b = as->item (i);
+    const Bond * b = as->item(i);
 
     if (b->is_double_bond())
       double_bonds_found++;
     else
       continue;
 
-    atom_number_t o = b->other (s);
+    atom_number_t o = b->other(s);
 
     if (8 == _things[o]->atomic_number())
-      oxygens.add (o);
+      oxygens.add(o);
   }
 
-  if (0 == double_bonds_found || 0 == oxygens.number_elements())
+  if (0 == double_bonds_found || oxygens.empty())
     return 0;
 
   already_done[s] = 1;
 
-  oxygens.set_vector (already_done, 1);
+  oxygens.set_vector(already_done, 1);
 
   return 1;
 }

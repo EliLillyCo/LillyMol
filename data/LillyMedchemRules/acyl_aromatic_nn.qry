@@ -1,0 +1,44 @@
+# RuleClass acylating
+# SubClass aromatic
+
+(0 Query
+  (A C Comment "acyl_aromatic_nn")
+  (A C Comment "acyl_aromatic_nn")
+  (A I Version 2)
+  (A I min_nrings 1)
+  (A I min_aromatic_ring_count 1)
+  (0 Query_Atom
+
+# 15 apr 98, also look for Sulphur at this position
+
+    (A I atomic_number (8 16))
+    (A I ncon 1)
+    (A I nbonds 2)
+  )
+  (1 Query_Atom
+    (A I atomic_number 6)
+    (A I min_ncon 2)
+    (A I min_nbonds 3)
+    (A I nrings 0)
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 3)
+    (A I aromatic 1)
+    (A I nbonds 3)
+    (A I nrings 1)
+    (A I ring_size 5)
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 7)
+    (A I ncon 2)
+    (A I nbonds 3)
+    (A I aromatic 1)
+    (A I nrings 1)
+    (A I ring_size 5)
+    (A I aromatic_bond 2)
+#   (A I single_bond 2)     sept 2014, aromatic bond is fine
+  )
+)

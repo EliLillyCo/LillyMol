@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package minor_changes_data;
+
+message MinorChangesData {
+  // Do we allow amides (and sulfonamides) to be destroyed.
+  optional bool destroy_amide = 1;
+
+  // Turn various transformations on and off.
+
+  // Add a fragment to an atom with an implicit Hydrogen.
+  // If the fragment has isotopes, those are assumed to be
+  // atom types.
+  optional bool add_fragments = 2;
+
+  // Identify fragments that can be removed and replaced by
+  // something from the library. This only does terminal
+  // functional groups.
+  optional bool replace_terminal_fragments = 3;
+
+  // Changing bond orders.
+  optional bool single_to_double_bond = 4;
+  optional bool double_to_single_bond = 5;
+
+  // change a spiro fusion to a biphenyl type linkage.
+  optional bool unspiro = 6;
+
+  // Join beta atoms to make a three membered ring.
+  optional bool make_three_membered_rings = 7;
+
+  // Various element transformations.
+  optional bool change_carbon_to_nitrogen = 8;
+  optional bool change_carbon_to_oxygen = 9;
+  optional bool change_nitrogen_to_carbon = 10;
+
+  // Inserting and removing CH2
+  optional bool insert_ch2 = 11;
+  optional bool remove_ch2 = 12;
+
+  // Destroy aromatic rings. In a ring system
+  // only destroys one aromatic ring at a time.
+  optional bool destroy_aromatic_rings = 13;
+
+  // Destroy all aromatic rings in a ring system.
+  optional bool destroy_aromatic_ring_systems = 14;
+
+  // Swap the positions of two adjacent atoms.
+  optional bool swap_adjacent_atoms = 15;
+
+  // NOTE: as more features are added, add those to the
+  // code in SetConfig.
+
+  // A list of fragment sizes that it is OK to remove.
+  repeated uint32 remove_fragment = 16;
+
+  // The max number of variants generated for any molecule.
+  optional uint32 max_variants = 17;
+
+  // Fragments can be read from a file, or can come from the
+  // proto. This is helpful for testing.
+  // Smiles of fragments that can be attached.
+  // Note that atom typing and isotopes must be consistent.
+  // For example, if there are isotopes in these frgments,
+  // and atom_typing is active, then isotopes must match
+  // atom types.
+  repeated string fragment = 18;
+
+  // when replacing fragments, the largest number of atoms allowed
+  // to be lost. Note that the implementation will use a value of
+  // 3 if this is not specified.
+  optional uint32 max_atoms_lost = 19;
+
+  // Atom typing can be specified in the proto or on the command line.
+  // For example "UST:AY".
+  optional string atype = 20;
+
+  // Query specifications for specifying those atoms that can change.
+  // For example "SMARTS:a", or "PROTO:/path/to/proto"
+  repeated string only_process_query = 21;
+
+  // By default, adjacent aromatic atoms are not swapped.
+  // This is because the chances of destroying aromaticity are high.
+  // Use this to enable that.
+  // This should not be used, use ring_replacement instead.
+  optional bool swap_adjacent_aromatic_atoms = 22;
+
+  // Fragments inserted may be monovalent or bivalent.
+  optional bool insert_fragments = 23;
+
+  // Given a fragment with a given number of bonds between
+  // the attachment points, which might be zero, identify a
+  // segment of the molecule and excise what is there, and 
+  // inser the bivalent fragment
+  optional bool replace_inner_fragments = 24;
+
+  // We can specify bivalent fragments here.
+  repeated string bivalent_fragment = 25;
+
+  // Since the dicer_data.DicerFragment proto may have a prevalence
+  // we can include a support level for including fragments.
+  optional uint32 fragment_support = 26;
+
+  // When a molecule with a bad valence is generated, do we log
+  // that to stderr or not.
+  optional bool echo_bad_valence = 27;
+
+  optional bool fuse_biphenyls = 28;
+
+  // Some ways for limiting the number of molecules generated.
+  // Impose a limit on the number of fragments in the two fragment libraries.
+  // Note that it will be flagged as an error to specify both a support
+  // requirment and a library size.
+  optional uint32 max_fragment_lib_size = 29;
+  optional uint32 max_bivalent_fragment_lib_size = 30;
+}

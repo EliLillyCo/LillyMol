@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package LillyMolTest;
+
+message Diff {
+  // A message describing comparison of two files.
+  // The shell level tool that knows how to compare the files.
+  optional string diff_tool = 1;
+
+  // The two files being compared.
+  optional string file1 = 2;
+  optional string file2 = 3;
+}
+
+message TestCase {
+  // A test case has command line options.
+  // This is a single string, but we allow a repeated string
+  // to avoid lengthy single lines. These get concatenated
+  // and passed to the command.
+  repeated string options = 1;
+
+  // One or more input files - 
+  repeated string input_file = 2;
+
+  // One or more output files. Each of these must be present
+  // in the `out` directory for the test case.
+  repeated string output_file = 3;
+
+  // Diff tests that be conducted on the output(s)
+  repeated Diff diffs = 4;
+
+  // The name of the executable - required.
+  optional string executable = 5;
+}
+
+message TestCases {
+  // The name of the executable - required.
+  optional string executable = 1;
+
+  repeated TestCase test_case = 2;
+}

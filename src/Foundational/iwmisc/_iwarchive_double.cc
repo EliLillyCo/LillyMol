@@ -1,5 +1,4 @@
 #include <iostream>
-using namespace std;
 
 #define IWARCHIVE_IMPLEMENTATION
 #define IWARCHIVE_OP_IMPLEMENTATION
@@ -7,4 +6,4 @@ using namespace std;
 
 template class iwarchive<double>;
 
-template ostream & operator << (ostream &, const iwarchive<double> &);
+template std::ostream & operator << (std::ostream &, const iwarchive<double> &);

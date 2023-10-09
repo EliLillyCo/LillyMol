@@ -5,12 +5,16 @@
 
 #include <stdlib.h>
 #include <fstream>
-using namespace std;
+#include <iostream>
+#include <memory>
 
-#include "cmdline.h"
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
-#include "iwcrex.h"
+#include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+
+using std::cerr;
+using std::endl;
 
 const char * prog_name = NULL;
 
@@ -18,7 +22,7 @@ static int verbose = 0;
 
 static IWString identifier_tag ("PCN<");
 
-static IW_Regular_Expression identifier_rx;
+static std::unique_ptr<re2::RE2> identifier_rx;
 
 static int ignore_identifiers_not_matching_rx = 0;
 
@@ -115,19 +119,19 @@ extract_identifier (const IWString & buffer,
   if (remove_leading_zeros)
     id.remove_leading_chars('0');
 
-  if (! identifier_rx.active ())
+  if (! identifier_rx)
     ;
-  else if (identifier_rx.matches (id))
+  else if (iwre2::RE2PartialMatch(id, *identifier_rx))
     ;
   else if (ignore_identifiers_not_matching_rx)
   {
-    cerr << "Ignoring identifier '" << id << "' not matching '" << identifier_rx.source () << "'\n";
+    cerr << "Ignoring identifier '" << id << "' not matching '" << identifier_rx->pattern() << "'\n";
     fatal = 0;
     return 0;
   }
   else
   {
-    cerr << "Invalid identifier '" << id << "' does not match '" << identifier_rx.source () << "'\n";
+    cerr << "Invalid identifier '" << id << "' does not match '" << identifier_rx->pattern() << "'\n";
     fatal = 1;
     return 0;
   }
@@ -292,19 +296,19 @@ extract_identifier_from_tdt (const_IWSubstring buffer,    // not passed by refer
   if (remove_leading_zeros)
     id.remove_leading_chars('0');
 
-  if (! identifier_rx.active ())
+  if (! identifier_rx)
     ;
-  else if (identifier_rx.matches (id))
+  else if (iwre2::RE2PartialMatch(id, *identifier_rx))
     ;
   else if (ignore_identifiers_not_matching_rx)
   {
-    cerr << "Ignoring identifier '" << id << "' not matching '" << identifier_rx.source () << "'\n";
+    cerr << "Ignoring identifier '" << id << "' not matching '" << identifier_rx->pattern() << "'\n";
     fatal = 0;
     return 0;
   }
   else
   {
-    cerr << "Invalid identifier '" << id << "' does not match '" << identifier_rx.source () << "'\n";
+    cerr << "Invalid identifier '" << id << "' does not match '" << identifier_rx->pattern() << "'\n";
     fatal = 1;
     return 0;
   }
@@ -443,7 +447,7 @@ fetch_tdt (int argc, char ** argv)
   {
     const_IWSubstring p = cl.string_value ('p');
 
-    if (! identifier_rx.set_pattern (p))
+    if (! iwre2::RE2Reset(identifier_rx, p))
     {
       cerr << "Invalid identifier regexp '" << p << "'\n";
       return 5;
@@ -547,7 +551,7 @@ fetch_tdt (int argc, char ** argv)
     return 5;
   }
 
-  iwstring_data_source tdt_file (cl[1]);
+  iwstring_data_source tdt_file(cl[1]);
 
   if (! tdt_file.good ())
   {

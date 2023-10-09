@@ -47,7 +47,7 @@ typedef Report_Progress_Template<unsigned int> Report_Progress;
 
 #include <limits>
 
-#include "cmdline.h"
+#include "Foundational/cmdline/cmdline.h"
 
 template <typename T>
 Report_Progress_Template<T>::Report_Progress_Template()
@@ -67,7 +67,7 @@ Report_Progress_Template<T>::Report_Progress_Template()
 
 template <typename T>
 int
-Report_Progress_Template<T>::operator ()()
+Report_Progress_Template<T>::operator()()
 {
   if (0 == _report_every)
     return 0;
@@ -84,14 +84,14 @@ Report_Progress_Template<T>::operator ()()
 
 template<typename T>
 int
-Report_Progress_Template<T>::report (const char * leading,
-                                     const char * trailing,
-                                     std::ostream & output)
+Report_Progress_Template<T>::report(const char * leading,
+                                    const char * trailing,
+                                    std::ostream & output)
 {
   if (! operator()())
     return 0;
 
-  if (NULL != leading)
+  if (nullptr != leading)
     output << leading;
 
   output << _times_called;
@@ -103,7 +103,7 @@ Report_Progress_Template<T>::report (const char * leading,
     _tprev = tnow;
   }
 
-  if (NULL != trailing)
+  if (nullptr != trailing)
     output << trailing;
 
   return 1;
@@ -111,7 +111,7 @@ Report_Progress_Template<T>::report (const char * leading,
 
 template <typename T> template<typename C>
 int
-Report_Progress_Template<T>::initialise (C & cl, char flag, int verbose)
+Report_Progress_Template<T>::initialise(C & cl, char flag, int verbose)
 {
   const_IWSubstring s;
 
@@ -124,7 +124,7 @@ Report_Progress_Template<T>::initialise (C & cl, char flag, int verbose)
     }
     else if (! cl.value(flag, _report_every) || 0 == _report_every)
     {
-      cerr << "Report_Progress::initialise:the report every option (-" << flag << ") must be a whole +ve number\n";
+      std::cerr << "Report_Progress::initialise:the report every option (-" << flag << ") must be a whole +ve number\n";
       return 0;
     }
   }
@@ -132,14 +132,14 @@ Report_Progress_Template<T>::initialise (C & cl, char flag, int verbose)
   _report_next = _report_every;
 
   if (verbose)
-    cerr << "Will report progress every " << _report_every << " items\n";
+    std::cerr << "Will report progress every " << _report_every << " items\n";
 
   return 1;
 }
 
 template <typename T>
 int
-Report_Progress_Template<T>::set_report_every (T s)
+Report_Progress_Template<T>::set_report_every(T s)
 {
   _report_every = s;
 
@@ -164,7 +164,7 @@ Report_Progress_Template<T>::set_report_every (T s)
 
 template <typename T>
 void
-Report_Progress_Template<T>::initialise (const Report_Progress_Template<T> & rhs)
+Report_Progress_Template<T>::initialise(const Report_Progress_Template<T> & rhs)
 {
   _times_called = 0;
   _report_every = rhs._report_every;

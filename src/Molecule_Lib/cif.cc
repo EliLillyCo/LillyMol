@@ -3,9 +3,13 @@
 */
 
 #include <algorithm>
+#include <iostream>
 
-#include "iwstring_data_source.h"
-#include "iw_stl_hash_map.h"
+#include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iw_stl_hash_map.h"
+
+using std::cerr;
+using std::endl;
 
 class CIF_Loop
 {
@@ -101,7 +105,7 @@ CIF_Loop::build (iwstring_data_source & input)
     _zdata.add(new IWString(buffer));
   }
 
-  if (0 == _zdata.number_elements())
+  if (_zdata.empty())
   {
     cerr << "CIF_Loop::build:no data\n";
     return 0;
@@ -339,7 +343,7 @@ Molecule::read_molecule_cif_ds (iwstring_data_source & input)
     }
 
     const Element * e = get_element_from_symbol_no_case_conversion(type_symbol);
-    if (NULL == e)
+    if (nullptr == e)
     {
       cerr << "Molecule::read_molecule_cif_ds:invalid element specification '" << s << "'\n";
       return 0;
@@ -379,7 +383,7 @@ Molecule::read_molecule_cif_ds (iwstring_data_source & input)
 }
 
 int
-Molecule::_cif_bond_list (const CIF_Loop & cifloop, const IW_STL_Hash_Map_int & atom_name_to_atom_number)
+Molecule::_cif_bond_list(const CIF_Loop & cifloop, const IW_STL_Hash_Map_int & atom_name_to_atom_number)
 {
   int nt = cifloop.number_title_records();
 
@@ -428,6 +432,8 @@ Molecule::_cif_bond_list (const CIF_Loop & cifloop, const IW_STL_Hash_Map_int & 
       else if (type_col == col)
         sbt =  token;
     }
+
+    (void) comp_id_col;  // quiet unused variable warning.
 
     auto f = atom_name_to_atom_number.find(sa1);
     if (f == atom_name_to_atom_number.end())

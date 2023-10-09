@@ -1,8 +1,11 @@
-#include "iwstring.h"
+#include <iostream>
+#include "Foundational/iwmisc/misc.h"
 #include "smiles.h"
 #include "iwrnm.h"
-#include "misc.h"
 #include "misc2.h"
+
+using std::cerr;
+using std::endl;
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
@@ -26,10 +29,10 @@ void
 Ring_Number_Manager::_default_values()
 {
   _nr = 0;
-  _ring_id = NULL;
-  _bond = NULL;
-//_bt = NULL;
-  _from_atom = NULL;
+  _ring_id = nullptr;
+  _bond = nullptr;
+//_bt = nullptr;
+  _from_atom = nullptr;
   _include_aromaticity_in_smiles = get_include_aromaticity_in_smiles();
   _include_cis_trans_in_smiles = include_cis_trans_in_smiles();
 
@@ -67,7 +70,7 @@ Ring_Number_Manager::ok() const
   if (_nr > 10000)
     cerr << "Ring_Number_Manager::ok:improbably large nrings value " << _nr << endl;
 
-  if (NULL != _ring_id)
+  if (nullptr != _ring_id)
   {
     for (int i = 1; i <= _nr; i++)
     {
@@ -88,7 +91,7 @@ Ring_Number_Manager::ok() const
     }
   }
 
-  if (NULL != _from_atom)
+  if (nullptr != _from_atom)
   {
     for (int i = 1; i <= _nr; i++)
     {
@@ -103,7 +106,7 @@ Ring_Number_Manager::ok() const
     }
   }
 
-  if (NULL != _bond)
+  if (nullptr != _bond)
   {
     for (int i = 1; i < _nr; i++)
     {
@@ -125,7 +128,7 @@ int
 Ring_Number_Manager::activate (int nrings)
 {
   assert (nrings > 0);
-  assert (NULL == _ring_id);
+  assert (nullptr == _ring_id);
 
   _nr = nrings;
   _ring_id = new_int(_nr + 1, UNUSED_RING_NUMBER);
@@ -139,7 +142,7 @@ Ring_Number_Manager::activate (int nrings)
 
 Ring_Number_Manager::~Ring_Number_Manager()
 {
-  if (NULL != _ring_id)
+  if (nullptr != _ring_id)
   {
     delete [] _ring_id;
     delete [] _bond;
@@ -218,7 +221,7 @@ Ring_Number_Manager::_append_ring_closure_digits (IWString & smiles,
                             atom_number_t ato) const
 {
 #ifdef DEBUG_APPEND_RING_CLOSURE_DIGITS
-  if (NULL == b)
+  if (nullptr == b)
     cerr << "No ring closure bond\n";
   else if (b->is_aromatic())
     cerr << "closed with an aromatic bond\n";
@@ -230,7 +233,7 @@ Ring_Number_Manager::_append_ring_closure_digits (IWString & smiles,
 
   ring_closure_number += ring_number_offset;
 
-/*if (NULL == b)
+/*if (nullptr == b)
     ;
   else if (b->is_aromatic() && include_aromaticity_in_smiles)
     ;
@@ -244,7 +247,7 @@ Ring_Number_Manager::_append_ring_closure_digits (IWString & smiles,
 //  C1(=C/N(C)C)/C(=O)NN=C/1 PBCHM737863          Corina complains incomplete specification and ignores
 //  C1(=C/N(C)C)/C(=O)NN=C\1 PBCHM737863          Corina complains inconsistent and fails
 
-  if (NULL == b)   // is a ring opening
+  if (nullptr == b)   // is a ring opening
     ;
   else if (! b->is_single_bond())
     b->append_bond_type(smiles, ato, _include_aromaticity_in_smiles);
@@ -310,7 +313,7 @@ Ring_Number_Manager::_generate_ring_opening_chars (IWString & ring_opening_chars
     _from_atom[free_ring] = ato;
     _bond[free_ring] = b;
 
-    _append_ring_closure_digits(ring_opening_chars, free_ring, NULL, ato);
+    _append_ring_closure_digits(ring_opening_chars, free_ring, nullptr, ato);
   }
 
   return 1;
@@ -436,7 +439,7 @@ Ring_Number_Manager::append_ring_closing_and_opening_digits (IWString & smiles,
 
   _generate_ring_opening_chars(ring_opening_string, ring_opening_bonds, zatom);
 
-  if (NULL != c && ring_closures_found.number_elements() > 1)
+  if (nullptr != c && ring_closures_found.number_elements() > 1)
     _append_ring_closures_for_chiral_atom(smiles, zatom, ring_closures_found);
   else
   {

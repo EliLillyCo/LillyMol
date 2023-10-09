@@ -1,0 +1,136 @@
+description {
+  feature_name: "w_halogen"
+  description: "Number of halogen atoms"
+  plot_title: "Number of halogen atoms"
+  line_color: "red"
+  source: "Chembl"
+}
+maxval: 26.0
+mean: 0.6827913
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+}
+quantile {
+  quantile: 0.9
+  value: 2.0
+}
+quantile {
+  quantile: 0.95
+  value: 3.0
+}
+quantile {
+  quantile: 0.99
+  value: 5.0
+}
+int_values {
+  count: 1426714
+}
+int_values {
+  value: 1
+  count: 452359
+}
+int_values {
+  value: 2
+  count: 176844
+}
+int_values {
+  value: 3
+  count: 125139
+}
+int_values {
+  value: 4
+  count: 40012
+}
+int_values {
+  value: 5
+  count: 12498
+}
+int_values {
+  value: 6
+  count: 13204
+}
+int_values {
+  value: 7
+  count: 3310
+}
+int_values {
+  value: 8
+  count: 1542
+}
+int_values {
+  value: 9
+  count: 1067
+}
+int_values {
+  value: 10
+  count: 278
+}
+int_values {
+  value: 11
+  count: 70
+}
+int_values {
+  value: 12
+  count: 182
+}
+int_values {
+  value: 13
+  count: 72
+}
+int_values {
+  value: 14
+  count: 9
+}
+int_values {
+  value: 15
+  count: 60
+}
+int_values {
+  value: 16
+  count: 15
+}
+int_values {
+  value: 17
+  count: 92
+}
+int_values {
+  value: 18
+  count: 21
+}
+int_values {
+  value: 19
+  count: 6
+}
+int_values {
+  value: 20
+  count: 4
+}
+int_values {
+  value: 21
+  count: 5
+}
+int_values {
+  value: 22
+  count: 3
+}
+int_values {
+  value: 24
+  count: 2
+}
+int_values {
+  value: 25
+  count: 1
+}
+int_values {
+  value: 26
+  count: 1
+}
