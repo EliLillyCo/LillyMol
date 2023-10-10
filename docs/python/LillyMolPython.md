@@ -54,7 +54,7 @@ This works because the LillyMol Molecule is a very lazy object. It never compute
 things like fragment membership, ring membership, aromaticity or canononical
 ordering unless requested. So if you remove an atom, or bond, it will destroy any
 information it has about those derived quantities. Only if requested will any
-be computed.
+be recomputed.
 
 This has many advantages. For example if a molecle is built from a smiles
 and then the only thing ever requested is the number of atoms, that will be
@@ -593,13 +593,13 @@ m = MolFromSmiles('C(=N)(C1=C(O)C(=C(O)C=C1O)OC)CC1=CC=C(O)C=C1 CHEMBL503634')
 query.substructure_search(m)
 ```
 The number of matches will be returned. In this case it will frequently be 2 since
-the query will mactch two times in a benzene like ring.
+the query will match two times in a benzene like ring.
 
 To get the matched atoms, as a List of List's,
 ```
 matches = q.substructure_search_matches(m)
 ```
-and then the matches can be iterated.
+and then the matches object (type SubstructureResults) can be iterated.
 
 For example if you wanted to place an isotope on each set of matched atoms that might look like
 ```
@@ -608,7 +608,7 @@ for match in query.substructure_search_matches(m):
   m.set_isotopes(match, 1)
   print(m)
 ```
-Omit the `remove_isotopes` call to accumulate the results.
+Omit the `remove_isotopes` call to add the new isotopes to whatever might have already been there.
 
 On the other hand if you need to know which matched atom is which, that might look like
 ```
@@ -660,7 +660,7 @@ or
 ```
 If the reaction is a simple form that has either no sidechains,
 or all sidechains have a single, already specified, reagent, then
-the `in_place_transformations1 method can be used.
+the `in_place_transformations` method can be used.
 ```
   rxn.in_place_transformations(m)
 ```

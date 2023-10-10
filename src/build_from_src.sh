@@ -17,7 +17,11 @@ jobs='8'
 # bazel will not work on an NFS mounted file system. So if you are on an NFS
 # file system, you must specify a value for --output_user_root that is
 # locally mounted.
-bazel_options="--output_user_root=/node/scratch/ian"
+# If your local file system is suitable for the bazel cache.
+bazel_options=""
+# If inside Lilly, some local scratch storage
+# bazel_options="--output_user_root=/node/scratch/ian"
+
 build_options="--cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --jobs=${jobs} -c opt --enable_bzlmod --experimental_cc_shared_library"
 
 echo ${common_options}

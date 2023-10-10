@@ -354,23 +354,6 @@ cc_proto_library(
 )
 
 proto_library(
-    name = "tsubstructure_proto",
-    srcs = [
-        "tsubstructure.proto",
-    ],
-    deps = [
-        "//Molecule_Lib:substructure_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "tsubstructure_cc_proto",
-    deps = [
-        "tsubstructure_proto",
-    ],
-)
-
-proto_library(
     name = "xlogp_proto",
     srcs = [
         "xlogp.proto",
@@ -2852,22 +2835,22 @@ cc_library(
 #    ],
 #)
 
-cc_library(
-    name = "unique_molecules_api",
-    srcs = [
-        "unique_molecules_api.cc",
-    ],
-    hdrs = [
-        "unique_molecules_api.h",
-    ],
-    deps = [
-        "//Molecule_Lib:iwmolecule",
-        "@com_google_absl//absl/container:btree",
-    ],
-    visibility = [
-        "//visibility:public",
-    ],
-)
+# cc_library(
+#     name = "unique_molecules_api",
+#     srcs = [
+#         "unique_molecules_api.cc",
+#     ],
+#     hdrs = [
+#         "unique_molecules_api.h",
+#     ],
+#     deps = [
+#         "//Molecule_Lib:iwmolecule",
+#         "@com_google_absl//absl/container:btree",
+#     ],
+#     visibility = [
+#         "//visibility:public",
+#     ],
+# )
 
 cc_library(
     name = "xlogp_lib",

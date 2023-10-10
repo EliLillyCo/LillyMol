@@ -78,17 +78,24 @@ must_build=0
 #   (cd googletest && cd build && make install)
 # fi
 
-# if [[ ! -d 'protobuf' ]] ; then
-#   git clone https://github.com/protocolbuffers/protobuf
-# fi
-# if [[ ! -d "${third_party}/include/google/protobuf" ]] ; then
-#   (cd protobuf && git pull)
-#   (cd protobuf && git submodule update --init --recursive)
-#   (cd protobuf && ./autogen.sh)
-#   (cd protobuf &&  ./configure --prefix=${third_party} --enable-shared=no)
-#   (cd protobuf && make -j ${THREADS})
-#   (cd protobuf && make install)
-# fi
+# Needed if building with cmake, and protoc is not installed
+if [[ ! -d ${third_party}/bin ]] ; then
+  mkdir -p ${third_party}/bin
+fi
+
+must_build=0
+if [[ ! -d 'protobuf' ]] ; then
+  git clone https://github.com/protocolbuffers/protobuf
+  must_build=1
+fi
+if [[ ${must_build} -eq 1 || ! -d "${third_party}/include/google/protobuf" ]] ; then
+  (cd protobuf && git pull)
+  (cd protobuf && git submodule update --init --recursive)
+  # if bazel is used, the libraries don't get generated, not sure why...
+  (cd protobuf && cmake . -DCMAKE_CXX_STANDARD=14)
+  (cd protobuf && cmake --build .)
+
+fi
 
 # oneTBB now available via MODULE
 # must_build=0
@@ -160,16 +167,9 @@ fi
 # cilk??
 
 # Not yet in the public release.
-if [[ ! -s "https://github.com/intel/x86-simd-sort" ]] ; then
+if [[ ! -d "x86-simd-sort" ]] ; then
   git clone 'https://github.com/intel/x86-simd-sort'
 fi
-
-# Make an attempt to generate an updated WORKSPACE file.
-# First return to our starting point, which hopefully has WORKSPACE
-
-cd ${maybe_src}
-echo "Back to ${PWD}"
-
 # Figure out of WORKSPACE is where we can find it.
 if [[ -s 'WORKSPACE' ]] ; then
   workspace='WORKSPACE'
@@ -184,7 +184,41 @@ fi
 # Oct 2022. Not implemented because it seems
 # that the existing conversion functions are faster.
 # That seems impossible. TODO:ianwatson investigate.
-(cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
+set -x
+if [[ ! -d "${third_party}/include" ]] ; then
+  mkdir -p "${third_party}/include"
+fi
+if [[ ! -s "${third_party}/include/fast_float.h" ]] ; then
+  (cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
+fi
+
+# If you do not want to install MPI dependent tools, omit this AND comment out the mpich
+# section in WORKSPACE. Run the build with --build-tag_filters=-mpi which suppresses
+# building of tools that depend on MPI.
+
+# Indeed this takes too long to build, and then fails because it needs some
+# further system dependencies (Ubuntu 22). The best way to use mpi might be to install it on
+# the system if you can. Only one tool depends on it.
+
+# must_build=0
+# mpi_version='4.1.2'
+# if [[ ! -d ${third_party}/mpich-${mpi_version}/ ]] ; then
+#   (cd ${third_party} && wget https://www.mpich.org/static/downloads/4.1.2/mpich-${mpi_version}.tar.gz)
+#   (cd ${third_party} && tar zxvf mpich-${mpi_version}.tar.gz)
+#   must_build=1
+# fi
+
+# if [[ $must_build -eq 1 || ! -s ${third_party}/mpich/src/lib ]] ; then
+  (cd ${third_party}/mpich-${mpi_version}/ && ./configure --prefix=${third_party})
+#   (cd ${third_party}/mpich-${mpi_version}/ && make)
+# fi
+
+# Make an attempt to generate an updated WORKSPACE file.
+# First return to our starting point, which hopefully has WORKSPACE
+
+cd ${maybe_src}
+echo "Back to ${PWD}"
+
 
 # OMG there seems to be a bug in sed, and this does not work!
 # If I change the third_party to third_partq it works. Amazing. 
@@ -202,6 +236,6 @@ echo "Please check ${tmpworkspace} for a possibly ready to use WORKSPACE file" >
 if [[ -s 'build_deps/install.bzl' ]] ; then
   tmpinstall='/tmp/install.bzl'
   bindir=$(echo ${PWD}/bin/Linux | sed -e 's/\//\\\//g')
-  sed -e "s/defult = \"..+\"/default =\"${bindir}\"/" build_deps/install.bzl > ${tmpinstall}
+  sed -e "s/default = \"..+\"/default =\"${bindir}\"/" build_deps/install.bzl > ${tmpinstall}
   echo "Please check ${tmpinstall} for a possibly ready to use build_deps/install.bzl file" >&2
 fi

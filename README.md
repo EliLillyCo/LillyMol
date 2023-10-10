@@ -183,6 +183,9 @@ There is an install run target built into the BUILD files, and you must
 decide upon the directory to which that target should copy executables.
 See previous section.
 
+While there is a script that should do the build for you, underneath these
+are the commands being issued. Skip to the next section unless interested.
+
 A typical build command might be (change the path for test_env)
 
 ```
@@ -212,6 +215,8 @@ version will be allowed to float via bazelisk.
 
 ## Targets to Test and Build
 
+First run `build_third_party.sh` to ensure dependencies are built.
+
 Actual tests, builds and installs can be handled by the `build_from_src.sh` script.
 
 The script `build_from_src.sh` will
@@ -221,9 +226,9 @@ The script `build_from_src.sh` will
 3. install executables into the `bin/Linux` directory (build_deps/install.bzl)
 
 ## cmake
-There is `cmake` infrasture
+There is `cmake` infrastructure
 included, but that may, or may not, work - within Lilly we have not
-been able to make that work, usually as a result of conflicting protcol buffer
+been able to make it work, usually as a result of conflicting protcol buffer
 versions on the system, but externally it often works, although it has not
 been tested recently.
 
@@ -240,7 +245,11 @@ cd ./src
 # cp /tmp/WORKSPACE WORKSPACE
 # Examine /tmp/install.bzl
 # cp /tmp/install.bzl build_deps
+./build_from_src.sh
 
 # Rebuild Molecule_Tools any time
 bazelisk --output_user_root=/node/scratch/$USER build --jobs=8 --enable_bzlmod --experimental_cc_shared_library -c opt --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" //Molecule_Tools:all --test_env=C3TK_DATA_PERSISTENT=/full/path/to/LillyMol/queries
 ```
+Note that because the date is included with cxxopt, this _will_ cause a daily
+recompile. While this is hardly desirable, knowing when an executable was compiled
+can be useful.
