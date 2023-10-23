@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_morpholinyl")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "CCN1CCOCC1 SHR.add_morpholinyl")
+    (A C smarts "CCN1CCOCC1")
+    (A I join (0 0))
+  )
+)

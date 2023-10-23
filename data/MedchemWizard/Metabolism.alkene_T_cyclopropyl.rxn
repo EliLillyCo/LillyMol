@@ -1,0 +1,15 @@
+(0 Reaction
+# [#6:1]C=C[#6:2]>>[#6:1]C1C([#6:2])C1 alkene --> cyclopropyl
+
+  (A C Comment "Metabolism.alkene_T_cyclopropyl")
+  (0 Scaffold
+    (A C smarts "[#6]C=C[#6]")
+    (A I single_bond (1 2))
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (1 0))
+    (A I join (2 0))
+  )
+)

@@ -1,0 +1,13 @@
+(0 Reaction
+# c1(ccc(cc1)[*:1])[*:2]>>[*:1]C21CC(C1)(C2)[*:2] "1,4-pheny; --> 2.2.2 tricycle"
+
+  (A C Comment "More_aryl_rings.1-4-phenyl_T_2.2.2_tricycle")
+  (0 Scaffold
+    (A C smarts "c1(ccc(cc1)[*:1])[*:2]")
+  )
+  (1 Sidechain
+    (A C smiles "[*:1]C21CC(C1)(C2)[*:2] ARGA.1-4-pheny;_T_2.2.2_tricycle")
+    (A C smarts "[*:1]C21CC(C1)(C2)[*:2]")
+    (A I join (0 0))
+  )
+)

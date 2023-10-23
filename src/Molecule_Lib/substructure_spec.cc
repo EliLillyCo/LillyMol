@@ -1717,6 +1717,31 @@ truncate_after_digits(const const_IWSubstring & ignore_these,
   return;     // looked good all the way out
 }
 
+// `token` is part of a {number} pattern. The opening brace has been
+// removed. Return true if we find a closing brace and the characters
+// before that are a value number, placed in `result`.
+static int
+FetchNumericFromBraces(const const_IWSubstring& token, Set_or_Unset<double>& result) {
+  int cbrace = token.index(kCloseBrace);
+  if (cbrace < 0) {
+    cerr << "FetchNumericFromBraces:no closing brace in '" << token << "'\n";
+    return 0;
+  }
+
+  IWString mytoken(token);
+  mytoken.iwtruncate(cbrace);
+  mytoken.gsub('_', '.');
+
+  double tmp;
+  if (mytoken.numeric_value(tmp)) {
+    result.set(tmp);
+    return 1;
+  }
+
+  cerr << "FetchNumericFromBraces:invalid numeric '" << token << "'\n";
+  return 0;
+}
+
 //#define DEBUG_ATOM_CONSTRUCT_FROM_SMARTS_TOKEN
 
 /*
@@ -1960,7 +1985,14 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring & smarts)
       ;
     else if (c.starts_with("cipR") || c.starts_with("cipS"))
       ;
-    else if (c.starts_with("Nv"))
+    else if (c.starts_with("Nv{")) {
+      c.remove_leading_chars(3);
+      if (! FetchNumericFromBraces(c, _numeric_value)) {
+        cerr << "Substructure_Atom::construct_from_smarts_token:invalid Nv '" << c << "'\n";
+        return 0;
+      }
+    }
+    else if (c.starts_with("Nv"))  // positive integers only
     {
       c.remove_leading_chars(2);
       int nv;
@@ -2986,6 +3018,17 @@ Substructure_Atom_Specifier::construct_from_smarts_token(const const_IWSubstring
           return 0;
         }
         nchars = 3 + 4 + c.length() - 1;
+      }
+      else if (c.starts_with("Nv{")) {
+        c.remove_leading_chars(3);
+        nchars = 3 + 3;
+        while (c.length()) {
+          if (c[0] == kCloseBrace) {
+            break;
+          }
+          c += 1;
+          ++nchars;
+        }
       }
       else if (c.starts_with("Nv"))
       {

@@ -1,0 +1,13 @@
+(0 Reaction
+# [a;RH1;1:5]1[a;H1;R1:4][a;R1:3][a;R1:2][n;R1:1]1>>[a;R1:5]1[n;R1:1][a;R1:2][c:3]2[c:4]1cccc2 pyrrole --> isoindole
+
+  (A C Comment "More_aryl_rings.pyrrole_T_isoindole")
+  (0 Scaffold
+    (A C smarts "[a;RH1;1:5]1[a;H1;R1:4][a;R1:3][a;R1:2][n;R1:1]1")
+  )
+  (1 Sidechain
+    (A C smiles "[a;R1:5]1[n;R1:1][a;R1:2][c:3]2[c:4]1cccc2 ARGA.pyrrole_T_isoindole")
+    (A C smarts "[a;R1:5]1[n;R1:1][a;R1:2][c:3]2[c:4]1cccc2")
+    (A I join (0 0))
+  )
+)

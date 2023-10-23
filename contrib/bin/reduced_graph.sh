@@ -1,19 +1,19 @@
 #!/bin/bash
 
-if [[ ! -v LILLYMOL_HOME ]]
-then
-  echo 'Must set shell variable LILLYMOL_HOME' >&2
-  exit 1
+if [ -v LILLYMOL_HOME ] ; then
+  true
+else
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
 fi
 
-charges="${LILLYMOL_HOME}/contrib/data/queries/charges/queries"
-hbonds="${LILLYMOL_HOME}/contrib/data/queries/hbonds"
-# File containing reduced_graph::GraphReduction testprotos describing
+charges="${LILLYMOL_HOME}/data/queries/charges/queries"
+hbonds="${LILLYMOL_HOME}/data/queries/hbonds"
+# File containing reduced_graph::GraphReduction textprotos describing
 # a series of reductions.
-reductions=${LILLYMOL_HOME}/contrib/data/reduced_graph/reductions
+reductions=${LILLYMOL_HOME}/data/reduced_graph/reductions
 
 # If you want to use reductions based on LillyMol donor acceptor assignments, use
-# reductions=${LILLYMOL_HOME}/contrib/data/reduced_graph/reductions.donor_acceptor
+# reductions=${LILLYMOL_HOME}/data/reduced_graph/reductions.donor_acceptor
 # Those queries use the isotopic labels applied by the donor acceptor.
 
 exec ${LILLYMOL_HOME}/bin/Linux/reduced_graph -N F:${charges} \

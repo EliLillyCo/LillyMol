@@ -342,6 +342,14 @@ PYBIND11_MODULE(lillymol, m)
                 .def("largest_ring_size", static_cast<int (Molecule::*)()>(&Molecule::LargestRingSize), "Largest ring size")
                 .def("number_ring_systems", static_cast<int (Molecule::*)()>(&Molecule::number_ring_systems), "Number ring systems")
                 .def("is_spiro_fused", static_cast<int (Molecule::*)(atom_number_t)>(&Molecule::is_spiro_fused), "True if atom is spiro fused")
+                .def("label_atoms_by_atom_number", [](Molecule& m) {
+                  const int matoms = m.natoms();
+                  for (int i = 1; i < matoms; ++i) {
+                    m.set_isotope(i, i);
+                  }
+                },
+                "Isotope becomes atom number"
+                )
                 .def("label_atoms_by_ring_system",
                   [](Molecule& m)->std::vector<int>{
                     std::vector<int> rc(m.natoms());
@@ -932,6 +940,27 @@ PYBIND11_MODULE(lillymol, m)
     .def("valence_ok", &Atom::valence_ok, "True if valence is ok")
     .def("fully_saturated", &Atom::fully_saturated, "True if fully saturated")
     .def("other", static_cast<atom_number_t (Atom::*)(atom_number_t, int)const>(&Atom::other), "Other connection")
+    .def("x", [](const Atom* a)->float {
+        return a->x();
+      },
+      "x coordinate"
+    )
+    .def("y", [](const Atom* a)->float {
+        return a->y();
+      },
+      "y coordinate"
+    )
+    .def("z", [](const Atom* a)->float {
+        return a->z();
+      },
+      "z coordinate"
+    )
+    .def("distance", [](const Atom* a1, const Atom* a2)->float {
+        return a1->distance(*a2);
+      },
+      "spatial distance between atoms"
+    )
+
     .def("__repr__",
       [](Atom &a) {
         IWString s;

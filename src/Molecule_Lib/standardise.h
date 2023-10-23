@@ -1,9 +1,8 @@
 #ifndef MOLECULE_LIB_STANDARDISE_H_
 #define MOLECULE_LIB_STANDARDISE_H_
 
-/*
-  For each transformation we keep track of things processed
-*/
+// Chemical standardisation.
+// Transformations that change one molecular representation to another.
 
 #include <iostream>
 

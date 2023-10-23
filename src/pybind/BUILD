@@ -268,6 +268,31 @@ cc_shared_library(
   shared_lib_name = "lillymol_tsubstructure.so",
 )
 
+cc_library(
+    name = "lillymol_tools",
+    srcs = [
+        "lillymol_pybind_tools.cc",
+    ],
+    hdrs = [
+    ],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:iwreaction",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:unique_molecules_api",
+	"@pybind11",
+        "@python",
+    ],
+)
+
+cc_shared_library(
+    name = "lillymol_tools_shared",
+    deps = [
+        ":lillymol_tools",
+    ],
+    shared_lib_name = "lillymol_tools.so",
+)
+
 # Cannot figure out how to make this work. TODO:ianwatson
 #py_pytest_test(
 #    name = "test_lillymol",

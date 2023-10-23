@@ -78,24 +78,25 @@ must_build=0
 #   (cd googletest && cd build && make install)
 # fi
 
-# Needed if building with cmake, and protoc is not installed
 if [[ ! -d ${third_party}/bin ]] ; then
-  mkdir -p ${third_party}/bin
+ mkdir -p ${third_party}/bin
 fi
 
-must_build=0
-if [[ ! -d 'protobuf' ]] ; then
-  git clone https://github.com/protocolbuffers/protobuf
-  must_build=1
-fi
-if [[ ${must_build} -eq 1 || ! -d "${third_party}/include/google/protobuf" ]] ; then
-  (cd protobuf && git pull)
-  (cd protobuf && git submodule update --init --recursive)
-  # if bazel is used, the libraries don't get generated, not sure why...
-  (cd protobuf && cmake . -DCMAKE_CXX_STANDARD=14)
-  (cd protobuf && cmake --build .)
+# Needed if building with cmake, and protoc is not installed
 
-fi
+# must_build=0
+# if [[ ! -d 'protobuf' ]] ; then
+#   git clone https://github.com/protocolbuffers/protobuf
+#   must_build=1
+# fi
+# if [[ ${must_build} -eq 1 || ! -d "${third_party}/include/google/protobuf" ]] ; then
+#   (cd protobuf && git pull)
+#   (cd protobuf && git submodule update --init --recursive)
+#   # if bazel is used, the libraries don't get generated, not sure why...
+#   (cd protobuf && cmake . -DCMAKE_CXX_STANDARD=14)
+#   (cd protobuf && cmake --build .)
+# 
+# fi
 
 # oneTBB now available via MODULE
 # must_build=0
@@ -120,6 +121,7 @@ must_build=0
 if [[ ! -d 'highwayhash' ]] ; then
   git clone https://github.com/google/highwayhash
   must_build=1
+  (cd highwayhash && git config pull.rebase false)
 fi
 if [[ ${must_build} -eq 1 || ! -s '${third_party}/highwayhash/lib/libhighwayhash.a' ]] ; then
   (cd highwayhash && git pull)
@@ -149,28 +151,47 @@ if [[ ${must_build} -eq 1 || ! -s 'libf2c/libf2c.a' ]] ; then
 fi
 
 # You should examine the BerkeleyDB license terms, it is not necessarily free.
-must_build=0
-bdb_version='18.1.40'
-if [[ ! -s "db-${bdb_version}.tar.gz" ]] ; then
-  wget http://download.oracle.com/berkeley-db/db-${bdb_version}.tar.gz
-  tar zxvf db-${bdb_version}.tar.gz
-  must_build=1
-fi
-if [[ ${must_build} -eq 1 || ! -s "${third_party}/BDB/include/db.h" ]] ; then
-  (cd "db-${bdb_version}/build_unix" && make realclean)
-  (cd "db-${bdb_version}/build_unix" && ../dist/configure --prefix=${third_party}/BDB --enable-cxx --enable-shared=no --with-repmgr-ssl=no)
-  (cd "db-${bdb_version}/build_unix" && make)
-  # fails on some items not installed, but installs what we need.
-  (cd "db-${bdb_version}/build_unix" && make install)
+if [[ -v BUILD_BDB ]] ; then
+  must_build=0
+  bdb_version='18.1.40'
+  if [[ ! -s "db-${bdb_version}.tar.gz" ]] ; then
+    wget http://download.oracle.com/berkeley-db/db-${bdb_version}.tar.gz
+    tar zxf db-${bdb_version}.tar.gz
+    must_build=1
+  fi
+  if [[ ${must_build} -eq 1 || ! -s "${third_party}/BDB/include/db.h" ]] ; then
+    (cd "db-${bdb_version}/build_unix" && make realclean)
+    (cd "db-${bdb_version}/build_unix" && ../dist/configure --prefix=${third_party}/BDB --enable-cxx --enable-shared=no --with-repmgr-ssl=no)
+    (cd "db-${bdb_version}/build_unix" && make)
+    # fails on some items not installed, but installs what we need.
+    (cd "db-${bdb_version}/build_unix" && make -j 4 install)
+
+    echo ""
+    echo "Ignore error messages from BerkeleyDB install, it is for components we do not use"
+  fi
 fi
 
 # cilk??
 
 # Not yet in the public release.
-if [[ ! -d "x86-simd-sort" ]] ; then
-  git clone 'https://github.com/intel/x86-simd-sort'
-fi
-# Figure out of WORKSPACE is where we can find it.
+# if [[ ! -d "x86-simd-sort" ]] ; then
+#   git clone 'https://github.com/intel/x86-simd-sort'
+# fi
+
+# Fastfloat get prebuilt single header
+# Oct 2022. Not implemented because it seems
+# that the existing conversion functions are faster.
+# That seems impossible. TODO:ianwatson investigate.
+# if [[ ! -d "${third_party}/include" ]] ; then
+#   mkdir -p "${third_party}/include"
+# fi
+# (cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
+
+# Make an attempt to generate an updated WORKSPACE file for python.
+
+cd ${maybe_src}
+
+# Figure out if WORKSPACE is where we can find it.
 if [[ -s 'WORKSPACE' ]] ; then
   workspace='WORKSPACE'
 elif [[ -s 'src/WORKSPACE' ]] ; then
@@ -180,62 +201,33 @@ else
   exit 1
 fi
 
-# Fastfloat get prebuilt single header
-# Oct 2022. Not implemented because it seems
-# that the existing conversion functions are faster.
-# That seems impossible. TODO:ianwatson investigate.
-set -x
-if [[ ! -d "${third_party}/include" ]] ; then
-  mkdir -p "${third_party}/include"
+# Only build python if requested
+if [[ -v BUILD_PYTHON ]] ; then
+  # Use python to update WORKSPACE for python locations.
+  if [[ -s 'update_python_in_workspace.py' ]] ; then
+    cp ${workspace} /tmp
+    python3 ./update_python_in_workspace.py /tmp/WORKSPACE > ${workspace}
+    if [[ ! -s ${workspace} ]] ; then
+      echo "Updating WORKSPACE failed, restoring orignal, python bindings will not work"
+      cp -f /tmp/WORKSPACE ${workspace}
+    fi
+  else
+    echo "Missing update_python_in_workspace.py, WORKSPACE not updated for python"
+  fi
 fi
-if [[ ! -s "${third_party}/include/fast_float.h" ]] ; then
-  (cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
-fi
 
-# If you do not want to install MPI dependent tools, omit this AND comment out the mpich
-# section in WORKSPACE. Run the build with --build-tag_filters=-mpi which suppresses
-# building of tools that depend on MPI.
-
-# Indeed this takes too long to build, and then fails because it needs some
-# further system dependencies (Ubuntu 22). The best way to use mpi might be to install it on
-# the system if you can. Only one tool depends on it.
-
-# must_build=0
-# mpi_version='4.1.2'
-# if [[ ! -d ${third_party}/mpich-${mpi_version}/ ]] ; then
-#   (cd ${third_party} && wget https://www.mpich.org/static/downloads/4.1.2/mpich-${mpi_version}.tar.gz)
-#   (cd ${third_party} && tar zxvf mpich-${mpi_version}.tar.gz)
-#   must_build=1
-# fi
-
-# if [[ $must_build -eq 1 || ! -s ${third_party}/mpich/src/lib ]] ; then
-  (cd ${third_party}/mpich-${mpi_version}/ && ./configure --prefix=${third_party})
-#   (cd ${third_party}/mpich-${mpi_version}/ && make)
-# fi
-
-# Make an attempt to generate an updated WORKSPACE file.
-# First return to our starting point, which hopefully has WORKSPACE
-
-cd ${maybe_src}
-echo "Back to ${PWD}"
-
-
-# OMG there seems to be a bug in sed, and this does not work!
-# If I change the third_party to third_partq it works. Amazing. 
-# This remains broken until sed works properly. Version 4.8.1 does
-# not work, nor does 4.1.5.
-# Seems hard to imagine that sed has a bug like this, maybe I am mistaken??!!
-
-# Quote and backslash hell...
-third_party=$(echo ${third_party} | sed -e 's/\//\\\//g')
-echo "third_party ${third_party}"
-tmpworkspace='/tmp/WORKSPACE'
-sed --regexp-extended -e "s/path = \"..*\/(..+)\"/path = \"${third_party}\/\\1\"/" ${workspace} > ${tmpworkspace}
-echo "Please check ${tmpworkspace} for a possibly ready to use WORKSPACE file" >&2
-
+# install.bzl does need to be updated.
+echo 'Updating build_deps/install.bzl'
 if [[ -s 'build_deps/install.bzl' ]] ; then
   tmpinstall='/tmp/install.bzl'
-  bindir=$(echo ${PWD}/bin/Linux | sed -e 's/\//\\\//g')
-  sed -e "s/default = \"..+\"/default =\"${bindir}\"/" build_deps/install.bzl > ${tmpinstall}
-  echo "Please check ${tmpinstall} for a possibly ready to use build_deps/install.bzl file" >&2
+  bindir=$(echo ${PWD}/../bin/$(uname) | sed -e 's/\//\\\//g')
+  # Make a copy
+  cp build_deps/install.bzl /tmp/install.bzl.orig
+  sed --in-place --regexp-extended -e "s/default = *\"..+\",/default =\"${bindir}\",/" build_deps/install.bzl > ${tmpinstall}
+
+  # Create bindir if not already present
+  bindir=$(echo ${PWD}/../bin/$(uname))
+  if [[ ! -d  ${bindir} ]] ; then
+    mkdir -p ${bindir}
+  fi
 fi

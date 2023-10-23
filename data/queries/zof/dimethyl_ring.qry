@@ -1,0 +1,8 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "Multiple Methyl Substituents")
+  (0 Ring_System_Specifier
+    (A I min_ncon 3)
+    (A C environment ">1[D>2]-!@[C,F,Cl,I;D1]")
+  )
+)

@@ -6,6 +6,9 @@
   removal.
 */
 
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
+
 class Molecule;
 class Command_Line;
 

@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_CH2-NH-CH2-CH2-methylsulfone")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]C[NH][CH2][CH2]S(=O)(=O)[CH3] SHR.add_CH2-NH-CH2-CH2-methylsulfone")
+    (A C smarts "CCNCCS(=O)(=O)C")
+    (A I join (0 0))
+  )
+)

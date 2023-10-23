@@ -1,0 +1,13 @@
+(0 Reaction
+# [O:1][C;H2:2][C;H3:3]>>[O:1][C:2]1CC1 OEt -> OcPr
+
+  (A C Comment "Metabolism.OEt_T_OcPr")
+  (0 Scaffold
+    (A C smarts "[OD2]-[CD2]-[CD1]")
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A I join (1 0))
+    (A I join (2 0))
+  )
+)

@@ -1,0 +1,14 @@
+(0 Reaction
+# [#6:1][#8;H1:2]>>[#6:1][#8:2][#6](F)(F)(F) OH -> OCF3
+
+  (A C Comment "Metabolism.OH_T_OCF3")
+  (0 Scaffold
+    (A C smarts "[#6][#8H1]")
+    (A I remove_atom 1)
+  )
+  (1 Sidechain
+    (A C smiles "C(F)(F)F")
+    (A C smarts "C(F)(F)F")
+    (A I join (0 0))
+  )
+)

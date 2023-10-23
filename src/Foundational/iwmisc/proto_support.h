@@ -164,6 +164,28 @@ ReadTextProto(IWString& fname) {
   return result;
 }
 
+template <typename Proto>
+std::unique_ptr<Proto>
+ReadTextProtoPtr(IWString& fname) {
+  AFile input(fname, O_RDONLY);
+  if (! input.good()) {
+    cerr << "ReadTextProto:cannot open '" << fname << "'\n";
+    return nullptr;
+  }
+
+  using google::protobuf::io::ZeroCopyInputStream;
+  using google::protobuf::io::FileInputStream;
+  std::unique_ptr<FileInputStream> zero_copy_input(new FileInputStream(input.fd()));
+
+  std::unique_ptr<Proto> result = std::make_unique<Proto>();
+  if (! google::protobuf::TextFormat::Parse(zero_copy_input.get(), result.get())) {
+    cerr << "ReadTextProto:cannot read '" << fname << "'\n";
+    return nullptr;
+  }
+
+  return result;
+}
+
 // TextFormat does not allow comments. We can enable them.
 // Note that it is possible to imagine a failure where a text
 // value gets wrapped onto a separate line??? Probably not.

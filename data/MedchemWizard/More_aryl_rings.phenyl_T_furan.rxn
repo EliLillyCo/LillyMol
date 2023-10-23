@@ -1,0 +1,15 @@
+(0 Reaction
+# [c$(c1ccc[c:2]c1)H1:1][cH1][c:2]>>[o:1][c:2] phenyl --> furan
+
+  (A C Comment "More_aryl_rings.phenyl_T_furan")
+  (0 Scaffold
+    (A C smarts "[/IWfss1cD2]1[cD2]cccc1")
+    (A C change_element "0 O")
+    (A I remove_atom 1)
+    (A I single_bond (0 2))
+    (A I double_bond (2 3))
+    (A I single_bond (3 4))
+    (A I double_bond (4 5))
+    (A I single_bond (5 0))
+  )
+)

@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "Ring Spinach")
+  (0 ring_system_specifier
+    (A I min_atoms_in_spinach_group 5)
+  )
+)

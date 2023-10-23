@@ -1,0 +1,10 @@
+(0 Reaction
+# [o:1][c:2][n:3]>>[o:1][n:2][c:3] ocn --> onc
+
+  (A C Comment "More_aryl_rings.ocn_T_onc")
+  (0 Scaffold
+    (A C smarts "o:[cD2]:n")
+    (A C change_element "1 N")
+    (A C change_element "2 C")
+  )
+)

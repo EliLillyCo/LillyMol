@@ -1,10 +1,13 @@
 #ifndef MOLECULE_LIB_MOLECULE_H_
 #define MOLECULE_LIB_MOLECULE_H_
 
+#include <assert.h>
+#include <sys/types.h>
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <optional>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
@@ -17,6 +20,7 @@ struct XMLNode;
   Header file for Molecule objects
 */
 
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwbits/iwbits.h"
 class iwstring_data_source;
@@ -24,12 +28,14 @@ class iwstring_data_source;
 #include "iwmtypes.h"
 
 #include "atom.h"
+#include "bond.h"
 #include "bond_list.h"
 #include "collection_template.h"
 #include "coordinates.h"
+#include "element.h"
+#include "iwrcb.h"
 #include "mol2graph.h"
 #include "set_of_atoms.h"
-
 
 // forward declaration
 
@@ -261,8 +267,6 @@ class Fragment_Information {
 
   int all_atoms_in_one_fragment(int natoms, int nbonds);  // initialise the structure
 };
-
-#include "iwrcb.h"
 
 /*
   Once fragments, rings and aromaticity are known, we can generate a smiles ordering

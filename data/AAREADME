@@ -1,0 +1,8 @@
+# Data
+This directory holds data that has proven to be useful with LillyMol
+
+There is a mixture of structure files used for unit tests and queries,
+reactions, models and other structural information. Many of these
+data files/directories will have an associated executable, and
+a shell wrapper (in $LILLYMOL_HOME/contrib/bin) that sets up
+the executable to use these files.

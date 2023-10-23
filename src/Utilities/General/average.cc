@@ -697,7 +697,7 @@ build_regular_expression_from_components(Command_Line& cl, char flag) {
   tmp << ")$";
 
   re2::StringPiece string_piece(tmp.data(), tmp.length());
-  return std::move(std::make_unique<re2::RE2>(string_piece));
+  return std::make_unique<re2::RE2>(string_piece);
 }
 
 static int

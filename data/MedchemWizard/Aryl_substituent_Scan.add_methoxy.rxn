@@ -1,0 +1,10 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_methoxy")
+  (0 Scaffold
+    (A C smarts "[cH1]")
+  )
+  (1 Sidechain
+    (A C smiles "OC ArylSS.add_methoxy")
+    (A I join (0 0))
+  )
+)

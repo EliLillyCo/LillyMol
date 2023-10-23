@@ -643,7 +643,7 @@ do_split(resizable_array_p<ID_Stratum_Selected>& idss, int ndx,
 
   fname << stem_for_training_set << ndx << ".smi";
 
-  if (!write_smiles(idss, fname, std::bind2nd(std::greater<int>(), 0))) {
+  if (!write_smiles(idss, fname, [](const int s) { return s > 0;})) {
     return 0;
   }
 
@@ -652,7 +652,7 @@ do_split(resizable_array_p<ID_Stratum_Selected>& idss, int ndx,
 
     fname << stem_for_test_set << ndx << ".smi";
 
-    if (!write_smiles(idss, fname, std::bind2nd(std::equal_to<int>(), 0))) {
+    if (!write_smiles(idss, fname, [](const int s) { return s == 0;})) {
       return 0;
     }
   }

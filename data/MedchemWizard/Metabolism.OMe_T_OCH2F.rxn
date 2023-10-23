@@ -1,0 +1,13 @@
+(0 Reaction
+# [O:1][C;H3:2]>>[O:1][C:2](F) OMe -> OCH2F
+
+  (A C Comment "Metabolism.OMe_T_OCH2F")
+  (0 Scaffold
+    (A C smarts "[OD2][CD1]")
+  )
+  (1 Sidechain
+    (A C smiles "F")
+    (A C smarts "F")
+    (A I join (1 0))
+  )
+)

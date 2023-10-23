@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_O-CH2-CH2-pyrrolidine")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "COCCN1CCCC1 SHR.add_O-CH2-CH2-pyrrolidine")
+    (A C smarts "COCCN1CCCC1")
+    (A I join (0 0))
+  )
+)

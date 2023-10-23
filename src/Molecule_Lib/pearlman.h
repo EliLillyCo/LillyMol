@@ -1,6 +1,9 @@
 #ifndef MOLECULE_LIB_PEARLMAN_SSSR_H_
 #define MOLECULE_LIB_PEARLMAN_SSSR_H_
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwbits/iwbits.h"
 
 #include "iwmtypes.h"

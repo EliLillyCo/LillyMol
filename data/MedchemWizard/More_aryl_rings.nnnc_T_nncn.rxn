@@ -1,0 +1,10 @@
+(0 Reaction
+# [n:1][n:2][n:3][c:4]>>[n:1][n:2][c:3][n:4] nnnc --> nncn
+
+  (A C Comment "More_aryl_rings.nnnc_T_nncn")
+  (0 Scaffold
+    (A C smarts "nnn[cD2]")
+    (A C change_element "2 C")
+    (A C change_element "3 N")
+  )
+)

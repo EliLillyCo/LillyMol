@@ -2312,6 +2312,18 @@ Single_Substructure_Query::_construct_from_proto(const SubstructureSearch::Singl
     }
   }
 
+  if (proto.nearby_atoms_size() > 0) {
+    for (const auto& r : proto.nearby_atoms()) {
+      std::unique_ptr<NearbyAtoms> nearby(std::make_unique<NearbyAtoms>());
+      if (! nearby->ConstructFromProto(r)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid NearbyAtoms\n";
+        cerr << r.ShortDebugString() << '\n';
+        return 0;
+      }
+      _nearby_atoms.add(nearby.release());
+    }
+  }
+
   if (proto.has_sort_matches() > 0)
   {
     _sort_matches_by = 0;
@@ -4087,6 +4099,108 @@ RequiredMolecularProperties::DiscernAttributesSpecified() {
   }
 
   return _attributes_specified;
+}
+
+int
+NearbyAtoms::ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto) {
+  cerr << "NearbyAtoms::ConstructFromProto building from\n";
+  cerr << proto.ShortDebugString() << '\n';
+  int nquery = proto.smarts_size() + proto.query_size() + proto.query_file_size();
+  if (nquery != 1) {
+    cerr << "NearbyAtoms::ConstructFromProto:must specify exactly 1 query source " << nquery << " invalid\n";
+    return 0;
+  }
+
+  for (const std::string& smt : proto.smarts()) {
+    std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
+    if (! q->create_from_smarts(smt)) {
+      cerr << "NearbyAtoms::ConstructFromProto:invalid smarts '" << smt << "'\n";
+      return 0;
+    }
+    _query << q.release();
+  }
+
+  for (const std::string& query_string : proto.query()) {
+    SubstructureSearch::SubstructureQuery query_proto;
+    if (!google::protobuf::TextFormat::ParseFromString(query_string, &query_proto)) {
+      cerr << "NearbyAtoms::ConstructFromProto:cannot parse proto data\n";
+      cerr << query_string << '\n';
+      return 0;
+    }
+
+    std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
+    if (! q->ConstructFromProto(query_proto)) {
+      cerr << "NearbyAtoms::ConstructFromProto:invalid query '" << query_string << "'\n";
+      return 0;
+    }
+    _query << q.release();
+  }
+
+  // We do not make allowance for directory path here...
+  for (const std::string& fname : proto.query_file()) {
+    IWString tmp(fname);
+    std::optional<SubstructureSearch::SubstructureQuery> maybe_proto = 
+      iwmisc::ReadTextProto<SubstructureSearch::SubstructureQuery>(tmp);
+    if (! maybe_proto) {
+      cerr << "NearbyAtoms::ConstructFromProto:cannot read '" << fname << "'\n";
+      return 0;
+    }
+    std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
+    if (! q->ConstructFromProto(*maybe_proto)) {
+      cerr << "NearbyAtoms::ConstructFromProto:Invalid query '" << fname << "'\n";
+      return 0;
+    }
+    _query << q.release();
+  }
+
+  if (proto.has_can_overlap_matched_atoms()) {
+    _can_overlap_matched_atoms = proto.can_overlap_matched_atoms();
+  }
+
+  if (!GETVALUES(proto, hits_needed, 0, no_limit)) {
+    return 0;
+  }
+
+  if (! _hits_needed.is_set()) {
+    _hits_needed.set_min(1);
+  }
+
+  for (uint32_t a : proto.matched_atom()) {
+    _matched_atom << a;
+  }
+
+  if (! GETVALUES(proto, bonds_between, 0, no_limit)) {
+    return 0;
+  }
+
+  if (proto.has_rejection()) {
+    _rejection = proto.rejection();
+  }
+  cerr << "Rejection set to " << _rejection << '\n';
+
+  return 1;
+}
+
+int
+NearbyAtoms::BuildProto(SubstructureSearch::NearbyAtoms& proto) const {
+  cerr << "NearbyAtoms::BuildProto:queries not implemented\n";
+
+  SetProtoValues(_hits_needed, "hits_needed", proto);
+  SetProtoValues(_hits_needed, "bonds_between", proto);
+
+  for (const uint32_t a : _matched_atom) {
+    proto.add_matched_atom(a);
+  }
+
+  if (_can_overlap_matched_atoms) {
+    proto.set_can_overlap_matched_atoms(_can_overlap_matched_atoms);
+  }
+
+  if (_rejection) {
+    proto.set_rejection(true);
+  }
+
+  return 1;
 }
 
 namespace iwsubstructure {

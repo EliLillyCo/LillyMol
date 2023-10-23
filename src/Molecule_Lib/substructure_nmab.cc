@@ -1354,3 +1354,111 @@ Region::Matches(Molecule_to_Match& target,
 
   return 1;
 }
+
+NearbyAtoms::NearbyAtoms() {
+  _rejection = 0;
+  _can_overlap_matched_atoms = false;
+}
+
+//#define DEBUG_NEARBY_ATOMS_MATCHES
+
+int
+NearbyAtoms::Matches(Molecule_to_Match& target, Query_Atoms_Matched& qam,
+                const int* already_matched) {
+#ifdef DEBUG_NEARBY_ATOMS_MATCHES
+  const int matoms = target.natoms();
+  Molecule& m = *target.molecule();
+  cerr << "NearbyAtoms::Matches " << m.smiles() << '\n';
+  for (int i = 0; i < matoms; ++i) {
+    if (already_matched[i]) {
+      cerr << " atom " << i << " " << m.smarts_equivalent_for_atom(i) << '\n';
+    }
+  }
+#endif // DEBUG_NEARBY_ATOMS_MATCHES
+
+  Substructure_Results sresults;
+  int got_match = 0;
+
+  for (Substructure_Query* q : _query) {
+    if (q->substructure_search(target, sresults) == 0) {
+      continue;
+    }
+
+    for (const Set_of_Atoms* e : sresults.embeddings()) {
+#ifdef DEBUG_NEARBY_ATOMS_MATCHES
+      cerr << "_can_overlap_matched_atoms " << _can_overlap_matched_atoms << " overlap " << 
+          e->any_members_set_in_array(already_matched) << '\n';
+#endif
+      if (! _can_overlap_matched_atoms && e->any_members_set_in_array(already_matched)) {
+        continue;
+      }
+
+      if (_matched_atom.empty()) {
+        if (! AnyMatchedAtomInRange(target, already_matched, *e)) {
+          return 0;
+        }
+      } else if (! SpecifiedmatchedAtomInRange(target, qam, *e)) {
+        return 0;
+      }
+
+      ++got_match;
+    }
+  }
+
+#ifdef DEBUG_NEARBY_ATOMS_MATCHES
+  cerr << "Got " << got_match << " mathes to querie, matches " << _hits_needed.matches(got_match) << " rej " << _rejection << '\n';
+#endif
+  if (_hits_needed.matches(got_match)) {
+    return ! _rejection;
+  }
+
+  return _rejection;
+}
+
+int
+NearbyAtoms::AnyMatchedAtomInRange(Molecule_to_Match& target,
+                const int* already_matched, const Set_of_Atoms& embedding) const {
+  Molecule& m = *target.molecule();
+  const int matoms = m.natoms();
+
+  for (int i = 0; i < matoms; ++i) {
+    if (! already_matched[i]) {
+      continue;
+    }
+
+    for (const atom_number_t& a : embedding) {
+      const int d = m.bonds_between(i, a);
+      if (_bonds_between.matches(d)) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+int
+NearbyAtoms::SpecifiedmatchedAtomInRange(Molecule_to_Match& target,
+                const Query_Atoms_Matched& qam,
+                const Set_of_Atoms& embedding) const {
+  Molecule& m = *target.molecule();
+
+  for (uint32_t a : _matched_atom) {
+    if (! qam.ok_index(a)) {
+      cerr << "NearbyAtoms::SpecifiedmatchedAtomInRange:matched atom " << a << " invalid\n";
+      cerr << "Query matches only " << qam.size() << " atoms\n";
+      return 0;
+    }
+
+    const atom_number_t matched = qam[a]->atom_number_matched();
+
+    for (const atom_number_t e : embedding) {
+      const int d = m.bonds_between(e, matched);
+      if (_bonds_between.matches(d)) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}

@@ -1,6 +1,7 @@
 #ifndef ENRICHMENT_H
 #define ENRICHMENT_H
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 //class ostream;

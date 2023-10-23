@@ -1,6 +1,7 @@
 #ifndef MOLECULE_LIB_RWSUBSTRUCTURE_H_
 #define MOLECULE_LIB_RWSUBSTRUCTURE_H_
 
+#include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -675,6 +676,39 @@ read_one_or_more_queries_from_file(resizable_array_p<T> & queries,
   return rc;
 }
 
+// A record in a file of queries starts with "PROTO:". Build the
+// file name, read the query and append to `queries`.
+template <typename T>
+int
+ReadProtoQuery(const IWString& fname,
+               const IWString& directory_path,
+               resizable_array_p<T>& queries, 
+               int verbose) {
+  assert(fname.starts_with("PROTO:"));
+
+  const_IWSubstring myfname(fname);
+  myfname.remove_leading_chars(6);
+
+  IWString pathname;
+  if (myfname.starts_with('/'))
+    pathname=myfname;
+  else if (directory_path.length())
+    pathname = directory_path + myfname;
+  else
+    pathname = myfname;
+
+  T * q = ReadProtoQueryFile<T>(pathname);
+  if (nullptr == q) {
+    std::cerr << "ReadProtoQuery::cannot read proto file '" << pathname << "'\n";
+    return 0;
+  }
+
+  queries.add(q);
+
+  return 1;
+}
+
+// Read a single record from a file containing queries.
 template <typename T>
 int
 file_record_is_file(resizable_array_p<T> & queries,
@@ -682,9 +716,12 @@ file_record_is_file(resizable_array_p<T> & queries,
                      IWString & buffer,
                      int verbose)
 {
+  if (buffer.starts_with("PROTO:")) {
+    return ReadProtoQuery(buffer, directory_path, queries, verbose);
+  }
+
   IWString fname;
-  if (! buffer.word(0, fname))
-  {
+  if (! buffer.word(0, fname)) {
     std::cerr << "file_record_is_file: cannot get first word from '" << buffer << "'\n";
     return 0;
   }
@@ -727,7 +764,7 @@ queries_from_file(iwstring_data_source & input, resizable_array_p<T> & queries,
   IWString buffer;
   while (input.next_record(buffer))
   {
-    if (0 == buffer.length())
+    if (buffer.empty())
       continue;
 
     if ('#' == buffer[0])
@@ -740,8 +777,7 @@ queries_from_file(iwstring_data_source & input, resizable_array_p<T> & queries,
     else
       rc_this_record = file_record_is_file(queries, directory_path, buffer, verbose);
 
-    if (0 == rc_this_record)
-    {
+    if (0 == rc_this_record) {
       std::cerr << "Queries_from_file: fatal error on line " << input.lines_read() << '\n';
       return 0;
     }

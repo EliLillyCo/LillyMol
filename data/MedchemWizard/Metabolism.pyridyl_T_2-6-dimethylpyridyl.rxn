@@ -1,0 +1,14 @@
+(0 Reaction
+# [cH1:1]1[n:2][c;H1:3][c:4][c:5][c:6]1>>[c:1]1([c:6][c:5][c:4][c:3]([n:2]1)C)C pyridyl -> 2,6-dimethylpyridyl
+
+  (A C Comment "Metabolism.pyridyl_T_2-6-dimethylpyridyl")
+  (0 Scaffold
+    (A C smarts "[cH1]1n[cH1]ccc1")
+  )
+  (1 Sidechain
+    (A C smiles "C.C")
+    (A C smarts "C.C")
+    (A I join (0 0))
+    (A I join (2 1))
+  )
+)

@@ -1,0 +1,15 @@
+(0 Reaction
+# [a:2]([a;H1:3])[#8;H1:1]>>[a:2]([a;H1:3])C[#8;H1:1] hydroxymethyl
+
+  (A C Comment "Phenol_isosteres.hydroxymethyl")
+  (0 Scaffold
+    (A C smarts "[OD1]-[ar6]:[aH]")
+#   (A I toggle_kekule_form (1 2 1))
+    (A I remove_atom 0)
+  )
+  (1 Sidechain
+    (A C smiles "CO")
+    (A C smarts "CO")
+    (A I join (1 0))
+  )
+)

@@ -38,8 +38,6 @@ static int report_min_and_max = 0;
 
 static IWString* ids_this_chunk = NULL;
 
-static int write_header_record = 0;
-
 static void
 usage(int rc)
 {
@@ -62,12 +60,6 @@ usage(int rc)
   // clang-format on
 
   exit(rc);
-}
-
-static int
-do_write_header_record(std::ostream& os)
-{
-  return 1;
 }
 
 static int

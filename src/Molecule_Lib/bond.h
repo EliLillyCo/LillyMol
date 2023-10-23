@@ -4,11 +4,11 @@
 #include <iostream>
 #include <functional>
 
+#include "Foundational/iwstring/iwstring.h"
+
 #include "iwmtypes.h"
 
 class Molecule;
-
-class IWString;
 
 class Connection
 {

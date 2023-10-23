@@ -1,0 +1,9 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "disubstituted")
+  (0 Ring_Specifier
+    (A I aromatic 0)
+    (A I min_ring_size 4)
+    (A C environment "[CD4](-!@*)-!@*")
+  )
+)

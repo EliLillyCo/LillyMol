@@ -23,7 +23,6 @@ local_install(
         ":difference_sort",
         ":diff_line_by_line",
         ":distribution",
-        ":enough_inventory_bdb",
         ":feature_scaling",
         ":fetch_sdf",
         ":fetch_sdf_quick",
@@ -383,22 +382,6 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwqsort",
-    ],
-)
-
-cc_binary(
-    name = "enough_inventory_bdb",
-    srcs = [
-        "enough_inventory_bdb.cc",
-    ],
-    tags = ["berkeleydb"],
-    deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
-        "@berkeleydb",
     ],
 )
 

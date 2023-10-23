@@ -77,11 +77,18 @@ TEST_P(TestExpandEnv, TestExpandEnv) {
   }
 
   std::optional<IWString> expanded = params.input.ExpandEnvironmentVariables();
-  EXPECT_EQ(expanded, params.expected);
+  EXPECT_EQ(expanded, params.expected) << " expected " << params.expected <<
+        " got '" << expanded->AsString();
 }
 INSTANTIATE_TEST_SUITE_P(TestExpandEnv, TestExpandEnv, testing::Values(
   EnvData{{}, "hello", "hello"},
   EnvData{{{"world", "world"}}, "hello ${world}", "hello world"},
+  EnvData{{{"hello", "hello"}}, "${hello} world", "hello world"},
+  EnvData{{{"hello", "welcome"}}, "${hello} world", "welcome world"},
+  EnvData{{{"a", "abcdefghi"}}, "${a} world", "abcdefghi world"},
+  EnvData{{{"a", "abcdefghi"}}, "xxx ${a} world", "xxx abcdefghi world"},
+  EnvData{{{"abcdefghi", "a"}}, "${abcdefghi} world", "a world"},
+  EnvData{{{"abcdefghi", "a"}}, "xxx ${abcdefghi} y", "xxx a y"},
   EnvData{{{"mm93", "marc marquez"}, 
            {"vr46", "valentino rossi"}},
            "motogp ${mm93} and ${vr46} greats",

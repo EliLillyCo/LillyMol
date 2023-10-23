@@ -28,10 +28,17 @@ between C++ and Python. Perhaps these could be lessened via careful inspection,
 but for now, there is no claim that this is as fast as things could be.
 
 ## Building
-In order to build the shared libraries needed for python binding, the following
-build command was used.
+Your python environment *must* include pybind11. Normally
 ```
-bazelisk --output_user_root=/local/disk/ian build --enable_bzlmod --experimental_cc_shared_library --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --local_cpu_resources=10 -c opt pybind:all
+pip install pybond11
+```
+will accomplish this.
+
+Normally the python bindings are built as part of the default build,
+the script [build_from_source.sh](/src/build_from_source.sh), but if
+you wish to compile separately that can be done via
+```
+bazelisk --output_user_root=/local/disk/ian build --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --local_cpu_resources=10 -c opt pybind:all
 ```
 This generates several `*.so` files in bazel-bin/python. In addition, LillyMol
 now has several run-time dependencies, and these also need to be made available.
@@ -39,7 +46,10 @@ For now, the script `copy_shared_libraries.sh` in the `src` directory will copy
 the needed files out of bazel-bin and into lib64.
 
 See `WORKSPACE` for how we configured the local python and pybind11 installs.
-This was quite difficult to get right.
+This was quite difficult to get right. Normally these will be auto
+configured for you by the [build_third_party](/src/build_third_party.sh) script,
+which in turn calls [update_python_in_workspace](/src/update_python_in_workspace.py)
+which interrogates the python installation. 
 
 Once the shared libraries are copied to `LillyMol/lib64`, a script, `run_python.sh` in
 this directory can be used to invoke python with those libraries avaialble.
@@ -88,7 +98,9 @@ objects for things like aromaticity and ring membership start with
 ```
 mol.compute_aromaticity_if_needed()
 ```
-which will force computaion of aromaticity.
+which will ensure that aromaticity information is propagated throughout
+all parts of the molecule - and if that has already been done, this does
+nothing.
 
 Atoms do not know if they are in a ring or not, nor whether 
 they are aromatic, or what fragment they are in. Fragment membership, 
@@ -151,10 +163,9 @@ Note that in LillyMol a molecule with an invalid valence is a valid molecule.
 If you don't want molecules with valence errors, use the valence_ok() method
 to check each molecule and skip those having an invalid valence.
 
-A more pythonic way of reading structures should be implemented. Maybe
-something like
+A more pythonic way of reading structures is available as
 ```
-  with Reader('/path/to/file.smi', FileType.SMI) as reader:
+  with ReaderContext('/path/to/file.sdf') as reader:
     for mol in reader:
       for atom in mol:
         ...
@@ -331,14 +342,14 @@ The most common methods for a Molecule currently implemented are
 | compute_Gasteiger_Huckel_partial_charges() | Gasteiger Huckel partial charges |
 | compute_Del_Re_partial_charges() | Del Re partial charges |
 | compute_Pullman_partial_charges() | Del Re partial charges |
-| __eq__ | True if m1 == m2. Will use unique smiles if necessary |
+| \__eq__ | True if m1 == m2. Will use unique smiles if necessary |
 | m1 += m2 | Adds atoms and bonds from m2 to m1 |
 | m1 + m2 | Returns a new molecule containing m1 and m2 |
-| __iter__ | List of Atoms |
-| __getitem__ | Get i'th atom |
-| __len__ | Number of atoms |
-| __eq__ | True if molecules contain same structures |
-| __contains__ | True of molecule contains atomic number |
+| \__iter__ | List of Atoms |
+| \__getitem__ | Get i'th atom |
+| \__len__ | Number of atoms |
+| \__eq__ | True if molecules contain same structures |
+| \__contains__ | True of molecule contains atomic number |
 | valence_ok() | True if all atoms have an OK valence |
 | ok | True if the internal state of the Molecule is ok |
 | debug_string() | String representation of internal state: print(m.debug_string())|
@@ -374,9 +385,9 @@ The Atom object supports
 | fully_saturated() | True nbonds() == ncon() |
 | atom_map() | atom map number |
 | connections(atom) | iterable list of atoms attached |
-| __iter__ | List of Bonds attached |
-| __contains__ | True if atom is bonded to |
-| __len__ | Number of connections |
+| \__iter__ | List of Bonds attached |
+| \__contains__ | True if atom is bonded to |
+| \__len__ | Number of connections |
 
 In additon an Atom object inherits from an object that holds coordinates. A subsequent
 version will enable that functionality.
@@ -440,7 +451,7 @@ And a couple of other things.
 | GetBeginAtomIdx() | Same as a1() |
 | GetEndAtomIdx() | Same as a2() |
 | GetBondType() | Same as btype() |
-| __contains__ | involves() |
+| \__contains__ | involves() |
 
 ## Set_of_Atoms Methods
 Set_of_Atoms objects are used extensively in LillyMol. Despite the name,
@@ -453,10 +464,10 @@ Set_of_Atoms contained duplicate atom numbers.
 | empty() | True of the set is empty |
 | size() | Number of items |
 | scatter(list, value) | Set values to 'value' |
-| __len__ | Number of items |
-| __getitem__ | Access via [i] |
-| __iter__ | Access atoms via iterators |
-| __contains__ | Is atom included |
+| \__len__ | Number of items |
+| \__getitem__ | Access via [i] |
+| \__iter__ | Access atoms via iterators |
+| \__contains__ | Is atom included |
 
 The C++ version contains several gather and scatter type methods. Other methods may
 be added.
@@ -484,8 +495,8 @@ trace out a bonded path through the ring.
 | strongly_fused_ring_neighbours() | Rings sharing more than 1 bond |
 | contains_bond(a1, a2) | True if Ring contains these atoms |
 | is_aromatic() | True if ring is aromatic |
-| __contains__ | Is atom included |
-| __len__ | Size |
+| \__contains__ | Is atom included |
+| \__len__ | Size |
 
 To count the number of isolated (not fused) 5 membered aromatic rings
 ```

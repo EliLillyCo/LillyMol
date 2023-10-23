@@ -32,7 +32,7 @@ cmp_out="$test_cmd_top/$case/out/test.out"
 
 echo "Testing: $command"
 
-queries_dir="$LILLYMOL_HOME/contrib/data/queries"
+queries_dir="$LILLYMOL_HOME/data/queries"
 
 $command \
    -q F:"${queries_dir}"/heteroatoms/unique_queries_tnass \

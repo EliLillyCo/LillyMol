@@ -1,6 +1,10 @@
 #ifndef MOLECULE_LIB_SMILES_H_
 #define MOLECULE_LIB_SMILES_H_
 
+#include <iostream>
+
+#include "Foundational/iwstring/iwstring.h"
+
 #include "molecule.h"
 
 /*

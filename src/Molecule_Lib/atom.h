@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "Foundational/iwaray/iwaray.h"
+
 #include "coordinates.h"
 #include "element.h"
 #include "iwmtypes.h"

@@ -1,6 +1,9 @@
 #ifndef MOLECULE_LIB_ATOM_TYPING_H_
 #define MOLECULE_LIB_ATOM_TYPING_H_
 
+#include <cstdint>
+
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwbits/iwbits.h"
 #include "Foundational/iwstring/iwstring.h"
 

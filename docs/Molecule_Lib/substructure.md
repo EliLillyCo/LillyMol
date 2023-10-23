@@ -448,6 +448,12 @@ Several tools assign numeric values to queries or atoms. This is a means of
 associating a numeric value with a particular matched atom. Only useful
 for low level programming.
 
+If the number is a positive integer something like '[/IWNv23C]` will work
+but if negative or floating point numbers are needed, then `[/IWNv{-3}C]`
+is needed. Note that since the '.' character is special in smiles, if
+you have a floating point number it must instead be entered with an
+underscore `[/IWNv{-3_14}C]` which is interpreted as `[/IWNv{-3.14}C]`.
+
 ## Future
 As use cases emerge further `/IW` directives may be added. Some can be
 evalated during atom matching, others are applied after an embedding has

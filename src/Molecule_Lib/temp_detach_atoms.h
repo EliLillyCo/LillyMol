@@ -7,6 +7,10 @@
   Hydrogens in order for the queries to work
 */
 
+
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
+
 #include "molecule.h"
 
 class Temp_Detach_Atoms {

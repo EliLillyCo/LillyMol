@@ -1,0 +1,16 @@
+(0 Reaction
+# [a:2]([a;H1:3])[#8;H1:1]>>[a:2]1[#7H1:1]N=N[a:3]1 benzotriazole
+
+  (A C Comment "Phenol_isosteres.benzotriazole")
+  (0 Scaffold
+    (A C smarts "[OD1]-[ar6]:[aH]")
+#   (A I toggle_kekule_form (1 2 1))
+    (A I remove_atom 0)
+  )
+  (1 Sidechain
+    (A C smiles "NN=N")
+    (A C smarts "NN=N")
+    (A I join (1 0))
+    (A I join (2 2 1))
+  )
+)

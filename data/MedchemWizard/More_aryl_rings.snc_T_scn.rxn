@@ -1,0 +1,10 @@
+(0 Reaction
+# [s:1][n:2][c:3]>>[s:1][c:2][n:3] snc --> scn
+
+  (A C Comment "More_aryl_rings.snc_T_scn")
+  (0 Scaffold
+    (A C smarts "s:n:[cD2]")
+    (A C change_element "1 C")
+    (A C change_element "2 N")
+  )
+)

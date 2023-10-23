@@ -1,0 +1,15 @@
+(0 Reaction
+# [a;R1:6]1[a;R1:5][a;H1;R1:4][a;H1;R1:3][a;R1:2][a;R1:1]1>>[a;R1:6]1[a;R1:1][a;R1:2][c:3]2[c:4]([a;R1:5]1)ncnc2 phenyl --> quinazoline
+
+  (A C Comment "More_aryl_rings.phenyl_T_quinazoline")
+  (0 Scaffold
+    (A C smarts "[/IWfss1/IWKl1cD2]1:[cD2]:c:c:c:c1")
+    (A I toggle_kekule_form (0 1 1))
+  )
+  (1 Sidechain
+    (A C smiles "N=CN=C")
+    (A C smarts "N=CN=C")
+    (A I join (0 0))
+    (A I join (1 3))
+  )
+)

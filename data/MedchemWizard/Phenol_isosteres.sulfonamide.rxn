@@ -1,0 +1,15 @@
+(0 Reaction
+# [a:2]([a;H1:3])[#8;H1:1]>>[a:2]([#7H1:1]S(=O)(C)=O)[a:3] sulfonamide
+
+  (A C Comment "Phenol_isosteres.sulfonamide")
+  (0 Scaffold
+    (A C smarts "[OD1]-[ar6]:[aH]")
+#   (A I toggle_kekule_form (1 2 1))
+    (A I remove_atom 0)
+  )
+  (1 Sidechain
+    (A C smiles "NS(=O)(=O)C")
+    (A C smarts "NS(=O)(=O)C")
+    (A I join (1 0))
+  )
+)

@@ -1,6 +1,10 @@
 #ifndef MOLECULE_LIB_DONOR_ACCEPTOR_H_
 #define MOLECULE_LIB_DONOR_ACCEPTOR_H_
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
 #include "Molecule_Lib/donor_acceptor.pb.h"
 #include "output.h"
 #include "temp_detach_atoms.h"

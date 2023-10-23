@@ -1,0 +1,14 @@
+(0 Reaction
+# [O;H1:3][c:1][c:2][O;H1:4]>>[O:3]1[c:1][c:2][O:4]C1 Catechol -> methylenedioxy
+
+  (A C Comment "Metabolism.Catechol_T_methylenedioxy")
+  (0 Scaffold
+    (A C smarts "[OH1]-c:c-[OH]")
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (0 0))
+    (A I join (3 0))
+  )
+)

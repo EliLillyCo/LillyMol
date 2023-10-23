@@ -1,0 +1,4 @@
+name: "pyridine_dione"
+query {
+  smarts: "[OD1]=[/IWrid1aT3]:[/IWNv{-1}nD2H]:[/IWrid1a]=O"
+}

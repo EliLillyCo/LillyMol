@@ -4,6 +4,7 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
+#include "Molecule_Lib/molecule_to_query.h"
 #include "Molecule_Lib/substructure.h"
 
 #include "Molecule_Lib/substructure.pb.h"
@@ -42,6 +43,13 @@ PYBIND11_MODULE(lillymol_query, q)
     .def(py::init<>())
     .def("build_from_smarts", static_cast<int (Substructure_Query::*)(const std::string&)>(&Substructure_Query::CreateFromSmarts),
         "build from smarts")
+    .def("build_from_molecule", [](Substructure_Query& q, Molecule& m)->bool {
+        Molecule_to_Query_Specifications mqs;
+        mqs.set_make_embedding(1);
+        return q.create_from_molecule(m, mqs);
+      },
+      "Convert `m` to a query with default conditions"
+    )
     .def("set_only_keep_matches_in_largest_fragment", &Substructure_Query::set_only_keep_matches_in_largest_fragment, "set_only_keep_matches_in_largest_fragment")
     .def("set_embeddings_do_not_overlap", &Substructure_Query::set_embeddings_do_not_overlap, "set_embeddings_do_not_overlap")
     .def("set_find_one_embedding_per_atom", &Substructure_Query::set_find_one_embedding_per_atom, "set_find_one_embedding_per_atom")
@@ -81,20 +89,27 @@ PYBIND11_MODULE(lillymol_query, q)
         rc << "<SubstructureQuery " << q.comment() << '>';
         return std::string(rc.data(), rc.length());
       })
-      .def("read_proto",
+    .def("read_proto",
         [](Substructure_Query& qry, const std::string& fname)->bool{
           IWString tmp(fname.data(), fname.size());
           return qry.ReadProto(tmp);
         },
         "read from textproto file"
       )
-      // Maybe one day when we get move constructures for a query
-      /*.def("QueryFromSmarts",
+    .def("read_msi",
+      [](Substructure_Query& qry, const std::string& fname)->bool {
+        const IWString myfname(fname);
+        return qry.read(myfname);
+      },
+      "read MSI style query from 'fname'"
+    )
+    // Maybe one day when we get move constructures for a query
+    /*.def("QueryFromSmarts",
         [](const std::string& smarts){
           return QueryFromSmarts(smarts);
         },
         "Query created from smarts - or None"
-      )*/
-    ;
+    )*/
+  ;
 
 }

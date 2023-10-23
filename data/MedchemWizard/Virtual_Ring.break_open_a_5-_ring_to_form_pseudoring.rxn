@@ -1,0 +1,14 @@
+(0 Reaction
+# [a:1]1([a:2][a:3][a:4]([*!F!Br!Cl!I:5])a1)[*!F!Br!Cl!I:6]>>[N:1]([a:2][a:3][C:4]([*!F!Br!Cl!I:5])=O)([*!F!Br!Cl!I:6])[H] break open a 5- ring to form pseudoring
+
+  (A C Comment "Virtual_Ring.break_open_a_5-_ring_to_form_pseudoring")
+  (0 Scaffold
+    (A C smarts "[F,Cl,Br,I]a1:a:a(-[F,Cl,Br,I]):a:a1")
+    (A I remove_atom 2)
+  )
+  (1 Sidechain
+    (A C smiles "O")
+    (A C smarts "O")
+    (A I join (3 0 2))
+  )
+)

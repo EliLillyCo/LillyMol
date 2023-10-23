@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_acetamide")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]NC(=O)C SHR.add_acetamide")
+    (A C smarts "CNC(=O)C")
+    (A I join (0 0))
+  )
+)

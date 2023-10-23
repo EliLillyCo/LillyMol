@@ -1,0 +1,13 @@
+(0 Reaction
+# [c:1]1([c;H1:6][c;H1:5][c;H1:4][c;H1:3][c;H1:2]1)[*:7]>>[c:1]1([c;H1:6][c;H1:5][c:4](F)[c;H1:3][c;H1:2]1)[*:7] Unsubstituted aryl -> 4-F
+
+  (A C Comment "Metabolism.Unsubstituted_aryl_T_4-F")
+  (0 Scaffold
+    (A C smarts "[cD2]1:[cD2]:[cD2]:[cD3]:[cD2]:[cD2]1")
+  )
+  (1 Sidechain
+    (A C smiles "F")
+    (A C smarts "F")
+    (A I join (0 0))
+  )
+)

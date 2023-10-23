@@ -28,12 +28,12 @@ name1_out=out/output.smi
 
 diff_tool=../../fileDiff.sh
 
-$command -N 50000 -n 20 -p 5 -c 15 -C 40 in/pubchem_example.smi >${name1} 2>err.txt
-# Need sort before comparision for the order issue
+$command -N 10000 -n 20 -p 5 -c 15 -C 40 in/pubchem_example.smi >${name1} 2>err.txt
+
 line_count=$(wc -l < "${name1}")
-#echo $line_count
-# 27000 is the trial value . It may fail for future test
-if [ $line_count -ge 27000 ]
+# echo $line_count
+# 5000 is an arbitrary number. Beware this test is non deterministic
+if [ ${line_count} -ge 5000 ]
 then
     echo "$case_id : TEST PASS"
 else

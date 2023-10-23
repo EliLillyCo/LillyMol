@@ -1,0 +1,9 @@
+(0 Reaction
+# [A;R1:6]1[AR1:4][AR1:3]([AR1:2][AR1:1][AR1:5]1)[*:7]>>[A:6]([A:4][A:3]([A:2][A:1])[*:7])[A:5] break open a cyclohexyl
+
+  (A C Comment "Virtual_Ring.break_open_a_cyclohexyl_3")
+  (0 Scaffold
+    (A C smarts "[AR1]1[AR1][AR1]([AR1][AR1][AR1]1)[*]")
+    (A I break_bond (2 3))
+  )
+)

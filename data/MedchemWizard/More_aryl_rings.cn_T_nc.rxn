@@ -1,0 +1,12 @@
+(0 Reaction
+# [c:1][n:2]>>[n:1][c:2] cn --> nc
+
+  (A C Comment "More_aryl_rings.cn_T_nc")
+  (0 Scaffold
+#   (A C smarts "[c]:[n]")
+#   IAW making this more restrictive
+    (A C smarts "[cD2]:[nR1+0]")
+    (A C change_element "0 N")
+    (A C change_element "1 C")
+  )
+)

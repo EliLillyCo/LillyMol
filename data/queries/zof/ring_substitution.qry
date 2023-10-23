@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (0 Ring_System_Specifier
+    (A I min_ncon 3)
+    (A C environment ">2[D>2]-!@[R0]")
+  )
+)

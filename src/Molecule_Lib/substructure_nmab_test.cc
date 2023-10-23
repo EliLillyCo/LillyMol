@@ -397,7 +397,9 @@ class TestRegionsP: public testing::TestWithParam<ProtoMolMatches> {
 
 TEST_P (TestRegionsP, Tests) {
   const auto params = GetParam();
+  cerr << "Calling TextFormat\n";
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
+  cerr << "Next ConstructFromProto\n";
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
@@ -471,6 +473,271 @@ query {
   }
 }
 )pb", "CCNCC1C(C1)CNCC", 1}
+
+));
+
+class TestNearbyAtomsP: public testing::TestWithParam<ProtoMolMatches> {
+  protected:
+    SubstructureSearch::SubstructureQuery _proto;
+    Substructure_Query _query;
+    Molecule _mol;
+    Substructure_Results _sresults;
+};
+
+TEST_P (TestNearbyAtomsP, Tests) {
+  const auto params = GetParam();
+  cerr << "Calling TextFormat\n";
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
+  cerr << "Next ConstructFromProto\n";
+  ASSERT_TRUE(_query.ConstructFromProto(_proto));
+  ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
+  // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
+  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected) << 
+      "mismatch " << params.smiles << " from " << _proto.ShortDebugString() << '\n';
+}
+INSTANTIATE_TEST_SUITE_P(TestNearbyAtomsP, TestNearbyAtomsP, testing::Values(
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "O"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    min_bonds_between: 2
+    max_bonds_between: 4
+  }
+}
+)pb", "OCCN", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "O"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    min_bonds_between: 3
+    max_bonds_between: 4
+  }
+}
+)pb", "OCCN", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "O"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    min_bonds_between: 4
+    max_bonds_between: 5
+  }
+}
+)pb", "OCCN", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    min_bonds_between: 2
+    max_bonds_between: 3
+    matched_atom: 0
+  }
+}
+)pb", "n1c(CN)cccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 2
+    matched_atom: 0
+  }
+}
+)pb", "n1c(CN)cccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 3
+    matched_atom: 0
+  }
+}
+)pb", "n1c(CN)cccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 3
+    matched_atom: 0
+    hits_needed: 1
+  }
+}
+)pb", "n1c(CN)cccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 3
+    matched_atom: 0
+    hits_needed: 2
+  }
+}
+)pb", "n1c(CN)cccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 3
+    matched_atom: 0
+    min_hits_needed: 1
+  }
+}
+)pb", "n1c(CN)cccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "n1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    bonds_between: 3
+    matched_atom: 0
+    min_hits_needed: 1
+    rejection: true
+  }
+}
+)pb", "n1c(CN)cccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "F"
+    bonds_between: 1
+    can_overlap_matched_atoms: false
+  }
+}
+)pb", "Fc1ccccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "F"
+    bonds_between: 1
+    can_overlap_matched_atoms: true
+  }
+}
+)pb", "Fc1ccccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+  }
+}
+)pb", "Fc1ccccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+  }
+}
+)pb", "Fc1cc(N)ccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+  }
+}
+)pb", "Fc1cc(CN)ccc1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+  }
+}
+)pb", "Fc1cc(CCN)ccc1", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+    min_hits_needed: 2
+  }
+}
+)pb", "Fc1cc(CN)cc(CN)c1", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1ccccc1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "N"
+    max_bonds_between: 2
+    matched_atom: [3, 4, 5]
+    min_hits_needed: 2
+    max_hits_needed: 2
+  }
+}
+)pb", "Fc1cc(CN)c(N)c(CN)c1", 0},
+
+  // Wow, look at what this can do.
+  // Can specify that some number of the matched atoms must be a given type.
+  // We always had element_hits_needed, but this seems more precise.
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "Fc1caaac1"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "n"
+    max_bonds_between: 0
+    matched_atom: [3, 4, 5]
+    hits_needed: 2
+    can_overlap_matched_atoms: true
+  }
+}
+)pb", "Fc1cncnc1", 1}
 
 ));
 

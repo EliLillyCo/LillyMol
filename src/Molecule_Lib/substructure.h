@@ -1,21 +1,26 @@
 #ifndef MOLECULE_LIB_SUBSTRUCTURE_H_
 #define MOLECULE_LIB_SUBSTRUCTURE_H_
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
 #endif
 
 #include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/iwminmax.h"
+#include "Foundational/iwmisc/logical_expression.h"
 #include "Foundational/iwmisc/matcher.h"
 #include "Foundational/iwmisc/minmaxspc.h"
-#include "Foundational/iwmisc/iwminmax.h"
-#include "Foundational/iwbits/iwbits.h"
-#include "Foundational/iwmisc/logical_expression.h"
 #include "Foundational/iwmisc/msi_object.h"
+#include "Foundational/iwmisc/set_or_unset.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "atom_alias.h"
 #include "iwmtypes.h"
@@ -2536,6 +2541,47 @@ class RequiredMolecularProperties {
     int Matches(Molecule_to_Match & target_molecule);
 };
 
+// Specify that within some distance of a matched atom, there must be
+// another query matched.
+class NearbyAtoms {
+  private:
+    resizable_array_p<Substructure_Query> _query;
+
+    // can the atoms matched here overlap with the matoms matched by the main query.
+    boolean _can_overlap_matched_atoms;
+
+    // How many instances of this do we require.
+    Min_Max_Specifier<int> _hits_needed;
+
+    // By default, we measure ourselves relative to any matched atom, but
+    // if this is set, we measure relative to only some matched atoms.
+    resizable_array<uint32_t> _matched_atom;
+
+    // The constraint on the number of bonds between our matched atom(s)
+    // and those in the query.
+    Min_Max_Specifier<int> _bonds_between;
+
+    // By default, we are a positive requirement for a match. We can instead
+    // be a rejection.
+    int _rejection;
+
+  // private functions.
+    int AnyMatchedAtomInRange(Molecule_to_Match& target,
+                const int* already_matched, const Set_of_Atoms& embedding) const;
+    int SpecifiedmatchedAtomInRange(Molecule_to_Match& target, const Query_Atoms_Matched& qam,
+                const Set_of_Atoms& embedding) const;
+
+  public:
+    NearbyAtoms();
+
+    int ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto);
+    int BuildProto(SubstructureSearch::NearbyAtoms& proto) const;
+
+    int Matches(Molecule_to_Match& target, Query_Atoms_Matched& qam,
+                const int* already_matched);
+};
+
+
 /*
   The process of verifying the internal consistency of a substructure
   query is somewhat expensive. To avoid recomputing this, we keep
@@ -2974,6 +3020,10 @@ class Single_Substructure_Query
 
     // May 2023. Regions
     resizable_array_p<Region> _region;
+
+    // Oct 2023.
+    // Groups that are to be found near the matched atoms of the query.
+    resizable_array_p<NearbyAtoms> _nearby_atoms;
 
 //  private functions
 

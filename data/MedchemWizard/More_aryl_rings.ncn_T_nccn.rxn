@@ -1,0 +1,16 @@
+(0 Reaction
+# [n;r5;R1;H1:1][c:2][n:3]>>[n:1][c:2]c[n:3] ncn --> nccn
+# should run without unique embeddings
+
+  (A C Comment "More_aryl_rings.ncn_T_nccn")
+  (0 Scaffold
+    (A C smarts "[nR1H]1:c:[nR1]:[aR1]:[aR1]1")
+    (A I break_bond (0 1))
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (0 0 2))
+    (A I join (1 0 1))
+  )
+)

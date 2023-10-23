@@ -1,0 +1,13 @@
+(0 Reaction
+# [cH1:1][cH0:2][OH:3]>>[c:1](Cl)[cH0:2][OH:3] Block ortho to a phenol
+
+  (A C Comment "Metabolism.Block_ortho_to_a_phenol_Cl1")
+  (0 Scaffold
+    (A C smarts "[OD1]-c[cD2]")
+  )
+  (1 Sidechain
+    (A C smiles "Cl")
+    (A C smarts "Cl")
+    (A I join (2 0))
+  )
+)

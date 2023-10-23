@@ -1,0 +1,10 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_Me")
+  (0 Scaffold
+    (A C smarts "[cH1]")
+  )
+  (1 Sidechain
+    (A C smiles "C ArylSS.add_Me")
+    (A I join (0 0))
+  )
+)

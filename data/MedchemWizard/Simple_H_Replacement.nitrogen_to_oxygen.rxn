@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.nitrogen_to_oxygen")
+  (0 Scaffold
+    (A C smarts "[NH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "O SHR.nitrogen_to_oxygen")
+    (A C smarts "O")
+    (A I join (0 0))
+  )
+)

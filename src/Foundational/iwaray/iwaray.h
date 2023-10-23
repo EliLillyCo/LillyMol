@@ -2070,6 +2070,8 @@ extending_resizable_array<T>::extending_resizable_array(T ini)
   return;
 }
 
+// Oct 2023. Extending the array seems like undesirable behaviour.
+// TODO:ianwatson investigate and hopefully change.
 template <typename T>
 T &
 extending_resizable_array<T>::operator [](int i)

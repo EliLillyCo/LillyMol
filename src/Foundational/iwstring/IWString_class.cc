@@ -5367,8 +5367,8 @@ const_IWSubstring::expand_environment_variables(IWString & destination) const
   return rc;
 }
 
-constexpr char open_brace = '{';
-constexpr char close_brace = '}';
+static constexpr char kOpenBrace = '{';
+static constexpr char kCloseBrace = '}';
 
 std::optional<IWString>
 IWString::ExpandEnvironmentVariables() const {
@@ -5392,7 +5392,7 @@ IWString::ExpandEnvironmentVariables() const {
       return result;
     }
 
-    if (_things[i + 1] != open_brace) {  // $ without following braces, not expanded.
+    if (_things[i + 1] != kOpenBrace) {  // $ without following braces, not expanded.
       result += '$';
       continue;
     }
@@ -5402,7 +5402,7 @@ IWString::ExpandEnvironmentVariables() const {
     int start_of_variable = i;
     int closing_brace = -1;
     for ( ; i < _number_elements; ++i) {
-      if (_things[i] == close_brace) {
+      if (_things[i] == kCloseBrace) {
         closing_brace = i;
         break;
       }

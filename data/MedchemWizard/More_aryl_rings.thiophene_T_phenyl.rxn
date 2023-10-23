@@ -1,0 +1,20 @@
+(0 Reaction
+# [c:1]s[c:2]>>[c:1]cc[c:2] thiophene --> phenyl
+
+  (A C Comment "More_aryl_rings.thiophene_T_phenyl")
+  (0 Scaffold
+    (A C smarts "s1[cR1][cR1][cR1]c1")
+    (A I break_bond (0 1))
+    (A C change_element "0 C")
+    (A I single_bond (1 2))
+    (A I double_bond (2 3))
+    (A I single_bond (3 4))
+    (A I double_bond (4 0))
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (0 0 1))
+    (A I join (1 0 2))
+  )
+)
