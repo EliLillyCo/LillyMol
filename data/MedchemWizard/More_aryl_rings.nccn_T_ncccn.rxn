@@ -1,0 +1,16 @@
+(0 Reaction
+# [n;r5;R1;H1:1][c:2][c:3][n:4]>>[n:1][c:2]c[c:3][n:4] nccn --> ncccn
+
+  (A C Comment "More_aryl_rings.nccn_T_ncccn")
+  (0 Scaffold
+#   (A C smarts "[n;r5;R1;H1:1][c:2][c:3][n:4]")
+    (A C smarts "[nR1H]1:c:[cR1]:n:c1")
+    (A I break_bond (0 1))
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (0 0 2))
+    (A I join (1 0 1))
+  )
+)

@@ -1,0 +1,11 @@
+(0 Reaction
+# [#6:1][C:2](=O)[#7:3][#6:4]>>[#6:1][#7:2][C:3](=O)[#6:4] reverse amide
+  (A C Comment "Switches.reverse_amide")
+  (0 Scaffold
+    (A C smarts "[#6]-S(=O)(=O)-!@[N]-[#6]")
+    (A I break_bond (0 1))
+    (A I break_bond (4 5))
+    (A I single_bond (1 5))
+    (A I single_bond (0 4))
+  )
+)

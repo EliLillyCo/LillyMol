@@ -12,6 +12,11 @@ PYBIND11_MODULE(lillymol_tools, m)
 {
   using unique_molecules::UniqueMolecules;
 
+  // This is a sub-optimal implementation. While functional, it is not efficient.
+  // Much to my surprise I found that storing smiles in a python set() was much
+  // faster than storing those same strings in the C++ map used in the current
+  // implementation. TODO:ianwatson understand what is going on.
+  // For now this is quite usable, just not efficient.
   py::class_<unique_molecules::UniqueMolecules>(m, "UniqueMolecules")
     .def(py::init<>())
     .def("set_exclude_chiral_info", &UniqueMolecules::set_exclude_chiral_info, "Ignore chirality")
@@ -26,6 +31,8 @@ PYBIND11_MODULE(lillymol_tools, m)
       py::return_value_policy::reference,
       "Element transformations"
     )
+    // Element Transformations temporarily not working - need to figure out duplicate Element ptr issue
+#ifdef ADD_ELEMENT_TRANSFORMATION_NOT_YET_WORKING
     .def("add_element_transformation",
       [](UniqueMolecules& u, const std::string& trans)->bool{
         const IWString s(trans);
@@ -33,6 +40,7 @@ PYBIND11_MODULE(lillymol_tools, m)
       },
       "Add one element transformation"
     )
+#endif
     .def("graph_specifications",
       [](UniqueMolecules& u)->Mol2Graph&{
         return u.graph_specifications();

@@ -138,11 +138,17 @@ Elements_Needed::matches(Molecule_to_Match & target_molecule) const
   }
 
   const int number_elements = _elements.number_elements();
+  // Should make this part of the class since it is needed each time
+  resizable_array<int> uids;
+  for (const Element* e : _elements) {
+    uids << e->unique_id();
+  }
+
   int * found = new_int(number_elements); std::unique_ptr<int[]> free_found(found);
   int nhits = 0;
   const Molecule* m = target_molecule.molecule();
   for (const Atom * a : *m) {
-    const int ndx = _elements.index(a->element());
+    const int ndx = uids.index(a->element()->unique_id());
     if (ndx >= 0) {
       found[ndx]++;
       ++nhits;
@@ -156,12 +162,16 @@ int
 Elements_Needed::_matches_single_element(Molecule_to_Match & target_molecule) const
 {
   const Molecule& m = *target_molecule.molecule();
-  const Element* e0 = _elements[0];
+
+  auto uid = _elements[0]->unique_id();
+
   int nhits = 0;
+
   for (const Atom* a : m) {
-    if (a->element() == e0) {
+    if (a->element()->unique_id() == uid) {
       ++nhits;
     }
   }
+
   return _hits_needed.matches(nhits);
 }

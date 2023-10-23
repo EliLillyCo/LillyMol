@@ -1,0 +1,9 @@
+(0 Reaction
+# [n;H1:1]>>[o:1] nH --> O
+
+  (A C Comment "More_aryl_rings.nH_T_O")
+  (0 Scaffold
+    (A C smarts "[nH1]")
+    (A C change_element "0 O")
+  )
+)

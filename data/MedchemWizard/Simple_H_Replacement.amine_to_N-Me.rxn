@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.amine_to_N-Me")
+  (0 Scaffold
+    (A C smarts "[NH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[N:1]C SHR.amine_to_N-Me")
+    (A C smarts "N")
+    (A I join (0 0))
+  )
+)

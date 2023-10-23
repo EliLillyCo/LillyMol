@@ -1,0 +1,14 @@
+(0 Reaction
+# [a;H1;R1:5]1[a;H1;R1:4][a;R1:3][a;R1:2][n;R1:1]1>>[c:5]21[n;R1:1][a;R1:2][a;R1:3][c:4]1cccc2 pyrrole --> indole
+
+  (A C Comment "More_aryl_rings.pyrrole_T_indole")
+  (0 Scaffold
+    (A C smarts "[/IWfss1nH]1:a:[aH]:[aH]:a1")
+  )
+  (1 Sidechain
+    (A C smiles "C=CC=C")
+    (A C smarts "C=CC=C")
+    (A I join (2 0))
+    (A I join (3 3))
+  )
+)

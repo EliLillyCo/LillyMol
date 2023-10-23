@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_N,N-dimethylethanolamine")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]OCCN(C)C SHR.add_N,N-dimethylethanolamine")
+    (A C smarts "COCCN(C)C")
+    (A I join (0 0))
+  )
+)

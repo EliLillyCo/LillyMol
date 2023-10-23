@@ -1,0 +1,13 @@
+(0 Query
+  (A C Comment "pyrrole")
+  (A D numeric_value 50)
+  (A I Version 2)
+  (0 Ring_Specifier
+    (A I aromatic 1)
+    (A I ring_size 5)
+    (A C environment "1[$([nH]),$([nD3T0]-[CG0])]")
+    (A I heteroatom_count 1)
+    (A I attached_heteroatom_count 0)
+    (A I fused 0)
+  )
+)

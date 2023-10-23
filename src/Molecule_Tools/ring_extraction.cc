@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <ctime>
 #include <iostream>
 #include <memory>
@@ -11,6 +12,7 @@
 
 #include "google/protobuf/text_format.h"
 
+#define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define IWQSORT_FO_IMPLEMENTATION
 
@@ -1235,13 +1237,48 @@ ExtractRings::WriteRings(IWString& fname,
 }
 
 // Write a set of rings `rings` to `output` as text_proto form.
+// Optionally sort them.
 int
 ExtractRings::WriteRings(IWString_and_File_Descriptor& output,
                          const IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>& rings) const {
   static google::protobuf::TextFormat::Printer printer;
   printer.SetSingleLineMode(true);
 
+  resizable_array<const RplRing::ReplacementRing*> for_sorting;
+  for_sorting.resize(rings.size());
+  for (const auto& [_, r] : rings) {
+    for_sorting << &r;
+  }
+
+  // Sort by number of exemplars, and secondarily by the unique smiles
+  // in order to generate a canonical order, which helps unit tests.
+  for_sorting.iwqsort_lambda([](const RplRing::ReplacementRing* r1,
+                                const RplRing::ReplacementRing* r2) {
+      if (r1->n() > r2->n()) {
+        return -1;
+      } else if (r1->n() < r2->n()) {
+        return 1;
+      }
+      const std::string& usmi1 = r1->usmi();
+      const std::string& usmi2 = r2->usmi();
+      if (usmi1.size() < usmi2.size()) {
+        return -1;
+      } else if (usmi1.size() > usmi2.size()) {
+        return 1;
+      }
+
+      return std::strncmp(usmi1.data(), usmi2.data(), usmi1.size());
+    }
+  );
+
   std::string buffer;
+
+  for (const RplRing::ReplacementRing* r : for_sorting) {
+    printer.PrintToString(*r, &buffer);
+    output << buffer << '\n';
+    output.write_if_buffer_holds_more_than(8192);
+  }
+  return 1;
 
   for (const auto& [usmi, r] : rings) {
     printer.PrintToString(r, &buffer);

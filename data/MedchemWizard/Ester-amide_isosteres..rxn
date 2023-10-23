@@ -1,0 +1,13 @@
+(0 Reaction
+# [NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]>>[#6:1]c1cncc(n1)[#6:2] 
+
+  (A C Comment "Ester-amide_isosteres.")
+  (0 Scaffold
+    (A C smarts "[NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]")
+  )
+  (1 Sidechain
+    (A C smiles "Cc1cncc(n1)C ARGA.")
+    (A C smarts "Cc1cncc(n1)C")
+    (A I join (0 0))
+  )
+)

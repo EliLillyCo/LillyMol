@@ -154,8 +154,6 @@ shuffle_file(iwstring_data_source & input,
 
   sb.resize(10000);
 
-  size_t o = input.tellg();
-
   if (iwcrex_end_of_group)
     gather_offsets_regexp_defines_group_end(input, iwcrex_end_of_group, sb);
   else if (1 == lines_per_group)

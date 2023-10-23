@@ -2327,6 +2327,7 @@ IW_General_Fingerprint::_construct_from_tdt(IW_TDT& tdt, int& fatal) {
            << "', but not specified on command line, suppressed\n";
       molecular_property_integer_tag.resize(0);
     } else if (!_read_molecular_properties_integer(tdt, molecular_property_integer_tag)) {
+      cerr << "Cannot read molecular properties\n";
       fatal = 1;
       return 0;
     }
@@ -2334,6 +2335,7 @@ IW_General_Fingerprint::_construct_from_tdt(IW_TDT& tdt, int& fatal) {
 
   if (molecular_property_continuous_tag.length()) {
     if (!_read_molecular_properties_continuous(tdt, molecular_property_continuous_tag)) {
+      cerr << "Cannot read continuous molecular properties\n";
       fatal = 1;
       return 0;
     }

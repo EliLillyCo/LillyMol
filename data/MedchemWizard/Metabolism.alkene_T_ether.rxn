@@ -1,0 +1,10 @@
+(0 Reaction
+# [#6:1]C=C[#6:2]>>[#6:1]OC[#6:2] alkene --> ether
+
+  (A C Comment "Metabolism.alkene_T_ether")
+  (0 Scaffold
+    (A C smarts "[#6][CD2]=C[#6]")
+    (A I single_bond (1 2))
+    (A C change_element "1 O")
+  )
+)

@@ -1,0 +1,9 @@
+(0 Reaction
+# [#6:1]C#C[#6:2]>>[#6:1]CC[#6:2] alkene --> alkane
+
+  (A C Comment "Metabolism.alkene_T_alkane")
+  (0 Scaffold
+    (A C smarts "[#6]C#C[#6]")
+    (A I single_bond (1 2))
+  )
+)

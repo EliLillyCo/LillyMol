@@ -1,14 +1,19 @@
 #! /bin/bash
-# LILLYMOL_HOME and BUILD_DIR are required to be exported before running test
-if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]
-then 
-    # undefined BIN_DIR
-    echo "System variables LILLYMOL_HOME and BUILD_DIR are required for running the test"
-    echo "Please export LILLYMOL_HOME(local path to LillyMol code)"
-    echo "Please export BUILD_DIR(the folder name under the bin folder after build)"
-    echo "Example: export LILLYMOL_HOME=/home/user/LillyMol"
-    echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
-    exit 1
+
+# LILLYMOL_HOME and BUILD_DIR should be exported, use my location if not set.
+
+if [[ ! -v LILLYMOL_HOME ]] ; then
+  me=$(readlink -f $0)
+  up=$(dirname ${me})  # LillyMol/test
+  export LILLYMOL_HOME=$(dirname ${up})
+fi
+
+if [[ ! -v BUILD_DIR ]] ; then
+  export BUILD_DIR=$(uname)
+fi
+
+if [[ ! -v PYTHONPATH ]] ; then
+  export PYTHONPATH="${LILLYMOL_HOME}/contrib/script/py"
 fi
 
 for dir in ./*; do

@@ -1,5 +1,5 @@
   lilly_mol:
-    image: lillymolprivate
+    image: lillymol
     container_name: lilly_mol
     volumes:
       - .:/test

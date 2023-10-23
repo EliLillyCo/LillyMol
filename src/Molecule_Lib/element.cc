@@ -1485,17 +1485,15 @@ debug_print_all_elements(std::ostream & os)
 {
   assert (os.good());
 
-  if (elements.empty())
-  {
+  if (elements.empty()) {
     os << "Element array not initialised\n";
     return;
   }
 
   int nelements = elements.number_elements();
 
-  for (int i = 0; i < nelements; i++)
-  {
-    os << "Element number " << i << endl;
+  for (int i = 0; i < nelements; i++) {
+    os << "Element number " << i << ' ';
     elements[i]->debug_print(os);
   }
 

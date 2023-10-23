@@ -1,9 +1,13 @@
 #ifndef MOLECULE_LIB_MDL_H_
 #define MOLECULE_LIB_MDL_H_
 
+#include <iostream>
 #include <memory>
 
 #include "re2/re2.h"
+
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "atom.h"
 #include "atom_alias.h"

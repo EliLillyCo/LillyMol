@@ -226,7 +226,7 @@ Options::Preprocess(Molecule& m) {
   return 1;
 }
 
-int
+void
 AppendSpaceSuppressedName(const IWString& name,
                           IWString_and_File_Descriptor& output) {
   for (char c : name) {

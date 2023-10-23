@@ -1,0 +1,13 @@
+(0 Reaction
+# [H:1]>>[C;H2:1][cR1]1[cR1][cR1][cR1][cR1][cR1]1 add benzyl
+
+  (A C Comment "Aryl_group_addition.add_benzyl")
+  (0 Scaffold
+    (A C smarts "[H>0]")
+  )
+  (1 Sidechain
+    (A C smiles "CC1=CC=CC=C1")
+    (A C smarts "C")
+    (A I join (0 0))
+  )
+)

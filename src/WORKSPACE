@@ -99,7 +99,7 @@ new_local_repository(
     build_file_content = """
 cc_library (
     name = "pybind11",
-    hdrs = glob( 
+    hdrs = glob(
         ["pybind11/**/*.h"],
     ),
     deps = [
@@ -161,7 +161,7 @@ new_local_repository(
 cc_library (
     name = "biobyte",
     srcs = [ "lib/libBB.a", "lib/libf2c.a" ],
-    hdrs = glob(["h/*.h"]),  
+    hdrs = glob(["h/*.h"]),
     strip_include_prefix = "h",
     visibility = ["//visibility:public"],
 )

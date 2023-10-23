@@ -1,0 +1,14 @@
+(0 Reaction
+# [a;H1:1][a:2]!@[a:3][a;H1:4]>>[a:1]1[a:2][a:3][a:4]CO1 create a new ring with O-CH2
+
+  (A C Comment "Virtual_Ring.create_a_new_ring_with_O-CH2")
+  (0 Scaffold
+    (A C smarts "[aH1][a]!@[a][aH1]")
+  )
+  (1 Sidechain
+    (A C smiles "OC")
+    (A C smarts "OC")
+    (A I join (0 0))
+    (A I join (3 1))
+  )
+)

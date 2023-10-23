@@ -135,6 +135,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
     with open(fname, "w") as writer:
       writer.write('\n'.join(f) + '\n')
 
+    set_display_smiles_interpretation_error_messages(0)
     molecules_read = 0
     with ReaderContext(fname, FileType.SMI) as reader:
       for mol in reader:
@@ -149,6 +150,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
     with open(fname, "w") as writer:
       writer.write('\n'.join(f) + '\n')
 
+    set_display_smiles_interpretation_error_messages(0)
     molecules_read = 0
     with ReaderContext(fname, FileType.SMI) as reader:
       reader.set_ignore_connection_table_errors(1)

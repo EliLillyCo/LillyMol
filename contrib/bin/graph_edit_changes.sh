@@ -5,9 +5,13 @@
 # TODO: random_molecular_transformations emits too many warning
 # messages, code needs cleanup..
 
-lillymol_home=$(dirname $(dirname $0))
+if [[ -v LILLYMOL_HOME ]] ; then
+  true
+else
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
+fi
 
-lib="${lillymol_home}/data/random_molecular_transformations.d"
+lib="${LILLYMOL_HOME}/data/random_molecular_permutations.d"
 if [[ ! -d ${lib} ]] ; then
   echo "Missing data ${lib}" >&2
   ls ${lib}
@@ -44,4 +48,5 @@ probabilities="${lib}/graph_edit_changes"
         fi
     done
 
-exec random_molecular_permutations -L single=$single -L double=$double -L arom=$aromatic -L aromR=$aromatic_ring -L fsarom=$fuse_aromatic_ring -L aliphR=${aliphatic_ring} -L singleR=$single_any -L singleR=${single2} -L singleR=${single3} -r $r -R $R -P $probabilities "$@"
+exe=${LILLYMOL_HOME}/bin/$(uname)/random_molecular_permutations
+exec ${exe} -L single=$single -L double=$double -L arom=$aromatic -L aromR=$aromatic_ring -L fsarom=$fuse_aromatic_ring -L aliphR=${aliphatic_ring} -L singleR=$single_any -L singleR=${single2} -L singleR=${single3} -r $r -R $R -P $probabilities "$@"

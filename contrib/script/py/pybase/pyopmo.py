@@ -54,8 +54,8 @@ mo_tool_map = {
     'alogp': [root_dir + '/abraham',
             '',
             {'-l': '',
-             '-F': home_dir + '/contrib/data/queries/abraham/Abraham',
-             '-P': home_dir + '/contrib/data/queries/abraham/Alpha2H',
+             '-F': home_dir + '/data/queries/abraham/Abraham',
+             '-P': home_dir + '/data/queries/abraham/Alpha2H',
              '-g': 'all' }]
 }
 

@@ -11,8 +11,10 @@
 
 #define REASONABLE_ATOMIC_NUMBER(z) ((z) >= 0 && (z) <= HIGHEST_ATOMIC_NUMBER)
 
+#include <cstdint>
 #include <iostream>
 
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 
 #include "iwmtypes.h"

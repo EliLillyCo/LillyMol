@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Multiple halogens on one ring")
+  (0 Ring_Specifier
+    (A I aromatic 1)
+    (A C environment ">1a-[F,Cl,Br,I]")
+  )
+)

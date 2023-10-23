@@ -1,8 +1,10 @@
 #ifndef FOUNDATIONAL_IWMISC_MINMAXSPC_H
 #define FOUNDATIONAL_IWMISC_MINMAXSPC_H
 
-#include <type_traits>
+#include <iostream>
 
+#include "Foundational/iwmisc/iwconfig.h"
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 #include "set_or_unset.h"
 #include "iwarchive.h"
@@ -79,9 +81,6 @@ template <typename T>  std::ostream &
 #if (IW_IMPLEMENTATIONS_EXPOSED) || defined(MINMAXSPC_IMPLEMENTATION)
 
 #include <assert.h>
-#include <iomanip>
-
-#include "minmaxspc.h"
 
 template <typename T>
 Min_Max_Specifier<T>::Min_Max_Specifier()

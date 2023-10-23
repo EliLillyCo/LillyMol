@@ -12,7 +12,12 @@
 
 namespace atom_pair_fingerprint {
 
+using atom_type_t = uint64_t;
+
 class AtomPairFingerprint {
+
+  public:
+  private:
 
   // In order to avoid passing long argument lists.
   class APairOfAtoms {
@@ -80,8 +85,6 @@ class AtomPairFingerprint {
       }
   };
 
-  public:
-    using uint64_t = atom_type_t;
   private:
     // _min_separation will default to 1, which is 1 bond. Set to zero
     // to get bits corresponding to atom types themselves.

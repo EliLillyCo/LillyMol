@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "Multiple large ring systems")
+  (A I Version 2)
+  (0 Ring_Specifier
+    (A I min_ring_size 7)
+    (A I min_hits_needed 2)
+  )
+)

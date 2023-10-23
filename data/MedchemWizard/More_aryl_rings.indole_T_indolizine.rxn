@@ -1,0 +1,19 @@
+(0 Reaction
+# [c:1][n$(n1ccc2c1cccc2):2]>>[n:1][c:2] indole --> indolizine
+
+  (A C Comment "More_aryl_rings.indole_T_indolizine")
+  (0 Scaffold
+    (A C smarts "n1[cR1]cc2ccccc12")
+    (A C change_element "0 C")
+    (A C change_element "8 N")
+    (A I double_bond (0 1))
+    (A I single_bond (1 2))
+    (A I double_bond (2 3))
+    (A I single_bond (3 4))
+    (A I double_bond (4 5))
+    (A I single_bond (5 6))
+    (A I double_bond (6 7))
+    (A I single_bond (7 8))
+    (A I single_bond (3 8))
+  )
+)

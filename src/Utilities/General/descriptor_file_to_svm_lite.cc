@@ -56,15 +56,16 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Converts a descriptor file to the form needed by svm-lite\n";
-  cerr << " -A <fname>     activity file\n";
-  cerr << " -H <fname>     write the descriptor file header to <fname>\n";
-  cerr << " -e             processing a test set, no -A file needed\n";
-  cerr << " -U <fname>     check descriptors are in <fname> - created with -H option\n";
-  cerr << " -z             strip leading zero's when comparing identifiers\n";
-  cerr << " -C             activity data is categorical - skip numeric conversion\n";
-  cerr << " -t <tol>       ignore values within <tol> of zero\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Converts a descriptor file to the form needed by svm-lite\n";
+ -A <fname>     activity file
+ -e             processing a test set, no -A file needed
+ -H <fname>     write the descriptor file header to <fname>
+ -U <fname>     check descriptors are in <fname> - created with -H option
+ -z             strip leading zero's when comparing identifiers
+ -C             activity data is categorical - skip numeric conversion
+ -t <tol>       ignore values within <tol> of zero
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -424,6 +425,7 @@ descriptor_file_to_svm_lite(int argc, char** argv)
 
   verbose = cl.option_count('v');
 
+  // There must be just one source of experimental data.
   int n = 0;
   if (cl.option_present('e')) {
     n++;
@@ -492,7 +494,6 @@ descriptor_file_to_svm_lite(int argc, char** argv)
 
   if (cl.option_present('A')) {
     const_IWSubstring a = cl.string_value('A');
-
     if (!read_activity_data(a, id_to_activity)) {
       cerr << "Cannot read activity data in '" << a << "'\n";
       return 4;
@@ -522,7 +523,7 @@ descriptor_file_to_svm_lite(int argc, char** argv)
     }
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }

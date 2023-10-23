@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_carboxylate")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]C(=O)[OH] SHR.add_carboxylate")
+    (A C smarts "CC(=O)O")
+    (A I join (0 0))
+  )
+)

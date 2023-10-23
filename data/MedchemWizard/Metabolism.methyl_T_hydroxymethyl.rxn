@@ -1,0 +1,13 @@
+(0 Reaction
+# [C;H3:1]>>[C:1]O methyl -> hydroxymethyl
+
+  (A C Comment "Metabolism.methyl_T_hydroxymethyl")
+  (0 Scaffold
+    (A C smarts "[CH3]")
+  )
+  (1 Sidechain
+    (A C smiles "O")
+    (A C smarts "O")
+    (A I join (0 0))
+  )
+)

@@ -1,6 +1,10 @@
 #ifndef MOLECULE_LIB_MARVIN_H_
 #define MOLECULE_LIB_MARVIN_H_
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
 class Marvin_Structure_Information

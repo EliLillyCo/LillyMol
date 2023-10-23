@@ -13,7 +13,7 @@ else
     BIN_DIR=$LILLYMOL_HOME/bin/$BUILD_DIR
 fi
 
-QUERY_DIR=$LILLYMOL_HOME/contrib/data/queries
+QUERY_DIR=$LILLYMOL_HOME/data/queries
 command=$BIN_DIR/abraham
 case_id="Case 1"
 echo "Testing:  $command"

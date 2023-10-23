@@ -315,24 +315,23 @@ cc_binary(
     ],
 )
 
-# Enable if MPI is enabled in the current environment.
-# cc_binary(
-#     name = "gfp_leader_threaded_mpi",
-#     srcs = [
-#         "gfp_leader_threaded_mpi.cc",
-#     ],
-#     tags = [
-#         "mpi",
-#     ],
-#     deps = [
-#         "//Foundational/accumulator",
-#         "//Foundational/cmdline:iwcmdline",
-#         "//Foundational/data_source:iwstring_data_source",
-#         "//Foundational/iwmisc",
-#         "//Utilities/GFP_Tools:gfp",
-#         "@mpich",
-#     ],
-# )
+#cc_binary(
+#    name = "gfp_leader_threaded_mpi",
+#    srcs = [
+#        "gfp_leader_threaded_mpi.cc",
+#    ],
+#    tags = [
+#        "mpi",
+#    ],
+#    deps = [
+#        "//Foundational/accumulator",
+#        "//Foundational/cmdline:iwcmdline",
+#        "//Foundational/data_source:iwstring_data_source",
+#        "//Foundational/iwmisc",
+#        "//Utilities/GFP_Tools:gfp",
+#        "@mpich",
+#    ],
+#)
 
 cc_binary(
     name = "gfp_mcs",

@@ -43,7 +43,7 @@ fi
 
 echo "Testing: $command"
 
-queries_dir="$LILLYMOL_HOME/contrib/data/queries"
+queries_dir="$LILLYMOL_HOME/data/queries"
 
 $command \
    -N F:${queries_dir}/charges/queries \

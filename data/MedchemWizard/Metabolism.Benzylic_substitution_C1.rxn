@@ -1,0 +1,13 @@
+(0 Reaction
+# [C$(Ca);H2:1]>>[C$(Ca);H0:1](C)(C) Benzylic substitution
+
+  (A C Comment "Metabolism.Benzylic_substitution_C1")
+  (0 Scaffold
+    (A C smarts "[CH2]-a")
+  )
+  (1 Sidechain
+    (A C smiles "C")
+    (A C smarts "C")
+    (A I join (0 0))
+  )
+)

@@ -38,6 +38,8 @@ static int verbose = 0;
 
 static int molecules_processed = 0;
 
+static int products_written = 0;
+
 static Number_Assigner number_assigner;
 
 static Chemical_Standardisation chemical_standardisation;
@@ -61,6 +63,17 @@ static int avoid_overlapping_scaffold_changes = 0;
 static int max_atoms_in_product = 0;
 
 static int products_discarded_for_too_many_atoms = 0;
+
+// Oct 2023. It is common to generate molecules that might
+// have fragments that are too large or too small. These can
+// be complex to filter out with other tools, so enable someone
+// to specify the min and max fragment size in the product.
+// Any product violating this is discarded.
+
+static int need_to_check_product_fragment_sizes = 0;
+static int min_allowed_fragment_size_in_product = 0;
+static int max_allowed_fragment_size_in_product = std::numeric_limits<int>::max();
+static int products_discarded_for_violating_fragment_specifications = 0;
 
 /*
   There are subtle differences between these two directives.
@@ -209,9 +222,9 @@ usage(int rc) {
   cerr << "  -d             suppress duplicate molecules - only checks current molecule\n";
   cerr << "  -k             don't perceive symmetry equivalents in the scaffold\n";
   cerr << "  -J ...         various special purpose options, enter '-J help' for details\n";
-  cerr << "  -E ...         standard element options, enter '-E help' for info\n";
   cerr << "  -S <string>    create output files with name stem <string>\n";
   cerr << "  -o <type>      specify output file type(s)\n";
+  cerr << "  -E ...         standard element options, enter '-E help' for info\n";
   (void) display_standard_aromaticity_options(cerr);
   (void) display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -i <type>      specify input file type\n";
@@ -406,6 +419,27 @@ RemoveHydrogensCausingValenceErrors(Molecule& m) {
 }
 
 static int
+OkFragmentsInProduct(Molecule& m) {
+  const int nfrag = m.number_fragments();
+  // It is unclear what should happen in this case.
+  if (nfrag == 1) {
+    return 1;
+  }
+
+  for (int i = 0; i < nfrag; ++i) {
+    const int nat = m.atoms_in_fragment(i);
+    if (nat < min_allowed_fragment_size_in_product) {
+      return 0;
+    }
+    if (nat > max_allowed_fragment_size_in_product) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
 do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
          Molecule_Output_Object& output) {
   if (strip_products_to_largest_fragment) {
@@ -474,9 +508,18 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
 
     return 1;
   }
+
   if (unset_unnecessary_implicit_hydrogens_known_values) {
     product.unset_unnecessary_implicit_hydrogens_known_values();
   }
+
+  if (need_to_check_product_fragment_sizes) {
+    if (! OkFragmentsInProduct(product)) {
+      ++products_discarded_for_violating_fragment_specifications;
+      return 1;
+    }
+  }
+
 
   if (number_assigner.active()) {
     number_assigner.process(product);
@@ -490,6 +533,8 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
   if (verbose > 1) {
     cerr << "Writing " << product.name() << '\n';
   }
+
+  ++products_written;
 
   return output.write(product);
 }
@@ -578,7 +623,7 @@ do_all_scaffold_possibilities_enumeration(Molecule& scaffold, IWReaction& reacti
 
 static void
 set_molecule_name(Molecule& m, const IWString& name_stem, int& ndx) {
-  if (0 == name_stem.length()) {
+  if (name_stem.empty()) {
     return;
   }
 
@@ -1081,14 +1126,14 @@ static int
 do_write(IW_TDT& tdt, Molecule& result, std::ostream& output) {
   tdt.set_dataitem_value(SMILES_TAG, result.smiles());
 
-  if (0 == append_to_changed_molecules.length()) {
+  if (append_to_changed_molecules.empty()) {
     output << tdt;
 
     return output.good();
   }
 
   if (tdt.index_of_dataitem(identifier_tag) < 0) {
-    if (0 == append_to_changed_molecules.length()) {
+    if (append_to_changed_molecules.empty()) {
       tdt.set_dataitem_value(identifier_tag, result.name());
     } else {
       IWString tmp(result.name());
@@ -1328,27 +1373,31 @@ trxn(const char* fname, IWReaction& rxn, FileType input_type,
 static void
 display_dash_j_qualifiers(std::ostream& os) {
   // clang-format off
-  os << "  -J wrscaf      write scaffolds  to the output stream\n";
-  os << "  -J wrsdch      write sidechains to the output stream\n";
-  os << "  -J blki        bonds lose Kekule identity\n";
-  os << "  -J appinfo     append text info from reagents to products\n";
-  os << "  -J onlyreact=RX only react molecules where the name matches RX\n";
-  os << "  -J maxat=nn    discard any product molecule having more than <nn> atoms\n";
-  os << "  -J rmncm       ignore multiple substructure matches involving non changing atoms\n";
-  os << "  -J rmovm       ignore multiple substructure matches involving     changing atoms\n";
-  os << "  -J exph        make implicit Hydrogen atoms explicit (changes reaction)\n";
-  os << "  -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed)\n";
-  os << "  -J rmph        remove explicit hydrogen atoms from product molecules\n";
-  os << "  -J rcksm       when multiple scaffold hits present, re-check matches for activity\n";
-  os << "  -J numok       keep non-unique embeddings - default is unique embeddings only\n";
-  os << "  -J isonum      isotopically label atoms with their initial atom number\n";
-  os << "  -J msm=<s>     text designating multiple scaffold matches, use NONE to skip\n";
-  os << "  -J marvin      the input reaction file (-D) has come from Marvin\n";
-  os << "  -J keepatmn    retain any atom map numbers in output molecules\n";
-  os << "  -J larf        in smirks, if an atom is lost, remove the fragment\n";
-  os << "  -J rmhsqb      remove unnecessary [] in product molecules\n";
-  os << "  -J rmxhbv      remove explicit hydrogens causing bad valences\n";
-  os << "  -J coords      include coordinates with smiles output\n";
+  os << R"(
+ -J wrscaf      write scaffolds  to the output stream
+ -J wrsdch      write sidechains to the output stream
+ -J blki        bonds lose Kekule identity
+ -J appinfo     append text info from reagents to products
+ -J onlyreact=RX only react molecules where the name matches RX
+ -J maxat=nn    discard any product molecule having more than <nn> atoms
+ -J rmncm       ignore multiple substructure matches involving non changing atoms
+ -J rmovm       ignore multiple substructure matches involving     changing atoms
+ -J exph        make implicit Hydrogen atoms explicit (changes reaction)
+ -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed)
+ -J rmph        remove explicit hydrogen atoms from product molecules
+ -J rcksm       when multiple scaffold hits present, re-check matches for activity
+ -J numok       keep non-unique embeddings - default is unique embeddings only
+ -J isonum      isotopically label atoms with their initial atom number
+ -J msm=<s>     text designating multiple scaffold matches, use NONE to skip
+ -J marvin      the input reaction file (-D) has come from Marvin
+ -J keepatmn    retain any atom map numbers in output molecules
+ -J larf        in smirks, if an atom is lost, remove the fragment
+ -J rmhsqb      remove unnecessary [] in product molecules
+ -J rmxhbv      remove explicit hydrogens causing bad valences
+ -J coords      include coordinates with smiles output
+ -J minpfs=<n>  discard products with a fragment with < minpfs atoms
+ -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms
+)";
   // clang-format on
 
   return;
@@ -1447,7 +1496,7 @@ trxn(int argc, char** argv) {
       }
     }
 
-    if (0 == append_to_changed_molecules.length()) {
+    if (append_to_changed_molecules.empty()) {
       cerr << "No text to append specified (-C option)\n";
       usage(6);
     }
@@ -1659,6 +1708,28 @@ trxn(int argc, char** argv) {
         }
       } else if (j == "coords") {
         set_append_coordinates_after_each_atom(1);
+      } else if (j.starts_with("minpfs=")) {
+        j.remove_leading_chars(7);
+        if (! j.numeric_value(min_allowed_fragment_size_in_product) || 
+            min_allowed_fragment_size_in_product < 1) {
+          cerr << "The min fragment size in product molecule directive 'minpfs=' must be a while +ve number\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will discard molecules where any fragment has less than " << min_allowed_fragment_size_in_product << " atoms\n";
+        }
+        need_to_check_product_fragment_sizes = 1;
+      } else if (j.starts_with("maxpfs=")) {
+        j.remove_leading_chars(7);
+        if (! j.numeric_value(max_allowed_fragment_size_in_product) ||
+          max_allowed_fragment_size_in_product < min_allowed_fragment_size_in_product) {
+          cerr << "The max fragment size in product molecule directive 'maxpfs=' must be a whole +ve number\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will discard molecules where any fragment has more than " << max_allowed_fragment_size_in_product << " atoms\n";
+        }
+        need_to_check_product_fragment_sizes = 1;
       } else {
         cerr << "Unrecognised -J qualifier '" << j << "'\n";
         display_dash_j_qualifiers(cerr);
@@ -2172,9 +2243,16 @@ trxn(int argc, char** argv) {
       chemical_standardisation.report(cerr);
     }
 
+    if (need_to_check_product_fragment_sizes) {
+      cerr << products_discarded_for_violating_fragment_specifications <<
+              " product molecules violated for fragment size constraints\n";
+    }
+
     if (suppress_duplicate_molecules) {
       cerr << duplicate_molecules_suppressed << " duplicate products suppressed\n";
     }
+
+    cerr << products_written << " products written\n";
   }
 
   if (nullptr != secondary_reactions) {

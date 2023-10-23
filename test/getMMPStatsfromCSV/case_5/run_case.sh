@@ -35,7 +35,7 @@ echo "Testing: $command"
 
 $command -i "$in" -o "$out" -s SMILES -n CHEMBL_ID -a hERG_pIC50 -A DIFF60 2>>err.txt
 
-$diff_tool ${$gold_out} ${out}.sum
+$diff_tool ${gold_out} ${out}.sum
 ret=$?
 
 if [ $ret -eq 1 ]

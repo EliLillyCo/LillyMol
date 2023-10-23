@@ -2,7 +2,12 @@
 #define MOLECULE_LIB_GEOMETRIC_CONSTRAINTS_H
 // Geometry matching conditions.
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
+
 #include "molecule.h"
+#include "set_of_atoms.h"
 #include "space_vector.h"
 #include "Molecule_Lib/geometric_constraints.pb.h"
 

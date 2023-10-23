@@ -23,15 +23,15 @@ then
     exit 1
 fi
 
-name1=log.txt
+stdout='stdout'
+stderr='stderr'
 diff_tool=../../fileDiff.sh
 
 pid=${$}
-$command -X Ar:Al -R 7 -k -c -v -S /tmp/${pid}ring in/rings.smi >log.txt 2>err.txt
+$command -X Ar:Al -R 7 -k -c -v -S /tmp/${pid}ring in/rings.smi >${stdout} 2>${stderr}
 
 status='PASS'
 for file in /tmp/${pid}ring_*smi ; do
-  # echo "Processing ${file}"
   diff -q $file out/$(basename ${file/${pid}/})
   if [[ $? -ne 0 ]] ; then
     status='FAIL'
@@ -39,7 +39,5 @@ for file in /tmp/${pid}ring_*smi ; do
 done
 echo "$case_id : TEST ${status}"
 
-#rm $name1
+rm ${stdout} ${stderr}
 rm /tmp/${pid}ring_*smi
-rm log.txt
-rm err.txt

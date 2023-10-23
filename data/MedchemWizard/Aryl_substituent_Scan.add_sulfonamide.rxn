@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_sulfonamide")
+  (0 Scaffold
+    (A C smarts "[cH1]")
+  )
+  (1 Sidechain
+    (A C smiles "NS(=O)(=O)C ArylSS.add_sulfonamide")
+    (A I join (0 0))
+  )
+)
+
+)

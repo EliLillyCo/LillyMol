@@ -1,0 +1,14 @@
+(0 Reaction
+# [H:1]>>[cR1:1]1[nR1][cR1][cR1][cR1][cR1]1 add 2-pyridyl
+
+  (A C Comment "Aryl_group_addition.add_2-pyridyl")
+  (0 Scaffold
+    (A C smarts "[H>0]")
+  )
+  (1 Sidechain
+    (A C smiles "C1=NC=CC=C1")
+    (A C smarts "c")
+    (A I max_matches 1)
+    (A I join (0 0))
+  )
+)

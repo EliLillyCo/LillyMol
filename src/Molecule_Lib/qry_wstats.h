@@ -1,8 +1,14 @@
 #ifndef MOLECULE_LIB_QRY_WSTATS_H_
 #define MOLECULE_LIB_QRY_WSTATS_H_
 
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
+
 #include "ostream_and_type.h"
 #include "substructure.h"
+#include "Molecule_Lib/substructure.pb.h"
 
 /*
   This extension of a substructure query keeps track of the number of

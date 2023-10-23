@@ -1,12 +1,13 @@
 #ifndef MOLECULE_LIB_CHARGE_ASSIGNER_H_
 #define MOLECULE_LIB_CHARGE_ASSIGNER_H_
 
-/*
-*/
+#include <iostream>
+
+#include "Foundational/iwaray/iwaray.h"
 
 #include "iwmtypes.h"
-#include "temp_detach_atoms.h"
 #include "qry_wstats.h"
+#include "temp_detach_atoms.h"
 
 class Substructure_Hit_Statistics;
 class Single_Substructure_Query;

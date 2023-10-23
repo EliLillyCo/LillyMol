@@ -1280,6 +1280,14 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
     }
   }
 
+  if (_nearby_atoms.size() > 0) {
+    for (NearbyAtoms* n : _nearby_atoms) {
+      if (! n->Matches(target_molecule, matched_query_atoms, already_matched)) {
+        return 0;
+      }
+    }
+  }
+
 #ifdef DEBUG_MATCHED_ATOM_POST_CHECK
   cerr << "Global conditions OK\n";
 #endif

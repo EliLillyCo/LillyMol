@@ -1,4 +1,4 @@
-smi: "[1CH2]1O[1CH2]CC1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D>2]:[ax2r5D2]:[ax2r5D2]:1" id: "CHEMBL423837.5Al" n: 2 conn: true usmi: "O1[1CH2]CC[1CH2]1" 
-smi: "[1CH2]1C[1NH]C(=O)C1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D>2]:[ax2r5D3](=[a]):[ax2r5D2]:1" id: "CHEMBL1545530.5Al" n: 2 conn: true usmi: "O=C1[1NH]C[1CH2]C1" 
 smi: "[1NH]1CCCC1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:1" id: "CHEMBL2216854.5Al" n: 2 conn: true usmi: "[1NH]1CCCC1" 
 smi: "[1CH2]1CCCC1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:1" id: "CHEMBL3639904.5Al" n: 2 conn: true usmi: "[1CH2]1CCCC1" 
+smi: "[1CH2]1O[1CH2]CC1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D>2]:[ax2r5D2]:[ax2r5D2]:1" id: "CHEMBL423837.5Al" n: 2 conn: true usmi: "O1[1CH2]CC[1CH2]1" 
+smi: "[1CH2]1C[1NH]C(=O)C1" smt: "[ax2r5D>2]1:[ax2r5D2]:[ax2r5D>2]:[ax2r5D3](=[a]):[ax2r5D2]:1" id: "CHEMBL1545530.5Al" n: 2 conn: true usmi: "O=C1[1NH]C[1CH2]C1" 

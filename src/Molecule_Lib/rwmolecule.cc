@@ -246,11 +246,13 @@ set_number_connection_table_errors_to_skip(int s)
 }
 
 /*
-  Radha had a problem with reading molecules from Cambridge.
-  They contain convalently bonded metals, but since they are
-  attached to aromatic rings, they mess up the Kekule detection.
-  We have the option of removing such things before Kekule
-  perception takes place.
+  Optionally remove all bonds from non-organic elements.
+  Possible values:
+    0  do nothing
+    1  remove all bonds to metals
+    2  remove all bonds to a non-organic if all atoms attached are heteroatoms.
+
+  TODO: make this an enumeration
 */
 
 static int _unconnect_covalently_bonded_non_organics_on_read = 0;
@@ -1047,6 +1049,8 @@ string_to_file_type(const const_IWSubstring & file_type)
   we need to remove any covalently bonded non-organics
   Nov 2007. Change this to only un-connect them when they are bonded
   only to heteroatoms
+  Oct 2023. More useful to make the default always remove all bonds.
+  The old behaviour can be obtained by setting _unconnect_covalently_bonded_non_organics_on_read=2
 */
 
 int
@@ -1061,8 +1065,10 @@ Molecule::_do_unconnect_covalently_bonded_non_organics()
     if (a->element()->organic() || 0 == a->ncon())
       continue;
 
-    if (attached_heteroatom_count(i) == a->ncon())
-    {
+    if (_unconnect_covalently_bonded_non_organics_on_read == 1) {
+      remove_bonds_to_atom(1);
+      ++rc;
+    } else if (attached_heteroatom_count(i) == a->ncon()) {
       remove_bonds_to_atom(i);
       rc++;
     }

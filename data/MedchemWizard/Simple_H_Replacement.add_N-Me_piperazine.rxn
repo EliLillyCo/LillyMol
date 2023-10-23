@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_N-Me_piperazine")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]N1CCN(CC)CC1 SHR.add_N-Me_piperazine")
+    (A C smarts "CN1CCN(CC)CC1")
+    (A I join (0 0))
+  )
+)

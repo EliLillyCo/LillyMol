@@ -1005,6 +1005,44 @@ message RequiredMolecularProperties {
   repeated ElementsNeeded elements_needed = 47;
 }
 
+// The concept of other atoms that must be somewhere near the matched
+// atoms. This enables fuzzy concepts like
+//   a donor within 3 bonds of any matched atom
+//   an acceptor within [2,4] bonds of matched atom 5
+//       note that sometimes the ...{[2,4] } construct will work there.
+message NearbyAtoms {
+  // Specify the query via any of these means.
+  repeated string smarts = 1;
+  repeated string query = 2;
+  repeated string query_file = 3;
+
+  // By default, NearbyAtoms cannot overlap the atoms
+  // matched by the query.
+  optional bool can_overlap_matched_atoms = 4;
+
+  // The number of hits needed. All matches must match
+  // the distance constraints. This could also be specified
+  // via the `query` or `query_file` construct.
+  optional uint32 min_hits_needed = 5;
+  optional uint32 max_hits_needed = 6;
+  repeated uint32 hits_needed = 7;
+
+  // The matched atom(s) from which we are measured. If this
+  // is empty, then we check distances with respect to any matched
+  // atom.
+  repeated uint32 matched_atom = 8;
+
+  // The constraint on the number of bonds between our matched atom(s)
+  // and the matched atom(s) of the query.
+  optional uint32 min_bonds_between = 9;
+  optional uint32 max_bonds_between = 10;
+  repeated uint32 bonds_between = 11;
+
+  // Normally the presence of nearby matched atoms is a requirement for
+  // a match, but it can also be cause for a rejection.
+  optional bool rejection = 12;
+}
+
 message SingleSubstructureQuery {
   // Must be present, and unique across all SingleSubstructureQuery.
   optional int32 id = 1;
@@ -1228,7 +1266,12 @@ message SingleSubstructureQuery {
   // Regions defined by matched atoms.
   repeated Region region = 81;
 
-  // Next to assign 82
+  // There is some redundancy with SeparatedAtoms and LinkerAtoms
+  // but they each have different interesting capabilities.
+  // This is probably the most flexible.
+  repeated NearbyAtoms nearby_atoms = 82;
+
+  // Next to assign 83
 }
 
 // A SubstructureQuery is merely a collection of individual

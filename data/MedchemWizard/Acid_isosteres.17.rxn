@@ -1,0 +1,12 @@
+(0 Reaction
+  (A C Comment "Acid_isosteres.17")
+  (0 Scaffold
+    (A C smarts "[CD3](=O)[OD1]")
+    (A I remove_atom (1 2))
+  )
+  (1 Sidechain
+    (A C smiles "S(C=1NC=NN=1)(=O)=O AcidIso.17")
+    (A C smarts "S")
+    (A I join (0 0))
+  )
+)

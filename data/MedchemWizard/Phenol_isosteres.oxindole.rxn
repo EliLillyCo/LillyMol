@@ -1,0 +1,17 @@
+(0 Reaction
+# [a:2]([a;H1:3])[#8;H1:1]>>[a:2]1[#7H1:1]C(C[a:3]1)=O oxindole
+
+  (A C Comment "Phenol_isosteres.oxindole")
+  (0 Scaffold
+    (A C smarts "[OD1]-[/IWKl1ar6]:[aH]")
+    (A I toggle_kekule_form (1 2 2))
+    (A I remove_atom 0)
+    (A I single_bond (1 2))
+  )
+  (1 Sidechain
+    (A C smiles "NC(=O)C")
+    (A C smarts "NC(=O)C")
+    (A I join (1 0 2))
+    (A I join (2 3 2))
+  )
+)

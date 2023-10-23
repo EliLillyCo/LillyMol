@@ -151,7 +151,6 @@ CXResult::Build(const const_IWSubstring& buffer,
           return 0;
         }
         atoms[atom[ndx]] = (atom_number - 1);
-        cerr << "ndx " << ndx << " is atom " << atoms[atom[ndx]] << '\n';
       }
     }
   }

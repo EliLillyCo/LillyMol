@@ -1,0 +1,16 @@
+(0 Reaction
+# [NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]>>[#6:2][#6]1=N[#6](=[#7][#8]1)[#6:1] reverse 1,3,4 oxadiazole
+
+  (A C Comment "Ester-amide_isosteres.reverse_1-3-4_oxadiazole")
+  (0 Scaffold
+    (A C smarts "[CX4R<2]-[N,O;R<2]-C(=O)-[#6R<2]")
+    (A I embeddings_do_not_overlap 1)
+    (A I remove_atom (1 2 3))
+  )
+  (1 Sidechain
+    (A C smiles "C1=NOC=N1")
+    (A C smarts "c1nocn1")
+    (A I join (0 3))
+    (A I join (4 0))
+  )
+)

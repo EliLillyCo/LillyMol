@@ -1,7 +1,9 @@
 #ifndef MOLECULE_LIB_IWMFINGERPRINT_H_
 #define MOLECULE_LIB_IWMFINGERPRINT_H_
 
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "atom_typing.h"
 

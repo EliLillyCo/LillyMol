@@ -949,7 +949,10 @@ value_count<T>::_can_collapse_to_binary(T & v1, int & c1, T & v2, int & c2) cons
   if (binary_density < binary_collapse_threshold)    // cannot be collapsed
     return 0;
 
-// We must now combine the one or two minor values with one of the two major values
+  // We must now combine the one or two minor values with one of the two major values
+  // TODO:ianwatson implement this sometime
+
+  (void) v4;  // keep the compiler quiet until this gets implemented.
 
   return 1;
 }

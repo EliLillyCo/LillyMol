@@ -760,6 +760,7 @@ write_reasons (const IW_STL_Hash_Map_int & reason_bad,
   for (int i = 0; i < istop; ++i)
   {
     write_rejection_reason(rej, i, output);
+    output << ' ';
     write_rejection_reason(dem, i, output);
     output << '\n';
   }

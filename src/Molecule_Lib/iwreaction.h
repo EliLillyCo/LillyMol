@@ -1,11 +1,17 @@
 #ifndef MOLECULE_LIB_IWREACTION_H_
 #define MOLECULE_LIB_IWREACTION_H_
 
+#include <assert.h>
+#include <iostream>
 #include <random>
+#include <string>
 
+#include "Foundational/iwaray/iwaray.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/msi_object.h"
+#include "Foundational/iwstring/iwstring.h"
 
+#include "iwmtypes.h"
 #include "istream_and_type.h"
 #include "reaction_match_conditions.h"
 #include "Molecule_Lib/reaction.pb.h"

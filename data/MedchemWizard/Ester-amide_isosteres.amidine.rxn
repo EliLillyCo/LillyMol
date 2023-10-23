@@ -1,0 +1,16 @@
+(0 Reaction
+# [NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]>>[#6:1]C(=NC)N[#6:2] amidine
+
+  (A C Comment "Ester-amide_isosteres.amidine")
+  (0 Scaffold
+    (A C smarts "[CX4R<2]-[N,O;R<2]-C(=O)-[#6R<2]")
+    (A I embeddings_do_not_overlap 1)
+    (A I remove_atom (1 2 3))
+  )
+  (1 Sidechain
+    (A C smiles "NC=NC")
+    (A C smarts "NC=NC")
+    (A I join (0 0))
+    (A I join (4 1))
+  )
+)

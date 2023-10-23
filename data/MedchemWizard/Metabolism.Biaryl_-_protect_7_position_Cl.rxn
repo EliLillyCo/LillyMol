@@ -1,0 +1,13 @@
+(0 Reaction
+# [cH1$(c1[c,n][c,n][c,n]2[c,n]([c,n]1)[c,n]([c,n][c,n][c,n]2)*):1]>>[c:1]C Biaryl - protect 7 position
+
+  (A C Comment "Metabolism.Biaryl_-_protect_7_position_Cl")
+  (0 Scaffold
+    (A C smarts "[cD3]1aaaa2aa[cD2]aa12")
+  )
+  (1 Sidechain
+    (A C smiles "Cl")
+    (A C smarts "Cl")
+    (A I join (7 0))
+  )
+)

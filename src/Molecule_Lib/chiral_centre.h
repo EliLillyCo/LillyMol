@@ -1,11 +1,13 @@
 #ifndef MOLECULE_LIB_CHIRAL_CENTRE_H_
 #define MOLECULE_LIB_CHIRAL_CENTRE_H_
 
+#include <iostream>
+
 #include "Foundational/iwaray/iwaray.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "iwmtypes.h"
 
-class IWString;
 class Molecule;
 class Bond;
 

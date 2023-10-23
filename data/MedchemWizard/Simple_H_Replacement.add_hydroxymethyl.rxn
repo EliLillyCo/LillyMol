@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Simple_H_Replacement.add_hydroxymethyl")
+  (0 Scaffold
+    (A C smarts "[CH>0]")
+  )
+  (1 Sidechain
+    (A C smiles "[C:1]CO SHR.add_hydroxymethyl")
+    (A C smarts "CCO")
+    (A I join (0 0))
+  )
+)
