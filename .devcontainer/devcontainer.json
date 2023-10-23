@@ -1,5 +1,0 @@
-
-   
-{
-    "postCreateCommand": "pip3 install --user awscli",
-}
