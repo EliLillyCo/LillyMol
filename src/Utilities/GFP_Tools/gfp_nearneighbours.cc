@@ -19,10 +19,6 @@ using std::cerr;
 using std::endl;
 
 /*
-  gfp_nearneighbours.cc,v 1.3 2002/06/21 19:05:32
-*/
-
-/*
   When doing near neighbour determinations within a single set of molecules, we gain
   great efficiencies by writing the index of the item rather than its name. This helps
   programmes that read the nn file

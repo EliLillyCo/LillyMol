@@ -430,6 +430,7 @@ nearneighbours(iwstring_data_source& input, IWString_and_File_Descriptor& output
   similarity_type_t* d = new similarity_type_t[pool_size];
   std::unique_ptr<similarity_type_t[]> free_d(d);
 
+  cerr << "Begin main reading loop\n";
   IW_TDT tdt;
   while (tdt.next(input)) {
     IWString smiles, id;
@@ -441,6 +442,8 @@ nearneighbours(iwstring_data_source& input, IWString_and_File_Descriptor& output
 
     GFP_Standard fp;
     if (!build_fingerprint(tdt, fp)) {
+      cerr << "Cannot build fingerprint\n";
+      cerr << tdt << '\n';
       return 0;
     }
 

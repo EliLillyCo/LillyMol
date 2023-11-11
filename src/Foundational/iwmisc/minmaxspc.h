@@ -81,8 +81,6 @@ template <typename T>  std::ostream &
 #include <assert.h>
 #include <iomanip>
 
-#include "minmaxspc.h"
-
 template <typename T>
 Min_Max_Specifier<T>::Min_Max_Specifier()
 {

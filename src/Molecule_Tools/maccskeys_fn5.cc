@@ -2556,6 +2556,9 @@ MACCSKeys::_key34 (Molecule & m,
   const int * aromatic = mpr.aromatic();
 
   const int matoms = mpr.natoms();
+  if (matoms == 0) {
+    return 0;
+  }
 
   int rc = 0;
 

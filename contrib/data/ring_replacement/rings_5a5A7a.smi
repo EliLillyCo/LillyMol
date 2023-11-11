@@ -1,0 +1,1 @@
+smi: "[1CH]1=C2C(=CC3=[1CH][CH2:70]OC3=C1)[1CH2]CC2" smt: "[ax2r7D>2]1:[ax3r5r7D3]2:[ax3r5r7D3](:[ax2r7D2]:[ax3r5r7D3]3:[ax2r5D>2]:[ax2r5D2]:[ax2r5D2]:[ax3r5r7D3]:3:[ax2r7D2]:1):[ax2r5D>2]:[ax2r5D2]:[ax2r5D2]:2" id: "CHEMBL4168534" n: 1 conn: true exo: "[70O]" usmi: "O=c1oc2c[1cH]c3c([1CH2]CC3)cc2[1cH]1" 

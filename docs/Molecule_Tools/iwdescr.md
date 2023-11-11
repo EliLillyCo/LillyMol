@@ -9,12 +9,20 @@ iwdescr file.smi > file.w
 which will generate a tabular (space separated) file containing a couple of hundred
 molecular descriptors.
 
+Note that within the distribution there is a script that stages some external configurations,
+hydrogen bond status, formal charges, that are needed in order to avoid missing values.
+```
+/path/to/LillyMol/contrib/bin/iwdescr.sh -O all file.smi > file.w
+```
+will generate all known molecular descriptors. Note that if you do see missing values
+what gets written can be controlled with the `-u` option `-u N/A` for example.
+
 ## Descriptors.
 The following descriptors are computed.
 
-| ---- | ----------|
-| name | definition|
-| ---- | ----------|
+| ---- | ---------- |
+| name | definition |
+| ---- | ---------- |
 | natoms | the number of atoms in the molecule |
 | nrings | number of rings in the molecule |
 | nelem | number of different elements in the molecule |
@@ -296,7 +304,6 @@ The following descriptors are computed.
 | maxpsymdmean | the mean number of atoms in a partial symmetry relationship |
 | psymdnumzero | number of atoms not involved in a partial symmetry relationship |
 | xlogp | local implementation of xlogp |
-| -------- | ----------- |
 
 All are mostly interpretable molecular descriptors that are fairly quick to
 compute.

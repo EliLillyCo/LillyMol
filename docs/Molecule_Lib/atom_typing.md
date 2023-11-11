@@ -58,7 +58,7 @@ So-called basic atom type. There are 6 different atom types.
 This crude atom type sometimes works well in models.
 
 ### cc
-First applies the `complex` atom type. If the molecule has no formal charges
+First applies the `complex` atom type (see below). If the molecule has no formal charges
 return that. For every atom that has a formal charge, perturb the atom type
 depending on whether it is positive or negative.
 
@@ -103,7 +103,7 @@ Consists of 3 atom types
 This idea proved useful in a specific project once upon a time.
 
 ### pp
-This is the pharmacaphore fingerprint. This depends on externally
+This is the pharmacophore fingerprint. This depends on externally
 specified configurations for formal charge and Hydrogen Bonds. It is
 complex, and is described in its own section below.
 
@@ -144,14 +144,14 @@ consists of
 
 This very simple atom typing often does quite well in models.
 
-### Pharmacaphore Atom Type
+### Pharmacophore Atom Type
 This is driven by a configuration file that contains directives on how
-to form a pharmacaphore fingerprint. Those directives wil include
+to form a pharmacophore fingerprint. Those directives wil include
 
 - charge assigner
 - donor acceptor assigner
 - hydrophobe queries
-- atom type for non pharmacaphore atoms
+- atom type for non pharmacophore atoms
 - combine donor and acceptor
 
 The last directive, if present, says do not differentiate donors and
@@ -166,9 +166,9 @@ times, once with all duals as donors and once with them all as
 acceptors. But fingerprint generators do not know anything about this
 so that is not really feasible.
 
-Importantly, specifying a type for the non pharmacaphore atoms is
+Importantly, specifying a type for the non pharmacophore atoms is
 very important. This derives from work at Glaxo I recall where their
-efforts at implementing pharmacaphore atom types was floundering. And
+efforts at implementing pharmacophore atom types was floundering. And
 then they introduced an 'other' type, and things started working.
 This is hardly surprising since pharmacaphoric features usually
 comprise only a small fraction of the atoms in a molecule.
@@ -176,6 +176,19 @@ comprise only a small fraction of the atoms in a molecule.
 This atom typing seldom works well, probably because of the limitations
 noted above. In order to be useful, a custom fingerprint generator
 would likely be needed - something we have never implemented.
+
+In order to use this the file [pharmacophore](/contrib/data/queries/pharmacophore/pharmacophore)
+must be made available to the program. In order to use it with
+this distribution, you need to set
+```
+export LILLYMOL_HOME=/path/to/LillyMol
+```
+and to use the pharmacaphore atom type
+```
+some_tool -P PP=${LILLYMOL_HOME}/contrib/data/queries/pharmacophore/pharmacophore ...
+```
+which is not great. Hopefully a subsequent release can improve usability outside
+Lilly. It will also be a textproto form.
 
 ## UST
 The User Specified Type directive allows combination of any number of
@@ -220,6 +233,7 @@ Some of these are clearly better ideas than others. Properties `F`, `K` and
 
 Common atom types might include things like
 
+- UST:AY
 - UST:ACHPY
 - UST:ACRY
 - UST:ACHPRT
