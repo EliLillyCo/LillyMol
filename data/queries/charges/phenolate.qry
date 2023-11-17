@@ -45,5 +45,6 @@
     (A I min_hits_needed 2)
     (A C smarts "N(=O)=O")
     (A C smarts "[Cl,F,Br,I]")
+    (A C smarts "C#N")
   )
 )

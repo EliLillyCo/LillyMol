@@ -41,6 +41,7 @@
 #include "Molecule_Lib/standardise.h"
 
 #include "iwecfp_database.h"
+#include "iwecfp_database_lookup_lib.h"
 
 using std::cerr;
 
@@ -50,6 +51,8 @@ using iwecfp_database::DBKey;
 using iwecfp_database::Fingerprint_Characteristics;
 using iwecfp_database::IWdbkeyHash;
 using iwecfp_database::Set_of_Bits;
+using iwecfp_database_lookup::Count_Example;
+using iwecfp_database_lookup::Set_of_Databases;
 
 static Chemical_Standardisation chemical_standardisation;
 
@@ -90,20 +93,11 @@ static int count_threshold = 0;
 looks like this was never implemented static int db_cache_size = 0;  // 33554432;
 #endif
 
-/*
-  If we have slurped parts of the database to RAM, we don't do any
-  database lookups
-*/
-
-static int slurp_examples = 0;
-
 // static double minimum_score_needed = -1.0;
 
 static IWString_and_File_Descriptor stream_for_too_hard;
 
 static int show_number_bits_missing_for_missing_bits = 0;
-
-static unsigned int max_hash_size = 0;
 
 static int parallel_group_size = 0;
 
@@ -121,70 +115,10 @@ static int check_monotonicity_bits_found = 0;
 static int per_atom_counts = 0;
 
 /*
-  There is a need to assign scores in given ranges to labels.
-  Decided not to implement, write post-processing script instead
-*/
-
-class Human_Labels
-{
- private:
-  int _radius;
-
- public:
-  Human_Labels();
-
-  int
-  active() const
-  {
-    return _radius >= 0;
-  }
-
-  int
-  build(const char* fname);
-  int
-  build(iwstring_data_source&);
-};
-
-Human_Labels::Human_Labels()
-{
-  _radius = -1;
-}
-
-int
-Human_Labels::build(const char* fname)
-{
-  iwstring_data_source input(fname);
-
-  if (!input.good()) {
-    cerr << "Human_Labels::build:cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  return build(input);
-}
-
-int
-Human_Labels::build(iwstring_data_source& input)
-{
-  const_IWSubstring buffer;
-
-  while (input.next_record(buffer)) {
-    if (buffer.starts_with('#')) {
-      continue;
-    }
-  }
-
-  return 1;
-}
-
-static Human_Labels human_labels;
-
-/*
   A per-thread mechanism for accumulating outputs
 */
 
-class SF_Results
-{
+class SF_Results {
  private:
   IWString _to_stdout;
 
@@ -449,480 +383,6 @@ Score_Related::_okscore_mutex_protected(const double score)
 static Score_Related score_related;
 
 /*
-  A lookup class for databases built by iwecfp_database_load
-*/
-
-class SP_Database
-{
- private:
-  Db* _db;
-  DbEnv* _env;
-
-  int _lookups_done;
-  int _bits_found;
-
-  // We need a mutex to protect access to the _hash related things
-
-  std::mutex _mutex;
-
-  std::unordered_map<DBKey, Count_Radius, IWdbkeyHash> _hash;
-  int _hash_size;
-  int _cache_hit;
-
-  int _contains_examples;
-
-  IWString _dbname;
-
-  int _logfile_open;
-
-  std::ofstream _logfile;
-
-  int _need_to_swap_bytes;  // not used
-
-  //  private functions
-
-  int _do_open(const char*, int multi_threaded);
-  int _parse_database_record(const const_IWSubstring& fromdb, const DBKey& dbkey, int& radius,
-                         int& count, IWString& example);
-  int _in_cache(Dbt& zkey, const DBKey& dbkey, int& radius, int& count);
-  int _in_cache_mutex_protected(Dbt& zkey, const DBKey& dbkey, int& radius, int& count);
-
- public:
-  SP_Database();
-  ~SP_Database();
-
-  int report(std::ostream&) const;
-  int debug_print(std::ostream&) const;
-
-  int open_logfile(const char* fname);
-
-  int determine_if_examples_present();
-
-  int contains_example_structures() const
-  {
-    return _contains_examples;
-  }
-
-  void set_env(DbEnv* e)
-  {
-    _env = e;
-  }
-
-  int open(const char*, int multi_threaded);
-  //  int open(const const_IWSubstring & s, int ndx);
-
-  unsigned int slurp_to_cache(int);
-
-  int check_exists(Dbt* zkey);
-
-  int do_lookup(Dbt& zkey, const DBKey& dbkey, int& radius, int& count, IWString& example);
-  int get(DbTxn*, Dbt&, Dbt&, u_int32_t);
-};
-
-SP_Database::SP_Database()
-{
-  _db = nullptr;
-  _env = nullptr;
-
-  _lookups_done = 0;
-  _bits_found = 0;
-  _hash_size = 0;
-  _cache_hit = 0;
-
-  _contains_examples = 1;  // until proven otherwise
-
-  _logfile_open = 0;
-
-  _need_to_swap_bytes = 0;
-
-  return;
-}
-
-SP_Database::~SP_Database()
-{
-  if (nullptr != _db) {
-    delete _db;
-  }
-
-  return;
-}
-
-int
-SP_Database::debug_print(std::ostream& output) const
-{
-  output << "SP_Database::debug_print:database '" << _dbname << "' _contains_examples "
-         << _contains_examples << " _hash_size " << _hash_size << '\n';
-
-  return 1;
-}
-
-int
-SP_Database::report(std::ostream& os) const
-{
-  os << "Database '" << _dbname << "' looked up " << _lookups_done << " bits, found "
-     << _bits_found << " bits\n";
-  if (_hash.size() > 0) {
-    os << "Bit hash contains " << _hash.size() << " bits, " << _cache_hit
-       << " cache hits\n";
-  }
-
-  return 1;
-}
-
-int
-SP_Database::open(const char* dbname, int multi_threaded)
-{
-  return _do_open(dbname, multi_threaded);
-}
-
-int
-SP_Database::open_logfile(const char* fname)
-{
-  _logfile.open(fname, std::ios::out);
-
-  if (!_logfile.good()) {
-    cerr << "SP_Database::open_logfile:cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  _logfile_open = 1;
-
-  return 1;
-}
-
-int
-SP_Database::_do_open(const char* dbname, int multi_threaded)
-{
-  if (nullptr != _db) {
-#ifdef DEBUG_SEQUENCE_DATABASE_STUFF
-    cerr << "Deleting old database\n";
-#endif
-
-    delete _db;
-  }
-
-  _db = new Db(_env, DB_CXX_NO_EXCEPTIONS);
-
-#ifdef DEBUG_SEQUENCE_DATABASE_STUFF
-  cerr << "Opening '" << dbname << "'\n";
-#endif
-
-  int oflags = DB_RDONLY;
-  if (multi_threaded) {
-    oflags |= DB_THREAD;
-  }
-
-  int rc = _db->open(NULL, dbname, NULL, DB_UNKNOWN, oflags, 0);
-
-  if (0 != rc) {
-    cerr << "Cannot open database '" << dbname << "' ";
-    _db->err(rc, "");
-
-    return 0;
-  }
-
-  _dbname = dbname;
-
-  return 1;
-}
-
-unsigned int
-SP_Database::slurp_to_cache(int min_examples)
-{
-  Dbc* cursor = nullptr;
-
-  int rc = _db->cursor(NULL, &cursor, 0);
-  if (0 != rc) {
-    _db->err(rc, "cannot acquire cursor");
-    return 0;
-  }
-
-  int records_in_database = 0;
-
-  Dbt zkey, zdata;
-
-  while (0 == (rc = cursor->get(&zkey, &zdata, DB_NEXT))) {
-    records_in_database++;
-
-    if (sizeof(Count_Radius) != zdata.get_size()) {
-      continue;
-    }
-
-    const Count_Radius* cr = reinterpret_cast<const Count_Radius*>(zdata.get_data());
-
-    if (cr->_count < min_examples) {
-      continue;
-    }
-
-    DBKey* dbkey = reinterpret_cast<DBKey*>(zkey.get_data());
-
-    Count_Radius cr2;
-    cr2._count = cr->_count;
-    cr2._radius = cr->_radius;
-    _hash[*dbkey] = cr2;
-  }
-
-  if (DB_NOTFOUND != rc) {
-    _db->err(rc, "Strange error at end of cursor");
-  }
-
-  if (verbose) {
-    cerr << "Slurped " << _hash.size() << " of " << records_in_database
-         << " database records into hash "
-         << static_cast<float>(_hash.size()) / static_cast<float>(records_in_database)
-         << '\n';
-  }
-
-  return _hash.size();
-}
-
-int
-SP_Database::_parse_database_record(
-    const const_IWSubstring& fromdb,
-    const DBKey& dbkey,  // just for informational messages
-    int& radius, int& count, IWString& example)
-{
-  if (fromdb.nwords() < 3) {
-    cerr << "SP_Database::_parse_database_record:corrupted database contents for bit "
-         << dbkey._bit << " found '" << fromdb << "'\n";
-    return 0;
-  }
-
-  int i = 0;
-  const_IWSubstring token;
-
-  fromdb.nextword(token, i);
-
-  if (!token.numeric_value(count) || count < 1) {
-    cerr << "Invalid count in database for bit " << dbkey._bit << " found '" << fromdb
-         << "'\n";
-    return 0;
-  }
-
-  fromdb.nextword(token, i);
-
-  if ('4' == token) {
-    radius = 4;
-  } else if ('3' == token) {
-    radius = 3;
-  } else if ('2' == token) {
-    radius = 2;
-  } else if ('1' == token) {
-    radius = 1;
-  } else if ('0' == token) {
-    radius = 0;
-  } else if (!token.numeric_value(radius) || radius < 0)  // Strange
-  {
-    cerr << "Invalid radius in database for bit " << dbkey._bit << " found '" << fromdb
-         << "'\n";
-    return 0;
-  }
-
-  // What follows is the smiles and name of the example
-
-  example = fromdb.substr(i + 1);
-
-  // cerr << "Example set to '" << example << "'\n";
-
-  return 1;
-}
-
-int
-SP_Database::_in_cache_mutex_protected(Dbt& zkey, const DBKey& dbkey, int& radius,
-                                       int& count)
-{
-  // const DBKey * dbkey = reinterpret_cast<const DBKey *>(zkey.get_data());
-
-  const auto f = _hash.find(dbkey);
-
-  if (f == _hash.end()) {
-    return 0;
-  }
-
-  _cache_hit++;
-
-  count = (*f).second._count;
-  radius = (*f).second._radius;
-  _bits_found++;
-  return 1;
-}
-
-int
-SP_Database::_in_cache(Dbt& zkey, const DBKey& dbkey, int& radius, int& count)
-{
-  _mutex.lock();
-  int rc = _in_cache_mutex_protected(zkey, dbkey, radius, count);
-  _mutex.unlock();
-  return rc;
-}
-
-/*
-  The DBKey object is not really used, just for informational messages
-*/
-
-int
-SP_Database::do_lookup(Dbt& zkey, const DBKey& dbkey, int& radius, int& count,
-                       IWString& example)
-{
-// #define DEBUG_SP_DATABASE_DO_LOOKUP
-#ifdef DEBUG_SP_DATABASE_DO_LOOKUP
-  cerr << "SP_Database::do_lookup, bit " << dbkey._bit << " examples? "
-       << _contains_examples << '\n';
-#endif
-
-  example.resize_keep_storage(0);
-
-  _lookups_done++;
-
-  if (max_hash_size > 0 && _in_cache(zkey, dbkey, radius, count)) {
-    return 1;
-  }
-
-  if (slurp_examples > 0) {  // no longer doing lookups, bit not present
-    return 0;
-  }
-
-  Dbt zdata;
-  char* user_memory;
-  if (!_contains_examples) {
-    user_memory = new char[8];
-    zdata.set_ulen(8);
-  } else {
-    user_memory = new char[1024];
-    zdata.set_ulen(1024);
-  }
-
-  std::unique_ptr<char[]> free_user_memory(user_memory);
-
-  zdata.set_data(user_memory);
-  zdata.set_flags(DB_DBT_USERMEM);
-
-  //_logfile << "key " << zkey.get_size() << " bytes, flags " << zkey.get_flags() << '\n';
-
-  int dbrc = _db->get(NULL, &zkey, &zdata, 0);
-
-  if (0 == dbrc) {  // great, found
-    ;
-  } else if (DB_NOTFOUND == dbrc) {  // not here
-    return 0;
-  } else {
-    _db->err(dbrc, "Unspecified database error, see Ian");
-    return 0;
-    ;
-  }
-
-  _bits_found++;
-
-#ifdef DEBUG_SP_DATABASE_DO_LOOKUP
-  cerr << "Db contents size " << zdata.get_size() << '\n';
-#endif
-
-  if (8 == zdata.get_size())  // no examples here. Should be a #defined symbol
-  {
-    const int* iptr = reinterpret_cast<const int*>(zdata.get_data());
-
-    count = iptr[0];
-    radius = iptr[1];
-    if (_logfile_open) {
-      _mutex.lock();
-      _logfile << "bit " << dbkey._bit << " centre " << dbkey._acca << " found " << count
-               << " count, radius " << radius << '\n';
-      _mutex.unlock();
-    }
-  } else {
-    const_IWSubstring fromdb(reinterpret_cast<const char*>(zdata.get_data()),
-                             zdata.get_size());
-
-    if (!_parse_database_record(fromdb, dbkey, radius, count, example)) {
-      cerr << "Invalid database contents, ignored\n";
-      return 0;
-    }
-    //  cerr << "Example is '" << example << "'\n";
-  }
-
-  if (_hash_size <
-      static_cast<int>(
-          max_hash_size))  // slightly dangerous access to unguarded variable _hash_size
-  {
-    DBKey* dbkey = reinterpret_cast<DBKey*>(zkey.get_data());
-    Count_Radius cr;
-    cr._count = count;
-    cr._radius = radius;
-
-    _mutex.lock();
-    _hash[*dbkey] = cr;
-    _hash_size++;
-    _mutex.unlock();
-  }
-
-  return 1;
-}
-
-int
-SP_Database::check_exists(Dbt* zkey)
-{
-  return 0 == _db->exists(NULL, zkey, 0);
-}
-
-int
-SP_Database::get(DbTxn* env, Dbt& dkey, Dbt& zdata, u_int32_t flags)
-{
-  int rc = _db->get(env, &dkey, &zdata, flags);
-
-  if (0 == rc) {
-    return 1;
-  }
-
-  if (DB_NOTFOUND) {
-    return 0;
-  }
-
-  _db->err(rc, "Trying to retrieve ");
-  cerr.write(reinterpret_cast<const char*>(dkey.get_data()), dkey.get_size());
-  cerr << '\n';
-
-  return 0;
-}
-
-int
-SP_Database::determine_if_examples_present()
-{
-  Dbc* cursor = nullptr;
-
-  int rc = _db->cursor(NULL, &cursor, 0);
-  if (0 != rc) {
-    _db->err(rc, "SP_Database::determine_if_examples_present:cannot acquire cursor");
-    return 0;
-  }
-
-  Dbt zkey, zdata;
-
-  _contains_examples = 0;
-
-  for (int records_checked = 0; 0 == (rc = cursor->get(&zkey, &zdata, DB_NEXT));
-       records_checked++) {
-    if (records_checked > 100) {
-      break;
-    }
-
-    //  cerr << records_checked << " got " << zdata.get_size() << " bytes\n";
-
-    if (8 == zdata.get_size()) {  // most common case
-      continue;
-    }
-
-    if (zdata.get_size() > 8) {
-      _contains_examples = 1;
-      break;
-    }
-  }
-
-  cursor->close();
-
-  return _contains_examples;
-}
-
-/*
   When doing retrospective studies, it can be interesting to look
   at the database without certain molecules
 */
@@ -943,264 +403,6 @@ preprocess_molecule(Molecule& m)
   if (chemical_standardisation.active()) {
     chemical_standardisation.process(m);
   }
-
-  return 1;
-}
-
-class Subtraction_Set
-{
- private:
-  Subtract _subtract;
-  int _molecules_in_subtraction_set;
-
-  std::atomic<int> _subtraction_bits_hit;
-
-  //  private functions
-
-  int
-  _transfer_fingerprints_to_subtract(const Set_of_Bits<Bit_Produced>& sob);
-  int
-  _adjust_count_for_subtraction(const DBKey& dbkey, int& count) const;
-
- public:
-  Subtraction_Set();
-
-  size_t
-  nbits() const
-  {
-    return _subtract.size();
-  }
-
-  int
-  report(std::ostream&) const;
-
-  int
-  build(const Command_Line& cl, const char flag, Fingerprint_Characteristics& rpc);
-  int
-  build(const char* fname, Fingerprint_Characteristics& fpc);
-  int
-  build(data_source_and_type<Molecule>& input, Fingerprint_Characteristics& fpc);
-
-  int
-  nmolecules() const
-  {
-    return _molecules_in_subtraction_set;
-  }
-
-  int
-  active() const
-  {
-    return _molecules_in_subtraction_set;
-  }
-
-  int
-  adjust_count_for_subtraction(const DBKey& dbkey, int& count);
-
-  int
-  adjust_count_for_subtraction_threaded(
-      const DBKey& dbkey, int& count);  // does not adjust _subtraction_bits_hit
-};
-
-Subtraction_Set::Subtraction_Set()
-{
-  _molecules_in_subtraction_set = 0;
-
-  _subtraction_bits_hit = 0;
-
-  return;
-}
-
-int
-Subtraction_Set::report(std::ostream& os) const
-{
-  os << "Subtraction_Set::report:contains " << _subtract.size() << " bits, "
-     << _subtraction_bits_hit << " adjustments made\n";
-
-  return 1;
-}
-
-int
-Subtraction_Set::build(const Command_Line& cl, const char flag,
-                       Fingerprint_Characteristics& fpc)
-{
-  for (int i = 0; i < cl.option_count(flag); ++i) {
-    const char* s = cl.option_value(flag, i);
-
-    if (!build(s, fpc)) {
-      cerr << "Subtraction_Set::build:cannot build from '" << s << "'\n";
-      return 0;
-    }
-  }
-
-  return 1;
-}
-
-int
-Subtraction_Set::build(data_source_and_type<Molecule>& input,
-                       Fingerprint_Characteristics& fpc)
-{
-  Molecule* m;
-
-  while (nullptr != (m = input.next_molecule())) {
-    _molecules_in_subtraction_set++;
-
-    preprocess_molecule(*m);
-
-    std::unique_ptr<Molecule> free_m(m);
-
-    Set_of_Bits<Bit_Produced> sob;
-
-    compute_fingerprints(*m, fpc, sob);
-
-    _transfer_fingerprints_to_subtract(sob);
-  }
-
-  return _subtract.size();
-}
-
-int
-Subtraction_Set::build(const char* fname, Fingerprint_Characteristics& fpc)
-{
-  data_source_and_type<Molecule> input(FILE_TYPE_SMI, fname);
-
-  if (!input.good()) {
-    cerr << "build_subtraction_set:cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  return build(input, fpc);
-}
-
-int
-Subtraction_Set::_transfer_fingerprints_to_subtract(const Set_of_Bits<Bit_Produced>& sob)
-{
-  for (auto i : sob) {
-    const auto& k = i.first;
-
-    //  unordered_map<DBKey, int, IWdbkeyHash>::const_iterator f = sub.find(k);
-    const auto f = _subtract.find(k);
-
-    //  cerr << "Loaded subtraction for " << k._bit << '\n';
-
-    if (f == _subtract.end()) {
-      _subtract[k] = 1;
-    } else {
-      _subtract[k]++;
-    }
-  }
-
-  return 1;
-}
-
-int
-Subtraction_Set::_adjust_count_for_subtraction(const DBKey& dbkey, int& count) const
-{
-  Subtract::const_iterator f = _subtract.find(dbkey);
-
-  if (f == _subtract.end()) {
-    return 0;
-  }
-
-  int s = (*f).second;
-
-  if (count >= s) {
-    count = count - s;
-  } else {
-    count = 0;
-  }
-
-  return 1;
-}
-
-int
-Subtraction_Set::adjust_count_for_subtraction_threaded(const DBKey& dbkey, int& count)
-{
-  return _adjust_count_for_subtraction(dbkey, count);
-}
-
-int
-Subtraction_Set::adjust_count_for_subtraction(const DBKey& dbkey, int& count)
-{
-  const auto rc = _adjust_count_for_subtraction(dbkey, count);
-  if (rc) {
-    _subtraction_bits_hit++;
-  }
-
-  return rc;
-}
-
-static Subtraction_Set subtract;
-
-class Count_Example
-{
- private:
-  const int _number_examples;
-
-  const int _radius;
-
-  IWString _first_example_smiles;
-  IWString _first_example_name;
-
- public:
-  //  Count_Example(Molecule &, atom_number_t centre_atom, int r);
-  Count_Example(const IWString&, int r, int c);
-
-  int
-  radius() const
-  {
-    return _radius;
-  }
-
-  void
-  set_first_example_smiles(const const_IWSubstring& s)
-  {
-    _first_example_smiles = s;
-  }
-
-  int
-  number_examples() const
-  {
-    return _number_examples;
-  }
-
-  //  const IWString & first_example() const {return _first_example;}
-
-  int
-  do_output(IWString_and_File_Descriptor&) const;
-};
-
-Count_Example::Count_Example(const IWString& s, int r, int c)
-    : _number_examples(c), _radius(r)
-{
-  if (s.nwords() < 2) {
-    cerr << "Count_Example::Count_Example:invalid db contents '" << s << "'\n";
-    return;
-  }
-
-  int i = 0;
-
-  s.nextword(_first_example_smiles, i);
-  s.nextword(_first_example_name, i);
-
-  return;
-}
-
-int
-Count_Example::do_output(IWString_and_File_Descriptor& output) const
-{
-  if (0 == _first_example_smiles.length()) {
-    return 1;
-  }
-
-  output << _first_example_smiles << ' ';
-
-  output << _first_example_name << ' ';
-
-  if (_radius >= 0) {
-    output << _radius << ' ';
-  }
-
-  output << _number_examples << " EX\n";
 
   return 1;
 }
@@ -1243,7 +445,6 @@ usage(int rc)
   cerr << "  -M ...         miscellaneous options, enter '-M help' for info\n";
 //cerr << "  -z <number>    only count bits with counts >= <number> examples\n";
   cerr << "  -n <n>         if examples in databases, write the first <n>. Use 'all' for all\n";
-//cerr << "  -Y ...         file with human readable scores/classifications - enter -Y help for info\n";
   cerr << "  -t <number>    report progress every <number> molecules processed\n";
   cerr << "  -i <type>      input type\n";
   cerr << "  -g ...         chemical standardisation options\n";
@@ -1295,445 +496,6 @@ Bit_Produced_CE<I>::Bit_Produced_CE(unsigned int b, atom_number_t c, unsigned in
   _fromdb = nullptr;
 
   return;
-}
-
-class Set_of_Databases
-{
- private:
-  int _n;
-  SP_Database* _db;
-  DbEnv _dbenv;
-
-  int _user_wants_example_structures;
-
-  unsigned char _userdata[512];  // user memory for retrievals
-
-  //  private functions
-
-  int
-  _determine_if_examples_present();
-
- public:
-  Set_of_Databases();
-  ~Set_of_Databases();
-
-  int number_database() const
-  {
-    return _n;
-  }
-
-  int debug_print(std::ostream& output) const;
-
-  int open_logfile(const char* stem);
-
-  int build(Command_Line& cl, char flag_env, char flag_db, const int verbose);
-  int
-  build(const Command_Line& cl, const char flag_db, const int verbose, DbEnv* envptr);
-
-  int report(std::ostream&) const;
-
-  void set_user_wants_example_structures(int s)
-  {
-    _user_wants_example_structures = s;
-  }
-
-  int user_wants_example_structures() const
-  {
-    return _user_wants_example_structures;
-  }
-
-  int determine_atom_typing_in_use(int& iwecfp_atom_type);
-  int determine_max_search_radius(int& min_radius);
-
-  int slurp_to_cache(const int s);
-
-  int lookup_bit(const DBKey& dbkey, int& count, IWString& example_structure);
-  int lookup_bit(const DBKey& dbkey, resizable_array_p<Count_Example>& ce);
-  int lookup_bit_threaded(const DBKey& dbkey);
-};
-
-Set_of_Databases::Set_of_Databases() : _dbenv(0u)
-{
-  _n = 0;
-  _db = nullptr;
-
-  _user_wants_example_structures = 1;
-
-  return;
-}
-
-Set_of_Databases::~Set_of_Databases()
-{
-  if (nullptr != _db) {
-    delete[] _db;
-  }
-
-  return;
-}
-
-int
-Set_of_Databases::debug_print(std::ostream& output) const
-{
-  output << "Set_of_Databases::debug_print:set contains " << _n << " databases\n";
-  cerr << " _user_wants_example_structures " << _user_wants_example_structures << '\n';
-  for (int i = 0; i < _n; ++i) {
-    _db[i].debug_print(output);
-  }
-
-  return 1;
-}
-
-int
-Set_of_Databases::report(std::ostream& os) const
-{
-  os << "Report on " << _n << " databases\n";
-
-  for (int i = 0; i < _n; ++i) {
-    _db[i].report(os);
-  }
-
-  return 1;
-}
-
-int
-Set_of_Databases::open_logfile(const char* stem)
-{
-  IWString s(stem);
-
-  for (int i = 0; i < _n; ++i) {
-    IWString fname(stem);
-    fname << '.' << i << ".log";
-    if (!_db[i].open_logfile(fname.null_terminated_chars())) {
-      cerr << "Set_of_Databases::open_logfile:cannot set logfile '" << fname << "'\n";
-      return 0;
-    }
-  }
-
-  return _n;
-}
-
-int
-Set_of_Databases::build(Command_Line& cl, char flag_env, char flag_db, const int verbose)
-{
-  if (!cl.option_present(flag_env)) {
-    return build(cl, flag_db, verbose, nullptr);
-  }
-
-  const char* e = cl.option_value(flag_env);
-
-  u_int32_t env_flags = DB_CREATE | DB_INIT_MPOOL;
-
-  int rc = _dbenv.open(e, env_flags, 0);
-
-  if (0 != rc) {
-    cerr << "Set_of_Databases::build:cannot initialise DB environment '" << e << "'\n";
-    return 0;
-  }
-
-  if (verbose) {
-    cerr << "Using database environment '" << e << "'\n";
-  }
-
-  return build(cl, flag_db, verbose, &_dbenv);
-}
-
-int
-Set_of_Databases::build(const Command_Line& cl, const char flag_db, const int verbose,
-                        DbEnv* envptr)
-{
-  _n = cl.option_count(flag_db);
-
-  if (0 == _n) {
-    return 0;
-  }
-
-  _db = new SP_Database[_n];
-
-  for (int i = 0; i < _n; ++i) {
-    const char* fname = cl.option_value(flag_db, i);
-
-    if (verbose) {
-      cerr << "Opening database '" << fname << "'" << '\n';
-    }
-
-    if (nullptr != envptr) {
-      _db[i].set_env(envptr);
-    }
-
-    if (!_db[i].open(fname, 0 /* no threading */)) {
-      cerr << "Set_of_Databases::build:cannot open '" << fname << "'\n";
-      return 0;
-    }
-  }
-
-  if (verbose) {
-    cerr << "Set_of_Databases::build:opened " << _n << " databases\n";
-  }
-
-  if (_user_wants_example_structures) {
-    _determine_if_examples_present();
-  }
-
-  return _n;
-}
-
-int
-Set_of_Databases::slurp_to_cache(int min_examples)
-{
-  for (int i = 0; i < _n; i++) {
-    if (!_db[i].slurp_to_cache(min_examples)) {
-      cerr << "Set_of_Databases::slurp_to_cache:cannot slurp database " << i << " for "
-           << min_examples << " examples\n";
-    }
-  }
-
-  return _n;
-}
-
-int
-Set_of_Databases::_determine_if_examples_present()
-{
-  for (int i = 0; i < _n; ++i) {
-    _db[i].determine_if_examples_present();
-
-    if (!_db[i].contains_example_structures()) {
-      _user_wants_example_structures = 0;
-    }
-  }
-
-  // cerr <<
-  // "Set_of_Databases::_determine_if_examples_present:_user_wants_example_structures " <<
-  // _user_wants_example_structures << '\n';
-
-  return 1;
-}
-
-// #define DEBUG_BIT_LOOKUP
-
-int
-Set_of_Databases::lookup_bit(const DBKey& dbkey, int& count, IWString& example_structure)
-{
-#ifdef DEBUG_BIT_LOOKUP
-  cerr << "Set_of_Databases::lookup_bit:looking for bit " << dbkey << " across " << _n
-       << " databases\n";
-#endif
-
-  int nexamples = 0;
-  example_structure.resize_keep_storage(0);
-
-  Dbt zkey((void*)(&dbkey), sizeof(dbkey));  // loss of const OK
-
-  IWString s;  // scope here for efficiency
-  for (int i = 0; i < _n; i++) {
-    int radius;
-
-    if (!_db[i].do_lookup(zkey, dbkey, radius, count, s)) {
-      //    cerr << "Did not find bit " << dbkey._bit << " (radius " <<
-      //    static_cast<int>(dbkey._radius) << ") in database " << i << '\n';
-      continue;
-    }
-
-    if (radius != dbkey._radius) {  // collision
-      continue;
-    }
-
-#ifdef DEBUG_BIT_LOOKUP
-    cerr << "Found bit " << dbkey._bit << " (radius " << radius << ") in database " << i
-         << ", count " << count << " example '" << s << "'\n";
-#endif
-
-    if (subtract.active()) {
-      subtract.adjust_count_for_subtraction(dbkey, count);
-      if (0 == count) {
-        continue;
-      }
-    }
-
-    nexamples += count;
-
-    if (_user_wants_example_structures && 0 == example_structure.length()) {
-      example_structure = s;
-    }
-  }
-
-  return nexamples;
-}
-
-int
-Set_of_Databases::lookup_bit_threaded(const DBKey& dbkey)
-{
-  if (1 == _n) {  // no need for multi threaded execution
-    int notused1;
-    IWString notused2;
-    return lookup_bit(dbkey, notused1, notused2);
-  }
-
-  int nexamples = 0;
-
-  for (int i = 0; i < _n; i++) {
-    int radius, count;
-    IWString s;
-
-    DBKey tmp(dbkey);
-    // loss of const OK. Each thread needs its own key
-    Dbt zkey((void*)(&tmp), sizeof(tmp));
-    assert(tmp._bit == dbkey._bit);
-
-    if (!_db[i].do_lookup(zkey, dbkey, radius, count, s)) {
-      continue;
-    }
-
-    if (radius != dbkey._radius) {  // collision
-      continue;
-    }
-
-#ifdef DEBUG_BIT_LOOKUP
-    cerr << "Found bit " << dbkey._bit << " (radius " << radius << ") in database " << i
-         << ", count " << count << '\n';
-#endif
-
-    if (subtract.active()) {
-      subtract.adjust_count_for_subtraction_threaded(dbkey, count);  // count may be zero
-    }
-
-    nexamples += count;
-  }
-
-  return nexamples;
-}
-
-int
-Set_of_Databases::lookup_bit(const DBKey& dbkey, resizable_array_p<Count_Example>& ce)
-{
-  int count;
-  IWString zexample;
-  const auto rc = lookup_bit(dbkey, count, zexample);
-
-  if (0 == rc) {
-    return 0;
-  }
-
-  ce.add(new Count_Example(zexample, dbkey._radius, count));
-
-  return rc;
-}
-
-int
-Set_of_Databases::determine_atom_typing_in_use(int& iwecfp_atom_type)
-{
-  Dbt dkey((void*)(ATYPE_KEY), ::strlen(ATYPE_KEY));
-  Dbt d;
-
-  char buffer[32];
-  d.set_data(buffer);
-  d.set_ulen(sizeof(buffer));
-  d.set_flags(DB_DBT_USERMEM);
-
-  IWString string_atype;
-
-  for (int i = 0; i < _n; i++) {
-    if (!_db[i].get(NULL, dkey, d, 0)) {
-      cerr << "Database " << i << " lacks atom type key '" << ATYPE_KEY << "'\n";
-      return 0;
-    }
-
-    const_IWSubstring tmp(reinterpret_cast<const char*>(d.get_data()), d.get_size());
-
-    //  cerr << "type '" << tmp << "' fetched\n";
-
-    if (0 == i) {
-      string_atype = tmp;
-    } else if (string_atype == tmp) {  // great, consistent
-      ;
-    } else {
-      cerr << "INconsistent atom types in use, stored " << tmp << "', using '"
-           << string_atype << "', cannot continue\n";
-      return 0;
-    }
-  }
-
-  iwecfp_atom_type = determine_atom_type(string_atype);
-
-  if (0 == iwecfp_atom_type) {
-    cerr << "INvalid atom type stored in database\n";
-    return 0;
-  }
-
-  if (verbose) {
-    cerr << "Atom type '" << string_atype << "', numeric " << iwecfp_atom_type << '\n';
-  }
-
-  return 1;
-}
-
-/*
-  The max search radius will be the shortest radius stored in any of our databases
-*/
-
-int
-Set_of_Databases::determine_max_search_radius(int& min_radius)
-{
-  min_radius = 99;
-
-  Dbt dkey((void*)(RADIUS_KEY), ::strlen(RADIUS_KEY));
-  Dbt d;
-
-  char buffer[32];
-  d.set_data(buffer);
-  d.set_ulen(sizeof(buffer));
-  d.set_flags(DB_DBT_USERMEM);
-
-  for (int i = 0; i < _n; i++) {
-    if (!_db[i].get(NULL, dkey, d, 0)) {
-      cerr << "Database " << i << " lacks atom type key '" << RADIUS_KEY << "'\n";
-      continue;
-    }
-
-    const_IWSubstring tmp(reinterpret_cast<const char*>(d.get_data()), d.get_size());
-
-    //  cerr << "type '" << tmp << "' fetched\n";
-
-    int r;
-    if (!tmp.numeric_value(r) || r < 1) {
-      cerr << "Set_of_Databases::determine_max_radius:invalid '" << RADIUS_KEY
-           << "' value '" << tmp << "', ignored\n";
-      continue;
-    }
-
-    if (r < min_radius) {
-      min_radius = r;
-    }
-  }
-
-  if (verbose) {
-    cerr << "Set_of_Databases::determine_max_radius:across " << _n
-         << " databases, min radius " << min_radius << '\n';
-  }
-
-  return 1;
-}
-
-class Count_Example_Sorter
-{
- private:
- public:
-  int
-  operator()(const Count_Example*, const Count_Example*) const;
-};
-
-int
-Count_Example_Sorter::operator()(const Count_Example* ce1, const Count_Example* ce2) const
-{
-  int e1 = ce1->number_examples();
-  int e2 = ce2->number_examples();
-
-  if (e1 < e2) {
-    return -1;
-  } else if (e1 > e2) {
-    return 1;
-  } else {
-    return 0;
-  }
 }
 
 template <typename I>
@@ -2151,7 +913,7 @@ Lookup_Calculation_Results::initialise(const Fingerprint_Characteristics& fpc)
   return 1;
 }
 
-// #define DEBUG_DO_LOOKUP_NO_EXAMPLES
+//#define DEBUG_DO_LOOKUP_NO_EXAMPLES
 
 int
 Lookup_Calculation_Results::do_lookups_calculate_score(Molecule& m,
@@ -2160,6 +922,7 @@ Lookup_Calculation_Results::do_lookups_calculate_score(Molecule& m,
 {
   set_vector(_min_each_shell, _max_shell_radius + 1, std::numeric_limits<int>::max());
 
+  // cerr << "_max_shell_radius " << _max_shell_radius << '\n';
   for (int i = 0; i <= _max_shell_radius; ++i) {
     _rarest_atom[i].resize_keep_storage(0);
     _lkrs[i].reset();
@@ -2196,7 +959,7 @@ Lookup_Calculation_Results::do_lookups_calculate_score(Molecule& m,
          << m.smarts_equivalent_for_atom(i.second->centre_atom()) << '\n';
 #endif
 
-    const auto nexamples = sodb.lookup_bit_threaded(k);
+    const int nexamples = sodb.lookup_bit_threaded(k);
     //  int notused1;
     //  IWString notused2;
     //  const auto nexamples = sodb.lookup_bit(k, notused1, notused2);
@@ -2986,7 +1749,7 @@ display_dash_m_options(std::ostream& os)
 static int
 iwecfp(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vE:A:g:i:r:R:ld:e:t:z:w:u:U:H:S:M:n:IL:Y:");
+  Command_Line cl(argc, argv, "vE:A:g:i:r:R:ld:e:t:z:w:u:U:H:S:M:n:IL:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -2994,6 +1757,9 @@ iwecfp(int argc, char** argv)
   }
 
   verbose = cl.option_count('v');
+  if (verbose) {
+    iwecfp_database_lookup::set_verbose(verbose);
+  }
 
   if (!process_elements(cl)) {
     usage(2);
@@ -3040,20 +1806,6 @@ iwecfp(int argc, char** argv)
     } else if (verbose) {
       cerr << "Will write the first " << write_example_structures
            << " example structures\n";
-    }
-  }
-
-  if (cl.option_present('Y')) {
-    IWString y = cl.string_value('Y');
-
-    if ("help" == y) {
-      //    display_human_readable_classification_syntax(cerr);
-      exit(1);
-    }
-
-    if (!human_labels.build(y.null_terminated_chars())) {
-      cerr << "Cannot build human readable labels from '" << y << "'\n";
-      return 1;
     }
   }
 
@@ -3139,6 +1891,7 @@ iwecfp(int argc, char** argv)
 
   // sodb.debug_print(cerr);
 
+  int slurp_examples = 0;
   if (cl.option_present('M')) {
     int i = 0;
     const_IWSubstring m;
@@ -3200,10 +1953,12 @@ iwecfp(int argc, char** argv)
       else if (m.starts_with("bcache")) {
         m.remove_leading_chars(7);
 
+        int max_hash_size;
         if (!m.numeric_value(max_hash_size) || max_hash_size < 1) {
           cerr << "The max bit hash size must be a whole +ve number\n";
           return 2;
         }
+        iwecfp_database_lookup::set_max_hash_size(max_hash_size);
 
         if (write_example_structures && cl.option_present('n')) {
           cerr << "Sorry, caching does not work with example databases, see Ian\n";
@@ -3216,6 +1971,7 @@ iwecfp(int argc, char** argv)
           return 3;
         }
 
+        iwecfp_database_lookup::set_slurp_examples(slurp_examples);
         if (verbose) {
           cerr << "Will slurp database examples to hash if at least " << slurp_examples
                << " examples\n";
@@ -3312,12 +2068,13 @@ iwecfp(int argc, char** argv)
     return 7;
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
-  sodb.determine_atom_typing_in_use(iwecfp_atom_type);
+  IWString atype_string;
+  sodb.determine_atom_typing_in_use(atype_string, iwecfp_atom_type);
 
   fpc.set_atype(iwecfp_atom_type);
 
@@ -3326,17 +2083,16 @@ iwecfp(int argc, char** argv)
   }
 
   if (cl.option_present('S')) {
-    IWString s;
-    for (int i = 0; cl.value('S', s, i); ++i) {
-      if (!subtract.build(s.null_terminated_chars(), fpc)) {
-        cerr << "Cannot read subtraction set from '" << s << "'\n";
-        return 3;
+    IWString fname;
+    for (int i = 0; cl.value('S', fname, i); ++i) {
+      if (! sodb.BuildSubtractionDatabase(fname, fpc, preprocess_molecule)) {
+        cerr << "Cannot read subtraction set from '" << fname << "'\n";
+        return 1;
       }
     }
 
     if (verbose) {
-      cerr << "Read " << subtract.nbits() << " bits produced by " << subtract.nmolecules()
-           << " molecules for subtraction set\n";
+      sodb.ReportSubtractDatabaseStatus(cerr);
     }
   }
 
@@ -3379,9 +2135,7 @@ iwecfp(int argc, char** argv)
 
     score_related.report(cerr);
 
-    if (subtract.active()) {
-      subtract.report(cerr);
-    }
+    sodb.ReportSubtractionDatabaseImpact(cerr);
 
     sodb.report(cerr);
   }

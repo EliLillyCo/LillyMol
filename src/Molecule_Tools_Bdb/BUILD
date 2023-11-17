@@ -2,6 +2,8 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 load("//build_deps:install.bzl", "local_install")
 
+package(default_visibility = ["//visibility:public"])
+
 local_install(
     name = "install",
     srcs = [
@@ -10,6 +12,7 @@ local_install(
         ":in_lilly_database_bdb",
         ":iwecfp_database_load",
         ":iwecfp_database_lookup",
+        ":selimsteg_build",
         ":smi2rings_bdb",
         ":substituent_identification",
     ],
@@ -116,11 +119,25 @@ cc_binary(
     tags = ["berkeleydb"],
     deps = [
         ":iwecfp_database",
+        ":iwecfp_database_lookup_lib",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@berkeleydb",
     ],
+)
+
+cc_binary(
+    name = "selimsteg_build",
+    srcs = [
+        "selimsteg_build.cc",  
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@berkeleydb",
+    ]
 )
 
 cc_binary(
@@ -167,6 +184,56 @@ cc_library(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "@berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "iwecfp_database_shared",
+    srcs = [
+        "iwecfp_database.cc",
+    ],
+    hdrs = [
+        "iwecfp_database.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydbshared//:berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "iwecfp_database_lookup_lib",
+    srcs = [
+        "iwecfp_database_lookup_lib.cc",
+    ],
+    hdrs = [
+        "iwecfp_database_lookup_lib.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "iwecfp_database",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "iwecfp_database_lookup_lib_shared",
+    srcs = [
+        "iwecfp_database_lookup_lib.cc",
+    ],
+    hdrs = [
+        "iwecfp_database_lookup_lib.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":iwecfp_database_shared",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydbshared//:berkeleydb",
     ],
 )
 

@@ -9545,6 +9545,7 @@ Chemical_Standardisation::_do_transform_enol_fused(Molecule & m,
     }
     // the more difficult case where we may need a Kekule switch.
     Toggle_Kekule_Form tkf;
+    tkf.set_display_error_messages(0);
     int changed;
     tkf.process(m, carbon, j, SINGLE_BOND, changed);
     if (! changed) {

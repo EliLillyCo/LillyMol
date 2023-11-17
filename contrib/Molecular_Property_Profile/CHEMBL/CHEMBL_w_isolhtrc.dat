@@ -2,11 +2,11 @@ description {
   feature_name: "w_isolhtrc"
   description: "Number of isolated heterocycles"
   plot_title: "Number of isolated heterocycles"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 8.0
-mean: 0.8949807
+maxval: 6.0
+mean: 0.90228
 median: 1.0
 quantile {
   quantile: 0.01
@@ -34,37 +34,29 @@ quantile {
   value: 3.0
 }
 int_values {
-  count: 880338
+  count: 19444
 }
 int_values {
   value: 1
-  count: 863114
+  count: 19101
 }
 int_values {
   value: 2
-  count: 394471
+  count: 8813
 }
 int_values {
   value: 3
-  count: 99015
+  count: 2221
 }
 int_values {
   value: 4
-  count: 15281
+  count: 384
 }
 int_values {
   value: 5
-  count: 1163
-}
-int_values {
-  value: 6
-  count: 91
-}
-int_values {
-  value: 7
   count: 34
 }
 int_values {
-  value: 8
+  value: 6
   count: 3
 }

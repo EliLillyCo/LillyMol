@@ -2,11 +2,11 @@ description {
   feature_name: "w_bbr1"
   description: "One bond between two rings"
   plot_title: "One bond between two rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 7.0
-mean: 0.58484095
+maxval: 5.0
+mean: 0.59756
 quantile {
   quantile: 0.01
 }
@@ -32,33 +32,25 @@ quantile {
   value: 3.0
 }
 int_values {
-  count: 1284902
+  count: 28235
 }
 int_values {
   value: 1
-  count: 681768
+  count: 15201
 }
 int_values {
   value: 2
-  count: 232682
+  count: 5231
 }
 int_values {
   value: 3
-  count: 46782
+  count: 1138
 }
 int_values {
   value: 4
-  count: 6536
+  count: 174
 }
 int_values {
   value: 5
-  count: 724
-}
-int_values {
-  value: 6
-  count: 109
-}
-int_values {
-  value: 7
-  count: 7
+  count: 21
 }

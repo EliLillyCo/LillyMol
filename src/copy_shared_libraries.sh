@@ -27,8 +27,11 @@ bazel-bin/Molecule_Lib/*.so
 
 for lib in "${libs[@]}" ; do
   if compgen -G "${lib}" > /dev/null; then
-    echo "Copying ${lib}"
-    cp -f ${lib} ${destdir}
+    libname=$(basename ${lib})
+    if [[ ! -s ${destdir}/${libname} || ${lib} -nt ${destdir}/${libname} ]] ; then
+      echo "Copying ${lib}"
+      cp -f ${lib} ${destdir}
+    fi
   else
     echo "${lib} not found"
   fi
@@ -40,12 +43,32 @@ declare -a pb2=(
   atom_type_ext_pb2.py
   geometric_constraints_pb2.py
   mol2graph_pb2.py
+  pharmacophore_pb2.py
   substructure_pb2.py
   reaction_pb2.py
   toggle_kekule_form_pb2.py
 )
 
 for proto_pb2 in "${pb2[@]}" ; do
-  echo "Copying ${proto_pb2}"
-  cp -f bazel-bin/Molecule_Lib/${proto_pb2} Molecule_Lib
+  source="bazel-bin/Molecule_Lib/${proto_pb2}"
+  dest="Molecule_Lib/${proto_pb2}"
+
+  if [[ ! -s ${dest} || ${source} -nt ${dest} ]] ; then
+    echo "Copying ${proto_pb2}"
+    cp -f bazel-bin/Molecule_Lib/${proto_pb2} Molecule_Lib
+  fi
+done
+
+declare -a tools_pb2=(
+  dicer_fragments_pb2.py
+  iwdescr_pb2.py
+  xlogp_pb2.py
+)
+for proto_pb2 in "${tools_pb2[@]}" ; do
+  source="bazel-bin/Molecule_Tools/${proto_pb2}"
+  dest="Molecule_Tools/${proto_pb2}"
+  if [[ ! -s ${dest} || ${source} -nt ${dest} ]] ; then
+    echo "Copying ${proto_pb2}"
+    cp -f bazel-bin/Molecule_Tools/${proto_pb2} Molecule_Tools
+  fi
 done

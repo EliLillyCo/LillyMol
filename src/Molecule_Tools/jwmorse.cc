@@ -597,6 +597,7 @@ jwmorse (Molecule & m,
 }
 
 
+#ifdef NOT_BEING_USED
 static int
 jwmorse (Molecule & m,
          IWString_and_File_Descriptor & output,
@@ -670,6 +671,7 @@ jwmorse (Molecule & m,
 
   return rc;
 }
+#endif
 
 static int
 jwmorse (data_source_and_type<Molecule> & input,

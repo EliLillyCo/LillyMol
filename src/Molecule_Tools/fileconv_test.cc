@@ -212,7 +212,10 @@ INSTANTIATE_TEST_SUITE_P(FileConvTestP, FileConvTestP, testing::Values(
                       "[Li].CC", "name", 0, "CC", "name"},
 
   OptionsSmilesResult{vector<const char*>{"_", "-h", "SMARTS:[CD1]"}, "h:",
-                      "CC1CC1", "name", 0, "C([H])([H])([H])C1CC1", "name"}
+                      "CC1CC1", "name", 0, "C([H])([H])([H])C1CC1", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-I", "add:3-CC"}, "I:",
+                      "[3CH3]C", "name", 0, "[3CH2](C)CC", "name"}
 ));
 
 }  // namespace

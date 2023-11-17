@@ -10,8 +10,8 @@
 
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/data_source/string_data_source.h"
-#include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwmisc/misc.h"
 
 #include "aromatic.h"
 #include "atom_alias.h"
@@ -26,8 +26,7 @@
 using std::cerr;
 
 void
-MDL_File_Supporting_Material::_default_values()
-{
+MDL_File_Supporting_Material::_default_values() {
   _isis_standard_records = 0;
   _ignore_unrecognised_m_records = 0;
   _report_unrecognised_records = 1;
@@ -62,8 +61,7 @@ MDL_File_Supporting_Material::_default_values()
   _replace_first_sdf_tag.resize(0);
   _allow_deuterium = 0;
   _allow_tritium = 0;
-  if (nullptr != _input_bond_type_translation_table)
-  {
+  if (nullptr != _input_bond_type_translation_table) {
     delete[] _input_bond_type_translation_table;
     _input_bond_type_translation_table = nullptr;
   }
@@ -76,8 +74,7 @@ MDL_File_Supporting_Material::_default_values()
   _gsub_mdl_file_data = ' ';
 }
 
-MDL_File_Supporting_Material::MDL_File_Supporting_Material()
-{
+MDL_File_Supporting_Material::MDL_File_Supporting_Material() {
   _input_bond_type_translation_table = nullptr;
 
   _digits2 = nullptr;
@@ -86,13 +83,12 @@ MDL_File_Supporting_Material::MDL_File_Supporting_Material()
   _default_values();
 }
 
-MDL_File_Supporting_Material::~MDL_File_Supporting_Material()
-{
-  if (nullptr != _input_bond_type_translation_table)
+MDL_File_Supporting_Material::~MDL_File_Supporting_Material() {
+  if (nullptr != _input_bond_type_translation_table) {
     delete[] _input_bond_type_translation_table;
+  }
 
-  if (nullptr != _digits2)
-  {
+  if (nullptr != _digits2) {
     delete[] _digits2;
     delete[] _digits3;
   }
@@ -101,13 +97,10 @@ MDL_File_Supporting_Material::~MDL_File_Supporting_Material()
 }
 
 int
-MDL_File_Supporting_Material::set_mdl_input_bond_type_translation(int zfrom, int zto)
-{
-  if (nullptr == _input_bond_type_translation_table)
-  {
+MDL_File_Supporting_Material::set_mdl_input_bond_type_translation(int zfrom, int zto) {
+  if (nullptr == _input_bond_type_translation_table) {
     _input_bond_type_translation_table = new int[20];
-    for (int i = 0; i < 20; i++)
-    {
+    for (int i = 0; i < 20; i++) {
       _input_bond_type_translation_table[i] = i;
     }
   }
@@ -121,27 +114,23 @@ MDL_File_Supporting_Material::set_mdl_input_bond_type_translation(int zfrom, int
 
 static MDL_File_Supporting_Material default_mdl_file_optional_settings;
 
-MDL_File_Supporting_Material *
-global_default_MDL_File_Supporting_Material()
-{
+MDL_File_Supporting_Material*
+global_default_MDL_File_Supporting_Material() {
   return &default_mdl_file_optional_settings;
 }
 
 int
-set_display_non_organic_chirality_messages()
-{
+set_display_non_organic_chirality_messages() {
   return default_mdl_file_optional_settings.display_non_organic_chirality_messages();
 }
 
 void
-set_write_isis_standard(int s)
-{
+set_write_isis_standard(int s) {
   default_mdl_file_optional_settings.set_write_isis_standard(s);
 }
 
 void
-set_write_mdl_charges_as_m_chg(int s)
-{
+set_write_mdl_charges_as_m_chg(int s) {
   default_mdl_file_optional_settings.set_write_mdl_charges_as_m_chg(s);
 }
 
@@ -153,22 +142,21 @@ set_write_mdl_charges_as_m_chg(int s)
 */
 
 int
-convert_from_mdl_charge(int chg)
-{
-  if (0 == chg)    // or perhaps it really means -4!!! curse mdl
+convert_from_mdl_charge(int chg) {
+  if (0 == chg) {  // or perhaps it really means -4!!! curse mdl
     return 0;
+  }
 
-  if (4 == chg)
+  if (4 == chg) {
     return MDL_RADICAL;
+  }
 
   return 4 - chg;
 }
 
 int
-convert_to_mdl_charge(int chg)
-{
-  switch (chg)
-  {
+convert_to_mdl_charge(int chg) {
+  switch (chg) {
     case 0:
       return 0;
     case 1:
@@ -209,70 +197,67 @@ convert_to_mdl_charge(int chg)
 
   May 2002. the desktop version produces a different number of spaces than the host
   version. Change to just extracting tokens - this will presumably break if atom
-  numbers go above 999. 
+  numbers go above 999.
 */
 
 int
-fill_atom_property_array(const IWString & buffer, int & npairs, Aprop * atom_properties)
-{
+fill_atom_property_array(const IWString& buffer, int& npairs, Aprop* atom_properties) {
   assert(buffer.starts_with('M'));
 
-  const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+  const MDL_File_Supporting_Material* mdlfos =
+      global_default_MDL_File_Supporting_Material();
 
   int nw = buffer.nwords();
 
-  npairs = nw - 3;    // discount M  XXX c tokens
+  npairs = nw - 3;  // discount M  XXX c tokens
 
-  if (npairs != npairs / 2 * 2)    // must be an even number of tokens
+  if (npairs != npairs / 2 * 2)  // must be an even number of tokens
   {
     cerr << "mdl:must have even pairs '" << buffer << "'\n";
 
-    if (mdlfos->die_on_erroneous_m_input())
+    if (mdlfos->die_on_erroneous_m_input()) {
       return 0;
+    }
 
-    npairs--;    // convert to even number
+    npairs--;  // convert to even number
 
-    if (npairs <= 0)    // ignoring now empty record
+    if (npairs <= 0) {  // ignoring now empty record
       return 1;
+    }
   }
 
   npairs = npairs / 2;
 
-  if (0 == npairs)
-  {
+  if (0 == npairs) {
     cerr << "mdl:very strange, M record with no info '" << buffer << "'\n";
     return 0;
   }
 
-  if (npairs > MAX_PAIRS)
-  {
-    cerr
-        << "MDL::fill_atom_property_array:too many pairs on record, cannot process. Contact LillyMol on github (https://github.com/EliLillyCo/LillyMol) "
-        << npairs << '\n';
+  if (npairs > MAX_PAIRS) {
+    cerr << "MDL::fill_atom_property_array:too many pairs on record, cannot process. "
+            "Contact LillyMol on github (https://github.com/EliLillyCo/LillyMol) "
+         << npairs << '\n';
     return 0;
   }
 
   int i = 0;
   const_IWSubstring token;
 
-  buffer.nextword(token, i);    // M
-  buffer.nextword(token, i);    // XXX
-  buffer.nextword(token, i);    // count
+  buffer.nextword(token, i);  // M
+  buffer.nextword(token, i);  // XXX
+  buffer.nextword(token, i);  // count
 
-  for (int j = 0; j < npairs; j++)
-  {
+  for (int j = 0; j < npairs; j++) {
     buffer.nextword(token, i);
 
-    if (! token.numeric_value(atom_properties[j]._atom_number))
-    {
+    if (!token.numeric_value(atom_properties[j]._atom_number)) {
       cerr << "mdl:invalid atom number '" << buffer << "'\n";
       return 0;
     }
 
     buffer.nextword(token, i);
 
-    if (! token.numeric_value(atom_properties[j]._property))
-    {
+    if (!token.numeric_value(atom_properties[j]._property)) {
       cerr << "mdl: invalid numeric value '" << buffer << "'\n";
       return 0;
     }
@@ -287,40 +272,42 @@ fill_atom_property_array(const IWString & buffer, int & npairs, Aprop * atom_pro
 */
 
 int
-Molecule::mdl_add_m_isotope(int ntokens, const Aprop * atom_properties)
-{
+Molecule::mdl_add_m_isotope(int ntokens, const Aprop* atom_properties) {
   assert(ntokens > 0);
 
-  const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+  const MDL_File_Supporting_Material* mdlfos =
+      global_default_MDL_File_Supporting_Material();
 
   int matoms = _number_elements;
 
-  for (int i = 0; i < ntokens; i++)
-  {
+  for (int i = 0; i < ntokens; i++) {
     int j = atom_properties[i]._atom_number;
     int k = atom_properties[i]._property;
 
     //  cerr << "Isotope for atom " << j << " value " << k << "\n";
-    if (0 == j && 0 == k)    // have seen this a couple of times. Hard to know what they intended
+    if (0 == j &&
+        0 == k) {  // have seen this a couple of times. Hard to know what they intended
       continue;
+    }
 
-    if (0 == k)    // have seen this one too!
+    if (0 == k) {  // have seen this one too!
       continue;
+    }
 
-    j--;    // convert to C++ numbering
-    if (j < 0 || j >= matoms)
-    {
+    j--;  // convert to C++ numbering
+    if (j < 0 || j >= matoms) {
       cerr << "mdl_add_m_isotope: illegal atom number " << j << ", " << matoms
            << " atoms in the molecule\n";
       return 0;
     }
 
-    Atom * a = _things[j];    // the j'th atom of this molecule
+    Atom* a = _things[j];  // the j'th atom of this molecule
 
-    if (mdlfos->read_M_isotopes_as_numbers_rather_than_differences_from_normal())
+    if (mdlfos->read_M_isotopes_as_numbers_rather_than_differences_from_normal()) {
       a->set_isotope(k);
-    else
+    } else {
       a->set_isotope(a->element()->normal_isotope() + k);
+    }
   }
 
   return 1;
@@ -334,27 +321,23 @@ Molecule::mdl_add_m_isotope(int ntokens, const Aprop * atom_properties)
 */
 
 int
-Molecule::mdl_add_m_formal_charge(int ntokens, const Aprop * atom_properties)
-{
+Molecule::mdl_add_m_formal_charge(int ntokens, const Aprop* atom_properties) {
   assert(ntokens > 0);
 
   int matoms = _number_elements;
 
-  for (int i = 0; i < ntokens; i++)
-  {
+  for (int i = 0; i < ntokens; i++) {
     int j = atom_properties[i]._atom_number;
-    j--;    // convert to C++ numbering
-    if (j < 0 || j >= matoms)
-    {
+    j--;  // convert to C++ numbering
+    if (j < 0 || j >= matoms) {
       cerr << "mdl_add_m_charge: illegal atom number " << j << ", " << matoms
            << " atoms in the molecule\n";
       return 0;
     }
 
-    if (! reasonable_formal_charge_value(atom_properties[i]._property))
-    {
-      cerr << "mdl add formal charge: unreasonable charge value " << atom_properties[i]._property
-           << '\n';
+    if (!reasonable_formal_charge_value(atom_properties[i]._property)) {
+      cerr << "mdl add formal charge: unreasonable charge value "
+           << atom_properties[i]._property << '\n';
       return 0;
     }
 
@@ -365,18 +348,15 @@ Molecule::mdl_add_m_formal_charge(int ntokens, const Aprop * atom_properties)
 }
 
 int
-Molecule::mdl_add_m_radical(int ntokens, const Aprop * atom_properties)
-{
+Molecule::mdl_add_m_radical(int ntokens, const Aprop* atom_properties) {
   assert(ntokens > 0);
 
   int matoms = _number_elements;
 
-  for (int i = 0; i < ntokens; i++)
-  {
+  for (int i = 0; i < ntokens; i++) {
     int j = atom_properties[i]._atom_number;
-    j--;    // convert to C++ numbering
-    if (j < 0 || j >= matoms)
-    {
+    j--;  // convert to C++ numbering
+    if (j < 0 || j >= matoms) {
       cerr << "mdl_add_m_radical: illegal atom number " << j << ", " << matoms
            << " atoms in the molecule\n";
       return 0;
@@ -410,79 +390,86 @@ Molecule::mdl_add_m_radical(int ntokens, const Aprop * atom_properties)
 */
 
 int
-Molecule::_has_delocalised_neighbours(atom_number_t zatom, const int * aromatic_atoms,
-                                      const int * aromatic_bonds, Set_of_Atoms & s,
-                                      const int * ab) const
-{
-  const Atom * a = _things[zatom];
+Molecule::_has_delocalised_neighbours(atom_number_t zatom, const int* aromatic_atoms,
+                                      const int* aromatic_bonds, Set_of_Atoms& s,
+                                      const int* ab) const {
+  const Atom* a = _things[zatom];
 
   int acon = a->ncon();
   s.resize(acon);
 
-  int invariant = 0;    //  a quick and dirty computation to see if two atoms are the same
+  int invariant = 0;  //  a quick and dirty computation to see if two atoms are the same
 
-  for (int i = 0; i < acon; i++)
-  {
+  for (int i = 0; i < acon; i++) {
     atom_number_t j = a->other(zatom, i);
 
-    if (aromatic_atoms[j])    // good, will process
+    if (aromatic_atoms[j]) {  // good, will process
       ;
-    else if (ab[zatom * _number_elements + j])    // aromatic bond btw zatom and j, process
+    } else if (ab[zatom * _number_elements +
+                  j]) {  // aromatic bond btw zatom and j, process
       ;
-    else
+    } else {
       continue;
+    }
 
-    const Atom * aj = _things[j];
+    const Atom* aj = _things[j];
 
     int my_invariant;
 
-    if (8 == aj->atomic_number())
-      my_invariant =
-          10 * aj->atomic_number() + aj->ncon();    // breaks if we get more than 10 connections
-    else if (7 == aj->atomic_number() && aj->ncon() < 3)    // guanidines
+    if (8 == aj->atomic_number()) {
+      // breaks if we get more than 10 connections
+      my_invariant = 10 * aj->atomic_number() + aj->ncon();
+    } else if (7 == aj->atomic_number() && aj->ncon() < 3) {  // guanidines
       my_invariant = 10 * aj->atomic_number();
-    else
+    } else {
       continue;
+    }
 
-    //  cerr << "Atom " << j << " is an aromatic neighbour, invariant " << my_invariant << '\n';
+    //  cerr << "Atom " << j << " is an aromatic neighbour, invariant " << my_invariant <<
+    //  '\n';
 
-    if (s.empty())    // first one
+    if (s.empty())  // first one
     {
       invariant = my_invariant;
       s.add(j);
       continue;
+    } else if (my_invariant != invariant) {  // different atom type,
+      continue;                              // or should this be a failure
     }
-    else if (my_invariant != invariant)    // different atom type,
-      continue;                            // or should this be a failure
 
-    if (0 != aj->formal_charge())    // make sure anything with an existing formal charge up front
+    if (0 != aj->formal_charge()) {  // make sure anything with an existing formal charge
+                                     // up front
       s.insert_at_beginning(j);
-    else
+    } else {
       s.add(j);
+    }
   }
 
-  //cerr << "Found " << s.number_elements() << " aromatic neighbours\n";
+  // cerr << "Found " << s.number_elements() << " aromatic neighbours\n";
 
-  if (s.empty())
+  if (s.empty()) {
     return 0;
+  }
 
-  if (nullptr == aromatic_bonds)
+  if (nullptr == aromatic_bonds) {
     return (s.number_elements() > 1);
+  }
 
-    //  Implement this sometime, maybe not needed
+  //  Implement this sometime, maybe not needed
 
 #ifdef IS_THIS_NEEDED
   int nb = nedges();
 
-  for (int i = 0; i < nb; i++)
-  {
-    if (0 == aromatic_bonds[i])
+  for (int i = 0; i < nb; i++) {
+    if (0 == aromatic_bonds[i]) {
       continue;
+    }
 
-    const Bond * b = _bond_list[i];
+    const Bond* b = _bond_list[i];
 
-    if (! b->involves(zatom))
+    if (!b->involves(zatom)) {
       continue;
+    }
   }
 #endif
 
@@ -490,10 +477,11 @@ Molecule::_has_delocalised_neighbours(atom_number_t zatom, const int * aromatic_
 }
 
 int
-Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2, int * aromatic_bonds) const
-{
-  if (nullptr == aromatic_bonds)
+Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2,
+                                     int* aromatic_bonds) const {
+  if (nullptr == aromatic_bonds) {
     return 1;
+  }
 
   int b = which_bond(a1, a2);
 
@@ -501,23 +489,23 @@ Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2, int * a
 
   aromatic_bonds[b] = 0;
 
-  //cerr << " Bond between " << a1 << " and " << a2 << " is bond " << b << '\n';
+  // cerr << " Bond between " << a1 << " and " << a2 << " is bond " << b << '\n';
 
   return 1;
 }
 
 int
-Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2, int * aromatic_bonds,
-                                     const int * ab) const
-{
+Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2,
+                                     int* aromatic_bonds, const int* ab) const {
   const int bnumber = ab[a1 * _number_elements + a2] - 1;
 
-  if (bnumber < 0)
+  if (bnumber < 0) {
     return 1;
+  }
 
   aromatic_bonds[bnumber] = 0;
 
-  //cerr << " Bond between " << a1 << " and " << a2 << " is bond " << b << '\n';
+  // cerr << " Bond between " << a1 << " and " << a2 << " is bond " << b << '\n';
 
   return 1;
 }
@@ -528,19 +516,19 @@ Molecule::_unset_aromatic_bond_entry(atom_number_t a1, atom_number_t a2, int * a
 */
 
 int
-Molecule::_identify_atoms_at_ends_of_aromatic_bonds(const int * aromatic_bond,
-                                                    int * aromatic_connections, int * ab) const
-{
+Molecule::_identify_atoms_at_ends_of_aromatic_bonds(const int* aromatic_bond,
+                                                    int* aromatic_connections,
+                                                    int* ab) const {
   set_vector(aromatic_connections, _number_elements, 0);
 
   const int nb = nedges();
 
-  for (int i = 0; i < nb; ++i)
-  {
-    if (! aromatic_bond[i])
+  for (int i = 0; i < nb; ++i) {
+    if (!aromatic_bond[i]) {
       continue;
+    }
 
-    const Bond * b = _bond_list[i];
+    const Bond* b = _bond_list[i];
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
@@ -549,27 +537,26 @@ Molecule::_identify_atoms_at_ends_of_aromatic_bonds(const int * aromatic_bond,
     aromatic_connections[a2]++;
 
     ab[a1 * _number_elements + a2] = ab[a2 * _number_elements + a1] =
-        i + 1;    // we create an index into the bond list
+        i + 1;  // we create an index into the bond list
   }
 
   return 1;
 }
 
 int
-Molecule::_count_elements(const atomic_number_t z, const Set_of_Atoms & e) const
-{
+Molecule::_count_elements(const atomic_number_t z, const Set_of_Atoms& e) const {
   int rc = 0;
 
-  for (int i = 0; i < e.number_elements(); ++i)
-  {
-    if (z == _things[e[i]]->atomic_number())
+  for (int i = 0; i < e.number_elements(); ++i) {
+    if (z == _things[e[i]]->atomic_number()) {
       rc++;
+    }
   }
 
   return rc;
 }
 
-//#define DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
+// #define DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
 
 /*
   Sept 97, generalise this to be any two equivalent looking 'aromatic'
@@ -584,53 +571,55 @@ Molecule::_count_elements(const atomic_number_t z, const Set_of_Atoms & e) const
 */
 
 int
-Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromatic_bonds)
-{
-  if (nullptr == aromatic_bonds)    // cannot do anything
+Molecule::process_delocalised_carbonyl_bonds(int* aromatic_atoms, int* aromatic_bonds) {
+  if (nullptr == aromatic_bonds) {  // cannot do anything
     return 1;
+  }
 
 #ifdef DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
-  if (nullptr != aromatic_bonds)
-  {
+  if (nullptr != aromatic_bonds) {
     cerr << "On entry to _process_delocalised_carbonyl_bonds\n";
     iw_write_array(aromatic_bonds, nedges(), "aromatic bonds", cerr);
   }
 #endif
 
-  int * rm = new int[_number_elements + _number_elements];
+  int* rm = new int[_number_elements + _number_elements];
   std::unique_ptr<int[]> free_rm(rm);
 
   ring_membership(rm);
 
-  int * number_aromatic_connections = rm + _number_elements;
+  int* number_aromatic_connections = rm + _number_elements;
 
-  // Transfer information from the aromatic bonds array to an array that allows us to quickly find if two atoms have an aromatic bond between them
+  // Transfer information from the aromatic bonds array to an array that allows us to
+  // quickly find if two atoms have an aromatic bond between them
 
-  int * ab = new int[_number_elements * _number_elements];
+  int* ab = new int[_number_elements * _number_elements];
   std::unique_ptr<int[]> free_ab(ab);
 
   set_vector(ab, _number_elements * _number_elements, 0);
 
-  _identify_atoms_at_ends_of_aromatic_bonds(aromatic_bonds, number_aromatic_connections, ab);
+  _identify_atoms_at_ends_of_aromatic_bonds(aromatic_bonds, number_aromatic_connections,
+                                            ab);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (rm[i])    // only process non ring atoms here
+  for (int i = 0; i < _number_elements; i++) {
+    if (rm[i]) {  // only process non ring atoms here
       continue;
+    }
 
 #ifdef DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
-    cerr << " atom " << i << " aromatic? " << aromatic_atoms[i] << " aromatic connections "
-         << number_aromatic_connections[i] << '\n';
+    cerr << " atom " << i << " aromatic? " << aromatic_atoms[i]
+         << " aromatic connections " << number_aromatic_connections[i] << '\n';
 #endif
 
-    if (aromatic_atoms[i])
+    if (aromatic_atoms[i]) {
       ;
-    else if (number_aromatic_connections[i] > 1)
+    } else if (number_aromatic_connections[i] > 1) {
       ;
-    else
+    } else {
       continue;
+    }
 
-    Atom * a = _things[i];
+    Atom* a = _things[i];
 
     int icon = a->ncon();
 
@@ -639,16 +628,19 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
          << a->atomic_symbol() << "' " << icon << " connections is non ring\n";
 #endif
 
-    if (icon < 2)
+    if (icon < 2) {
       continue;
+    }
 
     Set_of_Atoms s;
 
-    if (! _has_delocalised_neighbours(i, aromatic_atoms, aromatic_bonds, s, ab))
+    if (!_has_delocalised_neighbours(i, aromatic_atoms, aromatic_bonds, s, ab)) {
       continue;
+    }
 
-    if (1 == s.number_elements())    // deal with these later
+    if (1 == s.number_elements()) {  // deal with these later
       continue;
+    }
 
 #ifdef DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
     cerr << "atom " << i << " atoms " << s << " delocalised\n";
@@ -663,15 +655,12 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
     // Jan 2005.  Sybyl produces P:O bonds.  No, just one bond in a PO3
     // grouping is aromatic, so this isn't needed
 
-    if (1 == s.number_elements())
-    {
-      if (a->implicit_hydrogens() && _things[a0]->implicit_hydrogens())
-      {
+    if (1 == s.number_elements()) {
+      if (a->implicit_hydrogens() && _things[a0]->implicit_hydrogens()) {
         set_bond_type_between_atoms(i, a0, DOUBLE_BOND);
         a->set_modified();
         _things[a0]->set_modified();
-        if (nullptr != aromatic_bonds)
-        {
+        if (nullptr != aromatic_bonds) {
           int b = which_bond(i, a0);
           aromatic_bonds[b] = 0;
         }
@@ -688,8 +677,7 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
     //  Special case for the Nitro group
 
     if (7 == a->atomic_number() && 2 == s.number_elements() && 8 == atomic_number(a0) &&
-        8 == atomic_number(s[1]))
-    {
+        8 == atomic_number(s[1])) {
       set_bond_type_between_atoms(i, a0, DOUBLE_BOND);
       set_bond_type_between_atoms(i, s[1], DOUBLE_BOND);
       _unset_aromatic_bond_entry(i, s[1], aromatic_bonds, ab);
@@ -699,26 +687,21 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
     set_bond_type_between_atoms(i, a0, SINGLE_BOND);
 
     if (6 == a->atomic_number() && 3 == s.number_elements() &&
-        3 == _count_elements(7, s))    // guanidine
+        3 == _count_elements(7, s))  // guanidine
     {
       _unset_aromatic_bond_entry(i, s[1], aromatic_bonds, ab);
       _unset_aromatic_bond_entry(i, s[2], aromatic_bonds, ab);
-      if (1 == _things[s[1]]->ncon())
-      {
+      if (1 == _things[s[1]]->ncon()) {
         set_bond_type_between_atoms(i, s[1], DOUBLE_BOND);
         set_bond_type_between_atoms(i, s[2], SINGLE_BOND);
-      }
-      else if (1 == _things[s[2]]->ncon())
-      {
+      } else if (1 == _things[s[2]]->ncon()) {
         set_bond_type_between_atoms(i, s[1], SINGLE_BOND);
         set_bond_type_between_atoms(i, s[2], DOUBLE_BOND);
-      }
-      else if (_things[s[1]]->nbonds() < _things[s[2]]->nbonds())
-      {
+      } else if (_things[s[1]]->nbonds() < _things[s[2]]->nbonds()) {
         set_bond_type_between_atoms(i, s[1], DOUBLE_BOND);
         set_bond_type_between_atoms(i, s[2], SINGLE_BOND);
-      }
-      else    // could be dangerous, perhaps one of these atoms already has a double bond. ignore for now...
+      } else  // could be dangerous, perhaps one of these atoms already has a double bond.
+              // ignore for now...
       {
         set_bond_type_between_atoms(i, s[1], SINGLE_BOND);
         set_bond_type_between_atoms(i, s[2], DOUBLE_BOND);
@@ -726,13 +709,15 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
       continue;
     }
 
-    if (-1 != _things[a0]->formal_charge())
+    if (-1 != _things[a0]->formal_charge()) {
       _things[a0]->set_formal_charge(-1);
+    }
 
-    if (s.number_elements() > 1)
+    if (s.number_elements() > 1) {
       _unset_aromatic_bond_entry(i, s[1], aromatic_bonds, ab);
+    }
 
-    if (2 == s.number_elements())    // the most common case, carbonyl for example
+    if (2 == s.number_elements())  // the most common case, carbonyl for example
     {
       set_bond_type_between_atoms(i, s[1], DOUBLE_BOND);
       continue;
@@ -742,28 +727,28 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
 
     //  SO3 gets two double bonds, PO3 gets just one
 
-    if (3 == s.number_elements())
-    {
+    if (3 == s.number_elements()) {
       set_bond_type_between_atoms(i, s[1], DOUBLE_BOND);
-      if (16 == a->atomic_number())
+      if (16 == a->atomic_number()) {
         set_bond_type_between_atoms(i, s[2], DOUBLE_BOND);
-      else
+      } else {
         set_bond_type_between_atoms(i, s[2], SINGLE_BOND);
+      }
       continue;
     }
 
     //  SO3 gets two double bonds, PO3 gets just one
 
-    if (4 == s.number_elements())
-    {
+    if (4 == s.number_elements()) {
       set_bond_type_between_atoms(i, s[1], SINGLE_BOND);
       _things[s[1]]->set_formal_charge(-1);
       set_bond_type_between_atoms(i, s[2], DOUBLE_BOND);
       set_bond_type_between_atoms(i, s[3], DOUBLE_BOND);
       _unset_aromatic_bond_entry(i, s[3], aromatic_bonds, ab);
+    } else {
+      cerr << "Molecule::_process_delocalised_carbonyl_bonds: This many neighbours " << s
+           << '\n';
     }
-    else
-      cerr << "Molecule::_process_delocalised_carbonyl_bonds: This many neighbours " << s << '\n';
   }
 
 #ifdef DEBUG_PROCESS_DELOCALISED_CARBONYL_BONDS
@@ -772,41 +757,38 @@ Molecule::process_delocalised_carbonyl_bonds(int * aromatic_atoms, int * aromati
   return 1;
 }
 
-//#define DEBUG_FINAL_PROCESSING_AROMATIC_MDL
+// #define DEBUG_FINAL_PROCESSING_AROMATIC_MDL
 
 int
-Molecule::_final_processing_of_aromatic_mdl_input(int * aromatic_atoms, int * aromatic_bonds)
-{
+Molecule::_final_processing_of_aromatic_mdl_input(int* aromatic_atoms,
+                                                  int* aromatic_bonds) {
 #ifdef DEBUG_FINAL_PROCESSING_AROMATIC_MDL
   cerr << "Molecule::_final_processing_of_aromatic_mdl_input:\n";
 #endif
 
-  if (allow_delocalised_carbonyl_bonds())
-  {
-    if (! process_delocalised_carbonyl_bonds(aromatic_atoms, aromatic_bonds))
-    {
+  if (allow_delocalised_carbonyl_bonds()) {
+    if (!process_delocalised_carbonyl_bonds(aromatic_atoms, aromatic_bonds)) {
       cerr << "Cannot process delocalised carbonyl bonds\n";
       return 0;
     }
   }
 
   // there were no aromatic atoms in the input
-  if (locate_item_in_array(1, _number_elements, aromatic_atoms) < 0)
+  if (locate_item_in_array(1, _number_elements, aromatic_atoms) < 0) {
     return 1;
+  }
 
   int rc = 1;
 
-  if (! find_kekule_form(aromatic_atoms))
-  {
+  if (!find_kekule_form(aromatic_atoms)) {
     cerr << "read_molecule_mdl_ds: find kekule form failed";
 
-    if (allow_input_without_valid_kekule_form())
-    {
+    if (allow_input_without_valid_kekule_form()) {
       cerr << ", using single bonds";
       _molecule_name += " (invalid KEKULE form)";
-    }
-    else
+    } else {
       rc = 0;
+    }
 
     cerr << ' ' << _molecule_name << "'\n";
   }
@@ -820,10 +802,8 @@ Molecule::_final_processing_of_aromatic_mdl_input(int * aromatic_atoms, int * ar
 */
 
 int
-return_code_depending_on_ignore_incorrect_chiral_input()
-{
-  if (ignore_incorrect_chiral_input())
-  {
+return_code_depending_on_ignore_incorrect_chiral_input() {
+  if (ignore_incorrect_chiral_input()) {
     cerr << "Ignored\n";
     return 1;
   }
@@ -835,43 +815,36 @@ return_code_depending_on_ignore_incorrect_chiral_input()
   Shared between the V2 and V3 programmes
 */
 
-Atom *
-MDL_File_Supporting_Material::create_mdl_atom(const const_IWSubstring & ss, int msdif, int chg,
-                                              int is_radical) const
-{
-  const_IWSubstring zsymbol = ss;    // our own local copy
+Atom*
+MDL_File_Supporting_Material::create_mdl_atom(const const_IWSubstring& ss, int msdif,
+                                              int chg, int is_radical) const {
+  const_IWSubstring zsymbol = ss;  // our own local copy
 
-  if (ss.length() > 2)    // a residue or something
+  if (ss.length() > 2)  // a residue or something
   {
-    cerr << "Molecule::create_mdl_atom:warning: element '" << ss << "' encountered\n";
-
-    if (_change_long_symbols_to.length())
+    if (_change_long_symbols_to.length()) {
       zsymbol = _change_long_symbols_to;
-    else if (_truncate_long_symbols)
+    } else if (_truncate_long_symbols) {
       zsymbol.iwtruncate(2);
-    else if (atomic_symbols_can_have_arbitrary_length())
+    } else if (atomic_symbols_can_have_arbitrary_length()) {
       ;
-    else    // no way of processing it
+    } else {  // no way of processing it
+      cerr << "Molecule::create_mdl_atom:warning: element '" << ss << "' encountered\n";
       return nullptr;
+    }
   }
 
-  isotope_t iso = 0;    // never used with mdl files
+  isotope_t iso = 0;  // never used with mdl files
 
-  const Element * e = get_element_from_symbol(zsymbol, iso);
-  if (nullptr == e)
-  {
-    if (_allow_deuterium && 'D' == zsymbol)
-    {
+  const Element* e = get_element_from_symbol(zsymbol, iso);
+  if (nullptr == e) {
+    if (_allow_deuterium && 'D' == zsymbol) {
       e = get_element_from_symbol_no_case_conversion("H");
       iso = 2;
-    }
-    else if (_allow_tritium && 'T' == zsymbol)
-    {
+    } else if (_allow_tritium && 'T' == zsymbol) {
       e = get_element_from_symbol_no_case_conversion("H");
       iso = 3;
-    }
-    else if (! auto_create_new_elements())
-    {
+    } else if (!auto_create_new_elements()) {
       cerr << "create_mdl_atom: unrecognised element '" << zsymbol << "'\n";
       return nullptr;
     } else {
@@ -879,28 +852,29 @@ MDL_File_Supporting_Material::create_mdl_atom(const const_IWSubstring & ss, int 
     }
 
     if (nullptr == e) {
-      cerr << "MDL_File_Optional_Settings::create_mdl_atom:cannot create element from '" << zsymbol
-           << "'\n";
+      cerr << "MDL_File_Optional_Settings::create_mdl_atom:cannot create element from '"
+           << zsymbol << "'\n";
       return nullptr;
     }
   }
 
-  Atom * rc = new Atom(e);
+  Atom* rc = new Atom(e);
   assert(nullptr != rc);
 
-  if (0 == msdif)
+  if (0 == msdif) {
     ;
-  else if (_read_isotopes_as_numbers_rather_than_differences_from_normal)
+  } else if (_read_isotopes_as_numbers_rather_than_differences_from_normal) {
     iso = msdif;
-  else
+  } else {
     iso = e->normal_isotope() + msdif;
+  }
 
   if (iso) {
     rc->set_isotope(iso);
   }
 
   if (chg) {
-    if (! reasonable_formal_charge_value(chg)) {
+    if (!reasonable_formal_charge_value(chg)) {
       cerr << "create mdl atom: bad charge value " << chg << '\n';
       delete rc;
       return nullptr;
@@ -997,24 +971,23 @@ parse_xyz_symbol_etc (const const_IWSubstring & buffer,
 
 int
 Molecule::_mdl_atom_is_chiral_centre(atom_number_t zatom, int cfg,
-                                     MDL_File_Supporting_Material & mdlfos)
-{
-  const Atom * a = _things[zatom];
+                                     MDL_File_Supporting_Material& mdlfos) {
+  const Atom* a = _things[zatom];
 
-  if (! a->element()->organic()) {
-    if (3 == cfg) {   // unspecified, who cares
+  if (!a->element()->organic()) {
+    if (3 == cfg) {  // unspecified, who cares
       return 1;
     }
 
     if (mdlfos.display_non_organic_chirality_messages()) {
-      cerr << "Ignoring non-organic chirality, atom " << zatom << " type '" << a->atomic_symbol()
-           << "'\n";
+      cerr << "Ignoring non-organic chirality, atom " << zatom << " type '"
+           << a->atomic_symbol() << "'\n";
     }
     return 1;
   }
 
   if (1 == cfg || 2 == cfg) {
-    Chiral_Centre * c = create_chiral_centre(zatom, 1);
+    Chiral_Centre* c = create_chiral_centre(zatom, 1);
     if (nullptr == c) {
       cerr << "Cannot create chiral center at atom " << zatom << '\n';
       return 0;
@@ -1024,7 +997,8 @@ Molecule::_mdl_atom_is_chiral_centre(atom_number_t zatom, int cfg,
   } else if (3 == cfg) {  // maybe ignore these
     mdlfos.unspecified_chiral_atom_if_interested(zatom);
   } else {
-    cerr << "Molecule::_mdl_atom_is_chiral_centre: unrecognised chirality " << cfg << '\n';
+    cerr << "Molecule::_mdl_atom_is_chiral_centre: unrecognised chirality " << cfg
+         << '\n';
     return 0;
   }
 
@@ -1038,22 +1012,20 @@ Molecule::_mdl_atom_is_chiral_centre(atom_number_t zatom, int cfg,
 */
 
 int
-Molecule::_mdl_set_bond_directionality(atom_number_t a1,
-                                       atom_number_t a2,
-                                       int directionality)
-{
+Molecule::_mdl_set_bond_directionality(atom_number_t a1, atom_number_t a2,
+                                       int directionality) {
   assert(0 != directionality);
 
   // Chances are this is the last bond in the list.
   for (int i = _bond_list.number_elements() - 1; i >= 0; i--) {
-    Bond * b = _bond_list[i];
-    if (! b->involves(a1, a2)) {
+    Bond* b = _bond_list[i];
+    if (!b->involves(a1, a2)) {
       continue;
     }
 
     if (b->is_wedge_any()) {
-      cerr << "Molecule::_mdl_set_bond_directionality: bond between atoms " << a1 << " and " << a2
-           << " already directional\n";
+      cerr << "Molecule::_mdl_set_bond_directionality: bond between atoms " << a1
+           << " and " << a2 << " already directional\n";
       continue;
     }
 
@@ -1066,16 +1038,16 @@ Molecule::_mdl_set_bond_directionality(atom_number_t a1,
     } else if (3 == directionality) {
       b->set_cis_trans_either_double_bond();
     } else {
-      cerr << "Molecule::_mdl_set_bond_directionality: unknown directionality " << directionality
-           << '\n';
+      cerr << "Molecule::_mdl_set_bond_directionality: unknown directionality "
+           << directionality << '\n';
       return 0;
     }
 
     return 1;
   }
 
-  cerr << "Molecule::_mdl_set_bond_directionality: HUH, no bond between atoms " << a1 << " and "
-       << a2 << '\n';
+  cerr << "Molecule::_mdl_set_bond_directionality: HUH, no bond between atoms " << a1
+       << " and " << a2 << '\n';
   return 0;
 }
 
@@ -1090,10 +1062,8 @@ Molecule::_mdl_set_bond_directionality(atom_number_t a1,
 */
 
 int
-convert_from_mdl_number_to_bond_type(int int_rep, bond_type_t & bt)
-{
-  switch (int_rep)
-  {
+convert_from_mdl_number_to_bond_type(int int_rep, bond_type_t& bt) {
+  switch (int_rep) {
     case 1:
       bt = SINGLE_BOND;
       return 1;
@@ -1120,12 +1090,11 @@ convert_from_mdl_number_to_bond_type(int int_rep, bond_type_t & bt)
 }
 
 int
-MDL_File_Supporting_Material::parse_bond_record(const_IWSubstring & buffer, int na,
-                                                atom_number_t & a1, atom_number_t & a2,
-                                                int & bond_type_read_in, int & directionality)
-{
-  if (buffer.length() < 9)
-  {
+MDL_File_Supporting_Material::parse_bond_record(const_IWSubstring& buffer, int na,
+                                                atom_number_t& a1, atom_number_t& a2,
+                                                int& bond_type_read_in,
+                                                int& directionality) {
+  if (buffer.length() < 9) {
     cerr << "Invalid bond record '" << buffer << "'\n";
     return 0;
   }
@@ -1134,53 +1103,54 @@ MDL_File_Supporting_Material::parse_bond_record(const_IWSubstring & buffer, int 
 
   int ntokens = int3d(buffer, a1, a2, &bond_type_read_in);
 
-  a1--;    // our atom numbers start at 0
+  a1--;  // our atom numbers start at 0
   a2--;
 
   if ((3 != ntokens) || a1 < 0 || a1 >= na || a2 < 0 || a2 >= na ||
-      ((a1 == a2) && ! _ignore_self_bonds))
-  {
+      ((a1 == a2) && !_ignore_self_bonds)) {
     cerr << "parse_bond_record: error on bond record\n";
 
-    if (3 != ntokens)
+    if (3 != ntokens) {
       cerr << "Bad token count on bond record " << ntokens << '\n';
-    else if (a1 < 0 || a1 > na)
+    } else if (a1 < 0 || a1 > na) {
       cerr << "Bad a1 value " << a1 << ", natoms = " << na << '\n';
-    else if (a2 < 0 || a2 > na)
+    } else if (a2 < 0 || a2 > na) {
       cerr << "Bad a2 value " << a2 << ", natoms = " << na << '\n';
-    else
+    } else {
       cerr << "a1 = " << a1 << " a2 = " << a2 << " natoms = " << na << '\n';
+    }
 
     return 0;
   }
 
-  if (buffer.length() < 12)    // no directionality present
+  if (buffer.length() < 12) {  // no directionality present
     return 1;
+  }
 
-  char direction = buffer[11];    // the 12'th column - probably should check columns 10 and 11....
+  char direction =
+      buffer[11];  // the 12'th column - probably should check columns 10 and 11....
 
-  if ('0' == direction)    // no directionality
+  if ('0' == direction) {  // no directionality
     return 1;
+  }
 
-  directionality = direction - '0';    // the numeric form we return in our argument list
+  directionality = direction - '0';  // the numeric form we return in our argument list
 
-  if (0 == _accumulate_mdl_chirality_features)
+  if (0 == _accumulate_mdl_chirality_features) {
     return 1;
+  }
 
-  if ('1' == direction)
+  if ('1' == direction) {
     _up_bonds_last_molecule.add(a1);
-  else if ('6' == direction)
+  } else if ('6' == direction) {
     _down_bonds_last_molecule.add(a1);
-  else if ('4' == direction)
+  } else if ('4' == direction) {
     _squiggle_bonds_last_molecule.add(a1);
-  else if ('3' == direction)
-  {
+  } else if ('3' == direction) {
     assert(2 == bond_type_read_in);
     _unspecified_double_bond_atoms.add(a1);
     _unspecified_double_bond_atoms.add(a2);
-  }
-  else
-  {
+  } else {
     cerr << "parse_bond_record: unrecognised bond directionality '" << direction << "'\n";
     return 0;
   }
@@ -1193,11 +1163,10 @@ MDL_File_Supporting_Material::parse_bond_record(const_IWSubstring & buffer, int 
 */
 
 int
-parse_m_sty_record(const const_IWSubstring & buffer, int & sgroups_present)
-{
-  if (buffer.nwords() < 3)
-  {
-    cerr << "Molecule::_read_molecule_mdl_trailing_records:invalid record '" << buffer << "'\n";
+parse_m_sty_record(const const_IWSubstring& buffer, int& sgroups_present) {
+  if (buffer.nwords() < 3) {
+    cerr << "Molecule::_read_molecule_mdl_trailing_records:invalid record '" << buffer
+         << "'\n";
     return 0;
   }
 
@@ -1206,8 +1175,7 @@ parse_m_sty_record(const const_IWSubstring & buffer, int & sgroups_present)
 
   int tmp;
 
-  if (! n.numeric_value(tmp) || tmp < 1)
-  {
+  if (!n.numeric_value(tmp) || tmp < 1) {
     cerr << "Molecule::parse_m_sty_record:invalid count '" << buffer << "'\n";
     return 0;
   }
@@ -1218,21 +1186,20 @@ parse_m_sty_record(const const_IWSubstring & buffer, int & sgroups_present)
 }
 
 int
-extract_sdf_identifier(const IWString & buffer, IWString & id)
-{
+extract_sdf_identifier(const IWString& buffer, IWString& id) {
   int istart = buffer.index('<');
   int istop = buffer.rindex('>');
 
-  if (istart > istop || istart < 0 || istop < 0)
-  {
+  if (istart > istop || istart < 0 || istop < 0) {
     cerr << "extract_sdf_identifier: HUH: '" << buffer << "'\n";
     return 0;
   }
 
   buffer.from_to(istart + 1, istop - 1, id);
 
-  if (id.contains(' '))
+  if (id.contains(' ')) {
     id.gsub(' ', '_');
+  }
 
   return 1;
 }
@@ -1270,27 +1237,24 @@ static int g_records_found = 0;
 static resizable_array_p<Atom_Alias> aliases;
 
 int
-a_records_found_most_recent_mdl_molecule()
-{
+a_records_found_most_recent_mdl_molecule() {
   return a_records_found;
 }
 
 int
-g_records_found_most_recent_mdl_molecule()
-{
+g_records_found_most_recent_mdl_molecule() {
   return g_records_found;
 }
 
-const resizable_array_p<Atom_Alias> &
-atom_aliases_most_recent_mdl_molecule()
-{
+const resizable_array_p<Atom_Alias>&
+atom_aliases_most_recent_mdl_molecule() {
   return aliases;
 }
 
 void
-add_to_text_info(resizable_array_p<IWString> & text_info, const const_IWSubstring & zextra)
-{
-  IWString * s = new IWString(zextra);
+add_to_text_info(resizable_array_p<IWString>& text_info,
+                 const const_IWSubstring& zextra) {
+  IWString* s = new IWString(zextra);
 
   text_info.add(s);
 
@@ -1307,32 +1271,34 @@ add_to_text_info(resizable_array_p<IWString> & text_info, const const_IWSubstrin
 
 #ifdef LOOKS_LIKE_SDF_TAG_OV
 static int
-looks_like_sdf_tag(const const_IWSubstring & buffer)
-{
-  //cerr << "Checking for sdf tag '" << buffer << "'\n";
+looks_like_sdf_tag(const const_IWSubstring& buffer) {
+  // cerr << "Checking for sdf tag '" << buffer << "'\n";
 
-  if (! buffer.starts_with('>'))
+  if (!buffer.starts_with('>')) {
     return 0;
+  }
 
   int n = buffer.length();
 
-  if (n < 3)
+  if (n < 3) {
     return 0;
+  }
 
-  for (int i = 1; i < n; i++)
-  {
+  for (int i = 1; i < n; i++) {
     char c = buffer[i];
 
-    if (' ' == c)
+    if (' ' == c) {
       continue;
+    }
 
-    if ('<' != c)
+    if ('<' != c) {
       return 0;
+    }
 
-    do
-    {
-      if ('>' == buffer[i])
+    do {
+      if ('>' == buffer[i]) {
         return 1;
+      }
 
       i++;
     } while (i < n);
@@ -1345,43 +1311,49 @@ looks_like_sdf_tag(const const_IWSubstring & buffer)
 #endif
 
 int
-looks_like_sdf_tag(const const_IWSubstring & buffer)
-{
-  //cerr << "Checking for sdf tag '" << buffer << "'\n";
+looks_like_sdf_tag(const const_IWSubstring& buffer) {
+  // cerr << "Checking for sdf tag '" << buffer << "'\n";
 
-  if (! buffer.starts_with('>'))    // cheapest test first
+  if (!buffer.starts_with('>')) {  // cheapest test first
     return 0;
+  }
 
   int i = 0;
   const_IWSubstring token;
 
   buffer.nextword(token, i);
 
-  if (! buffer.nextword(token, i))    // strange, no second token on line!
+  if (!buffer.nextword(token, i)) {  // strange, no second token on line!
     return 0;
-
-  if (token.starts_with('<'))    // the most common case
-    ;
-  else    // maybe a digit in there
-  {
-    int notused;
-    if (! token.numeric_value(notused) || notused < 0)
-      return 0;
-
-    if (! buffer.nextword(token, i))    // if we have a digit, there must be a following token
-      return 0;
-
-    if (! token.starts_with('<'))    // following the digit, there must be the
-      return 0;
   }
 
-  if (token.ends_with('>'))
-    return 1;
-
-  while (buffer.nextword(token, i))
+  if (token.starts_with('<')) {  // the most common case
+    ;
+  } else  // maybe a digit in there
   {
-    if (token.ends_with('>'))
+    int notused;
+    if (!token.numeric_value(notused) || notused < 0) {
+      return 0;
+    }
+
+    if (!buffer.nextword(token,
+                         i)) {  // if we have a digit, there must be a following token
+      return 0;
+    }
+
+    if (!token.starts_with('<')) {  // following the digit, there must be the
+      return 0;
+    }
+  }
+
+  if (token.ends_with('>')) {
+    return 1;
+  }
+
+  while (buffer.nextword(token, i)) {
+    if (token.ends_with('>')) {
       return 1;
+    }
   }
 
   return 0;
@@ -1395,28 +1367,25 @@ looks_like_sdf_tag(const const_IWSubstring & buffer)
 */
 
 int
-Molecule::_common_parse_M_record(const const_IWSubstring & buffer, int & fatal)
-{
+Molecule::_common_parse_M_record(const const_IWSubstring& buffer, int& fatal) {
   Aprop atom_properties[MAX_PAIRS];
 
 #ifdef DEBUG_COMMON_PARSE_M_RECORD
   cerr << "_common_parse_M_record examining '" << buffer << "'\n";
 #endif
 
-  if (buffer.starts_with("M  CHG"))
-  {
+  if (buffer.starts_with("M  CHG")) {
     int tokens;
-    if (! fill_atom_property_array(buffer, tokens, atom_properties))
-    {
+    if (!fill_atom_property_array(buffer, tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
 
-    if (0 == tokens)
+    if (0 == tokens) {
       return 1;
+    }
 
-    if (! mdl_add_m_formal_charge(tokens, atom_properties))
-    {
+    if (!mdl_add_m_formal_charge(tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
@@ -1424,20 +1393,18 @@ Molecule::_common_parse_M_record(const const_IWSubstring & buffer, int & fatal)
     return 1;
   }
 
-  if (buffer.starts_with("M  ISO"))
-  {
+  if (buffer.starts_with("M  ISO")) {
     int tokens;
-    if (! fill_atom_property_array(buffer, tokens, atom_properties))
-    {
+    if (!fill_atom_property_array(buffer, tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
 
-    if (0 == tokens)
+    if (0 == tokens) {
       return 1;
+    }
 
-    if (! mdl_add_m_isotope(tokens, atom_properties))
-    {
+    if (!mdl_add_m_isotope(tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
@@ -1445,20 +1412,18 @@ Molecule::_common_parse_M_record(const const_IWSubstring & buffer, int & fatal)
     return 1;
   }
 
-  if (buffer.starts_with("M  RAD"))
-  {
+  if (buffer.starts_with("M  RAD")) {
     int tokens;
-    if (! fill_atom_property_array(buffer, tokens, atom_properties))
-    {
+    if (!fill_atom_property_array(buffer, tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
 
-    if (0 == tokens)
+    if (0 == tokens) {
       return 1;
+    }
 
-    if (! mdl_add_m_radical(tokens, atom_properties))
-    {
+    if (!mdl_add_m_radical(tokens, atom_properties)) {
       fatal = 1;
       return 0;
     }
@@ -1466,10 +1431,8 @@ Molecule::_common_parse_M_record(const const_IWSubstring & buffer, int & fatal)
     return 1;
   }
 
-  if (buffer.starts_with("M  RGP"))
-  {
-    if (! _parse_M_RGP_record(buffer))
-    {
+  if (buffer.starts_with("M  RGP")) {
+    if (!_parse_M_RGP_record(buffer)) {
       fatal = 1;
       return 0;
     }
@@ -1493,75 +1456,72 @@ Molecule::_common_parse_M_record(const const_IWSubstring & buffer, int & fatal)
 */
 
 int
-MDL_File_Supporting_Material::add_rdfile_identifier(const IWString & new_identifier)
-{
+MDL_File_Supporting_Material::add_rdfile_identifier(const IWString& new_identifier) {
   assert(new_identifier.length() > 0);
 
   return _rdfile_identifiers.add(new IWString(new_identifier));
 }
 
 int
-MDL_File_Supporting_Material::set_rdfile_start_of_record(const const_IWSubstring & s)
-{
+MDL_File_Supporting_Material::set_rdfile_start_of_record(const const_IWSubstring& s) {
   _rdfile_start_of_record = s;
 
-  //cerr << "rdfile_start_of_record set to '" << s << "'\n";
+  // cerr << "rdfile_start_of_record set to '" << s << "'\n";
 
   return 1;
 }
 
 static int
-skip_to_rdfile_start_of_record(iwstring_data_source & input,
-                               const IWString & rdfile_start_of_record)
-{
+skip_to_rdfile_start_of_record(iwstring_data_source& input,
+                               const IWString& rdfile_start_of_record) {
   const_IWSubstring buffer;
 
   int records_read_here = 0;
 
-  while (input.next_record(buffer))
-  {
+  while (input.next_record(buffer)) {
     records_read_here++;
 
-    if (buffer.starts_with(rdfile_start_of_record))
-    {
+    if (buffer.starts_with(rdfile_start_of_record)) {
       input.push_record();
       return 1;
       ;
     }
   }
 
-  if (0 == records_read_here)
-  {
+  if (0 == records_read_here) {
     cerr << "read mol rdf eof\n";
     return 0;
   }
 
-  cerr << "EOF reading RDFILE, cannot find start record '" << rdfile_start_of_record << "', tried "
-       << records_read_here << "\n";
+  cerr << "EOF reading RDFILE, cannot find start record '" << rdfile_start_of_record
+       << "', tried " << records_read_here << "\n";
   return 0;
 }
 
-//#define DEBUG_READ_MOLECULE_RDF_DS
+// #define DEBUG_READ_MOLECULE_RDF_DS
 
 /*
   Lots of ways an RDFILE identifier can match
 */
 
 static int
-rdfile_record_matches(const IWString & buffer, const IWString & rdfile_identifier)
-{
+rdfile_record_matches(const IWString& buffer, const IWString& rdfile_identifier) {
 #ifdef DEBUG_READ_MOLECULE_RDF_DSQ
   cerr << "Checking rdfile match '" << buffer << "' vs '" << rdfile_identifier << "'\n";
 #endif
 
-  if (buffer.starts_with(rdfile_identifier))
+  if (buffer.starts_with(rdfile_identifier)) {
     return 1;
+  }
 
-  if (buffer.starts_with("$DTYPE MOL:") && buffer.matches_at_position(11, rdfile_identifier))
+  if (buffer.starts_with("$DTYPE MOL:") &&
+      buffer.matches_at_position(11, rdfile_identifier)) {
     return 1;
+  }
 
-  if (buffer.starts_with("$DTYPE ") && buffer.matches_at_position(7, rdfile_identifier))
+  if (buffer.starts_with("$DTYPE ") && buffer.matches_at_position(7, rdfile_identifier)) {
     return 1;
+  }
 
   return 0;
 }
@@ -1575,45 +1535,47 @@ rdfile_record_matches(const IWString & buffer, const IWString & rdfile_identifie
 */
 
 int
-Molecule::read_molecule_rdf_ds(iwstring_data_source & input)
-{
+Molecule::read_molecule_rdf_ds(iwstring_data_source& input) {
   assert(ok());
   assert(input.good());
 
-  if (input.eof())
+  if (input.eof()) {
     return 0;
+  }
 
 #ifdef DEBUG_READ_MOLECULE_RDF_DSQ
-  cerr << "Molecule::read_molecule_rdf_ds:input.record_buffered? " << input.record_buffered()
-       << '\n';
+  cerr << "Molecule::read_molecule_rdf_ds:input.record_buffered? "
+       << input.record_buffered() << '\n';
 #endif
 
-  MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
 
-  const IWString & rdfile_start_of_record = mdlfos->rdfile_start_of_record();
+  const IWString& rdfile_start_of_record = mdlfos->rdfile_start_of_record();
 
-  if (rdfile_start_of_record.length())    // scan through file till we get to header
+  if (rdfile_start_of_record.length())  // scan through file till we get to header
   {
-    if (! skip_to_rdfile_start_of_record(input, rdfile_start_of_record))
+    if (!skip_to_rdfile_start_of_record(input, rdfile_start_of_record)) {
       return 0;
+    }
   }
 
   IWString possible_name;
 
-  if (! _read_molecule_rdf_ds(input, possible_name, *mdlfos))
+  if (!_read_molecule_rdf_ds(input, possible_name, *mdlfos)) {
     return 0;
+  }
 
-  if (0 == _molecule_name.length() && possible_name.length())
+  if (0 == _molecule_name.length() && possible_name.length()) {
     set_name(possible_name);
+  }
 
   return 1;
 }
 
 int
-Molecule::_read_molecule_rdf_ds(iwstring_data_source & input, IWString & possible_name,
-                                MDL_File_Supporting_Material & mdlfos)
-{
-  const resizable_array_p<IWString> & rdfile_identifiers = mdlfos.rdfile_identifiers();
+Molecule::_read_molecule_rdf_ds(iwstring_data_source& input, IWString& possible_name,
+                                MDL_File_Supporting_Material& mdlfos) {
+  const resizable_array_p<IWString>& rdfile_identifiers = mdlfos.rdfile_identifiers();
 
   int nrdfid = rdfile_identifiers.number_elements();
 
@@ -1625,22 +1587,19 @@ Molecule::_read_molecule_rdf_ds(iwstring_data_source & input, IWString & possibl
 
   int records_read_here = 0;
 
-  IWString buffer;    // must be an IWString, NOT a const_IWSubstring
+  IWString buffer;  // must be an IWString, NOT a const_IWSubstring
 
   int have_read_structure = 0;
 
-  while (input.next_record(buffer))
-  {
+  while (input.next_record(buffer)) {
     records_read_here++;
 
 #ifdef DEBUG_READ_MOLECULE_RDF_DS
     cerr << "Just read '" << buffer << "'\n";
 #endif
 
-    if (buffer == "$DATUM $MFMT" || buffer.starts_with("$MFMT $MIREG"))
-    {
-      if (have_read_structure)
-      {
+    if (buffer == "$DATUM $MFMT" || buffer.starts_with("$MFMT $MIREG")) {
+      if (have_read_structure) {
         cerr << "Molecule::read_molecule_rdf_ds:multiple structures!!\n";
         return 0;
       }
@@ -1649,8 +1608,9 @@ Molecule::_read_molecule_rdf_ds(iwstring_data_source & input, IWString & possibl
       cerr << "Start reading mdl connection table at " << input.lines_read() << '\n';
 #endif
 
-      if (! read_molecule_mdl_ds(input, 1))
+      if (!read_molecule_mdl_ds(input, 1)) {
         return 0;
+      }
 
       have_read_structure = 1;
 
@@ -1658,38 +1618,34 @@ Molecule::_read_molecule_rdf_ds(iwstring_data_source & input, IWString & possibl
       cerr << "Successfully read structure\n";
 #endif
 
-      if (0 == rdfile_start_of_record.length())
+      if (0 == rdfile_start_of_record.length()) {
         return 1;
-    }
-    else if (nrdfid)
-    {
-      for (int i = 0; i < nrdfid; i++)
-      {
-        const IWString & rdfile_identifier = *(rdfile_identifiers[i]);
+      }
+    } else if (nrdfid) {
+      for (int i = 0; i < nrdfid; i++) {
+        const IWString& rdfile_identifier = *(rdfile_identifiers[i]);
 
-        if (rdfile_record_matches(buffer, rdfile_identifier))
-        {
+        if (rdfile_record_matches(buffer, rdfile_identifier)) {
           const_IWSubstring tmp;
-          if (! input.next_record(tmp))
-          {
+          if (!input.next_record(tmp)) {
             cerr << "Molecule::read_molecule_rdf_ds: premature eof\n";
             return 0;
           }
 
-          if (tmp.starts_with("$DATUM"))
+          if (tmp.starts_with("$DATUM")) {
             tmp.remove_leading_words(1);
+          }
 
           possible_name.append_with_spacer(rdfile_identifier);
           possible_name << ':' << tmp;
         }
       }
-    }
-    else if (buffer.contains("$DTYPE ") && buffer.contains(":LILLYNUMBER"))
-    {
+    } else if (buffer.contains("$DTYPE ") && buffer.contains(":LILLYNUMBER")) {
       (void)(input.next_record(possible_name));
-      if (! possible_name.contains("$DATUM "))    // strip this some time.
+      if (!possible_name.contains("$DATUM "))  // strip this some time.
       {
-        cerr << "Molecule::read_molecule_rdf_ds: Yipes, no $datum '" << possible_name << "'\n";
+        cerr << "Molecule::read_molecule_rdf_ds: Yipes, no $datum '" << possible_name
+             << "'\n";
         return 0;
       }
     }
@@ -1698,45 +1654,44 @@ Molecule::_read_molecule_rdf_ds(iwstring_data_source & input, IWString & possibl
     cerr << "Checking start '" << rdfile_start_of_record << "' and '" << buffer << "'\n";
 #endif
     if (rdfile_start_of_record.length() && buffer.starts_with(rdfile_start_of_record) &&
-        records_read_here > 1)
-    {
+        records_read_here > 1) {
 #ifdef DEBUG_READ_MOLECULE_RDF_DS
       cerr << "Found rdf start of record, structure? " << have_read_structure << '\n';
 #endif
 
-      if (! have_read_structure)
+      if (!have_read_structure) {
         cerr << "Molecule::read_molecule_mdl_ds:no structure!\n";
+      }
 
       input.push_record();
       return 1;
     }
   }
 
-  if (0 == records_read_here || have_read_structure)
-  {
+  if (0 == records_read_here || have_read_structure) {
     cerr << "read mol rdf eof\n";
     return 0;
   }
 
-  if (have_read_structure)
+  if (have_read_structure) {
     return 1;
+  }
 
-  if (possible_name.length())
+  if (possible_name.length()) {
     return 1;
+  }
 
   cerr << "EOF reading RDFILE\n";
   return 0;
 }
 
 int
-Molecule::write_molecule_mdl(const char * fname, const char * comments)
-{
+Molecule::write_molecule_mdl(const char* fname, const char* comments) {
   assert(ok());
   assert(nullptr != fname);
 
   std::ofstream output(fname);
-  if (! output.good())
-  {
+  if (!output.good()) {
     cerr << "Molecule::write_molecule_mdl: cannot open '" << fname << "'\n";
     return 0;
   }
@@ -1749,13 +1704,11 @@ Molecule::write_molecule_mdl(const char * fname, const char * comments)
 */
 
 int
-Molecule::write_extra_text_info(IWString & buffer) const
-{
+Molecule::write_extra_text_info(IWString& buffer) const {
   int ne = _text_info.number_elements();
 
-  for (int i = 0; i < ne; i++)
-  {
-    const IWString * info = _text_info[i];
+  for (int i = 0; i < ne; i++) {
+    const IWString* info = _text_info[i];
 
     buffer << (*info) << newline_string();
   }
@@ -1769,87 +1722,96 @@ Molecule::write_extra_text_info(IWString & buffer) const
 
 int
 Molecule::_mdl_atom_stereo_value(atom_number_t zatom,
-                                 const MDL_File_Supporting_Material & mdlfos) const
-{
-  Chiral_Centre * c = chiral_centre_at_atom(zatom);
+                                 const MDL_File_Supporting_Material& mdlfos) const {
+  Chiral_Centre* c = chiral_centre_at_atom(zatom);
 
-  if (nullptr == c)
+  if (nullptr == c) {
     return 0;
+  }
 
-  if (! c->chirality_known())
+  if (!c->chirality_known()) {
     return 3;
+  }
 
   // If there is an explicit Hydrogen, that atom must be the highest numbered atom
-  // Who knows what you are supposed to do if there is an implicit and an explicit Hydrogen
+  // Who knows what you are supposed to do if there is an implicit and an explicit
+  // Hydrogen
 
-  if (c->implicit_hydrogen_count())    // we assume no explicit hydrogen also
+  if (c->implicit_hydrogen_count()) {  // we assume no explicit hydrogen also
     return c->mdl_stereo_centre_value();
+  }
 
-  if (c->lone_pair_count())    // who knows how we are supposed to handle a lone pair and an explicit hydrogen
+  if (c->lone_pair_count()) {  // who knows how we are supposed to handle a lone pair and
+                               // an explicit hydrogen
     return c->mdl_stereo_centre_value();
+  }
 
-  if (! mdlfos.mdl_write_h_correct_chiral_centres())    // optional behaviour
+  if (!mdlfos.mdl_write_h_correct_chiral_centres()) {  // optional behaviour
     return c->mdl_stereo_centre_value();
+  }
 
   // Look for an explicit Hydrogen atom. Remember, we pass the atoms SW N SE
 
-  if (1 == _things[c->top_front()]->atomic_number())
+  if (1 == _things[c->top_front()]->atomic_number()) {
     return c->mdl_stereo_centre_value(c->right_down(), c->top_back(), c->left_down());
-  if (1 == _things[c->top_back()]->atomic_number())
+  }
+  if (1 == _things[c->top_back()]->atomic_number()) {
     return c->mdl_stereo_centre_value(c->left_down(), c->top_front(), c->right_down());
-  if (1 == _things[c->left_down()]->atomic_number())
+  }
+  if (1 == _things[c->left_down()]->atomic_number()) {
     return c->mdl_stereo_centre_value(c->right_down(), c->top_front(), c->top_back());
-  if (1 == _things[c->right_down()]->atomic_number())
+  }
+  if (1 == _things[c->right_down()]->atomic_number()) {
     return c->mdl_stereo_centre_value(c->top_back(), c->top_front(), c->left_down());
+  }
 
   return c->mdl_stereo_centre_value();
 }
 
-const IWString &
-MDL_File_Supporting_Material::digits2(int n)
-{
-  if (nullptr == _digits2)
+const IWString&
+MDL_File_Supporting_Material::digits2(int n) {
+  if (nullptr == _digits2) {
     _initialise_digits();
+  }
 
   return _digits2[n];
 }
 
-const IWString &
-MDL_File_Supporting_Material::digits3(int n)
-{
-  if (nullptr == _digits2)
+const IWString&
+MDL_File_Supporting_Material::digits3(int n) {
+  if (nullptr == _digits2) {
     _initialise_digits();
+  }
 
   return _digits3[n];
 }
 
 void
-MDL_File_Supporting_Material::_initialise_digits()
-{
+MDL_File_Supporting_Material::_initialise_digits() {
   _digits2 = new IWString[100];
   _digits3 = new IWString[1000];
 
   assert(nullptr != _digits3);
 
-  for (int i = 0; i <= 999; i++)
-  {
-    IWString & d = _digits3[i];
+  for (int i = 0; i <= 999; i++) {
+    IWString& d = _digits3[i];
 
-    if (i >= 100)
+    if (i >= 100) {
       d << i;
-    else if (i >= 10)
+    } else if (i >= 10) {
       d << ' ' << i;
-    else
+    } else {
       d << "  " << i;
+    }
   }
 
-  for (int i = 0; i <= 99; i++)
-  {
-    IWString & d = _digits2[i];
-    if (i >= 10)
+  for (int i = 0; i <= 99; i++) {
+    IWString& d = _digits2[i];
+    if (i >= 10) {
       d << i;
-    else
+    } else {
       d << ' ' << i;
+    }
   }
 
   return;
@@ -1862,24 +1824,25 @@ MDL_File_Supporting_Material::_initialise_digits()
 */
 
 void
-MDL_File_Supporting_Material::append_isotope_information(IWString & output_buffer, int iso,
-                                                         int normal_isotope) const
-{
+MDL_File_Supporting_Material::append_isotope_information(IWString& output_buffer, int iso,
+                                                         int normal_isotope) const {
   int to_be_written;
 
-  if (_write_isotopes_as_numbers_rather_than_differences_from_normal)
+  if (_write_isotopes_as_numbers_rather_than_differences_from_normal) {
     to_be_written = iso;
-  else
+  } else {
     to_be_written = iso - normal_isotope;
+  }
 
-  if (to_be_written > 99)
+  if (to_be_written > 99) {
     output_buffer += _digits2[0];
-  else if (to_be_written >= 0)
+  } else if (to_be_written >= 0) {
     output_buffer += _digits2[to_be_written];
-  else if (to_be_written > -10)
-    output_buffer << to_be_written;    // just write it
-  else                                 // will be done in the M ISO records
+  } else if (to_be_written > -10) {
+    output_buffer << to_be_written;  // just write it
+  } else {                           // will be done in the M ISO records
     output_buffer += _digits2[0];
+  }
 
   return;
 }
@@ -1891,56 +1854,54 @@ MDL_File_Supporting_Material::append_isotope_information(IWString & output_buffe
 
 int
 Molecule::_write_mdl_atom_record_element_charge_and_chirality(
-    atom_number_t i, IWString & output_buffer, MDL_File_Supporting_Material & mdlfos) const
-{
-  const Atom * a = _things[i];
+    atom_number_t i, IWString& output_buffer,
+    MDL_File_Supporting_Material& mdlfos) const {
+  const Atom* a = _things[i];
 
-  const Element * e = a->element();
+  const Element* e = a->element();
 
-  if (! e->is_in_periodic_table() && 'R' == e->symbol()[0] && 2 == e->symbol().length() &&
-      isdigit(e->symbol()[1]))
-  {
-    if (mdlfos.write_Rn_groups_as_element())
-    {
+  if (!e->is_in_periodic_table() && 'R' == e->symbol()[0] && 2 == e->symbol().length() &&
+      isdigit(e->symbol()[1])) {
+    if (mdlfos.write_Rn_groups_as_element()) {
       output_buffer = e->symbol();
       output_buffer << ' ';
-    }
-    else
+    } else {
       output_buffer = "R# ";
-  }
-  else if (mdlfos.mdl_write_aromatic_atoms() && nullptr != _aromaticity &&
-           is_aromatic_atom(_aromaticity[i]))
-  {
-    if (0 == e->aromatic_symbol().length())
+    }
+  } else if (mdlfos.mdl_write_aromatic_atoms() && nullptr != _aromaticity &&
+             is_aromatic_atom(_aromaticity[i])) {
+    if (0 == e->aromatic_symbol().length()) {
       output_buffer = e->symbol();
-    else
+    } else {
       output_buffer = e->aromatic_symbol();
+    }
     (void)output_buffer.extend(3, ' ');
-  }
-  else
-  {
+  } else {
     output_buffer = e->symbol();
     (void)output_buffer.extend(3, ' ');
   }
 
   int iso = a->isotope();
-  if (0 == iso)
+  if (0 == iso) {
     output_buffer += mdlfos.digits2(0);
-  else
+  } else {
     mdlfos.append_isotope_information(output_buffer, iso, e->normal_isotope());
+  }
 
   output_buffer += mdlfos.digits3(convert_to_mdl_charge(a->formal_charge()));
 
   int s;
-  if (mdlfos.include_chiral_info_in_mdl_outputs() && _chiral_centres.number_elements())
+  if (mdlfos.include_chiral_info_in_mdl_outputs() && _chiral_centres.number_elements()) {
     s = _mdl_atom_stereo_value(i, mdlfos);
-  else
+  } else {
     s = 0;
+  }
 
-  if (s)
+  if (s) {
     output_buffer += mdlfos.digits3(s);
-  else if (mdlfos.isis_standard_records())
+  } else if (mdlfos.isis_standard_records()) {
     output_buffer += mdlfos.digits3(0);
+  }
 
   return 1;
 }
@@ -1957,56 +1918,65 @@ Molecule::_write_mdl_atom_record_element_charge_and_chirality(
        /       \
      a2         a6
 
-  In order to get consistent placement, we need to "grow" cis-trans perceptions once we get one
+  In order to get consistent placement, we need to "grow" cis-trans perceptions once we
+  get one
 */
 
 int
-Molecule::discern_cis_trans_bonds_from_depiction()
-{
-  if (_number_elements < 4)
+Molecule::discern_cis_trans_bonds_from_depiction() {
+  if (_number_elements < 4) {
     return 1;
+  }
 
-  const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+  const MDL_File_Supporting_Material* mdlfos =
+      global_default_MDL_File_Supporting_Material();
 
-  (void)compute_aromaticity_if_needed();    // path_scoring needs aromaticity
+  (void)compute_aromaticity_if_needed();  // path_scoring needs aromaticity
 
   int nb = _bond_list.number_elements();
 
   int rc = 0;
-  for (int i = 0; i < nb; i++)
-  {
-    Bond * b = _bond_list[i];
+  for (int i = 0; i < nb; i++) {
+    Bond* b = _bond_list[i];
 
-    if (! b->is_double_bond())
+    if (!b->is_double_bond()) {
       continue;
+    }
 
     atom_number_t a3 = b->a1();
     atom_number_t a4 = b->a2();
 
     int acon = _things[a3]->ncon();
-    if (1 == acon || acon > 3)
+    if (1 == acon || acon > 3) {
       continue;
+    }
 
     acon = _things[a4]->ncon();
-    if (1 == acon || acon > 3)
+    if (1 == acon || acon > 3) {
       continue;
+    }
 
     // for compatability with Daylight, we only do Carbon atoms
-    if (6 != _things[a3]->atomic_number())
+    if (6 != _things[a3]->atomic_number()) {
       continue;
+    }
 
-    if (6 != _things[a4]->atomic_number())
+    if (6 != _things[a4]->atomic_number()) {
       continue;
+    }
 
-    if (mdlfos->unspecified_double_bond_atoms().contains(a3))
+    if (mdlfos->unspecified_double_bond_atoms().contains(a3)) {
       continue;
+    }
 
     // if a3 and a4 are both ring atoms, ignore
-    if (is_ring_atom(a3) && is_ring_atom(a4))
+    if (is_ring_atom(a3) && is_ring_atom(a4)) {
       continue;
+    }
 
-    if (_discern_cis_trans_bond_from_depiction(b))
+    if (_discern_cis_trans_bond_from_depiction(b)) {
       rc++;
+    }
   }
 
   return rc;
@@ -2018,26 +1988,25 @@ Molecule::discern_cis_trans_bonds_from_depiction()
 */
 
 int
-Molecule::_multiple_wedge_bonds_to_atom(atom_number_t zatom) const
-{
-  const Atom * a = _things[zatom];
+Molecule::_multiple_wedge_bonds_to_atom(atom_number_t zatom) const {
+  const Atom* a = _things[zatom];
 
   int acon = a->ncon();
 
   int rc = 0;
 
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a->item(i);
+  for (int i = 0; i < acon; i++) {
+    const Bond* b = a->item(i);
 
-    if (b->is_wedge_definitive())
+    if (b->is_wedge_definitive()) {
       rc++;
+    }
   }
 
   return rc > 1;
 }
 
-//#define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
+// #define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
 
 #ifdef SIMPLE_VERSION_THAT_IGNORES_MULTIPLE_WEDGE_BONDS
 // For each bond that is a wedge bond, assign chirality to
@@ -2046,8 +2015,8 @@ int
 Molecule::discern_chirality_from_wedge_bonds() {
   int rc = 1;
 
-  for (const Bond * b : _bond_list) {
-    if (! b->is_wedge_definitive()) {
+  for (const Bond* b : _bond_list) {
+    if (!b->is_wedge_definitive()) {
       continue;
     }
 
@@ -2059,26 +2028,30 @@ Molecule::discern_chirality_from_wedge_bonds() {
       continue;
     }
 
-    // cerr << "Bond " << *b << " is directonal, is_wedge_up " << b->is_wedge_up() <<  " is_wedge_down " << b->is_wedge_down() << '\n';
+    // cerr << "Bond " << *b << " is directonal, is_wedge_up " << b->is_wedge_up() <<  "
+    // is_wedge_down " << b->is_wedge_down() << '\n';
 
     int tmprc;
 
-    if (b->is_wedge_up())
+    if (b->is_wedge_up()) {
       tmprc = _discern_chirality_from_wedge_bond(a1, a2, 1);
-    else if (b->is_wedge_down())
+    } else if (b->is_wedge_down()) {
       tmprc = _discern_chirality_from_wedge_bond(a1, a2, -1);
-    else if (b->is_wedge_any())
+    } else if (b->is_wedge_any()) {
       tmprc = _create_unspecified_chirality_object(a1);
-    else
+    } else {
       continue;
+    }
 
     if (0 == tmprc) {
-      const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      const MDL_File_Supporting_Material* mdlfos =
+          global_default_MDL_File_Supporting_Material();
 
       if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
-        cerr << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine chirality\n";
-        cerr << "Atoms " << b->a1() << " and " << b->a2() << ", molecule '" << _molecule_name
-             << "'\n";
+        cerr << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine "
+                "chirality\n";
+        cerr << "Atoms " << b->a1() << " and " << b->a2() << ", molecule '"
+             << _molecule_name << "'\n";
       }
       rc = 0;
     }
@@ -2089,38 +2062,37 @@ Molecule::discern_chirality_from_wedge_bonds() {
 #endif
 
 int
-Molecule::discern_chirality_from_wedge_bonds()
-{
+Molecule::discern_chirality_from_wedge_bonds() {
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
   cerr << "Discerning chirality from wedge bonds if present\n";
 #endif
 
   // Count the number of wedge bonds at each atom.
-  int * wedge_bonds_at_atom = new_int(_number_elements);
+  int* wedge_bonds_at_atom = new_int(_number_elements);
   std::unique_ptr<int[]> free_wedge_bonds_at_atom(wedge_bonds_at_atom);
 
   int nb = _bond_list.number_elements();
 
-  for (const Bond * b : _bond_list) {
-    if (! b->is_wedge_definitive()) {
+  for (const Bond* b : _bond_list) {
+    if (!b->is_wedge_definitive()) {
       continue;
     }
 
     wedge_bonds_at_atom[b->a1()]++;
-    //wedge_bonds_at_atom[b->a2()]++;
+    // wedge_bonds_at_atom[b->a2()]++;
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
     cerr << "Found wedge bond between atoms " << b->a1() << " and " << b->a2() << '\n';
 #endif
   }
 
-  int rc = 1;    // success until found otherwise
+  int rc = 1;  // success until found otherwise
 
   for (int i = 0; i < _number_elements; ++i) {
     if (0 == wedge_bonds_at_atom[i]) {
       continue;
     }
 
-    if (_things[i]->ncon() < 2) {    // singly connected atoms cannot be chiral centres
+    if (_things[i]->ncon() < 2) {  // singly connected atoms cannot be chiral centres
       wedge_bonds_at_atom[i] = 0;
       continue;
     }
@@ -2138,12 +2110,13 @@ Molecule::discern_chirality_from_wedge_bonds()
       continue;
     }
 
-    const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+    const MDL_File_Supporting_Material* mdlfos =
+        global_default_MDL_File_Supporting_Material();
 
     if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
-      cerr
-          << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine chirality multiple wedge bonds at atom "
-          << i << "\n";
+      cerr << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine chirality "
+              "multiple wedge bonds at atom "
+           << i << "\n";
     }
 
     rc = 0;
@@ -2152,43 +2125,46 @@ Molecule::discern_chirality_from_wedge_bonds()
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
   cerr << "Examine bonds for single wedge bonds to atom\n";
 #endif
-  for (int i = 0; i < nb; i++)
-  {
-    const Bond * b = _bond_list[i];
+  for (int i = 0; i < nb; i++) {
+    const Bond* b = _bond_list[i];
 
-    if (! b->is_wedge_definitive()) {
+    if (!b->is_wedge_definitive()) {
       continue;
     }
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
 
-    if (wedge_bonds_at_atom[a1] > 1 || wedge_bonds_at_atom[a2] > 1) {    // processed above
+    if (wedge_bonds_at_atom[a1] > 1 || wedge_bonds_at_atom[a2] > 1) {  // processed above
       continue;
     }
 
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
-    cerr << "Bond " << *b << " is directonal, is_wedge_up " << b->is_wedge_up() <<  " is_wedge_down " << b->is_wedge_down() << '\n';
+    cerr << "Bond " << *b << " is directonal, is_wedge_up " << b->is_wedge_up()
+         << " is_wedge_down " << b->is_wedge_down() << '\n';
 #endif
 
     int tmprc;
 
-    if (b->is_wedge_up())
+    if (b->is_wedge_up()) {
       tmprc = _discern_chirality_from_wedge_bond(a1, a2, -1);
-    else if (b->is_wedge_down())
+    } else if (b->is_wedge_down()) {
       tmprc = _discern_chirality_from_wedge_bond(a1, a2, 1);
-    else if (b->is_wedge_any())
+    } else if (b->is_wedge_any()) {
       tmprc = _create_unspecified_chirality_object(a1);
-    else
+    } else {
       continue;
+    }
 
     if (0 == tmprc) {
-      const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      const MDL_File_Supporting_Material* mdlfos =
+          global_default_MDL_File_Supporting_Material();
 
       if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
-        cerr << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine chirality\n";
-        cerr << "Atoms " << b->a1() << " and " << b->a2() << ", molecule '" << _molecule_name
-             << "'\n";
+        cerr << "Molecule::_discern_chirality_from_wedge_bonds: cannot determine "
+                "chirality\n";
+        cerr << "Atoms " << b->a1() << " and " << b->a2() << ", molecule '"
+             << _molecule_name << "'\n";
       }
       rc = 0;
     }
@@ -2211,11 +2187,9 @@ Molecule::discern_chirality_from_wedge_bonds()
 */
 
 int
-Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1,
-                                             atom_number_t a2,
-                                             int direction)
-{
-  const Atom * aa1 = _things[a1];
+Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1, atom_number_t a2,
+                                             int direction) {
+  const Atom* aa1 = _things[a1];
 
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
   cerr << "Bond from atom " << a1 << ' ' << aa1->atomic_symbol() << " to " << a2 << " "
@@ -2236,7 +2210,7 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1,
 
   // Connectivity is low, maybe we are just at the wrong end of the bond
 
-  const Atom * aa2 = _things[a2];
+  const Atom* aa2 = _things[a2];
 
   if (4 == aa2->ncon()) {
     return _discern_chirality_from_wedge_bond_4(a2, a1, -direction);
@@ -2246,11 +2220,13 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1,
     return _discern_chirality_from_wedge_bond_4(a2, INVALID_ATOM_NUMBER, direction);
   }
 
-  const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+  const MDL_File_Supporting_Material* mdlfos =
+      global_default_MDL_File_Supporting_Material();
 
-  if (mdlfos->mdl_display_invalid_chiral_connectivity())
-    cerr << "Molecule::_discern_chirality_from_wedge_bond: base atom " << aa1->atomic_symbol()
-         << " has " << aa1->ncon() << " connections!\n";
+  if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
+    cerr << "Molecule::_discern_chirality_from_wedge_bond: base atom "
+         << aa1->atomic_symbol() << " has " << aa1->ncon() << " connections!\n";
+  }
 
   return return_code_depending_on_ignore_incorrect_chiral_input();
 }
@@ -2259,23 +2235,22 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1,
   Atom ZATOM is 4 connected and has a wedge bond to atom A2
 */
 
-//#define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
+// #define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
 
 int
-Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom,
-                                               atom_number_t a2,
-                                               int direction)
-{
+Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom, atom_number_t a2,
+                                               int direction) {
   // Aug 2022 change making these optional.
   if (chiral_centre_at_atom(zatom) != nullptr) {
     return 1;
   }
 
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  cerr << "From " << zatom << ' ' << smarts_equivalent_for_atom(zatom) << " to " << a2 << " direction " << direction << '\n';
+  cerr << "From " << zatom << ' ' << smarts_equivalent_for_atom(zatom) << " to " << a2
+       << " direction " << direction << '\n';
 #endif
 
-  const Atom * centre = _things[zatom];
+  const Atom* centre = _things[zatom];
 
   // The other 3 atoms connected
 
@@ -2283,8 +2258,7 @@ Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom,
   atom_number_t a[3];
 
   int nfound = 0;
-  for (int i = 0; i < centre->ncon(); i++)
-  {
+  for (int i = 0; i < centre->ncon(); i++) {
     atom_number_t j = centre->other(zatom, i);
 
     if (a2 == j) {
@@ -2315,9 +2289,10 @@ Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom,
 #endif
 
   if (0.0 == theta1 && 0.0 == theta2) {
-    cerr << "Molecule::_discern_chirality_from_wedge_bond_4: two zero angles encountered '"
-         << _molecule_name << "'\n";
-    return 1;    // ignore the problem
+    cerr
+        << "Molecule::_discern_chirality_from_wedge_bond_4: two zero angles encountered '"
+        << _molecule_name << "'\n";
+    return 1;  // ignore the problem
   }
 
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
@@ -2344,7 +2319,7 @@ Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom,
   coord_t z20 = x20.z();
 
   /*
-  OK, there are bugs in this, but I don't have the time to chase them down. 
+  OK, there are bugs in this, but I don't have the time to chase them down.
   If there are multiple wedge bonds to an atom, we will get multiple chiral
   centres. This example shows a case where the two chiral centre objects are
   incompatible - file was called t9b.mol
@@ -2367,90 +2342,77 @@ M  END
   resolve this sometime if it ever matters.
 */
 
-  int rotation;    // clockwise is positive - going 0 -> 1 -> 2
+  int rotation;  // clockwise is positive - going 0 -> 1 -> 2
 
-  //cerr << "Z values z01 " << z01 << " z12 " << z12 << " z20 " << z20 << '\n';
-  if (z01 >= 0.0 && z12 >= 0.0)
-  {
+  // cerr << "Z values z01 " << z01 << " z12 " << z12 << " z20 " << z20 << '\n';
+  if (z01 >= 0.0 && z12 >= 0.0) {
     rotation = 1;
-  }
-  else if (z01 < 0.0 && z12 < 0.0)
-  {
+  } else if (z01 < 0.0 && z12 < 0.0) {
     rotation = -1;
-  }
-  else if (z12 >= 0.0 && z20 >= 0.0)
-  {
+  } else if (z12 >= 0.0 && z20 >= 0.0) {
     rotation = 1;
-  }
-  else if (z12 < 0.0 && z20 < 0.0)
-  {
+  } else if (z12 < 0.0 && z20 < 0.0) {
     rotation = -1;
-  }
-  else if (z20 >= 0.0 && z01 >= 0.0)
-  {
+  } else if (z20 >= 0.0 && z01 >= 0.0) {
     rotation = 1;
-  }
-  else if (z20 < 0.0 && z01 < 0.0)
-  {
+  } else if (z20 < 0.0 && z01 < 0.0) {
     rotation = -1;
-  }
-  else
-  {
-    cerr << "Molecule::_discern_chirality_from_wedge_bond_4: unusual geometry z01 = " << z01
-         << " z12 = " << z12 << " z20 = " << z20 << '\n';
+  } else {
+    cerr << "Molecule::_discern_chirality_from_wedge_bond_4: unusual geometry z01 = "
+         << z01 << " z12 = " << z12 << " z20 = " << z20 << '\n';
     assert(nullptr == "this should not happen");
     return 0;
   }
 
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     cerr << i << " is atom " << a[i] << ' ' << _things[a[i]]->atomic_symbol() << '\n';
   }
-  cerr << "z01 = " << z01 << " z12 = " << z12 << " z20 = " << z20 << " rotation " << rotation
-       << '\n';
+  cerr << "z01 = " << z01 << " z12 = " << z12 << " z20 = " << z20 << " rotation "
+       << rotation << '\n';
 #endif
 
-  if (rotation > 0)
+  if (rotation > 0) {
     return _create_chiral_centre(zatom, a[0], a[1], a[2], a2, direction);
+  }
 
   return _create_chiral_centre(zatom, a[0], a[2], a[1], a2, direction);
 }
 
 int
-Molecule::_create_chiral_centre(atom_number_t zatom, atom_number_t a1,
-                                atom_number_t a2, atom_number_t a3,
-                                atom_number_t a4, int direction)
-{
+Molecule::_create_chiral_centre(atom_number_t zatom, atom_number_t a1, atom_number_t a2,
+                                atom_number_t a3, atom_number_t a4, int direction) {
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
   cerr << "Molecule::_create_chiral_centre: " << zatom << " a1 = " << a1 << " a2 = " << a2
-       << " a3 = " << a3 << " a3 = " << a3 << " a4 = " << a4 << " direction " << direction << '\n';
+       << " a3 = " << a3 << " a3 = " << a3 << " a4 = " << a4 << " direction " << direction
+       << '\n';
 #endif
 
-  Chiral_Centre * c = new Chiral_Centre(zatom);
+  Chiral_Centre* c = new Chiral_Centre(zatom);
   c->set_top_front(a1);
   c->set_chirality_known(1);
 
   if (INVALID_ATOM_NUMBER == a4) {
     int lp;
 
-    if (1 == _things[zatom]->implicit_hydrogens())
+    if (1 == _things[zatom]->implicit_hydrogens()) {
       c->set_top_back(kChiralConnectionIsImplicitHydrogen);
-    else if (_things[zatom]->lone_pair_count(lp) && 1 == lp)
+    } else if (_things[zatom]->lone_pair_count(lp) && 1 == lp) {
       c->set_top_back(kChiralConnectionIsLonePair);
-    else
-    {
+    } else {
       delete c;
 
-      const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      const MDL_File_Supporting_Material* mdlfos =
+          global_default_MDL_File_Supporting_Material();
 
-      if (mdlfos->mdl_display_invalid_chiral_connectivity())
-        cerr << "Molecule::_create_chiral_centre: atom " << zatom << " strange chemistry, '"
-             << _molecule_name << "' " << smarts_equivalent_for_atom(zatom) << '\n';
+      if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
+        cerr << "Molecule::_create_chiral_centre: atom " << zatom
+             << " strange chemistry, '" << _molecule_name << "' "
+             << smarts_equivalent_for_atom(zatom) << '\n';
+      }
       return return_code_depending_on_ignore_incorrect_chiral_input();
     }
-  }
-  else {
+  } else {
     c->set_top_back(a4);
   }
 
@@ -2479,27 +2441,27 @@ Molecule::_create_chiral_centre(atom_number_t zatom, atom_number_t a1,
 }
 
 int
-Molecule::_create_unspecified_chirality_object(atom_number_t zatom)
-{
-  const Atom * a = _things[zatom];
+Molecule::_create_unspecified_chirality_object(atom_number_t zatom) {
+  const Atom* a = _things[zatom];
 
-  Chiral_Centre * c = new Chiral_Centre(zatom);
+  Chiral_Centre* c = new Chiral_Centre(zatom);
 
-  if (3 == a->ncon())
+  if (3 == a->ncon()) {
     c->set_top_back(kChiralConnectionIsImplicitHydrogen);
+  }
 
-  for (int i = 0; i < a->ncon(); i++)
-  {
+  for (int i = 0; i < a->ncon(); i++) {
     atom_number_t j = a->other(zatom, i);
 
-    if (0 == i)
+    if (0 == i) {
       c->set_top_front(j);
-    else if (1 == i)
+    } else if (1 == i) {
       c->set_left_down(j);
-    else if (2 == i)
+    } else if (2 == i) {
       c->set_right_down(j);
-    else
+    } else {
       c->set_top_back(j);
+    }
   }
 
   c->set_chirality_known(0);
@@ -2516,20 +2478,21 @@ Molecule::_create_unspecified_chirality_object(atom_number_t zatom)
 */
 
 int
-Molecule::_discern_chirality_from_multiple_wedge_bonds(atom_number_t zatom)
-{
-  //cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:processing atom " << zatom << '\n';
-  // TODO:ianwatson get information on what the algorithm is and implement.
-  // for now, we ignore multiple wedge bonds to an atom.
+Molecule::_discern_chirality_from_multiple_wedge_bonds(atom_number_t zatom) {
+  // cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:processing atom " <<
+  // zatom << '\n';
+  //  TODO:ianwatson get information on what the algorithm is and implement.
+  //  for now, we ignore multiple wedge bonds to an atom.
   return 1;
 
-  const Atom * a = _things[zatom];
+  const Atom* a = _things[zatom];
 
   const int acon = a->ncon();
 
   // Not sure this can happen, but let's be sure.
   if (acon == 2) {
-    const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+    const MDL_File_Supporting_Material* mdlfos =
+        global_default_MDL_File_Supporting_Material();
     if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
       cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:two connections\n";
     }
@@ -2541,7 +2504,7 @@ Molecule::_discern_chirality_from_multiple_wedge_bonds(atom_number_t zatom)
   Set_of_Atoms up, down, also_connected;
 
   for (int i = 0; i < acon; i++) {
-    const Bond * b = a->item(i);
+    const Bond* b = a->item(i);
 
     if (b->is_wedge_up()) {
       up << b->other(zatom);
@@ -2560,36 +2523,43 @@ Molecule::_discern_chirality_from_multiple_wedge_bonds(atom_number_t zatom)
   // order to have a fully qualified chiral center. Other times just one
   // wedge bond seems sufficient.
   if (up.size() == 1 && down.size() == 1) {
-    return _discern_chirality_from_up_down_wedge_bond(zatom, up[0], down[0], also_connected);
+    return _discern_chirality_from_up_down_wedge_bond(zatom, up[0], down[0],
+                                                      also_connected);
   }
 
   // If there are two up bonds, or two down bonds, that is ambiguous.
   if (up.size() > 1 || down.size() > 1) {
-    const MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+    const MDL_File_Supporting_Material* mdlfos =
+        global_default_MDL_File_Supporting_Material();
     if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
-      cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:multiple up or down bonds\n";
+      cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:multiple up or "
+              "down bonds\n";
     }
     return 0;
   }
 
   // This should never happen.
   if (up.empty() && down.empty()) {
-    cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:no directional bonds\n";
+    cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:no directional "
+            "bonds\n";
     return 0;
   }
 
   if (up.size() == 1 && down.empty()) {
     down << also_connected.pop();
-    return _discern_chirality_from_up_down_wedge_bond(zatom, up[0], down[0], also_connected);
+    return _discern_chirality_from_up_down_wedge_bond(zatom, up[0], down[0],
+                                                      also_connected);
   }
 
   if (down.size() == 1 && up.empty()) {
     up << also_connected.pop();
-    return _discern_chirality_from_up_down_wedge_bond(zatom, down[0], up[0], also_connected);
+    return _discern_chirality_from_up_down_wedge_bond(zatom, down[0], up[0],
+                                                      also_connected);
   }
 
   // This should not happen.
-  cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:up " << up.size() << " and " << down.size() << " up down bonds\n";
+  cerr << "Molecule::_discern_chirality_from_multiple_wedge_bonds:up " << up.size()
+       << " and " << down.size() << " up down bonds\n";
   return 0;
 }
 
@@ -2598,10 +2568,9 @@ Molecule::_discern_chirality_from_multiple_wedge_bonds(atom_number_t zatom)
 // other atom is assumed to be an implicit Hydrogen.
 int
 Molecule::_discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
-                                atom_number_t up,
-                                atom_number_t down,
-                                const Set_of_Atoms& also_connected) {
-  //cerr << "_discern_chirality_from_up_down_wedge_bond passing 1\n";
+                                                     atom_number_t up, atom_number_t down,
+                                                     const Set_of_Atoms& also_connected) {
+  // cerr << "_discern_chirality_from_up_down_wedge_bond passing 1\n";
   if (_things[zatom]->ncon() == 3) {
     return _discern_chirality_from_wedge_bond(zatom, up, -1);
   }
@@ -2689,11 +2658,10 @@ Molecule::_discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
 #ifdef DOES_NOT_WORK_ASA
 int
 Molecule::_discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
-                                atom_number_t up,
-                                atom_number_t down,
-                                const Set_of_Atoms& also_connected) {
+                                                     atom_number_t up, atom_number_t down,
+                                                     const Set_of_Atoms& also_connected) {
   cerr << "_discern_chirality_from_up_down_wedge_bond passing 1\n";
-  //return _discern_chirality_from_wedge_bond(zatom, up, -1);
+  // return _discern_chirality_from_wedge_bond(zatom, up, -1);
 
   Chiral_Centre* c = new Chiral_Centre(zatom);
   c->set_top_front(up);
@@ -2702,7 +2670,8 @@ Molecule::_discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
   } else {
     c->set_top_back(down);
   }
-  cerr << "_discern_chirality_from_up_down_wedge_bond atom " << zatom << " up " << up << " down " << down << " also " << also_connected << '\n';
+  cerr << "_discern_chirality_from_up_down_wedge_bond atom " << zatom << " up " << up
+       << " down " << down << " also " << also_connected << '\n';
 
   if (GeometricSide(zatom, up, down, also_connected[0]) > 0) {
     cerr << "Geom > 0\n";
@@ -2746,10 +2715,8 @@ Molecule::_discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,
 // Then check the angle of zatom->also_connected with that cross product
 // unit vector.
 int
-Molecule::GeometricSide(atom_number_t zatom,
-                      atom_number_t up,
-                      atom_number_t down,
-                      atom_number_t also_connected) const {
+Molecule::GeometricSide(atom_number_t zatom, atom_number_t up, atom_number_t down,
+                        atom_number_t also_connected) const {
   Coordinates cz(*_things[zatom]);
   Coordinates cup(*_things[up]);
   cup.set_z(1.0);
@@ -2768,8 +2735,8 @@ Molecule::GeometricSide(atom_number_t zatom,
   co -= cz;
   co.normalise();
 
-  co.cross_product(cdown);   // cdown now holds the normal up-center-down
-  co.normalise();  // not necessary, but just in case.
+  co.cross_product(cdown);  // cdown now holds the normal up-center-down
+  co.normalise();           // not necessary, but just in case.
   if (co.angle_between_unit_vectors(cdown) <= (0.5 * M_PI)) {
     return -11;
   } else {
@@ -2778,24 +2745,23 @@ Molecule::GeometricSide(atom_number_t zatom,
 }
 
 int
-Molecule::_assign_strange_atomic_symbol_to_atom(atom_number_t zatom, const_IWSubstring s)
-{
-  const Element * e = get_element_from_symbol_no_case_conversion(s);
+Molecule::_assign_strange_atomic_symbol_to_atom(atom_number_t zatom,
+                                                const_IWSubstring s) {
+  const Element* e = get_element_from_symbol_no_case_conversion(s);
 
-  if (nullptr != e)
+  if (nullptr != e) {
     ;
-  else if (! auto_create_new_elements())
-  {
-    cerr
-        << "Molecule::_assign_strange_atomic_symbol_to_atom:autocreate elements needed for R# and G group\n";
+  } else if (!auto_create_new_elements()) {
+    cerr << "Molecule::_assign_strange_atomic_symbol_to_atom:autocreate elements needed "
+            "for R# and G group\n";
     return 0;
-  }
-  else
+  } else {
     e = create_element_with_symbol(s);
+  }
 
-  if (nullptr == e)
-  {
-    cerr << "Molecule::_assign_strange_atomic_symbol_to_atom:cannot create element '" << s << "'\n";
+  if (nullptr == e) {
+    cerr << "Molecule::_assign_strange_atomic_symbol_to_atom:cannot create element '" << s
+         << "'\n";
     return 0;
   }
 
@@ -2807,17 +2773,16 @@ Molecule::_assign_strange_atomic_symbol_to_atom(atom_number_t zatom, const_IWSub
 }
 
 int
-Molecule::_parse_M_RGP_record(const const_IWSubstring & buffer)
-{
+Molecule::_parse_M_RGP_record(const const_IWSubstring& buffer) {
   Aprop atom_properties[MAX_PAIRS];
 
   int npairs;
-  if (! fill_atom_property_array(buffer, npairs, atom_properties))
+  if (!fill_atom_property_array(buffer, npairs, atom_properties)) {
     return 0;
+  }
 
-  for (int i = 0; i < npairs; i++)
-  {
-    const Aprop & api = atom_properties[i];
+  for (int i = 0; i < npairs; i++) {
+    const Aprop& api = atom_properties[i];
 
     atom_number_t a = api._atom_number - 1;
     int rnumber = api._property;
@@ -2825,8 +2790,9 @@ Molecule::_parse_M_RGP_record(const const_IWSubstring & buffer)
     IWString tmp;
     tmp << "R" << rnumber;
 
-    if (! _assign_strange_atomic_symbol_to_atom(a, tmp))
+    if (!_assign_strange_atomic_symbol_to_atom(a, tmp)) {
       return 0;
+    }
   }
 
   _set_modified();
@@ -2835,24 +2801,24 @@ Molecule::_parse_M_RGP_record(const const_IWSubstring & buffer)
 }
 
 int
-Molecule::_write_M_RGP_records(const MDL_File_Supporting_Material & mdlfos, std::ostream & os) const
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
-    const Element * e = _things[i]->element();
+Molecule::_write_M_RGP_records(const MDL_File_Supporting_Material& mdlfos,
+                               std::ostream& os) const {
+  for (int i = 0; i < _number_elements; i++) {
+    const Element* e = _things[i]->element();
 
-    if (e->is_in_periodic_table())
+    if (e->is_in_periodic_table()) {
       continue;
-
-    const IWString & s = e->symbol();
-
-    if (2 == s.length() && 'R' == s[0] && isdigit(s[1]))
-    {
-      if (mdlfos.write_Rn_groups_as_element())
-        continue;
     }
-    else
+
+    const IWString& s = e->symbol();
+
+    if (2 == s.length() && 'R' == s[0] && isdigit(s[1])) {
+      if (mdlfos.write_Rn_groups_as_element()) {
+        continue;
+      }
+    } else {
       continue;
+    }
 
     os << "M  RGP  1 " << std::setw(3) << (i + 1) << "   " << s[1] << newline_string();
   }
@@ -2861,14 +2827,12 @@ Molecule::_write_M_RGP_records(const MDL_File_Supporting_Material & mdlfos, std:
 }
 
 int
-Molecule::_set_elements_based_on_atom_aliases(const resizable_array_p<Atom_Alias> & a)
-{
+Molecule::_set_elements_based_on_atom_aliases(const resizable_array_p<Atom_Alias>& a) {
   set_atomic_symbols_can_have_arbitrary_length(1);
   set_auto_create_new_elements(1);
 
-  for (int i = 0; i < a.number_elements(); i++)
-  {
-    const Atom_Alias * ai = a[i];
+  for (int i = 0; i < a.number_elements(); i++) {
+    const Atom_Alias* ai = a[i];
 
     atom_number_t j = ai->atom_number();
 
@@ -2876,10 +2840,11 @@ Molecule::_set_elements_based_on_atom_aliases(const resizable_array_p<Atom_Alias
 
     const IWString alias = ai->alias();
 
-    const Element * e = get_element_from_symbol_no_case_conversion(alias);
+    const Element* e = get_element_from_symbol_no_case_conversion(alias);
 
-    if (nullptr == e)
+    if (nullptr == e) {
       e = create_element_with_symbol(alias);
+    }
 
     assert(nullptr != e);
 
@@ -2890,18 +2855,15 @@ Molecule::_set_elements_based_on_atom_aliases(const resizable_array_p<Atom_Alias
 }
 
 int
-Molecule::_process_mdl_g_record(const IWString & g, const const_IWSubstring & buffer)
-{
-  if (0 == buffer.length())
-  {
+Molecule::_process_mdl_g_record(const IWString& g, const const_IWSubstring& buffer) {
+  if (0 == buffer.length()) {
     cerr << "Molecule::_process_mdl_g_record:empty G record\n";
     return 0;
   }
 
   assert(g.starts_with("G "));
 
-  if (3 != g.nwords())
-  {
+  if (3 != g.nwords()) {
     cerr << "Molecule::_process_mdl_g_record:Invalid G record\n";
     return 0;
   }
@@ -2913,8 +2875,7 @@ Molecule::_process_mdl_g_record(const IWString & g, const const_IWSubstring & bu
   g.nextword(token, i);
 
   atom_number_t a;
-  if (! token.numeric_value(a) || a < 1 || a > _number_elements)
-  {
+  if (!token.numeric_value(a) || a < 1 || a > _number_elements) {
     cerr << "Molecule::_process_mdl_g_record:invalid atom number in G record\n";
     return 0;
   }
@@ -2923,38 +2884,39 @@ Molecule::_process_mdl_g_record(const IWString & g, const const_IWSubstring & bu
 }
 
 int
-MDL_File_Supporting_Material::set_sdf_identifier(const const_IWSubstring & sdfid)
-{
+MDL_File_Supporting_Material::set_sdf_identifier(const const_IWSubstring& sdfid) {
   IWString mysdfid = sdfid;
 
-  if (mysdfid.starts_with('^'))
+  if (mysdfid.starts_with('^')) {
     mysdfid.remove_item(0);
+  }
 
   IWString tmp = "^>.*<";
   tmp += mysdfid;
 
   mysdfid = tmp;
 
-  if (mysdfid.ends_with('$'))
+  if (mysdfid.ends_with('$')) {
     mysdfid.chop();
+  }
 
   mysdfid += ">";
 
-  if (! iwre2::RE2Reset(_sdf_identifier, mysdfid)) {
+  if (!iwre2::RE2Reset(_sdf_identifier, mysdfid)) {
     cerr << "Cannot set sdfid pattern to '" << mysdfid << "'\n";
     return 0;
   }
 
-  //cerr << "Pattern set to '" << mysdfid << "'\n";
+  // cerr << "Pattern set to '" << mysdfid << "'\n";
 
   return 1;
 }
 
 void
-MDL_File_Supporting_Material::set_mdl_name_in_m_tag(const const_IWSubstring & s)
-{
-  if (_name_in_m_tag.length() > 0)
+MDL_File_Supporting_Material::set_mdl_name_in_m_tag(const const_IWSubstring& s) {
+  if (_name_in_m_tag.length() > 0) {
     _name_in_m_tag.resize_keep_storage(0);
+  }
 
   _name_in_m_tag << ' ' << s << ' ';
 
@@ -2966,58 +2928,53 @@ static int accumulate_mdl_chirality_features = 0;
 
 static Set_of_Atoms unspecified_chiral_atoms_last_molecule;
 
-static Set_of_Atoms up_bonds_last_molecule, down_bonds_last_molecule, squiggle_bonds_last_molecule;
+static Set_of_Atoms up_bonds_last_molecule, down_bonds_last_molecule,
+    squiggle_bonds_last_molecule;
 
 static Set_of_Atoms unspecified_double_bond_atoms;
 
 void
-set_mdl_accumulate_mdl_chirality_features(int s)
-{
+set_mdl_accumulate_mdl_chirality_features(int s) {
   accumulate_mdl_chirality_features = s;
 }
 
-const Set_of_Atoms &
-mdl_unspecified_chiral_atoms()
-{
+const Set_of_Atoms&
+mdl_unspecified_chiral_atoms() {
   return unspecified_chiral_atoms_last_molecule;
 }
 
-const Set_of_Atoms &
-mdl_atoms_with_up_bonds()
-{
+const Set_of_Atoms&
+mdl_atoms_with_up_bonds() {
   return up_bonds_last_molecule;
 }
 
-const Set_of_Atoms &
-mdl_atoms_with_squiggle_bonds()
-{
+const Set_of_Atoms&
+mdl_atoms_with_squiggle_bonds() {
   return squiggle_bonds_last_molecule;
 }
 
-const Set_of_Atoms &
-mdl_atoms_with_down_bonds()
-{
+const Set_of_Atoms&
+mdl_atoms_with_down_bonds() {
   return down_bonds_last_molecule;
 }
 
-const Set_of_Atoms &
-mdl_unspecified_double_bond_atoms()
-{
+const Set_of_Atoms&
+mdl_unspecified_double_bond_atoms() {
   return unspecified_double_bond_atoms;
 }
 #endif
 
 void
-MDL_File_Supporting_Material::set_mdl_change_long_symbols_to(const const_IWSubstring & s)
-{
+MDL_File_Supporting_Material::set_mdl_change_long_symbols_to(const const_IWSubstring& s) {
   assert(s.length() > 0 && s.length() <= 2);
 
   _change_long_symbols_to = s;
 
-  const Element * e = get_element_from_symbol_no_case_conversion(s);
+  const Element* e = get_element_from_symbol_no_case_conversion(s);
 
-  if (nullptr == e)
+  if (nullptr == e) {
     e = create_element_with_symbol(s);
+  }
 
   return;
 }
@@ -3031,73 +2988,79 @@ static MDL_File_Supporting_Material default_mdl_file_supporting_material;
 */
 
 int
-int3d(const const_IWSubstring & buffer, int & i1, int & i2, int * i3)
-{
-  if (buffer.length() < 6)
+int3d(const const_IWSubstring& buffer, int& i1, int& i2, int* i3) {
+  if (buffer.length() < 6) {
     return 0;
+  }
 
   i1 = 0;
-  int tmp = -1;    // this is outside the loop to make sure that we detect blank fields.
-  for (int i = 0; i < 3; i++)
-  {
-    if (' ' == buffer[i])
+  int tmp = -1;  // this is outside the loop to make sure that we detect blank fields.
+  for (int i = 0; i < 3; i++) {
+    if (' ' == buffer[i]) {
       continue;
+    }
 
     tmp = buffer[i] - '0';
-    if (tmp < 0 || tmp > 9)
+    if (tmp < 0 || tmp > 9) {
       return 0;
+    }
 
     i1 = i1 * 10 + tmp;
   }
 
-  if (-1 == tmp)
+  if (-1 == tmp) {
     return 0;
+  }
 
   tmp = -1;
 
   i2 = 0;
-  for (int i = 3; i < 6; i++)
-  {
-    if (' ' == buffer[i])
+  for (int i = 3; i < 6; i++) {
+    if (' ' == buffer[i]) {
       continue;
+    }
 
     tmp = buffer[i] - '0';
-    if (tmp < 0 || tmp > 9)
+    if (tmp < 0 || tmp > 9) {
       return 1;
+    }
 
     i2 = i2 * 10 + tmp;
   }
 
-  if (-1 == tmp)
+  if (-1 == tmp) {
     return 1;
+  }
 
-  if (nullptr == i3)
+  if (nullptr == i3) {
     return 2;
+  }
 
   tmp = -1;
 
   *i3 = 0;
-  for (int i = 6; i < 9; i++)
-  {
-    if (' ' == buffer[i])
+  for (int i = 6; i < 9; i++) {
+    if (' ' == buffer[i]) {
       continue;
+    }
 
     tmp = buffer[i] - '0';
-    if (tmp < 0 || tmp > 9)
+    if (tmp < 0 || tmp > 9) {
       return 1;
+    }
 
     *i3 = *i3 * 10 + tmp;
   }
 
-  if (-1 == tmp)
+  if (-1 == tmp) {
     return 2;
+  }
 
   return 3;
 }
 
 void
-MDL_File_Supporting_Material::reset_for_next_molecule()
-{
+MDL_File_Supporting_Material::reset_for_next_molecule() {
   _unspecified_chiral_atoms_last_molecule.resize_keep_storage(0);
   _down_bonds_last_molecule.resize_keep_storage(0);
   _up_bonds_last_molecule.resize_keep_storage(0);
@@ -3108,33 +3071,33 @@ MDL_File_Supporting_Material::reset_for_next_molecule()
   _g_records_found = 0;
   _aliases.resize(0);
 
-  if (nullptr == _digits2)
+  if (nullptr == _digits2) {
     _initialise_digits();
+  }
 
   return;
 }
 
 int
-MDL_File_Supporting_Material::process_mdl_bond_translation(const const_IWSubstring & mdlbt)
-{
+MDL_File_Supporting_Material::process_mdl_bond_translation(
+    const const_IWSubstring& mdlbt) {
   const_IWSubstring f, t;
-  if (! mdlbt.split(f, '=', t))
-  {
+  if (!mdlbt.split(f, '=', t)) {
     cerr << "An mdl bond translation must be of the form 'number=number'\n";
     return 0;
   }
 
   int zfrom;
-  if (! f.numeric_value(zfrom) || zfrom < 0)
-  {
-    cerr << "process_mdl_bond_translation:invalid from bond type specification '" << f << "'\n";
+  if (!f.numeric_value(zfrom) || zfrom < 0) {
+    cerr << "process_mdl_bond_translation:invalid from bond type specification '" << f
+         << "'\n";
     return 0;
   }
 
   int zto;
-  if (! t.numeric_value(zto) || zto < 0)
-  {
-    cerr << "process_mdl_bond_translation:invalid to bond type specification '" << t << "'\n";
+  if (!t.numeric_value(zto) || zto < 0) {
+    cerr << "process_mdl_bond_translation:invalid to bond type specification '" << t
+         << "'\n";
     return 0;
   }
 
@@ -3143,10 +3106,10 @@ MDL_File_Supporting_Material::process_mdl_bond_translation(const const_IWSubstri
 
 template <typename T>
 int
-MDL_File_Supporting_Material::write_atoms_and_bonds(int na, int nb, T & os)
-{
-  if (nullptr == _digits2)
+MDL_File_Supporting_Material::write_atoms_and_bonds(int na, int nb, T& os) {
+  if (nullptr == _digits2) {
     _initialise_digits();
+  }
 
   os << _digits3[na];
   os << _digits3[nb];
@@ -3155,10 +3118,9 @@ MDL_File_Supporting_Material::write_atoms_and_bonds(int na, int nb, T & os)
 }
 
 int
-MDL_File_Supporting_Material::sdf_identifier_matches(const IWString & buffer)
-{
+MDL_File_Supporting_Material::sdf_identifier_matches(const IWString& buffer) {
   // If inactive return 0;
-  if (! _sdf_identifier) {
+  if (!_sdf_identifier) {
     return 0;
   }
 
@@ -3166,10 +3128,10 @@ MDL_File_Supporting_Material::sdf_identifier_matches(const IWString & buffer)
 }
 
 int
-MDL_File_Supporting_Material::unspecified_chiral_atom_if_interested(int a)
-{
-  if (! _accumulate_mdl_chirality_features)
+MDL_File_Supporting_Material::unspecified_chiral_atom_if_interested(int a) {
+  if (!_accumulate_mdl_chirality_features) {
     return 0;
+  }
 
   _unspecified_chiral_atoms_last_molecule.add(a);
 
@@ -3177,40 +3139,36 @@ MDL_File_Supporting_Material::unspecified_chiral_atom_if_interested(int a)
 }
 
 int
-MDL_File_Supporting_Material::translate_input_bond_type(int bt) const
-{
-  if (nullptr == _input_bond_type_translation_table)
+MDL_File_Supporting_Material::translate_input_bond_type(int bt) const {
+  if (nullptr == _input_bond_type_translation_table) {
     return bt;
-  else
+  } else {
     return _input_bond_type_translation_table[bt];
+  }
 }
 
 int
-Molecule::_contains_isotope_above(isotope_t s) const
-{
-  for (auto i = 0; i < _number_elements; ++i)
-  {
-    if (_things[i]->isotope() > s)
+Molecule::_contains_isotope_above(isotope_t s) const {
+  for (auto i = 0; i < _number_elements; ++i) {
+    if (_things[i]->isotope() > s) {
       return 1;
+    }
   }
 
   return 0;
 }
 
-template int
-Molecule::write_molecule_mdl<std::ostream>(std::ostream &, IWString const &);
-//template int Molecule::write_molecule_mdl<IWString_and_File_Descriptor>(IWString_and_File_Descriptor &, IWString const&) const;
+template int Molecule::write_molecule_mdl<std::ostream>(std::ostream&, IWString const&);
+// template int
+// Molecule::write_molecule_mdl<IWString_and_File_Descriptor>(IWString_and_File_Descriptor
+// &, IWString const&) const;
 
-template int
-Molecule::read_molecule_mdl_ds<String_Data_Source>(String_Data_Source &, int);
-template int
-Molecule::read_molecule_mdl_ds<iwstring_data_source>(iwstring_data_source &, int);
-template int
-Molecule::write_extra_text_info<IWString_and_File_Descriptor>(IWString_and_File_Descriptor &) const;
-template int
-Molecule::_write_m_iso_records<std::ostream>(std::ostream &, int) const;
-template int
-Molecule::_write_m_chg_records<std::ostream>(std::ostream &, int) const;
-template int
-Molecule::_mdl_write_atoms_and_bonds_record<std::ostream>(std::ostream &, int, int,
-                                                          MDL_File_Supporting_Material &) const;
+template int Molecule::read_molecule_mdl_ds<String_Data_Source>(String_Data_Source&, int);
+template int Molecule::read_molecule_mdl_ds<iwstring_data_source>(iwstring_data_source&,
+                                                                  int);
+template int Molecule::write_extra_text_info<IWString_and_File_Descriptor>(
+    IWString_and_File_Descriptor&) const;
+template int Molecule::_write_m_iso_records<std::ostream>(std::ostream&, int) const;
+template int Molecule::_write_m_chg_records<std::ostream>(std::ostream&, int) const;
+template int Molecule::_mdl_write_atoms_and_bonds_record<std::ostream>(
+    std::ostream&, int, int, MDL_File_Supporting_Material&) const;

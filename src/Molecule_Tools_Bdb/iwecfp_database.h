@@ -55,9 +55,9 @@ class IWdbkeyHash
 
 extern int operator == (const DBKey &, const DBKey &);
 
-extern void form_key (unsigned int b,
+extern void form_key(uint64_t b,
           int radius,
-          int atom_constant_centre_atom,
+          unsigned int atom_constant_centre_atom,
           DBKey & dkey);
 
 extern int debug_print_key_components (const DBKey & dbkey, std::ostream & os);
@@ -85,7 +85,7 @@ class Bit_Produced
 //  To help keep bit collisions down, we keep track of the
 //  atom constant of the centre atom
 
-    const int _atom_constant_centre_atom;
+    const unsigned int _atom_constant_centre_atom;
 
     unsigned int _count;
 
@@ -102,7 +102,7 @@ class Bit_Produced
 
     atom_number_t centre_atom() const { return _centre_atom;}
 
-    int atom_constant_centre_atom () const { return _atom_constant_centre_atom;}
+    unsigned int atom_constant_centre_atom () const { return _atom_constant_centre_atom;}
 };
 
 //typedef unordered_map<DBKey, Bit_Produced *, IWdbkeyHash> Set_of_Bits;
@@ -204,19 +204,25 @@ class Fingerprint_Characteristics
     int string_atom_type (IWString & s) const;
 
     int build (const Command_Line & cl, const int mr, const int verbose);
+
+    // update `sum_so_far` for a new member in the next shell.
+    void Increment(unsigned int processing_status,
+                unsigned int bond_constant,
+                unsigned int atom_constant,
+                uint64_t& sum_so_far) const;
 };
 
 template <typename T>
 int
 handle_newly_found_bit (atom_number_t centre_atom,
-                        const int atom_constant_centre_atom,
+                        const unsigned int atom_constant_centre_atom,
                         const int radius,
-                        const unsigned int b,
+                        const uint64_t b,
                         Set_of_Bits<T> &  sob,
                         Fingerprint_Characteristics & fc)
 {
 #ifdef DEBUG_BITS_FORMED
-  std::cerr << "From atom " << centre_atom << " radius " << radius << " bit " << b << endl;
+  std::cerr << "From atom " << centre_atom << " radius " << radius << " bit " << b << '\n';
 #endif
 
   DBKey dbkey;
@@ -225,11 +231,9 @@ handle_newly_found_bit (atom_number_t centre_atom,
 
   auto f = sob.find(dbkey);
 
-  if (f != sob.end())   // already encountered this bit
-  {
+  if (f != sob.end()) {  // already encountered this bit
     T * bp = (*f).second;
-    if (atom_constant_centre_atom != bp->atom_constant_centre_atom())
-    {
+    if (atom_constant_centre_atom != bp->atom_constant_centre_atom()) {
       fc.intra_molecular_bit_collision();
       return 0;
     }
@@ -245,11 +249,12 @@ handle_newly_found_bit (atom_number_t centre_atom,
   return 1;
 }
 
+#ifdef NOW_MEMBER_FUNCTION
 static void
-increment (unsigned int & sum_so_far,
-           int processing_status,
-           int bc,
-           int atom_constant,
+increment (uint64_t & sum_so_far,
+           unsigned int processing_status,
+           unsigned int bc,
+           unsigned int atom_constant,
            const Fingerprint_Characteristics & fc)
 {
   if (fc.additive())
@@ -259,9 +264,10 @@ increment (unsigned int & sum_so_far,
 
   return;
 }
+#endif
 
-static int 
-bond_constant (const Bond * bondi)
+static unsigned int 
+bond_constant(const Bond * bondi)
 {
   if (bondi->is_aromatic())
     return 11;
@@ -275,22 +281,24 @@ bond_constant (const Bond * bondi)
 
 #define PROCESSING_FINISHED 0
 
-/*
-  This is an unlikely number. Note there is a miniscule possibility of some
-  number of atom constants summing to this, but we just don't worry about that.
-*/
+// This is an arbitrary number, but guaranteed that no 32 bit number, negative,
+// will collide.
+static constexpr int64_t kNotYetSeen = std::numeric_limits<int64_t>::min();
 
-#define NOT_YET_SEEN -2147483640   
+static constexpr int64_t kNextShell = std::numeric_limits<int64_t>::min() + 1;
+static constexpr int64_t kWillBeNextShell = std::numeric_limits<int64_t>::min() + 2;
+static constexpr int64_t kProcessingFinished = std::numeric_limits<int64_t>::min() + 3;
 
+#ifdef OLD_VERSION_THAT_DOES_NOT_WORK
 template <typename T>
 int
 generate_shells (int matoms,
                 int radius,
                 const Atom * const * a,
                 atom_number_t centre_atom,
-                const int * atom_constant,
-                int * processing_status,
-                unsigned int sum_so_far,
+                const unsigned int * atom_constant,
+                int64_t* processing_status,
+                uint64_t sum_so_far,
                 Set_of_Bits<T> & sob,
                 Fingerprint_Characteristics & fc)
 {
@@ -301,74 +309,62 @@ generate_shells (int matoms,
 
 //#define DEBUG_ECFP_BITS 1
 #ifdef DEBUG_ECFP_BITS
-  std::cerr << "On entry sum_so_far " << sum_so_far << endl;
+  std::cerr << "On entry sum_so_far " << sum_so_far << '\n';
 #endif
 
   int continue_processing = 0;
 
-  for (int i = 0; i < matoms; i++)
-  {
-    if (processing_status[i] <= 0)
+  for (int i = 0; i < matoms; i++) {
+    if (processing_status[i] <= 0) {
       continue;
+    }
 
-    const Atom * ai = a[i];
-
-    int acon = ai->ncon();
-
-    const Bond * const * bonds = ai->rawdata();    // for efficiency
-
-    for (int j = 0; j < acon; j++)
-    {
-      const Bond * b = bonds[j];
-
+    for (const Bond* b : *a[i]) {
       atom_number_t k = b->other(i);
+      // std::cerr << "From atom " << i << " to " << k << '\n';
 
-      if (PROCESSING_FINISHED == processing_status[k])   // expanding the shell, either outward or closing a ring
-      {
-        int bc = bond_constant(b);
-//      std::cerr << "B4 inc " << sum_so_far << ' ';
-        increment(sum_so_far, processing_status[i], bc, atom_constant[i], fc);
-//      std::cerr << "from " << centre_atom << " at rad " << radius << " atom " << i << " sum " << sum_so_far << " PC " << processing_status[i] << " AC " << atom_constant[i] << endl;
+      // expanding the shell, either outward or closing a ring
+      if (PROCESSING_FINISHED == processing_status[k]) {
+        unsigned int bc = bond_constant(b);
+        // std::cerr << "B4 inc " << sum_so_far << " bc " << bc << '\n';
+        fc.Increment(processing_status[i], bc, atom_constant[i], sum_so_far);
+        // std::cerr << "from " << centre_atom << " at rad " << radius << " atom " << i << " sum " << sum_so_far << " PC " << processing_status[i] << " AC " << atom_constant[i] << '\n';
       }
-      else if (processing_status[k] > 0)   // will be processed later in this loop
-        ;
-      else if (NOT_YET_SEEN == processing_status[k])    // mark for next time
-      {
-        processing_status[k] = - atom_constant[i];
+      else if (processing_status[k] > 0) {  // will be processed later in this loop
+      } else if (kNotYetSeen == processing_status[k]) {   // mark for next time
+        processing_status[k] = - static_cast<int64_t>(atom_constant[i]);
         continue_processing = 1;
-      }
-      else
-      {
-//      std::cerr << "processing_status " << processing_status[k] << endl;
+      } else {
+        // std::cerr << radius << "else processing_status " << processing_status[k] << '\n';
 //      processing_status[k] -= atom_constant[i];
 //      continue_processing = 1;
       }
     }
   }
 
-  if (radius >= fc.min_shell_radius())
-  {
+  if (radius >= fc.min_shell_radius()) {
 #ifdef DEBUG_ECFP_BITS
-    std::cerr << "From " << centre_atom << " radius " << radius << " hit bit " << sum_so_far << endl;
+    std::cerr << "From " << centre_atom << " radius " << radius << " hit bit " << sum_so_far << '\n';
 #endif
     handle_newly_found_bit(centre_atom, atom_constant[centre_atom], radius, sum_so_far, sob, fc);
   }
 
-  if (! continue_processing)
+  if (! continue_processing) {
     return 1;
+  }
 
-  if (radius >= fc.max_shell_radius())
+  if (radius >= fc.max_shell_radius()) {
     return 1;
+  }
 
 #ifdef DEBUG_ECFP_BITS
   std::cerr << "from " << centre_atom << " at radius " << radius << " atoms";
 #endif
 
-  for (int i = 0; i < matoms; i++)
-  {
+  for (int i = 0; i < matoms; i++) {
     if (processing_status[i] > 0)
       processing_status[i] = PROCESSING_FINISHED;
-    else if (NOT_YET_SEEN == processing_status[i])
+    else if (kNotYetSeen == processing_status[i])
       ;
     else if (processing_status[i] < 0)
     {
@@ -380,7 +376,7 @@ generate_shells (int matoms,
   }
 
 #ifdef DEBUG_ECFP_BITS
-  std::cerr << endl;
+  std::cerr << '\n';
 #endif
 
   return generate_shells(matoms, radius, a, centre_atom, atom_constant, processing_status, sum_so_far, sob, fc);
@@ -390,21 +386,21 @@ template <typename T>
 int
 compute_fingerprints (Molecule & m,
                       Fingerprint_Characteristics & fc,
-                      const int * atom_constant,
+                      const unsigned int * atom_constant,
                       Set_of_Bits<T> & sob)
 {
   sob.clear();
 
 #ifdef DEBUG_ECFP_BITS
-  std::cerr << "Computing fingerprints on '" << m.unique_smiles() << " radius " << fc.min_shell_radius() << " to " << fc.max_shell_radius() << endl;
+  std::cerr << "Computing fingerprints on '" << m.unique_smiles() << " radius " << fc.min_shell_radius() << " to " << fc.max_shell_radius() << '\n';
 
   for (int i = 0; i < m.natoms(); i++)
   {
-    std::cerr << "Atom " << i << " type " << atom_constant[i] << " " << m.smarts_equivalent_for_atom(i) << endl;
+    std::cerr << "Atom " << i << " type " << atom_constant[i] << " " << m.smarts_equivalent_for_atom(i) << '\n';
   }
 #endif
 
-//cerr << "Computing fingerprints type " << iwecfp_atom_type << endl;
+//cerr << "Computing fingerprints type " << iwecfp_atom_type << '\n';
 
   const int matoms = m.natoms();
 
@@ -412,42 +408,39 @@ compute_fingerprints (Molecule & m,
 
   m.atoms((const Atom **) atoms);   // disregard of const OK
 
-  int * processing_status = new int[matoms]; std::unique_ptr<int[]> free_processing_status(processing_status);
+  // Use signed int64 for this, so we can store the uint32_2 atom types,
+  // as well as their negative values.
+  std::unique_ptr<int64_t[]> processing_status = std::make_unique<int64_t[]>(matoms);
 
-  for (int i = 0; i < matoms; i++)
-  {
+  for (int i = 0; i < matoms; i++) {
 #ifdef DEBUG_ECFP_BITS
     if (0 == fc.min_shell_radius())
-      std::cerr << "Starting with atom " << i << " bit " << atom_constant[i] << endl;
+      std::cerr << "Starting with atom " << i << " bit " << atom_constant[i] << '\n';
 #endif
-    if (0 == fc.min_shell_radius())
-    {
+    if (0 == fc.min_shell_radius()) {
       handle_newly_found_bit(i, atom_constant[i], 0, atom_constant[i], sob, fc);
       if (0 == fc.max_shell_radius())
         continue;
     }
 
-    std::fill_n(processing_status, matoms, NOT_YET_SEEN);
+    std::fill_n(processing_status.get(), matoms, kNotYetSeen);
 
     processing_status[i] = PROCESSING_FINISHED;
 
     const Atom * ai = atoms[i];
-
-    int acon = ai->ncon();
-
-    for (int j = 0; j < acon; j++)
-    {
-      atom_number_t k = ai->other(i, j);
+    for (const Bond* b : *ai) {
+      atom_number_t k = b->other(i);
 
       processing_status[k] = atom_constant[i];
     }
 
-    generate_shells(matoms, 0, atoms, i, atom_constant, processing_status, atom_constant[i], sob, fc);
+    generate_shells(matoms, 0, atoms, i, atom_constant, processing_status.get(), 
+                    static_cast<uint64_t>(atom_constant[i]), sob, fc);
   }
 
 #ifdef DEBUG_ECFP_BITS
   std::cerr << "Fingerprint contqainsq " << sob.size() << " bits\n";
-  sob.debug_print(cerr);
+  sob.debug_print(std::cerr);
 #endif
 
   return 1;
@@ -459,15 +452,176 @@ compute_fingerprints(Molecule & m,
                      Fingerprint_Characteristics & fc,
                      Set_of_Bits<T> & sob)
 {
-  int * atype = new int[m.natoms()]; std::unique_ptr<int[]> free_atype(atype);
+  unsigned int * atype = new unsigned int[m.natoms()]; std::unique_ptr<unsigned int[]> free_atype(atype);
 
-  if (! assign_atom_types(m, fc.atype(), atype))
-  {
+  if (! assign_atom_types(m, fc.atype(), atype)) {
     std::cerr << "compute_fingerprints::cannot assign atom types for " << m.smiles() << ' ' << m.name() << '\n';
     return 0;
   }
 
   return compute_fingerprints(m, fc, atype, sob);
+}
+#endif  // OLD_VERSION_THAT_DOES_NOT_WORK
+
+template <typename T>
+int
+generate_shells(int matoms,
+                int radius,
+                const Atom * const * a,
+                atom_number_t centre_atom,
+                const unsigned int * atom_constant,
+                int64_t* processing_status,
+                uint64_t sum_so_far,
+                Set_of_Bits<T> & sob,
+                Fingerprint_Characteristics & fc)
+{
+  radius++;
+
+  if (fc.additive())
+    sum_so_far *= 7879;   // an arbitrary prime number
+
+// #define DEBUG_ECFP_BITS 1
+#ifdef DEBUG_ECFP_BITS
+  std::cerr << "On entry sum_so_far " << sum_so_far << '\n';
+#endif
+
+  int continue_processing = 0;
+
+  for (int i = 0; i < matoms; i++) {
+    if (processing_status[i] != kNextShell) {
+      continue;
+    }
+
+    for (const Bond* b : *a[i]) {
+      atom_number_t k = b->other(i);
+      // std::cerr << "From atom " << i << " to " << k << '\n';
+
+      // Either going back to previous atom or closing a ring
+      if (kProcessingFinished == processing_status[k]) {
+        unsigned int bc = bond_constant(b);
+        // std::cerr << "B4 inc " << sum_so_far << " bc " << bc << '\n';
+        fc.Increment(atom_constant[i], bc, atom_constant[k], sum_so_far);
+        // std::cerr << "from " << centre_atom << " at rad " << radius << " atom " << i << " sum " << sum_so_far << " PC " << processing_status[i] << " AC " << atom_constant[i] << '\n';
+      } else if (processing_status[k] == kNotYetSeen) {
+        processing_status[k] = kWillBeNextShell;
+        continue_processing = 1;
+      }
+    }
+  }
+
+  if (radius >= fc.min_shell_radius()) {
+#ifdef DEBUG_ECFP_BITS
+    std::cerr << "From " << centre_atom << " radius " << radius << " hit bit " << sum_so_far << '\n';
+#endif
+    handle_newly_found_bit(centre_atom, atom_constant[centre_atom], radius, sum_so_far, sob, fc);
+  }
+
+  if (! continue_processing) {
+    return 1;
+  }
+
+  if (radius >= fc.max_shell_radius()) {
+    return 1;
+  }
+
+#ifdef DEBUG_ECFP_BITS
+  std::cerr << "from " << centre_atom << " at radius " << radius << " atoms";
+#endif
+
+  for (int i = 0; i < matoms; i++) {
+    if (processing_status[i] == kNextShell) {
+      processing_status[i] = kProcessingFinished;
+    } else if (processing_status[i] == kWillBeNextShell) {
+      processing_status[i] = kNextShell;
+    }
+  }
+
+#ifdef DEBUG_ECFP_BITS
+  std::cerr << '\n';
+#endif
+
+  return generate_shells(matoms, radius, a, centre_atom, atom_constant, processing_status, sum_so_far, sob, fc);
+}
+
+template <typename T>
+int
+compute_fingerprints(Molecule & m,
+                      Fingerprint_Characteristics & fc,
+                      const unsigned int * atom_constant,
+                      Set_of_Bits<T> & sob)
+{
+  sob.clear();
+
+#ifdef DEBUG_ECFP_BITS
+  std::cerr << "Computing fingerprints on '" << m.unique_smiles() << " radius " << fc.min_shell_radius() << " to " << fc.max_shell_radius() << '\n';
+
+  for (int i = 0; i < m.natoms(); i++)
+  {
+    std::cerr << "Atom " << i << " type " << atom_constant[i] << " " << m.smarts_equivalent_for_atom(i) << '\n';
+  }
+#endif
+
+//cerr << "Computing fingerprints type " << iwecfp_atom_type << '\n';
+
+  const int matoms = m.natoms();
+
+  Atom ** atoms = new Atom * [matoms]; std::unique_ptr<Atom *[]> free_atoms(atoms);
+
+  m.atoms((const Atom **) atoms);   // disregard of const OK
+
+  // Use signed int64 for this, so we can store the uint32_2 atom types,
+  // as well as their negative values.
+  std::unique_ptr<int64_t[]> processing_status = std::make_unique<int64_t[]>(matoms);
+
+  for (int i = 0; i < matoms; i++) {
+#ifdef DEBUG_ECFP_BITS
+    if (0 == fc.min_shell_radius())
+      std::cerr << "Starting with atom " << i << " bit " << atom_constant[i] << '\n';
+#endif
+    if (0 == fc.min_shell_radius()) {
+      handle_newly_found_bit(i, atom_constant[i], 0, atom_constant[i], sob, fc);
+      if (0 == fc.max_shell_radius())
+        continue;
+    }
+
+    std::fill_n(processing_status.get(), matoms, kNotYetSeen);
+
+    processing_status[i] = kProcessingFinished;
+
+    const Atom * ai = atoms[i];
+    for (const Bond* b : *ai) {
+      atom_number_t k = b->other(i);
+
+      processing_status[k] = kNextShell;
+    }
+
+    generate_shells(matoms, 0, atoms, i, atom_constant, processing_status.get(), 
+                    static_cast<uint64_t>(atom_constant[i]), sob, fc);
+  }
+
+#ifdef DEBUG_ECFP_BITS
+  std::cerr << "Fingerprint contqainsq " << sob.size() << " bits\n";
+  sob.debug_print(std::cerr);
+#endif
+
+  return 1;
+}
+
+
+template <typename T>
+int
+compute_fingerprints(Molecule & m,
+                     Fingerprint_Characteristics & fc,
+                     Set_of_Bits<T> & sob)
+{
+  std::unique_ptr<uint32_t[]> atype = std::make_unique<uint32_t[]>(m.natoms());
+
+  if (! assign_atom_types(m, fc.atype(), atype.get())) {
+    std::cerr << "compute_fingerprints::cannot assign atom types for " << m.smiles() << ' ' << m.name() << '\n';
+    return 0;
+  }
+
+  return compute_fingerprints(m, fc, atype.get(), sob);
 }
 
 }  // namespace iwecfp_database

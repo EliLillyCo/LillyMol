@@ -60,9 +60,6 @@ cc_test(
     srcs = [
         "iwstring_data_source_test.cc",
     ],
-    linkopts = [
-        "-lz",
-    ],
     deps = [
         ":iwstring_data_source",
         "@googletest//:gtest_main",
@@ -85,9 +82,6 @@ cc_binary(
     name = "tiwds",
     srcs = [
         "tiwds.cc",
-    ],
-    linkopts = [
-        "-lz",
     ],
     deps = [
         ":iwstring_data_source",

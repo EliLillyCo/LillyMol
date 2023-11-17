@@ -45,6 +45,23 @@ message VirtualAtom {
   optional int32 set_global = 2;
 }
 
+// four atoms define two vectors. We can specify the
+// angle between those vectors.
+message PairOfAtoms {
+  uint32 base = 1;
+  uint32 end = 2;
+}
+
+message AngleBetweenVectors {
+  // The two pairs of atoms that define the two vectors.
+  // The vectors are from a1 to a2 in each vector.
+  optional PairOfAtoms v1 = 1;
+  optional PairOfAtoms v2 = 2;
+
+  // The allowed angles.
+  optional Range angle = 3;
+}
+
 // All the geometric constraints follow a similar pattern.
 // One or more atoms, and a range of allowed values.
 
@@ -137,8 +154,11 @@ message SetOfConstraints {
   repeated PositiveSpatialConstraint positive_spatial_constraint = 4;
   repeated NegativeSpatialConstraint negative_spatial_constraint = 5;
 
-  // The number of the above constraints that must match.
-  uint32 number_to_match = 6;
+  repeated AngleBetweenVectors angle_between_vectors = 6;
 
-  repeated VirtualAtom virtual_atom = 7;
+  // The number of the above constraints that must match.
+  // By default all must match.
+  uint32 number_to_match = 7;
+
+  repeated VirtualAtom virtual_atom = 8;
 }

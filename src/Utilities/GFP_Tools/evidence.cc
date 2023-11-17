@@ -545,8 +545,8 @@ int
 Evidence::Initialise(Command_Line_v2& cl) {
   _verbose = cl.option_count('v');
 
-  if (cl.option_present("options")) {
-    IWString fname = cl.string_value("options");
+  if (cl.option_present("config")) {
+    IWString fname = cl.string_value("config");
     std::optional<EvidenceData::Options> maybe_proto = 
                 iwmisc::ReadTextProtoCommentsOK<EvidenceData::Options>(fname);
     if (! maybe_proto) {

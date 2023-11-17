@@ -2,18 +2,17 @@
 #include <stdlib.h>
 
 #include <optional>
-#include <unordered_set>
-#include <unordered_set>
 #include <string>
+#include <type_traits>
+#include <unordered_set>
 
-//#include "googlemock/include/gmock/gmock.h"
-//#include "googletest/include/gtest/gtest.h"
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "googlemock/include/gmock/gmock.h"
+#include "googletest/include/gtest/gtest.h"
 
 #include "iwstring.h"
 
 namespace {
+
 TEST(TestIWString, TestAsString) {
   IWString s("hello");
   const std::string as_string = s.AsString();
@@ -96,5 +95,80 @@ INSTANTIATE_TEST_SUITE_P(TestExpandEnv, TestExpandEnv, testing::Values(
   EnvData{{{"mm93", "marc marquez"}}, "hello $mm93 motogp", "hello $mm93 motogp"},
   EnvData{{{"mm93", "marquez marquez"}}, "hello $mm93}", "hello $mm93}"}
 ));
+
+TEST(TestIWString, TestEnsureEndsWithEmpty) {
+  IWString s;
+  EXPECT_TRUE(s.EnsureEndsWith('a'));
+  EXPECT_EQ(s, 'a');
+}
+
+template <typename T>
+class EnsureEndsWithTest : public testing::Test {
+ protected:
+  void TestEmpty();
+  void TestAlreadyEndsWith();
+  void TestMustBeAdded();
+};
+
+template <typename T>
+void
+EnsureEndsWithTest<T>::TestEmpty() {
+  IWString s;
+  T extra("a");
+  EXPECT_EQ(s.EnsureEndsWith(extra), 1);
+  EXPECT_EQ(s, "a");
+}
+
+template <typename T>
+void
+EnsureEndsWithTest<T>::TestAlreadyEndsWith() {
+  IWString s('a');
+  T extra("a");
+  EXPECT_EQ(s.EnsureEndsWith(extra), 0);
+  EXPECT_EQ(s, 'a');
+}
+
+template <typename T>
+void
+EnsureEndsWithTest<T>::TestMustBeAdded() {
+  IWString s('a');
+  T extra("b");
+  EXPECT_EQ(s.EnsureEndsWith(extra), 1);
+  EXPECT_EQ(s, "ab");
+}
+
+using MyTypes = ::testing::Types<const char*, const IWString&, const const_IWSubstring&>;
+TYPED_TEST_SUITE_P(EnsureEndsWithTest);
+
+TYPED_TEST_P(EnsureEndsWithTest, StartsEmpty) {
+  // Inside a test, refer to TypeParam to get the type parameter.
+  // TypeParam n = 0;
+  // Maybe something could be done to combine the const char* type into the template?
+  // std::is_pointer...
+  // if (std::is_integral<TypeParam>::value) {
+  // }
+
+  // You will need to use `this` explicitly to refer to fixture members.
+  this->TestEmpty();
+}
+
+TYPED_TEST_P(EnsureEndsWithTest, AlreadyEndsWith) {
+  // TypeParam n = 0;
+
+  this->TestAlreadyEndsWith();
+}
+
+TYPED_TEST_P(EnsureEndsWithTest, MustBeAdded) { 
+  // TypeParam n = 0;
+
+  this->TestMustBeAdded();
+}
+
+REGISTER_TYPED_TEST_SUITE_P(EnsureEndsWithTest,
+                            StartsEmpty, AlreadyEndsWith, MustBeAdded);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(My, EnsureEndsWithTest, MyTypes);
+
+
 
 }  // namespace

@@ -193,9 +193,6 @@ cc_library(
     hdrs = [
         "memoized_floats.h",
     ],
-    linkopts = [
-        "-lz",
-    ],
     visibility = ["//visibility:public"],
     deps = [
         ":iwmisc",
@@ -222,9 +219,6 @@ cc_binary(
     srcs = [
         "test_iwdigits.cc",
     ],
-    linkopts = [
-        "-lz",
-    ],
     deps = [
         ":iwmisc",
         "//Foundational/cmdline_v2",
@@ -235,10 +229,6 @@ cc_test(
     name = "iwdigits_test",
     srcs = [
         "iwdigits_test.cc",
-    ],
-    linkopts = [
-        "-lm",
-        "-lz",
     ],
     deps = [
         ":iwmisc",
@@ -251,10 +241,6 @@ cc_test(
     srcs = [
         "iwre2_test.cc",
     ],
-    linkopts = [
-        "-lm",
-        "-lz",
-    ],
     deps = [
         ":iwre2",
         "@googletest//:gtest_main",
@@ -265,10 +251,6 @@ cc_test(
     name = "memoized_floats_test",
     srcs = [
         "memoized_floats_test.cc",
-    ],
-    linkopts = [
-        "-lm",
-        "-lz",
     ],
     deps = [
         ":memoized_floats",
@@ -281,9 +263,6 @@ cc_test(
     name = "memoized_floats_benchmark",
     srcs = [
         "memoized_floats_benchmark.cc",
-    ],
-    linkopts = [
-        "-lz",
     ],
     deps = [
         ":memoized_floats",

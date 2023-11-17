@@ -2,11 +2,11 @@ description {
   feature_name: "w_nrings6"
   description: "Number of 6 membered rings"
   plot_title: "Number of 6 membered rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
 maxval: 10.0
-mean: 2.464668
+mean: 2.50364
 median: 2.0
 quantile {
   quantile: 0.01
@@ -36,45 +36,41 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 89066
+  count: 1828
 }
 int_values {
   value: 1
-  count: 377194
+  count: 8106
 }
 int_values {
   value: 2
-  count: 716080
+  count: 15620
 }
 int_values {
   value: 3
-  count: 662515
+  count: 14887
 }
 int_values {
   value: 4
-  count: 308903
+  count: 7149
 }
 int_values {
   value: 5
-  count: 80128
+  count: 1951
 }
 int_values {
   value: 6
-  count: 16914
+  count: 404
 }
 int_values {
   value: 7
-  count: 2209
+  count: 42
 }
 int_values {
   value: 8
-  count: 460
-}
-int_values {
-  value: 9
-  count: 34
+  count: 12
 }
 int_values {
   value: 10
-  count: 7
+  count: 1
 }

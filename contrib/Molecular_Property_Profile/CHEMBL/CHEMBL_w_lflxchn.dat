@@ -2,11 +2,11 @@ description {
   feature_name: "w_lflxchn"
   description: "Length of longest flexible chain"
   plot_title: "Length of longest flexible chain"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 47.0
-mean: 1.7574393
+maxval: 41.0
+mean: 1.76442
 median: 1.0
 quantile {
   quantile: 0.01
@@ -31,184 +31,120 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 10.0
+  value: 9.01
 }
 int_values {
-  count: 524656
+  count: 11465
 }
 int_values {
   value: 1
-  count: 647628
+  count: 14309
 }
 int_values {
   value: 2
-  count: 572890
+  count: 12915
 }
 int_values {
   value: 3
-  count: 279039
+  count: 6194
 }
 int_values {
   value: 4
-  count: 108734
+  count: 2388
 }
 int_values {
   value: 5
-  count: 47399
+  count: 1074
 }
 int_values {
   value: 6
-  count: 25205
+  count: 604
 }
 int_values {
   value: 7
-  count: 11940
+  count: 264
 }
 int_values {
   value: 8
-  count: 7645
+  count: 172
 }
 int_values {
   value: 9
-  count: 5292
+  count: 115
 }
 int_values {
   value: 10
-  count: 4025
+  count: 88
 }
 int_values {
   value: 11
-  count: 3493
+  count: 87
 }
 int_values {
   value: 12
-  count: 2820
+  count: 69
 }
 int_values {
   value: 13
-  count: 2701
+  count: 60
 }
 int_values {
   value: 14
-  count: 2336
+  count: 52
 }
 int_values {
   value: 15
-  count: 1799
+  count: 32
 }
 int_values {
   value: 16
-  count: 2225
+  count: 37
 }
 int_values {
   value: 17
-  count: 993
-}
-int_values {
-  value: 18
-  count: 1152
-}
-int_values {
-  value: 19
-  count: 403
-}
-int_values {
-  value: 20
-  count: 391
-}
-int_values {
-  value: 21
-  count: 159
-}
-int_values {
-  value: 22
-  count: 103
-}
-int_values {
-  value: 23
-  count: 173
-}
-int_values {
-  value: 24
-  count: 44
-}
-int_values {
-  value: 25
-  count: 96
-}
-int_values {
-  value: 26
   count: 15
 }
 int_values {
-  value: 27
-  count: 26
+  value: 18
+  count: 34
 }
 int_values {
-  value: 28
-  count: 19
-}
-int_values {
-  value: 29
-  count: 10
-}
-int_values {
-  value: 30
-  count: 16
-}
-int_values {
-  value: 31
-  count: 26
-}
-int_values {
-  value: 32
-  count: 8
-}
-int_values {
-  value: 33
-  count: 8
-}
-int_values {
-  value: 34
-  count: 6
-}
-int_values {
-  value: 35
-  count: 10
-}
-int_values {
-  value: 37
+  value: 19
   count: 7
 }
 int_values {
-  value: 38
+  value: 20
+  count: 4
+}
+int_values {
+  value: 21
+  count: 3
+}
+int_values {
+  value: 22
   count: 2
 }
 int_values {
-  value: 39
+  value: 23
+  count: 5
+}
+int_values {
+  value: 24
   count: 1
 }
 int_values {
-  value: 40
-  count: 3
+  value: 25
+  count: 1
+}
+int_values {
+  value: 28
+  count: 1
+}
+int_values {
+  value: 30
+  count: 1
 }
 int_values {
   value: 41
-  count: 3
-}
-int_values {
-  value: 42
   count: 1
-}
-int_values {
-  value: 43
-  count: 1
-}
-int_values {
-  value: 46
-  count: 1
-}
-int_values {
-  value: 47
-  count: 6
 }

@@ -2,15 +2,15 @@ description {
   feature_name: "w_fncon3"
   description: "Fraction of atoms with 3 connections"
   plot_title: "Fraction of atoms with 3 connections"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 0.9
-mean: 0.30590424
+maxval: 0.7778
+mean: 0.30631152
 median: 0.3077
 quantile {
   quantile: 0.01
-  value: 0.125
+  value: 0.1304
 }
 quantile {
   quantile: 0.05
@@ -18,7 +18,7 @@ quantile {
 }
 quantile {
   quantile: 0.1
-  value: 0.2273
+  value: 0.2286
 }
 quantile {
   quantile: 0.5
@@ -34,389 +34,376 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 0.4483
+  value: 0.4444
 }
 float_values {
-  count: 3119
+  count: 65
 }
 float_values {
-  value: 0.009
+  value: 0.007778
 }
 float_values {
-  value: 0.018
-  count: 52
+  value: 0.015556
+  count: 1
 }
 float_values {
-  value: 0.027
-  count: 379
-}
-float_values {
-  value: 0.036
-  count: 671
-}
-float_values {
-  value: 0.045
-  count: 1015
-}
-float_values {
-  value: 0.054
-  count: 1345
-}
-float_values {
-  value: 0.063
-  count: 1449
-}
-float_values {
-  value: 0.072
-  count: 1379
-}
-float_values {
-  value: 0.081
-  count: 1567
-}
-float_values {
-  value: 0.09
-  count: 1993
-}
-float_values {
-  value: 0.099
-  count: 3116
-}
-float_values {
-  value: 0.108
-  count: 2800
-}
-float_values {
-  value: 0.117
-  count: 5201
-}
-float_values {
-  value: 0.126
-  count: 3651
-}
-float_values {
-  value: 0.135
-  count: 7096
-}
-float_values {
-  value: 0.144
-  count: 4051
-}
-float_values {
-  value: 0.153
-  count: 9503
-}
-float_values {
-  value: 0.162
-  count: 10480
-}
-float_values {
-  value: 0.171
-  count: 12810
-}
-float_values {
-  value: 0.18
-  count: 17183
-}
-float_values {
-  value: 0.189
-  count: 14820
-}
-float_values {
-  value: 0.198
-  count: 32697
-}
-float_values {
-  value: 0.207
-  count: 32984
-}
-float_values {
-  value: 0.216
-  count: 41559
-}
-float_values {
-  value: 0.225
-  count: 50035
-}
-float_values {
-  value: 0.234
-  count: 69460
-}
-float_values {
-  value: 0.243
-  count: 93173
-}
-float_values {
-  value: 0.252
-  count: 70687
-}
-float_values {
-  value: 0.261
-  count: 89826
-}
-float_values {
-  value: 0.27
-  count: 101974
-}
-float_values {
-  value: 0.279
-  count: 131659
-}
-float_values {
-  value: 0.288
-  count: 130135
-}
-float_values {
-  value: 0.297
-  count: 136828
-}
-float_values {
-  value: 0.306
-  count: 128434
-}
-float_values {
-  value: 0.315
-  count: 174235
-}
-float_values {
-  value: 0.324
-  count: 20961
-}
-float_values {
-  value: 0.333
-  count: 187964
-}
-float_values {
-  value: 0.342
-  count: 145107
-}
-float_values {
-  value: 0.351
-  count: 108017
-}
-float_values {
-  value: 0.36
-  count: 80265
-}
-float_values {
-  value: 0.369
-  count: 66654
-}
-float_values {
-  value: 0.378
-  count: 59351
-}
-float_values {
-  value: 0.387
-  count: 52707
-}
-float_values {
-  value: 0.396
-  count: 34238
-}
-float_values {
-  value: 0.405
-  count: 33774
-}
-float_values {
-  value: 0.414
-  count: 18023
-}
-float_values {
-  value: 0.423
-  count: 17218
-}
-float_values {
-  value: 0.432
-  count: 12329
-}
-float_values {
-  value: 0.441
-  count: 9951
-}
-float_values {
-  value: 0.45
-  count: 5627
-}
-float_values {
-  value: 0.459
-  count: 3938
-}
-float_values {
-  value: 0.468
-  count: 3283
-}
-float_values {
-  value: 0.477
-  count: 2503
-}
-float_values {
-  value: 0.486
-  count: 237
-}
-float_values {
-  value: 0.495
-  count: 2542
-}
-float_values {
-  value: 0.504
-  count: 76
-}
-float_values {
-  value: 0.513
-  count: 445
-}
-float_values {
-  value: 0.522
-  count: 336
-}
-float_values {
-  value: 0.531
-  count: 204
-}
-float_values {
-  value: 0.54
-  count: 113
-}
-float_values {
-  value: 0.549
-  count: 105
-}
-float_values {
-  value: 0.558
-  count: 35
-}
-float_values {
-  value: 0.567
-  count: 44
-}
-float_values {
-  value: 0.576
-  count: 27
-}
-float_values {
-  value: 0.585
-  count: 8
-}
-float_values {
-  value: 0.594
-  count: 6
-}
-float_values {
-  value: 0.603
-  count: 2
-}
-float_values {
-  value: 0.612
-  count: 13
-}
-float_values {
-  value: 0.621
+  value: 0.023334
   count: 4
 }
 float_values {
-  value: 0.63
+  value: 0.031112
   count: 5
 }
 float_values {
-  value: 0.639
-  count: 1
+  value: 0.03889
+  count: 18
 }
 float_values {
-  value: 0.648
-  count: 1
+  value: 0.046668
+  count: 13
 }
 float_values {
-  value: 0.657
+  value: 0.054446
+  count: 15
 }
 float_values {
-  value: 0.666
-  count: 8
+  value: 0.062224
+  count: 21
 }
 float_values {
-  value: 0.675
+  value: 0.070002
+  count: 47
 }
 float_values {
-  value: 0.684
-  count: 1
+  value: 0.07778
+  count: 28
 }
 float_values {
-  value: 0.693
-  count: 4
+  value: 0.085558
+  count: 35
 }
 float_values {
-  value: 0.702
+  value: 0.093336
+  count: 54
+}
+float_values {
+  value: 0.101114
+  count: 34
+}
+float_values {
+  value: 0.108892
+  count: 46
+}
+float_values {
+  value: 0.11667
+  count: 46
+}
+float_values {
+  value: 0.124448
+  count: 87
+}
+float_values {
+  value: 0.132226
+  count: 103
+}
+float_values {
+  value: 0.140004
+  count: 97
+}
+float_values {
+  value: 0.147782
+  count: 136
+}
+float_values {
+  value: 0.15556
+  count: 128
+}
+float_values {
+  value: 0.163338
+  count: 196
+}
+float_values {
+  value: 0.171116
+  count: 258
+}
+float_values {
+  value: 0.178894
+  count: 249
+}
+float_values {
+  value: 0.186672
+  count: 425
+}
+float_values {
+  value: 0.19445
+  count: 605
+}
+float_values {
+  value: 0.202228
+  count: 367
+}
+float_values {
+  value: 0.210006
+  count: 792
+}
+float_values {
+  value: 0.217784
+  count: 637
+}
+float_values {
+  value: 0.225562
+  count: 1122
+}
+float_values {
+  value: 0.23334
+  count: 1192
+}
+float_values {
+  value: 0.241118
+  count: 532
+}
+float_values {
+  value: 0.248896
+  count: 2000
+}
+float_values {
+  value: 0.256674
+  count: 1959
+}
+float_values {
+  value: 0.264452
+  count: 1652
+}
+float_values {
+  value: 0.27223
+  count: 2879
+}
+float_values {
+  value: 0.280008
+  count: 2227
+}
+float_values {
+  value: 0.287786
+  count: 2182
+}
+float_values {
+  value: 0.295564
+  count: 2744
+}
+float_values {
+  value: 0.303342
+  count: 2802
+}
+float_values {
+  value: 0.31112
+  count: 2497
+}
+float_values {
+  value: 0.318898
+  count: 2959
+}
+float_values {
+  value: 0.326676
+  count: 3934
+}
+float_values {
+  value: 0.334454
+  count: 359
+}
+float_values {
+  value: 0.342232
+  count: 3018
+}
+float_values {
+  value: 0.35001
+  count: 1834
+}
+float_values {
+  value: 0.357788
+  count: 1597
+}
+float_values {
+  value: 0.365566
+  count: 1470
+}
+float_values {
+  value: 0.373344
+  count: 1595
+}
+float_values {
+  value: 0.381122
+  count: 826
+}
+float_values {
+  value: 0.3889
+  count: 949
+}
+float_values {
+  value: 0.396678
+  count: 746
+}
+float_values {
+  value: 0.404456
+  count: 647
+}
+float_values {
+  value: 0.412234
+  count: 385
+}
+float_values {
+  value: 0.420012
+  count: 264
+}
+float_values {
+  value: 0.42779
+  count: 373
+}
+float_values {
+  value: 0.435568
+  count: 154
+}
+float_values {
+  value: 0.443346
+  count: 204
+}
+float_values {
+  value: 0.451124
+  count: 103
+}
+float_values {
+  value: 0.458902
+  count: 68
+}
+float_values {
+  value: 0.46668
+  count: 64
+}
+float_values {
+  value: 0.474458
+  count: 49
+}
+float_values {
+  value: 0.482236
+  count: 23
+}
+float_values {
+  value: 0.490014
+}
+float_values {
+  value: 0.497792
+  count: 53
+}
+float_values {
+  value: 0.50557
   count: 2
 }
 float_values {
-  value: 0.711
-  count: 1
+  value: 0.513348
+  count: 7
 }
 float_values {
-  value: 0.72
-  count: 1
+  value: 0.521126
+  count: 7
 }
 float_values {
-  value: 0.729
-  count: 1
-}
-float_values {
-  value: 0.738
-}
-float_values {
-  value: 0.747
+  value: 0.528904
   count: 4
 }
 float_values {
-  value: 0.756
+  value: 0.536682
+}
+float_values {
+  value: 0.54446
   count: 1
 }
 float_values {
-  value: 0.765
-  count: 4
+  value: 0.552238
 }
 float_values {
-  value: 0.774
+  value: 0.560016
+  count: 2
+}
+float_values {
+  value: 0.567794
   count: 1
 }
 float_values {
-  value: 0.783
+  value: 0.575572
 }
 float_values {
-  value: 0.792
+  value: 0.58335
 }
 float_values {
-  value: 0.801
+  value: 0.591128
 }
 float_values {
-  value: 0.81
+  value: 0.598906
+}
+float_values {
+  value: 0.606684
+}
+float_values {
+  value: 0.614462
   count: 1
 }
 float_values {
-  value: 0.819
+  value: 0.62224
 }
 float_values {
-  value: 0.828
+  value: 0.630018
 }
 float_values {
-  value: 0.837
+  value: 0.637796
 }
 float_values {
-  value: 0.846
+  value: 0.645574
 }
 float_values {
-  value: 0.855
+  value: 0.653352
 }
 float_values {
-  value: 0.864
+  value: 0.66113
 }
 float_values {
-  value: 0.873
+  value: 0.668908
 }
 float_values {
-  value: 0.882
+  value: 0.676686
 }
 float_values {
-  value: 0.891
+  value: 0.684464
+}
+float_values {
+  value: 0.692242
+}
+float_values {
+  value: 0.70002
+}
+float_values {
+  value: 0.707798
+}
+float_values {
+  value: 0.715576
+}
+float_values {
+  value: 0.723354
+}
+float_values {
+  value: 0.731132
+}
+float_values {
+  value: 0.73891
+}
+float_values {
+  value: 0.746688
+}
+float_values {
+  value: 0.754466
+}
+float_values {
+  value: 0.762244
+}
+float_values {
+  value: 0.770022
   count: 1
 }

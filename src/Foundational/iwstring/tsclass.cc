@@ -157,12 +157,6 @@ test_returned_string()
 }
 
 static int
-test_operators_with_scalars()
-{
-  return 1;
-}
-
-static int
 test_strncasecmp()
 {
   IWString foo("hello");

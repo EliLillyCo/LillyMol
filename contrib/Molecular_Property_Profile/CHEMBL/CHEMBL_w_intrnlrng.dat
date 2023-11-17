@@ -2,11 +2,11 @@ description {
   feature_name: "w_intrnlrng"
   description: "Number of internal (non terminal) rings"
   plot_title: "Number of internal (non terminal) rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 13.0
-mean: 1.3872515
+maxval: 9.0
+mean: 1.40482
 median: 1.0
 quantile {
   quantile: 0.01
@@ -31,52 +31,44 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 4.0
+  value: 5.0
 }
 int_values {
-  count: 470133
+  count: 10368
 }
 int_values {
   value: 1
-  count: 870477
+  count: 18977
 }
 int_values {
   value: 2
-  count: 594377
+  count: 13355
 }
 int_values {
   value: 3
-  count: 232647
+  count: 5278
 }
 int_values {
   value: 4
-  count: 65761
+  count: 1516
 }
 int_values {
   value: 5
-  count: 15955
+  count: 412
 }
 int_values {
   value: 6
-  count: 3222
+  count: 70
 }
 int_values {
   value: 7
-  count: 705
+  count: 17
 }
 int_values {
   value: 8
-  count: 188
+  count: 6
 }
 int_values {
   value: 9
-  count: 40
-}
-int_values {
-  value: 11
   count: 1
-}
-int_values {
-  value: 13
-  count: 4
 }

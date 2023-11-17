@@ -10,9 +10,6 @@
 
 namespace {
 
-using std::cerr;
-using std::endl;
-
 using testing::UnorderedElementsAre;
 
 TEST(TestFrags, NoAtoms) {
@@ -34,9 +31,7 @@ class TestNumberFragments : public testing::TestWithParam<SmilesNfrag> {
 TEST_P(TestNumberFragments, TestCounts) {
   const auto params = GetParam();
   Molecule m;
-  cerr << "Building from " << params.smiles << '\n';
   ASSERT_TRUE(m.build_from_smiles(params.smiles));
-  cerr << "Built molecule from " << params.smiles << '\n';
   EXPECT_EQ(m.number_fragments(), params.number_fragments);
 }
 
@@ -72,9 +67,7 @@ class TestFragmentMembership : public testing::TestWithParam<SmilesSameFrag> {
 TEST_P(TestFragmentMembership, TestFragMembership) {
   const auto params = GetParam();
   Molecule m;
-  cerr << "Building from " << params.smiles << '\n';
   ASSERT_TRUE(m.build_from_smiles(params.smiles));
-  cerr << "Built molecule from " << params.smiles << '\n';
   if (params.same) {
     EXPECT_EQ(m.fragment_membership(params.a1), m.fragment_membership(params.a2));
   } else {
@@ -113,5 +106,13 @@ TEST(TestCreateSubset, TestCreateSubset) {
   }
 
 }
+
+TEST(TestAtomsInFragment, FirstCall) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("C.CC"));
+  EXPECT_EQ(m.atoms_in_fragment(0), 1);
+  EXPECT_EQ(m.atoms_in_fragment(1), 2);
+}
+
 }  // namespace
 

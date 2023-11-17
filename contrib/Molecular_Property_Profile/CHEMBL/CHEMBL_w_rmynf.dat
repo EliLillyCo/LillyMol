@@ -2,11 +2,11 @@ description {
   feature_name: "w_rmynf"
   description: "Number of Flourine atoms"
   plot_title: "Number of Flourine atoms"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 26.0
-mean: 0.40963653
+maxval: 18.0
+mean: 0.42336
 quantile {
   quantile: 0.01
 }
@@ -32,105 +32,69 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 1815929
+  count: 39944
 }
 int_values {
   value: 1
-  count: 209241
+  count: 4819
 }
 int_values {
   value: 2
-  count: 66026
+  count: 1535
 }
 int_values {
   value: 3
-  count: 119726
+  count: 2715
 }
 int_values {
   value: 4
-  count: 19051
+  count: 451
 }
 int_values {
   value: 5
-  count: 6262
+  count: 144
 }
 int_values {
   value: 6
-  count: 12742
+  count: 288
 }
 int_values {
   value: 7
-  count: 1974
+  count: 46
 }
 int_values {
   value: 8
-  count: 880
+  count: 20
 }
 int_values {
   value: 9
-  count: 990
+  count: 24
 }
 int_values {
   value: 10
-  count: 190
+  count: 2
 }
 int_values {
   value: 11
-  count: 51
+  count: 2
 }
 int_values {
   value: 12
-  count: 168
+  count: 2
 }
 int_values {
   value: 13
-  count: 66
+  count: 4
 }
 int_values {
   value: 14
-  count: 5
-}
-int_values {
-  value: 15
-  count: 62
-}
-int_values {
-  value: 16
-  count: 12
-}
-int_values {
-  value: 17
-  count: 104
-}
-int_values {
-  value: 18
-  count: 13
-}
-int_values {
-  value: 19
-  count: 2
-}
-int_values {
-  value: 20
-  count: 5
-}
-int_values {
-  value: 21
-  count: 5
-}
-int_values {
-  value: 22
-  count: 2
-}
-int_values {
-  value: 24
-  count: 2
-}
-int_values {
-  value: 25
   count: 1
 }
 int_values {
-  value: 26
+  value: 17
+  count: 2
+}
+int_values {
+  value: 18
   count: 1
 }

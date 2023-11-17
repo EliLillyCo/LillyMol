@@ -7,19 +7,19 @@ module(
 # https://github.com/bazelbuild/bazel-central-registry/tree/main/modules
 
 bazel_dep(name = "abseil-cpp", version = "20230802.0", repo_name="com_google_absl")
-bazel_dep(name = "bazel_skylib", version = "1.4.2")
-bazel_dep(name = "caseyduquettesc_rules_python_pytest", version = "1.0.9", repo_name = "rules_python_pytest")
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+bazel_dep(name = "caseyduquettesc_rules_python_pytest", version = "1.1.0", repo_name = "rules_python_pytest")
 bazel_dep(name = "eigen", version = "3.4.0", repo_name="com_gitlab_libeigen_eigen")
 bazel_dep(name = "google_benchmark", version = "1.8.2", repo_name="benchmark")
 bazel_dep(name = "googletest", version = "1.14.0")
 bazel_dep(name = "onetbb", version = "2021.10.0", repo_name="onetbb")
 bazel_dep(name = "pybind11_bazel", version = "2.11.1")
-bazel_dep(name = "re2", version = "2023-09-01")
+bazel_dep(name = "re2", version = "2023-11-01")
 bazel_dep(name = "rules_cc", version = "0.0.9")
 bazel_dep(name = "rules_go", version = "0.41.0")
 bazel_dep(name = "rules_pkg", version = "0.9.1")
 bazel_dep(name = "rules_proto", version = "5.3.0-21.7")
-bazel_dep(name = "rules_python", version = "0.25.0")
+bazel_dep(name = "rules_python", version = "0.26.0")
 bazel_dep(name = "protobuf", version = "21.7", repo_name="com_google_protobuf")
 bazel_dep(name = "zlib", version = "1.3")
 

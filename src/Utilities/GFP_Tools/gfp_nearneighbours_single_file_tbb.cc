@@ -1196,6 +1196,7 @@ build_pool(const char* fname)
   return build_pool(input);
 }
 
+#ifdef NOT_IN_USE
 static int
 write_average_neighbour_distance(IW_GFP_D_ID** neighbours, int number_neighbours,
                                  IWString& output)
@@ -1213,6 +1214,7 @@ write_average_neighbour_distance(IW_GFP_D_ID** neighbours, int number_neighbours
 
   return output.good();
 }
+#endif
 
 /*
   Common function for doing the distance computation

@@ -2,11 +2,11 @@ description {
   feature_name: "w_ncon1"
   description: "Number of atoms with 1 connection"
   plot_title: "Number of atoms with 1 connection"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 28.0
-mean: 4.6181135
+maxval: 24.0
+mean: 4.7182
 median: 4.0
 quantile {
   quantile: 0.01
@@ -33,120 +33,100 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 12.0
+  value: 13.0
 }
 int_values {
-  count: 28430
+  count: 598
 }
 int_values {
   value: 1
-  count: 120023
+  count: 2485
 }
 int_values {
   value: 2
-  count: 269117
+  count: 5959
 }
 int_values {
   value: 3
-  count: 378522
+  count: 8058
 }
 int_values {
   value: 4
-  count: 414637
+  count: 8999
 }
 int_values {
   value: 5
-  count: 353840
+  count: 7919
 }
 int_values {
   value: 6
-  count: 265470
+  count: 5898
 }
 int_values {
   value: 7
-  count: 168532
+  count: 3898
 }
 int_values {
   value: 8
-  count: 104820
+  count: 2458
 }
 int_values {
   value: 9
-  count: 58826
+  count: 1404
 }
 int_values {
   value: 10
-  count: 36122
+  count: 871
 }
 int_values {
   value: 11
-  count: 21783
+  count: 579
 }
 int_values {
   value: 12
-  count: 14077
+  count: 359
 }
 int_values {
   value: 13
-  count: 8074
+  count: 206
 }
 int_values {
   value: 14
-  count: 5154
+  count: 128
 }
 int_values {
   value: 15
-  count: 2777
+  count: 87
 }
 int_values {
   value: 16
-  count: 1643
+  count: 43
 }
 int_values {
   value: 17
-  count: 809
+  count: 23
 }
 int_values {
   value: 18
-  count: 467
+  count: 16
 }
 int_values {
   value: 19
-  count: 159
+  count: 8
 }
 int_values {
   value: 20
-  count: 100
+  count: 1
 }
 int_values {
   value: 21
-  count: 52
+  count: 1
 }
 int_values {
   value: 22
-  count: 34
-}
-int_values {
-  value: 23
-  count: 15
+  count: 1
 }
 int_values {
   value: 24
-  count: 15
-}
-int_values {
-  value: 25
-  count: 5
-}
-int_values {
-  value: 26
-  count: 3
-}
-int_values {
-  value: 27
-  count: 2
-}
-int_values {
-  value: 28
-  count: 2
+  count: 1
 }

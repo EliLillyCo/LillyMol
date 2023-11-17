@@ -2,11 +2,11 @@ description {
   feature_name: "w_maxdrng"
   description: "Max distance between any two rings"
   plot_title: "Max distance between any two rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 41.0
-mean: 11.505899
+maxval: 38.0
+mean: 11.63658
 median: 12.0
 quantile {
   quantile: 0.01
@@ -37,165 +37,145 @@ quantile {
   value: 22.0
 }
 int_values {
-  count: 21049
+  count: 453
 }
 int_values {
   value: 1
-  count: 1246
+  count: 32
 }
 int_values {
   value: 2
-  count: 21961
+  count: 468
 }
 int_values {
   value: 3
-  count: 84863
+  count: 1836
 }
 int_values {
   value: 4
-  count: 30681
+  count: 635
 }
 int_values {
   value: 5
-  count: 41467
+  count: 911
 }
 int_values {
   value: 6
-  count: 56523
+  count: 1217
 }
 int_values {
   value: 7
-  count: 94016
+  count: 2026
 }
 int_values {
   value: 8
-  count: 144283
+  count: 3220
 }
 int_values {
   value: 9
-  count: 196119
+  count: 4114
 }
 int_values {
   value: 10
-  count: 205511
+  count: 4380
 }
 int_values {
   value: 11
-  count: 219075
+  count: 4689
 }
 int_values {
   value: 12
-  count: 223962
+  count: 5045
 }
 int_values {
   value: 13
-  count: 203117
+  count: 4704
 }
 int_values {
   value: 14
-  count: 183199
+  count: 4093
 }
 int_values {
   value: 15
-  count: 146786
+  count: 3259
 }
 int_values {
   value: 16
-  count: 119096
+  count: 2695
 }
 int_values {
   value: 17
-  count: 86110
+  count: 2028
 }
 int_values {
   value: 18
-  count: 60315
+  count: 1443
 }
 int_values {
   value: 19
-  count: 41704
+  count: 1004
 }
 int_values {
   value: 20
-  count: 26595
+  count: 654
 }
 int_values {
   value: 21
-  count: 17148
+  count: 384
 }
 int_values {
   value: 22
-  count: 9920
+  count: 233
 }
 int_values {
   value: 23
-  count: 6834
+  count: 164
 }
 int_values {
   value: 24
-  count: 4198
+  count: 113
 }
 int_values {
   value: 25
-  count: 2688
+  count: 71
 }
 int_values {
   value: 26
-  count: 1890
+  count: 54
 }
 int_values {
   value: 27
-  count: 1232
+  count: 29
 }
 int_values {
   value: 28
-  count: 592
+  count: 17
 }
 int_values {
   value: 29
-  count: 524
+  count: 9
 }
 int_values {
   value: 30
-  count: 207
-}
-int_values {
-  value: 31
-  count: 275
-}
-int_values {
-  value: 32
-  count: 76
-}
-int_values {
-  value: 33
-  count: 127
-}
-int_values {
-  value: 34
-  count: 25
-}
-int_values {
-  value: 35
-  count: 63
-}
-int_values {
-  value: 36
-  count: 6
-}
-int_values {
-  value: 37
   count: 7
 }
 int_values {
+  value: 31
+  count: 7
+}
+int_values {
+  value: 32
+  count: 1
+}
+int_values {
+  value: 33
+  count: 3
+}
+int_values {
+  value: 35
+  count: 1
+}
+int_values {
   value: 38
-  count: 4
-}
-int_values {
-  value: 39
-  count: 12
-}
-int_values {
-  value: 41
-  count: 4
+  count: 1
 }

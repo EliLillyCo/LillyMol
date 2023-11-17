@@ -21,14 +21,20 @@ from tempfile import NamedTemporaryFile, mkdtemp
 log = logging.getLogger('lilly.' + __name__)
 log.addHandler(logging.NullHandler())
 
+try:
+    home_dir = os.environ['C3TK_HOME']
+except KeyError:
+    home_dir = os.environ['LILLYMOL_HOME']
+except KeyError:
+    sys.exit("Failed to identify home dir, please set C3TK_HOME or LILLYMOL_HOME")
+    
 build_dir = 'Linux'
 
 try:
-      build_dir = os.environ['BUILD_DIR']
-except EnvironmentError:
-     pass
+    build_dir = os.environ['BUILD_DIR']
+except KeyError:
+    pass
 
-home_dir = os.environ['LILLYMOL_HOME']
 root_dir = home_dir + '/bin/' + build_dir
 
 # dictionary of commands that will be turned into functions

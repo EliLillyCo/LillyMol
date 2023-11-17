@@ -37,6 +37,9 @@ Usage(int rc) {
  -X <fname>  XLogP::XlogpParameters text proto with updated fragment contribution values.
  -J ...      fingerprint output, enter '-J help' for info
  -f          function as a TDT filter
+ -y          display atom assignments - helpful for debugging
+ -p <n>      number of bit replicates when generating fingerprint
+ -Y ...      other options, enter '-Y help' for info
  -v          verbose output
 )";
 // clang-format on
@@ -62,7 +65,7 @@ class Options {
     // Not a part of all applications, just an example...
     Element_Transformations _element_transformations;
 
-    int _molecles_read = 0;
+    int _molecules_read = 0;
     int _successful_calculations = 0;
     int _failed_calculations = 0;
 
@@ -77,9 +80,16 @@ class Options {
     IWString_and_File_Descriptor _stream_for_failed_calculations;
 
     IWString _smiles_tag;
+    IWString _identifier_tag;
     IWString _xlogp_tag;
+    int _bit_replicates;
 
     int _function_as_tdt_filter;
+
+    int _flush_after_every_molecule;
+
+    Accumulator<double> _acc;
+    extending_resizable_array<int> _bucket;
 
     // Private functions
     int ProcessSuccessfulCalculation(Molecule& m, const int* status,
@@ -88,6 +98,11 @@ class Options {
     int ProcessFailedCalculaton(Molecule& m, const int* status);
 
     int PerformAnyFirstMoleculeRelated(IWString_and_File_Descriptor& output);
+
+    void UpdateBucket(double result);
+    int WriteFingerprint(Molecule& m,
+                         const Sparse_Fingerprint_Creator& sfc,
+                         IWString_and_File_Descriptor& output);
 
   public:
     Options();
@@ -106,6 +121,9 @@ class Options {
     int function_as_tdt_filter() const {
       return _function_as_tdt_filter;
     }
+    int flush_after_every_molecule() const {
+      return _flush_after_every_molecule;
+    }
 
     // After each molecule is read, but before any processing
     // is attempted, do any preprocessing transformations.
@@ -122,8 +140,24 @@ Options::Options() {
   _reduce_to_largest_fragment = 1;
   _remove_chirality = 0;
   _smiles_tag = "$SMI<";
+  _identifier_tag = "PCN<";
   _xlogp_tag = "NCXLOGP<";
   _function_as_tdt_filter = 0;
+  _bit_replicates = 9;  // same default as clogp
+  _flush_after_every_molecule = 0;
+}
+
+void
+DisplayDashJOptions(std::ostream& output) {
+  output << " -J <tag>          tag for fingerprints\n";
+  output << " -J rep=<n>        number of bit replicates\n";
+  ::exit(0);
+}
+
+void
+DisplayDashYOptions(std::ostream& output) {
+  output << " -Y flush          flush output after each molecule\n";
+  ::exit(0);
 }
 
 int
@@ -157,13 +191,42 @@ Options::Initialise(Command_Line& cl) {
   }
 
   if (cl.option_present('J')) {
-    const_IWSubstring j;
-    for (int i = 0; cl.value('j', i); ++i) {
+    cl.value('J', _xlogp_tag);
+
+    _xlogp_tag.EnsureEndsWith('<');
+
+    _produce_descriptor_file = 0;
+  }
+
+  if (cl.option_present('p')) {
+    if (! cl.value('p', _bit_replicates) || _bit_replicates < 1) {
+      cerr << "The bit replicates (-p) option must be a while +ve integer\n";
+      return 0;
     }
+
+    _produce_descriptor_file = 0;
   }
 
   if (cl.option_present('f')) {
     _function_as_tdt_filter = 1;
+    _produce_descriptor_file = 0;
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "help") {
+        DisplayDashYOptions(cerr);
+      } else if (y == "flush") {
+        _flush_after_every_molecule = 1;
+        if (_verbose) {
+          cerr << "Will flush after each molecule read\n";
+        }
+      } else {
+        cerr << "Unrecognised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions(cerr);
+      }
+    }
   }
 
   if (cl.option_present('U')) {
@@ -184,9 +247,40 @@ Options::Initialise(Command_Line& cl) {
 }
 
 int
+IstopLastZero(const extending_resizable_array<int>& values) {
+  int rc = 0;
+  for (int i = 0; i < values.number_elements(); ++i) {
+    if (values[i] > 0) {
+      rc = i + 1;
+    }
+  }
+
+  return rc;
+}
+
+int
 Options::Report(std::ostream& output) const {
-  output << "Read " << _molecles_read << " molecules\n";
-  output << _successful_calculations << " successful " << _failed_calculations << " failed\n";
+  output << "Read " << _molecules_read << " molecules\n";
+  if (_molecules_read == 0) {
+    return 1;
+  }
+
+  output << _acc.n() << " successful " << _failed_calculations << " failed\n";
+  output << "Values btw " << _acc.minval() << " and " << _acc.maxval() <<
+            " mean " << static_cast<float>(_acc.average()) << '\n';
+
+  const int bstop = IstopLastZero(_bucket);
+  uint32_t tot = 0;
+  for (int i = 0; i < bstop; ++i) {
+    tot += _bucket[i];
+  }
+
+  constexpr char kTab = '\t';
+  output << "xlogp" << kTab << 'N' << kTab << "Fraction\n";
+  for (int i = 0; i < bstop; ++i) {
+    output << (-5 + i) << kTab << _bucket[i] << kTab <<
+           static_cast<float>(_bucket[i]) / static_cast<float>(tot) << '\n';
+  }
 
   for (const auto& [smt, count] : _failed) {
     output << count << " failed " << smt << '\n';
@@ -238,12 +332,64 @@ AppendSpaceSuppressedName(const IWString& name,
   }
 }
 
+// copied from clogp2descriptors_biobyte
+int
+convert_computed_to_positive_int(float f) {
+  int rc = static_cast<int>(f + 5.4999F);
+
+  if (rc <= 0) {
+    return 1;
+  } else {
+    return rc;
+  }
+}
+
+int
+Options::WriteFingerprint(Molecule& m,
+                          const Sparse_Fingerprint_Creator& sfc,
+                          IWString_and_File_Descriptor& output) {
+  if (! _function_as_tdt_filter) {
+    output << _smiles_tag << m.smiles() << ">\n";
+    output << _identifier_tag << m.name() << ">\n";
+  }
+
+  IWString tmp;
+  sfc.daylight_ascii_form_with_counts_encoded(_xlogp_tag, tmp);
+
+  output << tmp << '\n';
+
+  if (!_function_as_tdt_filter) {
+    output << "|\n";
+  }
+
+  return 1;
+}
+
+// Increment a position in _bucket based on `result`.
+// Note that we arbitrarily truncate the range to [-5,10].
+void
+Options::UpdateBucket(double result) {
+  int bucket;
+  if (result < -5.0) {
+    bucket = 0;
+  } else if (result >= 10.0) {
+    bucket = 15;
+  } else {
+    bucket = static_cast<int>(result + 5.0 + 0.49999);
+  }
+
+  ++_bucket[bucket];
+}
+
 int
 Options::ProcessSuccessfulCalculation(Molecule& m,
                 const int* status,
                 double result,
                 IWString_and_File_Descriptor& output) {
   ++_successful_calculations;
+  _acc.extra(result);
+
+  UpdateBucket(result);
 
   if (_produce_descriptor_file) {
     AppendSpaceSuppressedName(m.name(), output);
@@ -252,10 +398,14 @@ Options::ProcessSuccessfulCalculation(Molecule& m,
     return 1;
   }
 
-  if (_function_as_tdt_filter) {
+  int int_logp = convert_computed_to_positive_int(result);
+
+  Sparse_Fingerprint_Creator sfc;
+  for (int i = 0; i < _bit_replicates; ++i) {
+    sfc.hit_bit(i, int_logp);
   }
 
-  return 1;
+  return WriteFingerprint(m, sfc, output);
 }
 
 int
@@ -302,11 +452,11 @@ Options::PerformAnyFirstMoleculeRelated(IWString_and_File_Descriptor& output) {
 
 int
 Options::Process(Molecule& m, IWString_and_File_Descriptor& output) {
-  if (_molecles_read == 0) {
+  if (_molecules_read == 0) {
     PerformAnyFirstMoleculeRelated(output);
   }
 
-  ++_molecles_read;
+  ++_molecules_read;
 
   std::unique_ptr<int[]> status(new_int(m.natoms()));
   std::optional<double> x = XLogP(m, status.get());
@@ -382,6 +532,10 @@ XlogPCalculation(Options& options,
     if (! XlogPCalculationRecord(options, buffer, output)) {
       return 0;
     }
+
+    if (options.flush_after_every_molecule()) {
+      output.flush();
+    }
   }
 
   return 1;
@@ -424,7 +578,7 @@ XlogPCalculation(Options& options,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:H:N:T:A:lcg:i:fJ:U:X:y");
+  Command_Line cl(argc, argv, "vE:H:N:T:A:lcg:i:fJ:U:X:yY:p:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -508,6 +662,7 @@ Main(int argc, char** argv) {
   }
 
   if (verbose) {
+    output.flush();
     options.Report(cerr);
   }
 

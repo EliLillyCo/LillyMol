@@ -304,7 +304,7 @@ class IWStandard_Current_Molecule
 #define CS_REVERSE_NV5 "rvnv5"
 #define CS_ISOXAZOLE  "isoxazole"
 #define CS_ARGUAN "arguan"
-#define CS_PYRAZOLONE "pirazolone"
+#define CS_PYRAZOLONE "pyrazolone"
 #define CS_AMINO_THIAZOLE "aminothazole"
 #define CS_KETO_ENOL "keto_enol"
 #define CS_4_PYRIDONE "4-pyridone"

@@ -111,7 +111,7 @@ usage(int rc) {
   // clang-format on
   // clang-format off
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
-  cerr << "Interface to corina36\n";
+  cerr << "Interface to corina\n";
   cerr << "  -d ...        options passed to corina\n";
   cerr << "  -x            if a 3D structure is not generated, remove chiral centres\n";
   cerr << "  -r <number>   number of random smiles to try\n";

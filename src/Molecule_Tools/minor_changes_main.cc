@@ -21,7 +21,6 @@ namespace minor_changes_main {
 
 using std::cerr;
 
-// By convention the Usage function tells how to use the tool.
 void
 Usage(int rc) {
 // clang-format off

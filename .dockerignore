@@ -1,0 +1,4 @@
+# Exclude all unnecessary folders from docker
+docs/
+example/
+test/

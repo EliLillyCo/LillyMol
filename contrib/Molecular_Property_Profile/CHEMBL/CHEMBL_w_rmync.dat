@@ -2,12 +2,12 @@ description {
   feature_name: "w_rmync"
   description: "Number of Carbon atoms"
   plot_title: "Number of Carbon atoms"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
 minval: 1.0
 maxval: 48.0
-mean: 20.47408
+mean: 20.7779
 median: 20.0
 quantile {
   quantile: 0.01
@@ -31,7 +31,7 @@ quantile {
 }
 quantile {
   quantile: 0.95
-  value: 31.0
+  value: 32.0
 }
 quantile {
   quantile: 0.99
@@ -39,193 +39,185 @@ quantile {
 }
 int_values {
   value: 1
-  count: 73
+  count: 2
 }
 int_values {
   value: 2
-  count: 317
+  count: 9
 }
 int_values {
   value: 3
-  count: 836
+  count: 17
 }
 int_values {
   value: 4
-  count: 1914
+  count: 52
 }
 int_values {
   value: 5
-  count: 3163
+  count: 59
 }
 int_values {
   value: 6
-  count: 6325
+  count: 142
 }
 int_values {
   value: 7
-  count: 8538
+  count: 164
 }
 int_values {
   value: 8
-  count: 13530
+  count: 317
 }
 int_values {
   value: 9
-  count: 20796
+  count: 420
 }
 int_values {
   value: 10
-  count: 32252
+  count: 709
 }
 int_values {
   value: 11
-  count: 42173
+  count: 889
 }
 int_values {
   value: 12
-  count: 57473
+  count: 1204
 }
 int_values {
   value: 13
-  count: 72992
+  count: 1532
 }
 int_values {
   value: 14
-  count: 92191
+  count: 1954
 }
 int_values {
   value: 15
-  count: 112475
+  count: 2374
 }
 int_values {
   value: 16
-  count: 129072
+  count: 2651
 }
 int_values {
   value: 17
-  count: 143102
+  count: 3050
 }
 int_values {
   value: 18
-  count: 152966
+  count: 3273
 }
 int_values {
   value: 19
-  count: 154815
+  count: 3427
 }
 int_values {
   value: 20
-  count: 155349
+  count: 3439
 }
 int_values {
   value: 21
-  count: 144524
+  count: 3108
 }
 int_values {
   value: 22
-  count: 137056
+  count: 3048
 }
 int_values {
   value: 23
-  count: 123012
+  count: 2740
 }
 int_values {
   value: 24
-  count: 111507
+  count: 2486
 }
 int_values {
   value: 25
-  count: 96358
+  count: 2280
 }
 int_values {
   value: 26
-  count: 83742
+  count: 1905
 }
 int_values {
   value: 27
-  count: 69777
+  count: 1615
 }
 int_values {
   value: 28
-  count: 58736
+  count: 1472
 }
 int_values {
   value: 29
-  count: 46945
+  count: 1143
 }
 int_values {
   value: 30
-  count: 41768
+  count: 1021
 }
 int_values {
   value: 31
-  count: 30474
+  count: 754
 }
 int_values {
   value: 32
-  count: 25741
+  count: 641
 }
 int_values {
   value: 33
-  count: 19821
+  count: 463
 }
 int_values {
   value: 34
-  count: 16694
+  count: 422
 }
 int_values {
   value: 35
-  count: 12721
+  count: 329
 }
 int_values {
   value: 36
-  count: 11098
+  count: 288
 }
 int_values {
   value: 37
-  count: 7667
+  count: 202
 }
 int_values {
   value: 38
-  count: 5915
+  count: 168
 }
 int_values {
   value: 39
-  count: 3544
+  count: 85
 }
 int_values {
   value: 40
-  count: 2747
+  count: 60
 }
 int_values {
   value: 41
-  count: 1293
+  count: 32
 }
 int_values {
   value: 42
-  count: 973
+  count: 28
 }
 int_values {
   value: 43
-  count: 444
+  count: 14
 }
 int_values {
   value: 44
-  count: 349
-}
-int_values {
-  value: 45
-  count: 101
+  count: 8
 }
 int_values {
   value: 46
-  count: 135
-}
-int_values {
-  value: 47
-  count: 6
+  count: 3
 }
 int_values {
   value: 48
-  count: 10
+  count: 1
 }

@@ -47,7 +47,7 @@ static int first_token_of_name_only = 1;
 
 static int equal_weight_tanimoto = 0;
 
-static similarity_type_t singleton_threshold = std::numeric_limits<similarity_type_t>::max();
+// static similarity_type_t singleton_threshold = std::numeric_limits<similarity_type_t>::max();
 
 static void
 usage(int rc)

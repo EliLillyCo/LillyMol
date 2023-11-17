@@ -22,6 +22,13 @@ fi
 # Adjust to local resource availability.
 jobs='8'
 
+declare -i inside_lilly
+if [[ $(hostname -d) =~ 'lilly.com' ]] ; then
+  inside_lilly=1
+else
+  inside_lilly=0
+fi
+
 # Options that are used by all bazelisk invocations.
 
 # bazel will not work on an NFS mounted file system. So if you are on an NFS
@@ -30,7 +37,7 @@ jobs='8'
 # Note that the bazel cache can get quite large, 1-2GB.
 
 # If inside Lilly, some local scratch storage
-if [[ $(hostname -d) =~ 'lilly.com' && -d '/node/scratch' ]] ; then
+if [[ ${inside_lilly} -eq 1 && -d '/node/scratch' ]] ; then
   bazel_options="--output_user_root=/node/scratch/${USER}"
 elif [[ $(df -TP ${HOME}) =~ 'nfs' ]] ; then
   echo "Your HOME dir is an NFS mounted file system. bazel will not work."
@@ -49,7 +56,6 @@ if [[ ! -v BUILD_BDB ]] ; then
 fi
 
 # First task is unit tests
-set -x
 
 ${bazel} ${bazel_options} test ${build_options} Foundational/...:all
 ${bazel} ${bazel_options} test ${build_options} Molecule_Lib:all
@@ -66,10 +72,18 @@ fi
 # Once the tests run, then executables can be built.
 # donor_acceptor_test frequently fails due to lack of supporting files.
 
-echo "Building tools"
-${bazel} ${bazel_options} build ${build_options} Molecule_Tools:all
-${bazel} ${bazel_options} build ${build_options} Foundational/iw_tdt:all
-${bazel} ${bazel_options} build ${build_options} Utilities/...:all
+if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
+  echo "Building tools"
+  ${bazel} ${bazel_options} build ${build_options} Molecule_Tools:all
+  ${bazel} ${bazel_options} build ${build_options} Obsolete:all
+  ${bazel} ${bazel_options} build ${build_options} Obsolete/Descriptor_Similarity:all
+  ${bazel} ${bazel_options} build ${build_options} Foundational/iw_tdt:all
+  ${bazel} ${bazel_options} build ${build_options} Utilities/...:all
+fi
+
+if [[ ${inside_lilly} -eq 1 || -v BUILD_VENDOR ]] ; then
+  ${bazel} ${bazel_options} build ${build_options} Vendor/...:all
+fi
 
 if [[ -v BUILD_BDB ]] ; then
   ${bazel} ${bazel_options} build ${build_options} BerkeleyDB:all
@@ -78,12 +92,22 @@ fi
 
 # Now install the targets
 
-echo "Installing tools"
-${bazel} ${bazel_options} run ${build_options} Foundational/iw_tdt:install
-${bazel} ${bazel_options} run ${build_options} Molecule_Tools:install
-${bazel} ${bazel_options} run ${build_options} Utilities/General:install
-${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Tools:install
-${bazel} ${bazel_options} run ${build_options} Utilities/Distance_Matrix:install
+if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
+  echo "Installing tools"
+  ${bazel} ${bazel_options} run ${build_options} Foundational/iw_tdt:install
+  ${bazel} ${bazel_options} run ${build_options} Molecule_Tools:install
+  ${bazel} ${bazel_options} run ${build_options} Obsolete:install
+  ${bazel} ${bazel_options} run ${build_options} Obsolete/Descriptor_Similarity:install
+  ${bazel} ${bazel_options} run ${build_options} Utilities/General:install
+  ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Tools:install
+  ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Knn:install
+  ${bazel} ${bazel_options} run ${build_options} Utilities/Distance_Matrix:install
+fi
+
+if [[ ${inside_lilly} -eq 1 || -v BUILD_VENDOR ]] ; then
+  ${bazel} ${bazel_options} run ${build_options} Vendor:install
+fi
+
 if [[ -v BUILD_BDB ]] ; then
   ${bazel} ${bazel_options} run ${build_options} BerkeleyDB:install
   ${bazel} ${bazel_options} run ${build_options} Molecule_Tools_Bdb:install
@@ -96,10 +120,4 @@ fi
 if [[ -v BUILD_PYTHON ]] ; then
   ${bazel} ${bazel_options} build ${build_options} pybind:all
   ./copy_shared_libraries.sh ../lib
-
-  if [[ -s "../lib/lillymol.so" ]] ; then
-    ./run_python_unit_tests.sh
-  else
-    echo "Python shared libraries not found"
-  fi
 fi

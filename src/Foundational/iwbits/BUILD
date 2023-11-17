@@ -57,9 +57,6 @@ cc_test(
     srcs = [
         "fixed_bit_vector_test.cc",
     ],
-    linkopts = [
-        "-lz",
-    ],
     deps = [
         ":iwbits",
         "@googletest//:gtest",

@@ -2,11 +2,11 @@ description {
   feature_name: "w_nrings"
   description: "Number of rings"
   plot_title: "Number of rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
 maxval: 13.0
-mean: 3.4409587
+mean: 3.48112
 median: 3.0
 quantile {
   quantile: 0.01
@@ -37,57 +37,53 @@ quantile {
   value: 7.0
 }
 int_values {
-  count: 21049
+  count: 453
 }
 int_values {
   value: 1
-  count: 107060
+  count: 2311
 }
 int_values {
   value: 2
-  count: 375727
+  count: 8182
 }
 int_values {
   value: 3
-  count: 693608
+  count: 14912
 }
 int_values {
   value: 4
-  count: 626586
+  count: 13961
 }
 int_values {
   value: 5
-  count: 306660
+  count: 7204
 }
 int_values {
   value: 6
-  count: 93280
+  count: 2256
 }
 int_values {
   value: 7
-  count: 22744
+  count: 560
 }
 int_values {
   value: 8
-  count: 5440
+  count: 136
 }
 int_values {
   value: 9
-  count: 1013
+  count: 18
 }
 int_values {
   value: 10
-  count: 188
-}
-int_values {
-  value: 11
-  count: 64
+  count: 5
 }
 int_values {
   value: 12
-  count: 39
+  count: 1
 }
 int_values {
   value: 13
-  count: 52
+  count: 1
 }

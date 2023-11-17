@@ -6,7 +6,6 @@
 #include <iostream>
 #include <limits>
 #include <memory>
-using std::numeric_limits;
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
@@ -16,7 +15,6 @@ using std::numeric_limits;
 #include "Foundational/iwmisc/sparse_fp_creator.h"
 
 using std::cerr;
-using std::endl;
 
 const char * prog_name = nullptr;
 
@@ -38,7 +36,7 @@ static int * numeric_value = nullptr;
 
 static IWString missing_value('.');
 
-static int truncate_large_values = numeric_limits<int>::max();
+static int truncate_large_values = std::numeric_limits<int>::max();
 
 static int strip_leading_zeros_from_identifiers = 0;
 
@@ -166,7 +164,7 @@ descriptor_file_to_01_fingerprints_record (const const_IWSubstring & buffer,
 {
   if (columns_in_input != buffer.nwords())
   {
-    cerr << "Column count mismatch, got" << buffer.nwords() << " expected " << columns_in_input << endl;
+    cerr << "Column count mismatch, got" << buffer.nwords() << " expected " << columns_in_input << '\n';
     return 0;
   }
 
@@ -228,7 +226,7 @@ descriptor_file_to_01_fingerprints_main (iwstring_data_source & input,
 
     if (! descriptor_file_to_01_fingerprints_record (buffer, output))
     {
-      cerr << "Fatal error processing line " << input.lines_read() << endl;
+      cerr << "Fatal error processing line " << input.lines_read() << '\n';
       cerr << "'" << buffer << "'\n";
       return 0;
     }
@@ -268,7 +266,7 @@ descriptor_file_to_01_fingerprints (iwstring_data_source & input,
       nbits = ( (c / 8) * 8 + 8);
 
     if (verbose)
-      cerr << "Found " << c << " columns in input, nbits = " << nbits << endl;
+      cerr << "Found " << c << " columns in input, nbits = " << nbits << '\n';
 
     numeric_value = new int[nbits];
   }
@@ -276,7 +274,7 @@ descriptor_file_to_01_fingerprints (iwstring_data_source & input,
     ;
   else
   {
-    cerr << "Column count mismatch, got " << c << " expected " << columns_in_input << endl;
+    cerr << "Column count mismatch, got " << c << " expected " << columns_in_input << '\n';
     return 0;
   }
 
@@ -451,7 +449,7 @@ read_descriptor_file_record (const const_IWSubstring & buffer,
 {
   if (columns_in_input != buffer.nwords())
   {
-    cerr << "Column count mismatch, got" << buffer.nwords() << " expected " << columns_in_input << endl;
+    cerr << "Column count mismatch, got" << buffer.nwords() << " expected " << columns_in_input << '\n';
     return 0;
   }
 
@@ -568,7 +566,7 @@ descriptor_file_to_01_fingerprints (int argc, char ** argv)
 
   verbose = cl.option_count('v');
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage (2);

@@ -85,6 +85,10 @@ class __attribute__((visibility("default"))) Atom : public resizable_array<Bond*
 
   int is_isotope() const;
 
+  int is_organic() const {
+    return _element->organic();
+  }
+
   int userAtomType() const {
     return _userAtomType;
   }

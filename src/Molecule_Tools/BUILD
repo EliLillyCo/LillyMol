@@ -15,7 +15,12 @@ local_install(
         ":dbf",
         ":dicer",
         ":echoqry",
+        ":echorxn",
+        ":ec_fingerprint",
         ":extended_atom_pairs",
+        ":ez_descriptor",
+        ":ez_fingerprint",
+        ":ez_fingerprint_v2",
         ":fileconv",
         ":fingerprint_substructure",
         ":firstatom",
@@ -41,6 +46,7 @@ local_install(
         ":jwmolconn",
         ":jwmorse",
         ":jwsadb",
+        ":linear_fingerprint",
         ":long_molecules",
         ":maccskeys",
         ":make_these_molecules",
@@ -59,7 +65,8 @@ local_install(
         ":msort",
         ":msort_parallel",
         ":numbered_smiles",
-        ":pharmacaphore_2d",
+        ":overlapping_fragment_model",
+        ":pharmacophore_2d",
         ":preferred_smiles",
         ":psafp",
         ":pubchem_fingerprints",
@@ -201,6 +208,13 @@ cc_proto_library(
     ],
 )
 
+py_proto_library(
+    name = "iwdescr_py_proto",
+    srcs = [
+        ":iwdescr.proto",
+    ],
+)
+
 proto_library(
     name = "make_these_molecules_proto",
     srcs = [
@@ -331,7 +345,7 @@ proto_library(
         "replacement_ring.proto",
     ],
 )
-    
+
 cc_proto_library(
     name = "replacement_ring_cc_proto",
     deps = [
@@ -348,7 +362,7 @@ cc_proto_library(
 #         "//Molecule_Lib:substructure_proto",
 #     ],
 # )
-# 
+#
 # cc_proto_library(
 #     name = "tsubstructure_cc_proto",
 #     deps = [
@@ -370,6 +384,12 @@ cc_proto_library(
     ],
 )
 
+py_proto_library(
+    name = "xlogp_py_proto",
+    srcs = [
+        "xlogp.proto",
+    ],
+)
 cc_binary(
     name = "abraham",
     srcs = [
@@ -567,6 +587,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "echorxn",
+    srcs = [
+        "echorxn.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:iwreaction",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
     name = "element_density",
     srcs = [
         "element_density.cc",
@@ -601,6 +634,46 @@ cc_binary(
         "//Molecule_Lib:iwmfingerprint",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "ez_descriptor",
+    srcs = [
+        "ez_descriptor.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "ez_fingerprint",
+    srcs = [
+        "ez_fingerprint.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "ez_fingerprint_v2",
+    srcs = [
+        "ez_fingerprint_v2.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Utilities/GFP_Tools:gfp",
     ],
 )
 
@@ -1096,6 +1169,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "molecule_pca",
+    srcs = [
+        "molecule_pca.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/jama:jama",
+        "//Foundational/tnt:tnt",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ]
+)
+
+cc_binary(
     name = "molecule_subset",
     srcs = [
         "molecule_subset.cc",
@@ -1186,9 +1273,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "pharmacaphore_2d",
+    name = "pharmacophore_2d",
     srcs = [
-        "pharmacaphore_2d.cc",
+        "pharmacophore_2d.cc",
     ],
     deps = [
         "//Foundational/cmdline:iwcmdline",
@@ -1236,6 +1323,18 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
     ],
+)
+
+cc_binary(
+    name = "overlapping_fragment_model",
+    srcs = [
+        "overlapping_fragment_model.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ]
 )
 
 cc_binary(
@@ -1756,10 +1855,10 @@ cc_binary(
         "//Molecule_Lib:moleculeio",
     ],
 )
-cc_binary(  
-    name = "substituent_model",  
+cc_binary(
+    name = "substituent_model",
     srcs = [
-        "substituent_model.cc",  
+        "substituent_model.cc",
     ],
     deps = [
         "//Foundational/cmdline:iwcmdline",

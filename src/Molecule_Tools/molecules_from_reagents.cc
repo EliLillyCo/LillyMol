@@ -841,7 +841,7 @@ replace_atoms_with_isotopes(resizable_array_p<T> & m,
 
   for (unsigned int i = 0; i < n; ++i)
   {
-    T & mi = *(m[i]);
+    //T & mi = *(m[i]);
 
     if (! replace_atoms_with_isotopes(*(m[i]), e))
     {

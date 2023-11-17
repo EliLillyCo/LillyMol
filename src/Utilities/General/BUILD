@@ -10,7 +10,6 @@ local_install(
         ":byte_offset_index",
         ":class_label_translation",
         ":concat_files",
-        ":concat_files_large_memory",
         ":correlate",
         ":descriptor_file_cat",
         ":descriptor_file_filter",
@@ -21,8 +20,8 @@ local_install(
         ":descriptors_to_fingerprint",
         ":dfilefilter",
         ":difference_sort",
-        ":diff_line_by_line",
         ":distribution",
+        ":exon_correlated",
         ":feature_scaling",
         ":fetch_sdf",
         ":fetch_sdf_quick",
@@ -31,9 +30,11 @@ local_install(
         ":grep_by_column",
         ":grid_overlap",
         ":_inventory",
+        ":isolation_forest",
         ":iwcut",
         ":iwsplit",
         ":jfilecompare",
+        ":just_columns_with_same_sign",
         ":kstat_correlated",
         ":mispredicted",
         ":model_average",
@@ -41,14 +42,16 @@ local_install(
         ":normalise",
         ":notenoughvariance",
         ":numeric_differences",
+        ":nn_single_linkage",
+        ":ppv",
         ":random_records",
-        ":rearrange_columns",
         ":rmsigma",
         ":running_average",
         ":shuffle_file",
         ":spearman_rank",
         ":stratified_samples",
         ":svm_lite_to_gfp",
+        ":svmfp_error_vs_distance",
         ":tcount",
         ":test_train_split_classification",
         ":test_train_split_cluster",
@@ -182,19 +185,6 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "diff_line_by_line",
-    srcs = [
-        "diff_line_by_line.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc",
-    ],
-)
-
 proto_library(
     name = "feature_scaling_proto",
     srcs = [
@@ -272,19 +262,6 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
-    ],
-)
-
-cc_binary(
-    name = "concat_files_large_memory",
-    srcs = [
-        "concat_files_large_memory.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
     ],
 )
 
@@ -504,6 +481,40 @@ cc_binary(
 )
 
 cc_binary(
+    name = "exon_correlated",
+    srcs = [
+        "exon_correlated.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwqsort:iwqsort",
+    ],
+)
+
+cc_binary(
+    name = "isolation_forest",
+    srcs = [
+        "isolation_forest.cc",
+    ],
+    copts = [
+        "-fopenmp",
+    ],
+    linkopts = [
+        "-lgomp",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwbits:iwbits",
+        "//Foundational/iwmisc:iwmisc",
+    ],
+)
+
+cc_binary(
     name = "iwsplit",
     srcs = [
         "iwsplit.cc",
@@ -540,6 +551,19 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
+    ],
+)
+
+cc_binary(
+    name = "just_columns_with_same_sign",
+    srcs = [
+        "just_columns_with_same_sign.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
     ],
 )
 
@@ -598,6 +622,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "nn_single_linkage",
+    srcs = [
+        "nn_single_linkage.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+    ],
+)
+
+cc_binary(
     name = "normalise",
     srcs = [
         "iwtokeniser.cc",
@@ -638,25 +675,25 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "ppv",
+    srcs = [
+        "ppv.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:activity_from_file",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwqsort:iwqsort",
+    ],
+)
 
 cc_binary(
     name = "random_records",
     srcs = [
         "random_records.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc",
-        "//Foundational/iwstring",
-    ],
-)
-
-cc_binary(
-    name = "rearrange_columns",
-    srcs = [
-        "rearrange_columns.cc",
     ],
     deps = [
         "//Foundational/accumulator",
@@ -750,6 +787,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "svmfp_error_vs_distance",
+    srcs = [
+        "svmfp_error_vs_distance.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:activity_from_file",
+        "//Foundational/iwmisc:iwmisc",
+    ],
+)
+
+cc_binary(
     name = "tcount",
     srcs = [
         "tcount.cc",
@@ -789,19 +840,6 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwbits",
-        "//Foundational/iwmisc",
-    ],
-)
-
-cc_binary(
-    name = "test_train_split_from_leader",
-    srcs = [
-        "test_train_split_from_leader.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
     ],
 )
@@ -861,19 +899,6 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
-    ],
-)
-
-cc_binary(
-    name = "zero_pad",
-    srcs = [
-        "zero_pad.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
     ],
 )
 

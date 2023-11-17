@@ -2,11 +2,11 @@ description {
   feature_name: "w_aiercsct"
   description: "Atoms in conjugated sections"
   plot_title: "Atoms in conjugated sections"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 50.0
-mean: 20.601805
+maxval: 48.0
+mean: 20.86566
 median: 21.0
 quantile {
   quantile: 0.01
@@ -26,7 +26,7 @@ quantile {
 }
 quantile {
   quantile: 0.9
-  value: 29.0
+  value: 30.0
 }
 quantile {
   quantile: 0.95
@@ -37,205 +37,197 @@ quantile {
   value: 37.0
 }
 int_values {
-  count: 528
+  count: 13
 }
 int_values {
   value: 1
-  count: 1186
+  count: 29
 }
 int_values {
   value: 2
-  count: 2182
+  count: 54
 }
 int_values {
   value: 3
-  count: 4196
+  count: 99
 }
 int_values {
   value: 4
-  count: 7392
+  count: 167
 }
 int_values {
   value: 5
-  count: 9625
+  count: 194
 }
 int_values {
   value: 6
-  count: 12802
+  count: 272
 }
 int_values {
   value: 7
-  count: 16942
+  count: 353
 }
 int_values {
   value: 8
-  count: 23955
+  count: 537
 }
 int_values {
   value: 9
-  count: 31689
+  count: 674
 }
 int_values {
   value: 10
-  count: 43709
+  count: 956
 }
 int_values {
   value: 11
-  count: 51988
+  count: 1023
 }
 int_values {
   value: 12
-  count: 61289
+  count: 1289
 }
 int_values {
   value: 13
-  count: 72576
+  count: 1514
 }
 int_values {
   value: 14
-  count: 84639
+  count: 1810
 }
 int_values {
   value: 15
-  count: 92477
+  count: 1911
 }
 int_values {
   value: 16
-  count: 103103
+  count: 2196
 }
 int_values {
   value: 17
-  count: 112160
+  count: 2345
 }
 int_values {
   value: 18
-  count: 121471
+  count: 2600
 }
 int_values {
   value: 19
-  count: 128617
+  count: 2846
 }
 int_values {
   value: 20
-  count: 135826
+  count: 3009
 }
 int_values {
   value: 21
-  count: 133917
+  count: 2956
 }
 int_values {
   value: 22
-  count: 133925
+  count: 3013
 }
 int_values {
   value: 23
-  count: 124656
+  count: 2821
 }
 int_values {
   value: 24
-  count: 118453
+  count: 2775
 }
 int_values {
   value: 25
-  count: 104654
+  count: 2460
 }
 int_values {
   value: 26
-  count: 94453
+  count: 2192
 }
 int_values {
   value: 27
-  count: 80208
+  count: 1738
 }
 int_values {
   value: 28
-  count: 70047
+  count: 1623
 }
 int_values {
   value: 29
-  count: 58321
+  count: 1431
 }
 int_values {
   value: 30
-  count: 49216
+  count: 1088
 }
 int_values {
   value: 31
-  count: 38661
+  count: 883
 }
 int_values {
   value: 32
-  count: 32187
+  count: 801
 }
 int_values {
   value: 33
-  count: 24177
+  count: 574
 }
 int_values {
   value: 34
-  count: 19449
+  count: 472
 }
 int_values {
   value: 35
-  count: 13858
+  count: 324
 }
 int_values {
   value: 36
-  count: 11792
+  count: 274
 }
 int_values {
   value: 37
-  count: 7923
+  count: 236
 }
 int_values {
   value: 38
-  count: 6138
+  count: 129
 }
 int_values {
   value: 39
-  count: 4073
+  count: 97
 }
 int_values {
   value: 40
-  count: 3356
+  count: 73
 }
 int_values {
   value: 41
-  count: 1878
+  count: 64
 }
 int_values {
   value: 42
-  count: 1530
+  count: 29
 }
 int_values {
   value: 43
-  count: 797
+  count: 16
 }
 int_values {
   value: 44
-  count: 621
+  count: 19
 }
 int_values {
   value: 45
-  count: 266
+  count: 6
 }
 int_values {
   value: 46
-  count: 276
+  count: 4
 }
 int_values {
   value: 47
-  count: 115
+  count: 7
 }
 int_values {
   value: 48
-  count: 140
-}
-int_values {
-  value: 49
-  count: 23
-}
-int_values {
-  value: 50
-  count: 48
+  count: 4
 }

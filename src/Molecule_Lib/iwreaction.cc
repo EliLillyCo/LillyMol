@@ -1993,13 +1993,28 @@ Scaffold_Reaction_Site::construct_from_msi_object (const msi_object & msi,
   return 1;
 }
 
-Inter_Particle_Bond::Inter_Particle_Bond()
-{
+void
+Inter_Particle_Bond::_default_values() {
   _bt = SINGLE_BOND;
 
   _distance = 0.0f;
 
   _sidechain_isotope_requirement = SidechainIsotopeRequirement::kUndefined;
+
+  _align_3d = 0.0f;
+}
+
+Inter_Particle_Bond::Inter_Particle_Bond()
+{
+  _default_values();
+
+  _bt = SINGLE_BOND;
+
+  _distance = 0.0f;
+
+  _sidechain_isotope_requirement = SidechainIsotopeRequirement::kUndefined;
+
+  _align_3d = 0.0f;
 
   return;
 }
@@ -2008,6 +2023,8 @@ Inter_Particle_Bond::Inter_Particle_Bond(int frag1, atom_number_t z1,
                           atom_number_t z2,
                           bond_type_t b)
 {
+  _default_values();
+
   _a1.set_in_component(frag1);
   _a1.set_matched_atom(z1);
 
@@ -2973,7 +2990,7 @@ IWReaction::debug_print(std::ostream & os) const
   os << "Reaction";
   if (_comment.length())
     os << " '" << _comment << "'";
-  os << endl;
+  os << '\n';
 
   os << "Scaffold\n";
   Reaction_Site::debug_print(os, "  ");
@@ -2982,7 +2999,7 @@ IWReaction::debug_print(std::ostream & os) const
   os << ns << " sidechains\n";
   for (int i = 0; i < ns; i++)
   {
-    os << " Sidechain " << i << endl;
+    os << " Sidechain " << i << '\n';
     _sidechains[i]->debug_print(os, "  ");
   }
 
@@ -4027,7 +4044,7 @@ IWReaction::_perform_scaffold_transformations(Molecule & result,
   subsequent processing
 */
 
-//#define DEBUG_PERFORM_REACTION
+// #define DEBUG_PERFORM_REACTION
 
 int
 IWReaction::_perform_reaction(Molecule & result,
@@ -5050,11 +5067,11 @@ IWReaction::_make_inter_particle_bond(Molecule & result,
 #endif
 
   atom_number_t a1;
-  if (! determine_atom_number(*scaffold_embedding, b.a1(), etmp, "IWReaction::_make_inter_particle_bonds: a1", a1))
+  if (! determine_atom_number(*scaffold_embedding, b.a1(), etmp, "IWReaction::_make_inter_particle_bond: a1", a1))
     return 0;
 
   atom_number_t a2 = INVALID_ATOM_NUMBER;
-  if (! determine_atom_number(*scaffold_embedding, b.a2(), etmp, "IWReaction::_make_inter_particle_bonds: a1", a2))
+  if (! determine_atom_number(*scaffold_embedding, b.a2(), etmp, "IWReaction::_make_inter_particle_bond: a1", a2))
     return 0;
 
 #ifdef DEBUG_MAKE_INTER_PARTICLE_BONDS
@@ -5065,16 +5082,20 @@ IWReaction::_make_inter_particle_bond(Molecule & result,
     return 0;
   }
 
-  if (! b.OkDistance(result, a1, a2)) {
+  // Align before bonds are made.
+  if (b.align_3d() > 0.0f) {
+    if (! lillymol::Position3D(result, a1, b.align_3d(), a2)) {
+      cerr << "IWReaction::_make_inter_particle_bond:cannot 3d align atoms " <<
+              a1 << result.smarts_equivalent_for_atom(a1) << " and " <<
+              a2 << result.smarts_equivalent_for_atom(a2) << '\n';
+    }
+  } else if (! b.OkDistance(result, a1, a2)) {
     return 0;
   }
-
-  if (! result.add_bond(a1, a2, b.btype()))
-  {
+  if (! result.add_bond(a1, a2, b.btype())) {
     cerr << "IWReaction::_make_inter_particle_bond:cannot make bond between " << a1 << " and " << a2 << endl;
     return 0;
   }
-
   result.set_implicit_hydrogens_known(a1, 0);
   result.set_implicit_hydrogens_known(a2, 0);
 
@@ -5085,28 +5106,23 @@ IWReaction::_make_inter_particle_bond(Molecule & result,
 }
 
 int
-IWReaction::_make_inter_particle_bonds (Molecule & result,
-                                        const Set_of_Atoms * scaffold_embedding,
-                                        const Enumeration_Temporaries & etmp) const
+IWReaction::_make_inter_particle_bonds(Molecule & result,
+                                       const Set_of_Atoms * scaffold_embedding,
+                                       const Enumeration_Temporaries & etmp) const
 {
-  int ns = _sidechains.number_elements();
-
 //cerr << "IWReaction::_make_inter_particle_bonds:checking " << ns << " sidechains\n";
 
-  for (int i = 0; i < ns; i++)
-  {
-    const Sidechain_Reaction_Site * s = _sidechains[i];
-
+  for (const Sidechain_Reaction_Site* s : _sidechains) {
     int nb = s->number_inter_particle_bonds();
 
-//  cerr << "SC " << i << " has " << nb << " inter particle bonds\n";
+    // cerr << "SC has " << nb << " inter particle bonds\n";
 
-    for (int j = 0; j < nb; j++)
-    {
+    for (int j = 0; j < nb; j++) {
       const Inter_Particle_Bond * b = s->inter_particle_bond(j);
 
-      if (! _make_inter_particle_bond(result, scaffold_embedding, *b, etmp))
+      if (! _make_inter_particle_bond(result, scaffold_embedding, *b, etmp)) {
         return 0;
+      }
     }
   }
 
@@ -6430,7 +6446,7 @@ int
 IWReaction::perform_reaction(Molecule & m,
                              const Set_of_Atoms * embedding,
                              Molecule_Output_Object & output)
-{
+{ 
   Reaction_Iterator iter;
 
   iter.initialise(*this);

@@ -21,18 +21,25 @@ else
   exit 1
 fi
 echo "third_party in ${third_party}"
+
 # Convert to full path name
 third_party=$(readlink -m ${third_party})
-
 if [[ ! -d "${third_party}" ]] ; then
   mkdir -p "${third_party}"
 fi
 
+toplevel=$(dirname ${third_party})
+if [[ ! -d "${toplevel}/lib" ]] ; then
+  mkdir -p "${toplevel}/lib"
+fi
+
+uname=$(uname)
+if [[ ! -d "${toplevel}/bin/${uname}" ]] ; then
+  mkdir -p "${toplevel}/bin/${uname}"
+fi
+
 # If you are building with bazel, also need to update this path in WORKSPACE
 # If you are building with cmake, also need to update this path in CMakeLists.txt
-
-# We want to update WORKSPACE if the build succeeds, so save our current location
-maybe_src=${PWD}
 
 # The general stragegy here is that if the source directory does not exist, fetch it.
 # Then, if some artifact of the build/install is absent, go into that directory, and re/build,
@@ -41,8 +48,8 @@ cd "${third_party}" || echo "Cannot go to ${third_party}" >&2
 
 # If we clone the repo we must build it, even if the
 # file being checked is still present.
-declare -i must_buld
-must_buld=0
+declare -i must_build
+must_build=0
 
 # Jun 2023 crc32c now obtained from absl
 # if [[ ! -d 'crc32c' ]] ; then
@@ -110,23 +117,24 @@ fi
 #   (cd oneTBB && cd build && cmake -DCMAKE_INSTALL_PREFIX:PATH=${third_party}/TBB -DTBB_TEST=OFF -DBUILD_SHARED_LIBS=off ..)
 #   (cd oneTBB && cd build && make install)
 # fi
-# 
+
 # Eigen now available via MODULE
 # if [[ ! -s 'eigen-3.4.0.tar.bz2' ]] ; then
 #   wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
 #   tar -xvjf eigen-3.4.0.tar.bz2
 # fi
 
-must_build=0
-if [[ ! -d 'highwayhash' ]] ; then
-  git clone https://github.com/google/highwayhash
-  must_build=1
-  (cd highwayhash && git config pull.rebase false)
-fi
-if [[ ${must_build} -eq 1 || ! -s '${third_party}/highwayhash/lib/libhighwayhash.a' ]] ; then
-  (cd highwayhash && git pull)
-  (cd highwayhash && make)
-fi
+# Now using absl hash functions
+# must_build=0
+# if [[ ! -d 'highwayhash' ]] ; then
+#   git clone https://github.com/google/highwayhash
+#   must_build=1
+#   (cd highwayhash && git config pull.rebase false)
+# fi
+# if [[ ${must_build} -eq 1 || ! -s '${third_party}/highwayhash/lib/libhighwayhash.a' ]] ; then
+#   (cd highwayhash && git pull)
+#   (cd highwayhash && make)
+# fi
 
 must_build=0
 if [[ ! -s 'f2c.tar.gz' ]] ; then
@@ -161,13 +169,15 @@ if [[ -v BUILD_BDB ]] ; then
   fi
   if [[ ${must_build} -eq 1 || ! -s "${third_party}/BDB/include/db.h" ]] ; then
     (cd "db-${bdb_version}/build_unix" && make realclean)
-    (cd "db-${bdb_version}/build_unix" && ../dist/configure --prefix=${third_party}/BDB --enable-cxx --enable-shared=no --with-repmgr-ssl=no)
-    (cd "db-${bdb_version}/build_unix" && make)
+    (cd "db-${bdb_version}/build_unix" && ../dist/configure --prefix=${third_party}/BDB --enable-cxx --enable-shared=yes --with-repmgr-ssl=no)
+    (cd "db-${bdb_version}/build_unix" && make -j 6)
     # fails on some items not installed, but installs what we need.
     (cd "db-${bdb_version}/build_unix" && make -j 4 install)
 
     echo ""
     echo "Ignore error messages from BerkeleyDB install, it is for components we do not use"
+    # Copy shared libraries to our lib folder so python bindings work.
+    (cp BDB/lib/lib*.so ${toplevel}/lib) || echo "Did not copy BerkeleyDB shared libraries"
   fi
 fi
 
@@ -186,48 +196,3 @@ fi
 #   mkdir -p "${third_party}/include"
 # fi
 # (cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
-
-# Make an attempt to generate an updated WORKSPACE file for python.
-
-cd ${maybe_src}
-
-# Figure out if WORKSPACE is where we can find it.
-if [[ -s 'WORKSPACE' ]] ; then
-  workspace='WORKSPACE'
-elif [[ -s 'src/WORKSPACE' ]] ; then
-  workspace='src/WORKSPACE'
-else
-  echo "No WORKSPACE file found" >&2
-  exit 1
-fi
-
-# Only build python if requested
-if [[ -v BUILD_PYTHON ]] ; then
-  # Use python to update WORKSPACE for python locations.
-  if [[ -s 'update_python_in_workspace.py' ]] ; then
-    cp ${workspace} /tmp
-    python3 ./update_python_in_workspace.py /tmp/WORKSPACE > ${workspace}
-    if [[ ! -s ${workspace} ]] ; then
-      echo "Updating WORKSPACE failed, restoring orignal, python bindings will not work"
-      cp -f /tmp/WORKSPACE ${workspace}
-    fi
-  else
-    echo "Missing update_python_in_workspace.py, WORKSPACE not updated for python"
-  fi
-fi
-
-# install.bzl does need to be updated.
-echo 'Updating build_deps/install.bzl'
-if [[ -s 'build_deps/install.bzl' ]] ; then
-  tmpinstall='/tmp/install.bzl'
-  bindir=$(echo ${PWD}/../bin/$(uname) | sed -e 's/\//\\\//g')
-  # Make a copy
-  cp build_deps/install.bzl /tmp/install.bzl.orig
-  sed --in-place --regexp-extended -e "s/default = *\"..+\",/default =\"${bindir}\",/" build_deps/install.bzl > ${tmpinstall}
-
-  # Create bindir if not already present
-  bindir=$(echo ${PWD}/../bin/$(uname))
-  if [[ ! -d  ${bindir} ]] ; then
-    mkdir -p ${bindir}
-  fi
-fi

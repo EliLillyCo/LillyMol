@@ -6,6 +6,7 @@
   2.  We read one or more of those files and decide which one(s) to
       use in order to produce splits of the appropriate size
 
+  This is not implemented
 */
 
 #include <stdlib.h>
@@ -200,6 +201,7 @@ Leader_Results::build(iwstring_data_source& input, const IW_STL_Hash_Map_int& id
   return _nclusters;
 }
 
+#ifdef NOT_IMPLEMENTED
 static int
 test_train_split_from_leader(iwstring_data_source& input,
                              const IW_STL_Hash_Map_int& id_to_ndx,
@@ -223,6 +225,7 @@ test_train_split_from_leader(const char* fname, const IW_STL_Hash_Map_int& id_to
 
   return test_train_split_from_leader(input, id_to_ndx, id_to_smiles, output);
 }
+#endif
 
 /*static int
 read_smiles_record (const const_IWSubstring & buffer,

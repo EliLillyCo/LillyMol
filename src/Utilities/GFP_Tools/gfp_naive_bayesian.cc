@@ -63,11 +63,11 @@ static int bayes_method = BAYES_METHOD_MULTINOMIAL;
 
 static int min_support_level = 0;
 
-static int remove_correlated_bits = 0;
+// static int remove_correlated_bits = 0;
 
 static int sum_starts_with_log_class_probability = 1;
 
-static int write_probabilities_in_11_range = 0;
+// static int write_probabilities_in_11_range = 0;
 
 static IWString identifier_tag ("PCN<");
 
@@ -1455,7 +1455,7 @@ Bayesian_Classification::do_write (const IWString * class_label,
 
   for (int i = 0; i < _nclasses; ++i)
   {
-    const auto & f = _bit_weight[i];
+    //const auto & f = _bit_weight[i];
     _write_bit_weight(i, class_label, output);
   }
 

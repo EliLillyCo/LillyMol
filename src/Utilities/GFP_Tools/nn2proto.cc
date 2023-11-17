@@ -599,6 +599,9 @@ Main(int argc, char** argv) {
       cerr << "Cannot open '" << fname << "' for TFDataRecord proto output\n";
       return 1;
     }
+    if (verbose) {
+      cerr << "Writing TFDataRecord '" << fname << "'\n";
+    }
 
     if (! nn_to_csv.WriteTFDataRecord(writer)) {
       cerr << "TFDataRecord write to '" << fname << "' failed\n";

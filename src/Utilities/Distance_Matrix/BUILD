@@ -3,11 +3,28 @@ load("//build_deps:install.bzl", "local_install")
 local_install(
     name = "install",
     srcs = [
+        ":distance_matrix_activity_difference",
         ":distance_matrix_from_distances",
         ":distance_matrix_kmedioids",
         ":distance_matrix_leader",
         ":distance_matrix_nn",
+        ":distance_matrix_simple_cluster",
         ":distance_matrix_spread",
+        ":distance_matrix_to_distances",
+    ],
+)
+
+cc_binary(
+    name = "distance_matrix_activity_difference",
+    srcs = [
+        "distance_matrix_activity_difference.cc",
+    ],
+    deps = [
+        ":distance_matrix_base",
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
     ],
 )
 
@@ -78,6 +95,35 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
+    ],
+)
+cc_binary(
+    name = "distance_matrix_simple_cluster",
+    srcs = [
+        "distance_matrix_simple_cluster.cc",
+        "iwhcl.cc",
+        "iwhcl.h",
+    ],
+    deps = [
+        ":distance_matrix_base",
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+    ],
+)
+
+cc_binary(
+    name = "distance_matrix_to_distances",
+    srcs = [
+        "distance_matrix_to_distances.cc",
+    ],
+    deps = [
+        ":distance_matrix_base",
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
     ],
 )
 

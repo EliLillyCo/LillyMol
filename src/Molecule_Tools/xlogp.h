@@ -78,6 +78,9 @@ int ReadNewFragmentParameters(IWString& fname);
 // assigned to each atom.
 void SetDisplayAtomAssignments(int s);
 
+// It can be useful to suppress unclassified atom warning messages.
+void SetIssueUnclassifiedAtomMessages(int s);
+
 // If all atoms are classified, return xlogp.
 std::optional<double> XLogP(Molecule& m);
 // The user can have the atom types returned.

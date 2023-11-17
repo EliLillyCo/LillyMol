@@ -5038,6 +5038,34 @@ IWString::operator +=(const std::string & rhs)
 
 #endif
 
+int
+IWString::EnsureEndsWith(const char* s) {
+  const_IWSubstring mycopy(s, ::strlen(s));
+
+  return this->EnsureEndsWith<const_IWSubstring&>(mycopy);
+}
+
+template <typename T>
+int
+IWString::EnsureEndsWith(const T& c) {
+  if (_number_elements == 0) {
+    operator<<(c);
+    return 1;
+  }
+
+  if (ends_with(c)) {
+    return 0;
+  }
+
+  operator<<(c);
+
+  return 1;
+}
+
+template int IWString::EnsureEndsWith(const char&);
+template int IWString::EnsureEndsWith(const IWString&);
+template int IWString::EnsureEndsWith(const const_IWSubstring&);
+
 /*
   Some names taken from 
 

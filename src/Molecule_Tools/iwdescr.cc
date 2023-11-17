@@ -549,6 +549,7 @@ enum IWDescr_Enum
   iwdescr_cinconjs,
   iwdescr_brunsneg,
   iwdescr_brunspos,
+  iwdescr_formal_charge,
   iwdescr_brunsacc,
   iwdescr_brnsdual,
   iwdescr_brunsdon,
@@ -563,6 +564,8 @@ enum IWDescr_Enum
   iwdescr_ishape,
   iwdescr_maxdrng,
   iwdescr_maxdarom,
+  iwdescr_maxdhtro, 
+  iwdescr_maxdons, 
   iwdescr_avebbtwn,
   iwdescr_normbbtwn,
   iwdescr_compact,
@@ -694,7 +697,8 @@ enum IWDescr_Enum
   iwdescr_rmyns,
   iwdescr_rmyncl,
   iwdescr_rmynbr,
-  iwdescr_rmyni
+  iwdescr_rmyni,
+  iwdescr_rmy_heavy_halogen   // remember to update NUMBER_DESCRIPTORS below.
 };
 
 /*
@@ -702,7 +706,7 @@ enum IWDescr_Enum
   member of the enumeration here
 */
 
-#define NUMBER_DESCRIPTORS (iwdescr_rmyni + 1)
+#define NUMBER_DESCRIPTORS (iwdescr_rmy_heavy_halogen +  1)
 
 /*
   Descriptor names
@@ -1101,6 +1105,7 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_cinconjs].set_min_max_resolution(0.0f, 27.99497f, resolution);
   d[iwdescr_brunsneg].set_min_max_resolution(0.0f, 6.0f, resolution);
   d[iwdescr_brunspos].set_min_max_resolution(0.0f, 7.0f, resolution);
+  d[iwdescr_formal_charge].set_min_max_resolution(0.0f, 10.19615f, resolution);
   d[iwdescr_brunsacc].set_min_max_resolution(0.0f, 10.19615f, resolution);
   d[iwdescr_brnsdual].set_min_max_resolution(0.0f, 2.761233f, resolution);
   d[iwdescr_brunsdon].set_min_max_resolution(0.0f, 6.24665f, resolution);
@@ -1115,6 +1120,8 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_ishape].set_min_max_resolution(0.0f, 1.0f, resolution);
   d[iwdescr_maxdrng].set_min_max_resolution(0.0f, 32.90875f, resolution);
   d[iwdescr_maxdarom].set_min_max_resolution(0.0f, 33.0f, resolution);
+  d[iwdescr_maxdhtro].set_min_max_resolution(0.0f, 33.0f, resolution);
+  d[iwdescr_maxdons].set_min_max_resolution(0.0f, 33.0f, resolution);
   d[iwdescr_avebbtwn].set_min_max_resolution(1.0f, 11.81314f, resolution);
   d[iwdescr_normbbtwn].set_min_max_resolution(0.1089f, 0.4444f, resolution);
   d[iwdescr_compact].set_min_max_resolution(0.02f, 0.7955f, resolution);
@@ -1216,6 +1223,7 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_rmyncl].set_min_max_resolution(0.0f, 3.300221f, resolution);
   d[iwdescr_rmynbr].set_min_max_resolution(0.0f, 9.0f, resolution);
   d[iwdescr_rmyni].set_min_max_resolution(0.0f, 8.0f, resolution);
+  d[iwdescr_rmy_heavy_halogen].set_min_max_resolution(0.0f, 10.0f, resolution);
 
   d[iwdescr_xlogp].set_min_max_resolution(-4.0f, 10.0f, resolution);
 
@@ -1688,6 +1696,7 @@ allocate_descriptors()
   if (descriptors_to_compute.charge_descriptors) {
     descriptor[iwdescr_brunsneg].set_name("brunsneg");
     descriptor[iwdescr_brunspos].set_name("brunspos");
+    descriptor[iwdescr_formal_charge].set_name("formal_charge");
   }
   if (descriptors_to_compute.donor_acceptor) {
     descriptor[iwdescr_brunsacc].set_name("brunsacc");
@@ -1707,6 +1716,8 @@ allocate_descriptors()
     descriptor[iwdescr_ishape].set_name("ishape");
     descriptor[iwdescr_maxdrng].set_name("maxdrng");
     descriptor[iwdescr_maxdarom].set_name("maxdarom");
+    descriptor[iwdescr_maxdhtro].set_name("maxdhtro");
+    descriptor[iwdescr_maxdons].set_name("maxdons");
     descriptor[iwdescr_avebbtwn].set_name("avebbtwn");
     descriptor[iwdescr_normbbtwn].set_name("normbbtwn");
     descriptor[iwdescr_compact].set_name("compact");
@@ -1868,6 +1879,7 @@ allocate_descriptors()
     descriptor[iwdescr_rmyncl].set_name("rmyncl");
     descriptor[iwdescr_rmynbr].set_name("rmynbr");
     descriptor[iwdescr_rmyni].set_name("rmyni");
+    descriptor[iwdescr_rmy_heavy_halogen].set_name("heavy_halogen");
   }
   if (descriptors_to_compute.compute_xlogp) {
     descriptor[iwdescr_xlogp].set_name("xlogp");
@@ -2811,6 +2823,7 @@ compute_ramey_descriptors(Molecule & m,
   descriptor[iwdescr_rmyncl].set(static_cast<float>(ncl));
   descriptor[iwdescr_rmynbr].set(static_cast<float>(nbr));
   descriptor[iwdescr_rmyni].set(static_cast<float>(ni));
+  descriptor[iwdescr_rmy_heavy_halogen].set(static_cast<float>(ncl + nbr + ni));
 
   const int nh = m.implicit_hydrogens();
 
@@ -3351,6 +3364,40 @@ do_compute_distances_from_longest_path_descriptors(Molecule & m,
   return do_compute_distances_from_longest_path_descriptors(m, dm, a1[pair_with_highest_score], a2[pair_with_highest_score], in_path, longest_path);
 }
 
+// We store an atom status into an int.
+static constexpr uint32_t kIsRing = 1;
+static constexpr uint32_t kIsAromatic = 2;
+static constexpr uint32_t kIsHeteroatom = 4;
+static constexpr uint32_t kIsONS = 8;
+
+static std::unique_ptr<uint32_t[]>
+AssignDistanceMatrixAtomTypes(Molecule& m,
+                              const atomic_number_t* z) {
+  const int matoms = m.natoms();
+
+  // To be returned
+  std::unique_ptr<uint32_t[]> atype = std::make_unique<uint32_t[]>(matoms);
+
+  for (int i = 0; i < matoms; ++i){
+    atype[i] = 0;
+    if (m.ring_bond_count(i) > 0) {
+      atype[i] |= kIsRing;
+      if (m.is_aromatic(i)) {
+        atype[i] |= kIsAromatic;
+      }
+    }
+    if (z[i] == 6) {
+      continue;
+    }
+    atype[i] |= kIsHeteroatom;
+    if (z[i] == 7 || z[i] == 8 || z[i] == 16) {
+      atype[i] |= kIsONS;
+    }
+  }
+
+  return atype;
+}
+
 static int
 do_compute_distance_matrix_descriptors(Molecule & m,
                                        const atomic_number_t * z,
@@ -3368,23 +3415,27 @@ do_compute_distance_matrix_descriptors(Molecule & m,
   int tg3 = 0;                // terminal groups separated by 3 bonds
   int max_distance_between_ring_atoms = 0;
   int max_distance_between_aromatic_atoms = 0;
+  int max_distance_between_heteratoms = 0;
+  int max_distance_between_ons = 0;
   double harary = 0.0;
 
   Accumulator_Int<int> bonds_between_stats;
 
-  for (int i = 0; i < matoms; i++)
-  {
-    int tg = (1 == ncon[i]);     // is this a terminal group
+  std::unique_ptr<uint32_t[]> atype = AssignDistanceMatrixAtomTypes(m, z);
 
-    int i_is_ring = m.is_ring_atom(i);
-    int i_is_aromatic = m.is_aromatic(i);
+  for (int i = 0; i < matoms; i++) {
+    const int tg = (1 == ncon[i]);     // is this a terminal group
 
-    if (tg && 6 == z[i] && 1 == m.nbonds(i))
+    const int i_is_ring = atype[i] & kIsRing;
+    const int i_is_aromatic = atype[i] & kIsAromatic;
+    const int i_is_heteroatom = atype[i] & kIsHeteroatom;
+    const int i_is_ons = atype[i] & kIsONS;
+
+    if (tg && 6 == z[i] && 1 == m.nbonds(i)) {
       tm++;
+    }
 
-    for (int j = i + 1; j < matoms; j++)
-    {
-//    int d = m.bonds_between(i, j);
+    for (int j = i + 1; j < matoms; j++) {
       int d = dm[i * matoms + j];
 
       bonds_between_stats.extra(d);
@@ -3402,10 +3453,18 @@ do_compute_distance_matrix_descriptors(Molecule & m,
       if (d > eccentricity[j])
         eccentricity[j] = d;
 
-      if (i_is_ring && d > max_distance_between_ring_atoms && m.is_ring_atom(j))
+      if (i_is_ring && d > max_distance_between_ring_atoms && (atype[j] & kIsRing)) {
         max_distance_between_ring_atoms = d;
-      if (i_is_aromatic && d > max_distance_between_aromatic_atoms && m.is_aromatic(j))
+      }
+      if (i_is_aromatic && d > max_distance_between_aromatic_atoms && (atype[j] & kIsAromatic)) {
         max_distance_between_aromatic_atoms = d;
+      }
+      if (i_is_heteroatom && d > max_distance_between_heteratoms && (atype[j] & kIsHeteroatom)) {
+        max_distance_between_heteratoms = d;
+      }
+      if (i_is_ons && d > max_distance_between_ons && (atype[j] & kIsONS)) {
+        max_distance_between_ons = d;
+      }
     }
   }
 
@@ -3472,10 +3531,13 @@ do_compute_distance_matrix_descriptors(Molecule & m,
     descriptor[iwdescr_ishape].set(static_cast<float>(max_eccentricity - min_eccentricity) / static_cast<float>(min_eccentricity));
   }
 
-  descriptor[iwdescr_maxdrng].set(static_cast<float>(max_distance_between_ring_atoms));
-  descriptor[iwdescr_maxdarom].set(static_cast<float>(max_distance_between_aromatic_atoms));
+  descriptor[iwdescr_maxdrng].set(max_distance_between_ring_atoms);
+  descriptor[iwdescr_maxdarom].set(max_distance_between_aromatic_atoms);
+  descriptor[iwdescr_maxdhtro].set(max_distance_between_heteratoms);
+  descriptor[iwdescr_maxdons].set(max_distance_between_ons);
   descriptor[iwdescr_avebbtwn].set(bonds_between_stats.average_if_available_minval_if_not());
   descriptor[iwdescr_normbbtwn].set(bonds_between_stats.average_if_available_minval_if_not() / static_cast<float>(matoms));
+
   descriptor[iwdescr_compact].set(1.0f - static_cast<float>(max_eccentricity) / static_cast<float>(matoms));
   descriptor[iwdescr_nolp].set(matoms - max_eccentricity -1);
 
@@ -7895,6 +7957,7 @@ store_charge_assigner_results(const Molecule & m,
 
   descriptor[iwdescr_brunsneg].set(static_cast<float>(nneg));
   descriptor[iwdescr_brunspos].set(static_cast<float>(npos));
+  descriptor[iwdescr_formal_charge].set(static_cast<int>(nneg + npos));
   descriptor[iwdescr_nplus].set   (static_cast<float>(positive_nitrogen));
   descriptor[iwdescr_nminus].set  (static_cast<float>(negative_nitrogen));
 
@@ -8607,6 +8670,19 @@ DisplayFingerprintOptions(std::ostream& output) {
   output << " replicates of that bit in the output. By default, all features get the same number\n";
 }
 
+static void
+DisplayFilterOptions(std::ostream& output) {
+  output <<  R"(
+Use the -F option to filter molecules. The syntax uses fortran like comparison operators.
+-F w_natoms.lt.50
+only writes molecules that have fewer than 50 heavy atoms. Note that when using property filters
+output is a smiles file.
+
+Multiple filters are compiled as and conditions,
+iwdescr ... -F w_natoms.gt.12 -F w_natoms.lt.50 -F w_nrings.gt.1 -F w_nrings.lt.5 file.smi > filtered.smi
+would only write molecules that satisfy all conditions.
+)";
+}
 
 int
 iwdescr(int argc, char ** argv)
@@ -8714,6 +8790,8 @@ iwdescr(int argc, char ** argv)
       }
     }
   }
+
+  xlogp::SetIssueUnclassifiedAtomMessages(0);
 
   FileType input_type = FILE_TYPE_INVALID;
   if (! cl.option_present('i'))
@@ -8884,6 +8962,10 @@ iwdescr(int argc, char ** argv)
     for (int i = 0; i < number_filters; i++)
     {
       cl.value('F', f, i);
+      if (f == "help") {
+        DisplayFilterOptions(cerr);
+        return 1;
+      }
       if (! filter[i].build(f))
       {
         cerr << "INvalid filter specification '" << f << "'\n";
