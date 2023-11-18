@@ -23,15 +23,3 @@ jobs:
         make test_lillymol | tee ./unit_test_results.txt
     - name: Stop running
       run: docker-compose down
-    - name: "Post to PR"
-      uses: EliLillyCo/github-actions-post-to-pr@main
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        post_to_pr_definition: |
-          [
-            {
-              "message_file": "./unit_test_results.txt",
-              "title": "Unit Test",
-              "compare_branches": ["master"]
-            }
-          ]
