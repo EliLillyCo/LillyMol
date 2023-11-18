@@ -12,9 +12,9 @@ molecular descriptors.
 ## Descriptors.
 The following descriptors are computed.
 
-| ---- | ----------|
-| name | definition|
-| ---- | ----------|
+| ---- | ---------- |
+| name | definition |
+| ---- | ---------- |
 | natoms | the number of atoms in the molecule |
 | nrings | number of rings in the molecule |
 | nelem | number of different elements in the molecule |
@@ -155,9 +155,12 @@ The following descriptors are computed.
 | rmyncl | number of chlorine atoms |
 | rmynbr | number of bromine atoms |
 | rmyni | number of iodine atoms |
+| heavy_halogen | chlorine + bromine + iodine |
 | aromc | number of aromatic carbon atoms |
 | maxdarom | max bond separation between aromatic atoms |
 | maxdrng | max bond separation between ring atoms (not necessarily in same ring) |
+| maxdhtro | max bond separation between heteroatoms |
+| maxdons | max bond separation between O, N or S atoms |
 | lercsct | largest electron rich section - all adjacent atoms have pi electrons |
 | avebbtwn | average bond separation between atoms in the molecule |
 | excybond | number exocyclic bonds |

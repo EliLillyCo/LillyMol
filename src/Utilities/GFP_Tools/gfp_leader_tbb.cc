@@ -818,7 +818,7 @@ process_cluster(Cluster& cluster, similarity_type_t my_threshold,
     cerr << "Cluster " << clusters_found << ' ' << cs << " items, centre '"
          << cluster[0]->id() << "', ";
     if (threshold_from_file_tag.length()) {
-      similarity_type_t threshold;
+      similarity_type_t threshold = 0.0f;
       (void)centre->threshold(threshold);
       cerr << "threshold " << threshold << ", ";
     }

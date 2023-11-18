@@ -220,6 +220,7 @@ display_dash_x_options(std::ostream & os)
   os << " -X sdcensor=<d>    in tabular output, censor distances shorter than <d>\n";
   os << " -X mnc=<n>         only write targets that have exactly<n> nbrs after distance filtering\n";
   os << " -X sdo             with the -s option, only write the shortest distance\n";
+  os << " -X app=<fname>     join values from a descriptor file with each id written\n";
 // clang-format on
 
   return;
@@ -240,6 +241,52 @@ display_dash_u_options(std::ostream & os)
 }
 
 // clang-format on
+
+static int
+GetDataToAppendLine(const const_IWSubstring& buffer,
+                IW_STL_Hash_Map_String& data) {
+  static constexpr char kSep = ' ';
+
+  IWString id, value;
+  int i = 0;
+  if (! buffer.nextword(id, i, kSep) || ! buffer.nextword(value, i, kSep) ||
+      id.empty() || value.empty()) {
+    return 0;
+  }
+
+  data[id] = value;
+
+  return 1;
+}
+
+static int
+GetDataToAppend(iwstring_data_source& input,
+                IW_STL_Hash_Map_String& data) {
+  const_IWSubstring line;
+  if (! input.next_record(line)) {
+    return 0;
+  }
+
+  while (input.next_record(line)) {
+    if (! GetDataToAppendLine(line, data)) {
+      cerr << "GetDataToAppend:invalid '" << line << "'\n";
+      return 0;
+    }
+  }
+
+  return data.size();
+}
+
+static int
+GetDataToAppend(IWString& fname,
+                IW_STL_Hash_Map_String& data) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "GetDataToAppend::canot open '" << fname << "'\n";
+    return 0;
+  }
+  return GetDataToAppend(input, data);
+}
 
 class Fatal_Error {
  private:
@@ -408,8 +455,25 @@ passes_number_needed_within_distance(
 }
 
 static int
+AppendAfterId(const IWString& id,
+              const IW_STL_Hash_Map_String& append_to_id,
+              IWString_and_File_Descriptor& output) {
+  output << output_separator;
+
+  const auto iter = append_to_id.find(id);
+  if (iter == append_to_id.end()) {
+    output << '.';
+  } else {
+    output << iter->second;
+  }
+
+  return 1;
+}
+
+static int
 write_neighbour_list(const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
                      const IWString &target_smiles,
+                     const IW_STL_Hash_Map_String& append_to_id,
                      IWString_and_File_Descriptor &output) {
   if (suppress_neighbours) {
     return 1;
@@ -436,7 +500,12 @@ write_neighbour_list(const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
       output << sid->smiles() << output_separator;
     }
 
-    output << sid->id() << output_separator;
+    output << sid->id();
+    if (append_to_id.size() > 0) {
+      AppendAfterId(sid->id(), append_to_id, output);
+    }
+    output << output_separator;
+
     if (append_neighbour_number_to_each_neighbour) {
       output << (i + 1) << output_separator;
     }
@@ -730,6 +799,7 @@ do_three_column_output(const IWString &id,
 static int
 process_molecule(const IWString &smiles, const IWString &id,
                  const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
+                 const IW_STL_Hash_Map_String& append_to_id,
                  IWString_and_File_Descriptor &output) {
   molecules_processed++;
 
@@ -802,6 +872,10 @@ process_molecule(const IWString &smiles, const IWString &id,
 
     output << id;
 
+    if (append_to_id.size() > 0) {
+      AppendAfterId(id, append_to_id, output);
+    }
+
     if (collect_statistics) {
       write_statistics_for_neighbour_list(neighbours, output);
     }
@@ -815,7 +889,7 @@ process_molecule(const IWString &smiles, const IWString &id,
     molecules_written++;
   }
 
-  int rc = write_neighbour_list(neighbours, smiles, output);
+  int rc = write_neighbour_list(neighbours, smiles, append_to_id, output);
 
   // cerr << "After write_neighbour_list '" << output << "'\n";
 
@@ -1308,6 +1382,7 @@ process_neighbour_list_record(const IWString &id_of_target,
 
 static int
 process_molecule(iwstring_data_source &input, int &fatal,
+                 const IW_STL_Hash_Map_String& append_to_id,
                  IWString_and_File_Descriptor &output) {
   IWString smiles, id;
 
@@ -1383,11 +1458,12 @@ process_molecule(iwstring_data_source &input, int &fatal,
     do_check_distance_ordering(neighbours);
   }
 
-  return process_molecule(smiles, id, neighbours, output);
+  return process_molecule(smiles, id, neighbours, append_to_id, output);
 }
 
 static int
 process_molecule_gfp_leader(iwstring_data_source &input, int &fatal,
+                            const IW_STL_Hash_Map_String& append_to_id,
                             IWString_and_File_Descriptor &output) {
   IWString smiles, id;
 
@@ -1470,13 +1546,15 @@ process_molecule_gfp_leader(iwstring_data_source &input, int &fatal,
 
   clusters_found++;
 
-  return process_molecule(smiles, id, neighbours, output);
+  return process_molecule(smiles, id, neighbours, append_to_id, output);
 }
 
 static int
-plotnn_gfp_leader(iwstring_data_source &input, IWString_and_File_Descriptor &output) {
+plotnn_gfp_leader(iwstring_data_source &input,
+                  const IW_STL_Hash_Map_String& append_to_id,
+                  IWString_and_File_Descriptor &output) {
   int fatal;
-  while (process_molecule_gfp_leader(input, fatal, output)) {
+  while (process_molecule_gfp_leader(input, fatal, append_to_id, output)) {
     output.write_if_buffer_holds_more_than(IW_FLUSH_BUFFER);
   }
 
@@ -1488,10 +1566,12 @@ plotnn_gfp_leader(iwstring_data_source &input, IWString_and_File_Descriptor &out
 }
 
 static int
-plotnn(iwstring_data_source &input, IWString_and_File_Descriptor &output) {
+plotnn(iwstring_data_source &input,
+       const IW_STL_Hash_Map_String& append_to_id,
+       IWString_and_File_Descriptor &output) {
   int fatal;
 
-  while (process_molecule(input, fatal, output)) {
+  while (process_molecule(input, fatal, append_to_id, output)) {
     output.write_if_buffer_holds_more_than(IW_FLUSH_BUFFER);
   }
 
@@ -1503,7 +1583,9 @@ plotnn(iwstring_data_source &input, IWString_and_File_Descriptor &output) {
 }
 
 static int
-plotnn(const char *fname, IWString_and_File_Descriptor &output) {
+plotnn(const char *fname, 
+       const IW_STL_Hash_Map_String& append_to_id,
+       IWString_and_File_Descriptor &output) {
   iwstring_data_source input(fname);
 
   if (!input.ok()) {
@@ -1512,10 +1594,10 @@ plotnn(const char *fname, IWString_and_File_Descriptor &output) {
   }
 
   if (from_gfp_leader) {
-    return plotnn_gfp_leader(input, output);
+    return plotnn_gfp_leader(input, append_to_id, output);
   }
 
-  return plotnn(input, output);
+  return plotnn(input, append_to_id, output);
 }
 
 static int
@@ -1595,7 +1677,7 @@ write_normalised_histogram(const IWHistogram &nearest_neighbour_histogram,
   return 1;
 }
 
-// Remove?
+#ifdef MAKE_JULIA_PLOT
 static int
 do_create_julia_file_for_histogram_plot(const IWHistogram &nearest_neighbour_histogram,
                                         const int normalise_h_file, const int cumulative,
@@ -1690,6 +1772,7 @@ do_create_julia_file_for_histogram_plot(const IWHistogram &nearest_neighbour_his
 
   return 1;
 }
+#endif
 
 static int
 do_create_rfle_for_histogram_plot(const IWHistogram &nearest_neighbour_histogram,
@@ -2143,6 +2226,8 @@ plotnn(int argc, char **argv) {
 
   IWString rfile_for_histogram_plot;
 
+  IW_STL_Hash_Map_String append_to_id;
+
   if (cl.option_present('X')) {
     int i = 0;
     const_IWSubstring x;
@@ -2426,6 +2511,13 @@ plotnn(int argc, char **argv) {
         if (verbose) {
           cerr << "Will write the shortest distance only with the -s output\n";
         }
+      } else if (x.starts_with("app=")) {
+        x.remove_leading_chars(4);
+        IWString fname(x);
+        if (! GetDataToAppend(fname, append_to_id)) {
+          cerr << "Cannot read data to append '" << x << "'\n";
+          return 1;
+        }
       } else if ("help" == x) {
         display_dash_x_options(cerr);
         return 0;
@@ -2519,7 +2611,7 @@ plotnn(int argc, char **argv) {
   int rc = 0;
 
   for (int i = 0; i < cl.number_elements(); i++) {
-    if (!plotnn(cl[i], output)) {
+    if (!plotnn(cl[i], append_to_id, output)) {
       rc = i + 1;
       break;
     }

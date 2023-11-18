@@ -382,17 +382,17 @@ set(msort_libs
 add_executable(msort ${msort_srcs})
 target_link_libraries(msort LINK_PUBLIC ${msort_libs})
 
-# pharmacaphore_2d
-set(pharmacaphore_2d_srcs
-  pharmacaphore_2d.cc
+# pharmacophore_2d
+set(pharmacophore_2d_srcs
+  pharmacophore_2d.cc
 )
-set(pharmacaphore_2d_libs
+set(pharmacophore_2d_libs
   iwreaction
   ${common_libs}
   ${third_party_libs}
 )
-add_executable(pharmacaphore_2d ${pharmacaphore_2d_srcs})
-target_link_libraries(pharmacaphore_2d LINK_PUBLIC ${pharmacaphore_2d_libs})
+add_executable(pharmacophore_2d ${pharmacophore_2d_srcs})
+target_link_libraries(pharmacophore_2d LINK_PUBLIC ${pharmacophore_2d_libs})
 
 # preferred_smiles
 set(preferred_smiles_srcs

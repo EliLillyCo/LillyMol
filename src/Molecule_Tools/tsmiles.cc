@@ -876,8 +876,9 @@ tsmiles(Molecule & m)
     report_canonical_ranking(cerr, m);
 
   const resizable_array<atom_number_t> & atom_order_in_smiles = m.atom_order_in_smiles();
-
-  assert (matoms == atom_order_in_smiles.number_elements());
+  if (matoms != atom_order_in_smiles.number_elements()) {
+    cerr << "Size mismatch in atom order\n";
+  }
 
   if (test_assignment)
     do_test_assignment(m, usmiles);

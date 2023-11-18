@@ -213,7 +213,6 @@ molecular_merge (int argc, char ** argv)
 
   all_of_them.resize(10000);
 
-  int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++)
   {
     if (! molecular_merge(cl[i], input_type, all_of_them))

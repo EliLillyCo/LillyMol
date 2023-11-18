@@ -378,7 +378,7 @@ query {
 ```
 identifies molecules containing two separated rings, and in between those two rings
 there is a region with at most 12 atoms and no rings. And of course more complex
-conditons could be placed on the atoms in the smarts.
+conditions could be placed on the atoms in the smarts.
 
 When or if other needs are identified, the `region` concept will be expanded.
 
@@ -512,6 +512,66 @@ Again, this could all be accomplished with a fairly gruesome recursive smarts, o
 construct is just a notational convenience. And of course the original smarts can
 have arbitrary complexity as well, so there is considerable flexibility here.
 
+## Nearby Atoms
+When working with lead optimisation projects there may be some fairly non
+specific requirements to be investigated. For example 'an x kind of ring,
+and within two bonds we need both a donor and an acceptor'. Or 'from this
+point on the aromatic ring, we need a primary amine within 2 bonds'. Or 
+'no nitro group within 2 bonds of the ring'.
+
+The NearbyAtoms concept was introduced to enable these kinds of minimally
+specified query types. A fairly complex example might be
+```
+query {
+  ring_system_specifier {
+    rings_in_system: 2
+    aromatic_ring_count: 2
+    base {
+      min_heteroatom_count: 1
+      set_global_id: 1
+      environment: "[o,nD2H0]&&[cD3]-!@*"
+    }
+  }
+
+  smarts: "[/IWgid1]"
+
+  nearby_atoms {
+    smarts: "[OH,SH]"
+    max_bonds_between: 3
+    hits_needed: 1
+  }
+  nearby_atoms {
+    smarts: "[ND1H2T0]-[G0]"
+    max_bonds_between: 2
+    rejection: true
+  }
+}
+```
+which matches a
+
+* two-aromatic-ring ring system with at least one heteroatom
+* somewhere in that ring system is an acceptor
+* somewhere in the ring system there is a 3 connected carbon with a non ring bond
+* the smarts defines all atoms in that ring system
+* within 3 bonds of a ring atom, there must be exactly one OH or SH
+* fail if there is a primary amine within 2 bonds of the ring.
+
+The first condition is already covered by the second matching criterion, and
+so is not strictly necessary.
+
+The smarts matches all atoms in the ring system, and so the required OH or SH
+can be anywhere near the ring system.
+
+You can also restrict the nearby atoms matches to specific matched atoms by use
+of the matched_atom directive. But note the potential overlap with the
+`link_atoms` directive. By default, the atoms in the nearby_atoms block
+must be distinct from the matched atoms, but that can be changed if
+`can_overlap_matched_atoms` is set.
+
+If there are no constraints on distance, then a simple '&&' smarts can be
+used, which describes two (possibly overlapping) separate smarts matches.
+
+## Smarts
 I have heard smarts referred to as a 'write only' language. Several of these
 constructs in the proto representation are specifically designed to lessen the
 need for complex recursive smarts.
@@ -521,7 +581,7 @@ creates recursive smarts of arbitrary depth. Enjoy...
 
 ## Conclusion
 Protocol Buffers enable the expression of fairly complex substructure
-searching concepts. But after working with these tools for any years,
+searching concepts. But after working with these tools for many years,
 we are still encountering quite reasonable substructure query ideas that
 cannot be processed readily. There will be an ongoing effort to decide
 which of those unmet needs are worth addressing in LillyMol.

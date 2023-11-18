@@ -156,7 +156,7 @@ static IWString tag;
 static IWString smiles_tag("$SMI<");
 
 /*
-  We can speed things up and avoid problems with isotopes by hard coding the common pharmacaphore things
+  We can speed things up and avoid problems with isotopes by hard coding the common pharmacophore things
 */
 
 static int positive_negative_acceptor_donor = 0;

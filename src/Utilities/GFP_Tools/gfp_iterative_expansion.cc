@@ -35,7 +35,7 @@ static Tversky tversky;
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
 
-static Accumulator_Int<int>* neighbour_count = nullptr;
+// static Accumulator_Int<int>* neighbour_count = nullptr;
 
 static Report_Progress report_progress;
 

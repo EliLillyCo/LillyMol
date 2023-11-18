@@ -18,6 +18,20 @@ cc_library(
 """,
 )
 
+new_local_repository(
+    name = "berkeleydbshared",
+    path = "../third_party/BDB",
+    build_file_content = """
+cc_library(
+    name = "berkeleydb",
+    srcs = ["lib/libdb_cxx.so", "lib/libdb.so"],
+    hdrs = ["include/db_cxx.h", "include/db.h" ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
 #http_archive(
 #   name = "com_github_google_benchmark",
 #    name = "benchmark",
@@ -57,10 +71,10 @@ cc_library(
 """,
 )
 
-local_repository(
-    name = "tbb",
-    path = "../third_party/oneTBB",
-)
+#local_repository(
+#    name = "tbb",
+#    path = "../third_party/oneTBB",
+#)
 
 new_local_repository(
     name = "fast_float",
@@ -115,7 +129,7 @@ cc_library (
 # local needs.
 new_local_repository(
     name = "python",
-    path = "/lrlhps/data/c3tk/dev/virtenv/gc3tk-env/include/python3.11",
+    path = "/usr/include/python3.6m",
     build_file_content = """
 cc_library(
     name = "python",
@@ -156,7 +170,7 @@ cc_library(
 # definitely possibility of problems...
 new_local_repository(
     name = "biobyte",
-    path= "/lrlhps/apps/gc3tk/c3tk-core/lib/Linux/BioByte/linux-64/",
+    path= "/lrlhps/apps/gc3tk/c3tk-core/lib/biobyte/linux-64/",
     build_file_content = """
 cc_library (
     name = "biobyte",
@@ -170,7 +184,7 @@ cc_library (
 
 new_local_repository(
     name = "corina",
-    path = "/lrlhps/apps/corina/corina-4.4.0",
+    path = "/lrlhps/apps/gc3tk/c3tk-core/lib/corina",
     build_file_content = """
 cc_library(
     name = "corina",

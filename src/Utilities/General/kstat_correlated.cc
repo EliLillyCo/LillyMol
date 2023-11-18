@@ -1172,18 +1172,20 @@ SColumn::_do_Q_test(SColumn& rhs)
 
   // First get the two unique values for each column
 
-  float a11, a12;
+  float a11;
+  //float a12;
 
   f = _different_values.begin();
   a11 = (*f).first;
   f++;
-  a12 = (*f).first;
+  //a12 = (*f).first;
 
-  float a21, a22;
+  float a21;
+  //float a22;
   f = rhs._different_values.begin();
   a21 = (*f).first;
   f++;
-  a22 = (*f).first;
+  //a22 = (*f).first;
 
   int n = _values_sampled.number_elements();
 

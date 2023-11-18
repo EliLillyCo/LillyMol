@@ -441,6 +441,7 @@ namespace {
     _scaffolds_per_mol.push_back(0);
 //  cerr << "push_molecule:got " << smiles << endl;
   }
+
   int GroupR::get_current_molecule_id() const {
     return _molecules.size()-1;
   }
@@ -1876,6 +1877,7 @@ identify_substituents (Molecule & m,
   return rc;
 }
 
+#ifdef OLD_VERSION_
 static int
 gp_add_scaffold_iw(const Molecule & m,
                    const int query_number,
@@ -1930,6 +1932,7 @@ gp_add_scaffold_iw(const Molecule & m,
 
   return 1;
 }
+#endif
 
 static int
 gp_add_scaffold_iw_v2(const Molecule & m,

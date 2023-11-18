@@ -100,6 +100,8 @@ FileconvConfig::DefaultValues() {
   max_path_length = 0;
   molecules_with_longest_path_too_long = 0;
 
+  need_to_consider_isotopes = 0;
+
   exclude_isotopes = 0;
   molecules_containing_isotopes = 0;
 
@@ -3239,7 +3241,86 @@ ConvertIsotopes(Molecule& m) {
   }
   return rc;
 }
+// Return 1 if any change is made.
+int
+FileconvConfig::AddFragmentToIsotopicAtoms(Molecule& m) {
+  int rc = 0;
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    const isotope_t iso = m.isotope(i);
+    if (iso == 0) {
+      continue;
+    }
 
+    auto iter = add_to_isotopic_atom.find(iso);
+    if (iter == add_to_isotopic_atom.end()) {
+      continue;
+    }
+
+    // Interesting design decision. What to do if someone has entered
+    // something like [C] - Carbon with no Hydrogens. Let's be forgiving
+    // and see if we can liberate some Hydrogens.
+    m.unset_all_implicit_hydrogen_information(i);
+
+    if (m.hcount(i) == 0) {
+      continue;
+    }
+
+    const int initial_matoms = m.natoms();
+    m.add_molecule(&iter->second);
+    m.add_bond(i, initial_matoms, SINGLE_BOND);
+    rc = 1;
+  }
+
+  return rc;
+}
+
+// Returns 1 if we change `m` and increment molecules_containing_isotopes
+int
+FileconvConfig::IsotopeRelated(Molecule& m) {
+  int rc = 0;
+
+  if (convert_isotopes == 1) {  // put here so chemical standardisation can get rid of converted Deuterium
+    if (m.transform_to_non_isotopic_form()) {
+      ++rc;
+      molecules_containing_isotopes++;
+    }
+  } else if (convert_isotopes == 2) {
+    if (ConvertIsotopes(m)) {
+      ++rc;
+      molecules_containing_isotopes++;
+    }
+  } else if (convert_all_isotopes_to) {
+    if (do_convert_all_isotopes_to(m, convert_all_isotopes_to)) {
+      ++rc;
+      molecules_containing_isotopes++;
+    }
+  } else {
+    if (convert_specific_isotopes.number_elements()) {
+      if (do_convert_specific_isotopes(m,
+                                       convert_specific_isotopes,
+                                       convert_specific_isotopes_new_isotope)) {
+        ++rc;
+        molecules_containing_isotopes++;
+      }
+    }
+
+    if (convert_specific_isotopes_query.number_elements()) {
+      if (do_convert_specific_isotopes_query(m,
+                                             convert_specific_isotopes_query,
+                                             convert_specific_isotopes_query_new_isotope)) {
+        ++rc;
+        molecules_containing_isotopes++;
+      }
+    }
+
+    if (add_to_isotopic_atom.size()) {
+      rc += AddFragmentToIsotopicAtoms(m);
+    }
+  }
+
+  return rc;
+}
 FileconvResult
 FileconvConfig::Process(Molecule& m) {
   ++molecules_processed;
@@ -3294,39 +3375,8 @@ FileconvConfig::Process(Molecule& m) {
     }
   }
 
-  if (convert_isotopes == 1) {  // put here so chemical standardisation can get rid of converted Deuterium
-    if (m.transform_to_non_isotopic_form()) {
-      molecule_changed++;
-      molecules_containing_isotopes++;
-    }
-  } else if (convert_isotopes == 2) {
-    if (ConvertIsotopes(m)) {
-      molecule_changed++;
-      molecules_containing_isotopes++;
-    }
-  } else if (convert_all_isotopes_to) {
-    if (do_convert_all_isotopes_to(m, convert_all_isotopes_to)) {
-      molecules_changed++;
-      molecules_containing_isotopes++;
-    }
-  } else {
-    if (convert_specific_isotopes.number_elements()) {
-      if (do_convert_specific_isotopes(m,
-                                       convert_specific_isotopes,
-                                       convert_specific_isotopes_new_isotope)) {
-        molecules_changed++;
-        molecules_containing_isotopes++;
-      }
-    }
-
-    if (convert_specific_isotopes_query.number_elements()) {
-      if (do_convert_specific_isotopes_query(m,
-                                             convert_specific_isotopes_query,
-                                             convert_specific_isotopes_query_new_isotope)) {
-        molecules_changed++;
-        molecules_containing_isotopes++;
-      }
-    }
+  if (need_to_consider_isotopes) {
+    molecule_changed += IsotopeRelated(m);
   }
 
   if (reset_atom_map_numbers)
@@ -3648,6 +3698,28 @@ FileconvConfig::GetTranslations(Command_Line& cl, const char cflag) {
   return 1;
 }
 
+// `s` must be of the form <number>-<smiles>
+//  isotope number and a molecule.
+int
+FileconvConfig::ParseFragmentAddToIsotope(const const_IWSubstring& s) {
+  const_IWSubstring iso, smiles;
+  isotope_t isotope;
+  if (! s.split(iso, '-', smiles) || iso.empty() || smiles.empty() ||
+      ! iso.numeric_value(isotope)) {
+    return 0;
+  }
+
+  Molecule m;
+  if (! m.build_from_smiles(smiles)) {
+    cerr << "FileconvConfig::ParseFragmentAddToIsotope:invalid smiles '" << smiles << "'\n";
+    return 0;
+  }
+
+  add_to_isotopic_atom[isotope] = m;
+
+  return 1;
+}
+
 int
 FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
   if (!cl.option_present(flag)) {
@@ -3672,6 +3744,12 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
       convert_isotopes = 2;
       if (verbose)
         cerr << "All isotopic atoms will be converted to their non isotopic form, implicit H recomputed\n";
+    } else if (tmp.starts_with("add:")) {
+      tmp.remove_leading_chars(4);
+      if (! ParseFragmentAddToIsotope(tmp)) {
+        cerr << "Invalid fragment add to isotope directive '" << tmp << "'\n";
+        return 0;
+      }
     } else if (tmp.starts_with("convert=") || tmp.starts_with("change=")) {
       if (tmp.starts_with("convert="))
         tmp.remove_leading_chars(8);
@@ -3759,6 +3837,9 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
       Usage(1);
     }
   }
+
+  need_to_consider_isotopes = 1;
+
   return 1;
 }
 

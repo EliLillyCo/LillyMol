@@ -296,6 +296,7 @@ Replacement::MakeVariant(Molecule& parent,
         continue;
       }
       if (! EnvironmentMatch(_m, i, o, atypes)) {
+        // cerr << "Failed due to EnvironmentMatch\n";
         return 0;
       }
       // cerr << "From atom " << a << " make bond " << (initial_natoms + i) << " to " << o << '\n';
@@ -333,10 +334,13 @@ Replacement::MakeVariant(Molecule& parent,
 
   m->remove_atoms(to_remove.get());
 
-  // cerr << "After removing atoms " << m->aromatic_smiles() << '\n';
+#ifdef DEBUG_MAKE_VARIANT
+  cerr << "After removing atoms " << m->aromatic_smiles() << '\n';
+#endif
 
   if (! _exocyclic.empty()) {
     if (! JoinExocyclic(*m)) {
+      // cerr << "JoinExocyclic failed\n";
       return 0;
     }
   }
@@ -509,6 +513,7 @@ class RingReplacement {
     int AnyReplacementRingIgnoreQueryMatches(Replacement& r);
     int OkSupport(const Replacement& r);
     int IsUnique(Molecule& m);
+    int OkQueryConstraints(Molecule& m);
     int Process(resizable_array_p<Molecule>& mols, int ndx, const uint32_t* atypes);
     int Write(const resizable_array_p<Molecule>& mols, IWString_and_File_Descriptor& output);
 
@@ -904,6 +909,10 @@ RingReplacement::Process(Molecule& m,
     return 0;
   }
 
+  if (_verbose) {
+    cerr << "From " << m.name() << " generated " << generated.size() << "  molecules\n";
+  }
+
   if (generated.size() == 1) {
     if (_stream_for_unchanged_molecules.is_open()) {
       _stream_for_unchanged_molecules << m.smiles() << ' ' << m.name() << '\n';
@@ -915,6 +924,7 @@ RingReplacement::Process(Molecule& m,
   return Write(generated, output);
 }
 
+// All isotopic atoms get translated to `iso`.
 void
 TranslateIsotopes(Molecule& m, isotope_t iso) {
   const int matoms = m.natoms();
@@ -960,6 +970,9 @@ RingReplacement::Process(resizable_array_p<Molecule>& mols,
         if (!IsUnique(*variant)) {
           continue;
         }
+        if (!OkQueryConstraints(*variant)) {
+          continue;
+        }
         if (_remove_isotopes) {
           variant->transform_to_non_isotopic_form();
         } else if (_translate_isotopes) {
@@ -998,6 +1011,36 @@ RingReplacement::IsUnique(Molecule& m) {
   // Make sure we do not write unique smiles.
   m.invalidate_smiles();
 
+  return 1;
+}
+
+// Return true if any of `queries` match `target`.
+int
+MatchAny(Molecule_to_Match& target,
+         resizable_array_p<Substructure_Query>& queries) {
+  for (Substructure_Query* q : queries) {
+    if (q->substructure_search(target)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int
+RingReplacement::OkQueryConstraints(Molecule& m) {
+  Molecule_to_Match target(&m);
+
+  if (_products_must_have.empty()) {
+  } else if (! MatchAny(target, _products_must_have)) {
+    return 0;
+  }
+
+  if (_products_must_not_have.empty()) {
+  } else if (MatchAny(target, _products_must_not_have)) {
+    return 0;
+  }
+  
   return 1;
 }
 

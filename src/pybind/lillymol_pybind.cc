@@ -4,6 +4,7 @@
 #include <string>
 
 #include "pybind11/pybind11.h"
+#include "pybind11/numpy.h"
 // to convert C++ STL containers to python list
 #include "pybind11/stl.h"
 
@@ -27,9 +28,19 @@ PYBIND11_MAKE_OPAQUE(std::vector<int>);
 #include "Molecule_Lib/path.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
+
+#include "Molecule_Tools/xlogp.h"
+
 #include "pybind/molecule.h"
 
 namespace py = pybind11;
+
+// Lifted from test_numpy_dtypes.cpp
+template <typename T>
+py::array mkarray_via_buffer(size_t n) {
+    return py::array(py::buffer_info(
+        nullptr, sizeof(T), py::format_descriptor<T>::format(), 1, {n}, {sizeof(T)}));
+}
 
 static void
 AppendBond(const Bond* b,
@@ -521,6 +532,19 @@ PYBIND11_MODULE(lillymol, m)
 
                 .def("remove_non_periodic_table_elements", static_cast<int (Molecule::*)()>(&Molecule::remove_all_non_natural_elements), "Remove non periodic table elements")
                 .def("organic_only", static_cast<int (Molecule::*)()const>(&Molecule::organic_only), "True if only organic elements")
+                .def("non_organic_atom_count", &Molecule::non_organic_atom_count, "Number of non organic atoms")
+                .def("is_organic",
+                  [](const Molecule& m, atom_number_t zatom)->bool {
+                    return m.is_organic(zatom);
+                  },
+                  "True if the atom is organic"
+                )
+                .def("is_organic",
+                  [](const Molecule& m, atom_number_t zatom)->bool {
+                    return m.is_organic(zatom);
+                  },
+                  "True if `zatom` is organic"
+                )
 
                 .def("remove_explicit_hydrogens", static_cast<int (Molecule::*)()>(&Molecule::remove_explicit_hydrogens), "Remove explicit hydrogens")
                 .def("remove_all", static_cast<int (Molecule::*)(atomic_number_t)>(&Molecule::remove_all), "Remove all elements with atomic number")
@@ -708,6 +732,13 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   py::return_value_policy::move
                 )
+                .def("bond",
+                  [](const Molecule& m, int ndx)->const Bond* {
+                    return m.bondi(ndx);
+                  },
+                  py::return_value_policy::reference,
+                  "Return the i'th Bond"
+                )
 
                 .def("remove_isotopes",
                   [](Molecule& m) {
@@ -767,14 +798,28 @@ PYBIND11_MODULE(lillymol, m)
                 .def("atom_map_number", static_cast<int (Molecule::*)(atom_number_t)const>(&Molecule::atom_map_number), "Set atom map number")
                 .def("atom_with_atom_map_number", &Molecule::atom_with_atom_map_number, "Atom with atom map number")
 
-                .def("bond_length", static_cast<distance_t (Molecule::*)(atom_number_t, atom_number_t, int)const>(&Molecule::bond_length), "Bond length between atoms")
-                .def("bond_angle", static_cast<distance_t (Molecule::*)(atom_number_t, atom_number_t, atom_number_t, int)const>(&Molecule::bond_angle), "Bond length between atoms")
+                .def("bond_length", 
+                  [](const Molecule& m, atom_number_t a1, atom_number_t a2)->std::optional<float> {
+                    if (! m.are_bonded(a1, a2)) {
+                      return std::nullopt;
+                    }
+                    return m.bond_length(a1, a2);  // no need to check again.
+                  },
+                  "Distance between two bonded atoms"
+                )
                 .def("bond_angle",
                   [](const Molecule& m, atom_number_t a1, atom_number_t a2, atom_number_t a3)->float {
-                    return m.bond_angle(a1, a2, a3, 1);
-                  }
+                    return m.bond_angle(a1, a2, a3, BondedStatus::kOkNotBonded);
+                  },
+                  "Angle defined by any three atoms - not necessarily bonded"
                 )
-                .def("dihedral_angle", static_cast<distance_t (Molecule::*)(atom_number_t, atom_number_t, atom_number_t, atom_number_t, int)const>(&Molecule::dihedral_angle), "Dihedral angle involving atoms")
+                .def("dihedral_angle",
+                  [](const Molecule& m, atom_number_t a1, atom_number_t a2,
+                     atom_number_t a3, atom_number_t a4) {
+                    return m.dihedral_angle(a1, a2, a3, a4, BondedStatus::kOkNotBonded);
+                  },
+                  "Dihedral angle defined by any four atoms - not necessarily bonded"
+                )
                 .def("signed_dihedral_angle", static_cast<distance_t (Molecule::*)(atom_number_t, atom_number_t, atom_number_t, atom_number_t)const>(&Molecule::signed_dihedral_angle), "Signed dihedral angle involving atoms")
                 .def("distance_between_atoms", static_cast<distance_t (Molecule::*)(atom_number_t, atom_number_t)const>(&Molecule::distance_between_atoms), "Spatial distance between atoms")
                 .def("longest_intra_molecular_distance", &Molecule::longest_intra_molecular_distance, "longest_intra_molecular_distance")
@@ -783,6 +828,29 @@ PYBIND11_MODULE(lillymol, m)
                     return m.translate_atoms(x, y, z);
                   },
                   "translate coordinates"
+                )
+                .def ("translate",
+                  [](Molecule& m, std::vector<int>& to_move, int flag, float x, float y, float z)->bool {
+                    Coordinates coords(x, y, z);
+                    m.translate_atoms(coords, to_move.data(), flag);
+                    return 1;
+                  },
+                  "Move all atoms where 'to_move[i]== flag' by (x,y,z)"
+                )
+                .def("rotate",
+                  [](Molecule& m, const std::vector<int>& to_move, int flag,
+                               const Coordinates& axis, float angle) {
+                    return m.rotate_atoms(axis, angle, to_move.data(), flag);
+                  },
+                  "Rotate the atoms for which 'to_move[i]==flag' around `axis` by"
+                )
+
+                .def("bump_check",
+                  [](const Molecule& m, distance_t dist) {
+                    return m.bump_check(dist);
+                  }
+                  ,
+                  "the number of non-bonded atoms within dist of each other"
                 )
 
                 // This did not work, the name always showed up as empty.
@@ -804,6 +872,48 @@ PYBIND11_MODULE(lillymol, m)
                 .def("setz", static_cast<void (Molecule::*)(atom_number_t, coord_t)>(&Molecule::setz), "set z coordinate")
                 .def("setxyz", static_cast<void (Molecule::*)(atom_number_t, coord_t, coord_t, coord_t)>(&Molecule::setxyz), "Set coordinates")
                 .def("discern_chirality_from_3d_structure", &Molecule::discern_chirality_from_3d_structure, "Find chiral centres")
+
+                .def("get_coordinates",
+                  [](const Molecule& m)->py::array_t<float> {
+                    const int matoms = m.natoms();
+                    py::array_t<float> result = mkarray_via_buffer<float>(matoms * 3);
+                    auto req = result.request();
+                    float* ptr = static_cast<float*>(req.ptr);
+                    for (int i = 0; i < matoms; ++i) {
+                      ptr[i * 3 + 0] = m.x(i);
+                      ptr[i * 3 + 1] = m.y(i);
+                      ptr[i * 3 + 2] = m.z(i);
+                    }
+                    return result;
+                  },
+                  "Return 3*natoms array of coords. First 3 values hold x,y,z of the first atom..."
+                )
+                .def("set_coordinates",
+                  [](Molecule& m, const pybind11::array_t<float> coords)->void {
+                    auto req = coords.request();
+                    m.SetXyz(static_cast<float*>(req.ptr));
+                  },
+                  "Set coordinates. First 3 entries are x,y,z for first atom..."
+                )
+                .def("dihedral_scan",
+                  [](Molecule& m, atom_number_t a2, atom_number_t a3, angle_t angle, float bump_check)->std::vector<py::array_t<float>>{
+                    const std::vector<std::unique_ptr<float[]>> coords = m.DihedralScan(a2, a3, angle, bump_check);
+                    const int nconf = coords.size();
+                    const int matoms = m.natoms();
+
+                    std::vector<py::array_t<float>> result;
+                    result.reserve(nconf);
+
+                    for (const std::unique_ptr<float[]>& c : coords) {
+                      result.emplace_back(py::array_t<float>(matoms * 3));
+                      auto req = result.back().request();
+                      float* ptr = static_cast<float*>(req.ptr);
+                      std::copy_n(c.get(), matoms * 3, ptr);
+                    }
+                    return result;
+                  },
+                  "Scan around `a2`-`a3` bond every `angle` degrees and return list of coordinates at each conformer"
+                )
 
                 .def("molecular_formula", static_cast<std::string (Molecule::*)()>(&Molecule::MolecularFormula), "Molecular formula")
 
@@ -925,12 +1035,19 @@ PYBIND11_MODULE(lillymol, m)
   py::class_<Atom, std::shared_ptr<Atom>>(m, "Atom")
     .def(py::init<int>())
     .def("atomic_number", static_cast<int (Atom::*)()const>(&Atom::atomic_number), "Atomic Number")
+    .def("atomic_symbol",
+      [](const Atom& a)->std::string{
+        return a.atomic_symbol().AsString();
+      },
+      "Atomic symbol"
+    )
     .def("isotope", static_cast<isotope_t (Atom::*)()const>(&Atom::isotope), "isotope")
     .def("ncon", static_cast<int (Atom::*)()const>(&Atom::ncon), "Number of connections")
     .def("nbonds", static_cast<int (Atom::*)()const>(&Atom::nbonds), "Number of bonds - single=1, double=2...")
     .def("formal_charge", &Atom::formal_charge, "formal charge")
     .def("atomic_weight", &Atom::atomic_weight, "atomic weight")
     .def("exact_mass", &Atom::exact_mass, "exact mass")
+    .def("implicit_hydrogens", &Atom::implicit_hydrogens, "number of implicit Hydrogens attached")
     .def("is_bonded_to",
       [](const Atom& a, atom_number_t atom)->bool{
           return a.is_bonded_to(atom);
@@ -1012,6 +1129,12 @@ PYBIND11_MODULE(lillymol, m)
         return a.ncon();
       },
       "Number of connections"
+    )
+    .def("__sub__",
+      [](const Atom& a1, const Atom& a2)->float {
+        return a1.distance(a2);
+      },
+      "Spatial distance between two atoms"
     )
 
 
@@ -1385,6 +1508,11 @@ PYBIND11_MODULE(lillymol, m)
       "Apply transformations"
     )
   ;
+  py::class_<Coordinates>(m, "Coordinates")
+    .def(py::init<>())
+    .def(py::init<float, float, float>())
+    .def("normalise", &Coordinates::normalise)
+  ;
 
   m.def("set_copy_name_in_molecule_copy_constructor", &set_copy_name_in_molecule_copy_constructor, "Copy name in constructor");
   m.def("MolFromSmiles", &MolFromSmiles, "Molecule from smiles");
@@ -1424,6 +1552,24 @@ PYBIND11_MODULE(lillymol, m)
       return IsChiralLonePair(c);
     },
     "True if chiral connection is a lone pair"
+  );
+
+  m.def("Position3D",
+    [](Molecule& m, atom_number_t atom1, float distance, atom_number_t atom2) {
+      return lillymol::Position3D(m, atom1, distance, atom2);
+    },
+    "Move atoms in fragment defined by atom2 so that fragment can join atom1"
+  );
+
+  m.def("xlogp",
+    [](Molecule& m)->std::optional<float> {
+      std::optional<double> result = xlogp::XLogP(m);
+      if (! result) {
+        return std::nullopt;
+      }
+      return *result;
+    },
+    "xlogp"
   );
 
 }

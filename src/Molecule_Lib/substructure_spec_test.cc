@@ -1710,13 +1710,18 @@ TEST_P(TestRangesSpiro, TestSpiro) {
   // std::cerr << "TestingSpiro '" << params.smiles << "' smarts '" << params.smarts << " xpt " << params.nhits << '\n';
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
   ASSERT_TRUE(_query.create_from_smarts(params.smarts));
-  EXPECT_EQ(_query.substructure_search(&_m), params.nhits);
+  EXPECT_EQ(_query.substructure_search(&_m), params.nhits) << params.smiles <<
+     " smarts " << params.smarts << " expected " << params.nhits;
 }
 INSTANTIATE_TEST_SUITE_P(TestRangesSpiro, TestRangesSpiro, testing::Values(
   SmilesSmartsNhits{"C", "[/IWspiro]", 0},
   SmilesSmartsNhits{"C1CC1C1CC1", "[/IWspiroC]", 0},
   SmilesSmartsNhits{"C1CC12CC2", "[/IWspiroC]", 1},
   SmilesSmartsNhits{"C12(N3CC4(C)C(=O)C(C)(C3)CN1C4)C1=C(C=CC(=C1)Br)NC2=O", "[/IWspiroC]", 1}
+));
+
+INSTANTIATE_TEST_SUITE_P(TestSymd, TestRangesSpiro, testing::Values(
+  SmilesSmartsNhits{"CO", "[/IWsymd1]", 2}
 ));
 
 class TestInvalidSmarts : public testing::TestWithParam<IWString> {

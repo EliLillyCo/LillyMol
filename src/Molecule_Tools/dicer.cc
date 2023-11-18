@@ -134,7 +134,7 @@ static int prepend_smiles_to_fragstat_proto = 0;
 // If we are writing binary protos - recommended for larger
 // datasets.
 static int write_fragstat_as_binary_proto = 0;
-iw_tf_data_record::TFDataWriter tfdata_writer;
+static iw_tf_data_record::TFDataWriter tfdata_writer;
 
 static int work_like_recap = 0;
 
@@ -214,7 +214,168 @@ static int reject_breakages_that_result_in_fragments_too_small = 0;
 static int write_smiles = 1;
 static int write_parent_smiles = 1;
 
-static int output_is_proto = 0;
+// We can write fragments in several forms.
+//   1. classical form, smiles one per line
+//   2. textproto, one per line
+//   3. serialized proto form.
+// This class holds that information and the associated streams.
+
+class DicerFragmentOutput {
+  private:
+    // pointer because if we need to use stdout, we need to use the
+    // constructor.
+    std::unique_ptr<IWString_and_File_Descriptor> _text_output;
+
+    // If true, we flush _text_output whenever we feel like it.
+    int _buffered_output;
+
+    iw_tf_data_record::TFDataWriter _as_tfdata;
+
+    // True if a proto needs to be formed. We will write it as either
+    // text or tfdata.
+    int _output_is_proto;
+
+    // private functions
+
+    int WriteText(const dicer_data::DicedMolecule& proto, IWString_and_File_Descriptor& output);
+    int WriteSerialized(const dicer_data::DicedMolecule& proto);
+
+  public:
+    DicerFragmentOutput();
+
+    void set_output_is_proto(int s) {
+      _output_is_proto = s;
+    }
+    int output_is_proto() const {
+      return _output_is_proto;
+    }
+
+    void set_buffered_output(int s) {
+      _buffered_output = s;
+    }
+    int buffered_output() const {
+      return _buffered_output;
+    }
+
+    void flush() {
+      if (_text_output) {
+        _text_output->flush();
+      }
+    }
+
+    // After processing a molecule do whatever flushing is needed.
+    int MaybeFlush();
+
+    int write_if_buffer_holds_more_than(uint32_t s) {
+      return _text_output->write_if_buffer_holds_more_than(s);
+    }
+
+    IWString_and_File_Descriptor& text_output() {
+      return *_text_output;
+    }
+
+    int SetUseStdout();
+
+    int SetOutputStream(IWString& fname);
+
+    int SetTFDataFname(IWString& fname);
+
+    int Write(const dicer_data::DicedMolecule& proto);
+
+    template <typename T>
+    DicerFragmentOutput& operator << (const T rhs) {
+      *_text_output << rhs;
+      return *this;
+    }
+};
+
+DicerFragmentOutput::DicerFragmentOutput() {
+  _output_is_proto = 0;
+  _buffered_output = 1;
+}
+
+int
+DicerFragmentOutput::SetUseStdout() {
+  _text_output = std::make_unique<IWString_and_File_Descriptor>(1);
+
+  return _text_output->good();
+}
+
+int
+DicerFragmentOutput::SetOutputStream(IWString& fname) {
+  _text_output = std::make_unique<IWString_and_File_Descriptor>();
+  if (! _text_output->open(fname.null_terminated_chars())) {
+    cerr << "DicerFragmentOutput::SetOutputStream:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return _text_output->good();
+}
+
+int
+DicerFragmentOutput::SetTFDataFname(IWString& fname) {
+  if (! _as_tfdata.Open(fname)) {
+    cerr << "DicerFragmentOutput::SetTFDataFname:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  _output_is_proto = 1;
+
+  return 1;
+}
+
+int
+DicerFragmentOutput::Write(const dicer_data::DicedMolecule& proto) {
+  if (_text_output) {
+    return WriteText(proto, *_text_output);
+  } else {
+    return WriteSerialized(proto);
+  }
+}
+
+int
+DicerFragmentOutput::WriteText(const dicer_data::DicedMolecule& proto,
+                IWString_and_File_Descriptor& output) {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "DicerFragmentOutput::WriteTextcannot write '" << proto.ShortDebugString() << "'\n";
+    return 0;
+  }
+
+  output << buffer;
+  output << '\n';
+
+  if (_buffered_output) {
+    output.write_if_buffer_holds_more_than(8192);
+  } else {
+    output.flush();
+  }
+
+  return 1;
+}
+
+int
+DicerFragmentOutput::WriteSerialized(const dicer_data::DicedMolecule& proto) {
+  return _as_tfdata.WriteSerializedProto<dicer_data::DicedMolecule>(proto);
+}
+
+int
+DicerFragmentOutput::MaybeFlush() {
+  if (! _text_output) {
+    return 0;
+  }
+
+  if (_buffered_output) {
+    _text_output->write_if_buffer_holds_more_than(8192);
+  } else {
+    _text_output->flush();
+  }
+
+  return 1;
+}
 
 /*
    When viewing fragments, it is convenient to have the parent
@@ -260,8 +421,6 @@ static extending_resizable_array<int> fragments_produced;
 static Molecule_Output_Object bbrk_file;
 static IWString bbrk_tag;
 static int read_bonds_to_be_broken_from_bbrk_file = 0;
-
-static int buffered_output = 1;
 
 static int check_for_lost_chirality = 0;
 
@@ -442,7 +601,6 @@ reset_variables()
      reject_breakages_that_result_in_fragments_too_small = 0;
      write_smiles = 1;
      write_parent_smiles = 1;
-     output_is_proto = 0;
      vf_structures_per_page = 0;
      write_smiles_and_complementary_smiles = 0;
      allow_cc_bonds_to_break = 0;
@@ -461,7 +619,6 @@ reset_variables()
      read_bonds_to_be_broken_from_bbrk_file = 0;
 	 bbrk_file.resize(0);
 	 bbrk_tag.resize(0);
-     buffered_output = 1;
      check_for_lost_chirality = 0;
      return;
 }
@@ -863,9 +1020,6 @@ class Dicer_Arguments
     // not need the usual output.
     int _write_diced_molecules;
 
-    // Rather than a (ragged) tabular output, we can write a proto.
-    int _output_is_proto = 0;
-
 // private functions
 
     int _write_fragment_and_complement (Molecule & m, const IW_Bits_Base & b,
@@ -884,7 +1038,7 @@ class Dicer_Arguments
     int _is_smallest_fragment(const IW_Bits_Base & b) const;
     void _add_new_smiles_to_global_hashes (const IWString & smiles);
 
-    int WriteAsProto(Molecule& n, int breakable_bonds, IWString_and_File_Descriptor& output) const;
+    int WriteAsProto(Molecule& n, int breakable_bonds, DicerFragmentOutput& output) const;
 
   public:
     Dicer_Arguments (int mrd);            // arg is max recursion depth
@@ -938,9 +1092,6 @@ class Dicer_Arguments
 
     void set_write_diced_molecules(int s) {
       _write_diced_molecules = s;
-    }
-    void set_output_is_proto(int s) {
-      _output_is_proto = s;
     }
 
     int max_recursion_depth_this_molecule () const
@@ -1003,7 +1154,7 @@ class Dicer_Arguments
 
     int try_more_ring_splitting ();
 
-    int write_fragments_found_this_molecule(Molecule & m, int breakable_bonds, IWString_and_File_Descriptor & output) const;
+    int write_fragments_found_this_molecule(Molecule & m, int breakable_bonds, DicerFragmentOutput & output) const;
 
     int produce_fingerprint(Molecule & m, IWString_and_File_Descriptor & output) const;
 
@@ -1046,8 +1197,6 @@ Dicer_Arguments::Dicer_Arguments(int mrd)
   _atom_type = nullptr;
 
   _write_diced_molecules = 1;
-
-  _output_is_proto = 0;
 
   // Copy from file scope value.
   _max_non_ring_atoms = max_non_ring_atoms;
@@ -2390,13 +2539,13 @@ Dicer_Arguments::is_unique(Molecule & m)
 int
 Dicer_Arguments::write_fragments_found_this_molecule(Molecule & m,
                                           int breakable_bonds,
-                                          IWString_and_File_Descriptor & output) const
+                                          DicerFragmentOutput & output) const
 {
   if (! _write_diced_molecules) {
     return 1;
   }
 
-  if (_output_is_proto) {
+  if (output.output_is_proto()) {
     return WriteAsProto(m, breakable_bonds, output);
   }
 
@@ -2439,7 +2588,7 @@ Dicer_Arguments::write_fragments_found_this_molecule(Molecule & m,
 int
 Dicer_Arguments::WriteAsProto(Molecule& m,
                               int breakable_bonds,
-                              IWString_and_File_Descriptor& output) const {
+                              DicerFragmentOutput& output) const {
   dicer_data::DicedMolecule proto;
   proto.set_name(m.name().data(), m.name().length());
   const IWString& usmi = m.unique_smiles();
@@ -2457,18 +2606,7 @@ Dicer_Arguments::WriteAsProto(Molecule& m,
     frag->set_id(fragment_number);
   }
 
-  static google::protobuf::TextFormat::Printer printer;  
-  printer.SetSingleLineMode(true);
-
-  std::string buffer;
-  if (! printer.PrintToString(proto, &buffer)) {
-    cerr << "WriteFragmentStatisticsAsProto:cannot write '" << proto.ShortDebugString() << "'\n";
-    return 0;
-  }
-  output << buffer;
-  output << '\n';
-
-  output.write_if_buffer_holds_more_than(4096);
+  return output.Write(proto);
 
   return 1;
 }
@@ -6528,7 +6666,6 @@ Breakages::discard_breakages_that_result_in_fragments_too_small(Molecule & m,
     }
   }
 
-  //cerr << "Returning rc = " << rc << endl;
   return rc;
 }
 
@@ -6923,7 +7060,7 @@ add_parent_atom_count_to_global_array(const IWString & mname,
 
 static int
 dicer(Molecule & m,
-      IWString_and_File_Descriptor & output)
+      DicerFragmentOutput & output)
 {
   static bool first_call = true;
   if (first_call) {
@@ -6983,10 +7120,6 @@ dicer(Molecule & m,
   else
     dicer_args.set_lower_atom_count_cutoff(lower_atom_count_cutoff);
 
-  if (output_is_proto) {
-    dicer_args.set_output_is_proto(output_is_proto);
-  }
-
   dicer_args.set_upper_atom_count_cutoff(std::min(upper_atom_count_cutoff,
                                                   int(max_atom_fraction*m.natoms())));
 
@@ -7022,7 +7155,7 @@ dicer(Molecule & m,
   if (0 == bonds_to_break_this_molecule)
   {
     if (fingerprint_tag.length())
-      dicer_args.produce_fingerprint(m, output);
+      dicer_args.produce_fingerprint(m, output.text_output());
 
     return 1;
   }
@@ -7068,7 +7201,7 @@ dicer(Molecule & m,
       dicer_args.write_fragments_found_this_molecule(m, -1, output);
     }
     if (fingerprint_tag.length()) {
-      dicer_args.produce_fingerprint(m, output);
+      dicer_args.produce_fingerprint(m, output.text_output());
     }
 
     return 1;
@@ -7094,10 +7227,10 @@ dicer(Molecule & m,
   }
 
   if (fingerprint_tag.length())
-    dicer_args.produce_fingerprint(m, output);
+    dicer_args.produce_fingerprint(m, output.text_output());
 
   if (write_smiles_and_complementary_smiles)
-    dicer_args.write_fragments_and_complements(m, output);
+    dicer_args.write_fragments_and_complements(m, output.text_output());
 
   if (verbose)
     fragments_produced[dicer_args.fragments_found()]++;
@@ -7107,7 +7240,7 @@ dicer(Molecule & m,
 
 static int
 dicer(data_source_and_type<Molecule> & input,
-      IWString_and_File_Descriptor & output)
+      DicerFragmentOutput & output)
 {
   Molecule * m;
   while (nullptr != (m = input.next_molecule()))
@@ -7126,32 +7259,31 @@ dicer(data_source_and_type<Molecule> & input,
     current_parent_molecule = *m;
 #endif
 
-    if (!dicer(*m, output))
+    if (!dicer(*m, output)) {
+      cerr << "dicer:error processing " << m->name() << '\n';
       return 0;
+    }
 
-    if (collect_time_statistics)
-    {
+    if (collect_time_statistics) {
       clock_t t = (clock() - t0) / 1000;
 
-      if (t >= 0)                      // have observed this going negative at times. Presumably something wrapping
-      {
+      // have observed this going negative at times. Presumably something wrapping
+      if (t >= 0) {
         cerr << m->name() << " took " << t << " ms\n";
         time_acc.extra(t);
       }
     }
 
-    if (buffered_output)
-      output.write_if_buffer_holds_more_than(8192);
-    else
-      output.flush();
+    output.MaybeFlush();
   }
 
+  cerr << "main dicer loop complete, return ing 1\n";
   return 1;
 }
 
 static int
 dicer_tdt_filter_(const_IWSubstring buffer,    // local copy
-  IWString_and_File_Descriptor & output)
+                  DicerFragmentOutput & output)
 {
   assert (buffer.ends_with('>'));
 
@@ -7172,7 +7304,7 @@ dicer_tdt_filter_(const_IWSubstring buffer,    // local copy
 
 static int
 dicer_tdt_filter(iwstring_data_source & input,
-  IWString_and_File_Descriptor & output)
+                 DicerFragmentOutput & output)
 {
   const_IWSubstring buffer;
 
@@ -7193,8 +7325,8 @@ dicer_tdt_filter(iwstring_data_source & input,
 }
 
 static int
-dicer_tdt_filter (const char * fname,
-  IWString_and_File_Descriptor & output)
+dicer_tdt_filter(const char * fname,
+                DicerFragmentOutput & output)
 {
   iwstring_data_source input(fname);
 
@@ -7243,6 +7375,7 @@ display_misc_B_options (std::ostream & os)
   os << " -B xsub           do not report fragments that are exact subsets of others\n";
   os << " -B nosmi          suppress output of fragment smiles\n";
   os << " -B noparent       suppress output of parent smiles\n";
+  os << " -B proto          main output is a dicer_data.DicedMolecule proto\n";
   os << " -B time           run timing\n";
   os << " -B addq           run the -q queries in addition to the default rules\n";
   os << " -B WB=fname       write smiles of just broken molecules to <fname>\n";
@@ -7292,19 +7425,17 @@ display_dash_K_options(char flag, std::ostream & os)
 
 static int
 dicer(const char * fname, FileType input_type,
-      IWString_and_File_Descriptor & output)
+      DicerFragmentOutput& output)
 {
   assert (nullptr != fname);
 
-  if (FILE_TYPE_INVALID == input_type)
-  {
+  if (FILE_TYPE_INVALID == input_type) {
     input_type = discern_file_type_from_name(fname);
     assert (FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
-  if (!input.good())
-  {
+  if (!input.good()) {
     cerr << prog_name << ": cannot open '" << fname << "'\n";
     return 0;
   }
@@ -7611,6 +7742,11 @@ dicer (int argc, char ** argv)
 
   Fragment_Statistics_Report_Support_Specification fsrss;
 
+  DicerFragmentOutput output;
+
+  // We can write the fragments generated as binary protos.
+  int write_fragments_as_binary_protos = 0;
+
   // Too hard to check support levels since some may be numeric, some may be percentages....
 
   if (cl.option_present('B'))
@@ -7910,7 +8046,7 @@ dicer (int argc, char ** argv)
       }
       else if ("flush" == b)
       {
-        buffered_output = 0;
+        output.set_buffered_output(0);
         if (verbose)
           cerr << "Output flushed after each molecule\n";
       }
@@ -7927,11 +8063,19 @@ dicer (int argc, char ** argv)
         }
       }
       else if (b == "proto") {
-        output_is_proto = 1;
         write_parent_smiles = 0;
         if (verbose) {
           cerr << "Output is dicer_data::DicedMolecule textproto\n";
         }
+        output.set_output_is_proto(1);
+      }
+      else if (b == "serialized_proto") {
+        write_fragments_as_binary_protos = 1;
+        write_parent_smiles = 0;
+        if (verbose) {
+          cerr << "Will write fragments as serialised dicer_data::DicedMolecule protos\n";
+        }
+        output.set_output_is_proto(1);
       }
       else if("help" == b)
       {
@@ -7978,6 +8122,11 @@ dicer (int argc, char ** argv)
     }
 
     all_fragments.UseDefaultFeaturesUnlessSpecified();
+  }
+
+  if (write_fragments_as_binary_protos && ! cl.option_present('S')) {
+    cerr << "When writing serialized protos, must specify output file via the -S option\n";
+    return 1;
   }
 
   if (cl.option_present('P'))
@@ -8151,14 +8300,11 @@ dicer (int argc, char ** argv)
     return 3;
   }
 
-  if (write_smiles)
-    ;
-  else if (fingerprint_tag.length())
-    ;
-  else if (write_smiles_and_complementary_smiles)
-    ;
-  else
-  {
+  if (write_smiles) {
+  } else if (fingerprint_tag.length()) {
+  } else if (write_smiles_and_complementary_smiles) {
+  } else if (! name_for_fragment_statistics_file.empty()) {
+  } else {
     cerr << "NO output specified\n";
     usage(4);
   }
@@ -8299,44 +8445,37 @@ dicer (int argc, char ** argv)
 
   IW_Time tstart;
 
-  IWString_and_File_Descriptor * output;
-  if (cl.option_present('S'))
-  {
-    output = new IWString_and_File_Descriptor;
-    const char * s = cl.option_value('S');
+  if (write_fragments_as_binary_protos) {
+    IWString fname = cl.option_value('S');
+    if (! output.SetTFDataFname(fname)) {
+      cerr << "Cannot open stream for serialized protos '" << fname << "'\n";
+      return 1;
+    }
+  } else if (cl.option_present('S')) {
+    IWString fname = cl.option_value('S');
 
-    if (! output->open(s))
-    {
-      cerr << "Cannot open output file '" << s << "'\n";
+    if (! output.SetOutputStream(fname)) {
+      cerr << "Cannot open output file '" << fname << "'\n";
+      return 1;
+    }
+  } else {
+    output.SetUseStdout();
+  }
+
+  for (const char * fname: cl) {
+    int rc;
+    if (function_as_filter)
+      rc = dicer_tdt_filter(fname, output);
+    else
+      rc = dicer(fname, input_type, output);
+
+    if (0 == rc) {
+      cerr << "Error processing '" << fname << "'\n";
       return 1;
     }
   }
-  else
-  {
-    output = new IWString_and_File_Descriptor(1);
-  }
 
-  std::unique_ptr<IWString_and_File_Descriptor> free_output(output);
-
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (function_as_filter)
-      rc = dicer_tdt_filter(cl[i], *output);
-    else
-      rc = dicer(cl[i], input_type, *output);
-
-    if (0 == rc)
-    {
-      rc = i + 1;
-      break;
-    }
-    else
-      rc = 0;
-  }
-
-  if (output->size())
-    output->flush();
+  output.flush();
 
   if (eliminate_fragment_subset_relations)
     do_eliminate_fragment_subset_relations();
@@ -8395,7 +8534,7 @@ dicer (int argc, char ** argv)
     }
   }
 
-  return rc;
+  return 0;
 }
 
 #ifndef _WIN32_

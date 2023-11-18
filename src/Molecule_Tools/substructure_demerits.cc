@@ -178,6 +178,9 @@ too_many_charges(const Molecule & m_in, Demerit & demerit)
   return demerit.rejected();
 }
 
+static int complex_fused_rings_count = 0;
+
+#ifdef NOT_BEING_USED
 static int
 compute_max_nrings(Molecule & m,
                     const Ring & r)
@@ -196,8 +199,6 @@ compute_max_nrings(Molecule & m,
 
   return rc;
 }
-
-static int complex_fused_rings_count = 0;
 
 static int
 complex_fused_rings(Molecule & m)
@@ -272,6 +273,7 @@ complex_fused_rings(Molecule & m,
 
   return 0;
 }
+#endif
 
 static int
 identify_largest_saturated_carbon_section(Molecule & m,

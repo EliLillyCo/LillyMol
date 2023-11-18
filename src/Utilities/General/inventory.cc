@@ -16,7 +16,7 @@ const char * prog_name = NULL;
 
 static int verbose = 0;
 
-static int negative_amount_skipped = 0;
+//static int negative_amount_skipped = 0;
 
 static int lines_read = 0;
 

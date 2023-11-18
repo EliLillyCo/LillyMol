@@ -2,11 +2,11 @@ description {
   feature_name: "w_maxpsymd"
   description: "Max distance between atoms in partial symmetry relations"
   plot_title: "Max distance between atoms in partial symmetry relations"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 22.0
-mean: 3.9219413
+maxval: 19.0
+mean: 3.9576
 median: 4.0
 quantile {
   quantile: 0.01
@@ -26,7 +26,7 @@ quantile {
 }
 quantile {
   quantile: 0.9
-  value: 5.0
+  value: 6.0
 }
 quantile {
   quantile: 0.95
@@ -37,93 +37,81 @@ quantile {
   value: 8.0
 }
 int_values {
-  count: 213
+  count: 8
 }
 int_values {
   value: 1
-  count: 3555
+  count: 71
 }
 int_values {
   value: 2
-  count: 186339
+  count: 3900
 }
 int_values {
   value: 3
-  count: 744174
+  count: 16125
 }
 int_values {
   value: 4
-  count: 744176
+  count: 16630
 }
 int_values {
   value: 5
-  count: 350647
+  count: 7989
 }
 int_values {
   value: 6
-  count: 136922
+  count: 3228
 }
 int_values {
   value: 7
-  count: 51660
+  count: 1238
 }
 int_values {
   value: 8
-  count: 21643
+  count: 490
 }
 int_values {
   value: 9
-  count: 7685
+  count: 173
 }
 int_values {
   value: 10
-  count: 2870
+  count: 85
 }
 int_values {
   value: 11
-  count: 1467
+  count: 20
 }
 int_values {
   value: 12
-  count: 807
+  count: 13
 }
 int_values {
   value: 13
-  count: 471
+  count: 13
 }
 int_values {
   value: 14
-  count: 457
+  count: 9
 }
 int_values {
   value: 15
-  count: 175
+  count: 2
 }
 int_values {
   value: 16
-  count: 102
+  count: 1
 }
 int_values {
   value: 17
-  count: 57
+  count: 1
 }
 int_values {
   value: 18
-  count: 39
+  count: 2
 }
 int_values {
   value: 19
-  count: 25
-}
-int_values {
-  value: 20
-  count: 17
-}
-int_values {
-  value: 21
-  count: 4
-}
-int_values {
-  value: 22
-  count: 5
+  count: 2
 }

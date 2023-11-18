@@ -2,424 +2,420 @@ description {
   feature_name: "w_fncon2"
   description: "Fraction of atoms with 2 connections"
   plot_title: "Fraction of atoms with 2 connections"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
 maxval: 1.0
-mean: 0.5079187
-median: 0.5143
+mean: 0.50597936
+median: 0.5122
 quantile {
   quantile: 0.01
-  value: 0.2222
+  value: 0.2245
 }
 quantile {
   quantile: 0.05
-  value: 0.3182
+  value: 0.3158
 }
 quantile {
   quantile: 0.1
-  value: 0.3636
+  value: 0.3611
 }
 quantile {
   quantile: 0.5
-  value: 0.5143
+  value: 0.5122
 }
 quantile {
   quantile: 0.9
-  value: 0.6471
+  value: 0.6452
 }
 quantile {
   quantile: 0.95
-  value: 0.6842
+  value: 0.68
 }
 quantile {
   quantile: 0.99
-  value: 0.7586
+  value: 0.75
 }
 float_values {
-  count: 678
+  count: 15
 }
 float_values {
   value: 0.01
 }
 float_values {
   value: 0.02
-  count: 4
 }
 float_values {
   value: 0.03
-  count: 15
+  count: 1
 }
 float_values {
   value: 0.04
-  count: 53
+  count: 1
 }
 float_values {
   value: 0.05
-  count: 179
+  count: 6
 }
 float_values {
   value: 0.06
-  count: 189
+  count: 2
 }
 float_values {
   value: 0.07
-  count: 332
+  count: 8
 }
 float_values {
   value: 0.08
-  count: 188
+  count: 1
 }
 float_values {
   value: 0.09
-  count: 464
+  count: 8
 }
 float_values {
   value: 0.1
-  count: 329
+  count: 5
 }
 float_values {
   value: 0.11
-  count: 533
+  count: 12
 }
 float_values {
   value: 0.12
-  count: 722
+  count: 12
 }
 float_values {
   value: 0.13
-  count: 588
+  count: 12
 }
 float_values {
   value: 0.14
-  count: 1112
+  count: 17
 }
 float_values {
   value: 0.15
-  count: 1194
+  count: 24
 }
 float_values {
   value: 0.16
-  count: 1828
+  count: 44
 }
 float_values {
   value: 0.17
-  count: 1427
+  count: 36
 }
 float_values {
   value: 0.18
-  count: 1709
+  count: 41
 }
 float_values {
   value: 0.19
-  count: 1026
+  count: 26
 }
 float_values {
   value: 0.2
-  count: 4801
+  count: 111
 }
 float_values {
   value: 0.21
-  count: 3471
+  count: 78
 }
 float_values {
   value: 0.22
-  count: 4128
+  count: 83
 }
 float_values {
   value: 0.23
-  count: 5738
+  count: 129
 }
 float_values {
   value: 0.24
-  count: 2259
+  count: 60
 }
 float_values {
   value: 0.25
-  count: 9887
+  count: 223
 }
 float_values {
   value: 0.26
-  count: 8206
+  count: 179
 }
 float_values {
   value: 0.27
-  count: 9224
+  count: 222
 }
 float_values {
   value: 0.28
-  count: 11451
+  count: 247
 }
 float_values {
   value: 0.29
-  count: 10967
+  count: 260
 }
 float_values {
   value: 0.3
-  count: 18188
+  count: 425
 }
 float_values {
   value: 0.31
-  count: 14885
+  count: 336
 }
 float_values {
   value: 0.32
-  count: 10735
+  count: 268
 }
 float_values {
   value: 0.33
-  count: 37994
+  count: 857
 }
 float_values {
   value: 0.34
-  count: 22959
+  count: 505
 }
 float_values {
   value: 0.35
-  count: 20242
+  count: 519
 }
 float_values {
   value: 0.36
-  count: 38696
+  count: 855
 }
 float_values {
   value: 0.37
-  count: 35765
+  count: 786
 }
 float_values {
   value: 0.38
-  count: 36851
+  count: 841
 }
 float_values {
   value: 0.39
-  count: 27808
+  count: 618
 }
 float_values {
   value: 0.4
-  count: 66261
+  count: 1530
 }
 float_values {
   value: 0.41
-  count: 55112
+  count: 1227
 }
 float_values {
   value: 0.42
-  count: 66910
+  count: 1547
 }
 float_values {
   value: 0.43
-  count: 37533
+  count: 816
 }
 float_values {
   value: 0.44
-  count: 72167
+  count: 1593
 }
 float_values {
   value: 0.45
-  count: 72254
+  count: 1583
 }
 float_values {
   value: 0.46
-  count: 71027
+  count: 1612
 }
 float_values {
   value: 0.47
-  count: 76529
+  count: 1728
 }
 float_values {
   value: 0.48
-  count: 86613
+  count: 1982
 }
 float_values {
   value: 0.49
 }
 float_values {
   value: 0.5
-  count: 155767
+  count: 3395
 }
 float_values {
   value: 0.51
-  count: 73923
+  count: 1708
 }
 float_values {
   value: 0.52
-  count: 105562
+  count: 2278
 }
 float_values {
   value: 0.53
-  count: 77910
+  count: 1756
 }
 float_values {
   value: 0.54
-  count: 74637
+  count: 1656
 }
 float_values {
   value: 0.55
-  count: 75025
+  count: 1660
 }
 float_values {
   value: 0.56
-  count: 69745
+  count: 1510
 }
 float_values {
   value: 0.57
-  count: 82471
+  count: 1736
 }
 float_values {
   value: 0.58
-  count: 71839
+  count: 1587
 }
 float_values {
   value: 0.59
-  count: 17793
+  count: 408
 }
 float_values {
   value: 0.6
-  count: 95835
+  count: 2173
 }
 float_values {
   value: 0.61
-  count: 64886
+  count: 1394
 }
 float_values {
   value: 0.62
-  count: 48096
+  count: 1050
 }
 float_values {
   value: 0.63
-  count: 36172
+  count: 789
 }
 float_values {
   value: 0.64
-  count: 35475
+  count: 773
 }
 float_values {
   value: 0.65
-  count: 38658
+  count: 880
 }
 float_values {
   value: 0.66
-  count: 40883
+  count: 872
 }
 float_values {
   value: 0.67
-  count: 9009
+  count: 191
 }
 float_values {
   value: 0.68
-  count: 28009
+  count: 636
 }
 float_values {
   value: 0.69
-  count: 23793
+  count: 474
 }
 float_values {
   value: 0.7
-  count: 9414
+  count: 193
 }
 float_values {
   value: 0.71
-  count: 14185
+  count: 281
 }
 float_values {
   value: 0.72
-  count: 11115
+  count: 250
 }
 float_values {
   value: 0.73
-  count: 10078
+  count: 213
 }
 float_values {
   value: 0.74
-  count: 1596
+  count: 33
 }
 float_values {
   value: 0.75
-  count: 7896
+  count: 165
 }
 float_values {
   value: 0.76
-  count: 5968
+  count: 113
 }
 float_values {
   value: 0.77
-  count: 3648
+  count: 80
 }
 float_values {
   value: 0.78
-  count: 2652
+  count: 44
 }
 float_values {
   value: 0.79
-  count: 761
+  count: 16
 }
 float_values {
   value: 0.8
-  count: 3032
+  count: 66
 }
 float_values {
   value: 0.81
-  count: 1384
+  count: 28
 }
 float_values {
   value: 0.82
-  count: 724
+  count: 13
 }
 float_values {
   value: 0.83
-  count: 839
+  count: 15
 }
 float_values {
   value: 0.84
-  count: 854
+  count: 18
 }
 float_values {
   value: 0.85
-  count: 709
+  count: 12
 }
 float_values {
   value: 0.86
-  count: 431
+  count: 15
 }
 float_values {
   value: 0.87
-  count: 311
+  count: 4
 }
 float_values {
   value: 0.88
-  count: 409
+  count: 6
 }
 float_values {
   value: 0.89
-  count: 145
+  count: 5
 }
 float_values {
   value: 0.9
-  count: 234
+  count: 3
 }
 float_values {
   value: 0.91
-  count: 77
+  count: 4
 }
 float_values {
   value: 0.92
-  count: 107
+  count: 2
 }
 float_values {
   value: 0.93
-  count: 64
+  count: 1
 }
 float_values {
   value: 0.94
-  count: 54
 }
 float_values {
   value: 0.95
-  count: 8
 }
 float_values {
   value: 0.96
-  count: 6
 }
 float_values {
   value: 0.97
@@ -429,5 +425,5 @@ float_values {
 }
 float_values {
   value: 0.99
-  count: 90
+  count: 3
 }

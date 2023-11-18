@@ -21,6 +21,7 @@ class AllowedRange {
     AllowedRange();
 
     int BuildFromProto(const GeometricConstraints::Range& proto);
+    int BuildProto(GeometricConstraints::Range& proto) const;
 
     // Is this initialised?
     int Active() const {
@@ -31,6 +32,11 @@ class AllowedRange {
       _min_value = d1;
       _max_value = d2;
       return 1;
+    }
+
+    void operator*=(float scale) {
+      _min_value *= scale;
+      _max_value *= scale;
     }
 
     int Matches(float x) const {
@@ -179,6 +185,28 @@ class PositionalConstraint : public ConstraintBaseClass {
     friend std::ostream& operator<< (std::ostream& output, const PositionalConstraint& constraint);
 };
 
+class AngleBetweenVectors : public ConstraintBaseClass {
+  private:
+    GeometricConstraints::AngleBetweenVectors _match_type;
+
+    // The matched atoms that define the vectors.
+    int _base1;
+    int _end1;
+    int _base2;
+    int _end2;
+
+    Space_Vector<double> _coords;
+
+  public:
+    AngleBetweenVectors();
+
+    int BuildFromProto(const GeometricConstraints::AngleBetweenVectors& proto);
+    int BuildProto(GeometricConstraints::AngleBetweenVectors& proto) const;
+
+    //int Matches(const Molecule& m) const;
+    int Matches(const Molecule& m, const Set_of_Atoms& embedding) const;
+};
+
 // A common situation is to have an arbitrary number of constraints of different kinds.
 // The _number_to_match parameter governs matching.
 // it specifies the number of queries must match - set to the sum of
@@ -195,6 +223,9 @@ class SetOfGeometricConstraints {
     resizable_array_p<TorsionAngleConstraint> _torsion_angles;
     resizable_array_p<PositionalConstraint> _positive_spatial_constraints;
     resizable_array_p<PositionalConstraint> _negative_spatial_constraints;
+    resizable_array_p<AngleBetweenVectors> _angle_between_vectors;
+
+    // If more are added don't forget to update _number_constraints.
 
     int _number_to_match;
 

@@ -1,0 +1,25 @@
+name: ci-testing
+
+# Controls when the workflow will run .
+on:
+  # Triggers the workflow on  pull request events for master
+ pull_request:
+   branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest-8-core-spe
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the project
+      run: make build_docker
+    - name: Run the project
+      run: |
+        docker-compose up -d
+        sleep 30
+    - name: Run unit tests
+      run: |
+        set -o pipefail
+        make test_lillymol | tee ./unit_test_results.txt
+    - name: Stop running
+      run: docker-compose down

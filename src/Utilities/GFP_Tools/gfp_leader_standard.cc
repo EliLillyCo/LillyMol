@@ -209,6 +209,7 @@ leader(int * leaders,
     {
       leaders[i] += start;
     }
+
     if (1 == leaders_found || fingerprints[leaders[0]].tanimoto_distance(fingerprints[leaders[1]]) <= threshold)
     {
       cluster_id++;
@@ -242,18 +243,13 @@ leader(int * leaders,
       distances[leaders[0]] = 0.0f;
       distances[leaders[1]] = 0.0f;
       #pragma omp parallel for schedule(dynamic,256) private(cand_distances)
-      for (int i = start; i < pool_size; i++)
-      {
-        if (!selected[i])
-        {
+      for (int i = start; i < pool_size; i++) {
+        if (!selected[i]) {
           fingerprints[i].tanimoto_distance_2(fingerprints[leaders[0]], fingerprints[leaders[1]], cand_distances);
-          if (cand_distances[0] <= threshold)
-          {
+          if (cand_distances[0] <= threshold) {
             selected[i]  = c0id;
             distances[i] = cand_distances[0];
-          }
-          else if (cand_distances[1] <= threshold)
-          {
+          } else if (cand_distances[1] <= threshold) {
             selected[i]  = c1id;
             distances[i] = cand_distances[1];
           }

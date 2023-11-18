@@ -454,7 +454,7 @@ process_cluster(Cluster &cluster, similarity_type_t my_threshold,
     cerr << "Cluster " << clusters_found << ' ' << cs << " items, centre '"
          << cluster[0]->id() << "', ";
     if (threshold_from_file_tag.length()) {
-      similarity_type_t threshold;
+      similarity_type_t threshold = 0.0f;
       (void)centre->threshold(threshold);
       cerr << "threshold " << threshold << ", ";
     }
@@ -726,7 +726,7 @@ leader(iwstring_data_source &input, IWString_and_File_Descriptor &output) {
   while (items_selected < pool_size) {
     GFP_L &centre = pool[icentre];
 
-    similarity_type_t my_threshold;
+    similarity_type_t my_threshold = 0.0f;
     if (centre.threshold(my_threshold)) {  // has come from the file
       ;
     } else {

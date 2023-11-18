@@ -2,11 +2,11 @@ description {
   feature_name: "w_arring"
   description: "Number of aromatic rings"
   plot_title: "Number of aromatic rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 10.0
-mean: 2.4572504
+maxval: 8.0
+mean: 2.4786
 median: 2.0
 quantile {
   quantile: 0.01
@@ -35,45 +35,37 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 115079
+  count: 2680
 }
 int_values {
   value: 1
-  count: 346448
+  count: 7405
 }
 int_values {
   value: 2
-  count: 710887
+  count: 15310
 }
 int_values {
   value: 3
-  count: 666210
+  count: 15094
 }
 int_values {
   value: 4
-  count: 322465
+  count: 7344
 }
 int_values {
   value: 5
-  count: 76405
+  count: 1801
 }
 int_values {
   value: 6
-  count: 13917
+  count: 322
 }
 int_values {
   value: 7
-  count: 1654
+  count: 42
 }
 int_values {
   value: 8
-  count: 388
-}
-int_values {
-  value: 9
-  count: 53
-}
-int_values {
-  value: 10
-  count: 4
+  count: 2
 }

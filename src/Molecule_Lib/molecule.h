@@ -586,6 +586,14 @@ class const_BondIterator {
   }
 };
 
+// Methods like bond_length, bond_angle and dihedral_angle have an extra
+// parameter that controls whether or not the atoms in the relationship
+// are bonded or not.
+enum BondedStatus {
+  kMustBeBonded,
+  kOkNotBonded
+};
+
 class __attribute__((visibility("default"))) Molecule : private resizable_array_p<Atom> {
  private:
   Bond_list _bond_list;
@@ -814,6 +822,13 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   bool _ok_for_fast_atom_comparisons();  // Used in uniqueness determinations.
   // Used for the shell hash
   uint32_t ShellHash(const int* include_atom, atom_number_t zatom);
+
+  int LocationOfSubstituent1(atom_number_t zatom, distance_t dist,
+                Coordinates& result) const;
+  int LocationOfSubstituent2(atom_number_t zatom, distance_t dist,
+                Coordinates& result) const;
+  int LocationOfSubstituent3(atom_number_t zatom, distance_t dist,
+                Coordinates& result) const;
 
 #ifdef COMPILING_IS_ACTUALLY_CHIRAL_CC
 #include "cahn_ingold_prelog.h"
@@ -1381,10 +1396,10 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  will be no requirement for the atoms to be bonded.
   //  Note that all angles are in radians. Note that angles are always positive.
 
-  distance_t bond_length(atom_number_t, atom_number_t, int = 0) const;
-  angle_t bond_angle(atom_number_t, atom_number_t, atom_number_t, int = 0) const;
+  distance_t bond_length(atom_number_t, atom_number_t, BondedStatus = kOkNotBonded) const;
+  angle_t bond_angle(atom_number_t, atom_number_t, atom_number_t, BondedStatus = kOkNotBonded) const;
   angle_t dihedral_angle(atom_number_t, atom_number_t, atom_number_t, atom_number_t,
-                         int = 0) const;
+                         BondedStatus = kOkNotBonded) const;
 
   // Return a signed dihedral angle.
   angle_t signed_dihedral_angle(atom_number_t a1, atom_number_t a2, atom_number_t a3,
@@ -1399,8 +1414,23 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  all the '0' atoms and all the '1' atoms
 
   int bump_check(const int*, distance_t) const;
+  // An all pair of atoms bump check. Returns the number of non-bonded violations
+  int bump_check(distance_t dist) const;
 
   int set_dihedral(atom_number_t, atom_number_t, atom_number_t, atom_number_t, angle_t);
+
+  // The first two atoms attached to `a2` and `a3` are assumed to be the extra
+  // atoms needed to define the dihedral.
+  int IncrementDihedral(atom_number_t a2, atom_number_t a3, angle_t angle);
+
+  // Rotate around the `a2`-`a3` bond in increments of `delta` degrees, and
+  // at each point call get_coords and accumulate the sets of coordinates
+  // generated.
+  // If `bump_check` is > 0, then any conformation where atoms on either side
+  // of the rotatable bond that are closer than `bump_check` will be discarded.
+  // Note that the current coordinates are NOT included in what is returned.
+  std::vector<std::unique_ptr<float[]>> DihedralScan(atom_number_t a2,
+                atom_number_t a3, angle_t delta, distance_t bump_check);
 
   //  A1 and A2 stay fixed. A3 is moved
 
@@ -1534,7 +1564,11 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
                        Molecular_Weight_Calculation_Result&) const;
 
   Coordinates get_coords(atom_number_t) const;
-  int get_coords(atom_number_t, Coordinates&) const;
+
+  int get_coords(atom_number_t zatom, Coordinates& result) const;
+  int get_coordinates(atom_number_t zatom, Coordinates& result) const {
+    return get_coords(zatom, result);
+  }
   int get_coords(Coordinates*) const;
   int vector_between_atoms(atom_number_t, atom_number_t, Coordinates&) const;
   // Return a vector of floats, xyz triples for each atom.
@@ -1597,6 +1631,16 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   template <typename T>
   int rotate_atoms(const Space_Vector<T>&, T, const Set_of_Atoms&);
 
+  // Rotate those atoms for which value[i]==flag
+  template <typename T>
+  int rotate_atoms(const Space_Vector<T>&, T, const int* value, int flag);
+
+  // For doing 3D reactions, we need a point in space at which the atom to
+  // be joined will be placed. We return the point in space at which the
+  // atom should be placed. This is very approximate.
+  int LocationOfSubstituent(atom_number_t zatom, distance_t dist,
+                Coordinates& result) const;
+
   int number_fragments();
   // Each fragment is assigned an arbitrary number - that starts at 0. Usually
   // atom 0 will be in fragment 0, but not guaranteed.
@@ -1657,8 +1701,11 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
                                         int& fragments_same_size_as_largest_organic);
 
   int organic_only() const;
+  int is_organic(atom_number_t zatom) const;
+  int non_organic_atom_count() const;
 
   int contains_non_periodic_table_elements() const;
+  int count_non_periodic_table_elements() const;
 
   int swap_atoms(atom_number_t, atom_number_t, int call_set_modified = 1);
   int move_atom_to_end_of_atom_list(atom_number_t a);
@@ -2047,6 +2094,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int _place_4_hydrogens(const Make_Implicit_Hydrogens_Explicit&);
   int _place_lots_of_hydrogens(const Make_Implicit_Hydrogens_Explicit&, int);
   int _place_chiral_h_atom(Chiral_Centre*, Atom*, atom_number_t);
+  int PlaceOneHydrogenSp2(const Make_Implicit_Hydrogens_Explicit& mihe);
 #endif  // COMPILING_MOLECULEH_H
 #ifdef COMPILING_TRIPOS_CC
  private:
@@ -2604,6 +2652,23 @@ extern distance_t DistanceBetweenAtoms(const Atom* a1, const Atom* a2);
 extern angle_t BondAngle(const Atom* a1, const Atom* a2, const Atom* a3);
 extern angle_t DihedralAngle(const Atom* a1, const Atom* a2, const Atom* a3,
                              const Atom* a4);
+
+namespace lillymol {
+
+// Positions `m2` so that `atom1` in `m1` and `atom2` in `m2` are `distance`
+// apart and oriented in what might be a reasonable position.
+// Does NOT form a bond between the two atoms.
+// The expectation is that the caller would then use add_molecule to
+// add `m2` to `m1` and add_bond to join atom1 and atom2.
+int Position3D(const Molecule& m1, atom_number_t atom1,
+                 float distance,
+                 Molecule& m2, atom_number_t atom2);
+// In this version, we assume that `atom1` and `atom2` are in different
+// fragments and the `atom2` fragment is moved so it could then form a
+// bond with `atom1` with bond length `distance`.
+int Position3D(Molecule& m, atom_number_t atom1, float distance, atom_number_t atom2);
+
+}  // namespace lillymol
 
 // Write a smiles where the isotope of each atom is the atom number.
 template <typename T>

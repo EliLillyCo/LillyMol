@@ -955,5 +955,112 @@ cip_stereo {
   }
 ));
 
+TEST(TestPlace3D, TestPlace3DAcidAmine) {
+  const std::string string_proto = R"pb(
+scaffold {
+  id: 0
+  smarts: "[OH]-C(=O)*"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  smarts: "NC"
+  join {
+    a1: 1
+    a2: 0
+    align_3d: 1.32
+  }
+  bond_angle {
+    c1 {
+      component: 0
+      atom: 1
+    }
+    a2: 0
+    a3: 1
+    angle: 108.0
+  }
+  dihedral_angle {
+    c1 {
+      component: 0
+      atom: 3
+    }
+    c2 {
+      component: 0
+      atom: 1
+    }
+    a3: 0
+    a4: 1
+    angle: 145
+  }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+
+  Molecule scaffold;
+  ASSERT_TRUE(scaffold.build_from_smiles("O{{0.0021,-0.0041,0.002}}=C{{-0.0144,1.2105,0.0087}}(O{{1.1429,1.8999,0.0013}})C{{-1.3036,1.9317,0.0187}}1=C{{-2.5051,1.2203,0.0206}}C{{-3.7054,1.9,0.0362}}=C{{-3.7205,3.2836,0.0376}}C{{-2.5336,3.9948,0.0301}}=C{{-1.3262,3.3278,0.0207}}1 acid"));
+
+  std::vector<std::string> smiles {
+    "N{{-0.0178,1.4648,0.0101}}C{{0.0021,-0.0041,0.002}} NC",
+    "N{{-0.0178,1.4648,0.0101}}C{{0.0021,-0.0041,0.002}}C{{0.826,-0.5095,1.188}} NCC",
+    "N{{-0.0178,1.4648,0.0101}}C{{0.0021,-0.0041,0.002}}C{{-1.4333,-0.5336,0.0129}}(C{{-1.4157,-2.0577,-0.1212}})C{{-2.1103,-0.1453,1.3289}} N3c"
+  };
+
+  Sidechain_Match_Conditions smc;
+  std::vector<int> natoms;
+
+  for (const std::string& smi : smiles) {
+    Molecule_and_Embedding * mae = new Molecule_and_Embedding();
+    ASSERT_TRUE(mae->build_from_smiles(smi));
+    ASSERT_TRUE(rxn.sidechain(0)->add_reagent(mae, smc));
+    natoms.push_back(mae->natoms());
+  }
+
+  Substructure_Results sresults;
+  ASSERT_TRUE(rxn.substructure_search(scaffold, sresults));
+
+  const Set_of_Atoms* embedding = sresults.embedding(0);
+
+  Reaction_Iterator iter(rxn);
+  for (uint32_t i = 0; i < smiles.size(); ++i, iter++) {
+    Molecule product;
+    EXPECT_TRUE(rxn.perform_reaction(&scaffold, embedding, iter, product));
+    EXPECT_EQ(product.natoms(), scaffold.natoms() - 1 + natoms[i]) <<
+       "wrong atom count in " << product.aromatic_smiles();
+
+    // Kind of hard to keep track of where the atoms ended up.
+    // O=[1C]([2C]1=[3CH][4CH]=[5CH][6CH]=[7CH]1)[8NH][9CH3]
+    //  a-c1(=O)-N-C
+
+    const atom_number_t a = 2;
+    const atom_number_t c1 = 1;
+    const atom_number_t N = 8;
+    const atom_number_t C = 9;
+
+    EXPECT_TRUE(product.is_aromatic(a));
+
+    EXPECT_EQ(product.atomic_number(c1), 6);
+    EXPECT_EQ(product.ncon(c1), 3);
+
+    EXPECT_EQ(product.atomic_number(N), 7);
+    EXPECT_EQ(product.ncon(N), 2);
+
+    EXPECT_EQ(product.atomic_number(C), 6);
+
+    EXPECT_NEAR(product.distance_between_atoms(c1, N),
+                proto.sidechain(0).join(0).align_3d(), 0.01);
+
+    EXPECT_NEAR(product.bond_angle(c1, N, C) * RAD2DEG,
+                proto.sidechain(0).bond_angle(0).angle(), 0.1);
+
+    EXPECT_NEAR(product.dihedral_angle(a, c1, N, C) * RAD2DEG, 
+                proto.sidechain(0).dihedral_angle(0).angle(), 0.1);
+  }
+}
 
 }  // namespace

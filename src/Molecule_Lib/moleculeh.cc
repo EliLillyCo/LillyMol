@@ -474,6 +474,59 @@ Molecule::GeometryIsSp2(atom_number_t zatom) const {
   return 1;
 }
 
+#ifdef NOT_NEEDED_HANDLED_IN_EXISTING_FN
+// Adding an H to something like *=C-*
+int
+Molecule::PlaceOneHydrogenSp2(const Make_Implicit_Hydrogens_Explicit& mihe) {
+  atom_number_t anchor = mihe.a();
+
+  const Atom * a = _things[anchor];
+
+  atom_number_t o = a->other(anchor, 0);
+  Coordinates v1(*a);
+  v1 -= *_things[o];
+
+  o = a->other(anchor, 1);
+  Coordinates v2(*a);
+  v2 =- *_things[o];
+
+  v1.normalise();
+  v2.normalise();
+
+  v1 += v2;
+  v1.normalise();
+  v1 *= 1.09;
+  v1 += *a;
+
+  Atom * h = mihe.new_atom();
+  h->set_x(v1.x());
+  h->set_y(v1.y());
+  h->set_z(v1.z());
+
+  add(h);
+  add_bond(anchor, _number_elements - 1, SINGLE_BOND);
+
+#ifdef DEBUG_PLACEONEHYDROGENSP2
+  cerr << "Anchor " << a->x() << ',' << a->y() << ',' << a->z() << '\n';
+  const atom_number_t o0 = a->other(anchor, 0);
+  const Atom* q = _things[o0];
+  cerr << "0      " << q->x() << ',' << q->y() << ',' << q->z() << '\n';
+  const atom_number_t o1 = a->other(anchor, 1);
+  q = _things[o1];
+  cerr << "1      " << q->x() << ',' << q->y() << ',' << q->z() << '\n';
+  q = _things[_number_elements - 1];
+  cerr << "H      " << q->x() << ',' << q->y() << ',' << q->z() << '\n';
+  cerr << "dists " << distance_between_atoms(_number_elements - 1, anchor) << ' '
+       << distance_between_atoms(_number_elements - 1, o0) << ' '
+       << distance_between_atoms(_number_elements - 1, o1) << ' '
+       << distance_between_atoms(anchor, o0) << ' '
+       << distance_between_atoms(anchor, o1) << '\n';
+#endif
+
+  return 1;
+}
+#endif
+
 /*
   We need to set the coordinates for newly created Hydrogen atom H
   It is bonded to atom ANCHOR
@@ -500,10 +553,6 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
     return 0;
   }
 
-  if (acon >= 2 && GeometryIsSp2(anchor) > 0) {
-    return 0;
-  }
-
   Atom * h = mihe.new_atom();
 
   add(h);
@@ -513,6 +562,7 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
   }
 
   const int dimensionality = mihe.dimensionality();
+  // cerr << "_place_1_hydrogen dimensionality " << dimensionality << '\n';
 
   if (dimensionality < 2) {    // no need to worry about coordinates
     return 1;
@@ -533,7 +583,7 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
 // Needs to be done carefully. Sum all the bond vectors coming from the attachment point
 // and then place the extra atom on the other side
 
-  Coordinates va = (*a);
+  const Coordinates va = (*a);
 
 // avoid straight bonds
 
@@ -557,8 +607,8 @@ Molecule::_place_1_hydrogen (const Make_Implicit_Hydrogens_Explicit & mihe)
     vperp.cross_product(v);
     vperp.normalise();
 
-	vperp = vperp * static_cast<coord_t>(blen/sqrt(5.0) );
-	v = v * static_cast<coord_t>( blen * 2 / sqrt(5.0) );
+    vperp = vperp * static_cast<coord_t>(blen/sqrt(5.0) );
+    v = v * static_cast<coord_t>( blen * 2 / sqrt(5.0) );
 
 //  cerr << "v is " << v << ", vperp " << vperp << endl;
 
@@ -953,14 +1003,15 @@ Molecule::_place_3_hydrogens(const Make_Implicit_Hydrogens_Explicit & mihe)
 int
 Molecule::_place_4_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
 {
-  atom_number_t anchor = mihe.a();
-  int dimensionality = mihe.dimensionality();
+  const atom_number_t anchor = mihe.a();
+  const int dimensionality = mihe.dimensionality();
+
+  const int initial_matoms = _number_elements;
 
   const Atom * a = _things[anchor];
 
   Atom * atoms[4];
-  for (int i = 0; i < 4; i++)
-  {
+  for (int i = 0; i < 4; i++) {
     atoms[i] = mihe.new_atom();
     add (atoms[i]);
     add_bond(anchor, _number_elements - 1, SINGLE_BOND);
@@ -990,7 +1041,11 @@ Molecule::_place_4_hydrogens (const Make_Implicit_Hydrogens_Explicit & mihe)
     return 1;
   }
 
-  cerr << "Molecule::_place_4_hydrogens: don't know how to place 4 Hydrogens\n";
+  // Wikipedia
+  _things[initial_matoms + 0]->setxyz(1.0, 0.0, -1.0 / sqrt(2.0));
+  _things[initial_matoms + 1]->setxyz(-1.0, 0.0, -1.0 / sqrt(2.0));
+  _things[initial_matoms + 2]->setxyz(0.0, 1.0, 1.0 / sqrt(2.0));
+  _things[initial_matoms + 3]->setxyz(0.0, -1.0, 1.0 / sqrt(2.0));
 
   return 1;
 }
@@ -1000,7 +1055,7 @@ Molecule::_place_lots_of_hydrogens (const Make_Implicit_Hydrogens_Explicit & mih
                                     int ih)
 {
   atom_number_t anchor = mihe.a();
-  int dimensionality = mihe.dimensionality();
+  const int dimensionality = mihe.dimensionality();
 
   resizable_array<Atom *> atoms;
   atoms.resize(ih);
@@ -1011,11 +1066,11 @@ Molecule::_place_lots_of_hydrogens (const Make_Implicit_Hydrogens_Explicit & mih
     add_bond(anchor, _number_elements - 1, SINGLE_BOND);
   }
 
-  if (dimensionality < 2)
+  if (dimensionality < 2) {
     return 1;
+  }
 
-  cerr << "Molecule::_place_lots_of_hydrogens: don't know how to place " << ih << " hydrogens\n";
-
+  cerr << "Molecule::_place_lots_of_hydrogens:don't know how to place " << ih << " hydrogens\n";
   return 1;
 }
 
@@ -1107,9 +1162,11 @@ Molecule::make_implicit_hydrogens_explicit(Make_Implicit_Hydrogens_Explicit & mi
       return 0;
     }
 
-    int ih = implicit_hydrogens(a);
-    if (0 == ih)
+    const int ih = implicit_hydrogens(a);
+    // cerr << "ATom " << a << " has " << ih << " implicit hydrogens " << aromatic_smiles() << '\n';
+    if (0 == ih) {
       return 1;
+    }
 
     int rc;
 

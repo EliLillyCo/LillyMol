@@ -1,0 +1,12 @@
+# Default pharmacaphore definitions. Used in atom_typing.cc and passed via $IW_PHARMACAPHORE env var.
+
+charge_assigner: "F:${C3TK_DATA_PERSISTENT}/queries/charges/queries"
+
+donor_acceptor {
+  acceptor: "F:${C3TK_DATA_PERSISTENT}/queries/hbonds/acceptor"
+  donor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/donor.qry"
+}
+
+hydrophobe: "${C3TK_DATA_PERSISTENT}/queries/pharmacophore/hydrophobe2.qry"
+
+other: "UST:aY"

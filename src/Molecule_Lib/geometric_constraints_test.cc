@@ -181,8 +181,8 @@ TEST(Test_Angle, FromProto) {
   m.setxyz(7, -10.0, -0.1, 0.0);
   std::string string_proto = R"pb(
       range {
-         min: 0.001
-         max: 0.010
+         min: 0.1
+         max: 1.5
       }
       a1: 5
       a2: 6
@@ -205,8 +205,8 @@ TEST(Test_Torsion_Angle, FromProto) {
   m.setxyz(8, 1.0, 0.0, 1.0);
   std::string string_proto = R"pb(
       range {
-         min: 1.5707
-         max: 1.5709
+         min: 89.0
+         max: 91.9
       }
       a1: 5
       a2: 6
@@ -241,8 +241,8 @@ TEST(TestSet, TestAllFeatures) {
     }
     bond_angle {
       range {
-        min: 2.35618
-        max: 2.35620
+        min: 134.90
+        max: 135.10
       }
       a1: 0
       a2: 1
@@ -250,8 +250,8 @@ TEST(TestSet, TestAllFeatures) {
     }
     torsion_angle {
       range {
-        min: 0.98279
-        max: 0.98280
+        min: 56.3
+        max: 56.7
       }
       a1: 0
       a2: 1

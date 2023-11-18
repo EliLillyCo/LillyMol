@@ -79,8 +79,8 @@ static int reactions_with_reagent_count_changed = 0;
 static int reactions_with_no_common_mapped_atoms = 0;
 
 static int reactions_with_orphan_atoms = 0;
-static int reactions_with_counterions_moved_to_orphan = 0;
-static int reactions_with_duplicates_atom_maps_ignored = 0;
+//static int reactions_with_counterions_moved_to_orphan = 0;
+//static int reactions_with_duplicates_atom_maps_ignored = 0;
 static int reactions_with_no_reagents = 0;
 static int reactions_with_no_products = 0;
 

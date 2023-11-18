@@ -68,6 +68,13 @@ PYBIND11_MODULE(lillymol_atom, a)
     .def("isotope", static_cast<isotope_t (Atom::*)()const>(&Atom::isotope), "isotope")
     .def("ncon", static_cast<int (Atom::*)()const>(&Atom::ncon), "Number of connections")
     .def("other", static_cast<atom_number_t (Atom::*)(atom_number_t, int)const>(&Atom::other), "Other connection")
+    .def("is_organic", &Atom::is_organic, "True if the element is organic")
+    .def("atomic_symbol",
+      [](const Atom& a)->std::string {
+        return a.element()->symbol().AsString();
+      },
+      "atomic symbol"
+    )
     .def("__repr__",
       [](Atom &a) {
         IWString s;

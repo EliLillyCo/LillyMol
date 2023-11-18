@@ -545,7 +545,7 @@ long_molecules(Molecule & m,
   Set_of_Atoms equivalent_a1, equivalent_a2;
 
   int longest_path = 1;
-  int pairs_with_longest_path = 0;
+  //int pairs_with_longest_path = 0;
 
   for (int i = 0; i < matoms; i++)
   {

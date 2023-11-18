@@ -2,12 +2,12 @@ description {
   feature_name: "w_mxdst"
   description: "Longest topological distance"
   plot_title: "Longest topological distance"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
 minval: 2.0
-maxval: 49.0
-mean: 14.125501
+maxval: 45.0
+mean: 14.2804
 median: 14.0
 quantile {
   quantile: 0.01
@@ -39,193 +39,165 @@ quantile {
 }
 int_values {
   value: 2
-  count: 58
+  count: 2
 }
 int_values {
   value: 3
-  count: 577
+  count: 14
 }
 int_values {
   value: 4
-  count: 2525
+  count: 49
 }
 int_values {
   value: 5
-  count: 7440
+  count: 165
 }
 int_values {
   value: 6
-  count: 16951
+  count: 392
 }
 int_values {
   value: 7
-  count: 32108
+  count: 662
 }
 int_values {
   value: 8
-  count: 60645
+  count: 1374
 }
 int_values {
   value: 9
-  count: 104148
+  count: 2201
 }
 int_values {
   value: 10
-  count: 154445
+  count: 3196
 }
 int_values {
   value: 11
-  count: 197496
+  count: 4141
 }
 int_values {
   value: 12
-  count: 230929
+  count: 4896
 }
 int_values {
   value: 13
-  count: 243417
+  count: 5309
 }
 int_values {
   value: 14
-  count: 239799
+  count: 5359
 }
 int_values {
   value: 15
-  count: 218335
+  count: 4958
 }
 int_values {
   value: 16
-  count: 187338
-}
-int_values {
-  value: 17
-  count: 154371
-}
-int_values {
-  value: 18
-  count: 121015
-}
-int_values {
-  value: 19
-  count: 90023
-}
-int_values {
-  value: 20
-  count: 63513
-}
-int_values {
-  value: 21
-  count: 42506
-}
-int_values {
-  value: 22
-  count: 28114
-}
-int_values {
-  value: 23
-  count: 19113
-}
-int_values {
-  value: 24
-  count: 12020
-}
-int_values {
-  value: 25
-  count: 8184
-}
-int_values {
-  value: 26
-  count: 5127
-}
-int_values {
-  value: 27
   count: 4119
 }
 int_values {
+  value: 17
+  count: 3533
+}
+int_values {
+  value: 18
+  count: 2876
+}
+int_values {
+  value: 19
+  count: 2094
+}
+int_values {
+  value: 20
+  count: 1528
+}
+int_values {
+  value: 21
+  count: 1047
+}
+int_values {
+  value: 22
+  count: 665
+}
+int_values {
+  value: 23
+  count: 475
+}
+int_values {
+  value: 24
+  count: 290
+}
+int_values {
+  value: 25
+  count: 210
+}
+int_values {
+  value: 26
+  count: 128
+}
+int_values {
+  value: 27
+  count: 97
+}
+int_values {
   value: 28
-  count: 2597
+  count: 64
 }
 int_values {
   value: 29
-  count: 1977
+  count: 46
 }
 int_values {
   value: 30
-  count: 1134
+  count: 21
 }
 int_values {
   value: 31
-  count: 1123
+  count: 29
 }
 int_values {
   value: 32
-  count: 658
-}
-int_values {
-  value: 33
-  count: 677
-}
-int_values {
-  value: 34
-  count: 237
-}
-int_values {
-  value: 35
-  count: 271
-}
-int_values {
-  value: 36
-  count: 110
-}
-int_values {
-  value: 37
-  count: 115
-}
-int_values {
-  value: 38
-  count: 43
-}
-int_values {
-  value: 39
-  count: 82
-}
-int_values {
-  value: 40
-  count: 36
-}
-int_values {
-  value: 41
-  count: 35
-}
-int_values {
-  value: 42
-  count: 11
-}
-int_values {
-  value: 43
   count: 18
 }
 int_values {
-  value: 44
+  value: 33
+  count: 17
+}
+int_values {
+  value: 34
   count: 7
 }
 int_values {
-  value: 45
-  count: 48
+  value: 35
+  count: 7
 }
 int_values {
-  value: 46
-  count: 5
-}
-int_values {
-  value: 47
-  count: 3
-}
-int_values {
-  value: 48
+  value: 36
   count: 1
 }
 int_values {
-  value: 49
-  count: 6
+  value: 37
+  count: 1
+}
+int_values {
+  value: 38
+  count: 3
+}
+int_values {
+  value: 39
+  count: 2
+}
+int_values {
+  value: 40
+  count: 1
+}
+int_values {
+  value: 42
+  count: 1
+}
+int_values {
+  value: 45
+  count: 2
 }

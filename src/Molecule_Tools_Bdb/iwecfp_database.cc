@@ -8,21 +8,25 @@
 
 #include "db_cxx.h"
 
-namespace iwecfp_database
-{
+namespace iwecfp_database {
 
 using std::cerr;
-using std::endl;
 
 // Data is packed into a binary form in the most efficient way possible.
 // The Pubchem version of this database is 3.4GB, corporate db 134MB.
 void
-form_key(unsigned int b, int radius, int atom_constant_centre_atom, DBKey& dbkey)
+form_key(uint64_t b, int radius, unsigned int atom_constant_centre_atom, DBKey& dbkey)
 {
-  // cerr << "RAD " << radius << " Acca " << atom_constant_centre_atom << endl;
+  // cerr << "RAD " << radius << " Acca " << atom_constant_centre_atom << '\n';
 
-  dbkey._bit = b;
-  dbkey._acca = static_cast<int>(atom_constant_centre_atom);
+  static constexpr uint64_t maxu32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
+
+  if (b > maxu32) {
+    dbkey._bit = b % maxu32;
+  } else {
+    dbkey._bit = b;
+  }
+  dbkey._acca = static_cast<unsigned int>(atom_constant_centre_atom);
   dbkey._radius = static_cast<unsigned char>(radius);
   dbkey._nu1 = static_cast<unsigned char>(0);
   dbkey._nu2 = static_cast<unsigned char>(0);
@@ -123,13 +127,13 @@ Fingerprint_Characteristics::build(const Command_Line& cl,
     }
 
     if (verbose) {
-      cerr << "Max radius " << _max_shell_radius << endl;
+      cerr << "Max radius " << _max_shell_radius << '\n';
     }
   } else if (mr > 0) {
     _max_shell_radius = mr;
     if (verbose) {
       cerr << "Fingerprint_Characteristics::build:using database default radius "
-           << _max_shell_radius << endl;
+           << _max_shell_radius << '\n';
     }
   } else {
     cerr << "Must specify maximum radius for synthetic example fragments\n";
@@ -176,6 +180,18 @@ Fingerprint_Characteristics::string_atom_type(IWString& s) const
   cerr << "Fingerprint_Characteristics::string_atype:Unrecognised atom type !!! "
        << _atype << '\n';
   return 0;
+}
+
+void
+Fingerprint_Characteristics::Increment(unsigned int processing_status,
+                unsigned int bond_constant,
+                unsigned int atom_constant,
+                uint64_t& sum_so_far) const {
+  if (_additive) {
+    sum_so_far += (processing_status % 73) * bond_constant * atom_constant;
+  } else {
+    sum_so_far *= (processing_status % 73) * bond_constant * atom_constant;
+  }
 }
 
 }  // namespace iwecfp_database

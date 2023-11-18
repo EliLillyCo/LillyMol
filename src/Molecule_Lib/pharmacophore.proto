@@ -1,0 +1,36 @@
+
+syntax = "proto3";
+
+package Pharmacophore;
+
+message DonorAcceptor {
+  // Query specification describing acceptors.
+  optional string acceptor = 1;
+
+  // Query specification describing donors.
+  optional string donor = 2;
+
+  optional bool apply_isotopic_labels = 3;
+
+  optional bool apply_atom_type_labels = 4;
+
+  optional bool add_to_existing_isotopic_label = 5;
+}
+
+message PharmacophoreSpecification {
+  // Path to the charge assigner query specifications.
+  optional string charge_assigner = 1;
+
+  // Path to the donor acceptor query specifications.
+  optional DonorAcceptor donor_acceptor = 2;
+
+  // Query for hydrophobic atoms
+  repeated string hydrophobe = 3;
+  
+  // The atom type that is assigned to otherwise unclassifed atoms.
+  optional string other = 4;
+
+  optional string write = 5;
+
+  optional bool combine_donor_acceptor = 6;
+}

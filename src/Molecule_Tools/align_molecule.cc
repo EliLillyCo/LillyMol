@@ -814,6 +814,7 @@ get_atom_and_coordinates(const const_IWSubstring& token,
   return matched_atoms.size();
 }
 
+#ifdef NOT_BEING_USED
 static int
 read_query_from_molecule(Substructure_Hit_Statistics& query, const_IWSubstring& fname)
 {
@@ -847,6 +848,7 @@ read_query_from_molecule(Substructure_Hit_Statistics& query, const_IWSubstring& 
 
   return 1;
 }
+#endif
 
 static int
 report_which_matched_atoms(std::ostream& os, const resizable_array<int>& matched_atoms,

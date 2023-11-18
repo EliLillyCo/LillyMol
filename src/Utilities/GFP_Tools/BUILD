@@ -33,15 +33,19 @@ local_install(
         ":gfp_spread_omp",
         ":gfp_spread_standard",
         ":gfp_svmfp_score",
+        ":gfp_svmfp_score_tbb",
         ":gfp_to_descriptors",
         ":gfp_to_descriptors_multiple",
         ":gfp_to_svm_lite.v2",
         ":iwstats",
+        ":marvin2gfp",
         ":nn_leader_and_jp",
         ":nn_merge",
+        ":nn_merge_from_smiles",
         ":nn2csv",
         ":nplotnn",
         ":parallel_nn_search_to_gfp_spread",
+        ":random_fingerprint",
     ],
 )
 
@@ -189,6 +193,21 @@ cc_binary(
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
         "//Utilities/Distance_Matrix:distance_matrix_base",
+    ],
+)
+
+cc_binary(
+    name = "gfp_distance_filter_standard",
+    srcs = [
+        "gfp_distance_filter_standard.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iw_tdt:iw_tdt",
+        "//Utilities/GFP_Tools:gfp_standard",
     ],
 )
 
@@ -611,6 +630,44 @@ cc_binary(
 )
 
 cc_binary(
+    name = "gfp_svmfp_score_pthread",
+    srcs = [
+        "gfp_svmfp_score_pthread.cc",
+    ],
+    deps = [
+        ":gfp_bit_subset",
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc:normalisation",
+        "//Foundational/iw_tdt:iw_tdt",
+        "//Utilities/GFP_Tools:gfp",
+    ],
+)
+
+cc_binary(
+    name = "gfp_svmfp_score_tbb",
+    srcs = [
+        "gfp_svmfp_score_tbb.cc",
+    ],
+    linkopts = [
+        "-ldl",
+    ],
+    deps = [
+        "gfp_bit_subset",
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc:normalisation",
+        "//Foundational/iw_tdt:iw_tdt",
+        "//Utilities/GFP_Tools:gfp",
+        "@onetbb//:tbb",
+    ],
+)
+
+cc_binary(
     name = "gfp_to_descriptors",
     srcs = [
         "gfp_to_descriptors.cc",
@@ -663,22 +720,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "InformationContent",
-    srcs = [
-        "InformationContent.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iw_tdt",
-        "//Foundational/iwbits",
-        "//Foundational/iwmisc",
-        "//Utilities/GFP_Tools:gfp",
-    ],
-)
-
-cc_binary(
     name = "nn_fixed_size_cluster",
     srcs = [
         "nn_fixed_size_cluster.cc",
@@ -701,6 +742,22 @@ cc_binary(
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
         "//Foundational/iwqsort",
+        "//Utilities/GFP_Tools:smiles_id_dist",
+    ],
+)
+
+cc_binary(
+    name = "nn_merge_from_smiles",
+    srcs = [
+        "nn_merge_from_smiles.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iw_tdt:iw_tdt",
         "//Utilities/GFP_Tools:smiles_id_dist",
     ],
 )
@@ -763,6 +820,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "marvin2gfp",
+    srcs = [
+        "marvin2gfp.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc:sparse_fp_creator",
+    ],
+)
+
+cc_binary(
     name = "nn_leader_and_jp",
     srcs = [
         "nn_leader_and_jp.cc",
@@ -797,6 +868,20 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
+    ],
+)
+
+cc_binary(
+    name = "random_fingerprint",
+    srcs = [
+        "random_fingerprint.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwbits:iwbits",
+        "//Foundational/iwmisc:iwmisc",
     ],
 )
 
@@ -841,6 +926,22 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwqsort",
+    ],
+)
+
+cc_binary(
+    name = "InformationContent",
+    srcs = [
+        "InformationContent.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
+        "//Utilities/GFP_Tools:gfp",
     ],
 )
 

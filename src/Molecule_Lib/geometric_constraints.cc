@@ -37,6 +37,15 @@ AllowedRange::BuildFromProto(const GeometricConstraints::Range& proto) {
 }
 
 int
+AllowedRange::BuildProto(GeometricConstraints::Range& proto) const {
+  proto.set_min(_min_value);
+  proto.set_max(_max_value);
+
+  return 1;
+}
+
+
+int
 ConstraintBaseClass::IsValid() const {
   // Unset is a valid state.
   if (!_allowed_range.Active() && _atoms.empty()) {
@@ -221,6 +230,7 @@ BondAngleConstraint::BuildFromProto(const GeometricConstraints::BondAngle& proto
     cerr << "DistanceConstraint::BuildFromProto:invalid range " << proto.ShortDebugString() << '\n';
     return 0;
   }
+  _allowed_range *= DEG2RAD;
 
   if (SetAtoms(proto.a1(), proto.a2(), proto.a3()) != 3) {
     cerr << "BondAngle::BuildFromProto:invalid atom numbers " << proto.ShortDebugString() << '\n';
@@ -260,6 +270,8 @@ TorsionAngleConstraint::BuildFromProto(const GeometricConstraints::TorsionAngle&
     return 0;
   }
 
+  _allowed_range *= DEG2RAD;
+
   if (SetAtoms(proto.a1(), proto.a2(), proto.a3(), proto.a4()) != 4) {
     cerr << "TorsionAngle::BuildFromProto:invalid atom numbers " << proto.ShortDebugString() << '\n';
     return 0;
@@ -279,6 +291,7 @@ operator<< (std::ostream& output, const TorsionAngleConstraint& constraint) {
   output << "TorsionAngleConstraint:atoms " << me;
   return output;
 }
+
 int
 TorsionAngleConstraint::Matches(const Molecule& m) {
   return _allowed_range.Matches(m.dihedral_angle(_atoms[0], _atoms[1], _atoms[2], _atoms[3]));
@@ -299,7 +312,10 @@ int
 SetOfGeometricConstraints::_number_constraints() const {
   return _distances.number_elements() +
          _bond_angles.number_elements() +
-         _torsion_angles.number_elements();
+         _torsion_angles.number_elements() +
+         _positive_spatial_constraints.number_elements() +
+         _negative_spatial_constraints.number_elements() +
+         _angle_between_vectors.number_elements();
 }
 
 int
@@ -345,6 +361,7 @@ SetOfGeometricConstraints::BuildFromProto(const GeometricConstraints::SetOfConst
       cerr << "SetOfConstraints::BuildFromProto:bad torsion " << torsion.ShortDebugString() << '\n';
       return 0;
     }
+
     _torsion_angles << c.release();
   }
 
@@ -354,6 +371,7 @@ SetOfGeometricConstraints::BuildFromProto(const GeometricConstraints::SetOfConst
       cerr << "SetOfConstraints::BuildFromProto:bad spatial " << spatial.ShortDebugString() << '\n';
       return 0;
     }
+
     _positive_spatial_constraints << p.release();
   }
 
@@ -363,12 +381,23 @@ SetOfGeometricConstraints::BuildFromProto(const GeometricConstraints::SetOfConst
       cerr << "SetOfConstraints::BuildFromProto:bad spatial " << spatial.ShortDebugString() << '\n';
       return 0;
     }
+
     _negative_spatial_constraints << p.release();
+  }
+
+  for (const auto& vector_angle : proto.angle_between_vectors()) {
+    std::unique_ptr<AngleBetweenVectors> s = std::make_unique<AngleBetweenVectors>();
+    if (! s->BuildFromProto(vector_angle)) {
+      cerr << "SetOfConstraints::BuildFromProto:bad vector angle " << vector_angle.ShortDebugString() << '\n';
+      return 0;
+    }
+
+    _angle_between_vectors << s.release();
   }
 
   _active = 1;
   if (_number_to_match == 0) {
-    _number_to_match =  _number_constraints();
+    _number_to_match = _number_constraints();
   }
 
   return IsValid();
@@ -476,6 +505,72 @@ PositionalConstraint::MatchesAll(const Molecule& m,
   return 1;
 }
 
+AngleBetweenVectors::AngleBetweenVectors() {
+  _base1 = -1;
+  _end1 = -1;
+
+  _base2 = -1;
+  _end2 = -1;
+}
+
+int
+AngleBetweenVectors::BuildFromProto(const GeometricConstraints::AngleBetweenVectors& proto) {
+  if (! proto.has_v1() || ! proto.has_v2() || ! proto.has_angle()) {
+    cerr << "AngleBetweenVectors::BuildFromProto:must specify all components\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  _base1 = proto.v1().base();
+  _end1 = proto.v1().end();
+
+  _base2 = proto.v2().base();
+  _end2 = proto.v2().end();
+
+  if (_base1 == _end1 || _base2 == _end2) {
+    cerr << "AngleBetweenVectors::BuildFromProto:invalid matched atoms\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (! _allowed_range.BuildFromProto(proto.angle())) {
+    cerr << "AngleBetweenVectors::BuildFromProto:invalid angle\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // the human specifies things in degrees.
+  _allowed_range *= DEG2RAD;
+  // cerr << "after building " << _allowed_range << '\n';
+
+  return 1;
+}
+
+int
+AngleBetweenVectors::BuildProto(GeometricConstraints::AngleBetweenVectors& proto) const {
+  proto.mutable_v1()->set_base(_base1);
+  proto.mutable_v1()->set_end(_end1);
+
+  proto.mutable_v2()->set_base(_base2);
+  proto.mutable_v2()->set_end(_end2);
+
+  return _allowed_range.BuildProto(*proto.mutable_angle());  // does not convert back to degrees...TODO:ianwatson
+}
+
+int
+AngleBetweenVectors::Matches(const Molecule& m, const Set_of_Atoms& embedding) const {
+  atom_number_t base1 = embedding[_base1];
+  atom_number_t end1 = embedding[_end1];
+  Space_Vector<float> v1 = m[end1] - m[base1];
+
+  atom_number_t base2 = embedding[_base2];
+  atom_number_t end2 = embedding[_end2];
+  Space_Vector<float> v2 = m[end2] - m[base2];
+
+  // cerr << "angle is " << (v1.angle_between(v2) * RAD2DEG) << " matches " << _allowed_range.Matches(v1.angle_between(v2)) << '\n';
+  return _allowed_range.Matches(v1.angle_between(v2));
+}
+
 int
 SetOfGeometricConstraints::Matches(Molecule& m) const {
   int matched_here = 0;
@@ -485,6 +580,8 @@ SetOfGeometricConstraints::Matches(Molecule& m) const {
       if (matched_here >= _number_to_match) {
         return matched_here;
       }
+    } else {
+      return 0;
     }
   }
   for (auto c : _bond_angles) {
@@ -493,6 +590,8 @@ SetOfGeometricConstraints::Matches(Molecule& m) const {
       if (matched_here >= _number_to_match) {
         return matched_here;
       }
+    } else {
+      return 0;
     }
   }
   for (auto c : _torsion_angles) {
@@ -501,6 +600,8 @@ SetOfGeometricConstraints::Matches(Molecule& m) const {
       if (matched_here >= _number_to_match) {
         return matched_here;
       }
+    } else {
+      return 0;
     }
   }
 
@@ -509,6 +610,7 @@ SetOfGeometricConstraints::Matches(Molecule& m) const {
 
 int
 SetOfGeometricConstraints::Matches(Molecule& m, const Set_of_Atoms& embedding) const {
+  // cerr << "SetOfGeometricConstraints::Matches " << m.smiles() << " need " << _number_to_match << '\n';
   int matched_here = 0;
 #ifdef DEBUG_CONSTRAINTS_MATCHES
   std::cerr << "Checking " << _distances.size() << " distance_constraints\n";
@@ -558,6 +660,13 @@ SetOfGeometricConstraints::Matches(Molecule& m, const Set_of_Atoms& embedding) c
   }
   for (auto &c : _negative_spatial_constraints) {
     if (c->Matches(m, embedding)) {
+      return 0;
+    }
+    ++matched_here;
+  }
+
+  for (auto& v : _angle_between_vectors) {
+    if (!v->Matches(m, embedding)) {
       return 0;
     }
     ++matched_here;

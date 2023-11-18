@@ -7,12 +7,11 @@
 #    cp WORKSPACE /tmp
 #    update_python_in_workspace /tmp/WORKSPACE > WORKSPACE
 
+import logging
 import os
 import re
+import sys
 import sysconfig
-
-from absl import app
-from absl import logging
 
 have_pybind = True
 try:
@@ -23,7 +22,8 @@ except:
 
 # Scan a WORKSPACE file and change the 'path = ' directive
 # for new_local_repository's 'pybind11' and 'python'.
-# We assume that WORKSPACE contains 'name = ' BEFORE 'path ='.
+# We assume that each new_local_repository contains
+# 'name = ' BEFORE 'path ='.
 
 def update_python_in_workspace(argv):
   # The location of python and pybind11 includes
@@ -74,4 +74,4 @@ def update_python_in_workspace(argv):
         print(line)
 
 if __name__ == "__main__":
-  app.run(update_python_in_workspace)
+  update_python_in_workspace(sys.argv)

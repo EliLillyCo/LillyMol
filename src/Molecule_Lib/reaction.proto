@@ -167,6 +167,10 @@ message InterParticleBond {
   // A requirement on the scaffold atom and how it relates to an isotope on
   // the sidechain atom.
   optional JoinRequirement isotope_join_requirement = 7;
+
+  // If the fragments do not start aligned to join, we can do that.
+  // If the value is greater than zero, that will be the bond length.
+  optional float align_3d = 8;
 }
 
 // A stereo preserving atom replacement.

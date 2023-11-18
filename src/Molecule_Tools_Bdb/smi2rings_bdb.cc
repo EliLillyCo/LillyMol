@@ -2290,6 +2290,11 @@ smi2rings(int argc, char** argv) {
     }
   }
 
+  if (! cl.option_present('d')) {
+    cerr << "Must specify database(s) to process via the -d option\n";
+    usage(1);
+  }
+
   if (cl.option_present('d')) {
     int oflags = 0;
     DBTYPE dbtype = DB_UNKNOWN;

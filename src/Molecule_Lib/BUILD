@@ -91,6 +91,28 @@ py_proto_library(
 )
 
 proto_library(
+    name = "pharmacophore_proto",
+    srcs = [
+        "pharmacophore.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "pharmacophore_cc_proto",
+    deps = [
+        ":pharmacophore_proto",
+    ]
+)
+
+py_proto_library(
+    name = "pharmacophore_py_proto",
+    srcs = [
+        "pharmacophore.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
     name = "substructure_proto",
     srcs = [
         "substructure.proto",
@@ -349,6 +371,7 @@ cc_library(
         ":atom_type_ext_cc_proto",
         ":donor_acceptor_cc_proto",
         ":mol2graph_cc_proto",
+        ":pharmacophore_cc_proto",
         ":space_vector",
         ":substructure_cc_proto",
         ":toggle_kekule_form_cc_proto",
@@ -645,6 +668,19 @@ cc_test(
     ],
     deps = [
         ":coordinate_box",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "geometry_test",
+    timeout = "short",
+    srcs = [
+        "geometry_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
         "@googletest//:gtest_main",
     ],
 )
@@ -988,6 +1024,18 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":iwreaction",
+        ":moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "toggle_kekule_form_test",
+    timeout = "short",
+    srcs = ["toggle_kekule_form_test.cc"],
+    deps = [
+        ":iwmolecule",
         ":moleculeio",
         "@googletest//:gtest",
         "@googletest//:gtest_main",

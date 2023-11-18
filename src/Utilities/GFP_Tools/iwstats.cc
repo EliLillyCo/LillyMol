@@ -106,6 +106,18 @@ static resizable_array<float> fold_difference_multiplicative;
 
 static IWString_and_File_Descriptor stream_for_residuals;
 
+// The percentiles for which we report errors 
+static resizable_array<int> ae_percentiles{50, 75, 95};
+
+// We can report the fraction of errors within a given range.
+static resizable_array<float> fraction_within;
+
+// The default/historical output is not as regular as it should be which
+// inhibits automated processing. Some measures do not have an = sign,
+// so an option enables that.
+
+static int all_outputs_have_equals_sign = 0;
+
 static void
 usage(int rc) {
 // clang-format off
@@ -133,10 +145,12 @@ Can have the experimental data in a separate file, or as a column in the predict
  -M <string>    missing value string
  -q             quietly ignore missing values
  -R .           randomise the sort when duplicate predicted values present
- -c <number>    number of valid pairs needed for producing correlations (default " << values_needed_for_reporting_correlations << ")
+ -c <number>    number of valid pairs needed for producing correlations (default 20)
  -w             when duplicate values present, suppress computation of best
                 and worst BSquared values
  -r <float>     max relative error allowed computations
+ -B <pct>       the percentiles at which absolute errors are reported
+ -W <value>     report the fraction of items with abs error within <value>
  -T             truncate predicted values to the experimental range
  -h             use traditional (Wikipedia) Q2 formula
  -b <nbucket>   compute distribution functions across <nbucket> buckets
@@ -151,6 +165,8 @@ Can have the experimental data in a separate file, or as a column in the predict
  -U <fraction>  keep only the <fraction> most active experimental values
  -m <col/name>  do analysis by data in column <col> or descriptor name <name>
  -L <fname>     write residuals to <fname>
+ -Y ...         miscellaneous and obscure options, enter '-Y help' for info
+ -i <char>      input column separator (default ' ') use '-i tab' for tsv
  -v             verbose output
 )";
   // clang-format on
@@ -1360,6 +1376,19 @@ compute_fold_difference_values_multiplicative(
   return;
 }
 
+// Return the number of items in `values` that are less than or equal to cutoff
+// assuming that `values` is sorted.
+static int
+CountLess(const float* values, int n, float cutoff) {
+  for (int i = 0; i < n; ++i) {
+    if (values[i] > cutoff) {
+      return i;
+    }
+  }
+
+  return n;
+}
+
 /*
   which_predicted_set is an index into the _predicted array for each prediction type
   predicted_column is the column number in the original file
@@ -1584,6 +1613,9 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
 
     write_something_identifying_the_column(predicted_column, output);
     output << " R2 ";
+    if (all_outputs_have_equals_sign) {
+      output << "= ";
+    }
 
     if (wikipedia_r2_definition) {
       double n = 0.0;    // numerator
@@ -1640,10 +1672,17 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     } else {
       output << " Q2 ";
     }
+    if (all_outputs_have_equals_sign) {
+      output << "= ";
+    }
     output << static_cast<float>(q2) << '\n';
 
     write_something_identifying_the_column(predicted_column, output);
-    output << " Bias " << (o.average() - p.average()) << '\n';
+    output << " Bias ";
+    if (all_outputs_have_equals_sign) {
+      output << "= ";
+    }
+    output << (o.average() - p.average()) << '\n';
 
     sum1 = 0.0;
     for (unsigned int i = 0; i < number_records; i++) {
@@ -1705,14 +1744,18 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
   Float_Comparator fc;
   iwqsort(tmp1, ndx, fc);
 
-  write_something_identifying_the_column(predicted_column, output);
-  output << " AE50 = " << tmp1[ndx / 2] << "\n";
+  for (int pct : ae_percentiles) {
+    write_something_identifying_the_column(predicted_column, output);
+    // Kind of dangerous integer divice
+    int j = pct * ndx / 100;
+    output << " AE" << pct << " = " << tmp1[j] <<'\n';
+  }
 
-  write_something_identifying_the_column(predicted_column, output);
-  output << " AE75 = " << tmp1[ndx * 75 / 100] << "\n";
-
-  write_something_identifying_the_column(predicted_column, output);
-  output << " AE95 = " << tmp1[ndx * 95 / 100] << "\n";
+  for (float diff : fraction_within) {
+    write_something_identifying_the_column(predicted_column, output);
+    int n = CountLess(tmp1, ndx, diff);
+    output << " WITHIN:" << diff << " = " << iwmisc::Fraction<float>(n, ndx) << "\n";
+  }
 
 #ifdef DEBUG_CMSR
   for (auto i = 0; i < DEBUG_CMSR; ++i) {
@@ -1751,17 +1794,23 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     write_something_identifying_the_column(predicted_column, output);
   }
 
-  if (duplicate_predicted_values_present) {
-    output << " Input";
+  if (all_outputs_have_equals_sign) {
+    if (duplicate_predicted_values_present) {
+      output << " B2.input = ";
+    } else {
+      output << " B2.unbiased = ";
+    }
+  } else if (duplicate_predicted_values_present) {
+    output << " Input Bsquared ";
   } else {
-    output << " Unbiased";
+    output << " Unbiased Bsquared ";
   }
 
   double Bsquared;
   compute_b_squared(number_records, experimental_column, zdata, tmp1, tmp2, Bsquared,
                     which_predicted_set);
 
-  output << " Bsquared " << static_cast<float>(Bsquared) << '\n';
+  output <<  static_cast<float>(Bsquared) << '\n';
 
   if (calculate_enrichment_metrics &&
       initilize_enrichment(number_records, experimental_column, zdata, tmp1,
@@ -1813,7 +1862,11 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     compute_b_squared(number_records, experimental_column, zdata, tmp1, tmp2,
                       best_bsquared, which_predicted_set);
     write_something_identifying_the_column(predicted_column, output);
-    output << " Best Bsquared " << best_bsquared << '\n';
+    if (all_outputs_have_equals_sign) {
+      output << " B2.best = " << best_bsquared << '\n';
+    } else {
+      output << " Best Bsquared " << best_bsquared << '\n';
+    }
 
     std::random_shuffle(zdata.begin(), zdata.end());  // randomise before sorting
 
@@ -1824,13 +1877,21 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     compute_b_squared(number_records, experimental_column, zdata, tmp1, tmp2,
                       worst_bsquared, which_predicted_set);
     write_something_identifying_the_column(predicted_column, output);
-    output << " Worst Bsquared " << worst_bsquared << '\n';
+    if (all_outputs_have_equals_sign) {
+      output << " B2.worst = " << worst_bsquared << '\n';
+    } else {
+      output << " Worst Bsquared " << worst_bsquared << '\n';
+    }
 
-    float b2 = static_cast<float>((best_bsquared + worst_bsquared) *
-                                  0.5);  // cut precision to suppress significant figures
+    // write as float to avoid excess precision.
+    float b2 = static_cast<float>((best_bsquared + worst_bsquared) * 0.5);
 
     write_something_identifying_the_column(predicted_column, output);
-    output << " Unbiased Bsquared " << b2 << '\n';
+    if (all_outputs_have_equals_sign) {
+      output << " B2 = " << b2 << '\n';
+    } else {
+      output << " Unbiased Bsquared " << b2 << '\n';
+    }
   }
 
   if (number_distribution_buckets > 0) {
@@ -2168,9 +2229,16 @@ parse_dash_p(const const_IWSubstring& p, resizable_array<int>& predicted_column)
   return 1;
 }
 
+static void
+DisplayDasyYOptions(std::ostream& output) {
+  output << " -Y allequals      all values written will be of the form '<Measure> = <value>'\n";
+
+  ::exit(0);
+}
+
 static int
 iwstats(int argc, char** argv) {
-  Command_Line cl(argc, argv, "ve:E:p:s:jwn:t:P:M:qR:zc:TA:b:hr:ko:a:f:u:U:i:Km:dF:D:L:");
+  Command_Line cl(argc, argv, "ve:E:p:s:jwn:t:P:M:qR:zc:TA:b:hr:ko:a:f:u:U:i:Km:dF:D:L:B:W:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -2194,6 +2262,23 @@ iwstats(int argc, char** argv) {
 
     if (verbose) {
       cerr << "Will process as a descriptor file\n";
+    }
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "allequals") {
+        all_outputs_have_equals_sign = 1;
+        if (verbose) {
+          cerr << "All measures reported will have an equals sign\n";
+        }
+      } else if (y == "help") {
+        DisplayDasyYOptions(cerr);
+      } else {
+        cerr << "Unrecognised -Y qualifier '" << y << "'\n";
+        DisplayDasyYOptions(cerr);
+      }
     }
   }
 
@@ -2242,6 +2327,48 @@ iwstats(int argc, char** argv) {
     if (!cl.option_present('p')) {
       cerr << "Must specify one or more predicted columns via the -p option\n";
       usage(5);
+    }
+  }
+
+  if (cl.option_present('B')) {
+    ae_percentiles.resize_keep_storage(0);
+    const_IWSubstring b;
+    for (int i = 0; cl.value('B', b, i); ++i) {
+      int j = 0;
+      const_IWSubstring token;
+      while (b.nextword(token, j, ',')) {
+        int pct;
+        if (! token.numeric_value(pct) || pct < 1 || pct > 100) {
+          cerr << "Invalid average absolute error percentage (-B)\n";
+          return 1;
+        }
+
+        ae_percentiles << pct;
+        if (verbose) {
+          cerr << "Will report the " << pct << " percentile of absolute error\n";
+        }
+      }
+    }
+  }
+
+  if (cl.option_present('w')) {
+    fraction_within.resize_keep_storage(0);
+    const_IWSubstring w;
+    for (int i = 0; cl.value('W', w, i); ++i) {
+      int j = 0;
+      const_IWSubstring token;
+      while (w.nextword(token, j, ',')) {
+        float v;
+        if (! token.numeric_value(v) || v <= 0.0f) {
+          cerr << "Invalid absolute error value (-W)\n";
+          return 1;
+        }
+
+        fraction_within << v;
+        if (verbose) {
+          cerr << "Will report the fraction of predited values within " << v << " of correct\n";
+        }
+      }
     }
   }
 

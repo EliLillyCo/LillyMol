@@ -274,7 +274,7 @@ do_brief_output_tabular_form (const IWString & id,    // ID of needle
 
 // Need to find the shortest distance
 
-  int id_with_shortest_distance = 0;
+  //int id_with_shortest_distance = 0;
   similarity_type_t mindist = sid[0]->distance();
 
   for (int i = 1; i < n; i++)
@@ -285,7 +285,7 @@ do_brief_output_tabular_form (const IWString & id,    // ID of needle
       continue;
 
     mindist = sidi->distance();
-    id_with_shortest_distance = i;
+    //id_with_shortest_distance = i;
   }
 
   fraction_as_string.append_number(output, mindist);

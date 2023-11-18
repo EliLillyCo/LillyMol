@@ -236,6 +236,11 @@ constexpr int kFailed = -1;
 
 bool display_unclassified_atom_messages = 1;
 
+void
+SetIssueUnclassifiedAtomMessages(int s) {
+  display_unclassified_atom_messages = s;
+}
+
 int
 ProcessNewFragmentParameter(const XLogP::XlogpParameter& proto) {
   if (! proto.has_index() || ! proto.has_value()) {

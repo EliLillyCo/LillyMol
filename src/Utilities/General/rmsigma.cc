@@ -129,7 +129,7 @@ template <typename T>
 double
 Median_Determination<T>::median ()
 {
-  if (_median_valid == _acc.n())
+  if (_median_valid == static_cast<int>(_acc.n()))
     return _median;
 
   IWComparator<T> cptr;

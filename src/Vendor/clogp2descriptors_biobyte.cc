@@ -110,12 +110,12 @@ static IWString identifier_tag("PCN<");
 
 static IWString tag;
 
-/*
-  Adding just one bit to a large fingerprint does not do much, so we set multiple bits
-*/
+// Adding just one bit to a large fingerprint does not do much, so we set multiple bits
+// 1 is not enough, 20 reduces performance, but this is largely a guess.
+// But there are plenty of models that do benefit from more bit replicates, this
+// needs to be explored on a case by case basis.
 
-static int bit_replicates =
-    9;  // 1 is not enough, 20 reduces performance, but this is largely a guess
+static int bit_replicates = 9; 
 
 static extending_resizable_array<int> clogp_fp_histogram;
 

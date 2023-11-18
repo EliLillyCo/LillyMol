@@ -12,8 +12,11 @@ def _local_install_impl(ctx):
       target = env['BINDIR']
 
     for s in ctx.files.srcs:
-        shell_commands += "echo Copying %s to %s\n" % (s.short_path, target)
-        shell_commands += "cp -f %s %s\n" % (s.short_path, target)
+        shell_commands += "dest=%s/$(basename %s)\n" % (target, s.short_path)
+        shell_commands += "if [[ ! -s ${dest} || ${dest} -ot %s ]] ; then\n" % (s.short_path)
+
+        shell_commands += "  echo 'Copy %s to %s'\n" % (s.short_path, target)
+        shell_commands += "  cp -f %s %s\nfi\n" % (s.short_path, target)
 
     ctx.actions.write( 
         output = ctx.outputs.executable,
@@ -31,6 +34,6 @@ local_install = rule(
     implementation = _local_install_impl,
     attrs = {
         "srcs": attr.label_list(allow_files = True),
-        "target": attr.string(default = "/workspaces/LillyMolPrivate/bin/Linux/", doc = "Installation target directory"),
+        "target": attr.string(default ="/home/l010903/work/repo/LillyMolPrivate/src/../bin/Linux", doc = "Installation target directory"),
     },
 )

@@ -14,6 +14,11 @@ class TSubstructure_FP
     int _default_fingerprint_nbits;
     IWString _tag;
 
+    // We can optionally set a bit for the total number of hits
+    // across all the queries. Note that the value of the variable controls
+    // the number of bit replicates associated with the total hits bit.
+    int _extra_bit_total_hits;
+
 //  private functions
 
     template <typename OUTPUT> int _do_fingerprint_output(int nq, const int * hits, OUTPUT& output) const ;
@@ -26,6 +31,9 @@ class TSubstructure_FP
     void set_bit_replicates(int s) { _bit_replicates = s;}
     void set_fingerprint_tag(const const_IWSubstring & s) { _tag = s;}
     void set_default_fingerprint_nbits(int s) { _default_fingerprint_nbits = s;}
+    void set_extra_bit_total_hits(int s) {
+      _extra_bit_total_hits = s;
+    }
 
     template <typename OUTPUT>
       int do_fingerprint_output(Molecule &, int nq, const int * hits, OUTPUT& output) const;

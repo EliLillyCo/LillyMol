@@ -1416,11 +1416,11 @@ Single_Substructure_Query::BuildProto(SubstructureSearch::SingleSubstructureQuer
   }
 
   for (const InterRingAtoms* ira : _inter_ring_region) {
-     // TODO: implement this.
+    ira->BuildProto(*proto.add_inter_ring_region());
   }
 
   for (const Substituent* substituent : _substituent) {
-    // TODO: implement this.
+    substituent->BuildProto(*proto.add_substituent());
   }
 
   for (const DownTheBond* dtb : _down_the_bond) {
@@ -3566,7 +3566,7 @@ Substructure_Ring_Base::BuildProto(SubstructureSearch::SubstructureRingBase& pro
   }
 
   for (const Substituent* substituent : _substituent) {
-    // TODO: implement this.
+    substituent->BuildProto(*proto.mutable_substituent()->Add());
   }
 
   return 1;
@@ -3822,6 +3822,23 @@ Substituent::ConstructFromProto(const SubstructureSearch::Substituent& proto) {
 
 int
 Substituent::BuildProto(SubstructureSearch::Substituent& proto) const {
+  SetProtoValues(_hits_needed, "hits_needed", proto);
+  SetProtoValues(_natoms, "natoms", proto);
+  SetProtoValues(_nrings, "nrings", proto);
+  SetProtoValues(_length, "length", proto);
+
+  if (_set_global_id > 0) {
+    proto.set_set_global_id(_set_global_id);
+  }
+
+  for (const IWString* smt : _required_smarts) {
+    proto.add_required_smarts(smt->AsString());
+  }
+
+  for (const IWString* smt : _disqualifying_smarts) {
+    proto.add_disqualifying_smarts(smt->AsString());
+  }
+
   cerr << "Substituent::BuildProto:implement this something\n";
   return 0;
 }
@@ -3891,6 +3908,31 @@ InterRingAtoms::ConstructFromProto(const SubstructureSearch::InterRingAtoms& pro
 
 int
 InterRingAtoms::BuildProto(SubstructureSearch::InterRingAtoms& proto) const {
+  SetProtoValues(_hits_needed, "hits_needed", proto);
+  SetProtoValues(_natoms, "natoms", proto);
+  SetProtoValues(_ring_connections, "ring_connections", proto);
+  SetProtoValues(_length, "length", proto);
+
+  if (_set_global_id > 0) {
+    proto.set_set_global_id(_set_global_id);
+  }
+
+  for (int length : _required_length) {
+    proto.add_required_length(length);
+  }
+
+  for (const IWString* smt : _required_smarts) {
+    proto.add_required_smarts(smt->AsString());
+  }
+
+  for (const IWString* smt : _disqualifying_smarts) {
+    proto.add_disqualifying_smarts(smt->AsString());
+  }
+
+  for (int& g : _defined_by_ring_global_id) {
+    proto.add_defined_by_ring_global_id(g);
+  }
+
   cerr << "InterRingAtoms::BuildProto:implement this something\n";
   return 0;
 }

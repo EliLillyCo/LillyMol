@@ -53,6 +53,15 @@ The experimental data can be specified either via the `-X` option,
 or if it is a particular column in the smiles file, via the `-e` option
 with no `-X` option.
 
+## TLDR
+A common use of this tool might look like
+```
+activity_consistency -E train.activity -e 2 -l -c -x -g all -T I=Cl -T Br=Cl
+        -M max -M merged -v train.smi
+```
+New files `merged.activity` and `merged.smi` are created, containing
+merged information about structural duplicates.
+
 ## Options
 
 ### -a
@@ -78,7 +87,7 @@ to do that with a continuous response, we need to specify how
 different do values need to be in order to be considered 'different'.
 
 ### -r
-Interpret the `-t` option as a ratio between activities
+Interpret the `-t` option as a ratio between activities.
 
 ### -O \<fname\>
 Write groups outside tolerance to \<fname\>. See the `-t` and `-r`
@@ -123,7 +132,17 @@ among these seldom leads to a better model.
 ### -V ...
 What to do with multi-valued activities (-V help for info). The
 activity file may contain duplicate data - same identifier, possibly
-different values. The following qualifiers are allowed
+different values.
+```
+12345 3.14
+12345 -3.14
+```
+or different class assignments
+```
+12345 foo
+12345 bar
+```
+The following qualifiers are allowed
 
 #### -V first
 Take the first instance of data.
@@ -152,16 +171,26 @@ are permitted in the output. Other elements can be temporarily considered
 as organic, `-W Si`.
 
 ### -U \<fname\> 
-Tabular output format.
+For all of the equivalent structure groups, writes a
+tab separated record showing the folling information about that 
+set of molecules. The `ID` will be that of the first molecule
+encountered within that group.
+```
+Minval Maxval Range Average ID Activity
+```
 
 ### -b \<natoms\>
-Lower atom count cutoff. Discard molecules having too few atoms.
+Lower atom count cutoff. Discard molecules having too few atoms. Many
+datasets will contain molecules that are either 'very small' or 'very large'.
+These outliers may have negative influences on model performance, and we
+usually find it useful to suppress them.
 
 ### -B \<natoms\>
 Upper atom count cutoff.
 
 ### -z
-remove leading 0's from identifiers.
+Remove leading 0's from identifiers. This may be useful in an environment
+where sometimes identifiers are present as '000000123456' and sometimes as '123456'.
 
 ### -l
 reduce to largest fragment.

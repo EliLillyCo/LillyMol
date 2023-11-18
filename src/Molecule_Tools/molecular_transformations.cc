@@ -853,6 +853,7 @@ molecule_is_duplicate(Molecule & m)
   return 0;
 }
 
+#ifdef NOT_BEING_USED
 static int
 do_append(IWString & new_name,
           const IWString & name_separator,
@@ -865,6 +866,7 @@ do_append(IWString & new_name,
 
   return zextra.length();
 }
+#endif
 
 static int
 do_append(Molecule & m,
@@ -1155,6 +1157,7 @@ in_place_transformation_maybe_append_to_name(IWReaction & rxn,
   return do_name_appends(m, rxn);
 }
 
+#ifdef NOT_BEING_USED
 static int
 in_place_transformations_maybe_append_to_name(IWReaction & rxn,
                                               Molecule & m,
@@ -1165,6 +1168,7 @@ in_place_transformations_maybe_append_to_name(IWReaction & rxn,
 
   return do_name_appends(m, rxn);
 }
+#endif
 
 int
 Set_of_Reactions::grouping_is_exhausted(const int reaction_number,
@@ -1585,7 +1589,7 @@ _doAllRegioIsomersAndSitesRecurs(Molecule & m,
 
 
       IWReaction & ri = sor.reaction(reactionNumber);
-      const AndORProb * ao = reinterpret_cast<const AndORProb *>(ri.user_specified_void_ptr());    // may be null
+      //const AndORProb * ao = reinterpret_cast<const AndORProb *>(ri.user_specified_void_ptr());    // may be null
 
       // do the reaction
 

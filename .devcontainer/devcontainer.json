@@ -1,0 +1,7 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/cpp:1.0.4-debian-12",
+    "build": {
+       // Path is relative to the devcontainer.json file
+       "dockerfile": "Dockerfile"
+    },
+}

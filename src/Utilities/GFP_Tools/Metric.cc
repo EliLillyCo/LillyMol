@@ -87,7 +87,7 @@ double calculateRIE::operator()( const Enrichment& p_enrich ) const
     sum += exp( -a * static_cast<double>( *iter ) / N );
   }
   double ra  = n/N;
-  double ri  = (N-n)/N;
+  //double ri  = (N-n)/N;
   double random_sum = ra*exp( -a/N )*(1.0 - exp( -a ) )/ ( 1.0 - exp( -a / N ) );
   return sum/random_sum;
 }

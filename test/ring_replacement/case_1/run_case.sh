@@ -34,7 +34,8 @@ echo "Testing: $command"
 
 data_dir='.'
 
-$command -R ${data_dir}/rings_6a.smi -s a "$in" 1>> "$out" 2>>err.txt
+stderr='stderr'
+$command -R ${data_dir}/rings_6a.smi -s a "$in" 1>> "$out" 2>>${stderr}
 $diff_tool "$out" "$cmp_out"
 ret=$?
 
@@ -45,4 +46,4 @@ else
 fi
 
 rm -f "$out"
-rm -f err.txt
+rm -f "${stderr}"

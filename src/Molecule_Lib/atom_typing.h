@@ -8,6 +8,7 @@
 #include "Foundational/iwstring/iwstring.h"
 
 #include "Molecule_Lib/atom_type_ext.pb.h"
+#include "Molecule_Lib/pharmacophore.pb.h"
 
 #include "charge_assigner.h"
 #include "donor_acceptor.h"
@@ -136,7 +137,7 @@ class Atom_Typing_Specification {
 
   IWString _built_from;
 
-  //  For Pharmacaphore types
+  //  For Pharmacophore types
 
   Charge_Assigner _charge_assigner;
   Donor_Acceptor_Assigner _donor_acceptor_assigner;
@@ -214,10 +215,11 @@ class Atom_Typing_Specification {
                                   int* complete, int need_to_compute_bond_constants,
                                   int radius) const;
 
-  int _build_pharmacaphore_specification(const const_IWSubstring&);
-  int _build_pharmacaphore_specification(const IWString&, iwstring_data_source&);
+  int _build_pharmacophore_specification(const const_IWSubstring&);
+  int _build_pharmacophore_specification(const Pharmacophore::PharmacophoreSpecification& proto);
+  int _build_pharmacophore_specification(const IWString&, iwstring_data_source&);
   template <typename T>
-  int _assign_atom_types_pharmacaphore(Molecule& m, T* atype);
+  int _assign_atom_types_pharmacophore(Molecule& m, T* atype);
 
   int ParseExternalQuery(IWString& proto_fname);
   int BuildExternal(const atom_typing_spec::External& proto);
@@ -245,8 +247,7 @@ class Atom_Typing_Specification {
   template <typename T>
   int assign_atom_types(
       Molecule& m, T* atype,
-      const int* ncon =
-          nullptr);  // non const because the pharmacaphore type contains queries
+      const int* ncon = nullptr);  // non const because the pharmacophore type contains queries
 
   //  ec fingerprints started with Jibo's prime number atomic number types,
   //  but other programmes do not use that convention.
