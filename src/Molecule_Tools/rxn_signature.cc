@@ -38,9 +38,9 @@ static int * radius = nullptr;
 
 static Atom_Typing_Specification atom_typing_specification;
 
-static int reactions_discarded_for_incomplete_atom_map = 0;
+//static int reactions_discarded_for_incomplete_atom_map = 0;
 
-static int remove_duplicate_reagents_atom_maps_scrambled = 0;
+//static int remove_duplicate_reagents_atom_maps_scrambled = 0;
 
 static extending_resizable_array<int> unmapped_atom_count;
 
@@ -1034,7 +1034,6 @@ static int rxn_signature (int argc, char ** argv)
     cerr << "Read " << reactions_read << " reactions\n";
     Accumulator_Int<int> acc;
 
-    int most_common = 0;
     int most_common_count = 0;
     for (int i = 0; i < acc_changing_atoms.number_elements(); ++i)
     {
@@ -1048,7 +1047,6 @@ static int rxn_signature (int argc, char ** argv)
       if (c > most_common_count)
       {
         most_common_count = c;
-        most_common = i;
       }
     }
 
@@ -1081,5 +1079,5 @@ main (int argc, char ** argv)
 
   int rc = rxn_signature(argc, argv);
 
-  return 0;
+  return rc;
 }

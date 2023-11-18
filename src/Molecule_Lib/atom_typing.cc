@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <memory>
@@ -143,7 +144,7 @@ determine_atom_type_and_set_tag(const const_IWSubstring& s, IWString& tag, int v
     if (verbose) {
       cerr << "Will produce basic atom type, tag '" << tag << "'\n";
     }
-  } else if ("sb" == p) {
+  } else if ("sb" == p || p == "syb") {
     rc = IWATTYPE_SYBYL;
     tag << "SB<";
     if (verbose) {
@@ -153,7 +154,7 @@ determine_atom_type_and_set_tag(const const_IWSubstring& s, IWString& tag, int v
     rc = IWATTYPE_PPHORE;
     tag << "PP<";
     if (verbose) {
-      cerr << "Will produce pharmacaphore atom type, tag '" << tag << "'\n";
+      cerr << "Will produce pharmacophore atom type, tag '" << tag << "'\n";
     }
   } else if ("expt" == p) {
     rc = IWATTYPE_EXPT;
@@ -336,7 +337,7 @@ determine_atom_type(const IWString& s) {
     return IWATTYPE_COMPLEX;
   } else if ("tt" == mys) {
     return IWATTYPE_TT;
-  } else if ("sb" == mys) {
+  } else if ("sb" == mys || mys == "syb") {
     return IWATTYPE_SYBYL;
   } else if ("pp" == mys) {
     return IWATTYPE_PPHORE;
@@ -1485,10 +1486,10 @@ assign_atom_types_nox(const Molecule& m, T* atype) {
 
 template <typename T>
 int
-Atom_Typing_Specification::_assign_atom_types_pharmacaphore(Molecule& m, T* atype) {
+Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atype) {
   const auto matoms = m.natoms();
 
-  // cerr << "Atom_Typing_Specification::_assign_atom_types_pharmacaphore, ust " <<
+  // cerr << "Atom_Typing_Specification::_assign_atom_types_pharmacophore, ust " <<
   // _user_specified_type << '\n';
 
   if (0 != _user_specified_type) {
@@ -1773,7 +1774,7 @@ display_atom_type_specifications(std::ostream& os) {
   os << " -P c              \"c\" atom type\n";
   os << " -P tt             topological torsion atom type\n";
   os << " -P syb            Sibyl atom type\n";
-  os << " -P pp             Pharmacaphore type\n";
+  os << " -P pp             Pharmacophore type\n";
   os << " -P UST:achprtyzne User Specified Type\n";
   os << "        A          aromatic or not\n";
   os << "        C          number of connections\n";
@@ -1880,7 +1881,7 @@ Atom_Typing_Specification::build(const const_IWSubstring& s) {
   }
 
   if (IWATTYPE_PPHORE == _type) {
-    return _build_pharmacaphore_specification(mys);
+    return _build_pharmacophore_specification(mys);
   }
 
   // cerr << "TYpe " << _type << '\n';
@@ -1896,7 +1897,7 @@ Atom_Typing_Specification::assign_atom_types(Molecule& m, T* atype, const int* n
   if (IWATTYPE_PPHORE ==
       _type)  // because this owns the charge assigner etc queries. Must be done first
   {
-    if (!_assign_atom_types_pharmacaphore(m, atype)) {  // we allow
+    if (!_assign_atom_types_pharmacophore(m, atype)) {  // we allow
       return 0;
     }
   } else if (0 != _user_specified_type) {
@@ -2957,38 +2958,114 @@ Atom_Typing_Specification::string_representation(IWString& s) const {
   return iwattype_convert_to_string_form(_type, s);
 }
 
-/*
-  Pharmacaphore type specified. We need to go and open the file
-*/
+// Given that `venv` is the value of a shell variable, find the name of
+// queries/pharmacophore/pharmacophore. If successful, please in `pharmacophore`.
+static int
+FindPharmacophoreQueries(const IWString& venv, IWString& pharmacophore) {
+  if (! std::filesystem::exists(venv.AsString())) {
+    cerr << "FindPharmacophoreQueries::does not exist '" << venv << "'\n";
+    return 0;
+  }
+
+  // If it is a file, assume it is set.
+  if (std::filesystem::is_regular_file(venv.AsString())) {
+    pharmacophore = venv;
+    return 1;
+  }
+
+  // Seems very unlikely...
+  if (! std::filesystem::is_directory(venv.AsString())) {
+    return 0;
+  }
+
+  IWString fname;
+  fname << venv << "/queries/pharmacophore/pharmacophore";
+  if (std::filesystem::is_regular_file(fname.AsString())) {
+    pharmacophore = fname;
+    return 1;
+  }
+
+  fname.resize_keep_storage(0);
+  fname << venv << "/data/queries/pharmacophore/pharmacophore";
+  if (std::filesystem::is_regular_file(fname.AsString())) {
+    pharmacophore = fname;
+    return 1;
+  }
+
+  cerr <<  "Cannot find '" << venv << "'\n";
+  return 0;
+}
+
+// If shell variable `vname` is set, place the value in `result`
+static int
+GetEnvValue(const char * vname, IWString& result) {
+  const char* from_env = getenv(vname);
+  if (nullptr == from_env) {
+    return 0;
+  }
+
+  result = from_env;
+  return 1;
+}
+
+// Depending on where we are running, the pharmacophore query might
+// be in several different places. Search for them
+static int
+PharmacophoreFromShellVariables(IWString& query_file) {
+  IWString dir;
+  if (GetEnvValue("IW_PHARMACOPHORE", dir) &&
+      FindPharmacophoreQueries(dir, query_file)) {
+    return 1;
+  }
+  if (GetEnvValue("GC3TK_DATA_PERSISTENT", dir) &&
+      FindPharmacophoreQueries(dir, query_file)) {
+    return 1;
+  }
+  if (GetEnvValue("LILLYMOL_HOME", dir) &&
+      FindPharmacophoreQueries(dir, query_file)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+//  Pharmacophore type specified. We need to go and open the file
 
 int
-Atom_Typing_Specification::_build_pharmacaphore_specification(
+Atom_Typing_Specification::_build_pharmacophore_specification(
     const const_IWSubstring& s) {
   IWString myfname(s);
 
   if ("PP" == myfname || 0 == myfname.length()) {
-    const char* from_env = getenv("IW_PHARMACAPHORE");
-    if (nullptr != from_env) {
-      myfname = from_env;
-    } else {
-      // The default private home directory is removed.
-      // A new directory for the queries may be provided in the future
-      cerr << "Could not find required queries \n";
+    if (! PharmacophoreFromShellVariables(myfname)) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot find pharmacophore queries from env\n";
       return 0;
     }
   } else if (myfname.starts_with("PP=") || myfname.starts_with("PP:")) {
     myfname.remove_leading_chars(3);
   }
 
+  if (myfname.ends_with(".textproto")) {
+    std::optional<Pharmacophore::PharmacophoreSpecification> pphore =
+      iwmisc::ReadTextProto<Pharmacophore::PharmacophoreSpecification>(myfname);
+    if (! pphore) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot read '" <<
+              myfname << "'\n";
+      return 0;
+    }
+
+    return _build_pharmacophore_specification(*pphore);
+  }
+
   iwstring_data_source input(myfname.null_terminated_chars());
 
   if (!input.good()) {
-    cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification:cannot open '"
+    cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot open '"
          << myfname << "'\n";
     return 0;
   }
 
-  return _build_pharmacaphore_specification(myfname, input);
+  return _build_pharmacophore_specification(myfname, input);
 }
 
 /*
@@ -3080,7 +3157,7 @@ string_interpolation(const const_IWSubstring& starting_string, IWString& expande
 }
 
 int
-Atom_Typing_Specification::_build_pharmacaphore_specification(
+Atom_Typing_Specification::_build_pharmacophore_specification(
     const IWString& fname, iwstring_data_source& input) {
   input.set_translate_tabs(1);
   input.set_strip_leading_blanks(1);
@@ -3103,12 +3180,14 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
     //  cerr << "Building pp specification '" << buffer << "'\n";
     IWString tmp;
 
+    // should be replaced with the member function, but this whole function
+    // is obsolete. Proto input is preferred.
     string_interpolation(buffer, tmp);
 
     buffer = tmp;
 
     if (echo_inputs) {
-      cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification:reading '"
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:reading '"
            << buffer << "'\n";
     }
 
@@ -3120,7 +3199,7 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
       buffer.remove_leading_words(1);
 
       if (!_charge_assigner.build(buffer)) {
-        cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification, cannot "
+        cerr << "Atom_Typing_Specification::_build_pharmacophore_specification, cannot "
                 "build charge assigner '"
              << buffer << "'\n";
         return 0;
@@ -3129,7 +3208,7 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
       buffer.remove_leading_words(1);
 
       if (!_donor_acceptor_assigner.build(buffer)) {
-        cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification, cannot "
+        cerr << "Atom_Typing_Specification::_build_pharmacophore_specification, cannot "
                 "build donor/acceptor assigner '"
              << buffer << "'\n";
         return 0;
@@ -3139,8 +3218,8 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
     } else if (buffer.starts_with("hydrophobe")) {
       buffer.remove_leading_words(1);
       if (!process_cmdline_token('*', buffer, _hydrophobe, 0)) {
-        cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification:cannot "
-                "process pharmacaphore '"
+        cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot "
+                "process pharmacophore '"
              << buffer << "'\n";
         return 0;
       }
@@ -3149,7 +3228,7 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
 
       _write_isotopically_labelled.add_output_type(FILE_TYPE_SMI);
       if (!_write_isotopically_labelled.new_stem(buffer)) {
-        cerr << "Atom_Typing_Specification::_build_pharmacaphore_specification:cannot "
+        cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot "
                 "initialise write= stream '"
              << buffer << "'\n";
         return 0;
@@ -3179,6 +3258,87 @@ Atom_Typing_Specification::_build_pharmacaphore_specification(
 
   return 1;
 }
+
+// Attempt shell variable expansion on `starting_value`.
+// If successful return the result, otherwise return `starting_value`.
+static IWString
+ExpandedValue(const std::string& starting_value) {
+  IWString mycopy(starting_value);
+
+  std::optional<IWString> expanded = mycopy.ExpandEnvironmentVariables();
+  if (! expanded) {
+    return mycopy;
+  }
+
+  return *expanded;
+}
+
+int
+Atom_Typing_Specification::_build_pharmacophore_specification(const Pharmacophore::PharmacophoreSpecification& proto) {
+  if (proto.has_charge_assigner()) {
+    IWString s = ExpandedValue(proto.charge_assigner());
+    if (! _charge_assigner.build(s)) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification: invalid charge assigner '" <<
+              s << "'\n";
+      return 0;
+    }
+  }
+
+  if (proto.has_donor_acceptor()) {
+    if (!_donor_acceptor_assigner.BuildFromProto(proto.donor_acceptor())) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification, cannot "
+              "build donor/acceptor assigner '" << proto.donor_acceptor().ShortDebugString() << "'\n";
+      return 0;
+    }
+
+    // we allocate our own array, do not want to perturb the incoming molecule
+    _donor_acceptor_assigner.set_apply_isotopic_labels(0);
+  }
+
+  if (proto.hydrophobe_size()) {
+    for (const std::string& s : proto.hydrophobe()) {
+      IWString qry = ExpandedValue(s);
+      if (!process_cmdline_token('*', qry, _hydrophobe, 0)) {
+        cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot "
+                "process pharmacophore '" << qry << "'\n";
+        return 0;
+      }
+    }
+  }
+
+  if (proto.has_write()) {
+    const IWString fname(proto.write());
+
+    _write_isotopically_labelled.add_output_type(FILE_TYPE_SMI);
+    if (!_write_isotopically_labelled.new_stem(fname)) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:cannot "
+              "initialise write stream '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  if (proto.has_other()) {
+    IWString s(proto.other());
+    if (s.starts_with("UST:")) {
+      s.remove_leading_chars(4);
+    }
+
+    if (!_parse_user_specified_type(s)) {
+      cerr << "Atom_Typing_Specification::_build_pharmacophore_specification:invalid atype " <<
+              s << "'\n";
+      return 0;
+    }
+  } else {  // default type
+    _assign_other_type = 1;
+  }
+
+  _combine_donor_and_acceptor = proto.combine_donor_acceptor();
+
+  set_global_aromaticity_type(Daylight);
+
+  return 1;
+}
+
 
 QueryAndValue::QueryAndValue() {
   _value = 0;
@@ -3307,3 +3467,4 @@ template int Atom_Typing_Specification::assign_atom_types<uint64_t>(Molecule&, u
                                                                     int const*);
 
 template int assign_atom_types(Molecule&, int, int*, int const*);
+template int assign_atom_types(Molecule&, int, unsigned int*, int const*);

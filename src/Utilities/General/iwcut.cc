@@ -29,6 +29,7 @@ usage(int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "Extracts columns - like cut\n";
   cerr << " -f <col>         extract single column\n";
   cerr << " -f <col1,col2>   extract multiple columns\n";
@@ -57,6 +58,7 @@ usage(int rc)
 #endif
   cerr << " -g <char>        in tokens with whitespace, replace with <char>\n";
   cerr << " -v               verbose output\n";
+// clang-format on
 
   exit(rc);
 }

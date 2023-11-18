@@ -554,6 +554,12 @@ class IWString : public resizable_array<char>
     int ends_with (const IWString &) const;
     int ends_with (const const_IWSubstring &) const;
 
+    // a common operation is to check to see if a string ends
+    // with something, and if not append it.
+    // Returns 1 if a change was made, 0 if no change.
+    int EnsureEndsWith(const char* s);
+    template <typename T> int EnsureEndsWith(const T& c);
+
     int looks_like (const char *, int) const;
     int looks_like (const IWString &, int) const;
     int looks_like (const const_IWSubstring &, int) const;
@@ -721,7 +727,6 @@ class IWString : public resizable_array<char>
 
     // Try to interpolate any ${varname}.
     std::optional<IWString> ExpandEnvironmentVariables() const;
-
 };
 
 inline int

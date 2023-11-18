@@ -1,9 +1,15 @@
+# this was added because some guanidine molecules were not hit
+# by the amidine query, S1C(=NN=C1C1=C(C)C=CC=C1)NC(=N)N1CCCC1 CHEMBL1189119
+# We make this very restrictive so that hopefully it will only
+# hit molecules otherwise missed by the amidine query.
+# There appear to be very few molecules hit by this query.
 
 (0 Query
   (A C Comment "guanidine")
   (A I Version 2)
   (A I unique_embeddings_only 1)
   (A I one_embedding_per_start_atom 1)
+# clogD offset
   (A D numeric_value 2.70)
   (1 Element_Hits_Needed
     (A I atomic_number 7)
@@ -38,6 +44,7 @@
     (A I single_bond (0 2 3))
     (A C smarts "N(=O)=O")
     (A C smarts "S=O")
+    (A C smarts "C#N")
     (A C smarts "C=[O,S]")
     (A C smarts "[OH,SH]")
   )

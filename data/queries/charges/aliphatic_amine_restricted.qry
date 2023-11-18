@@ -26,6 +26,7 @@
       (A I preference_value 20)
     )
 
+#   within the ncon3 case, make sure the less substituted Nitrogen gets the charge
 
     (5 Query_Atom_Preference
       (A I ncon 3)

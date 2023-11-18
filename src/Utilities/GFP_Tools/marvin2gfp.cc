@@ -5,12 +5,11 @@
 #include <stdlib.h>
 #include <iostream>
 
+#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
-
-#include "Foundational/iwmisc/sparse_fp_creator.h"
-#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/iwmisc/set_or_unset.h"
+#include "Foundational/iwmisc/sparse_fp_creator.h"
 
 using std::cerr;
 using std::endl;
@@ -27,7 +26,7 @@ static int process_apKa1 = 0;
 static int process_bpKa1 = 0;
 
 static int clogp_column = -1;
-static int clogD_column = -1;
+//static int clogD_column = -1;
 static int apKa1_column = -1;
 static int bpKa1_column = -1;
 

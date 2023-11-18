@@ -1,8 +1,5 @@
 # Welcome to the Eli Lilly LillyMol implementation.
 
-![Static Badge](https://img.shields.io/badge/tested_docker_gcc_version-10.2%7C12.3%7C13.2-blue)
-![Static Badge](https://img.shields.io/badge/supported_platform-Linux-green)
-
 ## Background
 LillyMol is a C++ library for Cheminformatics. This repo also contains a variety of useful
 command line tools that have been built with LillyMol.
@@ -75,6 +72,14 @@ module load gcc10
 module load bazelisk
 module load git
 ```
+
+Other system components that are needed, which may or may not be
+available.
+
+* wget
+* unzip
+* libz-dev
+
 ### Python
 If you wish to build the python bindings, you will need a recent version of
 python. Development was done with python3.11 and has not been
@@ -89,11 +94,15 @@ Note that with the default build (below) Python bindings are not built.
 If you have bazelisk and gcc installed, there is a reasonable possibility that
 issuing `make` in the top level directory will work (but see note below
 about NFS filesystems).
+
 ```
-cd /path/to/Lillymol
+# Inside Lilly use the private repo
+git clone https://github.com/EliLillyCo/LillyMol
+
+cd /path/to/LillyMol
 make
 ```
-Executables will be in bin/$(uname) and libraries in lib. More details
+Executables will be in `bin/$(uname)` and libraries in `lib`. More details
 below. There is no concept of installation prefix, everything remains
 in the repo.
 
@@ -103,10 +112,36 @@ are built. If you wish to build either of those
 make python
 make berkeleydb
 ```
+or
+```
+make all
+```
 
-If you look at (Makefile)[Makefile] you will see that all it is doing
-is sequentially invoking the two scripts discussed below, possibly with
-various shell variables set, which enable the optional builds.
+If you look at [Makefile](Makefile) you will see that all it is doing
+is sequentially invoking the three scripts discussed below, possibly with
+
+### Configuring for bazel
+Within the src directory, the file `WORKSPACE` configures the build environment
+for `bazel`. If you are building python bindings, this file needs to be updated
+to reflect the location of your local python. The script `update_bazel_configs.sh`
+does this automatically from the Makefile.
+
+### Installation Directory
+There is an 'install' target in the BUILD files, and defined in
+[build_deps/install.bzl](src/build_deps/install.bzl).
+This is where LillyMol executables will be installed when
+the 'install' run target is run. Again `update_bazel_configs.sh`
+will update this to '/path/to/LillyMol/bin/$(uname)'.
+Check to see that the update has
+been done correctly and adjust if not, or to set another location.
+
+```
+tail build_deps/install.bzl
+```
+That file contains other mechanisms for specifying the install directory.
+But remember, every time `make` is run, that file will be automatically
+updated again. Remove the calls to `update_bazel_configs.sh` from
+the Makefile if needed.
 
 ### C++ Dependencies.
 There are several dependencies which could be installed on the system,
@@ -134,11 +169,8 @@ directory (next to src) and then download, build and install the following depen
 
 - **BerkeleyDb**: used for key/value databases
 - **f2c/libf2c**: there is some fortran in LillyMol.
-- **HighwayHash**: hash function from Google
 
 Running 'build_third_party.sh' needs to be done once.
-
-Currently HighwayHash is impeding deployment on Mac's.
 
 Note that BerkeleyDB and Python bindings are only built if requested. 
 In [Makefile](/Makefile) you will see use of the shell variables
@@ -152,39 +184,15 @@ re-run the script and all dependencies are downloaded and rebuilt. If there is
 an individual dependency that you would like to rebuild, just remove it from
 the `third_party` directory, run the script again and it will be rebuilt.
 
+Note too that installing these external dependencies and running bazel may require
+considerable amounts of disk space. For example at the time of writing my
+'third_party' directory contains 1.2GB and my bazel temporary area contains 2.2GB.
+
+
 Note that [.bazelrc](/src/.bazelrc) contains a hardware restriction to quite old
 Intel hardware. You should update update `--cxxopt` to reflect
 your hardware. Using `--cxxopt=-march=native --cxxopt=-mtune=native` is likely
 what you want. Build for the local hardware.
-
-`WORKSPACE` configures the build environment for `bazel`. The path
-to the external dependencies must be configured in that file. They
-can be either full path names, or path names relative to the main
-WORKSPACE file. In the WORKSPACE file in this distribution, there is a mixture, with
-many of the dependencies in the `../third_party` directory, and
-others with Lilly specific full path names. You may need to
-update WORKSPACE for local needs.
-
-Note that installing these external dependencies and running bazel may require
-considerable amounts of disk space. For example at the time of writing my
-'third_party' directory contains 1.2GB and my bazel temporary area contains 2.2GB.
-
-### Installation Directory
-There is an 'install' target in the BUILD files, and defined in
-[build_deps/install.bzl](src/build_deps/install.bzl).
-This is where LillyMol executables will be installed  when
-the 'install' run target is run.
-
-'build_third_party.sh' changes the default location for executables
-to be '/path/to/LillyMol/bin/$(uname)'. Check to see that the update has
-been done correctly and adjust if not, or to set another location.
-
-```
-tail build_deps/install.bzl
-```
-That file contains other mechanisms for specifying the install directory.
-But remember, every time `build_third_party.sh` runs it will change
-this file.
 
 ### Python Bindings
 During building of external dependencies (with build_third_party.sh

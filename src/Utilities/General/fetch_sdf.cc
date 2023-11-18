@@ -141,6 +141,7 @@ separate_into_id_and_data(const const_IWSubstring& buffer, int col, IWString& id
   return 1;
 }
 
+#ifdef NOT_BEING_USED
 static int
 insert_identifier_file_info(IWString& sd, const IWString& zinfo)
 {
@@ -151,6 +152,7 @@ insert_identifier_file_info(IWString& sd, const IWString& zinfo)
   cerr << "Insert identifier info feature not implemented, see Ian\n";
   return 0;
 }
+#endif
 
 /*static int
 read_next_rdf (iwstring_data_source & input,

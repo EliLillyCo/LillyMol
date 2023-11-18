@@ -2,11 +2,11 @@ description {
   feature_name: "w_isolrc"
   description: "Number of isolated (unfused) rings"
   plot_title: "Number of isolated (unfused) rings"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 9.0
-mean: 2.0243034
+maxval: 8.0
+mean: 2.04404
 median: 2.0
 quantile {
   quantile: 0.01
@@ -16,6 +16,7 @@ quantile {
 }
 quantile {
   quantile: 0.1
+  value: 1.0
 }
 quantile {
   quantile: 0.5
@@ -34,41 +35,37 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 227490
+  count: 4993
 }
 int_values {
   value: 1
-  count: 555845
+  count: 12226
 }
 int_values {
   value: 2
-  count: 707249
+  count: 15540
 }
 int_values {
   value: 3
-  count: 514822
+  count: 11437
 }
 int_values {
   value: 4
-  count: 200415
+  count: 4623
 }
 int_values {
   value: 5
-  count: 41544
+  count: 1014
 }
 int_values {
   value: 6
-  count: 5463
+  count: 147
 }
 int_values {
   value: 7
-  count: 636
+  count: 19
 }
 int_values {
   value: 8
-  count: 45
-}
-int_values {
-  value: 9
   count: 1
 }

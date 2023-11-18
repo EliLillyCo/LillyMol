@@ -163,7 +163,6 @@ class Matched_Atom_in_Component
 extern std::ostream &
 operator << (std::ostream &, const Matched_Atom_in_Component &);
 
-
 // These will be instantiated from the "join" directive.
 class Inter_Particle_Bond
 {
@@ -188,6 +187,13 @@ class Inter_Particle_Bond
 
     SidechainIsotopeRequirement _sidechain_isotope_requirement;
 
+    // If requested, we can orient the two fragments so they can
+    // form a plausible 3d connection;
+    float _align_3d;
+
+  // private functions.
+    void _default_values();
+
   public:
     Inter_Particle_Bond ();
     Inter_Particle_Bond (int f1, int q1, int q2, bond_type_t bt);
@@ -198,7 +204,7 @@ class Inter_Particle_Bond
     const Matched_Atom_in_Component & a1 () const { return _a1;}
     const Matched_Atom_in_Component & a2 () const { return _a2;}
 
-    bond_type_t   btype () const { return _bt;}
+    bond_type_t btype () const { return _bt;}
 
     int build (const IWString & s);
     int write_msi (std::ostream & os, const IWString & ind) const;
@@ -223,6 +229,10 @@ class Inter_Particle_Bond
     // if _sidechain_isotope_requirement is set, return true if it is OK
     // to join atoms `a1` (scaffold) and `a2` (sidechain) in `m`.
     int OkSidechainIsotopeConstraint(Molecule& m, atom_number_t a1, atom_number_t a2) const;
+
+    float align_3d() const {
+      return _align_3d;
+    }
 };
 
 std::ostream & operator << (std::ostream &, const Inter_Particle_Bond &);

@@ -1023,7 +1023,9 @@ Molecule::atoms_in_fragment(int zfrag)
 {
   assert(zfrag >= 0);
 
-  assert(zfrag < number_fragments());
+  if (zfrag > number_fragments()) {
+    return 0;
+  }
 
   return _fragment_information.atoms_in_fragment(zfrag);
 }

@@ -22,27 +22,45 @@
 default:
 	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
 	echo "Default build does not build targets 'berkeleydb' and 'python'"
+	cd src && ./update_bazel_configs.sh
 	cd src && ./build_third_party.sh
 	cd src && ./build_from_src.sh
 
 all:
 	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 ./build_third_party.sh
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 ./build_from_src.sh
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./build_third_party.sh
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./build_from_src.sh
 
 berkeleydb:
 	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
 	cd src && BUILD_BDB=1 ./build_third_party.sh
 	cd src && BUILD_BDB=1 ./build_from_src.sh
 
 python:
 	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
 	cd src && BUILD_PYTHON=1 ./build_third_party.sh
 	cd src && BUILD_PYTHON=1 ./build_from_src.sh
 
+vendor:
+	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
+	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
+	cd src && BUILD_VENDOR=1 ./build_third_party.sh
+	cd src && BUILD_VENDOR=1 ./build_from_src.sh
+
 build_docker:
-	docker build -f Dockerfile -t lillymol .
+	docker build -f Dockerfile -t lillymolprivate .
      
 test_lillymol:
+	docker container exec lilly_mol bash -c 'cd bin/Linux/ && echo "Number of executables built: `ls -1 | wc -l`" && ls -1'
 	docker container exec lilly_mol bash -c "cd test/ && ./run_all_test.sh"
 	docker container exec lilly_mol bash -c "cd src/ && ./run_python_unit_tests.sh 2>&1"
+
+start_s3:
+	docker-compose up -d
+	sleep 30
+	echo 'run s3 commannd with: aws s3 --endpoint "http://localhost:4566" <s3 command>'
+stop_s3:
+	docker-compose down

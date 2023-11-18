@@ -3978,6 +3978,72 @@ Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
 template int Molecule::rotate_atoms(const Space_Vector<double> &, double, const Set_of_Atoms &);
 template int Molecule::rotate_atoms(const Space_Vector<coord_t> &, angle_t, const Set_of_Atoms &);
 
+template <typename T>
+int
+Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
+                       const int* value, int flag) {
+  assert(ok());
+
+  if (static_cast<T>(0.0) == theta) {
+    return 1;
+  }
+
+// The direction cosines for the vector
+ 
+  const T dc1 = axis.x();
+  const T dc2 = axis.y();
+  const T dc3 = axis.z();
+  
+#ifdef DEBUG_ROTATE_ATOMS
+  cerr << "Dc's are " << dc1 << "," << dc2 << "," << dc3 << " sum = " <<
+       dc1 * dc1 + dc2 * dc2 + dc3 * dc3 << "\n";
+#endif
+
+// Rather than deal properly with a matrix, just use individual variables
+
+  T rotmat11 = static_cast<T>(cos(theta) + dc1 * dc1 * (1.0 - cos(theta)) );
+  T rotmat12 = static_cast<T>(dc1 * dc2 * (1.0 - cos(theta)) - dc3 * sin(theta) );
+  T rotmat13 = static_cast<T>(dc1 * dc3 * (1.0 - cos(theta)) + dc2 * sin(theta) );
+  T rotmat21 = static_cast<T>(dc1 * dc2 * (1.0 - cos(theta)) + dc3 * sin(theta) );
+  T rotmat22 = static_cast<T>(cos(theta) + dc2 * dc2 * (1.0 - cos(theta)) );
+  T rotmat23 = static_cast<T>(dc2 * dc3 * (1.0 - cos(theta)) - dc1 * sin(theta) );
+  T rotmat31 = static_cast<T>(dc3 * dc1 * (1.0 - cos(theta)) - dc2 * sin(theta) );
+  T rotmat32 = static_cast<T>(dc3 * dc2 * (1.0 - cos(theta)) + dc1 * sin(theta) );
+  T rotmat33 = static_cast<T>(cos(theta) + dc3 * dc3 * (1.0 - cos(theta)) );
+
+#ifdef DEBUG_ROTATE_ATOMS
+  cerr << "Rotation matrix is\n" << rotmat11 << " " << rotmat12 << " " << rotmat13 << "\n";
+  cerr << rotmat21 << " " << rotmat22 << " " << rotmat23 << "\n";
+  cerr << rotmat31 << " " << rotmat32 << " " << rotmat33 << "\n";
+#endif
+
+  for (int j = 0; j < _number_elements; ++j) {
+    if (value[j] != flag) {
+      continue;
+    }
+
+    Atom *a = _things[j];
+
+//  cerr << "Initial coordinates for atom " << j << " " << *a << endl;
+  
+    T x0 = a->x();
+    T y0 = a->y();
+    T z0 = a->z();
+
+    T xx = rotmat11 * x0 + rotmat12 * y0 + rotmat13 * z0;
+    T yy = rotmat21 * x0 + rotmat22 * y0 + rotmat23 * z0;
+    T zz = rotmat31 * x0 + rotmat32 * y0 + rotmat33 * z0;
+
+    a->setxyz(static_cast<coord_t>(xx), static_cast<coord_t>(yy), static_cast<coord_t>(zz) );
+//  cerr << "New coordinates for atom " << j << " " << *a << endl;
+  }
+
+  return 1;
+}
+
+template int Molecule::rotate_atoms(const Space_Vector<double> &, double, const int*, int);
+template int Molecule::rotate_atoms(const Space_Vector<coord_t> &, angle_t, const int*, int);
+
 void
 Molecule::rotate_to_longest_distance_along_x(atom_number_t & left, atom_number_t & right)
 {
@@ -4211,12 +4277,14 @@ Molecule::setxyz(atom_number_t a, const Coordinates& c) {
 }
 
 distance_t
-Molecule::bond_length(atom_number_t a1, atom_number_t a2, int not_bonded_ok) const
+Molecule::bond_length(atom_number_t a1, atom_number_t a2, BondedStatus bonded_status) const
 {
   assert(ok_2_atoms(a1, a2));
-  if (! not_bonded_ok)
-  {
-    assert(are_bonded(a1, a2));
+  if (bonded_status == BondedStatus::kMustBeBonded) {
+    if (! are_bonded(a1, a2)) {
+      cerr << "Molecule::bond_length: atoms not bonded " << a1 << ' ' << a2 << '\n';
+      return 0;
+    }
   }
 
   const Atom * aa1 = _things[a1];
@@ -4339,13 +4407,15 @@ Molecule::_set_bond_length(atom_number_t a1, atom_number_t a2,
 }
 
 angle_t
-Molecule::bond_angle(atom_number_t a1, atom_number_t a2, atom_number_t a3, int not_bonded_ok) const
+Molecule::bond_angle(atom_number_t a1, atom_number_t a2, atom_number_t a3, 
+                     BondedStatus bonded_status) const
 {
   assert(ok_3_atoms(a1, a2, a3));
-  if (! not_bonded_ok)
-  {
-    assert(are_bonded(a1, a2));
-    assert(are_bonded(a2, a3));
+  if (bonded_status == kMustBeBonded) {
+    if (! are_bonded(a1, a2) || ! are_bonded(a2, a3)) {
+      cerr << "Molecule::bond_angle: atoms not bonded " << a1 << ' ' << a2 << ' ' << a3 << '\n';
+      return 0.0;
+    }
   }
 
   const Atom * aa1 = _things[a1];
@@ -4620,6 +4690,26 @@ Molecule::organic_only() const
 
   return 1;
 }
+
+int
+Molecule::is_organic(atom_number_t zatom) const {
+  assert(ok_atom_number(zatom));
+
+  return _things[zatom]->element()->organic();
+}
+
+int
+Molecule::non_organic_atom_count() const {
+  int rc = 0;
+  for (int i = 0; i < _number_elements; ++i) {
+    if (! _things[i]->element()->organic()) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
 
 int
 Molecule::swap_atoms(int i1, int i2,
@@ -5260,6 +5350,19 @@ Molecule::contains_non_periodic_table_elements() const
   }
 
   return 0;
+}
+
+int
+Molecule::count_non_periodic_table_elements() const {
+  int rc = 0;
+
+  for (int i = 0; i < _number_elements; ++i) {
+    if (_things[i]->atomic_number() <= 0) {
+      ++rc;
+    }
+  }
+
+  return rc;
 }
 
 void *

@@ -2,6 +2,8 @@ import copy
 import math
 import unittest
 
+import numpy as np
+
 from absl import app
 from absl import logging
 from absl.testing import absltest
@@ -194,6 +196,12 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.smiles(), "C1CC1C1CC1")
     self.assertEqual(m.number_ring_systems(), 2)
     self.assertEqual(m.label_atoms_by_ring_system(), [1, 1, 1, 2, 2, 2])
+
+  def test_atoms_in_fragment(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCC.c1ccccc1"))
+    self.assertEqual(m.atoms_in_fragment(0), 4);
+    self.assertEqual(m.atoms_in_fragment(1), 6);
 
   def test_aspirin(self):
     m = Molecule()
@@ -618,6 +626,11 @@ class TestLillyMol(absltest.TestCase):
       elif bond.is_triple_bond():
         self.assertEqual(m.isotope(other), 3)
 
+  def test_atom_subtraction(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC{{1,1,1}}"))
+    self.assertAlmostEqual(m[0] - m[1], math.sqrt(3.0))
+
   # Do a 'substructure search'. Generally do not do this, do an
   # actual substructure search, but this might be illustrative.
   # Identify a O=a atom pair.
@@ -734,6 +747,56 @@ class TestLillyMol(absltest.TestCase):
 
     self.assertAlmostEqual(m.bond_angle(0, 1, 2), 1.230959, 4)
 
+  def test_getxyz(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("C{{0,0,0}}C{{1,1,1}}C{{2,0,0}}"))
+    coords = m.get_coordinates()
+    self.assertEqual(len(coords), m.natoms() * 3)
+    self.assertAlmostEqual(coords[0], 0.0)
+    self.assertAlmostEqual(coords[1], 0.0)
+    self.assertAlmostEqual(coords[2], 0.0)
+
+    self.assertAlmostEqual(coords[3], 1.0)
+    self.assertAlmostEqual(coords[4], 1.0)
+    self.assertAlmostEqual(coords[5], 1.0)
+
+    self.assertAlmostEqual(coords[6], 2.0)
+    self.assertAlmostEqual(coords[7], 0.0)
+    self.assertAlmostEqual(coords[8], 0.0)
+
+  def test_setxyz(self):
+    coords = np.arange(0, 6, dtype=float)
+    self.assertEqual(len(coords), 6)
+
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC"))
+    self.assertAlmostEqual(m.x(0), 0.0)
+    self.assertAlmostEqual(m.y(0), 0.0)
+    self.assertAlmostEqual(m.z(0), 0.0)
+    self.assertAlmostEqual(m.x(1), 0.0)
+    self.assertAlmostEqual(m.y(1), 0.0)
+    self.assertAlmostEqual(m.z(1), 0.0)
+
+    m.set_coordinates(coords)
+    for i in range(0, 2):
+      self.assertAlmostEqual(m.x(i), i * 3 + 0)
+      self.assertAlmostEqual(m.y(i), i * 3 + 1)
+      self.assertAlmostEqual(m.z(i), i * 3 + 2)
+
+  def test_dihedral_scan(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("C{{-2,1,0}}C{{-1,0,0}}C{{0,0,0}}C{{1,1,0}}"))
+    bump_check = 0.0 
+    angle = 45.0
+    coords = m.dihedral_scan(1, 2, angle, bump_check)
+    self.assertEqual(len(coords), 7)
+
+    expected = [-45.0, -90.0, -135.0, 180, 135, 90, 45]
+    for ndx, c in enumerate(coords):
+      m.set_coordinates(c)
+      found = m.signed_dihedral_angle(0, 1, 2, 3)
+      self.assertAlmostEqual(found * 180.0 / 3.14159265, expected[ndx], places=4)
+      
   def test_rule_of_five(self):
     m = Molecule()
     self.assertTrue(m.build_from_smiles("COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N Eliquis"))
@@ -825,6 +888,11 @@ class TestLillyMol(absltest.TestCase):
     m.set_formal_charge(3, -1)
     self.assertEqual(m.formal_charge(3), -1)
     self.assertEqual(m.net_formal_charge(), -1)
+
+  def test_xlogp(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC(=O)OC1=CC=CC=C1C(=O)O aspirin"))
+    self.assertAlmostEqual(xlogp(m), 1.426)
 
 if __name__ == '__main__':
   absltest.main()

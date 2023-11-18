@@ -2,7 +2,6 @@
   Group identical molecules together and study their activities
 */
 
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <random>
@@ -27,7 +26,6 @@
 #include "Molecule_Lib/standardise.h"
 
 using std::cerr;
-using std::endl;
 
 const char *prog_name = nullptr;
 
@@ -390,9 +388,7 @@ Group_of_Molecules::write_first_member(IWString_and_File_Descriptor &output) con
   return _sida[0]->do_write(output);
 }
 
-class Group_of_Molecules_Comparator
-    : public std::binary_function<const Group_of_Molecules *, const Group_of_Molecules *,
-                                  int> {
+class Group_of_Molecules_Comparator {
  private:
  public:
   int operator()(const Group_of_Molecules *, const Group_of_Molecules *) const;
@@ -435,7 +431,7 @@ Group_of_Molecules::_write_max_activity(
     IWString_and_File_Descriptor &stream_for_activity) const {
   sida->do_write(stream_for_smiles);
 
-  // cerr << "class_name_to_number " << class_name_to_number.size() << endl;
+  // cerr << "class_name_to_number " << class_name_to_number.size() << '\n';
   if (class_name_to_number.empty()) {
     stream_for_activity << sida->id() << ' ' << sida->activity();
   } else if (sida->activity() < 0.0F) {
@@ -700,7 +696,7 @@ Group_of_Molecules::write_if_classes_consistent(
 
     if (fabs(c - class_assigned) > 0.001)  // inconsistent, do NOT write
     {
-      cerr << "Classes " << c << " and " << class_assigned << endl;
+      cerr << "Classes " << c << " and " << class_assigned << '\n';
       discarded_for_inconsistent_class_assignments++;
       return 1;
     }
@@ -882,7 +878,7 @@ discarded_for_atom_count(const Molecule &m) {
   const auto matoms = m.natoms();
   if (matoms < lower_atom_count_cutoff) {
     if (verbose) {
-      cerr << m.name() << " rejected for too few atoms " << m.natoms() << endl;
+      cerr << m.name() << " rejected for too few atoms " << m.natoms() << '\n';
     }
     molecules_discarded_for_too_few_atoms++;
     return 1;
@@ -890,7 +886,7 @@ discarded_for_atom_count(const Molecule &m) {
 
   if (matoms > upper_atom_count_cutoff) {
     if (verbose) {
-      cerr << m.name() << " rejected for too many atoms " << m.natoms() << endl;
+      cerr << m.name() << " rejected for too many atoms " << m.natoms() << '\n';
     }
     molecules_discarded_for_too_many_atoms++;
     return 1;
@@ -1040,7 +1036,7 @@ group_molecules(data_source_and_type<Molecule> &input,
   while (nullptr != (m = input.next_molecule())) {
     molecules_read++;
 
-    //  cerr << "Read " << m->name() << endl;
+    //  cerr << "Read " << m->name() << '\n';
 
     std::unique_ptr<Molecule> free_m(m);
 
@@ -1389,7 +1385,7 @@ handle_multi_valued_activities(ID_to_Activity &id_to_activity) {
   if (acc_diff.n() > 2) {
     cerr << " std " << static_cast<float>(sqrt(acc_diff.variance()));
   }
-  cerr << endl;
+  cerr << '\n';
 
   if (zero_diff > 0) {
     acc_diff.extra(0.0f, zero_diff);
@@ -1424,14 +1420,14 @@ read_activity_record(const const_IWSubstring &buffer, ID_to_Activity &id_to_acti
   } else {
     if (!buffer.word(activity_column, token)) {
       cerr << "Cannot fetch token for experimental data, activity_column "
-           << activity_column << endl;
+           << activity_column << '\n';
       return 0;
     }
   }
 
   if (0 == token.length())  // how could that happen?
   {
-    cerr << "Cannot extract activity token, activity_column " << activity_column << endl;
+    cerr << "Cannot extract activity token, activity_column " << activity_column << '\n';
     return 0;
   }
 
@@ -1937,7 +1933,7 @@ activity_consistency(int argc, char **argv) {
     if (!cl.value('B', upper_atom_count_cutoff) ||
         upper_atom_count_cutoff < lower_atom_count_cutoff) {
       cerr << "THe upper atom count cutoff (-B) must be a whole +ve number, greater than "
-           << lower_atom_count_cutoff << endl;
+           << lower_atom_count_cutoff << '\n';
       usage(2);
     }
 
@@ -2167,7 +2163,7 @@ activity_consistency(int argc, char **argv) {
   } else if (range_acc.n() > 0) {
     cerr << items_to_display << " groups, ranges between " << range_acc.minval() << " to "
          << range_acc.maxval() << " ave "
-         << static_cast<float>(range_acc.average_if_available_minval_if_not()) << endl;
+         << static_cast<float>(range_acc.average_if_available_minval_if_not()) << '\n';
   }
 
   Group_of_Molecules_Comparator gmc;

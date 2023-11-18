@@ -2,11 +2,11 @@ description {
   feature_name: "w_ncon4"
   description: "Number of atoms with 4 connections"
   plot_title: "Number of atoms with 4 connections"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 14.0
-mean: 0.4928139
+maxval: 9.0
+mean: 0.51682
 quantile {
   quantile: 0.01
 }
@@ -21,7 +21,7 @@ quantile {
 }
 quantile {
   quantile: 0.9
-  value: 1.0
+  value: 2.0
 }
 quantile {
   quantile: 0.95
@@ -32,57 +32,41 @@ quantile {
   value: 4.0
 }
 int_values {
-  count: 1469437
+  count: 32076
 }
 int_values {
   value: 1
-  count: 572736
+  count: 12920
 }
 int_values {
   value: 2
-  count: 146761
+  count: 3420
 }
 int_values {
   value: 3
-  count: 36783
+  count: 850
 }
 int_values {
   value: 4
-  count: 13227
+  count: 347
 }
 int_values {
   value: 5
-  count: 8212
+  count: 217
 }
 int_values {
   value: 6
-  count: 5043
+  count: 139
 }
 int_values {
   value: 7
-  count: 949
+  count: 25
 }
 int_values {
   value: 8
-  count: 243
+  count: 5
 }
 int_values {
   value: 9
-  count: 68
-}
-int_values {
-  value: 10
-  count: 39
-}
-int_values {
-  value: 11
-  count: 7
-}
-int_values {
-  value: 12
-  count: 4
-}
-int_values {
-  value: 14
   count: 1
 }

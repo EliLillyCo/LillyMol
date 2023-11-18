@@ -349,19 +349,22 @@ Donor_Acceptor_Assigner::_do_apply_atom_type_labels(Molecule & m,
   return;
 }
 
+template <typename T>
 int
-Donor_Acceptor_Assigner::_fetch_queries(const_IWSubstring & c,
+Donor_Acceptor_Assigner::_fetch_queries(T & c,
                                         resizable_array_p<Substructure_Hit_Statistics> & queries)
 {
   assert ('=' == c[1]);
 
-  c.remove_leading_chars(2);     // srtip off 'a=' or 'd='
+  // Reading old style specification
+  if (c.starts_with("a=") || c.starts_with("d=")) {
+    c.remove_leading_chars(2); 
+  }
 
   if (c.starts_with("F:"))
   {
     c.remove_leading_chars(2);
-    if (! queries_from_file(c, queries, 1, 0))
-    {
+    if (! queries_from_file(c, queries, 1, 0)) {
       cerr << "Cannot read query file 'F:" << c << "'\n";
       return 0;
     }
@@ -369,8 +372,7 @@ Donor_Acceptor_Assigner::_fetch_queries(const_IWSubstring & c,
   else
   {
     Substructure_Hit_Statistics * q = new Substructure_Hit_Statistics;
-    if (! q->read(c))
-    {
+    if (! q->read(c)) {
       cerr << "Donor_Acceptor_Assigner::_fetch_queries: cannot construct query from '" << c << "'\n";
       delete q;
       return 0;
@@ -440,6 +442,50 @@ Donor_Acceptor_Assigner::build(const const_IWSubstring & s)
   }
 
   _apply_isotopic_labels = 1;
+
+  return 1;
+}
+
+// copied from atom_typing.cc
+static IWString
+ExpandedValue(const std::string& starting_value) {
+  IWString mycopy(starting_value);
+
+  std::optional<IWString> expanded = mycopy.ExpandEnvironmentVariables();
+  if (! expanded) {
+    return mycopy;
+  }
+
+  return *expanded;
+}
+
+
+int
+Donor_Acceptor_Assigner::BuildFromProto(const Pharmacophore::DonorAcceptor& proto) {
+  if (proto.has_acceptor()) {
+    IWString s = ExpandedValue(proto.acceptor());
+    if (! _fetch_queries(s, _acceptor_queries)) {
+      cerr << "Cannot process acceptor queries '" << proto.acceptor() << "'\n";
+      return 0;
+    }
+  }
+
+  if (proto.has_donor()) {
+    IWString s = ExpandedValue(proto.donor());
+    if (! _fetch_queries(s, _donor_queries)) {
+      cerr << "Cannot process donor queries '" << proto.donor() << "'\n";
+      return 0;
+    }
+  }
+
+  _apply_isotopic_labels = proto.apply_isotopic_labels();
+  _apply_atom_type_labels = proto.apply_atom_type_labels();
+  _add_to_existing_isotopic_label = proto.add_to_existing_isotopic_label();
+
+  if (_donor_queries.empty() || _acceptor_queries.empty()) {
+    cerr << "Donor_Acceptor_Assigner::BuildFromProto:incomplete specification\n";
+    return 0;
+  }
 
   return 1;
 }

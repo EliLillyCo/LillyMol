@@ -52,3 +52,116 @@ after the smiles. LillyMol will recognise some of these, but most relate
 to concepts that are not implemented in LillyMol - advanced stereochemistry, or
 things that LillyMol can do via other means - arbitrary atomic symbols. Generally
 support for Chemaxon extensions is slim... It will recognise coordinates.
+
+## Identity
+Determining molecular identity is one of the most common tasks for
+someone working with molecules. One of the first decisions that you
+need to determine is at what level of granularity do you need to
+determine aromaticity? For example, do 'counterions' matter? Does
+chirality matter? What about tautomeric representations? Each
+of these is very complex, with no obviously right answers. It all
+depends....
+
+Generally in drug discovery, a unique smiles representation is adequate
+for identity determination. It is also important to acknowledge that
+default smiles is deficient as a molecular representation, and many
+important aspects of molecular identity cannot be encoded in a default
+smiles. Chemaxon has tried to address this with their smiles extensions.
+InChI provides quite robust identity matching, but at the expense of
+computational cost.
+
+For LillyMol we deliberately adopt a simplified approach, generally
+assuming that the unique smiles is an adequate measure of equivalence.
+
+The LillyMol unique smiles suffers from cases where the same
+molecule may generate different unique smiles. Generally these are
+unusual structures where there can be pathological interactions between
+the determination of the smallest set of smallest rings and the
+determination of aromaticity. Fixing these cases would be hard and
+would likely slow down all calculations.
+
+In the case of the "organic" subset of Chembl, 5-50 heavy atoms, there
+is just one failure
+
+!(CHEMBL1998572)[Images/tsmiles_failure.png]
+
+which is largely a result of aromaticity determination in a complex
+fused system. Outside the organic subset
+```
+119164 molecules had between 1 and 780 atoms. Average 82.5219
+```
+there are 52 failing molecules.
+```
+52 molecules had between 65 and 136 atoms. Average 80.9038
+```
+So across 119k molecules the failure rate is 0.04%, but when
+counted against all of Chemb, fraction failing is very low, and
+restricted to molecules seldom of interest 
+
+To replicate this
+```
+tsmiles -v -p 10 -a -t 0 -h -w 5 -m 5 -j -u -y -q -R -f -r 10000 -F failed -A 2 chembl.smi
+```
+Here are some of the failures
+```
+C123C4(C5=C6C7=C1C1C8C9=C7C7=C%10C%11=C%12C(=C67)C6=C5C5=C7C%13=C6C%12=C6C%12=C%13C%13=C%14C%15=C%12C%12C%16C%17%18C%19=C%20C(=C8C8=C%19C%16=C(C%10=C89)C%11=C6%12)C6=C1C2=C1C2=C6C%20C(C%15%17CN(CCOCCOCCN)C%18)C%14=C2C(=C7%13)C1=C45)CN(C3)CCOCCOCCN CHEMBL1185065 aromatic smiles mismatch
+C123C4(C5=C6C7=C1C1C8C9=C7C7=C%10C%11=C%12C(=C67)C6=C5C5=C7C%13=C6C%12=C6C%12=C%13C%13=C%14C%15=C%12C%12C%16C%17%18C%19=C%20C(=C8C8=C%19C%16=C(C%10=C89)C%11=C6%12)C6=C1C2=C1C2=C6C%20C(C%15%17CN(CCOCCOCCN(CC(=O)O)CC(=O)O)C%18)C%14=C2C(=C7%13)C1=C45)CN(C3)CCOCCOCCN(CC(=O)O)CC(=O)O CHEMBL407797 aromatic smiles mismatch
+C123C4(C5=C6C7=C1C1=C8C9=C%10C%11=C%12C%13=C%14C(=C6C%12=C79)C6=C5C5=C7C9=C6C%14=C6C%12C9C9=C%14C%15=C%16C%17=C%18C(=C1C2=C%17C(=C45)C%16=C79)C1=C8C%10=C2C4=C%11C%13=C6C5=C4C4=C(C%15=C%18C1=C24)C%14=C5%12)CC(OC(=O)CCC(=O)O)CC3 CHEMBL216867 aromatic smiles mismatch
+```
+all 52 seem to be BuckyBall type structures, again seldom of interest to
+Drug Discovery.
+
+*Note* canonicalization of cis/trans bonds in LillyMol does not
+work. Work started, but once we came to the realization that most of
+the cis trans bonding information we had was likely incorrect, the
+effort was abandoned. Simple cases mostly work, but more complex
+cases do not.
+
+This leads to an important discussion about chirality in smiles.
+Ideally all molecules would be properly annotated with chirality
+unambiguously marked. The reality is different. In Drug Discovery
+many molecules are never resolved. Some registration systems may
+force an arbitrary choice of chirality in cases of racemic
+or unknown chirality. There are stereo concepts that are difficult
+to deal with in smiles - a 70/30 mixture, if site 1 is R then
+site 2 is S. These are difficult to deal with in computational chemistry
+in general, and likely need to be enumerated.
+
+Many collections contain atoms that are marked chiral, but which are not,
+and atoms which are indeed chiral, but which have no marked atoms. For
+example in the "organic" subset of Chembl, 5-50 heavy atoms we find
+```
+unmarked 2253510 values between 0 and 19 ave 0.291271
+```
+So there is an average of 0.29 unmarked chiral centres per molecule. In
+tabular form
+| Number Unmarked | Frequency |
+| --------------- | --------- |
+| 0 | 1771711 |
+| 1 | 373456 |
+| 2 | 75180 |
+| 3 | 16767 |
+| 4 | 9226 |
+| 5 | 3610 |
+| 6 | 1608 |
+| 7 | 581 |
+| 8 | 497 |
+| 9 | 203 |
+| 10 | 305 |
+| 11 | 120 |
+| 12 | 56 |
+| 13 | 53 |
+| 14 | 42 |
+| 15 | 70 |
+| 16 | 12 |
+| 17 | 6 |
+| 18 | 3 |
+| 19 | 4 |
+
+Similar results are found with other collections. What this means is that
+any attempt to deal with chirality, starting with something like Chembl,
+has to deal with a significant number of "missing values". In addition, one
+must ask, of the molecules marked as being chiral, how many of those 
+annotations are actually correct? Generally we take a skeptical view of
+chirality and frequently it is best handled by enumerating the
+different forms, see `id_chirality`.

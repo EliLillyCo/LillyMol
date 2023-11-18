@@ -1,4 +1,4 @@
-// Generate pharmacaphore-like queries for 2D molecules
+// Generate pharmacophore-like queries for 2D molecules
 
 #include <iostream>
 #include <memory>

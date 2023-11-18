@@ -2,11 +2,11 @@ description {
   feature_name: "w_rotbond"
   description: "Number of rotatable bonds"
   plot_title: "Number of rotatable bonds"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 47.0
-mean: 5.7611513
+maxval: 43.0
+mean: 5.85868
 median: 5.0
 quantile {
   quantile: 0.01
@@ -36,193 +36,169 @@ quantile {
   value: 18.0
 }
 int_values {
-  count: 31843
+  count: 710
 }
 int_values {
   value: 1
-  count: 76569
+  count: 1621
 }
 int_values {
   value: 2
-  count: 164418
+  count: 3522
 }
 int_values {
   value: 3
-  count: 261263
+  count: 5578
 }
 int_values {
   value: 4
-  count: 336940
+  count: 7425
 }
 int_values {
   value: 5
-  count: 343678
+  count: 7527
 }
 int_values {
   value: 6
-  count: 304002
+  count: 6789
 }
 int_values {
   value: 7
-  count: 227664
+  count: 5079
 }
 int_values {
   value: 8
-  count: 161456
+  count: 3616
 }
 int_values {
   value: 9
-  count: 105810
+  count: 2387
 }
 int_values {
   value: 10
-  count: 70376
+  count: 1639
 }
 int_values {
   value: 11
-  count: 47367
+  count: 1128
 }
 int_values {
   value: 12
-  count: 32842
+  count: 791
 }
 int_values {
   value: 13
-  count: 22504
+  count: 576
 }
 int_values {
   value: 14
-  count: 16300
+  count: 400
 }
 int_values {
   value: 15
-  count: 11729
+  count: 287
 }
 int_values {
   value: 16
-  count: 8893
+  count: 234
 }
 int_values {
   value: 17
-  count: 7090
+  count: 170
 }
 int_values {
   value: 18
-  count: 5476
+  count: 130
 }
 int_values {
   value: 19
-  count: 4127
+  count: 103
 }
 int_values {
   value: 20
-  count: 2989
+  count: 61
 }
 int_values {
   value: 21
-  count: 2307
+  count: 55
 }
 int_values {
   value: 22
-  count: 1603
+  count: 39
 }
 int_values {
   value: 23
-  count: 1351
+  count: 19
 }
 int_values {
   value: 24
-  count: 875
+  count: 18
 }
 int_values {
   value: 25
-  count: 992
+  count: 21
 }
 int_values {
   value: 26
-  count: 656
+  count: 12
 }
 int_values {
   value: 27
-  count: 545
+  count: 9
 }
 int_values {
   value: 28
-  count: 382
+  count: 10
 }
 int_values {
   value: 29
-  count: 334
+  count: 12
 }
 int_values {
   value: 30
-  count: 186
+  count: 2
 }
 int_values {
   value: 31
-  count: 235
+  count: 7
 }
 int_values {
   value: 32
-  count: 112
-}
-int_values {
-  value: 33
-  count: 135
-}
-int_values {
-  value: 34
-  count: 69
-}
-int_values {
-  value: 35
-  count: 107
-}
-int_values {
-  value: 36
-  count: 63
-}
-int_values {
-  value: 37
-  count: 64
-}
-int_values {
-  value: 38
-  count: 43
-}
-int_values {
-  value: 39
-  count: 42
-}
-int_values {
-  value: 40
-  count: 14
-}
-int_values {
-  value: 41
-  count: 32
-}
-int_values {
-  value: 42
-  count: 7
-}
-int_values {
-  value: 43
-  count: 7
-}
-int_values {
-  value: 44
-  count: 1
-}
-int_values {
-  value: 45
   count: 4
 }
 int_values {
-  value: 46
-  count: 6
+  value: 33
+  count: 8
 }
 int_values {
-  value: 47
+  value: 34
+  count: 3
+}
+int_values {
+  value: 35
+  count: 1
+}
+int_values {
+  value: 36
+  count: 1
+}
+int_values {
+  value: 37
   count: 2
+}
+int_values {
+  value: 38
+  count: 1
+}
+int_values {
+  value: 40
+  count: 1
+}
+int_values {
+  value: 41
+  count: 1
+}
+int_values {
+  value: 43
+  count: 1
 }

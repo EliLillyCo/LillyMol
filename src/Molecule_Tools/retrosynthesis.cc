@@ -540,15 +540,13 @@ class Set_of_Reactions
   }
 
   void
-  set_name(const const_IWSubstring& s)
-  {
+  set_name(const const_IWSubstring& s) {
     _name = s;
     cerr << "name now '" << _name << "'\n";
   }
 
   int
-  number_reactions() const
-  {
+  number_reactions() const {
     return _number_reactions;
   }
 
@@ -1060,8 +1058,6 @@ Set_of_Reactions::_build(const const_IWSubstring& buffer,
       // cerr << "thisMol (Product): " << *thisMol << endl;
     }
 
-    Reaction_With_Stats* t = new Reaction_With_Stats;
-
     RXN_File_Create_Reaction_Options rxnfcro;
     rxnfcro.set_only_create_query_from_first_reagent(1);
 
@@ -1069,15 +1065,16 @@ Set_of_Reactions::_build(const const_IWSubstring& buffer,
 
     rxn.set_auto_fix_orphans(1);
 
+    std::unique_ptr<Reaction_With_Stats> t = std::make_unique<Reaction_With_Stats>();
+
     if (!rxn.create_reaction(*t, rxnfcro, mqs, include_atom_map)) {
       cerr << "Reaction " << rxn.name() << " cannot create reaction object\n";
-      delete t;
       return ignore_bad_reactions;
     }
 
     t->set_do_not_perceive_symmetry_equivalent_matches(1);
 
-    _rxn[r].add(t);
+    _rxn[r].add(t.release());
 
     _id_to_ndx[r][rxn.name()] = _rxn[r].number_elements() - 1;
   }

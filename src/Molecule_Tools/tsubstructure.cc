@@ -181,6 +181,7 @@ display_dash_M_options()
   cerr << "  -M organic     discard hits that are in a non-organic fragment\n";
   cerr << "  -M TDT         input is a TDT, will add fingerprint. Must use -J to specify tag\n";
   cerr << "  -M bitrep=<n>  number of bit replicats when creating fingerprints\n";
+  cerr << "  -M nhitsbitrep=<n> set an extra bit for the total number of query matches\n";
   cerr << "  -M nhtag=<tag> output TDT, insert number of hits in the <tag> dataitem\n";
   cerr << "  -M htag=<tag>  output TDT, insert id of each query that matches\n";
   cerr << "  -M time        report timing\n";
@@ -2025,7 +2026,7 @@ tsubstructure(int argc, char ** argv)
 
   if (cl.option_present('g'))
   {
-    if(! chemical_standardisation.construct_from_command_line(cl, verbose))
+    if(! chemical_standardisation.construct_from_command_line(cl, verbose > 1))
     {
       cerr << "Cannot parse -g option\n";
       return 61;
@@ -2235,6 +2236,18 @@ tsubstructure(int argc, char ** argv)
           cerr << "Will create " << bit_replicates << " bit replicates\n";
 
         tsubfp.set_bit_replicates(bit_replicates);
+      } else if (m.starts_with("nhitsbitrep=")) {
+        m.remove_leading_chars(12);
+        int bit_replicates;
+        if (! m.numeric_value(bit_replicates) || bit_replicates < 1) {
+          cerr << "The total nhits bit replicates value must be a whole +ve number\n";
+          return 1;
+        }
+        tsubfp.set_extra_bit_total_hits(bit_replicates);
+        if (verbose) {
+          cerr << "Will add an extra bit for the total number of queries matched " <<
+                   bit_replicates << " replicates\n";
+        }
       }
       else if (m.starts_with("nhtag="))
       {

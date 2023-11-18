@@ -4368,10 +4368,8 @@ RXN_File::_create_reaction(IWReaction &rxn,
 
     Sidechain_Reaction_Site *s = rxn.sidechain(r2 - 1);
 
-    if (!s->add_inter_particle_bond(
-            r1 - 1, q1, q2,
-            b->btype()))  // In the reaction object the scaffold is designated -1
-    {
+    // In the reaction object the scaffold is designated -1
+    if (!s->add_inter_particle_bond(r1 - 1, q1, q2, b->btype())) {
       cerr << "RXN_File::_create_reaction: cannot add inter particle bond " << (*b)
            << " between fragments " << r1 << " and " << r2 << endl;
       return 0;
@@ -4383,8 +4381,8 @@ RXN_File::_create_reaction(IWReaction &rxn,
   // cerr << "Orphan is " << _orphan_atoms.smiles() << endl;
 
   if (_orphan_atoms.natoms()) {
-    Sidechain_Reaction_Site *s =
-        rxn.sidechain(_nr - 1);  // the extra sidechain for the orphans
+    // the extra sidechain for the orphans
+    Sidechain_Reaction_Site *s = rxn.sidechain(_nr - 1);
 
     for (const Bond *b : bonds_to_be_made) {
       int m1 = b->a1();

@@ -12,6 +12,7 @@ cc_library(
         ":molecule",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:xlogp_lib",
         "@pybind11",
         "@python",
     ],
@@ -28,6 +29,21 @@ cc_shared_library(
         "//Molecule_Lib:moleculeio",
   ],
   shared_lib_name = "lillymol.so",
+)
+
+cc_library(
+    name = "lillymol_pybind_fingerprints",
+    srcs = [
+        "lillymol_pybind_fingerprint.cc",
+    ],
+    deps = [
+        ":molecule",
+        "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@pybind11",
+        "@python",
+    ],
 )
 
 cc_library(
@@ -280,6 +296,8 @@ cc_library(
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Tools:unique_molecules_api",
+        "//Molecule_Tools_Bdb:iwecfp_database_lookup_lib_shared",
+        "@berkeleydbshared//:berkeleydb",
 	"@pybind11",
         "@python",
     ],

@@ -2,11 +2,11 @@ description {
   feature_name: "w_rmyns"
   description: "Number of Sulphur atoms"
   plot_title: "Number of Sulphur atoms"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 12.0
-mean: 0.37292844
+maxval: 8.0
+mean: 0.37006
 quantile {
   quantile: 0.01
 }
@@ -32,49 +32,29 @@ quantile {
   value: 2.0
 }
 int_values {
-  count: 1555965
+  count: 34665
 }
 int_values {
   value: 1
-  count: 571519
+  count: 12528
 }
 int_values {
   value: 2
-  count: 111840
+  count: 2510
 }
 int_values {
   value: 3
-  count: 12150
+  count: 247
 }
 int_values {
   value: 4
-  count: 1697
+  count: 42
 }
 int_values {
   value: 5
-  count: 193
-}
-int_values {
-  value: 6
-  count: 96
-}
-int_values {
-  value: 7
-  count: 8
+  count: 6
 }
 int_values {
   value: 8
-  count: 32
-}
-int_values {
-  value: 9
   count: 2
-}
-int_values {
-  value: 10
-  count: 3
-}
-int_values {
-  value: 12
-  count: 5
 }

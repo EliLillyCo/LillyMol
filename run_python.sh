@@ -12,4 +12,5 @@
 
 # Assume that lib, with the shared libraries, is one above where this script is.
 my_dir=$(dirname $0)
-PYTHONPATH=${my_dir}/../lib:${my_dir}:${PYTHONPATH} python3 "$@"
+export LD_LIBRARY_PATH=${my_dir}/lib:${LD_LIBRARY_PATH}
+PYTHONPATH=${my_dir}/lib:${my_dir}:${PYTHONPATH} python3 "$@"

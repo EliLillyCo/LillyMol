@@ -45,7 +45,7 @@ static int allow_out_of_range_unscalings = 0;
 static int truncate_low_values = 0;
 static int truncate_high_values = 0;
 
-static int allow_unscaled_values_below_zero = 1;
+// static int allow_unscaled_values_below_zero = 1;
 
 static int operator_to_apply = 0;
 

@@ -52,6 +52,8 @@ typedef int atom_number_t;     // number of each atom within a molecule, starts 
 
 #define INVALID_ATOM_NUMBER -1
 
+inline constexpr int kInvalidAtomNumber = INVALID_ATOM_NUMBER;
+
 /*
   Bond types are stored as by setting bits in a word.
   The reason for this is for aromaticity, so we can store not only whether

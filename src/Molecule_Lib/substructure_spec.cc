@@ -663,8 +663,9 @@ Substructure_Atom_Specifier::_match_symmetry_degree(Target_Atom & target_atom) c
 #ifdef DEBUG_MATCH_SYMMETRY_DEGREE
     cerr << "  check atom " << i << " symmetry group " << s[i] << endl;
 #endif
-    if (sa == s[i])
+    if (sa == s[i]) {
       symmetric_atoms++;
+    }
   }
 
 #ifdef DEBUG_MATCH_SYMMETRY_DEGREE
@@ -1227,10 +1228,10 @@ Substructure_Atom_Specifier::_matches(Target_Atom & target)
       return 1;
   }
 
-  if (_symmetry_degree.is_set())
-  {
-    if (! _match_symmetry_degree(target))
+  if (_symmetry_degree.is_set()) {
+    if (! _match_symmetry_degree(target)) {
       return 0;
+    }
 
     attributes_checked++;
 
@@ -3045,8 +3046,7 @@ Substructure_Atom_Specifier::construct_from_smarts_token(const const_IWSubstring
       {
         c.remove_leading_chars(4);
         truncate_after_digits("=<>", c);
-        if (! _symmetry_degree.initialise(c))
-        {
+        if (! _symmetry_degree.initialise(c)) {
           smiles_error_message(initial_smarts_ptr, characters_to_process, characters_processed, "Invalid symd qualifier");
           return 0;
         }

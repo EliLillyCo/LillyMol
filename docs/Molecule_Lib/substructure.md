@@ -193,10 +193,9 @@ The directive is inserted between the two atoms that define the bond, and
 atoms down that bond are considered. If the bond is in a ring, the match
 will fail.
 
-As this was implemented, we came up with the more general idea
-of a substituent, that is only available in query files. In retrospect
-this feature in smiles is not satisfactory. It will continue to work,
-but expect it to probably disappear.
+After this was implemented, we came up with the more general idea
+of a substituent, that is only available in query files. This
+concept 
 
 ## Atomic Smarts Extensions
 LillyMol's atomic smarts also contain some useful extensions.
@@ -213,7 +212,12 @@ easy to implement `[#<17]` for example, but at the cost of slowing
 down all matching on this frequently used atomic property.
 
 ### Arbitrary Elements
-In LillyMol elements can be of any length. So, if the `-E autocreate`
+In LillyMol any one or two letter combination can be a valid element.
+Such elements do not have an atomic number, mass, valence or any
+property, but they can be matched. Enable all one and two letter
+combinations by adding `-E autocreate` to any LillyMol executable.
+
+In addition, LillyMol elements can be of any length. So, if the `-E anylength`
 option is specified, most programmes will happily snarf `[Ala][Leu][Gly]`.
 These can be substructure searched as
 ```
@@ -375,7 +379,7 @@ or not an atom has been matched, it is an intrinsic property of an atom.
 ### /IWsymd
 There are two symmetry related atom matching directives. `IWsymd` specifies
 the degree of symmetry. An atom that is not symmetric with anything else in
-the molecule will have a symmetry degree of 0. The F atoms in a CF3 will have
+the molecule will have a symmetry degree of 1. The F atoms in a CF3 will have
 a symmetry degree of 3. Note that this property is expensive to compute.
 
 ### /IWsymg
@@ -448,7 +452,7 @@ Several tools assign numeric values to queries or atoms. This is a means of
 associating a numeric value with a particular matched atom. Only useful
 for low level programming.
 
-If the number is a positive integer something like '[/IWNv23C]` will work
+If the number is a positive integer something like `[/IWNv23C]` will work
 but if negative or floating point numbers are needed, then `[/IWNv{-3}C]`
 is needed. Note that since the '.' character is special in smiles, if
 you have a floating point number it must instead be entered with an

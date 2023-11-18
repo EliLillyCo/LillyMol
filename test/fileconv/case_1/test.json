@@ -1,0 +1,7 @@
+{
+    "executable": "fileconv",
+    "options": [ "-F 6 -c 4 -C 14 -v -i smi -S #{File.basename(output_file[0], '.smi')}",
+                 " #{input_file[0]}" ],
+    "input_file": [ "list.smi" ],
+    "output_file": [ "selection.smi" ]
+}

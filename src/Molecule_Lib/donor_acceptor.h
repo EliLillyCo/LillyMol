@@ -9,6 +9,8 @@
 #include "output.h"
 #include "temp_detach_atoms.h"
 
+#include "Molecule_Lib/pharmacophore.pb.h"
+
 class Molecule_to_Match;
 class Substructure_Hit_Statistics;
 
@@ -41,7 +43,9 @@ class Donor_Acceptor_Assigner
     int  _do_apply_isotopic_labels(Molecule &, const int *) const;
     void _do_apply_atom_type_labels(Molecule &, const int *) const;
 
-    int  _fetch_queries(const_IWSubstring & c, resizable_array_p<Substructure_Hit_Statistics> &);
+    // T will be either IWString or const_IWSubstring.
+    template <typename T>
+    int  _fetch_queries(T & c, resizable_array_p<Substructure_Hit_Statistics> &);
 
     int  _open_stream_for_labelled_molecules(const IWString &);
 
@@ -62,6 +66,7 @@ class Donor_Acceptor_Assigner
 
     int construct_from_command_line(Command_Line &, char, int = 0);
     int build(const const_IWSubstring &);
+    int BuildFromProto(const Pharmacophore::DonorAcceptor& proto);
 
     // Construct from proto files.
     int BuildFromProto(const IWString& fname);

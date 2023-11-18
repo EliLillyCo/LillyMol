@@ -62,8 +62,8 @@ static int keto_enol_flipped = 0;
 
 static int allow_chain_amide_groups_to_flip = 0;
 
-static int process_pyrrole = 0;
-static int pyrrole_flipped = 0;
+//static int process_pyrrole = 0;
+//static int pyrrole_flipped = 0;
 
 static int process_imidazole = 0;
 static int imidazoles_flipped = 0;

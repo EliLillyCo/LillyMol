@@ -14,6 +14,8 @@ fi
 
 if [[ ! -v PYTHONPATH ]] ; then
   export PYTHONPATH="${LILLYMOL_HOME}/contrib/script/py"
+elif [[ ! $PYTHONPATH =~ "contrib/script/py" ]]; then
+  export PYTHONPATH="${LILLYMOL_HOME}/contrib/script/py:${PYTHONPATH}"
 fi
 
 for dir in ./*; do

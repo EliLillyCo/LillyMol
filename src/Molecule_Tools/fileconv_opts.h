@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <unordered_map>
 
 #include "Foundational/accumulator/accumulator.h"
 
@@ -146,6 +147,9 @@ struct FileconvConfig {
   int max_path_length = 0;
   int molecules_with_longest_path_too_long = 0;
 
+  // Will be set if any isotope related directive has been specified.
+  int need_to_consider_isotopes = 0;
+
   int exclude_isotopes = 0;
   int molecules_containing_isotopes = 0;  // only if the isotopic attributes are changed
 
@@ -164,6 +168,11 @@ struct FileconvConfig {
 
   resizable_array_p<Substructure_Query> convert_specific_isotopes_query;
   resizable_array<int> convert_specific_isotopes_query_new_isotope;
+
+  // For a given isotope number, a fragment that is added to that
+  // atom. Could also do a reaction, but this might be faster.
+  // Adds via the first atom in the fragment.
+  std::unordered_map<int, Molecule> add_to_isotopic_atom;
 
   int output_organic_only = 0;
   int non_organic_molecules_found = 0;
@@ -443,6 +452,7 @@ struct FileconvConfig {
   int GetFragmentSpecifications(Command_Line& cl);
   int GatherAppendSpecifications(Command_Line& cl, char flag);
   int ParseMkFragOptions(Command_Line& cl, char flag);
+  int ParseFragmentAddToIsotope(const const_IWSubstring& s);
   int InitialiseRotation(const_IWSubstring buffer);
 
   // Functions that compute values, print things, change or filter the molecule.
@@ -456,6 +466,8 @@ struct FileconvConfig {
                                             const Set_of_Atoms& e,
                                             Set_of_Atoms& atoms_with_chiral_centres_to_be_removed);
 
+  int AddFragmentToIsotopicAtoms(Molecule& m);
+  int IsotopeRelated(Molecule& m);
   int RemoveChiralCentresOnMatchedAtoms(
       Molecule& m, const resizable_array_p<Substructure_Query>& remove_chiral_centres_on);
   int CountRingSystems(Molecule& m);

@@ -785,6 +785,119 @@ This is very complex, but mostly seems to work. Note however that in some
 test cases, some dihedral angles came out as -90 instead of 90. The cause
 is unclear.
 
+### 3D positioning
+If you are starting with two fragments wit arbitrary spatial orientations and positions, and
+wish to join them in a spatially reasonable way, one of the fragments will need to
+be translated and rotated so the atoms in each fragment are "pointed towards" each
+other in a plausible way. This is accomplished with the `align_3d` directive in
+the InterParticleBond message, the `join` directive. For example to perform
+an acid + amine reaction in 3d one could use
+```
+name: "acid_amine"
+scaffold {
+  id: 0
+  smarts: "[OH]-C(=O)*"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  smarts: "NC"
+  join {
+    a1: 1
+    a2: 0
+    align_3d: 1.32
+  }
+  bond_angle {
+    c1 {
+      component: 0
+      atom: 1
+    }
+    a2: 0
+    a3: 1
+    angle: 108.0
+  }
+  dihedral_angle {
+    c1 {
+      component: 0
+      atom: 3
+    }
+    c2 {
+      component: 0
+      atom: 1
+    }
+    a3: 0
+    a4: 1
+    angle: 145
+  }
+}
+```
+This not only positions the amine "pointing towards" the acid, 1,32 Angstroms away, 
+but then once that has been done, sets various bond angles and dihedrals - in this case just one of
+each, but those are repeated messages. 
+
+This functionality is accomplished by the `Position3D` function, which operates on
+fragments within the same molecule.
+
+Within 2D `trxn` a common reaction is acid + amine. That can be accomplished
+via reactions, as demonstrated above, or the underlying function can be called directly.
+The scenario is to have an acid that is fixed in space, and we have a
+list of 3D amines that are randomly positioned and oriented, and which each
+need to be positioned near the acid for bond formation.
+
+If doing this in python, a typical sequence of code might look like
+```
+# Read 3d acid molecule from somewhere. Save the number of atoms.
+acid = read_from_somewhere()
+atoms_in_acid = acid.natoms()
+
+# Identify the atom in ‘acid’ that will form the bond -
+# for simplicity we  assume the [OH] has been stripped off.
+# This function presumably does some kind of substructure search,
+# or maybe just look for an isotopically labelled atom, or...
+acid_atom = identify_acid_join(acid)
+
+# Read a list of amines from somewhere and iterate through them.
+for amine in amines:
+  # Which atom in this amine is the join atom - the N atom.
+  amine_atom = identify_amine_atom(amine)
+
+  # make a copy of the acid so we can add to it and change it
+  # and leave `acid` ready for the next fragment.
+  mcopy = copy.copy(acid)
+
+  # Add the amine – no bonds created, two fragments in mcopy,
+  # no change in `amine` atom positions.
+  mcopy += amine
+
+  # Orient the atoms in the fragment
+  Position3D(mcopy, acid_atom, distance, atoms_in_acid + amine_atom)
+
+  # Now that it is positioned, add a bond.
+  mcopy.add_bond(acid_atom, atoms_in_acid + amine_atom, SINGLE_BOND)
+
+  # Further processing on the newly formed amide `mcopy`.
+```
+Note that we did not really need to make a copy of `acid`. We could
+have added each `amine` to `acid` and then when work began on the
+next amine, `acid.resize(atoms_in_acid)` would remove all the atoms
+that had been added by the previous amine, leaving the acid in its
+original form. Depends on what subsequent processing might have
+done with the newly formed molecule.
+
+In the repo there is an example python script that was used for
+testing `Position3D`, [test_position_3d](/contrib/bin/test_position_3d.py).
+That tool looks for all breakable bonds in a
+set of molecules, breaks each of those bonds, randomly positions
+one of the fragments, and then re-assembles the starting molecule.
+
+Given 10k random molecules from Chembl, this generates 76k 
+broken and rejoined molecules and takes about 10 seconds.
+
+That script also demonstrates how you can them perform a systematic
+dihedral scan around the newly formed bond, to whatever degree of
+granularity is needed. Of course if you have specified a dihedral
+angle in the reaction, this is not necessary.
+
 # Examples
 
 There are a variety of reactions in the `data/MolecularVariants` directory

@@ -616,6 +616,9 @@ Inter_Particle_Bond::ConstructFromProto(const ReactionProto::InterParticleBond& 
     return 0;
   }
 
+  if (proto.has_align_3d()) {
+    _align_3d = proto.align_3d();
+  }
 
   return 1;
 }

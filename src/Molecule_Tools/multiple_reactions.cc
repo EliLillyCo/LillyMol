@@ -1,10 +1,15 @@
 //  Apply a set of reactions to input molecules.
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
 
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 #include "Molecule_Lib/aromatic.h"
@@ -20,6 +25,7 @@
 namespace apply_multiple_reactions {
 
 using std::cerr;
+namespace fs = std::filesystem;
 
 void
 Usage(int rc)
@@ -27,6 +33,7 @@ Usage(int rc)
   cerr << "Apply a set of reactions. Reactions are applied separately\n";
   cerr << " -R <rxn>          specify one or more reactions\n";
   cerr << " -R F:<fname>      file containing multiple reactions\n";
+  cerr << " -R TFDATA:<fname> file containing serialised ReactionProto::Reaction protos\n";
   cerr << " -G <rxn>          one or more old format reactions\n";
   cerr << " -r <recursion>    number of recursive invocations (def 0)\n";
   cerr << " -z i              ignore molecules not matching any queries\n";
@@ -102,6 +109,9 @@ class MultipleReactions {
   int ReadReaction(IWString& fname);
   int ReadFileOfReactions(IWString& fname);
   int ReadFileOfReactions(const IWString& fname, iwstring_data_source& input);
+
+  int ReadTfDataReactions(IWString& fname);
+  int ReadTfDataReactions(iw_tf_data_record::TFDataReader& input, const IWString& dirname);
 
   int Process(Molecule& m, Molecule_to_Match& target, IWReaction& rxn,
               resizable_array_p<Molecule>& result);
@@ -185,6 +195,13 @@ MultipleReactions::Initialise(Command_Line& cl)
         fname.remove_leading_chars(2);
         if (!ReadFileOfReactions(fname)) {
           cerr << "Cannot read reactions from '" << fname << "'\n";
+          return 0;
+        }
+      }
+      else if (fname.starts_with("TFDATA:")) {
+        fname.remove_leading_chars(7);
+        if (! ReadTfDataReactions(fname)) {
+          cerr << "Cannot read TFDataRecord file '" << fname << "'\n";
           return 0;
         }
       }
@@ -333,6 +350,53 @@ MultipleReactions::ReadReactionOldFormat(iwstring_data_source& input,
 
   cerr << "MultipleReactions::ReadReactionOldFormat:cannot read reaction\n";
   return 0;
+}
+
+int
+MultipleReactions::ReadTfDataReactions(IWString& fname) {
+  iw_tf_data_record::TFDataReader input(fname);
+  if (! input.good()) {
+    cerr << "MultipleReactions::ReadTfDataReactions:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  fs::path dir = fs::path(fname.null_terminated_chars());
+  const IWString dirname(dir.parent_path());
+
+  return ReadTfDataReactions(input, dirname);
+}
+
+int
+MultipleReactions::ReadTfDataReactions(iw_tf_data_record::TFDataReader& input,
+                        const IWString& dirname) {
+  while (true) {
+    std::optional<const_IWSubstring> data = input.Next();
+    if (! data) {
+      return _rxn.size();
+    }
+
+    // Thought I would need this, but not so. Keep as an example.
+    // using google::protobuf::io::ZeroCopyInputStream;
+    // using google::protobuf::io::ArrayInputStream;
+    // ArrayInputStream zero_copy_input(data->data(), data->length());
+
+    ReactionProto::Reaction proto;
+    if (! proto.ParseFromArray(data->data(), data->length())) {
+      cerr << "MultipleReactions::ReadTfDataReactions:cannot decode\n";
+      return 0;
+    }
+
+    std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+    if (! rxn->ConstructFromProto(proto, dirname)) {
+      cerr << "MultipleReactions::ReadTfDataReactions:invalid proto " << 
+              proto.ShortDebugString();
+      return 0;
+    }
+
+    _rxn << rxn.release();
+  }
+
+  return _rxn.size();
 }
 
 int

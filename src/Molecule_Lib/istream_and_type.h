@@ -71,7 +71,7 @@ class data_source_and_type : public iwstring_data_source
     void set_connection_table_errors_allowed (int i);
     int  set_connection_table_error_file (const IWString &);
 
-//  int next_molecule (Molecule &);
+    int next_molecule (T &);
     T * next_molecule();
 
     int molecules_remaining();
@@ -382,11 +382,98 @@ data_source_and_type<T>::next_molecule()
     if (_connection_table_errors_encountered > _connection_table_errors_allowed)
     {
       std::cerr << "data_source_and_type::next_molecule:too many connection table errors " << _connection_table_errors_allowed << '\n';
-      return 0;
+      return nullptr;
     }
   }
 
   return nullptr;
+}
+
+template <typename T>
+int
+data_source_and_type<T>::next_molecule(T& m) {
+//std::cerr << "Reading next molecule\n";
+//debug_print(std::cerr);
+
+  if (! _valid) {
+    return 0;
+  }
+
+  if (_do_only > 0 && _molecules_read >= _do_only) {
+    std::cerr << "data_source_and_type::next_molecule: already read " << _molecules_read << " molecules\n";
+    _valid = 0;
+    return 0;
+  }
+
+  if (! good()) {
+    _valid = 0;
+    return 0;
+  }
+
+  while (_connection_table_errors_encountered <= _connection_table_errors_allowed)
+  {
+    // tellg does not work on stdin
+    if (! is_pipe()) {
+      _offset_for_most_recent_molecule = tellg();
+
+      if (_offset_for_most_recent_molecule >= max_offset_from_command_line()) {
+        return 0;
+      }
+    }
+
+    if (m.read_molecule_ds (*this, _input_type)) {
+      _molecules_read++;
+      if (_verbose) {
+        std::cerr << _molecules_read;
+        if (m.name().length())
+          std::cerr << " read '" << m.name() << "'\n";
+        else
+          std::cerr << " no name\n";
+      }
+
+      return 1;
+    }
+
+    // normal termination
+    if (at_eof()) {
+      return 0;
+    }
+
+    _connection_table_errors_encountered++;
+
+    std::cerr << "data_source_and_type::next_molecule: Skipping connection table error " << _connection_table_errors_encountered << 
+            " record " << lines_read() << '\n';
+
+    if (m.name().length()) {
+      std::cerr << "Molecule name '" << m.name() << "'\n";
+    }
+
+    if (_stream_for_connection_table_errors.is_open()) {
+      off_t here = tellg();
+
+      size_t bytes_to_echo = here - _offset_for_most_recent_molecule;
+
+//    std::cerr << "From " << here << " go back to " << _offset_for_most_recent_molecule << " echo " << bytes_to_echo << " bytes\n";
+
+      if (! seekg (_offset_for_most_recent_molecule))
+        std::cerr << "data_source_and_type::next_molecule:sorry, cannot seek back to " << _offset_for_most_recent_molecule << '\n';
+      else
+      {
+        echo (_stream_for_connection_table_errors, static_cast<off_t>(bytes_to_echo));
+        seekg (here);
+
+        std::cerr << "from " << _offset_for_most_recent_molecule << " to " << here << " now " << tellg() << '\n';
+      }
+    }
+
+    if (_connection_table_errors_encountered > _connection_table_errors_allowed)
+    {
+      std::cerr << "data_source_and_type::next_molecule:too many connection table errors " << _connection_table_errors_allowed << '\n';
+      return 0;
+    }
+  }
+
+  return 0;
 }
 
 template <typename T>

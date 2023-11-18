@@ -33,9 +33,11 @@
   (5 Environment_No_Match
     (A I single_bond (1 2 4))
 
+    (A C smarts "C#N")
     (A C smarts "C=C")
     (A C smarts "a")
 
+#   Free acids will be charged, but not esters
 
     (A C smarts "C(=[O,S])-[D>1]")
     (A C smarts "S(=O)(=O)-[D>1]")
@@ -43,8 +45,10 @@
     (A C smarts "[NG>0]")
 
     (A C smarts "[F,Cl,Br,I]")
+    (A C smarts "[#8,#16;D1]")
   )
 
+# Jan 2005. Must have an electron donating group on the ring
 
   (7 Environment
     (A I single_bond (1 2 4))

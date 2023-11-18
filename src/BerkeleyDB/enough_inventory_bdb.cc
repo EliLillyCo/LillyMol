@@ -39,7 +39,7 @@ static int append_amount_to_output = 0;
 
 static int append_molecular_weight = 0;
 
-static int write_amount_as_initial_lookup = 0;
+//static int write_amount_as_initial_lookup = 0;
 
 static int identifier_column = -1;
 

@@ -12,4 +12,12 @@ message KekuleBond {
 
 message ToggleKekuleForm {
   repeated KekuleBond bond = 1;
+
+  optional bool allow_pyrrole_to_change = 2;
+
+  optional bool display_error_messages = 3;
+
+  optional bool unset_unnecessary_implicit_hydrogens_known_values = 4;
+
+  optional bool check_all_bonds_aromatic = 5;
 }

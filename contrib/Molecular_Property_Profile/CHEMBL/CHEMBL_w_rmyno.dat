@@ -2,11 +2,11 @@ description {
   feature_name: "w_rmyno"
   description: "Number of Oxygen atoms"
   plot_title: "Number of Oxygen atoms"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 27.0
-mean: 2.9647083
+maxval: 22.0
+mean: 3.02192
 median: 3.0
 quantile {
   quantile: 0.01
@@ -24,7 +24,7 @@ quantile {
 }
 quantile {
   quantile: 0.9
-  value: 5.0
+  value: 6.0
 }
 quantile {
   quantile: 0.95
@@ -35,109 +35,93 @@ quantile {
   value: 10.0
 }
 int_values {
-  count: 158795
+  count: 3430
 }
 int_values {
   value: 1
-  count: 370420
+  count: 8003
 }
 int_values {
   value: 2
-  count: 517028
+  count: 11371
 }
 int_values {
   value: 3
-  count: 462188
+  count: 10181
 }
 int_values {
   value: 4
-  count: 334193
+  count: 7370
 }
 int_values {
   value: 5
-  count: 191979
+  count: 4431
 }
 int_values {
   value: 6
-  count: 104416
+  count: 2442
 }
 int_values {
   value: 7
-  count: 49613
+  count: 1177
 }
 int_values {
   value: 8
-  count: 26742
+  count: 655
 }
 int_values {
   value: 9
-  count: 14058
+  count: 332
 }
 int_values {
   value: 10
-  count: 9360
+  count: 239
 }
 int_values {
   value: 11
-  count: 5355
+  count: 136
 }
 int_values {
   value: 12
-  count: 3833
+  count: 92
 }
 int_values {
   value: 13
-  count: 2090
+  count: 47
 }
 int_values {
   value: 14
-  count: 1406
+  count: 40
 }
 int_values {
   value: 15
-  count: 809
+  count: 19
 }
 int_values {
   value: 16
-  count: 510
+  count: 13
 }
 int_values {
   value: 17
-  count: 269
+  count: 8
 }
 int_values {
   value: 18
-  count: 172
-}
-int_values {
-  value: 19
-  count: 82
-}
-int_values {
-  value: 20
-  count: 66
-}
-int_values {
-  value: 21
-  count: 42
-}
-int_values {
-  value: 22
-  count: 27
-}
-int_values {
-  value: 23
-  count: 26
-}
-int_values {
-  value: 24
-  count: 17
-}
-int_values {
-  value: 26
   count: 9
 }
 int_values {
-  value: 27
-  count: 5
+  value: 19
+  count: 1
+}
+int_values {
+  value: 20
+  count: 2
+}
+int_values {
+  value: 21
+  count: 1
+}
+int_values {
+  value: 22
+  count: 1
 }

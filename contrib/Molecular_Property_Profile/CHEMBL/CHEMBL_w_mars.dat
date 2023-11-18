@@ -2,11 +2,11 @@ description {
   feature_name: "w_mars"
   description: "Most atoms in a ring system"
   plot_title: "Most atoms in a ring system"
-  line_color: "red"
-  source: "Chembl"
+  line_color: "green"
+  source: "CHEMBL"
 }
-maxval: 50.0
-mean: 8.566836
+maxval: 48.0
+mean: 8.61118
 median: 9.0
 quantile {
   quantile: 0.01
@@ -30,200 +30,168 @@ quantile {
 }
 quantile {
   quantile: 0.95
-  value: 15.0
+  value: 16.0
 }
 quantile {
   quantile: 0.99
   value: 21.0
 }
 int_values {
-  count: 21049
+  count: 453
 }
 int_values {
   value: 3
-  count: 1401
+  count: 34
 }
 int_values {
   value: 4
-  count: 921
-}
-int_values {
-  value: 5
-  count: 46646
-}
-int_values {
-  value: 6
-  count: 934792
-}
-int_values {
-  value: 7
-  count: 30710
-}
-int_values {
-  value: 8
-  count: 39601
-}
-int_values {
-  value: 9
-  count: 477157
-}
-int_values {
-  value: 10
-  count: 374830
-}
-int_values {
-  value: 11
-  count: 25307
-}
-int_values {
-  value: 12
-  count: 26923
-}
-int_values {
-  value: 13
-  count: 92343
-}
-int_values {
-  value: 14
-  count: 57969
-}
-int_values {
-  value: 15
-  count: 16398
-}
-int_values {
-  value: 16
-  count: 17402
-}
-int_values {
-  value: 17
-  count: 36292
-}
-int_values {
-  value: 18
-  count: 16048
-}
-int_values {
-  value: 19
-  count: 5686
-}
-int_values {
-  value: 20
-  count: 5615
-}
-int_values {
-  value: 21
-  count: 9021
-}
-int_values {
-  value: 22
-  count: 7767
-}
-int_values {
-  value: 23
-  count: 1657
-}
-int_values {
-  value: 24
-  count: 1810
-}
-int_values {
-  value: 25
-  count: 1709
-}
-int_values {
-  value: 26
-  count: 892
-}
-int_values {
-  value: 27
-  count: 799
-}
-int_values {
-  value: 28
-  count: 609
-}
-int_values {
-  value: 29
-  count: 671
-}
-int_values {
-  value: 30
-  count: 286
-}
-int_values {
-  value: 31
-  count: 147
-}
-int_values {
-  value: 32
-  count: 195
-}
-int_values {
-  value: 33
-  count: 96
-}
-int_values {
-  value: 34
-  count: 91
-}
-int_values {
-  value: 35
-  count: 63
-}
-int_values {
-  value: 36
-  count: 203
-}
-int_values {
-  value: 37
-  count: 78
-}
-int_values {
-  value: 38
-  count: 138
-}
-int_values {
-  value: 39
-  count: 38
-}
-int_values {
-  value: 40
-  count: 45
-}
-int_values {
-  value: 41
-  count: 17
-}
-int_values {
-  value: 42
   count: 19
 }
 int_values {
-  value: 43
-  count: 8
+  value: 5
+  count: 940
 }
 int_values {
-  value: 44
-  count: 28
+  value: 6
+  count: 20639
 }
 int_values {
-  value: 45
+  value: 7
+  count: 661
+}
+int_values {
+  value: 8
+  count: 849
+}
+int_values {
+  value: 9
+  count: 10700
+}
+int_values {
+  value: 10
+  count: 8359
+}
+int_values {
+  value: 11
+  count: 541
+}
+int_values {
+  value: 12
+  count: 609
+}
+int_values {
+  value: 13
+  count: 1992
+}
+int_values {
+  value: 14
+  count: 1322
+}
+int_values {
+  value: 15
+  count: 375
+}
+int_values {
+  value: 16
+  count: 431
+}
+int_values {
+  value: 17
+  count: 826
+}
+int_values {
+  value: 18
+  count: 356
+}
+int_values {
+  value: 19
+  count: 118
+}
+int_values {
+  value: 20
+  count: 130
+}
+int_values {
+  value: 21
+  count: 200
+}
+int_values {
+  value: 22
+  count: 219
+}
+int_values {
+  value: 23
+  count: 38
+}
+int_values {
+  value: 24
+  count: 40
+}
+int_values {
+  value: 25
+  count: 49
+}
+int_values {
+  value: 26
+  count: 17
+}
+int_values {
+  value: 27
+  count: 15
+}
+int_values {
+  value: 28
+  count: 15
+}
+int_values {
+  value: 29
+  count: 22
+}
+int_values {
+  value: 30
   count: 6
 }
 int_values {
-  value: 46
-  count: 11
+  value: 31
+  count: 2
 }
 int_values {
-  value: 47
+  value: 32
+  count: 3
+}
+int_values {
+  value: 33
+  count: 1
+}
+int_values {
+  value: 34
+  count: 4
+}
+int_values {
+  value: 35
+  count: 1
+}
+int_values {
+  value: 36
+  count: 5
+}
+int_values {
+  value: 37
+  count: 1
+}
+int_values {
+  value: 38
+  count: 3
+}
+int_values {
+  value: 39
+  count: 1
+}
+int_values {
+  value: 40
   count: 3
 }
 int_values {
   value: 48
-  count: 10
-}
-int_values {
-  value: 50
-  count: 3
+  count: 1
 }

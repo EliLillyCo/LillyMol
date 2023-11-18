@@ -109,4 +109,42 @@ INSTANTIATE_TEST_SUITE_P(TestSignedDihedral, TestSignedDihedral, testing::Values
   CoordsAngle{{{-1.0, 1.0, 0.0}, {0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 0.01}}, -0.57293868, {1,2,3}},
   CoordsAngle{{{-1.0, 1.0, 0.0}, {0.0, 0.0, 0.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, -0.01}}, 0.57293868, {1,2,3}}
 ));
+
+TEST(TestDihedralScan, TestDihedralScan) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("C{{-2,1,0}}C{{-1,0,0}}C{{0,0,0}}C{{1,1,0}}"));
+
+  constexpr float kBumpCheck = 0.0f;  // no bump check
+  std::vector<std::unique_ptr<float[]>> coords = m.DihedralScan(1, 2, 45.0, kBumpCheck);
+
+  constexpr float kAbsDiff = 0.001;
+
+  EXPECT_NEAR(m.x(0), -2.0, kAbsDiff);
+  EXPECT_NEAR(m.y(0), 1.0, kAbsDiff);
+  EXPECT_NEAR(m.z(0), 0.0, kAbsDiff);
+
+  EXPECT_NEAR(m.x(1), -1.0, kAbsDiff);
+  EXPECT_NEAR(m.y(1), 0.0, kAbsDiff);
+  EXPECT_NEAR(m.z(1), 0.0, kAbsDiff);
+
+  EXPECT_NEAR(m.x(2), 0.0, kAbsDiff);
+  EXPECT_NEAR(m.y(2), 0.0, kAbsDiff);
+  EXPECT_NEAR(m.z(2), 0.0, kAbsDiff);
+
+  EXPECT_NEAR(m.x(3), 1.0, kAbsDiff);
+  EXPECT_NEAR(m.y(3), 1.0, kAbsDiff);
+  EXPECT_NEAR(m.z(3), 0.0, kAbsDiff);
+
+  EXPECT_EQ(coords.size(), 7);
+
+  std::vector<float> expected{-45.0, -90.0, -135.0, 180, 135.0, 90.0, 45.0};
+
+  for (uint32_t i = 0; i < coords.size(); ++i) {
+    m.SetXyz(coords[i].get());
+    angle_t angle = m.signed_dihedral_angle(0, 1, 2, 3);
+    EXPECT_NEAR(angle * RAD2DEG, expected[i], kAbsDiff);
+  }
 }
+
+}  // namespace
+

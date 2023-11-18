@@ -243,6 +243,10 @@ void Enrichment::readFromStream( std::istream& p_istream )
   int previous_rank = -1;
   int count = -1;
   int previous_count = -1;
+  // Keep the compiler quiet.
+  (void) previous_rank;
+  (void) previous_count;
+
   while( p_istream >> rank >> count )
   {
     assert( rank > 0 );
@@ -266,12 +270,12 @@ double Enrichment::calculateRandVarRIE( const int p_nbr_actives, const int p_nbr
   double n = static_cast<double>( p_nbr_actives );
   double N = static_cast<double>( p_nbr_compounds );
   double a = p_exponential;
-  double exp_aN = exp( a * N );
-  double exp_a  = exp( a );
-  double exp_2a = exp_a * exp_a;
-  double exp_a_N = exp( a / N );
-  double exp_2a_N = exp_a_N * exp_a_N;
-  double factor = N/n*(1.0/exp_a_N-1.0)*(1.0/exp_a_N-1.0)/(1.0-exp_a)/(1.0-exp_a);
+  //double exp_aN = exp( a * N );
+  //double exp_a  = exp( a );
+  //double exp_2a = exp_a * exp_a;
+  //double exp_a_N = exp( a / N );
+  //double exp_2a_N = exp_a_N * exp_a_N;
+  // double factor = N/n*(1.0/exp_a_N-1.0)*(1.0/exp_a_N-1.0)/(1.0-exp_a)/(1.0-exp_a);
   double term1 = ( 1.0 - exp(-2.0*a ))/( exp(2.0*a/N)-1.0 );
   double term2 = 2.0*(n-1.0)/(N-1.0)*exp(-2.0*a)*(exp(a/N)-exp(a))*(1.0-exp(a))/(exp(a/N)-1.0)/(exp(a/N)-1.0)/(1.0+exp(a/N));
   double term3 = n/N*(1.0-exp(-a))/(exp(a/N)-1.0)*(1.0-exp(-a))/(exp(a/N)-1.0);

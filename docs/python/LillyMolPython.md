@@ -40,10 +40,10 @@ you wish to compile separately that can be done via
 ```
 bazelisk --output_user_root=/local/disk/ian build --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --local_cpu_resources=10 -c opt pybind:all
 ```
-This generates several `*.so` files in bazel-bin/python. In addition, LillyMol
+This generates several `*.so` files in bazel-bin/pybind. In addition, LillyMol
 now has several run-time dependencies, and these also need to be made available.
 For now, the script `copy_shared_libraries.sh` in the `src` directory will copy
-the needed files out of bazel-bin and into lib64.
+the needed files out of bazel-bin and into lib.
 
 See `WORKSPACE` for how we configured the local python and pybind11 installs.
 This was quite difficult to get right. Normally these will be auto
@@ -51,8 +51,8 @@ configured for you by the [build_third_party](/src/build_third_party.sh) script,
 which in turn calls [update_python_in_workspace](/src/update_python_in_workspace.py)
 which interrogates the python installation. 
 
-Once the shared libraries are copied to `LillyMol/lib64`, a script, `run_python.sh` in
-this directory can be used to invoke python with those libraries avaialble.
+Once the shared libraries are copied to `LillyMol/lib`, a script, `run_python.sh` in
+the top level directory can be used to invoke python with those libraries avaialble.
 
 ## Philosophy
 LillyMol has no concept of changeable and unchangeable molecules. Any molecule
@@ -140,7 +140,7 @@ from lillymol_io import *
 
 reader = Reader()
 if not reader.open('/path/to/file.smi', FileType.SMI):
-  logging.fatal('Cannot open...')
+  logging.error('Cannot open...')
 
 for m in reader:
   print(m)
@@ -190,6 +190,16 @@ both report the atomic number of atom 3. The first queried the
 molecule, and the second retrieved the third atom and asked it
 for the atomic number. In terms of efficiency, the first method
 will be more efficient in python.
+
+And for the greatest simplicity in getting a list of molecules
+into python
+```
+mols = slurp(fname)
+```
+will read all molecules from `fname` into a list. Note that this
+only works if `fname` has the proper suffix, and it will not work
+if trying to read stdin. Returns None if anything goes wrong. Note
+that if any molecule fails nothing is returned.
 
 ## Molecule Methods
 The most common methods for a Molecule currently implemented are
@@ -247,7 +257,7 @@ The most common methods for a Molecule currently implemented are
 | remove_non_periodic_table_elements() | Remove any non-natural atoms |
 | remove_all(atomic_number) | Remove all atoms with atomic_number |
 | move_to_end_of_connection_table(z) | Move all atoms with atomic number to end of connection table |
-| chop(m) | Remove the last 'n' atoms in the molecule |
+| chop(n) | Remove the last 'n' atoms in the molecule |
 | organic_only() | True if only B, C, N, O, F, P, S, Cl, Br, I |
 | remove_explicit_hydrogens() | Remove explicit Hydrogens |
 | RemoveHs() | Remove explicit Hydrogens |
@@ -331,6 +341,7 @@ The most common methods for a Molecule currently implemented are
 | translate(x, y, z) | Translate atoms |
 | highest_coordinate_dimensionality() | Will be 3 of 3D coordinates available |
 | discern_chirality_from_3d_structure() | Use geometry to discern chiral centres |
+| dihedral_scan(atom, atom, angle, bump_check | return list of coordinate sets |
 | non_sssr_rings() | Number of non Smallest Set of Smallest Rings rings |
 | non_sssr_ring(i) | The i'th non-SSSR ring |
 | has_partial_charges() | True if the molecule has partial charges |
@@ -382,15 +393,22 @@ The Atom object supports
 | other(atom_number, ndx) | atom number of the 'ndx' connection |
 | is_bonded_to(atom) | True if atom is bonded to 'atom' |
 | valence_ok(atom) | True if valence ok |
-| fully_saturated() | True nbonds() == ncon() |
+| fully_saturated() | True if nbonds() == ncon() |
 | atom_map() | atom map number |
 | connections(atom) | iterable list of atoms attached |
+| implicit_hydrogens | number of implicit hydrogens attached |
 | \__iter__ | List of Bonds attached |
 | \__contains__ | True if atom is bonded to |
 | \__len__ | Number of connections |
 
-In additon an Atom object inherits from an object that holds coordinates. A subsequent
-version will enable that functionality.
+In additon an Atom object inherits from an object that holds coordinates. Subsequent
+versions will enable more of that functionality. For now the subtraction operator
+returns the distance between two atoms.
+```
+m.build_from_smiles("C{{0,0,0}}C{{1,1,1}}"))
+m[0] - m[1]
+```
+reports sqrt(3).
 
 A common construct might be (count the number of carbon=,#nitrogen bonds)
 ```
@@ -422,7 +440,6 @@ Traversing the bond list results in each Bond being examined only once.
 ```
 Knowing when to solve a problem by traversing atoms and when to traverse
 bonds can be hard.
-
 
 ## Bond Methods
 Again, the Bond class really does not know much.
@@ -487,13 +504,13 @@ trace out a bonded path through the ring.
 | size() | size |
 | ring_number() | unique ring number |
 | fragment_membership() | fragment number containing ring |
-| fused_system_identifier() | fused system containing this ring |
+| fused_system_identifier() | fused system number containing this ring |
 | is_fused() | True if ring is fused to another ring |
 | fused_ring_neighbours() | Number of fused neighbours |
-| is_fused_to(ring) | True if fused to another ring |
+| is_fused_to(ring) | True if fused to another ring number |
 | largest_number_of_bonds_shared_with_another_ring() | for flat ring systems, this will be 1 |
 | strongly_fused_ring_neighbours() | Rings sharing more than 1 bond |
-| contains_bond(a1, a2) | True if Ring contains these atoms |
+| contains_bond(a1, a2) | True if Ring contains these adjacent atoms |
 | is_aromatic() | True if ring is aromatic |
 | \__contains__ | Is atom included |
 | \__len__ | Size |
@@ -594,7 +611,7 @@ To read a query from a textproto query specification
 ```
 query = Query()
 if not query.read_proto('/path/to/file.textproto'):
-  logging.fatal('Cannot read query file %s...')
+  logging.error('Cannot read query file %s...')
 ```
 
 To perform a substructure search, not recording anything about the
@@ -661,13 +678,13 @@ Reactions can be build from
 ```
   rxn = Reaction()
   if not rxn.read('/path/to/rxn.textproto'):
-    logging.fatal('Cannot read reaction %s...
+    logging.error('Cannot read reaction %s...
 ```
 or
 ```
   rxn = Reaction()
   if not rxn.construct_from_smirks(smirks):
-    logging.fatal('Cannot interpret smirks %s...
+    logging.error('Cannot interpret smirks %s...
 ```
 If the reaction is a simple form that has either no sidechains,
 or all sidechains have a single, already specified, reagent, then
@@ -713,7 +730,9 @@ molecules might look like
   rxn.read('/path/to/reaction.textproto')
   rxn.add_sidechain_reagents(0, '/path/to/r2.smi', FileType.SMI)
 
-  matches = rxn.substructure_search_matches(m)
+  matches = rxn.substructure_search_matches(mol)
+  if not matches:
+    logging.error("No matches to %s", mol.name())
 
   iter = ReactionIterator(rxn)
 
@@ -721,7 +740,7 @@ molecules might look like
     iter.reset()
     while iter.active():
       for match in matches:
-        product = rxn.perform_reaction(m, match, iter)
+        product = rxn.perform_reaction(mol, match, iter)
         # do something with product
 
       iter++

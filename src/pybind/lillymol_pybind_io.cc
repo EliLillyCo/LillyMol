@@ -325,6 +325,32 @@ PYBIND11_MODULE(lillymol_io, io)
       },
       "File names created from a token in the molecule name"
     )
-
   ;
+
+  io.def("slurp",
+    [](const std::string& fname)->std::optional<std::vector<Molecule>> {
+      IWString tmp(fname);
+      FileType itype = discern_file_type_from_name(tmp);
+      if (itype == FILE_TYPE_INVALID) {
+        itype = FILE_TYPE_SMI;  // give it a try.
+      }
+      data_source_and_type<Molecule> input(itype, tmp);
+      if (! input.good()) {
+        std::cerr << "slurp:cannot open '" << fname << "'\n";
+        return std::nullopt;
+      }
+
+      uint32_t number_molecules = input.molecules_remaining();
+      std::vector<Molecule> result(number_molecules);
+      for (uint32_t i = 0; i < number_molecules; ++i) {
+        if (! input.next_molecule(result[i])) {
+          return std::nullopt;
+        }
+      }
+
+      return result;
+    },
+    "Read all molecules from `fname`"
+  );
+
 }
