@@ -4,11 +4,11 @@ name: ci-testing
 on:
   # Triggers the workflow on  pull request events for master
  pull_request:
-   branches: [ master ]
+   branches: [ master, dev ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest-8-core-spe
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Build the project
