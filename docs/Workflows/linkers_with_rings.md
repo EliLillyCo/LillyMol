@@ -281,3 +281,21 @@ tsubstructure -s B -s P -s I -s Br -n okelements -v all.single_ring.smi
 tsubstructure -n linker.not_too_long -s '[R]!@{a>4}*' -m too_long okelements.smi
 ```
 and again the linkers are separated by atoms between the join points.
+
+## Files
+**LILLY SPECIFIC**
+The relevant files are
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.2.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.3.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.4.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.5.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.6.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.7.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.8.smi
+* /lrlhps/users/rx87690/LINKERS_With_Rings/all.linker.9.smi
+
+The same files that include singletons are in
+```
+/lrlhps/users/rx87690/LINKERS_With_Rings/SINGLETONS
+```
+These are isotopically labelled at the join point.
