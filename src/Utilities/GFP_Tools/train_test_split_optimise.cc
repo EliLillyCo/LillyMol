@@ -1,5 +1,7 @@
 // Use the results of a nearest neighbour calculation to optimize
 // one or more train/test splits.
+// In its current state this is not working. Needs debugging.
+//  TODO:ianwatson fix this.
 
 #include <stdlib.h>
 
@@ -41,7 +43,7 @@ Usage(int rc) {
   cerr << " -f <train_fraction> fraction of data in the train split\n";
   cerr << " -n <nsplit>         number of splits needed\n";
   cerr << " -S <stem>           write splits to <stem>, <stem>R and <stem>E\n";
-  cerr << " -s ...              stratified sampling...\n";
+  //cerr << " -s ...              stratified sampling...\n";
   cerr << " -o <nopt>           number of optimisation steps to try per split\n";
   cerr << " -t <sec>            run each split for <sec> seconds\n";
   cerr << " -r <n>              report progress every <n> steps\n";
@@ -399,7 +401,7 @@ Optimise::DistanceOrMax(uint32_t i, uint32_t j) const {
 
   const auto iter = _distance.find(key);
   if (iter == _distance.end()) {
-    cerr << "No distance for " << i << ',' << j << '\n';
+    // cerr << "No distance for " << i << ',' << j << '\n';
     return _max_distance;
   }
 
@@ -452,9 +454,11 @@ Optimise::RandomSplit() {
     cerr << "RandomSplit after balancing " << in_train << " in train\n";
   }
 
+#ifdef DEBUG_SWAP_ITEMS
   for (uint32_t i = 0; i < _number_needles; ++i) {
     cerr << " train " << i << ' ' << _needle[i].in_train() << '\n';
   }
+#endif
 
   return 1;
 }
@@ -471,13 +475,13 @@ Optimise::RecomputeCurrentScore() {
       }
 
       const uint32_t d = DistanceOrMax(i, j);
-      cerr << " " << i << " and " << j << " opposite, dist " << d << '\n';
+      //cerr << " " << i << " and " << j << " opposite, dist " << d << '\n';
 
       _current_score += d;
     }
   }
 
-  cerr << "Current score " << _current_score << '\n';
+  //cerr << "Current score " << _current_score << '\n';
 
   return _current_score;
 }
@@ -648,7 +652,7 @@ Optimise::MakeSplit(int split) {
 
     const int train1 = _needle[i1].in_train();
     const int train2 = _needle[i2].in_train();
-    cerr << "Selected " << i1 << " and " << i2 << " has " << _needle[i1].number_neighbours() << " nbrs\n";
+    //cerr << "Selected " << i1 << " and " << i2 << " has " << _needle[i1].number_neighbours() << " nbrs\n";
 
     int32_t delta = 0;   // a signed quantity.
     uint32_t number_nbrs = _needle[i1].number_neighbours();
@@ -658,7 +662,7 @@ Optimise::MakeSplit(int split) {
         continue;
       }
       uint32_t d = DistanceOrMax(i2, n);
-      cerr <<  "  adj " << i1 << " to " << n << " dist " << d << " train1 " << train1 << " nbr " << _needle[n].in_train() << '\n';
+      // cerr <<  "  adj " << i1 << " to " << n << " dist " << d << " train1 " << train1 << " nbr " << _needle[n].in_train() << '\n';
 
       // If both on the same side now, were previously on opposite sides.
       if (_needle[n].in_train() == train2) {
@@ -666,7 +670,7 @@ Optimise::MakeSplit(int split) {
       } else  {  // different sides now, previously same.
         delta += d;
       }
-      cerr << "  delta updated to " << delta << '\n';
+      // cerr << "  delta updated to " << delta << '\n';
     }
 
     number_nbrs = _needle[i2].number_neighbours();
@@ -676,7 +680,7 @@ Optimise::MakeSplit(int split) {
         continue;
       }
       uint32_t d = DistanceOrMax(i1, n);
-      cerr <<  "  adj " << i2 << " to " << n << " dist " << d << " train2 " << train2 << " nbr " << _needle[n].in_train() << '\n';
+      // cerr <<  "  adj " << i2 << " to " << n << " dist " << d << " train2 " << train2 << " nbr " << _needle[n].in_train() << '\n';
 
       // If both on the same side now, were previously on opposite sides.
       if (_needle[n].in_train() == train1) {
@@ -684,14 +688,16 @@ Optimise::MakeSplit(int split) {
       } else  {  // different sides now, previously same.
         delta += d;
       }
-      cerr << "   2nd loop, delta " << delta << '\n';
+      // cerr << "   2nd loop, delta " << delta << '\n';
     }
-    cerr << "Score " << score << " delta " << delta << '\n';
+    // cerr << "Score " << score << " delta " << delta << '\n';
     uint64_t new_score = score + delta;
+#ifdef DEBUG_SWAP_ITEMS
     cerr << "new_score " << new_score << " cmp " << score << '\n';
     for (uint32_t y = 0; y < _number_needles; ++y) {
       cerr << " needle " << y << " train " << _needle[y].in_train() << '\n';
     }
+#endif
 
     if (_report_progress() && j > 0) {
       cerr << split << ' ' << j << " score " << new_score << " cmp " << starting_score << " accepted " << steps_accepted << " " << iwmisc::Fraction<float>(steps_accepted, j) << '\n';
@@ -722,7 +728,7 @@ Optimise::MakeSplit(int split) {
   cerr << "Writing split " << split << '\n';
   WriteSplit(split);
 
-  cerr << "Split " << split << " accepted " << steps_accepted << " steps\n";
+  cerr << "Split " << split << " accepted " << steps_accepted << " of " << _nopt << " steps\n";
 
   return 1;
 }
@@ -797,7 +803,7 @@ Optimise::WriteSmiles(int train, IWString_and_File_Descriptor& output) const {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:");
+  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:t:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

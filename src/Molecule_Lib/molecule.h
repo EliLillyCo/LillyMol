@@ -859,7 +859,10 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int add(Atom* a, int partial_molecule = 0);
 
   int add(const Element*);
-  int resize(int);
+  // If `new_size` is smaller than `natoms` atoms are removed.
+  // If larger than `natoms` space is allocated to make sure `new_size`
+  // atoms can be allocated.
+  int resize(int new_size);
 
   int ok() const;  // quick audit function
   int debug_print(std::ostream&) const;

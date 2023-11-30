@@ -589,7 +589,7 @@ Options::Process(Molecule& m,
     ProcessZeroLengthLinkers(m, is_ring.get(), output);
   }
 
-  std::unique_ptr<int[]> already_done = std::make_unique<int[]>(matoms);
+  std::unique_ptr<int[]> already_done(new_int(matoms));
   std::unique_ptr<int[]> join_point(new_int(matoms));
   std::unique_ptr<int[]> adjacent_atoms(new_int(matoms));
 

@@ -351,14 +351,20 @@ class Reaction_Change_Formal_Charge
 class Reaction_Place_Isotope
 {
   protected:
-    int _atom;
+    // Multiple matched atoms can be assigned the same isotope.
+    resizable_array<int> _atom;
+
+    // The isotope to be placed. Must be signed because other classes use
+    // this as a delta.
     int _isotope;
 
   public:
     Reaction_Place_Isotope ();
     Reaction_Place_Isotope (int a, int iso) : _atom (a), _isotope (iso) {}
 
-    int atom () const { return _atom;}
+    const resizable_array<int>& matched_atoms() const {
+      return _atom;
+    }
     int isotope () const { return _isotope;}
 
     void set_atom (int s) { _atom = s;}

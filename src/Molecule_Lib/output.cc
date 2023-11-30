@@ -491,6 +491,7 @@ Molecule_Output_Object::_add_output_type(FileType otype, const const_IWSubstring
 static int
 display_output_help_screen(std::ostream& os, char opt)
 {
+  // clang-format off
   os << "The following qualifiers are recognised by the -" << opt << " flag\n";
 
   os << " -" << opt << " smi3d       append coordinates after smiles\n";
@@ -517,7 +518,9 @@ display_output_help_screen(std::ostream& os, char opt)
   os << " -" << opt << " nochiral    exclude chirality info from smiles and mdl outputs\n";
   os << " -" << opt << " nochiralflag don't write the chiral flag info to mdl files\n";
   os << " -" << opt << " NOCT        exclude any CIS/TRANS information from smiles output\n";
+  os << " -" << opt << " smisep=<c>  separator between smiles and name: 'smisep=tab' for example\n";
   os << " -" << opt << " <type>      specify one or more output types (smi,usmi,nausmi,rsmi,sdf,tdt,mol2,marvin)\n";
+  // clang-format off
 
   return os.good();
 }
@@ -697,6 +700,17 @@ Molecule_Output_Object::determine_output_types(const Command_Line& cl, char opt)
     if ("mol2wfc" == c)
     {
       set_mol2_write_formal_charge_as_partial_charge(1);
+      continue;
+    }
+
+    if (c.starts_with("smisep=")) {
+      c.remove_leading_chars(7);
+      IWString tmp(c);
+      if (! char_name_to_char(tmp)) {
+        cerr << "Molecule_Output_Object::determine_output_types:invalid smisep '" << c << "'\n";
+        return 0;
+      }
+      smiles::set_smiles_output_separator(tmp[0]);
       continue;
     }
 

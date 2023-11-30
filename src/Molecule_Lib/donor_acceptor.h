@@ -37,6 +37,10 @@ class Donor_Acceptor_Assigner
 
 //  private functions
 
+    int BuildFromEnvValue(const IWString & env, int verbose);
+    int BuildFromDefaultEnv(int verbose);
+    int BuildFromEnv(const IWString& env, int verbose);
+
     int  _assign_acceptors(Molecule_to_Match & target, int * isotope);
     int  _assign_donors(Molecule_to_Match & target, int * isotope);
 

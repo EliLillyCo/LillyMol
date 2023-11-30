@@ -215,12 +215,13 @@ message ChangeFormalCharge {
 }
 
 message PlaceIsotope {
-  optional uint32 atom = 1;
+  // Any number of matched atoms can get the same isotope.
+  repeated uint32 atom = 1;
   optional int32 isotope = 2;
 }
 
 message IncrementIsotope {
-  optional uint32 atom = 1;
+  repeated uint32 atom = 1;
   optional int32 delta = 2;
 }
 

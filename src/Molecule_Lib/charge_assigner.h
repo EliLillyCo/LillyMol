@@ -85,6 +85,10 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
 //  private functions
 
+    int BuildFromDefaultEnvs();
+    int BuildFromEnv(const IWString& env);
+    int BuildFromEnvValue(const IWString& dir);
+
     void _increment_global_counters (const Set_of_Atoms & positive_charges_assigned,
                                              const Set_of_Atoms & negative_charges_assigned);
 

@@ -319,7 +319,7 @@ ExtractRings::Initialise(Command_Line& cl) {
       return 0;
     }
     if (_verbose) {
-      cerr << "WIll skip rings with more than " << _max_ring_size << " atoms\n";
+      cerr << "Will skip rings with more than " << _max_ring_size << " atoms\n";
     }
   }
 

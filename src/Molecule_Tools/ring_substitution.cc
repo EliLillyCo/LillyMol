@@ -19,7 +19,6 @@
 #include "Molecule_Lib/standardise.h"
 
 using std::cerr;
-using std::endl;
 
 const char * prog_name = nullptr;
 
@@ -97,6 +96,7 @@ usage(int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "  -J <tag>       tag for fingerprints\n";
   cerr << "  -P <bonds>    maximum path length around edge of ring system\n";
 //cerr << "  -b            break after finding adjacent match\n";
@@ -107,6 +107,7 @@ usage(int rc)
   cerr << "  -A ...        aromaticity specifications, enter '-A help' for info\n";
   cerr << "  -E ...        element specifications, enter '-E help' for info\n";
   cerr << "  -v            verbose output\n";
+// clang-format on
 
   exit(rc);
 }
@@ -121,10 +122,10 @@ ring_substitution(const IWString & mname,
 
 //#define DEBUG_RING_SUBSTITUTION
 #ifdef DEBUG_RING_SUBSTITUTION
-  cerr << mname << endl;
+  cerr << mname << '\n';
   for (int i = 0; i < n; i++)
   {
-    cerr << " i = " << i << " abstract_path " << abstract_path[i] << endl;
+    cerr << " i = " << i << " abstract_path " << abstract_path[i] << '\n';
   }
 #endif
 
@@ -155,7 +156,7 @@ ring_substitution(const IWString & mname,
       unsigned int b = 40 + 30 + j * 30 * 30 * max_path_length + (ta * tb);   // 30 is larger than all atom types assigned
 
 #ifdef DEBUG_RING_SUBSTITUTION
-      cerr << " i = " << i << " ar " << ta << " j = " << j << " k = " << k << " ar " << tb << " b = " << b << endl;
+      cerr << " i = " << i << " ar " << ta << " j = " << j << " k = " << k << " ar " << tb << " b = " << b << '\n';
 #endif
       sfpc.hit_bit(b);
     }
@@ -535,7 +536,7 @@ ring_substitution(Molecule & m,
 #ifdef DEBUG_RING_SUBSTITUTION
   for (int i = 0; i < m.natoms(); i++)
   {
-    cerr << "Atom " << i << " assigned type " << atype[i] << endl;
+    cerr << "Atom " << i << " assigned type " << atype[i] << '\n';
   }
 #endif
 
@@ -653,7 +654,7 @@ ring_substitution_filter(iwstring_data_source & input,
       continue;
 
     if (! ring_substitution_filter_record(buffer, output)) {
-      cerr << "Fatal error, line " << input.lines_read() << endl;
+      cerr << "Fatal error, line " << input.lines_read() << '\n';
       return 0;
     }
 
@@ -761,7 +762,7 @@ ring_substitution(int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "Max path length " << max_path_length << endl;
+      cerr << "Max path length " << max_path_length << '\n';
   }
 
   if (cl.option_present('M'))
@@ -855,7 +856,7 @@ ring_substitution(int argc, char ** argv)
   {
     cerr << "Processed " << molecules_read << " molecules, " << molecules_with_no_rings << " had no rings\n";
     if (acc_nset.n() > 1)
-      cerr << "Fingerprints have between " << acc_nset.minval() << " and " << acc_nset.maxval() << " bits set, ave " << static_cast<float>(acc_nset.average()) << endl;
+      cerr << "Fingerprints have between " << acc_nset.minval() << " and " << acc_nset.maxval() << " bits set, ave " << static_cast<float>(acc_nset.average()) << '\n';
   }
 
   return rc;

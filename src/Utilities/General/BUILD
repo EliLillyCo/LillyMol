@@ -884,6 +884,7 @@ cc_binary(
         "//Foundational/cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
         "//Foundational/iwstring",
     ],
 )

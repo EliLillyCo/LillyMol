@@ -1515,8 +1515,27 @@ PYBIND11_MODULE(lillymol, m)
   ;
 
   m.def("set_copy_name_in_molecule_copy_constructor", &set_copy_name_in_molecule_copy_constructor, "Copy name in constructor");
-  m.def("MolFromSmiles", &MolFromSmiles, "Molecule from smiles");
   m.def("LillyMolFromSmiles", &MolFromSmiles, "Molecule from smiles");
+  m.def("MolFromSmiles",
+    [](const std::string& smiles)->std::optional<Molecule> {
+      return MolFromSmiles(smiles);
+    },
+    "Molecule from smiles"
+  );
+  m.def("MolFromSmiles",
+    [](const std::vector<std::string>& smiles) {
+      uint32_t nmols = smiles.size();
+      std::vector<Molecule> result(nmols);
+      for (uint32_t i = 0; i < nmols; ++i) {
+        if (! result[i].build_from_smiles(smiles[i])) {
+          std::cerr << "Invalid smiles '" << smiles[i] << "' ignored\n";
+          result[i].resize(0);
+        }
+      }
+      return result;
+    },
+    "Return a list of molecules"
+  );
   m.def("set_auto_create_new_elements", &set_auto_create_new_elements, "auto create new elements");
   m.def("set_atomic_symbols_can_have_arbitrary_length", &set_atomic_symbols_can_have_arbitrary_length, "any string is an element");
   m.def("interpret_D_as_deuterium", &element::interpret_d_as_deuterium, "D means '[2H]'");

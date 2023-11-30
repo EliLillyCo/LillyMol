@@ -349,6 +349,13 @@ still need `-i allsdfid`, and you may also need `-i SDFNONAME`. Otherwise
 the name field will be processed normally, leading to `smiles name { "FOO": "bar" }`
 which might be exactly what you want.
 
+### -I NAME2JSON
+If needed, the molecule name can be encoded in json form as well as the
+specified sdf tags. The resulting form will be
+```
+"name": "molecule name" "tag1": "something" ...
+```
+
 ### -i SDFNONAME
 Normally the first record in an MDL connection table is the name
 of the molecule. If this is specified, discard that information instead.
@@ -519,6 +526,7 @@ yields
  -o nochiral    exclude chirality info from smiles and mdl outputs
  -o nochiralflag don't write the chiral flag info to mdl files
  -o NOCT        exclude any CIS/TRANS information from smiles output
+ -o smisep=\<c\>  separator between smiles and name: 'smisep=tab' for example
  -o \<type\>      specify one or more output types (smi,usmi,nausmi,rsmi,sdf,tdt,mol2,marvin)
 ```
 
@@ -618,6 +626,14 @@ Do not write the chiral flag info to mdl files.
 
 ### -o NOCT
 exclude any CIS/TRANS information from smiles output.
+
+### -o smisep
+By default, smiles are written as smiles followed by a space and then
+the id. The space can be changed to any character with this directive.
+```
+-i smisep=vbar
+```
+will result in a vertical bar being the output separator.
 
 ### -o \<type\>
 specify one or more output types (smi,usmi,nausmi,rsmi,sdf,tdt,mol2,marvin).

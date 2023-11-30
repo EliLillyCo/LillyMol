@@ -479,7 +479,6 @@ Reaction_Change_Formal_Charge::process (Molecule & result,
 
 Reaction_Place_Isotope::Reaction_Place_Isotope()
 {
-  _atom = -1;
   _isotope = 0;
 }
 
@@ -493,9 +492,9 @@ Reaction_Place_Isotope::construct_from_msi_attribute (const msi_attribute * att)
     return 0;
   }
 
-  _atom = att->int_multi_value(0);
+  _atom << att->int_multi_value(0);
 
-  if (_atom < 0)
+  if (_atom[0] < 0)
   {
     cerr << "Reaction_Place_Isotope::construct_from_msi_attribute: atom specifiers must be non negative ints\n";
     cerr << (*att) << endl;
@@ -511,7 +510,7 @@ int
 Reaction_Place_Isotope::write_msi(std::ostream & os, const const_IWSubstring & ind,
                            const const_IWSubstring & attribute_name) const
 {
-  os << ind << "  (A I " << attribute_name << " (" << _atom << ' ' << _isotope << "))\n";
+  os << ind << "  (A I " << attribute_name << " (" << _atom[0] << ' ' << _isotope << "))\n";
 
   return os.good();
 }
@@ -521,11 +520,12 @@ Reaction_Place_Isotope::process (Molecule & result,
                                  const Set_of_Atoms & embedding,
                                  int offset)
 {
-  assert (embedding.ok_index(_atom));
+  for (int matched_atom : _atom) {
+    const atom_number_t a = embedding[matched_atom];
+    assert (result.ok_atom_number(a));
 
-  atom_number_t a = embedding[_atom];
-
-  result.set_isotope(a + offset, _isotope);   // will crash if (a + offset) illegal
+    result.set_isotope(a + offset, _isotope);
+  }
 
   return 1;
 }
@@ -535,15 +535,15 @@ Reaction_Increment_Isotope::process (Molecule & result,
                                  const Set_of_Atoms & embedding,
                                  int offset)
 {
-  assert (embedding.ok_index(_atom));
+  for (const int matched_atom : _atom) {
+    const atom_number_t a = embedding[matched_atom];
 
-  atom_number_t a = embedding[_atom];
+    // cerr << "matched atom " << matched_atom << " current isotope is " << result.isotope(a+offset) << " delta " << _isotope << '\n';
 
-//cerr << "Current isotope is " << result.isotope(a+offset) << " mine " << _isotope <<endl;
+    const isotope_t iso = result.isotope(a + offset) + _isotope;
 
-  int iso = result.isotope(a + offset) + _isotope;
-
-  result.set_isotope(a + offset, iso);   // will crash if (a + offset) illegal
+    result.set_isotope(a + offset, iso);
+  }
 
   return 1;
 }
@@ -553,18 +553,22 @@ Reaction_Invert_Isotope::process(Molecule & result,
                                  const Set_of_Atoms & embedding,
                                  int offset)
 {
-  assert (embedding.ok_index(_atom));
 
-  atom_number_t a = embedding[_atom];
+  for (const int matched_atom : _atom) {
+    assert (embedding.ok_index(matched_atom));
 
-  int iso = result.isotope(a + offset);    // current value
+    const atom_number_t a = embedding[matched_atom];
 
-//cerr << "Inverting isotope to " << _isotope << endl;
+    const isotope_t iso = result.isotope(a + offset);    // current value
 
-  if (0 == iso)
-    result.set_isotope(a + offset, _isotope);   // will crash if (a + offset) illegal
-  else
-    result.set_isotope(a + offset, 0);
+  // cerr << "Inverting isotope to " << _isotope << endl;
+
+    if (iso == 0) {
+      result.set_isotope(a + offset, _isotope);   // will crash if (a + offset) illegal
+    } else {
+      result.set_isotope(a + offset, 0);
+    }
+  }
 
   return 1;
 }

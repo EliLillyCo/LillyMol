@@ -4143,9 +4143,8 @@ RXN_File::_create_reaction(IWReaction &rxn,
     }
   }
 
-  if (_orphan_atoms.natoms() >
-      0)  // do not create a query for these, but add it as a reagent
-  {
+  // do not create a query for these, but add it as a reagent
+  if (_orphan_atoms.natoms() > 0) {
     Sidechain_Reaction_Site *r = rxn.sidechain(x - 1);
     r->set_single_reagent(_orphan_atoms);
   }
@@ -4595,26 +4594,24 @@ RXN_File::_create_reaction(IWReaction &rxn,
 
   // How about isotopes
 
-  for (int i = 0; i < isotopes.number_elements(); i++) {
-    const Reaction_Place_Isotope *rpi = isotopes[i];
+  for (const Reaction_Place_Isotope *rpi : isotopes) {
+    for (int matched_atom : rpi->matched_atoms()) {
+      const int r = _reagent_locator[matched_atom];
 
-    int m = rpi->atom();
+      int a = _reagent[r].which_is_mapped_atom(matched_atom);
 
-    int r = _reagent_locator[m];
+      if (r == 0 || !rxnfcro.only_create_query_from_first_reagent()) {
+        a = subset.atom_number_in_subset(a, r);
+      }
 
-    int a = _reagent[r].which_is_mapped_atom(m);
-
-    if (r == 0 || !rxnfcro.only_create_query_from_first_reagent()) {
-      a = subset.atom_number_in_subset(a, r);
-    }
-
-    assert(a >= 0);
-
-    if (0 == r) {
-      rxn.add_isotope_to_be_placed(a, rpi->isotope());
-    } else {
-      Sidechain_Reaction_Site *s = rxn.sidechain(r - 1);
-      s->add_isotope_to_be_placed(a, rpi->isotope());
+      assert(a >= 0);
+  
+      if (0 == r) {
+        rxn.add_isotope_to_be_placed(a, rpi->isotope());
+      } else {
+        Sidechain_Reaction_Site *s = rxn.sidechain(r - 1);
+        s->add_isotope_to_be_placed(a, rpi->isotope());
+      }
     }
   }
 

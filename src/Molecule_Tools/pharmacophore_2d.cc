@@ -537,7 +537,7 @@ Pharacaphore2d(int argc, char** argv) {
 
   cl.value('S', output_stem);
 
-  if (cl.number_elements() == 0) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     Usage(1);
   }

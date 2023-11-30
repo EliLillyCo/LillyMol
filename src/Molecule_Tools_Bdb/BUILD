@@ -12,7 +12,6 @@ local_install(
         ":in_lilly_database_bdb",
         ":iwecfp_database_load",
         ":iwecfp_database_lookup",
-        ":selimsteg_build",
         ":smi2rings_bdb",
         ":substituent_identification",
     ],
@@ -125,19 +124,6 @@ cc_binary(
         "//Molecule_Lib:moleculeio",
         "@berkeleydb",
     ],
-)
-
-cc_binary(
-    name = "selimsteg_build",
-    srcs = [
-        "selimsteg_build.cc",  
-    ],
-    deps = [
-        "//Foundational/cmdline:iwcmdline",
-        "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
-    ]
 )
 
 cc_binary(

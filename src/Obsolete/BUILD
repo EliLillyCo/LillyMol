@@ -488,6 +488,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "selimsteg_build",
+    srcs = [
+        "selimsteg_build.cc",  
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@berkeleydb",
+    ]
+)
+
+cc_binary(
     name = "test_train_split_from_leader",
     srcs = [
         "test_train_split_from_leader.cc",

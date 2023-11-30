@@ -89,13 +89,10 @@ Reaction_Site::determine_which_matched_atoms_are_changed ()
     _matched_atom_changed[j]++;
   }
 
-  for (int i = 0; i < _isotopes_to_assign.number_elements(); i++)
-  {
-    const Reaction_Place_Isotope * e = _isotopes_to_assign[i];
-
-    int j = e->atom();
-
-    _matched_atom_changed[j]++;
+  for (const Reaction_Place_Isotope* iso : _isotopes_to_assign) {
+    for (int atom : iso->matched_atoms()) {
+      _matched_atom_changed[atom]++;
+    }
   }
 
   for (int i = 0; i < _replace_atom.number_elements(); i++)

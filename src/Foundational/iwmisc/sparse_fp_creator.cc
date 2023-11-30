@@ -184,49 +184,6 @@ class Unsigned_Int_Comparitor
 
 static Unsigned_Int_Comparitor uic;
 
-int
-Sparse_Fingerprint_Creator::write_constant_width_fingerprint(unsigned int nb,
-                                 const IWString & tag,
-                                 std::ostream & os) const
-{
-  int * tmp = new_int(nb); std::unique_ptr<int[]> free_tmp(tmp);
-
-  return _write_constant_width_fingerprint(nb, tmp, tag, os);
-}
-
-int
-Sparse_Fingerprint_Creator::_write_constant_width_fingerprint(unsigned int nb,
-                                 int * tmp,
-                                 const IWString & tag,
-                                 std::ostream & os) const
-{
-  for (FPHash::const_iterator i = _fp.begin(); i != _fp.end(); i++)
-  {
-    unsigned int b = (*i).first;
-
-    b = b % nb;
-
-    tmp[b]++;
-  }
-
-  IW_Bits_Base dyfp;
-
-  (void) dyfp.construct_from_array_of_ints(reinterpret_cast<const int *>(tmp), nb);
-
-  if (iw_little_endian())
-  {
-    cerr << "Sparse_Fingerprint_Creator::_write_constant_width_fingerprint: code is broken for Little endian systems, contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
-    abort();
-  }
-
-  IWString dy_ascii;
-  dyfp.daylight_ascii_representation(dy_ascii);
-
-  os << tag << dy_ascii << ">\n";
-
-  return os.good();
-}
-
 inline void
 Sparse_Fingerprint_Creator::_convert_to_unsigned_char(unsigned int b,
                                      unsigned char & count) const

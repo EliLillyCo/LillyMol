@@ -952,6 +952,40 @@ cip_stereo {
 )pb",
     "ClC(F)",
     "I[C@@H](Cl)F"
+  },
+
+  // Test placing multiple isotopes
+  RxnSmilesResult{
+    R"pb(
+scaffold {
+  id: 0
+  smarts: "CC"
+  isotope {
+    atom: [0, 1]
+    isotope: 3
+  }
+}
+)pb",
+    "CC",
+    "[3CH3][3CH3]"
+  },
+
+  // Test incrementing multiple isotopes.
+  // There are two matches to the query so the
+  // net result is decrement by 2.
+  RxnSmilesResult{
+    R"pb(
+scaffold {
+  id: 0
+  smarts: "CC"
+  change_isotope {
+    atom: [0, 1]
+    delta: -1
+  }
+}
+)pb",
+    "[3CH3][2CH3]",
+    "[1CH3]C"
   }
 ));
 

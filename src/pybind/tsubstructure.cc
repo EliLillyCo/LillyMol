@@ -39,6 +39,8 @@ TSubstructure::ReadQueries(std::string& directive) {
 
   ApplyQueryConstraints();
 
+  query_matched.resize(query.size(), 0);
+
   return true;
 }
 
@@ -71,6 +73,23 @@ TSubstructure::AddQueryFromSmarts(const std::string& smarts) {
 
   query.push_back(q.release());
 
+  query_matched.resize(query.size(), 0);
+
+  // Only the last query read needs to be set.
+  ApplyQueryConstraints();
+
+  return true;
+}
+
+bool
+TSubstructure::AddQueriesFromSmarts(const std::vector<std::string>& smarts) {
+  for (const std::string& smt : smarts) {
+    if (! AddQueryFromSmarts(smt)) {
+      cerr << "TSubstructure::AddQueriesFromSmarts:invalid smarts '" << smt << "'\n";
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -93,7 +112,7 @@ TSubstructure::SubstructureSearch(Molecule& m) {
   Molecule_to_Match target(&m);
 
   if (query.empty()) {
-    cerr << "No query has been loaded'\n'";
+    cerr << "No query has been loaded\n";
     return false;
   }
 
@@ -106,10 +125,13 @@ TSubstructure::SubstructureSearch(Molecule& m) {
 
 bool
 TSubstructure::SubstructureSearchAnyMatch(Molecule& m) {
+  Preprocess(m);
+
   Molecule_to_Match target(&m);
 
-  for (Substructure_Query* q : query) {
-    if (q->substructure_search(target)) {
+  for (uint32_t i = 0; i < query.size(); ++i) {
+    if (query[i]->substructure_search(target)) {
+      ++query_matched[i];
       return true;
     }
   }
@@ -118,13 +140,17 @@ TSubstructure::SubstructureSearchAnyMatch(Molecule& m) {
 
 bool
 TSubstructure::SubstructureSearchAllMatch(Molecule& m) {
+  Preprocess(m);
   Molecule_to_Match target(&m);
 
-  for (Substructure_Query* q : query) {
-    if (! q->substructure_search(target)) {
+  for (uint32_t i = 0; i < query.size(); ++i) {
+    if (query[i]->substructure_search(target)) {
+      ++query_matched[i];
+    } else {
       return false;
     }
   }
+
   return true;
 }
 
@@ -155,10 +181,15 @@ TSubstructure::NumofMatches(Molecule& m) {
 
   Molecule_to_Match target(&m);
   std::vector<int> res;
-  res.reserve(query.size());
-  for (Substructure_Query* q : query) {
-    int nhits = q->substructure_search(target);
+
+  const uint32_t nq = query.size();
+  res.reserve(nq);
+  for (uint32_t i = 0; i < nq; ++i) {
+    int nhits = query[i]->substructure_search(target);
     res.push_back(nhits);
+    if (nhits) {
+      ++query_matched[i];
+    }
   }
 
   return res;
@@ -177,21 +208,25 @@ TSubstructure::LabelMatchedAtoms(const std::string& smi) {
     return std::string("");
   }
 
-  return LabelMatchedAtoms(m);
+  LabelMatchedAtoms(m);
+
+  return m.smiles().AsString();
 }
 
-std::string
+int
 TSubstructure::LabelMatchedAtoms(Molecule& m) {
   Preprocess(m);
 
   int got_result = 0;
 
   Molecule_to_Match target(&m);
-  for (Substructure_Query* q : query) {
+  for (uint32_t i = 0; i < query.size(); ++i) {
     Substructure_Results sresults;
-    if (q->substructure_search(target, sresults) == 0) {
+    if (query[i]->substructure_search(target, sresults) == 0) {
       continue;
     }
+
+    ++query_matched[i];
 
     ++got_result;
 
@@ -199,16 +234,16 @@ TSubstructure::LabelMatchedAtoms(Molecule& m) {
     // in the embedding and set the isotope.
     for (const Set_of_Atoms* e : sresults.embeddings()) {
       for (atom_number_t a : *e) {
-        m.set_isotope(a, isotope);
+        if (label_by_query_number) {
+          m.set_isotope(a, i + 1);
+        } else {
+          m.set_isotope(a, isotope);
+        }
       }
     }
   }
 
-  if (got_result == 0) {
-    return std::string("");
-  }
-
-  return m.smiles().AsString();
+  return got_result;
 }
 
 std::vector<std::vector<uint32_t>>
@@ -237,6 +272,8 @@ TSubstructure::MatchedAtoms(Molecule& m) {
       continue;
     }
 
+    ++query_matched[i];
+
     // Loop through all the embeddings, and through each atom
     // in the embedding and set the isotope.
     for (const Set_of_Atoms* e : sresults.embeddings()) {
@@ -248,5 +285,56 @@ TSubstructure::MatchedAtoms(Molecule& m) {
 
   return result;
 }
+
+std::vector<std::vector<uint32_t>>
+TSubstructure::NumberMatches(const std::vector<std::string>& smiles) {
+  const uint32_t nmols = smiles.size();
+  std::vector<Molecule> mols(nmols);
+  for (uint32_t i = 0; i < nmols; ++i) {
+    if (! mols[i].build_from_smiles(smiles[i])) {
+      cerr << "TSubstructure::NumberMatches:invalid smiles '" << smiles[i] << "'\n";
+      mols[i].resize(0);
+    }
+  }
+
+  return NumberMatches(mols);
+}
+
+std::vector<std::vector<uint32_t>>
+TSubstructure::NumberMatches(std::vector<Molecule>& mols) {
+  const uint32_t nmols = mols.size();
+
+  std::vector<std::vector<uint32_t>> result(nmols);
+
+  const int nq = query.size();
+
+  for (uint32_t i = 0; i < nmols; ++i) {
+    Preprocess(mols[i]);
+
+    Molecule_to_Match target(&(mols[i]));
+
+    result[i].reserve(nq);
+    for (int j = 0; j < nq; ++j) {
+      const int nhits = query[j]->substructure_search(target);
+      result[i].push_back(nhits);
+      if (nhits) {
+        ++query_matched[j];
+      }
+    }
+  }
+
+  return result;
+}
+
+std::vector<std::string>
+TSubstructure::query_names() const {
+  std::vector<std::string> result(query.size());
+  for (const Substructure_Query* q : query) {
+    result.push_back(q->comment().AsString());
+  }
+
+  return result;
+}
+
 
 }  // namespace pybind_substructure
