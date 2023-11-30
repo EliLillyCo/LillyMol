@@ -2,9 +2,7 @@
 #include <iostream>
 #include <memory>
 
-/*
-  Tester for reaction objects
-*/
+// Performs reactions based on a reaction file.
 
 #include "re2/re2.h"
 
@@ -74,6 +72,16 @@ static int need_to_check_product_fragment_sizes = 0;
 static int min_allowed_fragment_size_in_product = 0;
 static int max_allowed_fragment_size_in_product = std::numeric_limits<int>::max();
 static int products_discarded_for_violating_fragment_specifications = 0;
+
+// Nov 2023.
+// A common operation is to fragment a molecule, and the next step will
+// involve splitting the molecule into components.
+// Note that each fragment must satisfy min_allowed_fragment_size_in_product and
+// max_allowed_fragment_size_in_product.
+static int write_multi_fragment_products_as_separate_molecules = 0;
+
+// Suppress the 'hits in scaffold' message.
+static int display_multiple_scaffold_hits_message = 1;
 
 /*
   There are subtle differences between these two directives.
@@ -439,6 +447,17 @@ OkFragmentsInProduct(Molecule& m) {
   return 1;
 }
 
+// Remove from `fragments` all molecules that fail
+// min_allowed_fragment_size_in_product or
+// max_allowed_fragment_size_in_product.
+static int
+RemoveSizeNotOk(resizable_array_p<Molecule>& fragments) {
+  return fragments.remove_items_fn([](const Molecule* m) {
+    return m->natoms() > max_allowed_fragment_size_in_product ||
+           m->natoms() < min_allowed_fragment_size_in_product;
+  });
+}
+
 static int
 do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
          Molecule_Output_Object& output) {
@@ -458,7 +477,12 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
     product.remove_all(1);
   }
 
-  if (max_atoms_in_product > 0 && product.natoms() > max_atoms_in_product) {
+  if (max_atoms_in_product == 0) {
+    // no checking
+  }
+  else if (write_multi_fragment_products_as_separate_molecules) {
+    // will be checked later on a per fragment basis.
+  } else if (product.natoms() > max_atoms_in_product) {
     products_discarded_for_too_many_atoms++;
 
     if (verbose > 1) {
@@ -535,6 +559,18 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
   }
 
   ++products_written;
+
+  if (write_multi_fragment_products_as_separate_molecules &&
+      product.number_fragments() > 1) {
+    resizable_array_p<Molecule> fragments;
+    product.create_components(fragments);
+    RemoveSizeNotOk(fragments);
+    for (Molecule* frag : fragments) {
+      frag->set_name(product.name());
+      output.write(*frag);
+    }
+    return 1;
+  }
 
   return output.write(product);
 }
@@ -854,29 +890,22 @@ static int
 trxn(Molecule& m, IWReaction& reaction, Molecule_Output_Object& output) {
   Substructure_Results sresults;
 
-  int nhits = reaction.determine_matched_atoms(m, sresults);
+  const int nhits = reaction.determine_matched_atoms(m, sresults);
 
   hit_statistics[nhits]++;
-
-  if (verbose > 1 || nhits > 1) {
-    cerr << molecules_processed << " '" << m.name() << "' " << nhits
-         << " hits in scaffold\n";
-    if (0 == nhits) {
-      cerr << "only matched " << sresults.max_query_atoms_matched_in_search()
-           << " query atoms\n";
-    }
-  }
 
   const Scaffold_Match_Conditions& smc = reaction.scaffold_match_conditions();
 
   if (nhits == 0) {
     if (0 == verbose && 0 == smc.ignore_not_reacting()) {
-      cerr << molecules_processed << " '" << m.name() << "' "
-           << " 0 hits in scaffold, only matched "
+      cerr << molecules_processed << " '" << m.name() << "' only matched "
            << sresults.max_query_atoms_matched_in_search() << " query atoms\n";
     }
 
     return handle_scaffolds_not_reacting(m, smc, output);
+  } else if (verbose > 1 || (nhits > 1 && display_multiple_scaffold_hits_message)) {
+    cerr << molecules_processed << " '" << m.name() << "' " << nhits
+         << " hits in scaffold\n";
   }
 
   if (nhits > smc.suppress_if_more_than_this_many_substructure_search_hits()) {
@@ -1397,6 +1426,8 @@ display_dash_j_qualifiers(std::ostream& os) {
  -J coords      include coordinates with smiles output
  -J minpfs=<n>  discard products with a fragment with < minpfs atoms
  -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms
+ -J mfpseparate write multi fragment products as separate molecules
+ -J nomshmsg    do NOT write 'hits in scaffold' messages for multiple scaffold query hits
 )";
   // clang-format on
 
@@ -1730,6 +1761,16 @@ trxn(int argc, char** argv) {
           cerr << "Will discard molecules where any fragment has more than " << max_allowed_fragment_size_in_product << " atoms\n";
         }
         need_to_check_product_fragment_sizes = 1;
+      } else if (j == "mfpseparate") {
+        write_multi_fragment_products_as_separate_molecules = 1;
+        if (verbose) {
+          cerr << "Will write multi fragment products as separate molecules\n";
+        }
+      } else if (j == "nomshmsg") {
+        display_multiple_scaffold_hits_message = 0;
+        if (verbose) {
+          cerr << "Will NOT write messagea about multiple scaffold query hits\n";
+        }
       } else {
         cerr << "Unrecognised -J qualifier '" << j << "'\n";
         display_dash_j_qualifiers(cerr);

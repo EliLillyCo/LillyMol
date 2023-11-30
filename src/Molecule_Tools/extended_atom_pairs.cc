@@ -80,6 +80,10 @@ std::unordered_map<atype_t, unsigned int> pairs_to_find;
 
 int write_descriptors = 0;
 
+// A descriptor file where the bits are hashed to a fixed width, does not need
+// another other information.
+static uint32_t descriptor_file_output = 0;
+
 IWString descriptor_prefix("MAP");
 
 /*
@@ -823,6 +827,24 @@ ExtendedAtomPairs_default(Molecule& m, const IWString& tag, atype_t* atype,
   return 1;
 }
 
+// Write the contents of `sfc` as `ncols` descriptors to `output`.
+static int
+WriteDescriptors(const Molecule& m,
+                 uint32_t ncols,
+                 const Sparse_Fingerprint_Creator& sfc,
+                 IWString_and_File_Descriptor & output) {
+  // assume that `ncols` does not change from one invocation to the next.
+  static std::unique_ptr<int[]> count = std::make_unique<int[]>(ncols);
+
+  std::fill_n(count.get(), ncols, 0);
+
+  output << m.name();
+  sfc.WriteAsDescriptors(ncols, count.get(), output);
+  output << '\n';
+
+  return 1;
+}
+
 // Given a set of queries, set entries in `include_these_atoms` according
 // to which atoms are matched by the queries.
 int
@@ -953,6 +975,8 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
   // << function_as_filter << '\n';
   if (write_descriptors) {
     ;
+  } else if (descriptor_file_output) {
+    ;
   } else if (function_as_filter) {
     ;
   } else {
@@ -1003,6 +1027,11 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
     return do_write_descriptors(fp, pairs_to_find, output);
   }
 
+  if (descriptor_file_output) {
+    // Not sure this is relevant here.
+    return 1;
+  }
+
   if (stream_with_all_pairs.is_open()) {
     stream_with_all_pairs << "|\n";
     stream_with_all_pairs.write_if_buffer_holds_more_than(32768);
@@ -1051,6 +1080,10 @@ ExtendedAtomPairs(Molecule& m, const IWString& tag, const atype_t* atype,
     return do_write_descriptors(fp, pairs_to_find, output);
   }
 
+  if (descriptor_file_output) {
+    return WriteDescriptors(m, descriptor_file_output, fp, output);
+  }
+
   if (stream_with_all_pairs.is_open()) {
     stream_with_all_pairs << "|\n";
     stream_with_all_pairs.write_if_buffer_holds_more_than(32768);
@@ -1080,7 +1113,8 @@ ExtendedAtomPairs(Molecule& m, IWString_and_File_Descriptor& output) {
   // cerr << "Processing " << m.smiles() << '\n';
   if (write_descriptors) {
     append_first_token_of_name(m.name(), output);
-  } else if (function_as_filter) {
+  } else if (descriptor_file_output) {
+  }else if (function_as_filter) {
   } else if (explain_bits) {
   } else if (only_process_queries.number_elements() > 0) {
   } else {
@@ -1127,6 +1161,8 @@ ExtendedAtomPairs(Molecule& m, IWString_and_File_Descriptor& output) {
   }
 
   if (write_descriptors) {
+    ;
+  } else if (descriptor_file_output) {
     ;
   } else if (function_as_filter) {
     ;
@@ -1448,15 +1484,28 @@ read_fuzziness_specifications_from_file(const const_IWSubstring& fname) {
   return read_fuzziness_specifications_from_file(input);
 }
 
+int
+WriteDescriptorFileHeader(uint32_t ncols, IWString_and_File_Descriptor& output) {
+  output << "Id";
+  for (uint32_t i = 0; i < ncols; ++i) {
+    output << " AP" << i;
+  }
+
+  output << '\n';
+  return 1;
+}
+
 void
 DisplayDashGOptins(std::ostream& output) {
-  output << " -G samedist     distances within range are identical\n";
-  output << " -G help         this message\n";
+  output << " -G samedist       distances within range are identical\n";
+  output << " -G desc=<ncols>   generate a descriptor file outpu with <ncols> columns\n";
+  output << " -G flush          flush output after each molecule\n";
+  output << " -G help           this message\n";
 }
 
 int
 ExtendedAtomPairs(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:lg:T:c:C:kJ:fP:O:dL:i:B:F:b:xm:e:2s:q:yuD:X:G:");
+  Command_Line cl(argc, argv, "vA:E:lg:T:c:C:kJ:fP:O:dL:i:B:F:b:xm:e:2s:q:yuDX:G:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -1525,7 +1574,7 @@ ExtendedAtomPairs(int argc, char** argv) {
       usage(1);
     }
 
-    include_distances_beyond_max = 5000;  // just an arbitrary number
+    include_distances_beyond_max = 1;
 
     if (verbose) {
       cerr << "Pairs beyond " << max_distance
@@ -1610,13 +1659,29 @@ ExtendedAtomPairs(int argc, char** argv) {
     }
   }
 
+  cerr << "How abt G " << cl.option_present('G') << '\n';
   if (cl.option_present('G')) {
     const_IWSubstring g;
-    for (int i = 0; cl.value('g', g, i); ++i) {
+    for (int i = 0; cl.value('G', g, i); ++i) {
+      cerr << "Examing '" << g << "'\n";
       if (g == "samedist") {
         all_distances_identical = 1;
         if (verbose) {
           cerr << "Add distances set to max\n";
+        }
+      } else if (g.starts_with("desc=")) {
+        if (cl.option_present('f')) {
+          cerr << "Cannot write descriptors when working as a filter\n";
+          return 8;
+        }
+
+        g.remove_leading_chars(5);
+        if (! g.numeric_value(descriptor_file_output) || descriptor_file_output < 2) {
+          cerr << "Descriptor file output ncols must be > 1\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will produce a descriptor file with " << descriptor_file_output << " columns\n";
         }
       } else if (g == "flush") {
         flush_after_each_molecule = 1;
@@ -1625,6 +1690,7 @@ ExtendedAtomPairs(int argc, char** argv) {
         }
       } else if (g == "help") {
         DisplayDashGOptins(cerr);
+        return 1;
       } else {
         cerr << "Unrecognised -G qualifier '" << g << "'\n";
         return 1;
@@ -1918,6 +1984,10 @@ ExtendedAtomPairs(int argc, char** argv) {
   }
 
   IWString_and_File_Descriptor output(1);
+
+  if (descriptor_file_output) {
+    WriteDescriptorFileHeader(descriptor_file_output, output);
+  }
 
   int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++) {

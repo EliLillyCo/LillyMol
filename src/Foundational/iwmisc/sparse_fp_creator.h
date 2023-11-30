@@ -2,9 +2,11 @@
 #define SPARSE_FP_CREATOR_H
 
 #include <algorithm>
+#include <memory>
 #include <ostream>
 
 #include "Foundational/iwstring/iw_stl_hash_map.h"
+#include "Foundational/iwbits/iwbits.h"
 
 #include "timsort.hpp"
 
@@ -26,7 +28,9 @@ class Sparse_Fingerprint_Creator
 
 //  private functions
 
-    int _write_constant_width_fingerprint (unsigned int, int *, const IWString &, std::ostream &) const;
+    template <typename O>
+    int _write_constant_width_fingerprint(unsigned int, int *, const IWString &, O& output) const;
+
     inline void _convert_to_unsigned_char (unsigned int b, unsigned char & count) const;
 
     int _daylight_ascii_form_with_counts_encoded (const unsigned int * s,
@@ -55,8 +59,6 @@ class Sparse_Fingerprint_Creator
 
     int write_fingerprint (const IWString &, std::ostream &) const;
     int write_fingerprint (const IWString &, IWString_and_File_Descriptor &) const;
-    int write_as_descriptors (int, std::ostream &) const;
-    int write_constant_width_fingerprint (unsigned int, const IWString &, std::ostream &) const;
     int daylight_ascii_form_with_counts_encoded (IWString & dyascii) const;
     int daylight_ascii_form_with_counts_encoded (const const_IWSubstring & tag, IWString & dyascii) const;    // first argument is the TDT tag
     int append_daylight_ascii_form_with_counts_encoded (const const_IWSubstring & tag, IWString & dyascii) const;    // first argument is the TDT tag
@@ -65,8 +67,23 @@ class Sparse_Fingerprint_Creator
     // Return a Daylight encoded string of a dense vector of the bits hashed to `nbits`.
     IWString FixedWidthFingerprint(int nbits) const;
 
+    // Write a fixed width binary fingerprint with `nbits` bits to `output`.
+    template <typename O>
+    int write_constant_width_fingerprint(uint32_t nbits, const IWString & tag, O&  output) const;
+
     // A Daylight encoded string of the sorted bit numbers.
     IWString BitsWithoutCounts() const;
+
+    // Write as `ncols` space separated values to `output`.
+    template <typename O>
+    int WriteAsDescriptors(int ncols, O & output) const;
+
+    // Write as `ncols` space separated values to `output`.
+    // The method needs an array to work, and it can be provided.
+    // Note that it is NOT initialised, so if `count` already contains
+    // that will be incremented and written.
+    template <typename O>
+    int WriteAsDescriptors(int ncols, int* count, O& output) const;
 
     template <typename O> int write_as_feature_count(const char sep, O &) const;
     template <typename O> int write_as_md5_sum(O & output) const;
@@ -94,7 +111,7 @@ extern int form_sparse_fingerprint (int ndx, unsigned int * tmp, IWString & dyas
 template <typename C, typename O> int unordered_map_to_md5(const std::unordered_map<unsigned int, C> &, O & output);
 
 
-#ifdef IW_IMPLEMENTATIONS_EXPOSED
+#if defined(SPARSE_FP_CREATOR_IMPLEMENTATION) || defined(IW_IMPLEMENTATIONS_EXPOSED)
 
 #include <memory>
 
@@ -185,6 +202,68 @@ unordered_map_to_md5(const std::unordered_map<unsigned int, C> & h, O & output)
   }
 
   return 1;
+}
+
+template <typename O>
+int
+Sparse_Fingerprint_Creator::WriteAsDescriptors(int ncols, O & output) const {
+  std::unique_ptr<int[]> count = std::make_unique<int[]>(ncols);
+  std::fill_n(count.get(), ncols, 0);
+  return WriteAsDescriptors(ncols, count.get(), output);
+}
+
+template <typename O>
+int
+Sparse_Fingerprint_Creator::WriteAsDescriptors(int ncols, int* count, O & output) const {
+  for (auto& [b, c] : _fp) {
+    int col = b % ncols;
+    count[col] += c;
+  }
+
+  for (int i = 0; i < ncols; ++i) {
+    output << ' ' << count[i];
+  }
+
+  return 1;
+}
+
+template <typename O>
+int
+Sparse_Fingerprint_Creator::write_constant_width_fingerprint(unsigned int nb,
+                                 const IWString & tag,
+                                 O& output) const
+{
+  std::unique_ptr<int[]> tmp = std::make_unique<int[]>(nb);
+  std::fill_n(tmp.get(), nb, 0);
+
+  return _write_constant_width_fingerprint(nb, tmp.get(), tag, output);
+}
+
+template <typename O>
+int
+Sparse_Fingerprint_Creator::_write_constant_width_fingerprint(unsigned int nb,
+                                 int * tmp,
+                                 const IWString & tag,
+                                 O& output) const
+{
+  for (FPHash::const_iterator i = _fp.begin(); i != _fp.end(); i++) {
+    unsigned int b = (*i).first;
+
+    b = b % nb;
+
+    tmp[b]++;
+  }
+
+  IW_Bits_Base dyfp;
+
+  (void) dyfp.construct_from_array_of_ints(reinterpret_cast<const int *>(tmp), nb);
+
+  IWString dy_ascii;
+  dyfp.daylight_ascii_representation_including_nset_info(dy_ascii);
+
+  output << tag << dy_ascii << ">\n";
+
+  return output.good();
 }
 
 #endif

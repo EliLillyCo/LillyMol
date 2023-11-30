@@ -322,7 +322,6 @@ SP_Database::do_lookup(Dbt& zkey, const DBKey& dbkey, int& radius, int& count,
   } else {
     _db->err(dbrc, "Unspecified database error, see Ian");
     return 0;
-    ;
   }
 
   _bits_found++;
@@ -354,10 +353,8 @@ SP_Database::do_lookup(Dbt& zkey, const DBKey& dbkey, int& radius, int& count,
     //  cerr << "Example is '" << example << "'\n";
   }
 
-  if (_hash_size <
-      static_cast<int>(
-          max_hash_size))  // slightly dangerous access to unguarded variable _hash_size
-  {
+  // slightly dangerous access to unguarded variable _hash_size
+  if (_hash_size < static_cast<int>(max_hash_size)) {
     DBKey* dbkey = reinterpret_cast<DBKey*>(zkey.get_data());
     Count_Radius cr;
     cr._count = count;

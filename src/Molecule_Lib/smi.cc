@@ -123,6 +123,17 @@ display_smiles_interpretation_error_messages()
   return file_scope_display_smiles_interpretation_error_messages;
 }
 
+namespace smiles {
+// The separator between smiles and id.
+static char output_separator = ' ';
+
+void
+set_smiles_output_separator(char c) {
+  output_separator = c;
+}
+
+}  // namespace smiles
+
 static int
 check_for_append (const const_IWSubstring & buffer,    // as read in
                   IWString & add_to_name)              // what will finally be appended
@@ -158,7 +169,7 @@ Molecule::write_molecule_usmi (std::ostream & os, const IWString & comment)
   os << unique_smiles();
 
   if (comment.length())
-    os << " " << comment;
+    os << smiles::output_separator << comment;
   
   os << newline_string();
 
@@ -177,7 +188,7 @@ Molecule::write_molecule_nausmi (std::ostream & os, const IWString & comment)
   os << non_aromatic_unique_smiles();
 
   if (comment.length())
-    os << " " << comment;
+    os << smiles::output_separator << comment;
   
   os << newline_string();
 
@@ -196,7 +207,7 @@ Molecule::write_molecule_smi (std::ostream & os, const IWString & comment)
   os << smiles();
 
   if (comment.length())
-    os << ' ' << comment;
+    os << smiles::output_separator << comment;
   
   os << newline_string();
 
@@ -215,7 +226,7 @@ Molecule::write_molecule_rsmi (std::ostream & os, const IWString & comment)
   os << random_smiles();
 
   if (comment.length())
-    os << " " << comment;
+    os << smiles::output_separator << comment;
   
   os << newline_string();
 

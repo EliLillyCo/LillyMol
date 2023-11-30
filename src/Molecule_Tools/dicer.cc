@@ -7277,7 +7277,6 @@ dicer(data_source_and_type<Molecule> & input,
     output.MaybeFlush();
   }
 
-  cerr << "main dicer loop complete, return ing 1\n";
   return 1;
 }
 

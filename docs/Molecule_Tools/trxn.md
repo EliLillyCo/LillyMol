@@ -531,26 +531,29 @@ default is usually adequate.
 # Miscelaneous Options.
 The `-J` option hides several special optional forms.
 ```
-  -J wrscaf      write scaffolds  to the output stream
-  -J wrsdch      write sidechains to the output stream
-  -J blki        bonds lose Kekule identity
-  -J appinfo     append text info from reagents to products
-  -J onlyreact=RX only react molecules where the name matches RX
-  -J maxat=nn    discard any product molecule having more than <nn> atoms
-  -J rmncm       ignore multiple substructure matches involving non changing atoms
-  -J rmovm       ignore multiple substructure matches involving     changing atoms
-  -J exph        make implicit Hydrogen atoms explicit (changes reaction)
-  -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed)
-  -J rmph        remove hydrogen atoms from product molecules
-  -J rcksm       when multiple scaffold hits present, re-check matches for activity
-  -J numok       keep non-unique embeddings - default is unique embeddings only
-  -J isonum      isotopically label atoms with their initial atom number
-  -J msm=<s>     text designating multiple scaffold matches, use NONE to skip
-  -J marvin      the input reaction file (-D) has come from Marvin
-  -J keepatmn    retain any atom map numbers in output molecules
-  -J larf        in smirks, if an atom is lost, remove the fragment
-  -J rmhsqb      remove unnecessary [] in product molecules
-  -J rmxhbv      remove explicit hydrogens causing bad valences
+ -J wrscaf      write scaffolds  to the output stream
+ -J wrsdch      write sidechains to the output stream
+ -J blki        bonds lose Kekule identity
+ -J appinfo     append text info from reagents to products
+ -J onlyreact=RX only react molecules where the name matches RX
+ -J maxat=nn    discard any product molecule having more than <nn> atoms
+ -J rmncm       ignore multiple substructure matches involving non changing atoms
+ -J rmovm       ignore multiple substructure matches involving     changing atoms
+ -J exph        make implicit Hydrogen atoms explicit (changes reaction)
+ -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed)
+ -J rmph        remove hydrogen atoms from product molecules
+ -J rcksm       when multiple scaffold hits present, re-check matches for activity
+ -J numok       keep non-unique embeddings - default is unique embeddings only
+ -J isonum      isotopically label atoms with their initial atom number
+ -J msm=<s>     text designating multiple scaffold matches, use NONE to skip
+ -J marvin      the input reaction file (-D) has come from Marvin
+ -J keepatmn    retain any atom map numbers in output molecules
+ -J larf        in smirks, if an atom is lost, remove the fragment
+ -J rmhsqb      remove unnecessary [] in product molecules
+ -J rmxhbv      remove explicit hydrogens causing bad valences
+ -J minpfs=<n>  discard products with a fragment with < minpfs atoms
+ -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms
+ -J mfpseparate write multi fragment products as separate molecules
 ```
 
 ## -J wrscaf
@@ -634,6 +637,29 @@ Remove unnecessary [] in product molecules.
 
 ## -J rmxhbv
 Remove explicit hydrogens causing bad valences.
+
+## -J minpfs, maxpfs
+These are used to discard products where any fragment violates these atom
+count constraints. This is most commonly used when using `trxn` to identify
+substituents and fragments. The same effect could be accomplished
+via post-processing with `fileconv` but this will be more straightforward.
+
+## -J mfpseparate
+If the product molecule contains multiple fragments, write them as
+separate molecules. Note that each fragment must pass any constraints
+specified by `minpfs` and/or `maxpfs`. The same effect could be 
+accomplished with `mkfrag` to convert these multi-fragment molecules
+to fragments, but that is much less efficient.
+
+For example, running a simple bond breaking reaction across 2.2M molecules
+took 6 minutes. Then using mkfrag to convert these to separate molecules
+took an extra 6 minutes. By using the `-J mfpseparate` option on `trxn`
+the total run time was 8 minutes.
+
+## -J nomshmsg
+Do NOT write 'hits in scaffold' messages for multiple scaffold query hits.
+In large enumerations where this is expected, the messages are uninformative
+and slow down processing.
 
 ## 3D
 While the primary purpose of `trxn` is manipulating connection

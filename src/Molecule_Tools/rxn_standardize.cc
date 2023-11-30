@@ -277,6 +277,27 @@ echo_bad_data(iwstring_data_source& input, const off_t initial_offset,
   return input.tellg() == current_offset;
 }
 
+// If a reaction comes from an ISIS reaction file, separate reagents and products
+// will be in the reaction. But if we are reading reaction smiles,
+// then multiple products may appear as dot disconnected forms.
+static int
+ContainsMultipleProducts(RXN_File& rxn) {
+  if (rxn.number_products() > 1) {
+    return 1;
+  }
+
+  if (rxn.number_products() == 0) {
+    return 0;
+  }
+
+  Molecule& product = rxn.product(0);
+  if (product.number_fragments() > 1) {
+    return 1;
+  }
+
+  return 0;
+}
+
 static int
 rxn_standardize(RXN_File& rxn, iwstring_data_source& input, const off_t initial_offset,
                 IWString_and_File_Descriptor& output) {
@@ -583,7 +604,7 @@ rxn_standardize(RXN_File& rxn, iwstring_data_source& input, const off_t initial_
     return 1;
   }
 
-  if (skip_reactions_with_multiple_products && rxn.number_products() > 1) {
+  if (skip_reactions_with_multiple_products && ContainsMultipleProducts(rxn)) {
     reactions_with_multiple_products_skipped++;
 
     if (stream_for_discarded_reactions.is_open()) {

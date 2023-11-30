@@ -368,7 +368,7 @@ Molecule::_read_mdl_data_following_tag(T& input,
       _text_info.add(new IWString(buffer));
     }
 
-    constexpr char kNewLine = 13;  // Ascii encoding.
+    static constexpr char kNewLine = 13;  // Ascii encoding.
 
     if (buffer.empty() || (buffer.length() == 1 && buffer[0] == kNewLine)) {
       if (mdlfos.sdf_tags_to_json()) {
@@ -425,6 +425,15 @@ Molecule::_read_molecule_mdl_trailing_records(
   int extreg_found = 0;
   int got_dollar = 0;
   int tags_encountered = 0;
+
+  int json_open_brace_written = 0;
+
+  if (mdlfos.name_to_json() && ! _molecule_name.empty()) {
+    IWString tmp;
+    tmp << "{ \"name\": " << _molecule_name << '"';
+    _molecule_name = tmp;
+    json_open_brace_written = 1;
+  }
 
   while (input.next_record(buffer)) {
     trailing_lines++;
@@ -598,10 +607,14 @@ Molecule::_read_molecule_mdl_trailing_records(
       ++tags_encountered;
 
       if (mdlfos.sdf_tags_to_json()) {
-        if (tags_encountered == 1) {
-          _molecule_name << "{ ";
+        if (! json_open_brace_written) {
+          _molecule_name.append_with_spacer("{");
+          json_open_brace_written = 1;
         }
-        _molecule_name << '"' << id << "\":";
+        if (_molecule_name.ends_with('"')) {
+          _molecule_name << ',';
+        }
+        _molecule_name << " \"" << id << "\":";
       } else if (mdlfos.replace_first_sdf_tag().length() > 0) {
         _molecule_name.append_with_spacer(mdlfos.replace_first_sdf_tag(),
                                           mdlfos.insert_between_sdf_name_tokens());
@@ -662,7 +675,7 @@ Molecule::_read_molecule_mdl_trailing_records(
     _set_elements_based_on_atom_aliases(mdlfos.atom_aliases());
   }
 
-  if (mdlfos.sdf_tags_to_json()) {
+  if (json_open_brace_written) {
     _molecule_name << " }";
   }
 

@@ -267,12 +267,15 @@ Reaction_Change_Formal_Charge::ConstructFromProto(const ReactionProto::ChangeFor
 int
 Reaction_Place_Isotope::ConstructFromProto(const ReactionProto::PlaceIsotope& proto)
 {
-  if (! proto.has_atom())
+  if (proto.atom_size() == 0)
     return WriteError("Reaction_Place_Isotope::ConstructFromProto:no atom", proto);
   if (! proto.has_isotope())
     return WriteError("Reaction_Place_Isotope::ConstructFromProto:no isotope", proto);
 
-  _atom = proto.atom();
+  for (int a : proto.atom()) {
+    _atom << a;
+  }
+
   _isotope = proto.isotope();
 
   return 1;
@@ -281,12 +284,15 @@ Reaction_Place_Isotope::ConstructFromProto(const ReactionProto::PlaceIsotope& pr
 int
 Reaction_Increment_Isotope::ConstructFromProto(const ReactionProto::IncrementIsotope& proto)
 {
-  if (! proto.has_atom())
+  if (proto.atom().empty())
     return WriteError("Reaction_Increment_Isotope::ConstructFromProto:no atom", proto);
   if (! proto.has_delta())
     return WriteError("Reaction_Increment_Isotope::ConstructFromProto:no delta", proto);
 
-  _atom = proto.atom();
+  for (int m : proto.atom()) {
+    _atom << m;
+  }
+
   _isotope = proto.delta();
 
   return 1;
@@ -295,12 +301,15 @@ Reaction_Increment_Isotope::ConstructFromProto(const ReactionProto::IncrementIso
 int
 Reaction_Invert_Isotope::ConstructFromProto(const ReactionProto::PlaceIsotope& proto)
 {
-  if (! proto.has_atom())
+  if (proto.atom().empty())
     return WriteError("Reaction_Invert_Isotope::ConstructFromProto:no atom", proto);
   if (! proto.has_isotope())
     return WriteError("Reaction_Invert_Isotope::ConstructFromProto:no isotope", proto);
 
-  _atom = proto.atom();
+  for (int m : proto.atom()) {
+    _atom << m;
+  }
+
   _isotope = proto.isotope();
 
   return 1;

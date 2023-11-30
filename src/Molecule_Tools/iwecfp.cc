@@ -15,6 +15,7 @@
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/iwdigits.h"
+#define SPARSE_FP_CREATOR_IMPLEMENTATION
 #include "Foundational/iwmisc/sparse_fp_creator.h"
 
 #include "Molecule_Lib/aromatic.h"
@@ -95,6 +96,10 @@ static int flush_after_each_molecule = 0;
 
 typedef unsigned int atype_t;
 
+// Options for generating fixed width outputs.
+static uint32_t descriptor_file_output = 0;
+static uint32_t fixed_width_fingerprint = 0;
+
 static void
 usage(int rc)
 {
@@ -105,6 +110,7 @@ usage(int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "  -r <len>       min shell width for writing a fingerprint\n";
   cerr << "  -R <length>    set the maximum step for the connected shell\n";
   cerr << "  -m             multiplicative formation of bits\n";
@@ -129,6 +135,7 @@ usage(int rc)
   //  (void) display_standard_sparse_fingerprint_options (cerr, 'F');
   //cerr << "  -E ...         standard element options\n";
   cerr << "  -v             verbose output\n";
+// clang-format on
   
   exit(rc);
 }
@@ -505,6 +512,37 @@ update_global_sparse_fingerprint(const Sparse_Fingerprint_Creator * sfc)
 }
 
 static int
+WriteFixedWidthFingerprint(Molecule& m,
+                        uint32_t nbits,
+                        const Sparse_Fingerprint_Creator& sfc,
+                        IWString_and_File_Descriptor& output) {
+  output << smiles_tag << m.smiles() << ">\n";
+  sfc.write_constant_width_fingerprint(nbits, tag, output);
+  output << identifier_tag << m.name() << ">\n";
+  output << "|\n";
+
+  return 1;
+}
+
+static int
+WriteDescriptorFileRow(Molecule& m,
+                       uint32_t ncols,
+                       const Sparse_Fingerprint_Creator& sfc,
+                       IWString_and_File_Descriptor& output) {
+  output << m.name();
+  // We assume that `ncols` will not change from on invocation to the next.
+  static std::unique_ptr<int[]> count = std::make_unique<int[]>(ncols);
+
+  std::fill_n(count.get(), ncols, 0);
+
+  sfc.WriteAsDescriptors(ncols, count.get(), output);
+
+  output << '\n';
+
+  return 1;
+}
+
+static int
 write_array_of_fingerprints(Sparse_Fingerprint_Creator * sfc,
                             IWString_and_File_Descriptor & output)
 {
@@ -563,6 +601,10 @@ do_output(Molecule &m,
 
   if (function_as_filter) {
     write_array_of_fingerprints(sfc, output);
+  } else if (fixed_width_fingerprint) {
+    WriteFixedWidthFingerprint(m, fixed_width_fingerprint, sfc[0], output);
+  } else if (descriptor_file_output) {
+    WriteDescriptorFileRow(m, descriptor_file_output, sfc[0], output);
   } else {
     output << smiles_tag << m.smiles() << ">\n";
     write_array_of_fingerprints(sfc, output);
@@ -1136,8 +1178,23 @@ display_dash_G_options(std::ostream & os)
 
 static void
 DisplayDashYOptions(std::ostream& output) {
-  output << " -Y flush     flush output after each molecule\n";
-  exit(0);
+  output << " -Y flush            flush output after each molecule\n";
+  output << " -Y fixed=<nbits>    generate fixed width fingerprints with <nbits> bits\n";
+  output << " -Y desc=<ncols>     generate descriptor file output with <ncols> columns\n";
+
+  ::exit(0);
+}
+
+static int
+WriteDescriptorFileHeader(uint32_t ncols, IWString_and_File_Descriptor& output) {
+  output << "Id";
+  for (uint32_t i = 0; i < ncols; ++i) {
+    output << " EC" << max_shell_radius << '_' << i;
+  }
+
+  output << '\n';
+
+  return 1;
 }
 
 static int
@@ -1237,29 +1294,80 @@ iwecfp(int argc, char ** argv)
       cerr << "Will reduce to largest fragment\n";
   }
 
-  if (cl.option_present('g'))
-  {
-    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
-    {
+  if (cl.option_present('g')) {
+    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       cerr << "Cannot initialise chemical standardisation (-g)\n";
       usage(14);
     }
   }
 
-  if (cl.option_present('m'))
-  {
+  if (cl.option_present('m')) {
     additive = 0;
 
     if (verbose)
       cerr << "Fingerprints formed with multiplication operations\n";
   }
 
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (y.starts_with("desc=")) {
+        y.remove_leading_chars(5);
+        if (! y.numeric_value(descriptor_file_output) || descriptor_file_output < 2) {
+          cerr << "The number of columns for descriptor output must be a whole +ve number\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will write a descriptor file with " <<  descriptor_file_output << " columns\n";
+        }
+      } else if (y.starts_with("fixed=")) {
+        y.remove_leading_chars(6);
+        if (! y.numeric_value(fixed_width_fingerprint) || fixed_width_fingerprint < 2) {
+          cerr << "The number of bits for a fixed width fingerprint must be a whole +ve number\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will write a fixed width fingerprint with " << fixed_width_fingerprint << " bits\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions(cerr);
+      } else {
+        cerr << "Unrecongised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions(cerr);
+      }
+    }
+  }
+
+  if (descriptor_file_output && function_as_filter) {
+    cerr << "Cannot generate descriptors while working as a TDT filter\n";
+    return 1;
+  }
+
+  // If atom typing is specified, initialise now.
+  if (cl.option_present('P')) {
+    const_IWSubstring p = cl.string_value('P');
+
+    if (! atom_type.build(p)) {
+      cerr << "Cannot discern atom type '" << p << "'\n";
+      return 3;
+    }
+  }
+  
 // If neither atom type nor tag specified, take a default
 
-  if (! cl.option_present('J') && ! cl.option_present('P'))
-  {
+  if (descriptor_file_output) {
+  } else if (! cl.option_present('J') && ! cl.option_present('P')) {
     atom_type.set_atom_type(IWATTYPE_COMPLEX);
-    tag = "NCECC<";
+    if (fixed_width_fingerprint) {
+      tag = "FPECC<";
+    } else {
+      tag = "NCECC<";
+    }
   }
   else if (! cl.option_present('P') && cl.option_present('J'))
   {
@@ -1268,23 +1376,18 @@ iwecfp(int argc, char ** argv)
   }
   else      // -P present, and maybe also -J
   {
-    const_IWSubstring p = cl.string_value('P');
-
-    if (! atom_type.build(p))
-    {
-      cerr << "Cannot discern atom type '" << p << "'\n";
-      return 3;
-    }
-
     atom_type.swap_atomic_number_atom_type_to_atomic_number_prime();
 
-    if (cl.option_present('J'))
-    {
+    if (cl.option_present('J')) {
       tag = cl.string_value('J');
     }
     else
     {
-      tag = "NCEC";
+      if (fixed_width_fingerprint) {
+        tag = "FPEC";
+      } else {
+        tag = "NCEC";
+      }
       atom_type.append_to_tag(tag);
     }
 
@@ -1318,23 +1421,6 @@ iwecfp(int argc, char ** argv)
     usage(5);
   }
 
-  if (cl.option_present('Y')) {
-    const_IWSubstring y;
-    for (int i = 0; cl.value('Y', y, i); ++i) {
-      if (y == "flush") {
-        flush_after_each_molecule = 1;
-        if (verbose) {
-          cerr << "Will flush output after each molecule\n";
-        }
-      } else if (y == "help") {
-        DisplayDashYOptions(cerr);
-      } else {
-        cerr << "Unrecongised -Y qualifier '" << y << "'\n";
-        DisplayDashYOptions(cerr);
-      }
-    }
-  }
-  
   set_global_aromaticity_type(Daylight);
   set_input_aromatic_structures(1);
 
@@ -1511,21 +1597,21 @@ iwecfp(int argc, char ** argv)
     }
   }
 
-  int rc = 0;
-
   IWString_and_File_Descriptor output(1);
 
-  for (int i = 0; i < cl.number_elements(); i++)
-    {
-      if (! iwecfp(cl[i], input_type, output))
-        {
-          rc = i + 1;
-          break;
-        }
-    }
+  if (descriptor_file_output) {
+    WriteDescriptorFileHeader(descriptor_file_output, output);
+  }
 
-  if (verbose)
-  {
+  int rc = 0;
+  for (const char* fname : cl) {
+    if (! iwecfp(fname, input_type, output)) {
+      rc = 1;
+      break;
+    }
+  }
+
+  if (verbose) {
     cerr << "Read " << molecules_read << " molecules\n";
 
     if (nbits_acc.n() > 0)

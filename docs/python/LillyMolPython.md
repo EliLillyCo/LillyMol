@@ -118,7 +118,13 @@ For those familiar with RDKit, this enables
 ```
 m = MolFromSmiles('c1ccccc1')
 ```
-and if an invalid smiles is encountered, None will be returned.
+and if an invalid smiles is encountered, None will be returned. There
+is also a list form of this
+```
+mols = MolFromSmiles(["C", "CC", "C1CC1"])
+```
+which returns a list of molecules. This may offer speed advantages
+depending on the structure of the program.
 
 There are other means by which molecules can enter the system.
 
@@ -258,7 +264,7 @@ The most common methods for a Molecule currently implemented are
 | remove_all(atomic_number) | Remove all atoms with atomic_number |
 | move_to_end_of_connection_table(z) | Move all atoms with atomic number to end of connection table |
 | chop(n) | Remove the last 'n' atoms in the molecule |
-| organic_only() | True if only B, C, N, O, F, P, S, Cl, Br, I |
+| organic_only() | True if only C, N, O, F, P, S, Cl, Br, I |
 | remove_explicit_hydrogens() | Remove explicit Hydrogens |
 | RemoveHs() | Remove explicit Hydrogens |
 | implicit_hydrogens(atom) | Number of implicit Hydrogens on 'atom' |
@@ -403,12 +409,13 @@ The Atom object supports
 
 In additon an Atom object inherits from an object that holds coordinates. Subsequent
 versions will enable more of that functionality. For now the subtraction operator
-returns the distance between two atoms.
+returns the distance between two atoms, although long term this must be changed
+so that subtraction of two atoms returns the vector between them.
 ```
 m.build_from_smiles("C{{0,0,0}}C{{1,1,1}}"))
 m[0] - m[1]
 ```
-reports sqrt(3).
+reports sqrt(3). For now...
 
 A common construct might be (count the number of carbon=,#nitrogen bonds)
 ```
@@ -603,13 +610,13 @@ from lillymol_query import *
 ```
 Instantiate a new query for a para substituted methoxy group via
 ```
-query = Query()
+query = SubstructureQuery()
 query.build_from_smarts('[CH3]-[OD2]-c:c:c:[cD3]')
 ```
 
 To read a query from a textproto query specification
 ```
-query = Query()
+query = SubstructureQuery()
 if not query.read_proto('/path/to/file.textproto'):
   logging.error('Cannot read query file %s...')
 ```

@@ -221,6 +221,9 @@ int DiscernChemaxonSmilesExtensions();
 
 void SetProcessQuotedSmiles(int s);
 int ProcessQuotedSmiles();
+
+// Set the separator between smiles and id with smiles output.
+void set_smiles_output_separator(char c);
 }  //  namespace smiles
 
 /*

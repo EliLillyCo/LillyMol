@@ -1293,7 +1293,8 @@ display_input_help(std::ostream & os)
  -i SDFID:XX             name follows '> <XX>' record in SDF file
  -i SDFNONAME            discard name in first record of SD file
  -i SDFNOPREPEND         do not prepend the SDF identifier to the identifier value
- -i SDFTAG2JSON          append all sdf tags as JSON form\n"
+ -i SDFTAG2JSON          append all sdf tags as JSON form\
+ -i NAME2JSON            when writing in JSON form, convert the name to 'name: "...."'
  -i firstsdftag          take first tag in an sd file as the name
  -i allsdfid             concatenate all sdf identifiers
  -i ISISEXTREG           try to discern the ISIS external registry number in SDF files
@@ -1413,7 +1414,9 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     else if (optval == "SDFTAG2JSON") {
       mdlfos->set_sdf_tags_to_json(1);
     }
-    else if ("ICTE" == optval)
+    else if (optval == "NAME2JSON") {
+      mdlfos->set_name_to_json(1);
+    } else if ("ICTE" == optval)
     {
       set_number_connection_table_errors_to_skip(std::numeric_limits<int>::max());
     }

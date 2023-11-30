@@ -158,7 +158,8 @@ set_smiles_tag(const_IWSubstring s) {
 
 int
 Molecule::write_molecule_textproto(std::ostream& output) {
-  output << lillymol_textproto::smiles_tag << " \"" << smiles() << "\" " << _molecule_name << '\n';
+  output << lillymol_textproto::smiles_tag << " \"" << smiles() <<
+         "\" id: \"" << _molecule_name << "\"\n";
   return output.good();
 }
 

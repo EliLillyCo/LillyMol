@@ -1,6 +1,7 @@
 #include "Foundational/iwmisc/iwconfig.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -704,11 +705,12 @@ IWString::to_uppercase()
 static int
 _strcmp (const char * s1, int l1, const char * s2, int l2)
 {
-  int ncomp = l1;
-  if (l2 < l1)
+  uint32_t ncomp = l1;
+  if (l2 < l1) {
     ncomp = l2;
+  }
 
-  return strncmp(s1, s2, ncomp);
+  return ::strncmp(s1, s2, ncomp);
 }
 
 static int
