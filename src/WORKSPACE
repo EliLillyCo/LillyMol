@@ -48,16 +48,6 @@ http_archive(
     urls = ["https://github.com/google/leveldb/archive/main.zip"],
 )
 
-# Change master to the git tag you want.
-http_archive(
-    name = "com_grail_bazel_toolchain",
-    strip_prefix = "bazel-toolchain-master",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/master.tar.gz"],
-)
-
-load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
-bazel_toolchain_dependencies()
-
 new_local_repository(
     name = "local_f2c",
     path = "../third_party/libf2c",
