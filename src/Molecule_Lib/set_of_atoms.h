@@ -17,6 +17,7 @@ class Set_of_Atoms : public resizable_array<atom_number_t>
     Set_of_Atoms(int);
     Set_of_Atoms(const Set_of_Atoms &);
     Set_of_Atoms(const std::vector<int>& l);
+    Set_of_Atoms(const std::vector<int64_t>& l);
     Set_of_Atoms(const std::initializer_list<int> l);
 
     Set_of_Atoms & operator =(const Set_of_Atoms &);
@@ -59,6 +60,9 @@ class Set_of_Atoms : public resizable_array<atom_number_t>
     using const_iterator = const atom_number_t*;
 
     std::vector<atom_number_t> AsVector() const;
+
+    // Add or subtract from each atom number.
+    void EachAtomIncrement(int offset);
 };
 
 template <typename T>

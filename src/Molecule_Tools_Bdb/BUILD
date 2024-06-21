@@ -32,6 +32,20 @@ cc_proto_library(
     ],
 )
 
+proto_library(
+    name = "substituent_identification_proto",
+    srcs = [
+      "substituent_identification.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "substituent_identification_cc_proto",
+    deps = [
+        "substituent_identification_proto",
+    ],
+)
+
 cc_binary(
     name = "buildsmidb_bdb",
     srcs = [
@@ -58,6 +72,41 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:dicer_fragments_cc_proto",
+        "@berkeleydb",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "dicer_fragment_replace",
+    srcs = [
+        "dicer_fragment_replace.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:molecular_formula_lib",
+        "//Molecule_Tools:dicer_fragments_cc_proto",
+        "@berkeleydb",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "dicer2bdb",
+    srcs = [
+      "dicer2bdb.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/cmdline_v2",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwmisc",
         "//Molecule_Tools:dicer_fragments_cc_proto",
         "@berkeleydb",
         "@com_google_protobuf//:protobuf",
@@ -136,6 +185,38 @@ cc_binary(
         ":smi2rings_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@berkeleydb",
+    ],
+)
+cc_binary(
+    name = "structure_database_load",
+    srcs = [
+        "structure_database_load.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":structure_database",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@berkeleydb",
+    ],
+)
+
+cc_binary(
+    name = "structure_database_lookup",
+    srcs = [
+        "structure_database_lookup.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":structure_database",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@berkeleydb",
@@ -149,11 +230,14 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        ":substituent_identification_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@berkeleydb",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -236,5 +320,51 @@ cc_library(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "@berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "selimsteg",
+    srcs = [
+        "selimsteg.cc",
+    ],
+    hdrs = [
+        "selimsteg.h",
+    ],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydbshared//:berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "structure_database",
+    srcs = [
+        "structure_database.cc",
+    ],
+    hdrs = [
+        "structure_database.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydb",
+    ],
+)
+
+cc_library(
+    name = "structure_database_shared",
+    srcs = [
+        "structure_database.cc",
+    ],
+    hdrs = [
+        "structure_database.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "@berkeleydbshared//:berkeleydb",
     ],
 )

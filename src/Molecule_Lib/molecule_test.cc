@@ -468,4 +468,29 @@ INSTANTIATE_TEST_SUITE_P(TestNumberRingSystems, TestNumberRingSystems, testing::
   SmilesNsys{"C1CC1C2CC2", 2}
 ));
 
+struct SmilesAtomValue {
+  IWString smiles;
+  std::vector<atom_number_t> atom;
+  std::vector<int> expected;
+};
+
+class TestSaturation : public testing::TestWithParam<SmilesAtomValue> {
+  protected:
+    Molecule _m;
+};
+TEST_P(TestSaturation, TestSaturation) {
+  const auto params = GetParam();
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  for (uint32_t i = 0; i < params.atom.size(); ++i) {
+    EXPECT_EQ(_m.saturated(params.atom[i]), params.expected[i]);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(TestSaturation, TestSaturation, testing::Values(
+  SmilesAtomValue{"CCC", {0, 1, 2}, {1, 1, 1}},
+  SmilesAtomValue{"CC=C", {0, 1, 2}, {1, 0, 0}},
+  SmilesAtomValue{"CNC(=O)C", {0, 1, 2, 3, 4}, {1, 1, 0, 0, 1}},
+  SmilesAtomValue{"CNS(=O)(=O)C", {0, 1, 2, 3, 4, 5}, {1, 1, 0, 0, 0, 1}}
+));
+
 }  // namespace

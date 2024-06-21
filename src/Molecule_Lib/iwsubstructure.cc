@@ -1142,6 +1142,12 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
     }
   }
 
+  if (_substituent_no_match.size()) {
+    if (_substituent_no_match_matches(target_molecule, matched_query_atoms)) {
+      return 0;
+    }
+  }
+
   // cerr << "nmab " << _nmab.size() << " nmab items\n";
   if (_nmab.number_elements()) {
     if (! _nmab_satisfied(target_molecule, matched_query_atoms)) {
@@ -1421,8 +1427,9 @@ Single_Substructure_Query::_add_embedding (Query_Atoms_Matched & matched_atoms,
   results.add_embedding(new_embedding, matched_atoms);
 
   if (_max_matches_to_find > 0 &&
-      static_cast<int>(results.hits_found()) >= _max_matches_to_find)
+      static_cast<int>(results.hits_found()) >= _max_matches_to_find) {
     results.set_complete();
+  }
 
   return 1;
 }
@@ -1915,7 +1922,7 @@ Single_Substructure_Query::_adjust_for_internal_consistency()
 
 //#define DEBUG_SUBSTRUCTURE_QUERY
 
-int
+uint32_t
 Single_Substructure_Query::_substructure_search(Molecule_to_Match & target_molecule,
                                                 int * already_matched,
                                                 std::unique_ptr<int[]>& matched_by_global_specs,
@@ -2401,7 +2408,7 @@ Single_Substructure_Query::_aromatic_atoms_matches(Molecule_to_Match& target_mol
   have been deleted.
 */
 
-int
+uint32_t
 Single_Substructure_Query::_substructure_search(Molecule_to_Match & target_molecule,
                                                 Substructure_Results & results)
 {
@@ -2437,7 +2444,7 @@ Single_Substructure_Query::_substructure_search(Molecule_to_Match & target_molec
 
   int * tmp = new_int(target_molecule.natoms()); std::unique_ptr<int[]> free_tmp(tmp);
 
-  int rc = _substructure_search(target_molecule, tmp, matched_by_global_specs, results);
+  uint32_t rc = _substructure_search(target_molecule, tmp, matched_by_global_specs, results);
 
   for (auto* root_atom : _root_atoms) {
     root_atom->recursive_release_hold();
@@ -2507,11 +2514,17 @@ Single_Substructure_Query::_one_time_initialisations()
        3                   8             2
 */
 
-int
+uint32_t
 Single_Substructure_Query::substructure_search(Molecule_to_Match & target_molecule,
                                                Substructure_Results & results)
 {
   assert (target_molecule.ok());
+
+  // Before any atom matching.
+  if (_required_bonds.empty()) {
+  } else if (! RequiredBondsMatch(*target_molecule.molecule())) {
+    return 0;
+  }
 
   const int matoms = target_molecule.natoms();
 
@@ -2768,7 +2781,7 @@ Single_Substructure_Query::_examine_bond_specifications()
   return 1;
 }
 
-int
+uint32_t
 Single_Substructure_Query::substructure_search(Molecule * m,
                                                Substructure_Results & results)
 {
@@ -3404,6 +3417,8 @@ Single_Substructure_Query::InterRingRegionsMatch(Molecule_to_Match& target,
   return 1;
 }
 
+// For every matched atom, set the corresponding entry in `ring_atom`.
+// Note that we do not enforce anything related to ring membership.
 void
 SetRingAtoms(Query_Atoms_Matched& matched_query_atoms,
              int * ring_atom) {
@@ -3433,6 +3448,26 @@ Single_Substructure_Query::_substituent_satisfied(Molecule_to_Match& target_mole
   }
 
   return rc;
+}
+
+int
+Single_Substructure_Query::_substituent_no_match_matches(Molecule_to_Match& target_molecule,
+                Query_Atoms_Matched& matched_query_atoms) const {
+  const int matoms = target_molecule.natoms();
+
+  std::unique_ptr<int[]> matched_by_global_specs(new_int(matoms));
+  std::unique_ptr<int[]> ring_atoms(new_int(matoms));
+  SetRingAtoms(matched_query_atoms, ring_atoms.get());
+  std::unique_ptr<int[]> storage(new_int(matoms));
+
+  for (Substituent* subst : _substituent_no_match) {
+    if (subst->Matches(target_molecule, ring_atoms.get(), storage.get(),
+                matched_by_global_specs)) {
+      return 1;;
+    }
+  }
+
+  return 0;
 }
 
 MatchedAtomMatch::MatchedAtomMatch() {
@@ -3526,6 +3561,17 @@ MatchedAtomMatch::Matches(Query_Atoms_Matched& matched_query_atoms,
 #endif
         return 0;
       }
+    }
+  }
+
+  return 1;
+}
+
+int
+Single_Substructure_Query::RequiredBondsMatch(const Molecule& m) {
+  for (const RequiredBond* b : _required_bonds) {
+    if (! b->Matches(m)) {
+      return 0;
     }
   }
 

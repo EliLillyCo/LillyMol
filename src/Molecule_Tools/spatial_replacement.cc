@@ -1204,6 +1204,7 @@ Options::Process(Molecule& starting_molecule,
 
   // Count number atoms being removed.
   int removed = 0;
+  int possible_bonds = 0;
 
   for (int i = 0; i < initial_natoms; ++i) {
     for (int j = initial_natoms; j < matoms; ++j) {
@@ -1216,14 +1217,13 @@ Options::Process(Molecule& starting_molecule,
         pair_could_be_bonded[j * matoms + i] = 1;
         atom_could_be_bonded[i] = 1;
         atom_could_be_bonded[j] = 1;
+        ++possible_bonds;
       }
     }
   }
 
-  if (removed == 0) {
-    if (_verbose > 1) {
-      cerr << m.name() << "No atoms within " << _exclusion_radius << " of replacements\n";
-    }
+  if (possible_bonds == 0) {
+    cerr << m.name() << " no atoms within " << _bond_formation_radius << " for bond formation\n";
     ++_molecules_not_close_to_replacement;
     return 1;
   }

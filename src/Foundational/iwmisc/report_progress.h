@@ -41,7 +41,7 @@ class Report_Progress_Template
     void initialise (const Report_Progress_Template<T> & rhs);
 };
 
-typedef Report_Progress_Template<unsigned int> Report_Progress;
+typedef Report_Progress_Template<uint64_t> Report_Progress;
 
 #ifdef REPORT_PROGRESS_IMPLEMENTATION
 

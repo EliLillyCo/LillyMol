@@ -133,6 +133,7 @@ usage(int rc) {
   cerr << "  -i <type>     input specification\n";
   cerr << "  -o ...        options for corina's -o option (NOT the usual output types for Lilly tools)\n";
   cerr << "                    for example, to get pdb output '-o t=pdb'\n";
+  cerr << "  --Y ...       other options, enter '-Y help' for info\n";
   cerr << "  -g ...        chemical standardisation options\n";
   cerr << "  -E ...        standard element specifications\n";
   cerr << "  -A ...        standard aromaticity specifications\n";
@@ -716,9 +717,16 @@ rcorina34(const char* fname, FileType input_type, Molecule_Output_Object& molecu
   return rcorina34(input, molecule_output, text_output);
 }
 
+static void
+DisplayDashYOptions(std::ostream& output) {
+  output << " -Y flush          flush output stream after each molecule\n";
+
+  ::exit(0);
+}
+
 static int
 rcorina34(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lxd:F:P:S:r:e:qfsnty:R:C:huo:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lxd:F:P:S:r:e:qfsnty:R:C:huo:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -894,6 +902,23 @@ rcorina34(int argc, char** argv) {
 
   if (verbose) {
     cerr << "Dash d option set to '" << dash_d_value << "'\n";
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "flush") {
+        moleculeio::set_flush_files_after_writing_each_molecule(1);
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions(cerr);
+      } else {
+        cerr << "Urecognised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions(cerr);
+      }
+    }
   }
 
   if (cl.empty()) {

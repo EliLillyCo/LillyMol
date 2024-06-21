@@ -36,12 +36,17 @@ class Match_Conditions
 
     int _suppress_if_more_than_this_many_substructure_search_hits;
 
+    // Jun 2024. Suppress warnings about no sidechain matches.
+    int _issue_sidechain_no_match_warnings;
+
   public:
     Match_Conditions ();
 
     Match_Conditions & operator = (const Match_Conditions &);
 
-    int ConstructFromProto(const ReactionProto::MatchConditions& proto);
+    // The two classes that inherit from this class use this to initialise
+    // common settings.
+    template <typename P> int ConstructFromProto(const P& proto);
 
     int verbose () const { return _verbose;}
     void set_verbose (int v) { _verbose = v;}
@@ -66,6 +71,14 @@ class Match_Conditions
 
     void set_ignore_multiple_substucture_matches (int s) { _suppress_if_more_than_this_many_substructure_search_hits = s;}
     int suppress_if_more_than_this_many_substructure_search_hits () const { return _suppress_if_more_than_this_many_substructure_search_hits;}
+
+    void set_issue_sidechain_no_match_warnings(int s) {
+      _issue_sidechain_no_match_warnings = s;
+    }
+
+    int issue_sidechain_no_match_warnings() const {
+      return _issue_sidechain_no_match_warnings;
+    }
 };
 
 class Scaffold_Match_Conditions : public Match_Conditions

@@ -26,7 +26,7 @@ const char* prog_name = nullptr;
 namespace ec_fingerprint {
 int verbose = 0;
 
-int molecules_read = 0;
+uint64_t molecules_read = 0;
 
 Chemical_Standardisation chemical_standardisation;
 

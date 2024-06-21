@@ -1,5 +1,5 @@
-#ifndef IW_BITS_BASE_H
-#define IW_BITS_BASE_H
+#ifndef FOUNDATIONAL_IWBITS_IWBITS_H_
+#define FOUNDATIONAL_IWBITS_IWBITS_H_
 
 #include <iostream>
 
@@ -311,4 +311,5 @@ void InternalHexForm(const unsigned char * s,
                      IWString & destination);
 
 }  // namespace iwbits;
-#endif
+
+#endif  // FOUNDATIONAL_IWBITS_IWBITS_H_

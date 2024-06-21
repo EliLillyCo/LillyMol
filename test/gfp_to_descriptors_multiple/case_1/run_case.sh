@@ -23,26 +23,36 @@ then
     exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
+stdout='stdout'
+stderr='stderr'
+
+golden=out/log.txt
 # Support linux and mac 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/log.txt
+    golden=out/linux/log.txt
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    name1_out=out/osx/log.txt
+    golden=out/osx/log.txt
 else
     echo "OS is not supported"
 fi
 
 diff_tool=../../fileDiff.sh
-$command -x 0.5 -F FPMK $LILLYMOL_HOME/data/pubchem_example.gfp >>log.txt 2>>err.txt
-$diff_tool $name1 $name1_out
-ret=$?
-if [ $ret -eq 1 ]
-then
-    echo "$case_id : TEST PASS"
-else
-    echo "$case_id : TEST FAIL"
+same_bits=../../same_bits.py
+$command -x 0.5 -F FPMK $LILLYMOL_HOME/data/pubchem_example.gfp > ${stdout} 2> ${stderr}
+$diff_tool ${stdout} ${golden}
+
+if [[ $? -eq 1 ]] ; then
+  echo "$case_id : TEST PASS"
+  rm ${stdout} ${stderr}
+  exit
 fi
-rm log.txt
-rm err.txt
+
+$same_bits ${stdout} ${golden}
+if [[ $? -eq 0 ]] ; then
+  echo "$case_id : TEST PASS"
+  rm ${stdout} ${stderr}
+  exit
+fi
+
+echo "$case_id : TEST FAIL"
+rm ${stdout} ${stderr}

@@ -83,7 +83,7 @@ static IWString tag_for_hits;
   that have matched any query
 */
 
-static int stop_processing_after_this_many_molecules_matching = 0;
+static uint64_t stop_processing_after_this_many_molecules_matching = 0;
 
 /*
   Jun 2009. Want to be able to easily do a self search of a file.
@@ -95,6 +95,9 @@ static int perform_search_even_if_names_the_same = 1;
   Dec 2019. Proto output.
 */
 static int write_results_as_proto = 0;
+
+// Nov 2022. Pass our own Molecule_to_Query to substructur reading.
+static Molecule_to_Query_Specifications mqs;
 
 static void
 usage(int rc)
@@ -243,8 +246,8 @@ display_dash_j_options()
 }
 
 int verbose = 0;
-static int molecules_read = 0;
-static int molecules_which_match = 0;
+static uint64_t molecules_read = 0;
+static uint64_t molecules_which_match = 0;
 static int print_embeddings = 0;
 
 static Report_Progress report_progress;
@@ -539,7 +542,7 @@ do_discard_hits_in_non_organic_fragments (Molecule_to_Match & target,
       non_organic_fragments.add(ai.fragment_membership());
   }
 
-  for (int i = 0; i < sresults.number_embeddings(); i++)
+  for (uint32_t i = 0; i < sresults.number_embeddings(); i++)
   {
     const Set_of_Atoms * e = sresults.embedding(i);
 
@@ -645,8 +648,8 @@ do_proto_output(Molecule& m,
 {
   SubstructureSearch::QueryMatchResults to_write;
 
-  to_write.set_smiles(m.smiles().AsString());
-  to_write.set_name(m.name().AsString());
+  to_write.set_smiles(m.smiles().data(), m.smiles().length());
+  to_write.set_name(m.name().data(), m.name().length());
 
   const int number_queries = queries.number_elements();
 
@@ -656,7 +659,7 @@ do_proto_output(Molecule& m,
       continue;
 
     SubstructureSearch::QueryMatchResults::Matches* matches = to_write.add_matches();
-    matches->set_name(queries[i]->comment().AsString());
+    matches->set_name(queries[i]->comment().data(), queries[i]->comment().length());
     matches->set_nhits(hits[i]);
   }
 
@@ -1016,10 +1019,11 @@ label_matches_and_write_to_stream_for_individually_labelled_matches(Molecule & m
 {
   std::unique_ptr<isotope_t[]> atom_isotopic_label = std::make_unique<isotope_t[]>(m.natoms());
 
-  for (int i = 0; i < sresults.number_embeddings(); i++)
+  for (uint32_t i = 0; i < sresults.number_embeddings(); i++)
   {
-    if (i > 0)
+    if (i > 0) {
       m.transform_to_non_isotopic_form();
+    }
 
     if (! label_match_and_write_to_stream_for_individually_labelled_matches(m, query_number,
                         sresults, i, atom_isotopic_label.get(), number_queries)) {
@@ -2139,7 +2143,7 @@ tsubstructure(int argc, char ** argv)
       }
       else if ("nrnr" == m)
       {
-        set_respect_ring_membership(1);
+        mqs.set_bonds_preserve_ring_membership(1);
         if (verbose)
           cerr << "Non ring atoms in molecule queries will not match ring atoms\n";
       }
@@ -2365,7 +2369,7 @@ tsubstructure(int argc, char ** argv)
       }
       else if ("onlysubiso" == m)
       {
-        set_substituents_only_at_isotopic_atoms(1);
+        mqs.set_substituents_only_at_isotopic_atoms(1);
         if (verbose)
           cerr << "When building queries from molecules, isotopic atoms indicate substitution points\n";
       }
@@ -2435,7 +2439,7 @@ tsubstructure(int argc, char ** argv)
       }
       else if ("CEH" == m)
       {
-        set_molecule_to_query_always_condense_explicit_hydrogens_to_anchor_atoms (1);
+        mqs.set_condense_explicit_hydrogens_to_anchor_atoms (1);
         if (verbose)
           cerr << "Queries from molecules always condense explicit Hydrogens\n";
       }
@@ -2477,7 +2481,7 @@ tsubstructure(int argc, char ** argv)
       }
       else if ("ama" == m)
       {
-        set_only_aromatic_atoms_match_aromatic_atoms(1);
+        mqs.set_only_aromatic_atoms_match_aromatic_atoms(1);
         if (verbose)
           cerr << "Molecule to query transformations such that only aromatic atoms match aromatic atoms\n";
       }

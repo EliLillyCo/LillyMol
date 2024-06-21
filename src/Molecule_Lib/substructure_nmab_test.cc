@@ -10,9 +10,6 @@
 
 namespace {
 
-using std::cerr;
-using std::endl;
-
 using testing::Eq;
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -155,12 +152,9 @@ TEST_F(TestNMABToken, JustOpAndRelational) {
 
 TEST_F(TestNMABToken, EmptySmarts) {
   s = "{[]}";
-  cerr << "first\n";
   EXPECT_EQ(TokeniseNMABSpecification(s, tokens), 0);
-  cerr << "second\n";
   s = "{1[]}";
   EXPECT_EQ(TokeniseNMABSpecification(s, tokens), 0);
-  cerr << "third\n";
   s = "{>1[]}";
   EXPECT_EQ(TokeniseNMABSpecification(s, tokens), 0);
   s = "{,>1[]}";
@@ -368,6 +362,17 @@ TEST_F(TestNMAB, AllRingAtomsButNotBonds) {
   EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
 }
 
+// The reason this was confusing is that I was looking for
+// hydroxy groups near an acetylene, but with no matched atoms
+// in between. This matched, which seemed wrong. But the ring
+// atom is not an unmatched atom between the two groups, but
+// a matched atom, and so this is a correct match.
+TEST_F(TestNMAB, ConfusingAtFirst) {
+  ASSERT_TRUE(_query.create_from_smarts("C#C...{<4;0[R]}[CX4]-[OH]"));
+  ASSERT_TRUE(_m.build_from_smiles("OC1(CCN2CCCC12)C#C"));
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1);
+}
+
 TEST_F(TestNMAB, NoRingAtomsBetween) {
   ASSERT_TRUE(_query.create_from_smarts("[R]-!@*...{1;0[R]}*-!@[R]"));
   ASSERT_TRUE(_m.build_from_smiles("C1CC1CCC1CC1"));
@@ -397,9 +402,7 @@ class TestRegionsP: public testing::TestWithParam<ProtoMolMatches> {
 
 TEST_P (TestRegionsP, Tests) {
   const auto params = GetParam();
-  cerr << "Calling TextFormat\n";
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
-  cerr << "Next ConstructFromProto\n";
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
@@ -472,7 +475,85 @@ query {
     nrings: 1
   }
 }
-)pb", "CCNCC1C(C1)CNCC", 1}
+)pb", "CCNCC1C(C1)CNCC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    max_atoms_not_on_shortest_path: 0
+  }
+}
+)pb", "CNCCCCNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    max_atoms_not_on_shortest_path: 0
+  }
+}
+)pb", "CNCC(O)CCNC", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    min_atoms_not_on_shortest_path: 1
+  }
+}
+
+)pb", "CNCC(O)CCNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 2
+  }
+}
+)pb", "CNCC(O)C(C)CNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 0
+  }
+}
+)pb", "CNCC1CC(C1)CNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 1
+  }
+}
+)pb", "CNCC1C(C)C(C1)CNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 0
+  }
+}
+)pb", "CNCC1C(=O)C(C1)CNC", 1}
 
 ));
 
@@ -486,9 +567,7 @@ class TestNearbyAtomsP: public testing::TestWithParam<ProtoMolMatches> {
 
 TEST_P (TestNearbyAtomsP, Tests) {
   const auto params = GetParam();
-  cerr << "Calling TextFormat\n";
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
-  cerr << "Next ConstructFromProto\n";
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';

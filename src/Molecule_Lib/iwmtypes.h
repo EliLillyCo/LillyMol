@@ -40,6 +40,9 @@ inline constexpr int kInvalidAtomType = -8;
 #define TRIPLE_BOND_SYMBOL '#'
 #define AROMATIC_BOND_SYMBOL ':'
 
+// What gets returned as the smiles if smiles interpretation fails.
+inline constexpr char kSmilesError[] = "SMILES_ERROR";
+
 typedef float angle_t;
 
 typedef float distance_t;
@@ -75,6 +78,19 @@ typedef unsigned int bond_type_t;
 #define TRIPLE_BOND 4
 #define AROMATIC_BOND 8
 #define NOT_AROMATIC_BOND 0xfff7
+
+#ifdef THESE_CLASH_WITH_STUFF_IN_PYBIND
+TODO:ianwatson figure out how to resolve this. Ultimately we want to
+use the kSingleBond versios...
+inline constexpr int kSingleBond = SINGLE_BOND;
+inline constexpr int kDoubleBond = DOUBLE_BOND;
+inline constexpr int kTripleBond = TRIPLE_BOND;
+#endif
+
+// fill this out with the full periodic table.
+inline constexpr int kHydrogen = 1;
+inline constexpr int kHelium = 2;
+inline constexpr int kCarbon = 6;
 
 #define ATOMS_NOT_BONDED -1
 

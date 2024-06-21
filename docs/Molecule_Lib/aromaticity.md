@@ -46,6 +46,8 @@ commands.
   -A sfrna       strongly fused can never be aromatic
   -A arallsat    a ring can be aromatic even if it contains all fully saturated atoms
   -A nbh0        no square bracket on an atom means H0
+  -A maxkekule=<n> do NOT attempt Kekule->aromatic conversion if a ring system
+                  contains more than <n> atoms
 ```
 
 At any time in LillyMol there is an aromaticity type that is used
@@ -130,3 +132,8 @@ with Vijay.
         a Hydrogen atom in order to aromatise a ring. Using 'nbh0' should
         probably be the default, with the other options used when
         questionable structures are being processed.
+
+### -A maxkekule=N
+   Kekule determination may take very long times when attemtpting to process a very large
+   ring system containing aromatic atoms. By default, if there is a ring system with more
+   than 80 atoms, Kekule determination is not attempted. Set that value with this directive.

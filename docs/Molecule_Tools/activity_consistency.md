@@ -62,6 +62,9 @@ activity_consistency -E train.activity -e 2 -l -c -x -g all -T I=Cl -T Br=Cl
 New files `merged.activity` and `merged.smi` are created, containing
 merged information about structural duplicates.
 
+Where there are multiple molecules with equivalent smiles, the maximum
+value of the observed activity is written to `merged.activity`..
+
 ## Options
 
 ### -a
@@ -127,7 +130,9 @@ Discard structures with inconsistent class assignments.
 ### -T ...
 Standard element transformation options. Most commonly this is to
 group the heavy halogens `-T 'I=Cl' -T 'Br=Cl'`. Differentiating
-among these seldom leads to a better model.
+among these seldom leads to a better model and examining halogen
+duplicates can sometimes point to what might be inconsistent
+values - depending on the assay. See also [evidence](/docs/GFP/evidence.md).
 
 ### -V ...
 What to do with multi-valued activities (-V help for info). The

@@ -3,9 +3,11 @@
   of structures.
 */
 
+#include <stdlib.h>
+
 #include <iostream>
 #include <memory>
-#include <stdlib.h>
+
 #include <sys/stat.h>
 using std::cerr;
 using std::endl;
@@ -13,22 +15,22 @@ using std::endl;
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
-#include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/element.h"
 #include "Molecule_Lib/etrans.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/iwreaction.h"
-#include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/numass.h"
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/rmele.h"
 #include "Molecule_Lib/smiles.h"
+#include "Molecule_Lib/standardise.h"
 
 static int verbose = 0;
 
@@ -95,7 +97,7 @@ static IWString identifier_tag("PCN<");
 
 static int only_same_if_structure_and_name_the_same = 0;
 
-static int perform_formula_check = 0;    // slows things down!
+static int perform_formula_check = 0;  // slows things down!
 
 static int use_atom_hash = 0;
 
@@ -119,18 +121,18 @@ static int number_reactions = 0;
 static int molecules_changed_by_reactions = 0;
 
 static int
-is_unique_molecule(Molecule& m)
-{
-  if (exclude_chiral_info)
+is_unique_molecule(Molecule& m) {
+  if (exclude_chiral_info) {
     set_include_chiral_info_in_smiles(0);
+  }
 
-  if (exclude_cis_trans_bonding_info)
+  if (exclude_cis_trans_bonding_info) {
     set_include_cis_trans_in_smiles(0);
+  }
 
   IWString usmi;
 
-  if (compare_as_graph)
-  {
+  if (compare_as_graph) {
     IWString formula = m.molecular_formula();
 
     Molecule g;
@@ -142,42 +144,44 @@ is_unique_molecule(Molecule& m)
     usmi << ':' << formula;
 
     //  cerr << "Graph " << usmi << endl;
-  }
-  else
+  } else {
     usmi = m.unique_smiles();
+  }
 
-  //cerr << "Testing unique smiles '" << usmi << "'\n";
+  // cerr << "Testing unique smiles '" << usmi << "'\n";
 
-  if (exclude_chiral_info)    // reset back to useful value
+  if (exclude_chiral_info) {  // reset back to useful value
     set_include_chiral_info_in_smiles(1);
+  }
 
-  if (exclude_cis_trans_bonding_info)
+  if (exclude_cis_trans_bonding_info) {
     set_include_cis_trans_in_smiles(1);
+  }
 
-  if (only_same_if_structure_and_name_the_same)
+  if (only_same_if_structure_and_name_the_same) {
     usmi << m.name();
+  }
 
   const int matoms = m.natoms();
 
-  while (matoms >= smiles_hash.number_elements())
-  {
+  while (matoms >= smiles_hash.number_elements()) {
     smiles_hash.add(new IW_STL_Hash_Map_int);
-    if (use_atom_hash)
+    if (use_atom_hash) {
       atom_hash.add(new std::unordered_set<uint64_t>());
+    }
   }
 
-  //cerr << matoms << " smiles_hash " << smiles_hash.number_elements() << " formula_hash " << formula_hash.number_elements() << endl;
+  // cerr << matoms << " smiles_hash " << smiles_hash.number_elements() << " formula_hash
+  // " << formula_hash.number_elements() << endl;
 
-  if (use_atom_hash)
-  {
+  if (use_atom_hash) {
     const uint64_t h = m.quick_bond_hash();
 
     std::unordered_set<uint64_t>* ha = atom_hash[matoms];
 
     const auto f = ha->find(h);
 
-    if (f == ha->end())    // never seen this before, molecule must be unique
-    {
+    if (f == ha->end()) {  // never seen this before, molecule must be unique
       ha->insert(h);
 
       IW_STL_Hash_Map_int* h = smiles_hash[matoms];
@@ -189,21 +193,19 @@ is_unique_molecule(Molecule& m)
   }
 
 #ifdef FORMULA_CHECK_SLOWS_THINGS_DOWN
-  if (perform_formula_check)
-  {
+  if (perform_formula_check) {
     IWString mformula;
     m.formula_distinguishing_aromatic(mformula);
 
-    //cerr << m.name() << " usmi " << usmi << "'\n";
+    // cerr << m.name() << " usmi " << usmi << "'\n";
 
     IW_STL_Hash_Set* s = formula_hash[matoms];
 
-    if (s->end() == s->find(mformula))
-    {
+    if (s->end() == s->find(mformula)) {
       s->insert(mformula);
 
       IW_STL_Hash_Map_int* h =
-          smiles_hash[matoms];    // very important to update the smiles hash too
+          smiles_hash[matoms];  // very important to update the smiles hash too
       (*h)[usmi] = 1;
 
       unique_molecules++;
@@ -216,14 +218,11 @@ is_unique_molecule(Molecule& m)
 
   IW_STL_Hash_Map<IWString, int>::iterator f = h->find(usmi);
 
-  if (f == h->end())
-  {
+  if (f == h->end()) {
     (*h)[usmi] = 1;
     unique_molecules++;
     return 1;
-  }
-  else
-  {
+  } else {
     duplicates_found++;
     (*f).second++;
     return 0;
@@ -237,30 +236,32 @@ is_unique_molecule(Molecule& m)
 */
 
 static int
-perform_reactions(Molecule& m)
-{
+perform_reactions(Molecule& m) {
   int rc = 0;
 
-  for (int i = 0; i < number_reactions; i++)
-  {
+  for (int i = 0; i < number_reactions; i++) {
     Substructure_Results sresults;
 
     int nhits = reaction[i]->determine_matched_atoms(m, sresults);
-    if (0 == nhits)
+    if (0 == nhits) {
       continue;
+    }
 
-    if (verbose > 2)
+    if (verbose > 2) {
       cerr << nhits << " hits for reaction " << i << '\n';
+    }
 
     reaction[i]->in_place_transformations(m, sresults);
 
     rc++;
   }
 
-  if (rc && verbose > 1)
+  if (rc && verbose > 1) {
     cerr << m.name() << ", " << rc << " reactions changed\n";
-  if (rc)
+  }
+  if (rc) {
     molecules_changed_by_reactions++;
+  }
 
   return rc;
 }
@@ -281,25 +282,30 @@ TransformToIdenticalIsotope(Molecule& m, isotope_t fixed) {
 }
 
 static void
-apply_preprocessing(Molecule& m)
-{
-  if (reduce_to_largest_fragment)
+apply_preprocessing(Molecule& m) {
+  if (reduce_to_largest_fragment) {
     m.reduce_to_largest_fragment();
+  }
 
-  if (elements_to_remove.active())
+  if (elements_to_remove.active()) {
     elements_to_remove.process(m);
+  }
 
-  if (chemical_standardisation.active())
+  if (chemical_standardisation.active()) {
     chemical_standardisation.process(m);
+  }
 
-  if (element_transformations.active())
+  if (element_transformations.active()) {
     element_transformations.process(m);
+  }
 
-  if (number_reactions)
+  if (number_reactions) {
     perform_reactions(m);
+  }
 
-  if (ignore_isotopes)
+  if (ignore_isotopes) {
     m.transform_to_non_isotopic_form();
+  }
 
   if (all_isotopes_become_identical) {
     TransformToIdenticalIsotope(m, kFixedIsotope);
@@ -309,58 +315,50 @@ apply_preprocessing(Molecule& m)
 }
 
 static int
-is_unique(Molecule& m)
-{
-  if (discard_molecule_changes)
-  {
-    Molecule tmp(m);    // make a copy
+is_unique(Molecule& m) {
+  if (discard_molecule_changes) {
+    Molecule tmp(m);  // make a copy
     apply_preprocessing(tmp);
 
     return is_unique_molecule(tmp);
-  }
-  else
-  {
-    apply_preprocessing(m);    // actually change it
+  } else {
+    apply_preprocessing(m);  // actually change it
 
     return is_unique_molecule(m);
   }
 }
 
 static int
-unique_molecule(data_source_and_type<Molecule>& input)
-{
+unique_molecule(data_source_and_type<Molecule>& input) {
   Molecule* m;
-  while (nullptr != (m = input.next_molecule()))
-  {
+  while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
 
     molecules_read++;
 
-    if (report_progress())
+    if (report_progress()) {
       cerr << " processed " << molecules_read << " molecules\n";
+    }
 
-    if (is_unique(*m))
-    {
-      if (unique_molecule_stream.active())
-      {
+    if (is_unique(*m)) {
+      if (unique_molecule_stream.active()) {
         m->invalidate_smiles();
 
-        if (number_assigner.active())
+        if (number_assigner.active()) {
           number_assigner.process(*m);
+        }
 
         unique_molecule_stream.write(m);
       }
-    }
-    else
-    {
-      if (duplicate_molecule_stream.active())
-      {
+    } else {
+      if (duplicate_molecule_stream.active()) {
         m->invalidate_smiles();
         duplicate_molecule_stream.write(m);
       }
 
-      if (verbose > 1)
+      if (verbose > 1) {
         cerr << "Is duplicate\n";
+      }
     }
   }
 
@@ -369,45 +367,39 @@ unique_molecule(data_source_and_type<Molecule>& input)
 
 // This does not seem to be necessary. TODO:ianwatson remove sometime.
 static int
-unique_molecule(iwstring_data_source& input, std::ostream& output)
-{
+unique_molecule(iwstring_data_source& input, std::ostream& output) {
   IW_TDT tdt;
-  while (tdt.next(input) && output.good())
-  {
+  while (tdt.next(input) && output.good()) {
     const_IWSubstring smi;
-    if (! tdt.dataitem_value(smiles_tag, smi))
-    {
+    if (!tdt.dataitem_value(smiles_tag, smi)) {
       cerr << "Yipes, cannot extract smiles from tdt\n";
       cerr << tdt;
       return 0;
     }
 
     Molecule m;
-    if (! m.build_from_smiles(smi))
-    {
+    if (!m.build_from_smiles(smi)) {
       cerr << "Very bad news, cannot parse smiles '" << smi << "'\n";
       cerr << tdt;
       return 0;
     }
 
-    if (is_unique(m))
-    {
+    if (is_unique(m)) {
       output << tdt;
       continue;
     }
 
     //  If verbose we need to report the ID of the dup.
 
-    if (verbose || duplicate_molecule_stream.active())
-    {
+    if (verbose || duplicate_molecule_stream.active()) {
       IWString id;
       tdt.dataitem_value(identifier_tag, id);
 
-      if (verbose > 1)
+      if (verbose > 1) {
         cerr << "Is duplicate '" << id << "'\n";
+      }
 
-      if (duplicate_molecule_stream.active())
-      {
+      if (duplicate_molecule_stream.active()) {
         m.set_name(id);
         m.invalidate_smiles();
         duplicate_molecule_stream.write(m);
@@ -419,11 +411,9 @@ unique_molecule(iwstring_data_source& input, std::ostream& output)
 }
 
 static int
-unique_molecule(const char* fname, std::ostream& output)
-{
+unique_molecule(const char* fname, std::ostream& output) {
   iwstring_data_source input(fname);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open filter input '" << fname << "'\n";
     return 0;
   }
@@ -432,39 +422,36 @@ unique_molecule(const char* fname, std::ostream& output)
 }
 
 static int
-unique_molecule(const char* fname, FileType input_type)
-{
-  if (FILE_TYPE_INVALID == input_type)
-  {
+unique_molecule(const char* fname, FileType input_type) {
+  if (FILE_TYPE_INVALID == input_type) {
     input_type = discern_file_type_from_name(fname);
     assert(FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open '" << fname << "' for input\n";
     return 1;
   }
 
-  if (verbose > 1)
+  if (verbose > 1) {
     input.set_verbose(verbose);
+  }
 
   return unique_molecule(input);
 }
 
 static int
-build_previous_molecules(data_source_and_type<Molecule>& input, int& molecules)
-{
+build_previous_molecules(data_source_and_type<Molecule>& input, int& molecules) {
   Molecule* m;
-  while (nullptr != (m = input.next_molecule()))
-  {
+  while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
 
     molecules++;
 
-    if (report_progress())
+    if (report_progress()) {
       cerr << " processed " << molecules << " previously known molecules\n";
+    }
 
     (void)is_unique(*m);
   }
@@ -473,17 +460,15 @@ build_previous_molecules(data_source_and_type<Molecule>& input, int& molecules)
 }
 
 static int
-build_previous_molecules(const const_IWSubstring& fname, FileType input_type, int& molecules)
-{
-  if (FILE_TYPE_INVALID == input_type)
-  {
+build_previous_molecules(const const_IWSubstring& fname, FileType input_type,
+                         int& molecules) {
+  if (FILE_TYPE_INVALID == input_type) {
     input_type = discern_file_type_from_name(fname);
     assert(FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open '" << fname << "' for input\n";
     return 1;
   }
@@ -492,15 +477,14 @@ build_previous_molecules(const const_IWSubstring& fname, FileType input_type, in
 }
 
 static void
-usage(int rc)
-{
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
-// clang-format on
+  // clang-format on
   cerr << "Usage: " << prog_name << " <options> <file1> <file2> ...\n";
   cerr << "  -l             strip to largest fragment\n";
   cerr << "  -a             compare as tautomers - skeleton and Hcount\n";
@@ -511,16 +495,18 @@ usage(int rc)
   cerr << "  -y             all non-zero isotopic values considered equivalent\n";
   cerr << "  -p <fname>     specify previously collected molecules\n";
   cerr << "  -G <tag>       identifier tag when working as a filter\n";
-  cerr << "  -s <size>      specify primary hash size (default " << default_primary_hash_size
-       << ")\n";
+  cerr << "  -s <size>      specify primary hash size (default "
+       << default_primary_hash_size << ")\n";
   cerr << "  -S <name>      specify output file name stem\n";
   cerr << "  -D <name>      write duplicate structures to <name>\n";
   cerr << "  -R <rxn>       perform reaction(s) on molecules before comparing\n";
   cerr << "  -T             discard molecular changes after comparison\n";
-  //cerr << "  -n xxx         number assigner specification (enter '-n help' for info)\n";
+  // cerr << "  -n xxx         number assigner specification (enter '-n help' for
+  // info)\n";
   cerr << "  -r <number>    report progress every <number> molecules\n";
   cerr << "  -e             report all molecules together with counts\n";
-  cerr << "  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv\n";
+  cerr
+      << "  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv\n";
   cerr << "  -j             items are the same only if both structure and name match\n";
   cerr << "  -t E1=E2       element transformations, enter '-t help' for details\n";
   cerr << "  -i <type>      specify input type\n";
@@ -556,7 +542,7 @@ WriteCounts(Command_Line& cl, int verbose,
   }
 
   IWString_and_File_Descriptor output;
-  if (! output.open(fname.null_terminated_chars())) {
+  if (!output.open(fname.null_terminated_chars())) {
     cerr << "WriteCounts:cannot open '" << fname << "'\n";
     return 0;
   }
@@ -578,102 +564,92 @@ WriteCounts(Command_Line& cl, int verbose,
 }
 
 static int
-unique_molecule(int argc, char** argv)
-{
+unique_molecule(int argc, char** argv) {
   Command_Line cl(argc, argv, "t:Tag:D:vS:A:E:X:i:o:ls:czfG:p:Ir:n:K:eR:jhU:y");
 
   verbose = cl.option_count('v');
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
-  if (cl.option_present('E'))
-  {
-    if (! process_elements(cl, verbose, 'E'))
-    {
+  if (cl.option_present('E')) {
+    if (!process_elements(cl, verbose, 'E')) {
       cerr << "Cannot discern elements, -E\n";
       usage(8);
     }
   }
 
-  if (! process_standard_aromaticity_options(cl, verbose, 'A'))
-  {
+  if (!process_standard_aromaticity_options(cl, verbose, 'A')) {
     cerr << "Cannot process standard aromaticity options\n";
     usage(2);
   }
 
-  if (cl.option_present('K'))
-  {
-    if (! process_standard_smiles_options(cl, verbose, 'K'))
-    {
+  if (cl.option_present('K')) {
+    if (!process_standard_smiles_options(cl, verbose, 'K')) {
       cerr << "Cannot initialise smiles options\n";
       return 5;
     }
   }
 
-  if (cl.option_present('n'))
-  {
-    if (! number_assigner.initialise(cl, 'n', verbose > 1))
-    {
+  if (cl.option_present('n')) {
+    if (!number_assigner.initialise(cl, 'n', verbose > 1)) {
       cerr << "Cannot initialise number assigner (-n option)\n";
       usage(13);
     }
   }
 
-  if (cl.option_present('j'))
-  {
+  if (cl.option_present('j')) {
     only_same_if_structure_and_name_the_same = 1;
-    if (verbose)
-      cerr << "Molecules will be considered identical only if both structure and name match\n";
+    if (verbose) {
+      cerr << "Molecules will be considered identical only if both structure and name "
+              "match\n";
+    }
   }
 
-  if (cl.option_present('h'))
-  {
+  if (cl.option_present('h')) {
     use_atom_hash = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will use atom hashes\n";
+    }
   }
 
-  if (cl.option_present('l'))
-  {
+  if (cl.option_present('l')) {
     reduce_to_largest_fragment = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will strip molecules to their largest fragment\n";
+    }
   }
 
-  if (cl.option_present('a'))
-  {
+  if (cl.option_present('a')) {
     compare_as_graph = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "molecules will be compared for tautomer equivalence\n";
+    }
   }
 
-  if (cl.option_present('c'))
-  {
+  if (cl.option_present('c')) {
     exclude_chiral_info = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Optical isomers will be considered to be duplicates\n";
+    }
   }
 
-  if (cl.option_present('z'))
-  {
+  if (cl.option_present('z')) {
     exclude_cis_trans_bonding_info = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Cis/trans isomers will be considered to be duplicates\n";
-  }
-  else
-  {
+    }
+  } else {
     exclude_cis_trans_bonding_info = 1;
   }
 
-  if (cl.option_present('I'))
-  {
+  if (cl.option_present('I')) {
     ignore_isotopes = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Isotopic variants are considered the same\n";
+    }
   }
 
   if (cl.option_present('y')) {
@@ -683,192 +659,170 @@ unique_molecule(int argc, char** argv)
     }
   }
 
-  if (cl.option_present('s'))
-  {
-    if (! cl.value('s', default_primary_hash_size) || default_primary_hash_size < 1)
-    {
+  if (cl.option_present('s')) {
+    if (!cl.value('s', default_primary_hash_size) || default_primary_hash_size < 1) {
       cerr << "The -s option must be followed by a positive whole number\n";
       usage(8);
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Primary hash size set to " << default_primary_hash_size << '\n';
+    }
   }
 
-  if (cl.option_present('X'))
-  {
-    if (! elements_to_remove.construct_from_command_line(cl, verbose, 'X'))
-    {
+  if (cl.option_present('X')) {
+    if (!elements_to_remove.construct_from_command_line(cl, verbose, 'X')) {
       cerr << "Cannot discern elements to remove, -X\n";
       usage(3);
     }
   }
 
-  if (cl.option_present('t'))
-  {
-    if (! element_transformations.construct_from_command_line(cl, verbose, 't'))
-    {
+  if (cl.option_present('t')) {
+    if (!element_transformations.construct_from_command_line(cl, verbose, 't')) {
       cerr << "Cannot process element transformations (-t option)\n";
       usage(32);
     }
   }
 
-  if (cl.option_present('R'))
-  {
+  if (cl.option_present('R')) {
     Sidechain_Match_Conditions sidechain_match_conditions;
 
-    if (! read_reactions(cl, reaction, sidechain_match_conditions, 'R'))
-    {
+    if (!read_reactions(cl, reaction, sidechain_match_conditions, 'R')) {
       cerr << "Cannot read reaction(s) (-R option)\n";
       return 4;
     }
 
     number_reactions = reaction.number_elements();
 
-    if (verbose)
+    if (verbose) {
       cerr << "Defined " << number_reactions << " reactions\n";
+    }
 
-    for (int i = 0; i < number_reactions; i++)
-    {
+    for (int i = 0; i < number_reactions; i++) {
       reaction[i]->set_find_unique_embeddings_only(1);
     }
   }
 
-  if (cl.option_present('g'))
-  {
-    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
-    {
+  if (cl.option_present('g')) {
+    if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       cerr << "Cannot process chemical standardisations (-g option)\n";
       usage(33);
     }
   }
 
-  if (cl.option_present('T'))
-  {
-    if (! elements_to_remove.active() && ! element_transformations.active() &&
-        0 == number_reactions)
-    {
+  if (cl.option_present('T')) {
+    if (!elements_to_remove.active() && !element_transformations.active() &&
+        0 == number_reactions) {
       cerr << "The -T option only makes sense with the -X, -R or -t options\n";
       usage(41);
     }
 
     discard_molecule_changes = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Transformed molecule only used for comparisons\n";
+    }
   }
 
-  if (cl.option_present('r'))
-  {
-    if (! report_progress.initialise(cl, 'r', verbose))
-    {
-      cerr << "The report every option (-r) must be followed by a whole positive number\n";
+  if (cl.option_present('r')) {
+    if (!report_progress.initialise(cl, 'r', verbose)) {
+      cerr
+          << "The report every option (-r) must be followed by a whole positive number\n";
       usage(8);
     }
   }
 
-  if (cl.option_present('f'))
-  {
-    if (cl.option_present('i'))
-    {
+  if (cl.option_present('f')) {
+    if (cl.option_present('i')) {
       cerr << "The -i and -f options are incompatible\n";
       usage(18);
     }
 
     function_as_filter = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will function as a TDT filter\n";
+    }
 
-    if (cl.option_present('G'))
-    {
+    if (cl.option_present('G')) {
       cl.value('G', identifier_tag);
-      if (! identifier_tag.ends_with('<'))
+      if (!identifier_tag.ends_with('<')) {
         identifier_tag += '<';
+      }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Molecules identified by '" << identifier_tag << "' tag\n";
+      }
     }
   }
 
   FileType input_type = FILE_TYPE_INVALID;
-  if (function_as_filter)    // don't check anything about the input type
+  if (function_as_filter) {  // don't check anything about the input type
     ;
-  else if (! cl.option_present('i'))
-  {
-    if (1 == cl.number_elements() && 0 == strncmp(cl[0], "-", 1))
+  } else if (!cl.option_present('i')) {
+    if (1 == cl.number_elements() && 0 == strncmp(cl[0], "-", 1)) {
       input_type = FILE_TYPE_SMI;
-    else if (! all_files_recognised_by_suffix(cl))
-    {
+    } else if (!all_files_recognised_by_suffix(cl)) {
       cerr << "Cannot automatically determine input type(s)\n";
       usage(8);
     }
-  }
-  else if (! process_input_type(cl, input_type))
-  {
+  } else if (!process_input_type(cl, input_type)) {
     cerr << "Cannot determine input type\n";
     usage(1);
   }
 
   // Test this before opening any files
 
-  if (cl.empty())
-  {
+  if (cl.empty()) {
     cerr << "No input files specified\n";
     usage(1);
   }
 
-  for (int i = 0; i < 200; i++)
-  {
+  for (int i = 0; i < 200; i++) {
     smiles_hash.add(new IW_STL_Hash_Map_int);
-    if (perform_formula_check)
+    if (perform_formula_check) {
       formula_hash.add(new IW_STL_Hash_Set);
+    }
   }
 
-  for (int i = 0; i < 200; i++)
-  {
+  for (int i = 0; i < 200; i++) {
     //  smiles_hash[i]->resize(default_primary_hash_size);
     //  if (perform_formula_check)
     //   formula_hash.resize(default_primary_hash_size);
   }
 
-  if (cl.option_present('p'))
-  {
+  if (cl.option_present('p')) {
     int molecules = 0;
 
     int i = 0;
     const_IWSubstring p;
-    while (cl.value('p', p, i++))
-    {
-      if (! build_previous_molecules(p, input_type, molecules))
-      {
+    while (cl.value('p', p, i++)) {
+      if (!build_previous_molecules(p, input_type, molecules)) {
         cerr << "Cannot process the -p option, '" << p << "'\n";
         return 72;
       }
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "read " << molecules << " molecules from previous set(s)\n";
+    }
 
-    if (duplicates_found)
-    {
-      if (verbose)
+    if (duplicates_found) {
+      if (verbose) {
         cerr << "Found " << duplicates_found << " duplicates in the -p file\n";
+      }
 
       duplicates_found = 0;
     }
   }
 
-  if (cl.option_present('S'))
-  {
-    if (function_as_filter)
-    {
+  if (cl.option_present('S')) {
+    if (function_as_filter) {
       cerr << "The -f and -S options are incompatible\n";
       usage(49);
     }
 
-    if (! cl.option_present('o'))
+    if (!cl.option_present('o')) {
       unique_molecule_stream.add_output_type(FILE_TYPE_SMI);
-    else if (! unique_molecule_stream.determine_output_types(cl))
-    {
+    } else if (!unique_molecule_stream.determine_output_types(cl)) {
       cerr << "Cannot discern output types for duplicate stream\n";
       usage(12);
     }
@@ -876,28 +830,25 @@ unique_molecule(int argc, char** argv)
     const_IWSubstring tmp;
     cl.value('S', tmp);
 
-    if (unique_molecule_stream.would_overwrite_input_files(cl, tmp))
-    {
+    if (unique_molecule_stream.would_overwrite_input_files(cl, tmp)) {
       cerr << "Cannot overwrite input file(s) '" << tmp << "'\n";
       return 7;
     }
 
-    if (! unique_molecule_stream.new_stem(tmp, 1))    // causes files to be opened
-    {
+    if (!unique_molecule_stream.new_stem(tmp, 1)) {  // causes files to be opened
       cerr << "Could not use stem '" << tmp << "' for duplicates\n";
       return 4;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Unique molecules written to stem '" << tmp << "'\n";
+    }
   }
 
-  if (cl.option_present('D'))
-  {
-    if (! cl.option_present('o'))
+  if (cl.option_present('D')) {
+    if (!cl.option_present('o')) {
       duplicate_molecule_stream.add_output_type(FILE_TYPE_SMI);
-    else if (! duplicate_molecule_stream.determine_output_types(cl))
-    {
+    } else if (!duplicate_molecule_stream.determine_output_types(cl)) {
       cerr << "Cannot discern output types for duplicate stream\n";
       usage(12);
     }
@@ -905,50 +856,49 @@ unique_molecule(int argc, char** argv)
     IWString tmp;
     cl.value('D', tmp);
 
-    if (! duplicate_molecule_stream.new_stem(tmp, 1))    // causes files to be opened
-    {
+    if (!duplicate_molecule_stream.new_stem(tmp, 1)) {  // causes files to be opened
       cerr << "Could not use stem '" << tmp << "' for duplicates\n";
       return 4;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Duplicate molecules written to stem '" << tmp << "'\n";
+    }
   }
 
   int rc = 0;
-  for (int i = 0; i < cl.number_elements() && 0 == rc; i++)
-  {
+  for (int i = 0; i < cl.number_elements() && 0 == rc; i++) {
     int rc;
-    if (function_as_filter)
+    if (function_as_filter) {
       rc = unique_molecule(cl[i], std::cout);
-    else
+    } else {
       rc = unique_molecule(cl[i], input_type);
+    }
 
-    if (0 == rc)
+    if (0 == rc) {
       return i + 1;
+    }
   }
 
-  if (! unique_molecule_stream.active() && ! duplicate_molecule_stream.active())
+  if (!unique_molecule_stream.active() && !duplicate_molecule_stream.active()) {
     verbose = 1;
+  }
 
-  if (verbose)
-  {
+  if (verbose) {
     cerr << molecules_read << " molecules read, " << duplicates_found << " duplicates, "
          << (molecules_read - duplicates_found) << " unique structures\n";
-    if (number_reactions)
+    if (number_reactions) {
       cerr << molecules_changed_by_reactions << " molecules changed by reactions\n";
+    }
   }
 
-  if (cl.option_present('e'))
-  {
+  if (cl.option_present('e')) {
     int n = smiles_hash.number_elements();
 
-    for (int i = 0; i < n; i++)
-    {
+    for (int i = 0; i < n; i++) {
       const IW_STL_Hash_Map_int& f = *(smiles_hash[i]);
 
-      for (IW_STL_Hash_Map_int::const_iterator j = f.begin(); j != f.end(); ++j)
-      {
+      for (IW_STL_Hash_Map_int::const_iterator j = f.begin(); j != f.end(); ++j) {
         cerr << (*j).first << ' ' << (*j).second << '\n';
         //      cerr << (*j).second << " instances of '" << (*j).first << "'\n";
       }
@@ -956,17 +906,15 @@ unique_molecule(int argc, char** argv)
   }
 
   if (cl.option_present('U')) {
-    if (! WriteCounts(cl, verbose, smiles_hash)) {
+    if (!WriteCounts(cl, verbose, smiles_hash)) {
       cerr << "Cannot write hash (-U)\n";
       return 1;
     }
   }
 
-  if (use_atom_hash)
-  {
+  if (use_atom_hash) {
     unsigned int s = 0;
-    for (int i = 0; i < atom_hash.number_elements(); ++i)
-    {
+    for (int i = 0; i < atom_hash.number_elements(); ++i) {
       s += atom_hash[i]->size();
     }
     cerr << "Atom hash contains " << s << " discrete values\n";
@@ -976,8 +924,7 @@ unique_molecule(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = unique_molecule(argc, argv);

@@ -9,6 +9,7 @@
 #include "pybind11/stl.h"
 
 #include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/mdl.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/output.h"
 
@@ -352,5 +353,71 @@ PYBIND11_MODULE(lillymol_io, io)
     },
     "Read all molecules from `fname`"
   );
+
+  io.def("set_sdf_identifier",
+    [](const std::string& sdfid)->bool {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      const_IWSubstring tmp(sdfid);
+      return mdlfos->set_sdf_identifier(tmp);
+    },
+    "Set sdf tag containing identifier"
+  );
+  io.def("set_ignore_bad_m",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_ignore_unrecognised_mdl_m_records(v);
+    },
+    "ignore unrecognised M records while reading .sdf input"
+  );
+  io.def("set_mdlquiet",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_report_unrecognised_records(!v);
+    },
+    "quietly ignore unrecognised M records while reading .sdf input"
+  );
+  io.def("set_prepend_sdfid",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_prepend_sdfid(v);
+    },
+    "Prepend the sdf tag name to the identifier ->   tag:value"
+  );
+  io.def("set_allsdfid",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_fetch_all_sdf_identifiers(v);
+    },
+    "All sdf tags in the input concatenated to make the molecule name"
+  );
+  io.def("set_sdf_tags_to_json",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_sdf_tags_to_json(v);
+    },
+    "Molecule name is JSON representation of sdf tags"
+  );
+  io.def("set_firstsdftag",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_take_first_tag_as_name(v);
+    },
+    "The first sdf tag in the input is the molecule name"
+  );
+  io.def("set_allow_deuterium",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_allow_deuterium(v);
+    },
+    "D is interpreted as Dueterium [2H]"
+  );
+  io.def("set_allow_tritium",
+    [](bool v) {
+      MDL_File_Supporting_Material * mdlfos = global_default_MDL_File_Supporting_Material();
+      mdlfos->set_allow_tritium(v);
+    },
+    "T is interpreted as Tritium [3H]"
+  );
+
 
 }

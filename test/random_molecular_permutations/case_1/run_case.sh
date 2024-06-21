@@ -18,32 +18,32 @@ case_id="Case 1"
 test_top="$LILLYMOL_HOME/test"
 test_cmd_top="$test_top/$test_command"
 
-diff_tool=../../fileDiff.sh
+diff_tool='../../fileDiff.sh'
 command="$BIN_DIR/$test_command"
 
-if [ ! -x "$command" ]; then
-    echo "$command is not executable or does not exist"
-    exit 1
+if [ ! -x "${command}" ] ; then
+  echo "Executable ${command} not found"
 fi
 
-in="$test_cmd_top/$case/in/test.smi"
-out=test.out
-cmp_out="$test_cmd_top/$case/out/test.out"
+in="${test_cmd_top}/${case}/in/test.smi"
+golden="${test_cmd_top}/${case}/out/test.out"
 
-echo "Testing: $command"
+stdout='stdout'
+stderr='stderr'
+
+echo "Testing: ${command}"
 
 # take 10 copies, do 100 mutations, max ring size 8, 10-40 atoms,
 # max num rings 6, remove duplicates, use seed for deterministic test
-$command -x 10 -p 100 -c 10 -c 40 -R 8 -Y 7 -U all -s 1234567 "$in" > "$out" 2>> err.txt
-$diff_tool "$out" "$cmp_out"
-ret=$?
+${command} -x 10 -p 100 -c 10 -c 40 -R 8 -Y 7 -U all -s 1234567 "$in" > "${stdout}" 2> ${stderr}
+${diff_tool} ${stdout} ${golden}
 
-if [ $ret -eq 1 ]
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  cat ${stderr}
 fi
 
-rm -f "$out"
-rm -f err.txt
+rm ${stdout} ${stderr}

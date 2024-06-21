@@ -1,5 +1,5 @@
-#ifndef IW_CMDLINE_H
-#define IW_CMDLINE_H
+#ifndef FOUNDATIONAL_CMDLINE_CMDLINE_H_
+#define FOUNDATIONAL_CMDLINE_CMDLINE_H_
 
 #include <iostream>
 
@@ -108,4 +108,4 @@ Option_and_Value::value (T & rc) const
   return tmp.numeric_value(rc);
 }
 
-#endif
+#endif  // FOUNDATIONAL_CMDLINE_CMDLINE_H_

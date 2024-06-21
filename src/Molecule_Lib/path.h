@@ -86,8 +86,12 @@ class Ring : public Set_of_Atoms
 
     int  fused_ring_neighbours () const { return _fused_neighbours.number_elements ();}
     const Ring * fused_neighbour (int) const;
+    const resizable_array<Ring*> fused_neighbours() const {
+      return _fused_neighbours;
+    }
     int  set_fused_to (Ring * r, int);
-    int  is_fused_to (const Ring * r) const { return _fused_neighbours.contains ((Ring *) r);}   // loss of const OK
+    // Returns true if `r` is in the _fused_neighbours array.
+    int  is_fused_to (const Ring * r) const;
 
     int largest_number_of_bonds_shared_with_another_ring () const { return _largest_number_of_bonds_shared_with_another_ring;}
     int strongly_fused_ring_neighbours () const { return _number_strongly_fused_neighbours;}

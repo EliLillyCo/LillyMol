@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package standardisation;
+
+message Standardisation {
+  // The convention is that the atoms involved are identified by a
+  // smarts or query file.
+  oneof query {
+    string smarts = 1;
+    string query_file = 2;
+  }
+
+  // The smiles, Kekule form, contains the bonding pattern to be
+  // imposed.
+  // Formal charges are also set.
+  optional string smiles = 3;
+
+  // If the name of the standardisation is appended to the molecule
+  // name, this will be used.
+  optional string name = 4;
+
+  // free text, ignored.
+  repeated string comment = 5;
+}

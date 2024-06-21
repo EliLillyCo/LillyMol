@@ -5,9 +5,11 @@ local_install(
     name = "install",
     srcs = [
         ":clogp2descriptors_biobyte",
-        ":iwclogp",
         ":rcorina",
-    ]
+    ],
+    tags = [
+        "vendor",
+    ],
 )
 
 cc_binary(
@@ -30,6 +32,9 @@ cc_binary(
         "iwclogp.cc",
         "biobyte_stuff.c",
     ],
+    tags = [
+        "vendor",
+    ],
     deps = [
         "@biobyte//:biobyte",
         "//Foundational/cmdline:iwcmdline",
@@ -51,6 +56,9 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@corina//:corina",
-    ]
+    ],
+    tags = [
+        "vendor",
+    ],
 )
 

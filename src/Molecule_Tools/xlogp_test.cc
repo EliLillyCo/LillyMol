@@ -208,13 +208,13 @@ INSTANTIATE_TEST_SUITE_P(TestXlogpPWithCorrections, TestXlogpPWithCorrections,  
   SmilesExpected{"Brc1ccccc1", 2.758, {74, 30, 26, 26, 26, 26, 26}},
   SmilesExpected{"Ic1ccccc1", 3.06, {75, 30, 26, 26, 26, 26, 26}},
   // BioByte 1.885 Marvin 1.91
-  SmilesExpected{"O=N(=O)c1ccccc1", 1.835, {80, 80, 80, 30, 26, 26, 26, 26, 26}},
+  SmilesExpected{"O=N(=O)c1ccccc1", 1.925, {80, 80, 80, 30, 26, 26, 26, 26, 26}},
   // BioByte 3.305 Marvin 3.00
   SmilesExpected{"S=C=Nc1ccccc1", 3.197, {78, 78, 78, 30, 26, 26, 26, 26, 26}},
   // BioByte 1.575 Marvin 1.83
   SmilesExpected{"N#Cc1ccccc1", 1.681, {77, 77, 29, 26, 26, 26, 26, 26}},
   // BioByte 1.885 Marvin 1.91
-  SmilesExpected{"O=N(=O)c1ccccc1", 1.835, {80, 80, 80, 30, 26, 26, 26, 26, 26}},
+  SmilesExpected{"O=N(=O)c1ccccc1", 1.925, {80, 80, 80, 30, 26, 26, 26, 26, 26}},
   // Biobyte 2.025, Marvin 2.05
   SmilesExpected{"O=Nc1ccccc1", 1.648, {79, 79, 30, 26, 26, 26, 26, 26}},
   //Biobyte 3.305 Marvin 3.00
@@ -355,7 +355,7 @@ INSTANTIATE_TEST_SUITE_P(TestXlogpPWithCorrections, TestXlogpPWithCorrections,  
   // Paper reports 2.61
   SmilesExpected{"C1=CC=C(C=C1)N2C(=CC=N2)NS(=O)(=O)C3=CC=C(C=C3)N sulfaphenazole", 2.783, {26, 26, 26, 30, 26, 26, 62, 23, 19, 21, 54, 64, 71, 45, 45, 30, 26, 26, 30, 26, 26, 47}},
   // Biobyte 2.305 Marvin 2.92
-  SmilesExpected{"C1=CC=C(C=C1)C2=NC(C(=O)NC3=C2C=C(C=C3)Cl)O oxezepam", 2.340, {26, 26, 26, 29, 26, 26, 24, 53, 11, 24, 44, 64, 30, 29, 26, 30, 26, 26, 73, 38}},
+  SmilesExpected{"C1=CC=C(C=C1)C2=NC(C(=O)NC3=C2C=C(C=C3)Cl)O oxezepam", 2.870, {26, 26, 26, 29, 26, 26, 24, 53, 11, 24, 44, 64, 30, 29, 26, 30, 26, 26, 73, 38}},
   // Biobyte -0.109 Marvin 0.43
   SmilesExpected{"CC(C)NCC(COC1=CC=C(C=C1)CC(=O)N)O atenolol", 0.656, {1, 10, 1, 49, 6, 10, 6, 41, 30, 26, 26, 29, 26, 26, 5, 24, 44, 63, 38}},
   // Biobyte 4.466 Marvin 5.04
@@ -391,7 +391,7 @@ INSTANTIATE_TEST_SUITE_P(TestXlogpPWithCorrections, TestXlogpPWithCorrections,  
   SmilesExpected{"c1sccc1 thiophene 1.29", 1.286, {20, 68, 20, 19, 19}},
   // Biobyte 1.283 Marvin 0.88 Paper 1.46
   // The assigments seem to be good, not sure why the discrepancy. TODO:ianwatson
-  SmilesExpected{"C1=CC(=CC=C1[C@@H](O)[C@@H](CO)NC(=O)C(Cl)Cl)N(=O)=O chloramphenicol 1.46", 0.876, {26, 26, 30, 26, 26, 29, 10, 38, 10, 6, 38, 64, 24, 44, 11, 73, 73, 80, 80, 80}},
+  SmilesExpected{"C1=CC(=CC=C1[C@@H](O)[C@@H](CO)NC(=O)C(Cl)Cl)N(=O)=O chloramphenicol 1.46", 0.966, {26, 26, 30, 26, 26, 29, 10, 38, 10, 6, 38, 64, 24, 44, 11, 73, 73, 80, 80, 80}},
   // Biobyte -1.00 Marvin -0.44
   SmilesExpected{"C1=C2C(=CC(=C1Cl)S(=O)(=O)N)S(=O)(=O)N=CN2 chlorothiazide -0.58", 0.246, {26, 30, 30, 26, 30, 30, 73, 71, 45, 45, 63, 71, 45, 45, 54, 21, 58}},
   // Biobyte 5.50 Marvin 4.54

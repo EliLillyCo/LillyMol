@@ -1,5 +1,8 @@
 #include <algorithm>
 #include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -326,6 +329,261 @@ TEST_F(TestECFingerPrint, TestCoverage2)
   coverage.FingerprintingComplete(_m);
 
   EXPECT_EQ(_m.smiles(), "[CH3:2][N:6]1[CH:4]=[CH:4][N:4]=[CH:4]1");
+}
+
+const std::vector<std::string> aspirin = {
+  "N1=CN(C)C2=C1N(C)C(=O)N(C)C2=O",
+  "N1(C2=C(N(C(=O)N(C)C2=O)C)N=C1)C",
+  "N1=CN(C)C2=C1N(C)C(=O)N(C2=O)C",
+  "C1(=O)N(C2=C(N(C=N2)C)C(=O)N1C)C",
+  "O=C1N(C)C2=C(N(C=N2)C)C(=O)N1C",
+  "C12=C(C(=O)N(C)C(=O)N1C)N(C=N2)C",
+  "C12=C(N=CN1C)N(C)C(=O)N(C)C2=O",
+  "N1(C)C=NC2=C1C(=O)N(C)C(=O)N2C",
+  "C12=C(N(C=N1)C)C(=O)N(C)C(=O)N2C",
+  "C1=NC2=C(N1C)C(=O)N(C(=O)N2C)C",
+  "CN1C=NC2=C1C(=O)N(C)C(=O)N2C",
+  "C1=NC2=C(C(=O)N(C(=O)N2C)C)N1C",
+  "N1(C)C2=C(N(C=N2)C)C(=O)N(C)C1=O",
+  "O=C1N(C(=O)C2=C(N1C)N=CN2C)C",
+  "C1(=O)N(C)C2=C(C(=O)N1C)N(C=N2)C",
+  "C1=NC2=C(C(=O)N(C)C(=O)N2C)N1C",
+  "N1(C)C(=O)N(C2=C(N(C=N2)C)C1=O)C",
+  "C1(=O)N(C)C(=O)C2=C(N=CN2C)N1C",
+  "C1(=O)N(C)C(=O)N(C)C2=C1N(C=N2)C",
+  "C12=C(N=CN1C)N(C)C(=O)N(C2=O)C",
+  "N1(C)C(=O)N(C)C2=C(N(C=N2)C)C1=O",
+  "N1(C)C(=O)N(C2=C(C1=O)N(C=N2)C)C",
+  "O=C1C2=C(N=CN2C)N(C(=O)N1C)C",
+  "CN1C2=C(N(C=N2)C)C(=O)N(C)C1=O",
+  "CN1C(=O)N(C)C2=C(C1=O)N(C)C=N2",
+  "N1(C2=C(N=C1)N(C)C(=O)N(C2=O)C)C",
+  "CN1C(=O)N(C)C2=C(N(C=N2)C)C1=O",
+  "CN1C(=O)N(C)C(=O)C2=C1N=CN2C",
+  "CN1C(=O)N(C2=C(N(C)C=N2)C1=O)C",
+  "C1(=O)N(C(=O)N(C2=C1N(C=N2)C)C)C",
+  "N1(C)C(=O)C2=C(N(C)C1=O)N=CN2C",
+  "CN1C2=C(N(C(=O)N(C)C2=O)C)N=C1",
+  "O=C1N(C)C(=O)N(C2=C1N(C=N2)C)C",
+  "N1(C(=O)N(C)C(=O)C2=C1N=CN2C)C",
+  "N1(C(=O)C2=C(N=CN2C)N(C)C1=O)C",
+  "N1(C)C2=C(N(C)C=N2)C(=O)N(C1=O)C",
+  "N1(C2=C(N=C1)N(C)C(=O)N(C)C2=O)C",
+  "N1(C)C(=O)C2=C(N=CN2C)N(C1=O)C",
+  "C1=NC2=C(N1C)C(=O)N(C)C(=O)N2C",
+  "C1(=O)N(C)C(=O)N(C2=C1N(C)C=N2)C",
+  "O=C1N(C)C2=C(C(=O)N1C)N(C=N2)C",
+  "C1(=O)N(C)C(=O)N(C)C2=C1N(C)C=N2",
+  "N1(C)C(=O)N(C)C2=C(N(C)C=N2)C1=O",
+  "C1(=O)N(C2=C(C(=O)N1C)N(C=N2)C)C",
+  "N1(C(=O)C2=C(N(C1=O)C)N=CN2C)C",
+  "C1(=O)N(C(=O)N(C)C2=C1N(C)C=N2)C",
+  "O=C1N(C(=O)C2=C(N=CN2C)N1C)C",
+  "N1(C(=O)C2=C(N=CN2C)N(C1=O)C)C",
+  "N1(C(=O)N(C)C2=C(C1=O)N(C)C=N2)C",
+  "C12=C(N(C)C=N1)C(=O)N(C(=O)N2C)C",
+  "N1=CN(C2=C1N(C(=O)N(C2=O)C)C)C",
+  "C1(=O)N(C)C(=O)C2=C(N1C)N=CN2C",
+  "N1(C(=O)N(C2=C(C1=O)N(C=N2)C)C)C",
+  "O=C1N(C)C(=O)N(C)C2=C1N(C)C=N2",
+  "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+  "C12=C(N=CN1C)N(C(=O)N(C2=O)C)C",
+  "C12=C(C(=O)N(C(=O)N1C)C)N(C)C=N2",
+  "N1(C)C=NC2=C1C(=O)N(C(=O)N2C)C",
+  "N1(C)C(=O)N(C(=O)C2=C1N=CN2C)C",
+  "O=C1N(C(=O)N(C)C2=C1N(C=N2)C)C",
+  "CN1C(=O)C2=C(N=CN2C)N(C1=O)C",
+  "CN1C(=O)C2=C(N(C1=O)C)N=CN2C",
+  "C1(=O)C2=C(N(C)C(=O)N1C)N=CN2C",
+  "O=C1N(C2=C(C(=O)N1C)N(C)C=N2)C",
+  "O=C1C2=C(N(C)C(=O)N1C)N=CN2C",
+  "C12=C(N(C)C(=O)N(C)C1=O)N=CN2C",
+  "O=C1C2=C(N=CN2C)N(C)C(=O)N1C",
+  "O=C1C2=C(N(C(=O)N1C)C)N=CN2C",
+  "N1(C(=O)C2=C(N(C)C1=O)N=CN2C)C",
+  "O=C1N(C)C(=O)C2=C(N1C)N=CN2C",
+  "C12=C(N(C(=O)N(C1=O)C)C)N=CN2C",
+  "C1(=O)N(C(=O)C2=C(N1C)N=CN2C)C",
+  "N1(C2=C(N(C)C=N2)C(=O)N(C1=O)C)C",
+  "CN1C2=C(N=C1)N(C)C(=O)N(C)C2=O",
+  "N1(C)C(=O)N(C)C2=C(C1=O)N(C=N2)C",
+  "N1(C=NC2=C1C(=O)N(C)C(=O)N2C)C",
+  "N1(C=NC2=C1C(=O)N(C(=O)N2C)C)C",
+  "CN1C2=C(N=C1)N(C(=O)N(C2=O)C)C",
+  "N1=CN(C)C2=C1N(C(=O)N(C)C2=O)C",
+  "CN1C(=O)N(C(=O)C2=C1N=CN2C)C",
+  "C1(=O)N(C)C2=C(N(C=N2)C)C(=O)N1C",
+  "N1(C)C(=O)C2=C(N=CN2C)N(C)C1=O",
+  "CN1C2=C(N=C1)N(C)C(=O)N(C2=O)C",
+  "N1(C2=C(N(C)C(=O)N(C)C2=O)N=C1)C",
+  "C1(=O)N(C(=O)C2=C(N=CN2C)N1C)C",
+  "N1(C(=O)N(C)C2=C(N(C)C=N2)C1=O)C",
+  "N1(C)C(=O)N(C)C(=O)C2=C1N=CN2C",
+  "CN1C2=C(N(C)C=N2)C(=O)N(C1=O)C",
+  "CN1C2=C(C(=O)N(C1=O)C)N(C)C=N2",
+  "C12=C(N(C(=O)N(C)C1=O)C)N=CN2C",
+  "C1(=O)N(C2=C(C(=O)N1C)N(C)C=N2)C",
+  "C1(=O)C2=C(N=CN2C)N(C(=O)N1C)C",
+  "O=C1N(C(=O)N(C2=C1N(C)C=N2)C)C",
+  "N1(C)C2=C(N(C)C(=O)N(C2=O)C)N=C1",
+  "N1=CN(C2=C1N(C)C(=O)N(C2=O)C)C",
+  "CN1C(=O)N(C2=C(C1=O)N(C=N2)C)C",
+  "C12=C(N=CN1C)N(C(=O)N(C)C2=O)C",
+  "CN1C2=C(C(=O)N(C)C1=O)N(C=N2)C",
+  "N1(C2=C(N(C=N2)C)C(=O)N(C)C1=O)C",
+  "N1=CN(C)C2=C1N(C(=O)N(C2=O)C)C",
+  "C1(=O)N(C(=O)N(C2=C1N(C)C=N2)C)C",
+  "C1(=O)C2=C(N(C(=O)N1C)C)N=CN2C",
+  "O=C1N(C(=O)N(C)C2=C1N(C)C=N2)C",
+  "N1(C2=C(N(C)C(=O)N(C2=O)C)N=C1)C",
+  "CN1C2=C(N(C(=O)N(C2=O)C)C)N=C1",
+  "O=C1N(C)C2=C(C(=O)N1C)N(C)C=N2",
+  "O=C1N(C)C(=O)C2=C(N=CN2C)N1C",
+  "N1(C2=C(C(=O)N(C1=O)C)N(C)C=N2)C",
+  "O=C1N(C)C(=O)N(C2=C1N(C)C=N2)C",
+  "N1(C)C2=C(C(=O)N(C1=O)C)N(C)C=N2",
+  "C1(=O)N(C)C2=C(N(C)C=N2)C(=O)N1C",
+  "CN1C(=O)C2=C(N=CN2C)N(C)C1=O",
+  "C1(=O)N(C)C(=O)N(C2=C1N(C=N2)C)C",
+  "C1(=O)C2=C(N=CN2C)N(C)C(=O)N1C",
+  "C1(=O)N(C2=C(N(C)C=N2)C(=O)N1C)C",
+  "N1(C(=O)N(C(=O)C2=C1N=CN2C)C)C",
+  "CN1C2=C(N(C)C(=O)N(C)C2=O)N=C1",
+  "N1=CN(C2=C1N(C)C(=O)N(C)C2=O)C",
+  "N1(C(=O)N(C)C2=C(N(C=N2)C)C1=O)C",
+  "N1(C)C2=C(C(=O)N(C)C1=O)N(C=N2)C",
+  "CN1C(=O)C2=C(N(C)C1=O)N=CN2C",
+  "N1(C)C2=C(N=C1)N(C(=O)N(C)C2=O)C",
+  "O=C1N(C)C(=O)N(C)C2=C1N(C=N2)C",
+  "C1(=O)N(C(=O)N(C)C2=C1N(C=N2)C)C",
+  "N1(C)C2=C(N=C1)N(C(=O)N(C2=O)C)C",
+  "O=C1N(C2=C(N(C)C=N2)C(=O)N1C)C",
+  "N1(C2=C(N=C1)N(C(=O)N(C)C2=O)C)C",
+  "C12=C(N(C)C(=O)N(C1=O)C)N=CN2C",
+  "N1(C)C(=O)C2=C(N(C1=O)C)N=CN2C",
+  "N1(C2=C(N=C1)N(C(=O)N(C2=O)C)C)C",
+  "O=C1N(C2=C(N(C=N2)C)C(=O)N1C)C",
+  "CN1C(=O)N(C2=C(C1=O)N(C)C=N2)C",
+  "CN1C(=O)N(C)C2=C(C1=O)N(C=N2)C",
+  "N1(C2=C(N(C(=O)N(C2=O)C)C)N=C1)C",
+  "O=C1N(C2=C(C(=O)N1C)N(C=N2)C)C",
+  "N1=CN(C2=C1N(C(=O)N(C)C2=O)C)C",
+  "C1(=O)N(C)C2=C(C(=O)N1C)N(C)C=N2",
+  "CN1C2=C(N=C1)N(C(=O)N(C)C2=O)C",
+  "N1(C2=C(C(=O)N(C)C1=O)N(C=N2)C)C",
+  "N1(C)C(=O)N(C2=C(N(C)C=N2)C1=O)C",
+  "CN1C2=C(N(C)C(=O)N(C2=O)C)N=C1",
+  "N1(C)C(=O)N(C2=C(C1=O)N(C)C=N2)C",
+  "N1(C(=O)N(C2=C(N(C)C=N2)C1=O)C)C",
+  "N1(C(=O)N(C2=C(C1=O)N(C)C=N2)C)C",
+  "O=C1N(C)C2=C(N(C)C=N2)C(=O)N1C",
+  "O=C1N(C(=O)N(C2=C1N(C=N2)C)C)C",
+  "N1(C(=O)N(C)C2=C(C1=O)N(C=N2)C)C",
+  "N1(C(=O)N(C2=C(N(C=N2)C)C1=O)C)C",
+  "N1(C)C2=C(N=C1)N(C)C(=O)N(C)C2=O",
+  "N1(C)C(=O)N(C)C2=C(C1=O)N(C)C=N2",
+  "N1(C)C2=C(N=C1)N(C)C(=O)N(C2=O)C",
+  "CN1C(=O)N(C2=C(N(C=N2)C)C1=O)C",
+  "CN1C(=O)N(C)C2=C(N(C)C=N2)C1=O",
+  "N1(C)C2=C(N(C)C(=O)N(C)C2=O)N=C1",
+  "N1(C)C2=C(N(C(=O)N(C2=O)C)C)N=C1",
+  "N1(C)C2=C(N(C(=O)N(C)C2=O)C)N=C1"
+};
+
+bool
+SameAtomTypes(const std::unordered_map<atom_type_t, int>& h1,
+              const std::unordered_map<atom_type_t, int>& h2) {
+  if (h1.size() != h2.size()) {
+    return false;
+  }
+
+  for (const auto& [b1, c1] : h1) {
+    const auto iter = h2.find(b1);
+    if (iter == h2.end()) {
+      std::cerr << "bit " << b1 << " not in h2\n";
+      return false;
+    }
+
+    if (c1 != iter->second) {
+      std::cerr << "Count mismatch on bit " << b1 << " counts " << c1 << " and " << iter->second << '\n';
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool
+SameBitsAndCounts(const Sparse_Fingerprint_Creator& fp1,
+                  const Sparse_Fingerprint_Creator& fp2) {
+  const auto& bits1 = fp1.bits_found();
+  const auto& bits2 = fp2.bits_found();
+
+  if (bits1.size() != bits2.size()) {
+    std::cerr << "Bit count mismatch " << bits1.size() << " and " << bits2.size() << '\n';
+    return false;
+  }
+
+  for (const auto& [b, c] : bits1) {
+    const auto iter = bits2.find(b);
+    if (iter == bits2.end()) {
+      cerr << "Bit " << b << " not found in b2\n";
+      return false;
+    }
+
+    if (c != iter->second) {
+      std::cerr << "Count mismatch on bit " << b << " counts " << c << " and " << iter->second << '\n';
+      return false;
+    }
+  }
+
+  return true;
+}
+
+TEST_F(TestECFingerPrint, TestRandomOrder) {
+  const int nsmiles = aspirin.size();
+
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles(aspirin[0]));
+
+  Atom_Typing_Specification atom_typing;
+  ASSERT_TRUE(atom_typing.build("UST:ACY"));
+
+  const int matoms = m.natoms();
+
+  std::unique_ptr<atom_type_t[]> atype = std::make_unique<atom_type_t[]>(matoms);
+  ASSERT_TRUE(atom_typing.assign_atom_types(m, atype.get()));
+
+  std::unordered_map<atom_type_t, int> atype_hash;
+  for (int i = 0; i < matoms; ++i) {
+    ++atype_hash[atype[i]];
+  }
+
+  ECFingerprint fp_creator;
+
+  ProduceFingerprint bits;
+  fp_creator.Fingerprint(m, nullptr, atype.get(), bits);
+
+  for (int i = 1; i < nsmiles; ++i) {
+    Molecule variant;
+    EXPECT_TRUE(variant.build_from_smiles(aspirin[i])) << aspirin[i];
+    ASSERT_EQ(matoms, variant.natoms());
+    ASSERT_EQ(m.unique_smiles(), variant.unique_smiles());
+
+    std::unique_ptr<atom_type_t[]> atype = std::make_unique<atom_type_t[]>(variant.natoms());
+    ASSERT_TRUE(atom_typing.assign_atom_types(variant, atype.get()));
+
+    std::unordered_map<atom_type_t, int> variant_atype_hash;
+    for (int j = 0; j < matoms; ++j) {
+      ++variant_atype_hash[atype[j]];
+    }
+    EXPECT_TRUE(SameAtomTypes(atype_hash, variant_atype_hash));
+
+    ProduceFingerprint variant_bits;
+    fp_creator.Fingerprint(variant, nullptr, atype.get(), variant_bits);
+
+    EXPECT_TRUE(SameBitsAndCounts(bits.sfc(), variant_bits.sfc()));
+  }
 }
 
 }  // namespace

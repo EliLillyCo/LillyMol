@@ -8,7 +8,7 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
     exit 1
 else
-    BIN_DIR="$LILLYMOL_HOME/contrib/script/py/mmp"
+    BIN_DIR="$LILLYMOL_HOME/contrib/python/mmp"
 fi
 
 test_command=getMMPSeriesSuggestfromCSV
@@ -27,22 +27,23 @@ if [ ! -x "$command" ]; then
     exit 1
 fi
 
-in="$test_cmd_top/$case/in/test_data_04.smi"
-out=dalke_case2.series
-gold_out="$test_cmd_top/$case/out/dalke_case2.series"
+in="${test_cmd_top}/${case}/in/dalkeJCM2018_ChEMBL_hERG_series.csv"
+gold_out="${test_cmd_top}/${case}/out/dalke_case2.series"
+stdout='dalke_case2.series'
+stderr='stderr'
 
 echo "Testing: $command"
 
-$command -i "$in" -o "$out" -s SMILES -n LSN_LOWEST -a PIC50_MEAN -p 5 -q 9 -y 2>>err.txt
-$diff_tool "out" "$gold_out"
-ret=$?
+${command} -i "${in}" -o "${stdout}" -s SMILES -n CHEMBL_ID -a hERG_pIC50 -p 5 -q 9 -y 2> ${stderr}
+$diff_tool "${stdout}" "${gold_out}"
 
-if [ $ret -eq 1 ]
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+    echo "${case_id} : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+    echo "${case_id} : TEST FAIL"
+    diff ${stdout} ${gold_out}
+    cat ${stderr}
 fi
 
-rm -f "$out"
-rm -f err.txt
+rm -f ${stdout} ${stderr}

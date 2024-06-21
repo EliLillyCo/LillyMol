@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <iostream>
+#include <optional>
 #include <random>
 #include <string>
 
@@ -212,6 +213,8 @@ class Inter_Particle_Bond
     int construct_from_msi_attribute (const msi_attribute &);
     int ConstructFromProto(const ReactionProto::InterParticleBond& proto, int component);
 
+    int BuildProto(ReactionProto::InterParticleBond& proto) const;
+
     int has_sidechain_isotope_requirement() const {
       return _sidechain_isotope_requirement != SidechainIsotopeRequirement::kUndefined;
     }
@@ -292,6 +295,9 @@ class Reaction_Change_Element
     void set_element (const Element * e) { _element = e;}
 
     int atom () const { return _atom;}
+    const Element* element() const {
+      return _element;
+    }
 
     int construct_from_msi_attribute (const msi_attribute *);
     int ConstructFromProto(const ReactionProto::ChangeElement& proto);
@@ -316,6 +322,9 @@ class Reaction_Formal_Charge
     void set_formal_charge (formal_charge_t f) { _fc = f;}
 
     int atom () const { return _atom;}
+    formal_charge_t charge() const {
+      return _fc;
+    }
 
     int process (Molecule &, const Set_of_Atoms &, int);
 
@@ -339,6 +348,9 @@ class Reaction_Change_Formal_Charge
     Reaction_Change_Formal_Charge ();
 
     int atom () const { return _atom;}
+    int delta() const {
+      return _delta;
+    }
 
     int process (Molecule &, const Set_of_Atoms &, int);
 
@@ -375,6 +387,8 @@ class Reaction_Place_Isotope
     int construct_from_msi_attribute (const msi_attribute *);
     int ConstructFromProto(const ReactionProto::PlaceIsotope& proto);
 
+    int BuildProto(ReactionProto::PlaceIsotope& proto) const;
+
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 };
 
@@ -393,6 +407,7 @@ class Reaction_Increment_Isotope : public Reaction_Place_Isotope
     int process (Molecule &, const Set_of_Atoms &, int);
 
     int ConstructFromProto(const ReactionProto::IncrementIsotope& proto);
+    int BuildProto(ReactionProto::IncrementIsotope& proto) const;
 };
 
 /*
@@ -410,6 +425,7 @@ class Reaction_Invert_Isotope : public Reaction_Place_Isotope
     int process (Molecule &, const Set_of_Atoms &, int);
 
     int ConstructFromProto(const ReactionProto::PlaceIsotope& proto);
+    int BuildProto(ReactionProto::PlaceIsotope& proto) const;
 };
 
 /*
@@ -435,6 +451,7 @@ class Molecule_and_Embedding : public Molecule
 
   public:
     Molecule_and_Embedding ();
+    Molecule_and_Embedding (const Molecule& rhs);
 
     const Set_of_Atoms * embedding () const { return &_embedding;}
 
@@ -498,6 +515,8 @@ class Replace_Atom
     int ConstructFromProto(const ReactionProto::ReplaceAtom& proto, int component);
 
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
+
+    int BuildProto(ReactionProto::ReplaceAtom& proto) const;
 
     const Matched_Atom_in_Component & a1 () const { return _a1;}
     const Matched_Atom_in_Component & a2 () const { return _a2;}
@@ -656,6 +675,7 @@ class SiteCipStereo {
     SiteCipStereo();
 
     int ConstructFromProto(const ReactionProto::CipStereoAtom& proto);
+    int BuildProto(ReactionProto::CipStereoAtom& proto) const;
 
     int atom() const {
       return _atom;
@@ -711,6 +731,7 @@ class Reaction_Dihedral_Angle
 
     int construct_from_msi_attribute (const msi_attribute *);
     int ConstructFromProto(const ReactionProto::DihedralAngle& proto, const int component);
+    int BuildProto(ReactionProto::DihedralAngle& proto) const;
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
@@ -732,6 +753,7 @@ class Reaction_Bond_Angle
 
     int construct_from_msi_attribute (const msi_attribute *);
     int ConstructFromProto(const ReactionProto::BondAngle& proto, int component);
+    int BuildProto(ReactionProto::BondAngle& proto) const;
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
@@ -759,6 +781,8 @@ class Reaction_Bond_Length {
     int construct_from_msi_attribute (const msi_attribute *);
     int ConstructFromProto(const ReactionProto::BondLength& proto, int component);
     int write_msi (std::ostream &, const const_IWSubstring &, const const_IWSubstring &) const;
+
+    int BuildProto(ReactionProto::BondLength& proto) const;
 
     int process (Molecule &, const Set_of_Atoms *, const int *, const Molecule_and_Embedding **) const;
 
@@ -814,6 +838,8 @@ class Reaction_3D_Replace
     int construct_from_msi_attribute (const msi_attribute * att);
     int ConstructFromProto(const ReactionProto::CoordinateTransfer& proto,
                 int component);
+    // Not actually implemented.
+    int BuildProto(ReactionProto::CoordinateTransfer& proto) const;
 
     int write_msi (std::ostream & os, const const_IWSubstring & ind,
                    const const_IWSubstring & attribute_name) const;
@@ -949,6 +975,10 @@ class Reaction_Site : public Substructure_Query
     // Aut 2023. Cahn Ingold Prelog stereochemistry
     resizable_array_p<SiteCipStereo> _cip_stereo;
 
+    // Jun 2024. If creating a proto, it is convenient to retain the scaffold smarts.
+    // That way it can be transferred unchanged through a programme.
+    resizable_array_p<IWString> _smarts;
+
 //  private functions
 
     int _write_msi (std::ostream & os, int &, const IWString & ind);
@@ -1009,6 +1039,8 @@ class Reaction_Site : public Substructure_Query
 
     int _determine_matched_atoms_checking_inactives (Molecule & m, Substructure_Results & sresults);
 
+    template <typename M> int InitialiseQueryConstraints(const M& match_condtions);
+
 
   public:
     Reaction_Site ();
@@ -1029,6 +1061,8 @@ class Reaction_Site : public Substructure_Query
     int construct_from_msi_object (const msi_object &, int, const IWString &);
     template <typename P>
     int ConstructFromProto(const P& proto, const IWString& fname);
+
+    template <typename P> int BuildProto(P& proto) const;
 
     int determine_which_matched_atoms_are_changed ();
     int another_reagent_changes_your_matched_atom (int);
@@ -1123,6 +1157,7 @@ class Reaction_Site : public Substructure_Query
 class Scaffold_Reaction_Site : public Reaction_Site
 {
   protected:
+    Scaffold_Match_Conditions _match_conditions;
 
   protected:
 
@@ -1185,6 +1220,10 @@ class Sidechain_Reaction_Site : public Reaction_Site
     // Used during construction from proto.
     int _add_reagent(const std::string& smiles);
 
+    void MaybeIssueNoHitsWarning(const Molecule_and_Embedding& m,
+                const Substructure_Results& sresults,
+                const Sidechain_Match_Conditions& smc) const;
+
   public:
     Sidechain_Reaction_Site ();
     ~Sidechain_Reaction_Site ();
@@ -1206,18 +1245,23 @@ class Sidechain_Reaction_Site : public Reaction_Site
                                    const Sidechain_Match_Conditions & smc);
     int ConstructFromProto(const ReactionProto::SidechainReactionSite& proto, const IWString& fname);
 
+    int BuildProto(ReactionProto::SidechainReactionSite& proto) const;
+
     int number_reagents () const { return _reagents.number_elements ();}
 
     // return true if any of our _inter_particle_bonds has a sidechain isotope requirement.
     int has_sidechain_isotope_requirement() const;
+
 
     int single_reagent_only () const { return 1 == _reagents.number_elements ();}
 
     int add_inter_particle_bond (int, int, int, bond_type_t);
 
     int remove_first_reagent_no_delete();
+    int remove_no_delete_all_reagents();
 
     int add_reagent  (Molecule_and_Embedding * m, const Sidechain_Match_Conditions & smc);
+    int add_reagent  (const Molecule& m, const Sidechain_Match_Conditions & smc);
     int add_reagents (const char *, FileType, const Sidechain_Match_Conditions &);
     int add_reagents (data_source_and_type<Molecule_and_Embedding> &, const Sidechain_Match_Conditions &);
     int add_reagents_with_stringbuffer (const char * fname, int input_type,
@@ -1226,7 +1270,8 @@ class Sidechain_Reaction_Site : public Reaction_Site
     int add_reagent_embedding_identified  (Molecule_and_Embedding * m, const Sidechain_Match_Conditions & smc);
     Molecule_and_Embedding * reagent (int r) const { return _reagents[r];}
 
-    int empty_reagents_array ();
+    int empty_reagents_array();
+    int remove_last_reagent();
 
     int check_internal_consistency (int, int, const resizable_array<int> &, const resizable_array<int> &);
 
@@ -1362,8 +1407,6 @@ class IWReaction : public Scaffold_Reaction_Site
 //  Passed to all the sidechains
 
     int _make_implicit_hydrogens_explicit;
-
-    Scaffold_Match_Conditions _match_conditions;
 
     void * _user_specified_void_ptr;
 
@@ -1559,8 +1602,16 @@ class IWReaction : public Scaffold_Reaction_Site
     // Add reagents to a sidechain.
     int add_sidechain_reagents(int sidechain, const char* fname,
                      FileType file_type, const Sidechain_Match_Conditions& smc);
+    int add_sidechain_reagent(int sidechain, Molecule& reagent,
+                        const Sidechain_Match_Conditions& smc);
 
     int number_sidechains_with_reagents () const;
+    const resizable_array_p<Sidechain_Reaction_Site>& sidechains() const {
+      return _sidechains;
+    }
+
+    // remove, without deleting, all reagents in all sidechains.
+    int remove_no_delete_all_reagents();
 
     int all_sidechains_have_reagents () const;
 
@@ -1575,10 +1626,15 @@ class IWReaction : public Scaffold_Reaction_Site
     // possibility is that those files are assumed to be in the same directory as `proto`.
     int ConstructFromProto(const ReactionProto::Reaction& proto, const IWString& file_name);
 
+    int ConstructFromTextProto(const std::string& textproto, const IWString& dirname);
+
     // Read a reaction from `fname`.
     // Unfortunately there is currently not a variant that takes
     // a Scaffold_Match_Conditions specification, but that can be in the proto.
     int Read(IWString& fname);
+
+    // Transfer information to `proto`.
+    int BuildProto(ReactionProto::Reaction& proto) const;
 
     int write_msi (const char * fname);
     int write_msi (std::ostream &);
@@ -1645,6 +1701,11 @@ class IWReaction : public Scaffold_Reaction_Site
                           Molecule &);
 
     int perform_reaction (Molecule &, resizable_array_p<Molecule> &);
+
+    // react scaffold and sidechain if the number of embeddings found in sidechain is one.
+    // returns a match for every scaffold match
+    std::optional<std::vector<Molecule>> perform_reaction(Molecule& scaffold, Molecule& sidechain);
+
 //  int perform_reaction (Molecule & m, Molecule_Output_Object &);
 //  int perform_reaction (Molecule & m, const Set_of_Atoms * embedding, Molecule_Output_Object &);
 

@@ -16,6 +16,8 @@
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 
+#include "fingerprint_writer.h"
+
 using std::cerr;
 using std::endl;
 
@@ -33,7 +35,6 @@ Atom_Typing_Specification atom_typing;
 
 int reduce_to_largest_fragment = 0;
 
-IWString tag;
 
 bool function_as_tdt_filter = false;
 
@@ -49,18 +50,18 @@ Accumulator_Int<uint> atom_count;
 Accumulator_Int<uint> longest_path_acc;
 extending_resizable_array<int> longest_path;
 
-// If positive, the width of the fixed width fingerprint to produce.
-int write_fixed_width_fingerprint = 0;
+fingerprint_writer::FingerprintWriter fp_writer;
 
 void
 usage(int rc) {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
   cerr << "Computes atom pair fingerprints\n";
   cerr << "  -r <sep>      minimum bond separation (def 1)\n";
   cerr << "                set to 0 to get single atom type fingerprint included\n";
   cerr << "  -R <sep>      maximum bond separation (def none)\n";
   cerr << "  -P ...        atom type specification\n";
-  cerr << "  -J <tag>      tag for fingerprints\n";
+  cerr << "  -J <tag>      tag for fingerprints, enter '-J help' for fixed, or "
+          "descriptor form\n";
   cerr << "  -f            function as a TDT filter\n";
   cerr << "  -X <fname>    look for bits in <fname> and provide explanations\n";
   cerr << "  -B <fname>    write all bits found to <fname>\n";
@@ -120,21 +121,18 @@ DoAtomPairFingerprint(Molecule& m, const atom_type_t* atype,
     GatherStatistics(m);
   }
 
-  if (!function_as_tdt_filter) {
+  int need_vbar = 0;
+  if (function_as_tdt_filter) {
+  } else if (fp_writer.IsWritingDescriptors()) {
+  } else {
     output << smiles_tag << m.smiles() << ">\n";
     output << identifier_tag << m.name() << ">\n";
+    need_vbar = 1;
   }
 
-  if (write_fixed_width_fingerprint > 0) {
-    const IWString ascii = sfc.FixedWidthFingerprint(write_fixed_width_fingerprint);
-    output << tag << ascii << ">\n";
-  } else {
-    IWString tmp;
-    sfc.daylight_ascii_form_with_counts_encoded(tag, tmp);
-    output << tmp << "\n";
-  }
+  fp_writer.WriteFingerprint(m.name(), sfc, output);
 
-  if (!function_as_tdt_filter) {
+  if (need_vbar) {
     output << "|\n";
   }
 
@@ -214,7 +212,7 @@ DoAtomPairFingerprintPipe(iwstring_data_source& input,
 
     if (!DoAtomPairFingerprintPipe(line, atom_pair_fp_gen, output)) {
       cerr << "AtomPairFingerprintPipe:invalid input " << line << "' line "
-           << input.lines_read() << endl;
+           << input.lines_read() << '\n';
       return 0;
     }
 
@@ -233,7 +231,7 @@ DoAtomPairFingerprint(const char* fname, FileType input_type,
   if (function_as_tdt_filter) {
     iwstring_data_source input(fname);
     if (!input.good()) {
-      cerr << "AtomPairFingerprint::cannot open filter " << fname << endl;
+      cerr << "AtomPairFingerprint::cannot open filter " << fname << '\n';
       return 0;
     }
 
@@ -260,7 +258,7 @@ DoAtomPairFingerprint(const char* fname, FileType input_type,
 
 int
 DoAtomPairFingerprint(int argc, char** argv) {
-  Command_Line cl(argc, argv, "A:K:lg:i:J:P:bvftr:R:ysB:cw:");
+  Command_Line cl(argc, argv, "A:K:lg:i:J:P:bvftr:R:ysB:c");
 
   if (cl.unrecognised_options_encountered()) {
     usage(1);
@@ -305,7 +303,7 @@ DoAtomPairFingerprint(int argc, char** argv) {
   if (cl.option_present('R')) {
     if (!cl.value('R', max_separation) || max_separation < min_separation) {
       cerr << "Max separation (-R) must be larger than min_separation " << min_separation
-           << endl;
+           << '\n';
       return 1;
     }
 
@@ -345,27 +343,14 @@ DoAtomPairFingerprint(int argc, char** argv) {
     }
   }
 
-  if (cl.option_present('w')) {
-    if (!cl.value('w', write_fixed_width_fingerprint) ||
-        write_fixed_width_fingerprint < 8) {
-      cerr << "The number of bits in a fixed fingerprint must be +ve\n";
-      return 1;
-    }
-
-    if (verbose) {
-      cerr << "Will generate fixed width fingerprints " << write_fixed_width_fingerprint
-           << " bits\n";
-    }
-  }
-
   if (!cl.option_present('J')) {
     cerr << "Must specify tag via the -J option\n";
     usage(1);
   }
 
-  cl.value('J', tag);
-  if (!tag.ends_with('<')) {
-    tag += '<';
+  if (!fp_writer.Initialise(cl, 'J', verbose)) {
+    cerr << "Cannot initialise FP writer (-J)\n";
+    return 1;
   }
 
   FileType input_type = FILE_TYPE_INVALID;

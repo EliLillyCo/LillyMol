@@ -10,23 +10,29 @@
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 
-#include "Foundational/cmdline/cmdline.h"
+#include "absl/strings/string_view.h"
+#include "google/protobuf/text_format.h"
 
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwqsort/iwqsort.h"
 
-#include "molecule.h"
 #include "aromatic.h"
+#include "molecule.h"
+#include "misc2.h"
+#include "path.h"
+#include "smiles.h"
 #include "standardise.h"
 #include "path.h"
 #include "toggle_kekule_form.h"
-#include "smiles.h"
-#include "misc2.h"
+
+#include "Molecule_Lib/standardise.pb.h"
 
 using std::cerr;
 using std::endl;
 using standardise::Canonicalise;
+using standardisation::ExternalTransformation;
 
 class Molecule_Data_for_Standardisation
 {
@@ -193,18 +199,21 @@ Possible_Lactim_Lactam::add_unique_nitrogens(Set_of_Atoms & unique_nitrogens) co
 int
 Possible_Lactim_Lactam::reperceive(Molecule & m)
 {
-  if (INVALID_ATOM_NUMBER == _second_nitrogen)    // no change possible
+  if (INVALID_ATOM_NUMBER == _second_nitrogen) {    // no change possible
     return 0;
+  }
 
   const Bond * b1 = m.bond_between_atoms(_carbon, _nitrogen);
 
-  if (b1->is_double_bond())   // we are good
+  if (b1->is_double_bond()) {   // we are good
     return 1;
+  }
 
   const Bond * b2 = m.bond_between_atoms(_carbon, _second_nitrogen);
 
-  if (b2->is_single_bond())   // we are good
+  if (b2->is_single_bond()) {   // we are good
     return 1;
+  }
 
 //cerr << "reperceive, bond1 " << b1->is_double_bond() << " bond2 " << b2->is_single_bond() << '\n';
 
@@ -353,11 +362,13 @@ Chemical_Standardisation::activate_all()
   _transform_azid.activate();
   _transform_misdrawn_urea.activate();
   _transform_imidazole.activate();
+  _transform_imidazole_exocyclic_nh.activate();
   _transform_charged_imidazole.activate();
   _transform_pyrazole.activate();
   _transform_lactim_lactam.activate();
   _transform_lactim_lactam_ring.activate();
   _transform_triazole.activate();
+  _transform_pyrimidine.activate();
   _transform_isoxazole.activate();
   _transform_aromatic_guanidine_ring.activate();
   _transform_pyrazolone.activate();
@@ -366,10 +377,16 @@ Chemical_Standardisation::activate_all()
   _transform_sulfonyl_urea.activate();
   _transform_124_triazine.activate();
   _transform_enol_fused.activate();
+  _transform_charged_non_organic.activate();
 
   _active = 1;
 
   return;
+}
+
+void
+Chemical_Standardisation::set_append_string_depending_on_what_changed(int s) {
+  _append_string_depending_on_what_changed = s;
 }
 
 int
@@ -392,55 +409,60 @@ Chemical_Standardisation::ConvertToCanonicalOrder(Molecule& m) {
   return 0;
 }
 
+
 int
 display_all_chemical_standardisation_options(std::ostream & os, char zoption)
 {
-  os << "  -" << zoption << ' ' << CS_NITRO << "       transform nitro groups to N(=O)=O\n";
-  os << "  -" << zoption << ' ' << CS_NpOm << "        transform charge separated [N+]-[O-] (includes nitro)\n";
-  os << "  -" << zoption << ' ' << CS_NpNm << "        transform charge separated [N+]-[N-] to N=N\n";
-  os << "  -" << zoption << ' ' << CS_SpCm << "        transform [S+]-[C-] to S=C\n";
-  os << "  -" << zoption << ' ' << CS_ALLpm << "       transform all [X+]-[Y-] to X=Y\n";
-  os << "  -" << zoption << ' ' << CS_XH << "          remove hydrogens\n";
-  os << "  -" << zoption << ' ' << CS_AMINE << "       change all amines\n";
-  os << "  -" << zoption << ' ' << CS_Om << "          protonate all O- groups\n";
-  os << "  -" << zoption << ' ' << CS_Nm << "          protonate all N- groups\n";
-  os << "  -" << zoption << ' ' << CS_NRMCH << "       remove all hydrogens except those to chiral centres\n";
-  os << "  -" << zoption << ' ' << CS_COVM << "        break covalent bonds between Oxygen and Na,K\n";
-  os << "  -" << zoption << ' ' << CS_ISOLC << "       assign formal charges to isolated Na, K, .. and Halogens\n";
-  os << "  -" << zoption << ' ' << CS_GUAND << "        convert guanidines to -N-C(=N)-N form\n";
-  os << "  -" << zoption << ' ' << CS_GUANDR << "        convert Ring type guanidines to -N-C(=N)-N form\n";
-  os << "  -" << zoption << ' ' << CS_AZID << "        convert charge separated azids [N-]=[N+]=N to N#N=N\n";
-  os << "  -" << zoption << ' ' << CS_MSDUR << "       convert misdrawn ureas, O-C(=N)-N to O=C(-N)-N\n";
-  os << "  -" << zoption << ' ' << CS_MSDSA << "       convert misdrawn sulfonamides, O=S(O)=N to O=S(=O)N\n";
-  os << "  -" << zoption << ' ' << CS_FCRN << "        for converting back from corina mangled structures\n";
-  os << "  -" << zoption << ' ' << CS_EHLST << "      move all explicit Hydrogen atoms to last in the connection table\n";
-  os << "  -" << zoption << ' ' << CS_FMRK << "        reverse transformations applied to .mrk files\n";
-  os << "  -" << zoption << ' ' << CS_RNPNM << "       transform 5 valent N=N to charge separated form\n";
-  os << "  -" << zoption << ' ' << CS_FWIH << "        fix obviously wrong implicit hydrogen settings\n";
-  os << "  -" << zoption << ' ' << CS_IMIDAZOLE << "   convert imidazoles to have nH near cD3\n";
-  os << "  -" << zoption << ' ' << CS_CHARGED_IMIDAZOLE << "   convert charged imidazoles to have n+ near cD3\n";
-  os << "  -" << zoption << ' ' << CS_PYRAZOLE << "    convert pyrazoles to have nH near electron withdrawing\n";
-  os << "  -" << zoption << ' ' << CS_TRIAZOLE << "    convert triazoles to have nH near electron withdrawing\n";
-  os << "  -" << zoption << ' ' << CS_TETRAZOLE << "    convert tetrazoles to have nH near attachment\n";
-  os << "  -" << zoption << ' ' << CS_LACTIM_LACTAM << "        convert lactim to lactam form (non ring)\n";
-  os << "  -" << zoption << ' ' << CS_LACTIM_LACTAM_RING << "       convert lactim to lactam form (ring)\n";
-  os << "  -" << zoption << ' ' << CS_ISOXAZOLE << "       convert Hydroxy isoxazoles to O= forms\n";
-  os << "  -" << zoption << ' ' << CS_ARGUAN << "       aromatic \"gauanidines\" - adjacent to =O, better name needed\n";
-  os << "  -" << zoption << ' ' << CS_PYRAZOLONE << "       convert pyrazolone to keto form\n";
-  os << "  -" << zoption << ' ' << CS_AMINO_THIAZOLE << "     convert -N=c1scc[nH]1 to -[NH]c1sccn1\n";
-  os << "  -" << zoption << ' ' << CS_KETO_ENOL << "     convert enol to keto forms (no adjacent heteroatoms)\n";
-  os << "  -" << zoption << ' ' << CS_4_PYRIDONE << "     convert 4 pyridol to pyridone form\n";
-  os << "  -" << zoption << ' ' << CS_SULFONYL_UREA << "     convert S-C(=N)-N to S=C(-N)-N\n";
-  os << "  -" << zoption << ' ' << CS_124TRIAZINE << "     convert S-C(=N)-N to S=C(-N)-N\n";
-  os << "  -" << zoption << ' ' << CS_ENOL_FUSED << "     convert [O,S;D1]-c(:n):[aD3x3] to O=C form\n";
+  IWString zopt;
+  zopt << " -" << zoption << " ";
 
-  os << "  -" << zoption << ' ' << CS_ALL << "         ALL the above standardistions\n";
-  os << "  -" << zoption << ' ' << CS_REVERSE_NITRO << "     convert O=N=O nitro groups to charge separated\n";
-  os << "  -" << zoption << ' ' << CS_REVERSE_NV5 << "       convert all 5 valent N atoms to charge separated\n";
-  os << "  -" << zoption << ' ' << "APP=<xxx>   append 'xxx' to the name of changed molecules\n";
-  os << "  -" << zoption << ' ' << "APP=EACH    append the reason for each change\n";
+  os << zopt << CS_NITRO << "       transform nitro groups to N(=O)=O\n";
+  os << zopt << CS_NpOm << "        transform charge separated [N+]-[O-] (includes nitro)\n";
+  os << zopt << CS_NpNm << "        transform charge separated [N+]-[N-] to N=N\n";
+  os << zopt << CS_SpCm << "        transform [S+]-[C-] to S=C\n";
+  os << zopt << CS_ALLpm << "       transform all [X+]-[Y-] to X=Y\n";
+  os << zopt << CS_XH << "          remove hydrogens\n";
+  os << zopt << CS_AMINE << "       change all amines\n";
+  os << zopt << CS_Om << "          protonate all O- groups\n";
+  os << zopt << CS_Nm << "          protonate all N- groups\n";
+  os << zopt << CS_NRMCH << "       remove all hydrogens except those to chiral centres\n";
+  os << zopt << CS_COVM << "        break covalent bonds between Oxygen and Na,K\n";
+  os << zopt << CS_ISOLC << "       assign formal charges to isolated Na, K, .. and Halogens\n";
+  os << zopt << CS_GUAND << "        convert guanidines to -N-C(=N)-N form\n";
+  os << zopt << CS_GUANDR << "        convert Ring type guanidines to -N-C(=N)-N form\n";
+  os << zopt << CS_AZID << "        convert charge separated azids [N-]=[N+]=N to N#N=N\n";
+  os << zopt << CS_MSDUR << "       convert misdrawn ureas, O-C(=N)-N to O=C(-N)-N\n";
+  os << zopt << CS_MSDSA << "       convert misdrawn sulfonamides, O=S(O)=N to O=S(=O)N\n";
+  os << zopt << CS_FCRN << "        for converting back from corina mangled structures\n";
+  os << zopt << CS_EHLST << "      move all explicit Hydrogen atoms to last in the connection table\n";
+  os << zopt << CS_FMRK << "        reverse transformations applied to .mrk files\n";
+//  os << zopt << CS_RNPNM << "       transform 5 valent N=N to charge separated form\n";
+  os << zopt << CS_FWIH << "        fix obviously wrong implicit hydrogen settings\n";
+  os << zopt << CS_IMIDAZOLE << "   convert imidazoles to have nH near cD3\n";
+  os << zopt << CS_CHARGED_IMIDAZOLE << "   convert charged imidazoles to have n+ near cD3\n";
+  os << zopt << CS_PYRAZOLE << "    convert pyrazoles to have nH near electron withdrawing\n";
+  os << zopt << CS_TRIAZOLE << "    convert triazoles to have nH near electron withdrawing\n";
+  os << zopt << CS_TETRAZOLE << "    convert tetrazoles to have nH near attachment\n";
+  os << zopt << CS_LACTIM_LACTAM << "        convert lactim to lactam form (non ring)\n";
+  os << zopt << CS_LACTIM_LACTAM_RING << "       convert lactim to lactam form (ring)\n";
+  os << zopt << CS_ISOXAZOLE << "       convert Hydroxy isoxazoles to O= forms\n";
+  os << zopt << CS_ARGUAN << "       aromatic \"gauanidines\" - adjacent to =O, better name needed\n";
+  os << zopt << CS_PYRAZOLONE << "       convert pyrazolone to keto form\n";
+  os << zopt << CS_AMINO_THIAZOLE << "     convert -N=c1scc[nH]1 to -[NH]c1sccn1\n";
+  os << zopt << CS_KETO_ENOL << "     convert enol to keto forms (no adjacent heteroatoms)\n";
+  os << zopt << CS_4_PYRIDONE << "     convert 4 pyridol to pyridone form\n";
+  os << zopt << CS_SULFONYL_UREA << "     convert S-C(=N)-N to S=C(-N)-N\n";
+  os << zopt << CS_124TRIAZINE << "     convert S-C(=N)-N to S=C(-N)-N\n";
+  os << zopt << CS_ENOL_FUSED << "     convert [O,S;D1]-c(:n):[aD3x3] to O=C form\n";
 
-  return os.good();
+  os << zopt << CS_ALL << "         ALL the above standardistions\n";
+  os << zopt << CS_REVERSE_NITRO << "     convert O=N=O nitro groups to charge separated\n";
+  os << zopt << CS_REVERSE_NV5 << "       convert all 5 valent N atoms to charge separated\n";
+  os << zopt << "APP=<xxx>   append 'xxx' to the name of changed molecules\n";
+  os << zopt << "APP=EACH    append the reason for each change\n";
+  os << zopt << "EXT:F:/path/to/proto   file of external standardisation(s) standardisation::Standardisation proto\n";
+
+  return 1;
 }
 
 int
@@ -459,35 +481,58 @@ Chemical_Standardisation::Activate(const IWString& directive,
   if (negation)
     tmp.remove_leading_chars(1);
 
-  if (CS_ALL == tmp)    // do first on purpose
-  {
+  if (CS_ALL == tmp) {    // do first on purpose
     activate_all();
     if (verbose)
       cerr << "All chemical standardisation transformations enabled\n";
   }
   else if (CS_ALLpm == tmp)
   {
-    _transform_plus_minus.activate();
-    if (verbose)
-      cerr << "CS: all charge separated [X+]-[Y-] will be transformed to X=Y\n";
+    if (negation) {
+      _transform_plus_minus.deactivate();
+      if (verbose)
+        cerr << "CS: all charge separated [X+]-[Y-] will be not transformed to X=Y\n";
+    } else {
+      _transform_plus_minus.activate();
+      if (verbose)
+        cerr << "CS: all charge separated [X+]-[Y-] will be transformed to X=Y\n";
+    }
   }
   else if (CS_NITRO == tmp)
   {
-    _transform_nitro.activate();
-    if (verbose)
-      cerr << "CS: nitro groups will be transformed to N(=O)=O\n";
+    if (negation) {
+      _transform_nitro.deactivate();
+      if (verbose)
+        cerr << "CS: nitro groups will not be transformed to N(=O)=O\n";
+    } else {
+      _transform_nitro.activate();
+      if (verbose)
+        cerr << "CS: nitro groups will be transformed to N(=O)=O\n";
+    }
   }
   else if (CS_NpOm == tmp)
   {
-    _transform_nplus_ominus.activate();
-    if (verbose)
-      cerr << "CS: charge separated [N+]-[O-] will be transformed to N=O\n";
+    if (negation) {
+      _transform_nplus_ominus.deactivate();
+      if (verbose)
+        cerr << "CS: charge separated [N+]-[O-] will be not transformed to N=O\n";
+    } else {
+      _transform_nplus_ominus.activate();
+      if (verbose)
+        cerr << "CS: charge separated [N+]-[O-] will be transformed to N=O\n";
+    }
   }
   else if (CS_NpNm == tmp)
   {
-    _transform_n_charge_sep.activate();
-    if (verbose)
-      cerr << "CS: charge separated [N+]-[N-] will be transformed to N=N\n";
+    if (negation) {
+      _transform_n_charge_sep.deactivate();
+      if (verbose)
+        cerr << "CS: charge separated [N+]-[N-] will not be transformed to N=N\n";
+    } else {
+      _transform_n_charge_sep.activate();
+      if (verbose)
+        cerr << "CS: charge separated [N+]-[N-] will be transformed to N=N\n";
+    }
   }
   else if (CS_XH == tmp)
   {
@@ -506,102 +551,210 @@ Chemical_Standardisation::Activate(const IWString& directive,
   }
   else if (CS_SpCm == tmp)
   {
-    _transform_splus_cminus.activate();
-    if (verbose)
-      cerr << "[S+]-[C-] will be transformed to S=C\n";
+    if (negation) {
+      _transform_splus_cminus.deactivate();
+      if (verbose)
+        cerr << "[S+]-[C-] will not be transformed to S=C\n";
+    } else {
+      _transform_splus_cminus.activate();
+      if (verbose)
+        cerr << "[S+]-[C-] will be transformed to S=C\n";
+    }
   }
   else if (CS_Om == tmp)
   {
-    _transform_ominus.activate();
-    if (verbose)
-      cerr << "All free [O-] groups will be protonated\n";
+    if (negation) {
+      _transform_ominus.deactivate();
+      if (verbose)
+        cerr << "All free [O-] groups will not be protonated\n";
+    } else {
+      _transform_ominus.activate();
+      if (verbose)
+        cerr << "All free [O-] groups will be protonated\n";
+    }
   }
   else if (CS_Nm == tmp)
   {
-    _transform_nminus.activate();
-    if (verbose)
-      cerr << "All [N-] groups will be protonated\n";
+    if (negation) {
+      _transform_nminus.deactivate();
+      if (verbose)
+        cerr << "All [N-] groups will not be protonated\n";
+    } else {
+      _transform_nminus.activate();
+      if (verbose)
+        cerr << "All [N-] groups will be protonated\n";
+    }
   }
   else if (CS_Cm == tmp)
   {
-    _transform_cminus.activate();
-    if (verbose)
-      cerr << "All [C-] groups will be protonated\n";
+    if (negation) {
+      _transform_cminus.deactivate();
+      if (verbose) {
+        cerr << "All [C-] groups will not be protonated\n";
+      }
+    } else {
+      _transform_cminus.activate();
+      if (verbose) {
+        cerr << "All [C-] groups will be protonated\n";
+      }
+    }
   }
   else if (CS_AMINE == tmp)
   {
-    _transform_amines.activate();
-    if (verbose)
-      cerr << "All charged amines will be deprotonated\n";
+    if (negation) {
+      _transform_amines.deactivate();
+      if (verbose)
+        cerr << "All charged amines will not be deprotonated\n";
+    } else {
+      _transform_amines.activate();
+      if (verbose)
+        cerr << "All charged amines will be deprotonated\n";
+    }
   }
   else if (CS_COVM == tmp)
   {
-    _transform_covalent_metals.activate();
-    if (verbose)
-      cerr << "Will break bonds to covalently bonded Na and K\n";
+    if (negation) {
+      _transform_covalent_metals.deactivate();
+      if (verbose)
+        cerr << "Will not break bonds to covalently bonded Na and K\n";
+    } else {
+      _transform_covalent_metals.activate();
+      if (verbose)
+        cerr << "Will break bonds to covalently bonded Na and K\n";
+    }
   }
   else if (CS_ISOLC == tmp)
   {
-    _transform_single_atom_ions.activate();
-
-    if (verbose)
-      cerr << "Isolated metals and halogens will be assigned charges\n";
+    if (negation) {
+      _transform_single_atom_ions.deactivate();
+      if (verbose)
+        cerr << "Isolated metals and halogens will not be assigned charges\n";
+    } else {
+      _transform_single_atom_ions.activate();
+      if (verbose)
+        cerr << "Isolated metals and halogens will be assigned charges\n";
+    }
   }
   else if (CS_GUAND == tmp)
   {
-    _transform_guanidine.activate();
-
-    if (verbose)
-      cerr << "Guanidines will be transformed\n";
+    if (negation) {
+      _transform_guanidine.deactivate();
+      if (verbose)
+        cerr << "Guanidines will not be transformed\n";
+    } else {
+      _transform_guanidine.activate();
+      if (verbose)
+        cerr << "Guanidines will be transformed\n";
+    }
   }
   else if (CS_GUANDR == tmp)
   {
-    _transform_guanidine_ring.activate();
-
-    if (verbose)
-      cerr << "Ring guanidines will be transformed\n";
+    if (negation) {
+      _transform_guanidine_ring.deactivate();
+      if (verbose)
+        cerr << "Ring guanidines will not be transformed\n";
+    } else {
+      _transform_guanidine_ring.activate();
+      if (verbose)
+        cerr << "Ring guanidines will be transformed\n";
+    }
   }
   else if (CS_NRMCH == tmp)
   {
-    _remove_hydrogens.activate();
-    _remove_hydrogens_attached_to_chiral_centres = 0;
+    if (negation) {
+      _remove_hydrogens.deactivate();
+      _remove_hydrogens_attached_to_chiral_centres = 1;
+      if (verbose) {
+        cerr << "Will not remove explicit Hydrogens\n";
+      }
+    } else {
+      _remove_hydrogens.activate();
+      _remove_hydrogens_attached_to_chiral_centres = 0;
+      if (verbose) {
+        cerr << "Will remove explicit Hydrogens\n";
+      }
+    }
   }
   else if (CS_ACID == tmp)
   {
-    _protonate_carboxyllic_acids.activate();
-    _protonate_sulfinic_acids.activate();
-    _protonate_sulfonic_acids.activate();
-    _protonate_sulfur_acids.activate();
-    _protonate_phosphorous_acids.activate();
+    if (negation) {
+      _protonate_carboxyllic_acids.deactivate();
+      _protonate_sulfinic_acids.deactivate();
+      _protonate_sulfonic_acids.deactivate();
+      _protonate_sulfur_acids.deactivate();
+      _protonate_phosphorous_acids.deactivate();
 
-    if (verbose)
-      cerr << "All acids will be protonated\n";
+      if (verbose) {
+        cerr << "All acids will not be protonated\n";
+      }
+    } else {
+      _protonate_carboxyllic_acids.activate();
+      _protonate_sulfinic_acids.activate();
+      _protonate_sulfonic_acids.activate();
+      _protonate_sulfur_acids.activate();
+      _protonate_phosphorous_acids.activate();
+
+      if (verbose) {
+        cerr << "All acids will be protonated\n";
+      }
+    }
   }
   else if (CS_EHLST == tmp)
   {
-    _explicit_hydrogens_last.activate();
+    if (negation) {
+      _explicit_hydrogens_last.deactivate();
+      if (verbose) {
+        cerr << "Will not move explicit Hydrogens to last in the connection table\n";
+      }
+    } else {
+      _explicit_hydrogens_last.activate();
+      if (verbose) {
+        cerr << "Will move explicit Hydrogens to last in the connection table\n";
+      }
+    }
   }
   else if (CS_FMRK == tmp)
   {
-    _from_mrk_standardisations.activate();
+    if (negation) {
+      _from_mrk_standardisations.deactivate();
+    } else {
+      _from_mrk_standardisations.activate();
+    }
   }
+#ifdef REMOVED_JUN_2024_WAS_DUPLICATE
   else if (CS_RNPNM == tmp)
   {
     _transform_back_to_nplus_nminus.activate();
     _transform_to_charge_separated_azid.activate();
   }
+#endif
   else if (CS_FWIH == tmp)
   {
     _transform_obvious_implicit_hydrogen_errors.activate();
   }
   else if (CS_AZID == tmp)
   {
-    _transform_azid.activate();
+    if (negation) {
+      _transform_azid.deactivate();
+      if (verbose) {
+        cerr << "Will not transform azids to \n";
+      }
+    } else {
+      _transform_azid.activate();
+      if (verbose) {
+        cerr << "Will transform azids to \n";
+      }
+    }
   }
   else if (CS_MSDUR == tmp)
   {
-    _transform_misdrawn_urea.activate();
+    if (negation) {
+      _transform_azid.deactivate();
+    } else {
+      _transform_misdrawn_urea.activate();
+    }
   }
+  // TODO:ianwatson finish up the negations...
   else if (CS_MSDSA == tmp)
   {
     _transform_misdrawn_sulfonamide.activate();
@@ -614,11 +767,32 @@ Chemical_Standardisation::Activate(const IWString& directive,
   }
   else if (CS_IMIDAZOLE == tmp)
   {
-    _transform_imidazole.activate();
+    if (negation) {
+      _transform_imidazole.deactivate();
+      if (verbose) {
+        cerr << "Will NOT transform imidazoles\n";
+      }
+    } else {
+      _transform_imidazole.activate();
+      if (verbose) {
+        cerr << "Will transform imidazoles\n";
+      }
+    }
   }
   else if (CS_CHARGED_IMIDAZOLE == tmp)
   {
-    _transform_charged_imidazole.activate();
+    if (negation) {
+      _transform_charged_imidazole.deactivate();
+    } else {
+      _transform_charged_imidazole.activate();
+    }
+  }
+  else if (tmp == CS_IMIDAZOLE_EXONH) {
+    if (negation) {
+      _transform_charged_imidazole.deactivate();
+    } else {
+      _transform_imidazole_exocyclic_nh.activate();
+    }
   }
   else if (CS_TETRAZOLE == tmp)
   {
@@ -631,6 +805,9 @@ Chemical_Standardisation::Activate(const IWString& directive,
   else if (CS_TRIAZOLE == tmp)
   {
     _transform_triazole.activate();
+  }
+  else if (tmp == CS_PYRIMIDINE) {
+    _transform_pyrimidine.activate();
   }
   else if (CS_ISOXAZOLE == tmp)
   {
@@ -662,7 +839,8 @@ Chemical_Standardisation::Activate(const IWString& directive,
   }
   else if (CS_REVERSE_NV5 == tmp)
   {
-    _transform_nv5_to_charge_separated.activate();
+    _transform_back_to_nplus_nminus.activate();
+    _transform_to_charge_separated_azid.activate();
   }
   else if (CS_KETO_ENOL == tmp)
   {
@@ -688,6 +866,18 @@ Chemical_Standardisation::Activate(const IWString& directive,
 
   if (!negation)
     _active++;
+
+  return 1;
+}
+
+int
+Chemical_Standardisation::_activate_nohmove_transformations() {
+  _transform_nplus_ominus.activate();    // no need to do nitro, as they are a subset
+  _transform_n_charge_sep.activate();
+  _transform_splus_cminus.activate();
+  _transform_ominus.activate();
+  _transform_nminus.activate();
+  _transform_covalent_metals.activate();
 
   return 1;
 }
@@ -752,6 +942,15 @@ Chemical_Standardisation::construct_from_command_line(Command_Line & cl,
       continue;
     }
 
+    if (tmp.starts_with("EXT:")) {
+      tmp.remove_leading_chars(4);
+      if (! AddExternalSpecification(tmp)) {
+        cerr << "Chemical_Standardisation::construct_from_command_line:invalid external '" << tmp << '\n';
+        return 0;
+      }
+      continue;
+    }
+
     if (!Activate(tmp, verbose))
     {
       cerr << "Chemical_Standardisation::construct_from_command_line:unrecognized directive '" << flag << "'\n";
@@ -771,13 +970,15 @@ Chemical_Standardisation::_do_remove_hydrogens(Molecule & m)
 {
   assert(ok());
 
-  if (0 == m.natoms(1))     // quick check
+  if (0 == m.natoms(1)) {     // quick check
     return 0;
+  }
 
   const int matoms = m.natoms();
 
-  if (1 == matoms && 1 == m.atomic_number(0))   // Hydrogen molecule, do not "disappear" it...
+  if (1 == matoms && 1 == m.atomic_number(0)) {   // Hydrogen molecule, do not "disappear" it...
     return 0;
+  }
 
   int rc = 0;
 
@@ -790,11 +991,11 @@ Chemical_Standardisation::_do_remove_hydrogens(Molecule & m)
       continue;
 
 //  cerr << "H atom " << i << " has ncon " << a->ncon() << '\n';
-    if (a->ncon() > 1)     // don't touch those bridging hydrogens
+    if (a->ncon() > 1) {     // don't touch those bridging hydrogens
       continue;
+    }
 
-    if (a->formal_charge() && a->ncon())     // formally charged Hydrogen attached to something
-    {
+    if (a->formal_charge() && a->ncon()) {     // formally charged Hydrogen attached to something
       if (_verbose)
         cerr << "Chemical_Standardisation::_do_remove_hydrogens: formally charged, covalently bonded Hydrogen not removed\n";
       continue;
@@ -803,17 +1004,16 @@ Chemical_Standardisation::_do_remove_hydrogens(Molecule & m)
     if (a->is_isotope())
       continue;
 
-    if (a->ncon() > 0)     // need to check for chiral centre involvement
-    {
+    // need to check for chiral centre involvement
+    if (a->ncon() > 0 && m.chiral_centres() > 0) {
       const atom_number_t j = a->other(i, 0);
 //    cerr << "Bonded to " << j << " type " << m.smarts_equivalent_for_atom(j) << '\n';
 
-      if (nullptr == m.chiral_centre_at_atom(j))   // nothing to worry about, can remove it
+      if (nullptr == m.chiral_centre_at_atom(j)) {   // nothing to worry about, can remove it
         ;
-      else if (0 == _remove_hydrogens_attached_to_chiral_centres)  // leave these alone
+      } else if (0 == _remove_hydrogens_attached_to_chiral_centres) {  // leave these alone
         continue;
-      else     // check for non-organic chirality
-      {
+      } else {     // check for non-organic chirality
         const Atom * aj = m.atomi(j);
 //      cerr << "ORGANIC ? " << aj->element()->organic() << '\n';
         if (! aj->element()->organic())
@@ -866,17 +1066,20 @@ Chemical_Standardisation::_do_transform_nitro(Molecule & m,
 
   for (int nitrogen = 0; nitrogen < natoms; nitrogen++)
   {
-    if (7 != z[nitrogen])    // central atom must be N
+    if (7 != z[nitrogen]) {    // central atom must be N
       continue;
-    if (3 != ncon[nitrogen])            // must have three connections
+    }
+    if (3 != ncon[nitrogen]) {            // must have three connections
       continue;
+    }
 
     const Atom * an = atoms[nitrogen];
 
     if (1 != an->formal_charge())
       continue;
-    if (4 != an->nbonds())          // all cases have 4 connections
+    if (4 != an->nbonds()) {          // all cases have 4 connections
       continue;
+    }
 
 //  Now we must examine the atoms connected.
 
@@ -916,12 +1119,14 @@ Chemical_Standardisation::_do_transform_nitro(Molecule & m,
     if (2 != oxygens_attached || 1 != doubly_bonded_oxygen)
       continue; 
 
-    if (singly_bonded_oxygen_with_neg_charge && singly_bonded_oxygen)   // cannot have both
+    if (singly_bonded_oxygen_with_neg_charge && singly_bonded_oxygen) {   // cannot have both
       continue;
+    }
 
     if (singly_bonded_oxygen_with_neg_charge > 1 ||     // can have only one of either kind
-        singly_bonded_oxygen > 1)
+        singly_bonded_oxygen > 1) {
       continue;
+    }
 
     if (0 == singly_bonded_oxygen_with_neg_charge &&     // must have either kind
         0 == singly_bonded_oxygen)
@@ -971,16 +1176,18 @@ Chemical_Standardisation::_do_transform_nplus_ominus (Molecule & m,
 
   for (int nitrogen = 0; nitrogen < natoms; nitrogen++)
   {
-    if (7 != z[nitrogen])    // central atom must be N
+    if (7 != z[nitrogen]) {    // central atom must be N
       continue;
+    }
 
     const Atom * an = atoms[nitrogen];
 
     if (1 != an->formal_charge())
       continue;
 
-    if (3 == an->ncon() && 3 == an->nbonds())     // would introduce a valence error
+    if (3 == an->ncon() && 3 == an->nbonds()) {     // would introduce a valence error
       continue;
+    }
 
     for (int j = 0; j < ncon[nitrogen]; j++)
     {
@@ -1219,20 +1426,23 @@ ok_to_change_charge_separated_pair (const Molecule & m,
                         atom_number_t a2)
 {
   const Atom * aa1 = m.atomi(a1);
-  if (7 != aa1->atomic_number())     // not a Nitrogen, OK
+  if (7 != aa1->atomic_number()) {     // not a Nitrogen, OK
     return 1;
+  }
 
   const Atom * aa2 = m.atomi(a2);
-  if (7 != aa2->atomic_number())     // not a Nitrogen, OK
+  if (7 != aa2->atomic_number()) {     // not a Nitrogen, OK
     return 1;
+  }
 
 // we have a charge separated pair of Nitrogens
 
   int a1con = m.ncon(a1);
   int a2con = m.ncon(a2);
 
-  if (2 == a1con && 1 == a2con)     // An azide in the form =[N+]=[N-]
+  if (2 == a1con && 1 == a2con) {     // An azide in the form =[N+]=[N-]
     return 1;
+  }
 
   return 0;     // all other cases, don't change
 }
@@ -1256,8 +1466,9 @@ Chemical_Standardisation::_do_transform_n_charge_sep (Molecule & m,
   int natoms = m.natoms();
   for (int n1 = 0; n1 < natoms; n1++)
   {
-    if (7 != z[n1])    // central atom must be N
-      continue;
+    if (7 != z[n1]) {    // central atom must be N
+      continue; 
+    }
 
     Atom * a1 = const_cast<Atom *>(atoms[n1]);
 
@@ -1399,11 +1610,11 @@ Chemical_Standardisation::_do_transform_plus_minus (Molecule & m,
     atom_number_t n1, n2;
     (void) two_negatively_charged_connections(i, *ai, atoms, n1, n2);
 
-    if (INVALID_ATOM_NUMBER == n1)    // no negatively charged neighbours
+    if (INVALID_ATOM_NUMBER == n1) {    // no negatively charged neighbours
       continue;
+    }
 
-    if (INVALID_ATOM_NUMBER == n2)    // only N1 is a negatively charged neighbour
-    {
+    if (INVALID_ATOM_NUMBER == n2) {    // only N1 is a negatively charged neighbour
       if (ok_to_change_charge_separated_pair(m, i, n1))
         continue;
 
@@ -1775,8 +1986,9 @@ Chemical_Standardisation::_do_protonate_sulfonic_acids (Molecule & m,
     if (0 == doubly_bonded_oxygen_count)
       continue;
 
-    if (ih_known)     // [S+]([O])(=O)(OCCCNC(=O)C=C)ON PBCHM101160818  oxygen atom is radical???
+    if (ih_known) {     // [S+]([O])(=O)(OCCCNC(=O)C=C)ON PBCHM101160818  oxygen atom is radical???
       continue;
+    }
 
     if (2 == doubly_bonded_oxygen_count && 1 == ai->formal_charge())    
     {
@@ -1855,8 +2067,7 @@ Chemical_Standardisation::_do_protonate_sulfinic_acids (Molecule & m,
 
     const Atom * as = atoms[s];
 
-    if (1 == as->formal_charge() && 3 == as->nbonds() && 0 == ai->formal_charge())   // create a sulfinic acid
-    {
+    if (1 == as->formal_charge() && 3 == as->nbonds() && 0 == ai->formal_charge()) {   // create a sulfinic acid
       m.set_formal_charge(s, 0);
       current_molecule_data.change_npos(-1);
       current_molecule_data.change_splus(-1);
@@ -1865,8 +2076,9 @@ Chemical_Standardisation::_do_protonate_sulfinic_acids (Molecule & m,
       continue;
     }
 
-    if (3 == as->nbonds() || 0 == ai->formal_charge())      // no double bonds here, and/or no charge to neutralise
+    if (3 == as->nbonds() || 0 == ai->formal_charge()) {      // no double bonds here, and/or no charge to neutralise
       continue;
+    }
 
     int doubly_bonded_oxygen_count = 0;
     for (int j = 0; j < 3; j++)
@@ -1943,8 +2155,9 @@ Chemical_Standardisation::_do_protonate_no (Molecule & m,
     if (7 != z[n])
       continue;
 
-    if (0 != m.formal_charge(n))   // hard to know what might be going on. The [N+]-[O-] rule should have got it
+    if (0 != m.formal_charge(n)) {   // hard to know what might be going on. The [N+]-[O-] rule should have got it
       continue;
+    }
 
     m.set_formal_charge(i, 0);
     rc++;
@@ -1997,12 +2210,13 @@ Chemical_Standardisation::_do_transform_splus_cminus (Molecule & m,
     if (1 != ai->formal_charge())
       continue;
 
-    if (4 == ncon[i] && 5 == ai->nbonds())     // yep, do this one
+    if (4 == ncon[i] && 5 == ai->nbonds()) {     // yep, do this one
       ;
-    else if (3 == ncon[i] && 3 == ai->nbonds())     // yep, do this one
+    } else if (3 == ncon[i] && 3 == ai->nbonds()) {     // yep, do this one
       ;
-    else
+    } else {
       continue;
+    }
 
 //  At this stage, we have an appropriate S+. Is it bonded to a C- or O-
 
@@ -2025,10 +2239,11 @@ Chemical_Standardisation::_do_transform_splus_cminus (Molecule & m,
         current_molecule_data.change_nneg(-1);
         m.set_formal_charge(c, 0);
       }
-      else if (8 == z[c] && 1 == ncon[c])    // OK to have a neutral oxygen here
+      else if (8 == z[c] && 1 == ncon[c]) {    // OK to have a neutral oxygen here
         ;
-      else
+      } else {
         continue;
+      }
 
       m.set_formal_charge(i, 0);
       m.set_bond_type_between_atoms(i, c, DOUBLE_BOND);
@@ -2086,8 +2301,9 @@ Chemical_Standardisation::_do_transform_amines (Molecule & m,
 
     int hc = m.hcount(i);     // check both implicit and explicit
 
-    if (0 == hc)     // must have at least 1 Hydrogen attachment
+    if (0 == hc) {     // must have at least 1 Hydrogen attachment
       continue;
+    }
 
     int implicit_hydrogens;
     if (hc)
@@ -2118,10 +2334,11 @@ Chemical_Standardisation::_do_transform_amines (Molecule & m,
 
     if (implicit_hydrogens)
       ;
-    else if (INVALID_ATOM_NUMBER == explicit_hydrogen_to_remove)   // should not happen
+    else if (INVALID_ATOM_NUMBER == explicit_hydrogen_to_remove) {   // should not happen
       continue;
-    else
+    } else {
       atoms_to_be_removed.add_if_not_already_present(explicit_hydrogen_to_remove);
+    }
 
     m.set_formal_charge(i, 0);
 
@@ -2155,13 +2372,13 @@ Chemical_Standardisation::_do_transform_covalent_metals (Molecule & m)
   {
     const Atom * a = m.atomi(i);
 
-    if (1 != a->ncon())       // we only process single atoms
+    if (1 != a->ncon()) {       // we only process single atoms
       continue;
+    }
 
     const atomic_number_t z = a->atomic_number();
 
-    if (11 == z || 19 == z)     // Na and K only
-    {
+    if (11 == z || 19 == z) {     // Na and K only
       atom_number_t o = a->other(i, 0);
 
       const Atom * ao = m.atomi(o);
@@ -2214,11 +2431,11 @@ Chemical_Standardisation::_do_transform_covalent_metals (Molecule & m,
 
   for (int i = 0; i < matoms; i++)
   {
-    if (1 != ncon[i])       // we only process single atoms
+    if (1 != ncon[i]) {       // we only process single atoms
       continue;
+    }
 
-    if (11 == z[i] || 19 == z[i])     // Na and K only
-    {
+    if (11 == z[i] || 19 == z[i]) {     // Na and K only
       atom_number_t o = atoms[i]->other(i, 0);
 
       if (8 == z[o])
@@ -2274,8 +2491,13 @@ ResolvedAllDifferent(const int * score,
          atom_number_t & n1,
          atom_number_t & n2)
 {
-  assert(score[0] != score[1]);
-  assert(score[1] != score[2]);
+// If any two are the same, we are not resolved
+
+  if (score[0] == score[1] || score[0] == score[2] || score[1] == score[2]) {
+    return 0;
+  }
+
+// The must be all different
 
   std::pair<int, int> tmp[3];
   for (int i = 0; i < 3; ++i)
@@ -2432,12 +2654,11 @@ identify_the_one_still_active(const int * score,
   {
   }
 //cerr << "identify_the_one_still_active scores " << score[0] << ' ' << score[1] << ' ' << score[2] << '\n';
-  if (score[0] == score[1])    // n2 is distinct
+  if (score[0] == score[1]) {    // n2 is distinct
     std::swap(n0, n2);
-  else if (score[0] == score[2])  // n1 is distinct
+  } else if (score[0] == score[2]) {  // n1 is distinct
     std::swap(n0, n1);
-  else
-  {
+  } else {
 // default case means 1 and 2 the same
 
     assert (score[1] == score[2]);
@@ -2509,11 +2730,9 @@ resolve_by_shell_expansion(const Molecule & m,
   {
     for (int j = 0; j < 3; ++j)
     {
-      if (score[j] > 0)   // still active, compute new score
-      {
+      if (score[j] > 0) {   // still active, compute new score
         score[j] = advance(m, p1[j], p2[j], claimed, current_molecule_data);
-        if (0 == score[j])    // mark as exhausted
-        {
+        if (0 == score[j]) {    // mark as exhausted
           nactive--;
           score[j] = - i;    // mark as being exhausted
         }
@@ -2563,8 +2782,9 @@ collect_attached_nitrogen_atoms (Molecule & m,
 
   const atomic_number_t * z = current_molecule_data.atomic_number();
 
-  if (3 != ac->ncon())   // should not happen
+  if (3 != ac->ncon()) {   // should not happen
     return 0;
+  }
 
   for (int i = 0; i < 3; ++i)
   {
@@ -2573,8 +2793,9 @@ collect_attached_nitrogen_atoms (Molecule & m,
       return 0;
 
     const atom_number_t n = b->other(c);
-    if (7 != z[n])    // should not happen
+    if (7 != z[n]) {    // should not happen
       return 0;
+    }
 
     if (b->is_single_bond() && m.hcount(n))
     {
@@ -2627,8 +2848,7 @@ Chemical_Standardisation::_do_transform_guanidine(Molecule & m,
 
   int rc = 0;
 
-  for (int i = ng - 1; i >= 0; --i)    // because we remove things from the array
-  {
+  for (int i = ng - 1; i >= 0; --i) {    // because we remove things from the array
     const atom_number_t c = g[i];
     if (ring_membership[c])
       continue;
@@ -2762,14 +2982,16 @@ Chemical_Standardisation::_do_transform_ring_guanidine(Molecule & m,
     if (atom_is_aromatic[n1] || atom_is_aromatic[n2])
       continue;
 
-    if (ring_membership[doubly_bonded_n])    // too hard, probably taken care of elsewhere
+    if (ring_membership[doubly_bonded_n]) {    // too hard, probably taken care of elsewhere
       continue;
+    }
 
     const int h1 = m.hcount(n1);
     const int h2 = m.hcount(n2);
 
-    if (0 == h1 && 0 == h2)     // neither of the other atoms can accept a double bond
+    if (0 == h1 && 0 == h2) {     // neither of the other atoms can accept a double bond
       continue;
+    }
 
 // too hard. Thought about doing via expansion, but run into problems with other groups
 // in ring. Even this is buggy because other transformations may change the H count
@@ -2967,27 +3189,31 @@ Chemical_Standardisation::_do_transform_aromatic_ring_guanidine (Molecule & m,
 
 //  cerr << "Atoms: C " << c << " n1 " << n1 << " n2 " << n2 << " DOUBLY " << doubly_bonded_n << '\n';
 
-    if (! atom_is_aromatic[doubly_bonded_n])   // must have double bond in ring
+    if (! atom_is_aromatic[doubly_bonded_n]) {   // must have double bond in ring
       continue;
+    }
 
-    if (2 == ncon[n1] && 1 == ncon[n2])    // make sure N1 is in the ring
+    if (2 == ncon[n1] && 1 == ncon[n2]) {    // make sure N1 is in the ring
       ;
-    else if (1 == ncon[n1] && 2 == ncon[n2])
+    } else if (1 == ncon[n1] && 2 == ncon[n2]) {
       std::swap(n1, n2);
-    else
+    } else {
       continue;
+    }
 
 //  cerr << "N1 " << n1 << " aromatic " << atom_is_aromatic[n1] << '\n';
     if (! atom_is_aromatic[n1])
       continue;
 
-    if (! identify_nitrogen_adjacent_to_carbonyl(m, c, n1, doubly_bonded_n, current_molecule_data))    // will swap these two so N1 is adjacent to carbonyl
+    if (! identify_nitrogen_adjacent_to_carbonyl(m, c, n1, doubly_bonded_n, current_molecule_data)) {    // will swap these two so N1 is adjacent to carbonyl
       continue;
+    }
 
 //  cerr << "Adjacent to carbonyl " << n1 << " hcount " << m.hcount(n1) << '\n';
 
-    if (m.hcount(n1))    // already good
+    if (m.hcount(n1)) {    // already good
       continue;
+    }
 
 #ifdef DEBUG_AROMATIC_RING_GUANIDINE
     cerr << "Before setting bond " << m.smiles() << '\n';
@@ -3042,14 +3268,17 @@ Chemical_Standardisation::_do_transform_single_atom_ions (Molecule & m,
 
   for (int i = 0; i < matoms; i++)
   {
-    if (0 != ncon[i])       // we only process isolated atoms
+    if (0 != ncon[i]) {       // we only process isolated atoms
       continue;
+    }
 
-    if (atoms[i]->formal_charge())    // already set, we don't change it
+    if (atoms[i]->formal_charge()) {    // already set, we don't change it
       continue;
+    }
 
-    if (atoms[i]->implicit_hydrogens_known() && const_cast<Atom *>(atoms[i])->implicit_hydrogens() > 0)    // don't change it
+    if (atoms[i]->implicit_hydrogens_known() && const_cast<Atom *>(atoms[i])->implicit_hydrogens() > 0) {    // don't change it
       continue;
+    }
 
     if (atoms[i]->element()->is_halogen())
     {
@@ -3057,16 +3286,14 @@ Chemical_Standardisation::_do_transform_single_atom_ions (Molecule & m,
 
       rc++;
     }
-    else if (! atoms[i]->element()->is_metal())     // we only process metals here
+    else if (! atoms[i]->element()->is_metal()) {     // we only process metals here
       ;
-    else if (3 == z[i] || 11 == z[i] || 19 == z[i])     // Li, Na, K
-    {
+    } else if (3 == z[i] || 11 == z[i] || 19 == z[i]) {     // Li, Na, K
       m.set_formal_charge(i, 1);
 
       rc++;
     }
-    else if (12 == z[i] || 20 == z[i] || 30 == z[i] || 56 == z[i])   // Mg, Ca, Zn, Ba
-    {
+    else if (12 == z[i] || 20 == z[i] || 30 == z[i] || 56 == z[i]) {   // Mg, Ca, Zn, Ba
       m.set_formal_charge(i, 2);
 
       rc++;
@@ -3106,11 +3333,13 @@ Chemical_Standardisation::_do_explicit_hydrogens_last (Molecule & m)
       last_non_hydrogen_atom = i;
   }
 
-  if (eh.empty())    // none present, that's easy
+  if (eh.empty()) {    // none present, that's easy
     return 0;
+  }
 
-  if (INVALID_ATOM_NUMBER == last_non_hydrogen_atom)    // Huh, a molecule with just Hydrogen atoms
+  if (INVALID_ATOM_NUMBER == last_non_hydrogen_atom) {    // Huh, a molecule with just Hydrogen atoms
     return 0;
+  }
 
 // Any explicit Hydrogen that is already past the last non-hydrogen atom doesn't need to be removed
 
@@ -3118,14 +3347,16 @@ Chemical_Standardisation::_do_explicit_hydrogens_last (Molecule & m)
   {
     atom_number_t h = eh[i];
 
-    if (h > last_non_hydrogen_atom)   // doesn't need to be moved around
+    if (h > last_non_hydrogen_atom) {   // doesn't need to be moved around
       eh.remove_item(i);
+    }
   }
 
   int neh = eh.number_elements();
 
-  if (0 == neh)    // order must have already been OK
+  if (0 == neh) {    // order must have already been OK
     return 1;
+  }
 
   for (int i = neh - 1; i >= 0; i--)
   {
@@ -3155,18 +3386,18 @@ Chemical_Standardisation::_process(Molecule & m,
 {
   int rc = 0;
 
-  // cerr << m.aromatic_smiles() << ' ' << __LINE__ << " rc " << rc << '\n';
+  //cerr << m.aromatic_smiles() << ' ' << __LINE__ << " rc " << rc << '\n';
   int * atom_already_changed = new_int(m.natoms()); std::unique_ptr<int[]> free_atom_already_changed(atom_already_changed);
 
   if (_transform_nitro_reverse.active())
     rc += _do_transform_reverse_nitro(m, current_molecule_data);
 
-  if (_transform_azid_reverse.active())
-    rc += _do_transform_reverse_azid(m, current_molecule_data);
-
+#ifdef NO_LONGER_USED_NV5
+  //cerr << "_transform_nv5_to_charge_separated " << _transform_nv5_to_charge_separated.active() << '\n';
   if (_transform_nv5_to_charge_separated.active()) {
     rc += _do_nv5_to_charge_separated(m, current_molecule_data);
   }
+#endif
 
   if (_transform_misdrawn_urea.active())
     rc += _do_transform_misdrawn_urea(m, current_molecule_data);
@@ -3297,13 +3528,21 @@ Chemical_Standardisation::_process(Molecule & m,
   if (_transform_charged_imidazole.active())
     rc += _do_charged_imidazole(m, current_molecule_data);
 
-  if (_transform_pyrazole.active())
+  if (_transform_imidazole_exocyclic_nh.active()) {
+    rc += _do_imidazole_exocyclic_nh(m, current_molecule_data);
+  }
+
+  if (_transform_pyrazole.active()) {
     rc += _do_pyrazole(m, atom_already_changed, current_molecule_data);
+  }
 
 //cerr << "After pyrazole " << m.unique_smiles() << '\n';
 
   if (_transform_triazole.active())
     rc += _do_triazole(m, current_molecule_data);
+  if (_transform_pyrimidine.active()) {
+    rc += _do_pyrimidine(m, current_molecule_data);
+  }
 
   if (_transform_isoxazole.active())
     rc += _do_isoxazole(m, current_molecule_data);
@@ -3319,8 +3558,9 @@ Chemical_Standardisation::_process(Molecule & m,
   if (_transform_back_to_nplus_nminus.active() && current_molecule_data.nitrogens() > 1)
     rc += _do_transform_back_to_nplus_nminus(m, current_molecule_data);
 
-  if (_transform_to_charge_separated_azid.active() && current_molecule_data.nitrogens() > 2)
+  if (_transform_to_charge_separated_azid.active() && current_molecule_data.nitrogens() >= 2) {
     rc += _do_transform_azid_to_charge_separated(m, current_molecule_data);
+  }
 
   if (_transform_obvious_implicit_hydrogen_errors.active())
     rc += _do_transform_implicit_hydrogen_known_errors(m, current_molecule_data);
@@ -3334,6 +3574,10 @@ Chemical_Standardisation::_process(Molecule & m,
 
   if (_transform_enol_to_keto.active())
     rc += _do_enol_to_keto(m, current_molecule_data);
+
+  if (_external_transformation.size() > 0) {
+    rc += DoExternalTransformations(m);
+  }
 
   assert (current_molecule_data.npos() >= 0);
   assert (current_molecule_data.nneg() >= 0);
@@ -3352,6 +3596,24 @@ Chemical_Standardisation::_process(Molecule & m,
     rc += _do_explicit_hydrogens_last(m);
 
 //cerr << m.smiles() << ' ' << __LINE__ << " rc " << rc << '\n';
+  return rc;
+}
+
+int
+Chemical_Standardisation::DoExternalTransformations(Molecule& m) {
+  int rc = 0;
+
+  for (standardisation::ExternalTransformation* t : _external_transformation) {
+    if (t->Process(m) == 0) {
+      continue;
+    }
+
+    ++rc;
+    if (_append_string_depending_on_what_changed) {
+      _append_to_changed_molecules << " STD:" << t->name();
+    }
+  }
+
   return rc;
 }
 
@@ -3427,6 +3689,7 @@ Chemical_Standardisation::_process(Molecule & m)
   }
 
   if (! _processing_needed(current_molecule_data)) {
+    //cerr << //"Processing not needed\n";
     return rc;
   }
 
@@ -3731,6 +3994,7 @@ Chemical_Standardisation::deactivate_lactim_lactam ()
   return;
 }
 
+#ifdef NO_LONGER_USED
 /*
   Change N#N=N to [N-]=[N+]=N
 */
@@ -3808,6 +4072,7 @@ Chemical_Standardisation::_do_transform_reverse_azid (Molecule & m,
 
   return rc;
 }
+#endif
 
 /*
   Change [N-]=[N+]=N to N#N=N
@@ -3863,20 +4128,23 @@ Chemical_Standardisation::_do_transform_azid(Molecule & m,
     {
       const Bond * b = an2->item(j);
 
-      if (! b->is_double_bond())    // how could that happen?
+      if (! b->is_double_bond()) {    // how could that happen?
         continue;
+      }
 
       atom_number_t n3 = b->other(n2);
       if (i == n3)
         continue;
 
-      if (7 == z[n3] || 6 == z[n3])   // not sure what else could be there...
+      if (7 == z[n3] || 6 == z[n3]) {   // not sure what else could be there...
         ;
-      else
+      } else {
         continue;
+      }
 
-      if (-1 == atoms[n3]->formal_charge())    // pathological case of [N+](=[N-])=[N-] 16606
+      if (-1 == atoms[n3]->formal_charge()) {    // pathological case of [N+](=[N-])=[N-] 16606
         continue;
+      }
 
       m.set_bond_type_between_atoms(i, n2, TRIPLE_BOND);
       m.set_formal_charge(i, 0);
@@ -3983,9 +4251,26 @@ Chemical_Standardisation::_do_transform_reverse_nitro (Molecule & m,
 }
 
 int
+HasTripleBond(const Molecule& m,
+              atom_number_t n) {
+  const Atom& a = m.atom(n);
+  for (const Bond* b : a) {
+    if (b->is_triple_bond()) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+#ifdef NO_LONGER_USED_NV5
+int
 Chemical_Standardisation::_do_nv5_to_charge_separated(Molecule & m,
                                                 IWStandard_Current_Molecule & current_molecule_data)
 {
+  // Jan 2024. Turned off. Not clear if this is doing anything useful.
+  return 0;
+  cerr << "_do_nv5_to_charge_separated begin\n";
   const atomic_number_t * z = current_molecule_data.atomic_number();
   const int * ncon = current_molecule_data.ncon();
   const Atom * const * atoms = current_molecule_data.atoms();
@@ -3994,8 +4279,7 @@ Chemical_Standardisation::_do_nv5_to_charge_separated(Molecule & m,
 
   int rc = 0;
 
-  for (int i = 0; i < matoms; i++)
-  {
+  for (int i = 0; i < matoms; i++) {
     if (7 != z[i])
       continue;
 
@@ -4032,20 +4316,7 @@ Chemical_Standardisation::_do_nv5_to_charge_separated(Molecule & m,
         double_bonded_2_connected_n = k;
     }
 
-    // cerr << "doubly_bonded_singly_connected " << doubly_bonded_singly_connected << " triply_connected_n " << triply_connected_n << '\n';
-    if (INVALID_ATOM_NUMBER != doubly_bonded_singly_connected)
-      ;
-    else if (INVALID_ATOM_NUMBER != triply_connected_n)
-      doubly_bonded_singly_connected = triply_connected_n;
-    else if (INVALID_ATOM_NUMBER != double_bonded_2_connected_n)
-      doubly_bonded_singly_connected = double_bonded_2_connected_n;
-    else
-      continue;
-
-    m.set_formal_charge(i, 1);
-    m.set_formal_charge(doubly_bonded_singly_connected, -1);
-    m.set_bond_type_between_atoms(i, doubly_bonded_singly_connected, bond_to_be_placed);
-    rc++;
+    rc += _do_nv5_to_charge_separated(m, i, current_molecule_data);
   }
 
   if (rc)
@@ -4062,6 +4333,65 @@ Chemical_Standardisation::_do_nv5_to_charge_separated(Molecule & m,
   return rc;
 }
 
+// Jan 2024. Turned off. Not really working properly...
+int
+Chemical_Standardisation::_do_nv5_to_charge_separated(Molecule& m,
+                                atom_number_t zatom,
+                                const IWStandard_Current_Molecule& current_molecule_data) {
+  const atomic_number_t* z = current_molecule_data.atomic_number();
+  const int* ncon = current_molecule_data.ncon();
+
+  assert(m.ncon(zatom) > 1);
+  cerr << "Checking bonds " << m.smarts_equivalent_for_atom(zatom) << '\n';
+
+  const Atom& a = m[zatom];
+
+  int nbonds = 0;
+  atom_number_t doubly_bonded_singly_connected = INVALID_ATOM_NUMBER;
+  // atom_number_t triply_connected_n = INVALID_ATOM_NUMBER;
+  bond_type_t bond_to_be_placed = SINGLE_BOND;
+  atom_number_t double_bonded_2_connected_n = INVALID_ATOM_NUMBER;
+  atom_number_t to_get_negative_charge = INVALID_ATOM_NUMBER;
+
+  for (const Bond*b : a) {
+    if (b->is_single_bond()) {
+      ++nbonds;
+      continue;
+    }
+
+    const atom_number_t o = b->other(zatom);
+
+    if (b->is_triple_bond()) {
+      to_get_negative_charge = o;
+      bond_to_be_placed = DOUBLE_BOND;
+      nbonds += 3;
+      continue;
+    }
+
+    // Must be a double bond.
+    nbonds += 2;
+
+    // Note that this will process nitro groups, the second oxygen gets the charge
+    if (1 == ncon[o] && 8 == z[o]) {
+      to_get_negative_charge = o;
+    } else if (2 == ncon[o] && 7 == z[o]) {
+      double_bonded_2_connected_n = o;
+    }
+  }
+
+  if (nbonds != 5) {
+    return 0;
+  }
+  (void) double_bonded_2_connected_n;
+
+  m.set_formal_charge(zatom, 1);
+  m.set_formal_charge(to_get_negative_charge, -1);
+  m.set_bond_type_between_atoms(zatom, doubly_bonded_singly_connected, bond_to_be_placed);
+
+  return 1;
+}
+#endif
+
 int
 Chemical_Standardisation::_do_from_mrk_standardisations (Molecule & m,
                                     IWStandard_Current_Molecule & current_molecule_data)
@@ -4077,8 +4407,7 @@ Chemical_Standardisation::_do_from_mrk_standardisations (Molecule & m,
 
   int rc = 0;
 
-  if (current_molecule_data.phosphorus() && current_molecule_data.nneg() > 1 && current_molecule_data.npos())   //  [O-]-[P+]-[O-]
-  {
+  if (current_molecule_data.phosphorus() && current_molecule_data.nneg() > 1 && current_molecule_data.npos()) {   //  [O-]-[P+]-[O-]
     for (int i = 0; i < matoms; i++)
     {
       if (15 != z[i])
@@ -4110,8 +4439,7 @@ Chemical_Standardisation::_do_from_mrk_standardisations (Molecule & m,
     } 
   }
 
-  if ((current_molecule_data.sulphur() || current_molecule_data.phosphorus()) && current_molecule_data.nneg() > 1 && current_molecule_data.npos())    // try to fix [*-]-[S,++]-[*-]
-  {
+  if ((current_molecule_data.sulphur() || current_molecule_data.phosphorus()) && current_molecule_data.nneg() > 1 && current_molecule_data.npos()) {    // try to fix [*-]-[S,++]-[*-]
     for (int i = 0; i < matoms; i++)
     {
       if (16 != z[i])
@@ -4234,17 +4562,19 @@ Chemical_Standardisation::_do_triazole (Molecule & m,
     if (7 != z[j])
       continue;
 
-    if (2 != ncon[j])    // If there is a 3 connected Nitrogen, we cannot change the bonding in the ring
+    if (2 != ncon[j]) {    // If there is a 3 connected Nitrogen, we cannot change the bonding in the ring
       return 0;
+    }
 
-    if (n1_index_in_ring < 0)   // there must be exactly three nitrogens in the ring
+    if (n1_index_in_ring < 0) {   // there must be exactly three nitrogens in the ring
       n1_index_in_ring = i;
-    else if (n2_index_in_ring < 0)
+    } else if (n2_index_in_ring < 0) {
       n2_index_in_ring = i;
-    else if (n3_index_in_ring < 0)
+    } else if (n3_index_in_ring < 0) {
       n3_index_in_ring = i;
-    else
+    } else {
       return 0;
+    }
   }
 
 #ifdef DEBUG_DO_TRIAZOLE
@@ -4393,12 +4723,12 @@ compute_electron_donating_power (Molecule & m,
 
 // We must differentiate NR2 and NO2
 
-  if (7 == z && 3 == acon)    // NR2 or NO2
-  {
-    if (3 == a->nbonds())   // NR2
+  if (7 == z && 3 == acon) {    // NR2 or NO2
+    if (3 == a->nbonds()) {   // NR2
       return 3.4;
-    else if (5 == a->nbonds())    // presumably NO2
+    } else if (5 == a->nbonds()) {    // presumably NO2
       return -3.6;
+    }
   }
 
   if (7 == z && 4 == acon)
@@ -4406,16 +4736,18 @@ compute_electron_donating_power (Molecule & m,
 
   if (16 == z)
   {
-    if (4 == acon)   // most likely SO2
+    if (4 == acon) {   // most likely SO2
       return -3.3;
-    else
+    } else {
       return 2.0;   // maybe a thioether?
+    }
   }
 
   if (6 == z)
   {
-    if (2 == acon && 4 == a->nbonds())   // cyano or acetylene. Actually reference lists cyano but not acetylene...
+    if (2 == acon && 4 == a->nbonds()) {   // cyano or acetylene. Actually reference lists cyano but not acetylene...
       return -3.2;
+    }
 
     if (4 == acon)
     {
@@ -4430,17 +4762,19 @@ compute_electron_donating_power (Molecule & m,
 // we are withdrawing.
 // IAW makes up a bunch of other heuristics
 
-  if (acon == a->nbonds())   // saturated
+  if (acon == a->nbonds()) {   // saturated
     return static_cast<double>(m.attached_heteroatom_count(astart)) * -0.20;   // IAW
-  else if (acyl_group_attached(astart, atoms))
+  } else if (acyl_group_attached(astart, atoms)) {
     return -2.0;
+  }
 
 // the unsaturated case, which may include aromatic. Cannot compute aromaticity
 
   int ahc = m.attached_heteroatom_count(astart);
 
-  if (m.multiple_bond_to_heteroatom(astart))   // most likely a Nitrogen
+  if (m.multiple_bond_to_heteroatom(astart)) {   // most likely a Nitrogen
     return 0.57;
+  }
 
   if (ahc > 0)
     return -0.21 * static_cast<double>(ahc);
@@ -4475,8 +4809,9 @@ place_123_triazole_bonds (Molecule & m,
                           const Set_of_Atoms & r,
                           const Set_of_Atoms * is_fused)
 {
-  if (2 == atoms[a1]->nbonds())   // already set up properly
+  if (2 == atoms[a1]->nbonds()) {   // already set up properly
     return 0;
+  }
 
 //#define DEBUG_PLACE_123_TRIAZOLE_BONDS
 #ifdef DEBUG_PLACE_123_TRIAZOLE_BONDS
@@ -4513,8 +4848,9 @@ place_123_triazole_bonds (Molecule & m,
       c2 = j;
   }
 
-  if (INVALID_ATOM_NUMBER == c2)   // should not happen
+  if (INVALID_ATOM_NUMBER == c2) {   // should not happen
     return 0;
+  }
 
   int ndx1 = is_fused->index(c1);
   int ndx2 = is_fused->index(c2);
@@ -4526,8 +4862,9 @@ place_123_triazole_bonds (Molecule & m,
   cerr << "Ring " << *is_fused <<'\n';
 #endif
 
-  if (ndx1 < 0 || ndx2 < 0)   // should not happen
+  if (ndx1 < 0 || ndx2 < 0) {   // should not happen
     return 0;
+  }
 
 // We need to make sure we traverse the ring the long way around. Make ndx2 is one larger than ndx1
 
@@ -4535,8 +4872,9 @@ place_123_triazole_bonds (Molecule & m,
     ;
   else if (ndx2 + 1 == ndx1)
     std::swap(ndx1, ndx2);
-  else if (ndx1 < ndx2)    // change 0 5 to 5 0
+  else if (ndx1 < ndx2) {    // change 0 5 to 5 0
     std::swap(ndx1, ndx2);
+  }
 
 #ifdef DEBUG_PLACE_123_TRIAZOLE_BONDS
   cerr << "Before setting bonds " << m.smiles() << " ring indices " << ndx1 << " and " << ndx2 << '\n';
@@ -4620,13 +4958,15 @@ Chemical_Standardisation::_do_123_triazole (Molecule & m,
   cerr << "nbonds " << atoms[n2]->nbonds() << " ncon " << ncon[n2] << '\n';
 #endif
 
-  if (3 == ncon[n2])   // rare, cannot change anything
+  if (3 == ncon[n2]) {   // rare, cannot change anything
     return 0;
+  }
 
   atom_number_t n3 = r[n3_index_in_ring];
 
-  if (3 == ncon[n1] || 3 == ncon[n3])   // cannot change anything
+  if (3 == ncon[n1] || 3 == ncon[n3]) {   // cannot change anything
     return 0;
+  }
 
   atom_number_t c4 = r[c4_index_in_ring];
   atom_number_t c5 = r[c5_index_in_ring];
@@ -4639,8 +4979,9 @@ Chemical_Standardisation::_do_123_triazole (Molecule & m,
 
 // do we have unsubstituted 123-triazole
 
-  if (2 == ncon[c4] && 2 == ncon[c5])   // 123-triazole
+  if (2 == ncon[c4] && 2 == ncon[c5]) {   // 123-triazole
     return place_123_triazole_bonds(m, n1, n2, n3, c4, c5, atoms, r, is_fused);
+  }
 
 // Now we need to decide whether to put the H on N1 or N3.
 // We know that at least one of C4 and C5 are substituted, 
@@ -4648,22 +4989,22 @@ Chemical_Standardisation::_do_123_triazole (Molecule & m,
   atom_number_t cc4 = identify_extra_ring_atom(atoms[c4], c4, n3, c5);
   atom_number_t cc5 = identify_extra_ring_atom(atoms[c5], c5, n1, c4);
 
-  if (INVALID_ATOM_NUMBER == cc4)   // substituted at c5
-  {
+  if (INVALID_ATOM_NUMBER == cc4) {   // substituted at c5
     double electron_donating_power = compute_electron_donating_power(m, cc5, c5, atoms);
-    if (electron_donating_power > 0.0)   // put H on N1
+    if (electron_donating_power > 0.0) {   // put H on N1
       return place_123_triazole_bonds(m, n1, n2, n3, c4, c5, atoms, r, is_fused);
-    else    // put H on N3
+    } else {    // put H on N3
       return place_123_triazole_bonds(m, n3, c4, c5, n1, n2, atoms, r, is_fused);
+    }
   }
 
-  if (INVALID_ATOM_NUMBER == cc5)   // sustituted at c4
-  {
+  if (INVALID_ATOM_NUMBER == cc5) {   // sustituted at c4
     double electron_donating_power = compute_electron_donating_power(m, cc4, c4, atoms);
-    if (electron_donating_power > 0)   // put H on N3
+    if (electron_donating_power > 0) {   // put H on N3
       return place_123_triazole_bonds(m, n3, c4, c5, n1, n2, atoms, r, is_fused);
-    else
+    } else {
       return place_123_triazole_bonds(m, n1, n2, n3, c4, c5, atoms, r, is_fused);
+    }
   }
 
 // Substituted at both positions
@@ -4682,10 +5023,11 @@ Chemical_Standardisation::_do_123_triazole (Molecule & m,
 
   if (fabs(ed4 - ed5) < 1.0e-09)
     return place_123_triazole_bonds(m, n2, n3, c4, c5, n1, atoms, r, is_fused);
-  else if (ed4 < ed5)   // put Hydrogen on N1
+  else if (ed4 < ed5) {   // put Hydrogen on N1
     return place_123_triazole_bonds(m, n1, n2, n3, c4, c5, atoms, r, is_fused);
-  else
+  } else {
     return place_123_triazole_bonds(m, n3, c4, c5, n1, n2, atoms, r, is_fused);
+  }
 }
 
 /*
@@ -4729,8 +5071,9 @@ Chemical_Standardisation::_do_134_triazole (Molecule & m,
   cerr << "What is n1? " << n1 << " bonds " << atoms[n1]->nbonds() << " ncon " << ncon[n1] << '\n';
 #endif
 
-  if (atoms[n1]->nbonds() == ncon[n1])   // already single bonds at N1
+  if (atoms[n1]->nbonds() == ncon[n1]) {   // already single bonds at N1
     return 0;
+  }
 
   atom_number_t c2 = r[c2_index_in_ring];
   atom_number_t n3 = r[n3_index_in_ring];
@@ -4812,14 +5155,16 @@ fused_to_kekule_variable_ring(Molecule & m,
     if (current_molecule_data.fused_system_identifier(ri->item(0)) != fsid1)
       continue;
 
-    if (fused_ring >= 0)    // we have more than one extra ring in the fused system
+    if (fused_ring >= 0) {    // we have more than one extra ring in the fused system
       return nullptr;
+    }
 
     fused_ring = i;
   }
 
-  if (fused_ring < 0)   // should not happen
+  if (fused_ring < 0) {   // should not happen
     return nullptr;
+  }
 
   const Set_of_Atoms * r2 = current_molecule_data.ringi(fused_ring);
 
@@ -4934,6 +5279,10 @@ count_atomic_number_in_set (const Molecule & m,
 }
 #endif
 
+// Transform 
+// COC1=C(C=CC=C1)C1=CC(=N)NO1 ID:EN300-192006
+// to
+// COC1=C(C=CC=C1)C1=CC(N)=NO1 ID:EN300-192006
 int
 Chemical_Standardisation::_do_isoxazole(Molecule & m,
                                         IWStandard_Current_Molecule & current_molecule_data)
@@ -5022,8 +5371,9 @@ Chemical_Standardisation::_do_isoxazole(Molecule & m,
   if (n < 0 || o < 0)
     return 0;
 
-  if (1 == m.implicit_hydrogens(r[n]))    // already in the right form
+  if (1 == m.implicit_hydrogens(r[n])) {    // already in the right form
     return 0;
+  }
 
   if (! m.are_bonded(r[o], r[n]))
     return 0;
@@ -5042,8 +5392,9 @@ Chemical_Standardisation::_do_isoxazole(Molecule & m,
   {
     const Bond * b = an->item(i);
 
-    if (b->is_single_bond())   // to the oxygen
+    if (b->is_single_bond()) {   // to the oxygen
       continue;
+    }
 
     const atom_number_t x = b->other(r[n]);
 
@@ -5212,6 +5563,84 @@ expand_shell(const Molecule & m,
   return rc;
 }
 
+
+// Resolve an imidazole
+
+/*             c1                               *
+             /    \                             *
+            /      \                            *
+         nh1        nh0
+           |        |
+          c3 ------ c2
+*/
+int
+Chemical_Standardisation::ResolveImidazole(Molecule& m,
+                const Set_of_Atoms& r,
+                atom_number_t c1,
+                atom_number_t nh0,
+                atom_number_t c2,
+                atom_number_t c3,
+                atom_number_t nh1) {
+
+  assert (m.are_bonded(c2, nh0));
+  assert (m.are_bonded(c3, nh1));
+  assert (m.are_bonded(c2, c3));
+  assert (m.are_bonded(c1, nh0));
+  assert (m.are_bonded(c1, nh1));
+
+  const int c2con = m.ncon(c2);
+  const int c3con = m.ncon(c3);
+  if (c2con < c3con) {  // already as we want it
+    return 0;
+  }
+
+  if (c2con > c3con)
+    return _swap_imidazole(m, nh1, c1, nh0);
+
+  const int matoms = m.natoms();
+
+  int * tmp = new_int(matoms + matoms); std::unique_ptr<int[]> free_tmp(tmp);
+
+  int * tmp1 = tmp;
+  int * tmp2 = tmp + matoms;
+
+// Mark all atoms in the ring as visited
+
+  r.set_vector(tmp1, -1);
+  r.set_vector(tmp2, -1);
+
+// The carbon atoms are the starting points for expansion
+
+  tmp1[c2] = 1;
+  tmp2[c3] = 1;
+
+#ifdef DEBUG_DO_IMIDAZOLE
+  cerr << "Beginning out of ring imidazole detection\n";
+#endif
+
+  while (1)
+  {
+    int e1 = expand_shell(m, tmp1);
+    int e2 = expand_shell(m, tmp2);
+
+#ifdef DEBUG_DO_IMIDAZOLE
+    cerr << " e1 " << e1 << " and " << e2 << '\n';
+#endif
+
+    if (e1 > e2) {    // correct as is
+      return 0;
+    } else if (e1 < e2)
+      return _swap_imidazole(m, nh1, c1, nh0);
+
+    if (0 == e1) {    // no more expansion, cannot be resolved
+      return 0;
+    }
+  }
+
+  // Should never come here.
+  return 0;
+}
+
 int 
 Chemical_Standardisation::_swap_imidazole(Molecule & m,
                                           atom_number_t n1,
@@ -5322,6 +5751,8 @@ Chemical_Standardisation::_do_imidazole(Molecule & m,
   if (b == nullptr || ! b->is_double_bond())
     return 0;
 
+  return ResolveImidazole(m, r, c1, nh0, c2, c3, nh1);
+#ifdef NOW_IN_SEPARATE_FUNCTION
 // At this stage we have an imidazole. See if we can resolve it by
 // number of connections at c2 and c3
 
@@ -5343,8 +5774,9 @@ Chemical_Standardisation::_do_imidazole(Molecule & m,
   cerr << "Ncon " << atoms[c2]->ncon() << " and " << atoms[c3]->ncon() << '\n';
 #endif
 
-  if (atoms[c2]->ncon() < atoms[c3]->ncon())   // already as we want it
+  if (atoms[c2]->ncon() < atoms[c3]->ncon()) {   // already as we want it
     return 0;
+  }
 
   if (atoms[c2]->ncon() > atoms[c3]->ncon())
     return _swap_imidazole(m, nh1, c1, nh0);
@@ -5381,16 +5813,19 @@ Chemical_Standardisation::_do_imidazole(Molecule & m,
     cerr << " e1 " << e1 << " and " << e2 << '\n';
 #endif
 
-    if (e1 > e2)    // correct as is
+    if (e1 > e2) {    // correct as is
       return 0;
-    else if (e1 < e2)
+    } else if (e1 < e2) {
       return _swap_imidazole(m, nh1, c1, nh0);
+    }
 
-    if (0 == e1)    // no more expansion, cannot be resolved
+    if (0 == e1) {    // no more expansion, cannot be resolved
       return 0;
+    }
   }
 
   return 1;
+#endif
 }
 
 // Return true if `zatom` has an exocyclic double bond, doubly bonded
@@ -5445,14 +5880,16 @@ Chemical_Standardisation::_do_charged_imidazole(Molecule & m,
     if (z[a] != 7)
       continue;
 
-    if (ncon[a] != 3)  // If just doing imidazoles, this would be a return.
+    if (ncon[a] != 3) {  // If just doing imidazoles, this would be a return.
       continue;
+    }
 
     if (atoms[a]->formal_charge() == 1) {
       if (nplus >= 0)
         return 0;
-      if (ncon[a] == 3 && ExocyclicDoubleBond(m, a, r))   // [O-][n]1cco[n+]1=C
+      if (ncon[a] == 3 && ExocyclicDoubleBond(m, a, r)) {   // [O-][n]1cco[n+]1=C
         return 0;
+      }
       nplus = i;
     } else if (nd3 >= 0)
       return 0;
@@ -5558,11 +5995,160 @@ Chemical_Standardisation::_do_charged_imidazole(Molecule & m,
       return 1;
     }
 
-    if (0 == e1)    // no more expansion, cannot be resolved
+    if (0 == e1) {    // no more expansion, cannot be resolved
       return 0;
+    }
   }
 
   return 0;   // Should never get here.
+}
+
+int
+Chemical_Standardisation::_do_imidazole_exocyclic_nh(Molecule& m, IWStandard_Current_Molecule& current_molecule_data) {
+  const atomic_number_t * z = current_molecule_data.atomic_number();
+  const int * ncon = current_molecule_data.ncon();
+  const int * ring_membership = current_molecule_data.ring_membership();
+
+  int rc = 0;
+#ifdef DEBUG_IMIDAZOLE_EXOCYCLIC_NH
+  cerr << "_do_imidazole_exocyclic_nh " << m.smiles() << ' ' << m.name() << '\n';
+#endif
+
+  // start the search looking for the N=c bond.
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (z[i] != 7) {
+      continue;
+    }
+    if (ncon[i] != 1) {
+      continue;
+    }
+
+#ifdef DEBUG_IMIDAZOLE_EXOCYCLIC_NH
+    cerr << m.smarts_equivalent_for_atom(i) << " perhaps\n";
+#endif
+
+    const Bond* b = m[i][0];
+    if (! b->is_double_bond()) {
+      continue;
+    }
+
+    atom_number_t carbon = b->other(i);
+    if (z[carbon] != 6) {
+      continue;
+    }
+    if (ring_membership[carbon] != 1) {
+      continue;
+    }
+
+    int rnum = current_molecule_data.ring_number_containing_atom(carbon);
+#ifdef DEBUG_IMIDAZOLE_EXOCYCLIC_NH
+    cerr << "Ring size " << current_molecule_data.ring_size()[rnum] << " arom " << current_molecule_data.ring_is_aromatic()[rnum] << '\n';
+#endif
+    if (current_molecule_data.ring_size()[rnum] != 5) {
+      continue;
+    }
+    if (! current_molecule_data.ring_is_aromatic()[rnum]) {
+      continue;
+    }
+    rc += _do_imidazole_exocyclic_nh(m, current_molecule_data, i, carbon);
+  }
+
+  if (rc == 0) {
+    return 0;
+  }
+
+  _transform_imidazole_exocyclic_nh.extra(rc);
+
+  if (_verbose) {
+    cerr << "Transformed " << rc << " imidazole=NH";
+  }
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:imidazole=NH";
+  }
+
+  return rc;
+}
+
+// Find the first carbon atom attached to `zatom` that is not `exclude`.
+static atom_number_t
+OtherC(const Molecule& m, atom_number_t zatom, atom_number_t exclude) {
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (o == exclude) {
+      continue;
+    }
+
+    if (m.atomic_number(o) != 6) {
+      return INVALID_ATOM_NUMBER;
+    }
+
+    return o;
+  }
+
+  return INVALID_ATOM_NUMBER;
+}
+
+
+int
+Chemical_Standardisation::_do_imidazole_exocyclic_nh(Molecule & m,
+                        IWStandard_Current_Molecule& current_molecule_data,
+                        atom_number_t nh, atom_number_t carbon) {
+  const atomic_number_t* z = current_molecule_data.atomic_number(); 
+  const int* ncon = current_molecule_data.ncon(); 
+
+  // cerr << "nh " << nh << " carbon " << carbon << '\n';
+  atom_number_t nh0 = INVALID_ATOM_NUMBER;
+  atom_number_t nh1 = INVALID_ATOM_NUMBER;
+  for (const Bond* b : m[carbon]) {
+    atom_number_t o = b->other(carbon);
+    if (o == nh) {
+      continue;
+    }
+    if (! b->is_single_bond()) {  // Probably not necessary
+      continue;
+    }
+    if (z[o] != 7) {
+      return 0;
+    }
+    if (ncon[o] != 2) {
+      return 0;
+    }
+
+    if (nh0 == INVALID_ATOM_NUMBER) {
+      nh0 = o;
+    } else {
+      nh1 = o;
+    }
+  }
+
+  // cerr << "Found " << nh0 << " and " << nh1 << "'\n";
+  if (nh1 == INVALID_ATOM_NUMBER) {
+    return 0;
+  }
+
+  // Now we need to identify the two carbon atoms in the ring. c1-nh0-c2-c3-nh1
+  atom_number_t c2 = OtherC(m, nh0, carbon);
+  if (c2 == INVALID_ATOM_NUMBER) {
+    return 0;
+  }
+  atom_number_t c3 = OtherC(m, nh1, carbon);
+  if (c3 == INVALID_ATOM_NUMBER) {
+    return 0;
+  }
+
+  // cerr << "Carbons are " << c2 << " and " << c3 << '\n';
+
+
+  // ResolveImidazole needs the ring, but rather than fetch it, it might be
+  // easier to just recreate it.
+  Set_of_Atoms tmp{carbon, nh0, c2, c3, nh1};
+  ResolveImidazole(m, tmp, carbon, nh0, c2, c3, nh1);
+  m.set_bond_type_between_atoms(nh, carbon, SINGLE_BOND);
+  m.set_bond_type_between_atoms(carbon, nh0, DOUBLE_BOND);
+  m.set_bond_type_between_atoms(carbon, nh1, SINGLE_BOND);
+  return 1;
 }
 
 //#define DEBUG_SWAP_CHARGED_PYRAZOLE
@@ -5581,8 +6167,9 @@ Chemical_Standardisation::_swap_charged_pyrazole(Molecule& m, const int ring_num
   cerr << "_swap_charged_pyrazole ring " << ring_number << ' ' << *(current_molecule_data.ringi(ring_number)) << '\n';
 #endif
 
-  if (current_molecule_data.ring_is_fused()[ring_number])  // Too hard, too rare.
+  if (current_molecule_data.ring_is_fused()[ring_number]) {  // Too hard, too rare.
     return 0;
+  }
 
   const Set_of_Atoms & r = *(current_molecule_data.ringi(ring_number));
   assert(r.number_elements() == 5);
@@ -5713,8 +6300,9 @@ Chemical_Standardisation::_do_tetrazole (Molecule & m,
 
     Atom * aj = const_cast<Atom *>(atoms[j]);    // the implicit_hydrogens method is possibly non-const
 
-    if (aj->formal_charge() > 0)   // we may have a negatively charged N in the ring
+    if (aj->formal_charge() > 0) {   // we may have a negatively charged N in the ring
       continue;
+    }
 
     if (7 == z[j] && 2 == ncon[j])
     {
@@ -5741,8 +6329,9 @@ Chemical_Standardisation::_do_tetrazole (Molecule & m,
     }
     else if (6 == z[j] && 3 == ncon[j] && 4 == aj->nbonds())
     {
-      if (c >= 0)     // can be only one Carbon atom in a tetrazole
+      if (c >= 0) {     // can be only one Carbon atom in a tetrazole
         return 0;
+      }
 
       c = i;
     }
@@ -5829,8 +6418,9 @@ determine_fused_aromatic_pyrazole (const Molecule & m,
   const Atom * const * atoms = current_molecule_data.atoms();
   const int * atom_is_aromatic = current_molecule_data.atom_is_aromatic();
 
-  if (3 != ncon[c_opposite])   // must be fused in some strange way
+  if (3 != ncon[c_opposite]) {   // must be fused in some strange way
     return 0;
+  }
 
   for (int i = 0; i < 3; i++)
   {
@@ -5914,9 +6504,9 @@ Chemical_Standardisation::_do_pyrazole(Molecule & m,
     if (2 != ncon[j])
       continue;
 
-    if (n1_index_in_ring < 0)   // there must be exactly two nitrogens in the ring
+    if (n1_index_in_ring < 0) {   // there must be exactly two nitrogens in the ring
       n1_index_in_ring = i;
-    else if (n2_index_in_ring < 0)
+    } else if (n2_index_in_ring < 0)
       n2_index_in_ring = i;
     else
       return 0;
@@ -5993,8 +6583,9 @@ Chemical_Standardisation::_do_pyrazole(Molecule & m,
   if (6 != atoms[c2]->atomic_number())
     return 0;
 
-  if (2 == ncon[c1] && 2 == ncon[c2])    // cannot do anything, symmetric and isolated
+  if (2 == ncon[c1] && 2 == ncon[c2]) {    // cannot do anything, symmetric and isolated
     return 0;
+  }
 
 #ifdef DEBUG_DO_PYRAZOLE
   cerr << "First two carbons OK\n";
@@ -6087,8 +6678,9 @@ Chemical_Standardisation::_do_pyrazole(Molecule & m,
 
     if (e1 == e2)
     {
-      if (0 == e1)   // done, cannot be resolved
+      if (0 == e1) {   // done, cannot be resolved
         return 0;
+      }
 
       continue;
     }
@@ -6108,17 +6700,9 @@ Chemical_Standardisation::_do_pyrazole(Molecule & m,
   return 0;   // cannot figure out what to do
 }
 
-
-/*
-  Take N=N to [N+]-[N-]
-
-  We also do CN(C)(C)=N
-*/
-
 int
-Chemical_Standardisation::_do_transform_back_to_nplus_nminus (Molecule & m,
-                                          IWStandard_Current_Molecule & current_molecule_data)
-{
+Chemical_Standardisation::_do_transform_back_to_nplus_nminus(Molecule & m,
+                                          IWStandard_Current_Molecule & current_molecule_data) {
   const atomic_number_t * z = current_molecule_data.atomic_number();
   const int * ncon = current_molecule_data.ncon();
   const Atom * const * atoms = current_molecule_data.atoms();
@@ -6127,58 +6711,84 @@ Chemical_Standardisation::_do_transform_back_to_nplus_nminus (Molecule & m,
 
   int matoms = m.natoms();
 
-  for (int i = 0; i < matoms; i++)
-  {
-    if (7 != z[i])
+  for (int i = 0; i < matoms; i++) {
+    if (7 != z[i]) {
       continue;
+    }
 
-    if (ncon[i] < 3)
+    if (ncon[i] < 3) {
       continue;
+    }
 
     const Atom * ai = atoms[i];
 
-    if (0 != ai->formal_charge())
+    if (ai->formal_charge() != 0) {
       continue;
-
-    if (5 != ai->nbonds())
-      continue;
-
-    atom_number_t doubly_bonded_nitrogen = INVALID_ATOM_NUMBER;
-    for (int j = 0; j < ncon[i]; j++)
-    {
-      const Bond * b = ai->item(j);
-      if (! b->is_double_bond())
-        continue;
-
-      atom_number_t k = b->other(i);
-      if (7 != z[k])
-        continue;
-
-      if (0 != atoms[k]->formal_charge())
-        continue;
-
-      doubly_bonded_nitrogen = k;
-      break;
     }
 
-    if (INVALID_ATOM_NUMBER == doubly_bonded_nitrogen)
+    atom_number_t double1 = kInvalidAtomNumber;
+    atom_number_t double2 = kInvalidAtomNumber;
+    for (const Bond* b : *ai) {
+      if (! b->is_double_bond()) {
+        continue;
+      }
+
+      atom_number_t o = b->other(i);
+
+      if (atoms[o]->formal_charge() != 0) {
+        continue;
+      }
+
+      if (double1 == kInvalidAtomNumber) {
+        double1 = o;
+      } else {
+        double2 = o;
+        break;
+      }
+    }
+
+    if (double2 == kInvalidAtomNumber) {
       continue;
+    }
+
+    atomic_number_t z1 = atoms[double1]->atomic_number();
+    atomic_number_t z2 = atoms[double2]->atomic_number();
+    atom_number_t negative_charge = kInvalidAtomNumber;
+
+    // Prefer oxygen first, then singly connected Nitrogen, then other nitrogen
+    if (z1 == 8) {
+      negative_charge = double1;
+    } else if (z2 == 8) {
+      negative_charge = double2;
+    } else if (z1 == 7 && atoms[double1]->ncon() == 1) {
+      negative_charge = double1;
+    } else if (z2 == 7 && atoms[double2]->ncon() == 1) {
+      negative_charge = double2;
+    } else if (z1 == 7) {
+      negative_charge = double1;
+    } else if (z2 == 7) {
+      negative_charge = double2;
+    } else {
+      continue;
+    }
 
     m.set_formal_charge(i, 1);
-    m.set_formal_charge(doubly_bonded_nitrogen, -1);
-    m.set_bond_type_between_atoms(i, doubly_bonded_nitrogen, SINGLE_BOND);
-    rc++;
+    m.set_formal_charge(negative_charge, -1);
+    m.set_bond_type_between_atoms(i, negative_charge, SINGLE_BOND);
+
+    ++rc;
   }
 
-  if (rc)
-  {
+  if (rc) {
     _transform_back_to_nplus_nminus.extra(rc);
 
-    if (_verbose)
+    if (_verbose) {
       cerr << "Transformed " << rc << " =N=N- to =[N+]-[N-]-\n";
+    }
 
-    if (_append_string_depending_on_what_changed)
+    if (_append_string_depending_on_what_changed) {
       _append_to_changed_molecules << " STD:RN+N-";
+    }
   }
 
   return rc;
@@ -6238,9 +6848,6 @@ Chemical_Standardisation::_do_transform_azid_to_charge_separated (Molecule & m,
       n3 = a2->other(n2, 1);
     else
       n3 = a2->other(n2, 0);
-
-    if (7 != z[n3])
-      continue;
 
     if (0 != atoms[n3]->formal_charge())
       continue;
@@ -6638,8 +7245,9 @@ is_isolated_lactim_lactam (const Molecule & m,
     if (i == ndx)
       continue;
 
-    if (possible_lactam[i]->shares_nitrogen_with(*p))     // p not isolated
+    if (possible_lactam[i]->shares_nitrogen_with(*p)) {     // p not isolated
       return 0;
+    }
   }
 
   return 1;     // not shared with any of the others, isolated
@@ -6720,8 +7328,7 @@ Chemical_Standardisation::__do_transform_ring_lactim(Molecule & m,
       continue;
     }
 
-    if (p->lactam_form())    // already lactim form, OK
-    {
+    if (p->lactam_form()) {    // already lactim form, OK
       already_done[i] = 1;
       remaining_to_be_processed--;
       continue;
@@ -6816,8 +7423,9 @@ Chemical_Standardisation::__do_transform_ring_lactim(Molecule & m,
     if (1 != p->total_nitrogen_attachments())
       continue;
 
-    if (1 == p->fused_system_size())   // these were tried above
+    if (1 == p->fused_system_size()) {   // these were tried above
       continue;
+    }
 
     if (1 != p->lactims_in_fused_system())
       continue;
@@ -6996,8 +7604,9 @@ Chemical_Standardisation::__do_transform_ring_lactim(Molecule & m,
     if (2 != m.ncon(n1) || 2 != m.ncon(n2))
       continue;
 
-    if (m.hcount(n1) || m.hcount(n2))   // already got a hydrogen nearby
+    if (m.hcount(n1) || m.hcount(n2)) {   // already got a hydrogen nearby
       continue;
+    }
 
 #ifdef DEBUG_LACTAM_LACTIM
     cerr << "Trying to switch kekule form to get a hydrogen nearby, starting with " << m.smiles() << '\n';
@@ -7030,10 +7639,11 @@ Chemical_Standardisation::__do_transform_ring_lactim(Molecule & m,
     if (1 != m.hcount(p->second_nitrogen()))
       continue;
 
-    if (1 == n)    // must be isolated
+    if (1 == n) {    // must be isolated
       ;
-    else if (! is_isolated_lactim_lactam(m, i, current_molecule_data))
+    } else if (! is_isolated_lactim_lactam(m, i, current_molecule_data)) {
       continue;
+    }
 
     _change_molecule_kekule_form_for_lactam_canonical(m, *p);
 
@@ -7050,8 +7660,7 @@ Chemical_Standardisation::__do_transform_ring_lactim(Molecule & m,
 //cerr << m.smiles() << ' ' << m.name() << " multiple lactims on ring/ring system\n"; //    implement something one of these days...
 
 #ifdef IMPLEMENT_THIS_SOMETIME
-  for (int i = 0; i < n; ++i)     // need to implement something here....
-  {
+  for (int i = 0; i < n; ++i) {     // need to implement something here....
     if (already_done[i])
       continue;
 
@@ -7082,8 +7691,9 @@ Chemical_Standardisation::_process_lactim_in_isolated_aromatic_ring(Molecule & m
     if (! changed)
       return 0;
 
-    if (! p.could_change_to_lactim_with_current_bonding(m))    // huh????
+    if (! p.could_change_to_lactim_with_current_bonding(m)) {    // huh????
       return 0;
+    }
   }
 
   p.to_lactam_form(m, 1);
@@ -7160,14 +7770,16 @@ Chemical_Standardisation::_change_molecule_kekule_form_for_lactam_canonical (Mol
 
     if (e1 == e2)
     {
-      if (0 == e1)   // done, cannot be resolved
+      if (0 == e1) {   // done, cannot be resolved
         return 0;
+      }
 
       continue;
     }
 
-    if (e1 < e2)    // we are good
+    if (e1 < e2) {    // we are good
       return 0;
+    }
 
     Toggle_Kekule_Form tkf;
 
@@ -7319,8 +7931,9 @@ Chemical_Standardisation::_do_lactam_lactim_pyrazole_triazole(Molecule & m,
 
 //cerr << "Checking hcount " << m.hcount(n1) << " " << m.hcount(n2) << '\n';
 
-  if (0 == m.hcount(n1) && 0 == m.hcount(n2))   // must be a hydrogen somewhere
+  if (0 == m.hcount(n1) && 0 == m.hcount(n2)) {   // must be a hydrogen somewhere
     return 0;
+  }
 
 // ring looks like: p.oxygen - c - n1 - n2 - x3 - x4 which joins c
 
@@ -7467,8 +8080,7 @@ identity_exocyclic_singly_bonded_oxygen(const Molecule & m,
 
     const atom_number_t j = b->other(c);
 
-    if (8 == z[j] && 1 == ncon[j] && m.formal_charge(j) == 0)  // guard against [O-]C1=C2C3=[N+](N1)C23
-    {
+    if (8 == z[j] && 1 == ncon[j] && m.formal_charge(j) == 0) {  // guard against [O-]C1=C2C3=[N+](N1)C23
       oxygen = j;
       return 1;
     }
@@ -7530,9 +8142,9 @@ Chemical_Standardisation::_do_transform_pyrazolone(Molecule & m,
     }
     else if (2 == ncon[j])
       ;
-    else if (6 != z[j]) // guard against S1(CC2=CCS(=O)(=O)C2)NC2=C(C=CC=C2)N=1 @takacsgergely Jan 2018
+    else if (6 != z[j]) {   // guard against S1(CC2=CCS(=O)(=O)C2)NC2=C(C=CC=C2)N=1 @takacsgergely Jan 2018
       ;
-    else if (identity_exocyclic_singly_bonded_oxygen(m, j, exocyclic_singly_bonded_oxygen, current_molecule_data))
+    } else if (identity_exocyclic_singly_bonded_oxygen(m, j, exocyclic_singly_bonded_oxygen, current_molecule_data))
       ndx_exocyclic_singly_bonded_oxygen = i;
   }
    
@@ -7602,14 +8214,11 @@ Chemical_Standardisation::_do_transform_pyrazolone(Molecule & m,
 
   const Bond * b = m.bond_between_atoms(c, n1);
 
-  if (b->is_double_bond())    // the easy case OC1=NNC=C1
-  {
+  if (b->is_double_bond()) {    // the easy case OC1=NNC=C1
     m.set_bond_type_between_atoms(c, exocyclic_singly_bonded_oxygen, DOUBLE_BOND);
     m.set_bond_type_between_atoms(c, n1, SINGLE_BOND);
     m.set_implicit_hydrogens_known(n1, 0);
-  }
-  else                  // The harder case of O-C1=CC=NN1
-  {
+  } else {                  // The harder case of O-C1=CC=NN1
     const Bond * b = m.bond_between_atoms(c, c1);
     if (! b->is_double_bond())
       return 0;
@@ -7783,8 +8392,9 @@ Possible_Lactim_Lactam::_alpha_nitrogen_present (const Molecule & m,
 {
   const Atom * a = m.atomi(n);
 
-  if (2 != a->ncon())    // should never happen
+  if (2 != a->ncon()) {    // should never happen
     return 0;
+  }
 
   for (int i = 0; i < 2; ++i)
   {
@@ -7844,8 +8454,7 @@ remove_aromatic_lactims_with_alpha_nitrogen (Molecule & m,
     {
       atom_number_t k = an->other(pi->nitrogen(), j);
 
-      if (7 == m.atomic_number(k) && m.is_aromatic(k) && m.hcount(k))    // second check for aromaticity probably not necessary
-      {
+      if (7 == m.atomic_number(k) && m.is_aromatic(k) && m.hcount(k)) {    // second check for aromaticity probably not necessary
         possible_lactim.remove_item(i);
         break;
       }
@@ -7947,14 +8556,13 @@ looks_like_urea (const Molecule & m,
 static int
 possible_lactam_comparator (const Possible_Lactim_Lactam * pll1, const Possible_Lactim_Lactam * pll2)
 {
-  if (! pll1->is_ring() && ! pll2->is_ring())    // not in a ring, the ordering really does not matter, do something arbitrary. Implement sometime...
-  {
+  if (! pll1->is_ring() && ! pll2->is_ring()) {    // not in a ring, the ordering really does not matter, do something arbitrary. Implement sometime...
     const atom_number_t c1 = pll1->carbon();
     const atom_number_t c2 = pll2->carbon();
 
-    if (c1 < c2)        // this is of course invalid, but does not matte right now...
+    if (c1 < c2) {        // this is of course invalid, but does not matte right now...
       return -1;
-    else
+    } else
       return 1;
   }
 
@@ -8181,8 +8789,9 @@ IWStandard_Current_Molecule::initialise(Molecule & m)
 
     const Bond * boc = _atom[i]->item(0);
 
-    if (! boc->is_single_bond())    // already in correct form
+    if (! boc->is_single_bond()) {    // already in correct form
       continue;
+    }
 
     const atom_number_t c = boc->other(i);
 
@@ -8194,8 +8803,9 @@ IWStandard_Current_Molecule::initialise(Molecule & m)
 
     const Atom * ac = _atom[c];
 
-    if (4 != ac->nbonds())    // must be unsaturated
+    if (4 != ac->nbonds()) {    // must be unsaturated
       continue;
+    }
 
     resizable_array<const Bond *> bonds_to_nitrogen;
     const int attached_nitrogens = gather_bonds_to_nitrogen_atoms(m, c, i, bonds_to_nitrogen);
@@ -8213,8 +8823,9 @@ IWStandard_Current_Molecule::initialise(Molecule & m)
     {
       const Bond * bcn = bonds_to_nitrogen[j];
 
-      if (bcn->is_double_bond() && bcn->part_of_cis_trans_grouping()) // C(=NNC(N)=N)(C=CC1=CC=C(O1)N(=O)=O)C(=O)NO - shown without cis trans bonds
+      if (bcn->is_double_bond() && bcn->part_of_cis_trans_grouping()) {   // C(=NNC(N)=N)(C=CC1=CC=C(O1)N(=O)=O)C(=O)NO - shown without cis trans bonds
         continue;
+      }
 
       const atom_number_t n = bcn->other(c);
 
@@ -8233,15 +8844,15 @@ IWStandard_Current_Molecule::initialise(Molecule & m)
     if (nullptr == bn1)
       continue;
 
-    if (nullptr != bn2 && bn1->is_single_bond())     // make sure bn1 is the double bond (if present)
+    if (nullptr != bn2 && bn1->is_single_bond()) {     // make sure bn1 is the double bond (if present)
       std::swap(bn1, bn2);
+    }
 
     const atom_number_t n1 = bn1->other(c);
 
     Possible_Lactim_Lactam * p = nullptr;
 
-    if (boc->is_double_bond())    // already correct - actually, will not happen
-    {
+    if (boc->is_double_bond()) {    // already correct - actually, will not happen
       p = new Possible_Lactim_Lactam(i, c, n1);
       p->set_lactam_form(1);
     }
@@ -8332,9 +8943,16 @@ Chemical_Standardisation::_processing_needed(const IWStandard_Current_Molecule &
       _transform_to_4_pyridone.active() ||
       (_transform_sulfonyl_urea.active() && current_molecule_data.sulphur() > 0) ||
       (_transform_124_triazine.active() && current_molecule_data.nitrogens() > 2) ||
+      (_transform_charged_non_organic.active() && current_molecule_data.non_organic() &&
+       (current_molecule_data.npos() > 0 || current_molecule_data.nneg() > 0)) ||
       (_transform_enol_fused.active() && current_molecule_data.nrings() > 1)
-    )
+    ) {
+      return 1;
+  }
+
+  if (_external_transformation.size() > 0) {
     return 1;
+  }
 
   return 0;
 }
@@ -8463,10 +9081,10 @@ Chemical_Standardisation::_do_amino_thiazole (Molecule & m,
     const atom_number_t j = r[i];
 
     const atomic_number_t zj = current_molecule_data.atomic_number()[j];
-    if (8 == zj || 16 == zj)     // try oxygen too
-    {
-      if (s >= 0)   // can only be one in the ring
+    if (8 == zj || 16 == zj) {     // try oxygen too
+      if (s >= 0) {   // can only be one in the ring
         return 0;
+      }
 
       s = i;
       continue;
@@ -8474,8 +9092,9 @@ Chemical_Standardisation::_do_amino_thiazole (Molecule & m,
 
     if (7 == zj)
     {
-      if (n >= 0)   // can only be one in the ring
+      if (n >= 0) {   // can only be one in the ring
         return 0;
+      }
 
       if (2 != current_molecule_data.ncon()[j])
         return 0;
@@ -8484,11 +9103,13 @@ Chemical_Standardisation::_do_amino_thiazole (Molecule & m,
       continue;
     }
 
-    if (6 != zj)    // ring can contain only S C and N
+    if (6 != zj) {    // ring can contain only S C and N
       return 0;
+    }
 
-    if (2 == current_molecule_data.ncon()[j])   // if it is going to have an exocyclic Nitrogen, must have 3 connections
+    if (2 == current_molecule_data.ncon()[j]) {   // if it is going to have an exocyclic Nitrogen, must have 3 connections
       continue;
+    }
 
     const Atom * aj = m.atomi(j);
 
@@ -8619,8 +9240,9 @@ Chemical_Standardisation::_do_enol_to_keto(Molecule & m, IWStandard_Current_Mole
 
 //  cerr << "Atoms " << o << " c1 " << c1 << " and doubly_bonded_carbon " << doubly_bonded_carbon << " mol has " << m.natoms() << " atoms\n";
 
-    if (m.attached_heteroatom_count(doubly_bonded_carbon))  // SHould we also check singly_bonded_carbon
+    if (m.attached_heteroatom_count(doubly_bonded_carbon)) {  // SHould we also check singly_bonded_carbon
       continue;
+    }
     if (m.ncon(singly_bonded_carbon) < m.nbonds(singly_bonded_carbon))
       continue;
     m.set_bond_type_between_atoms(c1, o, DOUBLE_BOND);
@@ -8660,11 +9282,13 @@ accumulate_possible_keto_form(const Molecule & m,
   Set_of_Atoms attached_carbons(2);
   for (int i = 0; i < 3; ++i) {
     const Bond * b = carbon->item(i);
-    if (b->is_double_bond())   // Bond back to 'o`.
+    if (b->is_double_bond()) {   // Bond back to 'o`.
       continue;
+    }
     const atom_number_t j = b->other(c);
-    if (z[j] != 6)  // All attachments must be carbon.
+    if (z[j] != 6) {  // All attachments must be carbon.
       return 0;
+    }
     if (ring_membership[j] > 0)
       return 0;
 
@@ -8697,8 +9321,9 @@ unsaturated_neighbors(const Molecule& m, const atom_number_t zatom)
     }
 
     const atom_number_t j = b->other(zatom);
-    if (m.ncon(j) < m.nbonds(j))  // Since any unsaturated neighbor stops the conversion, we could return here.
+    if (m.ncon(j) < m.nbonds(j)) {  // Since any unsaturated neighbor stops the conversion, we could return here.
       rc++;
+    }
   }
 
   return rc;
@@ -8729,8 +9354,9 @@ accumulate_possible_enol_form(const Molecule & m,
     if (j == o)
       continue;
 
-    if (z[j] != 6)  // All attachments must be carbon.
+    if (z[j] != 6) {  // All attachments must be carbon.
       return 0;
+    }
     if (ring_membership[j] > 0)
       return 0;
 
@@ -8790,8 +9416,9 @@ Chemical_Standardisation::_identify_current_keto_and_enol_forms(Molecule & m,
     if (ncon[c] != 3)
       continue;
 
-    if (ring_membership[c])  // too hard.
+    if (ring_membership[c]) {  // too hard.
       continue;
+    }
 
     if (b->is_double_bond())
       rc += accumulate_possible_keto_form(m, current_molecule_data, o, c, current_keto_form);
@@ -8856,8 +9483,9 @@ Chemical_Standardisation::_identify_adjacent_keto_enol_groups(Molecule & m,
   int unique_id = 1;
   for (int o1 = 0; o1 < matoms; ++o1) 
   {
-    if (part_of_keto_or_enol[o1] >= 0)  // already covered.
+    if (part_of_keto_or_enol[o1] >= 0) {  // already covered.
       continue;
+    }
 
     if (z[o1] != 8)
       continue;
@@ -8870,8 +9498,9 @@ Chemical_Standardisation::_identify_adjacent_keto_enol_groups(Molecule & m,
     if (z[c1] != 6)
       continue;
 
-    if (ring_membership[c1])  // Too hard.
+    if (ring_membership[c1]) {  // Too hard.
       continue;
+    }
 
 
     const Atom * ac1 = m.atomi(c1);
@@ -8901,8 +9530,9 @@ Chemical_Standardisation::_identify_adjacent_keto_enol_groups(Molecule & m,
     unique_id += 1;
   }
 
-  if (unique_id == 2)  // Only one group found.
+  if (unique_id == 2) {  // Only one group found.
     return;
+  }
 
   // There are multiple keto/enol forms possible. Look for any that
   // might be adjacent.
@@ -8929,8 +9559,9 @@ Chemical_Standardisation::_identify_adjacent_keto_enol_groups(Molecule & m,
         connections_to_oh.add(j)
     }
 
-    if (connections_to_oh.empty())  // No connections to other keto/enol groups.
+    if (connections_to_oh.empty()) {  // No connections to other keto/enol groups.
       continue;
+    }
 
     if (connections_to_oh.number_elements() == 1) {
       part_of_keto_or_enol[c] = part_of_keto_or_enol[connections_to_oh[0]];
@@ -8961,7 +9592,7 @@ Chemical_Standardisation::_do_transform_to_4_pyridone(Molecule& m,
     if (! current_molecule_data.ring_is_aromatic()[i]) {
       continue;
     }
-    rc += _do_transform_to_4_pyridone(m, *r);
+    rc += _do_transform_to_4_pyridone(m, current_molecule_data, *r);
   }
 
   if (rc == 0) {
@@ -8982,6 +9613,7 @@ Chemical_Standardisation::_do_transform_to_4_pyridone(Molecule& m,
 
 int
 Chemical_Standardisation::_do_transform_to_4_pyridone(Molecule& m,
+                        IWStandard_Current_Molecule& current_molecule_data,
                         const Set_of_Atoms& ring) const {
   assert(ring.size() == 6);
 
@@ -9000,7 +9632,10 @@ Chemical_Standardisation::_do_transform_to_4_pyridone(Molecule& m,
     }
 
     // No other heteroatoms allowed.
-    if (atom.atomic_number() != 6) {
+    if (atom.atomic_number() == 6) {
+    } else if (atom.atomic_number() == 7 &&
+               current_molecule_data.ring_membership()[ring[i]] == 2) {
+    } else {
       continue;
     }
 
@@ -9567,6 +10202,270 @@ Chemical_Standardisation::_do_transform_enol_fused(Molecule & m,
 
   if (_append_string_depending_on_what_changed) {
     _append_to_changed_molecules << " STD::enol_fused";
+  }
+
+  return rc;
+}
+
+int
+Chemical_Standardisation::_do_pyrimidine(Molecule& m, IWStandard_Current_Molecule& current_molecule_data) {
+  int rc = 0;
+
+  for (int i = 0; i < current_molecule_data.nrings(); ++i) {
+    if (current_molecule_data.ring_size()[i] != 6) {
+      continue;
+    }
+    if (! current_molecule_data.ring_is_aromatic()[i]) {
+      continue;
+    }
+    if (current_molecule_data.ring_nitrogen_count()[i] < 2) {
+      continue;
+    }
+
+    rc += _do_pyrimidine(m, current_molecule_data, *current_molecule_data.ringi(i));
+  }
+
+  if (rc == 0) {
+    return 0;
+  }
+
+  _transform_pyrimidine.extra(rc);
+
+  if (_verbose) {
+    cerr << "Transformed " << rc << " pyrimidine\n";
+  }
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:pyrimidine";
+  }
+
+  return rc;
+}
+
+// First task is to identify the atoms in the ring that comprise the pyrimidine nitrogen pair.
+// Note that there might be two of these. Give up in that case.
+int
+Chemical_Standardisation::_do_pyrimidine(Molecule& m, IWStandard_Current_Molecule& current_molecule_data,
+                const Set_of_Atoms& ring) {
+  assert(ring.size() == 6);
+
+  const atomic_number_t* z = current_molecule_data.atomic_number();
+
+  resizable_array<int> n_indices;
+  n_indices.reserve(6);
+  for (int i = 0; i < 6; ++i) {
+    if (z[ring[i]] == 7) {
+      n_indices << i;
+    }
+  }
+
+  const int nn = n_indices.number_elements();
+
+  if (nn < 2) {  // should not happen.
+    return 0;
+  }
+
+#ifdef TODO_FINIS_THIS
+
+  // Look for indices separated by 2.
+  for (int i = 1; i < nn; ++i) {
+    int prev = nn[i-1];
+    if ((prev + 2) % 6 == nn[i]) {
+    }
+    if ((nn[i-1] + 2) % 6 == nn[i]) {
+    }
+  }
+
+  return 1;
+#endif
+  return 0;
+}
+
+int
+Chemical_Standardisation::AddExternalSpecification(const const_IWSubstring& directive) {
+  IWString tmp(directive);
+  std::optional<IWString> expanded = tmp.ExpandEnvironmentVariables();
+  if (expanded) {
+    tmp = *expanded;
+  }
+
+  if (tmp.starts_with("F:")) {
+    tmp.remove_leading_chars(2);
+    if (! ReadFileOfExternalProtos(tmp)) {
+      cerr << "Chemical_Standardisation::AddExternalSpecification:cannot read '" << directive << "'\n";
+      cerr << tmp << '\n';
+      return 0;
+    }
+  } else {
+    cerr << "Chemical_Standardisation::AddExternalSpecification:unrecognised input " << directive << '\n';
+    return 0;
+  }
+
+  _active = 1;
+
+  return 1;
+}
+
+int
+Chemical_Standardisation::ReadFileOfExternalProtos(const const_IWSubstring& fname) {
+  IWString tmp(fname);
+  iwstring_data_source input(tmp);
+  if (! input.good()) {
+    cerr << "Chemical_Standardisation::ReadFileOfExternalProtos:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return ReadFileOfExternalProtos(input, fname);
+}
+
+int
+Chemical_Standardisation::ReadFileOfExternalProtos(iwstring_data_source& input, const const_IWSubstring& fname) {
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    if (! ReadExternalProto(buffer, fname)) {
+      cerr << "Chemical_Standardisation::ReadFileOfExternalProtos:cannot parse '" << buffer << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Chemical_Standardisation::ReadExternalProto(const const_IWSubstring& buffer, const const_IWSubstring& fname) {
+  standardisation::Standardisation proto;
+
+  absl::string_view tmp(buffer.data(), buffer.length());
+
+  if (! google::protobuf::TextFormat::ParseFromString(tmp, &proto)) {
+    cerr << "Chemical_Standardisation::ReadExternalProto:cannot parse " << buffer << "\n";
+    return 0;
+  }
+
+  std::unique_ptr<ExternalTransformation> extrnl = std::make_unique<ExternalTransformation>();
+  if (! extrnl->Build(proto, fname)) {
+    cerr << "Chemical_Standardisation::ReadExternalProto:invalid proto " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  _external_transformation << extrnl.release();
+
+  _active = 1;
+
+  return 1;
+}
+
+int
+ExternalTransformation::Build(const standardisation::Standardisation& proto,
+                              const IWString& fname) {
+  if (! proto.has_smiles()) {
+    cerr << "ExternalTransformation::Build:no smiles\n";
+    return 0;
+  }
+
+  if (proto.has_smarts()) {
+    if (! _query.create_from_smarts(proto.smarts())) {
+      cerr << "ExternalTransformation::Build:invalid smarts " << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+  } else if (proto.has_query_file()) {
+  } else {
+    cerr << "ExternalTransformation::Build:no query\n";
+    return 0;
+  }
+
+  if (! proto.has_smiles()) {
+    cerr << "ExternalTransformation::Build:no smiles\n";
+    return 0;
+  }
+
+  if (! _molecule.build_from_smiles(proto.smiles())) {
+    cerr << "ExternalTransformation::Build:invalid smiles " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  _query.set_find_unique_embeddings_only(1);
+  _query.set_find_one_embedding_per_atom(1);
+
+  _standardisation = proto;
+
+  return 1;
+}
+
+ExternalTransformation::ExternalTransformation() {
+  _molecules_processed = 0;
+  _molecules_changed = 0;
+}
+
+const std::string&
+ExternalTransformation::name() const {
+  return _standardisation.name();
+}
+
+int
+ExternalTransformation::Process(Molecule& m) {
+  ++_molecules_processed;
+
+  Substructure_Results sresults;
+  if (! _query.substructure_search(m, sresults)) {
+    cerr << "No substructure search match\n";
+    return 0;
+  }
+
+  int rc = 0;
+  for (const Set_of_Atoms* e : sresults.embeddings()) {
+    rc += Process(m, *e);
+  }
+
+  if (rc) {
+    ++_molecules_changed;
+  }
+
+  return rc;
+}
+
+int
+ExternalTransformation::Process(Molecule& m,
+                const Set_of_Atoms& embedding) {
+  // cerr << "Processing embedding " << embedding << '\n';
+  int rc = 0;
+  for (const Bond* b : _molecule.bond_list()) {
+    atom_number_t a1 = embedding[b->a1()];
+    atom_number_t a2 = embedding[b->a2()];
+
+    const Bond* b2 = m.bond_between_atoms(a1, a2);
+    if (b2 == nullptr) {
+      cerr << "ExternalTransformation::Process:no bond btw atoms " << 
+               _standardisation.ShortDebugString() << '\n';
+      continue;
+    }
+
+    if (b->is_single_bond()) {
+      if (! b2->is_single_bond()) {
+        m.set_bond_type_between_atoms(a1, a2, SINGLE_BOND);
+        ++rc;
+      }
+    } else if (b->is_double_bond()) {
+      if (! b2->is_double_bond()) {
+        m.set_bond_type_between_atoms(a1, a2, DOUBLE_BOND);
+        ++rc;
+      }
+    } else if (b->is_triple_bond()) {
+      if (! b2->is_triple_bond()) {
+        m.set_bond_type_between_atoms(a1, a2, TRIPLE_BOND);
+        ++rc;
+      }
+    }
+  }
+
+  // and formal charges.
+  const int matoms = _molecule.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    atom_number_t x = embedding[i];
+    if (_molecule.formal_charge(i) != m.formal_charge(x)) {
+      m.set_formal_charge(x, _molecule.formal_charge(i));
+      ++rc;
+    }
   }
 
   return rc;

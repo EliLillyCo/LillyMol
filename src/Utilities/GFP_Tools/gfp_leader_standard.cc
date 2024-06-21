@@ -242,6 +242,7 @@ leader(int * leaders,
       selected[leaders[1]] = c1id;
       distances[leaders[0]] = 0.0f;
       distances[leaders[1]] = 0.0f;
+      // Ignore compiler warnings about cand_distances being unitialised.
       #pragma omp parallel for schedule(dynamic,256) private(cand_distances)
       for (int i = start; i < pool_size; i++) {
         if (!selected[i]) {

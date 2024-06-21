@@ -78,8 +78,11 @@ UseScalingLine(const const_IWSubstring& buffer,
                IWString_and_File_Descriptor& output) {
   int i = 0;
   const_IWSubstring token;
+  IWString id;
   for(int col = 0; buffer.nextword(token, i, input_separator); ++col) {
-    if (col > 0) {
+    if (col == 0) {
+      id = token;
+    } else {
       output << output_separator;
     }
     if (col != activity_column) {
@@ -93,6 +96,10 @@ UseScalingLine(const const_IWSubstring& buffer,
       return 0;
     }
 
+    if (identifiers_to_process.empty()) {
+    } else if (! identifiers_to_process.contains(id)) {
+      continue;
+    }
 
     if (action == Action::kScaleToRange) {
       value = scaling.Scale(value);
@@ -378,7 +385,7 @@ GatherRange(const Command_Line_v2& cl,
 
 int
 FeatureScaling(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-C=s-U=s-c=ipos-action=s-hdr=ipos-prec=ipos-bin-subset-11=sfile-scol=ipos");
+  Command_Line_v2 cl(argc, argv, "-v-C=s-U=s-c=ipos-action=s-hdr=ipos-prec=ipos-bin-subset=sfile-11-scol=ipos");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

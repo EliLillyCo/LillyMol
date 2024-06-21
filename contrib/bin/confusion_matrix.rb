@@ -3,7 +3,7 @@
 ianhome = ENV['C3TK_BIN']
 # ianhome = "/home/rx87851"
 
-require "#{ianhome}/ruby/lib/iwcmdline.rb"
+require_relative "lib/iwcmdline.rb"
 
 $expert = false
 

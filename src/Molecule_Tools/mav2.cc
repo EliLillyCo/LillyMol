@@ -390,7 +390,7 @@ DisplayDashXOptions(std::ostream& output) {
 static int
 mav2 (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vA:E:i:g:la:B:pY:fcCthK:z:o:F:m:");
+  Command_Line cl(argc, argv, "vA:E:i:g:la:B:pY:fcCthK:z:o:F:m:X:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -481,23 +481,6 @@ mav2 (int argc, char ** argv)
     unfix_implicit_hydrogens = 1;
     if (verbose)
       cerr << "Any explicit specification of implicit hydrogens will be discarded\n";
-  }
-
-  if (cl.option_present('X')) {
-    const_IWSubstring x;
-    for (int i = 0; cl.value('X', x, i); ++i) {
-      if (x == "flush") {
-        flush_after_each_molecule = 1;
-        if (verbose) {
-          cerr << "Will flush output after each molecule\n";
-        }
-      } else if (x == "help") {
-        DisplayDashXOptions(cerr);
-      } else {
-        cerr << "Unrecognised -X qualifier '" << x << "'\n";
-        DisplayDashXOptions(cerr);
-      }
-    }
   }
 
   if (cl.option_present('i') && cl.option_present('f'))
@@ -623,6 +606,27 @@ mav2 (int argc, char ** argv)
     ndx++;
   }
 
+  if (cl.option_present('X')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "flush") {
+        flush_after_each_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush output after each molecule\n";
+        }
+      } else if (x == "smiles") {
+        for (int i = 0; i < number_abstraction_sets; ++i) {
+          mabs[i].set_write_unique_smiles(0);
+        }
+      } else if (x == "help") {
+        DisplayDashXOptions(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOptions(cerr);
+      }
+    }
+  }
+
   int write_smiles = 0;
   for (int i = 0; i < number_abstraction_sets; i++)
   {
@@ -633,7 +637,7 @@ mav2 (int argc, char ** argv)
     }
   }
 
-  if (0 == cl.number_elements())
+  if (cl.empty())
   {
     cerr << "Insufficient arguments\n";
     usage(2);

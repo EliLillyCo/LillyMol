@@ -32,22 +32,6 @@ cc_library(
 """,
 )
 
-#http_archive(
-#   name = "com_github_google_benchmark",
-#    name = "benchmark",
-#    strip_prefix = "benchmark-main",
-#    urls = ["https://github.com/google/benchmark/archive/main.zip"],
-#)
-
-http_archive(
-    name = "com_google_leveldb",
-    build_file = "//third_party:leveldb.BUILD",
-#   sha256 = "6d91bcb96547bd8d43013e5ac9f4c2ad3227e30e3dc472cdafd2910eb43c16f8",
-#   strip_prefix = "leveldb-1cb384088184be9840bd59b4040503a9fa9aee66",
-#   urls = ["https://github.com/google/leveldb/archive/1cb384088184be9840bd59b4040503a9fa9aee66.zip"],
-    urls = ["https://github.com/google/leveldb/archive/main.zip"],
-)
-
 new_local_repository(
     name = "local_f2c",
     path = "../third_party/libf2c",
@@ -60,6 +44,35 @@ cc_library(
 )
 """,
 )
+
+new_local_repository(
+    name = "charge_assigner",
+    path = "../data/queries/charges",
+    build_file_content = """
+filegroup(
+    name = "charge_assigner_data",
+    srcs = glob(["**"]),
+    visibility = [
+        "//visibility:public",
+    ],
+)
+"""
+)
+
+new_local_repository(
+    name = "donor_acceptor",
+    path = "../data/queries/hbonds",
+    build_file_content = """
+filegroup(
+    name = "donor_acceptor_data",
+    srcs = glob(["**"]),
+    visibility = [
+        "//visibility:public",
+    ],
+)
+"""
+)
+
 
 #local_repository(
 #    name = "tbb",
@@ -114,6 +127,13 @@ cc_library (
 """
 )
 
+new_local_repository(
+   name = "pybind11_protobuf",
+   path = "../third_party/pybind11_protobuf",
+   workspace_file = "WORKSPACE",
+   build_file = "pybind11_protobuf/BUILD",
+)
+
 # in order to build LillyMol pybind11 bindings you will need a python
 # installation with pybind installed with that. Adjust this to meet
 # local needs.
@@ -140,17 +160,100 @@ new_local_repository(
     build_file_content = """
 cc_library(
     name = "x86-simd.sort",
-    hdrs = [
+    hdrs = 
       glob(
         ["src/*hpp"],
-      )
-    ],
+      ),
     strip_include_prefix = "src",
     visibility = ["//visibility:public"],
 )
 """,
 )
 
+new_local_repository(
+    name = "libzmq",
+    path = "../third_party",
+    build_file_content = """
+cc_library (
+    name = "libzmq",
+    srcs = [
+        "lib64/libzmq.a",
+    ],
+    hdrs = [
+        "include/zmq.h",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+new_local_repository(
+    name = "cppzmq",
+    path = "../third_party",
+    build_file_content = """
+cc_library(
+    name = "cppzmq",
+    srcs = [
+    ],
+    hdrs = [
+        "include/zmq.hpp",
+    ],
+    deps = [
+        "@libzmq",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+new_local_repository(
+    name = "xgboost",
+    path="../third_party",
+    build_file_content = """
+cc_library(
+    name = "xgboost",
+    srcs = [
+        "lib64/libxgboost.so",
+    ],
+    hdrs =
+        glob(
+            ["include/xgboost/**"],
+        ),
+    deps = [
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+# Needed for xgboost
+new_local_repository(
+    name = "dlmc",
+    path="../third_party",
+    build_file_content = """
+cc_library(
+    name = "dlmc",
+    srcs = [
+    ],
+    hdrs =
+        glob(
+            ["include/dmlc/**"],
+        ),
+    deps = [
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+#local_repository(
+#    name = "com_github_grpc_grpc",
+#    path = "../third_party/grpc",
+#)
 
 # THESE TARGETS REQUIRE THIRD PARTY LICENSED PRODUCTS.
 # If you have these products available, adjust the file
@@ -175,10 +278,14 @@ cc_library (
 new_local_repository(
     name = "corina",
     path = "/lrlhps/apps/gc3tk/c3tk-core/lib/corina",
+#   path = "/lrlhps/apps/corina/corina-5.0.0",
     build_file_content = """
 cc_library(
     name = "corina",
-    srcs = ["lib/corina_linux_x86_64.so"],
+    srcs = [
+#      "lib/corina.so",
+       "lib/libcorina_linux_rhel6_x86_64_libc2.12_gcc4.4.7.so",
+    ],
     hdrs = ["include/corina_lib.h"],
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],

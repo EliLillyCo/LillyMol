@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package gfp_server;
+
+import "Utilities/GFP_Tools/nearneighbours.proto";
+
+// A nearneighbour request can specify either a number of neighbours to
+// find, or a maximum distance.
+message NnRequest {
+  optional string smiles = 2;
+  optional string id = 3;
+
+  oneof request {
+    uint32 nbrs = 4;
+    float distance = 5;
+  }
+}
+
+// An incoming message can request various actions from the server
+message ServerRequest {
+  enum Request {
+    NONE = 0;
+    SHUTDOWN = 1;
+    RELOAD = 2;
+  }
+
+  optional Request request = 1;
+}
+
+// An incoming request will be either a request for the server to do
+// something, or to find some nearest neighbours.
+message Request {
+  oneof request {
+    ServerRequest server_request = 1;
+    NnRequest nn_request = 2;
+  }
+}
+
+enum Status {
+  OK = 0;
+  NO_DIRECTIVE = 1;
+  NO_SMILES = 2;
+  BAD_SMILES = 3;
+  RELOAD_FAILED = 4;
+}
+
+message Reply {
+  // Will be true if this processing was successful.
+  // Note that `result` could be empty even if `status` is true,
+  // Asking for neighbours within a given distance and there are none,
+  // or a server request.
+  optional Status status = 1;
+
+  optional nnbr.NearNeighbours result = 2;
+}
+
+service Grpcnnreq {
+  rpc GetNeighbours(NnRequest) returns(Reply) {}
+}

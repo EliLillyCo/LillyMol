@@ -429,6 +429,9 @@ to accidentally generate molecules with invalid valence and
 examining and debugging is a common undertaking. Having them
 written to a separate file aids rapid debugging.
 
+If \<fname\> is 'NONE' then products with invalid valences are discarded,
+but not written - no discard file is opened.
+
 ## -d
 For the current scaffold, suppress any duplicates formed. Note that
 each scaffold is reacted with all sidechains, so it is quite

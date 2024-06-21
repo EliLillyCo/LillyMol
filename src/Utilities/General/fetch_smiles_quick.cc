@@ -312,8 +312,11 @@ fetch_smiles_quick (const const_IWSubstring & buffer,
 
   if (invert_fetching_operation)   // the iterator may be bad
     ;
-  else if (include_identifier_file_info)
-    output_buffer << string_before_identifier_file_info << (*f).second;
+  else if (include_identifier_file_info) {
+    if (! f->second.empty()) {
+      output_buffer << string_before_identifier_file_info << (*f).second;
+    }
+  }
 
   output_buffer << '\n';
 

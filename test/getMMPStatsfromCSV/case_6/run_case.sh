@@ -8,41 +8,42 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
     exit 1
 else
-    BIN_DIR="$LILLYMOL_HOME/contrib/script/py/mmp"
+    BIN_DIR="${LILLYMOL_HOME}/contrib/python/mmp"
 fi
 
-test_command=getMMPStatsfromCSV
-case=case_6
+test_command='getMMPStatsfromCSV'
+case='case_6'
 case_id="Case 6"
 
-test_top="$LILLYMOL_HOME/test"
-test_cmd_top="$test_top/$test_command"
+test_top="${LILLYMOL_HOME}/test"
+test_cmd_top="${test_top}/${test_command}"
 
-diff_tool=../../fileDiff.sh
+diff_tool='../../fileDiff.sh'
 
-command="$BIN_DIR/$test_command.py"
+command="${BIN_DIR}/$test_command.py"
 
-if [ ! -x "$command" ]; then
-    echo "$command is not executable or does not exist"
-    exit 1
+if [ ! -x "${command}" ]; then
+  echo "${command} is not executable or does not exist"
+  exit 1
 fi
 
-in="$test_cmd_top/$case/in/dalkeJCM2018_ChEMBL_hERGsubset.csv"
-out=dalke_c6.pairs
-gold_out="$test_cmd_top/$case/out/dalke_c6.pairs.sum"
+in="${test_cmd_top}/${case}/in/dalkeJCM2018_ChEMBL_hERGsubset.csv"
+gold_out="${test_cmd_top}/${case}/out/dalke_c6.pairs.sum"
+stdout='dalke_c6.pairs'
+stderr='stderr'
 
-echo "Testing: $command"
+echo "Testing: ${command}"
 
-$command -i "$in" -o "$out" -s SMILES -n CHEMBL_ID -a hERG_pIC50 -A MEAN_DIFF_INVLOG -p BASIC 2>>err.txt
-$diff_tool $out.sum $gold_out
-ret=$?
+${command} -i "${in}" -o "${stdout}" -s SMILES -n CHEMBL_ID -a hERG_pIC50 -A MEAN_DIFF_INVLOG -p BASIC 2> ${stderr}
+${diff_tool} ${stdout}.sum ${gold_out}
 
-if [ $ret -eq 1 ]
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "${case_id} : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "${case_id} : TEST FAIL"
+  diff ${stdout} ${gold_out} | head -n 50
+  cat ${stderr}
 fi
 
-rm -f $out $out.sum
-rm -f err.txt
+rm -f ${stdout}.sum ${stdout}.pairs ${stderr}

@@ -245,11 +245,15 @@ DisplayQrbHelp(char flag, std::ostream& output) {
   output << "To control rotatable bond calculation the following directives are recognised\n";
   output << " -" << flag << " fast              all non-ring, [D>1]-[D>1] single bonds are rotatable\n";
   output << " -" << flag << " better            CF3, t-Butyl and amides are excluded\n";
+  output << " -" << flag << " isotope=<iso>     isotope to be placed on all atoms at the end of a rotatable bond\n";
+  output << " -" << flag << " uiso              each bond gets a unique isotope\n";
 }
 
 int
 QuickRotatableBonds::Initialise(Command_Line& cl,
                                 char flag) {
+  const int verbose = cl.option_present('v');
+
   IWString s;
   for (int i = 0; cl.value(flag, s, i); ++i) {
     if (s == "fast") {
@@ -261,6 +265,20 @@ QuickRotatableBonds::Initialise(Command_Line& cl,
       if (! s.numeric_value(_isotope)) {
         cerr << "QuickRotatableBonds::Initialise:invalid iso= directive '" << s << "'\n";
         return 0;
+      }
+    } else if (s.starts_with("isotope=")) {
+      s.remove_leading_chars(8);
+      if (! s.numeric_value(_isotope)) {
+        cerr << "QuickRotatableBonds::Initialise:invalid isotope\n";
+        return 0;
+      }
+      if (verbose) {
+        cerr << "Isotope " << _isotope << " placed on atoms in rotatable bonds\n";
+      }
+    } else if (s == "uiso") {
+      _unique_isotope_each_bond = 1;
+      if (verbose) {
+        cerr << "Will place a unique isotope on each rotatable bond.\n";
       }
     } else if (s == "help") {
       DisplayQrbHelp(flag, cerr);
@@ -402,6 +420,8 @@ QuickRotatableBonds::Expensive(Molecule& m) {
   resizable_array<const Bond*> candidate_bonds;
   candidate_bonds.resize(12);
 
+  isotope_t next_isotope = _isotope;
+
   // For each atom, keep track of the number of terminal
   // atoms to which it is attached. This is later used for
   // CF3 and t-butyl
@@ -465,7 +485,15 @@ QuickRotatableBonds::Expensive(Molecule& m) {
     }
 
     ++rc;
-    if (_isotope) {
+    if (_isotope == 0) {
+      continue;
+    }
+
+    if (_unique_isotope_each_bond) {
+      m.set_isotope(a1, next_isotope);
+      m.set_isotope(a2, next_isotope);
+      ++next_isotope;
+    } else {
       m.set_isotope(a1, _isotope);
       m.set_isotope(a2, _isotope);
     }

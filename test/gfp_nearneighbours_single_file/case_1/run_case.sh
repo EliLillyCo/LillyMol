@@ -16,37 +16,45 @@ fi
 shared_data_dir=$LILLYMOL_HOME/data
 command=$BIN_DIR/gfp_nearneighbours_single_file
 case_id="Case 1"
-echo "Testing:  $command"
+echo "Testing:  ${command}"
 
-if [ ! -e "$command" ]
+if [ ! -e "${command}" ]
 then
-    echo "Executable is not found"
-    exit 1
+  echo "Executable ${command} is not found"
+  exit 1
 fi
 
-name1=out.txt
-name1_out=out/out.txt
+golden=out/out.txt
+
+stdout=out.txt
+stderr='stderr'
 
 # Support linux and mac 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/out.txt
+  golden='out/linux/out.txt'
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    name1_out=out/osx/out.txt
+  golden='out/osx/out.txt'
 else
-    echo "OS is not supported"
+  echo "OS is not supported"
+  golden='out/linux/out.txt'  # Might work...
 fi
 
-diff_tool=../../fileDiff.sh
-$command -p -z -T 0.2 -F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -V a=0.3 -V b=1.7 $shared_data_dir/pubchem.gfp >out.txt 2>err.log
-$diff_tool $name1 $name1_out
-ret1=$?
+diff_tool='../../fileDiff.sh'
 
-if [ $ret1 -eq 1 ]
+# Need to remove neighbours with a distance of 0.2 because that can vary across
+# library versions - the -T 0.2 is an exact floating point comparison.
+# This does not really solve the problem, but lessens the probability
+# of issues. 
+# Alternative would be to write a custom diff tool
+${command} -p -z -T 0.2 -F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -V a=0.3 -V b=1.7 -j 3 ${shared_data_dir}/pubchem.gfp 2>${stderr} | sed -e '/ 0\.2$/d' > ${stdout}
+${diff_tool} ${stdout} ${golden}
+
+if [ $? -eq 1 ]
 then
-        echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-        echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  diff -w ${stdout} ${golden} | head -n 20
 fi
 
-rm $name1
-rm err.log
+rm ${stdout} ${stderr}

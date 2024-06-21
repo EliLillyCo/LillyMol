@@ -22,6 +22,8 @@
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
+#include "Molecule_Tools/multiple_reactions.pb.h"
+
 namespace apply_multiple_reactions {
 
 using std::cerr;
@@ -30,24 +32,36 @@ namespace fs = std::filesystem;
 void
 Usage(int rc)
 {
-  cerr << "Apply a set of reactions. Reactions are applied separately\n";
-  cerr << " -R <rxn>          specify one or more reactions\n";
-  cerr << " -R F:<fname>      file containing multiple reactions\n";
-  cerr << " -R TFDATA:<fname> file containing serialised ReactionProto::Reaction protos\n";
-  cerr << " -G <rxn>          one or more old format reactions\n";
-  cerr << " -r <recursion>    number of recursive invocations (def 0)\n";
-  cerr << " -z i              ignore molecules not matching any queries\n";
-  cerr << " -z w              write molecules not reaction to the output\n";
-  cerr << " -S <fname>        file name stem for output\n";
-  cerr << " -V <fname>        write products with bad valence to <fname>\n";
-  cerr << " -V drop           discard products with bad valence - no writing\n";
-  cerr << " -p                write starting molecule in addition to products\n";
-  cerr << " -b                perform the substructure search whilever there are matches\n";
-  cerr << " -x                apply all reactions to the starting molecule, generating 1 product\n";
-  cerr << " -o <type>         specify output type(s)\n";
-  cerr << " -c                remove chirality\n";
-  cerr << " -l                strip to largest fragment\n";
-  cerr << " -v                verbose output\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Apply a set of reactions. Reactions are applied separately.
+Only in place transformations are applied, so there can be no externally specified sidechains.
+ -C <fname>        textproto containing multiple_reactions.Options proto
+ -R <rxn>          specify one or more reactions
+ -R F:<fname>      file containing multiple reactions
+ -R TFDATA:<fname> file containing serialised ReactionProto::Reaction protos
+ -G <rxn>          one or more old format reactions
+ -r <recursion>    number of recursive invocations (def 0)
+ -z i              ignore molecules not matching any queries
+ -z w              write molecules not reaction to the output
+ -S <fname>        file name stem for output
+ -V <fname>        write products with bad valence to <fname>
+ -V drop           discard products with bad valence - no writing
+ -p                write starting molecule in addition to products
+ -b                perform the substructure search whilever there are matches
+ -x                apply all reactions to the starting molecule, generating 1 product
+ -J ...            other options, enter '-J help' for info
+ -c                remove chirality
+ -l                strip to largest fragment
+ -o <type>         specify output type(s)
+ -v                verbose output
+  )";
 
   ::exit(rc);
 }
@@ -80,11 +94,19 @@ class MultipleReactions {
   // just one product.
   int _apply_all_reactions;
 
+  // By default, we use in_place_transformation for all reactions.
+  // But if there are reactions that have multiple sidechains, we need
+  // to do those reactions via an iterator
+  int _perform_reactions_via_iterator;
+
   //  Used to keep identify duplicates.
   IW_STL_Hash_Set _seen;
 
   //  The number of duplicates we identify;
   int _duplicates_discarded;
+
+  // If reading sidechains from a proto config file.
+  Sidechain_Match_Conditions _smc;
 
   int _append_reaction_name_to_product;
 
@@ -113,6 +135,9 @@ class MultipleReactions {
   int ReadTfDataReactions(IWString& fname);
   int ReadTfDataReactions(iw_tf_data_record::TFDataReader& input, const IWString& dirname);
 
+  int ReadProtoConfig(IWString& fname);
+  int ReadReaction(const multiple_reactions::ReactionAndSidechains& proto);
+
   int Process(Molecule& m, Molecule_to_Match& target, IWReaction& rxn,
               resizable_array_p<Molecule>& result);
 
@@ -121,6 +146,12 @@ class MultipleReactions {
   int ProcessReSearch(Molecule& m, IWReaction& rxn,
                       resizable_array_p<Molecule>& result);
   int ProcessAllReactionsApplied(Molecule& m, resizable_array_p<Molecule>& result);
+
+  int ViaIterator(Molecule& m, resizable_array_p<Molecule>& results);
+  int ViaIterator(Molecule& m,
+                        int ndx,
+                        Reaction_Iterator* iter,
+                        resizable_array_p<Molecule>& results);
 
   int IsDuplicate(Molecule& m);
   void MaybeAppendRxnName(const IWString& rxnname, Molecule& product);
@@ -147,10 +178,20 @@ MultipleReactions::MultipleReactions()
   _duplicates_discarded = 0;
   _molecules_not_generating_products = 0;
   _append_reaction_name_to_product = 0;
+  _perform_reactions_via_iterator = 0;
   _apply_all_reactions = 0;
   _discard_bad_valence = 0;
   _bad_valence_detected = 0;
   _re_search_each_scaffold_hit = 0;
+}
+
+void
+DisplayDashJQualifiers(std::ostream& output) {
+  output << R"(The following options are recognisde
+ -J noschmsg    do NOT write warning messages about no sidechain substructure matches
+  )";
+
+  ::exit(0);
 }
 
 int
@@ -183,6 +224,7 @@ MultipleReactions::Initialise(Command_Line& cl)
 
   if (cl.option_present('R')) {
   } else if (cl.option_present('G')) {
+  } else if (cl.option_present('C')) {
   } else {
     cerr << "Must specify one or more reactions via the -R option\n";
     return 0;
@@ -224,6 +266,26 @@ MultipleReactions::Initialise(Command_Line& cl)
     }
   }
 
+  for (const IWReaction* r : _rxn) {
+    if (r->number_sidechains() == 0) {
+      continue;
+    }
+
+    for(const Sidechain_Reaction_Site* s : r->sidechains()) {
+      if (s->number_reagents() > 1) {
+        ++_perform_reactions_via_iterator;
+      }
+    }
+  }
+
+  if (cl.option_present('C')) {
+    IWString fname = cl.string_value('C');
+    if (! ReadProtoConfig(fname)) {
+      cerr << "Cannot read proto config file '" << fname << "'\n";
+      return 0;
+    }
+  }
+
   if (cl.option_present('a')) {
     _append_reaction_name_to_product = 1;
     if (_verbose) {
@@ -260,6 +322,24 @@ MultipleReactions::Initialise(Command_Line& cl)
     _apply_all_reactions = 1;
     if (_verbose) {
       cerr << "Will apply all reactions to the starting molecule, generating 1 product\n";
+    }
+  }
+
+  if (cl.option_present('J')) {
+    const_IWSubstring j;
+    for (int i = 0; cl.value('J', j, i); ++i) {
+      if (j == "noschmsg") {
+        _smc.set_issue_sidechain_no_match_warnings(0);
+        if (_verbose) {
+          cerr << "Will NOT warn about no sidechain query matches\n";
+        }
+      } else if (j == "help") {
+        DisplayDashJQualifiers(cerr);
+      } else {
+        cerr << "Unrecognised -J qualifier '" << j << "'\n";
+        DisplayDashJQualifiers(cerr);
+        return 1;
+      }
     }
   }
 
@@ -340,10 +420,8 @@ MultipleReactions::ReadReactionOldFormat(iwstring_data_source& input,
   IWString dirname(fname);
   dirname.truncate_at_last('/');
 
-  Sidechain_Match_Conditions smc;
-
   std::unique_ptr<IWReaction> r = std::make_unique<IWReaction>();
-  if (r->do_read(input, smc)) {
+  if (r->do_read(input, _smc)) {
     _rxn << r.release();
     return 1;;
   }
@@ -400,6 +478,96 @@ MultipleReactions::ReadTfDataReactions(iw_tf_data_record::TFDataReader& input,
 }
 
 int
+MultipleReactions::ReadProtoConfig(IWString& fname) {
+  std::optional<multiple_reactions::Options> proto = 
+     iwmisc::ReadTextProto<multiple_reactions::Options>(fname);
+  if (! proto) {
+    cerr << "MultipleReactions::ReadProtoConfig:cannot read '" << fname << "'\n";
+    return 0;
+  }
+
+  for (const auto& rxn : proto->rxn()) {
+    if (! ReadReaction(rxn)) {
+      cerr << "MultipleReactions::ReadProtoConfig:cannot parse " << rxn.ShortDebugString() << '\n';
+      return 0;
+    }
+  }
+
+  _apply_all_reactions = proto->apply_all_reactions_to_reagent();
+
+  return 1;
+}
+
+int
+MultipleReactions::ReadReaction(const multiple_reactions::ReactionAndSidechains& proto) {
+  if (proto.has_proto_reaction_file()) {
+  } else if (proto.has_legacy_reaction_file()) {
+  } else {
+    cerr << "MultipleReactions::ReadReaction:no reaction specified\n";
+    return 0;
+  }
+
+  std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+  if (proto.has_proto_reaction_file()) {
+    IWString fname(proto.proto_reaction_file());
+    std::unique_ptr<ReactionProto::Reaction> proto = 
+                iwmisc::ReadTextProtoPtr<ReactionProto::Reaction>(fname);
+    if (! proto) {
+      cerr << "MultipleReactions::ReadReaction:cannot read textproto '" << fname << "'\n";
+      return 0;
+    }
+    if (! rxn->ConstructFromProto(*proto, fname)) {
+      cerr << "MultipleReactions::ReadReaction:cannot build reaction from '" << fname << "'\n";
+      return 0;
+    }
+  } else if (proto.has_legacy_reaction_file()) {
+    IWString fname(proto.legacy_reaction_file());
+    if (! rxn->do_read(fname, _smc)) {
+      cerr << "MultipleReactions::ReadReaction:cannot read msi file '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  assert(rxn);
+
+  if (proto.sidechain_file_size() == 0) {
+    _rxn << rxn.release();
+    return 1;
+  }
+
+  if (rxn->number_sidechains() == 0) {
+    cerr << "MultipleReactions::ReadReaction:no sidechains in reaction, but sidechain file specified\n";
+    return 0;
+  }
+
+  // In index into proto.sidechain_file()
+  int ndx = 0;
+  for (int i = 0; i < rxn->number_sidechains(); i++) {
+    Sidechain_Reaction_Site* s = rxn->sidechain(i);
+
+    if (s->single_reagent_only()) {
+      continue;
+    }
+
+    IWString fname = proto.sidechain_file(ndx);
+    ++ndx;
+    if (! s->add_reagents(fname, FILE_TYPE_SMI, _smc)) {
+      cerr << "MultipleReactions::ReadReaction:cannot read sidechain '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  if (ndx != proto.sidechain_file_size()) {
+    cerr << "MultipleReactions::ReadReaction:size mismatch between sidechains " << ndx << '\n';
+    return 0;
+  }
+
+  _rxn << rxn.release();
+
+  return 1;
+}
+
+int
 MultipleReactions::Preprocess(Molecule& m)
 {
   if (_reduce_to_largest_fragment) {
@@ -427,6 +595,10 @@ MultipleReactions::Process(Molecule& m, resizable_array_p<Molecule>& results)
   ++_molecules_read;
 
   _seen.insert(m.unique_smiles());
+
+  if (_perform_reactions_via_iterator) {
+    return ViaIterator(m, results);
+  }
 
   if (_apply_all_reactions) {
     return ProcessAllReactionsApplied(m, results);
@@ -472,7 +644,7 @@ MultipleReactions::Process(Molecule& m, Molecule_to_Match& target, IWReaction& r
 
   Substructure_Results sresults;
   const int nhits = rxn.substructure_search(target, sresults);
-  if (_verbose > 2) {
+  if (_verbose > 1) {
     cerr << nhits << " hits to " << rxn.name() << " in " << m.name() << '\n';
   }
 
@@ -613,6 +785,76 @@ MultipleReactions::IsDuplicate(Molecule& m)
   _seen.insert(usmi);
   //  Have not seen it before.
   return 0;
+}
+
+int
+MultipleReactions::ViaIterator(Molecule& m, resizable_array_p<Molecule>& results) {
+  const int nrxn = _rxn.number_elements();
+
+  std::unique_ptr<Reaction_Iterator[]> iter = std::make_unique<Reaction_Iterator[]>(nrxn);
+
+  for (int i = 0; i < nrxn; ++i) {
+    iter[i].initialise(*_rxn[i]);
+  }
+
+  Molecule_to_Match target(&m);
+
+  Substructure_Results sresults;
+
+  for (int i = 0; i < nrxn; ++i) {
+    if (_rxn[i]->substructure_search(target, sresults) == 0) {
+      continue;
+    }
+
+    for (const Set_of_Atoms* embedding : sresults.embeddings()) {
+      for (iter[i].reset(); iter[i].active(); iter[i]++) {
+        std::unique_ptr<Molecule> result = std::make_unique<Molecule>();
+        if (! _rxn[i]->perform_reaction(&m, embedding, iter[i], *result)) {
+          continue;
+        }
+
+        results << result.release();
+      }
+    }
+
+    ViaIterator(m, i, iter.get(), results);
+  }
+
+  return 1;
+}
+
+int
+MultipleReactions::ViaIterator(Molecule& m,
+                        int ndx,
+                        Reaction_Iterator* iter,
+                        resizable_array_p<Molecule>& results) {
+  const int nrxn = _rxn.number_elements();
+
+  Molecule_to_Match target(&m);
+
+  Substructure_Results sresults;
+
+  for (; ndx < nrxn; ++ndx) {
+    if (_rxn[ndx]->substructure_search(target, sresults) == 0) {
+      continue;
+    }
+
+    for (const Set_of_Atoms* embedding : sresults.embeddings()) {
+      for (iter[ndx].reset(); iter[ndx].active(); iter[ndx]++) {
+        std::unique_ptr<Molecule> result = std::make_unique<Molecule>();
+        if (! _rxn[ndx]->perform_reaction(&m, embedding, iter[ndx], *result)) {
+          continue;
+        }
+
+        if (ndx < (_rxn.number_elements() - 1)) {
+          ViaIterator(*result, ndx + 1, iter, results);
+        }
+        results << result.release();
+      }
+    }
+  }
+
+  return 1;
 }
 
 int
@@ -855,7 +1097,7 @@ ApplyMultipleReactions(MultipleReactions& many_reactions, Options& options, cons
 int
 Main(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vE:A:i:g:lcR:S:az:pr:V:bG:x");
+  Command_Line cl(argc, argv, "vE:A:i:g:lcR:S:az:pr:V:bG:xJ:C:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

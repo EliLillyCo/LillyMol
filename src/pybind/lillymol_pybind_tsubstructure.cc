@@ -96,6 +96,14 @@ PYBIND11_MODULE(lillymol_tsubstructure, s) {
           },
           "For each molecule, return the per query number of matches"
         )
+        .def("all_queries_match",
+          [](TSubstructure& ts, Molecule& m)->bool {
+            ts.must_match_all_queries = true;
+            return ts.SubstructureSearch(m);
+          },
+          ""
+        )
+
 
         .def("number_queries", &TSubstructure::number_queries, "Number of queries defined")
         // These behaviour modifiers should be set before any queries are read.

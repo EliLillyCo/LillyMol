@@ -8,7 +8,7 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
     exit 1
 else
-    BIN_DIR="$LILLYMOL_HOME/contrib/script/py/mmp"
+    BIN_DIR="$LILLYMOL_HOME/contrib/python/mmp"
 fi
 
 test_command=getMMPStatsfromCSV
@@ -20,29 +20,31 @@ test_cmd_top="$test_top/$test_command"
 
 diff_tool=../../fileDiff.sh
 
-command="$BIN_DIR/$test_command.py"
+command="${BIN_DIR}/$test_command.py"
 
-if [ ! -x "$command" ]; then
-    echo "$command is not executable or does not exist"
-    exit 1
+if [ ! -x "${command}" ]; then
+  echo "${command} is not executable or does not exist"
+  exit 1
 fi
 
-in="$test_cmd_top/$case/in/test_data_03.csv"
-out=test_data_03c2.pairs
-gold_out="$test_cmd_top/$case/out/test_data_03c2.pairs"
+in="${test_cmd_top}/${case}/in/test_data_03.csv"
+gold_out="${test_cmd_top}/${case}/out/test_data_03c2.pairs"
 
-echo "Testing: $command"
+stdout='test_data_03c2.pairs'
+stderr='stderr'
 
-$command -i "$in" -o "$out" -s SMILES -n ID -c DOUBLE -f REMOVE_NONRINGS 2>>err.txt
-$diff_tool $out $gold_out
-ret=$?
+echo "Testing: ${command}"
 
-if [ $ret -eq 1 ]
+${command} -i "$in" -o "${stdout}" -s SMILES -n ID -c DOUBLE -f REMOVE_NONRINGS 2> ${stderr}
+${diff_tool} ${stdout} ${gold_out}
+
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  ls -l ${stdout} ${gold_out}
+  cat ${stderr}
 fi
 
-rm -f "$out"
-rm -f err.txt
+rm -f "${stdout}" "${stderr}"

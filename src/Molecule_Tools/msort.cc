@@ -1519,7 +1519,7 @@ msort(int argc, char **argv) {
           token.remove_leading_chars(4);
           comparison_criterion[nproperties] = CMP_SDF_TAG;
           comparison_tag[nproperties] << "<" << token << '>';
-          set_read_extra_text_info(1);
+          moleculeio::set_read_extra_text_info(1);
         }
         //      else if (token.starts_with("rx="))
         //      {

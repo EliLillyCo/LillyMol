@@ -44,13 +44,18 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Extracts inter-ring linkers to DicerFragment proto\n";
-  cerr << " -m <natoms>   discard linkers with fewer than <natoms> atoms\n";
-  cerr << " -M <natoms>   discard linkers with more  than <natoms> atoms\n";
-  cerr << " -P ...        atom typing specification\n";
-  cerr << " -c            discard chirality\n";
-  cerr << " -l            reduce to largest fragment\n";
-  cerr << " -v            verbose output\n";
+  cerr << R"(Extracts inter-ring linkers to DicerFragment proto.
+All pairs of rings are examined.
+ -m <natoms>            discard linkers with fewer than <natoms> atoms
+ -M <natoms>            discard linkers with more  than <natoms> atoms
+ -w <dist>              discard linkers that are shorter than <dist> between attachment points
+ -W <dist>              discard linkers that are longer than <dist> between attachment points
+ -P ...                 atom typing specification
+ -c                     discard chirality\n";
+ -l                     reduce to largest fragment\n";
+ -v                     verbose output\n";
+ )";
+
 // clang-format on
 
   ::exit(rc);
@@ -81,6 +86,10 @@ class Options {
     int _min_natoms;
     int _max_natoms;
 
+    // Constraints on the distances between attachment points.
+    int _min_length;
+    int _max_length;
+
     // This will ultimately be written.
     IW_STL_Hash_Map<IWString, dicer_data::DicerFragment> _seen;
 
@@ -89,6 +98,7 @@ class Options {
   // private functions
     int OkAtomCount(const Molecule& m) const;
     int AddToHash(Molecule& m, const IWString& parent_name);
+    int OkLength(Molecule& m) const;
 
   public:
     Options();
@@ -183,6 +193,28 @@ Options::Initialise(Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Will only write fragments with fewer than " << _max_natoms << " atoms\n";
+    }
+  }
+
+  if (cl.option_present('w')) {
+    if (! cl.value('w', _min_length) || _min_length < 1) {
+      cerr << "The minimum length of linker (-w) option must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will only write fragments with at least " << _min_length << " bonds between attachment points\n";
+    }
+  }
+
+  if (cl.option_present('W')) {
+    if (! cl.value('W', _max_length) || _max_length < _min_length) {
+      cerr << "The maximum length of linker (-W) option must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will only write fragments with fewer than " << _max_length << " atoms\n";
     }
   }
 
@@ -360,12 +392,46 @@ Options::Process(Molecule& m,
     if (c->nrings()) {
       continue;
     }
+    if (_min_length > 0 || _max_length > 0) {
+      if (! OkLength(*c)) {
+        continue;
+      }
+    }
 
     AddToHash(*c, m.name());
   }
 
   // The IWString_and_File_Descriptor object needs to be flushed.
   output.write_if_buffer_holds_more_than(4192);
+
+  return 1;
+}
+
+// We examine all isotope-isotope distances in `m`
+// and return false if any of those distances violate
+// _min_length or _max_length if set.
+int
+Options::OkLength(Molecule& m) const {
+  m.recompute_distance_matrix();
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (m.isotope(0) == 0) {
+      continue;
+    }
+    for (int j = i + 1; i < matoms; ++i) {
+      if (m.isotope(j) == 0) {
+        continue;
+      }
+
+      const int d = m.bonds_between(i, j);
+      if (_min_length > 0 && d < _min_length) {
+        return 0;
+      }
+      if (_max_length > 0 && d > _max_length) {
+        return 0;
+      }
+    }
+  }
 
   return 1;
 }
@@ -385,6 +451,7 @@ Options::AddToHash(Molecule& m,
   dicer_data::DicerFragment proto;
   proto.set_smi(usmi.AsString());
   proto.set_par(parent_name.AsString());
+  proto.set_nat(m.natoms());
 
   proto.set_n(1);
 
@@ -484,7 +551,7 @@ GetLinkers(Options& options,
 
 int
 GetLinkers(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:m:M:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:m:M:w:W:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

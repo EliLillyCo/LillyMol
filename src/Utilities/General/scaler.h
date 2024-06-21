@@ -211,11 +211,11 @@ template <typename T>
 T
 FeatureScaler<T>::ScaleBackToOrignalRange(T scaled) const {
 
-  std::cerr << "Unscaling " << scaled << " scaled range [" << _scaled_min << ',' << _scaled_max << "]\n";
+  // std::cerr << "Unscaling " << scaled << " scaled range [" << _scaled_min << ',' << _scaled_max << "]\n";
   if (scaled >= _scaled_min && scaled <= _scaled_max) {
       return _min + (scaled - _scaled_min) / _scaled_range * _range;
   }
-  std::cerr << "Out of range _truncate_out_of_range " << _truncate_out_of_range << '\n';
+  // std::cerr << "Out of range _truncate_out_of_range " << _truncate_out_of_range << '\n';
 
 #ifdef STATS_ON_OUT_OF_RANGE
   // Out of range, update stats and decide what to do.

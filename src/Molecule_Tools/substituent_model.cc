@@ -1076,7 +1076,7 @@ substituent_model(const char* fname, FileType input_type,
 static int
 determine_contributions(const IWString* model_prefix, int number_models,
                         const resizable_array_p<Substituent_Model_Query>& queries) {
-  assert(nq = queries.number_elements());
+  assert(nq == queries.number_elements());
 
   int rc = 1;
 

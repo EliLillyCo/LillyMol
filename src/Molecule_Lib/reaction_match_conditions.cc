@@ -21,6 +21,8 @@ Match_Conditions::Match_Conditions ()
 
   _suppress_if_more_than_this_many_substructure_search_hits = std::numeric_limits<int>::max();
 
+  _issue_sidechain_no_match_warnings = 1;
+
   return;
 }
 

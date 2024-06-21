@@ -15,6 +15,7 @@
 #include "mdl.h"
 #include "misc2.h"
 #include "molecule.h"
+#include "moleculeio.h"
 
 using std::cerr;
 
@@ -937,7 +938,7 @@ Molecule::_smi_atom_bonded_to_chiral_centre (atom_number_t previous_atom,
     _things[a]->set_implicit_hydrogens(0, 1);
 
     cerr << "Molecule::_smi_last_atom_is_part_of_chiral_centre:replaced implicit Hydrogen with connection\n";
-    cerr << "Atom " << atom_bonded_to_chiral_centre << '\n';
+    cerr << "Atom " << atom_bonded_to_chiral_centre << ' ' << _molecule_name << '\n';
     return 1;
   }
 
@@ -1137,7 +1138,7 @@ Molecule::_check_for_incomplete_chiral_specifications()
 
     _chiral_centres.remove_item(i);
 
-    if (! ignore_incorrect_chiral_input())
+    if (! moleculeio::ignore_incorrect_chiral_input())
       rc = 0;
   }
 
@@ -2143,7 +2144,7 @@ Molecule::_complete_chiral_centres_from_mdl_files(const MDL_File_Supporting_Mate
       continue;
     }
 
-    if (ignore_incorrect_chiral_input()) {
+    if (moleculeio::ignore_incorrect_chiral_input()) {
       cerr << "Discarding invalid chiral centre on atom " << c->a() << " '" << smarts_equivalent_for_atom(c->a()) << "'\n";
 
       _chiral_centres.remove_item(i);
@@ -2983,9 +2984,9 @@ Chiral_Centre::new_atom_numbers (const int * xref)
   return;
 }
 
-resizable_array_p<Chiral_Centre>
+SetOfChiralCentres
 Molecule::ReleaseChiralCentres() {
-  resizable_array_p<Chiral_Centre> result;
+  SetOfChiralCentres result;
   if (_chiral_centres.empty()) {
     return result;
   }
@@ -2995,7 +2996,7 @@ Molecule::ReleaseChiralCentres() {
 }
 
 int
-Molecule::SetChiralCentres(resizable_array_p<Chiral_Centre>&& from) {
+Molecule::SetChiralCentres(SetOfChiralCentres&& from) {
   _chiral_centres = std::move(from);
   return _chiral_centres.number_elements();
 }

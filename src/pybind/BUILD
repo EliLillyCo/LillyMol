@@ -1,7 +1,8 @@
 
 package(default_visibility = ["//visibility:public"])
 
-load("@rules_python_pytest//python_pytest:defs.bzl", "py_pytest_test")
+# load("@rules_python_pytest//python_pytest:defs.bzl", "py_pytest_test")
+load("@rules_python//python:py_test.bzl", "py_test")
 
 cc_library(
     name = "lillymol_pybind",
@@ -12,7 +13,9 @@ cc_library(
         ":molecule",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:alogp_lib",
         "//Molecule_Tools:xlogp_lib",
+#       "@com_google_pybind11_protobuf",
         "@pybind11",
         "@python",
     ],
@@ -39,11 +42,22 @@ cc_library(
     deps = [
         ":molecule",
         "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:atom_pair_fingerprint",
+        "//Molecule_Lib:linear_fingerprint",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:ec_fingerprint_lib",
         "@pybind11",
         "@python",
     ],
+)
+
+cc_shared_library(
+    name = "lillymol_fingerprint",
+    deps = [
+        ":lillymol_pybind_fingerprints",
+    ],
+    shared_lib_name = "lillymol_fingerprint.so"
 )
 
 cc_library(
@@ -295,8 +309,12 @@ cc_library(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:dicer_api",
+        "//Molecule_Tools:nvrtspsa",
         "//Molecule_Tools:unique_molecules_api",
         "//Molecule_Tools_Bdb:iwecfp_database_lookup_lib_shared",
+        "//Molecule_Tools_Bdb:selimsteg",
+        "//Molecule_Tools_Bdb:structure_database_shared",
         "@berkeleydbshared//:berkeleydb",
 	"@pybind11",
         "@python",
@@ -312,7 +330,7 @@ cc_shared_library(
 )
 
 # Cannot figure out how to make this work. TODO:ianwatson
-#py_pytest_test(
+#py_test(
 #    name = "test_lillymol",
 #    size = "small",
 #    srcs = ["lillymol_test.py"],

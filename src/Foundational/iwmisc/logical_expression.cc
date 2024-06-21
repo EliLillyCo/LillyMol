@@ -1,9 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#ifdef USE_IWMALLOC
-#include "iwmalloc.h"
-#endif
+#include <iostream>
 
 #include "Foundational/iwstring/iwstring.h"
 #include "logical_expression.h"
@@ -19,6 +17,11 @@ using std::cerr;
 
 #define IW_LOGEXP_UNKNOWN_RESULT -1
 
+static constexpr char kAnd = '&';
+static constexpr char kOr = ',';
+static constexpr char kXor = '^';
+static constexpr char kLPAnd = ';';
+
 /*
   If we are evaluating something like
     '*,*&*'
@@ -31,20 +34,16 @@ using std::cerr;
 
 #define IW_LOGEXP_RESULT_NOT_NEEDED -2
 
-void
-IW_Logical_Expression::_default_values() {
+IW_Logical_Expression::IW_Logical_Expression()
+{
+  resize(4);
 
   _operator.resize(3);
   _unary_operator.resize(3);
 
   _default_state();
-}
 
-IW_Logical_Expression::IW_Logical_Expression()
-{
-  resize(4);
-
-  _default_values();
+  return;
 }
 
 void
@@ -111,7 +110,7 @@ integer_equivalent(char op)
       return i;
   }
 
-  if (',' == op)    // the Daylight smarts OR operator
+  if (kOr == op)    // the Daylight smarts OR operator
     return 2;
 
   cerr << "What kind of operator is this '" << op << "'\n";
@@ -273,7 +272,7 @@ IW_Logical_Expression::add_operator(int op)
       return 0;
     }
   }
-  else if (0 == _operator.number_elements())    // no need to check
+  else if (_operator.empty())    // no need to check
     ;
   else if (IW_LOGEXP_XOR == _operator[0])
   {
@@ -285,6 +284,8 @@ IW_Logical_Expression::add_operator(int op)
 
   resizable_array<int>::add(IW_LOGEXP_UNKNOWN_RESULT);
   _unary_operator.add(1);
+
+  _first_low_priority_and_grouping = nullptr;
 
   assert (ok());
 
@@ -895,4 +896,173 @@ IW_Logexp_Low_Priority_and_Grouping::evaluate(int * the_results,
   zresult = 0;
 
   return 1;
+}
+
+IWString
+IW_Logical_Expression::ToString() const {
+  IWString result;
+  if (_operator.empty()) {
+    return result;
+  }
+  
+  for (int i =  0; i < _unary_operator.number_elements(); ++i) {
+    if (i > 0) {
+      switch (_operator[i - 1]) {
+        case IW_LOGEXP_AND:
+          result << kAnd;
+          break;
+        case IW_LOGEXP_OR:
+          result << kOr;
+          break;
+        case IW_LOGEXP_XOR:
+          result << kXor;
+          break;
+        case IW_LOGEXP_LOW_PRIORITY_AND:
+          result << kLPAnd;
+          break;
+        default:
+          cerr << "IW_LOGEXP_LOW_PRIORITY_AND::ToString:unrecognised operator " << _operator[i] << '\n';
+          result << '?';
+      }
+    }
+    if (_unary_operator[i] == 0) {
+      result << '!';
+    }
+    result << '.';
+  }
+
+  return result;
+}
+
+// parse `s` into a sequence of tokens.
+// Each token in `s` must be either
+//     a dot '.' or a negated dot '!.'
+//     an operator
+static constexpr int kDot = 10;
+static constexpr int kNegatedDot = 11;
+int
+DotsAndOperators(const IWString& s, resizable_array<int>& result) {
+
+  result.resize_keep_storage(0);
+
+  for (int i = 0; i < s.length(); ++i) {
+    const char c = s[i];
+    char next_c;
+    if (i == s.length() - 1) {
+      next_c = ' ';
+    } else {
+      next_c = s[i + 1];
+    }
+    if (c == '!'  && next_c == '.') {
+      result << kNegatedDot;
+      ++i;
+    } else if (c == '.') {
+      result << kDot;
+    } else if (c == kAnd) {
+      result << IW_LOGEXP_AND;
+    } else if (c == kOr) {
+      result << IW_LOGEXP_OR;
+    } else if (c == kXor) {
+      result << IW_LOGEXP_XOR;
+    } else if (c == kLPAnd) {
+      result << IW_LOGEXP_LOW_PRIORITY_AND;
+    } else {
+      cerr << "DotsAndOperators:unrecognised character '" << c << " pos " << i << " in '" << s << "'\n";
+      return 0;
+    }
+  }
+
+  return result.number_elements();
+}
+
+static int
+ContainsAlternatingDotsAndOperators(const resizable_array<int>& tokens) {
+  // Must be an odd number of tokens.
+  if (tokens.number_elements() % 2 != 1) {
+    cerr << "ContainsAlternatingDotsAndOperators:incorrect token count " << tokens.size() << '\n';
+    return 0;
+  }
+
+  for (int i = 0; i < tokens.number_elements(); ++i) {
+    int ti = tokens[i];
+    if (i % 2 == 0) {
+      if (ti == kDot || ti == kNegatedDot) {
+      } else {
+        cerr << "Character " << i << " not dot, got " << ti << '\n';
+        return 0;
+      }
+    } else {
+      if (ti == IW_LOGEXP_AND || ti == IW_LOGEXP_OR || ti == IW_LOGEXP_XOR || ti == IW_LOGEXP_LOW_PRIORITY_AND) {
+      } else {
+        cerr << "Character " << i << " not operator, got " << ti << '\n';
+        return 0;
+      }
+    }
+  }
+
+  return 1;
+}
+
+int
+IW_Logical_Expression::BuildFromString(const IWString& s) {
+  cerr << "Building from '" << s << "'\n";
+  this->resize_keep_storage(0);
+  _operator.resize_keep_storage(0);
+  _unary_operator.resize_keep_storage(0);
+
+  resizable_array<int> tokens;
+  if (! DotsAndOperators(s, tokens)) {
+    cerr << "IW_Logical_Expression::BuildFromString:cannot tokenise '" << s << "'\n";
+    return 0;
+  }
+
+  if (! ContainsAlternatingDotsAndOperators(tokens)) {
+    cerr << "IW_Logical_Expression::BuildFromString:invalid syntax '" << s << "'\n";
+    return 0;
+  }
+
+  for (int i = 0; i < tokens.number_elements(); ++i) {
+    if (tokens[i] == kDot) {
+      _unary_operator << 1;
+      this->add(IW_LOGEXP_UNKNOWN_RESULT);
+    } else if (tokens[i] == kNegatedDot) {
+      _unary_operator << 0;
+      this->add(IW_LOGEXP_UNKNOWN_RESULT);
+    }
+    else {
+      _operator << tokens[i];
+    }
+  }
+
+  if (! ok()) {
+    cerr << "IW_Logical_Expression::BuildFromString:invalid state '" << s << "'\n";
+    debug_print(cerr);
+    return 0;
+  }
+
+  _first_low_priority_and_grouping = nullptr;
+
+  return 1;
+}
+
+bool
+IW_Logical_Expression::operator==(const IW_Logical_Expression& rhs) const {
+  if (_operator.size() != rhs._operator.size()) {
+    return false;
+  }
+  const int nop = _operator.number_elements();
+  for (int i = 0; i < nop; ++i) {
+    if (_operator[i] != rhs._operator[i]) {
+      return false;
+    }
+  }
+
+  const int nunary = _unary_operator.number_elements();
+  for (int i = 0; i < nunary; ++i) {
+    if (_unary_operator[i] != rhs._unary_operator[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }

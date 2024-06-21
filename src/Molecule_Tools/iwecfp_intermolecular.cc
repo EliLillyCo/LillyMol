@@ -1510,7 +1510,7 @@ iwecfp_intermolecular (int argc, char ** argv)
   MDL_File_Supporting_Material * mdlfsm = global_default_MDL_File_Supporting_Material ();
   mdlfsm->set_report_unrecognised_records(0);
 
-  set_write_extra_text_info(1);
+  moleculeio::set_write_extra_text_info(1);
 
   if (! cl.option_present('T'))
   {

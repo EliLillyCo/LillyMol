@@ -2,6 +2,7 @@
 #define MOLECULE_LIB_QRY_WSTATS_H_
 
 #include <iostream>
+#include <unordered_map>
 
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
@@ -39,6 +40,9 @@ class Substructure_Hit_Statistics : public Substructure_Query
     int _molecules_which_match;
     int _molecules_which_do_not_match;
     extending_resizable_array<int> _molecules_which_match_n_times;
+    // We can get molecules that match very large numbers of times, so above a given size
+    // store in a hash.
+    std::unordered_map<uint64_t, uint32_t> _many_matches;
 
 //  private functions
 
@@ -46,7 +50,7 @@ class Substructure_Hit_Statistics : public Substructure_Query
 
     void _default_values ();
     int  _set_stream (FileType, const char *, ofstream_and_type &);
-    int  _update_matches (int, Molecule *, const Substructure_Results &);
+    int  _update_matches (uint32_t, Molecule *, const Substructure_Results &);
     int  _update_name_if_needed (int, Molecule *);
 
   public:

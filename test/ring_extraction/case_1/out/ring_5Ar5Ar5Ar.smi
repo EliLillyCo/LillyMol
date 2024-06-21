@@ -1,1 +1,2 @@
-smi: "S1C2=C(N3C(=N2)SC=C3)C=[1CH]1" smt: "[ax2r5D2]1:[ax3r5r5D3]2:[ax3r5r5D3](:[ax3r5r5D3]3:[ax3r5r5D3](:[ax2r5D2]:2):[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:3):[ax2r5D2]:[ax2r5D3]:1" id: "CHEMBL1579795.5Ar5Ar5Ar" n: 2 conn: true usmi: "[n]1c2[n](c3c[1cH]sc13)ccs2" 
+smi: "S1C2=C(N3C(=N2)SC=C3)C=C1" smt: "[ax2r5]1:[ax3r5]2:[ax3r5](:[ax3r5]3:[ax3r5](:[ax2r5]:2):[ax2r5]:[ax2r5]:[ax2r5]:3):[ax2r5]:[ax2r5]:1" id: "CHEMBL1579795.5Ar5Ar5Ar" n: 1 conn: false usmi: "c1c2[n]3ccsc3[n]c2sc1" 
+smi: "S1C2=C(N3C(=N2)SC=C3)C=[1CH]1" smt: "[ax2r5D2]1:[ax3r5D3]2:[ax3r5D3](:[ax3r5D3]3:[ax3r5D3](:[ax2r5D2]:2):[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:3):[ax2r5D2]:[ax2r5D3]:1" id: "CHEMBL1579795.5Ar5Ar5Ar" n: 1 conn: true usmi: "[n]1c2[n](c3c[1cH]sc13)ccs2" 

@@ -482,3 +482,22 @@ novartis_polar_surface_area(Molecule &m) {
 
   return rc;
 }
+
+namespace nvrtspsa {
+
+NovartisPolarSurfaceArea::NovartisPolarSurfaceArea() {
+  _display_psa_unclassified_atom_mesages = 1;
+  _return_zero_for_unclassified_atoms = 0;
+  _non_zero_constribution_for_SD2 = 1;
+}
+
+std::optional<double>
+NovartisPolarSurfaceArea::PolarSurfaceArea(Molecule& m) {
+  if (m.empty()) {
+    return std::nullopt;
+  }
+
+  return novartis_polar_surface_area(m);
+}
+
+}  // namespace nvrtspsa

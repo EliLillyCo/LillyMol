@@ -120,6 +120,11 @@ namespace aromatic {
 // Kekule form is found, regardless of whether or not I think it is aromatic.
 void set_any_kekule_bonding_pattern_ok_for_aromatic_input(int s);
 
+// Kekule determination scales very poorly with ring system size.
+// Do not even attempt Kekule finding if a ring system contains
+// more than this many rings.
+void set_max_aromatic_atoms_for_kekule_determination(int s);
+
 }  // namespace aromatic
 
 #endif // MOLECULE_LIB_AROMATIC_H_

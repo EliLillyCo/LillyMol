@@ -9,7 +9,6 @@
 #include <string>
 #include <string_view>
 
-#include "google/protobuf/stubs/status.h"
 #include "google/protobuf/text_format.h"
 #include "google/protobuf/util/json_util.h"
 #include "google/protobuf/io/zero_copy_stream.h"
@@ -131,7 +130,7 @@ ReadTextProtoJson(const IWString& fname) {
   google::protobuf::util::JsonParseOptions options;
   // This makes me very nervous, we should not be using an internal namespace.
   if (auto status = google::protobuf::util::JsonStringToMessage(tmp, &result, options);
-      status != google::protobuf::util::status_internal::OkStatus()) {
+      status != absl::OkStatus()) {
     return std::nullopt;
   }
 

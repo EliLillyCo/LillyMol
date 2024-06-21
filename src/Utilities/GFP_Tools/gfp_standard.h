@@ -36,6 +36,8 @@ class GFP_Standard
     void build_mk  (IWDYFP &);   // only non const because it calls nset()
     void build_mk2 (IWDYFP &);
 
+    int DebugPrint(std::ostream& output) const;
+
     int * molecular_properties () { return _molecular_properties;}
 
     void build_iwfp(const unsigned char *, int nset);             // note last param is bits set

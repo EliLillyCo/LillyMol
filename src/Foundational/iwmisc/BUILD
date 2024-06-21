@@ -248,6 +248,17 @@ cc_test(
 )
 
 cc_test(
+    name = "logical_expression_test",
+    srcs = [
+        "logical_expression_test.cc",
+    ],
+    deps = [
+        ":iwmisc",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "memoized_floats_test",
     srcs = [
         "memoized_floats_test.cc",

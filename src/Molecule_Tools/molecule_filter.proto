@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package MoleculeFilterData;
+
+message Requirements {
+  optional int32 min_natoms = 1;
+  optional int32 max_natoms = 2;
+
+  optional int32 min_heteroatom_count = 3;
+
+  optional float min_heteroatom_fraction = 4;
+  optional float max_heteroatom_fraction = 5;
+
+  optional int32 min_nrings = 6;
+  optional int32 max_nrings = 7;
+
+  optional int32 min_aromatic_ring_count = 8;
+  optional int32 max_aromatic_ring_count = 9;
+
+  optional int32 min_aliphatic_ring_count = 10;
+  optional int32 max_aliphatic_ring_count = 11;
+
+  optional int32 min_rotatable_bonds = 12;
+  optional int32 max_rotatable_bonds = 13;
+
+  optional int32 max_ring_system_size = 14;
+
+  optional int32 max_aromatic_rings_in_system = 15;
+
+  optional float min_tpsa = 16;
+  optional float max_tpsa = 17;
+
+  optional float min_alogp = 18;
+  optional float max_alogp = 19;
+
+  optional float min_xlogp = 20;
+  optional float max_xlogp = 21;
+
+  // Lipinski definitions
+  optional int32 min_hba = 22;
+  optional int32 max_hba = 23;
+  optional int32 min_hbd = 24;
+  optional int32 max_hbd = 25;
+
+  // Note that this does NOT span spiro fusions.
+  optional int32 largest_ring_size = 26;
+
+  repeated string required_smarts = 27;
+  repeated string must_not_have_smarts = 28;
+
+  optional bool exclude_non_organic = 29;
+  optional bool exclude_isotopes = 30;
+
+  optional int32 max_halogen_count = 31;
+
+  // Longest distance between any pair of atoms.
+  // Requires computation of distance matrix.
+  optional int32 max_distance = 32;
+
+  optional int32 min_sp3_carbon = 33;
+
+  optional float max_aromatic_density = 34;
+
+}
+

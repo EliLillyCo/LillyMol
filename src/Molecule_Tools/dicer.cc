@@ -51,9 +51,15 @@
 #include "Molecule_Lib/target.h"
 
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#include "Molecule_Tools/dicer_lib.h"
 
 using std::cerr;
 using std::endl;
+
+using dicer_lib::USPVPTR;
+using dicer_lib::InitialAtomNumber;
+using dicer_lib::is_amide;
+using dicer_lib::is_cf3_like;
 
 //#define SPECIAL_THING_FOR_PARENT_AND_FRAGMENTS
 #ifdef SPECIAL_THING_FOR_PARENT_AND_FRAGMENTS
@@ -113,6 +119,13 @@ static resizable_array_p<IWString> id_to_smiles;
 static int add_new_strings_to_hash = 1;
 
 static IW_STL_Hash_Map_uint molecules_containing;
+
+// If we wish to use atom map numbers to keep track of atom mappings
+// from parents to fragments, we cannot use unique smiles, since that
+// suppresses atom map numbers.
+// Note that the resulting smiles are NOT unique, so any global
+// accumulation will be invalid.
+static int fragments_indexed_by_unique_smiles = 1;
 
 /*
  During writing the fragstat file, we want to know the identity of the
@@ -385,6 +398,8 @@ DicerFragmentOutput::MaybeFlush() {
 static int vf_structures_per_page = 0;
 
 static int write_smiles_and_complementary_smiles = 0;
+// We can impose limits on the size of complementary fragments generated.
+static int upper_atom_count_cutoff_complementary_fragment = 0;
 
 static IWString_and_File_Descriptor bit_smiles_cross_reference;
 
@@ -903,44 +918,6 @@ Fragments_At_Recursion_Depth::fragments_at_recursion_depth (int k, int b) const
 static Fragments_At_Recursion_Depth fard;
 
 /*
-  We can store various things with the user specified void pointer of the parent.
-  This gets passed down to the fragments
-*/
-
-struct USPVPTR
-{
-  public:
-    atom_number_t _atom_number_in_parent;
-    uint32_t _atom_type_in_parent;
-
-  public:
-    USPVPTR();
-
-    void set_atom_number_in_parent(const atom_number_t s) { _atom_number_in_parent = s;}
-    atom_number_t atom_number_in_parent() const { return _atom_number_in_parent;}
-
-    void set_atom_type_in_parent(const uint32_t s) { _atom_type_in_parent = s;}
-    uint32_t atom_type_in_parent() const { return _atom_type_in_parent;}
-
-};
-
-USPVPTR::USPVPTR() {
-  _atom_number_in_parent = -1;
-  _atom_type_in_parent = 0;
-}
-
-static std::optional<atom_number_t>
-InitialAtomNumber(const Atom* a) {
-  const void * v = a->user_specified_void_ptr();
-  if (v == nullptr) {
-    return std::nullopt;
-  }
-
-  const USPVPTR* uspvptr = reinterpret_cast<const USPVPTR*>(v);
-  return uspvptr->_atom_number_in_parent;
-}
-
-/*
    We need a means of passing around arguments
  */
 
@@ -1020,6 +997,7 @@ class Dicer_Arguments
     // not need the usual output.
     int _write_diced_molecules;
 
+
 // private functions
 
     int _write_fragment_and_complement (Molecule & m, const IW_Bits_Base & b,
@@ -1039,6 +1017,17 @@ class Dicer_Arguments
     void _add_new_smiles_to_global_hashes (const IWString & smiles);
 
     int WriteAsProto(Molecule& n, int breakable_bonds, DicerFragmentOutput& output) const;
+
+    int ToProto(Molecule& m, int breakable_bonds,
+                         dicer_data::DicedMolecule& proto) const;
+    int AppendFragmentAndComplement(Molecule& m,
+                                  const IW_Bits_Base & b,
+                                  int * subset_specification,
+                                  dicer_data::DicedMolecule& proto) const;
+    int WriteFragmentsAndComplementsProto(Molecule& m,
+           DicerFragmentOutput& output) const;
+
+    int MaybeAddToHash(const IWString& smiles);
 
   public:
     Dicer_Arguments (int mrd);            // arg is max recursion depth
@@ -1158,7 +1147,7 @@ class Dicer_Arguments
 
     int produce_fingerprint(Molecule & m, IWString_and_File_Descriptor & output) const;
 
-    int write_fragments_and_complements (Molecule & m, IWString_and_File_Descriptor & output) const;
+    int write_fragments_and_complements (Molecule & m, DicerFragmentOutput & output) const;
 
     int store_atom_types (Molecule & m,  Atom_Typing_Specification & ats);
 
@@ -2116,44 +2105,6 @@ Breakages_Iterator::current_transformation (const Breakages & b)
   return rc;
 }
 
-#ifdef NO_LONGER_USED_ADAS
-static int
-initialise_atom_pointers(Molecule & m,
-                         int * atom_number)
-{
-  int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; i++)
-  {
-    atom_number[i] = i;
-    m.set_user_specified_atom_void_ptr(i, atom_number + i);
-  }
-
-  return 1;
-}
-#endif
-
-static int
-initialise_atom_pointers(Molecule & m,
-                         const uint32_t * atype,
-                         USPVPTR * uspvptr)
-{
-  const int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; ++i) {
-    uspvptr[i].set_atom_number_in_parent(i);
-    m.set_user_specified_atom_void_ptr(i, (void*)(uspvptr + i));
-  }
-
-  if (nullptr != atype) {
-    for (int i = 0; i < matoms; ++i) {
-      uspvptr[i].set_atom_type_in_parent(atype[i]);
-    }
-  }
-
-  return 1;
-}
-
 /*
    We can pre-compute the number of fragments expected for a given number
    of bonds in the molecule
@@ -2390,6 +2341,9 @@ do_check_for_lost_chirality (Molecule & m)
   int rc = 0;
 
   const int nc = m.chiral_centres();
+  if (nc == 0) {
+    return 0;
+  }
 
   for (int i = nc - 1; i >= 0; --i)
   {
@@ -2414,22 +2368,33 @@ Dicer_Arguments::contains_fragment(Molecule & m)
 {
   //cerr << "Found fragment '" << smiles << "'\n";
 
-  if (! contains_user_specified_queries(m))
+  if (! contains_user_specified_queries(m)) {
     return 0;
+  }
 
   if (! OkAtomCount(m)) {
     return 0;
   }
 
-  if (fragments_must_contain_heteroatom && ! ok_heteromatom_count(m, fragments_must_contain_heteroatom))
+  if (fragments_must_contain_heteroatom && ! ok_heteromatom_count(m, fragments_must_contain_heteroatom)) {
     return 0;
+  }
 
-  if (check_for_lost_chirality)
+  if (check_for_lost_chirality) {
     do_check_for_lost_chirality(m);
+  }
 
-  const IWString & smiles = m.unique_smiles();
+  if (fragments_indexed_by_unique_smiles) {
+    return MaybeAddToHash(m.unique_smiles());
+  } else {
+    return MaybeAddToHash(m.smiles());
+  }
+}
 
-  // std::cerr << smiles << " ####" << _recursion_depth << std::endl;
+int
+Dicer_Arguments::MaybeAddToHash(const IWString& smiles) {
+
+  // std::cerr << smiles << " ####" << _recursion_depth << '\n';
 
   IW_STL_Hash_Map_uint::iterator f1 = smiles_to_id.find(smiles);
 
@@ -2545,7 +2510,10 @@ Dicer_Arguments::write_fragments_found_this_molecule(Molecule & m,
     return 1;
   }
 
-  if (output.output_is_proto()) {
+  if (! output.output_is_proto()) {
+  } else if (write_smiles_and_complementary_smiles) {
+    return 1;
+  } else {
     return WriteAsProto(m, breakable_bonds, output);
   }
 
@@ -2585,14 +2553,19 @@ Dicer_Arguments::write_fragments_found_this_molecule(Molecule & m,
   return 1;
 }
 
+// Load all the information about the breakages for this molecule into `proto`.
 int
-Dicer_Arguments::WriteAsProto(Molecule& m,
-                              int breakable_bonds,
-                              DicerFragmentOutput& output) const {
-  dicer_data::DicedMolecule proto;
+Dicer_Arguments::ToProto(Molecule& m,
+                         int breakable_bonds,
+                         dicer_data::DicedMolecule& proto) const {
   proto.set_name(m.name().data(), m.name().length());
-  const IWString& usmi = m.unique_smiles();
-  proto.set_smiles(usmi.data(), usmi.length());
+  if (fragments_indexed_by_unique_smiles) {
+    const IWString& usmi = m.unique_smiles();
+    proto.set_smiles(usmi.data(), usmi.length());
+  } else {
+    const IWString& smi = m.smiles();
+    proto.set_smiles(smi.data(), smi.length());
+  }
   proto.set_natoms(m.natoms());
   proto.set_nbonds(breakable_bonds);
 
@@ -2606,9 +2579,16 @@ Dicer_Arguments::WriteAsProto(Molecule& m,
     frag->set_id(fragment_number);
   }
 
-  return output.Write(proto);
-
   return 1;
+}
+
+int
+Dicer_Arguments::WriteAsProto(Molecule& m,
+                              int breakable_bonds,
+                              DicerFragmentOutput& output) const {
+  dicer_data::DicedMolecule proto;
+  ToProto(m, breakable_bonds, proto);
+  return output.Write(proto);
 }
 
 int
@@ -4069,7 +4049,7 @@ set_isotopes_if_needed(Molecule & m,
                        atom_number_t j2,
                        const Dicer_Arguments & dicer_args)
 {
-  if (isotope_for_join_points > 0) {
+  if (isotope_for_join_points > 0 || increment_isotope_for_join_points) {
     do_apply_isotopic_labels(m, j1, j2);
 
     return 1;
@@ -4255,9 +4235,13 @@ Dicer_Arguments::_is_smallest_fragment (const IW_Bits_Base & b) const
 }
 
 int
-Dicer_Arguments::write_fragments_and_complements (Molecule & m,
-                                                  IWString_and_File_Descriptor & output) const
+Dicer_Arguments::write_fragments_and_complements(Molecule & m,
+                                                 DicerFragmentOutput& output) const
 {
+  if (output.output_is_proto()) {
+    return WriteFragmentsAndComplementsProto(m, output);
+  }
+
   int * tmp1 = new int[_nbits]; std::unique_ptr<int[]> free_tmp1(tmp1);
 
   int n = _stored_bit_vectors.number_elements();
@@ -4273,13 +4257,41 @@ Dicer_Arguments::write_fragments_and_complements (Molecule & m,
     if (write_only_smallest_fragment && (!_is_smallest_fragment(*b)))
       continue;
 
-    _write_fragment_and_complement(m, *b, tmp1, output);
+    _write_fragment_and_complement(m, *b, tmp1, output.text_output());
   }
 
   if (0 == lower_atom_count_cutoff())
-    _write_fragment_and_hydrogen(m, tmp1, output);
+    _write_fragment_and_hydrogen(m, tmp1, output.text_output());
 
   return 1;
+}
+
+int
+Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule & m,
+                                                  DicerFragmentOutput & output) const {
+
+  std::unique_ptr<int[]> tmp1 = std::make_unique<int[]>(_nbits);
+
+  dicer_data::DicedMolecule proto;
+
+  proto.set_name(m.name().data(), m.name().length());
+  const IWString& usmi = m.unique_smiles();
+  proto.set_smiles(usmi.data(), usmi.length());
+  proto.set_natoms(m.natoms());
+  // We do not know the number of breakable bonds here.
+  // proto.set_nbonds(breakable_bonds);
+
+  for (const IW_Bits_Base* b : _stored_bit_vectors) {
+    assert (b->nbits() > 0);
+
+    if (write_only_smallest_fragment && (!_is_smallest_fragment(*b))) {
+      continue;
+    }
+
+    AppendFragmentAndComplement(m, *b, tmp1.get(), proto);
+  }
+
+  return output.Write(proto);
 }
 
 static void
@@ -4543,6 +4555,65 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
     output << ' ' << s2.natoms() << ' ' << (static_cast<float>(s2.natoms())/static_cast<float>(matoms));
 
   output << '\n';
+
+  return 1;
+}
+
+// `b` describes a subset of `m`. Generate that subset and the complement
+// fragment and load those into `proto`.
+// subset_specification is just used as working storate - convert `b`
+// to an array.
+// Maybe should try to share code with _write_fragment_and_complement
+int
+Dicer_Arguments::AppendFragmentAndComplement(Molecule& m,
+                                  const IW_Bits_Base & b,
+                                  int * subset_specification,
+                                  dicer_data::DicedMolecule& proto) const {
+  const int matoms = m.natoms();
+
+  assert (b.nbits() >= matoms);
+
+  if (0 == b.nset() || matoms == b.nset()) {
+    return 1;
+  }
+
+  if (! ok_atom_count(b.nset())) {
+    return 0;
+  }
+
+  std::fill_n(subset_specification, matoms, 0);
+
+  b.set_vector(subset_specification);
+
+  //cerr << "Nset " <<b.nset() << ", natoms " << matoms <<endl;
+  //cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification, matoms) << " atoms\n";
+
+  Molecule s1;
+  m.create_subset(s1, subset_specification, 1, _local_xref);
+
+  Molecule s2;
+  m.create_subset(s2, subset_specification, 0, _local_xref2);
+
+  if (upper_atom_count_cutoff_complementary_fragment > 0 &&
+      s2.natoms() > upper_atom_count_cutoff_complementary_fragment) {
+    return 1;
+  }
+
+  if (apply_isotopes_to_complementary_fragments > 0) {
+    _do_apply_isotopes_to_complementary_fragments(m, s1, _local_xref);
+    _do_apply_isotopes_to_complementary_fragments(m, s2, _local_xref2);
+  }
+  else if (apply_isotopes_to_complementary_fragments < 0)
+    _do_apply_isotopes_to_complementary_fragments(m, s1, s2);
+
+  dicer_data::DicerFragment* frag = proto.add_fragment();
+  const IWString& usmi1 = s1.unique_smiles();
+  frag->set_smi(usmi1.data(), usmi1.length());
+  frag->set_nat(s1.natoms());
+  const IWString& usmi2 = s2.unique_smiles();
+  frag->set_comp(usmi2.data(), usmi2.length());
+
+  // We do not know the ID of this fragment, and we don't care about the number of instances in the molecule.
 
   return 1;
 }
@@ -5448,8 +5519,9 @@ Chain_Bond_Breakage::_process(Molecule & m0,
     return 0;
   }
 
-  if (! m.are_bonded(j1, j2))     // should not happen
+  if (! m.are_bonded(j1, j2)) {     // should not happen
     return 0;
+  }
 
   set_isotopes_if_needed(m, j1, j2, dicer_args);
 
@@ -5511,8 +5583,9 @@ Chain_Bond_Breakage::_process(Molecule& m0,
   {
     Molecule & c = *(components[i]);
 
-    if (c.natoms() < dicer_args.lower_atom_count_cutoff())               // cannot be subdivided any more
+    if (c.natoms() < dicer_args.lower_atom_count_cutoff()) {               // cannot be subdivided any more
       continue;
+    }
 
     c.set_name(mname);
 
@@ -6189,60 +6262,6 @@ do_change_element_for_heteroatoms_with_hydrogens (Molecule & m)
   return rc;
 }
 
-/*
-   Detect CX3 or t-butyl
- */
-
-static int
-is_cf3_like (const Molecule & m, atom_number_t zatom)
-{
-  const Atom * c = m.atomi(zatom);
-
-  if (4 != c->ncon())
-    return 0;
-
-  int halogens_attached = 0;
-  int ch3_attached = 0;
-
-  for (int i = 0; i < 4; i++)
-  {
-    atom_number_t j = c->other(zatom, i);
-
-    if (m.is_halogen(j))
-      halogens_attached++;
-    else if (1 == m.ncon(j) && 6 == m.atomic_number(j))
-      ch3_attached++;
-  }
-
-  if (3 == halogens_attached)
-    return 1;
-
-  return 3 == ch3_attached;
-}
-
-/*
-   Identify bonds to a CF3 or t-Butyl group
-   We must be the bond leading to the CF3, not within the CF3
- */
-
-static int
-is_cf3_like (const Molecule & m, const Bond & b)
-{
-  atom_number_t a1 = b.a1();
-  atom_number_t a2 = b.a2();
-
-  if (1 == m.ncon(a1) || 1 == m.ncon(a2))
-    return 0;
-
-  if (4 == m.ncon(a1) && is_cf3_like(m, a1))
-    return 1;
-
-  if (4 == m.ncon(a2) && is_cf3_like(m, a2))
-    return 1;
-
-  return 0;
-}
-
 static int
 singly_connected_atoms_only (const Molecule & m,
                              atom_number_t zatom,
@@ -6315,38 +6334,6 @@ is_terminal_heteroatom (const Molecule & m,
    Basically anything that is [!C]-*=*.
    The caller guarantees that neither atom is in a ring
  */
-
-static int
-is_amide (const Molecule & m,
-          atom_number_t a1,
-          atom_number_t a2)
-{
-  const Atom * aa1 = m.atomi(a1);
-  const Atom * aa2 = m.atomi(a2);
-
-  int z1 = aa1->atomic_number();
-  int z2 = aa2->atomic_number();
-
-  // At least one must be a heteroatom
-
-  if (6 != z1)
-    ;
-  else if (6 != z2)
-    ;
-  else
-    return 0;
-
-  // And at least one must be unsaturated
-
-  if (aa1->nbonds() > aa1->ncon())
-    ;
-  else if (aa2->nbonds() > aa2->ncon())
-    ;
-  else
-    return 0;
-
-  return 1;
-}
 
 static int
 assign_bond_priority (Molecule & m,
@@ -6787,13 +6774,15 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
 int
 Breakages::identify_bonds_to_break (Molecule & m)
 {
-  if (0 == nq)
+  if (0 == nq) {
     return identify_bonds_to_break_hard_coded_rules(m);
+  }
 
   int rc = 0;
 
-  if (add_user_specified_queries_to_default_rules)
+  if (add_user_specified_queries_to_default_rules) {
     rc += identify_bonds_to_break_hard_coded_rules(m);
+  }
 
   Molecule_to_Match target(&m);
 
@@ -7186,14 +7175,13 @@ dicer(Molecule & m,
 
   USPVPTR * uspvptr = new USPVPTR[m.natoms()]; std::unique_ptr<USPVPTR[]> free_uspvptr(uspvptr);
 
-  initialise_atom_pointers(m, dicer_args.atom_types(), uspvptr);
+  dicer_lib::initialise_atom_pointers(m, dicer_args.atom_types(), uspvptr);
 
   // int * atom_numbers = new int[m.natoms()];
   // std::unique_ptr<int[]> free_atom_numbers(atom_numbers);
   // initialise_atom_pointers(m, atom_numbers);
 
-  if (work_like_recap)
-  {
+  if (work_like_recap) {
     breakages.do_recap(m, dicer_args);
 
     // The number of breakable bonds is not used with recap output, set to -1.
@@ -7207,8 +7195,9 @@ dicer(Molecule & m,
     return 1;
   }
 
-  if (m.number_fragments() > 1)
-    cerr << m.smiles() << ' ' << m.name() << endl;
+  if (m.number_fragments() > 1) {
+    cerr << m.smiles() << ' ' << m.name() << '\n';
+  }
 
   assert (1 == m.number_fragments());
 
@@ -7229,8 +7218,9 @@ dicer(Molecule & m,
   if (fingerprint_tag.length())
     dicer_args.produce_fingerprint(m, output.text_output());
 
-  if (write_smiles_and_complementary_smiles)
-    dicer_args.write_fragments_and_complements(m, output.text_output());
+  if (write_smiles_and_complementary_smiles) {
+    dicer_args.write_fragments_and_complements(m, output);
+  }
 
   if (verbose)
     fragments_produced[dicer_args.fragments_found()]++;
@@ -7375,6 +7365,7 @@ display_misc_B_options (std::ostream & os)
   os << " -B nosmi          suppress output of fragment smiles\n";
   os << " -B noparent       suppress output of parent smiles\n";
   os << " -B proto          main output is a dicer_data.DicedMolecule proto\n";
+  os << " -B serialized_proto main output is tfdatarecord of serialized dicer_data::DicedMolecule\n";
   os << " -B time           run timing\n";
   os << " -B addq           run the -q queries in addition to the default rules\n";
   os << " -B WB=fname       write smiles of just broken molecules to <fname>\n";
@@ -7383,6 +7374,7 @@ display_misc_B_options (std::ostream & os)
   os << " -B BRS            break spiro rings\n";
   os << " -B BBRK_FILE=<fname> write bonds to break to <fname> - no computation\n";
   os << " -B BBRK_TAG=<tag> read bonds to be broken from sdf tag <tag> (def DICER_BBRK)\n";
+  os << " -B nousmi         do NOT uuse unique smiles to keep track of fragments - dangerous\n";
   os << " -B nbamide        do NOT break amide and amide-like bonds\n";
   os << " -B brcb           break all bonds from a chain to a ring\n";
   // the nbfts option is not working, TODO ianwatson fix.
@@ -7472,6 +7464,72 @@ display_dash_i_options(std::ostream & os)
   os << " -I inc=<n>       increment existing isotopic label before labelling join points\n";
 
   exit(0);
+}
+
+static int
+DisplayComplementaryFragmentOptions(std::ostream& output) {
+  output << " -C def            complementary fragments with all default conditions\n";
+  output << " -C auto           complementary fragments have same isotope as fragment\n";
+  output << " -C atype          complementary fragments have isotopes based on atom type\n";
+  output << " -C iso=<iso>      apply isotope <n> to the join point on the complementary fragment\n";
+  output << " -C maxat=<n>      do not write complementary fragments with more than n> atoms\n";
+
+  ::exit(0);
+}
+
+static int
+ParseComplementaryFragmentOptions(Command_Line& cl) {
+  if (! cl.option_present('C')) {
+    return 1;
+  }
+
+  const_IWSubstring c;
+  for (int i = 0; cl.value('C', c, i); ++i) {
+    if (c.starts_with("maxat=") || c.starts_with("maxat:")) {
+      c.remove_leading_chars(6);
+      if (! c.numeric_value(upper_atom_count_cutoff_complementary_fragment) ||
+          upper_atom_count_cutoff_complementary_fragment < 1) {
+        cerr << "The upper atom count limit for complementary fragments must be a +ve whole number\n";
+        return 0;
+      }
+      if (verbose) {
+        cerr << "Will not write complementary fragmes with more than " << 
+               upper_atom_count_cutoff_complementary_fragment << " atoms\n";
+      }
+    } else if (c == "def") {
+    } else if (c == "auto") {
+      apply_isotopes_to_complementary_fragments = -1;
+      if (verbose)
+        cerr << "Same isotope will be set to the fragments and complementary fragments\n";
+    } else if (c == "atype") {
+      apply_isotopes_to_complementary_fragments = ISO_CF_ATYPE;
+      if (verbose)
+        cerr << "Isotopes at complementary atoms will be initial molecule atom type\n";
+    } else if (c.starts_with("iso=") || c.starts_with("iso:")) {
+      c.remove_leading_chars(4);
+
+      if (!c.numeric_value(apply_isotopes_to_complementary_fragments) ||
+           apply_isotopes_to_complementary_fragments < 0) {
+        cerr << "Invalid complementary set isotope specification '" << c << "'\n";
+        return 0;
+      }
+      if (verbose) {
+        cerr << "Isotope " << apply_isotopes_to_complementary_fragments << " applied to join points of complementary fragments\n";
+      }
+    } else if (c == "help") {
+      DisplayComplementaryFragmentOptions(cerr);
+    } else {
+      cerr << "Unrecognised -C qualifier '" << c << "'\n";
+      DisplayComplementaryFragmentOptions(cerr);
+    }
+  }
+
+  write_smiles_and_complementary_smiles = 1;
+  if (verbose) {
+    cerr << "Will write smiles and complementary smiles\n";
+  }
+
+  return 1;
 }
 
 static int
@@ -7634,9 +7692,8 @@ dicer (int argc, char ** argv)
       }
       else
       {
-        if (!cl.value('I', isotope_for_join_points) || isotope_for_join_points < 0)
-        {
-          cerr << "The isotope for join points value (-I) must be a whole +ve number\n";
+        if (! i.numeric_value(isotope_for_join_points) || isotope_for_join_points < 0) {
+          cerr << "The isotope for join points value (-I) must be a whole +ve number '" << i << "' invalid\n";
           usage(4);
         }
 
@@ -7650,16 +7707,12 @@ dicer (int argc, char ** argv)
       usage(4);
     }
 
-    if (add_environment_atoms)
+    if (add_environment_atoms) {
       InitialiseEnvironmentElements();
-    if (increment_isotope_for_join_points && 0 == isotope_for_join_points) {
-      cerr << "Increment specified for existing isotopes, but no isotope for join points\n";
-      display_dash_i_options(cerr);
     }
   }
 
-  if (cl.option_present('r'))
-  {
+  if (cl.option_present('r')) {
     work_like_recap = 1;
 
     if (verbose)
@@ -8076,6 +8129,12 @@ dicer (int argc, char ** argv)
         }
         output.set_output_is_proto(1);
       }
+      else if (b == "nousmi") {
+        fragments_indexed_by_unique_smiles = 0;
+        if (verbose) {
+          cerr << "Fragments will NOT be indexed by unique smiles - do not use fragstat!\n";
+        }
+      }
       else if("help" == b)
       {
         display_misc_B_options(cerr);
@@ -8115,7 +8174,7 @@ dicer (int argc, char ** argv)
     }
     else
     {
-      set_read_extra_text_info(1);
+      moleculeio::set_read_extra_text_info(1);
       MDL_File_Supporting_Material * mdlfs = global_default_MDL_File_Supporting_Material();
       mdlfs->set_report_unrecognised_records(0);
     }
@@ -8143,50 +8202,62 @@ dicer (int argc, char ** argv)
     write_only_smallest_fragment = 1;
   }
 
-  if (cl.option_present('C'))
-  {
-    write_smiles_and_complementary_smiles = 1;
-
-    if (verbose)
-      cerr << "Will write smiles and complementary smiles\n";
-
-    const_IWSubstring c = cl.string_value('C');
-
-    if ("def" == c)
-      ;
-    else if ("auto" == c)
-    {
-      apply_isotopes_to_complementary_fragments = -1;
-      if (verbose)
-        cerr << "Same isotope will be set to the fragments and complementary fragments\n";
-    }
-    else if ("atype" == c)
-    {
-      apply_isotopes_to_complementary_fragments = ISO_CF_ATYPE;
-      if (verbose)
-        cerr << "Isotopes at complementary atoms will be initial molecule atom type\n";
-    }
-    else if (c.starts_with("iso="))
-    {
-      c.remove_leading_chars(4);
-
-      if (!c.numeric_value(apply_isotopes_to_complementary_fragments) || apply_isotopes_to_complementary_fragments < 0)
-      {
-        cerr << "Invalid complementary set isotope specification '" << c << "'\n";
-        return 4;
-      }
-      else if (verbose)
-          cerr << "Isotope " << apply_isotopes_to_complementary_fragments << " applied to join points of complementary fragments\n";
-    }
-    else
-    {
-      cerr << "Unrecognised -C qualifier '" << c << "'\n";
-      usage(4);
-    }
+  if (cl.option_present('C')) {
+    // will exit if it fails.
+    ParseComplementaryFragmentOptions(cl);
   }
 
-  if (cl.option_present('s'))
-  {
+#ifdef NOW_IN_FUNCTION
+  if (cl.option_present('C')) {
+    const_IWSubstring c;
+    for (int i = 0; cl.value('C', c, i); ++i) {
+      if (c.starts_with("maxat=") || c.starts_with("maxat:")) {
+        c.remove_leading_chars(6);
+        if (! c.numeric_value(upper_atom_count_cutoff_complementary_fragment) ||
+            upper_atom_count_cutoff_complementary_fragment < 1) {
+          cerr << "The upper atom count limit for complementary fragments must be a +ve whole number\n";
+          return 0;
+        }
+        if (verbose) {
+          cerr << "Will not write complementary fragmes with more than " << 
+                 upper_atom_count_cutoff_complementary_fragment << " atoms\n";
+        }
+      } else if (c == "def") {
+      } else if (c == "auto") {
+        apply_isotopes_to_complementary_fragments = -1;
+        if (verbose)
+          cerr << "Same isotope will be set to the fragments and complementary fragments\n";
+      } else if (c == "atype") {
+        apply_isotopes_to_complementary_fragments = ISO_CF_ATYPE;
+        if (verbose)
+          cerr << "Isotopes at complementary atoms will be initial molecule atom type\n";
+      } else if (c.starts_with("iso=") || c.starts_with("iso:")) {
+        c.remove_leading_chars(4);
+
+        if (!c.numeric_value(apply_isotopes_to_complementary_fragments) ||
+             apply_isotopes_to_complementary_fragments < 0) {
+          cerr << "Invalid complementary set isotope specification '" << c << "'\n";
+          return 0;
+        }
+        if (verbose) {
+          cerr << "Isotope " << apply_isotopes_to_complementary_fragments << " applied to join points of complementary fragments\n";
+        }
+      } else if (c == "help") {
+        DisplayComplementaryFragmentOptions(cerr);
+      } else {
+        cerr << "Unrecognised -C qualifier '" << c << "'\n";
+        DisplayComplementaryFragmentOptions(cerr);
+      }
+    }
+
+    write_smiles_and_complementary_smiles = 1;
+    if (verbose) {
+      cerr << "Will write smiles and complementary smiles\n";
+    }
+  }
+#endif  // NOW_IN_FUNCTION
+
+  if (cl.option_present('s')) {
     int i = 0;
     const_IWSubstring smarts;
     while (cl.value('s', smarts, i++))
@@ -8489,8 +8560,13 @@ dicer (int argc, char ** argv)
         cerr << global_counter_bonds_to_be_broken[i] << " molecules had " << i << " bonds to be broken\n";
     }
 
-    if (smiles_to_id.size())
-      cerr << smiles_to_id.size() << " unique fragments encountered\n";
+    if (smiles_to_id.size()) {
+      cerr << smiles_to_id.size() << ' ';
+      if (fragments_indexed_by_unique_smiles) {
+        cerr << "unique";
+      } 
+      cerr << " fragments encountered\n";
+    }
 
     if (break_fused_rings)
       cerr << top_level_kekule_forms_switched << " top level Kekule forms switched\n";

@@ -22,13 +22,13 @@ then
     exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
-name2=err.txt
+stdout='stdout'
+golden='out/stdout'
+stderr='err.txt'
 name2_out=out/err.txt
 diff_tool=../../fileDiff.sh
-$command -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 1 -I in/CentroidRxnSmi_1 -P UST:AZUCORS in/10Cmpds.smi >log.txt 2>err.txt
-$diff_tool $name1 $name1_out
+$command -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 1 -I in/CentroidRxnSmi_1 -P UST:AZUCORS in/10Cmpds.smi >${stdout} 2>${stderr}
+$diff_tool ${stdout} ${golden}
 ret1=$?
 
 if [ $ret1 -eq 1 ]
@@ -37,5 +37,4 @@ then
 else
     echo "$case_id : TEST FAIL"
 fi
-rm $name1 $name2
-
+rm ${stdout} ${stderr}

@@ -2,9 +2,25 @@
 
 in_name=$1
 out_name=$2
+
+if [[ -z "${in_name}" || -z "${out_name}" ]] ; then
+  echo "one or more file(s) missing '${in_name}' '${out_name}'" >&1
+  exit 1
+fi
+
 ret=0
 #echo name1
 #echo name1_out
+
+if [[ ! -f ${in_name} ]] ; then
+  echo "${in_name} not found" >&2
+  exit 2
+fi
+
+if [[ ! -f ${out_name} ]] ; then
+  echo "${out_name} not found" >&2
+  exit 2
+fi
 
 result=$(diff -y -W 72 $in_name $out_name)
 

@@ -12,7 +12,6 @@
 #include "target.h"
 
 using std::cerr;
-using std::endl;
 
 Substructure_Environment::Substructure_Environment ()
 {
@@ -78,13 +77,13 @@ Substructure_Environment::_print_common_info (std::ostream & os,
   os << " and " << _number_elements << " components\n";
 
   if (_query_environment_match_as_rejection)
-    os << indentation << "Match as rejection is " << _query_environment_match_as_rejection << endl;
+    os << indentation << "Match as rejection is " << _query_environment_match_as_rejection << '\n';
 
   if (_and_id)
-    os << indentation << " and_id " << _and_id << endl;
+    os << indentation << " and_id " << _and_id << '\n';
 
   if (_or_id)
-    os << indentation << " or_id " << _or_id << endl;
+    os << indentation << " or_id " << _or_id << '\n';
 
   if (_no_other_substituents_allowed)
     os << indentation << " no other substituents allowed\n";
@@ -187,7 +186,7 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
   while (move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms))
   {
 #ifdef DEBUG_ENVIRONMENT_SEARCH
-  cerr << "Env base atom matches atom " << _current_hold_atom->atom_number() << endl;
+  cerr << "Env base atom matches atom " << _current_hold_atom->atom_number() << '\n';
 #endif
 
     if (0 == nc)    // no children, have a match right here
@@ -205,13 +204,13 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
       Substructure_Atom * a = (Substructure_Atom *) matched_query_atoms[atom_to_process];
 
 #ifdef DEBUG_ENVIRONMENT_SEARCH
-      cerr << "Atom to process is " << atom_to_process << " which is " << a->unique_id() << endl;
+      cerr << "Atom to process is " << atom_to_process << " which is " << a->unique_id() << '\n';
 #endif
 
       if (! a->move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms))
       {
 #ifdef DEBUG_ENVIRONMENT_SEARCH
-        cerr << "Move to next failed for query environment atom " << a->unique_id() << endl;
+        cerr << "Move to next failed for query environment atom " << a->unique_id() << '\n';
 #endif
 
         a->remove_your_children(matched_query_atoms, previously_matched_atoms);
@@ -227,7 +226,7 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
 #ifdef DEBUG_ENVIRONMENT_SEARCH
         cerr << "Move to next match succeeded " << 
                 a->unique_id() << "(" << a->atom_number_matched() << "), or = " << a->or_id() <<
-                " atom to process = " << atom_to_process << " matched = " << matched_query_atoms.number_elements() << endl;
+                " atom to process = " << atom_to_process << " matched = " << matched_query_atoms.number_elements() << '\n';
 #endif
         int orid = a->or_id();
         if (orid)
@@ -247,7 +246,7 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
   }
 
 #ifdef DEBUG_ENVIRONMENT_SEARCH
-  cerr << "environment search returning " << rc << endl;
+  cerr << "environment search returning " << rc << '\n';
 #endif
 
   return rc;
@@ -307,7 +306,7 @@ Substructure_Environment::matches(int * previously_matched_atoms,
     const Molecule * m = a->m();
     for (int x = 0; x < m->natoms(); ++x)
     {
-      cerr << " previously_matched_atoms[" << x << "] = " << previously_matched_atoms[x] << endl;
+      cerr << " previously_matched_atoms[" << x << "] = " << previously_matched_atoms[x] << '\n';
     }
 #endif
 
@@ -335,7 +334,7 @@ Substructure_Environment::matches(int * previously_matched_atoms,
       Substructure_Atom * aj = _things[j];
 
 #ifdef DEBUG_SS_ENV_MATCHES
-      cerr << "Preparing component " << j << endl;
+      cerr << "Preparing component " << j << '\n';
 #endif
 
       aj->prepare_for_matching(a);
@@ -397,8 +396,8 @@ Substructure_Environment::matches(int * previously_matched_atoms,
   }
 
 #ifdef DEBUG_SS_ENV_MATCHES
-  cerr << "After checking components, nhits = " << nhits << ", pwuc = " << parents_with_unmatched_connections << endl;
-  cerr << "_hits_needed.matches? " << _hits_needed.matches(nhits) << endl;
+  cerr << "After checking components, nhits = " << nhits << ", pwuc = " << parents_with_unmatched_connections << '\n';
+  cerr << "_hits_needed.matches? " << _hits_needed.matches(nhits) << '\n';
   _hits_needed.debug_print(cerr);
 #endif
 
@@ -659,7 +658,7 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
 
   int * previously_matched = new_int(atoms_in_target_molecule); std::unique_ptr<int[]> free_previously_matched(previously_matched);
 
-//cerr << "Single_Substructure_Query::_query_environment_also_matched: _environment_must_match_unmatched_atoms " << _environment_must_match_unmatched_atoms << endl;
+//cerr << "Single_Substructure_Query::_query_environment_also_matched: _environment_must_match_unmatched_atoms " << _environment_must_match_unmatched_atoms << '\n';
 
   if (_environment_must_match_unmatched_atoms)
   {
@@ -673,7 +672,7 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
       cerr << "Query atom " << a->unique_id() << " matched with atom " << j;
       if (0 != previously_matched[j])
         cerr << " YIPES, that atom not marked as matched";
-      cerr << endl;
+      cerr << '\n';
 #endif
 
       assert (j >= 0 && 0 == previously_matched[j]);
@@ -686,7 +685,7 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
   int * env_already_done = new_int(ne + nr); std::unique_ptr<int[]> free_env_already_done(env_already_done);
 
 #ifdef DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
-  cerr << " number env matches " << ne << " and number env rejections " << nr << endl;
+  cerr << " number env matches " << ne << " and number env rejections " << nr << '\n';
 #endif
 
   if (ne)

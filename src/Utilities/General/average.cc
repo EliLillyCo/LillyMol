@@ -60,7 +60,7 @@ static int take_absolute_value = 0;
   impose a limit on the number of values stored
 */
 
-static int value_buffer_size = std::numeric_limits<int>::max();
+static uint32_t value_buffer_size = std::numeric_limits<uint32_t>::max();
 
 static std::random_device rd;
 
@@ -144,15 +144,15 @@ class AColumn : public Accumulator<double> {
  private:
   IWString _name;
 
-  int _number_missing_values;
-  int _non_numeric_data;
-  int _number_instances_special_value;
+  uint32_t _number_missing_values;
+  uint32_t _non_numeric_data;
+  uint32_t _number_instances_special_value;
 
   resizable_array<float> _raw_values;
 
   std::mt19937_64 _rng;
   std::uniform_real_distribution<double> _uniform_01;
-  std::uniform_int_distribution<int> _uniform_nraw;
+  std::uniform_int_distribution<uint32_t> _uniform_nraw;
 
   //  private functions
 
@@ -179,6 +179,8 @@ class AColumn : public Accumulator<double> {
   }
 
   void update_global_accumulator(Accumulator<double>&) const;
+
+  void Reset();
 };
 
 AColumn::AColumn()
@@ -188,7 +190,7 @@ AColumn::AColumn()
   _number_instances_special_value = 0;
 
   if (value_buffer_size > 0) {
-    _raw_values.resize(value_buffer_size);
+    _raw_values.reserve(20000);  // hopefully cover many cases.
   }
 
   return;
@@ -251,7 +253,7 @@ AColumn::extra(const_IWSubstring& token, const int prevalence) {
 
 void
 AColumn::_add_to_raw_values(float f) {
-  if (_raw_values.number_elements() < value_buffer_size) {
+  if (_raw_values.size() < value_buffer_size) {
     _raw_values.add(f);
     return;
   }
@@ -273,7 +275,7 @@ AColumn::report(std::ostream& output) const {
     output << _name << ' ';
   }
 
-  const int n = Accumulator<double>::n();
+  const uint32_t n = Accumulator<double>::n();
 
   if (0 == n) {
     output << "AColumn::report: no data\n";
@@ -343,6 +345,51 @@ AColumn::update_global_accumulator(Accumulator<double>& acc) const {
   return;
 }
 
+void
+AColumn::Reset() {
+  Accumulator<double>& me = *this;
+  me.reset();
+
+  _raw_values.resize_keep_storage(0);
+
+  _number_missing_values = 0;
+  _non_numeric_data = 0;
+  _number_instances_special_value = 0;
+}
+
+// TODO:ianwatson. Implement this. Will be quite a few code changes.
+class SetOfColumns {
+  private:
+    uint32_t _number_columns;
+    AColumn* _column;
+
+  public:
+    SetOfColumns();
+    ~SetOfColumns();
+
+    // Allocate `s` column objects.
+    int resize(uint32_t s);
+
+    AColumn& column(uint32_t ndx) {
+      return _column[ndx];
+    }
+    const AColumn& column(uint32_t ndx) const {
+      return _column[ndx];
+    }
+};
+
+SetOfColumns::SetOfColumns() {
+  _number_columns = 0;
+  _column = nullptr;
+}
+
+SetOfColumns::~SetOfColumns() {
+  if (_column != nullptr) {
+    delete [] _column;
+  }
+}
+
+static int number_columns = 0;
 static AColumn* acolumn = nullptr;
 
 // If multiple files are processed, some things must be reset.
@@ -352,8 +399,9 @@ ResetFileScopeStaticParams() {
   prevalence_column_name.resize(0);
   prevalence_multiplier = 1.0;
 
-  delete [] acolumn;
-  acolumn = nullptr;
+  for (int i = 0; i < number_columns; ++i) {
+    acolumn[i].Reset();
+  }
 }
 
 static int
@@ -471,6 +519,7 @@ determine_descriptors_to_process(const const_IWSubstring& buffer) {
     return 0;
   }
 
+  number_columns = nw;
   acolumn = new AColumn[nw];
 
   if (nullptr == acolumn) {
@@ -866,6 +915,7 @@ average(int argc, char** argv) {
 
   if (0 == specifications) {
     columns_to_process[0] = 1;
+    number_columns = 2;
     acolumn = new AColumn[2];
   } else if (1 != specifications) {
     cerr << "Must have just one of -c, -d or -R options\n";
@@ -910,6 +960,7 @@ average(int argc, char** argv) {
     }
 
     acolumn = new AColumn[columns_to_process.number_elements() + 1];
+    number_columns = columns_to_process.number_elements() + 1;
   } else if (cl.option_present('R')) {
     const_IWSubstring r = cl.string_value('R');
 
@@ -923,6 +974,7 @@ average(int argc, char** argv) {
     }
 
     acolumn = new AColumn[1];
+    number_columns = 1;
   } else if (cl.option_present('d')) {
     if (cl.option_count('d') > 1) {
       descriptor_rx = build_regular_expression_from_components(cl, 'd');
@@ -1138,6 +1190,10 @@ average(int argc, char** argv) {
 
   if (ignore_bad_data && invalid_data_records_skipped) {
     cerr << "Skipped " << invalid_data_records_skipped << " invalid data records\n";
+  }
+
+  if (number_columns) {  // Should always be true here.
+    delete [] acolumn;
   }
 
   return rc;

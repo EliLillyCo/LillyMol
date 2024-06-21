@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package substituent_identification;
+
+// These are what is stored in the database.
+message Replacement {
+  // the smiles that can be replaced.
+  optional string smiles = 1;
+  // The id of the first molecule exemplifying this fragment.
+  // Or perhaps all identifiers exemplifying the fragment.
+  repeated string id = 2;
+  // the number of instances of this fragment.
+  optional uint32 n = 3;
+  // The radius at which this fragment was found
+  optional uint32 radius = 4;
+}
+
+message Replacements {
+  repeated Replacement replacement = 1;
+}
+
+// These are provided as output.
+message Result {
+  // the starting molecule
+  optional string smi = 1;
+
+  optional string id = 2;
+
+  // the id of the molecule donating the replacement group.
+  optional string donor = 3;
+
+  // the number of instances of this fragment in the database.
+  optional uint32 n = 4;
+
+  optional uint32 rad = 5;
+
+  optional string frag = 6;
+}

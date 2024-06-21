@@ -6,6 +6,8 @@
 #include "mdl_file_data.h"
 #include "substructure.h"
 
+#include "Molecule_Lib/molecule_to_query.pb.h"
+
 /*
   To support the ability to specify substructures at atoms, we need a
   relationship between an element and a smarts
@@ -184,6 +186,13 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
 
     int _substituents_only_at_isotopic_atoms;
 
+    int _substituents_only_at_non_isotopic_atoms;
+
+    // Nov 2022. Brining more global variables to class scope.
+    int _must_have_substituent_at_every_isotopic_atom;
+    int _isotope_count_means_extra_connections;
+    int _only_include_isotopically_labeled_atoms;
+
 //  Mar 2016. It can be convenient to have some per-atom meaning passed in via
 //  the isotopic label. Kind of a kludge, but flexible.
 
@@ -208,6 +217,9 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
     // Jul 2022. An isotope can be interpreted as match any atom.
     // isotope_t type since this value gets compared to isotope_t values.
     isotope_t _isotope_means_match_any_atom;
+
+    // Nov 2022. All information about atom types is lost.
+    int _ignore_atom_type;
 
 //  private functions
 
@@ -263,6 +275,7 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
     int ignore_molecular_hydrogen_information() const { return _ignore_molecular_hydrogen_information;}
     int interpret_atom_alias_as_smarts() const { return _interpret_atom_alias_as_smarts;}
     int substituents_only_at_isotopic_atoms() const { return _substituents_only_at_isotopic_atoms;}
+    int substituents_only_at_non_isotopic_atoms() const { return _substituents_only_at_non_isotopic_atoms;}
     int isotopic_label_means() const { return _isotopic_label_means;}
     int set_element_hits_needed_during_molecule_to_query() const { return _set_element_hits_needed_during_molecule_to_query;}
     int aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic() const { return _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic;}
@@ -270,6 +283,10 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
     int bonds_preserve_ring_membership() const { return _bonds_preserve_ring_membership;}
     int all_bonds_become_type_any() const { return _all_bonds_become_type_any;}
     isotope_t isotope_means_match_any_atom() const { return _isotope_means_match_any_atom;}
+    int ignore_atom_type() const { return _ignore_atom_type;}
+    int only_include_isotopically_labeled_atoms() const { return _only_include_isotopically_labeled_atoms;}
+    int must_have_substituent_at_every_isotopic_atom() const { return _must_have_substituent_at_every_isotopic_atom;}
+    int isotope_count_means_extra_connections() const { return _isotope_count_means_extra_connections;}
 
     void set_make_embedding(int s) { _make_embedding = s;}
     void set_all_ring_bonds_become_undefined(int s) { _all_ring_bonds_become_undefined = s;}
@@ -289,15 +306,22 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
     void set_ignore_molecular_hydrogen_information(int s) { _ignore_molecular_hydrogen_information = s;}
     void set_interpret_atom_alias_as_smarts(int s) { _interpret_atom_alias_as_smarts = s;}
     void set_substituents_only_at_isotopic_atoms(int s) { _substituents_only_at_isotopic_atoms = s;}
+    void set_substituents_only_at_non_isotopic_atoms(int s) { _substituents_only_at_non_isotopic_atoms = s;}
     void set_isotopic_label_means(int s) { _isotopic_label_means = s;}
     void set_set_element_hits_needed_during_molecule_to_query(int s) { _set_element_hits_needed_during_molecule_to_query = s;}
     void set_aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic(int s) { _aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = s;}
     void set_preserve_smallest_ring_size(int s) { _preserve_smallest_ring_size = s;}
     void set_bonds_preserve_ring_membership(int s) { _bonds_preserve_ring_membership = s;}
     void set_all_bonds_become_type_any(int s) { _all_bonds_become_type_any = s;}
-    void set_isotope_means_match_any_atom(int s) { _isotope_means_match_any_atom = s;}
+    void set_isotope_means_match_any_atom(isotope_t s) { _isotope_means_match_any_atom = s;}
+    void set_ignore_atom_type(int s) { _ignore_atom_type = s;}
+    void set_only_include_isotopically_labeled_atoms(int s) { _only_include_isotopically_labeled_atoms = s;}
+    void set_must_have_substituent_at_every_isotopic_atom(int s) { _must_have_substituent_at_every_isotopic_atom = s;}
+    void set_isotope_count_means_extra_connections(isotope_t s) { _isotope_means_match_any_atom = s;}
 
     int parse_directives(const const_IWSubstring &);
+
+    int Build(const molecule_to_query::MoleculeToQuery& proto);
 
     Substructure_Query & substitutions_only_at() { return _substitutions_only_at;}
     const Substructure_Query & substitutions_only_at() const { return _substitutions_only_at;}
@@ -332,23 +356,24 @@ class Molecule_to_Query_Specifications : public MDL_File_Data
 /*
   When creating query objects from Molecules, sometimes isotopes have
   special meaning
+  All of these are deprecated, should be part of Molecule_to_Query_Specifications.
 */
 
-extern void set_substituents_only_at_isotopic_atoms(int);
-extern void set_must_have_substituent_at_every_isotopic_atom(int s);
-extern void set_isotope_count_means_extra_connections(int s);
-extern void set_substitutions_only_at_non_isotopic_atoms(int s);
-extern void set_only_include_isotopically_labeled_atoms(int s);
-extern void set_only_aromatic_atoms_match_aromatic_atoms(int s);
+//extern void set_substituents_only_at_isotopic_atoms(int);
+// extern void set_must_have_substituent_at_every_isotopic_atom(int s);
+// extern void set_isotope_count_means_extra_connections(int s);
+// extern void set_substitutions_only_at_non_isotopic_atoms(int s);
+// extern void set_only_include_isotopically_labeled_atoms(int s);
+// extern void set_only_aromatic_atoms_match_aromatic_atoms(int s);
 
-extern int substituents_only_at_isotopic_atoms();
-extern int must_have_substituent_at_every_isotopic_atom();
-extern int isotope_count_means_extra_connections();
-extern int substitutions_only_at_non_isotopic_atoms();
-extern int only_include_isotopically_labeled_atoms();
+//extern int substituents_only_at_isotopic_atoms();
+// extern int must_have_substituent_at_every_isotopic_atom();
+// extern int isotope_count_means_extra_connections();
+// extern int substitutions_only_at_non_isotopic_atoms();
+// extern int only_include_isotopically_labeled_atoms();
 
-extern void set_respect_ring_membership(int);
+// extern void set_respect_ring_membership(int);
 
-extern void set_molecule_to_query_always_condense_explicit_hydrogens_to_anchor_atoms(int);
+// extern void set_molecule_to_query_always_condense_explicit_hydrogens_to_anchor_atoms(int);
 
 #endif  // MOLECULE_LIB_MOLECULE_TO_QUERY_H_

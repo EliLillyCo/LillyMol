@@ -1,3 +1,6 @@
+// Descriptor computation.
+
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -38,6 +41,7 @@
 #include "Molecule_Tools/nvrtspsa.h"
 #include "Molecule_Tools/qry_wcharge.h"
 #include "Molecule_Tools/partial_symmetry.h"
+#include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/xlogp.h"
 
 #include "Molecule_Tools/iwdescr.pb.h"
@@ -73,6 +77,14 @@ static IW_STL_Hash_Map_String name_translation;
 
 static int flush_after_each_molecule = 0;
 
+static alogp::ALogP alogp_engine;
+
+// Normally we read a smiles file and produce a descriptor file.
+// Optionally we can read a descriptor file with a smiles as the first
+// column, and optionally, write the same thing.
+static int read_descriptor_file_pipeline = 0;
+static int write_descriptor_file_pipeline = 0;
+
 /*
   Since the strongly fused ring system descriptors are sparse, they are
   optional too
@@ -100,6 +112,7 @@ struct DescriptorsToCompute {
   int ring_chain_descriptors = 1;
   int ring_fusion_descriptors = 1;
   int ring_substitution_descriptors = 1;
+  int compute_alogp = 1;
   int compute_xlogp = 1;
   int ring_substitution_ratio_descriptors = 1;
   int specific_groups = 1;
@@ -118,6 +131,9 @@ struct DescriptorsToCompute {
 
   // Display usage message and return 0.
   int DisplayUsage(char flag) const;
+
+  int ReadDescriptorsToCompute(const const_IWSubstring& fname);
+  int ReadDescriptorsToCompute(iwstring_data_source& input);
 
   public:
     int Initialise(Command_Line& cl);
@@ -139,6 +155,7 @@ DescriptorsToCompute::SetAll(int s) {
   polar_bond_descriptors = s;
   ring_chain_descriptors = s;
   ring_substitution_descriptors = s;
+  compute_alogp = s;
   compute_xlogp = s;
   ring_substitution_ratio_descriptors = s;
   simple_hbond_descriptors = s;
@@ -166,6 +183,7 @@ DescriptorsToCompute::DisplayUsage(char flag) const {
   cerr << dash_o << "chiral        enable all expensive chirality perception descriptors\n";
   cerr << dash_o << "complex       enable planar fused ring descriptors\n";
   cerr << dash_o << "crowd         enable atomic crowding descriptors\n";
+  cerr << dash_o << "dm            enable descriptors based on the distance matrix\n";
   cerr << dash_o << "donacc        enable donor acceptor derived descriptors\n";
   cerr << dash_o << "hbond         enable donor/acceptor derived descriptors\n";
   cerr << dash_o << "shbond        enable simplistic donor/acceptor derived descriptors\n";
@@ -175,7 +193,7 @@ DescriptorsToCompute::DisplayUsage(char flag) const {
 #ifdef MCGOWAN
   cerr << dash_o << "mcgowan       enable McGowan volume descriptors\n";
 #endif  // MCGOWAN
-  cerr << dash_o << "psim          enable partial symmetry derived descriptors\n";
+  cerr << dash_o << "psymm         enable partial symmetry derived descriptors\n";
   cerr << dash_o << "ramey         enable Ramey (element count) descriptors\n";
   cerr << dash_o << "rcj           enable ring chain join descriptors\n";
   cerr << dash_o << "rfuse         enable ring fusion descriptors\n";
@@ -226,7 +244,7 @@ DescriptorsToCompute::Initialise(Command_Line& cl) {
       if (verbose) {
         cerr << "complexity derived descriptors enabled\n";
       }
-    } else if (o == "crows") {
+    } else if (o == "crowd") {
       crowding_descriptors = 1;
       if (verbose) {
         cerr << "atomic crowding descriptors enabled\n";
@@ -278,7 +296,7 @@ DescriptorsToCompute::Initialise(Command_Line& cl) {
         cerr << "McGowan volumes descriptor enabled\n";
       }
 #endif
-    } else if (o == "psim") {
+    } else if (o == "psymm") {
       partial_symmetry_descriptors = 1;;
       if (verbose) {
         cerr << "partial symmetry derived descriptors enabled\n";
@@ -323,16 +341,116 @@ DescriptorsToCompute::Initialise(Command_Line& cl) {
       if (verbose) {
         cerr << "specific substructure descriptors enabled\n";
       }
+    } else if (o == "alogp") {
+      compute_alogp = 1;
+      if (verbose) {
+        cerr << "alogp will be computed\n";
+      }
     } else if (o == "xlogp") {
       compute_xlogp = 1;
       if (verbose) {
         cerr << "xlogp will be computed\n";
+      }
+    } else if (o.starts_with("F:")) {
+      o.remove_leading_chars(2);
+      if (! ReadDescriptorsToCompute(o)) {
+        cerr << "DescriptorsToCompute::Initialise:cannot process '" << o << "'\n";
+        return 0;
       }
     } else if (o == "help") {
       return DisplayUsage(kFlag);
     } else {
       cerr << "DescriptorsToCompute::Initialise:unrecognised '" << o << "'\n";
       return DisplayUsage(kFlag);
+    }
+  }
+
+  return 1;
+}
+
+int
+DescriptorsToCompute::ReadDescriptorsToCompute(const const_IWSubstring& fname) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "DescriptorsToCompute::ReadDescriptorsToCompute:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return DescriptorsToCompute::ReadDescriptorsToCompute(input);
+}
+
+int
+DescriptorsToCompute::ReadDescriptorsToCompute(iwstring_data_source& input) {
+  input.set_strip_trailing_blanks(1);
+
+  // Turn off everything to start
+  SetAll(0);
+
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    if (buffer.starts_with("#")) {
+      continue;
+    }
+
+    // This code is copied from above, so keep the same variable name.
+    // Should set up an Activate() function...
+    const const_IWSubstring o(buffer);
+
+    if (o == "none") {
+      SetAll(0);
+    } else if (o == "all") {
+      SetAll(1);
+    } else if (o == "adjring") {
+      adjacent_ring_fusion_descriptors = 1;
+    } else if (o == "bbr") {
+      bonds_between_rings = 1;
+    } else if (o == "charge") {
+      charge_descriptors = 1;
+    } else if (o == "complex") {
+      complexity_descriptors = 1;
+    } else if (o == "crowd") {
+      crowding_descriptors = 1;
+    } else if (o == "dm") {
+      distance_matrix_descriptors = 1;
+    } else if (o == "donacc") {
+      donor_acceptor = 1;
+    } else if (o == "hbond") {
+      hbond_descriptors = 1;
+    } else if (o == "shbond") {
+      simple_hbond_descriptors = 1;
+    } else if (o == "chiral" || o == "expchiral") {
+      perform_expensive_chirality_perception = 1;;
+    } else if (o == "ncon") {
+      ncon_descriptors = 1;;
+    } else if (o == "pbond") {
+      polar_bond_descriptors = 1;;
+    } else if (o == "psa") {
+      psa = 1;;
+    } else if (o == "psymm") {
+      partial_symmetry_descriptors = 1;;
+    } else if (o == "symm") {
+      symmetry_descriptors = 1;;
+    } else if (o == "ramey") {
+      ramey_descriptors = 1;;
+    } else if (o == "rcj") {
+      ring_chain_descriptors = 1;;
+    } else if (o == "rfuse") {
+      ring_fusion_descriptors = 1;;
+    } else if (o == "rss") {
+      ring_substitution_descriptors = 1;;
+    } else if (o == "rssr") {
+      ring_substitution_ratio_descriptors = 1;;
+    } else if (o == "spch") {
+      spinach_descriptors = 1;;
+    } else if (o == "spcgrp") {
+      specific_groups = 1;;
+    } else if (o == "alogp") {
+      compute_alogp = 1;
+    } else if (o == "xlogp") {
+      compute_xlogp = 1;
+    } else {
+      cerr << "DescriptorsToCompute::ReadDescriptorsToCompute:unrecognised '" << o << "'\n";
+      return 0;
     }
   }
 
@@ -373,7 +491,7 @@ static int output_precision = 4;
 static int compute_spiro_fusions = 1;
 
 static int verbose = 0;
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 static int molecules_with_no_rings = 0;
 
 static unsigned int alarm_time = 0;
@@ -439,6 +557,7 @@ enum IWDescr_Enum
   iwdescr_fdiffallp,
   iwdescr_harary,
   iwdescr_rotbond,
+  iwdescr_frotbond,
   iwdescr_ringatom,
   iwdescr_rhacnt,
   iwdescr_rhaf,
@@ -635,6 +754,8 @@ enum IWDescr_Enum
   iwdescr_cd4chain,
   iwdescr_frsub,
   iwdescr_frssub,
+  iwdescr_arorthoring,
+  iwdescr_alorthoring,
   iwdescr_bbr1,
   iwdescr_bbr2,
   iwdescr_bbr3,
@@ -685,6 +806,7 @@ enum IWDescr_Enum
   iwdescr_maxpsymdmean,
   iwdescr_psymdnumzero,
 
+  iwdescr_alogp,
   iwdescr_xlogp,
 
 // Ramey descriptors
@@ -991,6 +1113,7 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_fdiffallp].set_min_max_resolution(0.0f, 10.0f, resolution);
   d[iwdescr_harary].set_min_max_resolution(0.0f, 1.0f, resolution);
   d[iwdescr_rotbond].set_min_max_resolution(0.0f, 19.3958f, resolution);
+  d[iwdescr_frotbond].set_min_max_resolution(0.0f, 1.0f, resolution);
   d[iwdescr_ringatom].set_min_max_resolution(0.0f, 19.3958f, resolution);
   d[iwdescr_rhacnt].set_min_max_resolution(0.0f, 10.70095f, resolution);
   d[iwdescr_rhaf].set_min_max_resolution(0.0f, 1.0f, resolution);
@@ -1190,6 +1313,8 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_cd4chain].set_min_max_resolution(0.0f, 2.508958f, resolution);
   d[iwdescr_frsub].set_min_max_resolution(0.0f, 2.0f, resolution);
   d[iwdescr_frssub].set_min_max_resolution(0.0f, 2.0f, resolution);
+  d[iwdescr_arorthoring].set_min_max_resolution(0.0f, 2.0f, resolution);
+  d[iwdescr_alorthoring].set_min_max_resolution(0.0f, 2.0f, resolution);
   d[iwdescr_bbr1].set_min_max_resolution(0.0f, 7.0f, resolution);
   d[iwdescr_bbr2].set_min_max_resolution(0.0f, 6.0f, resolution);
   d[iwdescr_bbr3].set_min_max_resolution(0.0f, 5.0f, resolution);
@@ -1225,6 +1350,7 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_rmyni].set_min_max_resolution(0.0f, 8.0f, resolution);
   d[iwdescr_rmy_heavy_halogen].set_min_max_resolution(0.0f, 10.0f, resolution);
 
+  d[iwdescr_alogp].set_min_max_resolution(-4.0f, 10.0f, resolution);
   d[iwdescr_xlogp].set_min_max_resolution(-4.0f, 10.0f, resolution);
 
   return;
@@ -1568,6 +1694,7 @@ allocate_descriptors()
     descriptor[iwdescr_harary].set_name("harary");
   }
   descriptor[iwdescr_rotbond].set_name("rotbond");
+  descriptor[iwdescr_frotbond].set_name("frotbond");
   descriptor[iwdescr_ringatom].set_name("ringatom");
   descriptor[iwdescr_rhacnt].set_name("rhacnt");
   descriptor[iwdescr_rhaf].set_name("rhaf");
@@ -1807,6 +1934,8 @@ allocate_descriptors()
   if (descriptors_to_compute.ring_substitution_ratio_descriptors) {
     descriptor[iwdescr_frsub].set_name("frsub");
     descriptor[iwdescr_frssub].set_name("frssub");
+    descriptor[iwdescr_arorthoring].set_name("arorthoring");
+    descriptor[iwdescr_alorthoring].set_name("alorthoring");
   }
   if (descriptors_to_compute.bonds_between_rings) {
     descriptor[iwdescr_bbr1].set_name("bbr1");
@@ -1880,6 +2009,9 @@ allocate_descriptors()
     descriptor[iwdescr_rmynbr].set_name("rmynbr");
     descriptor[iwdescr_rmyni].set_name("rmyni");
     descriptor[iwdescr_rmy_heavy_halogen].set_name("heavy_halogen");
+  }
+  if (descriptors_to_compute.compute_alogp) {
+    descriptor[iwdescr_alogp].set_name("alogp");
   }
   if (descriptors_to_compute.compute_xlogp) {
     descriptor[iwdescr_xlogp].set_name("xlogp");
@@ -1966,7 +2098,7 @@ MaybeFlush(IWString_and_File_Descriptor& output) {
   if (flush_after_each_molecule) {
     output.flush();
   } else {
-    output.write_if_buffer_holds_more_than(32768);
+    output.write_if_buffer_holds_more_than(4096);
   }
 }
 
@@ -2056,7 +2188,7 @@ create_header(const Descriptor* descriptor,
 
 
 static int
-write_header(const Descriptor* descriptor,
+WriteHeader(const Descriptor* descriptor,
              const IW_STL_Hash_Map_String& name_translation,
              const char output_separator,
              IWString_and_File_Descriptor & output) {
@@ -2064,13 +2196,15 @@ write_header(const Descriptor* descriptor,
 
   int tokens = create_header(descriptor, name_translation, output_separator, header);
 
-  output << "Name" << output_separator;
-  if (include_smiles_as_descriptor)
+  if (include_smiles_as_descriptor) {
     output << "smiles" << output_separator;
+  }
+
   output << header << '\n';
 
-  if (verbose)
+  if (verbose) {
     cerr << "Output will contain " << tokens << " descriptors\n";
+  }
 
   return 1;
 }
@@ -2123,7 +2257,17 @@ write_the_output(Molecule & m,
     return write_fingerprint(m, descriptor, NUMBER_DESCRIPTORS, output);
   }
 
-  append_first_token_of_name(m.name(), output);
+  if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (read_descriptor_file_pipeline) {
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    append_first_token_of_name(m.name(), output);
+  } else {
+    append_first_token_of_name(m.name(), output);
+  }
 
   if (include_smiles_as_descriptor) {
     output << output_separator << smiles_as_input;
@@ -2137,8 +2281,7 @@ write_the_output(Molecule & m,
     output << output_separator;
 
     float v;
-    if (descriptor[i].value(v))
-    {
+    if (descriptor[i].value(v)) {
       if (OutputAsWholeNumber(v, output)) {
       } else if (v > 100.0f)
         output.append_number(v, 5);
@@ -2150,6 +2293,8 @@ write_the_output(Molecule & m,
   }
 
   output << '\n';
+
+  MaybeFlush(output);
 
   if (verbose)
   {
@@ -2355,6 +2500,53 @@ compute_ring_substitution_descriptors(Molecule & m,
   return 1;
 }
 
+int
+BondedToAnotherRing(Molecule& m,
+                    const int* ring_membership,
+                    atom_number_t zatom) {
+  for (const Bond* b : m[zatom]) {
+    if (b->nrings()) {
+      continue;
+    }
+    atom_number_t o = b->other(zatom);
+    if (ring_membership[o]) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+// Compute the number of ortho rings attached to `ring`.
+static int
+OrthoRingCount(Molecule& m,
+               const int* ncon,
+               const int* ring_membership,
+               const Ring& ring) {
+  int rc = 0;
+  const int ring_size = ring.number_elements();
+
+  for (int i = 0; i < ring_size; ++i) {
+    atom_number_t a1 = ring[i];
+    if (ncon[a1] == 2) {
+      continue;
+    }
+    atom_number_t a2 = ring[(i + 1) % ring_size];
+    if (ncon[a2] == 2) {
+      continue;
+    }
+    if (! BondedToAnotherRing(m, ring_membership, a1)) {
+      continue;
+    }
+
+    if (BondedToAnotherRing(m, ring_membership, a2)) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
 /*
   Measures of how crowded the rings are
 */
@@ -2373,6 +2565,8 @@ compute_ring_substitution_ratios(Molecule & m,
   {
     descriptor[iwdescr_frsub].set(static_cast<float>(0.0));
     descriptor[iwdescr_frssub].set(static_cast<float>(0.0));
+    descriptor[iwdescr_arorthoring].set(static_cast<float>(0.0));
+    descriptor[iwdescr_alorthoring].set(static_cast<float>(0.0));
 
     return 1;
   }
@@ -2406,6 +2600,21 @@ compute_ring_substitution_ratios(Molecule & m,
 
   descriptor[iwdescr_frsub].set(static_cast<float>(substituted_outside_ring) / static_cast<float>(ring_atoms));
   descriptor[iwdescr_frssub].set(static_cast<float>(simple_substituted_outside_ring) / static_cast<float>(ring_atoms));
+
+  m.compute_aromaticity_if_needed();
+
+  int aromatic_ortho_ring_count = 0;
+  int aliphatic_ortho_ring_count = 0;
+  for (const Ring* r : m.sssr_rings()) {
+    if (r->is_aromatic()) {
+      aromatic_ortho_ring_count += OrthoRingCount(m, ncon, ring_membership, *r);
+    } else {
+      aliphatic_ortho_ring_count += OrthoRingCount(m, ncon, ring_membership, *r);
+    }
+  }
+
+  descriptor[iwdescr_arorthoring].set(aromatic_ortho_ring_count);
+  descriptor[iwdescr_alorthoring].set(aliphatic_ortho_ring_count);
 
   return 1;
 }
@@ -2615,6 +2824,17 @@ compute_xlogp(Molecule& m) {
   std::optional<double> x = xlogp::XLogP(m);
   if (x) {
     descriptor[iwdescr_xlogp] = *x;
+    return 1;
+  }
+
+  return 0;
+}
+
+static int
+compute_alogp(Molecule& m) {
+  std::optional<double> x = alogp_engine.LogP(m);
+  if (x) {
+    descriptor[iwdescr_alogp] = *x;
     return 1;
   }
 
@@ -3033,9 +3253,9 @@ compute_atom_distribution_along_longest_path(const Molecule & m,
 
   const float mean1 = to_a1.average();
   const float mean2 = to_a2.average();
-  float mean = std::min(mean1, mean2);
-  descriptor[iwdescr_mdallp] = mean;
-  descriptor[iwdescr_fmdallp] = mean / static_cast<float>(dm[a1 * matoms + a2]);
+  float minval = std::min(mean1, mean2);
+  descriptor[iwdescr_mdallp] = minval;
+  descriptor[iwdescr_fmdallp] = minval / static_cast<float>(dm[a1 * matoms + a2]);
   const float diff = abs(mean1 - mean2);
   descriptor[iwdescr_fdiffallp] = diff / static_cast<float>(dm[a1 * matoms + a2]);
 
@@ -3576,6 +3796,8 @@ do_compute_distance_matrix_descriptors(Molecule & m,
 
 //set_vector(totd, matoms, 0);
 
+  // Actually this is wrong, it is measuring heteroatoms further
+  // than 3 bonds. Turns out this is useful this way.
   int largest_heteroatoms_within_three_bonds = 0;
 
   for (auto i = 0; i < matoms; ++i)
@@ -3590,6 +3812,7 @@ do_compute_distance_matrix_descriptors(Molecule & m,
 //    int d = m.bonds_between(i, j);
       int d = dm[i * matoms + j];
 
+      // Wrong, but useful as is.
       if (d < 3)
         continue;
 
@@ -7349,6 +7572,7 @@ compute_topological_descriptors(Molecule & m,
   descriptor[iwdescr_fdcca].set(static_cast<float>(two_connected_chain_atom) / static_cast<float>(matoms));
 
   descriptor[iwdescr_rotbond].set(static_cast<float>(rotatable_bonds));
+  descriptor[iwdescr_frotbond].set(iwmisc::Fraction<float>(rotatable_bonds, m.nedges()));
   descriptor[iwdescr_ringatom].set(static_cast<float>(ring_atom_count));
   if (ring_atom_count)
   {
@@ -7460,6 +7684,10 @@ compute_topological_descriptors(Molecule & m,
   if (descriptors_to_compute.compute_xlogp) {
     compute_xlogp(m);
   }
+  if (descriptors_to_compute.compute_alogp) {
+    compute_alogp(m);
+  }
+
 
   if (descriptors_to_compute.ring_substitution_descriptors) {
     compute_ring_substitution_descriptors(m, ncon);
@@ -8347,10 +8575,15 @@ handle_zero_atom_molecule(const Molecule & m,
   if (ignore_molecules_with_no_atoms)
     return 1;
 
-  append_first_token_of_name(m.name(), output);
+  if (write_descriptor_file_pipeline) {
+    output << m.name();
+  } else {
+    append_first_token_of_name(m.name(), output);
+  }
 
-  if (include_smiles_as_descriptor)
+  if (include_smiles_as_descriptor) {
     output << ' ' << smiles_as_input;
+  }
 
   for (int i = 0; i < NUMBER_DESCRIPTORS; ++i)
   {
@@ -8385,15 +8618,15 @@ iwdescriptors_alarm(data_source_and_type<Molecule> & input,
   {
     std::unique_ptr<Molecule> free_m(m);
 
-    if (number_filters || include_smiles_as_descriptor)
+    if (number_filters || include_smiles_as_descriptor) {
       smiles_as_input = m->smiles();
+    }
 
     molecules_read++;
 
     preprocess(*m);
 
-    if (0 == m->natoms())
-    {
+    if (m->empty()) {
       handle_zero_atom_molecule(*m, output);
       continue;
     }
@@ -8423,11 +8656,13 @@ iwdescriptors_alarm(data_source_and_type<Molecule> & input,
 
     MaybeFlush(output);
 
-    if (rc && ntest)
+    if (rc && ntest) {
       rc = test_iwdescriptors(*m);
+    }
 
-    if (0 == rc)
+    if (0 == rc) {
       return 0;
+    }
   }
 
   return 1;
@@ -8441,8 +8676,7 @@ iwdescriptors(data_source_and_type<Molecule> & input,
   assert (input.ok());
 
   Molecule * m;
-  while (nullptr != (m = input.next_molecule()))
-  {
+  while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
 
     if (number_filters || include_smiles_as_descriptor)
@@ -8520,6 +8754,68 @@ iwdescriptors_filter(const char * fname,
   }
 
   return iwdescriptors_filter(input, output_separator, output);
+}
+
+static int
+iwdescriptors_rpipe_line(const const_IWSubstring& buffer,
+                    char output_separator,
+                    IWString_and_File_Descriptor& output) {
+  Molecule m;
+  if (! m.build_from_smiles(buffer)) {
+    cerr << "iwdescriptors_rpipe_line:invalid smiles\n";
+    return 0;
+  }
+
+  return iwdescriptors(m, output_separator, output);
+}
+
+static int
+iwdescriptors_rpipe(iwstring_data_source& input,
+                    char output_separator,
+                    IWString_and_File_Descriptor& output) {
+  static int first_call = 1;
+  const_IWSubstring buffer;
+
+  if (first_call) {
+    if (! input.next_record(buffer)) {
+      cerr << "iwdescriptors_rpipe:cannot read header\n";
+      return 0;
+    }
+
+    if (write_descriptor_file_pipeline) {
+      output << buffer << output_separator;
+      WriteHeader(descriptor, name_translation, output_separator, output);
+    } else {
+      buffer.remove_leading_words(1);
+      output << buffer << output_separator;
+      WriteHeader(descriptor, name_translation, output_separator, output);
+    }
+
+    first_call = 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! iwdescriptors_rpipe_line(buffer, output_separator, output)) {
+      cerr << "Fatal error\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+iwdescriptors_rpipe(const char* fname,
+                    char output_separator,
+                    IWString_and_File_Descriptor& output) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "iwdescriptors_rpipe:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return iwdescriptors_rpipe(input, output_separator, output);
 }
 
 static int
@@ -8607,6 +8903,8 @@ DisplayDashBOptions(std::ostream& output) {
   output << " -B quiet        do not report unclassified atoms\n";
   output << " -B namexref=<fname> file containing w.NameTranslation proto for name translations\n";
   output << " -B ranges=<fname>  file containing w.Ranges text proto with descriptor ranges\n";
+  output << " -B rpipe        input is a smiles pipeline 'smiles id descriptors...'\n";
+  output << " -B wpipe        write a smiles pipeline 'smiles id descriptors...'\n";
   output << " -B flush        flush output after each molecule\n";
 // clang-format on
 }
@@ -8707,6 +9005,10 @@ iwdescr(int argc, char ** argv)
   else
     set_display_psa_unclassified_atom_mesages(0);
 
+  if (verbose == 0) {
+    alogp_engine.set_display_error_messages(0);
+  }
+
   if (cl.option_present('S')) {
     set_non_zero_constribution_for_SD2(0);
     if (verbose) {
@@ -8735,7 +9037,8 @@ iwdescr(int argc, char ** argv)
     for (int i = 0; cl.value('B', b, i); ++i) {
       if (b.starts_with("prefix=")) {
         b.remove_leading_chars(7);
-        char_name_to_char(b);
+        constexpr int kMessage = 0;
+        char_name_to_char(b, kMessage);
         descriptor_prefix = b;
         if (verbose)
           cerr << "Descriptors generated with prefix '" << descriptor_prefix << "'\n";
@@ -8775,6 +9078,16 @@ iwdescr(int argc, char ** argv)
         if (verbose) {
           cerr << "Descriptor range info read from " << range_proto_file_name << '\n';
         }
+      } else if (b == "rpipe") {
+        read_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Input assumed to be a descriptor file pipeline\n";
+        }
+      } else if (b == "wpipe") {
+        write_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Will write a descriptor file pipeline\n";
+        }
       } else if (b == "flush") {
         flush_after_each_molecule = 1;
         if (verbose) {
@@ -8794,7 +9107,9 @@ iwdescr(int argc, char ** argv)
   xlogp::SetIssueUnclassifiedAtomMessages(0);
 
   FileType input_type = FILE_TYPE_INVALID;
-  if (! cl.option_present('i'))
+  if (read_descriptor_file_pipeline) {
+    // don't care about input type.
+  } else if (! cl.option_present('i'))
   {
     if (1 == cl.number_elements() && 0 == strcmp("-", cl[0]))
       input_type = FILE_TYPE_SMI;
@@ -9088,6 +9403,11 @@ iwdescr(int argc, char ** argv)
 
   if (cl.option_present('s'))
   {
+    if (write_descriptor_file_pipeline) {
+      cerr << "Writing a descriptor file pipeline is incompatible with the -s option\n";
+      return 1;
+    }
+
     include_smiles_as_descriptor = 1;
 
     if (verbose)
@@ -9104,6 +9424,10 @@ iwdescr(int argc, char ** argv)
 
   mwc.set_ignore_isotopes(1);
 
+  // Even if alogp is not being computed, set some useful default values.
+  alogp_engine.set_use_alcohol_for_acid(1);
+  alogp_engine.set_rdkit_phoshoric_acid_hydrogen(1);
+
   if (cl.empty()) {
     cerr << prog_name << ": no files specified\n";
     usage(6);
@@ -9111,7 +9435,7 @@ iwdescr(int argc, char ** argv)
 
   IWString_and_File_Descriptor output(1);
 
-// write the descriptor file header
+// write the descriptor file header if needed.
 
   if (ntest)     // no header needed
     ;
@@ -9119,37 +9443,51 @@ iwdescr(int argc, char ** argv)
     ;
   else if (tag.length() > 0)   // fingerprints, no header
     ;
-  else if (! write_header(descriptor, name_translation, output_separator, output))
-  {
-    cerr << "Cannot write descriptor file header\n";
-    return 7;
+  else if (read_descriptor_file_pipeline)   // handled elsewhere.
+    ;
+  else if (write_descriptor_file_pipeline) {
+    output << "smiles" << output_separator << "Id" << output_separator;
+    if (!WriteHeader(descriptor, name_translation, output_separator, output)) {
+      cerr << "Cannot write descriptor file header\n";
+      return 1;
+    }
+  }
+  else {
+    output << "Name" << output_separator;
+    if (!WriteHeader(descriptor, name_translation, output_separator, output)) {
+      cerr << "Cannot write descriptor file header\n";
+      return 1;
+    }
   }
 
 //cerr << "HEader contains " << output.size() << " bytes, filters " << number_filters << '\n';
 
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)     // each argument is a file
-  {
-    const char *fname = cl[i];
+  if (read_descriptor_file_pipeline) {
+    for (const char* fname : cl) {
+      if (! iwdescriptors_rpipe(fname, output_separator, output)) {
+        cerr << "Fatal error processing '" << fname << "'\n";
+        return 1;
+      }
+    }
+  } else {
+    for (const char* fname : cl) {
+      int rc;
+      if (work_as_tdt_filter) {
+        rc = iwdescriptors_filter(fname, output_separator, output);
+      } else {
+        rc = iwdescriptors(fname, input_type, output_separator, output);
+      }
 
-    int rc;
-
-    if (work_as_tdt_filter)
-      rc = iwdescriptors_filter(fname, output_separator, output);
-    else 
-      rc = iwdescriptors(fname, input_type, output_separator, output);
-
-    if (! rc)
-    {
-      rc = i + 1;
-      break;
+      if (! rc) {
+        cerr << "Fatal error processing '" << fname << "'\n";
+        return 1;
+      }
     }
   }
 
   output.flush();
 
-  if (verbose)
-  {
+  if (verbose) {
     cerr << molecules_read << " molecules read\n";
     if (molecules_with_no_rings)
       cerr << molecules_with_no_rings << " molecules have no rings\n";
@@ -9175,17 +9513,17 @@ iwdescr(int argc, char ** argv)
   else if (ntest && verbose)
     cerr << "NO test failures\n";
 
-  if (molecules_skipped_by_timer)
+  if (molecules_skipped_by_timer) {
     cerr << " Skipped " << molecules_skipped_by_timer << " molecules because of timer " << alarm_time << '\n';
+  }
 
-  for (int i = 0; i < charge_queries.number_elements(); i++)
-  {
+  for (int i = 0; i < charge_queries.number_elements(); i++) {
     charge_queries[i]->report(i, cerr);
   }
 
   delete [] descriptor;
 
-  return rc;
+  return 0;
 }
 
 int

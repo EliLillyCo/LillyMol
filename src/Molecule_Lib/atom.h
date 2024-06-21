@@ -267,6 +267,7 @@ class __attribute__((visibility("default"))) Atom : public resizable_array<Bond*
 
   int fully_saturated() const;  // nbonds() == ncon)
   int unsaturated() const;      // nbonds() < ncon()
+  int unsaturation() const;
 
   const void* user_specified_void_ptr() const {
     return _user_specified_void_ptr;
@@ -289,6 +290,13 @@ class __attribute__((visibility("default"))) Atom : public resizable_array<Bond*
   void set_atom_map(const int s) {
     _atom_map = s;
   }
+
+  // A common operation is to ask if this atom `zatom` is
+  //   a. singly connected
+  //   b. with a double bond.
+  // In that case return the other atom,
+  // otherwise return kInvalidAtomNumber.
+  atom_number_t SingleConnectionDoubleBondTo(atom_number_t zatom) const;
 };
 
 extern void reset_atom_file_scope_variables();

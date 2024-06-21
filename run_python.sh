@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Run python with PYTHONPATH pointing to the shared libraries generated
 # by build_from_src.sh
@@ -13,4 +13,4 @@
 # Assume that lib, with the shared libraries, is one above where this script is.
 my_dir=$(dirname $0)
 export LD_LIBRARY_PATH=${my_dir}/lib:${LD_LIBRARY_PATH}
-PYTHONPATH=${my_dir}/lib:${my_dir}:${PYTHONPATH} python3 "$@"
+PYTHONPATH=${my_dir}/lib:${my_dir}/src:${PYTHONPATH} python3 "$@"

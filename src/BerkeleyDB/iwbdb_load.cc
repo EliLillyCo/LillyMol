@@ -68,6 +68,10 @@ static int uppercase_data = 0;
 
 static int need_to_change_case = 0;
 
+// Given a textproto, extract one of the columns and use it as the
+// key. The value is the entire textproto.
+static IWString textproto_key;
+
 static void
 usage(int rc) {
 // clang-format off
@@ -98,6 +102,7 @@ usage(int rc) {
   cerr << " -Z              compress data with zlib\n";
   cerr << " -y <type>       access type (btree, hash, recno, queue)\n";
   cerr << " -T <t>          UK UD lK lD Uppercase or Lowercase the Key and/or Data\n";
+  cerr << " -X <tag>        input is textproto. Use <tag> as the key, and whole textproto as data\n";
   cerr << " -v              verbose output\n";
   // clang-format on
 
@@ -287,9 +292,53 @@ iwbdb_load(const const_IWSubstring& identifier, const const_IWSubstring& to_stor
   return iwbdb_load(identifier, database, dbkey, zdata);
 }
 
+int
+RemoveQuotes(const_IWSubstring& s) {
+  constexpr char kDquote = '"';
+
+  if (s[0] == kDquote) {
+    ++s;
+  }
+
+  if (s.ends_with(kDquote)) {
+    s.chop(1);
+  }
+
+  return 1;
+}
+
+// `buffer` is a textproto. Look for textproto_key in that. Set the next token to
+// `identifier` and load `buffer` into `to_write`.
+static int
+DetermineTextprotoIdentifier(const const_IWSubstring& buffer, const_IWSubstring& identifier,
+                     IWString& to_write) {
+  int i = 0;
+  const_IWSubstring token;
+  int next_is_key = 0;
+
+  while (buffer.nextword(token, i)) {
+    if (next_is_key) {
+      identifier = token;
+      RemoveQuotes(identifier);
+      to_write = buffer;
+      return 1;
+    }
+
+    if (token == textproto_key) {
+      next_is_key = 1;
+    }
+  }
+
+  return 0;
+}
+
 static int
 determine_identifier(const const_IWSubstring& buffer, const_IWSubstring& identifier,
                      IWString& to_write) {
+  if (! textproto_key.empty()) {
+    return DetermineTextprotoIdentifier(buffer, identifier, to_write);
+  }
+
   if (!buffer.word(column_for_identifier, identifier)) {
     return 0;
   }
@@ -432,7 +481,7 @@ iwbdb_load(const char* fname, Db& database,
 
 int
 iwbdb_load(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vd:p:c:C:oa:AK:V:br:B:h:Zy:L:T:N:O:");
+  Command_Line cl(argc, argv, "vd:p:c:C:oa:AK:V:br:B:h:Zy:L:T:N:O:X:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -650,6 +699,14 @@ iwbdb_load(int argc, char** argv) {
 
       columns_for_data.add(c - 1);
     }
+  }
+
+  if (cl.option_present('X')) {
+    cl.value('X', textproto_key);
+    if (verbose) {
+      cerr << "Key is '" << textproto_key << " in textproto\n";
+    }
+    textproto_key.EnsureEndsWith(':');
   }
 
   if (cl.option_present('o') && (cl.option_present('a') || cl.option_present('A'))) {

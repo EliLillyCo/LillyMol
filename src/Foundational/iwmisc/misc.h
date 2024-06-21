@@ -1,5 +1,5 @@
-#ifndef FOUNDATIONAL_IWMISC_MISC_H
-#define FOUNDATIONAL_IWMISC_MISC_H
+#ifndef FOUNDATIONAL_IWMISC_MISC_H_
+#define FOUNDATIONAL_IWMISC_MISC_H_
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -391,4 +391,4 @@ extern int find_dividing_points(const char * fname, int n,
                                 resizable_array<off_t> & o,
                                 IW_Regular_Expression & rx);
 #endif  // WAIT_FOR_RE2
-#endif  // FOUNDATIONAL_IWMISC_MISC_H
+#endif  // FOUNDATIONAL_IWMISC_MISC_H_

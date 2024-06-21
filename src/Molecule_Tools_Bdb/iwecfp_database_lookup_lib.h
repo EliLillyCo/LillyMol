@@ -61,6 +61,9 @@ class SP_Database
   int _in_cache(Dbt& zkey, const DBKey& dbkey, int& radius, int& count);
   int _in_cache_mutex_protected(Dbt& zkey, const DBKey& dbkey, int& radius, int& count);
 
+  int SlurpDataContainsExamples(const Dbt& dkey, const Dbt& zdata, int min_examples);
+  int SlurpCountRadius(const Dbt& dkey, const Dbt& zdata, int min_examples);
+
  public:
   SP_Database();
   ~SP_Database();
@@ -263,6 +266,12 @@ class SP_Set_of_Databases {
 
   public:
     int AddDatabase(const std::string& dbname);
+
+    // Slurp all database entries with `min_examples` or more to internal hash
+    // memory.
+    bool slurp(uint32_t min_examples) {
+      return _dbs.slurp_to_cache(min_examples);
+    }
 
     // Note that currently there is no checking whether max_radius might be
     // larger than what is in any of the databases.

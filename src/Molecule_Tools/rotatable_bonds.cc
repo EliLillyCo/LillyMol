@@ -15,7 +15,6 @@
 #include "Molecule_Lib/target.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 
@@ -102,9 +101,298 @@ static int molecules_passed_by_atom_count = 0;
 
 static quick_rotbond::QuickRotatableBonds simple_rotbond;
 
+static constexpr isotope_t kIsotope = 556;
+
+class RotBondBetween {
+  private:
+    resizable_array_p<Substructure_Query> _q1;
+    resizable_array_p<Substructure_Query> _q2;
+
+   quick_rotbond::QuickRotatableBonds _rotbond;
+
+   isotope_t _isotope;
+
+   IWString_and_File_Descriptor _output;
+
+   IWString _missing_value;
+
+   int _molecules_processed;
+   int _molecules_not_matching_queries;
+
+ // private functions
+
+    int RotBondsBetween(Molecule& m, atom_number_t a1, atom_number_t a2);
+    int OpenOutputStream(const const_IWSubstring& f);
+
+  public:
+    RotBondBetween();
+
+    int Initialise(const Command_Line& cl, char flag);
+
+    // True if we have queries. If there is anything in _q1 then
+    // _q2 must also have queries.
+    int active() const {
+      return _q1.number_elements();
+    }
+
+    int Process(Molecule& m);
+
+    std::optional<int> RotBondsBetween(Molecule& m);
+
+    int Report(std::ostream& output) const;
+};
+
+RotBondBetween::RotBondBetween() {
+  _isotope = 0;
+  _missing_value = ".";
+  _molecules_processed = 0;
+  _molecules_not_matching_queries = 0;
+}
+
+int
+ReadQueries(char flag, const const_IWSubstring& directive,
+            resizable_array_p<Substructure_Query>& queries) {
+
+  static constexpr int kVerbose = 1;
+
+  if (! process_cmdline_token(flag, directive, queries, kVerbose)) {
+    cerr << "ReadQueries:Cannot process '" << directive << "'\n";
+    return 0;
+  }
+
+  return queries.number_elements();
+}
+
 static void
-usage(int rc)
-{
+DisplayRobBondBetweenOptions(std::ostream& output) {
+  output << " q1:<qry>          substructure query for first  matched atom\n";
+  output << " q2:<qry>          substructure query for second matched atom\n";
+  output << " write=<fname>     write smiles name rotbond to <fname>\n";
+  output << " iso=<isotope>     place isotope on matched atoms\n";
+  ::exit(0);
+}
+
+int
+RotBondBetween::Initialise(const Command_Line& cl, char flag) {
+  const int verbose = cl.option_present('v');
+
+  _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
+  _rotbond.set_isotope(kIsotope);
+  _rotbond.set_unique_isotope_each_bond(1);
+
+  const_IWSubstring f;
+  for (int i = 0; cl.value(flag, f, i); ++i) {
+    if (f.starts_with("q1:")) {
+      f.remove_leading_chars(3);
+      if (! ReadQueries(flag, f, _q1)) {
+        cerr << "RotBondBetween:Initialise:cannot process q1 '" << f << "'\n";
+        return 0;
+      }
+    } else if (f.starts_with("q2:")) {
+      f.remove_leading_chars(3);
+      if (! ReadQueries(flag, f, _q2)) {
+        cerr << "RotBondBetween:Initialise:cannot process q2 '" << f << "'\n";
+        return 0;
+      }
+    } else if (f.starts_with("write=")) {
+      f.remove_leading_chars(6);
+      if (! OpenOutputStream(f)) {
+        cerr << "Cannot direct output to '" << f << "'\n";
+        return 0;
+      }
+
+      if (verbose) {
+        cerr << "Rotbond between data written to '" << f << "'\n";
+      }
+    } else if (f.starts_with("iso=")) {
+      f.remove_leading_chars(4);
+      if (! f.numeric_value(_isotope)) {
+        cerr << "RotBondBetween:Initialise:Invalid isotope '" << f << "'\n";
+        return 0;
+      }
+      if (verbose) {
+        cerr << "Isotope " << _isotope << " placed on matched atoms\n";
+      }
+    } else if (f == "help") {
+      DisplayRobBondBetweenOptions(cerr);
+    } else {
+      cerr << "Unrecognised -" << flag << " specification '" << f << "'\n";
+      DisplayRobBondBetweenOptions(cerr);
+    }
+  }
+
+  if (_q1.empty() || _q2.empty()) {
+    cerr << "RotBondBetween::Incomplete query specification\n";
+    return 0;
+  }
+
+  if (! _output.active()) {
+    cerr << "RotBondBetween::Initialise:did not initialse output stream 'write=<fname>'\n";
+    return 0;
+  }
+
+  if (verbose) {
+    cerr << "Read " << _q1.size() << " Q1 queries and " << _q2.size() << " Q2 queries\n";
+    return 1;
+  }
+
+  return 1;
+}
+
+int
+RotBondBetween::OpenOutputStream(const const_IWSubstring& f) {
+  IWString tmp(f);
+  if (! _output.open(tmp.null_terminated_chars())) {
+    cerr << "RotBondBetween::OpenOutputStream:cannot open '" << f << "'\n";
+    return 0;
+  }
+
+  return 1;
+}
+atom_number_t
+IdentifyMatchedAtom(Molecule_to_Match& target,
+                    atom_number_t avoid,
+                    resizable_array_p<Substructure_Query>& queries) {
+  Substructure_Results sresults;
+  for (Substructure_Query* q : queries) {
+    if (q->substructure_search(target, sresults) == 0) {
+      continue;
+    }
+
+    atom_number_t rc = sresults.embedding(0)->front();
+    if (rc == avoid) {
+      continue;
+    }
+
+    return rc;
+  }
+
+  return kInvalidAtomNumber;
+}
+
+std::optional<int>
+RotBondBetween::RotBondsBetween(Molecule& m) {
+  Molecule_to_Match target(&m);
+  const atom_number_t a1 = IdentifyMatchedAtom(target, kInvalidAtomNumber, _q1);
+  if (a1 == kInvalidAtomNumber) {
+    cerr << "RotBondBetween:RotBondsBetween:cannot identify q1 in " << m.name() << '\n';
+    ++_molecules_not_matching_queries;
+    return std::nullopt;
+  }
+
+  const atom_number_t a2 = IdentifyMatchedAtom(target, a1, _q2);
+  if (a2 == kInvalidAtomNumber) {
+    cerr << "RotBondBetween:RotBondsBetween:cannot identify q2 in " << m.name() << '\n';
+    ++_molecules_not_matching_queries;
+    return std::nullopt;
+  }
+
+  return RotBondsBetween(m, a1, a2);
+}
+
+void
+IdentifyPath(Molecule& m,
+             atom_number_t zatom,
+             atom_number_t destination,
+             int* visited) {
+  visited[zatom] = 1;
+
+  int current_distance = m.bonds_between(zatom, destination);
+
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (visited[o]) {
+      continue;
+    }
+
+    if (o == destination) {
+      return;
+    }
+
+    if (m.bonds_between(o, destination) == current_distance - 1) {
+      IdentifyPath(m, o, destination, visited);
+    }
+  }
+}
+
+int
+RotBondBetween::RotBondsBetween(Molecule& m, atom_number_t a1, atom_number_t a2) {
+  if (_rotbond.Process(m) == 0) {
+    return 0;
+  }
+
+  m.recompute_distance_matrix();
+  std::unique_ptr<int[]> visited(new_int(m.natoms()));
+
+  IdentifyPath(m, a1, a2, visited.get());
+  
+  // Check bonds in path - visited atoms.
+  int rc = 0;
+  for (const Bond* b : m.bond_list()) {
+    atom_number_t a1 = b->a1();
+    if (! visited[a1]) {
+      continue;
+    }
+    if (m.isotope(a1) < kIsotope) {
+      continue;
+    }
+    atom_number_t a2 = b->a2();
+    if (! visited[a2]) {
+      continue;
+    }
+    if (m.isotope(a2) < kIsotope) {
+      continue;
+    }
+
+    if (m.isotope(a1) == m.isotope(a2)) {
+      ++rc;
+    }
+  }
+
+  m.transform_to_non_isotopic_form();
+
+  if (_isotope) {
+    m.set_isotope(a1, _isotope);
+    m.set_isotope(a2, _isotope);
+  }
+  
+  return rc;
+}
+
+int
+RotBondBetween::Process(Molecule& m) {
+  static constexpr char kSep = ' ';
+
+  ++_molecules_processed;
+
+  // Write the smiles after the computation because isotopes may have been added.
+  std::optional<int> bonds = RotBondsBetween(m);
+  if (bonds) {
+    _output << m.smiles() << kSep << m.name() << kSep << *bonds;
+    ++nrbonds[*bonds];   // update global counter
+  } else {
+    _output << m.smiles() << kSep << m.name() << kSep << _missing_value;
+  }
+
+  _output << '\n';
+
+  _output.write_if_buffer_holds_more_than(8192);
+
+  return 1;
+}
+
+int
+RotBondBetween::Report(std::ostream& output) const {
+  output << "Processed " << _molecules_processed << " molecules\n";
+  output << _molecules_not_matching_queries << " did not match queries\n";
+
+  return output.good();
+}
+
+static RotBondBetween rotbonds_between_queries;
+
+static void
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
@@ -115,6 +403,7 @@ usage(int rc)
   // clang-format off
   cerr << "  -m <number>    discard molecules with <number> or fewer rotatable bonds\n";
   cerr << "  -M <number>    discard molecules with <number> or more  rotatable bonds\n";
+  cerr << "  -w <natoms>    write molecules with <natoms> or fewer atoms regardless\n";
   cerr << "  -f <number>    longest allowable consecutive flexible bonds\n";
   cerr << "  -f <maxc=nn>   maximum connectivity along a long flexible chain\n";
   cerr << "  -f <breaku>    stop any flexible chain growth at any unsaturated atom\n";
@@ -128,10 +417,10 @@ usage(int rc)
   cerr << "  -a             append rotatable bond count to name\n";
   cerr << "  -c             append longest distance between rings to name\n";
   cerr << "  -C <bonds>     discard molecules with longest distance between rings > <bonds>\n";
-  cerr << "  -w <natoms>    write molecules with <natoms> or fewer atoms regardless\n";
   cerr << "  -S <string>    create output files with name stem <string>\n";
   cerr << "  -B <string>    write discarded molecules to <string>\n";
   cerr << "  -V <fname>     list of rotatable bonds written to <fname>\n";
+  cerr << "  -F ...         compute rotatable bonds between features - enter '-F help' for info\n";
   cerr << "  -Q ...         use quick and dirty calculation, enter '-Q help' for info\n";
   cerr << "  -e             compute rotbonds on largest fragment only\n";
   cerr << "  -l             reduce to largest fragment (discard counterions)\n";
@@ -147,8 +436,7 @@ usage(int rc)
 }
 
 static void
-do_append_results_to_name(Molecule& m, int rotbond, int longest_inter_ring_distance)
-{
+do_append_results_to_name(Molecule& m, int rotbond, int longest_inter_ring_distance) {
   IWString tmp = m.name();
 
   tmp << ' ' << " ROTBOND = " << rotbond;
@@ -165,18 +453,13 @@ do_append_results_to_name(Molecule& m, int rotbond, int longest_inter_ring_dista
 static int
 bonds_to_nearest_ring(const Molecule& m, atom_number_t previous_atom,
                       atom_number_t current_atom, const Atom* const* atom,
-                      const int* fsid)
-{
-  const Atom* a = atom[current_atom];
-
-  int acon = a->ncon();
-
-  int matoms = m.natoms();
+                      const int* fsid) {
+  const int matoms = m.natoms();
 
   int rc = matoms;  // we look for the shortest path
 
-  for (int i = 0; i < acon; i++) {
-    atom_number_t j = a->other(current_atom, i);
+  for (const Bond* b : *atom[current_atom]) {
+    atom_number_t j = b->other(current_atom);
 
     if (previous_atom == j) {
       continue;
@@ -207,8 +490,7 @@ bonds_to_nearest_ring(const Molecule& m, atom_number_t previous_atom,
 }
 
 static int
-compute_between_ring_descriptors(Molecule& m)
-{
+compute_between_ring_descriptors(Molecule& m) {
   int nr = m.nrings();
 
   if (nr < 2) {  // we deal with between ring information
@@ -268,8 +550,8 @@ compute_between_ring_descriptors(Molecule& m)
 }
 
 static int
-marked_as_non_rotatable(const Bond* b, const resizable_array_p<Bond>& non_rotatable_bonds)
-{
+marked_as_non_rotatable(const Bond* b,
+                        const resizable_array_p<Bond>& non_rotatable_bonds) {
   atom_number_t a1 = b->a1();
   atom_number_t a2 = b->a2();
 
@@ -294,10 +576,9 @@ marked_as_non_rotatable(const Bond* b, const resizable_array_p<Bond>& non_rotata
 
 static int
 count_flexible_bonds(Molecule& m, atom_number_t previous_atom, atom_number_t current_atom,
-                     int* already_done)
-{
+                     int* already_done) {
 #ifdef DEBUG_COUNT_FLEXIBLE_BONDS
-  cerr << "count_flexible_bonds from " << previous_atom << " to " << current_atom << endl;
+  cerr << "count_flexible_bonds from " << previous_atom << " to " << current_atom << '\n';
 #endif
 
   if (already_done[current_atom]) {
@@ -361,8 +642,7 @@ count_flexible_bonds(Molecule& m, atom_number_t previous_atom, atom_number_t cur
 }
 
 static int
-identify_long_flexible_chains(Molecule& m, int* already_done)
-{
+identify_long_flexible_chains(Molecule& m, int* already_done) {
   int rc = 0;
 
   int matoms = m.natoms();
@@ -392,7 +672,7 @@ identify_long_flexible_chains(Molecule& m, int* already_done)
     int total_length = f1 + f2 - 1;  //
 
     //  cerr << "From atom " << i << " f1 = " << f1 << " f2 = " << f2 << " total " <<
-    //  total_length << endl;
+    //  total_length << '\n';
 
     if (total_length > rc) {
       rc = total_length;
@@ -409,8 +689,7 @@ identify_long_flexible_chains(Molecule& m, int* already_done)
 static int
 identify_long_flexible_chains(Molecule& m,
                               const resizable_array_p<Bond>& non_rotatable_bonds,
-                              int* already_done)
-{
+                              int* already_done) {
   int nb = non_rotatable_bonds.number_elements();
 
   for (int i = 0; i < nb; i++) {
@@ -424,8 +703,7 @@ identify_long_flexible_chains(Molecule& m,
 
 static int
 identify_long_flexible_chains(Molecule& m,
-                              const resizable_array_p<Bond>& non_rotatable_bonds)
-{
+                              const resizable_array_p<Bond>& non_rotatable_bonds) {
   int* already_done = new_int(m.natoms());
   std::unique_ptr<int[]> free_already_done(already_done);
 
@@ -437,8 +715,7 @@ identify_long_flexible_chains(Molecule& m,
 */
 
 static int
-in_ring_of_size(Molecule& m, const Bond* b, int single_bonds_in_rings_are_flexible)
-{
+in_ring_of_size(Molecule& m, const Bond* b, int single_bonds_in_rings_are_flexible) {
   atom_number_t a1 = b->a1();
   atom_number_t a2 = b->a2();
 
@@ -472,8 +749,7 @@ in_ring_of_size(Molecule& m, const Bond* b, int single_bonds_in_rings_are_flexib
 }
 
 static int
-identify_largest_fragment(Molecule& m)
-{
+identify_largest_fragment(Molecule& m) {
   int nf = m.number_fragments();
 
   if (1 == nf) {
@@ -496,8 +772,7 @@ identify_largest_fragment(Molecule& m)
 }
 
 static atom_number_t
-do_find_unmatched_atom(const Molecule& m, const Set_of_Atoms& embedding)
-{
+do_find_unmatched_atom(const Molecule& m, const Set_of_Atoms& embedding) {
   atom_number_t a1 = embedding[0];
 
   const Atom* a = m.atomi(a1);
@@ -512,15 +787,14 @@ do_find_unmatched_atom(const Molecule& m, const Set_of_Atoms& embedding)
     }
   }
 
-  cerr << "Yipes, no unmatched atoms bonded to atom " << a1 << endl;
+  cerr << "Yipes, no unmatched atoms bonded to atom " << a1 << '\n';
 
   return INVALID_ATOM_NUMBER;
 }
 
 static int
 compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotatable_bonds,
-                        int* isotope)
-{
+                        int* isotope) {
   int nb = m.nedges();
 
   non_rotatable_bonds.resize(nb);
@@ -569,7 +843,7 @@ compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotatable_bond
   int rc = 0;
 
   if (stream_for_michal_vieth.rdbuf()->is_open()) {
-    stream_for_michal_vieth << m.name() << endl;
+    stream_for_michal_vieth << m.name() << '\n';
   }
 
   for (int i = 0; i < nb; i++) {
@@ -628,7 +902,7 @@ compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotatable_bond
     if (stream_for_michal_vieth.rdbuf()->is_open()) {
       stream_for_michal_vieth << ' ' << m.atomi(a1)->atomic_symbol() << (a1 + 1);
       stream_for_michal_vieth << ' ' << m.atomi(a2)->atomic_symbol() << (a2 + 1);
-      stream_for_michal_vieth << endl;
+      stream_for_michal_vieth << '\n';
     }
 
     rc++;
@@ -638,8 +912,7 @@ compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotatable_bond
 }
 
 int
-compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotabable_bonds)
-{
+compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotabable_bonds) {
   int* isotope;
 
   if (mark_rotatable_bonds) {
@@ -660,8 +933,7 @@ compute_rotatable_bonds(Molecule& m, resizable_array_p<Bond>& non_rotabable_bond
 }
 
 static void
-preprocess(Molecule& m)
-{
+preprocess(Molecule& m) {
   if (reduce_to_largest_fragment) {
     m.reduce_to_largest_fragment();
   }
@@ -695,8 +967,7 @@ HandleFailingMolecule(Molecule& m) {
 // Return 1 if `rotbond` passes global requirements for min and
 // max rotatable bonds allowed.
 static int
-OkRotbondCount(const int matoms,
-               const int rotbond) {
+OkRotbondCount(const int matoms, const int rotbond) {
   if (matoms <= always_write_threshold) {
     ;
   } else if (rotbond <= min_rotatable_bonds) {
@@ -714,17 +985,20 @@ OkRotbondCount(const int matoms,
 }
 
 static void
-AppendRotbondToName(Molecule& m,
-                    int rotbond) {
+AppendRotbondToName(Molecule& m, int rotbond) {
   IWString tmp(m.name());
   tmp << ' ' << rotbond;
   m.set_name(tmp);
 }
 
 static int
-rotatable_bonds(Molecule& m)
-{
+rotatable_bonds(Molecule& m) {
   preprocess(m);
+
+  if (rotbonds_between_queries.active()) {
+    rotbonds_between_queries.Process(m);
+    return 1;
+  }
 
   if (simple_rotbond.active()) {
     const int rotbond = simple_rotbond.Process(m);
@@ -763,7 +1037,7 @@ rotatable_bonds(Molecule& m)
     if (maximum_consecutive_flexible_bonds > 1) {
       cerr << ", longest chain " << longest_flexible_chain;
     }
-    cerr << endl;
+    cerr << '\n';
   }
 
   if (append_results_to_name) {
@@ -783,7 +1057,7 @@ rotatable_bonds(Molecule& m)
     pass = 0;
   }
 
-  if (pass && ! OkRotbondCount(matoms, rotbond)) {
+  if (pass && !OkRotbondCount(matoms, rotbond)) {
     pass = 0;
   }
 
@@ -804,8 +1078,7 @@ rotatable_bonds(Molecule& m)
 }
 
 static int
-rotatable_bonds(data_source_and_type<Molecule>& input)
-{
+rotatable_bonds(data_source_and_type<Molecule>& input) {
   Molecule* m;
 
   while (nullptr != (m = input.next_molecule())) {
@@ -826,8 +1099,7 @@ rotatable_bonds(data_source_and_type<Molecule>& input)
 }
 
 static int
-rotatable_bonds(const char* fname, FileType input_type)
-{
+rotatable_bonds(const char* fname, FileType input_type) {
   if (FILE_TYPE_INVALID == input_type) {
     input_type = discern_file_type_from_name(fname);
     assert(FILE_TYPE_INVALID != input_type);
@@ -844,9 +1116,8 @@ rotatable_bonds(const char* fname, FileType input_type)
 }
 
 static int
-rotatable_bonds(int argc, char** argv)
-{
-  Command_Line cl(argc, argv, "vA:E:g:q:s:m:M:i:o:S:B:r:R:alef:kV:cC:w:Q:");
+rotatable_bonds(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vA:E:g:q:s:m:M:i:o:S:B:r:R:alef:kV:cC:w:Q:F:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -873,11 +1144,12 @@ rotatable_bonds(int argc, char** argv)
   }
 
   if (cl.option_present('Q')) {
-    if (! simple_rotbond.Initialise(cl, 'Q')) {
+    if (!simple_rotbond.Initialise(cl, 'Q')) {
       cerr << "Cannot initialise quick rotatable bonds computation (-Q)\n";
       return 1;
     }
-    cerr << "Warning, fast/simplified rotatable bond computation selected, many other options do not work\n";
+    cerr << "Warning, fast/simplified rotatable bond computation selected, many other "
+            "options do not work\n";
   }
 
   if (cl.option_present('r')) {
@@ -888,7 +1160,7 @@ rotatable_bonds(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Rotatable bonds labelled with " << mark_rotatable_bonds << endl;
+      cerr << "Rotatable bonds labelled with " << mark_rotatable_bonds << '\n';
     }
   }
 
@@ -997,7 +1269,7 @@ rotatable_bonds(int argc, char** argv)
 
         if (verbose) {
           cerr << "Long flexible chains stop with atoms of connectivity more than "
-               << max_ncon_along_flexible_chain << endl;
+               << max_ncon_along_flexible_chain << '\n';
         }
       } else if ("breaku" == f) {
         stop_flexible_chains_at_unsaturation = 1;
@@ -1100,6 +1372,14 @@ rotatable_bonds(int argc, char** argv)
            << " atoms or fewer\n";
     }
   }
+
+  if (cl.option_present('F')) {
+    if (! rotbonds_between_queries.Initialise(cl, 'F')) {
+      cerr << "Cannot initialise rotatable bonds between query specification\n";
+      return 1;
+    }
+  }
+
 
   if (cl.empty()) {
     cerr << "Insufficient arguments\n";
@@ -1222,12 +1502,18 @@ rotatable_bonds(int argc, char** argv)
 
     float ave = static_cast<float>(sum) / static_cast<float>(molecules_read);
 
-    cerr << "Ave Rot Bond " << ave << endl;
+    cerr << "Ave Rot Bond " << ave << '\n';
+
+    if (rotbonds_between_queries.active()) {
+      rotbonds_between_queries.Report(cerr);
+      return 0;
+    }
+
 
     if (maximum_consecutive_flexible_bonds > 0) {
       for (int i = 0; i < lfc.number_elements(); i++) {
         if (lfc[i]) {
-          cerr << lfc[i] << " molecules had flexible chains of length " << i << endl;
+          cerr << lfc[i] << " molecules had flexible chains of length " << i << '\n';
         }
       }
     }
@@ -1249,8 +1535,7 @@ rotatable_bonds(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   int rc = rotatable_bonds(argc, argv);
 
   return rc;

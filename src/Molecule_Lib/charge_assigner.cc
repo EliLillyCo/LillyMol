@@ -511,7 +511,8 @@ Charge_Assigner::_remove_lower_preference_hits(Molecule& m,
 
 #ifdef DEBUG_REMOVE_LOWER_PREFERENCE_MATCHES
       if (ai != aj) {
-        cerr << "Atoms " << ai << " and " << aj << " dist " << m.bonds_between(ai, aj) << '\n';
+        cerr << "Atoms " << ai << " and " << aj << " dist " << m.bonds_between(ai, aj) << " atom " << aj << " being removed\n";
+        cerr << _min_distance_between_charges << " _min_distance_between_charges\n";
       } else {
         cerr << "Two queries hit atom " << ai << '\n';
       }
@@ -1179,7 +1180,7 @@ Charge_Assigner::process(Molecule& m, formal_charge_t* charges_assigned) {
   }
 
 #ifdef DEBUG_CHARGE_ASSIGNER
-  for (auto i = 0; i < matoms; ++i) {
+  for (int i = 0; i < matoms; ++i) {
     if (charges_assigned[i] != 0) {
       cerr << "Atom " << i << " " << m.smarts_equivalent_for_atom(i) << " assigned "
            << charges_assigned[i] << '\n';
@@ -1354,6 +1355,12 @@ Charge_Assigner::build(const const_IWSubstring& s) {
       {
         cerr << "Charge_Assigner: cannot read queries from file specifier 'F:" << token
              << "'\n";
+        return 0;
+      }
+    } else if (token.starts_with("ENV=") || token.starts_with("ENV:")) {
+      token.remove_leading_chars(4);
+      if (! BuildFromEnvValue(token)) {
+        cerr << "Charge_Assigner::build:invalid ENV specification '" << token << "'\n";
         return 0;
       }
     } else if ("verbose" == token) {

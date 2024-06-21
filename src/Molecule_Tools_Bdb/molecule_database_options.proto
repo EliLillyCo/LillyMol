@@ -1,0 +1,24 @@
+// Options describing a structure database.
+// Used in buildsmidb and in_database.
+
+syntax = "proto3";
+
+package LLYMol;
+
+import "Molecule_Lib/mol2graph.proto";
+
+message MoleculeDatabaseOptions {
+  // Small fragments removed.
+  bool reduce_to_largest_fragment = 1;
+  // Is chirality retained.
+  bool include_chirality = 2;
+
+  // Directional bonds should always be removed.
+  bool include_directional_bonds = 3;
+
+  // Specifications about graph conversion.
+  Mol2Graph mol2graph = 4;
+
+  // By default the unique smiles is used.
+  bool unique_smiles = 5;
+}

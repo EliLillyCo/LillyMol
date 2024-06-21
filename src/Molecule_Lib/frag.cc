@@ -1183,6 +1183,12 @@ Molecule::first_atom_in_fragment(int f) {
 
 int
 Molecule::rings_in_fragment(int f) {
+  if (number_fragments() == 1) {
+    return nrings();
+  }
+
+  fragment_membership();
+
   assert(f >= 0);
 
   assert(f < number_fragments());
@@ -1815,4 +1821,12 @@ Molecule::_compute_fragment_information_subset(Fragment_Information& fragment_in
   }
 
   return nf;
+}
+
+int
+Molecule::create_components(Components& components) {
+  resizable_array_p<Molecule> tmp;
+  int rc = create_components(tmp);
+  components.swap_contents(tmp);
+  return  rc;
 }

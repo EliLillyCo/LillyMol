@@ -4,8 +4,6 @@
 
 #include <iostream>
 #include <limits>
-using std::cerr;
-using std::endl;
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
@@ -15,12 +13,17 @@ using std::endl;
 #include "mdl.h"
 #include "misc2.h"
 #include "molecule.h"
+#include "moleculeio.h"
 #include "smiles.h"
+
+using std::cerr;
+using std::endl;
 
 /*
   Fileconv can be run so as to ignore all chiral information on input
 */
 
+#ifdef NOW_IN_MOLECULEIO
 static int _ignore_all_chiral_information_on_input = 0;
 
 void
@@ -230,7 +233,9 @@ set_max_offset_from_command_line(off_t s)
 {
   _max_offset_from_command_line = s;
 }
+#endif
 
+#ifdef NOW_IN_MOLECULEIO
 static int _number_connection_table_errors_to_skip = 0;
 
 int
@@ -268,6 +273,7 @@ set_unconnect_covalently_bonded_non_organics_on_read(int s)
 {
   _unconnect_covalently_bonded_non_organics_on_read = s;
 }
+#endif
 
 static int _put_formal_charges_on_neutral_ND3v4 = 0;
 
@@ -328,6 +334,7 @@ int ProcessQuotedSmiles() {
 
 }  // namespace smiles
 
+#ifdef NOW_IN_MOLECULEIO
 static IWString file_scope_newline_string('\n');
 
 void
@@ -365,6 +372,7 @@ write_DOS_records()
 {
   return _write_DOS_records;
 }
+#endif
 
 /*
   Return the appropriate suffix for a given file type.
@@ -605,8 +613,6 @@ suffix_for_file_type(int file_type)
 }
 #endif
 
-static FileType _string_to_file_type(const const_IWSubstring &);    // forward declaration
-
 /*
   We must be careful stripping off old prefixes in case the directory name
   contains a period.
@@ -635,13 +641,14 @@ remove_suffix(IWString & fname)
 
   const_IWSubstring suffix = fname.substr(period + 1);
 
-  if (0 == _string_to_file_type(suffix))    // not a known suffix
+  if (FILE_TYPE_INVALID == moleculeio::string_to_file_type(suffix)) {   // not a known suffix
     return;
+  }
 
-  for (int i = period + 1; i < fname.nchars(); i++)
-  {
-    if ('/' == fname[i])
+  for (int i = period + 1; i < fname.nchars(); i++) {
+    if ('/' == fname[i]) {
       return;
+    }
   }
 
 // No directory separators found
@@ -666,8 +673,7 @@ create_file_with_appropriate_name(const const_IWSubstring & old_name,
                                    int keep_existing_suffix)
 {
   const char * new_suffix = suffix_for_file_type(file_type);
-  if (nullptr == new_suffix)
-  {
+  if (nullptr == new_suffix) {
     cerr << "create_file_with_appropriate_name: unrecognised type " << 
             file_type << endl;
 
@@ -675,15 +681,19 @@ create_file_with_appropriate_name(const const_IWSubstring & old_name,
     return 0;
   }
 
+  IWString dot_suffix;
+  dot_suffix << '.' << new_suffix;
+
   new_name = old_name;
 
-  if (! keep_existing_suffix)     // get rid of old suffix
-  {
+  if (new_name.ends_with(dot_suffix)) {
+    return 1;
+  }
+
+  if (! keep_existing_suffix) {     // get rid of old suffix
     remove_suffix(new_name);
     new_name += '.';
-  }
-  else
-  {
+  } else {
     if (! new_name.ends_with('.'))
       new_name += '.';
   }
@@ -781,79 +791,6 @@ discern_file_type_from_name(const IWString & file_name)
   return FILE_TYPE_INVALID;
 }
 
-/*
-  Converts a string to one of our known file types. 
-  Does its work silently.
-  Returns 0 if a match is not found.
-*/
-
-static FileType
-_string_to_file_type(const const_IWSubstring & file_type)
-{
-  assert (file_type.nchars());
-
-  if ("mdl" == file_type)
-    return FILE_TYPE_MDL;
-  if ("pdb" == file_type)
-    return FILE_TYPE_PDB;
-  if ("mmod" == file_type)
-    return FILE_TYPE_MMOD;
-  if ("smi" == file_type)
-    return FILE_TYPE_SMI;
-  if ("usmi" == file_type)
-    return FILE_TYPE_USMI;
-  if ("msi" == file_type)
-    return FILE_TYPE_MSI;
-  if ("tdt" == file_type)
-    return FILE_TYPE_TDT;
-  if ("gfp" == file_type)
-    return FILE_TYPE_TDT;
-  if ("utdt" == file_type)
-    return FILE_TYPE_UTDT;
-  if ("tdtnausmi" == file_type)
-    return FILE_TYPE_TDT_NAUSMI;
-  if ("rdf" == file_type)
-    return FILE_TYPE_RDF;
-  if ("qry" == file_type)
-    return FILE_TYPE_QRY;
-  if ("rsmi" == file_type)
-    return FILE_TYPE_RSMI;
-  if ("sdf" == file_type)
-    return FILE_TYPE_SDF;
-  if ("mol" == file_type)
-    return FILE_TYPE_SDF;
-  if ("mol2" == file_type)
-    return FILE_TYPE_MOL2;
-  if ("chm" == file_type)
-    return FILE_TYPE_CHM;
-  if ("moe" == file_type)
-    return FILE_TYPE_MOE;
-  if ("mrk" == file_type)
-    return FILE_TYPE_MRK;
-  if ("wchm" == file_type)
-    return FILE_TYPE_WCHM;
-  if ("nausmi" == file_type)
-    return FILE_TYPE_NAUSMI;
-  if ("cif" == file_type)
-    return FILE_TYPE_CIF;
-  if ("smt" == file_type)
-    return FILE_TYPE_SMT;
-  if ("mrv" == file_type)
-    return FILE_TYPE_MRV;
-  if ("inchi" == file_type)
-    return FILE_TYPE_INCHI;
-  if ("csv" == file_type)
-    return FILE_TYPE_CSV;
-  if ("textproto" == file_type ||
-      "txtproto" == file_type ||
-      "txt" == file_type)
-    return FILE_TYPE_TXTPROTO;
-  if ("xyz" == file_type)
-    return FILE_TYPE_XYZ;
-  
-  return FILE_TYPE_INVALID;
-}
-
 static int
 process_option(const Command_Line & cl, FileType & type, const char c, const char * type_name)
 {
@@ -868,7 +805,7 @@ process_option(const Command_Line & cl, FileType & type, const char c, const cha
   int i = 0;
   cl.value(c, type_string, i);
 
-  FileType tmp = string_to_file_type(type_string);
+  FileType tmp = moleculeio::string_to_file_type(type_string);
   if (0 == tmp)
   {
     cerr << "Unrecognised " << type_name << " type '" << type_string << "'\n";
@@ -1024,25 +961,6 @@ valid_file_type(int ftype)
 }
 #endif
 
-/*
-  Externally visible routine for converting from a string specification
-  of file type to a number.
-  Issues an error message if it fails.
-*/
-
-FileType
-string_to_file_type(const const_IWSubstring & file_type)
-{
-  assert (file_type.nchars());
-
-  FileType rc = _string_to_file_type(file_type);
-  if (rc)
-    return rc;
-
-  cerr << "string_to_file_type: unrecognised type '" << file_type << "'\n";
-  
-  return rc;
-}
 
 /*
   We have read a molecule with aromatic atoms. Before doing Kekule perception
@@ -1065,7 +983,7 @@ Molecule::_do_unconnect_covalently_bonded_non_organics()
     if (a->element()->organic() || 0 == a->ncon())
       continue;
 
-    if (_unconnect_covalently_bonded_non_organics_on_read == 1) {
+    if (moleculeio::unconnect_covalently_bonded_non_organics_on_read() == 1) {
       remove_bonds_to_atom(1);
       ++rc;
     } else if (attached_heteroatom_count(i) == a->ncon()) {
@@ -1142,8 +1060,16 @@ Molecule::read_molecule_ds(iwstring_data_source & input, FileType input_type)
   //cerr << "Having read molecule name is " << _molecule_name << "'\n";
   //cerr << Name() << '\n';
 
-  if (rc && coordinate_scaling > 0.0f) {
+  if (rc == 0) {
+    return 0;
+  }
+
+  if (coordinate_scaling > 0.0f) {
     ScaleCoordinates(coordinate_scaling);
+  }
+
+  if (moleculeio::unconnect_covalently_bonded_non_organics_on_read()) {
+    _do_unconnect_covalently_bonded_non_organics();
   }
 
   return rc;
@@ -1356,7 +1282,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
 
     if ("info" == optval)
     {
-      set_read_extra_text_info(1);
+      moleculeio::set_read_extra_text_info(1);
     }
     else if ("ignore_bad_m" == optval)
     {
@@ -1382,7 +1308,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if ("uccvno" == optval)
     {
-      set_unconnect_covalently_bonded_non_organics_on_read(1);
+      moleculeio::set_unconnect_covalently_bonded_non_organics_on_read(1);
     }
     else if ("Hiso" == optval)
     {
@@ -1418,7 +1344,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
       mdlfos->set_name_to_json(1);
     } else if ("ICTE" == optval)
     {
-      set_number_connection_table_errors_to_skip(std::numeric_limits<int>::max());
+      moleculeio::set_number_connection_table_errors_to_skip(std::numeric_limits<int>::max());
     }
     else if (optval.starts_with("ICTE="))
     {
@@ -1429,7 +1355,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
         cerr << "Invalid ICTE qualifier '" << optval << "'\n";
         return 0;
       }
-      set_number_connection_table_errors_to_skip(t);
+      moleculeio::set_number_connection_table_errors_to_skip(t);
     }
     else if ("allsdfid" == optval || "ALLSDFID" == optval)
     {
@@ -1531,11 +1457,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if ("ignore_bad_chiral" == optval)
     {
-      set_ignore_incorrect_chiral_input(1);
+      moleculeio::set_ignore_incorrect_chiral_input(1);
     }
     else if ("discard_chiral" == optval)
     {
-      set_ignore_all_chiral_information_on_input(1);
+      moleculeio::set_ignore_all_chiral_information_on_input(1);
     }
     else if ("addmih" == optval)
     {
@@ -1569,11 +1495,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if ("dctb" == optval)
     {
-      set_discern_cis_trans_bonds(1);
+      moleculeio::set_discern_cis_trans_bonds(1);
     }
     else if ("d@3d" == optval || "d3d" == optval)
     {
-      set_discern_chirality_from_3d_coordinates(1);
+      moleculeio::set_discern_chirality_from_3d_coordinates(1);
     }
     else if (optval.starts_with("d@3d=") || optval.starts_with("d3d="))
     {
@@ -1585,7 +1511,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
         return 0;
       }
 
-      set_discern_chirality_from_3d_coordinates(d);
+      moleculeio::set_discern_chirality_from_3d_coordinates(d);
     }
     else if ("dwedge" == optval)
     {
@@ -1593,11 +1519,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if ("ibctb" == optval)
     {
-      set_ignore_bad_cis_trans_input(1);
+      moleculeio::set_ignore_bad_cis_trans_input(1);
     }
     else if ("xctb" == optval || "rmctb" == optval)
     {
-      set_discard_directional_bonds_on_input(1);
+      moleculeio::set_discard_directional_bonds_on_input(1);
     }
     else if (optval.starts_with("delim="))
     {
@@ -1607,55 +1533,57 @@ process_input_type(const Command_Line & cl, FileType & input_type)
         return 0;
       }
 
-      record_delimiter = optval.last_item();
+      moleculeio::set_record_delimiter(optval.last_item());
     }
     else if ("DOS" == optval || "dos" == optval)
     {
-      dos_mode = 1;
+      moleculeio::set_dos_mode(1);
     }
     else if (optval.starts_with("skip="))
     {
       optval.remove_leading_chars(5);
-      if (! optval.numeric_value(_skip_first_molecules) || _skip_first_molecules < 0)
+      int n;
+      if (! optval.numeric_value(n) || n < 0)
       {
         cerr << "The skip first molecules directive 'skip=nn' must be followed by a whole positive number\n";
         return 0;
       }
+      moleculeio::set_skip_first_molecules(n);
     }
     else if (optval.starts_with("do="))
     {
+      int n;
       optval.remove_leading_chars(3);
-      if (! optval.numeric_value(_do_only_n_molecules) || _do_only_n_molecules < 0)
+      if (! optval.numeric_value(n) || n < 0)
       {
         cerr << "The do only molecules directive 'do=nn' must be followed by a whole positive number\n";
         return 0;
       }
+      moleculeio::set_do_only_n_molecules(n);
     }
     else if (optval.starts_with("seek="))
     {
       optval.remove_leading_chars(5);
 
-      long tmp;
-      if (! optval.numeric_value(tmp) || tmp < 0)
-      {
+      off_t tmp;
+      if (! optval.numeric_value(tmp)) {
         cerr << "Invalid seek to specifier 'seek=" << optval << "'\n";
         return 0;
       }
 
-      _seek_to_from_command_line = static_cast<off_t>(tmp);
+      moleculeio::set_seek_to(tmp);
     }
     else if (optval.starts_with("stop="))
     {
       optval.remove_leading_chars(5);
 
-      long tmp;
-      if (! optval.numeric_value(tmp) || tmp < 0)
-      {
+      off_t tmp;
+      if (! optval.numeric_value(tmp)) {
         cerr << "Invalid stop specifier 'stop=" << optval << "'\n";
         return 0;
       }
 
-      _max_offset_from_command_line = static_cast<off_t>(tmp);
+      moleculeio::set_max_offset_from_command_line(tmp);
     }
     else if (optval.starts_with("maxq="))
     {
@@ -1710,11 +1638,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if ("mol2fc" == optval)
     {
-      set_mol2_assign_default_formal_charges(1);
+      tripos::set_mol2_assign_default_formal_charges(1);
     }
     else if ("mol2rfc" == optval)
     {
-      set_mol2_read_charge_column_contains_formal_charges(1);
+      tripos::set_mol2_read_charge_column_contains_formal_charges(1);
     }
     else if ("fixnd3v4" == optval)
     {
@@ -1786,7 +1714,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     } else if (input_type) {
       cerr << "Only one -i option is allowed, '" << optval << "' unrecognised\n";
       return 0;
-    } else if (0 == (input_type = string_to_file_type(optval))) {
+    } else if (0 == (input_type = moleculeio::string_to_file_type(optval))) {
       cerr << "Unrecognised input type or directive '" << optval << "'\n";
       return 0;
     }
@@ -1806,25 +1734,25 @@ process_input_type(const Command_Line & cl, FileType & input_type)
 void
 reset_rwmolecule_file_scope_variables()
 {
-    _ignore_all_chiral_information_on_input = 0;
-    _ignore_incorrect_chiral_input = 0;
-    _flush_files_after_writing_each_molecule = 0;
-    _read_extra_text_info = 0;
-    _discern_cis_trans_bonds = 0;
-    _discern_chirality_from_3d_coordinates = 0;
-    _ignore_bad_cis_trans_input = 0;
-    _write_extra_text_info = 0;
-    record_delimiter = '\n';
-    dos_mode = 1;    // Mar 2005. Change to default
-    _skip_first_molecules = 0;
-    _do_only_n_molecules = 0;
-    _seek_to_from_command_line = 0;
-    _max_offset_from_command_line = std::numeric_limits<off_t>::max();
-    _number_connection_table_errors_to_skip = 0;
-    _unconnect_covalently_bonded_non_organics_on_read = 0;
+//  _ignore_all_chiral_information_on_input = 0;
+//  _ignore_incorrect_chiral_input = 0;
+//  _flush_files_after_writing_each_molecule = 0;
+//  _read_extra_text_info = 0;
+//  _discern_cis_trans_bonds = 0;
+//  _discern_chirality_from_3d_coordinates = 0;
+//  _ignore_bad_cis_trans_input = 0;
+//  _write_extra_text_info = 0;
+//    record_delimiter = '\n';
+//    dos_mode = 1;    // Mar 2005. Change to default
+//  _skip_first_molecules = 0;
+//  _do_only_n_molecules = 0;
+//  _seek_to_from_command_line = 0;
+//  _max_offset_from_command_line = std::numeric_limits<off_t>::max();
+//  _number_connection_table_errors_to_skip = 0;
+//  _unconnect_covalently_bonded_non_organics_on_read = 0;
     _put_formal_charges_on_neutral_ND3v4 = 0;
-    file_scope_newline_string = '\n';
-    _write_DOS_records = 0;
+//    file_scope_newline_string = '\n';
+//    _write_DOS_records = 0;
     type_to_write_with_operator = FILE_TYPE_SMI;
 
     return;

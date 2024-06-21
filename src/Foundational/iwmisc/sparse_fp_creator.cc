@@ -192,7 +192,10 @@ Sparse_Fingerprint_Creator::_convert_to_unsigned_char(unsigned int b,
 
   int c = (*f).second;
 
-  assert (c > 0);
+  // Apr 2024. ring_fingerprint is generating one or more 0 counts.
+  // They are harmless, just wasteful. TODO:ianwatson remove zero
+  // count features from ring_fingerprint and re-establish the assert.
+  // assert (c > 0);
 
   if (c > 255)
     count = 255;

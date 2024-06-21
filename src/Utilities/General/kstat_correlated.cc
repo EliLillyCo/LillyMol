@@ -38,7 +38,7 @@ static std::ofstream stream_for_column_statistics;
 
 static int sample_records_randomly = 1;
 
-static int default_records_to_sample = 2000;
+static int default_records_to_sample = 5000;
 
 /*
   Nov 2000. Dave wanted to be able to just ignore columns with invalid data....

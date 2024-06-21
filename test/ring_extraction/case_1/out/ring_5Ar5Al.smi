@@ -1,1 +1,2 @@
-smi: "[1CH]1=[1CH]C2=C(S1)CCC2" smt: "[ax2r5D3]1:[ax2r5D3]:[ax3r5r5D3]2:[ax3r5r5D3](:[ax2r5D2]:1):[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:2" id: "CHEMBL1552380.5Ar5Al" n: 2 conn: true usmi: "s1c2c([1cH][1cH]1)CCC2" 
+smi: "C1=CC2=C(S1)CCC2" smt: "[ax2r5]1:[ax2r5]:[ax3r5]2:[ax3r5](:[ax2r5]:1)[Ax2r5][Ax2r5][Ax2r5]2" id: "CHEMBL1552380.5Ar5Al" n: 1 conn: false usmi: "C1Cc2ccsc2C1" 
+smi: "[1CH]1=[1CH]C2=C(S1)CCC2" smt: "[ax2r5D3]1:[ax2r5D3]:[ax3r5D3]2:[ax3r5D3](:[ax2r5D2]:1)[Ax2r5D2][Ax2r5D2][Ax2r5D2]2" id: "CHEMBL1552380.5Ar5Al" n: 1 conn: true usmi: "s1c2c([1cH][1cH]1)CCC2" 

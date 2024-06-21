@@ -47,6 +47,14 @@ class QuickRotatableBonds {
     // If requested, we can label the rotatable bonds.
     isotope_t _isotope;
 
+    // Even though we can label atoms as being part of a rotatable
+    // bond, this leaves ambiguities, since if the same isotope is
+    // used for every rotatable bond, we can have bonds that have
+    // an isotope at each end, but the bond is not rotatable.
+    // For that reason, we can optionally assign a unique isotope
+    // to each rotatable bond.
+    int _unique_isotope_each_bond = 0;
+
   public:
     QuickRotatableBonds();
 
@@ -54,6 +62,13 @@ class QuickRotatableBonds {
 
     int active () const {
       return _calculation != RotBond::kUndefined;
+    }
+
+    void set_isotope(isotope_t iso) {
+      _isotope = iso;
+    }
+    void set_unique_isotope_each_bond(int s) {
+      _unique_isotope_each_bond = s;
     }
 
     void set_calculation_type(RotBond rbtype) {

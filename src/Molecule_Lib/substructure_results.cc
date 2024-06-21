@@ -270,8 +270,9 @@ Substructure_Results::add_embedding(Set_of_Atoms * e,
 {
   _hits_found++;
 
-  if (_hits_found > 9999 && 0 == _hits_found % 10000)
+  if (_hits_found > 9999 && 0 == _hits_found % 10000) {
     cerr << "Query got " << _hits_found << " embeddings so far\n";
+  }
 
 //cerr << "_save_matched_atoms " << _save_matched_atoms << " _save_query_atoms_matched " << _save_query_atoms_matched << '\n';
 

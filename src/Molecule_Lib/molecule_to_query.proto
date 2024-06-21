@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package molecule_to_query;
+
+import "Molecule_Lib/substructure.proto";
+
+// Proto initialisation for molecule to query.
+
+// Sometimes isotopes are used to designate special conditions for that
+// atom, and not an actual isotopic value.
+// This is a bit field, so values are powers of 2. Note that some of
+// these combinations would not make sense.
+enum IsotopeMeans {
+  // If an isotope is present in the molecule it means an isotope is to be matched.
+  NOSPECIALMEANING = 0;
+
+  // Extra connections are only allowed at isotopically labelled atoms.
+  SUBSTITUTION = 1;
+
+  // The isotope means this many connections at the atom.
+  NCON = 2;
+
+  // The isotope means number of ring bonds.
+  RING_BOND_COUNT = 4;
+
+  // If an isotope, means the atom must be aromatic.
+  AROM = 8;
+
+  // If an isotope, then that atom will have no type information
+  // in the query.
+  MATCH_ANY_ATOM = 16;
+}
+
+message MoleculeToQuery {
+  bool make_embedding = 1;
+
+  bool all_ring_bonds_become_undefined = 2;
+  bool non_ring_atoms_become_nrings_0 = 3;
+  bool atoms_conserve_ring_membership = 4;
+  bool ring_atoms_conserve_ring_membership = 5;
+
+  bool convert_all_aromatic_atoms_to_generic_aromatic = 6;
+
+  bool only_aromatic_atoms_match_aromatic_atoms = 7;
+
+  bool set_element_hits_needed_during_molecule_to_query = 8;
+
+  bool aromatic_only_matches_aromatic_aliphatic_only_matches_aliphatic = 9;
+
+  bool all_bonds_become_type_any = 10;
+
+  IsotopeMeans isotope_means = 11;
+
+  repeated uint32 ncon = 12;
+  uint32 min_ncon = 13;
+  uint32 max_ncon = 14;
+
+  bool just_atomic_number_and_connectivity = 15;
+
+  bool ignore_atom_type = 16;
+}

@@ -19,6 +19,7 @@ test_top="$LILLYMOL_HOME/test"
 test_cmd_top="$test_top/$test_command"
 
 diff_tool=../../fileDiff.sh
+same_lines=../../same_lines.py
 
 command="$BIN_DIR/$test_command"
 
@@ -44,14 +45,25 @@ echo "Testing: $command"
 
 # sort the output to avoid dependencies on hash ordering.
 
-$command -k 2 -X 5000 -m 5 -M 20 -A D "$in" 2> err.txt | sort > "$out" 
-$diff_tool "$out" "$cmp_out"
+stderr='stderr'
+$command -k 2 -X 5000 -m 5 -M 20 -A D "$in" 2> ${stderr} > ${out}
+
+$diff_tool "${out}" "${cmp_out}"
 
 if [[ $? -eq 1 ]] ; then
-    echo "$case_id : TEST PASS"
-else
-    echo "$case_id : TEST FAIL"
+  echo "${case_id} : TEST PASS"
+  rm -f "${out}" "${stderr}"
+  exit 0
 fi
 
-rm -f "$out"
-rm -f err.txt
+${same_lines} "${out}" "${cmp_out}"
+if [[ $? -eq 0 ]] ; then
+  echo "${case_id} : TEST PASS"
+  rm -f "${out}" "${stderr}"
+  exit 0
+fi
+
+echo "$case_id : TEST FAIL"
+
+rm -f "${out}"
+rm -f "${stderr}"

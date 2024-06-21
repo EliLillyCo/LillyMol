@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Download and built pre-requisites for LillyMol.
 # Deliberately no robust error checking.
 
@@ -8,6 +8,13 @@
 # Things will likely go badly if you request 12 cores, but
 # are restructed to 1.
 THREADS=8
+
+declare -i inside_lilly
+if [[ $(hostname -d) =~ 'lilly.com' ]] ; then
+  inside_lilly=1
+else
+  inside_lilly=0
+fi
 
 # We expect to be invoked from either the top level directory of
 # the repo, or src. We want third party to be at the same level
@@ -51,90 +58,11 @@ cd "${third_party}" || echo "Cannot go to ${third_party}" >&2
 declare -i must_build
 must_build=0
 
-# Jun 2023 crc32c now obtained from absl
-# if [[ ! -d 'crc32c' ]] ; then
-#   git clone https://github.com/google/crc32c
-#   must_build=1
-# fi
-# if [[ $must_build -eq 1 || ! -s "${third_party}/include/crc32c/crc32c.h" ]] ; then
-#   (cd crc32c && git pull && git submodule update --init --recursive)
-#   (cd crc32c && if [[ ! -d build ]] ; then mkdir build ; fi)
-#   (cd crc32c/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=${third_party} -DBUILD_SHARED_LIBS=no -DCRC32C_BUILD_TESTS=0 -DCRC32C_BUILD_BENCHMARKS=0 .. && make all install)
-# fi
-
-must_build=0
-# re2 now from bazel MODULE
-#if [[ ! -d 're2' ]] ; then
-#  git clone https://github.com/google/re2
-#  must_build=1
-#fi
-#if [[ ${must_build} -eq 1 || ! -s "${third_party}/RE2/include/re2/re2.h" ]] ; then
-#  (cd re2 && git pull)
-#  (cd re2 && make prefix=${third_party}/RE2)
-#  (cd re2 && make prefix=${third_party}/RE2 install)
-#fi
-
-# Googletest not handled via MODULE
-# if [[ ! -d 'googletest' ]] ; then
-#   git clone https://github.com/google/googletest
-# fi
-# if [[ ! -f "${third_party}/include/gtest/gtest.h" ]] ; then
-#   (cd googletest && git pull)
-#   (cd googletest && mkdir build)
-#   (cd googletest && cd build && cmake -DCMAKE_INSTALL_PREFIX:PATH=${third_party}/GOOGLETEST ..)
-#   (cd googletest && cd build && make install)
-# fi
-
 if [[ ! -d ${third_party}/bin ]] ; then
  mkdir -p ${third_party}/bin
 fi
 
 # Needed if building with cmake, and protoc is not installed
-
-# must_build=0
-# if [[ ! -d 'protobuf' ]] ; then
-#   git clone https://github.com/protocolbuffers/protobuf
-#   must_build=1
-# fi
-# if [[ ${must_build} -eq 1 || ! -d "${third_party}/include/google/protobuf" ]] ; then
-#   (cd protobuf && git pull)
-#   (cd protobuf && git submodule update --init --recursive)
-#   # if bazel is used, the libraries don't get generated, not sure why...
-#   (cd protobuf && cmake . -DCMAKE_CXX_STANDARD=14)
-#   (cd protobuf && cmake --build .)
-# 
-# fi
-
-# oneTBB now available via MODULE
-# must_build=0
-# if [[ ! -s 'oneTBB' ]] ; then
-#   git clone https://github.com/oneapi-src/oneTBB
-#   must_build=1
-# fi
-# if [[ ${must_build} -eq 1 || ! -s "${third_party}/TBB//lib/libtbb.so" ]] ; then
-#   (cd oneTBB && git pull)
-#   (cd oneTBB && mkdir build)
-#   (cd oneTBB && cd build && cmake -DCMAKE_INSTALL_PREFIX:PATH=${third_party}/TBB -DTBB_TEST=OFF -DBUILD_SHARED_LIBS=off ..)
-#   (cd oneTBB && cd build && make install)
-# fi
-
-# Eigen now available via MODULE
-# if [[ ! -s 'eigen-3.4.0.tar.bz2' ]] ; then
-#   wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
-#   tar -xvjf eigen-3.4.0.tar.bz2
-# fi
-
-# Now using absl hash functions
-# must_build=0
-# if [[ ! -d 'highwayhash' ]] ; then
-#   git clone https://github.com/google/highwayhash
-#   must_build=1
-#   (cd highwayhash && git config pull.rebase false)
-# fi
-# if [[ ${must_build} -eq 1 || ! -s '${third_party}/highwayhash/lib/libhighwayhash.a' ]] ; then
-#   (cd highwayhash && git pull)
-#   (cd highwayhash && make)
-# fi
 
 must_build=0
 if [[ ! -s 'f2c.tar.gz' ]] ; then
@@ -181,6 +109,13 @@ if [[ -v BUILD_BDB ]] ; then
   fi
 fi
 
+must_build=0
+if [[ ! -s 'pybind11_protobuf/WORKSPACE' ]] ; then
+  git clone https://github.com/pybind/pybind11_protobuf
+else
+  (cd pybind11_protobuf && git pull)
+fi
+
 # cilk??
 
 # Not yet in the public release.
@@ -196,3 +131,30 @@ fi
 #   mkdir -p "${third_party}/include"
 # fi
 # (cd ${third_party}/include && wget https://github.com/fastfloat/fast_float/releases/download/v3.4.0/fast_float.h)
+
+if [[ -v BUILD_GFP_SERVER ]] ; then
+  if [[ ! -d libzmq ]] ; then
+    git clone https://github.com/zeromq/libzmq
+  else
+    (cd libzmq && git pull)
+  fi
+  if [[ ! -d 'libzmq/cmake-build' ]] ; then
+    mkdir 'libzmq/cmake-build'
+  fi
+  (cd libzmq/cmake-build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} -DBUILD_SHARED=0 ..)
+  (cd libzmq/cmake-build && make -j 4)
+  (cd libzmq/cmake-build && make install)
+
+  if [[ ! -d cppzmq ]] ; then
+    git clone https://github.com/zeromq/cppzmq
+    mkdir cppzmq/build
+  else
+    (cd cppzmq && git pull)
+  fi
+  if [[ ${inside_lilly} -eq 1 ]] ; then
+    ${toplevel}/src/make_cppzmq_lly.sh ${third_party}
+  else
+    (cd cppzmq/build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} ..)
+    (cd cppzmq/build && make -j 4 && make install)
+  fi
+fi

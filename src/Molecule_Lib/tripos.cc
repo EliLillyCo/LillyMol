@@ -15,9 +15,11 @@ using std::endl;
 #include "charge_calculation.h"
 #include "misc2.h"
 #include "molecule.h"
+#include "moleculeio.h"
 #include "rwmolecule.h"
 
-static int assign_default_formal_charges = 0;
+namespace tripos {
+int assign_default_formal_charges = 0;
 
 void 
 set_mol2_assign_default_formal_charges(int a)
@@ -27,7 +29,7 @@ set_mol2_assign_default_formal_charges(int a)
   return;
 }
 
-static int sybyl_write_assigned_atom_types = 0;
+int sybyl_write_assigned_atom_types = 0;
 
 void
 set_mol2_write_assigned_atom_types(int s)
@@ -43,7 +45,7 @@ set_mol2_write_formal_charge_as_partial_charge(int s)
   mol2_write_formal_charge_as_partial_charge = s;
 }
 
-static int mol2_read_charge_column_contains_formal_charges = 0;
+int mol2_read_charge_column_contains_formal_charges = 0;
 
 void 
 set_mol2_read_charge_column_contains_formal_charges(int s)
@@ -56,13 +58,15 @@ set_mol2_read_charge_column_contains_formal_charges(int s)
   in the user specified void ptr
 */
 
-static int place_mol2_residue_information_in_user_specified_void_ptr = 0;
+int place_mol2_residue_information_in_user_specified_void_ptr = 0;
 
 void
 set_place_mol2_residue_information_in_user_specified_void_ptr(int s)
 {
   place_mol2_residue_information_in_user_specified_void_ptr = s;
 }
+
+}  // namespace tripos
 
 Tripos_Residue_Information::Tripos_Residue_Information(int na)
 {
@@ -144,7 +148,7 @@ Molecule::read_molecule_mol2_ds(iwstring_data_source & input)
       input.push_record();    // leave it there for reading next time
   }
 
-  if (assign_default_formal_charges)
+  if (tripos::assign_default_formal_charges)
     _mol2_assign_default_formal_charges();
 
   if (nullptr == _atom_type)    // strange
@@ -152,7 +156,7 @@ Molecule::read_molecule_mol2_ds(iwstring_data_source & input)
   else if (_atom_type->number_elements() > 0 && 0 == _atom_type->ztype().length())
     _atom_type->set_type(ATOM_TYPE_SYBYL);
 
-  int d = discern_chirality_from_3d_coordinates();
+  int d = moleculeio::discern_chirality_from_3d_coordinates();
 
   if (d && 3 == highest_coordinate_dimensionality())
   {
@@ -340,7 +344,7 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input)
 
   Tripos_Residue_Information * tri = nullptr;
 
-  if (place_mol2_residue_information_in_user_specified_void_ptr)
+  if (tripos::place_mol2_residue_information_in_user_specified_void_ptr)
   {
     tri = new Tripos_Residue_Information(na);
     _user_specified_void_ptr = reinterpret_cast<void *>(tri);
@@ -349,7 +353,7 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input)
   if (! _read_molecule_mol2_ds(input, na, nb, aromatic_atom, aromatic_bonds, tri))
     return 0;
 
-  if (unconnect_covalently_bonded_non_organics_on_read())
+  if (moleculeio::unconnect_covalently_bonded_non_organics_on_read())
     _do_unconnect_covalently_bonded_non_organics();
 
   process_delocalised_carbonyl_bonds(aromatic_atom, aromatic_bonds);   // may turn off aromaticity of some of the atoms
@@ -363,7 +367,7 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input)
   if (put_formal_charges_on_neutral_ND3v4())
     _do_put_formal_charges_on_neutral_ND3v4();
 
-  if (assign_default_formal_charges)
+  if (tripos::assign_default_formal_charges)
     _place_formal_charges_on_quat_n_from_mol2();
 
   if (locate_item_in_array(1, na, aromatic_atom) < 0 &&
@@ -646,7 +650,7 @@ Molecule::_parse_tripos_atom_record (const const_IWSubstring & buffer,
   if (nullptr != tri)
     tri->update_residue_information(_number_elements - 1, residue_number, residue_name);
 
-  if (mol2_read_charge_column_contains_formal_charges)
+  if (tripos::mol2_read_charge_column_contains_formal_charges)
     ;
   else if (nullptr == _charges)
   {
@@ -668,7 +672,7 @@ Molecule::_parse_tripos_atom_record (const const_IWSubstring & buffer,
     return 0;
   }
 
-  if (mol2_read_charge_column_contains_formal_charges)
+  if (tripos::mol2_read_charge_column_contains_formal_charges)
   {
     formal_charge_t f;
     if (! convert_float_to_formal_charge(q, f))
@@ -969,7 +973,7 @@ Molecule::write_molecule_mol2 (std::ostream & os)
 int
 Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
 {
-  if (sybyl_write_assigned_atom_types && nullptr == _atom_type)
+  if (tripos::sybyl_write_assigned_atom_types && nullptr == _atom_type)
   {
     cerr << "MOLECULE::_write_molecule_mol2:no atom types available\n";
     return 0;
@@ -987,7 +991,7 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
   os <<  std::setw(5) << _number_elements << std::setw(6) << nb << "      1" << '\n';
   os << "SMALL\n";
 
-  if (mol2_write_formal_charge_as_partial_charge)
+  if (tripos::mol2_write_formal_charge_as_partial_charge)
     os << "USER_CHARGES\n";
   else if (nullptr == _charges)
     os << "NO_CHARGES\n";
@@ -1023,7 +1027,7 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
 
     a->write_coordinates (os);
 
-    if (sybyl_write_assigned_atom_types)
+    if (tripos::sybyl_write_assigned_atom_types)
       os << 'T' << std::left << std::setw(5) << _atom_type->item(i);
     else if (! append_sybyl_atom_type(os, atype[i], a->atomic_symbol()))
     {
@@ -1031,13 +1035,13 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
       cerr << "Atom " << i << " type " << a->atomic_symbol() << ", " << a->ncon() << " connections\n";
     }
 
-    if (mol2_write_formal_charge_as_partial_charge || nullptr != _charges)
+    if (tripos::mol2_write_formal_charge_as_partial_charge || nullptr != _charges)
     {
       os << "     1 <1>       ";
 
       charge_t q;
 
-      if (mol2_write_formal_charge_as_partial_charge)
+      if (tripos::mol2_write_formal_charge_as_partial_charge)
         q = static_cast<charge_t>(_things[i]->formal_charge());
       else
         q = _charges->item(i);

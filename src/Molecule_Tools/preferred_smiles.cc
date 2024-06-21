@@ -1,9 +1,10 @@
 /*
   Writes either the unique smiles (if it can be repinterpreted)
-  or a non-aromatic "unique" smiles
+  or a non-aromatic unique smiles
 */
 
 #include <stdlib.h>
+
 #include <iostream>
 #include <memory>
 
@@ -12,13 +13,12 @@
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
-#include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/standardise.h"
 
 using std::cerr;
-using std::endl;
 
-const char * prog_name = nullptr;
+const char* prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -34,17 +34,22 @@ static int remove_chirality = 0;
 
 static IWString_and_File_Descriptor stream_for_failed_reinterpretation;
 
+// Now that we have the ability to write a unique Kekule form, that
+// can be an option.
+static int default_is_unique_kekule_form = 0;
+
 static void
-usage(int rc)
-{
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
-// clang-format on
+  // clang-format on
+  // clang-format off
   cerr << "  -U <fname>    write failed interpretation molecules to <fname>\n";
+  cerr << "  -k            write the unique Kekule form if possible\n";
   cerr << "  -c            remove chirality\n";
   cerr << "  -l            reduce to largest fragment\n";
   cerr << "  -i <type>     input specification\n";
@@ -52,72 +57,85 @@ usage(int rc)
   cerr << "  -E ...        standard element specifications\n";
   cerr << "  -A ...        standard aromaticity specifications\n";
   cerr << "  -v            verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
 
 static void
-preprocess (Molecule & m)
-{
-  if (reduce_to_largest_fragment)
+preprocess(Molecule& m) {
+  if (reduce_to_largest_fragment) {
     m.reduce_to_largest_fragment();
+  }
 
-  if (chemical_standardisation.active())
+  if (chemical_standardisation.active()) {
     chemical_standardisation.process(m);
+  }
 
-  if (remove_chirality)
+  if (remove_chirality) {
     m.remove_all_chiral_centres();
+  }
 
   return;
 }
 
 /*
-  Here's where you do whatever you want to do with the molecule
-  In this case, we count the number of nitrogen atoms
+  Generate the unique smiles, and if it can be reinterpreted, write that
+  smiles, otherwise non_aromatic_unique_smiles.
+  But see also influence of default_is_unique_kekule_form.
 */
 
 static int
-preferred_smiles (Molecule & m,
-                  IWString_and_File_Descriptor & output)
-{
+preferred_smiles(Molecule& m, IWString_and_File_Descriptor& output) {
+  static constexpr char kSep = ' ';
+
   IWString s = m.unique_smiles();
 
   Molecule tmp;
 
-  if (! tmp.build_from_smiles(s))
-  {
-    output << m.non_aromatic_unique_smiles() << ' ' << m.name() << '\n';
-    molecules_failing_reinterpretation++;
-    if (verbose > 1)
-      cerr << "Failed aromatic form '" << m.name() << "'\n";
-
-    if (stream_for_failed_reinterpretation.is_open())
-    {
-      stream_for_failed_reinterpretation << m.non_aromatic_unique_smiles() << ' ' << m.name() << '\n';
-      stream_for_failed_reinterpretation.write_if_buffer_holds_more_than(32768);
+  // If the smiles can be reinterpreted, use it.
+  if (tmp.build_from_smiles(s)) {
+    if (default_is_unique_kekule_form) {
+      output << tmp.smiles();
+    } else {
+      output << s;
     }
+
+    output << kSep << m.name() << '\n';
+    return 1;
   }
-  else
-    output << s << ' ' << m.name() << '\n';
+
+  // Cannot parse the unique smiles.
+  output << m.non_aromatic_unique_smiles() << kSep << m.name() << '\n';
+
+  molecules_failing_reinterpretation++;
+  if (verbose > 1) {
+    cerr << "Failed aromatic form '" << m.name() << "'\n";
+  }
+
+  if (stream_for_failed_reinterpretation.is_open()) {
+    stream_for_failed_reinterpretation << m.non_aromatic_unique_smiles() << ' '
+                                       << m.name() << '\n';
+    stream_for_failed_reinterpretation.write_if_buffer_holds_more_than(32768);
+  }
 
   return 1;
 }
 
 static int
-preferred_smiles (data_source_and_type<Molecule> & input,
-                  IWString_and_File_Descriptor & output)
-{
-  Molecule * m;
-  while (nullptr != (m = input.next_molecule()))
-  {
+preferred_smiles(data_source_and_type<Molecule>& input,
+                 IWString_and_File_Descriptor& output) {
+  Molecule* m;
+  while (nullptr != (m = input.next_molecule())) {
     molecules_read++;
 
     std::unique_ptr<Molecule> free_m(m);
 
     preprocess(*m);
 
-    if (! preferred_smiles(*m, output))
+    if (!preferred_smiles(*m, output)) {
       return 0;
+    }
 
     output.write_if_buffer_holds_more_than(32768);
   }
@@ -126,46 +144,41 @@ preferred_smiles (data_source_and_type<Molecule> & input,
 }
 
 static int
-preferred_smiles (const char * fname, FileType input_type, 
-                  IWString_and_File_Descriptor & output)
-{
-  assert (nullptr != fname);
+preferred_smiles(const char* fname, FileType input_type,
+                 IWString_and_File_Descriptor& output) {
+  assert(nullptr != fname);
 
-  if (FILE_TYPE_INVALID == input_type)
-  {
+  if (FILE_TYPE_INVALID == input_type) {
     input_type = discern_file_type_from_name(fname);
-    assert (FILE_TYPE_INVALID != input_type);
+    assert(FILE_TYPE_INVALID != input_type);
   }
 
   data_source_and_type<Molecule> input(input_type, fname);
-  if (! input.good())
-  {
+  if (!input.good()) {
     cerr << prog_name << ": cannot open '" << fname << "'\n";
     return 0;
   }
 
-  if (verbose > 1)
+  if (verbose > 1) {
     input.set_verbose(1);
+  }
 
   return preferred_smiles(input, output);
 }
-static int
-preferred_smiles (int argc, char ** argv)
-{
-  Command_Line cl(argc, argv, "vA:E:i:g:lU:c");
 
-  if (cl.unrecognised_options_encountered())
-  {
+static int
+preferred_smiles(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vA:E:i:g:lU:ck");
+
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('A'))
-  {
-    if (! process_standard_aromaticity_options(cl, verbose, 'A'))
-    {
+  if (cl.option_present('A')) {
+    if (!process_standard_aromaticity_options(cl, verbose, 'A')) {
       cerr << "Cannot initialise aromaticity specifications\n";
       usage(5);
     }
@@ -174,85 +187,84 @@ preferred_smiles (int argc, char ** argv)
   set_input_aromatic_structures(1);
   set_display_no_kekule_form_message(0);
 
-  if (cl.option_present('E'))
-  {
-    if (! process_elements(cl, verbose, 'E'))
-    {
+  if (cl.option_present('E')) {
+    if (!process_elements(cl, verbose, 'E')) {
       cerr << "Cannot initialise elements\n";
       return 6;
     }
   }
 
-  if (cl.option_present('g'))
-  {
-    if (! chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g'))
-    {
+  if (cl.option_present('g')) {
+    if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       cerr << "Cannot process chemical standardisation options (-g)\n";
       usage(32);
     }
   }
 
-  if (cl.option_present('l'))
-  {
+  if (cl.option_present('l')) {
     reduce_to_largest_fragment = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will reduce to largest fragment\n";
+    }
   }
 
-  if (cl.option_present('c'))
-  {
+  if (cl.option_present('c')) {
     remove_chirality = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will remove chirality\n";
+    }
+  }
+
+  if (cl.option_present('k')) {
+    default_is_unique_kekule_form = 1;
+    if (verbose) {
+      cerr << "Will try to write the unique Kekule form as default\n";
+    }
   }
 
   FileType input_type = FILE_TYPE_INVALID;
 
-  if (cl.option_present('i'))
-  {
-    if (! process_input_type(cl, input_type))
-    {
+  if (cl.option_present('i')) {
+    if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
-      usage (6);
+      usage(6);
     }
-  }
-  else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-"))
+  } else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-")) {
     input_type = FILE_TYPE_SMI;
-  else if (! all_files_recognised_by_suffix(cl))
+  } else if (!all_files_recognised_by_suffix(cl)) {
     return 4;
+  }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
-  if (cl.option_present('U'))
-  {
+  if (cl.option_present('U')) {
     IWString u = cl.string_value('U');
 
-    if (! u.ends_with(".smi"))
+    if (!u.ends_with(".smi")) {
       u << ".smi";
+    }
 
-    if (! stream_for_failed_reinterpretation.open (u.null_terminated_chars()))
-    {
+    if (!stream_for_failed_reinterpretation.open(u.null_terminated_chars())) {
       cerr << "Cannot open stream for failed interpretation '" << u << "'\n";
       return 2;
     }
 
-    if (verbose)
-      cerr << "Molecules for which unique smiles cannot be reinterpreted written to '" << u << "'\n";
+    if (verbose) {
+      cerr << "Molecules for which unique smiles cannot be reinterpreted written to '"
+           << u << "'\n";
+    }
   }
 
   IWString_and_File_Descriptor output(1);
 
   int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (! preferred_smiles(cl[i], input_type, output))
-    {
+  for (int i = 0; i < cl.number_elements(); i++) {
+    if (!preferred_smiles(cl[i], input_type, output)) {
       rc = i + 1;
       break;
     }
@@ -260,18 +272,19 @@ preferred_smiles (int argc, char ** argv)
 
   output.flush();
 
-  if (verbose)
-    cerr << "Read " << molecules_read << " molecules, " << molecules_failing_reinterpretation << " failed reinterpretation\n";
+  if (verbose) {
+    cerr << "Read " << molecules_read << " molecules, "
+         << molecules_failing_reinterpretation << " failed reinterpretation\n";
+  }
 
   return rc;
 }
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
-  int rc = preferred_smiles (argc, argv);
+  int rc = preferred_smiles(argc, argv);
 
   return rc;
 }

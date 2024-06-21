@@ -436,7 +436,8 @@ FixedBitVector::ConstructFromDaylightAsciiBitRep(const const_IWSubstring& ascii)
   resize(number_bits);
 
   unsigned int bytes_read;
-  if (! (du_ascii2bin(ascii.data(), ascii.length(), reinterpret_cast<unsigned char *>(_bits), bytes_read)))
+  if (! (du_ascii2bin(ascii.data(), ascii.length(),
+                      reinterpret_cast<unsigned char *>(_bits), bytes_read)))
   {
     cerr << "FixedBitVector::ConstructFromDaylightAsciiBitRep: du_ascii2bin failed\n";
     cerr << ascii << '\n';
@@ -459,8 +460,10 @@ IWString
 FixedBitVector::DaylightAsciiRepresentation() const {
   int nchars = 0;
   const int nbytes = _nwords * kBytesPerWord;
-  const char * b = du_bin2ascii(&nchars, nbytes, reinterpret_cast<char *>(_bits));
-  return IWString(b, nchars);
+  char * b = du_bin2ascii(&nchars, nbytes, reinterpret_cast<char *>(_bits));
+  IWString result;
+  result.set_and_assume_ownership(b, nchars);
+  return result;
 }
 
 IWString

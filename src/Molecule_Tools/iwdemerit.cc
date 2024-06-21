@@ -37,7 +37,7 @@ static int verbose = 0;     // visible in substructure_demerits
 
 static int keep_going_after_rejection = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
 const char * prog_name = nullptr;
 

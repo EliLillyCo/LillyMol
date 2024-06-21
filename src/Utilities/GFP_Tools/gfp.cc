@@ -1213,7 +1213,7 @@ IW_General_Fingerprint::flip() {
   return;
 }
 
-// #define DEBUG_TANIMOTO
+//#define DEBUG_TANIMOTO
 
 similarity_type_t
 IW_General_Fingerprint::tanimoto(IW_General_Fingerprint& rhs) {
@@ -1250,9 +1250,9 @@ IW_General_Fingerprint::tanimoto(IW_General_Fingerprint& rhs) {
 #ifdef DEBUG_TANIMOTO
     cerr << _fingerprint[i].nbits() << " bits, " << _fingerprint[i].nset()
          << " bits set and " << fp2.nset() << '\n';
-    _fingerprint[i].PrintOn(cerr);
+    _fingerprint[i].printon(cerr);
     cerr << '\n';
-    fp2.PrintOn(cerr);
+    fp2.printon(cerr);
     cerr << '\n';
     cerr << " FP " << i << " similarity " << _fingerprint[i].tanimoto(fp2) << " weight "
          << _fingerprint_weight[i] << " bic "

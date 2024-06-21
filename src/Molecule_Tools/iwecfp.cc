@@ -30,7 +30,7 @@ static Chemical_Standardisation chemical_standardisation;
 
 static int verbose=0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
 static int add_tails = 0;
 

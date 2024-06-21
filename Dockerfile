@@ -1,17 +1,14 @@
 # builder stage
-FROM gcc:13.2 AS build
+FROM python:3.11.8 AS build
 
 RUN apt-get update && \ 
     apt-get upgrade -y
 
 RUN apt-get install npm -y && \
     npm install -g @bazel/bazelisk && \
-    apt-get install libblas-dev -y && \
-    apt-get install liblapack-dev -y 
+    apt-get install libblas-dev liblapack-dev libzmq3-dev -y
 
-RUN apt-get install python3-minimal -y && \
-    apt-get install python3-pandas python3-scipy python3-absl python3-pybind11 python3-protobuf -y && \
-    rm -f /usr/bin/python && ln -s /usr/bin/python3 /usr/bin/python
+RUN pip install pandas scipy absl-py pybind11 protobuf
 
 COPY . ./LillyMol
 
@@ -22,16 +19,16 @@ ENV LILLYMOL_HOME=/LillyMol \
     BUILD_BDB=1 \
     BUILD_PYTHON=1
 
-RUN ./update_bazel_configs.sh && ./build_third_party.sh && ./build_from_src.sh
+RUN ./build_linux.sh
 
 # final stage
-FROM ubuntu:mantic AS final
+FROM python:3.11.8-slim AS final
 
 RUN apt-get update && \ 
     apt-get upgrade -y && \
-    apt-get install python3-minimal -y && \
-    apt-get install python3-pandas python3-scipy python3-absl python3-pybind11 python3-protobuf -y && \
-    rm -f /usr/bin/python && ln -s /usr/bin/python3 /usr/bin/python
+    apt-get install libgomp1 -y
+
+RUN pip install pandas scipy absl-py pybind11 protobuf
 
 COPY --from=build /LillyMol /LillyMol
 

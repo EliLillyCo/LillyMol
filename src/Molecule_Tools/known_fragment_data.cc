@@ -17,6 +17,11 @@ Known_Fragment_Data::Known_Fragment_Data()
 
   _remove_everything_if_all_fragments_match = 1;
 
+  _remove_non_organics = 1;
+
+  // Turned on by default since chirality is removed from fragments read.
+  _remove_chirality = 1;
+
   return;
 }
 
@@ -91,12 +96,12 @@ Known_Fragment_Data::_common_read(data_source_and_type<Molecule> & input,
                              _formula_usmi & mf,
                              _formula_usmi & usmi)
 {
+  // We do not consider chirality when determining salts.
   Temporarily_Set_Include_Chiral_Info_in_Smiles tsics(0);
 
   Molecule * m;
 
-  while (nullptr != (m = input.next_molecule()))
-  {
+  while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
 
     if (! m->valence_ok())
@@ -150,7 +155,7 @@ just_acid_and_carbon(Molecule & m,
 
 // First scan for an acid group. Ignore the carbons
 
-  int * already_done = new_int(matoms);std::unique_ptr<int> free_already_done(already_done);
+  int * already_done = new_int(matoms);std::unique_ptr<int[]> free_already_done(already_done);
 
   int found_acid = 0;
 
@@ -360,13 +365,13 @@ Known_Fragment_Data::process(Molecule & m)
 
   const int nf = m.number_fragments();
 
-  if (nf <= 1)
+  if (nf <= 1) {
     return 1;
+  }
 
-  _remove_non_organic(m);
-
-  if (m.number_fragments() <= 1)
-    return 1;
+  if (_remove_non_organics) {
+    _remove_non_organic(m);
+  }
 
   resizable_array_p<Molecule> fragments;
 
@@ -444,8 +449,14 @@ Known_Fragment_Data::_scan_known_fragments(Molecule & m,
 
 //  Need to check the unique smiles
 
-    if (fragments.empty())   // something has the formula, need to do more...
+    if (fragments.empty()) {   // something has the formula, need to do more...
       m.create_components(fragments);
+      if (_remove_chirality) {
+        for (Molecule* f : fragments) {
+          f->remove_all_chiral_centres();
+        }
+      }
+    }
 
     Molecule * fi = fragments[frag];
 

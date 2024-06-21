@@ -19,6 +19,7 @@
 
 using std::cerr;
 using std::endl;
+
 static const char * prog_name = nullptr;
 
 static IWString smiles_tag("$SMI<");

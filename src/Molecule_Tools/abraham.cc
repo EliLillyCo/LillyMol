@@ -91,6 +91,14 @@ static int check_for_previously_matched_atoms = 1;
 
 static int process_queries_first_to_last = 1;
 
+// Normally we read a smiles file and produce a descriptor file.
+// Optionally we can read a descriptor file with a smiles as the first
+// column, and optionally, write the same thing.
+static int read_descriptor_file_pipeline = 0;
+static int write_descriptor_file_pipeline = 0;
+
+static int flush_after_every_molecule = 0;
+
 /*
   Indices into the models array of the various types of models
 */
@@ -543,11 +551,12 @@ usage(int rc)
   cerr << "  -h             make implicit hydrogens explicit\n";
   cerr << "  -L <fname>     write molecules with labeled atoms to <fname>\n";
   cerr << "  -o <type>      specify output file type(s) for -L file\n";
-  cerr << "  -G ...         miscellaneous options, enter '-G help' for info\n";
+  cerr << "  -G ...         miscellaneous options controlling the calculation, enter '-G help' for info\n";
   cerr << "  -S <fname>     specify output stream (default is stdout)\n";
   cerr << "  -J <tag>       fingerprint tag\n";
   cerr << "  -p <int>       bit replicates when producing fingerprints\n";
   cerr << "  -y m,n         display query matches (m) and/or non matches (n)\n";
+  cerr << "  -Y ...         miscellaneous options controlling processing, enter '-Y help' for info\n";
   (void)display_standard_chemical_standardisation_options(cerr, 'g');
   (void)display_standard_aromaticity_options(cerr);
   cerr << "  -f             work as a tdt filter\n";
@@ -1370,6 +1379,19 @@ static int *int_output_for_fingerprints = nullptr;
 static double *v = nullptr;
 
 static int
+MaybeFlush(IWString_and_File_Descriptor& output) {
+  if (flush_after_every_molecule) {
+    output.flush();
+    return 1;
+  }
+
+  output.write_if_buffer_holds_more_than(4096);
+
+  return 1;
+}
+
+
+static int
 abraham(Molecule &m, int *already_hit, int *isotope, Queries_and_Additive_Models *models,
         const int number_query_sets, const int nmodels,
         IWString_and_File_Descriptor &output) {
@@ -1431,13 +1453,29 @@ abraham(Molecule &m, int *already_hit, int *isotope, Queries_and_Additive_Models
                              output);
   }
 
-  append_first_token_of_name(m.name(), output);
+  if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (read_descriptor_file_pipeline) {
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    append_first_token_of_name(m.name(), output);
+  } else {
+    append_first_token_of_name(m.name(), output);
+  }
+
+  set_default_iwstring_float_concatenation_precision(5);
 
   for (auto i = 0; i < nmodels; ++i) {
     output << output_separator << static_cast<float>(v[i]);
   }
 
+  set_default_iwstring_float_concatenation_precision(7);
+
   output << '\n';
+
+  MaybeFlush(output);
 
   return output.good();
 }
@@ -1589,13 +1627,23 @@ abraham(const char *fname, FileType input_type, Queries_and_Additive_Models *mod
 
   return abraham(input, models, number_query_sets, nmodels, output);
 }
+static int
+abraham_descriptor_pipeline_line(const const_IWSubstring& buffer, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
+  Molecule m;
+  if (! m.build_from_smiles(buffer)) {
+    cerr << "Bad smiles\n";
+    return 0;
+  }
+
+  return abraham(m, models, number_query_sets, nmodels, output);
+}
 
 static int
 write_header_records(const Queries_and_Additive_Models *models,
-                     const int number_query_sets, const int nmodels,
+                     const int number_query_sets,
                      IWString_and_File_Descriptor &output) {
-  output << "Name";
-
   for (auto i = 0; i < number_query_sets; ++i) {
     models[i].append_model_names(descriptor_prefix, output);
   }
@@ -1607,6 +1655,63 @@ write_header_records(const Queries_and_Additive_Models *models,
   return output.good();
 }
 
+static int
+abraham_descriptor_pipeline(iwstring_data_source& input, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
+  const_IWSubstring buffer;
+
+  static int first_call = 1;
+  if (first_call) {
+    if (! input.next_record(buffer)) {
+      cerr << "abraham_descriptor_pipeline:cannot read header\n";
+      return 0;
+    }
+
+    if (write_descriptor_file_pipeline) {
+      output << buffer << output_separator;
+      write_header_records(models, number_query_sets, output);
+    } else {
+      buffer.remove_leading_words(1);
+      output << buffer << output_separator;
+      write_header_records(models, number_query_sets, output);
+    }
+
+    first_call = 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! abraham_descriptor_pipeline_line(buffer, models, number_query_sets, nmodels, output)) {
+      cerr << "abraham_descriptor_pipeline:error processing\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+abraham_descriptor_pipeline(const char *fname, Queries_and_Additive_Models *models,
+        const int number_query_sets, const int nmodels,
+        IWString_and_File_Descriptor &output) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "abraham_descriptor_pipeline:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return abraham_descriptor_pipeline(input, models, number_query_sets, nmodels, output);
+}
+
+static void
+DisplayDashYOptions() {
+  cerr << " -Y rpipe    input is a descriptor file pipeline  smiles id d1 d2 d3 ...\n";
+  cerr << " -Y wpipe    write a descriptor file pipeline - smiles id d1 d2 d3 ...\n";
+  cerr << " -Y flush    flush output after every molecule processed\n";
+  ::exit(0);
+}
+
 /*
   Once upon a time, the make all hydrogens explicit was -H. I changed it so -h does
   that. Leave the -H option there, but it is now ignored
@@ -1614,7 +1719,7 @@ write_header_records(const Queries_and_Additive_Models *models,
 
 static int
 abraham(int argc, char **argv) {
-  Command_Line cl(argc, argv, "vA:E:i:o:g:F:L:lhJ:rP:G:fp:d:C:y:");
+  Command_Line cl(argc, argv, "vA:E:i:o:g:F:L:lhJ:rP:G:fp:d:C:y:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1648,6 +1753,33 @@ abraham(int argc, char **argv) {
     reduce_to_largest_fragment = 1;
     if (verbose) {
       cerr << "Will reduce multi-fragment molecules to largest fragment\n";
+    }
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "rpipe") {
+        read_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Input assumed to be a descriptor file pipeline\n";
+        }
+      } else if (y == "wpipe") {
+        write_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Will write a descriptor file pipeline\n";
+        }
+      } else if (y == "flush") {
+        flush_after_every_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush after every molecule processed\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions();
+      } else {
+        cerr << "Unrecognised -Y directive '" << y << "'\n";
+        DisplayDashYOptions();
+      }
     }
   }
 
@@ -1945,7 +2077,9 @@ abraham(int argc, char **argv) {
   }
 
   FileType input_type = FILE_TYPE_INVALID;
-  if (function_as_tdt_filter) {
+  if (read_descriptor_file_pipeline) {
+    // do not care about input type
+  } else if (function_as_tdt_filter) {
     ;
   } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
@@ -1988,20 +2122,37 @@ abraham(int argc, char **argv) {
 
   IWString_and_File_Descriptor output(1);
 
-  if (0 == fingerprint_tag.length()) {
-    write_header_records(models, number_query_sets, nmodels, output);
+  if (read_descriptor_file_pipeline) {
+    // header processed elsewhere.
+  } else if (fingerprint_tag.length()) {
+  } else {
+    if (write_descriptor_file_pipeline) {
+      output << "Smiles" << ' ';
+    }
+    output << "Name";
+    write_header_records(models, number_query_sets, output);
   }
 
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++) {
-    if (function_as_tdt_filter) {
-      if (!abraham(cl[i], models, number_query_sets, nmodels, output)) {
-        rc = i + 1;
-        break;
+  if (read_descriptor_file_pipeline) {
+    for (const char* fname: cl) {
+      if (! abraham_descriptor_pipeline(fname, models, number_query_sets, nmodels, output)) {
+        cerr << "Error processing '" << fname << "'\n";
+        return 1;
       }
-    } else if (!abraham(cl[i], input_type, models, number_query_sets, nmodels, output)) {
-      rc = i + 1;
-      break;
+    }
+  } else if (function_as_tdt_filter) {
+    for (const char* fname: cl) {
+      if (! abraham(fname, models, number_query_sets, nmodels, output)) {
+        cerr << "Error processing '" << fname << "'\n";
+        return 1;
+      }
+    }
+  } else {
+    for (const char* fname: cl) {
+      if (!abraham(fname, input_type, models, number_query_sets, nmodels, output)) {
+        cerr << "Error processing '" << fname << "'\n";
+        return 1;
+      }
     }
   }
 
@@ -2027,7 +2178,7 @@ abraham(int argc, char **argv) {
     delete[] acc;
   }
 
-  return rc;
+  return 0;
 }
 
 int

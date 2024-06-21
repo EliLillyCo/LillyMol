@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -36,7 +37,7 @@ static resizable_array_p<Substructure_Hit_Statistics> hydrophillic_queries;
 static Accumulator_Int<int> hydrophobic_atom_count;
 static Accumulator_Int<int> hydrophillic_atom_count;
 
-static int two_connected_sulphur_is_greasy = 1;
+static int two_connected_sulphur_is_greasy = 1;;
 
 static int cf3_is_hydrophillic = 0;
 
@@ -75,6 +76,14 @@ static int min_hydrophillic_section_size = 1;
 
 static int min_min_separation = 2;
 
+// Normally we read a smiles file and produce a descriptor file.
+// Optionally we can read a descriptor file with a smiles as the first
+// column, and optionally, write the same thing.
+static int read_descriptor_file_pipeline = 0;
+static int write_descriptor_file_pipeline = 0;
+
+static int flush_after_every_molecule = 0;
+
 static void
 usage(int rc) {
 // clang-format off
@@ -103,6 +112,7 @@ usage(int rc) {
   cerr << "  -e <num>       minimum separation between sections (default " << min_min_separation << ")\n";
   cerr << "  -S <fname>     file name for labelled molecules\n";
   cerr << "  -n             suppress writing descriptors\n";
+  cerr << "  -Y ...         miscellaneous options, enter '-Y help' for info\n";
   (void) display_standard_aromaticity_options(cerr);
   cerr << "  -v             verbose output\n";
   // clang-format on
@@ -267,7 +277,7 @@ do_form_ratio_descriptors(const resizable_array<float>& hydrophobic_descriptors,
 }
 
 static void
-copy_isotopic_info(int matoms, int* isotope, const int* phobphil, int iso) {
+copy_isotopic_info(int matoms, isotope_t* isotope, const int* phobphil, isotope_t iso) {
   for (int i = 0; i < matoms; i++) {
     if (phobphil[i]) {
       isotope[i] = iso;
@@ -436,7 +446,7 @@ identify_contiguous_sections(const Molecule& m, resizable_array<int>& section_si
 }
 
 static int
-do_write_labelled_smiles(Molecule& m, const int* isotope,
+do_write_labelled_smiles(Molecule& m, const isotope_t* isotope,
                          Molecule_Output_Object& output) {
   m.set_isotopes(isotope);
 
@@ -934,7 +944,7 @@ do_create_descriptors(Molecule& m, int hydrophobic_atoms, int* hydrophobic,
 }
 
 static int
-hydrophobic_sections(Molecule& m, int* hyphil, int* isotope, IWString& output_buffer) {
+hydrophobic_sections(Molecule& m, int* hyphil, isotope_t* isotope, IWString& output_buffer) {
   int matoms = m.natoms();
 
   if (verbose > 1) {
@@ -962,13 +972,16 @@ hydrophobic_sections(Molecule& m, int* hyphil, int* isotope, IWString& output_bu
     copy_isotopic_info(matoms, isotope, hyphob, hydrophobic_isotope);
   }
 
-  const IWString& mname = m.name();
-  if (1 == mname.nwords()) {
-    output_buffer << mname;
+  if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
+    output_buffer << m.smiles() << ' ';
+    output_buffer << m.name();  // includes all previously calculated descriptors.
+  } else if (read_descriptor_file_pipeline) {
+    output_buffer << m.name();  // includes all previously calculated descriptors.
+  } else if (write_descriptor_file_pipeline) {
+    output_buffer << m.smiles() << ' ';
+    append_first_token_of_name(m.name(), output_buffer);
   } else {
-    const_IWSubstring tmp(mname);
-    tmp.truncate_at_first(' ');
-    output_buffer << tmp;
+    append_first_token_of_name(m.name(), output_buffer);
   }
 
   resizable_array<float> hydrophobic_descriptors;
@@ -1067,6 +1080,46 @@ preprocess(Molecule& m) {
 }
 
 static int
+hydrophobic_sections(Molecule& m,
+                     IWString_and_File_Descriptor& output) {
+  preprocess(m);
+
+  const int matoms = m.natoms();
+
+  if (0 == matoms) {
+    cerr << "Skipping empty molecule'" << m.name() << "'\n";
+    return 1;
+  }
+
+  std::unique_ptr<int[]> hyphil;
+
+  if (create_hydrophillic_descriptors) {
+    hyphil.reset(new_int(matoms));
+  }
+
+  std::unique_ptr<isotope_t[]> isotope;
+
+  if (hydrophobic_isotope || hydrophillic_isotope) {
+    isotope.reset(new isotope_t[matoms]);
+    std::fill_n(isotope.get(), matoms, 0);
+  }
+
+  int rc = hydrophobic_sections(m, hyphil.get(), isotope.get(), output);
+
+  if (isotope) {
+    do_write_labelled_smiles(m, isotope.get(), stream_for_labelled_molecules);
+  }
+
+  if (flush_after_every_molecule) {
+    output.flush();
+  } else {
+    output.write_if_buffer_holds_more_than(4096);
+  }
+
+  return rc;
+}
+
+static int
 hydrophobic_sections(data_source_and_type<Molecule>& input,
                      IWString_and_File_Descriptor& output) {
   IWString output_buffer;
@@ -1077,45 +1130,7 @@ hydrophobic_sections(data_source_and_type<Molecule>& input,
 
     std::unique_ptr<Molecule> free_m(m);
 
-    preprocess(*m);
-
-    int matoms = m->natoms();
-
-    if (0 == matoms) {
-      cerr << "Skipping empty molecule'" << m->name() << "'\n";
-      continue;
-    }
-
-    int* hyphil;
-
-    if (create_hydrophillic_descriptors) {
-      hyphil = new_int(matoms);
-    } else {
-      hyphil = nullptr;
-    }
-
-    int* isotope;
-
-    if (hydrophobic_isotope || hydrophillic_isotope) {
-      isotope = new_int(matoms);
-    } else {
-      isotope = nullptr;
-    }
-
-    int rc = hydrophobic_sections(*m, hyphil, isotope, output);
-
-    if (nullptr != hyphil) {
-      delete[] hyphil;
-    }
-
-    if (nullptr != isotope) {
-      do_write_labelled_smiles(*m, isotope, stream_for_labelled_molecules);
-      delete[] isotope;
-    }
-
-    output.write_if_buffer_holds_more_than(32768);
-
-    if (0 == rc) {
+    if (! hydrophobic_sections(*m, output)) {
       return 0;
     }
   }
@@ -1141,67 +1156,69 @@ hydrophobic_sections(const char* fname, FileType input_type,
 }
 
 static void
-create_header_for_set(const char* prefix, IWString& buffer) {
+create_header_for_set(const char* prefix, char sep, IWString& buffer) {
   if (buffer.length()) {
-    buffer << ' ';
+    buffer << sep;
   }
 
   buffer << prefix << "numbr";
-  buffer << ' ' << prefix << "ratio";
-  buffer << ' ' << prefix << "nsect";
-  buffer << ' ' << prefix << "minsz";
-  buffer << ' ' << prefix << "avesz";
-  buffer << ' ' << prefix << "maxsz";
-  buffer << ' ' << prefix << "mxntr";
+  buffer << sep << prefix << "ratio";
+  buffer << sep << prefix << "nsect";
+  buffer << sep << prefix << "minsz";
+  buffer << sep << prefix << "avesz";
+  buffer << sep << prefix << "maxsz";
+  buffer << sep << prefix << "mxntr";
 
-  buffer << ' ' << prefix << "minpi";
-  buffer << ' ' << prefix << "avepi";
-  buffer << ' ' << prefix << "maxpi";
-  buffer << ' ' << prefix << "mpntr";
+  buffer << sep << prefix << "minpi";
+  buffer << sep << prefix << "avepi";
+  buffer << sep << prefix << "maxpi";
+  buffer << sep << prefix << "mpntr";
 
-  buffer << ' ' << prefix << "mxmxd";
-  buffer << ' ' << prefix << "avmxd";
-  buffer << ' ' << prefix << "mxarm";
-  buffer << ' ' << prefix << "avarm";
+  buffer << sep << prefix << "mxmxd";
+  buffer << sep << prefix << "avmxd";
+  buffer << sep << prefix << "mxarm";
+  buffer << sep << prefix << "avarm";
 
-  buffer << ' ' << prefix << "ntrml";
-  buffer << ' ' << prefix << "lgtrm";
+  buffer << sep << prefix << "ntrml";
+  buffer << sep << prefix << "lgtrm";
 
   return;
 }
 
 static int
-do_create_header(IWString& buffer) {
-  create_header_for_set("hpo_HPO", buffer);
+do_create_header(char sep, IWString& buffer) {
+  create_header_for_set("hpo_HPO", sep, buffer);
 
   if (!create_hydrophillic_descriptors) {
     return 1;
   }
 
-  buffer << " hpo_OIratio";
+  buffer << sep << "hpo_OIratio";
 
-  create_header_for_set("hpo_HPI", buffer);
+  create_header_for_set("hpo_HPI", sep, buffer);
 
-  create_header_for_set("hpo_HOI", buffer);
+  create_header_for_set("hpo_HOI", sep, buffer);
 
-  buffer << " hpo_OInumsep";
-  buffer << " hpo_OIminsep";
-  buffer << " hpo_OIavesep";
-  buffer << " hpo_OImaxsep";
+  buffer << sep << "hpo_OInumsep";
+  buffer << sep << "hpo_OIminsep";
+  buffer << sep << "hpo_OIavesep";
+  buffer << sep << "hpo_OImaxsep";
 
-  buffer << " hpo_NTnhphpi";
-  buffer << " hpo_NTfnhopi";
+  buffer << sep << "hpo_NTnhphpi";
+  buffer << sep << "hpo_NTfnhopi";
 
   return 1;
 }
 
+// Write just the descriptor names in the header.
 static int
-do_write_header(IWString_and_File_Descriptor& output) {
+WriteDescriptorNames(IWString_and_File_Descriptor& output) {
+  static constexpr char kSep = ' ';
+
   IWString buffer;
+  do_create_header(kSep, buffer);
 
-  do_create_header(buffer);
-
-  output << "Name " << buffer << '\n';
+  output << kSep << buffer << '\n';
 
   return 1;
 }
@@ -1294,8 +1311,75 @@ parse_specification(Command_Line& cl, char flag, int& simple, int& minsize, int&
 }
 
 static int
+HydrophobicSectionsPipelineLine(const const_IWSubstring& buffer,
+                            IWString_and_File_Descriptor& output) {
+  Molecule m;
+  if (! m.build_from_smiles(buffer)) {
+    cerr << "HydrophobicSectionsPipelineLine:invalid smiles\n";
+    return 0;
+  }
+
+  return hydrophobic_sections(m, output);
+} 
+
+static int
+HydrophobicSectionsPipeline(iwstring_data_source& input,
+                            IWString_and_File_Descriptor& output) {
+  const_IWSubstring buffer;
+  static int first_call = 1;
+  if (first_call) {
+    if (! input.next_record(buffer)) {
+      cerr << "HydrophobicSectionsPipeline:cannot read first record\n";
+      return 0;
+    }
+
+    // If we are writing a descriptor file pipeline, append our header to the existing one.
+    if (write_descriptor_file_pipeline) {
+      output << buffer;
+      WriteDescriptorNames(output);
+    } else {
+      buffer.remove_leading_words(1);
+      output << buffer;
+      WriteDescriptorNames(output);
+    }
+    first_call = 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! HydrophobicSectionsPipelineLine(buffer, output)) {
+      cerr << "Fatal error processing\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+HydrophobicSectionsPipeline(const char* fname,
+                             IWString_and_File_Descriptor& output) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "HydrophobicSectionsPipeline:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return HydrophobicSectionsPipeline(input, output);
+}
+
+
+static void
+DisplayDashYOptions() {
+  cerr << " -Y rpipe    input is a descriptor file pipeline  smiles id d1 d2 d3 ...\n";
+  cerr << " -Y wpipe    write a descriptor file pipeline - smiles id d1 d2 d3 ...\n";
+  cerr << " -Y flush    flush output after every molecule\n";
+  ::exit(0);
+}
+
+static int
 hydrophobic_sections(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vi:A:E:nG:L:e:xo:S:");
+  Command_Line cl(argc, argv, "vi:A:E:nG:L:e:xo:S:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -1316,8 +1400,36 @@ hydrophobic_sections(int argc, char** argv) {
     usage(8);
   }
 
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "rpipe") {
+        read_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Input assumed to be a descriptor file pipeline\n";
+        }
+      } else if (y == "wpipe") {
+        write_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Will write a descriptor file pipeline\n";
+        }
+      } else if (y == "flush") {
+        flush_after_every_molecule = 1;
+        if (verbose) {
+          cerr << "Will flush the output after every molecule read\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions();
+      } else {
+        cerr << "Unrecognised -Y directive '" << y << "'\n";
+        DisplayDashYOptions();
+      }
+    }
+  }
+
   FileType input_type = FILE_TYPE_INVALID;
-  if (cl.option_present('i')) {
+  if (read_descriptor_file_pipeline) {
+  } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
       usage(6);
@@ -1425,16 +1537,28 @@ hydrophobic_sections(int argc, char** argv) {
 
   IWString_and_File_Descriptor output(1);
 
-  if (!do_write_header(output)) {
-    cerr << "Cannot write header\n";
-    return 6;
-  }
+  // If reading a descriptor file with smiles, the header is handled
+  // in the function. 
 
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++) {
-    if (!hydrophobic_sections(cl[i], input_type, output)) {
-      cerr << "Fatal error processing '" << cl[i] << "'\n";
-      rc = i + 1;
+  if (read_descriptor_file_pipeline) {
+    for (const char* fname : cl) {
+      if (! HydrophobicSectionsPipeline(fname, output)) {
+        cerr << "Fatal error processing " << fname << "\n";
+        return 1;
+      }
+    }
+  } else {
+    // For normal molecule input, we write a header for our descriptors.
+    if (write_descriptor_file_pipeline) {
+      output << "Smiles" << ' ';
+    }
+    output << "Name";
+    WriteDescriptorNames(output);
+    for (const char* fname : cl) {
+      if (! hydrophobic_sections(fname, input_type, output)) {
+        cerr << "Fatal error processing '" << fname << "'\n";
+        return 1;
+      }
     }
   }
 
@@ -1454,7 +1578,7 @@ hydrophobic_sections(int argc, char** argv) {
     }
   }
 
-  return rc;
+  return 0;
 }
 
 int

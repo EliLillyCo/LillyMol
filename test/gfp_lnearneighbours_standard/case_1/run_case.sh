@@ -19,21 +19,25 @@ echo "Testing:  $command"
 
 if [ ! -e "$command" ]
 then
-    echo "Executable is not found"
-    exit 1
+  echo "Executable ${command} not found"
+  exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
-diff_tool=../../fileDiff.sh
-$command -p $LILLYMOL_HOME/data/pubchem_example.gfp -T 0.5 $LILLYMOL_HOME/data/pubchem_example.gfp >>log.txt 2>>err.txt
-$diff_tool $name1 $name1_out
-ret=$?
-if [ $ret -eq 1 ]
+diff_tool='../../fileDiff.sh'
+
+golden='out/log.txt'
+stdout='stdout'
+stderr='stderr'
+
+${command} -p "${LILLYMOL_HOME}/data/pubchem_example.gfp" -T 0.5 "${LILLYMOL_HOME}/data/pubchem_example.gfp" > ${stdout} 2> ${stderr}
+${diff_tool} ${stdout} ${golden}
+
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  cat ${stderr}
 fi
-rm log.txt
-rm err.txt
+
+rm ${stdout} ${stderr}

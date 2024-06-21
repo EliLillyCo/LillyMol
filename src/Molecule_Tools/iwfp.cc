@@ -29,9 +29,9 @@ static int function_as_filter = 0;
 
 static int accumulate_statistics = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
-static int tdts_read = 0;
+static uint64_t tdts_read = 0;
 
 static int nbits = 2048;
 
@@ -49,7 +49,7 @@ static int write_non_zero_bits = 0;
   We can collect statistics on which bits are hit
 */
 
-static extending_resizable_array<int> bit_count;
+static extending_resizable_array<uint64_t> bit_count;
 
 /*
   Also on the number of bits hit per fingerprint

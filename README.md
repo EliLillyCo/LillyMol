@@ -59,8 +59,6 @@ If you use the module system
 module load bazelisk
 ```
 If you are NOT building the python bindings, bazel or bazelisk is equivalent.
-If building the python bindings, a frozen version of bazel is needed and this
-is controlled by bazelisk.
 
 The software requires a gcc version of at least version 10. This version of LillyMol
 uses some fairly recent c++ features, which require a recent compiler. The software
@@ -73,8 +71,7 @@ module load bazelisk
 module load git
 ```
 
-Other system components that are needed, which may or may not be
-available.
+Other system components that are needed
 
 * wget
 * unzip
@@ -87,8 +84,20 @@ tested on any other version, although we have no reason to believe
 it will not work with other versions. You will need to install
 ```
 pip install pybind11 absl-py protobuf
+apt install python-dev
 ```
 Note that with the default build (below) Python bindings are not built.
+
+
+Make sure that python-dev and libblas-dev are installed.
+
+```
+sudo apt install python-dev libblas-dev
+```
+Things seem to work seamlessly in virtualenv.
+
+Installation within virtualenv works well.
+
 
 # TLDR
 If you have bazelisk and gcc installed, there is a reasonable possibility that
@@ -118,7 +127,8 @@ make all
 ```
 
 If you look at [Makefile](Makefile) you will see that all it is doing
-is sequentially invoking the three scripts discussed below, possibly with
+is sequentially invoking the three scripts discussed below, with
+different shell variables set.
 
 ### Configuring for bazel
 Within the src directory, the file `WORKSPACE` configures the build environment
@@ -287,15 +297,3 @@ The distribution contains `cmake` infrastructure, that is currently
 not functional.  Within Lilly we have not been able to make it work,
 usually as a result of conflicting protcol buffer versions on the
 system.  Work is ongoing to get cmake working for the public release.
-
-## Overall Recipe to Build (inside Lilly).
-
-```bash
-module load gcc10
-module load bazelisk
-module load git
-# ensure 'python' invokes to a suitable version, install requirements if needed
-# pip install pybind11 absl-py protobuf
-make python berkeleydb
-
-# copy executables and library files out of the repo to their final destination.

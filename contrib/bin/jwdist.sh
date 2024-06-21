@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 # Setup queries for jwcats
 
-if [ -v LILLYMOL_HOME ] ; then
+if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
   export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))

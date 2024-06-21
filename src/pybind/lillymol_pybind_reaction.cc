@@ -95,14 +95,34 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
       },
       "From smirks"
     )
+    .def("construct_from_textproto",
+      [](IWReaction& rxn, const std::string& textproto)->bool {
+        IWString dirname(".");  // maybe make an argument
+        if (! rxn.ConstructFromTextProto(textproto, dirname))  {
+          return false;
+        }
+
+        return true;
+      },
+      ""
+    )
     .def("number_sidechains", &IWReaction::number_sidechains, "Number of sidechains")
     .def("number_sidechains_with_reagents", &IWReaction::number_sidechains_with_reagents, "number_sidechains_with_reagents")
     .def("set_one_embedding_per_start_atom", &IWReaction::set_one_embedding_per_start_atom, "one embedding per start atom")
-    .def("add_sicechain_reagents",
+    .def("add_sidechain_reagents",
       [](IWReaction& rxn, int sidechain, const char* fname, FileType file_type, Sidechain_Match_Conditions& smc)->bool{
         return rxn.add_sidechain_reagents(sidechain, fname, file_type, smc);
       },
       "Add reagents to a sidechain"
+    )
+    .def("add_sidechain_reagent",
+      [](IWReaction& rxn, int sidechain, Molecule& m, const Sidechain_Match_Conditions& smc)->bool {
+        return rxn.add_sidechain_reagent(sidechain, m, smc);
+      },
+      ""
+    )
+    .def("remove_no_delete_all_reagents", &IWReaction::remove_no_delete_all_reagents,
+         "remove, without destroying, all sidechain reagents"
     )
     .def("substructure_search",
       [](IWReaction& rxn, Molecule& m, Substructure_Results& sresults) {
@@ -142,6 +162,70 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
       },
       "generate product based on embedding and iter"
     )
+    .def("perform_reaction",
+      [](IWReaction& rxn, Molecule& scaffold, Molecule& sidechain)->std::optional<std::vector<Molecule>> {
+        return rxn.perform_reaction(scaffold, sidechain);
+      },
+      ""
+    )
+    .def("perform_reaction",
+      [](IWReaction& rxn, Molecule& scaffold, const Set_of_Atoms& scaffold_embedding,
+         std::vector<Molecule>& sidechain)->std::optional<Molecule> {
+        // Just use default match conditions.
+        Sidechain_Match_Conditions smc;
+        for (uint32_t i = 0; i < sidechain.size(); ++i) {
+          if (! rxn.add_sidechain_reagent(i, sidechain[i], smc)) {
+            std::cerr << "perform_reaction:cannot add sidechain reagent " << sidechain[i].name() << '\n';
+            rxn.remove_no_delete_all_reagents();
+            return std::nullopt;
+          }
+        }
+        Molecule result;
+        int rc = rxn.perform_reaction(&scaffold, &scaffold_embedding, result);
+
+        rxn.remove_no_delete_all_reagents();
+        if (rc) {
+          return result;
+        }
+        std::cerr << "Cannot react " << scaffold.name() << '\n';
+        return std::nullopt;
+      },
+      "React scaffold with the sidechains - assumes 1 query match per sidechain"
+    )
+    .def("perform_reaction",
+      [](IWReaction& rxn, Molecule& scaffold, std::vector<Molecule>& sidechain)->std::optional<Molecule> {
+
+        // Just use default match conditions.
+        Sidechain_Match_Conditions smc;
+        for (uint32_t i = 0; i < sidechain.size(); ++i) {
+          if (! rxn.add_sidechain_reagent(i, sidechain[i], smc)) {
+            std::cerr << "perform_reaction:cannot add sidechain reagent " << sidechain[i].name() << '\n';
+            rxn.remove_no_delete_all_reagents();
+            return std::nullopt;
+          }
+        }
+
+        Substructure_Results sresults;
+        if (rxn.substructure_search(scaffold, sresults) != 1) {
+          std::cerr << "perform_reaction:not 1 match to scaffold " << scaffold.name() << '\n';
+          return std::nullopt;
+        }
+
+        Molecule result;
+        int rc = rxn.perform_reaction(&scaffold, sresults.embedding(0), result);
+
+        rxn.remove_no_delete_all_reagents();
+        if (rc) {
+          return result;
+        }
+        std::cerr << "Cannot react " << scaffold.name() << '\n';
+        return std::nullopt;
+
+      },
+      "React scaffold with sidechains, assuming one substructure match all round"
+    )
       
   ;
+
+  rxn.def("set_smirks_lost_atom_means_remove_frgment", &set_smirks_lost_atom_means_remove_frgment, "atoms lost in a smirks are removed");
 }

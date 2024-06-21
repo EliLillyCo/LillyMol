@@ -184,6 +184,8 @@ compute_atoms_with_pi_electrons (const Ring * r, Molecule_to_Match & target)
 }
 #endif
 
+namespace ss_ring {
+
 // Take a simpler view of saturation and unsaturation.
 // If there is any multiple bond, an atom is considered to have pi
 // electrons.
@@ -207,7 +209,6 @@ compute_pi_electrons(const Set_of_Atoms * ring,
 
   return std::tuple<int, int>(awpe, fsat);
 }
-
 
 static int
 compute_within_ring_unsaturation (const Ring * r, Molecule_to_Match & target)
@@ -247,6 +248,34 @@ compute_within_ring_unsaturation (const Ring * r, Molecule_to_Match & target)
 //cerr << "compute_within_ring_unsaturation finds " << rc << " unsaturation\n";
   return rc;
 }
+
+int
+fused_aromatic_neighbours(const Ring& r) {
+  int result = 0;
+  for (int i = 0; i < r.fused_ring_neighbours(); i++) {
+    const Ring * rni = r.fused_neighbour(i);
+    if (rni->is_aromatic()) {
+      ++result;
+    }
+  }
+
+  return result;
+}
+
+int
+fused_non_aromatic_neighbours(const Ring& r) {
+  int result = 0;
+  for (int i = 0; i < r.fused_ring_neighbours(); i++) {
+    const Ring * rni = r.fused_neighbour(i);
+    if (! rni->is_aromatic()) {
+      ++result;
+    }
+  }
+
+  return result;
+}
+
+}  // namespace ss_ring
 
 //#define DEBUG_SS_RING_MATCHES
 
@@ -289,20 +318,22 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
     _ring_size.debug_print(cerr);
 #endif
 
-    if (! _ring_size.matches(rsize)) {
+    if (_ring_size.is_set() && ! _ring_size.matches(rsize)) {
       continue;
     }
 
 //  cerr << "Ring has " << r->fused_ring_neighbours() << '\n';
-    if (! _fused.matches(r->fused_ring_neighbours())) {
+    if (_fused.is_set() && ! _fused.matches(r->fused_ring_neighbours())) {
       continue;
     }
 
-    if (! _largest_number_of_bonds_shared_with_another_ring.matches(r->largest_number_of_bonds_shared_with_another_ring())) {
+    if (_largest_number_of_bonds_shared_with_another_ring.is_set() && 
+        ! _largest_number_of_bonds_shared_with_another_ring.matches(r->largest_number_of_bonds_shared_with_another_ring())) {
       continue;
     }
 
-    if (! _strongly_fused_ring_neighbours.matches(r->strongly_fused_ring_neighbours())) {
+    if (_strongly_fused_ring_neighbours.is_set() &&
+        ! _strongly_fused_ring_neighbours.matches(r->strongly_fused_ring_neighbours())) {
       continue;
     }
 
@@ -357,57 +388,41 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
         }
       }
 
-      if (! _ncon.matches(rcon))
+      if (_ncon.is_set() && ! _ncon.matches(rcon))
         continue;
   
-      if (! _attached_heteroatom_count.matches(ahc))
+      if (_attached_heteroatom_count.is_set() && ! _attached_heteroatom_count.matches(ahc))
         continue;
   
 #ifdef DEBUG_SS_RING_MATCHES
       cerr << "rh = " << rh << " match " << _heteroatom_count.matches(rh) << '\n';
 #endif
 
-      if (! _heteroatom_count.matches(rh))
+      if (_heteroatom_count.is_set() && ! _heteroatom_count.matches(rh))
         continue;
     }
 
-    if (_fused_aromatic_neighbours.is_set())
-    {
-      int arfsn = 0;
-      for (int j = 0; j < r->fused_ring_neighbours(); j++)
-      {
-        const Ring * rnj = r->fused_neighbour(j);
-        if (rnj->is_aromatic())
-          arfsn++;
-      }
+    if (_fused_aromatic_neighbours.is_set()) {
+      const int arfsn = ss_ring::fused_aromatic_neighbours(*r);
 
       if (! _fused_aromatic_neighbours.matches(arfsn))
         continue;
     }
 
-    if (_fused_non_aromatic_neighbours.is_set())
-    {
-      int narfsn = 0;
-      for (int j = 0; j < r->fused_ring_neighbours(); j++)
-      {
-        const Ring * rnj = r->fused_neighbour(j);
-        if (rnj->is_non_aromatic())
-          narfsn++;
-      }
+    if (_fused_non_aromatic_neighbours.is_set()) {
+      int narfsn = ss_ring::fused_non_aromatic_neighbours(*r);
 
       if (! _fused_non_aromatic_neighbours.matches(narfsn))
         continue;
     }
 
-    if (_all_hits_in_same_fragment)
-    {
+    if (_all_hits_in_same_fragment) {
       atom_number_t a = r->item(0);
       hits_in_fragment[m->fragment_membership(a)]++;
     }
 
-    if (_within_ring_unsaturation.is_set())
-    {
-      int ring_unsaturation = compute_within_ring_unsaturation(r, target);
+    if (_within_ring_unsaturation.is_set()) {
+      int ring_unsaturation = ss_ring::compute_within_ring_unsaturation(r, target);
 
       if (! _within_ring_unsaturation.matches(ring_unsaturation))
         continue;
@@ -415,7 +430,7 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
 
     if (_atoms_with_pi_electrons.is_set() || _fully_saturated_atoms.is_set())
     {
-      const auto [awpe, fsat] = compute_pi_electrons(r, target);
+      const auto [awpe, fsat] = ss_ring::compute_pi_electrons(r, target);
       if (_atoms_with_pi_electrons.is_set() && ! _atoms_with_pi_electrons.matches(awpe))
         continue;
       if (_fully_saturated_atoms.is_set() && ! _fully_saturated_atoms.matches(fsat))

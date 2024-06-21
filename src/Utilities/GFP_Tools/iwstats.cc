@@ -1598,9 +1598,19 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
 
     output << "Errors between " << e.minval() << " and " << e.maxval() << " ave "
            << e.average() << '\n';
-    output << "Average absolute error " << ae.average() << '\n';
-    output << "RMS error " << sqrt(ae.sum_of_squares() / static_cast<double>(ae.n()))
-           << '\n';
+    if (all_outputs_have_equals_sign) {
+      write_something_identifying_the_column(predicted_column, output);
+      output << " AAE " << ae.average() << '\n';
+    } else {
+      output << "Average absolute error " << ae.average() << '\n';
+    }
+    if (all_outputs_have_equals_sign) {
+      write_something_identifying_the_column(predicted_column, output);
+      output << " RMS = ";
+      output << sqrt(ae.sum_of_squares() / static_cast<double>(ae.n())) << '\n';
+    } else {
+      output << "RMS error " << sqrt(ae.sum_of_squares() / static_cast<double>(ae.n())) << '\n';
+    }
 
     if (static_cast<float>(0.0) != relative_error_threshold) {
       output << "Average Relative Error " << static_cast<float>(are.average()) << '\n';
@@ -1734,11 +1744,15 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     output << " first " << *(chunk_title) << " (" << number_records << " records)\n";
   }
 
+  float max_diff = 0.0f;
   for (int i = 0; i < ndx; ++i) {
     float o = tmp1[i];
     float p = tmp2[i];
     tmp1[i] = fabs(o - p);
     tmp2[i] = (o - p);
+    if (tmp1[i] > max_diff) {
+      max_diff = tmp1[i];
+    }
   }
 
   Float_Comparator fc;
@@ -1756,6 +1770,10 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     int n = CountLess(tmp1, ndx, diff);
     output << " WITHIN:" << diff << " = " << iwmisc::Fraction<float>(n, ndx) << "\n";
   }
+
+  write_something_identifying_the_column(predicted_column, output);
+  output << " max_error = " << max_diff << '\n';
+
 
 #ifdef DEBUG_CMSR
   for (auto i = 0; i < DEBUG_CMSR; ++i) {

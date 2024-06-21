@@ -17,9 +17,9 @@ class Command_Line;
 class Element_to_Remove : public Element_Matcher
 {
   private:
-    int _molecules_examined;
-    int _molecules_changed;
-    int _atoms_removed;
+    uint64_t _molecules_examined;
+    uint64_t _molecules_changed;
+    uint64_t _atoms_removed;
 
     int _maxcon_to_remove;
     int _add_bond_after_two_connected_removals;

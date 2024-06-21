@@ -192,6 +192,7 @@ usage(int rc)
   cerr << "  -f             forked process for each input file (recommended)\n";
   cerr << "  -p             use parallel sort for final sort (recommended)\n";
   cerr << "  -Y <x>         decrease size of chunk with highest atom count to <x> pct of rest\n";
+  cerr << "  -M ...         other options, enter '-M help' for info\n";
   display_standard_aromaticity_options(cerr);
   cerr << "  -E <symbol>    create element with symbol\n";
   cerr << "  -i <type>      specify input file type. Enter '-i help' for details\n";

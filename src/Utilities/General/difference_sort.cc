@@ -10,6 +10,7 @@
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 
+#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline_v2/cmdline_v2.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/misc.h"
@@ -398,6 +399,20 @@ difference_sort(int argc, char** argv) {
   }
 
   if (verbose) {
+    Accumulator<double> acc;
+    int zero_diff_count = 0;
+    for (const File_Record* f : zdata) {
+      if (f->diff() == 0.0) {
+        ++zero_diff_count;
+      } else {
+        acc.extra(abs(f->diff()));
+      }
+    }
+
+    cerr << "Read " << n << " records, " << zero_diff_count << 
+            " no difference " << iwmisc::Fraction<float>(zero_diff_count, n) << '\n';
+    cerr << acc.n() << " abs diffs btw " << acc.minval() << ' ' << acc.maxval() <<
+            " ave " << static_cast<float>(acc.average()) << '\n';
   }
 
   return rc;

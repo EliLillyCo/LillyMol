@@ -175,3 +175,100 @@ Elements_Needed::_matches_single_element(Molecule_to_Match & target_molecule) co
 
   return _hits_needed.matches(nhits);
 }
+
+RequiredBond::RequiredBond() {
+  _atomic_number_1 = -1;
+  _atomic_number_2 = -1;
+  _btype = INVALID_BOND_TYPE;
+  _min_count = 1;
+}
+
+int
+RequiredBond::Matches(const Molecule& m) const {
+  if (_btype == SINGLE_BOND) {
+    return MatchesSingle(m);
+  }
+  if (_btype == DOUBLE_BOND) {
+    return MatchesDouble(m);
+  }
+  if (_btype == TRIPLE_BOND) {
+    return MatchesTriple(m);
+  }
+  cerr << "RequiredBonds::Matches1:What kind of bond is " << _btype << '\n';
+  return 0;
+}
+
+int
+RequiredBond::MatchesSingle(const Molecule& m) const {
+  int rc = 0;
+  for (const Bond* b : m.bond_list()) {
+    if (! b->is_single_bond()) {
+      continue;
+    }
+    const atomic_number_t z1 = m.atomic_number(b->a1());
+    const atomic_number_t z2 = m.atomic_number(b->a2());
+    if (z1 == _atomic_number_1 && z2 == _atomic_number_2) {
+      ++rc;
+    } else if (z2 == _atomic_number_1 && z1 == _atomic_number_2) {
+      ++rc;
+    } else {
+      continue;
+    }
+
+    if (rc >= _min_count) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int
+RequiredBond::MatchesDouble(const Molecule& m) const {
+  int rc = 0;
+  for (const Bond* b : m.bond_list()) {
+    if (! b->is_double_bond()) {
+      continue;
+    }
+    const atomic_number_t z1 = m.atomic_number(b->a1());
+    const atomic_number_t z2 = m.atomic_number(b->a2());
+    if (z1 == _atomic_number_1 && z2 == _atomic_number_2) {
+      ++rc;
+    } else if (z2 == _atomic_number_1 && z1 == _atomic_number_2) {
+      ++rc;
+    } else {
+      continue;
+    }
+
+    if (rc >= _min_count) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int
+RequiredBond::MatchesTriple(const Molecule& m) const {
+  int rc = 0;
+  for (const Bond* b : m.bond_list()) {
+    if (! b->is_triple_bond()) {
+      continue;
+    }
+    const atomic_number_t z1 = m.atomic_number(b->a1());
+    const atomic_number_t z2 = m.atomic_number(b->a2());
+    if (z1 == _atomic_number_1 && z2 == _atomic_number_2) {
+      ++rc;
+    } else if (z2 == _atomic_number_1 && z1 == _atomic_number_2) {
+      ++rc;
+    } else {
+      continue;
+    }
+
+    if (rc >= _min_count) {
+      return 1;
+    }
+  }
+
+  return 0;
+}

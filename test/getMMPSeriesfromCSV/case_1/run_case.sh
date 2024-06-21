@@ -8,7 +8,7 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
     exit 1
 else
-    BIN_DIR="$LILLYMOL_HOME/contrib/script/py/mmp"
+    BIN_DIR="$LILLYMOL_HOME/contrib/python/mmp"
 fi
 
 test_command=getMMPSeriesfromCSV
@@ -28,23 +28,22 @@ if [ ! -x "$command" ]; then
 fi
 
 in="$test_cmd_top/$case/in/test_data_04.csv"
-out=test_data_4c1.series
 gold_out="$test_cmd_top/$case/out/test_data_4c1.series"
+stdout='test_data_4c1.series'
+stderr='stderr'
 
 echo "Testing: $command"
 
 
-$command -i "$in" -o "$out" -s SMILES -n ID -a PIC50 2>>err.txt
-$diff_tool "$out" "$gold_out"
+$command -i "$in" -o "${stdout}" -s SMILES -n ID -a PIC50 2> ${stderr}
+$diff_tool "${stdout}" "$gold_out"
 
-ret=$?
-
-if [ $ret -eq 1 ]
+if [ $? -eq 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  cat ${stderr}
 fi
 
-rm -f "$out"
-rm -f err.txt
+rm -f ${stdout} ${stderr}

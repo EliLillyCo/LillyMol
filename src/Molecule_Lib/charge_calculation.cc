@@ -1031,24 +1031,6 @@ Molecule :: _gasteiger_partial_charge_procedure (double partial_charge[], double
 int
 Molecule::compute_Gasteiger_partial_charges ()
 {
-  /*  int rc;
-  int n_atoms = natoms();
-  int * atom_type = new int[n_atoms];
-
-  if (find_simplified_sybyl_atom_type_sybyl_style (atom_type))
-    {
-      rc = compute_Gasteiger_partial_charges (atom_type);
-      delete [] atom_type;
-    }
-  else
-    {
-      delete [] atom_type;
-      cerr<<"Unreconized Atom Type Encountered  -- "<<name()<<endl;
-      return 0;
-    }
-  */
-  // new version
-
   int n_atoms = natoms();
   atom_type_t * sybyl_atom_type = new atom_type_t[n_atoms];
   std::unique_ptr<atom_type_t[]> free_sybyl_atom_type(sybyl_atom_type);

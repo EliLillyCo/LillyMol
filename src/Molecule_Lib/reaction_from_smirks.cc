@@ -14,9 +14,8 @@
 #include "molecule_to_query.h"
 
 using std::cerr;
-using std::endl;
 
-static int smirks_lost_atom_means_remove_frgment = 0;
+static int smirks_lost_atom_means_remove_frgment = 1;
 
 void
 set_smirks_lost_atom_means_remove_frgment(int s)
@@ -89,11 +88,11 @@ IWReaction::_construct_from_smirks(const const_IWSubstring & smirks)
 
   smirks.from_to(0, first_open_angle - 1, reagents);
 
-//cerr << "Reagents " << reagents << endl;
+//cerr << "Reagents " << reagents << '\n';
 
   smirks.from_to(second_open_angle + 1, smirks.length() - 1, products);
 
-//cerr << "products " << products << endl;
+//cerr << "products " << products << '\n';
 
   return construct_from_smirks(reagents, products);
 }
@@ -136,6 +135,7 @@ fetch_closing_paren(const_IWSubstring & buffer,
   in the sidechain.
 */
 
+#ifdef OLD_VERSION_DOES_NOT_WORK
 static int
 tokenise_smarts_into_components(const_IWSubstring smarts,    // pass by value
                                 resizable_array_p<IWString> & components)
@@ -181,7 +181,7 @@ tokenise_smarts_into_components(const_IWSubstring smarts,    // pass by value
         components.add(s);
 
         smarts += (i + 1);
-//      cerr << "Smarts updated to " << smarts << endl;
+//      cerr << "Smarts updated to " << smarts << '\n';
         s = nullptr;
         break;
       }
@@ -198,6 +198,64 @@ tokenise_smarts_into_components(const_IWSubstring smarts,    // pass by value
 
   return components.number_elements();
 }
+#endif
+
+// This badly needs unit tests.
+static int
+tokenise_smarts_into_components(const_IWSubstring smarts,    // pass by value
+                                resizable_array_p<IWString> & components)
+{
+#ifdef debug_TOKENISE_SMARTS_INTO_COMPONENTS
+  cerr << "Smarts '" << smarts << "'\n";
+#endif
+
+  while (smarts.length() > 0) {
+#ifdef debug_TOKENISE_SMARTS_INTO_COMPONENTS
+    cerr << "  smarts '" << smarts << "' length " << smarts.length() << '\n';
+#endif
+
+    if (smarts.starts_with('(')) {
+      IWString * c = new IWString;
+      fetch_closing_paren(smarts, *c);
+      components.add(c);
+      smarts++;
+      if (smarts.starts_with('.'))
+        smarts++;
+    }
+    else
+    {
+      IWString * s = new IWString;
+
+      while (smarts.length() > 0) {
+        const char c = smarts[0];
+
+        if ('.' != c) {
+          s->add(c);
+          smarts++;
+          if (smarts.empty()) {
+            components.add(s);
+            break;
+          }
+          continue;
+        }
+
+        if (smarts.starts_with("...")) {
+          *s << "...";
+          smarts += 3;
+          continue;
+        }
+
+        // We are left with the case of smarts[0] == '.'
+        components.add(s);
+        smarts++;
+        break;
+      }
+    }
+  }
+
+  return components.number_elements();
+}
+
 
 #ifdef NO_LONGER_USED_JJJJJ
 static void
@@ -286,7 +344,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
 
   if (! product_molecule.create_from_smarts(products))
   {
-    cerr << "IWReaction::construct_from_smirks:invalid product " << products << endl;
+    cerr << "IWReaction::construct_from_smirks:invalid product " << products << '\n';
     return 0;
   }
 
@@ -320,7 +378,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
     if (ramn[i] > 0)
       cerr << ' ' << i;
   }
-  cerr << endl;
+  cerr << '\n';
 #endif
 
 // On the LHS, each atom map number must be used once
@@ -346,7 +404,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
     h = h2;
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
-  cerr << "Highest atom map number in use " << h << endl;
+  cerr << "Highest atom map number in use " << h << '\n';
 #endif
 
 // We need to assign atom map numbers to unmapped atoms in the product. These are, by definition
@@ -355,7 +413,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
   product_molecule.assign_atom_map_numbers(h);
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
-  cerr << "After assigning atom map number to product atoms, h = " << h << endl;
+  cerr << "After assigning atom map number to product atoms, h = " << h << '\n';
 #endif
 
 // Ensure that all atom numbers are present. Identify any orphans - atoms in the products that
@@ -377,7 +435,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
   for (int i = 1; i < istop; i++)
   {
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
-    cerr << "i = " << i << " ran " << ramn[i] << " pan " << pamn[i] << endl;
+    cerr << "i = " << i << " ran " << ramn[i] << " pan " << pamn[i] << '\n';
 #endif
 
     if (1 == ramn[i] && 1 == pamn[i])    // one occurrence on LHS and RHS
@@ -401,7 +459,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring & reagents,
       continue;
     }
 
-    cerr << "IWReaction::construct_from_smirks:atom number mismatch, atom " << i << " in reagents " << ramn[i] << " in products " << pamn[i] << endl;
+    cerr << "IWReaction::construct_from_smirks:atom number mismatch, atom " << i << " in reagents " << ramn[i] << " in products " << pamn[i] << '\n';
     return 0;
   }
 
@@ -491,7 +549,7 @@ IWReaction::_create_orphan_molecule(const resizable_array<int> & orphan_atoms,  
     const auto & e = si->element();
     if (e.empty())
     {
-      cerr << "IWReaction::_create_orphan_molecule:RHS orphan atom has no element specified, impossible. Atom map " << oi << endl;
+      cerr << "IWReaction::_create_orphan_molecule:RHS orphan atom has no element specified, impossible. Atom map " << oi << '\n';
       return 0;
     }
 
@@ -547,7 +605,7 @@ IWReaction::_create_orphan_molecule(const resizable_array<int> & orphan_atoms,  
   sc.set_single_reagent(orphan_molecule);
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
-  cerr << "Build orphan molecule " << orphan_molecule.smiles() << endl;
+  cerr << "Build orphan molecule " << orphan_molecule.smiles() << '\n';
 #endif
 
   return 1;
@@ -585,7 +643,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
   for (int i = 0; i < istop; i++)
   {
-//  cerr << "Atom map i " << i << " mapped in reagents " << atom_map_numbers_in_reagents[i] << endl;
+//  cerr << "Atom map i " << i << " mapped in reagents " << atom_map_numbers_in_reagents[i] << '\n';
     if (atom_map_numbers_in_reagents[i] <= 0)   // atom map number not present on LHS, orphan
       continue;
 
@@ -627,7 +685,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
   for (int i = 1; i < istop; ++i)
   {
-    cerr << i << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << endl;
+    cerr << i << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << '\n';
   }
 #endif
 
@@ -637,13 +695,13 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
   for (int i = 0; i < istop; i++)
   {
-//  cerr << i << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << endl;
+//  cerr << i << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << '\n';
 
     Reaction_Site * i_site = _reaction_site_with_atom_map_number(i);    // may be NULL
 
     for (int j = i + 1; j < istop; j++)
     {
-//    cerr << i << ',' << j << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << " j " << ' ' << atom_map_numbers_in_reagents[j] << endl;
+//    cerr << i << ',' << j << " atom_map_numbers_in_reagents " << atom_map_numbers_in_reagents[i] << " j " << ' ' << atom_map_numbers_in_reagents[j] << '\n';
       if (atom_map_numbers_in_reagents[i] <= 0 && atom_map_numbers_in_reagents[j] <= 0)   // numbers not used
         continue;
 
@@ -661,7 +719,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
       else           // not in same reagent, therefore not bonded
         bonded_in_reagent = nullptr; 
 
-//    cerr << "bonded? " << bonded_in_reagent << ' ' << bonded_in_product << endl;
+//    cerr << "bonded? " << bonded_in_reagent << ' ' << bonded_in_product << '\n';
 
       if (nullptr == bonded_in_reagent && nullptr == bonded_in_product)    // no bond btw I and J either side
         continue;
@@ -675,13 +733,13 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 //    the bonding changes. Is it a removal, an addition or a change? What components are involved?
 
 //    cerr << "Between atoms " << i << " and " << j << " reagent? " << bonded_in_reagent << " (" << btr << ") products " << bonded_in_product << " (" << btp << ")\n";
-//    cerr << "Sites " << i_site << " and " << j_site << endl;
+//    cerr << "Sites " << i_site << " and " << j_site << '\n';
 
       if (i_site == j_site)     // new/changed or removed bond in the same component
       {
         const Substructure_Atom * ai = i_site->query_atom_with_atom_map_number(i);
         const Substructure_Atom * aj = j_site->query_atom_with_atom_map_number(j);
-//      cerr << "Atom numbers " << ai->initial_atom_number() << " and " << aj->initial_atom_number() << " xBTP " << btp << endl;
+//      cerr << "Atom numbers " << ai->initial_atom_number() << " and " << aj->initial_atom_number() << " xBTP " << btp << '\n';
         if (INVALID_BOND_TYPE == btp)       // bond is removed
           i_site->add_bond_to_be_broken(ai->initial_atom_number(), aj->initial_atom_number());
         else                    // new or changed
@@ -692,7 +750,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
       if (nullptr != i_site && nullptr != j_site)     // new inter partile bond btw existing reagents
       {
-//      cerr << "Adding inter particle bond btw " << i << " and " << j << endl;
+//      cerr << "Adding inter particle bond btw " << i << " and " << j << '\n';
         if (! _from_smirks_add_inter_particle_bond(i, i_site, j, j_site, btp))
           return 0;
         continue;
@@ -700,7 +758,7 @@ IWReaction::_identify_changes_from_smirks(const extending_resizable_array<int> &
 
 //    One of these atom map numbers is not present on the LHS
 
-//    cerr << "Bond involves different sites. I " << i_site << " J " << j_site << " type " << btp << endl;
+//    cerr << "Bond involves different sites. I " << i_site << " J " << j_site << " type " << btp << '\n';
       assert (INVALID_BOND_TYPE != btp);
 
       if (nullptr == i_site)
@@ -796,11 +854,11 @@ IWReaction::_from_smirks_add_inter_particle_bond_involves_scaffold(int a1, int a
     break;
   }
 
-  cerr << "Atom " << a1 << " in scaffold, atom " << a2 << " in sidechain " << r2 << endl;
+  cerr << "Atom " << a1 << " in scaffold, atom " << a2 << " in sidechain " << r2 << '\n';
 
   if (r2 < 0)
   {
-    cerr << "IWReaction::_from_smirks_add_inter_particle_bond_involves_scaffold:no sidechain for " << a2 << endl;
+    cerr << "IWReaction::_from_smirks_add_inter_particle_bond_involves_scaffold:no sidechain for " << a2 << '\n';
     return 0;
   }
 
@@ -849,7 +907,7 @@ IWReaction::_discern_atomic_changes_specifier(Reaction_Site & r,
     {
       cerr << ' ' << e2[i];
     }
-    cerr << endl;
+    cerr << '\n';
     return 0;
   }
 
@@ -897,7 +955,7 @@ IWReaction::_discern_atomic_changes_specifier(Reaction_Site & r,
   if (2776704 != need_to_set_isotope)
     r.add_isotope_to_be_placed(a, need_to_set_isotope);
 
-//cerr << "need_to_set_isotope " << need_to_set_isotope << endl;
+//cerr << "need_to_set_isotope " << need_to_set_isotope << '\n';
 
   const aromaticity_type_t arom1 = q1.Substructure_Atom_Specifier::aromaticity();
   const aromaticity_type_t arom2 = q2.Substructure_Atom_Specifier::aromaticity();
@@ -956,7 +1014,7 @@ Substructure_Atom::first_specified_isotope() const
   {
     const Substructure_Atom_Specifier * c = _components[i];
 
-    const Min_Max_Specifier<int> & iso = c->isotope();
+    const iwmatcher::Matcher<uint32_t> & iso = c->isotope();
 
     if (iso.number_elements())
       return iso[0];

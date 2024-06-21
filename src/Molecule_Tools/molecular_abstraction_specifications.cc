@@ -375,6 +375,8 @@ Molecular_Abstraction_Directives_Node::directive_recognised()
     _type = MAD_TYPE_SSS;
   else if (MAD_SPINACH == _directive)
     _type = MAD_TYPE_SPINACH;
+  else if (MAD_GRAPH == _directive)
+    _type = MAD_TYPE_GRAPH;
   else
   {
     cerr << "Molecular_Abstraction_Directives_Node::directive_recognised:unrecognised directive '" << _directive << "'\n";

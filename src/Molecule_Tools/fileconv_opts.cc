@@ -26,6 +26,8 @@
 #include "Molecule_Lib/is_actually_chiral.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/mdl.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/moleculeio.h"
 #include "Molecule_Lib/numass.h"
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/path.h"
@@ -377,41 +379,44 @@ DisplayDashhOptions(std::ostream& output) {
 void
 DisplayfOptions(int rc) {
   // clang-format off
-  cerr << "  -f large       trim to largest fragment (can abbreviate to '-f l')\n";
-  cerr << "  -f alarge      determine largest fragment. Keep all fragments with that number of atoms\n";
-  cerr << "  -f lo          trim to fragment with most organic atoms\n";
-  cerr << "  -f lod         trim to fragment with most organic atoms and desirable features\n";
-  cerr << "  -f allo        keep all organic fragments\n";
-  cerr << "  -f RMDUP       remove duplicate fragments\n";
-  cerr << "  -f rmle=nn     remove fragments with NN or fewer atoms\n";
-  cerr << "  -f Q:qfile     keep largest  frag which matches query in <qfile>\n";
-  cerr << "  -f q:qfile     keep smallest frag which matches query in <qfile>\n";
-  cerr << "  -f Q:F:file    keep largest  frag which matches queries in <file>\n";
-  cerr << "  -f q:F:file    keep smallest frag which matches queries in <file>\n";
-  cerr << "  -f SMARTS:smt  keep largest  frag which matches smarts\n";
-  cerr << "  -f smarts:smt  keep smallest frag which matches smarts\n";
-  cerr << "  -f ALL:smt     keep all fragments that match smarts <smarts>\n";
-  cerr << "  -f rm:smt      remove all fragments that match <smarts>\n";
-  cerr << "  -f saltfile=<file> smiles file of known salts - always removed even\n";
-  cerr << "                     if the largest fragment\n";
-  cerr << "  -f parentfile=<file> file of known parent molecules - never removed as salts\n";
-  cerr << "  -f kmfok       compare known salts and parents by molecular formula only - not unique smiles\n";
-  cerr << "  -f kpallsalt   do not change a molecule if every fragment is a known salt\n";
-  cerr << "  -f rmxt=<n>    discard molecules with >1 fragment with more than n atoms\n";
-  cerr << "  -f rmxt        discard molecules with >1 fragment with more than 16 atoms\n";
-  cerr << "  -f sfs         sort fragments by size\n";
-  cerr << "  -f dmxt=<d>    discard molecules where largest fragments differ by <d> atoms or fewer\n";
-  cerr << "  -f manlf=<d>   discard molecules that have a non-largest fragment with more than <d> atoms\n";
-  cerr << "  -f klf=<d>     discard all but the <n> largest fragments\n";
-  cerr << "  -f RMF=<tag>   when processing TDT forms, write removed fragments to <tag>\n";
-  cerr << "  -f rmlarge     remove the largest fragment (arbitrary if two frags of same size\n";
-  cerr << "  -f rmlarge=<n> remove the largest <n> fragments (arbitrary if frags of the same size)\n";
-  cerr << "  -f rmsmall     remove the smallst fragment (arbitrary if two frags of same size\n";
-  cerr << "  -f rmsmall=<n> remove the smallst <n> fragments (arbitrary if frags of the same size)\n";
-  cerr << "  -f keepsmall   remove all but the smallest fragment (arbitrary if frags of the same size)\n";
-  cerr << "  -f keepsmall=<n> remove all but the smallest <n> fragments\n";
-  cerr << "  -f <number>    remove fragments so that all written molecules\n";
-  cerr << "                 have no more than <number> fragments\n";
+  cerr << R"(
+ -f large       trim to largest fragment (can abbreviate to '-f l')
+ -f alarge      determine largest fragment. Keep all fragments with that number of atoms
+ -f lo          trim to fragment with most organic atoms
+ -f lod         trim to fragment with most organic atoms and desirable features
+ -f allo        keep all organic fragments
+ -f RMDUP       remove duplicate fragments
+ -f rmle=nn     remove fragments with NN or fewer atoms
+ -f Q:qfile     keep largest  frag which matches query in <qfile>
+ -f q:qfile     keep smallest frag which matches query in <qfile>
+ -f Q:F:file    keep largest  frag which matches queries in <file>
+ -f q:F:file    keep smallest frag which matches queries in <file>
+ -f SMARTS:smt  keep largest  frag which matches smarts
+ -f smarts:smt  keep smallest frag which matches smarts
+ -f ALL:smt     keep all fragments that match smarts <smarts>
+ -f rm:smt      remove all fragments that match <smarts>
+ -f saltfile=<file> smiles file of known salts - always removed even if the largest fragment
+ -f parentfile=<file> file of known parent molecules - never removed as salts
+ -f xchirals    ignore chirality when processing a saltfile
+ -f kmfok       compare known salts and parents by molecular formula only - not unique smiles
+ -f kpallsalt   do not change a molecule if every fragment is a known salt
+ -f noxorganic do NOT discard non organic fragments when saltfile present.
+ -f rmxt=<n>    discard molecules with >1 fragment with more than n atoms
+ -f rmxt        discard molecules with >1 fragment with more than 16 atoms
+ -f sfs         sort fragments by size
+ -f dmxt=<d>    discard molecules where largest fragments differ by <d> atoms or fewer
+ -f manlf=<d>   discard molecules that have a non-largest fragment with more than <d> atoms
+ -f klf=<d>     discard all but the <n> largest fragments
+ -f RMF=<tag>   when processing TDT forms, write removed fragments to <tag>
+ -f rmlarge     remove the largest fragment (arbitrary if two frags of same size
+ -f rmlarge=<n> remove the largest <n> fragments (arbitrary if frags of the same size)
+ -f rmsmall     remove the smallst fragment (arbitrary if two frags of same size
+ -f rmsmall=<n> remove the smallst <n> fragments (arbitrary if frags of the same size)
+ -f keepsmall   remove all but the smallest fragment (arbitrary if frags of the same size)
+ -f keepsmall=<n> remove all but the smallest <n> fragments
+ -f <number>    remove fragments so that all written molecules
+                have no more than <number> fragments
+)";
   // clang-format on
 
 
@@ -493,15 +498,17 @@ DisplayDashYOptions(std::ostream& os, int rc) {
 void
 DisplayDashIOptions(char flag, std::ostream& os) {
   // clang-format off
-  os << " -" << flag << " 0             discard molecules containing any isotopic atoms\n";
-  os << " -" << flag << " change        change any isotopic atoms to normal form\n";
-  os << " -" << flag << " change=<n>    change any isotope <n> atoms to normal form\n";
-  os << " -" << flag << " change=<i,j>  change any isotope <i> atoms to isotope <j>\n";
-  os << " -" << flag << " CHANGE        change to normal form. Free implicit H. Should be default\n";
-  os << " -" << flag << " alliso=<i>    change any isotopic atoms to isotope <i>\n";
-  os << " -" << flag << " smarts:<i>    change any atoms matching <smarts> to isotope <i>, e.g. '[2C],0' or '[#16],4'\n";
-  os << " -" << flag << " remove        remove any isotopically labelled atoms\n";
-  os << " -" << flag << " help          this message\n";
+  cerr << R"(
+  -I 0             discard molecules containing any isotopic atoms.
+  -I change        change any isotopic atoms to normal form
+  -I change=<n>    change any isotope <n> atoms to normal form
+  -I change=<i,j>  change any isotope <i> atoms to isotope <j>
+  -I CHANGE        change to normal form. Free implicit H. Should be default
+  -I alliso=<i>    change any isotopic atoms to isotope <i>
+  -I smarts:<i>    change any atoms matching <smarts> to isotope <i>, e.g. '[2C],0' or '[#16],4'
+  -I firstatom:smarts:<i> in a multi-atom smarts, set the isotope only on the first matched atom
+  -I remove        remove any isotopically labelled atoms
+)";
   // clang-format on
 
   exit(1);
@@ -2869,7 +2876,7 @@ int
 do_convert_specific_isotopes_query(Molecule& m,
                                    Molecule_to_Match& target,
                                    Substructure_Query& q,
-                                   const int new_isotope) {
+                                   const isotope_t new_isotope) {
   Substructure_Results sresults;
 
   const int nhits = q.substructure_search(target, sresults);
@@ -2887,11 +2894,15 @@ do_convert_specific_isotopes_query(Molecule& m,
 
     for (int j = 0; j < n; ++j) {
       const atom_number_t k = e->item(j);
-
-      const int iso = m.isotope(k);
-
-      if (iso == new_isotope)
+      if (k == INVALID_ATOM_NUMBER) {
         continue;
+      }
+
+      const isotope_t iso = m.isotope(k);
+
+      if (iso == new_isotope) {
+        continue;
+      }
 
       m.set_isotope(k, new_isotope);
       rc++;
@@ -2905,7 +2916,7 @@ int
 do_convert_specific_isotopes_query(
     Molecule& m,
     const resizable_array_p<Substructure_Query>& convert_specific_isotopes_query,
-    const resizable_array<int>& convert_specific_isotopes_query_new_isotope) {
+    const resizable_array<isotope_t>& convert_specific_isotopes_query_new_isotope) {
   assert(convert_specific_isotopes_query.number_elements() ==
          convert_specific_isotopes_query_new_isotope.number_elements());
   int rc = 0;
@@ -2944,8 +2955,8 @@ do_convert_all_isotopes_to(Molecule& m, const int convert_all_isotopes_to)
 
 int
 do_convert_specific_isotopes(Molecule& m,
-                             const resizable_array<int>& convert_specific_isotopes,
-                             const resizable_array<int>& convert_specific_isotopes_new_isotope) {
+                             const resizable_array<isotope_t>& convert_specific_isotopes,
+                             const resizable_array<isotope_t>& convert_specific_isotopes_new_isotope) {
   const int matoms = m.natoms();
 
   int rc = 0;
@@ -3409,7 +3420,9 @@ FileconvConfig::Process(Molecule& m) {
   }
 
   if (remove_invalid_chiral_centres) {
-    int nr = do_remove_invalid_chiral_centres(m);
+    int nr = lillymol::RemoveInvalidChiralCentresUsingSymmetry(m);
+    //This also works ok, but seems less reliable than the above.
+    //int nr = lillymol::do_remove_invalid_chiral_centres(m);
     if (nr) {
       molecules_with_invalid_chiral_centres++;
 
@@ -3624,11 +3637,14 @@ FileconvConfig::ParseOrganicSpecification(Command_Line& cl, char flag) {
       ok_non_organics.add(e);
 
       const Element* ele = e->element();
-      if (nullptr != ele)
+      if (nullptr != ele) {
         allowed_elements.set_allow(ele->atomic_number(), 1);
+        const_cast<Element*>(ele)->set_organic(1);
+      }
 
-      if (verbose)
+      if (verbose) {
         cerr << "ok_non_organics added '" << o << "'\n";
+      }
 
       output_organic_only = 1;
     }
@@ -3720,6 +3736,74 @@ FileconvConfig::ParseFragmentAddToIsotope(const const_IWSubstring& s) {
   return 1;
 }
 
+// Recursively exclude child atoms from embedding.
+void
+ExcludeChildren(Substructure_Atom& a) {
+  const int nchildren = a.number_children();
+  for (int i = 0; i < nchildren; ++i) {
+    Substructure_Atom* c = a.child(i);
+    c->set_include_in_embedding(0);
+    ExcludeChildren(*c);
+  }
+}
+
+int
+OnlyIncludeFirstAtom(Substructure_Query& query) {
+  for (Single_Substructure_Query* q : query) {
+    bool first_atom = true;
+    const int nroot = q->root_atoms();
+    for (int i = 0; i < nroot; ++i) {
+      Substructure_Atom* a = const_cast<Substructure_Atom*>(q->root_atom(i));
+
+      if (first_atom) {
+        first_atom = false;
+      } else {
+        a->set_include_in_embedding(0);
+      }
+      ExcludeChildren(*a);
+    }
+  }
+
+  return 1;
+}
+
+// Parse something like 'smarts,iso' and place the results into
+// `query` and `isotope`.
+int
+ParseAsSmartsAndIsotope(IWString& buffer,
+                        resizable_array_p<Substructure_Query>& query,
+                        resizable_array<isotope_t>& isotope) {
+  const int ndx = buffer.rindex(',');
+
+  if (ndx < 0) {
+    cerr << "The smarts for converting isotopes must have be 'smarts,new_isotope', '" << buffer
+         << "' invalid\n";
+    return 0;
+  }
+
+  const_IWSubstring s;
+  buffer.from_to(0, ndx - 1, s);
+
+  std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
+
+  if (!q->create_from_smarts(s)) {
+    cerr << "Invalid smarts in isotopic directives '" << buffer << "'\n";
+    return 0;
+  }
+
+  buffer.from_to(ndx + 1, buffer.length() - 1, s);
+  isotope_t x;
+  if (!s.numeric_value(x) || x < 0) {
+    cerr << "Invalid isotope in isotopic directives '" << buffer << "' '" << s << "'\n";
+    return 0;
+  }
+
+  query.add(q.release());
+  isotope.add(x);
+
+  return 1;
+}
+
 int
 FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
   if (!cl.option_present(flag)) {
@@ -3765,12 +3849,14 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
           cerr << "The isotopic conversion directive must contain a valid set of isotopes '" << tmp
                << "' invalid\n";
           DisplayDashIOptions('I', cerr);
+          return 0;
         }
       } else {
         if (!tmp.numeric_value(a) || a < 0) {
           cerr << "The isotopic conversion directive must contain a valid set of isotopes '" << tmp
                << "' invalid\n";
           DisplayDashIOptions('I', cerr);
+          return 0;
         }
       }
 
@@ -3783,40 +3869,27 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
                tmp.starts_with("smarts:"))  // must be of the form 'smarts,new'
     {
       tmp.remove_leading_chars(7);
-
-      const int ndx = tmp.rindex(',');
-
-      if (ndx < 0) {
-        cerr << "THe smarts for converting isotopes must have be 'smarts,new_isotope', '" << tmp
-             << "' invalid\n";
+      if (! ParseAsSmartsAndIsotope(tmp, convert_specific_isotopes_query, 
+                                    convert_specific_isotopes_query_new_isotope)) {
+        cerr << "Invalid 'smarts=' directive '" << tmp << "'\n";
         DisplayDashIOptions('I', cerr);
+        return 0;
       }
-
-      const_IWSubstring s;
-      tmp.from_to(0, ndx - 1, s);
-
-      std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
-
-      if (!q->create_from_smarts(s)) {
-        cerr << "Invalid smarts in isotopic directives '" << tmp << "'\n";
-        return 1;
+    } else if (tmp.starts_with("firstatom:") || tmp.starts_with("firstatom=")) {
+      tmp.remove_leading_chars(10);
+      if (! ParseAsSmartsAndIsotope(tmp, convert_specific_isotopes_query,
+                                    convert_specific_isotopes_query_new_isotope)) {
+        cerr << "Invalid 'firstatom:' directive '" << tmp << "'\n";
+        return 0;
       }
-
-      tmp.from_to(ndx + 1, tmp.length() - 1, s);
-      int x;
-      if (!s.numeric_value(x) || x < 0) {
-        cerr << "Invalid isotope in isotopic directives '" << tmp << "' '" << s << "'\n";
-        return 1;
-      }
-
-      convert_specific_isotopes_query.add(q.release());
-      convert_specific_isotopes_query_new_isotope.add(x);
+      OnlyIncludeFirstAtom(*convert_specific_isotopes_query.back());
     } else if (tmp.starts_with("alliso=")) {
       tmp.remove_leading_chars(7);
       if (!tmp.numeric_value(convert_all_isotopes_to) || convert_all_isotopes_to < 0) {
         cerr << "The convert all isotopes 'alliso=' directive must have a valid isotopic value, '"
              << tmp << "' invalid\n";
         DisplayDashIOptions('I', cerr);
+        return 0;
       }
 
       if (verbose)
@@ -4208,7 +4281,7 @@ FileconvConfig::GetChiralityInstructions(Command_Line& cl, char flag) {
       if (verbose)
         cerr << "Will reflect coordinates and invert chiral centres\n";
     } else if ("discard" == tmp) {
-      set_ignore_all_chiral_information_on_input(1);
+      moleculeio::set_ignore_all_chiral_information_on_input(1);
       if (verbose)
         cerr << "All chiral information in input will be discarded\n";
     } else if ("remove" == tmp) {
@@ -4216,7 +4289,7 @@ FileconvConfig::GetChiralityInstructions(Command_Line& cl, char flag) {
       if (verbose)
         cerr << "Will strip all chiral information from molecules\n";
     } else if ("good" == tmp || "ignore" == tmp) {
-      set_ignore_incorrect_chiral_input(1);
+      moleculeio::set_ignore_incorrect_chiral_input(1);
       if (verbose)
         cerr << "Incorrect chiral specifications will be ignored\n";
     } else if ("rmbad" == tmp) {
@@ -4483,8 +4556,9 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
       } else if ("RMDUP" == f) {
         remove_duplicate_fragments = 1;
 
-        if (verbose)
+        if (verbose) {
           cerr << "Will remove duplicate fragments\n";
+        }
       } else if (f.starts_with("saltfile=")) {
         f.remove_leading_chars(9);
         if (!known_fragment_data.read_known_salts(f)) {
@@ -4499,10 +4573,18 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         }
       } else if ("kmfok" == f) {
         known_fragment_data.set_only_check_molecular_formula(1);
+        if (verbose) {
+          cerr << "Will only consider the molecular formula when processing the saltfile\n";
+        }
       } else if ("kpallsalt" == f) {
         known_fragment_data.set_remove_everything_if_all_fragments_match(0);
         if (verbose)
           cerr << "Will not change molecule consisting of all salts\n";
+      } else if (f == "noxorganic" ) {
+        known_fragment_data.set_remove_non_organics(0);
+        if (verbose) {
+          cerr << "Will NOT discard non organic fragments when saltfile specified\n";
+        }
       } else if (f.starts_with("rmxt=")) {
         f.remove_leading_chars(5);
 
@@ -4669,7 +4751,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
                << " fragments will be skipped\n";
       } else {
         cerr << "Unrecognised -F qualitifier '" << f << "'\n";
-        return 3;
+        return 0;
       }
     }
 
@@ -4863,7 +4945,7 @@ FileconvConfig::ParseRingFiltering(Command_Line& cl) {
         }
         if (verbose) {
           cerr << "Molecules with fewer than " << min_ring_systems_required <<
-                  " will be discarded\n";
+                  " ring systems will be discarded\n";
         }
       } else if (r.starts_with("aliph:")) {
         r.remove_leading_chars(6);
@@ -5359,26 +5441,26 @@ FileconvConfig::Build(Command_Line& cl) {
   }
 
   if (!process_elements(cl))
-    Usage(2);
+    return 0;
 
   if (!process_standard_smiles_options(cl, verbose)) {
-    Usage(4);
+    return 0;
   }
 
   if (!process_standard_aromaticity_options(cl, verbose)) {
-    Usage(5);
+    return 0;
   }
 
   if (cl.option_present('g')) {
     if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
-      Usage(6);
+      return 0;
     }
   }
 
   if (cl.option_present('N')) {
     if (!charge_assigner.construct_from_command_line(cl, verbose, 'N')) {
       cerr << "Cannot determine charge assigner from command line\n";
-      Usage(77);
+      return 0;
     }
 
     if (Daylight != global_aromaticity_type()) {
@@ -5391,13 +5473,13 @@ FileconvConfig::Build(Command_Line& cl) {
   if (cl.option_present('H')) {
     if (!donor_acceptor_assigner.construct_from_command_line(cl, 'H', verbose)) {
       cerr << "Cannot initialise donor/acceptor assigner (-H option)\n";
-      Usage(6);
+      return 0;
     }
   }
 
   if (cl.option_present('t')) {
     if (!element_transformations.construct_from_command_line(cl, verbose, 't'))
-      Usage(8);
+      return 0;
   }
 
   // Processing the -O option is hard because it might be either
@@ -5407,7 +5489,7 @@ FileconvConfig::Build(Command_Line& cl) {
   if (cl.option_present('O')) {
     if (!ParseOrganicSpecification(cl, 'O')) {
       DisplayDashOOptions('O', cerr);
-      return 3;
+      return 0;
     }
   }
 
@@ -5431,28 +5513,28 @@ FileconvConfig::Build(Command_Line& cl) {
   }
 
   if (!GetChiralityInstructions(cl, 's')) {
-    return 1;
+    return 0;
   }
 
   if (!GetChargeCalculation(cl, 'Q')) {
-    return 1;
+    return 0;
   }
 
   if (!GetFragmentSpecifications(cl)) {
-    return 1;
+    return 0;
   }
 
   if (cl.option_present('J')) {
     if (!structure_fixing.initialise(cl, 'J', verbose > 1)) {
       cerr << "Cannot initialise structure fixing (-J option)\n";
-      Usage(4);
+      return 0;
     }
   }
 
   if (cl.option_present('X')) {
     if (!elements_to_remove.construct_from_command_line(cl, verbose, 'X')) {
       cerr << "Cannot discern elements to remove from -X switch\n";
-      Usage(18);
+      return 0;
     }
   }
 
@@ -5466,28 +5548,28 @@ FileconvConfig::Build(Command_Line& cl) {
            cl.option_present('S')) {
     cerr << "Filtering and output options like -c, -C -I -s and -S don't make sense with the -a "
             "option\n";
-    return 5;
+    return 0;
   }
 
   if (!ParseMolecularWeightSpecifications(cl)) {
-    return 1;
+    return 0;
   }
 
   if (!ParseAtomCountDirectives(cl)) {
-    return 1;
+    return 0;
   }
 
   if (!number_assigner.initialise(cl, 'n', verbose)) {
     cerr << "Cannot process -n option\n";
-    Usage(51);
+    return 0;
   }
 
   if (!ParseRingFiltering(cl)) {
-    return 1;
+    return 0;
   }
 
   if (! ParseImplicitHydrogenDirectives(cl, 'h')) {
-    return 1;
+    return 0;
   }
 
   if (cl.option_present('V')) {
@@ -5497,25 +5579,25 @@ FileconvConfig::Build(Command_Line& cl) {
   }
 
   if (!GetIsotopeDirectives(cl, 'I')) {
-    return 1;
+    return 0;
   }
 
   if (!GetTranslations(cl, 'T')) {
-    return 1;
+    return 0;
   }
 
 #ifdef NOT_IMPLEMENTED_YET
   if (! ParseMkFragOptions(cl, 'D')) {
-    return 1;
+    return 0;
   }
 #endif
 
   if (!ParseMiscOptions(cl, 'Y')) {
-    return 1;
+    return 0;
   }
 
   if (!GatherAppendSpecifications(cl, 'p')) {
-    return 1;
+    return 0;
   }
 
   return 1;

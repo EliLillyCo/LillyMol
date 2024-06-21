@@ -1,1 +1,2 @@
-smi: "[1CH]1=CC=CC2=CC=CC=C12" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax3r6r6D3]2:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax3r6r6D3]:1:2" id: "CHEMBL1550427.6Ar6Ar" n: 2 conn: true usmi: "[1cH]1c2c(ccc1)cccc2" 
+smi: "C1=CC=CC2=CC=CC=C12" smt: "[ax2r6]1:[ax2r6]:[ax2r6]:[ax2r6]:[ax3r6]2:[ax2r6]:[ax2r6]:[ax2r6]:[ax2r6]:[ax3r6]:1:2" id: "CHEMBL1550427.6Ar6Ar" n: 1 conn: false usmi: "c1ccc2c(c1)cccc2" 
+smi: "[1CH]1=CC=CC2=CC=CC=C12" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax3r6D3]2:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax3r6D3]:1:2" id: "CHEMBL1550427.6Ar6Ar" n: 1 conn: true usmi: "[1cH]1c2c(ccc1)cccc2" 

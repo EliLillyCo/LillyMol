@@ -19,6 +19,7 @@ local_install(
         ":descriptor_file_transpose",
         ":descriptors_to_fingerprint",
         ":dfilefilter",
+        ":dicer_fragments_collate",
         ":difference_sort",
         ":distribution",
         ":exon_correlated",
@@ -44,6 +45,7 @@ local_install(
         ":numeric_differences",
         ":nn_single_linkage",
         ":ppv",
+        ":random_column_order",
         ":random_records",
         ":rmsigma",
         ":running_average",
@@ -178,6 +180,7 @@ cc_binary(
         "difference_sort.cc",
     ],
     deps = [
+        "//Foundational/accumulator",
         "//Foundational/cmdline_v2:cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc:iwmisc",
@@ -206,6 +209,51 @@ py_proto_library(
     name = "feature_scaling_py_proto",
     srcs = [
         "feature_scaling.proto",
+    ],
+)
+
+proto_library(
+    name = "xgboost_model_proto",
+    srcs = [
+        "xgboost_model.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "xgboost_model_cc_proto",
+    deps = [
+        "xgboost_model_proto",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+py_proto_library(
+    name = "xgboost_model_py_proto",
+    srcs = [
+        "xgboost_model.proto",
+    ],
+)
+
+proto_library(
+    name = "random_forest_model_proto",
+    srcs = [
+        "random_forest_model.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "random_forest_model_cc_proto",
+    deps = [
+        "random_forest_model_proto",
+    ]
+)
+
+py_proto_library(
+    name = "random_forest_model_py_proto",
+    srcs = [
+        "random_forest_model.proto",
     ],
 )
 
@@ -337,6 +385,21 @@ cc_binary(
     name = "dicer_fragments_collate",
     srcs = [
         "dicer_fragments_collate.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline_v2",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwstring",
+        "//Molecule_Tools:dicer_fragments_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_binary(
+    name = "dicer_complementary_fragments_collate",
+    srcs = [
+        "dicer_complementary_fragments_collate.cc",
     ],
     deps = [
         "//Foundational/cmdline_v2",
@@ -691,6 +754,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "random_column_order",
+    srcs = [
+        "random_column_order.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring",
+    ],
+)
+
+cc_binary(
     name = "random_records",
     srcs = [
         "random_records.cc",
@@ -900,6 +976,24 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
+    ],
+)
+
+cc_binary(
+    name = "xgboost_model_evaluate",
+    srcs = [
+        "xgboost_model_evaluate.cc",
+    ],
+    deps = [
+        ":xgboost_model_cc_proto",
+        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
+        "@xgboost//:xgboost",
+        "@dlmc//:dlmc",
+    ],
+    tags = [
+        "xgboost",
     ],
 )
 

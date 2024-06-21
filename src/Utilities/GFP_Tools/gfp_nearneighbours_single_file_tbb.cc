@@ -26,6 +26,7 @@
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/histogram/iwhistogram.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/iwdigits.h"
@@ -34,8 +35,9 @@
 #include "Utilities/GFP_Tools/gfp.h"
 #include "Utilities/GFP_Tools/sparse_collection.h"
 
+#include "Utilities/GFP_Tools/nearneighbours.pb.h"
+
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 
@@ -109,6 +111,10 @@ static int include_neighbour_count_with_target_identifier = 0;
 
 static int nworkers = 2;
 
+// If we are writing TFDataRecord protos.
+static int write_as_tfdata_record = 0;
+static iw_tf_data_record::TFDataWriter tfdata_writer;
+
 /*
   We can encode an integer ID and a floating point distance into a single 64 bit int
   We need methods to compare these
@@ -126,10 +132,10 @@ static uint64_t
 encode_distance_id(const float d, const int id)
 {
   uint64_t rc = d * float_max_32_but_unsigned_int;
-  // cerr << "With distance encoded " << std::hex << rc << ' ' << std::dec << rc << endl;
+  // cerr << "With distance encoded " << std::hex << rc << ' ' << std::dec << rc << '\n';
 
   rc = rc << 32;
-  // cerr << "Shifted " << std::hex << rc << ' ' << std::dec << rc << endl;
+  // cerr << "Shifted " << std::hex << rc << ' ' << std::dec << rc << '\n';
 
   uint64_t idt = id;
 
@@ -151,6 +157,35 @@ decode_id(const uint64_t did)
   return i[0];
 }
 
+template <typename T>
+int 
+NbrsToTFData(const T& target, const T* pool, iw_tf_data_record::TFDataWriter& writer) {
+  nnbr::NearNeighbours proto;
+  const IWString& s = target.smiles();
+  proto.set_smiles(s.data(), s.length());
+  const IWString& id = target.id();
+  proto.set_name(id.data(), id.length());
+
+  const resizable_array<uint64_t>& nbrs = target.nbrs();
+
+  if (nbrs.empty() && !write_molecules_with_no_neighbours) {
+    return 1;
+  }
+
+  for (uint64_t i : target.nbrs()) {
+    const uint32_t ndx = decode_id(i);
+    const float d = decode_distance(i);
+
+    auto* nbr = proto.mutable_nbr()->Add();
+
+    const IWString& id = pool[ndx].id();
+    nbr->set_id(id.data(), id.length());
+    nbr->set_dist(d);
+  }
+
+  return writer.WriteSerializedProto<nnbr::NearNeighbours>(proto);
+}
+
 int
 Encoded_Dist_ID_Sorter::operator()(const uint64_t i1, const uint64_t i2) const
 {
@@ -168,6 +203,11 @@ template <typename F>
 int
 write_neighbour_list(const F& target, const F* pool, IWString_and_File_Descriptor& output)
 {
+  // Ugly use of global variables...
+  if (write_as_tfdata_record) {
+    return NbrsToTFData<F>(target, pool, tfdata_writer);
+  }
+
   const resizable_array<uint64_t>& nbrs = target.nbrs();
 
   const int n = nbrs.number_elements();
@@ -193,7 +233,7 @@ write_neighbour_list(const F& target, const F* pool, IWString_and_File_Descripto
     }
 
     const float d = decode_distance(j);
-    //  cerr << "From " << j << " get id " << id << " and distance " << d << endl;
+    //  cerr << "From " << j << " get id " << id << " and distance " << d << '\n';
 
     fraction_as_string.append_number(output, d);
 
@@ -338,13 +378,13 @@ void
 FP_Fixed_Distance::extra(const float d, const int id)
 {
   // cerr << "cmp " << d << " with " << upper_distance_threshold << " size " <<
-  // _dist_id.size() << endl;
+  // _dist_id.size() << '\n';
   if (d > upper_distance_threshold || d < lower_distance_threshold) {
     return;
   }
 
   // if (4664 == id && fabs(d - 0.2416) < 0.0001)
-  //   cerr << "Got " << id << " at dist " << d << endl;
+  //   cerr << "Got " << id << " at dist " << d << '\n';
 
   uint64_t e = encode_distance_id(d, id);
 
@@ -394,13 +434,13 @@ FP_Number_Nbrs::extra(const float d, const int id)
   for (int i = 1; i < _sorted.number_elements(); ++i) {
     if (_sorted[i] <= _sorted[i - 1]) {
       cerr << "List out of order, i = " << i << " prev " << _sorted[i - 1] << " now "
-           << _sorted[i] << " e = " << e << endl;
+           << _sorted[i] << " e = " << e << '\n';
     }
   }
   const float x = decode_distance(_sorted.last_item());
   if (x != _dmax) {
     cerr << "FP_Number_Nbrs::extra:dmax mismatch, found " << x << " dmax " << _dmax
-         << " n = " << _sorted.size() << endl;
+         << " n = " << _sorted.size() << '\n';
   }
 #endif
 
@@ -412,7 +452,7 @@ void
 FP_Number_Nbrs::extra(const float d, const int id)
 {
   // cerr << "FP_Number_Nbrs:extra distance " << d << " have " <<
-  // _sorted.number_elements() << " max " << _dmax << " id " << id << endl;
+  // _sorted.number_elements() << " max " << _dmax << " id " << id << '\n';
 
   if (_sorted.number_elements() == neighbours_to_find &&
       d >= _dmax) {  // most common case
@@ -425,7 +465,7 @@ FP_Number_Nbrs::extra(const float d, const int id)
 
   const uint64_t e = encode_distance_id(d, id);
 
-  // cerr << "encoded " << e << ' ' << (1.0f - d) << endl;
+  // cerr << "encoded " << e << ' ' << (1.0f - d) << '\n';
 
   if (0 == _sorted.number_elements()) {
     _sorted.add(e);
@@ -463,7 +503,7 @@ FP_Number_Nbrs::extra(const float d, const int id)
 
   const auto s = _sorted.rawdata();
 
-  // cerr << "INserting " << e << " into list of size " << _sorted.size() << endl;
+  // cerr << "INserting " << e << " into list of size " << _sorted.size() << '\n';
 
   while (middle > left) {
     const auto m = s[middle];
@@ -476,7 +516,7 @@ FP_Number_Nbrs::extra(const float d, const int id)
 
     middle = (left + right) / 2;
 
-    //  cerr << "Update " << left << " " << middle << " " << right << endl;
+    //  cerr << "Update " << left << " " << middle << " " << right << '\n';
   }
 
   _sorted.insert_before(middle + 1, e);
@@ -544,7 +584,7 @@ void
 gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
                    const int jstop)
 {
-  // cerr << istart << ' ' << istop << ' ' << jstart << ' ' << jstop << endl;
+  // cerr << istart << ' ' << istop << ' ' << jstart << ' ' << jstop << '\n';
   if (property_based_windows_present()) {
     for (int i = istart; i < istop; ++i) {
       auto& pi = pool[i];
@@ -556,7 +596,7 @@ gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
         }
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << endl;
+        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -570,7 +610,7 @@ gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
         auto& pj = pool[j];
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << endl;
+        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -597,7 +637,7 @@ gfp_nearneighbours_diagonal(F* pool, const int istart, const int istop)
         }
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << endl;
+        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -611,7 +651,7 @@ gfp_nearneighbours_diagonal(F* pool, const int istart, const int istop)
         auto& pj = pool[j];
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << endl;
+        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -943,7 +983,7 @@ gfp_nearneighbours(F* pool, const int pool_size)
       auto& pj = pool[j];
 
       const auto d = 1.0f - pi.tanimoto(pj);
-      //    cerr << " i = " << i << " j = " << j << " dist " << d << endl;
+      //    cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
       pi.extra(d, j);
       pj.extra(d, i);
@@ -957,7 +997,7 @@ template <typename F>
 int
 gfp_nearneighbours(F* pool, const int pool_size, IWString_and_File_Descriptor& output)
 {
-  // cerr << "nworkers " << nworkers << endl;
+  // cerr << "nworkers " << nworkers << '\n';
   if (2 == nworkers) {
     gfp_nearneighbours_parallel2(pool, pool_size);
   } else if (3 == nworkers) {
@@ -1025,13 +1065,13 @@ gfp_nearneighbours(const char* fname, int& pool_size,
   for (int ndx = 0; tdt.next(input); ++ndx) {
     fatal = 0;
     if (!pool[ndx].construct_from_tdt(tdt, fatal)) {
-      cerr << "Cannot build pool, ndx " << ndx << endl;
+      cerr << "Cannot build pool, ndx " << ndx << '\n';
       return 0;
     }
 
     IWString smiles;
     if (!tdt.dataitem_value(smiles_tag, smiles)) {
-      cerr << "Cannot extract smiles, ndx " << ndx << endl;
+      cerr << "Cannot extract smiles, ndx " << ndx << '\n';
       return 0;
     }
 
@@ -1148,7 +1188,7 @@ build_pool(iwstring_data_source& input)
 
     if (items_in_pool == pool_size) {
       if (verbose) {
-        cerr << "Pool is full, max " << pool_size << endl;
+        cerr << "Pool is full, max " << pool_size << '\n';
       }
       break;
     }
@@ -1184,12 +1224,12 @@ build_pool(const char* fname)
 
     pool = new IW_GFP_D_ID[pool_size];
     if (NULL == pool) {
-      cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
+      cerr << "Yipes, could not allocate pool of size " << pool_size << '\n';
       return 62;
     }
 
     if (verbose) {
-      cerr << "Pool automatically sized to " << pool_size << endl;
+      cerr << "Pool automatically sized to " << pool_size << '\n';
     }
   }
 
@@ -1282,7 +1322,7 @@ nearneighbours(IW_GFP_D_ID& fp, IW_GFP_D_ID** neighbours,
 // #define DEBUG_NN
 #ifdef DEBUG_NN
       cerr << "Distance between '" << fp.id() << " and pool " << i << " '" << pool[i].id()
-           << "' is " << t << endl;
+           << "' is " << t << '\n';
 #endif
 
       pool[i].set_distance(t);
@@ -1342,6 +1382,7 @@ usage(int rc)
   cerr << " -x               exclude smiles from the output\n";
   cerr << " -y               allow arbitrary distances\n";
   cerr << " -u               include number of neighbours with target identifier\n";
+  cerr << " -S <fname>       write nnbr::NearNeighbours TFDataRecord serialized protos to <fname>\n";
   // cerr << " -C <nthreads>    number of TBB threads to use\n";
   cerr << " -v               verbose output\n";
   // clang-format on
@@ -1362,7 +1403,7 @@ do_write_histogram(std::ostream& os)
 static int
 nearneighbours(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:u");
+  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:uS:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1392,7 +1433,7 @@ nearneighbours(int argc, char** argv)
     const uint64_t e1 = encode_distance_id(0.01 * i, 0);
     const uint64_t e2 = encode_distance_id(0.01 * i, 100);
 
-    cerr << (0.01 * i) << ' ' << e1 << ' ' << e2 << endl;
+    cerr << (0.01 * i) << ' ' << e1 << ' ' << e2 << '\n';
 
     const float d1 = decode_distance(e1);
     const float d2 = decode_distance(e2);
@@ -1401,7 +1442,7 @@ nearneighbours(int argc, char** argv)
     const int id2 = decode_id(e2);
 
     cerr << (0.01 * i) << " id1 " << id1 << " d1 " << d1 << " id2 " << id2 << " d2 " << d2
-         << endl;
+         << '\n';
   }
 #endif
 
@@ -1441,12 +1482,12 @@ nearneighbours(int argc, char** argv)
 
     pool = new IW_GFP_D_ID[pool_size];
     if (NULL == pool) {
-      cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
+      cerr << "Yipes, could not allocate pool of size " << pool_size << '\n';
       return 62;
     }
 
     if (verbose) {
-      cerr << "system sized to " << pool_size << endl;
+      cerr << "system sized to " << pool_size << '\n';
     }
   }
 
@@ -1467,6 +1508,22 @@ nearneighbours(int argc, char** argv)
 
     if (verbose) {
       cerr << "Distances not constrained to [0-1]\n";
+    }
+  }
+
+  if (cl.option_present('S')) {
+    if (cl.option_present('p')) {
+      cerr << "The -p (three column output) and -S (tfDataRecord) are incompatible\n";
+      return 1;
+    }
+
+    IWString fname = cl.string_value('S');
+    if (! tfdata_writer.Open(fname)) {
+      cerr << "Cannot open stream for TFdataRecord output '" << fname << "'\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "TFdataRecord protos written to '" << fname << "'\n";
     }
   }
 
@@ -1567,7 +1624,7 @@ nearneighbours(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Upper distance threshold set to " << upper_distance_threshold << endl;
+      cerr << "Upper distance threshold set to " << upper_distance_threshold << '\n';
     }
   }
 
@@ -1579,7 +1636,7 @@ nearneighbours(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Lower distance threshold set to " << lower_distance_threshold << endl;
+      cerr << "Lower distance threshold set to " << lower_distance_threshold << '\n';
     }
   }
 
@@ -1662,7 +1719,7 @@ nearneighbours(int argc, char** argv)
     set_default_iwstring_float_concatenation_precision(j);
 
     if (verbose) {
-      cerr << "Default float concatenation precision " << j << endl;
+      cerr << "Default float concatenation precision " << j << '\n';
     }
   } else {
     fraction_as_string.initialise(0.0f, 1.0f, 4);
@@ -1690,12 +1747,12 @@ nearneighbours(int argc, char** argv)
   if (verbose) {
     cerr << "Read " << pool_size << " fingerprints\n";
     cerr << "Neighbour distances for " << distance_stats.n() << " neighbours between "
-         << distance_stats.minval() << " and " << distance_stats.maxval() << endl;
+         << distance_stats.minval() << " and " << distance_stats.maxval() << '\n';
     if (distance_stats.n() > 1) {
       cerr << "Average " << distance_stats.average() << " variance "
            << distance_stats.variance();
     }
-    cerr << endl;
+    cerr << '\n';
 
     cerr << nearest_neighbour_distance_stats.n()
          << " nearest neighbour distances between "
@@ -1705,7 +1762,7 @@ nearneighbours(int argc, char** argv)
       cerr << " ave " << nearest_neighbour_distance_stats.average() << " std dev "
            << static_cast<float>(sqrt(nearest_neighbour_distance_stats.variance()));
     }
-    cerr << endl;
+    cerr << '\n';
 
     for (int i = 0; i < neighbour_count.number_elements(); i++) {
       if (neighbour_count[i]) {

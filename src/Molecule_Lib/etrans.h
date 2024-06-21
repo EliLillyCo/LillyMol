@@ -21,6 +21,10 @@ class Element_Transformation
     const Element * _to;
     int _isotope;
 
+    // When changing from I to Cl, we can get a bad valence if we are
+    // translating a 3 connected Iodone.
+    int _reverse_bad_valence;
+
     int _molecules_processed;
     int _molecules_changed;
     int _atoms_changed;
@@ -28,6 +32,7 @@ class Element_Transformation
 //  private functions
 
     void _default_values ();
+    int MaybeChangeElement(Molecule& m, atom_number_t zatom);
 
   public:
     Element_Transformation ();
@@ -35,12 +40,12 @@ class Element_Transformation
     int ok () const;
     int debug_print (std::ostream &) const;
 
-//  int build (const char *);
-    int build (const IWString &);
+//  int build(const char *);
+    int build(const IWString& value);
 
-    int process (Molecule &);
+    int process(Molecule &);
 
-    int process (Molecule_to_Match &);
+    int process(Molecule_to_Match &);
 };
 
 class Element_Transformations : public resizable_array_p<Element_Transformation>
@@ -48,27 +53,27 @@ class Element_Transformations : public resizable_array_p<Element_Transformation>
   private:
   public:
 
-    int ok () const;
-    int debug_print (std::ostream &) const;
+    int ok() const;
+    int debug_print(std::ostream &) const;
 
-    int active () const { return _number_elements;}
+    int active() const { return _number_elements;}
 
-    int construct_from_command_line (Command_Line &, int = 0, char = 't');
+    int construct_from_command_line(Command_Line &, int = 0, char = 't');
 
     // Add a transformation directive 'Br=Cl' for example.
     int Add(const IWString& token);
 
-    int process (Molecule *);
+    int process(Molecule *);
 
-    int process (Molecule &);
+    int process(Molecule &);
 
-    int process (Molecule_to_Match &);
+    int process(Molecule_to_Match &);
 };
 
-extern int display_standard_etrans_options (std::ostream &, char = 't');
+extern int display_standard_etrans_options(std::ostream &, char = 't');
 
-extern int process_element_transformations (Command_Line &,
-                                            Element_Transformations &,
-                                            int = 0,
-                                            char = 't');
+extern int process_element_transformations(Command_Line &,
+                                           Element_Transformations &,
+                                           int = 0,
+                                           char = 't');
 #endif  // MOLECULE_LIB_ETRANS_H_

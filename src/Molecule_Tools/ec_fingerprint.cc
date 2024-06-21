@@ -293,8 +293,9 @@ WriteAllBits::Bit(const ShellInfo& shell_info, const atom_type_t running_sum,
   Molecule mcopy(shell_info.m());
   mcopy.set_isotope(a0, radius);
 
-  _output << mcopy.smiles() << ' ' << shell_info.name() << " bit " << running_sum
-          << " atom type" << shell_info.atom_type(a0) << " radius " << radius << "\n";
+  _output << mcopy.smiles() << ' ' << shell_info.name() << " atom " << shell_info.a0() <<
+             " bit " << running_sum <<
+             " atom type " << shell_info.atom_type(a0) << " radius " << radius << "\n";
 
   _output.write_if_buffer_holds_more_than(8192);
 

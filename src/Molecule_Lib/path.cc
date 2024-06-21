@@ -105,6 +105,11 @@ Ring::set_fused_to(Ring * r, int bic)
   return 1;
 }
 
+int
+Ring::is_fused_to(const Ring* r) const {
+  return _fused_neighbours.contains ((Ring *) r);   // loss of const OK
+}
+
 const Ring *
 Ring::fused_neighbour(int n) const
 {

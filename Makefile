@@ -17,38 +17,35 @@
 .PHONY: default
 .PHONY: all
 
+# Determine the operating system
+UNAME := $(shell uname)
+
+ifeq ($(UNAME),Darwin)
+	BUILD_SCRIPT := build_macos.zsh
+else
+	BUILD_SCRIPT := build_linux.sh
+endif
+
+# Determine REPO_HOME
+REPO_HOME := $(CURDIR)
+
 # A default target that will probably work in most cases.
 # Note it does not build BerkeleyDB dependent tools or Python bindings.
 default:
-	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	echo "Default build does not build targets 'berkeleydb' and 'python'"
-	cd src && ./update_bazel_configs.sh
-	cd src && ./build_third_party.sh
-	cd src && ./build_from_src.sh
+	@echo "Build platform: $(UNAME)"
+	cd src && REPO_HOME=$(REPO_HOME) ./$(BUILD_SCRIPT) 
 
 all:
-	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./build_third_party.sh
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./build_from_src.sh
+	@echo "Build platform: $(UNAME)"
+	cd src && REPO_HOME=$(REPO_HOME) BUILD_BDB=1 BUILD_PYTHON=1 BUILD_XGBOOST=1 BUILD_VENDOR=1 ./$(BUILD_SCRIPT)
 
-berkeleydb:
-	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
-	cd src && BUILD_BDB=1 ./build_third_party.sh
-	cd src && BUILD_BDB=1 ./build_from_src.sh
-
-python:
-	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
-	cd src && BUILD_PYTHON=1 ./build_third_party.sh
-	cd src && BUILD_PYTHON=1 ./build_from_src.sh
+advance:
+	@echo "Build platform: $(UNAME)"
+	cd src && REPO_HOME=$(REPO_HOME) BUILD_BDB=1 BUILD_PYTHON=1 ./$(BUILD_SCRIPT)
 
 vendor:
-	bash -c 'if [[ -z "$$(type -p bazelisk)" && -z "$$(type -p bazel)" ]] ; then echo "No bazel/bazelisk, see README.md" && exit 1 ; fi'
-	cd src && BUILD_BDB=1 BUILD_PYTHON=1 BUILD_VENDOR=1 ./update_bazel_configs.sh
-	cd src && BUILD_VENDOR=1 ./build_third_party.sh
-	cd src && BUILD_VENDOR=1 ./build_from_src.sh
+	@echo "Build platform: $(UNAME)"
+	cd src && REPO_HOME=$(REPO_HOME) BUILD_VENDOR=1 ./$(BUILD_SCRIPT)
 
 build_docker:
 	docker build -f Dockerfile -t lillymolprivate .
@@ -61,6 +58,7 @@ test_lillymol:
 start_s3:
 	docker-compose up -d
 	sleep 30
-	echo 'run s3 commannd with: aws s3 --endpoint "http://localhost:4566" <s3 command>'
+	@echo 'run s3 commannd with: aws s3 --endpoint "http://localhost:4566" <s3 command>'
+
 stop_s3:
 	docker-compose down

@@ -844,7 +844,7 @@ chirality_fingerprint(Molecule& m, IWString_and_File_Descriptor& output) {
   }
 
   if (remove_invalid_chiral_centres) {
-    do_remove_invalid_chiral_centres(m);
+    lillymol::do_remove_invalid_chiral_centres(m);
   }
 
   const auto matoms = m.natoms();

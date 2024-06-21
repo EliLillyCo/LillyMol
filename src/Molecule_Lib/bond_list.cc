@@ -3,7 +3,6 @@
 #include <memory>
 
 using std::cerr;
-using std::endl;
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
@@ -20,6 +19,15 @@ Bond_list::~Bond_list()
 {
   _magic = 0;
 }
+
+#ifdef BOND_LIST_COPY_CONSTRUCTOR
+Bond_list::Bond_list(const Bond_list& rhs) {
+  _magic = BOND_LIST_MAGIC;
+  for (const Bond * b : rhs) {
+    this->add(new Bond(*b));
+  }
+}
+#endif
 
 int
 Bond_list::ok() const
@@ -88,7 +96,7 @@ Bond_list::remove_bond_between_atoms (atom_number_t a1, atom_number_t a2)
     }
   }
 
-  cerr << "Bond_list::remove_bond_between_atoms: no bond between atoms " << a1 << " and " << a2 << endl;
+  cerr << "Bond_list::remove_bond_between_atoms: no bond between atoms " << a1 << " and " << a2 << '\n';
   assert(NULL == "this should not happen");
   return 0;
 }

@@ -8,11 +8,12 @@
 #include <sstream>
 #endif
 
+#include "Foundational/iwmisc/misc.h"
+
 #include "qry_wstats.h"
 #include "target.h"
 
 using std::cerr;
-using std::endl;
 
 void
 Substructure_Hit_Statistics::_default_values()
@@ -79,7 +80,7 @@ Substructure_Hit_Statistics::report(std::ostream & os, int verbose) const
   os << "Details on hits for query '" << Substructure_Query::comment() << "'";
   if (_verbose)
     os << " (verbose)";
-  os << endl;
+  os << '\n';
 
   if (0 == _molecules_which_match && 0 == _molecules_which_do_not_match)
   {
@@ -87,26 +88,31 @@ Substructure_Hit_Statistics::report(std::ostream & os, int verbose) const
     return 1;
   }
 
-  float fraction = static_cast<float>(_molecules_which_match) / static_cast<float>(_molecules_which_match + _molecules_which_do_not_match);
+  float fraction = iwmisc::Fraction<float>(_molecules_which_match, _molecules_which_match + _molecules_which_do_not_match);
 
   os << "Tested " <<  _molecules_which_match + _molecules_which_do_not_match <<
         " molecules, " << _molecules_which_match << " matched, " <<
-        _molecules_which_do_not_match << " did not. Fraction " << fraction << endl;
+        _molecules_which_do_not_match << " did not. Fraction " << fraction << '\n';
 
-  int sites = 0;
-  int number_different_contributions = 0;
-  for (int i = 0; i < _molecules_which_match_n_times.number_elements(); i++)
-  {
-    if (_molecules_which_match_n_times.item(i))
-    {
+  uint32_t sites = 0;
+  uint32_t number_different_contributions = 0;
+  for (int i = 0; i < _molecules_which_match_n_times.number_elements(); i++) {
+    if (_molecules_which_match_n_times.item(i)) {
       os << " " << _molecules_which_match_n_times[i] << " molecules had " << i << " hits\n";
       sites += i * _molecules_which_match_n_times[i];
       number_different_contributions++;
     }
   }
 
-  if (number_different_contributions)
+  for (const auto& [hits, count] : _many_matches) {
+    os << count << " molecules had " << hits << " hits\n";
+    sites += count * hits;
+    ++number_different_contributions;
+  }
+
+  if (number_different_contributions) {
     os << sites << " reactive sites\n";
+  }
  
   if (_molecules_which_match && _stream_for_matches.valid())
     os << " Matches written to '" << _stream_for_matches.fname() << "'\n";
@@ -126,7 +132,7 @@ Substructure_Hit_Statistics::_set_stream(FileType output_type, const char * fnam
 {
   if (! valid_file_type(output_type))
   {
-    cerr << "Substructure_Hit_Statistics::_set_stream: invalid type " << output_type << endl;
+    cerr << "Substructure_Hit_Statistics::_set_stream: invalid type " << output_type << '\n';
     return 0;
   }
 
@@ -284,7 +290,7 @@ int
 Substructure_Hit_Statistics::substructure_search(Molecule_to_Match & m,
                                                  Substructure_Results & results)
 {
-  int nmatches = Substructure_Query::substructure_search(m, results);
+  uint32_t nmatches = Substructure_Query::substructure_search(m, results);
 
   _update_matches(nmatches, m.molecule(), results);
 
@@ -299,7 +305,7 @@ Substructure_Hit_Statistics::substructure_search(Molecule_to_Match & m,
 */
 
 int
-Substructure_Hit_Statistics::_update_matches(int nmatches,
+Substructure_Hit_Statistics::_update_matches(uint32_t nmatches,
                                              Molecule * m,
                                              const Substructure_Results & sresults)
 {
@@ -342,7 +348,16 @@ Substructure_Hit_Statistics::_update_matches(int nmatches,
     _stream_for_matches.write_molecule(m);
   }
 
-  _molecules_which_match_n_times[nmatches]++;
+  if (nmatches <= 100000) {
+    _molecules_which_match_n_times[nmatches]++;
+  } else {
+    auto iter = _many_matches.find(nmatches);
+    if (iter == _many_matches.end()) {
+      _many_matches[nmatches] = 1;
+    } else {
+      iter->second += 1;
+    }
+  }
 
   return nmatches;
 }

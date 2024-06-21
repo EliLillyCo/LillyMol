@@ -10,7 +10,7 @@
 #include "surface_area_molvol.h"
 #include "jwrandom_preset_array.h"
 
-extern "C" void volume_ (int &);
+extern "C" void volume_ (uint64_t *);
 
 using std::cerr;
 using std::endl;
@@ -191,8 +191,8 @@ Surface_Area_Molvol::_molvol (Molecule & m,
   int wobbles_this_molecule = 0;
   while (wobbles_this_molecule <= _max_wobble)
   {
-    int error_encountered=0;
-    volume_ (error_encountered);
+    uint64_t error_encountered=0;
+    volume_ (&error_encountered);
 
     if (! error_encountered)     // great, we are done
       break;

@@ -26,9 +26,11 @@ PYBIND11_MAKE_OPAQUE(std::vector<int>);
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/mol2graph.pb.h"
 #include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rotbond_common.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
 
+#include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/xlogp.h"
 
 #include "pybind/molecule.h"
@@ -146,6 +148,9 @@ ToScaffold(Molecule& m) {
   return m.remove_atoms(spinach.get(), 1);
 }
 
+// Ultimately we want kSingleBond to be used as the LillyMol name for
+// a single bond. But having these here might make that problematic.
+// TODO:ianwatson investigate.
 enum BondType {
   kUnknown = 0,
   kSingleBond = 1,
@@ -240,7 +245,7 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "Returns true if internal datastructures ok"
                 )
-                .def("natoms", static_cast<int (Molecule::*)()const>(&Molecule::natoms), "Number atoms in molecule")
+                .def("natoms", static_cast<int (Molecule::*)()const>(&Molecule::natoms), "Number explicit atoms in molecule")
                 .def("natoms",
                   [](const Molecule& m, atomic_number_t z) {
                     return m.natoms(z);
@@ -303,7 +308,7 @@ PYBIND11_MODULE(lillymol, m)
                   [](Molecule& m, atom_number_t zatom)->int{
                     return m.nrings(zatom);
                   },
-                  "nrings"
+                  "number of rings containing atom"
                 )
 
                 .def("is_ring_atom",
@@ -334,7 +339,8 @@ PYBIND11_MODULE(lillymol, m)
                       result.push_back(new Ring(*r));
                     }
                     return result;
-                  }
+                  },
+                  "iterable list of rings in the molecule"
                 )
                 //.def("in_same_ring", static_cast<int (Molecule::*)(atom_number_t, atom_number_t)>(&Molecule::in_same_ring), "True if atoms in the same ring")
                 .def("in_same_ring",
@@ -367,7 +373,7 @@ PYBIND11_MODULE(lillymol, m)
                     m.label_atoms_by_ring_system(rc.data());
                     return rc;
                   },
-                  "Return a list of ring system identifiers"
+                  "For each atom the ring system identifier"
                 )
                 .def("label_atoms_by_ring_system_including_spiro_fused",
                   [](Molecule& m)->std::vector<int>{
@@ -375,7 +381,7 @@ PYBIND11_MODULE(lillymol, m)
                     m.label_atoms_by_ring_system_including_spiro_fused(rc.data());
                     return rc;
                   },
-                  "Return a list of ring system identifiers"
+                  "For each atom the ring system identifier"
                 )
                 .def("amw", static_cast<float (Molecule::*)()const>(&Molecule::molecular_weight), "AMW")
                 .def("exact_mass", static_cast<exact_mass_t (Molecule::*)()const>(&Molecule::exact_mass), "Exact Mass")
@@ -407,7 +413,7 @@ PYBIND11_MODULE(lillymol, m)
                     m.pi_electrons(zatom, pi);
                     return pi;
                   },
-                  "Pi electrons"
+                  "Pi electrons on atom"
                 )
                 .def("lone_pair_count", &Molecule::lone_pair_count, "Lone pair count")
                 .def("compute_aromaticity_if_needed", &Molecule::compute_aromaticity_if_needed, "Ensure molecule has aromaticity")
@@ -427,7 +433,7 @@ PYBIND11_MODULE(lillymol, m)
                     const IWString s = m.smarts_equivalent_for_atom(zatom);
                     return std::string(s.data(), s.size());
                   },
-                  "smarts for atom"
+                  "smarts for atom. If aromaticity has been computed, will include aromaticity"
                 )
                 .def("smarts",
                   [](Molecule& m)->std::string{
@@ -495,7 +501,7 @@ PYBIND11_MODULE(lillymol, m)
                   }
                 )
                 .def("number_fragments", static_cast<int (Molecule::*)()>(&Molecule::number_fragments), "number fragments")
-                .def("fragment_membership", static_cast<int (Molecule::*)(atom_number_t)>(&Molecule::fragment_membership), "fragment number for atom")
+                .def("fragment_membership", static_cast<int (Molecule::*)(atom_number_t)>(&Molecule::fragment_membership), "For each atom the fragment number containing that atom")
                 .def("delete_fragment", static_cast<int (Molecule::*)(int)>(&Molecule::delete_fragment), "Remove a fragment")
                 .def("remove_fragment", static_cast<int (Molecule::*)(int)>(&Molecule::delete_fragment), "Remove a fragment")
                 .def("atoms_in_fragment", static_cast<int (Molecule::*)(int)>(&Molecule::atoms_in_fragment), "atoms in fragment")
@@ -508,7 +514,7 @@ PYBIND11_MODULE(lillymol, m)
                       m.fragment_membership(rc.data());
                       return rc;
                     },
-                    "Fragment membership"
+                    "For each atom the fragment membership"
                 )
                 .def("create_components",
                   [](Molecule& m)->std::optional<std::vector<Molecule*>>{
@@ -527,7 +533,7 @@ PYBIND11_MODULE(lillymol, m)
                     components.resize_no_delete(0);
                     return res;
                   },
-                  "Split into fragments"
+                  "Split a multi fragment molecule into fragment molecules"
                 )
 
                 .def("remove_non_periodic_table_elements", static_cast<int (Molecule::*)()>(&Molecule::remove_all_non_natural_elements), "Remove non periodic table elements")
@@ -569,6 +575,7 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "True if atom is fully saturated"
                 )
+                .def("unsaturation", &Molecule::unsaturation)
                 .def("implicit_hydrogens_known", &Molecule::implicit_hydrogens_known, "True if atom had [] in smiles")
                 .def("unset_all_implicit_hydrogen_information", &Molecule::unset_all_implicit_hydrogen_information, "Discard implicit hydrogen known")
                 .def("make_implicit_hydrogens_explicit", static_cast<int (Molecule::*)()>(&Molecule::make_implicit_hydrogens_explicit), "Make implicit hydrogens implicit")
@@ -600,7 +607,7 @@ PYBIND11_MODULE(lillymol, m)
                   [](Molecule& m, const Mol2Graph& mol2graph) {
                     return m.change_to_graph_form(mol2graph);
                   },
-                  "Convert to graph form"
+                  "Convert to graph form under control of mol2graph"
                 )
 
                 //.def("valence_ok", static_cast<int (Molecule::*)()>(&Molecule::valence_ok), "True if all atoms ok valence")
@@ -618,7 +625,7 @@ PYBIND11_MODULE(lillymol, m)
                     m.canonical_ranks(result.data());
                     return result;
                   },
-                  "canonical ranks"
+                  "For each atom the canonical rank"
                 )
                 .def("symmetry_class", static_cast<int (Molecule::*)(atom_number_t)>(&Molecule::symmetry_class), "Atom's symmetry class")
                 .def("number_symmetry_classes", static_cast<int (Molecule::*)()>(&Molecule::number_symmetry_classes), "Number symmetry classes")
@@ -636,7 +643,6 @@ PYBIND11_MODULE(lillymol, m)
                   "Atoms related to zatom by symmetry"
                 )
 
-                //.def("build_from_smiles", static_cast<int (Molecule::*)(const std::string&)>(&Molecule::build_from_smiles), "Build from smiles")
                 .def("build_from_smiles", 
                   [](Molecule& m, const std::string& s)->bool{
                     return m.build_from_smiles(s);
@@ -684,7 +690,7 @@ PYBIND11_MODULE(lillymol, m)
                 .def("remove_hydrogens_known_flag_to_fix_valence_errors",
                      &Molecule::remove_hydrogens_known_flag_to_fix_valence_errors, "Remove problematic square brackets")
 
-                .def("add", static_cast<int (Molecule::*)(const Molecule*)>(&Molecule::add_molecule), "add molecule")
+                .def("add", static_cast<int (Molecule::*)(const Molecule*)>(&Molecule::add_molecule), "add molecule, no bonds formed, generates multi-fragment molecule")
                 .def("are_bonded", static_cast<int (Molecule::*)(atom_number_t, atom_number_t)const>(&Molecule::are_bonded), "True if atoms are bonded")
 
                 .def("formal_charge", static_cast<formal_charge_t (Molecule::*)(atom_number_t)const>(&Molecule::formal_charge), "formal charge on atom")
@@ -766,6 +772,12 @@ PYBIND11_MODULE(lillymol, m)
                   "Set isotope for atoms in 's'"
                 )
                 .def("number_isotopic_atoms", static_cast<int (Molecule::*)()const>(&Molecule::number_isotopic_atoms), "Number atoms with isotopes")
+                .def("first_atom_with_isotope",
+                  [](const Molecule& m, isotope_t iso) -> atom_number_t {
+                    return m.atom_with_isotope(iso);
+                  },
+                  "First atom with isitioe:|"
+                )
 
                 .def("bonds_between", static_cast<int (Molecule::*)(atom_number_t, atom_number_t)>(&Molecule::bonds_between), "bonds between atoms")
                 .def("longest_path", static_cast<int (Molecule::*)()>(&Molecule::longest_path), "longest path in molecule")
@@ -1056,6 +1068,7 @@ PYBIND11_MODULE(lillymol, m)
     )
     .def("valence_ok", &Atom::valence_ok, "True if valence is ok")
     .def("fully_saturated", &Atom::fully_saturated, "True if fully saturated")
+    .def("unsaturation", &Atom::unsaturation, "nbonds() - ncon()")
     .def("other", static_cast<atom_number_t (Atom::*)(atom_number_t, int)const>(&Atom::other), "Other connection")
     .def("x", [](const Atom* a)->float {
         return a->x();
@@ -1299,6 +1312,14 @@ PYBIND11_MODULE(lillymol, m)
       },
       "True if empty"
     )
+    .def("any_atoms_in_common", 
+      [](const Set_of_Atoms& s1, const Set_of_Atoms& s2)->bool {
+        return s1.any_members_in_common(s2);
+      },
+      "True if any atom in common"
+    )
+    .def("first_atom_in_common", &Set_of_Atoms::members_in_common, "Atom number of first atom in common")
+    .def("atoms_in_common", &Set_of_Atoms::members_in_common, "Number of atoms shared")
     .def("size", &Set_of_Atoms::size, "size")
 #ifdef LILLYMOL_VECTOR_OPAQUE
     .def("scatter",
@@ -1337,6 +1358,11 @@ PYBIND11_MODULE(lillymol, m)
     .def("__getitem__",
       [](const Set_of_Atoms& me, int ndx) {
         return me.item(ndx);
+      })
+    .def("__setitem__",
+      [](const Set_of_Atoms& me, int ndx, atom_number_t atom) {
+        me[ndx] = atom;
+        return atom;
       })
     .def("__iter__",
       [](const Set_of_Atoms&s) {
@@ -1391,6 +1417,13 @@ PYBIND11_MODULE(lillymol, m)
           s << e;
         }
       }
+    )
+    .def("__iadd__",
+      [](Set_of_Atoms& lhs, const Set_of_Atoms& rhs)->Set_of_Atoms {
+        lhs += rhs;
+        return lhs;
+      },
+      "add contents of RHS to LHS returning new Set_of_Atoms"
     )
   ;
 
@@ -1590,5 +1623,28 @@ PYBIND11_MODULE(lillymol, m)
     },
     "xlogp"
   );
+
+  py::class_<alogp::ALogP>(m, "ALogP")
+    .def(py::init<>())
+    .def("set_rdkit_phoshoric_acid_hydrogen", &alogp::ALogP::set_rdkit_phoshoric_acid_hydrogen,
+        "mimic RDKit in how Hydrogens on phosphoric acids are handled")
+    .def("set_use_alcohol_for_acid", &alogp::ALogP::set_use_alcohol_for_acid,
+        "mimic RDKit in how oxygen atoms in acids are handled")
+    .def("logp", &alogp::ALogP::LogP, "Compute alogp - or None")
+  ;
+
+  // Rotatable bonds.
+  py::enum_<quick_rotbond::QuickRotatableBonds::RotBond> (m, "RotBond")
+    .value("UNDEFINED", quick_rotbond::QuickRotatableBonds::RotBond::kUndefined)
+    .value("QUICK", quick_rotbond::QuickRotatableBonds::RotBond::kQuick)
+    .value("EXPENSIVE", quick_rotbond::QuickRotatableBonds::RotBond::kExpensive)
+    .export_values();
+  ;
+
+  py::class_<quick_rotbond::QuickRotatableBonds>(m, "RotatableBonds")
+    .def(py::init<>())
+    .def("rotatable_bonds", &quick_rotbond::QuickRotatableBonds::Process)
+    .def("set_calculation_type", &quick_rotbond::QuickRotatableBonds::set_calculation_type)
+  ;
 
 }

@@ -28,9 +28,9 @@ namespace fileconv {
 // When fileconv is processing, there can be a number of output streams.
 struct LocalOptions {
   int verbose = 0;
-  int molecules_read = 0;
-  int molecules_changed = 0;
-  int molecules_written = 0;
+  uint64_t molecules_read = 0;
+  uint64_t molecules_changed = 0;
+  uint64_t molecules_written = 0;
   int audit_input = 0;
   int debug_print_each_molecule = 0;
 
@@ -371,8 +371,10 @@ LocalOptions::MaybeWriteRejection(Molecule& m,
     reject_log.write_if_buffer_holds_more_than(4096);
   }
 
-  if (rejections_output.active())
+  if (rejections_output.active()) {
+    m << " REJ " << rejection_reason;
     rejections_output.write(m);
+  }
 
   return 1;
 }

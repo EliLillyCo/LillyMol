@@ -24,28 +24,37 @@ then
     exit 1
 fi
 
-name1=out.txt
-name1_out=out/out.txt
+stdout='stdout'
+stderr='stderr'
+
+golden='out/out.txt'
 # Support linux and mac 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/out.txt
+  golden=out/linux/out.txt
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    name1_out=out/osx/out.txt
+  golden=out/osx/out.txt
 else
-    echo "OS is not supported"
+  echo "OS is not supported"
 fi
 
 diff_tool=../../fileDiff.sh
-$command -b -n 50 -f -F FPDSC $shared_data_dir/pubchem.gfp >out.txt 2>err.log
-$diff_tool $name1 $name1_out
-ret1=$?
+same_bits=../../same_bits.py
+${command} -b -n 50 -f -F FPDSC ${shared_data_dir}/pubchem.gfp >${stdout} 2>${stderr}
+$diff_tool ${stdout} ${golden}
 
-if [ $ret1 -eq 1 ]
-then
-        echo "$case_id : TEST PASS"
-else
-        echo "$case_id : TEST FAIL"
+if [ $? -eq 1 ] ; then
+  echo "$case_id : TEST PASS"
+  rm ${stdout} ${stderr}
+  exit
 fi
 
-rm $name1
-rm err.log
+$same_bits ${stdout} ${golden}
+if [[ $? -eq 0 ]] ; then
+  echo "$case_id : TEST PASS"
+  rm ${stdout} ${stderr}
+  exit
+fi
+
+echo "$case_id : TEST FAIL"
+
+rm ${stdout} ${stderr}

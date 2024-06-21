@@ -4,6 +4,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <fstream>
 #include <memory>
 #include <random>
@@ -63,7 +65,14 @@ static int write_header_to_split_files = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Splits a set of molecules into test and train\n";
   cerr << " -p <pct>       percent of molecules in the training set (default 50)\n";
   cerr << " -n <number>    number of splits to create\n";
@@ -79,6 +88,7 @@ usage (int rc)
   cerr << " -h             write a header record to each of the split files\n";
   cerr << " -F <suffix>    append <suffix> to all files produced\n";
   cerr << " -v             verbose output\n";
+  // clang-format on
 
   exit (rc);
 }
@@ -91,6 +101,11 @@ class TTItem
     int _times_in_training_set;
 
     int _in_training_set;
+
+    static std::random_device _rd;
+    static std::default_random_engine _rng;
+
+    std::uniform_real_distribution<double> _u;
 
 //  private functions
 
@@ -113,7 +128,9 @@ class TTItem
     void switch_training_set_membership();
 };
 
-TTItem::TTItem()
+std::default_random_engine TTItem::_rng;
+
+TTItem::TTItem() : _u(0.0, 1.0)
 {
   _times_in_training_set = 0;
 
@@ -166,11 +183,7 @@ TTItem::_volunteer_lower_probability (int splits_remaining,
 
   double p = static_cast<double>(times_should_have_been_chosen) / static_cast<double>(_times_in_training_set);
 
-  std::random_device rd;
-  std::default_random_engine rng;
-  std::uniform_real_distribution<double> u(0, 1.0);
-
-  if (u(rng) < p)
+  if (_u(_rng) < p)
     return 1;
   else
     return 0;
@@ -184,11 +197,7 @@ TTItem::_volunteer_increased_probability (int splits_remaining,
 
   double p = static_cast<double>(_times_in_training_set) / static_cast<double>(times_should_have_been_chosen);
 
-  std::random_device rd;
-  std::default_random_engine rng;
-  std::uniform_real_distribution<double> u(0, 1.0);
-
-  if (u(rng) < p)
+  if (_u(_rng) < p)
     return 1;
   else
     return 0;
@@ -310,6 +319,51 @@ adjust_split_toward_average()
   return 1;
 }
 
+int
+generate_random_split(const int* ndx,
+                      int number_items,
+                      int items_needed,
+                      int split_number,
+                      float average_times_chosen) {
+  int items_selected = 0;
+
+  for (int i = 0; i < number_items; ++i) {
+    TTItem & t = ttitem[ndx[i]];
+
+    if (t.in_training_set())
+      continue;
+
+    if (t.times_in_training_set() > 0)
+      continue;
+
+    t.set_in_training_set(1);
+
+    items_selected++;
+    if (items_selected >= items_needed)
+      return items_needed;
+  }
+
+  for (int i = 0; i < number_items; ++i) {
+#ifdef DEBUG_FUNCTION_OBJECTS
+    cerr << "IN for loop, i = " << i << endl;
+#endif
+
+    TTItem & t = ttitem[ndx[i]];
+
+    if (t.in_training_set()) {
+      continue;
+    }
+
+    if (t.volunteer(number_splits - split_number, average_times_chosen)) {
+      items_selected++;
+      if (items_selected >= items_needed)
+        return items_selected;
+    }
+  }
+
+  return items_selected;
+}
+
 /*
   Since DELTA can be either positive of negative, we use function objects
   to control the stopping criterion
@@ -379,33 +433,25 @@ generate_random_split (int items_in_training_set,
 {
   set_training_set_membership(0);
 
-  int average_times_chosen = static_cast<int>(fraction_in_training_set * split_number - 1);  // how often should an individual have been chosen
+  // how often should an individual have been chosen
+  int average_times_chosen = static_cast<int>(fraction_in_training_set * split_number - 1);
 
   int items_selected = 0;
 
-  std::random_device rd;
-  std::default_random_engine rng;
+  static std::random_device rd;
+  static std::default_random_engine rng;
   std::uniform_int_distribution<int> u0(0, number_items / 2);
   std::uniform_int_distribution<int> u1(1, number_items / 2);
-  std::bernoulli_distribution b(0.50);
+  static std::bernoulli_distribution b(0.50);
+
+  std::unique_ptr<int[]> ndx = std::make_unique<int[]>(number_items);
+  std::iota(ndx.get(), ndx.get() + number_items, 0);
+  std::shuffle(ndx.get(), ndx.get() + number_items, rng);
 
   while (1)
   {
-    int istart = u0(rng);
-    int delta  = u1(rng);
-
     int items_needed = items_in_training_set - items_selected;
-
-    if (b(rng) == 0) {  // Loop in ascending order.
-      std::less<int> myless;
-      items_selected += generate_random_split(istart, delta, number_items, myless, items_needed, split_number, average_times_chosen);
-    }
-    else     // loop in descending order
-    {
-      std::greater_equal<int> myge;
-      delta = - delta;
-      items_selected += generate_random_split(istart, delta, 0, myge, items_needed, split_number, average_times_chosen);
-    }
+    items_selected += generate_random_split(ndx.get(), number_items, items_needed, split_number, average_times_chosen);
 
     if (items_selected >= items_in_training_set)
       return 1;

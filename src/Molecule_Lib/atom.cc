@@ -203,7 +203,7 @@ Atom::_constructor_copy_atom_attributes(const Atom& other_atom) {
 
   _radical = other_atom._radical;
 
-  resize(other_atom._elements_allocated);
+  reserve(other_atom._elements_allocated);
 
   return;
 }
@@ -323,8 +323,14 @@ Atom::fully_saturated() const {
 
 int
 Atom::unsaturated() const {
-  std::less<int> l;
+  std::greater<int> l;
   return _common_saturation(l);
+}
+
+int
+Atom::unsaturation() const {
+  int nb = nbonds();
+  return nb - _number_elements;
 }
 
 template <typename T>
@@ -458,25 +464,54 @@ angle_between_atoms(const Atom& a1, const Atom& a2, const Atom& a3, const Atom& 
   v43.negate();
 
   return v21.angle_between(v43);
-#ifdef NO_ATTEMPT_TO_ASSIGN_DIRECTIONALITY
-  // Trying to assign directionality to a dihedral probably does not
-  // make sense. Besides, this never worked properly.
-
-  // Now we need to work out the directionality of the angle
-  // The cross product of v21 and v43 will be in the same or opposite
-  // direction of v32
-
-  v21.cross_product(v43);
-
-  angle_t tmp = v21.angle_between(v32);
-
-  if (tmp < static_cast<angle_t>(0.0)) {
-    return -rc;
-  }
-
-  return rc;
-#endif
 }
+
+double
+signed_dihedral_angle_atoms(const Atom& a1, const Atom& a2, const Atom& a3,
+                            const Atom& a4) {
+  assert(a1.ok());
+  assert(a2.ok());
+  assert(a3.ok());
+  assert(a4.ok());
+
+  Space_Vector<double> v21(a1.x() - a2.x(), a1.y() - a2.y(), a1.z() - a2.z());
+  Space_Vector<double> v32(a2.x() - a3.x(), a2.y() - a3.y(), a2.z() - a3.z());
+  Space_Vector<double> v43(a3.x() - a4.x(), a3.y() - a4.y(), a3.z() - a4.z());
+
+  v21.normalise();
+  v32.normalise();
+  v43.normalise();
+#ifdef DEBUG_ATOM_BETWEEN_ATOMS
+  cerr << "v21 " << v21 << '\n';
+  cerr << "v32 " << v32 << '\n';
+  cerr << "v43 " << v43 << '\n';
+#endif
+
+  v21.cross_product(v32);
+  v43.cross_product(v32);
+
+  v43 *= static_cast<coord_t>(-1.0);
+
+  float result = v21.angle_between(v43);
+
+  // Figure out on which side of the v43 plane is a1 found
+  // Take the formula from
+  // https://brilliant.org/wiki/3d-coordinate-geometry-equation-of-a-plane/#:~:text=If%20we%20know%20the%20normal,of%20the%20plane%20is%20established.&text=a%20(%20x%20%E2%88%92%20x%201%20),%E2%88%92%20z%201%20)%20%3D%200.
+
+  double d = -(v43.x() * a3.x() + v43.y() * a3.y() + v43.z() * a3.z());
+
+  double zvalue = v43.x() * a1.x() + v43.y() * a1.y() + v43.z() * a1.z() + d;
+
+  if (abs(zvalue) < 1.0e-06) {
+    return result;
+  }
+  if (zvalue < 0.0f) {
+    return -result;
+  } else {
+    return result;
+  }
+}
+
 
 /*
   Fully audit an atom.
@@ -1714,4 +1749,17 @@ Atom::CanonicaliseBonds() {
   });
 
   return 1;
+}
+
+atom_number_t
+Atom::SingleConnectionDoubleBondTo(atom_number_t zatom) const {
+  if (_number_elements != 1) {
+    return kInvalidAtomNumber;
+  }
+  const Bond* b = _things[0];
+  if (! b->is_double_bond()) {
+    return kInvalidAtomNumber;
+  }
+
+  return b->other(zatom);
 }
