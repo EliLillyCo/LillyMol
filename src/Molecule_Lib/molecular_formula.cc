@@ -634,6 +634,11 @@ MolecularFormula<T>::IdentifyElementSQB(const const_IWSubstring& smiles,
 
   ++i;
   const int nchars = smiles.length();
+  // Smiles ends with kCloseSquareBracket, that is invalid.
+  if (i == nchars) {
+    std::cerr << "MolecularFormula::IdentifyElementSQB:ends with squre bracket '" << smiles << "'\n";
+    return 0;
+  }
 
   // skip over leading digits (isotopes)
   for ( ; i < nchars; ++i) {
