@@ -45,9 +45,11 @@ ret1=$?
 
 if [ $ret1 -eq 1 ]
 then
-        echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-        echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  /bin/ls -l $name1 $name1_out
+  diff ${name1} ${name1_out}
 fi
 
 rm $name1

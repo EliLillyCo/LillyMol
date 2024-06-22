@@ -27,6 +27,12 @@ namespace mol2qry {
 
 using std::cerr;
 
+constexpr char kOpenSquareBracket = '[';
+constexpr char kCloseSquareBracket = ']';
+
+constexpr char kOpenBrace = '{';
+constexpr char kCloseBrace = '}';
+
 const char * prog_name = nullptr;
 
 int queries_written = 0;
@@ -63,6 +69,8 @@ int remove_isotopes_from_input_molecules = 0;
 IWString append_to_comment;
 
 int perform_matching_test = 0;
+
+int write_smarts_relationals_as_rdkit_ranges = 0;
 
 //  People sometimes draw a two atom molecule across a ring in order to
 //  signify that every atom on that ring could be a point of substitution
@@ -348,6 +356,7 @@ usage(int rc = 1)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "  -m             all ncon and nbonds values are written as minima\n";
   // does not work, not sure it makes sense cerr << "  -r             all ring bonds become type ANY\n";
   cerr << "  -j             all atoms conserve their ring membership\n";
@@ -380,11 +389,13 @@ usage(int rc = 1)
   cerr << "  -P <fname>     serialized proto output (many queries), 'tsubstructure -q TFPROTO:file ...'\n";
   cerr << "  -p             write individual textproto files\n";
   cerr << "  -D ...         create proto query files with GeometricConstraints, '-D help' for info\n";
+  cerr << "  -B <fname>     generate smarts instead of query file\n";
   cerr << "  -Y ...         more obscure options, enter '-Y help' for info\n";
   cerr << "  -i <type>      specify input file type\n";
   display_standard_aromaticity_options(cerr);
   cerr << "  -g ...         chemical standardisation options, enter '-g help' for info\n";
   cerr << "  -v             verbose operation\n";
+// clang-format on
   
   exit(rc);
 }
@@ -606,7 +617,7 @@ mol2qry(MDL_Molecule & m,
 
   if (radius_from_coordination_point <= 0) {
   } else if (identify_coordination_point_and_adjacent_atoms(m)) {
-    set_only_include_isotopically_labeled_atoms(1);
+    mqs.set_only_include_isotopically_labeled_atoms(1);
   } else {
     cerr << "Cannot identify coordination points in '" << m.name() << "'\n";
     return 0;
@@ -638,74 +649,6 @@ mol2qry(MDL_Molecule & m,
 
   return 1;
 }
-
-#ifdef OLD_VESION
-int
-mol2qry(MDL_Molecule & m,
-        Molecule_to_Query_Specifications & mqs,
-        IWString_and_File_Descriptor& output)
-{
-  Set_of_Atoms & substitution_points = mqs.externally_specified_substitution_points();
-
-  substitution_points.resize_keep_storage(0);
-
-  if (change_R_groups_to_substitutions)
-    m.change_R_groups_to_substitutions(rgroup, 0);
-
-  if (radius_from_coordination_point <= 0)
-    ;
-  else if (identify_coordination_point_and_adjacent_atoms(m))
-    set_only_include_isotopically_labeled_atoms(1);
-  else
-  {
-    cerr << "Cannot identify coordination points in '" << m.name() << "'\n";
-    return 0;
-  }
-
-  Substructure_Query query;
-  if (! query.create_from_molecule(m, mqs))   // it inherits the molecule name
-  {
-    cerr << "cannot create query from molecule '" << m.name() << "'\n";
-    return 1;
-  }
-
-  if (perform_matching_test)
-  {
-    cerr << "Performing matching test\n";
-    if (0 == query.substructure_search(&m))
-    {
-      cerr << "No match to searching origin '" << m.name() << "'\n";
-      return 0;
-    }
-  }
- 
-  if (append_to_comment.length())
-  {
-    IWString tmp(m.name());
-    tmp.append_with_spacer(append_to_comment);
-    query[0]->set_comment(tmp);
-  }
-
-  cerr << "write_as_text_proto " << write_as_text_proto << " proto_destination " << (proto_destination ? "yes":"no") << '\n';
-  if (write_as_text_proto) {
-    WriteProto(query, output);
-  } else if (proto_destination) {
-    SubstructureSearch::SubstructureQuery proto = query.BuildProto();
-    std::string serialized;
-    proto.SerializeToString(&serialized);
-    return proto_destination->Write(serialized.data(), serialized.size());
-  } else if (! query.write_msi(output)) {
-    cerr << "Cound not write as msi form\n";
-    return 0;
-  }
-
-  queries_written++;
-
-  output.write_if_buffer_holds_more_than(4192);
-
-  return output.good();
-}
-#endif
 
 int
 mol2qry(MDL_Molecule & m,
@@ -893,32 +836,153 @@ process_smiles_from_command_line(const IWString & smiles,
 #endif
 }
 
+// Only a limited set of functionality is supported.
+int
+Mol2Smarts(Molecule_to_Query_Specifications& mqs,
+           Molecule& m,
+           IWString_and_File_Descriptor& output) {
+  m.compute_aromaticity_if_needed();
+
+  const int matoms = m.natoms();
+
+  Smiles_Information smiles_information(matoms);
+  smiles_information.allocate_user_specified_atomic_smarts();
+  smiles_information.set_smiles_is_smarts(1);
+
+  if (mqs.substituents_only_at_isotopic_atoms()) {
+    for (int i = 0; i < matoms; ++i) {
+      IWString smt;
+      smt << kOpenSquareBracket;
+      if (mqs.substituents_only_at_isotopic_atoms()) {
+        if (m.IsAromatic(i)) {
+          smt << m.element(i).aromatic_symbol();
+        } else {
+          smt << m.element(i).symbol();
+        }
+        // Only need to nail down the connectivity if the atom has implicit Hydrogens
+        if (m.implicit_hydrogens(i)) {
+          smt << 'D';
+          if (m.isotope(i)) {
+            if (write_smarts_relationals_as_rdkit_ranges) {
+              smt << kOpenBrace << (m.ncon(i) + 1) << '-' << kCloseBrace;
+            } else {
+              smt << ">" << m.ncon(i);
+            }
+          } else {
+            smt << m.ncon(i);
+          }
+        }
+      }
+      if (atoms_conserve_ring_membership) {
+        // Beware any elements ending in 'x'.
+        smt << ";x" << m.ring_bond_count(i);
+      }
+
+      smt << kCloseSquareBracket;
+      smiles_information.set_user_specified_atomic_smarts(i, smt);
+    }
+  }
+
+  set_write_smiles_aromatic_bonds_as_colons(1);
+  m.smiles(smiles_information);
+  set_write_smiles_aromatic_bonds_as_colons(0);
+
+  IWString smt = smiles_information.smiles();
+
+  output << smt << ' ' << m.name() << '\n';
+
+  output.write_if_buffer_holds_more_than(4096);
+
+  return 1;
+}
+
+int
+Mol2Smarts(Molecule_to_Query_Specifications& mqs,
+           data_source_and_type<Molecule>& input,
+           IWString_and_File_Descriptor& output) {
+  Molecule * m;
+  while ((m = input.next_molecule()) != nullptr) {
+    if (! Mol2Smarts(mqs, *m, output)) {
+      cerr << "Cannot process " << m->name() << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Mol2Smarts(Molecule_to_Query_Specifications& mqs,
+           const char* fname,
+           FileType input_type,
+           IWString_and_File_Descriptor& output) {
+  data_source_and_type<Molecule> input (input_type, fname);
+  if (! input.good()) {
+    cerr << "Mol2Smarts:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return Mol2Smarts(mqs, input, output);
+}
+
+int
+Mol2Smarts(Molecule_to_Query_Specifications& mqs,
+           Command_Line& cl,
+           FileType input_type,
+           IWString_and_File_Descriptor& output) {
+  for (const char* fname: cl) {
+    if (! Mol2Smarts(mqs, fname, input_type, output)) {
+      cerr << "Mol2Smarts:error processing '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Mol2Smarts(Molecule_to_Query_Specifications& mqs,
+           Command_Line& cl,
+           FileType input_type,
+           IWString& fname) {
+  IWString_and_File_Descriptor output;
+  if (! output.open(fname.null_terminated_chars())) {
+    cerr << "Mol2Smarts:cannot open '" << fname << "'\n";
+    return 0;
+  } 
+
+  return Mol2Smarts(mqs, cl, input_type, output);
+}
+
 void
 display_dash_y_options(std::ostream & os)
 {
-  os << " -Y minextra=n  for a match, target must have at least N extra atoms\n";
-  os << " -Y maxextra=n  for a match, target must have at most  N extra atoms\n";
-  os << " -Y minfm=<f>   set the min fraction atoms matched to <f>\n";
-  os << " -Y maxfm=<f>   set the max fraction atoms matched to <f>\n";
-  os << " -Y APPC=<s>    append <s> to the comment field of all queries produced\n";
-  os << " -Y exph        add explicit hydrogens, but construct query so anything matched\n";
-  os << " -Y ablk        aromatic bonds lose their kekule identity\n";
-  os << " -Y A2A=<f>     set aromatic atom translation\n";
-  os << " -Y A2A=1       aromatic atoms become 'aromatic'\n";
-  os << " -Y A2A=2       aromatic heteroatoms must match aromatic heteroatoms\n";
-  os << " -Y A2A=3       aromatic rings must preserve the number of heteroatoms\n";
-  os << " -Y rmiso       remove all isotope information from input molecules\n";
-  os << " -Y ncon=n      matches must have exactly  <n> connections to unmatched atoms\n";
-  os << " -Y min_ncon=n  matches must have at least <n> connections to unmatched atoms\n";
-  os << " -Y max_ncon=n  matches must have at most  <n> connections to unmatched atoms\n";
-  os << " -Y test        for each query formed, do a match against the starting molecule\n";
+  os << R"(
+ -Y minextra=n  for a match, target must have at least N extra atoms
+ -Y maxextra=n  for a match, target must have at most  N extra atoms
+ -Y minfm=<f>   set the min fraction atoms matched to <f>
+ -Y maxfm=<f>   set the max fraction atoms matched to <f>
+ -Y APPC=<s>    append <s> to the comment field of all queries produced
+ -Y exph        add explicit hydrogens, but construct query so anything matched
+ -Y ablk        aromatic bonds lose their kekule identity
+ -Y A2A=<f>     set aromatic atom translation
+ -Y A2A=1       aromatic atoms become 'aromatic'
+ -Y A2A=2       aromatic heteroatoms must match aromatic heteroatoms
+ -Y A2A=3       aromatic rings must preserve the number of heteroatoms
+ -Y rmiso       remove all isotope information from input molecules
+ -Y ncon=n      matches must have exactly  <n> connections to unmatched atoms
+ -Y min_ncon=n  matches must have at least <n> connections to unmatched atoms
+ -Y max_ncon=n  matches must have at most  <n> connections to unmatched atoms
+ -Y smtrange    write smarts relationals [D>2] as RdKit ranges [D{3-}]
+ -Y test        for each query formed, do a match against the starting molecule
+)";
 
   exit(1);
 }
 
 int
 mol2qry(int  argc, char ** argv) {
-  Command_Line cl(argc, argv, "aA:S:P:nmvE:i:M:sV:X:F:f:R:btg:heu:ojK:Y:kl:L:IcdD:px:");
+  Command_Line cl(argc, argv, "aA:S:P:nmvE:i:M:sV:X:F:f:R:btg:heu:ojK:Y:kl:L:IcdD:px:B:");
 
   verbose = cl.option_count('v');
 
@@ -1048,21 +1112,21 @@ mol2qry(int  argc, char ** argv) {
 //  mqs.substitutions_only_at().create_from_smarts("[!0*]");
     isotopically_labelled_from_slicer = 1;
 
-    set_substituents_only_at_isotopic_atoms(1);
+    mqs.set_substituents_only_at_isotopic_atoms(1);
 
     if (cl.option_present('t')) {
-      set_must_have_substituent_at_every_isotopic_atom(0);
+      mqs.set_must_have_substituent_at_every_isotopic_atom(0);
       if (verbose)
         cerr << "Not all isotopically labelled atoms need substituents\n";
     }
 
     if (cl.option_present('c')) {
-      set_isotope_count_means_extra_connections(1);
+      mqs.set_isotope_count_means_extra_connections(1);
       if (verbose)
         cerr << "Isotopic number indicates number of extra connections\n";
     }
   } else if (cl.option_present('w')) {
-    set_substitutions_only_at_non_isotopic_atoms(1);
+    mqs.set_substituents_only_at_non_isotopic_atoms(1);
   } else if (cl.option_present('u')) {
     const_IWSubstring smarts;
     cl.value('u', smarts);
@@ -1174,11 +1238,11 @@ mol2qry(int  argc, char ** argv) {
       cerr << "Coordination points defined by matches to '" << smt << "'\n";
     }
 
-    set_only_include_isotopically_labeled_atoms(1);
+    mqs.set_only_include_isotopically_labeled_atoms(1);
   }
 
   if (cl.option_present('I')) {
-    set_only_include_isotopically_labeled_atoms(1);
+    mqs.set_only_include_isotopically_labeled_atoms(1);
 
     if (verbose) {
       cerr << "Will only include isotopically labelled atoms in the query\n";
@@ -1342,6 +1406,12 @@ mol2qry(int  argc, char ** argv) {
         if (verbose)
           cerr << "Will try a match into the originating molecule for each query formed\n";
       }
+      else if (y == "smtrange") {
+        write_smarts_relationals_as_rdkit_ranges = 1;
+        if (verbose) {
+          cerr << "Smarts relational specifications written as rdkit ranges\n";
+        }
+      }
       else if ("help" == y)
       {
         display_dash_y_options (cerr);
@@ -1362,6 +1432,11 @@ mol2qry(int  argc, char ** argv) {
     }
     if (verbose)
       cerr << "Will write geometric constraint query protos\n";
+  }
+
+  if (cl.option_present('B')) {
+    IWString fname = cl.string_value('B');
+    return Mol2Smarts(mqs, cl, input_type, fname);
   }
 
   Mol2QryOutput mol2qry_output;

@@ -55,7 +55,7 @@ static constexpr int kMoleculeMagicNumber = 7215237;
 
 static int display_already_bonded_error_message = 1;
 
-void 
+void
 set_display_already_bonded_error_message(int s)
 {
   display_already_bonded_error_message = s;
@@ -63,7 +63,7 @@ set_display_already_bonded_error_message(int s)
 
 static char useThisCharAsDotInSmiles = '.';
 
-void 
+void
 setUseThisCharAsDotInSmiles(char thisChar)
 {
   useThisCharAsDotInSmiles = thisChar;
@@ -167,8 +167,8 @@ Molecule::_default_values(int atoms_in_new_molecule)
     resize(atoms_in_new_molecule);
 
   _user_specified_void_ptr = nullptr;
-  
-  doNotComputeAromaticity = false; 
+
+  doNotComputeAromaticity = false;
 
   return;
 }
@@ -555,6 +555,17 @@ Molecule::ok_4_atoms(atom_number_t a1, atom_number_t a2, atom_number_t a3, atom_
 }
 
 int
+Molecule::OkAtomNumbers(const Set_of_Atoms& s) const {
+  for (atom_number_t a : s) {
+    if (! ok_atom_number(a)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
 Molecule::check_bonding() const
 {
   assert(ok());
@@ -577,7 +588,7 @@ Molecule::check_bonding() const
       a->debug_print(cerr);
       iwabort();
     }
-    
+
     const int icon = a->ncon();
 
     Set_of_Atoms connected(icon);
@@ -891,7 +902,7 @@ Molecule::_set_partial_charge_type(const const_IWSubstring & qtype)
 static IWString empty_string;
 
 const IWString &
-Molecule::partial_charge_type() const 
+Molecule::partial_charge_type() const
 {
   if (nullptr == _charges)
     return empty_string;
@@ -1058,7 +1069,7 @@ Molecule::ok() const
 #ifdef SHOW_OK
   if (NULL == this)
     cerr << "Null molecule\n";
-  cerr << "Checking Molecule " <<   " array " << resizable_array_p<Atom>::ok() << 
+  cerr << "Checking Molecule " <<   " array " << resizable_array_p<Atom>::ok() <<
           " magic " << (kMoleculeMagicNumber == _magic) << endl;
 #endif
 
@@ -1723,7 +1734,7 @@ Molecule::_ok_ring_info() const
     return 1;
 
   return 1;    // for now, fix later
-  
+
 //if (_experimental_sssr_rings.number_elements() + _raw_rings.number_elements() != _nrings)
 //  return 0;
 
@@ -1924,7 +1935,7 @@ Molecule::_standardise_name()
 
   _molecule_name.strip_leading_blanks();
   _molecule_name.strip_trailing_blanks();
-  
+
   return;
 }
 
@@ -2019,7 +2030,7 @@ Molecule::_append_non_periodic_table_elements_to_mf(IWString& formula) const {
 }
 
 IWString
-Molecule::molecular_formula() 
+Molecule::molecular_formula()
 {
   IWString f;
 
@@ -2029,7 +2040,7 @@ Molecule::molecular_formula()
 }
 
 /*
-  For things line molecular weight determinations, formula and exact mass, 
+  For things line molecular weight determinations, formula and exact mass,
   having a count of each element type is good.
 */
 
@@ -2482,7 +2493,7 @@ Molecule::isis_like_molecular_formula(IWString & f)
   }
 
 // Don't forget any non-periodic table elements. We don't handle multiple instances gracefully
-  
+
   if (non_periodic_table_atoms_present == 0 && completed == _number_elements) {
     return 1;
   }
@@ -2730,7 +2741,7 @@ set_add_same_bond_twice_fatal (int f)
 */
 
 int
-Molecule::add_bond(atom_number_t a1, atom_number_t a2, bond_type_t bt, 
+Molecule::add_bond(atom_number_t a1, atom_number_t a2, bond_type_t bt,
                    int partial_molecule)
 {
   assert(ok_2_atoms(a1, a2));
@@ -2747,7 +2758,7 @@ Molecule::add_bond(atom_number_t a1, atom_number_t a2, bond_type_t bt,
       return 0;
 
     debug_print(cerr);
-    // IL, no need to abort, just skip this mol 
+    // IL, no need to abort, just skip this mol
     // iwabort();
     return 0;
   }
@@ -2889,7 +2900,7 @@ Molecule::_remove_atom(const atom_number_t atom_to_remove)
   const atomic_number_t z = _things[atom_to_remove]->atomic_number();
 
   atom_number_t explicit_hydrogen_attached_to_non_organic = INVALID_ATOM_NUMBER;
-  
+
   const int acon = _things[atom_to_remove]->ncon();
 
   if (1 == z && 1 == acon)    // singly connected explicit H
@@ -2932,7 +2943,7 @@ Molecule::_remove_atom(const atom_number_t atom_to_remove)
 
   remove_atom_from_charge_arrays(atom_to_remove);
 
-// We must tell _adjust_chiral_centres.. whether or not this 
+// We must tell _adjust_chiral_centres.. whether or not this
 // was a hydrogen, as it handles hydrogens specially.
 
   _adjust_chiral_centres_for_loss_of_atom(atom_to_remove, (1 == z));
@@ -3052,6 +3063,37 @@ Molecule::remove_atoms(const int * to_remove, int flag)
 
   return rc;
 }
+
+template <typename T>
+int
+Molecule::remove_atoms(const T * to_remove)
+{
+  assert(ok());
+
+#ifdef DEBUG_REMOVE_ATOMS
+  for (auto i = 0; i < _number_elements; ++i) {
+    if (to_remove[i]){
+      cerr << "Molecule will remove atom " << i << '\n';
+    }
+  }
+#endif
+
+  int rc = 0;
+  for (int i = _number_elements - 1; i >= 0; i--) {
+    if (to_remove[i]) {
+      _remove_atom(i);
+      rc++;
+    }
+  }
+
+  if (rc) {
+    _set_modified();
+  }
+
+  return rc;
+}
+template int Molecule::remove_atoms(const int32_t*);
+template int Molecule::remove_atoms(const int64_t*);
 
 int
 Molecule::remove_many_atoms(const int * to_remove)
@@ -3176,7 +3218,7 @@ Molecule::transform_to_non_isotopic_form(int unset_implicit_h)
   return rc;
 }
 
-template <typename T> 
+template <typename T>
 int
 Molecule::set_isotopes(const T * iso)
 {
@@ -3310,7 +3352,7 @@ Molecule::set_userAtomType(atom_number_t a, int atomType)
   assert(ok_atom_number(a));
 
   _things[a]->set_userAtomType(atomType);
-  
+
   return 1;
 }
 
@@ -3373,7 +3415,7 @@ Molecule::maximum_isotope() const
 
 int
 Molecule::increment_isotope(atom_number_t zatom,
-                            int incr) 
+                            int incr)
 {
   assert(ok_atom_number(zatom));
 
@@ -3406,7 +3448,7 @@ Molecule::increment_isotope(atom_number_t zatom,
 static int
 issue_non_periodic_table_molecular_weight_warning = 1;
 
-void 
+void
 set_issue_non_periodic_table_molecular_weight_warning(int s)
 {
   issue_non_periodic_table_molecular_weight_warning = s;
@@ -3868,13 +3910,13 @@ Molecule::rotate_atoms(const Coordinates & axis, angle_t theta)
   }
 
 // The direction cosines for the vector
- 
+
   const double dc1 = axis.x();
   const double dc2 = axis.y();
   const double dc3 = axis.z();
 //cerr << "Dc's are " << dc1 << "," << dc2 << "," << dc3 << " sum = " <<
 //     dc1 * dc1 + dc2 * dc2 + dc3 * dc3 << ", angle " << theta << endl;
-  
+
 // Rather than deal properly with a matrix, just use individual variables
 
   double rotmat11 = static_cast<double>(cos(theta) + dc1 * dc1 * (1.0 - cos(theta)) );
@@ -3890,7 +3932,7 @@ Molecule::rotate_atoms(const Coordinates & axis, angle_t theta)
   for (int i = 0; i < _number_elements; i++)
   {
     Atom * a = _things[i];
-  
+
     double x0 = a->x();
     double y0 = a->y();
     double z0 = a->z();
@@ -3922,11 +3964,11 @@ Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
     return 0;
 
 // The direction cosines for the vector
- 
+
   const T dc1 = axis.x();
   const T dc2 = axis.y();
   const T dc3 = axis.z();
-  
+
 #ifdef DEBUG_ROTATE_ATOMS
   cerr << "Dc's are " << dc1 << "," << dc2 << "," << dc3 << " sum = " <<
        dc1 * dc1 + dc2 * dc2 + dc3 * dc3 << "\n";
@@ -3959,7 +4001,7 @@ Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
     Atom *a = _things[j];
 
 //  cerr << "Initial coordinates for atom " << j << " " << *a << endl;
-  
+
     T x0 = a->x();
     T y0 = a->y();
     T z0 = a->z();
@@ -3989,11 +4031,11 @@ Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
   }
 
 // The direction cosines for the vector
- 
+
   const T dc1 = axis.x();
   const T dc2 = axis.y();
   const T dc3 = axis.z();
-  
+
 #ifdef DEBUG_ROTATE_ATOMS
   cerr << "Dc's are " << dc1 << "," << dc2 << "," << dc3 << " sum = " <<
        dc1 * dc1 + dc2 * dc2 + dc3 * dc3 << "\n";
@@ -4025,7 +4067,7 @@ Molecule::rotate_atoms(const Space_Vector<T> & axis, T theta,
     Atom *a = _things[j];
 
 //  cerr << "Initial coordinates for atom " << j << " " << *a << endl;
-  
+
     T x0 = a->x();
     T y0 = a->y();
     T z0 = a->z();
@@ -4081,7 +4123,7 @@ Molecule::rotate_to_longest_distance_along_x(atom_number_t & left, atom_number_t
     }
   }
 
-// In order to enforce more uniform behaviour, canonicalise left and right. 
+// In order to enforce more uniform behaviour, canonicalise left and right.
 
   if (_things[left]->x() > _things[right]->x())
     std::swap(left, right);
@@ -4130,7 +4172,7 @@ Molecule::rotate_to_longest_distance_along_x(atom_number_t & left, atom_number_t
   return;
 }
 
-Coordinates 
+Coordinates
 Molecule::get_coords(atom_number_t i) const
 {
   assert(ok_atom_number(i));
@@ -4276,6 +4318,22 @@ Molecule::setxyz(atom_number_t a, const Coordinates& c) {
   _things[a]->setxyz(c.x(), c.y(), c.z());
 }
 
+void
+Molecule::setxyz(atom_number_t zatom, const Atom* from) {
+  assert(ok_atom_number(zatom));
+  _things[zatom]->setxyz(from->x(), from->y(), from->z());
+}
+
+template <typename T>
+void
+Molecule::setxyz(atom_number_t zatom, const Space_Vector<T>& from) {
+  assert(ok_atom_number(zatom));
+  _things[zatom]->setxyz(from.x(), from.y(), from.z());
+}
+
+template void Molecule::setxyz(atom_number_t, const Space_Vector<float>&);
+template void Molecule::setxyz(atom_number_t, const Space_Vector<double>&);
+
 distance_t
 Molecule::bond_length(atom_number_t a1, atom_number_t a2, BondedStatus bonded_status) const
 {
@@ -4407,7 +4465,7 @@ Molecule::_set_bond_length(atom_number_t a1, atom_number_t a2,
 }
 
 angle_t
-Molecule::bond_angle(atom_number_t a1, atom_number_t a2, atom_number_t a3, 
+Molecule::bond_angle(atom_number_t a1, atom_number_t a2, atom_number_t a3,
                      BondedStatus bonded_status) const
 {
   assert(ok_3_atoms(a1, a2, a3));
@@ -4470,7 +4528,7 @@ Molecule::remove_all(const Element * to_remove)
 {
   assert(ok());
   assert(OK_ELEMENT(to_remove));
-   
+
   int rc = 0;
 
   if (1 == to_remove->atomic_number())
@@ -4563,7 +4621,7 @@ Molecule::remove_explicit_hydrogens()
 
     hcount[j]++;
 
-    _things[j]->remove_bonds_to_atom(i); 
+    _things[j]->remove_bonds_to_atom(i);
     _things[i]->remove_bonds_to_atom(j);
 
 #ifdef DEBUG_REMOVE_EXPLICIT_HYDROGENS
@@ -4612,7 +4670,7 @@ Molecule::remove_explicit_hydrogens()
       _things[i]->set_implicit_hydrogens(hcount[i], 1);
       _things[i]->set_implicit_hydrogens_known(1);
     }
-    else if (_things[i]->implicit_hydrogens_known())   // wow, organic, implicit Hydrogens known, but had an explicit H. 
+    else if (_things[i]->implicit_hydrogens_known())   // wow, organic, implicit Hydrogens known, but had an explicit H.
     {
       _things[i]->set_implicit_hydrogens(hcount[i], 1);
       _things[i]->set_implicit_hydrogens_known(1);
@@ -4713,7 +4771,7 @@ Molecule::non_organic_atom_count() const {
 
 int
 Molecule::swap_atoms(int i1, int i2,
-                      int call_set_modified) 
+                      int call_set_modified)
 {
   assert(ok_2_atoms(i1, i2));
 
@@ -4770,7 +4828,7 @@ Molecule::move_atom_to_end_of_atom_list(atom_number_t zatom)
     _things[i] = _things[i + 1];
   }
 
-  _things[_number_elements - 1] = a;   
+  _things[_number_elements - 1] = a;
 
   for (int i = 0; i < _chiral_centres.number_elements(); i++)
   {
@@ -4801,7 +4859,7 @@ Molecule::delete_fragment(int frag)
 {
   assert(ok());
 
-  // Ensure fragment membership is 
+  // Ensure fragment membership is
   if (frag >= number_fragments()) {
     cerr << "Molecule::delete_fragment:only " << number_fragments() <<
             " fragments, cannot delete " << frag << '\n';
@@ -4991,7 +5049,7 @@ int
 Molecule::centroid(Coordinates & result, int frag)
 {
   result.setxyz(0.0, 0.0, 0.0);
-  
+
   assert(frag >= 0 && frag < number_fragments());
 
   const int * fragment_membership = _fragment_information.fragment_membership();
@@ -5091,7 +5149,7 @@ Molecule::stereo_preserving_substitute(atom_number_t c,
 
 // Change the atoms in the bond
 
-  if (a1 == bca1->a1())    
+  if (a1 == bca1->a1())
     bca1->set_a1(a2);
   else
     bca1->set_a2(a2);
@@ -5248,7 +5306,6 @@ Molecule::stereo_preserving_substitute(atom_number_t a1,
   at2->set_modified();
 
   at1->resize(0);   // get rid of all the bonds
-  
 
   at1->set_implicit_hydrogens_known(0);
 
@@ -5267,17 +5324,24 @@ Molecule::stereo_preserving_substitute(atom_number_t a1,
 int
 Molecule::highest_coordinate_dimensionality() const
 {
-  int rc = 1;    
+  static constexpr coord_t kZero = static_cast<coord_t>(0.0);
+  int rc = 0;
 
   for (int i = 0; i < _number_elements; i++)
   {
     const Atom * ai = _things[i];
 
-    if (ai->z() != static_cast<coord_t>(0.0))
+    if (ai->z() != kZero) {
       return 3;
+    }
 
-    if (ai->x() != static_cast<coord_t>(0.0) || ai->y() != static_cast<coord_t>(0.0))
+    if (ai->x() != kZero && ai->y() != kZero) {
       rc = 2;
+    }
+
+    if (rc == 0 && ai->x() != kZero) {
+      rc = 1;
+    }
   }
 
   return rc;
@@ -5656,7 +5720,7 @@ Molecule::set_atom_map_number(const atom_number_t zatom, const int s)
 }
 
 static uint64_t
-do_or(uint64_t x, int bits_left, 
+do_or(uint64_t x, int bits_left,
       const uint64_t maxval,
       const uint64_t rc)
 {
@@ -5707,7 +5771,7 @@ Molecule::quick_atom_hash() const
   uint64_t sd2 = 0;   // 3 bits
   uint64_t sdx = 0;   // 3 bits
   uint64_t cl = 0;    // 3 bits
-  uint64_t x = 0;    // 3 bits   
+  uint64_t x = 0;    // 3 bits
 
   uint64_t h = 0;   // 6 bits
 
@@ -5754,7 +5818,7 @@ Molecule::quick_atom_hash() const
       }
       else if (3 == acon)
         nd3++;
-      else   
+      else
       {
         nd4++;
         fc++;

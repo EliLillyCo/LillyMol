@@ -59,7 +59,7 @@ PYBIND11_MODULE(lillymol_query, q)
     .def("set_min_atoms_to_match", &Substructure_Query::set_min_atoms_to_match, "set_min_atoms_to_match")
     .def("set_max_atoms_to_match", &Substructure_Query::set_max_atoms_to_match, "set_max_atoms_to_match")
     .def("max_query_atoms_matched_in_search", &Substructure_Query::max_query_atoms_matched_in_search, "max_query_atoms_matched_in_search")
-    .def("substructure_search", static_cast<int (Substructure_Query::*)(Molecule*)>(&Substructure_Query::substructure_search), "substructure_search")
+    .def("substructure_search", static_cast<uint32_t (Substructure_Query::*)(Molecule*)>(&Substructure_Query::substructure_search), "substructure_search")
     .def("substructure_search",
       [](Substructure_Query& qry, Molecule& m, Substructure_Results& sresults) {
         return qry.substructure_search(m, sresults);

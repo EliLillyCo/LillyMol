@@ -186,7 +186,7 @@ class IW_General_Fingerprint
 
     IWString  _id;
 
-    Set_or_Unset<__off_t> _offset;
+    Set_or_Unset<off_t> _offset;
 
 //  private functions
 
@@ -232,9 +232,8 @@ class IW_General_Fingerprint
 
     const IWString & id () const { return _id;}
 
-    // off_t not defined in C++-11, only __off_t is
-    int offset (__off_t &) const;
-    void set_offset (__off_t o) { _offset.set (o);}
+    int offset (off_t &) const;
+    void set_offset (off_t o) { _offset.set (o);}
 
     IWDYFP & operator [] (int) const;
     IWDYFP & item (int) const;

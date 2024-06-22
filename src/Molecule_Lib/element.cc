@@ -411,6 +411,8 @@ Element::_default_values(atomic_number_t i)
 
   _natural_peptide = 0;
 
+  _can_be_aromatic = 0;
+
   switch (i)
   {
     case 0:
@@ -1312,8 +1314,12 @@ Element::_default_values(atomic_number_t i)
 
   (void) _symbol.null_terminated_chars();    // ensure null terminated
 
-  if (0 == _aromatic_symbol.length())
+  if (_aromatic_symbol.empty()) {
+    _can_be_aromatic = 0;
     _aromatic_symbol = _symbol;
+  } else {
+    _can_be_aromatic = 1;
+  }
 
   if (_symbol.length() > 2)    // cannot hash these
     return;

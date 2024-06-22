@@ -80,7 +80,7 @@ static int products_discarded_for_violating_fragment_specifications = 0;
 // max_allowed_fragment_size_in_product.
 static int write_multi_fragment_products_as_separate_molecules = 0;
 
-// Suppress the 'hits in scaffold' message.
+// If set, the 'hits in scaffold' message is issued.
 static int display_multiple_scaffold_hits_message = 1;
 
 /*
@@ -212,7 +212,6 @@ usage(int rc) {
   cerr << "  -m do=number   process site number <number> in the scaffold\n";
   cerr << "  -m each        enumerate each scaffold hit separately\n";
   cerr << "  -m RMX         ignore scaffolds that generate multiple substructure hits\n";
-//cerr << "  -m all         exhaustive enumeration of all scaffold matches\n";
   cerr << "  -X <symbol>    extract/remove all atoms of type <symbol>. No bonds changed\n";
   cerr << "  -I             change isotopes to natural form in product molecules\n";
   cerr << "  -M all         generate all regio-isomers from multiple sidechain matches\n";
@@ -220,7 +219,7 @@ usage(int rc) {
   cerr << "  -M mskip=text  append <text> to names where just one possible sidechain attachment chosen\n";
   cerr << "  -M write=file  write non-reacting sidechains to <file>\n";
   cerr << "  -M RMX         ignore any sidechains with multiple substructure matches\n";
-  cerr << "  -V <fname>     molecules with invalid valences ignored and written to <fname>\n";
+  cerr << "  -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)\n";
   cerr << "  -l             strip reagents to largest fragment\n";
   cerr << "  -L             strip products to largest fragment\n";
   cerr << "  -f             function as a TDT filter\n";
@@ -789,7 +788,7 @@ process_no_reagents(Molecule& m, IWReaction& reaction,
   ;
 
   if (smc.process_hit_number() >= 0) {
-    int mdo = smc.process_hit_number();
+    uint32_t mdo = smc.process_hit_number();
 
     if (mdo >= sresults.number_embeddings()) {
       cerr << "Request to process embedding " << mdo << " but query produced "
@@ -1428,6 +1427,7 @@ display_dash_j_qualifiers(std::ostream& os) {
  -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms
  -J mfpseparate write multi fragment products as separate molecules
  -J nomshmsg    do NOT write 'hits in scaffold' messages for multiple scaffold query hits
+ -J noschmsg    do NOT write warning messages about no sidechain substructure matches
 )";
   // clang-format on
 
@@ -1560,15 +1560,21 @@ trxn(int argc, char** argv) {
 
     suppress_invalid_valences = 1;
 
-    stream_for_invalid_valence.add_output_type(FILE_TYPE_SMI);
+    if (fname == "NONE") {
+      if (verbose) {
+        cerr << "Products with invalid valences not written\n";
+      }
+    } else {
+      stream_for_invalid_valence.add_output_type(FILE_TYPE_SMI);
 
-    if (!stream_for_invalid_valence.new_stem(fname)) {
-      cerr << "Cannot set invalid valence stream stem to '" << fname << "'\n";
-      return 62;
-    }
+      if (!stream_for_invalid_valence.new_stem(fname)) {
+        cerr << "Cannot set invalid valence stream stem to '" << fname << "'\n";
+        return 62;
+      }
 
-    if (verbose) {
-      cerr << "Molecules with invalid valences written to '" << fname << ".smi'\n";
+      if (verbose) {
+        cerr << "Molecules with invalid valences written to '" << fname << ".smi'\n";
+      }
     }
   }
 
@@ -1670,8 +1676,8 @@ trxn(int argc, char** argv) {
           cerr << "Will ignore multiple matches when changing atoms are involved\n";
         }
       } else if ("exph" == j) {
-        make_implicit_hydrogens_explicit =
-            96632;  // some unlikely number so we can pull them off at the end
+        // an unlikely number so we can pull them off at the end
+        make_implicit_hydrogens_explicit = 96632;
         rxn.set_make_implicit_hydrogens_explicit(make_implicit_hydrogens_explicit);
 
         if (verbose) {
@@ -1771,6 +1777,11 @@ trxn(int argc, char** argv) {
         if (verbose) {
           cerr << "Will NOT write messagea about multiple scaffold query hits\n";
         }
+      } else if (j == "noschmsg") {
+        if (verbose) {
+          cerr << "Will NOT warn about no sidechain query matches\n";
+        }
+        scaffold_match_conditions.set_issue_sidechain_no_match_warnings(0);
       } else {
         cerr << "Unrecognised -J qualifier '" << j << "'\n";
         display_dash_j_qualifiers(cerr);
@@ -1944,6 +1955,7 @@ trxn(int argc, char** argv) {
 
   if (cl.option_present('u')) {
     rxn.set_find_one_embedding_per_atom(1);
+    rxn.set_find_unique_embeddings_only(1);
     sidechain_match_conditions.set_one_embedding_per_start_atom(1);
     if (verbose) {
       cerr << "One embedding per start atom\n";

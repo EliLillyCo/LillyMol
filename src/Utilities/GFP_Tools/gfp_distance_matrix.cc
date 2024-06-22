@@ -119,6 +119,8 @@ initialise_int_sr() {
 
 static int *output_buffer = nullptr;
 
+static int write_header_record = 0;
+
 // clang-format off
 static void
 usage (int rc)
@@ -132,6 +134,7 @@ usage (int rc)
 // clang-format on
 // clang-format off
   cerr << R"(Computes the distance matrix for a pool of fingerprints\n";
+ -h               write a header record
  -l               lower triangular matrix only
  -m               output as similarities rather than distances
  -s <size>        specify the number of molecules (usually not needed)
@@ -377,8 +380,24 @@ all_ids_have_same_token_count(const IW_General_Fingerprint *pool, int n) {
 }
 
 static int
+WriteHeaderRecord(const IW_General_Fingerprint* pool, int pool_size,
+                  IWString_and_File_Descriptor& output) {
+  output << "Name";
+  for (int i = 0; i < pool_size; ++i) {
+    output << token_separator << pool[i].id();
+
+    output.write_if_buffer_holds_more_than(8192);
+  }
+
+  output << '\n';
+
+  return 1;
+}
+
+
+static int
 distance_matrix(int argc, char **argv) {
-  Command_Line cl(argc, argv, "vs:lmV:fF:P:W:Q:C:ejr:g:q");
+  Command_Line cl(argc, argv, "vs:lmV:fF:P:W:Q:C:ejr:g:qh");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -462,6 +481,13 @@ distance_matrix(int argc, char **argv) {
     }
   }
 
+  if (cl.option_present('h')) {
+    write_header_record = 1;
+    if (verbose) {
+      cerr << "Will write a header record\n";
+    }
+  }
+
   if (cl.option_present('f')) {
     fast_io = 1;
 
@@ -517,6 +543,10 @@ distance_matrix(int argc, char **argv) {
   set_default_iwstring_float_concatenation_precision(4);
 
   IWString_and_File_Descriptor output(1);
+  
+  if (write_header_record) {
+    WriteHeaderRecord(pool, pool_size, output);
+  }
 
   IW_General_Fingerprint *pool2 = nullptr;
   int ncomparators = 0;
@@ -603,7 +633,7 @@ distance_matrix(int argc, char **argv) {
   }
 
   if (nullptr != stored_result) {
-    delete stored_result;
+    delete[] stored_result;
   }
 
   return 0;

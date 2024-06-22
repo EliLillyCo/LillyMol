@@ -1002,7 +1002,7 @@ Haystack::DoLookup(Options& options,
     return 0;
   }
 
-  resizable_array_p<Chiral_Centre> chiral_centres = m.ReleaseChiralCentres();
+  auto chiral_centres = m.ReleaseChiralCentres();
   int rc = DoLookupInner(options, initial_molecule, m, output);
   m.SetChiralCentres(std::move(chiral_centres));
 

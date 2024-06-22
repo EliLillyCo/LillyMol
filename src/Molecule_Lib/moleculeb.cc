@@ -83,6 +83,13 @@ Molecule::saturated(atom_number_t i) const
   return _things[i]->fully_saturated();
 }
 
+int
+Molecule::unsaturation(atom_number_t zatom) const {
+  assert(ok_atom_number(zatom));
+
+  return _things[zatom]->nbonds() - _things[zatom]->ncon();
+}
+
 /*
   Return the atom number of the J'th connection to atom I in
   molecule THIS

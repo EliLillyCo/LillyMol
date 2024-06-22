@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # when building a pybind environment, we need to copy the shared libraries generated
 # by bazel to somewhere permanent.
@@ -17,6 +17,7 @@ fi
 declare -a libs=(
 bazel-bin/pybind/lillymol.so
 bazel-bin/pybind/lillymol_io.so
+bazel-bin/pybind/lillymol_fingerprint.so
 bazel-bin/pybind/lillymol_query.so
 bazel-bin/pybind/lillymol_reaction.so
 bazel-bin/pybind/lillymol_standardise.so

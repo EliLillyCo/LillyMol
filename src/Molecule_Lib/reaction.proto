@@ -5,7 +5,10 @@ import "Molecule_Lib/toggle_kekule_form.proto";
 
 package ReactionProto;
 
-message MatchConditions {
+// Both ScaffoldMatchConditions and SidechainMatchConditions have features
+// in common, but rather than create an inner message, elect to duplicate
+// those attributes in each message in order to enhance usability.
+message ScaffoldMatchConditions {
   optional bool ignore_not_reacting = 1;
   optional bool find_unique_embeddings = 2;
   optional int32 process_hit_number = 3;
@@ -13,19 +16,23 @@ message MatchConditions {
   optional bool ignore_symmetry_related_matches = 5;
   optional string multiple_match_string = 6;
   optional int32 suppress_if_more_than_this_many_substructure_search_hits = 7;
-};
 
-message ScaffoldMatchConditions {
-  optional MatchConditions match_conditions = 1;
-  optional bool enumerate_scaffold_hits_individually = 2;
-  optional int32 combinatorial_expansion_of_scaffold_hits = 3;
+  optional bool enumerate_scaffold_hits_individually = 9;
+  optional int32 combinatorial_expansion_of_scaffold_hits = 10;
 }
 
 message SidechainMatchConditions {
-  optional MatchConditions match_conditions = 1;
-  optional bool make_new_reagent_for_each_hit = 2;
-  optional int32 max_matches_to_find = 3;
-  optional bool strip_reagents_to_largest_fragment = 4;
+  optional bool ignore_not_reacting = 1;
+  optional bool find_unique_embeddings = 2;
+  optional int32 process_hit_number = 3;
+  optional bool one_embedding_per_start_atom = 4;
+  optional bool ignore_symmetry_related_matches = 5;
+  optional string multiple_match_string = 6;
+  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 7;
+
+  optional bool make_new_reagent_for_each_hit = 9;
+  optional int32 max_matches_to_find = 10;
+  optional bool strip_reagents_to_largest_fragment = 11;
 }
 
 message PairOfAtoms {
@@ -454,6 +461,9 @@ message ScaffoldReactionSite {
 
   repeated CipStereoAtom cip_stereo = 33;
 // DO NOT EDIT
+
+  // jan 2024 this was at Reaction scope, but should be here.
+  optional ScaffoldMatchConditions match_conditions = 40;
 }
 
 message SidechainReactionSite {
@@ -533,7 +543,9 @@ message Reaction {
 
   optional bool make_implicit_hydrogens_explicit = 12;
 
-  optional ScaffoldMatchConditions scaffold_match_conditions = 13;
+  // This should be replaced by the ScaffoldReactionSite _match_conditions
+  // message. Not yet marked as deprecated, but should not be used.
+  optional ScaffoldMatchConditions scaffold_match_conditions = 13;   // [deprecated=true];
 
   optional bool noop_reaction = 14;
 }

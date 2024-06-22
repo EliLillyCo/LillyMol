@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package RandomForestModel;
+
+message RandomForestParameters {
+  optional uint32 n_estimators = 1;
+  optional uint32 max_depth = 2;
+  optional uint32 min_samples_split = 3;
+  optional uint32 min_samples_leaf = 4;
+  // Not used
+  optional float min_weight_fraction = 5;
+  // Not used
+  oneof max_features {
+    string s = 16;
+    uint32 i = 17;
+    float f = 18;
+  }
+  optional uint32 max_leaf_nodes = 6;
+  optional float min_impurity_decrease = 7;
+  optional bool bootstrap = 8;
+  optional bool oob_score = 9;
+  optional uint32 n_jobs = 10;
+  // Not used
+  optional int32 random_state = 11;
+  optional int32 verbose = 12;
+}
+
+message RandomForestModel {
+  optional string model_type = 1;
+
+  optional string response = 2;
+
+  optional RandomForestParameters parameters = 3;
+
+  optional bool classification = 4;
+
+  // When a model is evaluated we need to ensure that we have the same
+  // column order as was used during training, so we store a cross reference
+  // from column name to column number that the evaluation script can use to
+  // ensure that the same features are sent to the model.
+  map<string, uint32> name_to_col = 5;
+}

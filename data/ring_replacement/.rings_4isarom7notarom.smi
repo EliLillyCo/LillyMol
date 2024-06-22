@@ -1,1 +1,1 @@
-smi: "C12=[1CH][CH2:70]C1=NCCC[1NH]2" smt: "[ax3r4r7D3]12:[ax2r4D>2]:[ax2r4D2]:[ax3r4r7D3]:1:[ax2r7D2]:[ax2r7D2]:[ax2r7D2]:[ax2r7D2]:[ax2r7D>2]:2" id: "CHEMBL79960" n: 6 conn: true exo: "[70O]" usmi: "O=c1[1cH]c2[1NH]CCCN=c12" 
+smi: "C12=[1CH][CH2:70]C1=NCCC[1NH]2" smt: "[ax3r4r7D3]12=[ax2r4D>2][ax2r4D2][ax3r4r7D3]1=[Ax2r7D2][Ax2r7D2][Ax2r7D2][Ax2r7D2][Ax2r7D>2]2" id: "CHEMBL79961.4a7A" n: 6 conn: true exo: "[70O]" usmi: "O=c1[1cH]c2[1NH]CCCN=c12" 

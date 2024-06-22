@@ -744,8 +744,9 @@ static int
 display_standard_dash_M_options(std::ostream& os) {
   os << "  -M aeuao       Atom Environments match Unmatched Atoms Only\n";
   os << "  -M imp2exp     make implicit Hydrogens explicit\n";
-  os << "  -M onlysubiso  isotopic atoms in query molecules indicate subsitution "
-        "points\n";
+#ifdef NO_LONGER_WORKS
+  os << "  -M onlysubiso  isotopic atoms in query molecules indicate subsitution points\n";
+#endif
   os << "  -M iso=nn      apply isotope <nn> to the points of breakage\n";
 
   return os.good();
@@ -783,12 +784,14 @@ molecule_subset(int argc, char** argv) {
         set_atom_environment_only_matches_unmatched_atoms(1);
       } else if ("imp2exp" == m) {
         make_implicit_hydrogens_explicit = 1;
+#ifdef NO_LONGER_WORKS_AS_GLOBAL
       } else if ("onlysubiso" == m) {
-        set_substituents_only_at_isotopic_atoms(1);
+        mqs.set_substituents_only_at_isotopic_atoms(1);
         if (verbose) {
           cerr << "When building queries from molecules, isotopic atoms indicate "
                   "substitution points\n";
         }
+#endif
       } else if (m.starts_with("iso=")) {
         m.remove_leading_chars(4);
         if (!m.numeric_value(isotope_at_break_points) || isotope_at_break_points <= 0) {

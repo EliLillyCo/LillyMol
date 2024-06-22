@@ -76,15 +76,10 @@ usage (int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
-
-  cerr << "  -i <type>      input type\n";
-
   cerr << "  -f             ignore unrecognized atom class\n";
-
+  cerr << "  -i <type>      input type\n";
   (void) display_standard_aromaticity_options (cerr);
-
   (void) display_standard_chemical_standardisation_options (cerr, 'g');
-
   cerr << "  -v             verbose output\n";
   
   exit (rc);

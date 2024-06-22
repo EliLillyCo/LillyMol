@@ -70,6 +70,8 @@ class Element {
 
     int _natural_peptide;
 
+    int _can_be_aromatic;
+
 //  private functions
 
     void _non_periodic_table_element_constructor (const char * s, int nchars);
@@ -145,8 +147,8 @@ class Element {
 
     int is_halogen () const;
 
-    int pi_electrons (int, formal_charge_t, int &) const;
-    int lone_pairs   (int, formal_charge_t, int &) const;
+    int pi_electrons (int ncon, formal_charge_t, int & result) const;
+    int lone_pairs   (int ncon, formal_charge_t, int & result) const;
 
     int outer_shell_electrons (int &) const;
 
@@ -155,6 +157,10 @@ class Element {
 
     int natural_peptide() const { return _natural_peptide;}
     void set_natural_peptide(const int s) { _natural_peptide = s;}
+
+    int can_be_aromatic() const {
+      return _can_be_aromatic;
+    }
 };
 
 extern void  debug_print_all_elements (std::ostream &);

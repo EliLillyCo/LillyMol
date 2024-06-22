@@ -181,7 +181,7 @@ def generate_feature_profile(data: pd.DataFrame,
   if column_number < 0:
     logging.fatal("No %s in %r", feature_name, data.columns)
 
-  feature_type = data.dtypes[column_number]
+  feature_type = data.dtypes.iloc[column_number]
 
   if verbose:
     logging.info("Feature %s found in column %d type %r", feature_name, column_number, feature_type)

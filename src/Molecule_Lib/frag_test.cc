@@ -114,5 +114,13 @@ TEST(TestAtomsInFragment, FirstCall) {
   EXPECT_EQ(m.atoms_in_fragment(1), 2);
 }
 
+TEST(TestRingsInFragment, TestRingsInFragment) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("CCC.C1CC1.C12CC1C2"));
+  EXPECT_EQ(m.rings_in_fragment(0), 0);
+  EXPECT_EQ(m.rings_in_fragment(1), 1);
+  EXPECT_EQ(m.rings_in_fragment(2), 2);
+}
+
 }  // namespace
 

@@ -493,6 +493,17 @@ Molecule::_parse_v30_bond_record(const const_IWSubstring & buffer,
     return 0;
   }
 
+  // THis needs to be implemented here but to do that we need to change the
+  // function signature...
+  //btype = mdlfos.translate_input_bond_type();
+
+#ifdef TEMP_HACK_TO_READ_COORDINATION_BONDS
+  // Temporary hack to enable coordination bonds...
+  if (btype == 9) {
+    btype = 1;
+  }
+#endif // TEMP_HACK_TO_READ_COORDINATION_BONDS
+
 // Bit of a tough decision about whether to put the query combinations in
 // here but it means we don't have to duplicate the code
 

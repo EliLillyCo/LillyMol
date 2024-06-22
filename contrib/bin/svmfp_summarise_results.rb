@@ -7,35 +7,33 @@ require "#{ianhome}/ruby/lib/iwcmdline.rb"
 $expert = false
 
 def usage (rc)
-  $stderr.print "Summarises results in the output files from svmfp_calibrate.rb\n"
-  $stderr.print " -rx <regexp>   process files that match <rx>, -rx 'A80' for example\n"
-  $stderr.print "                useful if too many files to process via cmd line\n"
-  $stderr.print " -F <fname>     read files to be processed from <fname>\n"
-  $stderr.print " -R B2          result of interest is Bsquared\n"
-  $stderr.print " -R AE          result of interest is average absolute error\n"
-  $stderr.print " -R RMS         result of interest is root mean square error\n"
-  $stderr.print " -R R2          result of interest is R squared\n"
-  $stderr.print " -R Q2          result of interest is Q squared\n"
-  $stderr.print " -R AE50        result of interest is AE50\n"
-  $stderr.print " -R AE95        result of interest is AE95\n"
-# GH Removed. RMS50 and RMS95 are not calculated in svmfp_calibrate.sh based on the comment
-#             from Suntara Cahya
-#  $stderr.print " -R RMS50       result of interest is RMS50\n"
-#  $stderr.print " -R RMS95       result of interest is RMS95\n"
-  $stderr.print " -R cMSR90_mad    result of interest is cMSR (median average deviation) (Suntara)\n"
-  $stderr.print " -R cMSR90_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
-  $stderr.print " -R cMSR95_mad    result of interest is cMSR (median average deviation) (Suntara)\n"
-  $stderr.print " -R cMSR95_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
-  $stderr.print " -R rx=<rx>     for extracting the model type from the file name\n" if ($expert)
-  $stderr.print " -C .           classification model (min fraction correct)\n" if ($expert)
-  $stderr.print " -C mfc         classification (min fraction correct)\n" if ($expert)
-  $stderr.print " -C afc         classification (ave fraction correct)\n" if ($expert)
-# $stderr.print " -p precision   precision for outputs (default 3)\n"
-  $stderr.print " -T <nt>        perform t test on the <nt> best fingerprints compared to best\n" if ($expert)
-  $stderr.print " -D <fname>     file of raw values\n" if ($expert)
-  $stderr.print " -B <fname>     write best fingerprint model to <fname>\n"
-  $stderr.print " -x             normally the -B file contains the best fingerprint only, -x allows other forms\n" if $expert
-  $stderr.print " -v             verbose output\n"
+  $stderr << "Summarises results in the output files from svmfp_calibrate.rb\n"
+  $stderr << " -rx <regexp>   process files that match <rx>, -rx 'A80' for example\n"
+  $stderr << "                useful if too many files to process via cmd line\n"
+  $stderr << " -F <fname>     read files to be processed from <fname>\n"
+  $stderr << " -R B2          result of interest is Bsquared\n"
+  $stderr << " -R AE          result of interest is average absolute error\n"
+  $stderr << " -R RMS         result of interest is root mean square error\n"
+  $stderr << " -R R2          result of interest is R squared\n"
+  $stderr << " -R Q2          result of interest is Q squared\n"
+  $stderr << " -R AE50        result of interest is AE50\n"
+  $stderr << " -R AE95        result of interest is AE95\n"
+  $stderr << " -R cMSR90_mad    result of interest is cMSR (median average deviation) (Suntara)\n"
+  $stderr << " -R cMSR90_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
+  $stderr << " -R cMSR95_mad    result of interest is cMSR (median average deviation) (Suntara)\n"
+  $stderr << " -R cMSR95_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
+  $stderr << " -R max_error     max error\n" if $expert
+  $stderr << " -R rx=<rx>     Process lines that match <rx>\n" if $expert
+  $stderr << " -col <col>     when matching records via the rx= directive, which column\n" if $expert
+  $stderr << " -C .           classification model (min fraction correct)\n" if $expert
+  $stderr << " -C mfc         classification (min fraction correct)\n" if $expert
+  $stderr << " -C afc         classification (ave fraction correct)\n" if $expert
+# $stderr << " -p precision   precision for outputs (default 3)\n"
+  $stderr << " -T <nt>        perform t test on the <nt> best fingerprints compared to best\n" if $expert
+  $stderr << " -D <fname>     file of raw values\n" if $expert
+  $stderr << " -B <fname>     write best fingerprint model to <fname>\n"
+  $stderr << " -x             normally the -B file contains the best fingerprint only, -x allows other forms\n" if $expert
+  $stderr << " -v             verbose output\n"
   exit(rc)
 end
 
@@ -44,7 +42,7 @@ cl = IWCmdline.new("-v-R=s-C=s-p=ipos-r-col=ipos-RX=s-rx=s-T=ipos-D=s-expert-std
 $expert = cl.option_present('expert')
 
 if cl.unrecognised_options_encountered()
-  $stderr.print "Unrecognised options encountered\n"
+  $stderr << "Unrecognised options encountered\n"
   usage(1)
 end
 
@@ -135,12 +133,12 @@ if ! next_file.initialise(cl, ARGV)
 end
 
 $output_precision = 3
-if (cl.option_present('p'))
+if cl.option_present('p')
   $output_precision = cl.value('p')
 end
 
 column_to_process = false
-if (cl.option_present('col'))
+if cl.option_present('col')
   column_to_process = cl.value('col')
   column_to_process -= 1
 end
@@ -158,68 +156,76 @@ rxrx = Regexp.new('^rx=(\\S+)')
 
 header_for_Dfile = "B2"
 
-if (cl.option_present('R'))
+if cl.option_present('R')
 
   cl.values('R').each do |r|
 
-    if ('B2' == r)
-      rx.push(Regexp.new(' Bsquared '))
+    if 'B2' == r
+      rx.push(Regexp.new(' (Bsquared|B2.input) '))
       rxname.push('B2')
       reverse.push(false)
-    elsif ('R2' == r)
+    elsif 'R2' == r
       rx.push(Regexp.new(' R2 '))
       rxname.push('R2')
       reverse.push(false)
-    elsif ('Q2' == r)
+    elsif 'Q2' == r
       rx.push(Regexp.new(' Q2 '))
       rxname.push('Q2')
       reverse.push(false)
-    elsif ('AE' == r)
+    elsif 'AE' == r
       rx.push(Regexp.new('^Average absolute error '))
       rxname.push('AE')
       reverse.push(true)
-    elsif ('RMSE' == r || 'RMS' == r)
-      rx.push(Regexp.new('^RMS error '))
+    elsif 'RMSE' == r || 'RMS' == r
+      rx.push(Regexp.new('(^RMS error | RMS =)'))
       rxname.push('RMS')
       reverse.push(true)
-    elsif ('D' == r)
+    elsif 'D' == r
       rx.push(Regexp.new('^Distributional similarity'))
       rxname.push('DS')
       reverse.push(false)
-    elsif ('PPV' == r)
+    elsif 'PPV' == r
       rx.push(Regexp.new(' PPV '))
       rxname.push('PPV')
       reverse.push(false)
-    elsif ('AE50' == r)
+    elsif 'AE50' == r
       rx.push(Regexp.new(' AE50 '))
       rxname.push('AE50')
       reverse.push(true)
-    elsif ('AE95' == r)
+    elsif 'AE75' == r
+      rx.push(Regexp.new(' AE75 '))
+      rxname.push('AE75')
+      reverse.push(true)
+    elsif 'AE95' == r
       rx.push(Regexp.new(' AE95 '))
       rxname.push('AE95')
       reverse.push(true)
-    elsif ('cMSR90_mad' == r)
+    elsif 'cMSR90_mad' == r
       rx.push(Regexp.new(' cMSR90_mad '))
       rxname.push('cMSR90_mad')
       reverse.push(true)
-    elsif ('cMSR95_mad' == r)
+    elsif 'cMSR95_mad' == r
       rx.push(Regexp.new(' cMSR95_mad '))
       rxname.push('cMSR95_mad')
       reverse.push(true)
-    elsif ('cMSR90_sd' == r)
+    elsif 'cMSR90_sd' == r
       rx.push(Regexp.new(' cMSR90_sd '))
       rxname.push('cMSR90_sd')
       reverse.push(true)
-    elsif ('cMSR95_sd' == r)
+    elsif 'cMSR95_sd' == r
       rx.push(Regexp.new(' cMSR95_sd '))
       rxname.push('cMSR95_sd')
       reverse.push(true)
-    elsif ("bias" == r.downcase)
+    elsif "bias" == r.downcase
       rx.push(Regexp.new(' bias ', Regexp::IGNORECASE))
       rxname.push('bias')
       reverse.push(true)
-    elsif ("all" == r.downcase)
-      rx.push(Regexp.new(' Bsquared '))
+    elsif r == 'max_error'
+      rx.push(Regexp.new(' max_error ', Regexp::IGNORECASE))
+      rxname.push('max_error')
+      reverse.push(true)
+    elsif "all" == r.downcase
+      rx.push(Regexp.new(' (Bsquared|B2.input) '))
       rxname.push('B2')
       reverse.push(false)
       rx.push(Regexp.new(' R2 '))
@@ -253,11 +259,11 @@ if (cl.option_present('R'))
       rxname.push('cMSR95_mad')
       reverse.push(true)
     elsif (m = rxrx.match(r))
-      rx.push(Regexp.new(m[0]))
-      rxname.push(m[0])
+      rx.push(Regexp.new(m[1]))
+      rxname.push(m[1])
       reverse.push(false)   # we really do not know
     else
-      $stderr.print "Unrecognised -R qualifier '#{r}'\n"
+      $stderr << "Unrecognised -R qualifier '#{r}'\n"
       usage(5)
     end
   end
@@ -285,11 +291,11 @@ elsif (cl.option_present('C'))
     rxname.push(c)
     reverse.push(false)
   else
-    $stderr.print "Unrecognised -C qualifier '#{c}'\n"
+    $stderr << "Unrecognised -C qualifier '#{c}'\n"
     usage(5)
   end
 else
-  rx.push(Regexp.new(' Bsquared '))
+  rx.push(Regexp.new(' (Bsquared|B2\.input) '))
   rxname.push('B2')
   reverse.push(false)
 end
@@ -434,7 +440,7 @@ next_file.each do |fname, file_contents|
   m = fname_rx.match(fname)
 
   if (! m)
-    $stderr.print "Skipping non valid file name '#{fname}' #{fname_rx.source}\n"
+    $stderr << "Skipping non valid file name '#{fname}' #{fname_rx.source}\n"
     next
   end
 
@@ -460,7 +466,7 @@ next_file.each do |fname, file_contents|
     ndx = which_rx_matches(rx, line)
     next unless (ndx)
 
-    f = line.split
+    f = line.chomp.split
 
     if (column_to_process)
       zvalue = f[column_to_process]
@@ -475,7 +481,7 @@ next_file.each do |fname, file_contents|
       t = 0.0;
     end
 
-#   $stderr.print "From '#{line.chomp}' get #{t}\n"
+#   $stderr << "From '#{line.chomp}' get #{t}\n"
 
     predictors[predictor].extra(ndx, t)
   end
@@ -520,6 +526,7 @@ def looks_like_fingerprint s
   return false unless s
   return false unless s.length > 0
   return false if s.index("ARB")
+  return false if s.index("XGB")
 #GH Only check the string starts with those substring
   return false if (0 == s.index("CUBIST")) 
   return false if (0 == s.index("SVMD"))
@@ -548,11 +555,11 @@ end
       array_of_predictors.push(v)
       nsplit = n if (n > nsplit)
     else
-      $stderr.print "No #{rxname[i]} values for '#{v.name}', ignored\n"
+      $stderr << "No #{rxname[i]} values for '#{v.name}', ignored\n"
     end
   end
 
-#$stderr.print "Have #{array_of_predictors.size} different predictions\n"
+#$stderr << "Have #{array_of_predictors.size} different predictions\n"
 
   rvs = reverse[i]
   array_of_predictors.sort! {|a, b| 
@@ -568,7 +575,7 @@ end
     va <=> vb
   }
 
-  $stderr.print "After sort #{array_of_predictors.size} values\n" if verbose
+  $stderr << "After sort #{array_of_predictors.size} values\n" if verbose
 
   os = $stdout
   if rx.size > 1

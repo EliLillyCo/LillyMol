@@ -310,9 +310,9 @@ queries_from_file_of_molecules (const const_IWSubstring & fname,
 
 // Don't follow any seeking or such from the command line
 
-  const off_t o = seek_to_from_command_line();
+  const off_t o = moleculeio::seek_to_from_command_line();
 
-  set_seek_to(static_cast<off_t>(0));
+  moleculeio::set_seek_to(static_cast<off_t>(0));
 
   data_source_and_type<MDL_Molecule> input(input_type, fname);
   if (! input.good())
@@ -323,7 +323,7 @@ queries_from_file_of_molecules (const const_IWSubstring & fname,
 
   int rc = queries_from_file_of_molecules(input, mqs, queries, verbose);
 
-  set_seek_to(o);
+  moleculeio::set_seek_to(o);
 
   return rc;
 }

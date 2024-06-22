@@ -19,9 +19,14 @@
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwqsort/iwqsort.h"
 
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/substructure.h"
+#include "Molecule_Lib/target.h"
 
 #include "Molecule_Tools/dicer_fragments.pb.h"
 
@@ -34,7 +39,125 @@ struct SmilesNatoms {
   int natoms;
   SmilesNatoms(const const_IWSubstring& s, int n) : smiles(s), natoms(n) {
   }
+  SmilesNatoms(const std::string& s, int n) : smiles(s), natoms(n) {
+  }
 };
+
+// As we look up fragments, we can do a substructure search to see how the
+// fragment is embedded in the parent molecule. We set an isotope to the
+// total number of times an atom is matched by a fragment.
+class AtomCoverage {
+  private:
+    Molecule _m;
+
+    // for each atom, the number of fragments matching the atom.
+    int* _times_matched;
+
+    // The number of atoms in the largest fragment that matches.
+    int _largest_fragment_match;
+
+    Molecule_to_Query_Specifications _mqs;
+
+    std::unique_ptr<Molecule_to_Match> _target;
+
+    Fraction_as_String _fraction;
+
+  public:
+    AtomCoverage(const IWString& smiles, const IWString& name);
+    ~AtomCoverage();
+
+    int UpdateCoverage(const IWString& smiles);
+    int UpdateCoverage(Molecule& frag);
+
+    int WriteCoverageSmiles(IWString_and_File_Descriptor& output);
+};
+
+AtomCoverage::AtomCoverage(const IWString& smiles, const IWString& name) {
+  if (! _m.build_from_smiles(smiles)) {
+    cerr << "AtomCoverage:invalid smiles '" << smiles << "'\n";
+    return;
+  }
+
+  _m.set_name(name);
+
+  _times_matched = new_int(_m.natoms());
+  
+  _mqs.set_substituents_only_at_isotopic_atoms(1);
+
+  _target = std::make_unique<Molecule_to_Match>(&_m);
+
+  _largest_fragment_match = 0;
+
+  _fraction.initialise(0.0f, 1.0f, 3);
+}
+
+AtomCoverage::~AtomCoverage() {
+  delete [] _times_matched;
+}
+
+int
+AtomCoverage::UpdateCoverage(const IWString& smiles) {
+  if (smiles.empty()) {
+    cerr << "Ignoring empty smiles\n";
+    return 0;
+  }
+
+  Molecule frag;
+  if (! frag.build_from_smiles(smiles)) {
+    cerr << "AtomCoverage::UpdateCoverage:invalid smiles '" << smiles << "'\n";
+    return 0;
+  }
+
+  return UpdateCoverage(frag);
+}
+
+int
+AtomCoverage::UpdateCoverage(Molecule& frag) {
+  Substructure_Query qry;
+  if (! qry.create_from_molecule(frag, _mqs)) {
+    cerr << "AtomCoverage::UpdateCoverage:cannot convert " << frag.smiles() << " to query\n";
+    return 0;
+  }
+
+  qry.set_find_unique_embeddings_only(1);
+
+  Substructure_Results sresults;
+  if (qry.substructure_search(*_target, sresults) == 0) {
+    cerr << "AtomCoverage:UpdateCoverage:no query match for " << frag.smiles() <<
+            " in " << _m.smiles() << '\n';
+    return 0;
+  }
+
+  if (frag.natoms() > _largest_fragment_match) {
+    _largest_fragment_match = frag.natoms();
+  }
+
+  for (const Set_of_Atoms* e : sresults.embeddings()) {
+    e->increment_vector(_times_matched, 1);
+  }
+
+  return sresults.number_embeddings();
+}
+
+int
+AtomCoverage::WriteCoverageSmiles(IWString_and_File_Descriptor& output) {
+  _m.set_isotopes(_times_matched);
+
+  const int niso = _m.number_isotopic_atoms();
+  float f = iwmisc::Fraction<float>(niso, _m.natoms());
+
+  static constexpr char kSep = ' ';
+
+  output << _m.smiles() << kSep << _m.name() << kSep << niso << kSep;
+  _fraction.append_number(output, f);
+  output << kSep << _largest_fragment_match << kSep;
+
+  f = iwmisc::Fraction<float>(_largest_fragment_match, _m.natoms());
+  _fraction.append_number(output, f);
+
+
+  return 1;
+}
 
 class DicerFragmentLookupImpl {
   private:
@@ -46,6 +169,8 @@ class DicerFragmentLookupImpl {
     // rarest fragment is > _min_count_needed;
     // by default it is zero.
     int _min_count_needed;
+
+    int _input_is_textproto;
 
     // the number of molecules passed to DoOutput.
     int _molecules_processed;
@@ -78,11 +203,26 @@ class DicerFragmentLookupImpl {
     // fragments.
     int _looking_for_highest_precedent;
 
+    // We might have input that contains fragments smaller or larger
+    // than what might be stored in the database, so have the ability
+    // to filter fragments as they are read in.
+    int _min_fragment_size;
+    int _max_fragment_size;
+
+    int _write_header_record;
+
     // The output separator in our output files.
     char _sep = ' ';
 
     // The values used to initialise per_natom_min.
-    int maxint = std::numeric_limits<int>::max();
+    const int maxint = std::numeric_limits<int>::max();
+
+    // As fragments are read, we can do a substructure search and increment the
+    // number of times each atom is hit by one of the fragments fetched from the
+    // database.
+    int _compute_atom_coverage;
+
+    IWString_and_File_Descriptor _stream_for_atom_coverage;
 
     // Private functions
 
@@ -109,6 +249,12 @@ class DicerFragmentLookupImpl {
     DicerFragmentLookupImpl();
 
     int Initialise(Command_Line& cl);
+
+    int input_is_textproto() const {
+      return _input_is_textproto;
+    }
+
+    int OkAtomCount(int natoms) const;
 
     // Lookup `smiles` in each database and return the total
     // number of instances.
@@ -138,13 +284,18 @@ class DicerFragmentLookupImpl {
 
 DicerFragmentLookupImpl::DicerFragmentLookupImpl() {
   _verbose = 0;
+  _input_is_textproto = 0;
+  _write_header_record = 0;
   _molecules_processed = 0;
   _molecules_with_no_fragments = 0;
   _min_count_needed = 0;
   _above_min_count = 0;
+  _min_fragment_size = 0;
+  _max_fragment_size = 0;
   _rarest_fragment_on_separate_line = 0;
   _write_per_natoms_data = 0;
   _looking_for_highest_precedent = 0;
+  _compute_atom_coverage = 0;
 }
 
 void
@@ -153,6 +304,17 @@ DisplayDashJOptions(std::ostream& output) {
   output << " -J          other qualifiers will be added\n";
 
   exit(0);
+}
+
+void
+DisplayDashYOptions(std::ostream& output) {
+  cerr << R"(
+ -Y header              write a header record
+ -Y vf2                 write the rarest fragment on a separate line, useful with vf
+ -Y peratom             for each molecule, write number of failures as a function of size.
+)";
+
+  ::exit(0);
 }
 
 int
@@ -175,6 +337,7 @@ DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
         rc != 0) {
       cerr << "Cannot open '" << dbname << "' ";
       db->err(rc, "");
+      return 0;
     }
     _database << db.release();
   }
@@ -183,9 +346,9 @@ DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
     cerr << "Opened " << _database.size() << " dicer precedent databases\n";
   }
 
-  if (cl.option_present('c')) {
-    if (! cl.value('c', _min_count_needed)) {
-      cerr << "DicerFragmentLookupImpl::Initialise:the -c option must be a whole number\n";
+  if (cl.option_present('p')) {
+    if (! cl.value('p', _min_count_needed)) {
+      cerr << "DicerFragmentLookupImpl::Initialise:the -p option must be a whole number\n";
       return 0;
     }
 
@@ -226,8 +389,71 @@ DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
     _looking_for_highest_precedent = 1;
   }
 
+  if (cl.option_present('c')) {
+    if (! cl.value('c', _min_fragment_size) || _min_fragment_size < 1) {
+      cerr << "The minimum fragment size (-c) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will discard fragments with fewer than " << _min_fragment_size << " atoms\n";
+    }
+  }
+
+  if (cl.option_present('C')) {
+    if (! cl.value('C', _max_fragment_size) || _max_fragment_size < 1) {
+      cerr << "The maximum fragment size (-C) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will discard fragments with more than " << _max_fragment_size << " atoms\n";
+    }
+  }
+
+  if (_min_fragment_size > _max_fragment_size) {
+    cerr << "Inconsistent min " << _min_fragment_size << " and max " << 
+            _max_fragment_size << " fragment size specifications\n";
+    return 0;
+  }
+
+  if (cl.option_present('t')) {
+    _input_is_textproto = 1;
+    if (_verbose) {
+      cerr << "Input is textproto\n";
+    }
+  }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "header") {
+        _write_header_record = 1;
+        if (_verbose) {
+          cerr << "Will write a header record\n";
+        }
+      } else if (y == "vf2") {
+        _rarest_fragment_on_separate_line = 1;
+        if (_verbose) {
+          cerr << "Rarest fragment written on separate line\n";
+        }
+      } else if (y == "peratom") {
+        _write_per_natoms_data = 1;
+        if (_verbose) {
+          cerr << "Will write per natoms data for failed molecules\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions(cerr);
+      } else {
+        cerr << "Unrecognised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions(cerr);
+      }
+    }
+  }
+
   if (cl.option_present('X')) {
     IWString fname = cl.string_value('X');
+    fname.EnsureEndsWith(".smi");
     if (!_stream_for_below_threshold.open(fname.null_terminated_chars())) {
       cerr << "DicerFragmentLookupImpl::Initialise:cannot open -X file '" << fname << "'\n";
       return 0;
@@ -235,6 +461,23 @@ DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Molecules with fragments below " << _min_count_needed << " written to '" << fname << "'\n";
+    }
+  }
+
+  if (cl.option_present('F')) {
+    _compute_atom_coverage = 1;
+
+    IWString fname = cl.string_value('F');
+
+    fname.EnsureEndsWith(".smi");
+
+    if (!_stream_for_atom_coverage.open(fname.null_terminated_chars())) {
+      cerr << "DicerFragmentLookupImpl::Initialise:cannot open -F file '" << fname << "'\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Atom coverage data written to '" << fname << "'\n";
     }
   }
 
@@ -291,6 +534,12 @@ DicerFragmentLookupImpl::FirstMatch(const const_IWSubstring& smiles) {
       return std::nullopt;
     }
 
+#ifdef DEBUG_FIRST_MATCH
+    const_IWSubstring tmp((const char*)fromdb.get_data(), fromdb.get_size());
+    cerr << "Key '" << smiles << "'\n";
+    cerr << "From " << tmp << " build\n";
+    cerr << frag.ShortDebugString() << '\n';
+#endif
     return frag;
   }
 
@@ -333,6 +582,29 @@ DicerFragmentLookupImpl::DoOutput(const const_IWSubstring& smiles,
   return 1;
 }
 
+static int
+WriteAtomCoverage(AtomCoverage& atom_coverage, 
+                  IWString_and_File_Descriptor& output) {
+  atom_coverage.WriteCoverageSmiles(output);
+  output << '\n';
+    output.write_if_buffer_holds_more_than(4096);
+
+  return 1;
+}
+
+int
+DicerFragmentLookupImpl::OkAtomCount(int natoms) const {
+  if (_max_fragment_size > 0 && natoms > _max_fragment_size) {
+    return 0;
+  }
+
+  if (_min_fragment_size > 0 && natoms < _min_fragment_size) {
+    return 0;
+  }
+
+  return 1;
+}
+
 int
 DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
                                 const IWString& name,
@@ -361,6 +633,10 @@ DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
     }
   });
 
+  std::unique_ptr<AtomCoverage> atom_coverage;
+  if (_compute_atom_coverage) {
+    atom_coverage.reset(new AtomCoverage(smiles, name));
+  }
 
   // For each fragment size, the lowest count found.
   extending_resizable_array<int> per_natom_min(maxint);
@@ -373,7 +649,15 @@ DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
   int index_with_lowest_count = -1;
 
   for (int i = 0; i < nfrag; ++i) {
+
     int count = Lookup(fragments[i]->smiles);
+    if (count == 0) {
+      continue;
+    }
+
+    if (atom_coverage) {
+      atom_coverage->UpdateCoverage(fragments[i]->smiles);
+    }
 
     if (count < per_natom_min[fragments[i]->natoms]) {
       per_natom_min[fragments[i]->natoms] = count;
@@ -382,6 +666,10 @@ DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
       lowest_count = count;
       index_with_lowest_count = i;
     }
+  }
+
+  if (atom_coverage) {
+    WriteAtomCoverage(*atom_coverage, _stream_for_atom_coverage);
   }
 
   if (lowest_count > _min_count_needed) {
@@ -419,10 +707,19 @@ DicerFragmentLookupImpl::HighestPrecedent(const IWString& smiles,
     }
   });
 
+  std::unique_ptr<AtomCoverage> atom_coverage;
+  if (_compute_atom_coverage) {
+    atom_coverage.reset(new AtomCoverage(smiles, name));
+  }
+
   for (const SmilesNatoms* iter : fragments) {
     std::optional<dicer_data::DicerFragment> maybe_frag = FirstMatch(iter->smiles);
     if (! maybe_frag) {
       continue;
+    }
+
+    if (atom_coverage) {
+      atom_coverage->UpdateCoverage(maybe_frag->smi());
     }
 
     if (static_cast<int>(maybe_frag->n()) < _min_count_needed) {
@@ -432,12 +729,15 @@ DicerFragmentLookupImpl::HighestPrecedent(const IWString& smiles,
     output << smiles << _sep << name << _sep;
     if (_rarest_fragment_on_separate_line) {
       output << '\n';
-    } else {
-      output << _sep;
-    }
+    } 
+
     output << iter->smiles << _sep << maybe_frag->n() << _sep
            << maybe_frag->par() << '\n';
     output.write_if_buffer_holds_more_than(4096);
+  }
+
+  if (atom_coverage) {
+    WriteAtomCoverage(*atom_coverage, _stream_for_atom_coverage);
   }
 
   return 1;
@@ -487,16 +787,36 @@ DicerFragmentLookupImpl::Report(std::ostream& output) const {
 
 int
 Usage(int rc) {
-  cerr << "Consumes the output from dicer and looks up fragments in a database\n";
-  cerr << " -d <dbname>     name of database(s) containing dicer fragments\n";
-  cerr << " -c <count>      minimum number of exemplars required\n";
-  cerr << "                 enter a negative value and all molecules will pass\n";
-  cerr << " -X <fname>      write failed molecules (below -c) to <fname>\n";
-  cerr << " -J ...          look up the most common fragments, enter '-r help' for info\n";
-  cerr << " -y              write the rarest fragment on a separate line (easier with vf -c 2)\n";
-  cerr << " -h              write a header record (cannot combine with -y)\n";
-  cerr << " -w              write per natoms count for failed molecules\n";
-  cerr << " -v              verbose output\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Consumes the output from dicer and looks up fragments in a BerkeleyDB database.
+If all fragments in the molecule are in the database, subject to the support requirement (-p)
+then the molecule is considered to have 'passed'.
+For example
+
+ dicer -B proto ... -S example.textproto example.smi
+ dicer_database_lookup_bdb -F atom_coverage -d collection.bdb -t example.textproto
+
+ -d <dbname>            name of database(s) containing dicer fragments - built by dicer2bdb
+ -t                     input is textproto
+ -c <natoms>            minimum fragment size to process - discards these fragments upon input
+ -C <natoms>            maximum fragment size to process - discards these fragments upon input
+ -p <count>             minimum number of exemplars required for a molecule to pass.
+                        enter a negative value and all molecules will pass
+ -X <fname>             write failed molecules (one or more fragments below -p) to <fname>
+ -J ...                 look up the most common fragments, enter '-J help' for info
+ -Y ...                 various other options, enter '-Y help' for details.
+ -F <fname>             write fragment coverage (labelled smiles) to <fname>
+ -v                     verbose output
+)";
+  // clang-format on
+
   ::exit(rc);
 }
 
@@ -548,12 +868,71 @@ DicerFragmentLookup(iwstring_data_source& input,
     }
 
     const int natoms = count_atoms_in_smiles(smiles);
+    if (! dicer_fragment_lookup.OkAtomCount(natoms)) {
+      continue;
+    }
     fragments_this_molecule << new SmilesNatoms(smiles, natoms);
   }
 
   if (!fragments_this_molecule.empty()) {
     dicer_fragment_lookup.ProcessMolecule(current_smiles, current_name,
                 fragments_this_molecule, output);
+  }
+
+  return 1;
+}
+
+int
+DicerFragmentLookupTextproto(const dicer_data::DicedMolecule& proto,
+                             DicerFragmentLookupImpl& dicer_fragment_lookup,
+                             IWString_and_File_Descriptor& output) {
+  if (proto.fragment_size() == 0) {
+    return 1;
+
+  }
+  resizable_array_p<SmilesNatoms> fragments_this_molecule;
+  fragments_this_molecule.reserve(proto.fragment_size());
+
+  for (const dicer_data::DicerFragment& frag : proto.fragment()) {
+    if (! dicer_fragment_lookup.OkAtomCount(frag.nat())) {
+      continue;
+    }
+
+    fragments_this_molecule << new SmilesNatoms(frag.smi(), frag.nat());
+  }
+
+  const IWString current_smiles(proto.smiles());
+  const IWString current_name(proto.name());
+
+  return dicer_fragment_lookup.ProcessMolecule(current_smiles, current_name,
+        fragments_this_molecule, output);
+}
+
+int
+DicerFragmentLookupTextproto(const const_IWSubstring& buffer,
+                             DicerFragmentLookupImpl& dicer_fragment_lookup,
+                             IWString_and_File_Descriptor& output) {
+  dicer_data::DicedMolecule mol;
+  google::protobuf::io::ArrayInputStream input(buffer.data(), buffer.length());
+  if (! google::protobuf::TextFormat::Parse(&input, &mol)) {
+    cerr << "DicerFragmentLookupTextproto:cannot parse textproto\n";
+    return 0;
+  }
+
+  return DicerFragmentLookupTextproto(mol, dicer_fragment_lookup, output);
+}
+
+int
+DicerFragmentLookupTextproto(iwstring_data_source& input,
+                             DicerFragmentLookupImpl& dicer_fragment_lookup,
+                             IWString_and_File_Descriptor& output) {
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    if (! DicerFragmentLookupTextproto(buffer, dicer_fragment_lookup, output)) {
+      cerr << "DicerFragmentLookupTextproto:invalid input\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
   }
 
   return 1;
@@ -569,12 +948,16 @@ DicerFragmentLookup(const char * fname,
     return 0;
   }
 
+  if (dicer_fragment_lookup.input_is_textproto()) {
+    return DicerFragmentLookupTextproto(input, dicer_fragment_lookup, output);
+  }
+
   return DicerFragmentLookup(input, dicer_fragment_lookup, output);
 }
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vd:c:X:yhwJ:");
+  Command_Line cl(argc, argv, "vd:c:C:X:yhwJ:tp:F:Y:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

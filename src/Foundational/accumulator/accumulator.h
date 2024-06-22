@@ -1,5 +1,5 @@
-#ifndef IW_ACCUMULATOR_H
-#define IW_ACCUMULATOR_H
+#ifndef FOUNDATIONAL_ACCUMULATOR_ACCUMULATOR_H_
+#define FOUNDATIONAL_ACCUMULATOR_ACCUMULATOR_H_
 
 #include <iostream>
 
@@ -477,4 +477,4 @@ Accumulator_with_Missing_Values<T>::reset ()
 #ifdef ACCUMULATOR_INT_IMPLEMENTATION
 #endif
 
-#endif
+#endif  // FOUNDATIONAL_ACCUMULATOR_ACCUMULATOR_H_

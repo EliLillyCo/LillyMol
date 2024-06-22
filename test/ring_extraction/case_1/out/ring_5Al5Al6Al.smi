@@ -1,1 +1,2 @@
-smi: "O1C2C3O[1CH2]OC3O[1CH2]C2O[1CH2]1" smt: "[ax2r5D2]1:[ax3r5r6D3]2:[ax3r5r6D3]3:[ax2r5D2]:[ax2r5D>2]:[ax2r5D2]:[ax3r5r6D3]:3:[ax2r6D2]:[ax2r6D>2]:[ax3r5r6D3]:2:[ax2r5D2]:[ax2r5D>2]:1" id: "CHEMBL1552835.5Al5Al6Al" n: 2 conn: true usmi: "O1[1CH2]C2O[1CH2]OC2C2C1O[1CH2]O2" 
+smi: "O1C2C3OCOC3OCC2OC1" smt: "[Ax2r5]1[Ax3r5r6]2[Ax3r5r6]3[Ax2r5][Ax2r5][Ax2r5][Ax3r5r6]3[Ax2r6][Ax2r6][Ax3r5r6]2[Ax2r5][Ax2r5]1" id: "CHEMBL1552835.5Al5Al6Al" n: 1 conn: false usmi: "O1CC2OCOC2C2C1OCO2" 
+smi: "O1C2C3O[1CH2]OC3O[1CH2]C2O[1CH2]1" smt: "[Ax2r5D2]1[Ax3r5r6D3]2[Ax3r5r6D3]3[Ax2r5D2][Ax2r5D>2][Ax2r5D2][Ax3r5r6D3]3[Ax2r6D2][Ax2r6D>2][Ax3r5r6D3]2[Ax2r5D2][Ax2r5D>2]1" id: "CHEMBL1552835.5Al5Al6Al" n: 1 conn: true usmi: "O1[1CH2]C2O[1CH2]OC2C2C1O[1CH2]O2" 

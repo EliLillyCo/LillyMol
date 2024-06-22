@@ -1,1 +1,1 @@
-smi: "[1CH]1=CC=C2C(=C1)C1(C2)[1CH2]C1" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax3r4r6D3]2:[ax3r4r6D3](:[ax2r6D2]:1):[ax4r3r4D4]1(:[ax2r4D2]:2):[ax2r3D>2]:[ax2r3D2]:1" id: "CHEMBL2385459" n: 2 conn: true usmi: "[1CH2]1C2(Cc3c2c[1cH]cc3)C1" 
+smi: "[1CH]1=CC=C2C(=C1)C1(C2)[1CH2]C1" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax3r4r6D3]2:[ax3r4r6D3](:[ax2r6D2]:1)[Ax4r3r4D4]1([Ax2r4D2]2)[Ax2r3D>2][Ax2r3D2]1" id: "CHEMBL2385459.3A4A6a" n: 2 conn: true usmi: "[1CH2]1C2(Cc3c2c[1cH]cc3)C1" 

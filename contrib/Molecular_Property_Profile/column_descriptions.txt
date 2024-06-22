@@ -365,6 +365,12 @@ feature_to_description {
   }
 }
 feature_to_description {
+  key: "w_alogp"
+  value {
+    description: "alogP"
+  }
+}
+feature_to_description {
   key: "w_xlogp"
   value {
     description: "xlogP"
@@ -422,5 +428,17 @@ feature_to_description {
   key: "w_rng7atoms"
   value {
     description: "Number of rings with 7 or more atoms"
+  }
+}
+feature_to_description {
+  key: "w_ro5_ohnh"
+  value {
+    description: "Lipinski Donors"
+  }
+}
+feature_to_description {
+  key: "w_ro5_on"
+  value {
+    description: "Lipinski Acceptors"
   }
 }

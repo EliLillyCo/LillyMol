@@ -46,6 +46,37 @@ M  END
 $$$$
 """
 
+ENAMINE="""
+  -ISIS-  -- StrEd -- 
+
+  4  3  0  0  0  0  0  0  0  0999 V2000
+    0.7500    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2500   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.7500   -0.8660    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.7500   -0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  2  3  2  0  0  0  0
+  2  4  1  0  0  0  0
+M  END
+>  <idnumber> (Z33546370)
+Z33546370
+
+>  <LogS> (Z33546370)
+0.5
+
+>  <LogP> (Z33546370)
+-1.114
+
+>  <PSA> (Z33546370)
+43.09
+
+>  <link> (Z33546370)
+https://www.enaminestore.com/catalog/Z33546370
+
+$$$$
+"""
+
+
 class TestLillyMolSubstructure(absltest.TestCase):
   def test_open_file_ok_suffix(self):
     tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
@@ -135,7 +166,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
     with open(fname, "w") as writer:
       writer.write('\n'.join(f) + '\n')
 
-    set_display_smiles_interpretation_error_messages(0)
+    set_display_smiles_interpretation_error_messages(False)
     molecules_read = 0
     with ReaderContext(fname, FileType.SMI) as reader:
       for mol in reader:
@@ -185,7 +216,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
   # Writer objects can simultaneously write multiple types.
   def test_write_smiles(self):
     tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
-    stem = os.path.join(tmpdir, "somefile")
+    stem = os.path.join(tmpdir, "anything")
     writer = Writer()
     writer.add_output_type(FileType.SMI)
     writer.add_output_type(FileType.SDF)
@@ -202,6 +233,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
 
     for suffix,ftype in suffix_type.items():
       fname = f"{stem}.{suffix}"
+      # logging.info("Opening %s", fname)
       with ReaderContext(fname, ftype) as reader:
         for mol in reader:
           seen[mol.unique_smiles()] += 1
@@ -227,6 +259,135 @@ class TestLillyMolSubstructure(absltest.TestCase):
         molecules_read += 1
 
     self.assertEqual(molecules_read, 10)
+
+  def test_sdfid_with_prepend(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    self.assertTrue(set_sdf_identifier("idnumber"))
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_prepend_sdfid(True)
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), "idnumber:Z33546370")
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+
+  def test_sdfid_no_prepend(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    self.assertTrue(set_sdf_identifier("idnumber"))
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_prepend_sdfid(False)
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), "Z33546370")
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_prepend_sdfid(True)
+
+  def test_sdfid_allsdfid(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_allsdfid(True)
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), "idnumber:Z33546370 LogS:0.5 LogP:-1.114 PSA:43.09 link:https://www.enaminestore.com/catalog/Z33546370")
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_allsdfid(False)
+
+  def test_sdfid_sdf_tags_to_json_nothing(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_sdf_tags_to_json(True)
+    self.assertTrue(set_sdf_identifier(""))
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), "{ }")
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_sdf_tags_to_json(False)
+
+  def test_sdfid_sdf_tags_to_json_sdf_identifier(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_sdf_tags_to_json(True)
+    self.assertTrue(set_sdf_identifier("idnumber"))
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), "{ \"idnumber\": \"Z33546370\" }")
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_sdf_tags_to_json(False)
+
+  def test_sdfid_sdf_tags_to_json_all_sdf_tags(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_sdf_tags_to_json(True)
+    self.assertTrue(set_sdf_identifier(""))
+    set_allsdfid(True)
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), '{ "idnumber": "Z33546370", "LogS": "0.5", "LogP": "-1.114", "PSA": "43.09", "link": "https://www.enaminestore.com/catalog/Z33546370" }')
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_sdf_tags_to_json(False)
+    set_allsdfid(False)
+
+  def test_firstsdfid(self):
+    tmpdir = tempfile.mkdtemp(dir=absltest.TEST_TMPDIR.value)
+    fname = os.path.join(tmpdir, "input.sdf")
+    with open(fname, "w") as writer:
+      writer.write(ENAMINE)
+
+    set_mdlquiet(True)
+    set_ignore_bad_m(True)
+    set_firstsdftag(True)
+    self.assertTrue(set_sdf_identifier(""))
+    # This has no effect here. Is that a feature or a bug?
+    set_prepend_sdfid(True)
+    with ReaderContext(fname) as reader:
+      for mol in reader:
+        self.assertEqual(mol.name(), 'Z33546370')
+
+    # Reset back to default value.
+    self.assertTrue(set_sdf_identifier(""))
+    set_allsdfid(False)
+    set_firstsdftag(False)
 
 
 if __name__ == '__main__':

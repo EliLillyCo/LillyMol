@@ -65,6 +65,7 @@ class Chiral_Centre
     int debug_print (std::ostream &) const;
 
     atom_number_t a () const { return _a;}
+    atom_number_t centre() const { return _a;}
     void set_centre (atom_number_t s) { _a = s;}     // no checking
 
     int make_copy (const Chiral_Centre &, const int *);

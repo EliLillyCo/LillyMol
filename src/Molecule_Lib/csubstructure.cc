@@ -224,7 +224,7 @@ Substructure_Query::_substructure_search(Molecule_to_Match& target,
   return 0;
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search(Molecule_to_Match& target,
                                         Substructure_Results& results) {
   assert(ok());
@@ -233,26 +233,26 @@ Substructure_Query::substructure_search(Molecule_to_Match& target,
   return _substructure_search(target, results);
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search(Molecule& m, Substructure_Results& results) {
   Molecule_to_Match target(&m);
 
   return substructure_search(target, results);
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search(Molecule* m, Substructure_Results& results) {
   return substructure_search(*m, results);
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search(Molecule_to_Match& target) {
   Substructure_Results results;
 
   return substructure_search(target, results);
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search(Molecule* m) {
   assert(ok());
   assert(m->ok());
@@ -263,7 +263,7 @@ Substructure_Query::substructure_search(Molecule* m) {
   return substructure_search(target, results);
 }
 
-int
+uint32_t
 Substructure_Query::substructure_search_do_each_component(
     Molecule_to_Match& target, Substructure_Results& sresults) {
   sresults.initialise(target.natoms());

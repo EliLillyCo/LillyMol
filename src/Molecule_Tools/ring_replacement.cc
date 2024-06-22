@@ -18,6 +18,7 @@
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/rwsubstructure.h"
+#include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
@@ -38,7 +39,7 @@ Usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << R"(Performs ring replacement given an existing set of replacement rings from ring_extraction
+  cerr << R"(Performs ring replacement given an existing set of replacement rings from ring_extraction.
  -R <fname>    file(s) of labelled rings created by ring_extraction
  -s <smarts>   only replace rings containing atoms matched by <smarts>
  -q <query>    only replace rings containing atoms matched by <query>
@@ -52,6 +53,7 @@ Usage(int rc) {
  -Y <query>    product molecules MUST     match a query in <query>
  -N <query>    product molecules must NOT match any queries in <query>
  -D <query>    discard any replacement ring that matches <query>
+ -3            if the input molecules contain 3D coordinates, copy the old atom's coordinates to the new atom.
  -I .          remove isotopes from product molecules
  -I <n>        change all existing isotopes to <n> (useful if atom types used)
  -B <fname>    write molecules not transformed to <fname>
@@ -91,6 +93,10 @@ class Replacement {
     // incremented once the product has passed a valence check.
     int _variants_generated;
 
+    // We can optionally copy the coordinates of the old atoms to the new
+    // atoms. Coordinates of exocyclic doubly bonded atoms are computed.
+    int _transfer_coordinates;
+
   public:
     // public so these variables can be set from the command line options.
     static int _display_valence_error_messages;
@@ -111,6 +117,10 @@ class Replacement {
     Replacement();
 
     int BuildFromProto(const RplRing::ReplacementRing& proto);
+
+    void set_transfer_coordinates(int s) {
+      _transfer_coordinates = s;
+    }
 
     int count() const {
       return _count;
@@ -136,6 +146,8 @@ int Replacement::_warn_loss_of_aromaticity = 0;
 Replacement::Replacement() {
   _variants_generated = 0;
   _invalid_valenced_generated = 0;
+
+  _transfer_coordinates = 0;
 }
 
 int
@@ -193,7 +205,7 @@ Replacement::ReportValenceErrors(const Molecule& parent, Molecule& m, std::ostre
 
   ++_invalid_valenced_generated;
 
-  output << "Invalid valence '" << m.smiles() << ' ' << parent.name() << ' ' << _id << '\n';
+  output << "Invalid valence " << m.smiles() << ' ' << parent.name() << ' ' << _id << '\n';
 
   for (int i = 0; i < m.natoms(); ++i) {
     if (! m.valence_ok(i)) {
@@ -315,6 +327,13 @@ Replacement::MakeVariant(Molecule& parent,
     }
   }
 
+  if (_transfer_coordinates) {
+    for (int i = 0; i < esize; ++i) {
+      const atom_number_t a = embedding[i];
+      m->setxyz(initial_natoms + i, m->atomi(a));
+    }
+  }
+
   // Note that `b` is destroyed by remove_bond_between_atoms
   for (const Bond* b: remove_bonds) {
     atom_number_t a1 = b->a1();
@@ -344,7 +363,6 @@ Replacement::MakeVariant(Molecule& parent,
       return 0;
     }
   }
-
   UnsetImplicitHydrogenInformation(*m);
 
   if (! m->ok()) {
@@ -360,6 +378,10 @@ Replacement::MakeVariant(Molecule& parent,
     return 0;
   }
 
+#ifdef DEBUG_MAKE_VARIANT
+  cerr << "MakeVariant succeeds " << m->smiles() << '\n';
+#endif
+
   ReportValenceErrors(parent, *m, cerr);
 
   SetName(parent.name(), *m);
@@ -367,6 +389,49 @@ Replacement::MakeVariant(Molecule& parent,
   result.reset(m.release());
 
   ++_variants_generated;
+
+  return 1;
+}
+
+// We have just added `exocyclic` to `m` by making a double bond with `zatom`.
+// Adjust the coordinates of `exocyclic` to reflect a double bond
+int
+SetExocyclicCoordinates(Molecule& m, atom_number_t zatom, atom_number_t exocyclic) {
+  if (m.ncon(zatom) != 3) {
+    cerr << "SetExocyclicCoordinates:not 3 connected!\n";
+    return 0;
+  }
+
+  atom_number_t c1 = kInvalidAtomNumber;
+  atom_number_t c2 = kInvalidAtomNumber;
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (o == exocyclic) {
+      continue;
+    }
+    if (c1 == kInvalidAtomNumber) {
+      c1 = o;
+    } else {
+      c2 = o;
+    }
+  }
+
+  // Should never happen.
+  if (c2 == kInvalidAtomNumber) {
+    return 0;
+  }
+  Space_Vector<coord_t> v1(m[c1]);
+  Space_Vector<coord_t> v2(m[c2]);
+  Space_Vector<coord_t> vz(m[zatom]);
+  Space_Vector<coord_t> vz1 = vz - v1;
+  Space_Vector<coord_t> vz2 = vz - v2;
+  vz1.normalise();
+  vz2.normalise();
+  Space_Vector<coord_t> middle = (vz1 + vz2) * 0.5;
+  middle.normalise();
+  Space_Vector<coord_t> pos = vz + middle * 1.23;
+
+  m.setxyz(exocyclic, pos);
 
   return 1;
 }
@@ -398,9 +463,18 @@ Replacement::MakeDoubleBond(Molecule& m,
       return 0;
     }
 
+    // If the existing connection was just 1 atom, we could remove it.
+    // TODO:ianwatson investigate this.
+    if (m.ncon(zatom) > 2) {
+      return 0;
+    }
+
     m.add_bond(zatom, i, DOUBLE_BOND);
     m.set_atom_map_number(zatom, 0);
     m.set_isotope(i, 0);
+    if (_transfer_coordinates) {
+      return SetExocyclicCoordinates(m, zatom, i);
+    }
     return 1;
   }
 
@@ -514,8 +588,11 @@ class RingReplacement {
     int OkSupport(const Replacement& r);
     int IsUnique(Molecule& m);
     int OkQueryConstraints(Molecule& m);
-    int Process(resizable_array_p<Molecule>& mols, int ndx, const uint32_t* atypes);
+    int Process(resizable_array_p<Molecule>& mols, int ndx, const uint32_t* atypes,
+                const int* process_atom);
     int Write(const resizable_array_p<Molecule>& mols, IWString_and_File_Descriptor& output);
+    int IdentifyMatchedAtoms(Molecule& m, resizable_array_p<Substructure_Query>& queries,
+                             int* process_atom);
 
   public:
     RingReplacement();
@@ -581,7 +658,7 @@ RingReplacement::Initialise(Command_Line& cl) {
   }
 
   if (cl.option_present('g')) {
-    if (! _chemical_standardisation.construct_from_command_line(cl, _verbose, 'g')) {
+    if (! _chemical_standardisation.construct_from_command_line(cl, _verbose > 1, 'g')) {
       cerr << "Cannot initialise chemical standardisation\n";
       return 0;
     }
@@ -725,6 +802,18 @@ RingReplacement::Initialise(Command_Line& cl) {
       cerr << "Invalid atom type specification '" << p  << "'\n";
       return 0;
     }
+  }
+
+  if (cl.option_present('3')) {
+    for (int i = 0; i < _nreplacements; ++i) {
+      for (Replacement* r : _rings[i]) {
+        r->set_transfer_coordinates(1);
+      }
+    }
+    if (_verbose) {
+      cerr << "Will write 3D coordinates\n";
+    }
+    set_append_coordinates_after_each_atom(1);
   }
 
   if (cl.option_present('B')) {
@@ -891,6 +980,26 @@ RingReplacement::Report(std::ostream& output) {
   return 1;
 }
 
+// For all query matches of `queries` agains `m`, set the
+// corresponding entries in `process_atom`.
+int
+RingReplacement::IdentifyMatchedAtoms(Molecule& m,
+                        resizable_array_p<Substructure_Query>& queries,
+                        int* process_atom) {
+  int rc = 0;
+  Molecule_to_Match target(&m);
+  for (Substructure_Query* q : queries) {
+    Substructure_Results sresults;
+    if (! q->substructure_search(target, sresults)) {
+      continue;
+    }
+    sresults.each_embedding_set_vector(process_atom, 1);
+    ++rc;
+  }
+
+  return rc;
+}
+
 int
 RingReplacement::Process(Molecule& m,
                          IWString_and_File_Descriptor& output) {
@@ -902,14 +1011,22 @@ RingReplacement::Process(Molecule& m,
     _atype.assign_atom_types(m, atypes.get());
   }
 
+  std::unique_ptr<int[]> process_atom;
+  if (_queries.size()) {
+    process_atom.reset(new_int(m.natoms()));
+    if (! IdentifyMatchedAtoms(m, _queries, process_atom.get())) {
+      return 0;
+    }
+  }
+
   resizable_array_p<Molecule> generated;
   generated << new Molecule(m);
 
-  if (! Process(generated, 0, atypes.get())) {
+  if (! Process(generated, 0, atypes.get(), process_atom.get())) {
     return 0;
   }
 
-  if (_verbose) {
+  if (_verbose > 1) {
     cerr << "From " << m.name() << " generated " << generated.size() << "  molecules\n";
   }
 
@@ -935,15 +1052,31 @@ TranslateIsotopes(Molecule& m, isotope_t iso) {
   }
 }
 
+// Return true if `process_atom` is null.
+// Return true if any of the atoms in `embedding` are set in
+// `process_atom`.
+int
+MatchesAtomsToProcess(int n, const int* process_atom,
+                      const Set_of_Atoms& embedding) {
+  if (process_atom == nullptr) {
+    return 1;
+  }
+
+  return embedding.any_members_set_in_array(process_atom);
+}
+
+//#define DEBUG_RING_REPLACEMENT_PROCESS
+
 int
 RingReplacement::Process(resizable_array_p<Molecule>& mols,
                          int ndx,
-                         const uint32_t* atypes) {
+                         const uint32_t* atypes,
+                         const int* process_atom) {
 
   resizable_array_p<Molecule> generated_here;
   generated_here.reserve(10 * mols.size());
 
-#ifdef DEBUG_MAKE_VARIANT
+#ifdef DEBUG_RING_REPLACEMENT_PROCESS
   cerr << "RingReplacement::Process:scanning " << mols.size() << " molecules\n";
 #endif
 
@@ -956,13 +1089,17 @@ RingReplacement::Process(resizable_array_p<Molecule>& mols,
 
     for (Replacement* r : _rings[ndx]) {
 #ifdef DEBUG_RING_REPLACEMENT_PROCESS
-      cerr << "Processing replacement " << ndx << '\n';
+      Substructure_Results for_debugging;
+      cerr << "Processing replacement " << ndx << " SSS " << r->SubstructureSearch(target, for_debugging) << '\n';
 #endif
       if (! r->SubstructureSearch(target, sresults)) {
         continue;
       }
 
       for (const Set_of_Atoms* e : sresults.embeddings()) {
+        if (! MatchesAtomsToProcess(m->natoms(), process_atom, *e)) {
+          continue;
+        }
         std::unique_ptr<Molecule> variant;
         if (! r->MakeVariant(*m, *e, atypes, variant)) {
           continue;
@@ -990,7 +1127,8 @@ RingReplacement::Process(resizable_array_p<Molecule>& mols,
   mols.transfer_in(generated_here);
 
   if (ndx < _nreplacements - 1) {
-    return Process(mols, ndx + 1, atypes);
+    Process(mols, ndx + 1, atypes, process_atom);
+    return 1;
   }
 
   return 1;
@@ -1075,10 +1213,11 @@ ReplaceCore(RingReplacement& ring_replacement,
     std::unique_ptr<Molecule> free_m(m);
 
     if (! ring_replacement.Preprocess(*m)) {
-      return 0;
+      continue;
     }
 
     if (! ReplaceCore(ring_replacement, *m, output)) {
+      cerr << "Fatal error processing " << m->name() << '\n';
       return 0;
     }
   }
@@ -1113,7 +1252,7 @@ DisplayDashXOptions(std::ostream& output) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:i:g:lcY:N:R:P:s:q:uapn:D:I:wX:dB:");
+  Command_Line cl(argc, argv, "vE:A:i:g:lcY:N:R:P:s:q:uapn:D:I:wX:dB:3");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);
@@ -1185,7 +1324,11 @@ Main(int argc, char** argv) {
     }
   }
 
+  output.flush();
+
   if (verbose) {
+    set_append_coordinates_after_each_atom(0);
+
     ring_replacement.Report(cerr);
   }
 

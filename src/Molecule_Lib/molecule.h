@@ -16,20 +16,21 @@
 
 struct XMLNode;
 
-/*
-  Header file for Molecule objects
-*/
+class Command_Line;
+class iwstring_data_source;
+
+//  Header file for Molecule objects
 
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwbits/iwbits.h"
-class iwstring_data_source;
 
 #include "iwmtypes.h"
 
 #include "atom.h"
 #include "bond.h"
 #include "bond_list.h"
+#include "chiral_centre.h"
 #include "collection_template.h"
 #include "coordinates.h"
 #include "element.h"
@@ -42,6 +43,7 @@ class iwstring_data_source;
 class Molecule;
 class Ring;
 class Beep;
+class Path;
 class Path_Scoring;
 class Smiles_First_Atom;
 class Smiles_Formation_Info;
@@ -75,10 +77,19 @@ using atom_type_t = std::uint32_t;
 
 class Atom_Types : public Collection_Template<atom_type_t> {};
 
+// If it convenient to expose the Chiral_Centre's as a class.
+class SetOfChiralCentres : public resizable_array_p<Chiral_Centre> {
+};
+
+// CxxWrap works better with classes.
+class Components : public resizable_array_p<Molecule> {
+  private:
+  public:
+};
+
+
 // Used during aromaticity determinations. Mostly to reduce the
 // number of arguments passed.
-
-class Molecule;
 
 struct AromData {
   // For each atom, the number of pi electrons available for aromaticity.
@@ -186,8 +197,6 @@ inline constexpr int kRingMembershipNotComputed = -41871;
 inline constexpr int kRingMembershipIsRingAtom = -76;
 
 #define REASONABLE_RING_SIZE(r) ((r) > 2)
-
-class Path;
 
 class List_of_Ring_Sizes : public resizable_array<int> {};
 
@@ -366,7 +375,7 @@ class Smiles_Information {
   void make_empty();
 
   const IWString& set_error() {
-    _smiles = "ERROR";
+    _smiles = kSmilesError;
     return _smiles;
   }
 
@@ -478,8 +487,6 @@ class Symmetry_Class_and_Canonical_Rank {
 class Smiles_Ring_Status;
 class Tnode;
 class Ring_Number_Manager;
-
-class Chiral_Centre;
 
 /*
   We want various degrees of control over how implicit Hydrogens are added
@@ -598,7 +605,8 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
  private:
   Bond_list _bond_list;
 
-  resizable_array_p<Chiral_Centre> _chiral_centres;
+  //resizable_array_p<Chiral_Centre> _chiral_centres;
+  SetOfChiralCentres _chiral_centres;
 
   //  We may also have information about the fragment characteristics of the molecule.
   //  Only computed if needed
@@ -878,6 +886,9 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int ok_2_atoms(atom_number_t, atom_number_t) const;
   int ok_3_atoms(atom_number_t, atom_number_t, atom_number_t) const;
   int ok_4_atoms(atom_number_t, atom_number_t, atom_number_t, atom_number_t) const;
+  // Returns true if all atoms in `s` are valid atom numbers.
+  // Does not check uniqueness of the atoms in `s`.
+  int OkAtomNumbers(const Set_of_Atoms& s) const;
 
   int invalidate_from_possibly_invalid_state();
 
@@ -961,6 +972,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   // Recursively identify all atoms in the same fragment as zatom.
   int all_atoms_connected(atom_number_t zatom, Set_of_Atoms& connected_atoms) const;
 
+  // Functions that can operate on individual components. 
   template <typename F>
   void each_atom(F&) const;
   template <typename F>
@@ -1225,6 +1237,9 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int CanonicaliseBondList();
 
   IWString isotopically_labelled_smiles();
+
+  // Convert to scaffold form.
+  int ToScaffold();
 
   int change_to_graph_form();
   int change_to_graph_form(const Mol2Graph&);
@@ -1529,6 +1544,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   int remove_atom(atom_number_t);
   int remove_atoms(Set_of_Atoms&);
+  template <typename T> int    remove_atoms(const T *);
   // Remove any atoms set in to_remove.
   int remove_atoms(const int* to_remove);
   // Remove those atoms for which to_remove[i] == flag
@@ -1594,6 +1610,10 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   void setxyz(atom_number_t, const coord_t*);
   void setxyz(const Coordinates*);
   void setxyz(atom_number_t, const Coordinates&);
+  // Copy the coordinates from atom `from` to `zatom`.
+  void setxyz(atom_number_t zatom, const Atom* from);
+  template <typename T>
+  void setxyz(atom_number_t zatom, const Space_Vector<T>& from);
 
   void spatial_extremeties(coord_t& xmin, coord_t& xmax, coord_t& ymin,
                            coord_t& ymax) const;
@@ -1676,6 +1696,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int create_components(resizable_array_p<T>&);
   int create_components(int bond_number, Molecule& m1, Molecule& m2);
   int create_components(const int* frag, resizable_array_p<Molecule>&) const;
+  int create_components(Components& components);
   int create_components_across_bonds(const int* bonds_to_remove,
                                      resizable_array_p<Molecule>&);
 
@@ -1836,6 +1857,8 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  int add_aromaticity_to_bonds();
 
   int saturated(atom_number_t) const;
+  // The difference between ncon() and nbonds().
+  int unsaturation(atom_number_t zatom) const;
 
   //  Construct a molecule based on a given subset of a molecule
 
@@ -1848,7 +1871,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
     return _chiral_centres.number_elements();
   }
 
-  const resizable_array_p<Chiral_Centre>& ChiralCentres() const {
+  const SetOfChiralCentres& ChiralCentres() const {
     return _chiral_centres;
   }
 
@@ -1882,9 +1905,9 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //   auto chiral_centres = m.ReleaseChiralCentres();
   //   DoSomethingTo(m...)
   //   m.SetChiralCentres(std::move(chiral_centres));
-  resizable_array_p<Chiral_Centre> ReleaseChiralCentres();
+  SetOfChiralCentres ReleaseChiralCentres();
   // Again, just like unique_ptr, restore from an external state.
-  int SetChiralCentres(resizable_array_p<Chiral_Centre>&& from);
+  int SetChiralCentres(SetOfChiralCentres&& from);
 
   //  Set all atoms involved in a chiral centre
 
@@ -1949,11 +1972,9 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int ez_by_geometry(atom_number_t a1, atom_number_t a2, atom_number_t a3,
                      atom_number_t a4, angle_t theta = -1.0) const;
 
-  //  This should be a template function, but the implementation goes through
-  //  qsort, and that seems to make it impossible to use templates. Therefore
-  //  we have multiple signatures
-
-  int sort(const int*, int = 1);
+  // Sorts the atoms so they are in the order in `criterion`.
+  template <typename T>
+  int sort(const T* criterion, int direction = 1);
   // Pybind need a std::vector. For simplicity assume ascending order.
   int sort(const std::vector<int>& order);
   //  int sort(const float *, int = 1);
@@ -2240,7 +2261,6 @@ extern void set_type_to_write_with_operator(FileType s);
 extern std::ostream& operator<<(std::ostream& os, Molecule& m);
 extern std::ostream& operator<<(std::ostream& os, const CahnIngoldPrelog& cip);
 
-extern FileType string_to_file_type(const const_IWSubstring&);
 extern FileType discern_file_type_from_name(const IWString&);
 extern const char* suffix_for_file_type(FileType file_type);
 extern int valid_file_type(int);
@@ -2348,29 +2368,31 @@ extern void set_ignore_self_bonds(int);
 template <typename T>
 int read_next_v30_record(T& input, IWString& buffer);
 
-extern off_t seek_to_from_command_line();
-extern void set_seek_to(off_t);
+//extern off_t seek_to_from_command_line();
+//extern void set_seek_to(off_t);
 
-extern off_t max_offset_from_command_line();
-extern void set_max_offset_from_command_line(off_t);
+//extern off_t max_offset_from_command_line();
+//extern void set_max_offset_from_command_line(off_t);
 
-extern void set_mol2_assign_default_formal_charges(int);
-extern void set_mol2_write_assigned_atom_types(int s);
-extern void set_place_mol2_residue_information_in_user_specified_void_ptr(int s);
-extern void set_mol2_write_formal_charge_as_partial_charge(int s);
-extern void set_mol2_read_charge_column_contains_formal_charges(int s);
+namespace tripos {
+void set_mol2_assign_default_formal_charges(int);
+void set_mol2_write_assigned_atom_types(int s);
+void set_place_mol2_residue_information_in_user_specified_void_ptr(int s);
+void set_mol2_write_formal_charge_as_partial_charge(int s);
+void set_mol2_read_charge_column_contains_formal_charges(int s);
+}  // namespace tripos
 
-extern int ignore_all_chiral_information_on_input();
-extern void set_ignore_all_chiral_information_on_input(int);
+//extern int ignore_all_chiral_information_on_input();
+//extern void set_ignore_all_chiral_information_on_input(int);
 
 extern void set_ignore_tdts_with_no_smiles(int);
 extern void set_smiles_tag(const const_IWSubstring&);
 
-extern int flush_files_after_writing_each_molecule();
-extern void set_flush_files_after_writing_each_molecule(int);
+//extern int flush_files_after_writing_each_molecule();
+//extern void set_flush_files_after_writing_each_molecule(int);
 
-extern int ignore_incorrect_chiral_input();
-extern void set_ignore_incorrect_chiral_input(int);
+//extern int ignore_incorrect_chiral_input();
+//extern void set_ignore_incorrect_chiral_input(int);
 extern void set_automatically_add_implicit_hydrogen_to_incomplete_chiral_centre(int s);
 
 extern int set_sdf_identifier(const const_IWSubstring&);
@@ -2386,15 +2408,13 @@ extern void set_mdl_display_invalid_chiral_connectivity(int);
 extern void set_tdt_identifier_dataitem(const const_IWSubstring&);
 extern void set_tdt_append_dataitem(const const_IWSubstring&);
 
-extern void set_discern_cis_trans_bonds(int);
-extern int discern_cis_trans_bonds();
+//extern void set_discern_cis_trans_bonds(int);
+//extern int discern_cis_trans_bonds();
 
-extern void set_discern_chirality_from_3d_coordinates(int);
-extern int discern_chirality_from_3d_coordinates();
+//extern void set_discern_chirality_from_3d_coordinates(int);
+//extern int discern_chirality_from_3d_coordinates();
 
-extern void set_ignore_bad_cis_trans_input(int s);
-extern int ignore_bad_cis_trans_input();
-extern void set_discard_directional_bonds_on_input(int);
+//extern void set_discard_directional_bonds_on_input(int);
 
 #ifdef BONDS_KNOW_RING_MEMBERSHIP
 
@@ -2404,29 +2424,27 @@ extern void set_discard_directional_bonds_on_input(int);
 
 #endif
 
-extern void set_read_extra_text_info(int);
-extern int read_extra_text_info();
-extern void set_write_extra_text_info(int);
-extern int write_extra_text_info();
-extern char input_file_delimiter();
-extern int input_is_dos_mode();
+//extern void set_read_extra_text_info(int);
+//extern int read_extra_text_info();
+//extern void set_write_extra_text_info(int);
+//extern int write_extra_text_info();
+//extern char input_file_delimiter();
+//extern int input_is_dos_mode();
 
-extern void set_write_DOS_records(int s);
-extern int write_DOS_records();
-extern const IWString& newline_string();
+//extern void set_write_DOS_records(int s);
+//extern int write_DOS_records();
+//extern const IWString& newline_string();
 
-extern void set_skip_first_molecules(int);
-extern int skip_first_molecules();
-extern void set_do_only_n_molecules(int);
-extern int do_only_n_molecules();
+//extern void set_skip_first_molecules(int);
+//extern int skip_first_molecules();
+//extern void set_do_only_n_molecules(int);
+//extern int do_only_n_molecules();
 
 // extern Molecule * next_molecule(iwstring_data_source &, int);
 
 // extern int next_molecule(Molecule &, iwstring_data_source &, int);
 
 // extern int construct_ring(resizable_array<const Bond *> & bonds, Ring * r);
-
-class Command_Line;
 
 // extern int process_file_types  (const Command_Line &, int &, int &);
 extern int process_input_type(const Command_Line&, FileType&);
@@ -2503,8 +2521,8 @@ class Temporarily_Disable_Messages_About_Unable_to_Compute_Implicit_Hydrogens {
 
 int is_actually_chiral(Molecule& m, atom_number_t zatom);
 
-extern int unconnect_covalently_bonded_non_organics_on_read();
-extern void set_unconnect_covalently_bonded_non_organics_on_read(int);
+//extern int unconnect_covalently_bonded_non_organics_on_read();
+//extern void set_unconnect_covalently_bonded_non_organics_on_read(int);
 
 /*
   When asking for smarts from a molecule, we need to decide what kind of
@@ -2568,14 +2586,13 @@ extern int set_max_reasonble_atomic_partial_charge_value(charge_t);
 extern int set_min_reasonble_atomic_partial_charge_value(charge_t);
 extern int set_reasonable_atomic_partial_charge_range(charge_t, charge_t);
 
-extern int number_connection_table_errors_to_skip();
-extern void set_number_connection_table_errors_to_skip(int);
+//extern int number_connection_table_errors_to_skip();
+//extern void set_number_connection_table_errors_to_skip(int);
 
-/*
-  Determine the number of atoms in a smiles just by examining text
-*/
-
+// Determine the number of atoms in a smiles just by examining text
 extern int count_atoms_in_smiles(const const_IWSubstring& smiles);
+// Also discern the number of rings. Does NOT handle %nn forms.
+extern int count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings);
 
 extern void set_copy_name_in_molecule_copy_constructor(int);
 
@@ -2655,6 +2672,7 @@ extern distance_t DistanceBetweenAtoms(const Atom* a1, const Atom* a2);
 extern angle_t BondAngle(const Atom* a1, const Atom* a2, const Atom* a3);
 extern angle_t DihedralAngle(const Atom* a1, const Atom* a2, const Atom* a3,
                              const Atom* a4);
+
 
 namespace lillymol {
 

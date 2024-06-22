@@ -8,9 +8,9 @@
 #define COMPILING_MDL_CC
 
 #include "mdl.h"
-#include "substructure.h"
-
+#include "moleculeio.h"
 #include "molecule_to_query.h"
+#include "substructure.h"
 
 #define COMPILING_MDL_CC
 
@@ -614,7 +614,7 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
   if (nb > 0)
     check_bonding();
 
-  if (ignore_all_chiral_information_on_input())
+  if (moleculeio::ignore_all_chiral_information_on_input())
     Molecule::remove_all_chiral_centres();
   else if (mdl_molecule_discard_chirality)
     ;
@@ -629,7 +629,7 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
   {
     cerr << "MDL_Molecule::read_molecule_mdl_ds: erroneous chiral input '" << Molecule::name() << "'\n";
     Molecule::remove_all_chiral_centres();
-    if (! ignore_incorrect_chiral_input())
+    if (! moleculeio::ignore_incorrect_chiral_input())
       return 0;
   }
 
@@ -670,7 +670,7 @@ MDL_Molecule::read_molecule_mdl_ds (iwstring_data_source & input,
       return 0;
     }
 
-    if (read_extra_text_info())
+    if (moleculeio::read_extra_text_info())
       Molecule::add_extra_text_info(buffer);
   }
 
@@ -1150,18 +1150,18 @@ MDL_Molecule::only_allow_substitutions_at_isotopic_atoms(const Molecule_to_Query
     else
       cerr << "MDL_Molecule::only_allow_substitutions_at_isotopic_atoms:no open valence in '" << name() << "', atom " << smarts_equivalent_for_atom(i) << endl;
 
-    if (must_have_substituent_at_every_isotopic_atom())
+    if (mqs.must_have_substituent_at_every_isotopic_atom())
     {
       if (0 != mad->substitution())   // already set
         ;
-      else if (isotope_count_means_extra_connections())
+      else if (mqs.isotope_count_means_extra_connections())
         mad->set_substitution(ai->ncon() + iso);
       else
         mad->set_min_ncon(ai->ncon() + 1);
     }
     else
     {
-      if (isotope_count_means_extra_connections())
+      if (mqs.isotope_count_means_extra_connections())
         mad->set_min_ncon(ai->ncon() + iso);
       else
         mad->set_min_ncon(ai->ncon());

@@ -43,6 +43,10 @@ static int append_molecular_weight = 0;
 
 static int identifier_column = -1;
 
+// If the database has multiple tokens stored, which is the column that
+// holds the amount value we are querying.
+static int amount_column = 0;
+
 static int break_after_finding_a_match = 1;
 
 static std::unique_ptr<re2::RE2> id_rx;
@@ -251,7 +255,12 @@ Inventory_Database::_common_lookup(Dbt& dkey, int& found, IWString& retrieved,
 
   amount_as_string = retrieved;
 
-  amount_as_string.truncate_at_first(' ');
+  if (amount_column == 0) {
+    amount_as_string.truncate_at_first(' ');
+  } else {
+    amount_as_string.remove_leading_words(amount_column);
+    amount_as_string.truncate_at_first(' ');
+  }
 
   if (!amount_as_string.numeric_value(amt) || amt < static_cast<float>(0.0)) {
     cerr << "Yipes, invalid amount '" << retrieved << "', ignored\n";
@@ -410,6 +419,7 @@ usage(int rc) {
   cerr << " -c <mg>        cutoff in mg\n";
   cerr << " -m <ul>        cutoff in ul\n";
   cerr << " -C <col>       identifier column - use -C 2 for a smiles file\n";
+  cerr << " -              column in database to query - some databases have multiple columns - def 2\n";
   cerr << " -B <fname>     write records with no or not enough inventory to <fname>\n";
   cerr << " -a             append the inventory amount and source to each record written\n";
   cerr << " -k             look in all databases, even after a match is found\n";
@@ -595,7 +605,7 @@ enough_inventory(const char* fname, IWString_and_File_Descriptor& output) {
 
 static int
 enough_inventory(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vd:N:c:m:C:B:akR:wu:yZ");
+  Command_Line cl(argc, argv, "vd:N:c:l:m:C:B:akR:wu:yZ");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -622,6 +632,21 @@ enough_inventory(int argc, char** argv) {
     identifier_column--;
   } else {
     identifier_column = 0;
+  }
+
+  if (cl.option_present('l')) {
+    if (!cl.value('l', amount_column) || amount_column < 1) {
+      cerr << "Invalid value for amount column (-l option)\n";
+      usage(6);
+    }
+
+    if (verbose) {
+      cerr << "amounts in column " << amount_column << '\n';
+    }
+
+    amount_column--;
+  } else {
+    amount_column = 0;
   }
 
   if (cl.option_present('a')) {

@@ -11,6 +11,7 @@ then
 else
     BIN_DIR=$LILLYMOL_HOME/bin/$BUILD_DIR
 fi
+
 command=$BIN_DIR/common_names
 case_id="Case 2"
 echo "Testing:  $command"
@@ -22,17 +23,17 @@ then
 fi
 
 name1=output.smi
-name1_out=out/output.smi
+golden=out/output.smi
 diff_tool=../../fileDiff.sh
-$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >>log.txt 2>>err.txt
+$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >log.txt 2>err.txt
 
-$diff_tool $name1 $name1_out
+$diff_tool $name1 ${golden}
 ret=$?
 if [ $ret == 1 ]
 then
-        echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-        echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
 fi
 rm $name1
 rm log.txt

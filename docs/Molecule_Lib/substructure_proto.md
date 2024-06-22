@@ -175,6 +175,56 @@ While this was initially implemented as an efficiency tool, generally we find th
 does not make much of a difference on speed, but can be a very useful expressive
 device.
 
+Currently the following properties are supported, together with their min_ and max_ variations.
+```
+natoms
+nrings
+heteroatoms_in_molecule
+fused_rings
+strongly_fused_rings
+isolated_rings
+ring_systems
+aromatic_rings
+aromatic_atoms
+non_aromatic_rings
+number_isotopic_atoms
+number_fragments
+atoms_in_spinach
+inter_ring_atoms
+net_formal_charge
+any_net_formal_charge
+elements_needed
+required_bond
+```
+More simple to compute properties could be added. It is a pre-match filter and there
+is no connection between any of the atoms used to satisfy these criteria and
+the subsequent atom matching.
+
+For access to a more complete set of molecular properties, it may be useful to
+use `iwdescr`.
+```
+iwdescr.sh -s . -F 'w_natoms<30' -F 'w_nrings<4' file.smi | tsubstructure.sh -s 'O' -
+```
+which should be functionally equivalent to many of the attributes specified
+via required_molecular_properties.
+
+### RequiredBond
+The required_bond attribute of a required_molecular_properties message
+allows specification of a particular bond somewhere in the molecule.
+Since this is done via a scan over the bond list, rather than via
+atom matching, it can help with efficiency.
+
+```
+required_bond {
+  atomic_number_1: 6
+  btype: SS_SINGLE_BOND
+  atomic_number_2: 8
+}
+```
+means that somewhere in the molecule there is a Carbon Oxygen
+single bond. Again, there is no relationship between this bond any any
+subsequent atom matching. This is just for efficiency.
+
 ## Ring Systems
 One of the most common use cases for beyond smarts queries are queries
 that involve specification of a ring system. In standard smarts it
@@ -380,7 +430,47 @@ identifies molecules containing two separated rings, and in between those two ri
 there is a region with at most 12 atoms and no rings. And of course more complex
 conditions could be placed on the atoms in the smarts.
 
-When or if other needs are identified, the `region` concept will be expanded.
+The concept of a between-ring group of atoms was later implemented via the
+InterRingAtoms message, but the Region concept remained useful otherwise.
+
+A common task in de-novo molecule generation is to try to replace a core
+piece of a molecule. If that chunk is a linker group between two rings,
+the tool `get_linkers` can be used. It is designed for this task,
+although currently of somewhat limited functionality.
+
+But the region functionality within substructure searching might offer
+certain flexibilities. Imagine we need to replace a region of a molecule
+that is between two six membered aromatic rings. We have a constraint
+that the number of bonds between the two groups must remain between 5 and
+7 bonds. In addition, the replacement group can have a max of 1 ring,
+and have no more than 2 atoms that are not on the shortest path between
+the join points - not too much branching.
+
+A query that can do that might be
+```
+query {
+  smarts: "a-!@*...{3-5}*-!@a"
+  unique_embeddings_only: true
+  region {
+    atom: [1, 2]
+    max_nrings: 1
+    max_atoms_not_on_shortest_path: 2
+  }
+}
+```
+This will match groups of atoms that are
+. in between two aromatic rings.
+. contain a max of 1 ring
+. have a max of 2 atoms that are *not* on the shortest path.
+
+Fragments matching this query might be attractive candidates for
+replacing a region in a molecule.
+
+Currently only
+. natoms
+. nrings
+. atoms_not_on_shortest_path
+are implemented.  When or if other needs are identified, the `region` concept can be expanded.
 
 ## LinkAtoms
 The `NoMatchedAtomsBetween` idea is related to the idea of link atoms, but

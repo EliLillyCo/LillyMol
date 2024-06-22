@@ -298,6 +298,7 @@ The following descriptors are computed.
 | fmaxpsymd | maxpsymd / natoms |   
 | maxpsymdmean | the mean number of atoms in a partial symmetry relationship |
 | psymdnumzero | number of atoms not involved in a partial symmetry relationship |
+| alogp | local implementation of alogp |
 | xlogp | local implementation of xlogp |
 | -------- | ----------- |
 

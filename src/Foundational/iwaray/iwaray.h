@@ -1,5 +1,5 @@
-#ifndef IWARAY_H
-#define IWARAY_H
+#ifndef FOUNDATIONAL_IWARAY_IWARAY_H_
+#define FOUNDATIONAL_IWARAY_IWARAY_H_
 
 //#include <tbb/scalable_allocator.h>
 
@@ -2290,6 +2290,6 @@ resizable_array_p<T>::each_lambda(F f) const
   return;
 }
 
-#endif
+#endif  // IW_IMPLEMENTATIONS_EXPOSED
 
-#endif
+#endif  // FOUNDATIONAL_IWARAY_IWARAY_H_

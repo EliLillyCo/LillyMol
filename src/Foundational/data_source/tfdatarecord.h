@@ -2,6 +2,7 @@
 #define FOUNDATIONAL_DATA_SOURCE_TFDATARECORD_H
 // Read and write TFDataRecord
 
+#include <memory>
 #include <optional>
 
 #include "Foundational/data_source/tfdatarecord.h"
@@ -70,6 +71,11 @@ class TFDataReader {
     template <typename P>
     std::optional<P>
     ReadProto();
+
+    // Read serialized proto type P and return a unique ptr to
+    // the newly read proto.
+    template <typename T>
+    std::unique_ptr<T> ReadProtoPtr();
 };
 
 // Writes data files that can subsequently be read by TFDataReader.
@@ -119,6 +125,24 @@ TFDataReader::ReadProto() {
   }
 
   return proto;
+}
+
+template <typename T>
+std::unique_ptr<T>
+TFDataReader::ReadProtoPtr() {
+  std::optional<const_IWSubstring> data = Next();
+  if (! data) {
+    return nullptr;
+  }
+  const std::string as_string(data->data(), data->length());
+  std::unique_ptr<T> result = std::make_unique<T>();
+  if (! result->ParseFromString(as_string)) {
+    std::cerr << "TFDataReader::ReadProto:cannot parse serialized form\n";
+    return nullptr;
+  }
+
+  return result;
+
 }
 
 template <typename P>

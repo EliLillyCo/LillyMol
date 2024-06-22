@@ -1,3 +1,4 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 load("//build_deps:install.bzl", "local_install")
@@ -9,6 +10,7 @@ local_install(
         ":abraham",
         ":activity_consistency",
         ":align_molecule",
+        ":alogp",
         ":atom_triples",
         ":chirality_fingerprint",
         ":common_names",
@@ -17,6 +19,7 @@ local_install(
         ":echoqry",
         ":echorxn",
         ":ec_fingerprint",
+        ":enumeration",
         ":extended_atom_pairs",
         ":ez_descriptor",
         ":ez_fingerprint",
@@ -29,6 +32,7 @@ local_install(
         ":gfp_erg",
         ":ghose_crippen",
         ":grease",
+        ":grep_molecule",
         ":grid_fingerprint",
         ":hydrophobic_sections",
         ":id_chirality",
@@ -52,20 +56,24 @@ local_install(
         ":make_these_molecules",
         ":marvin_pka",
         ":medchemwizard",
+        ":minor_changes",
         ":mkfrag",
         ":mol2qry",
+        ":mol2SAFE",
         ":molecular_abstraction",
         ":molecular_grid",
         ":molecular_merge",
         ":molecular_scaffold",
         ":molecular_transformations",
         ":molecular_variants",
+        ":molecule_filter",
         ":molecule_subset",
         ":molecules_from_reagents",
         ":msort",
         ":msort_parallel",
         ":numbered_smiles",
         ":overlapping_fragment_model",
+        ":parsimonious_set",
         ":pharmacophore_2d",
         ":preferred_smiles",
         ":psafp",
@@ -77,6 +85,7 @@ local_install(
         ":reduced_graph",
         ":remove_and_label",
         ":remove_matched_atoms",
+        ":representations",
         ":retrosynthesis",
         ":rgroup",
         ":ring_extraction",
@@ -195,6 +204,20 @@ py_proto_library(
 )
 
 proto_library(
+    name = "enumeration_proto",
+    srcs = [
+        "enumeration.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "enumeration_cc_proto",
+    deps = [
+        "enumeration_proto",
+    ],
+)
+
+proto_library(
     name = "iwdescr_proto",
     srcs = [
         "iwdescr.proto",
@@ -261,6 +284,22 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "molecule_filter_proto",
+    srcs = [
+        "molecule_filter.proto",
+    ],
+    deps = [
+    ],
+)
+
+cc_proto_library(
+    name = "molecule_filter_cc_proto",
+    deps = [
+        ":molecule_filter_proto",
+    ],
+)
+
+proto_library(
     name = "ligand_protein_interactions_proto",
     srcs = [
         "ligand_protein_interactions.proto",
@@ -273,6 +312,22 @@ cc_proto_library(
     name = "ligand_protein_interactions_cc_proto",
     deps = [
         ":ligand_protein_interactions_proto",
+    ],
+)
+
+proto_library(
+    name = "multiple_reactions_proto",
+    srcs = [
+        "multiple_reactions.proto",
+    ],
+    deps = [
+    ],
+)
+
+cc_proto_library(
+    name = "multiple_reactions_cc_proto",
+    deps = [
+        ":multiple_reactions_proto",
     ],
 )
 
@@ -353,6 +408,22 @@ cc_proto_library(
     ],
 )
 
+proto_library(
+    name = "scaffolds_proto",
+    srcs = [
+        "scaffolds.proto",
+    ],
+    deps = [
+    ],
+)
+
+cc_proto_library(
+    name = "scaffolds_cc_proto",
+    deps = [
+        ":scaffolds_proto",
+    ],
+)
+
 # proto_library(
 #     name = "tsubstructure_proto",
 #     srcs = [
@@ -421,6 +492,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "aggregate_replacement_rings",
+    srcs = [
+        "aggregate_replacement_rings.cc",
+    ],
+    deps = [
+        ":replacement_ring_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
     name = "align_molecule",
     srcs = [
         "align_molecule.cc",
@@ -436,11 +520,26 @@ cc_binary(
 )
 
 cc_binary(
+    name = "alogp",
+    srcs = [
+        "alogp_main.cc",
+    ],
+    deps = [
+        ":alogp_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
     name = "atom_pair_fingerprint",
     srcs = [
         "atom_pair_fingerprint_main.cc",
     ],
     deps = [
+        ":fingerprint_writer",
         "//Foundational/iwmisc:sparse_fp_creator",
         "//Molecule_Lib:atom_pair_fingerprint",
         "//Molecule_Lib:iwmolecule",
@@ -473,6 +572,32 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@com_google_absl//absl/algorithm:container",
+    ],
+)
+
+cc_binary(
+    name = "bump_check",
+    srcs = [
+        "bump_check.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "charge_fingerprint",
+    srcs = [
+        "charge_fingerprint.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Tools:extended_connectivity_fp",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
     ],
 )
 
@@ -534,7 +659,8 @@ cc_binary(
         "dicer.cc",
     ],
     deps = [
-        "dicer_fragments_cc_proto",
+        ":dicer_fragments_cc_proto",
+        ":dicer_lib",
         "//Foundational/accumulator",
         "//Foundational/cmdline_v2",
         "//Foundational/iwaray",
@@ -548,6 +674,22 @@ cc_binary(
 )
 
 cc_binary(
+    name = "dicer_fragment_activity",
+    srcs = [
+        "dicer_fragment_activity.cc",
+    ],
+    deps = [
+        "dicer_fragments_cc_proto",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline_v2",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwaray",
+        "//Foundational/iwmisc",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
     name = "dicer_fragment_overlap",
     srcs = [
         "dicer_fragment_overlap.cc",
@@ -556,6 +698,40 @@ cc_binary(
         "dicer_fragments_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "dicer_fragment_replace",
+    srcs = [
+        "dicer_fragment_replace.cc",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        ":molecule_filter_cc_proto",
+        ":molecule_filter_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "dicer_to_topological_types",
+    srcs = [
+        "dicer_to_topological_types.cc",
+    ],
+    deps = [
+        "dicer_fragments_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@com_google_protobuf//:protobuf",
@@ -606,6 +782,22 @@ cc_binary(
     ],
     deps = [
         "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+
+cc_binary(
+    name = "enumeration",
+    srcs = [
+        "enumeration.cc",
+    ],
+    deps = [
+        "dicer_fragments_cc_proto",
+        "enumeration_cc_proto",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmfingerprint",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
     ],
@@ -890,6 +1082,7 @@ cc_binary(
         "qry_wcharge.h",
     ],
     deps = [
+        ":alogp_lib",
         ":iwdescr_cc_proto",
         ":nvrtspsa",
         ":partial_symmetry",
@@ -1103,6 +1296,22 @@ cc_binary(
 )
 
 cc_binary(
+    name = "mol2SAFE",
+    srcs = [
+        "mol2SAFE.cc",
+    ],
+    deps = [
+        ":highest_ring_number",
+        ":fragment_molecule_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/container:node_hash_map",
+    ],
+)
+
+cc_binary(
     name = "molecular_abstraction",
     srcs = [
         "mav2.cc",
@@ -1166,6 +1375,23 @@ cc_binary(
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
     ],
+)
+
+cc_binary(
+    name = "molecule_filter",
+    srcs = [
+        "molecule_filter.cc",
+    ],
+    deps = [
+        ":molecule_filter_cc_proto",
+        ":molecule_filter_lib",
+        ":alogp_lib",
+        ":xlogp_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:nvrtspsa",
+    ]
 )
 
 cc_binary(
@@ -1264,10 +1490,26 @@ cc_binary(
         "multiple_reactions.cc",
     ],
     deps = [
+        "multiple_reactions_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iw_tdt",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:iwreaction",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "parsimonious_set",
+    srcs = [
+        "parsimonious_set.cc",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwmisc:iwmisc",
+        "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
     ],
 )
@@ -1428,6 +1670,20 @@ cc_binary(
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iw_tdt",
+        "//Foundational/iwaray",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "representations",
+    srcs = [
+        "representations.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwaray",
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
@@ -1715,6 +1971,23 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "alogp_lib",
+    srcs = [
+        "alogp.cc",
+    ],
+    hdrs = [
+        "alogp.h",
+    ],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
 #cc_library(
 #    name = "atomic_distance_fingerprint_lib",
 #    srcs = [
@@ -1749,6 +2022,35 @@ cc_library(
 )
 
 cc_library(
+    name = "dicer_api",
+    hdrs = [
+        "dicer_api.h",
+    ],
+    srcs = [
+        "dicer_api.cc",
+    ],
+    deps = [
+        ":dicer_lib",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_library(
+    name = "dicer_lib",
+    hdrs = [
+        "dicer_lib.h",
+    ],
+    srcs = [
+        "dicer_lib.cc",
+    ],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+    ],
+)
+
+cc_library(
     name = "ec_fingerprint_lib",
     srcs = [
         "ec_fingerprint.cc",
@@ -1760,6 +2062,28 @@ cc_library(
         ":fingerprint_writer",
         "//Molecule_Lib:iwmolecule",
         "//Foundational/iwmisc:sparse_fp_creator",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_library(
+    name = "molecule_filter_lib",
+    srcs = [
+        "molecule_filter_lib.cc",
+    ],
+    hdrs = [
+        "molecule_filter_lib.h",
+    ],
+    deps = [
+        ":molecule_filter_cc_proto",
+        ":alogp_lib",
+        ":xlogp_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:nvrtspsa",
     ],
 )
 
@@ -1803,6 +2127,20 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "scaffolds",
+    srcs = [
+        "scaffolds_main.cc",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        ":scaffolds_lib",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
 
@@ -1962,8 +2300,10 @@ cc_binary(
         ":topotorsion_support",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc:sparse_fp_creator",
+        "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/container:node_hash_map",
     ],
 )
 
@@ -2159,6 +2499,19 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "grep_molecule",
+    srcs = [
+        "grep_molecule.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:molecular_formula_lib",
         "//Molecule_Lib:moleculeio",
     ],
 )
@@ -2535,6 +2888,34 @@ cc_library(
 )
 
 cc_library(
+    name = "fragment_molecule_lib",
+    srcs = [
+        "fragment_molecule.cc",
+    ],
+    hdrs = [
+        "fragment_molecule.h",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        "//Molecule_Lib:iwmolecule",
+    ],
+)
+
+cc_library(
+    name = "highest_ring_number",
+    srcs = [
+        "highest_ring_number.cc",
+    ],
+    hdrs = [
+        "highest_ring_number.h",
+    ],
+    deps = [
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring",
+    ],
+)
+
+cc_library(
     name = "insight_grid",
     srcs = [
         "insight_grid.cc",
@@ -2722,6 +3103,24 @@ cc_library(
 )
 
 cc_library(
+    name = "scaffolds_lib",
+    srcs = [
+        "scaffolds.cc",
+    ],
+    hdrs = [
+        "scaffolds.h",
+    ],
+    deps = [
+        ":scaffolds_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwstring:iwstring",
+        "//Foundational/iwmisc:iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
     name = "surface_area_molvol",
     srcs = [
         "jwrandom_preset_array.h",
@@ -2823,6 +3222,37 @@ cc_library(
 )
 
 cc_test(
+    name = "alogp_test",
+    timeout = "short",
+    srcs = ["alogp_test.cc"],
+    data = [
+        "@charge_assigner//:charge_assigner_data",
+    ],
+    deps = [
+        ":alogp_lib",
+        "//Molecule_Lib:charge_assigner",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dicer_api_test",
+    timeout = "short",
+    srcs = [
+        "dicer_api_test.cc",
+    ],
+    deps = [
+        ":dicer_api",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
     name = "ec_fingerprint_test",
     timeout = "short",
     srcs = ["ec_fingerprint_test.cc"],
@@ -2856,6 +3286,31 @@ cc_test(
     deps = [
         ":fileconv_lib",
         "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "fragment_molecule_test",
+    srcs = [
+        "fragment_molecule_test.cc",
+    ],
+    deps = [
+        ":fragment_molecule_lib",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "highest_ring_number_test",
+    srcs = [
+        "highest_ring_number_test.cc",
+    ],
+    deps = [
+        ":highest_ring_number",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
@@ -2926,7 +3381,23 @@ cc_test(
         "//Molecule_Lib:moleculeio",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
     ],
+)
+
+cc_test(
+    name = "scaffolds_test",
+    srcs = [
+        "scaffolds_test.cc",
+    ],
+    deps = [
+        ":scaffolds_lib",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@com_google_protobuf//:protobuf",
+    ],
+    timeout="short",
 )
 
 cc_test(
@@ -2956,20 +3427,3 @@ cc_test(
         "@googletest//:gtest",
     ]
 )
-
-#cc_test(
-#    name = "rxn_to_openrxn_test",
-#    srcs = [
-#        "rxn_to_openrxn_test.cc",
-#    ],
-#    deps = [
-#        "rxn_to_openrxn_lib",
-#        "//Molecule_Lib:iwmolecule",
-#        "//Molecule_Lib:iwreaction",
-#        "//Molecule_Lib:moleculeio",
-#        "@googletest//:gtest_main",
-#        "@googletest//:gtest",
-#    ],
-#    linkopts = [
-#    ],
-#)

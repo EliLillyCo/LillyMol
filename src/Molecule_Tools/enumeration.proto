@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package substituent_enumeration;
+
+message EnumerationConfig {
+
+  bool reduce_to_largest_fragment = 1;
+
+  bool remove_chirality = 2;
+
+  // "I=Cl" for example
+  repeated string element_transformations = 3;
+
+  // Limit what fragments get processed.
+  optional uint32 min_atoms_in_fragment = 4;
+  optional uint32 max_atoms_in_fragment = 5;
+
+  // Within the starting molecules, we can specify which atoms
+  // are the sites for enumeration. These can be positive
+  // selections, with `ok_attach`, or negative selections with `no_attach`.
+  repeated string ok_attach = 6;
+  repeated string no_attach = 7;
+
+  // Does the parent, starting molecule. get written as well.
+  bool write_parent = 8;
+
+  // Do we bother checking products for bad valences.
+  bool check_valences = 9;
+
+  // Do we remove isotopes before the product gets written.
+  bool remove_isotopes = 10;
+
+  // In order to enforce rules about formal charges, we may
+  // need a charge assigner. This will get passed to
+  // Charge_Assigner.build()
+  optional string charge_assigner = 11;
+
+  // If a molecule has more than this number of points of enumeration,
+  // discard the molecule.
+  optional uint32 discard_if_too_many_sites = 12;
+
+  // The other way of handling a molecule with too many reactive sites
+  // is to randomly downsample to approximately this number.
+  optional uint32 downsample_threshold = 13;
+
+
+  // Even with discarding molecules with too many reactive sites and
+  // downsampling, we can still end up with a molecule that generates
+  // too many products.
+  // Remember that this is counting the number of products formed,
+  // not the number of sites processed, so it will need to be multiplied
+  // by the size of the fragment library.
+  optional uint32 stop_generating_if_more_than = 14;
+
+  // Substructure queries for things to drop.
+  // Note that some rejections are hard coded.
+  repeated string discard_products_containing = 15;
+
+  optional uint32 max_atoms_in_product = 16;
+  optional uint32 max_rings_in_product = 17;
+  optional uint32 max_halogens_in_product = 18;
+
+  // This is a simplistic count of the number of rotatable
+  // bonds in the molecule and the fragment. It does not account
+  // for the bond being formed likely also being rotatable.
+  optional uint32 max_rotbonds_in_product = 19;
+
+  // We can place an isotope on the atom in the molecule
+  // to which the fragment is attached.
+  optional uint32 isotope_at_join = 20;
+}
+

@@ -7,9 +7,10 @@
 
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
+
 using std::cerr;
-using std::endl;
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
@@ -33,6 +34,11 @@ static std::unique_ptr<RE2> suffix_exclusion_list;
 
 static char input_separator = ' ';
 static char output_separator = ' ';
+
+// We can impose a requirement that the output be tabular.
+// Note that this is not robust in the case of files with differening
+// input separators. The test is an nwords check on the output.
+static uint32_t output_must_be_tabular = 0;
 
 /*
   since the records may be ordered differently in each file, we need to determine
@@ -245,7 +251,7 @@ do_trim_leading_zeros_from_identifiers(const_IWSubstring& buffer) {
 static int
 preprocess_to_identifier(const_IWSubstring& buffer, const int identifier_column,
                          const int quot, const char sep) {
-  // cerr << "Preprocessing, identifier_column " << identifier_column << endl;
+  // cerr << "Preprocessing, identifier_column " << identifier_column << '\n';
   // cerr << "Initially '" << buffer << "'\n";
 
   if (identifier_column > 0) {
@@ -443,7 +449,7 @@ AFile::initialise(const char* fname) {
     if (!preprocess_to_identifier(buffer, _identifier_column, _quoted_fields,
                                   _input_separator)) {
       cerr << "Cannot extract identifier from '" << buffer << "' col "
-           << (_identifier_column + 1) << endl;
+           << (_identifier_column + 1) << '\n';
       return 0;
     }
 
@@ -475,9 +481,9 @@ AFile::initialise(const char* fname) {
         ;
       } else if (2 == verbose && 0 == size() % 1000) {
         cerr << "Identifier '" << buffer << "' found at " << offset << ", size " << size()
-             << endl;
+             << '\n';
       } else {
-        cerr << "Identifier '" << buffer << "' found at " << offset << endl;
+        cerr << "Identifier '" << buffer << "' found at " << offset << '\n';
       }
     }
 
@@ -648,7 +654,7 @@ AFile::echo(const IWString& id, IWString& output_buffer) {
 
   const_IWSubstring buffer;
   if (!iwstring_data_source::next_record(buffer)) {
-    cerr << "AFile::echo: very bad news, cannot read from offset " << offset << endl;
+    cerr << "AFile::echo: very bad news, cannot read from offset " << offset << '\n';
     return 0;
   }
 
@@ -823,6 +829,7 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
+  // clang-format off
   cerr << "Concatenates descriptor files by joining on identifiers\n";
   cerr << "           set per file settings with 'fname,sep=comma,col=4'\n";
   cerr << " -u               truncate identifiers at first '_' char\n";
@@ -833,23 +840,20 @@ usage(int rc) {
   cerr << " -g               ignore duplicate identifiers in files\n";
   cerr << " -c <column>      identifier column(s) (default 1)\n";
   cerr << " -z               trim leading zero's from identifiers\n";
-  cerr << " -I               only write records for which identifier is present in every "
-          "file\n";
+  cerr << " -I               only write records for which identifier is present in every file\n";
   cerr << " -K <fname>       write identifiers discarded by -I option to <fname>\n";
-  cerr << " -n               input files are NOT descriptor files - header records not "
-          "special\n";
+  cerr << " -n               input files are NOT descriptor files - header records not special\n";
   cerr << " -k               skip blank lines in all files\n";
   cerr << " -s               ignore case when comparing identifiers\n";
-  // cerr << " -b               check for duplicate descriptor names across files\n";
-  // obsolete
-  cerr << " -D die           stop processing if duplicate descriptor names are "
-          "encountered\n";
+  cerr << " -D die           stop processing if duplicate descriptor names are encountered\n";
   cerr << " -D rm            remove duplicate descriptors\n";
   cerr << " -D disambiguate  assign new unique names to duplicate descriptors\n";
   cerr << " -i <sep>         input  file separator (default space)\n";
   cerr << " -o <sep>         output file separator (default space)\n";
   cerr << " -q               input consists of quoted fields\n";
+  cerr << " -Y ...           other options, enter '-Y help' for info\n";
   cerr << " -v               verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -896,6 +900,32 @@ write_identifiers_not_written(AFile* files, const int nfiles, const const_IWSubs
   return os.good();
 }
 
+// There is a requirement that the output be tabular.
+// `output` holds the last record written, starting at `start`.
+// If `output_must_be_tabular` is uint32_t::max() then this must be the first
+// call and we set it. Otherwise we make sure it is the same as what was first
+// set.
+
+static int
+IsTabular(const IWString& output, uint32_t start,
+          uint32_t& output_must_be_tabular) {
+  const_IWSubstring s(output.data() + start, output.size() - start);
+  const uint32_t nw = s.nwords_single_delimiter(output_separator);
+
+  if (output_must_be_tabular == std::numeric_limits<uint32_t>::max()) {
+    output_must_be_tabular = nw;
+    return 1;
+  } else if (output_must_be_tabular == nw) {
+    return 1;
+  }
+
+  cerr << "Non tabular output found. Got " << nw << " words, expected " <<
+          output_must_be_tabular << '\n';
+  cerr << s;
+
+  return 0;
+}
+
 /*
   We are processing a remaining file, MISSING will be a bunch of missing
   values for all the items from earlier files not present
@@ -905,6 +935,9 @@ static int
 do_all_identifiers(const IWString& missing, int& records_written, AFile* files,
                    const int nfiles, const int z, IWString_and_File_Descriptor& output) {
   AFile& f = files[z];
+
+  // If we are checking for tabular output.
+  uint32_t initial_size = output.size();
 
   IW_STL_Hash_Map<IWString, off_t>::const_iterator i;
   for (i = f.begin(); i != f.end(); i++) {
@@ -935,10 +968,13 @@ do_all_identifiers(const IWString& missing, int& records_written, AFile* files,
     }
 
     output << '\n';
+    records_written++;
 
     output.write_if_buffer_holds_more_than(4096);
 
-    records_written++;
+    if (output_must_be_tabular && ! IsTabular(output, initial_size, output_must_be_tabular)) {
+      return 0;
+    }
   }
 
   return 1;
@@ -1090,7 +1126,7 @@ concat_files(iwstring_data_source& input, const char input_separator,
       ids_encountered.insert(id);
     }
 
-    int size_of_buffer_before_processing_id = output.length();
+    uint32_t size_of_buffer_before_processing_id = output.size();
 
     append_possibly_translated(buffer, input_separator, output_separator, quot, output);
 
@@ -1126,6 +1162,11 @@ concat_files(iwstring_data_source& input, const char input_separator,
     output << '\n';
 
     output.write_if_buffer_holds_more_than(8192);
+
+    if (output_must_be_tabular && ! IsTabular(output, size_of_buffer_before_processing_id,
+                output_must_be_tabular)) {
+      return 0;
+    }
   }
 
   if (only_write_records_when_all_files_have_data) {
@@ -1166,9 +1207,17 @@ concat_files(const char* fname, int identifier_column, int quot, AFile* files,
                       output);
 }
 
+static void
+DisplayDashYOptions() {
+  cerr << " -Y tabular          fail if non-tabular output is generated\n";
+  cerr << "                     Note that this uses the value of the -o option to count tokens\n";
+
+  ::exit(0);
+}
+
 static int
 concat_files(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vuM:adgzc:IK:nksX:qQbi:o:fD:");
+  Command_Line cl(argc, argv, "vuM:adgzc:IK:nksX:qQbi:o:fD:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options present\n";
@@ -1206,7 +1255,7 @@ concat_files(int argc, char** argv) {
       }
 
       if (verbose) {
-        cerr << "Identifiers in column " << col << endl;
+        cerr << "Identifiers in column " << col << '\n';
       }
 
       col--;
@@ -1417,6 +1466,23 @@ concat_files(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "tabular") {
+        output_must_be_tabular = std::numeric_limits<uint32_t>::max();
+        if (verbose) {
+          cerr << "Will fail if non tabular output is encountered\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions();
+      } else {
+        cerr << "Unrecognised -Y qualifier '" << y << "'\n";
+        DisplayDashYOptions();
+      }
+    }
+  }
+
   missing_dataitem = new_int(nfiles);
   std::unique_ptr<int> free_missing_dataitem(missing_dataitem);
 
@@ -1451,7 +1517,7 @@ concat_files(int argc, char** argv) {
       if (files[i].duplicate_identifiers()) {
         cerr << ", " << files[i].duplicate_identifiers() << " duplicates";
       }
-      cerr << endl;
+      cerr << '\n';
     }
   }
 

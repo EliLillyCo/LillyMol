@@ -4,22 +4,22 @@ package GfpModel;
 
 message ModelMetadata {
   // A name for this model.
-  string response_name = 1;
+  optional string response_name = 1;
 
   // Options to gfp_make to generate the fingerprints.
-  string fingerprints = 2;
+  optional string fingerprints = 2;
 
   // If this is a classification model, this file may be present.
-  string class_label_translation = 3;
+  optional string class_label_translation = 3;
 
   // A FeatureScaling proto if this is a regression model.
-  string response_scaling = 4;
+  optional string response_scaling = 4;
 
   // If sparse counted fingerprints are flattened.
-  bool flatten_sparse_fingerprints = 5;
+  optional bool flatten_sparse_fingerprints = 5;
 
   // When was this file created.
-  string date_built = 6;
+  optional string date_built = 6;
 }
 
 message SvmfpModel{
@@ -27,22 +27,22 @@ message SvmfpModel{
 
   // Proto file containing the list of gfp bits that
   // are included in the model.
-  string bit_subset = 2;
+  optional string bit_subset = 2;
 
   // Proto file containing a mapping from gfp bits to
   // svm_lite feature numbers
-  string bit_xref = 3;
+  optional string bit_xref = 3;
 
   // The full .gfp file from train.smi
-  string train_gfp = 4;
+  optional string train_gfp = 4;
 
   // GFP file containing support vectors and weights.
   // Contains only a single sparse fingerprint with
   // translated bit numbers.
-  string support_vectors = 5;
+  optional string support_vectors = 5;
 
   // The threshold_b bias parameter
-  double threshold_b = 6;
+  optional double threshold_b = 6;
 }
 
 message LightGbmModel {
@@ -50,13 +50,13 @@ message LightGbmModel {
 
   // Proto file containing a mapping from gfp bits to
   // svm_lite feature numbers
-  string bit_xref = 4;
+  optional string bit_xref = 4;
 }
 
 message CatboostModel {
-  ModelMetadata metadata = 1;
+  optional ModelMetadata metadata = 1;
 
   // Proto file containing a mapping from gfp bits to
   // svm_lite feature numbers
-  string bit_xref = 4;
+  optional string bit_xref = 4;
 }

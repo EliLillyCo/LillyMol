@@ -1513,9 +1513,9 @@ Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atyp
   for (auto i = 0; i < _hydrophobe.number_elements(); ++i) {
     Substructure_Results sresults;
 
-    auto nhits = _hydrophobe[i]->substructure_search(target, sresults);
+    uint32_t nhits = _hydrophobe[i]->substructure_search(target, sresults);
 
-    for (auto j = 0; j < nhits; ++j) {
+    for (uint32_t j = 0; j < nhits; ++j) {
       const Set_of_Atoms* e = sresults.embedding(j);
 
       atom_number_t k = e->first();
@@ -2065,9 +2065,9 @@ Atom_Typing_Specification::_perform_shell_iteration_v2(Molecule& m,
   return rc;
 }
 
-static constexpr int kCarbon = 3001;
-static constexpr int kNitrogen = 6007;
-static constexpr int kOxygen = 9001;
+static constexpr int kAtypeCarbon = 3001;
+static constexpr int kAtypeNitrogen = 6007;
+static constexpr int kAtypeOxygen = 9001;
 
 template <typename T>
 int
@@ -2078,13 +2078,13 @@ Atom_Typing_Specification::_ust_assign_atom_types_z_prime_numbers(
   for (int i = 0; i < matoms; i++) {
     switch (m.atomic_number(i)) {
       case 6:
-        atype[i] = kCarbon;
+        atype[i] = kAtypeCarbon;
         break;
       case 7:
-        atype[i] = kNitrogen;
+        atype[i] = kAtypeNitrogen;
         break;
       case 8:
-        atype[i] = kOxygen;
+        atype[i] = kAtypeOxygen;
         break;
       case 9:
         atype[i] = 12007;
@@ -2331,7 +2331,7 @@ ust_assign_atom_types_t_ring(Molecule& m, const Ring& r, T* atype) {
 
       const auto o = b->other(j);
 
-      if (1 == m.ncon(i) && 8 == m.atomic_number(o)) {  // =O or -O is fine
+      if (1 == m.ncon(o) && 8 == m.atomic_number(o)) {  // =O or -O is fine
         exocyclic_oxygen.add(o);
       }
 
@@ -2407,11 +2407,11 @@ Atom_Typing_Specification::_ust_assign_atom_types_t(Molecule & m,
     }
     const Atom& s = m.atom(i);
     if (s.ncon() <= 2) {
-      atype[i] = kOxygen;
+      atype[i] = kAtypeOxygen;
       continue;
     }
     if (IsSulfonamide(m, i)) {
-      atype[i] = kCarbon;
+      atype[i] = kAtypeCarbon;
     }
   }
 

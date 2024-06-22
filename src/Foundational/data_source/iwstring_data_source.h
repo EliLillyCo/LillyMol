@@ -1,5 +1,5 @@
-#ifndef IWSTRING_DATA_SOURCE_H
-#define IWSTRING_DATA_SOURCE_H 1
+#ifndef FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_
+#define FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_
 
 #include <sys/types.h>
 #include <iostream>
@@ -15,12 +15,6 @@
 #define STRING_DEFAULT_BUF_SIZE 8192
 
 class IWSDS_State;       // for saving and restoring state info
-
-/*
-  Jun 2004. Found that seek operations on gnu iostream objects have
-  become horribly, horribly slow. Therefore re-implement this to
-  exclude c++ i/o
-*/
 
 class iwstring_data_source
 {
@@ -209,4 +203,4 @@ protected:
     size_t copy_raw_bytes (void *, const size_t);    // does a save and restore of the state, so it will not advance the file pointer - just got too complicated...
 };
 
-#endif
+#endif  // FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_

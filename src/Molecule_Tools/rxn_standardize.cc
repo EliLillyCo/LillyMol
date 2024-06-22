@@ -1095,7 +1095,7 @@ rxn_standardize(int argc, char** argv) {
     // for MDL mols:
     set_mdl_molecule_discard_chirality(1);
     // for smiles:
-    set_ignore_all_chiral_information_on_input(1);
+    moleculeio::set_ignore_all_chiral_information_on_input(1);
 
     if (verbose) {
       cerr << "Will discard all chirality input on input\n";

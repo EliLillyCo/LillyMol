@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <algorithm>
 #include <iostream>
 
 #include "Foundational/cmdline/cmdline.h"
@@ -8,7 +9,6 @@
 #include "allowed_elements.h"
 
 using std::cerr;
-using std::endl;
 
 void
 Allowed_Elements::_default_values()
@@ -66,7 +66,7 @@ Allowed_Elements::build_from_command_line(Command_Line & cl,
 
     atomic_number_t z = o->atomic_number();
 
-//  cerr << "Processing element '" << e << "', z = " << z << endl;
+//  cerr << "Processing element '" << e << "', z = " << z << '\n';
 
     assert(z >= 0 && z <= HIGHEST_ATOMIC_NUMBER);
 

@@ -130,6 +130,13 @@ class Path_Scoring: public resizable_array_p<Atomic_Numbers_Encounterd>
 
     int _nsteps;
 
+    // We need to keep track of the atoms we have encountered during
+    // shell expansion, otherwise molecules like
+    // O[C@@]12CCNC[C@@H]1C2 CHEMBL4592402
+    // will fail. From atom 1, the two radius 3 shells appear identical,
+    // but the trajectories are different.
+    uint64_t _sum;
+
   public:
     Path_Scoring ();
 

@@ -71,6 +71,8 @@ static int apply_isotopic_labels = 1;
 
 static Atom_Typing_Specification atom_typing;
 
+static int remove_chiral_centres = 0;
+
 static void
 usage(int rc = 0)
 {
@@ -81,6 +83,7 @@ usage(int rc = 0)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
+  // clang-format off
   cerr << "  -n atom        number by atom number (the default)\n";
   cerr << "  -n symm        number by symmetry class\n";
   cerr << "  -n canon       number by canonical order\n";
@@ -97,14 +100,15 @@ usage(int rc = 0)
   cerr << "  -q <query>     only label atoms matched by the query/queries\n";
   cerr << "  -s <smarts>    only label atoms matched by the smarts\n";
   cerr << "  -m             apply atom map numbers instead of isotopic labels\n";
+  cerr << "  -c             remove all chiral centres\n";
   cerr << "  -Y ...         more options, enter '-Y help' for info\n";
   cerr << "  -S <stem>      specify output file name stem\n";
   cerr << "  -K ...         standard smiles control options\n";
   cerr << "  -t ...         element transformation options\n";
   cerr << "  -i <type>      specify input type\n";
   display_standard_aromaticity_options(cerr);
-  ;
   cerr << "  -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -468,6 +472,10 @@ numbered_smiles(Molecule& m, Molecule_Output_Object& output)
 {
   assert(m.ok());
 
+  if (remove_chiral_centres) {
+    m.remove_all_chiral_centres();
+  }
+
   if (change_to_graph_form) {
     m.change_to_graph_form();
   }
@@ -563,7 +571,7 @@ DisplayDashYOptions(std::ostream& output) {
 static int
 numbered_smiles(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "Ivq:s:q:S:i:o:n:E:A:rpHb:e:mK:P:Y:t:");
+  Command_Line cl(argc, argv, "Ivq:s:q:S:i:o:n:E:A:rpHb:e:mK:P:Y:t:c");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -606,6 +614,13 @@ numbered_smiles(int argc, char** argv)
       return 1;
     }
     numbering_type = NumberingType::kAtomType;
+  }
+
+  if (cl.option_present('c')) {
+    remove_chiral_centres = 1;
+    if (verbose) {
+      cerr << "Will remove chiral centres from molecules\n";
+    }
   }
 
   if (cl.option_present('Y')) {

@@ -20,14 +20,21 @@ Set_of_Atoms::Set_of_Atoms(const Set_of_Atoms& rhs)
 }
 
 Set_of_Atoms::Set_of_Atoms(const std::initializer_list<int> l) {
-  resize(l.size());
+  reserve(l.size());
   for (auto a : l) {
     add(a);
   }
 }
 
 Set_of_Atoms::Set_of_Atoms(const std::vector<int>& l) {
-  resize(l.size());
+  reserve(l.size());
+  for (auto a : l) {
+    add(a);
+  }
+}
+
+Set_of_Atoms::Set_of_Atoms(const std::vector<int64_t>& l) {
+  reserve(l.size());
   for (auto a : l) {
     add(a);
   }
@@ -335,6 +342,13 @@ Set_of_Atoms::contains_atoms(const atom_number_t a1, const atom_number_t a2) con
   }
 
   return 0;
+}
+
+void
+Set_of_Atoms::EachAtomIncrement(int offset) {
+  for (int i = 0; i < _number_elements; ++i) {
+    _things[i] += offset;
+  }
 }
 
 std::vector<atom_number_t>

@@ -92,20 +92,6 @@ set(atom_pair_fingerprint_libs
 add_executable(atom_pair_fingerprint ${atom_pair_fingerprint_srcs})
 target_link_libraries(atom_pair_fingerprint LINK_PUBLIC ${atom_pair_fingerprint_libs})
 
-# buildsmidb_leveldb
-set(buildsmidb_leveldb_srcs
-  buildsmidb_leveldb.cc
-  molecule_database_options.cc
-  ${PROTO_SRCS}
-)
-set(buildsmidb_leveldb_libs
-  ${common_libs}
-  ${third_party_libs}
-  leveldb
-)
-add_executable(buildsmidb_leveldb ${buildsmidb_leveldb_srcs})
-target_link_libraries(buildsmidb_leveldb LINK_PUBLIC ${buildsmidb_leveldb_libs})
-
 # common_names
 set(common_names_srcs
   common_names.cc
@@ -205,20 +191,6 @@ set(hydrophobic_sections_libs
 )
 add_executable(hydrophobic_sections ${hydrophobic_sections_srcs})
 target_link_libraries(hydrophobic_sections LINK_PUBLIC ${hydrophobic_sections_libs})
-
-# in_database_leveldb
-set(in_database_leveldb_srcs
-  in_database_leveldb.cc
-  molecule_database_options.cc
-  ${PROTO_SRCS}
-)
-set(in_database_leveldb_libs
-  ${common_libs}
-  ${third_party_libs}
-  leveldb
-)
-add_executable(in_database_leveldb ${in_database_leveldb_srcs})
-target_link_libraries(in_database_leveldb LINK_PUBLIC ${in_database_leveldb_libs})
 
 # iwdescr
 set(iwdescr_srcs

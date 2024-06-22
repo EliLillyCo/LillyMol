@@ -20,6 +20,15 @@ class Known_Fragment_Data
 
     int _remove_everything_if_all_fragments_match;   // if every fragment is a SALT
 
+    // Jan 2024. Previously this was always done, convert to optionl.
+    int _remove_non_organics;
+
+    // Jan 2024. Counterions may comein with a variety of chirality states.
+    // For maximum flexibility, discard chirality when storing the hash and
+    // when molecules are examined.
+    // By default, this is set to 1.
+    int _remove_chirality;
+
     extending_resizable_array<int> _natoms;
 
     typedef IWString_STL_Hash_Set _formula_usmi;
@@ -61,6 +70,12 @@ class Known_Fragment_Data
 
     void set_only_check_molecular_formula (int s) { _only_check_molecular_formula = s;}
     void set_remove_everything_if_all_fragments_match (int s) { _remove_everything_if_all_fragments_match = s;}
+    void set_remove_non_organics(int s) {
+      _remove_non_organics = s;
+    }
+    void set_remove_chirality(int s) {
+      _remove_chirality = s;
+    }
 
     int read_known_salts (const const_IWSubstring &);
     int read_known_parents (const const_IWSubstring &);

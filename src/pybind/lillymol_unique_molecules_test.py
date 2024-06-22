@@ -29,9 +29,27 @@ class TestUniqueMolecules(absltest.TestCase):
     m2 = MolFromSmiles("C(O)[C@H](N)C")
 
     u = UniqueMolecules()
-    u.set_exclude_chiral_info(True)
+    u.set_include_chiral_info(False)
     self.assertTrue(u.is_unique(m1))
     self.assertFalse(u.is_unique(m2))
+
+  def test_chemical_standardisation_on_by_default(self):
+    m1 = MolFromSmiles("CC(=O)O")
+    m2 = MolFromSmiles("CC(=O)[O-]")
+
+    u = UniqueMolecules()
+    self.assertTrue(u.is_unique(m1))
+    self.assertFalse(u.is_unique(m2))
+
+  def test_chemical_standardisation_turned_off(self):
+    m1 = MolFromSmiles("CC(=O)O")
+    m2 = MolFromSmiles("CC(=O)[O-]")
+
+    u = UniqueMolecules()
+    u.set_standardize_molecules(False)
+
+    self.assertTrue(u.is_unique(m1))
+    self.assertTrue(u.is_unique(m2))
 
   def test_fragments_different(self):
     m1 = MolFromSmiles("CC.C")
@@ -85,7 +103,7 @@ class TestUniqueMolecules(absltest.TestCase):
     m1 = MolFromSmiles("C")
 
     u = UniqueMolecules()
-    u.set_ignore_isotopes(True);
+    u.set_consider_isotopes(False);
     self.assertTrue(u.is_unique(m1))
 
     m1.set_isotope(0, 1)

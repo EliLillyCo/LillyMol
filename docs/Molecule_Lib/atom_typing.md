@@ -235,7 +235,23 @@ unless you have a specific reason.
 The `T` atomic property assigns the same atom types to aromatic nitrogen
 atoms in the same ring, where one might need to be drawn with a Hydrogen
 and the other without, while in reality they might be tautomerically
-equivalent. This atom typing often works well.
+equivalent. Certain kinds of Oxygen and Sulphur atoms are made
+equivalent, and from an aromatic ring, singly connected oxygen
+atoms are merged. This atom typing often works well.
+
+Note that when used in gfp_make, the `UST:...` fingerprint types are specified
+as things like
+```
+-EC3:AHY
+-EC3:ART
+-MAP8:CPY1
+-IW7:AY
+```
+which gfp_make will expand to
+```
+... -P UST:...
+```
+during the invocation.
 
 ## Shell Expansion
 All `UST:` directives can be followed with a digit. When this is
@@ -263,8 +279,9 @@ if (cl.option_present('P'))
   if (! atom_typing.build(cl.value('P'))) {
 ...
 // If it has been activated, assign atom types.
+std::unique_ptr<uint32_t[]> atype = std::make_unique<uint32_t[]>(matoms);
 if atom_typing.active()
-  atom_typing.process(molecule...)
+  atom_typing.process(molecule, atype.get())
 ```
 
 Because this object can be compiled into many different tools,
@@ -307,8 +324,9 @@ This can be applied as
 
 ## Future
 As is often the case, hindsight is very good and there were design
-decisions made many years ago that today are not so great.
+decisions made many years ago that today are not so great. Work
+continues on finding useful atomic descriptions and their combinations
+that demonstrate utility in models.
 
-Using 64 bit atom types would significantly lower the chance of collisions
-but at the expense of forcing adoption of 64 bit isotope values, which
-is not worth it.
+Note that it is usually unpredicable which atom type combinations
+will work best in any given situation.

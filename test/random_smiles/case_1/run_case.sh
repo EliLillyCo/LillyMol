@@ -17,25 +17,26 @@ command=$BIN_DIR/random_smiles
 case_id="Case 1"
 echo "Testing:  $command"
 
-if [ ! -e "$command" ]
+if [ ! -e "${command}" ]
 then
-    echo "Executable is not found"
-    exit 1
+  echo "Executable ${command} not found"
+  exit 1
 fi
 
-name1=log.txt
-name1_out=out/output.smi
-diff_tool=../../fileDiff.sh
-$command -n 5 -a -e -A D in/pubchem_example.smi >log.txt 2>err.txt
-# Need sort before comparision for the order issue
-$diff_tool $name1 $name1_out
-ret=$?
-if [ $ret == 2 ]
+diff_tool='../../fileDiff.sh'
+
+golden='out/output.smi'
+stdout='stdout'
+stderr='stderr'
+
+${command} -n 5 -a -e -A D 'in/pubchem_example.smi' > ${stdout} 2> ${stderr}
+
+${diff_tool} ${stdout} ${golden}
+
+if [ $? == 2 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "${case_id} : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "${case_id} : TEST FAIL"
 fi
-#rm $name1
-rm log.txt
-rm err.txt
+rm ${stdout} ${stderr}

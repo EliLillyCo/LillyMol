@@ -157,8 +157,8 @@ fragment selection. When given `-f help` the following menu appears
   -f smarts:smt  keep smallest frag which matches smarts
   -f ALL:smt     keep all fragments that match smarts <smarts>
   -f rm:smt      remove all fragments that match <smarts>
-  -f saltfile=<file> smiles file of known salts - always removed even
-                     if the largest fragment
+  -f saltfile=<file> smiles file of known salts - always removed even if the largest fragment
+  -f saltsmartsfile=<file> file containing smarts of known salts. All atoms in fragment must match (RDKit)
   -f parentfile=<file> file of known parent molecules - never removed as salts
   -f kmfok       compare known salts and parents by molecular formula only - not unique smiles
   -f kpallsalt   do not change a molecule if every fragment is a known salt
@@ -202,6 +202,12 @@ Trim to fragment with most organic atoms and desirable features. This is
 the current best choice for selecting what is likely to be the fragment
 of interest. Like all heuristics it is not perfect.
 
+Generally it will favour fragments with "organic" atoms, especially Nitrogen
+atoms. So even though a fragment with just Carbon and Oxygen atoms might
+have more atoms, it might instead select a fragment with a Nitrogen
+atom as more likely to be the fragment of interest to a biological
+study.
+
 ### -f allo
 Keep all organic fragments. Any fragment that contains a non organic
 atom will be discarded.
@@ -234,6 +240,11 @@ This raises a fundamental question, how should counterions be handled?
 Should there be a dictionary of known counterions, this option, or are
 things better done via heuristics. Most use of fileconv relies on
 heuristics, but there have been times when a saltfile has been needed.
+
+###-f saltsmartsfile=\<file\>
+Designed to read an RDKit salt file - those are smarts. They must match
+all the atoms in the fragment. This makes no sense, but is included for
+compatibility. Matching fragments are discarded.
 
 ### -f parentfile=\<file\>
 File of known parent molecules - never removed as salts.
@@ -423,6 +434,7 @@ a great many operations can be performed on isotopes. Entering
  -I CHANGE        change to normal form. Free implicit H. Should be default
  -I alliso=<i>    change any isotopic atoms to isotope <i>
  -I smarts:smarts,<i>    change any atoms matching <smarts> to isotope <i>, e.g. '[2C],0' or '[#16],4'
+ -I firstatom:smarts:<i> in a multi-atom smarts, set the isotope only on the first matched atom
  -I remove        remove any isotopically labelled atoms
  -I add:\<i\>-\<smiles\> attach a fragment to all occurrences of isotope \<i\>
 
@@ -580,8 +592,25 @@ The usage message is
   -n digits=<n>  left pad numbers with leading 0's to yield <n> digits
   -n nochange    only apply if the existing name is empty
   -n nsep='c'    separator between number and existing name (default ' ')
+  -n seq         assign unadorned sequential numbers - no prefix or parentheses
 ```
 This is seldom used, and is not described in detail here.
+
+The most simple use case would be for a set of molecules that did not contain
+identifiers, or had duplicate identifiers, and you need to apply a unique
+identifier to each molecule.
+```
+fileconv -n seq ....
+```
+will apply sequential numbers to the molecules, inserting a sequential
+number at the beginning of each record.
+```
+fileconv -n seq -n replace ...
+```
+will discard the name entirely and only the sequential numbers will appear.
+
+Beware 'naked' numbers which may get confused with other numbers. The default
+for the number assigner is to create ids that look like 'R(nnn)'.
 
 ## -o
 The `-o` option governs what kind of output is produced. This is covered

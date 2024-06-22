@@ -3283,8 +3283,14 @@ IWString::starts_with(const char * s, int lens) const
   if (0 == _number_elements)
     return 0;
 
-  if (lens < 0)
+  // This seems very ugly and fragile, TODO:ianwatson get rid of this?
+  if (lens < 0) {
     lens = static_cast<int>(::strlen(s));
+  }
+
+  if (_number_elements < lens) {
+    return 0;
+  }
 
   return (0 == ::strncmp(_things, s, lens));
 }
@@ -3364,7 +3370,7 @@ IWString::ends_with(const char * s, int lens) const
   }
 #endif
 
-  return (0 == ::strncmp(s, _things + i, lens));
+  return (0 == ::strncmp(s, _things + i, static_cast<uint32_t>(lens)));
 }
 
 int
@@ -3624,7 +3630,7 @@ IWString::strncpy(const char * s, int nchars)
 #ifdef _WIN32
   IW_STRNCPY(_things, s, nchars);
 #else
-  ::memcpy(_things, s, nchars);
+  ::memcpy(_things, s, static_cast<uint32_t>(nchars));
 #endif
 
   _number_elements = nchars;
@@ -5114,8 +5120,7 @@ void char_name_to_char_usage(const IWString & optionTag)
 
 
 int
-char_name_to_char(IWString & s)
-{
+char_name_to_char(IWString & s, int message_if_unrecognised) {
   if (1 == s.length())
     return 1;
 
@@ -5329,7 +5334,9 @@ char_name_to_char(IWString & s)
     return (0);
   }
 
-  cerr << "Unrecognised character name '" << s << "'\n";
+  if (message_if_unrecognised) {
+    cerr << "Unrecognised character name '" << s << "'\n";
+  }
   return 0;
 }
 
@@ -5481,7 +5488,5 @@ const_IWSubstring::AsString() const {
     return std::string();
   }
 
-  char * copy = new char[_nchars];
-  std::copy_n(_data, _nchars, copy);
-  return std::string(copy, _nchars);
+  return std::string(_data, _nchars);
 }

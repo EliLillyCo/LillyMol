@@ -12,17 +12,18 @@
 #include "absl/container/flat_hash_set.h"
 
 #include "Foundational/iwstring/iw_stl_hash_set.h"
-#include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/standardise.h"
 
 namespace unique_molecules {
 
 class UniqueMolecules {
   private:
-    int _exclude_chiral_info;
-    int _exclude_cis_trans_bonding_info;
+    int _include_chiral_info;
+    int _include_cis_trans_bonding_info;
     int _strip_to_largest_fragment;
-    int _ignore_isotopes;
+    int _consider_isotopes;
     isotope_t _constant_isotope;
 
     Mol2Graph _mol2graph;
@@ -38,6 +39,8 @@ class UniqueMolecules {
     uint32_t _molecules_processed;
     uint32_t _duplicates_found;
 
+    Chemical_Standardisation _chemical_standardisation;
+
   // Private functions.
 
     bool InternalIsUnique(Molecule&& m);
@@ -47,21 +50,25 @@ class UniqueMolecules {
     UniqueMolecules();
 
     // Setters for matching conditions.
-    void set_exclude_chiral_info(int s) {
-      _exclude_chiral_info = s;
+    void set_include_chiral_info(int s) {
+      _include_chiral_info = s;
     }
-    void set_exclude_cis_trans_bonding_info(int s) {
-      _exclude_cis_trans_bonding_info = s;
+    void set_include_cis_trans_bonding_info(int s) {
+      _include_cis_trans_bonding_info = s;
     }
     void set_strip_to_largest_fragment(int s) {
       _strip_to_largest_fragment = s;
     }
-    void set_ignore_isotopes(int s) {
-      _ignore_isotopes = s;
+    void set_consider_isotopes(int s) {
+      _consider_isotopes = s;
     }
     void set_constant_isotope(isotope_t s) {
       _constant_isotope = s;
     }
+
+    // By default, chemical standardisation is performed.
+    void set_standardize_molecules(bool s);
+
     // Fully expose these so they can be initialised externally.
     Mol2Graph& graph_specifications() {
       return _mol2graph;

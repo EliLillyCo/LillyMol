@@ -1,7 +1,12 @@
 #include <algorithm>
 #include <cstdint>
 
+#ifdef __APPLE__
+#include <machine/endian.h>
+#else
 #include <endian.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

@@ -132,7 +132,7 @@ struct FileconvConfig {
 
   // We can keep track of how many atoms are lost
 
-  Accumulator_Int<int> atoms_lost;
+  Accumulator_Int<uint64_t> atoms_lost;
   extending_resizable_array<int> initial_fragment_count;
 
   // For efficiency we have a single variable which indicates whether or not
@@ -163,16 +163,16 @@ struct FileconvConfig {
   int convert_isotopes_to_atom_map_numbers = 0;
   int convert_atom_map_numbers_to_isotopes = 0;
 
-  resizable_array<int> convert_specific_isotopes;
-  resizable_array<int> convert_specific_isotopes_new_isotope;
+  resizable_array<isotope_t> convert_specific_isotopes;
+  resizable_array<isotope_t> convert_specific_isotopes_new_isotope;
 
   resizable_array_p<Substructure_Query> convert_specific_isotopes_query;
-  resizable_array<int> convert_specific_isotopes_query_new_isotope;
+  resizable_array<isotope_t> convert_specific_isotopes_query_new_isotope;
 
   // For a given isotope number, a fragment that is added to that
   // atom. Could also do a reaction, but this might be faster.
   // Adds via the first atom in the fragment.
-  std::unordered_map<int, Molecule> add_to_isotopic_atom;
+  std::unordered_map<isotope_t, Molecule> add_to_isotopic_atom;
 
   int output_organic_only = 0;
   int non_organic_molecules_found = 0;
@@ -188,8 +188,8 @@ struct FileconvConfig {
   int molecules_below_molecular_weight_cutoff = 0;
   int molecules_above_molecular_weight_cutoff = 0;
 
-  Accumulator<molecular_weight_t> amw_accumulator;
-  Accumulator_Int<int> natoms_accumulator;
+  Accumulator<double> amw_accumulator;
+  Accumulator_Int<uint64_t> natoms_accumulator;
   extending_resizable_array<int> atom_count;
 
   int lower_atom_count_cutoff = 0;

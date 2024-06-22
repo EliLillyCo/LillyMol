@@ -20,7 +20,6 @@
 #include "smiles.h"
 
 using std::cerr;
-using std::endl;
 
 /*
   Some smiles parsers are picky about reusing numbers for ring closures.
@@ -331,7 +330,7 @@ process_standard_smiles_options(Command_Line & cl, int verbose,
     {
       random_number_seed_t tmp = set_smiles_random_number_seed_random();
       if (verbose)
-        cerr << "Smiles generated with a random seed " << tmp << endl;
+        cerr << "Smiles generated with a random seed " << tmp << '\n';
     }
     else if ("iusmi" == tmp)
     {
@@ -406,7 +405,7 @@ process_standard_smiles_options(Command_Line & cl, int verbose,
     {
       set_smiles_random_number_seed(random_number_seed_t(seed));
       if (verbose)
-        cerr << "Random smiles generated with seed " << seed << endl;
+        cerr << "Random smiles generated with seed " << seed << '\n';
     }
     else
     {
@@ -430,7 +429,7 @@ Molecule::_smiles_write_directional_bond (atom_number_t a,
   if (nullptr == ctb)
   {
     cerr << "Molecule::process_atom_for_smiles: directional bond, but no CTB\n";
-    cerr << "Atoms " << a << " and " << anchor << endl;
+    cerr << "Atoms " << a << " and " << anchor << '\n';
     debug_print (cerr);
     assert (nullptr == "This should not happen");
   }
@@ -445,7 +444,7 @@ Molecule::_smiles_write_directional_bond (atom_number_t a,
     smiles += '/';
   else
   {
-    cerr << "Molecule::_smiles_write_directional_bond: anchor = " << anchor << " a = " << a << endl;
+    cerr << "Molecule::_smiles_write_directional_bond: anchor = " << anchor << " a = " << a << '\n';
     ctb->debug_print(cerr);
     assert (nullptr == "What's going on here");
   }
@@ -464,8 +463,8 @@ Molecule::_process_directional_bond_for_smiles(IWString & smiles,
                                                atom_number_t next_atom)
 {
 #ifdef DEBUG_PROCESS_DIRECTIONAL_BOND_FOR_SMILES
-  cerr << "Directional bond from " << b->a1() << " to " << b->a2() << endl;
-  cerr << " up " << b->is_directional_up() << " down " << b->is_directional_down() << endl;
+  cerr << "Directional bond from " << b->a1() << " to " << b->a2() << '\n';
+  cerr << " up " << b->is_directional_up() << " down " << b->is_directional_down() << '\n';
 #endif
 
   if (b->is_directional_up() && next_atom == b->a2())
@@ -478,8 +477,8 @@ Molecule::_process_directional_bond_for_smiles(IWString & smiles,
     smiles += '/';
   else
   {
-    cerr << "Molecule::_process_directional_bond_for_smiles: bad directional bond to " << next_atom << endl;
-    cerr << (*b) << endl;
+    cerr << "Molecule::_process_directional_bond_for_smiles: bad directional bond to " << next_atom << '\n';
+    cerr << (*b) << '\n';
     return 0;
   }
 
@@ -519,7 +518,7 @@ finish_smiles_atom(IWString & smiles,
                    int hcount,
                    formal_charge_t fc)
 {
-//cerr << "finish_smiles_atom atomic number " << z << " with hcount " << hcount << endl;
+//cerr << "finish_smiles_atom atomic number " << z << " with hcount " << hcount << '\n';
 
   if (hcount > 0 && 1 != z)
   {
@@ -555,7 +554,7 @@ finish_smiles_atom(IWString & smiles,
       smiles += -fc;
     }
   } else {
-    cerr << "How did we get here: formal_charge " << fc << endl;
+    cerr << "How did we get here: formal_charge " << fc << '\n';
   }
 
   return;
@@ -688,7 +687,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     cerr << " ihknown";
   if (c)
     cerr << " chiral";
-  cerr << " anchor is " << anchor << endl;
+  cerr << " anchor is " << anchor << '\n';
   a->debug_print(cerr);
 #endif
 
@@ -703,8 +702,8 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   const int stored_hcount = include_hcount_in_smiles ? a->implicit_hydrogens() : 0;
 
 #ifdef DEBUG_PROCESS_ATOM_FOR_SMILES
-  cerr << "Atom type " << a->atomic_symbol() << " stored_hcount " << stored_hcount << " include_hcount_in_smiles " << include_hcount_in_smiles << endl;
-  cerr << "has " << a->implicit_hydrogens() << " IH, known? " << a->implicit_hydrogens_known() << endl;
+  cerr << "Atom type " << a->atomic_symbol() << " stored_hcount " << stored_hcount << " include_hcount_in_smiles " << include_hcount_in_smiles << '\n';
+  cerr << "has " << a->implicit_hydrogens() << " IH, known? " << a->implicit_hydrogens_known() << '\n';
 #endif
 
   if (! include_hcount_in_smiles)
@@ -718,7 +717,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     else
     {
       if (e->organic() && file_scope_display_unusual_hcount_warning_messages)
-        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " nbonds " << a->nbonds() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << endl;
+        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " nbonds " << a->nbonds() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << '\n';
       hcount = stored_hcount;
     }
   }
@@ -728,7 +727,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
 // Daylight needs to include non zero hcount with aromatic nitrogens and phosphorus.
 // Actually, Daylight seems never to aromatise phosphorus...
 
-//cerr << __LINE__ << " hcount " << hcount << endl;
+//cerr << __LINE__ << " hcount " << hcount << '\n';
 
   if (hcount >= 0)            // already set
     ;
@@ -740,14 +739,20 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   {
     const atomic_number_t z = e->atomic_number();
 
-    if (7 == z || 15 == z)
+    if (7 == z || 15 == z || z == 16)
     {
       aromaticity_type_t arom;
-      if (aromaticity(zatom, arom) && is_aromatic_atom(arom))
+      if (aromaticity(zatom, arom) && is_aromatic_atom(arom)) {
         hcount = stored_hcount;
+        // Preserve default behaviour for thiophene. If zero, no need for square brackets,
+        // but nitrogen needs square brackets.
+        if (z == 16 && hcount == 0) {
+          hcount = -1;
+        }
+      }
 
 #ifdef DEBUG_PROCESS_ATOM_FOR_SMILES
-      cerr << "Aromatic N or P has " << hcount << " implicit hydrogens\n";
+      cerr << "Aromatic N or P or S has " << hcount << " implicit hydrogens\n";
 #endif
     }
   }
@@ -778,7 +783,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
       (a->atom_map() > 0 && _include_atom_map_with_smiles))       // implicit_hydrogens_known() - possibly adjusted above
   {
     smiles += '[';
-//  cerr << "Appended square bracket '" << smiles << "' hcount " << hcount << " ihknown " << ihknown << endl;
+    // cerr << "Appended square bracket '" << smiles << "' hcount " << hcount << " ihknown " << ihknown << '\n';
     need_to_close_square_bracket = 1;
     if (hcount < 0)
       hcount = stored_hcount;
@@ -799,7 +804,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   if (_include_atom_map_with_smiles && a->atom_map() > 0)
     smiles << ':' << a->atom_map();
 
-//cerr << "Square bracket needed " << need_to_close_square_bracket << endl;
+//cerr << "Square bracket needed " << need_to_close_square_bracket << '\n';
   if (need_to_close_square_bracket)
     smiles += ']';
 
@@ -809,7 +814,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     do_append_coordinate_box(a, smiles);
   }
 
-//cerr << "After addition, length " << smiles.length() << endl;
+//cerr << "After addition, length " << smiles.length() << '\n';
 
   return rc;
 }
@@ -865,7 +870,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     else
     {
       if (e->organic() && a->ncon() && file_scope_display_unusual_hcount_warning_messages)
-        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << endl;
+        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << '\n';
       hcount = stored_hcount;
     }
   }

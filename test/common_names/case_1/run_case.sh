@@ -15,23 +15,25 @@ fi
 command=$BIN_DIR/common_names
 case_id="Case 1"
 echo "Testing:  $command"
+
 if [ ! -e "$command" ]
 then
     echo "Executable is not found"
     exit 1
 fi
-name1=output.smi
-name1_out=out/output.smi
-diff_tool=../../fileDiff.sh
-$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >>log.txt 2>>err.txt
 
-$diff_tool $name1 $name1_out
+name1=output.smi
+golden=out/output.smi
+diff_tool=../../fileDiff.sh
+$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >log.txt 2>err.txt
+
+$diff_tool $name1 ${golden}
 ret=$?
 if [ $ret == 1 ]
 then
-    echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-    echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
 fi
 rm $name1
 rm log.txt

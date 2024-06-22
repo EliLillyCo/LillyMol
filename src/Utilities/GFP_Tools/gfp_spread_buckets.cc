@@ -25,8 +25,8 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/misc.h"
+#include "spread.h"
 #include "re2/re2.h"
-#include "spread_v2.h"
 
 using std::cerr;
 using std::endl;

@@ -1,5 +1,7 @@
 // Tester for fileconv
 
+#include <filesystem>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "google/protobuf/text_format.h"
@@ -216,6 +218,77 @@ INSTANTIATE_TEST_SUITE_P(FileConvTestP, FileConvTestP, testing::Values(
 
   OptionsSmilesResult{vector<const char*>{"_", "-I", "add:3-CC"}, "I:",
                       "[3CH3]C", "name", 0, "[3CH2](C)CC", "name"}
+));
+
+struct SaltFileData {
+  std::vector<const char*> argv;
+  const char * options;
+  const char * smiles;
+  const char * name;
+
+  IWString saltfile_contents;
+
+  const char* expected_smiles;
+};
+
+class SaltFileTestP : public testing::TestWithParam<SaltFileData> {
+  protected:
+    Molecule _m;
+    fileconv::FileconvConfig _config;
+};
+
+TEST_P(SaltFileTestP, SaltFileTestP) {
+  const auto& params = GetParam();
+  moleculeio::set_ignore_all_chiral_information_on_input(0);
+
+  auto tmp_path = std::filesystem::temp_directory_path();
+  auto saltfile = tmp_path.append("saltfile");
+  IWString_and_File_Descriptor output;
+  ASSERT_TRUE(output.open(saltfile.c_str()));
+  output << params.saltfile_contents;
+  if (! params.saltfile_contents.ends_with('\n')) {
+    output << '\n';
+  }
+  output.close();
+
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  _m.set_name(params.name);
+  int argc = params.argv.size();
+  ASSERT_GT(argc, 0);
+  argc += 2;
+  char ** argv = new char*[argc];
+  std::unique_ptr<char *[]> free_argv(argv);
+  int ndx = 0;
+  for (const auto& c : params.argv) {
+    argv[ndx] = const_cast<char*>(c);
+    ++ndx;
+  }
+  argv[ndx] = const_cast<char*>("-f");
+  ++ndx;
+  IWString tmp;
+  tmp << "saltfile=" << saltfile;
+  argv[ndx] = const_cast<char*>(tmp.null_terminated_chars());
+  ++ndx;
+
+  moleculeio::set_ignore_all_chiral_information_on_input(0);
+
+  Command_Line cl(argc, argv, params.options);
+  // std::cerr << "Testing initial smiles " << _m.smiles() << ' ' << params.name << '\n';
+  ASSERT_TRUE(_config.Build(cl));
+
+  _config.Process(_m);
+  EXPECT_EQ(_m.smiles(), params.expected_smiles) << "Wrong smiles " << _m.smiles() <<
+                " vs " << params.expected_smiles;
+  std::filesystem::remove(saltfile);
+}
+
+INSTANTIATE_TEST_SUITE_P(SaltFileTests, SaltFileTestP, testing::Values(
+  SaltFileData{vector<const char*>{"_"}, "f:", "C.CCCC", "methane", "CCCC", "C"},
+  SaltFileData{vector<const char*>{"_", "-f", "noxorganic"}, "f:", "C.BCCC", "methane", "O", "C.BCCC"},
+  // Test that chirality is removed when the library is read.
+  SaltFileData{vector<const char*>{"_"}, "f:", "C.CC(N)F", "methane", "C[C@H](N)F", "C"},
+  // And that chirality is removed from fragments.
+  SaltFileData{vector<const char*>{"_"}, "f:", "C.C[C@H](N)F", "methane", "CC(N)F", "C"}
 ));
 
 }  // namespace

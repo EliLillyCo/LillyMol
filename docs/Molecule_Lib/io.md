@@ -537,7 +537,7 @@ chirality, it should be discarded as the molecule is read, `-i nochiral`.
 
 ### -o smi3d
 A LillyMol extension allows coordinates to be written in a smiles. This takes
-the form `C{{{1.2,0.4,4.1}}`. Even though the option is named `smid` it works
+the form `C{{{1.2,0.4,4.1}}`. Even though the option is named `smi3d` it works
 for any coordinates. Some tools also support this via the `-K coords` directive.
 
 ### -o flush
@@ -545,7 +545,7 @@ Flush files after writing each molecule.
 
 ### -o info
 Write any associated text info (if possible). This is usually paired with
-the `-i info` flag, and only applies to certain file types.
+the `-i info` flag, and only applies to certain file types, SDF and TDT.
 
 ### -o MULT
 Write each structure to a separate file. Typically if a `-S` option is

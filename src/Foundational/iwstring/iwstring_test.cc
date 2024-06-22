@@ -169,6 +169,108 @@ REGISTER_TYPED_TEST_SUITE_P(EnsureEndsWithTest,
 
 INSTANTIATE_TYPED_TEST_SUITE_P(My, EnsureEndsWithTest, MyTypes);
 
+// typed test suites are too complicated...
 
+TEST(TestIWString, TestStartsWithChar) {
+  IWString foo('c');
+  EXPECT_TRUE(foo.starts_with('c'));
+  EXPECT_FALSE(foo.starts_with('b'));
+  EXPECT_FALSE(foo.starts_with("cc"));
+}
+
+TEST(TestConst_IWSubstring, TestStartsWithChar) {
+  const char* s = "c";
+  const_IWSubstring foo(s);
+  EXPECT_TRUE(foo.starts_with('c'));
+  EXPECT_FALSE(foo.starts_with('b'));
+  EXPECT_FALSE(foo.starts_with("cc"));
+}
+
+TEST(TestIWString, TestStartsWithCharStar) {
+  IWString foo('c');
+  EXPECT_TRUE(foo.starts_with("c"));
+  EXPECT_TRUE(foo.starts_with("c", 1));
+  EXPECT_TRUE(foo.starts_with("cx", 1));
+  EXPECT_TRUE(foo.starts_with("cx", 1));
+  EXPECT_FALSE(foo.starts_with("cx"));
+
+  foo = "abc";
+  EXPECT_TRUE(foo.starts_with("a"));
+  EXPECT_TRUE(foo.starts_with("ab"));
+  EXPECT_TRUE(foo.starts_with("abc"));
+  EXPECT_TRUE(foo.starts_with("abc", 1));
+  EXPECT_TRUE(foo.starts_with("abc", 2));
+  EXPECT_TRUE(foo.starts_with("abc", 3));
+  EXPECT_FALSE(foo.starts_with("abcd", 4));
+  EXPECT_FALSE(foo.starts_with("x"));
+}
+
+TEST(TestConst_IWSubstring, TestStartsWithCharStar) {
+  IWString foo('c');
+  EXPECT_TRUE(foo.starts_with("c"));
+  EXPECT_TRUE(foo.starts_with("c", 1));
+  EXPECT_TRUE(foo.starts_with("cx", 1));
+  EXPECT_TRUE(foo.starts_with("cx", 1));
+  EXPECT_FALSE(foo.starts_with("x"));
+
+  foo = "abc";
+  EXPECT_TRUE(foo.starts_with("a"));
+  EXPECT_TRUE(foo.starts_with("ab"));
+  EXPECT_TRUE(foo.starts_with("abc"));
+  EXPECT_FALSE(foo.starts_with("abcd"));
+  EXPECT_FALSE(foo.starts_with("x"));
+}
+
+TEST(TestIWString, TestStartsWithIWString) {
+  IWString foo('c');
+  EXPECT_TRUE(foo.starts_with(foo));
+  IWString bar("cx");
+  EXPECT_TRUE(bar.starts_with(bar));
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+
+  foo = "abc";
+  EXPECT_TRUE(foo.starts_with(foo));
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "a";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "ab";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "abc";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+  bar = "abcd";
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+}
+
+TEST(TestConst_IWSubstring, TestStartsWithIWString) {
+  const_IWSubstring foo("c");
+  EXPECT_TRUE(foo.starts_with(foo));
+  const_IWSubstring bar("cx");
+  EXPECT_TRUE(bar.starts_with(bar));
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+
+  foo = "abc";
+  EXPECT_TRUE(foo.starts_with(foo));
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "a";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "ab";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_FALSE(bar.starts_with(foo));
+  bar = "abc";
+  EXPECT_TRUE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+  bar = "abcd";
+  EXPECT_FALSE(foo.starts_with(bar));
+  EXPECT_TRUE(bar.starts_with(foo));
+}
 
 }  // namespace

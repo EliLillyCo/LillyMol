@@ -1482,7 +1482,7 @@ Set_of_Reactions::_process(Molecule& m, Molecule_to_Match& target, const int rad
   Substructure_Results sresults;
 
   // cerr << "Reaction has " << rxn->number_sidechains() << " sidechains\n";
-  int nhits = rxn->substructure_search(target, sresults);
+  uint32_t nhits = rxn->substructure_search(target, sresults);
 
   acc_nhits[nhits]++;
 
@@ -1518,7 +1518,7 @@ Set_of_Reactions::_process(Molecule& m, Molecule_to_Match& target, const int rad
 
   _molecules_deconstructed_at_radius[radius]++;
 
-  for (int i = 0; i < nhits; ++i) {
+  for (uint32_t i = 0; i < nhits; ++i) {
     Molecule result;
     //  cerr << " processing embedding " << *sresults.embedding(i) << endl;
     if (!rxn->perform_reaction(&m, sresults.embedding(i), result)) {
@@ -1934,7 +1934,7 @@ run_self_react_test(Molecule& m, Reaction_With_Stats& r, const int max_radius,
 {
   Substructure_Results sresults;
 
-  const int nhits = r.substructure_search(m, sresults);
+  const uint32_t nhits = r.substructure_search(m, sresults);
   acc_nhits[nhits]++;
   if (nhits != sresults.number_embeddings()) {
     cerr << "HUH " << nhits << " vs " << sresults.number_embeddings() << endl;
@@ -1970,7 +1970,7 @@ run_self_react_test(Molecule& m, Reaction_With_Stats& r, const int max_radius,
 
   resizable_array_p<Molecule> results;
 
-  for (int i = 0; i < nhits; ++i) {
+  for (uint32_t i = 0; i < nhits; ++i) {
     Molecule* result = new Molecule;
 
     results.add(result);

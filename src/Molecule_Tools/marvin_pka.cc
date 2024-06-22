@@ -33,6 +33,14 @@ using std::cerr;
 
 void
 Usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Generates formally charged molecules based on a Chemaxon pKa calculation\n";
   cerr << "\n";
   cerr << " -M <fname>      output from 'cxcalc pka file.smi'\n";
@@ -47,6 +55,7 @@ Usage(int rc) {
   cerr << " -c              remove chirality\n";
   cerr << " -g <...>        chemical standardisation options - use with caution\n";
   cerr << " -v              verbose output\n";
+  // clang-format on
 
   ::exit(rc);
 }

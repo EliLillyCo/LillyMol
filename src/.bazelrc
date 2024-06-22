@@ -1,11 +1,9 @@
-# This is probably what you want
-# build --cxxopt=-std=c++20 --copt=-march=native --cxxopt=-march=native
-
-# build --cxxopt=-std=c++20 --copt=-march=core-avx2  
 # sandybridge 2011
-build --cxxopt=-std=c++20 --cxxopt=-march=sandybridge --cxxopt=-mtune=sandybridge 
+build --cxxopt=-std=c++20
 
 build --enable_bzlmod --experimental_cc_shared_library
+# https://groups.google.com/g/bazel-discuss/c/5cbRuLuTwNg
+build --per_file_copt=external/.*@-Wno-error=maybe-uninitialized
 
 build:asan --strip=never
 build:asan --copt -fsanitize=address
@@ -35,18 +33,10 @@ build:msan --linkopt=-fsanitize=memory
 build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
 
 
-#Taken from https://docs.bazel.build/versions/main/tutorial/cc-toolchain-config.html
+# Taken from https://docs.bazel.build/versions/main/tutorial/cc-toolchain-config.html
 # No longer works. TODO:ianwatson re-enable clang as a compiler.
-build:clang_config --crosstool_top=//toolchain:clang_suite
-
-# Use --cpu as a differentiator.
-
-build:clang_config --cpu=skylake
-
-# Use the default Bazel C++ toolchain to build the tools used during the
-# build.
-
-build:clang_config --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+# build:clang_config --crosstool_top=//toolchain:clang_suite
+# build:clang_config --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 
 # DO not redefine test
 # https://github.com/bazelbuild/bazel/issues/13186

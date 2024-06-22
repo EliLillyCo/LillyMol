@@ -48,6 +48,7 @@ Usage(int rc) {
  -M <natoms>       max fragment size
  -r <nrings>       min number of rings in the fragment
  -R <nrings>       max number of rings in the fragment
+ -y <nsys>         min number of ring systems in the fragment
  -Y <nsys>         max number of ring systems in the fragment
  -I <isotope>      place <isotope> at the join atoms
  -P ...            atom typing specification - isotopes are for adjacent atom
@@ -106,7 +107,8 @@ class Options {
     int _min_rings;
     int _max_rings;
 
-    // A max on the ring systems in the substituent.
+    // Limits on the ring systems in the substituent.
+    int _min_ring_systems;
     int _max_ring_systems;
 
     // Keep track of some statistics about the fragments generated.
@@ -262,6 +264,7 @@ Options::Options() {
   _min_rings = 0;
   _max_rings = std::numeric_limits<int>::max();
 
+  _min_ring_systems = 0;
   _max_ring_systems = 0;
 
   _fragments_generated = 0;
@@ -467,6 +470,17 @@ Options::Initialise(Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Max number of rings " << _max_rings << '\n';
+    }
+  }
+
+  if (cl.option_present('y')) {
+    if (! cl.value('y', _min_ring_systems) || _min_ring_systems < 0) {
+      cerr << "Options::Initialise:the min number of ring systems option (-y) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "min number of ring sytems in a substituent " << _min_ring_systems << '\n';
     }
   }
 
@@ -983,6 +997,11 @@ Options::PassesConstraints(Molecule& m) {
     return 0;
   }
 
+  if (_min_ring_systems == 0) {
+  } else if (m.number_ring_systems() < _min_ring_systems) {
+    return 0;
+  }
+
   if (_max_ring_systems == 0) {
   } else if (m.number_ring_systems() > _max_ring_systems) {
     return 0;
@@ -1083,7 +1102,7 @@ DisplayDashXOptions(std::ostream& output) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:lcg:i:S:I:s:q:f:F:m:M:nz:O:aX:pdP:r:R:Y:");
+  Command_Line cl(argc, argv, "vE:A:lcg:i:S:I:s:q:f:F:m:M:nz:O:aX:pdP:r:R:y:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

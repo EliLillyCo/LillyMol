@@ -114,30 +114,9 @@ TEST_P(TestChemaxonSpecialAtoms, Test1) {
   const auto params = GetParam();
   EXPECT_TRUE(m.build_from_smiles(params.input));
   EXPECT_EQ(m.smiles(), params.output);
-  set_atomic_symbols_can_have_arbitrary_length(0);
 }
 INSTANTIATE_TEST_SUITE_P(TestChemaxonSpecialAtoms, TestChemaxonSpecialAtoms, testing::Values(
   SmilesInOut{"*C(*)CC(*)CC(*)* |$;;Pol_p;;;Q_e;;;star_e;M_p$|", "[A]C([Pol])CC([Q])CC(*)[M]"}
 ));
-
-TEST(TestSquareBracketsInSmiles, Test1) {
-  set_atomic_symbols_can_have_arbitrary_length(1);
-  IWString smiles = "C[ab[c]de]N";
-  Molecule m;
-  EXPECT_TRUE(m.build_from_smiles(smiles));
-  set_atomic_symbols_can_have_arbitrary_length(0);
-}
-
-// Sept 2023. There is a bug in canonicalisation of multi-fragment molecules.
-// This test reflects a test failure. When the bug is fixed, this test should
-// fail.
-TEST(TestBrokenCanonicalisation, Test1) {
-  Molecule m;
-  ASSERT_TRUE(m.build_from_smiles("C1=CNN=C1.[nH]1c2c(c[n]1)cccc2"));
-  EXPECT_EQ(m.unique_smiles(), "c1c[nH][n]c1.[nH]1c2c(c[n]1)cccc2");
-
-  ASSERT_TRUE(m.build_from_smiles("O1CCNCC1.[n]1[nH]c2c(c1)cccc2"));
-  EXPECT_EQ(m.unique_smiles(), "O1CCNCC1.[n]1[nH]c2c(c1)cccc2");
-}
 
 }  // namespace

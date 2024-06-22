@@ -885,6 +885,10 @@ static integer c__5 = 5;
 /*     < PASSED */
 /*     < LOCAL */
 /*     < Initialize some stuff. */
+    /* voids added IAW to keep the compiler quiet */
+    (void) areat;
+    (void) volumet;
+
     *error_encountered__ = FALSE_;
     *volume = 0.;
     volumet = 0.;

@@ -2,16 +2,28 @@
 
 namespace unique_molecules {
 UniqueMolecules::UniqueMolecules() {
-  _exclude_chiral_info = 0;
-  _exclude_cis_trans_bonding_info = 1;
+  _include_chiral_info = 1;
+  // Turned off by default.
+  _include_cis_trans_bonding_info = 0;  
   _strip_to_largest_fragment = 0;
-  _ignore_isotopes = 0;
+  _consider_isotopes = 1;
   _constant_isotope = 0;
 
   _use_atom_hash = 1;
 
   _molecules_processed = 0;
   _duplicates_found = 0;
+
+  _chemical_standardisation.activate_all();
+}
+
+void
+UniqueMolecules::set_standardize_molecules(bool s) {
+  if (s) {
+    _chemical_standardisation.activate_all();
+  } else {
+    _chemical_standardisation.deactivate();
+  }
 }
 
 void
@@ -37,19 +49,29 @@ UniqueMolecules::InternalIsUnique(Molecule&& m) {
   if (_strip_to_largest_fragment) {
     m.reduce_to_largest_fragment_carefully();
   }
-  if (_exclude_chiral_info) {
+  if (!_include_chiral_info) {
     m.remove_all_chiral_centres();
   }
-  if (_exclude_cis_trans_bonding_info) {
+  if (!_include_cis_trans_bonding_info) {
     m.revert_all_directional_bonds_to_non_directional();
   }
-  if (_ignore_isotopes) {
+  if (!_consider_isotopes) {
     m.unset_isotopes();
   }
   if (_etrans.active()) {
     _etrans.process(m);
   }
+
   if (_constant_isotope) {
+    for (int i = 0; i < m.natoms(); ++i) {
+      if (m.isotope(i)) {
+        m.set_isotope(i, _constant_isotope);
+      }
+    }
+  }
+
+  if (_chemical_standardisation.active()) {
+    _chemical_standardisation.process(m);
   }
 
   return InternalIsUniqueInner(m);

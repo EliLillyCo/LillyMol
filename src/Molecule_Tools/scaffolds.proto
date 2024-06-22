@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package scaffolds;
+
+// This is used to initialise a Scaffolds object.
+message ScaffoldsOptions {
+  // When generating subsets, how many ring systems must be in a subset
+  // in order for that subset to be generated. Likely value will be 2,
+  // since generating single ring/ring systems subsets seems uninteresting.
+  optional uint32 min_systems_in_subset = 1;
+
+  // We can also have a maximum number of ring systems in a subset.
+  optional uint32 max_systems_in_subset = 2;
+
+  // We can impose a limit o the number of ring systems lost during
+  // subset formation.
+  optional uint32 max_systems_lost = 3;
+
+  // We can label the atoms where inter-ring linkers join and or where
+  // ring substituents are joined.
+  optional uint32 linker_isotope = 4;
+  optional uint32 substituent_isotope = 5;
+
+  // We can generate interesting and useful output if we retain atoms
+  // in the starting molecule. By default, all are removed.
+  // There are two kinds of non-scafold atoms.
+  //   Those attached to linker atoms.
+  //   Those attached to ring atoms.
+  // Again, by default both kinds are removed by default.
+  optional bool remove_ring_based_non_scaffold_atoms = 6;
+  optional bool remove_linker_based_non_scaffold_atoms = 7;
+
+  // We can impose conditions on what gets formed.
+  // Min and max number of atoms on the shortest path between
+  // two rings.
+  // Note that currently this is not working properly. The atoms counted
+  // include =O and =N atoms attached to the scaffold.
+  // TODO:ianwatson fix this bug.
+  optional uint32 min_length_linker = 8;
+  optional uint32 max_length_linker = 9;
+
+  // Limit the number of atoms in the linker.
+  // Note that 
+  optional uint32 max_atoms_in_linker = 10;
+
+  // If set, we convert C1CC1 to C([3C])[3C]
+  optional bool discard_cyclopropyl_ring = 11;
+
+}
+
+message ScaffoldSubset {
+  // The smiles of this scaffold.
+  optional string smi = 1;
+
+  // The number of ring systems in this subset.
+  optional uint32 ring_sys = 2;
+}
+
+message ScaffoldData {
+  // The smiles of the parent molecule.
+  optional string smi = 1;
+
+  // The name of the parent molecule.
+  optional string par = 2;
+
+  // The number of ring systems in the parent.
+  optional uint32 ring_sys = 3;
+
+  // Thought about adding the scaffold of the parent, but it
+  // can be obtained by looking for the subset that has
+  // the same number of ring systems as the parent.
+
+  repeated ScaffoldSubset subset = 4;
+}

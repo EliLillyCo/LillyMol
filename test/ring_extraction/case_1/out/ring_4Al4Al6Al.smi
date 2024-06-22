@@ -1,1 +1,2 @@
-smi: "[1CH]12CC3C[1CH2]CC(C1)N23" smt: "[ax3r4r4D>3]12:[ax2r4D2]:[ax3r4r6D3]3:[ax2r6D2]:[ax2r6D>2]:[ax2r6D2]:[ax3r4r6D3](:[ax2r4D2]:1):[ax3r4r4r6D3]:2:3" id: "CHEMBL3639904.4Al4Al6Al" n: 2 conn: true usmi: "[1CH2]1CC2N3[1CH](C2)CC3C1" 
+smi: "C12CC3CCCC(C1)N23" smt: "[Ax3r4]12[Ax2r4][Ax3r4r6]3[Ax2r6][Ax2r6][Ax2r6][Ax3r4r6]([Ax2r4]1)[Ax3r4r6]23" id: "CHEMBL3639904.4Al4Al6Al" n: 1 conn: false usmi: "C1CC2N3C(C2)CC3C1" 
+smi: "[1CH]12CC3C[1CH2]CC(C1)N23" smt: "[Ax3r4D>3]12[Ax2r4D2][Ax3r4r6D3]3[Ax2r6D2][Ax2r6D>2][Ax2r6D2][Ax3r4r6D3]([Ax2r4D2]1)[Ax3r4r6D3]23" id: "CHEMBL3639904.4Al4Al6Al" n: 1 conn: true usmi: "[1CH2]1CC2N3[1CH](C2)CC3C1" 

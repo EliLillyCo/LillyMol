@@ -289,7 +289,7 @@ TEST_P(TestRingSys, TestOperators) {
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   //std::cerr << "Testing " << params.smiles << ' ' << params.proto << "\n expecting " << params.nhits << '\n';
-  EXPECT_EQ(_query.substructure_search(&_mol), params.nhits);
+  EXPECT_EQ(_query.substructure_search(&_mol), params.nhits) << "smiles " << params.smiles;
 }
 INSTANTIATE_TEST_SUITE_P(TestRingSys, TestRingSys, testing::Values(
   Data{"Fc1ccccc1", f_env_query, 0},

@@ -8,7 +8,6 @@ from absl import app
 from absl import logging
 from absl.testing import absltest
 
-
 from lillymol import *
 
 CHIRAL_SMILES1 = [
@@ -66,7 +65,7 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.explicit_hydrogens(0), 0)
     self.assertEqual(m.isotope(0), 0)
     self.assertTrue(m.valence_ok())
-    self.assertEqual(m.highest_coordinate_dimensionality(), 1)
+    self.assertEqual(m.highest_coordinate_dimensionality(), 0)
 
   def test_copy_constructor(self):
     m1 = Molecule()
@@ -155,6 +154,12 @@ class TestLillyMol(absltest.TestCase):
     self.assertFalse(m.valence_ok())
     m.remove_hydrogens_known_flag_to_fix_valence_errors()
     self.assertTrue(m.valence_ok())
+
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("C[1C][2C][3C][1C]"))
+    self.assertEqual(m.first_atom_with_isotope(2), 2)
+    self.assertEqual(m.first_atom_with_isotope(1), 1)
+    self.assertEqual(m.first_atom_with_isotope(7), -1)
 
 
   def test_fragment_related(self):
@@ -265,6 +270,27 @@ class TestLillyMol(absltest.TestCase):
     self.assertGreaterEqual(to_remove, 0)
     m.delete_fragment(to_remove)
     self.assertEqual(m.smiles(), "CC.CC")
+
+  def test_saturated(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC=CC#CCc1ccccc1"))
+    self.assertTrue(m.saturated(0))
+    self.assertFalse(m.saturated(1))
+    self.assertFalse(m.saturated(2))
+    self.assertFalse(m.saturated(3))
+    self.assertFalse(m.saturated(4))
+    self.assertFalse(m.saturated(6))
+
+  def test_unsaturation(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC=CC#CCc1ccccc1"))
+    self.assertEqual(m.unsaturation(0), 0)
+    self.assertEqual(m.unsaturation(1), 1)
+    self.assertEqual(m.unsaturation(2), 1)
+    self.assertEqual(m.unsaturation(3), 2)
+    self.assertEqual(m.unsaturation(4), 2)
+    self.assertEqual(m.unsaturation(5), 0)
+    self.assertEqual(m.unsaturation(6), 1)
 
   def test_remove_atom(self):
     m = Molecule()
@@ -608,7 +634,7 @@ class TestLillyMol(absltest.TestCase):
     m.add_bond(1, 2, BondType.DOUBLE_BOND)
     m.add_bond(2, 3, BondType.SINGLE_BOND)
     m.add_bond(3, 4, BondType.DOUBLE_BOND)
-    m.add_bond(2, 5, BondType.SINGLE_BOND)
+    m.add_bond(4, 5, BondType.SINGLE_BOND)
     m.add_bond(5, 0, BondType.DOUBLE_BOND)
     self.assertEqual(m.aromatic_ring_count(), 1)
 
@@ -893,6 +919,27 @@ class TestLillyMol(absltest.TestCase):
     m = Molecule()
     self.assertTrue(m.build_from_smiles("CC(=O)OC1=CC=CC=C1C(=O)O aspirin"))
     self.assertAlmostEqual(xlogp(m), 1.426)
+
+  def test_alogp(self):
+    m = Molecule()
+    alogp = ALogP()
+    self.assertTrue(m.build_from_smiles("C(C)[C@@H](NC1=NC=C2C(=C1)C(=C(C#N)C=N2)NC1=CC(=C(F)C=C1)Cl)C1=CC=CC=C1 CHEMBL197382"))
+    self.assertAlmostEqual(alogp.logp(m), 6.601, places=3)
+
+  def test_rotbond(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC"))
+    rotbond_calc = RotatableBonds()
+    rotbond_calc.set_calculation_type(EXPENSIVE)
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
+    self.assertTrue(m.build_from_smiles("CCC"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
+    self.assertTrue(m.build_from_smiles("CC(F)(F)F"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
+    self.assertTrue(m.build_from_smiles("CCCC"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 1)
+    self.assertTrue(m.build_from_smiles("C1CC1C"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
 
 if __name__ == '__main__':
   absltest.main()

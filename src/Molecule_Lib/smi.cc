@@ -21,6 +21,7 @@
 #include "element.h"
 #include "misc2.h"
 #include "molecule.h"
+#include "moleculeio.h"
 #include "parse_smarts_tmp.h"
 #include "rwmolecule.h"
 #include "smiles.h"
@@ -30,6 +31,7 @@ using std::cerr;
 using std::endl;
 
 using down_the_bond::DownTheBond;
+using moleculeio::newline_string;
 
 constexpr char kOparen = '(';
 constexpr char kCparen = ')';
@@ -173,7 +175,7 @@ Molecule::write_molecule_usmi (std::ostream & os, const IWString & comment)
   
   os << newline_string();
 
-  if (flush_files_after_writing_each_molecule())
+  if (moleculeio::flush_files_after_writing_each_molecule())
     os.flush();
 
   return os.good();
@@ -192,7 +194,7 @@ Molecule::write_molecule_nausmi (std::ostream & os, const IWString & comment)
   
   os << newline_string();
 
-  if (flush_files_after_writing_each_molecule())
+  if (moleculeio::flush_files_after_writing_each_molecule())
     os.flush();
 
   return os.good();
@@ -211,7 +213,7 @@ Molecule::write_molecule_smi (std::ostream & os, const IWString & comment)
   
   os << newline_string();
 
-  if (flush_files_after_writing_each_molecule())
+  if (moleculeio::flush_files_after_writing_each_molecule())
     os.flush();
 
   return os.good();
@@ -230,7 +232,7 @@ Molecule::write_molecule_rsmi (std::ostream & os, const IWString & comment)
   
   os << newline_string();
 
-  if (flush_files_after_writing_each_molecule())
+  if (moleculeio::flush_files_after_writing_each_molecule())
     os.flush();
 
   return os.good();
@@ -989,6 +991,8 @@ maybe_deuterium_or_tritium(const char * smiles,
   Parsing an atom enclosed in a square bracket
 */
 
+//#define DEBUG_PARSE_SMILES_TOKEN
+
 int
 parse_smiles_token (const char * smiles,
                     int characters_to_process,
@@ -1041,6 +1045,8 @@ parse_smiles_token (const char * smiles,
       tmp = element_from_long_smiles_string(smiles, characters_to_process, e);
     else  
       tmp = element_from_smiles_string(smiles, characters_to_process, e);
+
+    // cerr << "atomic_symbols_can_have_arbitrary_length " << atomic_symbols_can_have_arbitrary_length << " tmp " << tmp << '\n';
 
     if (0 == tmp && characters_to_process > 1 && ']' == smiles[1])     
       tmp = maybe_deuterium_or_tritium(smiles, e, atomic_mass);
@@ -1226,7 +1232,7 @@ parse_smiles_token (const char * smiles,
     }
   }
 
-  if (chiral_encountered && ignore_all_chiral_information_on_input())
+  if (chiral_encountered && moleculeio::ignore_all_chiral_information_on_input())
     chiral_encountered = 0;
 
   rc++;     // we got our closing bracket.
@@ -1257,9 +1263,6 @@ Molecule::read_molecule_smi_ds (iwstring_data_source & input)
     cerr << buffer << endl;
     return 0;
   }
-
-  if (unconnect_covalently_bonded_non_organics_on_read())
-    _do_unconnect_covalently_bonded_non_organics();
 
   return 1;
 }
@@ -1372,7 +1375,7 @@ Molecule::read_molecule_tdt_ds (iwstring_data_source & input)
       continue;       // let's skip this TDT and look at the next one
     }
 
-    if (read_extra_text_info())
+    if (moleculeio::read_extra_text_info())
     {
       IWString * tmp = new IWString(buffer);
       _text_info.add(tmp);
@@ -1732,7 +1735,7 @@ valid_end_of_smiles_character(int last_token)
   return 1;
 }
 
-//#define DEBUG_BUILD_FROM_SMILES
+// #define DEBUG_BUILD_FROM_SMILES
 
 int
 Molecule::_build_from_smiles(const char * smiles,
@@ -1784,8 +1787,7 @@ Molecule::_build_from_smiles(const char * smiles,
   {
     const char * s = smiles + characters_processed;
 
-    if (characters_processed && (isdigit(*s) || '%' == *s))
-    {
+    if (characters_processed && (isdigit(*s) || '%' == *s)) {
       int ring_number;
       int nchars;
       if (! fetch_ring_number(s, characters_to_process - characters_processed, ring_number, nchars))
@@ -2271,7 +2273,7 @@ Molecule::_build_from_smiles (const char * smiles, int nchars,
 
 //(void) _assign_directional_bonds();
 
-  if (ignore_all_chiral_information_on_input())
+  if (moleculeio::ignore_all_chiral_information_on_input())
     _chiral_centres.resize(0);
   else if (! _check_for_incomplete_chiral_specifications())
     return 0;
@@ -2309,7 +2311,7 @@ Molecule::_build_from_smiles (const char * smiles, int nchars,
 
   if (_finished_reading_smiles_assign_and_check_directional_bonds())    // did it successfully
     ;
-  else if (ignore_bad_cis_trans_input())    // trouble, but we are ignoring errors
+  else if (moleculeio::ignore_bad_cis_trans_input())    // trouble, but we are ignoring errors
   {
     revert_all_directional_bonds_to_non_directional();
     _append_bad_cis_trans_input_text_to_name();
@@ -2328,9 +2330,15 @@ Molecule::_build_from_smiles (const char * smiles, int nchars,
 int
 Molecule::_build_from_smiles (const char * smiles, int nchars)
 {
+  assert(nchars >= 0);
+
   resize (0);
 
-  assert(nchars > 0);
+  if (nchars == 0) {
+    _molecule_name.resize(0);
+    return 1;
+  }
+
 
   if ('.' != smiles[0])
     ;
@@ -2439,7 +2447,7 @@ Molecule::_write_molecule_tdt_pcn (std::ostream & os,
 
   os << '|' << newline_string();
 
-  if (flush_files_after_writing_each_molecule())
+  if (moleculeio::flush_files_after_writing_each_molecule())
     os.flush();
 
   return os.good();

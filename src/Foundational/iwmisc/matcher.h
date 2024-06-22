@@ -58,6 +58,9 @@ class Matcher {
     // For compatibility with Min_Max_Specifier which was public resizable_array
     int number_elements() const;
     unsigned int size() const { return number_elements();}
+    int empty() const {
+      return number_elements() == 0;
+    }
     // This is only defined for r = 0;
     int resize(int r);
     // return the smallest explicit value if present.
@@ -101,6 +104,9 @@ class Matcher {
     template <typename C> bool AnyValue(C condition) const;
     // For each explicit value, update the value with `fn`.
     template <typename C> void UpdateValues(C fn);
+
+    // Returns true if `value` is present as an explicit value.
+    int contains(T value) const;
 };
 
 #if (IW_IMPLEMENTATIONS_EXPOSED) || defined(MATCHER_IMPLEMENTATION)
@@ -111,6 +117,10 @@ Matcher<T>::Matcher() {
 
   _other_values = nullptr;
   _number_other_values = 0;
+
+  // These do not need to be initialised, but an abundance of caution.
+  _min_val = T{};
+  _max_val = T{};
 }
 
 template <typename T>
@@ -792,6 +802,25 @@ Matcher<T>::UpdateValues(C fn) {
   return;
 }
 
+template <typename T>
+int
+Matcher<T>::contains(T value) const {
+  if (! _mask_and_int._mask[kSet]) {
+    return 0;
+  }
+
+  if (_single_value == value) {
+    return 1;
+  }
+
+  for (int i = 0; i < _number_other_values; ++i) {
+    if (_other_values[i] == value) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
 
 #endif  // IW_IMPLEMENTATIONS_EXPOSED || MATCHER_IMPLEMENTATION
 

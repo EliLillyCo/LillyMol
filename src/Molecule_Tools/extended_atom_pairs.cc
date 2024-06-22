@@ -51,7 +51,7 @@ int verbose = 0;
 // Read from a tdt file.
 int function_as_filter = 0;
 
-int molecules_read = 0;
+uint64_t molecules_read = 0;
 
 // The min and max atom separation at which fingerprints are generated.
 int min_distance = 0;

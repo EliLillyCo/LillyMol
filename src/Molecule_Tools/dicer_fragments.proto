@@ -24,20 +24,23 @@ enum Isotope {
 
 message DicerFragment {
   // What kind of smiles is this?
-  Isotope iso = 1;
+  optional Isotope iso = 1;
   // The unique smiles of the fragment.
   // What is in there will be governed by what is in `iso`.
   string smi = 2;
   // The parent molecule that generated the first occurrence of
   // this fragment
-  string par = 3;
+  optional string par = 3;
   // the number of atoms in the fragment.
-  uint32 nat = 4;
-  // The number of instances of this frgment.
-  uint32 n = 5;
+  optional uint32 nat = 4;
+  // The number of instances of this fragment.
+  optional uint32 n = 5;
 
   // If fragments have been assigned unique ids
-  uint32 id = 6;
+  optional uint32 id = 6;
+
+  // If we are generating complement fragments.
+  optional string comp = 7;
 };
 
 // For each pair of fragments, the number of atoms in common.
@@ -58,4 +61,18 @@ message DicedMolecule {
   repeated DicerFragment fragment = 5;
 
   repeated FragmentOverlap overlap = 6;
+}
+
+// Deliberately shortened names to help textproto representations.
+message FragmentAndComplements {
+  // The fragment, including isotopically labelled attachment points.
+  optional string usmi = 1;
+  // Name of first molecule exemplifying this fragment
+  optional string par = 2;
+
+  // Number of instances of the fragment.
+  optional uint32 n = 3;
+
+  // For each complementary fragment found.
+  repeated DicerFragment comp = 4;
 }

@@ -86,4 +86,5 @@ cc_test(
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
+    timeout="short",
 )

@@ -1,6 +1,8 @@
 /*
-  Tester for the shadow code
+  Compute shadow descriptors based on a 3D structure.
+  Aligns the molecule with the longest separation along the X axis
 */
+
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -21,6 +23,7 @@
 #include "Molecule_Lib/iw_vdw.h"
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/qry_wstats.h"
+#include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
@@ -116,8 +119,14 @@ static Accumulator<double> rdkit_diff;
 
 static int position_by_extremeties = 1;
 
+// Normally we read a smiles file and produce a descriptor file.
+// Optionally we can read a descriptor file with a smiles as the first
+// column, and optionally, write the same thing.
+static int read_descriptor_file_pipeline = 0;
+static int write_descriptor_file_pipeline = 0;
+
 /*
-  Run the computation across the Lilly collection and get extremeties
+  Run the computation across any large collection to get extremeties.
 */
 
 static void
@@ -155,6 +164,7 @@ usage(int rc) {
   cerr << "  -y <count>     when producing fingerprints, max count\n";
   cerr << "  -i <type>      specify input file type. Enter '-i help' for details\n";
   cerr << "  -O <fname>     file name for oriented molecules - sdf output only\n";
+  cerr << "  -B ...         miscellaneous options, enter '-B help' for info\n";
   cerr << "  -E ...         standard element options, enter '-E help' for details\n";
   (void) display_standard_aromaticity_options(cerr);
   cerr << "  -v             verbose output\n";
@@ -164,7 +174,7 @@ usage(int rc) {
 }
 
 static int
-write_header(IWString_and_File_Descriptor& output) {
+WriteHeader(IWString_and_File_Descriptor& output) {
   output.resize(64000);
 
   if (pbf_only) {
@@ -176,7 +186,7 @@ write_header(IWString_and_File_Descriptor& output) {
     return 1;
   }
 
-  output << "Name sh_maxdist sh_avedist sh_maxhdist sh_avehdist sh_shadow1";
+  output << "sh_maxdist sh_avedist sh_maxhdist sh_avehdist sh_shadow1";
   output << " sh_shadow2 sh_shadow3";
 
   if (write_ordered_areas) {
@@ -1440,7 +1450,7 @@ do_fingerprint_output(const resizable_array<float>& shd,
 
   output << tmp << '\n';
 
-  output.write_if_buffer_holds_more_than(8192);
+  output.write_if_buffer_holds_more_than(4096);
 
   return 1;
 }
@@ -1477,9 +1487,25 @@ do_output(const resizable_array<float>& shd, IWString_and_File_Descriptor& outpu
 }
 
 static int
-do_output(const IWString& mname, const resizable_array<float>& shd,
+do_output(Molecule& m, const resizable_array<float>& shd,
           IWString_and_File_Descriptor& output) {
-  append_first_token_of_name(mname, output);
+
+  if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
+    m.invalidate_smiles();
+    set_append_coordinates_after_each_atom(1);
+    output << m.smiles() << ' ';
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (read_descriptor_file_pipeline) {
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (write_descriptor_file_pipeline) {
+    set_append_coordinates_after_each_atom(1);
+    m.invalidate_smiles();
+    output << m.smiles() << ' ';
+    append_first_token_of_name(m.name(), output);
+  } else {
+    append_first_token_of_name(m.name(), output);
+  }
+
   output << ' ';
 
   output << shd[0];  // always gets written
@@ -1488,7 +1514,7 @@ do_output(const IWString& mname, const resizable_array<float>& shd,
 
   output << '\n';
 
-  output.write_if_buffer_holds_more_than(8192);
+  output.write_if_buffer_holds_more_than(4096);
 
   return 1;
 
@@ -1568,8 +1594,7 @@ tshadow(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor& out
       ;
     } else if (3 == m->highest_coordinate_dimensionality()) {  // great
       three_dimensional_molecule_encountered = 1;
-    } else if (1 == m->highest_coordinate_dimensionality())  // horrible
-    {
+    } else if (1 == m->highest_coordinate_dimensionality()) {  // horrible
       cerr << "Warning, no geometry '" << m->name() << "'\n";
       return 0;
     } else {  // benzene might be the first molecule in the dataset...
@@ -1584,7 +1609,7 @@ tshadow(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor& out
       return 0;
     }
 
-    do_output(m->name(), shd, output);
+    do_output(*m, shd, output);
   }
 
   return 1;
@@ -1633,7 +1658,7 @@ tshadow_filter(iwstring_data_source& input, IWString_and_File_Descriptor& output
 
   while (input.next_record(buffer)) {
     output << buffer << '\n';
-    output.write_if_buffer_holds_more_than(32768);
+    output.write_if_buffer_holds_more_than(4096);
 
     if (!buffer.starts_with(smiles_tag)) {
       continue;
@@ -1665,8 +1690,88 @@ tshadow_filter(const char* fname,  // most likely '-'
 }
 
 static int
+tshadow_descriptor_pipeline(Molecule& m,
+                IWString_and_File_Descriptor& output) {
+  resizable_array<float> results;
+  if (! tshadow(m, results)) {
+    return 0;
+  }
+
+  do_output(m, results, output);
+
+  return 1;
+}
+
+static int
+tshadow_descriptor_pipeline_line(const const_IWSubstring& buffer,
+                IWString_and_File_Descriptor& output) {
+  Molecule m;
+  if (! m.build_from_smiles(buffer)) {
+   cerr << "Bad smiles\n";
+   return 0;
+  }
+
+  return tshadow_descriptor_pipeline(m, output);
+}
+
+static int
+tshadow_descriptor_pipeline(iwstring_data_source& input,
+                IWString_and_File_Descriptor& output) {
+  const_IWSubstring buffer;
+
+  static int first_call = 1;
+  if (first_call) {
+    if (! input.next_record(buffer)) {
+      cerr << "tshadow_descriptor_pipeline:cannot read header\n";
+      return 0;
+    }
+
+    if (write_descriptor_file_pipeline) {
+      output << buffer << ' ';
+      WriteHeader(output);
+    } else {
+      // Remove the smiles and write.
+      buffer.remove_leading_words(1);
+      output << buffer << ' ';
+      WriteHeader(output);
+    }
+
+    first_call = 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! tshadow_descriptor_pipeline_line(buffer, output)) {
+      cerr << "Error processing\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+tshadow_descriptor_pipeline(const char* fname,
+                IWString_and_File_Descriptor& output) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "tshadow_descriptor_pipeline:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return tshadow_descriptor_pipeline(input, output);
+}
+
+static void
+DisplayDashBOptions() {
+  cerr << " -Y rpipe    input is a descriptor file pipeline  smiles id d1 d2 d3 ...\n";
+  cerr << " -Y wpipe    write a descriptor file pipeline - smiles id d1 d2 d3 ...\n";
+  ::exit(0);
+}
+
+static int
 tshadow(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vi:A:E:r:V:p:LYGuq:s:e:O:m:dJ:P:btky:h");
+  Command_Line cl(argc, argv, "vi:A:E:r:V:p:LYGuq:s:e:O:m:dJ:P:btky:hB:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1683,6 +1788,29 @@ tshadow(int argc, char** argv) {
   if (!process_elements(cl)) {
     cerr << "Cannot process element specifications (-E)\n";
     usage(2);
+  }
+
+  if (cl.option_present('B')) {
+    const_IWSubstring b;
+    for (int i = 0; cl.value('B', b, i); ++i) {
+      if (b == "rpipe") {
+        read_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Input assumed to be a descriptor file pipeline\n";
+        }
+      } else if (b == "wpipe") {
+        write_descriptor_file_pipeline = 1;
+        set_append_coordinates_after_each_atom(1);
+        if (verbose) {
+          cerr << "Will write a descriptor file pipeline\n";
+        }
+      } else if (b == "help") {
+        DisplayDashBOptions();
+      } else {
+        cerr << "Unrecognised -B directive '" << b << "'\n";
+        DisplayDashBOptions();
+      }
+    }
   }
 
   if (cl.option_present('r')) {
@@ -1894,7 +2022,9 @@ tshadow(int argc, char** argv) {
 
   FileType input_type = FILE_TYPE_INVALID;
 
-  if (cl.option_present('i')) {
+  if (read_descriptor_file_pipeline) {
+    // DO not care about input types.
+  } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
       usage(6);
@@ -1997,12 +2127,23 @@ tshadow(int argc, char** argv) {
   IWString_and_File_Descriptor output(1);
 
   int rc = 0;
-  if (tag.length() > 0) {
+  if (read_descriptor_file_pipeline) {
+    for (const char* fname: cl) {
+      if (! tshadow_descriptor_pipeline(fname, output)) {
+        cerr << "Fatal error processing '" << fname << "'\n";
+        return 1;
+      }
+    }
+  } else if (tag.length() > 0) {
     if (!tshadow_filter(cl[0], output)) {
       rc = 1;
     }
   } else {
-    if (!write_header(output)) {
+    if (write_descriptor_file_pipeline) {
+      output << "Smiles" << ' ';
+    }
+    output << "Name" << ' ';
+    if (!WriteHeader(output)) {
       cerr << "Cannot write header\n";
       return 8;
     }

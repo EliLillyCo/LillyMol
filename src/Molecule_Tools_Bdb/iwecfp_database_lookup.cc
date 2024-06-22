@@ -46,7 +46,6 @@
 using std::cerr;
 
 using iwecfp_database::Bit_Produced;
-using iwecfp_database::Count_Radius;
 using iwecfp_database::DBKey;
 using iwecfp_database::Fingerprint_Characteristics;
 using iwecfp_database::IWdbkeyHash;

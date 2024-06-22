@@ -6,14 +6,21 @@
 #include <math.h>
 #include <time.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
 
+#include "absl/container/flat_hash_set.h"
+
+#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/iwdigits.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/sparse_fp_creator.h"
+#include "Foundational/iwstring/absl_hash.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
@@ -23,7 +30,6 @@
 #include "torsion_hash.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 static int molecules_read = 0;
@@ -113,6 +119,14 @@ static int eight_character_torsion_names = 1;
 
 static int numeric_torsion_names = 0;
 
+// Apr 2024. Allow writing a fixed width descriptor file.
+static uint32_t fixed_ncols = 0;
+
+// Keep track of the number of unique torsions encountered.
+// Note that this is different from the number of columns filled
+// since there will likely be collisions.
+static absl::flat_hash_set<IWString> torsions_found;
+
 /*
   As a quick check for presence of a torsion, we hash the atomic
   numbers in the target torsions
@@ -153,7 +167,7 @@ quick_torsion_hash(const const_IWSubstring& t)
     h = 26 * h + (c - 'A');
   }
 
-  // cerr << "Torsion '" << t << "' hash value " << h << endl;
+  // cerr << "Torsion '" << t << "' hash value " << h << '\n';
 
   assert(h >= 0 && h < QUICK_HASH_SIZE);
 
@@ -350,7 +364,7 @@ torsion_requested(const const_IWSubstring& t, int& id)
   int h = quick_torsion_hash(t);
 
   // cerr << "Do we want '" << t << "', hash " << only_want_some[h] << ", hash " <<
-  // torsions_to_find.contains (t) << endl;
+  // torsions_to_find.contains (t) << '\n';
 
   if (0 == only_want_some[h]) {
     return 0;
@@ -382,7 +396,7 @@ check_hash_function(int uid, const IWString& torsion)
       }
 
       cerr << "Hashed torsion identifier mismatch, uid = " << uid << " index " << i
-           << endl;
+           << '\n';
       abort();
     }
   }
@@ -413,6 +427,26 @@ static int insert_spaces_in_torsions = 0;
 typedef unsigned short tt_atom_t;
 
 static int suppress_molecules_with_no_torsions = 1;
+
+// The number of molecules that have a given number of torsions.
+static extending_resizable_array<uint32_t> torsion_count;
+
+// Given a torsion name, return a column number in [0,fixed_ncols)
+static uint32_t
+TorsionToIndex(const uint32_t fixed_ncols,
+               const IWString& name) {
+  auto iter = torsions_found.find(name);
+  if (iter == torsions_found.end()) {
+    torsions_found.emplace(name);
+  }
+
+  // Also works with an absl hash, but that is not guaranteed
+  // to remain stable across releases. This seems to be as performant
+  // and well behaved.
+  static IWStringHash hasher;
+
+  return hasher(name) % fixed_ncols;
+}
 
 class Topological_Torsion
 {
@@ -534,7 +568,7 @@ filter_torsions()
         torsions_suppressed++;
         if (verbose) {
           cerr << "Torsion " << i << " too few hits " << hits[i] << " min " << low
-               << endl;
+               << '\n';
         }
       }
     }
@@ -560,7 +594,7 @@ filter_torsions()
         torsions_suppressed++;
         if (verbose) {
           cerr << "Torsion " << i << " too many hits " << hits[i] << " max " << high
-               << endl;
+               << '\n';
         }
       }
     }
@@ -568,6 +602,36 @@ filter_torsions()
 
   return;
 }
+
+static int
+WriteFixedWidthVector(Molecule& m,
+                     int* output_vector,
+                     uint32_t fixed_ncols,
+                     const resizable_array_p<TopoTorsion>& torsions,
+                     IWString_and_File_Descriptor& output) {
+  append_first_token_of_name(m.name(), output);
+
+  std::fill_n(output_vector, fixed_ncols, 0);
+
+  for (const TopoTorsion* t : torsions) {
+    uint32_t col = TorsionToIndex(fixed_ncols, *t);
+    output_vector[col] += t->count();
+  }
+
+  static constexpr char kSep = ' ';
+
+  for (uint32_t i = 0; i < fixed_ncols; ++i) {
+    output << kSep << output_vector[i];
+  }
+  output << '\n';
+
+  if (output.write_if_buffer_holds_more_than(4096)) {
+    output.flush();
+  }
+
+  return 1;
+}
+
 
 static int
 write_descriptor_file_header(IWString* torsion, IWString_and_File_Descriptor& output)
@@ -602,7 +666,7 @@ write_descriptor_file_header(IWString* torsion, IWString_and_File_Descriptor& ou
     }
 
     if (0 == torsion[i].length()) {
-      cerr << "Yipes, no torsion name assigned to column " << i << endl;
+      cerr << "Yipes, no torsion name assigned to column " << i << '\n';
       rc = 0;
     }
   }
@@ -741,7 +805,7 @@ store_torsions(const IWString& molecule_name, const resizable_array_p<TopoTorsio
   moltor[n].resize(ntt);
   if (!moltorcount[n].resize(ntt)) {
     cerr << "store_torsions: memory failure, molecule " << n << " ntorsions = " << ntt
-         << endl;
+         << '\n';
     return 0;
   }
 
@@ -808,9 +872,14 @@ topotorsion(Molecule& m, const atomic_number_t* z, const IWString& asymbol,
   }
   append_atom(tmp, m, asymbol, a3, ncon[a3]);
 
-  if (nullptr == only_want_some)  // we want all of them - the most common case
-  {
+  // we want all of them - the most common case
+  if (nullptr == only_want_some) {
     tt.add(t);
+    return 1;
+  }
+
+  if (fixed_ncols) {
+    tt << t;
     return 1;
   }
 
@@ -894,20 +963,25 @@ static int
 topotorsion(Molecule& m, const atomic_number_t* z, const IWString& asymbol,
             const int* ncon, IWString_and_File_Descriptor& output)
 {
-  if (nullptr != output_vector) {
+  if (fixed_ncols) {
+  } else if (nullptr != output_vector) {
     set_vector(output_vector, number_torsions_wanted, 0);
   }
 
   resizable_array_p<TopoTorsion> tt;
 
-  int nb = m.nedges();
+  tt.reserve(4 * m.nedges());
 
-  tt.resize(4 * nb);
-
-  for (int i = 0; i < nb; i++) {
-    const Bond* b = m.bondi(i);
-
+  for (const Bond* b : m.bond_list()) {
     topotorsion(m, z, asymbol, ncon, b, tt);
+  }
+
+  if (verbose) {
+    ++torsion_count[tt.size()];
+  }
+
+  if (fixed_ncols) {
+    return WriteFixedWidthVector(m, output_vector, fixed_ncols, tt, output);
   }
 
   if (nullptr != output_vector) {
@@ -952,11 +1026,10 @@ topotorsion(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor&
 
     m->remove_all(1);
 
-    int matoms = m->natoms();
+    const int matoms = m->natoms();
 
     if (0 == matoms) {
-      cerr << "Too few atoms in molecule '" << m->name()
-           << "', natoms = " << matoms << endl;
+      cerr << "Skip empty molecule " << m->name() << '\n';
       continue;
     }
 
@@ -1036,7 +1109,13 @@ topotorsion(const char* fname, FileType input_type, IWString_and_File_Descriptor
 static void
 usage(int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Usage : " << prog_name << " options file1 file2 file3 ....\n";
   cerr << "  -n 8           create 8 character torsion names (for SAS, the default)\n";
   cerr << "  -n 12          create 12 character torsion names (more comprehensible)\n";
@@ -1050,6 +1129,7 @@ usage(int rc)
   cerr << "  -X <fname>     only process torsions in cross reference file <fname>\n";
   cerr << "  -a             write output as array (only valid with -O or -X option)\n";
   cerr << "  -Y             single pass, memory intensive, produces descriptor file\n";
+  cerr << "  -H <ncol>      hash feature names to generate a fixed width descriptor file\n";
   cerr << "  -c <number>    suppress torsions with <number> or fewer hits\n";
   cerr << "  -c <number%>   suppress torsions with <percent>or fewer hits\n";
   cerr << "  -C <number>    suppress torsions with <number> or more hits\n";
@@ -1057,6 +1137,7 @@ usage(int rc)
   cerr << "  -E <symbol>    create element with symbol\n";
   display_standard_aromaticity_options(cerr);
   cerr << "  -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -1090,7 +1171,7 @@ get_number_or_percent(Command_Line& cl, char flag, int& as_number, int& as_perce
 int
 topotorsion(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "sn:A:DE:vi:o:zQ:O:X:aYc:C:fJ:P:q");
+  Command_Line cl(argc, argv, "sn:A:DE:vi:o:zQ:O:X:aYc:C:fJ:P:qH:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1209,9 +1290,8 @@ topotorsion(int argc, char** argv)
     }
   }
 
-  int nfiles = cl.number_elements();
-  if (0 == nfiles) {
-    cerr << prog_name << ": no files specified\n";
+  if (cl.empty()) {
+    cerr << prog_name << ": insufficient arguments\n";
     usage(3);
   }
 
@@ -1251,6 +1331,7 @@ topotorsion(int argc, char** argv)
   }
 
   IWString_and_File_Descriptor output(1);
+  output.reserve(8192);
 
   IWString header("Name");
   if (cl.option_present('O')) {
@@ -1280,7 +1361,7 @@ topotorsion(int argc, char** argv)
     if (verbose > 1) {
       for (IW_STL_Hash_Map_int::const_iterator i = torsions_to_find.begin();
            i != torsions_to_find.end(); ++i) {
-        cerr << "Torsion '" << (*i).first << "' is number " << (*i).second << endl;
+        cerr << "Torsion '" << (*i).first << "' is number " << (*i).second << '\n';
       }
     }
   }
@@ -1313,6 +1394,33 @@ topotorsion(int argc, char** argv)
     }
   }
 
+  if (cl.option_present('H')) {
+    if (cl.option_present('Y') || cl.option_present('c') || cl.option_present('C') ||
+        cl.option_present('Q') || cl.option_present('O') || cl.option_present('X') ||
+        cl.option_present('a')) {
+      cerr << "The -Y -c -C -Q -O -X -a options are not compatible with the -H option\n";
+      return 1;
+    }
+
+    if (! cl.value('H', fixed_ncols) || fixed_ncols < 10) {
+      cerr << "The -H option must be a whole +ve number\n";
+      usage(1);
+    }
+
+    if (verbose) {
+      cerr << "Will produce a fixed width descriptor file with " << fixed_ncols << " columns\n";
+    }
+    
+    output_vector = new int[fixed_ncols];
+
+    static constexpr char kSep = ' ';
+    output << "Name";
+    for (uint32_t i = 0; i < fixed_ncols; ++i) {
+      output << kSep << "tt_TT" << i;
+    }
+    output << '\n';
+  }
+
   if (cl.option_present('a')) {
     output_vector = new int[number_torsions_wanted];
 
@@ -1322,30 +1430,39 @@ topotorsion(int argc, char** argv)
   }
 
   if (produce_descriptor_file && verbose) {
-    cerr << "Computation started at " << time(NULL) << endl;
+    cerr << "Computation started at " << time(NULL) << '\n';
   }
 
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)  // each argument is a file
-  {
-    const char* fname = cl[i];
-
+  for (const char * fname: cl) {
     if (verbose) {
       cerr << prog_name << " processing '" << fname << "'\n";
     }
 
     if (!topotorsion(fname, input_type, output)) {
-      rc = i + 1;
-      break;
+      cerr << "Error processing '" << fname << "'\n";
+      return 1;
     }
   }
+
+  output.flush();
 
   if (verbose) {
     cerr << molecules_read << " molecules read";
     if (torsion_hash.size()) {
       cerr << ", found " << torsion_hash.size() << " torsions";
     }
-    cerr << endl;
+    cerr << '\n';
+    Accumulator_Int<uint32_t> acc;
+    for (uint32_t i = 0; i < torsion_count.size(); ++i) {
+      if (torsion_count[i]) {
+        cerr << torsion_count[i] << " molecules had " << i << " torsions\n";
+        acc.extra(i, torsion_count[i]);
+      }
+    }
+    cerr << "Mean " << acc.average() << '\n';
+    if (fixed_ncols) {
+      cerr << "NUmber of different torsions " << torsions_found.size() << '\n';
+    }
   }
 
   if (write_torsion_hash && molecules_read) {
@@ -1363,12 +1480,10 @@ topotorsion(int argc, char** argv)
 
   if (produce_descriptor_file && molecules_read) {
     if (verbose) {
-      cerr << "Starting writing descriptor file at " << time(NULL) << endl;
+      cerr << "Starting writing descriptor file at " << time(NULL) << '\n';
     }
     write_descriptor_file(output);
   }
-
-  output.close();
 
   if (cl.option_present('q')) {
     _exit(0);
@@ -1382,7 +1497,7 @@ topotorsion(int argc, char** argv)
     delete[] only_want_some;
   }
 
-  return rc;
+  return 0;
 }
 
 int

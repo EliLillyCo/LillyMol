@@ -24,7 +24,6 @@
 #include "iwrcb.h"
 
 using std::cerr;
-using std::endl;
 
 // Values for _smiles_order_type
 

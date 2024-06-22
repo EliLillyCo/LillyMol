@@ -108,6 +108,9 @@ class Molecule_With_Info_About_Parent : public Molecule
 #define MAD_SPINACH "spinach"
 #define MAD_TYPE_SPINACH 23
 
+#define MAD_GRAPH "graph"
+#define MAD_TYPE_GRAPH 24
+
 extern void DisplayAbstractionNames(std::ostream& output);
 extern void DisplayUsageExamples(std::ostream& output);
 

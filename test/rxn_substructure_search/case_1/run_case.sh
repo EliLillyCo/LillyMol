@@ -19,24 +19,24 @@ echo "Testing:  $command"
 
 if [ ! -e "$command" ]
 then
-    echo "Executable is not found"
-    exit 1
+  echo "Executable ${command} not found"
+  exit 1
 fi
 
-name1=found.rxnsmi
-name1_out=out/found.rxnsmi
+diff_tool='../../fileDiff.sh'
 
-diff_tool=../../fileDiff.sh
-$command -q 'C(F)(F)F>>' -m found in/sample_reactions.rsmi
-$diff_tool $name1 $name1_out
-ret1=$?
+golden='out/found.rxnsmi'
+stdout='stdout'
+stderr='stderr'
 
-if [ $ret1 -eq 1 ]
+${command} -q 'C(F)(F)F>>' -m ${stdout} in/sample_reactions.rsmi 2> ${stderr}
+${diff_tool} ${stdout}.rxnsmi ${golden}
+
+if [ $? -eq 1 ]
 then
-        echo "$case_id : TEST PASS"
+  echo "$case_id : TEST PASS"
 else
-        echo "$case_id : TEST FAIL"
+  echo "$case_id : TEST FAIL"
 fi
 
-rm $name1
-#rm err.txt
+rm ${stdout}.rxnsmi ${stderr}

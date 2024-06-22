@@ -537,7 +537,7 @@ BSquared::report (ostream & os, int insert_comment_char) const
     }
     os << '\n';
 
-    assert (_bsquared_values.number_elements () == _acc.n ());
+    assert (_bsquared_values.size() == _acc.n());
   }
 
   return os.good ();
@@ -3600,9 +3600,8 @@ determine_tvalue_threshold (int n,
 
   double left = 0.01;
   // double lp = iwpvalue (n, left);
-
-//cerr << " lp " << lp << " threshold " << pvalue_threshold << " rp " << rp << '\n';
-  assert (lp >= pvalue_threshold && pvalue_threshold >= rp);
+  //cerr << " lp " << lp << " threshold " << pvalue_threshold << " rp " << rp << '\n';
+  //assert (lp >= pvalue_threshold && pvalue_threshold >= rp);
 
   while (1)
   {

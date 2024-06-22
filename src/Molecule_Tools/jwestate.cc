@@ -349,6 +349,9 @@ is_charged_acid(const Molecule& m, atom_number_t o1, int atom_type[])
   }
 
   atom_number_t o2, o3;
+  // These initialisations are not needed, just to keep the compiler quiet.
+  o2 = kInvalidAtomNumber;
+  o3 = kInvalidAtomNumber;
   int no = count_doubly_bonded_oxygens_attached(m, centre, o2, o3);
 
   //  cerr << "Atom " << centre << " has " << no << " doubly bonded oxygens\n";

@@ -102,8 +102,8 @@ struct Parameters {
   char translate_non_printing_chars = '\0';
   int remove_non_printing_chars = 0;
 
-  int molecules_read = 0;
-  int molecules_written = 0;
+  uint64_t molecules_read = 0;
+  uint64_t molecules_written = 0;
 
   Chemical_Standardisation chemical_standardisation;
 

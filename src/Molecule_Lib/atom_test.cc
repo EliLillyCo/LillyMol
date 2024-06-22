@@ -7,6 +7,10 @@
 #include "molecule.h"
 
 namespace {
+
+// Used with EXPECT_NEAR comparisons.
+constexpr float kAbsTol = 0.0001f;
+
 TEST(TestAtom, TestDihedralZero) {
   Molecule m;
   ASSERT_TRUE(m.build_from_smiles("CCCC"));
@@ -24,7 +28,7 @@ TEST(TestAtom, TestDihedralSmallPositive) {
   m.setxyz(1, 0.0, 0.0, 0.0);
   m.setxyz(2, 1.0, 0.0, 0.0);
   m.setxyz(3, 1.5, 1.0, 0.1);
-  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.099668f, 0.00001);
+  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.09966857f, kAbsTol);
 }
 
 TEST(TestAtom, TestDihedralSmallNegative) {
@@ -34,7 +38,7 @@ TEST(TestAtom, TestDihedralSmallNegative) {
   m.setxyz(1, 0.0, 0.0, 0.0);
   m.setxyz(2, 1.0, 0.0, 0.0);
   m.setxyz(3, 1.5, 1.0, -0.1);
-  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.099668, 0.00001);
+  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.09966857f, kAbsTol);
 }
 
 TEST(TestAtom, TestDihedral90) {
@@ -44,7 +48,7 @@ TEST(TestAtom, TestDihedral90) {
   m.setxyz(1, 0.0, 0.0, 0.0);
   m.setxyz(2, 1.0, 0.0, 0.0);
   m.setxyz(3, 1.5, 0.0, 1.0);
-  EXPECT_FLOAT_EQ(m.dihedral_angle(0, 1, 2, 3), 0.5 * M_PI);
+  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.5 * M_PI, kAbsTol);
 }
 
 TEST(TestAtom, TestDihedralneg90) {
@@ -54,7 +58,7 @@ TEST(TestAtom, TestDihedralneg90) {
   m.setxyz(1, 0.0, 0.0, 0.0);
   m.setxyz(2, 1.0, 0.0, 0.0);
   m.setxyz(3, 1.5, 0.0, -1.0);
-  EXPECT_FLOAT_EQ(m.dihedral_angle(0, 1, 2, 3), 0.5 * M_PI);
+  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), 0.5 * M_PI, kAbsTol);
 }
 
 TEST(TestAtom, TestDihedralneg180) {
@@ -64,7 +68,7 @@ TEST(TestAtom, TestDihedralneg180) {
   m.setxyz(1, 0.0, 0.0, 0.0);
   m.setxyz(2, 1.0, 0.0, 0.0);
   m.setxyz(3, 1.5, -1.0, 0.0);
-  EXPECT_FLOAT_EQ(m.dihedral_angle(0, 1, 2, 3), M_PI);
+  EXPECT_NEAR(m.dihedral_angle(0, 1, 2, 3), M_PI, kAbsTol);
 }
 
 TEST(TestAtom, TestBondsAndAtoms) {

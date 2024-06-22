@@ -5,10 +5,8 @@ local_install(
     name = "install",
     srcs = [
         ":complex_chirality",
-        ":concat_files_large_memory",
         ":descriptor_file_same_row_order",
         ":diff_line_by_line",
-        ":gfp_spread_threaded",
         ":prediction_bias",
         ":rearrange_columns",
     ],
@@ -378,7 +376,7 @@ cc_binary(
         "//Foundational/iwmisc:iwmisc",
         "//Foundational/iw_tdt:iw_tdt",
         "//Utilities/GFP_Tools:gfp",
-        "//Utilities/GFP_Tools:spread_v2",
+        "//Utilities/GFP_Tools:spread",
     ],
 )
 
@@ -497,7 +495,10 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "@berkeleydb",
-    ]
+    ],
+    tags = [
+        "berkeleydb",
+    ],
 )
 
 cc_binary(

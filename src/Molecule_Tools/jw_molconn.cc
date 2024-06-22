@@ -22,7 +22,6 @@
 #include "jw_path_with_values.h"
 
 using std::cerr;
-using std::endl;
 
 // DEBUG_SWITCH is used to print out debugging msgs
 #ifndef DEBUG_SWITCH
@@ -60,6 +59,12 @@ static int output_precision = 3;
 
 static double truncate_to_zero = 1.0e-05;
 
+// Normally we read a smiles file and produce a descriptor file.
+// Optionally we can read a descriptor file with a smiles as the first
+// column, and optionally, write the same thing.
+static int read_descriptor_file_pipeline = 0;
+static int write_descriptor_file_pipeline = 0;
+
 static void
 usage(int rc) {
 // clang-format off
@@ -73,7 +78,7 @@ usage(int rc) {
   cerr << "  -l             compute more connectivity related descriptors besides those in MOLCONNZ program\n";
   cerr << "  -m <n>         maximum allowed heavy atom number for input molecule (default 100)\n";
   cerr << "  -i <type>      input type\n";
-  //  (void) display_standard_aromaticity_options(cerr);
+  cerr << "  -Y ...         other options, enter '-Y help' for details\n";
   (void) display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -v             verbose output\n";
   // clang-format on
@@ -102,10 +107,9 @@ preprocess_molecule(Molecule& m) {
 }
 
 static int
-output_result_header(IWString_and_File_Descriptor& output) {
-  output << "Name";
-
-  output << " jwmc_ncirc";
+WriteHeader(IWString_and_File_Descriptor& output) {
+  // First descriptor does not have leading space.
+  output << "jwmc_ncirc";
 
   for (int i = 0; i < 11; i++) {
     output << " jwmc_xp" << i;
@@ -484,9 +488,9 @@ compute_kappa_descriptors(Molecule& m, double kappa_simple_descriptors[],
   }
 
   //  cerr<<"kappa 0="<<kappa_simple_descriptors[0]<<"\tkappa
-  //  1="<<kappa_simple_descriptors[1]<<"\tkappa 2="<<kappa_simple_descriptors[2]<<endl;
+  //  1="<<kappa_simple_descriptors[1]<<"\tkappa 2="<<kappa_simple_descriptors[2]<<'\n';
   //  cerr<<"kappa 0="<<kappa_alpha_descriptors[0]<<"\tkappa
-  //  1="<<kappa_alpha_descriptors[1]<<"\tkappa 3="<<kappa_alpha_descriptors[3]<<endl;
+  //  1="<<kappa_alpha_descriptors[1]<<"\tkappa 3="<<kappa_alpha_descriptors[3]<<'\n';
 }
 
 static void
@@ -534,6 +538,86 @@ value_of_zero_order_chi(const Molecule& m, const double delta[]) {
   return value;
 }
 
+
+struct ChiDescriptors {
+  public:
+    double chi_descriptors[15];
+    double valence_chi_descriptors[15];
+    double difference_modified_v_chi_descriptors[15];
+
+    double chain_chi_descriptors[8];
+    double chain_valence_chi_descriptors[8];
+    double chain_modified_v_chi_descriptors[8];
+
+    double bt_indexes[5];  // bonchev_trinajstic_information_indexes
+
+    double difference_chi_descriptors[11];
+    double difference_valence_chi_descriptors[11];
+    double modified_v_chi_descriptors[15];
+};
+
+struct DeltaDescriptors {
+  double* simple_delta;
+  double* valence_delta;
+  double* modified_valence_delta;
+  double* estate_index;
+  double* tp_index;
+  double* etp_index;
+  double* values;
+
+  DeltaDescriptors(int natoms);
+  ~DeltaDescriptors();
+};
+
+DeltaDescriptors::DeltaDescriptors(int natoms) {
+  simple_delta = new double[natoms];
+  valence_delta = new double[natoms];
+  modified_valence_delta = new double[natoms];
+  estate_index = new double[natoms];
+  tp_index = new double[natoms];
+  etp_index = new double[natoms];
+  values = new double[natoms];
+}
+
+struct MoleculeData {
+  atomic_number_t* atomic_number;
+  const Atom** atoms;
+  int* hcount;
+
+  MoleculeData(Molecule& m);
+  ~MoleculeData();
+};
+
+MoleculeData::MoleculeData(Molecule& m) {
+  const int matoms = m.natoms();
+  atomic_number = new atomic_number_t[matoms];
+  m.atomic_numbers(atomic_number);
+
+  atoms = new const Atom*[matoms];
+  m.atoms(atoms);
+
+  hcount = new int[matoms];
+  for (int i = 0; i < matoms; ++i) {
+    hcount[i] = m.hcount(i);
+  }
+}
+
+MoleculeData::~MoleculeData() {
+  delete [] atomic_number;
+  delete [] atoms;
+  delete [] hcount;
+}
+
+DeltaDescriptors::~DeltaDescriptors() {
+  delete [] simple_delta;
+  delete [] valence_delta;
+  delete [] modified_valence_delta;
+  delete [] estate_index;
+  delete [] tp_index;
+  delete [] etp_index;
+  delete [] values;
+}
+
 static void
 higher_order_chi_descriptor_computation_procedure(
     Molecule& m, double* simple_delta, double* valence_delta,
@@ -567,7 +651,7 @@ higher_order_chi_descriptor_computation_procedure(
   int n_path = paths.number_elements();
 
   resizable_array_p<Path_with_values> temp_path;
-  temp_path.resize(3 * n_path);
+  temp_path.reserve(3 * n_path);
 
   double length = 1.0;
   for (int j = 0; j < n_path; j++) {
@@ -844,7 +928,7 @@ setup_terminal_delta(const Molecule& m, double* terminal_delta, const Atom* cons
 
     terminal_delta[i] =
         ((double)valence - terminal_hydrogen) / (atomic_number_i - valence - 1);
-    //  cerr<<"atom i="<<i<<"\t valance_delta ="<<(valance - hcount[i])<<endl;
+    //  cerr<<"atom i="<<i<<"\t valance_delta ="<<(valance - hcount[i])<<'\n';
     //      return valance - m.hcount(i);
   }
 }
@@ -888,7 +972,7 @@ setup_terminal_modified_delta(Molecule& m, double* terminal_modified_delta,
 
     terminal_modified_delta[i] =
         ((double)valence - terminal_hydrogen) / (double)pq_number / (double)pq_number;
-    //  cerr<<"atom i="<<i<<"\t valance_delta ="<<(valance - m.hcount(i))<<endl;
+    //  cerr<<"atom i="<<i<<"\t valance_delta ="<<(valance - m.hcount(i))<<'\n';
     //      return valance - m.hcount(i);
   }
 }
@@ -1130,7 +1214,7 @@ compute_chi_descriptors(
   for (int i = 0; i < n_atoms; i++) {
     estate_index[i] = fabs(estate_index[i]);
     //  cerr<<"atom i="<<i<<"\t"<<m.atomic_symbol(i)<<"t
-    //  estate_index["<<i<<"]="<<estate_index[i]<<endl;
+    //  estate_index["<<i<<"]="<<estate_index[i]<<'\n';
   }
 
   // take care of the zero order chi values
@@ -1141,8 +1225,8 @@ compute_chi_descriptors(
   resizable_array_p<Path_with_values> odd_path;
   resizable_array_p<Path_with_values> even_path;
 
-  odd_path.resize(1000);
-  even_path.resize(1000);
+  odd_path.resize(2000);
+  even_path.resize(2000);
 
   // set up odd number bond path
   int n_bonds = m.nedges();
@@ -1187,7 +1271,7 @@ compute_chi_descriptors(
 
 #ifdef DEBUG_HOCD
     cerr << "*e_topological_index updated " << e_topological_index[a1] << " and "
-         << e_topological_index[a2] << ", etp_value " << etp_value << endl;
+         << e_topological_index[a2] << ", etp_value " << etp_value << '\n';
 #endif
 
     chi_descriptors[1] += temp_chi;
@@ -1273,7 +1357,7 @@ compute_chi_descriptors(
 
 #ifdef DEBUG_HOCD
         cerr << " updating e_topo " << e_topological_index[atomj] << " and "
-             << e_topological_index[atomk] << " etp_value " << etp_value << endl;
+             << e_topological_index[atomk] << " etp_value " << etp_value << '\n';
 #endif
         e_topological_index[atomj] += etp_value / 9.0;
         e_topological_index[atomk] += etp_value / 9.0;
@@ -1389,7 +1473,7 @@ compute_chi_descriptors(
   for (int i = 0; i < n_atoms; i++) {
     total_topological_index += topological_index[i] / 2 + valence_delta[i];
     //    cerr << " i = " << i << " e_topological_index " << e_topological_index[i] <<
-    //    endl;
+    //    '\n';
 
     total_e_topological_index += e_topological_index[i] / 2;
   }
@@ -1495,7 +1579,7 @@ compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
   }
 
   // cerr << "Computing 0, wiener_number " << wiener_number[0] << ", sumw " << sumw <<
-  // endl;
+  // '\n';
 
   bt_indexes[0] =
       (double)wiener_number[0] * log10((double)wiener_number[0]) / log10(2.0) - sumw;
@@ -1526,10 +1610,10 @@ compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
 
 #ifdef ECHOWBT
   for (int i = 0; i < 4; i++) {
-    cerr << "Wiener Number[" << i << "]=" << wiener_number[i] << endl;
+    cerr << "Wiener Number[" << i << "]=" << wiener_number[i] << '\n';
   }
   for (int i = 0; i < 5; i++) {
-    cerr << "BT_index[" << i << "]=" << bt_indexes[i] << endl;
+    cerr << "BT_index[" << i << "]=" << bt_indexes[i] << '\n';
   }
 #endif
 }
@@ -1886,12 +1970,16 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output, const Atom* const*
   compute_values_of_second_order_Zagreb_index(m, zagreb_2, zagreb_2_v, zagreb_2_mv, atoms,
                                               z, hcount);
 
-  if (m.name().contains(' ')) {
-    const_IWSubstring tmp(m.name());
-    tmp.truncate_at_first(' ');
-    output << tmp;
+  if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (read_descriptor_file_pipeline) {
+    output << m.name();  // includes all previously calculated descriptors.
+  } else if (write_descriptor_file_pipeline) {
+    output << m.smiles() << ' ';
+    append_first_token_of_name(m.name(), output);
   } else {
-    output << m.name();
+    append_first_token_of_name(m.name(), output);
   }
 
   output << ' ' << n_rings;  // col 2
@@ -2141,7 +2229,7 @@ jw_molconn(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor& 
       return 0;
     }
 
-    output.write_if_buffer_holds_more_than(32768);
+    output.write_if_buffer_holds_more_than(4096);
   }
 
   return 1;
@@ -2160,8 +2248,75 @@ jw_molconn(const char* fname, FileType input_type, IWString_and_File_Descriptor&
 }
 
 static int
+jw_molconn_descriptor_pipeline_line(const const_IWSubstring& buffer,
+                IWString_and_File_Descriptor& output) {
+  Molecule m;
+  if (! m.build_from_smiles(buffer)) {
+    cerr << "Bad smiles\n";
+    return 0;
+  }
+
+  return jw_molconn(m, output);
+}
+
+static int
+jw_molconn_descriptor_pipeline(iwstring_data_source& input,
+                IWString_and_File_Descriptor& output) {
+  const_IWSubstring buffer;
+
+  static int first_call = 1;
+  if (first_call) {
+    if (! input.next_record(buffer)) {
+      cerr << "jw_molconn_descriptor_pipeline:cannot read header\n";
+      return 0;
+    }
+
+    if (write_descriptor_file_pipeline) {
+      output << buffer << ' ';
+      WriteHeader(output);
+    } else {
+      // Remove the smiles and write.
+      buffer.remove_leading_words(1);
+      output << buffer << ' ';
+      WriteHeader(output);
+    }
+
+    first_call = 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! jw_molconn_descriptor_pipeline_line(buffer, output)) {
+      cerr << "Error processing\n";
+      cerr << buffer << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+jw_molconn_descriptor_pipeline(const char* fname,
+                IWString_and_File_Descriptor& output) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "jw_molconn_descriptor_pipeline:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return jw_molconn_descriptor_pipeline(input, output);
+}
+
+static void
+DisplayDashYOptions() {
+  cerr << " -Y rpipe    input is a descriptor file pipeline  smiles id d1 d2 d3 ...\n";
+  cerr << " -Y wpipe    write a descriptor file pipeline - smiles id d1 d2 d3 ...\n";
+  ::exit(0);
+}
+
+static int
 jw_molconn(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vli:g:m:p:");
+  Command_Line cl(argc, argv, "vli:g:m:p:Y:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -2179,6 +2334,28 @@ jw_molconn(int argc, char** argv) {
   //      cerr << "Cannot process aromaticity options (-A)\n";
   //      usage (5);
   //    }
+
+  if (cl.option_present('Y')) {
+    const_IWSubstring y;
+    for (int i = 0; cl.value('Y', y, i); ++i) {
+      if (y == "rpipe") {
+        read_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Input assumed to be a descriptor file pipeline\n";
+        }
+      } else if (y == "wpipe") {
+        write_descriptor_file_pipeline = 1;
+        if (verbose) {
+          cerr << "Will write a descriptor file pipeline\n";
+        }
+      } else if (y == "help") {
+        DisplayDashYOptions();
+      } else {
+        cerr << "Unrecognised -Y directive '" << y << "'\n";
+        DisplayDashYOptions();
+      }
+    }
+  }
 
   if (cl.option_present('l')) {
     compute_additional_connectivity_related_descriptors = 1;
@@ -2224,7 +2401,9 @@ jw_molconn(int argc, char** argv) {
   }
 
   FileType input_type = FILE_TYPE_INVALID;
-  if (cl.option_present('i')) {
+  if (read_descriptor_file_pipeline) {
+    // do not need input type
+  } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
       usage(6);
@@ -2244,16 +2423,33 @@ jw_molconn(int argc, char** argv) {
   IWString_and_File_Descriptor output(1);
   output.resize(36000);
 
-  if (!output_result_header(output)) {
-    return 5;
+  if (read_descriptor_file_pipeline) {
+    // Header generated elsewhere.
+  } else {
+    if (write_descriptor_file_pipeline) {
+      output << "Smiles" << ' ';
+    } 
+
+    output << "Name" << ' ';
+
+    if (!WriteHeader(output)) {
+      return 5;
+    }
   }
 
-  int rc = 0;
-
-  for (int i = 0; i < cl.number_elements(); i++) {
-    if (!jw_molconn(cl[i], input_type, output)) {
-      rc = i + 1;
-      break;
+  if (read_descriptor_file_pipeline) {
+    for (const char* fname : cl) {
+      if (! jw_molconn_descriptor_pipeline(fname, output)) {
+        cerr << "Fatal error reading '" << fname << "'\n";
+        return 1;
+      }
+    }
+  } else {
+    for (const char* fname : cl) {
+      if (!jw_molconn(fname, input_type, output)) {
+        cerr << "Fatal error reading '" << fname << "'\n";
+        return 1;
+      }
     }
   }
 
@@ -2263,7 +2459,7 @@ jw_molconn(int argc, char** argv) {
     cerr << "Read " << molecules_read << " molecules\n";
   }
 
-  return rc;
+  return 0;
 }
 
 int

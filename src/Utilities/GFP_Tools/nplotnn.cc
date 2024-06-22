@@ -16,6 +16,7 @@
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/moleculeio.h"
 #include "Molecule_Lib/smiles.h"
 #include "distance_scaling.h"
 #include "smiles_id_dist.h"
@@ -1892,7 +1893,7 @@ plotnn(int argc, char **argv) {
 
   // Bazel has problems linking this unless we make an explicit call
   // to something in the IO library, not sure why. This is a no-op here.
-  set_ignore_all_chiral_information_on_input(1);
+  moleculeio::set_ignore_all_chiral_information_on_input(1);
 
   if (cl.option_present('n')) {
     if (!cl.value('n', neighbours_per_structure) || neighbours_per_structure < 0) {

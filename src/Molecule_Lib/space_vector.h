@@ -69,7 +69,7 @@ class Space_Vector
 
     void add(T, T, T);
     void translate(T tx, T ty, T tz) { Space_Vector<T>::add(tx, ty, tz);}
-    void translate(const Space_Vector<T> &);
+    void translate(const Space_Vector<T> & delta);
     void  normalise();
     T norm() const;
     T length() const { return norm();}
@@ -340,11 +340,11 @@ Space_Vector<T>::add(T xx, T yy, T zz)
 
 template <typename T>
 void
-Space_Vector<T>::translate(const Space_Vector<T> & whereto)
+Space_Vector<T>::translate(const Space_Vector<T> & delta)
 {
-  _x += whereto._x;
-  _y += whereto._y;
-  _z += whereto._z;
+  _x += delta._x;
+  _y += delta._y;
+  _z += delta._z;
 
   return;
 }

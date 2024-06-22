@@ -13,9 +13,9 @@ if [[ ! -v BUILD_DIR ]] ; then
 fi
 
 if [[ ! -v PYTHONPATH ]] ; then
-  export PYTHONPATH="${LILLYMOL_HOME}/contrib/script/py"
-elif [[ ! $PYTHONPATH =~ "contrib/script/py" ]]; then
-  export PYTHONPATH="${LILLYMOL_HOME}/contrib/script/py:${PYTHONPATH}"
+  export PYTHONPATH="${LILLYMOL_HOME}/contrib/python:${LILLYMOL_HOME}/contrib/python/pybase"
+elif [[ ! $PYTHONPATH =~ "contrib/python" ]]; then
+  export PYTHONPATH="${LILLYMOL_HOME}/contrib/python:${LILLYMOL_HOME}/contrib/python/pybase:${PYTHONPATH}"
 fi
 
 for dir in ./*; do

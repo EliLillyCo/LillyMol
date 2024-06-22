@@ -2,6 +2,7 @@
 #define IW_LOGICAL_EXP_H
 
 class const_IWSubstring;
+class IWString;
 
 /*
   In substructure searching we need to be able to evaluate something
@@ -184,6 +185,19 @@ class IW_Logical_Expression : private resizable_array<int>
 
     // The operators. Mostly intended for support type use.
     const resizable_array<int> Operators() const { return _operator;}
+
+    // When adding these to protos it was simpler to just
+    // use a string representation.
+    // ToString generates a string, which can then be
+    // consumed by another IW_Logical_Expression to end up with
+    // the same thing.
+    IWString ToString() const;
+    int BuildFromString(const IWString& s);
+
+    bool operator==(const IW_Logical_Expression& rhs) const;
+    bool operator!=(const IW_Logical_Expression& rhs) const {
+      return ! operator==(rhs);
+    }
 };
 
 #endif

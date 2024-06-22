@@ -214,12 +214,15 @@ Donor_Acceptor_Assigner::BuildFromEnvValue(const IWString & env, int verbose) {
 int
 Donor_Acceptor_Assigner::_assign_acceptors(Molecule_to_Match& target, int* isotope) {
   int na = _acceptor_queries.number_elements();
+  // cerr << "There are " << na << " acceptor queries\n";
 
   int rc = 0;
   for (int i = 0; i < na; i++) {
     Substructure_Results sresults;
 
+    // cerr << "Begin seqrch " << _acceptor_queries[i]->comment() << '\n';
     int nhits = _acceptor_queries[i]->substructure_search(target, sresults);
+    // cerr << nhits << " to query " << i << " " << isotope << '\n';
     if (0 == nhits) {
       continue;
     }

@@ -14,6 +14,7 @@
 #include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
+#include "moleculeio.h"
 #include "rwmolecule.h"
 
 using std::cerr;
@@ -498,9 +499,6 @@ CONECT 2556 2557 2558 2559 2578                                                 
   if (nbonds)
     check_bonding();
 
-  if (unconnect_covalently_bonded_non_organics_on_read())
-    _do_unconnect_covalently_bonded_non_organics();
-
   if (store_pdb_atom_information &&
       stored_pdb_atom_information.number_elements() != _number_elements)
   {
@@ -509,7 +507,7 @@ CONECT 2556 2557 2558 2559 2578                                                 
     abort();
   }
 
-  if (discern_chirality_from_3d_coordinates() && 3 == highest_coordinate_dimensionality())
+  if (moleculeio::discern_chirality_from_3d_coordinates() && 3 == highest_coordinate_dimensionality())
     (void)discern_chirality_from_3d_structure();
 
   return _number_elements;

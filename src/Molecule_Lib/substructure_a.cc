@@ -2,8 +2,6 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
-using std::cerr;
-using std::endl;
 
 #define IWARAY_EACH_IMPLEMENTATION
 
@@ -12,6 +10,8 @@ using std::endl;
 #include "target.h"
 #include "misc2.h"
 #include "smiles.h"
+
+using std::cerr;
 
 void
 Substructure_Atom::_default_values()
@@ -47,6 +47,8 @@ Substructure_Atom::_default_values()
 
   _atom_type_group = 0;
 
+  _on_queue_for_matching = 0;
+
   return;
 }
 
@@ -67,7 +69,7 @@ Substructure_Atom::Substructure_Atom(const Element * e) :
 
 Substructure_Atom::~Substructure_Atom()
 {
-//cerr << "Deleting Substructure atom " << _unique_id << " at " << this << endl;
+//cerr << "Deleting Substructure atom " << _unique_id << " at " << this << '\n';
 
   if (-5 == _unique_id)
     cerr << "Deleting already deleted Substructure_Atom\n";
@@ -378,7 +380,7 @@ Substructure_Atom::ok () const
 #ifdef SHOW_SUBSTRUCTURE_ATOM_OK
   if (nullptr != _parent && nullptr == _bond_to_parent)
   {
-    cerr << "Substructure_Atom::ok: parent is not null, but bond to parent is, atom " << _unique_id << endl;
+    cerr << "Substructure_Atom::ok: parent is not null, but bond to parent is, atom " << _unique_id << '\n';
   }
 #endif
 
@@ -401,7 +403,7 @@ Substructure_Atom::ok () const
 
 #ifdef SHOW_SUBSTRUCTURE_ATOM_OK
   if (_current_hold_atom)
-    cerr << "Atom " << _unique_id << " checking hold atom " << _current_hold_atom->ok() << endl;
+    cerr << "Atom " << _unique_id << " checking hold atom " << _current_hold_atom->ok() << '\n';
 #endif
 
   if (_current_hold_atom && ! _current_hold_atom->ok())
@@ -422,7 +424,7 @@ Substructure_Atom::ok () const
   else if (_components.number_elements() != _operator.number_results())
   {
 #ifdef SHOW_SUBSTRUCTURE_ATOM_OK
-    cerr << "Components " << _components.number_elements() << " operator mismatch " << _operator.number_results() << endl;
+    cerr << "Components " << _components.number_elements() << " operator mismatch " << _operator.number_results() << '\n';
 #endif
     return 0;
   }
@@ -463,6 +465,7 @@ Substructure_Atom::debug_print(std::ostream & os, const IWString & indentation) 
 
   os << indentation << "Operators ";
   _operator.debug_print(os);
+  os << '\n';
 
   if (! ok())
     os << indentation << "Warning, OK fails\n";
@@ -471,7 +474,7 @@ Substructure_Atom::debug_print(std::ostream & os, const IWString & indentation) 
 
   if (nullptr != _anchor)
   {
-    os << indentation << " Currently anchored at atom " << _anchor->atom_number() << ", _con = " << _con << endl;
+    os << indentation << " Currently anchored at atom " << _anchor->atom_number() << ", _con = " << _con << '\n';
   }
   else
   {
@@ -515,7 +518,7 @@ Substructure_Atom::debug_print(std::ostream & os, const IWString & indentation) 
           os << indentation << "    Substructure atom at other end (" << other_query_atom->unique_id() << ") not matched\n";
         else
           os << indentation << "    Substructure atom at other end (" << other_query_atom->unique_id() << ") is matched with atom " <<
-                other_query_atom->current_hold_atom()->atom_number() << endl;
+                other_query_atom->current_hold_atom()->atom_number() << '\n';
       }
     }
   }
@@ -524,7 +527,7 @@ Substructure_Atom::debug_print(std::ostream & os, const IWString & indentation) 
   for (int i = 0; i < nc; i++)
   {
     const Substructure_Atom_Specifier * c = _components[i];
-    os << indentation << "  Component " << i << endl;
+    os << indentation << "  Component " << i << '\n';
     c->debug_print(os, ind);
   }
 
@@ -543,7 +546,7 @@ Substructure_Atom::recursive_debug_print (std::ostream & os,
   int nc = _children.number_elements();
   for (int i = 0; i < nc; i++)
   {
-    os << indentation << "Child " << i << " of " << _unique_id << endl;
+    os << indentation << "Child " << i << " of " << _unique_id << '\n';
     _children[i]->recursive_debug_print(os, indentation + "  ");
   }
 
@@ -565,7 +568,7 @@ Substructure_Atom::terse_details (std::ostream & os,
   if (_components.number_elements())
     os << " and " << _components.number_elements() << " components";
 
-  os << endl;
+  os << '\n';
 
   if (! ok())
     os << "Warning, OK fails\n";
@@ -578,39 +581,39 @@ Substructure_Atom::terse_details (std::ostream & os,
     {
       os << ' ' << _element[i]->atomic_number();
     }
-    os << endl;
+    os << '\n';
   }
   if (_ncon.is_set())
-    os << indentation << " ncon " << _ncon << endl;
+    os << indentation << " ncon " << _ncon << '\n';
   if (_nbonds.is_set())
-    os << indentation << " nbonds " << _nbonds << endl;
+    os << indentation << " nbonds " << _nbonds << '\n';
   if (_ncon2.is_set())
-    os << indentation << " ncon2 " << _ncon2 << endl;
+    os << indentation << " ncon2 " << _ncon2 << '\n';
   if (_formal_charge.is_set())
-    os << indentation << " Formal charge " << _formal_charge << endl;
+    os << indentation << " Formal charge " << _formal_charge << '\n';
   if (_nrings.is_set())
-    os << indentation << " Nrings " << _nrings << endl;
+    os << indentation << " Nrings " << _nrings << '\n';
   if (_hcount.is_set())
-    os << indentation << " Hcount " << _hcount << endl;
+    os << indentation << " Hcount " << _hcount << '\n';
   if (SUBSTRUCTURE_NOT_SPECIFIED != _aromaticity)
-    os << indentation << " Aromaticity = " << _aromaticity << endl;
+    os << indentation << " Aromaticity = " << _aromaticity << '\n';
 
   if (nullptr != _current_hold_atom)
-    os << indentation << "Currently matched with atom " << _current_hold_atom << endl;
+    os << indentation << "Currently matched with atom " << _current_hold_atom << '\n';
 
   if (_bonds.number_elements())
     os << _bonds.number_elements() << " ring closure bonds";
 
   if (nullptr != _anchor)
   {
-    os << indentation << "Currently anchored at atom " << _anchor->atom_number() << ", _con = " << _con << endl;
+    os << indentation << "Currently anchored at atom " << _anchor->atom_number() << ", _con = " << _con << '\n';
   }
 
   int nc = _components.number_elements();
   for (int i = 0; i < nc; i++)
   {
     const Substructure_Atom_Specifier * c = _components[i];
-    os << indentation << "  Component " << i << endl;
+    os << indentation << "  Component " << i << '\n';
     c->terse_details(os, indentation + "  ");
   }
 
@@ -628,7 +631,7 @@ Substructure_Atom::recursive_terse_details(std::ostream & os,
   int nc = _children.number_elements();
   for (int i = 0; i < nc; i++)
   {
-    os << indentation << "Child " << i << " of " << _unique_id << endl;
+    os << indentation << "Child " << i << " of " << _unique_id << '\n';
     _children[i]->recursive_terse_details(os, indentation + "  ");
   }
 
@@ -653,7 +656,7 @@ Substructure_Atom::print_connectivity_graph(std::ostream & output) const
     
   for (int i = 0; i < _children.number_elements(); ++i)
   {
-    output << " child " << i << " of " << uid << endl;
+    output << " child " << i << " of " << uid << '\n';
     _children[i]->print_connectivity_graph(output);
   }
 
@@ -672,7 +675,7 @@ Substructure_Atom::print_current_hold (std::ostream & os) const
     return 0;
   }
 
-  os << " hold is " << _current_hold_atom->atom_number() << endl;
+  os << " hold is " << _current_hold_atom->atom_number() << '\n';
   return 1;
 }
 
@@ -710,7 +713,7 @@ Substructure_Atom::set_hold (Target_Atom * a, int * already_matched)
   assert (0 == already_matched[anum]);
 
 #ifdef DEBUG_HOLD
-  cerr << "Query atom " << _unique_id << " set hold to " << anum << endl;
+  cerr << "Query atom " << _unique_id << " set hold to " << anum << '\n';
 #endif
 
   _current_hold_atom = a;
@@ -730,7 +733,7 @@ Substructure_Atom::release_hold (int * already_matched)
   assert (_current_hold_atom->ok());
 
 #ifdef DEBUG_HOLD
-  cerr << "Atom " << _unique_id << " being released from atom " << _current_hold_atom->atom_number() << endl;
+  cerr << "Atom " << _unique_id << " being released from atom " << _current_hold_atom->atom_number() << '\n';
 #endif
 
   int anum = _current_hold_atom->atom_number();
@@ -804,10 +807,10 @@ Substructure_Atom::_adjust_nrings (int nr)
   if (mxnr < nr)
   {
     cerr << "Substructure_Atom::_adjust_nrings: nrings violation\n";
-    cerr << "Perceived " << nr << " rings in query, max is " << mxnr << endl;
+    cerr << "Perceived " << nr << " rings in query, max is " << mxnr << '\n';
     if (! _nrings.adjust_to_accommodate(nr))
     {
-      cerr << "Could not adjust nr " << _nrings << endl;
+      cerr << "Could not adjust nr " << _nrings << '\n';
     }
   }
 
@@ -836,7 +839,9 @@ Substructure_Atom::_adjust_ring_sizes (const List_of_Ring_Sizes & ring_sizes_per
     return 1;
   }
 
-  _ring_size.add_non_duplicated_elements(ring_sizes_perceived);
+  for (const auto r : ring_sizes_perceived) {
+    _ring_size.add_if_not_already_present(r);
+  }
 
   return 1;
 }
@@ -950,22 +955,25 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
   assert (nullptr == _current_hold_atom);
   assert (0 == already_matched[target.atom_number()]);
 
-  int m = Substructure_Atom_Specifier::matches(target);
+  if (_attributes_specified > 0) {
+    const int m = Substructure_Atom_Specifier::matches(target);
 
 #ifdef DEBUG_ATOM_MATCHES
-  cerr << "Matching atom with " << _components.number_elements() << " components, underlying specifier match " << m << " match or rej " << _match_as_match_or_rejection << endl;
+    cerr << "Matching atom with " << _components.number_elements() << " components, underlying specifier match " << m << " match or rej " << _match_as_match_or_rejection << endl;
 #endif
   
-  if (m && 0 == _match_as_match_or_rejection)    // matches, but we are a rejection criterion
-  {
-    return 0;
+    if (m && 0 == _match_as_match_or_rejection) {    // matches, but we are a rejection criterion
+      return 0;
+    }
+
+    if (0 == m && 0 != _match_as_match_or_rejection) {    // no match, but we must match
+      return 0;
+    }
+
+    if (0 == m) {
+      return ! _match_as_match_or_rejection;
+    }
   }
-
-  if (0 == m && 0 != _match_as_match_or_rejection)    // no match, but we must match
-    return 0;
-
-  if (0 == m)
-    return ! _match_as_match_or_rejection;
 
 #ifdef DEBUG_ATOM_MATCHES
   cerr << "Query atom " << _unique_id << " and " << target.atom_number() <<
@@ -994,7 +1002,7 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
 
     for (int i = 0; i < nc; i++)
     {
-//    cerr << "Do we need a result from component " << i << "? " << _operator.result_needed(i) << endl;
+//    cerr << "Do we need a result from component " << i << "? " << _operator.result_needed(i) << '\n';
 
       if (! _operator.result_needed(i))
         continue;
@@ -1003,7 +1011,7 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
       _operator.set_result(i, tmp);
 
 #ifdef DEBUG_ATOM_MATCHES
-      cerr << "Component " << i << " result is " << tmp << endl;
+      cerr << "Component " << i << " result is " << tmp << '\n';
 #endif
 
       if (tmp)
@@ -1048,13 +1056,14 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
 // sum any numeric preferences.
 // Any zero preference value means reject the match!
 
-  if (_preferences.number_elements() == 0)
+  if (_preferences.empty()) {
     return 1;
+  }
 
 //#define DEBUG_PREFERENCE_STUFF
 #ifdef DEBUG_PREFERENCE_STUFF
   cerr << "Checking " << np << " preferences, sum " << _sum_all_preference_hits << 
-          " matched atom " << target.atom_number() << " type " << target.atomic_number() << endl;
+          " matched atom " << target.atom_number() << " type " << target.atomic_number() << '\n';
 #endif
 
   for (Substructure_Atom_Specifier* a : _preferences)
@@ -1062,7 +1071,7 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
     if (a->matches(target))
     {
 #ifdef DEBUG_PREFERENCE_STUFF
-      cerr << "Preference component " << i << " matches, value " << a->preference_value() << endl;
+      cerr << "Preference component " << i << " matches, value " << a->preference_value() << '\n';
 #endif
       if (0 == a->preference_value())
         return ! _match_as_match_or_rejection;
@@ -1077,7 +1086,7 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
   }
 
 #ifdef DEBUG_PREFERENCE_STUFF
-  cerr << "Preference sum " << _preference_value_current_match << endl;
+  cerr << "Preference sum " << _preference_value_current_match << '\n';
 #endif
 
   return 1;
@@ -1268,7 +1277,7 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
 #ifdef DEBUG_MOVE_TO_NEXT_FROM_ANCHOR
   cerr << "Query atom " << _unique_id << " moving.";
   if (_current_hold_atom)
-    cerr << " current hold atom " << _current_hold_atom->atom_number() << endl;
+    cerr << " current hold atom " << _current_hold_atom->atom_number() << '\n';
   else
     cerr << " no current hold atom\n";
 #endif
@@ -1280,8 +1289,8 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
     return 0;
 
 #ifdef DEBUG_MOVE_TO_NEXT_FROM_ANCHOR
-  cerr << "move_to_next_match_from_current_anchor:: query atom " << _unique_id << " anchored at " << _parent->current_hold_atom()->atom_number() << endl;
-  cerr << "_con = " << _con << " and _anchor_ncon = " << _anchor_ncon << endl;
+  cerr << "move_to_next_match_from_current_anchor:: query atom " << _unique_id << " anchored at " << _parent->current_hold_atom()->atom_number() << '\n';
+  cerr << "_con = " << _con << " and _anchor_ncon = " << _anchor_ncon << '\n';
 #endif
 
 // Loop through all remaining connections to anchor
@@ -1293,11 +1302,11 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
     Target_Atom * a = bata.other();
 
 #ifdef DEBUG_MOVE_TO_NEXT_FROM_ANCHOR
-    cerr << "Query atom " << _unique_id << ", _con " << _con << ", may go to atom " << a->atom_number();
+    cerr << "Query atom " << _unique_id << ", _con " << _con << ", may go to atom " << a->atom_number() << " atn " << a->atomic_number() << '\n';
     if (already_matched[a->atom_number()])
       cerr << ". Nope, that one's matched\n";
     else
-      cerr << endl;
+      cerr << '\n';
 #endif
 
     if (already_matched[a->atom_number()])
@@ -1322,8 +1331,11 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
     if (! matches(*a, already_matched))
       continue;
 
-    if (! _ring_closure_bonds_match(a))
+    // If only the bond to the parent, no need to check ring closure bonds.
+    if (_bonds.number_elements() == 1) {
+    } else if (! _ring_closure_bonds_match(a)) {
       continue;
+    }
 
 //  Looking good. Check any _ring_id values
 
@@ -1338,7 +1350,7 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
 
 #ifdef DEBUG_MOVE_TO_NEXT_FROM_ANCHOR
     cerr << "move_to_next_match: query atom " << _unique_id << ", _con " << _con << " matched with atom " << 
-            a->atom_number() << endl;
+            a->atom_number() << '\n';
 #endif
 
     return 1;
@@ -1352,7 +1364,7 @@ Substructure_Atom::move_to_next_match_from_current_anchor (int * already_matched
   _con = 0;      // get ready for another attempt with same anchor
 
 #ifdef DEBUG_MOVE_TO_NEXT_FROM_ANCHOR
-  cerr << "Move_to_next_match_from_current_anchor: returning 0, query atom " << _unique_id << endl;
+  cerr << "Move_to_next_match_from_current_anchor: returning 0, query atom " << _unique_id << '\n';
 #endif
 
   return 0;
@@ -1370,29 +1382,31 @@ Substructure_Atom::determine_ring_or_non_ring (int & result) const
   if (! _nrings.is_set())
     return 0;
 
-  if (1 == _nrings.number_elements())
-  {
+  const int nelements = _nrings.number_elements();
+
+  if (nelements == 1) {
     result = _nrings[0];
     return 1;
   }
 
   int tmp;
-  if (_nrings.min(tmp) && tmp > 0)
-  {
+  if (_nrings.min(tmp) && tmp > 0) {
     result = tmp;
     return 1;
   }
 
-  if (_nrings.empty())    // must just be a max value specified
+  // must be just a max value specified.
+  if (nelements == 0) {
     return 0;
+  }
 
 // There are multiple values for nrings. If they are all > 0, then ok.
 // Fingerprint just needs to know ring or non ring.
 
-  for (const int r : _nrings)
-  {
-    if (0 == r)
+  for (int i = 0; i < nelements; ++i) {
+    if (_nrings[i] == 0) {
       return 0;
+    }
   }
 
 // All _nrings values were > 0
@@ -1501,9 +1515,15 @@ Substructure_Atom::check_internal_consistency(int connections) const
 int
 Substructure_Atom::ring_sizes_specified(resizable_array<int> & ring_sizes) const
 {
-  ring_sizes.add_non_duplicated_elements(_aromatic_ring_size);
+  int n = _aromatic_ring_size.number_elements();
+  for (int i = 0; i < n; ++i) {
+    ring_sizes.add_if_not_already_present(_aromatic_ring_size[i]);
+  }
 
-  ring_sizes.add_non_duplicated_elements(_aliphatic_ring_size);
+  n = _aliphatic_ring_size.number_elements();
+  for (int i = 0; i < n; ++i) {
+    ring_sizes.add_if_not_already_present(_aliphatic_ring_size[i]);
+  }
 
   return ring_sizes.number_elements();
 }
@@ -1600,7 +1620,7 @@ Substructure_Atom::_fill_min_ncon (Molecule & m,
   {
     cerr << "Substructure_Atom::_fill_min_ncon: Query atom " << _unique_id << 
             " connections not specified fully\n";
-    cerr << "Min known is " << min_ncon() << " but molecule has " << m.ncon(a) << endl;
+    cerr << "Min known is " << min_ncon() << " but molecule has " << m.ncon(a) << '\n';
     cerr << "Suggest you change the query to reflect that\n";
   }
 
@@ -1608,7 +1628,7 @@ Substructure_Atom::_fill_min_ncon (Molecule & m,
   if (bond_shortage <= 0)
     bond_shortage = 0;
 
-// cerr << "Atom " << a << " cs = " << connection_shortage << " bs = " << bond_shortage << endl;
+// cerr << "Atom " << a << " cs = " << connection_shortage << " bs = " << bond_shortage << '\n';
   for (int i = 0; i < connection_shortage; i++)
   {
     Atom * h = new Atom(0);
@@ -1649,12 +1669,12 @@ Substructure_Atom::_add_bond_to_molecule (Molecule & m,
 
 #ifdef DEBUG_ADD_BOND_TO_MOLECULE
   cerr << "_add_bond_to_molecule: molecule has " << m.natoms() << " atoms\n";
-  cerr << "Adding bond between " << _unique_id << " and " << other_atom->unique_id() << endl;
+  cerr << "Adding bond between " << _unique_id << " and " << other_atom->unique_id() << '\n';
 #endif
 
   if (_unique_id == other_atom->unique_id())
   {
-    cerr << "Substructure_Atom::_add_bond_to_molecule: yipes, atoms the same " << _unique_id << endl;
+    cerr << "Substructure_Atom::_add_bond_to_molecule: yipes, atoms the same " << _unique_id << '\n';
     return 0;
   }
 
@@ -1663,7 +1683,7 @@ Substructure_Atom::_add_bond_to_molecule (Molecule & m,
   if (_unique_id >= matoms || other_atom->unique_id() >= matoms)
   {
     cerr << "Substructure_Atom::_add_bond_to_molecule: yipes, atom numbers out of range\n";
-    cerr << "molecule contains " << matoms << " atoms, id's are " << _unique_id << " and " << other_atom->unique_id() << endl;
+    cerr << "molecule contains " << matoms << " atoms, id's are " << _unique_id << " and " << other_atom->unique_id() << '\n';
     return 0;
   }
 
@@ -1756,11 +1776,12 @@ Substructure_Atom::assign_unique_atom_numbers (int & id)
 void
 Substructure_Atom::assign_unique_id_from_atom_number_if_set (extending_resizable_array<int> & numbers_in_use)
 {
-//cerr << "Substructure_Atom::assign_unique_id_from_atom_number_if_set:_initial_atom_number " << _initial_atom_number << " _unique_id " << _unique_id << endl;
+//cerr << "Substructure_Atom::assign_unique_id_from_atom_number_if_set:_initial_atom_number " << _initial_atom_number << " _unique_id " << _unique_id << '\n';
 
-  if (_initial_atom_number >= 0)     // use it
+  if (_initial_atom_number >= 0) {     // use it
     _unique_id = _initial_atom_number;
-  else     // find an unused number to assign
+    ++numbers_in_use[_unique_id];
+  } else     // find an unused number to assign
   {
     int next_to_assign = -1;
     for (unsigned int i = 0; i < numbers_in_use.size(); ++i)    // find current max index
@@ -1779,6 +1800,12 @@ Substructure_Atom::assign_unique_id_from_atom_number_if_set (extending_resizable
 
     _unique_id = next_to_assign;
     numbers_in_use[next_to_assign]++;
+  }
+
+  // THe environment is separate from the main query.
+  for (Substructure_Atom* e : _environment) {
+    extending_resizable_array<int> for_env;
+    e->assign_unique_id_from_atom_number_if_set(for_env);
   }
 
   for (unsigned int i = 0; i < _children.size(); ++i)
@@ -1816,12 +1843,16 @@ int
 Substructure_Atom::remove_your_children(Query_Atoms_Matched & atoms,
                                         int * already_matched)
 {
-//assert (ok ());
+  if (_current_hold_atom) {
+    release_hold(already_matched);
+  }
 
   const int nc = _children.number_elements();
-  if (0 == nc)
-    ;
-  else if (1 == nc)
+  if (0 == nc) {
+    return 1;
+  }
+
+  if (1 == nc)
     atoms.remove_first(_children[0]);
   else if (2 == nc)
     atoms.remove_two_items(_children[0], _children[1]);
@@ -1833,8 +1864,6 @@ Substructure_Atom::remove_your_children(Query_Atoms_Matched & atoms,
     }
   }
 
-  if (_current_hold_atom)
-    release_hold(already_matched);
 
   return 1;
 }
@@ -2015,18 +2044,23 @@ Substructure_Atom::determine_start_stop(const Molecule_to_Match & target,
   if (!_match_as_match_or_rejection)  // Too complex otherwise.
     return 1;
 
+// If we have no info about atomic numbers, we must search the whole target
+  if (_element.empty()) {
+    return 1;
+  }
+
   const int na = _element.number_elements();
 
   assert (_element_unique_id.number_elements() == na);
 
 #ifdef DEBUG_DETERMINE_START_STOP
-  cerr << "Determining start/stop points, matoms = " << matoms << " na = " << na << endl;
+  cerr << "Determining start/stop points, matoms = " << matoms << " na = " << na << '\n';
   for (int i = 0; i < na; i++)
   {
     cerr << " z = " << _element[i]->atomic_number();
   }
   if (na > 0)
-    cerr << endl;
+    cerr << '\n';
 #endif
 
 // If we have no info about atomic numbers, we must search the whole target
@@ -2042,7 +2076,7 @@ Substructure_Atom::determine_start_stop(const Molecule_to_Match & target,
   istart = target.first(z);
 
 #ifdef DEBUG_DETERMINE_START_STOP
-  cerr << "First occurrence of atomic number " << z << " at " << istart << endl;
+  cerr << "First occurrence of atomic number " << z << " at " << istart << '\n';
 #endif
 
   if (istart >= 0)
@@ -2084,13 +2118,13 @@ Substructure_Atom::determine_start_stop(const Molecule_to_Match & target,
   int na = _element.number_elements();
 
 #ifdef DEBUG_DETERMINE_START_STOP
-  cerr << "Determining start/stop points, matoms = " << matoms << " na = " << na << endl;
+  cerr << "Determining start/stop points, matoms = " << matoms << " na = " << na << '\n';
   for (int i = 0; i < na; i++)
   {
     cerr << " z = " << _element[i]->atomic_number();
   }
   if (na > 0)
-    cerr << endl;
+    cerr << '\n';
 #endif
 
 // If we have no info about atomic numbers, we must search the whole target
@@ -2107,7 +2141,7 @@ Substructure_Atom::determine_start_stop(const Molecule_to_Match & target,
   istart = target.first(z);
 
 #ifdef DEBUG_DETERMINE_START_STOP
-  cerr << "First occurrence of atomic number " << z << " at " << istart << endl;
+  cerr << "First occurrence of atomic number " << z << " at " << istart << '\n';
 #endif
 
   if (istart >= 0)
@@ -2204,7 +2238,7 @@ Substructure_Atom::add_ncon_preference_object(int n, int p)
 void
 Substructure_Atom::identify_atom_numbers(extending_resizable_array<int> & a) const
 {
-//cerr << "Substructure_Atom::identify_atom_numbers:my number " << _initial_atom_number << endl;
+//cerr << "Substructure_Atom::identify_atom_numbers:my number " << _initial_atom_number << '\n';
 
   if (_initial_atom_number >= 0)
     a[_initial_atom_number]++;
@@ -2220,7 +2254,7 @@ Substructure_Atom::identify_atom_numbers(extending_resizable_array<int> & a) con
 void
 Substructure_Atom::identify_atom_map_numbers(extending_resizable_array<int> & a) const
 {
-//cerr << "Substructure_Atom::identify_atom_numbers:my number " << _initial_atom_number << endl;
+//cerr << "Substructure_Atom::identify_atom_numbers:my number " << _initial_atom_number << '\n';
 
   if (_atom_map_number >= 0)
     a[_atom_map_number]++;
@@ -2247,7 +2281,7 @@ const Substructure_Bond *
 Substructure_Atom::bond_between_atom_map_numbers(int a1, int a2) const
 {
 #ifdef DEBUG_BOND_BETWEEN_ATOM_MAP_NUMBERS
-  cerr << "Substructure_Atom::bond_between_atom_map_numbers:looking for " << a1 << " and " << a2 << " I am " << _atom_map_number << endl;
+  cerr << "Substructure_Atom::bond_between_atom_map_numbers:looking for " << a1 << " and " << a2 << " I am " << _atom_map_number << '\n';
 #endif
 
   const Substructure_Bond * rc = _bond_between_atom_map_numbers(a1, a2);
@@ -2292,7 +2326,7 @@ Substructure_Atom::_bond_between_atom_map_numbers(int a1, int a2) const
 // what about ring closure bonds
 
 #ifdef DEBUG_BOND_BETWEEN_ATOM_MAP_NUMBERS
-  cerr << "N = " << _bonds.number_elements() << endl;
+  cerr << "N = " << _bonds.number_elements() << '\n';
 #endif
 
   for (const Substructure_Bond* b : _bonds)
@@ -2408,7 +2442,7 @@ Substructure_Atom::adjust_initial_atom_numbers(const int * xref)
 int
 Substructure_Atom::symmetry_groups_present() const
 {
-//cerr << "Substructure_Atom::symmetry_groups_present:checking " << _symmetry_group << ' ' << this << endl;
+//cerr << "Substructure_Atom::symmetry_groups_present:checking " << _symmetry_group << ' ' << this << '\n';
 
   if (_symmetry_group > 0)
     return 1;
@@ -2464,7 +2498,7 @@ Substructure_Atom::assign_atom_map_numbers(int & amap)
 {
   int rc = 0;
 
-//cerr << "Substructure_Atom::assign_atom_map_numbers:atom " << _unique_id << " map " << _atom_map_number << " do I need " << amap << endl;
+//cerr << "Substructure_Atom::assign_atom_map_numbers:atom " << _unique_id << " map " << _atom_map_number << " do I need " << amap << '\n';
 
   if (_atom_map_number < 0)
   {

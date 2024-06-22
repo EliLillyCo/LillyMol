@@ -8,7 +8,7 @@ if [ -z "$LILLYMOL_HOME" ] || [ -z "$BUILD_DIR" ]; then
     echo "Example: export BUILD_DIR=Linux-gcc-7.2.1" 
     exit 1
 else
-    BIN_DIR="$LILLYMOL_HOME/contrib/script/py/mmp"
+    BIN_DIR="$LILLYMOL_HOME/contrib/python/mmp"
 fi
 
 test_command=getMMPSeriesfromCSV

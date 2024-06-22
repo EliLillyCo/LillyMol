@@ -1,5 +1,5 @@
-#ifndef SPARSE_FP_CREATOR_H
-#define SPARSE_FP_CREATOR_H
+#ifndef FOUNDATIONAL_IWMISC_SPARSE_FP_CREATOR_H_
+#define FOUNDATIONAL_IWMISC_SPARSE_FP_CREATOR_H_
 
 #include <algorithm>
 #include <memory>
@@ -266,6 +266,6 @@ Sparse_Fingerprint_Creator::_write_constant_width_fingerprint(unsigned int nb,
   return output.good();
 }
 
-#endif
+#endif  // SPARSE_FP_CREATOR_IMPLEMENTATION
 
-#endif
+#endif  // FOUNDATIONAL_IWMISC_SPARSE_FP_CREATOR_H_

@@ -245,7 +245,7 @@ BitXref::WriteSvmlFeatures(const IW_General_Fingerprint& gfp,
         continue;
       }
       feature_counts[ndx].feature = iter->second;
-      feature_counts[ndx].count = 1;
+      feature_counts[ndx].count = c;
       ndx++;
     }
   }

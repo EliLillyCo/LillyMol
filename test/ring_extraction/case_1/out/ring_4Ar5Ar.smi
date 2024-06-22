@@ -1,1 +1,1 @@
-smi: "[CH2:70]1N2N([1CH]=[1CH]2)[CH2:71][1NH]1" smt: "[ax2r5D2]1:[ax3r4r5D3]2:[ax3r4r5D3](:[ax2r4D3]:[ax2r4D3]:2):[ax2r5D2]:[ax2r5D>2]:1" id: "CHEMBL1980365.4Ar5Ar" n: 1 conn: true exo: "[70O].[71O]" usmi: "O=c1[1nH]c(=O)[n]2[n]1[1cH][1cH]2" 
+smi: "[CH2:70]1N2N([1CH]=[1CH]2)[CH2:71][1NH]1" smt: "[ax2r5D2]1:[ax3r4r5]2:[ax3r4r5D3](:[ax2r4D3]:[ax2r4D3]:2):[ax2r5D2]:[ax2r5D>2]:1" id: "CHEMBL1980365.4Ar5Ar" n: 1 conn: true exo: "[70O].[71O]" usmi: "O=c1[1nH]c(=O)[n]2[n]1[1cH][1cH]2" 

@@ -1097,4 +1097,169 @@ sidechain {
   }
 }
 
+TEST(TestUniqueEmbeddingsSidechain, FailsBecauseMultipleMatches) {
+  const std::string string_proto = R"pb(
+scaffold {
+    id: 0
+    smarts: "C"
+}
+sidechain {
+  id: 1
+  smarts: "[CD1]"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+
+  Molecule scaffold;
+  ASSERT_TRUE(scaffold.build_from_smiles("C"));
+
+  Molecule sidechain;
+  ASSERT_TRUE(sidechain.build_from_smiles("CC ethane"));
+
+  Sidechain_Match_Conditions smc;
+  smc.set_ignore_symmetry_related_matches(1);
+  ASSERT_FALSE(rxn.add_sidechain_reagent(0, sidechain, smc));
+}
+
+TEST(TestUniqueEmbeddingsSidechain, IgnoreSymmetry) {
+  const std::string string_proto = R"pb(
+scaffold {
+    id: 0
+    smarts: "C"
+}
+sidechain {
+  id: 1
+  smarts: "[CD1]"
+  match_conditions {
+    ignore_symmetry_related_matches: true
+  }
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+
+  Molecule scaffold;
+  ASSERT_TRUE(scaffold.build_from_smiles("C methane"));
+
+  Molecule sidechain;
+  ASSERT_TRUE(sidechain.build_from_smiles("CC ethane"));
+
+  Sidechain_Match_Conditions smc;
+  smc.set_ignore_symmetry_related_matches(1);
+  std::cerr << "Calling add_sidechain_reagent\n";
+  ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
+  std::cerr << "after add_sidechain_reagent\n";
+
+  resizable_array_p<Molecule> product;
+  EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);
+  EXPECT_EQ(product[0]->smiles(), "CCC");
+}
+
+TEST(TestUniqueEmbeddingsScaffold, GeneratesMultipleProducts) {
+  const std::string string_proto = R"pb(
+scaffold {
+    id: 0
+    smarts: "C"
+}
+sidechain {
+  id: 1
+  smarts: "N"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+
+  Molecule scaffold;
+  ASSERT_TRUE(scaffold.build_from_smiles("CC methane"));
+
+  Molecule sidechain;
+  ASSERT_TRUE(sidechain.build_from_smiles("N"));
+
+  Sidechain_Match_Conditions smc;
+  smc.set_ignore_symmetry_related_matches(1);
+  std::cerr << "Calling add_sidechain_reagent\n";
+  ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
+  std::cerr << "after add_sidechain_reagent\n";
+
+  resizable_array_p<Molecule> product;
+  EXPECT_EQ(rxn.perform_reaction(scaffold, product), 2);
+  EXPECT_EQ(product[0]->unique_smiles(), "NCC") << "Bad smiles " << product[0]->smiles();
+  EXPECT_EQ(product[1]->unique_smiles(), "NCC") << "bad smiles " << product[1]->smiles();
+}
+
+TEST(TestUniqueEmbeddingsScaffold, GeneratesOneProduct) {
+  const std::string string_proto = R"pb(
+scaffold {
+    id: 0
+    smarts: "C"
+    match_conditions {
+      ignore_symmetry_related_matches: true
+    }
+}
+sidechain {
+  id: 1
+  smarts: "N"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+
+  Molecule scaffold;
+  ASSERT_TRUE(scaffold.build_from_smiles("CC methane"));
+
+  Molecule sidechain;
+  ASSERT_TRUE(sidechain.build_from_smiles("N"));
+
+  Sidechain_Match_Conditions smc;
+  smc.set_ignore_symmetry_related_matches(1);
+  std::cerr << "Calling add_sidechain_reagent\n";
+  ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
+  std::cerr << "after add_sidechain_reagent\n";
+
+  resizable_array_p<Molecule> product;
+  EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);
+  EXPECT_EQ(product[0]->unique_smiles(), "NCC") << "Bad smiles " << product[0]->smiles();
+}
+
 }  // namespace

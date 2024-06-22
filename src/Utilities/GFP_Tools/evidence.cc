@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -133,7 +134,9 @@ class Item {
     resizable_array<int> _percentile;
 
     // Some results may be undefined - zero nbr list for example.
-    static constexpr float kUndefinedValue = -1.0;
+    // It will be externally specified to some value that will not
+    // collide with any actual value.
+    T _undefined_value;
     static constexpr char kMissing = '.';
 
   // private functions
@@ -144,6 +147,10 @@ class Item {
   public:
     Item();
     ~Item();
+
+    void set_undefined_value(T s) {
+      _undefined_value = s;
+    }
 
     void set(const IWString& s, T v) {
       _id = s;
@@ -212,6 +219,7 @@ Item<T>::Item() {
   _activity = {};
   _number_nbrs = 0;
   _nbrs = nullptr;
+  _undefined_value = 0;
 }
 
 template <typename T>
@@ -245,10 +253,10 @@ Item<T>::AddNbr(int ndx, float distance, T activity, int uid) {
 template <typename T>
 void
 Item<T>::AppendUndefined(bool append_diff) {
-  _results << kUndefinedValue;
+  _results << _undefined_value;
 
   if (append_diff) {
-    _results << kUndefinedValue;
+    _results << _undefined_value;
   }
 }
 
@@ -262,8 +270,8 @@ Item<T>::MaybeAppendDiff(bool append_diff) {
   }
 
   const float last_result = _results.back();
-  if (last_result == kUndefinedValue) {
-    _results << kUndefinedValue;
+  if (last_result == _undefined_value) {
+    _results << _undefined_value;
     return;
   }
 
@@ -279,7 +287,12 @@ Item<T>::AddShortestDistance(bool append_diff) {
   }
 
   _results << _nbrs[0].distance();
-  MaybeAppendDiff(append_diff);
+
+  if (! append_diff) {
+    return;
+  }
+
+  _results << (_nbrs[0].activity() - _activity);
 }
 
 template <typename T>
@@ -384,7 +397,7 @@ Item<T>::AddPiecewiseLinear(bool append_diff,
   }
 
   if (sum_weights == 0.0f) {
-    _results << kUndefinedValue;
+    _results << _undefined_value;
   } else {
     _results << (tot / sum_weights);
   }
@@ -426,7 +439,7 @@ int
 Item<T>::WriteResults(char sep, IWString_and_File_Descriptor& output) const {
   for (float r : _results) {
     output << sep;
-    if (r == kUndefinedValue) {
+    if (r == _undefined_value) {
       output << kMissing;
     } else {
       output << r;
@@ -735,6 +748,32 @@ Evidence::SetupItems() {
     _item[ndx].set(id, value);
     _id_to_ndx[id] = ndx;
     ++ndx;
+  }
+
+  float min_activity = std::numeric_limits<float>::max();
+  float max_activity = -std::numeric_limits<float>::max();
+
+  for (const auto& [id, value] : _id_to_activity) {
+    if (value < min_activity) {
+      min_activity = value;
+    }
+    if (value > max_activity) {
+      max_activity = value;
+    }
+  }
+
+  float range = max_activity - min_activity;
+  if (range == 0.0f) {
+    cerr << "Evidence::SetupItems:HUH range is zero " << min_activity << " to " << max_activity << '\n';
+  }
+
+  const float undefined_value = min_activity - range;
+  if (_verbose) {
+    cerr << "Range " << min_activity << ',' << max_activity << " undefined value " <<
+            undefined_value << '\n';
+  }
+  for (int i = 0; i < _number_items; ++i) {
+    _item[i].set_undefined_value(undefined_value);
   }
 
   return _id_to_ndx.size();

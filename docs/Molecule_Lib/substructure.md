@@ -107,16 +107,24 @@ is used, then each benzene ring returns just 1 match. The other option is
 one embedding per start atom (-r in tsubstructure). With that in effect,
 once the first query atom
 finds a match, do not go looking for more matches at that same atom. In that
-case benzene has 6 matches. The `-u` is most commonly used.
+case benzene has 6 matches. The `-u` option is most commonly used.
 
-Similarly if looking for an amide `N-C=O', if the molecule contains
+Similarly if looking for an amide `N-C=O`, if the molecule contains
 a urea group, that query will, by default, match two times. The query
 could be rewritten as `O=C-N` and use one embedding per start atom,
 or the embeddings do not overlap directive `-M edno` in `tsubstructure`.
 
-Or a recursive smarts `O=[$([CD3]-N)]` which does not report the
-Nitrogen atom as a matched atom. For matching this might be Ok, but in
-a context where you need the matched atoms, this may not be feasible.
+Another approach might be to use a recursive smarts `O=[$([CD3]-N)]` which does not report the
+Nitrogen atom as a matched atom. For matching this might be ok, but in
+a context where you need the matched atoms, this does not work. This
+also does not address the urea problem, although obviously the recursive
+smarts could be extended to `O=[$([CD3](-N)-[!N])]` which is starting
+to become complex.
+
+Differentiating an amide from a urea can also be done with an
+`environment_no_match` directive in a query file.
+```
+```
 
 This particular problem points to the fact that within LillyMol
 substructure searching there are frequently many different ways of
@@ -177,7 +185,6 @@ Whether it is better to express a complex linker relationship in
 smiles or via a query file is an open question.
 
 ## Down The Bond
-**Note this is experimental, and may be removed**
 There were several times when we needed to place a limit on
 the number of atoms in a substituent. This is not as simple
 as looking at the furthest distance of an atom in the
@@ -194,8 +201,10 @@ atoms down that bond are considered. If the bond is in a ring, the match
 will fail.
 
 After this was implemented, we came up with the more general idea
-of a substituent, that is only available in query files. This
-concept 
+of a substituent, that is only available in query files. A substituent
+is a much more complex concept, but for simple cases, a down-the-bond
+directive can work well. The DownTheBond message is also available
+in a query file.
 
 ## Atomic Smarts Extensions
 LillyMol's atomic smarts also contain some useful extensions.

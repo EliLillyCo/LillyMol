@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "Foundational/iwmisc/misc.h"
+
 #include "iwecfp_database.h"
 #include "iwecfp_database_lookup_lib.h"
 
@@ -140,6 +142,22 @@ SP_Database::_do_open(const char* dbname, int multi_threaded)
   return 1;
 }
 
+// Return true if `dbkey` is one of the special keys stored in 
+// the database.
+int
+KeyIsKnown(const Dbt& dbkey) {
+  const const_IWSubstring token((const char*) dbkey.get_data(), dbkey.get_size());
+  if (token == ATYPE_KEY) {
+    return 1;
+  }
+  if (token == RADIUS_KEY) {
+    return 1;
+  }
+
+  return 0;
+}
+
+// The slurp function must work in the case of examples being stored or not.
 unsigned int
 SP_Database::slurp_to_cache(int min_examples)
 {
@@ -151,29 +169,28 @@ SP_Database::slurp_to_cache(int min_examples)
     return 0;
   }
 
-  int records_in_database = 0;
+  uint64_t records_in_database = 0;
 
   Dbt zkey, zdata;
 
   while (0 == (rc = cursor->get(&zkey, &zdata, DB_NEXT))) {
     records_in_database++;
 
-    if (sizeof(Count_Radius) != zdata.get_size()) {
-      continue;
+    int rc;
+    if (_contains_examples) {
+      rc = SlurpDataContainsExamples(zkey, zdata, min_examples);
+    } else {
+      rc = SlurpCountRadius(zkey, zdata, min_examples);
     }
 
-    const Count_Radius* cr = reinterpret_cast<const Count_Radius*>(zdata.get_data());
-
-    if (cr->_count < min_examples) {
+    if (rc) {
+      // good.
+    } else if (KeyIsKnown(zkey)) {
+      continue;
+    } else {
+      cerr << "SP_Database::slurp_to_cache:slurp failure\n";
       continue;
     }
-
-    DBKey* dbkey = reinterpret_cast<DBKey*>(zkey.get_data());
-
-    Count_Radius cr2;
-    cr2._count = cr->_count;
-    cr2._radius = cr->_radius;
-    _hash[*dbkey] = cr2;
   }
 
   if (DB_NOTFOUND != rc) {
@@ -183,11 +200,87 @@ SP_Database::slurp_to_cache(int min_examples)
   if (verbose) {
     cerr << "Slurped " << _hash.size() << " of " << records_in_database
          << " database records into hash "
-         << static_cast<float>(_hash.size()) / static_cast<float>(records_in_database)
+         << iwmisc::Fraction<float>(_hash.size(), records_in_database)
          << '\n';
   }
 
   return _hash.size();
+}
+
+// We have a database where the data is a Count_Radius structure.
+// reinterpret `zdata` and update _hash if the count is
+// greater than `min_examples`.
+int
+SP_Database::SlurpCountRadius(const Dbt& dkey, const Dbt& zdata,
+                int min_examples) {
+  if (zdata.get_size() != sizeof(Count_Radius)) {
+    return 0;
+  }
+
+  const Count_Radius* cr = reinterpret_cast<const Count_Radius*>(zdata.get_data());
+
+  if (cr->_count < min_examples) {
+    return 1;
+  }
+
+  DBKey* dbkey = reinterpret_cast<DBKey*>(dkey.get_data());
+
+#ifdef THIS_IS_NOT_NECESSARY
+  Count_Radius cr2;
+  cr2._count = cr->_count;
+  cr2._radius = cr->_radius;
+  _hash[*dbkey] = cr2;
+#endif
+  _hash[*dbkey] = *cr;
+
+  return 1;
+}
+
+// Processing a database with examples. Reinterpret `zdata` as a string
+// and parse the example and if the number of occurrences is above
+// `min_examples` update _hash
+int
+SP_Database::SlurpDataContainsExamples(const Dbt& dkey, const Dbt& zdata,
+                int min_examples) {
+  if (KeyIsKnown(dkey)) {
+    return 1;
+  }
+
+  const const_IWSubstring data((const char*) zdata.get_data(), zdata.get_size());
+  const_IWSubstring token;
+  int i = 0;
+  if (! data.nextword(token, i, ' ')) {
+    cerr << "SP_Database::SlurpDataContainsExamples:invalid data '" << data << "'\n";
+    return 0;
+  }
+  int count;
+  if (! token.numeric_value(count) || count < 0) {
+    cerr << "SP_Database::SlurpDataContainsExamples:Invalid count '" << data << "'\n";
+    return 0;
+  }
+
+  if (count < min_examples) {
+    return 1;
+  }
+
+  if (! data.nextword(token, i, ' ')) {
+    cerr << "SP_Database::SlurpDataContainsExamples:invalid data (radius) '" << data << "'\n";
+    return 0;
+  }
+  int radius;
+  if (! token.numeric_value(radius) || radius < 0) {
+    cerr << "SP_Database::SlurpDataContainsExamples:Invalid radius '" << data << "'\n";
+    return 0;
+  }
+
+  DBKey* dbkey = reinterpret_cast<DBKey*>(dkey.get_data());
+
+  Count_Radius cr;
+  cr._count = count;
+  cr._radius = radius;
+  _hash[*dbkey] = cr;
+
+  return 1;
 }
 
 int

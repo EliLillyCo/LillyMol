@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package multiple_reactions;
+
+message ReactionAndSidechains {
+  oneof file_name {
+    string proto_reaction_file = 1;
+    string legacy_reaction_file = 2;
+  }
+
+  // One or more files containing the sidechains for each sidechain in the reaction.
+  repeated string sidechain_file = 3;
+}
+
+message Options {
+  repeated ReactionAndSidechains rxn = 1;
+
+  // By default each reaction is applied to a copy of the starting molecule.
+  // If this is set, all reactions are applied, sequentially, to the same molecule.
+  optional bool apply_all_reactions_to_reagent = 2;
+}

@@ -29,7 +29,6 @@
 #include "tversky.h"
 
 using std::cerr;
-using std::endl;
 
 static int fingerprints_processed = 0;
 
@@ -136,8 +135,6 @@ NN_Object::NN_Object() {
   _upper_distance_threshold = upper_distance_threshold;
 
   _search_status = NOT_YET_STARTED;
-
-  return;
 }
 
 static similarity_type_t zero_distance = static_cast<similarity_type_t>(0.0);
@@ -156,7 +153,7 @@ NN_Object::consider(FP_and_Smiles& rhs) {
   similarity_type_t d;
 
   // clang-format off
-  //cerr << "equal_weight_tanimoto_distance_measure " << equal_weight_tanimoto_distance_measure << " values " << IW_General_Fingerprint::equal_weight_tanimoto(rhs) << ' ' << IW_General_Fingerprint::tanimoto(rhs) << " btw " << rhs.id() << " and " << id() << endl;
+  //cerr << "equal_weight_tanimoto_distance_measure " << equal_weight_tanimoto_distance_measure << " values " << IW_General_Fingerprint::equal_weight_tanimoto(rhs) << ' ' << IW_General_Fingerprint::tanimoto(rhs) << " btw " << rhs.id() << " and " << id() << '\n';
   // clang-format on
 
   if (equal_weight_tanimoto_distance_measure) {
@@ -212,7 +209,7 @@ NN_Object::consider(FP_and_Smiles& rhs) {
   // of neighbours grow without bounds
 
   // clang-format off
-  //cerr << "nbrs " << number_neighbours() << " max d " << distance_of_furthest_neighbour() << " max " << _upper_distance_threshold << endl;
+  //cerr << "nbrs " << number_neighbours() << " max d " << distance_of_furthest_neighbour() << " max " << _upper_distance_threshold << '\n';
   // clang-format on
 
   if (min_number_neighbours > 0 && number_neighbours() > min_number_neighbours) {
@@ -228,7 +225,6 @@ NN_Object::consider(FP_and_Smiles& rhs) {
           min_number_neighbours);
     }
   }
-  return;
 }
 
 void
@@ -282,8 +278,6 @@ NN_Object::consider(FP_and_Smiles& rhs, similarity_type_t must_be_larger_than) {
   }
 
   extra(rhs, d);
-
-  return;
 }
 
 int
@@ -441,7 +435,7 @@ build_pool(iwstring_data_source& input) {
     i++;
 
     if (i >= pool_size) {
-      cerr << "Pool is full, max " << pool_size << endl;
+      cerr << "Pool is full, max " << pool_size << '\n';
       break;
     }
   }
@@ -577,8 +571,6 @@ nearneighbours_sorted_pool(FP_and_Smiles& fp) {
       }
     }
   }
-
-  return;
 }
 
 static void
@@ -590,8 +582,6 @@ nearneighbours(FP_and_Smiles& fp) {
 
     pool[i].consider(fp);
   }
-
-  return;
 }
 
 static int
@@ -614,8 +604,6 @@ do_remove_leading_zeros_from_identifiers(FP_and_Smiles& fp) {
   tmp.remove_leading_chars('0');
 
   fp.set_id(tmp);
-
-  return;
 }
 
 //  It goes somewhere in the list
@@ -761,7 +749,6 @@ usage (int rc)
   cerr << " -V ...           Tversky specification, enter '-V help' for details\n";
   cerr << " -g <dist>        Abandon distance computation if any component > dist \n";
   cerr << " -k               generate nnbr::NearNeighbours textproto output\n";
-  cerr << " -k               generate nnbr::NearNeighbours textproto output\n";
   cerr << " -v               verbose output\n";
 // clang-format on
 
@@ -826,7 +813,7 @@ nearneighbours(int argc, char** argv) {
     lower_distance_threshold = t;
 
     if (verbose) {
-      cerr << "Lower distance threshold set to " << lower_distance_threshold << endl;
+      cerr << "Lower distance threshold set to " << lower_distance_threshold << '\n';
     }
   }
 
@@ -857,7 +844,7 @@ nearneighbours(int argc, char** argv) {
       }
 
       if (verbose) {
-        cerr << "Upper distance threshold set to " << upper_distance_threshold << endl;
+        cerr << "Upper distance threshold set to " << upper_distance_threshold << '\n';
       }
     }
   }
@@ -891,7 +878,7 @@ nearneighbours(int argc, char** argv) {
 
     pool = new NN_Object[nfp];
     if (nullptr == pool) {
-      cerr << "Yipes, could not allocate pool of size " << nfp << endl;
+      cerr << "Yipes, could not allocate pool of size " << nfp << '\n';
       return 62;
     }
 
@@ -899,7 +886,7 @@ nearneighbours(int argc, char** argv) {
     number_active_fingerprints = pool_size;
 
     if (verbose) {
-      cerr << "system sized to " << nfp << endl;
+      cerr << "system sized to " << nfp << '\n';
     }
   }
 
@@ -1036,7 +1023,7 @@ nearneighbours(int argc, char** argv) {
 
     if (verbose) {
       cerr << "Assuming pool sorted, each similarity component must be at least "
-           << must_be_larger_than << endl;
+           << must_be_larger_than << '\n';
     }
 
     must_be_larger_than = 1.0 - must_be_larger_than;  // convert to similarity
@@ -1159,7 +1146,7 @@ nearneighbours(int argc, char** argv) {
 
     if (neighbours_to_find > 0 && min_number_neighbours > neighbours_to_find) {
       cerr << "Inconsistent specification of neighbours_to_find " << neighbours_to_find
-           << " and min_number_neighbours " << min_number_neighbours << endl;
+           << " and min_number_neighbours " << min_number_neighbours << '\n';
       usage(4);
     }
   }

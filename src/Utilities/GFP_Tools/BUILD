@@ -1,5 +1,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build_deps:install.bzl", "local_install")
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+
 
 local_install(
     name = "install",
@@ -91,10 +93,20 @@ cc_proto_library(
     ],
 )
 
+py_proto_library(
+    name = "gfp_to_svm_lite_proto_py_proto",
+    srcs = [
+        "gfp_to_svm_lite.proto",
+    ],
+)
+
 proto_library(
     name = "nearneighbours",
     srcs = [
         "nearneighbours.proto",
+    ],
+    visibility = [
+        "//visibility:public",
     ],
 )
 
@@ -107,6 +119,47 @@ cc_proto_library(
         ":nearneighbours",
     ],
 )
+
+py_proto_library(
+    name = "nearneighbours_py_proto",
+    srcs = [
+        "nearneighbours.proto",
+    ],
+)
+
+proto_library(
+    name = "nn_request_proto",
+    srcs = [
+        "nn_request.proto",
+    ],
+    deps = [
+        "//Utilities/GFP_Tools:nearneighbours",
+    ],
+)
+
+cc_proto_library(
+    name = "nn_request_cc_proto",
+    deps = [
+        ":nn_request_proto",
+    ]
+)
+
+py_proto_library(
+    name = "nn_request_py_proto",
+    srcs = [
+        "nn_request.proto",
+    ],
+    deps = [
+        "nearneighbours_py_proto",
+    ],
+)
+
+#grpc_proto_library(
+#  name = "nn_request_grpc",
+#  srcs = [
+#      "nn_request.proto",
+#  ],
+#)
 
 cc_binary(
     name = "descriptor_file_to_01_fingerprints",
@@ -275,7 +328,7 @@ cc_binary(
 cc_binary(
     name = "gfp_leader",
     srcs = [
-        "gfp_leader_v2.cc",
+        "gfp_leader.cc",
         "leader.h",
     ],
     deps = [
@@ -378,11 +431,62 @@ cc_binary(
         ":bit_subset_v2",
         ":gfp",
         ":smiles_id_dist",
-        ":spread_v2",
+        ":spread",
         "//Foundational/accumulator",
         "//Foundational/iwmisc",
     ],
 )
+
+cc_binary(
+  name = "gfp_server",
+  srcs = [
+      "gfp_server.cc",
+  ],
+  deps = [
+       "nn_request_cc_proto",
+       "//Foundational/cmdline:iwcmdline",
+       "//Foundational/data_source:iwstring_data_source",
+       "//Molecule_Lib:iwmfingerprint",
+       "//Molecule_Lib:iwmolecule",
+       "//Molecule_Lib:moleculeio",
+       "//Molecule_Tools:mpr",
+       "//Molecule_Tools:maccskeys_fn5_lib",
+       "//Utilities/GFP_Tools:gfp_standard",
+       "//Utilities/GFP_Tools:nearneighbours_cc_proto",
+       "@cppzmq//:cppzmq",
+       "@libzmq//:libzmq",
+       "@com_google_protobuf//:protobuf",
+  ],
+  tags = [
+      "gfp_server",
+      "zeromq",
+  ],
+)
+
+# cc_binary(
+#   name = "gfp_server_grpc",
+#   srcs = [
+#       "gfp_server_grpc.cc",
+#   ],
+#   deps = [
+#        "nn_request_cc_proto",
+#        "//Foundational/cmdline:iwcmdline",
+#        "//Foundational/data_source:iwstring_data_source",
+#        "//Molecule_Lib:iwmfingerprint",
+#        "//Molecule_Lib:iwmolecule",
+#        "//Molecule_Lib:moleculeio",
+#        "//Molecule_Tools:mpr",
+#        "//Molecule_Tools:maccskeys_fn5_lib",
+#        "//Utilities/GFP_Tools:gfp_standard",
+#        "//Utilities/GFP_Tools:nearneighbours_cc_proto",
+#        "@com_github_grpc_grpc//:grpc++",
+#        "@com_google_protobuf//:protobuf",
+#   ],
+#   tags = [
+#       "gfp_server",
+#       "grpc,
+#   ],
+# )
 
 cc_binary(
     name = "gfp_sparse_to_fixed",
@@ -400,12 +504,12 @@ cc_binary(
 cc_binary(
     name = "gfp_spread",
     srcs = [
-        "gfp_spread_v2.cc",
+        "gfp_spread.cc",
     ],
     deps = [
         ":gfp",
         ":smiles_id_dist",
-        ":spread_v2",
+        ":spread",
         "//Foundational/accumulator",
         "//Foundational/iwmisc",
     ],
@@ -419,7 +523,7 @@ cc_binary(
     deps = [
         ":gfp",
         ":smiles_id_dist",
-        ":spread_v2",
+        ":spread",
         "//Foundational/accumulator",
         "//Foundational/iwmisc",
     ],
@@ -443,7 +547,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "//Utilities/GFP_Tools:spread_v2",
+        "//Utilities/GFP_Tools:spread",
     ],
 )
 
@@ -509,6 +613,7 @@ cc_binary(
     ],
     deps = [
         ":gfp",
+        "//Foundational/data_source:iwtfdata_record",
         "//Foundational/histogram:iwhistogram",
     ],
 )
@@ -531,6 +636,7 @@ cc_binary(
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
         "//Foundational/histogram:iwhistogram",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
@@ -653,6 +759,9 @@ cc_binary(
     ],
     linkopts = [
         "-ldl",
+    ],
+    tags = [
+        "tbb",
     ],
     deps = [
         "gfp_bit_subset",
@@ -907,6 +1016,7 @@ cc_binary(
     ],
     deps = [
         ":nearneighbours_cc_proto",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwmisc",
@@ -982,12 +1092,12 @@ cc_library(
 )
 
 cc_library(
-    name = "spread_v2",
+    name = "spread",
     srcs = [
-        "spread_v2.cc",
+        "spread.cc",
     ],
     hdrs = [
-        "spread_v2.h",
+        "spread.h",
     ],
     visibility = [
         "//visibility:public",

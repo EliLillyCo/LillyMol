@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -158,6 +159,12 @@ static int write_shortest_distance = 0;
 static float report_neighbours_within = 0.0;
 
 static int gather_influence_data = 0;
+
+// As an optimisation, we can skip evaluating any support vector
+// that has an absolute weight less than a given threshold.
+// The assumption is that a partial model evaluation might be good
+// enough.
+static float weight_cutoff = 1.01f;
 
 static IWString_and_File_Descriptor stream_for_vector_contributions;
 static IWString_and_File_Descriptor stream_for_bit_contributions;
@@ -352,7 +359,7 @@ usage(int rc)
   cerr << " -E <fname>     read prediction scatter data (produced by mispredicted -Y option)\n";
   cerr << " -L <fname>     kernel distance scaling file. One token per line, similarity scale\n";
   cerr << " -W <fname>     file of known values - echo if ID encountered\n";
-  cerr << " -Y             other options\n";
+  cerr << " -Y ...         other options, enter '-Y help' for info\n";
   cerr << " -v             verbose output\n";
   // clang-format on
 
@@ -1241,6 +1248,13 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
     }
 
     scatter /= sumwts;
+  } else if (weight_cutoff < 1.0f) {
+    for (int i = 0; i < pool_size; i++) {
+      if (std::abs(pool[i].weight()) < weight_cutoff) {
+        continue;
+      }
+      rc += pool[i].weighted_similarity(fp, max_similarity);
+    }
   } else if (1.0 == kernel_multiplier) {
     for (int i = 0; i < pool_size; i++) {
       //    cerr << i << ' ' << pool[i].weighted_similarity(fp, max_similarity) << '\n';
@@ -1533,7 +1547,9 @@ display_kernel_function_choices(std::ostream& os)
 static void
 DisplayDashYOptions(std::ostream& output)
 {
-  output << " -Y flush     flush output after each molecule\n";
+  output << " -Y flush         flush output after each molecule\n";
+  output << " -Y wcutoff=<f>   support vector weight cutoff. Only use support vectors with abs weight values\n";
+  output << "                  greater than <f>. Will definitely speed up run times, but at the expense of accuracy\n";
 
   ::exit(0);
 }
@@ -1733,6 +1749,16 @@ svmfp_score(int argc, char** argv)
         flush_after_each_molecule = 1;
         if (verbose) {
           cerr << "Will flush output after each molecule\n";
+        }
+      } else if (y.starts_with("wcutoff=")) {
+        y.remove_leading_chars(8);
+        if (! y.numeric_value(weight_cutoff) || weight_cutoff <= 0.0f ||        
+            weight_cutoff > 1.0f) {
+          cerr << "The support vector weight cutoff value must be a valid weight [0,1]\n";
+          return 0;
+        }
+        if (verbose) {
+          cerr << "Will only evaluate support vectors with weight " << weight_cutoff << " or above\n";
         }
       } else if (y == "help") {
         DisplayDashYOptions(cerr);

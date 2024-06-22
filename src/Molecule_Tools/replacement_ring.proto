@@ -21,8 +21,7 @@ message ReplacementRing {
   uint32 n = 5;
 
   // Whether there are connections marked in the smiles.
-  // Note that this is not being used in ring_replacement now.
-  bool conn = 6;
+  optional bool conn = 6;
 
   // Exocyclic atoms that are needed in order to make the ring
   // aromatic are problematic. If we put them in the smarts,
@@ -35,5 +34,5 @@ message ReplacementRing {
 
   // the unique smiles is not needed for processing, but needed for aggregating
   // results across different collections.
-  string usmi = 8;
+  optional string usmi = 8;
 }

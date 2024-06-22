@@ -40,4 +40,3 @@ else
     echo "$case_id : TEST FAIL"
 fi
 rm $name1 $name2 $name3
-

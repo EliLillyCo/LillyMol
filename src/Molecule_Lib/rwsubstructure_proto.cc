@@ -213,7 +213,8 @@ AddOperator(const SubstructureSearch::Operator op,
 static int
 fetch_elements(const SubstructureSearch::SubstructureAtomSpecifier & proto,
                resizable_array<const Element*>& ele,
-               resizable_array<int>& element_unique_id)
+               resizable_array<int>& element_unique_id,
+               extending_resizable_array<int>& element_uid)
 {
   if (proto.atomic_symbol_size() > 0) {
     for (const auto& s : proto.atomic_symbol()) 
@@ -230,6 +231,7 @@ fetch_elements(const SubstructureSearch::SubstructureAtomSpecifier & proto,
       
       ele.add_if_not_already_present(e);
       element_unique_id.add_if_not_already_present(e->unique_id());
+      element_uid[e->unique_id()] = 1;
     }
   }
 
@@ -243,6 +245,7 @@ fetch_elements(const SubstructureSearch::SubstructureAtomSpecifier & proto,
       
       ele.add_if_not_already_present(e);
       element_unique_id.add_if_not_already_present(e->unique_id());
+      element_uid[e->unique_id()] = 1;
     }
   }
 
@@ -364,8 +367,9 @@ Substructure_Atom_Specifier::construct_from_proto(const SubstructureSearch::Subs
   assert (ok());
 
 //cerr << "SubstructureAtomSpecifier::construct_from_proto:from " << proto.ShortDebugString() << '\n';
-  if (! fetch_elements(proto, _element, _element_unique_id))
+  if (! fetch_elements(proto, _element, _element_unique_id, _element_uid)) {
     return 0;
+  }
 
   if (proto.has_preference_value())
     _preference_value = proto.preference_value();
@@ -374,62 +378,69 @@ Substructure_Atom_Specifier::construct_from_proto(const SubstructureSearch::Subs
   if (!GETVALUESINT(proto, formal_charge, -12, 12))
     return 0;
 
-  if (! GETVALUES(proto, ncon, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, ncon, int, _ncon);
+//if (! GETVALUES(proto, ncon, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, nbonds, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, nbonds, int, _nbonds);
+//if (!GETVALUES(proto, nbonds, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, valence, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, valence, int, _valence);
+//if (!GETVALUES(proto, valence, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, nrings, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, nrings, int, _nrings);
+//if (!GETVALUES(proto, nrings, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, ring_bond_count, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, ring_bond_count, int, _ring_bond_count);
+//if (!GETVALUES(proto, ring_bond_count, 0, no_limit))
+//  return 0;
 
   if (!GETVALUES(proto, ncon2, 0, no_limit))
     return 0;
+  MATCHER_FROM_PROTO(proto, hcount, int, _hcount);
+//if (!GETVALUES(proto, hcount, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, hcount, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, ring_size, int, _ring_size);
+//if (!GETVALUES(proto, ring_size, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, ring_size, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, attached_heteroatom_count, int, _attached_heteroatom_count);
 
-  if (!GETVALUES(proto, attached_heteroatom_count, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, lone_pair_count, int, _lone_pair_count);
+//if (!GETVALUES(proto, lone_pair_count, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, lone_pair_count, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, unsaturation, int, _unsaturation);
+//if (!GETVALUES(proto, unsaturation, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, unsaturation, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, daylight_x, int, _daylight_x);
+//if (!GETVALUES(proto, daylight_x, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, daylight_x, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, isotope, uint32_t, _isotope);
+//if (!GETVALUES(proto, isotope, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, isotope, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, aryl, int, _aryl);
 
-  if (!GETVALUES(proto, aryl, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, vinyl, int, _vinyl);
 
-  if (!GETVALUES(proto, vinyl, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, fused_system_size, int, _fused_system_size);
+//if (!GETVALUES(proto, fused_system_size, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, fused_system_size, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, symmetry_degree, int, _symmetry_degree);
+//if (!GETVALUES(proto, symmetry_degree, 0, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, symmetry_degree, 0, no_limit))
-    return 0;
-
-  if (!GETVALUES(proto, fused_system_size, 0, no_limit))
-    return 0;
-
-  if (!GETVALUES(proto, scaffold_bonds_attached_to_ring, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, scaffold_bonds_attached_to_ring, int, _scaffold_bonds_attached_to_ring);
+//if (!GETVALUES(proto, scaffold_bonds_attached_to_ring, 0, no_limit))
+//  return 0;
 
   if (proto.has_symmetry_group())
   {
@@ -453,15 +464,18 @@ Substructure_Atom_Specifier::construct_from_proto(const SubstructureSearch::Subs
   if (proto.has_chirality())
     _chirality = proto.chirality();
 
-  if (!GETVALUES(proto, heteroatoms_in_ring, 0, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, heteroatoms_in_ring, int, _heteroatoms_in_ring);
+//if (!GETVALUES(proto, heteroatoms_in_ring, 0, no_limit))
+//  return 0;
 
   // Min should be related to min aromatic ring size.
-  if (!GETVALUES(proto, aromatic_ring_size, 4, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, aromatic_ring_size, int, _aromatic_ring_size);
+//if (!GETVALUES(proto, aromatic_ring_size, 4, no_limit))
+//  return 0;
 
-  if (!GETVALUES(proto, aliphatic_ring_size, 3, no_limit))
-    return 0;
+  MATCHER_FROM_PROTO(proto, aliphatic_ring_size, int, _aliphatic_ring_size);
+//if (!GETVALUES(proto, aliphatic_ring_size, 3, no_limit))
+//  return 0;
 
   if (proto.has_all_rings_kekule()) 
     _all_rings_kekule = proto.all_rings_kekule();
@@ -1127,6 +1141,18 @@ Substructure_Atom::construct_from_proto(const SubstructureSearch::SubstructureAt
   if (!GETVALUES(proto, unmatched_atoms_attached, 0, no_limit))
     return 0;
 
+  for (const SubstructureSearch::SubstructureAtom& c : proto.children()) {
+    std::unique_ptr<Substructure_Atom> a = std::make_unique<Substructure_Atom>();
+
+    // Each env gets its own unique numbers and ids.
+    extending_resizable_array<Substructure_Atom *> completed;
+    if (! a->construct_from_proto(c, completed)) {
+      cerr << "Substructure_Atom::construct_from_proto:invalid env " << c.ShortDebugString() << '\n';
+      return 0;
+    }
+    _children << a.release();
+  }
+
   if (proto.has_atom_type_group())
     _atom_type_group = proto.atom_type_group();
 
@@ -1313,6 +1339,19 @@ Single_Substructure_Query::BuildProto(SubstructureSearch::SingleSubstructureQuer
   if (_no_matched_atoms_between_exhaustive) {
     proto.set_no_matched_atoms_between_exhaustive(_no_matched_atoms_between_exhaustive);
   }
+  if (! _environment_must_match_unmatched_atoms) {
+    proto.set_environment_must_match_unmatched_atoms(_environment_must_match_unmatched_atoms);
+  }
+  if (_find_unique_embeddings_only) {
+    proto.set_unique_embeddings_only(_find_unique_embeddings_only);
+  }
+  if (! _respect_initial_atom_numbering) {
+    proto.set_respect_initial_atom_numbering(_respect_initial_atom_numbering);
+  }
+  if (_compress_embeddings) {
+    proto.set_compress_embeddings(_compress_embeddings);
+  }
+
 
   for (const auto * lnk : _link_atom) {
     SubstructureSearch::LinkAtoms* p = proto.add_link_atoms();
@@ -1549,6 +1588,13 @@ Substructure_Atom::BuildProto(SubstructureSearch::SubstructureAtom& proto) const
     }
   }
 
+  _environment.BuildProto(proto);
+
+  for (const Substructure_Atom* c : _children) {
+    SubstructureSearch::SubstructureAtom* child = proto.add_children();
+    c->BuildProto(*child);
+  }
+
   return 1;
 }
 
@@ -1595,14 +1641,15 @@ Substructure_Atom_Specifier::BuildProto(SubstructureSearch::SubstructureAtomSpec
     }
   }
 
-  SetProtoValues(_ncon, "ncon", proto);  // 3
+  PROTO_FROM_MATCHER(_ncon, ncon, int, proto); // 3
   SetProtoValues(_ncon2, "ncon2", proto);  // 6
-  SetProtoValues(_nbonds, "nbonds", proto);  // 9
+  PROTO_FROM_MATCHER(_nbonds, nbonds, int, proto); // 9
+  PROTO_FROM_MATCHER(_valence, valence, int, proto); // 79
   SetProtoValuesInt(_formal_charge, "formal_charge", proto);  // 12
-  SetProtoValues(_nrings, "nrings", proto);  // 15
-  SetProtoValues(_ring_bond_count, "ring_bond_count", proto);  // 18
-  SetProtoValues(_ring_size, "ring_size", proto);  // 21
-  SetProtoValues(_hcount, "hcount", proto);  // 24
+  PROTO_FROM_MATCHER(_nrings, nrings, int, proto); // 15
+  PROTO_FROM_MATCHER(_ring_bond_count, ring_bond_count, int, proto);  // 15
+  PROTO_FROM_MATCHER(_ring_size, ring_size, int, proto);  // 21
+  PROTO_FROM_MATCHER(_hcount, hcount, int, proto); // 24
   if (_aromaticity == SUBSTRUCTURE_NOT_SPECIFIED) {
   }  else if (_aromaticity == AROMATIC) {  // 27
     proto.set_aromatic(true);
@@ -1611,24 +1658,24 @@ Substructure_Atom_Specifier::BuildProto(SubstructureSearch::SubstructureAtomSpec
   }
   if (_chirality != SUBSTRUCTURE_NOT_SPECIFIED)
     proto.set_chirality(true);  // 28
-  SetProtoValues(_aromatic_ring_size, "aromatic_ring_size", proto);  // 30
-  SetProtoValues(_aliphatic_ring_size, "aliphatic_ring_size", proto);  // 33
-  SetProtoValues(_attached_heteroatom_count, "attached_heteroatom_count", proto);  // 36
-  SetProtoValues(_lone_pair_count, "lone_pair_count", proto);  // 39
-  SetProtoValues(_unsaturation, "unsaturation", proto);  // 42
-  SetProtoValues(_daylight_x, "daylight_x", proto);  // 45
-  SetProtoValues(_isotope, "isotope", proto);  // 48
-  SetProtoValues(_aryl, "aryl", proto);  // 51
-  SetProtoValues(_vinyl, "vinyl", proto);  // 54
-  SetProtoValues(_fused_system_size, "fused_system_size", proto);  // 57
+  PROTO_FROM_MATCHER(_aromatic_ring_size, aromatic_ring_size, int, proto);  // 30
+  PROTO_FROM_MATCHER(_aliphatic_ring_size, aliphatic_ring_size, int, proto);  // 33
+  PROTO_FROM_MATCHER(_attached_heteroatom_count, attached_heteroatom_count, int, proto);  // 36
+  PROTO_FROM_MATCHER(_lone_pair_count, lone_pair_count, int, proto);  // 39
+  PROTO_FROM_MATCHER(_unsaturation, unsaturation, int, proto);  // 42
+  PROTO_FROM_MATCHER(_daylight_x, daylight_x, int, proto);  // 45
+  PROTO_FROM_MATCHER(_isotope, isotope, uint32_t, proto);  // 48
+  PROTO_FROM_MATCHER(_aryl, aryl, int, proto);  // 51
+  PROTO_FROM_MATCHER(_vinyl, vinyl, int, proto);  // 54
+  PROTO_FROM_MATCHER(_fused_system_size, fused_system_size, int, proto);  // 58
   if (_all_rings_kekule != SUBSTRUCTURE_NOT_SPECIFIED) {
     proto.set_all_rings_kekule(true);  // 60
   }
-  SetProtoValues(_heteroatoms_in_ring, "heteroatoms_in_ring", proto);  // 61
+  PROTO_FROM_MATCHER(_heteroatoms_in_ring, heteroatoms_in_ring, int, proto);  // 61
   SET_PROTO_IF_SET(proto, match_spinach_only, -1);  // 64
-  SetProtoValues(_scaffold_bonds_attached_to_ring, "scaffold_bonds_attached_to_ring", proto);  // 65
+  PROTO_FROM_MATCHER(_scaffold_bonds_attached_to_ring, scaffold_bonds_attached_to_ring, int, proto);  // 65
   SET_PROTO_IF_SET(proto, preference_value, 0);  // 68
-  SetProtoValues(_symmetry_degree, "symmetry_degree", proto);  // 69
+  PROTO_FROM_MATCHER(_symmetry_degree, symmetry_degree, int, proto);  // 69
   SET_PROTO_IF_SET(proto, symmetry_group, 0);  // 72
   if (_spiro < 0) {
   } else if (_spiro == 0) {
@@ -1966,7 +2013,7 @@ Substructure_Environment::construct_from_proto(const SubstructureSearch::Substru
     const_IWSubstring x = smarts;
     const char * s = smarts.data();
 
-    if (isdigit(s[0]) || '>' == s[0] || '<' == s[0] || s[0] == kOpenBrace) {
+    if (x.length() > 0 && (isdigit(s[0]) || '>' == s[0] || '<' == s[0] || s[0] == kOpenBrace)) {
       int chars_consumed = substructure_spec::SmartsNumericQualifier(s, smarts.length(), _hits_needed);
       if (chars_consumed == 0) {
         cerr << "Substructure_Environment::construct_from_proto:invalid numeric qualifier '" << x << "'\n";
@@ -2297,6 +2344,18 @@ Single_Substructure_Query::_construct_from_proto(const SubstructureSearch::Singl
         return 0;
       }
       _substituent.add(substituent.release());
+    }
+  }
+
+  if (proto.substituent_no_match_size() > 0) {
+    for (const auto& subst : proto.substituent_no_match()) {
+      std::unique_ptr<Substituent> substituent(std::make_unique<Substituent>());
+      if (! substituent->ConstructFromProto(subst)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid Substituent\n";
+        cerr << subst.ShortDebugString() << '\n';
+        return 0;
+      }
+      _substituent_no_match.add(substituent.release());
     }
   }
 
@@ -3578,8 +3637,10 @@ Substructure_Ring_Specification::BuildProto(SubstructureSearch::SubstructureRing
   ::Substructure_Ring_Base::BuildProto(*proto.mutable_base());
 
   SETPROTOVALUES(proto, ring_size, int);  // 2
-  if (_aromatic) {
+  if (_aromatic == AROMATIC) {
     proto.set_aromatic(true);   // 5
+  } else if (_aromatic == NOT_AROMATIC) {
+    proto.set_aromatic(false);   // 5
   }
   SETPROTOVALUES(proto, fused, int);   // 6
   SETPROTOVALUES(proto, fused_aromatic_neighbours, int);   // 9
@@ -3998,6 +4059,155 @@ MatchedAtomMatch::BuildProto(SubstructureSearch::MatchedAtomMatch& proto) const 
 }
 
 int
+Substructure_Atom_Environment::BuildProto(SubstructureSearch::SubstructureAtom& proto) const {
+  cerr << "SubstructureAtom::BuildProto:has " << _number_elements << " components\n";
+  if (_number_elements == 0) {
+    return 1;
+  }
+
+  SubstructureSearch::SubstructureAtomEnvironment* env = proto.add_environment();
+  for (Substructure_Atom* a : *this) {
+    SubstructureSearch::SubstructureAtom* in_proto = env->add_substructure_atom();
+    a->BuildProto(*in_proto);
+  }
+
+  // If just one component, no operator.
+  if (_number_elements == 1) {
+    return 1;
+  }
+
+  const std::string op = _operator.ToString().AsString();
+  cerr << "Encoding logexp as '" << op << "'\n";
+  env->set_op(op);
+
+  return 1;
+}
+
+int
+Substructure_Atom_Environment::BuildFromProto(const SubstructureSearch::SubstructureAtomEnvironment& proto) {
+  cerr << "SubstructureAtomEnvironment::BuildFromProto:implement this\n";
+  for (const SubstructureSearch::SubstructureAtom& atom_proto : proto.substructure_atom()) {
+    std::unique_ptr<Substructure_Atom> a = std::make_unique<Substructure_Atom>();
+    extending_resizable_array<Substructure_Atom *> completed;
+    if (! a->construct_from_proto(atom_proto, completed)) {
+      cerr << "Substructure_Atom::BuildFromProto:cannot parse atom " << atom_proto.ShortDebugString() << '\n';
+      return 0;
+    }
+    this->add(a.release());
+  }
+
+  // Cannot be empty.
+  if (_number_elements == 0) {
+    cerr << "Substructure_Atom_Environment::BuildFromProto:no components read " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // If there is just one component, no operator needed.
+  if (! proto.has_op()) {
+    if (_number_elements == 1) {
+      return 1;
+    }
+    cerr << "Substructure_Atom_Environment::BuildFromProto:one component, but operator " << proto.op() << "'\n";
+    return 0;
+  }
+
+  if (! proto.has_op() || proto.op().empty()) {
+    cerr << "Substructure_Atom_Environment::BuildFromProto:got " << _number_elements << " components, but no op " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (! _operator.BuildFromString(proto.op())) {
+    cerr << "Substructure_Atom_Environment::BuildFromProto:cannot parse operator '" << proto.op() << "'\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+RequiredBond::ConstructFromProto(const SubstructureSearch::RequiredBond& proto) {
+  if (proto.has_atomic_number_1()) {
+    _atomic_number_1 = proto.atomic_number_1();
+  } else if (proto.has_atomic_symbol_1()) {
+    const IWString s = proto.atomic_symbol_1();
+    isotope_t notused;
+    const Element* e = get_element_from_symbol(s, notused);
+    if (e == nullptr) {
+      cerr << "RequiredBond::ConstructFromProto:unrecognised symbol '" << s << "'\n";
+      return 0;
+    }
+    _atomic_number_1 = e->atomic_number();
+  } else {
+    cerr << "RequiredBond::ConstructFromProto:must specify first atom type\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.has_btype()) {
+    if (proto.btype() == SubstructureSearch::SS_SINGLE_BOND) {
+      _btype = SINGLE_BOND;
+    } else if (proto.btype() == SubstructureSearch::SS_DOUBLE_BOND) {
+      _btype = DOUBLE_BOND;
+    } else if (proto.btype() == SubstructureSearch::SS_TRIPLE_BOND) {
+      _btype = TRIPLE_BOND;
+    } else {
+      cerr << "RequiredBond::ConstructFromProto:Unrecognised bond type\n";
+      cerr << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+  } else {
+    _btype = SINGLE_BOND;
+  }
+
+  if (proto.has_atomic_number_2()) {
+    _atomic_number_2 = proto.atomic_number_2();
+  } else if (proto.has_atomic_symbol_2()) {
+    const IWString s = proto.atomic_symbol_2();
+    isotope_t notused;
+    const Element* e = get_element_from_symbol(s, notused);
+    if (e == nullptr) {
+      cerr << "RequiredBond::ConstructFromProto:unrecognised symbol '2 " << s << "'\n";
+      return 0;
+    }
+    _atomic_number_2 = e->atomic_number();
+  } else {
+    cerr << "RequiredBond::ConstructFromProto:must specify first atom type\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.has_min_count()) {
+    _min_count = proto.min_count();
+    if (_min_count <= 0) {
+      cerr << "RequiredBond::ConstructFromProto:invalid min count\n";
+      cerr << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+RequiredBond::BuildProto(SubstructureSearch::RequiredBond& proto) const {
+  proto.set_atomic_number_1(_atomic_number_1);
+  if (_btype == SINGLE_BOND) {
+    proto.set_btype(SubstructureSearch::SS_SINGLE_BOND);
+  } else if (_btype == DOUBLE_BOND) {
+    proto.set_btype(SubstructureSearch::SS_DOUBLE_BOND);
+  } else if (_btype == TRIPLE_BOND) {
+    proto.set_btype(SubstructureSearch::SS_TRIPLE_BOND);
+  } else {
+    cerr << "RequiredBond::BuildProto:what kind of bond do I have " << _btype << '\n';
+    return 0;
+  }
+  proto.set_atomic_number_2(_atomic_number_2);
+
+  return 1;
+}
+
+
+int
 Region::ConstructFromProto(const SubstructureSearch::Region& proto) {
   for (auto a : proto.atom()) {
     _matched_atom.add_if_not_already_present(a);
@@ -4021,12 +4231,18 @@ Region::ConstructFromProto(const SubstructureSearch::Region& proto) {
     return 0;
   }
 
+  if (! GETVALUES(proto, atoms_not_on_shortest_path, 0, no_limit)) {
+    return 0;
+  }
+
   if (_natoms.is_set()) {
   } else if (_nrings.is_set()) {
+  } else if (_atoms_not_on_shortest_path.is_set()) {
   } else {
     cerr << "Region::ConstructFromProto:nothing specified\n";
     return 0;
   }
+
   return 1;
 }
 
@@ -4042,6 +4258,10 @@ Region::BuildProto(SubstructureSearch::Region& proto) const {
 
   if (_nrings.is_set()) {
     SetProtoValues(_natoms, "nrings", proto);
+  }
+
+  if (_atoms_not_on_shortest_path.is_set()) {
+    SetProtoValues(_atoms_not_on_shortest_path, "atoms_not_on_shortest_path", proto);
   }
 
   return 1;
@@ -4145,8 +4365,11 @@ RequiredMolecularProperties::DiscernAttributesSpecified() {
 
 int
 NearbyAtoms::ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto) {
+#ifdef DEBUG_NEARBY_ATOMS_CONSTRUCT_FROM_PROTO
   cerr << "NearbyAtoms::ConstructFromProto building from\n";
   cerr << proto.ShortDebugString() << '\n';
+#endif
+
   int nquery = proto.smarts_size() + proto.query_size() + proto.query_file_size();
   if (nquery != 1) {
     cerr << "NearbyAtoms::ConstructFromProto:must specify exactly 1 query source " << nquery << " invalid\n";
@@ -4218,7 +4441,6 @@ NearbyAtoms::ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto) {
   if (proto.has_rejection()) {
     _rejection = proto.rejection();
   }
-  cerr << "Rejection set to " << _rejection << '\n';
 
   return 1;
 }

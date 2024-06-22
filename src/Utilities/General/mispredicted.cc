@@ -19,6 +19,7 @@
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/iwre2.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
@@ -56,6 +57,11 @@ static IWString_and_File_Descriptor stream_for_summary;
 static int data_includes_distance_to_support_vector = 0;
 
 static int sort_best_to_worst = 1;
+
+static IW_STL_Hash_Map_String id_to_smiles;
+
+static int ignore_duplicate_experimental_values = 0;
+static uint32_t duplicate_experimental_values_ignored = 0;
 
 class Binning_Data
 {
@@ -198,14 +204,11 @@ class Entity_Classification : public Entity
   void
   predicted_as(const const_IWSubstring& s);
 
-  float
-  accuracy() const;
+  float accuracy() const;
 
-  int
-  report(IWString_and_File_Descriptor&) const;
+  int report(IWString_and_File_Descriptor&) const;
 
-  int
-  write_summary_data(IWString_and_File_Descriptor&) const;
+  int write_summary_data(IWString_and_File_Descriptor&) const;
 };
 
 Entity_Classification::Entity_Classification(const IWString& s) : Entity(s)
@@ -241,10 +244,21 @@ Entity_Classification::accuracy() const
 int
 Entity_Classification::report(IWString_and_File_Descriptor& output) const
 {
-  output << _id << " " << _correct_class << " predicted " << _times_predicted;
-  if (_times_predicted > 0) {
-    output << " correct " << _correct_predictions << ' ' << accuracy();
+  static constexpr char kSep = ' ';
+
+  output << _id << kSep;
+
+  if (produce_descriptor_file) {
+    output << _correct_class << kSep << _times_predicted << kSep <<
+              _correct_predictions << kSep <<
+              iwmisc::Fraction<float>(_correct_predictions, _times_predicted);
+  } else {
+    output << _correct_class << " predicted " << _times_predicted;
+    if (_times_predicted > 0) {
+      output << " correct " << _correct_predictions << kSep << accuracy();
+    }
   }
+
   output << '\n';
 
   return 1;
@@ -278,31 +292,24 @@ class Entity_Continuous : public Entity
   Entity_Continuous(const IWString&);
 
   void
-  set_experimental_value(T s)
-  {
+  set_experimental_value(T s) {
     _experimental_value = s;
   }
 
   T
-  experimental_value() const
-  {
+  experimental_value() const {
     return _experimental_value;
   }
 
-  int
-  predicted_as(const const_IWSubstring&);
+  int predicted_as(const const_IWSubstring&);
   void predicted_as(T);
-  int
-  prediction_and_distance(const const_IWSubstring&, const const_IWSubstring&);
+  int prediction_and_distance(const const_IWSubstring&, const const_IWSubstring&);
 
-  T
-  accuracy() const;
+  T accuracy() const;
 
-  int
-  report(IWString_and_File_Descriptor&) const;
+  int report(IWString_and_File_Descriptor&) const;
 
-  int
-  write_summary_data(IWString_and_File_Descriptor&) const;
+  int write_summary_data(IWString_and_File_Descriptor&) const;
 };
 
 template <typename T>
@@ -378,14 +385,24 @@ template <typename T>
 int
 Entity_Continuous<T>::report(IWString_and_File_Descriptor& output) const
 {
-  if (produce_descriptor_file) {
-    if (0 == _times_predicted) {
-      return 1;
-    }
+  static constexpr char kSep = ' ';
 
-    output << _id << ' ' << _experimental_value << ' ' << accuracy();
+  if (! id_to_smiles.empty()) {
+    const auto iter = id_to_smiles.find(_id);
+    if (iter == id_to_smiles.end()) {
+      cerr << "NO smiles for '" << _id << "'\n";
+      output << '*' << kSep;
+    } else {
+      output << iter->second << kSep;
+    }
+  }
+
+  output << _id << kSep << _experimental_value << kSep;
+
+  if (produce_descriptor_file) {
+    output << accuracy();
   } else {
-    output << _id << ' ' << _experimental_value << " predicted " << _times_predicted;
+    output << "predicted " << _times_predicted;
     if (_times_predicted > 0) {
       output << " btw " << _predictions.minval() << " and " << _predictions.maxval()
              << " diffs btw " << _diffs.minval() << " and " << _diffs.maxval() << " ave "
@@ -515,29 +532,72 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Identifies molecules that are poorly predicted\n";
-  cerr << " -E <fname>     experimental (Correct) results in <fname>\n";
-  cerr << " -g             ignore missing experimental data\n";
-  cerr << " -e <col>       experimental values in column <col>\n";
-  cerr << " -p <col>       predicted    values in column <col>\n";
-  cerr << " -C             classification problem\n";
-  cerr << " -c <float>     cutoff for recomputing class membership using raw score\n";
-  cerr << " -X -1,1        convert class labels to -1,1 based on prevalence (svmfp_calibrate)\n";
-  cerr << " -F             run in a fault tolerant mode - skip seemingly incorrect files\n";
-  cerr << " -s             consider signed differences rather than absolute\n";
-  cerr << " -w <number>    only write the <number> worst predicted values\n";
-  cerr << " -b             'balance' numeric filtering - approximately equal large and small values\n";
-  cerr << " -W <value>     only write items with prediction errors above <value>\n";
-  cerr << " -d             produce a 'descriptor' like file, just id and ave activity diff\n";
-  cerr << " -h             input files were produced by svmfp_evaluate with the -c option (dist to SV)\n";
-  cerr << " -D <fname>     produce file of distance vs abs prediction error\n";
-  cerr << " -Y <fname>     produce file 'id ave_diff N'\n";
-  cerr << " -R <regex>     process all files that match <regex> in current directory\n";
-  cerr << " -r             reverse sort order, sort output from worst (top of file) to best (bottom)\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Identifies molecules that are poorly predicted across multiple prediction files.
+ -E <fname>     experimental (Correct) results in <fname>
+ -g             ignore missing experimental data
+ -h             ignore duplicate entries in the -E file.
+ -e <col>       experimental values in column <col>
+ -p <col>       predicted    values in column <col>
+ -C             classification problem
+ -c <float>     cutoff for recomputing class membership using raw score
+ -X -1,1        convert class labels to -1,1 based on prevalence (svmfp_calibrate)
+ -F             run in a fault tolerant mode - skip seemingly incorrect files
+ -s             consider signed differences rather than absolute
+ -w <number>    only write the <number> worst predicted values
+ -b             'balance' numeric filtering - approximately equal large and small values
+ -W <value>     only write items with prediction errors above <value>
+ -d             produce a 'descriptor' like file, just id and ave activity diff
+ -k             input files were produced by svmfp_evaluate with the -c option (dist to SV)
+ -D <fname>     produce file of distance vs abs prediction error
+ -Y <fname>     produce file 'id ave_diff N'
+ -R <regex>     process all files that match <regex> in current directory
+ -S <fname>     file of smiles - output will include the smiles
+ -r             reverse sort order, sort output from worst (top of file) to best (bottom)
+ -v             verbose output
+)";
   // clang-format on
 
+
   exit(rc);
+}
+
+static int
+ReadSmilesLine(const_IWSubstring& buffer, IW_STL_Hash_Map_String& id_to_smiles) {
+  IWString smiles, id;
+  int i = 0;
+  if (! buffer.nextword(smiles, i) || 
+      ! buffer.nextword(id, i)) {
+    cerr << "Cannot extract smiles and/or id\n";
+    return 0;
+  }
+
+  id_to_smiles[id] = smiles;
+
+  return 1;
+}
+
+static int
+ReadSmiles(iwstring_data_source& input, IW_STL_Hash_Map_String& id_to_smiles) {
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    if (! ReadSmilesLine(buffer, id_to_smiles)) {
+      cerr << "ReadSmiles:cannot process '" << buffer << "'\n";
+      return 0;
+    }
+  }
+
+  return id_to_smiles.size();
+}
+
+static int
+ReadSmiles(const char* fname, IW_STL_Hash_Map_String& id_to_smiles) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "ReadSmiles:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return ReadSmiles(input, id_to_smiles);
 }
 
 typedef IW_STL_Hash_Map<IWString, Entity_Classification*> ID_to_Classification_Data;
@@ -860,7 +920,11 @@ parse_experimental_data_record(const const_IWSubstring& buffer,
   int i = 0;
   buffer.nextword(id, i);
 
-  if (idd.contains(id)) {
+  if (! idd.contains(id)) {
+    // new value, great
+  } else if (ignore_duplicate_experimental_values) {
+    ++duplicate_experimental_values_ignored;
+  } else {
     cerr << "Duplicate experimental data for '" << id << "', cannot continue\n";
     return 0;
   }
@@ -1383,7 +1447,7 @@ report_coverage(const ID_to_Classification_Data& idcd, std::ostream& os)
 static int
 mispredicted(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:HX:r");
+  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:h");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1442,9 +1506,7 @@ mispredicted(int argc, char** argv)
     }
   }
 
-  if (cl.option_present('H')) {
-    const_IWSubstring h = cl.string_value('H');
-
+  if (cl.option_present('k')) {
     data_includes_distance_to_support_vector = 1;
 
     if (verbose) {
@@ -1522,6 +1584,18 @@ mispredicted(int argc, char** argv)
     usage(3);
   }
 
+  if (cl.option_present('S')) {
+    IWString fname = cl.string_value('S');
+    if (! ReadSmiles(fname.null_terminated_chars(), id_to_smiles)) {
+      cerr << "Cannot read smiles '" << fname << "'\n";
+      return 1;
+    }
+
+    if (verbose) {
+      cerr << "Read " << id_to_smiles.size() << " id to smiles from " << fname << "n";
+    }
+  }
+
   if (cl.option_present('R')) {
     ;
   } else if (cl.empty()) {
@@ -1529,12 +1603,22 @@ mispredicted(int argc, char** argv)
     usage(2);
   }
 
-  const_IWSubstring f = cl.string_value('E');
+  const_IWSubstring experimental_data_fname = cl.string_value('E');
 
   IWString_and_File_Descriptor output(1);
 
   if (produce_descriptor_file) {
-    output << "ID EXPT AVDIFF\n";
+    static constexpr char kSep = ' ';
+
+    if (id_to_smiles.size()) {
+      output << "SMILES" << kSep;
+    }
+    if (classification) {
+      output << "ID EXPT N Correct Accuracy";
+    } else {
+      output << "ID EXPT AVDIFF";
+    }
+    output << '\n';
   }
 
   if (cl.option_present('Y')) {
@@ -1565,6 +1649,13 @@ mispredicted(int argc, char** argv)
     }
   }
 
+  if (cl.option_present('h')) {
+    ignore_duplicate_experimental_values = 1;
+    if (verbose) {
+      cerr << "Will ignore duplicate experimental values in the -E file\n";
+    }
+  }
+
   std::unique_ptr<re2::RE2> fname_rx;
 
   bool fname_rx_active = false;
@@ -1587,13 +1678,13 @@ mispredicted(int argc, char** argv)
   if (classification) {
     ID_to_Classification_Data idcd;
 
-    if (!read_experimental_data_classification(f, idcd)) {
-      cerr << "Cannot read experimental data from '" << f << "'\n";
+    if (!read_experimental_data_classification(experimental_data_fname, idcd)) {
+      cerr << "Cannot read experimental data from '" << experimental_data_fname << "'\n";
       return 3;
     }
 
     if (verbose) {
-      cerr << "Read " << idcd.size() << " experimental data values from '" << f << "'\n";
+      cerr << "Read " << idcd.size() << " experimental data values from '" << experimental_data_fname << "'\n";
     }
 
     IW_STL_Hash_Map_String xref;
@@ -1632,13 +1723,13 @@ mispredicted(int argc, char** argv)
   } else {
     ID_to_Continuous_Data idcd;
 
-    if (!read_experimental_data_continuous(f, idcd)) {
-      cerr << "Cannot read experimental data from '" << f << "'\n";
+    if (!read_experimental_data_continuous(experimental_data_fname, idcd)) {
+      cerr << "Cannot read experimental data from '" << experimental_data_fname << "'\n";
       return 3;
     }
 
     if (verbose) {
-      cerr << "Read " << idcd.size() << " experimental data values from '" << f << "'\n";
+      cerr << "Read " << idcd.size() << " experimental data values from '" << experimental_data_fname << "'\n";
     }
 
     if (fname_rx_active) {

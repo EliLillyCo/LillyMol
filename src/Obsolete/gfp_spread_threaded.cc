@@ -16,7 +16,7 @@
 #include "Foundational/iwmisc/numeric_data_from_file.h"
 
 #include "Utilities/GFP_Tools/tversky.h"
-#include "Utilities/GFP_Tools/spread_v2.h"
+#include "Utilities/GFP_Tools/spread.h"
 
 using std::cerr;
 using std::endl;

@@ -20,7 +20,7 @@
     int _mdl_atom_is_chiral_centre (atom_number_t zatom, int cfg, MDL_File_Supporting_Material &);
 
   private:
-    int _contains_isotope_above (isotope_t) const;
+    int _contains_isotope_above (isotope_t iso) const;
 
 
     int _has_delocalised_neighbours (atom_number_t zatom, const int * aromatic_atoms, const int * aromatic_bonds,

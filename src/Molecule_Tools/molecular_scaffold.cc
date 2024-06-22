@@ -215,6 +215,15 @@ output_scaffold(Molecule& m, IWString& original, int number_ring_systems, O& out
   output << "\n";
 }
 
+void
+UnsetImplicitHydrogenKnown(Molecule& m) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    m.unset_all_implicit_hydrogen_information(i);
+    m.recompute_implicit_hydrogens(i);
+  }
+}
+
 template <typename O>
 int
 molecular_scaffold(Molecule& m, O& output) {
@@ -289,6 +298,7 @@ molecular_scaffold(Molecule& m, O& output) {
       msub.delete_all_fragments_except(k_good);
     }
     if (remove_spinach(msub, spinach)) {
+      UnsetImplicitHydrogenKnown(msub);
       output_scaffold(msub, original, sub_ringsys, output);
     }
   }

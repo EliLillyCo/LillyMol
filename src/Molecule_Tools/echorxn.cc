@@ -4,6 +4,7 @@
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/proto_support.h"
 
 #include "Molecule_Lib/iwreaction.h"
 #include "Molecule_Lib/rxn_file.h"
@@ -18,10 +19,29 @@ static int verbose = 0;
 
 static IWString output_filename;
 
+static int output_as_textproto = 0;
+
+static int
+EchoRxnProto(IWReaction& rxn, const char* fname) {
+  ReactionProto::Reaction proto;
+
+  if (! rxn.BuildProto(proto)) {
+    cerr << "EchoRxnProto:cannot create proto\n";
+    return 0;
+  }
+
+  IWString tmp(output_filename);
+  return iwmisc::WriteTextProto<ReactionProto::Reaction>(proto, tmp);
+}
+
 static int
 echorxn (IWReaction & rxn,
          const char * fname)
 {
+  if (output_as_textproto) {
+    return EchoRxnProto(rxn, fname);
+  }
+
   std::ofstream output;
 
   if (output_filename.length())
@@ -137,13 +157,22 @@ do_echo_isis_reaction_file(RXN_File & ISIS_rxn,
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Usage: " << prog_name << " <options> <reaction1> <reaction2> ...\n";
 
-  cerr << "  -h             query files in same directory as reaction files\n";
-  cerr << "  -D <fname>     ISIS reaction file\n";
-  cerr << "  -S <fname>     specify file name stem for echo'd reaction files\n";
-  cerr << "  -v             verbose output\n";
+  cerr << " -h             query files in same directory as reaction files\n";
+  cerr << " -D <fname>     ISIS reaction file\n";
+  cerr << " -S <fname>     specify file name stem for echo'd reaction files\n";
+  cerr << " -t             output as textproto\n";
+  cerr << " -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -151,15 +180,21 @@ usage (int rc)
 static int
 echorxn(int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vD:S:h");
+  Command_Line cl(argc, argv, "vD:S:ht");
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised options encountered\n";
     usage(1);
   }
 
   verbose = cl.option_count('v');
+
+  if (cl.option_count('t')) {
+    output_as_textproto = 1;
+    if (verbose) {
+      cerr << "Will write textproto proto forms\n";
+    }
+  }
 
   int query_files_in_reaction_directory = 0;
   if (cl.option_present('h'))
@@ -204,16 +239,16 @@ echorxn(int argc, char ** argv)
     return 0;
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(5);
   }
 
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (! echorxn(cl[i], query_files_in_reaction_directory))
-      return i + 1;
+  for (const char* fname : cl) {
+    if (! echorxn(fname, query_files_in_reaction_directory)) {
+      cerr << "Error processing '" << fname << "'\n";
+      return 1;
+    }
   }
 
   return 0;

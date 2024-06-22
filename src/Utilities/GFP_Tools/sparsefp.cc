@@ -617,9 +617,6 @@ Sparse_Fingerprint::tanimoto_binary(const Sparse_Fingerprint &rhs) const {
     return static_cast<similarity_type_t>(0.0);
   }
 
-  assert(nullptr != _count);
-  assert(_nset > 0 && rhs._nset > 0);
-
 // #define DEBUG_SPARSE_TANIMOTO_BINARY
 #ifdef DEBUG_SPARSE_TANIMOTO_BINARY
   cerr << "Comparing non colliding counted fingerprint with " << _nbits << " bits "

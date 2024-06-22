@@ -38,7 +38,8 @@ INSTANTIATE_TEST_SUITE_P(RandomlySelectedMolecules, TestUniqueSmiles, testing::V
    SmilesAndExpected{"CC", "CC"},
    SmilesAndExpected{"OC", "OC"},
    SmilesAndExpected{"CO", "OC"},
-   SmilesAndExpected{"O=C(O)C12CC3(CC(C1)CC(C2)C3)", "O=C(O)C12CC3CC(CC(C3)C1)C2"}
+   SmilesAndExpected{"O=C(O)C12CC3(CC(C1)CC(C2)C3)", "O=C(O)C12CC3CC(CC(C3)C1)C2"},
+   SmilesAndExpected{"S1C=CC=C1", "s1cccc1"}
 ));
 
 class TestUniqueKekuleSmiles: public testing::TestWithParam<SmilesAndExpected> {

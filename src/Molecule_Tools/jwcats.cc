@@ -12,8 +12,6 @@
 #include <memory>
 
 using std::cerr;
-using std::endl;
-using std::ostream;
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
@@ -226,8 +224,6 @@ output_result_header(IWString_and_File_Descriptor& output)
     size = 14;
   }
 
-  output << "Name";
-
   for (int i = 0; i < max_bond_separation; i++) {
     for (int j = 0; j < size; j++) {
       //    output <<" jwc_B"<< (i + 1) <<"P"<<j;
@@ -301,7 +297,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
 
 #ifdef ECHO_DONOR_ACCEPTOR_RESULTS
   for (int i = 0; i < n_atoms; i++) {
-    cerr << m.isotope(i) << endl;
+    cerr << m.isotope(i) << '\n';
   }
 #endif
 
@@ -357,7 +353,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
 
       int nhits = queries[i]->substructure_search(m, sresults);
       if (verbose > 1) {
-        cerr << ' ' << nhits << " hits to query " << i << endl;
+        cerr << ' ' << nhits << " hits to query " << i << '\n';
       }
 
       if (0 == nhits) {
@@ -374,9 +370,9 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
                     }*/
       }
     }
-    //      cerr<<"Hydrophobic"<<endl;
+    //      cerr<<"Hydrophobic"<<'\n';
     //      for (int i=0; i<n_atoms; i++)
-    //        if (properties[4][i]) cerr<<"atomi="<<i<<endl;
+    //        if (properties[4][i]) cerr<<"atomi="<<i<<'\n';
   } else {
     // compute partial atomic charge -- only needed when looking at lipophilicity
     // descriptor
@@ -391,7 +387,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
     }
 
     for (int i = 0; i < n_atoms; i++) {
-      //    cerr << i << ' ' << m.charge_on_atom(i) << endl;
+      //    cerr << i << ' ' << m.charge_on_atom(i) << '\n';
       if (fabs(m.charge_on_atom(i)) <= 0.2) {
         properties[4][i] = 1;
         if (verbose) {
@@ -399,7 +395,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
         }
       }
       //    cerr << "Atom " << i << " type " << m.atomic_number(i) << " q " <<
-      //    m.charge_on_atom(i) << " p " << properties[4][i] << endl;
+      //    m.charge_on_atom(i) << " p " << properties[4][i] << '\n';
     }
   }
 
@@ -407,7 +403,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
   if (scaling_type) {
     for (int i = 0; i < n_atoms; i++) {
       for (int j = 0; j < 5; j++) {
-        //      cerr << i << ' ' << j << ' ' << properties[j][i] << endl;
+        //      cerr << i << ' ' << j << ' ' << properties[j][i] << '\n';
         if (properties[j][i]) {
           property_count[j]++;
         }
@@ -455,7 +451,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
   // for each atom pair, find out if they belong to a properties pair,
   // if yes, increment the count
 
-  // cerr << "HAC " << n_atoms << endl;
+  // cerr << "HAC " << n_atoms << '\n';
 
   for (int i = 0; i < n_atoms; i++) {
     if (1 == m.atomic_number(i)) {
@@ -492,7 +488,7 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
           int array_column = (bond_distance - 1) * 15 + property_pair_no;
           //        cerr << " i " << i << " j " << j << " dist " << bond_distance << " npi
           //        " << npi << " npj " << npj << " pair " << property_pair_no << " col "
-          //        << array_column << endl;
+          //        << array_column << '\n';
           if (0 == scaling_type) {
             scaled_counts[array_column]++;
           } else if (1 == scaling_type) {
@@ -504,11 +500,11 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
             scaled_counts[array_column] += static_cast<double>(number_heavy_atoms) /
                                            (property_count[npi] + property_count[npj]);
           } else {
-            cerr << "Not sure what to do with scaling type " << scaling_type << endl;
+            cerr << "Not sure what to do with scaling type " << scaling_type << '\n';
             return 0;
           }
           //        cerr << "put " << npi << " and " << npj << " into " <<
-          //        property_pair_no << " value " << scaled_counts[array_column] << endl;
+          //        property_pair_no << " value " << scaled_counts[array_column] << '\n';
         }
       }
     }
@@ -595,13 +591,13 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output)
 
   m.recompute_distance_matrix();
 
-  //    cerr << "Before charge assigner, Number of Atom"<<n_atoms<<endl;
+  //    cerr << "Before charge assigner, Number of Atom"<<n_atoms<<'\n';
 
   if (charge_assigner.active()) {
     charge_assigner.process(m);
   }
 
-  //    cerr << "After charge assigner,  Number of Atom"<<m.natoms()<<endl;
+  //    cerr << "After charge assigner,  Number of Atom"<<m.natoms()<<'\n';
 
   if (make_implicit_hydrogens_explicit) {
     m.make_implicit_hydrogens_explicit();
@@ -648,7 +644,7 @@ jw_cat_search(data_source_and_type<Molecule>& input, IWString_and_File_Descripto
     }
 
     if (!jw_cat_search(*m, output)) {
-      cerr << "ERROR in computing descriptors for " << m->name() << endl;
+      cerr << "ERROR in computing descriptors for " << m->name() << '\n';
       return 0;
     }
 
@@ -956,19 +952,20 @@ jw_cat_search(int argc, char** argv)
 
   if (verbose) {
     logfile << "This file collect all the info about error during the calculation\n";
-    logfile << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
+    logfile << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
     time(&current_time);
     logfile << "calculation started at " << ctime(&current_time);
-    logfile << "The complete Command was:" << endl;
+    logfile << "The complete Command was:" << '\n';
     for (int kk = 0; kk < argc; kk++) {
       logfile << argv[kk] << " ";
     }
-    logfile << endl;
+    logfile << '\n';
   }
 
   IWString_and_File_Descriptor output(1);
 
   if (0 == fingerprint_tag.length()) {
+    output << "Name";
     output_result_header(output);
   }
 
@@ -976,7 +973,7 @@ jw_cat_search(int argc, char** argv)
   for (int i = 0; i < 5; i++) {
     for (int j = i; j < 5; j++) {
       int k = find_property_pair_number(i, j);
-      cerr << " i = " << i << " j = " << j << " pair " << k << endl;
+      cerr << " i = " << i << " j = " << j << " pair " << k << '\n';
     }
   }
 #endif
@@ -1004,10 +1001,10 @@ jw_cat_search(int argc, char** argv)
   // output info
   if (verbose) {
     time(&current_time);
-    logfile << "\n\ncalculation ended at " << ctime(&current_time) << endl;
+    logfile << "\n\ncalculation ended at " << ctime(&current_time) << '\n';
     logfile << "Total Molecules read: " << molecules_read
-            << "\tTotal Error: " << number_of_error << endl;
-    logfile << "Error Rate: " << (double)number_of_error / (double)molecules_read << endl;
+            << "\tTotal Error: " << number_of_error << '\n';
+    logfile << "Error Rate: " << (double)number_of_error / (double)molecules_read << '\n';
     cerr << "Read " << molecules_read << " molecules\n";
 
     cerr << "Processed " << molecules_read << " molecules\n";

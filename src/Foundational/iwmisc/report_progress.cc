@@ -7,5 +7,5 @@
 
 #include "report_progress.h"
 
-template class Report_Progress_Template<unsigned int>;
-template int Report_Progress_Template<unsigned int>::initialise<Command_Line>(Command_Line&, char, int);
+template class Report_Progress_Template<uint64_t>;
+template int Report_Progress_Template<uint64_t>::initialise<Command_Line>(Command_Line&, char, int);

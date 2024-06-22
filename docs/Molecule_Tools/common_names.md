@@ -25,6 +25,7 @@ Gather all the names duplicate structures together
   -y             write first name and count of smiles only
   -s <size>      maximum number of molecules to process
   -r <number>    report progress every <number> molecules processed
+  -X ...         miscellaneous and obscure options
   -i <type>      specify input file type
   -S <name>      specify name for output
   -o <type>      specify output file type
@@ -117,5 +118,21 @@ enables such a transformation.
 
 ### -S \<stem\>
 Specify a file name stem for the output.
+
+### -X
+Several options are available via the -X option.
+
+-X num
+
+In the `-S` output file, include a count of the number of instances of each
+structure.
+
+-X proto=\<fname\>
+Write the results as textproto form to \<fname\>. This might look like
+```
+smiles: "[N+]1(=CN(C)C=C1)CCCC" key: "CCCC[n+]1c[n](C)cc1" id: "CHEMBL3182180" id: "CHEMBL3184676" id: "CHEMBL3559949" 
+```
+Where `id` is a repeated field, holding the id's of all the molecules matching
+the key.
 
 The other options are common across different tools.

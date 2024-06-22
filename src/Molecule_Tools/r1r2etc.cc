@@ -1566,7 +1566,7 @@ R1R2Etc::_R1R2Etc (Molecule & m,
 
     queries_hitting_this_molecule++;
 
-    for (int j = 0; j < nhits; ++j)
+    for (uint32_t j = 0; j < nhits; ++j)
     {
       const auto e = sresults.embedding(j);
 
