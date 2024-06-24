@@ -342,7 +342,7 @@ class MMPPairsObjectClass(MMPDataObjectClass):
             #    return 1
             # else:
             #    return 0
-            if abs(row[clp_diff_idx]) > 0 and row[clp_diff_sd_idx] > 0:
+            if abs(row[clp_diff_idx]) > 0:
 
                 num_pairs = row[num_pairs_idx]
                 clp_left_sd = row[clp_left_sd_idx]
