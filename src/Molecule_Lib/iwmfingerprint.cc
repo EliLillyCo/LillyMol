@@ -2310,9 +2310,10 @@ IWMFingerprint::_construct_fingerprint (Molecule & m,
                                         const int * include_these_atoms)
 {
   assert (nullptr == _bvector);
-  assert (0 == _nbits);
 
-  allocate_space_for_bits(bits_per_iwmfingerprint);
+  if (_nbits == 0) {
+    allocate_space_for_bits(bits_per_iwmfingerprint);
+  }
 
   _bvector = new_int(bits_per_iwmfingerprint);
 

@@ -2787,6 +2787,9 @@ IdentifyTerminalGroups(Molecule& m,
 std::optional<double>
 XLogPWFL(Molecule& m,
       int* status) {
+  // Always remove any explicit Hydrogen atoms, Sorry, this might change `m`.
+  m.remove_all(1);
+
   const int matoms = m.natoms();
 
   std::fill_n(status, matoms, 0);

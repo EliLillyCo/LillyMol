@@ -1359,6 +1359,27 @@ IdentifyShortestPath(Molecule& m,
   return rc;
 }
 
+static int
+CountHeteroatoms(Molecule& m, atom_number_t avoid1, atom_number_t avoid2, 
+                 const int* in_region) {
+  const int matoms = m.natoms();
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (! in_region[i]) {
+      continue;
+    }
+    if (i == avoid1 || i == avoid2) {
+      continue;
+    }
+    if (m.atomic_number(i) != 6) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
 // #define DEBUG_REGION_MATCHES
 
 int
@@ -1429,6 +1450,13 @@ Region::Matches(Molecule_to_Match& target,
 
     int not_in_shortest_path = atoms_in_region - on_shortest_path;
     if (! _atoms_not_on_shortest_path.matches(not_in_shortest_path)) {
+      return 0;
+    }
+  }
+
+  if (_heteroatom_count.is_set()) {
+    int heteratoms = CountHeteroatoms(*m, edges[0], edges[1], tmp.get());
+    if (! _heteroatom_count.matches(heteratoms)) {
       return 0;
     }
   }

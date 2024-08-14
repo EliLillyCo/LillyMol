@@ -212,51 +212,6 @@ py_proto_library(
     ],
 )
 
-proto_library(
-    name = "xgboost_model_proto",
-    srcs = [
-        "xgboost_model.proto",
-    ],
-)
-
-cc_proto_library(
-    name = "xgboost_model_cc_proto",
-    deps = [
-        "xgboost_model_proto",
-    ],
-    visibility = [
-        "//visibility:public",
-    ],
-)
-
-py_proto_library(
-    name = "xgboost_model_py_proto",
-    srcs = [
-        "xgboost_model.proto",
-    ],
-)
-
-proto_library(
-    name = "random_forest_model_proto",
-    srcs = [
-        "random_forest_model.proto",
-    ],
-)
-
-cc_proto_library(
-    name = "random_forest_model_cc_proto",
-    deps = [
-        "random_forest_model_proto",
-    ]
-)
-
-py_proto_library(
-    name = "random_forest_model_py_proto",
-    srcs = [
-        "random_forest_model.proto",
-    ],
-)
-
 cc_library(
     name = "scaler",
     srcs = [
@@ -392,6 +347,7 @@ cc_binary(
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwstring",
         "//Molecule_Tools:dicer_fragments_cc_proto",
+        "@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
@@ -976,24 +932,6 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
-    ],
-)
-
-cc_binary(
-    name = "xgboost_model_evaluate",
-    srcs = [
-        "xgboost_model_evaluate.cc",
-    ],
-    deps = [
-        ":xgboost_model_cc_proto",
-        "//Foundational/cmdline_v2:cmdline_v2",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc",
-        "@xgboost//:xgboost",
-        "@dlmc//:dlmc",
-    ],
-    tags = [
-        "xgboost",
     ],
 )
 

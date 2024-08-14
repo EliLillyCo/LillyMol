@@ -5,10 +5,11 @@
 # TODO: random_molecular_transformations emits too many warning
 # messages, code needs cleanup..
 
+set -x
 if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
-  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $(readlink -e $0))))
 fi
 
 lib="${LILLYMOL_HOME}/data/random_molecular_permutations.d"

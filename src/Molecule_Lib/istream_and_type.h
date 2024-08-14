@@ -363,6 +363,13 @@ data_source_and_type<T>::next_molecule() {
         }
       }
 
+      if (moleculeio::ignore_all_chiral_information_on_input()) {
+        m->remove_all_chiral_centres();
+      }
+      if (moleculeio::discard_directional_bonds_on_input()) {
+        m->revert_all_directional_bonds_to_non_directional();
+      }
+
       return m;
     }
 

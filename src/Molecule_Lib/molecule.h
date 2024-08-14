@@ -1409,6 +1409,14 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   int identify_side_of_bond(int* either_side, atom_number_t astart, int flag,
                             atom_number_t avoid) const;
+  // If successful, return the number of atoms down the from->to bond (including to);
+  // `down_the_bond` will be 1 for those atoms identified.
+  // Fails if the from-to bond is in a ring.
+  // Note that this does NOT initialise `down_the_bond`.
+  // THis can be helpful since it allows you to process all the connections to 
+  // an atom, and assign different flag values to each connection.
+  std::optional<int> DownTheBond(atom_number_t from, atom_number_t to,
+             int* down_the_bond, int flag=1) const;
 
   //  All these functions work the same. If the flag(last argument) is set, then there
   //  will be no requirement for the atoms to be bonded.

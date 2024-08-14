@@ -959,7 +959,7 @@ Substructure_Atom::_matches(Target_Atom & target, const int * already_matched)
     const int m = Substructure_Atom_Specifier::matches(target);
 
 #ifdef DEBUG_ATOM_MATCHES
-    cerr << "Matching atom with " << _components.number_elements() << " components, underlying specifier match " << m << " match or rej " << _match_as_match_or_rejection << endl;
+    cerr << "Matching atom with " << _components.number_elements() << " components, underlying specifier match " << m << " match or rej " << _match_as_match_or_rejection << '\n';
 #endif
   
     if (m && 0 == _match_as_match_or_rejection) {    // matches, but we are a rejection criterion

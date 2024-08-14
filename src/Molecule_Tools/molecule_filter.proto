@@ -45,6 +45,10 @@ message Requirements {
   // Note that this does NOT span spiro fusions.
   optional int32 largest_ring_size = 26;
 
+  // These are not implemented. Likely more efficient to
+  // run this tool and pipe the results to tsubstructure.
+  // If there were a small number of queries, this might make
+  // sense. For now, not implemented.
   repeated string required_smarts = 27;
   repeated string must_not_have_smarts = 28;
 
@@ -61,5 +65,8 @@ message Requirements {
 
   optional float max_aromatic_density = 34;
 
+  optional int32 max_chiral = 35;
+
+  optional int32 max_number_fragments = 36;
 }
 

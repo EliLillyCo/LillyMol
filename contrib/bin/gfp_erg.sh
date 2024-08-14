@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Set up queries for gfp_erg
-if [ -v LILLYMOL_HOME ] ; then
+here=$(dirname $(readlink -e $0))
+
+if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
-  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
+  export LILLYMOL_HOME=$(dirname $(dirname ${here}))
 fi
 
 ERG_QUERIES=${LILLYMOL_HOME}/data/ErG

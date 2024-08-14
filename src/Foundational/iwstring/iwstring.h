@@ -23,6 +23,7 @@
 #endif
 #include <vector>
 #include <string>
+#include <string_view>
 
 #define IW_STD_STRING_DEFINED 1
 
@@ -412,8 +413,11 @@ class IWString : public resizable_array<char>
     int operator == (const IWString &) const;
     int operator != (const IWString &) const;
 
+    // These are not instantiated. Did not work inside Google.
     bool operator== (const std::string& rhs) const;
     bool operator!= (const std::string& rhs) const;
+    bool operator== (const std::string_view& rhs) const;
+    bool operator!= (const std::string_view& rhs) const;
 
 //  The relational operators are implemented using strncmp
 
@@ -600,6 +604,7 @@ class IWString : public resizable_array<char>
 
 #if defined (IW_STD_STRING_DEFINED)
     void operator += (const std::string &);
+    void operator += (const std::string_view &);
 #endif
 
     void append_number (int);
@@ -696,6 +701,7 @@ class IWString : public resizable_array<char>
     IWString & operator << (double);
 #ifdef IW_STD_STRING_DEFINED
     IWString & operator << (const std::string & s) { this->operator+=(s); return *this;}
+    IWString & operator << (const std::string_view & s) { this->operator+=(s); return *this;}
 #endif
 
     int operator < (int) const;
@@ -997,6 +1003,20 @@ Equals(const IWString& lhs, const std::string& rhs) {
 }
 inline bool
 Equals(const const_IWSubstring& lhs, const std::string& rhs) {
+  if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
+    return false;
+  }
+  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+}
+inline bool
+Equals(const IWString& lhs, const std::string_view& rhs) {
+  if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
+    return false;
+  }
+  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+}
+inline bool
+Equals(const const_IWSubstring& lhs, const std::string_view& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }

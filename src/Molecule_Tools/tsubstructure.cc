@@ -11,6 +11,7 @@
 #include "Foundational/iwbits/iwbits.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/iwre2.h"
 #include "Foundational/iwmisc/report_progress.h"
 
 #include "Molecule_Lib/aromatic.h"
@@ -98,6 +99,14 @@ static int write_results_as_proto = 0;
 
 // Nov 2022. Pass our own Molecule_to_Query to substructur reading.
 static Molecule_to_Query_Specifications mqs;
+
+// Jul 2024.
+// Have a file with a bunch of different motifs. Need a simple way of
+// adding something to the name for molecules that match any of the queries.
+static IWString append_to_matches;
+
+// If set, only perform searches on molecules that match a regex.
+static std::unique_ptr<RE2> rx_match_only;
 
 static void
 usage(int rc)
@@ -212,6 +221,8 @@ display_dash_M_options()
   cerr << "  -M ucez        interpret uppercase smarts letters as element specifiers only\n";
   cerr << "  -M ecount      initialise element counts in targets - may help '-q M:...'\n";
   cerr << "  -M mmaq        must match all queries in order for a match to be perceived\n";
+  cerr << "  -M app=<s>     append <s> to molecules matching any query. For example -m NONM -M app=foo\n";
+  cerr << "  -M rx=<rx>     only process molecules where the name matches <rx> - must useful with the app= directive\n";
   cerr << "  -M nsssr       within target objects, nrings includes non-sssr rings\n";
   cerr << "  -M DCF=fname   create a csib directcolorfile <fname>\n";
   cerr << "  -M CEH         Condense Explicit Hydrogens to anchor atom(s)\n";
@@ -1290,7 +1301,7 @@ tsubstructure (Molecule & m,
 
   int * tmp = new_int(tsize); std::unique_ptr<int[]> free_tmp(tmp);
 
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
   isotope_t * atom_isotopic_label;
 
@@ -1326,7 +1337,11 @@ tsubstructure (Molecule & m,
     }
   }
 
-  int nmatched = do_all_queries(m, queries, sresults, tmp, new_elements, atom_isotopic_label);
+  int nmatched = 0;
+  if (rx_match_only && ! iwre2::RE2PartialMatch(m.name(), *rx_match_only)) {
+  } else {
+    nmatched = do_all_queries(m, queries, sresults, tmp, new_elements, atom_isotopic_label);
+  }
 
   if (nullptr != atom_isotopic_label)
     delete [] atom_isotopic_label;
@@ -1345,6 +1360,9 @@ tsubstructure (Molecule & m,
   if (nmatched)
   {
     molecules_which_match++;
+    if (! append_to_matches.empty()) {
+      m << append_to_matches;
+    }
     if (matched_structures_number_assigner.active())
       matched_structures_number_assigner.process(m);
     if (write_matched_atoms_as_mdl_v30_atom_lists || write_matched_atoms_as_mdl_v30_bond_lists)
@@ -1417,8 +1435,7 @@ tsubstructure (data_source_and_type<Molecule> & input,
 
     preprocess(*m);
 
-    if (0 == m->natoms())
-    {
+    if (m->empty()) {
       if (verbose)
         cerr << "Empty molecule skipped\n";
       continue;
@@ -2508,6 +2525,25 @@ tsubstructure(int argc, char ** argv)
         write_results_as_proto = 1;
         if (verbose)
           cerr << "Match results written in proto form\n";
+      }
+      else if (m.starts_with("app=")) {
+        m.remove_leading_chars(4);
+        append_to_matches << ' ' << m;
+        if (verbose) {
+          cerr << "Will append '" << append_to_matches << "' to the names of matched molecules\n";
+        }
+        NONM_append_non_match_query_details = 0;
+      }
+      else if (m.starts_with("rx=")) {
+        m.remove_leading_chars(3);
+        if (! iwre2::RE2Reset(rx_match_only, m)) {
+          cerr << "Invalid regex '" << m << "'\n";
+          return 1;
+        }
+
+        if (verbose) {
+          cerr << "Will only attempt matching on molecules matching '" << rx_match_only->pattern() << "'\n";
+        }
       }
       else if ("help" == m)
       {

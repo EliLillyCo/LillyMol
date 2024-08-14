@@ -160,7 +160,7 @@ new_local_repository(
     build_file_content = """
 cc_library(
     name = "x86-simd.sort",
-    hdrs = 
+    hdrs =
       glob(
         ["src/*hpp"],
       ),
@@ -215,7 +215,7 @@ new_local_repository(
 cc_library(
     name = "xgboost",
     srcs = [
-        "lib64/libxgboost.so",
+        "lib/libxgboost.so",
     ],
     hdrs =
         glob(

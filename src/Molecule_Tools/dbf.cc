@@ -996,7 +996,7 @@ do_spatial_and_topological_distances_computation(
 
       int b;
       if (!ok_topology(m, *ci, *cj, b)) {
-        cerr << "Distance " << d << " rejected by topology\n";
+        // cerr << "Distance " << d << " rejected by topology\n";
         continue;
       }
 

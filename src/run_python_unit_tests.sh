@@ -8,6 +8,12 @@ if [[ ! -v PYTHONPATH ]] ; then
   export PYTHONPATH=${here}
 fi
 
+# If tmpdir is not set, multiple people running absl tests will collide.
+# Unique tmpdir for each user.
+if [[ ! -v TMPDIR ]] ; then
+  export "TMPDIR=/tmp/absl_testing_${USER}"
+fi
+
 if [[ ! -s "${here}/../lib" ]] ; then
   echo "No shared libraries available ${here}, python unit tests not done"
   exit 1

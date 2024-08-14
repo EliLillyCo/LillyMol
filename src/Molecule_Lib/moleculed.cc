@@ -1150,3 +1150,45 @@ Molecule::recompute_distance_matrix()
 
   return rc;
 }
+
+static constexpr int kStartingAtom = 309;
+
+static int
+DownTheBondInternal(const Molecule & m,
+                atom_number_t zatom,
+                atom_number_t previous_atom,
+                int* down_the_bond,
+                int flag) {
+  down_the_bond[zatom] = flag;
+  int rc = 1;
+
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (o == previous_atom) {
+      continue;
+    }
+    if (down_the_bond[o] == 0) {
+      int tmp = DownTheBondInternal(m, o, zatom, down_the_bond, flag);
+      if (tmp < 0) {
+        return -1;
+      }
+      rc += tmp;
+    } else if (down_the_bond[o] == kStartingAtom) {
+      return -1;
+    }
+  }
+
+  return rc;
+}
+
+std::optional<int>
+Molecule::DownTheBond(atom_number_t from, atom_number_t to, int* down_the_bond, int flag) const {
+  down_the_bond[from] = kStartingAtom;
+  const int rc = DownTheBondInternal(*this, to, from, down_the_bond, flag);
+  down_the_bond[from] = 0;
+  if (rc < 0) {
+    return std::nullopt;
+  }
+
+  return rc;
+}

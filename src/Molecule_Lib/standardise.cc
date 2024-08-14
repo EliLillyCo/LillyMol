@@ -454,6 +454,7 @@ display_all_chemical_standardisation_options(std::ostream & os, char zoption)
   os << zopt << CS_SULFONYL_UREA << "     convert S-C(=N)-N to S=C(-N)-N\n";
   os << zopt << CS_124TRIAZINE << "     convert S-C(=N)-N to S=C(-N)-N\n";
   os << zopt << CS_ENOL_FUSED << "     convert [O,S;D1]-c(:n):[aD3x3] to O=C form\n";
+  os << zopt << CS_ISOTOPE << "     convert all isotopic atoms to non isotopic forms\n";
 
   os << zopt << CS_ALL << "         ALL the above standardistions\n";
   os << zopt << CS_REVERSE_NITRO << "     convert O=N=O nitro groups to charge separated\n";
@@ -858,8 +859,9 @@ Chemical_Standardisation::Activate(const IWString& directive,
   else if (tmp == CS_ENOL_FUSED) {
     _transform_enol_fused.activate();
   }
-  else
-  {
+  else if (tmp == CS_ISOTOPE) {
+    _transform_isotopes.activate();
+  } else {
     cerr << "Chemical_Standardisation::Activate:unrecognized directive '" << directive << "'\n";
     return 0;
   }
@@ -3627,8 +3629,7 @@ Chemical_Standardisation::process(Molecule & m)
 
   const auto asave = global_aromaticity_type();
 
-  if (Daylight != asave)
-  {
+  if (Daylight != asave) {
     set_global_aromaticity_type(Daylight);
     m.compute_aromaticity();
   }
@@ -3663,19 +3664,27 @@ Chemical_Standardisation::_process(Molecule & m)
 // Removing atoms can mess up anything which comes after, so make 
 // sure we do that before anything else
 
-  if (_append_string_depending_on_what_changed)
+  if (_append_string_depending_on_what_changed) {
     _append_to_changed_molecules.resize_keep_storage(0);
+  }
 
   int rc = 0;
 
-  if (_remove_hydrogens.active())
+  if (_transform_isotopes.active()) {
+    rc += _do_unset_isotopes(m);
+  }
+
+  if (_remove_hydrogens.active()) {
     rc += _do_remove_hydrogens(m);
+  }
 
-  if (0 == m.natoms())
+  if (0 == m.natoms()) {
     return 0;
+  }
 
-  if (_transform_covalent_metals.active())
+  if (_transform_covalent_metals.active()) {
     _do_transform_covalent_metals(m);
+  }
 
   if (_convert_to_canonical_order != Canonicalise::kNone) {
     ConvertToCanonicalOrder(m);
@@ -8311,6 +8320,8 @@ IWStandard_Current_Molecule::IWStandard_Current_Molecule()
   _nitrogens = 0;
   _oxygens = 0;
 
+  _isotope = 0;
+
   return;
 }
 
@@ -8650,9 +8661,12 @@ IWStandard_Current_Molecule::initialise(Molecule & m)
   atom_number_t first_singly_connected_oxygen = INVALID_ATOM_NUMBER;
   atom_number_t first_singly_connected_sulphur = INVALID_ATOM_NUMBER;
 
-  for (int i = 0; i < _matoms; i++)
-  {
+  for (int i = 0; i < _matoms; i++) {
     Atom * ai = const_cast<Atom *>(_atom[i]);
+
+    if (ai->isotope()) {
+      ++_isotope;
+    }
 
     if (! ai->valence_ok())
       _possible_valence_errors++;
@@ -8945,7 +8959,8 @@ Chemical_Standardisation::_processing_needed(const IWStandard_Current_Molecule &
       (_transform_124_triazine.active() && current_molecule_data.nitrogens() > 2) ||
       (_transform_charged_non_organic.active() && current_molecule_data.non_organic() &&
        (current_molecule_data.npos() > 0 || current_molecule_data.nneg() > 0)) ||
-      (_transform_enol_fused.active() && current_molecule_data.nrings() > 1)
+      (_transform_enol_fused.active() && current_molecule_data.nrings() > 1) ||
+      (_transform_isotopes.active() && current_molecule_data.isotope() > 0)
     ) {
       return 1;
   }
@@ -10470,3 +10485,19 @@ ExternalTransformation::Process(Molecule& m,
 
   return rc;
 }
+
+int
+Chemical_Standardisation::_do_unset_isotopes(Molecule& m) {
+  const int rc = m.unset_isotopes();
+  if (rc == 0) {
+    return 0;
+  }
+
+  _transform_isotopes.extra(rc);
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:isotope";
+  }
+
+  return rc;
+} 

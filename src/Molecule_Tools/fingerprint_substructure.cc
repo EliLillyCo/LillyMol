@@ -12,6 +12,7 @@
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/atom_typing.h"
+#include "Molecule_Lib/etrans.h"
 #include "Molecule_Lib/iwmfingerprint.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
@@ -30,6 +31,8 @@ const char * prog_name = nullptr;
 static int verbose = 0;
 
 static Chemical_Standardisation chemical_standardisation;
+
+static Element_Transformations element_transformations;
 
 static int reduce_to_largest_fragment = 0;
 
@@ -98,6 +101,7 @@ usage (int rc)
   cerr << "  -P ...        atom typing specification, enter '-P help' for info\n";
   cerr << "  -M            produce atom pair fingerprints\n";
   cerr << "  -f            work as a filter\n";
+  cerr << "  -T ...         standard element transformations -T I=Cl -T Br=Cl ...\n";
   cerr << "  -e            truncate any counted fingerprint to 0/1\n";
   cerr << "  -l            reduce to largest fragment\n";
   cerr << "  -i <type>     input specification\n";
@@ -694,6 +698,10 @@ preprocess (Molecule & m)
   if (chemical_standardisation.active())
     chemical_standardisation.process(m);
 
+  if (element_transformations.active()) {
+    element_transformations.process(m);
+  }
+
   return;
 }
 
@@ -969,6 +977,13 @@ fingerprint_substructure (int argc, char ** argv)
     }
   }
 
+  if (cl.option_present('T')) {
+    if (! element_transformations.construct_from_command_line(cl, verbose, 'T')) {
+      cerr << "Cannot initialise element transformations (-T)\n";
+      return 0;
+    }
+  }
+
   if (cl.option_present('e'))
   {
     truncate_counted_fingerprints_to_one = 1;
@@ -977,8 +992,7 @@ fingerprint_substructure (int argc, char ** argv)
       cerr << "Will truncate counted fingerprints to 0/1\n";
   }
 
-  if (cl.option_present('T'))
-  {
+  if (cl.option_present('T')) {
     cl.value('T', fingerprint_tag);
 
     if (verbose)

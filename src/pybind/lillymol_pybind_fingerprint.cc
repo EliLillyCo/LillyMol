@@ -81,6 +81,10 @@ class LinearFingerprintByte : public BaseFpGenerator {
   public:
     LinearFingerprintByte(int nb);
 
+    void set_max_length(uint32_t s) {
+      _fp.set_max_length(s);
+    }
+
     py::array_t<uint8_t> Fingerprint(Molecule& m);
 };
 
@@ -117,6 +121,10 @@ class ECFingerprintByte : public BaseFpGenerator {
 
   public:
     ECFingerprintByte(int nb);
+
+    void set_max_radius(uint32_t rad) {
+      _fp.set_max_radius(rad);
+    }
 
     py::array_t<uint8_t> Fingerprint(Molecule& m);
 };
@@ -264,6 +272,7 @@ PYBIND11_MODULE(lillymol_fingerprint, m)
       },
       "Set atom type"
     )
+    .def("set_max_radius", &ECFingerprintByte::set_max_radius, "Max radius for fingerprints")
     .def("fingerprint",
       [](ECFingerprintByte& fp_creator, Molecule& m) {
         return fp_creator.Fingerprint(m);
@@ -281,6 +290,7 @@ PYBIND11_MODULE(lillymol_fingerprint, m)
       },
       "Set atom type"
     )
+    .def("set_max_length", &LinearFingerprintByte::set_max_length, "Max path length")
     .def("fingerprint",
       [](LinearFingerprintByte& fp_creator, Molecule& m) {
         return fp_creator.Fingerprint(m);
@@ -298,6 +308,7 @@ PYBIND11_MODULE(lillymol_fingerprint, m)
       },
       "Set atom type"
     )
+    .def("set_max_separation", &AtomPairFingerprintByte::set_max_separation, "max separation between atoms")
     .def("fingerprint",
       [](AtomPairFingerprintByte& fp_creator, Molecule& m) {
         return fp_creator.Fingerprint(m);

@@ -5,6 +5,7 @@ local_install(
     name = "install",
     srcs = [
         ":clogp2descriptors_biobyte",
+        ":marvin_pka",
         ":rcorina",
     ],
     tags = [
@@ -40,6 +41,18 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc:iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "marvin_pka",
+    srcs = [
+        "marvin_pka.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
     ],

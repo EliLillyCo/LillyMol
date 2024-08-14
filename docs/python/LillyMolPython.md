@@ -30,12 +30,12 @@ but for now, there is no claim that this is as fast as things could be.
 ## Building
 Your python environment *must* include pybind11. Normally
 ```
-pip install pybond11
+pip install pybind11
 ```
 will accomplish this.
 
 Normally the python bindings are built as part of the default build,
-the script [build_from_source.sh](/src/build_from_source.sh), but if
+the script [build_linux.sh](/src/build_linux.sh), but if
 you wish to compile separately that can be done via
 ```
 bazelisk --output_user_root=/local/disk/ian build --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --local_cpu_resources=10 -c opt pybind:all
@@ -47,7 +47,7 @@ the needed files out of bazel-bin and into lib.
 
 See `WORKSPACE` for how we configured the local python and pybind11 installs.
 This was quite difficult to get right. Normally these will be auto
-configured for you by the [build_third_party](/src/build_third_party.sh) script,
+configured for you by the build script,
 which in turn calls [update_python_in_workspace](/src/update_python_in_workspace.py)
 which interrogates the python installation. 
 
@@ -125,6 +125,13 @@ mols = MolFromSmiles(["C", "CC", "C1CC1"])
 ```
 which returns a list of molecules. This may offer speed advantages
 depending on the structure of the program.
+
+And for clarity
+```
+mol = LillyMolFromSmiles("C methane")
+```
+also works.
+
 
 There are other means by which molecules can enter the system.
 
@@ -219,7 +226,7 @@ The most common methods for a Molecule currently implemented are
 | GetNumAtoms() | Number of atoms (explicit atoms only) |
 | nedges() | Number of bonds |
 | bonds() | Iterable collection of Bonds |
-| nrings() | Number of rings |
+| nrings() | Number of SSSR rings |
 | nrings(atom) | Ring membership of 'atom' |
 | is_ring_atom(atom) | True if 'atom' is in a ring |
 | IsInRing(atom) | True if 'atom' is in a ring |
@@ -260,9 +267,10 @@ The most common methods for a Molecule currently implemented are
 | remove_atom(atom) | Remove an atom |
 | remove_atoms(list, flag) | Remove all atoms where list[i] == flag |
 | remove_atoms(Set_of_Atoms) | Remove the atoms in the set |
+| remove_atoms(numpy_array, flag) | Remove atoms where numpy_array[i] == flag |
 | remove_non_periodic_table_elements() | Remove any non-natural atoms |
 | remove_all(atomic_number) | Remove all atoms with atomic_number |
-| move_to_end_of_connection_table(z) | Move all atoms with atomic number to end of connection table |
+| move_to_end_of_connection_table(z) | Move all atoms with atomic number z to end of connection table |
 | chop(n) | Remove the last 'n' atoms in the molecule |
 | organic_only() | True if only C, N, O, F, P, S, Cl, Br, I |
 | remove_explicit_hydrogens() | Remove explicit Hydrogens |
@@ -323,13 +331,16 @@ The most common methods for a Molecule currently implemented are
 | isotope(atom) | Isotope on 'atom' |
 | set_isotope(atom, iso) | Set isotope |
 | set_isotopes(Set_of_Atoms, iso) | Set isotope for atoms in the set |
+| set_isotopes(numpy_array) | Set each isotope |
 | remove_isotopes() | Remove all isotopes |
 | number_isotopic_atoms() | Number of atoms with non zero isotopes |
 | bonds_between(a1, a2) | Bonds between atoms |
 | longest_path() | Longest through bond path |
+| atoms_on_shortest_path(a1, a2) | Set_of_Atoms holding atoms on shortest path between a1 and a2 |
+| down_the_bond(a1, a2) | Return all atoms found by looking down the a1->a2 bond. May return None |
 | atom_map_number(atom) | Atom map number on 'atom' |
 | set_atom_map_number(atom, nbr) | Set atom map number |
-| reset_all_atom_map_numbers() | Remove all atom map numbers |
+| reset_atom_map_numbers() | Remove all atom map numbers |
 | atom_with_atom_map_number(number) | Atom with atom map number |
 | bond_length(a1, a2) | Bond distance |
 | bond_angle(a1, a2, a3) | Bond angle |

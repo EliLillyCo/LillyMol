@@ -9,6 +9,10 @@ iwdescr file.smi > file.w
 which will generate a tabular (space separated) file containing a couple of hundred
 molecular descriptors.
 
+There is also a shell wrapper in the contrib/bin directory that sets up some useful
+defaults. It is strongly recommended that the wrapper be used always. Otherwise you will
+see various missing columns.
+
 ## Descriptors.
 The following descriptors are computed.
 
@@ -219,12 +223,15 @@ The following descriptors are computed.
 | brnsdual | fred bruns: donor and acceptor |
 | brunspos | fred bruns: likely positive charge |
 | brunsneg | fred bruns: likely negative charge |
+| formal_charge| sum of brunspos + brunsneg. Net formal charge |
 | brunshbdsum | brunsacc + brunsdon - brnsdual |
 | cd4ring | carbon atoms with four connections in a ring |
 | cd4chain | carbon atoms with four connections not in a ring |
 | csp3_chain | sp3 carbon atoms not in a ring |
 | frsub | fraction of ring atoms that are subsituted outside the ring |
 | frssub | fraction of ring atoms that have a single atom subsituent |
+| alorthoring | number of ortho substituents on an aliphatic ring |
+| arorthoring | number of ortho substituents on an aromatic ring |
 | fsatspcha | fraction of spinach atoms that are saturated |
 | satspcha | number of spinach atoms that are saturated |
 | unsatspcha | number of unsaturated spinach atoms |

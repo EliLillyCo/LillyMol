@@ -5,7 +5,7 @@
 if [ -v LILLYMOL_HOME ] ; then
   true
 else
-  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $(readlink -e $0))))
 fi
 
 charges="${LILLYMOL_HOME}/data/queries/charges/queries"

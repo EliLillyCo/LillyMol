@@ -126,6 +126,7 @@ ReadFileOfProtoQueries(const const_IWSubstring fname, resizable_array_p<T>& quer
   while (input.next_record(line))
   {
     std::optional<IWString> file_that_exists = iwmisc::FileOrPath(fname, line);
+    // std::cerr << "Looking for query file '" << fname << ' ' << line << '\n';
     if (! file_that_exists) {
       std::cerr << "ReadFileOfProtoQueries:no file '" << line << "'\n";
       return 0;
@@ -934,7 +935,7 @@ process_cmdline_token(char option,
 {
   const_IWSubstring mytoken(token);
 
-//std::cerr << "Examining token '" << mytoken << "'\n";
+  // std::cerr << "process_cmdline_token:examining token '" << mytoken << "'\n";
   if (mytoken.starts_with("F:") || mytoken.starts_with("Q:"))
   {
     mytoken.remove_leading_chars(2);

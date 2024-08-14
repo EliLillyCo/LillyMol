@@ -8,6 +8,7 @@
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/misc2.h"
 #include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rotbond_common.h"
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
@@ -3252,13 +3253,80 @@ Single_Substructure_Query::_atom_type_groupings_matched(const Query_Atoms_Matche
   return 1;
 }
 
+// Move from `a1` towards `a2` counting the number of rotatable bonds
+// encountered.
+int
+SeparatedAtoms::RotatableBondsBetween(Molecule& m,
+                        atom_number_t a1,
+                        atom_number_t a2,
+                        const int* bond_rotatable) const {
+  const int d = m.bonds_between(a1, a2);
+
+  //cerr << "RotatableBondsBetween from " << a1 << " to " << a2 << " d " << d << '\n';
+
+  for (const Bond* b : m[a1]) {
+    const atom_number_t o = b->other(a1);
+    if (m.bonds_between(o, a2) != d - 1) {
+      continue;
+    }
+
+    int rc = 0;
+    if (bond_rotatable[b->bond_number()]) {
+      rc = 1;
+    }
+    //cerr << "  to atom " << o << " rotatable? " << rc << '\n';
+
+    if (o == a2) {
+      return rc;
+    }
+
+    return rc + RotatableBondsBetween(m, o, a2, bond_rotatable);
+  }
+
+  return 0;
+}
+
+int
+SeparatedAtoms::RotatableBondsBetween(Molecule& m,
+                      atom_number_t a1,
+                      atom_number_t a2) const {
+  static quick_rotbond::QuickRotatableBonds rotbond;
+  rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
+
+  std::unique_ptr<int[]> bond_rotatable = std::make_unique<int[]>(m.nedges());
+
+  const uint32_t rotatable_bonds = rotbond.Process(m, bond_rotatable.get());
+  // If there is a minimum number of rotatable bonds between a1 and a2, and
+  // the total number of rotbonds in the molecule is below that, no match is possible.
+  // cerr << "MOlecule contains " << rotatable_bonds << " rotatable bonds\n";
+
+  uint32_t tmp;
+  if (_rotbond.min(tmp) && rotatable_bonds < tmp) {
+    return 0;
+  }
+
+  return RotatableBondsBetween(m, a1, a2, bond_rotatable.get());
+}
+
 int
 SeparatedAtoms::Matches(Molecule& m,
         const Set_of_Atoms& embedding) const {
   atom_number_t a1 = embedding[_a1];
   atom_number_t a2 = embedding[_a2];
   // cerr << "Matched atoms are " << a1 << " and " << a2 << " betw " << m.bonds_between(a1, a2) << '\n';
-  return _separation.matches(m.bonds_between(a1, a2));
+  if (! _separation.matches(m.bonds_between(a1, a2))) {
+    return 0;
+  }
+
+  if (_rotbond.is_set()) {
+    // int rbb = RotatableBondsBetween(m, a1, a2);
+    // cerr << " rbb " << rbb << " atoms " << a1 << ' ' << a2 << '\n';
+    if (! _rotbond.matches(RotatableBondsBetween(m, a1, a2))) {
+      return 0;
+    }
+  }
+
+  return 1;
 }
 
 int

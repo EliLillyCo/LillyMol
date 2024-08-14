@@ -15,11 +15,11 @@ jobs:
       run: make build_docker
     - name: Run the project
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
     - name: Run unit tests
       run: |
         set -o pipefail
         make test_lillymol | tee ./unit_test_results.txt
     - name: Stop running
-      run: docker-compose down
+      run: docker compose down

@@ -16,6 +16,7 @@ local_install(
         ":common_names",
         ":dbf",
         ":dicer",
+        ":dicer_to_topological_types",
         ":echoqry",
         ":echorxn",
         ":ec_fingerprint",
@@ -54,7 +55,6 @@ local_install(
         ":long_molecules",
         ":maccskeys",
         ":make_these_molecules",
-        ":marvin_pka",
         ":medchemwizard",
         ":minor_changes",
         ":mkfrag",
@@ -91,6 +91,7 @@ local_install(
         ":ring_extraction",
         ":ring_fingerprint",
         ":ring_replacement",
+        ":ring_replacement_collate",
         ":ring_size_fingerprint",
         ":ring_substitution",
         ":ring_trimming",
@@ -328,6 +329,20 @@ cc_proto_library(
     name = "multiple_reactions_cc_proto",
     deps = [
         ":multiple_reactions_proto",
+    ],
+)
+
+proto_library(
+    name = "pharmacophore_2d_proto",
+    srcs = [
+        "pharmacophore_2d.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "pharmacophore_2d_cc_proto",
+    deps = [
+        "pharmacophore_2d_proto",
     ],
 )
 
@@ -1257,18 +1272,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "marvin_pka",
-    srcs = [
-        "marvin_pka.cc",
-    ],
-    deps = [
-        "//Foundational/cmdline:iwcmdline",
-        "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:moleculeio",
-    ],
-)
-
-cc_binary(
     name = "minor_changes",
     srcs = [
         "minor_changes_main.cc",
@@ -1520,9 +1523,11 @@ cc_binary(
         "pharmacophore_2d.cc",
     ],
     deps = [
+        ":pharmacophore_2d_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -1819,6 +1824,23 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Lib:substructure_cc_proto",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "ring_replacement_collate",
+    srcs = [
+        "ring_replacement_collate.cc",
+    ],
+    deps = [
+        ":replacement_ring_cc_proto",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline_v2",
+        "//Foundational/iwaray",
+        "//Foundational/iwmisc",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 

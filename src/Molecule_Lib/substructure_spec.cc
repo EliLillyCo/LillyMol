@@ -2076,10 +2076,6 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
 
   Atomic_Smarts_Component* asc = &tokens;
 
-  // As tokenised, the operator comes in with the previous token, but
-  // needed to be added to _operator with the next component.
-  int op = IW_LOGEXP_UNDEFINED;
-
   do {
 #ifdef DEBUG_ATOM_CONSTRUCT_FROM_SMARTS_TOKEN
     cerr << "Building component from '" << *asc << " op " << asc->op() << '\n';

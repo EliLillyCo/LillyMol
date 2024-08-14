@@ -76,6 +76,7 @@ Entering `-g help` to most LillyMol tools yields the usage message
   -g keto_enol     convert enol to keto forms (no adjacent heteroatoms)
   -g all         ALL the above standardistions
   -g rvnitro     convert O=N=O nitro groups to charge separated
+  -g isotope     convert all isotopic atoms to non isotopic forms
   -g rvnv5       convert all 5 valent N atoms to charge separated
   -g APP=<xxx>   append 'xxx' to the name of changed molecules
   -g APP=EACH    append the reason for each change

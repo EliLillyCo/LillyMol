@@ -1,21 +1,11 @@
 #!/bin/bash
 
-# $Id$
+here=$(dirname $(readlink -e $0))
 
-if [[ -d "../ruby" ]]
-then # place here all your code
-    # define executable
-    program="../ruby/dopattern.rb"
-    # check that executable exists
-    if [ ! -s "$program" ]
-        then
-        echo "Cannot access executable '$program'" >&2
-        exit 1
-    fi
-
-    # this will execute and exit, returning the exit status of the command
-    exec $program "$@"
-
+if [[ -v LILLYMOL_HOME ]] ; then
+  true
 else
-    echo $(basename $0)": Required libraries are not found under ruby folder" >&2 && exit 1
+  export LILLYMOL_HOME=$(dirname $(dirname $(readlink -e $0)))
 fi
+
+exec ruby ${here}/dopattern.rb "$@"

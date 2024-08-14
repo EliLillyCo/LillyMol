@@ -661,6 +661,11 @@ must be distinct from the matched atoms, but that can be changed if
 If there are no constraints on distance, then a simple '&&' smarts can be
 used, which describes two (possibly overlapping) separate smarts matches.
 
+### Separated Atoms
+This message started as redundant with the Linker message. It describes bond
+separations between pairs of matched atoms. In addition, the number of rotatable
+bonds found on the shortest path between the two matched atoms can be specified.
+
 ## Smarts
 I have heard smarts referred to as a 'write only' language. Several of these
 constructs in the proto representation are specifically designed to lessen the

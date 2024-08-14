@@ -247,6 +247,27 @@ TFDataReader::FillReadBuffer(uint64_t bytes_needed) {
   return true;
 }
 
+int
+TFDataReader::seek_zero() {
+  if (_fd < 0) {
+    return 0;
+  }
+
+  off_t rc = IW_FD_LSEEK(_fd, 0, SEEK_SET);
+
+  if (rc < 0) {
+    cerr << "TFDataReader::seek_zero:cannot seek back to start of file\n";
+    _good = false;
+    return 0;
+  }
+
+  _good = true;
+  _eof = false;
+  _next = 0;
+  return 1;
+}
+
+
 TFDataWriter::TFDataWriter() {
 }
 

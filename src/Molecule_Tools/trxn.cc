@@ -340,7 +340,10 @@ static void
 do_append_text(Molecule& m, const IWString& to_append) {
   IWString tmp = m.name();
 
-  if (!tmp.ends_with(' ')) {
+  // Make sure there is a space between what is there already and what we are adding.
+  if (to_append.starts_with(' ')) {
+  } else if (tmp.ends_with(' ')) {
+  } else {
     tmp += ' ';
   }
 
@@ -458,6 +461,33 @@ RemoveSizeNotOk(resizable_array_p<Molecule>& fragments) {
 }
 
 static int
+WriteMultiFragmentMolecule(Molecule& product,
+                           Molecule_Output_Object& output) {
+  resizable_array_p<Molecule> fragments;
+  product.create_components(fragments);
+  RemoveSizeNotOk(fragments);
+  if (suppress_duplicate_molecules) {
+    IW_STL_Hash_Set seen;
+    for (Molecule* frag : fragments) {
+      if (seen.contains(frag->unique_smiles())) {
+        continue;
+      }
+      seen.insert(frag->unique_smiles());
+
+      frag->set_name(product.name());
+      output.write(*frag);
+    }
+  } else {
+    for (Molecule* frag : fragments) {
+      frag->set_name(product.name());
+      output.write(*frag);
+    }
+  }
+
+  return 1;
+}
+
+static int
 do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
          Molecule_Output_Object& output) {
   if (strip_products_to_largest_fragment) {
@@ -561,14 +591,7 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
 
   if (write_multi_fragment_products_as_separate_molecules &&
       product.number_fragments() > 1) {
-    resizable_array_p<Molecule> fragments;
-    product.create_components(fragments);
-    RemoveSizeNotOk(fragments);
-    for (Molecule* frag : fragments) {
-      frag->set_name(product.name());
-      output.write(*frag);
-    }
-    return 1;
+    return WriteMultiFragmentMolecule(product, output);
   }
 
   return output.write(product);
@@ -1165,14 +1188,14 @@ do_write(IW_TDT& tdt, Molecule& result, std::ostream& output) {
       tdt.set_dataitem_value(identifier_tag, result.name());
     } else {
       IWString tmp(result.name());
-      tmp << ' ' << append_to_changed_molecules;
+      tmp << append_to_changed_molecules;
 
       tdt.set_dataitem_value(identifier_tag, tmp);
     }
   } else {
     IWString tmp(result.name());
     if (append_to_changed_molecules.length()) {
-      tmp << ' ' << append_to_changed_molecules;
+      tmp << append_to_changed_molecules;
     }
 
     tdt.add_dataitem(identifier_tag, tmp);

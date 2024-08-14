@@ -1,0 +1,36 @@
+# Allow removal of fragments containing as many a 3 atoms
+remove_fragment: [1, 2, 3]
+# Avoid excessive numbers of products for any starting molecule.
+max_variants: 10000
+# Running with atom typing is generally recommended
+# This type contains the element and whether it is aromatic or not.
+atype: "UST:AY"
+# Do not use rare fragments. Helps cut numbers too.
+# in this example, prefer setting library size
+# fragment_support: 10
+
+# When removing fragments, how large can we lose.
+max_atoms_lost: 3
+
+# Turn on all transformations
+
+add_fragments: true
+replace_terminal_fragments: true
+single_to_double_bond: true
+double_to_single_bond: true
+unspiro: true
+make_three_membered_rings: true
+change_carbon_to_nitrogen: true
+change_carbon_to_oxygen: true
+change_nitrogen_to_carbon: true
+insert_ch2: true
+remove_ch2: true
+destroy_aromatic_rings: true
+destroy_aromatic_ring_systems: true
+swap_adjacent_atoms: true
+swap_adjacent_aromatic_atoms: true
+insert_fragments: true
+replace_inner_fragments: true
+
+max_fragment_lib_size: 100
+max_bivalent_fragment_lib_size: 200

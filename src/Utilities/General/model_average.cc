@@ -13,7 +13,6 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = NULL;
 
@@ -60,21 +59,23 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Performs model averaging for regression models. All values in one file\n";
-  cerr << " -c <col>       model in column <col>\n";
-  cerr << " -c <col>,w=0.2 model in column <col>, specify relative weight\n";
-  cerr << " -a ...         type of averaging to do\n";
-  cerr << " -a ave         average of all values (default)\n";
-  cerr << " -a max         final result is max of all values encountered\n";
-  cerr << " -a sum         final result is sum of all values encountered\n";
-  cerr << " -a pairs       many-class model, pair-wise models built\n";
-  cerr << " -a ovsall      many-class model, individual built\n";
-  cerr << " -C <cutoff>    classification model, convert result to class\n";
-  cerr << " -d             discern class labels from input\n";
-  cerr << " -f             write composite prediction first rather than last\n";
-  cerr << " -n             just write the composite prediction\n";
-  cerr << " -r             include range/average/standard deviation of component models\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(
+Performs model averaging for regression models. All values in one file
+ -c <col>       model in column <col>. c1,c2,c3 and c1-c4 also recognised.
+ -c <col>,w=0.2 model in column <col>, specify relative weight
+ -a ...         type of averaging to do
+ -a ave         average of all values (default)
+ -a max         final result is max of all values encountered
+ -a sum         final result is sum of all values encountered
+ -a pairs       many-class model, pair-wise models built
+ -a ovsall      many-class model, individual built
+ -C <cutoff>    classification model, convert result to class
+ -d             discern class labels from input
+ -f             write composite prediction first rather than last
+ -n             just write the composite prediction
+ -r             include range/average/standard deviation of component models
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);

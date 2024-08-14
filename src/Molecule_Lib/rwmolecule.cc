@@ -17,7 +17,6 @@
 #include "smiles.h"
 
 using std::cerr;
-using std::endl;
 
 /*
   Fileconv can be run so as to ignore all chiral information on input
@@ -675,7 +674,7 @@ create_file_with_appropriate_name(const const_IWSubstring & old_name,
   const char * new_suffix = suffix_for_file_type(file_type);
   if (nullptr == new_suffix) {
     cerr << "create_file_with_appropriate_name: unrecognised type " << 
-            file_type << endl;
+            file_type << '\n';
 
     new_name = "UNK_TYPE";
     return 0;
@@ -710,7 +709,7 @@ append_appropriate_suffix(IWString & fname, FileType file_type)
   if (nullptr == new_suffix)
   {
     cerr << "append_appropriate_suffix: unrecognised type " << 
-            file_type << endl;
+            file_type << '\n';
 
     return 0;
   }
@@ -1694,7 +1693,9 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     }
     else if (optval.starts_with("mdlsep=")) {
       optval.remove_leading_chars(7);
-      mdlfos->set_mdl_insert_between_sdf_name_tokens(optval);
+      IWString tmp(optval);
+      char_name_to_char(tmp, false /* no error message of not recognised */);
+      mdlfos->set_mdl_insert_between_sdf_name_tokens(tmp);
     } else if (optval == "mdlnwce") {
       mdlfos->set_mdl_display_invalid_chiral_connectivity(0);
     } else if ("sasge" == optval) {

@@ -28,7 +28,6 @@ namespace molecule_filter {
 
 using std::cerr;
 
-// By convention the Usage function tells how to use the tool.
 void
 Usage(int rc) {
 // clang-format off
@@ -39,10 +38,13 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << R"(
- -F <fname>     textproto describing constraints on filter.
+  cerr << R"(Filters molecules based on easy to compute molecular properties.
+Designed for rapidly triaging large collections of molecules in the most
+computationally efficient way possible.
+ -F <fname>     textproto describing constraints on filter - required.
  -c             remove chirality
- -B <fname>     write rejected moleculed to <fname>
+ -l             reduce to largest fragment
+ -B <fname>     write rejected molecules to <fname>
  -v             verbose output
   )";
 // clang-format on
@@ -67,8 +69,8 @@ class Options {
 
     Chemical_Standardisation _chemical_standardisation;
 
-    int _molecules_read = 0;
-    int _molecules_passed = 0;
+    uint64_t _molecules_read = 0;
+    uint64_t _molecules_passed = 0;
 
     MoleculeFilterData::Requirements _requirements;
 
@@ -77,38 +79,43 @@ class Options {
     IWString_and_File_Descriptor _reject_stream;
 
     // Values accumulated based on rejections
-    int _too_few_atoms = 0;
-    int _too_many_atoms = 0;
-    int _too_few_rings = 0;
-    int _too_many_rings = 0;
-    int _too_few_heteroatoms = 0;
-    int _min_heteroatom_fraction = 0;
-    int _max_heteroatom_fraction = 0;
-    int _too_few_aromatic_rings = 0;
-    int _too_many_aromatic_rings = 0;
-    int _too_few_aliphatic_rings = 0;
-    int _too_many_aliphatic_rings = 0;
-    int _ring_system_too_large = 0;
-    int _too_many_aromatic_rings_in_system = 0;
-    int _ring_too_large = 0;
-    int _non_organic = 0;
-    int _isotope = 0;
-    int _too_few_rotbond = 0;
-    int _too_many_rotbond = 0;
-    int _low_tpsa = 0;
-    int _high_tpsa = 0;
-    int _low_xlogp = 0;
-    int _high_xlogp = 0;
-    int _low_alogp = 0;
-    int _high_alogp = 0;
-    int _too_few_hba = 0;
-    int _too_many_hba = 0;
-    int _too_few_hbd = 0;
-    int _too_many_hbd = 0;
-    int _too_many_halogens = 0;
-    int _too_long = 0;
-    int _too_few_csp3 = 0;
-    int _aromdens_too_high = 0;
+    uint64_t _too_few_atoms = 0;
+    uint64_t _too_many_atoms = 0;
+    uint64_t _too_few_rings = 0;
+    uint64_t _too_many_rings = 0;
+    uint64_t _too_few_heteroatoms = 0;
+    uint64_t _min_heteroatom_fraction = 0;
+    uint64_t _max_heteroatom_fraction = 0;
+    uint64_t _too_few_aromatic_rings = 0;
+    uint64_t _too_many_aromatic_rings = 0;
+    uint64_t _too_few_aliphatic_rings = 0;
+    uint64_t _too_many_aliphatic_rings = 0;
+    uint64_t _ring_system_too_large = 0;
+    uint64_t _too_many_aromatic_rings_in_system = 0;
+    uint64_t _ring_too_large = 0;
+    uint64_t _non_organic = 0;
+    uint64_t _isotope = 0;
+    uint64_t _too_few_rotbond = 0;
+    uint64_t _too_many_rotbond = 0;
+    uint64_t _low_tpsa = 0;
+    uint64_t _high_tpsa = 0;
+    uint64_t _low_xlogp = 0;
+    uint64_t _high_xlogp = 0;
+    uint64_t _low_alogp = 0;
+    uint64_t _high_alogp = 0;
+    uint64_t _too_few_hba = 0;
+    uint64_t _too_many_hba = 0;
+    uint64_t _too_few_hbd = 0;
+    uint64_t _too_many_hbd = 0;
+    uint64_t _too_many_halogens = 0;
+    uint64_t _too_long = 0;
+    uint64_t _too_few_csp3 = 0;
+    uint64_t _aromdens_too_high = 0;
+    uint64_t _too_many_chiral = 0;
+    uint64_t _too_many_fragments = 0;
+
+    uint64_t _matches_exclusion_smarts = 0;
+    uint64_t _no_match_required_smarts = 0;
 
   // Private functions
     int Process(Molecule& m);
@@ -189,6 +196,24 @@ Options::Initialise(Command_Line& cl) {
     }
 
     _requirements = std::move(*maybe_proto);
+  }
+
+  if (_requirements.required_smarts_size() ||
+      _requirements.must_not_have_smarts_size()) {
+    cerr << "Options::Initialise:smarts not implemented\n";
+    return 0;
+  }
+
+  if (_remove_chirality && _requirements.has_max_chiral()) {
+    cerr << "Options::Initialise:removing chirality has been specified (-c)\n";
+    cerr << "But the config file contains 'max_chiral'. Impossible\n";
+    return 0;
+  }
+
+  if (_requirements.has_max_distance() && ! _reduce_to_largest_fragment) {
+    cerr << "Options::Initialise:max distance specified, but largest fragment not selected (-l)\n";
+    cerr << "Automatically enabling largest fragment selection\n";
+    _reduce_to_largest_fragment = 1;
   }
 
   if (cl.option_present('B')) {
@@ -322,25 +347,13 @@ Options::Report(std::ostream& output) const {
   if (_requirements.has_max_aromatic_density()) {
     output << _aromdens_too_high << " aromatic density too high " << _requirements.max_aromatic_density() << '\n';
   }
-  return 1;
-}
 
-int
-Options::Preprocess(Molecule& m) {
-  if (m.empty()) {
-    return 0;
+  if (_requirements.has_max_chiral()) {
+    output << _too_many_chiral << " too many chiral centres " << _requirements.max_chiral() << '\n';
   }
 
-  if (_reduce_to_largest_fragment) {
-    m.reduce_to_largest_fragment_carefully();
-  }
-
-  if (_remove_chirality) {
-    m.remove_all_chiral_centres();
-  }
-
-  if (_chemical_standardisation.active()) {
-    _chemical_standardisation.process(m);
+  if (_requirements.has_max_number_fragments()) {
+    output << _too_many_fragments << " too many fragments " << _requirements.max_number_fragments() << '\n';
   }
 
   return 1;
@@ -401,192 +414,6 @@ LargestFragment(const const_IWSubstring& smiles,
   return true;
 }
 
-#ifdef NOW_IN_LIBRARY
-std::tuple<int, int>
-MaxRingSystemSize(Molecule& m, std::unique_ptr<int[]>& tmp) {
-  const int matoms = m.natoms();
-
-  m.compute_aromaticity_if_needed();
-
-  if (! tmp) {
-    tmp.reset(new int[matoms]);
-  }
-  std::fill_n(tmp.get(), matoms, 0);
-
-  const int nrings = m.nrings();
-
-  std::unique_ptr<int[]> ring_already_done = std::make_unique<int[]>(nrings);
-  std::fill_n(ring_already_done.get(), nrings, 0);
-
-  int max_system_size = 0;
-  int max_aromatic_rings_in_system = 0;
-  for (int i = 0; i < nrings; ++i) {
-    if (ring_already_done[i]) {
-      continue;
-    }
-    const Ring* ri = m.ringi(i);
-    if (! ri->is_fused()) {
-      continue;
-    }
-
-    int system_size = 1;
-    int aromatic_rings_in_system;
-    if (ri->is_aromatic()) {
-      aromatic_rings_in_system = 1;
-    } else {
-      aromatic_rings_in_system = 0;
-    }
-
-
-    for (int j = i + 1; j < nrings; ++j) {
-      if (ring_already_done[j]) {
-        continue;
-      }
-
-      ring_already_done[j] = 1;
-      const Ring* rj = m.ringi(j);
-      if (ri->fused_system_identifier() == rj->fused_system_identifier()) {
-        ++system_size;
-        if (rj->is_aromatic()) {
-          ++aromatic_rings_in_system;
-        }
-      }
-    }
-    if (system_size > max_system_size) {
-      max_system_size = system_size;
-    }
-    if (aromatic_rings_in_system > max_aromatic_rings_in_system) {
-      max_aromatic_rings_in_system = aromatic_rings_in_system;
-    }
-  }
-
-  return std::make_tuple(max_system_size, max_aromatic_rings_in_system);
-}
-
-// Lifted from iwdescr.cc
-void
-RuleOfFive(Molecule & m, int& acceptor, int& donor) {
-  acceptor = 0;
-  donor = 0;
-
-  const int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; i++) {
-    atomic_number_t z = m.atomic_number(i);
-    // Intercept the most common case.
-    if (z == 6) {
-      continue;
-    }
-
-    if (z == 7 || z == 8) {
-    } else {
-      continue;
-    }
-
-    ++acceptor;
-
-    const int h = m.hcount(i);
-
-    // acceptor
-    if (0 == h) {
-      continue;
-    }
-
-    if (7 == z && h > 1) {
-      donor += 2;
-    } else {
-      donor += 1;
-    }
-  }
-}
-
-
-int
-HalogenCount(const Molecule& m) {
-  static std::vector<int> halogen = {
-    0,  // 0
-    0,  // 1
-    0,  // 2
-    0,  // 3
-    0,  // 4
-    0,  // 5
-    0,  // 6
-    0,  // 7
-    0,  // 8
-    1,  // 9
-    0,  // 10
-    0,  // 11
-    0,  // 12
-    0,  // 13
-    0,  // 14
-    0,  // 15
-    0,  // 16
-    1,  // 17
-    0,  // 18
-    0,  // 19
-    0,  // 20
-    0,  // 21
-    0,  // 22
-    0,  // 23
-    0,  // 24
-    0,  // 25
-    0,  // 26
-    0,  // 27
-    0,  // 28
-    0,  // 29
-    0,  // 30
-    0,  // 31
-    0,  // 32
-    0,  // 33
-    0,  // 34
-    0,  // 35
-    0,  // 36
-    1,  // 37
-    0,  // 38
-    0,  // 39
-    0,  // 40
-    0,  // 41
-    0,  // 42
-    0,  // 43
-    0,  // 44
-    0,  // 45
-    0,  // 46
-    0,  // 47
-    0,  // 48
-    0,  // 49
-    0,  // 50
-    0,  // 51
-    0,  // 52
-    1   // 53
-  };
-
-  int rc = 0;
-
-  for (const Atom* a : m) {
-    const uint32_t z = a->atomic_number();
-    if (z < halogen.size()) {
-      rc += halogen[z];
-    }
-  }
-
-  return rc;
-}
-
-int 
-Sp3Carbon(Molecule & m) {
-  int rc = 0;
-
-  const int matoms = m.natoms();
-  for (int i = 0; i < matoms; ++i) {
-    if (m.saturated(i)) {
-      ++rc;
-    }
-  }
-
-  return rc;
-}
-#endif  // NOW_IN_LIBRARY
-
 // If chemical standardisation is in effect
 int
 Options::Process(const const_IWSubstring& line,
@@ -597,6 +424,14 @@ Options::Process(const const_IWSubstring& line,
   line.split(smiles, ' ', id);
 
   bool smiles_changed = false;
+
+  if (_requirements.has_max_number_fragments()) {
+    const int nfrag = smiles.ccount('.') + 1;
+    if (nfrag > _requirements.max_number_fragments()) {
+      ++_too_many_fragments;
+      return 0;
+    }
+  }
 
   const_IWSubstring largest_frag;
   int matoms = 0;
@@ -642,6 +477,22 @@ Options::Process(const const_IWSubstring& line,
   if (! m.build_from_smiles(largest_frag)) {
     cerr << "MoleculeFilterLine:invalid smiles '" << line << "'\n";
     return 0;
+  }
+
+  if (m.empty()) {
+    cerr << "MoleculeFilterLine:no atoms '" << line << "'\n";
+    return 0;
+  }
+
+  if (_requirements.has_max_chiral() &&
+      m.chiral_centres() > _requirements.max_chiral()) {
+    ++_too_many_chiral;
+    return 0;
+  }
+
+  if (_remove_chirality) {
+    m.remove_all_chiral_centres();
+    smiles_changed = true;
   }
 
   if (_chemical_standardisation.active()) {
@@ -724,6 +575,12 @@ Options::Process(Molecule& m,
 
   if (_requirements.has_exclude_isotopes() && m.number_isotopic_atoms() > 0) {
     ++_isotope;
+    return 0;
+  }
+
+  if (_requirements.has_max_chiral() &&
+      m.chiral_centres() > _requirements.max_chiral()) {
+    ++_too_many_chiral;
     return 0;
   }
 
@@ -972,7 +829,7 @@ MoleculeFilter(int argc, char** argv) {
   Options options;
   if (! options.Initialise(cl)) {
     cerr << "Cannot initialise options\n";
-    return 1;
+    Usage(1);
   }
 
   if (cl.empty()) {

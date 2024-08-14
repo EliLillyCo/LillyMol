@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package xgboost_model;
+
+enum TreeMethod {
+  UNDEFINED = 0;
+  AUTO = 1;
+  EXACT = 2;
+  APPROX = 3;
+  HIST = 4;
+}
+
+message XGBoostParameters {
+  optional float eta = 1;
+
+  optional uint32 max_depth = 2;
+
+  optional uint32 n_estimators = 3;
+
+  optional uint32 min_samples_split = 4;
+
+  optional float subsample = 5;
+
+  optional float colsample_bytree = 6;
+  optional float colsample_bylevel = 7;
+  optional float colsample_bynode = 8;
+
+  optional TreeMethod tree_method = 9;
+
+  optional float scale_pos_weight = 10;
+}
+
+message LightGbmParameters {
+}
+
+message XGBoostModel {
+  optional string model_type = 1;
+
+  optional string response = 2;
+
+  optional XGBoostParameters parameters = 3;
+
+  optional bool classification = 4;
+
+  // When a model is evaluated we need to ensure that we have the same
+  // column order as was used during training, so we store a cross reference
+  // from column name to column number that the evaluation script can use to
+  // ensure that the same features are sent to the model.
+  map<string, uint32> name_to_col = 5;
+}
