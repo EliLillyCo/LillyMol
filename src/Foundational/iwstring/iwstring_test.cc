@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_set>
 
@@ -23,6 +24,19 @@ TEST(TestConstIWSubstring, TestAsString) {
   const std::string as_string = s.AsString();
   EXPECT_EQ(as_string, "hello");
 }
+TEST(TestAppendOperator, TestStd) {
+  IWString s("hello");
+  std::string_view space(" ");
+  std::string world("world");
+  s << space << world;
+  EXPECT_EQ(s, "hello world");
+}
+TEST(TestEqualsOperator, TestStd) {
+  IWString hello = "hello";
+  std::string world;
+  EXPECT_FALSE(iwstring::Equals(hello, world));
+}
+
 TEST(TestIWString, TestExpandEnvironmentVariablesNothing) {
   const IWString hello("hello world");
   EXPECT_EQ(hello.ExpandEnvironmentVariables(), hello);

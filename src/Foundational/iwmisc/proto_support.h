@@ -15,6 +15,7 @@
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iwstring.h"
 
 namespace iwmisc {

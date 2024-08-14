@@ -304,6 +304,37 @@ class No_Matched_Atoms_Between {
 
 namespace down_the_bond {
 
+
+// In a down the bond specification, we can specify substructure based requirements.
+// Note that this is not a full substructure_query, just a Substructure_Atom. but
+// note that recursive smarts can work there.
+class QueryMatches {
+  private:
+    // Cannot be a Substructure_Atom since that is not defined yet.
+    std::unique_ptr<Substructure_Atom> _query;
+
+    // We retain the smarts so we can be written if requested.
+    IWString _smarts;
+
+    iwmatcher::Matcher<uint32_t> _hits_needed;
+
+  public:
+    int Build(const SubstructureSearch::QueryMatches& qm);
+    int BuildProto(SubstructureSearch::QueryMatches& proto) const;
+    int Build(const IWString& smarts, const iwmatcher::Matcher<uint32_t>& numeric);
+
+    Substructure_Atom& ss_atom() {
+      return *_query;
+    }
+
+    // Returns true if _hits_needed only matches 0.
+    int RequiresZeroHits() const;
+
+    int Matches(uint32_t n) const {
+      return _hits_needed.matches(n);
+    }
+};
+
 // Looking down from one matched atom to another, how many atoms are
 // there - matched or otherwise. Includes matched atom _a2.
 // the -{} directive is parsed into one of these.
@@ -313,7 +344,57 @@ class DownTheBond {
     int _a1;
     int _a2;
 
-    Min_Max_Specifier<int> _natoms;
+    int _match_as_match;
+
+    // By default, we aggregate all atoms that appear down the a1->a2 bond.
+    // If this is set, then we process the unmatched attachments to a2 one at a
+    // time, and a match is returned if there is at least one substituent that
+    // individually matches the requirements.
+    boolean _match_individual_substituent;
+
+    // By defaul, when matching individual substituents, a match is returned if at
+    // least one unmatched substituent on a2 matches the requirements. If this is set,
+    // then any non-matching other substituent will cause a failed match.
+    // If this is set, it automatically turns on match_individual_substituent.
+    boolean _no_other_substituents_allowed;
+
+    // The number of atoms
+    iwmatcher::Matcher<uint32_t> _natoms;
+    // The number of heteratoms.
+    iwmatcher::Matcher<uint32_t> _heteroatom_count;
+    // Number of ring atoms.
+    iwmatcher::Matcher<uint32_t> _ring_atom_count;
+    // Number of unsaturated atoms
+    iwmatcher::Matcher<uint32_t> _unsaturation_count;
+    // Number of aromatic atoms.
+    iwmatcher::Matcher<uint32_t> _aromatic_count;
+    // Max bond distance of any atom from `a2`.
+    iwmatcher::Matcher<uint32_t> _max_distance;
+    // Note that if any more Matcher's are added here be sure to add logic to
+    // DownTheBond::NoAtomsDownTheBond(Molecule)
+
+    resizable_array_p<QueryMatches> _query;
+
+    // We need special handling for the case where there are no atoms
+    // down the bond. In that case, if all the queries require zero hits
+    // then that will be a match. Determine this once and store.
+    int _all_queries_require_zero_hits;
+
+    // Private functions
+    void DefaultValues();
+
+    int AllQueriesRequireZeroHits() const;
+
+    int MatchesIndividualSubstituent(Molecule& m,
+                atom_number_t a1,
+                atom_number_t a2,
+                int* visited);
+    int OkHeteratomCount(const Molecule& m, const int* visited) const;
+    int OkUnsaturationCount(Molecule& m, const int* visited) const;
+    int OkAromaticCount(Molecule& m, const int* visited) const;
+    int OkRingAtomCount(Molecule& m, const int* visited) const;
+    int OkMaxDistance(Molecule& m, atom_number_t a2, const int* visited) const;
+    int NoAtomsDownTheBond(Molecule& m, atom_number_t a1, atom_number_t a2);
 
   public:
     DownTheBond();
@@ -1671,9 +1752,12 @@ class Substructure_Ring_Environment : public Substructure_Atom
 };
 
 class Substructure_Query;
+
 // A ring or ring system can have any number of Substituent's.
 class Substituent {
   private:
+    int _match_as_match_or_rejection;
+
     // How many of these must there be attached to a ring.
     Min_Max_Specifier<int> _hits_needed;
     // the atoms in the substituent.
@@ -1695,9 +1779,26 @@ class Substituent {
     resizable_array_p<IWString> _required_smarts;
     resizable_array_p<IWString> _disqualifying_smarts;
 
+    // Number of heteroatoms in the substituent.
+    iwmatcher::Matcher<uint32_t> _heteroatom_count;
+    iwmatcher::Matcher<uint32_t> _unsaturation_count;
+
+    // This class was developed for ring substituents, but was later
+    // adapted to general query matches. If processing a ring substituent
+    // there are different conditions that apply.
+    int _is_ring_substituent;
+  
+    // This is intended for use with matched atoms, and not really for use
+    // with rings and ring systems.
+    int _no_other_substituents_allowed;
+
     // private functions.
     int OkNrings(Molecule& m, const int* storage, int flag) const;
     int OkLength(Molecule& m, const int* storage, atom_number_t anchor, int flag) const;
+    int OkHeteratomCount(const Molecule& m, const int* storage,
+                atom_number_t anchor, int flag) const;
+    int OkUnsaturation(Molecule& m, const int* storage,
+                atom_number_t anchor, int flag) const;
     int RunQueries(Molecule_to_Match& target, const int * storage, int flag,
                        int& got_required_match,
                        int& got_rejected_match);
@@ -1712,6 +1813,10 @@ class Substituent {
     Substituent();
 
     int ConstructFromProto(const SubstructureSearch::Substituent& proto);
+    void set_is_ring_substituent(int s) {
+      _is_ring_substituent = s;
+    }
+
     int BuildProto(SubstructureSearch::Substituent& proto) const;
 
     // Given a set of matched atoms (which may, or may not) describe
@@ -2468,6 +2573,19 @@ class SeparatedAtoms {
     // The bonds_between value that must be met.
     Min_Max_Specifier<int> _separation;
 
+    // Constraints on the number of rotatable bonds along the shortest
+    // path between matched atom _a1 and matched atom _a2.
+    iwmatcher::Matcher<uint32_t> _rotbond;
+
+  // Private functions
+    int RotatableBondsBetween(Molecule& m,
+                      atom_number_t a1,
+                      atom_number_t a2) const;
+    int RotatableBondsBetween(Molecule& m,
+                        atom_number_t a1,
+                        atom_number_t a2,
+                        const int* bond_rotatable) const;
+
   public:
     SeparatedAtoms();
 
@@ -2496,6 +2614,8 @@ class Region {
     Min_Max_Specifier<int> _nrings;
 
     Min_Max_Specifier<int> _atoms_not_on_shortest_path;
+
+    iwmatcher::Matcher<uint32_t> _heteroatom_count;
 
   public:
     int ConstructFromProto(const SubstructureSearch::Region& proto);

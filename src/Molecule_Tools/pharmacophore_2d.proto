@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package pharmacophore2d;
+
+// These are the atomic properties that can be transferred to the atom
+// in the SubstructureAtom created.
+enum AtomicProperty {
+  UNSPECIFIED = 0;
+  ATOMIC_NUMBER = 1;
+  NCON = 2;
+  AP_AROMATIC = 3;
+  RING_BOND_COUNT = 4;  
+  HAS_PI_ELECTRON = 5;  // Not implemented, do not use
+  PI_ELECTRON_COUNT = 6;  // Not implemented, do not use
+  UNSATURATION = 7;
+  ISOTOPE = 8;
+  RING_SIZE = 9;
+  SPINACH = 10;
+  FUSED_SYSTEM_SIZE = 11;
+  HCOUNT = 12;
+}
+
+message Pharmacophore2DConfig {
+
+  // Substructure query specifications for functional groups.
+  // Same syntax as the -q option to tsubstructure.
+  // "SMARTS:smt", "PROTO:/path/to/qry.textproto",...
+  repeated string functional_group = 1;
+
+  // If set then each external functional group query must match.
+  optional bool all_functional_groups_must_match = 2;
+
+  // Substructure query specifications for atoms to ignore.
+  repeated string atoms_to_ignore = 3;
+
+  // We ignore pharmacophore features that are outside this distance range.
+  optional uint32 min_separation = 4;
+  optional uint32 max_separation = 5;
+
+  // By default the bond separation in the query will be the same as
+  // what it is in the starting molecule. If either of these are specified
+  // the initial distance is converted to a range
+  // d - delta_shorter, d + delta_longer
+  optional uint32 delta_shorter = 6;
+  optional uint32 delta_longer = 7;
+    
+  // If set, all atomic ncon values become min_ncon in the query.
+  optional bool ncon_becomes_min_ncon = 8;
+    
+  // If set, all atomic ring_bond_count values become min_ring_bond_count
+  // specifications in the query.
+  optional bool ring_bond_count_becomes_min_ring_bond_count = 9;
+
+  // The atomic properties that get transferred to the query atom.
+  repeated AtomicProperty atomic_property = 10;
+
+  // If set, when the query is constructed, the separated_atom message
+  // will preserve the same rotatable bonds between matched atoms.
+  optional bool preserve_rotbond = 11;
+
+  // Or we can specify a number of extra or fewer rotabable bonds allowed.
+  optional uint32 extra_rotbond = 12;
+  optional uint32 less_rotbond = 13;
+
+  // Impose a limit on the number of atoms in the target molecule relative
+  // to the starting molecule.
+  optional uint32 max_extra_atoms = 14;
+
+  optional bool hcount_becomes_min = 15;
+}

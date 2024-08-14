@@ -67,14 +67,14 @@ def xgboost_evaluate(mdir: str, fname: str)->bool:
 
   logging.info("Evaluating %d rows", len(data))
   results = model.predict(data.iloc[:,1:])
-  print(f"Id {response}")
+  print(f"Id XGBD_{response}")
   for i in range(len(results)):
     print(f"{data.iloc[i,0]} {results[i]:.4f}")
 
   return True
 
 def main(argv):
-  """Temporary tool to fix broken multi-fragment unique smiles problem
+  """Evaluate an xgboost descriptor model.
   """
   if len(argv) == 1:
     logging.error("Must specify descriptor file as argument")
@@ -88,4 +88,5 @@ def main(argv):
   return xgboost_evaluate(FLAGS.mdir, argv[1])
 
 if __name__ == '__main__':
+  absl::InitializeLog()
   app.run(main)

@@ -217,6 +217,8 @@ class IWStandard_Current_Molecule
 
     int _possible_valence_errors;
 
+    int _isotope;
+
     resizable_array_p<Possible_Lactim_Lactam> _possible_lactam;
 
 // We save the rings because they may get recomputed during our changes
@@ -306,6 +308,9 @@ class IWStandard_Current_Molecule
     int explicit_hydrogen_count () const { return  _explicit_hydrogen_count;}
     int possible_valence_errors () const { return  _possible_valence_errors;}
     const resizable_array_p<Possible_Lactim_Lactam> & possible_lactam() const { return _possible_lactam;}
+    int isotope() const {
+      return _isotope;
+    }
 
     int remove_possible_guanidine (const atom_number_t);
 
@@ -369,6 +374,7 @@ class IWStandard_Current_Molecule
 #define CS_124TRIAZINE "124-triazine"
 #define CS_ENOL_FUSED "enol-fused"
 #define CS_FCNO "fcno"
+#define CS_ISOTOPE "isotope"
 
 
 namespace standardise {
@@ -442,6 +448,7 @@ class Chemical_Standardisation
     Chemical_Transformation _transform_124_triazine;
     Chemical_Transformation _transform_enol_fused;
     Chemical_Transformation _transform_charged_non_organic;
+    Chemical_Transformation _transform_isotopes;
 
 //  Various reverse direction transformations
 
@@ -481,6 +488,7 @@ class Chemical_Standardisation
 
     void _do_transform_plus_minus_pair (Molecule & m, atom_number_t a1, atom_number_t a2, IWStandard_Current_Molecule & current_molecule_data);
 
+    int  _do_unset_isotopes(Molecule& m);
     int  _do_transform_amines   (Molecule &, Set_of_Atoms &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_nitro    (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_nplus_ominus (Molecule &, IWStandard_Current_Molecule & current_molecule_data);

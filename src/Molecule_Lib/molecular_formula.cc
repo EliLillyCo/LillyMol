@@ -106,29 +106,15 @@ static int ignore[256] = {
   1,   // 89 Y
   1,   // 90 Z
   0,   // 91 [
-  1,   // 92 \
+  1,   // 92 backslash
   0,   // 93 ]
   1,   // 94 ^
   1,   // 95 _
   1,   // 96 `
   1,   // 97 a
   1,   // 98 b
-#ifdef NOT_SURE_WHAT_IS_GOING_ON
-  I build this with ruby
-256.times do |i|
-  q = if i.chr.to_str =~ /[[:print:]]/
-        i.chr.to_str
-      else
-        ' '
-      end
-
-  $stdout << "  0,   // #{i} #{q}\n"
-end
-But for some reason, the lowercase letters are offset. No idea
-what went wrong, but ignoring it for now.
-#endif
-  1,   // 99 c
-  0,   // 100 d
+  0,   // 99 c
+  1,   // 100 d
   1,   // 101 e
   1,   // 102 f
   1,   // 103 g
@@ -138,13 +124,13 @@ what went wrong, but ignoring it for now.
   1,   // 107 k
   1,   // 108 l
   1,   // 109 m
-  1,   // 110 n
+  0,   // 110 n
   0,   // 111 o
   0,   // 112 p
-  0,   // 113 q
+  1,   // 113 q
   1,   // 114 r
-  1,   // 115 s
-  0,   // 116 t
+  0,   // 115 s
+  1,   // 116 t
   1,   // 117 u
   1,   // 118 v
   1,   // 119 w
@@ -382,18 +368,15 @@ static int is_single_letter_element[256] = {
   -1,   // 89 Y
   -1,   // 90 Z
   -1,   // 91 [
-  -1,   // 92 \
+  -1,   // 92 backslash
   -1,   // 93 ]
   -1,   // 94 ^
   -1,   // 95 _
   -1,   // 96 `
   -1,   // 97 a
   -1,   // 98 b
-#ifdef NOT_SURE_WHAT_IS_GOING_ON
-  same thing here
-#endif
-  -1,   // 99 c
-   0,   // 100 d
+   0,   // 99 c
+  -1,   // 100 d
   -1,   // 101 e
   -1,   // 102 f
   -1,   // 103 g
@@ -403,13 +386,13 @@ static int is_single_letter_element[256] = {
   -1,   // 107 k
   -1,   // 108 l
   -1,   // 109 m
-  -1,   // 110 n
-   1,   // 111 o
-   2,   // 112 p
-   4,   // 113 q
+   1,   // 110 n
+   2,   // 111 o
+   4,   // 112 p
+  -1,   // 113 q
   -1,   // 114 r
-  -1,   // 115 s
-   5,   // 116 t
+   5,   // 115 s
+  -1,   // 116 t
   -1,   // 117 u
   -1,   // 118 v
   -1,   // 119 w
@@ -564,24 +547,15 @@ MolecularFormula<T>::Build(const const_IWSubstring& smiles) {
 
   std::fill_n(_count, kOther + 1, 0);
 
-#ifdef NOT_SURE_WHAT_IS_GOING_ON
-  // used to debug this problem.
-  if (smiles == "Cr") {
-    for (int i = 0; i < 256; ++i) {
-      char c = static_cast<char>(i);
-      std::cerr << i << " '" << c << "' ignore " << ignore[i] << '\n';
-    }
-  }
-#endif
-
+  // std::cerr << "Parsing smiles '" << smiles << "'\n";
   int rc = 0;
   for (int i = 0; i < nchars; ++i) {
     unsigned char c = smiles[i];
+    // std::cerr << "i = " << i << " examining '" << c << "'\n";
     if (c == ' ' || c == '\t') {
       return rc;
     }
 
-    // std::cerr << i << " '" << c << " ignore " << ignore[c] << '\n';
     if (ignore[c]) {
       continue;
     }

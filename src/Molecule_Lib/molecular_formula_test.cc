@@ -44,7 +44,7 @@ class TestMf: public testing::TestWithParam<SmilesMf> {
 
 TEST_P(TestMf, TestWorks) {
   const auto params = GetParam();
-  std::cerr << "Testing '" << params.smiles << "'\n";
+  // std::cerr << "Testing '" << params.smiles << "'\n";
   ASSERT_EQ(_mf.Build(params.smiles), params.expected) << params.smiles;
 
   const uint32_t* count = _mf.mf();

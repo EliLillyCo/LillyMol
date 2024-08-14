@@ -2692,6 +2692,13 @@ struct ProtoMolMatches {
   int expected;
 };
 
+std::ostream&
+operator<<(std::ostream& output, const ProtoMolMatches& pmm) {
+  output << pmm.proto << ' ' << " smiles " << pmm.smiles << " expected " << pmm.expected;
+
+  return output;
+}
+
 TEST_F(TestSubstructure, TestAndWithTwoZeros) {
   ASSERT_TRUE(_query.create_from_smarts("0[<23C]&&0[>23C]"));
 
@@ -2918,7 +2925,7 @@ TEST_P(TestSubstructureP, Tests) {
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
-  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected);
+  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected) << params;
 }
 INSTANTIATE_TEST_SUITE_P(TestSubstructureP, TestSubstructureP, testing::Values(
   ProtoMolMatches{aminunch, "CN", 1},
@@ -2954,7 +2961,63 @@ INSTANTIATE_TEST_SUITE_P(TestSubstructureP, TestSubstructureP, testing::Values(
   ProtoMolMatches{substituent_isotope1,  "C[1CH2](C)(C)C1CC1CN", 4},
   ProtoMolMatches{substituent_isotope1,  "C[1CH2](C)(C)C1CC1C[1NH2]", 6},
   ProtoMolMatches{substituent_different_global_ids_23,  "CCC1CC1C", 2},
-  ProtoMolMatches{substituent_different_global_ids_33,  "CCC1CC1C", 3}
+  ProtoMolMatches{substituent_different_global_ids_33,  "CCC1CC1C", 3},
+  
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "NC=O"
+  substituent {
+    heteroatom_count: 0
+  }
+}
+)pb", "NC(=O)C", 1},
+  
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "NC=O"
+  substituent {
+    heteroatom_count: 0
+  }
+}
+)pb", "NC(=O)CCCO", 0},
+  
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "NC=O"
+  substituent {
+    heteroatom_count: 1
+  }
+}
+)pb", "NC(=O)CCCO", 1},
+ 
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "NC=O"
+  substituent {
+    heteroatom_count: 1
+    length: 4
+    natoms: 4
+    nrings: 0
+    unsaturation_count: 0
+    hits_needed: 1
+  }
+}
+)pb", "NC(=O)CCCO", 1},
+ 
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "CCCC"
+  unique_embeddings_only: true
+  substituent {
+    heteroatom_count: 1
+    length: 1
+    natoms: 1
+    nrings: 0
+    unsaturation_count: 0
+    hits_needed: 4
+  }
+}
+)pb", "FC(F)(F)CCCF", 1}
 ));
 
 struct SmilesSmartsMatches {

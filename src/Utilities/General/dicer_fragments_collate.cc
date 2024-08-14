@@ -5,10 +5,12 @@
 
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <unordered_map>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/initialize.h"
 
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
@@ -38,6 +40,7 @@ struct DicerData {
   IWString smiles;
   std::string par;
   uint32_t n;
+  uint32_t natoms;
 };
 
 class DicerFragmentsCollate {
@@ -58,6 +61,10 @@ class DicerFragmentsCollate {
     // Is the input a valid textproto, or does it have a leading
     // non-unique smiles.
     int _has_leading_non_unique_smiles;
+
+    // It can be convenient to limit the number of atoms
+    uint32_t _max_atoms;
+    int _discarded_for_too_many_atoms;
 
     // If it has a leading non unique smiles, keep track of them and
     // write them at the end.
@@ -117,6 +124,9 @@ DicerFragmentsCollate::DicerFragmentsCollate() {
 
   _hash_value_is_proto = 1;
 
+  _max_atoms = std::numeric_limits<uint32_t>::max();
+  _discarded_for_too_many_atoms = 0;
+
   _items_read = 0;
   _support = 0;
   _suppressed_by_support = 0;
@@ -140,6 +150,17 @@ DicerFragmentsCollate::Initialise(Command_Line_v2& cl) {
   
   if (cl.option_present("nosmi")) {
     _has_leading_non_unique_smiles = 0;
+  }
+
+  if (cl.option_present("maxat")) {
+    cl.value("maxat", _max_atoms);
+    if (_max_atoms < 1) {
+      cerr << "Invalid -maxat value\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will discard input with more than " << _max_atoms << " atoms\n";
+    }
   }
 
   if (cl.option_present('r')) {
@@ -283,6 +304,11 @@ DicerFragmentsCollate::AccumulateRecord(dicer_data::DicerFragment& proto,
     cerr << '\n';
   }
 
+  if (proto.nat() > _max_atoms) {
+    ++_discarded_for_too_many_atoms;
+    return 1;
+  }
+
   if (_hash_value_is_proto) {
     return InsertIntoProtoHash(proto, non_unique_smiles);
   } else {
@@ -323,6 +349,7 @@ DicerFragmentsCollate::InsertIntoDataHash(dicer_data::DicerFragment& proto,
   if (iter != _hash_data.end()) {
     const int n = iter->second.n;
     iter->second.n = n + 1;
+    iter->second.natoms = proto.nat();
     return 1;
   }
 
@@ -428,6 +455,7 @@ DicerFragmentsCollate::WriteFromDataHash(IWString_and_File_Descriptor& output) {
     output << " smi: " << usmi;
     output << " par: " << data.par;
     output << " n: " << data.n;
+    output << " nat: " << data.natoms;
     output << '\n';
 
     output.write_if_buffer_holds_more_than(32768);
@@ -454,6 +482,10 @@ int
 DicerFragmentsCollate::Report(std::ostream& output) const {
   output << "DicerFragmentsCollate::Report: read " << _items_read <<
             " items, ";
+  if (_max_atoms != std::numeric_limits<uint32_t>::max()) {
+    output << "discarded " << _discarded_for_too_many_atoms <<
+              " inputs for having more than " << _max_atoms << " atoms\n";
+  }
   if (_hash_value_is_proto) {
     output << _hash.size();
   } else {
@@ -482,6 +514,7 @@ Usage(int rc) {
   cerr << "Aggregates multiple dicer_data::DicerFragment text proto files\n";
   cerr << " -p <support>        minimum support level (n: value) for inclusion\n";
   cerr << " -nosmi              each record does not contain a leading non-unique smiles\n";
+  cerr << " -maxat <n>          discard input that contains more than <maxat> atoms\n";
   cerr << " -r <n>              report progress every <n> items read\n";
   cerr << " -minimal            extract only the essential information from the protos\n";
   cerr << " -tfdata             data is TFDataRecord serialized protos\n";
@@ -493,7 +526,7 @@ Usage(int rc) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-p=ipos-nosmi-r=ipos-minimal-tfdata");
+  Command_Line_v2 cl(argc, argv, "-v-p=ipos-nosmi-r=ipos-minimal-tfdata-maxat=ipos");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options present\n";
@@ -538,6 +571,8 @@ Main(int argc, char** argv) {
 
 int
 main(int argc, char** argv) {
+  absl::InitializeLog();
+
   int rc = dicer_fragments_collate::Main(argc, argv);
 
   return rc;

@@ -28,7 +28,9 @@ fi
 
 dbname="/tmp/buildsmidb$$.bdb"
 
-cmd="${build} -d ${dbname} -c -l ${insmi}"
+stderr='stderr'
+
+cmd="${build} -d ${dbname} -c -l ${insmi}" 2> "${stderr}"
 ${cmd}
 
 if [[ $? -ne 0 ]] ; then
@@ -43,7 +45,7 @@ fi
 
 found="/tmp/found$$"
 not_in_db="/tmp/notfound$$"
-cmd="${lookup} -d ${dbname} -c -l -F ${found} -U ${not_in_db} ${insmi}"
+cmd="${lookup} -d ${dbname} -c -l -F ${found} -U ${not_in_db} ${insmi}" 2> "${stderr}"
 ${cmd}
 
 if [[ $? -ne 0 ]] ; then
@@ -64,4 +66,5 @@ fi
 unlink ${dbname}
 unlink "${found}.smi"
 unlink "${not_in_db}.smi"
+unlink "${stderr}"
 exit 0

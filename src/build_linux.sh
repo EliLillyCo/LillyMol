@@ -31,11 +31,11 @@ fi
 if [[ -v BUILD_PYTHON ]] ; then
     # Use python to update WORKSPACE for python locations.
     if [[ -s 'update_python_in_workspace.py' ]] ; then
-        cp WORKSPACE /tmp
-        python3 ./update_python_in_workspace.py /tmp/WORKSPACE > WORKSPACE
+        cp WORKSPACE "/tmp/WORKSPACE_${USER}"
+        python3 ./update_python_in_workspace.py "/tmp/WORKSPACE_${USER}" > WORKSPACE
             if [[ ! -s WORKSPACE ]] ; then
                 echo "Updating WORKSPACE failed, restoring orignal, python bindings will not work"
-                cp -f /tmp/WORKSPACE WORKSPACE
+                cp -f "/tmp/WORKSPACE_${USER}" WORKSPACE
             fi
         echo "WORKSPACE updated"
     else
@@ -52,13 +52,13 @@ fi
 bindir=$(echo $REPO_HOME/bin/$(uname) | sed -e 's/\//\\\//g')
 
 # Make a copy
-cp build_deps/install.bzl /tmp/install.bzl.orig
+cp build_deps/install.bzl /tmp/install.bzl.${USER}
 
 sed -i -e "s/default *= *\".*\",/default = \"${bindir}\",/" build_deps/install.bzl
 
 # Create bindir if not already present
 bindir=$REPO_HOME/bin/$(uname)
-if [[ ! -d  ${bindir} ]] ; then
+if [[ ! -d ${bindir} ]] ; then
   mkdir -p ${bindir}
 fi
 
@@ -80,14 +80,14 @@ third_party=$REPO_HOME/third_party
 echo "third_party in ${third_party}"
 
 if [[ ! -d "${third_party}" ]] ; then
-    mkdir -p "${third_party}"
+  mkdir -p "${third_party}"
 fi
 
 lib=$REPO_HOME/lib
 echo "lib in ${lib}"
 
 if [[ ! -d "${lib}" ]] ; then
-    mkdir -p "${lib}"
+  mkdir -p "${lib}"
 fi
 
 
@@ -100,7 +100,7 @@ fi
 pushd $third_party
 
 if [[ ! -d ${third_party}/bin ]] ; then
-    mkdir -p ${third_party}/bin
+  mkdir -p ${third_party}/bin
 fi
 
 # If we clone the repo we must build it, even if the
@@ -158,7 +158,7 @@ fi
 if [[ -v BUILD_XGBOOST ]] ; then
   git clone --recursive https://github.com/dmlc/xgboost
   mkdir xgboost/build
-  (cd xgboost/build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} ..)
+  (cd xgboost/build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} -DCMAKE_INSTALL_LIBDIR=${third_party}/lib ..)
   (cd xgboost/build && make -j${THREADS})
   (cd xgboost/build && make install)
 fi
@@ -215,6 +215,9 @@ build_options="--cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --
 
 build_options="${build_options} --noincompatible_use_python_toolchains"
 
+# Enable partial builds.
+build_options="${build_options} -k"
+
 # Outside Lily use native architective
 if [[ ${inside_lilly} -eq 1 ]] ; then
   build_options="${build_options} --cxxopt=-march=sandybridge --cxxopt=-mtune=sandybridge"
@@ -245,6 +248,10 @@ fi
 
 if [[ ! -v BUILD_XGBOOST ]] ; then
     build_tag_filters+=('-xgboost')
+fi
+
+if [[ ${inside_lilly} -eq 0 ]] ; then
+  build_tag_filters+=('-vendor')
 fi
 
 if [[ "${#build_tag_filters[@]}" -gt 0 ]] ; then
@@ -292,6 +299,10 @@ if [[ -v BUILD_GO ]] ; then
     ${bazel} ${bazel_options} build ${build_options} go:all
 fi
 
+if [[ -v BUILD_XGBOOST ]] ; then
+    ${bazel} ${bazel_options} build ${build_options} xgboost:all
+fi
+
 # Now install the targets
 
 if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
@@ -301,8 +312,9 @@ if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
     ${bazel} ${bazel_options} run ${build_options} Obsolete:install
     ${bazel} ${bazel_options} run ${build_options} Obsolete/Descriptor_Similarity:install
     ${bazel} ${bazel_options} run ${build_options} Utilities/General:install
-    ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Tools:install
+    ${bazel} ${bazel_options} run ${build_options} Utilities/GeneExpression:install
     ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Knn:install
+    ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Tools:install
     ${bazel} ${bazel_options} run ${build_options} Utilities/Distance_Matrix:install
     ${bazel} ${bazel_options} run ${build_options} go:install
 fi
@@ -314,6 +326,10 @@ fi
 if [[ -v BUILD_BDB ]] ; then
     ${bazel} ${bazel_options} run ${build_options} BerkeleyDB:install
     ${bazel} ${bazel_options} run ${build_options} Molecule_Tools_Bdb:install
+fi
+
+if [[ -v BUILD_XGBOOST ]] ; then
+    ${bazel} ${bazel_options} run ${build_options} xgboost:install
 fi
 
 # Python if requested, build, install and test.

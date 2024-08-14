@@ -58,7 +58,7 @@ class Element_Transformations : public resizable_array_p<Element_Transformation>
 
     int active() const { return _number_elements;}
 
-    int construct_from_command_line(Command_Line &, int = 0, char = 't');
+    int construct_from_command_line(Command_Line &, int verbose= 0, char = 't');
 
     // Add a transformation directive 'Br=Cl' for example.
     int Add(const IWString& token);

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <vector>
 
 #include "googletest/include/gtest/gtest.h"
 
@@ -441,7 +442,7 @@ TEST_F(TestStandardisation, TestExternalChargedAcid) {
 }
 
 struct ForStd {
-  IWString std;
+  std::vector<IWString> directives;
   IWString smiles;
   IWString expected;
 };
@@ -457,15 +458,19 @@ TEST_P(TestStandardisationP, Tests) {
 
   static constexpr int kVerbose = 0;
 
-  ASSERT_TRUE(_chemical_standardisation.Activate(params.std, kVerbose));
+  for (const IWString& directive : params.directives) {
+    ASSERT_TRUE(_chemical_standardisation.Activate(directive, kVerbose));
+  }
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
   ASSERT_TRUE(_chemical_standardisation.process(_m));
   EXPECT_EQ(_m.unique_smiles(), params.expected) << "got " << 
             _m.unique_smiles() << " expected " << params.expected;
 }
 INSTANTIATE_TEST_SUITE_P(TestStandardisationP, TestStandardisationP, testing::Values(
-  ForStd{"rvnv5", "N1(=NC(=N(=O)C2=CC(=CC=C12)OCCCN1CCOCC1)CC)=O CHEMBL553213", 
-         "CCc1[n][n+]([O-])c2c([n+]1[O-])cc(OCCCN1CCOCC1)cc2"}
+  ForStd{{"rvnv5"}, "N1(=NC(=N(=O)C2=CC(=CC=C12)OCCCN1CCOCC1)CC)=O CHEMBL553213", 
+         "CCc1[n][n+]([O-])c2c([n+]1[O-])cc(OCCCN1CCOCC1)cc2"},
+  ForStd{{"isotope"}, "[2H]-C", "C[H]"},
+  ForStd{{"isotope", "all"}, "[2H]-C", "C"}
 ));
 
 }  // namespace

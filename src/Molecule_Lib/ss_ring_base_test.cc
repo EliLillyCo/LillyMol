@@ -612,4 +612,64 @@ query {
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3}));
 }
 
+struct ProtoSmilesExpected {
+  std::string proto;
+  IWString smiles;
+  int expected;
+};
+
+std::ostream&
+operator<<(std::ostream& output, const ProtoSmilesExpected& pse) {
+  output << pse.proto << ' ' << pse.smiles << " expect " << pse.expected;
+
+  return output;
+}
+
+class TestSubstructureP: public testing::TestWithParam<ProtoSmilesExpected> {
+  protected:
+    SubstructureSearch::SubstructureQuery _proto;
+    Substructure_Query _query;
+    Molecule _mol;
+    Substructure_Results _sresults;
+};
+
+TEST_P(TestSubstructureP, Tests) {
+  const auto params = GetParam();
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
+  ASSERT_TRUE(_query.ConstructFromProto(_proto));
+  ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
+  // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
+  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected) << params;
+}
+INSTANTIATE_TEST_SUITE_P(TestSubstructureP, TestSubstructureP, testing::Values(
+  ProtoSmilesExpected{R"pb(
+query {
+  ring_specifier {
+    base {
+      substituent {
+        natoms: 1;
+        heteroatom_count: 0
+        set_global_id: 1
+        hits_needed: 2
+      }
+    }
+  }
+  smarts: "[/IWgid1C]"
+}
+)pb", "C1CC1(C)C", 2},
+
+  ProtoSmilesExpected{R"pb(
+query {
+  substituent {
+    max_natoms: 3
+    heteroatom_count: 0
+    no_other_substituents_allowed: true
+  }
+  smarts: "[CD3T2](=O)-[ND2]"
+}
+)pb", "NCCC(=O)NCCC", 0}
+
+));
+
+
 }  // namespace

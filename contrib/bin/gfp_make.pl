@@ -28,7 +28,7 @@ chomp $uname;
 my @bindir;
 
 unshift (@bindir, "$ianhome/bin/Linux");
-unshift (@bindir, "$ianhome/contrib/script/sh");
+unshift (@bindir, "$ianhome/contrib/bin");
 
 # Flags for each kind of fingerprint possible
 
@@ -1435,7 +1435,7 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-D2F")
   {
-    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint.sh');
+    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint');
 
     $d2f_string .= "|${descriptors_to_fingerprint} -f ";
     my $tmp = $ARGV[$argptr++];

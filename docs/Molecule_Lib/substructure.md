@@ -122,14 +122,60 @@ smarts could be extended to `O=[$([CD3](-N)-[!N])]` which is starting
 to become complex.
 
 Differentiating an amide from a urea can also be done with an
-`environment_no_match` directive in a query file.
+environment_no_match` directive in a query file.
 ```
+query {
+  smarts: "O=[CD3]-[NG0]"
+  environment_no_match {
+    attachment {
+      attachment_point: 1
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "N"
+  }
+}
 ```
+But note that this query will match molecules like
+![CHEMBL4515300](Images/CHEMBL4515300.png)
+which contain both a urea and an amide - that share a Nitrogen atom.
+We could also exclude matches where there is another C=O atom attached
+to the matched Nitrogen atom.
+```
+query {
+  smarts: "O=[CD3]-[NG0]"
+  environment_no_match {
+    attachment {
+      attachment_point: 1
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "N"
+  }
+  environment_no_match {
+    attachment {
+      attachment_point: 2
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "C=O"
+  }
+}
+```
+where one environment_no_match checks what is attached to matched atom 1,
+the Carbon atom, and the other checks what is attached to the Nitrogen atom.
+Again, these could also be accomplished by recursive smarts, but at the
+cost of considerable complexity if primary, secondary and tertiary amides are
+to be handled.
+```
+O=C([$([!N])])-[$([ND1]),$([ND2]-[!$(C=O)]),$([ND3](-[!$(C=O)])-[!$(C=O)])]
+```
+yields the same results.
 
-This particular problem points to the fact that within LillyMol
+This case points to the fact that within LillyMol
 substructure searching there are frequently many different ways of
 doing the same thing. These will differ in their complexity, and
 efficiency.
+
+In the case above, the query file processes 20k molecules in 0.65 seconds
+whereas the smarts based query takes 10% longer.
 
 ### Diversion
 Smarts has been referred to as a write-only language, with extraodinarily
@@ -174,7 +220,7 @@ The best location of documentation for this feature is in the source
 file [substructure.h](/src/Molecule_Lib/substructure.h), where several
 use cases are outlined. For example
 ```
-// {>3;0[c]}  More than 3 bonds, and no aromatic Carbons.
+   {>3;0[c]}  More than 3 bonds, and no aromatic Carbons.
 ```
 Refer to that file and also the file containing C++ 
 [unit tests](/src/Molecule_Lib/substructure_nmab_test.cc)
@@ -183,28 +229,6 @@ specification. While complex, it can be very useful.
 
 Whether it is better to express a complex linker relationship in
 smiles or via a query file is an open question.
-
-## Down The Bond
-There were several times when we needed to place a limit on
-the number of atoms in a substituent. This is not as simple
-as looking at the furthest distance of an atom in the
-substituent, because of branching.
-
-For example to find various methoxy-like
-substituents on a benzene, one might limit the size of
-the group to a max of 5 atoms.
-```
-a-[OD2]-{a{1-5}}C
-```
-The directive is inserted between the two atoms that define the bond, and
-atoms down that bond are considered. If the bond is in a ring, the match
-will fail.
-
-After this was implemented, we came up with the more general idea
-of a substituent, that is only available in query files. A substituent
-is a much more complex concept, but for simple cases, a down-the-bond
-directive can work well. The DownTheBond message is also available
-in a query file.
 
 ## Atomic Smarts Extensions
 LillyMol's atomic smarts also contain some useful extensions.
@@ -471,3 +495,323 @@ underscore `[/IWNv{-3_14}C]` which is interpreted as `[/IWNv{-3.14}C]`.
 As use cases emerge further `/IW` directives may be added. Some can be
 evalated during atom matching, others are applied after an embedding has
 been found.
+
+## Other Messages
+
+Proto specifications of substructure match conditions allow specification of
+several useful concepts related to more general descriptions of regions of a
+molecule.
+
+### Separated Atoms
+The SeparatedAtoms message describes bond separations between matched atoms,
+as well as rotatable bonds on the path between those matched atoms.
+
+For example the query
+```
+query {
+  smarts: "[OH].[OH]"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    min_bonds_between: 3
+    min_rotbond: 1
+  }
+}
+```
+matches `OCCCCO` but not `Oc1ccc(O)cc1`. This construct can be useful
+creating pharmacophore type matches.
+
+### Nearby Atoms
+This construct is also useful for pharmacophore type queries, but has
+some added flexibility.
+
+For example, to identify an aromatic Nitrogen acceptor with a nearby
+amide
+```
+query {
+  smarts: "[nD2H0]:c"
+  unique_embeddings_only: true
+  nearby_atoms {
+    smarts: "[CD3T2](=O)-[NT0G0]"
+    hits_needed: 1
+    matched_atom: 0
+    min_bonds_between: 3
+    max_bonds_between: 5
+  }
+}
+```
+would do that. But note this imposes no 'directionality' on the amide. If
+that were needed, then something like
+```
+c:[nD2H0]...{3-5}[CD3T2](=O)-[NT0G0]
+```
+would be needed. But note that in this case, the atoms matched by the
+amide are returned as matched atoms, whereas with the nearby_atoms
+construct, only the `nc` matched atoms are returned.
+
+A query_file can also be used instead of a smarts in a nearby_atoms
+directive, which allows considerable flexibility and re-use of complex
+queries.
+
+Beware with the max_hits_needed directive. If specified, this also
+includes zero hits. So if you wish to specify both that there must
+be at least one match and a max number, you will need to specify
+```
+  min_hits_needed: 1
+  max_hits_needed: 2
+```
+to specify either 1 or 2 matched. This would be the same as
+```
+  hits_needed: [1, 2]
+```
+
+### Separated Rings
+A pharmacaphore type query might involve something like:
+
+```
+"A molecule with a a five membered aromatic ring containing 
+an [nH] group, and a 6 membered aromatic containing an [nH0] group,
+separated by at least 6 atoms"
+```
+This query can be accomplished with the query file
+```
+query {
+  ring_specifier {
+    aromatic: true
+    ring_size: 5
+    fused: 0
+    base {
+      set_global_id: 1
+      environment: "[nr5H]"
+    }
+  }
+  ring_specifier {
+    aromatic: true
+    ring_size: 6
+    fused: 0
+    base {
+      set_global_id: 2
+      environment: "[nr6H0]"
+    }
+  }
+  smarts: "[/IWgid1c]!@-[/IWscaf1]...{>5}[/IWscaf1]-!@[/IWgid2c]"
+}
+```
+First each of the two rings are defined. Both are aromatic, and
+they have different sizes. Neither are fused.
+
+In the first ring, we specify that there must be an aromatic
+Nitrogen atom with a  Hydrogen atom. The 'r5' specification is
+redundant, but harmless. Same in the other ring where we look
+for a pyridine like Nitrogen atom, again with a redundant
+specification of the ring size.
+
+The smarts is complex. We are looking for an aromatic Carbon
+atom that is in the first ring, then a non-ring bond to an
+atom that is in the scaffold. That can only be an atom that
+is part of a linker, joining rings. Five atoms away we look
+for a non ring atom that is also in the scaffold and is then bonded
+to an atom that is in the second ring.
+
+This will identify molecules such as
+
+![CHEMBL59123](Images/CHEMBL59123.png)
+
+To identify two separate rings without the distance
+constraint could be done with
+```
+[/IWfss1/IWrid1nr5H]...[/IWfss1/IWrid2nr6H0]
+```
+Many more matches are found, but there is no separation
+constraint on the matches. Note that just using a `,,,` directive
+to specify atoms between the matched atoms would not work since
+that path may include other atoms in the ring. 
+
+
+## Down The Bond
+There were several times when we needed to place a limit on
+the number of atoms in a substituent. This is not as simple
+as looking at the furthest distance of an atom in the
+substituent, because of branching.
+
+For example to find various methoxy-like
+substituents on a benzene, one might limit the size of
+the group to a max of 5 atoms.
+```
+a-[OD2]-{a{1-5}}C
+```
+The directive is inserted between the two atoms that define the bond, and
+atoms down that bond are considered. Note that the 'C' atom in the query
+above is *not* considered to be part of what is matched by the down the bond
+directive - because it can be fully specified here. If the bond is in a ring, the match will fail.
+
+After this was implemented, we came up with the more general idea
+of a substituent, that is only available in query files. A substituent
+is a slightly different concept, but for simple cases, a down-the-bond
+directive can work well. The DownTheBond message is also available
+in a query file.
+
+The down the bond directive now supports further atomic properties. 
+Counts of atoms that are
+
+* heteroatom
+* aromatic
+* unsaturated
+* in a ring
+* atomic smarts
+
+Currently all specifications are treated with an implicit `and` operator,
+so all specifications must be satisfied. In addition, multiple specifications
+must be separated by an ';' operator - leaving the door open for a future
+use case that might implement other operators.
+
+So a complex down the bond smarts might look like
+
+```
+[Nx0]-C(=O)-{a{2-5};h0;r>1;u>0}C
+```
+which is an amide group, then down the bond with between 2 and 5 atoms, no
+heteroatoms, at least one ring atom (actually there would be at least
+three ring atoms) and at least one unsaturated atom. This matches molecules
+like
+![CHEMBL88846](Images/CHEMBL88846.png)
+
+Note that unsaturation and aromaticity are separate concepts, so unsaturation
+only applies to aliphatic atoms. Note that the minimum unsaturation value
+will be 2 since an unsaturated bond consists of two atoms that are each
+unsaturated.
+
+Looking for a C1-5 secondary alkyl amide might look like
+```
+O=[CD3T2]-{a<6;h0;u0;m0}[ND2]
+```
+where we want fewer than 6 atoms down the bond, no heteratoms, no unsaturated
+atoms, and no aromatic atoms.
+
+If we wanted tertiary amides, that would be
+```
+O=[CD3T2]-[ND3](-{a<5;h0;u0;m0}C)-{a<5;h0;u0;m0}C
+```
+where the same directive is repeated for each substituent. This of
+course raises the question whether it is possible to come up with a single
+query that will handle primary, secondary and tertiary amides. That is
+not possible with a down the bond smiles construct, but is possible with
+a query file.
+
+```
+query {
+  smarts: "[CD3T2R0](=O)N"
+  down_the_bond {
+    a1: 0
+    a2: 2
+    max_natoms: 5
+    heteroatom_count: 0
+    unsaturation_count: 0
+    aromatic_count: 0
+    match_individual_substituent: true
+    no_other_substituents_allowed: true
+  }
+}
+```
+This query will *not* match `OCCC(=O)N(CCC)CO`. Nor will it match a primary amide,
+since a down the bond specification has bee made, but no match would be made with
+a primary amide. Clearly we could add a directive to say that no substituent atoms
+would comprise a positive match.
+
+By default, the down the bond directives aggregate all atoms that appear
+down the bond, and atomic properties are summed across all substituents
+attached to `a2`. If `match_individual_substituent` is set, then
+rather than aggregating across all substituents, each substituent is
+computed separately and must match the constraints. If a single substituent
+is found to satisfy the conditions, a match is reported.
+
+If `no_other_substituents_allowed` is also specified, then the match fails
+if there is a substituent that does *not* satisfy the constraints.
+
+Both within smarts and via a query file, an atomic smarts can be specified. Since
+that, like all directives, will be followed by a numeric qualifier, it can be
+either a positive or negative requirement.
+
+The quite complex smarts
+```
+[OHD1]-[CD3R0](=O)-[CD3R0](-{[CD2]1;[$(O=c1nsnc1)]1;d3;m5;r5;u1;a7}*)-[ND1H2]
+```
+will match
+!(CHEMBL1094324)[Images/CHEMBL1094324.png]
+
+where we are looking for a `[CD2]` as well as an atom that is the aromatic
+ring. Note that these could have been combined, although maybe you want
+flexibility. All queries are completely independent. In this case we
+also require that the maximum separation from `a2` be 3 bonds, there
+be 5 aromatic atoms, 5 ring atoms, 1 unsaturated atoms and 7 atoms.
+
+Note that in all cases only atomic smarts can be specified, but they can
+be recursive smarts, and can match any parts of the molecule - including
+atoms that are NOT down the bond.
+
+### Substituent
+The Substituent message was initially implemented to handle the
+environments specified with ring and ring system specifications. These
+are similar to DownTheBond directives, but have some other properties
+reflecting their origin.
+
+They are somewhat similar to an envionment or environment_no_match
+messages, but describe less specific features. They also share a lot
+of attributes with the DownTheBond message, but are not neccessarily
+tied to a specific bond. Generally prefer using a DownTheBond message
+although if the substituent can be attached via multiple sites,
+this is more convenient.
+
+The other use case for a Substituent message is restricting matches
+to certain functional groups. For example, going back to the previous example
+of trying to identify an alkyl amide, the following query might be
+an approach to that.
+```
+query {
+  smarts: "[CD3T2R0](=O)N"
+  substituent {
+    max_natoms: 5
+    heteroatom_count: 0
+    unsaturation_count: 0
+    no_other_substituents_allowed: true
+    disqualifying_smarts: "a"
+  }
+}
+```
+But because this looks at all matched atoms, it is also applying its
+matching restrictions to atoms attached to the Carbonyl Carbon atom.
+This may not be what is needed.
+
+Note the significant differences between environments and
+substituents. Environments are very specific atom matches that
+are directly bonded to specific matched atoms. Substituents are more general
+concepts attached to any matched atom. Down the bond messages are
+specific to the matched atoms forming a bond.
+
+### Region
+Two matched atoms can define a region in a molecule. In order for this to
+work, the two matched atoms must *not* be in the same ring system. The
+'atom' directive for defining a region is a repeated field, leaving the
+door open for regions that might be defined by more than 2 matched query atoms.
+But currently only regions defined by two matched atoms are supported.
+
+The query
+```
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    natoms: 6
+    atoms_not_on_shortest_path: 0
+    heteroatom_count: [2, 3]
+  }
+}
+```
+will match "NCOCOCCN".
+
+Currently only a small number of attributes are implemented for Region messages
+but clearly more could be added as the need arises.
+
+The C++ unit tests in the [src/Molecule_Lib](src/Molecule_Lib) directory contain
+more examples of proto specifications of complex queries that test these concepts.

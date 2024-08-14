@@ -42,7 +42,7 @@ class QuickRotatableBonds {
 
     int Quickest(Molecule& m);
     // the more expensive calculation handles CF3 and amides.
-    int Expensive(Molecule& m);
+    int Expensive(Molecule& m, int* bond_rotatable);
 
     // If requested, we can label the rotatable bonds.
     isotope_t _isotope;
@@ -77,7 +77,23 @@ class QuickRotatableBonds {
 
     // Using whatever method is specified in _calculation, return the
     // number of rotatable bonds.
-    int Process(Molecule& m);
+    // If bond_rotatable is not null each bond, set
+    // the corresponding entry in `bond_rotatable` to 1 for rotatable bonds.
+    int Process(Molecule& m, int* bond_rotatable = nullptr);
+
+    // Use the current computation to determine the number of rotatable bonds
+    // between atoms `a1` and `a2`. A greedy path is traced between the two
+    // atoms and the first traversal from `a1` to `a2` is used.
+    // Note that this could produce unstable results if there is a case of
+    // multiple paths with different rotatable bonds, but not sure that
+    // can happen.
+    int RotatableBondsBetween(Molecule& m,
+                atom_number_t a1,
+                atom_number_t a2);
+
+    // return an array of m.natoms()*m.natoms() with the rotatable bonds
+    // between atoms.
+    std::unique_ptr<int[]> RotatableBondsBetween(Molecule& m);
 };
 
 }  // namespace quick_rotbond

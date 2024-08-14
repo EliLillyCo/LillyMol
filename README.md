@@ -11,6 +11,10 @@ LillyMol has some novel approaches to substructure searching, reaction enumerati
 chemical similarity. These have been developed over many years, driven by the needs
 of Computational and Medicinal Chemists at Lilly and elsewhere.
 
+Recent work has focussed on making *de-novo* molecule construction and there are
+several tools desiged to either support or complement A/I driven molecule
+generation.
+
 LillyMol is fast and scalable, with modest memory requirements.
 
 This release includes a number of C++ unit tests. All
@@ -95,9 +99,6 @@ Make sure that python-dev and libblas-dev are installed.
 sudo apt install python-dev libblas-dev
 ```
 Things seem to work seamlessly in virtualenv.
-
-Installation within virtualenv works well.
-
 
 # TLDR
 If you have bazelisk and gcc installed, there is a reasonable possibility that

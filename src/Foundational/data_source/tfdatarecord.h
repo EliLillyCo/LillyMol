@@ -55,6 +55,8 @@ class TFDataReader {
     bool good() const { return _good;}
     bool eof() const { return _eof;}
 
+    int seek_zero();
+
     int Close();
 
     // Will not reduce the size of _read_buffer, but may

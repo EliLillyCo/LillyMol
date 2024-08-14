@@ -2748,7 +2748,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
     }
     else if (is_down_the_bond(qsmarts, characters_processed, down_the_bond_qualifier) && check_compatiability_table(previous_token_was, PREVIOUS_TOKEN_WAS_DOWN_THE_BOND))
     {
-      std::unique_ptr<DownTheBond> dtb = std::make_unique<DownTheBond>(pst.last_query_atom_created());
+      std::unique_ptr<DownTheBond> dtb = std::make_unique<DownTheBond>(previous_atom->unique_id());
       if (! dtb->Build(down_the_bond_qualifier)) {
         cerr << "Substructure_Atom::parse_smiles_token:invalid down the bond {" << down_the_bond_qualifier << "}\n";
         return 0;
@@ -2779,7 +2779,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
         return 0;
       }
 
-      assert(!previous_bond);
+//    assert(!previous_bond);
 
 //    Push the various stacks.
 

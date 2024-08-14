@@ -161,6 +161,15 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.first_atom_with_isotope(1), 1)
     self.assertEqual(m.first_atom_with_isotope(7), -1)
 
+  def test_set_isotopes_numpy(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCCCCCC"));
+    iso = np.zeros(m.natoms());
+    for i in range(m.natoms()):
+      iso[i] = i
+
+    m.set_isotopes(iso);
+    self.assertEqual(m.smiles(), "C[1CH2][2CH2][3CH2][4CH2][5CH2][6CH2][7CH3]")
 
   def test_fragment_related(self):
     m = Molecule()
@@ -303,6 +312,33 @@ class TestLillyMol(absltest.TestCase):
     m.add_bond(1, 2, BondType.SINGLE_BOND)
     self.assertEqual(m.smiles(), "CNC")
 
+  def test_remove_atoms_set_of_atoms(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCCCCCC"))
+    for i in range(m.natoms()):
+      m.set_isotope(i, i + 1)
+
+    to_remove = Set_of_Atoms()
+    to_remove += 4
+    to_remove += 6
+    to_remove += 3
+    self.assertEqual(m.remove_atoms(to_remove), 3)
+    self.assertEqual(m.smiles(), "[1CH3][2CH2][3CH3].[6CH4].[8CH4]")
+
+  def test_remove_atoms_numpy(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCCCCCC"))
+    for i in range(m.natoms()):
+      m.set_isotope(i, i + 1)
+
+    to_remove = np.zeros(m.natoms(), dtype=int);
+    to_remove[3] = 1
+    to_remove[4] = 1
+    to_remove[6] = 1
+    self.assertEqual(m.remove_atoms(to_remove, 1), 3);
+    self.assertEqual(m.smiles(), "[1CH3][2CH2][3CH3].[6CH4].[8CH4]")
+
+
   def test_set_bond_type_between_atoms(self):
     m = Molecule()
     self.assertTrue(m.build_from_smiles("CC"))
@@ -389,12 +425,30 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.bonds_between(0, 1), 1)
     self.assertEqual(m.bonds_between(0, 2), 2)
 
+    self.assertIsNone(m.atoms_on_shortest_path(0, 1));
+    # logging.info("atoms_between %s", m.atoms_on_shortest_path(0, 2))
+    self.assertCountEqual(m.atoms_on_shortest_path(0, 2), [1])
+    # logging.info("atoms_on_shortest_path - 3 %s", m.atoms_on_shortest_path(0, 3))
+    self.assertIsNone(m. atoms_on_shortest_path(0, 3))
+    self.assertEqual(m.bonds_between(0, 1), 1)
+
     self.assertTrue(m.build_from_smiles("N(CC1=CC=C(OCCCC2=CC=CC=C2)C=C1)(CC1=CC=C(OCCCC2=CC=CC=C2)C=C1)CCCCN CHEMBL349114"))
     self.assertEqual(m.fragment_membership(30), m.fragment_membership(39))
     self.assertEqual(m.bonds_between(30, 39), 18)
     self.assertEqual(m.longest_path(), 26)
     self.assertEqual(m.most_distant_pair(), (13, 30))
     self.assertEqual(m.bonds_between(13, 30), 26)
+
+
+    self.assertTrue(m.build_from_smiles("CCC"))
+    # logging.info("Atoms between 0 and 2 %s", m.atoms_on_shortest_path(0, 2))
+    self.assertCountEqual(m.atoms_on_shortest_path(0, 2), [1])
+    self.assertEqual(m.bonds_between(0, 2), 2)
+
+    self.assertTrue(m.build_from_smiles("CC1CC(C)1"))
+    self.assertCountEqual(m.atoms_on_shortest_path(0, 4), [1, 3])
+    return
+    self.assertEqual(m.bonds_between(0, 4), 3)
 
   def test_atom_numbers(self):
     m = Molecule()
@@ -738,23 +792,27 @@ class TestLillyMol(absltest.TestCase):
 
     self.assertTrue(m.build_from_smiles("O1N=C(C(=O)N2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1 CHEMBL1589003"))
     m.to_scaffold()
-    self.assertEqual(m.smiles(), "O1N=C(CN2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1")
+    self.assertEqual(m.smiles(), "O1N=C(C(=O)N2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1")
 
     self.assertTrue(m.build_from_smiles("O=C(N(C1=CC=C(C)C=C1)CC(=O)NCCOC)CCC(=O)NC1=CC=CC=N1 CHEMBL1576099"))
     m.to_scaffold()
-    self.assertEqual(m.smiles(), "C(NC1=CC=CC=C1)CCCNC1=CC=CC=N1")
+    self.assertEqual(m.smiles(), "O=C(NC1=CC=CC=C1)CCC(=O)NC1=CC=CC=N1")
 
     self.assertTrue(m.build_from_smiles("O=C1N(C(=O)C2=C1C(=CC=C2)N(=O)=O)CC(=O)N1CC2=CC=CC=C2CC1 CHEMBL2134451"))
     m.to_scaffold()
-    self.assertEqual(m.smiles(), "C1N(CC2=C1C=CC=C2)CCN1CC2=CC=CC=C2CC1")
+    self.assertEqual(m.smiles(), "O=C1N(C(=O)C2=C1C=CC=C2)CC(=O)N1CC2=CC=CC=C2CC1")
 
     self.assertTrue(m.build_from_smiles("O=C(C1=CC=CN1CC(=O)NCC1N(CCC1)CC)C1=CC=CC=C1C CHEMBL1404612"))
     m.to_scaffold()
-    self.assertEqual(m.smiles(), "C(C1=CC=CN1CCNCC1NCCC1)C1=CC=CC=C1")
+    self.assertEqual(m.smiles(), "O=C(C1=CC=CN1CC(=O)NCC1NCCC1)C1=CC=CC=C1")
 
     self.assertTrue(m.build_from_smiles("O=C(N1[C@H](C(=O)NC2C3=CC=CC=C3CCC2)CCC1)[C@@H](NC(=O)[C@H](C)NC)CC(=O)O CHEMBL1570483"))
     m.to_scaffold()
-    self.assertEqual(m.smiles(), "N1[C@H](CNC2C3=CC=CC=C3CCC2)CCC1")
+    self.assertEqual(m.smiles(), "N1[C@H](C(=O)NC2C3=CC=CC=C3CCC2)CCC1")
+
+    self.assertTrue(m.build_from_smiles("CC(C)(N)C1=NC(=CC(=O)N1)C(F)F CHEMBL3551873"))
+    m.to_scaffold()
+    self.assertEqual(m.smiles(), "C1=NC=CC(=O)N1")
 
   def test_coords(self):
     m = Molecule()
@@ -940,6 +998,15 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(rotbond_calc.rotatable_bonds(m), 1)
     self.assertTrue(m.build_from_smiles("C1CC1C"))
     self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
+
+  def test_down_the_bond(self):
+    m = Molecule();
+    self.assertTrue(m.build_from_smiles("CCC"))
+    self.assertCountEqual(m.down_the_bond(0, 1), [2])
+    self.assertCountEqual(m.down_the_bond(2, 1), [0])
+    self.assertTrue(m.build_from_smiles("C1CC1C"))
+    self.assertCountEqual(m.down_the_bond(2, 3), [])
+    self.assertIsNone(m.down_the_bond(0, 1))
 
 if __name__ == '__main__':
   absltest.main()

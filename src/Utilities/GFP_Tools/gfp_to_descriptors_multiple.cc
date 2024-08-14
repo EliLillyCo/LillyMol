@@ -184,7 +184,7 @@ fill_output_array(const Sparse_Fingerprint& fp,
     }
 
     //  cerr << "Bit " << zbit << " found in column " << f->second << '\n';
-    tmp[(*f).second] = zcount;
+    tmp[(*f).second] += zcount;
     rc++;
   }
 

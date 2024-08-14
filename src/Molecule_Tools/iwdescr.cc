@@ -2279,6 +2279,7 @@ write_the_output(Molecule & m,
     }
 
     output << output_separator;
+    cerr << "writing " << i << std::endl;
 
     float v;
     if (descriptor[i].value(v)) {
@@ -8528,7 +8529,7 @@ preprocess(Molecule & m)
     if (0 == reduce_to_largest_fragment)
     {
       cerr << "Fatal, '" << m.name() << " has " << m.number_fragments() << " components\n";
-      iwabort();
+      //iwabort();
     }
 
     (void) m.reduce_to_largest_fragment_carefully();
@@ -9228,6 +9229,9 @@ iwdescr(int argc, char ** argv)
     while (cl.value('u', undefined_value, i++)) {
       if (verbose)
         cerr << "Undefined values will be written as '" << undefined_value << "'\n";
+    }
+    if (undefined_value == "none") {
+      undefined_value = "";
     }
   }
 

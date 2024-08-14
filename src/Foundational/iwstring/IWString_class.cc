@@ -5037,11 +5037,13 @@ IWString::operator =(const std::string & rhs)
 void
 IWString::operator +=(const std::string & rhs)
 {
-  const_IWSubstring tmp(rhs);
+  resizable_array<char>::add(rhs.data(), rhs.length());
+}
 
-  operator += (tmp);
-
-  return;
+void
+IWString::operator +=(const std::string_view & rhs)
+{
+  resizable_array<char>::add(rhs.data(), rhs.length());
 }
 
 #endif

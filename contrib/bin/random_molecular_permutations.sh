@@ -3,11 +3,7 @@
 if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
-  here=$(dirname $0)
-  up=$(dirname ${here})
-  up=$(dirname ${up})
-  export LILLYMOL_HOME=${up}
-  echo "LILLYMOL_HOME at ${LILLYMOL_HOME}"
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $(readlink -e $0))))
 fi
 
 lib="${LILLYMOL_HOME}/data/random_molecular_permutations.d"

@@ -19,6 +19,7 @@ import re
 import string
 
 from absl import app
+from absl import logging
 
 from lillymol import *
 
@@ -30,7 +31,7 @@ def main(argv):
               ';', '<', '>', '?', '^', '_', 
               '`', '{', '|', '}', '~', '“', '”']
   p = re.compile("[" + re.escape("".join(my_punct)) + "]")
-  do_not_process = re.compile(".*\.(png|pdf)$")
+  do_not_process = re.compile(".*\.(png|pdf|pyc)$")
 
   # initially implemented this to avoid finding the same molecule
   # multiple times, but we actually want to find all instances of
@@ -42,6 +43,7 @@ def main(argv):
       fname = os.path.join(root, name)
       if do_not_process.match(fname):
         continue
+      logging.info("Processing %s", fname)
       with open(fname, "r") as reader:
         for line in reader:
           no_punctuation = p.sub(" ", line.rstrip())

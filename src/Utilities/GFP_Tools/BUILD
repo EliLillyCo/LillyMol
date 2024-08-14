@@ -48,6 +48,7 @@ local_install(
         ":nplotnn",
         ":parallel_nn_search_to_gfp_spread",
         ":random_fingerprint",
+        ":train_test_split_optimise",
     ],
 )
 

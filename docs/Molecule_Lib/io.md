@@ -393,7 +393,13 @@ to V2000 files which have the isotope in the atom record.
 ### -i mdlsep=\<..\>
 Separator between tags when reading mdl files. If a name is built up
 from the concatentation of multiple tags, this is the separator between
-those tags. Default is space.
+those tags. Default is space. Character names are recognised so
+`-i mdlsep=tab` is valid. To convert a .sdf file with tags to a tab
+separated file, we recently used this invocation.
+```
+fileconv -i mdlquiet -i 'SDFID:(idnumber|LogP|Collection)' -o smi -o smisep=tab
+        -i mdlsep=tab -S newfile /path/to/input.sdf
+```
 
 ### -i mdlnwce
 Discerning chirality from wedge bonds and atom positions can often

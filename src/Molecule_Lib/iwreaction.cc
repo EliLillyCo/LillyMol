@@ -5070,7 +5070,7 @@ Sidechain_Reaction_Site::do_makes_breaks (Molecule & result,
   return Reaction_Site::do_makes_breaks(result, *embedding, offset, etmp);
 }
 
-//#define DEBUG_MAKE_INTER_PARTICLE_BONDS
+// #define DEBUG_MAKE_INTER_PARTICLE_BONDS
 
 int
 determine_atom_number(const Set_of_Atoms & scaffold_embedding,

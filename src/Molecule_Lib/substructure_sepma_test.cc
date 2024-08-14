@@ -311,7 +311,7 @@ TEST_F(TestSeparatedAtoms, TestMultiple) {
   EXPECT_FALSE(_query.substructure_search(&_m));
 }
 
-TEST_F(TestSeparatedAtoms, TestRespedtInitialNumbering) {
+TEST_F(TestSeparatedAtoms, TestRespectInitialNumbering) {
   _string_proto = R"(query {
       respect_initial_atom_numbering: true
       query_atom {
@@ -354,5 +354,97 @@ TEST_F(TestSeparatedAtoms, TestRespedtInitialNumbering) {
   ASSERT_TRUE(_m.build_from_smiles("S(CC)CN"));
   EXPECT_FALSE(_query.substructure_search(&_m));
 }
+
+struct ProtoSmilesResult {
+  std::string proto;
+  IWString smiles;
+  int expected;
+};
+
+std::ostream&
+operator<< (std::ostream& output, const ProtoSmilesResult& psr) {
+  output << psr.proto << ' ' << psr.smiles << ' ' << psr.expected;
+  return output;
+}
+
+class TestSepma: public testing::TestWithParam<ProtoSmilesResult> {
+  protected:
+    SubstructureSearch::SubstructureQuery _proto;
+    Substructure_Query _query;
+    Substructure_Results _sresults;
+    Molecule _mol;
+};
+TEST_P(TestSepma, Tests) {
+  const auto params = GetParam();
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
+  ASSERT_TRUE(_query.ConstructFromProto(_proto));
+  ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
+  // cerr << "Testing " << params.smiles << " expecting " << params.expected << '\n';
+  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected) << params;
+}
+INSTANTIATE_TEST_SUITE_P(TestSepma, TestSepma, testing::Values(
+  ProtoSmilesResult{
+    R"pb(
+query {
+  smarts: "O.O"
+  unique_embeddings_only: true
+  separated_atoms {
+    a1: 0
+    a2: 1
+    rotbond: 3
+  }
+}
+)pb", "OCCCCO", 1},
+
+  ProtoSmilesResult{
+    R"pb(
+query {
+  smarts: "O.O"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    rotbond: 3
+  }
+}
+)pb", "OCCCCO", 2},
+
+  ProtoSmilesResult{
+    R"pb(
+query {
+  smarts: "O.O"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    bonds_between: 5
+  }
+}
+)pb", "OC1CCC(O)CC1", 2},
+
+  ProtoSmilesResult{
+    R"pb(
+query {
+  smarts: "O.O"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    bonds_between: 5
+    rotbond: 0
+  }
+}
+)pb", "OC1CCC(O)CC1", 2},
+
+  ProtoSmilesResult{
+    R"pb(
+query {
+  smarts: "O.O"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    min_rotbond: 2
+    max_rotbond: 2
+  }
+}
+)pb", "OCC(=O)NCO", 2}
+));
 
 }  // namespace
