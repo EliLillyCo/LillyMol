@@ -38,6 +38,9 @@ struct NeedleCompare {
 };
 
 class Needle {
+  friend void delete_max_possible_association();
+  friend void initialise_max_possible_association();
+
   private:
     // The number of genes we read.
     uint32_t _number_genes;
@@ -78,10 +81,6 @@ class Needle {
     // Once we have decided which items are needed, we scan the list and
     // sequentially assign a rank to each.
     int* _rank;
-
-    // Each item will be assigned a signed rank, depending on whether or not the
-    // score is positive or negative.
-    int* _signed_rank;
 
     // std::priority_queue<Neighbour, std::vector<Neighbour>, NeedleCompare> _neighbours;
 
@@ -162,6 +161,10 @@ void set_accumulate_matching_genes(int s);
 // Set the threshold above which genes id's are put into a hash rather
 // than the _gene_to_index array.
 void set_large_gene_id_threshold(uint32_t s);
+
+// The static class variable _max_possible_association needs to be deleted.
+void initialise_max_possible_association();
+void delete_max_possible_association();
 
 bool operator==(const Neighbour& n1, const Neighbour& n2);
 
