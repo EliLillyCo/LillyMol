@@ -8,6 +8,7 @@
 #include "Foundational/iwmisc/misc.h"
 
 #include "misc2.h"
+#include "path.h"
 #include "substructure.h"
 #include "target.h"
 
@@ -53,10 +54,11 @@ class DTB_Token {
       kNatoms = 1,
       kheteroatoms = 2,
       kRingAtoms = 3,
-      kUnsaturation = 4,
-      kAromatic = 5,
-      kMaxDistance = 6,
-      kSmarts = 7
+      kRings = 4,
+      kUnsaturation = 5,
+      kAromatic = 6,
+      kMaxDistance = 7,
+      kSmarts = 8
     };
     enum class Operator {
       kUndefined = 0,
@@ -138,7 +140,9 @@ GetNumber(const const_IWSubstring& buffer, int& ndx, uint32_t& value) {
 
 int
 DTB_Token::Build(const const_IWSubstring& buffer, int& ndx) {
+  // cerr << "DTB_Token::Build buffer '" << buffer << "' ndx " << ndx << '\n';
   if (ndx >= buffer.length()) {
+    cerr << "DTB_Token::Build:no numeric qualifier after token '" << buffer << "'\n";
     return 0;
   }
 
@@ -337,6 +341,9 @@ ParseToDTB(const const_IWSubstring& buffer,
       case 'r':
         token = std::make_unique<DTB_Token>(DTB_Token::Token::kRingAtoms);
         break;
+      case 'R':
+        token = std::make_unique<DTB_Token>(DTB_Token::Token::kRings);
+        break;
       case 'u':
         token = std::make_unique<DTB_Token>(DTB_Token::Token::kUnsaturation);
         break;
@@ -353,7 +360,8 @@ ParseToDTB(const const_IWSubstring& buffer,
           cerr << "ParseToDTB:no closing brace '" << buffer << "'\n";
           return 0;
         }
-        token->set_smarts(buffer, i, i + chars_consumed);
+        //cerr << "Buffer is '" << buffer << "' i " << i << " chars_consumed " << chars_consumed << '\n';
+        token->set_smarts(buffer, i, chars_consumed);
         break;
       default:
         cerr << "ParseDTB:unrecognised property '" << buffer[i] << "'\n";
@@ -450,6 +458,9 @@ DownTheBond::Build(const const_IWSubstring& buffer) {
         break;
       case DTB_Token::Token::kRingAtoms:
         dtb->set_matcher(_ring_atom_count);
+        break;
+      case DTB_Token::Token::kRings:
+        dtb->set_matcher(_rings);
         break;
       case DTB_Token::Token::kheteroatoms:
         dtb->set_matcher(_heteroatom_count);
@@ -572,6 +583,11 @@ DownTheBond::MatchesIndividualSubstituent(Molecule& m,
       matched_here = 1;
     }
     if (_ring_atom_count.is_set() && ! OkRingAtomCount(m, visited)) {
+      continue;
+    } else {
+      matched_here = 1;
+    }
+    if (_rings.is_set() && ! OkRingCount(m, visited)) {
       continue;
     } else {
       matched_here = 1;
@@ -702,6 +718,18 @@ DownTheBond::OkRingAtomCount(Molecule& m, const int* visited) const {
   }
 
   return _ring_atom_count.matches(rc);
+}
+
+int
+DownTheBond::OkRingCount(Molecule& m, const int* visited) const {
+  int nr = 0;
+  for (const Ring* r : m.sssr_rings()) {
+    if (r->any_members_set_in_array(visited)) {
+      ++nr;
+    }
+  }
+
+  return _rings.matches(nr);
 }
 
 // #define DEBUG_DOWN_THE_BOND_MATCHES
@@ -908,6 +936,13 @@ DownTheBond::NoAtomsDownTheBond(Molecule& m, atom_number_t a1, atom_number_t a2)
 
   if (! _ring_atom_count.is_set()) {
   } else if (_ring_atom_count.matches(0)) {
+    ++positive_match_found;
+  } else {
+    return ! _match_as_match;
+  }
+
+  if (! _rings.is_set()) {
+  } else if (_rings.matches(0)) {
     ++positive_match_found;
   } else {
     return ! _match_as_match;

@@ -1,5 +1,5 @@
 # sandybridge 2011
-build --cxxopt=-std=c++20
+build --cxxopt=-std=c++20 --cxxopt=-DBUILD_BAZEL
 
 build --enable_bzlmod --experimental_cc_shared_library
 # https://groups.google.com/g/bazel-discuss/c/5cbRuLuTwNg

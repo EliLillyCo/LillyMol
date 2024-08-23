@@ -654,16 +654,23 @@ in a query file.
 The down the bond directive now supports further atomic properties. 
 Counts of atoms that are
 
-* heteroatom
-* aromatic
-* unsaturated
-* in a ring
-* atomic smarts
+* heteroatom - h
+* aromatic - m
+* unsaturated - u
+* in a ring - r
+* atomic smarts [...]
 
 Currently all specifications are treated with an implicit `and` operator,
 so all specifications must be satisfied. In addition, multiple specifications
 must be separated by an ';' operator - leaving the door open for a future
 use case that might implement other operators.
+
+The 'd' directive specified the maximum distance from the first matched atom.
+So a bond might have 10 atoms down the bond, but we can restrict the maximum
+distance from the first matched atom to 5 bonds, which will ensure branching.
+
+The 'R' directive is not an atom count, but specifies the number of rings
+that involve atoms down the bond.
 
 So a complex down the bond smarts might look like
 

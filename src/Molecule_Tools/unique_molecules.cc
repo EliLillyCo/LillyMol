@@ -4,19 +4,23 @@
 */
 
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include <iostream>
 #include <memory>
 
-#include <sys/stat.h>
 using std::cerr;
-using std::endl;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
+
+#include "google/protobuf/text_format.h"
+
+#include "absl/container/flat_hash_map.h"
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/absl_hash.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
@@ -31,6 +35,12 @@ using std::endl;
 #include "Molecule_Lib/rmele.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
+
+#ifdef BUILD_BAZEL
+#include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 static int verbose = 0;
 
@@ -111,6 +121,9 @@ static resizable_array_p<IW_STL_Hash_Set> formula_hash;
 static resizable_array_p<IW_STL_Hash_Map_int> smiles_hash;
 static resizable_array_p<std::unordered_set<uint64_t>> atom_hash;
 
+static int store_dicer_fragments = 0;
+static resizable_array_p<absl::flat_hash_map<IWString, dicer_data::DicerFragment>> smiles_to_dicer_fragment;
+
 template class resizable_array_p<IW_STL_Hash_Map_int>;
 template class resizable_array_base<IW_STL_Hash_Map_int*>;
 template class resizable_array_p<IW_STL_Hash_Set>;
@@ -119,6 +132,58 @@ template class resizable_array_base<IW_STL_Hash_Set*>;
 static resizable_array_p<IWReaction> reaction;
 static int number_reactions = 0;
 static int molecules_changed_by_reactions = 0;
+
+static int
+UpdateDicerFragmentHash(Molecule& m, const IWString& usmi) {
+  const int matoms = m.natoms();
+
+  absl::flat_hash_map<IWString, dicer_data::DicerFragment>* smiles_hash = smiles_to_dicer_fragment[matoms];
+
+  auto iter = smiles_hash->find(usmi);
+  if (iter == smiles_hash->end()) {
+    dicer_data::DicerFragment proto;
+    proto.set_smi(m.smiles().data(), m.smiles().length());
+    proto.set_par(m.name().data(), m.name().length());
+    proto.set_n(1);
+    proto.set_nat(m.natoms());
+    smiles_hash->emplace(usmi, std::move(proto));
+    ++unique_molecules;
+    return 1;
+  } else {
+    uint32_t n = iter->second.n();
+    iter->second.set_n(n + 1);
+    ++duplicates_found;
+    return 0;
+  }
+}
+
+static int
+UpdateSmilesHash(const Molecule& m, const IWString& usmi) {
+  const int matoms = m.natoms();
+
+  IW_STL_Hash_Map_int* h = smiles_hash[matoms];
+
+  IW_STL_Hash_Map<IWString, int>::iterator f = h->find(usmi);
+
+  if (f == h->end()) {
+    (*h)[usmi] = 1;
+    unique_molecules++;
+    return 1;
+  } else {
+    duplicates_found++;
+    (*f).second++;
+    return 0;
+  }
+}
+
+static int
+UpdateHash(Molecule& m, const IWString& usmi) {
+  if (store_dicer_fragments) {
+    return UpdateDicerFragmentHash(m, usmi);
+  } else {
+    return UpdateSmilesHash(m, usmi);
+  }
+}
 
 static int
 is_unique_molecule(Molecule& m) {
@@ -143,7 +208,7 @@ is_unique_molecule(Molecule& m) {
 
     usmi << ':' << formula;
 
-    //  cerr << "Graph " << usmi << endl;
+    //  cerr << "Graph " << usmi << '\n';
   } else {
     usmi = m.unique_smiles();
   }
@@ -164,15 +229,21 @@ is_unique_molecule(Molecule& m) {
 
   const int matoms = m.natoms();
 
-  while (matoms >= smiles_hash.number_elements()) {
-    smiles_hash.add(new IW_STL_Hash_Map_int);
-    if (use_atom_hash) {
-      atom_hash.add(new std::unordered_set<uint64_t>());
+  if (store_dicer_fragments) {
+    while (matoms >= smiles_to_dicer_fragment.number_elements()) {
+      smiles_to_dicer_fragment << new absl::flat_hash_map<IWString, dicer_data::DicerFragment>;
+    }
+  } else {
+    while (matoms >= smiles_hash.number_elements()) {
+      smiles_hash.add(new IW_STL_Hash_Map_int);
+      if (use_atom_hash) {
+        atom_hash.add(new std::unordered_set<uint64_t>());
+      }
     }
   }
 
   // cerr << matoms << " smiles_hash " << smiles_hash.number_elements() << " formula_hash
-  // " << formula_hash.number_elements() << endl;
+  // " << formula_hash.number_elements() << '\n';
 
   if (use_atom_hash) {
     const uint64_t h = m.quick_bond_hash();
@@ -184,11 +255,7 @@ is_unique_molecule(Molecule& m) {
     if (f == ha->end()) {  // never seen this before, molecule must be unique
       ha->insert(h);
 
-      IW_STL_Hash_Map_int* h = smiles_hash[matoms];
-      (*h)[usmi] = 1;
-
-      unique_molecules++;
-      return 1;
+      return UpdateHash(m, usmi);
     }
   }
 
@@ -204,8 +271,8 @@ is_unique_molecule(Molecule& m) {
     if (s->end() == s->find(mformula)) {
       s->insert(mformula);
 
-      IW_STL_Hash_Map_int* h =
-          smiles_hash[matoms];  // very important to update the smiles hash too
+      // very important to update the smiles hash too
+      IW_STL_Hash_Map_int* h = smiles_hash[matoms]; 
       (*h)[usmi] = 1;
 
       unique_molecules++;
@@ -214,19 +281,7 @@ is_unique_molecule(Molecule& m) {
   }
 #endif
 
-  IW_STL_Hash_Map_int* h = smiles_hash[matoms];
-
-  IW_STL_Hash_Map<IWString, int>::iterator f = h->find(usmi);
-
-  if (f == h->end()) {
-    (*h)[usmi] = 1;
-    unique_molecules++;
-    return 1;
-  } else {
-    duplicates_found++;
-    (*f).second++;
-    return 0;
-  }
+  return UpdateHash(m, usmi);
 }
 
 /*
@@ -485,28 +540,29 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
+  // clang-format off
   cerr << "Usage: " << prog_name << " <options> <file1> <file2> ...\n";
+  cerr << "Remove duplicate molecules from a set of molecules.\n";
+  cerr << "The first instance of a structure is retained, the remaining instances are discarded,\n";
+  cerr << "or perhaps written to the -D file\n";
+  cerr << "Molecules may be transformed by various options\n";
   cerr << "  -l             strip to largest fragment\n";
   cerr << "  -a             compare as tautomers - skeleton and Hcount\n";
   cerr << "  -c             exclude chiral info - optical isomers will be duplicates\n";
   cerr << "  -z             exclude cis/trans bonding information\n";
   cerr << "  -I             ignore isotopic labels\n";
-  cerr << "  -f             function as filter (TDT input)\n";
   cerr << "  -y             all non-zero isotopic values considered equivalent\n";
   cerr << "  -p <fname>     specify previously collected molecules\n";
-  cerr << "  -G <tag>       identifier tag when working as a filter\n";
-  cerr << "  -s <size>      specify primary hash size (default "
-       << default_primary_hash_size << ")\n";
+  cerr << "  -s <size>      specify primary hash size (default " << default_primary_hash_size << ")\n";
   cerr << "  -S <name>      specify output file name stem\n";
   cerr << "  -D <name>      write duplicate structures to <name>\n";
   cerr << "  -R <rxn>       perform reaction(s) on molecules before comparing\n";
   cerr << "  -T             discard molecular changes after comparison\n";
-  // cerr << "  -n xxx         number assigner specification (enter '-n help' for
-  // info)\n";
   cerr << "  -r <number>    report progress every <number> molecules\n";
+  cerr << "  -d             gather data as DicerFragment protos, -U file is more informative\n";
   cerr << "  -e             report all molecules together with counts\n";
-  cerr
-      << "  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv\n";
+  cerr << "  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv\n";
+  cerr << "                 If using protos (-d) use '-U smiles' to write smiles + textproto\n";
   cerr << "  -j             items are the same only if both structure and name match\n";
   cerr << "  -t E1=E2       element transformations, enter '-t help' for details\n";
   cerr << "  -i <type>      specify input type\n";
@@ -516,18 +572,56 @@ usage(int rc) {
   display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -v             verbose output\n";
 
+// These two options are deprecated - should never have been implemented.
+//cerr << "  -f             function as filter (TDT input). Prefer -i tdt -i info -o tdt -o tdt -o info\n";
+//cerr << "  -G <tag>       identifier tag when working as a filter\n";
+
+  // clang-format on
+
   exit(rc);
 }
 
 static int
-WriteCounts(Command_Line& cl, int verbose,
-            const resizable_array_p<IW_STL_Hash_Map_int>& smiles_hash) {
+WriteTextproto(const resizable_array_p<absl::flat_hash_map<IWString, dicer_data::DicerFragment>>& smiles_to_dicer_fragment,
+               int write_smiles_and_textproto,
+               IWString_and_File_Descriptor & output) {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  static constexpr char kSep = ' ';
+
+  std::string buffer;
+
+  for (const absl::flat_hash_map<IWString, dicer_data::DicerFragment>* f : smiles_to_dicer_fragment) {
+    for (const auto& [usmi, proto] : *f) {
+      if (! printer.PrintToString(proto, &buffer)) {
+        cerr << "WriteTextproto:cannot write '" << proto.ShortDebugString() << "'\n";
+        return 0;
+      }
+      if (write_smiles_and_textproto) {
+        output << proto.smi() << kSep;
+      }
+      output << buffer << '\n';
+      output.write_if_buffer_holds_more_than(4096);
+    }
+  }
+
+  output.flush();
+
+  return 1;
+}
+
+static int
+WriteCounts(Command_Line& cl, int verbose) {
   int write_csv = 0;
+  int write_smiles_and_textproto = 0;
   IWString fname;
   IWString u;
   for (int i = 0; cl.value('U', u, i); ++i) {
     if (u == "csv") {
       write_csv = 1;
+    } else if (u == "smiles") {
+      write_smiles_and_textproto = 1;
     } else if (fname.empty()) {
       fname = u;
     } else {
@@ -547,6 +641,15 @@ WriteCounts(Command_Line& cl, int verbose,
     return 0;
   }
 
+  if (write_smiles_and_textproto && ! store_dicer_fragments) {
+    cerr << "Writing smiles + textproto requested (-U smiles) but dicer fragments not accumulated (-d)\n";
+    return 0;
+  }
+
+  if (store_dicer_fragments) {
+    return WriteTextproto(smiles_to_dicer_fragment, write_smiles_and_textproto, output);
+  }
+
   if (write_csv) {
     output << "Smiles,Count\n";
   }
@@ -564,8 +667,51 @@ WriteCounts(Command_Line& cl, int verbose,
 }
 
 static int
+WriteDicerFragments(const resizable_array_p<absl::flat_hash_map<IWString, dicer_data::DicerFragment>>& smiles_hash,
+                    std::ostream& output) {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+  for (const absl::flat_hash_map<IWString, dicer_data::DicerFragment>* f : smiles_hash) {
+    for (const auto& [usmi, proto] : *f) {
+      if (! printer.PrintToString(proto, &buffer)) {
+        cerr << "DicerFragmentOutput::WriteTextcannot write '" << proto.ShortDebugString() << "'\n";
+        return 0;
+      }
+      output << buffer << '\n';
+    }
+  }
+
+  return output.good();
+}
+
+static int
+WriteSmilesHash(const resizable_array_p<IW_STL_Hash_Map_int>& smiles_hash,
+                std::ostream& output) {
+  static constexpr char kSep = ' ';
+
+  for (const IW_STL_Hash_Map_int* f : smiles_hash) {
+    for (const auto& [usmi, count] : *f) {
+      output << usmi << kSep << count << '\n';
+    }
+  }
+
+  return output.good();
+}
+
+static int
+WriteHash(std::ostream& output) {
+  if (store_dicer_fragments) {
+    return WriteDicerFragments(smiles_to_dicer_fragment, output);
+  } else {
+    return WriteSmilesHash(smiles_hash, output);
+  }
+}
+
+static int
 unique_molecule(int argc, char** argv) {
-  Command_Line cl(argc, argv, "t:Tag:D:vS:A:E:X:i:o:ls:czfG:p:Ir:n:K:eR:jhU:y");
+  Command_Line cl(argc, argv, "t:Tag:D:vS:A:E:X:i:o:ls:czfG:p:Ir:n:K:eR:jhU:yd");
 
   verbose = cl.option_count('v');
 
@@ -731,6 +877,8 @@ unique_molecule(int argc, char** argv) {
     }
   }
 
+  // Deprecated, do not use. Prefer
+  // -i tdt -i TDTID:tag -i info -o tdt -o info
   if (cl.option_present('f')) {
     if (cl.option_present('i')) {
       cerr << "The -i and -f options are incompatible\n";
@@ -751,6 +899,13 @@ unique_molecule(int argc, char** argv) {
       if (verbose) {
         cerr << "Molecules identified by '" << identifier_tag << "' tag\n";
       }
+    }
+  }
+
+  if (cl.option_present('d')) {
+    store_dicer_fragments = 1;
+    if (verbose) {
+      cerr << "Data will be stored as DicerFragment protos\n";
     }
   }
 
@@ -776,10 +931,16 @@ unique_molecule(int argc, char** argv) {
     usage(1);
   }
 
-  for (int i = 0; i < 200; i++) {
-    smiles_hash.add(new IW_STL_Hash_Map_int);
-    if (perform_formula_check) {
-      formula_hash.add(new IW_STL_Hash_Set);
+  if (store_dicer_fragments) {
+    for (int i = 0; i < 200; i++) {
+      smiles_to_dicer_fragment << new absl::flat_hash_map<IWString, dicer_data::DicerFragment>;
+    }
+  } else {
+    for (int i = 0; i < 200; i++) {
+      smiles_hash.add(new IW_STL_Hash_Map_int);
+      if (perform_formula_check) {
+        formula_hash.add(new IW_STL_Hash_Set);
+      }
     }
   }
 
@@ -893,20 +1054,11 @@ unique_molecule(int argc, char** argv) {
   }
 
   if (cl.option_present('e')) {
-    int n = smiles_hash.number_elements();
-
-    for (int i = 0; i < n; i++) {
-      const IW_STL_Hash_Map_int& f = *(smiles_hash[i]);
-
-      for (IW_STL_Hash_Map_int::const_iterator j = f.begin(); j != f.end(); ++j) {
-        cerr << (*j).first << ' ' << (*j).second << '\n';
-        //      cerr << (*j).second << " instances of '" << (*j).first << "'\n";
-      }
-    }
+    WriteHash(cerr);
   }
 
   if (cl.option_present('U')) {
-    if (!WriteCounts(cl, verbose, smiles_hash)) {
+    if (!WriteCounts(cl, verbose)) {
       cerr << "Cannot write hash (-U)\n";
       return 1;
     }

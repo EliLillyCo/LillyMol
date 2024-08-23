@@ -2484,12 +2484,15 @@ cc_binary(
         "unique_molecules.cc",
     ],
     deps = [
+        ":dicer_fragments_cc_proto",
         "//Foundational/iw_tdt",
         "//Foundational/iwaray",
         "//Foundational/iwmisc",
+        "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
 

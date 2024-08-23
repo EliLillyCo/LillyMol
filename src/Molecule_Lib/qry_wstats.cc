@@ -322,7 +322,7 @@ Substructure_Hit_Statistics::_update_matches(uint32_t nmatches,
 
     if (_verbose > 1)
     {
-      cerr << "no match to '" << _comment << "' ";
+      cerr << "no match to '" << _comment << "' in " << m->name() << '\n';
       for (int i = 0; i < _number_elements; i++)
       {
 //      const Single_Substructure_Query * qi = _things[i];
