@@ -38,7 +38,24 @@ cc_library(
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
         "@com_google_absl//absl/crc:crc32c",
+        "@com_google_protobuf//:protobuf",
     ],
+)
+
+cc_library(
+    name = "iwrecordio",
+    srcs = [
+        "iwrecordio.cc",
+    ],
+    hdrs = [
+        "iwrecordio.h",
+    ],
+    deps = [
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring",
+        "@com_google_protobuf//:protobuf",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 proto_library(
@@ -86,5 +103,17 @@ cc_binary(
     deps = [
         ":iwstring_data_source",
         "//Foundational/cmdline:iwcmdline",
+    ],
+)
+
+cc_test(
+    name = "iwrecordio_test",
+    srcs = [
+        "iwrecordio_test.cc",
+    ],
+    deps = [
+        ":iwrecordio",
+        ":proto_for_testing_cc_proto",
+        "@googletest//:gtest_main",
     ],
 )

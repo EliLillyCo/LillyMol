@@ -264,6 +264,7 @@ TFDataReader::seek_zero() {
   _good = true;
   _eof = false;
   _next = 0;
+  _read_buffer.resize_keep_storage(0);
   return 1;
 }
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package JustForTesting;
+package just_for_testing;
 
 message TestMessage {
   double d = 1;

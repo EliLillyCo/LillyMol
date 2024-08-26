@@ -1,18 +1,19 @@
-#ifndef FOUNDATIONAL_DATA_SOURCE_TFDATARECORD_H
-#define FOUNDATIONAL_DATA_SOURCE_TFDATARECORD_H
-// Read and write TFDataRecord
+#ifndef FOUNDATIONAL_DATA_SOURCE_IWRECORDIO_H_
+#define FOUNDATIONAL_DATA_SOURCE_IWRECORDIO_H_
 
 #include <memory>
 #include <optional>
 #include <string_view>
 
-#include "Foundational/data_source/tfdatarecord.h"
-#include "Foundational/iwaray/iwaray.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwstring/iwstring.h"
 
-namespace iw_tf_data_record {
+namespace iwrecordio {
 
-class TFDataReader {
+// These have the same public methods as the corresponding TFdata classes.
+// Could make them inherit from a common base class, but seems un-necessary.
+
+class IWRecordIoReader {
   private:
     // The file descriptor from which data is retrieved.
     int _fd;
@@ -41,11 +42,11 @@ class TFDataReader {
     bool FillReadBuffer(uint64_t bytes_needed = 8192);
 
   public:
-    TFDataReader();
-    TFDataReader(const char * fname);
-    TFDataReader(IWString & fname);
-    TFDataReader(const const_IWSubstring & fname);
-    ~TFDataReader();
+    IWRecordIoReader();
+    IWRecordIoReader(const char * fname);
+    IWRecordIoReader(IWString & fname);
+    IWRecordIoReader(const const_IWSubstring & fname);
+    ~IWRecordIoReader();
 
     int Open(const char * fname);
     int Open(IWString & fname);
@@ -81,8 +82,7 @@ class TFDataReader {
     std::unique_ptr<T> ReadProtoPtr();
 };
 
-// Writes data files that can subsequently be read by TFDataReader.
-class TFDataWriter {
+class IWRecordIoWriter {
   private:
     // Handy abstraction that already has a file descriptor and
     // methods for writing.
@@ -95,8 +95,8 @@ class TFDataWriter {
   int CommonWrite(const void * data, const uint64_t nbytes);
 
   public:
-    TFDataWriter();
-    TFDataWriter(int fd);
+    IWRecordIoWriter();
+    IWRecordIoWriter(int fd);
 
     int Open(const char * fname);
     int Open(IWString& fname);
@@ -115,15 +115,17 @@ class TFDataWriter {
 
 template <typename P>
 std::optional<P>
-TFDataReader::ReadProto() {
+IWRecordIoReader::ReadProto() {
   std::optional<const_IWSubstring> data = Next();
   if (! data) {
+    std::cerr << "No data returned from Next\n";
     return std::nullopt;
   }
+
   const std::string_view as_string(data->data(), data->length());
   P proto;
   if (! proto.ParseFromString(as_string)) {
-    std::cerr << "TFDataReader::ReadProto:cannot parse serialized form\n";
+    std::cerr << "IWRecordIoReader::ReadProto:cannot parse serialized form\n";
     return std::nullopt;
   }
 
@@ -132,7 +134,7 @@ TFDataReader::ReadProto() {
 
 template <typename T>
 std::unique_ptr<T>
-TFDataReader::ReadProtoPtr() {
+IWRecordIoReader::ReadProtoPtr() {
   std::optional<const_IWSubstring> data = Next();
   if (! data) {
     return nullptr;
@@ -140,21 +142,20 @@ TFDataReader::ReadProtoPtr() {
   const std::string_view as_string(data->data(), data->length());
   std::unique_ptr<T> result = std::make_unique<T>();
   if (! result->ParseFromString(as_string)) {
-    std::cerr << "TFDataReader::ReadProto:cannot parse serialized form\n";
+    std::cerr << "IWRecordIoReader::ReadProto:cannot parse serialized form\n";
     return nullptr;
   }
 
   return result;
-
 }
 
 template <typename P>
 int
-TFDataWriter::WriteSerializedProto(const P& proto) {
+IWRecordIoWriter::WriteSerializedProto(const P& proto) {
   const std::string as_string = proto.SerializeAsString();
   return Write(as_string.data(), as_string.size());
 }
 
-}  // namespace iw_tf_data_record
+}  // namespace iwrecordio
 
-#endif // FOUNDATIONAL_DATA_SOURCE_TFDATARECORD_H
+#endif // FOUNDATIONAL_DATA_SOURCE_IWRECORDIO_H_
