@@ -100,6 +100,11 @@ Ring_Closure_Bonds::operator= (const Ring_Closure_Bonds & rhs)
 int 
 Ring_Closure_Bonds::write_bonds(std::ostream & output) const
 {
+  if (_atoms_in_molecule == 0) {
+    output << "Ring_Closure_Bonds::write_bonds:not initialised\n";
+    return 1;
+  }
+
   output << "Ring_Closure_Bonds::write_bonds:molecule has " << _atoms_in_molecule << " atoms\n";
 
   for (int i = 0; i < _atoms_in_molecule; i++)

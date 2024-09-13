@@ -559,8 +559,8 @@ usage(int rc) {
   cerr << "  -R <rxn>       perform reaction(s) on molecules before comparing\n";
   cerr << "  -T             discard molecular changes after comparison\n";
   cerr << "  -r <number>    report progress every <number> molecules\n";
-  cerr << "  -d             gather data as DicerFragment protos, -U file is more informative\n";
   cerr << "  -e             report all molecules together with counts\n";
+  cerr << "  -d             gather data as DicerFragment protos, -U file is more informative\n";
   cerr << "  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv\n";
   cerr << "                 If using protos (-d) use '-U smiles' to write smiles + textproto\n";
   cerr << "  -j             items are the same only if both structure and name match\n";

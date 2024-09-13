@@ -554,6 +554,19 @@ cc_library(
 )
 
 cc_library(
+    name = "kabsch",
+    srcs = [
+        "kabsch.cpp",
+    ],
+    hdrs = [
+        "kabsch.hpp",
+    ],
+    deps = [
+        "@com_gitlab_libeigen_eigen//:eigen",
+    ],
+)
+
+cc_library(
     name = "linear_fingerprint",
     srcs = [
         "linear_fingerprint.cc",
@@ -743,6 +756,20 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "kabsch_test",
+    timeout = "short",
+    srcs = [
+        "kabsch_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        ":kabsch",
         "@googletest//:gtest_main",
     ],
 )

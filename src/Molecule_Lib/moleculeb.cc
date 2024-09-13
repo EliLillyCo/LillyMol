@@ -1116,19 +1116,19 @@ Molecule::set_bond_types_no_set_modified(const bond_type_t * bt)
 }
 
 static uint64_t
-do_or(uint64_t x, int bits_left, const uint64_t maxval, const uint64_t rc)
-{
-  if (x > maxval)
+do_or(uint64_t x, int bits_left, const uint64_t maxval, const uint64_t rc) {
+  if (x > maxval) {
     x = maxval;
+  }
 
   return rc | (x << bits_left);
 }
 
 uint64_t
-Molecule::quick_bond_hash()
-{
-  if (0 == _number_elements)
+Molecule::quick_bond_hash() {
+  if (_bond_list.empty()) {
     return 0;
+  }
 
   compute_aromaticity_if_needed();
 
@@ -1266,31 +1266,31 @@ Molecule::quick_bond_hash()
   // clang-format off
   int bshift = 64-4;
 
-  rc = do_or(c_single_c, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_double_c, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_triple_c, bshift, 2, rc); bshift -= 2;
-  rc = do_or(c_arom_c/4, bshift, 8, rc); bshift -= 4;
+  rc = do_or(c_single_c, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_double_c, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_triple_c, bshift, 3, rc); bshift -= 2;
+  rc = do_or(c_arom_c/4, bshift, 15, rc); bshift -= 4;
 
-  rc = do_or(c_single_n, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_double_n, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_triple_n, bshift, 4, rc); bshift -= 3;
-  rc = do_or(c_arom_n,   bshift, 8, rc); bshift -= 4;
+  rc = do_or(c_single_n, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_double_n, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_triple_n, bshift, 7, rc); bshift -= 3;
+  rc = do_or(c_arom_n,   bshift, 15, rc); bshift -= 4;
 
-  rc = do_or(c_single_o, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_double_o, bshift, 8, rc); bshift -= 4;
+  rc = do_or(c_single_o, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_double_o, bshift, 15, rc); bshift -= 4;
   rc = do_or(c_arom_o,   bshift, 1, rc); bshift -= 1;
 
-  rc = do_or(c_single_s, bshift, 8, rc); bshift -= 4;
-  rc = do_or(c_double_s, bshift, 2, rc); bshift -= 2;
-  rc = do_or(c_arom_s,   bshift, 4, rc); bshift -= 3;
+  rc = do_or(c_single_s, bshift, 15, rc); bshift -= 4;
+  rc = do_or(c_double_s, bshift, 3, rc); bshift -= 2;
+  rc = do_or(c_arom_s,   bshift, 7, rc); bshift -= 3;
 
-//rc = do_or(n_double_o, bshift, 8, rc); bshift -= 4
+//rc = do_or(n_double_o, bshift, 15, rc); bshift -= 4
 
-  rc = do_or(o_single_s, bshift, 8, rc); bshift -= 4;
-  rc = do_or(o_double_s, bshift, 8, rc); bshift -= 4;
+  rc = do_or(o_single_s, bshift, 15, rc); bshift -= 4;
+  rc = do_or(o_double_s, bshift, 15, rc); bshift -= 4;
   // clang-format on
 
-  rc = do_or(aliphatic_ring_bond_count / 2, bshift, 8, rc);
+  rc = do_or(aliphatic_ring_bond_count / 2, bshift, 15, rc);
   bshift -= 4;
 
   assert(bshift >= 0);
@@ -1298,6 +1298,302 @@ Molecule::quick_bond_hash()
   //  cerr << "negative bshift\n";
 
   return rc;
+}
+
+// Shift `destination` left by nbits and OR `value`.
+// If `value` is too large for that many bits, truncate and increment `overflows`.
+static void
+ShiftOr(uint64_t value, int nbits, uint64_t &overflows, uint64_t& destination) {
+
+  static uint64_t maxval[] = {0, 1, 7, 16, 31, 63, 127, 255, 511, 1023};
+
+  if (value > maxval[nbits]) {
+    value = maxval[nbits];
+    ++overflows;
+  }
+
+  destination = (destination << nbits) | value;
+}
+
+void
+Molecule::QuickBondHash(uint64_t hash[2]) {
+  hash[0] = 0;
+  hash[1] = 0;
+
+  if (_bond_list.empty()) {
+    return;
+  }
+
+  compute_aromaticity_if_needed();
+
+  uint64_t c_single_c = 0;
+  uint64_t c_single_ring_c = 0;
+  uint64_t c_double_c = 0;
+  uint64_t c_triple_c = 0;
+  uint64_t c_arom_c = 0;
+  uint64_t carom_single_c = 0;
+  uint64_t carom_single_n = 0;
+  uint64_t carom_single_o = 0;
+  uint64_t biphenyl = 0;
+  uint64_t carom_double_n = 0;
+  uint64_t carom_double_o = 0;
+  uint64_t carom_ring_single_n = 0;
+  uint64_t carom_ring_single_o = 0;
+
+  uint64_t c_single_n = 0;
+  uint64_t c_double_n = 0;
+  uint64_t c_triple_n = 0;
+  uint64_t c_arom_n = 0;
+
+  uint64_t c_single_o = 0;
+  uint64_t c_double_o = 0;
+  uint64_t c_arom_o = 0;
+
+  uint64_t c_single_s = 0;
+  uint64_t c_double_s = 0;
+  uint64_t c_arom_s = 0;
+
+  uint64_t carom_f = 0;
+  uint64_t c_single_f = 0;
+  uint64_t c_single_halogen = 0;
+  uint64_t c_other = 0;
+
+  uint64_t n_arom_n = 0;
+  uint64_t n_single_n = 0;
+  uint64_t n_double_n = 0;
+  uint64_t n_triple_n = 0;
+
+  uint64_t n_single_o = 0;
+  uint64_t n_double_o = 0;
+  uint64_t n_arom_o = 0;
+  uint64_t n_arom_s = 0;
+  uint64_t narom_single_c = 0;
+
+  uint64_t o_single_o = 0;
+  uint64_t o_single_s = 0;
+  uint64_t o_double_s = 0;
+
+  uint64_t other_bond = 0;
+
+  uint64_t aliphatic_ring_bond_count = 0;
+
+  // The number of times something overflows the maximum
+  uint64_t overflow_count = 0;
+
+  for (const Bond* b : _bond_list) {
+    if (b->nrings() && ! b->is_aromatic())
+      aliphatic_ring_bond_count++;
+
+    const atom_number_t a1 = b->a1();
+    const atom_number_t a2 = b->a2();
+
+    atomic_number_t z1 = _things[a1]->atomic_number();
+
+    atomic_number_t z2 = _things[a2]->atomic_number();
+
+    int arom1 = is_aromatic(a1);
+    int arom2 = is_aromatic(a2);
+
+    if (z1 > z2) {
+      std::swap(z1, z2);
+      std::swap(arom1, arom2);
+    }
+
+    if (6 == z1) {
+      if (6 == z2)
+      {
+        if (b->is_aromatic()) {
+          c_arom_c++;
+        } else if (b->is_single_bond()) {
+          const uint64_t arom = arom1 + arom2;
+          if (arom == 0) {
+            if (b->nrings()) {
+              c_single_ring_c++;
+            } else {
+              c_single_c++;
+            }
+          } else if (arom == 1) {
+            ++carom_single_c;
+          } else {
+            ++biphenyl;
+          }
+        }
+        else if (b->is_double_bond())
+          c_double_c++;
+        else if (b->is_triple_bond())
+          c_triple_c++;
+      }
+      else if (7 == z2)
+      {
+        if (b->is_aromatic()) {
+          c_arom_n++;
+        } else if (b->is_single_bond()) {
+          if (arom1) {
+            if (b->nrings()) {
+              ++carom_ring_single_n;
+            } else {
+              ++carom_single_n;
+            }
+          } else if (arom2) {
+            ++narom_single_c;
+          } else {
+            ++c_single_n;
+          }
+        }
+        else if (b->is_double_bond()) {
+          if (arom1 == 0) {
+            c_double_n++;
+          } else {
+            ++carom_double_n;
+          }
+        }
+        else if (b->is_triple_bond())
+          c_triple_n++;
+      }
+      else if (8 == z2)
+      {
+        if (b->is_aromatic())
+          c_arom_o++;
+        else if (b->is_single_bond()) {
+          if (arom1) {
+            if (b->nrings()) {
+              ++carom_ring_single_o;
+            } else {
+              ++carom_single_o;
+            }
+          } else {
+            c_single_o++;
+          }
+        }
+        else if (b->is_double_bond()) {
+          if (arom1) {
+            ++carom_double_o;
+          } else {
+            c_double_o++;
+          }
+        }
+      }
+      else if (16 == z2)
+      {
+        if (b->is_aromatic())
+          c_arom_s++;
+        else if (b->is_single_bond())
+          c_single_s++;
+        else if (b->is_double_bond())
+          c_double_s++;
+      }
+      else if (z2 == 9) {
+        if (arom1) {
+          ++carom_f;
+        } else {
+          ++c_single_f;
+        }
+      } else if (z2 == 17 || z2 == 35 || z2 == 53) {
+        ++c_single_halogen;
+      } else {
+        ++c_other;
+      }
+    }
+
+    else if (7 == z1)
+    {
+      if (7 == z2)
+      {
+        if (b->is_aromatic())
+          n_arom_n++;
+        else if (b->is_single_bond())
+          n_single_n++;
+        else if (b->is_double_bond())
+          n_double_n++;
+        else if (b->is_triple_bond())
+          n_triple_n++;
+      }
+      else if (8 == z2)
+      {
+        if (b->is_aromatic())
+          n_arom_o++;
+        else if (b->is_single_bond())
+          n_single_o++;
+        else if (b->is_double_bond())
+          n_double_o++;
+      }
+      else if (z2 == 16) {
+        if (b->is_double_bond()) {
+          ++n_arom_s;
+        }
+      }
+    }
+    else if (8 == z1)
+    {
+      if (z2 == 8) {
+        ++o_single_o;
+      } else if (16 == z2) {
+        if (b->is_single_bond())
+          o_single_s++;
+        else if (b->is_double_bond())
+          o_double_s++;
+      }
+    } else {
+      ++other_bond;
+    }
+  }
+
+  // clang-format off
+
+  // Handy table of number of bits vs max value accommodated.
+  // 9 1 2 3  4  5
+  // 0 1 3 7 15 31
+
+  ShiftOr(c_single_c, 6, overflow_count, hash[0]);  // total = 6
+  ShiftOr(c_double_c, 3, overflow_count, hash[0]);  // total = 9
+  ShiftOr(c_triple_c, 2, overflow_count, hash[0]);  // total = 11
+  ShiftOr(c_arom_c, 5, overflow_count, hash[0]); // total = 16
+
+  ShiftOr(c_single_n, 4, overflow_count, hash[0]); // total = 20
+  ShiftOr(c_double_n, 3, overflow_count, hash[0]); // total = 23
+  ShiftOr(c_triple_n, 2, overflow_count, hash[0]); // total = 25
+  ShiftOr(c_arom_n, 4, overflow_count, hash[0]); // total = 31
+
+  ShiftOr(c_single_o, 4, overflow_count, hash[0]); // total = 35
+  ShiftOr(c_double_o, 3, overflow_count, hash[0]); // total = 38
+  ShiftOr(c_arom_o, 3, overflow_count, hash[0]); // total = 41
+
+  ShiftOr(c_single_s, 3, overflow_count, hash[0]); // total = 44
+  ShiftOr(c_double_s, 2, overflow_count, hash[0]); // total = 46
+  ShiftOr(c_arom_s, 3, overflow_count, hash[0]); // total = 49
+
+  ShiftOr(n_arom_n, 3, overflow_count, hash[0]); // total = 52
+  ShiftOr(n_single_n, 2, overflow_count, hash[0]); // total = 54
+  ShiftOr(n_double_n, 1, overflow_count, hash[0]); // total = 55
+  ShiftOr(n_triple_n, 1, overflow_count, hash[0]); // total = 56
+  ShiftOr(n_arom_o, 2, overflow_count, hash[0]); // total = 58
+  ShiftOr(n_arom_s, 1, overflow_count, hash[0]); // total = 59
+  ShiftOr(n_single_o, 2, overflow_count, hash[0]); // total = 61
+  ShiftOr(n_double_o, 3, overflow_count, hash[0]); // total = 64
+
+  ShiftOr(o_single_o, 1, overflow_count, hash[1]); // total = 1
+  ShiftOr(o_single_s, 3, overflow_count, hash[1]); // total = 4
+  ShiftOr(o_double_s, 3, overflow_count, hash[1]); // total = 7
+
+  ShiftOr(aliphatic_ring_bond_count, 5, overflow_count, hash[1]);  // total = 14
+
+  ShiftOr(carom_single_c, 4, overflow_count, hash[1]); // total = 18
+  ShiftOr(carom_single_n, 3, overflow_count, hash[1]); // total = 21
+  ShiftOr(carom_single_o, 3, overflow_count, hash[1]); // total = 24
+  ShiftOr(biphenyl, 2, overflow_count, hash[1]); // total = 26
+  ShiftOr(carom_double_n, 2, overflow_count, hash[1]); // total = 28
+  ShiftOr(carom_double_o, 2, overflow_count, hash[1]); // total = 30
+
+  ShiftOr(carom_ring_single_o, 2, overflow_count, hash[1]); // total = 32
+  ShiftOr(carom_ring_single_n, 2, overflow_count, hash[1]); // total = 34
+  ShiftOr(narom_single_c, 2, overflow_count, hash[1]); // total = 36
+  ShiftOr(c_single_ring_c, 4, overflow_count, hash[1]); // total = 40
+
+  // Must be last.
+  ShiftOr(c_other, 1, overflow_count, hash[1]); // total = 41
+  ShiftOr(other_bond, 2, overflow_count, hash[1]); // total = 43
+
+  // clang-format on
 }
 
 const_BondIterator::const_BondIterator(const Atom * a, const atom_number_t zatom) : _atnum(zatom)

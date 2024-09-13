@@ -2008,7 +2008,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   uint64_t quick_atom_hash() const;
   //  For each atom set in `include_atom`, form a radius 1 shell.
   int ShellHash(const int * include_atom, resizable_array<uint32_t>& result);
+  // A very approximate sum over all bonds. Because of the need to fit into a
+  // single 64 bit value, it is necessarily incomplete.
   uint64_t quick_bond_hash();  // not const because aromaticity is perceived
+  // A more complete bond hash that uses two 64 bit values. This way more information
+  // can be stored.
+  void QuickBondHash(uint64_t hash[2]); // not const because aromaticity is perceived.
 
   //  We are making a smarts of a subset and we want all the D and v directives to specify
   //  just the atoms in the subset or a minimum requirement

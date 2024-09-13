@@ -1064,6 +1064,20 @@ PYBIND11_MODULE(lillymol, m)
                 //.def("compute_Del_Re_partial_charges", &Molecule::compute_Del_Re_partial_charges, "Del Re partial charges")
                 //.def("compute_Pullman_partial_charges", &Molecule::compute_Pullman_partial_charges, "Pullman partial charges")
 
+                .def("gasteiger_partial_charges",
+                  [](Molecule& m) -> std::vector<float> {
+                    m.compute_Gasteiger_partial_charges();
+                    const int matoms = m.natoms();
+                    std::vector<float> result;
+                    result.reserve(matoms);
+                    for (int i = 0; i < matoms; ++i) {
+                      result.push_back(m.partial_charge(i));
+                    }
+                    return result;
+                  },
+                  "Return list of Gasteiger partial charges"
+                )
+
                 .def("highest_coordinate_dimensionality", static_cast<int (Molecule::*)()const>(&Molecule::highest_coordinate_dimensionality), "highest coordinate dimensionality")
                 .def("debug_string", static_cast<std::string (Molecule::*)()const>(&Molecule::debug_string), "Dump of internal data structures")
                 .def(py::self += py::self)
