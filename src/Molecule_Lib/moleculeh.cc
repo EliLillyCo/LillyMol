@@ -84,8 +84,12 @@ Molecule::_compute_and_store_implicit_hydrogens(atom_number_t zatom)
 {
   Atom * a = _things[zatom];
 
-  if (a->implicit_hydrogens_known())
+#ifdef DEBUG_COMPUTE_AND_STORE_IMPLICIT_HYDROGENS
+  cerr << "Molecule::_compute_and_store_implicit_hydrogens:implicit_hydrogens_known " << a->implicit_hydrogens_known() << ' ' << smarts_equivalent_for_atom(zatom) << '\n';
+#endif
+  if (a->implicit_hydrogens_known()) {
     return 1;
+  }
 
   int ih;
   if (! a->compute_implicit_hydrogens(ih))
@@ -100,7 +104,9 @@ Molecule::_compute_and_store_implicit_hydrogens(atom_number_t zatom)
     return 0;
   }
 
-//cerr << "Atom " << zatom << " '" << smarts_equivalent_for_atom (zatom) << "' has " << ih << " implicit hydrogens\n";
+#ifdef DEBUG_COMPUTE_AND_STORE_IMPLICIT_HYDROGENS
+  cerr << "Atom " << zatom << " '" << smarts_equivalent_for_atom (zatom) << "' has " << ih << " implicit hydrogens\n";
+#endif
 
   a->set_implicit_hydrogens(ih);
   return 1;
@@ -147,7 +153,10 @@ Molecule::compute_implicit_hydrogens()
 int
 Molecule::recompute_implicit_hydrogens(atom_number_t a)
 {
-  return _compute_and_store_implicit_hydrogens(a);
+  int rc = _compute_and_store_implicit_hydrogens(a);
+  invalidate_smiles();
+
+  return rc;
 }
 
 int
@@ -159,6 +168,8 @@ Molecule::recompute_implicit_hydrogens()
     if (! _compute_and_store_implicit_hydrogens(i))
       rc = 0;
   }
+
+  invalidate_smiles();
 
   return rc;
 }
