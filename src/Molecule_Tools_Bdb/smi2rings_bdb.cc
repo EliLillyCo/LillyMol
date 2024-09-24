@@ -2571,7 +2571,7 @@ smi2rings(int argc, char** argv) {
       if (f.starts_with("file=") || f.starts_with("FILE=")) {
         f.remove_leading_chars(5);
         fname = f;
-      } else if (!cl.value('f', min_urs_needed) || min_urs_needed < 0) {
+      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 0) {
         cerr << "The filter option requires a whole non-negative cutoff (-f)\n";
         usage(2);
       }
