@@ -303,8 +303,9 @@ usage(int rc) {
 // clang-format on
 // clang-format off
   cerr << R"(Identifies rings and ring systems. Stores or retrieves by unique smiles of the ring.
-Data is stored in a BerkeleyDb database with key unique smiles and value a textproto
-Smi2Rings::Ring proto.
+Data is stored in a BerkeleyDb database with key unique smiles and value a Smi2Rings.Ring textproto
+describing the ring system, including parent structure and number of instances.
+Usage:
 smi2rings_bdb -d dbname -d STORE|LOOKUP <options> file.smi
   -j ...         options for adding atoms to rings, enter '-j help' for info
   -N add         add non-ring connection to positive aromatic nitrogen
@@ -2571,7 +2572,7 @@ smi2rings(int argc, char** argv) {
       if (f.starts_with("file=") || f.starts_with("FILE=")) {
         f.remove_leading_chars(5);
         fname = f;
-      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 0) {
+      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 1) {
         cerr << "The filter option requires a whole non-negative cutoff (-f)\n";
         usage(2);
       }

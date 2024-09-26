@@ -2141,6 +2141,23 @@ cc_library(
 #)
 
 cc_binary(
+    name = "safe_generate",
+    srcs = [
+        "SAFE_generate.cc",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        ":molecule_filter_lib",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_protobuf//:protobuf",
+        "@com_google_absl//absl/container:flat_hash_set",
+    ],
+)
+
+cc_binary(
     name = "same_structures",
     srcs = [
         "same_structures.cc",
