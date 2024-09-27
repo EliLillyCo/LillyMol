@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <tuple>
 
@@ -63,6 +64,9 @@ Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
  -L <fname>             fragment library of SAFE fragments
  -Y <query>             queries for atoms that are allowed to change
  -N <query>             queries for atoms that are NOT allowed to change
+ -x extra=<n>           the number of extra atoms in a fragment being substitued
+ -x fewer=<n>           the number of fewer atoms in a fragment being substitued
+ -n <n>                 number of molecules to generate
  -v                     verbose output
 )";
 // clang-format on
@@ -71,19 +75,19 @@ Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
 }
 
 constexpr int kCarbon = 0;
-constexpr int kArCarbon = 0;
-constexpr int kNitrogen = 0;
-constexpr int kArNitrogen = 0;
-constexpr int kOxygen = 0;
-constexpr int kArOxygen = 0;
-constexpr int kFluorine = 0;
-constexpr int kPhosphorus = 0;
-constexpr int kSulphur = 0;
-constexpr int kArSulphur = 0;
-constexpr int kChlorine = 0;
-constexpr int kBromine = 0;
-constexpr int kIodine = 0;
-constexpr int kOther = 0;
+constexpr int kArCarbon = 1;
+constexpr int kNitrogen = 2;
+constexpr int kArNitrogen = 3;
+constexpr int kOxygen = 4;
+constexpr int kArOxygen = 5;
+constexpr int kFluorine = 6;
+constexpr int kPhosphorus = 7;
+constexpr int kSulphur = 8;
+constexpr int kArSulphur = 9;
+constexpr int kChlorine = 10;
+constexpr int kBromine = 11;
+constexpr int kIodine = 12;
+constexpr int kOther = 13;
 
 class MFormula {
   private:
@@ -241,7 +245,7 @@ SafeFragment::SafeFragment() {
 
 int
 SafeFragment::DebugPrint(std::ostream& output) const {
-  output << "SafeFragment smiles " << _smiles << '\n';
+  output << "SafeFragment smiles " << _smiles << " natoms " << _natoms << " ncon " << _ncon << '\n';
   output << "first";;
   for (int f : _first_digit) {
     output << ' ' << f << " '" << _smiles[f] << "'";
@@ -268,6 +272,7 @@ SafeFragment::Build(const const_IWSubstring& line) {
 int
 SafeFragment::Build(const const_IWSubstring& smi) {
   const int nchars = smi.length();
+  // cerr << "SafeFragment::Build from '" << smi << "'\n";
   // Must have at least an atomic symbol followed by % and a two digit ring number.
   if (nchars < 4) {
     cerr << "SafeFragment::Build:too short '" << smi << "'\n";
@@ -382,6 +387,7 @@ SafeFragment::Build(const dicer_data::DicerFragment& proto) {
   _mformula.Build(_m);
 
   _natoms = _m.natoms();
+  // cerr << "SafeFragment::build:smiles " << smi << " natoms " << _natoms << '\n';
 
   _ncon = _m.number_isotopic_atoms();
   if (_ncon == 0) {
@@ -423,6 +429,7 @@ SafeFragment::Build(const dicer_data::DicerFragment& proto) {
     }
   }
 
+  // cerr << "from " << smi << " transform to '" << tmp << " atoms " << _natoms << '\n';
   _smiles = tmp;
 
   return 1;
@@ -456,6 +463,8 @@ class SafedMolecule {
 
     int Build(const const_IWSubstring& buffer);
 
+    int DebugPrint(std::ostream& output) const;
+
     Molecule& mol() {
       return _m;
     }
@@ -470,6 +479,10 @@ class SafedMolecule {
 
     const IWString& smiles() const {
       return _smiles;
+    }
+
+    int number_fragments() const {
+      return _frag.number_elements();
     }
 
     const SafeFragment* fragment(int ndx) const {
@@ -507,6 +520,18 @@ SafedMolecule::SetupRng() {
 
   _dist = std::make_unique<std::uniform_int_distribution<uint32_t>>(0, _frag.size() - 1);
 
+  return 1;
+}
+
+int
+SafedMolecule::DebugPrint(std::ostream& output) const {
+  output << "SafedMolecule with " << _frag.size() << " fragments\n";
+  output << _smiles << ' ' << _m.name() << '\n';
+
+  for (int i = 0; i < _frag.number_elements(); ++i) {
+    output << i << ' ';
+    _frag[i]->DebugPrint(output);
+  }
   return 1;
 }
 
@@ -896,6 +921,11 @@ class Options {
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _mols_dist;
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _libs_dist;
 
+    // we can impose limits on the size of fragments that are selected
+    // for replacement.
+    int _min_atoms_in_fragment;
+    int _max_atoms_in_fragment;
+
     absl::flat_hash_set<IWString> _seen;
 
     MoleculeFilter _filter;
@@ -926,9 +956,15 @@ class Options {
     int AnyDiscardQueriesMatch(Molecule& m);
     int SeenBefore(Molecule& m);
     int BadBonds(Molecule& m) const;
+    int OkAtomCount(const int natoms) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
                         const SafeFragment& f2,
                         IWString_and_File_Descriptor& output);
+
+    int Breed(IWString_and_File_Descriptor& output);
+    int Breed(SafedMolecule& m1, SafedMolecule& m2, IWString_and_File_Descriptor& output);
+    int SelectFragments(const SafedMolecule& m1, const SafedMolecule& m2,
+                int& f1, int& f2);
 
   public:
     Options();
@@ -984,6 +1020,9 @@ Options::Options() {
 
   std::random_device rd;
   _rng.seed(rd());
+
+  _min_atoms_in_fragment = 0;
+  _max_atoms_in_fragment = std::numeric_limits<int>::max();
 
   _new_molecules_formed = 0;
   _rejected_by_bad_valence = 0;
@@ -1369,27 +1408,66 @@ Options::Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& 
   }
 
   const SafeFragment* f1 = m.fragment(*f1_ndx);
+  // cerr << "f1_ndx " << *f1_ndx << " natoms " << f1->natoms() << " smiles " << f1->smiles() << '\n';
+  // f1->DebugPrint(cerr);
+  if (! OkAtomCount(f1->natoms())) {
+    return 0;
+  }
 
   int natoms;
   if (_extra_atoms == 0 && _fewer_atoms == 0) {
     natoms = f1->natoms();
   } else {
-    std::uniform_int_distribution<uint32_t> u(f1->natoms() - _fewer_atoms,
-                                              f1->natoms() + _extra_atoms);
+    // Make sure we have a valid minimum atom count.
+    uint32_t amin;
+    if (_fewer_atoms >= static_cast<uint32_t>(f1->natoms())) {
+      amin = 1;
+    } else {
+      amin = f1->natoms() - _fewer_atoms;
+    }
+    std::uniform_int_distribution<uint32_t> u(amin, f1->natoms() + _extra_atoms);
     natoms = u(_rng);
-    cerr << "f1->natoms() " << f1->natoms() << " choose " << natoms << '\n';
+    // cerr << "f1->natoms() " << f1->natoms() << " choose " << natoms << '\n';
   }
 
   const SafeFragment* f2 = lib.GetFragment(f1->ncon(), natoms);
-  //cerr << " f2 " << f2 << '\n';
   if (f2 == nullptr) {
     return 0;
   }
-  cerr << "Requested " << natoms << " atoms got " << f2->natoms() << " QQ " << (natoms == f2->natoms()) << '\n';
+#ifdef DEBUG_GENERATE
+  cerr << f1->natoms() << " requested " << natoms << " atoms got " << f2->natoms() << " QQ " << (natoms == f2->natoms()) << '\n';
   cerr << f1->smiles() << ' ' << m.name() << '\n';
-  //cerr << "F2 smiles " << f2->smiles() << '\n';
+  Molecule mcopy(const_cast<SafeFragment*>(f1)->mol());
+  cerr << mcopy.smiles() << " from molecule, nat " << mcopy.natoms() << " cmp " << f1->natoms() << '\n';
+  cerr << "F2 smiles " << f2->smiles() << '\n';
+#endif
 
   return Generate(m, *f1_ndx, *f2, output);
+}
+
+int
+FormNewSmiles(const IWString& starting_smiles, int f1_ndx,
+              const IWString& new_smiles,
+              IWString& destination) {
+  destination.reserve(starting_smiles.size() + 20);   // 20 is an arbitrary choice
+  int frag_number = 0;
+  int new_smiles_added = 0;
+  for (int i = 0; i < starting_smiles.number_elements(); ++i) {
+    char c = starting_smiles[i];
+    if (c == '.') {
+      destination << c;
+      ++frag_number;
+    } else if (frag_number == f1_ndx) {
+      if (! new_smiles_added) {
+        destination << new_smiles;
+        new_smiles_added = 1;
+      }
+    } else {
+      destination << c;
+    }
+  }
+
+  return 1;
 }
 
 // `f1` is a fragment number from within `m` and `f2` is a library fragment.
@@ -1408,28 +1486,11 @@ Options::Generate(SafedMolecule& m,
   if (! m.NewSmiles(f1_ndx, f2, new_smiles)) {
     return 0;
   }
-  cerr << "Fragment smiles " << f1->smiles() << '\n';
-  cerr << "from " << m.smiles() << " and " << f2.smiles() << " get " << new_smiles << '\n';
+  // cerr << "Fragment smiles " << f1->smiles() << '\n';
+  // cerr << "from " << m.smiles() << " and " << f2.smiles() << " get " << new_smiles << '\n';
 
-  const IWString& starting_smiles = m.smiles();
   IWString tmp;
-  tmp.reserve(starting_smiles.size() + 20);   // 20 is an arbitrary choice
-  int frag_number = 0;
-  int new_smiles_added = 0;
-  for (int i = 0; i < starting_smiles.number_elements(); ++i) {
-    char c = starting_smiles[i];
-    if (c == '.') {
-      tmp << c;
-      ++frag_number;
-    } else if (frag_number == f1_ndx) {
-      if (! new_smiles_added) {
-        tmp << new_smiles;
-        new_smiles_added = 1;
-      }
-    } else {
-      tmp << c;
-    }
-  }
+  FormNewSmiles(m.smiles(), f1_ndx, new_smiles, tmp);
 
   Molecule newm;
   if (! newm.build_from_smiles(tmp)) {
@@ -1439,8 +1500,6 @@ Options::Generate(SafedMolecule& m,
 
   output << m.smiles() << ' ' << m.name() << " parent\n";
 
-  output.write_if_buffer_holds_more_than(4096);
-
   return ProcessNewMolecule(newm, m.name(), f2, output);
 }
 
@@ -1448,6 +1507,8 @@ int
 Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
                         const SafeFragment& f2,
                         IWString_and_File_Descriptor& output) {
+  output.write_if_buffer_holds_more_than(4096);
+
   ++_new_molecules_formed;
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; ++i) {
@@ -1491,6 +1552,19 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
 }
 
 int
+Options::OkAtomCount(const int natoms) const {
+  if (natoms < _min_atoms_in_fragment) {
+    return 0;
+  }
+
+  if (natoms > _max_atoms_in_fragment) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
 Options::BadBonds(Molecule& m) const {
   for (const Bond* b : m.bond_list()) {
     atom_number_t a1 = b->a1();
@@ -1526,6 +1600,78 @@ Options::SeenBefore(Molecule& m) {
 
   _seen.insert(m.unique_smiles());
   return 0;
+}
+
+int
+Options::Breed(IWString_and_File_Descriptor& output) {
+  int m1 = (*_mols_dist)(_rng);
+  int m2 = 0;
+  while (1) {
+    m2 = (*_mols_dist)(_rng);
+    if (m1 == m2) {
+      break;
+    }
+  }
+
+  return Breed(*_mols[m1], *_mols[m2], output);
+}
+
+// Identify a fragment number, `f1` from `m1` that is about the
+// same size as a fragment `f2` from `m2`.
+int
+Options::SelectFragments(const SafedMolecule& m1, const SafedMolecule& m2,
+                int& f1, int& f2) {
+  int nf1 = m1.number_fragments();
+  int nf2 = m2.number_fragments();
+
+  if (nf1 == 1) {
+    f1 = 0;
+  } else {
+    std::uniform_int_distribution<uint32_t> u1(0, nf1 - 1);
+    f1 = u1(_rng);
+  }
+
+  int atoms_in_f1 = m1.fragment(f1)->natoms();
+
+  // Find the fragment in `m2` closest to atoms_in_f1.
+  f2 = -1;
+  int min_diff = std::numeric_limits<int>::max();
+  for (int i = 0; i < nf2; ++i) {
+    const SafeFragment* f = m2.fragment(i);
+    int d = std::abs(f->natoms() - atoms_in_f1);
+    if (d < min_diff) {
+      min_diff = d;
+      f2 = i;
+    }
+  }
+
+  return f2 >= 0;
+}
+
+int
+Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
+               IWString_and_File_Descriptor& output) {
+  int f1_ndx, f2_ndx;
+  if (! SelectFragments(m1, m2, f1_ndx, f2_ndx)) {
+    return 0;
+  }
+
+  const SafeFragment* f1 = m1.fragment(f1_ndx);
+  const SafeFragment* f2 = m2.fragment(f2_ndx);
+
+  IWString replacement_smiles;
+  f1->SameNumbers(*f2, replacement_smiles);
+
+  IWString tmp;
+  FormNewSmiles(m1.smiles(), f1_ndx, replacement_smiles, tmp);
+
+  Molecule m;
+  if (! m.build_from_smiles(tmp)) {
+    cerr << "Options::Breed:invalid smiles '" << tmp << "'\n";
+    return 0;
+  }
+
+  return ProcessNewMolecule(m, m1.name(), *f2, output);
 }
 
 int
