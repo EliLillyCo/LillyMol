@@ -4,10 +4,12 @@
 #include <cctype>
 #include <iostream>
 #include <random>
+#include <tuple>
 
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 
 #include "Foundational/cmdline/cmdline.h"
@@ -220,6 +222,10 @@ class SafeFragment {
 
     const IWString& smiles () const {
       return _smiles;
+    }
+
+    Molecule& mol() {
+      return _m;
     }
 
     // Place into `new_smiles` the smiles of `f2` with the ring numbers
@@ -436,6 +442,7 @@ class SafedMolecule {
 
     resizable_array_p<SafeFragment> _frag;
 
+    // When random items are selected, we limit the number of tries.
     int _max_attempts;
 
     std::mt19937 _rng;
@@ -637,6 +644,7 @@ SafedMolecule::IdentifyUnChangingFragments(resizable_array_p<Substructure_Query>
 }
 
 
+#ifdef QWEQWEQWE
 SafeFragment*
 SafedMolecule::ChooseFragment(int ncon, const Matcher<int>& natoms) {
   for (int i = 0; i < _max_attempts; ++i) {
@@ -657,6 +665,7 @@ SafedMolecule::ChooseFragment(int ncon, const Matcher<int>& natoms) {
 
   return nullptr;
 }
+#endif
 
 int
 SafeFragment::SameNumbers(const SafeFragment& f2, IWString& new_smiles) const {
@@ -695,12 +704,8 @@ SafedMolecule::NewSmiles(int f1_ndx, const SafeFragment& f2, IWString& new_smile
 
 class Library {
   private:
-    // We store an array of fragments, with the array indexed by the number
-    // of connections in the fragment.
-    resizable_array_p<SafeFragment>* _frags;
-
-    // For each value of ncon in the _frags array, a distribution for sampling.
-    resizable_array_p<std::uniform_int_distribution<uint32_t>> _dist;
+    // A mapping from <ncon, natoms> to the molecules fitting that description.
+    absl::flat_hash_map<std::tuple<uint32_t, uint32_t>, resizable_array_p<SafeFragment>> _ff;
 
     // As we read the library, we keep track of the number of fragments
     // we discard because of too many connections
@@ -720,44 +725,26 @@ class Library {
 
     int SetupRng();
 
+    // Change the isotopic label of each atom that has an isotopic label to `iso`.
+    int SetIsotope(isotope_t iso);
+
     uint32_t size() const;
 
-    const SafeFragment* GetFragment(int ncon, const Matcher<int>& natoms);
+    const SafeFragment* GetFragment(int ncon, int natoms);
 };
 
 Library::Library() {
   _max_attempts = 10;  // arbitrary number.
   _excessive_connections = 0;
-  _frags = nullptr;
 }
 
 Library::~Library() {
-  delete [] _frags;
 }
 
 int
 Library::SetupRng() {
-  if (_frags == nullptr) {
-    cerr << "Library::SetupRng:no molecules\n";
-    return 0;
-  }
-
   std::random_device rd;
   _rng.seed(rd());
-  _dist.reserve(max_ncon);
-
-  // We don't have any zero connection fragments
-  _dist << new std::uniform_int_distribution<uint32_t>(0, 1);
-  for (int i = 1; i <= max_ncon; ++i) {
-    uint32_t n = _frags[i].size();
-    // cerr << "for ncon " << i << " have " << n << " fragments\n";
-
-    if (n == 0) {
-      _dist << new std::uniform_int_distribution<uint32_t>(0, 0);
-    } else {
-      _dist << new std::uniform_int_distribution<uint32_t>(0, n - 1);
-    }
-  }
 
   return 1;
 }
@@ -766,40 +753,46 @@ uint32_t
 Library::size() const {
   uint32_t rc = 0;
 
-  for (int i = 1; i < max_ncon; ++i) {
-    rc += _frags[i].size();
+  for (const auto& [k, v] : _ff) {
+    rc += v.size();
   }
 
   return rc;
 }
 
 const SafeFragment*
-Library::GetFragment(int ncon, const Matcher<int>& natoms) {
-  std::uniform_int_distribution<uint32_t>& u = *_dist[ncon];
-  resizable_array_p<SafeFragment>& frags = _frags[ncon];
-  // cerr << " for ncon " << ncon << " hve " << frags.size() << " fragments\n";
-  if (frags.empty()) {
+Library::GetFragment(int ncon, int natoms) {
+  std::tuple<uint32_t, uint32_t> key(ncon, natoms);
+  auto iter = _ff.find(key);
+  if (iter == _ff.end()) {
     return nullptr;
   }
 
-  for (int i = 0; i < _max_attempts; ++i) {
-    uint32_t ndx = u(_rng);
-    const SafeFragment* rc = frags[ndx];
+  std::uniform_int_distribution<uint32_t> u(0, iter->second.size() - 1);
+  uint32_t ndx = u(_rng);
 
-    if (natoms.matches(rc->natoms())) {
-      return rc;
+  return iter->second.item(ndx);
+}
+
+int
+Library::SetIsotope(isotope_t iso) {
+  for (const auto& [_, v] : _ff) {
+    for (SafeFragment* f : v) {
+      Molecule& m = f->mol();
+      const int matoms = m.natoms();
+      for (int i = 0; i < matoms; ++i) {
+        if (m.isotope(i)) {
+          m.set_isotope(i, iso);
+        }
+      }
     }
   }
 
-  return nullptr;
+  return 1;
 }
 
 int
 Library::Build(IWString& fname) {
-  if (_frags == nullptr) {
-    _frags = new resizable_array_p<SafeFragment>[max_ncon + 1];
-  }
-
   iwstring_data_source input(fname);
   if (! input.good()) {
     cerr << "Library::Build:cannot open '" << fname << "'\n";
@@ -845,8 +838,16 @@ Library::BuildMember(const const_IWSubstring& line) {
     return 1;
   }
 
-  // _mols << f.release();
-  _frags[f->ncon()] << f.release();
+  std::tuple<uint32_t, uint32_t> key(f->ncon(), f->natoms());
+  auto iter = _ff.find(key);
+  if (iter != _ff.end()) {
+    iter->second << f.release();
+    return 1;
+  }
+
+  resizable_array_p<SafeFragment> tmp;
+  tmp << f.release();
+  _ff.emplace(key, std::move(tmp));
 
   return 1;
 }
@@ -879,6 +880,9 @@ class Options {
 
     int _ignore_molecules_not_matching_queries;
 
+    uint32_t _extra_atoms;
+    uint32_t _fewer_atoms;
+
     // The -X option.
     resizable_array_p<Substructure_Query> _discard_if_match;
 
@@ -897,9 +901,11 @@ class Options {
     MoleculeFilter _filter;
 
     uint64_t _new_molecules_formed;
+    uint64_t _rejected_by_bad_valence;
     uint64_t _rejected_by_discard_queries;
     uint64_t _rejected_by_seen_before;
     uint64_t _rejected_by_filter;
+    uint64_t _rejected_by_adjacent_atoms;
 
   // Private functions.
     int ReadLibrary(IWString& fname);
@@ -911,7 +917,7 @@ class Options {
     void IdentifyUnChangingFragments();
     void IdentifyUnChangingFragments(SafedMolecule& m);
 
-    const SafeFragment* GetFragment(int ncon, const Matcher<int>& natoms);
+    const SafeFragment* GetFragment(int ncon, int natoms);
 
     int Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& output);
     int Generate(SafedMolecule& m,
@@ -919,8 +925,9 @@ class Options {
                   IWString_and_File_Descriptor& output);
     int AnyDiscardQueriesMatch(Molecule& m);
     int SeenBefore(Molecule& m);
+    int BadBonds(Molecule& m) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
-                        const IWString& name2,
+                        const SafeFragment& f2,
                         IWString_and_File_Descriptor& output);
 
   public:
@@ -958,6 +965,8 @@ class Options {
 
     int DoSubstructureSearches();
 
+    int SetIsotope(isotope_t iso);
+
     int Generate(int ngenerate, IWString_and_File_Descriptor& output);
 };
 
@@ -968,15 +977,20 @@ Options::Options() {
 
   _ignore_molecules_not_matching_queries = 0;
 
+  _extra_atoms = 0;
+  _fewer_atoms = 0;
+
   _max_attempts = 100;
 
   std::random_device rd;
   _rng.seed(rd());
 
   _new_molecules_formed = 0;
+  _rejected_by_bad_valence = 0;
   _rejected_by_discard_queries = 0;
   _rejected_by_seen_before = 0;
   _rejected_by_filter = 0;
+  _rejected_by_adjacent_atoms = 0;
 }
 
 int
@@ -1117,6 +1131,28 @@ Options::Initialise(Command_Line& cl) {
     }
   } 
 
+  if (cl.option_present('x')) {
+    const_IWSubstring x;
+    for (int i = 0; cl.value('x', x, i); ++i) {
+      if (x.starts_with("extra=")) {
+        x.remove_leading_chars(6);
+        if (! x.numeric_value(_extra_atoms)) {
+          cerr << "Invalid 'extra=" << x << " directive\n";
+          return 0;
+        }
+      } else if (x .starts_with("fewer=")) {
+        x.remove_leading_chars(6);
+        if (! x.numeric_value(_fewer_atoms)) {
+          cerr << "Invalid 'fewer=" << x << " directive\n";
+          return 0;
+        }
+      } else {
+        cerr << "Unrecognised -x directive '" << x << "'\n";
+        return 0;
+      }
+    }
+  }
+
   return 1;
 }
 
@@ -1196,6 +1232,15 @@ Options::SetupRng() {
 }
 
 int
+Options::SetIsotope(isotope_t iso) {
+  for (Library* lib : _library) {
+    lib->SetIsotope(iso);
+  }
+
+  return 1;
+}
+
+int
 Options::DoSubstructureSearches() {
   if (_can_change.size() > 0) {
     if (! IdentifyChangingFragments()) {
@@ -1250,8 +1295,9 @@ Options::IdentifyUnChangingFragments() {
   }
 }
 
+#ifdef NOT_NEEDED_AASD
 const SafeFragment*
-Options::GetFragment(int ncon, const Matcher<int>& natoms) {
+Options::GetFragment(int ncon, int natoms) {
   if (_library.size() == 1) {
     return _library[0]->GetFragment(ncon, natoms);
   }
@@ -1260,14 +1306,17 @@ Options::GetFragment(int ncon, const Matcher<int>& natoms) {
 
   return _library[lib]->GetFragment(ncon, natoms);
 }
+#endif
 
 int
 Options::Report(std::ostream& output) const {
 
   output << "Options: generated " << _new_molecules_formed << " molecules\n";
+  output << _rejected_by_bad_valence << " _rejected_by_bad_valence\n";
   output << _rejected_by_discard_queries << " _rejected_by_discard_queries\n";
   output << _rejected_by_seen_before << " _rejected_by_seen_before\n";
   output << _rejected_by_filter << " _rejected_by_filter\n";
+  output << _rejected_by_adjacent_atoms << " _rejected_by_adjacent_atoms\n";
 
   return 1;
 }
@@ -1299,6 +1348,8 @@ Options::Preprocess(Molecule& m) {
 
 int
 Options::Generate(int ngenerate, IWString_and_File_Descriptor& output) {
+  _max_attempts = 10 * ngenerate;
+
   int generated = 0;
   for (int i = 0; i < _max_attempts && generated < ngenerate; ++i) {
     int mindex = (*_mols_dist)(_rng);
@@ -1319,14 +1370,23 @@ Options::Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& 
 
   const SafeFragment* f1 = m.fragment(*f1_ndx);
 
-  Matcher<int> matcher;
-  matcher.add(f1->natoms());
+  int natoms;
+  if (_extra_atoms == 0 && _fewer_atoms == 0) {
+    natoms = f1->natoms();
+  } else {
+    std::uniform_int_distribution<uint32_t> u(f1->natoms() - _fewer_atoms,
+                                              f1->natoms() + _extra_atoms);
+    natoms = u(_rng);
+    cerr << "f1->natoms() " << f1->natoms() << " choose " << natoms << '\n';
+  }
 
-  const SafeFragment* f2 = lib.GetFragment(f1->ncon(), matcher);
+  const SafeFragment* f2 = lib.GetFragment(f1->ncon(), natoms);
   //cerr << " f2 " << f2 << '\n';
   if (f2 == nullptr) {
     return 0;
   }
+  cerr << "Requested " << natoms << " atoms got " << f2->natoms() << " QQ " << (natoms == f2->natoms()) << '\n';
+  cerr << f1->smiles() << ' ' << m.name() << '\n';
   //cerr << "F2 smiles " << f2->smiles() << '\n';
 
   return Generate(m, *f1_ndx, *f2, output);
@@ -1377,14 +1437,29 @@ Options::Generate(SafedMolecule& m,
     return 0;
   }
 
-  return ProcessNewMolecule(newm, m.name(), f2.name(), output);
+  output << m.smiles() << ' ' << m.name() << " parent\n";
+
+  output.write_if_buffer_holds_more_than(4096);
+
+  return ProcessNewMolecule(newm, m.name(), f2, output);
 }
 
 int
 Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
-                        const IWString& name2,
+                        const SafeFragment& f2,
                         IWString_and_File_Descriptor& output) {
   ++_new_molecules_formed;
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    m.unset_all_implicit_hydrogen_information(i);
+  }
+
+  if (! m.valence_ok()) {
+    cerr << "Options::ProcessNewMolecule:invalid valence " << m.smiles() <<
+            ' ' << name1 << '\n';
+    ++_rejected_by_bad_valence;
+    return 0;
+  }
 
   if (AnyDiscardQueriesMatch(m)) {
     ++_rejected_by_discard_queries;
@@ -1400,14 +1475,46 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
     return 0;
   }
 
+  if (BadBonds(m)) {
+    ++_rejected_by_adjacent_atoms;
+    return 0;
+  }
+
   // Form a new name.
   m << name1;
 
-  m << " %% " << name2;
+  m << " %% " << f2.name() << '.' << f2.ncon() << '.' << f2.natoms();
 
   output << m.aromatic_smiles() << ' ' << m.name() << '\n';
 
   return 1;
+}
+
+int
+Options::BadBonds(Molecule& m) const {
+  for (const Bond* b : m.bond_list()) {
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+
+    // Bonds are only formed with isotopes
+    if (m.isotope(a1) == 0 || m.isotope(a2) == 0) {
+      continue;
+    }
+
+    atomic_number_t z1 = m.atomic_number(a1);
+    if (z1 == 6) {
+      continue;
+    }
+    atomic_number_t z2 = m.atomic_number(a2);
+    if (z2 == 6) {
+      continue;
+    }
+
+    // Heteratom joined to heteroatom.
+    return 1;
+  }
+
+  return 0;
 }
 
 int
@@ -1423,7 +1530,7 @@ Options::SeenBefore(Molecule& m) {
 
 int
 SafeGenerate(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:C:z:X:F:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:C:z:X:F:x:n:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1483,9 +1590,21 @@ SafeGenerate(int argc, char** argv) {
 
   options.DoSubstructureSearches();
 
+  options.SetIsotope(2);
+
   IWString_and_File_Descriptor output(1);
 
-  options.Generate(100, output);
+  int ngenerate = 1;
+  if (cl.option_present('n')) {
+    if (! cl.value('n', ngenerate) || ngenerate < 1) {
+      cerr << "Invalid number to generate (-n)\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will generate " << ngenerate << " variants\n";
+    }
+  }
+  options.Generate(ngenerate, output);
 
   if (verbose) {
     options.Report(cerr);
