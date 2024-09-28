@@ -64,9 +64,13 @@ Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
  -L <fname>             fragment library of SAFE fragments
  -Y <query>             queries for atoms that are allowed to change
  -N <query>             queries for atoms that are NOT allowed to change
+ -z i                   ignore molecules not matching queries
  -x extra=<n>           the number of extra atoms in a fragment being substitued
  -x fewer=<n>           the number of fewer atoms in a fragment being substitued
- -n <n>                 number of molecules to generate
+ -n <n>                 number of molecules to generate by fragment swap from library
+ -b <n>                 number of molecules to generate by breeding
+ -F <fname>             molecule filter textproto file - products must pass
+ -p                     write the parent molecule before variants
  -v                     verbose output
 )";
 // clang-format on
@@ -241,6 +245,7 @@ SafeFragment::SafeFragment() {
   _natoms = 0;
   _ncon = 0;
   _distance = 0;
+  _ok_to_select = 1;
 }
 
 int
@@ -497,7 +502,7 @@ class SafedMolecule {
     int IdentifyChangingFragments(resizable_array_p<Substructure_Query>& queries);
     int IdentifyUnChangingFragments(resizable_array_p<Substructure_Query>& queries);
 
-    SafeFragment* ChooseFragment(int ncon, const Matcher<int>& natoms);
+    std::optional<int> ChooseFragment();
 
     // Return the index of a random fragment.
     std::optional<int> RandomFragment();
@@ -669,28 +674,23 @@ SafedMolecule::IdentifyUnChangingFragments(resizable_array_p<Substructure_Query>
 }
 
 
-#ifdef QWEQWEQWE
-SafeFragment*
-SafedMolecule::ChooseFragment(int ncon, const Matcher<int>& natoms) {
-  for (int i = 0; i < _max_attempts; ++i) {
-    const int ndx = (*_dist)(_rng);
-    SafeFragment* f = _frag[ndx];
-    if (! f->ok_to_select()) {
-      continue;
-    }
-    if (f->ncon() != ncon) {
-      continue;
-    }
-    if (! natoms.matches(f->natoms())) {
-      continue;
-    }
-
-    return f;
+std::optional<int>
+SafedMolecule::ChooseFragment() {
+  if (_frag.size() == 1) {
+    return 0;
   }
 
-  return nullptr;
+  for (int i = 0; i < _max_attempts; ++i) {
+    const int ndx = (*_dist)(_rng);
+    if (! _frag[ndx]->ok_to_select()) {
+      continue;
+    }
+
+    return ndx;
+  }
+
+  return std::nullopt;
 }
-#endif
 
 int
 SafeFragment::SameNumbers(const SafeFragment& f2, IWString& new_smiles) const {
@@ -921,6 +921,9 @@ class Options {
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _mols_dist;
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _libs_dist;
 
+    // Do we write the starting molecule or not
+    int _write_parent_molecule;
+
     // we can impose limits on the size of fragments that are selected
     // for replacement.
     int _min_atoms_in_fragment;
@@ -955,7 +958,7 @@ class Options {
                   IWString_and_File_Descriptor& output);
     int AnyDiscardQueriesMatch(Molecule& m);
     int SeenBefore(Molecule& m);
-    int BadBonds(Molecule& m) const;
+    int BondsOk(Molecule& m) const;
     int OkAtomCount(const int natoms) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
                         const SafeFragment& f2,
@@ -963,7 +966,7 @@ class Options {
 
     int Breed(IWString_and_File_Descriptor& output);
     int Breed(SafedMolecule& m1, SafedMolecule& m2, IWString_and_File_Descriptor& output);
-    int SelectFragments(const SafedMolecule& m1, const SafedMolecule& m2,
+    int SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
                 int& f1, int& f2);
 
   public:
@@ -1004,6 +1007,8 @@ class Options {
     int SetIsotope(isotope_t iso);
 
     int Generate(int ngenerate, IWString_and_File_Descriptor& output);
+    int Generate(SafedMolecule& m, int ngenerate, IWString_and_File_Descriptor& output);
+    int Breed(int nbreed, IWString_and_File_Descriptor& output);
 };
 
 Options::Options() {
@@ -1020,6 +1025,8 @@ Options::Options() {
 
   std::random_device rd;
   _rng.seed(rd());
+
+  _write_parent_molecule = 0;
 
   _min_atoms_in_fragment = 0;
   _max_atoms_in_fragment = std::numeric_limits<int>::max();
@@ -1189,6 +1196,13 @@ Options::Initialise(Command_Line& cl) {
         cerr << "Unrecognised -x directive '" << x << "'\n";
         return 0;
       }
+    }
+  }
+
+  if (cl.option_present('p')) {
+    _write_parent_molecule = 1;
+    if (_verbose) {
+      cerr << "Will write the parent molecule\n";
     }
   }
 
@@ -1387,14 +1401,26 @@ Options::Preprocess(Molecule& m) {
 
 int
 Options::Generate(int ngenerate, IWString_and_File_Descriptor& output) {
-  _max_attempts = 10 * ngenerate;
+  for (SafedMolecule* m : _mols) {
+    Generate(*m, ngenerate, output);
 
+    output.write_if_buffer_holds_more_than(4096);
+  }
+
+  return 1;
+}
+
+int
+Options::Generate(SafedMolecule& m, int ngenerate, IWString_and_File_Descriptor & output) {
   int generated = 0;
+
+  if (_write_parent_molecule) {
+    output << m.smiles() << ' ' << m.name() << " parent\n";
+  }
+
   for (int i = 0; i < _max_attempts && generated < ngenerate; ++i) {
-    int mindex = (*_mols_dist)(_rng);
     int libindex = (*_libs_dist)(_rng);
-    // cerr << "indices " << mindex << ' ' << libindex << '\n';
-    generated += Generate(*_mols[mindex], *_library[libindex], output);
+    generated += Generate(m, *_library[libindex], output);
   }
 
   return 1;
@@ -1402,6 +1428,8 @@ Options::Generate(int ngenerate, IWString_and_File_Descriptor& output) {
 
 int
 Options::Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& output) {
+//cerr << "Options;;Generate m ";
+//m.DebugPrint(cerr);
   std::optional<int> f1_ndx = m.RandomFragment();
   if (f1_ndx == std::nullopt) {
     return 0;
@@ -1498,8 +1526,6 @@ Options::Generate(SafedMolecule& m,
     return 0;
   }
 
-  output << m.smiles() << ' ' << m.name() << " parent\n";
-
   return ProcessNewMolecule(newm, m.name(), f2, output);
 }
 
@@ -1523,20 +1549,24 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
   }
 
   if (AnyDiscardQueriesMatch(m)) {
+    cerr << "Discard query\n";
     ++_rejected_by_discard_queries;
     return 0;
   }
   if (SeenBefore(m)) {
+    cerr << "Seen before " << m.smiles() << '\n';
     ++_rejected_by_seen_before;
     return 0;
   }
 
   if (! _filter.Ok(m)) {
+    cerr << "Filtered\n";
     ++_rejected_by_filter;
     return 0;
   }
 
-  if (BadBonds(m)) {
+  if (! BondsOk(m)) {
+    cerr << "Adjacent bonds\n";
     ++_rejected_by_adjacent_atoms;
     return 0;
   }
@@ -1565,7 +1595,7 @@ Options::OkAtomCount(const int natoms) const {
 }
 
 int
-Options::BadBonds(Molecule& m) const {
+Options::BondsOk(Molecule& m) const {
   for (const Bond* b : m.bond_list()) {
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
@@ -1576,19 +1606,30 @@ Options::BadBonds(Molecule& m) const {
     }
 
     atomic_number_t z1 = m.atomic_number(a1);
-    if (z1 == 6) {
-      continue;
-    }
     atomic_number_t z2 = m.atomic_number(a2);
-    if (z2 == 6) {
+    // Carbon-Carbon always OK.
+    if (z1 == 6 && z2 == 6) {
       continue;
     }
 
-    // Heteratom joined to heteroatom.
-    return 1;
+    // Reject heteratom joined to heteroatom.
+    if (z1 != 6 && z2 != 6) {
+      return 0;
+    }
+
+    // One atom must be a carbon.
+    // reject alkyl halides.
+    if (z1 > z2) {
+      std::swap(a1, a2);
+      std::swap(z1, z2);
+    }
+
+    if (! m.is_aromatic(a1) && (z2 == 17 || z2 == 35 || z2 == 53)) {
+      return 0;
+    }
   }
 
-  return 0;
+  return 1;
 }
 
 int
@@ -1603,41 +1644,58 @@ Options::SeenBefore(Molecule& m) {
 }
 
 int
-Options::Breed(IWString_and_File_Descriptor& output) {
-  int m1 = (*_mols_dist)(_rng);
-  int m2 = 0;
-  while (1) {
-    m2 = (*_mols_dist)(_rng);
-    if (m1 == m2) {
-      break;
+Options::Breed(int nbreed, IWString_and_File_Descriptor& output) {
+  int generated = 0;
+  for (int attempts = 0; generated < nbreed; ++attempts) {
+    int m1 = (*_mols_dist)(_rng);
+    int m2 = 0;
+    while (1) {
+      m2 = (*_mols_dist)(_rng);
+      if (m1 != m2) {
+        break;
+      }
+    }
+    cerr << "Breeding with " << m1 << " and " << m2 << '\n';
+    if (Breed(*_mols[m1], *_mols[m2], output)) {
+      ++generated;
+    } else {
+      cerr << "Breeding " << attempts << " failed, generated " << generated << '\n';
     }
   }
 
-  return Breed(*_mols[m1], *_mols[m2], output);
+  return 1;
 }
 
 // Identify a fragment number, `f1` from `m1` that is about the
 // same size as a fragment `f2` from `m2`.
 int
-Options::SelectFragments(const SafedMolecule& m1, const SafedMolecule& m2,
+Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
                 int& f1, int& f2) {
-  int nf1 = m1.number_fragments();
-  int nf2 = m2.number_fragments();
 
-  if (nf1 == 1) {
-    f1 = 0;
-  } else {
-    std::uniform_int_distribution<uint32_t> u1(0, nf1 - 1);
-    f1 = u1(_rng);
+  std::optional<int> maybef1 = m1.ChooseFragment();
+  if (! maybef1) {
+    cerr << "Cannot select f1\n";
+    return 0;
   }
 
+  f1 = *maybef1;
+
   int atoms_in_f1 = m1.fragment(f1)->natoms();
+  int ncon1 = m1.fragment(f1)->ncon();
+  // cerr << "Finding frag with " << ncon1 << " connections, with " << atoms_in_f1 << " atoms\n";
 
   // Find the fragment in `m2` closest to atoms_in_f1.
+  // Note that we do not respect the ok_to_select attribute?
+  const int nf2 = m2.number_fragments();
+
   f2 = -1;
   int min_diff = std::numeric_limits<int>::max();
   for (int i = 0; i < nf2; ++i) {
     const SafeFragment* f = m2.fragment(i);
+    if (ncon1 != f->ncon()) {
+      continue;
+    }
+
     int d = std::abs(f->natoms() - atoms_in_f1);
     if (d < min_diff) {
       min_diff = d;
@@ -1676,7 +1734,7 @@ Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
 
 int
 SafeGenerate(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:C:z:X:F:x:n:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:C:z:X:F:x:n:pb:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1750,7 +1808,21 @@ SafeGenerate(int argc, char** argv) {
       cerr << "Will generate " << ngenerate << " variants\n";
     }
   }
+
   options.Generate(ngenerate, output);
+
+  if (cl.option_present('b')) {
+    int nbreed;
+    if (! cl.value('b', nbreed) || nbreed < 1) {
+      cerr << "The number to breed option (-b) must be a whole +ve number\n";
+      Usage(1);
+    }
+    if (verbose) {
+      cerr << "Will generated " << nbreed << " variants by breeding\n";
+    }
+
+    options.Breed(nbreed, output);
+  }
 
   if (verbose) {
     options.Report(cerr);
