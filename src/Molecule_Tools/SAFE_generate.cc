@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <random>
 #include <tuple>
 
@@ -540,8 +541,14 @@ class Options {
 
     int _ignore_molecules_not_matching_queries;
 
-    uint32_t _extra_atoms;
-    uint32_t _fewer_atoms;
+    std::optional<uint32_t> _extra_atoms;
+    std::optional<uint32_t> _fewer_atoms;
+
+    std::optional<uint32_t> _extra_rings;
+    std::optional<uint32_t> _fewer_rings;
+
+    // Derived from the proto if set.
+    std::optional<uint32_t> _max_formula_difference;
 
     // The -X option.
     resizable_array_p<Substructure_Query> _discard_if_match;
@@ -596,12 +603,17 @@ class Options {
     int AnyDiscardQueriesMatch(Molecule& m);
     int SeenBefore(Molecule& m);
     int OkAtomCount(const int natoms) const;
+    int OkAtomCountDifference(int n1, int n2) const;
+    int OkRingCountDifference(int n1, int n2) const;
+    int OkDifferences(const SafeFragment& f1, const SafeFragment& f2) const;
+    int OkFormulaDifference(const SafeFragment& f1, const SafeFragment f2) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
                         const SafeFragment& f2,
                         IWString_and_File_Descriptor& output);
 
     int Breed(IWString_and_File_Descriptor& output);
     int Breed(SafedMolecule& m1, SafedMolecule& m2, IWString_and_File_Descriptor& output);
+    int SelectAtomCount(const SafeFragment& f);
     int SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
                 int& f1, int& f2);
 
@@ -653,9 +665,6 @@ Options::Options() {
   _remove_chirality = 0;
 
   _ignore_molecules_not_matching_queries = 0;
-
-  _extra_atoms = 0;
-  _fewer_atoms = 0;
 
   _max_attempts = 100;
   _number_from_breeding = 0;
@@ -832,16 +841,20 @@ Options::Initialise(Command_Line& cl) {
     for (int i = 0; cl.value('x', x, i); ++i) {
       if (x.starts_with("extra=")) {
         x.remove_leading_chars(6);
-        if (! x.numeric_value(_extra_atoms)) {
+        int tmp;
+        if (! x.numeric_value(tmp)) {
           cerr << "Invalid 'extra=" << x << " directive\n";
           return 0;
         }
+        _extra_rings = tmp;
       } else if (x .starts_with("fewer=")) {
         x.remove_leading_chars(6);
-        if (! x.numeric_value(_fewer_atoms)) {
+        int tmp;
+        if (! x.numeric_value(tmp)) {
           cerr << "Invalid 'fewer=" << x << " directive\n";
           return 0;
         }
+        _fewer_atoms = tmp;
       } else {
         cerr << "Unrecognised -x directive '" << x << "'\n";
         return 0;
@@ -905,9 +918,18 @@ Options::TransferFromConfig(const safe_generate::Config& proto) {
 
   for (const std::string& q : proto.cannot_change()) {
     IWString tmp(q);
-    constexpr char kFlag = 'Y';
+    constexpr char kFlag = 'N';
     if (! process_cmdline_token(kFlag, tmp, _cannot_change, _verbose)) {
       cerr << "Options::TransferFromConfig:invalid cannot change " << q << '\n';
+      return 0;
+    }
+  }
+
+  for (const std::string& q :proto.discard_if_match()) {
+    IWString tmp(q);
+    constexpr char kFlag = 'X';
+    if (! process_cmdline_token(kFlag, tmp, _discard_if_match, _verbose)) {
+      cerr << "Options::TransferFromConfig:invalid discard if change " << q << '\n';
       return 0;
     }
   }
@@ -918,6 +940,10 @@ Options::TransferFromConfig(const safe_generate::Config& proto) {
       cerr << proto.ShortDebugString() << '\n';
       return 0;
     }
+  }
+
+  if (proto.has_max_formula_difference()) {
+    _max_formula_difference = proto.max_formula_difference();
   }
 
   return 1;
@@ -1062,19 +1088,6 @@ Options::IdentifyUnChangingFragments() {
   }
 }
 
-#ifdef NOT_NEEDED_AASD
-const SafeFragment*
-Options::GetFragment(int ncon, int natoms) {
-  if (_library.size() == 1) {
-    return _library[0]->GetFragment(ncon, natoms);
-  }
-
-  int lib = (*_libs_dist)(_rng);
-
-  return _library[lib]->GetFragment(ncon, natoms);
-}
-#endif
-
 int
 Options::Report(std::ostream& output) const {
 
@@ -1130,18 +1143,59 @@ Options::Generate(int ngenerate, IWString_and_File_Descriptor& output) {
 
 int
 Options::Generate(SafedMolecule& m, int ngenerate, IWString_and_File_Descriptor & output) {
-  int generated = 0;
-
   if (_write_parent_molecule) {
     output << m.smiles() << ' ' << m.name() << " parent\n";
   }
 
-  for (int i = 0; i < _max_attempts && generated < ngenerate; ++i) {
-    int libindex = (*_libs_dist)(_rng);
-    generated += Generate(m, *_library[libindex], output);
+  int generated = 0;
+
+  int max_attempts = ngenerate * 10;
+
+  if (_library.size() == 1) {
+    for (int i = 0; i < max_attempts && generated < ngenerate; ++i) {
+      generated += Generate(m, *_library[0], output);
+    }
+  } else {
+    for (int i = 0; i < max_attempts && generated < ngenerate; ++i) {
+      const int libindex = (*_libs_dist)(_rng);
+      generated += Generate(m, *_library[libindex], output);
+    }
   }
 
   return 1;
+}
+
+// Fragment `f` is to be replaced. We need to decide on an atom count
+// for the fragment that will replace it.
+int
+Options::SelectAtomCount(const SafeFragment& f) {
+  // If nothing specified, return the same number of atoms.
+  if (! _extra_atoms && ! _fewer_atoms) {
+    return f.natoms();
+  }
+
+  // Need to select a value from a range. Establish the range.
+  int aminval;
+  // Make sure we have a valid minimum atom count.
+  if (_fewer_atoms) {
+    if (*_fewer_atoms >= static_cast<uint32_t>(f.natoms())) {
+      aminval = 1;
+    } else {
+      aminval = f.natoms() - *_fewer_atoms;
+    }
+  } else {
+    aminval = 1;
+  }
+
+  int amaxval;
+  if (_extra_atoms) {
+    amaxval = f.natoms() + *_extra_atoms;
+  } else {
+    amaxval = f.natoms() + 6;  // arbitrary number
+  }
+
+  std::uniform_int_distribution<uint32_t> u(aminval, amaxval);
+  return u(_rng);
 }
 
 int
@@ -1160,21 +1214,7 @@ Options::Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& 
     return 0;
   }
 
-  int natoms;
-  if (_extra_atoms == 0 && _fewer_atoms == 0) {
-    natoms = f1->natoms();
-  } else {
-    // Make sure we have a valid minimum atom count.
-    uint32_t amin;
-    if (_fewer_atoms >= static_cast<uint32_t>(f1->natoms())) {
-      amin = 1;
-    } else {
-      amin = f1->natoms() - _fewer_atoms;
-    }
-    std::uniform_int_distribution<uint32_t> u(amin, f1->natoms() + _extra_atoms);
-    natoms = u(_rng);
-    // cerr << "f1->natoms() " << f1->natoms() << " choose " << natoms << '\n';
-  }
+  const int natoms = SelectAtomCount(*f1);
 
   const SafeFragment* f2 = lib.GetFragment(f1->ncon(), natoms);
   if (f2 == nullptr) {
@@ -1187,6 +1227,14 @@ Options::Generate(SafedMolecule& m, Library& lib, IWString_and_File_Descriptor& 
   cerr << mcopy.smiles() << " from molecule, nat " << mcopy.natoms() << " cmp " << f1->natoms() << '\n';
   cerr << "F2 smiles " << f2->smiles() << '\n';
 #endif
+
+  if (! OkDifferences(*f1, *f2)) {
+    return 0;
+  }
+
+  if (! OkDifferences(*f1, *f2)) {
+    return 0;
+  }
 
   return Generate(m, *f1_ndx, *f2, output);
 }
@@ -1398,6 +1446,74 @@ Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
 }
 
 int
+Options::OkDifferences(const SafeFragment& f1, const SafeFragment& f2) const {
+  if (! OkAtomCountDifference(f1.natoms(), f2.natoms())) {
+    return 0;
+  }
+
+  if (! OkRingCountDifference(f1.nrings(), f2.nrings())) {
+    return 0;
+  }
+
+  if (! OkFormulaDifference(f1, f2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+// We are replacing a fragment with `n1` atoms with a fragment
+// that contains `n2` atoms.
+// Return true if that is OK wrt changes in atom count.
+int
+Options::OkAtomCountDifference(int n1, int n2) const {
+
+  if (_extra_atoms == 0 && n2 > n1) {
+    return 0;
+  }
+
+  if (_fewer_atoms == 0 && n2 < n1) {
+    return 0;
+  }
+
+  if (n2 > n1 && (n2 - n1) > static_cast<int>(*_extra_atoms)) {
+    return 0;
+  }
+
+  if (n2 < n1 && (n1 - n2) > static_cast<int>(*_fewer_atoms)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+Options::OkRingCountDifference(int n1, int n2) const {
+  if (_extra_rings) {
+    if (n1 < n2 && static_cast<uint32_t>(n2 - n1) > *_extra_rings) {
+      return 0;
+    }
+  }
+
+  if (_fewer_rings) {
+    if (n1 > n2 && static_cast<uint32_t>(n1 - n2) < *_fewer_rings) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::OkFormulaDifference(const SafeFragment& f1, const SafeFragment f2) const {
+  if (! _max_formula_difference) {
+    return 1;
+  }
+
+  return f1.FormulaDifference(f2) <= *_max_formula_difference;
+}
+
+int
 Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
                IWString_and_File_Descriptor& output) {
   int f1_ndx, f2_ndx;
@@ -1407,6 +1523,10 @@ Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
 
   const SafeFragment* f1 = m1.fragment(f1_ndx);
   const SafeFragment* f2 = m2.fragment(f2_ndx);
+
+  if (! OkDifferences(*f1, *f2)) {
+    return 0;
+  }
 
   IWString replacement_smiles;
   f1->SameNumbers(*f2, replacement_smiles);

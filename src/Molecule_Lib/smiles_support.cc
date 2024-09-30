@@ -71,6 +71,10 @@ include_bond_aromaticity_in_smiles() {
   return _write_bonds_as_aromatic;
 }
 
+void set_include_bond_aromaticity_in_smiles(int s) {
+  _write_bonds_as_aromatic = s;
+}
+
 static int _include_cis_trans_in_smiles = 1;
 
 void

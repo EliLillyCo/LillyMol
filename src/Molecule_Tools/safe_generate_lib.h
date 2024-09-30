@@ -14,7 +14,7 @@ inline constexpr int kMFOther = 13;
 
 class MFormula {
   private:
-    int _count[kMFOther];
+    int _count[kMFOther + 1];
 
   // Private functions
     void ZeroCountArray();
@@ -23,6 +23,9 @@ class MFormula {
     MFormula();
 
     int Build(Molecule& m);
+
+    // The absolute difference between individual types.
+    int Diff(const MFormula& rhs) const;
 };
 
 class SafeFragment {
@@ -42,6 +45,9 @@ class SafeFragment {
 
     // Number of atoms in the fragment.
     int _natoms;
+
+    // Number of rings in the fragment.
+    int _nrings;
 
     // Number of connections (ring openings) in the fragment.
     int _ncon;
@@ -78,6 +84,10 @@ class SafeFragment {
       return _ncon;
     }
 
+    int nrings() const {
+      return _nrings;
+    }
+
     int Build(const const_IWSubstring& buffer);
     int Build(const dicer_data::DicerFragment& proto);
 
@@ -96,11 +106,18 @@ class SafeFragment {
       return _m;
     }
 
+    // Formula difference
+    uint32_t FormulaDifference(const SafeFragment& rhs) const {
+      return _mformula.Diff(rhs._mformula);
+    }
+
     // Place into `new_smiles` the smiles of `f2` with the ring numbers
     // from `this`.
     int SameNumbers(const SafeFragment& f2, IWString& new_smiles) const;
 };
 
+// Examines all bonds in `m` and returns false if we find bonds that should
+// be rejected.
 int BondsOk(Molecule& m);
 
 }  // namespace safe_generate

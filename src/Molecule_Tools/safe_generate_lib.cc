@@ -89,6 +89,21 @@ MFormula::Build(Molecule& m) {
 }
 
 int
+MFormula::Diff(const MFormula& rhs) const {
+  uint32_t rc = 0;
+  for (int i = 0; i <= kMFOther; ++i) {
+    if (_count[i] == rhs._count[i]) {
+    } else if (_count[i] < rhs._count[i]) {
+      rc += rhs._count[i] - _count[i];
+    } else {
+      rc += _count[i] - rhs._count[i];
+    }
+  }
+
+  return rc;
+}
+
+int
 IsSulfonamide(const Molecule& m, atom_number_t s, atom_number_t n) {
   assert(m.atomic_number(s) == kSulphur);
 
@@ -204,6 +219,7 @@ BondsOk(Molecule& m) {
 
 SafeFragment::SafeFragment() {
   _natoms = 0;
+  _nrings = 0;
   _ncon = 0;
   _distance = 0;
   _ok_to_select = 1;
@@ -257,6 +273,7 @@ SafeFragment::Build(const const_IWSubstring& smi) {
   _smiles = smi;
   _smiles.truncate_at_first(' ');
   _natoms = _m.natoms();
+  _nrings = _m.nrings();
   _ncon = _first_digit.number_elements();
 
   const int niso = _m.number_isotopic_atoms();

@@ -8,6 +8,7 @@
 namespace {
 
 using safe_generate::BondsOk;
+using safe_generate::SafeFragment;
 
 TEST(TestBondsOk, Test1) {
   Molecule m;
@@ -68,6 +69,18 @@ TEST(TestBondsOk, Test2) {
   Molecule m;
   ASSERT_TRUE(m.build_from_smiles("N#CC1C(NC)C(SCC2NC3C(N2)CCCC3)C(C2CCCCC2)C=C1"));
   EXPECT_TRUE(BondsOk(m));
+}
+
+TEST(TestSameRingOpenings, Test1) {
+  SafeFragment f1, f2;
+  ASSERT_TRUE(f1.Build("CC[1N]%12CCC[1C]%13O"));
+  EXPECT_EQ(f1.natoms(), 8);
+  EXPECT_EQ(f1.nrings(), 0);
+  ASSERT_TRUE(f2.Build("[1O]%17C[1N]%18O"));
+  EXPECT_EQ(f2.natoms(), 4);
+  IWString new_smiles;
+  EXPECT_TRUE(f1.SameNumbers(f2, new_smiles));
+  EXPECT_EQ(new_smiles, "[1O]%12C[1N]%13O");
 }
 
 

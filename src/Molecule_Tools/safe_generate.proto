@@ -25,5 +25,17 @@ message Config {
   optional uint32 extra_atoms = 9;
   optional uint32 fewer_atoms = 10;
 
-  optional MoleculeFilterData.Requirements molecule_filter = 11;
+  optional uint32 extra_rings = 11;
+  optional uint32 fewer_rings = 12;
+
+  // If specified, a maximum value on the difference in the molecular
+  // formulae for two fragments in order to be swapped. This uses
+  // the Diff() method in the MFormula class. 
+  // Note that this check is independent of the extra_atoms and
+  // fewer_atoms checks.
+  optional uint32 max_formula_difference = 13;
+
+  repeated string discard_if_match = 14;
+
+  optional MoleculeFilterData.Requirements molecule_filter = 15;
 }
