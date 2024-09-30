@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package safe_generate;
+
+import "Molecule_Lib/etrans.proto";
+import "Molecule_Tools/molecule_filter.proto";
+
+message Config {
+  optional bool verbose = 1;
+
+  optional element_transformation.ElementTransformations etrans = 2;
+
+  repeated string library = 3;
+
+  repeated string can_change = 4;
+  repeated string cannot_change = 5;
+
+  optional bool ignore_molecules_not_matching_queries = 6;
+
+  optional uint32 min_atoms_in_fragment = 7;
+  optional uint32 max_atoms_in_fragment = 8;
+
+  // when a fragment changes size, how many extra atoms are allowed
+  // and how many atoms can it lose.
+  optional uint32 extra_atoms = 9;
+  optional uint32 fewer_atoms = 10;
+
+  optional MoleculeFilterData.Requirements molecule_filter = 11;
+}

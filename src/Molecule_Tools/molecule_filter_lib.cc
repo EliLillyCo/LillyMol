@@ -31,6 +31,15 @@ MoleculeFilter::Build(IWString& fname) {
   return 1;
 }
 
+int
+MoleculeFilter::Build(const MoleculeFilterData::Requirements& proto) {
+  _requirements = proto;
+
+  InitialiseOptionalFeatures();
+
+  return 1;
+}
+
 void
 MoleculeFilter::InitialiseOptionalFeatures() {
   _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);

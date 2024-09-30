@@ -27,6 +27,9 @@ class MoleculeFilter {
     // Read textproto configuration file
     int Build(IWString& fname);
 
+    // Copy `proto` to _requirements and initialise.
+    int Build(const MoleculeFilterData::Requirements& proto);
+
     // Return true if `m` is consistent with the constratins set in `_requirements`.
     int Ok(Molecule& m);
 };

@@ -13,8 +13,10 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 
+#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/matcher.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/absl_hash.h"
 
 #include "Molecule_Lib/aromatic.h"
@@ -26,11 +28,14 @@
 #include "Molecule_Lib/target.h"
 
 #include "Molecule_Tools/molecule_filter_lib.h"
+#include "Molecule_Tools/safe_generate_lib.h"
 
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#include "Molecule_Tools/safe_generate.pb.h"
 #else
 #include "dicer_fragments.pb.h"
+#include "safe_generate.pb.h"
 #endif
 
 namespace safe_generate {
@@ -61,6 +66,8 @@ Usage(int rc) {
 // clang-format off
   cerr << R"(Denovo generation of molecules from SAFE smiles
 Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
+ -C <fname>             safe_generate textproto configuration file.
+ -a <ncon>              maximum value for number of connections processed - applied to library.
  -L <fname>             fragment library of SAFE fragments
  -Y <query>             queries for atoms that are allowed to change
  -N <query>             queries for atoms that are NOT allowed to change
@@ -76,368 +83,6 @@ Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
 // clang-format on
 
   ::exit(rc);
-}
-
-constexpr int kCarbon = 0;
-constexpr int kArCarbon = 1;
-constexpr int kNitrogen = 2;
-constexpr int kArNitrogen = 3;
-constexpr int kOxygen = 4;
-constexpr int kArOxygen = 5;
-constexpr int kFluorine = 6;
-constexpr int kPhosphorus = 7;
-constexpr int kSulphur = 8;
-constexpr int kArSulphur = 9;
-constexpr int kChlorine = 10;
-constexpr int kBromine = 11;
-constexpr int kIodine = 12;
-constexpr int kOther = 13;
-
-class MFormula {
-  private:
-    int _count[kOther];
-
-  // Private functions
-    void ZeroCountArray();
-
-  public:
-    MFormula();
-
-    int Build(Molecule& m);
-};
-
-void
-MFormula::ZeroCountArray() {
-  std::fill_n(_count, kOther, 0);
-}
-
-MFormula::MFormula() {
-  ZeroCountArray();
-}
-
-int
-MFormula::Build(Molecule& m) {
-  m.compute_aromaticity_if_needed();
-
-  ZeroCountArray();
-
-  for (int i = 0; i < m.natoms(); ++i) {
-    atomic_number_t z = m.atomic_number(i);
-    if (z == 6) {
-      if (m.is_aromatic(i)) {
-        ++_count[kArCarbon];
-      } else {
-        ++_count[kCarbon];
-      }
-    } else if (z == 7) {
-      if (m.is_aromatic(i)) {
-        ++_count[kArNitrogen];
-      } else {
-        ++_count[kNitrogen];
-      }
-    } else if (z == 8) {
-      if (m.is_aromatic(i)) {
-        ++_count[kArOxygen];
-      } else {
-        ++_count[kOxygen];
-      }
-    } else if (z == 9) {
-      ++_count[kFluorine];
-    } else if (z == 15) {
-      ++_count[kPhosphorus];
-    } else if (z == 16) {
-      if (m.is_aromatic(i)) {
-        ++_count[kArSulphur];
-      } else {
-        ++_count[kSulphur];
-      }
-    } else if (z == 17) {
-      ++_count[kChlorine];
-    } else if (z == 35) {
-      ++_count[kBromine];
-    } else if (z == 53) {
-      ++_count[kIodine];
-    } else {
-      ++_count[kOther];
-    }
-  }
-
-  return 1;
-}
-
-class SafeFragment {
-  private:
-    // the smiles of the fragment
-    // Individual dot separated tokens from something like
-    // [1Cl]%10.[1C]%11.[1C]%121=NO[1C]%13%11O1.[1C]%131CCCCN1.C1CC[1C]%10[1C]%12C1
-    IWString _smiles;
-
-    // The indices within _smiles where the first digit after the % signs are.
-    resizable_array<int> _first_digit;
-
-    // A molecule build from _smiles by dropping the %nn characters
-    Molecule _m;
-
-    MFormula _mformula;
-
-    // Number of atoms in the fragment.
-    int _natoms;
-
-    // Number of connections (ring openings) in the fragment.
-    int _ncon;
-
-    // If two or more connections, the number of bonds between the closest two.
-    int _distance;
-
-    // Within _smiles the ring openings present.
-    std::vector<int> _ring;
-
-    // In a molecule consisting of individual SafeFragment's each fragment
-    // can be marked as ok to select or not - depending on substructure
-    // matches in the parent molecule.
-    int _ok_to_select;
-
-  // Private functions
-    int ProcessSquareBracket(const IWString& smi, int &i, int& next_ring,
-                     IWString& destination);
-
-  public:
-    SafeFragment();
-
-    int DebugPrint(std::ostream& output) const;
-
-    const IWString& name() const {
-      return _m.name();
-    }
-
-    int natoms() const {
-      return _natoms;
-    }
-
-    int ncon() const {
-      return _ncon;
-    }
-
-    int Build(const const_IWSubstring& buffer);
-    int Build(const dicer_data::DicerFragment& proto);
-
-    int ok_to_select() const {
-      return _ok_to_select;
-    }
-    void set_ok_to_select(int s) {
-      _ok_to_select = s;
-    }
-
-    const IWString& smiles () const {
-      return _smiles;
-    }
-
-    Molecule& mol() {
-      return _m;
-    }
-
-    // Place into `new_smiles` the smiles of `f2` with the ring numbers
-    // from `this`.
-    int SameNumbers(const SafeFragment& f2, IWString& new_smiles) const;
-};
-
-SafeFragment::SafeFragment() {
-  _natoms = 0;
-  _ncon = 0;
-  _distance = 0;
-  _ok_to_select = 1;
-}
-
-int
-SafeFragment::DebugPrint(std::ostream& output) const {
-  output << "SafeFragment smiles " << _smiles << " natoms " << _natoms << " ncon " << _ncon << '\n';
-  output << "first";;
-  for (int f : _first_digit) {
-    output << ' ' << f << " '" << _smiles[f] << "'";
-  }
-  output << '\n';
-
-  return output.good();
-}
-
-#ifdef NO_TUSED
-int
-SafeFragment::Build(const const_IWSubstring& line) {
-  google::protobuf::io::ArrayInputStream zero_copy_array(line.data(), line.nchars());
-  dicer_data::DicerFragment proto;
-  if (!google::protobuf::TextFormat::Parse(&zero_copy_array, &proto)) {
-    cerr << "SafeFragment:Build:cannot parse proto " << line << '\n';
-    return 0;
-  }
-
-  return Build(proto);
-}
-#endif
-
-int
-SafeFragment::Build(const const_IWSubstring& smi) {
-  const int nchars = smi.length();
-  // cerr << "SafeFragment::Build from '" << smi << "'\n";
-  // Must have at least an atomic symbol followed by % and a two digit ring number.
-  if (nchars < 4) {
-    cerr << "SafeFragment::Build:too short '" << smi << "'\n";
-    return 0;
-  }
-
-  IWString smiles;
-  smiles.reserve(smi.length());
-
-  for (int i = 0; i < nchars; ++i) {
-    const char c = smi[i];
-    if (c == kPercent) {
-      int n = (smi[i + 1] - '0') * 10 + smi[i + 2] - '0';
-      _ring.push_back(n);
-      _first_digit << (i + 1);
-      i += 2;
-    } else {
-      smiles << c;
-    }
-  }
-
-  if (! _m.build_from_smiles(smiles)) {
-    cerr << "SafeFragment::Build:invalid smiles '" << smiles << "' from '" << smi << "'\n";
-    return 0;
-  }
-
-  _natoms = _m.natoms();
-  _ncon = _first_digit.number_elements();
-  _smiles = smi;
-
-  const int niso = _m.number_isotopic_atoms();
-  if (niso == 0) {
-    cerr << "SafeFragment::Build:no isotopes '" << smiles << "' from '" << smi << "'\n";
-    return 0;
-  }
-
-  if (niso > 1) {
-    _distance = _natoms + 1;
-    for (int i = 0; i < _natoms; ++i) {
-      if (_m.isotope(i) == 0) {
-        continue;
-      }
-      for (int j = i + 1; j < _natoms; ++j) {
-        if (_m.isotope(j) == 0) {
-          continue;
-        }
-        const int d = _m.bonds_between(i, j);
-        if (d < _distance) {
-          _distance = d;
-        }
-      }
-    }
-  }
-
-  _mformula.Build(_m);
-
-  return 1;
-}
-
-int
-SafeFragment::ProcessSquareBracket(const IWString& smi, int &i, int& next_ring,
-                     IWString& destination) {
-  assert(smi[i] == kOpenSquareBracket);
-  destination << kOpenSquareBracket;
-  ++i;
-
-  // Should not happen.
-  if (i == smi.length()) {
-    return 0;
-  }
-
-  int got_isotope = 0;
-  if (std::isdigit(smi[i])) {
-    got_isotope = 1;
-  }
-
-  for ( ;i < smi.length(); ++i) {
-    destination << smi[i];
-    if (smi[i] == kCloseSquareBracket) {
-      break;
-    }
-  }
-
-  if (got_isotope) {
-    // Skip over any ring closures already present.
-    for ( ; (i + 1) < smi.length() && std::isdigit(smi[i + 1]); ++i) {
-      destination << smi[i + 1];
-    }
-    destination << '%';
-    _first_digit << destination.length();
-    destination << next_ring;
-    ++next_ring;
-  }
-
-  return 1;
-}
-
-int
-SafeFragment::Build(const dicer_data::DicerFragment& proto) {
-  IWString smi = proto.smi();
-  if (smi.empty()) {
-    cerr << "SafeFragment::Build:empty smiles " << proto.ShortDebugString() << '\n';
-    return 0;
-  }
-  if (! _m.build_from_smiles(smi)) {
-    cerr << "SafeFragment::Build:invalid smiles " << proto.ShortDebugString() << '\n';
-    return 0;
-  }
-
-  _m.set_name(proto.par());
-
-  _mformula.Build(_m);
-
-  _natoms = _m.natoms();
-  // cerr << "SafeFragment::build:smiles " << smi << " natoms " << _natoms << '\n';
-
-  _ncon = _m.number_isotopic_atoms();
-  if (_ncon == 0) {
-    cerr << "SafeFragment::Build:no isotopes '" << smi << "' from '" <<
-            proto.ShortDebugString() << "'\n";
-    return 0;
-  }
-
-  if (_ncon > 1) {
-    _distance = _natoms + 1;
-    for (int i = 0; i < _natoms; ++i) {
-      if (_m.isotope(i) == 0) {
-        continue;
-      }
-      for (int j = i + 1; j < _natoms; ++j) {
-        if (_m.isotope(j) == 0) {
-          continue;
-        }
-        const int d = _m.bonds_between(i, j);
-        if (d < _distance) {
-          _distance = d;
-        }
-      }
-    }
-  }
-
-  // The smiles that is read does not have the %nn ring opening/closing motifs.
-  // We insert those after the isotopic labels.
-
-  IWString tmp;
-  tmp.reserve(smi.length() + 9);
-  int next_ring = 11;
-  for (int i = 0; i < smi.length(); ++i) {
-    const char c = smi[i];
-    if (c == kOpenSquareBracket) {
-      ProcessSquareBracket(smi, i, next_ring, tmp);
-    } else {
-      tmp << c;
-    }
-  }
-
-  // cerr << "from " << smi << " transform to '" << tmp << " atoms " << _natoms << '\n';
-  _smiles = tmp;
-
-  return 1;
 }
 
 class SafedMolecule {
@@ -692,20 +337,6 @@ SafedMolecule::ChooseFragment() {
   return std::nullopt;
 }
 
-int
-SafeFragment::SameNumbers(const SafeFragment& f2, IWString& new_smiles) const {
-  new_smiles = f2._smiles;
-
-  // Now copy our ring numbers to `new_smiles`.
-  const int nf = _first_digit.number_elements();
-  for (int i = 0; i < nf; ++i) {
-    new_smiles[f2._first_digit[i]] = _smiles[_first_digit[i]];
-    new_smiles[f2._first_digit[i] + 1] = _smiles[_first_digit[i] + 1];
-  }
-
-  return 1;
-}
-
 std::optional<int>
 SafedMolecule::RandomFragment() {
   for (int i = 0; i < _max_attempts; ++i) {
@@ -895,6 +526,10 @@ class Options {
     // Not a part of all applications, just an example...
     Element_Transformations _element_transformations;
 
+    safe_generate::Config _config;
+
+    MoleculeFilter _filter;
+
     resizable_array_p<Library> _library;
 
     resizable_array_p<SafedMolecule> _mols;
@@ -931,7 +566,7 @@ class Options {
 
     absl::flat_hash_set<IWString> _seen;
 
-    MoleculeFilter _filter;
+    uint64_t _number_from_breeding;
 
     uint64_t _new_molecules_formed;
     uint64_t _rejected_by_bad_valence;
@@ -944,6 +579,8 @@ class Options {
     int ReadLibrary(IWString& fname);
     int ReadMolecules(iwstring_data_source& input);
     int ReadMolecule(const const_IWSubstring& line);
+
+    int TransferFromConfig(const safe_generate::Config& proto);
 
     int IdentifyChangingFragments();
     int IdentifyChangingFragments(SafedMolecule& m);
@@ -958,7 +595,6 @@ class Options {
                   IWString_and_File_Descriptor& output);
     int AnyDiscardQueriesMatch(Molecule& m);
     int SeenBefore(Molecule& m);
-    int BondsOk(Molecule& m) const;
     int OkAtomCount(const int natoms) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
                         const SafeFragment& f2,
@@ -1022,6 +658,7 @@ Options::Options() {
   _fewer_atoms = 0;
 
   _max_attempts = 100;
+  _number_from_breeding = 0;
 
   std::random_device rd;
   _rng.seed(rd());
@@ -1064,11 +701,6 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('T')) {
-    if (!_element_transformations.construct_from_command_line(cl, _verbose, 'T'))
-      Usage(8);
-  }
-
   if (cl.option_present('l')) {
     _reduce_to_largest_fragment = 1;
     if (_verbose) {
@@ -1083,9 +715,9 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('C')) {
-    if (! cl.value('C', max_ncon) || max_ncon < 1) {
-      cerr << "Options::Initialise:invalid max ncon value (-C)\n";
+  if (cl.option_present('a')) {
+    if (! cl.value('a', max_ncon) || max_ncon < 1) {
+      cerr << "Options::Initialise:invalid max ncon value (-a)\n";
       return 0;
     }
 
@@ -1093,6 +725,24 @@ Options::Initialise(Command_Line& cl) {
       cerr << "Will only consider fragments with at most " << max_ncon <<
               " connections\n";
     }
+  }
+
+  if (cl.option_present('C')) {
+    IWString fname = cl.string_value('C');
+    std::optional<safe_generate::Config> maybe_config = 
+                iwmisc::ReadTextProtoCommentsOK<safe_generate::Config>(fname);
+    if (! maybe_config) {
+      cerr << "Cannot initialise config (-C)\n";
+      return 0;
+    }
+
+    _config = *maybe_config;
+    TransferFromConfig(*maybe_config);
+  }
+
+  if (cl.option_present('T')) {
+    if (!_element_transformations.construct_from_command_line(cl, _verbose, 'T'))
+      Usage(8);
   }
 
   if (cl.option_present('Y')) {
@@ -1203,6 +853,70 @@ Options::Initialise(Command_Line& cl) {
     _write_parent_molecule = 1;
     if (_verbose) {
       cerr << "Will write the parent molecule\n";
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::TransferFromConfig(const safe_generate::Config& proto) {
+  if (proto.has_etrans()) {
+    if (! _element_transformations.Build(proto.etrans())) {
+      cerr << "Options::TransferFromConfig:invalid etrans " << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+  }
+
+  if (proto.has_ignore_molecules_not_matching_queries()) {
+    _ignore_molecules_not_matching_queries = proto.ignore_molecules_not_matching_queries();
+  }
+
+  if (proto.has_min_atoms_in_fragment()) {
+    _min_atoms_in_fragment = proto.min_atoms_in_fragment();
+  }
+  if (proto.has_max_atoms_in_fragment()) {
+    _max_atoms_in_fragment = proto.max_atoms_in_fragment();
+  }
+
+  if (proto.has_extra_atoms()) {
+    _extra_atoms = proto.extra_atoms();
+  }
+  if (proto.has_fewer_atoms()) {
+    _fewer_atoms = proto.fewer_atoms();
+  }
+ 
+  for (const std::string& fname: proto.library()) {
+    IWString tmp(fname);
+    if (! ReadLibrary(tmp)) {
+      cerr << "Options::TransferFromConfig::cannot read library '" << fname << "'\n";
+      return 0;
+    }
+  }
+
+  for (const std::string& q : proto.can_change()) {
+    IWString tmp(q);
+    constexpr char kFlag = 'Y';
+    if (! process_cmdline_token(kFlag, tmp, _can_change, _verbose)) {
+      cerr << "Options::TransferFromConfig:invalid can change " << q << '\n';
+      return 0;
+    }
+  }
+
+  for (const std::string& q : proto.cannot_change()) {
+    IWString tmp(q);
+    constexpr char kFlag = 'Y';
+    if (! process_cmdline_token(kFlag, tmp, _cannot_change, _verbose)) {
+      cerr << "Options::TransferFromConfig:invalid cannot change " << q << '\n';
+      return 0;
+    }
+  }
+
+  if (proto.has_molecule_filter()) {
+    if (! _filter.Build(proto.molecule_filter())) {
+      cerr << "Options::TransferFromConfig:invalid molecule filter\n";
+      cerr << proto.ShortDebugString() << '\n';
+      return 0;
     }
   }
 
@@ -1371,6 +1085,10 @@ Options::Report(std::ostream& output) const {
   output << _rejected_by_filter << " _rejected_by_filter\n";
   output << _rejected_by_adjacent_atoms << " _rejected_by_adjacent_atoms\n";
 
+  if (_number_from_breeding > 0) {
+    output << "Breed " << _number_from_breeding << " molecules\n";
+  }
+
   return 1;
 }
 
@@ -1481,7 +1199,7 @@ FormNewSmiles(const IWString& starting_smiles, int f1_ndx,
   int frag_number = 0;
   int new_smiles_added = 0;
   for (int i = 0; i < starting_smiles.number_elements(); ++i) {
-    char c = starting_smiles[i];
+    const char c = starting_smiles[i];
     if (c == '.') {
       destination << c;
       ++frag_number;
@@ -1539,34 +1257,45 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; ++i) {
     m.unset_all_implicit_hydrogen_information(i);
+    m.set_implicit_hydrogens_known(i, 0);
   }
 
   if (! m.valence_ok()) {
+#ifdef DEBUG_GENERATE
     cerr << "Options::ProcessNewMolecule:invalid valence " << m.smiles() <<
             ' ' << name1 << '\n';
+#endif
     ++_rejected_by_bad_valence;
     return 0;
   }
 
   if (AnyDiscardQueriesMatch(m)) {
+#ifdef DEBUG_PROCESS_NEW_MOLECULE
     cerr << "Discard query\n";
+#endif
     ++_rejected_by_discard_queries;
     return 0;
   }
   if (SeenBefore(m)) {
+#ifdef DEBUG_PROCESS_NEW_MOLECULE
     cerr << "Seen before " << m.smiles() << '\n';
+#endif
     ++_rejected_by_seen_before;
     return 0;
   }
 
   if (! _filter.Ok(m)) {
+#ifdef DEBUG_PROCESS_NEW_MOLECULE
     cerr << "Filtered\n";
+#endif
     ++_rejected_by_filter;
     return 0;
   }
 
   if (! BondsOk(m)) {
-    cerr << "Adjacent bonds\n";
+#ifdef DEBUG_PROCESS_NEW_MOLECULE
+    cerr <<  m.smiles() << ' ' << m.name() << " adjacent bonds\n";
+#endif
     ++_rejected_by_adjacent_atoms;
     return 0;
   }
@@ -1595,44 +1324,6 @@ Options::OkAtomCount(const int natoms) const {
 }
 
 int
-Options::BondsOk(Molecule& m) const {
-  for (const Bond* b : m.bond_list()) {
-    atom_number_t a1 = b->a1();
-    atom_number_t a2 = b->a2();
-
-    // Bonds are only formed with isotopes
-    if (m.isotope(a1) == 0 || m.isotope(a2) == 0) {
-      continue;
-    }
-
-    atomic_number_t z1 = m.atomic_number(a1);
-    atomic_number_t z2 = m.atomic_number(a2);
-    // Carbon-Carbon always OK.
-    if (z1 == 6 && z2 == 6) {
-      continue;
-    }
-
-    // Reject heteratom joined to heteroatom.
-    if (z1 != 6 && z2 != 6) {
-      return 0;
-    }
-
-    // One atom must be a carbon.
-    // reject alkyl halides.
-    if (z1 > z2) {
-      std::swap(a1, a2);
-      std::swap(z1, z2);
-    }
-
-    if (! m.is_aromatic(a1) && (z2 == 17 || z2 == 35 || z2 == 53)) {
-      return 0;
-    }
-  }
-
-  return 1;
-}
-
-int
 Options::SeenBefore(Molecule& m) {
   auto f = _seen.find(m.unique_smiles());
   if (f != _seen.end()) {
@@ -1646,7 +1337,8 @@ Options::SeenBefore(Molecule& m) {
 int
 Options::Breed(int nbreed, IWString_and_File_Descriptor& output) {
   int generated = 0;
-  for (int attempts = 0; generated < nbreed; ++attempts) {
+  int max_attempts = 50 * nbreed;
+  for (int attempts = 0; generated < nbreed && attempts < max_attempts; ++attempts) {
     int m1 = (*_mols_dist)(_rng);
     int m2 = 0;
     while (1) {
@@ -1655,13 +1347,13 @@ Options::Breed(int nbreed, IWString_and_File_Descriptor& output) {
         break;
       }
     }
-    cerr << "Breeding with " << m1 << " and " << m2 << '\n';
+    // cerr << "Breeding with " << m1 << " and " << m2 << " generated " << generated << '\n';
     if (Breed(*_mols[m1], *_mols[m2], output)) {
       ++generated;
-    } else {
-      cerr << "Breeding " << attempts << " failed, generated " << generated << '\n';
     }
   }
+
+  _number_from_breeding = generated;
 
   return 1;
 }
@@ -1674,7 +1366,6 @@ Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
 
   std::optional<int> maybef1 = m1.ChooseFragment();
   if (! maybef1) {
-    cerr << "Cannot select f1\n";
     return 0;
   }
 
@@ -1720,12 +1411,23 @@ Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
   IWString replacement_smiles;
   f1->SameNumbers(*f2, replacement_smiles);
 
+#ifdef DEBUG_BREED
+  cerr << "Calling FormNewSmiles with '" << m1.smiles() << "'\n";
+  cerr << "Replacement " << replacement_smiles << '\n';
+#endif
   IWString tmp;
   FormNewSmiles(m1.smiles(), f1_ndx, replacement_smiles, tmp);
 
   Molecule m;
   if (! m.build_from_smiles(tmp)) {
     cerr << "Options::Breed:invalid smiles '" << tmp << "'\n";
+    cerr << "f1_ndx " << f1_ndx << ' ';
+    m1.DebugPrint(cerr);
+    cerr << "f2_ndx " << f2_ndx << ' ';
+    m2.DebugPrint(cerr);
+    f1->DebugPrint(cerr);
+    f2->DebugPrint(cerr);
+    cerr << "Replacement smiles " << replacement_smiles << '\n';
     return 0;
   }
 
@@ -1734,7 +1436,7 @@ Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
 
 int
 SafeGenerate(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:C:z:X:F:x:n:pb:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:a:C:z:X:F:x:n:pb:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

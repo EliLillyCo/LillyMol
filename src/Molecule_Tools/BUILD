@@ -424,6 +424,24 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "safe_generate_proto",
+    srcs = [
+        "safe_generate.proto",
+    ],
+    deps = [
+        ":molecule_filter_proto",
+        "//Molecule_Lib:etrans_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "safe_generate_cc_proto",
+    deps = [
+        "safe_generate_proto",
+    ],
+)
+
+proto_library(
     name = "scaffolds_proto",
     srcs = [
         "scaffolds.proto",
@@ -2091,6 +2109,20 @@ cc_library(
 )
 
 cc_library(
+    name = "safe_generate_lib",
+    hdrs = [
+        "safe_generate_lib.h",
+    ],
+    srcs = [
+        "safe_generate_lib.cc",
+    ],
+    deps = [
+        ":dicer_fragments_cc_proto",
+        "//Molecule_Lib:iwmolecule",
+    ],
+)
+
+cc_library(
     name = "molecule_filter_lib",
     srcs = [
         "molecule_filter_lib.cc",
@@ -2148,6 +2180,9 @@ cc_binary(
     deps = [
         ":dicer_fragments_cc_proto",
         ":molecule_filter_lib",
+        ":safe_generate_lib",
+        ":safe_generate_cc_proto",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
@@ -3426,6 +3461,21 @@ cc_test(
         "@googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
     ],
+)
+
+cc_test(
+    name = "safe_generate_lib_test",
+    srcs = [
+        "safe_generate_lib_test.cc",
+    ],
+    deps = [
+        ":safe_generate_lib",
+        ":safe_generate_cc_proto",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+    ]
 )
 
 cc_test(

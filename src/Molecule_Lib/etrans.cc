@@ -132,6 +132,32 @@ Element_Transformation::build(const IWString& value) {
 }
 
 int
+Element_Transformation::Build(const element_transformation::ElementTransformation& proto) {
+  IWString from = proto.efrom();
+  const IWString to = proto.eto();
+
+  from << '=' << to;
+
+  return build(from);
+}
+
+int
+Element_Transformations::Build(const element_transformation::ElementTransformations& proto) {
+  for (const auto& etrans : proto.etrans()) {
+    std::unique_ptr<Element_Transformation> e = std::make_unique<Element_Transformation>();
+    if (! e->Build(etrans)) {
+      cerr << "Element_Transformations::Build:invalid transformation " <<
+                etrans.ShortDebugString() << '\n';
+      return 0;
+    }
+
+    add(e.release());
+  }
+
+  return 1;
+}
+
+int
 Element_Transformation::process(Molecule& m) {
   assert(ok());
   assert(m.ok());
