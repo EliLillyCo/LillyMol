@@ -24,17 +24,19 @@ where `%nn` ring opening and closing features have been added in order
 to rebuild the molecule.
 
 ## De-Novo Generation
-There are two modes of operation, both involve first running mol2SAFE in order
-to generate the SAFE representations.
+There are two modes of operation:
 
 1. Replace a SAFE fragment with a fragment from a library.
 2. Replace a SAFE fragment with a fragment from another molecule.
+
+Both involve first running mol2SAFE in order
+to generate the SAFE representations.
 
 During testing, the following invocation seemed useful.
 ```
 mol2SAFE -v -c -l -I 1 -S Sfile -M 16 -M maxnr=9 -g all -z -T I=Cl -T Br=Cl chembl.smi > chembl.safe.smi
 ```
-Takes less than 3 minutes.
+Takes less than 3 minutes to process a recent version of Chembl.
 
 The usage message for mol2SAFE is
 ```
@@ -66,7 +68,9 @@ The file `Sfile` is a textproto file with a summary of the fragments found. This
 used as input as a library file (-L option) to `safe_generate`. For Chembl, it contains about 91k molecules.
 
 In a lead optimisation scenario, it would make sense to use to build a fragment library
-from active molecules, and then feed all active molecules to safe_generate.
+from active molecules, and then feed all active molecules to safe_generate in order to
+generate molecules where likely active fragments get combined across product
+molecules.
 
 ## safe_generate
 Once a SAFE fragment library file has been built, and/or the input set of molecules
@@ -113,12 +117,12 @@ replacement, the library fragment, or fragment chosen from another molecule, mus
 by at most two atoms. Additionally, the new fragment can have an extra ring - but this
 might be hard with only two additional atoms. These two parameters are related.
 
-Note that if both extra_atoms and fewer_atoms are not specified, then replacement
+Note that if both `extra_atoms` and `fewer_atoms` are **not** specified, then replacement
 fragments must be the same size as what is being removed.
 
 The `max_formula_difference` specification is unusual. An aromatic molecular formula
 is computed for each fragment: it contains the number of aliphatic Carbon and aromatic
-Carbon atoms. In order for a fragment swap to uccur, the total absolute difference in 
+Carbon atoms, etc. In order for a fragment swap to uccur, the total absolute difference in 
 the two formulae must be 3 or fewer.
 
 Then follows specification of the molecule filter that is applied to the product
@@ -135,8 +139,12 @@ code complexity, and is not a priority now.
 
 ## Examples
 Given
-![CHEMBL444233](Images/CHEMBL444233_parent.png) and CHEMBL493334, the
-molecule
-![product](Images/CHEMBL444233____CHEMBL493334.1.6.png) can be formed
-with the config file above. 
+
+![CHEMBL444233](Images/CHEMBL444233_parent.png) 
+
+and CHEMBL493334, the molecule
+
+![product](Images/CHEMBL444233____CHEMBL493334.1.6.png)
+
+can be formed with the config file above. 
 
