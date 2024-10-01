@@ -65,8 +65,12 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << R"(Denovo generation of molecules from SAFE smiles
+  cerr << R"(Denovo generation of molecules from SAFE smiles.
 Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
+
+mol2SAFE ... -S library.textproto file.smi > file.safe.smi
+safe_generate ... -L library.textproto -C generate.config file.safe.smi > new_molecules.smi
+
  -C <fname>             safe_generate textproto configuration file.
  -a <ncon>              maximum value for number of connections processed - applied to library.
  -L <fname>             fragment library of SAFE fragments
@@ -79,6 +83,7 @@ Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
  -b <n>                 number of molecules to generate by breeding
  -F <fname>             molecule filter textproto file - products must pass
  -p                     write the parent molecule before variants
+ -s                     write SAFE smiles
  -v                     verbose output
 )";
 // clang-format on
@@ -566,6 +571,10 @@ class Options {
     // Do we write the starting molecule or not
     int _write_parent_molecule;
 
+    // By default, we write aromatic smiles, but we can optionally write
+    // SAFE smiles.
+    int _write_safe_smiles;
+
     // we can impose limits on the size of fragments that are selected
     // for replacement.
     int _min_atoms_in_fragment;
@@ -608,6 +617,7 @@ class Options {
     int OkDifferences(const SafeFragment& f1, const SafeFragment& f2) const;
     int OkFormulaDifference(const SafeFragment& f1, const SafeFragment f2) const;
     int ProcessNewMolecule(Molecule& m, const IWString& name1,
+                        const IWString& safe_smiles,
                         const SafeFragment& f2,
                         IWString_and_File_Descriptor& output);
 
@@ -673,6 +683,7 @@ Options::Options() {
   _rng.seed(rd());
 
   _write_parent_molecule = 0;
+  _write_safe_smiles = 0;
 
   _min_atoms_in_fragment = 0;
   _max_atoms_in_fragment = std::numeric_limits<int>::max();
@@ -827,7 +838,7 @@ Options::Initialise(Command_Line& cl) {
   if (cl.option_present('F')) {
     IWString fname = cl.string_value('F');
     if (! _filter.Build(fname)) {
-      cerr << "Options::Initialise:cannot initialise filter '" << fname << "'\n";
+      cerr << "Optionss::Initialise:cannot initialise filter '" << fname << "'\n";
       return 0;
     }
 
@@ -866,6 +877,13 @@ Options::Initialise(Command_Line& cl) {
     _write_parent_molecule = 1;
     if (_verbose) {
       cerr << "Will write the parent molecule\n";
+    }
+  }
+
+  if (cl.option_present('s')) {
+    _write_safe_smiles = 1;
+    if (_verbose) {
+      cerr << "Will write SAFE smiles\n";
     }
   }
 
@@ -1093,7 +1111,9 @@ Options::Report(std::ostream& output) const {
 
   output << "Options: generated " << _new_molecules_formed << " molecules\n";
   output << _rejected_by_bad_valence << " _rejected_by_bad_valence\n";
-  output << _rejected_by_discard_queries << " _rejected_by_discard_queries\n";
+  if (_discard_if_match.size() > 0) {
+    output << _rejected_by_discard_queries << " _rejected_by_discard_queries\n";
+  }
   output << _rejected_by_seen_before << " _rejected_by_seen_before\n";
   output << _rejected_by_filter << " _rejected_by_filter\n";
   output << _rejected_by_adjacent_atoms << " _rejected_by_adjacent_atoms\n";
@@ -1292,11 +1312,12 @@ Options::Generate(SafedMolecule& m,
     return 0;
   }
 
-  return ProcessNewMolecule(newm, m.name(), f2, output);
+  return ProcessNewMolecule(newm, m.name(), tmp, f2, output);
 }
 
 int
 Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
+                        const IWString& safe_smiles,
                         const SafeFragment& f2,
                         IWString_and_File_Descriptor& output) {
   output.write_if_buffer_holds_more_than(4096);
@@ -1353,7 +1374,13 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
 
   m << " %% " << f2.name() << '.' << f2.ncon() << '.' << f2.natoms();
 
-  output << m.aromatic_smiles() << ' ' << m.name() << '\n';
+  if (_write_safe_smiles) {
+    output << safe_smiles;
+  } else {
+    output << m.aromatic_smiles();
+  }
+
+  output << ' ' << m.name() << '\n';
 
   return 1;
 }
@@ -1551,12 +1578,12 @@ Options::Breed(SafedMolecule& m1, SafedMolecule& m2,
     return 0;
   }
 
-  return ProcessNewMolecule(m, m1.name(), *f2, output);
+  return ProcessNewMolecule(m, m1.name(), tmp, *f2, output);
 }
 
 int
 SafeGenerate(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:a:C:z:X:F:x:n:pb:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:a:C:z:X:F:x:n:pb:s");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
