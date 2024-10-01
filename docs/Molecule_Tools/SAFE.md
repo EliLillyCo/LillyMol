@@ -114,7 +114,7 @@ The first part describes two elemental transformations: translate I to Cl, and B
 
 Only fragments with at most 10 atoms will be processed. Once a fragment is selected for
 replacement, the library fragment, or fragment chosen from another molecule, must differ
-by at most two atoms. Additionally, the new fragment can have an extra ring - but this
+by at most two atoms (atom count). Additionally, the new fragment can have an extra ring - but this
 might be hard with only two additional atoms. These two parameters are related.
 
 Note that if both `extra_atoms` and `fewer_atoms` are **not** specified, then replacement
@@ -122,8 +122,9 @@ fragments must be the same size as what is being removed.
 
 The `max_formula_difference` specification is unusual. An aromatic molecular formula
 is computed for each fragment: it contains the number of aliphatic Carbon and aromatic
-Carbon atoms, etc. In order for a fragment swap to uccur, the total absolute difference in 
-the two formulae must be 3 or fewer.
+Carbon atoms, etc. In order for a fragment swap to occur, the total absolute difference in 
+the two formulae must be 3 or fewer. This could be a difference in 3 in just aliphatic
+Oxygens, or differences spread across atom types.
 
 Then follows specification of the molecule filter that is applied to the product
 molecules before writing.
@@ -132,7 +133,7 @@ Given an input file with 200 molecules, the invocation above generates
 almost 50k molecules in 36 seconds.
 
 There is no recursion built into safe_generate, but if SAFE smiles are written,
--s, then the output from onvocation can be fed to another, which has the
+-s, then the output from one invocation can be fed to another, which has the
 advantage of seamlessly using multiple cores. But since the two processes are
 separate, duplicate detection is not robust. Adding recursion would add
 code complexity, and is not a priority now.
