@@ -146,5 +146,31 @@ and CHEMBL493334, the molecule
 
 ![product](Images/CHEMBL444233____CHEMBL493334.1.6.png)
 
-can be formed with the config file above. 
+can be formed with the config file above. In this case
+the transformation is rather simple, an aromatic ring
+swapped for an aliphatic ring of the same size, but many more
+possibilities are available - that molecule generated over
+200 different variants, consistent with the configuration file.
+
+## Summary
+`safe_generate` can reasonably quickly generate quite reasonable
+looking molecules. It is highly likely that the results would need
+to be sent to some kind of post-processing filtering - Lilly Medchem
+Rules for example. And/or set query specifications in the
+`discard_if_match` attribute in the config file in order to specify
+specific queries specifying product molecules to be discarded. Note
+that it takes the same syntax as the -q option to `tsubstructure`
+so an entry like
+```
+  discard_if_match: "SMARTS:[CH]=O"
+```
+could be used to discard aldehydes in products - some care has been taken to
+minimise this, but some do make their way through.
+
+There is no correct specification for the entries in the config file.
+Allowing only small differences will result in a 'conservative' set
+of new molecules, where the differences from the starting molecules
+are small. Large values will see more diverse molecules generated.
+Conservative changes should maximise the ability of a QSAR model
+to make valid predictions.
 
