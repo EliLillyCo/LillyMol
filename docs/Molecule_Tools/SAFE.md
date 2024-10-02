@@ -23,14 +23,23 @@ A typical SAFE smiles might look something like
 where `%nn` ring opening and closing features have been added in order
 to rebuild the molecule.
 
+The fundamental idea behind the methodologies outlined here is the idea that SAFE fragments
+can be interchanged with others, just by adjusting the ring numbers. So if the starting
+fragment includes ring number `%12` then another SAFE fragment with just one ring number
+can be substitued, as long as its ring number is converted to `%12`. Similarly for
+SAFE fragments with two join points, etc. These string operations are cheap.
+
+The tools outlined below can impose constraints on other aspects of any proposed
+change based on swapping a SAFE fragment.
+
 ## De-Novo Generation
-There are two modes of operation:
+There are thre modes of operation:
 
-1. Replace a SAFE fragment with a fragment from a library.
-2. Replace a SAFE fragment with a fragment from another molecule.
+1. Replace a SAFE fragment with a random fragment from a library.
+2. Replace a SAFE fragment with each plausible fragment from a library.
+3. Replace a SAFE fragment with a fragment from another molecule.
 
-Both involve first running mol2SAFE in order
-to generate the SAFE representations.
+All involve first running mol2SAFE in order to generate the SAFE representations.
 
 During testing, the following invocation seemed useful.
 ```
@@ -77,14 +86,18 @@ Once a SAFE fragment library file has been built, and/or the input set of molecu
 converted to SAFE form, safe_generate can be run. Configuration via a textproto config
 file is preferred.
 ```
-safe_generate -b 20000 -p -n 1000 -C generate.textproto -v -L Sfile input.smi
+safe_generate -p -e 2000 -b 3000 -n 1000 -C generate.textproto -v -L Sfile input.smi
 ```
-For each input file, use fragment replacements from the Library file (-L) to generate
-up to 1000 new molecules for each input molecule. In addition,
-randomly choose pairs of molecules from within `input.smi`
-to breed, by swapping compatible fragments, generating a maximum of 20k new molecules.
+The -n option specifies up to 1000 variants by replacing SAFE fragments with randomly
+selected fragments from the library - mode #1.
 
-The textproto config file might look like
+The -e option specifies making as many as 2000 variants by replacing each SAFE
+fragment with all plausible fragments from the library - mode #2.
+
+The -b option specifies generating as many as 3000 molecules by swapping SAFE
+fragments between molecules - the library is not used. Mode #3.
+
+The textproto config file is specified by the -C option, and might look like 
 ```
 etrans {
   etrans {
@@ -102,6 +115,7 @@ extra_atoms: 2
 fewer_atoms: 2
 extra_rings: 1
 max_formula_difference: 3
+max_distance_difference: 2
 molecule_filter {
   max_natoms: 40
   max_nrings: 5
@@ -125,6 +139,13 @@ is computed for each fragment: it contains the number of aliphatic Carbon and ar
 Carbon atoms, etc. In order for a fragment swap to occur, the total absolute difference in 
 the two formulae must be 3 or fewer. This could be a difference in 3 in just aliphatic
 Oxygens, or differences spread across atom types.
+
+The `max_distance_difference` is only used on fragments with more than
+1 connection.  Fragments with more than one connections have a
+distance attribute - the shortest bond separation distance between
+connection points. The `max_distance_difference` attribute governs by how much
+the distance attribute can change when fragments are swapped. Again, a smaller number
+will enforce more similar structures being formed.
 
 Then follows specification of the molecule filter that is applied to the product
 molecules before writing.
@@ -153,6 +174,18 @@ swapped for an aliphatic ring of the same size, but many more
 possibilities are available - that molecule generated over
 200 different variants, consistent with the configuration file.
 
+## Interesting Features
+Given that the path through a molecule is arbitrary, something
+like an amide fragment can equally likely appear as `[1N]%11[1C](=O)%12` or
+as `[1C]%11(=O)-[1N]%12`, which means that if both are present in a 
+fragment library, then bidirctional amide formation will be observed.
+Note that even if unique smiles are used, there will still be
+arbitrary numbers of amide SAFE fragments in either direction.
+
+Since mol2SAFE does not break ring bonds, the results will never
+contain unprecedented rings. The tool does make efforts to discard
+obviously bad bonds being formed - peroxides for example.
+
 ## Summary
 `safe_generate` can reasonably quickly generate quite reasonable
 looking molecules. It is highly likely that the results would need
@@ -175,3 +208,11 @@ are small. Large values will see more diverse molecules generated.
 Conservative changes should maximise the ability of a QSAR model
 to make valid predictions.
 
+## Thoughts
+Given the above, and the fact that it is all implemented in C++, the
+obvious question arises, why not just process the fragments as
+Molecules, and forget the whole SAFE thing - that would clearly
+be more efficient. Indeed that is planned, and some of the
+infrastructure built here will be re-used. Part of the point of
+building this tool was to demonstrate the viability of the
+SAFE concept for de-novo molecule construction.

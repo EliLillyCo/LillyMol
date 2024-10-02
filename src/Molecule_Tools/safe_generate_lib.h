@@ -88,6 +88,10 @@ class SafeFragment {
       return _nrings;
     }
 
+    int distance() const {
+      return _distance;
+    }
+
     int Build(const const_IWSubstring& buffer);
     int Build(const dicer_data::DicerFragment& proto);
 

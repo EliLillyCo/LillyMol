@@ -35,7 +35,14 @@ message Config {
   // fewer_atoms checks.
   optional uint32 max_formula_difference = 13;
 
-  repeated string discard_if_match = 14;
+  // Fragments with two or more attachment points know the minimum
+  // distance between attachment points. With this setting we can
+  // impose a limit on how much the distance can change.
 
-  optional MoleculeFilterData.Requirements molecule_filter = 15;
+  optional uint32 max_distance_difference = 14;
+
+  // Substructure queries that will drop molecules.
+  repeated string discard_if_match = 15;
+
+  optional MoleculeFilterData.Requirements molecule_filter = 16;
 }
