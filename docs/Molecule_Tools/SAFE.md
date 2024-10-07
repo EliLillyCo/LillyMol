@@ -76,7 +76,7 @@ non ring atoms.
 The file `Sfile` is a textproto file with a summary of the fragments found. This file can be
 used as input as a library file (-L option) to `safe_generate`. For Chembl, it contains about 91k molecules.
 
-In a lead optimisation scenario, it would make sense to use to build a fragment library
+In a lead optimisation scenario, it would make sense to build a fragment library
 from active molecules, and then feed all active molecules to safe_generate in order to
 generate molecules where likely active fragments get combined across product
 molecules.
@@ -137,7 +137,7 @@ fragments must be the same size as what is being removed.
 The `max_formula_difference` specification is unusual. An aromatic molecular formula
 is computed for each fragment: it contains the number of aliphatic Carbon and aromatic
 Carbon atoms, etc. In order for a fragment swap to occur, the total absolute difference in 
-the two formulae must be 3 or fewer. This could be a difference in 3 in just aliphatic
+the two formulae must be 3 or fewer. This could be a difference of 3 in just aliphatic
 Oxygens, or differences spread across atom types.
 
 The `max_distance_difference` is only used on fragments with more than
