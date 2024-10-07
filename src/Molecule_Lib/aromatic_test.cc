@@ -66,10 +66,9 @@ TEST_P(TestRoundTrip, Various) {
   const auto params = GetParam();
   ASSERT_TRUE(_m1.build_from_smiles(params)) << "Cannot parse " << params;
   EXPECT_TRUE(_m2.build_from_smiles(_m1.unique_smiles()));
-  cerr << "Should be equal\n";
-  cerr << _m1.unique_smiles() << '\n';
-  cerr << _m2.unique_smiles() << '\n';
-  EXPECT_EQ(_m1.unique_smiles(), _m2.unique_smiles());
+  EXPECT_EQ(_m1.unique_smiles(), _m2.unique_smiles()) << " not equal " <<
+                _m1.unique_smiles() << '\n';
+                _m2.unique_smiles();
 }
 INSTANTIATE_TEST_SUITE_P(TestRoundTrip, TestRoundTrip, testing::Values(
   // https://issueexplorer.com/issue/rdkit/rdkit/4701
@@ -78,7 +77,8 @@ INSTANTIATE_TEST_SUITE_P(TestRoundTrip, TestRoundTrip, testing::Values(
   IWString{"C1Cn2cn[nH]c2=N1"},  // From GBD
   IWString{"N1=c2[nH][n]c[n]2CC1"}, // From GBD, input is unique form.
   IWString{"C1CN2C=NNC2=N1"},  // From GBD, input is kekule form.
-  IWString{"C=c1cc(C)sc1=NC(=O)C"}  // exocyclic amide test
+  IWString{"C=c1cc(C)sc1=NC(=O)C"},  // exocyclic amide test
+  IWString{"Nc1cnc2cn(C)nc2n1"}  // initially finding a bad Kekule form
 ));
 
 // There are smiles that are really hard to read, but which fail unique smiles tests.

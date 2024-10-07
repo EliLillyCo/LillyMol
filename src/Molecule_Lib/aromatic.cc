@@ -3894,11 +3894,23 @@ class Kekule_Temporary_Arrays
 
   int * _pi_electrons;
 
-  //  Some variables are only set if the molecule is larg//  Some variables are only set if the molecule is large.
+  //  Some variables are only set if the molecule is large
 
   int * _smallest_ring_size;    // for each atom, what is the size of the smallest ring containing it
 
   int _additional_fused_pi_electrons;
+
+  // When we are finding a Kekule form from an aromatic smiles, we use a very loose definition
+  // of aromaticity - all atoms having pi electrons. But this can lead to false configurations.
+  // Nc1cnc2cn(C)nc2n1
+  // When we find a configuration that satisfies this, but does not satisfy 4n+2, we store it
+  // here and continue the search. If we find something better, this is not used.
+
+  std::unique_ptr<bond_type_t[]> _found;  // not 4n+2
+
+  // When counting pi electrons, it is helpful to know whether or not each atom
+  // is doubly bonded to an exocyclic heteratoms.
+  int *_exocyclic_doubly_bonded_heteroatom;
 
  public:
   Kekule_Temporary_Arrays(int matoms, int nr, int * a, const int * b);
@@ -3921,11 +3933,26 @@ class Kekule_Temporary_Arrays
   int * process_these_rings() { return _process_these_rings; }
 
   int * pi_electrons() { return _pi_electrons; }
+  int * exocyclic_doubly_bonded_heteratom() {
+    return _exocyclic_doubly_bonded_heteroatom;
+  }
+  const int * exocyclic_doubly_bonded_heteratom() const {
+    return _exocyclic_doubly_bonded_heteroatom;
+  }
 
   void set_additional_fused_pi_electrons(int s) { _additional_fused_pi_electrons = s; }
   int additional_fused_pi_electrons() const { return _additional_fused_pi_electrons; }
 
   int establish_smallest_ring_size(Molecule &);
+
+  // Copy the bonds from `blist` to out `_found` array.
+  int CopyBondsTo4n_2(const Bond_list& blist);
+  // Return true if we have a stored array of bonds
+  int HasNot4n2() const {
+    return _found != nullptr;
+  }
+  // Copy the bonds from `_found` to `_blist`.
+  int CopyNon4n2ToBondList(Bond_list& _blist);
 };
 
 Kekule_Temporary_Arrays::Kekule_Temporary_Arrays(int matoms, int nr, int * a, const int * b)
@@ -3956,6 +3983,8 @@ Kekule_Temporary_Arrays::Kekule_Temporary_Arrays(int matoms, int nr, int * a, co
 
   _additional_fused_pi_electrons = 0;
 
+  _exocyclic_doubly_bonded_heteroatom = new_int(matoms);
+
   return;
 }
 
@@ -3978,6 +4007,8 @@ Kekule_Temporary_Arrays::~Kekule_Temporary_Arrays()
 
   if (nullptr != _smallest_ring_size)
     delete[] _smallest_ring_size;
+
+  delete[] _exocyclic_doubly_bonded_heteroatom;
 
   return;
 }
@@ -4005,6 +4036,47 @@ Kekule_Temporary_Arrays::establish_smallest_ring_size(Molecule & m)
 
       if (ring_size < _smallest_ring_size[k])
         _smallest_ring_size[k] = ring_size;
+    }
+  }
+
+  return 1;
+}
+
+int
+Kekule_Temporary_Arrays::CopyBondsTo4n_2(const Bond_list& blist) {
+  const int n = blist.number_elements();
+  if (! _found) {
+    _found = std::make_unique<bond_type_t[]>(n);
+  }
+  for (int i = 0; i < n; ++i) {
+    const Bond* b = blist[i];
+    if (b->is_single_bond()) {
+      _found[i] = SINGLE_BOND;
+    } else if (b->is_double_bond()) {
+      _found[i] = DOUBLE_BOND;
+    } else if (b->is_triple_bond()) {
+      _found[i] = TRIPLE_BOND;
+    }
+  }
+
+  return 1;
+}
+
+int
+Kekule_Temporary_Arrays::CopyNon4n2ToBondList(Bond_list& _blist) {
+  if (! _found) {
+    return 0;
+  }
+
+  const int n = _blist.number_elements();
+  for (int i = 0; i < n; ++i) {
+    Bond* b = const_cast<Bond*>(_blist[i]);
+    if (_found[i] == SINGLE_BOND) {
+      b->set_bond_type(SINGLE_BOND);
+    } else if (_found[i] == DOUBLE_BOND) {
+      b->set_bond_type(DOUBLE_BOND);
+    } else if (_found[i] == TRIPLE_BOND) {
+      b->set_bond_type(TRIPLE_BOND);
     }
   }
 
@@ -4366,17 +4438,45 @@ Molecule::_do_obvious_bond_order_settings(Kekule_Temporary_Arrays & kta)
 
   int * vary_bonds = kta.vary_bonds();
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (0 == process_these_atoms[i])
+  // First determine which atoms have doubly bonded heteroatoms outside the system.
+  int * exocyclic_doubly_bonded_heteratom = kta.exocyclic_doubly_bonded_heteratom();
+
+  for (const Bond* b : _bond_list) {
+    if (! b->is_double_bond()) {
       continue;
+    }
+
+    const atom_number_t a1 = b->a1();
+    const atom_number_t a2 = b->a2();
+
+    if (process_these_atoms[a1] && process_these_atoms[a2] == 0) {
+      if (_things[a1]->atomic_number() == 6 && _things[a2]->atomic_number() != 6 && ! _amide_like(a1, a2)) {
+        exocyclic_doubly_bonded_heteratom[a1] = 1;
+      }
+    } else if (process_these_atoms[a1] == 0 && process_these_atoms[a2]) {
+      if (_things[a2]->atomic_number() == 6 && _things[a1]->atomic_number() != 6 && ! _amide_like(a2, a2)) {
+        exocyclic_doubly_bonded_heteratom[a2] = 1;
+      }
+    }
+  }
+
+  // Now scan each atom
+
+  for (int i = 0; i < _number_elements; i++) {
+    if (0 == process_these_atoms[i]) {
+      continue;
+    }
+
+    if (exocyclic_doubly_bonded_heteratom[i]) {
+      vary_bonds[i] = 0;
+      continue;
+    }
 
     Atom * a = _things[i];
 
     const Element * e = a->element();
 
-    if (0 == e->normal_valence())
-    {
+    if (0 == e->normal_valence()) {
       cerr << "Molecule::_do_obvious_bond_order_settings: atom " << i << " (" << e->symbol()
            << ") has zero valence\n";
       return 0;
@@ -4519,8 +4619,7 @@ Molecule::_do_obvious_bond_order_settings(Kekule_Temporary_Arrays & kta)
   // Oct 2004. Whenever you have an O=c group, we can get some information
   // about the bonding of the atoms ortho to that
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     if (0 == process_these_atoms[i])
       continue;
 
@@ -4729,7 +4828,7 @@ Molecule::_kekule_all_atoms_and_bonds_in_system_aromatic(
   return 1;
 }
 
-//#define DEBUG_KEKULE
+// #define DEBUG_KEKULE
 
 /*
   Make any obvious hcount adjustments. For those atoms which are
@@ -4743,15 +4842,20 @@ Molecule::_do_obvious_hcount_adjustments(Kekule_Temporary_Arrays & kta)
   const int * process_these_atoms = kta.process_these_atoms();
   int * vary_hcount = kta.vary_hcount();
   const int * implicit_hydrogens_needed = kta.implicit_hydrogens_needed();
+  const int* exocyclic_doubly_bonded_heteratom = kta.exocyclic_doubly_bonded_heteratom();
 
 #ifdef DEBUG_KEKULE
   cerr << "Doing obvious vary_hcount stuff\n";
 #endif
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (0 == process_these_atoms[i])
+  for (int i = 0; i < _number_elements; i++) {
+    if (0 == process_these_atoms[i]) {
       continue;
+    }
+    if (exocyclic_doubly_bonded_heteratom[i]) {
+      vary_hcount[i] = 0;
+      continue;
+    }
 
     Atom * a = _things[i];
 
@@ -5144,6 +5248,7 @@ Molecule::_kekule_arom_test_rings(Kekule_Temporary_Arrays & kta,
                                   const resizable_array<const Ring *> & rings)
 {
   const int * process_these_atoms = kta.process_these_atoms();
+  const int* exocyclic_doubly_bonded_heteratom = kta.exocyclic_doubly_bonded_heteratom();
 
   int nr = rings.number_elements();
 
@@ -5161,8 +5266,14 @@ Molecule::_kekule_arom_test_rings(Kekule_Temporary_Arrays & kta,
 
   for (int i = 0; i < _number_elements; i++)
   {
-    if (0 == process_these_atoms[i])
+    if (0 == process_these_atoms[i]) {
       continue;
+    }
+
+    if (exocyclic_doubly_bonded_heteratom[i]) {
+      pi_e[i] = 0;
+      continue;
+    }
 
     int tmp;
     if (! _things[i]->pi_electrons(tmp))
@@ -5199,8 +5310,9 @@ Molecule::_bonded_to_heteroatom_outside_system(atom_number_t zatom, const int * 
 
   int acon = a->ncon();
   //cerr << "Atom " << zatom << " ncon " << acon << " ih " << implicit_hydrogens(zatom) << " bonds " << a->nbonds() << '\n';
-  if (acon + implicit_hydrogens(zatom) == a->nbonds())
+  if (acon + implicit_hydrogens(zatom) == a->nbonds()) {
     return 0;
+  }
 
 #ifdef DEBUG_KEKULE
   cerr << "Checking for multiple bonds outside the ring\n";
@@ -5346,8 +5458,14 @@ looks_like_valid_kekule_system(const Kekule_Temporary_Arrays & kta, int pi_elect
 */
 
 int
-Molecule::_count_pi_electrons(atom_number_t zatom, const int * process_these_atoms, int & result)
+Molecule::_count_pi_electrons(const Kekule_Temporary_Arrays& kta, 
+                              atom_number_t zatom, const int * process_these_atoms, int & result)
 {
+  if (kta.exocyclic_doubly_bonded_heteratom()[zatom]) {
+    result = 0;
+    return 1;
+  }
+
   Atom * a = _things[zatom];
 
   if (6 == a->atomic_number())    // the most common case
@@ -5482,8 +5600,9 @@ Molecule::__find_kekule_form_current_config(const resizable_array<const Ring *> 
   // so asking for pi electrons for a carbon, may be misleading
 
   int pi;
-  if (! _count_pi_electrons(zatom, process_these_atoms, pi))
+  if (! _count_pi_electrons(kta, zatom, process_these_atoms, pi)) {
     return 0;
+  }
 
   pi_electron_count += pi;
 
@@ -5508,8 +5627,9 @@ Molecule::__find_kekule_form_current_config(const resizable_array<const Ring *> 
       possible_continuations.add(j);
   }
 
-  if (possible_continuations.number_elements() > 1)
+  if (possible_continuations.number_elements() > 1) {
     _sort_possible_continuations_by_ring_size(zatom, possible_continuations);
+  }
 
   // Why is this a loop, it only processes the first one?
 
@@ -5534,8 +5654,9 @@ Molecule::__find_kekule_form_current_config(const resizable_array<const Ring *> 
     cerr << "Atom " << astart << " identified as new start atom\n";
 #endif
 
-  if (_kekule_identify_next_atom(process_these_atoms, astart))
+  if (_kekule_identify_next_atom(process_these_atoms, astart)) {
     return _find_kekule_form(rings, kta, astart, pi_electron_count);
+  }
 
   // Cound not find any unprocessed atoms. Is this a kekule form????
 
@@ -5543,11 +5664,23 @@ Molecule::__find_kekule_form_current_config(const resizable_array<const Ring *> 
   cerr << "Checking for possible aromatic " << pi_electron_count << '\n';
 #endif
 
-  if (looks_like_valid_kekule_system(kta, pi_electron_count))
+  if (looks_like_valid_kekule_system(kta, pi_electron_count)) {
     return 1;
+  }
 
   if (aromatic::any_kekule_bonding_pattern_ok_for_aromatic_input) {
-    return 1;
+    if (pi_electron_count % 4 == 2) {
+      return 1;
+    }
+    if (pi_electron_count == 0) {
+      return 0;
+    }
+
+#ifdef DEBUG_KEKULE
+    cerr << "Copying non kekule form " << pi_electron_count << '\n';
+#endif
+    kta.CopyBondsTo4n_2(_bond_list);
+    return 0;
   }
 
   if (pi_electron_count < 6)
@@ -5984,17 +6117,16 @@ Molecule::_find_kekule_form_ring_system(Kekule_Temporary_Arrays & kta,
     return _kekule_all_atoms_and_bonds_in_system_aromatic(kta, rings);
   }
 
-  if (! _do_obvious_hcount_adjustments(kta))
-  {
+  if (! _do_obvious_hcount_adjustments(kta)) {
     if (file_scope_display_no_kekule_form_message)
       cerr << "Molecule::_find_kekule_form: bad hcount detected\n";
     return 0;
   }
 
-  if (! _do_obvious_bond_order_settings(kta))
-  {
-    if (file_scope_display_no_kekule_form_message)
+  if (! _do_obvious_bond_order_settings(kta)) {
+    if (file_scope_display_no_kekule_form_message) {
       cerr << "Molecule::_find_kekule_form: bad bonding detected\n";
+    }
     return 0;
   }
 
@@ -6032,28 +6164,39 @@ Molecule::_find_kekule_form_ring_system(Kekule_Temporary_Arrays & kta,
 
   int rc = _find_kekule_form(rings, kta, astart, pi_electron_count);
 
+  if (! rc && kta.HasNot4n2()) {
+    if (file_scope_display_no_kekule_form_message) {
+      //cerr << "Warning, non 4n+2 form found " << _molecule_name << '\n';
+    }
+    kta.CopyNon4n2ToBondList(_bond_list);
+    rc = 1;
+  }
+
   // Feb 2022. Open question, should this be done if the calculation has failed?
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (0 == process_these_atoms[i])
+  for (int i = 0; i < _number_elements; i++) {
+    if (0 == process_these_atoms[i]) {
       continue;
+    }
 
     Atom * a = _things[i];
 
     a->recompute_nbonds();
-    if (! a->implicit_hydrogens_known())
+    if (! a->implicit_hydrogens_known()) {
       continue;
+    }
 
     //  If the computed implicit hydrogens are the same as the number specified, no need for the known flag
 
     int ih;
     a->compute_implicit_hydrogens(ih);
-    if (ih == a->implicit_hydrogens())
+    if (ih == a->implicit_hydrogens()) {
       a->set_implicit_hydrogens_known(0);
+    }
   }
 
-  if (rc)
+  if (rc) {
     return rc;
+  }
 
   // Could not do the aromaticity of the whole system, can we do it in
   // subsets.  Actually, that's a little hard now, let's just do it one
