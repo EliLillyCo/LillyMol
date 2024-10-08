@@ -6,9 +6,7 @@ tool_home = ".."
 
 require_relative "lib/iwcmdline"
 
-#GH Original
-#~ cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-parallel=ipos-l=s-V-j-q-submit=xfile-noeval")
-cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-l=s-V-j-q-submit=xfile-noeval")
+cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-parallel=ipos-l=s-V-j-q-submit=xfile-noeval")
 
 verbose = cl.option_present('v')
 
@@ -22,14 +20,14 @@ doitfilename = "DOPATTERNTMP#{Process.pid}"
 doitfile = false
 
 #GH Parallel is removed
-#~ if qsub || cl.option_present('parallel')
-  #~ dry_run = true
-  #~ doitfile = File.open(doitfilename, mode='w')
-  #~ unless doitfile
-    #~ $stderr.print "Cannot create temporary file for qsub submission\n"
-    #~ exit 3
-  #~ end
-#~ end
+if qsub || cl.option_present('parallel')
+  dry_run = true
+  doitfile = File.open(doitfilename, mode='w')
+  unless doitfile
+    $stderr.print "Cannot create temporary file for qsub submission\n"
+    exit 3
+  end
+end
 
 fsub = '%'
 
@@ -70,7 +68,7 @@ def usage (rc)
   $stderr.print " -sync           submit to qsub, wait for results (Cluster setup is required)\n" if (FileTest.directory?(clusterdir))
   $stderr.print " -qsubopt ... -qsubopt options passed to qsub (Cluster setup is required)\n" if $expert
   $stderr.print " -l ...          cluster resource specification(s) (Cluster setup is required)\n" if $expert
-#~ $stderr.print " -parallel <j>   use gnu parallel to process <j> tasks at a time\n" if $expert
+  $stderr.print " -parallel <j>   use gnu parallel to process <j> tasks at a time\n" if $expert
   $stderr.print " -submit <fname> specify your own job submitter (default iwqb.rb) (Cluster setup is required)\n" if $expert
   $stderr.print " -echo           echo % before each command\n"
   $stderr.print " -sleep <sec>    sleep between commands\n" if $expert
@@ -79,6 +77,7 @@ def usage (rc)
   exit(rc)
 end
 
+$stderr << "suffix " << cl.option_present('suffix') << "\n"
 if cl.option_present('o')
   istop = cl.value('o')
 elsif cl.option_present('stop')
@@ -480,21 +479,10 @@ if doitfile
     exit
   end
 
-#GH Original
-  #~ if cl.option_present('parallel')
-    #~ j = cl.value('parallel')
-    #~ cmd = "#{ianhome}/p/parallel -j #{j} < #{doitfilename}" # TODO: we may want to relocate parallel to a lib/p path instead
-  #~ else
-    #~ cmd = "#{iwqb} "
-    #~ cmd << "-qsub #{qsub_options} -qsub " if qsub_options.length > 0
-    #~ if cl.option_present('sync')
-      #~ cmd << '-sync '
-    #~ end
-    #~ if cl.option_present('j')
-      #~ cmd << ' -j'
-    #~ end
-    #~ cmd << "#{doitfilename}"
-  #~ end
+  if cl.option_present('parallel')
+    j = cl.value('parallel')
+    cmd = "parallel -j #{j} < #{doitfilename}" # TODO: we may want to relocate parallel to a lib/p path instead
+  else
     cmd = "#{iwqb} "
     cmd << "-qsub #{qsub_options} -qsub " if qsub_options.length > 0
     if cl.option_present('sync')
@@ -504,6 +492,7 @@ if doitfile
       cmd << ' -j'
     end
     cmd << "#{doitfilename}"
+  end
 
   if cl.option_present('dry')
     $stderr << "Dry run specified, job not submitted, would have executed '#{cmd}'\n"
@@ -513,10 +502,9 @@ if doitfile
   $stderr.print "Executing '#{cmd}'\n" if (verbose)
   system(cmd)
 
-#GH Original
-  #~ if cl.option_present('sync') || cl.option_present('parallel')
-    #~ File.unlink(doitfilename)
-  #~ end
+  if cl.option_present('sync') || cl.option_present('parallel')
+    File.unlink(doitfilename)
+  end
   if cl.option_present('sync')
     File.unlink(doitfilename)
   end

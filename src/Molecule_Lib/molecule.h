@@ -603,7 +603,7 @@ enum BondedStatus {
 
 class __attribute__((visibility("default"))) Molecule : private resizable_array_p<Atom> {
  private:
-  Bond_list _bond_list;
+  BondList _bond_list;
 
   //resizable_array_p<Chiral_Centre> _chiral_centres;
   SetOfChiralCentres _chiral_centres;
@@ -1376,7 +1376,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   bool bond_endpoints(int ndx, atom_number_t& a1,
                       atom_number_t& a2) const;  // bond endpoint indices
 
-  const Bond_list& bond_list() const {
+  const BondList& bond_list() const {
     return _bond_list;
   }  // dangerous, but we return it const
 

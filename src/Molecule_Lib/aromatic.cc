@@ -3946,13 +3946,13 @@ class Kekule_Temporary_Arrays
   int establish_smallest_ring_size(Molecule &);
 
   // Copy the bonds from `blist` to out `_found` array.
-  int CopyBondsTo4n_2(const Bond_list& blist);
+  int CopyBondsTo4n_2(const BondList& blist);
   // Return true if we have a stored array of bonds
   int HasNot4n2() const {
     return _found != nullptr;
   }
   // Copy the bonds from `_found` to `_blist`.
-  int CopyNon4n2ToBondList(Bond_list& _blist);
+  int CopyNon4n2ToBondList(BondList& _blist);
 };
 
 Kekule_Temporary_Arrays::Kekule_Temporary_Arrays(int matoms, int nr, int * a, const int * b)
@@ -4043,7 +4043,7 @@ Kekule_Temporary_Arrays::establish_smallest_ring_size(Molecule & m)
 }
 
 int
-Kekule_Temporary_Arrays::CopyBondsTo4n_2(const Bond_list& blist) {
+Kekule_Temporary_Arrays::CopyBondsTo4n_2(const BondList& blist) {
   const int n = blist.number_elements();
   if (! _found) {
     _found = std::make_unique<bond_type_t[]>(n);
@@ -4063,7 +4063,7 @@ Kekule_Temporary_Arrays::CopyBondsTo4n_2(const Bond_list& blist) {
 }
 
 int
-Kekule_Temporary_Arrays::CopyNon4n2ToBondList(Bond_list& _blist) {
+Kekule_Temporary_Arrays::CopyNon4n2ToBondList(BondList& _blist) {
   if (! _found) {
     return 0;
   }

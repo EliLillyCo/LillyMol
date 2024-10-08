@@ -349,7 +349,7 @@ Molecule::add_molecule(const Molecule * m2)
     //    tmp->set_user_specified_void_ptr(const_cast<void *>(a2->user_specified_void_ptr()));
   }
 
-  const Bond_list & m2blist = m2->_bond_list;
+  const BondList & m2blist = m2->_bond_list;
   int m2bonds = m2blist.nbonds();
   _bond_list.resize(_bond_list.number_elements() + m2bonds);
 
@@ -998,7 +998,7 @@ Molecule::assign_bond_numbers_to_bonds_if_needed()
 }
 
 int
-Bond_list::assign_bond_numbers(int istart)
+BondList::assign_bond_numbers(int istart)
 {
   for (int i = 0; i < _number_elements; i++)
   {
@@ -1009,7 +1009,7 @@ Bond_list::assign_bond_numbers(int istart)
 }
 
 int
-Bond_list::assign_bond_numbers_to_bonds_if_needed()
+BondList::assign_bond_numbers_to_bonds_if_needed()
 {
   if (0 == _number_elements)
     return 0;
@@ -1029,7 +1029,7 @@ Molecule::unset_all_permanent_aromatic_bonds()
 }
 
 int
-Bond_list::unset_all_permanent_aromatic_bonds()
+BondList::unset_all_permanent_aromatic_bonds()
 {
   assert(ok());
 
