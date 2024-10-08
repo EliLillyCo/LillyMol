@@ -566,7 +566,7 @@ TpFirstPass(const char *fname,
 
 int
 TpFirstPass(int argc, char ** argv) {
-  Command_Line cl(argc, argv, "vA:E:aI:g:t:L:S:K:X:c:C:Vi:o:r:R:B:P:p:b:kyue:x:Z:wf:F:H:");
+  Command_Line cl(argc, argv, "vA:E:aI:g:t:L:S:K:X:c:C:Vi:o:r:R:B:P:p:b:kyue:x:Z:wf:F:H:n:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

@@ -116,7 +116,7 @@
 
 //  All the private functions needed for kekule determinations
 
-    int _count_pi_electrons (atom_number_t zatom,
+    int _count_pi_electrons (const Kekule_Temporary_Arrays& kta, atom_number_t zatom,
                               const int * process_these,
                               int & result);
 

@@ -5,7 +5,6 @@
 #include "mdl_atom_record.h"
 
 using std::cerr;
-using std::endl;
 
 MDL_Atom_Record::MDL_Atom_Record()
 {
@@ -210,15 +209,13 @@ MDL_Atom_Record::build(const const_IWSubstring & buffer)
 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
 */
 
-  if (! buffer.nextword(token, i))    // last 3 columns must be present if we got to here
-  {
+  if (! buffer.nextword(token, i)) {    // last 3 columns should be present if we got to here
     cerr << "MDL_Atom_Record::build:not enough tokens, ignored\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     return 1;
   }
 
-  if (! token.numeric_value(_inversion))
-  {
+  if (! token.numeric_value(_inversion)) {
     cerr << "Bad inversion value '" << token << "'\n";
     return 0;
   }
@@ -226,7 +223,7 @@ MDL_Atom_Record::build(const const_IWSubstring & buffer)
   if (! buffer.nextword(token, i))    // last 3 columns must be present if we got to here
   {
     cerr << "MDL_Atom_Record::build:not enough tokens, ignored\n";
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     return 1;
   }
 
@@ -330,10 +327,10 @@ MDL_Bond_Record::build(const const_IWSubstring & buffer,
   if (_a1 != _a2)   // great, the most common case
     ;
   else if (mdlfos.ignore_self_bonds())
-    cerr << "MDL_Bond_Record::build:ignoring self bond, atom " << _a1 << endl;
+    cerr << "MDL_Bond_Record::build:ignoring self bond, atom " << _a1 << '\n';
   else
   {
-    cerr << "MDL_Bond_Record::build:self bond, atom " << _a1 << endl;
+    cerr << "MDL_Bond_Record::build:self bond, atom " << _a1 << '\n';
     return 0;
   }
   
@@ -415,7 +412,7 @@ MDL_Bond_Record::convert_mdl_bond_type_read_in_to_query (bond_type_t & for_query
     for_query = SINGLE_BOND | DOUBLE_BOND | TRIPLE_BOND | AROMATIC_BOND;
   else
   {
-    cerr << "MDL_Bond_Record::convert_bond_type_read_in_to_query: unrecognised bond type " << _bond_type_read_in << endl;
+    cerr << "MDL_Bond_Record::convert_bond_type_read_in_to_query: unrecognised bond type " << _bond_type_read_in << '\n';
     return 0;
   }
 
@@ -464,7 +461,7 @@ MDL_Bond_Record::bond_type_for_query(bond_type_t & for_query) const
     for_query = SINGLE_BOND | DOUBLE_BOND | TRIPLE_BOND | AROMATIC_BOND;
   else
   {
-    cerr << "MDL_Bond_Record::bond_type_for_query: unrecognised bond type " << _bond_type_read_in << endl;
+    cerr << "MDL_Bond_Record::bond_type_for_query: unrecognised bond type " << _bond_type_read_in << '\n';
     return 0;
   }
 

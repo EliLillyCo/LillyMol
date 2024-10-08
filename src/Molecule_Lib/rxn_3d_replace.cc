@@ -4,6 +4,8 @@
 #include "Foundational/iwmisc/misc.h"
 
 #include "iwreaction.h"
+#include "u3b.h"
+// extern "C" void u3b_(const double * w, double * c1, double * c2, const int * n, const int * mode, double *rms, double * u, double * t, int  * ier);
 
 using std::cerr;
 using std::endl;
@@ -183,7 +185,6 @@ identify_moving_atoms (const Molecule & m,
   return rc;
 }
 
-extern "C" void u3b_(const double * w, double * c1, double * c2, const int * n, const int * mode, double *rms, double * u, double * t, int  * ier);
 
 int
 Reaction_3D_Replace::process(Molecule & m,

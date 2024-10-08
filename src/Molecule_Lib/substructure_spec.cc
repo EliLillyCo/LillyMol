@@ -582,35 +582,72 @@ Substructure_Atom_Specifier::update_aromaticity(aromaticity_type_t arom) {
   return 1;
 }
 
-// #define DEBUG_RING_SIZE_MATCHES
+//#define DEBUG_RING_SIZE_MATCHES
 
 /*
   All the ring size matching functions look alike, so they are done in
   this function.
+  M will be a Matcher<> of some type.
+  Aug 2024. Long standing bug. r5r6 had been interpreted as:
+    ring of size 5 OR ring of size 6.
+  That is not correct. Should be AND.
 */
 
 template <typename M>
 int
 match_ring_sizes(const M& ring_sizes_in_query,
-                 const List_of_Ring_Sizes* ring_sizes_in_molecule, const char* comment) {
-  (void)comment;  // suppress compiler warnings of unused arg
+                 const List_of_Ring_Sizes& ring_sizes_in_molecule, const char* comment) {
+  if (ring_sizes_in_molecule.empty()) {
+    return 0;
+  }
 
 #ifdef DEBUG_RING_SIZE_MATCHES
   cerr << "Checking '" << comment << "' ring sizes. Atom is in rings of size:\n";
-  for (int i = 0; i < ring_sizes_in_molecule->number_elements(); i++) {
-    cerr << "   " << ring_sizes_in_molecule->item(i)
-         << ", match = " << ring_sizes_in_query.matches(ring_sizes_in_molecule->item(i))
+  for (int i = 0; i < ring_sizes_in_molecule.number_elements(); i++) {
+    cerr << "   " << ring_sizes_in_molecule.item(i)
+         << ", match = " << ring_sizes_in_query.matches(ring_sizes_in_molecule.item(i))
          << '\n';
   }
 #endif
 
-  for (const auto rs : *ring_sizes_in_molecule) {
-    if (ring_sizes_in_query.matches(rs)) {
-      return 1;
+  (void)comment;  // suppress compiler warnings of unused arg
+
+  // If the matcher contains only ranges, then any ring match is OK.
+  if (ring_sizes_in_query.empty()) {
+    for (const auto rs : ring_sizes_in_molecule) {
+      if (ring_sizes_in_query.matches(rs)) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  // If atom is in one ring and only one ring size specified, easy.
+  if (ring_sizes_in_query.size() == 1 && ring_sizes_in_molecule.size() == 1) {
+    return ring_sizes_in_query[0] == ring_sizes_in_molecule[0];
+  }
+
+  // If atom is in multiple rings, and just one ring size specified, then any match will do
+
+  if (ring_sizes_in_query.size() == 1 && ring_sizes_in_molecule.size() > 1) {
+    for (const int rs : ring_sizes_in_molecule) {
+      if (ring_sizes_in_query.matches(rs)) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  // The most complex case, the matcher contains multiple values and the atom is in multiple ring sizes.
+  const int nrs = ring_sizes_in_query.size();
+  for (int i = 0; i < nrs; ++i) {
+    int rs = ring_sizes_in_query[i];
+    if (! ring_sizes_in_molecule.contains(rs)) {
+      return 0;
     }
   }
 
-  return 0;  // no match found
+  return 1;  // Every requested ring size was found in the atom.
 }
 
 int
@@ -1062,7 +1099,7 @@ Substructure_Atom_Specifier::_matches(Target_Atom& target) {
 
   if (_ring_size.is_set()) {
     const List_of_Ring_Sizes* ring_sizes_in_molecule = target.sssr_ring_sizes();
-    if (!match_ring_sizes(_ring_size, ring_sizes_in_molecule, "ring_size")) {
+    if (!match_ring_sizes(_ring_size, *ring_sizes_in_molecule, "ring_size")) {
       return 0;
     }
 
@@ -1124,7 +1161,7 @@ Substructure_Atom_Specifier::_matches(Target_Atom& target) {
 
   if (_aromatic_ring_size.is_set()) {
     const List_of_Ring_Sizes* ring_sizes_in_molecule = target.aromatic_ring_sizes();
-    if (!match_ring_sizes(_aromatic_ring_size, ring_sizes_in_molecule,
+    if (!match_ring_sizes(_aromatic_ring_size, *ring_sizes_in_molecule,
                           "aromatic ring size")) {
       return 0;
     }
@@ -1143,7 +1180,7 @@ Substructure_Atom_Specifier::_matches(Target_Atom& target) {
 
   if (_aliphatic_ring_size.is_set()) {
     const List_of_Ring_Sizes* ring_sizes_in_molecule = target.aliphatic_ring_sizes();
-    if (!match_ring_sizes(_aliphatic_ring_size, ring_sizes_in_molecule,
+    if (!match_ring_sizes(_aliphatic_ring_size, *ring_sizes_in_molecule,
                           "aliphatic ring size")) {
       return 0;
     }

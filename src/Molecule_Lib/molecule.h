@@ -603,7 +603,7 @@ enum BondedStatus {
 
 class __attribute__((visibility("default"))) Molecule : private resizable_array_p<Atom> {
  private:
-  Bond_list _bond_list;
+  BondList _bond_list;
 
   //resizable_array_p<Chiral_Centre> _chiral_centres;
   SetOfChiralCentres _chiral_centres;
@@ -1376,7 +1376,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   bool bond_endpoints(int ndx, atom_number_t& a1,
                       atom_number_t& a2) const;  // bond endpoint indices
 
-  const Bond_list& bond_list() const {
+  const BondList& bond_list() const {
     return _bond_list;
   }  // dangerous, but we return it const
 
@@ -2008,7 +2008,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   uint64_t quick_atom_hash() const;
   //  For each atom set in `include_atom`, form a radius 1 shell.
   int ShellHash(const int * include_atom, resizable_array<uint32_t>& result);
+  // A very approximate sum over all bonds. Because of the need to fit into a
+  // single 64 bit value, it is necessarily incomplete.
   uint64_t quick_bond_hash();  // not const because aromaticity is perceived
+  // A more complete bond hash that uses two 64 bit values. This way more information
+  // can be stored.
+  void QuickBondHash(uint64_t hash[2]); // not const because aromaticity is perceived.
 
   //  We are making a smarts of a subset and we want all the D and v directives to specify
   //  just the atoms in the subset or a minimum requirement

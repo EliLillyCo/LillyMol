@@ -45,6 +45,8 @@ gene {
 
   Neighbour expected{"t1", 1.0f, 2};
   EXPECT_EQ(*needle.nbr(0), expected);
+
+  needle::delete_max_possible_association();
 }
 
 TEST(TestNeedle, TestIdenticalOppositeSign) {
@@ -79,6 +81,8 @@ gene {
 
   Neighbour expected{"t1", -1.0f, 2};
   EXPECT_EQ(*needle.nbr(0), expected);
+
+  needle::delete_max_possible_association();
 }
 
 // Hmmm, made a mistake here. This struct cannot explore
@@ -106,7 +110,20 @@ class TestGeneExpression : public testing::TestWithParam<Cmp> {
 
     Needle _n1;
     Needle _n2;
+
+  // Protected Functions
+    void SetUp();
+    void TearDown();
 };
+
+void
+TestGeneExpression::SetUp() {
+  needle::initialise_max_possible_association();
+}
+void
+TestGeneExpression::TearDown() {
+  needle::delete_max_possible_association();
+}
 
 TEST_P(TestGeneExpression, Test1) {
   const auto params = GetParam();

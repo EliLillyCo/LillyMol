@@ -23,6 +23,7 @@ extern int  get_include_aromaticity_in_smiles();
 // aromatic atoms, but non aromatic bonds.
 extern void set_include_aromaticity_in_smiles(int atom_arom, int bond_arom);
 extern int include_bond_aromaticity_in_smiles();
+extern void set_include_bond_aromaticity_in_smiles(int s);
 
 extern void set_include_cis_trans_in_smiles(int);
 extern int  include_cis_trans_in_smiles();

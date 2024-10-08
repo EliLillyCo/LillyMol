@@ -53,6 +53,20 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "etrans_proto",
+    srcs = [
+        "etrans.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "etrans_cc_proto",
+    deps = [
+        "etrans_proto",
+    ],
+)
+
+proto_library(
     name = "mol2graph_proto",
     srcs = [
         "mol2graph.proto",
@@ -408,6 +422,7 @@ cc_library(
     deps = [
         ":atom_type_ext_cc_proto",
         ":donor_acceptor_cc_proto",
+        ":etrans_cc_proto",
         ":mol2graph_cc_proto",
         ":molecule_to_query_cc_proto",
         ":pharmacophore_cc_proto",
@@ -550,6 +565,19 @@ cc_library(
     deps = [
         ":geometric_constraints_cc_proto",
         ":iwmolecule",
+    ],
+)
+
+cc_library(
+    name = "kabsch",
+    srcs = [
+        "kabsch.cpp",
+    ],
+    hdrs = [
+        "kabsch.hpp",
+    ],
+    deps = [
+        "@com_gitlab_libeigen_eigen//:eigen",
     ],
 )
 
@@ -743,6 +771,20 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "kabsch_test",
+    timeout = "short",
+    srcs = [
+        "kabsch_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        ":kabsch",
         "@googletest//:gtest_main",
     ],
 )

@@ -26,6 +26,9 @@ The usage message is
   -T             discard molecular changes after comparison
   -r <number>    report progress every <number> molecules
   -e             report all molecules together with counts
+  -d             gather data as DicerFragment protos, -U file is more informative
+  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv
+  -d             use '-U smiles' to write smiles + textproto
   -j             items are the same only if both structure and name match
   -t E1=E2       element transformations, enter '-t help' for details
   -i <type>      specify input type
@@ -34,6 +37,13 @@ The usage message is
   -K ...         standard smiles options, enter '-K help' for info
   -g <qualifier> chemical standardisations, enter "-g help" for usage
   -v             verbose output
+
+Typical usage might be
+
+unique_molecules -l -c -z -I -S /tmp/unique -v /home/ian/rand50k.smi
+
+To generate DicerFragment protos in the -U file.
+unique_molecules -l -c -z -I -U Ufile.textproto -d -U smiles -v /home/ian/rand50k.smi
 ```
 
 There are a great many ways by which two molecules can be considered identical.

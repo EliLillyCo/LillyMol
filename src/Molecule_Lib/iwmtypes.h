@@ -91,6 +91,14 @@ inline constexpr int kTripleBond = TRIPLE_BOND;
 inline constexpr int kHydrogen = 1;
 inline constexpr int kHelium = 2;
 inline constexpr int kCarbon = 6;
+inline constexpr int kNitrogen = 7;
+inline constexpr int kOxygen = 8;
+inline constexpr int kFluorine = 9;
+inline constexpr int kPhosphorus = 15;
+inline constexpr int kSulphur = 16;
+inline constexpr int kChlorine = 17;
+inline constexpr int kBromine = 35;
+inline constexpr int kIodine = 53;
 
 #define ATOMS_NOT_BONDED -1
 

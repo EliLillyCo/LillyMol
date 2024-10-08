@@ -23,6 +23,7 @@
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/substructure.h"
 
@@ -361,6 +362,7 @@ PlaceSmilesSymbol(Molecule& m, atom_number_t zatom, IWString& smi) {
     smi << kOpenSquareBracket;
   }
 
+//  e->append_smiles_symbol(smi, m.is_aromatic(zatom), m.isotope(zatom));
   e->append_smiles_symbol(smi, NOT_AROMATIC, m.isotope(zatom));
   if (square_bracket) {
     if (a.formal_charge() == 0) {
@@ -369,6 +371,7 @@ PlaceSmilesSymbol(Molecule& m, atom_number_t zatom, IWString& smi) {
     } else {
       smi << '-';
     }
+
     smi << kCloseSquareBracket;
   }
 }
@@ -433,6 +436,7 @@ AppendSmiles(Molecule& m, PerMoleculeArrays& data, RingNumberControl& rnc,
     smiles_information.set_user_specified_atomic_smarts(i, data.atom_smarts[i]);
   }
 
+  m.invalidate_smiles();
   const IWString& smt = m.smarts(smiles_information, data.include_atom);
 
   smiles << smt;
@@ -483,6 +487,7 @@ AppendSmiles(Molecule& m, PerMoleculeArrays& data, int& ring_number, IWString& s
     smiles_information.set_user_specified_atomic_smarts(i, data.atom_smarts[i]);
   }
 
+  m.invalidate_smiles();
   const IWString& smt = m.smarts(smiles_information, data.include_atom);
 
   smiles << smt;
@@ -590,6 +595,16 @@ Options::Process(Molecule& m, int hring, IWString_and_File_Descriptor& output) {
       xref[ini->initial_atom_number] = ndx;
     }
   }
+
+#ifdef FOOABA
+  for (Molecule * f : components) {
+    const int matoms = f->natoms();
+    for (int i = 0; i < matoms; ++i) {
+      f->set_implicit_hydrogens_known(i, 0);
+      f->recompute_implicit_hydrogens(i);
+    }
+  }
+#endif
 
   // When the smiles is being formed, and a fragment sees that it was bonded
   // to another atom, it does not know if that atom has already been processed,

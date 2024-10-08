@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package safe_generate;
+
+import "Molecule_Lib/etrans.proto";
+import "Molecule_Tools/molecule_filter.proto";
+
+message Config {
+  optional bool verbose = 1;
+
+  optional element_transformation.ElementTransformations etrans = 2;
+
+  repeated string library = 3;
+
+  repeated string can_change = 4;
+  repeated string cannot_change = 5;
+
+  optional bool ignore_molecules_not_matching_queries = 6;
+
+  optional uint32 min_atoms_in_fragment = 7;
+  optional uint32 max_atoms_in_fragment = 8;
+
+  // when a fragment changes size, how many extra atoms are allowed
+  // and how many atoms can it lose.
+  optional uint32 extra_atoms = 9;
+  optional uint32 fewer_atoms = 10;
+
+  optional uint32 extra_rings = 11;
+  optional uint32 fewer_rings = 12;
+
+  // If specified, a maximum value on the difference in the molecular
+  // formulae for two fragments in order to be swapped. This uses
+  // the Diff() method in the MFormula class. 
+  // Note that this check is independent of the extra_atoms and
+  // fewer_atoms checks.
+  optional uint32 max_formula_difference = 13;
+
+  // Fragments with two or more attachment points know the minimum
+  // distance between attachment points. With this setting we can
+  // impose a limit on how much the distance can change.
+
+  optional uint32 max_distance_difference = 14;
+
+  // Substructure queries that will drop molecules.
+  repeated string discard_if_match = 15;
+
+  optional MoleculeFilterData.Requirements molecule_filter = 16;
+}

@@ -303,8 +303,9 @@ usage(int rc) {
 // clang-format on
 // clang-format off
   cerr << R"(Identifies rings and ring systems. Stores or retrieves by unique smiles of the ring.
-Data is stored in a BerkeleyDb database with key unique smiles and value a textproto
-Smi2Rings::Ring proto.
+Data is stored in a BerkeleyDb database with key unique smiles and value a Smi2Rings.Ring textproto
+describing the ring system, including parent structure and number of instances.
+Usage:
 smi2rings_bdb -d dbname -d STORE|LOOKUP <options> file.smi
   -j ...         options for adding atoms to rings, enter '-j help' for info
   -N add         add non-ring connection to positive aromatic nitrogen
@@ -495,18 +496,23 @@ PerMoleculeData::MaybeRevertInitialIsotopes(Molecule& m) {
   return m.set_isotopes(starting_isotopes.get());
 }
 
+// Modified to also detect S+ and O+
+// C12=C(ON=C1OC)CC[S+](C)C2 CHEMBL278618
 int
 PerMoleculeData::IdentifyThreeConnectedAromaticSulphur(Molecule& m) {
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; ++i) {
+    if (m.ring_bond_count(i) == 0) {
+      continue;
+    }
+
     const Atom& a = m[i];
-    if (a.atomic_number() != 16) {
-      continue;
-    }
-    if (a.ncon() != 3) {
-      continue;
-    }
-    if (! m.is_aromatic(i)) {
+
+    if (a.formal_charge() == 1 &&
+        (a.atomic_number() == 8 || a.atomic_number() == 16)) {
+    } else if (a.atomic_number() == 16 && a.ncon() == 3 &&
+               m.is_aromatic(i)) {
+    } else {
       continue;
     }
 
@@ -1237,7 +1243,7 @@ MaybeWriteNotFoundRings(Molecule& m,
   return 1;
 }
 
-//#define DEBUG_DO_DATABASE_LOOKUP
+// #define DEBUG_DO_DATABASE_LOOKUP
 
 static int
 do_database_lookup_multiple_dbs(Molecule& m,
@@ -1485,6 +1491,9 @@ StoreInHash(Molecule& m,
 
   return 1;
 }
+
+// #define DEBUG_STORE
+
 static int
 DoDatabaseStore(Molecule& m, PerMoleculeData& mdata, int uid,
                 std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
@@ -1857,6 +1866,7 @@ PerMoleculeData::IdentifyPositiveAromaticNitrogen(Molecule& m) {
 
 
 //  Create the unique smiles for a given subset of the molecule
+// #define DEBUG_SUBSET_CREATION
 
 int
 PerMoleculeData::CreateSubset(Molecule& m, int uid,
@@ -1865,16 +1875,18 @@ PerMoleculeData::CreateSubset(Molecule& m, int uid,
 
   m.create_subset(tmp, in_system, uid, xref.get());
 
-  int matoms = tmp.natoms();
-  for (int i = 0; i < matoms; i++) {
+  // We could be more precise about this - change just the atoms
+  // that have changed bonding.
+  // O[C@@H]1C[C@H]2[N+](C)(C)[C@@H](C1)[C@H]1[C@@H]2O1 CHEMBL3706465
+  const int matoms = tmp.natoms();
+  for (int i = 0; i < matoms; ++i) {
     tmp.set_implicit_hydrogens_known(i, 0);
-
-    if (0 == tmp.isotope(i)) {
-      continue;
-    }
-
-    tmp.recompute_implicit_hydrogens(i);
   }
+
+  //cerr << tmp.unique_smiles() << " after formation\n";
+  //tmp.invalidate_smiles();
+  tmp.recompute_implicit_hydrogens();
+  //cerr << tmp.unique_smiles() << " after implicit H " << m.valence_ok() << '\n';
 
   for (atom_number_t s : aromatic_sulphur) {
     if (xref[s] >= 0) {
@@ -1882,7 +1894,6 @@ PerMoleculeData::CreateSubset(Molecule& m, int uid,
     }
   }
 
-// #define DEBUG_SUBSET_CREATION
 #ifdef DEBUG_SUBSET_CREATION
   tmp.debug_print(cerr);
   cerr << "Smiles for subset '" << tmp.smiles() << "' unique '";
@@ -2040,9 +2051,13 @@ static int
 smi2rings(Molecule& m,
           std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
           IWString_and_File_Descriptor& output) {
-  if (report_progress()) {
+  if (! report_progress()) {
+  } else if (store_in_database) {
     cerr << "Read " << molecules_read << " molecules, found " << new_ring_systems_stored
          << " new ring systems\n";
+  } else {
+    cerr << "Read " << molecules_read << ", " << exemplar_count[0] << 
+            " unique ring systems found\n";
   }
 
   if (write_parent_structure || write_non_ring_atoms) {
@@ -2090,11 +2105,11 @@ Preprocess(Molecule& m) {
     (void)chemical_standardisation.process(m);
   }
 
+  m.revert_all_directional_bonds_to_non_directional();
+
   if (remove_all_chiral_centres) {
     m.remove_all_chiral_centres();
   }
-
-  m.revert_all_directional_bonds_to_non_directional();
 
   return;
 }
@@ -2557,7 +2572,7 @@ smi2rings(int argc, char** argv) {
       if (f.starts_with("file=") || f.starts_with("FILE=")) {
         f.remove_leading_chars(5);
         fname = f;
-      } else if (!cl.value('f', min_urs_needed) || min_urs_needed < 0) {
+      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 1) {
         cerr << "The filter option requires a whole non-negative cutoff (-f)\n";
         usage(2);
       }

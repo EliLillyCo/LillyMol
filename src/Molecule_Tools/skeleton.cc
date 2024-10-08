@@ -69,9 +69,6 @@ class Options {
     // is attempted, do any preprocessing transformations.
     int Preprocess(Molecule& m);
 
-    // Helpful when the -i option is not given.
-    int MaybeDiscernInputType(const char * fname);
-
     // The function that actually does the processing,
     // and may write to `output`.
     // You may instead want to use a Molecule_Output_Object if
@@ -128,15 +125,6 @@ int
 Options::Report(std::ostream& output) const {
   output << "Read " << _molecules_read << " molecules\n";
   // Other information about what has happened.
-
-  return 1;
-}
-
-// If the input type is known, return it.
-// Otherwise examine the file name's suffix to 
-// determine the type.
-int
-Options::MaybeDiscernInputType(const char * fname) {
 
   return 1;
 }

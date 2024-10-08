@@ -364,6 +364,8 @@ class DownTheBond {
     iwmatcher::Matcher<uint32_t> _heteroatom_count;
     // Number of ring atoms.
     iwmatcher::Matcher<uint32_t> _ring_atom_count;
+    // Number of rings.
+    iwmatcher::Matcher<uint32_t> _rings;
     // Number of unsaturated atoms
     iwmatcher::Matcher<uint32_t> _unsaturation_count;
     // Number of aromatic atoms.
@@ -395,6 +397,7 @@ class DownTheBond {
     int OkRingAtomCount(Molecule& m, const int* visited) const;
     int OkMaxDistance(Molecule& m, atom_number_t a2, const int* visited) const;
     int NoAtomsDownTheBond(Molecule& m, atom_number_t a1, atom_number_t a2);
+    int OkRingCount(Molecule& m, const int* visited) const;
 
   public:
     DownTheBond();

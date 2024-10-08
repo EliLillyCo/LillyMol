@@ -91,6 +91,9 @@ static int fragments_discarded_for_not_containing_user_specified_queries = 0;
 
 static int include_amide_like_bonds_in_hard_coded_queries = 1;
 
+// By default, bonds to (for example) an amide are broken.
+static int break_bonds_to_unsaturated_atoms = 1;
+
 static int break_ring_chain_bonds = 0;
 
 static resizable_array_p<Substructure_Hit_Statistics> queries_for_bonds_to_not_break;
@@ -582,6 +585,7 @@ reset_variables()
      add_user_specified_queries_to_default_rules = 0;
      fragments_discarded_for_not_containing_user_specified_queries = 0;
      include_amide_like_bonds_in_hard_coded_queries = 1;
+     break_bonds_to_unsaturated_atoms = 1;
      break_ring_bonds = 0;
      nq = 0;
      append_atom_count = 0;
@@ -3237,6 +3241,7 @@ usage (int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "  -s <smarts>   smarts for cut points - breaks bond between 1st and 2nd matched atom\n";
   cerr << "  -q <...>      query specification (alternative to -s option)\n";
   cerr << "  -n <smarts>   smarts for bonds to NOT break\n";
@@ -3267,6 +3272,7 @@ usage (int rc)
   cerr << "  -G ...        standard smiles options\n";
   cerr << "  -S <fname>    output file (default to stdout)\n";
   cerr << "  -v            verbose output\n";
+// clang-format on
 
   exit(rc);
 }
@@ -3479,14 +3485,13 @@ mark_duplicates (Fragment_Info * frag_info,
 
 class Frag_Info_Comparator
 {
-public:
-int operator() (const Fragment_Info &, const Fragment_Info &) const;
+  public:
+    int operator() (const Fragment_Info &, const Fragment_Info &) const;
 };
 
 int
 Frag_Info_Comparator::operator() (const Fragment_Info & f1,
-  const Fragment_Info & f2) const
-{
+  const Fragment_Info & f2) const {
   if (f1.times_hit() < f2.times_hit())
     return -1;
 
@@ -4218,7 +4223,7 @@ Breakages::identify_symmetry_exclusions(Molecule & m)
 
 
 int
-Dicer_Arguments::_is_smallest_fragment (const IW_Bits_Base & b) const
+Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base & b) const
 {
   int n = _stored_bit_vectors.number_elements();
 
@@ -4295,10 +4300,9 @@ Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule & m,
 }
 
 static void
-dump_iw_atom_type (Molecule& frag, const Molecule& comp,
-                   const int parent_atoms, const int xref[], const uint32_t atypes[],
-                   IWString_and_File_Descriptor & output)
-{
+dump_iw_atom_type(Molecule& frag, const Molecule& comp,
+                  const int parent_atoms, const int xref[], const uint32_t atypes[],
+                  IWString_and_File_Descriptor & output) {
 //Molecule mcopy(comp);
 //cerr << "dump_iw_atom_type  processing " << frag.smiles() << " and comp " << mcopy.smiles() << endl;
   IWString v[10];
@@ -6669,6 +6673,15 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
 {
   m.compute_aromaticity_if_needed();
 
+  const int matoms = m.natoms();
+
+  std::unique_ptr<int[]> saturated = std::make_unique<int[]>(matoms);
+  std::unique_ptr<int[]> ring_bond_count = std::make_unique<int[]>(matoms);
+  for (int i = 0; i < matoms; ++i) {
+    saturated[i] = m.saturated(i);
+  ring_bond_count[i] = m.ring_bond_count(i);
+  }
+
   int rc = 0;
 
   for (const Bond* b : m.bond_list()) {
@@ -6683,25 +6696,29 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
 
-    const int rbc1 = m.ring_bond_count(a1);
-    const int rbc2 = m.ring_bond_count(a2);
-
     if (include_amide_like_bonds_in_hard_coded_queries)
       ;
-    else if (rbc1 || rbc2)
+    else if (ring_bond_count[a1] || ring_bond_count[a2])
       ;
     else if (is_amide(m, a1, a2))
       continue;
 
-    if (m.is_aromatic(a1) || m.is_aromatic(a2))
-    {
+    // Maybe we should check break_bonds_to_unsaturated_atoms here and
+    // also not break biphenyl type linkages?
+    if (m.is_aromatic(a1) || m.is_aromatic(a2)) {
       Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
       continue;
     }
 
-    if (!m.saturated(a1) || !m.saturated(a2)) {
+    if (! break_bonds_to_unsaturated_atoms) {
+      if (!saturated[a1] || !saturated[a2]) {
+        continue;
+      }
+    }
+
+    if (!saturated[a1] || !saturated[a2]) {
       Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
@@ -6709,7 +6726,8 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
     }
 
     if (! break_ring_chain_bonds) {
-    } else if ((rbc1 == 0 && rbc2 > 0) || (rbc1 > 0 && rbc2 == 0)) {
+    } else if ((ring_bond_count[a1] == 0 && ring_bond_count[a2] > 0) ||
+               (ring_bond_count[a1] > 0 && ring_bond_count[a2] == 0)) {
       Chain_Bond_Breakage * b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
@@ -7357,6 +7375,7 @@ InitialiseEnvironmentElements() {
 static int
 display_misc_B_options (std::ostream & os)
 {
+  // clang-format off
   os << " -B atype=<tag>    Calculate atom type and dump it in frag/comp pairs\n";
   os << " -B term           perceive terminal groups\n";
   os << " -B bscb           allow Carbon-Carbon single bonds to break\n";
@@ -7377,6 +7396,8 @@ display_misc_B_options (std::ostream & os)
   os << " -B nousmi         do NOT uuse unique smiles to keep track of fragments - dangerous\n";
   os << " -B nbamide        do NOT break amide and amide-like bonds\n";
   os << " -B brcb           break all bonds from a chain to a ring\n";
+  os << " -B nbunsat        do not break bonds to unsaturated atoms\n";
+   
   // the nbfts option is not working, TODO ianwatson fix.
   //os << " -B nbfts          do NOT break bonds that would yield fragments too small\n";
   os << " -B appnatoms      append the atom count to each fragment produced\n";
@@ -7397,6 +7418,7 @@ display_misc_B_options (std::ostream & os)
   os << " -B recap          work like Recap - break all breakable bonds at once\n";
   os << " -B nooutput       suppress writing diced fragments, useful with the '-B fragstat' option\n";
   os << " -B help           this message\n";
+  // clang-format on
 
   exit(3);
 }
@@ -7404,12 +7426,14 @@ display_misc_B_options (std::ostream & os)
 static int
 display_dash_K_options(char flag, std::ostream & os)
 {
+  // clang-format off
   os << " -" << flag << " READ=<fname>    read existing data from <fname>\n";
   os << " -" << flag << " WRITE=<fname>   when complete, write data to <fname>\n";
   os << " -" << flag << " ADD             add new strings to the hash (default)\n";
   os << " -" << flag << " NOADD           do NOT add new strings to the hash\n";
   os << "                       useful for creating fixed dictionary fingerprints\n";
   os << " -" << flag << " help            this message\n";
+  // clang-format on
 
   exit(3);
 }
@@ -7762,6 +7786,7 @@ dicer (int argc, char ** argv)
   {
     const_IWSubstring m;
     for (int i = 0; cl.value('M', m, i); ++i) {
+      cerr << "Examining '" << m << "'\n";
       if (m.starts_with("maxnr=")) {
         m.remove_leading_chars(6);
         if (! m.numeric_value(max_non_ring_atoms) || max_non_ring_atoms < 0) {
@@ -7984,6 +8009,12 @@ dicer (int argc, char ** argv)
 
         if (verbose)
           cerr << "Amide and amide-like bonds will not be broken\n";
+      }
+      else if (b == "nbunsat") {
+        break_bonds_to_unsaturated_atoms = 0;
+        if (verbose) {
+          cerr << "Bonds to unsaturated atoms will not be broken\n";
+        }
       }
       else if ("nbfts" == b)
       {

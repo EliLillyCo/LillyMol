@@ -205,21 +205,19 @@ currently there is really no limit to what can now be processed - see the '-Z'
 option.
 
 ## Aggregating Across Collections
-There is a script that can be used to aggregate data from multiple collections
+There is a C++ executable that can be used to aggregate data from multiple collections
 into a single collection.
-
 ```
-ruby aggregate_rings.rb corporate/rings chembl/rings ...
+aggregate_replacement_rings  -S ALL -v corporate/rings chembl/rings ...
 ```
 will aggregate all the data in the individual collections and create a unified set
 of protos in the current directory. The example used will be the first example
-encountered during the collation process. The script is quite dumb
-and mostly treats the protos as text, but it works well enough and
-is fast enough.
+encountered during the collation process. 
 
 ## Ring Replacement
 Once a set of replacement rings has been assembled, those can be used to
 perform ring replacement on molecules with existing ring/ring systems.
+```
  -R <fname>    file of labelled rings created by ring_extraction
  -s <smarts>   only replace rings matched by <smarts>
  -q <query>    only replace rings matched by <query>

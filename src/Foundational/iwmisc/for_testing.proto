@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package for_testing;
+
+message SubMessage {
+  optional int32 i1 = 1;
+  optional string str1 = 2;
+}
+
+message TestMessage {
+  optional string str1 = 1;
+  optional string str2 = 2;
+
+  optional int32 i1 = 3;
+  optional uint32 ui1 = 4;
+  optional float x = 5;
+
+  repeated int32 int_array = 6;
+  repeated float float_array = 7;
+
+  repeated string repeated_string = 8;
+
+  optional SubMessage sub_message = 9;
+}

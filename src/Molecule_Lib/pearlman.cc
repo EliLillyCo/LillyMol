@@ -1309,7 +1309,7 @@ discern_fused_neighbours(const resizable_array_p<Beep> & beeps,
 #ifdef BONDS_KNOW_RING_MEMBERSHIP
 
 /*int
-Bond_list::assign_ring_membership_to_bonds (const resizable_array_p<Beep> & beeps)
+BondList::assign_ring_membership_to_bonds (const resizable_array_p<Beep> & beeps)
 {
   int nb = beeps.number_elements();
   for (int i = 0; i < nb; i++)

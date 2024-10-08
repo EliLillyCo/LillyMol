@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwaray/iwaray.h"
@@ -119,7 +120,7 @@ TFDataReader::ReadProto() {
   if (! data) {
     return std::nullopt;
   }
-  const std::string as_string(data->data(), data->length());
+  const std::string_view as_string(data->data(), data->length());
   P proto;
   if (! proto.ParseFromString(as_string)) {
     std::cerr << "TFDataReader::ReadProto:cannot parse serialized form\n";
@@ -136,7 +137,7 @@ TFDataReader::ReadProtoPtr() {
   if (! data) {
     return nullptr;
   }
-  const std::string as_string(data->data(), data->length());
+  const std::string_view as_string(data->data(), data->length());
   std::unique_ptr<T> result = std::make_unique<T>();
   if (! result->ParseFromString(as_string)) {
     std::cerr << "TFDataReader::ReadProto:cannot parse serialized form\n";

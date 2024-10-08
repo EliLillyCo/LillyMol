@@ -377,12 +377,12 @@ MoleculeFragmenter::IdentifyBreakableBonds(Molecule& m, int* status) {
   return rc;
 }
 
-// Return true if this looks like an amide.
+// Return true if this looks like an amide or an acid
 int
 IsAmide(Molecule& m,
         atom_number_t nitrogen,
         atom_number_t cs) {
-  assert(m.atomic_number(nitrogen) == 7);
+  assert(m.atomic_number(nitrogen) == 7 || m.atomic_number(nitrogen) == 8);
 
   // cerr << "IsAmide nitrogen " << nitrogen << " " << m.atomic_number(nitrogen) << '\n';
   const Atom& acs = m[cs];
@@ -460,14 +460,28 @@ MoleculeFragmenter::IdentifyBreakableBond(Molecule& m,
     return 1;
   }
 
-  if (z1 == 7 && z2 != 7 && unsat2) {
+  if (z1 == 7 && (z2 == 6 || z2 == 16) && unsat2) {
     if (IsAmide(m, a1, a2)) {
       // cerr << "IsAmide returns true, not breakable\n";
       return 0;
     }
   }
 
-  if (z2 == 7 && z1 != 7 && unsat1) {
+  if (z2 == 7 && (z1 == 6 || z1 == 16) && unsat1) {
+    if (IsAmide(m, a2, a1)) {
+      // cerr << "IsAmide returns true, not breakable\n";
+      return 0;
+    }
+  }
+
+  // do not break acids
+  if (z1 == 8 && (z2 == 6 || z2 == 16) && unsat2) {
+    if (IsAmide(m, a1, a2)) {
+      // cerr << "IsAmide returns true, not breakable\n";
+      return 0;
+    }
+  }
+  if (z2 == 8 && (z1 == 6 || z1 == 16) && unsat1) {
     if (IsAmide(m, a2, a1)) {
       // cerr << "IsAmide returns true, not breakable\n";
       return 0;
