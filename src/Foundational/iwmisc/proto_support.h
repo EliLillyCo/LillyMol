@@ -18,6 +18,8 @@
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iwstring.h"
 
+#include "toml_support.h"
+
 namespace iwmisc {
 
 using std::cerr;
@@ -143,6 +145,9 @@ std::optional<Proto>
 ReadTextProto(IWString& fname) {
   if (fname.ends_with(".json")) {
     return ReadTextProtoJson<Proto>(fname);
+  }
+  if (fname.ends_with(".toml")) {
+    return ReadTomlProto<Proto>(fname);
   }
 
   AFile input(fname, O_RDONLY);

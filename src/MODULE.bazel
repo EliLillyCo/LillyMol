@@ -39,7 +39,5 @@ bazel_dep(name = "rules_pkg", version = "0.10.1")
 bazel_dep(name = "rules_proto", version = "6.0.2")
 bazel_dep(name = "rules_proto_grpc", version = "5.0.0")
 bazel_dep(name = "rules_ruby", version = "0.12.0")
-# Seem to be two toml handlers. Figure out which to use...
-# bazel_dep(name = "tomlplusplus", version = "3.4.0")
-# bazel_dep(name = "cpptoml", version = "0.1.1")
+bazel_dep(name = "tomlplusplus", version = "3.4.0")
 bazel_dep(name = "zlib", version = "1.3.1")
