@@ -1,0 +1,109 @@
+# load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_library(
+    name = "berkeley_static",
+    srcs = ["BDB/lib/libdb_cxx.a", "BDB/lib/libdb.a"],
+    hdrs = ["BDB/include/db_cxx.h", "BDB/include/db.h" ],
+    strip_include_prefix = "BDB/include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "berkeley_shared",
+    srcs = ["BDB/lib/libdb_cxx.so", "BDB/lib/libdb.so"],
+    hdrs = ["BDB/include/db_cxx.h", "BDB/include/db.h" ],
+    strip_include_prefix = "BDB/include",
+    visibility = ["//visibility:public"],
+)
+
+# THis is needed for xgboost
+cc_library(
+    name = "dlmc",
+    srcs = [
+    ],
+    hdrs =
+        glob(
+            ["include/dmlc/**"],
+            allow_empty=True,
+        ),
+    deps = [
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "xgboost",
+    srcs = [
+        "lib/libxgboost.so",
+    ],
+    hdrs =
+        glob(
+            ["include/xgboost/**"],
+            allow_empty=True,
+        ),
+    deps = [
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "f2c",
+    srcs = ["libf2c/libf2c.a"],
+    hdrs = ["libf2c/f2c.h"],
+    strip_include_prefix = "libf2c",
+    visibility = ["//visibility:public"],
+)
+
+#cc_library(
+#    name = "python",
+#    hdrs = glob(
+#           [ "/home/ian/third_party/PYTHON3.11/include/python3.11/**/*.h"]
+#    ),
+#    includes = [
+#        ".",
+#    ],
+#    strip_include_prefix = "/home/ian/third_party/PYTHON3.11/include/python3.11/",
+#    visibility = ["//visibility:public"],
+#)
+
+cc_library(
+    name = "cppzmq",
+    srcs = [
+    ],
+    hdrs = [
+        "include/zmq.hpp",
+    ],
+    deps = [
+        ":libzmq",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library (
+    name = "libzmq",
+    srcs = [
+        "lib/libzmq.a",
+    ],
+    hdrs = [
+        "include/zmq.h",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "inchi",
+    srcs = glob(
+               ["InChI/INCHI-1-SRC/INCHI_API/bin/Linux/libinchi.so*"],
+               allow_empty=True,
+          ),
+    hdrs = glob (
+               ["InChI/INCHI-1-SRC/INCHI_BASE/src/*.h"],
+               allow_empty=True,
+           ),
+    strip_include_prefix = "InChI/INCHI-1-SRC/INCHI_BASE/src",
+    visibility = ["//visibility:public"],
+)

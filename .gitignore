@@ -5,7 +5,6 @@
 lib
 include
 .gdb_history
-third_party
 .venv
 .vscode
 

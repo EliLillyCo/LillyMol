@@ -1,0 +1,4 @@
+module(
+    name = "third_party",
+    version = "1.0.0"
+)
