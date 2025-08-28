@@ -1,0 +1,6 @@
+C1=CC=CC1 cyclopentadiene
+C1=CC(C)=C(C)C1 1,2-dimethylcyclopentadiene
+C1=C(C)C(C)=CC1 2,3-cyclopentadiene
+C1(C)=CC=CC1 1-cyclopentadiene
+C1=CC=CC1(C) 5-cyclopentadiene
+C1=CC=CO1 furan

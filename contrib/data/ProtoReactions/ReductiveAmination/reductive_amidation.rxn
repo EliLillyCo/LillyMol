@@ -1,0 +1,23 @@
+name: "reductive_amination"
+scaffold {
+  id: 0
+  smarts: "[ND1H2]-[/IWAr0/IWVy0CX4T1]"
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "O=[CD2]"
+  remove_atom: 0
+  join {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}

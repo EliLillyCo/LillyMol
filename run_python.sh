@@ -3,7 +3,7 @@
 # Run python with PYTHONPATH pointing to the shared libraries generated
 # by build_from_src.sh
 # Make sure that PATH is set so that the same version of python that
-# is in WORKSPACE is used for run-time.
+# is in MODULE.bazel is used for run-time.
 # This will not work otherwise.
 
 # build_from_src.sh must have been run, and one of the last things it

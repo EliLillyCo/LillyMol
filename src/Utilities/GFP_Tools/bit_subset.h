@@ -7,9 +7,14 @@
 #include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
-#include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
 #include "Utilities/GFP_Tools/dyfp.h"
 #include "Utilities/GFP_Tools/gfp.h"
+
+#ifdef BUILD_BAZEL
+#include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
+#else
+#include "gfp_to_svm_lite.pb.h"
+#endif
 
 namespace bit_subset {
 
@@ -24,7 +29,7 @@ using gfp_bit_type = uint32_t;
 // is not necessarily known when this is constructed.
 class BitSubset {
   private:
-    // Makking from tag to subset of bits.
+    // Mapping from tag to subset of bits.
     using Subset = std::unordered_set<uint32_t>;
     IW_STL_Hash_Map<IWString, Subset> _tag_to_bit_subset;
 
@@ -65,6 +70,9 @@ class BitSubset {
     // If that fails, it will return -1.
     // Otherwise returns the number of features now in `gfp`.
     int MakeSubset(IW_General_Fingerprint& gfp);
+
+    // For debugging
+    int DebugPrint(std::ostream& output) const;
 };
 
 // The BitXref class is used to support conversion of .gfp data

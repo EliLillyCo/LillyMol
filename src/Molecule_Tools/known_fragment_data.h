@@ -49,8 +49,8 @@ class Known_Fragment_Data
     int _scan_known_fragments (Molecule & m,
                                             const IWString & molecular_formula,
                                             resizable_array_p<Molecule> & fragments,
-                                            _formula_usmi & mf,
-                                            _formula_usmi & usmi,
+                                            const _formula_usmi & mf,
+                                            const _formula_usmi & usmi,
                                             resizable_array<int> & fragments_identified) const;
 
     int _remove_soap (Molecule & m) const;

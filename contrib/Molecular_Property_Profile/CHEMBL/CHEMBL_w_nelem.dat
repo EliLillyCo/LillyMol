@@ -2,12 +2,12 @@ description {
   feature_name: "w_nelem"
   description: "Number of different elements"
   plot_title: "Number of different elements"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
 minval: 2.0
 maxval: 8.0
-mean: 4.60238
+mean: 4.591195
 median: 5.0
 quantile {
   quantile: 0.01
@@ -39,29 +39,29 @@ quantile {
 }
 int_values {
   value: 2
-  count: 11
+  count: 515
 }
 int_values {
   value: 3
-  count: 3844
+  count: 144498
 }
 int_values {
   value: 4
-  count: 19816
+  count: 735805
 }
 int_values {
   value: 5
-  count: 19351
+  count: 718379
 }
 int_values {
   value: 6
-  count: 6311
+  count: 227191
 }
 int_values {
   value: 7
-  count: 656
+  count: 21360
 }
 int_values {
   value: 8
-  count: 11
+  count: 313
 }

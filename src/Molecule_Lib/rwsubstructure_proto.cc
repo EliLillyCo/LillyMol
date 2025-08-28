@@ -28,7 +28,11 @@
 #include "Molecule_Lib/set_of_atoms.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "Molecule_Lib/substructure.pb.h"
+#endif
 #include "Molecule_Lib/target.h"
 
 using std::cerr;
@@ -38,8 +42,8 @@ using down_the_bond::DownTheBond;
 constexpr uint32_t no_limit = std::numeric_limits<uint32_t>::max();
 
 // Having unbalanced braces in the code messes up matching in the editor.
-constexpr char kOpenBrace = '{';
-constexpr char kCloseBrace = '}';
+static constexpr char kOpenBrace = '{';
+static constexpr char kCloseBrace = '}';
 
 using google::protobuf::Descriptor;
 using google::protobuf::FieldDescriptor;
@@ -2385,6 +2389,30 @@ Single_Substructure_Query::_construct_from_proto(const SubstructureSearch::Singl
     }
   }
 
+  if (proto.same_atomic_number_size() > 0) {
+    for (const auto& r : proto.same_atomic_number()) {
+      std::unique_ptr<SameAtomicNumber> s = std::make_unique<SameAtomicNumber>();
+      if (! s->ConstructFromProto(r)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid SameAtomicNumber\n";
+        cerr << r.ShortDebugString() << '\n';
+        return 0;
+      }
+      _same_atomic_number << s.release();
+    }
+  }
+
+  if (proto.different_atomic_number_size() > 0) {
+    for (const auto& r : proto.different_atomic_number()) {
+      std::unique_ptr<DifferentAtomicNumber> s = std::make_unique<DifferentAtomicNumber>();
+      if (! s->ConstructFromProto(r)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid DifferentAtomicNumber\n";
+        cerr << r.ShortDebugString() << '\n';
+        return 0;
+      }
+      _different_atomic_number << s.release();
+    }
+  }
+
   if (proto.has_sort_matches() > 0)
   {
     _sort_matches_by = 0;
@@ -3593,9 +3621,26 @@ Single_Substructure_Query::_build_chirality_specification_from_proto(const Subst
   return 1;
 }
 
+static int
+MaybeAddDirectory(const SubstructureSearch::SubstructureQuery& proto,
+                  IWString& fname) {
+  if (! proto.has_originating_file_name_internal_use_only()) {
+    return 1;
+  }
+
+  IWString originating_file_name(proto.originating_file_name_internal_use_only());
+  std::optional<IWString> maybe_new_file = iwmisc::FileOrPath(originating_file_name, fname);
+  if (! maybe_new_file) {
+    return 1;
+  }
+
+  fname = *maybe_new_file;
+
+  return 1;
+}
+
 int
-Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto)
-{
+Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto) {
   if (proto.has_name()) {
     _comment = proto.name();
   } else if (proto.comment().size() > 0) {
@@ -3607,8 +3652,7 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
     return 0;
   }
 
-  for (const auto& query : proto.query())
-  {
+  for (const auto& query : proto.query()) {
     std::unique_ptr<Single_Substructure_Query> q = std::make_unique<Single_Substructure_Query>();
 
     if (! q->ConstructFromProto(query)) {
@@ -3621,6 +3665,8 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
 
   for (const std::string& fname : proto.query_file()) {
     IWString tmp(fname);
+    MaybeAddDirectory(proto, tmp);
+    tmp.ExpandEnvironmentVariablesInPlace();
     std::optional<SubstructureSearch::SubstructureQuery> maybe_qry =
        iwmisc::ReadTextProtoCommentsOK<SubstructureSearch::SubstructureQuery>(tmp);
     if (! maybe_qry) {
@@ -3662,8 +3708,8 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
 
   _operator.RemoveAllOperators();
 
-  if (! ExtractOperator(proto.logexp(), _number_elements - 1, _operator, IW_LOGEXP_OR, "Substructure_Query::ConstructFromProto"))
-  {
+  if (! ExtractOperator(proto.logexp(), _number_elements - 1, _operator, IW_LOGEXP_OR,
+        "Substructure_Query::ConstructFromProto")) {
     cerr << "Substructure_Query::ConstructFromProto:cannot process operators\n";
     cerr << proto.ShortDebugString() << '\n';
     return 0;
@@ -3681,6 +3727,8 @@ Substructure_Query::ReadProto(const IWString& fname) {
     cerr << "Substructure_Query::ReadProto:cannot read proto from '" << fname << "'\n";
     return 0;
   }
+
+  maybe_proto->set_originating_file_name_internal_use_only(fname.data(), fname.length());
 
   return ConstructFromProto(*maybe_proto);
 }
@@ -4556,6 +4604,69 @@ NearbyAtoms::ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto) {
 
   if (proto.has_rejection()) {
     _rejection = proto.rejection();
+  }
+
+  return 1;
+}
+
+int
+SameAtomicNumber::ConstructFromProto(const SubstructureSearch::SetOfMatchedAtoms& proto) {
+  if (proto.atom_size() == 0) {
+    cerr << "SameAtomicNumber::ConstructFromProto: no data\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.atom_size() == 1) {
+    cerr << "SameAtomicNumber::ConstructFromProto:cannot have just one entry\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // Should warn about duplicated values.
+  for (const uint32_t a : proto.atom()) {
+    _atom.add_if_not_already_present(a);
+  }
+
+  return 1;
+}
+
+int
+DifferentAtomicNumber::ConstructFromProto(const SubstructureSearch::SetOfMatchedAtoms& proto) {
+  if (proto.atom_size() == 0) {
+    cerr << "DifferentAtomicNumber::ConstructFromProto: no data\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.atom_size() != 2) {
+    cerr << "DifferentAtomicNumber::ConstructFromProto:not sure how to process " << proto.atom_size() <<
+            " matched atoms\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // Should warn about duplicated values.
+  for (const uint32_t a : proto.atom()) {
+    _atom.add_if_not_already_present(a);
+  }
+
+  return 1;
+}
+
+int
+SameAtomicNumber::BuildProto(SubstructureSearch::SetOfMatchedAtoms& proto) const {
+  for (uint32_t a : _atom) {
+    proto.mutable_atom()->Add(a);
+  }
+
+  return 1;
+}
+
+int
+DifferentAtomicNumber::BuildProto(SubstructureSearch::SetOfMatchedAtoms& proto) const {
+  for (uint32_t a : _atom) {
+    proto.mutable_atom()->Add(a);
   }
 
   return 1;

@@ -1,0 +1,7 @@
+{
+    "executable": "make_these_molecules",
+    "args": [ "-E autocreate -A D -z i -z f -l -R #{indir}/amideFormation.rxn ",
+                 "-R #{indir}/amideFormation.rxn -M #{indir}/products.lbl ",
+                 "#{indir}/amines.smi #{indir}/enamine_bb.smi #{indir}/acids.smi"
+            ]
+}

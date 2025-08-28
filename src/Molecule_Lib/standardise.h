@@ -5,6 +5,7 @@
 // Transformations that change one molecular representation to another.
 
 #include <iostream>
+#include <optional>
 #include <string>
 
 class Molecule;
@@ -14,7 +15,11 @@ class Command_Line;
 #include "molecule.h"
 #include "set_of_atoms.h"
 #include "substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/standardise.pb.h"
+#else
+#include "standardise.pb.h"
+#endif
 
 namespace standardisation {
 // Transformations can be externally specified.
@@ -61,6 +66,19 @@ class ExternalTransformation {
     }
 
     int Process(Molecule& m);
+};
+
+// Some standardisations try multiple areas of a molecule/ring and
+// need to return more information about what they did.
+enum class Status {
+  // The bonding pattern is already correct.
+  kAlreadyCorrect = 0,
+
+  // Unable to change the bonding pattern.
+  kUnchanged = 1,
+
+  // Successfully changed to the desired form.
+  kChanged = 2
 };
 
 }  // namespace standardisation
@@ -169,6 +187,19 @@ class Possible_Lactim_Lactam
     int reperceive (Molecule & m);
 };
 
+// We frequently need to discern exocyclic atoms. For each atom,
+// this struct will be initialised if there is a singly connected
+// exocyclic atom attached to it. If 
+struct ExocyclicStatus {
+  atom_number_t atom;
+  bond_type_t btype;
+
+  ExocyclicStatus() {
+    atom = kInvalidAtomNumber;
+    btype = 0;
+  }
+};
+
 /*
   for thread safety, the Chemical_Standardisation object needs a stack
   based object in which it can hold attributes of the current molecule 
@@ -190,6 +221,8 @@ class IWStandard_Current_Molecule
     int * _ring_bond_count;
     int * _fsid;
     const Atom ** _atom;
+
+    ExocyclicStatus* _exocyclic_status;
 
     int * _ring_nitrogen_count;
 
@@ -227,6 +260,8 @@ class IWStandard_Current_Molecule
 
 //  private functions
 
+     void FillExocyclicStatus(Molecule& m);
+
   public:
     IWStandard_Current_Molecule();
     ~IWStandard_Current_Molecule();
@@ -245,6 +280,7 @@ class IWStandard_Current_Molecule
     const int *  atom_is_aromatic () const { return _atom_is_aromatic;}
     const int *  ring_nitrogen_count () const { return _ring_nitrogen_count;}
     const int *  ring_bond_count() const { return _ring_bond_count;}
+    const ExocyclicStatus* exocyclic_status() const { return _exocyclic_status;}
 
 //  Some methods are non const
 
@@ -284,7 +320,6 @@ class IWStandard_Current_Molecule
     void set_isolated_metal (int s) { _isolated_metal = s;}
     void set_isolated_halogen (int s) { _isolated_halogen = s;}
     void set_singly_connected_metal (int s) { _singly_connected_metal = s;}
-//  void set_possible_guanidine (int s) { _possible_guanidine = s;}
     void set_phosphorus (int s) { _phosphorus = s;}
     void set_explicit_hydrogen_count (int s) { _explicit_hydrogen_count = s;}
     void set_possible_valence_errors (int s) { _possible_valence_errors = s;}
@@ -303,7 +338,6 @@ class IWStandard_Current_Molecule
     int isolated_halogen () const { return  _isolated_halogen;}
     int singly_connected_metal () const { return  _singly_connected_metal;}
     int non_organic() const { return _non_organic;}
-    const Set_of_Atoms & possible_guanidine () const { return  _possible_guanidine;}
     int phosphorus () const { return  _phosphorus;}
     int explicit_hydrogen_count () const { return  _explicit_hydrogen_count;}
     int possible_valence_errors () const { return  _possible_valence_errors;}
@@ -313,6 +347,12 @@ class IWStandard_Current_Molecule
     }
 
     int remove_possible_guanidine (const atom_number_t);
+
+    const Set_of_Atoms & possible_guanidine () const { return  _possible_guanidine;}
+
+    // Many problems observed if we get a const reference to _possible_guanidine
+    // Return the `ndx` possible guanidine.
+    std::optional<atom_number_t> possible_guanidine(int ndx) const;
 
     int ring_number_containing_atom (const atom_number_t s) const;
     const Set_of_Atoms * ring_containing_atom (const atom_number_t) const;
@@ -375,9 +415,12 @@ class IWStandard_Current_Molecule
 #define CS_ENOL_FUSED "enol-fused"
 #define CS_FCNO "fcno"
 #define CS_ISOTOPE "isotope"
+#define CS_2AMINO_PYRIDINE "to2ap"
+#define CS_OXO_PYRIMIDINE "oxopyrimidine"
+#define CS_INDOLEH "indoleh"
 
 
-namespace standardise {
+namespace standardisation {
 // Mar 2022. Some transformations can result in different molecules depending on
 // the ordering of the connection table. Optionally switch to unique smiles order
 // to stop that happening.
@@ -386,7 +429,15 @@ enum class Canonicalise {
   kReorderAtoms,
   kReinterpretSmiles
 };
-}  // namespace standardise
+
+// Several functions can perform a transformation in multiple directions. This
+// can be used to indicate which direction.
+enum class KetoEnol {
+  kNone,
+  kToEnol,
+  kToKeto
+};
+}  // namespace standardisation
 
 /*
   As you add standardisations, make sure you update the code around the "all" directive
@@ -401,6 +452,8 @@ class Chemical_Standardisation
 
     uint64_t _molecules_processed;
     uint64_t _molecules_changed;
+
+    standardisation::KetoEnol _keto_enol;
 
 //  Our default set of conventions
 
@@ -448,7 +501,10 @@ class Chemical_Standardisation
     Chemical_Transformation _transform_124_triazine;
     Chemical_Transformation _transform_enol_fused;
     Chemical_Transformation _transform_charged_non_organic;
+    Chemical_Transformation _transform_to_2_amino_pyridine;
+    Chemical_Transformation _transform_oxo_pyrimidine;
     Chemical_Transformation _transform_isotopes;
+    Chemical_Transformation _transform_indole_hydrogen;
 
 //  Various reverse direction transformations
 
@@ -472,7 +528,7 @@ class Chemical_Standardisation
 
     int _check_valence_before_and_after;
 
-    standardise::Canonicalise _convert_to_canonical_order;
+    standardisation::Canonicalise _convert_to_canonical_order;
 
     // Any number of externally specified transformations.
     resizable_array_p<standardisation::ExternalTransformation> _external_transformation;
@@ -534,8 +590,8 @@ class Chemical_Standardisation
                 atom_number_t c2,
                 atom_number_t c3,
                 atom_number_t nh1);
-    int  _do_pyrazole (Molecule &, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
-    int  _do_pyrazole (Molecule &, int * atom_already_changed, const int, IWStandard_Current_Molecule & current_molecule_data);
+    int _do_pyrazole (Molecule &, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
+    int _do_pyrazole (Molecule &, int * atom_already_changed, const int, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_pyrimidine(Molecule& m, IWStandard_Current_Molecule& current_molecule_data);
     int  _do_pyrimidine(Molecule& m, IWStandard_Current_Molecule& current_molecule_data,
                 const Set_of_Atoms& ring);
@@ -546,8 +602,14 @@ class Chemical_Standardisation
     int  _do_123_triazole (Molecule & m, const Set_of_Atoms & r, int n1_index_in_ring, int n2_index_in_ring, int n3_index_in_ring, int c4_index_in_ring, int c5_index_in_ring, IWStandard_Current_Molecule &, const Set_of_Atoms * is_fused) const;
     int  _do_134_triazole (Molecule & m, const Set_of_Atoms & r, int n1_index_in_ring, int c2_index_in_ring, int n3_index_in_ring, int n4_index_in_ring, int c5_index_in_ring, IWStandard_Current_Molecule &) const;
 //  int  _do_134_triazole (Molecule & m, const Ring & r, int n1_index_in_ring, int n2_index_in_ring, int n3_index_in_ring, const atomic_number_t * z, const int * ncon, Atom ** atoms);
-    int  _do_isoxazole (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
-    int  _do_isoxazole (Molecule &, const Set_of_Atoms &, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_isoxazole (Molecule &, standardisation::KetoEnol keto_enol, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_isoxazole (Molecule &, standardisation::KetoEnol keto_enol, const Set_of_Atoms &, IWStandard_Current_Molecule & current_molecule_data);
+    int _do_isoxazole(Molecule& m, standardisation::KetoEnol keto_enol,
+                atom_number_t oxygen,
+                atom_number_t nitrogen,
+                atom_number_t carbon,
+                atom_number_t exocyclic,
+                IWStandard_Current_Molecule& current_molecule_data);
     int  _do_transform_azid  (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_misdrawn_urea (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_transform_misdrawn_sulfonamide (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
@@ -557,6 +619,14 @@ class Chemical_Standardisation
     int  _do_amino_thiazole (Molecule &, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_amino_thiazole (Molecule & m, const Set_of_Atoms & r, const int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
     int  _do_enol_to_keto(Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_enol_to_keto(Molecule& m,
+                const Set_of_Atoms& current_enol_form,
+                const Set_of_Atoms& current_keto_form,
+                IWStandard_Current_Molecule& current_molecule_data);
+    int _do_keto_to_enol(Molecule& m,
+                Set_of_Atoms& current_keto_form,
+                const Set_of_Atoms& current_enol_form,
+                IWStandard_Current_Molecule& current_molecule_data);
     int  _do_transform_diketo_to_enol(Molecule & m,
                         IWStandard_Current_Molecule& current_molecule_data,
                         int * diketone13);
@@ -587,7 +657,18 @@ class Chemical_Standardisation
 //    int  _do_transform_reverse_azid  (Molecule &, IWStandard_Current_Molecule & current_molecule_data);
 
     int  _do_transform_pyrazolone (Molecule & m, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
-    int  _do_transform_pyrazolone (Molecule & m, const Set_of_Atoms & ri, const int ring_is_fused, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
+    int  _do_transform_pyrazolone (Molecule & m, standardisation::KetoEnol keto_enol, const Set_of_Atoms & ri, const int ring_is_fused, int * atom_already_changed, IWStandard_Current_Molecule & current_molecule_data);
+
+    int _do_transform_pyrazolone_new(
+           Molecule& m, standardisation::KetoEnol keto_enol,
+           Set_of_Atoms const& r, const int ring_is_fused,
+           int* atom_already_changed, IWStandard_Current_Molecule& current_molecule_data);
+    standardisation::Status _do_transform_pyrazolone_new(
+           Molecule& m, standardisation::KetoEnol keto_enol,
+           atom_number_t n1, atom_number_t n2,
+           atom_number_t carbon,
+           Set_of_Atoms const& r, const int ring_is_fused,
+           int* atom_already_changed, IWStandard_Current_Molecule& current_molecule_data);
 
     int _do_transform_to_4_pyridone(Molecule& m, IWStandard_Current_Molecule& current_molecule_data);
     int _do_transform_to_4_pyridone(Molecule& m,
@@ -610,6 +691,14 @@ class Chemical_Standardisation
     int _do_transform_charged_non_organics(Molecule& m,
                 IWStandard_Current_Molecule& current_molecule_data);
     int  _do_transform_implicit_hydrogen_known_errors (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
+
+    int _do_transform_to_2_amino_pyridine(Molecule& m, 
+                        standardisation::KetoEnol keto_enol,
+                        IWStandard_Current_Molecule& current_molecule_data);
+    int _do_transform_oxo_pyrimidine(Molecule& m,
+                IWStandard_Current_Molecule& current_molecule_data);
+    int _do_transform_indole_hydrogen(Molecule& m,
+                IWStandard_Current_Molecule& current_molecule_data);
 
     int _activate_nohmove_transformations();
 
@@ -634,10 +723,14 @@ class Chemical_Standardisation
 
     void set_verbose (int v) { _verbose = v;}
 
-    void set_convert_to_canonical_order(standardise::Canonicalise s) {
+    void set_convert_to_canonical_order(standardisation::Canonicalise s) {
       _convert_to_canonical_order = s;
     }
     void set_append_string_depending_on_what_changed(int s);
+
+    void set_keto_enol_preference(standardisation::KetoEnol s) {
+      _keto_enol = s;
+    }
 
     int construct_from_command_line (Command_Line &, int = 0, char = 'g');
 

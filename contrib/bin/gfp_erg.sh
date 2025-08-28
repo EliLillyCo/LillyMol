@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set up queries for gfp_erg
-here=$(dirname $(readlink -e $0))
+here=$(dirname $(realpath $0))
 
 if [[ -v LILLYMOL_HOME ]] ; then
   true

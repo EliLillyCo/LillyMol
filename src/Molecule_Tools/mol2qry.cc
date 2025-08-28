@@ -360,6 +360,8 @@ usage(int rc = 1) {
   // clang-format on
   // clang-format off
   cerr << "Converts a file of molecule(s) to query forms\n";
+  cerr << " mol2qry ... -S stem needle.smi\n";
+  cerr << " tsubstructure -q stem0.qry haystack.smi\n";
   cerr << "  -m             all ncon and nbonds values are written as minima\n";
   // does not work, not sure it makes sense cerr << "  -r             all ring bonds become type ANY\n";
   cerr << "  -j             all atoms conserve their ring membership\n";
@@ -367,9 +369,9 @@ usage(int rc = 1) {
   cerr << "  -a             only aromatic atoms will match aromatic atoms\n";
   cerr << "  -d             the saturated/unsaturated status of atoms will be preserved\n";
   //cerr << "  -M <smiles>    specify smiles directly\n";
-  cerr << "  -s             only allow substitutions at     isotopically labelled atoms\n";
+  cerr << "  -s             only allow substitutions at isotopically labelled atoms\n";
+  cerr << "  -t             all isotopic atoms need be substituted\n";
   // not implemented cerr << "  -w             only allow substitutions at NON isotopically labelled atoms\n";
-  cerr << "  -t             not all isotopic atoms need be substituted\n";
   cerr << "  -c             the isotopic number is the number of extra connections at that atom\n";
   cerr << "  -k             use preference values to resolve symmetric atoms\n";
   cerr << "  -u <smarts>    smarts to specify embedding points\n";
@@ -618,6 +620,7 @@ mol2qry(MDL_Molecule& m, Molecule_to_Query_Specifications& mqs, IWString& fname,
   }
 
   Substructure_Query query;
+  cerr << "mol2qry status " << mqs.must_have_substituent_at_every_isotopic_atom() << '\n';
   if (!query.create_from_molecule(m, mqs)) {  // it inherits the molecule name
     cerr << "cannot create query from molecule '" << m.name() << "'\n";
     return 1;
@@ -1090,9 +1093,9 @@ mol2qry(int argc, char** argv) {
     mqs.set_substituents_only_at_isotopic_atoms(1);
 
     if (cl.option_present('t')) {
-      mqs.set_must_have_substituent_at_every_isotopic_atom(0);
+      mqs.set_must_have_substituent_at_every_isotopic_atom(1);
       if (verbose) {
-        cerr << "Not all isotopically labelled atoms need substituents\n";
+        cerr << "All isotopically labelled atoms need substituents\n";
       }
     }
 

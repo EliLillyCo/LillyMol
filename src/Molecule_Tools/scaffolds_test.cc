@@ -36,6 +36,8 @@ class TestScaffolds : public testing::TestWithParam<MoleculeResult> {
     resizable_array<IWString> _scaffold_smiles;
 };
 
+// #define DEBUG_TEST_ADASD
+
 TEST_P(TestScaffolds, TestScaffolds) {
   const auto params = GetParam();
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
@@ -49,11 +51,12 @@ TEST_P(TestScaffolds, TestScaffolds) {
   _scaffold_finder.MakeScaffolds(_m, _scaffolds);
 
 #ifdef DEBUG_TEST_ADASD
-  std::cerr << "Got " << _scaffolds.size() << " values back\n";
+  std::cerr << "Got " << _scaffolds.subset().size() << " values back\n";
   std::cerr << "params.results.size() " << params.results.size() << '\n';
+  std::cerr << _scaffolds.ShortDebugString() << '\n';
 #endif
 
-  EXPECT_EQ(_scaffolds.subset_size(), params.results.number_elements());
+  EXPECT_EQ(_scaffolds.subset_size(), params.results.number_elements()) << params.smiles;
 
   if (_scaffolds.subset().empty()) {
     return;
@@ -63,7 +66,7 @@ TEST_P(TestScaffolds, TestScaffolds) {
     Molecule m;
     const IWString smiles = p.smi();
     m.build_from_smiles(smiles);
-    std::cerr << "Generated " << m.smiles() << " from " << p.smi() << " usmi " << m.unique_smiles() << '\n';
+    // std::cerr << "Generated " << m.smiles() << " from " << p.smi() << " usmi " << m.unique_smiles() << '\n';
     _scaffold_smiles << m.smiles();
   }
 
@@ -79,16 +82,16 @@ TEST_P(TestScaffolds, TestScaffolds) {
 
 INSTANTIATE_TEST_SUITE_P(TestScaffolds, TestScaffolds, testing::Values(
   MoleculeResult{"C", {}},
-  MoleculeResult{"C1CC1", {{"C1CC1"}}},
-  MoleculeResult{"C1CC1C", {{"C1CC1"}}},
-  MoleculeResult{"C12CC1C2CC1CC1", {{"C1CC1", "C(C1CC1)C1C2CC12", "C1C2CC12"}}},
-  MoleculeResult{"C1CC1CC1CC1", {{"C1CC1", "C(C1CC1)C1CC1"}}},
-  MoleculeResult{"C1CC1CC1CC1CC1CC1", {{"C1CC1", "C(C1CC1)C1CC1", "C1C(CC2CC2)C1CC1CC1"}}},
-  MoleculeResult{"C1CC1C(C1CC1)C1CC1", {{"C1CC1", "C(C1CC1)C1CC1", "C1C(C(C2CC2)C2CC2)C1"}}},
-  MoleculeResult{"O=C1CC1CC(=O)CC1CC1", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
-  MoleculeResult{"O=C1CC1C(C)C(=O)C(C)(C)C1CC1", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
-  MoleculeResult{"O=C1CC1C(C)C(=O)C(C)(C)C1C(C)C1", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
-  MoleculeResult{"C1CC1CC(=O)CC1CC1", {{"C1CC1"}, {"O=C(CC1CC1)CC1CC1"}}}
+  MoleculeResult{"C1CC1 t2", {{"C1CC1"}}},
+  MoleculeResult{"C1CC1C t3", {{"C1CC1"}}},
+  MoleculeResult{"C12CC1C2CC1CC1 t4", {{"C1CC1", "C(C1CC1)C1C2CC12", "C1C2CC12"}}},
+  MoleculeResult{"C1CC1CC1CC1 t5", {{"C1CC1", "C(C1CC1)C1CC1"}}},
+  MoleculeResult{"C1CC1CC1CC1CC1CC1 t6", {{"C1CC1", "C(C1CC1)C1CC1", "C1C(CC2CC2)C1CC1CC1"}}},
+  MoleculeResult{"C1CC1C(C1CC1)C1CC1 t7", {{"C1CC1", "C(C1CC1)C1CC1", "C1C(C(C2CC2)C2CC2)C1"}}},
+  MoleculeResult{"O=C1CC1CC(=O)CC1CC1 t8", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
+  MoleculeResult{"O=C1CC1C(C)C(=O)C(C)(C)C1CC1 t9", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
+  MoleculeResult{"O=C1CC1C(C)C(=O)C(C)(C)C1C(C)C1 t10", {{"C1CC1"}, {"O=C1CC1"}, {"O=C(CC1CC1=O)CC1CC1"}}},
+  MoleculeResult{"C1CC1CC(=O)CC1CC1 t11", {{"C1CC1"}, {"O=C(CC1CC1)CC1CC1"}}}
 ));
 
 struct ProtoSmilesResult {
@@ -136,7 +139,7 @@ TEST_P(TestScaffoldsProto, TestScaffolds) {
   _scaffold_finder.MakeScaffolds(_m, _scaffolds);
 
 #ifdef DEBUG_TEST_ADASD
-  std::cerr << "Got " << _scaffolds.size() << " values back\n";
+  std::cerr << "Got " << _scaffolds.subset().size() << " values back\n";
   std::cerr << "params.results.size() " << params.results.size() << '\n';
 #endif
 
@@ -150,8 +153,8 @@ TEST_P(TestScaffoldsProto, TestScaffolds) {
     Molecule m;
     const IWString smiles = p.smi();
     m.build_from_smiles(smiles);
-    std::cerr << "Generated " << m.smiles() << " from " << p.smi() << " usmi " << m.unique_smiles() << '\n';
-    _scaffold_smiles << m.smiles();
+    // std::cerr << "Generated " << m.smiles() << " from " << p.smi() << " usmi " << m.unique_smiles() << '\n';
+    _scaffold_smiles << m.unique_smiles();
   }
 
 #ifdef DEBUG_TEST_ADASD
@@ -168,41 +171,47 @@ INSTANTIATE_TEST_SUITE_P(TestScaffoldsProto, TestScaffoldsProto, testing::Values
   ProtoSmilesResult{
     R"pb(
       remove_ring_based_non_scaffold_atoms: false
-    )pb", "CC1CC1", {"CC1CC1"}},
+    )pb", "CC1CC1 t1", {"CC1CC1"}},
   ProtoSmilesResult{
     R"pb(
       remove_ring_based_non_scaffold_atoms: false
-    )pb", "CC1CC1C(C)(C)C1CC1", {"CC1CC1", "C1CC1", "CC1CC1CC1CC1"}},
+    )pb", "CC1CC1C(C)(C)C1CC1 t2", {"CC1CC1", "C1CC1", "CC1CC1CC1CC1"}},
   ProtoSmilesResult{
     R"pb(
       remove_linker_based_non_scaffold_atoms: false
-    )pb", "CC1CC1", {"C1CC1"}},
+    )pb", "CC1CC1 t3", {"C1CC1"}},
   ProtoSmilesResult{
     R"pb(
       remove_linker_based_non_scaffold_atoms: false
-    )pb", "C1CC1C(C)(C)C1CC1", {"C1CC1", "CC(C)(C1CC1)C1CC1"}},
+    )pb", "C1CC1C(C)(C)C1CC1 t4", {"C1CC1", "CC(C)(C1CC1)C1CC1"}},
   ProtoSmilesResult{
     R"pb(
       remove_linker_based_non_scaffold_atoms: false
-    )pb", "C1CC1C(CC)C1CC1", {"C1CC1", "CCC(C1CC1)C1CC1"}},
+    )pb", "C1CC1C(CC)C1CC1 t5", {"C1CC1", "CCC(C1CC1)C1CC1"}},
   ProtoSmilesResult{
     R"pb(
       discard_cyclopropyl_ring: true
       remove_ring_based_non_scaffold_atoms: false
-    )pb", "c1ccccc1CC1CC1", {"CC(Cc1ccccc1)C"}},
+    )pb", "c1ccccc1CC1CC1 t6", {"CC(Cc1ccccc1)C"}},
   ProtoSmilesResult{
     R"pb(
       linker_isotope: 1
       substituent_isotope: 2
-    )pb", "c1c(C)cccc1CC(=O)NC(CCC)C1CC1", {"[1CH2]1CC1", "[2cH]1c[1cH]ccc1", "O=C(NC[1CH]1CC1)C[1c]1c[2cH]ccc1"}},
+    )pb", "c1c(C)cccc1CC(=O)NC(CCC)C1CC1 t7", {"[1CH2]1CC1", "[2cH]1c[1cH]ccc1", "O=C(NC[1CH]1CC1)C[1c]1c[2cH]ccc1"}},
   ProtoSmilesResult{
     R"pb(
       max_systems_in_subset: 2
-    )pb", "C1CC1C1CC1C1CC1", {"C1CC1", "C1CC1C1CC1"}},
+    )pb", "C1CC1C1CC1C1CC1 t8", {"C1CC1", "C1CC1C1CC1"}},
   ProtoSmilesResult{
     R"pb(
       max_length_linker: 2
-    )pb", "C1CC1CC1CC1CCCCC1CC1", {"C1CC1", "C(C1CC1)C1CC1"}}
+    )pb", "C1CC1CC1CC1CCCCC1CC1 t9", {"C1CC1", "C(C1CC1)C1CC1"}},
+  ProtoSmilesResult{
+    R"pb(
+      keep_first_nonring_atom: true
+    )pb", "OC1CC1CC(C1CC1)CC1CC1 t10", {"CC1CC1", "C(CC1CC1)C1CC1", "OC1CC1C", "OC1CC1CCCC1CC1", "OC1CC1CCC1CC1", "OC1CC1CC(CC1CC1)C1CC1"}}
+
+
 ));
 
 

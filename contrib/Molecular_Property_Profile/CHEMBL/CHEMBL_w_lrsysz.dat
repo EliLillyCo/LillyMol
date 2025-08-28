@@ -2,15 +2,14 @@ description {
   feature_name: "w_lrsysz"
   description: "Rings in largest ring system"
   plot_title: "Rings in largest ring system"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 11.0
-mean: 1.74752
+maxval: 13.0
+mean: 1.7471929
 median: 2.0
 quantile {
   quantile: 0.01
-  value: 1.0
 }
 quantile {
   quantile: 0.05
@@ -37,49 +36,57 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 453
+  count: 19402
 }
 int_values {
   value: 1
-  count: 22117
+  count: 816826
 }
 int_values {
   value: 2
-  count: 20553
+  count: 751139
 }
 int_values {
   value: 3
-  count: 4527
+  count: 173406
 }
 int_values {
   value: 4
-  count: 1501
+  count: 58215
 }
 int_values {
   value: 5
-  count: 627
+  count: 21329
 }
 int_values {
   value: 6
-  count: 149
+  count: 5301
 }
 int_values {
   value: 7
-  count: 55
+  count: 1787
 }
 int_values {
   value: 8
-  count: 13
+  count: 427
 }
 int_values {
   value: 9
-  count: 2
+  count: 99
 }
 int_values {
   value: 10
-  count: 1
+  count: 25
 }
 int_values {
   value: 11
-  count: 2
+  count: 67
+}
+int_values {
+  value: 12
+  count: 11
+}
+int_values {
+  value: 13
+  count: 27
 }

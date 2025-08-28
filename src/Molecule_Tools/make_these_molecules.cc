@@ -1,5 +1,7 @@
 /*
   Make specific molecules from a combinatorially derived set
+  NOTE: THere are memory errors lurking here.
+  ASAN does not work within Lilly, check once outside Lilly...
 */
 
 #include <stdlib.h>
@@ -22,7 +24,11 @@
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/standardise.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/make_these_molecules.pb.h"
+#else
+#include "make_these_molecules.pb.h"
+#endif
 
 using std::cerr;
 
@@ -415,7 +421,7 @@ Make_These_Molecules::_make_these_molecules(
   // Perform the first reaction. We should have at least one reaction
   int current_reagent_id = 0;
 
-  if (reagents[current_reagent_id]->embedding()->empty()) {
+  if (reagents[current_reagent_id]->embedding().empty()) {
     return _return_if_no_match;
   }
 
@@ -423,7 +429,7 @@ Make_These_Molecules::_make_these_molecules(
   mname = reagents[current_reagent_id]->name();
   // Run the reaction for the first sidechain with the scaffold
   if (!_reaction[0].perform_reaction(reagents[current_reagent_id],
-                                     reagents[current_reagent_id]->embedding(),
+                                     &reagents[current_reagent_id]->embedding(),
                                      product)) {
     cerr << "initial reaction failed!" << reagents[0]->name() << '\n';
     return _return_if_no_match;
@@ -546,11 +552,13 @@ Make_These_Molecules::_make_these_molecules(const const_IWSubstring& buffer,
   int current_reagent_id = 0;  // An index into the reagent_names vector.
   const IWString& token = *reagent_names[current_reagent_id];
 
-  Molecule_and_Embedding* m = _reagent[current_reagent_id][token];
-  if (m == nullptr) {
+  auto iter = _reagent[current_reagent_id].find(token);
+  if (iter == _reagent[current_reagent_id].end()) {
     cerr << "Cannot find molecule for '" << token << "', in scaffold\n";
     return 0;
   }
+
+  Molecule_and_Embedding* m = iter->second;
 
   // Populate the reagent list for reaction. Convert names to Molecule_and_Embedding
   std::vector<Molecule_and_Embedding*> reagents;
@@ -855,6 +863,10 @@ Make_These_Molecules::operator()(int argc, char** argv) {
 
   if (cl.option_present('W')) {
     _component_separator = cl.string_value('W');
+
+    static constexpr char kWarnIfError = true;
+
+    char_name_to_char(_component_separator, kWarnIfError);
 
     set_component_separator(_component_separator);
 

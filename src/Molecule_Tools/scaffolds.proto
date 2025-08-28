@@ -46,6 +46,9 @@ message ScaffoldsOptions {
   // If set, we convert C1CC1 to C([3C])[3C]
   optional bool discard_cyclopropyl_ring = 11;
 
+  // When forming a ring combination retain the first atom from
+  // either a sidechain or linker with the scaffold.
+  optional bool keep_first_nonring_atom = 12;
 }
 
 message ScaffoldSubset {

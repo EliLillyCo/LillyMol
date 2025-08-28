@@ -11,7 +11,6 @@ else
   export LILLYMOL_HOME=$(dirname $(dirname $(dirname $0)))
 fi
 
-set -x
 QUERIES=${LILLYMOL_HOME}/data/wildman_crippen.dat
 CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries
 

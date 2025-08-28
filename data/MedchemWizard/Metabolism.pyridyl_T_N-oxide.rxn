@@ -3,10 +3,11 @@
 
   (A C Comment "Metabolism.pyridyl_T_N-oxide")
   (0 Scaffold
-    (A C smarts "[cH1]1[n][cH1][c][c][c]1")
+    (A C smarts "[cH1]1[nD2][cH1][c][c][c]1")
+    (A I formal_charge (1 1))
   )
   (1 Sidechain
-    (A C smiles "[cH1:1]1[n;+1:2]([#8;-1])[c:3][c:4][c:5][c:6]1 MET.pyridyl_T_N-oxide")
-    (A I join (0 0))
+    (A C smiles "[O-]")
+    (A I join (1 0))
   )
 )

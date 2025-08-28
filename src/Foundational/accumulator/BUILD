@@ -1,3 +1,23 @@
+proto_library(
+    name = "accumulator_proto",
+    srcs = [
+        "accumulator.proto",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_proto_library(
+    name = "accumulator_cc_proto",
+    deps = [
+        "accumulator_proto",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
 cc_library(
     name = "accumulator",
     srcs = [
@@ -24,6 +44,7 @@ cc_library(
         "//visibility:public",
     ],
     deps = [
+        ":accumulator_cc_proto",
         "//Foundational/iwaray",
         "//Foundational/iwstring",
     ],

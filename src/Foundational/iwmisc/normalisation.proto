@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package normalisation;
+
+import "Foundational/accumulator/accumulator.proto";
+
+enum NormalisationTypeSpec {
+  NTYPE_UNSET = 0;
+  NTYPE_11 = 1;
+  NTYPE_01 = 2;
+  NTYPE_UNIT_VARIANCE = 3;
+  NTYPE_ZERO_MEAN = 4;
+}
+
+message NormalisationData {
+  
+  // Mandatory.
+  optional NormalisationTypeSpec type = 1;
+
+  // This holds info about the range, averge and variance.
+  optional accumulator.AccumulatorData acc = 2;
+
+  // If we are normalising a particular column in a descriptor file.
+  optional string descriptor_name = 7;
+}
+
+message Normalisations {
+  repeated NormalisationData normalisation = 1;
+
+  // It may be useful to record the name of the file from which this data was generated.
+  optional string fname = 2;
+}

@@ -4,6 +4,9 @@ package SubstructureSearch;
 
 import "Molecule_Lib/geometric_constraints.proto";
 
+// LillyMol:UserDocumentation
+// Proto for substructure queries. tsubstructure -q PROTO:file.qry...
+
 // Many of these protos fairly closely match correspondingly named
 // classes in the C++ code.
 
@@ -530,7 +533,7 @@ message InterRingAtoms {
   // implementation to make it work.
   // An inter-ring region can be defined by global_id's set by ring or
   // ring systems. What this means is that internally, rings and ring systems
-  // must be perceived beofre inter-ring regions are perceived.
+  // must be perceived before inter-ring regions are perceived.
   // There must be at least two values specified. ALL atoms between those rings
   // are included - even if that includes ring atoms.
   // what happens if we specify two numbers, but there is another ring attached? That fails?
@@ -1116,6 +1119,11 @@ message RequiredMolecularProperties {
   repeated RequiredBond required_bond = 48;
 }
 
+// Various functionalities operate on a set of matched atoms.
+message SetOfMatchedAtoms {
+  repeated uint32 atom = 1;
+}
+
 // The concept of other atoms that must be somewhere near the matched
 // atoms. This enables fuzzy concepts like
 //   a donor within 3 bonds of any matched atom
@@ -1384,7 +1392,15 @@ message SingleSubstructureQuery {
   // This is probably the most flexible.
   repeated NearbyAtoms nearby_atoms = 82;
 
-  // Next to assign 83
+  // It is convenient to be able to specify that goups of matched
+  // atoms must be the same, or different atomic numbers.
+  repeated SetOfMatchedAtoms same_atomic_number = 84;
+  // While the SetOfMatchedAtoms allows any number of matched atoms
+  // to be stored, in the case of different atomic numbers, only
+  // two makes sense.
+  repeated SetOfMatchedAtoms different_atomic_number = 85;
+
+  // Next to assign 86
 }
 
 // A SubstructureQuery is merely a collection of individual
@@ -1409,6 +1425,16 @@ message SubstructureQuery {
 
   // Rather than having textproto queries, we can have files.
   repeated string query_file = 6;
+
+  // This is for internal use only. If the proto has query
+  // files embedded, those query files may be relative to the
+  // location of the containing query file. We need a means of passing to
+  // Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto)
+  // the location of the query that generated the proto, so that when it
+  // encountered a query_file directive, it can go looking for it
+  // in the right place.
+  // Do not use this for any other purpose, it will be ignored.
+  optional string originating_file_name_internal_use_only = 15;
 }
 
 // An interesting design choice. Should the various properties

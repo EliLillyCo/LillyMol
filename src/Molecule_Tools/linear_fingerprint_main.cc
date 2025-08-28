@@ -67,32 +67,33 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Computes linear path fingerprints\n";
-  cerr << "  -r <rad>      minimum path length (def 0)\n";
-  cerr << "  -R <rad>      maximum path length (def 7)\n";
-  cerr << "  -P ...        atom type specification\n";
-  cerr << "  -J <tag>      tag for fingerprints\n";
-  cerr << "  -f            function as a TDT filter\n";
-  cerr << "  -X <fname>    look for bits in <fname> and provide explanations\n";
-  cerr << "  -B <fname>    write all bits found to <fname>\n";
-  cerr << "  -y            check for bit collisions\n";
-  cerr << "  -s            gather statistics on molecules processed\n";
-  cerr << "  -c            produce isotopically labelled smiles with coverage\n";
-  cerr << "  -x            allow linear paths can cross\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(Computes linear path fingerprints
+ -r <rad>      minimum path length (def 0)
+ -R <rad>      maximum path length (def 7)
+ -P ...        atom type specification
+ -J <tag>      tag for fingerprints
+ -f            function as a TDT filter
+ -X <fname>    look for bits in <fname> and provide explanations
+ -B <fname>    write all bits found to <fname>
+ -y            check for bit collisions
+ -s            gather statistics on molecules processed
+ -c            produce isotopically labelled smiles with coverage
+ -x            allow linear paths can cross
+ -w            set ring bits when a path forms a ring
+ -l            reduce to largest fragment
+ -i <type>     input specification
+ -g ...        chemical standardisation options
+ -E ...        standard element specifications
+ -A ...        standard aromaticity specifications
+ -v            verbose output
+)";
   // clang-format on
 
   exit(rc);
 }
 
 void
-Preprocess(Molecule & m)
-{
+Preprocess(Molecule & m) {
   if (reduce_to_largest_fragment)
     m.reduce_to_largest_fragment();
 
@@ -268,7 +269,7 @@ LinearFingerprint(const char * fname, FileType input_type,
 int
 LinearFingerprint(int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "E:A:K:lg:i:J:P:vfr:R:ysB:cx");
+  Command_Line cl(argc, argv, "E:A:K:lg:i:J:P:vfr:R:ysB:cxw");
 
   if (cl.unrecognised_options_encountered())
     usage(1);
@@ -395,6 +396,13 @@ LinearFingerprint(int argc, char ** argv)
     linear_fp_gen.set_paths_can_cross(true);
     if (verbose)
       cerr << "Paths can cross\n";
+  }
+
+  if (cl.option_present('w')) {
+    linear_fp_gen.set_fingerprint_ring_presence(true);
+    if (verbose) {
+      cerr << "Will set bits for presence of rings\n";
+    }
   }
 
   if (cl.option_present('B')) {

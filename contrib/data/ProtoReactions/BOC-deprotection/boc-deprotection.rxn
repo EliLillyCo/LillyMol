@@ -1,0 +1,27 @@
+name: "boc deprotection + acid"
+scaffold {
+  id: 0
+  smarts: "[NH]-C(=O)-[OD2]-[CD4](-[CD1])(-[CD1])-[CD1]"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+  isotope {
+    atom: 0;
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[OH]-C=O"
+  remove_atom: 0
+  join {
+    a1: 0
+    a2: 1
+  }
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}

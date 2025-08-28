@@ -1810,6 +1810,36 @@ INSTANTIATE_TEST_SUITE_P(TestCipStereo, TestCipStereo, testing::Values(
   SmilesSmartsNhits{"I[C@H](F)Br",  "[/IWcipS]", 0}
 ));
 
+class TestSmartsr : public testing::TestWithParam<SmilesSmartsNhits> {
+  protected:
+    Substructure_Query _query;
+    Molecule _m;
+};
+
+TEST_P(TestSmartsr, Test1) {
+  const auto params = GetParam();
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  ASSERT_TRUE(_query.create_from_smarts(params.smarts));
+  EXPECT_EQ(_query.substructure_search(&_m), params.nhits) << params.smiles << ' ' << params.smarts;
+}
+INSTANTIATE_TEST_SUITE_P(TestSmartsr, TestSmartsr, testing::Values(
+  SmilesSmartsNhits{"C1CC1", "[r]", 3},
+  SmilesSmartsNhits{"C1CC1", "[r3]", 3},
+  SmilesSmartsNhits{"C1CC1", "[r3r3]", 3},
+  SmilesSmartsNhits{"C1CC1", "[r4]", 0},
+  SmilesSmartsNhits{"C12CCC2C1", "[r3]", 3},
+  SmilesSmartsNhits{"C12CCC2C1", "[r4]", 4},
+  SmilesSmartsNhits{"C12CCC2C1C", "[r4r3]", 2},
+  SmilesSmartsNhits{"C12CCC2C1C", "[r>3]", 4},
+  SmilesSmartsNhits{"C12CCC2C1C", "[r<4]", 3},
+  SmilesSmartsNhits{"C12CCC2C1C", "[r>4]", 0},
+  SmilesSmartsNhits{"C123CCC2C3CCCC1", "[r>4]", 6},
+  SmilesSmartsNhits{"C123CCC2C3CCCC1", "[r6]", 6},
+  SmilesSmartsNhits{"C123CCC2C3CCCC1", "[r5]", 0},
+  SmilesSmartsNhits{"C123CCC2C3CCCC1", "[r3r4r6]", 1},
+  SmilesSmartsNhits{"C123CCC2C3CCCC1", "[r3r6]", 2}
+));
+
 class TestAnySmarts : public testing::TestWithParam<SmilesSmartsNhits> {
   protected:
     Substructure_Query _query;

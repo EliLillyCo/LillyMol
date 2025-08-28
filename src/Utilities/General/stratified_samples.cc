@@ -19,7 +19,6 @@
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = nullptr;
 
@@ -99,26 +98,39 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Performs multiple stratified samplings of a file\n";
-  cerr << " -E <fname>     write test set records to <fname>\n";
-  cerr << " -R <fname>     write training set records to <fname>\n";
-  cerr << " -c <col>       activity in column<c>\n";
-  cerr << " -N <nsplit>    number of splits to create\n";
-  cerr << " -n <nrecs>     number of items in training set(s)\n";
-  cerr << " -p <pct>       percentage of items in training set(s)\n";
-  cerr << " -s <nrecs>     header records to skip\n";
-  cerr << " -a <nrecs>     sample the most active <nrecs> items, equal size stratified sample of the rest\n";
-  cerr << " -a <p>%        sample the p% most active items, equal size stratified sample of the rest\n";
-  cerr << " -a .gt.<y>     sample all records > y, equal size stratified sample of the rest\n";
-  cerr << " -a sample=<x>  within the most active items selected above, randomly sample fraction <x> of them\n";
-  cerr << " -a expand=<x>  rather than an equal number of less active items, multiply the number active by <x>\n";
-  cerr << " -i             just write the identifiers, not whole records\n";
-  cerr << " -S <suffix>    create files with suffix <suffix>\n";
-  cerr << " -M <fname>     produce corresponding smiles files, smiles in <fname>\n";
-  cerr << " -K             drop input values for which smiles not available\n";
-  cerr << " -b <start>     normally files produced start with 0, start with <start> instead\n";
-  cerr << " -C             produce an extra chronological split\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Performs multiple stratified samplings of a file.
+Given all.smi and all.activity, generate 10 splits with 80% train:
+
+stratified_samples -v -E TEST -R TRAIN -N 10 -p 80 -s 1 -S .activity -M all.smiles all.activity
+
+Generates files
+TRAIN0.activity
+TRAIN0.smi
+TEST0.activity
+TEST0.smi
+TRAIN1.activity
+etc.
+
+ -R <fname>     write training set records to <fname> (TRAIN above)
+ -E <fname>     write test set records to <fname> (TEST above)
+ -c <col>       activity in column<c>
+ -N <nsplit>    number of splits to create
+ -n <nrecs>     number of items in training set(s)
+ -p <pct>       percentage of items in training set(s)
+ -s <nrecs>     header records to skip
+ -a <nrecs>     sample the most active <nrecs> items, equal size stratified sample of the rest
+ -a <p>%        sample the p% most active items, equal size stratified sample of the rest
+ -a .gt.<y>     sample all records > y, equal size stratified sample of the rest
+ -a sample=<x>  within the most active items selected above, randomly sample fraction <x> of them
+ -a expand=<x>  rather than an equal number of less active items, multiply the number active by <x>
+ -i             just write the identifiers, not whole records
+ -S <suffix>    create files with suffix <suffix>
+ -M <fname>     smiles file, if specified, smiles files will be generated for each split.
+ -K             drop input values for which smiles not available
+ -b <start>     normally files produced start with 0, start with <start> instead
+ -C             produce an extra chronological split
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -387,7 +399,7 @@ do_balanced_with_respect_to_first_stratum(
 
 #ifdef DEBUG_DO_BALANCED_WITH_RESPECT_TO_FIRST_STRATUM
   cerr << "From " << n << " items selected " << balanced_with_respect_to_first_stratum
-       << " remaining " << (n - balanced_with_respect_to_first_stratum) << endl;
+       << " remaining " << (n - balanced_with_respect_to_first_stratum) << '\n';
 #endif
 
   if (sample_fraction_within_first_stratum) {
@@ -547,7 +559,7 @@ do_split(resizable_array_p<ID_Stratum_Selected>& idss, int iteration_number,
     assert(train_end < stratum_stop[i]);
 
     // cerr << "Processing stratum " << i << " from " << stratum_start[i] << " to " <<
-    // stratum_stop[i] << " items " << (train_end - stratum_start[i]) << endl;;
+    // stratum_stop[i] << " items " << (train_end - stratum_start[i]) << '\n';;
 
     for (int j = stratum_start[i]; j < train_end; ++j) {
       idss[j]->set_selected_this_iteration();
@@ -670,7 +682,7 @@ assign_strata_activity_balanced(const resizable_array_p<ID_Stratum_Selected>& id
   if (balanced_with_respect_to_first_stratum_value_valid) {
     for (int i = n - 1; i >= 0; --i)  // array is sorted highest to smallest
     {
-      //    cerr << " i = " << i << " activity " << idds[i]->activity() << endl;
+      //    cerr << " i = " << i << " activity " << idds[i]->activity() << '\n';
       if (idds[i]->activity() < balanced_with_respect_to_first_stratum_value) {
         continue;
       }
@@ -681,13 +693,13 @@ assign_strata_activity_balanced(const resizable_array_p<ID_Stratum_Selected>& id
 
     if (balanced_with_respect_to_first_stratum < 0) {
       cerr << "No values found greater than "
-           << balanced_with_respect_to_first_stratum_value << endl;
+           << balanced_with_respect_to_first_stratum_value << '\n';
       return 0;
     }
 
     if (verbose) {
       cerr << "Found " << balanced_with_respect_to_first_stratum << " of " << n
-           << " values above " << balanced_with_respect_to_first_stratum_value << endl;
+           << " values above " << balanced_with_respect_to_first_stratum_value << '\n';
     }
   }
 
@@ -867,7 +879,7 @@ stratified_sample(iwstring_data_source& input)
 
   if (records_to_select >= n) {
     cerr << "Asked for " << records_to_select << " records, but input only contains " << n
-         << endl;
+         << '\n';
     return 0;
   }
 
@@ -1038,7 +1050,7 @@ stratified_sample(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Class data in column " << activity_column << endl;
+      cerr << "Class data in column " << activity_column << '\n';
     }
 
     activity_column--;
@@ -1240,12 +1252,12 @@ stratified_sample(int argc, char** argv)
 
 #ifdef DEBUG_DO_BALANCED_WITH_RESPECT_TO_FIRST_STRATUM
         cerr << "After conversion " << balanced_with_respect_to_first_stratum_fraction
-             << endl;
+             << '\n';
 #endif
         balanced_with_respect_to_first_stratum_fraction /= 100.0;
 #ifdef DEBUG_DO_BALANCED_WITH_RESPECT_TO_FIRST_STRATUM
         cerr << "Converted to fraction "
-             << balanced_with_respect_to_first_stratum_fraction << endl;
+             << balanced_with_respect_to_first_stratum_fraction << '\n';
 #endif
       } else if (a.starts_with("sample=")) {
         a.remove_leading_chars(7);
@@ -1275,7 +1287,7 @@ stratified_sample(int argc, char** argv)
 
     if (verbose) {
       cerr << "Balanced fraction " << balanced_with_respect_to_first_stratum_fraction
-           << " or balanced N " << balanced_with_respect_to_first_stratum << endl;
+           << " or balanced N " << balanced_with_respect_to_first_stratum << '\n';
     }
   }
 
@@ -1286,7 +1298,7 @@ stratified_sample(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Output files start at " << seq_start << endl;
+      cerr << "Output files start at " << seq_start << '\n';
     }
   }
 

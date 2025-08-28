@@ -1,0 +1,16 @@
+NC methylamine
+NC1CCCC1 cyclohexylamine
+NC1=CC=CC=C1 aniline
+NC1=CC(Cl)=CC=C1 m-chloroaniline
+NC1=CC=C(Cl)C=C1 o-chloroaniline
+N(CC)CC diethylamine
+N(C1)CCCC1 piperidine
+N(C1)C(C)CCC1 2-methylpiperidine
+NC1CCCC1.Cl cyclohexylamine_hcl
+NC1CCCC1.C(=O)O cyclohexylamine_formate
+C1CCCCC1 cyclohexane
+NCCC(C)N 2-methylpropylenediamine
+NCCCN propylenediamine
+NCCC(CCN)CCN sym_triamine
+NCCC(CCN)C(C)CN somesym_triamine
+NCCC(C(F)CN)C(C)CN unsym_triamine

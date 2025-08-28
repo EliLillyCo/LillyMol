@@ -8,7 +8,11 @@
 #include "Molecule_Tools/nvrtspsa.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_filter.pb.h"
+#else
+#include "molecule_filter.pb.h"
+#endif
 
 namespace molecule_filter_lib {
 
@@ -18,14 +22,25 @@ class MoleculeFilter {
 
     alogp::ALogP _alogp;
 
-    MoleculeFilterData::Requirements _requirements;
+    molecule_filter_data::Requirements _requirements;
+
+    bool _active;
 
   // private functions
     void InitialiseOptionalFeatures();
 
   public:
+    MoleculeFilter();
+
     // Read textproto configuration file
     int Build(IWString& fname);
+
+    int active() const {
+      return _active;
+    }
+
+    // Copy `proto` to _requirements and initialise.
+    int Build(const molecule_filter_data::Requirements& proto);
 
     // Return true if `m` is consistent with the constratins set in `_requirements`.
     int Ok(Molecule& m);

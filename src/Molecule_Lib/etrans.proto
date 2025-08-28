@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package element_transformation;
+
+message ElementTransformation {
+  optional string efrom = 1;
+  optional string eto = 2;
+}
+
+message ElementTransformations {
+  repeated ElementTransformation etrans = 1;
+}

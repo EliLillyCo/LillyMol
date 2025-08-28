@@ -179,6 +179,10 @@ data_source_and_type<T>::_file_opened_ok(const IWString& fname) {
   return 1;
 }
 
+// Cautionary note, if this constructor fails, note that it returns prior to _default_values
+// being called, which then leaves the object in an unpredictable state.
+// TODO:ianwatson split out default values into things that do not depend on
+// the file type being known.
 template <typename T>
 data_source_and_type<T>::data_source_and_type(FileType input_type, const char* fname)
     : iwstring_data_source(fname) {
@@ -564,15 +568,18 @@ data_source_and_type<T>::_rx_for_input_type() const {
 
     case FILE_TYPE_TDT:
       return RE2("^|");
-      break;
 
     case FILE_TYPE_MRK:
       return RE2("^[ 0-9]{5} [ 0-9]{5} *$");
-      break;
 
     case FILE_TYPE_PDB:
       return RE2("^END$");
-      break;
+
+    case FILE_TYPE_CSV:
+      return RE2(".");
+
+    case FILE_TYPE_TXTPROTO:
+      return RE2(".");
 
     default:
       std::cerr << "data_source_and_type::molecules_remaining: no rx for type "

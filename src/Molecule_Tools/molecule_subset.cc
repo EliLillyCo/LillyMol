@@ -804,7 +804,7 @@ molecule_subset(int argc, char** argv) {
                << '\n';
         }
       } else if (m == "coords") {
-        set_append_coordinates_after_each_atom(1);
+        lillymol::set_include_coordinates_with_smiles(1);
         if (verbose) {
           cerr << "Will append coordinates after each atom in smiles\n";
         }

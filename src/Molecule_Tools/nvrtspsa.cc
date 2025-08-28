@@ -9,7 +9,9 @@
 using std::cerr;
 using std::endl;
 
-static int display_psa_unclassified_atom_mesages = 1;
+namespace nvrtspsa {
+
+int display_psa_unclassified_atom_mesages = 1;
 
 void
 set_display_psa_unclassified_atom_mesages(int s) {
@@ -18,7 +20,7 @@ set_display_psa_unclassified_atom_mesages(int s) {
   return;
 }
 
-static int return_zero_for_unclassified_atoms = 0;
+int return_zero_for_unclassified_atoms = 0;
 
 void
 set_return_zero_for_unclassified_atoms(int s) {
@@ -27,17 +29,26 @@ set_return_zero_for_unclassified_atoms(int s) {
   return;
 }
 
-static int non_zero_constribution_for_SD2 = 1;
+int non_zero_constribution_for_SD2 = 1;
 
 void
 set_non_zero_constribution_for_SD2(int s) {
   non_zero_constribution_for_SD2 = s;
 }
 
+int zero_for_all_sulphur_atoms = 0;
+
+void
+set_zero_for_all_sulphur_atoms(int s) {
+  zero_for_all_sulphur_atoms = s;
+}
+
+}  // namespace nvrtspsa
+
 static void
 report_novartis_psa_unclassified_atom(Molecule &m, atom_number_t zatom, const Atom &a,
                                       int hcount, int is_aromatic) {
-  if (!display_psa_unclassified_atom_mesages) {
+  if (!nvrtspsa::display_psa_unclassified_atom_mesages) {
     return;
   }
 
@@ -189,7 +200,7 @@ novartis_polar_surface_area_nitrogen(Molecule &m, atom_number_t zatom, Atom &a,
 
   report_novartis_psa_unclassified_atom(m, zatom, a, hcount, is_aromatic);
 
-  if (return_zero_for_unclassified_atoms) {
+  if (nvrtspsa::return_zero_for_unclassified_atoms) {
     return 0.0;
   } else {
     return 5.0;  // just a guess
@@ -250,7 +261,7 @@ novartis_polar_surface_area_oxygen(Molecule &m, atom_number_t zatom, Atom &a,
 
   report_novartis_psa_unclassified_atom(m, zatom, a, hcount, is_aromatic);
 
-  if (return_zero_for_unclassified_atoms) {
+  if (nvrtspsa::return_zero_for_unclassified_atoms) {
     return 0.0;
   } else {
     return 10.0;  // just a guess
@@ -260,12 +271,18 @@ novartis_polar_surface_area_oxygen(Molecule &m, atom_number_t zatom, Atom &a,
 static double
 novartis_polar_surface_area_sulphur(Molecule &m, atom_number_t zatom, Atom &a,
                                     int is_aromatic) {
+  if (nvrtspsa::zero_for_all_sulphur_atoms) {
+    return 0.0;
+  }
+
   int ncon = a.ncon();
 
   int aromatic_bonds = 0;
   int single_bonds = 0;
   int double_bonds = 0;
   int triple_bonds = 0;
+
+//return 0.0;
 
   for (int i = 0; i < ncon; i++) {
     const Bond *b = a[i];
@@ -293,7 +310,7 @@ novartis_polar_surface_area_sulphur(Molecule &m, atom_number_t zatom, Atom &a,
 #endif
 
   if (is_aromatic) {
-    if (non_zero_constribution_for_SD2) {
+    if (nvrtspsa::non_zero_constribution_for_SD2) {
       if (0 == fc && 0 == hcount && 2 == ncon && 2 == aromatic_bonds) {  // [s](:*):*
         return 28.24;
       }
@@ -306,7 +323,7 @@ novartis_polar_surface_area_sulphur(Molecule &m, atom_number_t zatom, Atom &a,
   } else {
     if (0 == fc && 0 == hcount && 2 == ncon && 2 == single_bonds)  // [S](-*)-*
     {
-      if (non_zero_constribution_for_SD2) {
+      if (nvrtspsa::non_zero_constribution_for_SD2) {
         return 25.30;
       } else {
         return 0.0;
@@ -330,7 +347,7 @@ novartis_polar_surface_area_sulphur(Molecule &m, atom_number_t zatom, Atom &a,
 
   report_novartis_psa_unclassified_atom(m, zatom, a, hcount, is_aromatic);
 
-  if (return_zero_for_unclassified_atoms) {
+  if (nvrtspsa::return_zero_for_unclassified_atoms) {
     return 0.0;
   } else {
     return 20.0;  // just a guess
@@ -383,7 +400,7 @@ novartis_polar_surface_area_phosphorus(Molecule &m, atom_number_t zatom, Atom &a
 
   report_novartis_psa_unclassified_atom(m, zatom, a, hcount, is_aromatic);
 
-  if (return_zero_for_unclassified_atoms) {
+  if (nvrtspsa::return_zero_for_unclassified_atoms) {
     return 0.0;
   } else {
     return 10.0;  // just a guess

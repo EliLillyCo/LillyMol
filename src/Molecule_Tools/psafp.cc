@@ -1,6 +1,7 @@
-// Conputes PSA fingerprints
+// Computes PSA fingerprints
 
 #include <iostream>
+#include <limits>
 #include <memory>
 
 #include "Foundational/cmdline/cmdline.h"
@@ -15,13 +16,12 @@
 #include "Molecule_Tools/nvrtspsa.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = nullptr;
 
 static int verbose = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
 static Chemical_Standardisation chemical_standardisation;
 
@@ -35,7 +35,16 @@ static IWString fp_tag("NCPSA<");
 
 static int bit_replicates = 9;
 
+extending_resizable_array<int> acc_psa;
+
 static int flush_after_each_molecule = 0;
+
+static int generate_descriptor_file = 0;
+static float min_psa = 0.0f;
+static float max_psa = std::numeric_limits<float>::max();
+static uint64_t rejected_for_out_of_range = 0;
+static int min_or_max_specified = 0;
+static char output_separator = ' ';
 
 static void
 usage(int rc) {
@@ -48,18 +57,21 @@ usage(int rc) {
   // clang-format on
   // clang-format off
 
-  cerr << "Produces Novartis Polar Surface Area fingerprint\n";
-  cerr << "  -J <tag>      fingerprint tag to use\n";
-  cerr << "  -p <n>        number of bit replicates in fingerprints\n";
-  cerr << "  -f            function as tdt filter\n";
-  cerr << "  -q            quiet mode, do not display unclassified atom messages\n";
-  cerr << "  -z            assign zero contribution to unclassified atoms\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(Produces Novartis Polar Surface Area fingerprint\n";
+  -J <tag>      fingerprint tag to use, default 'NCPSA'
+  -p <n>        number of bit replicates in fingerprints.
+  -f            function as tdt filter.
+  -q            quiet mode, do not display unclassified atom messages.
+  -z            assign zero contribution to unclassified atoms.
+  -T ...        tabular descriptor output, enter '-T help' for info. Can do filtering.
+  -X ...        miscellaneous other options, enter '-X help' for info.
+  -l            reduce to largest fragment.
+  -i <type>     input specification.
+  -g ...        chemical standardisation options.
+  -E ...        standard element specifications.
+  -A ...        standard aromaticity specifications.
+  -v            verbose output.
+)";
   // clang-format on
 
   exit(rc);
@@ -78,9 +90,24 @@ preprocess(Molecule& m) {
   return;
 }
 
-/*
-  Handles both the case of molecule on the command line and filter
-*/
+static int 
+GenerateDescriptors(Molecule& m, float psa,
+        IWString_and_File_Descriptor& output) {
+  if (! min_or_max_specified) {
+  } else if (psa < min_psa) {
+    ++rejected_for_out_of_range;
+    return 1;
+  } else if (psa > max_psa) {
+    ++rejected_for_out_of_range;
+    return 1;
+  }
+
+  output << m.name() << output_separator << psa << '\n';
+
+  output.write_if_buffer_holds_more_than(4096);
+
+  return 1;
+}
 
 static int
 psafp(Molecule& m, IWString_and_File_Descriptor& output) {
@@ -88,7 +115,9 @@ psafp(Molecule& m, IWString_and_File_Descriptor& output) {
 
   preprocess(m);
 
-  if (!function_as_tdt_filter) {
+  if (generate_descriptor_file) {
+    // do nothing yet.
+  } else if (!function_as_tdt_filter) {
     output << smiles_tag << m.smiles() << ">\n";
     output << identifier_tag << m.name() << ">\n";
   }
@@ -97,9 +126,17 @@ psafp(Molecule& m, IWString_and_File_Descriptor& output) {
 
   double psa = novartis_polar_surface_area(m);
 
+  if (verbose) {
+    ++acc_psa[static_cast<int>(psa + 0.49999)];
+  }
+
   int int_psa = static_cast<int>(psa / 10.0 + 0.49999);
   if (int_psa <= 0) {
     int_psa = 1;
+  }
+
+  if (generate_descriptor_file) {
+    return GenerateDescriptors(m, psa, output);
   }
 
   Sparse_Fingerprint_Creator sfc;
@@ -219,9 +256,21 @@ DisplayDashXOptions(std::ostream& output) {
   ::exit(0);
 }
 
+static void
+DisplayDashTOptions(std::ostream& output) {
+  output << R"(Options for generating a descriptor file.
+-T min=<n>      minimum value for TPSA
+-T max=<n>      maximum value for TPSA
+-T sep=<char>   output separator, default ' '.
+-T .            default, no filtering, all molecules written.
+)";
+
+  ::exit(0);
+}
+
 static int
 psafp(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lfJ:p:zX:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lfJ:p:zX:T:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -231,7 +280,7 @@ psafp(int argc, char** argv) {
   verbose = cl.option_count('v');
 
   if (!verbose) {
-    set_display_psa_unclassified_atom_mesages(0);
+    nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
   }
 
   if (cl.option_present('A')) {
@@ -272,7 +321,7 @@ psafp(int argc, char** argv) {
   }
 
   if (cl.option_present('z')) {
-    set_return_zero_for_unclassified_atoms(1);
+    nvrtspsa::set_return_zero_for_unclassified_atoms(1);
 
     if (verbose) {
       cerr << "Unclassified atoms assigned zero value in psa computation\n";
@@ -298,7 +347,7 @@ psafp(int argc, char** argv) {
     }
 
     if (verbose) {
-      cerr << "Fingerprint bit replicates set to " << bit_replicates << endl;
+      cerr << "Fingerprint bit replicates set to " << bit_replicates << '\n';
     }
   }
 
@@ -334,12 +383,66 @@ psafp(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('T')) {
+    IWString t;
+    for (int i = 0; cl.value('T', t, i); ++i) {
+      if (t == '.') {
+      } else if (t.starts_with("min=")) {
+        t.remove_leading_chars(4);
+        if (! t.numeric_value(min_psa)) {
+          cerr << "Invalid min psa specification '" << t << "'\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will not write molecules with TPSA values below " << min_psa << '\n';
+        }
+        min_or_max_specified = 1;
+      } else if (t.starts_with("max=")) {
+        t.remove_leading_chars(4);
+        if (! t.numeric_value(max_psa)) {
+          cerr << "Invalid max psa specification '" << t << "'\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will not write molecules with TPSA values above " << max_psa << '\n';
+        }
+        min_or_max_specified = 1;
+      } else if (t.starts_with("sep=")) {
+        t.remove_leading_chars(4);
+        if (! char_name_to_char(t)) {
+          cerr << "Invalid descriptor file output separator '" << t << "'\n";
+          return 0;
+        }
+        output_separator = t[0];
+        if (verbose) {
+          cerr << "Descriptor file output separator " << output_separator << '\n';
+        }
+      } else if (t == "help") {
+        DisplayDashTOptions(cerr);
+      } else {
+        cerr << "Unrecognised -T qualifier '" << t << "'\n";
+        DisplayDashTOptions(cerr);
+      }
+    }
+
+    if (min_psa > max_psa) {
+      cerr << "Invalid min " << min_psa << " max " << max_psa << " TPSA specification\n";
+      return 1;
+    }
+
+    generate_descriptor_file = 1;
+  }
+
   if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
   IWString_and_File_Descriptor output(1);
+
+  if (generate_descriptor_file) {
+    output << "ID" << output_separator << "nvrtspsa\n";
+  }
 
   int rc = 0;
   if (function_as_tdt_filter) {
@@ -359,6 +462,37 @@ psafp(int argc, char** argv) {
 
   if (verbose) {
     cerr << "Read " << molecules_read << " molecules\n";
+    uint64_t n = 0;
+    uint64_t sum = 0;
+    int minv = -1;
+    int maxv = 0;
+    for (int i = 0; i < acc_psa.number_elements(); ++i) {
+      if (acc_psa[i] == 0) {
+        continue;
+      }
+
+      cerr << acc_psa[i] << " molecules with value " << i << '\n';
+
+      if (minv < 0) {
+        minv = i;
+      }
+      if (i > maxv) {
+        maxv = i;
+      }
+
+      if (acc_psa[i] > 0) {
+        n += acc_psa[i];
+        sum += i * acc_psa[i];
+      }
+    }
+
+    float ave = iwmisc::Fraction<double>(sum, n);
+    cerr << "Values btw " << minv << " and " << maxv << " ave " << ave << '\n';
+
+    if (generate_descriptor_file && min_or_max_specified) {
+      cerr << rejected_for_out_of_range << " molecules rejected for out of range " <<
+              min_psa << ' ' << max_psa << '\n';
+    }
   }
 
   return rc;

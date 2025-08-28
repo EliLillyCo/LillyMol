@@ -27,7 +27,7 @@ name1='stdout'
 name1_out='out/stdout'
 stderr='stderr'
 diff_tool=../../fileDiff.sh
-$command -j -e 2 -p 3 $LILLYMOL_HOME/data/descriptor.txt >$name1 2> $stderr
+$command -j -e 2 -p 3 ${LILLYMOL_HOME}/data/descriptor.txt >$name1 2> $stderr
 $diff_tool $name1 $name1_out
 ret=$?
 if [ $ret -eq 1 ]

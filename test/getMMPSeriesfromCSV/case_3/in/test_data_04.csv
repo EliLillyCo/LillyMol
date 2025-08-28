@@ -1,14 +1,10 @@
 SMILES,ID,PIC50
 CS(=O)(=O)c1ccc(C2=C(c3ccc(OC)cc3)CC3(C2)CC3)cc1,001,7.00
 Fc1c(OC)ccc(c1)C1=C(c2ccc(S(=O)(=O)C)cc2)CC2(C1)CC2,002,7.68
-Clc1c(OC)ccc(c1)C1=C(c2ccc(S(=O)(=O)C)cc2)CC2(C1)CC2,003,8.51
 Brc1c(OC)ccc(c1)C1=C(c2ccc(S(=O)(=O)C)cc2)CC2(C1)CC2,004,8.77
 O=C(OC)C1C(c2ccccc2)CC2N(C1CC2)C,010,8.30
 Fc1ccc(C2CC3N(C(C2C(=O)OC)CC3)C)cc1,011,8.00
 Clc1ccc(C2CC3N(C(C2C(=O)OC)CC3)C)cc1,012,7.77
-Brc1ccc(C2CC3N(C(C2C(=O)OC)CC3)C)cc1,013,8.89
-Clc1cc2c([n]c[n]c2Nc2ccccc2)cc1,081,6.80
-Clc1cc2c([n]c[n]c2Nc2ccc(F)cc2)cc1,082,7.20
 Clc1ccc(Nc2[n]c[n]c3c2cc(cc3)Cl)cc1,083,7.81
 Brc1ccc(Nc2[n]c[n]c3c2cc(Cl)cc3)cc1,084,8.42
 c1ccc(cc1)C2=C(CN(C2=O)c3ccccc3)c4ccc(cc4)S(=O)(=O)C,30002100,6.50

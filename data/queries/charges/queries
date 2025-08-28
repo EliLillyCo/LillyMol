@@ -12,4 +12,4 @@ amidine.qry
 amino_terminal_restricted.qry
 aliphatic_amine_restricted.qry
 imidazole_basic.qry
-PROTO:pyridine_dione.qry
+# PROTO:pyridine_dione.qry

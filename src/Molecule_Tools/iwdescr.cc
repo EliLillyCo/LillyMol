@@ -44,7 +44,11 @@
 #include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/iwdescr.pb.h"
+#else
+#include "iwdescr.pb.h"
+#endif
 
 using std::cerr;
 using iwmisc::Fraction;
@@ -118,6 +122,7 @@ struct DescriptorsToCompute {
   int specific_groups = 1;
   int spinach_descriptors = 1;
   int symmetry_descriptors = 1;
+  int long_carbon_chains = 1;
 #ifdef MCGOWAN
   int mcgowan = 1;
 #endif
@@ -163,6 +168,7 @@ DescriptorsToCompute::SetAll(int s) {
   spinach_descriptors = s;
   symmetry_descriptors = s;
   psa = s;
+  long_carbon_chains = s;
 #ifdef MCGOWAN
   mcgowan = s;
 #endif  // MCGOWAN
@@ -183,6 +189,7 @@ DescriptorsToCompute::DisplayUsage(char flag) const {
   cerr << dash_o << "chiral        enable all expensive chirality perception descriptors\n";
   cerr << dash_o << "complex       enable planar fused ring descriptors\n";
   cerr << dash_o << "crowd         enable atomic crowding descriptors\n";
+  cerr << dash_o << "lcc           enable atomic crowding descriptors\n";
   cerr << dash_o << "dm            enable descriptors based on the distance matrix\n";
   cerr << dash_o << "donacc        enable donor acceptor derived descriptors\n";
   cerr << dash_o << "hbond         enable donor/acceptor derived descriptors\n";
@@ -248,6 +255,11 @@ DescriptorsToCompute::Initialise(Command_Line& cl) {
       crowding_descriptors = 1;
       if (verbose) {
         cerr << "atomic crowding descriptors enabled\n";
+      }
+    } else if (o == "lcc") {
+      long_carbon_chains = 1;
+      if (verbose) {
+        cerr << "long carbon chain enabled\n";
       }
     } else if (o == "dm") {
       distance_matrix_descriptors = 1;
@@ -521,6 +533,10 @@ static Molecular_Weight_Control mwc;
 
 static int ignore_molecules_with_no_atoms = 0;
 
+// Internal Hydrogen bonding extremeties.
+static int shortest_internal_hydrogen_bond_separation = 3;
+static int longest_internal_hydrogen_bond_separation = 6;
+
 // Many of the features are int forms.
 static IWDigits iwdigits;
 
@@ -568,6 +584,7 @@ enum IWDescr_Enum
   iwdescr_fraromha,
   iwdescr_aromdens,
   iwdescr_ch2,
+  iwdescr_d2sp3,
   iwdescr_ch,
   iwdescr_htroatom,
   iwdescr_htroaf,
@@ -640,6 +657,7 @@ enum IWDescr_Enum
   iwdescr_avalcon,
   iwdescr_platt,
   iwdescr_weiner,
+  iwdescr_internalhbd,
   iwdescr_crowding,
   iwdescr_fcrowdng,
   iwdescr_halogen,
@@ -745,6 +763,8 @@ enum IWDescr_Enum
   iwdescr_nspiro,
   iwdescr_nchiral,
   iwdescr_nvrtspsa,
+  iwdescr_mxlencchain2,
+  iwdescr_mxlencchain3,
 #ifdef MCGOWAN
   iwdescr_mcgowan,
 #endif
@@ -1124,8 +1144,8 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_fraromha].set_min_max_resolution(0.0f, 1.0f, resolution);
   d[iwdescr_aromdens].set_min_max_resolution(0.0f, 1.0f, resolution);
   d[iwdescr_ch2].set_min_max_resolution(0.0f, 19.30857f, resolution);
+  d[iwdescr_d2sp3].set_min_max_resolution(0.0f, 19.30857f, resolution);
   d[iwdescr_chmltbd].set_min_max_resolution(0.0f, 7.63907f, resolution);
-  d[iwdescr_ch2].set_min_max_resolution(0.0f, 19.30857f, resolution);
   d[iwdescr_ch].set_min_max_resolution(0.0f, 36.0265f, resolution);
   d[iwdescr_htroatom].set_min_max_resolution(0.0f, 18.7231f, resolution);
   d[iwdescr_htroaf].set_min_max_resolution(0.0f, 1.0f, resolution);
@@ -1198,6 +1218,7 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_avalcon].set_min_max_resolution(0.0f, 4.0f, resolution);
   d[iwdescr_platt].set_min_max_resolution(0.0f, 30.0f, resolution);
   d[iwdescr_weiner].set_min_max_resolution(0.0f, 100.0f, resolution);
+  d[iwdescr_internalhbd].set_min_max_resolution(0.0f, 10.0f, resolution);
   d[iwdescr_crowding].set_min_max_resolution(0.0f, 35.21212f, resolution);
   d[iwdescr_fcrowdng].set_min_max_resolution(0.0f, 2.364f, resolution);
   d[iwdescr_halogen].set_min_max_resolution(0.0f, 7.139123f, resolution);
@@ -1304,6 +1325,8 @@ fill_descriptor_extremeties (Descriptor * d,
   d[iwdescr_fsdrngalal].set_min_max_resolution(0.0f, 2.0f, resolution);
   d[iwdescr_nchiral].set_min_max_resolution(0.0f, 5.821545f, resolution);
   d[iwdescr_nvrtspsa].set_min_max_resolution(0.0f, 220.2642f, resolution);
+  d[iwdescr_mxlencchain2].set_min_max_resolution(0.0f, 20.0, resolution);
+  d[iwdescr_mxlencchain3].set_min_max_resolution(0.0f, 20.0, resolution);
 #ifdef MCGOWAN
   d[iwdescr_mcgowan].set_min_max_resolution(50.0f, 900.0f, resolution);
 #endif
@@ -1705,6 +1728,7 @@ allocate_descriptors()
   descriptor[iwdescr_fraromha].set_name("fraromha");
   descriptor[iwdescr_aromdens].set_name("aromdens");
   descriptor[iwdescr_ch2].set_name("ch2");
+  descriptor[iwdescr_d2sp3].set_name("d2sp3");
   descriptor[iwdescr_ch].set_name("ch");
   descriptor[iwdescr_htroatom].set_name("htroatom");
   descriptor[iwdescr_htroaf].set_name("htroaf");
@@ -1792,6 +1816,7 @@ allocate_descriptors()
   descriptor[iwdescr_avalcon].set_name("avalcon");
   descriptor[iwdescr_platt].set_name("platt");
   descriptor[iwdescr_weiner].set_name("weiner");
+  descriptor[iwdescr_internalhbd].set_name("internalhbd");
   if (descriptors_to_compute.crowding_descriptors) {
     descriptor[iwdescr_crowding].set_name("crowding");
     descriptor[iwdescr_fcrowdng].set_name("fcrowdng");
@@ -1920,6 +1945,10 @@ allocate_descriptors()
   if (descriptors_to_compute.psa) {
     descriptor[iwdescr_nvrtspsa].set_name("nvrtspsa");
   }
+  if (descriptors_to_compute.long_carbon_chains) {
+    descriptor[iwdescr_mxlencchain2].set_name("mxlencchain2");
+    descriptor[iwdescr_mxlencchain3].set_name("mxlencchain3");
+  }
 #ifdef MCGOWAN
   if (descriptors_to_compute.mcgowan) {
     descriptor[iwdescr_mcgowan].set_name("mcgowan");
@@ -2022,6 +2051,10 @@ allocate_descriptors()
   }
   if (descriptors_to_compute.psa) {
     descriptor[iwdescr_nvrtspsa].set_best_fingerprint(1);
+  }
+  if (descriptors_to_compute.long_carbon_chains) {
+    descriptor[iwdescr_mxlencchain2].set_best_fingerprint(1);
+    descriptor[iwdescr_mxlencchain3].set_best_fingerprint(1);
   }
   descriptor[iwdescr_natoms].set_best_fingerprint(1);
   descriptor[iwdescr_frafus].set_best_fingerprint(1);
@@ -2279,7 +2312,6 @@ write_the_output(Molecule & m,
     }
 
     output << output_separator;
-    cerr << "writing " << i << std::endl;
 
     float v;
     if (descriptor[i].value(v)) {
@@ -3145,17 +3177,87 @@ do_compute_spiro_fusions(Molecule & m,
   return 1;
 }
 
+bool
+AnyAtomsMoreThanTwoRings(Molecule& m, const Ring& r) {
+  for (atom_number_t a : r) {
+    // cerr << " atom " << a << " in " << m.nrings(a) << '\n';
+    if (m.nrings(a) > 2) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Turn off any atom that is in a strongly fused ring.
+void
+TurnOffStronglyFused(Molecule& m,
+                     const int* ncon,
+                     int* ok_to_check) {
+  const int nrings = m.nrings();
+  if (m.nrings() < 2) {
+    return;
+  }
+
+  m.ring_membership();
+
+  for (int i = 0; i < nrings; ++i) {
+    const Ring* ri = m.ringi(i);
+//  cerr << "What abt " << *ri << '\n';
+//  cerr << "Bonds shared " << ri->largest_number_of_bonds_shared_with_another_ring() << '\n';
+    if (! ri->is_fused()) {
+      continue;
+    }
+
+    if (! AnyAtomsMoreThanTwoRings(m, *ri)) {
+      continue;
+    }
+
+    ri->set_vector(ok_to_check, 0);
+
+    const int rsize = ri->number_elements();
+    atom_number_t previous_atom = ri->back();
+
+    for (int i = 0; i < rsize; ++i) {
+      atom_number_t a = (*ri)[i];
+      if (ncon[a] == 2 || m.nrings_including_non_sssr_rings(a) > 1) {
+        previous_atom = a;
+        continue;
+      }
+
+      // Allow chiral centres on "uncluttered" atoms.
+      int j = i;
+      atom_number_t next_atom = ri->next_after_wrap(j, 1);
+      if (ncon[previous_atom] == 2 && ncon[next_atom] == 2) {
+        ok_to_check[a] = 1;
+      }
+
+      previous_atom = a;
+    }
+  }
+}
+
 static int
 do_compute_chirality_descriptors(Molecule & m,
                                  const atomic_number_t * z,
-                                 const int * ncon)
+                                 const int * ncon) 
 {
   int matoms = m.natoms();
+
+  std::unique_ptr<int[]> ok_to_check;
+  if (descriptors_to_compute.perform_expensive_chirality_perception) {
+    ok_to_check.reset(new_int(matoms, 1));
+    TurnOffStronglyFused(m, ncon, ok_to_check.get());
+  }
 
   int chiral_centres = 0;
 
   for (int i = 0; i < matoms; i++)
   {
+    if (ncon[i] < 3) {
+      continue;
+    }
+
     if (6 == z[i])
     {
       if (4 == ncon[i])
@@ -3175,17 +3277,31 @@ do_compute_chirality_descriptors(Molecule & m,
     else
       continue;
 
-    if (nullptr != m.chiral_centre_at_atom(i))
-    {
+    if (nullptr != m.chiral_centre_at_atom(i)) {
       chiral_centres++;
       continue;
     }
 
-    if (! descriptors_to_compute.perform_expensive_chirality_perception)
-      ;
-    else if (m.is_ring_atom(i))    // C1C2C3C1N1C2C31 has 5 chiral centers otherwise.
-      ;
-    else if (is_actually_chiral(m, i))  {   // Too expensive to compute by default.
+    if (! descriptors_to_compute.perform_expensive_chirality_perception) {
+      continue;
+    }
+
+    if (! ok_to_check[i]) {
+      continue;
+    }
+
+    // is_actually_chiral is expensive, so try to avoid if possible.
+    // Careful what we check,
+    // C1C2C3C1N1C2C31 has 5 chiral centers otherwise.
+    // By using non sssr rings, all atoms in cubane will not be checked.
+    if (! ok_to_check[i]) {
+      continue;
+    }
+//  if (m.nrings_including_non_sssr_rings(i) > 2) {
+//    continue;
+//  }
+
+    if (is_actually_chiral(m, i)) {
       chiral_centres++;
     }
   }
@@ -3423,6 +3539,11 @@ compute_shortest_distance_from_longest_path(Molecule & m,
                                             int * shortest_distance_from_longest_path)
 {
   int matoms = m.natoms();
+#ifdef DEBUG_DISTANCE_MATRIX
+  for (int i = 0; i < matoms; ++i) {
+    cerr << " atom " << i << ' ' << m.smarts_equivalent_for_atom(i) << " in_path " << in_path[i]<< '\n';
+  }
+#endif
 
   for (int i = 0; i < matoms; i++)    // atom I is outside the longest path
   {
@@ -3491,7 +3612,6 @@ do_compute_distances_from_longest_path_descriptors(Molecule & m,
   
   set_vector(in_path, matoms, 0);
   in_path[a2] = 1;
-
   int * shortest_distance_from_longest_path = new_int(matoms, matoms); std::unique_ptr<int[]> free_sdlp(shortest_distance_from_longest_path);
 
   shortest_distance_from_longest_path[a2] = 0;
@@ -3549,6 +3669,8 @@ do_compute_distances_from_longest_path_descriptors(Molecule & m,
       a2.add(j);
     }
   }
+
+  // cerr << "longest_path " <<longest_path << " atoms " << a1 << " and " << a2 << '\n';
 
   // Single atom molecule, or all atoms disconnected.
   if (a1.empty()) {
@@ -3620,6 +3742,37 @@ AssignDistanceMatrixAtomTypes(Molecule& m,
 }
 
 static int
+AllFlexibleBonds(const Molecule& m,
+                 atom_number_t zatom, atom_number_t destination, 
+                 int dist, const int* dm) {
+  const int matoms = m.natoms();
+
+  for (const Bond * b : m[zatom]) {
+    if (! b->is_single_bond()) {
+      return 0;
+    }
+    if (b->nrings()) {
+      continue;
+    }
+
+    atom_number_t o = b->other(zatom);
+    if (o == destination) {
+      return 1;
+    }
+
+    if (dm[zatom * matoms + o] != (dist - 1)) {
+      continue;
+    }
+
+    if (AllFlexibleBonds(m, o, destination, dist - 1, dm)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static int
 do_compute_distance_matrix_descriptors(Molecule & m,
                                        const atomic_number_t * z,
                                        const int * ncon,
@@ -3627,8 +3780,9 @@ do_compute_distance_matrix_descriptors(Molecule & m,
                                        const int * dm)
 {
   const auto matoms = m.natoms();
-  if (1 == matoms)    // these parameters don't make sense
+  if (1 == matoms) {    // these parameters don't make sense
     return 1;
+  }
 
   int * totd = eccentricity + matoms;
 
@@ -3826,6 +3980,57 @@ do_compute_distance_matrix_descriptors(Molecule & m,
   }
 
   descriptor[iwdescr_mh3b].set(static_cast<float>(largest_heteroatoms_within_three_bonds));
+
+  // Internal Hydrogen bonding possibilities.
+  // Note that we deliberately do not consider more sophisticated definitions of
+  // donors and acceptors. Worried about the cost and probably would not make
+  // much of a difference.
+
+  m.ring_membership();
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (z[i] == 6) {
+      continue;
+    } else if (z[i] == 7) {
+    } else if (z[i] == 8 || z[i] == 16) {
+    } else {
+      continue;
+    }
+    
+    const int hi = m.hcount(i);
+
+    for (int j = i + 1; j < matoms; ++j) {
+      int d = dm[i + matoms + j];
+      if (d > longest_internal_hydrogen_bond_separation) {
+        continue;
+      }
+      if (d < shortest_internal_hydrogen_bond_separation) {
+        continue;
+      }
+
+      if (z[j] == 6) {
+        continue;
+      } else if (z[i] == 7 || z[i] == 8 || z[i] == 16) {
+      } else {
+        continue;
+      }
+
+      const int hj = m.hcount(j);
+      if (hi == 0 && hj == 0) {
+        continue;
+      }
+      if (hi && hj) {  // omit consideration of dual donor/acceptor types
+        continue;
+      }
+
+      if (AllFlexibleBonds(m, i, j, d, dm)) {
+        ++rc;
+      }
+    }
+  }
+
+  descriptor[iwdescr_internalhbd].set(static_cast<float>(rc));
 
   return max_eccentricity;
 }
@@ -4942,6 +5147,114 @@ compute_substructure_based_charge_descriptors(Molecule & m,
 }
 
 static int
+ComputeLongCarbonChains(const Molecule& m, atom_number_t zatom,
+                        const atomic_number_t* z,
+                        const int* ncon,
+                        int max_ncon,
+                         const int* ring_membership,
+                         int* already_done) {
+  already_done[zatom] = 1;
+  int rc = 1;
+  for (const Bond* b : m[zatom]) {
+    if (! b->is_single_bond()) {
+      return rc;
+    }
+    atom_number_t o = b->other(zatom);
+    if (already_done[o]) {
+      continue;
+    }
+    if (z[o] != 6) {
+      continue;
+    }
+    if (ring_membership[o]) {
+      continue;
+    }
+    if (ncon[o] > max_ncon) {
+      continue;
+    }
+    if (! m.saturated(o)) {
+      continue;
+    }
+    if (ncon[o] == 1) {
+      already_done[o] = 1;  // not really necessary
+      ++rc;
+    } else {
+      rc += ComputeLongCarbonChains(m, o, z, ncon, max_ncon, ring_membership, already_done);
+    }
+  }
+
+  return rc;
+}
+
+// This could be split into another function that handled the different max_ncon cases
+// but that would result in a function with too many arguments and would be messy.
+// This is messy too.
+static int
+ComputeLongCarbonChains(const Molecule& m, const atomic_number_t* z,
+                        const int* ncon,
+                         const int* ring_membership,
+                         int* already_done) {
+
+  Accumulator_Int<uint32_t> acc2, acc3;
+
+  const int matoms = m.natoms();
+
+  int max_ncon = 2;
+  for (int i = 0; i < matoms; ++i) {
+    if (already_done[i]) {
+      continue;
+    }
+    if (z[i] != 6 || ring_membership[i]) {
+      continue;
+    }
+    if (! m.saturated(i)) {
+      continue;
+    }
+    if (ncon[i] > max_ncon) {
+      continue;
+    }
+
+    int csize = ComputeLongCarbonChains(m, i, z, ncon, max_ncon, ring_membership, already_done);
+    acc2.extra(csize);
+  }
+
+  if (acc2.n()) {
+    descriptor[iwdescr_mxlencchain2].set(static_cast<float>(acc2.maxval()));
+  } else {
+    descriptor[iwdescr_mxlencchain2].set(0.0f);
+  }
+
+  std::fill_n(already_done, matoms, 0);
+
+  max_ncon = 3;
+  for (int i = 0; i < matoms; ++i) {
+    if (already_done[i]) {
+      continue;
+    }
+    if (z[i] != 6 || ring_membership[i]) {
+      continue;
+    }
+    if (! m.saturated(i)) {
+      continue;
+    }
+    if (ncon[i] > max_ncon) {
+      continue;
+    }
+
+    int csize = ComputeLongCarbonChains(m, i, z, ncon, max_ncon, ring_membership, already_done);
+    acc3.extra(csize);
+  }
+
+  if (acc3.n()) {
+    descriptor[iwdescr_mxlencchain3].set(static_cast<float>(acc3.maxval()));
+  } else {
+    descriptor[iwdescr_mxlencchain3].set(0.0f);
+  }
+
+  return 1;
+}
+
+static int
 compute_radha_entropy_descriptors(Molecule & m,
                                   atom_number_t zatom,
                                   const int * ncon,
@@ -5486,6 +5799,13 @@ compute_spinach_descriptors(Molecule & m, int matoms,
 
   descriptor[iwdescr_scaffoldbranches].set(static_cast<float>(branches_in_scaffold));
 
+  // Note this computation is not quite right.
+  // Consider
+  // C1=CC=C2C(=C1C#N)C(=C(N2)C1=CC=C(C=C1)C1=CC2=C(O1)C=C(C=C2)C1=NCCCN1)C CHEMBL3311276
+  // this shows up with 4 terminal rings, but that is not right.
+  // This needs to be fixed to consider how fused rings affect the concept of
+  // a terminal or interiour ring. TODO:ianwatson investigate.
+
   int terminal_rings = 0;
   int internal_rings = 0;
   int spinach_connections = 0;
@@ -5515,10 +5835,11 @@ compute_spinach_descriptors(Molecule & m, int matoms,
 
 //  cerr << "s " << s << " ns " << ns << '\n';
 
-    if (1 == ns)
+    if (1 == ns) {
       terminal_rings++;
-    else
+    } else if (ns > 1) {
       internal_rings++;
+    }
 
     spinach_connections += s;
     non_spinach_connections += ns;
@@ -7325,6 +7646,7 @@ compute_topological_descriptors(Molecule & m,
   int ring_multiple_bonds = 0;
   int carbon_hydrogen_count = 0;
   int ch2 = 0;
+  int d2sp3 = 0;
   int unsaturation = 0;       // non aromatic
   int atoms_with_pi_electrons = 0;      // aromatic, unsaturated and lone pair electrons - this last type aren't really pi electrons...
   int electron_rich_sections = 0;       // contiguous parts of the molecule with lots of electrons
@@ -7358,6 +7680,9 @@ compute_topological_descriptors(Molecule & m,
     else
       connected[5]++;
 
+    if (ncon[i] == 2 && m.saturated(i)) {
+      ++d2sp3;
+    }
     atomic_number_t zi = z[i];
 
     if (1 == zi)
@@ -7573,7 +7898,11 @@ compute_topological_descriptors(Molecule & m,
   descriptor[iwdescr_fdcca].set(static_cast<float>(two_connected_chain_atom) / static_cast<float>(matoms));
 
   descriptor[iwdescr_rotbond].set(static_cast<float>(rotatable_bonds));
-  descriptor[iwdescr_frotbond].set(iwmisc::Fraction<float>(rotatable_bonds, m.nedges()));
+  if (m.nedges() == 0) {
+    descriptor[iwdescr_frotbond].set(0.0f);
+  } else {
+    descriptor[iwdescr_frotbond].set(iwmisc::Fraction<float>(rotatable_bonds, m.nedges()));
+  }
   descriptor[iwdescr_ringatom].set(static_cast<float>(ring_atom_count));
   if (ring_atom_count)
   {
@@ -7616,6 +7945,7 @@ compute_topological_descriptors(Molecule & m,
   }
 
   descriptor[iwdescr_ch2].set(static_cast<float>(ch2));
+  descriptor[iwdescr_d2sp3].set(static_cast<float>(d2sp3));
 
   descriptor[iwdescr_ch].set(static_cast<float>(carbon_hydrogen_count));
 
@@ -7662,6 +7992,11 @@ compute_topological_descriptors(Molecule & m,
   compute_radha_entropy_descriptors(m, ncon, ring_membership, atom);
 
   set_vector(already_done, matoms, 0);
+
+  if (descriptors_to_compute.long_carbon_chains) {
+    ComputeLongCarbonChains(m, z, ncon, ring_membership, already_done);
+    std::fill_n(already_done, matoms, 0);
+  }
 
   if (descriptors_to_compute.specific_groups) {
     compute_amine_count(m, atom, z, ncon, ring_membership, already_done);
@@ -9002,16 +9337,16 @@ iwdescr(int argc, char ** argv)
   }
 
   if (verbose)
-    set_display_psa_unclassified_atom_mesages(1);
+    nvrtspsa::set_display_psa_unclassified_atom_mesages(1);
   else
-    set_display_psa_unclassified_atom_mesages(0);
+    nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
 
   if (verbose == 0) {
     alogp_engine.set_display_error_messages(0);
   }
 
   if (cl.option_present('S')) {
-    set_non_zero_constribution_for_SD2(0);
+    nvrtspsa::set_non_zero_constribution_for_SD2(0);
     if (verbose) {
       cerr << "SD2 atoms given zero weight in PSA calculations\n";
     }
@@ -9044,7 +9379,7 @@ iwdescr(int argc, char ** argv)
         if (verbose)
           cerr << "Descriptors generated with prefix '" << descriptor_prefix << "'\n";
       } else if (b == "quiet") {
-        set_display_psa_unclassified_atom_mesages(0);
+        nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
 
         if (verbose) {
           cerr << "Will not report unclassified atoms\n";

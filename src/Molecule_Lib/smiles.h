@@ -23,6 +23,7 @@ extern int  get_include_aromaticity_in_smiles();
 // aromatic atoms, but non aromatic bonds.
 extern void set_include_aromaticity_in_smiles(int atom_arom, int bond_arom);
 extern int include_bond_aromaticity_in_smiles();
+extern void set_include_bond_aromaticity_in_smiles(int s);
 
 extern void set_include_cis_trans_in_smiles(int);
 extern int  include_cis_trans_in_smiles();
@@ -59,7 +60,12 @@ extern int process_standard_smiles_options(Command_Line &, int = 0, const char =
 extern void set_smiles_reuse_ring_closure_numbers(int);
 extern int  smiles_reuse_ring_closure_numbers();
 
-extern void set_append_coordinates_after_each_atom(int);
+namespace lillymol {
+// Smiles will look like  
+// O{{-0.0178,1.32,-0.4413}}.C{{0.0007,-0.0205,-0.3053}}(=O{{1.0586,-0.6179,-0.3187}})
+void set_include_coordinates_with_smiles(int);
+int include_coordinates_with_smiles();
+}
 extern void set_append_coordinate_box_after_each_atom(int);
 
 extern void set_smiles_native_ordering(int);

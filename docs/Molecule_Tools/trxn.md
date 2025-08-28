@@ -1,7 +1,7 @@
 # trxn
 
 `trxn` makes molecules based on a reaction specification
-and one or more sets of input molecules. It operate on a
+and one or more sets of input molecules. It can operate on a
 single molecule - performing some kind of intra-molecular
 change, or to perform a reaction involving any number of
 different sidechains.
@@ -15,13 +15,199 @@ reaction file will
 need to specify that the bond between matched atoms 0 (`[OH]`) and
 1 (`C`) is to be broken, and that matched atom 0, the `[OH]` is 
 to be removed. While this may seem tedious at first, the
-fine degree of control available becomes an advantage.
+precise degree of control available becomes an advantage.
 
 Whenever using `trxn` this correspondence between matched atom
 number, starting at zero, is crucial. All directives for changes
 are specified based on one or more matched atom numbers.
 
-It was originally developed to process combinatorial libraries
+For example, an simple acid-amine reaction might look like
+
+```
+name: "Acid + amine"
+scaffold {
+  id: 0
+  smarts: "[OH]-[CD3]=O"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  smarts: "[NH2]-[CX4]"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+The `name` field is optional.
+
+The order of the atoms in the smarts defines the atom numbering
+for the directives that change the molecule. Again, atom numbers
+start with 0.
+
+In this case we chose to call the acid the
+scaffold, and the amine the sidechain. That is entirely arbitrary, but it
+does mean that in order to perform this reaction, the command line must
+look something like
+```
+trxn -P acid_amine.rxn acid.smi amine.smi
+```
+where the order of the input files on the command line corresponds to
+the ordering within the reaction file.
+
+The same effect can be achieved by reversing the role of scaffold and
+sidechain,
+```
+name: "Amine + Acid"
+scaffold {
+  id: 0
+  smarts: "[NH2]-[CX4]"
+}
+sidechain {
+  id: 1
+  smarts: "[OH]-[CD3]=O"
+  remove_atom: 0
+  join {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+and then running
+```
+trxn -P amine_acid.rxn amine.smi acid.smi
+```
+where again, the order of reagents in the reaction file must correspond
+with what is given on the command line.
+
+If there is a single sidechain, the same reagent is being reacted with
+each scaffold, that can be specified in the reaction file via a
+`reagent` directive in the sidechain. For example
+a Buchwald reaction that just uses di-ethyl amine 'CCNCC' might be
+
+```
+name: "Buchwald"
+scaffold {
+  id: 0
+  smarts: "Br-c"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  reagent: "CCNCC diethylamine"
+  smarts: "[ND2](-[CX4])-[CX4]"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+and in this case `trxn` would be invoked with just the file of aryl Bromides
+```
+trxn -P buchwald_fixed.rxn aryl_bromine.smi
+```
+
+Note that with both of these reactions there is a single atom lost, which
+is discarded via the `remove_atom` directive. If that was not specified,
+those atoms would remain with their original bonding - likely leading
+to a valence error. If you instread wish to preserve the lost atoms as
+a separate fragment, you can break the bond between the lost atom and
+the rest of the molecule.
+
+The fixed reagent Buchwald reaction would be
+```
+name: "Buchwald"
+scaffold {
+  id: 0
+  smarts: "Br-c"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+}
+sidechain {
+  id: 1
+  reagent: "CCNCC diethylamine"
+  smarts: "[ND2](-[CX4])-[CX4]"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+which generates products that include disconnected Bromine atoms.
+
+There is of course nothing special about which is the scaffold and which is
+the sidechain. On a separate occasion the following reaction file was used
+for a Buchwald reaction
+```
+name: "Buchwald"
+scaffold {
+  id: 0
+  smarts: "[ND1H2][CT1G0]"
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[Cl,Br,I]-a"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+  join {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+where this time the primary amine is the "scaffold" and the halogen
+the "sidechain". In this case, isotopes are applied in order to help
+review the products. Invoke as
+```
+trxn -P buchwald.rxn primary_amine.smi halogen.smi
+```
+with the order of participants on the command line being the same as
+what is in the reaction file. The resulting products might look like
+![Buchwald](Images/buchwald.png).
+
+Examples of other TextProto reactions can be found in [contrib](/contrib/data/ProtoReactions).
+
+## Fragments
+
+Once a bond has been broken, if that defines a fragment, rather
+than atom, to be lost, the remove_fragment directive will remove all atoms
+in the fragment defined by the matched atom.
+
+Note that multiple atoms (or fragments) can be removed, since in 
+the proto definition file, [reaction.proto](/src/Molecule_Lib/reaction.proto)
+the `remove_atom` and `remove_fragment` directives are repeated fields. Removing
+multiple atoms can be either
+```
+scaffold {
+  remove_atom: 0
+  remove_atom: 1
+}
+```
+or
+```
+scaffold {
+  remove_atom: [0, 1]
+}
+```
+where the atoms to be removed are entered either as separate directives or
+as a vector of matched atoms.
+
+## Combinatorial Generation
+`trxn` was originally developed to process combinatorial libraries
 and as such, can be fast if doing that. For historical reasons,
 it divides reagents into one called `scaffold` and all others
 are referred to as `sidechains`. This is an artificial
@@ -51,6 +237,212 @@ The original reaction specification scheme for `trxn` was based on an
 old file format from Cerius-2. Those reaction files are still recognised
 but no new functionality is being added to them. They are not documented
 here.
+
+## Simple Reaction
+The only mandatory component of a reaction is a scaffold directive. For example
+the alchemists's dream reaction would be the unimolecular reaction
+```
+scaffold {
+  id: 0
+  smarts: "[Pb]"
+  change_element {
+    atom: 0
+    element: "Au"
+  }
+}
+```
+which transforms Lead to Gold.
+
+The important principle is that the smarts establishes an atom numbering.
+In this case, there is only one atom in the smarts, and therefore matched
+atom 0 is defined. In this case, matched atom 0 will be a Lead atom.
+
+The `change_element` directive specifies that matched atom 0, the Lead atom,
+should be changed to Gold.
+
+The Bootlegger's reaction for making alcohol might (naievely) be implemented
+by adding an Oxygen atom to a Ethane molecule
+```
+name: "bootlegger"
+scaffold {
+  id: 0
+  smarts: "CC"
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  smarts: "[O]"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+Unfortunately if this is run with default settings
+```
+trxn -P bootlegger.rxn ethane.smi
+```
+the product will be `OCCO`. This is because the smarts for ethane `CC` matches
+the ethane molecule two ways because of symmetry. Add the `-u` option to the
+`trxn` invocation to suppress these duplicate atom matches. Or the `-k` option
+which suppresses symmetry related matches such as these.
+
+Alternatively we can add a directive to the scaffold message to only find unique
+embeddings
+```
+name: "bootlegger"
+scaffold {
+  id: 0
+  smarts: "CC"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  smarts: "[O]"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}
+```
+and then no command line options are needed. Both means accomplish the
+same effect. Longer term, we hope to make most command line options
+also settable from within the reacton file.
+
+In order to hide evidence of a crime, the Bootlegger may wish to
+denature their ethanol by converting it to methanol!
+```
+name: "ethanol to methanol"
+scaffold {
+  id: 0
+  smarts: "[OH]-CC"
+  break_bond {
+    a1: 1
+    a2: 2
+  }
+  remove_atom: 2
+}
+```
+The bond between matched atoms 1 and 2, the two carbon atoms, is broken.
+Then matched atom 2 is removed - otherwise the product would be a disconnected
+molecule.
+
+Note that there is a more compact way of specifying a bond breakage - borrowing from
+the old format reaction files.
+```
+break_bond_between_atoms: [1, 4]
+```
+will break the bond between matched atoms 1 and 4. Note that this attribute is implemented
+as a repeated field. If there are multiple bonds to be broken, that should be entered
+as
+```
+break_bond_between_atoms: [1, 4]
+break_bond_between_atoms: [3, 4]
+```
+rather than 
+```
+break_bond_between_atoms: [1, 4, 3, 4]
+```
+which is exactly equivalent - but possibly harder to keep track of. There is no right
+answer about which form is preferred. The one-line compact form is attractive
+because of its brevity. The break_bond message is attractive because it is
+very precise and not dependent on positions in arrays.
+
+Formal charges are straightforward.
+```
+name: "charge acid"
+scaffold {
+  id: 0
+  smarts: "[OH]-C=O"
+  formal_charge {
+    atom: 0
+    formal_charge: -1
+  }
+}
+```
+The smarts defines atom numbering and the `formal_charge` directive specifies
+which atom gets assigned the formal charge.
+
+The `change_formal_charge` directive can be used to add or subtract a value
+from an existing formal charge. Similarly the `change_isotope` message can
+be used to change an existing isotopic value
+```
+name: "increment isotope"
+scaffold {
+  id: 0
+  smarts: "a-[9]"
+  change_isotope {
+    atom: 1
+    delta: 1
+  }
+}
+```
+In this case, we look for an aromatic atom, 'a' bonded to another atom
+that has isotope 9. The change is on matched atom 1. Since matched atom 1 is
+an atom with isotope 9, the result will be a molecule with isotope 10 on that
+matched atom. Delta can also be negative, but note that if
+a change would result in a negative isotope, that is silently set to zero.
+It is unclear if this is a bug or a feature, perhaps it should be an error,
+or at least a warning.
+
+Several different operators, apart from addition, can be applied to an existing
+isotope value - including no isotope, isotope 0. Currently supported operations are
+```
+multiply
+delta
+integer_divide
+modulo
+```
+and they are applied in that order. From the unit test we have this case
+```
+  scaffold: {
+    id: 0
+    smarts: "[CD1]-c"
+    change_isotope {
+      atom: 0
+      multiply: 4
+      delta: -9
+      integer_divide: 2
+      modulo: 5
+    }
+  }
+```
+In this case if the starting matched atom has isotope 6, the computation processed as follows
+```
+6 * 4 = 24
+24 - 9 = 15
+15 / 2 = 7
+7 % 5 = 2
+```
+so the final result is 2. This is pretty awful, the test is just designed to exercise functionality.
+We anticipate that most uses of this will be simple, single operator cases.
+
+It is also possible to only process a matched atom if the starting isotope matches constraints. Again
+from the uni test, this example
+```
+    scaffold: {
+      id: 0
+      smarts: "C"
+      change_isotope {
+        only_change_if {
+          range {
+            min: 3
+            max: 5
+          }
+        }
+        atom: 0
+        delta: 1
+      }
+    }
+```
+only changes matched atoms where the starting isotope is in the range [3-5]. See [reacation_test](src/Molecule_Lib/reaction_test.cc)
+for an example where a list of specific allowed values is used instead.
+
 
 ## Fixed Reagent
 A sidechain may involve a single reagent that is added to each
@@ -439,9 +831,10 @@ possible that duplicate products will appear. For example if there
 are halogen duplicates in the reagents, I and Br, I and Cl, Cl and Br.
 These may react and all generate the same product.
 
-Note that there is no provision for removing duplicate molecules
-across scaffolds. For that, pipe the output of trxn to
-`unique_molecules`.
+If more than one -d option is given `-d -d` then uniqueness is assessed
+across all molecules formed across all scaffolds. Or you can pipe
+the output of trxn to `unique_molecules` which might have some
+performance advantages.
 
 ## -I
 Remove any isotopic labels in the products. Isotopes are frequently
@@ -664,6 +1057,16 @@ Do NOT write 'hits in scaffold' messages for multiple scaffold query hits.
 In large enumerations where this is expected, the messages are uninformative
 and slow down processing.
 
+## -J noschmsg
+Do NOT write warning messages about no sidechain substructure matches.
+Note however that this information can be very important, so only suppress
+this is you are confident about the reaction being done.
+
+## -J rpt=<n>
+Report progress every <n> products written. By default trxn works silently
+and can quickly generate large numbers of molecules. This can help keep
+track of progress - helpful too if you know how many products to expect.
+
 ## 3D
 While the primary purpose of `trxn` is manipulating connection
 tables, it is fully 3d aware if the input data contains
@@ -815,7 +1218,7 @@ test cases, some dihedral angles came out as -90 instead of 90. The cause
 is unclear.
 
 ### 3D positioning
-If you are starting with two fragments wit arbitrary spatial orientations and positions, and
+If you are starting with two fragments with arbitrary spatial orientations and positions, and
 wish to join them in a spatially reasonable way, one of the fragments will need to
 be translated and rotated so the atoms in each fragment are "pointed towards" each
 other in a plausible way. This is accomplished with the `align_3d` directive in
@@ -957,7 +1360,46 @@ Note that this reaction works best with implicit Hydrogens. It should
 still work if Hydrogens are explicit, but would leave an unattached
 Hydrogen atom if run that way. It also works for secondary amines
 because the `H` requirement in the smarts is interpreted
-as 'at least 1 Hydrogen attached'.
+as 'at least 1 Hydrogen attached'. This may not be precise enough
+in either case.
+
+## Making/Changing Bonds
+There are two directives which can be used to add/alter a bond.
+
+The `make_bond` directive was shown above. It works regardless
+of whether there is an existing bond between those atoms or not.
+If there is no bond there, one will be added. If there is an existing
+bond present, the bond type may be changed. On the other hand the
+`change_bond` directive only works if the atoms are already bonded.
+If the atoms are not already bonded, it is a fatal error. This is
+largely a usability issue, because while `make_bond` seems more
+like "create a bond", `change_bond` is clearly associated with
+changing an existing bond. Syntax of the two messages is the same,
+a1, a2 and btype.
+
+*New Mar 2025*
+Carrying over from the old format, you can create/change to single
+bonds via
+```
+  single_bond: [1, 3]
+  single_bond: [2, 7]
+```
+Same with double_bond and triple_bond.
+
+It is however important to note that within the proto, these are all
+just repeated fields. So the above is actually equivalent to
+```
+single_bond: [1, 3, 2, 7]
+```
+It is just a convention that they should be entered as pairs. But
+what is nice about this is that a bond can be specified with one
+easy to understand line, rather than 5 lines with the full message.
+
+Having to understand positions in an array of repeated values
+is less elegant and precise, but entering them as pairs mitigates
+this issue. The repeated field method and the `make_bond` message
+are equivalent. They are both converted into the same thing upon
+input.
 
 ## Breaking Molecules
 Reactions are just changes to a connection table. They can both form, change or
@@ -1050,6 +1492,19 @@ scaffold {
 ```
 Now the output contains no square brackets. The unfix_implicit_hydrogens directive
 was applied to matched atom 0.
+
+As a convenience, an isotope directive can be done on one line
+```
+atom_and_isotope: [4, 1]
+```
+places isotope 1 on atom 4. Just as with the single_bond attribute above, this is
+implemented as a repeated field, if there were multiple isotopes applied, it
+would be equivalent to
+```
+atom_and_isotope: [4, 1, 3, 7]
+```
+with atom 3 getting isotope 7 in addition. These conveniences are convenient, but
+less descriptive, and less "safe".
 
 
 ## Inactive
@@ -1301,6 +1756,20 @@ otherwise.
 Components have both `invert_chirality` and `remove_chirality` directives
 which operate on their own matched atoms.
 
+Newer versions of `trxn` support a `cip_stereo` directive which 
+can use Cahn Ingold Prelog (CIP) notations to set a chiral centre.
+```
+cip_stereo {
+  atom: 2
+  rs: CIP_R
+}
+```
+But note that support for Cahn Ingold Prelog type chirality is
+currently only rudimentary in LillyMol. But this offers the
+advantage of brevity. The current limitation is that shell
+expansion is not implemented, so only the adjacent atoms
+are considered when deciding on the chirality. 
+
 ## Stereo Preserving Atom Replacement
 Unfortunately `trxn` performs its operations sequentially on a Molecule
 object. The Molecule is smart, and when it detects that an atom that is
@@ -1338,3 +1807,52 @@ sidechain {
 generates `C[C@H](Br)N`. Note there is an unfortunate quirk, `remove_atom: 2` does
 not work in this case. Atom removals are done earlier in processing, whereas
 fragment removals are done later. This would be difficult to alter.
+
+## Inverting isotopes (uncommon).
+
+A matched atom can have its isotopic information inverted.
+```
+name: "invert isotope"
+scaffold {
+  id: 0
+  smarts: "a"
+  invert_isotope {
+    atom: 0
+    isotope: 2
+  }
+}
+```
+Any matched atom with an existing isotope of 0, will be set to 2. Any
+atom with an existing isotope will be set to 0.
+
+## Copying Isotopes (uncommon).
+We recently encountered a need to transfer isotopic information from an atom
+that was being removed to an atom that was to be retained. And of course this would
+also work even if the source atom was not being removed.
+
+Note that if you are merely changing an element, that operation will preserve any
+existing isotopic information. This functionality is only needed when involving
+different matched atoms.
+
+Within the scaffold, only matched atom numbers can be specified. In a case where
+sidechain atoms had certain isotopic values, the task was to remove the sidechain,
+while transferring the isotopic informaion from the first sidechain atom to the
+ring atom that remains. The sidechain was to be deleted. This can be accomplished with
+```
+name: "remove sidechain"
+scaffold {
+  id: 0
+  smarts: "[R]!@-*"
+  copy_isotope {
+    from: 1
+    to: 0
+  }
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+}
+```
+There is however the possibility of ambiguity in cases where there are multiple
+substituents to the same ring atom. The result will be arbitrary.

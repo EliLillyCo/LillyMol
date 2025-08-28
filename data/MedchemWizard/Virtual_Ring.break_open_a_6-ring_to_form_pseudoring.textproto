@@ -1,0 +1,35 @@
+name: "Virtual_Ring.break_open_a_6-ring_to_form_pseudoring"
+comment: "[c:1]1(aa[c:4]([a:3][a:2]1)[*!F!Br!Cl!I:5])[*!F!Br!Cl!I:6]>>[N:1]([a:2][a:3][C:4]([*!F!Br!Cl!I:5])=O)([*!F!Br!Cl!I:6])[H] break open a 6-ring to form pseudoring"
+scaffold {
+  id: 0
+  smarts: "[C][/IWfss1c]1aac([C,O,N])aa1"
+  break_bond {
+    a1: 4
+    a2: 6
+  }
+  break_bond {
+    a1: 1
+    a2: 7
+  }
+  remove_fragment: 6
+  single_bond: [1, 2]
+  double_bond: [2, 3]
+  single_bond: [3, 4]
+  change_element {
+    atom: 1
+    element: "N"
+  }
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  smarts: "O"
+  join {
+    a1: 4
+    a2: 0
+    btype: SS_DOUBLE_BOND
+  }
+}

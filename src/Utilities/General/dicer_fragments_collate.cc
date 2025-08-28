@@ -18,10 +18,15 @@
 #include "Foundational/cmdline_v2/cmdline_v2.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/data_source/tfdatarecord.h"
+#include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace dicer_fragments_collate {
 
@@ -32,9 +37,9 @@ using std::cerr;
 // 9.5GB for what were 4.4GB on disk and which ended
 // up 3.1GB when combined. I expected protos to be
 // memory efficient. Let's see if this is better.
-// Note that we do not store the unique smiles, it is the key.
+// Note that we do not store the unique smiles, it is the hash key.
 // This does not make much of an improvement. The job now
-// takes 7.5GB of RAM
+// takes 7.5GB of RAM.
 
 struct DicerData {
   IWString smiles;
@@ -73,14 +78,21 @@ class DicerFragmentsCollate {
     // If the input is serialized protos.
     int _input_is_tfdata;
 
+    // We can optionally sort the output by prevalence.
+    int _sort_by_prevalence;
+
     int _verbose;
 
     Report_Progress _report_progress;
 
-    int _items_read;
-    int _suppressed_by_support;
+    uint64_t _items_read;
+    uint64_t _suppressed_by_support;
     uint32_t _max_count;
-    uint32_t _singleton_count;
+
+    extending_resizable_array<uint32_t> _atoms_in_fragment;
+
+    // We record singletons as a function of the number of atoms in the fragment.
+    extending_resizable_array<uint32_t> _singleton_count;
 
   // private functions
 
@@ -95,11 +107,17 @@ class DicerFragmentsCollate {
     int InsertIntoProtoHash(dicer_data::DicerFragment& proto,
                 const IWString& non_unique_smiles);
 
+    int WriteFromProtoHashSorted(IWString_and_File_Descriptor& output);
     int WriteFromDataHash(IWString_and_File_Descriptor& output);
-
+    int WriteFromDataHashSorted(IWString_and_File_Descriptor& output);
     int WriteFromProtoHash(IWString_and_File_Descriptor& output);
     int WriteNonUniqueSmiles(const std::string& usmi,
                              IWString_and_File_Descriptor& output) const;
+    int WriteProto(const dicer_data::DicerFragment& proto,
+                                  IWString_and_File_Descriptor& output);
+    int UpdateGlobalCounters(uint32_t natoms, uint32_t count);
+    int WriteDicerData(const IWString& usmi, const DicerData& dicer_data,
+                IWString_and_File_Descriptor& output);
 
   public:
     DicerFragmentsCollate();
@@ -131,7 +149,8 @@ DicerFragmentsCollate::DicerFragmentsCollate() {
   _support = 0;
   _suppressed_by_support = 0;
   _max_count = 0;
-  _singleton_count = 0;
+
+  _sort_by_prevalence = 0;
 }
 
 int
@@ -176,6 +195,11 @@ DicerFragmentsCollate::Initialise(Command_Line_v2& cl) {
   }
 
   if (cl.option_present("minimal")) {
+    if (cl.option_present("sort")) {
+      cerr << "The -minimal and -sort options are mutually incompatible\n";
+      return 0;
+    }
+
     _hash_value_is_proto = 0;
     if (_verbose) {
       cerr << "Will extract only essential items from the proto\n";
@@ -186,6 +210,13 @@ DicerFragmentsCollate::Initialise(Command_Line_v2& cl) {
     _input_is_tfdata = 1;
     if (_verbose) {
       cerr << "Input assumed to be TFDataRecord serialized protos\n";
+    }
+  }
+
+  if (cl.option_present("sort")) {
+    _sort_by_prevalence = 1;
+    if (_verbose) {
+      cerr << "Will sort by prevalence\n";
     }
   }
 
@@ -376,48 +407,18 @@ DicerFragmentsCollate::Write(IWString_and_File_Descriptor& output) {
 
 int
 DicerFragmentsCollate::WriteFromProtoHash(IWString_and_File_Descriptor& output) {
-
-  static google::protobuf::TextFormat::Printer printer;  
-  printer.SetSingleLineMode(true);
-
-  std::string buffer;
-  _max_count = 0;
-  _singleton_count = 0;
+  if (_sort_by_prevalence) {
+    return WriteFromProtoHashSorted(output);
+  }
 
   for (auto& [usmi, proto] : _hash) {
-    if (proto.n() == 1) {
-      ++_singleton_count;
-    }
-
-    if (_support > 0 && proto.n() < _support) {
-      ++_suppressed_by_support;
+    if (! UpdateGlobalCounters(proto.nat(), proto.n())) {
       continue;
-    }
-
-    if (proto.n() > _max_count) {
-      _max_count = proto.n();
     }
 
     proto.set_smi(usmi);
 
-    if (! printer.PrintToString(proto, &buffer)) {
-      cerr << "DicerFragmentsCollate::cannot print '" << proto.ShortDebugString() << "'\n";
-      continue;
-    }
-
-    if (buffer.ends_with(' ')) {
-      buffer.pop_back();
-    }
-
-    if (_has_leading_non_unique_smiles) {
-      if (! WriteNonUniqueSmiles(proto.smi(), output)) {
-        return 0;
-      }
-    }
-
-    output << buffer << '\n';
-
-    output.write_if_buffer_holds_more_than(8192);
+    WriteProto(proto, output);
   }
 
   output.flush();
@@ -425,41 +426,171 @@ DicerFragmentsCollate::WriteFromProtoHash(IWString_and_File_Descriptor& output) 
   return 1;
 }
 
+// We are processing a fragment with `natoms` atoms and which has been found
+// `count` times.
+// Update the global accumulators for this data and return 1 if `count`
+// satisfies the support requirements.
+int
+DicerFragmentsCollate::UpdateGlobalCounters(uint32_t natoms, uint32_t count) {
+  ++_atoms_in_fragment[natoms];
+
+  if (count == 1) {
+    ++_singleton_count[natoms];
+  }
+
+  if (count > _max_count) {
+    _max_count = count;
+  }
+
+  if (_support > 0 && count < _support) {
+    ++_suppressed_by_support;
+    return 0;
+  }
+
+  return 1;
+}
+    
+// Sort the protos in _hash by prevalence and write.
+int
+DicerFragmentsCollate::WriteFromProtoHashSorted(IWString_and_File_Descriptor& output) {
+  std::unique_ptr<dicer_data::DicerFragment*[]> frags = std::make_unique<dicer_data::DicerFragment*[]>(_hash.size());
+
+  uint32_t ndx = 0;
+  for (auto& [usmi, proto] : _hash) {
+    if (! UpdateGlobalCounters(proto.nat(), proto.n())) {
+      continue;
+    }
+
+    proto.set_smi(usmi);
+    frags[ndx] = &proto;
+    ++ndx;
+  }
+
+  // secondary sort on number of atoms.
+  std::sort(frags.get(), frags.get() + ndx, [](const dicer_data::DicerFragment* f1,
+                                               const dicer_data::DicerFragment* f2) {
+        if (f1->n() > f2->n()) {
+          return true;
+        }
+
+        if (f1->n() < f2->n()) {
+          return false;
+        }
+
+        if (f1->nat() < f2->nat()) {
+          return true;
+        }
+        return false;
+      });
+
+  for (uint32_t i = 0; i < ndx; ++i) {
+    const dicer_data::DicerFragment* f = frags[i];
+    WriteProto(*f, output);
+  }
+
+  return 1;
+}
+
+int
+DicerFragmentsCollate::WriteProto(const dicer_data::DicerFragment& proto,
+                                  IWString_and_File_Descriptor& output) {
+  static google::protobuf::TextFormat::Printer printer;  
+  printer.SetSingleLineMode(true);
+
+  static std::string buffer;
+
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "DicerFragmentsCollate::cannot print '" << proto.ShortDebugString() << "'\n";
+    return 0;;
+  }
+
+  if (buffer.ends_with(' ')) {
+    buffer.pop_back();
+  }
+
+  if (_has_leading_non_unique_smiles) {
+    if (! WriteNonUniqueSmiles(proto.smi(), output)) {
+      return 0;
+    }
+  }
+
+  output << buffer << '\n';
+
+  output.write_if_buffer_holds_more_than(8192);
+
+  return 1;
+}
+
 int
 DicerFragmentsCollate::WriteFromDataHash(IWString_and_File_Descriptor& output) {
+  if (_sort_by_prevalence) {
+    // return WriteFromDataHashSorted(output);
+    cerr << "Sorted output not possible if the -minimal option is specified\n";
+    return 0;
+  }
 
   static google::protobuf::TextFormat::Printer printer;  
   printer.SetSingleLineMode(true);
 
   std::string buffer;
   _max_count = 0;
-  _singleton_count = 0;
 
   for (const auto& [usmi, data] : _hash_data) {
-    if (data.n == 1) {
-      ++_singleton_count;
-    }
-
-    if (_support > 0 && data.n < _support) {
-      ++_suppressed_by_support;
+    if (! UpdateGlobalCounters(data.natoms, data.n)) {
       continue;
     }
 
-    if (data.n > _max_count) {
-      _max_count = data.n;
-    }
-
-    if (! data.smiles.empty()) {
-      output << data.smiles;
-    }
-    output << " smi: " << usmi;
-    output << " par: " << data.par;
-    output << " n: " << data.n;
-    output << " nat: " << data.natoms;
-    output << '\n';
-
-    output.write_if_buffer_holds_more_than(32768);
+    WriteDicerData(usmi, data, output);
   }
+
+  return 1;
+}
+
+#ifdef THIS_DOES_NOT_WORK
+because we have no means of passing `usmi` after we have sorted the hash.
+int
+DicerFragmentsCollate::WriteFromDataHashSorted(IWString_and_File_Descriptor& output) {
+  std::unique_ptr<const DicerData*[]> frags = std::make_unique<const DicerData*[]>(_hash_data.size());
+
+  uint32_t ndx = 0;
+  for (const auto& [usmi, data] : _hash_data) {
+    if (! UpdateGlobalCounters(data.natoms, data.n)) {
+      continue;
+    }
+
+    frags[ndx] = &data;
+    ++ndx;
+  }
+
+  std::sort(frags.get(), frags.get() + ndx, [](const DicerData* d1,
+                        const DicerData* d2) {
+        return d1->n > d2->n;
+      });
+
+  for (uint32_t i = 0; i < ndx; ++i) {
+    WriteDicerData(*frags[i], output);
+  }
+
+  return 1;
+}
+#endif
+
+// Write `dicer_data` in textproto form.
+int
+DicerFragmentsCollate::WriteDicerData(const IWString& usmi, const DicerData& dicer_data,
+                IWString_and_File_Descriptor& output) {
+
+  if (! dicer_data.smiles.empty()) {
+    output << dicer_data.smiles;
+  }
+
+  output << " smi: " << usmi;
+  output << " par: " << dicer_data.par;
+  output << " n: " << dicer_data.n;
+  output << " nat: " << dicer_data.natoms;
+  output << '\n';
+
+  output.write_if_buffer_holds_more_than(32768);
 
   return 1;
 }
@@ -495,8 +626,24 @@ DicerFragmentsCollate::Report(std::ostream& output) const {
 
   if (_support > 0) {
     output << _suppressed_by_support << " suppressed by support requirement " << _support << '\n';
+
   }
-  output << _singleton_count << " singletons, max count " << _max_count << '\n';
+
+  uint32_t total_singletons = 0;
+
+  IWString sep = ' ';
+
+  output << "Natoms" << sep << "Fragments" << sep << "Singletons" << sep << "Fraction\n";
+  for (int i = 1; i < _atoms_in_fragment.number_elements(); ++i) {
+    if (_atoms_in_fragment[i] == 0) {
+      continue;
+    }
+    output << i << sep << _atoms_in_fragment[i] << sep << _singleton_count[i] << sep <<
+              iwmisc::Fraction<float>(_singleton_count[i], _atoms_in_fragment[i]) << '\n';
+    total_singletons += _singleton_count[i];
+  }
+
+  output << total_singletons << " singletons, max count " << _max_count << '\n';
 
   return 1;
 }
@@ -516,8 +663,9 @@ Usage(int rc) {
   cerr << " -nosmi              each record does not contain a leading non-unique smiles\n";
   cerr << " -maxat <n>          discard input that contains more than <maxat> atoms\n";
   cerr << " -r <n>              report progress every <n> items read\n";
-  cerr << " -minimal            extract only the essential information from the protos\n";
+  cerr << " -minimal            extract only the essential information from the protos (may save memory)\n";
   cerr << " -tfdata             data is TFDataRecord serialized protos\n";
+  cerr << " -sort               sort the output by prevalence, n: value in textproto\n";
   cerr << " -v                  verbose output\n";
   // clang-format off
 
@@ -526,7 +674,7 @@ Usage(int rc) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-p=ipos-nosmi-r=ipos-minimal-tfdata-maxat=ipos");
+  Command_Line_v2 cl(argc, argv, "-v-p=ipos-nosmi-r=ipos-minimal-tfdata-maxat=ipos-sort");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options present\n";

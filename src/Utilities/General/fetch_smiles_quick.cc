@@ -214,7 +214,7 @@ read_identifiers_to_fetch(const const_IWSubstring& buffer, int record_number,
     return 1;
   }
 
-  cerr << "Duplicate identifier '" << id << "'\n";
+  cerr << "read_identifiers_to_fetch:duplicate identifier '" << id << "'\n";
   return 0;
 }
 

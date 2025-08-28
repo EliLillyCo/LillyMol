@@ -220,7 +220,7 @@ FileconvConfig::DefaultValues() {
   molecules_with_chiral_centres = 0;
   remove_chiral_data_from_all_molecules = 0;
   remove_non_organic_chirality = 0;
-  max_chiral_centres = 0;
+  max_chiral_centres = -1;
   molecules_with_too_many_chiral_centres = 0;
   chiral_centre_count.resize(0);
 
@@ -263,6 +263,8 @@ FileconvConfig::DefaultValues() {
 
   append_isis_molecular_formula_to_name = 0;
 
+  append_aromatic_distinguishing_molecular_formula_to_name = 0;
+
   append_nrings_to_name = 0;
 
   append_aromatic_ring_count_to_name = 0;
@@ -274,6 +276,8 @@ FileconvConfig::DefaultValues() {
   append_net_formal_charge_to_name = 0;
 
   append_clnd_count_to_name = 0;
+
+  prepend_feature_name = 1;
 
   lower_amw_cutoff = -1.0;
   molecules_below_amw_cutoff = 0;
@@ -395,12 +399,12 @@ DisplayfOptions(int rc) {
  -f smarts:smt  keep smallest frag which matches smarts
  -f ALL:smt     keep all fragments that match smarts <smarts>
  -f rm:smt      remove all fragments that match <smarts>
- -f saltfile=<file> smiles file of known salts - always removed even if the largest fragment
+ -f saltfile=<file>   smiles file of known salts - always removed even if the largest fragment
  -f parentfile=<file> file of known parent molecules - never removed as salts
  -f xchirals    ignore chirality when processing a saltfile
  -f kmfok       compare known salts and parents by molecular formula only - not unique smiles
  -f kpallsalt   do not change a molecule if every fragment is a known salt
- -f noxorganic do NOT discard non organic fragments when saltfile present.
+ -f noxorganic  do NOT discard non organic fragments when saltfile present.
  -f rmxt=<n>    discard molecules with >1 fragment with more than n atoms
  -f rmxt        discard molecules with >1 fragment with more than 16 atoms
  -f sfs         sort fragments by size
@@ -436,20 +440,23 @@ DisplayFOptions(int rc) {
 void
 DisplayPDirectives(int rc) {
   // clang-format off
-  cerr << " Appends various molecular properties to the molecule name\n";
-  cerr << "  -p AMW         append molecular weight to the name (isotopic atoms fail molecule)\n";
-  cerr << "  -p AMWI        append molecular weight to the name (isotopic atoms handled)\n";
-  cerr << "  -p MF          append molecular formula to the name\n";
-  cerr << "  -p ISISMF      append ISIS-like molecular formula to the name\n";
-  cerr << "  -p NATOMS      append number of atoms to the name\n";
-  cerr << "  -p NRINGS      append number of rings to the name\n";
-  cerr << "  -p AROMR       append number of aromatic rings to the name\n";
-  cerr << "  -p HTROAC      append number of heteroatoms to the name\n";
-  cerr << "  -p EXACT       append exact mass to the name\n";
-  cerr << "  -p NFC         append net formal charge to the name\n";
-  cerr << "  -p CLND        append Chemiluminescent Nitrogen Detection\n";
-  cerr << "  -p PREPEND     do a prepend rather than append\n";
-  cerr << "  -p LARGE       computed properties derived from the largest fragment\n";
+  cerr << R"( Appends various molecular properties to the molecule name
+  -p AMW         append molecular weight to the name (isotopic atoms fail molecule)
+  -p AMWI        append molecular weight to the name (isotopic atoms handled)
+  -p MF          append molecular formula to the name
+  -p ISISMF      append ISIS-like molecular formula to the name
+  -p ADMF        append aromatic distinguishing molecular formula to the name
+  -p NATOMS      append number of atoms to the name
+  -p NRINGS      append number of rings to the name
+  -p AROMR       append number of aromatic rings to the name
+  -p HTROAC      append number of heteroatoms to the name
+  -p EXACT       append exact mass to the name
+  -p NFC         append net formal charge to the name
+  -p CLND        append Chemiluminescent Nitrogen Detection
+  -p PREPEND     do a prepend rather than append
+  -p LARGE       computed properties derived from the largest fragment
+  -p noname      do NOT prepend the name of the property to the result
+)";
   // clang-format on
 
   exit(rc);
@@ -505,7 +512,7 @@ DisplayDashIOptions(char flag, std::ostream& os) {
   -I change=<i,j>  change any isotope <i> atoms to isotope <j>
   -I CHANGE        change to normal form. Free implicit H. Should be default
   -I alliso=<i>    change any isotopic atoms to isotope <i>
-  -I smarts:<i>    change any atoms matching <smarts> to isotope <i>, e.g. '[2C],0' or '[#16],4'
+  -I smarts:<smt>,<i>    change any atoms matching <smarts> to isotope <i>, e.g. 'smarts:[2C],0' or 'smarts:[#16],4'
   -I firstatom:smarts:<i> in a multi-atom smarts, set the isotope only on the first matched atom
   -I remove        remove any isotopically labelled atoms
 )";
@@ -646,28 +653,56 @@ FileconvConfig::ComputeClnd(const Molecule& m) {
   return rc;
 }
 
+// If we are prepending feature names, add `feature_name`
+// to `extra_stuff`.
+// If we are NOT prepending the feature name to the output,
+// add a space so that when the value is appended, there is a space.
+void
+FileconvConfig::MaybeAppendFeatureName(const char* feature_name,
+                IWString& extra_stuff) const {
+  if (! prepend_feature_name) {
+    extra_stuff << ' ';
+    return;
+  }
+
+  extra_stuff << ' ' << feature_name << " = ";
+}
+
 void
 FileconvConfig::DoAppends(Molecule& m, IWString& extra_stuff) {
   if (append_molecular_formula_to_name) {
-    extra_stuff += " MF = ";
+    MaybeAppendFeatureName("MF", extra_stuff);
     extra_stuff += m.molecular_formula();
   }
 
   if (append_isis_molecular_formula_to_name) {
-    extra_stuff += " ISISMF = ";
+    MaybeAppendFeatureName("ISISMF", extra_stuff);
     IWString tmp;
     m.isis_like_molecular_formula_dot_between_fragments(tmp);
     extra_stuff += tmp;
   }
 
-  if (append_natoms_to_name)
-    extra_stuff << " NATOMS = " << m.natoms();
+  if (append_aromatic_distinguishing_molecular_formula_to_name) {
+    MaybeAppendFeatureName("ADMF", extra_stuff);
+    IWString tmp;
+    m.formula_distinguishing_aromatic(tmp);
+    extra_stuff += tmp;
+  }
 
-  if (append_nbonds_to_name)
-    extra_stuff << " NBONDS = " << m.nedges();
+  if (append_natoms_to_name) {
+    MaybeAppendFeatureName("NATOMS", extra_stuff);
+    extra_stuff << m.natoms();
+  }
 
-  if (append_nrings_to_name)
-    extra_stuff << " NRINGS = " << m.nrings();
+  if (append_nbonds_to_name) {
+    MaybeAppendFeatureName("NBONDS", extra_stuff);
+    extra_stuff << m.nedges();
+  }
+
+  if (append_nrings_to_name) {
+    MaybeAppendFeatureName("NRINGS", extra_stuff);
+    extra_stuff << m.nrings();
+  }
 
   if (append_aromatic_ring_count_to_name) {
     m.compute_aromaticity_if_needed();
@@ -680,17 +715,20 @@ FileconvConfig::DoAppends(Molecule& m, IWString& extra_stuff) {
         nar++;
     }
 
-    extra_stuff << " AROMRING = " << nar;
+    MaybeAppendFeatureName("AROMRING", extra_stuff);
+    extra_stuff << nar;
   }
 
-  if (append_molecular_weight_to_name)
-    extra_stuff << " AMW = " << m.molecular_weight();
-  else if (append_molecular_weight_ok_isotope_to_name) {
+  if (append_molecular_weight_to_name) {
+    MaybeAppendFeatureName("AMW", extra_stuff);
+    extra_stuff << m.molecular_weight();
+  } else if (append_molecular_weight_ok_isotope_to_name) {
     Molecular_Weight_Control mwc;
     Molecular_Weight_Calculation_Result mwcr;
     mwc.set_ignore_isotopes(0);
     (void)m.molecular_weight(mwc, mwcr);
-    extra_stuff << " AMW = " << mwcr.amw();
+    MaybeAppendFeatureName("AMW", extra_stuff);
+    extra_stuff << mwcr.amw();
   }
 
   if (append_exact_mass_to_name) {
@@ -698,18 +736,24 @@ FileconvConfig::DoAppends(Molecule& m, IWString& extra_stuff) {
     if (!m.exact_mass(x))
       cerr << "Warning, molecule '" << m.name() << "' partial result for exact mass\n";
 
-    extra_stuff << " EXACT_MASS = " << x;
+    MaybeAppendFeatureName("EXACT_MASS", extra_stuff);
+    extra_stuff << x;
   }
 
   if (append_heteratom_count_to_name) {
-    extra_stuff << " HTROAC = " << (m.natoms() - m.natoms(6) - m.natoms(1));
+    MaybeAppendFeatureName("HTROAC", extra_stuff);
+    extra_stuff << (m.natoms() - m.natoms(6) - m.natoms(1));
   }
 
-  if (append_net_formal_charge_to_name)
-    extra_stuff << " FORMAL_CHARGE = " << m.formal_charge();
+  if (append_net_formal_charge_to_name) {
+    MaybeAppendFeatureName("FORMAL_CHARGE", extra_stuff);
+    extra_stuff << m.formal_charge();
+  }
 
-  if (append_clnd_count_to_name)
-    extra_stuff << " CLND = " << ComputeClnd(m);
+  if (append_clnd_count_to_name) {
+    MaybeAppendFeatureName("CLND", extra_stuff);
+    extra_stuff << ComputeClnd(m);
+  }
 
   return;
 }
@@ -1083,9 +1127,12 @@ FileconvConfig::ReflectCoordinates(Molecule& m) {
 
 int
 FileconvConfig::FindAllChiralCentres(Molecule& m) {
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
-  const int* symmetry = m.symmetry_classes();
+  std::unique_ptr<int[]> symmetry = std::make_unique<int[]>(matoms);
+  std::copy_n(m.symmetry_classes(), matoms, symmetry.get());
+
+//const int* symmetry = m.symmetry_classes();
 
   int rc = 1;
   for (int i = 0; i < matoms; i++) {
@@ -1109,7 +1156,7 @@ FileconvConfig::FindAllChiralCentres(Molecule& m) {
       continue;
 
     resizable_array<int> symmetries_found;
-    symmetries_found.resize(a->ncon());
+    symmetries_found.reserve(a->ncon());
 
     int different_symmetries = 1;
     for (int j = 0; j < a->ncon(); j++) {
@@ -2861,7 +2908,7 @@ FileconvConfig::ApplyAllFiltersInner(Molecule& m,
   if (verbose)
     chiral_centre_count[m.chiral_centres()]++;
 
-  if (max_chiral_centres > 0 && m.chiral_centres() > max_chiral_centres) {
+  if (max_chiral_centres >= 0 && m.chiral_centres() > max_chiral_centres) {
     if (verbose > 1)
       cerr << " too many chiral centres " << max_chiral_centres << '\n';
     molecules_with_too_many_chiral_centres++;
@@ -3399,8 +3446,9 @@ FileconvConfig::Process(Molecule& m) {
   if (remove_invalid_directional_bonds_from_input)
     molecule_changed = m.remove_invalid_directional_bonds();
 
-  if (chemical_standardisation.active())
+  if (chemical_standardisation.active()) {
     molecule_changed += chemical_standardisation.process(m);
+  }
 
   if (change_double_bonds_between_permanent_aromatic_to_single)
     molecule_changed += m.change_double_bonds_between_permanent_aromatic_to_single(0);
@@ -3433,11 +3481,21 @@ FileconvConfig::Process(Molecule& m) {
     }
   } else if (remove_chiral_data_from_all_molecules)
     molecule_changed += m.remove_all_chiral_centres();
-  else if (remove_chiral_centres_on.number_elements())
+  else if (remove_chiral_centres_on.size() > 0) {
     RemoveChiralCentresOnMatchedAtoms(m, remove_chiral_centres_on);
+  }
 
-  if (remove_non_organic_chirality)
+  if (find_all_chiral_centres || find_all_ring_chiral_centres)
+  {
+    if (int tmp = FindAllChiralCentres(m); tmp > 0) {
+      ++unmarked_chiral_centre_count[tmp];
+      molecule_changed += tmp;
+    }
+  }
+
+  if (remove_non_organic_chirality) {
     RemoveNonOrganicChirality(m);
+  }
 
   if (!ApplyAllFiltersInner(m, result.rejection_reason, molecule_changed)) {
     result.rejected = 1;
@@ -3478,8 +3536,6 @@ FileconvConfig::Process(Molecule& m) {
     molecule_changed += ReflectCoordinates(m);
   else if (invert_all_chiral_centres)
     molecule_changed += InvertAllChiralCentres(m);
-  else if (find_all_chiral_centres || find_all_ring_chiral_centres)
-    molecule_changed += FindAllChiralCentres(m);
 
   if (translation_specified) {
     DoTranslation(m);
@@ -3860,8 +3916,9 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
         }
       }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Will convert all isotope " << a << " values to isotope " << b << "\n";
+      }
 
       convert_specific_isotopes.add(a);
       convert_specific_isotopes_new_isotope.add(b);
@@ -4171,11 +4228,13 @@ FileconvConfig::ParseMiscOptions(Command_Line& cl, char flag) {
         cerr << "FileconvConfig::cannot initialise atom typing '" << y << "'\n";
         return 0;
       }
+    } else if (y == "dbg") {
+      // handled elsewhere
     } else if ("help" == y) {
       DisplayDashYOptions(cerr, 2);
     } else {
       cerr << "Unrecognised -Y qualifier '" << y << "'\n";
-      return 6;
+      return 0;
     }
   }
 
@@ -4540,7 +4599,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         if (!f.numeric_value(remove_fragments_this_size_or_smaller) ||
             remove_fragments_this_size_or_smaller < 1) {
           cerr << "The rmle= qualifier must be a whole positive number\n";
-          return 11;
+          return 0;
         }
 
         if (verbose)
@@ -4563,13 +4622,13 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         f.remove_leading_chars(9);
         if (!known_fragment_data.read_known_salts(f)) {
           cerr << "Cannot read known salts '" << f << "'\n";
-          return 9;
+          return 0;
         }
       } else if (f.starts_with("parentfile=")) {
         f.remove_leading_chars(11);
         if (!known_fragment_data.read_known_parents(f)) {
           cerr << "Cannot read known parents '" << f << "'\n";
-          return 9;
+          return 0;
         }
       } else if ("kmfok" == f) {
         known_fragment_data.set_only_check_molecular_formula(1);
@@ -4591,7 +4650,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         if (!f.numeric_value(discard_molecule_if_multiple_fragments_larger_than) ||
             discard_molecule_if_multiple_fragments_larger_than < 1) {
           cerr << "The rmxt qualifier must be followed by a whole +ve number\n";
-          return 3;
+          return 0;
         }
 
         if (verbose)
@@ -4608,7 +4667,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         if (!f.numeric_value(mixture_if_largest_frags_differ_by) ||
             mixture_if_largest_frags_differ_by < 0) {
           cerr << "The delta for mixture (dmxt=) specifier must be a whole non-negative number\n";
-          return 3;
+          return 0;
         }
 
         if (verbose)
@@ -4620,7 +4679,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
             remove_molecules_with_non_largest_fragment_natoms < 0) {
           cerr << "The max atoms in non-largest fragment directive (manlf) must be a whole +ve "
                   "number\n";
-          return 2;
+          return 0;
         }
 
         if (verbose)
@@ -4631,7 +4690,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
         if (!f.numeric_value(strip_to_n_largest_fragments) || strip_to_n_largest_fragments < 1) {
           cerr << "The strip to N largest fragments 'klf=' directive must have a whole +ve "
                   "integer\n";
-          return 2;
+          return 0;
         }
 
         if (verbose)
@@ -4647,7 +4706,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
 
         if (0 == tag_for_removed_fragments.length()) {
           cerr << "The tag for removed fragments (RMF=) must be non zero length\n";
-          return 2;
+          return 0;
         }
       } else if (f.starts_with("WINDOW=")) {
         f.remove_leading_chars(7);
@@ -4716,7 +4775,7 @@ FileconvConfig::GetFragmentSpecifications(Command_Line& cl) {
     if (tag_for_removed_fragments.length() && !reduce_to_largest_organic_fragment) {
       cerr << "Sorry, the tag for removed fragments option 'RMF=' only works with the 'lo' "
               "fragment selection qualifier\n";
-      return 1;
+      return 0;
     }
 
     //  if (known_fragment_data.active())
@@ -4793,6 +4852,12 @@ FileconvConfig::GatherAppendSpecifications(Command_Line& cl, char flag) {
         cerr << "The ISIS-like molecular formula will be appended to the name\n";
 
       appends_to_be_done = 1;
+    } else if ("ADMF" == p || p == "AROMF") {
+      append_aromatic_distinguishing_molecular_formula_to_name = 1;
+      if (verbose) {
+        cerr << "The aromatic distinguishing molecular formula will be appended to the name\n";
+      }
+      appends_to_be_done = 1;
     } else if ("NATOMS" == p) {
       append_natoms_to_name = 1;
       if (verbose)
@@ -4849,6 +4914,11 @@ FileconvConfig::GatherAppendSpecifications(Command_Line& cl, char flag) {
         cerr << "Will append the heteroatom count to the name\n";
 
       appends_to_be_done = 1;
+    } else if (p == "noname") {
+      prepend_feature_name = 0;
+      if (verbose) {
+        cerr << "Will NOT prepend the feature name before the property value\n";
+      }
     } else if ("help" == p) {
       DisplayPDirectives(0);
     } else {
@@ -5327,6 +5397,16 @@ FileconvConfig::ReportResults(const Command_Line& cl, std::ostream& output) cons
   }
   if (chiral_centres_inverted) {
     cerr << chiral_centres_inverted << " chiral centres inverted\n";
+  }
+  if (! unmarked_chiral_centre_count.empty()) {
+    uint32_t tot = 0;
+    for (int i = 0; i < unmarked_chiral_centre_count.number_elements(); ++i) {
+      if (unmarked_chiral_centre_count[i] > 0) {
+       cerr << unmarked_chiral_centre_count[i] << " had " << i << " unmarked chiral centres\n";
+       tot += unmarked_chiral_centre_count[i];
+      }
+    }
+    cerr << tot << " molecules had unmarked chiral centres\n";
   }
 
   if (molecules_with_chiral_centres_removed_by_rmchiral) {

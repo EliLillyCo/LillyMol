@@ -56,7 +56,7 @@ class LinearFpStatus {
     // We just keep a pointer to what comes in.
     const atom_type_t* _atype;
 
-    const Bond_list& _bond_list;
+    const BondList& _bond_list;
 
     // For each bond, indexed by bond number, the invariant used.
     uint64_t * _bond_constant;
@@ -142,6 +142,8 @@ class LinearFpStatus {
     // Called once for each molecule so we have ready access to atom numbers
     // during debugging.
     void _WriteLabelledSmiles() const;
+
+    int DebugPrint(std::ostream& output) const;
     
   public:
     LinearFpStatus(const Options& options, const Molecule& m,

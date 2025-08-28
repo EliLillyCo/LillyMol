@@ -21,7 +21,6 @@
 #include "iwstring_data_source.h"
 
 using std::cerr;
-using std::endl;
 
 static int
 iw_open_file(const char* fname) {
@@ -53,7 +52,8 @@ iwstring_data_source::_default_values(int lrecl) {
   _open = 0;
   _good = 1;
   _eof = 0;
-  _dos = 0;
+  // Feb 2025. Make this the default - too many surprises otherwise.
+  _dos = 1;
   _translate_tabs = 0;
   _echo_returned_records_stream = nullptr;
 
@@ -257,10 +257,10 @@ iwstring_data_source::debug_print(std::ostream& os) const {
   if (_gzfile.active()) {
     os << "gzip'd input\n";
   } else if (_fd > 0) {
-    os << "File descriptor " << _fd << endl;
+    os << "File descriptor " << _fd << '\n';
   }
   // else if (_fd > 0)
-  //   cerr << "File descriptor " << _fd << " currently at " << tellg() << endl;
+  //   cerr << "File descriptor " << _fd << " currently at " << tellg() << '\n';
 
   os << _lines_read << " lines have been read\n";
   os << _lines_which_are_returned << " lines passed the filters\n";
@@ -291,7 +291,7 @@ iwstring_data_source::debug_print(std::ostream& os) const {
   }
 
   if (_record_buffered) {
-    os << "There is a record buffered\n" << _buffer << endl;
+    os << "There is a record buffered\n" << _buffer << '\n';
   } else {
     os << "No record buffered\n";
   }
@@ -372,7 +372,7 @@ iwstring_data_source::set_filter_pattern(const const_IWSubstring& pattern) {
 
 int
 iwstring_data_source::_apply_all_filters() {
-  // cerr << "_apply_all_filters:dos " << _dos << endl;
+  // cerr << "_apply_all_filters:dos " << _dos << '\n';
   if (_dos && _buffer.length()) {
     //  if (static_cast<char> (13) == _buffer.last_item())   // could not put in ^M
     //  character because it would not compile under Linux
@@ -498,8 +498,7 @@ iwstring_data_source::_copy_next_record_from_read_buffer_to_buffer() {
 
   // cerr << "Did we find a delimiter '" << (nullptr != c) << "'\n";
 
-  if (nullptr != c)  // there is a record delimiter character in _read_buffer
-  {
+  if (nullptr != c) { // there is a record delimiter character in _read_buffer
     int chars_to_copy = c - s;
 
     _buffer.strncat(s, chars_to_copy);
@@ -516,8 +515,30 @@ iwstring_data_source::_copy_next_record_from_read_buffer_to_buffer() {
   }
 
   // No record delimiter found, copy everything
+  // Ran into cases of a currupted file where we did not find a newline
+  // for a LONG time. Impose a hard limit on the record length and
+  // return nothing if we encounter that.
 
   if (_buffer.number_elements() + _lrecl > _buffer.elements_allocated()) {
+#ifdef DEBUG_RESIZE
+    cerr << "Resizing " << _buffer.number_elements() << " _lrecl " << _lrecl << " allocated " << _buffer.elements_allocated() << '\n';
+    cerr << "Resize to " << (_buffer.elements_allocated() + _buffer.elements_allocated()) << '\n';
+    cerr << "_chars_in_read_buffer " << _chars_in_read_buffer << '\n';
+    cerr << "_next_char_in_read_buffer_to_transfer_to_buffer " << _next_char_in_read_buffer_to_transfer_to_buffer << '\n';
+    for (int i = 0; i < _chars_in_read_buffer; ++i) {
+      if (_read_buffer[i] == _record_delimiter) {
+        cerr << "REcord delimiter " << i << '\n';
+      }
+    }
+#endif
+    if (_buffer.size() > 80000000) {
+      cerr << "Failed to find newline in " << _buffer.size() << " discarding data\n";
+      _next_char_in_read_buffer_to_transfer_to_buffer = 0;
+      _buffer.resize_keep_storage(0);
+      _chars_in_read_buffer = 0;
+      return 1;
+    }
+
     _buffer.resize(_buffer.elements_allocated() + _buffer.elements_allocated());
   }
 
@@ -529,7 +550,7 @@ iwstring_data_source::_copy_next_record_from_read_buffer_to_buffer() {
 
 #ifdef DEBUG_COPY_NEXT_RECORD_FROM_READ_BUFFER_TO_BUFFER
   cerr << "Not a complete record yet, buffer " << _buffer.size() << ", allocated "
-       << _buffer.elements_allocated() << endl;
+       << _buffer.elements_allocated() << '\n';
 #endif
 
   return 0;  // we did not find a whole record
@@ -595,7 +616,7 @@ iwstring_data_source::_fetch_record_into_buffer() {
 // #define DEBUG_FETCH_RECORD_INTO_BUFFER
 #ifdef DEBUG_FETCH_RECORD_INTO_BUFFER
   cerr << "On entry to _fetch_record_into_buffer, _chars_in_read_buffer "
-       << _chars_in_read_buffer << endl;
+       << _chars_in_read_buffer << '\n';
 #endif
 
   if (_chars_in_read_buffer > 0 &&
@@ -741,7 +762,7 @@ iwstring_data_source::next_record(T& buffer) {
 
     while (1) {
 #ifdef DEBUG_NEXT_RECORD2
-      cerr << "In infinite loop fetching records " << _good << endl;
+      cerr << "In infinite loop fetching records " << _good << '\n';
 #endif
       if (!_fetch_record()) {
         return 0;
@@ -755,7 +776,7 @@ iwstring_data_source::next_record(T& buffer) {
       if (_apply_all_filters()) {
         buffer = _buffer;
 #ifdef DEBUG_NEXT_RECORD2
-        cerr << "Got a record that passed all filters " << _good << endl;
+        cerr << "Got a record that passed all filters " << _good << '\n';
 #endif
         return 1;
       }
@@ -794,7 +815,7 @@ iwstring_data_source::next_record(T& buffer) {
 
     while (1) {
 #ifdef DEBUG_NEXT_RECORD2
-      cerr << "In infinite loop fetching records " << _good << endl;
+      cerr << "In infinite loop fetching records " << _good << '\n';
 #endif
       if (!_fetch_record()) {
         return 0;
@@ -808,7 +829,7 @@ iwstring_data_source::next_record(T& buffer) {
       if (_apply_all_filters()) {
         buffer = _buffer;
 #ifdef DEBUG_NEXT_RECORD2
-        cerr << "Got a record that passed all filters " << _good << endl;
+        cerr << "Got a record that passed all filters " << _good << '\n';
 #endif
         return 1;
       }
@@ -902,7 +923,7 @@ iwstring_data_source::tellg() const {
     cerr << "iwstring_data_source::tellg:current_offset " << current_offset
          << " _chars_in_read_buffer " << _chars_in_read_buffer
          << " _next_char_in_read_buffer_to_transfer_to_buffer "
-         << _next_char_in_read_buffer_to_transfer_to_buffer << endl;
+         << _next_char_in_read_buffer_to_transfer_to_buffer << '\n';
 #endif
 
     if (-1 == current_offset && 0 == _fd) {
@@ -913,7 +934,7 @@ iwstring_data_source::tellg() const {
     if (current_offset < static_cast<off_t>(0))  // cannot happen, fix sometime
     {
       cerr << "iwstring_data_source::tellg:negative current offset " << current_offset
-           << ", file " << _fd << endl;
+           << ", file " << _fd << '\n';
       assert(NULL == "This is very bad");
       return current_offset;
     }
@@ -926,7 +947,7 @@ iwstring_data_source::tellg() const {
 
     if (rc < 0)  // silly test, cannot happen. Fix sometime
     {
-      cerr << "iwstring_data_source::tellg:negative offset " << rc << endl;
+      cerr << "iwstring_data_source::tellg:negative offset " << rc << '\n';
       cerr << _chars_in_read_buffer << " chars in read buffer\n";
       cerr << _next_char_in_read_buffer_to_transfer_to_buffer << " next to transfer\n";
       cerr << current_offset << " current offset\n";
@@ -940,7 +961,7 @@ iwstring_data_source::tellg() const {
 int
 iwstring_data_source::seekg(off_t zoffset, int whence) {
   // cerr << "iwstring_data_source::seekg:seeking " << zoffset << " by " << whence <<
-  // endl;
+  // '\n';
 
   assert(ok());
 
@@ -982,7 +1003,7 @@ iwstring_data_source::seekg(off_t zoffset, int whence) {
   off_t rc = IW_FD_LSEEK(_fd, zoffset, SEEK_SET);
 
   if (rc < 0) {
-    cerr << "iwstring_data_source::seekg:cannot seek to " << zoffset << endl;
+    cerr << "iwstring_data_source::seekg:cannot seek to " << zoffset << '\n';
     _good = 0;
     return 0;
   }
@@ -990,13 +1011,13 @@ iwstring_data_source::seekg(off_t zoffset, int whence) {
   // off_t current_offset = IW_FD_LSEEK(_fd, 0, SEEK_CUR);
 
   // cerr << "After seek " << whence << " offset " << current_offset << " rc " << rc <<
-  // endl;
+  // '\n';
 
   _chars_in_read_buffer = 0;
   _record_buffered = 0;
   _next_char_in_read_buffer_to_transfer_to_buffer = 0;
 
-  // cerr << "After seek to " << zoffset << " good is " << _is->good() << endl;
+  // cerr << "After seek to " << zoffset << " good is " << _is->good() << '\n';
 
   return 1;
 }
@@ -1145,12 +1166,12 @@ iwstring_data_source::records_remaining(int stop_counting_when) {
 
     // #define DEBUG_RECORDS_REMAINING
 #ifdef DEBUG_RECORDS_REMAINING
-    cerr << "iwstring_data_source::records_remaining:seek to " << current_offset << endl;
+    cerr << "iwstring_data_source::records_remaining:seek to " << current_offset << '\n';
 #endif
 
     if (IW_FD_LSEEK(_fd, current_offset, SEEK_SET) < 0) {
       cerr << "iwstring_data_source::records_remaining:cannot seek to " << current_offset
-           << endl;
+           << '\n';
       return 0;
     }
 
@@ -1169,7 +1190,7 @@ iwstring_data_source::records_remaining(int stop_counting_when) {
       int chars_read = IW_FD_READ(_fd, tmpbuffer, RRBUFSIZE);
 
 #ifdef DEBUG_RECORDS_REMAINING
-      cerr << "Read " << chars_read << " characters, rc = " << rc << endl;
+      cerr << "Read " << chars_read << " characters, rc = " << rc << '\n';
 #endif
 
       if (0 == chars_read) {
@@ -1218,7 +1239,7 @@ iwstring_data_source::records_remaining(int stop_counting_when) {
     _eof = 0;
 
 #ifdef DEBUG_RECORDS_REMAINING
-    cerr << "After records remaining, offset " << tellg() << endl;
+    cerr << "After records remaining, offset " << tellg() << '\n';
 #endif
 
     return rc;
@@ -1352,7 +1373,7 @@ iwstring_data_source::_save_state(IWSDS_State& zstate) {
   off_t s = IW_FD_LSEEK(_fd, o, SEEK_SET);
 
   if (s < 0) {
-    cerr << "iwstring_data_source::_save_state:cannot seek to " << o << endl;
+    cerr << "iwstring_data_source::_save_state:cannot seek to " << o << '\n';
     return 0;
   }
 
@@ -1390,14 +1411,14 @@ iwstring_data_source::_restore_state(IWSDS_State& zstate) {
   assert(ok());
 
 #ifdef DEBUG_RESTORE_STATE
-  cerr << "Seeking back to " << zstate.offset() << endl;
+  cerr << "Seeking back to " << zstate.offset() << '\n';
 #endif
 
   off_t s = IW_FD_LSEEK(_fd, zstate.offset(), SEEK_SET);
 
   if (s < 0) {
     cerr << "iwstring_data_source::_restore_state:cannot seek back to " << zstate.offset()
-         << endl;
+         << '\n';
     _good = 0;
     return 0;
   }
@@ -1553,7 +1574,7 @@ iwstring_data_source::skip_records(int nskip) {
   for (int i = 0; i < nskip; i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::skip_records: EOF at record " << i << " of " << nskip
-           << endl;
+           << '\n';
       return 0;
     }
   }
@@ -1573,7 +1594,7 @@ iwstring_data_source::skip_records(RE2& rx, int nskip) {
   while (nfound < nskip) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::skip_records: EOF at record " << _lines_read
-           << " of " << nskip << endl;
+           << " of " << nskip << '\n';
       return 0;
     }
 
@@ -1598,7 +1619,7 @@ iwstring_data_source::echo_records(std::ostream& os, int necho) {
   for (int i = 0; i < necho && os.good(); i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::echo_records: EOF at record " << i << " of " << necho
-           << endl;
+           << '\n';
       return 0;
     }
 
@@ -1618,7 +1639,7 @@ iwstring_data_source::echo_records(IWString_and_File_Descriptor& os, int necho) 
   for (int i = 0; i < necho && os.good(); i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::echo_records: EOF at record " << i << " of " << necho
-           << endl;
+           << '\n';
       return 0;
     }
 
@@ -1708,11 +1729,11 @@ iwstring_data_source::read_bytes(void* destination, size_t bytes_requested) {
 
   while (bytes_requested > 0) {
 #ifdef DEBUG_READ_BYTES
-    cerr << bytes_written << " written so far, requested " << bytes_requested << endl;
+    cerr << bytes_written << " written so far, requested " << bytes_requested << '\n';
 #endif
 
     if (!_read_more_data_into_read_buffer()) {
-      //    cerr << "Could not read more data, good " << _good << endl;
+      //    cerr << "Could not read more data, good " << _good << '\n';
       if (!_good) {
         return 0;
       }
@@ -1740,7 +1761,7 @@ iwstring_data_source::read_bytes(void* destination, size_t bytes_requested) {
 
 #ifdef DEBUG_READ_BYTES
     cerr << "At end of loop, written " << bytes_written << " still requrested "
-         << bytes_requested << endl;
+         << bytes_requested << '\n';
 #endif
   }
 
@@ -1773,7 +1794,7 @@ iwstring_data_source::_copy_raw_bytes(void* destination, const size_t bytes_to_c
   // cerr << "iwstring_data_source::_copy_raw_bytes:copying " << bytes_to_copy << " bytes,
   // read buffer " << _chars_in_read_buffer << ",
   // _next_char_in_read_buffer_to_transfer_to_buffer " <<
-  // _next_char_in_read_buffer_to_transfer_to_buffer << endl;
+  // _next_char_in_read_buffer_to_transfer_to_buffer << '\n';
 
   if (_chars_in_read_buffer - _next_char_in_read_buffer_to_transfer_to_buffer > 0) {
     size_t copy_from_read_buffer =
@@ -1800,7 +1821,7 @@ iwstring_data_source::_copy_raw_bytes(void* destination, const size_t bytes_to_c
 
   while (ncopy > 0) {
     int bytes_read = IW_FD_READ(_fd, buf, IWSTRDS_BUF_SIZE);
-    //  cerr << "Read " << bytes_read << endl;
+    //  cerr << "Read " << bytes_read << '\n';
 
     if (0 == bytes_read) {
       break;
@@ -1839,9 +1860,21 @@ iwstring_data_source::is_pipe() const {
 
   const auto rc = fstat(_fd, &s);
   if (rc < 0) {
-    cerr << "iwstring_data_source::is_pipe:fstat failed " << rc << endl;
+    cerr << "iwstring_data_source::is_pipe:fstat failed " << rc << '\n';
     return 0;
   }
 
   return S_ISFIFO(s.st_mode);
+}
+
+int
+iwstring_data_source::ReadAllRecords(IWString& destination) {
+  destination.reserve(destination.size() + file_size());
+
+  const_IWSubstring buffer;
+  while (next_record(buffer)) {
+    destination << buffer << '\n';
+  }
+
+  return _lines_read;
 }

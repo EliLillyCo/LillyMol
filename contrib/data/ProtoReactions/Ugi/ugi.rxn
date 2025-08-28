@@ -1,0 +1,83 @@
+name: "ugi"
+comment: "https://en.wikipedia.org/wiki/Ugi_reaction"
+scaffold {
+  id: 0
+  comment: "acid"
+  smarts: "[OD1H]-C=O"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  comment: "amine"
+  smarts: "[ND1H2]-[CX4T1]"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  isotope {
+    atom: 0
+    isotope: 2
+  }
+}
+sidechain {
+  id: 2
+  comment: "aldehyde"
+  smarts: "O=[CD2H]"
+  break_bond_between_atoms: [0, 1]
+  join {
+    c1 {
+      component: 1
+      atom: 0
+    }
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  isotope {
+    atom: 1
+    isotope: 3
+  }
+}
+
+sidechain {
+  id: 3
+  comment: "isocyanate"
+  smarts: "N#[CD1]"
+  change_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  formal_charge {
+    atom: 0
+    formal_charge: 0
+  }
+  formal_charge {
+    atom: 1
+    formal_charge: 0
+  }
+  join {
+    c1 {
+      component: 2
+      atom: 1
+    }
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    c1 {
+      component: 2
+      atom: 0
+    }
+    a2: 1
+    btype: SS_DOUBLE_BOND
+  }
+  isotope {
+    atom: 0
+    isotope: 4
+  }
+}

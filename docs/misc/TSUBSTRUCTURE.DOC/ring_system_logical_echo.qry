@@ -1,0 +1,13 @@
+(0 Query
+  (A I version 2)
+  (1 ring_specifier
+    (A I heteroatom_count 4)
+    (A I ring_size 6)
+    (A I aromatic 1)
+  )
+  (2 ring_specifier
+    (A I heteroatom_count 4)
+    (A I ring_size 8)
+    (A I aromatic 0)
+  )
+)

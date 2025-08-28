@@ -1,0 +1,25 @@
+scaffold {
+  id: 0
+  smarts: "O-c1ccccc1"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  copy_isotope {
+    cfrom {
+      component: 0
+      atom: 0
+    }
+    to: 0
+  }
+  single_bond: [4, 0]
+}

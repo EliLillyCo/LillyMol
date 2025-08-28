@@ -1,0 +1,9 @@
+Will report a maximum of 2 missing values in each column
+File has 5 columns
+ column 2 is 'd1'
+ column 3 is 'd2'
+ column 4 is 'd3'
+ column 5 is 'd4'
+ descriptor 'd2' (column 3) missing on 8 records
+Read 9 records from 'whatsmissing/x_option/in/in.dat'
+8 records had 1 missing values

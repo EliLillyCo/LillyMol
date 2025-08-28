@@ -1,18 +1,7 @@
 #!/usr/bin/env perl
-
 use strict;
 
-# General script for making composite fingerprints.
-# This script began life in the mid 1990's, and has evolved over time.
-# It has become successively larger, and less elegant, but remains in
-# widespread use today. It is the starting point for most similarity computations.
-# Note that parts of this are specific to the Lilly environment, and will take
-# effort to make work outside there. But most functionality is available.
-# LILLYMOL_HOME=/path/to//LillyMolPrivate perl ../contrib/script/perl/gfp_make.pl -v -STD file.smi
-# works.
-
-# The entire purpose of this script is to construct a pipelined command
-# where each pipeline component adds one, or more, fingerprints to the output.
+# General script for making composite fingerprints
 
 die "Environment Variable LILLYMOL_HOME is not defined!!!" unless defined $ENV{LILLYMOL_HOME};
 my $ianhome = $ENV{LILLYMOL_HOME};
@@ -27,8 +16,8 @@ chomp $uname;
 
 my @bindir;
 
-unshift (@bindir, "$ianhome/bin/Linux");
-unshift (@bindir, "$ianhome/contrib/bin");
+unshift (@bindir, "$ianhome/contrib/bin/");
+unshift (@bindir, "$ianhome/bin/Linux/");
 
 # Flags for each kind of fingerprint possible
 
@@ -40,12 +29,16 @@ my $ncmk = 0;
 my @ttust = ();
 
 my $mpr = 0;
+my $mpr_options = "";
 my $chg = 0;
 
 my $iwfp = 0;
 my $nciwfp = 0;
 my @nciwfp = ();
 my @iwfpust = ();
+
+my @linear = ();
+my @nc_linear = ();
 
 my $gc = 0;
 my $pubchem = 0;
@@ -54,13 +47,25 @@ my @ecust = ();
 
 my @mapust = ();
 
+# New version EC fingerprints.
+# Fixed and sparse versions.
+my @nv_fecust = ();  # Fixed width.
+my @nv_ecust = ();  # Sparse.
+
 my $es = 0;
 my $es_options = "";
 
 my $dbf = 0;
+my $dbf_tag = "";
+my $dbf2d = 0;
+my $dbf2d_tag = "";
+my $dbf3d = 0;
+my $dbf3d_tag = "";
 my $shadow = 0;
 my $need3d = 0;
 my $jurs = 0;
+
+my $formula = 0;
 
 my $tsubstructure_fingerprints_non_colliding = 0;
 my $tsubstructure_bitrep = 0;
@@ -104,8 +109,17 @@ my $clogd = 0;
 my $clogpd = 0;
 my $clogp_bit_replicates = 0;
 
-my $marvin = 0;
-my $marvin_string = "";
+my $aclogp = 0;
+my $aclogp_replicates = 0;
+my $aclogd = 0;
+
+my $xlogp = 0;
+my $xlogp_bit_replicates = 0;
+
+my $alogp = 0;
+my $alogp_bit_replicates = 0;
+my $alogd = 0;
+my $alogd_bit_replicates = 0;
 
 my $psa = 0;
 my $psa_bit_replicates = 0;
@@ -155,6 +169,9 @@ my $user_insert = 0;
 
 my $convert_to_unique_smiles = 0;
 
+# Ignore Connection Table Errors
+my $icte = 0;
+
 my $tmpdir = ".";
 if (! -w $tmpdir)
 {
@@ -168,7 +185,13 @@ my $reactions = "";
 my $max_ec_shell_length = "";
 my $min_ec_shell_length = "";
 
-my $multiplicative_ec = 1;
+# TODO: Transition away from a separate -ecbig option and instead
+# -EC3:ACH,ecbig
+# which means that the ecbig qualifier is then associated with individual
+# EC fingerprint specifications, rather than a global setting.
+# Unfortunately that will be a breaking change, because currently, by
+# default, the -m option is added.
+my $ecbig_specified = 0;
 
 my $mapmin = "";
 my $mapmax = "";
@@ -185,6 +208,10 @@ my $translate_elements = "";
 my $join_existing_file = "";
 
 my $chirality_fingerprint_opts = "";
+my $chirality_fingerprint_default_options = "-e 5 -r 2 -y 1 -M fpnochiral";
+
+my $seek_to = 0;
+my $stop_at = 0;
 
 # Flush all fingerprint generators after each molecule.
 my $flush = 0;
@@ -202,9 +229,12 @@ sub usage
   print STDERR " -MK2           FP MACCS keys level 2 - multiple feature determination\n";
   print STDERR " -NCMK          FP non-colliding counted MACCS keys\n" if ($expert);
   print STDERR " -MPR           FP molecular properties (natoms, nrings, ...)\n";
+  print STDERR " -MPR=natoms,.. FP molecular properties, specify which ones\n" if ($expert);
   print STDERR " -CHG           apply formal charges then fingerprint\n" if ($expert);
   print STDERR " -IW            FP IW fingerprints\n";
   print STDERR " -w <option> -w option(s) passed to iwfp (two -w's are needed)\n" if ($expert);
+  print STDERR " -LINEAR -LINEAR5 -LINEAR:AY -LINEAR6:Y new version linear fingerprint\n" if ($expert);
+  print STDERR " -NCLINEAR -NCLINEAR5 -NCLINEAR:AY -NCLINEAR6:Y new version NC linear fingerprint\n" if ($expert);
   print STDERR " -GHOSE         FP Ghose Crippen atom types\n" if ($expert);
   print STDERR " -EC            FP Jibo's Extended Connectivity fingerprints\n" if ($expert);
   print STDERR " -EC...         FP variants on EC fingerprints, C TT PP ...\n" if ($expert);
@@ -212,8 +242,12 @@ sub usage
   print STDERR " -EX...         FP Extended Connectivity fingerprints (V2), custom atom type DNU\n" if ($expert);
   print STDERR " -ecmax <num>   max shell length for -EC fingerprints\n" if ($expert);
   print STDERR " -ecmin <num>   min shell length for -EC fingerprints\n" if ($expert);
-  print STDERR " -ecbig         generate larger, but more precise -EC fingerprints\n" if ($expert);
+  print STDERR " -ecbig         generate larger, but more precise -EC fingerprints.\n" if ($expert);
+  print STDERR "                **Being deprecated, use -EC3:ACHY,ecbig instead. The new method applies\n" if ($expert);
+  print STDERR "                to each EC fingerprint individually, rather than applied to all\n"if ($expert);
   print STDERR " -extec ... -extec extra options passed to all EC fingerprints\n" if ($expert);
+  print STDERR " -NVEC -NVEC3 -NVEC:AY -NVEC3:Y new version EC fingerprints\n" if ($expert);
+  print STDERR " -NVFEC -NVFEC3 -NVFEC:AY -NVFEC3:Y new version fixed EC fingerprints\n" if ($expert);
 # print STDERR " -extra ... -extra extra options passed to -EX\n" if ($expert);
 # print STDERR " -ESA           Jibo's Estate fingerprints (Atom Estate)\n";
 # print STDERR " -ESH           Jibo's Estate fingerprints (Hydrogen Estate)\n";
@@ -243,9 +277,9 @@ sub usage
   print STDERR " -MABS ... -MABS FP options for molecular abstractions\n" if ($expert);
   print STDERR " -TSUB ...      FP query/queries for tsubstructure, S:file for smarts\n" if ($expert);
   print STDERR " -tsubnc        generate tsubstructure fingerprints as counted\n" if ($expert);
+  print STDERR " -ts ... -ts    options for tsubstructure\n" if ($expert);
   print STDERR " -FPS ...       FP query/queries for fingerprint_substructure, S:file for smarts DNU\n" if ($expert);
   print STDERR " -fpsopt ... -fpsopt extra options for -FPS (suggest -x 3)\n" if ($expert);
-  print STDERR " -ts ... -ts    options for tsubstructure\n" if ($expert);
   print STDERR " -W <dname>     include fingerprint of descriptor <dname>\n";
   print STDERR " -R <rxn>       isostere reaction DNU\n" if ($expert);
   print STDERR " -R FRED        transform to isosteric form based on Fred's rules DNU\n" if ($expert);
@@ -253,30 +287,35 @@ sub usage
   print STDERR " -EZ <smarts>   FP query for EZ fingerprints: *-*=*-* DNU\n" if ($expert);
   print STDERR " -CT            FP fingerprint all cis-trans bonds\n" if ($expert);
   print STDERR " -DSC <prog>    FP descriptor programme to insert descriptors DNU\n" if ($expert);
-  print STDERR " -CLOGP         FP Biobyte clogp and clogd as fingerprints\n" if ($expert);
-  print STDERR " -MCLP, -MPKA, -MPKB, Marvin clogp, pKa, pKb - use -MALL for all\n" if ($expert);
-  print STDERR " -MVD           FP Marvin logd 7.4\n" if ($expert);
+  print STDERR " -CLOGP<n>      FP Biobyte clogp and clogd as fingerprints. <n> replicates\n" if ($expert);
+  print STDERR " -XLOGP<n>      FP xlogp clogp as fingerprints. <n> replicates\n" if ($expert);
+  print STDERR " -ALOGP<n>      FP alogp clogp as fingerprints. <n> replicates\n" if ($expert);
   print STDERR " -PSA           FP Novartis Polar Surface Area\n" if ($expert);
   print STDERR " -ABR           FP Abraham fingerprint\n" if ($expert);
   print STDERR " -ABP           FP Abraham and Platts fingerprint\n" if ($expert);
   print STDERR " -INS ... -INS  FP insert arbitrary pipelined commands, F:... to read from file\n" if ($expert);
   print STDERR " -D2F ... -D2F  FP use descriptors_to_fingerprint to insert bucketised descriptors (very flexible)\n" if ($expert);
   print STDERR " -d2f <fname,r,b> FP use descriptors to insert bucketised descriptors (replicates,buckets) - less flexible\n" if ($expert);
-  print STDERR " -I2F ... -I2F  FP use descriptor_file_to_01_fingerprints to insert integer descriptors\n" if ($expert);
+  print STDERR " -I2F ... -I2F  FP use descriptors_to_fingerprint_integer to insert integer descriptors\n" if ($expert);
   print STDERR " -SHD           FP fingerprints based on shadow descriptors (3D)\n" if ($expert);
-  print STDERR " -DBF           FP fingerprints based on distance between features descriptors (3D)\n" if ($expert);
+  print STDERR " -DBF           FP fingerprints based on distance between features descriptors (2D && 3D)\n" if ($expert);
+  print STDERR " -DBF2D         FP fingerprints based on distance between features descriptors (2D)\n" if ($expert);
+  print STDERR " -DBF3D         FP fingerprints based on distance between features descriptors (3D)\n" if ($expert);
   print STDERR " -JURS          FP fingerprints based on Jurs descriptors (3d)\n" if ($expert);
+  print STDERR " -FORMULA       FP fingerprints derived from the aromatic distinguishing molecular formula\n" if ($expert);
 # print STDERR " -nostd         do NOT use '-g all' to standardise structures\n" if ($expert);
   print STDERR " -SP2FB ... -SP2FB convert sparse fingerprints to fixed binary (gfp_sparse_to_fixed.sh)\n" if ($expert);
   print STDERR " -fltc          flatten counted fingerprints to count = 1\n" if ($expert);
   print STDERR " -JOIN <fname>  use tdt_join to merge in the contents of an existing .gfp file\n" if ($expert);
-  print STDERR " -CHIRAL ...    chirality fingerprint\n" if $expert;
+  print STDERR " -CHIRAL ... -CHIRAL  chirality fingerprint, use -CHIRAL DEF -CHIRAL for default '$chirality_fingerprint_default_options'.\n" if $expert;
+  print STDERR "                Options between -CHIRAL flags are passed to chirality_fingerprint.sh\n" if $expert;
   print STDERR " -bindir <dir>  search in <dir> for binaries\n" if ($expert);
   print STDERR " -flush         flush after each molecule\n" if ($expert);
   print STDERR " -i <qualifier> input qualifiers to the first pipe stage\n" if ($expert);
   print STDERR " -f             work as a filter. Input assumed to be smiles\n" if ($expert);
   print STDERR " -tdt           work as a filter. Input must       be a TDT\n" if ($expert);
-  print STDERR " -expert        more options\n";
+  print STDERR " -icte          ignore connection table errors\n" if ($expert);
+  print STDERR " -expert        more options\n" if (!$expert);
   print STDERR " -v             verbose output\n";
 
   exit ($_[0]);
@@ -321,11 +360,29 @@ sub ust_needed_for_atype
   }
 }
 
+sub maybe_append_ecbig {
+  use strict 'vars';
+
+  my $fp = $_[0];
+  my $ecbig = $_[1];
+  my $extra_opts = $_[2];
+
+  if (length($extra_opts)) {
+    $fp .= " ${extra_opts}";
+  }
+
+  if ($ecbig == "0") {
+    return "${fp} -m";
+  }
+
+  return $fp;
+}
+
 my $fingerprints_specified = 0;
 
 # Feb 2000. Too many people making mistakes, make dash_g a default
 
-my $dash_g = "-g all -l";     
+my $dash_g = "-g all -l";
 
 my $aromatic_smiles = "-A I";   # make default, IL: not -A D?
 
@@ -341,11 +398,34 @@ my $temperature_dash_m = "";
 my $cmd_fname = "";
 
 my @files_to_be_deleted = ();
- 
+
 my $argptr = 0;
 OPTION: while ($argptr < @ARGV)
 {
   my $opt = $ARGV[$argptr++];
+  # print STDERR "Processing $opt fingerprints_specified $fingerprints_specified\n";
+
+  my $ecbig = 0;
+  if ($opt =~ /^(-EC.*),big$/) {
+    $opt = $1;
+    $ecbig = 1;
+    $ecbig_specified = 1;
+  } elsif ($ecbig_specified) {
+    $ecbig = 1;
+  }
+
+  # Unlike extra_ec_options which gets applied to all EC type fingerprints. this
+  # is only applied to the current -EC specification.
+  # This is how it should have been implemented initially, but we never contemplated
+  # multiple -EC fingerprints till recently.
+  my $ec_modifiers;
+  if ($opt =~ /^-EC/) {
+    my @f = split(",", $opt);
+    if (@f > 1) {
+      $opt = shift @f;
+      $ec_modifiers = get_ec_modifiers(@f);
+    }
+  }
 
   if ($opt eq "-v")
   {
@@ -636,6 +716,125 @@ OPTION: while ($argptr < @ARGV)
     push(@nciwfp, " -P ${ust}${atype} -R ${max_path_len} -J NCIW${max_path_len}${atype}");
     $fingerprints_specified += 1;
   }
+  elsif ($opt eq "-LINEAR")
+  {
+    push(@linear, "-J FPLIN");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-LINEAR(\d+)$/)
+  {
+    push(@linear, "-R $1 -J FPLIN$1");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-LINEAR(\d+):(\S+)/)
+  {
+    push(@linear, "-R $1 -P UST:$2 -J FPLIN$1$2");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-LINEAR:(\S+)/)
+  {
+    push(@linear, "-P UST:$1 -J FPLIN$1");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt eq "-NCLINEAR")
+  {
+    push(@nc_linear, "-J NCLIN");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /-NCLINEAR(\d+)$/)
+  {
+    push(@nc_linear, "-R $1 -J NCLIN$1");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NCLINEAR(\d+):(\S+)/)
+  {
+    push(@nc_linear, "-R $1 -P UST:$2 -J NCLIN$1$2");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NCLINEAR:(\S+)/)
+  {
+    push (@nc_linear, "-P UST:$1 -J NCLIN$1");
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt eq "-NVFEC")
+  {
+    my $tmp = "-J FPXECY -P UST:Y";
+    push(@nv_fecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVFEC(\d+)$/)
+  {
+    my $tmp = "-J FPXECY -R $1 -P UST:Y";
+    push(@nv_fecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVFEC(\d):(\S+)/)
+  {
+    my $rad = $1;
+    my $tmp = "-J FPXEC$rad$2 -R $rad -P UST:$2";
+    push(@nv_fecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVFEC:(\S+)/)
+  {
+    my $tmp = " -J FPXEC$1 -P UST:$1";
+    push(@nv_fecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt eq "-NVEC")
+  {
+    my $tmp = "-J NCXECY -P UST:Y";
+    push(@nv_ecust, $tmp);
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVEC(\d+)$/)
+  {
+    my $tmp = "-J NCXECY$1 -R $1 -P UST:Y";
+    push(@nv_ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVEC(\d):(\S+)/)
+  {
+    my $radius = $1;
+    my $tmp = "-J NCXEC$radius$2 -R $radius -P UST:$2";
+    push(@nv_ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt =~ /^-NVEC:(\S+)/)
+  {
+    my $tmp = " -J NCXEC$1 -P UST:$1";
+    push(@nv_ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
+    $fingerprints_specified += 1;
+  }
+  elsif ($opt eq '-NVECX')
+  {
+    my $tmp = "";
+
+    my $gotclose;    # do we find a closing -ts
+
+    $gotclose = 0;
+
+    GET_NVEXC: while (1)
+    {
+      if ($ARGV[$argptr] eq "-NVECX")
+      {
+        $gotclose = 1;
+        $argptr++;
+        last GET_NVEXC; 
+      }
+
+      $tmp .= " $ARGV[$argptr]";
+
+      $argptr++;
+
+      last GET_NVEXC if ($argptr >= @ARGV);
+    }
+
+    die "The -NVECX option grouping must be closed" unless ($gotclose);
+#   print STDERR "NVECX Options '${tmp}'\n";
+    push(@nv_ecust, $tmp);
+    $fingerprints_specified += 1;
+  }
   elsif ($opt eq "-RAND")
   {
     $rand = 1;
@@ -652,36 +851,66 @@ OPTION: while ($argptr < @ARGV)
      $pubchem = 1;
      $fingerprints_specified++;
   }
+  elsif ($opt eq "-ECCLOSE")
+  {
+    my $tmp = "";
+
+    my $gotclose;    # do we find a closing -ts
+
+    $gotclose = 0;
+
+    GET_ECCLOSE: while (1)
+    {
+      if ($ARGV[$argptr] eq "-ECCLOSE")
+      {
+        $gotclose = 1;
+        $argptr++;
+        last GET_ECCLOSE; 
+      }
+
+      $tmp .= " $ARGV[$argptr]";
+
+      $argptr++;
+
+      last GET_ECCLOSE if ($argptr >= @ARGV);
+    }
+
+    die "The -ECCLOSE option grouping must be closed" unless ($gotclose);
+#   print STDERR "ECCLOSE Options '${tmp}'\n";
+    push(@ecust, $tmp);
+    $fingerprints_specified += 1;
+  }
   elsif ($opt eq "-EC" || $opt eq "-ECZ")    # strange, no radius
   {
     my $tmp = "-P Z -J NCECZ";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt eq "-FEC")
   {
-    push(@ecust, "-P Z -J FPECZ");
+    my $tmp = "-P Z -J FPECZ";
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC(\d)$/)
   {
     my $rad = $1;
     my $tmp = "-R ${rad} -P Z -J NCEC${rad}Z";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-FEC(\d)$/)
   {
     my $rad = $1;
     my $tmp = "-R ${rad} -P Z -J FPEC${rad}Z";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-ECC([0-9]+)$/)
   {
     my $rad = $1;
     my $tmp = "-R ${rad} -P C -J NCEC${rad}C";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC(\d+):(\S+)/)
@@ -689,7 +918,8 @@ OPTION: while ($argptr < @ARGV)
     my $rad = $1;
     my $atype = $2;
     my $ust = ust_needed_for_atype($atype);
-    push (@ecust, "-R ${rad} -P ${ust}${atype} -J NCEC${rad}${atype}");
+    my $tmp = "-R ${rad} -P ${ust}${atype} -J NCEC${rad}${atype}";
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-FEC(\d+):(\S+)/)
@@ -697,7 +927,8 @@ OPTION: while ($argptr < @ARGV)
     my $rad = $1;
     my $atype = $2;
     my $ust = ust_needed_for_atype($atype);
-    push (@ecust, "-R ${rad} -P ${ust}${atype} -J FPEC${rad}${atype}");
+    my $tmp = "-R ${rad} -P ${ust}${atype} -J FPEC${rad}${atype}";
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC:(\S+)/)
@@ -705,7 +936,7 @@ OPTION: while ($argptr < @ARGV)
     my $atype = $1;
     my $ust = ust_needed_for_atype($atype);
     my $tmp = "-P ${ust}${atype} -J NCEC${atype}";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-FEC:(\S+)/)
@@ -713,7 +944,7 @@ OPTION: while ($argptr < @ARGV)
     my $atype = $1;
     my $ust = ust_needed_for_atype($atype);
     my $tmp = "-P ${ust}${atype} -J FPEC${atype}";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC(\d)(\S+)/)
@@ -721,7 +952,7 @@ OPTION: while ($argptr < @ARGV)
     my $rad = $1;
     my $atype = $2;
     my $tmp = "-P ${atype} -R ${rad} -J NCEC${rad}${atype}";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC(\S+)(\d)$/)     # historically we interpreted ECTT3 to be EC3TT
@@ -733,17 +964,18 @@ OPTION: while ($argptr < @ARGV)
       $rad = $2;
       $atype = $1;
     }
-    push(@ecust, "-P ${atype} -R ${rad} -J NCEC${rad}${atype}");
+    my $tmp = "-P ${atype} -R ${rad} -J NCEC${rad}${atype}";
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
   elsif ($opt =~ /^-EC(\S+)/)
   {
     my $atype = $1;
     my $tmp = "-P ${atype} -J NCEC${atype}";
-    push(@ecust, $tmp);
+    push(@ecust, maybe_append_ecbig($tmp, $ecbig, $ec_modifiers));
     $fingerprints_specified++;
   }
-  elsif ($opt eq "-ESA")
+  elsif ($opt eq "-ESA" || $opt eq "-ESTATE")
   {
     $es++;
     $es_options = "-J estate -J NCESTA";
@@ -760,6 +992,12 @@ OPTION: while ($argptr < @ARGV)
     die "Cannot specify multiple MPR fingerprints" if ($mpr == 1);
     $mpr = 1;
     $fingerprints_specified++;       # well, not really a fingerprint
+  }
+  elsif ($opt =~ /^-MPR=(\S+)/)
+  {
+    $mpr = 1;
+    $mpr_options = "-O ${1}";
+    $fingerprints_specified++;
   }
   elsif ($opt eq "-GRF")
   {
@@ -1201,6 +1439,10 @@ OPTION: while ($argptr < @ARGV)
   {
     $flush = 1;
   }
+  elsif ($opt eq "-icte")
+  {
+    $icte = 1;
+  }
   elsif ($opt eq "-multi")
   {
     $temperature_dash_m = "-m";
@@ -1219,7 +1461,7 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-ecbig")
   {
-    $multiplicative_ec = 0;
+    $ecbig_specified = 1;
   }
   elsif ($opt eq "-R")
   {
@@ -1305,35 +1547,54 @@ OPTION: while ($argptr < @ARGV)
     $clogp_bit_replicates = $1;
     $fingerprints_specified++;
   }
-  elsif ($opt eq "-MCLP")
+  elsif ($opt eq "-XLOGP")
   {
-    $marvin_string .= ' -O clogp';
-    $fingerprints_specified++ if (0 == $marvin);
-    $marvin = 1;
+    $xlogp = 1;
+    $fingerprints_specified++;
   }
-  elsif ($opt eq "-MPKA")
+  elsif ($opt =~ /-XLOGP(\d+)$/)
   {
-    $marvin_string .= ' -O apK';
-    $fingerprints_specified++ if (0 == $marvin);
-    $marvin = 1;
+    $xlogp = 1;
+    $xlogp_bit_replicates = $1;
+    $fingerprints_specified++;
   }
-  elsif ($opt eq "-MPKB")
+  elsif ($opt eq "-ALOGP")
   {
-    $marvin_string .= ' -O bpK';
-    $fingerprints_specified++ if (0 == $marvin);
-    $marvin = 1;
+    $alogp = 1;
+    $fingerprints_specified++;
   }
-  elsif ($opt eq "-MVD")
+  elsif ($opt =~ /-ALOGP(\d+)$/)
   {
-    $marvin_string .= ' -O clogd';
-    $fingerprints_specified++ if (0 == $marvin);
-    $marvin = 1;
+    $alogp = 1;
+    $alogp_bit_replicates = $1;
+    $fingerprints_specified++;
   }
-  elsif ($opt eq "-MVALL")
+  elsif ($opt eq "-ALOGD")
   {
-    $marvin_string .= ' -O clogp -O apK -O bpK';
-    $fingerprints_specified++ if (0 == $marvin);
-    $marvin = 1;
+    $alogd = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /-ALOGD(\d+)$/)
+  {
+    $alogd = 1;
+    $alogd_bit_replicates = $1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-ACLOGP")
+  {
+    $aclogp = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-ACLOGP(\d+)/) 
+  {
+    $aclogp = 1;
+    $aclogp_replicates = $1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-ACLOGD")
+  {
+    $aclogd = 1;
+    $fingerprints_specified++;
   }
   elsif ($opt eq "-NATOMS")
   {
@@ -1435,7 +1696,7 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-D2F")
   {
-    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint');
+    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint.sh');
 
     $d2f_string .= "|${descriptors_to_fingerprint} -f ";
     my $tmp = $ARGV[$argptr++];
@@ -1455,7 +1716,7 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-d2f")
   {
-    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint');
+    my $descriptors_to_fingerprint = find_executable('descriptors_to_fingerprint.sh');
 
     $d2f_string .= "|${descriptors_to_fingerprint} -f";
 
@@ -1481,9 +1742,9 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-I2F")
   {
-    my $descriptor_file_to_01_fingerprints = find_executable('descriptor_file_to_01_fingerprints');
+    my $descriptors_to_fingerprint_integer = find_executable('descriptors_to_fingerprint_integer.sh');
 
-    $i2f_string .= "|${descriptor_file_to_01_fingerprints} -f ";
+    $i2f_string .= "|${descriptors_to_fingerprint_integer} -f ";
     my $tmp = $ARGV[$argptr++];
     while ($tmp ne "-I2F" && $argptr < @ARGV)
     {
@@ -1505,6 +1766,37 @@ OPTION: while ($argptr < @ARGV)
     $need3d = 1;
     $fingerprints_specified++;
   }
+  elsif ($opt =~ /^-DBF:(\S+)/)
+  {
+    $dbf = 1;
+    $need3d = 1;
+    $dbf_tag = ":$1";
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-DBF2D")
+  {
+    $dbf2d = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-DBF2D:(\S)/)
+  {
+    $dbf2d = 1;
+    $dbf2d_tag = ":$1";
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-DBF3D")
+  {
+    $dbf3d = 1;
+    $need3d = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-DBF3D:(\S+)/)
+  {
+    $dbf3d = 1;
+    $dbf3d_tag = ":$1";
+    $need3d = 1;
+    $fingerprints_specified++;
+  }
   elsif ($opt eq "-SHD")
   {
     $shadow = 1;
@@ -1517,6 +1809,12 @@ OPTION: while ($argptr < @ARGV)
     $need3d = 1;
     $fingerprints_specified++;
   }
+  elsif ($opt eq "-FORMULA")
+  {
+    $formula = 1;
+    $fingerprints_specified++;
+  }
+
   elsif ($opt eq "-tmpdir")
   {
     $tmpdir = $ARGV[$argptr++];
@@ -1555,8 +1853,21 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-CHIRAL")
   {
-    $chirality_fingerprint_opts = $ARGV[$argptr++];
+    my $tmp = $ARGV[$argptr++];
+    while ($tmp ne "-CHIRAL" && $argptr < @ARGV) {
+      $chirality_fingerprint_opts .= " ${tmp}";
+      $tmp = $ARGV[$argptr++];
+    }
+    $chirality_fingerprint_opts =~ s/^ *//;  # no leading spaces
     $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-seek=(\d+)/)
+  {
+    $seek_to = $1;
+  }
+  elsif ($opt =~ /^stop=(\d+)/)
+  {
+    $stop_at = $1;
   }
   elsif ($opt =~ /^-/)
   {
@@ -1579,6 +1890,24 @@ if ($argptr >= @ARGV)
 {
   print STDERR "Insufficient arguments\n";
   usage(1);
+}
+
+# IF we have any seek/stop directives build arguments for the first
+# pipeline component
+my $seek_stop;
+
+if ($seek_to > 0 || $stop_at > 0)
+{
+  if ($seek_to > 0) {
+    $seek_stop = " -i seek=${seek_to}";
+  }
+  if ($stop_at > 0) {
+    $seek_to .= " -i stop=${stop_at}";
+  }
+}
+else
+{
+  $seek_stop = "";
 }
 
 # When flushing output, each generator may have a different set
@@ -1641,7 +1970,7 @@ if (length($descriptors))
 
   die "'$cmd' failed" unless (-s $dsctmp1);
 
-  my $just_columns_with_same_sign = find_executable("just_columns_with_same_sign");
+  my $just_columns_with_same_sign = find_executable("just_columns_with_same_sign.sh");
 
   $dsctmp2 = "$tmpdir/gfpdsctmp2$$";
 
@@ -1657,6 +1986,14 @@ if (length($descriptors))
 }
 
 $dash_g = "-g all" if (length($temperature_dash_m));
+
+# dash_g gets appended to all first pipeline invocations, so assume
+# that if we add ICTE to that first invocation, everything else will
+# be OK.
+if ($icte)
+{
+  $dash_g = "-i ICTE ${dash_g}";
+}
 
 # If no fingerprints specified, take the default set.
 
@@ -1695,15 +2032,15 @@ my $hbd_cmd_pipe;
 
 if ($hbd)
 {
-  my $tnass = find_executable ("tnass");
+  my $tnass = find_executable ("tnass.sh");
 
-  my $charges = "$ENV{LILLYMOL_HOME}/queries/charges";
-  my $hbonds = "$ENV{LILLYMOL_HOME}/queries/hbonds";
-  my $hbondpatterns = "$ENV{LILLYMOL_HOME}/queries/hbondpatterns";
+  my $charges = "$ENV{LILLYMOL_HOME}/data/queries/charges";
+  my $hbonds = "$ENV{LILLYMOL_HOME}/data/queries/hbonds";
+  my $hbondpatterns = "$ENV{LILLYMOL_HOME}/data/queries/hbondpatterns";
 
-  die "Yipes, cannot access charges directory '$charges', see Ian" unless (-f $charges && -r $charges);
-  die "Yipes, cannot access hbonds directory '$hbonds', see Ian" unless (-f $hbonds && -r $hbonds);
-  die "Yipes, cannot access hbondpatterns directory '$hbondpatterns', see Ian" unless (-f $hbondpatterns && -r $hbondpatterns);
+  die "Yipes, cannot access charges directory '$charges', see Ian" unless (-d $charges && -r $charges);
+  die "Yipes, cannot access hbonds directory '$hbonds', see Ian" unless (-d $hbonds && -r $hbonds);
+  die "Yipes, cannot access hbondpatterns directory '$hbondpatterns', see Ian" unless (-d $hbondpatterns && -r $hbondpatterns);
 
   my $hbd_cmd = "$tnass -A D -H a=F:${hbonds}/acceptor -H d=${hbonds}/donor.qry -H label -N F:${charges}/queries -q F:${hbondpatterns}/nass -J FPHB ";
 
@@ -1713,7 +2050,7 @@ if ($hbd)
   }
   else
   {
-    $hbd_cmd_first = "$hbd_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $hbd_cmd_first = "$hbd_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
   $hbd_cmd_pipe  = "$hbd_cmd -F - ";
 }
@@ -1723,7 +2060,7 @@ my $mk_cmd_pipe;
 
 if ($mk || $mk2 || $ncmk)
 {
-  my $maccskeys =  find_executable("maccskeys");
+  my $maccskeys =  find_executable("maccskeys.sh");
 
   my $mk_cmd = "$maccskeys -E autocreate -A D -n ";
 
@@ -1744,7 +2081,7 @@ if ($mk || $mk2 || $ncmk)
   }
   else
   {
-    $mk_cmd_first = "$mk_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $mk_cmd_first = "$mk_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
 
   $mk_cmd_pipe  = "$mk_cmd -f -";
@@ -1755,9 +2092,10 @@ my $temperature_cmd_pipe;
 
 if ($mpr)
 {
-  my $temperature = find_executable("temperature");
+  my $temperature = find_executable("temperature.sh");
 
-  my $mpr_cmd = "$temperature -A D -J MPR -E autocreate $temperature_dash_m" . flush_args("temperature");
+  my $mpr_cmd = "$temperature -A D -J MPR -E autocreate $temperature_dash_m" .
+        "${mpr_options}" . flush_args("temperature");
 
   if ($work_as_filter)
   {
@@ -1769,7 +2107,7 @@ if ($mpr)
   }
   else
   {
-    $temperature_cmd_first = "$mpr_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $temperature_cmd_first = "$mpr_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
 
   $temperature_cmd_pipe  = "$mpr_cmd -f -";
@@ -1777,7 +2115,7 @@ if ($mpr)
 
 if ($temperature)
 {
-  my $t = find_executable('temperature');
+  my $t = find_executable('temperature.sh');
 
   my $b = "-d 4 -B ";
   $b .= 'n' if ($natoms);
@@ -1786,7 +2124,7 @@ if ($temperature)
 
   my $temperature_cmd = "${t} -A D -J NCMP -E autocreate ${temperature_dash_m} ${b}" . flush_args("temperature");
 
-  $temperature_cmd_first = "$temperature_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+  $temperature_cmd_first = "$temperature_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   $temperature_cmd_pipe  = "$temperature_cmd -f -";
   $mpr = 1;    # we can switch now
 }
@@ -1810,7 +2148,7 @@ if ($w)
   }
   else
   {
-    $w_cmd_first = "${iwdescr_cmd} FILE";
+    $w_cmd_first = "${iwdescr_cmd} ${seek_stop} FILE";
   }
 
   $w_cmd_pipe = "${iwdescr_cmd} -G FILTER -";
@@ -1833,7 +2171,7 @@ my $assign_formal_charges_first;
 
 if ($chg)
 {
-  my $assign_formal_charges = find_executable("assign_formal_charges");
+  my $assign_formal_charges = find_executable("assign_formal_charges.sh");
 
   $assign_formal_charges_first = "${assign_formal_charges} -f l -S - -o tdt FILE";
 }
@@ -1843,7 +2181,7 @@ my $iwfp_cmd_pipe;
 
 if ($iwfp)
 {
-  my $iwfp = find_executable("iwfp");
+  my $iwfp = find_executable("iwfp.sh");
 
   my $iwfp_cmd = "$iwfp -A D -E autocreate -J FPIW $extra_iwfp_options" . flush_args("iwfp");
 
@@ -1857,14 +2195,14 @@ if ($iwfp)
   }
   else
   {
-    $iwfp_cmd_first = "$iwfp_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $iwfp_cmd_first = "$iwfp_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
   $iwfp_cmd_pipe  = "$iwfp_cmd -f -";
 }
 
 if ($nciwfp)
 {
-  my $iwfp = find_executable("iwfp");
+  my $iwfp = find_executable("iwfp.sh");
 
   my $iwfp_cmd = "$iwfp -A D -E autocreate -J NCIW -c 200000 $extra_iwfp_options" . flush_args("iwfp");
 
@@ -1878,7 +2216,7 @@ if ($nciwfp)
   }
   else
   {
-    $iwfp_cmd_first = "$iwfp_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $iwfp_cmd_first = "$iwfp_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
   $iwfp_cmd_pipe  = "$iwfp_cmd -f -";
 }
@@ -1888,7 +2226,7 @@ my $nciwfp_cmd_pipe;
 
 if (@nciwfp)
 {
-  my $iwfp = find_executable("iwfp");
+  my $iwfp = find_executable("iwfp.sh");
 
   my $iwfp_cmd = "${iwfp} -A D -E autocreate -c 200000" . flush_args("iwfp");
 
@@ -1910,7 +2248,7 @@ if (@nciwfp)
 
 if (@iwfpust)
 {
-  my $iwfp = find_executable('iwfp');
+  my $iwfp = find_executable('iwfp.sh');
 
   my $iwfp_cmd = "$iwfp -A D -E autocreate" . flush_args("iwfp");
 
@@ -1924,9 +2262,54 @@ if (@iwfpust)
   }
   else
   {
-    $iwfp_cmd_first = "$iwfp_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $iwfp_cmd_first = "$iwfp_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
   $iwfp_cmd_pipe  = "$iwfp_cmd -f -";
+}
+
+my $linear_cmd_first;
+my $linear_cmd_pipe;
+
+if (@linear)
+{
+  my $exe = find_executable('linear_fingerprint.sh');
+  my $cmd = "$exe -E autocreate" . flush_args("linear");
+
+  if ($work_as_filter)
+  {
+    $linear_cmd_first = "$cmd $dash_g $input_qualifiers";
+  } elsif ($work_as_tdt_filter)
+  {
+    $linear_cmd_first = "$cmd $dash_g $input_qualifiers -f -";
+  }
+  else
+  {
+    $linear_cmd_first = "$cmd ${seek_stop} $dash_g $input_qualifiers";
+  }
+  $linear_cmd_pipe = "$cmd -f"
+}
+
+my $nc_linear_cmd_first;
+my $nc_linear_cmd_pipe;
+
+if (@nc_linear)
+{
+  my $exe = find_executable('linear_fingerprint.sh');
+  my $cmd = "$exe -E autocreate " . flush_args("linear");
+
+  if ($work_as_filter)
+  {
+    $nc_linear_cmd_first = "$cmd $dash_g $input_qualifiers";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $nc_linear_cmd_first = "$cmd $dash_g $input_qualifiers -f -";
+  }
+  else
+  {
+    $nc_linear_cmd_first = "$cmd ${seek_stop} $dash_g $input_qualifiers";
+  }
+  $nc_linear_cmd_pipe = "$cmd -f"
 }
 
 my $gc_cmd_first;
@@ -1934,16 +2317,16 @@ my $gc_cmd_pipe;
 
 if ($gc)
 {
-  my $tnass = find_executable("tnass");
+  my $tnass = find_executable("tnass.sh");
 
   my $queries = "$ianhome/lib/wildman_crippen.dat";
   die "Where are the GC queries '$queries'" unless (-s $queries && -r $queries);
 
   my $gc_cmd = "$tnass -A D -J NCGC -E autocreate -q S:$queries". flush_args("tnass");
 
-  $gc_cmd_first = "$gc_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+  $gc_cmd_first = "$gc_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   $gc_cmd_pipe  = "$gc_cmd -F -";
-  
+
   print STDERR "Ignore the 'no available queries' message from tnass, it is harmless\n";
 }
 
@@ -1956,7 +2339,7 @@ if ($pubchem)
 
   my $pubchem_fingerprints_cmd = "${pubchem_fingerprints} -E autocreate -l" . flush_args("pubchem_fingerprints");
 
-  $pubchem_fingerprints_first = "${pubchem_fingerprints_cmd} ${dash_g} ${aromatic_smiles} ${input_qualifiers} FILE";
+  $pubchem_fingerprints_first = "${pubchem_fingerprints_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} ${input_qualifiers} FILE";
   $pubchem_fingerprints_pipe = "${pubchem_fingerprints_cmd} -f -";
 }
 my $ttust_cmd_first;
@@ -1964,7 +2347,7 @@ my $ttust_cmd_pipe;
 
 if (@ttust)
 {
-  my $topotorsion_fingerprints = find_executable("topotorsion_fingerprints");
+  my $topotorsion_fingerprints = find_executable("topotorsion_fingerprints.sh");
 
   my $tt_cmd = "${topotorsion_fingerprints} -A D -E autocreate";
 
@@ -1978,7 +2361,7 @@ if (@ttust)
   }
   else
   {
-    $ttust_cmd_first = "${tt_cmd} ${dash_g} ${aromatic_smiles} ${input_qualifiers} FILE";
+    $ttust_cmd_first = "${tt_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} ${input_qualifiers} FILE";
   }
 
   $ttust_cmd_pipe = "${tt_cmd} -f -";
@@ -1989,7 +2372,7 @@ my $map_cmd_pipe;
 
 if (@mapust)
 {
-  my $map = find_executable("extended_atom_pairs");
+  my $map = find_executable("extended_atom_pairs.sh");
 
   my $map_cmd = "$map -A D -E autocreate ${extra_map_options}";
   $map_cmd .= " -c $mapmin" if (length($mapmin));
@@ -2005,7 +2388,7 @@ if (@mapust)
   }
   else
   {
-    $map_cmd_first = "$map_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $map_cmd_first = "$map_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
   $map_cmd_pipe  = "$map_cmd -f -";
 }
@@ -2015,7 +2398,7 @@ my $mapO_cmd_pipe;
 
 if (length($mapO))
 {
-  my $map = find_executable("extended_atom_pairs");
+  my $map = find_executable("extended_atom_pairs.sh");
 
   my $map_cmd = "$map -A D -E autocreate -J NCMAPO -O F:${mapO} ${extra_map_options}";
 
@@ -2042,14 +2425,14 @@ my $ec_cmd_pipe;
 
 if (@ecust)
 {
-  my $extended_connectivity = find_executable("iwecfp");
+  my $extended_connectivity = find_executable("iwecfp.sh");
 
   my $ec_cmd = "$extended_connectivity -E autocreate ";
   $ec_cmd .= "-R $max_ec_shell_length " if (length($max_ec_shell_length));
   $ec_cmd .= "-r $min_ec_shell_length" if (length($min_ec_shell_length));
   $ec_cmd .= $extra_ec_options if (length($extra_ec_options));
 
-  $ec_cmd .= " -m" if ($multiplicative_ec);
+  $ec_cmd .= " -m" if ($ecbig_specified == 0);
 
   if ($work_as_filter)
   {
@@ -2061,10 +2444,58 @@ if (@ecust)
   }
   else
   {
-    $ec_cmd_first = "$ec_cmd $dash_g $aromatic_smiles $input_qualifiers FILE";
+    $ec_cmd_first = "$ec_cmd ${seek_stop} $dash_g $aromatic_smiles $input_qualifiers FILE";
   }
 
   $ec_cmd_pipe = "$ec_cmd -f -";
+}
+
+my $nv_ec_cmd_first;
+my $nv_ec_cmd_pipe;
+
+if (@nv_ecust)
+{
+  my $exe = find_executable("ec_fingerprint.sh");
+  $exe .= " -E autocreate";
+
+  if ($work_as_filter)
+  {
+    $nv_ec_cmd_first = "$exe $dash_g $input_qualifiers FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $nv_ec_cmd_first = "$exe -f FILE";
+  }
+  else
+  {
+    $nv_ec_cmd_first = "$exe ${seek_stop} ${dash_g} FILE";
+  }
+
+  $nv_ec_cmd_pipe = "$exe -f";
+}
+
+my $nv_fec_cmd_first;
+my $nv_fec_cmd_pipe;
+
+if (@nv_fecust)
+{
+  my $exe = find_executable("ec_fingerprint.sh");
+  $exe .= " -E autocreate";
+
+  if ($work_as_filter)
+  {
+    $nv_fec_cmd_first = "$exe $dash_g $input_qualifiers FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $nv_fec_cmd_first = "$exe -f FILE";
+  }
+  else
+  {
+    $nv_fec_cmd_first = "$exe ${seek_stop} #{dash_g} FILE";
+  }
+
+  $nv_fec_cmd_pipe = "$exe -f";
 }
 
 my $rand_cmd_first;
@@ -2072,7 +2503,7 @@ my $rand_cmd_pipe;
 
 if ($rand)
 {
-  my $random_fingerprint = find_executable("random_fingerprint");
+  my $random_fingerprint = find_executable("random_fingerprint.sh");
 
   if ($work_as_filter)
   {
@@ -2100,7 +2531,7 @@ if ($es > 1)
 
 if ($es)
 {
-  my $estate = find_executable("jwestate");
+  my $estate = find_executable("jwestate.sh");
 
   my $es_cmd = "$estate $es_options";
 
@@ -2133,7 +2564,7 @@ my $mabs_cmd_pipe;
 
 if (length($molecular_abstraction_options))
 {
-  my $molecular_abstraction = find_executable("molecular_abstraction");
+  my $molecular_abstraction = find_executable("molecular_abstraction.sh");
 
   my $input_file_specification;
   if ($work_as_filter)
@@ -2161,7 +2592,7 @@ my $ring_fingerprint_pipe;
 
 if ($ring_fingerprint)
 {
-  my $ring_fingerprint_exe = find_executable("ring_fingerprint");
+  my $ring_fingerprint_exe = find_executable("ring_fingerprint.sh");
 
   my $input_file_specification = "-p -d -E autocreate -l ${input_qualifiers} ";
   if ($work_as_tdt_filter)
@@ -2173,7 +2604,7 @@ if ($ring_fingerprint)
     $input_file_specification .= " -i smi";
   }
 
-  $ring_fingerprint_first = "${ring_fingerprint_exe} ${dash_g} ${input_file_specification} FILE";
+  $ring_fingerprint_first = "${ring_fingerprint_exe} ${seek_stop} ${dash_g} ${input_file_specification} FILE";
   $ring_fingerprint_pipe  = "${ring_fingerprint_exe} ${input_file_specification} -f -";
 }
 
@@ -2182,7 +2613,7 @@ my $similarity_to_pipe;
 
 if ($similarity_to)
 {
-  my $similarity_to_exe = find_executable("similarity_to");
+  my $similarity_to_exe = find_executable("similarity_to.sh");
 
   if ($similarity_to_options eq "")
   {
@@ -2195,8 +2626,8 @@ if ($similarity_to)
     $input_file_specification .= " -f";
   }
 
-  $similarity_to_first = "${similarity_to_exe} ${input_file_specification} ";     # note we do NOT insert FILE 
-  $similarity_to_pipe = "${similarity_to_exe} ${input_file_specification} -f ";     # note we do NOT insert - 
+  $similarity_to_first = "${similarity_to_exe} ${input_file_specification} ";     # note we do NOT insert FILE
+  $similarity_to_pipe = "${similarity_to_exe} ${input_file_specification} -f ";     # note we do NOT insert -
 }
 
 my $fingerprint_substructure_cmd_first;
@@ -2204,7 +2635,7 @@ my $fingerprint_substructure_cmd_pipe;
 
 if (length($fingerprint_substructure_options))
 {
-  my $fingerprint_substructure = find_executable("fingerprint_substructure");
+  my $fingerprint_substructure = find_executable("fingerprint_substructure.sh");
 
   my $input_file_specification;
   if ($work_as_filter)
@@ -2231,7 +2662,7 @@ my $molecular_transformations_pipe;
 
 if(length ($reactions))
 {
-  my $molecular_transformations = find_executable("molecular_transformations");
+  my $molecular_transformations = find_executable("molecular_transformations.sh");
 
   my $molecular_transformations_cmd = "$molecular_transformations -J FPISO -z i -z w -j -A D $reactions -F 'OUT=ISOSMI<'";
 
@@ -2252,7 +2683,7 @@ my $ez_descriptor_pipe;
 
 if (@EZ)
 {
-  my $ez_descriptor = find_executable("ez_descriptor");
+  my $ez_descriptor = find_executable("ez_descriptor.sh");
   my $ez_descriptor_cmd = "${ez_descriptor} -E autocreate -A D -J FPEZ -z i -z f";
   foreach $_ (@EZ)
   {
@@ -2275,7 +2706,7 @@ my $ezf_fingerprint_pipe;
 
 if ($ezf)
 {
-  my $ez_fingerprint = find_executable("ez_fingerprint");
+  my $ez_fingerprint = find_executable("ez_fingerprint.sh");
   my $ez_fingerprint_cmd = "${ez_fingerprint} -v -r 10 -d 250 -E autocreate -l";
 
   $ez_fingerprint_cmd .= " -S ${ezf_write}"  if (length($ezf_write));
@@ -2298,7 +2729,7 @@ my $ez_fingerprint_v2_pipe;
 
 if ($ct)
 {
-  my $ez_fingerprint_v2 = find_executable("ez_fingerprint_v2");
+  my $ez_fingerprint_v2 = find_executable("ez_fingerprint_v2.sh");
   my $ez_fingerprint_v2_cmd = "${ez_fingerprint_v2} -A D -P za -E autocreate ${dash_g} -l";
 
   if ($work_as_filter)
@@ -2318,7 +2749,7 @@ my $tsubstructure_pipe;
 
 if (length($tsubstructure_fingerprint_options))
 {
-  my $tsubstructure = find_executable("tsubstructure");
+  my $tsubstructure = find_executable("tsubstructure.sh");
   my $tsubstructure_command = "${tsubstructure} -E autocreate -A D -u ${tsubstructure_fingerprint_options} ";
 
   if ($tsubstructure_fingerprints_non_colliding)
@@ -2345,7 +2776,7 @@ if (length($tsubstructure_fingerprint_options))
   }
   else
   {
-    $tsubstructure_first = "$tsubstructure_command FILE";
+    $tsubstructure_first = "$tsubstructure_command ${seek_stop} FILE";
   }
 
   $tsubstructure_pipe = "$tsubstructure_command -M tdt -";
@@ -2356,7 +2787,7 @@ my $ring_substitution_pipe;
 
 if ($rs)
 {
-  my $ring_substitution = find_executable("ring_substitution");
+  my $ring_substitution = find_executable("ring_substitution.sh");
   my $ring_substitution_command = "$ring_substitution -A D -l -M full -M sfb -E autocreate";
 
   if ($work_as_filter)
@@ -2369,7 +2800,7 @@ if ($rs)
   }
   else
   {
-    $ring_substitution_first = "$ring_substitution_command ${dash_g} FILE";
+    $ring_substitution_first = "$ring_substitution_command ${seek_stop} ${dash_g} FILE";
   }
 
   $ring_substitution_pipe = "$ring_substitution_command -f -";
@@ -2380,7 +2811,7 @@ my $ring_size_fingerprint_pipe;
 
 if ($rze)
 {
-  my $ring_size_fingerprint = find_executable("ring_size_fingerprint");
+  my $ring_size_fingerprint = find_executable("ring_size_fingerprint.sh");
   # my $ring_size_fingerprint_command = "$ring_size_fingerprint -E autocreate -x -e -t -r 8 ";
   # This is what Ian has, -x and -e is not compatible
   my $ring_size_fingerprint_command = "$ring_size_fingerprint -E autocreate -e -t ";
@@ -2412,7 +2843,7 @@ my $iwpathdtc_pipe;
 
 if ($pathd || $pathdt || $pathdc || $pathdtc)
 {
-  my $iwpathd = find_executable("iwpathd");
+  my $iwpathd = find_executable("iwpathd.sh");
   my $comm = "$iwpathd -A D ${dash_g} -E autocreate";
   my $iwpathd_command = "$comm -J NCPD";
   my $iwpathdt_command = "$comm -X tshape=5 -J NCPDT";
@@ -2453,8 +2884,8 @@ my $dicer_pipe;
 
 if ($dicer)
 {
-  my $dicer_exe = find_executable("dicer");
-  my $dicer_command = "$dicer_exe -X 500 -A D -J NCDC -k 3 -c -M 12"; 
+  my $dicer_exe = find_executable("dicer.sh");
+  my $dicer_command = "$dicer_exe -B nbamide -B brcb -B bscb -X 500 -A D -J NCDC -k 3 -c -M 12";
 
   if ($work_as_filter)
   {
@@ -2472,20 +2903,90 @@ if ($dicer)
   $dicer_pipe = "$dicer_command -f -";
 }
 
+my $dbf_first;
 my $dbf_pipe;
+my $dbf2d_first;
+my $dbf2d_pipe;
+my $dbf3d_first;
+my $dbf3d_pipe;
+
+if ($dbf && ($dbf2d || $dbf3d))
+{
+  print STDERR "Cannot specify both -DBF and either of -DBF2d -DBF3D\n";
+  exit(1);
+}
+
+# Initially tried to consolidate all the DBF variants, but it just ended
+# up messy and complex. Instead adopt the simplest approach
 
 if ($dbf)
 {
-  my $dbf_exe = find_executable("dbf");
+  my $dbf_exe = find_executable("dbf.sh");
+  my $dbf_command = "$dbf_exe -p none -p 2d -p 3d -p ratio -J NCDBF${dbf_tag}";
 
-  $dbf_pipe = "$dbf_exe -J NCDBF -";
+  if ($work_as_filter)
+  {
+    $dbf_first = "${dbf_command} -f -";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $dbf_first = "${dbf_command} -f -";
+  }
+  else 
+  {
+    $dbf_first = "${dbf_command} -f -";
+  }
+
+  $dbf_pipe = "${dbf_command} -f -";
+}
+
+if ($dbf2d)
+{
+  my $dbf_exe = find_executable("dbf.sh");
+  my $dbf_command = "$dbf_exe -p none -p 2d -J NCDBF2D${dbf2d_tag}";
+
+  if ($work_as_filter)
+  {
+    $dbf2d_first = "$dbf_command FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $dbf2d_first = "$dbf_command -i tdt -";
+  }
+  else
+  {
+    $dbf2d_first = "$dbf_command FILE";
+  }
+
+  $dbf2d_pipe = "$dbf_command -f -";
+}
+
+if ($dbf3d)
+{
+  my $dbf_exe = find_executable("dbf.sh");
+  my $dbf_command = "$dbf_exe -p none -p 3d -J NCDBF3D${dbf3d_tag}";
+
+  if ($work_as_filter)
+  {
+    $dbf3d_first = "$dbf_command -f -";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $dbf3d_first = "$dbf_command -i tdt -";
+  }
+  else
+  {
+    $dbf3d_first = "$dbf_command -f -";
+  }
+
+  $dbf3d_pipe = "$dbf_command -f -";
 }
 
 my $shadow_pipe;
 
 if ($shadow)
 {
-  my $shadow_exe = find_executable("tshadow");
+  my $shadow_exe = find_executable("tshadow.sh");
 
   $shadow_pipe = "${shadow_exe} -J NCSHD -";
 }
@@ -2494,9 +2995,9 @@ my $jurs_pipe;
 
 if ($jurs)
 {
-  my $jurs_exe = find_executable("jursfp");
+  my $jurs_exe = find_executable("jursfp.sh");
 
-  $jurs_pipe = "${jurs_exe} -J NCJURS - 2> /dev/null";
+  $jurs_pipe = "${jurs_exe} -J NCJURS -f -q - 2> /dev/null";
 }
 
 my $corina_first;
@@ -2504,16 +3005,20 @@ my $corina_pipe;
 
 if ($need3d)
 {
-  my $corina = find_executable("rcorina");
+  my $corina = find_executable("rcorina.sh");
   my $corina_command = "$corina -x -r 4";
 
   if ($work_as_filter)
   {
-    $corina_first = "${corina_command} -f FILE";
+    $corina_first = "${corina_command} -f -";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $corina_first = "${corina_command} -t -i tdt FILE";
   }
   else
   {
-    $corina_first = "${corina_command} -t FILE";
+    $corina_first = "${corina_command} ${seek_stop} -t FILE";
   }
 
   $corina_pipe = "${corina_command} -f -";
@@ -2524,7 +3029,7 @@ my $erg_cmd_pipe;
 
 if ($erg)
 {
-  my $erg_exe = find_executable("ErG");
+  my $erg_exe = find_executable("ErG.sh");
 
   my $erg_cmd = "${erg_exe} -J NCERG -j";
 
@@ -2538,7 +3043,7 @@ if ($erg)
   }
   else
   {
-    $erg_cmd_first = "${erg_cmd} FILE";
+    $erg_cmd_first = "${erg_cmd} ${seek_stop} ${dash_g} FILE";
   }
 
   $erg_cmd_pipe = "${erg_cmd} -f -";
@@ -2549,7 +3054,7 @@ my $ncerg_cmd_pipe;
 
 if ($ncerg)
 {
-  my $erg_exe = find_executable("ErG");
+  my $erg_exe = find_executable("ErG.sh");
 
   my $erg_cmd = "${erg_exe} -B all -M NCERG";
 
@@ -2563,7 +3068,7 @@ if ($ncerg)
   }
   else
   {
-    $ncerg_cmd_first = "${erg_cmd} FILE";
+    $ncerg_cmd_first = "${erg_cmd} ${seek_stop} ${dash_g} FILE";
   }
 
   $ncerg_cmd_pipe = "${erg_cmd} -f -";
@@ -2574,7 +3079,7 @@ my $fperg_cmd_pipe;
 
 if ($fperg)
 {
-  my $erg_exe = find_executable("ErG");
+  my $erg_exe = find_executable("ErG.sh");
 
   my $erg_cmd = "${erg_exe} -B all -M FPERG";
 
@@ -2588,7 +3093,7 @@ if ($fperg)
   }
   else
   {
-    $fperg_cmd_first = "${erg_cmd} FILE";
+    $fperg_cmd_first = "${erg_cmd} ${seek_stop} ${dash_g} FILE";
   }
 
   $fperg_cmd_pipe = "${erg_cmd} -f -";
@@ -2600,7 +3105,7 @@ my $catsp_cmd_pipe;
 
 if ($catsp)
 {
-  my $catsp_exe = find_executable("jwcats");
+  my $catsp_exe = find_executable("jwcats.sh");
 
   my $tag = "NCCATSP";
 
@@ -2628,7 +3133,7 @@ if ($catsp)
   }
   else
   {
-    $catsp_cmd_first = "${catsp_cmd} ${dash_g} ${input_qualifiers} FILE";
+    $catsp_cmd_first = "${catsp_cmd} ${seek_stop} ${dash_g} ${input_qualifiers} FILE";
   }
 
   $catsp_cmd_pipe = "${catsp_cmd} -f -";
@@ -2639,7 +3144,7 @@ my $cats_cmd_pipe;
 
 if ($cats)
 {
-  my $cats_exe = find_executable("jwcats");
+  my $cats_exe = find_executable("jwcats.sh");
 
   my $tag = "NCCATS";
   my $cats_cmd = "${cats_exe} -E autocreate";
@@ -2666,7 +3171,7 @@ if ($cats)
   }
   else
   {
-    $cats_cmd_first = "${cats_cmd} ${dash_g} ${input_qualifiers} FILE";
+    $cats_cmd_first = "${cats_cmd} ${seek_stop} ${dash_g} ${input_qualifiers} FILE";
   }
 
   $cats_cmd_pipe = "${cats_cmd} -f -";
@@ -2680,10 +3185,11 @@ my $clogp_cmd_pipe;
 
 if ($clogp)
 {
-  my $fileconv = find_executable("fileconv");
-  my $clogp_exe = find_executable("bb_clogp-5.4_fp");
-  my $clogp_cmd = "${clogp_exe}";
-  my $fileconv_options = "-A I -E autocreate -f lod -g all -I 0 -V -S -";    # always invoke chemical standardisation
+  my $fileconv = find_executable("fileconv.sh");
+  my $clogp_exe = find_executable("bb_clogp-5.4_fp.sh");
+  my $clogp_cmd = "${clogp_exe} -u";
+  # Limit to < 100 atoms because of limitations in BioByte
+  my $fileconv_options = "${seek_stop} -A I -E autocreate -f lod -g all -I change -I 0 -V -C 200 -t nonperiodic=C -S -";    # always invoke chemical standardisation
 
   $clogp_cmd .= " -p ${clogp_bit_replicates}" if ($clogp_bit_replicates > 0);
 
@@ -2710,22 +3216,72 @@ if ($clogp)
   }
 }
 
-my $marvin_cmd_first;
+my $xlogp_cmd_first;
+my $xlogp_cmd_pipe;
 
-if ($marvin)
-{
-  my $marvin_exe = find_executable('iwmarvin.sh');
-  my $m2gfp = find_executable('marvin2gfp.sh');
+if ($xlogp) {
+  my $xlogp_exe = find_executable("xlogp.sh");
+  my $xlogp_cmd = "${xlogp_exe}";
+  $xlogp_cmd .= " -p ${xlogp_bit_replicates}" if ($xlogp_bit_replicates > 0);
 
-  if ($work_as_filter)
-  {
-    print STDERR "Marvin does not work as a filter\n";
-    exit(2);
+  if ($work_as_tdt_filter) {
+    $xlogp_cmd_first = "${xlogp_cmd} -f -J NCXLOGP FILE";
+  } else {
+    $xlogp_cmd_first = "${xlogp_cmd} ${seek_stop} -J NCXLOGP -g all -l FILE";
   }
-  else
-  {
-    $marvin_cmd_first = "${marvin_exe} FILE | ${m2gfp} ${marvin_string} -";
+
+  $xlogp_cmd_pipe = "${xlogp_cmd} -f -";
+}
+
+my $alogp_cmd_first;
+my $alogp_cmd_pipe;
+
+if ($alogp) {
+  my $alogp_exe = find_executable("alogp.sh");
+  my $alogp_cmd = "${alogp_exe} -Y quiet";
+  $alogp_cmd .= " -p ${alogp_bit_replicates}" if ($alogp_bit_replicates > 0);
+
+  if ($work_as_tdt_filter) {
+    $alogp_cmd_first = "${alogp_cmd} -f -J NCALOGP FILE";
+  } else {
+    $alogp_cmd_first = "${alogp_cmd} ${seek_stop} -J NCALOGP -g all -l FILE";
   }
+
+  $alogp_cmd_pipe = "${alogp_cmd} -f -";
+}
+
+my $alogd_cmd_first;
+my $alogd_cmd_pipe;
+
+if ($alogd) {
+  my $alogd_exe = find_executable("alogp.sh");
+  my $alogd_cmd = "${alogd_exe} -d -Y quiet";
+  $alogd_cmd .= " -p ${alogd_bit_replicates}" if ($alogd_bit_replicates > 0);
+
+  if ($work_as_tdt_filter) {
+    $alogd_cmd_first = "${alogd_cmd} -f -J NCALOGD FILE";
+  } else {
+    $alogd_cmd_first = "${alogd_cmd} ${seek_stop} -J NCALOGD -g all -l FILE";
+  }
+
+  $alogd_cmd_pipe = "${alogd_cmd} -J NCALOGD -f -";
+}
+
+my $aclogp_cmd_first;
+my $aclogp_cmd_pipe;
+
+if ($aclogp) {
+  my $aclogp_exe = find_executable("aclogp.sh");
+  my $aclogp_cmd = "${aclogp_exe} -Y quiet";
+  $aclogp_cmd .= " -p ${aclogp_replicates}" if ($aclogp_replicates > 0);
+
+  if ($work_as_tdt_filter) {
+    $aclogp_cmd_first = "${aclogp_exe} -f -J NCACLOGP FILE";
+  } else {
+    $aclogp_cmd_first = "${aclogp_cmd} ${dash_g} -J NCACLOGP FILE";
+  }
+
+  $aclogp_cmd_pipe = "${aclogp_exe} -f -J NCACLOGP -";
 }
 
 my $psa_cmd_first;
@@ -2733,7 +3289,7 @@ my $psa_cmd_pipe;
 
 if ($psa)
 {
-  my $psa_exe = find_executable("psafp");
+  my $psa_exe = find_executable("psafp.sh");
   my $psa_cmd = "${psa_exe}";
 
   if ($psa_bit_replicates > 0)
@@ -2751,7 +3307,7 @@ if ($psa)
   }
   else
   {
-    $psa_cmd_first = "${psa_cmd} ${dash_g} ${aromatic_smiles} FILE";
+    $psa_cmd_first = "${psa_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} FILE";
   }
 
   $psa_cmd_pipe = "${psa_cmd} -f -";
@@ -2762,7 +3318,7 @@ my $abr_cmd_pipe;
 
 if ($abr)
 {
-  my $abr_exe = find_executable("abr.sh");
+  my $abr_exe = find_executable("abraham.sh");
   my $abr_cmd = "${abr_exe}";
 
   if ($abr_bit_replicates > 0)
@@ -2784,7 +3340,7 @@ if ($abr)
   }
   else
   {
-    $abr_cmd_first = "${abr_cmd} ${dash_g} ${aromatic_smiles} FILE";
+    $abr_cmd_first = "${abr_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} FILE";
   }
 
   $abr_cmd_pipe = "${abr_cmd} -f -";
@@ -2817,7 +3373,7 @@ if ($abp)
   }
   else
   {
-    $abp_cmd_first = "${abp_cmd} ${dash_g} ${aromatic_smiles} FILE";
+    $abp_cmd_first = "${abp_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} FILE";
   }
 
   $abp_cmd_pipe = "${abp_cmd} -f -";
@@ -2828,7 +3384,7 @@ my $atp_cmd_pipe;
 
 if ($atp)
 {
-  my $atp_exe = find_executable("atom_triples");
+  my $atp_exe = find_executable("atom_triples.sh");
   my $atp_cmd = "${atp_exe} -A D -l ${atp_options}";
 
   if ($work_as_filter)
@@ -2841,7 +3397,7 @@ if ($atp)
   }
   else
   {
-    $atp_first = "${atp_cmd} ${dash_g} ${aromatic_smiles} FILE"
+    $atp_first = "${atp_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} FILE"
   }
 
   $atp_cmd_pipe = "${atp_cmd} -f -";
@@ -2852,7 +3408,7 @@ my $atr_cmd_pipe;
 
 if ($atr)
 {
-  my $atr_exe = find_executable("atom_triples");
+  my $atr_exe = find_executable("atom_triples.sh");
   my $atr_cmd = "${atr_exe} -A D -l ${atr_options}";
 
   if ($work_as_filter)
@@ -2865,7 +3421,7 @@ if ($atr)
   }
   else
   {
-    $atr_first = "${atr_cmd} ${dash_g} ${aromatic_smiles} FILE"
+    $atr_first = "${atr_cmd} ${seek_stop} ${dash_g} ${aromatic_smiles} FILE"
   }
 
   $atr_cmd_pipe = "${atr_cmd} -f -";
@@ -2876,7 +3432,7 @@ my $ata_cmd_pipe;
 
 if ($ata)
 {
-  my $ata_exe = find_executable("atom_triples");
+  my $ata_exe = find_executable("atom_triples.sh");
   my $ata_cmd = "${ata_exe} -A D -l ${ata_options}";
 
   if ($work_as_filter)
@@ -2895,6 +3451,31 @@ if ($ata)
   $ata_cmd_pipe = "${ata_cmd} -f -";
 }
 
+my $formula_first;
+my $formula_cmd_pipe;
+
+if ($formula)
+{
+  my $formula_exe = "formula_fingerprint.sh";
+  my $formula_cmd = "${formula_exe}";
+
+  if ($work_as_filter)
+  {
+    $formula_first = "${formula_cmd} FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $formula_first = "${formula_cmd} -f -";
+  }
+  else
+  {
+    # dash_g is deliberately omitted.
+    $formula_first = "${formula_cmd} ${seek_stop} FILE";
+  }
+
+  $formula_cmd_pipe = "${formula_cmd} -f -";
+}
+
 my $flatten_counted_pipe;
 
 if ($flatten_counted)
@@ -2905,7 +3486,7 @@ if ($flatten_counted)
     usage(1);
   }
 
-  my $flatten_counted_exe = find_executable("gfp_flatten_counted");
+  my $flatten_counted_exe = find_executable("gfp_flatten_counted.sh");
 
   $flatten_counted_pipe = "${flatten_counted_exe} -";
 }
@@ -2915,10 +3496,11 @@ my $chirality_fingerprint_pipe;
 
 if (length($chirality_fingerprint_opts) > 0)
 {
-  my $chirality_fingerprint_exe = find_executable("chirality_fingerprint");
+  my $chirality_fingerprint_exe = find_executable("chirality_fingerprint.sh");
+  print STDERR "chirality_fingerprint_opts '$chirality_fingerprint_opts'\n";
   if ("DEF" eq $chirality_fingerprint_opts)
   {
-    $chirality_fingerprint_opts = "-e 1 -r 15 -y 1";
+    $chirality_fingerprint_opts = $chirality_fingerprint_default_options;
   }
   else
   {
@@ -2936,7 +3518,7 @@ if (length($chirality_fingerprint_opts) > 0)
   }
   else
   {
-    $chirality_fingerprint_first = "${chirality_fingerprint_exe} ${dash_g} FILE";
+    $chirality_fingerprint_first = "${chirality_fingerprint_exe} ${seek_stop} ${dash_g} FILE";
   }
 
   $chirality_fingerprint_pipe = "${chirality_fingerprint_exe} -f -";
@@ -2950,7 +3532,7 @@ my $cmd = "";
 
 if ($convert_to_unique_smiles)
 {
-  my $fileconv = find_executable("fileconv");
+  my $fileconv = find_executable("fileconv.sh");
   $cmd = "${fileconv} -c 1 -A D -E autocreate -o tdtnausmi -S -";
   $cmd .= " -g all -f lod" if (length($dash_g));    # fileconv does not recognise -l
   $cmd .= " FILE";
@@ -2958,7 +3540,7 @@ if ($convert_to_unique_smiles)
 }
 elsif (length($translate_elements))
 {
-  my $fileconv = find_executable("fileconv");
+  my $fileconv = find_executable("fileconv.sh");
   $cmd = "${fileconv} -c 1 -A D -E autocreate -o tdt -S - ${translate_elements}";
   $cmd .= " -g all -f lod" if (length($dash_g));    # fileconv does not recognise -l
   $cmd .= " FILE";
@@ -2969,7 +3551,6 @@ elsif (length($translate_elements))
 
 while ($fingerprints_specified > 0)
 {
-  print STDERR "$fingerprints_specified fingerprints remaining\n" if ($verbose);
   my $file;
 
   if ($clogp)
@@ -3070,6 +3651,54 @@ while ($fingerprints_specified > 0)
       $cmd .= "| $tmp";
     }
   }
+  elsif (@linear)
+  {
+    my $tmp = pop(@linear);
+
+    if ($first)
+    {
+      $cmd = "$linear_cmd_first $tmp FILE";
+    }
+    else {
+      $cmd .= "| $linear_cmd_pipe $tmp -";
+    }
+  }
+  elsif (@nc_linear)
+  {
+    my $tmp = pop(@nc_linear);
+
+    if ($first)
+    {
+      $cmd = "$nc_linear_cmd_first $tmp FILE";
+    }
+    else {
+      $cmd .= "| $nc_linear_cmd_pipe $tmp -";
+    }
+  }
+  elsif (@nv_fecust)
+  {
+    my $tmp = pop(@nv_fecust);
+    if ($first)
+    {
+      $cmd = "$nv_fec_cmd_first $tmp";
+    }
+    else
+    {
+      $cmd .= "| $nv_fec_cmd_pipe $tmp -";
+    }
+  }
+  elsif (@nv_ecust)
+  {
+    my $tmp = pop(@nv_ecust);
+    if ($first)
+    {
+      $cmd = "$nv_ec_cmd_first $tmp";
+    }
+    else
+    {
+      $cmd .= "| $nv_ec_cmd_pipe $tmp -";
+    }
+  }
   elsif ($hbd)
   {
     if ($first)
@@ -3081,6 +3710,42 @@ while ($fingerprints_specified > 0)
       $cmd .= "| $hbd_cmd_pipe";
     }
     $hbd = 0;
+  }
+  elsif ($alogp)
+  {
+    if ($first) {
+      $cmd = $alogp_cmd_first;
+    } else {
+      $cmd .= "| $alogp_cmd_pipe";
+    }
+    $alogp = 0;
+  }
+  elsif ($alogd)
+  {
+    if ($first) {
+      $cmd = $alogd_cmd_first;
+    } else {
+      $cmd .= "| $alogd_cmd_pipe";
+    }
+    $alogd = 0;
+  }
+  elsif ($xlogp)
+  {
+    if ($first) {
+      $cmd = $xlogp_cmd_first;
+    } else {
+      $cmd .= "| $xlogp_cmd_pipe";
+    }
+    $xlogp = 0;
+  }
+  elsif ($aclogp)
+  {
+    if ($first) {
+      $cmd = $aclogp_cmd_first;
+    } else {
+      $cmd .= "| $aclogp_cmd_pipe";
+    }
+    $aclogp = 0;
   }
   elsif ($w)
   {
@@ -3229,7 +3894,7 @@ while ($fingerprints_specified > 0)
     }
 
     my $fname;
-    foreach $fname (@similarity_to_targets) 
+    foreach $fname (@similarity_to_targets)
     {
       $cmd .= "|${similarity_to_pipe} -p ${fname} -"
     }
@@ -3248,17 +3913,6 @@ while ($fingerprints_specified > 0)
     }
 
     $psa = 0;
-  }
-  elsif ($marvin)
-  {
-    if ($first)
-    {
-      $cmd = $marvin_cmd_first;
-      $marvin = 0;
-    }
-    else {
-       print STDERR "Can only run Marvin FP on their own, NCMV* FP omitted\n";
-    }
   }
   elsif ($abr)
   {
@@ -3447,6 +4101,67 @@ while ($fingerprints_specified > 0)
 
     $dicer = 0;
   }
+  elsif ($dbf)
+  {
+    if ($first)
+    {
+      if ($need3d)
+      {
+        $cmd = "${corina_first} | $dbf_first ";
+        $need3d = 0;
+      }
+    }
+    else
+    {
+      if ($need3d)
+      {
+        $cmd .= "|${corina_pipe} | ${dbf_pipe} ";
+        $need3d = 0
+      }
+      else {
+        $cmd .= "|${dbf_pipe} ";
+      }
+    }
+
+    $dbf = 0;
+  }
+  elsif ($dbf2d)
+  {
+    if ($first)
+    {
+      $cmd = "${dbf2d_first} ";
+    }
+    else 
+    {
+      $cmd .= "|${dbf2d_pipe} ";
+    }
+
+    $dbf2d = 0
+  }
+  elsif ($dbf3d) 
+  {
+    if ($first)
+    {
+      if ($need3d)
+      {
+        $cmd = "${corina_first} | $dbf3d_first ";
+        $need3d = 0;
+      }
+    }
+    else
+    {
+      if ($need3d)
+      {
+        $cmd .= "|${corina_pipe} | ${dbf3d_pipe} ";
+        $need3d = 0
+      }
+      else {
+        $cmd .= "|${dbf3d_pipe} ";
+      }
+    }
+
+    $dbf3d = 0;
+  }
   elsif ($shadow)
   {
     if ($first)
@@ -3469,27 +4184,6 @@ while ($fingerprints_specified > 0)
     }
 
     $shadow = 0;
-    $need3d = 0;
-  }
-  elsif ($dbf)
-  {
-    if ($first)
-    {
-      $cmd = "${corina_first} | $dbf_pipe ";
-    }
-    else
-    {
-      if ($need3d)
-      {
-        $cmd .= "|${corina_pipe}|${dbf_pipe} ";
-      }
-      else
-      {
-          $cmd .= "|${dbf_pipe}";
-      }
-    }
-
-    $dbf = 0;
     $need3d = 0;
   }
   elsif ($jurs)
@@ -3621,6 +4315,18 @@ while ($fingerprints_specified > 0)
     }
     $atp = 0;
   }
+  elsif ($formula)
+  {
+    if ($first)
+    {
+      $cmd = $formula_first;
+    }
+    else
+    {
+      $cmd .= "|${formula_cmd_pipe}";
+    }
+    $formula = 0;
+  }
   elsif (length($chirality_fingerprint_first) > 0)
   {
     if ($first)
@@ -3631,6 +4337,7 @@ while ($fingerprints_specified > 0)
     {
       $cmd .= "|${chirality_fingerprint_pipe}";
     }
+    $chirality_fingerprint_first = "";
     $fingerprints_specified--;
   }
   elsif ($user_insert)
@@ -3650,7 +4357,7 @@ while ($fingerprints_specified > 0)
   }
 
 # Models are complicated by the fact that we don't want the fingerprints of the model
-# joining what we are asked to produce. So, we temporarily protect any fingerprints 
+# joining what we are asked to produce. So, we temporarily protect any fingerprints
 # already in the stream, then after the model has been evaluated, we remove anything unprotected
 # see the sed commands
 
@@ -3746,14 +4453,14 @@ while ($fingerprints_specified > 0)
 
 if (length($sp2fb))
 {
-  my $sp2fb_cmd = find_executable('gfp_sparse_to_fixed');
+  my $sp2fb_cmd = find_executable('gfp_sparse_to_fixed.sh');
 
   $cmd .= "| ${sp2fb_cmd} ${sp2fb} -";
 }
 
 if (length($join_existing_file))
 {
-  my $tdt_join = find_executable('tdt_join');
+  my $tdt_join = find_executable('tdt_join.sh');
   $cmd .= "| ${tdt_join} -d -t PCN - -c 1 -C 1 ${join_existing_file}";
 }
 
@@ -3834,7 +4541,7 @@ foreach (@files_to_be_deleted)
   unlink($_);
 }
 
-sub check_executable 
+sub check_executable
 {
   use strict 'vars';
 
@@ -3843,7 +4550,7 @@ sub check_executable
   die "Missing or inaccessible programme '$fname'" unless (-s $fname && -x $fname);
 }
 
-sub find_executable 
+sub find_executable
 {
   use strict 'vars';
 
@@ -3860,13 +4567,18 @@ sub find_executable
 
   foreach $dir (@bindir)
   {
-    return "${dir}/${fname}" if (-x "${dir}/${fname}.sh");
+    return "${dir}/${fname}.sh" if (-x "${dir}/${fname}.sh");
+  }
+
+  $fname =~ s/\.sh$//;
+  foreach $dir (@bindir) {
+    return "${dir}/${fname}" if (-x "${dir}/${fname}");
   }
 
   die "Cannot find executable for '$fname'\n";
 }
 
-sub gather_isostere_reactions 
+sub gather_isostere_reactions
 {
   use strict 'vars';
 
@@ -3890,3 +4602,30 @@ sub gather_isostere_reactions
   return $rc;
 }
 
+# An EC fingerprint is being parsed and has been found to have
+# one or more trailing comma separated tokens.
+# @f will have those split tokens. Convert them to one or more command
+# line arguments that will then be given to iwecfp.
+# Exit on any error.
+sub get_ec_modifiers {
+  use strict 'vars';
+
+  my @f = $_[0];
+
+  my $result = "";
+
+  for ($i = 0; $i < @f; $i++) {
+    my $mod = $f[$i];
+    if (length($mod) == 0) {
+      continue;
+    }
+    if ($mod =~ /^rep(\d+)$/) {
+      $result .= " -Y replicates=${1}";
+    } else {
+      print STDERR "Unrecognised -EC modifier '${f[$i]}'\n";
+      exit(1)
+    }
+  }
+
+  return $result;
+}

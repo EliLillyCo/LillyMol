@@ -96,6 +96,7 @@ usage (int rc = 1)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "Programme for making the \"grease\" demerit\n";
   cerr << "usage: " << prog_name << " options file1 file2 file3 ....\n";
   cerr << "  -q <file>      specify one or more substructure queries\n";
@@ -115,6 +116,7 @@ usage (int rc = 1)
   cerr << "  -i ...         specify input type\n";
   cerr << "  -o  ...        specify output type\n";
   cerr << "  -v             verbose output\n";
+// clang-format on
 
   exit (rc);
 }
@@ -142,7 +144,7 @@ static int molecules_with_no_hydrophillic_atoms = 0;
 
 /*
   One rule is that any molecule with a formal charge (we have a charge_assigner)
-  is not considered hydrophiboc
+  is not considered hydrophobic
 */
 
 static int formally_charged_molecules_are_hydrophillic = 0;

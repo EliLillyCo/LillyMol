@@ -2,15 +2,14 @@ description {
   feature_name: "w_ringsys"
   description: "Number of ring systems"
   plot_title: "Number of ring systems"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 8.0
-mean: 2.65736
+maxval: 9.0
+mean: 2.6081135
 median: 3.0
 quantile {
   quantile: 0.01
-  value: 1.0
 }
 quantile {
   quantile: 0.05
@@ -37,37 +36,41 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 453
+  count: 19402
 }
 int_values {
   value: 1
-  count: 5764
+  count: 225158
 }
 int_values {
   value: 2
-  count: 16453
+  count: 623719
 }
 int_values {
   value: 3
-  count: 17326
+  count: 641611
 }
 int_values {
   value: 4
-  count: 8063
+  count: 275637
 }
 int_values {
   value: 5
-  count: 1705
+  count: 55880
 }
 int_values {
   value: 6
-  count: 210
+  count: 6036
 }
 int_values {
   value: 7
-  count: 25
+  count: 585
 }
 int_values {
   value: 8
+  count: 32
+}
+int_values {
+  value: 9
   count: 1
 }

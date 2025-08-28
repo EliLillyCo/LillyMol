@@ -9,7 +9,7 @@ set -x
 if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
-  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $(readlink -e $0))))
+  export LILLYMOL_HOME=$(dirname $(dirname $(dirname $(realpath $0))))
 fi
 
 lib="${LILLYMOL_HOME}/data/random_molecular_permutations.d"

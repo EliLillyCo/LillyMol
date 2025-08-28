@@ -157,17 +157,22 @@ having been previously selected. For example if running two different selection
 methods, a docking score and a QSAR model, you can either
 
 * Combine the scores into a composite measure and sort by that.
-* Run leader with one method, then again with the other method.
+* Run leader with one method, then again with the other method with the first
+set marked as already selected.
 
-A workflow that needs to select 1000 moleules might look something like.
+A workflow that needs to select 1000 moleules, based on two different scoring
+methods might look something like.
 ```
 sort_by_docking_score file.smi > file.sorted1.smi
-gfp_make file.sorted1.smi > file.sorted1.gfp
+gfp_make.sh file.sorted1.smi > file.sorted1.gfp
 gfp_leader -C 500 -t 0.2 -v file.sorted1.gfp > file.sorted1.ldr
+
+# Fetch the selected molecules, without neighbours.
 nplotnn -n 0 file.sorted1.ldr > file.sorted1.sel
 
 # The selections from the first method are now available. Fetch those
 # fingerprints from the previously generated file, or regenerate.
+
 fetch_tdt_quick -c 2 file.sorted1.sel file.sorted1.gfp > file.sorted1.sel.gfp
 sort_by_qsar_score file.smi > file.sorted2.smi
 gfp_make file.sorted2.smi > file.sorted2.gfp

@@ -1,0 +1,4 @@
+(0 Query
+  (A C define_heteroatoms "F Cl Br I")
+  (A I min_heteroatom_count 4)
+)

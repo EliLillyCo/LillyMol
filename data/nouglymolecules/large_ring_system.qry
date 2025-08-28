@@ -1,0 +1,7 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "Ring system with 4 or more rings")
+  (0 ring_system_specifier
+    (A I min_nrings 4)
+  )
+)

@@ -1,4 +1,4 @@
-This directory contains a set of ring replacements extracted from a version
+This directory contains a set of ring replacements extracted from a recent version
 of Chembl.
 
 The files are named according to the kind of ring or ring system. For example
@@ -22,3 +22,11 @@ to_mac.sh
 where the first one is for file systems where 5a5a can coexist with 5A5A
 and the second is for case insensitive file systems. In that case, 5a5A will
 show up as 5Ar5Al (Aromatic and Aliphatic) a much less pleasing naming scheme.
+
+Note that while the files have a .smi suffix, they are actually textproto files.
+These can be processed with most LillyMol tools by specifying
+```
+-i textproto
+```
+Although ring_replacement itself supports options (-D and -F) for subsetting
+the replacement rings used.

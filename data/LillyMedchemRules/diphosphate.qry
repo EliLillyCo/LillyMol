@@ -1,7 +1,7 @@
 (0 Query
   (A C Comment "diphosphate")
-  (A C Comment "diphosphate")
   (A I Version 2)
+  (A I max_matches_to_find 1)
   (0 Query_Atom
     (A I atomic_number 15)
   )

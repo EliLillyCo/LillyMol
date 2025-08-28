@@ -1,8 +1,10 @@
 #include <stdlib.h>
-#include <memory>
+#include <cstdint>
 #include <fstream>
+#include <memory>
 #include <iostream>
 #include <iomanip>
+
 using std::cerr;
 using std::endl;
 
@@ -575,3 +577,17 @@ template class IW_Hash_Map<unsigned int, int>;
 template int Sparse_Fingerprint_Creator::write_as_feature_count(const char, IWString_and_File_Descriptor &) const;
 template int Sparse_Fingerprint_Creator::write_as_md5_sum(IWString_and_File_Descriptor &) const;
 #endif
+
+int
+Sparse_Fingerprint_Creator::Scale(int s) {
+  int rc = 1;
+  for (auto [_, v] : _fp) {
+    v *= s;
+    if (v > std::numeric_limits<uint8_t>::max()) {
+      v = std::numeric_limits<uint8_t>::max();
+      rc = 0;
+    }
+  }
+
+  return rc;
+}

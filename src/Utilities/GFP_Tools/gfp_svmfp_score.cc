@@ -23,6 +23,7 @@
 
 #include "gfp_bit_subset.h"
 
+#include "Utilities/General/linear_scaling.h"
 #include "Utilities/GFP_Tools/gfp.h"
 
 using std::cerr;
@@ -41,6 +42,8 @@ static similarity_type_t lower_singleton_similarity_cutoff =
 
 static GFP_Bit_Subset bit_subset;
 
+// The whole concept of scatter as a function of what is observed during calibration
+// never really worked. We should probably remove it from here.
 typedef IW_STL_Hash_Map<IWString, double> scatter_t;
 
 static scatter_t scatter_data;
@@ -91,13 +94,18 @@ static IW_Hash_Map<unsigned int, double_accumulator*> global_bit_contributions;
 
 static int flush_after_each_molecule = 0;
 
+// We can choose to limit the number of support vectors considered.
+// Such an evaluation will be less accurate, but will be faster.
+static int number_sv_to_use = 0;
+
+static linear_scaling::LinearScaling linear_scaling_fn;
+
 #define EQUAL_WEIGHT_TANIMOTO 1
 #define EQUAL_WEIGHT_DOT_PRODUCT 2
 
 static int kernel_function = EQUAL_WEIGHT_TANIMOTO;
 
-class Fingerprint_and_Weight : public IW_General_Fingerprint
-{
+class Fingerprint_and_Weight : public IW_General_Fingerprint {
  private:
   double _weight;
 
@@ -110,18 +118,22 @@ class Fingerprint_and_Weight : public IW_General_Fingerprint
 
   double weighted_similarity(IW_General_Fingerprint& fp, float&);
   double weighted_similarity(IW_General_Fingerprint& fp, float& max_similarity,
-                      float report_neighbours_within, int& count_neighbours_within);
+                             float report_neighbours_within,
+                             int& count_neighbours_within);
 
-  double weighted_similarity_and_scatter(IW_General_Fingerprint& fp, float& max_similarity,
-                                  double& scatter, double& sumwts);
+  double weighted_similarity_and_scatter(IW_General_Fingerprint& fp,
+                                         float& max_similarity, double& scatter,
+                                         double& sumwts);
 
   int extract_numeric_value_from_id(int w);
 
-  double weight() const {
+  double
+  weight() const {
     return _weight;
   }
 
-  void set_scatter(double s) {
+  void
+  set_scatter(double s) {
     _scatter = s;
   }
 };
@@ -150,7 +162,7 @@ static similarity_type_t minimum_similarity_for_singleton_consideration =
 
 static Accumulator<double> acc_scores;
 
-static NColumn normalisation;
+static NColumn my_normalisation;
 
 static int normalisation_active = 0;
 
@@ -171,8 +183,7 @@ static IWString_and_File_Descriptor stream_for_bit_contributions;
 
 static IWString_and_File_Descriptor stream_for_bits_removed;
 
-Fingerprint_and_Weight::Fingerprint_and_Weight()
-{
+Fingerprint_and_Weight::Fingerprint_and_Weight() {
   _weight = 0.0;
 
   _scatter = 0.0;
@@ -182,10 +193,9 @@ Fingerprint_and_Weight::Fingerprint_and_Weight()
 
 double
 Fingerprint_and_Weight::weighted_similarity(IW_General_Fingerprint& fp,
-                                            float& max_similarity)
-{
+                                            float& max_similarity) {
   similarity_type_t sim;
-  if (EQUAL_WEIGHT_TANIMOTO == kernel_function) {
+  if (EQUAL_WEIGHT_TANIMOTO == kernel_function) [[likely]] {
     sim = this->equal_weight_tanimoto(fp);
   } else if (EQUAL_WEIGHT_DOT_PRODUCT == kernel_function) {
     sim = this->equal_weight_dot_product(fp);
@@ -216,8 +226,7 @@ double
 Fingerprint_and_Weight::weighted_similarity(IW_General_Fingerprint& fp,
                                             float& max_similarity,
                                             float report_neighbours_within,
-                                            int& count_neighbours_within)
-{
+                                            int& count_neighbours_within) {
   similarity_type_t sim = this->equal_weight_tanimoto(fp);
 
   if (sim < lower_similarity_cutoff) {
@@ -243,8 +252,7 @@ Fingerprint_and_Weight::weighted_similarity(IW_General_Fingerprint& fp,
 double
 Fingerprint_and_Weight::weighted_similarity_and_scatter(IW_General_Fingerprint& fp,
                                                         float& max_similarity,
-                                                        double& scatter, double& sumwts)
-{
+                                                        double& scatter, double& sumwts) {
   similarity_type_t sim = this->equal_weight_tanimoto(fp);
 
   if (sim > max_similarity) {
@@ -261,8 +269,7 @@ Fingerprint_and_Weight::weighted_similarity_and_scatter(IW_General_Fingerprint& 
 }
 
 int
-Fingerprint_and_Weight::construct_from_tdt(IW_TDT& tdt, int& fatal)
-{
+Fingerprint_and_Weight::construct_from_tdt(IW_TDT& tdt, int& fatal) {
   if (!IW_General_Fingerprint::construct_from_tdt(tdt, fatal)) {
     return 0;
   }
@@ -293,8 +300,7 @@ Fingerprint_and_Weight::construct_from_tdt(IW_TDT& tdt, int& fatal)
 }
 
 int
-Fingerprint_and_Weight::extract_numeric_value_from_id(int w)
-{
+Fingerprint_and_Weight::extract_numeric_value_from_id(int w) {
   if (_id.nwords() < w + 1) {
     cerr << "Fingerprint_and_Weight::extract_numeric_value_from_id:not enough tokens in "
             "name '"
@@ -311,7 +317,7 @@ Fingerprint_and_Weight::extract_numeric_value_from_id(int w)
   }
 
   if (normalisation_active) {
-    normalisation.scale(_weight, _weight);
+    my_normalisation.scale(_weight, _weight);
   }
 
   return 1;
@@ -322,9 +328,8 @@ const char* prog_name = nullptr;
 static int verbose = 0;
 
 static void
-usage(int rc)
-{
-// clang-format off
+usage(int rc) {
+  // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
@@ -333,18 +338,19 @@ usage(int rc)
   // clang-format on
   // clang-format off
   cerr << "Evaluates svmfp models\n";
-  cerr << " -U <fname>     support vectors\n";
+  cerr << " -U <fname>     TDT file contianing support vectors and weights as tags\n";
+  cerr << " -S <tag>       support vector weight tag (default '" << svmfp_weight_tag << "')\n";
   cerr << " -s <n>         number of support vectors present\n";
   cerr << " -b <float>     threshold b parameter\n";
   cerr << " -p <precision> default output precision\n";
-  cerr << " -S <tag>       support vector weight tag (default '" << svmfp_weight_tag << "')\n";
-  cerr << " -N <fname>     activity normalisation data file\n";
+  cerr << " -N <fname>     activity normalisation data file - created by normalise -C...\n";
+  cerr << " -Z <fname>     linear rescaling. <fname> should be generated by 'iwstats -C <fname>'\n";
   cerr << " -d             include shortest distance to support vector in output\n";
   cerr << " -y <dist>      report number of support vectors within <dist>\n";
   cerr << " -i             include largest negative and positive influence values in output \n";
-  cerr << " -I <fname>     file of singletons, from ./nn_identify_active_outliers\n";
+  cerr << " -I <fname>     file of singletons, from nn_identify_active_outliers\n";
   cerr << " -g <dist>      minimum distance for singleton consideration\n";
-  cerr << " -o ...         options for normalisation, enter '-o help' for info\n";
+  cerr << " -o ...         options for rescaling back to experimental range, enter '-o help' for info\n";
   cerr << " -T <dist>      upper distance threshold - ignore molecule > <dist>\n";
   cerr << " -X <fname>     bit cross reference file created by gfp_to_svm_lite\n";
   cerr << " -D <fname>     write individual vector contributions to <fname>\n";
@@ -356,9 +362,6 @@ usage(int rc)
   cerr << " -A lt.<x>      only write values where the score is < <x> \n";
   cerr << " -J ...         produce fingerprint of result, enter '-J help' for info\n";
   cerr << " -K ...         kernel function, enter '-K help' for choices\n";
-  cerr << " -E <fname>     read prediction scatter data (produced by mispredicted -Y option)\n";
-  cerr << " -L <fname>     kernel distance scaling file. One token per line, similarity scale\n";
-  cerr << " -W <fname>     file of known values - echo if ID encountered\n";
   cerr << " -Y ...         other options, enter '-Y help' for info\n";
   cerr << " -v             verbose output\n";
   // clang-format on
@@ -367,8 +370,7 @@ usage(int rc)
 }
 
 static int
-identify_column_matching(const const_IWSubstring& buffer, const IWString& s)
-{
+identify_column_matching(const const_IWSubstring& buffer, const IWString& s) {
   const_IWSubstring token;
 
   for (auto c = 0, i = 0; buffer.nextword(token, i); c++) {
@@ -387,8 +389,7 @@ identify_column_matching(const const_IWSubstring& buffer, const IWString& s)
 // SGCV2852 6 14 1.960912 2.114052 2.014683 3.985317 4.039088 0.04240524
 
 static int
-parse_scatter_data_record(const const_IWSubstring& buffer, int col, scatter_t& s)
-{
+parse_scatter_data_record(const const_IWSubstring& buffer, int col, scatter_t& s) {
   IWString id;
   int i = 0;
 
@@ -419,8 +420,7 @@ parse_scatter_data_record(const const_IWSubstring& buffer, int col, scatter_t& s
 }
 
 static int
-read_known_values(iwstring_data_source& input, IW_STL_Hash_Map_float& known_values)
-{
+read_known_values(iwstring_data_source& input, IW_STL_Hash_Map_float& known_values) {
   input.set_dos(1);
 
   const_IWSubstring buffer;
@@ -451,8 +451,7 @@ read_known_values(iwstring_data_source& input, IW_STL_Hash_Map_float& known_valu
 }
 
 static int
-read_known_values(const char* fname, IW_STL_Hash_Map_float& known_values)
-{
+read_known_values(IWString& fname, IW_STL_Hash_Map_float& known_values) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -465,8 +464,7 @@ read_known_values(const char* fname, IW_STL_Hash_Map_float& known_values)
 
 static int
 read_kernel_scaling_function(iwstring_data_source& input,
-                             similarity_type_t* kernel_scaling_function)
-{
+                             similarity_type_t* kernel_scaling_function) {
   const_IWSubstring buffer;
 
   int ndx;
@@ -494,9 +492,10 @@ read_kernel_scaling_function(iwstring_data_source& input,
 }
 
 static int
-read_kernel_scaling_function(const char* fname,
-                             similarity_type_t* kernel_scaling_function)
-{
+read_kernel_scaling_function(IWString& fname,
+                             similarity_type_t* kernel_scaling_function) {
+  kernel_scaling_function = new similarity_type_t[101];
+
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -508,13 +507,12 @@ read_kernel_scaling_function(const char* fname,
 }
 
 static int
-read_scatter_data(iwstring_data_source& input, scatter_t& s)
-{
+read_scatter_data(iwstring_data_source& input, scatter_t& s) {
   const_IWSubstring buffer;
 
   input.next_record(buffer);
 
-  auto col = identify_column_matching(buffer, scatter_descriptor);
+  int col = identify_column_matching(buffer, scatter_descriptor);
 
   if (col <= 0) {
     cerr << "Cannot find '" << scatter_descriptor << "' in '" << buffer << "'\n";
@@ -537,8 +535,7 @@ read_scatter_data(iwstring_data_source& input, scatter_t& s)
 }
 
 static int
-read_scatter_data(const char* fname, scatter_t& s)
-{
+read_scatter_data(const char* fname, scatter_t& s) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -551,8 +548,7 @@ read_scatter_data(const char* fname, scatter_t& s)
 
 static int
 transfer_scatter_data_to_support_vectors(Fingerprint_and_Weight* pool, int pool_size,
-                                         const scatter_t& scatter_data)
-{
+                                         const scatter_t& scatter_data) {
   for (auto i = 0; i < pool_size; ++i) {
     const IWString& id = pool[i].id();
 
@@ -570,8 +566,7 @@ transfer_scatter_data_to_support_vectors(Fingerprint_and_Weight* pool, int pool_
 }
 
 int
-allocate_pool(int n, Fingerprint_and_Weight*& fp)
-{
+allocate_pool(int n, Fingerprint_and_Weight*& fp) {
   if (NULL != fp) {
     cerr << "Warning, fingerprint array already allocated!!\n";
     delete[] fp;
@@ -588,8 +583,7 @@ allocate_pool(int n, Fingerprint_and_Weight*& fp)
 }
 
 static int
-read_singletons(iwstring_data_source& input)
-{
+read_singletons(iwstring_data_source& input) {
   int s = input.count_records_starting_with("PCN<");
 
   if (0 == s) {
@@ -635,8 +629,7 @@ read_singletons(iwstring_data_source& input)
 }
 
 static int
-read_singletons(const char* fname)
-{
+read_singletons(const char* fname) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -648,8 +641,7 @@ read_singletons(const char* fname)
 }
 
 static int
-read_pool(iwstring_data_source& input)
-{
+read_pool(iwstring_data_source& input) {
   if (0 == svmfp_weight_tag.length()) {
     cerr << "Cannot read pool, no weight tag\n";
     return 0;
@@ -693,8 +685,7 @@ read_pool(iwstring_data_source& input)
 }
 
 static int
-read_pool(const char* fname)
-{
+read_pool(const char* fname) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -722,8 +713,7 @@ read_pool(const char* fname)
 */
 
 static int
-update_score_for_proximity_to_singletons(IW_General_Fingerprint& fp, double& rc)
-{
+update_score_for_proximity_to_singletons(IW_General_Fingerprint& fp, double& rc) {
   iwmaxid<double, int> maxsim(0.0, -1);
 
   for (int i = 0; i < number_singletons; i++) {
@@ -759,8 +749,7 @@ update_score_for_proximity_to_singletons(IW_General_Fingerprint& fp, double& rc)
   return 1;
 }
 
-class Bit_and_Contribution
-{
+class Bit_and_Contribution {
  private:
   unsigned int _bit;
   double _contribution;
@@ -768,35 +757,37 @@ class Bit_and_Contribution
  public:
   Bit_and_Contribution();
 
-  Bit_and_Contribution(unsigned int b, double c) : _bit(b), _contribution(c){};
+  Bit_and_Contribution(unsigned int b, double c) : _bit(b), _contribution(c) {};
 
-  void set_bit(unsigned int b) {
+  void
+  set_bit(unsigned int b) {
     _bit = b;
   }
 
-  unsigned int bit_number() const {
+  unsigned int
+  bit_number() const {
     return _bit;
   }
 
-  void extra(double e) {
+  void
+  extra(double e) {
     _contribution += e;
   }
 
-  double contribution() const {
+  double
+  contribution() const {
     return _contribution;
   }
 };
 
-Bit_and_Contribution::Bit_and_Contribution()
-{
+Bit_and_Contribution::Bit_and_Contribution() {
   _bit = 0;
   _contribution = 0.0;
 
   return;
 }
 
-class BC_Comparator
-{
+class BC_Comparator {
  private:
  public:
   int operator()(const Bit_and_Contribution&, const Bit_and_Contribution&) const;
@@ -804,8 +795,7 @@ class BC_Comparator
 
 int
 BC_Comparator::operator()(const Bit_and_Contribution& bc1,
-                          const Bit_and_Contribution& bc2) const
-{
+                          const Bit_and_Contribution& bc2) const {
   double c1 = bc1.contribution();
   double c2 = bc2.contribution();
 
@@ -825,8 +815,7 @@ static BC_Comparator bc_comparator;
 static int
 analyse_bit_contributions(const IWString& smiles, const IWString& id,
                           const Sparse_Fingerprint& sfp,
-                          IWString_and_File_Descriptor& output)
-{
+                          IWString_and_File_Descriptor& output) {
   const int n = sfp.nbits();
 
   Bit_and_Contribution* bc = new Bit_and_Contribution[n];
@@ -899,27 +888,22 @@ analyse_bit_contributions(const IWString& smiles, const IWString& id,
   return 1;
 }
 
-template void
-iwqsort<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int, BC_Comparator&);
-template void
-iwqsort<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int, BC_Comparator&,
-                                             void*);
-template void
-compare_two_items<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*,
-                                                       BC_Comparator&, void*);
-template void
-move_in_from_left<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int&, int&,
-                                                       int, BC_Comparator&, void*);
-template void
-move_in_from_right<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int&, int&,
-                                                        BC_Comparator&);
-template void
-swap_elements<Bit_and_Contribution>(Bit_and_Contribution&, Bit_and_Contribution&, void*);
+template void iwqsort<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int,
+                                                           BC_Comparator&);
+template void iwqsort<Bit_and_Contribution, BC_Comparator>(Bit_and_Contribution*, int,
+                                                           BC_Comparator&, void*);
+template void compare_two_items<Bit_and_Contribution, BC_Comparator>(
+    Bit_and_Contribution*, BC_Comparator&, void*);
+template void move_in_from_left<Bit_and_Contribution, BC_Comparator>(
+    Bit_and_Contribution*, int&, int&, int, BC_Comparator&, void*);
+template void move_in_from_right<Bit_and_Contribution, BC_Comparator>(
+    Bit_and_Contribution*, int&, int&, BC_Comparator&);
+template void swap_elements<Bit_and_Contribution>(Bit_and_Contribution&,
+                                                  Bit_and_Contribution&, void*);
 
 static int
 analyse_bit_contributions(IW_General_Fingerprint& fp, const IWString& smiles,
-                          IWString_and_File_Descriptor& output)
-{
+                          IWString_and_File_Descriptor& output) {
   if (bit_subset.active()) {
     bit_subset.reduce_to_subset(fp);
   }
@@ -941,8 +925,7 @@ analyse_bit_contributions(IW_General_Fingerprint& fp, const IWString& smiles,
   return analyse_bit_contributions(smiles, fp.id(), sfp, output);
 }
 
-class Double_Accumulator_Compartor
-{
+class Double_Accumulator_Compartor {
  private:
  public:
   int operator()(const Accumulator<double>*, const Accumulator<double>*) const;
@@ -950,8 +933,7 @@ class Double_Accumulator_Compartor
 
 int
 Double_Accumulator_Compartor::operator()(const Accumulator<double>* a1,
-                                         const Accumulator<double>* a2) const
-{
+                                         const Accumulator<double>* a2) const {
   double ave1 = a1->average();
   double ave2 = a2->average();
 
@@ -966,8 +948,7 @@ Double_Accumulator_Compartor::operator()(const Accumulator<double>* a1,
   return 0;
 }
 
-class Global_Bit_Summary
-{
+class Global_Bit_Summary {
  private:
   unsigned int _bit;
   int _number_molecules;
@@ -976,33 +957,38 @@ class Global_Bit_Summary
  public:
   Global_Bit_Summary();
 
-  void set_bit_number(unsigned int b) {
+  void
+  set_bit_number(unsigned int b) {
     _bit = b;
   }
 
-  void set_number_molecules(int n) {
+  void
+  set_number_molecules(int n) {
     _number_molecules = n;
   }
 
-  void set_average_contribution(double s) {
+  void
+  set_average_contribution(double s) {
     _average_contribution = s;
   }
 
-  unsigned int bit_number() const {
+  unsigned int
+  bit_number() const {
     return _bit;
   }
 
-  int number_molecules() const {
+  int
+  number_molecules() const {
     return _number_molecules;
   }
 
-  double average_contribution() const {
+  double
+  average_contribution() const {
     return _average_contribution;
   }
 };
 
-Global_Bit_Summary::Global_Bit_Summary()
-{
+Global_Bit_Summary::Global_Bit_Summary() {
   _bit = 0;
   _number_molecules = 0;
   _average_contribution = 0.0;
@@ -1010,8 +996,7 @@ Global_Bit_Summary::Global_Bit_Summary()
   return;
 }
 
-class Global_Bit_Summary_Comparator
-{
+class Global_Bit_Summary_Comparator {
  private:
  public:
   int operator()(const Global_Bit_Summary&, const Global_Bit_Summary&) const;
@@ -1019,8 +1004,7 @@ class Global_Bit_Summary_Comparator
 
 int
 Global_Bit_Summary_Comparator::operator()(const Global_Bit_Summary& gb1,
-                                          const Global_Bit_Summary& gb2) const
-{
+                                          const Global_Bit_Summary& gb2) const {
   double a1 = gb1.average_contribution();
   double a2 = gb2.average_contribution();
 
@@ -1038,8 +1022,7 @@ Global_Bit_Summary_Comparator::operator()(const Global_Bit_Summary& gb1,
 static int
 write_global_bit_contributions(
     const IW_Hash_Map<unsigned int, double_accumulator*>& global_bit_contributions,
-    IWString_and_File_Descriptor& output)
-{
+    IWString_and_File_Descriptor& output) {
   unsigned int threshold = pool_size / 100;
   if (0 == threshold) {
     threshold = 2;
@@ -1097,8 +1080,7 @@ write_global_bit_contributions(
 }
 
 static int
-within_range(float v)
-{
+within_range(float v) {
   if (v < min_activity_written) {
     items_less_than_min_activity++;
     return 0;
@@ -1114,8 +1096,7 @@ within_range(float v)
 
 static void
 write_identifier(const IW_TDT& tdt, const IWString& smiles, const IWString& id,
-                 IWString_and_File_Descriptor& output)
-{
+                 IWString_and_File_Descriptor& output) {
   if (function_as_tdt_filter) {
     tdt.write_all_except_vbar(output);
     return;
@@ -1139,8 +1120,7 @@ write_identifier(const IW_TDT& tdt, const IWString& smiles, const IWString& id,
 }
 
 static void
-write_result(float r, IWString_and_File_Descriptor& output)
-{
+write_result(float r, IWString_and_File_Descriptor& output) {
   if (verbose) {
     acc_scores.extra(r);
   }
@@ -1151,12 +1131,12 @@ write_result(float r, IWString_and_File_Descriptor& output)
   }
 
   int b;
-  if (r < normalisation.minval()) {
+  if (r < my_normalisation.minval()) {
     b = 0;
-  } else if (r > normalisation.maxval()) {
+  } else if (r > my_normalisation.maxval()) {
     b = fingerprint_buckets;
   } else {
-    b = static_cast<int>((r - normalisation.minval()) / fingerprint_dx + 0.4999);
+    b = static_cast<int>((r - my_normalisation.minval()) / fingerprint_dx + 0.4999);
   }
 
   b++;
@@ -1178,8 +1158,7 @@ write_result(float r, IWString_and_File_Descriptor& output)
 
 static int
 svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smiles,
-            IWString_and_File_Descriptor& output)
-{
+            IWString_and_File_Descriptor& output) {
   if (bit_subset.active()) {
     int bits_removed = bit_subset.reduce_to_subset(fp);
 
@@ -1188,6 +1167,14 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
       stream_for_bits_removed.write_if_buffer_holds_more_than(32768);
     }
   }
+
+
+  // The number of support vectors we will scan. By default `pool_size`.
+  int number_support_vectors = pool_size;
+  if (number_support_vectors < number_sv_to_use) {
+    number_support_vectors = number_sv_to_use;
+  }
+  // cerr << "Scoring " << number_support_vectors << " fingerprints\n";
 
   double rc = -threshold_b;
 
@@ -1206,7 +1193,7 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
     append_first_token_of_name(fp.id(), stream_for_vector_contributions);
 
     double tmp;
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       Fingerprint_and_Weight& pi = pool[i];
 
       tmp = pi.weighted_similarity(fp, max_similarity);
@@ -1229,40 +1216,40 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
 
     double tmp;  // scope here for efficiency
 
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       tmp = pool[i].weighted_similarity(fp, max_similarity);
       ineg->try_this(tmp, i);
       ipos->try_this(tmp, i);
       rc += tmp;
     }
   } else if (report_neighbours_within > 0.0) {
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       rc += pool[i].weighted_similarity(fp, max_similarity, report_neighbours_within,
                                         count_neighbours_within);
     }
     rc *= kernel_multiplier;
   } else if (scatter_data.size() > 0) {
     double sumwts = 0.0;  // could be computed once and saved
-    for (auto i = 0; i < pool_size; ++i) {
+    for (auto i = 0; i < number_support_vectors; ++i) {
       rc += pool[i].weighted_similarity_and_scatter(fp, max_similarity, scatter, sumwts);
     }
 
     scatter /= sumwts;
   } else if (weight_cutoff < 1.0f) {
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       if (std::abs(pool[i].weight()) < weight_cutoff) {
         continue;
       }
       rc += pool[i].weighted_similarity(fp, max_similarity);
     }
   } else if (1.0 == kernel_multiplier) {
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       //    cerr << i << ' ' << pool[i].weighted_similarity(fp, max_similarity) << '\n';
       rc += pool[i].weighted_similarity(fp, max_similarity);
     }
   } else {
     // this makes no sense, move multiplier out of loop - investigate sometime
-    for (int i = 0; i < pool_size; i++) {
+    for (int i = 0; i < number_support_vectors; i++) {
       rc += kernel_multiplier * pool[i].weighted_similarity(fp, max_similarity);
     }
   }
@@ -1271,16 +1258,21 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
     update_score_for_proximity_to_singletons(fp, rc);
   }
 
+  // cerr << "normalisation_active " << normalisation_active << " linear_scaling_fn " << linear_scaling_fn.active() << '\n';
+  // The linear scaling function should be applied regardless of normalisation.
+  // No time to make that change now. TODO:ianwatson make change and test.
   if (normalisation_active) {
     double unscaled;
-    normalisation.unscale(rc, unscaled);
-    //  cerr << "Unscale '" << fp.id() << "' " << rc << " to " << unscaled << endl;
+    my_normalisation.unscale(rc, unscaled);
+    // cerr << "Unscale '" << fp.id() << "' " << rc << " to " << unscaled << '\n';
+
+    linear_scaling_fn.MaybeTransform(unscaled);
+
     if (!within_range(unscaled)) {
       return 1;
     }
 
     write_identifier(tdt, smiles, fp.id(), output);
-
     write_result(unscaled, output);
 
     if (stream_for_vector_contributions.active()) {
@@ -1338,8 +1330,7 @@ svmfp_score(const IW_TDT& tdt, IW_General_Fingerprint& fp, const IWString& smile
 }
 
 static int
-svmfp_score(IW_TDT& tdt, IWString_and_File_Descriptor& output)
-{
+svmfp_score(IW_TDT& tdt, IWString_and_File_Descriptor& output) {
   IW_General_Fingerprint fp;
 
   int fatal;
@@ -1385,8 +1376,7 @@ svmfp_score(IW_TDT& tdt, IWString_and_File_Descriptor& output)
 }
 
 static int
-svmfp_score(iwstring_data_source& input, IWString_and_File_Descriptor& output)
-{
+svmfp_score(iwstring_data_source& input, IWString_and_File_Descriptor& output) {
   IW_TDT tdt;
   while (tdt.next(input)) {
     tdts_read++;
@@ -1404,8 +1394,7 @@ svmfp_score(iwstring_data_source& input, IWString_and_File_Descriptor& output)
 }
 
 static int
-svmfp_score(const char* fname, IWString_and_File_Descriptor& output)
-{
+svmfp_score(const char* fname, IWString_and_File_Descriptor& output) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -1417,8 +1406,7 @@ svmfp_score(const char* fname, IWString_and_File_Descriptor& output)
 }
 
 static int
-read_normalisation_data(iwstring_data_source& input, NColumn& normalisation)
-{
+read_normalisation_data(iwstring_data_source& input, NColumn& my_normalisation) {
   IWString buffer;
 
   while (input.next_record(buffer)) {
@@ -1432,19 +1420,15 @@ read_normalisation_data(iwstring_data_source& input, NColumn& normalisation)
       return 0;
     }
 
-    if (buffer.starts_with('#')) {
-      continue;
-    }
-
-    if (0 == buffer.length()) {
-      continue;
-    }
-
     buffer.truncate_at_first('#');
+
+    if (buffer.empty()) {
+      continue;
+    }
 
     buffer.remove_leading_words(1);
 
-    return normalisation.establish_range_from_pre_existing_data(buffer);
+    return my_normalisation.establish_range_from_pre_existing_data(buffer);
   }
 
   cerr << "No normalisation data in file\n";
@@ -1452,8 +1436,7 @@ read_normalisation_data(iwstring_data_source& input, NColumn& normalisation)
 }
 
 static int
-read_normalisation_data(const IWString& n, NColumn& normalisation)
-{
+read_normalisation_data(const IWString& n, NColumn& my_normalisation) {
   iwstring_data_source input(n);
 
   if (!input.good()) {
@@ -1461,104 +1444,45 @@ read_normalisation_data(const IWString& n, NColumn& normalisation)
     return 0;
   }
 
-  return read_normalisation_data(input, normalisation);
+  return read_normalisation_data(input, my_normalisation);
 }
 
-/*
-  The way svm_learn is run, all fingerprints, of all types get mixed together
-  with equal weight. But all the gfp_* programmes run by assigning each fingerprint
-  equal weight by default. In order to reproduce the results from svm_learn,
-  we need to adjust the weights
-
-  WRONG! this never worked properly. Maybe there's a way to figure out how
-  to do this, but it isn't obvious
-*/
-
-#ifdef DOES_NOT_WORK4
 static int
-adjust_fingerprint_weights_according_to_number_of_bits(const GFP_Bit_Subset& bit_subset)
-{
-  int total_bits = bit_subset.number_properties();
-
-  for (int i = 0; i < bit_subset.number_fixed_width_fingerprints(); i++) {
-    total_bits += bit_subset.bits_used_in_fixed_width_fingerprint(i);
-  }
-
-  for (int i = 0; i < bit_subset.number_sparse_fingerprints(); i++) {
-    total_bits += bit_subset.bits_in_sparse_fingerprint(i);
-  }
-
-  double w = static_cast<double>(bit_subset.number_properties()) /
-             static_cast<double>(total_bits);
-
-  set_property_weight_integer(w);
-
-  if (verbose > 1) {
-    cerr << "Property weight " << w << endl;
-  }
-
-  for (int i = 0; i < bit_subset.number_fixed_width_fingerprints(); i++) {
-    int nb = bit_subset.bits_used_in_fixed_width_fingerprint(i);
-
-    w = static_cast<double>(nb) / static_cast<double>(total_bits);
-
-    set_fixed_width_fingerprint_weight(i, w);
-
-    if (verbose) {
-      cerr << "Fixed width fingerprint " << i << " weight " << w << endl;
-    }
-  }
-
-  for (int i = 0; i < bit_subset.number_sparse_fingerprints(); i++) {
-    int nb = bit_subset.bits_in_sparse_fingerprint(i);
-
-    w = static_cast<double>(nb) / static_cast<double>(total_bits);
-
-    set_sparse_fingerprint_weight(i, w);
-
-    if (verbose) {
-      cerr << "Sparse fingerprint " << i << " weight " << w << endl;
-    }
-  }
-
-  return 1;
-}
-#endif
-
-static int
-display_dash_J_options(std::ostream& os)
-{
+display_dash_J_options(std::ostream& os) {
+  // clang-format off
   os << " -J TAG=<tag>     specify tag for fingerprint\n";
   os << " -J BKT=<n>       number of buckets\n";
   os << " -J RPL=<n>       number of replicates\n";
   os << " -J FILTER        function as a TDT filter\n";
+  // clang-format on
   exit(1);
 }
 
 static void
-display_kernel_function_choices(std::ostream& os)
-{
+display_kernel_function_choices(std::ostream& os) {
+  // clang-format off
   os << " -K tani          Tanimoto kernel function (default)\n";
   os << " -K dot           dot product\n";
+  // clang-format on
 
   exit(1);
 }
 
 static void
-DisplayDashYOptions(std::ostream& output)
-{
+DisplayDashYOptions(std::ostream& output) {
+  // clang-format off
   output << " -Y flush         flush output after each molecule\n";
   output << " -Y wcutoff=<f>   support vector weight cutoff. Only use support vectors with abs weight values\n";
   output << "                  greater than <f>. Will definitely speed up run times, but at the expense of accuracy\n";
+  // clang-format on
 
   ::exit(0);
 }
 
 static int
-svmfp_score(int argc, char** argv)
-{
+svmfp_score(int argc, char** argv) {
   Command_Line cl(argc, argv,
-                  "vP:p:S:n:P:F:b:s:H:N:dy:io:U:T:I:g:D:X:mB:k:R:A:J:K:E:L:W:Y:");
+                  "vP:p:S:n:P:F:b:s:H:N:dy:io:U:T:I:g:D:X:mB:k:R:A:J:K:E:L:W:Y:Z:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1712,10 +1636,9 @@ svmfp_score(int argc, char** argv)
     }
   }
 
+  // Deprecated, not available in -Y options.
   if (cl.option_present('L')) {
-    const char* l = cl.option_value('L');
-
-    kernel_scaling_function = new similarity_type_t[101];
+    IWString l = cl.option_value('L');
 
     if (!read_kernel_scaling_function(l, kernel_scaling_function)) {
       cerr << "Cannot read kernel scaling function from '" << l << "'\n";
@@ -1727,8 +1650,9 @@ svmfp_score(int argc, char** argv)
     }
   }
 
+  // Deprecated, now available via -Y option.
   if (cl.option_present('W')) {
-    const char* fname = cl.option_value('W');
+    IWString fname = cl.option_value('W');
 
     if (!read_known_values(fname, known_values)) {
       cerr << "Cannot read known values from '" << fname << "'\n";
@@ -1743,7 +1667,7 @@ svmfp_score(int argc, char** argv)
   }
 
   if (cl.option_present('Y')) {
-    const_IWSubstring y;
+    IWString y;
     for (int i = 0; cl.value('Y', y, i); ++i) {
       if (y == "flush") {
         flush_after_each_molecule = 1;
@@ -1752,13 +1676,47 @@ svmfp_score(int argc, char** argv)
         }
       } else if (y.starts_with("wcutoff=")) {
         y.remove_leading_chars(8);
-        if (! y.numeric_value(weight_cutoff) || weight_cutoff <= 0.0f ||        
+        if (!y.numeric_value(weight_cutoff) || weight_cutoff <= 0.0f ||
             weight_cutoff > 1.0f) {
           cerr << "The support vector weight cutoff value must be a valid weight [0,1]\n";
           return 0;
         }
         if (verbose) {
-          cerr << "Will only evaluate support vectors with weight " << weight_cutoff << " or above\n";
+          cerr << "Will only evaluate support vectors with weight " << weight_cutoff
+               << " or above\n";
+        }
+      } else if (y.starts_with("nsv=")) {
+        y.remove_leading_chars(4);
+        if (! y.numeric_value(number_sv_to_use) || number_sv_to_use < 10) {
+          cerr << "The number of support vectors to use '-Y nsv=' must be a whole +ve number " <<
+                  y << " invalid\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will only evaluate the first " << number_sv_to_use << " support vectors\n";
+        }
+      } else if (y.starts_with("KNOWN=")) {
+        y.remove_leading_chars(6);
+        if (!read_known_values(y, known_values)) {
+          cerr << "Cannot read known values from '" << y << "'\n";
+          return 1;
+        }
+
+        known_values_present = true;
+
+        if (verbose) {
+          cerr << "Read " << known_values.size() << " known values from '" << y << "'\n";
+        }
+      } else if (y.starts_with("KSCALE=")) {
+        y.remove_leading_chars(7);
+
+        if (!read_kernel_scaling_function(y, kernel_scaling_function)) {
+          cerr << "Cannot read kernel scaling function from '" << y << "'\n";
+          return 1;
+        }
+
+        if (verbose) {
+          cerr << "Kernel scaling function read from '" << y << "'\n";
         }
       } else if (y == "help") {
         DisplayDashYOptions(cerr);
@@ -1791,7 +1749,7 @@ svmfp_score(int argc, char** argv)
       cerr << "Missing or empty normalisation file '" << n << "'\n";
       return 3;
     }
-    if (!read_normalisation_data(n, normalisation)) {
+    if (!read_normalisation_data(n, my_normalisation)) {
       cerr << "Invalid normalisation data '" << n << "'\n";
       return 4;
     }
@@ -1801,6 +1759,17 @@ svmfp_score(int argc, char** argv)
     }
 
     normalisation_active = 1;
+  }
+
+  if (cl.option_present('Z')) {
+    IWString fname = cl.string_value('Z');
+    if (! linear_scaling_fn.Build(fname)) {
+      cerr << "Cannot read linear unscaling textproto '" << fname << "'\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Build linear rescaling from '" << fname << "'\n";
+    }
   }
 
   if (cl.option_present('S')) {
@@ -1815,10 +1784,11 @@ svmfp_score(int argc, char** argv)
     }
   }
 
+  // Deprecated. Not displayed in usage message. Will be removed.
   if (cl.option_present('E')) {
     IWString scatter_fname;
     const_IWSubstring e;
-    for (auto i = 0; cl.value('E', e, i); ++i) {
+    for (int i = 0; cl.value('E', e, i); ++i) {
       if (e.starts_with("dsc=")) {
         e.remove_leading_chars(4);
         scatter_descriptor = e;
@@ -2070,14 +2040,14 @@ svmfp_score(int argc, char** argv)
     }
 
     if (!normalisation_active) {  // classification model, scale to [-1,1]
-      normalisation.set(-1.0, 1.0, 2.0);
+      my_normalisation.set(-1.0, 1.0, 2.0);
     }
 
-    fingerprint_dx = (normalisation.maxval() - normalisation.minval()) /
+    fingerprint_dx = (my_normalisation.maxval() - my_normalisation.minval()) /
                      static_cast<double>(fingerprint_buckets);
     if (verbose) {
-      cerr << "Fingerprinting done between " << normalisation.minval() << " and "
-           << normalisation.maxval() << " dx " << fingerprint_dx << endl;
+      cerr << "Fingerprinting done between " << my_normalisation.minval() << " and "
+           << my_normalisation.maxval() << " dx " << fingerprint_dx << endl;
     }
   }
 
@@ -2164,12 +2134,15 @@ svmfp_score(int argc, char** argv)
     stream_for_bits_removed.close();
   }
 
+  if (kernel_scaling_function != nullptr) {
+    delete [] kernel_scaling_function;
+  }
+
   return rc;
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = svmfp_score(argc, argv);

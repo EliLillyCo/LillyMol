@@ -3,7 +3,11 @@
 
 // Rescaling floating point values to and from the [0,1] range.
 
+#ifdef BUILD_BAZEL
 #include "Utilities/General/feature_scaling.pb.h"
+#else
+#include "feature_scaling.pb.h"
+#endif
 
 namespace feature_scaler {
 

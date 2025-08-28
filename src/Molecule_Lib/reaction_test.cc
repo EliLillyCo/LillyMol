@@ -27,6 +27,8 @@ class TestReaction : public testing::Test
 
     IWReaction _rxn;
 
+    Sidechain_Match_Conditions _smc;
+
     Molecule _m;
 
     bool _MoleculeFromSmiles(const char * smiles);
@@ -69,7 +71,7 @@ TEST_F(TestReaction, TestIsotope)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("Cc1ccccc1"));
 
@@ -93,13 +95,123 @@ TEST_F(TestReaction, TestIncrementIsotope)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("[6CH3]c1ccccc1"));
 
   EXPECT_EQ(_rxn.in_place_transformations(_m), 1);
 
-  EXPECT_EQ(_m.unique_smiles(), "[10CH3]c1ccccc1");
+  EXPECT_EQ(_m.unique_smiles(), "[10CH3]c1ccccc1") << " got " << _m.unique_smiles();
+}
+
+TEST_F(TestReaction, TestIncrementIsotopeNotNegative)
+{
+  _string_proto = R"(
+    scaffold: {
+      id: 0
+      smarts: "[CD1]-c"
+      change_isotope {
+        atom: 0
+        delta: -9
+      }
+    }
+  )";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("[6CH3]c1ccccc1"));
+
+  EXPECT_EQ(_rxn.in_place_transformations(_m), 1);
+
+  EXPECT_EQ(_m.unique_smiles(), "Cc1ccccc1") << " got " << _m.unique_smiles();
+}
+
+TEST_F(TestReaction, TestIncrementIsotopeComplex)
+{
+  _string_proto = R"(
+    scaffold: {
+      id: 0
+      smarts: "[CD1]-c"
+      change_isotope {
+        atom: 0
+        multiply: 4
+        delta: -9
+        integer_divide: 2
+        modulo: 5
+      }
+    }
+  )";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("[6CH3]c1ccccc1"));
+
+  EXPECT_EQ(_rxn.in_place_transformations(_m), 1);
+
+  EXPECT_EQ(_m.unique_smiles(), "[2CH3]c1ccccc1") << " got " << _m.unique_smiles();
+}
+
+TEST_F(TestReaction, TestIncrementOnlyChangeIfMinMax)
+{
+  _string_proto = R"(
+    scaffold: {
+      id: 0
+      smarts: "C"
+      change_isotope {
+        only_change_if {
+          range {
+            min: 3
+            max: 5
+          }
+        }
+        atom: 0
+        delta: 1
+      }
+    }
+  )";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("[1CH3][2CH2][3CH2][4CH2][5CH2][6CH2][7CH3]"));
+
+  EXPECT_GT(_rxn.in_place_transformations(_m), 0);
+
+  EXPECT_EQ(_m.unique_smiles(), "[7CH3][6CH2][6CH2][5CH2][4CH2][2CH2][1CH3]") << " got " << _m.unique_smiles();
+}
+
+TEST_F(TestReaction, TestIncrementOnlyChangeIfRange)
+{
+  _string_proto = R"(
+    scaffold: {
+      id: 0
+      smarts: "C"
+      change_isotope {
+        only_change_if {
+          values {
+            values: [3, 4, 5]
+          }
+        }
+        atom: 0
+        delta: 1
+      }
+    }
+  )";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("[1CH3][2CH2][3CH2][4CH2][5CH2][6CH2][7CH3]"));
+
+  EXPECT_GT(_rxn.in_place_transformations(_m), 0);
+
+  EXPECT_EQ(_m.unique_smiles(), "[7CH3][6CH2][6CH2][5CH2][4CH2][2CH2][1CH3]") << " got " << _m.unique_smiles();
 }
 
 TEST_F(TestReaction, TestInvertIsotope)
@@ -121,7 +233,7 @@ TEST_F(TestReaction, TestInvertIsotope)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("[1F]-[2CH2]-N"));
 
@@ -145,7 +257,7 @@ TEST_F(TestReaction, TestChangeElement)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("[Pb].[Pb]"));
 
@@ -169,7 +281,7 @@ TEST_F(TestReaction, TestFormalCharge)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("c1ccccc1C(=O)O"));
 
@@ -193,7 +305,7 @@ TEST_F(TestReaction, TestChangeFormalCharge)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("c1ccccc1C(=O)[O-]"));
 
@@ -217,7 +329,7 @@ TEST_F(TestReaction, TestBreakBond)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("c1ccccc1CC(=O)NC"));
 
@@ -242,7 +354,7 @@ TEST_F(TestReaction, TestMakeBond)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("c1ccccc1CC(=O).NC"));
 
@@ -263,7 +375,7 @@ TEST_F(TestReaction, TestRemoveAtom)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("Nc1c(C)cccc1"));
 
@@ -288,7 +400,7 @@ TEST_F(TestReaction, TestRemoveFragment)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CNc1c(CC)cccc1"));
 
@@ -316,7 +428,7 @@ TEST_F(TestReaction, TestKeepFragment)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CNc1c(CC)cccc1"));
 
@@ -341,7 +453,7 @@ TEST_F(TestReaction, TestMakeSingleBond)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CCCC"));
 
@@ -366,7 +478,7 @@ TEST_F(TestReaction, TestMakedoubleBond)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CCCC"));
 
@@ -391,13 +503,59 @@ TEST_F(TestReaction, TestMakeTripleBond)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("N.CC(=O)O"));
 
   EXPECT_EQ(_rxn.in_place_transformations(_m), 1);
 
   EXPECT_EQ(_m.unique_smiles(), "OC(=O)C#N");
+}
+
+TEST_F(TestReaction, TestChangeBondNotFound) {
+  _string_proto = R"(
+scaffold {
+  id: 0
+  smarts: "CCO"
+  change_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}
+)";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("CCO"));
+
+  EXPECT_EQ(_rxn.in_place_transformations(_m), 0);
+}
+
+TEST_F(TestReaction, TestChangeBondOk) {
+  _string_proto = R"(
+scaffold {
+  id: 0
+  smarts: "CCO"
+  change_bond {
+    a1: 1
+    a2: 2
+    btype: SS_DOUBLE_BOND
+  }
+}
+)";
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
+
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
+
+  ASSERT_TRUE(_MoleculeFromSmiles("CCO"));
+
+  EXPECT_EQ(_rxn.in_place_transformations(_m), 1);
+
+  EXPECT_EQ(_m.unique_smiles(), "O=CC");
 }
 
 TEST_F(TestReaction, TestBondLength)
@@ -416,7 +574,7 @@ TEST_F(TestReaction, TestBondLength)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("C{{0,0,0}}N{{1,0,0}}"));
 
@@ -446,7 +604,7 @@ TEST_F(TestReaction, TestBondAngle)
 
   const float angle = _proto.scaffold().bond_angle(0).angle() * DEG2RAD;
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("F{{0,0,0}}C{{1,0,0}}N{{2,0,0}}"));
 
@@ -477,7 +635,7 @@ TEST_F(TestReaction, TestDihedralAngle)
 
   const float angle = _proto.scaffold().dihedral_angle(0).angle() * DEG2RAD;
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("C{{-1,-1,0}}C{{-0.5,0,0}}C{{0.5,0,0}}N{{1,1,0}}"));
 
@@ -512,7 +670,7 @@ TEST_F(TestReaction, TestSubstructureQuery)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CCNCCC"));
 
@@ -536,7 +694,7 @@ TEST_F(TestReaction, TestReplaceAtom)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("N[C@H](C)F.Cl"));
 
@@ -557,7 +715,7 @@ TEST_F(TestReaction, TestInvertChirality)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("F[C@H](N)C"));
 
@@ -578,7 +736,7 @@ TEST_F(TestReaction, TestRemoveChirality)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("F[C@H](N)C"));
 
@@ -609,7 +767,7 @@ TEST_F(TestReaction, TestFixedReagent)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CC(=O)O"));
 
@@ -620,7 +778,7 @@ TEST_F(TestReaction, TestFixedReagent)
   {
     Molecule result;
     ASSERT_EQ(_rxn.perform_reaction(&_m, _sresults, iterator, result), 1);
-    ASSERT_EQ(result.smiles(), "CC(=O)NCC");
+    ASSERT_EQ(result.smiles(), "CC(=O)NCC") << "Got " << result.smiles() << " expected " << "CC(=O)NCC";
   }
 }
 
@@ -648,7 +806,7 @@ TEST_F(TestReaction, TestMultipleReagents)
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CC(=O)O"));
 
@@ -687,7 +845,7 @@ TEST_F(TestReaction, TestAppendReagentName) {
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CC ethane"));
 
@@ -724,7 +882,7 @@ TEST_F(TestReaction, TestAppendReagentNameEnumerate) {
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CC ethane"));
 
@@ -756,7 +914,7 @@ TEST_F(TestReaction, TestAppendToName) {
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("CC1CC1 name"));
 
@@ -782,7 +940,7 @@ TEST_F(TestReaction, TestUniqueEmbeddingsOnlyWorks) {
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("C1CC1C1CC1"));
 
@@ -815,7 +973,7 @@ scaffold {
 
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _unused_fname, _smc));
 
   ASSERT_TRUE(_MoleculeFromSmiles("B1(OC(C)(C)C(C)(C)O1)C1=C(C=C(C(=C1F)F)B1OC(C)(C)C(C)(C)O1)OC SIGMA448437690"));
 
@@ -848,13 +1006,14 @@ class TestRxn: public testing::TestWithParam<RxnSmilesResult> {
     IWReaction _rxn;
     Molecule _m;
     Molecule _result;
+    Sidechain_Match_Conditions _smc;
 };
 
 TEST_P(TestRxn, Tests) {
   const auto params = GetParam();
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.rxn_string, &_proto));
 
-  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _file_name));
+  ASSERT_TRUE(_rxn.ConstructFromProto(_proto, _file_name, _smc));
 
   ASSERT_TRUE(_m.build_from_smiles(params.smiles)) << "Bad smiles " << params.smiles;
 
@@ -986,7 +1145,96 @@ scaffold {
 )pb",
     "[3CH3][2CH3]",
     "[1CH3]C"
+  },
+
+  // Test that a reagent with no smarts gets the default query.
+  RxnSmilesResult {
+    R"pb(
+scaffold {
+  id: 0
+  smarts: "[cH1]"
+  match_conditions {
+    max_matches_to_find: 1
   }
+}
+sidechain {
+  id: 1
+  reagent: "N(C)C(=O)C"
+  join {
+    a1: 0
+    a2: 0
+  }
+}
+)pb",
+    "c1ccccc1",
+    "O=C(N(c1ccccc1)C)C"
+  },
+
+  // Test max_matches_to_find in sidechain
+  RxnSmilesResult {
+    R"pb(
+name: "Aryl_group_addition.add_2-pyridyl"
+scaffold {
+  id: 0
+  smarts: "[H>0]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  smarts: "c"
+  reagent: "C1=NC=CC=C1"
+  join {
+    a1: 0
+    a2: 0
+  }
+  match_conditions {
+    max_matches_to_find: 1
+  }
+}
+)pb",
+    "c1cnccc1",
+    "[n]1c(c(c(c2[n]cccc2)c(c1c1[n]cccc1)c1[n]cccc1)c1[n]cccc1)c1[n]cccc1"
+  },
+
+  // Test single,double_bond directive and toggle_kekule_form
+  RxnSmilesResult {
+    R"pb(
+name: "Phenol_isosteres.oxindole"
+scaffold {
+  id: 0
+  single_bond: [1, 2]
+  remove_atom: 0
+  toggle_kekule_form {
+    bond {
+      a1: 1
+      a2: 2
+      btype: SS_DOUBLE_BOND
+    }
+  }
+  smarts: "[OD1]-[/IWKl1ar6]:[aH]"
+  match_conditions {
+    find_unique_embeddings: true
+    embeddings_can_overlap: true
+  }
+}
+sidechain {
+  id: 1
+  smarts: "NC(=O)C"
+  reagent: "NC(=O)C"
+  double_bond: [1, 0]
+  double_bond: [2, 3]
+  match_conditions {
+    find_unique_embeddings: true
+    embeddings_can_overlap: true
+  }
+}
+)pb",
+    "OC1=C(N)C=CC=C1",
+    "O=C1N=c2c(N)cccc2=C1"
+  }
+
 ));
 
 TEST(TestPlace3D, TestPlace3DAcidAmine) {
@@ -1034,7 +1282,8 @@ sidechain {
 
   IWReaction rxn;
   IWString not_used;
-  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
 
   Molecule scaffold;
   ASSERT_TRUE(scaffold.build_from_smiles("O{{0.0021,-0.0041,0.002}}=C{{-0.0144,1.2105,0.0087}}(O{{1.1429,1.8999,0.0013}})C{{-1.3036,1.9317,0.0187}}1=C{{-2.5051,1.2203,0.0206}}C{{-3.7054,1.9,0.0362}}=C{{-3.7205,3.2836,0.0376}}C{{-2.5336,3.9948,0.0301}}=C{{-1.3262,3.3278,0.0207}}1 acid"));
@@ -1045,7 +1294,6 @@ sidechain {
     "N{{-0.0178,1.4648,0.0101}}C{{0.0021,-0.0041,0.002}}C{{-1.4333,-0.5336,0.0129}}(C{{-1.4157,-2.0577,-0.1212}})C{{-2.1103,-0.1453,1.3289}} N3c"
   };
 
-  Sidechain_Match_Conditions smc;
   std::vector<int> natoms;
 
   for (const std::string& smi : smiles) {
@@ -1119,7 +1367,8 @@ sidechain {
 
   IWReaction rxn;
   IWString not_used;
-  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
 
   Molecule scaffold;
   ASSERT_TRUE(scaffold.build_from_smiles("C"));
@@ -1127,7 +1376,6 @@ sidechain {
   Molecule sidechain;
   ASSERT_TRUE(sidechain.build_from_smiles("CC ethane"));
 
-  Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
   ASSERT_FALSE(rxn.add_sidechain_reagent(0, sidechain, smc));
 }
@@ -1157,7 +1405,8 @@ sidechain {
 
   IWReaction rxn;
   IWString not_used;
-  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
 
   Molecule scaffold;
   ASSERT_TRUE(scaffold.build_from_smiles("C methane"));
@@ -1165,15 +1414,12 @@ sidechain {
   Molecule sidechain;
   ASSERT_TRUE(sidechain.build_from_smiles("CC ethane"));
 
-  Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);
-  EXPECT_EQ(product[0]->smiles(), "CCC");
+  EXPECT_EQ(product[0]->smiles(), "CCC") << product[0]->smiles() << " not CCC";
 }
 
 TEST(TestUniqueEmbeddingsScaffold, GeneratesMultipleProducts) {
@@ -1198,7 +1444,8 @@ sidechain {
 
   IWReaction rxn;
   IWString not_used;
-  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
 
   Molecule scaffold;
   ASSERT_TRUE(scaffold.build_from_smiles("CC methane"));
@@ -1206,11 +1453,8 @@ sidechain {
   Molecule sidechain;
   ASSERT_TRUE(sidechain.build_from_smiles("N"));
 
-  Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 2);
@@ -1243,7 +1487,8 @@ sidechain {
 
   IWReaction rxn;
   IWString not_used;
-  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used));
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
 
   Molecule scaffold;
   ASSERT_TRUE(scaffold.build_from_smiles("CC methane"));
@@ -1251,15 +1496,68 @@ sidechain {
   Molecule sidechain;
   ASSERT_TRUE(sidechain.build_from_smiles("N"));
 
-  Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);
   EXPECT_EQ(product[0]->unique_smiles(), "NCC") << "Bad smiles " << product[0]->smiles();
 }
+
+TEST(TestSingleBond, TestWithinScaffold) {
+  const std::string string_proto = R"pb(
+scaffold {
+   smarts: "CCC"
+   single_bond: [0, 2]
+   match_conditions {
+      find_unique_embeddings: true
+   }
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
+
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("CCC propane"));
+
+  EXPECT_EQ(rxn.in_place_transformations(m), 1);
+  EXPECT_EQ(m.unique_smiles(), "C1CC1");
+}
+
+TEST(TestSingleBond, TestToScaffold) {
+  const std::string string_proto = R"pb(
+scaffold {
+   id: 0
+   smarts: "CCO"
+}
+sidechain {
+   id: 1
+   reagent: "C"
+   smarts: "C"
+   single_bond: [1, 0]
+}
+)pb";
+
+  ReactionProto::Reaction proto;
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(string_proto, &proto));
+
+  IWReaction rxn;
+  IWString not_used;
+  Sidechain_Match_Conditions smc;
+  ASSERT_TRUE(rxn.ConstructFromProto(proto, not_used, smc));
+
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("CCO ethanol"));
+
+  EXPECT_EQ(rxn.in_place_transformations(m), 1);
+  EXPECT_EQ(m.unique_smiles(), "OC(C)C") << m.unique_smiles();
+}
+
 
 }  // namespace

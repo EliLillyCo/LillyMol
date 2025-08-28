@@ -9,15 +9,20 @@
 
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwmisc/matcher.h"
 #include "Foundational/iwmisc/msi_object.h"
 #include "Foundational/iwstring/iwstring.h"
 
 #include "iwmtypes.h"
 #include "istream_and_type.h"
 #include "reaction_match_conditions.h"
-#include "Molecule_Lib/reaction.pb.h"
 #include "substructure.h"
 #include "toggle_kekule_form.h"
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/reaction.pb.h"
+#else
+#include "reaction.pb.h"
+#endif
 
 /*
   Names used in msi_object .rxn files
@@ -164,6 +169,21 @@ class Matched_Atom_in_Component
 extern std::ostream &
 operator << (std::ostream &, const Matched_Atom_in_Component &);
 
+class CopyIsotope {
+  private:
+    Matched_Atom_in_Component _from;
+    Matched_Atom_in_Component _to;
+
+  public:
+    int ConstructFromProto(const ReactionProto::CopyIsotopeData& proto, int component);
+    int BuildProto(ReactionProto::CopyIsotopeData& proto) const;
+
+    int Process(Molecule& m, const Set_of_Atoms& embedding) const;
+    int Process(Molecule& result, const Set_of_Atoms& scaffold_embedding,
+                                const Set_of_Atoms& sidechain_embedding,
+                                const Enumeration_Temporaries & etmp) const;
+};
+
 // These will be instantiated from the "join" directive.
 class Inter_Particle_Bond
 {
@@ -218,6 +238,10 @@ class Inter_Particle_Bond
     int has_sidechain_isotope_requirement() const {
       return _sidechain_isotope_requirement != SidechainIsotopeRequirement::kUndefined;
     }
+
+    // initialise with matched atom `m1` in the scaffold, `m2` in sidechain `c2`
+    // and bond type `btype`.
+    int SetDefaultJoin(int m1, int c2, int m2, bond_type_t btype);
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
 
@@ -372,7 +396,9 @@ class Reaction_Place_Isotope
 
   public:
     Reaction_Place_Isotope ();
-    Reaction_Place_Isotope (int a, int iso) : _atom (a), _isotope (iso) {}
+    Reaction_Place_Isotope (int a, int iso) : _isotope (iso) {
+      _atom << a;
+    }
 
     const resizable_array<int>& matched_atoms() const {
       return _atom;
@@ -400,8 +426,20 @@ class Reaction_Place_Isotope
 class Reaction_Increment_Isotope : public Reaction_Place_Isotope
 {
   private:
+    // If specified, look at the existing isotope value and only make changes if
+    // the existing value satisfies these conditions.
+    iwmatcher::Matcher<isotope_t> _only_change_if;
+
+    uint32_t _multiply;
+    uint32_t _integer_divide;
+    uint32_t _modulo;
+
+    // Private functions.
+    int BuildOnlyChangeIf(const ReactionProto::Range& proto);
+    int BuildOnlyChangeIf(const ReactionProto::Values& proto);
+
   public:
-    Reaction_Increment_Isotope () : Reaction_Place_Isotope () {}
+    Reaction_Increment_Isotope ();
     Reaction_Increment_Isotope (int a, int iso) : Reaction_Place_Isotope (a, iso) {}
 
     int process (Molecule &, const Set_of_Atoms &, int);
@@ -453,7 +491,7 @@ class Molecule_and_Embedding : public Molecule
     Molecule_and_Embedding ();
     Molecule_and_Embedding (const Molecule& rhs);
 
-    const Set_of_Atoms * embedding () const { return &_embedding;}
+    const Set_of_Atoms& embedding () const { return _embedding;}
 
 //  A substructure query has just matched. We need to copy the
 //  appropriate embedding to ourself.
@@ -510,7 +548,19 @@ class Replace_Atom
     Matched_Atom_in_Component _a1;
     Matched_Atom_in_Component _a2;
 
+    // Some reactions will replace an atom and simultaneously invert the existing chirality.
+    int _invert_chirality;
+
   public:
+    Replace_Atom();
+
+    void set_invert_chirality(int s) {
+      _invert_chirality = s;
+    }
+    int invert_chirality() const {
+      return _invert_chirality;
+    }
+
     int construct_from_msi_object (const msi_attribute *, int);
     int ConstructFromProto(const ReactionProto::ReplaceAtom& proto, int component);
 
@@ -529,8 +579,6 @@ class Replace_Atom
                             const Enumeration_Temporaries& etmp) const;
 
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> &);
-
-    int process (Molecule &, const Set_of_Atoms *, const Set_of_Atoms *, int) const;
 };
 
 extern std::ostream & operator << (std::ostream &, const Replace_Atom &);
@@ -894,6 +942,7 @@ class Reaction_Site : public Substructure_Query
     IWString _comment;
 
     resizable_array_p<Bond> _bonds_to_be_made;
+    resizable_array_p<Bond> _bonds_to_be_changed;
     resizable_array_p<Bond> _bonds_to_be_broken;
     resizable_array<int>    _atoms_to_be_removed;
     resizable_array<int>    _fragments_to_be_removed;
@@ -978,6 +1027,9 @@ class Reaction_Site : public Substructure_Query
     // Jun 2024. If creating a proto, it is convenient to retain the scaffold smarts.
     // That way it can be transferred unchanged through a programme.
     resizable_array_p<IWString> _smarts;
+
+    // Transference of isotopic labels.
+    resizable_array_p<CopyIsotope> _copy_isotope;
 
 //  private functions
 
@@ -1083,6 +1135,7 @@ class Reaction_Site : public Substructure_Query
     void add_atom_to_be_removed (int a) { _atoms_to_be_removed.add (a);}    // should check for A being a valid number
     int add_bond_to_be_broken (int, int);
     int add_bond_to_be_made (int, int, bond_type_t);
+    int add_bond_to_be_changed(const int a1, const int a2, const bond_type_t bt);
     int add_fragment_to_be_removed (int);
     int add_chiral_centre_to_be_inverted (int a) { _stereo_centres_to_invert.add (a); return 1;}
     int add_replace_atom (Replace_Atom * r) { _replace_atom.add (r); return 1;}
@@ -1168,6 +1221,9 @@ class Scaffold_Reaction_Site : public Reaction_Site
 
 // private functions
 
+    int AddMatchConditions(ReactionProto::ScaffoldReactionSite& proto) const;
+    int DoCopyIsotopes(Molecule& result, const Set_of_Atoms& embedding) const;
+
   public:
     Scaffold_Reaction_Site ();
     ~Scaffold_Reaction_Site ();
@@ -1175,6 +1231,8 @@ class Scaffold_Reaction_Site : public Reaction_Site
     int construct_from_msi_object (const msi_object & msi, int, const IWString &);
     int write_msi (std::ostream &, int &, int);
     int ConstructFromProto(const ReactionProto::ScaffoldReactionSite& proto, const IWString& fname);
+
+    void set_max_matches_to_find(int s);
 };
 
 /*
@@ -1196,7 +1254,7 @@ class Sidechain_Reaction_Site : public Reaction_Site
 
     resizable_array_p<No_Reaction> _no_reaction;
 
-//  how this is joined onto the reaction
+    //  how this is joined onto the reaction
 
     resizable_array_p<Inter_Particle_Bond> _inter_particle_bonds;
 
@@ -1219,10 +1277,13 @@ class Sidechain_Reaction_Site : public Reaction_Site
 
     // Used during construction from proto.
     int _add_reagent(const std::string& smiles);
+    int AddInterParticleBond(atom_number_t a1, atom_number_t a2, bond_type_t btype);
 
     void MaybeIssueNoHitsWarning(const Molecule_and_Embedding& m,
                 const Substructure_Results& sresults,
                 const Sidechain_Match_Conditions& smc) const;
+
+    int BuildMatchConditions(ReactionProto::SidechainMatchConditions& proto) const;
 
   public:
     Sidechain_Reaction_Site ();
@@ -1234,6 +1295,8 @@ class Sidechain_Reaction_Site : public Reaction_Site
     int sidechain_number () const { return _sidechain_number;}
     void set_sidechain_number (int i) { _sidechain_number = i;}
 
+    void set_max_matches_to_find(int s);
+
     int adjust_matched_atoms_in_component (const extending_resizable_array<int> & xref);
 
     void set_make_implicit_hydrogens_explicit (int s) { _make_implicit_hydrogens_explicit = s;}
@@ -1243,7 +1306,8 @@ class Sidechain_Reaction_Site : public Reaction_Site
 
     int construct_from_msi_object (const msi_object & msi, int, const IWString &,
                                    const Sidechain_Match_Conditions & smc);
-    int ConstructFromProto(const ReactionProto::SidechainReactionSite& proto, const IWString& fname);
+    int ConstructFromProto(const ReactionProto::SidechainReactionSite& proto, int uid, const IWString& fname,
+                const Sidechain_Match_Conditions& smc);
 
     int BuildProto(ReactionProto::SidechainReactionSite& proto) const;
 
@@ -1254,6 +1318,9 @@ class Sidechain_Reaction_Site : public Reaction_Site
 
 
     int single_reagent_only () const { return 1 == _reagents.number_elements ();}
+    bool has_reagents() const {
+      return _reagents.size() > 0;
+    }
 
     int add_inter_particle_bond (int, int, int, bond_type_t);
 
@@ -1283,7 +1350,7 @@ class Sidechain_Reaction_Site : public Reaction_Site
     int set_single_reagent (Molecule &);
 
     int do_makes_breaks (Molecule & result,
-                         const Set_of_Atoms * embedding,
+                         const Set_of_Atoms& embedding,
                          int offset,
                          Enumeration_Temporaries & etmp);
 
@@ -1310,6 +1377,10 @@ class Sidechain_Reaction_Site : public Reaction_Site
                                           const Set_of_Atoms * scaffold_embedding,
                                           int atoms_in_scaffold,
                                           const Set_of_Atoms * sidechain_embedding) const;
+    int CopyIsotopes(Molecule& result,
+                                const Set_of_Atoms& scaffold_embedding,
+                                const Set_of_Atoms& sidechain_embedding,
+                                const Enumeration_Temporaries& etmp);
 };
 
 /*
@@ -1624,9 +1695,11 @@ class IWReaction : public Scaffold_Reaction_Site
 
     // The `file_name` argument is needed in case there are files referenced in the proto, and one
     // possibility is that those files are assumed to be in the same directory as `proto`.
-    int ConstructFromProto(const ReactionProto::Reaction& proto, const IWString& file_name);
+    int ConstructFromProto(const ReactionProto::Reaction& proto, const IWString& file_name,
+                const Sidechain_Match_Conditions& smc);
 
-    int ConstructFromTextProto(const std::string& textproto, const IWString& dirname);
+    int ConstructFromTextProto(const std::string& textproto, const IWString& dirname,
+                const Sidechain_Match_Conditions& smc);
 
     // Read a reaction from `fname`.
     // Unfortunately there is currently not a variant that takes

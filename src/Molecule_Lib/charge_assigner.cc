@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -61,14 +62,16 @@ Charge_Assigner::Charge_Assigner() {
 
   _apply_charges_to_molecule = 1;
 
-  _assigned_charge_multiplier = 0;
-
   return;
 }
 
 Charge_Assigner::~Charge_Assigner() {
-  DELETE_IF_NOT_NULL(_which_atom);
-  DELETE_IF_NOT_NULL(_charge_to_assign);
+  if (_which_atom != nullptr) {
+    delete [] _which_atom;
+  }
+  if (_charge_to_assign != nullptr) {
+    delete [] _charge_to_assign;
+  }
 
   _molecules_examined = -5;
 
@@ -125,6 +128,17 @@ display_all_charge_assigner_options(std::ostream& os, char cflag) {
   // clang-format on
 
   return;
+}
+
+// Initialise the arrays that keep track of the relationship between query and matched atom.
+void
+Charge_Assigner::InitialiseWhichAtom() {
+  if (_which_atom != nullptr) {
+    return;
+  }
+
+  _which_atom = new_int(_number_elements, -99);  // -99 means not initialised
+  _charge_to_assign = new_int(_number_elements, -99);
 }
 
 int
@@ -260,8 +274,7 @@ Charge_Assigner::construct_from_command_line(Command_Line& cl, int verbose, char
   }
 
   if (simple_flag) {
-    _which_atom = new_int(_number_elements, -99);  // -99 means not initialised
-    _charge_to_assign = new_int(_number_elements, -99);
+    InitialiseWhichAtom();
   }
 
   return _all_queries_have_numeric_value();
@@ -333,6 +346,47 @@ Charge_Assigner::_increment_global_counters(
   if (negative_charges_assigned.number_elements()) {
     _molecules_receiving_negative_charges++;
     _negative_charges_assigned += negative_charges_assigned.number_elements();
+  }
+
+  return;
+}
+
+void
+Charge_Assigner::_increment_global_counters(std::vector<ChargeAndQuery>& results) {
+  if (results.empty()) {
+    return;
+  }
+
+  if (results.size() == 1) {
+    if (results[0].formal_charge < 0) {
+      ++_molecules_receiving_negative_charges;
+      ++_negative_charges_assigned;
+    } else {
+      ++_molecules_receiving_positive_charges;
+      ++_positive_charges_assigned;
+    }
+
+    return;
+  }
+
+  int npos = 0;
+  int nneg = 0;
+  for (const ChargeAndQuery& aqfc : results) {
+    if (aqfc.formal_charge < 0) {
+      ++nneg;
+    } else {
+      ++npos;
+    }
+  }
+
+  if (npos) {
+    ++_molecules_receiving_positive_charges;
+    ++_positive_charges_assigned;
+  }
+
+  if (nneg) {
+    ++_molecules_receiving_negative_charges;
+    ++_negative_charges_assigned;
   }
 
   return;
@@ -417,6 +471,37 @@ Charge_Assigner::_add_charge_to_atom(Molecule_to_Match& target,
   }
 
   charges_assigned[zatom] = fc;
+
+  return 1;
+}
+
+int
+Charge_Assigner::_add_charge_to_result(Molecule_to_Match& target,
+                        int query_number,
+                        atom_number_t zatom,
+                        formal_charge_t fc,
+                        formal_charge_t* charges_assigned,
+                        std::vector<ChargeAndQuery>& result) {
+  if (charges_assigned[zatom]) [[ unlikely ]] {  // already assigned, we do not overwrite.
+    return 0;
+  }
+
+  if (target[zatom].formal_charge() && 0 == _overwrite_existing_formal_charges) {
+    return 0;
+  }
+
+  // Do not put formal charges on 3 connected Nitrogens with chiral centres.
+  if (fc > 0) {
+    Molecule& m = *target.molecule();
+    if (m.atomic_number(zatom) == 7 && m.hcount(zatom) == 1 &&
+        m.chiral_centre_at_atom(zatom) != nullptr) {
+      return 0;
+    }
+  }
+
+  charges_assigned[zatom] = fc;
+
+  result.emplace_back(ChargeAndQuery(zatom, fc, query_number));
 
   return 1;
 }
@@ -566,9 +651,7 @@ Charge_Assigner::_process(Molecule_to_Match& target,
       cerr << " hit " << j << " is " << (*s) << '\n';
 #endif
 
-      //    If we already know which member of the embedding carries the charge, just do
-      //    it
-
+      // If we already know which member of the embedding carries the charge, just do it
       if (_which_atom && _which_atom[i] >= 0) {
         atom_number_t l = s->item(_which_atom[i]);
         if (_add_charge_to_atom(target, positive_charges_assigned,
@@ -594,20 +677,12 @@ Charge_Assigner::_process(Molecule_to_Match& target,
           continue;
         }
 
-        formal_charge_t fc =
-            static_cast<formal_charge_t>(tmp);  // double -> int conversion
+        const formal_charge_t fc = static_cast<formal_charge_t>(tmp);
         if (0 == fc) {
           continue;
         }
 
-        if (fc > 0) {
-          fc = _assigned_charge_multiplier * i + fc;
-        } else {
-          fc = -(_assigned_charge_multiplier * i) + fc;
-        }
-
-        if (_which_atom && _which_atom[i] < 0)  // not initialised
-        {
+        if (_which_atom && _which_atom[i] < 0) {  // not initialised
           _which_atom[i] = k;
           _charge_to_assign[i] = fc;
         }
@@ -811,6 +886,54 @@ Charge_Assigner::_identify_charged_atoms_too_close(Molecule& m, const Set_of_Ato
   return too_close.number_elements() / 2;
 }
 
+// Identify positive charges that are too close.
+// Use the existing _remove_positive_charge_hits_on_chiral_atoms function,
+// so all we do is transform `results` to the form expected
+// by that function, call it, and then anything that has been removed by that
+// function is removed from `result`.
+// We only check positive charges.
+void
+Charge_Assigner::RemoveSitesTooClose(Molecule & m,
+                formal_charge_t* charges_assigned,
+                std::vector<ChargeAndQuery>& result) {
+  Set_of_Atoms positive_atoms;
+  for (const ChargeAndQuery& afq : result) {
+    if (afq.formal_charge < 0) {
+      continue;
+    }
+    positive_atoms << afq.atom;
+  }
+
+  if (positive_atoms.size() < 2) {
+    return;
+  }
+
+  _remove_hits_too_close_isolation_score(m, positive_atoms, charges_assigned);
+
+  for (int i = result.size() - 1; i >= 0; --i) {
+    const atom_number_t a = result[i].atom;
+
+    // Do not discard any negative charges assigned.
+    if (result[i].formal_charge < 0) {
+      continue;
+    }
+
+    if (! positive_atoms.contains(a)) {
+      result.erase(result.begin() + i);
+    }
+  }
+}
+
+int
+Charge_Assigner::AtomsTooClose(Molecule& m, atom_number_t a1, atom_number_t a2) const {
+  if (m.fragment_membership(a1) != m.fragment_membership(a2)) {
+    return 0;
+  }
+
+  // cerr << " AtomsTooClose cmp " << m.bonds_between(a1, a2) << " and " << _min_distance_between_charges << '\n';
+  return m.bonds_between(a1, a2) <= _min_distance_between_charges;
+}
+
 void
 Charge_Assigner::_remove_hits_too_close_isolation_score(
     Molecule& m, Set_of_Atoms& s, formal_charge_t* charges_assigned) const {
@@ -823,16 +946,16 @@ Charge_Assigner::_remove_hits_too_close_isolation_score(
   int* times_too_close = new_int(matoms);
   std::unique_ptr<int[]> free_times_too_close(times_too_close);
 
-  if (0 == _identify_charged_atoms_too_close(
-               m, s, times_too_close)) {  // great, nothing too close
+  // If nothing too close, we are done
+  if (0 == _identify_charged_atoms_too_close(m, s, times_too_close)) {
     return;
   }
 
   // We have atoms too close. If there is an atom that is in a too-close
   // relationship multiple times, remove the charge from it
+  // cerr << "Looking for too close in " << s << '\n';
 
   int istart = iwmax_of_array(times_too_close, matoms);  // most likely 2 or maybe 3
-  // cerr << "istart " << istart << '\n';
 
   // int charges_removed = 0;
 
@@ -862,20 +985,52 @@ Charge_Assigner::_remove_hits_too_close_isolation_score(
   }
 
   // All we are left with now are pairs, no triples or higher groups
+  // First identify all atoms that are not close to anything else.
 
   Set_of_Atoms survivors;
+  survivors.reserve(s.size());
+
+  const int n = s.number_elements();
+  for (int i = 0; i < n; ++i) {
+    atom_number_t ai = s[i];
+    bool another_too_close = false;
+    for (int j = 0; j < n; ++j) {
+      atom_number_t aj = s[j];
+      if (ai == aj) {
+        continue;
+      }
+      // cerr << "Atoms " << ai << " and " << s[j] << " AtomsTooClose " << AtomsTooClose(m, ai, s[j]) << '\n';
+      if (AtomsTooClose(m, ai, aj)) {
+        another_too_close = true;
+        break;
+      }
+    }
+
+    if (! another_too_close) {
+      survivors << ai;
+    }
+  }
+
+  // cerr << "survivors " << survivors << '\n';
+  if (survivors.size() > 0) {
+    for (atom_number_t a : survivors) {
+      s.remove_first(a);
+    }
+  }
+
+  // cerr << "After finding isolated charges " << s << '\n';
+
+  // If all assigned charges are well separated, we are done.
+  if (s.empty()) {
+    s = survivors;
+  }
 
   for (int i = 0; i < s.number_elements(); i++) {
     atom_number_t ai = s[i];
 
     for (int j = i + 1; j < s.number_elements(); j++) {
       atom_number_t aj = s[j];
-
-      if (m.fragment_membership(ai) != m.fragment_membership(aj)) {
-        continue;
-      }
-
-      if (m.bonds_between(ai, aj) > _min_distance_between_charges) {
+      if (! AtomsTooClose(m, ai, aj)) {
         continue;
       }
 
@@ -896,6 +1051,7 @@ Charge_Assigner::_remove_hits_too_close_isolation_score(
   return;
 }
 
+#ifdef NO_LONGER_NEEDED_
 void
 Charge_Assigner::_remove_hits_too_close(Molecule& m, Set_of_Atoms& s,
                                         formal_charge_t* charges_assigned) const {
@@ -942,6 +1098,7 @@ Charge_Assigner::_remove_hits_too_close(Molecule& m, Set_of_Atoms& s,
 
   return;
 }
+#endif
 
 int
 Charge_Assigner::_enumerate_possibilities0(
@@ -1079,6 +1236,8 @@ Charge_Assigner::_process(Molecule& m, formal_charge_t* charges_assigned) {
       continue;
     }
 
+    // cerr << "Atom " << i << " assigned " << charges_assigned[i] << '\n';
+
     int ih;
     if (_preserve_implicit_hydrogen_count && (_positive_element || _negative_element)) {
       ih = m.implicit_hydrogens(i);
@@ -1201,8 +1360,7 @@ Charge_Assigner::process(Molecule& m, formal_charge_t* charges_assigned) {
 
 int
 Charge_Assigner::process(Molecule& m, resizable_array_p<Molecule>& charged_forms) {
-  int matoms = m.natoms();
-  if (0 == matoms) {
+  if (m.empty()) {
     cerr << "Charge_Assigner::process: cannot process no-struct\n";
     return 0;
   }
@@ -1218,6 +1376,161 @@ Charge_Assigner::process(Molecule& m, resizable_array_p<Molecule>& charged_forms
   }
 
   return rc;
+}
+
+int
+Charge_Assigner::Process(Molecule& m, std::vector<ChargeAndQuery>& result) {
+  if (m.empty()) {
+    cerr << "Charge_Assigner::process: cannot process no-struct\n";
+    return 0;
+  }
+
+  // We always use this construct, initialise if needed.
+  if (_which_atom == nullptr) {
+    InitialiseWhichAtom();
+  }
+
+  m.move_hydrogens_to_end_of_connection_table();  // temp detach may remove hydrogens that
+                                                  // are found to be superfluous, and that
+                                                  // will mess up our array
+
+  const int hydrogens_present = _temp_detach_hydrogens.detach_atoms(m);
+
+  const int matoms = m.natoms();
+  std::unique_ptr<formal_charge_t[]> charges_assigned = 
+                std::make_unique<formal_charge_t[]>(matoms);
+  std::fill_n(charges_assigned.get(), matoms, 0);
+
+  _process(m, charges_assigned.get(), result);
+
+  if (hydrogens_present) {
+    _temp_detach_hydrogens.reattach_atoms(m);
+  }
+
+  if (result.empty()) {
+    return 0;
+  }
+
+  _molecules_changed++;
+
+  if (result.size() == 1) {  // No sorting needed.
+    return 1;
+  }
+
+  if (_min_distance_between_charges > 0) {
+    RemoveSitesTooClose(m, charges_assigned.get(), result);
+  }
+
+  if (result.size() > 2) {
+    std::sort(result.begin(), result.end(), [](const ChargeAndQuery& acq1, const ChargeAndQuery& acq2) {
+      return acq1.atom < acq2.atom;
+    });
+  } else if (result[0].atom < result[1].atom) {
+    // already sorted.
+  } else {
+    std::swap(result[0], result[1]);
+  }
+
+  return result.size();
+}
+
+// Convert any numeric_value attribute of `a` to a formal charge.
+std::optional<formal_charge_t>
+FormalChargeFromNumericValue(const Substructure_Atom& a) {
+  double tmp;
+  if (!a.numeric_value(tmp)) {
+    return std::nullopt;
+  }
+
+  const formal_charge_t fc = static_cast<formal_charge_t>(tmp);
+  if (0 == fc) {
+    return std::nullopt;
+  }
+
+  return fc;
+}
+
+// #define DEBUG_CHARGE_ASSIGNER_PROCESS
+int
+Charge_Assigner::_process(Molecule& m, formal_charge_t* charges_assigned, std::vector<ChargeAndQuery>& result) {
+
+  Molecule_to_Match target(&m);
+
+#ifdef DEBUG_CHARGE_ASSIGNER_PROCESS
+  cerr << "Charge assigner running " << _number_elements << " queries\n";
+#endif
+
+  for (int i = 0; i < _number_elements; i++) {
+    Substructure_Results sresults;
+
+    int nhits = _things[i]->substructure_search(target, sresults);
+    if (0 == nhits) {
+      continue;
+    }
+
+#ifdef DEBUG_CHARGE_ASSIGNER_PROCESS
+    cerr << "Charge assigner query " << i << " (" << _things[i]->comment() << ") hits "
+         << nhits << " times\n";
+#endif
+
+    if (sresults.number_embeddings() > 1) {
+      _remove_lower_preference_hits(*(target.molecule()), sresults);
+      nhits = sresults.number_embeddings();
+    }
+
+    for (int j = 0; j < nhits; j++) {
+      const Set_of_Atoms& s = *sresults.embedding(j);
+#ifdef DEBUG_CHARGE_ASSIGNER_PROCESS
+      cerr << " hit " << j << " is " << s << '\n';
+#endif
+
+      // If we already know which member of the embedding carries the charge, just do it
+      if (_which_atom && _which_atom[i] >= 0) {
+        atom_number_t l = s[_which_atom[i]];
+        _add_charge_to_result(target, i, l, _charge_to_assign[i], charges_assigned, result);
+        continue;
+      }
+
+      const Query_Atoms_Matched* qam = sresults.query_atoms_matching(j);
+
+      assert(s.number_elements() == qam->number_elements());
+
+      int found_non_zero_charge = 0;  // make sure every query has a charge to assign
+
+      int ns = s.number_elements();
+      for (int k = 0; k < ns; k++) {
+        const Substructure_Atom* a = qam->item(k);
+
+        std::optional<formal_charge_t> fc = FormalChargeFromNumericValue(*a);
+        if (! fc) {
+          continue;
+        }
+
+        if (_which_atom && _which_atom[i] < 0) {  // not initialised
+          _which_atom[i] = k;
+          _charge_to_assign[i] = *fc;
+        }
+
+        atom_number_t l = s[k];
+
+#ifdef DEBUG_CHARGE_ASSIGNER_PROCESS
+        cerr << "k = " << k << " formal charge of " << *fc << " to be placed on atom " << l
+             << ", type " << target[l].atomic_number() << '\n';
+#endif
+
+        _add_charge_to_result(target, i, l, _charge_to_assign[i], charges_assigned, result);
+        ++found_non_zero_charge;
+      }
+
+      if (0 == found_non_zero_charge) {
+        cerr << "Hmmm, query '" << _things[i]->comment() << "' has no non-zero charges\n";
+      }
+    }
+  }
+
+  _increment_global_counters(result);
+
+  return result.size();
 }
 
 static void
@@ -1377,4 +1690,23 @@ Charge_Assigner::build(const const_IWSubstring& s) {
   }
 
   return 1;
+}
+
+std::ostream&
+operator<<(std::ostream& output, const ChargeAndQuery& afc) {
+  output << "ChargeAndQuery: atom " << afc.atom << " charge " << afc.formal_charge <<
+            " query " << afc.query_number;
+  return output;
+}
+
+bool
+ChargeAndQuery::operator==(const ChargeAndQuery& rhs) const {
+  if (atom != rhs.atom) {
+    return 0;
+  }
+  if (formal_charge != rhs.formal_charge) {
+    return 0;
+  }
+
+  return query_number == rhs.query_number;
 }

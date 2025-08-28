@@ -45,7 +45,7 @@ Converts a fingerprint set from a gfp file to a descriptor file
  -v             verbose output
 ```
 Just like any gfp tool, you don't need to specify the fingerprint (-F)
-unless you with to.
+unless you wish to.
 
 ### Support
 Many of the features generated will appear in only one, or a small number of
@@ -75,7 +75,7 @@ Found 30874 bits set in NCEC3C fingerprint
 0 bits above threshold 1980
 Will produce 697 descriptors
 ```
-So a requirement that a feature appear in 1% of the molecules, results in
+Similarly, a requirement that a feature appear in 1% of the molecules, results in
 the number of features generated from 20k to 697. This dramatic reduction is
 because this is a randomly chosen set of molecules. Most sets of molecules
 being studied will have considerable internal similarity, and imposing
@@ -96,8 +96,11 @@ Auto sized for
  2 bits above threshold 2719
  Will produce 885 descriptors
 ```
-so 2750 related molecules generate more features than 2000 random molecules.
+we see that 2750 related molecules generate more features than 2000 random molecules.
 And there were only 15k bits found, rather than the 30k found in the random set.
+
+Note that there are no bit collisions in the ouput here, each feature found in the
+input will have its own column.
 
 ### Fixed Width Fingerprints
 `gfp_to_descriptors_multiple` can also generate a fixed width tabular output.
@@ -128,8 +131,11 @@ Auto sized for
  Will produce 256 descriptors
  77 of 256 bits with collisions (fraction 0.300781) max collision count 482
 ```
-Indeed, folding those 15k bits found, or the survivors of the support requirements
-to just 256 bits, does indeed result in significant bit collisions.
+Indeed, folding these 15k bits found, or the survivors of the support requirements
+to just 256 bits, does indeed result in significant bit collisions. This suggests
+that 256 bits is not adequate for this set of features, experiment with wider
+widths. Note that there is nothing special about powers of 2. It is quite ok to
+request that there be 437 columns in the output.
 
 Note that bits are scanned before folding in order to impose support requirements.
 

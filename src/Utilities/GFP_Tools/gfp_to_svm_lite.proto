@@ -36,11 +36,11 @@ message BitXref {
 // Parameters recorded about the creation of the subset.
 message Params {
   // The support level that was used in generating the data.
-  uint32 support = 1;
+  optional uint32 support = 1;
 
   // When the model is built, sparse counted fingerprints
   // can have their count values set to 1.
-  bool flatten_sparse_fingerprints = 2;
+  optional bool flatten_sparse_fingerprints = 2;
 
   // BitXref manipulations may need the highest feature number.
   uint32 highest_feature_number = 3;

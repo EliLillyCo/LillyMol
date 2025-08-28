@@ -32,8 +32,13 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #include "Molecule_Tools/enumeration.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#include "enumeration.pb.h"
+#endif
 
 namespace substituent_enumeration {
 

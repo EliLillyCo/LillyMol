@@ -22,7 +22,9 @@ ReadReaction(const std::string& fname, IWReaction& rxn) {
     return false;
   }
 
-  if (! rxn.ConstructFromProto(*proto, tmp)) {
+  Sidechain_Match_Conditions smc;
+
+  if (! rxn.ConstructFromProto(*proto, tmp, smc)) {
     return false;
   }
 
@@ -98,7 +100,8 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
     .def("construct_from_textproto",
       [](IWReaction& rxn, const std::string& textproto)->bool {
         IWString dirname(".");  // maybe make an argument
-        if (! rxn.ConstructFromTextProto(textproto, dirname))  {
+        Sidechain_Match_Conditions smc;
+        if (! rxn.ConstructFromTextProto(textproto, dirname, smc))  {
           return false;
         }
 

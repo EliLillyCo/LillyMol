@@ -294,6 +294,7 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "True if molecule is empty"
                 )
+                .def("resize", &Molecule::resize, "Change number of atoms - dangerous")
                 .def("nedges", static_cast<int (Molecule::*)()const>(&Molecule::nedges), "Number edges in molecule")
                 .def("add_atom",
                   [](Molecule& m, int atnum)->bool {
@@ -830,7 +831,7 @@ PYBIND11_MODULE(lillymol, m)
                   [](const Molecule& m, isotope_t iso) -> atom_number_t {
                     return m.atom_with_isotope(iso);
                   },
-                  "First atom with isitioe:|"
+                  "First atom with isotope:|"
                 )
 
                 .def("bonds_between", static_cast<int (Molecule::*)(atom_number_t, atom_number_t)>(&Molecule::bonds_between), "bonds between atoms")
@@ -1064,6 +1065,20 @@ PYBIND11_MODULE(lillymol, m)
                 //.def("compute_Del_Re_partial_charges", &Molecule::compute_Del_Re_partial_charges, "Del Re partial charges")
                 //.def("compute_Pullman_partial_charges", &Molecule::compute_Pullman_partial_charges, "Pullman partial charges")
 
+                .def("gasteiger_partial_charges",
+                  [](Molecule& m) -> std::vector<float> {
+                    m.compute_Gasteiger_partial_charges();
+                    const int matoms = m.natoms();
+                    std::vector<float> result;
+                    result.reserve(matoms);
+                    for (int i = 0; i < matoms; ++i) {
+                      result.push_back(m.partial_charge(i));
+                    }
+                    return result;
+                  },
+                  "Return list of Gasteiger partial charges"
+                )
+
                 .def("highest_coordinate_dimensionality", static_cast<int (Molecule::*)()const>(&Molecule::highest_coordinate_dimensionality), "highest coordinate dimensionality")
                 .def("debug_string", static_cast<std::string (Molecule::*)()const>(&Molecule::debug_string), "Dump of internal data structures")
                 .def(py::self += py::self)
@@ -1183,6 +1198,11 @@ PYBIND11_MODULE(lillymol, m)
         return a1->distance(*a2);
       },
       "spatial distance between atoms"
+    )
+    .def("distance", [](const Atom* a1, const Coordinates& c)->float {
+        return a1->distance(c);
+      },
+      "spatial distance between atom and point"
     )
 
     .def("__repr__",
@@ -1646,6 +1666,16 @@ PYBIND11_MODULE(lillymol, m)
     .def(py::init<>())
     .def(py::init<float, float, float>())
     .def("normalise", &Coordinates::normalise)
+    .def("__repr__", [](const Coordinates& coords) {
+      IWString tmp;
+      tmp << '(' << coords.x() << ',' << coords.y() << ',' << coords.z() << ')';
+      return tmp.AsString();
+    })
+    .def("__str__", [](const Coordinates& coords) {
+      IWString tmp;
+      tmp << '(' << coords.x() << ',' << coords.y() << ',' << coords.z() << ')';
+      return tmp.AsString();
+    })
   ;
 
   m.def("set_copy_name_in_molecule_copy_constructor", &set_copy_name_in_molecule_copy_constructor, "Copy name in constructor");
@@ -1680,7 +1710,7 @@ PYBIND11_MODULE(lillymol, m)
   m.def("count_atoms_in_smiles",
     [](const std::string& smiles) {
       const const_IWSubstring tmp(smiles);
-      return count_atoms_in_smiles(tmp);
+      return lillymol::count_atoms_in_smiles(tmp);
     }
   );
 
@@ -1730,7 +1760,11 @@ PYBIND11_MODULE(lillymol, m)
         "mimic RDKit in how Hydrogens on phosphoric acids are handled")
     .def("set_use_alcohol_for_acid", &alogp::ALogP::set_use_alcohol_for_acid,
         "mimic RDKit in how oxygen atoms in acids are handled")
-    .def("logp", &alogp::ALogP::LogP, "Compute alogp - or None")
+    .def("logp",
+         [](alogp::ALogP& mylogp, Molecule& m) {
+          return mylogp.LogP(m);
+         },
+         "Compute AlogP - or None")
   ;
 
   // Rotatable bonds.

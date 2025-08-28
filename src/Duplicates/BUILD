@@ -1,12 +1,3 @@
-load("//build_deps:install.bzl", "local_install")
-
-local_install(
-    name = "install",
-    srcs = [
-        ":topological_torsion",
-    ],
-)
-
 cc_binary(
     name = "topological_torsion",
     srcs = [
@@ -14,10 +5,10 @@ cc_binary(
     ],
     deps = [
         ":topological_torsion_lib",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
-        "//Foundational/iwaray:iwaray",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwaray",
+        "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Lib:substructure_cc_proto",
@@ -33,23 +24,23 @@ cc_library(
         "topological_torsion.h",
     ],
     deps = [
-        "//Foundational/iwstring:iwstring",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
-        "//Molecule_Lib:iwmolecule"
+        "//Foundational/iwstring",
+        "//Molecule_Lib:iwmolecule",
     ],
 )
 
 cc_test(
     name = "topological_torsion_test",
+    timeout = "short",
     srcs = [
         "topological_torsion_test.cc",
     ],
     deps = [
         ":topological_torsion_lib",
-        "@googletest//:gtest_main",
-        "@googletest//:gtest",
         "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
-    timeout="short",
 )

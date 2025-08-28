@@ -2,11 +2,11 @@ description {
   feature_name: "w_ncon1"
   description: "Number of atoms with 1 connection"
   plot_title: "Number of atoms with 1 connection"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 24.0
-mean: 4.7182
+maxval: 28.0
+mean: 4.651649
 median: 4.0
 quantile {
   quantile: 0.01
@@ -33,100 +33,120 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 13.0
+  value: 12.0
 }
 int_values {
-  count: 598
+  count: 23657
 }
 int_values {
   value: 1
-  count: 2485
+  count: 97221
 }
 int_values {
   value: 2
-  count: 5959
+  count: 217404
 }
 int_values {
   value: 3
-  count: 8058
+  count: 305194
 }
 int_values {
   value: 4
-  count: 8999
+  count: 338005
 }
 int_values {
   value: 5
-  count: 7919
+  count: 290014
 }
 int_values {
   value: 6
-  count: 5898
+  count: 220130
 }
 int_values {
   value: 7
-  count: 3898
+  count: 141114
 }
 int_values {
   value: 8
-  count: 2458
+  count: 88698
 }
 int_values {
   value: 9
-  count: 1404
+  count: 49757
 }
 int_values {
   value: 10
-  count: 871
+  count: 30392
 }
 int_values {
   value: 11
-  count: 579
+  count: 18233
 }
 int_values {
   value: 12
-  count: 359
+  count: 11767
 }
 int_values {
   value: 13
-  count: 206
+  count: 6778
 }
 int_values {
   value: 14
-  count: 128
+  count: 4381
 }
 int_values {
   value: 15
-  count: 87
+  count: 2392
 }
 int_values {
   value: 16
-  count: 43
+  count: 1451
 }
 int_values {
   value: 17
-  count: 23
+  count: 715
 }
 int_values {
   value: 18
-  count: 16
+  count: 414
 }
 int_values {
   value: 19
-  count: 8
+  count: 137
 }
 int_values {
   value: 20
-  count: 1
+  count: 90
 }
 int_values {
   value: 21
-  count: 1
+  count: 45
 }
 int_values {
   value: 22
-  count: 1
+  count: 33
+}
+int_values {
+  value: 23
+  count: 15
 }
 int_values {
   value: 24
-  count: 1
+  count: 15
+}
+int_values {
+  value: 25
+  count: 2
+}
+int_values {
+  value: 26
+  count: 3
+}
+int_values {
+  value: 27
+  count: 2
+}
+int_values {
+  value: 28
+  count: 2
 }

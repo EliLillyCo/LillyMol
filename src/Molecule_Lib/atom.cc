@@ -1252,18 +1252,18 @@ Atom::pi_electrons(int& pe) {
       _formal_charge, pe);
 }
 
-//#define DEBUG_ATOM_VALENCE_OK
+// #define DEBUG_ATOM_VALENCE_OK
 
 int
 Atom::valence_ok() {
   // We don't check the valence of strange elements
-  if (!_element->organic()) {
+  if (!_element->organic()) [[unlikely]] {
     return 1;
   }
 
   // If there is no valence information associated with the
   // element, it must be OK. Likely redundant with the organic test.
-  if (_element->normal_valence() < 0) {
+  if (_element->normal_valence() < 0) [[unlikely]] {
     return 1;
   }
 
@@ -1275,23 +1275,25 @@ Atom::valence_ok() {
   cerr << "Checking valence of atom " << _element->symbol() << '\n';
 #endif
 
-  if (!reasonable_formal_charge_value(_formal_charge)) {
+  if (_formal_charge == 0) [[ likely ]] {
+  } else if (_formal_charge == 1 || _formal_charge == -1) {
+  } else if (!reasonable_formal_charge_value(_formal_charge)) {
     return 0;
   }
 
   int ih;
-  if (!compute_implicit_hydrogens(ih)) {
+  if (!compute_implicit_hydrogens(ih)) [[unlikely]] {
     return 0;
   }
 
-  if (_radical) {  // too hard
+  if (_radical) [[unlikely]] {  // too hard
     return 1;
   }
 
 #ifdef DEBUG_ATOM_VALENCE_OK
   cerr << "IH " << ih << " ncon " << _number_elements << '\n';
 #endif
-  if (_number_elements + ih > 4) {
+  if (_number_elements + ih > 4) [[unlikely]] {
     if (15 == _element->atomic_number() && 6 == (_number_elements + ih)) {
       ;
     } else if (16 == _element->atomic_number() && 0 == _formal_charge &&
@@ -1322,6 +1324,16 @@ Atom::valence_ok() {
 #endif
 
   if (_element->is_valid_valence(nb)) {
+    ///  disallow =S=
+    if (_number_elements == 2 && _element->atomic_number() == 16 && _formal_charge == 0 &&
+        _things[0]->is_double_bond() && _things[1]->is_double_bond()) {
+      return 0;
+    }
+    // Disallow -I=
+    if (_element->atomic_number() == 53 && _formal_charge == 0 && _number_elements == 2 &&
+        nb > _number_elements) {
+      return 0;
+    }
     return 1;
   }
 

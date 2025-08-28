@@ -27,7 +27,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace get_linkers {
 
@@ -46,14 +50,15 @@ Usage(int rc) {
 // clang-format off
   cerr << R"(Extracts inter-ring linkers to DicerFragment proto.
 All pairs of rings are examined.
- -m <natoms>            discard linkers with fewer than <natoms> atoms
- -M <natoms>            discard linkers with more  than <natoms> atoms
- -w <dist>              discard linkers that are shorter than <dist> between attachment points
- -W <dist>              discard linkers that are longer than <dist> between attachment points
- -P ...                 atom typing specification
- -c                     discard chirality\n";
- -l                     reduce to largest fragment\n";
- -v                     verbose output\n";
+ -m <natoms>            discard linkers with fewer than <natoms> atoms.
+ -M <natoms>            discard linkers with more  than <natoms> atoms.
+ -w <dist>              discard linkers that are shorter than <dist> between attachment points.
+ -W <dist>              discard linkers that are longer than <dist> between attachment points.
+ -P ...                 atom typing specification.
+ -b                     write a smiles at the start of each output line - file is a smiles file, but invalid textproto.
+ -c                     discard chirality.
+ -l                     reduce to largest fragment.
+ -v                     verbose output.
  )";
 
 // clang-format on
@@ -90,10 +95,12 @@ class Options {
     int _min_length;
     int _max_length;
 
+    int _prepend_smiles;
+
     // This will ultimately be written.
     IW_STL_Hash_Map<IWString, dicer_data::DicerFragment> _seen;
 
-    int _molecules_read = 0;
+    uint64_t _molecules_read = 0;
 
   // private functions
     int OkAtomCount(const Molecule& m) const;
@@ -140,6 +147,11 @@ Options::Options() {
 
   _min_natoms = 0;
   _max_natoms = std::numeric_limits<int>::max();
+
+  _min_length = 0;
+  _max_length = 0;
+
+  _prepend_smiles = 0;
 
   _molecules_read = 0;
 }
@@ -223,6 +235,13 @@ Options::Initialise(Command_Line& cl) {
     if (! _atype.build(a)) {
       cerr << "Invalid atom typing specification '" << a << "'\n";
       return 0;
+    }
+  }
+
+  if (cl.option_present('b')) {
+    _prepend_smiles = 1;
+    if (_verbose) {
+      cerr << "Will prepend smiles to the textproto output\n";
     }
   }
 
@@ -389,7 +408,7 @@ Options::Process(Molecule& m,
     if (c->number_isotopic_atoms() < 2) {
       continue;
     }
-    if (c->nrings()) {
+    if (c->nrings()) {  // Maybe this should be optional...
       continue;
     }
     if (_min_length > 0 || _max_length > 0) {
@@ -489,6 +508,9 @@ Options::WriteFragments(IWString_and_File_Descriptor& output) {
       return 0;
     }
 
+    if (_prepend_smiles) {
+      output << proto.smi() << ' ';
+    }
     output << buffer << '\n';
     output.write_if_buffer_holds_more_than(4096);
   }
@@ -551,7 +573,7 @@ GetLinkers(Options& options,
 
 int
 GetLinkers(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:m:M:w:W:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:m:M:w:W:b");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

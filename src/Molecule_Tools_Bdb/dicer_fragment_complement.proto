@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package dicer_replace_complement;
+
+// Compare a fragment with the parent.
+// this can apply to either the retained piece or the complement
+// that will be replaced.
+message Conditions {
+  optional uint32 min_atoms_in_fragment = 1;
+  optional uint32 max_atoms_in_fragment = 2;
+
+  // Or based on number of atoms lost/gained.
+  optional uint32 min_atoms_lost_parent_to_fragment = 3;
+  optional uint32 max_atoms_lost_parent_to_fragment = 4;
+
+  // Or we can specify the difference as a fraction.
+  optional float min_fraction_atoms_in_fragment = 5;
+  optional float max_fraction_atoms_in_fragment = 6;
+
+  optional uint32 min_nrings = 7;
+  optional uint32 max_nrings = 8;
+
+
+  repeated string smarts_must_have = 9;
+  repeated string smarts_must_not_have = 10;
+}
+
+message Options {
+  // for both the fragment and the complement, constraints on atom counts.
+  optional Conditions fragment_conditions = 1;
+  optional Conditions complement_conditions = 2;
+
+  // As we bring in complementary fragments from the database, we can
+  // compare their molecular formula with the existing formula and
+  // restrict differences.
+  optional uint32 min_comp_formula_difference = 3;
+  optional uint32 max_comp_formula_difference = 4;
+}

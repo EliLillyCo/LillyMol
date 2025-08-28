@@ -1,14 +1,52 @@
-load("//build_deps:install.bzl", "local_install")
-
-# Some executables are still used in certain systems.
-local_install(
-    name = "install",
+proto_library(
+    name = "gfp_linear_model_proto",
     srcs = [
-        ":complex_chirality",
-        ":descriptor_file_same_row_order",
-        ":diff_line_by_line",
-        ":prediction_bias",
-        ":rearrange_columns",
+        "gfp_linear_model.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "gfp_linear_model_cc_proto",
+    deps = [
+        ":gfp_linear_model_proto",
+    ],
+)
+
+
+cc_library(
+    name = "subset_of_interest",
+    srcs = [
+        "subset_of_interest.cc",
+    ],
+    hdrs = [
+       "subset_of_interest.h",
+    ],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_binary(
+    name = "alogp_optimise",
+    srcs = [
+        "alogp_optimise.cc",
+    ],
+    deps = [
+        "//Molecule_Tools:alogp_lib",
+        "//Molecule_Tools:alogp_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/algorithm:container",
+        "@nlopt",
+    ],
+    tags = [
+        "nlopt",
     ],
 )
 
@@ -18,24 +56,12 @@ cc_binary(
         "concat_files_large_memory.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
-)     
-
-cc_binary(
-    name = "complex_chirality",
-    srcs = [
-        "complex_chirality.cc",
-    ],
-    deps = [
-        "//Foundational/cmdline:iwcmdline",
-        "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:moleculeio",
-    ]
-)   
+)
 
 cc_binary(
     name = "confusion_matrix",
@@ -43,11 +69,11 @@ cc_binary(
         "confusion_matrix.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
         "//Utilities/GFP_Tools:metric",
     ],
 )
@@ -74,15 +100,27 @@ cc_binary(
 # )
 
 cc_binary(
+    name = "descriptor_file_to_01_fingerprints",
+    srcs = [
+        "descriptor_file_to_01_fingerprints.cc",
+    ],
+    deps = [
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
+        "//Foundational/iwmisc:sparse_fp_creator",
+    ],
+)
+
+cc_binary(
     name = "descriptor_file_to_molecular_properties",
     srcs = [
         "descriptor_file_to_molecular_properties.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -92,10 +130,10 @@ cc_binary(
         "descriptor_file_profile_activity.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -105,26 +143,25 @@ cc_binary(
         "descriptor_file_same_row_order.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
 cc_binary(
-
     name = "descriptor_file_to_mahalanobis_gfp",
     srcs = [
         "descriptor_file_to_mahalanobis_gfp.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/histogram:iwhistogram",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -134,13 +171,24 @@ cc_binary(
         "diff_line_by_line.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
-)  
+)
 
+cc_binary(
+    name = "element_density",
+    srcs = [
+        "element_density.cc",
+    ],
+    deps = [
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
 
 cc_binary(
     name = "fingerprint_weights_to_atom_colours",
@@ -152,7 +200,7 @@ cc_binary(
         "//Molecule_Lib:iwmfingerprint",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-    ]
+    ],
 )
 
 cc_binary(
@@ -161,11 +209,11 @@ cc_binary(
         "folded.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -176,11 +224,11 @@ cc_binary(
         "gfp_bit_filter.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -191,12 +239,51 @@ cc_binary(
         "gfp_difference_fingerprint.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Utilities/GFP_Tools:gfp",
+    ],
+)
+
+cc_binary(
+    name = "gfp_linear_model_optimise",
+    srcs = [
+        "gfp_linear_model_optimise.cc",
+    ],
+    deps = [
+        "gfp_linear_model_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring:iwstring",
+        "//Foundational/iwstring:absl_hash",
+        "//Utilities/GFP_Tools:gfp",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@nlopt",
+    ],
+    tags = [
+        "nlopt",
+    ],
+)
+
+cc_binary(
+    name = "gfp_svmfp_score_pthread",
+    srcs = [
+        "gfp_svmfp_score_pthread.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Foundational/iwmisc:normalisation",
+        "//Utilities/GFP_Tools:gfp_bit_subset",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -204,16 +291,16 @@ cc_binary(
 cc_binary(
     name = "gfp_evaluate_clustering",
     srcs = [
-        "gfp_evaluate_clustering.cc",
         "cluster_eval.cc",
         "cluster_eval.h",
+        "gfp_evaluate_clustering.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -224,11 +311,11 @@ cc_binary(
         "gfp_group_spread.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
         "//Utilities/GFP_Tools:smiles_id_dist",
     ],
@@ -240,11 +327,11 @@ cc_binary(
         "gfp_leader_opt_v2.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -255,11 +342,11 @@ cc_binary(
         "gfp_leader_standard_threaded.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp_standard",
         "//Utilities/GFP_Tools:smiles_id_dist",
         "@onetbb//:tbb",
@@ -274,11 +361,11 @@ cc_binary(
         "leader_parallel.h",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
         "@onetbb//:tbb",
     ],
@@ -290,11 +377,11 @@ cc_binary(
         "gfp_naive_bayesian_multiclass.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -305,11 +392,11 @@ cc_binary(
         "gfp_nearneighbours_threaded.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -320,11 +407,11 @@ cc_binary(
         "gfp_proximity_descriptors.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -370,11 +457,11 @@ cc_binary(
         "gfp_spread_threaded.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
         "//Utilities/GFP_Tools:spread",
     ],
@@ -386,12 +473,12 @@ cc_binary(
         "gfp_test_train_split.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/histogram:iwhistogram",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -401,13 +488,40 @@ cc_binary(
         "gfp_vector_differences.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
-        "//Foundational/iw_tdt:iw_tdt",
         "//Utilities/GFP_Tools:gfp",
+    ],
+)
+
+cc_binary(
+    name = "molecular_merge",
+    srcs = [
+        "molecular_merge.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_binary(
+    name = "molecule_pca",
+    srcs = [
+        "molecule_pca.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/jama",
+        "//Foundational/tnt",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
     ],
 )
 
@@ -417,32 +531,28 @@ cc_binary(
         "nn_identify_active_outliers.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
     ],
 )
 
 cc_binary(
-    name = "prediction_bias",
+    name = "plate_layout",
     srcs = [
-        "prediction_bias.cc",
-        "sgefa.c",
-        "sgesl.c",
+        "plate_layout.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "@local_f2c//:f2c",
-    ],
-    linkopts = [
-        "-lblas",
+        "//Foundational/iwmisc",
+        "//Utilities/GFP_Tools:gfp",
     ],
 )
+
 
 cc_binary(
     name = "rearrange_columns",
@@ -467,7 +577,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-    ] 
+    ],
 )
 
 cc_binary(
@@ -476,10 +586,10 @@ cc_binary(
         "rocs_rpt2nn.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
         "//Utilities/GFP_Tools:smiles_id_dist",
     ],
@@ -488,16 +598,16 @@ cc_binary(
 cc_binary(
     name = "selimsteg_build",
     srcs = [
-        "selimsteg_build.cc",  
+        "selimsteg_build.cc",
+    ],
+    tags = [
+        "berkeleydb",
     ],
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
-    ],
-    tags = [
-        "berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -520,9 +630,9 @@ cc_binary(
         "zero_pad.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )

@@ -2,11 +2,11 @@ description {
   feature_name: "w_lflxchn"
   description: "Length of longest flexible chain"
   plot_title: "Length of longest flexible chain"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 41.0
-mean: 1.76442
+maxval: 47.0
+mean: 1.7913055
 median: 1.0
 quantile {
   quantile: 0.01
@@ -31,120 +31,184 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 9.01
+  value: 10.0
 }
 int_values {
-  count: 11465
+  count: 427822
 }
 int_values {
   value: 1
-  count: 14309
+  count: 518754
 }
 int_values {
   value: 2
-  count: 12915
+  count: 469189
 }
 int_values {
   value: 3
-  count: 6194
+  count: 236455
 }
 int_values {
   value: 4
-  count: 2388
+  count: 92302
 }
 int_values {
   value: 5
-  count: 1074
+  count: 40541
 }
 int_values {
   value: 6
-  count: 604
+  count: 21432
 }
 int_values {
   value: 7
-  count: 264
+  count: 10111
 }
 int_values {
   value: 8
-  count: 172
+  count: 6357
 }
 int_values {
   value: 9
-  count: 115
+  count: 4593
 }
 int_values {
   value: 10
-  count: 88
+  count: 3493
 }
 int_values {
   value: 11
-  count: 87
+  count: 3081
 }
 int_values {
   value: 12
-  count: 69
+  count: 2399
 }
 int_values {
   value: 13
-  count: 60
+  count: 2480
 }
 int_values {
   value: 14
-  count: 52
+  count: 2126
 }
 int_values {
   value: 15
-  count: 32
+  count: 1582
 }
 int_values {
   value: 16
-  count: 37
+  count: 1964
 }
 int_values {
   value: 17
-  count: 15
+  count: 920
 }
 int_values {
   value: 18
-  count: 34
+  count: 1046
 }
 int_values {
   value: 19
-  count: 7
+  count: 392
 }
 int_values {
   value: 20
-  count: 4
+  count: 316
 }
 int_values {
   value: 21
-  count: 3
+  count: 138
 }
 int_values {
   value: 22
-  count: 2
+  count: 98
 }
 int_values {
   value: 23
-  count: 5
+  count: 171
 }
 int_values {
   value: 24
-  count: 1
+  count: 40
 }
 int_values {
   value: 25
-  count: 1
+  count: 96
+}
+int_values {
+  value: 26
+  count: 14
+}
+int_values {
+  value: 27
+  count: 26
 }
 int_values {
   value: 28
-  count: 1
+  count: 18
+}
+int_values {
+  value: 29
+  count: 10
 }
 int_values {
   value: 30
+  count: 16
+}
+int_values {
+  value: 31
+  count: 25
+}
+int_values {
+  value: 32
+  count: 7
+}
+int_values {
+  value: 33
+  count: 7
+}
+int_values {
+  value: 34
+  count: 5
+}
+int_values {
+  value: 35
+  count: 10
+}
+int_values {
+  value: 37
+  count: 7
+}
+int_values {
+  value: 38
+  count: 2
+}
+int_values {
+  value: 39
   count: 1
 }
 int_values {
+  value: 40
+  count: 3
+}
+int_values {
   value: 41
+  count: 3
+}
+int_values {
+  value: 42
   count: 1
+}
+int_values {
+  value: 43
+  count: 1
+}
+int_values {
+  value: 46
+  count: 1
+}
+int_values {
+  value: 47
+  count: 6
 }

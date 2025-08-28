@@ -1,0 +1,23 @@
+name: "Buchwald"
+scaffold {
+  id: 0
+  smarts: "[ND1H2][CT1G0]"
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[Cl,Br,I]-a"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+  join {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

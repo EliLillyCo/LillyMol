@@ -4,21 +4,21 @@ package RplRing;
 
 message ReplacementRing {
   // The replacement ring expressed as smiles.
-  string smi = 1;
+  optional string smi = 1;   // required
 
   // The replacement ring expressed as smarts.
   // Must have same atom order as `smi`.
-  string smt = 2;
+  optional string smt = 2;   // required
 
   // The name of the first exemplar of this ring.
   // Suggest using msort to sort the input by heavy atom count.
-  string id = 3;
+  optional string id = 3;
 
   // What kind of ring system this is.
-  string label = 4;
+  optional string label = 4;
 
   // The number of exemplars.
-  uint32 n = 5;
+  optional uint32 n = 5;
 
   // Whether there are connections marked in the smiles.
   optional bool conn = 6;

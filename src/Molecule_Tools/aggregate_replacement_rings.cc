@@ -10,7 +10,11 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 // #include "Foundational/iwmisc/proto_support.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/replacement_ring.pb.h"
+#else
+#include "replacement_ring.pb.h"
+#endif
 
 namespace aggregate_replacement_rings {
 using std::cerr;

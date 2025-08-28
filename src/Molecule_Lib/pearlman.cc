@@ -1309,7 +1309,7 @@ discern_fused_neighbours(const resizable_array_p<Beep> & beeps,
 #ifdef BONDS_KNOW_RING_MEMBERSHIP
 
 /*int
-Bond_list::assign_ring_membership_to_bonds (const resizable_array_p<Beep> & beeps)
+BondList::assign_ring_membership_to_bonds (const resizable_array_p<Beep> & beeps)
 {
   int nb = beeps.number_elements();
   for (int i = 0; i < nb; i++)
@@ -1364,8 +1364,9 @@ Molecule::_make_ring(const Beep * bp,
     }
   }
 
-  if (r->elements_allocated() < bonds_in_ring)
+  if (r->elements_allocated() < bonds_in_ring) {
     r->resize(bonds_in_ring);
+  }
 
 // We need to build up the ring with the atoms in order
 
@@ -1570,7 +1571,7 @@ Molecule::_pearlman_sssr(const int * process_these, int id,
     rings_found.process_new_rings(*this);
 
     iterations++;
-    if (iterations < _number_elements)   // keep looking
+    if (iterations <= _number_elements)   // keep looking
       continue;
 
     if (! perceive_sssr_rings())   // transfer last found rings to sssr set

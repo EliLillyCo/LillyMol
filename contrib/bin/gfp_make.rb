@@ -22,7 +22,7 @@ def usage(config_dirs, retcode)
   $stderr << " will pass '-a 1 -B foo' to the FOO fingerprint generator\n"
   $stderr << " Most fingerprints are sparse, non colliding form. To generate a fixed width version\n";
   $stderr << " append :fixed to the fingerprint name, EC3:AQT:fixed generates a 2048 bit EC fingerprint\n"
-  $stderr << " Some fingerprints that are by default fixed, will response to :sparse as a modifier\n"
+  $stderr << " Some fingerprints that are by default fixed, will respond to :sparse as a modifier\n"
   $stderr << "\n"
   $stderr << " -all ... -all    common options passed to all programmes\n"
   $stderr << " -v               verbose output\n"

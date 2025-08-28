@@ -1,11 +1,11 @@
 #!/bin/bash
 
-here=$(dirname $(readlink -e $0))
+here=$(dirname $(realpath $0))
 
 if [[ -v LILLYMOL_HOME ]] ; then
   true
 else
-  export LILLYMOL_HOME=$(dirname $(dirname $(readlink -e $0)))
+  export LILLYMOL_HOME=$(dirname $(dirname $(realpath $0)))
 fi
 
 exec ruby ${here}/dopattern.rb "$@"

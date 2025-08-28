@@ -24,12 +24,13 @@ Identifies substituents based on what is attached to query atoms
   -e             do multiple substituents on same atom separately
   -k             include attachment atom in R groups
   -I <iso>       label join points with isotope <iso>
-  -X <symbol>    after building, remove all elements of type <symbol>
   -c <natoms>    min atoms in an R group
   -C <natoms>    max atoms in an R group
   -H             make implicit hydrogens explicit
   -h             after processing, remove explicit Hydrogens not attached to isotope (-I)
   -y             process substituents involved in ring bonds
+  -P <atype>     atom typing specification - isotopes will be atom types
+  -X ...         other options, enter '-X help' for info
   -i <type>      input type
   -A <qualifier> Aromaticity, enter "-A help" for options
   -K <...>       Enter "-K help" for SMILES options

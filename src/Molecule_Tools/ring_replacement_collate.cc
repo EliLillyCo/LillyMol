@@ -16,7 +16,11 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/iwre2.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/replacement_ring.pb.h"
+#else
+#include "replacement_ring.pb.h"
+#endif
 
 namespace ring_replacement_collate {
 

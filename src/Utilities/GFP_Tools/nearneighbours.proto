@@ -11,6 +11,13 @@ message Nbr {
   float dist = 3;
 }
 
+// If the nearest neighbours are indexed by position in the
+// input file.
+message NbrNdx {
+  uint32 id = 1;
+  float dist = 2;
+}
+
 // Each needle has some number of neighbours.
 message NearNeighbours {
   optional string smiles = 1;
@@ -26,6 +33,16 @@ message NearNeighbours {
 
   // The members of the cluster
   repeated Nbr nbr = 5;
+}
+
+// A common operation is to store the neighbours from a single file.
+// We can save a lot of space by storing the neighbours as indices
+// rather than as their name.
+message NearNeighboursIndices {
+  optional string smiles = 1;
+  optional string name = 2;
+
+  repeated NbrNdx nbr = 3;
 }
 
 message ListOfNearNeighbours {

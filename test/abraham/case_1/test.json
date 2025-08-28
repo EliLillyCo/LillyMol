@@ -1,0 +1,8 @@
+{
+  "preamble": [
+     "QUERY_DIR=${LILLYMOL_HOME}/data/queries"
+  ],
+  "args": [
+    " -l -F ${QUERY_DIR}/abraham/Abraham -P ${QUERY_DIR}/abraham/Alpha2H -g all #{indir}/pubchem_example.smi"
+  ]
+}

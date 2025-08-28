@@ -28,9 +28,12 @@ Usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
-  cerr << "Performs some task on a set of molecules.\n";
-  cerr << " -a          what the -a option does\n";
-  cerr << " -v          verbose output\n";
+// clang-format off
+  cerr << R"(Performs some task on a set of molecules.
+ -a          what the -a option does
+ -v          verbose output
+)";
+// clang-format on
 
   ::exit(rc);
 }
@@ -53,7 +56,7 @@ class Options {
     // Not a part of all applications, just an example...
     Element_Transformations _element_transformations;
 
-    int _molecules_read = 0;
+    uint64_t _molecules_read = 0;
 
   public:
     Options();
@@ -68,9 +71,6 @@ class Options {
     // After each molecule is read, but before any processing
     // is attempted, do any preprocessing transformations.
     int Preprocess(Molecule& m);
-
-    // Helpful when the -i option is not given.
-    int MaybeDiscernInputType(const char * fname);
 
     // The function that actually does the processing,
     // and may write to `output`.
@@ -132,15 +132,6 @@ Options::Report(std::ostream& output) const {
   return 1;
 }
 
-// If the input type is known, return it.
-// Otherwise examine the file name's suffix to 
-// determine the type.
-int
-Options::MaybeDiscernInputType(const char * fname) {
-
-  return 1;
-}
-
 int
 Options::Preprocess(Molecule& m) {
   if (m.empty()) {
@@ -153,6 +144,7 @@ Options::Preprocess(Molecule& m) {
 
   if (_remove_chirality) {
     m.remove_all_chiral_centres();
+    m.revert_all_directional_bonds_to_non_directional();
   }
 
   if (_chemical_standardisation.active()) {

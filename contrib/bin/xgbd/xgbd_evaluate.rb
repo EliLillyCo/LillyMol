@@ -40,6 +40,18 @@ def get_model_metadata(mdir)
   return XgboostModel::XGBoostModel.decode(File.read(fname))
 end
 
+# return an xgboost_model_evaluate command for evaluating
+# the model in `mdir` with input descriptor file `input`.
+# Adds linear scaling if it is present in `mdir`.
+def evaluate_cmd(mdir, input)
+  result = "xgboost_model_evaluate.sh -mdir #{mdir}"
+  linear_scaling = File.join(mdir, 'rescaling.textproto')
+  result << " -Z #{linear_scaling}" if File.size?(linear_scaling)
+  result << " #{input}"
+
+  return result
+end
+
 def xgbd_evaluate_smiles(fname, mdir, proto, cl)
   descriptors = Set.new()
   proto.name_to_col.each do |name, col|
@@ -61,7 +73,7 @@ def xgbd_evaluate_smiles(fname, mdir, proto, cl)
     cmd << " -#{d}"
   end
   cmd << " #{fname}"
-  cmd << "| xgboost_model_evaluate.sh -mdir #{mdir} -"
+  cmd << '|' << evaluate_cmd(mdir '-')
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
 
@@ -69,7 +81,7 @@ def xgbd_evaluate_smiles(fname, mdir, proto, cl)
 end
 
 def xgbd_evaluate_descriptors(fname, mdir, proto, cl)
-  cmd = "xgboost_model_evaluate.sh -mdir #{mdir} #{fname}"
+  cmd = evaluate_cmd(mdir, fname)
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
   system(cmd)

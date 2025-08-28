@@ -1,0 +1,3 @@
+{
+   "args": [ "-L -G #{indir}/in.sdf" ]
+}

@@ -202,6 +202,51 @@ INSTANTIATE_TEST_SUITE_P(FileConvTestP, FileConvTestP, testing::Values(
   OptionsSmilesResult{vector<const char*>{"_", "-f", "WINDOW=2,2"}, "f:",
                       "CCC.C.CC.CCCC.CC", "name", 0, "CC.CC", "name"},
 
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmxt=3"}, "f:",
+                      "CCC.CCC", "name", 0, "CCC.CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmxt=3"}, "f:",
+                      "CCCC.CCCC", "name", 1, "CCCC.CCCC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "dmxt=2"}, "f:",
+                      "CCC.CCC", "name", 1, "CCC.CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "dmxt=2"}, "f:",
+                      "CCCC.CCC", "name", 1, "CCCC.CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "dmxt=2"}, "f:",
+                      "CCCCC.CCC", "name", 1, "CCCCC.CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "dmxt=2"}, "f:",
+                      "CCCCCC.CCC", "name", 0, "CCCCCC.CCC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "manlf=2"}, "f:",
+                      "CCCC.CC", "name", 0, "CCCC.CC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "manlf=2"}, "f:",
+                      "CCCC.CCC", "name", 1, "CCCC.CCC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "klf=1"}, "f:",
+                      "CCC.CC.C", "name", 0, "CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "klf=2"}, "f:",
+                      "C.CC.CCC", "name", 0, "CC.CCC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "keepsmall=2"}, "f:",
+                      "C.CC.CCC", "name", 0, "C.CC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmlarge"}, "f:",
+                      "C.CC.CCC", "name", 0, "C.CC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmlarge=2"}, "f:",
+                      "C.CC.CCC", "name", 0, "C", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmlarge=2"}, "f:",
+                      "CCC.CC.C", "name", 0, "C", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmsmall"}, "f:",
+                      "CCC.CC.C", "name", 0, "CCC.CC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "rmsmall=2"}, "f:",
+                      "CCC.CC.C", "name", 0, "CCC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "2"}, "f:",
+                      "CCC.CC.C.CCC", "name", 0, "CCC.CC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-f", "sfs"}, "f:",
+                      "C.CCC.CC.C.CCC", "name", 0, "CCC.CCC.CC.C.C", "name"},
+
   OptionsSmilesResult{vector<const char*>{"_", "-O", "def"}, "O:",
                       "CNOFSClBrI[Li][Na][K][Mg][Ca]", "name", 0, "CNOFSClBrI[Li][Na][K][Mg][Ca]", "name"},
   OptionsSmilesResult{vector<const char*>{"_", "-O", "def"}, "O:",
@@ -217,7 +262,12 @@ INSTANTIATE_TEST_SUITE_P(FileConvTestP, FileConvTestP, testing::Values(
                       "CC1CC1", "name", 0, "C([H])([H])([H])C1CC1", "name"},
 
   OptionsSmilesResult{vector<const char*>{"_", "-I", "add:3-CC"}, "I:",
-                      "[3CH3]C", "name", 0, "[3CH2](C)CC", "name"}
+                      "[3CH3]C", "name", 0, "[3CH2](C)CC", "name"},
+
+  OptionsSmilesResult{vector<const char*>{"_", "-s", "maxc=1", "-s", "find"}, "s:",
+                      "CC(N)(O)CC(F)(O)CCC", "name", 1, "C[C@](N)(O)C[C@](F)(O)CCC", "name"},
+  OptionsSmilesResult{vector<const char*>{"_", "-s", "maxc=2", "-s", "find"}, "s:",
+                      "CC(N)(O)CC(F)(O)CCC", "name", 0, "C[C@](N)(O)C[C@](F)(O)CCC", "name"}
 ));
 
 struct SaltFileData {
@@ -288,7 +338,9 @@ INSTANTIATE_TEST_SUITE_P(SaltFileTests, SaltFileTestP, testing::Values(
   // Test that chirality is removed when the library is read.
   SaltFileData{vector<const char*>{"_"}, "f:", "C.CC(N)F", "methane", "C[C@H](N)F", "C"},
   // And that chirality is removed from fragments.
-  SaltFileData{vector<const char*>{"_"}, "f:", "C.C[C@H](N)F", "methane", "CC(N)F", "C"}
+  SaltFileData{vector<const char*>{"_"}, "f:", "C.C[C@H](N)F", "methane", "CC(N)F", "C"},
+  // Make sure molecules with no fragments are OK
+  SaltFileData{vector<const char*>{"_"}, "f:", "C", "methane", "C", "C"}
 ));
 
 }  // namespace

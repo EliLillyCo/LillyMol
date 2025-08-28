@@ -17,19 +17,31 @@ using std::cerr;
 
 void
 Usage(int rc) {
-  cerr << "Filter a set of sorted molecules based on externally specified reactions\n";
-  cerr << "If the product has been seen before, the starting molecule is discarded\n";
-  cerr << " -a              read all the input into a vector of Molecules (recommended)\n";
-  cerr << " -r <fname>      reaction file (proto only)\n";
-  cerr << " -R <fname>      file containing reaction files\n";
-  cerr << " -X <fname>      write discarded molecules to <fname>\n";
-  cerr << " -p              in the -X file, write the predecessor on a separate line\n";
-  cerr << " -g ...          standard chemical standardisation options\n";
-  cerr << " -l              reduce to largest fragment\n";
-  cerr << " -c              discard chirality\n";
-  cerr << " -o <sep>        output separator\n";
-  cerr << " -v              verbose output\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Filter a set of sorted molecules based on externally specified reactions.
+The reactions are applied to molecules as they are read. If the product has already
+been seen, the new molecule is discarded. 
+ -a              read all the input into a vector of Molecules (recommended)
+ -r <fname>      reaction file (proto only)
+ -R <fname>      file containing reaction files
+ -X <fname>      write discarded molecules to <fname>
+ -p              in the -X file, write the predecessor on a separate line
+ -g ...          standard chemical standardisation options
+ -l              reduce to largest fragment
+ -c              discard chirality
+ -o <sep>        output separator
+ -v              verbose output
+)";
+
   exit(rc);
+  // clang-format on
 }
 
 // When the reaction product is found, we record the Predecessor - the previously
@@ -350,7 +362,8 @@ ReadReaction(IWString& fname) {
   }
 
   std::unique_ptr<IWReaction> result = std::make_unique<IWReaction>();
-  if (! result->ConstructFromProto(proto.value(), fname)) {
+  Sidechain_Match_Conditions smc;
+  if (! result->ConstructFromProto(proto.value(), fname, smc)) {
     cerr << "Cannot parse proto\n";
     cerr << proto.value().ShortDebugString() << '\n';
     return nullptr;

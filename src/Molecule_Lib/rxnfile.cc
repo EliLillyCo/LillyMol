@@ -1,8 +1,8 @@
 #include <algorithm>
-#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -654,14 +654,13 @@ ISIS_RXN_FILE_Molecule::which_is_mapped_atom(int m) const {
   // cerr << "Searching " << matoms << " atoms for map " << m << '\n';
 
   for (int i = 0; i < matoms; i++) {
-    //  cerr << " i = " << i << " check " << _atom_map[i] << " match? " << (_atom_map[i]
-    //  == m) << '\n';
+    //  cerr << " i = " << i << " check " << _atom_map[i] << " match? " << (_atom_map[i] == m) << '\n';
     if (_atom_map[i] == m) {
       return i;
     }
   }
 
-  return -1;
+  return kInvalidAtomNumber;
 }
 
 /*
@@ -2736,7 +2735,7 @@ RXN_File::_map_symmetry_equivalent_atoms(int &highest_atom_map_number, int r,
   }
 
 #ifdef DEBUG_MAP_SYMMETRY_EQUIVALENT_ATOMS
-  cerr << s1.number_elements() << " and " << s2.number_elements()
+  cerr << s1.number_elements() << " and " << s2.size()
        << " symmetry equivalents\n";
   cerr << "atom " << ar << " reagent " << r;
   for (int i = 0; i < n1; ++i) {
@@ -3981,7 +3980,7 @@ first_positive_item(const int *a, int n) {
   return -1;
 }
 
-// #define DEBUG_CREATE_REACTION
+//#define DEBUG_CREATE_REACTION
 
 int
 RXN_File::_create_reaction(IWReaction &rxn,
@@ -3992,9 +3991,13 @@ RXN_File::_create_reaction(IWReaction &rxn,
   cerr << "RXN_File::_create_reaction\n";
   write_mapped_reaction(cerr);
 
-  for (int i = 1; i <= highest_atom_map; ++i) {
-    cerr << i << " include_these_atom_map_numbers " << include_these_atom_map_numbers[i]
-         << '\n';
+  if (include_these_atom_map_numbers == nullptr) {
+    cerr << "include_these_atom_map_numbers is null\n";
+  } else {
+    for (int i = 1; i <= highest_atom_map; ++i) {
+      cerr << i << " include_these_atom_map_numbers " << include_these_atom_map_numbers[i]
+           << '\n';
+    }
   }
 #endif
 
@@ -4063,8 +4066,8 @@ RXN_File::_create_reaction(IWReaction &rxn,
   resizable_array_p<Bond> connections_involved_in_substitutions;  // both makes and breaks
   resizable_array<Replace_Atom *> atoms_to_replace;
 
-  //_identify_atom_substitutions(highest_atom_map, atoms_to_replace,
-  //connections_involved_in_substitutions);
+  _identify_atom_substitutions(highest_atom_map, atoms_to_replace,
+                               connections_involved_in_substitutions);
 
   resizable_array_p<Bond> bonds_to_be_broken;
 
@@ -4088,7 +4091,7 @@ RXN_File::_create_reaction(IWReaction &rxn,
 
   _identify_isotopes_to_be_placed(highest_atom_map, isotopes);
 
-  // cerr << "Identified " << bonds_to_be_made.number_elements() << " bonds to be made\n";
+  // cerr << "Identified " << bonds_to_be_made.size() << " bonds to be made\n";
 
   if (!_interpret_atom_alias_as_smarts) {
     for (int i = 0; i < _nr; ++i) {
@@ -4153,9 +4156,13 @@ RXN_File::_create_reaction(IWReaction &rxn,
   // Complication with atom replacements. Some naturally belong to the scaffold, but
   // convention dictates that they belong to a sidechain
 
-  // cerr << "Found " << atoms_to_replace.number_elements() << " replace atoms\n";
+#ifdef DEBUG_CREATE_REACTION
+  cerr << "Found " << atoms_to_replace.size() << " replace atoms\n";
+#endif
   for (int i = 0; i < atoms_to_replace.number_elements(); i++) {
     Replace_Atom *r = atoms_to_replace[i];
+    // cerr << "Replacement atom ";
+    // r->write_msi(cerr, "  ", " RPA");
 
     const int c1 = r->a1().in_component();
     const int c2 = r->a2().in_component();
@@ -4227,7 +4234,7 @@ RXN_File::_create_reaction(IWReaction &rxn,
   }
 
 #ifdef DEBUG_CREATE_REACTION
-  cerr << "RXN_File::_create_reaction:processing " << bonds_to_be_made.number_elements()
+  cerr << "RXN_File::_create_reaction:processing " << bonds_to_be_made.size()
        << " bonds to be made\n";
 #endif
 
@@ -4490,7 +4497,7 @@ RXN_File::_create_reaction(IWReaction &rxn,
 
   // Are there any stereo centres formed in the products
 
-  _look_for_stereo_centres_made(rxn);
+  _look_for_stereo_centres_made(rxn, atoms_to_replace);
 
   // Are there any element transformations
 
@@ -4914,9 +4921,8 @@ ISIS_RXN_FILE_Molecule::identify_connected_mapped_atoms(
 int
 RXN_File::_looks_like_atom_replacement(int m, resizable_array<int> &initial_connections,
                                        resizable_array<int> &final_connections) const {
-  for (int i = initial_connections.number_elements() - 1; i >= 0;
-       i--)  // first remove all fully preserved connections
-  {
+  // first remove all fully preserved connections
+  for (int i = initial_connections.number_elements() - 1; i >= 0; i--) {
     int j = initial_connections[i];
 
     if (!final_connections.contains(j)) {
@@ -4949,7 +4955,7 @@ RXN_File::_looks_like_atom_replacement(int m, resizable_array<int> &initial_conn
   return 1;
 }
 
-// #define DEBUG_IDENTIFY_ATOM_SUBSTITUTIONS
+//#define DEBUG_IDENTIFY_ATOM_SUBSTITUTIONS
 
 /*
   What is a substitution?
@@ -4968,15 +4974,13 @@ RXN_File::_identify_atom_substitutions(
   cerr << "RXN_File::_identify_atom_substitutions: highest atom map " << ham1 << '\n';
 #endif
 
-  for (int i = 0; i < _nr; i++)  // loop over all reagents
-  {
+  for (int i = 0; i < _nr; i++) {  // loop over all reagents
     const ISIS_RXN_FILE_Molecule &ri = _reagent[i];
 
     const int *amap = ri.atom_map();
 
-    int matoms = ri.natoms();
-    for (int j = 0; j < matoms; j++)  // loop over every atom in each reagent
-    {
+    const int matoms = ri.natoms();
+    for (int j = 0; j < matoms; j++) {  // loop over every atom in each reagent
       if (amap[j] < 1) {
         continue;
       }
@@ -4985,8 +4989,9 @@ RXN_File::_identify_atom_substitutions(
         continue;
       }
 
-      if (ri.nbonds(j) > ri.ncon(j)) {  // unsaturated, can't have a chiral centre, no
-                                        // atom replacements adjacent to this atom
+      // If unsaturated, no atom replacements possible.
+      // Long term, think of cis-trans bonds, not handled now.
+      if (ri.nbonds(j) > ri.ncon(j)) {
         continue;
       }
 
@@ -5028,6 +5033,7 @@ RXN_File::_identify_atom_substitutions(
         continue;
       }
 
+      // If the previous call is successful each array will hold just one element.
       int m1 = initially_connected_to[0];
       int m2 = ultimately_connected_to[0];
 
@@ -5069,6 +5075,11 @@ RXN_File::_identify_atom_substitutions(
       a2.set_in_component(rm2);
       a2.set_matched_atom(l);
 
+      atom_number_t x = ri.which_is_mapped_atom(m1);
+      if (ChiralityFlipped(ri, x, m2)) {
+        r->set_invert_chirality(1);
+      }
+
       atom_substitutions.add(r);
 
       Bond *b = new Bond(amap[j], m1, SINGLE_BOND);
@@ -5079,6 +5090,271 @@ RXN_File::_identify_atom_substitutions(
   }
 
   return 1;
+}
+
+// Various supporting functions for ChiralityFlipped
+
+// Fill `destination` with the atom maps for
+//  top_front, top_back, left_down, right_down
+// from `c`
+
+static int
+GetConnections(const ISIS_RXN_FILE_Molecule& reagent,
+                const Chiral_Centre& c,
+                int destination[4]) {
+  const int* amap = reagent.atom_map();
+
+  if (atom_number_t a = c.top_front(); a >= 0) {
+    int map_number = amap[a];
+    if (map_number <= 0) {
+      return 0;
+    }
+    destination[0] = map_number;
+  } else {
+    destination[0] = -1;
+  }
+
+  if (atom_number_t a = c.top_back(); a >= 0) {
+    int map_number = amap[a];
+    if (map_number <= 0) {
+      return 0;
+    }
+    destination[1] = map_number;
+  } else {
+    destination[1] = -1;
+  }
+
+  if (atom_number_t a = c.left_down(); a >= 0) {
+    int map_number = amap[a];
+    if (map_number <= 0) {
+      return 0;
+    }
+    destination[2] = map_number;
+  } else {
+    destination[2] = -1;
+  }
+
+  if (atom_number_t a = c.right_down(); a >= 0) {
+    int map_number = amap[a];
+    if (map_number <= 0) {
+      return 0;
+    }
+    destination[3] = map_number;
+  } else {
+    destination[3] = -1;
+  }
+
+  return 1;
+}
+
+static int
+IndexOfLowestValue(const int connections[4],
+                   int exclude) {
+  int lowest_value = std::numeric_limits<int>::max();
+  int result = -1;
+
+  for (int i = 0; i < 4; ++i) {
+    if (i == exclude) {
+      continue;
+    }
+    if (connections[i] < lowest_value) {
+      lowest_value = connections[i];
+      result = i;
+    }
+  }
+
+  return result;
+}
+
+// `connections` holds the top_front, top_back, left_down, right_down
+// connections around a chiral centre.
+// Look down index `look_down` and compute a canonical number for
+// the other connections.
+static uint64_t
+CanonicalNumber(const int connections[4], int look_down) {
+  int lowest = IndexOfLowestValue(connections, look_down);
+
+  static constexpr uint64_t kConst1 = 10000000;
+  static constexpr uint64_t kConst2 = 100000;
+  static constexpr uint64_t kConst3 = 1000;
+
+#ifdef DEBUG_CANONICAL_NUMBER
+  cerr << "look_down " << look_down << " lowest " << lowest << '\n';
+  for (int i = 0; i < 4; ++i) {
+    cerr << i << " mapped atom " << connections[i] << '\n';
+  }
+#endif
+
+  if (look_down == 0) {
+    if (lowest == 1) {
+      return kConst1 * connections[1] + kConst2 * connections[2] + kConst3 * connections[3];
+    } else if (lowest == 2) {
+      return kConst1 * connections[2] + kConst2 * connections[3] + kConst3 * connections[0];
+    } else if (lowest == 3) {
+      return kConst1 * connections[3] + kConst2 * connections[0] + kConst3 * connections[1];
+    }
+  }
+
+  if (look_down == 1) {
+    if (lowest == 2) {
+      return kConst1 * connections[2] + kConst2 * connections[3] + kConst3 * connections[0];
+    } else if (lowest == 3) {
+      return kConst1 * connections[3] + kConst2 * connections[0] + kConst3 * connections[1];
+    } else if (lowest == 0) {
+      return kConst1 * connections[0] + kConst2 * connections[2] + kConst3 * connections[3];
+    }
+  }
+
+  if (look_down == 2) {
+    if (lowest == 3) {
+      return kConst1 * connections[3] + kConst2 * connections[0] + kConst3 * connections[1];
+    } else if (lowest == 0) {
+      return kConst1 * connections[0] + kConst2 * connections[1] + kConst3 * connections[3];
+    } else if (lowest == 1) {
+      return kConst1 * connections[1] + kConst2 * connections[3] + kConst3 * connections[0];
+    }
+  }
+
+  if (look_down == 3) {
+    if (lowest == 0) {
+      return kConst1 * connections[0] + kConst2 * connections[1] + kConst3 * connections[2];
+    } else if (lowest == 1) {
+      return kConst1 * connections[1] + kConst2 * connections[2] + kConst3 * connections[2];
+    } else if (lowest == 2) {
+      return kConst1 * connections[2] + kConst2 * connections[0] + kConst3 * connections[1];
+    }
+  }
+
+  cerr << "CanonicalNumber: this should not happen, look_down " << look_down << '\n';
+  return 0;
+}
+
+// We have two chiral centres in two molecules and need to figure out
+// if this involves an inversion of chirality.
+// The arguments `map1` and `map2` are atom numbers in `reagent` and `product`
+// which are the replacment. When we find the mapped atoms attached to each
+// site, we must do that replacement.
+static int
+ChiralityFlipped(const ISIS_RXN_FILE_Molecule& reagent,
+                           const Chiral_Centre& c1,
+                           int a1,
+                           const ISIS_RXN_FILE_Molecule& product,
+                           const Chiral_Centre& c2,
+                           int a2) {
+  int conn1[4];
+  if (! GetConnections(reagent, c1, conn1)) {
+    return 0;
+  }
+
+  int conn2[4];
+  if (! GetConnections(product, c2, conn2)) {
+    return 0;
+  }
+
+  atom_number_t map1 = reagent.atom_map(a1);
+  atom_number_t map2 = product.atom_map(a2);
+
+#ifdef DEBUG_CHIRALITY_FLIPPED
+  cerr << "Swapped atoms are " << a1 << " and " << a2 << '\n';
+  cerr << reagent.smarts_equivalent_for_atom(a1) << " in product " << product.smarts_equivalent_for_atom(a2) << '\n';
+  cerr << "Replace " << map2 << " with " << map1 << '\n';
+#endif
+
+  for (int i = 0; i < 4; ++i) {
+    // cerr << i << " connections " << conn1[i] << " and " << conn2[i] << '\n';
+    if (conn1[i] == map1) {
+      conn1[i] = map2;
+      break;
+    }
+  }
+
+#ifdef DEBUG_CHIRALITY_FLIPPED
+  cerr << "After translation \n";
+  for (int i = 0; i < 4; ++i) {
+    cerr << i << " connections " << conn1[i] << " and " << conn2[i] << '\n';
+  }
+#endif
+
+  uint64_t canon1, canon2;
+  if (conn1[0] == conn2[0]) {
+    canon1 = CanonicalNumber(conn1, 0);
+    canon2 = CanonicalNumber(conn2, 0);
+  } else if (conn1[0] == conn2[1]) {
+    canon1 = CanonicalNumber(conn1, 1);
+    canon2 = CanonicalNumber(conn2, 1);
+  } else if (conn1[0] == conn2[2]) {
+    canon1 = CanonicalNumber(conn1, 2);
+    canon2 = CanonicalNumber(conn2, 2);
+  } else if (conn1[0] == conn2[3]) {
+    canon1 = CanonicalNumber(conn1, 3);
+    canon2 = CanonicalNumber(conn2, 3);
+  } else {
+    // Not sure this can happen.
+    return 0;
+  }
+
+#ifdef DEBUG_CHIRALITY_FLIPPED
+  cerr << "Canonical nujbers " << canon1 << " and " << canon2 << '\n';
+#endif
+
+  return canon1 != canon2;
+}
+
+static const Chiral_Centre*
+ChiralCentreInvolving(const ISIS_RXN_FILE_Molecule& m,
+                      atom_number_t zatom) {
+  // cerr << "Check atom " << zatom << " in chiral centres\n";
+  for (const Chiral_Centre* c : m.ChiralCentres()) {
+    if (c->involves(zatom)) {
+      return c;
+    }
+  }
+
+  return nullptr;
+}
+
+
+// We have identified `zatom` as involved in an atom replacement.
+// We need to decide whether or not the chirality is flipped during
+// this operation.
+int
+RXN_File::ChiralityFlipped(const ISIS_RXN_FILE_Molecule& reagent, atom_number_t a1,
+                           int map2) const {
+
+#ifdef DEBUG_CHIRALITY_FLIPPED
+  cerr << "RXN_File::ChiralityFlipped: a1 " << a1 << " " << reagent.smarts_equivalent_for_atom(a1) << '\n';
+#endif
+
+  const int pnum = _product_locator[map2];
+  const ISIS_RXN_FILE_Molecule& product = _product[pnum];
+  const atom_number_t a2 = product.which_is_mapped_atom(map2);
+
+#ifdef DEBUG_CHIRALITY_FLIPPED
+  cerr << "Chiral centre count " << reagent.chiral_centres() << " product " << product.chiral_centres() << '\n';
+  Molecule mcopy(reagent);
+  cerr << mcopy.smiles() << " reagent\n";
+  Molecule qq(product);
+  cerr << qq.smiles() << " product\n";
+#endif
+
+  resizable_array<int> initially_connected_to;
+  reagent.identify_connected_mapped_atoms(a1, initially_connected_to);
+
+  resizable_array<int> ultimately_connected_to;
+  product.identify_connected_mapped_atoms(a2, ultimately_connected_to);
+
+  const Chiral_Centre* c1 = ChiralCentreInvolving(reagent, a1);
+  if (c1 == nullptr) {
+    cerr << "No chiral centre on atom " << a1 << " in reagent\n";
+    return 0;
+  }
+  const Chiral_Centre* c2 = ChiralCentreInvolving(product, a2);
+  if (c2 == nullptr) {
+    cerr << "No chiral centre on atom " << a2 << " in product\n";
+    return 0;
+  }
+
+  return ::ChiralityFlipped(reagent, *c1, a1, product, *c2, a2);
 }
 
 /*
@@ -5371,7 +5647,7 @@ RXN_File::_identify_bonds_to_be_broken(
   }
 
 #ifdef DEBUG_IDENTIFY_BONDS_TO_BE_BROKEN
-  cerr << "Found " << bonds_to_be_broken.number_elements() << " bonds to be broken\n";
+  cerr << "Found " << bonds_to_be_broken.size() << " bonds to be broken\n";
 #endif
 
   return 1;
@@ -5434,7 +5710,7 @@ RXN_File::_identify_bonds_to_be_made(
   }
 
 #ifdef DEBUG_IDENTIFY_BONDS_TO_BE_MADE
-  cerr << "Found " << bonds_to_be_made.number_elements() << " bonds to be made, orphans? "
+  cerr << "Found " << bonds_to_be_made.size() << " bonds to be made, orphans? "
        << orphans.number_elements() << '\n';
 #endif
 
@@ -6007,10 +6283,62 @@ collect_mapped_neighbours(const ISIS_RXN_FILE_Molecule &m, const Chiral_Centre *
   return 1;
 }
 
+static int
+AtomIsCentreOfReplacement(int product_number,
+                const ISIS_RXN_FILE_Molecule& m, 
+                const Chiral_Centre& c,
+                const Replace_Atom& atom_to_replace) {
+  const Matched_Atom_in_Component& mac1 = atom_to_replace.a1();
+  // Do we need to check mac2?
+  // const Matched_Atom_in_Component& mac2 = atom_to_replace.a2();
+
+#ifdef DEBUG_ATOM_IS_CENTRE_OF_REPLACEMENT
+  cerr << "AtomIsCentreOfReplacement ";
+  atom_to_replace.write_msi(cerr, "  ", " RPL ");
+  cerr << "Testing atom " << c.a() << " in product " << product_number << '\n';
+#endif
+
+  if (product_number == 0 && mac1.in_scaffold()) {
+    ;
+  } else if (product_number != mac1.in_component()) {
+    ;
+  } else {
+    return 0;
+  }
+
+#ifdef DEBUG_ATOM_IS_CENTRE_OF_REPLACEMENT
+  for (int i = 0; i <  m.natoms(); ++i) {
+    cerr << " atom " << i << " " << m.smarts_equivalent_for_atom(i) << '\n';
+  }
+#endif
+
+  atom_number_t matched_atom = mac1.matched_atom();
+  return c.involves(matched_atom);
+}
+
+// Return true if any of the atoms in `c` are part of any of the
+// atom replacements in `atoms_to_replace`.
+static int
+AtomIsCentreOfReplacement(int product_number,
+                const ISIS_RXN_FILE_Molecule& m, 
+                const Chiral_Centre& c,
+                const resizable_array<Replace_Atom*>& atoms_to_replace) {
+  for (const Replace_Atom* rpla : atoms_to_replace) {
+    if (AtomIsCentreOfReplacement(product_number, m, c, *rpla)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 // #define DEBUG_LOOK_FOR_STEREO_CENTRES_MADE
 
+// Are there stereo centres that are made.
+// But we must avoid atoms that are involved with a Replace_Atom.
 int
-RXN_File::_look_for_stereo_centres_made(IWReaction &rxn) {
+RXN_File::_look_for_stereo_centres_made(IWReaction &rxn,
+                        const resizable_array<Replace_Atom*>& atoms_to_replace) {
   int return_code = 0;
 
   for (int i = 0; i < _np; i++) {
@@ -6022,9 +6350,14 @@ RXN_File::_look_for_stereo_centres_made(IWReaction &rxn) {
     for (int j = 0; j < m.chiral_centres(); j++) {
       const Chiral_Centre *c = m.chiral_centre_in_molecule_not_indexed_by_atom_number(j);
 
-      int mc = m.atom_map(c->a());
-      //    cerr << "j = " << j << " mapped atom is " << mc << '\n';
+      const int mc = m.atom_map(c->a());
       if (mc <= 0) {  // not a  mapped atom, can't process these
+        continue;
+      }
+
+      // If this chiral centre has already been taken care of as
+      // an atom replacement, skip.
+      if (AtomIsCentreOfReplacement(i, m, *c, atoms_to_replace)) {
         continue;
       }
 
@@ -6044,8 +6377,8 @@ RXN_File::_look_for_stereo_centres_made(IWReaction &rxn) {
         continue;
       }
 
-      int rtf =
-          find_reagent(_reagent_locator, mtf);  // in which reagent is mapped atom MTF
+      // in which reagent is mapped atom MTF
+      int rtf = find_reagent(_reagent_locator, mtf);
       if (mtf >= 0 && rtf < 0) {
         continue;
       }
@@ -7100,7 +7433,7 @@ RXN_File::check_for_widows_and_orphans() {
     }
 
 #ifdef DEBUG_CHECK_FOR_WIDOWS_AND_ORPHANS
-    cerr << "Found " << orphans.number_elements() << " orphan atoms\n";
+    cerr << "Found " << orphans.size() << " orphan atoms\n";
 #endif
     if (orphans.empty()) {
       continue;

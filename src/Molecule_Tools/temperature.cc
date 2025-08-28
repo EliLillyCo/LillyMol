@@ -345,7 +345,8 @@ temperature(Molecule& m, Options& options, IWString_and_File_Descriptor& output)
   if (matoms > std::numeric_limits<unsigned char>::max()) {
     molecules_with_too_many_atoms++;
     if (verbose) {
-      cerr << "Molecule with too many atoms " << matoms << ' ' << m.name() << '\n';
+      cerr << "Molecule with too many atoms " << matoms << ' ' << m.name() << 
+              " truncated\n";
     }
   }
 

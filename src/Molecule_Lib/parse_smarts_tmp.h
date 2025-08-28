@@ -12,7 +12,11 @@
 // of atoms between, or smarts.
 
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "substructure.pb.h"
+#endif
 
 // A base class for three dots and down the bond
 

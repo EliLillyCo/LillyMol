@@ -1,8 +1,6 @@
-#! /usr/bin/env ruby
+#!/usr/bin/env ruby
 
-ianhome = ENV['C3TK_BIN'] #"/home/rx87851"
-
-require "#{ianhome}/ruby/lib/iwcmdline.rb"
+require_relative "lib/iwcmdline.rb"
 
 $expert = false
 
@@ -10,6 +8,8 @@ def usage (rc)
   $stderr << "Summarises results in the output files from svmfp_calibrate.rb\n"
   $stderr << " -rx <regexp>   process files that match <rx>, -rx 'A80' for example\n"
   $stderr << "                useful if too many files to process via cmd line\n"
+  $stderr << " -NO <regexp>   exclude any file matching <regexp>. For example to omit a chronological\n"
+  $stderr << "                split that was split number 10: svmfp_summarise_results -NO '\\.10$' ....\n"
   $stderr << " -F <fname>     read files to be processed from <fname>\n"
   $stderr << " -R B2          result of interest is Bsquared\n"
   $stderr << " -R AE          result of interest is average absolute error\n"
@@ -22,6 +22,7 @@ def usage (rc)
   $stderr << " -R cMSR90_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
   $stderr << " -R cMSR95_mad    result of interest is cMSR (median average deviation) (Suntara)\n"
   $stderr << " -R cMSR95_sd     result of interest is cMSR (standard deviation) (Suntara)\n"
+  $stderr << " -R MSR1          reslt of interest is fraction within 1MSR of experimental, MSR2 and MSR3 also\n"
   $stderr << " -R max_error     max error\n" if $expert
   $stderr << " -R rx=<rx>     Process lines that match <rx>\n" if $expert
   $stderr << " -col <col>     when matching records via the rx= directive, which column\n" if $expert
@@ -31,13 +32,14 @@ def usage (rc)
 # $stderr << " -p precision   precision for outputs (default 3)\n"
   $stderr << " -T <nt>        perform t test on the <nt> best fingerprints compared to best\n" if $expert
   $stderr << " -D <fname>     file of raw values\n" if $expert
+  $stderr << " -S <fname>     multiple criteria processed at once, <fname> is output file name stem\n"
   $stderr << " -B <fname>     write best fingerprint model to <fname>\n"
   $stderr << " -x             normally the -B file contains the best fingerprint only, -x allows other forms\n" if $expert
   $stderr << " -v             verbose output\n"
   exit(rc)
 end
 
-cl = IWCmdline.new("-v-R=s-C=s-p=ipos-r-col=ipos-RX=s-rx=s-T=ipos-D=s-expert-std-q-S=s-F=sfile-tar=sfile-B=s-x")
+cl = IWCmdline.new("-v-R=s-C=s-p=ipos-r-col=ipos-RX=s-rx=s-T=ipos-D=s-expert-std-q-S=s-F=sfile-tar=sfile-B=s-x-MSR1-MSR2-MSR3-NO=s-keep")
 
 $expert = cl.option_present('expert')
 
@@ -60,6 +62,7 @@ class Next_File
   def initialize
     @argv = false
     @rx = false
+    @rx_nomatch = false
     @dir = false
     @file = false
     @tarfile = false
@@ -85,6 +88,10 @@ class Next_File
       return false
     end
 
+    if cl.option_present('NO')
+      @rx_nomatch = Regexp.new(cl.value('NO'))
+    end
+
     return true
   end
   
@@ -102,20 +109,23 @@ class Next_File
     if @argv
       @argv.each do |fname|
         next unless file_exists(fname)
-        yield fname, IO.read(fname)
+        next if @rx_nomatch && @rx_nomatch.match(fname)
+        yield fname, File.read(fname)
       end
     elsif @dir
       @dir.each do |fname|
         next unless @rx.match(fname)
         next unless file_exists(fname)
-        yield fname, IO.read(fname)
+        next if @rx_nomatch && @rx_nomatch.match(fname)
+        yield fname, File.read(fname)
       end
     elsif @file
       @file.each do |fn|
         fn.chomp!
         fname = fn.gsub(/\$(\w+)/){ENV[$1]}
         next unless file_exists(fname.to_str)
-        yield fname, IO.read(fname)
+        next if @rx_nomatch && @rx_nomatch.match(fname)
+        yield fname, File.read(fname)
       end
     elsif @tarfile
       @tarfile.each do |entry|
@@ -161,7 +171,7 @@ if cl.option_present('R')
   cl.values('R').each do |r|
 
     if 'B2' == r
-      rx.push(Regexp.new(' (Bsquared|B2.input) '))
+      rx.push(Regexp.new(' (Bsquared|B2.unbiased) '))
       rxname.push('B2')
       reverse.push(false)
     elsif 'R2' == r
@@ -224,8 +234,20 @@ if cl.option_present('R')
       rx.push(Regexp.new(' max_error ', Regexp::IGNORECASE))
       rxname.push('max_error')
       reverse.push(true)
+    elsif r == 'MSR1'
+      rx.push(Regexp.new(' MSR1 '))
+      rxname.push('MSR1')
+      reverse.push(false);
+    elsif r == 'MSR2'
+      rx.push(Regexp.new(' MSR2 '))
+      rxname.push('MSR2')
+      reverse.push(false);
+    elsif r == 'MSR3'
+      rx.push(Regexp.new(' MSR3 '))
+      rxname.push('MSR3')
+      reverse.push(false);
     elsif "all" == r.downcase
-      rx.push(Regexp.new(' (Bsquared|B2.input) '))
+      rx.push(Regexp.new(' (Bsquared|B2.unbiased) '))
       rxname.push('B2')
       reverse.push(false)
       rx.push(Regexp.new(' R2 '))
@@ -295,7 +317,7 @@ elsif (cl.option_present('C'))
     usage(5)
   end
 else
-  rx.push(Regexp.new(' (Bsquared|B2\.input) '))
+  rx.push(Regexp.new(' (Bsquared|B2\.unbiased) '))
   rxname.push('B2')
   reverse.push(false)
 end
@@ -385,10 +407,8 @@ class Model
   end
 
   def extra(f, v)
-    $st
     if (! @measures.has_key?(f))
       @measures[f] = Set_of_Data.new
-#     $stderr << "Initialised data for #{f}\n"
     end
 
     @measures[f].extra(v)
@@ -402,8 +422,8 @@ class Model
     @measures[f].report(@name, longest_name, os)
   end
 
-  def write_prediction(f, ndx, s)
-    @measures[f].write_prediction(ndx, s)
+  def write_prediction(f, ndx, output)
+    @measures[f].write_prediction(ndx, output)
   end
 
   def write_all_values(f, os)
@@ -497,7 +517,7 @@ if 0 == predictors.size
 end
 
 def do_report(name_stem, m, rxname, i, longest_name)
-  fname = "#{name_stem}.#{rxname}.dat"
+  fname = "#{name_stem}.#{rxname}"
   outp = File.open(fname, mode='w')
   raise "Cannot open '#{fname}'" unless outp
   m.report(i, longest_name, outp)
@@ -579,7 +599,7 @@ end
 
   os = $stdout
   if rx.size > 1
-    fname = "#{output_file_name_stem}.#{rxname[i]}.dat"
+    fname = "#{output_file_name_stem}.#{rxname[i]}"
     os = File.open(fname, mode='w')
     raise "Cannot open '#{fname}'" unless os
   end
@@ -645,7 +665,7 @@ end
     outp << "#{x}"
     (array_of_predictors.size - 1).downto(istart).each do |j|
       outp << ' '
-      array_of_predictors[j].write_prediction(x, outp)
+      array_of_predictors[j].write_prediction(i, x, outp)
     end
     outp << "\n"
   end
@@ -657,8 +677,8 @@ end
     exit 2
   end
 
-  cmd = "test_t_test.sh -s 1 -c 2"
-  (nt+1).downto(3).each do |i|
+  cmd = "t_test.sh -header=False -s 2"
+  (nt+1).downto(4).each do |i|
     cmd << " -c #{i}"
   end
   cmd << " #{tmpfile}"
@@ -669,5 +689,5 @@ end
 
   system(cmd)
 
-  File.unlink(tmpfile)
+  File.unlink(tmpfile) unless cl.option_present('keep')
 end

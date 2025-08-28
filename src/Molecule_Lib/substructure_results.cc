@@ -28,6 +28,26 @@ set_remove_hits_not_in_largest_fragment_behaviour(int s)
   remove_hits_not_in_largest_fragment_behaviour = s;
 }
 
+// Apr 2025. Symmetry continues to be a major problem.
+// The simplistic approach to symmetry of embeddings works well
+// for many reactions, so we make that behaviour the default.
+
+namespace lillymol {
+static int simplistic_symmetry_perception = 1;
+
+void
+set_simplistic_embedding_symmetry_perception(int s) {
+  simplistic_symmetry_perception = s;
+}
+
+int
+embedding_symmetry_perception_status() {
+  return simplistic_symmetry_perception;
+}
+}  // namespace lillymol
+
+
+
 Substructure_Results::Substructure_Results()
 {
   _save_matched_atoms = 1;
@@ -304,33 +324,125 @@ Substructure_Results::add_embedding(Set_of_Atoms * e,
   return 1;
 }
 
-//#define DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
+// #define DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
 
+// This is not correct.
+// In the tests we test CC1CC1 and C1NCCNC1.
+// THis current version gets the second one correct, but fails for
+// the first one.
+// The algorithm is to first look for an exact match between the
+// two embeddings. If that works, great, they are definitely symmetry related.
+// What we do then is to just count the number of instances of each symmetry
+// class encountered, and if that is the same across the two embeddings,
+// assume a symmetry match.
+// But that is incorrect via the first example above.
 int
 Substructure_Results::_are_symmetry_related(const Set_of_Atoms & e1, const Set_of_Atoms & e2) const
 {
-
   const int n = e1.number_elements();
 
-  for (int i = 0; i < n; i++)
-  {
-    atom_number_t a1 = e1[i];
-    atom_number_t a2 = e2[i];
+  // Deal with a possibly common case of 1 atom in the embeddings.
+  if (n == 1) {
+    const atom_number_t a1 = e1[0];
+    const atom_number_t a2 = e2[0];
+    if (a1 < 0 || a2 < 0) {
+      return 0;
+    }
 
-    if (a1 < 0 || a2 < 0)
+    return _symmetry_class[a1] == _symmetry_class[a2];
+  }
+
+  int are_symmetric = true;
+
+  // For the advanced checking there must be at least one atom that matches exactly.
+
+  for (int i = 0; i < n; i++) {
+    const atom_number_t a1 = e1[i];
+    const atom_number_t a2 = e2[i];
+
+    if (a1 < 0 || a2 < 0) [[unlikely]] {
       continue;
+    }
 
 #ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
     cerr << " checking atom " << a1 << " (" << _symmetry_class[a1] << ") and " << a2 << " (" << _symmetry_class[a2] << ")\n";
-
 #endif
-    if (_symmetry_class[a1] != _symmetry_class[a2])
+    if (_symmetry_class[a1] == _symmetry_class[a2]) {
+      continue;
+    }
+
+    are_symmetric = false;
+    break;
+  }
+
+#ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
+  cerr << "Compare " << e1 << " and " << e2 << " After initial check are_symmetric " << are_symmetric << '\n';
+#endif
+  if (are_symmetric) {
+    return 1;
+  }
+
+  if (lillymol::simplistic_symmetry_perception) {
+    return 0;
+  }
+
+  // We did not get an exact match, see if the symmetry classes match.
+  extending_resizable_array<int> symm_class;
+  for (atom_number_t a : e1) {
+    if (a < 0) [[unlikely]] {
+      continue;
+    }
+    int sa = _symmetry_class[a];
+    ++symm_class[sa];
+  }
+
+#ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
+  for (int i = 0; i < symm_class.number_elements(); ++i) {
+    if (symm_class[i] > 0) {
+      cerr << symm_class[i] << " instances of symmetry class " << i << '\n';
+    }
+  }
+#endif
+
+  for (atom_number_t a : e2) {
+    if (a < 0) {
+      continue;
+    }
+    const int sa = _symmetry_class[a];
+    // cerr << " E2 contains an instance of class " << sa << " still " << symm_class[sa] << " from e1\n";
+    if (symm_class[sa] == 0) {
       return 0;
+    }
+    --symm_class[sa];
+  }
+
+#ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
+  cerr << "After removing e2\n";
+  for (int i = 0; i < symm_class.number_elements(); ++i) {
+    if (symm_class[i] > 0) {
+      cerr << symm_class[i] << " instances of symmetry class " << i << '\n';
+    }
+  }
+#endif
+
+  // Not sure this final check is necessary.
+  for (atom_number_t a : e1) {
+    if (a < 0) {
+      continue;
+    }
+    int sa = _symmetry_class[a];
+    if (symm_class[sa] != 0) {
+      return 0;
+    }
   }
 
 #ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
   cerr << "Embeddings are symmetry related\n";
 #endif
+
+  // We have the same symmetry classes present, but what about the ordering
+  // and relationships between the atoms.
+  // TODO:ianwatson - seems maybe hard...
 
   return 1;
 }
@@ -340,30 +452,25 @@ Substructure_Results::_are_symmetry_related(const Set_of_Atoms & e1, const Set_o
 */
 
 int
-Substructure_Results::embedding_is_symmetry_related(const Set_of_Atoms & new_embedding) const
-{
+Substructure_Results::embedding_is_symmetry_related(const Set_of_Atoms & new_embedding) const {
   assert (_symmetry_class);
 
-  int ne = _embedding.number_elements();
+  if (_embedding.empty()) {
+    return 0;
+  }
 
 #ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
-  cerr << "Checking " << new_embedding << " against " << ne << " embeddings\n";
+  cerr << "Checking " << new_embedding << " against " << _embedding.size() << " embeddings\n";
 #endif
 
-  if (0 == ne)
-    return 0;
-
-  int np = new_embedding.number_elements();
-
-  for (int i = 0; i < ne; i++)
-  {
-    const Set_of_Atoms * p = _embedding[i];
-
-    if (np != p->number_elements())      // pretty unlikely to happen
+  for (const Set_of_Atoms* p : _embedding) {
+    if (new_embedding.size() != p->size()) [[unlikely]] {
       continue;
+    }
 
-    if (_are_symmetry_related(new_embedding, *p))
+    if (_are_symmetry_related(new_embedding, *p)) {
       return 1;
+    }
   }
 
 #ifdef DEBUG_EMBEDDING_IS_SYMMETRY_RELATED
@@ -438,6 +545,7 @@ Substructure_Results::sort_by_preference_value()
   QamSa * qamsa = new QamSa[ne]; std::unique_ptr<QamSa[]> free_qamsa(qamsa);
 
   for (int i = 0; i < ne; i++)
+  // atoms.
   {
     QamSa & t = qamsa[i];
     t.set_qam(_query_atoms_matched[i]);

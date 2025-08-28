@@ -5,5 +5,5 @@
     (A I atomic_number 16)
     (A I min_hits_needed 1)
   )
-  (A C smarts "[SD2R0]-[CR1X4]-[/IWVy0NR0G0T0]")
+  (A C smarts "[SD2R0]-[CR1X4]-[/IWVy0NR1G0T0]")
 )

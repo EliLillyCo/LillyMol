@@ -1,0 +1,43 @@
+{
+  "executable": "whatsmissing",
+  "test": [
+    {
+      "name": "dash_m",
+      "args": [ "-m q #{indir}/in.dat" ]
+    },
+    {
+      "name": "b_option",
+      "args": [ "-b #{indir}/in.dat" ]
+    },
+    {
+      "name": "n_option",
+      "args": [ "-n 2 #{indir}/in.dat" ]
+    },
+    {
+      "name": "n_zero_option",
+      "args": [ "-n 0 ${LILLYMOL_HOME}/data/descriptor.txt" ]
+    },
+    {
+      "name": "M_option",
+      "args": [ "-n 2 -M Mfile #{indir}/in.dat" ]
+    },
+    {
+      "name": "u_option",
+      "args": [ "-u -n 3 -M Mfile #{indir}/in.dat" ]
+    },
+    {
+      "name": "x_option",
+      "args": [ "-x 2 -v -v -v #{indir}/in.dat" ],
+      "difftool": "diff -I 'records from'"
+    },
+    {
+      "name": "non_rectangular",
+      "args": [ "#{indir}/in.dat" ]
+    },
+    {
+      "name": "r_option",
+      "args": [ "-r #{indir}/in.dat" ],
+      "non_zero_rc_expected": true
+    }
+  ]
+}

@@ -2,11 +2,11 @@ description {
   feature_name: "w_brunsacc"
   description: "Number of Hydrogen bond acceptors, Bruns"
   plot_title: "Number of Hydrogen bond acceptors, Bruns"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 19.0
-mean: 3.3986
+maxval: 26.0
+mean: 3.3338175
 median: 3.0
 quantile {
   quantile: 0.01
@@ -36,81 +36,93 @@ quantile {
   value: 9.0
 }
 int_values {
-  count: 1522
+  count: 60424
 }
 int_values {
   value: 1
-  count: 5015
+  count: 195799
 }
 int_values {
   value: 2
-  count: 9988
+  count: 382900
 }
 int_values {
   value: 3
-  count: 11788
+  count: 435352
 }
 int_values {
   value: 4
-  count: 10049
+  count: 359510
 }
 int_values {
   value: 5
-  count: 5921
+  count: 214412
 }
 int_values {
   value: 6
-  count: 3000
+  count: 106916
 }
 int_values {
   value: 7
-  count: 1397
+  count: 47521
 }
 int_values {
   value: 8
-  count: 686
+  count: 23743
 }
 int_values {
   value: 9
-  count: 292
+  count: 10247
 }
 int_values {
   value: 10
-  count: 146
+  count: 5084
 }
 int_values {
   value: 11
-  count: 77
+  count: 2491
 }
 int_values {
   value: 12
-  count: 55
+  count: 1587
 }
 int_values {
   value: 13
-  count: 27
+  count: 803
 }
 int_values {
   value: 14
-  count: 12
+  count: 573
 }
 int_values {
   value: 15
-  count: 16
+  count: 270
 }
 int_values {
   value: 16
-  count: 4
+  count: 220
 }
 int_values {
   value: 17
-  count: 2
+  count: 103
 }
 int_values {
   value: 18
-  count: 2
+  count: 76
 }
 int_values {
   value: 19
+  count: 10
+}
+int_values {
+  value: 20
+  count: 18
+}
+int_values {
+  value: 22
+  count: 1
+}
+int_values {
+  value: 26
   count: 1
 }

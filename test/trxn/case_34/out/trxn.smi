@@ -1,0 +1,636 @@
+OC[C@H](Cl)C R(110)
+Cl.OC[C@@H](I)C R(110) +
+OC[C@@H](Cl)C R(68)
+Cl.OC[C@H](I)C R(68) +
+Br[C@H](C)C(=O)O R(206)
+Br.I[C@@H](C)C(=O)O R(206) +
+Cl[C@@H]1C=C[C@@H]1Cl R(204)
+Cl.Cl.I[C@@H]1C=C[C@@H]1I R(204) + +
+Br[C@@H](C)C(=O)O R(202)
+Br.I[C@H](C)C(=O)O R(202) +
+Cl[C@H](C)C(=O)O R(152)
+Cl.I[C@@H](C)C(=O)O R(152) +
+Cl[C@@H](C)C(=O)O R(106)
+Cl.I[C@H](C)C(=O)O R(106) +
+Cl[C@H](C)C(=O)O R(105)
+Cl.I[C@@H](C)C(=O)O R(105) +
+Br[C@H](C)C(=O)O R(16)
+Br.I[C@@H](C)C(=O)O R(16) +
+Br[C@@H](C)C(=O)O R(15)
+Br.I[C@H](C)C(=O)O R(15) +
+Cl[C@H](C)C(=O)O R(14)
+Cl.I[C@@H](C)C(=O)O R(14) +
+Cl[C@@H](C)C(=O)O R(9)
+Cl.I[C@H](C)C(=O)O R(9) +
+Cl[C@H](C)C(=O)O R(8)
+Cl.I[C@@H](C)C(=O)O R(8) +
+CC[C@H](Br)C(=O)O R(446)
+Br.CC[C@@H](I)C(=O)O R(446) +
+CC[C@@H](Br)C(=O)O R(445)
+Br.CC[C@H](I)C(=O)O R(445) +
+Cl[C@H]1CCC[C@@H]1Cl R(135)
+Cl.Cl.I[C@@H]1CCC[C@H]1I R(135) + +
+CC[C@H](Cl)C(=O)O R(114)
+Cl.CC[C@@H](I)C(=O)O R(114) +
+CC[C@@H](Cl)C(=O)O R(113)
+Cl.CC[C@H](I)C(=O)O R(113) +
+Cl[C@@H](C)C(=O)OC R(97)
+Cl.I[C@H](C)C(=O)OC R(97) +
+Cl[C@H](C)C(=O)OC R(96)
+Cl.I[C@@H](C)C(=O)OC R(96) +
+Cl[C@H]1[C@H](SC)CCC1 R(671)
+Cl.I[C@@H]1[C@H](SC)CCC1 R(671) +
+Br[C@H]1[C@H]2C=C[C@@H]1CC2 R(636)
+Br.I[C@@H]1[C@H]2C=C[C@@H]1CC2 R(636) +
+CCC[C@H](Br)C(=O)O R(450)
+Br.CCC[C@@H](I)C(=O)O R(450) +
+CCC[C@@H](Br)C(=O)O R(449)
+Br.CCC[C@H](I)C(=O)O R(449) +
+Br[C@@H](C(C)C)C(=O)O R(448)
+Br.I[C@H](C(C)C)C(=O)O R(448) +
+Br[C@H](C(C)C)C(=O)O R(447)
+Br.I[C@@H](C(C)C)C(=O)O R(447) +
+Br[C@H]1C[C@H]2C[C@@H]1CC2 R(263)
+Br.I[C@@H]1C[C@H]2C[C@@H]1CC2 R(263) +
+Cl[C@H](CCl)[C@@H](Cl)CCl R(198)
+Cl.Cl.I[C@H](CCl)[C@@H](I)CCl R(198) + +
+Cl[C@H]1CC[C@H](Cl)CC1 R(134)
+Cl.Cl.I[C@H]1CC[C@H](I)CC1 R(134) + +
+Br[C@H](CBr)[C@@H](Br)CBr R(133)
+Br.Br.I[C@H](CBr)[C@@H](I)CBr R(133) + +
+Cl[C@@H](C(C)C)C(=O)O R(117)
+Cl.I[C@H](C(C)C)C(=O)O R(117) +
+CCC[C@@H](Cl)C(=O)O R(116)
+Cl.CCC[C@H](I)C(=O)O R(116) +
+Cl[C@@H](CCl)[C@@H](Cl)CCl R(108)
+Cl.Cl.I[C@H](CCl)[C@H](I)CCl R(108) + +
+Cl[C@@H]1CCCC[C@@H]1Cl R(107)
+Cl.Cl.I[C@@H]1CCCC[C@@H]1I R(107) + +
+Cl[C@H](C(C)C)C(=O)O R(75)
+Cl.I[C@@H](C(C)C)C(=O)O R(75) +
+CCC[C@H](Cl)C(=O)O R(74)
+Cl.CCC[C@@H](I)C(=O)O R(74) +
+Cl[C@H]1CCCC[C@@H]1Cl R(63)
+Cl.Cl.I[C@@H]1CCCC[C@H]1I R(63) + +
+Br[C@H]1CCCC[C@@H]1Br R(62)
+Br.Br.I[C@@H]1CCCC[C@H]1I R(62) + +
+Br[C@@H](C(C)C)C(=O)O R(40)
+Br.I[C@H](C(C)C)C(=O)O R(40) +
+Br[C@H](C(C)C)C(=O)O R(39)
+Br.I[C@@H](C(C)C)C(=O)O R(39) +
+Cl[C@@H](C(C)C)C(=O)O R(10)
+Cl.I[C@H](C(C)C)C(=O)O R(10) +
+Cl[C@H](C(C)C)C(=O)O R(2)
+Cl.I[C@@H](C(C)C)C(=O)O R(2) +
+Br[C@@H](CC(=O)O)C(=O)O R(680)
+Br.I[C@H](CC(=O)O)C(=O)O R(680) +
+O=C(O)[C@@H]1NC[C@H](F)C1 R(675)
+F.O=C(O)[C@@H]1NC[C@@H](I)C1 R(675) +
+O=C(O)[C@H]1NC[C@@H](F)C1 R(673)
+F.O=C(O)[C@H]1NC[C@H](I)C1 R(673) +
+O=C(O)[C@H]1NC[C@H](F)C1 R(672)
+F.O=C(O)[C@H]1NC[C@@H](I)C1 R(672) +
+CCCC[C@H](Br)C(=O)O R(452)
+Br.CCCC[C@@H](I)C(=O)O R(452) +
+CCCC[C@@H](Br)C(=O)O R(451)
+Br.CCCC[C@H](I)C(=O)O R(451) +
+CC[C@H](C)[C@H](Cl)C(=O)O R(341)
+Cl.CC[C@H](C)[C@@H](I)C(=O)O R(341) +
+O=S1(=O)C[C@H](Cl)[C@H](C1)Cl R(239)
+Cl.Cl.O=S1(=O)C[C@@H](I)[C@@H](C1)I R(239) + +
+O=S1(=O)C[C@H](Br)[C@H](C1)Br R(238)
+Br.Br.O=S1(=O)C[C@@H](I)[C@@H](C1)I R(238) + +
+Br[C@@H](CC(=O)O)C(=O)O R(237)
+Br.I[C@H](CC(=O)O)C(=O)O R(237) +
+CCC(C)[C@H](Cl)C(=O)O R(118)
+Cl.CCC(C)[C@@H](I)C(=O)O R(118) +
+Cl[C@@H](CC(=O)O)C(=O)O R(112)
+Cl.I[C@H](CC(=O)O)C(=O)O R(112) +
+Cl[C@H](CC(=O)O)C(=O)O R(111)
+Cl.I[C@@H](CC(=O)O)C(=O)O R(111) +
+Cl[C@@H](CC(C)C)C(=O)O R(72)
+Cl.I[C@H](CC(C)C)C(=O)O R(72) +
+O=S1(=O)C[C@H](Cl)[C@H](C1)Cl R(20)
+Cl.Cl.O=S1(=O)C[C@@H](I)[C@@H](C1)I R(20) + +
+F[C@@H]1[C@H](F)C(C1(F)F)(F)F R(683)
+F.F.I[C@@H]1C(C([C@@H]1I)(F)F)(F)F R(683) + +
+F[C@H]1[C@H](F)C(C1(F)F)(F)F R(682)
+F.F.I[C@H]1C(C([C@@H]1I)(F)F)(F)F R(682) + +
+O=C(O)C1C[C@H](Br)[C@H](C1)Br R(663)
+Br.Br.O=C(O)C1C[C@@H](I)[C@@H](C1)I R(663) + +
+O=C(O)[C@@H]1NC(=O)[C@@H](F)C1 R(612)
+F.O=C(O)[C@@H]1NC(=O)[C@H](I)C1 R(612) +
+Br[C@@H]1CS(=O)(=O)C[C@]1(Br)C R(252)
+Br.I[C@H]1CS(=O)(=O)C[C@]1(Br)C R(252) +
+O=C(O)[C@H]1NC(=O)[C@H](F)C1 R(233)
+F.O=C(O)[C@H]1NC(=O)[C@@H](I)C1 R(233) +
+O=C(O)[C@H]1NC(=O)[C@H](F)C1 R(232)
+F.O=C(O)[C@H]1NC(=O)[C@@H](I)C1 R(232) +
+O=C(O)[C@H]1NC(=O)[C@@H](F)C1 R(231)
+F.O=C(O)[C@H]1NC(=O)[C@H](I)C1 R(231) +
+Cl[C@H](C(=O)OCC(C)C)C R(161)
+Cl.I[C@@H](C(=O)OCC(C)C)C R(161) +
+OC[C@H]1OC([C@@H](F)[C@@H]1O)O R(124)
+F.OC[C@H]1OC([C@H](I)[C@@H]1O)O R(124) +
+OC[C@H]1OC([C@@H]([C@H]1F)O)O R(122)
+F.OC[C@H]1OC([C@@H]([C@@H]1I)O)O R(122) +
+Br[C@H](C(=O)O)[C@@H](Br)C(=O)O R(109)
+Br.Br.I[C@H](C(=O)O)[C@@H](I)C(=O)O R(109) + +
+C#C[C@@]1(O)CCCC[C@@H]1Cl R(71)
+Cl.C#C[C@@]1(O)CCCC[C@H]1I R(71) +
+O=C(O)C1C[C@H](Br)[C@H](C1)Br R(57)
+Br.Br.O=C(O)C1C[C@@H](I)[C@@H](C1)I R(57) + +
+Br[C@@H]1CS(=O)(=O)C[C@]1(Br)C R(22)
+Br.I[C@H]1CS(=O)(=O)C[C@]1(Br)C R(22) +
+O=C(C)N[C@H]1[C@H](Cl)CCCC1 R(623)
+Cl.O=C(C)N[C@H]1[C@@H](I)CCCC1 R(623) +
+F[C@@H](C[C@H](N)C(=O)O)C(=O)O R(611)
+F.I[C@H](C[C@H](N)C(=O)O)C(=O)O R(611) +
+F[C@H](C[C@@H](C(=O)N)N)C(=O)O R(230)
+F.I[C@@H](C[C@@H](C(=O)N)N)C(=O)O R(230) +
+F[C@@H](C[C@@H](C(=O)N)N)C(=O)O R(229)
+F.I[C@H](C[C@@H](C(=O)N)N)C(=O)O R(229) +
+F[C@H](C[C@@H](C(=O)N)N)C(=O)O R(228)
+F.I[C@@H](C[C@@H](C(=O)N)N)C(=O)O R(228) +
+F[C@H](C[C@@H](C(=O)O)N)C(=O)N R(227)
+F.I[C@@H](C[C@@H](C(=O)O)N)C(=O)N R(227) +
+F[C@@H](C[C@@H](C(=O)O)N)C(=O)N R(226)
+F.I[C@H](C[C@@H](C(=O)O)N)C(=O)N R(226) +
+F[C@H](C[C@@H](C(=O)O)N)C(=O)N R(225)
+F.I[C@@H](C[C@@H](C(=O)O)N)C(=O)N R(225) +
+F[C@H](C[C@@H](N)C(=O)O)C(=O)O R(224)
+F.I[C@@H](C[C@@H](N)C(=O)O)C(=O)O R(224) +
+F[C@@H](C[C@H](N)C(=O)O)C(=O)O R(223)
+F.I[C@H](C[C@H](N)C(=O)O)C(=O)O R(223) +
+F[C@H](C[C@H](N)C(=O)O)C(=O)O R(222)
+F.I[C@@H](C[C@H](N)C(=O)O)C(=O)O R(222) +
+F[C@@H](C[C@@H](N)C(=O)O)C(=O)O R(221)
+F.I[C@H](C[C@@H](N)C(=O)O)C(=O)O R(221) +
+F[C@H](C[C@H](N)C(=O)O)C(=O)O R(220)
+F.I[C@@H](C[C@H](N)C(=O)O)C(=O)O R(220) +
+Br[C@H]1Cc2c([C@@H]1O)cccc2 R(213)
+Br.I[C@@H]1Cc2c([C@@H]1O)cccc2 R(213) +
+O=C([C@H](c1ccccc1)Cl)Cl R(169)
+Cl.I[C@H](c1ccccc1)C(=O)Cl R(169) +
+Cl[C@H]1Cc2c([C@@H]1O)cccc2 R(121)
+Cl.I[C@@H]1Cc2c([C@@H]1O)cccc2 R(121) +
+OC[C@@H](Cl)Cc1ccccc1 R(119)
+Cl.OC[C@H](I)Cc1ccccc1 R(119) +
+Cl[C@H]1Cc2c([C@H]1O)cccc2 R(80)
+Cl.I[C@@H]1Cc2c([C@H]1O)cccc2 R(80) +
+OC[C@H](Cl)Cc1ccccc1 R(76)
+Cl.OC[C@@H](I)Cc1ccccc1 R(76) +
+Cl[C@@H]1C[C@H](C)CC[C@H]1C(C)C R(59)
+Cl.I[C@H]1C[C@H](C)CC[C@H]1C(C)C R(59) +
+Br[C@H]1Cc2c([C@@H]1O)cccc2 R(17)
+Br.I[C@@H]1Cc2c([C@@H]1O)cccc2 R(17) +
+FCC1O[C@H](C([C@@H]([C@H]1F)O)O)O R(648)
+F.FCC1O[C@H](C([C@@H]([C@@H]1I)O)O)O R(648) +
+OCC1O[C@H](C([C@@H]([C@@H]1F)O)O)O R(647)
+F.OCC1O[C@H](C([C@@H]([C@H]1I)O)O)O R(647) +
+OCC1O[C@@H](O)C([C@H](F)[C@@H]1O)O R(646)
+F.OCC1O[C@@H](O)C([C@@H](I)[C@@H]1O)O R(646) +
+OCC1O[C@H](C([C@@H]([C@H]1F)O)O)O R(645)
+F.OCC1O[C@H](C([C@@H]([C@@H]1I)O)O)O R(645) +
+OCC1O[C@@H](O)C([C@H](F)[C@H]1O)O R(644)
+F.OCC1O[C@@H](O)C([C@@H](I)[C@H]1O)O R(644) +
+F[C@H]([C@H](Br)C(=O)OC)C(=O)OC R(638)
+F.Br.I[C@H](C(=O)OC)[C@@H](I)C(=O)OC R(638) + +
+Cl[C@H]1[C@H](Cl)[C@H](Cl)[C@@H]([C@H]([C@H]1Cl)Cl)Cl R(621)
+Cl.Cl.Cl.Cl.Cl.Cl.I[C@H]1[C@H](I)[C@H](I)[C@@H]([C@H]([C@H]1I)I)I R(621) + + + + + +
+O=C[C@H](Cl)[C@H]([C@@H]([C@@H](CO)O)O)O R(610)
+Cl.O=C[C@@H](I)[C@H]([C@@H]([C@@H](CO)O)O)O R(610) +
+OC[C@H]1OC([C@@H](F)[C@H]([C@@H]1O)O)O R(586)
+F.OC[C@H]1OC([C@H](I)[C@H]([C@@H]1O)O)O R(586) +
+Br[C@@H](Cc1ccccc1)C(=O)O R(454)
+Br.I[C@H](Cc1ccccc1)C(=O)O R(454) +
+Br[C@H](Cc1ccccc1)C(=O)O R(453)
+Br.I[C@@H](Cc1ccccc1)C(=O)O R(453) +
+Cl[C@@H]1[C@@H](Cl)[C@H](Cl)[C@@H](Cl)[C@@H]([C@H]1Cl)Cl R(197)
+Cl.Cl.Cl.Cl.Cl.Cl.I[C@@H]1[C@@H](I)[C@H](I)[C@@H](I)[C@@H]([C@H]1I)I R(197) + + + + + +
+Cl[C@H]1[C@@H]([C@H]([C@@H](Cl)[C@@H]([C@H]1Cl)Cl)Cl)Cl R(196)
+Cl.Cl.Cl.Cl.Cl.Cl.I[C@H]1[C@@H]([C@H]([C@@H](I)[C@@H]([C@H]1I)I)I)I R(196) + + + + + +
+Cl[C@H]1[C@H](Cl)[C@H](Cl)[C@H]([C@@H]([C@H]1Cl)Cl)Cl R(195)
+Cl.Cl.Cl.Cl.Cl.Cl.I[C@H]1[C@@H]([C@H]([C@H](I)[C@@H]([C@H]1I)I)I)I R(195) + + + + + +
+Cl[C@H]1[C@H]([C@@H](Cl)[C@@H]([C@H]([C@@H]1Cl)Cl)Cl)Cl R(194)
+Cl.Cl.Cl.Cl.Cl.Cl.I[C@H]1[C@H]([C@@H](I)[C@@H]([C@H]([C@@H]1I)I)I)I R(194) + + + + + +
+N#CC1(C(=O)N)C[C@@H](C(Br)C1)Br R(173)
+Br.N#CC1(C(=O)N)CC(Br)[C@H](I)C1 R(173) +
+Br[C@@H]1CCC2CN(C)CC[C@H]2C1 R(172)
+Br.I[C@H]1CCC2CN(C)CC[C@H]2C1 R(172) +
+O=C(O)[C@H]1[C@H]2[C@@H](Br)C[C@@H]1C(=O)C2 R(167)
+Br.O=C(O)[C@H]1[C@H]2[C@H](I)C[C@@H]1C(=O)C2 R(167) +
+O=C[C@H]([C@H]([C@H](F)[C@@H](CO)O)O)O R(151)
+F.O=C[C@H]([C@H]([C@@H](I)[C@@H](CO)O)O)O R(151) +
+O=C[C@H]([C@@H](F)[C@H](O)[C@@H](CO)O)O R(150)
+F.O=C[C@H]([C@H](I)[C@H](O)[C@@H](CO)O)O R(150) +
+O=C[C@@H]([C@H]([C@H](F)[C@@H](CO)O)O)O R(149)
+F.O=C[C@@H]([C@H]([C@@H](I)[C@@H](CO)O)O)O R(149) +
+O=C[C@@H]([C@@H](F)[C@H](O)[C@@H](CO)O)O R(148)
+F.O=C[C@@H]([C@H](I)[C@H](O)[C@@H](CO)O)O R(148) +
+O=C[C@H](F)[C@H]([C@@H]([C@@H](CO)O)O)O R(147)
+F.O=C[C@@H](I)[C@H]([C@@H]([C@@H](CO)O)O)O R(147) +
+O=C[C@H](F)[C@H]([C@H]([C@@H](CO)O)O)O R(146)
+F.O=C[C@@H](I)[C@H]([C@H]([C@@H](CO)O)O)O R(146) +
+Br[C@H](CC[C@H](Br)C(=O)O)C(=O)O R(126)
+Br.Br.I[C@H](CC[C@H](I)C(=O)O)C(=O)O R(126) + +
+OC[C@H]1OC(O)[C@@H]([C@H]([C@@H]1F)O)O R(125)
+F.OC[C@H]1OC(O)[C@@H]([C@H]([C@H]1I)O)O R(125) +
+FC[C@H]1OC(O)[C@@H]([C@H]([C@H]1F)O)O R(123)
+F.FC[C@H]1OC(O)[C@@H]([C@H]([C@@H]1I)O)O R(123) +
+Cl[C@@H](Cc1ccccc1)C(=O)O R(115)
+Cl.I[C@H](Cc1ccccc1)C(=O)O R(115) +
+Br[C@@H]1[C@@H]2CC[C@](C)(C1=O)C2(C)C R(104)
+Br.I[C@H]1[C@@H]2CC[C@](C)(C1=O)C2(C)C R(104) +
+OC[C@H]1OC(O)[C@@H]([C@@H](F)[C@@H]1O)O R(101)
+F.OC[C@H]1OC([C@@H]([C@H](I)[C@@H]1O)O)O R(101) +
+OC[C@H]1OC([C@H](F)[C@H]([C@@H]1O)O)O R(100)
+F.OC[C@H]1OC([C@@H](I)[C@H]([C@@H]1O)O)O R(100) +
+OC[C@H]1OC(O)[C@@H]([C@@H](F)[C@H]1O)O R(95)
+F.OC[C@H]1OC([C@@H]([C@H](I)[C@H]1O)O)O R(95) +
+OC[C@H]1OC([C@H](F)[C@H]([C@H]1O)O)O R(94)
+F.OC[C@H]1OC([C@@H](I)[C@H]([C@H]1O)O)O R(94) +
+OC[C@H]1OC(O)[C@@H]([C@H]([C@H]1F)O)O R(89)
+F.OC[C@H]1OC(O)[C@@H]([C@H]([C@@H]1I)O)O R(89) +
+Cl[C@H](Cc1ccccc1)C(=O)O R(73)
+Cl.I[C@@H](Cc1ccccc1)C(=O)O R(73) +
+Br[C@H]1[C@H]2CC[C@@](C)(C1=O)C2(C)C R(61)
+Br.I[C@@H]1[C@H]2CC[C@@](C)(C1=O)C2(C)C R(61) +
+OC[C@H]1OC([C@@H](F)[C@H]([C@@H]1O)O)O R(50)
+F.OC[C@H]1OC([C@H](I)[C@H]([C@@H]1O)O)O R(50) +
+OC[C@H]1OC([C@H](F)[C@H]([C@@H]1O)O)O R(6)
+F.OC[C@H]1OC([C@@H](I)[C@H]([C@@H]1O)O)O R(6) +
+OC[C@H]1OC([C@H](F)[C@H]([C@H]1O)O)O R(4)
+F.OC[C@H]1OC([C@@H](I)[C@H]([C@H]1O)O)O R(4) +
+BrCC1(C)C2CCC1(C)C(=O)[C@H]2Br R(590)
+Br.BrCC1(C)C2CCC1(C)C(=O)[C@@H]2I R(590) +
+BrCC1(C)[C@@H]2CC[C@@]1(C)C(=O)[C@H]2Br R(294)
+Br.BrCC1(C)[C@@H]2CC[C@@]1(C)C(=O)[C@@H]2I R(294) +
+Br[C@@H]1C2(C)C3C4C5CC(C2C5C3=O)C14 R(474)
+Br.I[C@H]1C2(C)C3C4C5CC(C2C5C3=O)C14 R(474) +
+Br[C@@H]1C2(C)C3C4C5CC(C2C5C3=O)C14 R(43)
+Br.I[C@H]1C2(C)C3C4C5CC(C2C5C3=O)C14 R(43) +
+Br[C@@H]1[C@@H]2[C@@H]3C(=NO)[C@@H]4[C@@H]5C[C@@H]([C@H]1[C@H]35)[C@@H]24 R(35)
+Br.I[C@H]1[C@@H]2[C@@H]3C(=NO)[C@@H]4[C@@H]5C[C@@H]([C@H]1[C@H]35)[C@@H]24 R(35) +
+OCC1O[C@H](C(NC(=O)C)[C@@H]([C@@H]1F)O)O R(640)
+F.OCC1O[C@H](C(NC(=O)C)[C@@H]([C@H]1I)O)O R(640) +
+OCC1O[C@H](C(NC(=O)C)[C@@H]([C@H]1F)O)O R(639)
+F.OCC1O[C@H](C(NC(=O)C)[C@@H]([C@@H]1I)O)O R(639) +
+Br[C@H]1C2C3C4C1(O)C1C(C4(Br)Br)C3CC12 R(473)
+Br.I[C@@H]1C2C3C4C1(O)C1C(C4(Br)Br)C3CC12 R(473) +
+Br[C@@H]1C2C3[C@H](Br)C(=O)C4C(C1=O)C2CC34 R(444)
+Br.Br.I[C@@H]1C2C3[C@H](I)C(=O)C4C(C1=O)C2CC34 R(444) + +
+Cl[C@@H]1[C@@H](Sc2ccccc2)CS(=O)(=O)C1 R(306)
+Cl.I[C@H]1[C@@H](Sc2ccccc2)CS(=O)(=O)C1 R(306) +
+Br[C@H]1C2C3C4C1(O)C1C(C4(Br)Br)C3CC12 R(42)
+Br.I[C@@H]1C2C3C4C1(O)C1C(C4(Br)Br)C3CC12 R(42) +
+Br[C@@H]1C2C3[C@H](Br)C(=O)C4C(C1=O)C2CC34 R(38)
+Br.Br.I[C@@H]1C2C3[C@H](I)C(=O)C4C(C1=O)C2CC34 R(38) + +
+OC(=O)[C@H]1C[C@@H](F)CN1C(=O)OC(C)(C)C R(676)
+F.OC(=O)[C@H]1C[C@H](I)CN1C(=O)OC(C)(C)C R(676) +
+F[C@H]1C(O[C@H](COP(=O)(O)O)[C@H]([C@@H]1O)O)O R(545)
+F.I[C@@H]1C(O[C@H](COP(=O)(O)O)[C@H]([C@@H]1O)O)O R(545) +
+Cl[C@@H](C(C)c1ccccc1)c1ccccc1 R(531)
+Cl.I[C@H](C(C)c1ccccc1)c1ccccc1 R(531) +
+Br[C@H](C(C)c1ccccc1)c1ccccc1 R(530)
+Br.I[C@@H](C(C)c1ccccc1)c1ccccc1 R(530) +
+Br[C@H]([C@H](C)c1ccccc1)c1ccccc1 R(524)
+Br.I[C@@H]([C@H](C)c1ccccc1)c1ccccc1 R(524) +
+Br[C@@H]([C@H](C)c1ccccc1)c1ccccc1 R(523)
+Br.I[C@H]([C@H](C)c1ccccc1)c1ccccc1 R(523) +
+OC[C@H]1O[C@H](C[C@@H]1F)[n]1ccc(=O)[nH]c1=O R(343)
+F.OC[C@H]1O[C@H](C[C@H]1I)[n]1ccc(=O)[nH]c1=O R(343) +
+Br[C@H]1[C@H]2CC[C@@](C1=O)(CS(=O)(=O)O)C2(C)C R(262)
+Br.I[C@@H]1[C@H]2CC[C@@](C1=O)(CS(=O)(=O)O)C2(C)C R(262) +
+Br[C@H]1[C@H]2CC[C@](C1=O)(CS(=O)(=O)O)C2(C)C R(261)
+Br.I[C@@H]1[C@H]2CC[C@](C1=O)(CS(=O)(=O)O)C2(C)C R(261) +
+Br[C@H]1[C@H]2CC[C@@](C)(C1=O)[C@]2(C)CS(=O)(=O)O R(260)
+Br.I[C@@H]1[C@H]2CC[C@@](C)(C1=O)[C@]2(C)CS(=O)(=O)O R(260) +
+Br[C@@H]1[C@@H]2CC[C@](C)(C1=O)[C@@]2(C)CS(=O)(=O)O R(208)
+Br.I[C@H]1[C@@H]2CC[C@](C)(C1=O)[C@@]2(C)CS(=O)(=O)O R(208) +
+Br[C@H](c1ccccc1)[C@@H](Br)c1ccccc1 R(168)
+Br.Br.I[C@H](c1ccccc1)[C@@H](I)c1ccccc1 R(168) + +
+Br[C@H](CC[C@H](Br)C(=O)OCC)C(=O)OCC R(140)
+Br.Br.I[C@H](CC[C@H](I)C(=O)OCC)C(=O)OCC R(140) + +
+OC(=O)[C@H]1C[C@@H](F)CN1C(=O)OC(C)(C)C R(58)
+F.OC(=O)[C@H]1C[C@H](I)CN1C(=O)OC(C)(C)C R(58) +
+OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@H](O)[C@@H]1F R(674)
+F.OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@H](O)[C@H]1I R(674) +
+O=C(O[C@@H]1[C@H](Br)CS(=O)(=O)C1)c1ccccc1 R(664)
+Br.O=C(O[C@@H]1[C@@H](I)CS(=O)(=O)C1)c1ccccc1 R(664) +
+OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@H](F)[C@@H]1O R(607)
+F.OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@@H](I)[C@@H]1O R(607) +
+OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@@H](F)[C@@H]1O R(595)
+F.OC[C@H]1O[C@@H]([n]2ccc(=O)[nH]c2=O)[C@H](I)[C@@H]1O R(595) +
+Cl[C@@H]1[C@@H](S(=O)(=O)c2ccccc2)CS(=O)(=O)C1 R(171)
+Cl.I[C@H]1[C@@H](S(=O)(=O)c2ccccc2)CS(=O)(=O)C1 R(171) +
+OC[C@H]1O[C@@H]([n]2ccc(N)[n]c2=O)[C@H](F)[C@@H]1O R(87)
+F.OC[C@H]1O[C@@H]([n]2ccc(N)[n]c2=O)[C@@H](I)[C@@H]1O R(87) +
+OC[C@H]1O[C@H](C[C@@H]1F)[n]1cc(C)c(=O)[nH]c1=O R(81)
+F.OC[C@H]1O[C@H](C[C@H]1I)[n]1cc(C)c(=O)[nH]c1=O R(81) +
+OC[C@H]1O[C@@H]([n]2ccc(N)[n]c2=O)[C@H](F)[C@@H]1O R(3)
+F.OC[C@H]1O[C@@H]([n]2ccc(N)[n]c2=O)[C@@H](I)[C@@H]1O R(3) +
+Cl[C@@H]1[C@@H]2[C@H](C[C@@H]1Cl)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(622)
+Cl.Cl.I[C@@H]1C[C@H]2[C@@H]([C@@H]1I)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(622) + +
+Cl[C@H]1[C@@H]2[C@H]([C@@H]3O[C@H]13)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(618)
+Cl.I[C@@H]1[C@@H]2[C@H]([C@@H]3O[C@H]13)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(618) +
+Cl[C@@H]1[C@@H]2[C@H]([C@H]3O[C@@H]13)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(605)
+Cl.I[C@H]1[C@@H]2[C@H]([C@H]3O[C@@H]13)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(605) +
+Cl[C@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(598)
+Cl.I[C@@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(598) +
+Cl[C@@H]1[C@@H]2[C@H](C[C@H]1Cl)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(597)
+Cl.Cl.I[C@H]1C[C@H]2[C@@H]([C@@H]1I)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(597) + +
+OC[C@H]1O[C@@H]([n]2cc(I)c(=O)[nH]c2=O)[C@@H](F)[C@@H]1O R(592)
+F.OC[C@H]1O[C@@H]([n]2cc(c(=O)[nH]c2=O)I)[C@@H]([C@@H]1O)I R(592) +
+O=C(C)OC12[C@H]3[C@H]4[C@@H]([C@@H]1Br)[C@@H]1C[C@H]4[C@H]([C@H]21)C3(Br)Br R(510)
+Br.O=C(C)OC12[C@H]3[C@H]4[C@@H]([C@H]1I)[C@@H]1C[C@H]4[C@H]([C@H]21)C3(Br)Br R(510) +
+Cl[C@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(300)
+Cl.I[C@@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(300) +
+Cl[C@@H]1[C@@H]2[C@H](C[C@@H]1Cl)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(216)
+Cl.Cl.I[C@@H]1C[C@H]2[C@@H]([C@@H]1I)[C@@]1(C([C@@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(216) + +
+Cl[C@@H]1[C@@H]2[C@H](C[C@H]1Cl)[C@@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(207)
+Cl.Cl.I[C@H]1C[C@H]2[C@@H]([C@@H]1I)[C@@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(207) + +
+Cl[C@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(205)
+Cl.I[C@@H]1[C@H]2[C@@H]([C@H]3O[C@@H]13)[C@@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(205) +
+O=C(C)OC12[C@H]3[C@H]4[C@@H]([C@@H]1Br)[C@@H]1C[C@H]4[C@H]([C@H]21)C3(Br)Br R(44)
+Br.O=C(C)OC12[C@H]3[C@H]4[C@@H]([C@H]1I)[C@@H]1C[C@H]4[C@H]([C@H]21)C3(Br)Br R(44) +
+OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c[n]c23)[C@@H](F)C1O R(658)
+F.OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c[n]c23)[C@H](I)C1O R(658) +
+OC[C@H]1O[C@@H]([n]2c[n]c3c2[n]c[n]c3Cl)[C@@H](F)C1O R(657)
+F.OC[C@H]1O[C@@H]([n]2c[n]c3c2[n]c[n]c3Cl)[C@H](I)C1O R(657) +
+Cl[C@@H](C)C(=O)N1CCN(c2c(OC)cccc2)CC1 R(614)
+Cl.I[C@H](C)C(=O)N1CCN(c2c(OC)cccc2)CC1 R(614) +
+F[C@@H]1C2CC(C[C@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(591)
+F.I[C@H]1C2CC(C[C@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(591) +
+Br[C@H]1C([C@@H]2C[C@H]1C([C@H]2C)(C)C)(NC(=O)C)NC(=O)C R(316)
+Br.I[C@@H]1C([C@@H]2C[C@H]1C([C@H]2C)(C)C)(NC(=O)C)NC(=O)C R(316) +
+Cl[C@@]12O[C@@H]1[C@@H]1[C@H]([C@@H]2Cl)[C@@]2(C([C@@]1(Cl)C(=C2Cl)Cl)(Cl)Cl)Cl R(305)
+Cl.I[C@@H]1[C@H]2[C@@H]([C@H]3O[C@@]13Cl)[C@]1(C([C@]2(Cl)C(=C1Cl)Cl)(Cl)Cl)Cl R(305) +
+Cl[C@@H]1[C@@H](Cl)[C@@H]2[C@@]3(C(Cl)(Cl)[C@](Cl)([C@@H]2[C@H]1Cl)C(=C3Cl)Cl)Cl R(219)
+Cl.Cl.Cl.I[C@@H]1[C@@H](I)[C@H]2[C@]3(C(Cl)(Cl)[C@@](Cl)([C@H]2[C@H]1I)C(=C3Cl)Cl)Cl R(219) + + +
+Cl[C@H]1[C@@H](Cl)[C@@H]2[C@@]3(C(Cl)(Cl)[C@](Cl)([C@@H]2[C@H]1Cl)C(=C3Cl)Cl)Cl R(218)
+Cl.Cl.Cl.I[C@H]1[C@@H](I)[C@H]2[C@]3(C(Cl)(Cl)[C@@](Cl)([C@H]2[C@H]1I)C(=C3Cl)Cl)Cl R(218) + + +
+F[C@H]1C2CC(C[C@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(175)
+F.I[C@@H]1C2CC(C[C@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(175) +
+F[C@@H]1C2CC(C[C@@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(174)
+F.I[C@H]1C2CC(C[C@@H]2OS(=O)(=O)c2ccc(C)cc2)C1 R(174) +
+Cl[C@@H]1[C@@H](Sc2[n]cc(C(F)(F)F)cc2)CS(=O)(=O)C1 R(170)
+Cl.I[C@H]1[C@@H](Sc2[n]cc(C(F)(F)F)cc2)CS(=O)(=O)C1 R(170) +
+OC[C@H]1O[C@@H]([n]2c[n]c3c2[n]c(N)[n]c3Cl)[C@@H](F)C1O R(656)
+F.OC[C@H]1O[C@@H]([n]2c[n]c3c2[n]c(N)[n]c3Cl)[C@H](I)C1O R(656) +
+F[C@H]1[C@@H](O)[C@H](OC)O[C@@H]2COC(c3ccccc3)O[C@@H]12 R(615)
+F.I[C@@H]1[C@@H](O)[C@H](OC)O[C@@H]2COC(c3ccccc3)O[C@@H]12 R(615) +
+OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c(Cl)[n]c23)[C@@H](F)[C@@H]1O R(596)
+F.OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c(Cl)[n]c23)[C@H](I)[C@@H]1O R(596) +
+F[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2(CCC[C@@H]32)C)C1)C R(355)
+F.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2(CCC[C@@H]32)C)C1)C R(355) +
+Cl[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2(CCC[C@@H]32)C)C1)C R(354)
+Cl.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2(CCC[C@@H]32)C)C1)C R(354) +
+OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c(Cl)[n]c23)[C@@H](F)[C@@H]1O R(52)
+F.OC[C@H]1O[C@@H]([n]2c[n]c3c(N)[n]c(Cl)[n]c23)[C@H](I)[C@@H]1O R(52) +
+F[C@@H]1C[C@@H]2[C@](C)(CC[C@@H]3c4ccc(cc4CC[C@@H]23)O)[C@H]1O R(609)
+F.I[C@H]1C[C@@H]2[C@](C)(CC[C@@H]3c4ccc(cc4CC[C@@H]23)O)[C@H]1O R(609) +
+Cl[C@H]1[C@@H]2C[C@@H](C(C2(C(F)(F)F)C(F)(F)F)(C#N)C#N)[C@H]1Cl R(527)
+Cl.Cl.I[C@@H]1[C@@H]2C[C@@H](C(C2(C(F)(F)F)C(F)(F)F)(C#N)C#N)[C@@H]1I R(527) + +
+F[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(374)
+F.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(374) +
+Cl[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(372)
+Cl.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(372) +
+F[C@H]1[C@@H]2[C@]([C@@H]3[C@H]([C@@H]4CCC(=O)[C@@]4(C)CC3)C1)(C)CCCC2 R(371)
+F.I[C@@H]1[C@@H]2[C@]([C@@H]3[C@H]([C@@H]4CCC(=O)[C@@]4(C)CC3)C1)(C)CCCC2 R(371) +
+F[C@@H]1[C@@H]2[C@]([C@@H]3[C@H]([C@@H]4CCC(=O)[C@@]4(C)CC3)C1)(C)CCCC2 R(370)
+F.I[C@H]1[C@@H]2[C@]([C@@H]3[C@H]([C@@H]4CCC(=O)[C@@]4(C)CC3)C1)(C)CCCC2 R(370) +
+F[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(369)
+F.I[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(369) +
+F[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(368)
+F.I[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(368) +
+Cl[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(367)
+Cl.I[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(367) +
+Cl[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(366)
+Cl.I[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC2=O)C)C1)C R(366) +
+Br[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CCCC4)C)CC[C@]2(C1=O)C R(365)
+Br.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CCCC4)C)CC[C@]2(C1=O)C R(365) +
+Br[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CCCC4)C)CC[C@@]2(C1=O)C R(364)
+Br.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CCCC4)C)CC[C@@]2(C1=O)C R(364) +
+F[C@@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CCC[C@]4(CC[C@H]23)C)C1)C R(362)
+F.I[C@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CCC[C@]4(CC[C@H]23)C)C1)C R(362) +
+Cl[C@@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CCC[C@]4(CC[C@H]23)C)C1)C R(361)
+Cl.I[C@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CCC[C@]4(CC[C@H]23)C)C1)C R(361) +
+F[C@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CC(=O)CC4)C)CC[C@]12C R(360)
+F.I[C@@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CC(=O)CC4)C)CC[C@]12C R(360) +
+F[C@@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CC(=O)CC4)C)CC[C@]12C R(359)
+F.I[C@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)CC(=O)CC4)C)CC[C@]12C R(359) +
+Br[C@@H]1C[C@]2([C@H](CC1=O)CC[C@@H]1[C@@H]2CC[C@@]2(CCC[C@@H]12)C)C R(358)
+Br.I[C@H]1C[C@]2([C@H](CC1=O)CC[C@@H]1[C@@H]2CC[C@@]2(CCC[C@@H]12)C)C R(358) +
+Cl[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CC=C2Cl)C)C1)C R(356)
+Cl.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CC=C2Cl)C)C1)C R(356) +
+F[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(602)
+F.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(602) +
+Br[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(536)
+Br.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(536) +
+Cl[C@@H]1C[C@]2(C(CC1=O)CCC1C2CC[C@@]2([C@@H](C)CCC12)C)C R(515)
+Cl.I[C@H]1C[C@]2(C(CC1=O)CCC1C2CC[C@@]2([C@@H](C)CCC12)C)C R(515) +
+F[C@@H]1C2=CC(=O)CC[C@@]2([C@H]2CC[C@]3([C@@H](CC[C@@H]3O)[C@@H]2C1)C)C R(457)
+F.I[C@H]1C2=CC(=O)CC[C@@]2([C@H]2CC[C@]3([C@@H](CC[C@@H]3O)[C@@H]2C1)C)C R(457) +
+Br[C@@H]1C2C3C(=C4C(=O)OC(C)(C)OC4=O)C4C1C1C2CC3C14 R(443)
+Br.I[C@H]1C2C3C(=C4C(=O)OC(C)(C)OC4=O)C4C1C1C2CC3C14 R(443) +
+Br[C@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@H]1[C@@]2(CCC(=O)C1)C R(377)
+Br.I[C@@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@H]1[C@@]2(CCC(=O)C1)C R(377) +
+F[C@H]1CC[C@]2([C@@H](CC[C@H]3[C@@H]4CCC(=O)[C@]4(CC(=O)[C@H]23)C)C1)C R(376)
+F.I[C@@H]1CC[C@]2([C@@H](CC[C@H]3[C@@H]4CCC(=O)[C@]4(CC(=O)[C@H]23)C)C1)C R(376) +
+Br[C@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@H]1[C@@]2(CC[C@@H](O)C1)C R(347)
+Br.I[C@@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@H]1[C@@]2(CC[C@@H](O)C1)C R(347) +
+Br[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(130)
+Br.I[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4([C@@H](CC3)C[C@@H](O)CC4)C)CC[C@@]2(C1=O)C R(130) +
+Br[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(CC3)C[C@H](O)CC4)C)CC[C@@]2(C1=O)C R(82)
+Br.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(CC3)C[C@H](O)CC4)C)CC[C@@]2(C1=O)C R(82) +
+Br[C@@H]1C2C3C(=C4C(=O)OC(C)(C)OC4=O)C4C1C1C2CC3C14 R(37)
+Br.I[C@H]1C2C3C(=C4C(=O)OC(C)(C)OC4=O)C4C1C1C2CC3C14 R(37) +
+OC[C@H]1O[C@H](O[C@@]2(O[C@H](CCl)[C@H]([C@@H]2O)O)CCl)[C@@H]([C@H]([C@@H]1Cl)O)O R(546)
+Cl.OC[C@H]1O[C@H](O[C@@]2(O[C@H](CCl)[C@H]([C@@H]2O)O)CCl)[C@@H]([C@H]([C@H]1I)O)O R(546) +
+Br[C@@H]1C[C@]2(C(C(=O)CC3C2CC[C@@]2(CCCC23)C)[C@@H](C1=O)Br)C R(516)
+Br.Br.I[C@H]1C[C@]2(C(C(=O)CC3C2CC[C@@]2(CCCC23)C)[C@H](C1=O)I)C R(516) + +
+O=C(C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@@H](Cl)CC4)C)CC[C@]12C R(380)
+Cl.O=C(C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@H](I)CC4)C)CC[C@]12C R(380) +
+CC[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@H]([C@H]([C@]12C)Br)Br R(379)
+Br.Br.CC[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@@H]([C@@H]([C@]12C)I)I R(379) + +
+F[C@@H]1CC[C@]2([C@H](C1)C[C@@H]([C@H]1[C@@H]3CCC(=O)[C@]3(C[C@H]([C@H]21)O)C)O)C R(350)
+F.I[C@H]1CC[C@]2([C@H](C1)C[C@@H]([C@H]1[C@@H]3CCC(=O)[C@]3(C[C@H]([C@H]21)O)C)O)C R(350) +
+F[C@H]1CC[C@]2([C@H](C1)[C@H](C[C@H]1[C@@H]3CCC(=O)[C@]3(C[C@H]([C@H]21)O)C)O)C R(349)
+F.I[C@@H]1CC[C@]2([C@H](C1)[C@H](C[C@H]1[C@@H]3CCC(=O)[C@]3(C[C@H]([C@H]21)O)C)O)C R(349) +
+F[C@H]1C([C@H](OC(COC(=O)C)[C@H]1OC(=O)C)OC(=O)C)OC(=O)C R(651)
+F.I[C@@H]1C([C@H](OC(COC(=O)C)[C@H]1OC(=O)C)OC(=O)C)OC(=O)C R(651) +
+F[C@H]1C(O[C@@H](C([C@@H]1OC(=O)C)OC(=O)C)OC(=O)C)COC(=O)C R(650)
+F.I[C@@H]1C(O[C@@H](C([C@@H]1OC(=O)C)OC(=O)C)OC(=O)C)COC(=O)C R(650) +
+F[C@@H]1[C@@H]([C@@H]([C@H]([C@@H]([C@H]1OP(=O)(O)O)OP(=O)(O)O)O)OP(=O)(O)O)O R(526)
+F.I[C@H]1[C@@H]([C@@H]([C@H]([C@@H]([C@H]1OP(=O)(O)O)OP(=O)(O)O)O)OP(=O)(O)O)O R(526) +
+Cl[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC23OCCO3)C)C1)C R(373)
+Cl.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@]2([C@H]3CCC23OCCO3)C)C1)C R(373) +
+OC[C@H]1O[C@@H](Oc2c(cc(cc2)N(=O)=O)N(=O)=O)[C@H](F)[C@H]([C@@H]1O)O R(178)
+F.OC[C@H]1O[C@@H](Oc2c(cc(cc2)N(=O)=O)N(=O)=O)[C@@H](I)[C@H]([C@@H]1O)O R(178) +
+O=C(C)O[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(C[C@@H](Br)C(=O)C[C@@H]4CC3)C)CC[C@]12C R(533)
+Br.O=C(C)O[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(C[C@H](I)C(=O)C[C@@H]4CC3)C)CC[C@]12C R(533) +
+O=C(C)O[C@H]1CC[C@]2([C@H](CCC3C2CC[C@]2(C3C[C@@H](Br)C2=O)C)C1)C R(517)
+Br.O=C(C)O[C@H]1CC[C@]2([C@H](CCC3C2CC[C@]2(C3C[C@H](I)C2=O)C)C1)C R(517) +
+Br[C@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@@H]1CC3(CC[C@]21C)OCCO3 R(378)
+Br.I[C@@H]1C(=O)[C@H]2[C@H]([C@@H]3CCC[C@@]13C)CC[C@@H]1CC3(CC[C@]21C)OCCO3 R(378) +
+OC(=O)[C@H]1C[C@@H](F)CN1C(=O)OCC1c2ccccc2c2ccccc12 R(677)
+F.OC(=O)[C@H]1C[C@H](I)CN1C(=O)OCC1c2ccccc2c2ccccc12 R(677) +
+Br[C@H]([C@H](C)c1c(C)cc(OC)cc1)C(=O)N1[C@H](COC1=O)c1ccccc1 R(665)
+Br.I[C@@H]([C@H](C)c1c(C)cc(OC)cc1)C(=O)N1[C@H](COC1=O)c1ccccc1 R(665) +
+Cl[C@@H]1CC2C3C(C4(C(=CC3)CC(OC(=O)C)CC4)C)CCC2(C1C(=O)C)C R(600)
+Cl.I[C@H]1CC2C3C(C4(C(=CC3)CC(OC(=O)C)CC4)C)CCC2(C1C(=O)C)C R(600) +
+CCC[C@@H]1C[C@H](N(C)C1)C(=O)NC([C@H]1O[C@H](SC)[C@@H]([C@H]([C@H]1O)O)O)[C@@H](Cl)C R(459)
+Cl.CCC[C@@H]1C[C@H](N(C)C1)C(=O)NC([C@H]1O[C@H](SC)[C@@H]([C@H]([C@H]1O)O)O)[C@H](I)C R(459) +
+OCC(=O)[C@@]1(O)CC[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@H]3[C@@H](O)C[C@]12C)C R(388)
+F.OCC(=O)[C@@]1(O)CC[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@H]3[C@@H](O)C[C@]12C)C R(388) +
+OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@@](Cl)([C@@]4(C(=CC(=O)C=C4)CC3)C)[C@@H](Cl)C[C@]12C R(387)
+Cl.OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@@](Cl)([C@@]4(C(=CC(=O)C=C4)CC3)C)[C@H](I)C[C@]12C R(387) +
+Cl[C@@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@@H](OC(=O)C)CC4)C)CC[C@@]2([C@H]1C(=O)C)C R(201)
+Cl.I[C@H]1C[C@H]2[C@H]3[C@@H]([C@@]4(C(=CC3)C[C@@H](OC(=O)C)CC4)C)CC[C@@]2([C@H]1C(=O)C)C R(201) +
+CCC[C@@H]1C[C@H](N(C)C1)C(=O)N[C@@H](C1O[C@H](SC)[C@@H]([C@H]([C@H]1O)O)O)[C@@H](Cl)C R(193)
+Cl.CCC[C@@H]1C[C@H](N(C)C1)C(=O)N[C@@H](C1O[C@H](SC)[C@@H]([C@H]([C@H]1O)O)O)[C@H](I)C R(193) +
+O=C(O)CCC(C)C1CCC2C3[C@@H](C4(CCCCC4CC3)C)[C@H](Br)C(=O)C12C R(678)
+Br.O=C(O)CCC(C)C1CCC2C3[C@@H](C4(CCCCC4CC3)C)[C@@H](I)C(=O)C12C R(678) +
+OCC(=O)[C@@]1(O)[C@@H](C[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@H]3[C@H](C[C@]12C)O)C)O R(603)
+F.OCC(=O)[C@@]1(O)[C@@H](C[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@H]3[C@H](C[C@]12C)O)C)O R(603) +
+O=C(O)CCC(C)C1CCC2C3C([C@]4(CCCCC4CC3)C)[C@H](Br)C(=O)[C@]12C R(522)
+Br.O=C(O)CCC(C)C1CCC2C3C([C@]4(CCCCC4CC3)C)[C@@H](I)C(=O)[C@]12C R(522) +
+Cl[C@H]1CC[C@]2(C(=CC=C3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(415)
+Cl.I[C@@H]1CC[C@]2(C(=CC=C3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(415) +
+Cl[C@H]1C=C[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(413)
+Cl.I[C@@H]1C=C[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(413) +
+Cl[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(402)
+Cl.I[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(402) +
+Cl[C@@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(399)
+Cl.I[C@H]1CC[C@]2([C@@H](CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(399) +
+O=C(O)CC[C@@H](C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@@H](Br)C(=O)[C@]12C R(392)
+Br.O=C(O)CC[C@@H](C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@H](I)C(=O)[C@]12C R(392) +
+O=C(O)CC[C@@H](C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@H](Br)C(=O)[C@]12C R(391)
+Br.O=C(O)CC[C@@H](C)[C@H]1CC[C@H]2[C@H]3[C@@H]([C@]4(CCCC[C@H]4CC3)C)[C@@H](I)C(=O)[C@]12C R(391) +
+Cl[C@@H]1CCC2([C@@H](CCC3C2CCC2(C(CCC23)C(C)CCCC(C)C)C)C1)C R(308)
+Cl.I[C@H]1CCC2([C@@H](CCC3C2CCC2(C(CCC23)C(C)CCCC(C)C)C)C1)C R(308) +
+Br[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(79)
+Br.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(79) +
+Cl[C@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(60)
+Cl.I[C@@H]1CC[C@]2(C(=CC[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(60) +
+F[C@@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(=O)[nH]c1=O R(670)
+F.I[C@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(=O)[nH]c1=O R(670) +
+F[C@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(=O)[nH]c1=O R(662)
+F.I[C@@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(=O)[nH]c1=O R(662) +
+F[C@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(N)[n]c1=O R(661)
+F.I[C@@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1ccc(N)[n]c1=O R(661) +
+OCC(=O)C1(O)C(C)CC2C3C[C@H](F)C4=CC(=O)C=CC4([C@@]3(F)C(O)CC12C)C R(574)
+F.OCC(=O)C1(O)C(C)CC2C3C[C@@H](I)C4=CC(=O)C=CC4([C@@]3(F)C(O)CC12C)C R(574) +
+Br[C@@H]1CC2([C@H](CC1=O)CCC1C2CCC2(C(CCC12)C(C)CCCC(C)C)C)C R(528)
+Br.I[C@H]1CC2([C@H](CC1=O)CCC1C2CCC2(C(CCC12)C(C)CCCC(C)C)C)C R(528) +
+Br[C@@H]1C(=O)C[C@]2(C(=CCC3C2CC[C@@]2(C(CCC23)C(C)CCCC(C)C)C)C1)C R(514)
+Br.I[C@H]1C(=O)C[C@]2(C(=CCC3C2CC[C@@]2(C(CCC23)C(C)CCCC(C)C)C)C1)C R(514) +
+Cl[C@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(436)
+Cl.I[C@@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(436) +
+Cl[C@@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(435)
+Cl.I[C@H]1CC[C@]2([C@@H](CC(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(435) +
+Cl[C@H]1CC[C@]2([C@@H](C(=O)C[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(434)
+Cl.I[C@@H]1CC[C@]2([C@@H](C(=O)C[C@@H]3[C@@H]2CC[C@@]2([C@H](CC[C@@H]32)[C@H](C)CCCC(C)C)C)C1)C R(434) +
+Br[C@@H]1C[C@]2([C@H](CC1=O)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(430)
+Br.I[C@H]1C[C@]2([C@H](CC1=O)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(430) +
+Br[C@@H]1C[C@]2([C@H](C[C@H]1O)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(419)
+Br.I[C@H]1C[C@]2([C@H](C[C@H]1O)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(419) +
+Cl[C@H]1CC[C@]2(C(=CC(N)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(414)
+Cl.I[C@@H]1CC[C@]2(C(=CC(N)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C R(414) +
+Cl[C@H]1[C@]2(Cl)[C@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C1)[C@H](C)CCCC(C)C)C)(C)CCCC2 R(412)
+Cl.I[C@@H]1[C@]2(Cl)[C@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C1)[C@H](C)CCCC(C)C)C)(C)CCCC2 R(412) +
+Br[C@H]1CCC[C@@]2([C@@H]3[C@H]([C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@@]4(C)CC3)CC[C@@]12Br)C R(411)
+Br.I[C@@H]1CCC[C@@]2([C@@H]3[C@H]([C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@@]4(C)CC3)CC[C@@]12Br)C R(411) +
+Br[C@@H]1CC[C@]2([C@H]([C@H]1Br)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(410)
+Br.Br.I[C@H]1CC[C@]2([C@H]([C@@H]1I)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C R(410) + +
+C[C@@]12[C@H](CC[C@H]1[C@H]1[C@@H]([C@]3(C[C@@H]([C@H](C[C@@H]3CC1)Br)Br)C)CC2)[C@H](C)CCCC(C)C R(409)
+Br.Br.C[C@@]12[C@H](CC[C@H]1[C@H]1[C@@H]([C@]3(C[C@H]([C@@H](C[C@@H]3CC1)I)I)C)CC2)[C@H](C)CCCC(C)C R(409) + +
+Br[C@@H]1CC[C@H]2[C@@]([C@@H]3[C@H]([C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC3)C)CC2)([C@H]1Br)C R(408)
+Br.Br.I[C@H]1CC[C@H]2[C@@]([C@@H]3[C@H]([C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC3)C)CC2)([C@@H]1I)C R(408) + +
+Cl[C@H]1CC[C@@]2([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C[C@@H]3O[C@]23C1)[C@H](C)CCCC(C)C)C)C R(403)
+Cl.I[C@@H]1CC[C@@]2([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C[C@@H]3O[C@]23C1)[C@H](C)CCCC(C)C)C)C R(403) +
+Cl[C@H]1C[C@]2([C@@H](CC[C@]2(OC(=O)C)C(=O)C)[C@H]2[C@@]1(Cl)[C@]1(CCC(=O)C=C1CC2)C)C R(383)
+Cl.I[C@@H]1C[C@]2([C@@H](CC[C@]2(OC(=O)C)C(=O)C)[C@H]2[C@@]1(Cl)[C@]1(CCC(=O)C=C1CC2)C)C R(383) +
+Br[C@H]1C[C@H]2[C@H]3[C@H](C(=O)C[C@@]2([C@@]1(O)C(=O)C)C)[C@@]1([C@@H](CC3)C[C@@H](OC(=O)C)CC1)C R(199)
+Br.I[C@@H]1C[C@H]2[C@H]3[C@H](C(=O)C[C@@]2([C@@]1(O)C(=O)C)C)[C@@]1([C@@H](CC3)C[C@@H](OC(=O)C)CC1)C R(199) +
+OCC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(85)
+F.OCC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(85) +
+FCSC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(633)
+F.FCSC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(633) +
+O=C1[C@@H](C[C@]2(C([C@@H]1Br)CCC1C2CC[C@@]2(C(CCC12)C(C)CCCC(C)C)C)C)Br R(520)
+Br.Br.O=C1[C@H](C[C@]2(C([C@H]1I)CCC1C2CC[C@@]2(C(CCC12)C(C)CCCC(C)C)C)C)I R(520) + +
+O=C1[C@@H](C[C@]2([C@H]([C@@H]1Br)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C)Br R(431)
+Br.Br.O=C1[C@H](C[C@]2([C@H]([C@H]1I)CC[C@@H]1[C@@H]2CC[C@@]2([C@H](CC[C@@H]12)[C@H](C)CCCC(C)C)C)C)I R(431) + +
+Br[C@H]1[C@@H]2[C@@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3[C@H]1O)[C@H](C)CCCC(C)C)C)(CC[C@@H](C2)O)C R(429)
+Br.I[C@@H]1[C@@H]2[C@@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3[C@H]1O)[C@H](C)CCCC(C)C)C)(CC[C@@H](C2)O)C R(429) +
+Br[C@@H]1[C@@H]2[C@@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3[C@@H]1O)[C@H](C)CCCC(C)C)C)(CC[C@@H](C2)O)C R(428)
+Br.I[C@H]1[C@@H]2[C@@]([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3[C@@H]1O)[C@H](C)CCCC(C)C)C)(CC[C@@H](C2)O)C R(428) +
+Cl[C@@H]1CC2=CC[C@@H]3[C@@H]([C@@]2(C)CC1)CC[C@]1([C@H]3C[C@@H]2O[C@@]3(OC[C@@H](CC3)C)[C@H]([C@H]12)C)C R(397)
+Cl.I[C@H]1CC2=CC[C@@H]3[C@@H]([C@@]2(C)CC1)CC[C@]1([C@H]3C[C@@H]2O[C@@]3(OC[C@@H](CC3)C)[C@H]([C@H]12)C)C R(397) +
+O=C(O)CC[C@]1(C)[C@H]2CC[C@]3(C)[C@H](CC[C@H]3[C@@H]2C[C@@H](Br)C1=O)[C@@H](CCCC(C)C)C R(390)
+Br.O=C(O)CC[C@]1(C)[C@H]2CC[C@]3(C)[C@H](CC[C@H]3[C@@H]2C[C@H](I)C1=O)[C@@H](CCCC(C)C)C R(390) +
+CC(=O)OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@H](C(=O)C[C@]12C)[C@]1(CCC(=O)[C@@H](Br)[C@@H]1CC3)C R(200)
+Br.CC(=O)OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@H](C(=O)C[C@]12C)[C@]1(CCC(=O)[C@H](I)[C@@H]1CC3)C R(200) +
+CC(=O)OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@@](Cl)([C@@]4(C(=CC(=O)C=C4)CC3)C)[C@@H](Cl)C[C@]12C R(180)
+Cl.CC(=O)OCC(=O)[C@@]1(O)CC[C@H]2[C@H]3[C@@](Cl)([C@@]4(C(=CC(=O)C=C4)CC3)C)[C@H](I)C[C@]12C R(180) +
+F[C@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1c[n]c2c(N)[n]c[n]c12 R(660)
+F.I[C@@H]1[C@@H](O[C@H](COP(=O)(OP(=O)(OP(=O)(O)O)O)O)[C@H]1O)[n]1c[n]c2c(N)[n]c[n]c12 R(660) +
+Br[C@H]1C(=O)[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](OC(=O)C)C)[C@@]13C)CC[C@@H]1[C@@]2(CC[C@H](OC(=O)C)C1)C R(385)
+Br.I[C@@H]1C(=O)[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](OC(=O)C)C)[C@@]13C)CC[C@@H]1[C@@]2(CC[C@H](OC(=O)C)C1)C R(385) +
+OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@H]3[C@@H](O)C[C@]21C)C)(C)C R(181)
+F.OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@H]3[C@@H](O)C[C@]21C)C)(C)C R(181) +
+OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@H]3[C@H]([C@@H](O)C[C@]21C)[C@@]1(C(=CC(=O)CC1)[C@@H](F)C3)C)(C)C R(156)
+F.OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@H]3[C@H]([C@@H](O)C[C@]21C)[C@@]1(C(=CC(=O)CC1)[C@H](I)C3)C)(C)C R(156) +
+OCC(=O)[C@@]12OC(O[C@@H]1CC1C3C[C@H](F)C4=CC(=O)C=CC4([C@@]3(Cl)C(Cl)CC12C)C)(C)C R(581)
+F.OCC(=O)[C@@]12OC(O[C@@H]1CC1C3C[C@@H](I)C4=CC(=O)C=CC4([C@@]3(Cl)C(Cl)CC12C)C)(C)C R(581) +
+CC(=O)OCC(=O)C1(O)C(C)CC2C3C[C@H](F)C4=CC(=O)C=CC4([C@@]3(F)C(O)CC12C)C R(575)
+F.CC(=O)OCC(=O)C1(O)C(C)CC2C3C[C@@H](I)C4=CC(=O)C=CC4([C@@]3(F)C(O)CC12C)C R(575) +
+Br[C@H]1C(=O)C2C(C3CCC(C(=O)COC(=O)C)C13C)CCC1C2(CC[C@@H](OC(=O)C)C1)C R(529)
+Br.I[C@@H]1C(=O)C2C(C3CCC(C(=O)COC(=O)C)C13C)CCC1C2(CC[C@@H](OC(=O)C)C1)C R(529) +
+CC(=O)OCC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(389)
+F.CC(=O)OCC(=O)[C@@]1(O)[C@H](C)C[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C R(389) +
+Br[C@H]1C(=O)[C@H]2[C@H]([C@@H]3CC[C@H](C(=O)COC(=O)C)[C@@]13C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(386)
+Br.I[C@@H]1C(=O)[C@H]2[C@H]([C@@H]3CC[C@H](C(=O)COC(=O)C)[C@@]13C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(386) +
+OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]21C)C)(C)C R(66)
+F.OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]21C)C)(C)C R(66) +
+Br[C@H]1C2C(C3CCC(C(C)CCC(=O)OC)C3(C1=O)C)CC[C@H]1C2(CC[C@@H](OC(=O)C)C1)C R(679)
+Br.I[C@@H]1C2C(C3CCC(C(C)CCC(=O)OC)C3(C1=O)C)CC[C@H]1C2(CC[C@@H](OC(=O)C)C1)C R(679) +
+O=C(O[C@H]1CC[C@]2([C@@H]([C@H](Br)C(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)C R(438)
+Br.O=C(O[C@H]1CC[C@]2([C@@H]([C@@H](I)C(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)C R(438) +
+O=C(O[C@H]1CC[C@]2([C@@H]([C@@H](Br)C(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)C R(437)
+Br.O=C(O[C@H]1CC[C@]2([C@@H]([C@H](I)C(=O)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)C R(437) +
+O=C(O[C@H]1CC[C@@]2([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C[C@@H](F)[C@@]2(O)C1)[C@H](C)CCCC(C)C)C)C)C R(425)
+F.O=C(O[C@H]1CC[C@@]2([C@H]3CC[C@@]4([C@H](CC[C@H]4[C@@H]3C[C@H](I)[C@@]2(O)C1)[C@H](C)CCCC(C)C)C)C)C R(425) +
+Br[C@@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CCC(=O)OC)[C@]3(C1=O)C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(394)
+Br.I[C@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CCC(=O)OC)[C@]3(C1=O)C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(394) +
+Br[C@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CCC(=O)OC)[C@]3(C1=O)C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(393)
+Br.I[C@@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CCC(=O)OC)[C@]3(C1=O)C)CC[C@H]1[C@@]2(CC[C@@H](OC(=O)C)C1)C R(393) +
+O=C(O[C@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CC[C@@H](C(C)C)C)[C@]3(C1)C)CC[C@H]1CC(=O)[C@H](Br)C[C@]21C)C R(440)
+Br.O=C(O[C@H]1[C@H]2[C@H]([C@@H]3CC[C@H]([C@H](C)CC[C@@H](C(C)C)C)[C@]3(C1)C)CC[C@H]1CC(=O)[C@@H](I)C[C@]21C)C R(440) +
+F[C@H]1[C@@H]([C@H](O[C@@H]1OC(=O)c1ccccc1)COC(=O)c1ccccc1)OC(=O)c1ccccc1 R(165)
+F.I[C@@H]1[C@@H]([C@H](O[C@@H]1OC(=O)c1ccccc1)COC(=O)c1ccccc1)OC(=O)c1ccccc1 R(165) +
+F[C@H]1[C@@H]([C@H](O[C@H]1OC(=O)c1ccccc1)COC(=O)c1ccccc1)OC(=O)c1ccccc1 R(160)
+F.I[C@@H]1[C@@H]([C@H](O[C@H]1OC(=O)c1ccccc1)COC(=O)c1ccccc1)OC(=O)c1ccccc1 R(160) +
+F[C@H]1CC2C3CC(C)C(O)(C(=O)COC(=O)C(C)(C)C)C3(CC(O)[C@]2(F)C2(C1=CC(=O)C=C2)C)C R(576)
+F.I[C@@H]1CC2C3CC(C)C(O)(C(=O)COC(=O)C(C)(C)C)C3(CC(O)[C@]2(F)C2(C1=CC(=O)C=C2)C)C R(576) +
+CCC(=O)OCOC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@H]3[C@H](CC[C@]21C)[C@@]1(C(=CC(=O)CC1)[C@@H](F)C3)C)(C)C R(329)
+F.CCC(=O)OCOC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@H]3[C@H](CC[C@]21C)[C@@]1(C(=CC(=O)CC1)[C@H](I)C3)C)(C)C R(329) +
+CC(=O)OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]21C)C)(C)C R(157)
+F.CC(=O)OCC(=O)[C@@]12OC(O[C@@H]1C[C@H]1[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]21C)C)(C)C R(157) +
+F[C@H]1C[C@H]2[C@@H]3C[C@@H](C)[C@](O)(C(=O)COC(=O)C(C)(C)C)[C@]3(C[C@H](O)[C@]2(F)[C@@]2(C1=CC(=O)C=C2)C)C R(155)
+F.I[C@@H]1C[C@H]2[C@@H]3C[C@@H](C)[C@](O)(C(=O)COC(=O)C(C)(C)C)[C@]3(C[C@H](O)[C@]2(F)[C@@]2(C1=CC(=O)C=C2)C)C R(155) +
+F[C@H]1C[C@H]2[C@@H]3C[C@H](C)[C@](OC(=O)C)(C(=O)COC(=O)C)[C@]3(C[C@H](O)[C@]2(F)[C@@]2(C1=CC(=O)C=C2)C)C R(154)
+F.I[C@@H]1C[C@H]2[C@@H]3C[C@H](C)[C@](OC(=O)C)(C(=O)COC(=O)C)[C@]3(C[C@H](O)[C@]2(F)[C@@]2(C1=CC(=O)C=C2)C)C R(154) +
+CCCC(=O)O[C@@]1(CC[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C)C(=O)COC(=O)C R(471)
+F.CCCC(=O)O[C@@]1(CC[C@H]2[C@@H]3C[C@@H](I)C4=CC(=O)C=C[C@@]4([C@@]3(F)[C@@H](O)C[C@]12C)C)C(=O)COC(=O)C R(471) +
+F[C@H]1CC2C3C[C@H]4OC(O[C@@]4(C(=O)COC(=O)C4CC4)C3(CC(O)[C@]2(F)C2(C1=CC(=O)C=C2)C)C)(C)C R(582)
+F.I[C@@H]1CC2C3C[C@H]4OC(O[C@@]4(C(=O)COC(=O)C4CC4)C3(CC(O)[C@]2(F)C2(C1=CC(=O)C=C2)C)C)(C)C R(582) +
+O=C(O[C@H]1CC[C@]2([C@@H](C[C@@H](Br)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)c1ccccc1 R(420)
+Br.O=C(O[C@H]1CC[C@]2([C@@H](C[C@H](I)[C@H]3[C@@H]4CC[C@H]([C@H](C)CCCC(C)C)[C@]4(CC[C@H]23)C)C1)C)c1ccccc1 R(420) +
+Br[C@@H]1[C@H]2[C@@](CC[C@H](C2)OC(=O)C)(C)[C@H]2C[C@@H]([C@@]3([C@H](CC[C@H]3[C@@H]2C1=O)[C@H](C)CCC(=O)OC)C)OC(=O)C R(396)
+Br.I[C@H]1[C@H]2[C@@](CC[C@H](C2)OC(=O)C)(C)[C@H]2C[C@@H]([C@@]3([C@H](CC[C@H]3[C@@H]2C1=O)[C@H](C)CCC(=O)OC)C)OC(=O)C R(396) +
+CCOC(=O)CC[C@H]([C@H]1CC[C@@H]2[C@@]1([C@@H](OC(=O)C)C[C@@H]1[C@@]3([C@H]([C@@H](Br)C(=O)[C@@H]21)C[C@@H](CC3)OC(=O)C)C)C)C R(395)
+Br.CCOC(=O)CC[C@H]([C@H]1CC[C@@H]2[C@@]1([C@@H](OC(=O)C)C[C@@H]1[C@@]3([C@H]([C@H](I)C(=O)[C@@H]21)C[C@@H](CC3)OC(=O)C)C)C)C R(395) +
+Cl[C@@H](C)[C@@H](NC(=O)C1CC(CCC)CN1C)[C@H]1O[C@H](SC)[C@H](OC(=O)CCCCCCCCCCCCCCC)[C@H]([C@H]1O)O R(681)
+Cl.I[C@H](C)[C@@H](NC(=O)C1CC(CCC)CN1C)[C@H]1O[C@H](SC)[C@H](OC(=O)CCCCCCCCCCCCCCC)[C@H]([C@H]1O)O R(681) +

@@ -1,6 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "carboxylic_acids")
-  # the other substituent must be a carbon; must have 2 carbons
-  (A C smarts "[OD1]-[CX3T2](=O)")
-)

@@ -113,7 +113,7 @@ static similarity_type_t minimum_similarity_for_singleton_consideration = static
 
 static Accumulator<double> acc_scores;
 
-static NColumn normalisation;
+static NColumn my_normalisation;
 
 static int normalisation_active = 0;
 
@@ -215,7 +215,7 @@ Fingerprint_and_Weight::extract_numeric_value_from_id (int w)
   }
 
   if (normalisation_active)
-    normalisation.scale(_weight, _weight);
+    my_normalisation.scale(_weight, _weight);
 
   return 1;
 }
@@ -947,12 +947,12 @@ write_result (float r,
   }
 
   int b;
-  if (r < normalisation.minval())
+  if (r < my_normalisation.minval())
     b = 0;
-  else if (r > normalisation.maxval())
+  else if (r > my_normalisation.maxval())
     b = fingerprint_buckets;
   else
-    b = static_cast<int>((r - normalisation.minval()) / fingerprint_dx + 0.4999);
+    b = static_cast<int>((r - my_normalisation.minval()) / fingerprint_dx + 0.4999);
 
   b++;
 
@@ -1087,7 +1087,7 @@ svmfp_score (const IW_TDT & tdt,
   if (normalisation_active)
   {
     double unscaled;
-    normalisation.unscale(rc, unscaled);
+    my_normalisation.unscale(rc, unscaled);
 //  cerr << "Unscale '" << fp.id() << "' " << rc << " to " << unscaled << endl;
     if (! within_range(unscaled))
       return 1;
@@ -1198,7 +1198,7 @@ svmfp_score (const char * fname,
 
 static int
 read_normalisation_data(iwstring_data_source & input,
-                        NColumn & normalisation)
+                        NColumn & my_normalisation)
 {
   IWString buffer;
 
@@ -1222,7 +1222,7 @@ read_normalisation_data(iwstring_data_source & input,
 
     buffer.remove_leading_words(1);
 
-    return normalisation.establish_range_from_pre_existing_data(buffer);
+    return my_normalisation.establish_range_from_pre_existing_data(buffer);
   }
 
   cerr << "No normalisation data in file\n";
@@ -1231,7 +1231,7 @@ read_normalisation_data(iwstring_data_source & input,
 
 static int
 read_normalisation_data(const IWString & n,
-                        NColumn & normalisation)
+                        NColumn & my_normalisation)
 {
   iwstring_data_source input(n);
 
@@ -1241,7 +1241,7 @@ read_normalisation_data(const IWString & n,
     return 0;
   }
 
-  return read_normalisation_data (input, normalisation);
+  return read_normalisation_data (input, my_normalisation);
 }
 
 /*
@@ -1511,7 +1511,7 @@ svmfp_score (int argc, char ** argv)
       cerr << "Missing or empty normalisation file '" << n << "'\n";
       return 3;
     }
-    if (! read_normalisation_data(n, normalisation))
+    if (! read_normalisation_data(n, my_normalisation))
     {
       cerr << "Invalid normalisation data '" << n << "'\n";
       return 4;
@@ -1764,9 +1764,9 @@ svmfp_score (int argc, char ** argv)
       display_dash_J_options(cerr);
     }
 
-    fingerprint_dx = (normalisation.maxval() - normalisation.minval()) / static_cast<double>(fingerprint_buckets);
+    fingerprint_dx = (my_normalisation.maxval() - my_normalisation.minval()) / static_cast<double>(fingerprint_buckets);
     if (verbose)
-      cerr << "Fingerprinting done between " << normalisation.minval() << " and " << normalisation.maxval() << " dx " << fingerprint_dx << endl;
+      cerr << "Fingerprinting done between " << my_normalisation.minval() << " and " << my_normalisation.maxval() << " dx " << fingerprint_dx << endl;
   }
 
 

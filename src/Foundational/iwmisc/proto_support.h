@@ -18,6 +18,8 @@
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iwstring.h"
 
+#include "toml_support.h"
+
 namespace iwmisc {
 
 using std::cerr;
@@ -120,6 +122,10 @@ ReadTextProtoJson(const IWString& fname) {
     cerr << "ReadTextProtoJson:cannot open '" << fname << "'\n";
     return std::nullopt;
   }
+
+  // suppress comments
+  input.set_ignore_pattern("^# ");
+
   IWString file_contents;
   const_IWSubstring buffer;
   while (input.next_record(buffer)) {
@@ -132,6 +138,8 @@ ReadTextProtoJson(const IWString& fname) {
   // This makes me very nervous, we should not be using an internal namespace.
   if (auto status = google::protobuf::util::JsonStringToMessage(tmp, &result, options);
       status != absl::OkStatus()) {
+    cerr << "Invalid json\n";
+    cerr << file_contents << '\n';
     return std::nullopt;
   }
 
@@ -143,6 +151,9 @@ std::optional<Proto>
 ReadTextProto(IWString& fname) {
   if (fname.ends_with(".json")) {
     return ReadTextProtoJson<Proto>(fname);
+  }
+  if (fname.ends_with(".toml")) {
+    return ReadTomlProto<Proto>(fname);
   }
 
   AFile input(fname, O_RDONLY);
@@ -194,6 +205,9 @@ std::optional<Proto>
 ReadTextProtoCommentsOK(IWString& fname) {
   if (fname.ends_with(".json")) {
     return ReadTextProtoJson<Proto>(fname);
+  }
+  if (fname.ends_with(".toml")) {
+    return ReadTomlProto<Proto>(fname);
   }
 
   iwstring_data_source input(fname);

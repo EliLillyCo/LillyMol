@@ -19,9 +19,9 @@ const char *prog_name = nullptr;
 
 extending_resizable_array<int> token_counts;
 
-static Accumulator_Int<int> record_length;
+static Accumulator_Int<uint64_t> record_length;
 
-static int records_to_process = 0;
+static uint32_t records_to_process = 0;
 
 //  Sometimes it is the end of the file which is of interest
 
@@ -68,7 +68,7 @@ static int data_is_quoted_tokens = 0;
 static std::ofstream stream_for_count;
 
 static int token_length_n = 0;
-static Accumulator_Int<int> *acc_token_length = nullptr;
+static Accumulator_Int<uint32_t> *acc_token_length = nullptr;
 static int *zero_length = nullptr;
 
 static int contains_backslashed_separators = 0;
@@ -579,7 +579,7 @@ tcount(int argc, char **argv) {
       usage(1);
     }
 
-    acc_token_length = new Accumulator_Int<int>[token_length_n];
+    acc_token_length = new Accumulator_Int<uint32_t>[token_length_n];
     zero_length = new int[token_length_n];
     std::fill_n(zero_length, token_length_n, 0);
   }

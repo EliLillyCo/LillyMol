@@ -11,6 +11,8 @@
 #include <iostream>
 #include <memory>
 
+#include "google/protobuf/text_format.h"
+
 using std::cerr;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
@@ -41,6 +43,12 @@ using std::cerr;
 
 #ifdef DBF_MOLVOL
 #include "surface_area_molvol.h"
+#endif
+
+#ifdef BUILD_BAZEL
+#include "Molecule_Tools/dbf.pb.h"
+#else
+#include "dbf.pb.h"
 #endif
 
 static Elements_to_Remove elements_to_remove;
@@ -132,6 +140,7 @@ static int consider_bonded_features = 0;
 static coord_t ignore_atoms_closer_than_3d = 0.0;
 
 static Molecule_Output_Object stream_for_labelled_atoms;
+static IWString_and_File_Descriptor stream_for_atom_pairs;
 
 /*
   Sometimes we may want the NKEEP shortest distances as descriptors
@@ -151,13 +160,20 @@ static IWDigits iwdigits;
 
 static Fraction_as_String fraction_as_string;
 
+// We can write all atom pairs as textproto form.
 static IWString_and_File_Descriptor stream_for_all_distances;
+// Useful to truncate the distances in that file.
+static float max_write_atom_pair_distance = std::numeric_limits<float>::max();
 
 static IWString tag;
 static IWString smiles_tag("$SMI<");
+static IWString identifier_tag("PCN<");
+
+static int function_as_tdt_filter = 0;
 
 static int positive_negative_acceptor_donor = 0;
 
+static int int_bit_count_scaling_factor = 1;
 static float bit_count_scaling_factor = 1.0f;
 
 template <typename T>
@@ -192,7 +208,7 @@ class Distances : public Accumulator_Base<T, T>, private resizable_array<T> {
   void append_results_float(IWString&) const;
   void write_all_results(IWString_and_File_Descriptor& buffer);
 
-  void set_bits(int b, float bit_count_scaling_factor, Sparse_Fingerprint_Creator&) const;
+  template <typename S> void set_bits(int b, S bit_count_scaling_factor, Sparse_Fingerprint_Creator&) const;
 
   const IWHistogram*
   global_histogram() const {
@@ -481,9 +497,9 @@ Distances<T>::append_results_float(IWString& buffer) const {
   return;
 }
 
-template <typename T>
+template <typename T> template <typename S>
 void
-Distances<T>::set_bits(int b, float bit_count_scaling_factor,
+Distances<T>::set_bits(int b, S bit_count_scaling_factor,
                        Sparse_Fingerprint_Creator& sfc) const {
   const int number_samples = Accumulator_Base<T, T>::n();
 
@@ -540,8 +556,15 @@ usage(int rc) {
   // clang-format on
   // clang-format off
 
+  cerr << "Computes Distance Between Features descriptors\n";
+  cerr << "Computes 2d or 3d derived features. In 2d, distances are bond distances. In 3d, they are through space distances\n";
+  cerr << "Features are defined via queries, and descriptors computed both all features identified\n";
+  cerr << "Features are labelled with the alphabet, so the first feature defined will be 'a', etc\n";
+  cerr << "A descriptor 'aa' will be the relationship between instances of the first feature defined\n";
+  cerr << "A descriptor 'ac' will be the relationship between instances of the first and third features defined\n";
   cerr << "  -p 2d          compute topological distances\n";
   cerr << "  -p 3d          compute spatial     distances\n";
+  cerr << "  -p ratio       compute ratios between 2d and 3d distances\n";
   cerr << "  -q <query>     identify features as queries\n";
   cerr << "  -s <smarts>    identify features as smarts\n";
   cerr << "  -e             implement the default positive, negative, acceptor, donor queries (no smarts needed)\n";
@@ -553,9 +576,13 @@ usage(int rc) {
   cerr << "  -d             allow bonded features\n";
   cerr << "  -T <hist>      specify histogram for profiling -T min,max,nbuckets\n";
   cerr << "  -C <file>      detect all spatial distances and write to <file>\n";
-  cerr << "  -r             compute spatial/topological distance ratios\n";
+  cerr << "  -S <file>      write smarts bases feature descriptions in textproto form\n";
+  // deprecate the -r option in favour of the -p option
+  //cerr << "  -r             compute spatial/topological distance ratios\n";
   cerr << "  -W ...         various hard-coded queries, enter '-W help' for info\n";
   cerr << "  -L <fname>     write labelled molecules to <fname> - last query match wins!\n";
+  cerr << "  -J <tag>       generate fingerprints\n";
+  cerr << "  -f             function as a TDT filter\n";
   cerr << "  -i <type>      input type\n";
   (void) display_standard_aromaticity_options(cerr);
   cerr << "  -t ...         element transformation options, enter '-t help'\n";
@@ -622,8 +649,8 @@ Coords_and_Stuff::Coords_and_Stuff(int qnum) : _query_number(qnum) {
   return;
 }
 
-template class resizable_array_p<Coords_and_Stuff>;
-template class resizable_array_base<Coords_and_Stuff*>;
+//template class resizable_array_p<Coords_and_Stuff>;
+//template class resizable_array_base<Coords_and_Stuff*>;
 
 static int
 write_atom_hit_info(Molecule& m, const int* atom_label,
@@ -1010,8 +1037,7 @@ do_spatial_and_topological_distances_computation(
       Distances<float>& spatial_dist = spatial_distances[qni * nfeatures + qnj];
       Distances<float>& sptopratio = spatial_bond_ratio[qni * nfeatures + qnj];
 
-      if (b > 0)  // bond distance determined, these must be single atom matches
-      {
+      if (b > 0) {  // bond distance determined, these must be single atom matches
         topolog_dist.extra(b);
 
         if (compute_spatial_topological_ratio) {
@@ -1160,7 +1186,7 @@ gather_results(const resizable_array_p<Coords_and_Stuff>& coords,
         continue;
       }
 
-      int c = static_cast<int>(tmp[i] * bit_count_scaling_factor) + 1;
+      int c = static_cast<int>(tmp[i] * int_bit_count_scaling_factor) + 1;
       sfc.hit_bit(i, c);
     }
   } else {
@@ -1177,7 +1203,7 @@ gather_results(const resizable_array_p<Coords_and_Stuff>& coords,
         for (int j = i; j < nfeatures; j++) {
           const int ndx = i * nfeatures + j;
           const Distances<int>& d = bond_distances[ndx];
-          d.set_bits(bit_offset + 3 * ndx, bit_count_scaling_factor, sfc);
+          d.set_bits(bit_offset + 3 * ndx, int_bit_count_scaling_factor, sfc);
         }
       }
     } else {
@@ -1223,7 +1249,7 @@ gather_results(const resizable_array_p<Coords_and_Stuff>& coords,
                      sfc);  // these are ratios, so we need to expand them
         }
       }
-    } else {
+    } else if (do_spatial_distances) {
       for (int i = 0; i < nfeatures; i++) {
         for (int j = i; j < nfeatures; j++) {
           Distances<float>& d = spatial_bond_ratio[i * nfeatures + j];
@@ -1294,6 +1320,78 @@ write_all_distances(Molecule& m, const int nfeatures, Distances<T>* distances,
   return 1;
 }
 
+int
+WriteAtomPairs(Molecule& m,
+               const resizable_array_p<Coords_and_Stuff>& coords,
+               IWString_and_File_Descriptor & output) {
+
+  const int matoms = m.natoms();
+
+  dbf::Features proto;
+
+  proto.set_smi(m.smiles().data(), m.smiles().length());
+  proto.set_id(m.name().data(), m.name().length());
+
+  std::unique_ptr<isotope_t[]> isosave = m.GetIsotopes();
+  m.transform_to_non_isotopic_form();
+  for (int i = 0; i < matoms; ++i) {
+    m.set_isotope(i, i);
+  }
+
+  const IWString& s = m.aromatic_smiles();
+  proto.set_num_smi(s.data(), s.length());
+  m.set_isotopes(isosave.get());
+  m.compute_aromaticity_if_needed();
+
+  const uint32_t n = coords.size();
+  for (uint32_t i = 0; i < n; ++i) {
+    const Coords_and_Stuff& ci = *coords[i];
+    atom_number_t ai = ci.matched_atom();
+    for (uint32_t j = i + 1; j < n; ++j) {
+      const Coords_and_Stuff& cj = *coords[j];
+      atom_number_t aj = cj.matched_atom();
+
+      if (m.are_bonded(ai, aj)) {
+        continue;
+      }
+
+      const float dist = m.distance_between_atoms(ai, aj);
+      if (dist > max_write_atom_pair_distance) {
+        continue;
+      }
+
+      dbf::FeaturePair* f = proto.mutable_features()->Add();
+
+      const IWString& s1 = m.smarts_equivalent_for_atom(ai);
+      f->set_smt1(s1.data(), s1.length());
+      f->set_anum1(ai);
+      f->set_fnum1(ci.query_number());
+
+      const IWString& s2 = m.smarts_equivalent_for_atom(aj);
+      f->set_smt2(s1.data(), s1.length());
+      f->set_anum2(aj);
+      f->set_fnum2(cj.query_number());
+
+      f->set_distance(dist);
+    }
+  }
+
+  static google::protobuf::TextFormat::Printer printer;  
+  //printer.SetSingleLineMode(true);
+
+  std::string buffer;
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "WriteAtomPairs::cannot write '" << proto.ShortDebugString() << "'\n";
+    return 0;
+  }
+
+  output << buffer << '\n';
+
+  output.write_if_buffer_holds_more_than(32768);
+
+  return 1;
+}
+
 static int
 distance_between_features(Molecule& m, const isotope_t* isotopes, const int nfeatures,
                           IWString& output) {
@@ -1328,19 +1426,32 @@ distance_between_features(Molecule& m, const isotope_t* isotopes, const int nfea
     return 1;
   }
 
+  if (stream_for_atom_pairs.is_open()) {
+    WriteAtomPairs(m, coords, stream_for_atom_pairs);
+  }
+
   Sparse_Fingerprint_Creator sfc;  // might not be used
 
-  if (0 == tag.length()) {
+  if (tag.empty()) {
     append_first_token_of_name(m.name(), output);
   }
 
   gather_results(coords, sfc, nfeatures, output);
+
+  if (! function_as_tdt_filter && ! tag.empty()) {
+    output << smiles_tag << m.smiles() << ">\n";
+    output << identifier_tag << m.name() << ">\n";
+  }
 
   if (tag.length()) {
     IWString tmp;
     sfc.daylight_ascii_form_with_counts_encoded(tag, output);
 
     output << tmp << '\n';
+
+    if (! function_as_tdt_filter && ! tag.empty()) {
+      output << "|\n";
+    }
   } else {
     output << '\n';
   }
@@ -1380,7 +1491,7 @@ static void
 check_for_coordinates(const Molecule& m) {
   int d = m.highest_coordinate_dimensionality();
 
-  if (d < 3) {
+  if (d < 3 && do_spatial_distances) {
     cerr << "Spatial distances requested, but first molecule has <3 dimensions.\n";
     cerr << "Spatial distances not computed\n";
 
@@ -1587,9 +1698,34 @@ display_hard_coded_features(char flag, std::ostream& os) {
   return;
 }
 
+// If tag is of the form 'NCDBF:n', identify 'n' as int_bit_count_scaling_factor
+// Update bit_count_scaling_factor.
+static int
+MaybeParseBitReplicates(IWString& tag) {
+  // cerr << "Examining tag '" << tag << "'\n";
+  const_IWSubstring t,n;
+  if (! tag.split(t, ':', n)) {  // No replicate present, that's fine.
+    tag.EnsureEndsWith('<');
+    return 1;
+  }
+
+  if (! n.numeric_value(int_bit_count_scaling_factor) || int_bit_count_scaling_factor < 1) {
+    cerr << "The number of DBF bit replicates must be a whole +ve number '" << n << "' invalid\n";
+    return 0;
+  }
+
+  bit_count_scaling_factor = static_cast<float>(int_bit_count_scaling_factor);
+
+  // Fingerprint tags must be alphanumeric
+  tag.remove_all(':');
+  tag.EnsureEndsWith('<');
+
+  return 1;
+}
+
 static int
 distance_between_features(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vi:E:A:t:g:lp:q:s:z:N:H:b:du:nk:T:V:C:rW:J:y:eL:");
+  Command_Line cl(argc, argv, "vi:E:A:t:g:lp:q:s:z:N:H:b:du:nk:T:V:C:rW:J:fy:eL:S:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1642,16 +1778,35 @@ distance_between_features(int argc, char** argv) {
     }
   }
 
+  // Do this before the -p option.
+  // Probably should check for incompatible options, but the shell
+  // wrapper hard codes the -r option.
+  if (cl.option_present('r')) {
+    compute_spatial_topological_ratio = 1;
+    do_topological_distances = 1;
+    do_spatial_distances = 1;
+
+    if (verbose) {
+      cerr << "Will compute the spatial/topological dstance ratio\n";
+    }
+  }
+
   if (!cl.option_present('p')) {
     do_topological_distances = 1;
+    do_spatial_distances = 0;
+    compute_spatial_topological_ratio = 0;
     if (verbose) {
       cerr << "Doing topological distances by default\n";
     }
   } else {
+    compute_spatial_topological_ratio = 0;
     const_IWSubstring p;
-    int i = 0;
-    while (cl.value('p', p, i++)) {
-      if ("2d" == p) {
+    for (int i = 0; cl.value('p', p, i); ++i) {
+      if (p == "none") {
+        do_topological_distances = 0;
+        do_spatial_distances = 0;
+        compute_spatial_topological_ratio = 0;
+      } else if ("2d" == p) {
         do_topological_distances = 1;
         if (verbose) {
           cerr << "Will compute topological distances\n";
@@ -1661,10 +1816,22 @@ distance_between_features(int argc, char** argv) {
         if (verbose) {
           cerr << "Will compute spatial distances\n";
         }
+      } else if (p == "ratio") {
+        do_topological_distances = 1;
+        do_spatial_distances = 1;
+        compute_spatial_topological_ratio = 1;
+        if (verbose) {
+          cerr << "Will compute 2D and 3D features and their ratio\n";
+        }
       } else {
         cerr << "Unrecognised -p qualifier '" << p << "'\n";
         usage(9);
       }
+    }
+
+    if (! do_topological_distances && ! do_spatial_distances) {
+      cerr << "No computations specified, use '-p 2d' and/or '-p 3d' to enable\n";
+      return 1;
     }
   }
 
@@ -1863,16 +2030,6 @@ distance_between_features(int argc, char** argv) {
     return 3;
   }
 
-  if (cl.option_present('r')) {
-    compute_spatial_topological_ratio = 1;
-    do_topological_distances = 1;
-    do_spatial_distances = 1;
-
-    if (verbose) {
-      cerr << "Will compute the spatial/topological dstance ratio\n";
-    }
-  }
-
 #ifdef DBF_MOLVOL
   int vdw_type = 0;
   if (cl.option_present('V')) {
@@ -1952,42 +2109,51 @@ distance_between_features(int argc, char** argv) {
 
   if (cl.option_present('J')) {
     cl.value('J', tag);
-    if (!tag.ends_with('<')) {
-      tag << '<';
-    }
 
     if (verbose) {
       cerr << "Will act as a TDT filter\n";
     }
 
+    if ( !MaybeParseBitReplicates(tag)) {
+      cerr << "Invalid tag specification '" << tag << "'\n";
+      return 1;
+    }
+
     if (cl.option_present('y')) {
-      if (!cl.value('y', bit_count_scaling_factor) || bit_count_scaling_factor <= 0.0f) {
-        cerr << "The bit count scaling factor (-y) must be +ve floating point number\n";
+      if (!cl.value('y', int_bit_count_scaling_factor) || int_bit_count_scaling_factor <= 0.0f) {
+        cerr << "The bit count scaling factor (-y) must be +ve whole number\n";
         usage(2);
       }
 
       if (verbose) {
-        cerr << "Counts will be scaled by " << bit_count_scaling_factor
+        cerr << "Counts will be scaled by " << int_bit_count_scaling_factor
              << " for bit counts in the fingerprint\n";
+      }
+      bit_count_scaling_factor = static_cast<float>(int_bit_count_scaling_factor);
+    }
+
+    if (cl.option_present('f')) {
+      function_as_tdt_filter = 1;
+      if (verbose) {
+        cerr << "Will work as a TDT filter\n";
       }
     }
   }
 
   FileType input_type = FILE_TYPE_INVALID;
-  if (cl.option_present('i')) {
+  if (function_as_tdt_filter) {
+  } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
       usage(6);
     }
-  } else if (tag.length()) {
-    ;
   } else if (!all_files_recognised_by_suffix(cl)) {
     return 4;
   }
 
   set_default_iwstring_float_concatenation_precision(4);
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
@@ -2008,6 +2174,40 @@ distance_between_features(int argc, char** argv) {
 
     if (verbose) {
       cerr << "All distances written to '" << c << "'\n";
+    }
+  }
+
+  if (cl.option_present('S')) {
+    IWString fname;
+    IWString s;
+    for (int i = 0; cl.value('S', s, i); ++i) {
+      if (s.starts_with("maxdist=")) {
+        s.remove_leading_chars(8);
+        if (! s.numeric_value(max_write_atom_pair_distance) || 
+            max_write_atom_pair_distance < 1.0f) {
+          cerr << "The max distance between atom pairs to write to the -S file must be a reasonable distance\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will write atoms within " << max_write_atom_pair_distance << '\n';
+        }
+      } else {
+        fname = s;
+      }
+    }
+
+    if (fname.empty()) {
+      cerr << "Must specify name of output file with the -S option\n";
+      return 1;
+    }
+
+    fname.EnsureEndsWith(".textproto");
+    if (! stream_for_atom_pairs.open(fname.null_terminated_chars())) {
+      cerr << "Cannot open stream for atom pair distances '" << fname << "'\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Atom pair distances written to '" << fname << "'\n";
     }
   }
 
@@ -2047,7 +2247,7 @@ distance_between_features(int argc, char** argv) {
   }
 
   int rc = 0;
-  if (tag.length()) {
+  if (function_as_tdt_filter) {
     if (!distance_between_features_filter(cl[0], nfeatures, output)) {
       rc = 2;
     }

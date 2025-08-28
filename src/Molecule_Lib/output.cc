@@ -674,7 +674,7 @@ Molecule_Output_Object::determine_output_types(const Command_Line& cl, char opt)
 
     if ("smi3d" == c)
     {
-      set_append_coordinates_after_each_atom(1);
+      lillymol::set_include_coordinates_with_smiles(1);
       continue;
     }
 

@@ -14,8 +14,14 @@ if [[ ! -v TMPDIR ]] ; then
   export "TMPDIR=/tmp/absl_testing_${USER}"
 fi
 
-if [[ ! -s "${here}/../lib" ]] ; then
+libdir="${here}/../lib"
+if [[ ! -s "${libdir}" ]] ; then
   echo "No shared libraries available ${here}, python unit tests not done"
+  exit 1
+fi
+
+if [[ ! -s "${libdir}/lillymol.so" ]] ; then
+  echo "No lillymol Module ${libdir}/lillymol.so, python unit tests not done"
   exit 1
 fi
 

@@ -1,0 +1,47 @@
+{
+  "executable": "concat_files",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "#{indir}/t1.1 #{indir}/t1.2" ],
+          "comment": [ "Concatenates two files." ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "#{indir}/t2.1 #{indir}/t2.2" ],
+          "comment": [ "Concatenates two files." ]
+        },
+        {
+          "name": "case_3",
+          "args": [ "-a #{indir}/t3.1 #{indir}/t3.2" ],
+          "comment": [ "Concatenates two files. -a = write all identifiers (includes those not in first file)" ]
+        },
+        {
+          "name": "case_4",
+          "args": [ "-I #{indir}/t4.1 #{indir}/t4.2" ],
+          "comment": [ "Concatenates two files. -I = -I only write records for which identifier is present in every file" ]
+        },
+        {
+          "name": "case_5",
+          "args": [ "-z #{indir}/t5.1 #{indir}/t5.2" ],
+          "comment": [ "Concatenates two files. -z = trim leading zero's from indentifiers" ]
+        },
+        {
+          "name": "case_6",
+          "args": [ "#{indir}/t6.1 #{indir}/t6.2 #{indir}/t6.3 #{indir}/t6.4" ],
+          "comment": [ "Concatenates four files together." ]
+        },
+        {
+          "name": "case_7",
+          "args": [ "-a -s #{indir}/t7.1 #{indir}/t7.2" ],
+          "comment": [ "Concatenates two files. -a = write all identifiers (includes those not in first file). -s ignore case when comparing identifiers" ]
+        },
+        {
+          "name": "case_8",
+          "args": [ "-a #{indir}/t8.1 #{indir}/t8.2" ],
+          "comment": [ "Concatenates two files. -a = write all identifiers (includes those not in first file)." ]
+        }
+      ]
+    }
+  }
+}

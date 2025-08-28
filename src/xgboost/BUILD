@@ -1,13 +1,7 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
-load("//build_deps:install.bzl", "local_install")
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 
-local_install(
-    name = "install",
-    srcs = [
-        ":xgboost_model_evaluate",
-    ]
-)
+load("@rules_proto//proto:defs.bzl", "proto_library")
+# load("@rules_proto_grpc_go//:defs.bzl", "go_proto_compile", "go_proto_library")
 
 proto_library(
     name = "xgboost_model_proto",
@@ -21,26 +15,42 @@ proto_library(
 
 cc_proto_library(
     name = "xgboost_model_cc_proto",
-    deps = [
-        ":xgboost_model_proto",
-    ],
     tags = [
         "xgboost",
     ],
     visibility = [
         "//visibility:public",
     ],
+    deps = [
+        ":xgboost_model_proto",
+    ],
 )
 
 py_proto_library(
     name = "xgboost_model_py_proto",
-    srcs = [
-        "xgboost_model.proto",
+    deps = [
+        ":xgboost_model_proto",
     ],
     tags = [
         "xgboost",
     ],
 )
+
+#go_proto_compile(
+#    name = "xgboost_model_go_proto",
+#    protos = [
+#        ":xgboost_model_proto",
+#    ],
+#)
+
+#go_proto_library(
+#    name = "xgboost_model_go_proto",
+#    importpath = "xgboost_lib",
+#    protos = [
+#        ":xgboost_model_proto",
+#    ],
+#    visibility = ["//visibility:public"],
+#)
 
 proto_library(
     name = "random_forest_model_proto",
@@ -53,13 +63,13 @@ cc_proto_library(
     name = "random_forest_model_cc_proto",
     deps = [
         "random_forest_model_proto",
-    ]
+    ],
 )
 
 py_proto_library(
     name = "random_forest_model_py_proto",
-    srcs = [
-        "random_forest_model.proto",
+    deps = [
+        ":random_forest_model_proto",
     ],
 )
 
@@ -68,15 +78,16 @@ cc_binary(
     srcs = [
         "xgboost_model_evaluate.cc",
     ],
-    deps = [
-        ":xgboost_model_cc_proto",
-        "//Foundational/cmdline_v2:cmdline_v2",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc",
-        "@xgboost//:xgboost",
-        "@dlmc//:dlmc",
-    ],
     tags = [
         "xgboost",
+    ],
+    deps = [
+        ":xgboost_model_cc_proto",
+        "//Foundational/cmdline_v2",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
+        "//Utilities/General:linear_scaling",
+        "@third_party//:dlmc",
+        "@third_party//:xgboost",
     ],
 )

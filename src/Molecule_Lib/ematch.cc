@@ -1,36 +1,33 @@
-#include <stdlib.h>
+#include "ematch.h"
+
 #include <ctype.h>
+#include <stdlib.h>
+
 #include <iostream>
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/iwre2.h"
 
-#include "ematch.h"
-
 using std::cerr;
-using std::endl;
 
 void
-Element_Matcher::_default_values ()
-{
+Element_Matcher::_default_values() {
   _e = nullptr;
 
   _match_organic_only = 0;
   _match_non_organic_only = 0;
   _match_non_periodic_only = 0;
 
-   return;
+  return;
 }
 
-Element_Matcher::Element_Matcher ()
-{
+Element_Matcher::Element_Matcher() {
   _default_values();
 
   return;
 }
 
-Element_Matcher::Element_Matcher (const Element * e)
-{
+Element_Matcher::Element_Matcher(const Element* e) {
   _default_values();
 
   set_element(e);
@@ -43,61 +40,53 @@ Element_Matcher::Element_Matcher (const Element * e)
   match. So, '*Ra' matches any isotopic variant of Radium
 */
 
-Element_Matcher::Element_Matcher (const char * s)
-{
+Element_Matcher::Element_Matcher(const char* s) {
   _default_values();
 
-  (void) construct_from_string(s, static_cast<int>(strlen(s)));
+  (void)construct_from_string(s, static_cast<int>(strlen(s)));
 
   return;
 }
 
-Element_Matcher::Element_Matcher (const IWString & s)
-{
+Element_Matcher::Element_Matcher(const IWString& s) {
   _default_values();
 
-  (void) construct_from_string(s.rawchars(), s.nchars());
+  (void)construct_from_string(s.rawchars(), s.nchars());
 
   return;
 }
 
-std::ostream &
-operator<< (std::ostream & os, const Element_Matcher & em)
-{
+std::ostream&
+operator<<(std::ostream& os, const Element_Matcher& em) {
   em.operator_less_less(os);
 
   return os;
 }
 
 int
-Element_Matcher::operator_less_less (std::ostream & os) const
-{
+Element_Matcher::operator_less_less(std::ostream& os) const {
   os << "Element Matcher:match";
 
   if (_isotope) {
     os << " isotope " << *_isotope;
   }
-     
-  if (_e)
-  {
+
+  if (_e) {
     os << " element '" << _e->symbol() << "'";
     return os.good();
   }
 
-  if (_match_organic_only)
-  {
+  if (_match_organic_only) {
     os << " organic";
     return os.good();
   }
-  
-  if (_match_non_organic_only)
-  {
+
+  if (_match_non_organic_only) {
     os << " nonorganic";
     return os.good();
   }
 
-  if (_match_non_periodic_only)
-  {
+  if (_match_non_periodic_only) {
     os << " nonperiodic";
     return os.good();
   }
@@ -108,8 +97,8 @@ Element_Matcher::operator_less_less (std::ostream & os) const
 }
 
 void
-display_element_matcher_syntax (std::ostream & os)
-{
+display_element_matcher_syntax(std::ostream& os) {
+  // clang-format off
   os << "Element_Matcher recognised syntax options\n";
   os << " RX=<regexp>      elements whose symbols match <regexp>, e.g. 'RX=^[C,O]$'\n";
   os << " norganic         organic elements\n";
@@ -118,11 +107,12 @@ display_element_matcher_syntax (std::ostream & os)
   os << " <sym>            match the element with symbol <sym>\n";
   os << " <n><sym>         match isotope <n> of <sym>\n";
 //os << " *<sym>           match all isotopic variants of <sym>\n";   not sure this works properly, it just converts to atomic number match, which isn't what should happen
+  // clang-format on
 
   return;
 }
 
-//#define DEBUG_EMATCH_CONSTRUCT_FROM_STRING
+// #define DEBUG_EMATCH_CONSTRUCT_FROM_STRING
 
 /*
   Need to be careful with the meaning of *
@@ -131,17 +121,16 @@ display_element_matcher_syntax (std::ostream & os)
 */
 
 int
-Element_Matcher::construct_from_string (const const_IWSubstring & directive)
-{
+Element_Matcher::construct_from_string(const const_IWSubstring& directive) {
   const_IWSubstring s(directive);
 
-  if (0 == s.length())
+  if (0 == s.length()) {
     return 1;
+  }
 
   isotope_t maybe_isotope = 0;
 
-  while (s.length() > 0 && isdigit(s[0]))
-  {
+  while (s.length() > 0 && isdigit(s[0])) {
     maybe_isotope = 10 * maybe_isotope + s[0] - '0';
 
     s++;
@@ -153,39 +142,35 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
     return 1;
   }
 
-  if ("organic" == s)
-  {
+  if ("organic" == s) {
     _match_organic_only = 1;
     return 1;
   }
 
-  if ("nonorganic" == s)
-  {
+  if ("nonorganic" == s) {
     _match_non_organic_only = 1;
     return 1;
   }
 
-  if ("nonperiodic" == s)
-  {
+  if ("nonperiodic" == s) {
     _match_non_periodic_only = 1;
     return 1;
   }
 
-// We need a way of specifying the * element itself
+  // We need a way of specifying the * element itself
 
-  if ('*' == directive)
-  {
-    const Element * e = get_element_from_symbol_no_case_conversion("*");
+  if ('*' == directive) {
+    const Element* e = get_element_from_symbol_no_case_conversion("*");
     set_element(e);
 
     return 1;
   }
 
-  if (s.starts_with("RX="))
-  {
+  if (s.starts_with("RX=")) {
     s += 3;
-    if (! iwre2::RE2Reset(_symbol_rx, s)) {
-      cerr << "Element_Matcher::construct_from_string:invalid symbol regular expression '" << s << "'\n";
+    if (!iwre2::RE2Reset(_symbol_rx, s)) {
+      cerr << "Element_Matcher::construct_from_string:invalid symbol regular expression '"
+           << s << "'\n";
       return 0;
     }
 
@@ -196,20 +181,22 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
   cerr << "Element matcher making from '" << s << "'\n";
 #endif
 
-  if (! isalnum(s[0]))
-  {
-    cerr << "Element_Matcher::construct_from_string: elements must start with a letter or number '" << s << "'\n";
+  if (!isalnum(s[0])) {
+    cerr << "Element_Matcher::construct_from_string: elements must start with a letter "
+            "or number '"
+         << s << "'\n";
     return 0;
   }
 
   maybe_isotope = 0;
-  const Element * e = get_element_from_symbol(s, maybe_isotope);
+  const Element* e = get_element_from_symbol(s, maybe_isotope);
   if (maybe_isotope > 0) {
     _isotope = maybe_isotope;
   }
 
-  if (nullptr == e)
+  if (nullptr == e) {
     e = create_element_with_symbol(s);
+  }
 
   set_element(e);
 
@@ -217,34 +204,30 @@ Element_Matcher::construct_from_string (const const_IWSubstring & directive)
 }
 
 int
-Element_Matcher::construct_from_string (const char * s, int lens)
-{
+Element_Matcher::construct_from_string(const char* s, int lens) {
   const const_IWSubstring tmp(s, lens);
 
   return construct_from_string(tmp);
 }
 
 int
-Element_Matcher::construct_from_string (const char * s)
-{
+Element_Matcher::construct_from_string(const char* s) {
   const_IWSubstring tmp(s);
 
   return construct_from_string(tmp);
 }
 
 int
-Element_Matcher::construct_from_string (const IWString & s)
-{
+Element_Matcher::construct_from_string(const IWString& s) {
   const const_IWSubstring tmp(s);
 
   return construct_from_string(tmp);
 }
 
-Element_Matcher::Element_Matcher (atomic_number_t z)
-{
+Element_Matcher::Element_Matcher(atomic_number_t z) {
   _default_values();
 
-  const Element * e = get_element_from_atomic_number(z);
+  const Element* e = get_element_from_atomic_number(z);
   assert(e);
 
   set_element(e);
@@ -253,48 +236,52 @@ Element_Matcher::Element_Matcher (atomic_number_t z)
 }
 
 int
-Element_Matcher::ok() const
-{
+Element_Matcher::ok() const {
   if (nullptr == _e)
     ;
-  else if (! _e->ok())
+  else if (!_e->ok()) {
     return 0;
+  }
 
   return 1;
 }
 
 int
-Element_Matcher::debug_print (std::ostream & os) const
-{
-  assert (os.good());
+Element_Matcher::debug_print(std::ostream& os) const {
+  assert(os.good());
 
   os << "Element matcher ";
-  if (_isotope)
+  if (_isotope) {
     os << "isotope " << *_isotope << ' ';
-  if (nullptr != _e)
+  }
+  if (nullptr != _e) {
     os << "element '" << _e->symbol() << "'";
+  }
 
-  os << endl;
+  os << '\n';
 
-  if (_match_non_periodic_only)
+  if (_match_non_periodic_only) {
     os << "Non periodic table elements\n";
-  if (_match_organic_only)
+  }
+  if (_match_organic_only) {
     os << "Organic only\n";
-  if (_match_non_organic_only)
+  }
+  if (_match_non_organic_only) {
     os << "Non organic only\n";
+  }
 
-  if (_symbol_rx.get() != nullptr)
+  if (_symbol_rx.get() != nullptr) {
     os << " matched symbol rx '" << _symbol_rx->pattern() << "'\n";
+  }
 
   return os.good();
 }
 
 void
-Element_Matcher::set_element (const Element * e)
-{
-  assert (nullptr != e);
+Element_Matcher::set_element(const Element* e) {
+  assert(nullptr != e);
 
-  assert (e->ok());
+  assert(e->ok());
 
   _e = e;
 
@@ -304,43 +291,49 @@ Element_Matcher::set_element (const Element * e)
 // #define DEBUG_ELEMENT_MATCHER_MATCHES
 
 int
-Element_Matcher::matches(const Element * e, isotope_t iso)
-{
-  assert (e->ok());
+Element_Matcher::matches(const Element* e, isotope_t iso) {
+  assert(e->ok());
 
 #ifdef DEBUG_ELEMENT_MATCHER_MATCHES
   cerr << "Trying to match '" << e->symbol() << "' iso " << iso << '\n';
   debug_print(cerr);
 #endif
 
-  int isotope_matched = 0;   // we need to record the fact that something matched
+  int isotope_matched = 0;  // we need to record the fact that something matched
 
-  if (! _isotope)    // not active, do not check
+  if (!_isotope)  // not active, do not check
     ;
-  else if (iso != *_isotope)
+  else if (iso != *_isotope) {
     return 0;
-  else if (nullptr == _e)    // need to check other attributes
+  } else if (nullptr == _e) {  // need to check other attributes
     return isotope_matched = 1;
+  }
 
 #ifdef DEBUG_ELEMENT_MATCHER_MATCHES
-  if (_e == e)
+  if (_e == e) {
     cerr << "Element matcher returning 1 on exact match\n";
+  }
 #endif
 
-  if (nullptr == _e)    // do not check
+  if (nullptr == _e)  // do not check
     ;
-  else if (_e == e)
+  else if (_e == e) {
     return 1;
+  }
 
-  if (_match_organic_only)
+  if (_match_organic_only) {
     return e->organic();
+  }
 
-  //cerr << "_match_non_organic_only " << _match_non_organic_only << " ele " << e->symbol() << " organic " << e->organic() << '\n';
-  if (_match_non_organic_only)
-    return ! e->organic();
+  // cerr << "_match_non_organic_only " << _match_non_organic_only << " ele " <<
+  // e->symbol() << " organic " << e->organic() << '\n';
+  if (_match_non_organic_only) {
+    return !e->organic();
+  }
 
-  if (_match_non_periodic_only)
-    return ! e->is_in_periodic_table();
+  if (_match_non_periodic_only) {
+    return !e->is_in_periodic_table();
+  }
 
   if (_symbol_rx) {
     return iwre2::RE2FullMatch(e->symbol(), *_symbol_rx);
@@ -358,35 +351,31 @@ Element_Matcher::matches(const Element * e, isotope_t iso)
 */
 
 int
-Set_of_Element_Matches::construct_from_command_line (Command_Line & cl,
-                               int verbose,
-                               char mflag)
-{
+Set_of_Element_Matches::construct_from_command_line(Command_Line& cl, int verbose,
+                                                    char mflag) {
   IWString ele;
   int i = 0;
-  while (cl.value(mflag, ele, i++))
-  {
-    if (0 == ele.length() || "none" == ele)    // special case(s) for fileconv
+  while (cl.value(mflag, ele, i++)) {
+    if (0 == ele.length() || "none" == ele) {  // special case(s) for fileconv
       continue;
+    }
 
-    if (1 == ele.nwords())
-    {
-      Element_Matcher * em = new Element_Matcher(ele);
+    if (1 == ele.nwords()) {
+      Element_Matcher* em = new Element_Matcher(ele);
 
-      if (verbose)
+      if (verbose) {
         cerr << "Element '" << ele << "' included in element matches\n";
+      }
 
       add(em);
-    }
-    else
-    {
+    } else {
       int j = 0;
       const_IWSubstring token;
-      while (ele.nextword(token, j))
-      {
-        Element_Matcher * em = new Element_Matcher(token);
-        if (verbose)
+      while (ele.nextword(token, j)) {
+        Element_Matcher* em = new Element_Matcher(token);
+        if (verbose) {
           cerr << "Element '" << (*em) << "' included in element matches\n";
+        }
 
         add(em);
       }
@@ -397,14 +386,13 @@ Set_of_Element_Matches::construct_from_command_line (Command_Line & cl,
 }
 
 int
-Set_of_Element_Matches::matches (const Element * e, int iso)
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
-    Element_Matcher * em = _things[i];
+Set_of_Element_Matches::matches(const Element* e, int iso) {
+  for (int i = 0; i < _number_elements; i++) {
+    Element_Matcher* em = _things[i];
 
-    if (em->matches(e, iso))
+    if (em->matches(e, iso)) {
       return i + 1;
+    }
   }
 
   return 0;

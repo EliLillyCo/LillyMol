@@ -1,0 +1,7 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "OD1-ring")
+  (0 Ring_System_Specifier
+    (A C Environment "*-[OD1]")
+  )
+)

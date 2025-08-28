@@ -89,7 +89,6 @@ directive means exclude this atom from the matches reported, so the
 ring atom will not be removed. Recursive smarts can also be used
 to exclude atoms from what is reported as matched.
 
-
 To specify a changed bond type, you need to specify a smarts that
 defines two matched atoms.  To convert all aliphatic, ring double
 bonds to single bonds, try

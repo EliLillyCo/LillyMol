@@ -4,8 +4,8 @@ package GeometricConstraints;
 
 message Range {
   // Min and max values allowed in a range.
-  float min = 1;
-  float max = 2;
+  optional float min = 1;
+  optional float max = 2;
 }
 
 // This started out as something complicated involving van der waals

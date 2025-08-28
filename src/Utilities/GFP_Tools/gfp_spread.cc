@@ -10,12 +10,12 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/numeric_data_from_file.h"
+
 #include "sparse_collection.h"
 #include "spread.h"
 #include "tversky.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 
@@ -34,11 +34,10 @@ static int choose_first_item_randomly = 0;
 
 static int first_item_is_one_with_highest_scale_factor = 0;
 
+// Will be set if the -A option is specified.
 static int already_selected_molecules_present = 0;
 
-/*
-  Our pool is an array of FP objects
-*/
+// The array of objects from which we will be doing selections.
 
 static Spread_Object *pool = nullptr;
 
@@ -58,6 +57,8 @@ static int report_establish_initial_distances = 0;
 
 static Accumulator<similarity_type_t> nearest_selected_neighbour_distance;
 
+// If there is an atom count window active during the initial scan (-A option)
+// there might be molecules with no neighbours. Rescan if need be.
 static int retest_no_neighbours = 0;
 
 static IWString smiles_tag("$SMI<");
@@ -95,8 +96,8 @@ get_previously_computed_nearest_neighbour(
     Spread_Object &p, const IW_STL_Hash_Map_float &previously_computed_distances) {
   IW_STL_Hash_Map_float::const_iterator f = previously_computed_distances.find(p.id());
 
-  if (f ==
-      previously_computed_distances.end()) {  // OK if no previously computed distance
+  // OK if no previously computed distance
+  if (f == previously_computed_distances.end()) {
     return 1;
   }
 
@@ -126,7 +127,7 @@ get_previously_computed_nearest_neighbour(
 
   p.set_nearest_previously_selected_neighbour(nnsmiles, nnid, d);
 
-  // cerr << "Set distance to previous " << p.distance() << endl;
+  // cerr << "Set distance to previous " << p.distance() << '\n';
 
   return 1;
 }
@@ -135,7 +136,7 @@ static int
 build_pool(iwstring_data_source &input,
            const IWString &previously_computed_nn_distance_tag) {
   assert(pool_size > 0);
-  // cerr << "Pool ptr " << poolptr << ", pool size " << pool_size << endl;
+  // cerr << "Pool ptr " << poolptr << ", pool size " << pool_size << '\n';
   assert(poolptr >= 0 && poolptr < pool_size);
 
   int items_with_previously_computed_distances = 0;
@@ -177,7 +178,7 @@ build_pool(iwstring_data_source &input,
     poolptr++;
 
     if (poolptr >= pool_size) {
-      cerr << "Pool is full, max " << pool_size << endl;
+      cerr << "Pool is full, max " << pool_size << '\n';
       break;
     }
   }
@@ -202,12 +203,12 @@ allocate_pool() {
 
   pool = new Spread_Object[pool_size];
   if (nullptr == pool) {
-    cerr << "Yipes, could not allocate pool of size " << pool_size << endl;
+    cerr << "Yipes, could not allocate pool of size " << pool_size << '\n';
     return 62;
   }
 
   if (verbose) {
-    cerr << "system sized to " << pool_size << endl;
+    cerr << "system sized to " << pool_size << '\n';
   }
 
   return 1;
@@ -298,7 +299,7 @@ rescan_for_no_neighbours(iwstring_data_source &input) {
     Spread_Object fp;
     if (!fp.construct_from_tdt(tdt, fatal)) {
       if (fatal) {
-        cerr << "Cannot build fingerpint\n" << tdt << endl;
+        cerr << "Cannot build fingerpint\n" << tdt << '\n';
         return 0;
       }
 
@@ -329,7 +330,7 @@ establish_initial_distances(iwstring_data_source &input) {
     Spread_Object fp;
     if (!fp.construct_from_tdt(tdt, fatal)) {
       if (fatal) {
-        cerr << "Cannot build fingerpint\n" << tdt << endl;
+        cerr << "Cannot build fingerpint\n" << tdt << '\n';
         return 0;
       }
 
@@ -352,7 +353,7 @@ establish_initial_distances(iwstring_data_source &input) {
 
     if (report_establish_initial_distances &&
         0 == ntdt % report_establish_initial_distances) {
-      cerr << "Established initial distances " << ntdt << endl;
+      cerr << "Established initial distances " << ntdt << '\n';
     }
   }
 
@@ -364,10 +365,11 @@ establish_initial_distances(iwstring_data_source &input) {
     cerr << "INitial distances established\n";
     for (int i = 0; i < pool_size; i++) {
       cerr << "Pool " << i << " is " << pool[i].id() << " dist " << pool[i].distance()
-           << endl;
+           << '\n';
     }
   }
 
+  // This can happen if we have an atom count window in effect.
   if (retest_no_neighbours) {
     rescan_for_no_neighbours(input);
   }
@@ -573,7 +575,7 @@ do_start_with_object_furthest_from_everything(int &istart) {
 
   if (verbose) {
     cerr << "Starting with '" << pool[id_of_further_distance_encountered].id()
-         << "' dist " << furthest_distance_encountered << endl;
+         << "' dist " << furthest_distance_encountered << '\n';
   }
 
   return 1;
@@ -613,7 +615,7 @@ do_start_with_object_furthest_from_first(int &istart) {
 
     if (verbose) {
       cerr << "Furthest from first fingerprint is " << furthest_away << " '"
-           << pool[furthest_away].id() << "', distance " << d0 << endl;
+           << pool[furthest_away].id() << "', distance " << d0 << '\n';
     }
 
     istart = furthest_away;
@@ -628,7 +630,7 @@ do_start_with_object_furthest_from_first(int &istart) {
 
   if (verbose) {
     cerr << "Starting with '" << pool[id_of_further_distance_encountered].id()
-         << "' dist " << furthest_distance_encountered << endl;
+         << "' dist " << furthest_distance_encountered << '\n';
   }
 
   return 1;
@@ -731,7 +733,7 @@ fpobj_spread(IWString_and_File_Descriptor &output) {
       lastunselected = i;
 
       //    cerr << number_selected << " distance " << i << " '" << pool[i].id() << "' is
-      //    " << pool[i].distance() << endl;
+      //    " << pool[i].distance() << '\n';
 
       if (pool[i].distance() > maxdist) {
         maxdist = pool[i].distance();
@@ -755,8 +757,9 @@ fpobj_spread(IWString_and_File_Descriptor &output) {
     if (static_cast<float>(1.0) != fpsel.scale()) {
       output << "SCALE<" << fpsel.scale() << ">\n";
     }
-    output << distance_tag << fpsel.distance()
-           << ">\n";  // the sid object does not know about any scaling of the distance
+
+    // the sid object does not know about any scaling of the distance
+    output << distance_tag << fpsel.distance() << ">\n";
     output << "|\n";
 
     if (verbose > 1) {
@@ -782,8 +785,7 @@ fpobj_spread(IWString_and_File_Descriptor &output) {
 
       if (!use_atom_count_window) {
         ;
-      } else if (can_be_compared(fpsel, pool[i]))  // atom counts too close
-      {
+      } else if (can_be_compared(fpsel, pool[i])) {  // atom counts too close
         molecules_skipped_for_being_too_close++;
         continue;
       }
@@ -811,11 +813,10 @@ fpobj_spread(IWString_and_File_Descriptor &output) {
                0.8) {
       strikes++;
 
-      if (strikes > 10)  // 10 consecutive selections each skip 80% of the pool
-      {
+      if (strikes > 10) { // 10 consecutive selections each skip 80% of the pool
         use_atom_count_window = 0;
         if (verbose) {
-          cerr << "Atom count window turned off, selected " << number_selected << endl;
+          cerr << "Atom count window turned off, selected " << number_selected << '\n';
         }
       }
     } else {
@@ -847,28 +848,26 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
-  cerr << "Usage <options> <input_file>\n";
-  cerr << " -s <number>      specify max pool size\n";
-  cerr << " -n <number>      specify how many items to select\n";
-  cerr << " -t <dist>        stop selection once distance drops below <dist>\n";
-  cerr << " -A <file>        specify file of already selected items\n";
-  cerr << " -N <tag>         gfp_nearneighbours has been run and initial distances are "
-          "in <tag>\n";
-  cerr << " -p COL=<col>     distance scaling factor is column <col> of name\n";
-  cerr << " -p <tag>         specify distance scaling factor in <tag>\n";
-  cerr << " -p FILE=<fname>  distance scaling factors in <fname>\n";
-  cerr << " -p oknoscale     ok if not all items have a distance scaling factor - will "
-          "default to 1.0\n";
-  cerr << " -r <number>      report progress of initial distance assignments\n";
-  cerr << " -S ...           options for specifying first item selected, enter '-S "
-          "help'\n";
-  cerr << " -M ...           miscellaneous options, enter '-M help' for info\n";
-  cerr << " -b <number>      \"blurr\" distances to <number> resolution per range\n";
-  // cerr << " -i <tag>         specify identifier tag in pool\n";
-  // cerr << " -I <tag>         specify identifier tag in input file\n";
-  cerr << " -F,-P,-W ...     gfp options, enter '-F help' for details\n";
-  cerr << " -V <...>         Tversky conditions, enter '-V help' for details\n";
-  cerr << " -v               verbose output\n";
+// clang-format off
+  cerr << R"(Performs a greedy maximum dis-similarity selection from a set of molecules.
+ -n <number>      Specify how many items to select
+ -t <dist>        Stop selection once distance drops below <dist>
+ -A <file>        Specify file of already selected items
+ -N <tag>         Gfp_nearneighbours has been run and initial distances are in <tag>
+ -p COL=<col>     Distance scaling factor is column <col> of name
+ -p <tag>         Specify distance scaling factor in <tag>
+ -p FILE=<fname>  Distance scaling factors in <fname>
+ -p oknoscale     Ok if not all items have a distance scaling factor - will default to 1.0
+ -r <number>      Report progress of initial distance assignments
+ -S ...           Options for specifying first item selected, enter '-S help'
+ -M ...           Miscellaneous options, enter '-M help' for info
+ -s <number>      Specify max pool size. Without this the tool reads the file first.
+                  A max of <number> fingerprints will be read.
+ -F,-P,-W ...     gfp options, enter '-F help' for details
+ -V <...>         Tversky conditions, enter '-V help' for details
+ -v               Verbose output
+)";
+// clang-format on
 
   exit(rc);
 }
@@ -879,6 +878,7 @@ display_miscellaneous_options(std::ostream &os) {
   os << " -M nscale       include scale factor of nbr with scale\n";
   os << " -M squeeze=nnn  squeeze out selected molecules evern <nnn> steps\n";
   os << " -M ldist=<dist> all distances truncated to <dist>\n";
+  os << " -M blurr=<nn>   blurr distances so there are only <nn> values. Should be > 10\n";
 
   exit(3);
 }
@@ -893,9 +893,24 @@ display_first_item_selection_options(std::ostream &os) {
   exit(1);
 }
 
+// The user has specified a blurr=<nn> directive. Show a small number of
+// examples of the impact of that.
+static void
+ShowBlurring(int blurr_distances) {
+  std::random_device rd;
+  std::default_random_engine generator(rd());
+  std::uniform_real_distribution<similarity_type_t> u(0.0f, 1.0f);
+
+  cerr << "Distance blurring factor set to " << blurr_distances << '\n';
+  for (int i = 0; i < 9; i++) {
+    similarity_type_t r = u(generator);
+    cerr << "distance " << r << " becomes " << do_blurring(r, blurr_distances) << '\n';
+  }
+}
+
 static int
 fpobj_spread(int argc, char **argv) {
-  Command_Line cl(argc, argv, "vs:n:I:i:A:r:p:t:F:P:W:Q:O:N:V:b:S:M:");
+  Command_Line cl(argc, argv, "vs:n:I:i:A:r:p:t:F:P:W:Q:O:N:V:S:M:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -961,7 +976,17 @@ fpobj_spread(int argc, char **argv) {
         }
 
         if (verbose) {
-          cerr << "Long distances truncated to " << longest_distance_recognised << endl;
+          cerr << "Long distances truncated to " << longest_distance_recognised << '\n';
+        }
+      } else if (m.starts_with("blurr=")) {
+        m.remove_leading_chars(6);
+        if (! m.numeric_value(blurr_distances) || blurr_distances < 10) {
+          cerr << "The blurr=<nn> directive must have a reasonable number of bins " <<
+                   blurr_distances << " not valid\n";
+          return 1;
+        }
+        if (verbose) {
+          ShowBlurring(blurr_distances);
         }
       } else if ("help" == m) {
         display_miscellaneous_options(cerr);
@@ -1094,7 +1119,7 @@ fpobj_spread(int argc, char **argv) {
         }
         if (verbose) {
           cerr << "Previously computed near neighbour distances in column "
-               << previous_computed_distance_column << endl;
+               << previous_computed_distance_column << '\n';
         }
 
         previous_computed_distance_column--;
@@ -1136,6 +1161,57 @@ fpobj_spread(int argc, char **argv) {
     }
   }
 
+  if (cl.option_present('S')) {
+    if (cl.option_count('S') > 1) {
+      cerr << "There can be only one means of selecting the first item (-S)\n";
+      usage(3);
+    }
+
+    if (already_selected_molecules_present) {
+      cerr << "Cannot specify how to select first molecule if already selected molecules "
+              "present(-A)\n";
+      usage(3);
+    }
+
+    IWString s = cl.string_value('S');
+    s.to_lowercase();
+
+    if ("rand" == s) {
+      choose_first_item_randomly = 1;
+      if (verbose) {
+        cerr << "Will choose the first item randomly";
+      }
+    } else if ("furthest" == s) {
+      start_with_object_furthest_from_everything = 1;
+      if (verbose) {
+        cerr << "Will start with the item furthest from all other items\n";
+      }
+    } else if ("hsf" == s) {
+      first_item_is_one_with_highest_scale_factor = 1;
+      if (verbose) {
+        cerr << "First selected will be molecule with highest scale factor\n";
+      }
+    } else if (s.starts_with("fff=")) {
+      s.remove_leading_chars(4);
+      if (!s.numeric_value(start_with_object_furthest_from_first) ||
+          start_with_object_furthest_from_first < 1) {
+        cerr << "The times furthest from first option 'fff=nnn' must be a +ve number\n";
+        display_first_item_selection_options(cerr);
+      }
+      start_with_object_furthest_from_first = 1;
+
+      if (verbose) {
+        cerr << "Will start with the molecule furthest from the first molecule in the "
+                "set\n";
+      }
+    } else if ("help" == s) {
+      display_first_item_selection_options(cerr);
+    } else {
+      cerr << "Unrecognised first item selection directive '" << s << "'\n";
+      display_first_item_selection_options(cerr);
+    }
+  }
+
   // build the pool
 
   for (int i = 0; i < cl.number_elements(); i++) {
@@ -1156,7 +1232,7 @@ fpobj_spread(int argc, char **argv) {
       if (sfs.n() > 1) {
         cerr << ", ave " << sfs.average();
       }
-      cerr << endl;
+      cerr << '\n';
     }
   }
 
@@ -1210,76 +1286,6 @@ fpobj_spread(int argc, char **argv) {
     already_selected_molecules_present = 0;
   }
 
-  if (cl.option_present('S')) {
-    if (cl.option_count('S') > 1) {
-      cerr << "There can be only one means of selecting the first item (-S)\n";
-      usage(3);
-    }
-
-    if (already_selected_molecules_present) {
-      cerr << "Cannot specify how to select first molecule if already selected molecules "
-              "present(-A)\n";
-      usage(3);
-    }
-
-    IWString s = cl.string_value('S');
-    s.to_lowercase();
-
-    if ("rand" == s) {
-      choose_first_item_randomly = 1;
-      if (verbose) {
-        cerr << "Will choose the first item randomly";
-      }
-    } else if ("furthest" == s) {
-      start_with_object_furthest_from_everything = 1;
-      if (verbose) {
-        cerr << "Will start with the item furthest from all other items\n";
-      }
-    } else if ("hsf" == s) {
-      first_item_is_one_with_highest_scale_factor = 1;
-      if (verbose) {
-        cerr << "First selected will be molecule with highest scale factor\n";
-      }
-    } else if (s.starts_with("fff=")) {
-      s.remove_leading_chars(4);
-      if (!s.numeric_value(start_with_object_furthest_from_first) ||
-          start_with_object_furthest_from_first < 1) {
-        cerr << "The times furthest from first option 'fff=nnn' must be a +ve number\n";
-        display_first_item_selection_options(cerr);
-      }
-      start_with_object_furthest_from_first = 1;
-
-      if (verbose) {
-        cerr << "Will start with the molecule furthest from the first molecule in the "
-                "set\n";
-      }
-    } else if ("help" == s) {
-      display_first_item_selection_options(cerr);
-    } else {
-      cerr << "Unrecognised first item selection directive '" << s << "'\n";
-      display_first_item_selection_options(cerr);
-    }
-  }
-  if (cl.option_present('b')) {
-    if (!cl.value('b', blurr_distances) || blurr_distances < static_cast<float>(0.0)) {
-      cerr << "The blurr distances option (-b) must be a non negative number\n";
-      usage(4);
-    }
-
-    std::random_device rd;
-    std::default_random_engine generator(rd());
-    std::uniform_real_distribution<similarity_type_t> u(0.0f, 1.0f);
-
-    if (verbose) {
-      cerr << "Distance blurring factor set to " << blurr_distances << '\n';
-      for (int i = 0; i < 5; i++) {
-        similarity_type_t r = u(generator);
-        cerr << "distance " << r << " becomes " << do_blurring(r, blurr_distances)
-             << '\n';
-      }
-    }
-  }
-
   if (cl.option_present('n')) {
     int n;
     if (!cl.value('n', n) || n < 1) {
@@ -1310,7 +1316,7 @@ fpobj_spread(int argc, char **argv) {
 
     if (verbose) {
       cerr << "Will stop selection once distance drops below "
-           << stop_once_distance_drops_below << endl;
+           << stop_once_distance_drops_below << '\n';
     }
   }
 
@@ -1325,7 +1331,7 @@ fpobj_spread(int argc, char **argv) {
     if (nearest_selected_neighbour_distance.n() > 1) {
       cerr << " ave " << nearest_selected_neighbour_distance.average();
     }
-    cerr << endl;
+    cerr << '\n';
   }
 
   // delete [] pool;     leave this out for efficiency

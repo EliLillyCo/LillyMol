@@ -1,6 +1,8 @@
 
 #include <iostream>
 
+#include "Foundational/iwmisc/sparse_fp_creator.h"
+
 #include "Molecule_Lib/molecular_formula.h"
 
 namespace molecular_formula {
@@ -785,5 +787,19 @@ MolecularFormula<T>::Build(const Molecule& m) {
 
 
 template class MolecularFormula<uint32_t>;
+
+template <typename T>
+int
+MolecularFormula<T>::ToSparseFingerprint(IWString& destination) const {
+  Sparse_Fingerprint_Creator sfc;
+  for (int i = 0; i < kNTypes; ++i) {
+    std::cerr << i << " count " << _count[i] << '\n';
+    if (_count[i] > 0) {
+      sfc.hit_bit(i, _count[i]);
+    }
+  }
+
+  return sfc.daylight_ascii_form_with_counts_encoded(destination);
+}
 
 }  // namespace molecular_formula

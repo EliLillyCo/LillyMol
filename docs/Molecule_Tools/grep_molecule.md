@@ -125,6 +125,13 @@ Worst case would be finding a set of molecules in itself, which would require
 the full unique smiles computation. Nevertheless, doing this on 20k random
 molecules takes just 2.7 seconds.
 
+## Options
+Chirality can be removed from both the needle molecule and the molecules to
+be searched, add the -c option.
+
+Molecules can be reduced to the largest fragment via the -l option. Again,
+the transformation is applied to both the needle and the haystack molecules.
+
 ## Further Optimisation
 The number of chiral centres could be included with the aromatic molecular formula,
 or perhaps discerned from the starting smiles. If chirality is being considered

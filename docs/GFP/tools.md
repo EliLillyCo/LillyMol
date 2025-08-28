@@ -75,7 +75,7 @@ molecules to be selected. TODO:ianwatson document this.
 ## Leader - Sphere Exclusion
 This is commonly used for selecting a diverse yet desirable set of
 molecules. Molecules are ordered by desirability, and leader run on
-that set of fingerprints.
+that ordered set of fingerprints.
 
 Tools are
 ```
@@ -83,7 +83,6 @@ gfp_leader
 gfp_leader_standard
 gfp_leader_tbb
 ```
-
 Again, gfp_leader runs serial, and can consume any kind of fingerprint, or
 fingerprint combination. Given 50 random CHembl molecules clustered at a
 0.25 radius, that task takes 126 seconds. The parallel version, gfp_leader_tbb

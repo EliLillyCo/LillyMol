@@ -1,0 +1,16 @@
+(0 Reaction
+  (A C Comment "4.3.9_Benzothiazole_synthesis_FROM_amines_aromatic_primary_AND_o_amino_thiophenols")
+  (0 Scaffold
+     (A C smarts "[NT0D1H2]-a")
+  )
+  (1 Sidechain
+     (A C smarts "[SD1H]-c1c([NH2])cccc1")
+  )
+  (2 Sidechain
+     (A C smiles "C Carbon")
+     (A C smarts "C") 
+     (A I join (0 0))
+     (A C join "1.0 0")
+     (A C join "1.3 0 2")
+  )
+)

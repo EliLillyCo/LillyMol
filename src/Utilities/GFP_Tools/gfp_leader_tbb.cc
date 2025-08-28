@@ -810,7 +810,6 @@ process_cluster(Cluster& cluster, similarity_type_t my_threshold,
   }
 
   int cs = cluster.number_elements();
-  cluster_size[cs]++;  // the leader isn't in the cluster
 
   GFP_PL* centre = cluster[0];
 
@@ -2000,16 +1999,16 @@ leader(int argc, char** argv)
   if (verbose) {
     cerr << "Clustered " << initial_pool_size << " fingerprints into " << clusters_found
          << " clusters\n";
-    int isum = 0;
+    uint32_t isum = 0;
     for (int i = 0; i < cluster_size.number_elements(); i++) {
-      int j = cluster_size[i];
-      if (0 == j) {
+      int csize = cluster_size[i];
+      if (0 == csize) {
         continue;
       }
 
-      cerr << j << " clusters were of size " << i << " members\n";
+      cerr << csize << " clusters were of size " << i << " members\n";
 
-      isum += j * i;
+      isum += csize * i;
     }
 
     cerr << "In clusters " << isum << endl;

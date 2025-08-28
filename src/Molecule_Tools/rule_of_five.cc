@@ -21,10 +21,10 @@
 #include "Molecule_Lib/qry_wstats.h"
 #include "Molecule_Lib/standardise.h"
 
+#include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/nvrtspsa.h"
 
 using std::cerr;
-using std::endl;
 
 static Chemical_Standardisation chemical_standardisation;
 
@@ -42,6 +42,9 @@ static int reading_input_from_biobyte_clogp = 0;
 
 static int include_psa = 0;
 
+// Do we write the pass/fail value for each component of the score.
+static int write_per_property_violations = 0;
+
 static extending_resizable_array<int> feature_count;
 
 /*
@@ -51,6 +54,8 @@ static extending_resizable_array<int> feature_count;
 static Molecule_Output_Object stream_for_all_molecules;
 
 static int function_as_filter = 0;
+
+static char output_separator = ' ';
 
 /*
   Statistics on the number of donors and acceptors
@@ -79,7 +84,7 @@ static float upper_clogp_cutoff = 5.0;
 
 static int violation_cutoff = 2;
 
-static int violation_count[5] = {
+static uint32_t violation_count[5] = {
     0, 0, 0, 0, 0,
 };
 
@@ -90,26 +95,35 @@ static IWString ro5_tag("RO5<");
 static IWString ro5_violation_tag("VIOLATES<");
 static IWString ro5_violation_count_tag("VIOLATIONS<");
 
-static int primary_amines_contribute = 1;
+// May 2025. This should be the default.
+static int primary_amines_contribute = 2;
 
 /*
   It will help if we can group all the attributes together
 */
 
-class RO5_Attributes
-{
+class RO5_Attributes {
  private:
+  // Indices into the _violations array.
+  static constexpr int kAmw = 0;
+  static constexpr int kClogp = 1;
+  static constexpr int kAcc = 2;
+  static constexpr int kDon = 3;
+
   int _natoms;
   molecular_weight_t _amw;
   int _acount;
   int _dcount;
-  float _clogp;
+  std::optional<float> _clogp;
 
   int _number_violations;
+  int _violations[4];
 
   IWString _string_form;
 
   float _nvrtspsa;
+
+  std::unique_ptr<alogp::ALogP> _alogp;
 
   //  private functions
 
@@ -126,40 +140,38 @@ class RO5_Attributes
   int write_descriptors(const IWString&, IWString_and_File_Descriptor&);
 
   int
-  number_violations() const
-  {
+  number_violations() const {
     return _number_violations;
   }
 
   const IWString&
-  violations_in_string_form() const
-  {
+  violations_in_string_form() const {
     return _string_form;
   }
 };
 
-RO5_Attributes::RO5_Attributes()
-{
+RO5_Attributes::RO5_Attributes() {
   _natoms = 0;
-  _clogp = static_cast<float>(-100.0);
+  _clogp = std::nullopt;
   _amw = static_cast<molecular_weight_t>(0.0);
 
   _number_violations = 0;
+  std::fill_n(_violations, 4, 0);
 
   return;
 }
 
 int
 RO5_Attributes::write_descriptors(const IWString& mname,
-                                  IWString_and_File_Descriptor& output)
-{
-  if (0 == mname.length()) {
+                                  IWString_and_File_Descriptor& output) {
+  if (mname.empty()) {
     output << "RO5UNK" << molecules_read;
   } else {
     append_first_token_of_name(mname, output);
   }
 
-  output << ' ' << _dcount << ' ' << _acount << ' ' << _natoms << ' ';
+  output << output_separator << _dcount << output_separator << _acount
+         << output_separator << _natoms << output_separator;
 
   if (_amw > static_cast<molecular_weight_t>(0.0)) {
     output << _amw;
@@ -167,16 +179,22 @@ RO5_Attributes::write_descriptors(const IWString& mname,
     output << '.';
   }
 
-  if (_clogp > -100.0) {
-    output << ' ' << _clogp;
+  if (_clogp) {
+    output << output_separator << *_clogp;
   } else {
-    output << " .";
+    output << output_separator << '.';
   }
 
-  output << ' ' << _number_violations;
+  if (write_per_property_violations) {
+    for (int i = 0; i < 4; ++i) {
+      output << output_separator << _violations[i];
+    }
+  }
+
+  output << output_separator << _number_violations;
 
   if (include_psa) {
-    output << ' ' << _nvrtspsa;
+    output << output_separator << _nvrtspsa;
   }
 
   output << '\n';
@@ -185,20 +203,23 @@ RO5_Attributes::write_descriptors(const IWString& mname,
 }
 
 int
-RO5_Attributes::_identify_violations()
-{
+RO5_Attributes::_identify_violations() {
   assert(_natoms > 0);
 
   _number_violations = 0;
   _string_form.resize(0);
 
-  if (_clogp > upper_clogp_cutoff) {
+  if (! _clogp) {
+    ++_number_violations;
+    _violations[kClogp] = 1;
+  } else if (*_clogp > upper_clogp_cutoff) {
     if (append_violations_to_name) {
-      _string_form << " CP " << _clogp;
+      _string_form << " CP " << *_clogp;
     }
     _number_violations++;
+    _violations[kClogp] = 1;
     if (verbose > 1) {
-      cerr << " Clogp out of range " << _clogp << endl;
+      cerr << " Clogp out of range " << *_clogp << '\n';
     }
   }
 
@@ -207,8 +228,9 @@ RO5_Attributes::_identify_violations()
       _string_form << " AMW " << _amw;
     }
     _number_violations++;
+    _violations[kAmw] = 1;
     if (verbose > 1) {
-      cerr << " Molecular weight = " << _amw << endl;
+      cerr << " Molecular weight = " << _amw << '\n';
     }
   }
 
@@ -217,6 +239,7 @@ RO5_Attributes::_identify_violations()
       _string_form << " donor " << _dcount;
     }
     _number_violations++;
+    _violations[kDon] = 1;
     if (verbose > 1) {
       cerr << " Contains " << _dcount << " donors\n";
     }
@@ -227,6 +250,7 @@ RO5_Attributes::_identify_violations()
       _string_form << " acceptor " << _acount;
     }
     _number_violations++;
+    _violations[kAcc] = 1;
     if (verbose > 1) {
       cerr << " Contains " << _acount << " acceptors\n";
     }
@@ -238,8 +262,7 @@ RO5_Attributes::_identify_violations()
 }
 
 static int
-assign_acceptors_simplistic(Molecule& m, int* isotope)
-{
+assign_acceptors_simplistic(Molecule& m, int* isotope) {
   int matoms = m.natoms();
 
   int rc = 0;
@@ -260,8 +283,7 @@ assign_acceptors_simplistic(Molecule& m, int* isotope)
 */
 
 static int
-assign_donors_simplistic(Molecule& m, int* isotope)
-{
+assign_donors_simplistic(Molecule& m, int* isotope) {
   const int matoms = m.natoms();
 
   int rc = 0;
@@ -283,20 +305,17 @@ assign_donors_simplistic(Molecule& m, int* isotope)
 }
 
 static int
-assign_donors(Molecule& m, int* isotope)
-{
+assign_donors(Molecule& m, int* isotope) {
   return assign_donors_simplistic(m, isotope);
 }
 
 static int
-assign_acceptors(Molecule& m, int* isotope)
-{
+assign_acceptors(Molecule& m, int* isotope) {
   return assign_acceptors_simplistic(m, isotope);
 }
 
 int
-RO5_Attributes::initialise(Molecule& m)
-{
+RO5_Attributes::initialise(Molecule& m) {
   _natoms = m.natoms();
 
   if (0 == _natoms) {
@@ -307,6 +326,10 @@ RO5_Attributes::initialise(Molecule& m)
 
   _amw = m.molecular_weight();
 
+  if (! reading_input_from_biobyte_clogp) {
+    _alogp = std::make_unique<alogp::ALogP>();
+  }
+
   int* isotope = new_int(_natoms);
   std::unique_ptr<int[]> free_isotope(isotope);
 
@@ -314,8 +337,7 @@ RO5_Attributes::initialise(Molecule& m)
 }
 
 void
-RO5_Attributes::set_clogp(float c)
-{
+RO5_Attributes::set_clogp(float c) {
   _clogp = c;
 
   if (c > upper_clogp_cutoff) {
@@ -326,8 +348,7 @@ RO5_Attributes::set_clogp(float c)
 }
 
 int
-RO5_Attributes::_initialise(Molecule& m, int* isotope)
-{
+RO5_Attributes::_initialise(Molecule& m, int* isotope) {
   _acount = assign_acceptors(m, isotope);
 
   acceptor_count_accumulator.extra(_acount);
@@ -343,12 +364,21 @@ RO5_Attributes::_initialise(Molecule& m, int* isotope)
   feature_count[matched_atoms]++;
 
   if (verbose > 1) {
-    cerr << molecules_read << " '" << m.name() << "' " << _acount
-         << " acceptors " << _dcount << " donors\n";
+    cerr << molecules_read << " '" << m.name() << "' " << _acount << " acceptors "
+         << _dcount << " donors\n";
   }
 
   if (include_psa) {
     _nvrtspsa = novartis_polar_surface_area(m);
+  }
+
+  if (_alogp) {
+    std::optional<float> tmp = _alogp->LogP(m);
+    if (tmp) {
+      _clogp = *tmp;
+    } else {
+      // Not sure what to do here.
+    }
   }
 
   _identify_violations();
@@ -358,8 +388,7 @@ RO5_Attributes::_initialise(Molecule& m, int* isotope)
 
 static int
 do_append_violations_to_name(Molecule& m, int number_violations,
-                             const RO5_Attributes& ro5)
-{
+                             const RO5_Attributes& ro5) {
   IWString tmp = m.name();
   tmp << " PR5:" << number_violations << ro5.violations_in_string_form();
 
@@ -374,8 +403,7 @@ do_append_violations_to_name(Molecule& m, int number_violations,
 
 #ifdef SEEMINGLY_NOT_USED
 static int
-check_pass_fail(Molecule& m, int number_violations)
-{
+check_pass_fail(Molecule& m, int number_violations) {
   int rc;
   if (number_violations >= violation_cutoff) {
     if (Pfizer_non_druglike.active()) {
@@ -398,8 +426,7 @@ check_pass_fail(Molecule& m, int number_violations)
 #endif
 
 static int
-rule_of_five(Molecule& m, RO5_Attributes& ro5, IWString_and_File_Descriptor& output)
-{
+rule_of_five(Molecule& m, RO5_Attributes& ro5, IWString_and_File_Descriptor& output) {
   int number_violations = ro5.number_violations();
 
   if (append_violations_to_name) {
@@ -434,8 +461,7 @@ rule_of_five(Molecule& m, RO5_Attributes& ro5, IWString_and_File_Descriptor& out
 }
 
 static void
-preprocess(Molecule& m)
-{
+preprocess(Molecule& m) {
   if (reduce_to_largest_fragment && m.number_fragments() > 1) {
     m.reduce_to_largest_fragment();
   }
@@ -448,8 +474,7 @@ preprocess(Molecule& m)
 }
 
 static int
-compute_rule_of_five_attributes(Molecule& m, RO5_Attributes& ro5)
-{
+compute_rule_of_five_attributes(Molecule& m, RO5_Attributes& ro5) {
   molecules_read++;
 
   preprocess(m);
@@ -465,8 +490,8 @@ compute_rule_of_five_attributes(Molecule& m, RO5_Attributes& ro5)
 }
 
 static int
-rule_of_five(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor& output)
-{
+rule_of_five(data_source_and_type<Molecule>& input,
+             IWString_and_File_Descriptor& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
@@ -490,8 +515,8 @@ rule_of_five(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor
 */
 
 static int
-rule_of_five_record(const const_IWSubstring& buffer, IWString_and_File_Descriptor& output)
-{
+rule_of_five_record(const const_IWSubstring& buffer,
+                    IWString_and_File_Descriptor& output) {
   const_IWSubstring token;
   int i = 0;
 
@@ -549,17 +574,16 @@ rule_of_five_record(const const_IWSubstring& buffer, IWString_and_File_Descripto
   }
 
   ro5.set_clogp(clogp);
-  // cerr << "Set logp to " << clogp << endl;
+  // cerr << "Set logp to " << clogp << '\n';
 
   return rule_of_five(m, ro5, output);
 }
 
 static int
-rule_of_five(iwstring_data_source& input, IWString_and_File_Descriptor& output)
-{
+rule_of_five(iwstring_data_source& input, IWString_and_File_Descriptor& output) {
   const_IWSubstring buffer;
   // skip header record
-  if (! input.next_record(buffer)) {
+  if (!input.next_record(buffer)) {
     return 0;
   }
 
@@ -578,8 +602,7 @@ rule_of_five(iwstring_data_source& input, IWString_and_File_Descriptor& output)
 }
 
 static int
-rule_of_five(const char* fname, IWString_and_File_Descriptor& output)
-{
+rule_of_five(const char* fname, IWString_and_File_Descriptor& output) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -591,8 +614,8 @@ rule_of_five(const char* fname, IWString_and_File_Descriptor& output)
 }
 
 static int
-rule_of_five(const char* fname, FileType input_type, IWString_and_File_Descriptor& output)
-{
+rule_of_five(const char* fname, FileType input_type,
+             IWString_and_File_Descriptor& output) {
   data_source_and_type<Molecule> input(input_type, fname);
   if (!input.ok()) {
     cerr << "Cannot open input '" << fname << "'\n";
@@ -604,8 +627,7 @@ rule_of_five(const char* fname, FileType input_type, IWString_and_File_Descripto
 
 static int
 open_output_object(const Command_Line& cl, Molecule_Output_Object& mstream, char cflag,
-                   const char* text)
-{
+                   const char* text) {
   assert(cl.option_present(cflag));
   assert(mstream.empty());
 
@@ -635,15 +657,15 @@ open_output_object(const Command_Line& cl, Molecule_Output_Object& mstream, char
 }
 
 static void
-usage(int rc)
-{
-// clang-format off
+usage(int rc) {
+  // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
+  // clang-format off
 
   cerr << "Pfizer fule of five computation\n";
   cerr << "Usage: " << prog_name << " <options> <input_file> <input_file> ...\n";
@@ -659,21 +681,23 @@ usage(int rc)
   cerr << "  -S <name>      specify name for writing all molecules\n";
   cerr << "  -B             input from Biobyte clogp\n";
   cerr << "  -N             include Novartis PSA value in ouput\n";
-  cerr << "  -m             NH2 groups contribute 2 donors (in accord with Lipinski)\n";
+  // cerr << "  -m             NH2 groups contribute 2 donors (in accord with Lipinski)\n";
+  cerr << "  -e             Write extra columns with per property violation flag\n";
+  cerr << "  -f             function as a TDT filter from BioByte clogp\n";
   (void)display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -i <type>      specify input file type\n";
   cerr << "  -o <type>      specify output file type\n";
   cerr << "  -E ...         standard Element options\n";
   cerr << "  -A ...         standard aromaticity options\n";
   cerr << "  -v             verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
 
 int
-rule_of_five(int argc, char** argv)
-{
-  Command_Line cl(argc, argv, "vA:E:i:o:S:g:t:P:p:lW:z:O:BNfm");
+rule_of_five(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vA:E:i:o:S:g:t:P:p:lW:z:O:BNfme");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -750,6 +774,13 @@ rule_of_five(int argc, char** argv)
     }
   }
 
+  if (cl.option_present('e')) {
+    write_per_property_violations = 1;
+    if (verbose) {
+      cerr << "Will write per property violation data\n";
+    }
+  }
+
   FileType input_type = FILE_TYPE_INVALID;
   if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
@@ -788,7 +819,7 @@ rule_of_five(int argc, char** argv)
 
     if (verbose) {
       cerr << "Upper molecular weight cutoff for rule of 5 is "
-           << upper_molecular_weight_cutoff << endl;
+           << upper_molecular_weight_cutoff << '\n';
     }
   }
 
@@ -865,10 +896,18 @@ rule_of_five(int argc, char** argv)
   IWString_and_File_Descriptor output(1);
 
   if (!function_as_filter) {
-    output << "Name ro5_nhoh ro5_no natoms amw clogp violations";
+    output << "Name" << output_separator << "ro5_nhoh" << output_separator << "ro5_no" <<
+              output_separator << "natoms" << output_separator << "amw" << output_separator << "clogp";
+    if (write_per_property_violations) {
+      output << output_separator << "ro5_amw_viol";
+      output << output_separator << "ro5_clogp_viol";
+      output << output_separator << "ro5_acc_viol";
+      output << output_separator << "ro5_don_viol";
+    }
+    output << output_separator << "violations";
 
     if (include_psa) {
-      output << " nvrtspsa";
+      output << output_separator << "nvrtspsa";
     }
     output << '\n';
   }
@@ -910,7 +949,7 @@ rule_of_five(int argc, char** argv)
     if (acceptor_count_accumulator.n()) {
       cerr << ", ave " << acceptor_count_accumulator.average();
     }
-    cerr << endl;
+    cerr << '\n';
 
     for (int i = 0; i < acceptor_count.number_elements(); i++) {
       if (acceptor_count[i]) {
@@ -923,7 +962,7 @@ rule_of_five(int argc, char** argv)
     if (donor_count_accumulator.n()) {
       cerr << ", ave " << donor_count_accumulator.average();
     }
-    cerr << endl;
+    cerr << '\n';
 
     for (int i = 0; i < donor_count.number_elements(); i++) {
       if (donor_count[i]) {
@@ -937,7 +976,7 @@ rule_of_five(int argc, char** argv)
         cerr << " and " << clogp_accumulator.maxval() << " ave "
              << clogp_accumulator.average();
       }
-      cerr << endl;
+      cerr << '\n';
     }
   }
 
@@ -945,8 +984,7 @@ rule_of_five(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = rule_of_five(argc, argv);

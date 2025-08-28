@@ -29,6 +29,8 @@ struct DBKey
   unsigned char  _nu1;
   unsigned char  _nu2;
   unsigned char  _nu3;
+
+  bool operator==(const DBKey& rhs) const;
 };
 
 //extern std::ostream & operator << (const DBKey & k, std::ostream & os);
@@ -53,7 +55,7 @@ class IWdbkeyHash
     size_t operator () (const DBKey &) const;
 };
 
-extern int operator == (const DBKey &, const DBKey &);
+// extern int operator == (const DBKey &, const DBKey &);
 
 extern void form_key(uint64_t b,
           int radius,

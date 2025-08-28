@@ -3,7 +3,11 @@
 
 #include <optional>
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/xlogp.pb.h"
+#else
+#include "xlogp.pb.h"
+#endif
 
 #ifdef DOES_THIS_WORK_WELL_ENOUGH
 I AM NOT SURE WHETHER THIS IS GOOD ENOUGH FOR USE.

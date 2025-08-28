@@ -1,0 +1,10 @@
+name: "deTMS"
+scaffold {
+  id: 0
+  smarts: "[O,n][Si](C)(C)(C)"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+}

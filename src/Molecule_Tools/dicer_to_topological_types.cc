@@ -31,7 +31,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace dicer_to_topological_types {
 
@@ -54,6 +58,7 @@ cerr << R"(Processes DicerFragment textproto's and creates separate files based 
  -z                     ignore smiles interpretation errors
  -T                     write TFDataRecord serialized protos
  -3                     write 3 connected fragments - by defaint only 1 and 2 connected are written
+ -x <natoms>            maximum number of atoms in fragment to write - by default not limited
  -v                     verbose output
 )";
 
@@ -67,6 +72,9 @@ class Options {
     IWString _stem;
 
     IWString _suffix;
+
+    int _max_natoms;
+    uint64_t _too_many_atoms;
 
     // Not sure how these will be used.
     int _write_3_connected_fragments;
@@ -82,10 +90,10 @@ class Options {
     // If writing tfdata records, these are our output streams.
     IW_STL_Hash_Map<IWString, std::unique_ptr<TFDataWriter>> _tfdata_output;
 
-    int _molecules_read = 0;
+    uint64_t _molecules_read = 0;
 
     int _ignore_smiles_interpretation_errors;
-    int _smiles_errors_encountered;
+    uint64_t _smiles_errors_encountered;
 
   // private functions
     int Substituent(const const_IWSubstring& buffer,
@@ -119,6 +127,8 @@ class Options {
 Options::Options() {
   _verbose = 0;
   _molecules_read = 0;
+  _max_natoms = 0;
+  _too_many_atoms = 0;
   _write_3_connected_fragments = 0;
   _write_tfdata_records = 0;
   _ignore_smiles_interpretation_errors = 0;
@@ -145,6 +155,17 @@ Options::Initialise(Command_Line& cl) {
     _ignore_smiles_interpretation_errors = 1;
     if (_verbose) {
       cerr << "Will ignore smiles interpretation errors\n";
+    }
+  }
+
+  if (cl.option_present('x')) {
+    if (! cl.value('x', _max_natoms) || _max_natoms < 1) {
+      cerr << "Options::Initialise:the maximum number of atoms in a fragment (x) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will discard fragments having more than" << _max_natoms << " atoms\n";
     }
   }
 
@@ -176,6 +197,11 @@ Options::Report(std::ostream& output) const {
   }
   output << " files created\n";
 
+  if (_max_natoms > 0) {
+    output << _too_many_atoms << " fragments with more than " << _max_natoms
+           << " atoms discarded\n";
+  }
+
   output << _smiles_errors_encountered << " smiles errors encountered\n";
 
   return 1;
@@ -203,6 +229,11 @@ Options::Process(const const_IWSubstring& buffer,
     cerr << "Invalid smiles " << proto.ShortDebugString() << '\n';
     ++_smiles_errors_encountered;
     return _ignore_smiles_interpretation_errors;
+  }
+
+  if (_max_natoms > 0 && m.natoms() > _max_natoms) {
+    ++_too_many_atoms;
+    return 1;
   }
 
   const int niso = m.number_isotopic_atoms();
@@ -278,6 +309,7 @@ Options::Substituent(const const_IWSubstring& buffer,
                      const dicer_data::DicerFragment& proto,
                      Molecule& m) {
   const int matoms = m.natoms();
+
   IWString fname(_stem);
   fname << "_1_" << matoms << _suffix;
 
@@ -416,7 +448,7 @@ DicerToTopologicalTypes(Options& options,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:S:zT");
+  Command_Line cl(argc, argv, "vE:A:S:zTx:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package qupkake_transfer;
+
+// this is what gets stored in the db.
+
+// Within a given bit there may be multiple computed values.
+message ComputedValue {
+  enum AcidBase {
+    _UNSPECIFIED = 0;  // THis will never be used.
+    ACID = 1;
+    BASE = 2;
+  }
+
+  // The parent molecule used to generate this value.
+  optional string par = 1;
+
+  // The actual pK value.
+  optional float value = 2;
+
+  // Whether this is an acid or a base.
+  optional AcidBase acid_base = 3;
+}
+
+message ParentValue {
+  optional string par = 1;
+  optional float value = 2;
+}
+
+message ComputedValues {
+  optional float minval = 1;
+  optional float maxval = 2;
+  optional float mean = 3;
+  repeated ParentValue values = 4;
+}
+
+message QupKakeData {
+  
+  // The unique smiles of the subset.
+  optional string usmi = 1;
+
+  // Calculated values for both acids and bases.
+  optional ComputedValues acid = 2;
+  optional ComputedValues base = 3;
+};

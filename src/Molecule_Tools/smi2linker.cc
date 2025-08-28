@@ -1,4 +1,6 @@
 // Extract linkers from molecules
+// Or should we just use dicer fragments.
+// This has more control.
 
 #include <iostream>
 #include <limits>
@@ -22,7 +24,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace smi2linker {
 
@@ -139,7 +145,7 @@ class Options {
     // The assigned atom types of the current molecule.
     std::unique_ptr<uint32_t[]> _atype;
 
-    // In order to create the glboal fingerprint we need a mapping
+    // In order to create the global fingerprint we need a mapping
     // from smiles to data about that fragment.
     IW_STL_Hash_Map<IWString, dicer_data::DicerFragment> _fragments;
 
@@ -245,6 +251,7 @@ Options::~Options() {
 
 void
 DisplayDashIQualifiers(std::ostream& output) {
+  // clang-format off
   output << "The -I option controls isotopic labels applied to fragments\n";
   output << " -I join          isotope 1 applied to fragment atoms that join the rest of the molecule\n";
   output << " -I alar          Al (aliphatic) and Ar (arom) atms attached to the fragment\n";
@@ -252,6 +259,7 @@ DisplayDashIQualifiers(std::ostream& output) {
   output << "                  they are assigned an isotope based on the size of the ring\n";
   output << " -I atype         Dummy Ti atoms added with isotope being the atom type\n";
   output << "                  of the attached atom (non fragment) atom type\n";
+  // clang-format on
 
   exit(0);
 }
@@ -477,6 +485,7 @@ Options::Preprocess(Molecule& m) {
   return 1;
 }
 
+// Recursively identify a linker region.
 void
 IdentifyFragment(const Molecule& m,
                  atom_number_t zatom,

@@ -1,0 +1,6 @@
+OC(=O)[C@](c1ccccc1)(CC)C chiral2.R1 + chiral2.R2.1
+O=C([C@@](c1ccccc1)(C)O)O chiral2.R1 + chiral2.R2.2
+OC(=O)[C@@](N)(c1ccccc1)C chiral2.R1 + chiral2.R2.3
+OC(=O)[C@@](c1ccccc1)(CC)C chiral2.R2 + chiral2.R2.1
+O=C([C@](c1ccccc1)(C)O)O chiral2.R2 + chiral2.R2.2
+OC(=O)[C@](N)(c1ccccc1)C chiral2.R2 + chiral2.R2.3

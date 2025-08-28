@@ -1,0 +1,27 @@
+name: "baeyer-villiger"
+scaffold {
+  id: 0
+  smarts: "O=[CD3T1]-[CD4]||O=[CD3T1]C1CCCCC1||O=[CD3T1][CD2]||O=[CD3T1][CD2]||O=[CD3T1]-[CD1]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  break_bond {
+    a1: 1
+    a2: 2
+  }
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  smarts: "O"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 2
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

@@ -2,12 +2,15 @@
 
 require 'digest'
 require 'etc'
+require 'fileutils'
 require 'pathname'
 require 'set'
+require 'socket'
 require 'tmpdir'
+
 require 'google/protobuf'
 
-require_relative 'test_case_pb'
+require_relative 'lillymol_tests_pb'
 
 # Run unit tests in this directory.
 
@@ -18,30 +21,52 @@ unless ENV.key?('LILLYMOL_HOME')
 end
 
 unless ENV.key?('BUILD_DIR')
-  $stderr << "Shell variable \${BUILD_DIR} should be defined, taking default\n"
+  # $stderr << "Shell variable \${BUILD_DIR} should be defined, taking default\n"
   ENV['BUILD_DIR'] = Etc.uname[:sysname]
 end
 
 # I think build_dir would work just as well here.
 unless ENV.key?('OSTYPE')
-  $stderr << "Shell variable \${OSTYPE} should be defined, taking default\n"
-  ENV['OSTYPE'] = 'linux'
+# $stderr << "Shell variable \${OSTYPE} should be defined, taking default\n"
+  ENV['OSTYPE'] = 'Linux'
 end
 
-require "#{ENV['LILLYMOL_HOME']}/contrib/script/ruby/lib/iwcmdline"
+# Some tests only run inside Lilly.
+$inside_lilly = Socket.gethostname.match(/\.lilly.com$/)
+
+require "#{ENV['LILLYMOL_HOME']}/contrib/bin/lib/iwcmdline"
+
+def usage
+  $stderr << "Runs regression tests for LillyMol executables\n"
+  $stderr << "Each executable is in its own directory.\n"
+  $stderr << "In each directory there will be one or more unit tests for that executable\n"
+  $stderr << "For those tests that have been converted to use this script, there will be a file 'tests.json'\n"
+  $stderr << "in the directory for that executable. That file controls what gets run.\n"
+
+  $stderr << " -rx <rx>                 Only run tests that match regular expression <rx>\n"
+  $stderr << " -copy_fail <dir>         Upon failure, copy the test outcomes to <dir> - dir must already exist\n"
+
+  exit(0)
+end
 
 # https://stackoverflow.com/questions/32178998/using-environment-variables-in-a-file-path
 # Expand environment variables in `str`, return expanded form
 def expand_env(str)
   str.gsub(/\$([a-zA-Z_][a-zA-Z0-9_]*)|\${\g<1>}|%\g<1>%/) do 
     ENV.fetch(Regexp.last_match(1), nil) 
+    if ENV.fetch(Regexp.last_match(1), nil) == nil
+      "${" + Regexp.last_match(1) + "}"
+    else
+       ENV.fetch(Regexp.last_match(1), nil)
+    end
+
   end
 end
 
 # Return true if `fname1` and `fname2` have identical contents.
 # If their sizes are the same, compare the md5 sums. Otherwise
 # shell out to diff.
-def files_the_same(fname1, fname2)
+def files_the_same(proto, fname1, fname2)
   unless File.exist?(fname1)
     $stderr << "Missing file #{fname1}\n"
     return false
@@ -51,14 +76,21 @@ def files_the_same(fname1, fname2)
     return false
   end
 
+
   if File.size?(fname1) == File.size?(fname2)
     d1 = Digest::MD5.file(fname1).hexdigest
     d2 = Digest::MD5.file(fname2).hexdigest
     return true if d1 == d2
   end
 
-  rc = system("diff -w #{fname1} #{fname2}")
-  if rc == 0
+  rc = if proto.has_difftool?
+         # $stderr << "Executing #{proto.difftool} #{fname1} #{fname2}\n"
+         system("#{proto.difftool} #{fname2} #{fname1}")
+       else
+         system("diff -w #{fname1} #{fname2}")
+       end
+
+  if rc 
     return true
   else
     system("wc #{fname1}")
@@ -76,21 +108,51 @@ def to_single_line(lines)
 end
 
 class Options
-  attr_accessor :lillymol_home, :build_dir, :tmpdir, :ostype, :verbose
+  attr_accessor :lillymol_home, :build_dir, :tmpdir, :ostype, :verbose, :copy_failures_dir, :only_process_rx, :same_structures
 
-  def Initialize
-    @lillymol_home = ""
-    @build_dir = ""
-    @tmpdir = ""
-    # Does not work, not sure why
-    @ostype = ENV['OSTYPE'] if ENV.key?('OSTYPE')
+  def initialize(cl)
+    @lillymol_home = ENV['LILLYMOL_HOME']
+    @build_dir = ENV['BUILD_DIR']
+
+    @verbose = cl.option_present('v')
+
     # We do all our work in a tmpdir, which gets removed when we are done.
-    # User can specify a directory into which we copy files with diffs
-    @copy_failures_dir = ""
+    # User can specify a directory into which we copy files with diffs.
+    if cl.option_present('copy_fail')
+      @copy_failures_dir = cl.value('copy_fail')
+    else
+      @copy_failures_dir = ""
+    end
+    $stderr << "copy_failures_dir starts at #{@copy_failures_dir}\n" if verbose
+
+    @tmpdir = ""
+
+    @ostype = ENV['OSTYPE'] if ENV.key?('OSTYPE')
+
+    # We can select which tests to run via any number of regex's on the command line.
+    @only_process_rx = []
+
+    if cl.option_present('rx')
+      set_only_process_regex(cl.values('rx'))
+    end
+
+    # Tests using same_structures can use this as a short-cut for getting the path.
+    @same_structures = File.join(@lillymol_home, 'bin', @build_dir, 'same_structures')
   end
 
-  def set_copy_failures_dir(s)
-    @copy_failures_dir = s;
+  def set_only_process_regex(rx)
+    rx.each do |pattern|
+      @only_process_rx << Regexp.new(pattern)
+    end
+  end
+
+  def perform_test?(test_name)
+    return true if @only_process_rx.empty?
+
+    @only_process_rx.each do |rx|
+      return true if rx.match(test_name)
+    end
+    return false
   end
 end
 
@@ -100,15 +162,20 @@ def get_test_proto(options, dirname, test_json)
     $stderr << "No config #{config}\n"
     return nil
   end
-  contents = IO.read(config)
+  contents = File.read(config)
   $stderr << "Contents #{contents}\n" if options.verbose
-  proto = LillyMolTest::TestCase.decode_json(contents)
+  proto = LillymolTests::TestCase.decode_json(contents)
   $stderr << "proto #{proto}\n" if options.verbose
   return proto
 end
 
 def get_directory_contents(dirname)
   result = Set.new
+  unless File.directory?(dirname)
+    $stderr << "#{dirname} not found\n"
+    return result
+  end
+
   Dir.open(dirname).each do |fname|
     next if fname[0] == '.'
     result.add(File.join(dirname, fname))
@@ -161,7 +228,13 @@ def get_out_directory_contents(dirname)
 end
 
 def make_my_tmpdir(tmpdir, dir)
+  # $stderr << "make_my_tmpdir #{tmpdir} dir '#{dir}'\n"
   path = File.join(tmpdir, dir)
+  if File.directory?(path)
+    $stderr << "Temp directory #{path} already exists, is there a duplicate test name?\n"
+    return path
+  end
+
   unless Dir.mkdir(path) == 0
     $stderr << "Cound not create temporary directory #{path}\n"
     return tmpdir
@@ -191,9 +264,12 @@ def path_for_file(dirname, in_out, fname)
   return fname
 end
 
-# We have formed a command to execute. If we must capture stdout or stderr
-# add redirections to `cmd` and return the new variant.
+# We have formed a command to execute. 
+# append stdout and stderr captures and return the new variant
 def maybe_append_stdout_stderr(options, cmd, output_file)
+
+  return "#{cmd} > stdout 2> stderr"
+  # remove the code below...
 
   cmd = "#{cmd} > stdout" if output_file.include?('stdout')
 
@@ -206,6 +282,29 @@ def maybe_append_stdout_stderr(options, cmd, output_file)
   return "#{cmd} 2> .stderr"
 end
 
+# Getting output files is complicated by the fact that some tests
+# may have separate directories based on UNAME.
+# If there are files to be ignored in `proto` enforce that.
+def get_output_files(options, proto, dirname)
+  outdir = File.join(dirname, 'out')
+
+  platform_specific = File.join(outdir, options.ostype)
+
+  dc = if File.directory?(platform_specific)
+         get_directory_contents(platform_specific)
+       else
+         get_directory_contents(outdir)
+       end
+
+  return dc if proto.ignore_file.empty?
+
+  return dc.select {|fname| ! proto.ignore_file.include?(File.basename(fname))}
+end
+
+def discard_ignored_files(proto, files)
+  return files if proto.ignore_file.empty?
+end
+
 # We have read an array of strings that are either input or output files
 # from the proto. Return an array with every member replaced by shell
 # expansion, or presence in either `in` or `out` directories.
@@ -213,36 +312,25 @@ def maybe_expanded(lines, dirname, in_out)
   lines.map{ |line| path_for_file(dirname, in_out, expand_env(line)) }
 end
 
-# We are testing if output file `fname` is correct. We need to retrieve
-# the full path name of it. If `test_dir/out/fname` exists, that is
-# the result. Otherwise look OS specific places.
-def get_correct_file(options, test_dir, fname)
-  result = File.join(test_dir, 'out', fname)
-  return result if File.exist?(result)
+def run_case_proto(options, proto, test_dir, test_name, parent_tmpdir)
+  return true if proto.broken_do_not_evaluate
 
-  return result unless options.ostype
+  proto.name = test_name unless proto.has_name?
 
-  result = File.join(test_dir, 'out', options.ostype, fname)
-  return result if File.exist?(result)
+  mytmp = make_my_tmpdir(parent_tmpdir, proto.name)
 
-  $stderr << "Missing output file #{test_dir} #{fname}\n"
-  return File.join(test_dir, 'out', fname)
-end
-
-def run_case(options, dirname, test_name, parent_tmpdir)
-  $stderr << "Dirname #{dirname} #{test_name}\n" if options.verbose
-  proto = get_test_proto(options, File.join(dirname, test_name), 'test.json')
-  return false unless proto
-
-  test_dir = File.join(dirname, test_name)
-
-  mytmp = make_my_tmpdir(parent_tmpdir, test_name)
-
-  input_file = maybe_expanded(proto.input_file, test_dir, 'in')
   # output files are not expanded.
-  output_file = proto.output_file
-  opts = to_single_line(proto.options)
-  # $stderr << "input #{input_file} output #{output_file}\n"
+  # $stderr << "run_case_proto test dir #{test_dir} name #{proto.name}\n"
+  output_file = get_output_files(options, proto, File.join(test_dir, proto.name))
+  if output_file.empty?
+    $stderr << "Nothing to test in #{test_dir} #{proto.name}\n"
+    system("/bin/ls -l #{File.join(test_dir, proto.name)}")
+    return false
+  end
+  # $stderr << "Outfiles #{output_file}\n"
+
+  args = to_single_line(proto.args)
+  # $stderr << "Args are #{args}\n"
 
   exe = File.join(options.lillymol_home, 'bin', options.build_dir, proto.executable)
   unless File.executable?(exe)
@@ -250,39 +338,174 @@ def run_case(options, dirname, test_name, parent_tmpdir)
     return false
   end
 
-  opts = eval("\"" + opts + "\"")
-  cmd = "cd #{mytmp} && #{exe} #{opts}"
-
-  cmd = maybe_append_stdout_stderr(options, cmd, output_file)
-
-  cmd = expand_env(cmd)
-  $stderr << "Execting #{cmd}\n" if options.verbose
-
-  unless system(cmd)
-    $stderr << "Warning: #{cmd} failed\n"
+  indir = File.join(test_dir, test_name, 'in')
+  if File.directory?(File.join(test_dir, 'data'))
+    datadir = File.join(test_dir, 'data')
+  else
+    datadir = ""
   end
 
-  rc = true
+  args = eval("\"" + args + "\"")
+
+  if (proto.preamble.size > 0)
+    cmd = proto.preamble.join("\n") << "\n"
+  else
+    cmd = ""
+  end
+
+  cmd = "cd #{mytmp} && #{exe} "
+  if proto.default_command_components.size > 0
+    cmd << eval("\"" + proto.default_command_components.join(' ') + "\"")
+  end
+
+  cmd << " #{args} > stdout 2> stderr"
+
+  cmd = expand_env(cmd)
+
+  if proto.preamble.size > 0
+    cmd = proto.preamble.join("\n") << "\n" << cmd
+  end
+
+  $stderr << "Executing #{cmd}\n" if options.verbose
+
+  successful_execution = true
+  if system(cmd)
+  elsif proto.non_zero_rc_expected
+  else
+    successful_execution = false
+    $stderr << "Warning: #{cmd} failed rc #{$?}\n"
+  end
+
+  all_files_same = true
 
   system("/bin/ls -l #{mytmp}") if options.verbose
 
-  # Check that the files match.
-  output_file.each do |fname|
-    correct = get_correct_file(options, test_dir, fname)
-    in_tmp = File.join(mytmp, File.basename(fname))
-    $stderr << "Checking diffs #{correct} #{in_tmp}\n" if options.verbose
-    next if files_the_same(correct, in_tmp)
-    $stderr << "Diffs btw #{fname}\n      and #{in_tmp}\n"
-    rc = false
+  if proto.has_difftool? && proto.difftool == 'same_structures'
+    proto.difftool = options.same_structures
   end
 
-  rc
+  # Check that the files match.
+  output_file.each do |correct|
+    in_tmp = File.join(mytmp, File.basename(correct))
+    $stderr << "Checking diffs #{correct} #{in_tmp}\n" if options.verbose
+    next if files_the_same(proto, correct, in_tmp)
+    $stderr << "Diffs btw #{correct}\n      and #{in_tmp}\n"
+    system("ls -l #{correct} #{in_tmp}")
+    all_files_same = false
+  end
+
+  return true if successful_execution && all_files_same
+
+  # Failed test, do we need to copy the temporary directory
+
+  $stderr << "Got failed test where #{options.copy_failures_dir}\n"
+  return false unless options.copy_failures_dir.length > 0
+
+  # Copy the contents of the result directory to the saved location.
+  destination = File.join(options.copy_failures_dir, proto.executable, proto.name)
+  # $stderr << "Making #{destination}\n"
+  FileUtils.mkdir_p(destination)
+
+  get_directory_contents(mytmp).each do |fname|
+    f = File.basename(fname)
+    # $stderr << "Copying #{fname} to #{destination}/#{f}\n"
+    FileUtils.copy_file(fname, File.join(destination, f))
+  end
+
+  File.write(File.join(destination, 'cmd'), "#{cmd}\n")
+
+  return false
+end
+
+def run_case(options, dirname, test_name, parent_tmpdir)
+  proto = get_test_proto(options, File.join(dirname, test_name), 'test.json')
+
+  if proto
+    proto.executable = File.basename(dirname)
+    return run_case_proto(options, proto, dirname, test_name, parent_tmpdir)
+  end
+
+  run_case = File.join(dirname, test_name, 'run_case.sh')
+  return false unless File.executable?(run_case)
+
+  test_dir = File.join(dirname, test_name)
+  return system("cd #{test_dir} && ./run_case.sh")
+end
+
+def run_tests_in_dir(options, dirname, parent_tmpdir)
+  json_fname = File.join(dirname, 'tests.json')
+  contents = File.read(json_fname)
+  $stderr << "Contents #{contents}\n" if options.verbose
+  proto = LillymolTests::TestCases.decode_json(contents)
+  if proto.test.empty?
+    $stderr << "No tests in #{proto}\n"
+    return 0, 0
+  end
+
+  return 0, 0 if proto.only_inside_lilly && ! $inside_lilly
+
+  return 0, 0 if proto.broken_do_not_evaluate
+
+  passed = 0
+  failed = 0
+  proto.test.each do |test_case|
+    test_case.executable = proto.executable
+    test_case.default_command_components.concat(proto.default_command_components.to_a)
+    unless test_case.has_name?
+      $stderr << "Skipping test with no name\n"
+      $stderr << test_case << "\n"
+      next
+    end
+    test_dir = File.join(dirname, test_case.name)
+    unless File.directory?(test_dir)
+      $stderr << "NO directory for test #{test_case.name} in #{test_dir}\n"
+      failed += 1
+      next
+    end
+    next unless options.perform_test?(test_case.name)
+
+    # Inherit difftool from parent - I think this is a good idea...
+    if (proto.has_difftool? && ! test_case.has_difftool?)
+      test_case.difftool = proto.difftool
+      if proto.has_difftool_options?
+        test_case.difftool = "#{test_case.difftool} #{proto.difftool_options}"
+      end
+    end
+    # $stderr << test_case << "\n"
+
+    if run_case_proto(options, test_case, dirname, test_case.name, parent_tmpdir)
+      passed += 1
+    else
+      failed += 1
+    end
+  end
+
+  passfail = if failed == 0
+               'PASS'
+             else
+               'FAIL'
+             end
+  $stdout << File.basename(dirname) << " #{passed} passed #{failed} failed #{passfail}\n"
+
+  return passed, failed
+end
+
+# Return a list of the sub-directories in `dir`
+def dirs_in_dir(dir) 
+  result = []
+  Dir.open(dir).each do |fname|
+    next if fname[0] == '.'
+    next unless File.directory?(File.join(dir, fname))
+    result << fname
+  end
+
+  return result
 end
 
 # `dir` will be the full path name of the directory containing one or
 # more tests, which will be in directories like 'case_*'
 # basename(dir) will be the name of the tool being tested.
-# return the number of failed tests.
+# return the number of passed and failed tests.
 def run_tests(options, dir)
   $stderr << "Begin processing #{dir}'\n" if options.verbose
   tool = File.basename(dir)
@@ -291,37 +514,82 @@ def run_tests(options, dir)
   tmpdir = File.join(options.tmpdir, tool)
   Dir.mkdir(tmpdir)
 
-  failures = 0
-  Dir.open(dir).each do |fname|
-    next if fname[0] == '.'
-    next unless fname =~ /^case_/
+  # If there is a tests.json in the directory, that is how this directory is structured.
+  return run_tests_in_dir(options, dir, tmpdir) if File.size?(File.join(dir, 'tests.json'))
 
-    if run_case(options, dir, fname, tmpdir)
-      $stderr << "#{tool} #{fname} TEST #{fname} PASS\n";
+  # Test config files in each directory.
+
+  failures = 0
+  test_passes = 0
+  dirs_in_dir(dir).each do |subdir|
+    if run_case(options, dir, subdir, tmpdir)
+      $stderr << "#{tool} #{subdir} TEST #{subdir} PASS\n";
+      test_passes += 1
     else
-      $stderr << "#{tool} #{fname} TEST #{fname} FAIL\n";
+      $stderr << "#{tool} #{subdir} TEST #{subdir} FAIL\n";
       failures += 1
     end
   end
 
-  return failures
+  return test_passes, failures
+end
+
+# A path name `pathname` has come out of a directory scan.
+# There may be zero or more file names in `argv.
+# If empty, return true, all tests are to be done
+# Check to see if the file name component of `pathname` is in `argv`
+def selected_for_processing(pathname, argv)
+  return true if argv.empty?
+  fname = File.basename(pathname)
+
+  return argv.include?(fname)
+end
+
+# Return a sorted list of the subsirectories in `dirname`.
+def get_sorted_subdirectories(dirname)
+  result = []
+
+  unless File.directory?(dirname)
+    $stderr << "#{dirname} not found\n"
+    return []
+  end
+
+  Dir.open(dirname).each do |fname|
+    next if fname[0] == '.'
+    pathname = File.join(dirname, fname)
+    next unless File.directory?(pathname)
+    result << pathname
+  end
+
+  return result.sort
 end
 
 def main
-  cl = IWCmdline.new('-v-copy_fail=dir')
+  cl = IWCmdline.new('-v-copy_fail=dir-rx=s-help')
 
-  options = Options.new
-  options.lillymol_home = ENV['LILLYMOL_HOME']
-  options.build_dir = ENV['BUILD_DIR']
-  options.verbose = cl.option_present('v')
-  if cl.option_present('copy_fail')
-    options.set_copy_failures_dir(cl.value('copy_fail'))
+  if cl.option_present('help')
+    usage
   end
-  # Kludge, not sure why things do not work in the Options constructor.
-  options.ostype = 'linux' unless options.ostype
+
+  if cl.unrecognised_options_encountered
+    $stderr << "unrecognised_options_encountered\n"
+    usage
+  end
+
+  options = Options.new(cl)
+
+  # Strip trailing directory separators
+  ARGV.map! { |fname| 
+    if fname.end_with?('/')
+      fname.chomp('/')
+    else
+      fname
+    end
+  }
 
   ntests = 0
-  tools_failing = 0
+  passing_count = 0
+  tools_failing = {}
   failure_count = 0
 
   pn = Pathname.new(File.expand_path(__FILE__))
@@ -329,20 +597,31 @@ def main
   Dir.mktmpdir { |dir| 
     options.tmpdir = dir
     $stderr << "Temp files in #{dir}\n" if options.verbose
-    pn.parent.children.each do |fname|
-      next unless File.directory?(fname)
+    get_sorted_subdirectories(pn.parent).each do |fname|
+      next unless selected_for_processing(fname, ARGV)
+      next if File.basename(fname) == options.copy_failures_dir
       ntests += 1
-      failed = run_tests(options, fname)
-      if failed > 0
-        failure_count += failed
-        tools_failing += 1
+      p, f = run_tests(options, fname)
+      # $stderr << "p #{p} f #{f}\n"
+      passing_count += p
+      failure_count += f
+      if f > 0
+        tools_failing[fname] = 1
       end
     end
   }
 
-  if options.verbose || tools_failing > 0
-    $stderr << "Across #{ntests} tools #{tools_failing} failed, total #{failure_count} individual test failures\n"
+# if options.verbose || tools_failing > 0
+  total_tests = passing_count + failure_count
+  $stderr << "Tested #{ntests} tools with #{total_tests} total tests\n"
+  $stderr << tools_failing.size << " tools had failing tests\n"
+  if tools_failing.size > 0
+    tools_failing.each do |k|
+      $stderr << " #{k}\n"
+    end
   end
+  $stdout << "#{passing_count} tests passed, #{failure_count} tests failed\n"
+# end
 end
 
 main

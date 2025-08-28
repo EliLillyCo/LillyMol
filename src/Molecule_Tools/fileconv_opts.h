@@ -53,8 +53,6 @@ struct FileconvConfig {
 
   int verbose = 0;
 
-  int debug_print_each_molecule = 0;
-
   // Geometric values can be printed.
   int print_bond_lengths = 0;
   int print_bond_angles = 0;
@@ -319,17 +317,18 @@ struct FileconvConfig {
 
   int find_all_chiral_centres = 0;
   int find_all_ring_chiral_centres = 0;
+  extending_resizable_array<uint32_t> unmarked_chiral_centre_count;
   int invert_all_chiral_centres = 0;
   int reflect_coordinates = 0;
   int chiral_centres_inverted = 0;
   int remove_invalid_chiral_centres = 0;
-  int molecules_with_invalid_chiral_centres = 0;
-  int molecules_with_chiral_centres = 0;
+  uint64_t molecules_with_invalid_chiral_centres = 0;
+  uint64_t molecules_with_chiral_centres = 0;
   int remove_chiral_data_from_all_molecules = 0;
   int remove_non_organic_chirality = 0;
-  int max_chiral_centres = 0;
-  int molecules_with_too_many_chiral_centres = 0;
-  extending_resizable_array<int> chiral_centre_count;
+  int max_chiral_centres = -1;
+  uint64_t molecules_with_too_many_chiral_centres = 0;
+  extending_resizable_array<uint32_t> chiral_centre_count;
 
   resizable_array_p<Substructure_Query> remove_chiral_centres_on;
 
@@ -381,6 +380,8 @@ struct FileconvConfig {
 
   int append_isis_molecular_formula_to_name = 0;
 
+  int append_aromatic_distinguishing_molecular_formula_to_name = 0;
+
   int append_nrings_to_name = 0;
 
   int append_aromatic_ring_count_to_name = 0;
@@ -392,6 +393,12 @@ struct FileconvConfig {
   int append_net_formal_charge_to_name = 0;
 
   int append_clnd_count_to_name = 0;
+
+  // When we append a computed property to the name, by default we add
+  // a prefix that says what that feature is.
+  // That can be suppressed by turning this off, so just the computed
+  // value will be appended - with no explanation.
+  int prepend_feature_name = 1;
 
   molecular_weight_t lower_amw_cutoff = -1.0;
   int molecules_below_amw_cutoff = 0;
@@ -457,6 +464,7 @@ struct FileconvConfig {
 
   // Functions that compute values, print things, change or filter the molecule.
   void DoAppends(Molecule& m, IWString& extra_stuff);
+  void MaybeAppendFeatureName(const char* feature_name, IWString& extra_stuff) const;
   int PrintTorsion(const Molecule& m, const Bond& b, std::ostream& output);
   int PrintBondAngle(const Molecule& m,
                      const atom_number_t a1,

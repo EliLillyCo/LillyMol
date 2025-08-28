@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package ipld;
+
+message Options {
+  // Query specificatios applied to molecules that come in with no formal charges.
+  // These are in the syntax of tsubstructure -q, so
+  // "SMARTS:Nc"
+  // "PROTO:/path/to/query.qry"
+  repeated string applied_to_neutral = 1;
+
+  // We can mark certain atoms as being definitely part of a chain.
+  // This might be most useful for dealing with things like cholesterol
+  // as a chain.
+  // Substructure specification.
+  repeated string is_chain = 2;
+
+  // Substructure specifications of groups that divide sidechains and sidechains
+  // from head groups.
+  // Directionality does not matter. These atoms get marked as being anchor/dividing
+  // points for regions of the molecule.
+  // For example 'SMARTS:O=C-O' O=C-N 
+  // Not sure what to do with O-C(=O)-O
+  // Some may have a cholesterol-like molecule present.
+  repeated string chain_dividers = 3;
+
+  // Queries that define a branch in a sidechain.
+  repeated string branch_query = 4;
+
+  // We can impose a minimum length on a chain. Number of atoms in the chain.
+  optional uint32 min_chain_length = 5;
+
+  // When we look for all carbon chains, we start at terminal atoms.
+  // If the contiguous region we find has this many carbon atoms, we
+  // accept it.
+  optional uint32 min_atoms_in_all_carbon_chain = 6;
+
+  // We frequently observe chain dividers that are near each other, typically two or
+  // three carbon atoms between two chain divider groups : O=C-O-CC-O-C=O
+  // These queries define the atoms. The tool will look at the matched atoms and
+  // those that are unclassified will be the atoms marked.
+  repeated string between_linker_query = 7;
+
+  // We want to identify carbon chains that join at a carbon atom. The
+  // anticipated query might be [CD3](-{a>4;h0}[CD2H2])-{a>4;h0}[CD2H2]
+  // which describes a 3 connected carbon atom that has two longish
+  // carbon chains with no heteratoms.
+  repeated string carbon_chain_join = 8;
+
+  // We have molecules where there is just 1 tail. But that tail frgment
+  // includes an atom that could have been part of the head. The join
+  // is typicaly at a Nitrogen atom. This might be a tertiary amide or
+  // an N+ atom.
+  // Add those smarts to allow breaking.
+  // NOte that the smarts can assume isotope 1 on the atom that
+  // used to go to the head.
+  repeated string break_tail_at_attachment = 9;
+
+  // Decision about how to delineate the head group. One way, which will
+  // result in small head groups, is to declare that the head group ends
+  // at the Nitrogen atom that divides the molecule into two large parts.
+  // Suggest something like "SMARTS:[ND3](-{a>10}[R0])-{a>10}[R0]
+  repeated string break_head_at = 10;
+
+  // If the head is split, we can optionally label any carbon chain sequences
+  // that are joined to the split atom.
+  optional bool label_chains_from_head = 11;
+
+  // One way of classifying the molecles is to identify the head, identify the
+  // tails and declare that the rest are linkers.
+  optional bool head_linker_tail = 12;
+}

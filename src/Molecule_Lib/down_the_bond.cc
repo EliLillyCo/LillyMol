@@ -8,6 +8,7 @@
 #include "Foundational/iwmisc/misc.h"
 
 #include "misc2.h"
+#include "path.h"
 #include "substructure.h"
 #include "target.h"
 
@@ -53,10 +54,11 @@ class DTB_Token {
       kNatoms = 1,
       kheteroatoms = 2,
       kRingAtoms = 3,
-      kUnsaturation = 4,
-      kAromatic = 5,
-      kMaxDistance = 6,
-      kSmarts = 7
+      kRings = 4,
+      kUnsaturation = 5,
+      kAromatic = 6,
+      kMaxDistance = 7,
+      kSmarts = 8
     };
     enum class Operator {
       kUndefined = 0,
@@ -138,7 +140,9 @@ GetNumber(const const_IWSubstring& buffer, int& ndx, uint32_t& value) {
 
 int
 DTB_Token::Build(const const_IWSubstring& buffer, int& ndx) {
+  // cerr << "DTB_Token::Build buffer '" << buffer << "' ndx " << ndx << '\n';
   if (ndx >= buffer.length()) {
+    cerr << "DTB_Token::Build:no numeric qualifier after token '" << buffer << "'\n";
     return 0;
   }
 
@@ -337,6 +341,9 @@ ParseToDTB(const const_IWSubstring& buffer,
       case 'r':
         token = std::make_unique<DTB_Token>(DTB_Token::Token::kRingAtoms);
         break;
+      case 'R':
+        token = std::make_unique<DTB_Token>(DTB_Token::Token::kRings);
+        break;
       case 'u':
         token = std::make_unique<DTB_Token>(DTB_Token::Token::kUnsaturation);
         break;
@@ -353,7 +360,8 @@ ParseToDTB(const const_IWSubstring& buffer,
           cerr << "ParseToDTB:no closing brace '" << buffer << "'\n";
           return 0;
         }
-        token->set_smarts(buffer, i, i + chars_consumed);
+        //cerr << "Buffer is '" << buffer << "' i " << i << " chars_consumed " << chars_consumed << '\n';
+        token->set_smarts(buffer, i, chars_consumed);
         break;
       default:
         cerr << "ParseDTB:unrecognised property '" << buffer[i] << "'\n";
@@ -424,11 +432,13 @@ DownTheBond::Build(const const_IWSubstring& buffer) {
 #endif
 
   // We cannot multiply specify a condition.
+  // I thought about enabling it, but the underlying matcher does not play well.
   resizable_array<int> seen;
   seen.reserve(tokens.size());
 
   for (const DTB_Token* dtb : tokens) {
     if (dtb->type() == DTB_Token::Token::kUndefined) {
+      cerr << "Unrecognised DTB token '" << dtb->smarts() << "'\n";
       return 0;
     }
     // OK to have multiple smarts
@@ -437,6 +447,7 @@ DownTheBond::Build(const const_IWSubstring& buffer) {
     }
     if (! seen.add_if_not_already_present(static_cast<int>(dtb->type()))) {
       cerr << "DownTheBond::Build:duplicate specification\n";
+      cerr << "You can specify a range 'x{3-6}'\n";
       return 0;
     }
   }
@@ -450,6 +461,9 @@ DownTheBond::Build(const const_IWSubstring& buffer) {
         break;
       case DTB_Token::Token::kRingAtoms:
         dtb->set_matcher(_ring_atom_count);
+        break;
+      case DTB_Token::Token::kRings:
+        dtb->set_matcher(_rings);
         break;
       case DTB_Token::Token::kheteroatoms:
         dtb->set_matcher(_heteroatom_count);
@@ -576,6 +590,11 @@ DownTheBond::MatchesIndividualSubstituent(Molecule& m,
     } else {
       matched_here = 1;
     }
+    if (_rings.is_set() && ! OkRingCount(m, visited)) {
+      continue;
+    } else {
+      matched_here = 1;
+    }
     if (_unsaturation_count.is_set() && ! OkUnsaturationCount(m, visited)) {
       continue;
     } else {
@@ -586,7 +605,7 @@ DownTheBond::MatchesIndividualSubstituent(Molecule& m,
     } else {
       matched_here = 1;
     }
-    if (_max_distance.is_set() && ! OkMaxDistance(m, a2, visited)) {
+    if (_max_distance.is_set() && ! OkMaxDistance(m, a1, visited)) {
       continue;
     } else {
       matched_here = 1;
@@ -670,14 +689,14 @@ DownTheBond::OkAromaticCount(Molecule& m, const int* visited) const {
 }
 
 int
-DownTheBond::OkMaxDistance(Molecule& m, atom_number_t a2, const int* visited) const {
+DownTheBond::OkMaxDistance(Molecule& m, atom_number_t a1, const int* visited) const {
   const int matoms = m.natoms();
-  int maxdist = 0;
+  int maxdist = 1;  // because the bond to a2 counts as part of down the bond
   for (int i = 0; i < matoms; ++i) {
     if (! visited[i]) {
       continue;
     }
-    const int d = m.bonds_between(a2, i);
+    const int d = m.bonds_between(a1, i);
     if (d > maxdist) {
       maxdist = d;
     }
@@ -702,6 +721,18 @@ DownTheBond::OkRingAtomCount(Molecule& m, const int* visited) const {
   }
 
   return _ring_atom_count.matches(rc);
+}
+
+int
+DownTheBond::OkRingCount(Molecule& m, const int* visited) const {
+  int nr = 0;
+  for (const Ring* r : m.sssr_rings()) {
+    if (r->any_members_set_in_array(visited)) {
+      ++nr;
+    }
+  }
+
+  return _rings.matches(nr);
 }
 
 // #define DEBUG_DOWN_THE_BOND_MATCHES
@@ -824,6 +855,31 @@ DownTheBond::Matches(Molecule_to_Match& target,
     return ! _match_as_match;
   }
 
+  if (_max_distance.is_set()) {
+    const int matoms = m.natoms();
+    int max_dist = 1;  // because a2 counts as what is down the bond.
+    for (int i = 0; i < matoms; ++i) {
+      if (! visited[i]) {
+        continue;
+      }
+      if (i == a1 || i == a2) {
+        continue;
+      }
+      const int d = m.bonds_between(a1, i);
+      if (d > max_dist) {
+        max_dist = d;
+      }
+    }
+
+#ifdef DEBUG_DOWN_THE_BOND_MATCHES
+    cerr << "max dist from " << a1 << " is " << max_dist << " match? " << _max_distance.matches(max_dist) << '\n';
+#endif
+
+    if (! _max_distance.matches(max_dist)) {
+      return ! _match_as_match;
+    }
+  }
+
 #ifdef DEBUG_DOWN_THE_BOND_MATCHES
   cerr << "Have " << _query.size() << " query constraints\n";
 #endif
@@ -913,6 +969,13 @@ DownTheBond::NoAtomsDownTheBond(Molecule& m, atom_number_t a1, atom_number_t a2)
     return ! _match_as_match;
   }
 
+  if (! _rings.is_set()) {
+  } else if (_rings.matches(0)) {
+    ++positive_match_found;
+  } else {
+    return ! _match_as_match;
+  }
+
   if (! _unsaturation_count.is_set()) {
   } else {
     int u = 0;
@@ -938,7 +1001,7 @@ DownTheBond::NoAtomsDownTheBond(Molecule& m, atom_number_t a1, atom_number_t a2)
   }
 
   if (! _max_distance.is_set()) {
-  } else if (_max_distance.matches(0)) {
+  } else if (_max_distance.matches(1)) {
     ++positive_match_found;
   } else {
     return ! _match_as_match;

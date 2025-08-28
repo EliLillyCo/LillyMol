@@ -25,7 +25,7 @@ TEST_P(TestDTB, Test1) {
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
   ASSERT_TRUE(_query.create_from_smarts(params.smarts));
   //std::cerr << "TestingH '" << params.smiles << "' smarts '" << params.smarts << " xpt " << params.nhits << '\n';
-  EXPECT_EQ(_query.substructure_search(&_m), params.nhits);
+  EXPECT_EQ(_query.substructure_search(&_m), params.nhits) << params.smiles << ' ' << params.smarts;
 }
 INSTANTIATE_TEST_SUITE_P(TestDTB, TestDTB, testing::Values(
   SmilesSmartsNhits{"OC", "OC", 1},
@@ -40,11 +40,15 @@ INSTANTIATE_TEST_SUITE_P(TestDTB, TestDTB, testing::Values(
   SmilesSmartsNhits{"OCC(C)CC", "O-{a{2-7}}C", 1},
   SmilesSmartsNhits{"O1CCCC1", "O-{a{1-3}}CC", 0},  // contains ring
   SmilesSmartsNhits{"S1N=C(CC(N)C(=O)O)C(=O)N1 CHEMBL1094324",
-                "[OHD1]-[CD3R0](=O)-[CD3R0](-{[CD2]1;[$(O=c1nsnc1)]1;d3;m5;r5;u1;a7}*)-[ND1H2]", 1},
+                "[OHD1]-[CD3R0](=O)-[CD3R0](-{[CD2]1;[$(O=c1nsnc1)]1;d4;m5;r5;u1;a7}*)-[ND1H2]", 1},
   SmilesSmartsNhits{"c1ccccc1O", "c1ccccc1-{a1}O", 2},
   SmilesSmartsNhits{"CN", "C-{h1}*", 1},
   SmilesSmartsNhits{"CN", "C-{a1}*", 1},
-  SmilesSmartsNhits{"CN", "C-{a1;h1;r0;m0;u0;d0}*", 1}
+  SmilesSmartsNhits{"CN", "C-{a1;h1;r0;m0;u0;d1}*", 1},
+  SmilesSmartsNhits{"c1ccccc1C", "c-{d1}C", 1},
+  SmilesSmartsNhits{"c1ccccc1CC", "c-{d1}C", 0},
+  SmilesSmartsNhits{"c1ccccc1C(C)(C)C", "c-{d2}C", 1},
+  SmilesSmartsNhits{"c1ccccc1C(C)(C)C", "c-{d2}CC", 3}
 ));
 
 const std::string zero_atoms = R"pb(

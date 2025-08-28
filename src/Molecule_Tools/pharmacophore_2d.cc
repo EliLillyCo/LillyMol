@@ -23,10 +23,18 @@
 #include "Molecule_Lib/rotbond_common.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "Molecule_Lib.pb.h"
+#endif
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/pharmacophore_2d.pb.h"
+#else
+#include "pharmacophore_2d.pb.h"
+#endif
 
 namespace pharmacophore_2d {
 

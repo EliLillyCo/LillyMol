@@ -20,7 +20,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/ligand_protein_interactions.pb.h"
+#else
+#include "ligand_protein_interactions.pb.h"
+#endif
 
 namespace ligand_protein {
 

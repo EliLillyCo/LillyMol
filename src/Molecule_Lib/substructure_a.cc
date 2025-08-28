@@ -2207,12 +2207,14 @@ Substructure_Atom::query_atom_with_atom_map_number(atom_number_t a)
   return nullptr;
 }
 
+// Apr 2025: Not sure why the test for _parent->unique_id, but
+// things fail if we take it out.
 int
 Substructure_Atom::is_bonded_to(atom_number_t o) const
 {
   if (nullptr == _parent)
     ;
-  else if (0 == _parent->unique_id())
+  else if (0 == _parent->unique_id())  // why?
     return 1;
 
   for (const Substructure_Bond* b : _bonds)

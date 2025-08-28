@@ -4,16 +4,10 @@ import os
 import re
 
 import pandas as pd
-
-from absl import app
-from absl import flags
-from absl import logging
-from google.protobuf import text_format
-
-from xgboost import XGBClassifier
-from xgboost import XGBRegressor
-
 import xgboost_model_pb2
+from absl import app, flags, logging
+from google.protobuf import text_format
+from xgboost import XGBClassifier, XGBRegressor
 
 FLAGS = flags.FLAGS
 

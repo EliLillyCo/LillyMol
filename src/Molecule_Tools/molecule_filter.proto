@@ -1,6 +1,9 @@
 syntax = "proto3";
 
-package MoleculeFilterData;
+package molecule_filter_data;
+
+// LillyMol:UserDocumentation
+// Proto for molecule_filter: molecule_filter -F config.textproto file.smi > passed.smi
 
 message Requirements {
   optional int32 min_natoms = 1;

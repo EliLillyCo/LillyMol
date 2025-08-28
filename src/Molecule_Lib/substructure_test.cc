@@ -2479,7 +2479,6 @@ TEST_F(TestSubstructure, TestImplicitRingConditionChainNotMet)
   EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
 }
 
-#ifdef UNSURE_ABOUT_THIS_TEST_NEEDS_INVESTIGATION
 TEST_F(TestSubstructure, TestImplicitRingConditionRingMet)
 {
   _string_proto = R"(query {
@@ -2496,11 +2495,38 @@ TEST_F(TestSubstructure, TestImplicitRingConditionRingMet)
 
   _smiles = "CC1CC1";
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 6);
+
   _query.set_do_not_perceive_symmetry_equivalent_matches(1);
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+
+  // This test is caught up in the whole difficulties with symmetry equivalent
+  // substructure embeddings. Do not rely on these behaviours, it should be
+  // fixed sometime.
+
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 3);
 }
-#endif
+
+TEST_F(TestSubstructure, TestSymmetry1) {
+  _string_proto = R"pb(query {
+  smarts: "[CD2]-N-[CD2]"
+  perceive_symmetric_equivalents: false
+}
+)pb";
+
+  SubstructureSearch::SubstructureQuery proto;
+
+  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(_string_proto, &proto));
+
+  ASSERT_TRUE(_query.ConstructFromProto(proto)) << "Cannot parse proto " << proto.ShortDebugString();
+
+  _smiles = "C1NCCN1";
+
+  ASSERT_TRUE(_m.build_from_smiles(_smiles));
+
+  // THis test also may change once we get symmetry in substructure embeddings sorted.
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_sresults.number_embeddings(), 2);
+}
 
 TEST_F(TestSubstructure, TestTwoPiElectronsAromatic) {
   _string_proto = R"(query {
@@ -2591,6 +2617,8 @@ TEST_F(TestSubstructure, TestRidDifferentNumberTwoRing) {
 
 // This leaves out the R specification in the smarts. In that case
 // the non-ring Carbon atom also counts as not in the same ring.
+// Jul 2025. Breaking change.
+// Any atom with an RID specified will only match a ring atom.
 TEST_F(TestSubstructure, TestRidChainAtomIsNotInTheSameRing) {
   _string_proto = R"(query {
     smarts: "[/IWrid1].[/IWrid2]"
@@ -2605,7 +2633,7 @@ TEST_F(TestSubstructure, TestRidChainAtomIsNotInTheSameRing) {
 
   _smiles = "C1CC1CC1CC1";
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 30);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 18);
 }
 
 TEST_F(TestSubstructure, TestGlobalIDRing) {
@@ -3037,7 +3065,7 @@ TEST_P(TestSubstructureSmartsP, Tests) {
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   ASSERT_TRUE(_query.create_from_smarts(params.smarts));
   //std::cerr << "Testing " << params.smiles << " smarts " << params.smarts << " expecting " << params.expected << '\n';
-  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected);
+  EXPECT_EQ(_query.substructure_search(_mol, _sresults), params.expected) << params.smiles << " smt " << params.smarts;
 }
 INSTANTIATE_TEST_SUITE_P(TestSubstructureSmartsP, TestSubstructureSmartsP, testing::Values(
   SmilesSmartsMatches{"C", "1C", 1},
@@ -3063,8 +3091,53 @@ INSTANTIATE_TEST_SUITE_P(TestSubstructureSmartsP, TestSubstructureSmartsP, testi
   // Aromatic sulphur tests
   SmilesSmartsMatches{"S1=CC=CC=C1", "s", 1},
   SmilesSmartsMatches{"[SH]1=CC=CC=C1", "s", 1},
-  SmilesSmartsMatches{"CS1=CC=CC=C1", "s", 1}
+  SmilesSmartsMatches{"CS1=CC=CC=C1", "s", 1},
+
+  SmilesSmartsMatches{"O", "[!#6H]", 0},
+  SmilesSmartsMatches{"O", "[!#6H2]", 1},
+  SmilesSmartsMatches{"O", "[!#6H>1]", 1},
+  SmilesSmartsMatches{"N", "[!#6H]", 0},
+  SmilesSmartsMatches{"N", "[!#6H>0]", 1},
+  SmilesSmartsMatches{"N", "[!#6H>1]", 1},
+  SmilesSmartsMatches{"N", "[!#6H>2]", 1},
+  SmilesSmartsMatches{"N", "[!#6H3]", 1},
+
+  SmilesSmartsMatches{"c1ccccc1", "[/IWrh0c]", 6},
+  SmilesSmartsMatches{"c1ccccc1", "[/IWhr0c]", 6},
+  SmilesSmartsMatches{"n1ccccc1", "[/IWhr0c]", 0},
+  SmilesSmartsMatches{"n1ccccc1", "[/IWhr1c]", 5},
+  SmilesSmartsMatches{"n1ccccc1", "[/IWhr2c]", 0},
+  SmilesSmartsMatches{"n1cnccc1", "[/IWhr2c]", 4},
+  SmilesSmartsMatches{"n1cnccc1", "[/IWhr1c]", 0},
+  SmilesSmartsMatches{"n1cnccc1", "[/IWhr3c]", 0},
+
+  SmilesSmartsMatches{"Cc1ccccc1", "[/IWAr1C]", 1},
+  SmilesSmartsMatches{"CC", "[/IWAr1C]", 0},
+  SmilesSmartsMatches{"CC", "[/IWAr0C]", 2},
+  SmilesSmartsMatches{"c1ccccc1Cc1ccccc1", "[/IWAr2C]", 1}
 ));
+
+TEST(TestDaylightH, Test1) {
+  Molecule oxygen;
+  oxygen.build_from_smiles("O");
+  Molecule nitrogen;
+  nitrogen.build_from_smiles("N");
+  Molecule fluorine;
+  fluorine.build_from_smiles("F");
+  Substructure_Query qry1;
+  ASSERT_TRUE(qry1.create_from_smarts("[!#6H]"));
+  EXPECT_EQ(qry1.substructure_search(&oxygen), 0);
+  EXPECT_EQ(qry1.substructure_search(&nitrogen), 0);
+  EXPECT_EQ(qry1.substructure_search(&fluorine), 1);
+
+  set_h_means_exactly_one_hydrogen(0);
+  Substructure_Query qry2;
+  ASSERT_TRUE(qry2.create_from_smarts("[!#6H]"));
+  EXPECT_EQ(qry2.substructure_search(&oxygen), 1);
+  EXPECT_EQ(qry2.substructure_search(&nitrogen), 1);
+  EXPECT_EQ(qry2.substructure_search(&fluorine), 1);
+  set_h_means_exactly_one_hydrogen(1);  // reset to default.
+}
 
 const std::string inter_ring_region1 = R"pb(
 query {

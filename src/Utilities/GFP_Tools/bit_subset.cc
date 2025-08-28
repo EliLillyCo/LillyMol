@@ -211,6 +211,8 @@ BitXref::WriteSvmlFeatures(const IW_General_Fingerprint& gfp,
     return -1;  // Special return value indicating fatal error.
   }
 
+//cerr << "BitXref::WriteSvmlFeatures writing " << _nfixed << " fixed and " << _nsparse << " sparse fingerprints\n";
+
   // The maximum number of features.
   const int nfeatures = NumberFeatures(gfp);
 
@@ -314,14 +316,12 @@ BitXref::PopulateFeatureVector(const IW_General_Fingerprint& gfp,
                                std::vector<T>& features) const {
   std::fill(features.begin(), features.end(), 0.0);
   int rc = 0;
-  cerr << "PopulateFeatureVector: _nfixed " << _nfixed << " sparse " << _nsparse << '\n';
   for (int i = 0; i < _nfixed; ++i) {
     IWDYFP& fp = gfp[i];
     int j = 0;
     int bit;
     while ((bit = fp.next_on_bit(j)) >= 0) {
       const auto iter = _fixed[i]->find(bit);
-      cerr << "Checking fixed bit " << bit << " missing " << (iter == _fixed[i]->end()) << '\n';
       if (iter == _fixed[i]->end()) {
         continue;
       }
@@ -338,7 +338,6 @@ BitXref::PopulateFeatureVector(const IW_General_Fingerprint& gfp,
     int count;
     while (sfp.next_bit_set(j, bit, count)) {
       const auto iter = _sparse[i]->find(bit);
-      cerr << "Checking bit " << bit << " missing " << (iter == _sparse[i]->end()) << '\n';
       if (iter == _sparse[i]->end()) {
         continue;
       }
@@ -374,6 +373,13 @@ BitXref::WriteDsv(const IW_General_Fingerprint& gfp, char output_separator,
   }
 
   return rc;
+}
+
+int
+BitSubset::DebugPrint(std::ostream& output) const {
+  output << "BitXref::DebugPrint: _nfixed " << _nfixed << " _nsparse " << _nsparse << "\n";
+
+  return 1;
 }
 
 }  // namespace bit_subset

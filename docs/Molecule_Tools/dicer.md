@@ -523,6 +523,28 @@ The file `STEM_2_5` contains fragments that contain two attachment points, and
 5 atoms. The file `STEM_3_4.6.7` contains fragments with 3 attachment points, and
 where the isotopic atoms form a triangle of lengths 4, 6 and 7 bonds.
 
+## Fingerprinting.
+Dicer has supported fingerprinting for many years. Generally, dicer fingerprints
+are not informative. In any molecule there are typically a small number of
+dicer fragments, and as molecules are different, the distances between
+them increases rapidly, with distances of 0.90 being common.
+
+Traditionally, dicer would crate features that were based on the fragments
+encountered during any particular run. This was awkward, since it was 
+difficult to generate another set of fingerprints that were consistent
+with another existing set of fingerprints.
+
+Using '-J hash' generates a .gfp file where the bit numbers are
+[HighwayHash Hash](https://github.com/google/highwayhash) hashes
+of the unique smiles of the fragments. That way, gfp files can
+be generated at any time and compared. Note that collisions may
+occur, but seem to be quite rare.
+
+```
+dicer ... -J NCDICER -J hash file.smi > file.gfp
+```
+
+
 ## Database Lookup
 It can be useful to store dicer fragments in a BerkeleyDB database. That way, the
 results of a newly diced molecule can be looked up in that database. This might

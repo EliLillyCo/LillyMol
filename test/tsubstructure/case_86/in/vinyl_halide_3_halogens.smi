@@ -1,0 +1,6 @@
+C=C VH.1
+ClC=C VH.2
+BrC=C VH.3
+BrC(Cl)=C VH.4
+BrC(Cl)=CBr VH.5
+BrC(I)=CBr VH.6

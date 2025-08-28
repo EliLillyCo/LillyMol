@@ -22,12 +22,14 @@ then
     exit 1
 fi
 
-name1=output.smi
+name1='output.smi'
 golden=out/output.smi
+stdout='stdout'
+stderr='stderr'
 diff_tool=../../fileDiff.sh
-$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >log.txt 2>err.txt
+$command -S output -s 10000 -D + -v in/input1.smi in/input2.smi >${stdout} 2>${stderr}
 
-$diff_tool $name1 ${golden}
+$diff_tool ${name1} ${golden}
 ret=$?
 if [ $ret == 1 ]
 then
@@ -36,5 +38,5 @@ else
   echo "$case_id : TEST FAIL"
 fi
 rm $name1
-rm log.txt
-rm err.txt
+rm ${stdout}
+rm ${stderr}

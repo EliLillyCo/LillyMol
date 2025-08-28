@@ -16,6 +16,7 @@
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/output.h"
+#include "Molecule_Lib/path.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 
@@ -29,29 +30,27 @@ const char* prog_name = NULL;
 
 static int verbose = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
-static int molecules_converted_first_time = 0;
+static uint64_t molecules_converted_first_time = 0;
 
-static int molecules_failing_but_no_chiral_centres = 0;
+static uint64_t molecules_failing_but_no_chiral_centres = 0;
 
-static int molecules_converted_after_chiral_centre_removal = 0;
+static uint64_t molecules_converted_after_chiral_centre_removal = 0;
 
-static int molecules_converted_after_timeout = 0;
+static uint64_t molecules_converted_after_timeout = 0;
 
-static int molecules_failing_for_timeout = 0;
-
-static int last_molecule_failed_for_timeout = 0;
+static uint64_t molecules_failing_for_timeout = 0;
 
 static int current_molecule_failed_for_timeout = 0;
 
-static int molecules_not_converted = 0;
+static uint64_t molecules_not_converted = 0;
 
-static int computation_not_attempted = 0;
+static uint64_t computation_not_attempted = 0;
 
 static int random_smiles_to_try = 0;
 
-static int molecules_converted_after_random_smiles = 0;
+static uint64_t molecules_converted_after_random_smiles = 0;
 
 static Chemical_Standardisation input_chemical_standardisation;
 
@@ -97,8 +96,11 @@ static IWString identifier_tag("PCN<");
 
 static int timeout = 0;
 
-static int max_rings_to_consider = 20;   // numeric_limits<int>::max();
+static int max_rings_to_consider = 30;   // numeric_limits<int>::max();
 static int max_atoms_to_consider = 100;  // numeric_limits<int>::max();
+
+static int max_rings_in_system_to_consider = 10;
+static uint64_t molecules_with_large_ring_systems = 0;
 
 static void
 usage(int rc) {
@@ -111,33 +113,36 @@ usage(int rc) {
   // clang-format on
   // clang-format off
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
-  cerr << "Interface to corina\n";
-  cerr << "  -d ...        options passed to corina\n";
-  cerr << "  -x            if a 3D structure is not generated, remove chiral centres\n";
-  cerr << "  -r <number>   number of random smiles to try\n";
-  cerr << "  -S <fname>    standardise output from corina and write to <fname> in SDF format\n";
-  cerr << "  -h            also remove explicit Hydrogens in generated molecule (-S only)\n";
-  cerr << "  -F <fname>    output file name for failed molecules - smiles only\n";
-  cerr << "  -P <fname>    output file name for problematic molecules - smiles only\n";
-  cerr << "  -e <seed>     specify seed for random smiles\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -q            pass normal smiles (not unique smiles) to corina\n";
-  cerr << "  -n            pass non-aromatic unique smiles to corina\n";
-  cerr << "  -f            function as a tdt filter\n";
-  cerr << "  -t            produce TDT ouput\n";
-  cerr << "  -u            produce smiles with coordinates\n";
-  cerr << "  -s            input is already smiles, pass smiles strings from file to corina\n";
-  cerr << "  -R <nrings>   do not process any molecule having more than <nrings> rings (def " << max_rings_to_consider << ")\n";
-  cerr << "  -C <natoms>   do not process any molecule having more than <natoms> atoms (def " << max_atoms_to_consider << ")\n";
-  cerr << "  -y <seconds>  abandon any conversion after <seconds> seconds\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -o ...        options for corina's -o option (NOT the usual output types for Lilly tools)\n";
-  cerr << "                    for example, to get pdb output '-o t=pdb'\n";
-  cerr << "  --Y ...       other options, enter '-Y help' for info\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(Interface to corina\n";
+ -d ...        options passed to corina
+ -x            if a 3D structure is not generated, successively remove chiral centres and keep trying.
+ -r <number>   number of random smiles to try.
+ -S <fname>    standardise output from corina and write to <fname> in SDF format.
+ -h            also remove explicit Hydrogens in generated molecule (-S only).
+ -F <fname>    output file name for failed molecules - smiles only.
+ -P <fname>    output file name for problematic molecules - smiles only.
+ -e <seed>     specify seed for random smiles.
+ -l            reduce to largest fragment.
+ -q            pass normal smiles (not unique smiles) to corina.
+ -n            pass non-aromatic unique smiles to corina.
+ -f            function as a tdt filter.
+ -t            produce TDT ouput.
+ -u            produce smiles with coordinates.
+ -s            input is already smiles, pass smiles strings from file to corina.
+ -R <nrings>   do not process any molecule having more than <nrings> rings (def  30).
+ -C <natoms>   do not process any molecule having more than <natoms> atoms (def 100).
+ -B <nrings>   do not process any molecule having a ring system with more than <nrings> rings (def 10).
+ -y <seconds>  abandon any conversion after <seconds> seconds.
+ -i <type>     input specification.
+ -o ...        options for corina's -o option (NOT the usual output types for Lilly tools)
+                   for example, to get pdb output '-o t=pdb'
+ -Y ...        other options, enter '-Y help' for info.
+ -g ...        chemical standardisation options.
+ -E ...        standard element specifications.
+ -A ...        standard aromaticity specifications.
+ -v            verbose output.
+)";
+
   // clang-format on
 
   exit(rc);
@@ -254,10 +259,19 @@ restandardise(const char* from_corina,
 
 static int
 write_3d_smiles(Molecule& m, std::ostream& text_output) {
-  set_append_coordinates_after_each_atom(1);
+  lillymol::set_include_coordinates_with_smiles(1);
   m.invalidate_smiles();
+
+  if (function_as_tdt_filter) {
+    text_output << smiles_tag;
+  }
+
   text_output << m.smiles();
-  set_append_coordinates_after_each_atom(0);
+  lillymol::set_include_coordinates_with_smiles(0);
+
+  if (function_as_tdt_filter) {
+    text_output << ">\n";
+  }
 
   free_corina_storage();
 
@@ -319,10 +333,10 @@ do_output(const IWString& mname, const char* from_corina,
 
 static int
 write_3d_smiles_zero_coordinates(Molecule& m, std::ostream& text_output) {
-  set_append_coordinates_after_each_atom(1);
+  lillymol::set_include_coordinates_with_smiles(1);
   m.invalidate_smiles();
   text_output << smiles_tag << m.smiles() << ">\n";
-  set_append_coordinates_after_each_atom(0);
+  lillymol::set_include_coordinates_with_smiles(0);
 
   return 1;
 }
@@ -475,11 +489,57 @@ identify_chiral_centres(Molecule& m, Set_of_Atoms& chiral_centres_in_rings,
 }
 
 static int
+OkMaxRingsInSystem(Molecule& m, int max_rings_in_system_to_consider) {
+  if (m.nrings() <= max_rings_in_system_to_consider) {
+    return 1;
+  }
+
+  const int nr = m.nrings();
+
+  std::unique_ptr<int[]> ring_already_done = std::make_unique<int[]>(nr);
+  std::fill_n(ring_already_done.get(), nr, 0);
+  for (int i = 0; i < nr; ++i) {
+    if (ring_already_done[i]) {
+      continue;
+    }
+
+    const int fsidi = m.ringi(i)->fused_system_identifier();
+
+    int rings_in_system = 1;
+    for (int j = i = 1; j < nr; ++j) {
+      if (ring_already_done[j]) {
+        continue;
+      }
+
+      ring_already_done[j] = 1;
+      const Ring* rj = m.ringi(j);
+      if (fsidi == rj->fused_system_identifier()) {
+        ++rings_in_system;
+      }
+    }
+
+    if (rings_in_system > max_rings_in_system_to_consider) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
 rcorina34(Molecule& m, Molecule_Output_Object& molecule_output,
           std::ostream& text_output) {
   if (m.natoms() > max_atoms_to_consider || m.nrings() > max_rings_to_consider) {
     computation_not_attempted++;
     return 1;
+  }
+
+  if (max_rings_in_system_to_consider > 0) {
+    if (! OkMaxRingsInSystem(m, max_rings_in_system_to_consider)) {
+      ++molecules_with_large_ring_systems;
+      ++computation_not_attempted;
+      return 1;
+    }
   }
 
   current_molecule_failed_for_timeout = 0;
@@ -726,7 +786,7 @@ DisplayDashYOptions(std::ostream& output) {
 
 static int
 rcorina34(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lxd:F:P:S:r:e:qfsnty:R:C:huo:Y:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lxd:F:P:S:r:e:qfsnty:R:C:huo:Y:B:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -797,6 +857,18 @@ rcorina34(int argc, char** argv) {
     if (verbose) {
       cerr << "Will not process any molecule having more than " << max_atoms_to_consider
            << " atoms\n";
+    }
+  }
+
+  if (cl.option_present('B')) {
+    if (!cl.value('B', max_rings_in_system_to_consider) || max_rings_in_system_to_consider < 1) {
+      cerr << "The max rings in system to consider option (-B) must be a whole +ve number\n";
+      usage(1);
+    }
+
+    if (verbose) {
+      cerr << "Will not process any molecule having a ring system with more than than " <<
+                max_rings_in_system_to_consider << " rings\n";
     }
   }
 
@@ -1043,8 +1115,9 @@ rcorina34(int argc, char** argv) {
     cerr << "Read " << molecules_read << " molecules\n";
     if (computation_not_attempted > 0) {
       cerr << "Computation not attempted on " << computation_not_attempted
-           << " molecules due to atom (" << max_atoms_to_consider << ") and ring ("
-           << max_rings_to_consider << ") count constraints\n";
+           << " molecules due to atom (" << max_atoms_to_consider << "), ring ("
+           << max_rings_to_consider << ") and ring system size ("
+           << max_rings_in_system_to_consider << ") considerations\n";
     }
     cerr << molecules_converted_first_time << " molecules converted first attempt\n";
     cerr << molecules_failing_but_no_chiral_centres

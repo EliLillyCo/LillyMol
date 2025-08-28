@@ -71,6 +71,10 @@ include_bond_aromaticity_in_smiles() {
   return _write_bonds_as_aromatic;
 }
 
+void set_include_bond_aromaticity_in_smiles(int s) {
+  _write_bonds_as_aromatic = s;
+}
+
 static int _include_cis_trans_in_smiles = 1;
 
 void
@@ -117,13 +121,20 @@ ignore_chiral_info_on_input()
   return _ignore_chiral_info_on_input;
 }
 
-static int append_coordinates_after_each_atom = 0;
+namespace lillymol {
+
+int _include_coordinates_with_smiles = 0;
 
 void
-set_append_coordinates_after_each_atom(int s)
-{
-  append_coordinates_after_each_atom = s;
+set_include_coordinates_with_smiles(int s) {
+  _include_coordinates_with_smiles = s;
 }
+
+int include_coordinates_with_smiles() {
+  return _include_coordinates_with_smiles;
+}
+
+}  // namespace lillymol
 
 static int append_coordinate_box_after_each_atom = 0;
 void
@@ -316,7 +327,7 @@ process_standard_smiles_options(Command_Line & cl, int verbose,
     }
     else if ("coords" == tmp)
     {
-      set_append_coordinates_after_each_atom(1);
+      lillymol::set_include_coordinates_with_smiles(1);
       if (verbose)
         cerr << "Will add coordinates to each atom in a smiles\n";
     }
@@ -626,7 +637,7 @@ append_permanent_aromatic(IWString & smiles,
   if (needs_square_brackets)
     smiles << ']';
 
-  if (append_coordinates_after_each_atom)
+  if (lillymol::include_coordinates_with_smiles())
     do_append_coordinates(smiles, a);
 
   return 1;
@@ -808,7 +819,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   if (need_to_close_square_bracket)
     smiles += ']';
 
-  if (append_coordinates_after_each_atom) {
+  if (lillymol::include_coordinates_with_smiles()) {
     do_append_coordinates(smiles, a);
   } else if (append_coordinate_box_after_each_atom) {
     do_append_coordinate_box(a, smiles);
@@ -903,7 +914,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   if (need_to_close_square_bracket)
     smiles += ']';
 
-  if (append_coordinates_after_each_atom) {
+  if (lillymol::include_coordinates_with_smiles()) {
     do_append_coordinates(smiles, a);
   } else if (append_coordinate_box_after_each_atom) {
     do_append_coordinate_box(a, smiles);
@@ -1057,7 +1068,7 @@ reset_smiles_support_file_scope_variables()
   _include_cis_trans_in_smiles = 1;
   _include_chiral_info_in_smiles = 1;
   _ignore_chiral_info_on_input = 0;
-  append_coordinates_after_each_atom = 0;
+  lillymol::_include_coordinates_with_smiles = 0;
   _write_smiles_with_smarts_atoms = 0;
   include_implicit_hydrogens_on_aromatic_n_and_p = 1;
   _add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens = 0;

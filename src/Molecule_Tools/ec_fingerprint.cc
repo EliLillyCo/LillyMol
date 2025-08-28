@@ -258,6 +258,7 @@ AtomMapCoverage::PrepareToProcess(Molecule& m) {
 
 int
 AtomMapCoverage::FingerprintingComplete(Molecule& m) {
+  cerr << "AtomMapCoverage::FingerprintingComplete\n";
   assert(nullptr != _coverage);
 
   const int matoms = m.natoms();
@@ -281,6 +282,8 @@ AtomMapCoverage::FingerprintingComplete(Molecule& m) {
   tmp << " min " << min_coverage << " max " << max_coverage << " range "
       << (max_coverage - min_coverage);
   m.set_name(tmp);
+  // TODO:ianwatson fingerprint not being written, not sure what is going on.
+  cerr << m.smiles() << ' ' << m.name() << '\n';
 
   return 1;
 }

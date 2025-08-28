@@ -1,0 +1,15 @@
+{
+  "executable": "iwdescr",
+  "test": [
+    {
+      "name": "default",
+      "preamble": [
+         "queries_dir=${LILLYMOL_HOME}/data/queries"
+      ],
+      "args": [ "-N F:${queries_dir}/charges/queries -H a=F:${queries_dir}/hbonds/acceptor",
+                " -H d=${queries_dir}/hbonds/donor.qry -H label",
+                " -l -g all -A D -u 0 -b 5 -O complex -O dm -B quiet -E autocreate #{indir}/in.smi"
+              ]
+    }
+  ]
+}

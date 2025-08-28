@@ -35,6 +35,19 @@ form_key(uint64_t b, int radius, unsigned int atom_constant_centre_atom, DBKey& 
   return;
 }
 
+bool
+DBKey::operator==(const DBKey& rhs) const {
+  if (_bit != rhs._bit) {
+    return false;
+  }
+
+  if (_acca != rhs._acca) {
+    return false;
+  }
+
+  return _radius == rhs._radius;
+}
+
 /*std::ostream &
 operator << (const DBKey & k, std::ostream & os)
 {

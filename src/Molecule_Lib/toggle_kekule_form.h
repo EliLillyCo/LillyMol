@@ -1,10 +1,14 @@
 #ifndef MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
 #define MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
 
-#include "Molecule_Lib/toggle_kekule_form.pb.h"
-
 #include "bond.h"
 #include "molecule.h"
+
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/toggle_kekule_form.pb.h"
+#else
+#include "toggle_kekule_form.pb.h"
+#endif
 
 class Command_Line;
 class msi_attribute;
@@ -245,6 +249,7 @@ class Toggle_Kekule_Form {
   int add_bond(Bond* b);
 
   int ConstructFromProto(const ToggleKekuleForm::ToggleKekuleForm& proto);
+  int BuildProto(ToggleKekuleForm::ToggleKekuleForm& proto) const;
 
   void
   set_allow_pyrrole_to_change(int s) {
@@ -255,7 +260,7 @@ class Toggle_Kekule_Form {
 
   int ok_embedding(const Set_of_Atoms& embedding) const;
 
-  int process(Molecule&, const Set_of_Atoms&, int&);
+  int process(Molecule& m, const Set_of_Atoms& embedding, int& changed);
 
   int process(Molecule&, atom_number_t a1, atom_number_t a2, bond_type_t bt,
               int& changed);

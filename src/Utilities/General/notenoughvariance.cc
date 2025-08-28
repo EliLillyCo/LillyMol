@@ -1036,7 +1036,7 @@ static int columns_in_input = 0;
 
 static int min_different_values = 2;
 
-static int records_to_process = 0;
+static uint32_t records_to_process = 0;
 
 /*
   If all the columns are in the same units (like a Comfa grid) we
@@ -1353,7 +1353,7 @@ notenoughvariance(iwstring_data_source & input,
     }
   }
 
-  int records_examined = 0;    // different from records read with probability
+  uint32_t records_examined = 0;    // different from records read with probability
 
   std::random_device rd;
   std::default_random_engine generator(rd());
@@ -1816,6 +1816,7 @@ usage(int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
+// clang-format off
   cerr << "Usage:  <options> <input_file>\n";
   cerr << " -n <buffer>    specify buffer size - number of different values stored (mandatory)\n";
   cerr << " -m <string>    specify missing value string (default '" << missing_value << "')\n";
@@ -1862,6 +1863,7 @@ usage(int rc)
   cerr << " -r <range>     remove columns where the range is less than <range>\n";
   cerr << " -u             buffer all the input (avoids seeks, enables stdin)\n";
   cerr << " -v             verbose output\n";
+// clang-format on
 
   exit (rc);
 }

@@ -6,6 +6,8 @@
 #include <limits>
 #include <memory>
 
+#include "absl/container/flat_hash_map.h"
+
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
 

@@ -214,6 +214,15 @@ unpredictable results should be expected.
 Usually `seek=` is used on conjunction with `stop=` and when the
 reader determines that it has reached the stop offset, it will terminate.
 
+It is important to note that any seek or stop directive applies to all
+files on the command line - in most cases, this is not what you want.
+Longer terms there are plans to enable per-file specifications, probably
+along the lines of
+```
+/path/to/file,seek=5,stop=20
+```
+But that is not yet implemented.
+
 ### Charges
 Both formal and partial charges are subject to acceptable ranges, and
 molecules containing values out of range are flagged as errors. The

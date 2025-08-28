@@ -60,32 +60,32 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Splits a file into chunks based on regular expressions\n";
-
-  cerr << " -n <number>    items per chunk\n";
-  cerr << " -nc <number>   number of chunks to create - will count the file to\n";
-  cerr << "                determine the required number of items per chunk\n";
-  cerr << " -size          split into equally sized chunks - based on byte count\n";
-  cerr << " -rx <rx>       the regular expression to use\n";
-  cerr << "                SD  files need '^\\$'\n";
-  cerr << "                TDT files need '^\\|'\n";
-  cerr << " -s             chunks start with <rx> matched records rather than end (SDF and TDT)\n";
-  cerr << " -g <col>       items are defined by identifiers in column <col>\n";
-  cerr << " -g sep=x       column separator for the -g column\n";
-  cerr << " -tdt           short-hand for TDT files (like .gfp)\n";
-  cerr << " -sdf           short-hand for SDF files\n";
-  cerr << " -stem <name>   create files with stem <name>\n";
-  cerr << " -suffix <xx>   add <xx> to each file created\n";
-  cerr << " -ssuffix       create chunks with same suffix as input\n";
-  cerr << " -stop <number> create only <number> files\n";
-  cerr << " -append        append to an existing set of split files\n";
-  cerr << " -j <number>    repeat first <number> records from input in each file created\n";
-  cerr << "                useful for splitting descriptor files\n";
-  cerr << " -stdout        also write input stream to stdout\n";
-  cerr << " -dd <fname>    do NOT do any splitting, just write dd commands to <fname>\n";
-  cerr << " -w <n>         width for sequence number field\n";
-  cerr << " -w char=x      character to use for filling to the -w width\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Splits a file into chunks based on regular expressions\n";
+ -n <number>    items per chunk
+ -nc <number>   number of chunks to create - will count the lines in the input file to
+                determine the required number of items per chunk.
+ -size          split into equally sized chunks - based on byte count.
+ -tdt           short-hand for TDT files (like .gfp).
+ -sdf           short-hand for SDF files.
+ -rx <rx>       the regular expression defining the end of a "record".
+                SD  files need '^\$' - use the -sdf option.
+                TDT files need '^\|' - use the -tdt option.
+ -s             chunks start with <rx> matched records rather than end (SDF and TDT)
+ -g <col>       items are defined by identifiers in column <col>
+ -g sep=x       column separator for the -g column
+ -stem <name>   create files with stem <name>
+ -suffix <xx>   add <xx> to each file created
+ -ssuffix       create chunks with same suffix as input
+ -stop <number> create only <number> files
+ -append        append to an existing set of split files
+ -j <number>    repeat first <number> records from input in each file created
+                useful for splitting descriptor files
+ -stdout        also write input stream to stdout
+ -dd <fname>    do NOT do any splitting, just write dd commands to <fname>
+ -w <n>         width for sequence number field
+ -w char=x      character to use for filling to the -w width
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);

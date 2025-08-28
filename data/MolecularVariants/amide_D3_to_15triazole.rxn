@@ -16,6 +16,9 @@ scaffold {
     a2: 5
   }
   remove_fragment: 1
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
 }
 sidechain {
   id: 1
@@ -36,13 +39,6 @@ sidechain {
     a2: 4
     btype: SS_SINGLE_BOND
   }
-  match_conditions {
-    match_conditions {
-      one_embedding_per_start_atom: true
-    }
-  }
-}
-scaffold_match_conditions {
   match_conditions {
     one_embedding_per_start_atom: true
   }

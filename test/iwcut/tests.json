@@ -1,0 +1,35 @@
+{
+  "executable": "iwcut",
+  "test": [
+
+    {
+      "name": "case_1",
+      "args": [
+        "-f 5,3 #{datadir}/in.txt"
+      ]
+    },
+
+    {
+      "name": "dashD",
+      "args": [
+        "-k . -D #{indir}/file1.dat #{indir}/file2.dat"
+      ]
+    },
+
+    {
+      "name": "dashd",
+      "args": [
+        "-d D5,D1,D9 #{datadir}/in.txt"
+      ]
+    },
+
+    {
+      "name": "columns_in_file",
+      "args": [
+        "-F #{indir}/columns #{datadir}/in.txt"
+      ]
+    }
+
+  ]
+
+}

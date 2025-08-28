@@ -1,0 +1,32 @@
+(0 Query
+  (A I version 2)
+  (A I respect_initial_numbering 1)
+  (A C chirality "1 2 0 3 H")
+  (0 query_atom
+    (A I initial_atom_number 0)
+    (A I atomic_number 17)
+    (A I aromatic 0)
+  )
+  (1 query_atom
+    (A I initial_atom_number 1)
+    (1 Query_Atom_Specifier
+      (A I atomic_number 6)
+      (A I hcount 1)
+      (A I aromatic 0)
+      (A I chirality 2)
+    )
+    (A I bond (0 1 4))
+  )
+  (2 query_atom
+    (A I initial_atom_number 2)
+    (A I atomic_number 6)
+    (A I aromatic 0)
+    (A I bond (1 1 4))
+  )
+  (3 query_atom
+    (A I initial_atom_number 3)
+    (A I atomic_number 7)
+    (A I aromatic 0)
+    (A I bond (1 1 4))
+  )
+)

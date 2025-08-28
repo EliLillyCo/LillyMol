@@ -192,6 +192,7 @@ class AtomMapCoverage : public ECBaseWithOutput, public ECFunction
     int FingerprintingComplete(Molecule& m);
     int DoAnyOutput(Molecule& m, JobParameters& job_parameters,
                     IWString_and_File_Descriptor& output) {
+      //TODO:ianwatson implement this.
       return 1;
     }
 };

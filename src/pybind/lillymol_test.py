@@ -1008,5 +1008,14 @@ class TestLillyMol(absltest.TestCase):
     self.assertCountEqual(m.down_the_bond(2, 3), [])
     self.assertIsNone(m.down_the_bond(0, 1))
 
+  def test_resize(self):
+    # Note that resizing a molecule is potentially dangerous since it
+    # will remove the most recently added atoms - a molecule is a vector of atoms.
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCC"))
+    self.assertEqual(m.natoms(), 3);
+    m.resize(2);
+    self.assertEqual(m.natoms(), 2);
+
 if __name__ == '__main__':
   absltest.main()

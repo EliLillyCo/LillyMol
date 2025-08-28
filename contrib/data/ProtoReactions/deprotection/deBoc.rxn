@@ -1,0 +1,14 @@
+name: "deBoc"
+scaffold {
+  id: 0
+  smarts: "[N,n]C(=O)OC([CH3])([CH3])[CH3]"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+}

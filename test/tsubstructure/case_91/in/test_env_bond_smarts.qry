@@ -1,0 +1,13 @@
+# C[1]:C(:C:C:C(:C:@1)C[TAC=4]Any[IS=OH,C=CH,NC[TAC=4]])N(C[TAC=4])C[TAC=4]<regId="anil_di_alk_D(198)">
+(0 Query
+  (A I version 2)
+  (A C Comment "anil_di_alk_D")
+  (A C smarts "[/IWfsid1ND3,ND4+1]([CX4])([CX4])[/IWfsid2]1ccc(cc1)[CX4]")
+  (1 Environment
+#   (A I single_bond 9)
+    (A C bond_smarts "9 -!@")
+    (A C smarts "[OH]")
+    (A C smarts "C=[CH>0]")
+    (A C smarts "[NT0G0]([CX4])[CX4]")
+  )
+)

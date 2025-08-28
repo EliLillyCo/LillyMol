@@ -1,0 +1,30 @@
+{
+  "executable": "python",
+  "test": [
+    {
+      "name": "case_1",
+       "broken_do_not_evaluate": true,
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "case_2",
+       "broken_do_not_evaluate": true,
+      "args": [
+         ""
+      ]
+    },
+
+    {
+      "name": "case_3",
+       "broken_do_not_evaluate": true,
+      "args": [
+         ""
+      ]
+    }
+
+
+  ]
+}

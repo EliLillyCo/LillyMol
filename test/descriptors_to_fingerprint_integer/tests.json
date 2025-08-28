@@ -1,0 +1,21 @@
+{
+  "executable": "descriptors_to_fingerprint_integer",
+  "difftool": "diff",
+  "test": [
+    {
+      "name": "make_fingerprint",
+      "args": [
+        "-S #{indir}/in.smi -J NCDSCQ -v #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "insert_fingerprint",
+      "args": [
+         "-f -v -J NCDSCQ -D #{indir}/in.dat #{indir}/in.gfp"
+      ]
+    }
+
+
+  ]
+}

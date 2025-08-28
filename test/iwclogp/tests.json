@@ -1,0 +1,67 @@
+{
+  "executable": "iwclogp",
+  "only_inside_lilly": true,
+    "test": [
+        {
+          "name": "default",
+          "args": [ "#{datadir}/in.smi" ]
+        },
+
+        {
+          "name": "large",
+          "args": [
+              "-M 50 #{indir}/in.smi" 
+          ]
+        },
+
+        {
+          "name": "logd_default",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} -D #{datadir}/in.smi"
+          ]
+        },
+
+        {
+          "name": "logp_filter",
+          "args": [
+              "-c 2 -C 4 #{datadir}/in.smi"
+          ]
+        },
+
+        {
+          "name": "error_level_filter",
+          "args": [
+              "-e 40 #{indir}/in.smi"
+          ]
+        },
+
+        {
+          "name": "logp_fingerprint",
+          "args": [
+              "-J NCCLP -p 8 #{datadir}/in.smi"
+          ]
+        },
+
+        {
+          "name": "logd_fingerprint",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} -J NCCLP -p 4 #{datadir}/in.smi"
+          ]
+        },
+
+        {
+          "name": "tdt_filter",
+          "args": [
+              "-J NCCLP -f - < #{indir}/in.gfp"
+          ]
+        }
+      ]
+    }
+  
+}

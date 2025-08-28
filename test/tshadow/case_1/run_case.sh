@@ -23,21 +23,22 @@ then
     exit 1
 fi
 
-name1=log.txt
-name1_out=out/log.txt
+stdout='stdout'
+stderr='stderr'
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/log.txt
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    name1_out=out/osx/log.txt
+if [[ "${UNAME}" == "Linux" ]]; then
+    golden=out/${UNAME}/stdout
+elif [[ "${UNAME}" == "darwin"* ]]; then
+    golden=out/osx/stdout
 else
-    echo "OS is not supported"
+    echo "${UNAME} is not supported"
+    exit 1
 fi
 
 diff_tool=../../fileDiff.sh
-$command -L -G in/in.sdf >log.txt 2>err.txt
-$diff_tool $name1 $name1_out
+$command -L -G in/in.sdf > stdout 2>stderr
+$diff_tool ${stdout} ${golden}
 ret1=$?
 
 if [ $ret1 -eq 1 ]
@@ -47,6 +48,6 @@ else
         echo "$case_id : TEST FAIL"
 fi
 
-rm $name1
-rm err.txt
+rm ${stdout}
+rm ${stderr}
 

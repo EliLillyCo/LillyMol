@@ -1,0 +1,8 @@
+[CH3:1][CH2:2][Cl:3]+[BrH:4]>[OH2:5]>[CH3:6][CH2:7][Br:8] Rxn_Standardize_Test1
+[13CH3:1][CH2:2][Cl:3]+[BrH:4]>[OH2:5]>[13CH3:6][CH2:7][Br:7] Rxn_Standardize_Test2
+[CH3:1][CH2:2][Cl:3]>[OH2:5]>[CH3:6][CH3:7] Rxn_Standardize_Test3
+[CH3:6][CH3:7]+[ClH:9]>[OH2:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test4
+[CH3:6][CH3:7]+[ClH:9]>[OH2:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test6
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[OH2:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test7
+[CH3:1][CH2:2][Cl:3]+[ClH:4]+C1=CC=CC=C1>[OH2:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test8
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[OH2:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test9

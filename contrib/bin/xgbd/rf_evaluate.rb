@@ -5,11 +5,11 @@
 require 'set'
 require 'google/protobuf'
 
-c3tk_home = ENV['C3TK_HOME']
-raise 'C3TK_HOME not defined' unless c3tk_home
+lillymol_home = ENV['LILLYMOL_HOME']
+raise 'LILLYMOL_HOME not defined' unless lillymol_home
 
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
-require "#{c3tk_home}/bin/py/pytk/xgbd/random_forest_model_pb"
+require "#{lillymol_home}/contrib/bin/lib/iwcmdline"
+require "#{lillymol_home}/contrib/bin/xgbd/random_forest_model_pb"
 
 def usage
 msg = <<-END
@@ -77,7 +77,15 @@ def rf_evaluate_smiles(fname, mdir, proto, cl)
 end
 
 def rf_evaluate_descriptors(fname, mdir, proto, cl)
-  cmd = "rf_evaluate.sh -mdir #{mdir} #{fname}"
+  cmd = "rf_evaluate_sklearn.sh -mdir #{mdir}"
+
+  rescaling = File.join(mdir, 'rescaling.textproto')
+  if File.size?(rescaling)
+    # TODO ianwatson finish implementation
+    # cmd << 
+  end
+
+  cmd << " #{fname}"
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
   system(cmd)

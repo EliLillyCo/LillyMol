@@ -1,0 +1,14 @@
+C1=C(CCCCN(C)CCCC)C=C(CCC=O)C=C1CC=O core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCC)C=C(CCCN(C)CCCC)C=C1CC=O core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCC)C=C(CCCN(C)CCCC)C=C1CCN(C)CCCC core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCC)C=C(CCC=O)C=C1CCN(C)CCCC core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCCN(C)CCCC)C=C1CC=O core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCCN(C)CCCC)C=C1CCN(C)CCCC core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCC=O)C=C1CCN(C)CCCC core+TadSide1>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCCCCC(C)C)C=C(CCC=O)C=C1CC=O core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCCCCC(C)C)C=C(CCCN(C)CCCCCCC(C)C)C=C1CC=O core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCCCCC(C)C)C=C(CCCN(C)CCCCCCC(C)C)C=C1CCN(C)CCCCCCC(C)C core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCCN(C)CCCCCCC(C)C)C=C(CCC=O)C=C1CCN(C)CCCCCCC(C)C core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCCN(C)CCCCCCC(C)C)C=C1CC=O core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCCN(C)CCCCCCC(C)C)C=C1CCN(C)CCCCCCC(C)C core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines
+C1=C(CCCC=O)C=C(CCC=O)C=C1CCN(C)CCCCCCC(C)C core+TadSide2>>1.2.1_Aldehyde_reductive_amination_FROM_aldehydes_AND_amines

@@ -1,19 +1,32 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
-load("//build_deps:install.bzl", "local_install")
 
 package(default_visibility = ["//visibility:public"])
 
-local_install(
-    name = "install",
+proto_library(
+    name = "dicer_fragment_complement_proto",
     srcs = [
-        ":buildsmidb_bdb",
-        ":in_database_bdb",
-        ":in_lilly_database_bdb",
-        ":iwecfp_database_load",
-        ":iwecfp_database_lookup",
-        ":smi2rings_bdb",
-        ":substituent_identification",
+        "dicer_fragment_complement.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "dicer_fragment_complement_cc_proto",
+    deps = [
+        ":dicer_fragment_complement_proto",
+    ],
+)
+
+proto_library(
+    name = "qupkake_transfer_proto",
+    srcs = [
+        "qupkake_transfer.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "qupkake_transfer_cc_proto",
+    deps = [
+        ":qupkake_transfer_proto",
     ],
 )
 
@@ -35,7 +48,7 @@ cc_proto_library(
 proto_library(
     name = "substituent_identification_proto",
     srcs = [
-      "substituent_identification.proto",
+        "substituent_identification.proto",
     ],
 )
 
@@ -57,7 +70,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -74,24 +87,44 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
 
 cc_binary(
-    name = "dicer_fragment_replace",
+    name = "dicer_fragment_complement_replace",
     srcs = [
-        "dicer_fragment_replace.cc",
+        "dicer_fragment_complement_replace.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "dicer_fragment_complement_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:molecular_formula_lib",
+        "//Molecule_Tools:dicer_fragments_cc_proto",
+        "//Molecule_Tools:mformula",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "dicer_to_complemenent_db",
+    srcs = [
+        "dicer_to_complemenent_db.cc",
     ],
     tags = ["berkeleydb"],
     deps = [
         "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
         "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:molecular_formula_lib",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -99,7 +132,7 @@ cc_binary(
 cc_binary(
     name = "dicer2bdb",
     srcs = [
-      "dicer2bdb.cc",
+        "dicer2bdb.cc",
     ],
     tags = ["berkeleydb"],
     deps = [
@@ -108,7 +141,7 @@ cc_binary(
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwmisc",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -125,11 +158,12 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
-cc_binary(  
-    name = "in_lilly_database_bdb",   
+
+cc_binary(
+    name = "in_lilly_database_bdb",
     srcs = [
         "in_lilly_database_bdb.cc",
     ],
@@ -139,7 +173,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -155,7 +189,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -171,7 +205,26 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
+    ],
+)
+
+cc_binary(
+    name = "qupkake_transfer",
+    srcs = [
+        "qupkake_transfer.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":iwecfp_database_lookup_lib",
+        ":qupkake_transfer_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring:absl_hash",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@third_party//:berkeley_static",
+        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )
 
@@ -188,9 +241,10 @@ cc_binary(
         "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
+
 cc_binary(
     name = "structure_database_load",
     srcs = [
@@ -203,7 +257,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -219,7 +273,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -235,7 +289,8 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "//Molecule_Tools:mformula",
+        "@third_party//:berkeley_static",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_protobuf//:protobuf",
     ],
@@ -253,7 +308,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -269,7 +324,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -286,7 +341,7 @@ cc_library(
         "iwecfp_database",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -303,7 +358,7 @@ cc_library(
         ":iwecfp_database_shared",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -319,7 +374,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -333,7 +388,7 @@ cc_library(
     ],
     deps = [
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -349,7 +404,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -365,6 +420,6 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )

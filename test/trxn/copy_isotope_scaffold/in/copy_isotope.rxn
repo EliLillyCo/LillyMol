@@ -1,0 +1,11 @@
+scaffold {
+  smarts: "O.[>0]"
+  copy_isotope {
+    from: 1
+    to: 0
+  }
+  isotope {
+    atom: 1
+    isotope: 3
+  }
+}

@@ -32,9 +32,9 @@ out=test.out
 cmp_out="$test_cmd_top/$case/out/test.out"
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    cmp_out=out/linux/test.out
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "${UNAME}" == "Linux" ]]; then
+    cmp_out=out/${UNAME}/test.out
+elif [[ "${UNAME}" == "darwin"* ]]; then
     cmp_out=out/osx/test.out
 else
     echo "OS is not supported"

@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "too_many_sulphur")
+  (A I Version 2)
+  (A C smarts "[#16]")
+  (A I all_hits_in_same_fragment 1)
+  (A I subtract_from_rc 3)
+  (A D numeric_value 60)
+)

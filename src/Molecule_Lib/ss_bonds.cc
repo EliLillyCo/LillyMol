@@ -2,8 +2,9 @@
   Functions for Substructure_Bond objects
 */
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
+
 #include <iostream>
 
 #include "Foundational/iwmisc/misc.h"
@@ -12,41 +13,39 @@
 #include "target.h"
 
 using std::cerr;
-using std::endl;
 
-Substructure_Bond_Specifier_Base::Substructure_Bond_Specifier_Base()
-{
+Substructure_Bond_Specifier_Base::Substructure_Bond_Specifier_Base() {
   _next = nullptr;
 
   return;
 }
 
-Substructure_Bond_Specifier_Base::~Substructure_Bond_Specifier_Base()
-{
-  if (nullptr != _next)
+Substructure_Bond_Specifier_Base::~Substructure_Bond_Specifier_Base() {
+  if (nullptr != _next) {
     delete _next;
+  }
 
   return;
 }
 
 void
-Substructure_Bond_Specifier_Base::add_to_chain (Substructure_Bond_Specifier_Base * b)
-{
-  if (nullptr == _next)
+Substructure_Bond_Specifier_Base::add_to_chain(Substructure_Bond_Specifier_Base* b) {
+  if (nullptr == _next) {
     _next = b;
-  else
+  } else {
     _next->add_to_chain(b);
+  }
 
   return;
 }
 
 /*
-  
+
 */
 
-Substructure_Bond_Specifier_Type::Substructure_Bond_Specifier_Type (bond_type_t b)
-{
-  assert (SINGLE_BOND == b || DOUBLE_BOND == b || TRIPLE_BOND == b);    // single, double or triple only
+Substructure_Bond_Specifier_Type::Substructure_Bond_Specifier_Type(bond_type_t b) {
+  assert(SINGLE_BOND == b || DOUBLE_BOND == b ||
+         TRIPLE_BOND == b);  // single, double or triple only
 
   _bond_type = b;
 
@@ -54,259 +53,260 @@ Substructure_Bond_Specifier_Type::Substructure_Bond_Specifier_Type (bond_type_t 
 }
 
 int
-Substructure_Bond_Specifier_Type::ok() const
-{
-  if (SINGLE_BOND == _bond_type)
+Substructure_Bond_Specifier_Type::ok() const {
+  if (SINGLE_BOND == _bond_type) {
     return 1;
+  }
 
-  if (DOUBLE_BOND == _bond_type)
+  if (DOUBLE_BOND == _bond_type) {
     return 1;
+  }
 
-  if (TRIPLE_BOND == _bond_type)
+  if (TRIPLE_BOND == _bond_type) {
     return 1;
+  }
 
   return 0;
 }
 
 int
-Substructure_Bond_Specifier_Type::debug_print (std::ostream & os, const IWString & ind) const
-{
+Substructure_Bond_Specifier_Type::debug_print(std::ostream& os,
+                                              const IWString& ind) const {
   os << ind << "Substructure_Bond_Specifier_Type: type ";
 
-  if (SINGLE_BOND & _bond_type)
+  if (SINGLE_BOND & _bond_type) {
     os << "single";
-  else if (DOUBLE_BOND & _bond_type)
+  } else if (DOUBLE_BOND & _bond_type) {
     os << "double";
-  else if (TRIPLE_BOND & _bond_type)
+  } else if (TRIPLE_BOND & _bond_type) {
     os << "triple";
+  }
 
-  if (AROMATIC_BOND & _bond_type)
+  if (AROMATIC_BOND & _bond_type) {
     os << " aromatic";
+  }
 
-  os << endl;
+  os << '\n';
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_Type::smarts (std::ostream & os) const
-{
-  if (SINGLE_BOND & _bond_type)
+Substructure_Bond_Specifier_Type::smarts(std::ostream& os) const {
+  if (SINGLE_BOND & _bond_type) {
     os << '-';
-  else if (DOUBLE_BOND & _bond_type)
+  } else if (DOUBLE_BOND & _bond_type) {
     os << '=';
-  else if (TRIPLE_BOND & _bond_type)
+  } else if (TRIPLE_BOND & _bond_type) {
     os << '#';
-  else if (AROMATIC_BOND & _bond_type)
+  } else if (AROMATIC_BOND & _bond_type) {
     os << ':';
-  else
+  } else {
     os << "???";
+  }
 
   return os.good();
 }
 
 int
 Substructure_Bond_Specifier_Type::Smarts(IWString& destination) const {
-  if (SINGLE_BOND & _bond_type)
+  if (SINGLE_BOND & _bond_type) {
     destination << '-';
-  else if (DOUBLE_BOND & _bond_type)
+  } else if (DOUBLE_BOND & _bond_type) {
     destination << '=';
-  else if (TRIPLE_BOND & _bond_type)
+  } else if (TRIPLE_BOND & _bond_type) {
     destination << '#';
-  else if (AROMATIC_BOND & _bond_type)
+  } else if (AROMATIC_BOND & _bond_type) {
     destination << ':';
-  else
+  } else {
     destination << "???";
+  }
 
   return 1;
 }
 
 int
-Substructure_Bond_Specifier_Type::involves_aromatic_bond_specification (int & r) const
-{
-  if (nullptr == _next)
+Substructure_Bond_Specifier_Type::involves_aromatic_bond_specification(int& r) const {
+  if (nullptr == _next) {
     return 0;
+  }
 
   return _next->involves_aromatic_bond_specification(r);
 }
 
 int
-Substructure_Bond_Specifier_Type::matches (Bond_and_Target_Atom & bata) const
-{
-//cerr << "Substructure_Bond_Specifier_Type::matches: _bond_type " << _bond_type << " target " << bata.btype() <<  " returning " << (0 != ((BOND_TYPE_ONLY_MASK &bata.btype()) & (BOND_TYPE_ONLY_MASK &_bond_type))) << endl;
+Substructure_Bond_Specifier_Type::matches(Bond_and_Target_Atom& bata) const {
+  // cerr << "Substructure_Bond_Specifier_Type::matches: _bond_type " << _bond_type << "
+  // target " << bata.btype() <<  " returning " << (0 != ((BOND_TYPE_ONLY_MASK
+  // &bata.btype()) & (BOND_TYPE_ONLY_MASK &_bond_type))) << '\n';
 
-  return (0 != ((BOND_TYPE_ONLY_MASK & bata.btype()) & (BOND_TYPE_ONLY_MASK & _bond_type)));   // Oct 2014. Otherwise =: (double and aromatic) does not work
-//return bata.btype() == _bond_type;
+  return (0 !=
+          ((BOND_TYPE_ONLY_MASK & bata.btype()) &
+           (BOND_TYPE_ONLY_MASK &
+            _bond_type)));  // Oct 2014. Otherwise =: (double and aromatic) does not work
+  // return bata.btype() == _bond_type;
 }
 
-Substructure_Bond_Specifier_Ring::Substructure_Bond_Specifier_Ring (boolean r) : _ring(r)
-{
+Substructure_Bond_Specifier_Ring::Substructure_Bond_Specifier_Ring(boolean r) : _ring(r) {
 }
 
 int
-Substructure_Bond_Specifier_Ring::ok() const
-{
+Substructure_Bond_Specifier_Ring::ok() const {
   return (_ring >= 0);
 }
 
 int
-Substructure_Bond_Specifier_Ring::debug_print (std::ostream & os, const IWString & ind) const
-{
-  os << ind << "Substructure_Bond_Specifier_Ring::ring = " << _ring << endl;
+Substructure_Bond_Specifier_Ring::debug_print(std::ostream& os,
+                                              const IWString& ind) const {
+  os << ind << "Substructure_Bond_Specifier_Ring::ring = " << _ring << '\n';
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_Ring::smarts (std::ostream & os) const
-{
-  if (_ring)
+Substructure_Bond_Specifier_Ring::smarts(std::ostream& os) const {
+  if (_ring) {
     os << '@';
-  else
+  } else {
     os << "!@";
+  }
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_Ring::Smarts (IWString& destination) const
-{
-  if (_ring)
+Substructure_Bond_Specifier_Ring::Smarts(IWString& destination) const {
+  if (_ring) {
     destination << '@';
-  else
+  } else {
     destination << "!@";
+  }
 
   return 1;
 }
 
 int
-Substructure_Bond_Specifier_Ring::involves_aromatic_bond_specification (int & r) const
-{
+Substructure_Bond_Specifier_Ring::involves_aromatic_bond_specification(int& r) const {
   r++;
 
-  if (nullptr == _next)
+  if (nullptr == _next) {
     return 0;
+  }
 
   return _next->involves_aromatic_bond_specification(r);
 }
 
 int
-Substructure_Bond_Specifier_Ring::matches (Bond_and_Target_Atom & bata) const
-{
+Substructure_Bond_Specifier_Ring::matches(Bond_and_Target_Atom& bata) const {
   boolean r = boolean(bata.nrings() > 0);
 
-//cerr << "Substructure_Bond_Specifier_Ring::matches: rings for bond " << r << " from " << bata.nrings() << " must match " << _ring << " returning " << (_ring == r) << endl;
+  // cerr << "Substructure_Bond_Specifier_Ring::matches: rings for bond " << r << " from "
+  // << bata.nrings() << " must match " << _ring << " returning " << (_ring == r) << '\n';
 
   return (_ring == r);
 }
 
-Substructure_Bond_Specifier_NRings::Substructure_Bond_Specifier_NRings (int r) : _nrings (r)
-{
-  assert (r >= 0);
+Substructure_Bond_Specifier_NRings::Substructure_Bond_Specifier_NRings(int r)
+    : _nrings(r) {
+  assert(r >= 0);
 
   return;
 }
 
 int
-Substructure_Bond_Specifier_NRings::ok() const
-{
-  if (_nrings < 0)
+Substructure_Bond_Specifier_NRings::ok() const {
+  if (_nrings < 0) {
     return 0;
+  }
 
   return 1;
-
 }
 
 int
-Substructure_Bond_Specifier_NRings::debug_print (std::ostream & os, const IWString & ind) const
-{
-  os << ind << "Substructure_Bond_Specifier_NRings: nrings = " << _nrings << endl;
+Substructure_Bond_Specifier_NRings::debug_print(std::ostream& os,
+                                                const IWString& ind) const {
+  os << ind << "Substructure_Bond_Specifier_NRings: nrings = " << _nrings << '\n';
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_NRings::smarts (std::ostream & os) const
-{
+Substructure_Bond_Specifier_NRings::smarts(std::ostream& os) const {
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_NRings::Smarts (IWString& destination) const
-{
+Substructure_Bond_Specifier_NRings::Smarts(IWString& destination) const {
   cerr << "Substructure_Bond_Specifier_NRings::Smarts:nrings not handled as smarts\n";
   return 0;
 }
 
 int
-Substructure_Bond_Specifier_NRings::involves_aromatic_bond_specification (int & r) const
-{
+Substructure_Bond_Specifier_NRings::involves_aromatic_bond_specification(int& r) const {
   r = 1;
-  if (nullptr == _next)
+  if (nullptr == _next) {
     return 0;
+  }
 
   return _next->involves_aromatic_bond_specification(r);
 }
 
 int
-Substructure_Bond_Specifier_NRings::matches (Bond_and_Target_Atom & bata) const
-{
+Substructure_Bond_Specifier_NRings::matches(Bond_and_Target_Atom& bata) const {
   int r = bata.nrings();
 
   return (_nrings == r);
 }
 
-Substructure_Bond_Specifier_Aromatic::Substructure_Bond_Specifier_Aromatic (boolean a) : _aromatic(a)
-{
+Substructure_Bond_Specifier_Aromatic::Substructure_Bond_Specifier_Aromatic(boolean a)
+    : _aromatic(a) {
   return;
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::ok() const
-{
+Substructure_Bond_Specifier_Aromatic::ok() const {
   return 1;
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::involves_aromatic_bond_specification (int & r) const
-{
+Substructure_Bond_Specifier_Aromatic::involves_aromatic_bond_specification(int& r) const {
   return 1;
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::debug_print (std::ostream & os, const IWString & ind) const
-{
-  os << ind << "Substructure_Bond_Specifier_Aromatic: matches " << _aromatic << endl;
+Substructure_Bond_Specifier_Aromatic::debug_print(std::ostream& os,
+                                                  const IWString& ind) const {
+  os << ind << "Substructure_Bond_Specifier_Aromatic: matches " << _aromatic << '\n';
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::smarts (std::ostream & os ) const
-{
-  if (! _aromatic)
+Substructure_Bond_Specifier_Aromatic::smarts(std::ostream& os) const {
+  if (!_aromatic) {
     os << "!:";
-  else
+  } else {
     os << ':';
+  }
 
   return os.good();
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::Smarts (IWString& destination) const
-{
-  if (! _aromatic)
+Substructure_Bond_Specifier_Aromatic::Smarts(IWString& destination) const {
+  if (!_aromatic) {
     destination << "!:";
-  else
+  } else {
     destination << ':';
+  }
 
   return 1;
 }
 
 int
-Substructure_Bond_Specifier_Aromatic::matches (Bond_and_Target_Atom & bata) const
-{
-//cerr << "Substructure_Bond_Specifier_Aromatic::matches: _aromatic = " << _aromatic << " target = " << bata.aromatic() << endl;
+Substructure_Bond_Specifier_Aromatic::matches(Bond_and_Target_Atom& bata) const {
+  // cerr << "Substructure_Bond_Specifier_Aromatic::matches: _aromatic = " << _aromatic <<
+  // " target = " << bata.aromatic() << '\n';
 
   boolean ar = bata.aromatic();
 
@@ -314,8 +314,7 @@ Substructure_Bond_Specifier_Aromatic::matches (Bond_and_Target_Atom & bata) cons
 }
 
 void
-Substructure_Bond::_default_values()
-{
+Substructure_Bond::_default_values() {
   _a1 = nullptr;
 
   _b = nullptr;
@@ -325,61 +324,63 @@ Substructure_Bond::_default_values()
   return;
 }
 
-Substructure_Bond::Substructure_Bond()
-{
+Substructure_Bond::Substructure_Bond() {
   _default_values();
 
   return;
 }
 
 Substructure_Bond::~Substructure_Bond() {
-  if (_b != nullptr)
+  if (_b != nullptr) {
     delete _b;
+  }
 }
 
 int
-Substructure_Bond::ok() const
-{
-  if (_a1 && ! _a1->ok())
+Substructure_Bond::ok() const {
+  if (_a1 && !_a1->ok()) {
     return 0;
+  }
 
-  if (nullptr != _b)
+  if (nullptr != _b) {
     return _b->ok();
+  }
 
   return 1;
 }
 
-int 
-Substructure_Bond::debug_print (std::ostream & os, 
-                                const IWString & indentation) const
-{
-  assert (os.good());
+int
+Substructure_Bond::debug_print(std::ostream& os, const IWString& indentation) const {
+  assert(os.good());
 
   os << indentation << "Bond Descriptor:";
 
-  if (! ok())
+  if (!ok()) {
     os << indentation << " ** Warning, ok fails **";
+  }
 
-  if (0 != _bond_types)
-  {
-    if (SINGLE_BOND & _bond_types)
+  if (0 != _bond_types) {
+    if (SINGLE_BOND & _bond_types) {
       os << "single";
-    if (DOUBLE_BOND & _bond_types)
+    }
+    if (DOUBLE_BOND & _bond_types) {
       os << "double";
-    if (TRIPLE_BOND & _bond_types)
+    }
+    if (TRIPLE_BOND & _bond_types) {
       os << "triple";
-    if (AROMATIC_BOND & _bond_types)
+    }
+    if (AROMATIC_BOND & _bond_types) {
       os << "aromatic";
+    }
     os << '\n';
   }
 
   os << indentation;
   _logexp.debug_print(os);
 
-  Substructure_Bond_Specifier_Base * b = _b;
-  os << indentation << "Start bond info " << b << endl;
-  while (nullptr != b)
-  {
+  Substructure_Bond_Specifier_Base* b = _b;
+  os << indentation << "Start bond info " << b << '\n';
+  while (nullptr != b) {
     b->debug_print(os, indentation);
     b = b->next();
   }
@@ -388,11 +389,10 @@ Substructure_Bond::debug_print (std::ostream & os,
 }
 
 void
-Substructure_Bond::set_atom (Substructure_Atom * a)
-{
-  assert (ok());
+Substructure_Bond::set_atom(Substructure_Atom* a) {
+  assert(ok());
 
-  assert (a && a->ok());
+  assert(a && a->ok());
 
   _a1 = a;
 
@@ -432,11 +432,10 @@ Substructure_Bond::add_type (int bt)
 }*/
 
 void
-Substructure_Bond::set_match_any()
-{
-  assert (ok());
+Substructure_Bond::set_match_any() {
+  assert(ok());
 
-  assert (nullptr == _b);
+  assert(nullptr == _b);
 
   _bond_types = (SINGLE_BOND | DOUBLE_BOND | TRIPLE_BOND | AROMATIC_BOND);
 
@@ -444,49 +443,46 @@ Substructure_Bond::set_match_any()
 }
 
 int
-Substructure_Bond::bond_type_as_string (IWString & zresult) const
-{
-  assert (ok());
+Substructure_Bond::bond_type_as_string(IWString& zresult) const {
+  assert(ok());
 
-  assert (nullptr == _b);    // can only be a simple query
+  assert(nullptr == _b);  // can only be a simple query
 
   int rc = 0;
 
-  if (SINGLE_BOND & _bond_types)
-  {
+  if (SINGLE_BOND & _bond_types) {
     zresult = "single";
     rc = 1;
   }
-  
-  if (DOUBLE_BOND & _bond_types)
-  {
-    if (rc)
+
+  if (DOUBLE_BOND & _bond_types) {
+    if (rc) {
       zresult << "|double";
-    else
+    } else {
       zresult = "double";
+    }
     rc++;
   }
-  
-  if (TRIPLE_BOND & _bond_types)
-  {
-    if (rc)
+
+  if (TRIPLE_BOND & _bond_types) {
+    if (rc) {
       zresult << "|triple";
-    else
+    } else {
       zresult = "triple";
+    }
     rc++;
   }
-  
-  if (AROMATIC_BOND & _bond_types)
-  {
-    if (rc)
+
+  if (AROMATIC_BOND & _bond_types) {
+    if (rc) {
       zresult << "|aromatic";
-    else
+    } else {
       zresult = "aromatic";
+    }
     rc++;
   }
-  
-  if (0 == rc)
-  {
+
+  if (0 == rc) {
     cerr << "Substructure_Bond::bond_type_as_string: huh, nothing set\n";
     debug_print(cerr, "");
     zresult = "???";
@@ -497,15 +493,16 @@ Substructure_Bond::bond_type_as_string (IWString & zresult) const
 }
 
 int
-Substructure_Bond::involves_aromatic_bond_specification (int & need_rings) const
-{
-  assert (ok());
+Substructure_Bond::involves_aromatic_bond_specification(int& need_rings) const {
+  assert(ok());
 
-  if (AROMATIC_BOND & _bond_types)
+  if (AROMATIC_BOND & _bond_types) {
     return 1;
+  }
 
-  if (nullptr == _b)    // just matches bond types
+  if (nullptr == _b) {  // just matches bond types
     return 0;
+  }
 
   return _b->involves_aromatic_bond_specification(need_rings);
 }
@@ -516,17 +513,16 @@ Substructure_Bond::involves_aromatic_bond_specification (int & need_rings) const
 */
 
 int
-Substructure_Bond::make_single_or_aromatic()
-{
-  assert (ok());
-  assert (nullptr == _b);
+Substructure_Bond::make_single_or_aromatic() {
+  assert(ok());
+  assert(nullptr == _b);
 
   _bond_types = (SINGLE_BOND | AROMATIC_BOND);
 
   return 1;
 }
 
-//#define DEBUG_BOND_MATCH
+// #define DEBUG_BOND_MATCH
 
 /*
   Bond matching function. If we are just a bond type, catch that first.
@@ -534,37 +530,39 @@ Substructure_Bond::make_single_or_aromatic()
 */
 
 int
-Substructure_Bond::matches (Bond_and_Target_Atom & bata)
-{
+Substructure_Bond::matches(Bond_and_Target_Atom& bata) {
 #ifdef DEBUG_BOND_MATCH
-  cerr << "Checking bond to atom " << bata.other()->atom_number() << " type(s) " << bata.btype() << " my type(s) = " << _bond_types << " match " << (_bond_types & bata.btype()) << endl;
+  cerr << "Checking bond to atom " << bata.other()->atom_number() << " type(s) "
+       << bata.btype() << " my type(s) = " << _bond_types << " match "
+       << (_bond_types & bata.btype()) << '\n';
 #endif
 
-  if (0 == _bond_types)    // no types set, no need to check
+  if (0 == _bond_types)  // no types set, no need to check
     ;
-  else if (0 == ((_bond_types) & (bata.btype())))    // mismatch on types specified
+  else if (0 == ((_bond_types) & (bata.btype()))) {  // mismatch on types specified
     return 0;
+  }
 
 #ifdef DEBUG_BOND_MATCH
-  if (nullptr == _b)
+  if (nullptr == _b) {
     cerr << "NO components to check\n";
-  else
+  } else {
     cerr << "Checking " << _logexp.number_results() << " components\n";
+  }
 #endif
 
-  if (nullptr == _b)
+  if (nullptr == _b) {
     return 1;
+  }
 
   _logexp.reset();
 
-  int i = 0;     // which result are we generating
+  int i = 0;  // which result are we generating
 
-  Substructure_Bond_Specifier_Base * b = _b;
+  Substructure_Bond_Specifier_Base* b = _b;
 
-  while (nullptr != b)
-  {
-    if (! _logexp.result_needed(i))
-    {
+  while (nullptr != b) {
+    if (!_logexp.result_needed(i)) {
       i++;
       b = b->next();
       continue;
@@ -581,10 +579,9 @@ Substructure_Bond::matches (Bond_and_Target_Atom & bata)
 #endif
 
     int rc;
-    if (_logexp.evaluate(rc))
-    {
+    if (_logexp.evaluate(rc)) {
 #ifdef DEBUG_BOND_MATCH
-      cerr << " expression is complete: rc = " << rc << endl;
+      cerr << " expression is complete: rc = " << rc << '\n';
       _logexp.debug_print(cerr);
 #endif
 
@@ -599,17 +596,14 @@ Substructure_Bond::matches (Bond_and_Target_Atom & bata)
     b = b->next();
   }
 
-  assert (NULL == "Substructure_Bond_Specifier_Base::matches: should not come to here");
+  assert(NULL == "Substructure_Bond_Specifier_Base::matches: should not come to here");
 
   return 1;
 }
 
 static int
-count_bond_charactes (const char * smarts,
-                      int chars_to_process)
-{
-  for (int i = 0; i < chars_to_process; i++)
-  {
+count_bond_charactes(const char* smarts, int chars_to_process) {
+  for (int i = 0; i < chars_to_process; i++) {
     char s = smarts[i];
 
     if ('-' == s)
@@ -634,8 +628,9 @@ count_bond_charactes (const char * smarts,
       ;
     else if ('!' == s)
       ;
-    else
+    else {
       return i;
+    }
   }
 
   return chars_to_process;
@@ -649,29 +644,24 @@ count_bond_charactes (const char * smarts,
 */
 
 static int
-fetch_ring_specs (const char * smarts,
-                  int max_chars,
-                  int & nrings)
-{
-  assert ('@' == smarts[0]);
+fetch_ring_specs(const char* smarts, int max_chars, int& nrings) {
+  assert('@' == smarts[0]);
 
-  if (1 == max_chars)
-  {
+  if (1 == max_chars) {
     nrings = 1;
     return 1;
   }
 
-  if ('@' != smarts[1])
-  {
+  if ('@' != smarts[1]) {
     nrings = 1;
     return 1;
   }
 
   nrings = 2;
-  for (int i = 2; i < max_chars; i++)
-  {
-    if ('@' != smarts[i])
+  for (int i = 2; i < max_chars; i++) {
+    if ('@' != smarts[i]) {
       return i;
+    }
 
     nrings++;
   }
@@ -680,74 +670,69 @@ fetch_ring_specs (const char * smarts,
 }
 
 static int
-fetch_ring_specs (const char * smarts,
-                  int characters_processed,
-                  int chars_to_process,
-                  int & nr)
-{
-  return fetch_ring_specs(smarts + characters_processed, chars_to_process - characters_processed, nr);
+fetch_ring_specs(const char* smarts, int characters_processed, int chars_to_process,
+                 int& nr) {
+  return fetch_ring_specs(smarts + characters_processed,
+                          chars_to_process - characters_processed, nr);
 }
-       
+
 static bond_type_t
-char_to_btype (char c)
-{
-  if ('-' == c)
+char_to_btype(char c) {
+  if ('-' == c) {
     return SINGLE_BOND;
+  }
 
-  if ('=' == c)
+  if ('=' == c) {
     return DOUBLE_BOND;
+  }
 
-  if ('#' == c)
+  if ('#' == c) {
     return TRIPLE_BOND;
+  }
 
-  if (':' == c)
+  if (':' == c) {
     return AROMATIC_BOND;
+  }
 
   return 0;
 }
 
-//#define DEBUG_BOND_FROM_SMARTS
+// #define DEBUG_BOND_FROM_SMARTS
 
 /*
   We need to be specially careful with aromatic bonds.
 */
 
 int
-Substructure_Bond::_construct_from_smarts (const char * smarts,
-                             int chars_to_process,
-                             int & characters_processed)
-{
+Substructure_Bond::_construct_from_smarts(const char* smarts, int chars_to_process,
+                                          int& characters_processed) {
   int nchar = count_bond_charactes(smarts, chars_to_process);
 
 #ifdef DEBUG_BOND_FROM_SMARTS
   cerr << "Substructure_Bond::_construct_from_smarts: processing '";
-  for (int i = characters_processed; i < chars_to_process; i++)
-  {
+  for (int i = characters_processed; i < chars_to_process; i++) {
     cerr << smarts[i];
   }
-  cerr << "', nchars = " << nchar << endl;
+  cerr << "', nchars = " << nchar << '\n';
 #endif
 
-  if (0 == nchar)    // take the default of single or aromatic
+  if (0 == nchar)  // take the default of single or aromatic
   {
     make_single_or_aromatic();
     return 1;
   }
 
-// The special case of match any bond
+  // The special case of match any bond
 
-  if (1 == nchar && '~' == smarts[0])
-  {
+  if (1 == nchar && '~' == smarts[0]) {
     set_match_any();
     characters_processed = 1;
     return 1;
   }
 
-  if (1 == nchar)
-  {
+  if (1 == nchar) {
     bond_type_t bt = char_to_btype(smarts[0]);
-    if (0 != bt)
-    {
+    if (0 != bt) {
       _bond_types = bt;
       characters_processed = 1;
 
@@ -755,16 +740,13 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
     }
   }
 
-// For efficiency, try to process the special case of 'type,type'
+  // For efficiency, try to process the special case of 'type,type'
 
-
-  if (3 == nchar && ',' == smarts[1])
-  {
+  if (3 == nchar && ',' == smarts[1]) {
     bond_type_t bt1 = char_to_btype(smarts[0]);
     bond_type_t bt2 = char_to_btype(smarts[2]);
 
-    if (0 != bt1 && 0 != bt2)
-    {
+    if (0 != bt1 && 0 != bt2) {
       _bond_types = bt1 | bt2;
 
       characters_processed = 3;
@@ -773,22 +755,20 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
     }
   }
 
-// The special case of '!type' is also easy sometimes. We don't do ! aromatic here
+  // The special case of '!type' is also easy sometimes. We don't do ! aromatic here
 
-  if (2 == nchar && '!' == smarts[0])
-  {
+  if (2 == nchar && '!' == smarts[0]) {
     bond_type_t bt = char_to_btype(smarts[1]);
-    if (0 != bt && AROMATIC_BOND != bt)
-    {
-      if (SINGLE_BOND == bt)
+    if (0 != bt && AROMATIC_BOND != bt) {
+      if (SINGLE_BOND == bt) {
         _bond_types = DOUBLE_BOND | TRIPLE_BOND;
-      else if (DOUBLE_BOND == bt)
+      } else if (DOUBLE_BOND == bt) {
         _bond_types = SINGLE_BOND | TRIPLE_BOND;
-      else if (TRIPLE_BOND == bt)
+      } else if (TRIPLE_BOND == bt) {
         _bond_types = SINGLE_BOND | DOUBLE_BOND;
-      else
-      {
-        cerr << "Substructure_Bond::_construct_from_smarts: what is this '" << smarts[0] << smarts[1] << "'\n";
+      } else {
+        cerr << "Substructure_Bond::_construct_from_smarts: what is this '" << smarts[0]
+             << smarts[1] << "'\n";
         return 0;
       }
 
@@ -798,9 +778,9 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
     }
   }
 
-  if (';' == smarts[0] || '&' == smarts[0] || ',' == smarts[0] || '^' == smarts[0])
-  {
-    cerr << "Substructure_Bond::_construct_from_smarts:cannot start bond smarts with '" << smarts[0] << "'\n";
+  if (';' == smarts[0] || '&' == smarts[0] || ',' == smarts[0] || '^' == smarts[0]) {
+    cerr << "Substructure_Bond::_construct_from_smarts:cannot start bond smarts with '"
+         << smarts[0] << "'\n";
     return 0;
   }
 
@@ -808,27 +788,24 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
   cerr << "Substructure_Bond::_construct_from_smarts: building operators\n";
 #endif
 
-// All other cases are handled the hard way
+  // All other cases are handled the hard way
 
   int logop = IW_LOGEXP_UNDEFINED;
 
-  int natt = 0;    // the number of components of the logical expression
+  int natt = 0;  // the number of components of the logical expression
 
   boolean previous_token_was_operator = false;
 
-  while (characters_processed < chars_to_process)
-  {
+  while (characters_processed < chars_to_process) {
     int unary_op = 1;
 
     boolean token_is_operator = false;
 
-    if ('!' == smarts[characters_processed])
-    {
+    if ('!' == smarts[characters_processed]) {
       unary_op = 0;
       characters_processed++;
 
-      if (characters_processed >= chars_to_process)
-      {
+      if (characters_processed >= chars_to_process) {
         cerr << "Substructure_Bond::_construct_from_smarts: smarts cannot end with '!'\n";
         return 0;
       }
@@ -836,114 +813,98 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
 
     char s = smarts[characters_processed];
 
-//  Substructure_Bond_Specifier_Base * b = nullptr;
+    //  Substructure_Bond_Specifier_Base * b = nullptr;
     std::unique_ptr<Substructure_Bond_Specifier_Base> b;
 
     unsigned int bt = char_to_btype(s);
 
 #ifdef DEBUG_BOND_FROM_SMARTS
-    cerr << "Substructure_Bond_Specifier_Base::_construct_from_smarts: char '" << s << "' btype " << bt << ", characters_processed " << characters_processed << endl;
+    cerr << "Substructure_Bond_Specifier_Base::_construct_from_smarts: char '" << s
+         << "' btype " << bt << ", characters_processed " << characters_processed << '\n';
 #endif
 
-    if (SINGLE_BOND == bt || DOUBLE_BOND == bt || TRIPLE_BOND == bt)
-    {
-      b.reset(new Substructure_Bond_Specifier_Type(bt));     // can be a memory leak at times, fix sometime...
+    if (SINGLE_BOND == bt || DOUBLE_BOND == bt || TRIPLE_BOND == bt) {
+      b.reset(new Substructure_Bond_Specifier_Type(
+          bt));  // can be a memory leak at times, fix sometime...
       characters_processed++;
-    }
-    else if (':' == s)
-    {
-      if (0 == unary_op)
+    } else if (':' == s) {
+      if (0 == unary_op) {
         b.reset(new Substructure_Bond_Specifier_Aromatic(0));
-      else
+      } else {
         b.reset(new Substructure_Bond_Specifier_Aromatic(1));
+      }
 
-       unary_op = 1;
-       characters_processed++;
-    }
-    else if ('@' == s)
-    {
+      unary_op = 1;
+      characters_processed++;
+    } else if ('@' == s) {
       int nr;
       int nch = fetch_ring_specs(smarts, characters_processed, chars_to_process, nr);
 
-//    Deal with some common special cases
+      //    Deal with some common special cases
 
-      if (1 == nch)
-      {
-        if (0 == unary_op)
-        {
+      if (1 == nch) {
+        if (0 == unary_op) {
           b.reset(new Substructure_Bond_Specifier_Ring(0));
           unary_op = 1;
-        }
-        else
+        } else {
           b.reset(new Substructure_Bond_Specifier_Ring(1));
-      }
-      else    // must be number of rings specifier
+        }
+      } else  // must be number of rings specifier
       {
         b.reset(new Substructure_Bond_Specifier_NRings(nr));
       }
 
       characters_processed += nch;
-    }
-    else if ('&' == s)
-    {
+    } else if ('&' == s) {
       logop = IW_LOGEXP_AND;
       characters_processed++;
       token_is_operator = true;
-    }
-    else if (',' == s)
-    {
+    } else if (',' == s) {
       logop = IW_LOGEXP_OR;
       characters_processed++;
       token_is_operator = true;
-    }
-    else if (';' == s)
-    {
+    } else if (';' == s) {
       logop = IW_LOGEXP_LOW_PRIORITY_AND;
       characters_processed++;
       token_is_operator = true;
-    }
-    else if ('^' == s)
-    {
+    } else if ('^' == s) {
       logop = IW_LOGEXP_XOR;
       characters_processed++;
       token_is_operator = true;
-    }
-    else if ('~' == s)   // does not restrict anything, so just skip. This is wrong, the logical expression gets out of sync with the bonds, fix sometime
+    } else if ('~' ==
+               s)  // does not restrict anything, so just skip. This is wrong, the logical
+                   // expression gets out of sync with the bonds, fix sometime
     {
-      cerr << "Substructure_Bond::_construct_from_smarts:~ specification as part of composite makes no sense, ignored. Beware!\n";
+      cerr << "Substructure_Bond::_construct_from_smarts:~ specification as part of "
+              "composite makes no sense, ignored. Beware!\n";
       characters_processed++;
       continue;
-    }
-    else if (0 == unary_op)
-    {
-      cerr << "Substructure_Bond::_construct_from_smarts: unary operator '!' not followed by bond specifier\n";
+    } else if (0 == unary_op) {
+      cerr << "Substructure_Bond::_construct_from_smarts: unary operator '!' not "
+              "followed by bond specifier\n";
       return 0;
-    }
-    else      // must be done with this bond
+    } else  // must be done with this bond
     {
       break;
     }
 
-    if (token_is_operator)
-    {
-      assert (IW_LOGEXP_UNDEFINED != logop);
-      if (0 == unary_op)
-      {
-        cerr << "Substructure_Bond::_construct_from_smarts: operator cannot follow unary operator\n";
+    if (token_is_operator) {
+      assert(IW_LOGEXP_UNDEFINED != logop);
+      if (0 == unary_op) {
+        cerr << "Substructure_Bond::_construct_from_smarts: operator cannot follow unary "
+                "operator\n";
         return 0;
       }
       _logexp.add_operator(logop);
       previous_token_was_operator = true;
-    }
-    else
-    {
-      if (nullptr == _b)
+    } else {
+      if (nullptr == _b) {
         _b = b.release();
-      else
-      {
+      } else {
         _b->add_to_chain(b.release());
-        if (! previous_token_was_operator)
+        if (!previous_token_was_operator) {
           _logexp.add_operator(IW_LOGEXP_AND);
+        }
       }
       _logexp.set_unary_operator(natt, unary_op);
       natt++;
@@ -952,28 +913,25 @@ Substructure_Bond::_construct_from_smarts (const char * smarts,
   }
 
 #ifdef DEBUG_BOND_FROM_SMARTS
-  cerr << "After parsing bond, characters processed = " << characters_processed << endl;
+  cerr << "After parsing bond, characters processed = " << characters_processed << '\n';
 #endif
 
   return 1;
 }
 
 int
-Substructure_Bond::construct_from_smarts (const char * smarts,
-                             int chars_to_process,
-                             int & characters_processed)
-{
-  assert (nullptr == _b);
+Substructure_Bond::construct_from_smarts(const char* smarts, int chars_to_process,
+                                         int& characters_processed) {
+  assert(nullptr == _b);
 
   characters_processed = 0;
 
-  if (chars_to_process <= 0)
-  {
+  if (chars_to_process <= 0) {
     cerr << "Substructure_Bond::construct_from_smarts: no chars to process\n";
     return 0;
   }
 
-  int rc = _construct_from_smarts (smarts, chars_to_process, characters_processed);
+  int rc = _construct_from_smarts(smarts, chars_to_process, characters_processed);
 
   return rc;
 }
@@ -984,20 +942,18 @@ Substructure_Bond::construct_from_smarts (const char * smarts,
 */
 
 int
-Substructure_Bond::copy (const Bond * b,
-                         int copy_bond_attributes)
-{
-  if (b->is_aromatic())
+Substructure_Bond::copy(const Bond* b, int copy_bond_attributes) {
+  if (b->is_aromatic()) {
     _bond_types = AROMATIC_BOND;
-  else if (b->is_single_bond())
+  } else if (b->is_single_bond()) {
     _bond_types = SINGLE_BOND;
-  else if (b->is_double_bond())
+  } else if (b->is_double_bond()) {
     _bond_types = DOUBLE_BOND;
-  else if (b->is_triple_bond())
+  } else if (b->is_triple_bond()) {
     _bond_types = TRIPLE_BOND;
+  }
 
-  if (copy_bond_attributes)
-  {
+  if (copy_bond_attributes) {
     cerr << "Substructure_Bond::copy: sorry, copy_bond_attributes not implemented\n";
     return 0;
   }
@@ -1006,14 +962,12 @@ Substructure_Bond::copy (const Bond * b,
 }
 
 int
-Substructure_Bond::set_must_be_in_a_ring (int m)
-{
-  Substructure_Bond_Specifier_Ring * r = new Substructure_Bond_Specifier_Ring (m);
+Substructure_Bond::set_must_be_in_a_ring(int m) {
+  Substructure_Bond_Specifier_Ring* r = new Substructure_Bond_Specifier_Ring(m);
 
-  if (nullptr == _b)
+  if (nullptr == _b) {
     _b = r;
-  else
-  {
+  } else {
     _b->add_to_chain(r);
     _logexp.add_operator(IW_LOGEXP_LOW_PRIORITY_AND);
   }
@@ -1082,8 +1036,8 @@ Substructure_Bond::Smarts() const {
   }
 
   int ndx = 0;
-  for (const Substructure_Bond_Specifier_Base* b = _b;
-       b != nullptr; b = b->next(), ++ndx) {
+  for (const Substructure_Bond_Specifier_Base* b = _b; b != nullptr;
+       b = b->next(), ++ndx) {
     if (ndx > 0) {
       AppendOperator(_logexp.op(ndx - 1), result);
     }

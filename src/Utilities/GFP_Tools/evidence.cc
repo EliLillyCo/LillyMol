@@ -24,8 +24,13 @@
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
 #include "Utilities/GFP_Tools/evidence.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#include "evidence.pb.h"
+#endif
 
 namespace evidence {
 

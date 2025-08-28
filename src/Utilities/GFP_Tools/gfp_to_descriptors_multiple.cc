@@ -26,11 +26,11 @@ static const float zero = static_cast<float>(0.0);
 
 static float lower_population_cutoff = zero;
 
-static unsigned int lower_support_cutoff_number = 0;
+static uint32_t lower_support_cutoff_number = 0;
 
 static float upper_population_cutoff = zero;
 
-static unsigned int upper_support_cutoff_number = std::numeric_limits<int>::max();
+static uint32_t upper_support_cutoff_number = std::numeric_limits<int>::max();
 
 /*
   We can quickly check whether or not lower or upper limits have been specified
@@ -79,22 +79,22 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Converts a fingerprint set from a gfp file to a descriptor file\n";
-  cerr << " -F <tag>       specify tag of the fingerprint to be processed, standard .gfp syntax\n";
-//cerr << " -m             molecular properties\n";
-  cerr << " -x <fraction>  discard bits that hit less than <fraction> of the time\n";
-  cerr << " -n <number>    discard bits hit in less than <number> of the fingerprints\n";
-  cerr << " -X <fraction>  discard bits that hit more than <fraction> of the time\n";
-  cerr << " -N <number>    discard bits hit in more than <number> of the fingerprints\n";
-  cerr << "                    use either -x or -n, and either -X or -N\n";
-  cerr << " -y <number>    discard records unless they have at least <number> non zero values\n";
-  cerr << " -s             sort columns by frequency (within fingeprint)\n";
-  cerr << " -I <string>    prefix for descriptors produced\n";
-  cerr << " -u             gsub space to _ in multi-token names\n";
-  cerr << " -d <nbits>     fold sparse fingerprints to constant width <nbits>\n";
-  cerr << " -q             if a bit is absent write as -1 rather than 0\n";
-  cerr << " -o <sep>       output separator (def ' ')\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Converts a fingerprint set from a gfp file to a descriptor file.
+ -F <tag>       specify tag of the fingerprint to be processed, standard .gfp syntax.
+ -x <fraction>  discard bits that hit less than <fraction> of the time.
+ -n <number>    discard bits hit in less than <number> of the fingerprints.
+ -X <fraction>  discard bits that hit more than <fraction> of the time.
+ -N <number>    discard bits hit in more than <number> of the fingerprints.
+                    use either -x or -n, and either -X or -N.
+ -y <number>    discard records unless they have at least <number> non zero values.
+ -s             sort columns by frequency (within fingeprint).
+ -I <string>    prefix for descriptors produced.
+ -u             gsub space to _ in multi-token names.
+ -d <nbits>     fold sparse fingerprints to constant width <nbits>.
+ -q             if a bit is absent write as -1 rather than 0.
+ -o <sep>       output separator (def ' '). Names are recognised (-o tab).
+ -v             verbose output.
+)";
   // clang-format on
 
   exit(rc);
@@ -102,27 +102,27 @@ usage(int rc) {
 
 class Bit_and_Count {
  private:
-  unsigned int _bit;
-  unsigned int _count;
+  uint32_t _bit;
+  uint32_t _count;
 
  public:
-  unsigned int
+  uint32_t
   bit() const {
     return _bit;
   }
 
   void
-  set_bit(unsigned int s) {
+  set_bit(uint32_t s) {
     _bit = s;
   }
 
-  unsigned int
+  uint32_t
   count() const {
     return _count;
   }
 
   void
-  set_count(unsigned int s) {
+  set_count(uint32_t s) {
     _count = s;
   }
 };
@@ -150,6 +150,10 @@ write_descriptors(const IWString& pcn, const int* tmp, const int number_descript
                   IWString_and_File_Descriptor& output) {
   output << pcn;
 
+  if (output.elements_allocated() < (number_descriptors * 5)) {
+    output.reserve(number_descriptors * 6);
+  }
+
   for (int i = 0; i < number_descriptors; i++) {
     if (tmp[i] >= 0) {
       iwdigits.append_number(output, tmp[i]);
@@ -159,6 +163,7 @@ write_descriptors(const IWString& pcn, const int* tmp, const int number_descript
       cerr << "Unexpected negative value, i = " << i << " value " << tmp[i] << '\n';
       output << ' ' << tmp[i];
     }
+    output.write_if_buffer_holds_more_than(4096);
   }
 
   output.add('\n');
@@ -170,15 +175,15 @@ write_descriptors(const IWString& pcn, const int* tmp, const int number_descript
 
 static int
 fill_output_array(const Sparse_Fingerprint& fp,
-                  const IW_Hash_Map<unsigned int, unsigned int>& col, int* tmp) {
+                  const IW_Hash_Map<uint32_t, uint32_t>& col, int* tmp) {
   int istart = 0;
-  unsigned int zbit;
+  uint32_t zbit;
   int zcount;
 
   int rc = 0;
 
   while (fp.next_bit_set(istart, zbit, zcount)) {
-    IW_Hash_Map<unsigned int, unsigned int>::const_iterator f = col.find(zbit);
+    IW_Hash_Map<uint32_t, uint32_t>::const_iterator f = col.find(zbit);
     if (f == col.end()) {
       continue;
     }
@@ -193,7 +198,7 @@ fill_output_array(const Sparse_Fingerprint& fp,
 
 static int
 fill_output_array(const IWDYFP& fp,
-                  const std::unordered_map<unsigned int, unsigned int>& col, int* tmp) {
+                  const std::unordered_map<uint32_t, uint32_t>& col, int* tmp) {
   int i = 0;
   int b;
 
@@ -214,7 +219,7 @@ fill_output_array(const IWDYFP& fp,
 }
 
 static int
-rejected_by_upper_or_lower_population(unsigned int zbit, unsigned int zcount,
+rejected_by_upper_or_lower_population(uint32_t zbit, uint32_t zcount,
                                       const int pool_size, int& bits_below_threshold,
                                       int& bits_above_threshold) {
   if (!bit_count_limits_set) {
@@ -264,8 +269,8 @@ report_bits_above_and_below_threshold(std::ostream& os, int bits_below_threshold
 static int
 establish_header_and_columns_folded(
     const int fold_to_constant_width,
-    const IW_Hash_Map<unsigned int, unsigned int>* fpcount, const int nfp,
-    IW_Hash_Map<unsigned int, unsigned int>* col, const IWString* dprefix,
+    const IW_Hash_Map<uint32_t, uint32_t>* fpcount, const int nfp,
+    IW_Hash_Map<uint32_t, uint32_t>* col, const IWString* dprefix,
     int& number_descriptors, IWString& header) {
   int* to_col = new_int(fold_to_constant_width);
   std::unique_ptr<int[]> free_to_col(to_col);
@@ -330,8 +335,8 @@ establish_header_and_columns_folded(
 
 static int
 establish_header_and_columns_with_thresholds(
-    const IW_Hash_Map<unsigned int, unsigned int>* fpcount, const int nfp,
-    IW_Hash_Map<unsigned int, unsigned int>* col, const IWString* dprefix,
+    const IW_Hash_Map<uint32_t, uint32_t>* fpcount, const int nfp,
+    IW_Hash_Map<uint32_t, uint32_t>* col, const IWString* dprefix,
     int& number_descriptors, IWString& header) {
   int bits_below_threshold = 0;
   int bits_above_threshold = 0;
@@ -364,10 +369,10 @@ establish_header_and_columns_with_thresholds(
 
 static int
 bit_and_count_comparitor(const void* v1, const void* v2) {
-  const std::pair<unsigned int, unsigned int>* p1 =
-      (const std::pair<unsigned int, unsigned int>*)v1;
-  const std::pair<unsigned int, unsigned int>* p2 =
-      (const std::pair<unsigned int, unsigned int>*)v2;
+  const std::pair<uint32_t, uint32_t>* p1 =
+      (const std::pair<uint32_t, uint32_t>*)v1;
+  const std::pair<uint32_t, uint32_t>* p2 =
+      (const std::pair<uint32_t, uint32_t>*)v2;
 
   if (p1->second < p2->second) {
     return 1;
@@ -381,13 +386,13 @@ bit_and_count_comparitor(const void* v1, const void* v2) {
 }
 
 static int
-do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
-                     IW_Hash_Map<unsigned int, unsigned int>& col,
+do_sort_by_frequency(const IW_Hash_Map<uint32_t, uint32_t>& fpcount,
+                     IW_Hash_Map<uint32_t, uint32_t>& col,
                      const IWString& descriptor_prefix, int& number_descriptors,
                      IWString& header, const int pool_size) {
-  std::pair<unsigned int, unsigned int>* bit_and_count =
-      new std::pair<unsigned int, unsigned int>[fpcount.size()];
-  std::unique_ptr<std::pair<unsigned int, unsigned int>[]> free_bit_and_count(
+  std::pair<uint32_t, uint32_t>* bit_and_count =
+      new std::pair<uint32_t, uint32_t>[fpcount.size()];
+  std::unique_ptr<std::pair<uint32_t, uint32_t>[]> free_bit_and_count(
       bit_and_count);
 
   int bits_below_threshold = 0;
@@ -402,7 +407,7 @@ do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
       continue;
     }
 
-    std::pair<unsigned int, unsigned int>& pi = bit_and_count[ndx];
+    std::pair<uint32_t, uint32_t>& pi = bit_and_count[ndx];
     ndx++;
 
     pi.first = (*f).first;
@@ -418,13 +423,13 @@ do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
     return 0;
   }
 
-  qsort(bit_and_count, ndx, sizeof(std::pair<unsigned int, unsigned int>),
+  qsort(bit_and_count, ndx, sizeof(std::pair<uint32_t, uint32_t>),
         bit_and_count_comparitor);
 
   for (int i = 0; i < ndx; i++) {
-    const std::pair<unsigned int, unsigned int>& pi = bit_and_count[i];
+    const std::pair<uint32_t, uint32_t>& pi = bit_and_count[i];
 
-    unsigned int b = pi.first;
+    uint32_t b = pi.first;
 
     if (verbose > 2) {
       cerr << "Bit " << b << " found " << pi.second << " times\n";
@@ -443,7 +448,7 @@ do_sort_by_frequency(const IW_Hash_Map<unsigned int, unsigned int>& fpcount,
 int
 fingerprints_to_descriptors(const IW_General_Fingerprint* pool, const int pool_size,
                             const int nfp, const int* fpnumber,
-                            const std::unordered_map<unsigned int, unsigned int>* col,
+                            const std::unordered_map<uint32_t, uint32_t>* col,
                             const int number_descriptors,
                             IWString_and_File_Descriptor& output) {
   int* tmp = new int[number_descriptors];
@@ -489,21 +494,21 @@ fingerprints_to_descriptors(const IW_General_Fingerprint* pool, const int pool_s
 
 static int
 scan_fixed_width_fingerprint(const IWDYFP& fp,
-                             std::unordered_map<unsigned int, unsigned int>& fpcount,
-                             int& nbits, const IWString& fptag) {
-  unsigned int nb = fp.nbits();
+                             std::unordered_map<uint32_t, uint32_t>& fpcount,
+                             uint32_t& nbits, const IWString& fptag) {
+  uint32_t nb = fp.nbits();
 
   if (0 == nbits) {
     nbits = nb;
     if (verbose) {
       cerr << "Fixed width fingerprint " << fptag << " has " << nbits << " bits\n";
     }
-  } else if (nb != static_cast<unsigned int>(nbits)) {
+  } else if (nb != nbits) {
     cerr << "Bit count mismatch, expected " << nbits << " got " << nb << '\n';
     return 0;
   }
 
-  for (unsigned int i = 0; i < nb; i++) {
+  for (uint32_t i = 0; i < nb; i++) {
     if (fp.is_set(i)) {
       fpcount[i]++;
     }
@@ -514,9 +519,9 @@ scan_fixed_width_fingerprint(const IWDYFP& fp,
 
 static int
 scan_non_colliding_fingerprint(const Sparse_Fingerprint& fp,
-                               IW_Hash_Map<unsigned int, unsigned int>& fpcount) {
+                               IW_Hash_Map<uint32_t, uint32_t>& fpcount) {
   int istart = 0;
-  unsigned int zbit;
+  uint32_t zbit;
   int zcount;
 
   while (fp.next_bit_set(istart, zbit, zcount)) {
@@ -532,12 +537,12 @@ fingerprints_to_descriptors(const IW_General_Fingerprint* pool, const int pool_s
                             IWString_and_File_Descriptor& output) {
   const int nfp = fptag.number_elements();
 
-  std::unordered_map<unsigned int, unsigned int>* fpcount =
-      new std::unordered_map<unsigned int, unsigned int>[nfp];
-  std::unique_ptr<std::unordered_map<unsigned int, unsigned int>[]> free_fpcount(fpcount);
+  std::unordered_map<uint32_t, uint32_t>* fpcount =
+      new std::unordered_map<uint32_t, uint32_t>[nfp];
+  std::unique_ptr<std::unordered_map<uint32_t, uint32_t>[]> free_fpcount(fpcount);
 
-  int* nbits = new_int(nfp);
-  std::unique_ptr<int[]> free_nbits(nbits);
+  std::unique_ptr<uint32_t[]> nbits(new uint32_t[nfp]);
+  std::fill_n(nbits.get(), nfp, 0);
 
   for (int i = 0; i < pool_size; ++i) {
     for (int j = 0; j < nfp; ++j) {
@@ -568,9 +573,9 @@ fingerprints_to_descriptors(const IW_General_Fingerprint* pool, const int pool_s
   IWString header("Name");
   header.resize(10 * fpcount[0].size());
 
-  std::unordered_map<unsigned int, unsigned int>* col =
-      new std::unordered_map<unsigned int, unsigned int>[nfp];
-  std::unique_ptr<std::unordered_map<unsigned int, unsigned int>[]> free_col(col);
+  std::unordered_map<uint32_t, unsigned int>* col =
+      new std::unordered_map<uint32_t, unsigned int>[nfp];
+  std::unique_ptr<std::unordered_map<uint32_t, unsigned int>[]> free_col(col);
 
   IWString* dprefix = new IWString[nfp];
   std::unique_ptr<IWString[]> free_dprefix(dprefix);
@@ -604,7 +609,7 @@ fingerprints_to_descriptors(const IW_General_Fingerprint* pool, const int pool_s
   } else {
     for (int i = 0; i < nfp; ++i) {
       for (auto j : fpcount[i]) {
-        const unsigned int b = j.first;
+        const uint32_t b = j.first;
 
         header << dprefix[i] << b;
         col[i][b] = number_descriptors;
@@ -961,7 +966,7 @@ fingerprints_to_descriptors(int argc, char** argv) {
   // Convert any ratios specified for support levels to numbers
 
   if (zero != lower_population_cutoff) {
-    lower_support_cutoff_number = static_cast<unsigned int>(
+    lower_support_cutoff_number = static_cast<uint32_t>(
         lower_population_cutoff * static_cast<double>(pool_size) + 0.4999);
     if (0 == lower_support_cutoff_number) {
       lower_support_cutoff_number = 1;
@@ -976,10 +981,10 @@ fingerprints_to_descriptors(int argc, char** argv) {
   }
 
   if (zero != upper_population_cutoff) {
-    upper_support_cutoff_number = static_cast<unsigned int>(
+    upper_support_cutoff_number = static_cast<uint32_t>(
         upper_population_cutoff * static_cast<double>(pool_size) + 0.4999);
     assert(upper_support_cutoff_number > 1);
-    if (static_cast<unsigned int>(pool_size) == upper_support_cutoff_number) {
+    if (static_cast<uint32_t>(pool_size) == upper_support_cutoff_number) {
       upper_support_cutoff_number = pool_size - 1;
     }
 

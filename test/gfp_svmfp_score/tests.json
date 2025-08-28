@@ -1,0 +1,25 @@
+{
+  "executable": "gfp_svmfp_score",
+  "default_command_components": [
+    "-X #{indir}/bit_xref -U #{indir}/for_gfp_svmfp_evaluate.gfp -b 0.26222419 -s 490 -N #{indir}/activity_normalisation_data",
+    " -v -H 'Pred' -o allow -o quiet"
+  ],
+  "test": [
+
+    {
+      "name": "default",
+      "args": [
+        "#{indir}/in.gfp"
+      ]
+    },
+
+    {
+      "name": "linear_scaling",
+      "args": [
+        "-Z #{indir}/rescaling.textproto #{indir}/in.gfp"
+      ]
+    }
+
+  ]
+
+}

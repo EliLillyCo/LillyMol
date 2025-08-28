@@ -156,10 +156,14 @@ set_smiles_tag(const_IWSubstring s) {
 
 }  // namespace lillymol_textproto
 
+// It is hard to know what to do here. Initially I tried to anticipate various
+// cases, but immediately ran into problems. For now, take the simplest approach
+// of just writing the name field, assuming it is a proper textproto.
 int
 Molecule::write_molecule_textproto(std::ostream& output) {
-  output << lillymol_textproto::smiles_tag << " \"" << smiles() <<
-         "\" id: \"" << _molecule_name << "\"\n";
+  output << lillymol_textproto::smiles_tag << " \"" << smiles() << "\" " << _molecule_name;
+  output << '\n';
+
   return output.good();
 }
 

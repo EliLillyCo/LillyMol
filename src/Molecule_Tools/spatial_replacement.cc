@@ -701,14 +701,14 @@ Options::Process(Molecule& m, Molecule_Output_Object& output) {
   std::unique_ptr<float[]> unperturbed = m.GetCoordinates();
 
   // The number of items in each R replacement.
-  std::vector<int> count;
+  std::vector<uint32_t> count;
   for (const auto* mols : _replacement) {
     count.push_back(mols->size());
   }
 
   combinations::Combinations combinations(count);
 
-  std::vector<int> state;
+  std::vector<uint32_t> state;
   state.resize(_replacement.size(), 0);
 
   do {

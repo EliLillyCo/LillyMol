@@ -1,0 +1,682 @@
+{
+  "executable": "tsubstructure",
+  "difftool": "same_structures",
+  "default_command_components": [
+    "-o usmi"
+  ],
+  "test": [
+
+    {
+      "name": "case_2",
+      "args": [
+        "-A D -q I:#{indir}/438421_qry.mol -M fkekule #{indir}/438421.rand.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_1",
+      "args": [
+        "-A D -q M:#{indir}/in.mdl #{indir}/in_rand.smi -m out"
+      ]
+    },
+
+    {
+      "name": "case_3",
+      "args": [
+        "-q #{indir}/4isolatedphenyl.qry #{indir}/4isolatedphenyl.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_4",
+      "args": [
+        "-A D -q #{indir}/between_rings.qry #{indir}/between_rings.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_5",
+      "args": [
+        "-m QDT -q #{indir}/carbon_2oxygen.qry #{indir}/carbon_2oxygen.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_6",
+      "args": [
+        "-m QDT -q #{indir}/carbon_oxygen.qry #{indir}/carbon_oxygen.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_7",
+      "args": [
+        "-q I:#{indir}/chiral5r.mol #{indir}/chiral5.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_8",
+      "args": [
+        "-q I:#{indir}/chiral5.mol #{indir}/chiral5.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_9",
+      "args": [
+        "-j 1 -j same -A D -q #{indir}/env_and.qry #{indir}/env_and.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_10",
+      "args": [
+        "-m QDT -K esssr -q #{indir}/esssr1.qry #{indir}/esssr1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_11",
+      "args": [
+        "-j iquery -A D -q #{indir}/ethanol0.qry #{indir}/ethanol0.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_12",
+      "args": [
+        "-m QDT -q #{indir}/fss1.qry #{indir}/fss1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_13",
+      "args": [
+        "-m QDT -s '[!#6;!#1] heteroatom' #{indir}/heteroatom.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_14",
+      "args": [
+        "-A D -q M:#{indir}/imidazole_needle.smi #{indir}/imidazole_haystack.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_15",
+      "args": [
+        "-q #{indir}/inter_ring.qry #{indir}/inter_ring.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_16",
+      "args": [
+        "-s '[20*H]' #{indir}/isotope20.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_17",
+      "args": [
+        "-s '[20aH]' #{indir}/isotope20.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_18",
+      "args": [
+        "-s '[R]&&[R0]&&[!#6]&&[#7]' #{indir}/multiple_and.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_19",
+      "args": [
+        "-A D -X H -q #{indir}/nhits0.qry #{indir}/nhits0.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_20",
+      "args": [
+        "-s Oa #{indir}/Oa.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_21",
+      "args": [
+        "-m QDT -q #{indir}/oh2ring.qry #{indir}/oh2ring.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_22",
+      "args": [
+        "-m QDT -q #{indir}/ohring.qry #{indir}/ohring.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_23",
+      "args": [
+        "-j 1 -j same -q #{indir}/only_match_largest_fragment.qry #{indir}/only_match_largest_fragment.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_24",
+      "args": [
+        "-q M:#{indir}/onlysubiso2.smi -M onlysubiso #{indir}/onlysubiso2.inp.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_25",
+      "args": [
+        "-q M:#{indir}/needle.smi -M onlysubiso #{indir}/haystack.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_26",
+      "args": [
+        "-A D -m QDT -q #{indir}/pyrrole.qry #{indir}/pyrrole.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_27",
+      "args": [
+        "-s '[$([ND2H]);!$(N-C=O)] 2amine' -m out #{indir}/2amine.smi -R out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_28",
+      "args": [
+        "-m QDT -q #{indir}/ring_ncon.qry #{indir}/ring_ncon.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_29",
+      "args": [
+        "-m QDT -q #{indir}/ring_size4.qry #{indir}/ring_size4.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_30",
+      "args": [
+        "-m QDT -q #{indir}/ring_size5only.qry #{indir}/ring_size5only.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_31",
+      "args": [
+        "-m QDT -q #{indir}/ring_xor.qry #{indir}/ring_xor.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_32",
+      "args": [
+        "-s '[ND1H2]-[C@H]1CCN2CCCCC2C1' -A D #{indir}/smarts_chiral.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_33",
+      "args": [
+        "-s '[ND1H2]-[C@@H]1CCN2CCCCC2C1' -A D #{indir}/smarts_chiral.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_34",
+      "args": [
+        "-q #{indir}/spinach.qry #{indir}/spinach.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_35",
+      "args": [
+        "-q M:#{indir}/t1.smi #{indir}/t1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_36",
+      "args": [
+        "-A D -s '[a!#6r5]' -j 1 #{indir}/t2.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_37",
+      "args": [
+        "-q #{indir}/tchiral1.qry #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_38",
+      "args": [
+        "-q #{indir}/tchiral2.qry #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_39",
+      "args": [
+        "-s 'N[C@@H](C)Cl' #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_40",
+      "args": [
+        "-s 'N[C@H](C)Cl' #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_41",
+      "args": [
+        "-q M:#{indir}/tchiral5.smi #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_42",
+      "args": [
+        "-q M:#{indir}/tchiral6.smi #{indir}/tchiral1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_43",
+      "args": [
+        "-q #{indir}/test_fragid.qry #{indir}/test_fragid.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_44",
+      "args": [
+        "-s '(*~*).(*~*)' #{indir}/test_fragid.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_45",
+      "args": [
+        "-s 'Cl-[/IWfsid1].Cl-[/IWfsid2]' #{indir}/test_fsid.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_46",
+      "args": [
+        "-m QDT -q #{indir}/test_full_subset.qry #{indir}/test_full_subset.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_47",
+      "args": [
+        "-q #{indir}/test_H_directive.qry #{indir}/test_H_directive.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_48",
+      "args": [
+        "-q M:#{indir}/increment_isotope.smi -j qmatch #{indir}/test_iwrscb.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_49",
+      "args": [
+        "-s '[/IWfsid1].[/IWfsid2]' -A D #{indir}/test_isrs.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_50",
+      "args": [
+        "-s '[/IWrscb1/IWrid1a].[/IWrscb1/IWrid2a].[/IWrscb1/IWrid3a]' -A D #{indir}/test_iwrscb.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_51",
+      "args": [
+        "-q #{indir}/test_max_unmatched_atoms.qry #{indir}/test_max_unmatched_atoms.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_52",
+      "args": [
+        "-q #{indir}/test_min_fraction_atoms_matched.qry #{indir}/test_min_fraction_atoms_matched.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_53",
+      "args": [
+        "-q M:#{indir}/test_M_needle.sdf -j 1 #{indir}/test_M_target.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_54",
+      "args": [
+        "-q #{indir}/test_non_spinach.qry -A D #{indir}/test_non_spinach.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_55",
+      "args": [
+        "-A D -q M:#{indir}/test_nrnr.needle.smi -M nrnr #{indir}/test_nrnr.haystack.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_56",
+      "args": [
+        "-q #{indir}/test_numeric_env.qry -A D #{indir}/test_numeric_env.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_57",
+      "args": [
+        "-q #{indir}/test_ring_id_qry.qry #{indir}/test_ring_id_qry.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_58",
+      "args": [
+        "-s '[/IWrid13*].[/IWrid23*]' #{indir}/test_ring_id_smarts.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_59",
+      "args": [
+        "-q M:#{indir}/test_spiro_nrings2.smi #{indir}/test_spiro_nrings2.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_60",
+      "args": [
+        "-q M:#{indir}/test_spiro_nrings.smi #{indir}/test_spiro_nrings.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_61",
+      "args": [
+        "-W 1 -s '[/IWVy0/IWAr0ND1H2]-[CT1G0]||[/IWVy0/IWAr0ND2HT0]||[ND1H2]-a' -A D #{indir}/test_W1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_62",
+      "args": [
+        "-q #{indir}/test_within_ring_env_match.qry -A D #{indir}/test_within_ring_env_match.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_63",
+      "args": [
+        "-s '1[/IWfss1c]1cccs1 thiophene' -r -u -A D #{indir}/thiophene.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_64",
+      "args": [
+        "-s 'cO...{>2}*' #{indir}/three_dots1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_65",
+      "args": [
+        "-q I:#{indir}/tisis10.mol -A D -A I #{indir}/tisis10.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_66",
+      "args": [
+        "-q I:#{indir}/tisis11.mol -M nokekule -A D -A I #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_67",
+      "args": [
+        "-q I:#{indir}/tisis12.mol -n nonmatches.smi -m out -i ICTE #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "case_68",
+      "args": [
+        "-q I:#{indir}/tisis13.mol -A D -M nokekule -A I #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_69",
+      "args": [
+        "-q I:#{indir}/tisis16.mol -A D -M nokekule -A I #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_70",
+      "args": [
+        "-q I:#{indir}/tisis17.mol -A D -M nokekule -A I #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_71",
+      "args": [
+        "-q I:#{indir}/tisis1.mol #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_72",
+      "args": [
+        "-q I:#{indir}/tisis2.mol #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_73",
+      "args": [
+        "-q I:#{indir}/tisis3.mol #{indir}/tisis1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_74",
+      "args": [
+        "-q I:#{indir}/tisis4.mol -A I #{indir}/tisis4.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_75",
+      "args": [
+        "-q I:#{indir}/tisis5.mol -A I #{indir}/tisis4.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_76",
+      "args": [
+        "-q I:#{indir}/tisis6.mol -A I #{indir}/tisis6.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_77",
+      "args": [
+        "-q I:#{indir}/tisis7.mol -A I #{indir}/tisis6.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_78",
+      "args": [
+        "-q I:#{indir}/tisis8.mol -A I #{indir}/tisis8.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_79",
+      "args": [
+        "-q I:#{indir}/tisis9.mol -A I #{indir}/tisis8.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_80",
+      "args": [
+        "-j 1 -m QDT -u -s '[ND2H]([/IWxA])-[/IWxA]' -A D #{indir}/tIWX1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_81",
+      "args": [
+        "-q #{indir}/tr1.qry #{indir}/tr1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_82",
+      "args": [
+        "-q #{indir}/tr2.qry #{indir}/tr2.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_83",
+      "args": [
+        "-q #{indir}/tr3.qry #{indir}/tr3.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_84",
+      "args": [
+        "-q #{indir}/tr4.qry #{indir}/tr4.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_85",
+      "args": [
+        "-A D -m QDT -q #{indir}/vinyl1.qry #{indir}/vinyl1.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_86",
+      "args": [
+        "-m QDT -q #{indir}/vinyl_halide_3_halogens.qry #{indir}/vinyl_halide_3_halogens.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_87",
+      "args": [
+        "-s '[Cx4]' #{indir}/x4.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_88",
+      "args": [
+        "-A D -s 'S=c1c=:c[n,o,p]c=:c1'  #{indir}/test_aromatic_and_double_bonds.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_89",
+      "args": [
+        "-s '[NH+0]' -A D #{indir}//test_nh0plus.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_90",
+      "args": [
+        "-s '[0F]-[/IWspch0].[0F]-[/IWspch0]' -j +1 -j same #{indir}/test_j_inc.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_91",
+      "args": [
+        "-q #{indir}/test_env_bond_smarts.qry -A D #{indir}/test_env_bond_smarts.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_92",
+      "args": [
+        "-s '[Cu,Rb,Ag,Dy,Tm]' -A D #{indir}/test_CuAgRb.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "case_93",
+      "args": [
+        "-q #{indir}/zwitterion.qry -A D #{indir}/charged.smi -m out -i ICTE"
+      ]
+    },
+
+    {
+      "name": "PROTOFILE_inherit_path",
+      "args": [
+        "-q PROTOFILE:#{indir}/queries -m - #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "query_file_inherit_path",
+      "args": [
+        "-q PROTO:#{indir}/parent.textproto -m - #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "qnum",
+      "args": [
+        "-q S:#{indir}/atypes -j qnum -m out #{indir}/in.smi"
+      ]
+    }
+  ]
+
+}

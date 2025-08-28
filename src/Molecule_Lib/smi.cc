@@ -1966,8 +1966,8 @@ Molecule::_build_from_smiles(const char * smiles,
           return 0;
         }
 
-        return 1;
       }
+      return 1;
     }
     else if (kOparen == *s)
     {
@@ -2016,7 +2016,7 @@ Molecule::_build_from_smiles(const char * smiles,
       previous_atom_chiral_count = chirality_stack.pop();
       characters_processed++;
 #ifdef DEBUG_BUILD_FROM_SMILES
-      cerr << "Closing paren found, previous atom now " << previous_atom << endl;
+      cerr << "Closing paren found, previous atom now " << previous_atom->unique_id() << '\n';
 #endif
     }
     else if (characters_processed && '.' == *s)
@@ -2570,7 +2570,7 @@ Molecule::write_molecule_tdt_nausmi (std::ostream & os, const IWString & comment
   the identity of the last atom created
 */
 
-//#define DEBUG_BUILD_FROM_SMARTS
+// #define DEBUG_BUILD_FROM_SMARTS
 
 #define LOOKS_LIKE_SMARTS_BOND(b) ((SINGLE_BOND_SYMBOL == (b)) || (DOUBLE_BOND_SYMBOL == (b)) || (TRIPLE_BOND_SYMBOL == (b)) ||\
                                    (AROMATIC_BOND_SYMBOL == (b)) || ('~' == (b)) || ('@' == (b)) ||\
@@ -2637,12 +2637,10 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
     cerr << "Examining smarts token '" << *s << "', previous " << previous_token_was << endl;
 #endif
 
-    if (characters_processed && (isdigit(*s) || '%' == *s))    // we do not properly handle chirality here, fix sometime...
-    {
+    if (characters_processed && (isdigit(*s) || '%' == *s)) {    // we do not properly handle chirality here, fix sometime...
       int ring_number;
       int nchars;
-      if (! fetch_ring_number(s, characters_to_process - characters_processed, ring_number, nchars))
-      {
+      if (! fetch_ring_number(s, characters_to_process - characters_processed, ring_number, nchars)) {
         smiles_error_message(smarts, characters_to_process, characters_processed, "Invalid ring specification");
         return 0;
       }
@@ -2653,29 +2651,24 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
 
       std::unique_ptr<Substructure_Bond> b;
       bond_type_t bt = SINGLE_BOND; 
-      if (PREVIOUS_TOKEN_WAS_BOND == previous_token_was)
-      {
+      if (PREVIOUS_TOKEN_WAS_BOND == previous_token_was) {
         b.reset(previous_bond.release());
         bt = b->types_matched();
-      }
-      else
-      {
+      } else {
         b.reset(new Substructure_Bond);
         b->make_single_or_aromatic();
         bt = NOT_A_BOND;
       }
 
       atom_number_t other_end;    // will be set when a ring closure
-      if (ring_status.encounter(ring_number, previous_atom->unique_id(), other_end, bt))   // ring closing.
-      {
+      if (ring_status.encounter(ring_number, previous_atom->unique_id(), other_end, bt)) {   // ring closing.
         assert(nullptr != completed[other_end]);
 
 #ifdef DEBUG_BUILD_FROM_SMARTS
         cerr << "Ring closure, atom at other end is " << other_end << " prev " << previous_atom->unique_id() << endl;
 #endif
 
-        if (previous_atom->is_bonded_to(other_end))
-        {
+        if (previous_atom->is_bonded_to(other_end)) {
           cerr << "Substructure_Atom::_parse_smarts_specifier:two membered ring encountered\n";
           return 0;
         }
@@ -2744,6 +2737,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
         return 0;
       }
 
+      // Apr 2026. This is wrong. Does not handle branching CC(...N)C TODO:ianwatson
       return a->_parse_smarts_specifier(newsmarts, pst, atoms_in_previous_disconnected_sections + atoms_this_fragment, ring_status);
     }
     else if (is_down_the_bond(qsmarts, characters_processed, down_the_bond_qualifier) && check_compatiability_table(previous_token_was, PREVIOUS_TOKEN_WAS_DOWN_THE_BOND))
@@ -2811,8 +2805,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
 
 //    Jun 98. Handle something like '[CD3](:0)'   note it is a digit '0' rather than 'O' (oxygen)
 
-      if (previous_bond)
-      {
+      if (previous_bond) {
         smiles_error_message(smarts, characters_to_process, characters_processed, "Closing paren after bond??");
         return 0;
       }
@@ -2823,6 +2816,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
       previous_token_was = PREVIOUS_TOKEN_WAS_ATOM;
       previous_atom_chiral_count = chirality_stack.pop();
       characters_processed++;
+      // cerr << "close paren, previous_atom now " << previous_atom->unique_id() << '\n';
     }
     else if ('.' == *s)
     {
@@ -2859,8 +2853,7 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
     else
     {
       int save_previous_token_was = previous_token_was;
-      if (! check_compatiability_table(previous_token_was, PREVIOUS_TOKEN_WAS_ATOM))
-      {
+      if (! check_compatiability_table(previous_token_was, PREVIOUS_TOKEN_WAS_ATOM)) {
         smiles_error_message(smarts, characters_to_process, characters_processed, "incorrectly placed atom");
         return 0;
       }
@@ -2897,15 +2890,15 @@ Substructure_Atom::_parse_smarts_specifier(const const_IWSubstring & qsmarts,
         pst.down_the_bond().last_item()->set_a2(my_atom_number);
       }
 
-      if (a->initial_atom_number() < 0)    // only change it if it is unset
+      if (a->initial_atom_number() < 0) {    // only change it if it is unset
         a->set_initial_atom_number(my_atom_number);
+      }
 
       a->set_unique_id(my_atom_number);
 
       atoms_this_fragment++;
 
-      if (nullptr != previous_atom)
-      {
+      if (nullptr != previous_atom) {
         Substructure_Bond * b;
 
         if (previous_bond)

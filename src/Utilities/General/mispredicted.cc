@@ -14,6 +14,8 @@
 
 #include <sys/types.h>
 
+#include "google/protobuf/text_format.h"
+
 #define IWQSORT_FO_IMPLEMENTATION 1
 
 #include "Foundational/accumulator/accumulator.h"
@@ -23,6 +25,12 @@
 #include "Foundational/iwmisc/iwre2.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
+
+#ifdef BUILD_BAZEL
+#include "Utilities/General/mispredicted.pb.h"
+#else
+#include "mispredicted.pb.h"
+#endif
 
 using std::cerr;
 
@@ -62,6 +70,8 @@ static IW_STL_Hash_Map_String id_to_smiles;
 
 static int ignore_duplicate_experimental_values = 0;
 static uint32_t duplicate_experimental_values_ignored = 0;
+
+static IWString_and_File_Descriptor stream_for_textproto;
 
 class Binning_Data
 {
@@ -209,6 +219,7 @@ class Entity_Classification : public Entity
   int report(IWString_and_File_Descriptor&) const;
 
   int write_summary_data(IWString_and_File_Descriptor&) const;
+  int write_textproto_data(IWString_and_File_Descriptor&) const;
 };
 
 Entity_Classification::Entity_Classification(const IWString& s) : Entity(s)
@@ -277,6 +288,35 @@ Entity_Classification::write_summary_data(IWString_and_File_Descriptor& output) 
   return 1;
 }
 
+template <typename P>
+int
+MPWriteProto(const P& proto,
+             IWString_and_File_Descriptor& output) {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  std::string buffer;
+
+  printer.PrintToString(proto, &buffer);
+
+  output << buffer << '\n';
+
+  output.write_if_buffer_holds_more_than(4096);
+
+  return 1;
+}
+
+
+int
+Entity_Classification::write_textproto_data(IWString_and_File_Descriptor& output) const {
+  mispredicted::MispredictedClassification proto;
+  proto.set_id(_id.data(), _id.size());
+  proto.set_npred(_times_predicted);
+  proto.set_times_correct(_correct_predictions);
+
+  return MPWriteProto<mispredicted::MispredictedClassification>(proto, output);
+}
+
 template <typename T>
 class Entity_Continuous : public Entity
 {
@@ -310,6 +350,7 @@ class Entity_Continuous : public Entity
   int report(IWString_and_File_Descriptor&) const;
 
   int write_summary_data(IWString_and_File_Descriptor&) const;
+  int write_textproto_data(IWString_and_File_Descriptor&) const;
 };
 
 template <typename T>
@@ -438,6 +479,22 @@ Entity_Continuous<T>::write_summary_data(IWString_and_File_Descriptor& output) c
   return 1;
 }
 
+template <typename T>
+int
+Entity_Continuous<T>::write_textproto_data(IWString_and_File_Descriptor& output) const
+{
+  mispredicted::MispredictedContinuous proto;
+  proto.set_id(_id.data(), _id.length());
+  proto.set_npred(_diffs.n());
+  proto.set_activity(_experimental_value);
+  proto.set_minpred(_predictions.minval());
+  proto.set_maxpred(_predictions.maxval());
+  proto.set_average_difference(_diffs.average());
+  proto.set_std_difference(sqrt(_diffs.variance()));
+
+  return MPWriteProto<mispredicted::MispredictedContinuous>(proto, output);
+}
+
 class Classification_Data_Comparator
 {
  private:
@@ -552,6 +609,7 @@ usage(int rc)
  -Y <fname>     produce file 'id ave_diff N'
  -R <regex>     process all files that match <regex> in current directory
  -S <fname>     file of smiles - output will include the smiles
+ -T <fname>     output as Mispredicted textproto\n";
  -r             reverse sort order, sort output from worst (top of file) to best (bottom)
  -v             verbose output
 )";
@@ -613,6 +671,18 @@ do_summary(const T* ec, int n, IWString_and_File_Descriptor& output)
 
   return 1;
 }
+
+template <typename T>
+int
+do_textproto(const T* ec, int n, IWString_and_File_Descriptor& output)
+{
+  for (auto i = 0; i < n; ++i) {
+    ec[i]->write_textproto_data(output);
+  }
+
+  return 1;
+}
+
 
 template <typename T>
 int
@@ -886,6 +956,10 @@ report_continuous_results(const ID_to_Continuous_Data& idcd,
     do_summary(ec, n, stream_for_summary);
   }
 
+  if (stream_for_textproto.active()) {
+    do_textproto(ec, n, stream_for_textproto);
+  }
+
   return report_data(ec, n, output);
 }
 
@@ -1123,13 +1197,14 @@ gather_predicted_data_classification(iwstring_data_source& input,
 {
   const_IWSubstring buffer;
   if (!input.next_record(buffer)) {
-    cerr << "Empty prediction file\n";
+    cerr << "Empty prediction file " << input.fname() << '\n';
     return 0;
   }
 
   while (input.next_record(buffer)) {
     if (!process_classification_prediction(buffer, idd, xref)) {
       cerr << "Bad predicted data record '" << buffer << "'\n";
+      cerr << "From " << input.fname() << '\n';
       return fault_tolerant_mode;
     }
   }
@@ -1445,9 +1520,9 @@ report_coverage(const ID_to_Classification_Data& idcd, std::ostream& os)
 }
 
 static int
-mispredicted(int argc, char** argv)
+Mispredicted(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:h");
+  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:hT:D:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1556,6 +1631,18 @@ mispredicted(int argc, char** argv)
 
     if (verbose) {
       cerr << "Will produce an activity file\n";
+    }
+  }
+
+  if (cl.option_present('T')) {
+    IWString fname = cl.string_value('T');
+    fname.EnsureEndsWith(".textproto");
+    if (! stream_for_textproto.open(fname)) {
+      cerr << "Cannot open stream for textproto '" << fname << "' -T option\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will generate Mispredicted textproto output\n";
     }
   }
 
@@ -1766,7 +1853,7 @@ main(int argc, char** argv)
 {
   prog_name = argv[0];
 
-  int rc = mispredicted(argc, argv);
+  int rc = Mispredicted(argc, argv);
 
   return rc;
 }

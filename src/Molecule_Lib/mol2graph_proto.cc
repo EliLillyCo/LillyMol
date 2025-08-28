@@ -3,7 +3,11 @@
 #include "Foundational/cmdline/cmdline.h"
 
 #include "Molecule_Lib/mol2graph.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/mol2graph.pb.h"
+#else
+#include "mol2graph.pb.h"
+#endif
 
 using std::cerr;
 using std::endl;

@@ -192,8 +192,16 @@ Target_Atom::invalidate()
   _heteroatoms_in_ring = TARGET_ATOM_NOTHING_CAN_MATCH;
 
   // Ideally we would have an invalid element.
-  isotope_t notused = 0;
-  _element = get_element_from_symbol("*", notused);
+  // But we need something that can respond to a unique_id.
+
+  static const Element* default_element = nullptr;
+
+  if (default_element == nullptr) {
+    isotope_t notused = 0;
+    default_element = get_element_from_symbol("*", notused);
+  }
+
+  _element = default_element;
 
   _chirality_fetched = 0;
 

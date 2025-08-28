@@ -1,0 +1,12 @@
+(0 Query
+  (A I Version 2)
+  (A I min_nrings 2)
+  (0 Ring_Specifier
+    (A I ring_size 6)
+    (A I fused 0)
+    (A I aromatic 0)
+    (A I unsaturation (1 2))
+    (A I environment_can_match_in_ring_atoms 1)
+    (A C Environment "[CD2G1H]&&0a&&0[C,N]!@=[O,S]&&0[NR1]1-[CD2]-[CR1]=[CR1]-[CD2]-[CD2]1")
+  )
+)

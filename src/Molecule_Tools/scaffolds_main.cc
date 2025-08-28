@@ -3,6 +3,9 @@
 #include <iostream>
 
 #include "google/protobuf/text_format.h"
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/reflection.h>
 
 #include "absl/container/flat_hash_map.h"
 
@@ -16,8 +19,13 @@
 
 #include "Molecule_Tools/scaffolds.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #include "Molecule_Tools/scaffolds.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#include "scaffolds.pb.h"
+#endif
 
 namespace scaffolds_main {
 
@@ -39,6 +47,9 @@ class LocalOptions {
     Chemical_Standardisation _chemical_standardisation;
 
     int _write_parent;
+
+    // We can place an isotope on the severed join points.
+    isotope_t _isotope;
 
     // Output can be either as smiles or proto.
     int _write_smiles;
@@ -64,6 +75,10 @@ class LocalOptions {
 
     int Preprocess(Molecule& m);
 
+    int write_parent() const {
+      return _write_parent;
+    }
+
     void AnotherNonRingMolecule() {
       ++_non_ring_molecules_skipped;
     }
@@ -82,6 +97,7 @@ LocalOptions::LocalOptions() {
   _molecules_read = 0;
   _reduce_to_largest_fragment = 0;
   _remove_chirality = 0;
+  _isotope = 0;
   _non_ring_molecules_skipped = 0;
   _write_parent = 0;
   _write_smiles = 1;
@@ -124,6 +140,16 @@ LocalOptions::Initialise(Command_Line& cl) {
     _write_smiles = 0;
     if (_verbose) {
       cerr << "Will write as proto form\n";
+    }
+  }
+
+  if (cl.option_present('I')) {
+    if (! cl.value('I', _isotope)) {
+      cerr << "The isotope to place option (-I) must be a whole +ve number\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will place isotope " << _isotope << " at severed join points\n";
     }
   }
 
@@ -261,16 +287,47 @@ LocalOptions::WriteAccumulated(const std::string& usmi,
   return 1;
 }
 
+// From CoPilot
+void
+ListAllFields(const google::protobuf::Message& message, std::ostream& output) {
+  const google::protobuf::Descriptor* descriptor = message.GetDescriptor();
+//const google::protobuf::Reflection* reflection = message.GetReflection();
+
+  for (int i = 0; i < descriptor->field_count(); ++i) {
+    const google::protobuf::FieldDescriptor* field = descriptor->field(i);
+
+    output << field->type_name() << '	' << field->name() << '\n';
+//  output << "Field Name: " << field->name() << '\n';
+//  output << "Field Number: " << field->number() << "\n";
+//  output << "Field Type: " << field->type_name() << "\n";
+
+//  if (field->is_repeated()) {
+//      output << "Repeated Field\n";
+//  } else {
+//      output << "Single Field\n";
+//  }
+
+//  output << "-------------------\n";
+  }
+}
+
 void
 Usage(int rc) {
   cerr << R"(Generates all scaffold combinations.
 Generates all combinations of the ring systems in a molecule. For example of a molecule consists of
-R1-R2-R3 the output will be {R1 R2 R3 R1-R2 R2-R3}.
+R1-R2-R3 the output will be {R1 R2 R3 R1-R2 R2-R3 R1-R2-R3}.
  -G <fname>             config containing scaffolds::ScaffoldsOptions text proto
- -W <fname>             write dicer_data::DicerFragment data on all scaffolds
- -y                     output as scaffolds::ScaffoldData textproto
- -v                     verbose output
-  )";
+                          allows control of combinations, isotopes, sizes, etc.
+
+ -W <fname>             write dicer_data::DicerFragment data on all scaffolds.
+ -p                     write the parent molecule.
+ -y                     output as scaffolds::ScaffoldData textproto.
+ -v                     verbose output.
+)";
+
+  cerr << "The following fields are in a scaffolds::ScaffoldsOptions proto (-G)\n";
+  scaffolds::ScaffoldsOptions tmp;
+  ListAllFields(tmp, cerr);
 
   ::exit(rc);
 }

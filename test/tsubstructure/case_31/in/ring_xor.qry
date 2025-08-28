@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "XOR op in ring env")
+  (0 Ring_System_Specifier
+    (A I min_nrings 2)
+    (A C Environment ">1*-[OD1]^^*=O")
+  )
+)

@@ -13,7 +13,11 @@
 
 #include "Molecule_Tools/scaffolds.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/scaffolds.pb.h"
+#else
+#include "scaffolds.pb.h"
+#endif
 
 namespace scaffolds {
 
@@ -23,9 +27,35 @@ using std::cerr;
 constexpr int kLinker = -1;
 constexpr int kSpinach = -2;
 
+// We need to keep track of which atoms have come into the product
+// from a linker region. The easy way to do that is to apply an
+// isotopic label to atoms in linker regions.
+// But since we want to preserve existing isotopic information we
+// add this number to existing isotopes. 
+constexpr isotope_t kInLinker = 29931418;
+
 // When two rings are adjacent, like biphenyl, there is
 // an empty linker between them
 constexpr int kEmptyLinker = -1;
+
+// Return the number of connections to `zatom` that are set in `in_system`.
+int
+MatchedConnections(const Molecule& m, atom_number_t zatom,
+                     const int* in_system) {
+  int rc = 0;
+  for (const Bond* b : m[zatom]) {
+    if (! b->is_single_bond()) {
+      continue;
+    }
+    atom_number_t o = b->other(zatom);
+    if (in_system[o]) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
 
 // `in_sys` identifies atons in the different ring systems in `m`.
 // Identify =* groups and add them to `in_sys`.
@@ -33,7 +63,8 @@ int
 ExtendToSinglyAttachedDoublyBonded(Molecule& m,
                                    int* in_sys) {
   const int matoms = m.natoms();
-  int rc = 0;
+
+  Set_of_Atoms added_here;
   for (int i = 0; i < matoms; ++i) {
     // cerr << " atom " << i << " " << m.smarts_equivalent_for_atom(i) << " in_sys " << in_sys[i] << '\n';
     if (in_sys[i]) {
@@ -50,17 +81,26 @@ ExtendToSinglyAttachedDoublyBonded(Molecule& m,
       continue;
     }
 
-    atom_number_t j = b->other(i);
+    atom_number_t o = b->other(i);
     // cerr << "  atom " << j << " at other end of double bond\n";
-    if (in_sys[j] == 0) {
+    if (in_sys[o] == 0) {
       continue;
     }
 
-    in_sys[i] = in_sys[j];
-    ++rc;
+    if (MatchedConnections(m, o, in_sys) == 1) {
+      continue;
+    }
+
+    added_here << i;
   }
 
-  return rc;
+  if (added_here.empty()) {
+    return 0;
+  }
+
+  added_here.set_vector(in_sys, 1);
+
+  return added_here.number_elements();
 }
 
 int
@@ -247,7 +287,7 @@ PerMoleculeData::Seen(Molecule& m) {
 
 void
 PerMoleculeData::SetBetween(int r1, int r2, int region_id) {
-  // cerr << "between " << r1 << " and " << r2 << " region " << region_id << '\n';
+  // cerr << "SetBetween::between " << r1 << " and " << r2 << " region " << region_id << '\n';
   _between[r1 * _nsys + r2] = _between[r2 * _nsys + r1] = region_id;
 }
 
@@ -297,9 +337,9 @@ PerMoleculeData::ClassifyRegions(Molecule& m, const int* spinach, int classify_s
         SetBetween(_ring_sys[i], _ring_sys[o], kEmptyLinker);
         continue;
       }
-      int other_end = AssignLinkerRegion(m, i, o, spinach, next_region);
-      // cerr << "From " << i << " got to " << other_end << " linker\n";
-      SetBetween(_ring_sys[i], other_end, next_region);
+      resizable_array<int> ring_systems_encountered;
+      AssignLinkerRegion(m, i, o, spinach, next_region, ring_systems_encountered);
+      SetupBetweenRingSystemRelationships(_ring_sys[i], ring_systems_encountered, next_region);
       _atoms_in_region[next_region] = std::count(_region, _region + _matoms, next_region);
       ++next_region;
     }
@@ -349,21 +389,45 @@ PerMoleculeData::ClassifyRegions(Molecule& m, const int* spinach, int classify_s
   return 1;
 }
 
+void
+PerMoleculeData::SetupBetweenRingSystemRelationships(int rs1, const resizable_array<int>& ring_systems_encountered,
+                int flag) {
+  const int n = ring_systems_encountered.number_elements();
+
+  // cerr << "SetupBetweenRingSystemRelationships\n";
+  for (int i = 0; i < n; ++i) {
+    // cerr << "from ring system " << rs1 << " got to ring system " << ring_systems_encountered[i] << " flag " << flag << '\n';
+    SetBetween(rs1, ring_systems_encountered[i], flag);
+    for (int j = i + 1; j < n; ++j) {
+      // cerr << "  from ring system " << ring_systems_encountered[i] << " get to " << ring_systems_encountered[j] << '\n';
+      SetBetween(ring_systems_encountered[i], ring_systems_encountered[j], flag);
+    }
+  }
+}
+
 // Mark all the atoms that comprise the linker atoms between two rings.
 // `zatom` is a chain atom in a linker region.
+// Also apply an isotope to those atoms.
 // Update the _region array. Follow attached atoms that
-// are NOT set in `spinach` till we get an atom for which _ring_sys is set.
-// Return the value of _ring_sys.
-int 
-PerMoleculeData::AssignLinkerRegion(const Molecule& m, atom_number_t previous,
+// are NOT set in `spinach` till we get to any atom which is part of a
+// ring system. At that point add that ring system number to
+// `ring_systems_encountered`.
+void 
+PerMoleculeData::AssignLinkerRegion(Molecule& m, atom_number_t previous,
                  atom_number_t zatom,
-                 const int *spinach, int flag) {
+                 const int *spinach, int flag,
+                 resizable_array<int>& ring_systems_encountered) {
   // Allow for biphenyls on the first call.
   if (_ring_sys[zatom]) {
-    return _ring_sys[zatom];
+    ring_systems_encountered.add_if_not_already_present(_ring_sys[zatom]);
+    return;
   }
 
   _region[zatom] = flag;
+  
+  m.set_isotope(zatom, m.isotope(zatom) + kInLinker);
+
+  // cerr << "AssignLinkerRegion atom " << zatom << " assigned to region " << flag << '\n';
 
   for (const Bond* b : m[zatom]) {
     atom_number_t o = b->other(zatom);
@@ -377,10 +441,8 @@ PerMoleculeData::AssignLinkerRegion(const Molecule& m, atom_number_t previous,
     if (spinach[o]) {
       continue;
     }
-    return AssignLinkerRegion(m, zatom, o, spinach, flag);
+    AssignLinkerRegion(m, zatom, o, spinach, flag, ring_systems_encountered);
   }
-
-  return kInvalidAtomNumber;
 }
 
 int
@@ -427,10 +489,59 @@ ScaffoldFinder::ScaffoldFinder() {
   return;
 }
 
+// For every ring atom that is `in_system` look for non-ring neighbours
+// that are not `in_system` and add them.
+int
+ScaffoldFinder::AddBackFirstNonRingAtom(Molecule& m, int* in_system, int flag) {
+  const int matoms = m.natoms();
+
+  Set_of_Atoms added_here;
+
+  for (int i = 0; i < matoms; ++i) {
+    if (in_system[i] == 0) {
+      continue;
+    }
+    if (m.ring_bond_count(i) == 0) {
+      continue;
+    }
+    const Atom& a = m[i];
+    if (a.ncon() == 2) {
+      continue;
+    }
+
+    for (const Bond* b : a) {
+      atom_number_t o = b->other(i);
+      if (in_system[o]) {
+        continue;
+      }
+//    We do want to retain the adjacent atom, even if it is part of a biphenyl
+//    type linkage. This could be made into a dummy atom...
+//    if (m.ring_bond_count(o)) {
+//      continue;
+//    }
+      added_here << o;
+    }
+  }
+
+  if (added_here.empty()) {
+    return 0;
+  }
+
+  for (atom_number_t a : added_here) {
+    in_system[a] = flag;
+  }
+
+  return added_here.number_elements();
+}
+
 // Use Euler's formula to figure out if the combination of ring systems
 // implied by `state` is connected or not.
+// This breaks down in the case of banched regions between rings, so this is
+// turned off until maybe there is a way of finessing that.
 int
-PerMoleculeData::StateIsDisconnected(const std::vector<int>& state) const {
+PerMoleculeData::StateIsDisconnected(const std::vector<uint32_t>& state) const {
+  return 0;
+#ifdef FIGURE_OUT_HOW_TO_ENABLE_THIS
   assert(state.size() == static_cast<int>(_nsys));
 
   const uint32_t state_size = state.size();
@@ -456,12 +567,13 @@ PerMoleculeData::StateIsDisconnected(const std::vector<int>& state) const {
   }
 
   int ncircuits = nedges - nodes + 1;
-  // cerr << "State has " << nodes << " nodes and " << nedges << " edges, ncircuits " << ncircuits << '\n';
+  cerr << "State has " << nodes << " nodes and " << nedges << " edges, ncircuits " << ncircuits << '\n';
   if (ncircuits > 0) {
     return 1;
   }
 
   return 0;
+#endif
 }
 
 // Given that ring systems `r1` and `r2` are in a subset, add any atoms
@@ -469,7 +581,7 @@ PerMoleculeData::StateIsDisconnected(const std::vector<int>& state) const {
 int
 PerMoleculeData::AddInterRingAtoms(int r1, int r2, int* atoms_in_subset, int flag) const {
   int region = _between[r1 * _nsys + r2];
-  // cerr << "Betw " << r1 << " and " << r2 << " find " << region << '\n';
+  // cerr << "AddInterRingAtoms: betw " << r1 << " and " << r2 << " find " << region << '\n';
   if (region == 0) {
     return 0;
   }
@@ -624,7 +736,7 @@ IsCyclopropyl(Molecule& m, const Ring& ring, Set_of_Atoms& to_be_removed) {
   atom_number_t three_connections = kInvalidAtomNumber;
   for (const atom_number_t a : ring) {
     const Atom& atom = m[a];
-    if (atom.atomic_number() != kCarbon) {
+    if (atom.atomic_number() != lillymol::kCarbon) {
       continue;
     }
 
@@ -682,7 +794,7 @@ DiscardCycloPropylRings(Molecule& m) {
   return rc;
 }
 
-//#define DEBUG_SCAFFOLD_FINDER
+// #define DEBUG_SCAFFOLD_FINDER
 
 int
 ScaffoldFinder::MakeScaffolds(Molecule& m,
@@ -711,6 +823,7 @@ ScaffoldFinder::MakeScaffolds(Molecule& m,
   m.identify_spinach(in_sys.get());
 
   MaybeApplyIsotopicLabels(m, in_sys.get());
+  // cerr << m.smiles() << " after MaybeApplyIsotopicLabels\n";
 
   // Invert to get the scaffold and count
   const int matoms = m.natoms();
@@ -724,13 +837,12 @@ ScaffoldFinder::MakeScaffolds(Molecule& m,
     }
   }
 #ifdef DEBUG_SCAFFOLD_FINDER
-  cerr << "MakeScaffolds begin\n";
+  cerr << "MakeScaffolds begin " << m.name() << '\n';
   for (int i = 0; i < m.natoms(); ++i) {
     cerr << "Atom " << i << " scafold " << in_sys[i] << '\n';
   }
   cerr << "remove_ring_based_non_scaffold_atoms " << remove_ring_based_non_scaffold_atoms << '\n';
   cerr << "remove_linker_based_non_scaffold_atoms " << remove_linker_based_non_scaffold_atoms << '\n';
-
 #endif
 
   if (remove_ring_based_non_scaffold_atoms &&
@@ -743,6 +855,10 @@ ScaffoldFinder::MakeScaffolds(Molecule& m,
     if (! remove_linker_based_non_scaffold_atoms) {
       atoms_in_subset += AddBackFromLinker(m, in_sys.get());
     }
+  }
+
+  if (_config.keep_first_nonring_atom()) {
+    atoms_in_subset += AddBackFirstNonRingAtom(m, in_sys.get(), 1);
   }
 
 #ifdef DEBUG_SCAFFOLD_FINDER
@@ -758,13 +874,15 @@ ScaffoldFinder::MakeScaffolds(Molecule& m,
   }
 
   // Hmmm, these shortcuts do not update _generated...
-  if (atoms_in_subset + ExtendToSinglyAttachedDoublyBonded(m, in_sys.get()) ==
-      matoms) {
+  if (atoms_in_subset + ExtendToSinglyAttachedDoublyBonded(m, in_sys.get()) == matoms) {
     return Process(m, result);
   }
 
   Molecule subset;
   m.create_subset(subset, in_sys.get(), 1);
+#ifdef DEBUG_SCAFFOLD_FINDER
+  cerr << subset.smiles() << " starting subset\n";
+#endif
 
   subset.set_name(m.name());
 
@@ -779,6 +897,20 @@ ScaffoldFinder::MakeScaffolds(Molecule& m,
 int
 ScaffoldFinder::Process(Molecule& m,
                         scaffolds::ScaffoldData& result) {
+
+#ifdef DEBUG_SCAFFOLD_FINDER
+  cerr << m.smiles() << " entering ScaffoldFinder::Process\n";
+#endif
+
+  std::unique_ptr<isotope_t[]> isosave;
+  if (_config.linker_isotope() || _config.substituent_isotope()) {
+    ;
+  } else if (m.ContainsIsotopicAtoms()) {
+    isosave = m.GetIsotopes();
+    m.unset_isotopes();
+  }
+
+  // cerr << m.smiles() << ' ' << m.name() << " begin processing\n";
   // If everything is being removed, no need to classify the scaffold atoms
   int classify_spinach = 0;
   if (_config.remove_ring_based_non_scaffold_atoms() &&
@@ -790,10 +922,30 @@ ScaffoldFinder::Process(Molecule& m,
 
   PerMoleculeData pmd(m, classify_spinach);
 
+  int rc = Process2(m, pmd, result);
+
+  if (isosave) {
+    m.set_isotopes(isosave.get());
+  } else {
+    const int matoms = m.natoms();
+    for (int i = 0; i < matoms; ++i) {
+      const isotope_t iso = m.isotope(i);
+      if (iso < kInLinker) {
+        continue;
+      }
+      m.set_isotope(i, iso - kInLinker);
+    }
+  }
+
+  return rc;
+}
+
+int
+ScaffoldFinder::Process2(Molecule& m,
+                         PerMoleculeData& pmd,
+                         scaffolds::ScaffoldData& result) {
+
   uint32_t nsys = pmd.nsys();
-#ifdef DEBUG_SCAFFOLD_FINDER
-  cerr << "Scaffold molecule " << m.smiles() << " has " << m.nrings() << " rings and " << nsys << " ring systems\n";
-#endif
 
   result.set_ring_sys(nsys);
 
@@ -805,7 +957,8 @@ ScaffoldFinder::Process(Molecule& m,
       return 1;
     }
     scaffolds::ScaffoldSubset* s = result.add_subset();
-    s->set_smi(m.smiles().AsString());
+    const IWString& smi = m.smiles();
+    s->set_smi(smi.data(), smi.length());
     s->set_ring_sys(1);
     return 1;
   }
@@ -813,28 +966,23 @@ ScaffoldFinder::Process(Molecule& m,
   // Multiple ring systems present.
 
 #ifdef DEBUG_SCAFFOLD_FINDER
-  for (int i = 0; i < m.natoms(); ++i) {
-    cerr << i << ' ' << m.smarts_equivalent_for_atom(i) << " sys " << pmd.ring_sys(i) << '\n';
-  }
-#endif
-
-#ifdef DEBUG_SCAFFOLD_FINDER
   cerr << "Region assignments\n";
   for (int q = 0; q < m.natoms(); ++q) {
-    cerr << " atom " << q << ' ' << m.smarts_equivalent_for_atom(q) << " region " << pmd.region()[q] << '\n';
+    cerr << " atom " << q << ' ' << m.smarts_equivalent_for_atom(q) << " region " << pmd.region()[q] << " ring sys " << pmd.ring_sys(q) << '\n';
   }
 #endif
 
   // Set up arrays needed for combinations.
-  std::vector<int> count(nsys);
+  std::vector<uint32_t> count(nsys);
   std::fill(count.begin(), count.end(), 2);
-  std::vector<int> state(nsys);
+  std::vector<uint32_t> state(nsys);
 
   combinations::Combinations comb(count);
 
   while (comb.Next(state)) {
     const uint32_t nset = std::count(state.begin(), state.end(), 1);
 #ifdef DEBUG_SCAFFOLD_FINDER
+    cerr << "Enumeration state\n";
     for (int a: state) {
       cerr << ' ' << a;
     }
@@ -852,7 +1000,6 @@ ScaffoldFinder::Process(Molecule& m,
     if (nset < _config.min_systems_in_subset()) {
       continue;
     }
-    // cerr << "Will be processed\n";
 
     Process(m, state, pmd, result);
   }
@@ -860,15 +1007,92 @@ ScaffoldFinder::Process(Molecule& m,
   return 1;
 }
 
+// Return true if `zatom` is bonded to a ring atom that is in `atoms_in_subset`.
+bool
+BondedToRing(Molecule& m, atom_number_t zatom, const int* atoms_in_subset) {
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (atoms_in_subset[o] == 0) {
+      continue;
+    }
+    if (m.ring_bond_count(o) > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// `zatom` has been identified as part of a spinach group.
+// Remove it from `atoms_in_subset` and then go looking for
+// a two connected nearest neighbour. If found, recurse to that
+// atom.
+int
+DoPruning(const Molecule& m, atom_number_t zatom, int* atoms_in_subset) {
+  int rc = 1;
+
+  atoms_in_subset[zatom] = 0;
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (atoms_in_subset[o] == 0) {
+      continue;
+    }
+
+    if (m.ncon(o) != 2) {
+      continue;
+    }
+
+    return 1 + DoPruning(m, o, atoms_in_subset);
+  }
+
+  return rc;
+}
+
+// Prune the spinach from molecules that might look like
+// CC(CC1CC1)C1CC1 R5.2 2
+// From each singly connected atom, recusively remove that
+// chain from `atoms_in_subset`
+// The molecule `m` is not changed, we just call some non-const methods.
+int
+ScaffoldFinder::PruneSpinach(Molecule& m, int * atoms_in_subset) {
+  int rc = 0;
+
+
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+
+    // cerr << "   PruneSpinach " << i << " in sys " << atoms_in_subset[i] << " ncon " << m.ncon(i) << '\n';
+    if (atoms_in_subset[i] == 0) {
+      continue;
+    }
+
+    if (m.isotope(i) < kInLinker) {
+      continue;
+    }
+
+    if (MatchedConnections(m, i, atoms_in_subset) != 1) {
+      continue;
+    }
+    if (_config.keep_first_nonring_atom() && BondedToRing(m, i, atoms_in_subset)) {
+      continue;
+    }
+
+    // cerr << "Start pruning with atom " << i << '\n';
+    rc += DoPruning(m, i, atoms_in_subset);
+  }
+
+  return rc;
+}
 
 // Process a subset of the ring systems, as in `state`.
 // `region` holds, for each non ring atom, a label that
 // indicates a particular set of inter-ring atoms.
 // `systems_reachable` holds, for each region, a list of
 // the ring systems that can be reached from atoms in that region.
+// `m` is not changed, we just call some non const methods.
 int
-ScaffoldFinder::Process(const Molecule& m,
-                 const std::vector<int>& state,
+ScaffoldFinder::Process(Molecule& m,
+                 const std::vector<uint32_t>& state,
                  PerMoleculeData& pmd,
                  scaffolds::ScaffoldData& result) {
   assert(state.size() > 1);
@@ -930,32 +1154,55 @@ ScaffoldFinder::Process(const Molecule& m,
         continue;
       }
 
-      // cerr << " state " << i  << ',' << j << " look between\n";
       int atoms_added = pmd.AddInterRingAtoms(i + 1, j + 1, atoms_in_subset, kFlag);
-      // cerr << "Added " << atoms_added << " atoms as part of linker\n";
       if (! OkLinkerSize(atoms_added)) {
         return 1;
       }
     }
   }
 
+  // If we have an inter-ring region that is branched and we only have two
+  // rings in the subset, we need to prune the branched atoms.
 #ifdef DEBUG_SCAFFOLD_FINDER
-  cerr << "Subset atoms ";
+  cerr << m.smiles() << " before pruning\n";
   for (int i = 0; i < matoms; ++i) {
     if (atoms_in_subset[i]) {
-      cerr << ' ' << i;
+      cerr << ' ' << i << ' ' << atoms_in_subset[i] << '\n';
     }
   }
-  cerr << '\n';
+#endif
+
+  if (nsys > 1) {
+    PruneSpinach(m, atoms_in_subset);
+  }
+  if (_config.keep_first_nonring_atom()) {
+    AddBackFirstNonRingAtom(m, atoms_in_subset, kFlag);
+  }
+
+#ifdef DEBUG_SCAFFOLD_FINDER
+  cerr << "Subset atoms after perhaps adding back first non ring atoms\n";
+  cerr << m.smiles() << '\n';
+  for (int i = 0; i < matoms; ++i) {
+    cerr << i << ' ' << m.smarts_equivalent_for_atom(i) << " value " << atoms_in_subset[i] << '\n';
+  }
 #endif
 
   Molecule subset;
   m.create_subset(subset, atoms_in_subset, kFlag);
   Molecule mcopy(m);
-//  ExtendToSinglyAttachedDoublyBonded(mcopy, atoms_in_subset);
-  // cerr << "Subset " << subset->smiles() << '\n';
   if (subset.number_fragments() > 1) {
     return 0;
+  }
+#ifdef DEBUG_SCAFFOLD_FINDER
+  cerr << subset.smiles() << " subset created\n";
+#endif
+
+  for (int i = 0; i < subset.natoms(); ++i) {
+    if (subset.isotope(i) < kInLinker) {
+      continue;
+    }
+
+    subset.set_isotope(i, subset.isotope(i) - kInLinker);
   }
 
   return AddToResultsIfUnique(subset, pmd, nsys, result);
@@ -1000,6 +1247,9 @@ ScaffoldFinder::MaybeApplyIsotopicLabels(Molecule& m, const int* spinach) {
     substituent = 0;
   }
 
+  if (linker == 0 && substituent == 0) {
+    return 0;
+  }
   return ApplyIsotopicLabels(m, linker, substituent, spinach);
 }
 

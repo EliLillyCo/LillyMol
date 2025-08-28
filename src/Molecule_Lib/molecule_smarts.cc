@@ -147,16 +147,17 @@ Molecule::_append_smarts_equivalent_for_atom(atom_number_t zatom,
   if (a->is_isotope())
     s << a->isotope();
 
-  if (1 == a->atomic_number())
+  if (1 == a->atomic_number()) {
     s << "#1";
-  else if (nullptr != _aromaticity && is_aromatic_atom(_aromaticity[zatom]))
-    s << a->element()->aromatic_symbol();
-  else if (a->element()->symbol().length() > 2)
-  {
-    s << "#{" << a->element()->symbol() << '}';
   }
-  else
+  else if (nullptr != _aromaticity && is_aromatic_atom(_aromaticity[zatom])) {
+    s << a->element()->aromatic_symbol();
+  }
+  else if (a->element()->symbol().length() > 2) {
+    s << "#{" << a->element()->symbol() << '}';
+  } else {
     s << a->atomic_symbol();
+  }
 
 //cerr << "Atom " << zatom << " value " << make_smarts_embedding_value << endl;
 
@@ -243,8 +244,10 @@ Molecule::_append_isotope_and_atomic_symbol(atom_number_t zatom,
   {
     s << "#{" << a->atomic_symbol() << '}';
   }
-  else
+  else {
     s << a->atomic_symbol();
+  }
+
 
   return;
 }

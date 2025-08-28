@@ -13,6 +13,7 @@
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/iwre2.h"
 #include "Foundational/iwmisc/proto_support.h"
+#include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
@@ -34,9 +35,9 @@ const char* prog_name = nullptr;
 
 static int verbose = 0;
 
-static int molecules_processed = 0;
+static uint64_t molecules_processed = 0;
 
-static int products_written = 0;
+static uint64_t products_written = 0;
 
 static Number_Assigner number_assigner;
 
@@ -60,7 +61,7 @@ static int avoid_overlapping_scaffold_changes = 0;
 
 static int max_atoms_in_product = 0;
 
-static int products_discarded_for_too_many_atoms = 0;
+static uint64_t products_discarded_for_too_many_atoms = 0;
 
 // Oct 2023. It is common to generate molecules that might
 // have fragments that are too large or too small. These can
@@ -71,7 +72,7 @@ static int products_discarded_for_too_many_atoms = 0;
 static int need_to_check_product_fragment_sizes = 0;
 static int min_allowed_fragment_size_in_product = 0;
 static int max_allowed_fragment_size_in_product = std::numeric_limits<int>::max();
-static int products_discarded_for_violating_fragment_specifications = 0;
+static uint64_t products_discarded_for_violating_fragment_specifications = 0;
 
 // Nov 2023.
 // A common operation is to fragment a molecule, and the next step will
@@ -176,7 +177,9 @@ static Elements_to_Remove elements_to_remove;
 
 static int suppress_duplicate_molecules = 0;
 
-static int duplicate_molecules_suppressed = 0;
+static int add_parent_to_duplicate_hash = 0;
+
+static uint64_t duplicate_molecules_suppressed = 0;
 
 static IW_STL_Hash_Set smiles_generated_current_molecule;
 static IW_STL_Hash_Set unique_smiles_generated_current_molecule;
@@ -184,6 +187,14 @@ static IW_STL_Hash_Set unique_smiles_generated_current_molecule;
 static int all_scaffold_possibilities_enumeration = 0;
 
 static int unset_unnecessary_implicit_hydrogens_known_values = 0;
+
+// If set, we do an all atoms bump check and discard if failure.
+static distance_t bump_check = 0.0;
+// Only consider bump checking pairs of atoms that are at least this many bonds apart.
+static int bump_check_min_separation = 0;
+uint32_t products_failing_bump_check = 0;
+
+static Report_Progress report_progress;
 
 static void
 usage(int rc) {
@@ -196,46 +207,52 @@ usage(int rc) {
   // clang-format on
   // clang-format off
 
-  cerr << "  -r <file>      specify single reaction file\n";
-//cerr << "  -y <file>      specify secondary reaction(s)\n";
-  cerr << "  -D <file>      specify ISIS reaction file\n";
-  cerr << "  -D rmfrag      remove small fragments from the results of ISIS reaction file reactions\n";
-  cerr << "  -D rmunmp      remove unmapped elements shown on LHS but absent on RHS\n";
-  cerr << "  -P <file>      reaction as proto file\n";
-  cerr << "  -K <smirks>    reaction as smirks. F:<fname> means smirks is in file\n";
-  cerr << "  -z i           ignore molecules not reacting\n";
-  cerr << "  -z w           write molecules not reacting\n";
-  cerr << "  -Z             ignore sidechains not reacting\n";
-  cerr << "  -C <string>    append <string> to the name of all changed molecules\n";
-  cerr << "  -C ifmult      only append the -C string in the case of multiple scaffold matches\n";
-  cerr << "  -m <number>    the maximum number of scaffold reaction sites to process\n";
-  cerr << "  -m do=number   process site number <number> in the scaffold\n";
-  cerr << "  -m each        enumerate each scaffold hit separately\n";
-  cerr << "  -m RMX         ignore scaffolds that generate multiple substructure hits\n";
-  cerr << "  -X <symbol>    extract/remove all atoms of type <symbol>. No bonds changed\n";
-  cerr << "  -I             change isotopes to natural form in product molecules\n";
-  cerr << "  -M all         generate all regio-isomers from multiple sidechain matches\n";
-  cerr << "  -M do=number   process site number <number> in the sidechains\n";
-  cerr << "  -M mskip=text  append <text> to names where just one possible sidechain attachment chosen\n";
-  cerr << "  -M write=file  write non-reacting sidechains to <file>\n";
-  cerr << "  -M RMX         ignore any sidechains with multiple substructure matches\n";
-  cerr << "  -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)\n";
-  cerr << "  -l             strip reagents to largest fragment\n";
-  cerr << "  -L             strip products to largest fragment\n";
-  cerr << "  -f             function as a TDT filter\n";
-  cerr << "  -n <xxx>       number assigner options, enter '-n help' for details\n";
-  cerr << "  -W <string>    token put between names of products (default \" + \")\n";
-  cerr << "  -u             one embedding per start atom\n";
-  cerr << "  -d             suppress duplicate molecules - only checks current molecule\n";
-  cerr << "  -k             don't perceive symmetry equivalents in the scaffold\n";
-  cerr << "  -J ...         various special purpose options, enter '-J help' for details\n";
-  cerr << "  -S <string>    create output files with name stem <string>\n";
-  cerr << "  -o <type>      specify output file type(s)\n";
-  cerr << "  -E ...         standard element options, enter '-E help' for info\n";
-  (void) display_standard_aromaticity_options(cerr);
-  (void) display_standard_chemical_standardisation_options(cerr, 'g');
-  cerr << "  -i <type>      specify input file type\n";
-  cerr << "  -v             verbose output\n";
+  cerr << R"(
+Performs reactions based on a reaction file and smiles file(s).
+Specify the reaction file with the -r (old) or -P (textproto) option.
+The number of files specified must correspond to the number of components in the reaction.
+One file for the scaffold, mandatory, and zero or more file(s) for each sidechain.
+ -r <file>      specify single reaction file
+ -D <file>      specify ISIS reaction file
+ -D rmfrag      remove small fragments from the results of ISIS reaction file reactions
+ -D rmunmp      remove unmapped elements shown on LHS but absent on RHS
+ -P <file>      reaction as proto file
+ -K <smirks>    reaction as smirks. F:<fname> means smirks is in file
+ -z i           ignore molecules not reacting
+ -z w           write molecules not reacting
+ -Z             ignore sidechains not reacting
+ -C <string>    append <string> to the name of all changed molecules
+ -C ifmult      only append the -C string in the case of multiple scaffold matches
+ -m <number>    the maximum number of scaffold reaction sites to process
+ -m do=number   process site number <number> in the scaffold
+ -m each        enumerate each scaffold hit separately
+ -m RMX         ignore scaffolds that generate multiple substructure hits
+ -X <symbol>    extract/remove all atoms of type <symbol>. No bonds changed
+ -I             change isotopes to natural form in product molecules
+ -M all         generate all regio-isomers from multiple sidechain matches
+ -M do=number   process site number <number> in the sidechains
+ -M mskip=text  append <text> to names where just one possible sidechain attachment chosen
+ -M write=file  write non-reacting sidechains to <file>
+ -M RMX         ignore any sidechains with multiple substructure matches
+ -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)
+ -l             strip reagents to largest fragment
+ -L             strip products to largest fragment
+ -f             function as a TDT filter
+ -n <xxx>       number assigner options, enter '-n help' for details
+ -W <string>    token put between names of products (default " + ")
+                Use NONE to for empty string. Names like 'space' and 'tab' are also recognised.
+ -u             one embedding per start atom
+ -d             suppress duplicate molecules - only checks current molecule. Repeat for global de-duping.
+ -k             don't perceive symmetry equivalents in the scaffold
+ -J ...         various special purpose options, enter '-J help' for details
+ -S <string>    create output files with name stem <string>
+ -o <type>      specify output file type(s)
+ -E ...         standard element options, enter '-E help' for info
+ -A ...         standard aromaticity options, enter '-A help' for info
+ -g ...         chemical standardisation options, enter '-g help' for info
+ -i <type>      specify input file type
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -487,6 +504,39 @@ WriteMultiFragmentMolecule(Molecule& product,
   return 1;
 }
 
+// return 0 if any pair of atoms are closer than `bump_check`.
+// Ignore bonded atoms and atoms sharing a neighbour.
+// Should those behaviours be made options??
+static int
+PassesBumpCheck(Molecule& m, float bump_check) {
+  if (bump_check_min_separation > 0) {
+    m.recompute_distance_matrix();
+  }
+
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    for (int j = i + 1; j < matoms; ++j) {
+      float d = m.distance_between_atoms(i, j);
+      if (d >= bump_check) {
+        continue;
+      }
+      if (m.are_bonded(i, j)) {
+        continue;
+      }
+      if (m.are_adjacent(i, j)) {
+        continue;
+      }
+      if (bump_check_min_separation > 0 &&
+          m.bonds_between(i, j) <= bump_check_min_separation) {
+        continue;
+      }
+
+      return 0;
+    }
+  }
+  return 1;
+}
+
 static int
 do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
          Molecule_Output_Object& output) {
@@ -524,6 +574,13 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
 
   if (suppress_duplicate_molecules && molecule_is_duplicate(product)) {
     return 1;
+  }
+
+  if (bump_check > 0.0f) {
+    if (! PassesBumpCheck(product, bump_check)) {
+      ++products_failing_bump_check;
+      return 1;
+    }
   }
 
   if (write_sidechains_to_output_stream && nullptr != sidechain) {
@@ -592,6 +649,10 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
   if (write_multi_fragment_products_as_separate_molecules &&
       product.number_fragments() > 1) {
     return WriteMultiFragmentMolecule(product, output);
+  }
+
+  if (report_progress()) {
+    cerr << "trxn read " << molecules_processed << " scaffolds,  generated " << products_written << " products\n";
   }
 
   return output.write(product);
@@ -908,11 +969,20 @@ do_enumerate_scaffold_hits_combinatorial(const int depth, Molecule& m,
   return 1;
 }
 
+// #define DEBUG_TRXN
+
 static int
 trxn(Molecule& m, IWReaction& reaction, Molecule_Output_Object& output) {
   Substructure_Results sresults;
 
   const int nhits = reaction.determine_matched_atoms(m, sresults);
+#ifdef DEBUG_TRXN
+  cerr << "Reaction got " << nhits << " hits to query\n";
+  for (const Set_of_Atoms* e : sresults.embeddings()) {
+    cerr << *e << '\n';
+  }
+  reaction.debug_print(cerr);
+#endif
 
   hit_statistics[nhits]++;
 
@@ -1266,9 +1336,7 @@ trxn_filter(IW_TDT& tdt, IWReaction& rxn, std::ostream& output) {
     return handle_scaffolds_not_reacting_filter(tdt, m, smc, output);
   }
 
-  assert(
-      0 ==
-      rxn.number_reagents());  // all the sidechains must have their own fragment to add
+  assert( 0 == rxn.number_reagents());  // all the sidechains must have their own fragment to add
 
   Molecule result;
 
@@ -1337,6 +1405,11 @@ do_apply_isotopes_for_atom_numbers(Molecule& m) {
   return 1;
 }
 
+static void
+AddParentToDuplicateHash(Molecule& m) {
+  molecule_is_duplicate(m);
+}
+
 static int
 OkWithOnlyReact(std::unique_ptr<RE2>& only_react, const IWString& name) {
   if (!only_react) {  // Not specified, OK by definition.
@@ -1368,7 +1441,12 @@ trxn(data_source_and_type<Molecule>& input, IWReaction& rxn,
     }
 
     if (suppress_duplicate_molecules) {
-      reset_duplicate_hash_sets();
+      if (suppress_duplicate_molecules == 1) {
+        reset_duplicate_hash_sets();
+      }
+      if (add_parent_to_duplicate_hash) {
+        AddParentToDuplicateHash(*m);
+      }
     }
 
     if (make_implicit_hydrogens_explicit) {
@@ -1425,32 +1503,36 @@ static void
 display_dash_j_qualifiers(std::ostream& os) {
   // clang-format off
   os << R"(
- -J wrscaf      write scaffolds  to the output stream
- -J wrsdch      write sidechains to the output stream
- -J blki        bonds lose Kekule identity
- -J appinfo     append text info from reagents to products
- -J onlyreact=RX only react molecules where the name matches RX
- -J maxat=nn    discard any product molecule having more than <nn> atoms
- -J rmncm       ignore multiple substructure matches involving non changing atoms
- -J rmovm       ignore multiple substructure matches involving     changing atoms
- -J exph        make implicit Hydrogen atoms explicit (changes reaction)
- -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed)
- -J rmph        remove explicit hydrogen atoms from product molecules
- -J rcksm       when multiple scaffold hits present, re-check matches for activity
- -J numok       keep non-unique embeddings - default is unique embeddings only
- -J isonum      isotopically label atoms with their initial atom number
- -J msm=<s>     text designating multiple scaffold matches, use NONE to skip
- -J marvin      the input reaction file (-D) has come from Marvin
- -J keepatmn    retain any atom map numbers in output molecules
- -J larf        in smirks, if an atom is lost, remove the fragment
- -J rmhsqb      remove unnecessary [] in product molecules
- -J rmxhbv      remove explicit hydrogens causing bad valences
- -J coords      include coordinates with smiles output
- -J minpfs=<n>  discard products with a fragment with < minpfs atoms
- -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms
- -J mfpseparate write multi fragment products as separate molecules
- -J nomshmsg    do NOT write 'hits in scaffold' messages for multiple scaffold query hits
- -J noschmsg    do NOT write warning messages about no sidechain substructure matches
+ -J wrscaf      write scaffolds  to the output stream.
+ -J wrsdch      write sidechains to the output stream.
+ -J blki        bonds lose Kekule identity.
+ -J appinfo     append text info from reagents to products.
+ -J onlyreact=RX only react molecules where the name matches RX.
+ -J maxat=nn    discard any product molecule having more than <nn> atoms.
+ -J rmncm       ignore multiple substructure matches involving non changing atoms.
+ -J rmovm       ignore multiple substructure matches involving     changing atoms.
+ -J exph        make implicit Hydrogen atoms explicit (changes reaction).
+ -J exphR       make implicit Hydrogen atoms explicit on reagents (reaction not changed).
+ -J rmph        remove explicit hydrogen atoms from product molecules.
+ -J rcksm       when multiple scaffold hits present, re-check matches for activity.
+ -J numok       keep non-unique embeddings - default is unique embeddings only.
+ -J isonum      isotopically label atoms with their initial atom number.
+ -J msm=<s>     text designating multiple scaffold matches, use NONE to skip.
+ -J marvin      the input reaction file (-D) has come from Marvin.
+ -J BUMPCHK=<dist>  apply a 3d bump check to products. Fail if any atoms closer than <dist>.
+ -H BCMINSEP=<n>    only 3d bump check atoms if they are more than <n> bonds apart.
+ -J keepatmn    retain any atom map numbers in output molecules.
+ -J larf        in smirks, if an atom is lost, remove the fragment.
+ -J rmhsqb      remove unnecessary [] in product molecules.
+ -J rmxhbv      remove explicit hydrogens causing bad valences.
+ -J coords      include coordinates with smiles output.
+ -J minpfs=<n>  discard products with a fragment with < minpfs atoms.
+ -J maxpfs=<n>  discard products with a fragment with > maxpfs atoms.
+ -J mfpseparate write multi fragment products as separate molecules.
+ -J nomshmsg    do NOT write 'hits in scaffold' messages for multiple scaffold query hits.
+ -J noschmsg    do NOT write warning messages about no sidechain substructure matches.
+ -J rpt=<n>     report progress every <n> products written.
+ -J noparent    add the starting molecule to the duplicate hash - so starting molecules are not recreated.
 )";
   // clang-format on
 
@@ -1458,7 +1540,31 @@ display_dash_j_qualifiers(std::ostream& os) {
 }
 
 static int
-ReadReaction(IWString& fname, IWReaction& rxn) {
+ReadBinaryProto(IWString& fname, IWReaction& rxn,
+                const Sidechain_Match_Conditions& smc) {
+  std::optional<ReactionProto::Reaction> maybe_proto =
+      iwmisc::ReadBinaryProto<ReactionProto::Reaction>(fname);
+  if (! maybe_proto) {
+    cerr << "ReadBinaryProto:cannot read '" << fname << "'\n";
+    return 0;
+  }
+
+  if (!rxn.ConstructFromProto(*maybe_proto, fname, smc)) {
+    cerr << "ReadReaction:cannot parse reaction proto\n";
+    cerr << maybe_proto->ShortDebugString() << '\n';
+    return 0;
+  }
+
+  return 1;
+}
+
+static int
+ReadReaction(IWString& fname, IWReaction& rxn,
+             const Sidechain_Match_Conditions& smc) {
+  if (fname.ends_with(".dat")) {
+    return ReadBinaryProto(fname, rxn, smc);
+  }
+
   std::optional<ReactionProto::Reaction> maybe_proto =
       iwmisc::ReadTextProtoCommentsOK<ReactionProto::Reaction>(fname);
   if (!maybe_proto) {
@@ -1466,7 +1572,7 @@ ReadReaction(IWString& fname, IWReaction& rxn) {
     return 0;
   }
 
-  if (!rxn.ConstructFromProto(*maybe_proto, fname)) {
+  if (!rxn.ConstructFromProto(*maybe_proto, fname, smc)) {
     cerr << "ReadReaction:cannot parse reaction proto\n";
     cerr << maybe_proto->ShortDebugString() << '\n';
     return 0;
@@ -1523,9 +1629,13 @@ trxn(int argc, char** argv) {
   }
 
   if (cl.option_present('W')) {
-    const_IWSubstring w = cl.string_value('W');
-
-    set_component_separator(w);
+    IWString w = cl.string_value('W');
+    if (w == "NONE") {
+      set_component_separator("");
+    } else {
+      char_name_to_char(w, 0);  // 0 means no error message if not recognised.
+      set_component_separator(w);
+    }
 
     if (verbose) {
       cerr << "Component separator set to '" << w << "'\n";
@@ -1616,9 +1726,15 @@ trxn(int argc, char** argv) {
 
   if (cl.option_present('d')) {
     suppress_duplicate_molecules = 1;
+    if (cl.option_count('d') > 1) {
+      suppress_duplicate_molecules = 2;
+    }
 
-    if (verbose) {
+    if (verbose == 0) {
+    } else if (suppress_duplicate_molecules == 1) {
       cerr << "Will suppress duplicate molecules - within current generation\n";
+    } else if (suppress_duplicate_molecules == 2) {
+      cerr << "Will globally suppress duplicates\n";
     }
   }
 
@@ -1767,7 +1883,7 @@ trxn(int argc, char** argv) {
           cerr << "Square brackets removed from products if possible\n";
         }
       } else if (j == "coords") {
-        set_append_coordinates_after_each_atom(1);
+        lillymol::set_include_coordinates_with_smiles(1);
       } else if (j.starts_with("minpfs=")) {
         j.remove_leading_chars(7);
         if (! j.numeric_value(min_allowed_fragment_size_in_product) || 
@@ -1795,16 +1911,51 @@ trxn(int argc, char** argv) {
         if (verbose) {
           cerr << "Will write multi fragment products as separate molecules\n";
         }
-      } else if (j == "nomshmsg") {
+      } else if (j == "nomshmsg" || j == "nomscfmsg") {
         display_multiple_scaffold_hits_message = 0;
         if (verbose) {
-          cerr << "Will NOT write messagea about multiple scaffold query hits\n";
+          cerr << "Will NOT write messages about multiple scaffold query hits\n";
         }
       } else if (j == "noschmsg") {
         if (verbose) {
           cerr << "Will NOT warn about no sidechain query matches\n";
         }
         scaffold_match_conditions.set_issue_sidechain_no_match_warnings(0);
+      } else if (j.starts_with("rpt=")) {
+        j.remove_leading_chars(4);
+        uint32_t rpt;
+        if (! j.numeric_value(rpt)) {
+          cerr << "Invalid report progress specification '" << j << "'\n";
+          return 1;
+        }
+        report_progress.set_report_every(rpt);
+        if (verbose) {
+          cerr << "Will report progress every " << rpt << " products generated\n";
+        }
+      } else if (j == "noparent") {
+        add_parent_to_duplicate_hash = 1;
+        if (verbose) {
+          cerr << "Will add the starting molecules to the duplicate hash - products will not recreate the parent\n";
+        }
+      } else if (j.starts_with("BUMPCHK=")) {
+        j.remove_leading_chars(8);
+        if (! j.numeric_value(bump_check) || bump_check <= 0.0f) {
+          cerr << "The -J BUMPCHK= directive must be a valid non negative distance\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will NOT write molecules failing a 3D bump check of " << bump_check << " Angstroms\n";
+        }
+      } else if (j.starts_with("BCMINSEP=")) {
+        j.remove_leading_chars(9);
+        if (! j.numeric_value(bump_check_min_separation) || bump_check_min_separation < 2) {
+          cerr << "The Bump Check Minimum Separation BCMINSEP must be a whole +ve number\n";
+          return 0;
+        }
+        if (verbose) {
+          cerr << "Will only bump check atoms that are more than " << bump_check_min_separation
+               << " bonds apart\n";
+        }
       } else {
         cerr << "Unrecognised -J qualifier '" << j << "'\n";
         display_dash_j_qualifiers(cerr);
@@ -1862,6 +2013,9 @@ trxn(int argc, char** argv) {
       }
 
       sidechain_match_conditions.set_process_hit_number(mm);
+      if (verbose) {
+        cerr << "Will process sidechain hit number " << mm << '\n';
+      }
     } else if (m.starts_with("mskip=")) {
       const_IWSubstring ms = m;
       ms.remove_leading_chars(6);
@@ -1888,6 +2042,8 @@ trxn(int argc, char** argv) {
       cerr << "Unrecognised -M qualifier '" << m << "'\n";
       usage(23);
     }
+
+    sidechain_match_conditions.set_active(1);
   }
 
   if (cl.empty()) {
@@ -1962,7 +2118,7 @@ trxn(int argc, char** argv) {
 
     set_auto_create_new_elements(1);
 
-    if (!ReadReaction(fname, rxn)) {
+    if (!ReadReaction(fname, rxn, sidechain_match_conditions)) {
       cerr << "Cannot read reaction proto file -P " << fname << '\n';
       return 1;
     }
@@ -1977,7 +2133,7 @@ trxn(int argc, char** argv) {
   }
 
   if (cl.option_present('u')) {
-    rxn.set_find_one_embedding_per_atom(1);
+    rxn.set_one_embedding_per_start_atom(1);
     rxn.set_find_unique_embeddings_only(1);
     sidechain_match_conditions.set_one_embedding_per_start_atom(1);
     if (verbose) {
@@ -2051,7 +2207,10 @@ trxn(int argc, char** argv) {
         }
       } else if ("each" == m) {
         scaffold_match_conditions.set_enumerate_scaffold_hits_individually(1);
-        rxn.set_do_not_perceive_symmetry_equivalent_matches(1);
+        // No, this is not correct, there are things that appear symmetric during
+        // matching, but once reacted the symmetry goes away. Symmetry continues
+        // to be problematic.
+        // rxn.set_do_not_perceive_symmetry_equivalent_matches(1);
         if (verbose) {
           cerr << "Will enumerate multiple scaffold hits individually\n";
         }
@@ -2150,8 +2309,18 @@ trxn(int argc, char** argv) {
       cerr << "Cannot determine input type\n";
       usage(6);
     }
-  } else if (!all_files_recognised_by_suffix(cl)) {
-    return 4;
+  } else if (all_files_recognised_by_suffix(cl)) {
+  } else {
+    for (const char* fname : cl) {
+      const_IWSubstring tmp(fname);
+      if (tmp == "-") {
+        input_type = FILE_TYPE_SMI;
+      } else if (discern_file_type_from_name(fname)) {
+      } else {
+        cerr << "trxn:unrecognised input type '" << fname << '\n';
+        return 1;
+      }
+    }
   }
 
   // If a sidechain already has a molecule - it was in the msi file, then it doesn't need
@@ -2168,32 +2337,48 @@ trxn(int argc, char** argv) {
          << sidechains_that_are_just_single_reagents << " have just a single reagent\n";
     cerr << "But " << files_on_command_line << " files specified on the command line\n";
     cerr << "Impossible\n";
-    return 9;
+//  return 9;
   }
+
+  // Options like -i seek=off  from the command line are applied to all files that are
+  // read by LillyMol. But in the case of trxn_parallel, we assume that these settings
+  // apply only to the scaffold. So temporarily turn off those settings while the sidechain
+  // files are consumed.
+  moleculeio::SeekAndMax seek_and_max = moleculeio::UnsetSeekMax();
 
   int j = 1;  // index into Command_Line object
   for (int i = 0; i < rxn.number_sidechains(); i++) {
     Sidechain_Reaction_Site* s = rxn.sidechain(i);
 
-    if (s->single_reagent_only()) {
-      continue;
-    }
-
     if (make_implicit_hydrogens_explicit_on_all_reagents) {
       s->set_make_implicit_hydrogens_explicit(1);
     }
 
-    if (!s->add_reagents(cl[j], input_type, sidechain_match_conditions)) {
+    if (s->has_reagents()) {
+      ;  // no reagents to add.
+    } else if (j >= cl.number_elements()) {
+      cerr << "Sidechain without reagents, but no source on command line\n";
+      return 1;
+    } else if (!s->add_reagents(cl[j], input_type, sidechain_match_conditions)) {
       cerr << "Bad news, sidechain reaction " << i << " could not read reagents from '"
            << cl[j] << "'\n";
       return i + 1;
     }
 
+    if (verbose) {
+      cerr << "Sidechain " << j << " added " << s->number_reagents() << " reagents\n";
+    }
+
     j++;
   }
 
+  if (seek_and_max.max_offset > 0) {
+    moleculeio::set_seek_to(seek_and_max.seek_to); ;
+    moleculeio::set_max_offset_from_command_line(seek_and_max.max_offset);
+  }
+
   if (verbose) {
-    cerr << "Reaction '" << rxn.comment() << "' read " << rxn.number_reagents()
+    cerr << "Reaction '" << rxn.name() << "' read " << rxn.number_reagents()
          << " reagents\n";
     cerr << "will create " << rxn.number_products_per_scaffold_embedding()
          << " products per scaffold embedding\n";
@@ -2326,6 +2511,11 @@ trxn(int argc, char** argv) {
 
     if (suppress_duplicate_molecules) {
       cerr << duplicate_molecules_suppressed << " duplicate products suppressed\n";
+    }
+
+    if (bump_check > 0.0f) {
+      cerr << products_failing_bump_check << " products failed a " << bump_check 
+           << " Angstrom bump check\n";
     }
 
     cerr << products_written << " products written\n";

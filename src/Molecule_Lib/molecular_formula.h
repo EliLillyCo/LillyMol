@@ -86,6 +86,9 @@ class MolecularFormula {
     int MakeFormula(IWString& s) const;
     // A variant that appends instead.
     int AppendFormula(IWString& s) const;
+
+    int ToSparseFingerprint(IWString& destination) const;
+    int ToFixedCountedFingerprint(IWString& destination) const;
 };
 
 };

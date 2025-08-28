@@ -1,68 +1,5 @@
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
-load("//build_deps:install.bzl", "local_install")
-
-local_install(
-    name = "install",
-    srcs = [
-        ":average",
-        ":bucketise",
-        ":byte_offset_index",
-        ":class_label_translation",
-        ":concat_files",
-        ":correlate",
-        ":descriptor_file_cat",
-        ":descriptor_file_filter",
-        ":descriptor_file_select_rows",
-        ":descriptor_file_sort",
-        ":descriptor_file_to_svm_lite",
-        ":descriptor_file_transpose",
-        ":descriptors_to_fingerprint",
-        ":dfilefilter",
-        ":dicer_fragments_collate",
-        ":difference_sort",
-        ":distribution",
-        ":exon_correlated",
-        ":feature_scaling",
-        ":fetch_sdf",
-        ":fetch_sdf_quick",
-        ":fetch_smiles",
-        ":fetch_smiles_quick",
-        ":grep_by_column",
-        ":grid_overlap",
-        ":_inventory",
-        ":isolation_forest",
-        ":iwcut",
-        ":iwsplit",
-        ":jfilecompare",
-        ":just_columns_with_same_sign",
-        ":kstat_correlated",
-        ":mispredicted",
-        ":model_average",
-        ":nextdir",
-        ":normalise",
-        ":notenoughvariance",
-        ":numeric_differences",
-        ":nn_single_linkage",
-        ":ppv",
-        ":random_column_order",
-        ":random_records",
-        ":rmsigma",
-        ":running_average",
-        ":shuffle_file",
-        ":spearman_rank",
-        ":stratified_samples",
-        ":svm_lite_to_gfp",
-        ":svmfp_error_vs_distance",
-        ":tcount",
-        ":test_train_split_classification",
-        ":test_train_split_cluster",
-        ":test_train_split_random",
-        ":unbalanced_quotes",
-        ":unique_rows",
-        ":whatsmissing",
-    ],
-)
 
 proto_library(
     name = "class_label_translation_proto",
@@ -78,6 +15,40 @@ cc_proto_library(
     ],
     deps = [
         "class_label_translation_proto",
+    ],
+)
+
+proto_library(
+    name = "mispredicted_proto",
+    srcs = [
+        "mispredicted.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "mispredicted_cc_proto",
+    deps = [
+        "mispredicted_proto",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+proto_library(
+    name = "linear_scaling_proto",
+    srcs = [
+        "linear_scaling.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "linear_scaling_cc_proto",
+    deps = [
+        ":linear_scaling_proto",
+    ],
+    visibility = [
+        "//visibility:public",
     ],
 )
 
@@ -181,10 +152,10 @@ cc_binary(
     ],
     deps = [
         "//Foundational/accumulator",
-        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -207,8 +178,26 @@ cc_proto_library(
 
 py_proto_library(
     name = "feature_scaling_py_proto",
+    deps = [
+        "feature_scaling_proto",
+    ],
+)
+
+cc_library(
+    name = "linear_scaling",
     srcs = [
-        "feature_scaling.proto",
+        "linear_scaling.cc",
+    ],
+    hdrs = [
+        "linear_scaling.h",
+    ],
+    deps = [
+        "linear_scaling_cc_proto",
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring",
+    ],
+    visibility = [
+        "//visibility:public",
     ],
 )
 
@@ -321,6 +310,21 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "descriptors_to_fingerprint_integer",
+    srcs = [
+        "descriptors_to_fingerprint_integer.cc",
+    ],
+    deps = [
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Foundational/iwstring",
+        "//Foundational/iwstring:absl_hash",
+    ],
+)
+
 # This is a duplicate, two different versions were merged,
 # but both names are in scripts.
 cc_binary(
@@ -347,8 +351,8 @@ cc_binary(
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwstring",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log:initialize",
     ],
 )
 
@@ -464,10 +468,10 @@ cc_binary(
         "grep_by_column.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -492,10 +496,10 @@ cc_binary(
         "inventory.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -505,11 +509,11 @@ cc_binary(
         "exon_correlated.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -525,11 +529,11 @@ cc_binary(
         "-lgomp",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwbits:iwbits",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -579,10 +583,10 @@ cc_binary(
         "just_columns_with_same_sign.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -605,6 +609,7 @@ cc_binary(
         "mispredicted.cc",
     ],
     deps = [
+        ":mispredicted_cc_proto",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
@@ -632,11 +637,11 @@ cc_binary(
         "nextdir.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -646,10 +651,10 @@ cc_binary(
         "nn_single_linkage.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -661,9 +666,11 @@ cc_binary(
         "normalise.cc",
     ],
     deps = [
+        ":linear_scaling",
         "//Foundational/accumulator",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
+        "//Foundational/iwmisc:normalisation",
         "//Foundational/iwstring",
     ],
 )
@@ -687,10 +694,29 @@ cc_binary(
         "numeric_differences.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
+    ],
+)
+
+cc_binary(
+    name = "prediction_bias",
+    srcs = [
+        "prediction_bias.cc",
+        "sgefa.c",
+        "sgesl.c",
+    ],
+    linkopts = [
+        "-lblas",
+    ],
+    deps = [
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
+        "@third_party//:f2c",
     ],
 )
 
@@ -700,12 +726,12 @@ cc_binary(
         "ppv.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:activity_from_file",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -742,11 +768,11 @@ cc_binary(
         "rmsigma.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -782,11 +808,11 @@ cc_binary(
         "spearman_rank.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -824,11 +850,11 @@ cc_binary(
         "svmfp_error_vs_distance.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:activity_from_file",
-        "//Foundational/iwmisc:iwmisc",
     ],
 )
 
@@ -845,6 +871,20 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
+    ],
+)
+
+cc_binary(
+    name = "test_t_test_",
+    srcs = [
+        "test_t_test.cc",
+    ],
+    deps = [
+        "//Utilities/GFP_Knn:iwpvalue",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -882,12 +922,12 @@ cc_binary(
         "test_train_split_random.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
-        "//Foundational/iwbits:iwbits",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
     ],
 )
 
@@ -897,10 +937,10 @@ cc_binary(
         "unbalanced_quotes.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 

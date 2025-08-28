@@ -24,7 +24,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/reduced_graph.pb.h"
+#else
+#include "reduced_graph.pb.h"
+#endif
 
 namespace reduced_graph {
 

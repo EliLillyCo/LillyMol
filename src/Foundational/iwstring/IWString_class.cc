@@ -4258,6 +4258,7 @@ const_IWSubstring::remove_up_to_first(char target)
   return (index_of_target + 1);
 }
 
+#ifdef IMPLICIT_CONVERSIONS_A_BAD_IDEA
 /*
   All these operators with scalars need template specialisation.
   Once we move to 2.8.xxx change this
@@ -4472,6 +4473,7 @@ const_IWSubstring::operator !=(double rhs) const
 
   return doubleme != rhs;
 }
+#endif
 
 static int
 common_balance (char open, char close, const char * s, int nchars)
@@ -5329,6 +5331,11 @@ char_name_to_char(IWString & s, int message_if_unrecognised) {
     s.resize(0);
     return 1;
   }
+
+  else if (s == "newline") {
+    s = '\n';
+    return 1;
+  }
   
   if ("help" == s)
   {
@@ -5475,6 +5482,16 @@ IWString::ExpandEnvironmentVariables() const {
   return result;
 }
 
+int
+IWString::ExpandEnvironmentVariablesInPlace() {
+  std::optional<IWString> maybe_changed = ExpandEnvironmentVariables();
+  if (! maybe_changed) {
+    return 0;
+  }
+  *this = std::move(*maybe_changed);
+  return 1;
+}
+
 std::string
 IWString::AsString() const {
   if (_number_elements == 0) {
@@ -5492,3 +5509,49 @@ const_IWSubstring::AsString() const {
 
   return std::string(_data, _nchars);
 }
+template <typename T>
+int
+NumericValueKMGCommon(const char* s, int nchars, T& result) {
+  if (nchars == 0) {
+    return 0;
+  }
+
+  int multiplier = 1;
+  const char last_char = s[nchars - 1];
+
+  if (last_char == 'k' || last_char == 'K') {
+    multiplier = 1000;
+    --nchars;
+  } else if (last_char == 'm' || last_char == 'M') {
+    multiplier = 1000000;
+    --nchars;
+  } else if (last_char == 'g' || last_char == 'G') {
+    multiplier = 1000000000;
+    --nchars;
+  }
+
+  if (nchars == 0) {
+    return 0;
+  }
+
+  const_IWSubstring sv(s, nchars);
+  if (! sv.numeric_value(result)) {
+    return 0;
+  }
+
+  if (multiplier > 1) {
+    result *= multiplier;
+  }
+
+  return 1;
+}
+
+template <typename T>
+int
+IWString::NumericValueKMG(T& result) const {
+  return NumericValueKMGCommon(_things, _number_elements, result);
+}
+
+template int IWString::NumericValueKMG(uint64_t&) const;
+template int IWString::NumericValueKMG(uint32_t&) const;
+template int IWString::NumericValueKMG(int32_t&) const;

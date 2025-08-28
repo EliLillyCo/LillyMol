@@ -44,8 +44,6 @@ static IWString missing_values('.');
 
 static Charge_Assigner charge_assigner;
 
-#define CHARGE_ASSIGNER_MULTIPLIER 100
-
 static IWString descriptor_prefix;
 
 static int rerun_charge_assigner_queries = 0;
@@ -167,6 +165,8 @@ usage(int rc) {
   cerr << "  -C <max>      work as filter, discard if clogp .gt. <min>\n";
   cerr << "  -d <min>      work as filter, discard if clogd .lt. <min>\n";
   cerr << "  -D <max>      work as filter, discard if clogd .gt. <min>\n";
+  cerr << "                  note that all filters write smiles files, not descriptor files\n";
+
   cerr << "  -a            append clogp/clogd to filtered output\n";
   cerr << "  -B <fname>    write filtered molecules to <fname>\n";
   cerr << "  -b            append clogp/clogd to rejected output\n";
@@ -474,33 +474,25 @@ clogp2descriptors(Molecule& m, float clogp, IWString_and_File_Descriptor& output
 
   int matoms = m.natoms();
 
-  formal_charge_t* fc = new formal_charge_t[matoms];
-  std::unique_ptr<formal_charge_t[]> free_fc(fc);
-  set_vector(fc, matoms, 0);
-
-  if (0 == charge_assigner.process(m, fc)) {
-    //  append_result(output, (clogp - NEUTRAL_UNCHARGED), NEUTRAL_UNCHARGED);
+  std::vector<ChargeAndQuery> charges;
+  if (! charge_assigner.Process(m, charges)) {
     logd_stats.no_charge_encountered++;
     return logd_final_processing(m, clogp, NEUTRAL_UNCHARGED, output);
   }
 
   int npos = 0;
   int nneg = 0;
-
-  for (int i = 0; i < matoms; i++) {
-    formal_charge_t fci = fc[i];
-
-    if (0 == fci) {
-      ;
-    } else if (fci > 0) {
-      npos++;
+  for (const ChargeAndQuery& afq : charges) {
+    cerr << "Got match " << afq << '\n';
+    if (afq.formal_charge < 0) {
+      ++nneg;
     } else {
-      nneg++;
+      ++npos;
     }
   }
+  cerr << "nneg " << nneg << " npos " << npos << '\n';
 
-  if (0 == npos && 0 == nneg)  // really should have been picked up before
-  {
+  if (0 == npos && 0 == nneg) {  // really should have been picked up before
     //  append_result(output, (clogp - NEUTRAL_UNCHARGED), NEUTRAL_UNCHARGED);
     logd_stats.no_charge_encountered++;
     return logd_final_processing(m, clogp, NEUTRAL_UNCHARGED, output);
@@ -546,39 +538,26 @@ clogp2descriptors(Molecule& m, float clogp, IWString_and_File_Descriptor& output
     return 0;
   }
 
-  // Doesn't quality as any of the special cases. Compute the offset from
+  // Doesn't qualify as any of the special cases. Compute the offset from
   // the queries that match
 
   if (rerun_charge_assigner_queries) {
-    float offset = do_rerun_charge_assigner_queries(m, charge_assigner, fc);
-    cerr << "Offset from rerun " << offset << '\n';
+    std::unique_ptr<formal_charge_t[]> fc = std::make_unique<formal_charge_t[]>(matoms);
+    float offset = do_rerun_charge_assigner_queries(m, charge_assigner, fc.get());
+    // cerr << "Offset from rerun " << offset << '\n';
     //  append_result(output, (clogp - offset), offset);
     return logd_final_processing(m, clogp, offset, output);
   }
 
-  double offset = static_cast<double>(0.0);
-
-  for (int i = 0; i < matoms; i++) {
-    formal_charge_t fci = fc[i];
-    if (0 == fci) {
-      continue;
-    }
-
-    if (fci < 0) {
-      fci = -fci;
-    }
-
-    int query_number = fci / CHARGE_ASSIGNER_MULTIPLIER;
-
-    //  cerr << "Atom " << i << ' ' << m.smarts_equivalent_for_atom(i) <<  " matched to
-    //  query number " << query_number << '\n';
-
+  double offset = 0.0;
+  for (const ChargeAndQuery& afq : charges) {
+    // cerr << "Got match to " << afq << '\n';
     double d;
-    if (!charge_assigner[query_number]->numeric_value(d)) {
+    if (!charge_assigner[afq.query_number]->numeric_value(d)) {
       continue;
     }
 
-    offset += static_cast<double>(d);
+    offset += d;
   }
 
   // append_result(output, (clogp - offset), offset);
@@ -1178,7 +1157,6 @@ clogp2descriptors(int argc, char** argv) {
     }
 
     charge_assigner.set_apply_charges_to_molecule(0);
-    charge_assigner.set_assigned_charge_multiplier(CHARGE_ASSIGNER_MULTIPLIER);
 
     if (cl.option_present('g')) {
       if (!chemical_standardisation.construct_from_command_line(cl, (verbose > 1), 'g')) {

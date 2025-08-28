@@ -12,7 +12,11 @@
 
 #include "Molecule_Lib/molecule.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/scaffolds.pb.h"
+#else
+#include "scaffolds.pb.h"
+#endif
 
 namespace scaffolds {
 
@@ -58,8 +62,14 @@ class PerMoleculeData {
     int ClassifyRegions(Molecule& m, const int* spinach, int classify_spinach);
     int PropagateRegion(Molecule& m, atom_number_t zatom, int flag);
     int ExtendRingSystem(const Molecule& m, atom_number_t zatom, int flag);
-    int AssignLinkerRegion(const Molecule& m, atom_number_t previous,
-                atom_number_t zatom, const int *spinach, int flag);
+//  int AssignLinkerRegion(const Molecule& m, atom_number_t previous,
+//              atom_number_t zatom, const int *spinach, int flag);
+    void AssignLinkerRegion(Molecule& m, atom_number_t previous,
+                 atom_number_t zatom,
+                 const int *spinach, int flag,
+                 resizable_array<int>& ring_systems_encountered);
+    void SetupBetweenRingSystemRelationships(int rs1, const resizable_array<int>& ring_systems_encountered,
+                int flag);
     int ApplySubstituentIsotope(Molecule& m, isotope_t substituent) const;
     int ApplyLinkerIsotope(Molecule& m, isotope_t substituent) const;
 
@@ -112,7 +122,7 @@ class PerMoleculeData {
                             isotope_t substituent) const;
 
     // Return true if the combination of ring systems in `state` is disconnected.
-    int StateIsDisconnected(const std::vector<int>& state) const;
+    int StateIsDisconnected(const std::vector<uint32_t>& state) const;
 
     // For every atom that is between ring systems `r1` and `r2`, set the
     // value in `atoms_in_subset` to `flag`.
@@ -148,10 +158,12 @@ class ScaffoldFinder {
 
     int OkSubsetSize(uint32_t in_molecule, uint32_t in_subset) const;
 
+    int Process(Molecule& m, scaffolds::ScaffoldData& results);
+    int Process2(Molecule& m,
+                 PerMoleculeData& pmd,
+                 scaffolds::ScaffoldData& result);
     int Process(Molecule& m,
-                 scaffolds::ScaffoldData& results);
-    int Process(const Molecule& m,
-                 const std::vector<int>& state,
+                 const std::vector<uint32_t>& state,
                  PerMoleculeData& pmd,
                  scaffolds::ScaffoldData& results);
 
@@ -165,6 +177,8 @@ class ScaffoldFinder {
                 isotope_t substituent, const int* spinach) const;
     int ApplySubstituentIsotope(Molecule& m, isotope_t iso, const int* spinach) const;
     int ApplyLinkerIsotope(Molecule& m, isotope_t iso, const int* spinach) const;
+    int AddBackFirstNonRingAtom(Molecule& m, int* in_system, int flag);
+    int PruneSpinach(Molecule& m, int * atoms_in_subset);
 
   public:
     ScaffoldFinder();

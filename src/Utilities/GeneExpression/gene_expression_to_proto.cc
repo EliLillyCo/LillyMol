@@ -10,7 +10,11 @@
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GeneExpression/gene_expression.pb.h"
+#else
+#include "gene_expression.pb.h"
+#endif
 
 namespace gene_expression_to_proto {
 

@@ -21,7 +21,11 @@
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace dicer2bdb {
 
@@ -38,7 +42,7 @@ Usage(int rc) {
   // clang-format on
   // clang-format off
 cerr << R"(
-  Converts TFDataRecord dicer_data::DicerFragment serialised protos bo BerkeleyDB form.
+  Converts TFDataRecord dicer_data::DicerFragment serialised protos to BerkeleyDB form.
  A typical workflow will be
  dicer ... -B fragstat=dicer.data -B fragstatbinproto ...
  dicer2bdb -d /path/to/database.bdb dicer.data

@@ -85,6 +85,7 @@ class AFile : public iwstring_data_source, public IW_STL_Hash_Map<IWString, off_
       IWString_STL_Hash_Set& descriptor_names_encountered);
   template <typename T>
   IWString _column_subset(const T& s, char output_separator) const;
+  int OkToContinueWithDuplicateIdentifier(const char* fname, const IWString& buffer);
 
  public:
   AFile();
@@ -282,7 +283,7 @@ preprocess_to_identifier(const_IWSubstring& buffer, const int identifier_column,
     do_trim_leading_zeros_from_identifiers(buffer);
   }
 
-  if (0 == buffer.length()) {
+  if (buffer.empty()) {
     cerr << "preprocess_to_identifier:zero length identifier, column "
          << identifier_column << " sep '" << sep << "'\n";
     return 0;
@@ -331,7 +332,7 @@ recognise_file_qualifiers(const char* s, char& sep, int& col, int& quot,
   while (buffer.nextword(token, i, ',')) {
     //  cerr << "recognise_file_qualifiers:examining '" << token << "'\n";
 
-    if (0 == fname.length()) {
+    if (fname.empty()) {
       fname = token;
     } else if (token.starts_with("sep=")) {
       token.remove_leading_chars(4);
@@ -358,9 +359,28 @@ recognise_file_qualifiers(const char* s, char& sep, int& col, int& quot,
     }
   }
 
-  if (0 == fname.length())  // should never happen
-  {
+  if (fname.empty()) { // should never happen
     cerr << "recognise_file_qualifiers:file name not specified\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+AFile::OkToContinueWithDuplicateIdentifier(const char* fname, const IWString& buffer) {
+  if (_duplicate_identifiers == 0) {
+    cerr << "File '" << fname << "'\n";
+  }
+
+  _duplicate_identifiers++;
+
+  if (ignore_duplicate_identifiers > 1) {  // multiple -g options, don't even warn
+    ;
+  } else if (1 == ignore_duplicate_identifiers) {  // just warn
+    cerr << "AFile::initialise: duplicate identifier '" << buffer << "'\n";
+  } else {  // fatal
+    cerr << "AFile::initialise: duplicate identifier '" << buffer << "'\n";
     return 0;
   }
 
@@ -434,7 +454,7 @@ AFile::initialise(const char* fname) {
     buffer.strip_leading_blanks();
     buffer.strip_trailing_blanks();
 
-    if (0 == buffer.length()) {
+    if (buffer.empty()) {
       cerr << "Blank line at line " << iwstring_data_source::lines_read() << " in '"
            << fname << "'\n";
 
@@ -453,37 +473,25 @@ AFile::initialise(const char* fname) {
       return 0;
     }
 
-    if (contains(buffer)) {
-      if (0 == _duplicate_identifiers) {
-        cerr << "File '" << fname << "'\n";
-      }
+    IWString id(buffer);
+    if (translate_identifiers_to_lowercase) {
+      id.to_lowercase();
+    }
 
-      _duplicate_identifiers++;
-
-      if (ignore_duplicate_identifiers > 1) {  // multiple -g options, don't even warn
-        ;
-      } else if (1 == ignore_duplicate_identifiers) {  // just warn
-        cerr << "AFile::initialise: duplicate identifier '" << buffer << "'\n";
-      } else  // fatal
-      {
-        cerr << "AFile::initialise: duplicate identifier '" << buffer << "'\n";
+    if (contains(id)) {
+      if (! OkToContinueWithDuplicateIdentifier(fname, id)) {
         return 0;
       }
-    } else if (translate_identifiers_to_lowercase) {
-      IWString tmp(buffer);
-      tmp.to_lowercase();
-
-      (*this)[tmp] = offset;
     } else {
-      (*this)[buffer] = offset;
+      (*this)[id] = offset;
 
       if (verbose < 2) {
         ;
       } else if (2 == verbose && 0 == size() % 1000) {
-        cerr << "Identifier '" << buffer << "' found at " << offset << ", size " << size()
+        cerr << "Identifier '" << id << "' found at " << offset << ", size " << size()
              << '\n';
       } else {
-        cerr << "Identifier '" << buffer << "' found at " << offset << '\n';
+        cerr << "Identifier '" << id << "' found at " << offset << '\n';
       }
     }
 
@@ -620,15 +628,12 @@ int
 AFile::echo(const IWString& id, IWString& output_buffer) {
   // cerr << "AFile::echo '" << id << "'\n";
 
-  IW_STL_Hash_Map<IWString, off_t>::const_iterator f = find(id);
-
-  if (f != end()) {  // great, found it
-    ;
-  } else if (translate_identifiers_to_lowercase) {
-    IWString tmp(id);
-    tmp.to_lowercase();
-    f = find(tmp);
+  IWString myid(id);
+  if (translate_identifiers_to_lowercase) {
+    myid.to_lowercase();
   }
+
+  IW_STL_Hash_Map<IWString, off_t>::const_iterator f = find(myid);
 
   if (f == end()) {
     _missing_records++;
@@ -643,7 +648,7 @@ AFile::echo(const IWString& id, IWString& output_buffer) {
   if (first_file_may_contain_duplicate_ids) {
     ;
   } else if (all_identifiers || stream_for_identifiers_not_written.rdbuf()->is_open()) {
-    erase(id);
+    erase(myid);
   }
 
   if (!iwstring_data_source::seekg(offset)) {
@@ -830,29 +835,35 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Concatenates descriptor files by joining on identifiers\n";
-  cerr << "           set per file settings with 'fname,sep=comma,col=4'\n";
-  cerr << " -u               truncate identifiers at first '_' char\n";
-  cerr << " -a               write all identifiers (includes those not in first file)\n";
-  cerr << " -M <missing>     missing value string (default " << missing_value << ")\n";
-  cerr << " -d               skip duplicate identifiers in the first file\n";
-  cerr << " -f               first file may contain duplicate ID's\n";
-  cerr << " -g               ignore duplicate identifiers in files\n";
-  cerr << " -c <column>      identifier column(s) (default 1)\n";
-  cerr << " -z               trim leading zero's from identifiers\n";
-  cerr << " -I               only write records for which identifier is present in every file\n";
-  cerr << " -K <fname>       write identifiers discarded by -I option to <fname>\n";
-  cerr << " -n               input files are NOT descriptor files - header records not special\n";
-  cerr << " -k               skip blank lines in all files\n";
-  cerr << " -s               ignore case when comparing identifiers\n";
-  cerr << " -D die           stop processing if duplicate descriptor names are encountered\n";
-  cerr << " -D rm            remove duplicate descriptors\n";
-  cerr << " -D disambiguate  assign new unique names to duplicate descriptors\n";
-  cerr << " -i <sep>         input  file separator (default space)\n";
-  cerr << " -o <sep>         output file separator (default space)\n";
-  cerr << " -q               input consists of quoted fields\n";
-  cerr << " -Y ...           other options, enter '-Y help' for info\n";
-  cerr << " -v               verbose output\n";
+  cerr << R"(
+Concatenates/joins descriptor files by joining on identifiers.
+By default, identifiers are assumed to be in column 1 of each file.
+File names can be annotated with per-file specifications of the input separator
+and the identifier column. For example
+concat_files file1,sep=comma,col=2 file2,sep=space,col=1 > combined.txt
+
+ -u               truncate identifiers at first '_' char
+ -a               write all identifiers (includes those not in first file)
+ -M <missing>     missing value string (default " << missing_value << ")
+ -d               skip duplicate identifiers in the first file
+ -f               first file may contain duplicate ID's
+ -g               ignore duplicate identifiers in files
+ -c <column>      identifier column(s) (default 1)
+ -z               trim leading zero's from identifiers
+ -I               only write records for which identifier is present in every file
+ -K <fname>       write identifiers discarded by -I option to <fname>
+ -n               input files are NOT descriptor files - header records not special
+ -k               skip blank lines in all files
+ -s               ignore case when comparing identifiers
+ -D die           stop processing if duplicate descriptor names are encountered
+ -D rm            remove duplicate descriptors
+ -D disambiguate  assign new unique names to duplicate descriptors
+ -i <sep>         input  file separator (default space)
+ -o <sep>         output file separator (default space)
+ -q               input consists of quoted fields
+ -Y ...           other options, enter '-Y help' for info
+ -v               verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -1104,7 +1115,7 @@ concat_files(iwstring_data_source& input, const char input_separator,
     //  buffer.strip_trailing_blanks();     no, breaks with tab separated input
     //  buffer.strip_leading_blanks();
 
-    if (0 == buffer.length()) {
+    if (buffer.empty()) {
       if (skip_blank_lines) {
         continue;
       }
@@ -1484,7 +1495,7 @@ concat_files(int argc, char** argv) {
   }
 
   missing_dataitem = new_int(nfiles);
-  std::unique_ptr<int> free_missing_dataitem(missing_dataitem);
+  std::unique_ptr<int[]> free_missing_dataitem(missing_dataitem);
 
   // Make sure we have an identifier column for every input file
 

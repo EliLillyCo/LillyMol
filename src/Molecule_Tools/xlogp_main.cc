@@ -340,6 +340,7 @@ Options::Preprocess(Molecule& m) {
     return 0;
   }
 
+  m.transform_to_non_isotopic_form();
   m.remove_all(1);  // Always
 
   if (_reduce_to_largest_fragment) {

@@ -9,12 +9,11 @@
 require 'fileutils'
 require 'set'
 
-c3tk_home = ENV['C3TK_HOME']
-raise 'C3TK_HOME not defined' unless c3tk_home
-
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
+require_relative "lib/iwcmdline"
 
 def usage(descriptors)
+  descriptors['cmi'].vendor = true
+  descriptors['marvin'].vendor = true
 msg = <<-END
 Descriptor generator.
 Descriptors are specified on the command line and a Makefile describing the dependencies
@@ -30,8 +29,11 @@ END
   descriptors.each do |k, v|
     $stderr << " -#{k}"
     $stderr << "*" if v.threed
+    $stderr << " (vendor)" if v.vendor
     $stderr << "\n"
   end
+
+  # The -CORINA...-CORINA option is not documented, just to keep the usage message from getting cluttered
 
   $stderr << " -o <fname>       output file containing the descriptors\n"
   $stderr << "                  or omit this and output will be to stdout.\n"
@@ -39,7 +41,13 @@ END
   $stderr << "                  That is because `make` echo's commands to stdout\n"
   $stderr << " -j <n>           degree of parellelism 'make -j <n>\n"
   $stderr << " -speed           do nothing, but report the relative speed of each descriptor computation\n"
+  $stderr << " -okmissing       by default, molecules with missing values are discarded\n"
   $stderr << " -keep            do NOT delete the temporary directory when done, keep it\n"
+  $stderr << "                  note that if kept, missing identifiers will be in the file 'missing.txt' in the dir\n"
+  $stderr << " -2d              do all 2D descriptors\n"
+  $stderr << " -3d              do all 3D descriptors\n"
+  $stderr << " -no <desc>       list of descriptors to NOT compute: -all -no cmi,marvin -no ghose\n"
+  $stderr << " -C <maxat>       maximum number of atoms that can be processed - but some tools have hard limitations\n"
   $stderr << " -tmpdir <dir>    specify your own temporary directory - will not be deleted\n"
   $stderr << " -v               verbose output\n"
 
@@ -52,11 +60,12 @@ class Descriptor
   attr_accessor :programme
   attr_accessor :extra
   attr_accessor :speed
+  attr_accessor :vendor
   def initialize(programme, threed, speed)
     # The name of this descriptor - what the user enters as a command line option.
     @name = ""
 
-    # The tool that implements this desctiptor
+    # The tool that implements this descriptor
     @programme = programme
 
     # True if this is a 3D descriptor
@@ -68,6 +77,8 @@ class Descriptor
     # A relative measure of speed, with smaller numbers being better.
     # In reality it is the time taken to compute 50k molecules.
     @speed = speed
+
+    @vendor = false
   end
 end
 
@@ -77,21 +88,38 @@ def fileconv_options
   return '-f lod -E autocreate -e -V -g all -O def -c 2'
 end
 
+# Return options to be given to rcorina.
 # The flush option is not needed if there are >1 3D descriptors being computed.
-def corina_options
-  return '-r 5 -x -Y flush'
+# If you wish to try larger molecules with corina, try something like
+# -CORINA -C 500 -R 100 -CORINA
+def corina_options(cl)
+  result = '-r 5 -x -Y flush '
+
+  if cl.option_present('CORINA')
+    result << "-C #{cl.value('C')} " if cl.option_present('C')
+    result << cl.value('CORINA')
+  elsif cl.option_present('C')
+    result << "-C #{cl.value('C')}"
+  end
+  return result
 end
 
-def special_handling_cmi(fname)
+def special_handling_cmi(cl, fname)
   cmd = "fileconv.sh -f lod -E autocreate -e -V -g all -O def -C 99 -S - #{fname} | cmi.sh -"
+  if cl.option_present('o')
+    cmd << ' > ' << cl.value('o')
+  end
   $stderr << "executing #{cmd}\n"
   system(cmd)
   
   return true
 end
 
-def special_handling_marvin(fname)
-  cmd = "fileconv.sh -f lod -E autocreate -e -V -g all -O def -C 99 -S - #{fname} | marvin.sh -"
+def special_handling_marvin(cl, fname)
+  cmd = "fileconv.sh -f lod -E autocreate -e -V -g all -O def -C 99 -S - #{fname} | marvin.v2.sh -m all -i -"
+  if cl.option_present('o')
+    cmd << ' > ' << cl.value('o')
+  end
   $stderr << "executing #{cmd}\n"
   system(cmd)
   
@@ -101,8 +129,8 @@ end
 # Request for just a single descriptor. We do not need to create a Makefile
 # just issue a pipelined command.
 def do_single_descriptor(d, fname, cl)
-  return special_handling_cmi(fname) if d.name == 'cmi'
-  return special_handling_marvin(fname) if d.name == 'marvin'
+  return special_handling_cmi(cl, fname) if d.name == 'cmi'
+  return special_handling_marvin(cl, fname) if d.name == 'marvin'
   if cl.option_present('nostd')
     cmd = ""
     input_for_next_stage = fname
@@ -111,7 +139,7 @@ def do_single_descriptor(d, fname, cl)
     input_for_next_stage = '-i smi -'
   end
 
-  cmd << "rcorina.sh #{corina_options} -u #{input_for_next_stage}|" if d.threed
+  cmd << "rcorina.sh #{corina_options(cl)} -u #{input_for_next_stage}|" if d.threed
 
   cmd << "#{d.programme} -i smi -"
   cmd << ' > ' << cl.value('o') if cl.option_present('o')
@@ -154,7 +182,7 @@ def create_makefile(to_compute, tmpdir, cl)
 
   if ! d3.empty?
     makefile << "std.sdf: std.smi\n"
-    makefile << "	rcorina.sh #{verbose} #{corina_options} $< > $@\n"
+    makefile << "	rcorina.sh #{verbose} #{corina_options(cl)} $< > $@\n"
     d3.each do |d|
       makefile << "std.#{d.name}: std.sdf\n"
       makefile << "	#{d.programme} #{d.extra} $< > $@\n"
@@ -163,11 +191,20 @@ def create_makefile(to_compute, tmpdir, cl)
 
   d2.each do |d|
     makefile << "std.#{d.name}: std.smi\n"
-    makefile << "	#{d.programme} #{d.extra} $< > $@\n"
+    if d.name.match(/marvin/)
+      makefile << "	#{d.programme} #{d.extra} --input $< --output $@\n"
+    else
+      makefile << "	#{d.programme} #{d.extra} $< > $@\n"
+    end
   end
 
   makefile << "concat: all\n"
-  makefile << "	concat_files.sh -I #{verbose}"
+  makefile << "	concat_files.sh #{verbose} "
+  if ! cl.option_present('okmissing')
+    makefile << '-I -K missing.txt'
+  else
+    makefile << '-a'
+  end
   to_compute.each do |d|
     makefile << " std.#{d.name}"
   end
@@ -202,7 +239,7 @@ def descriptors_from_file(fname, descriptors, to_compute)
 end
 
 # Read descriptors from descriptor file `fname` and add to `to_compute`.
-def descriptors_from_desctiptor_file(fname, descriptors, to_compute)
+def descriptors_from_descriptor_file(fname, descriptors, to_compute)
   seen_here = Set.new()
   File.open(fname).each_line do |line|
     line.chomp.split[1..-1].each do |d|
@@ -241,6 +278,7 @@ def main
   descriptors['abr'] = Descriptor.new('abraham.sh', false, 17)
   descriptors['ap'] = Descriptor.new('ap.sh', false, 10.6)
   descriptors['chgfp'] = Descriptor.new('chgfp.sh', false, 8.2)
+  descriptors['cip'] = Descriptor.new('cip_labeler.sh --descriptors', false, 11.3)
   descriptors['cmi'] = Descriptor.new('cmi.sh', false, 24.4)
   descriptors['cnk'] = Descriptor.new('cnk.sh', false, 23.1)
   descriptors['comma'] = Descriptor.new('comma.sh', true, 31.1)
@@ -255,12 +293,12 @@ def main
   descriptors['jwdist'] = Descriptor.new('jwdist.sh', true, 9.7)
   descriptors['jwdp'] = Descriptor.new('jwdip.sh', true, 3.9)
   descriptors['jwmc'] = Descriptor.new('jwmolconn.sh', false, 62.1)
-  descriptors['marvin'] = Descriptor.new('marvin.sh', false, 461)
+  descriptors['marvin'] = Descriptor.new('marvin.v2.sh', false, 461)
   descriptors['medv'] = Descriptor.new('jwmedv.sh', false, 7.1)
   descriptors['mk'] = Descriptor.new('maccskeys.sh', false, 5.4)
   descriptors['morse'] = Descriptor.new('jwmorse.sh -f', true, 95.1)
   # descriptors['ms'] = Descriptor.new('unknown.sh', true)
-  descriptors['pd'] = Descriptor.new('iwpathd.sh', false, 252)
+  descriptors['pd'] = Descriptor.new('pd.sh', false, 252)
   descriptors['sh'] = Descriptor.new('tshadow.sh', true, 11.9)
   descriptors['tt'] = Descriptor.new('topotorsion.sh -H 1600', false, 2.25)
   descriptors['w'] = Descriptor.new('w.sh', false, 15.2)
@@ -275,7 +313,7 @@ def main
   descriptors.each do |key, v|
     opts << "-#{key}-#{key.upcase}=close"
   end
-  opts <<"-o=s-c=s-all-v-nostd-keep-tmpdir=s-j=ipos-speed-dfile=sfile-dlist=sfile"
+  opts <<"-o=s-c=s-all-v-nostd-keep-tmpdir=s-j=ipos-speed-dfile=sfile-dlist=sfile-okmissing-C=ipos-CORINA=close-no=s-2d-3d"
 
   # $stderr << opts << "\n"
 
@@ -296,6 +334,18 @@ def main
 
   to_compute = []
 
+  if cl.option_present('2d')
+    descriptors.each do |k, v|
+      to_compute << v unless v.threed()
+    end
+  end
+
+  if cl.option_present('3d')
+    descriptors.each do |k, v|
+      to_compute << v if v.threed()
+    end
+  end
+
   cl.values('c').each do |c|
     c.split(',').each do |f|
       unless descriptors.key?(f)
@@ -315,10 +365,10 @@ def main
   end
 
   if cl.option_present('dlist')
-    descriptors_from_file(cl.value('dfile'), descriptors, to_compute)
+    descriptors_from_file(cl.value('dlist'), descriptors, to_compute)
   end
   if cl.option_present('dfile')
-    descriptors_from_desctiptor_file(cl.value('dfile'), descriptors, to_compute)
+    descriptors_from_descriptor_file(cl.value('dfile'), descriptors, to_compute)
   end
 
   descriptors.each do |k, v|
@@ -329,6 +379,19 @@ def main
     elsif cl.option_present(k.upcase)
       # don't bother checking duplicates, too rare.
       v.extra = cl.value(k.upcase)
+    end
+  end
+
+  # After all the positive selectors are done, do the negative.
+  if cl.option_present('no')
+    cl.values('no').each do |no|
+      no.split(',').each do |n|
+        initial_size = to_compute.size
+        if to_compute.delete_if { |x| x.name == n }.size == initial_size
+          $stderr << "Descriptor #{n} not being computed\n"
+          return 1
+        end
+      end
     end
   end
 

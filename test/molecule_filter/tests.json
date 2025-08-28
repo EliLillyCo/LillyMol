@@ -1,0 +1,228 @@
+{
+  "executable": "molecule_filter",
+  "difftool": "same_structures",
+  "default_command_components": [
+      "-F #{indir}/config.textproto #{indir}/in.smi"
+  ],
+  "test": [
+
+    {
+      "name": "exclude_isotopes",
+      "args": [
+         ""
+      ]
+    },
+
+    {
+      "name": "exclude_non_organic",
+      "args": [
+        "-E autocreate"
+      ]
+    },
+
+    {
+      "name": "largest_ring_size",
+      "args": [
+         ""
+      ]
+    },
+
+    {
+      "name": "max_aliphatic_ring_count",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_aromatic_ring_count",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_aromatic_density",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_aromatic_rings_in_system",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_chiral",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_distance",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_halogen_count",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_hba",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_hbd",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_heteroatom_fraction",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_natoms",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_nrings",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_number_fragments",
+      "args": [
+         "-B rejected"
+      ]
+    },
+
+    {
+      "name": "max_ring_system_size",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_rotatable_bonds",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_tpsa",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_xlogp",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "max_alogp",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_hba",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_hbd",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_heteroatom_count",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_heteroatom_fraction",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_natoms",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_nrings",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_rotatable_bonds",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_sp3_carbon",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_tpsa",
+      "args": [
+        ""
+      ]
+    },
+
+    {
+      "name": "min_xlogp",
+      "args": [
+        ""
+      ]
+    }
+
+
+  ]
+}

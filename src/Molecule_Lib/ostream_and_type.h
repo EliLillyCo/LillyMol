@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "Foundational/iwstring/iwstring.h"
+
 #include "iwmtypes.h"
 
 class Molecule;
@@ -13,44 +14,56 @@ class Molecule;
   structure file to write.
 */
 
-class ofstream_and_type : public std::ofstream
-{
-  private:
-    FileType _output_type;
-    IWString _fname;
-    int _valid;
-    int _molecules_written;
-    int _verbose;
+class ofstream_and_type : public std::ofstream {
+ private:
+  FileType _output_type;
+  IWString _fname;
+  int _valid;
+  uint64_t _molecules_written;
+  int _verbose;
 
-//  private functions
+  //  private functions
 
-    int _default_values ();
+  int _default_values();
 
-  public:
-    ofstream_and_type ();
-    ofstream_and_type (FileType);
-    ofstream_and_type (FileType, const char *);
-    ofstream_and_type (FileType, IWString &);
-    ~ofstream_and_type ();
+ public:
+  ofstream_and_type();
+  ofstream_and_type(FileType);
+  ofstream_and_type(FileType, const char*);
+  ofstream_and_type(FileType, IWString&);
+  ~ofstream_and_type();
 
-    int ok () const;
-    int debug_print (std::ostream &) const;
+  int ok() const;
+  int debug_print(std::ostream&) const;
 
-    int valid () const { return _valid;}
+  int
+  valid() const {
+    return _valid;
+  }
 
-    int open (const char *);
-    int open (IWString &);
+  int open(const char*);
+  int open(IWString&);
 
-//  int  set_type (int);
-    int  set_type (FileType);
-    void set_verbose (int verbose) {_verbose = verbose;}
+  //  int  set_type (int);
+  int set_type(FileType);
 
-    const IWString & fname () const { return _fname;}
+  void
+  set_verbose(int verbose) {
+    _verbose = verbose;
+  }
 
-    int molecules_written () const { return _molecules_written;}
+  const IWString&
+  fname() const {
+    return _fname;
+  }
 
-    int write_molecule (Molecule *);
-    int write_molecules (const resizable_array_p<Molecule> &);
+  uint64_t
+  molecules_written() const {
+    return _molecules_written;
+  }
+
+  int write_molecule(Molecule*);
+  int write_molecules(const resizable_array_p<Molecule>&);
 };
 
 #endif  // MOLECULE_LIB_OSTREAM_AND_TYPE_H_

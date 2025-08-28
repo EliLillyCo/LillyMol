@@ -1,0 +1,12 @@
+(0 Query
+  (A I Version 2)
+  (A I min_nrings 4)
+  (1 Ring_Specifier
+    (A I aromatic 1)
+    (A I min_hits_needed 4)
+    (A I ring_size 6)
+    (A I ncon 1)
+    (A I fused 0)
+    (A I heteroatoms 0)
+  )
+)

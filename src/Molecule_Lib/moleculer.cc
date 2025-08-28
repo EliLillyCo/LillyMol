@@ -1,5 +1,5 @@
-#include <iostream>
 #include <string.h>
+
 #include <iostream>
 #include <memory>
 using std::cerr;
@@ -15,41 +15,42 @@ using std::endl;
 #include "tbb/scalable_allocator.h"
 #endif
 
-#include "Foundational/iwmisc/primes.h"
-#include "Foundational/iwmisc/misc.h"
-#include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/primes.h"
+#include "Foundational/iwqsort/iwqsort.h"
 
 class Rings_Found;
 
-#include "path.h"
-#include "molecule.h"
 #include "misc2.h"
+#include "molecule.h"
+#include "path.h"
 
 void
-Molecule::_initialise_ring_membership()
-{
-  assert (nullptr == _ring_membership);
+Molecule::_initialise_ring_membership() {
+  assert(nullptr == _ring_membership);
 
-  if (0 == _number_elements)
+  if (0 == _number_elements) {
     return;
+  }
 
   _ring_membership = new_int(_number_elements, kRingMembershipNotComputed);
 }
 
 void
-Molecule::_determine_ring_or_non_ring(atom_number_t a)
-{
+Molecule::_determine_ring_or_non_ring(atom_number_t a) {
   int frag_id = _fragment_information.fragment_membership(a);
 
-  assert (frag_id >= 0);
+  assert(frag_id >= 0);
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     _initialise_ring_membership();
+  }
 
-  assert (kRingMembershipNotComputed == _ring_membership[a]);
+  assert(kRingMembershipNotComputed == _ring_membership[a]);
 
-  int * tmp = new_int(_number_elements); std::unique_ptr<int[]> free_tmp(tmp);
+  int* tmp = new_int(_number_elements);
+  std::unique_ptr<int[]> free_tmp(tmp);
 
   _find_raw_rings_for_fragment(frag_id, tmp);
 
@@ -57,49 +58,55 @@ Molecule::_determine_ring_or_non_ring(atom_number_t a)
 }
 
 int
-Molecule::is_non_ring_atom(atom_number_t a)
-{
-  assert (ok_atom_number(a));
-  if (_ring_bond_count == nullptr)
+Molecule::is_non_ring_atom(atom_number_t a) {
+  assert(ok_atom_number(a));
+  if (_ring_bond_count == nullptr) {
     _compute_ring_bond_count();
+  }
   return _ring_bond_count[a] == 0;
 
 #ifdef OLD_VERSION_USING_RING_FINDING
-  if (0 == nrings())     // molecule has no rings, all are non ring atoms
+  if (0 == nrings()) {  // molecule has no rings, all are non ring atoms
     return 1;
+  }
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     _initialise_ring_membership();
+  }
 
-  if (kRingMembershipNotComputed == _ring_membership[a])
+  if (kRingMembershipNotComputed == _ring_membership[a]) {
     _determine_ring_or_non_ring(a);
+  }
 
-  if (0 == _ring_membership[a])
+  if (0 == _ring_membership[a]) {
     return 1;
-  else
+  } else {
     return 0;
+  }
 #endif
 }
 
 int
-Molecule::is_ring_atom(atom_number_t a)
-{
-  assert (ok_atom_number(a));
-  if (_ring_bond_count == nullptr)
+Molecule::is_ring_atom(atom_number_t a) {
+  assert(ok_atom_number(a));
+  if (_ring_bond_count == nullptr) {
     _compute_ring_bond_count();
+  }
 
   return _ring_bond_count[a] > 0;
 
 #ifdef OLD_VERSION_USING_RING_FINDING
-  if (0 == nrings())    // molecule has no rings, no atom is a ring atom
+  if (0 == nrings()) {  // molecule has no rings, no atom is a ring atom
     return 0;
+  }
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     _initialise_ring_membership();
+  }
 
-  if (kRingMembershipNotComputed == _ring_membership[a])
-  {
-    if (_things[a]->number_elements() <= 1)   // single and unconnected atoms are not in rings
+  if (kRingMembershipNotComputed == _ring_membership[a]) {
+    if (_things[a]->number_elements() <=
+        1)  // single and unconnected atoms are not in rings
     {
       _ring_membership[a] = 0;
       return 0;
@@ -112,41 +119,44 @@ Molecule::is_ring_atom(atom_number_t a)
     ;
   else if (_ring_membership[a] > 0 && _ring_bond_count[a] > 0)
     ;
-  else
-  {
-    cerr << "is_ring_atom inconsistent " << _ring_membership[a] << " vs " << _ring_bond_count[a] << " atom " << a << endl;
+  else {
+    cerr << "is_ring_atom inconsistent " << _ring_membership[a] << " vs "
+         << _ring_bond_count[a] << " atom " << a << endl;
     debug_print(cerr);
   }
   return _ring_bond_count[a] > 0;
-  if (0 == _ring_membership[a])
+  if (0 == _ring_membership[a]) {
     return 0;
-  else
+  } else {
     return 1;
+  }
 #endif
 }
 
 int
-Molecule::nrings(atom_number_t a)
-{
-  assert (ok_atom_number(a));
+Molecule::nrings(atom_number_t a) {
+  assert(ok_atom_number(a));
 
-  if (nullptr != _ring_membership && _ring_membership[a] >= 0)
+  if (nullptr != _ring_membership && _ring_membership[a] >= 0) {
     return _ring_membership[a];
+  }
 
   if (_things[a]->ncon() <= 1) {
     return 0;
   }
 
   // Try the fast way of getting ring info from _ring_bond_count.
-  if (ring_bond_count(a) == 0)
+  if (ring_bond_count(a) == 0) {
     return 0;
+  }
 
-// Test no longer needed, since ring_bond_count is > 0 here.
-//if (0 == nrings())     // no atoms in molecule, atom A not in any
-//  return 0;
+  // Test no longer needed, since ring_bond_count is > 0 here.
+  // if (0 == nrings())     // no atoms in molecule, atom A not in any
+  //  return 0;
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     _initialise_ring_membership();
+  }
 
   int frag_id = _fragment_information.fragment_membership(a);
   if (rings_in_fragment(frag_id) == 1) {
@@ -154,51 +164,54 @@ Molecule::nrings(atom_number_t a)
   }
 
   // No longer necessary
-//if (0 == _fragment_information.rings_in_fragment(frag_id))
-//{
-//  _ring_membership[a] = 0;
-//  return 0;
-//}
+  // if (0 == _fragment_information.rings_in_fragment(frag_id))
+  //{
+  //   _ring_membership[a] = 0;
+  //   return 0;
+  // }
 
-  if (kRingMembershipNotComputed == _ring_membership[a])
+  if (kRingMembershipNotComputed == _ring_membership[a]) {
     _determine_ring_or_non_ring(a);
+  }
 
-  if (_ring_membership[a] >= 0)
+  if (_ring_membership[a] >= 0) {
     return _ring_membership[a];
+  }
 
-//_determine_sssr_ring_membership(a);
+  //_determine_sssr_ring_membership(a);
 
   _determine_sssr_for_fragment(frag_id);
 
-  assert (_ring_membership[a] > 0);
+  assert(_ring_membership[a] > 0);
 
   return _ring_membership[a];
 }
 
 #ifdef OLD_VERSION_RBC
 int
-Molecule::ring_bond_count (atom_number_t zatom)
-{
+Molecule::ring_bond_count(atom_number_t zatom) {
   int nr = nrings(zatom);
 
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
-  if (1 == nr)
+  if (1 == nr) {
     return 2;
+  }
 
-  const Atom * a = _things[zatom];
+  const Atom* a = _things[zatom];
 
   int acon = a->ncon();
 
   int rc = 0;
 
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a->item(i);
+  for (int i = 0; i < acon; i++) {
+    const Bond* b = a->item(i);
 
-    if (b->nrings())
+    if (b->nrings()) {
       rc++;
+    }
   }
 
   return rc;
@@ -206,22 +219,23 @@ Molecule::ring_bond_count (atom_number_t zatom)
 #endif
 
 int
-Molecule::is_part_of_fused_ring_system(atom_number_t a)
-{
+Molecule::is_part_of_fused_ring_system(atom_number_t a) {
   int nr = nrings();
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
-  if (0 == nrings(a))
+  if (0 == nrings(a)) {
     return 0;
+  }
 
-  (void) ring_membership();   // force sssr
+  (void)ring_membership();  // force sssr
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (! r->contains(a))
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (!r->contains(a)) {
       continue;
+    }
 
     return r->is_fused();
   }
@@ -234,144 +248,141 @@ Molecule::is_part_of_fused_ring_system(atom_number_t a)
 */
 
 int
-Molecule::fused_system_size_no_compute (atom_number_t a) const
-{
-  for (int i = 0; i < _sssr_rings.number_elements(); i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (! r->contains(a))
+Molecule::fused_system_size_no_compute(atom_number_t a) const {
+  for (int i = 0; i < _sssr_rings.number_elements(); i++) {
+    const Ring* r = _sssr_rings[i];
+    if (!r->contains(a)) {
       continue;
+    }
 
-    if (! r->is_fused())      // an isolated ring
+    if (!r->is_fused()) {  // an isolated ring
       return 1;
+    }
 
-//  See how many rings in this system
+    //  See how many rings in this system
 
     int rc = 0;
     int fsid = r->fused_system_identifier();
 
-    for (int j = 0; j < _sssr_rings.number_elements(); j++)
-    {
-      const Ring * rj = _sssr_rings[j];
-      if (fsid == rj->fused_system_identifier())
+    for (int j = 0; j < _sssr_rings.number_elements(); j++) {
+      const Ring* rj = _sssr_rings[j];
+      if (fsid == rj->fused_system_identifier()) {
         rc++;
+      }
     }
     return rc;
   }
 
-  return 0;   // not in any rings
+  return 0;  // not in any rings
 }
 
 int
-Molecule::fused_system_size (atom_number_t a)
-{
-  if (0 == nrings(a))
+Molecule::fused_system_size(atom_number_t a) {
+  if (0 == nrings(a)) {
     return 0;
+  }
 
-  (void) ring_membership();     // force sssr    
-  return fused_system_size_no_compute( a );
+  (void)ring_membership();  // force sssr
+  return fused_system_size_no_compute(a);
 }
 
 int
-Molecule::rings_with_fused_system_identifier (int f)
-{
-  if (0 == nrings())
+Molecule::rings_with_fused_system_identifier(int f) {
+  if (0 == nrings()) {
     return 0;
+  }
 
-  (void) ring_membership();     // force sssr
+  (void)ring_membership();  // force sssr
 
   int rc = 0;
 
-  for (int i = 0; i < _sssr_rings.number_elements(); i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (r->fused_system_identifier() == f)
+  for (int i = 0; i < _sssr_rings.number_elements(); i++) {
+    const Ring* r = _sssr_rings[i];
+    if (r->fused_system_identifier() == f) {
       rc++;
+    }
   }
 
   return rc;
 }
 
 int
-Molecule::_unused_fused_ring_system_identifier()
-{
+Molecule::_unused_fused_ring_system_identifier() {
   int nr = _experimental_sssr_rings.number_elements();
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
   int rc = -100;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _experimental_sssr_rings[i];
-    if (! r->is_fused())
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _experimental_sssr_rings[i];
+    if (!r->is_fused()) {
       continue;
+    }
 
-    if (r->fused_system_identifier() > rc)
+    if (r->fused_system_identifier() > rc) {
       rc = r->fused_system_identifier();
+    }
   }
 
-  if (rc < 0)
+  if (rc < 0) {
     rc = 0;
+  }
 
   return rc;
 }
 
 int
-Molecule::print_ring_info(std::ostream & os) const
-{
-  assert (ok());
+Molecule::print_ring_info(std::ostream& os) const {
+  assert(ok());
 
-  if (kNringsNotComputed == _number_sssr_rings && kNringsNotComputed == _nrings)
-  {
+  if (kNringsNotComputed == _number_sssr_rings && kNringsNotComputed == _nrings) {
     os << "Nrings not computed\n";
     return 1;
   }
 
-  if (kNringsNotComputed != _number_sssr_rings)
+  if (kNringsNotComputed != _number_sssr_rings) {
     os << "Molecule contains " << _number_sssr_rings << " SSSR rings\n";
+  }
 
-  if (kNringsNotComputed != _nrings)
+  if (kNringsNotComputed != _nrings) {
     os << "Molecule contains " << _nrings << " computed rings\n";
+  }
 
   int nr = _sssr_rings.number_elements();
-  if (0 == nr)
+  if (0 == nr) {
     os << "SSSR rings not perceived\n";
-  else
-  {
-    for (int i = 0; i < nr; i++)
-    {
-      const Ring * r = _sssr_rings[i];
+  } else {
+    for (int i = 0; i < nr; i++) {
+      const Ring* r = _sssr_rings[i];
       os << (*r) << endl;
     }
 
     int nq = _non_sssr_rings.number_elements();
-    if (nq)
-    {
+    if (nq) {
       os << nq << " non sssr rings\n";
-      for (int i = 0; i < nq; i++)
-      {
-        const Ring * r = _non_sssr_rings[i];
+      for (int i = 0; i < nq; i++) {
+        const Ring* r = _non_sssr_rings[i];
         os << " Non SSSR Ring " << i << ' ' << (*r) << endl;
       }
     }
   }
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     os << "Ring membership is NULL\n";
-  else
-  {
-    for (int i = 0; i < _number_elements; i++)
-    {
-//    const Atom * a = _things[i];
+  } else {
+    for (int i = 0; i < _number_elements; i++) {
+      //    const Atom * a = _things[i];
 
       os << "Atom " << i << ' ' << smarts_equivalent_for_atom(i);
 
-      if (_ring_membership[i] >= 0)
+      if (_ring_membership[i] >= 0) {
         os << " in " << _ring_membership[i] << " rings\n";
-      else if (kRingMembershipNotComputed == _ring_membership[i])
+      } else if (kRingMembershipNotComputed == _ring_membership[i]) {
         os << " ring membership not computed\n";
-      else if (kRingMembershipIsRingAtom == _ring_membership[i])
+      } else if (kRingMembershipIsRingAtom == _ring_membership[i]) {
         os << " is a ring atom\n";
+      }
     }
   }
 
@@ -379,45 +390,42 @@ Molecule::print_ring_info(std::ostream & os) const
 }
 
 int
-Molecule::experimental_print_ring_info (std::ostream & os) const
-{
-  if (kNringsNotComputed == _nrings && kNringsNotComputed == _number_sssr_rings)
-  {
+Molecule::experimental_print_ring_info(std::ostream& os) const {
+  if (kNringsNotComputed == _nrings && kNringsNotComputed == _number_sssr_rings) {
     os << "Nrings not computed\n";
     return 1;
   }
 
-  if (kNringsNotComputed != _number_sssr_rings)
+  if (kNringsNotComputed != _number_sssr_rings) {
     os << "Molecule contains " << _number_sssr_rings << " SSSR rings\n";
+  }
 
-  if (kNringsNotComputed != _nrings)
+  if (kNringsNotComputed != _nrings) {
     os << "Molecule contains " << _nrings << " rings\n";
+  }
 
   int nr = _experimental_sssr_rings.number_elements();
-  if (0 == nr)
+  if (0 == nr) {
     os << "SSSR rings not perceived\n";
-  else
-  {
-    for (int i = 0; i < nr; i++)
-    {
-      const Ring * r = _experimental_sssr_rings[i];
+  } else {
+    for (int i = 0; i < nr; i++) {
+      const Ring* r = _experimental_sssr_rings[i];
       os << " Ring " << i << " " << (*r) << endl;
     }
   }
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     os << "Ring membership is NULL\n";
-  else
-  {
-    for (int i = 0; i < _number_elements; i++)
-    {
+  } else {
+    for (int i = 0; i < _number_elements; i++) {
       os << "Atom " << i;
-      if (_ring_membership[i] >= 0)
+      if (_ring_membership[i] >= 0) {
         os << " in " << _ring_membership[i] << " rings\n";
-      else if (kRingMembershipNotComputed == _ring_membership[i])
+      } else if (kRingMembershipNotComputed == _ring_membership[i]) {
         os << " ring membership not computed\n";
-      else if (kRingMembershipIsRingAtom == _ring_membership[i])
+      } else if (kRingMembershipIsRingAtom == _ring_membership[i]) {
         os << " is a ring atom\n";
+      }
     }
   }
 
@@ -429,25 +437,25 @@ Molecule::experimental_print_ring_info (std::ostream & os) const
 */
 
 int
-Molecule::check_ring_info() const
-{
+Molecule::check_ring_info() const {
   int nr = _sssr_rings.number_elements();
 
   int rc = 1;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (! ok_ring(r))
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (!ok_ring(r)) {
       return 0;
+    }
 
-//  ok_path does not check that first and last are bonded.
+    //  ok_path does not check that first and last are bonded.
 
-    if (! are_bonded(r->item(0), r->last_item()))
+    if (!are_bonded(r->item(0), r->last_item())) {
       return 0;
+    }
 
-    if (i != r->ring_number())
-    {
-      cerr << "Molecule::check_ring_info: ring " << i << " bad ring number " << r->ring_number() << endl;
+    if (i != r->ring_number()) {
+      cerr << "Molecule::check_ring_info: ring " << i << " bad ring number "
+           << r->ring_number() << endl;
       rc = 0;
     }
   }
@@ -456,8 +464,7 @@ Molecule::check_ring_info() const
 }
 
 int
-Molecule::_compute_number_sssr_rings_by_eulers_formula()
-{
+Molecule::_compute_number_sssr_rings_by_eulers_formula() {
   int nf = number_fragments();
 
   _number_sssr_rings = _bond_list.number_elements() - _number_elements + nf;
@@ -466,29 +473,29 @@ Molecule::_compute_number_sssr_rings_by_eulers_formula()
 }
 
 int
-Molecule::nrings_no_compute() const
-{
-  if (_nrings >= 0)               // already computed
+Molecule::nrings_no_compute() const {
+  if (_nrings >= 0) {  // already computed
     return _nrings;
-  else
-    return NOT_COMPUTED;          // not computed
+  } else {
+    return NOT_COMPUTED;  // not computed
+  }
 }
 
 int
-Molecule::nrings()
-{
-  if (nrings_no_compute() >= 0)     // already computed
+Molecule::nrings() {
+  if (nrings_no_compute() >= 0) {  // already computed
     return _nrings;
+  }
 
-  if (_number_elements <= 2)
-  {
+  if (_number_elements <= 2) {
     _nrings = 0;
     _number_sssr_rings = 0;
     return 0;
   }
 
-  if (kNringsNotComputed != _number_sssr_rings)
+  if (kNringsNotComputed != _number_sssr_rings) {
     return _number_sssr_rings;
+  }
 
   _nrings = _compute_number_sssr_rings_by_eulers_formula();
 
@@ -496,24 +503,24 @@ Molecule::nrings()
   cerr << "Molecule::nrings: molecule contains " << _nrings << " rings\n";
 #endif
 
-  if (0 == _nrings)    // chain molecule
+  if (0 == _nrings) {  // chain molecule
     return 0;
+  }
 
-  assert (number_fragments() > 0);
+  assert(number_fragments() > 0);
 
-  assert (_nrings >= 0 && _nrings <= _bond_list.number_elements());
+  assert(_nrings >= 0 && _nrings <= _bond_list.number_elements());
 
   return _nrings;
 }
 
 int
-Molecule::number_sssr_rings()
-{
-  if (kNringsNotComputed != _number_sssr_rings)
+Molecule::number_sssr_rings() {
+  if (kNringsNotComputed != _number_sssr_rings) {
     return _number_sssr_rings;
+  }
 
-  if (_number_elements < 3)
-  {
+  if (_number_elements < 3) {
     _number_sssr_rings = 0;
     _nrings = 0;
     return 0;
@@ -531,41 +538,39 @@ Molecule::number_sssr_rings()
 */
 
 int
-Molecule::nrings (atom_number_t a, int ring_size)
-{
-  assert (ok_atom_number(a));
-  assert (REASONABLE_RING_SIZE(ring_size));
+Molecule::nrings(atom_number_t a, int ring_size) {
+  assert(ok_atom_number(a));
+  assert(REASONABLE_RING_SIZE(ring_size));
 
-  (void) ring_membership();    // force SSSR determination
+  (void)ring_membership();  // force SSSR determination
 
   int nr = _sssr_rings.number_elements();
 
   int rc = 0;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (ring_size == r->number_elements() && r->contains(a))
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (ring_size == r->number_elements() && r->contains(a)) {
       rc++;
+    }
   }
 
   return rc;
 }
 
 int
-Molecule::nrings_size (int ring_size)
-{
-  assert (ok());
+Molecule::nrings_size(int ring_size) {
+  assert(ok());
 
-  (void) ring_membership();     // force sssr
+  (void)ring_membership();  // force sssr
 
   int nr = _sssr_rings.number_elements();
 
   int rc = 0;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (ring_size == r->number_elements())
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (ring_size == r->number_elements()) {
       rc++;
+    }
   }
 
   return rc;
@@ -575,49 +580,48 @@ Molecule::nrings_size (int ring_size)
   Return the array of ring memberships.
 */
 
-const int *
-Molecule::ring_membership()
-{
-  if (_sssr_rings.number_elements() >= nrings())   // > to allow for non sssr determinations
+const int*
+Molecule::ring_membership() {
+  if (_sssr_rings.number_elements() >=
+      nrings()) {  // > to allow for non sssr determinations
     return _ring_membership;
+  }
 
-  if (nullptr == _ring_membership)
+  if (nullptr == _ring_membership) {
     _initialise_ring_membership();
+  }
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     set_vector(_ring_membership, _number_elements, 0);
-  else
+  } else {
     _force_complete_sssr_determination();
+  }
 
   return _ring_membership;
 }
 
-int 
-Molecule::ring_or_non_ring (int * result)
-{
-  if (0 == nrings())
-  {
+int
+Molecule::ring_or_non_ring(int* result) {
+  if (0 == nrings()) {
     set_vector(result, _number_elements, 0);
     return 1;
   }
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     result[i] = is_ring_atom(i);
   }
 
   return 1;
 }
+
 int
-Molecule::ring_membership (int * rm)
-{
-  if (0 == nrings())
-  {
+Molecule::ring_membership(int* rm) {
+  if (0 == nrings()) {
     set_vector(rm, _number_elements, 0);
     return 1;
   }
 
-  const int * tmp = ring_membership();     // this forces sssr determination
+  const int* tmp = ring_membership();  // this forces sssr determination
 
   copy_vector(rm, tmp, _number_elements);
 
@@ -625,118 +629,125 @@ Molecule::ring_membership (int * rm)
 }
 
 int
-Molecule::in_same_ring_no_compute( const atom_number_t & a1, const atom_number_t & a2 ) const
-{
-  if ( _nrings <= 0 )
+Molecule::in_same_ring_no_compute(const atom_number_t& a1,
+                                  const atom_number_t& a2) const {
+  if (_nrings <= 0) {
     return 0;
+  }
 
-  for (int i = 0; i < _nrings; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (r->contains(a1) && r->contains(a2))
+  for (int i = 0; i < _nrings; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (r->contains(a1) && r->contains(a2)) {
       return 1;
+    }
   }
   return 0;
 }
 
 int
-Molecule::in_same_ring (atom_number_t a1, atom_number_t a2)
-{
-  assert (ok_2_atoms(a1, a2));
+Molecule::in_same_ring(atom_number_t a1, atom_number_t a2) {
+  assert(ok_2_atoms(a1, a2));
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return 0;
+  }
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
-  for (int i = 0; i < nr; i++)
-  {
-//  const Ring * r = _sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    //  const Ring * r = _sssr_rings[i];
 
-    if (_sssr_rings[i]->contains_both(a1, a2))
+    if (_sssr_rings[i]->contains_both(a1, a2)) {
       return 1;
+    }
   }
 
   return 0;
 }
 
 int
-Molecule::in_same_rings (atom_number_t a1, atom_number_t a2)
-{
-  assert (ok_2_atoms(a1, a2));
+Molecule::in_same_rings(atom_number_t a1, atom_number_t a2) {
+  assert(ok_2_atoms(a1, a2));
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return 0;
+  }
 
-  if (! is_ring_atom(a1) || ! is_ring_atom(a2))
+  if (!is_ring_atom(a1) || !is_ring_atom(a2)) {
     return 0;
+  }
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
   int rc = 0;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (r->contains(a1) && r->contains(a2))
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (r->contains(a1) && r->contains(a2)) {
       rc++;
+    }
   }
 
   return rc;
 }
 
 int
-Molecule::in_same_ring_system (atom_number_t a1, atom_number_t a2)
-{
-  assert (ok_2_atoms(a1, a2));
+Molecule::in_same_ring_system(atom_number_t a1, atom_number_t a2) {
+  assert(ok_2_atoms(a1, a2));
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return 0;
+  }
 
-  if (! is_ring_atom(a1) || ! is_ring_atom(a2))
+  if (!is_ring_atom(a1) || !is_ring_atom(a2)) {
     return 0;
+  }
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
-  if (1 == nr)
-    return 1;    // both atoms are ring atoms, and there is only one ring
-
-  if (2 == nr)
-  {
-    if (_sssr_rings[0]->is_fused())   // both atoms are ring atoms, all rings are fused
-      return 1;
-    else                // rings in separate ring systems
-      return _sssr_rings[0]->contains_both(a1, a2) || _sssr_rings[1]->contains_both(a1, a2);
+  if (1 == nr) {
+    return 1;  // both atoms are ring atoms, and there is only one ring
   }
 
-//#define DEBUG_IN_SAME_RING_SYSTEM
+  if (2 == nr) {
+    if (_sssr_rings[0]->is_fused()) {  // both atoms are ring atoms, all rings are fused
+      return 1;
+    } else {  // rings in separate ring systems
+      return _sssr_rings[0]->contains_both(a1, a2) ||
+             _sssr_rings[1]->contains_both(a1, a2);
+    }
+  }
+
+// #define DEBUG_IN_SAME_RING_SYSTEM
 #ifdef DEBUG_IN_SAME_RING_SYSTEM
   cerr << "Checking " << nr << " SSSR rings for atoms " << a1 << " and " << a2 << endl;
 #endif
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = _sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* ri = _sssr_rings[i];
 
     if (ri->contains(a1))
       ;
-    else if (ri->contains(a2))
+    else if (ri->contains(a2)) {
       std::swap(a1, a2);
-    else 
+    } else {
       continue;
+    }
 
 #ifdef DEBUG_IN_SAME_RING_SYSTEM
-    if (ri->contains(a2))
+    if (ri->contains(a2)) {
       cerr << "Both atoms in same ring\n";
+    }
 #endif
 
-    if (ri->contains(a2))   // in same ring, definitely in same ring system
+    if (ri->contains(a2)) {  // in same ring, definitely in same ring system
       return 1;
+    }
 
     const int fsid = ri->fused_system_identifier();
 
@@ -744,22 +755,25 @@ Molecule::in_same_ring_system (atom_number_t a1, atom_number_t a2)
     cerr << "First atom in fsid " << fsid << ' ' << *ri << endl;
 #endif
 
-    if (! ri->is_fused())     // ring is not fused and A2 is not in it
+    if (!ri->is_fused()) {  // ring is not fused and A2 is not in it
       continue;
+    }
 
-    for (int j = i + 1; j < nr; j++)
-    {
-      const Ring * rj = _sssr_rings[j];
+    for (int j = i + 1; j < nr; j++) {
+      const Ring* rj = _sssr_rings[j];
 
 #ifdef DEBUG_IN_SAME_RING_SYSTEM
-      cerr << "Check ring " << j << " fsid " << rj->fused_system_identifier() << ", atom2? " << rj->contains(a2) << ' ' << *rj << endl;
+      cerr << "Check ring " << j << " fsid " << rj->fused_system_identifier()
+           << ", atom2? " << rj->contains(a2) << ' ' << *rj << endl;
 #endif
 
-      if (fsid != rj->fused_system_identifier())
+      if (fsid != rj->fused_system_identifier()) {
         continue;
+      }
 
-      if (rj->contains(a2))
+      if (rj->contains(a2)) {
         return 1;
+      }
     }
   }
 
@@ -770,32 +784,32 @@ Molecule::in_same_ring_system (atom_number_t a1, atom_number_t a2)
   The I'th ring. Determine it if needed. Be careful
 */
 
-const Ring *
-Molecule::ringi_no_compute (int i) const
-{
-  assert (ok());
+const Ring*
+Molecule::ringi_no_compute(int i) const {
+  assert(ok());
 
-  if ( nrings_no_compute() <= 0 )
+  if (nrings_no_compute() <= 0) {
     return nullptr;
+  }
 
-  assert (i >= 0);
+  assert(i >= 0);
 
   return _sssr_rings[i];
 }
 
-const Ring *
-Molecule::ringi (int i)
-{
-  assert (ok());
+const Ring*
+Molecule::ringi(int i) {
+  assert(ok());
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return nullptr;
+  }
 
-  assert (i >= 0);
+  assert(i >= 0);
 
-  (void) ring_membership();   // ensure SSSR rings determined
+  (void)ring_membership();  // ensure SSSR rings determined
 
-  assert (_sssr_rings.ok_index(i));
+  assert(_sssr_rings.ok_index(i));
 
   return _sssr_rings[i];
 }
@@ -804,28 +818,27 @@ Molecule::ringi (int i)
   Return the I'th ring of size RING_SIZE
 */
 
-const Ring *
-Molecule::ringi (int which_ring, int ring_size)
-{
-  assert (ok());
+const Ring*
+Molecule::ringi(int which_ring, int ring_size) {
+  assert(ok());
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return nullptr;
+  }
 
-  assert (which_ring >= 0 && which_ring < nrings());
+  assert(which_ring >= 0 && which_ring < nrings());
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
   int found = 0;
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (r->number_elements() == ring_size)
-    {
-      if (which_ring == found)
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (r->number_elements() == ring_size) {
+      if (which_ring == found) {
         return r;
+      }
 
       found++;
     }
@@ -835,72 +848,70 @@ Molecule::ringi (int which_ring, int ring_size)
   return nullptr;
 }
 
-const Ring *
-Molecule::ring_containing_atom (atom_number_t a)
-{
-  if (is_non_ring_atom(a))
+const Ring*
+Molecule::ring_containing_atom(atom_number_t a) {
+  if (is_non_ring_atom(a)) {
     return nullptr;
-
-  (void) ring_membership();   // ensure ring membership available
-
-  int nr = _sssr_rings.number_elements();
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = ringi(i);
-    if (ri->contains(a))
-      return ri;
   }
 
-  assert (NULL == "Ring atom in no rings!!!!!");
+  (void)ring_membership();  // ensure ring membership available
+
+  int nr = _sssr_rings.number_elements();
+  for (int i = 0; i < nr; i++) {
+    const Ring* ri = ringi(i);
+    if (ri->contains(a)) {
+      return ri;
+    }
+  }
+
+  assert(NULL == "Ring atom in no rings!!!!!");
   return nullptr;
 }
 
 int
-Molecule::ring_sizes_for_atom (atom_number_t a, List_of_Ring_Sizes & ring_sizes)
-{
-  assert (ok_atom_number(a));
+Molecule::ring_sizes_for_atom(atom_number_t a, List_of_Ring_Sizes& ring_sizes) {
+  assert(ok_atom_number(a));
 
   ring_sizes.resize_keep_storage(0);
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return 0;
+  }
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
-    if (r->contains(a))
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
+    if (r->contains(a)) {
       ring_sizes.add_if_not_already_present(r->number_elements());
+    }
   }
 
   return ring_sizes.number_elements();
 }
 
 int
-Molecule::ring_sizes_for_all_atoms (resizable_array_p<List_of_Ring_Sizes> & ring_sizes)
-{
-  assert (ok());
+Molecule::ring_sizes_for_all_atoms(resizable_array_p<List_of_Ring_Sizes>& ring_sizes) {
+  assert(ok());
 
-  if (0 == nrings())
+  if (0 == nrings()) {
     return 0;
+  }
 
-  assert (ring_sizes.number_elements() == _number_elements);
+  assert(ring_sizes.number_elements() == _number_elements);
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int nr = _sssr_rings.number_elements();
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _sssr_rings[i];
     int n = r->number_elements();
-    for (int j = 0; j < n; j++)
-    {
+    for (int j = 0; j < n; j++) {
       atom_number_t k = r->item(j);
-      List_of_Ring_Sizes * rsk = ring_sizes[k];
+      List_of_Ring_Sizes* rsk = ring_sizes[k];
       rsk->add_if_not_already_present(n);
     }
   }
@@ -909,30 +920,28 @@ Molecule::ring_sizes_for_all_atoms (resizable_array_p<List_of_Ring_Sizes> & ring
 }
 
 /*
-*/
+ */
 
 int
-Molecule::ring_sizes_for_non_sssr_rings (atom_number_t a,
-                                         List_of_Ring_Sizes & ring_sizes,
-                                         int include_duplicates)
-{
-  assert (ok_atom_number(a));
+Molecule::ring_sizes_for_non_sssr_rings(atom_number_t a, List_of_Ring_Sizes& ring_sizes,
+                                        int include_duplicates) {
+  assert(ok_atom_number(a));
 
-  if (ring_sizes.number_elements())
+  if (ring_sizes.number_elements()) {
     ring_sizes.resize(0);
+  }
 
-  (void) ring_membership();    // force ring perception
+  (void)ring_membership();  // force ring perception
 
   const int nq = _non_sssr_rings.number_elements();
-  for (int i = 0; i < nq; i++)
-  {
-    const Ring * r = _non_sssr_rings[i];
-    if (r->contains(a))
-    {
-      if (include_duplicates)
+  for (int i = 0; i < nq; i++) {
+    const Ring* r = _non_sssr_rings[i];
+    if (r->contains(a)) {
+      if (include_duplicates) {
         ring_sizes.add(r->number_elements());
-      else
+      } else {
         ring_sizes.add_if_not_already_present(r->number_elements());
+      }
     }
   }
 
@@ -940,94 +949,89 @@ Molecule::ring_sizes_for_non_sssr_rings (atom_number_t a,
 }
 
 int
-Molecule::non_sssr_rings_no_compute() const
-{
+Molecule::non_sssr_rings_no_compute() const {
   return _non_sssr_rings.number_elements();
 }
 
 int
-Molecule::non_sssr_rings()
-{
-  assert (ok());
+Molecule::non_sssr_rings() {
+  assert(ok());
 
-  (void) ring_membership();  // force ring perception
+  (void)ring_membership();  // force ring perception
 
   return _non_sssr_rings.number_elements();
 }
 
-const Ring *
-Molecule::non_sssr_ring_no_compute (int i) const
-{
+const Ring*
+Molecule::non_sssr_ring_no_compute(int i) const {
   return _non_sssr_rings[i];
 }
 
-const Ring *
-Molecule::non_sssr_ring (int i)
-{
-  assert (ok());
+const Ring*
+Molecule::non_sssr_ring(int i) {
+  assert(ok());
 
-  (void) ring_membership();  // force ring perception
+  (void)ring_membership();  // force ring perception
 
   return _non_sssr_rings[i];
 }
 
 int
-Molecule::ring_membership_including_non_sssr_rings (int * result)
-{
+Molecule::ring_membership_including_non_sssr_rings(int* result) {
   int rc = ring_membership(result);
-  if (0 == rc)
+  if (0 == rc) {
     return 0;
+  }
 
   int nr = _non_sssr_rings.number_elements();
-  if (0 == nr)
+  if (0 == nr) {
     return rc;
+  }
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * r = _non_sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* r = _non_sssr_rings[i];
     r->increment_vector(result, 1);
   }
 
-  return rc;     // just what should this function return?
+  return rc;  // just what should this function return?
 }
 
 int
-Molecule::nrings_including_non_sssr_rings (atom_number_t a)
-{
+Molecule::nrings_including_non_sssr_rings(atom_number_t a) {
   int rc = nrings(a);
 
-  if (0 == rc)
+  if (0 == rc) {
     return rc;
+  }
 
-  for (int i = 0; i < _non_sssr_rings.number_elements(); i++)
-  {
-    if (_non_sssr_rings[i]->contains(a))
+  for (int i = 0; i < _non_sssr_rings.number_elements(); i++) {
+    if (_non_sssr_rings[i]->contains(a)) {
       rc++;
+    }
   }
 
   return rc;
 }
 
 int
-Molecule::experimental_sssr()
-{
+Molecule::experimental_sssr() {
   int nr = nrings();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 1;
+  }
 
-  if (_sssr_rings.number_elements() == nr)
+  if (_sssr_rings.number_elements() == nr) {
     return 1;
+  }
 
   return 1;
 }
 
-//#define DEBUG_FIND_SSSR_FOR_THESE_FUSED_RAW_RINGS
+// #define DEBUG_FIND_SSSR_FOR_THESE_FUSED_RAW_RINGS
 
 int
-Molecule::_find_sssr_for_these_fused_raw_rings (int fused_sys_id, 
-                                                int * tmp)
-{
+Molecule::_find_sssr_for_these_fused_raw_rings(int fused_sys_id, int* tmp) {
 #ifdef DEBUG_FIND_SSSR_FOR_THESE_FUSED_RAW_RINGS
   cerr << "Finding SSSR for fsid " << fused_sys_id << endl;
 #endif
@@ -1037,27 +1041,29 @@ Molecule::_find_sssr_for_these_fused_raw_rings (int fused_sys_id,
   int nraw = _raw_rings.number_elements();
 
   int rings_being_processed = 0;
-  for (int i = 0; i < nraw; i++)
-  {
-    const Ring * r = _raw_rings[i];
-    if (fused_sys_id == r->fused_system_identifier())
+  for (int i = 0; i < nraw; i++) {
+    const Ring* r = _raw_rings[i];
+    if (fused_sys_id == r->fused_system_identifier()) {
       rings_being_processed++;
+    }
   }
 
 #ifdef DEBUG_FIND_SSSR_FOR_THESE_FUSED_RAW_RINGS
-  cerr << "Processing " << rings_being_processed << " rings with id " << fused_sys_id << endl;
+  cerr << "Processing " << rings_being_processed << " rings with id " << fused_sys_id
+       << endl;
 #endif
 
-  if (2 == rings_being_processed)
+  if (2 == rings_being_processed) {
     return _easy_case_two_rings(fused_sys_id, tmp);
+  }
 
-// The more difficult and more general case
+  // The more difficult and more general case
 
-  for (int i = nraw - 1; i >= 0; i--)
-  {
-    const Ring * r = _raw_rings[i];
-    if (fused_sys_id != r->fused_system_identifier())
+  for (int i = nraw - 1; i >= 0; i--) {
+    const Ring* r = _raw_rings[i];
+    if (fused_sys_id != r->fused_system_identifier()) {
       continue;
+    }
 
     r->set_vector(tmp, 1);
     _raw_rings.remove_item(i);
@@ -1067,26 +1073,25 @@ Molecule::_find_sssr_for_these_fused_raw_rings (int fused_sys_id,
 }
 
 int
-Molecule::_determine_sssr_for_fragment (int f)
-{
+Molecule::_determine_sssr_for_fragment(int f) {
   int nraw = _raw_rings.number_elements();
 
   resizable_array<int> fsid;
 
-  for (int i = 0; i < nraw; i++)
-  {
-    const Ring * r = _raw_rings[i];
+  for (int i = 0; i < nraw; i++) {
+    const Ring* r = _raw_rings[i];
 
     atom_number_t a = r->item(0);
 
-    if (f == _fragment_information.fragment_membership(a))
+    if (f == _fragment_information.fragment_membership(a)) {
       fsid.add_if_not_already_present(r->fused_system_identifier());
+    }
   }
 
-  int * tmp = new int[_number_elements]; std::unique_ptr<int[]> free_tmp(tmp);
+  int* tmp = new int[_number_elements];
+  std::unique_ptr<int[]> free_tmp(tmp);
 
-  for (int i = 0; i < fsid.number_elements(); i++)
-  {
+  for (int i = 0; i < fsid.number_elements(); i++) {
     _find_sssr_for_these_fused_raw_rings(fsid[i], tmp);
   }
 
@@ -1104,50 +1109,51 @@ Molecule::_determine_sssr_for_fragment (int f)
 #ifdef FIX_WHEN_FSID_CHANGES
 
 int
-Molecule::_determine_sssr_ring_membership (atom_number_t a)
-{
-  assert (kRingMembershipIsRingAtom == _ring_membership[a]);
+Molecule::_determine_sssr_ring_membership(atom_number_t a) {
+  assert(kRingMembershipIsRingAtom == _ring_membership[a]);
 
-// First identify the fsid's of all raw rings that contain the atom
+  // First identify the fsid's of all raw rings that contain the atom
 
   int nraw = _raw_rings.number_elements();
   assert(nraw);
 
-// Because of spiro fusions, there can be as many as two fused
-// system identifiers
+  // Because of spiro fusions, there can be as many as two fused
+  // system identifiers
 
   int fsid1 = -100;
   int fsid2 = -100;
 
-  for (int i = 0; i < nraw; i++)
-  {
-    const Ring * r = _raw_rings[i];
-    if (! r->contains(a))
+  for (int i = 0; i < nraw; i++) {
+    const Ring* r = _raw_rings[i];
+    if (!r->contains(a)) {
       continue;
+    }
 
     int f = r->fused_system_identifier();
 
-    if (fsid1 < 0)
+    if (fsid1 < 0) {
       fsid1 = f;
-    else if (f == fsid1)
+    } else if (f == fsid1) {
       continue;
-    else if (fsid2 < 0)   // found spiro fusion. We are done
+    } else if (fsid2 < 0)  // found spiro fusion. We are done
     {
       fsid2 = f;
       break;
     }
   }
 
-  assert (fsid1 >= 0);
+  assert(fsid1 >= 0);
 
-// Process all raw rings with the same fused system identifier
+  // Process all raw rings with the same fused system identifier
 
-  int * tmp = new int[_number_elements]; std::unique_ptr<int[]> free_tmp(tmp);
+  int* tmp = new int[_number_elements];
+  std::unique_ptr<int[]> free_tmp(tmp);
 
   _find_sssr_for_these_fused_raw_rings(fsid1, tmp);
 
-  if (fsid2 >= 0)
+  if (fsid2 >= 0) {
     _find_sssr_for_these_fused_raw_rings(fsid2, tmp);
+  }
 
   return 1;
 }
@@ -1180,7 +1186,7 @@ Molecule::qnrings (atom_number_t a)
   }
 
   assert (kRingMembershipIsRingAtom == _ring_membership[a]);
-    
+
   _determine_sssr_ring_membership (a);
 
   assert (_ring_membership[a] >= 0);
@@ -1189,17 +1195,15 @@ Molecule::qnrings (atom_number_t a)
 }*/
 
 int
-Molecule::_sssr_for_all_raw_rings (int * tmp)
-{
-  while (_raw_rings.number_elements())
-  {
-    const Ring * r = _raw_rings[0];
+Molecule::_sssr_for_all_raw_rings(int* tmp) {
+  while (_raw_rings.number_elements()) {
+    const Ring* r = _raw_rings[0];
     int fused_sys_id = r->fused_system_identifier();
 
-    _find_sssr_for_these_fused_raw_rings (fused_sys_id, tmp);
+    _find_sssr_for_these_fused_raw_rings(fused_sys_id, tmp);
   }
 
-  _nrings = _sssr_rings.number_elements();   // in case a non-sssr determination
+  _nrings = _sssr_rings.number_elements();  // in case a non-sssr determination
 
   return 1;
 }
@@ -1211,37 +1215,31 @@ Molecule::_sssr_for_all_raw_rings (int * tmp)
 */
 
 int
-Molecule::_force_complete_sssr_determination()
-{
+Molecule::_force_complete_sssr_determination() {
   int nr = nrings();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 1;
-
-  if (nullptr == _ring_membership)
-  {
-    _initialise_ring_membership();
-    _find_raw_rings();     // gets all of them
   }
-  else
-  {
-    for (int i = 0; i < _number_elements; i++)
-    {
-      if (kRingMembershipNotComputed == _ring_membership[i])
-      {
+
+  if (nullptr == _ring_membership) {
+    _initialise_ring_membership();
+    _find_raw_rings();  // gets all of them
+  } else {
+    for (int i = 0; i < _number_elements; i++) {
+      if (kRingMembershipNotComputed == _ring_membership[i]) {
         _determine_ring_or_non_ring(i);
 
-        assert (kRingMembershipNotComputed != _ring_membership[i]);
+        assert(kRingMembershipNotComputed != _ring_membership[i]);
       }
     }
   }
 
-// If all the rings were non-fused, we are done
+  // If all the rings were non-fused, we are done
 
   int nraw = _raw_rings.number_elements();
 
-  if (0 == nraw)
-  {
+  if (0 == nraw) {
     _sort_by_ring_size();
 
     _assign_ring_numbers(nr);
@@ -1249,7 +1247,8 @@ Molecule::_force_complete_sssr_determination()
     return 1;
   }
 
-  int * tmp = new int[_number_elements]; std::unique_ptr<int[]> free_tmp(tmp);
+  int* tmp = new int[_number_elements];
+  std::unique_ptr<int[]> free_tmp(tmp);
 
   _sssr_for_all_raw_rings(tmp);
 
@@ -1266,9 +1265,8 @@ Molecule::_force_complete_sssr_determination()
 */
 
 int
-Molecule::get_fused_system(int fsid, Set_of_Atoms & result)
-{
-  (void) ring_membership();     // force sssr determination
+Molecule::get_fused_system(int fsid, Set_of_Atoms& result) {
+  (void)ring_membership();  // force sssr determination
 
   if (_sssr_rings.empty()) {
     return 0;
@@ -1294,64 +1292,65 @@ Molecule::get_fused_system(int fsid, Set_of_Atoms & result)
 }
 
 int
-Molecule::label_atoms_by_ring_system_no_compute (int * r) const
-{
+Molecule::label_atoms_by_ring_system_no_compute(int* r) const {
   set_vector(r, _number_elements, 0);
 
   int nr = _sssr_rings.number_elements();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
-  _sssr_rings[0]->set_vector(r, 1);   // always
+  _sssr_rings[0]->set_vector(r, 1);  // always
 
-  if (1 == nr)
+  if (1 == nr) {
     return 1;
+  }
 
-  if (2 == nr)
-  {
-    if (_sssr_rings[0]->is_fused())
-    {
+  if (2 == nr) {
+    if (_sssr_rings[0]->is_fused()) {
       _sssr_rings[1]->set_vector(r, 1);
       return 1;
-    }
-    else
-    {
+    } else {
       _sssr_rings[1]->set_vector(r, 2);
       return 2;
     }
   }
 
-// We have more than two rings. We don't know if ring[0] is fused or not, so we restart
+  // We have more than two rings. We don't know if ring[0] is fused or not, so we restart
 
-  int * ring_already_done = new_int(nr); std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
+  int* ring_already_done = new_int(nr);
+  std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
 
-  int f = 0;       // the number we will assign
+  int f = 0;  // the number we will assign
 
-  for (int i = 0; i < nr; i++)
-  {
-    if (ring_already_done[i])
+  for (int i = 0; i < nr; i++) {
+    if (ring_already_done[i]) {
       continue;
+    }
 
-    const Ring * ri = _sssr_rings[i];
+    const Ring* ri = _sssr_rings[i];
 
     f++;
 
-    if (i > 0)
+    if (i > 0) {
       ri->set_vector(r, f);
+    }
 
-    if (! ri->is_fused())
+    if (!ri->is_fused()) {
       continue;
+    }
 
-    for (int j = i + 1; j < nr; j++)
-    {
-      if (ring_already_done[j])
+    for (int j = i + 1; j < nr; j++) {
+      if (ring_already_done[j]) {
         continue;
+      }
 
-      const Ring * rj = _sssr_rings[j];
+      const Ring* rj = _sssr_rings[j];
 
-      if (ri->fused_system_identifier() != rj->fused_system_identifier())
+      if (ri->fused_system_identifier() != rj->fused_system_identifier()) {
         continue;
+      }
 
       rj->set_vector(r, f);
 
@@ -1363,44 +1362,43 @@ Molecule::label_atoms_by_ring_system_no_compute (int * r) const
 }
 
 int
-Molecule::label_atoms_by_ring_system (int * r)
-{
-  (void) ring_membership();
+Molecule::label_atoms_by_ring_system(int* r) {
+  (void)ring_membership();
 
-  return label_atoms_by_ring_system_no_compute (r);
+  return label_atoms_by_ring_system_no_compute(r);
 }
 
 int
-Molecule::label_atoms_by_ring_system_including_spiro_fused(int * r)
-{
-  (void) ring_membership();
+Molecule::label_atoms_by_ring_system_including_spiro_fused(int* r) {
+  (void)ring_membership();
 
   set_vector(r, _number_elements, 0);
 
   const int nr = _sssr_rings.number_elements();
 
-  if (0 == nr)
+  if (0 == nr) {
     return 0;
+  }
 
-  if (1 == nr)
-  {
-    const Ring * ri = _sssr_rings[0];
+  if (1 == nr) {
+    const Ring* ri = _sssr_rings[0];
     ri->set_vector(r, 1);
     return 1;
   }
 
-  int * ring_already_done = new_int(nr); std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
+  int* ring_already_done = new_int(nr);
+  std::unique_ptr<int[]> free_ring_already_done(ring_already_done);
 
   int f = 0;
 
   int rings_processed = 0;
 
-  for (int i = 0; i < nr; i++)
-  {
-    if (ring_already_done[i])
+  for (int i = 0; i < nr; i++) {
+    if (ring_already_done[i]) {
       continue;
+    }
 
-    const Ring * ri = _sssr_rings[i];
+    const Ring* ri = _sssr_rings[i];
 
     f++;
 
@@ -1408,39 +1406,39 @@ Molecule::label_atoms_by_ring_system_including_spiro_fused(int * r)
 
     rings_processed++;
 
-    if (nr == rings_processed)
+    if (nr == rings_processed) {
       break;
+    }
 
-    if (ri->is_fused())
-    {
+    if (ri->is_fused()) {
       int fused_ring_neighbours = ri->fused_ring_neighbours();
-      for (int j = 0; j < fused_ring_neighbours; j++)
-      {
-        const Ring * rj = ri->fused_neighbour(j);
+      for (int j = 0; j < fused_ring_neighbours; j++) {
+        const Ring* rj = ri->fused_neighbour(j);
         rj->set_vector(r, f);
         ring_already_done[rj->ring_number()] = 1;
         rings_processed++;
       }
 
-      if (nr == rings_processed)
+      if (nr == rings_processed) {
         return f;
+      }
     }
 
-//  Add any spiro fusions, and maybe other ring systems
+    //  Add any spiro fusions, and maybe other ring systems
 
-    while (1)
-    {
+    while (1) {
       int added_another_ring = 0;
 
-      for (int j = i + 1; j < nr; j++)
-      {
-        if (ring_already_done[j])
+      for (int j = i + 1; j < nr; j++) {
+        if (ring_already_done[j]) {
           continue;
+        }
 
-        const Ring * rj = _sssr_rings[j];
+        const Ring* rj = _sssr_rings[j];
 
-        if (! rj->any_members_set_in_array(r))
+        if (!rj->any_members_set_in_array(r)) {
           continue;
+        }
 
         rj->set_vector(r, f);
 
@@ -1448,18 +1446,20 @@ Molecule::label_atoms_by_ring_system_including_spiro_fused(int * r)
 
         rings_processed++;
 
-        if (nr == rings_processed)
+        if (nr == rings_processed) {
           return f;
+        }
 
         added_another_ring = 1;
       }
 
-      if (0 == added_another_ring)
+      if (0 == added_another_ring) {
         break;
+      }
     }
   }
 
-  return f;   // the number of different ring systems we have identified
+  return f;  // the number of different ring systems we have identified
 }
 
 int
@@ -1476,7 +1476,7 @@ Molecule::number_ring_systems() {
   extending_resizable_array<int> fsid;
 
   int isolated_rings = 0;
-  for (const Ring* r: _sssr_rings) {
+  for (const Ring* r : _sssr_rings) {
     if (r->is_fused()) {
       fsid[r->fused_system_identifier()] = 1;
     } else {
@@ -1488,67 +1488,66 @@ Molecule::number_ring_systems() {
 }
 
 int
-Molecule::in_ring_of_given_size (atom_number_t a, int ring_size)
-{
-  if (! is_ring_atom(a))
+Molecule::in_ring_of_given_size(atom_number_t a, int ring_size) {
+  if (!is_ring_atom(a)) {
     return 0;
+  }
 
-  (void) ring_membership();     // force sssr determination
+  (void)ring_membership();  // force sssr determination
 
   int nr = _sssr_rings.number_elements();
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = _sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* ri = _sssr_rings[i];
 
-    if (ri->number_elements() != ring_size)
+    if (ri->number_elements() != ring_size) {
       continue;
+    }
 
-    if (ri->contains(a))
+    if (ri->contains(a)) {
       return 1;
+    }
   }
 
-  return 0;      // didn't find a match
-}  
+  return 0;  // didn't find a match
+}
 
-class
-Ring_Size_Comparator
-{
-  private:
-  public:
-    int operator () (const Ring * r1, const Ring * r2) const
-    {
-      int n1 = r1->number_elements();
-      int n2 = r2->number_elements();
-      if (n1 < n2)
-        return -1;
-      if (n1 > n2)
-        return 1;
-
-      return 0;
+class Ring_Size_Comparator {
+ private:
+ public:
+  int
+  operator()(const Ring* r1, const Ring* r2) const {
+    int n1 = r1->number_elements();
+    int n2 = r2->number_elements();
+    if (n1 < n2) {
+      return -1;
     }
+    if (n1 > n2) {
+      return 1;
+    }
+
+    return 0;
+  }
 };
 
 static Ring_Size_Comparator rsc;
 
 void
-Molecule::_sort_by_ring_size ()
-{
+Molecule::_sort_by_ring_size() {
   int n = _sssr_rings.number_elements();
 
-  if (n < 2)
+  if (n < 2) {
     return;
+  }
 
   _sssr_rings.iwqsort(rsc);
 }
 
 void
-Molecule::_assign_ring_numbers (int nr)
-{
-  nr = _sssr_rings.number_elements();   // may be different from NR with -K esssr
+Molecule::_assign_ring_numbers(int nr) {
+  nr = _sssr_rings.number_elements();  // may be different from NR with -K esssr
 
-  for (int i = 0; i < nr; i++)
-  {
+  for (int i = 0; i < nr; i++) {
     _sssr_rings[i]->set_ring_number(i);
   }
 
@@ -1556,35 +1555,39 @@ Molecule::_assign_ring_numbers (int nr)
 }
 
 /*
-  Very detailed examination of R to see whether or not it is consistent with being part of our molecule
+  Very detailed examination of R to see whether or not it is consistent with being part of
+  our molecule
 */
 
 int
-Molecule::ok_ring (const Ring * r) const
-{
-  assert (r->ok());
+Molecule::ok_ring(const Ring* r) const {
+  assert(r->ok());
 
   int ring_size = r->number_elements();
 
-  if (0 == ring_size)    // I guess the empty set is OK
+  if (0 == ring_size) {  // I guess the empty set is OK
     return 1;
+  }
 
-  if (r->item(0) < 0 || r->item(0) >= _number_elements)
+  if (r->item(0) < 0 || r->item(0) >= _number_elements) {
     return 0;
+  }
 
-  if (1 == _number_elements)      // not very interesting
+  if (1 == _number_elements) {  // not very interesting
     return 1;
+  }
 
-  for (int i = 1; i < ring_size; i++)
-  {
+  for (int i = 1; i < ring_size; i++) {
     atom_number_t j = r->item(i - 1);
     atom_number_t k = r->item(i);
 
-    if (k < 0 || k >= _number_elements)
+    if (k < 0 || k >= _number_elements) {
       return 0;
-    
-    if (! _things[j]->is_bonded_to(k))
+    }
+
+    if (!_things[j]->is_bonded_to(k)) {
       return 0;
+    }
   }
 
   return 1;
@@ -1602,15 +1605,14 @@ Molecule::ok_ring (const Ring * r) const
   are shared, we go to _pearlman_sssr
 */
 
-//#define DEBUG_EASY_CASE_TWO_RINGS
+// #define DEBUG_EASY_CASE_TWO_RINGS
 
 int
-Molecule::_easy_case_two_rings(int fused_sys_id,
-                               int * tmp)
-{
-//cerr << "Via _easy_case_two_rings\n";
+Molecule::_easy_case_two_rings(int fused_sys_id, int* tmp) {
+  // cerr << "Via _easy_case_two_rings\n";
 
-  int fid = _unused_fused_system_identifier();    // we need to assign a new fused system identifier to these rings
+  int fid = _unused_fused_system_identifier();  // we need to assign a new fused system
+                                                // identifier to these rings
 
   int nraw = _raw_rings.number_elements();
 
@@ -1618,58 +1620,50 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
   cerr << nraw << " raw rings, looking for fsed " << fused_sys_id << endl;
 #endif
 
-  Ring * r1 = nullptr;
-  Ring * r2 = nullptr;
-  for (int i = nraw - 1; i >= 0; i--)
-  {
-    Ring * r = _raw_rings[i];
+  Ring* r1 = nullptr;
+  Ring* r2 = nullptr;
+  for (int i = nraw - 1; i >= 0; i--) {
+    Ring* r = _raw_rings[i];
 
-    if (fused_sys_id != r->fused_system_identifier())
+    if (fused_sys_id != r->fused_system_identifier()) {
       continue;
+    }
 
     r->increment_vector(tmp, 1);
     r->set_fused_system_identifier(fid);
     r->set_is_fused(1);
-    if (nullptr == r1)
-    {
+    if (nullptr == r1) {
       r1 = r;
       _raw_rings.remove_no_delete(i);
-    }
-    else if (nullptr == r2)
-    {
+    } else if (nullptr == r2) {
       r2 = r;
       _raw_rings.remove_no_delete(i);
       break;
     }
   }
 
-  assert (nullptr != r2);
+  assert(nullptr != r2);
 
-// If there are only two atoms in two rings, we have found the SSSR
+  // If there are only two atoms in two rings, we have found the SSSR
 
-  if (2 == count_occurrences_of_item_in_array(2, _number_elements, tmp))
-  {
+  if (2 == count_occurrences_of_item_in_array(2, _number_elements, tmp)) {
     r1->update_ring_membership(_ring_membership, 1);
     r2->update_ring_membership(_ring_membership, 1);
 
     r1->set_fused_to(r2, 1);
     r2->set_fused_to(r1, 1);
 
-    if (r1->number_elements() < r2->number_elements())
-    {
+    if (r1->number_elements() < r2->number_elements()) {
       _add_ring_to_sssr(r1);
       _add_ring_to_sssr(r2);
-    }
-    else
-    {
+    } else {
       _add_ring_to_sssr(r2);
       _add_ring_to_sssr(r1);
     }
 
 #ifdef NEVER_WANT_THESE
-    if (accumulate_non_sssr_rings())
-    {
-      Ring * r = new Ring;
+    if (accumulate_non_sssr_rings()) {
+      Ring* r = new Ring;
       r->add_non_duplicated_elements(*r1);
       r->add_non_duplicated_elements(*r2);
       r->set_fragment_membership(r1->fragment_membership());
@@ -1680,8 +1674,8 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
     return 2;
   }
 
-// We have more than two atoms shared. Is there only one bond shared? 
-// Find an atom in 1 ring that is bonded to an atom in 2 rings
+  // We have more than two atoms shared. Is there only one bond shared?
+  // Find an atom in 1 ring that is bonded to an atom in 2 rings
 
   Ring other_ring;
 
@@ -1692,89 +1686,89 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
 
   atom_number_t first_2 = INVALID_ATOM_NUMBER;
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (1 != tmp[i])
+  for (int i = 0; i < _number_elements; i++) {
+    if (1 != tmp[i]) {
       continue;
+    }
 
-    const Atom * a = _things[i];
+    const Atom* a = _things[i];
     int acon = a->ncon();
-    for (int j = 0; j < acon; j++)
-    {
+    for (int j = 0; j < acon; j++) {
       atom_number_t k = a->other(i, j);
-      if (2 != tmp[k])
+      if (2 != tmp[k]) {
         continue;
+      }
 
       other_ring.add(i);
       first_2 = k;
       break;
     }
 
-    if (INVALID_ATOM_NUMBER != first_2)
+    if (INVALID_ATOM_NUMBER != first_2) {
       break;
+    }
   }
 
 #ifdef DEBUG_EASY_CASE_TWO_RINGS
   cerr << "Initial start atom " << other_ring[0] << " first_2 is " << first_2 << endl;
 #endif
 
-// Build up the rest of the tmp[] == 1 ring in bonded order
+  // Build up the rest of the tmp[] == 1 ring in bonded order
 
   atom_number_t start_atom = other_ring[0];
   atom_number_t second_2 = INVALID_ATOM_NUMBER;
-  while (1)
-  {
+  while (1) {
 #ifdef DEBUG_EASY_CASE_TWO_RINGS
     cerr << "start atom is " << start_atom << endl;
 #endif
 
-    tmp[start_atom] = 0;                   // don't want to turn back on ourselves
-    const Atom * a = _things[start_atom];
+    tmp[start_atom] = 0;  // don't want to turn back on ourselves
+    const Atom* a = _things[start_atom];
     int acon = a->ncon();
-    int found_connection_with_tmp1 = 0;    // is the ring continuing
+    int found_connection_with_tmp1 = 0;  // is the ring continuing
     atom_number_t connected_atom_with_tmp2 = INVALID_ATOM_NUMBER;
-    for (int i = 0; i < acon; i++)
-    {
+    for (int i = 0; i < acon; i++) {
       atom_number_t j = a->other(start_atom, i);
-      if (0 == tmp[j])
+      if (0 == tmp[j]) {
         continue;
+      }
 
-      if (1 == tmp[j])
-      {
+      if (1 == tmp[j]) {
         other_ring.add(j);
         found_connection_with_tmp1 = 1;
         start_atom = j;
         break;
       }
 
-      if (2 == tmp[j])
+      if (2 == tmp[j]) {
         connected_atom_with_tmp2 = j;
+      }
     }
 
-    if (found_connection_with_tmp1)
+    if (found_connection_with_tmp1) {
       continue;
+    }
 
     second_2 = connected_atom_with_tmp2;
     break;
   }
 
-// We have identified two atoms at the ends of a sequence of atoms in just 1 ring. 
-// Are these bonded?
+  // We have identified two atoms at the ends of a sequence of atoms in just 1 ring.
+  // Are these bonded?
 
 #ifdef DEBUG_EASY_CASE_TWO_RINGS
   cerr << "first_2 is " << first_2 << " second_2 is " << second_2 << endl;
 #endif
-  if (! _things[first_2]->is_bonded_to(second_2))
-  {
+  if (!_things[first_2]->is_bonded_to(second_2)) {
     r1->set_vector(tmp, 1);
     r2->set_vector(tmp, 1);
     delete r1;
     delete r2;
-//  cerr << "Must be done via SSSR\n";
+    //  cerr << "Must be done via SSSR\n";
     return _pearlman_sssr(tmp, 1);
   }
 
-// The atoms in the Ring must be in bonded order...
+  // The atoms in the Ring must be in bonded order...
 
   other_ring.add(second_2);
   other_ring.add(first_2);
@@ -1785,22 +1779,23 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
   cerr << "Other " << other_ring << endl;
 #endif
 
-// The two smallest rings are the SSSR rings.
+  // The two smallest rings are the SSSR rings.
 
   int nr1 = r1->number_elements();
   int nr2 = r2->number_elements();
   int notr = other_ring.number_elements();
 
-  if (nr1 <= notr && nr2 < notr)    // R1 and R2 are the smallest
+  if (nr1 <= notr && nr2 < notr)  // R1 and R2 are the smallest
     ;
-  else if (notr <= nr1 && nr2 < nr1)
+  else if (notr <= nr1 && nr2 < nr1) {
     *r1 = other_ring;
-  else if (notr <= nr2 && nr1 < nr2)
+  } else if (notr <= nr2 && nr1 < nr2) {
     *r2 = other_ring;
+  }
 
 #ifdef DEBUG_EASY_CASE_TWO_RINGS
-    cerr << "Smallest R1 " << (*r1) << endl;
-    cerr << "Smallest R2 " << (*r2) << endl;
+  cerr << "Smallest R1 " << (*r1) << endl;
+  cerr << "Smallest R2 " << (*r2) << endl;
 #endif
 
   r1->update_ring_membership(_ring_membership, 1);
@@ -1809,13 +1804,10 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
   r1->set_fused_to(r2, 1);
   r2->set_fused_to(r1, 1);
 
-  if (r1->number_elements() < r2->number_elements())
-  {
+  if (r1->number_elements() < r2->number_elements()) {
     _add_ring_to_sssr(r1);
     _add_ring_to_sssr(r2);
-  }
-  else
-  {
+  } else {
     _add_ring_to_sssr(r2);
     _add_ring_to_sssr(r1);
   }
@@ -1823,9 +1815,8 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
 #ifdef NEVER_WANT_THESE
   not sure what I was thinking of here, we never want that outside ring
 
-  if (accumulate_non_sssr_rings())
-  {
-    Ring * r = new Ring;
+      if (accumulate_non_sssr_rings()) {
+    Ring* r = new Ring;
     r->add_non_duplicated_elements(*r1);
     r->add_non_duplicated_elements(*r2);
     r->set_fragment_membership(r1->fragment_membership());
@@ -1837,26 +1828,26 @@ Molecule::_easy_case_two_rings(int fused_sys_id,
 }
 
 int
-Molecule::_just_one_unclassified_spinach_connection (atom_number_t zatom,
-                                                     const int * spinach) const
-{
-  const Atom * a = _things[zatom];
+Molecule::_just_one_unclassified_spinach_connection(atom_number_t zatom,
+                                                    const int* spinach) const {
+  const Atom* a = _things[zatom];
 
   int acon = a->ncon();
 
   int unclassified_connections_found = 0;
 
-  for (int i = 0; i < acon; i++)
-  {
+  for (int i = 0; i < acon; i++) {
     atom_number_t j = a->other(zatom, i);
 
-    if (1 == spinach[j])
+    if (1 == spinach[j]) {
       continue;
+    }
 
     unclassified_connections_found++;
   }
 
-//cerr << "From atom " << zatom << " there are " << unclassified_connections_found << " unclassified connections\n";
+  // cerr << "From atom " << zatom << " there are " << unclassified_connections_found << "
+  // unclassified connections\n";
 
   return 1 == unclassified_connections_found;
 }
@@ -1866,43 +1857,42 @@ Molecule::_just_one_unclassified_spinach_connection (atom_number_t zatom,
 */
 
 int
-Molecule::identify_spinach_preset(int * spinach) const
-{
+Molecule::identify_spinach_preset(int* spinach) const {
   Set_of_Atoms stack;
   stack.resize(_number_elements);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (1 == spinach[i])
-    {
+  for (int i = 0; i < _number_elements; i++) {
+    if (1 == spinach[i]) {
       cerr << "Molecule::identify_spinach_preset:cannot use preset value of 1\n";
       return 0;
     }
 
-    if (spinach[i])
+    if (spinach[i]) {
       continue;
+    }
 
-    if (1 == _things[i]->ncon())
+    if (1 == _things[i]->ncon()) {
       stack.add(i);
+    }
   }
 
-  if (stack.empty())
-    return 0;    // maybe we should return something different
+  if (stack.empty()) {
+    return 0;  // maybe we should return something different
+  }
 
   return _identify_spinach(spinach, stack);
 }
 
 int
-Molecule::identify_spinach(int * spinach)
-{
-  if (0 == nrings())
-  {
+Molecule::identify_spinach(int* spinach) {
+  if (0 == nrings()) {
     set_vector(spinach, _number_elements, 1);
     return _number_elements;
   }
 
-  if (0 == _number_elements)
+  if (0 == _number_elements) {
     return 0;
+  }
 
   set_vector(spinach, _number_elements, 0);
 
@@ -1910,15 +1900,11 @@ Molecule::identify_spinach(int * spinach)
   stack.resize(_number_elements);
 
   int unconnected = 0;
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (1 == _things[i]->ncon())
-    {
+  for (int i = 0; i < _number_elements; i++) {
+    if (1 == _things[i]->ncon()) {
       stack.add(i);
       spinach[i] = 1;
-    }
-    else if (0 == _things[i]->ncon())
-    {
+    } else if (0 == _things[i]->ncon()) {
       spinach[i] = 1;
       unconnected++;
     }
@@ -1928,68 +1914,68 @@ Molecule::identify_spinach(int * spinach)
 }
 
 int
-Molecule::_identify_spinach (int * spinach,
-                             Set_of_Atoms & stack) const
-{
+Molecule::_identify_spinach(int* spinach, Set_of_Atoms& stack) const {
   int rc = 0;
 
-  while (stack.number_elements() > 0)
-  {
+  while (stack.number_elements() > 0) {
     atom_number_t zatom = stack.pop();
 
-//  cerr << "Processing atom " << zatom << " spinach? " << spinach[zatom] << endl;
+    //  cerr << "Processing atom " << zatom << " spinach? " << spinach[zatom] << endl;
 
-    const Atom * a = _things[zatom];
+    const Atom* a = _things[zatom];
 
     int acon = a->ncon();
 
     if (1 == acon)
       ;
-    else if (spinach[zatom])
+    else if (spinach[zatom]) {
       continue;
+    }
 
     spinach[zatom] = 1;
 
     rc++;
 
-    for (int j = 0; j < acon; j++)
-    {
+    for (int j = 0; j < acon; j++) {
       atom_number_t k = a->other(zatom, j);
 
-      if (spinach[k] > 0)
+      if (spinach[k] > 0) {
         continue;
+      }
 
-      if (2 == _things[k]->ncon())   // will definitely be part of spinach
+      if (2 == _things[k]->ncon())  // will definitely be part of spinach
         ;
-      else if (! _just_one_unclassified_spinach_connection(k, spinach))
+      else if (!_just_one_unclassified_spinach_connection(k, spinach)) {
         continue;
+      }
 
       stack.add(k);
     }
-//  cerr << "After atom " << zatom << " stack contains " << stack.number_elements() << endl;
+    //  cerr << "After atom " << zatom << " stack contains " << stack.number_elements() <<
+    //  endl;
   }
 
   return rc;
 }
 
 int
-Molecule::rings_with_strongly_fused_ring_neighbours()
-{
+Molecule::rings_with_strongly_fused_ring_neighbours() {
   int nr = nrings();
 
-  if (nr < 3)
+  if (nr < 3) {
     return 0;
+  }
 
-  (void) ring_membership();
+  (void)ring_membership();
 
   int rc = 0;
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = _sssr_rings[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* ri = _sssr_rings[i];
 
-    if (ri->strongly_fused_ring_neighbours())
+    if (ri->strongly_fused_ring_neighbours()) {
       rc++;
+    }
   }
 
   return rc;
@@ -1999,54 +1985,61 @@ static Int_Comparator_Larger icl;
 
 #if defined(__GNUG__)
 template void iwqsort<int, Int_Comparator_Larger>(int*, int, Int_Comparator_Larger&);
-template void iwqsort<int, Int_Comparator_Larger>(int*, int, Int_Comparator_Larger&, void*);
-template void move_in_from_left<int, Int_Comparator_Larger>(int*, int&, int&, int, Int_Comparator_Larger&, void*);
-template void move_in_from_right<int, Int_Comparator_Larger>(int*, int&, int&, Int_Comparator_Larger&);
-template void compare_two_items<int, Int_Comparator_Larger>(int*, Int_Comparator_Larger&, void*);
+template void iwqsort<int, Int_Comparator_Larger>(int*, int, Int_Comparator_Larger&,
+                                                  void*);
+template void move_in_from_left<int, Int_Comparator_Larger>(int*, int&, int&, int,
+                                                            Int_Comparator_Larger&,
+                                                            void*);
+template void move_in_from_right<int, Int_Comparator_Larger>(int*, int&, int&,
+                                                             Int_Comparator_Larger&);
+template void compare_two_items<int, Int_Comparator_Larger>(int*, Int_Comparator_Larger&,
+                                                            void*);
 template void swap_elements<int>(int&, int&, void*);
 #endif
 
 int
-Molecule::is_spiro_fused (atom_number_t zatom)
-{
-  if (nrings() < 2)
+Molecule::is_spiro_fused(atom_number_t zatom) {
+  if (nrings() < 2) {
     return 0;
+  }
 
-  if (is_non_ring_atom(zatom))
+  if (is_non_ring_atom(zatom)) {
     return 0;
+  }
 
-  const Atom * a = _things[zatom];
+  const Atom* a = _things[zatom];
 
-  if (4 != a->ncon())
+  if (4 != a->ncon()) {
     return 0;
+  }
 
-  (void) ring_membership();   // force sssr
+  (void)ring_membership();  // force sssr
 
   Set_of_Atoms connections;
   connections.resize(4);
 
-  for (int i = 0; i < 4; i++)
-  {
-    const Bond * b = a->item(i);
-    if (0 == b->nrings())
+  for (int i = 0; i < 4; i++) {
+    const Bond* b = a->item(i);
+    if (0 == b->nrings()) {
       return 0;
+    }
 
     connections.add(b->other(zatom));
   }
 
-// Ugly, we get things like this
-// C12(N3CC4(C)C(=O)C(C)(C3)CN1C4)C1=C(C=CC(=C1)Br)NC2=O 417829 PBCHM1097623:PBCHM6966522
-// where there are 3 or even 4 rings incident on the spiro fusion.
-// For now, just gather all rings incident on this atom
+  // Ugly, we get things like this
+  // C12(N3CC4(C)C(=O)C(C)(C3)CN1C4)C1=C(C=CC(=C1)Br)NC2=O 417829
+  // PBCHM1097623:PBCHM6966522 where there are 3 or even 4 rings incident on the spiro
+  // fusion. For now, just gather all rings incident on this atom
 
-  resizable_array<const Ring *> rings_here;
+  resizable_array<const Ring*> rings_here;
 
-  for (int i = 0; i < _sssr_rings.number_elements(); i++)
-  {
-    const Ring * ri = _sssr_rings[i];
+  for (int i = 0; i < _sssr_rings.number_elements(); i++) {
+    const Ring* ri = _sssr_rings[i];
 
-    if (ri->contains(zatom))
+    if (ri->contains(zatom)) {
       rings_here.add(ri);
+    }
   }
 
   int nr = rings_here.number_elements();
@@ -2055,16 +2048,15 @@ Molecule::is_spiro_fused (atom_number_t zatom)
   cerr << "Got " << nr << " rings\n";
 #endif
 
-  if (nr < 2)
-  {
+  if (nr < 2) {
     cerr << "Molecule::is_non_ring_atom:strange, atom " << zatom << " not in two rings\n";
     return 0;
   }
 
-//atom_number_t a0 = connections[0];
-//atom_number_t a1 = connections[1];
-//atom_number_t a2 = connections[2];
-//atom_number_t a3 = connections[3];
+  // atom_number_t a0 = connections[0];
+  // atom_number_t a1 = connections[1];
+  // atom_number_t a2 = connections[2];
+  // atom_number_t a3 = connections[3];
 
 #ifdef DEBUG_IS_SPIRO_FUSED
   cerr << "Centre atom " << zatom << endl;
@@ -2074,56 +2066,59 @@ Molecule::is_spiro_fused (atom_number_t zatom)
   cerr << "atom " << a3 << " ring_membership " << _ring_membership[a3] << endl;
 #endif
 
-// Form a number for each atom that indicates which of the rings it is in
+  // Form a number for each atom that indicates which of the rings it is in
 
   int rc[4] = {1, 1, 1, 1};
 
-  for (int i = 0; i < nr; i++)
-  {
-    const Ring * ri = rings_here[i];
+  for (int i = 0; i < nr; i++) {
+    const Ring* ri = rings_here[i];
 
-    for (int j = 0; j < 4; j++)
-    {
+    for (int j = 0; j < 4; j++) {
       atom_number_t aj = connections[j];
 
-      if (ri->contains(aj))
+      if (ri->contains(aj)) {
         rc[j] *= primes[i];
+      }
     }
   }
 
-// In a spiro system, the rc array should contain just two different values
-// Do a sort. Maybe should do this in place...
+  // In a spiro system, the rc array should contain just two different values
+  // Do a sort. Maybe should do this in place...
 
   ::iwqsort(&(rc[0]), 4, icl);
 
-  if (rc[0] == rc[1] && rc[1] != rc[2] && rc[2] == rc[3])
+  if (rc[0] == rc[1] && rc[1] != rc[2] && rc[2] == rc[3]) {
     return 1;
+  }
 
   return 0;
 
-// DO the easy case first
-// count the number of times the atoms occur in each of the rings. 
+  // DO the easy case first
+  // count the number of times the atoms occur in each of the rings.
 
 #ifdef QOWERU
-  if (2 == nrz)
-  {
-    int sro0 = spiro_ring_occupancy (r1, r2, a0);
-    if (0 == sro0 || 11 == sro0)
+  if (2 == nrz) {
+    int sro0 = spiro_ring_occupancy(r1, r2, a0);
+    if (0 == sro0 || 11 == sro0) {
       return 0;
+    }
 
-    int sro1 = spiro_ring_occupancy (r1, r2, a1);
-    if (0 == sro1 || 11 == sro1)
+    int sro1 = spiro_ring_occupancy(r1, r2, a1);
+    if (0 == sro1 || 11 == sro1) {
       return 0;
+    }
 
-    int sro2 = spiro_ring_occupancy (r1, r2, a2);
-    if (0 == sro2 || 11 == sro2)
+    int sro2 = spiro_ring_occupancy(r1, r2, a2);
+    if (0 == sro2 || 11 == sro2) {
       return 0;
+    }
 
-    int sro3 = spiro_ring_occupancy (r1, r2, a3);
-    if (0 == sro3 || 11 == sro3)
+    int sro3 = spiro_ring_occupancy(r1, r2, a3);
+    if (0 == sro3 || 11 == sro3) {
       return 0;
+    }
 
-// Within the sro numbers, we must have two 1's and two 10's
+    // Within the sro numbers, we must have two 1's and two 10's
 
     cerr << sro0 << sro1 << sro2 << sro3 << endl;
 
@@ -2131,50 +2126,50 @@ Molecule::is_spiro_fused (atom_number_t zatom)
   }
 #endif
 
-// Now the more difficult case of 3 or 4 rings incident on the fusion point
+  // Now the more difficult case of 3 or 4 rings incident on the fusion point
 
   return 0;
 }
-int
-Molecule::fused_system_identifier (atom_number_t a)
-{
-  const int nr = nrings();
-  if (0 == nr)
-    return -1;
 
-  if (! is_ring_atom(a))
+int
+Molecule::fused_system_identifier(atom_number_t a) {
+  const int nr = nrings();
+  if (0 == nr) {
     return -1;
+  }
+
+  if (!is_ring_atom(a)) {
+    return -1;
+  }
 
   ring_membership();
 
-  const Ring * r = ring_containing_atom(a);
+  const Ring* r = ring_containing_atom(a);
 
-  if (nullptr == r)    // should not happen
+  if (nullptr == r) {  // should not happen
     return -1;
+  }
 
   return r->fused_system_identifier();
 }
 
-const Ring * const *
-Molecule::cbeginRing()
-{
-  (void) ring_membership();
+const Ring* const*
+Molecule::cbeginRing() {
+  (void)ring_membership();
 
   return _sssr_rings.cbegin();
 }
 
-const Ring * const * 
-Molecule::cendRing()
-{
-  (void) ring_membership();
+const Ring* const*
+Molecule::cendRing() {
+  (void)ring_membership();
 
   return _sssr_rings.cend();
 }
 
 const resizable_array_p<Ring>&
-Molecule::sssr_rings()
-{
-  (void) ring_membership();
+Molecule::sssr_rings() {
+  (void)ring_membership();
 
   return _sssr_rings;
 }
@@ -2188,7 +2183,7 @@ FirstLowConnectedAtom(const Molecule& m) {
   const int natoms = m.natoms();
   atom_number_t a_doubly_bonded = INVALID_ATOM_NUMBER;
   for (int i = 0; i < natoms; ++i) {
-    const Atom * a = m.atomi(i);
+    const Atom* a = m.atomi(i);
     if (a->ncon() == 1) {
       return 1;
     }
@@ -2211,7 +2206,7 @@ FirstLowConnectedAtom(const Molecule& m) {
 // A variant of the above that checks an already processed array.
 // If it cannot find any unvisited atoms, it will return INVALID_ATOM_NUMBER.
 atom_number_t
-FirstLowConnectedAtom(const Molecule& m, const int * visited) {
+FirstLowConnectedAtom(const Molecule& m, const int* visited) {
   const int natoms = m.natoms();
   atom_number_t a_doubly_bonded_atom = INVALID_ATOM_NUMBER;
   atom_number_t an_unvisited_atom = INVALID_ATOM_NUMBER;
@@ -2219,7 +2214,7 @@ FirstLowConnectedAtom(const Molecule& m, const int * visited) {
     if (visited[i]) {
       continue;
     }
-    const Atom * a = m.atomi(i);
+    const Atom* a = m.atomi(i);
     if (a->ncon() == 1) {
       return 1;
     }
@@ -2236,49 +2231,46 @@ FirstLowConnectedAtom(const Molecule& m, const int * visited) {
   return an_unvisited_atom;
 }
 
-
-const int *
-Molecule::ring_bond_count()
-{
+const int*
+Molecule::ring_bond_count() {
   assert(ok());
 
-  if (_ring_bond_count == nullptr)
+  if (_ring_bond_count == nullptr) {
     _compute_ring_bond_count();
+  }
 
   return _ring_bond_count;
 }
 
 int
-Molecule::ring_bond_count(atom_number_t zatom)
-{
+Molecule::ring_bond_count(atom_number_t zatom) {
   assert(ok_atom_number(zatom));
 
-  if (_ring_bond_count == nullptr)
+  if (_ring_bond_count == nullptr) {
     _compute_ring_bond_count();
+  }
 
   return _ring_bond_count[zatom];
 }
 
-//#define DEBUG_RING_FINDER
+// #define DEBUG_RING_FINDER
 
 // The ring finding algorithm. Non member function to make
 // testing a little easier. This version does not fill in
 // a ring_bond_count array.
 #ifdef NOT_NEEDED_NOW
 int
-RingFinder(Molecule& m,
-           atom_number_t previous_atom,
-           atom_number_t current_atom,
-           int * ring_membership,
-           int * visited,
-           int counter) {
-
+RingFinder(Molecule& m, atom_number_t previous_atom, atom_number_t current_atom,
+           int* ring_membership, int* visited, int counter) {
   visited[current_atom] = counter;
 #ifdef DEBUG_RING_FINDER
-//cerr << "RingFinder enter atom " << current_atom << ' ' << m.smarts_equivalent_for_atom(current_atom) << " from " << previous_atom << " counter " << counter << '\n';
-  cerr << "RingFinder enter atom " << current_atom << " from " << previous_atom << " counter " << counter << '\n';
+  // cerr << "RingFinder enter atom " << current_atom << ' ' <<
+  // m.smarts_equivalent_for_atom(current_atom) << " from " << previous_atom << " counter
+  // " << counter << '\n';
+  cerr << "RingFinder enter atom " << current_atom << " from " << previous_atom
+       << " counter " << counter << '\n';
 #endif
-  const Atom * a = m.atomi(current_atom);
+  const Atom* a = m.atomi(current_atom);
   int found_ring = 0;
   for (const Bond* b : *a) {
     atom_number_t j = b->other(current_atom);
@@ -2286,7 +2278,8 @@ RingFinder(Molecule& m,
       continue;
     }
 #ifdef DEBUG_RING_FINDER
-    cerr << " from " << current_atom << " (" << counter << ") to " << j << " visited[" << j << "]=" << visited[j] << endl;
+    cerr << " from " << current_atom << " (" << counter << ") to " << j << " visited["
+         << j << "]=" << visited[j] << endl;
 #endif
     if (visited[j] > counter) {
       continue;
@@ -2296,13 +2289,15 @@ RingFinder(Molecule& m,
       found_ring++;
     } else {
       int tmp = RingFinder(m, current_atom, j, ring_membership, visited, counter + 1);
-      if (tmp)
+      if (tmp) {
         found_ring += tmp;
+      }
     }
   }
 
 #ifdef DEBUG_RING_FINDER
-  cerr << " atom " << current_atom << " found_ring " << found_ring << " rm " << ring_membership[current_atom] << '\n';
+  cerr << " atom " << current_atom << " found_ring " << found_ring << " rm "
+       << ring_membership[current_atom] << '\n';
 #endif
 
   // If no evidence of ring activity, we are done.
@@ -2335,20 +2330,22 @@ RingFinder(Molecule& m,
 // Put them all together into a single struct.
 struct RingFinderArrays {
   // Whehter or not each atom has been visited by the algorithm.
-  int * visited;
+  int* visited;
   // The result of the calculation.
-  int * ring_membership;
+  int* ring_membership;
   // Is the bond between two atoms a ring bond or not?
-  int * ring_bond_count;
+  int* ring_bond_count;
+
   RingFinderArrays(int natoms) {
     visited = new_int(natoms);
     ring_membership = new_int(natoms);
     ring_bond_count = new_int(natoms * natoms);
   }
+
   ~RingFinderArrays() {
-    delete [] visited;
-    delete [] ring_membership;
-    delete [] ring_bond_count;
+    delete[] visited;
+    delete[] ring_membership;
+    delete[] ring_bond_count;
   }
 };
 
@@ -2356,31 +2353,29 @@ struct RingFinderArrays {
 // of a bond, upate `ring_bond_membership` to reflect that.
 // `ring_bond_membership` is assumed to be a matoms*matoms array.
 void
-UpdateRingBondCount(int * ring_bond_membership,
-                    const int matoms,
-                    int current_atom,
+UpdateRingBondCount(int* ring_bond_membership, const int matoms, int current_atom,
                     int other) {
   ring_bond_membership[current_atom * matoms + other]++;
   ring_bond_membership[other * matoms + current_atom]++;
 }
 
 int
-RingFinder(Molecule& m,
-           atom_number_t previous_atom,
-           atom_number_t current_atom,
-           RingFinderArrays& data,
-           int counter) {
+RingFinder(Molecule& m, atom_number_t previous_atom, atom_number_t current_atom,
+           RingFinderArrays& data, int counter) {
   const int matoms = m.natoms();
-  int * visited = data.visited;
-  int * ring_membership = data.ring_membership;
-  int * ring_bond_count = data.ring_bond_count;
+  int* visited = data.visited;
+  int* ring_membership = data.ring_membership;
+  int* ring_bond_count = data.ring_bond_count;
 
   visited[current_atom] = counter;
 #ifdef DEBUG_RING_FINDER
-//cerr << "RingFinder enter atom " << current_atom << ' ' << m.smarts_equivalent_for_atom(current_atom) << " from " << previous_atom << " counter " << counter << '\n';
-  cerr << "RingFinder enter atom " << current_atom << " from " << previous_atom << " counter " << counter << '\n';
+  // cerr << "RingFinder enter atom " << current_atom << ' ' <<
+  // m.smarts_equivalent_for_atom(current_atom) << " from " << previous_atom << " counter
+  // " << counter << '\n';
+  cerr << "RingFinder enter atom " << current_atom << " from " << previous_atom
+       << " counter " << counter << '\n';
 #endif
-  const Atom * a = m.atomi(current_atom);
+  const Atom* a = m.atomi(current_atom);
   int found_ring = 0;
   for (const Bond* b : *a) {
     atom_number_t j = b->other(current_atom);
@@ -2388,7 +2383,8 @@ RingFinder(Molecule& m,
       continue;
     }
 #ifdef DEBUG_RING_FINDER
-    cerr << " from " << current_atom << " (" << counter << ") to " << j << " visited[" << j << "]=" << visited[j] << endl;
+    cerr << " from " << current_atom << " (" << counter << ") to " << j << " visited["
+         << j << "]=" << visited[j] << endl;
 #endif
     if (visited[j] > counter) {
       continue;
@@ -2407,7 +2403,8 @@ RingFinder(Molecule& m,
   }
 
 #ifdef DEBUG_RING_FINDER
-  cerr << " atom " << current_atom << " found_ring " << found_ring << " rm " << ring_membership[current_atom] << '\n';
+  cerr << " atom " << current_atom << " found_ring " << found_ring << " rm "
+       << ring_membership[current_atom] << '\n';
 #endif
 
   // If no evidence of ring activity, we are done.
@@ -2435,12 +2432,10 @@ RingFinder(Molecule& m,
   return rc;
 }
 
-
-
 // Return the index of the first member of `visited` that is zero.
 // Returns -1 if not found.
 int
-FirstUnvisited(const int * visited, const int n) {
+FirstUnvisited(const int* visited, const int n) {
   for (int i = 0; i < n; ++i) {
     if (visited[i] == 0) {
       return i;
@@ -2453,8 +2448,7 @@ FirstUnvisited(const int * visited, const int n) {
 // Also updates the fragment information since that is a byproduct of the
 // path traversal.
 void
-Molecule::_compute_ring_bond_count()
-{
+Molecule::_compute_ring_bond_count() {
   if (_number_elements == 0) {
     return;
   }
@@ -2479,23 +2473,26 @@ Molecule::_compute_ring_bond_count()
   int counter_start = 1;
   do {
     RingFinder(*this, INVALID_ATOM_NUMBER, starting_atom, data, counter_start);
-    counter_start += _update_fragment_information(data.visited, fragment_number, data.visited[starting_atom]);
+    counter_start += _update_fragment_information(data.visited, fragment_number,
+                                                  data.visited[starting_atom]);
     fragment_number++;
     starting_atom = FirstUnvisited(data.visited, _number_elements);
   } while (starting_atom != INVALID_ATOM_NUMBER);
 
   _fragment_information.set_number_fragments(fragment_number);
 
-  // Until we get the ring bond count algorithm working, do a final adjustment of ring bond count values.
+  // Until we get the ring bond count algorithm working, do a final adjustment of ring
+  // bond count values.
 
   for (int i = 0; i < _number_elements; ++i) {
     _ring_bond_count[i] = 0;
     if (data.ring_membership[i] <= 0) {  // Not in a ring.
       continue;
     }
-    for (const Bond * b : *_things[i]) {
-      if (data.ring_bond_count[i * _number_elements + b->other(i)])
+    for (const Bond* b : *_things[i]) {
+      if (data.ring_bond_count[i * _number_elements + b->other(i)]) {
         _ring_bond_count[i]++;
+      }
     }
   }
 }
@@ -2508,8 +2505,9 @@ Molecule::_compute_ring_bond_count()
 // _fragment_information, so this could be brittle.
 // Returns the number of atoms in `fragment_number`.
 int
-Molecule::_update_fragment_information(int * visited, int fragment_number, int min_visited_value) {
-  int * f = _fragment_information.fragment_membership();
+Molecule::_update_fragment_information(int* visited, int fragment_number,
+                                       int min_visited_value) {
+  int* f = _fragment_information.fragment_membership();
   int atoms_in_fragment = 0;
   int bonds_in_fragment = 0;
   for (int i = 0; i < _number_elements; ++i) {
@@ -2539,7 +2537,7 @@ Molecule::LargestRingSize() {
   // Investigate. Until that gets fixed, something safer.
 
   unsigned int result = 0;
-  for (const auto * r : _sssr_rings) {
+  for (const auto* r : _sssr_rings) {
     if (r->size() > result) {
       result = r->size();
     }
@@ -2558,7 +2556,8 @@ Molecule::ToScaffold() {
   }
   std::unique_ptr<int[]> spinach = std::make_unique<int[]>(_number_elements);
   identify_spinach(spinach.get());
-  if (std::count(spinach.get(), spinach.get() + _number_elements, 0) == _number_elements) {
+  if (std::count(spinach.get(), spinach.get() + _number_elements, 0) ==
+      _number_elements) {
     return 0;
   }
 

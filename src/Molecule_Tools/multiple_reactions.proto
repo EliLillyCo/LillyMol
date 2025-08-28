@@ -18,4 +18,12 @@ message Options {
   // By default each reaction is applied to a copy of the starting molecule.
   // If this is set, all reactions are applied, sequentially, to the same molecule.
   optional bool apply_all_reactions_to_reagent = 2;
+
+  // If we are applying each reaction to a copy of the starting molecule and if
+  // any of our reactions results in removing atoms, then the substructure perception
+  // must be re-done after every change - we cannot do an initial substructure
+  // search, getting multiple matches, and expect the subsequent matches to be still
+  // ok after the first match is used. 
+
+  optional bool reaction_contains_atom_removals = 3;
 }

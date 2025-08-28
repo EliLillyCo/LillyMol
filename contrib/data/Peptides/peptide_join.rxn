@@ -1,0 +1,13 @@
+(0 Reaction
+  (0 Scaffold
+    (A C smarts "[1C](=O)-[OD1].[1N]")
+    (A I remove_atom 2)
+    (A I recompute_implicit_hydrogens 3)
+  )
+  (1 Sidechain
+    (A C smarts "[1N]")
+    (A I isotope (0 0))
+    (A I recompute_implicit_hydrogens 0)
+    (A I join (0 0))
+  )
+)

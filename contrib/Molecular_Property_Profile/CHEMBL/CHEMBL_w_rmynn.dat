@@ -2,11 +2,11 @@ description {
   feature_name: "w_rmynn"
   description: "Number of Nitrogen atoms"
   plot_title: "Number of Nitrogen atoms"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
 maxval: 20.0
-mean: 3.15288
+mean: 3.066283
 median: 3.0
 quantile {
   quantile: 0.01
@@ -28,72 +28,88 @@ quantile {
 }
 quantile {
   quantile: 0.95
-  value: 7.0
+  value: 6.0
 }
 quantile {
   quantile: 0.99
   value: 8.0
 }
 int_values {
-  count: 3481
+  count: 132888
 }
 int_values {
   value: 1
-  count: 6208
+  count: 245256
 }
 int_values {
   value: 2
-  count: 10257
+  count: 389694
 }
 int_values {
   value: 3
-  count: 10415
+  count: 389571
 }
 int_values {
   value: 4
-  count: 8523
+  count: 306379
 }
 int_values {
   value: 5
-  count: 5426
+  count: 195020
 }
 int_values {
   value: 6
-  count: 3142
+  count: 107293
 }
 int_values {
   value: 7
-  count: 1459
+  count: 46562
 }
 int_values {
   value: 8
-  count: 674
+  count: 22459
 }
 int_values {
   value: 9
-  count: 265
+  count: 8526
 }
 int_values {
   value: 10
-  count: 91
+  count: 3015
 }
 int_values {
   value: 11
-  count: 34
+  count: 780
 }
 int_values {
   value: 12
-  count: 18
+  count: 380
+}
+int_values {
+  value: 13
+  count: 121
 }
 int_values {
   value: 14
-  count: 4
+  count: 79
+}
+int_values {
+  value: 15
+  count: 16
+}
+int_values {
+  value: 16
+  count: 8
 }
 int_values {
   value: 17
-  count: 1
+  count: 2
+}
+int_values {
+  value: 18
+  count: 2
 }
 int_values {
   value: 20
-  count: 2
+  count: 10
 }

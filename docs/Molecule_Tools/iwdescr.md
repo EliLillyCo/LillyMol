@@ -16,7 +16,6 @@ see various missing columns.
 ## Descriptors.
 The following descriptors are computed.
 
-| ---- | ---------- |
 | name | definition |
 | ---- | ---------- |
 | natoms | the number of atoms in the molecule |
@@ -56,6 +55,7 @@ The following descriptors are computed.
 | fraromha | aromatic heteroatoms divided by number of ring atoms |
 | aromdens | fraction of the atoms that are aromatic |
 | ch2 | number of ch2 groups |
+| d2sp3 | number of two connected, fully saturated atoms |
 | ch | number of carbon atoms that have one or more hydrogens attached |
 | htroaf | fraction of atoms that are heteroatoms |
 | ohsh | oxygen or sulphur with a hydrogen attached |
@@ -121,6 +121,8 @@ The following descriptors are computed.
 | avalcon | average connectivity of aliphatic atoms |
 | fcrowdng | fraction of atoms that are crowded. crowded atoms are those that have > 2 connections and also have one or more neighbours with > 2 connections |
 | avchcon | average connectivity of non ring (chain) atoms |
+| mxlencchain2 | maximum length of an all [CD2] chain with no branching |
+| mxlencchain3 | maximum length of an all [CD2] chain with at most [CD3] as a branch point |
 | faiercst | fraction of atoms involved in electron rich areas of the molecule. these include aromatic rings |
 | aiercsct | number of atoms in electron rich areas of the molecule. |
 | erichsct | number of separate electron rich areas of the molecule |
@@ -323,7 +325,7 @@ off all optional descriptors. This can make a big difference in run times. Runni
 ```
 iwdescr.sh -O all file.smi > file.w
 ```
-takes 5.7 seconds to process 20k molecules, generating 264 columns of ouput. Running
+takes 5.7 seconds to process 20k molecules, generating 277 columns of ouput. Running
 ```
 iwdescr.sh -O none file.smi > file.w
 ```

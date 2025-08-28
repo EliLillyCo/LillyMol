@@ -73,10 +73,13 @@ int all_distances_identical = 0;
 
 std::unordered_map<atype_t, unsigned int> pairs_to_find;
 
-/*
-  If we are creating a descriptor file, we need a cross reference between pair number and
-  column number
-*/
+// We can optionally add bits corresponding to just the number of
+// instances of each type.
+
+int fingerprint_atom_types = 0;
+
+//  If we are creating a descriptor file, we need a cross reference between pair number and
+//  column number.
 
 int write_descriptors = 0;
 
@@ -237,6 +240,8 @@ class Fuzziness_Profile {
   int set_bits(const int t1, const int t2, Sparse_Fingerprint_Creator& sfp) const;
 };
 
+//  At each separation, we have a fuzziness profile
+
 Fuzziness_Profile** fuzziness_profile = nullptr;
 
 Fuzziness_Profile::Fuzziness_Profile() {
@@ -265,7 +270,7 @@ Fuzziness_Profile::~Fuzziness_Profile() {
 
   where `o` is the bond separation, and a,b,c correspond to the
   values associated with o-1,o,o+1 bond distances.
-  TODO: swtich to RE2.
+  TODO: swtich to proto.
 */
 
 int
@@ -315,8 +320,8 @@ Fuzziness_Profile::build(const const_IWSubstring& s) {
   _minsep = _central_separation - maxwhere - 1;
   _maxsep = _central_separation + values.number_elements() - maxwhere - 1;
 
-  int number_to_allocate =
-      _central_separation + 1 + values.number_elements();  // maybe waste a little space
+  // maybe waste a little space
+  int number_to_allocate = _central_separation + 1 + values.number_elements();
 
   _value = new_int(number_to_allocate);
 
@@ -339,12 +344,8 @@ Fuzziness_Profile::debug_print(std::ostream& os) const {
   return 1;
 }
 
-/*
-  At each separation, we have a fuzziness profile
-*/
-
 void
-usage(int rc) {
+Usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
@@ -353,35 +354,36 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "  -c <number>    shortest bond distance to process\n";
-  cerr << "  -C <number>    longest  bond distance to process\n";
-  cerr << "  -D             use a fixed distance for all pairs beyond max distance\n";
-  cerr << "  -P <type>      atom type specification, enter '-P help' for info\n";
-  cerr << "  -f             work as a filter\n";
-  cerr << "  -J <tag>       tag for fingerprints\n";
-  cerr << "  -m <nbits>     if producing fixed width fingerprints (-J starts FP), nbits\n";
-  cerr << "  -O <number>    only produce pair <number>\n";
-  cerr << "  -O F:<file>    only produce pairs in <file>, '$ATYPE <type>' sets type\n";
-  cerr << "  -d             produce a descriptor file (requires the -O option)\n";
-//cerr << "  -x             write explanations for the bits in the -O file\n";
-  cerr << "  -X all         write all explanations for the bits in the -O file\n";
-  cerr << "  -X amap        use atom map labels instead of isotopes in the explanation output\n";
-  cerr << "  -B <fname>     write raw pair values: type1-dist-type2\n";
-  cerr << "  -F s:n,n,n     fuzziness specification, s = separation\n";
-  cerr << "  -s <smarts>    only process atoms matching <smarts>\n";
-  cerr << "  -q <query>     only process atoms matching <query>\n";
-  cerr << "  -k             pairs can have just one matched atom (default is both ends must be matched)\n";
-  cerr << "  -y             when using queries, set an extra bit for the number of atoms matched\n";
-  cerr << "  -2             use version 2 augmented atom algorithm\n";
-  cerr << "  -u             atom types are just 'same' or 'different'\n";
-  cerr << "  -e ...         for bonded atoms, use 'type' and/or 'ring' for separation\n";
-  cerr << "  -e ...         special processing for bonded atoms, enter '-e help' for infp\n";
-  cerr << "  -G ...         obscure options, enter '-G help' for info\n";
-  cerr << "  -b <n>         number of bit replicates to produce\n";
-  cerr << "  -L <fname>     write atom type labelled atoms to <fname>\n";
-  cerr << "  -l             reduce to largest fragment\n";
-  cerr << "  -g ...         chemical standardisation options\n";
-  cerr << "  -v             verbose output\n";
+  cerr << R"(Atom Pair fingerprints
+ -c <number>    shortest bond distance to process
+ -C <number>    longest  bond distance to process
+ -D             use a fixed distance for all pairs beyond max distance
+ -P <type>      atom type specification, enter '-P help' for info
+ -f             work as a filter
+ -J <tag>       tag for fingerprints
+ -m <nbits>     if producing fixed width fingerprints (-J starts FP), nbits
+ -O <number>    only produce pair <number>
+ -O F:<file>    only produce pairs in <file>, '$ATYPE <type>' sets type
+ -d             produce a descriptor file (requires the -O option)
+ -X all         write all explanations for the bits in the -O file
+ -X amap        use atom map labels instead of isotopes in the explanation output
+ -B <fname>     write raw pair values: type1-dist-type2
+ -F s:n,n,n     fuzziness specification, s = separation
+ -s <smarts>    only process atoms matching <smarts>
+ -q <query>     only process atoms matching <query>
+ -k             pairs can have just one matched atom (default is both ends must be matched)
+ -y             when using queries, set an extra bit for the number of atoms matched
+ -2             use version 2 augmented atom algorithm
+ -u             atom types are just 'same' or 'different'
+ -e ...         for bonded atoms, use 'type' and/or 'ring' for separation
+ -e ...         special processing for bonded atoms, enter '-e help' for infp
+ -G ...         obscure options, enter '-G help' for info
+ -b <n>         number of bit replicates to produce
+ -L <fname>     write atom type labelled atoms to <fname>
+ -l             reduce to largest fragment
+ -g ...         chemical standardisation options
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -929,6 +931,15 @@ form_atom_pair(Molecule& m, const atype_t* atype, const atom_number_t a1,
   return;
 }
 
+void
+FingerprintAtomTypes(Molecule& m, const atype_t* atype,
+                     Sparse_Fingerprint_Creator& sfp) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    sfp.hit_bit(atype[i]);
+  }
+}
+
 int
 ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype,
                                 IWString_and_File_Descriptor& output) {
@@ -984,10 +995,14 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
     output << identifier_tag << m.name() << ">\n";
   }
 
-  Sparse_Fingerprint_Creator fp;
+  Sparse_Fingerprint_Creator sfp;
 
   if (extra_bit_for_atoms_matched_by_queries) {
-    fp.hit_bit(EXTRA_BIT_FOR_ATOMS_MATCHED_BY_QUERIES, atoms_matched);
+    sfp.hit_bit(EXTRA_BIT_FOR_ATOMS_MATCHED_BY_QUERIES, atoms_matched);
+  }
+
+  if (fingerprint_atom_types) {
+    FingerprintAtomTypes(m, atype, sfp);
   }
 
   if (2 == included_atoms_needed) {
@@ -1001,7 +1016,7 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
           continue;
         }
 
-        form_atom_pair(m, atype, i, j, fp, output);
+        form_atom_pair(m, atype, i, j, sfp, output);
       }
     }
   } else {
@@ -1009,7 +1024,7 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
       for (int j = i + 1; j < matoms; ++j) {
         if (include_these_atoms[i] ||
             include_these_atoms[j]) {  // interesting to contemplate an XOR?
-          form_atom_pair(m, atype, i, j, fp, output);
+          form_atom_pair(m, atype, i, j, sfp, output);
         }
       }
     }
@@ -1020,11 +1035,11 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
   }
 
   if (verbose) {
-    nbits.extra(fp.nbits());
+    nbits.extra(sfp.nbits());
   }
 
   if (write_descriptors) {
-    return do_write_descriptors(fp, pairs_to_find, output);
+    return do_write_descriptors(sfp, pairs_to_find, output);
   }
 
   if (descriptor_file_output) {
@@ -1039,12 +1054,12 @@ ExtendedAtomPairs_matched_atoms(Molecule& m, const IWString& tag, atype_t* atype
 
   if (tag.starts_with("NC")) {
     IWString tmp;
-    fp.daylight_ascii_form_with_counts_encoded(tag, tmp);
+    sfp.daylight_ascii_form_with_counts_encoded(tag, tmp);
     output << tmp << "\n";
   } else if (pairs_to_find.size() > 0) {
-    return write_01_fingerprint(fp, tag, pairs_to_find, output);
+    return write_01_fingerprint(sfp, tag, pairs_to_find, output);
   } else {
-    return write_01_fingerprint(fp, tag, output);
+    return write_01_fingerprint(sfp, tag, output);
   }
 
   if (!function_as_filter) {
@@ -1060,11 +1075,14 @@ ExtendedAtomPairs(Molecule& m, const IWString& tag, const atype_t* atype,
                   IWString_and_File_Descriptor& output) {
   const int matoms = m.natoms();
 
-  Sparse_Fingerprint_Creator fp;
+  Sparse_Fingerprint_Creator sfp;
+  if (fingerprint_atom_types) {
+    FingerprintAtomTypes(m, atype, sfp);
+  }
 
   for (int i = 0; i < matoms; i++) {
     for (int j = i + 1; j < matoms; ++j) {
-      form_atom_pair(m, atype, i, j, fp, output);
+      form_atom_pair(m, atype, i, j, sfp, output);
     }
   }
 
@@ -1073,15 +1091,15 @@ ExtendedAtomPairs(Molecule& m, const IWString& tag, const atype_t* atype,
   }
 
   if (verbose) {
-    nbits.extra(fp.nbits());
+    nbits.extra(sfp.nbits());
   }
 
   if (write_descriptors) {
-    return do_write_descriptors(fp, pairs_to_find, output);
+    return do_write_descriptors(sfp, pairs_to_find, output);
   }
 
   if (descriptor_file_output) {
-    return WriteDescriptors(m, descriptor_file_output, fp, output);
+    return WriteDescriptors(m, descriptor_file_output, sfp, output);
   }
 
   if (stream_with_all_pairs.is_open()) {
@@ -1091,18 +1109,18 @@ ExtendedAtomPairs(Molecule& m, const IWString& tag, const atype_t* atype,
 
 #ifdef DEBUG_BITS_FORMED
   IWString tmp;
-  fp.write_in_svml_form(tmp);
+  sfp.write_in_svml_form(tmp);
   cerr << tmp << '\n';
 #endif
 
   if (tag.starts_with("NC")) {
     IWString tmp;
-    fp.daylight_ascii_form_with_counts_encoded(tag, tmp);
+    sfp.daylight_ascii_form_with_counts_encoded(tag, tmp);
     output << tmp << "\n";
   } else if (pairs_to_find.size() > 0) {
-    return write_01_fingerprint(fp, tag, pairs_to_find, output);
+    return write_01_fingerprint(sfp, tag, pairs_to_find, output);
   } else {
-    return write_01_fingerprint(fp, tag, output);
+    return write_01_fingerprint(sfp, tag, output);
   }
 
   return 1;
@@ -1497,10 +1515,12 @@ WriteDescriptorFileHeader(uint32_t ncols, IWString_and_File_Descriptor& output) 
 
 void
 DisplayDashGOptins(std::ostream& output) {
-  output << " -G samedist       distances within range are identical\n";
-  output << " -G desc=<ncols>   generate a descriptor file outpu with <ncols> columns\n";
-  output << " -G flush          flush output after each molecule\n";
-  output << " -G help           this message\n";
+  output << R"( -G samedist       distances within range are identical\n";
+ -G desc=<ncols>   generate a descriptor file output with <ncols> columns
+ -G flush          flush output after each molecule
+ -G fpatype        set extra bits for presence of atoms by type
+ -G help           this message
+)";
 }
 
 int
@@ -1509,7 +1529,7 @@ ExtendedAtomPairs(int argc, char** argv) {
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
-    usage(1);
+    Usage(1);
   }
 
   verbose = cl.option_count('v');
@@ -1518,12 +1538,12 @@ ExtendedAtomPairs(int argc, char** argv) {
     set_global_aromaticity_type(Daylight);
   } else if (!process_standard_aromaticity_options(cl, verbose > 1)) {
     cerr << "Cannot process -A option\n";
-    usage(11);
+    Usage(11);
   }
 
   if (!process_elements(cl, verbose > 1, 'E')) {
     cerr << "Cannot initialise elements\n";
-    usage(8);
+    Usage(8);
   }
 
   if (cl.option_present('l')) {
@@ -1537,7 +1557,7 @@ ExtendedAtomPairs(int argc, char** argv) {
   if (cl.option_present('g')) {
     if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       cerr << "Cannot initialise chemical standardisation\n";
-      usage(5);
+      Usage(5);
     }
   }
 
@@ -1548,7 +1568,7 @@ ExtendedAtomPairs(int argc, char** argv) {
   if (cl.option_present('c')) {
     if (!cl.value('c', min_distance) || min_distance < 1) {
       cerr << "The minimum distance option (-c) must be a whole positive number\n";
-      usage(3);
+      Usage(3);
     }
 
     if (verbose) {
@@ -1559,7 +1579,7 @@ ExtendedAtomPairs(int argc, char** argv) {
   if (cl.option_present('C')) {
     if (!cl.value('C', max_distance) || max_distance < min_distance) {
       cerr << "The maximum distance option (-C) must be a whole positive number\n";
-      usage(3);
+      Usage(3);
     }
 
     if (verbose) {
@@ -1571,7 +1591,7 @@ ExtendedAtomPairs(int argc, char** argv) {
     if (!cl.option_present('C')) {
       cerr << "The fixed distance for out of range pairs option (-D) must be used with "
               "the -C option\n";
-      usage(1);
+      Usage(1);
     }
 
     include_distances_beyond_max = 1;
@@ -1593,7 +1613,7 @@ ExtendedAtomPairs(int argc, char** argv) {
   if (cl.option_present('b')) {
     if (!cl.value('b', default_number_bits_to_set) || default_number_bits_to_set < 1) {
       cerr << "The default number of bits to set (-b) must be a +ve whole number\n";
-      usage(2);
+      Usage(2);
     }
 
     if (verbose) {
@@ -1610,7 +1630,7 @@ ExtendedAtomPairs(int argc, char** argv) {
     if (!cl.option_present('O')) {
       cerr << "When writing descriptors, must specify the descriptors to produce via the "
               "-O option\n";
-      usage(6);
+      Usage(6);
     }
 
     write_descriptors = 1;
@@ -1659,11 +1679,9 @@ ExtendedAtomPairs(int argc, char** argv) {
     }
   }
 
-  cerr << "How abt G " << cl.option_present('G') << '\n';
   if (cl.option_present('G')) {
     const_IWSubstring g;
     for (int i = 0; cl.value('G', g, i); ++i) {
-      cerr << "Examing '" << g << "'\n";
       if (g == "samedist") {
         all_distances_identical = 1;
         if (verbose) {
@@ -1682,6 +1700,11 @@ ExtendedAtomPairs(int argc, char** argv) {
         }
         if (verbose) {
           cerr << "Will produce a descriptor file with " << descriptor_file_output << " columns\n";
+        }
+      } else if (g == "fpatype") {
+        fingerprint_atom_types = 1;
+        if (verbose) {
+          cerr << "Will fingerprint atom types\n";
         }
       } else if (g == "flush") {
         flush_after_each_molecule = 1;
@@ -1712,7 +1735,7 @@ ExtendedAtomPairs(int argc, char** argv) {
         return 1;
       } else {
         cerr << "Unrecognised -e qualifier '" << e << "'\n";
-        usage(2);
+        Usage(2);
       }
     }
   }
@@ -1786,13 +1809,13 @@ ExtendedAtomPairs(int argc, char** argv) {
     if (!cl.option_present('C')) {
       cerr << "In order to use fuzziness profiles (-F) must specify max separation via "
               "the -C option\n";
-      usage(3);
+      Usage(3);
     }
 
     if (!cl.option_present('b')) {
       cerr << "If you are using fuzziness, you must specify default bit set count via "
               "the -b option\n";
-      usage(3);
+      Usage(3);
     }
 
     fuzziness_profile = new Fuzziness_Profile*[max_distance + 1];
@@ -1851,7 +1874,7 @@ ExtendedAtomPairs(int argc, char** argv) {
   } else if (cl.option_present('i')) {
     if (!process_input_type(cl, input_type)) {
       cerr << "Cannot determine input type\n";
-      usage(6);
+      Usage(6);
     }
   } else if (!all_files_recognised_by_suffix(cl)) {
     return 4;
@@ -1885,7 +1908,7 @@ ExtendedAtomPairs(int argc, char** argv) {
         0 != fixed_width_size % 8) {
       cerr << "The fixed width fingerprint bit count (-m) must be a whole +ve number "
               "divisible by 8\n";
-      usage(2);
+      Usage(2);
     }
 
     if (verbose) {
@@ -1895,7 +1918,7 @@ ExtendedAtomPairs(int argc, char** argv) {
 
   if (!tag.starts_with("NC") && 0 == fixed_width_size) {
     cerr << "Fingerprint not sparse '" << tag << "' but no fixed width for fingerprint\n";
-    usage(1);
+    Usage(1);
   }
 
   int nfp = cl.option_count('P');
@@ -1945,7 +1968,7 @@ ExtendedAtomPairs(int argc, char** argv) {
 
   if (cl.empty()) {
     cerr << "Insufficient arguments\n";
-    usage(2);
+    Usage(2);
   }
 
   if (cl.option_present('L')) {

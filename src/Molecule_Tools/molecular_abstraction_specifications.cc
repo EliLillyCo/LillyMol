@@ -50,6 +50,7 @@ DisplayUsageExamples(std::ostream& output) {
   output << "invscaf(SCH=<ele>)  keep the atoms that are NOT the scaffold\n";
   output << "rings()\n";
   output << "ringsys(<>)\n";
+  output << "rmbond()\n";
   output << "rmrd2(<e>)  remove [eRD2] atoms in ring\n";
   output << "rplink(ELE=<e>)\n";
   output << "scafold(keepfirst)  keepfirst means keep first ring attachment\n";

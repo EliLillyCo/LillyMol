@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package mispredicted;
+
+message MispredictedContinuous {
+  // The id of the molecule.
+  optional string id = 1;
+
+  // The actual activity of the molecule.
+  optional float activity = 2;
+
+  // the number of times it was in the test set.
+  optional uint32 npred = 3;
+
+  // THe range of the predictions.
+  optional float minpred = 4;
+  optional float maxpred = 5;
+
+  // The most important number, how bad are these predictions.
+  // Larger numbers are worse.
+  optional float average_difference = 6;
+  // The standard deviation of the differencs.
+  optional float std_difference = 7;
+}
+
+message MispredictedClassification {
+  optional string id = 1;
+  optional string label = 2;
+  optional uint32 npred = 3;
+  optional uint32 times_correct = 4;
+}

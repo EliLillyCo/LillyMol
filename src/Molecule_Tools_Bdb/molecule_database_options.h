@@ -10,7 +10,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/molecule.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_database_options.pb.h"
+#else
+#include "molecule_database_options.pb.h"
+#endif
 
 namespace molecule_database {
 

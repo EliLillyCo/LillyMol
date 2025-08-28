@@ -851,7 +851,11 @@ class RXN_File
                       Molecule_to_Query_Specifications & mqs, 
                       const int * include_these_atoms);
                          
-    int _look_for_stereo_centres_made (IWReaction &);
+    int _look_for_stereo_centres_made(IWReaction &rxn,
+                        const resizable_array<Replace_Atom*>& atoms_to_replace);
+
+    int ChiralityFlipped(const ISIS_RXN_FILE_Molecule& reagent, atom_number_t a1,
+                            int map2) const;
 
     int _map_unmapped_atoms (int & highest_atom_map_number);
     int __map_unmapped_atoms (int & highest_atom_map_number);

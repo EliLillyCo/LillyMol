@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "only ring size 5")
+  (0 Ring_System_Specifier
+    (A I ring_size 5)
+    (A I min_nrings 2)
+  )
+)

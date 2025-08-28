@@ -14,10 +14,14 @@ class TSubstructure_FP
     int _default_fingerprint_nbits;
     IWString _tag;
 
-    // We can optionally set a bit for the total number of hits
-    // across all the queries. Note that the value of the variable controls
-    // the number of bit replicates associated with the total hits bit.
+    // We can optionally set a bit for the total number of queries
+    // that match.  Note that the value of the variable controls the
+    // number of bit replicates associated with the total hits bit.
     int _extra_bit_total_hits;
+
+    // By default, we set a bit for each query that matches. If this is unset,
+    // then only the _extra_bit_total_hits bit will be set.
+    int _each_query_writes_bit;
 
 //  private functions
 
@@ -33,6 +37,14 @@ class TSubstructure_FP
     void set_default_fingerprint_nbits(int s) { _default_fingerprint_nbits = s;}
     void set_extra_bit_total_hits(int s) {
       _extra_bit_total_hits = s;
+    }
+    // If we are turning off writing a bit for each query, make sure we turn on
+    // writing a bit for the sum of queries that match.
+    void set_each_query_writes_bit(int s) {
+      _each_query_writes_bit = s;
+      if (s == 0 &&  _extra_bit_total_hits) {
+        _extra_bit_total_hits = 1;
+      }
     }
 
     template <typename OUTPUT>

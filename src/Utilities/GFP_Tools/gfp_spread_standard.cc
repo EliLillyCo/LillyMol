@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <random>
 
@@ -57,6 +58,7 @@ static int next_squeeze = 0;
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
 static IWString distance_tag("DIST<");
+static IWString scale_tag("SCALE<");
 static IWString mk_tag("FPMK<");
 static IWString mk2_tag("FPMK2<");
 static IWString iw_tag("FPIW<");
@@ -236,21 +238,22 @@ usage(int rc)
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Spread implementation requiring MPR IW MK MK2\n";
-  cerr << " -n <nsel>       number of items to select\n";
-  cerr << " -A <fname>      file of previously selected fingerprints\n";
-  cerr << " -p FILE=<fname> read weight values from <fname>\n";
-  cerr << " -p COL=<col>    weight values are column <col> in the name\n";
-  cerr << " -N <tag>        gfp_nearneighbours has been run and initial distances are in <tag> "
-          "(also FILE=, COL=)\n";
-  cerr << " -S rand         choose first item randomly\n";
-  cerr << " -s <size>       size of fingerprint file\n";
-  cerr << " -t <dist>       stop selection once distance drops below <dist>\n";
-  cerr << " -h <n>          maximum number of OMP threads to use\n";
-  cerr << " -r <n>          report progress every <n> items selected\n";
-  cerr << " -q <n>          squeeze out already selected items evern <n> selections (def 1000)\n";
-  cerr << " -b              brief output (smiles id dist)\n";
-  cerr << " -v              verbose output\n";
+  cerr << R"(Spread implementation requiring MPR IW MK MK2 fingerprints, the gfp_make default.
+ -n <nsel>       number of items to select
+ -A <fname>      file of previously selected fingerprints
+ -p FILE=<fname> read weight values from <fname>
+ -p COL=<col>    weight values are column <col> in the name
+ -N <tag>        gfp_nearneighbours has been run and initial distances are in <tag> "
+                  (also FILE=, COL=)
+ -S rand         choose first item randomly
+ -s <size>       size of fingerprint file
+ -t <dist>       stop selection once distance drops below <dist>
+ -h <n>          maximum number of OMP threads to use
+ -r <n>          report progress every <n> items selected
+ -q <n>          squeeze out already selected items evern <n> selections (def 1000)
+ -b              brief output (smiles id dist)
+ -v              verbose output
+)";
 // clang-format on
 
   exit(rc);
@@ -1523,7 +1526,7 @@ gfp_spread_standard(int argc, char** argv) {
   }
 
   if (cl.option_present('n')) {
-    if (!cl.value('n', nsel) || nsel < 2) {
+    if (!cl.value('n', nsel) || nsel < 1) {
       cerr << "The number if fingerprints to select must be a whole +ve number\n";
       usage(2);
     } else if (nsel > pool_size) {
@@ -1622,10 +1625,12 @@ gfp_spread_standard(int argc, char** argv) {
       if (nsn >= 0) {
         output << smiles_tag << smiles[nsn] << ">\n";
         output << identifier_tag << pcn[nsn] << ">\n";
+        output << scale_tag << weight[id] << ">\n";
         output << distance_tag << s._dist << ">\n";
       } else {
         output << smiles_tag << "*>\n";
         output << identifier_tag << "*>\n";
+        output << scale_tag << "*>\n";
         if (s._dist > 0.0f) {
           output << distance_tag << s._dist << ">\n";
         } else {

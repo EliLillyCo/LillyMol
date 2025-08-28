@@ -22,8 +22,8 @@ form.
 Built a textproto configuration file based on the proto
 [proto](/src/Molecule_Tools/molecule_filter.proto).
 ```
-molecule_filter -F config.textproto:w
-
+molecule_filter -F config.textproto <other options> file.smi > passed.smi
+```
 
 ## Implementation
 

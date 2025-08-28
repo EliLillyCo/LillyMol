@@ -205,7 +205,11 @@ def generate_profile(args):
   sep = FLAGS.sep
 
   if len(args) == 1:
-    logging.error("Must specify input file as argument")
+    print("Must specify input file containing iwdescr.sh output as argument")
+    print("iwdescr.sh file.smi > file.w")
+    print("mkdir FOO;     # To keep a bunch of temporary files out of the current directory")
+    print("generate_profile.sh --collection FOO --color red --stem FOO/mpp file.w")
+    print("plot_collections.sh --stem FOO --compare FOO/mpp")
     usage(1)
 
   if len(collection) == 0:

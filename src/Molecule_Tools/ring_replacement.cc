@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
@@ -23,11 +24,18 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#include "Molecule_Tools/mformula.h"
+
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/replacement_ring.pb.h"
+#else
+#include "replacement_ring.pb.h"
+#endif
 
 namespace ring_replacement {
 
 using std::cerr;
+using mformula::MFormula;
 
 void
 Usage(int rc) {
@@ -43,16 +51,21 @@ Usage(int rc) {
  -R <fname>    file(s) of labelled rings created by ring_extraction
  -s <smarts>   only replace rings containing atoms matched by <smarts>
  -q <query>    only replace rings containing atoms matched by <query>
- -u            unique molecules only
- -a            allow change of aromaticity on ring replacement
- -p            write parent molecule
- -n <ex>       only process replacement rings with <ex> or more examples
- -w            sort output by precedent count
+ -z i          ignore molecules not matching any of the queries.
+ -z w          ignored molecules are alwo written to the output - and possibly the -B file..
+ -u            unique molecules only.
+ -p            write parent molecule.
+ -n <ex>       only process replacement rings with <ex> or more examples.
+ -w            sort output by precedent count.
  -d            do NOT preserve substitution patterns. Replacement rings may
-               not have had the same substition pattern as they do here
- -Y <query>    product molecules MUST     match a query in <query>
- -N <query>    product molecules must NOT match any queries in <query>
- -D <query>    discard any replacement ring that matches <query>
+               not have had the same substitution pattern as they started with.
+ -Y <query>    product molecules MUST     match a query in <query>, eg:   -Y 'SMARTS:n:c-[NH2]'
+ -N <query>    product molecules must NOT match any queries in <query>.
+               Selections and de-selections on the replacement ring candidates.
+ -F <query>    only consider replacements rings that match <query>.  eg. -F 'SMARTS:2n' 
+ -D <query>    discard any replacement ring that matches <query>.   eg. '-D 'SMARTS:c=O'
+
+ -f <n>        only replace a ring if the molecular formula differs by at most <n>. Min value 2, must be even.
  -3            if the input molecules contain 3D coordinates, copy the old atom's coordinates to the new atom.
  -I .          remove isotopes from product molecules
  -I <n>        change all existing isotopes to <n> (useful if atom types used)
@@ -86,6 +99,8 @@ class Replacement {
 
     // If the ring has exocyclic doubly bonded atoms.
     Molecule _exocyclic;
+
+    mformula::MFormula _formula;
 
     // save for debugging.
     IWString _smarts;
@@ -121,6 +136,12 @@ class Replacement {
     void set_transfer_coordinates(int s) {
       _transfer_coordinates = s;
     }
+
+    // We are thinking of replacing the atoms in `embedding` which are in `m`.
+    // Compute the molecular formula of those atoms, and compare with _formula
+    // and return true if the diff is <= `max_difference`.
+    int OkFormulaDifference(Molecule& m, const Set_of_Atoms& embedding,
+                uint32_t max_difference);
 
     int count() const {
       return _count;
@@ -160,8 +181,20 @@ Replacement::BuildFromProto(const RplRing::ReplacementRing& proto) {
 
   _query.set_find_unique_embeddings_only(1);
 
+  if (! proto.has_smi()) {
+    cerr << "Replacement::BuildFromProto:no smi: field in proto\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
   if (! _m.build_from_smiles(proto.smi())) {
     cerr << "Replacement::BuildFromProto:cannot parse smiles:" << proto.ShortDebugString() << "'n";
+    return 0;
+  }
+
+  if (_m.empty()) {
+    cerr << "Replacement::BuildFromProto:strange, no smiles, empty replacement\n";
+    cerr << proto.ShortDebugString() << '\n';
     return 0;
   }
 
@@ -205,7 +238,7 @@ Replacement::ReportValenceErrors(const Molecule& parent, Molecule& m, std::ostre
 
   ++_invalid_valenced_generated;
 
-  output << "Invalid valence " << m.smiles() << ' ' << parent.name() << ' ' << _id << '\n';
+  output << m.smiles() << ' ' << parent.name() << ' ' << _id << " invalid valence\n";
 
   for (int i = 0; i < m.natoms(); ++i) {
     if (! m.valence_ok(i)) {
@@ -251,6 +284,28 @@ EnvironmentMatch(const Molecule& m,
   return iso == atypes[to_join];
 }
 
+// Return true if either `a1` or `a2` is a heteroatom.
+// Also reject any charged atoms.
+int
+OkAdjacentAtoms(const Molecule& m,
+                atom_number_t a1,
+                atom_number_t a2) {
+  atomic_number_t z1 = m.atomic_number(a1);
+  atomic_number_t z2 = m.atomic_number(a2);
+
+  if (z1 == 6 || z2 == 6) {
+    return 1;
+  }
+
+  // Do not allow formally charged atoms to be join points.
+  // Should this be optional?
+  if (m.formal_charge(a1) || m.formal_charge(a2)) {
+    return 0;
+  }
+
+  return 0;
+}
+
 //#define DEBUG_MAKE_VARIANT
 
 int
@@ -264,8 +319,8 @@ Replacement::MakeVariant(Molecule& parent,
 
   m->set_name(parent.name());
   m->add_molecule(&_m);
-  Molecule mcopy(_m);
-  //cerr << mcopy.smiles() << " was added " << _id << " smarts " << _smarts << '\n';
+  // Molecule mcopy(_m);
+  // cerr << mcopy.smiles() << " was added " << _id << " smarts " << _smarts << '\n';
 #ifdef DEBUG_MAKE_VARIANT
   cerr << "After adding replacement " << m->smiles() << " initial_natoms " << initial_natoms << '\n';
   write_isotopically_labelled_smiles(*m, false, cerr);
@@ -315,6 +370,10 @@ Replacement::MakeVariant(Molecule& parent,
       remove_bonds << b;
 
       atom_number_t join_to = initial_natoms + i;
+      if (! OkAdjacentAtoms(*m, o, join_to)) {
+        // cerr << "No adjacency between " << m->smarts_equivalent_for_atom(o) << " and " << m->smarts_equivalent_for_atom(join_to) << '\n';
+        return 0;
+      }
       if (b->is_single_bond()) {
         bonds_to_be_placed << new Bond(o, join_to, SINGLE_BOND);
       } else if (b->is_double_bond()) {
@@ -335,6 +394,7 @@ Replacement::MakeVariant(Molecule& parent,
   }
 
   // Note that `b` is destroyed by remove_bond_between_atoms
+  // cerr << "Removing " << remove_bonds.size() << " bonds\n";
   for (const Bond* b: remove_bonds) {
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
@@ -344,6 +404,7 @@ Replacement::MakeVariant(Molecule& parent,
     }
   }
 
+  // cerr << "placint " << bonds_to_be_placed.size() << " new bonds\n";
   for (Bond * b : bonds_to_be_placed) {
     if (m->hcount(b->a1()) == 0 || m->hcount(b->a2()) == 0) {
       return 0;
@@ -351,10 +412,13 @@ Replacement::MakeVariant(Molecule& parent,
     m->add_bond(b->a1(), b->a2(), b->btype());
   }
 
+#ifdef DEBUG_MAKE_VARIANT
+  cerr << m->aromatic_smiles() << " before remove_atoms\n";
+#endif
   m->remove_atoms(to_remove.get());
 
 #ifdef DEBUG_MAKE_VARIANT
-  cerr << "After removing atoms " << m->aromatic_smiles() << '\n';
+  cerr << m->aromatic_smiles() << " after removing atoms\n";
 #endif
 
   if (! _exocyclic.empty()) {
@@ -505,6 +569,20 @@ Replacement::JoinExocyclic(Molecule& m) {
 }
 
 int
+Replacement::OkFormulaDifference(Molecule& m, const Set_of_Atoms& embedding,
+                uint32_t max_difference) {
+  if (! _formula.initialised()) {
+    _formula.Build(_m);
+  }
+
+  MFormula starting_formula;
+  starting_formula.Build(m, embedding);
+  // cerr << "CMP formula diff " << (starting_formula.Diff(_formula)) << " max " << max_difference << '\n';
+  
+  return starting_formula.Diff(_formula) <= max_difference;
+}
+
+int
 Replacement::Report(std::ostream& output) {
   if (_variants_generated == 0 && _invalid_valenced_generated == 0) {
     return 1;
@@ -525,7 +603,7 @@ class RingReplacement {
   private:
     int _verbose;
 
-    int _molecules_read;
+    uint64_t _molecules_read;
 
     int _reduce_to_largest_fragment;
 
@@ -541,30 +619,43 @@ class RingReplacement {
     int _nreplacements;
     resizable_array_p<Replacement>* _rings;
 
-    // From the -D option.
-    resizable_array_p<Substructure_Query> _replacement_ignore;
-
     // Identify the (ring) atoms in the starting molecule that
     // are available for replacement.
     resizable_array_p<Substructure_Query> _queries;
 
+    // Sometimes it might be useful to just skip molecules not matching
+    // any of the queries.
+    int _ignore_molecules_not_matching_queries;
+    // By default, molecules that do not match any queries, and are
+    // ignored, are not written.
+    int _write_non_matching_molecules;
+
     resizable_array_p<Substructure_Query> _products_must_have;
     resizable_array_p<Substructure_Query> _products_must_not_have;
 
-    int _molecules_discarded_by_must_have_queries = 0;
-    int _molecules_discarded_by_must_not_have_queries = 0;
+    uint64_t _molecules_discarded_by_must_have_queries = 0;
+    uint64_t _molecules_discarded_by_must_not_have_queries = 0;
 
-    int _molecules_with_invalid_valences_suppressed;
+    // As the replacement rings are read, we can filter to a subset of them.
+    // From the -F and -D options.
+    resizable_array_p<Substructure_Query> _replacement_rings_must_have;
+    resizable_array_p<Substructure_Query> _replacement_rings_must_not_have;
+
+    uint64_t _molecules_with_invalid_valences_suppressed;
 
     int _unique_molecules_only = 0;
 
     int _min_examples_needed = 0;
     int _replacement_rings_discarded_for_count = 0;
 
+    // Specified via the -f option. The maximum formula difference between
+    // what is removed and the replacement ring.
+    std::optional<uint32_t> _max_formula_difference;
+
     IW_STL_Hash_Set _seen;
     int _duplicates_suppressed;
 
-    int _molecules_formed;
+    uint64_t _molecules_formed;
 
     extending_resizable_array<int> _number_variants;
 
@@ -584,10 +675,14 @@ class RingReplacement {
 
     int ReadReplacementRings(IWString& fname, int ndx);
     int ReadReplacementRings(iwstring_data_source& input, int ndx);
-    int AnyReplacementRingIgnoreQueryMatches(Replacement& r);
     int OkSupport(const Replacement& r);
     int IsUnique(Molecule& m);
-    int OkQueryConstraints(Molecule& m);
+    int OkProductQueryConstraints(Molecule& m);
+    // These are applied to replacement ring candidates.
+    int OkWithQueryRequirements(Molecule_to_Match& target);
+    int OkWithQueryRequirements(Replacement& r,
+                const RplRing::ReplacementRing& proto);
+
     int Process(resizable_array_p<Molecule>& mols, int ndx, const uint32_t* atypes,
                 const int* process_atom);
     int Write(const resizable_array_p<Molecule>& mols, IWString_and_File_Descriptor& output);
@@ -617,6 +712,9 @@ RingReplacement::RingReplacement() {
 
   _molecules_discarded_by_must_have_queries = 0;
   _molecules_discarded_by_must_not_have_queries = 0;
+
+  _ignore_molecules_not_matching_queries = 0;
+  _write_non_matching_molecules = 0;
 
   _molecules_with_invalid_valences_suppressed = 0;
 
@@ -695,8 +793,8 @@ RingReplacement::Initialise(Command_Line& cl) {
   }
 
   if (cl.option_present('Y')) {
-    if (! process_queries(cl, _products_must_have, _verbose, 'M')) {
-      cerr << "Cannot read products must have queries (-M)\n";
+    if (! process_queries(cl, _products_must_have, _verbose, 'Y')) {
+      cerr << "Cannot read products must have queries (-Y)\n";
       return 0;
     }
   }
@@ -709,8 +807,15 @@ RingReplacement::Initialise(Command_Line& cl) {
   }
 
   if (cl.option_present('D')) {
-    if (! process_queries(cl, _replacement_ignore, _verbose, 'D')) {
+    if (! process_queries(cl, _replacement_rings_must_not_have, _verbose, 'D')) {
       cerr << "Cannot read replacement ring must not have queries (-D)\n";
+      return 0;
+    }
+  }
+
+  if (cl.option_present('F')) {
+    if (! process_queries(cl, _replacement_rings_must_have, _verbose, 'F')) {
+      cerr << "RingReplacement::Initialise:cannot read rings must have queries (-F)\n";
       return 0;
     }
   }
@@ -726,6 +831,26 @@ RingReplacement::Initialise(Command_Line& cl) {
     _write_parent_molecule = 1;
     if (_verbose) {
       cerr << "Will write the parent molecule\n";
+    }
+  }
+
+  if (cl.option_present('z')) {
+    IWString z;
+    for (int i = 0; cl.value('z', z, i); ++i) {
+      if (z == 'i') {
+        _ignore_molecules_not_matching_queries = 1;
+        if (_verbose) {
+          cerr << "Will ignore molecules not matching any of the queries\n";
+        }
+      } else if (z == 'w') {
+        _write_non_matching_molecules = 1;
+        if (_verbose) {
+          cerr << "Will write non matching molecules\n";
+        }
+      } else {
+        cerr << "Unrecognised -z qualifier '" << z << "'\n";
+        return 0;
+      }
     }
   }
 
@@ -813,7 +938,7 @@ RingReplacement::Initialise(Command_Line& cl) {
     if (_verbose) {
       cerr << "Will write 3D coordinates\n";
     }
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
   }
 
   if (cl.option_present('B')) {
@@ -827,6 +952,22 @@ RingReplacement::Initialise(Command_Line& cl) {
     }
     if (_verbose) {
       cerr << "Unchanged molecules written to '" << fname << "'\n";
+    }
+  }
+
+  if (cl.option_present('f')) {
+    uint32_t d;
+    if (! cl.value('f', d)) {
+      cerr << "Replacement::Initialise:the max formula difference (-f) must be a whole +ve number\n";
+      return 0;
+    }
+    if (d == 1) {
+      cerr << "Replacement::Initialise:a formula diff of 1 is impossible, must be at least 2\n";
+      return 0;
+    }
+    _max_formula_difference = d;
+    if (_verbose) {
+      cerr << "Will only replace rings that differ in formula by " << *_max_formula_difference << '\n';
     }
   }
 
@@ -845,7 +986,23 @@ RingReplacement::ReadReplacementRings(IWString& fname, int ndx) {
 }
 
 int
+AnyQueriesMatch(Molecule_to_Match& target,
+                resizable_array_p<Substructure_Query>& queries) {
+  for (Substructure_Query * q : queries) {
+    if (q->substructure_search(target)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int
 RingReplacement::ReadReplacementRings(iwstring_data_source& input, int ndx) {
+
+  int rejected_by_query_requirements = 0;
+  int rejected_by_support_requirements = 0;
+
   const_IWSubstring line;
   while (input.next_record(line)) {
     google::protobuf::io::ArrayInputStream zero_copy_array(line.data(), line.nchars());
@@ -866,18 +1023,23 @@ RingReplacement::ReadReplacementRings(iwstring_data_source& input, int ndx) {
     }
 
     if (! OkSupport(*r)) {
+      ++rejected_by_support_requirements;
       continue;
     }
 
-    if (AnyReplacementRingIgnoreQueryMatches(*r)) {
+    if (!OkWithQueryRequirements(*r, proto)) {
+      ++rejected_by_query_requirements;
       continue;
     }
 
     _rings[ndx] << r.release();
   }
 
+
   if (_rings[ndx].empty()) {
     cerr << "RingReplacement::ReadReplacementRings:no replacement rings\n";
+    cerr << rejected_by_query_requirements << " rejected by query requirements\n";
+    cerr << rejected_by_support_requirements << " rejected bu support requirements\n";
     return 0;
   }
 
@@ -898,20 +1060,50 @@ RingReplacement::ReadReplacementRings(iwstring_data_source& input, int ndx) {
 
 // Return true if any of the _replacement_ignore queries match the
 // molecule in `r`.
+// There are complications however. If this replacement ring has
+// exocyclic =O type groups, we need to rebuild the molecule using
+// the usmi attribute in the proto, since at this stage, the molecle
+// in `r` will not have those atoms attached.
 int
-RingReplacement::AnyReplacementRingIgnoreQueryMatches(Replacement& r) {
-  if (_replacement_ignore.empty()) {
+RingReplacement::OkWithQueryRequirements(Replacement& r,
+                const RplRing::ReplacementRing& proto) {
+  if (_replacement_rings_must_have.empty() &&
+      _replacement_rings_must_not_have.empty()) {
+    return 1;
+  }
+
+  if (! proto.has_exo()) {
+    Molecule_to_Match target(&r.mol());
+    return OkWithQueryRequirements(target);
+  }
+
+  Molecule m;
+  if (! m.build_from_smiles(proto.usmi())) {
+    cerr << "RingReplacement::OkWithQueryRequirements:cannot parse '" << proto.usmi() << "'\n";
     return 0;
   }
 
-  Molecule_to_Match target(&r.mol());
-  for (Substructure_Query * q : _replacement_ignore) {
-    if (q->substructure_search(target)) {
-      return 1;
+  Molecule_to_Match target(&m);
+  return OkWithQueryRequirements(target);
+}
+
+int
+RingReplacement::OkWithQueryRequirements(Molecule_to_Match& target) {
+
+  if (_replacement_rings_must_have.size() > 0) {
+    if (!AnyQueriesMatch(target, _replacement_rings_must_have)) {
+      return 0;
     }
   }
 
-  return 0;
+  if (_replacement_rings_must_not_have.size() > 0) {
+    if (AnyQueriesMatch(target, _replacement_rings_must_not_have)) {
+      // cerr << target.molecule()->smiles() << ' ' << target.molecule()->name() << " rejected\n";
+      return 0;
+    }
+  }
+
+  return 1;
 }
 
 int
@@ -956,6 +1148,8 @@ RingReplacement::Report(std::ostream& output) {
   }
   output << _duplicates_suppressed << " duplicates suppressed\n";
   output << "Formed " << _molecules_formed << " molecules\n";
+
+  lillymol::set_include_coordinates_with_smiles(0);
 
   for (int i = 0; i < _number_variants.number_elements(); ++i) {
     if (_number_variants[i]) {
@@ -1015,7 +1209,10 @@ RingReplacement::Process(Molecule& m,
   if (_queries.size()) {
     process_atom.reset(new_int(m.natoms()));
     if (! IdentifyMatchedAtoms(m, _queries, process_atom.get())) {
-      return 0;
+      if (_write_non_matching_molecules) {
+        output << m.smiles() << ' ' << m.name() << '\n';
+      }
+      return _ignore_molecules_not_matching_queries;
     }
   }
 
@@ -1065,7 +1262,7 @@ MatchesAtomsToProcess(int n, const int* process_atom,
   return embedding.any_members_set_in_array(process_atom);
 }
 
-//#define DEBUG_RING_REPLACEMENT_PROCESS
+// #define DEBUG_RING_REPLACEMENT_PROCESS
 
 int
 RingReplacement::Process(resizable_array_p<Molecule>& mols,
@@ -1093,13 +1290,23 @@ RingReplacement::Process(resizable_array_p<Molecule>& mols,
       cerr << "Processing replacement " << ndx << " SSS " << r->SubstructureSearch(target, for_debugging) << '\n';
 #endif
       if (! r->SubstructureSearch(target, sresults)) {
+        if (_verbose > 1) {
+//        cerr << m->smiles() << ' ' << m->name() << " only matched " << sresults.
+        }
         continue;
       }
+
 
       for (const Set_of_Atoms* e : sresults.embeddings()) {
         if (! MatchesAtomsToProcess(m->natoms(), process_atom, *e)) {
           continue;
         }
+
+        if (_max_formula_difference && 
+            ! r->OkFormulaDifference(*m, *e, *_max_formula_difference)) {
+          continue;
+        }
+
         std::unique_ptr<Molecule> variant;
         if (! r->MakeVariant(*m, *e, atypes, variant)) {
           continue;
@@ -1107,7 +1314,7 @@ RingReplacement::Process(resizable_array_p<Molecule>& mols,
         if (!IsUnique(*variant)) {
           continue;
         }
-        if (!OkQueryConstraints(*variant)) {
+        if (!OkProductQueryConstraints(*variant)) {
           continue;
         }
         if (_remove_isotopes) {
@@ -1166,7 +1373,7 @@ MatchAny(Molecule_to_Match& target,
 }
 
 int
-RingReplacement::OkQueryConstraints(Molecule& m) {
+RingReplacement::OkProductQueryConstraints(Molecule& m) {
   Molecule_to_Match target(&m);
 
   if (_products_must_have.empty()) {
@@ -1185,7 +1392,17 @@ RingReplacement::OkQueryConstraints(Molecule& m) {
 int
 RingReplacement::Write(const resizable_array_p<Molecule>& mols,
                        IWString_and_File_Descriptor& output) {
-  for (Molecule* m : mols) {
+  int n = mols.number_elements();
+  int istart;
+  if (_write_parent_molecule) {
+    istart = 0;
+  } else {
+    istart = 1;
+  }
+
+  for (int i = istart; i < n; ++i) {
+    Molecule* m = mols[i];
+
     output << m->smiles() << ' ' << m->name() << '\n';
     output.write_if_buffer_holds_more_than(8192);
   }
@@ -1195,7 +1412,6 @@ RingReplacement::Write(const resizable_array_p<Molecule>& mols,
 
   return 1;
 }
-
 
 int
 ReplaceCore(RingReplacement& ring_replacement,
@@ -1252,7 +1468,7 @@ DisplayDashXOptions(std::ostream& output) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:i:g:lcY:N:R:P:s:q:uapn:D:I:wX:dB:3");
+  Command_Line cl(argc, argv, "vE:A:i:g:lcY:N:R:P:s:q:uapn:D:I:wX:dB:3z:F:f:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);
@@ -1327,7 +1543,7 @@ Main(int argc, char** argv) {
   output.flush();
 
   if (verbose) {
-    set_append_coordinates_after_each_atom(0);
+    lillymol::set_include_coordinates_with_smiles(1);
 
     ring_replacement.Report(cerr);
   }

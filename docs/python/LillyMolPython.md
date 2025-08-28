@@ -224,6 +224,7 @@ The most common methods for a Molecule currently implemented are
 | natoms() | Number of atoms (explicit atoms only) |
 | empty() | True if there are no atoms in the molecule |
 | GetNumAtoms() | Number of atoms (explicit atoms only) |
+| resize(n) | keep only the first n atoms |
 | nedges() | Number of bonds |
 | bonds() | Iterable collection of Bonds |
 | nrings() | Number of SSSR rings |

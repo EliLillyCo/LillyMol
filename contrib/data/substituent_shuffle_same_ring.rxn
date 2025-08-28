@@ -1,0 +1,23 @@
+name: "same_ring"
+comment: "identifies pairs of substituents, on the same ring, and swaps them."
+scaffold {
+  smarts: "[/IWrid1/IWsymg1D3R1]-!@{a<10}[R0D<3].[/IWrid1/IWsymg2D3R1]-!@{a<10}[R0D<3]"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 2
+    a2: 3
+  }
+  make_bond {
+    a1: 0
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 2
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

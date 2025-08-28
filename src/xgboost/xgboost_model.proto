@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package xgboost_model;
 
+option go_package = "xgboost/xgboost_model";
+
 enum TreeMethod {
   UNDEFINED = 0;
   AUTO = 1;

@@ -15,10 +15,14 @@ namespace molecule_filter_lib {
 
 using std::cerr;
 
+MoleculeFilter::MoleculeFilter() {
+  _active = false;
+}
+
 int
 MoleculeFilter::Build(IWString& fname) {
-  std::optional<MoleculeFilterData::Requirements> maybe_proto =
-                iwmisc::ReadTextProto<MoleculeFilterData::Requirements>(fname);
+  std::optional<molecule_filter_data::Requirements> maybe_proto =
+                iwmisc::ReadTextProto<molecule_filter_data::Requirements>(fname);
   if (! maybe_proto) {
     cerr << "MoleculeFilter::Build:cannot read '" << fname << "'\n";
     return 0;
@@ -28,13 +32,26 @@ MoleculeFilter::Build(IWString& fname) {
 
   InitialiseOptionalFeatures();
 
+  _active = true;
+
+  return 1;
+}
+
+int
+MoleculeFilter::Build(const molecule_filter_data::Requirements& proto) {
+  _requirements = proto;
+
+  InitialiseOptionalFeatures();
+
+  _active = true;
+
   return 1;
 }
 
 void
 MoleculeFilter::InitialiseOptionalFeatures() {
   _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
-  set_display_psa_unclassified_atom_mesages(0);
+  nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
   xlogp::SetIssueUnclassifiedAtomMessages(0);
 
   _alogp.set_use_alcohol_for_acid(1);
@@ -81,7 +98,7 @@ LargestFragment(const const_IWSubstring& smiles,
   while (smiles.nextword(token, i, '.')) {
     ++fragments_examined;
     int nri;
-    int nat = count_atoms_in_smiles(token, nri);
+    int nat = lillymol::count_atoms_in_smiles(token, nri);
     if (nat > max_atoms) {
       max_atoms = nat;
       nrings = nri;
@@ -233,9 +250,9 @@ HalogenCount(const Molecule& m) {
     0,  // 32
     0,  // 33
     0,  // 34
-    0,  // 35
+    1,  // 35
     0,  // 36
-    1,  // 37
+    0,  // 37
     0,  // 38
     0,  // 39
     0,  // 40
@@ -270,9 +287,11 @@ int
 Sp3Carbon(Molecule & m) {
   int rc = 0;
 
-  const int matoms = m.natoms();
-  for (int i = 0; i < matoms; ++i) {
-    if (m.saturated(i)) {
+  for (const Atom* a : m) {
+    if (a->atomic_number() != 6) {
+      continue;
+    }
+    if (a->fully_saturated()) {
       ++rc;
     }
   }

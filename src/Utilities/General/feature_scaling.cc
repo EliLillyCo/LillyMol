@@ -16,7 +16,11 @@
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/General/feature_scaling.pb.h"
+#else
+#include "feature_scaling.pb.h"
+#endif
 #define FEATURE_SCALER_IMPLEMENTATION
 #include "Utilities/General/scaler.h"
 
@@ -300,6 +304,8 @@ GatherRange(const char * fname,
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
+
+  scaling.mutable_from_file()->Add(fname);
 
   return GatherRange(input, scaling);
 }

@@ -1,6 +1,7 @@
 // Make minor changes to incoming molecules.
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -18,12 +19,14 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwbits/fixed_bit_vector.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/iwreaction.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/path.h"
 #include "Molecule_Lib/rwsubstructure.h"
@@ -33,8 +36,13 @@
 
 #include "Molecule_Tools/minor_changes.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #include "Molecule_Tools/minor_changes.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#include "minor_changes.pb.h"
+#endif
 
 namespace minor_changes {
 
@@ -71,16 +79,44 @@ Fragment::Fragment() {
   _atype = 0;
 }
 
-// get_substituents writes protos with the key as well as
-// the proto, so building must remove the first token from
-// `buffer`.
+// Kludge Alert.
+// We are reading files that can be either legal textprotos or smiles + textproto.
+// If this looks like smiles + textproto, remove the smiles.
+// Did I mention this is a kludge! Ok for now.
+int
+MaybeRemoveFirstToken(const_IWSubstring& buffer) {
+  int n = buffer.length();
+  bool got_colon = false;
+  for (int i = 0; i < n; ++i) {
+    char c = buffer[i];
+    if (c == ':') {
+      got_colon = true;
+    }
+    if (! ::isspace(buffer[i])) {
+      continue;
+    }
+
+    // We have skipped over the first token.
+    // If we have seen a colon before, do nothing.
+    if (got_colon) {
+      return 0;
+    }
+
+    buffer.remove_leading_words(1);
+    return 1;
+  }
+
+  // Should never come here.
+  return 0;
+}
+
 int
 Fragment::Build(const_IWSubstring buffer, uint32_t min_support) {
   if (buffer.empty()) {
     return 0;
   }
 
-  buffer.remove_leading_words(1);
+  MaybeRemoveFirstToken(buffer);
 
   google::protobuf::io::ArrayInputStream input(buffer.data(), buffer.length());
 
@@ -173,7 +209,7 @@ BivalentFragment::Build(const_IWSubstring buffer, uint32_t min_support) {
     return 0;
   }
 
-  buffer.remove_leading_words(1);
+  MaybeRemoveFirstToken(buffer);
 
   google::protobuf::io::ArrayInputStream input(buffer.data(), buffer.length());
 
@@ -250,7 +286,6 @@ BivalentFragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
 }
 
 using fixed_bit_vector::FixedBitVector;
-
 
 // A class that holds information frequently used during computations.
 class MoleculeData {
@@ -380,6 +415,19 @@ FillAlphaBeta(const Molecule& m,
   }
 }
 
+// return true if any of the atoms attached to `zatom` have a formal charge
+bool
+AdjacentChargedAtom(const Molecule& m, atom_number_t zatom) {
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (m.formal_charge(o)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 MoleculeData::MoleculeData(Molecule& m) {
   _matoms = m.natoms();
 
@@ -408,6 +456,20 @@ MoleculeData::MoleculeData(Molecule& m) {
     if (_z[i] == 7 && a.formal_charge() == 0 && m.nbonds(i) > 4) {
       _five_valent_nitrogen[i] = 1;
     }
+
+    // Lots of problems with things like
+    // N1(C(=O)NC(=O)C(=C1)C)C1O[C@H](C[N+]#[C-])[C@H](O)C1 CHEMBL33982
+    // Relax this, OK to change if the charged atom is fully saturated.
+    const formal_charge_t fc = m.formal_charge(i);
+    if (fc == 0) {
+    } else if (a.fully_saturated() && ! AdjacentChargedAtom(m, i)) {
+      // OK.
+    } else if (m.is_aromatic(i)) {
+      // This is a little bit questionable, but we have tests that handle this case.
+    } else {
+      _process_these_atoms[i] = 0;
+    }
+
     FillAlphaBeta(m, i, _alpha, _beta, _attached_heteroatom_count);
   }
 
@@ -487,6 +549,8 @@ Options::~Options() {
 
 // Sort `lib` by number of exemplars, and if larger than `max_size`
 // truncate to that length.
+// No longer used because we now insist upon fragment libraries being
+// pre-sored.
 template <typename F>
 void
 SortAndTrim(resizable_array_p<F>& lib, uint32_t max_size) {
@@ -588,7 +652,7 @@ Options::Initialise(Command_Line& cl) {
     const_IWSubstring f;
     for (int i = 0; cl.value('F', f, i); ++i) {
       if (! ReadFragments(f)) {
-        cerr << "Cannot read fragments from '" << "'\n";
+        cerr << "Cannot read fragments from '" << f << "'\n";
         return 0;
       }
     }
@@ -609,7 +673,8 @@ Options::Initialise(Command_Line& cl) {
     }
 
     if (_config.max_fragment_lib_size() > 0) {
-      SortAndTrim(_fragment, _config.max_fragment_lib_size());
+      // No longer used because we now insist upon sorted fragment libraries.
+      // SortAndTrim(_fragment, _config.max_fragment_lib_size());
 
       if (_verbose) {
         cerr << "After SortAndTrim have " << _fragment.size() << " fragments\n";
@@ -642,7 +707,8 @@ Options::Initialise(Command_Line& cl) {
     }
 
     if (_config.max_bivalent_fragment_lib_size() > 0) {
-      SortAndTrim(_bivalent_fragment, _config.max_bivalent_fragment_lib_size());
+      // No longer used because we now insist upon sorted fragment libraries.
+      // SortAndTrim(_bivalent_fragment, _config.max_bivalent_fragment_lib_size());
 
       if (_verbose) {
         cerr << "After SortAndTrim have " << _bivalent_fragment.size() << " bivalent fragments\n";
@@ -659,15 +725,28 @@ Options::Initialise(Command_Line& cl) {
         return 0;
       }
 
-      _only_process_query << q.release();
+      _atoms_to_change << q.release();
     }
   }
 
   if (cl.option_present('q')) {
     static constexpr int kFlag = ' ';  // not used.
-    if (!process_queries(cl, _only_process_query, _verbose, kFlag)) {
+    if (!process_queries(cl, _atoms_to_change, _verbose, kFlag)) {
       cerr << "Cannot read queries (-q)\n";
       return 0;
+    }
+  }
+
+  if (cl.option_present('n')) {
+    const_IWSubstring s;
+    for (int i = 0; cl.value('n', s, i); ++i) {
+      std::unique_ptr<Substructure_Query> q = std::make_unique<Substructure_Query>();
+      if (!q->create_from_smarts(s)) {
+        cerr << "Invalid smarts '" << s << "'\n";
+        return 0;
+      }
+
+      _atoms_not_changing << q.release();
     }
   }
 
@@ -694,6 +773,11 @@ Options::AnythingSpecified() const {
   if (_config.remove_fragment().size()) { return 1;}   // 16
   if (_config.has_insert_fragments()) { return 1;}  // 23
   if (_config.has_replace_inner_fragments()) { return 1;}  // 24
+  if (_config.bivalent_fragment_size()) { return 1;} // 25
+  if (_config.has_fuse_biphenyls()) { return 1;} // 28
+  if (_config.has_remove_fused_aromatics()) { return 1; } //
+  if (_config.reaction_size()) { return 1;}  // 31
+  if (_config.file_of_reactions_size()) { return 1;}  // 31
 
   return 0;
 }
@@ -713,14 +797,6 @@ Options::CheckConditions() {
     }
   }
 
-  if (_config.only_process_query_size()) {
-    if (! SetupOnlyProcessQueries()) {
-      cerr << "Options::CheckConditions:process only queries bad\n";
-      cerr << _config.ShortDebugString() << '\n';
-      return 0;
-    }
-  }
-
   if (_config.has_atype()) {
     const IWString tmp(_config.atype());
     if (! _atom_typing.build(tmp)) {
@@ -733,6 +809,34 @@ Options::CheckConditions() {
       (_config.max_fragment_lib_size() > 0 || _config.max_bivalent_fragment_lib_size())) {
     cerr << "Options::CheckConditions:cannot specify support level and fragment library size\n";
     return 0;
+  }
+
+  if (_config.reaction_size() > 0) {
+    IWString dirname(_config_fname);
+    dirname.truncate_at_last('/');
+
+    for (const std::string& fname : _config.reaction()) {
+      const IWString s(fname);
+      if (! ReadReaction(s, dirname)) {
+        cerr << "Cannot read reaction '" << s << " dirname '" << dirname << '\n';
+        return 0;
+      }
+    }
+  }
+
+  if (_config.file_of_reactions_size() > 0) {
+    IWString dirname(_config_fname);
+    dirname.truncate_at_last('/');
+    for (const std::string& fname : _config.file_of_reactions()) {
+      if (! ReadFileOfReactions(fname)) {
+        cerr << "Cannot read file of reactions '" << fname << "'\n";
+        return 0;
+      }
+    }
+  }
+
+  if (_reaction.size() > 0 && _verbose) {
+    cerr << "Read " << _reaction.size() << " reactions\n";
   }
 
   if (AnythingSpecified()) {
@@ -764,6 +868,81 @@ Options::CheckConditions() {
   _config.set_destroy_aromatic_ring_systems(true); // 14
   _config.set_swap_adjacent_atoms(true); // 15
   _config.set_insert_fragments(true); // 23
+
+  return 1;
+}
+
+int
+Options::ReadFileOfReactions(const std::string& fname) {
+  IWString s(fname);
+  if (std::optional<IWString> expanded = s.ExpandEnvironmentVariables(); expanded) {
+    s = *expanded;
+  }
+
+  iwstring_data_source input(s);
+  if (! input.good()) {
+    cerr << "Options::ReadFileOfReactions:cannot open '" << s << "'\n";
+    return 0;
+  }
+
+  s.truncate_at_last('/');
+
+  return ReadFileOfReactions(input, s);
+}
+
+int
+Options::ReadFileOfReactions(iwstring_data_source& input, const IWString& dirname) {
+  IWString buffer;
+  while (input.next_record(buffer)) {
+    if (! ReadReaction(buffer, dirname)) {
+      cerr << "Options::ReadFileOfReactions:cannot read reaction '" << buffer <<
+              " in directory '" << dirname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::ReadReaction(const IWString& buffer, const IWString& dirname) {
+  std::filesystem::path p(std::string(buffer.data(), buffer.length()));
+  if (std::filesystem::exists(p)) {
+    return ReadReaction(buffer, dirname);
+  }
+
+  if (std::optional<IWString> expanded = buffer.ExpandEnvironmentVariables(); expanded) {
+    std::filesystem::path p(std::string(expanded->data(), expanded->length()));
+    if (std::filesystem::exists(p)) {
+      return ReadReaction(*expanded, dirname);
+    }
+  }
+
+  IWString fname(dirname);
+  fname << '/' << buffer;
+
+  return ReadReactionInner(fname, dirname);
+}
+
+int
+Options::ReadReactionInner(IWString& fname, const IWString& dirname) {
+  std::optional<ReactionProto::Reaction> maybe_proto = 
+      iwmisc::ReadTextProto<ReactionProto::Reaction>(fname);
+  if (! maybe_proto) {
+    cerr << "Cannot read reaction text proto '" << fname << "'\n";
+    return 0;
+  }
+
+  std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+
+  Sidechain_Match_Conditions smc;
+  if (! rxn->ConstructFromProto(*maybe_proto, dirname, smc)) {
+    cerr << "Cannot build reaction from " << maybe_proto->ShortDebugString() << '\n';
+    return 0;
+  }
+  rxn->set_find_unique_embeddings_only(1);
+  rxn->set_embeddings_do_not_overlap(1);
+  _reaction << rxn.release();
 
   return 1;
 }
@@ -829,9 +1008,9 @@ Options::ReadFragmentsFromConfig() {
 }
 
 int
-Options::SetupOnlyProcessQueries() {
+Options::SetupAtomsToChangeQueries() {
   for (const std::string& q : _config.only_process_query()) {
-    if (! SetupOnlyProcessQuery(q)) {
+    if (! SetupAtomsToChangeQuery(q)) {
       cerr << "Options::SetupOnlyProcessQueries:invalid query specification '" << q << "'\n";
       return 0;
     }
@@ -841,11 +1020,31 @@ Options::SetupOnlyProcessQueries() {
 }
 
 int
-Options::SetupOnlyProcessQuery(const std::string& qry) {
+Options::SetupAtomsNotChangingQueries() {
+  for (const std::string& q : _config.do_not_process_query()) {
+    if (! SetupDoNotProcessQuery(q)) {
+      cerr << "Options::SetupDoNotProcessQueries:invalid query specification '" << q << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::SetupAtomsToChangeQuery(const std::string& qry) {
   static constexpr char kOption = ' ';   // not used.
   static constexpr int kVerbose = 0;     // not used.
   const_IWSubstring tmp(qry);
-  return process_cmdline_token(kOption, tmp, _only_process_query, kVerbose);
+  return process_cmdline_token(kOption, tmp, _atoms_to_change, kVerbose);
+}
+
+int
+Options::SetupDoNotProcessQuery(const std::string& qry) {
+  static constexpr char kOption = ' ';   // not used.
+  static constexpr int kVerbose = 0;     // not used.
+  const_IWSubstring tmp(qry);
+  return process_cmdline_token(kOption, tmp, _atoms_not_changing, kVerbose);
 }
 
 int
@@ -870,6 +1069,13 @@ Options::ReadFragments(const_IWSubstring& fname) {
 
 int
 Options::ReadFragments(iwstring_data_source& input) {
+  uint32_t max_size;
+  if (_config.max_fragment_lib_size() > 0) {
+    max_size = _config.max_fragment_lib_size();
+  } else {
+    max_size = std::numeric_limits<uint32_t>::max();
+  }
+
   const_IWSubstring buffer;
   while (input.next_record(buffer)) {
     if (buffer.empty() || buffer.starts_with('#')) {
@@ -879,6 +1085,10 @@ Options::ReadFragments(iwstring_data_source& input) {
     if (! ReadFragment(buffer)) {
       cerr << "Options::ReadFragments:cannot process '" << buffer << "'\n";
       cerr << "Ignored\n";
+    }
+
+    if (_fragment.size() >= max_size) {
+      return _fragment.size();
     }
   }
 
@@ -898,6 +1108,13 @@ Options::ReadBivalentFragments(const_IWSubstring& fname) {
 
 int
 Options::ReadBivalentFragments(iwstring_data_source& input) {
+  uint32_t max_size;
+  if (_config.max_fragment_lib_size() > 0) {
+    max_size = _config.max_fragment_lib_size();
+  } else {
+    max_size = std::numeric_limits<uint32_t>::max();
+  }
+
   const_IWSubstring buffer;
   while (input.next_record(buffer)) {
     if (buffer.empty() || buffer.starts_with('#')) {
@@ -908,6 +1125,10 @@ Options::ReadBivalentFragments(iwstring_data_source& input) {
       cerr << "Options::ReadBivalentFragments:cannot process '" << buffer << "'\n";
       cerr << "ignored\n";  // might just be a support failure.
       continue;
+    }
+
+    if (_bivalent_fragment.size() >= max_size) {
+      return _bivalent_fragment.size();
     }
   }
 
@@ -938,35 +1159,6 @@ Options::ReadBivalentFragment(const_IWSubstring& buffer) {
   return 1;
 }
 
-#ifdef NOT_USED_WANT_COMMENTS
-int
-Options::ReadOptions(const_IWSubstring& fname) {
-  iwstring_data_source input(fname);
-  if (! input.good()) {
-    cerr << "Options::cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  return ReadOptions(input);
-}
-
-int
-Options::ReadOptions(iwstring_data_source& input) {
-
-  // Copied from proto_support.h
-
-  using google::protobuf::io::ZeroCopyInputStream;
-  using google::protobuf::io::FileInputStream;
-  std::unique_ptr<FileInputStream> zero_copy_input(new FileInputStream(input.fd()));
-
-  if (! google::protobuf::TextFormat::Parse(zero_copy_input.get(), &_config)) {
-    cerr << "Options::ReadOptions:cannot read '" << input.fname() << "'\n";
-    return 0;
-  }
-
-  return 1;
-}
-#endif
 
 int
 Options::ReadOptions(const_IWSubstring& fname) {
@@ -979,6 +1171,7 @@ Options::ReadOptions(const_IWSubstring& fname) {
   }
 
   _config = std::move(*proto);
+  _config_fname = fname;
 
   return 1;
 }
@@ -1006,7 +1199,20 @@ Options::AddToResultsIfNew(std::unique_ptr<Molecule>& m,
   if (! m->valence_ok()) {
     ++_invalid_valence;
     if (_config.echo_bad_valence()) {
-      cerr << "Bad valence " << m->smiles() << "\n";
+      atom_number_t first_bad_valence = kInvalidAtomNumber;
+      for (int i = 0; i < m->natoms(); ++i) {
+        if (! m->valence_ok(i)) {
+          first_bad_valence = i;
+          break;
+        }
+      }
+
+      // first_bad_valence will sometimes emerge not set, due to the more complex checking
+      // done in Molecule::valence_ok
+      if (first_bad_valence >= 0) {
+        cerr << m->smiles() << ' ' << m->name() << " bad valence atom " << first_bad_valence <<
+              ' ' << m->smarts_equivalent_for_atom(first_bad_valence) << '\n';
+      }
     }
     return 0;
   }
@@ -1054,7 +1260,9 @@ Options::Report(std::ostream& output) const {
     { TransformationType::kRemoveFragment, "Remove Fragment"},
     { TransformationType::kInsertFragments, "Insert Fragments"},
     { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
-    { TransformationType::kFuseBiphenyls, "Fuse biphenyls"}
+    { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
+    { TransformationType::kRemoveFusedArom, "Remove Fused Arom"},
+    { TransformationType::kReaction, "Reaction"}
   };
 
 #ifdef NOT_USED_ASDASDASD
@@ -1084,7 +1292,7 @@ Options::Report(std::ostream& output) const {
     output << iter.second << ' ' << acc.n() << " btw " << acc.minval()
            << ' ' << acc.maxval() << " tot " << acc.sum();
     if (acc.n() > 0) {
-      output << " ave " << ' ' << static_cast<float>(acc.average());
+      output << " ave " << static_cast<float>(acc.average());
     }
 
     output << '\n';
@@ -1140,7 +1348,7 @@ Options::Process(Molecule& m,
     molecule_data.StoreAtomTypes(m, _atom_typing);
   }
 
-  if (_only_process_query.size()) {
+  if (_atoms_to_change.size() || _atoms_not_changing.size()) {
     if (! DetermineChangingAtoms(m, molecule_data)) {
       return 0;
     }
@@ -1156,8 +1364,11 @@ Options::Process(Molecule& m,
   return rc;
 }
 
-// Run the _only_process_query queries on `m` and store
+// Run the _atoms_to_change queries on `m` and store
 // the results in `molecule_data`
+// When that is done we then do _atoms_not_changing and those queries
+// can override what might have been set by one of the _atoms_to_change
+// queries. Not sure if that is a bug or a feature.
 int
 Options::DetermineChangingAtoms(Molecule& m,
                                 MoleculeData& molecule_data) {
@@ -1167,12 +1378,21 @@ Options::DetermineChangingAtoms(Molecule& m,
   Molecule_to_Match target(&m);
 
   int rc = 0;
-  for (Substructure_Query* q : _only_process_query) {
+  for (Substructure_Query* q : _atoms_to_change) {
     Substructure_Results sresults;
     if (! q->substructure_search(target, sresults)) {
       continue;
     }
     sresults.each_embedding_set_vector(molecule_data.process_these_atoms(), 1);
+    ++rc;
+  }
+
+  for (Substructure_Query* q : _atoms_not_changing) {
+    Substructure_Results sresults;
+    if (! q->substructure_search(target, sresults)) {
+      continue;
+    }
+    sresults.each_embedding_set_vector(molecule_data.process_these_atoms(), 0);
     ++rc;
   }
 
@@ -1273,15 +1493,26 @@ Options::Process(Molecule& m,
   }
   // q cerr << "AddFragments " << rc << '\n';
 
-  rc += FuseBiphenyls(m, molecule_data, results);  // 2
+  for (IWReaction* rxn : _reaction) {
+    rc += PerformReaction(m, molecule_data, *rxn, results);
+    if (rc > _config.max_variants()) {
+      return rc;
+    }
+  }
+
+  rc += RemoveFusedAromatics(m, molecule_data, results);
   if (rc > _config.max_variants()) {
     return rc;
   }
-  // q cerr << "FuseBiphenyls " << rc << '\n';
-
   // q cerr << "Options::Process:returning " << rc << '\n';
 
   return rc;
+}
+
+void
+UnsetAllImplicitHydrogenInformation(Molecule& m, atom_number_t a1, atom_number_t a2) {
+  m.unset_all_implicit_hydrogen_information(a1);
+  m.unset_all_implicit_hydrogen_information(a2);
 }
 
 int
@@ -1321,10 +1552,13 @@ Options::SingleToDoubleBond(Molecule& m,
 
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     mcopy->set_bond_type_between_atoms(a1, a2, DOUBLE_BOND);
+    // cerr << "TRANSFORM: SingleToDoubleBond\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kSingleToDoubleBond].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kSingleToDoubleBond].extra(rc);
+  }
 
   return rc;
 }
@@ -1449,10 +1683,13 @@ Options::DoubleToSingleBond(Molecule& m,
     } else {
       mcopy->set_bond_type_between_atoms(a1, a2, SINGLE_BOND);
     }
+    // cerr << "TRANSFORM:: DoubleToSingleBond\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDoubleToSingleBond].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDoubleToSingleBond].extra(rc);
+  }
 
   return rc;
 }
@@ -1522,10 +1759,13 @@ Options::ChangeCarbonToNitrogen(Molecule& m,
 
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     mcopy->set_atomic_number(i, 7);
+    // cerr << "TRANSFORM: ChangeCarbonToNitrogen\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeCarbonToNitrogen].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeCarbonToNitrogen].extra(rc);
+  }
 
   return rc;
 }
@@ -1573,10 +1813,13 @@ Options::ChangeCarbonToOxygen(Molecule& m,
 
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     mcopy->set_atomic_number(i, 8);
+    // cerr << "TRANSFORM: ChangeCarbonToOxygen\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeCarbonToOxygen].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeCarbonToOxygen].extra(rc);
+  }
 
   return rc;
 }
@@ -1606,6 +1849,7 @@ Options::ChangeNitrogenToCarbon(Molecule& m,
 
   const int matoms = m.natoms();
   int rc = 0;
+  // cerr << "Checking " << m.smiles() << " for change_nitrogen_to_carbon\n";
 
   for (int i = 0; i < matoms; ++i) {
     const Atom& a = m.atom(i);
@@ -1626,7 +1870,7 @@ Options::ChangeNitrogenToCarbon(Molecule& m,
     if (m.is_aromatic(i) && a.ncon() == 2 && m.hcount(i)) {
       continue;
     }
-    
+
     // Do not destroy aromatic rings.
     if (ExocyclicToAromatic(m, i)) {
       continue;
@@ -1640,11 +1884,15 @@ Options::ChangeNitrogenToCarbon(Molecule& m,
     mcopy->set_atomic_number(i, 6);
     if (a.formal_charge()) {
       mcopy->set_formal_charge(i, 0);
+      mcopy->unset_all_implicit_hydrogen_information(i);
     }
+    // cerr << "TRANSFORM: ChangeNitrogenToCarbon " << mcopy->smiles() << '\n';
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeNitrogenToCarbon].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeNitrogenToCarbon].extra(rc);
+  }
 
   return rc;
 }
@@ -1694,10 +1942,14 @@ Options::RemoveCh2(Molecule& m,
       --connected[1];
     }
     mcopy->add_bond(connected[0], connected[1], SINGLE_BOND);
+    UnsetAllImplicitHydrogenInformation(*mcopy, connected[0], connected[1]);
+    // cerr << "TRANSFORM: RemoveCh2\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kRemoveCH2].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveCH2].extra(rc);
+  }
 
   return rc;
 }
@@ -1714,8 +1966,14 @@ Options::InsertCh2(Molecule& m,
 
   static const Element* carbon = get_element_from_atomic_number(6);
 
+  m.compute_aromaticity_if_needed();
+
   for (const Bond* b : m.bond_list()) {
     if (! b->is_single_bond()) {
+      continue;
+    }
+
+    if (b->nrings()) {
       continue;
     }
 
@@ -1726,20 +1984,21 @@ Options::InsertCh2(Molecule& m,
       continue;
     }
 
-    if (b->nrings() && m.is_aromatic(a1) && m.is_aromatic(a2)) {
-      continue;
-    }
-
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     const int initial_matoms = mcopy->natoms();
     mcopy->remove_bond_between_atoms(a1, a2);
     mcopy->add(carbon);
     mcopy->add_bond(a1, initial_matoms, SINGLE_BOND);
     mcopy->add_bond(a2, initial_matoms, SINGLE_BOND);
+    UnsetAllImplicitHydrogenInformation(*mcopy, a1, initial_matoms);
+    UnsetAllImplicitHydrogenInformation(*mcopy, a2, initial_matoms);
+    // cerr << "TRANSFORM: InsertCh2\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kInsertCH2].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kInsertCH2].extra(rc);
+  }
 
   return rc;
 }
@@ -1870,10 +2129,13 @@ Options::DestroyAromaticRings(Molecule& m,
     if (! AllInSystemBondsSingle(*mcopy, molecule_data, in_system.get())) {
       continue;
     }
+    // cerr << "TRANSFORM: DestroyAromaticRings\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDestroyAromaticRings].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDestroyAromaticRings].extra(rc);
+  }
 
   return rc;
 }
@@ -1933,14 +2195,18 @@ Options::DestroyAromaticRingSystems(Molecule& m,
       continue;
     }
 
+    // This has the possibility of creating undesirable N-C-N groupings.
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     if (! AllInSystemBondsSingle(*mcopy, molecule_data, in_system.get())) {
       continue;
     }
+    // cerr << "TRANSFORM: DestroyAromaticRingSystems\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDestroyAromaticRingSystems].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDestroyAromaticRingSystems].extra(rc);
+  }
 
   return rc;
 }
@@ -2025,11 +2291,15 @@ Options::MakeThreeRing(Molecule& m,
       }
       std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
       mcopy->add_bond(i, j, SINGLE_BOND);
+      UnsetAllImplicitHydrogenInformation(*mcopy, i, j);
+      // cerr << "TRANSFORM: MakeThreeRing\n";
       rc += AddToResultsIfNew(mcopy, results);
     }
   }
 
-  _acc[TransformationType::kMakeThreeMemberedRings].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kMakeThreeMemberedRings].extra(rc);
+  }
 
   return rc;
 }
@@ -2044,6 +2314,7 @@ Options::RemoveFragment(Molecule& m,
   std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
   mcopy->remove_bond_between_atoms(a1, a2);
   mcopy->remove_fragment_containing_atom(a2);
+  // cerr << "TRANSFORM: RemoveFragment\n";
   return AddToResultsIfNew(mcopy, results);
 }
 
@@ -2102,10 +2373,13 @@ Options::RemoveFragments(Molecule& m,
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     mcopy->remove_bond_between_atoms(a1, a2);
     mcopy->remove_fragment_containing_atom(a2);
+    // cerr << "TRANSFORM: RemoveFragments\n";
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kRemoveFragment].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveFragment].extra(rc);
+  }
 
   return rc;
 }
@@ -2233,6 +2507,7 @@ Options::SwapAdjacentAtoms(Molecule& m,
 
   DoSwapAdjacentAtoms(*mcopy, a0, a1, a2, a3);
 
+  // cerr << "TRANSFORM: SwapAdjacentAtoms\n";
   return AddToResultsIfNew(mcopy, results);
 }
 
@@ -2311,7 +2586,9 @@ Options::SwapAdjacentAtoms(Molecule& m,
     rc += SwapAdjacentAtoms(m, molecule_data, a0, a1, a2, a3, results);
   }
 
-  _acc[TransformationType::kSwapAdjacentAtoms].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kSwapAdjacentAtoms].extra(rc);
+  }
 
   return rc;
 }
@@ -2427,11 +2704,14 @@ Options::Unspiro(Molecule& m,
       mcopy->add_bond(matoms, r1b, SINGLE_BOND);
       mcopy->add_bond(matoms, spiro, SINGLE_BOND);
 
+      // cerr << "TRANSFORM: Unspiro\n";
       rc += AddToResultsIfNew(mcopy, results);
     }
   }
 
-  _acc[TransformationType::kUnspiro].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kUnspiro].extra(rc);
+  }
 
   return rc;
 }
@@ -2482,13 +2762,17 @@ Options::AddFragments(Molecule& m,
 
       std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
       mcopy->add_molecule(&frag->mol());
-      mcopy->add_bond(i, matoms + frag->attachment_point(), SINGLE_BOND);
-      mcopy->unset_all_implicit_hydrogen_information(matoms + frag->attachment_point());
+      const atom_number_t a2 = matoms + frag->attachment_point();
+      mcopy->add_bond(i, a2, SINGLE_BOND);
+      UnsetAllImplicitHydrogenInformation(*mcopy, i, a2);
+      // cerr << "TRANSFORM: AddFragments\n";
       rc += AddToResultsIfNew(mcopy, results);
     }
   }
 
-  _acc[TransformationType::kAddFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kAddFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2568,7 +2852,9 @@ Options::InsertBivalentFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kInsertFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kInsertFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2612,9 +2898,9 @@ Options::InsertBivalentFragment(const Molecule& m,
 
   mcopy->add_bond(a1, f1, SINGLE_BOND);
   mcopy->add_bond(a2, f2, SINGLE_BOND);
-  mcopy->unset_all_implicit_hydrogen_information(f1);
-  mcopy->unset_all_implicit_hydrogen_information(f2);
+  UnsetAllImplicitHydrogenInformation(*mcopy, f1, f2);
 
+  // cerr << "TRANSFORM: InsertBivalentFragment\n";
   return AddToResultsIfNew(mcopy, results);
 }
 
@@ -2725,7 +3011,9 @@ Options::ReplaceInnerFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kReplaceInnerFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kReplaceInnerFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2765,10 +3053,10 @@ Options::ReplaceInnerFragment(const Molecule& m,
 
   mcopy->add_bond(a1, f1, SINGLE_BOND);
   mcopy->add_bond(a2, f2, SINGLE_BOND);
-  mcopy->unset_all_implicit_hydrogen_information(f1);
-  mcopy->unset_all_implicit_hydrogen_information(f2);
+  UnsetAllImplicitHydrogenInformation(*mcopy, f1, f2);
   RemoveAtoms(*mcopy, matoms, shortest_path);
 
+  // cerr << "TRANSFORM: ReplaceInnerFragment\n";
   return AddToResultsIfNew(mcopy, results);
 }
 
@@ -2869,12 +3157,18 @@ Options::ReplaceTerminalFragments(Molecule& m,
       }
 
       std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
+      //cerr << mcopy->smiles() << " mcopy smiles\n";
+      //cerr << frag->mol().smiles() << " frag smiles\n";
       mcopy->add_molecule(&frag->mol());
       mcopy->remove_bond_between_atoms(a1, a2);
-      mcopy->add_bond(a2, matoms + frag->attachment_point(), SINGLE_BOND);
+      const atom_number_t a3 = matoms + frag->attachment_point();
+      mcopy->add_bond(a2, a3, SINGLE_BOND);
+      //cerr << mcopy->smiles() << " product atoms " << a2 << " and " << a3 << '\n';
+      UnsetAllImplicitHydrogenInformation(*mcopy, a2, a3);
+
       mcopy->remove_fragment_containing_atom(a1);
-      mcopy->unset_all_implicit_hydrogen_information(matoms + frag->attachment_point());
-      // cerr << "Added " << frag->mol().smiles() << " to form "  << mcopy->smiles() << '\n';
+
+      // cerr << "TRANSFORM: ReplaceTerminalFragments\n";
       rc += AddToResultsIfNew(mcopy, results);
     }
 
@@ -2883,11 +3177,14 @@ Options::ReplaceTerminalFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kReplaceTerminalFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kReplaceTerminalFragments].extra(rc);
+  }
 
   return rc;
 }
 
+#ifdef IMPLEMENTED_AS_REACTION_MUCH_EASIER
 int
 Options::FuseBiphenyls(Molecule& m,
                  MoleculeData& molecule_data,
@@ -2933,7 +3230,9 @@ Options::FuseBiphenyls(Molecule& m,
     rc += FuseBiphenyls(m, molecule_data, a1, a2, results);
   }
 
-  _acc[TransformationType::kFuseBiphenyls].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kFuseBiphenyls].extra(rc);
+  }
 
   return rc;
 }
@@ -3059,6 +3358,378 @@ Options::FuseBiphenyl(Molecule& m,
   // mcopy->add_bond(
 
   return 1;
+}
+#endif
+
+int
+Options::PerformReaction(Molecule& m,
+                        MoleculeData& molecule_data,
+                        IWReaction& rxn,
+                        resizable_array_p<Molecule>& results) {
+  Substructure_Results sresults;
+  if (! rxn.substructure_search(m, sresults)) {
+    return 0;
+  }
+
+  int rc = 0;
+
+  for (const Set_of_Atoms* embedding : sresults.embeddings()) {
+    std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
+
+    if (! rxn.in_place_transformation(*mcopy, embedding)) {  // not sure it can fail.
+      continue;
+    }
+
+    // cerr << "TRANSFORM: PerformReaction\n";
+    if (AddToResultsIfNew(mcopy, results)) {
+      ++rc;
+    }
+  }
+
+  if (rc > 0) {
+    _acc[TransformationType::kReaction].extra(rc);
+  }
+
+  return rc;
+}
+
+//#define DEBUG_REMOVE_FUSED_RING
+
+int
+Options::RemoveFusedAromatics(Molecule& m, MoleculeData& molecule_data,
+                              resizable_array_p<Molecule>& results) {
+  if (! _config.remove_fused_aromatics()) {
+    return 0;
+  }
+
+  const int nr = m.nrings();
+
+  if (nr < 2) {
+    return 0;
+  }
+
+  int rc = 0;
+
+  m.compute_aromaticity_if_needed();
+
+  std::unique_ptr<int[]> ring_already_done(new_int(nr));
+  const int matoms = m.natoms();
+  std::unique_ptr<int[]> tmp = std::make_unique<int[]>(matoms);
+
+  for (int i = 0; i < nr; ++i) {
+    if (ring_already_done[i]) {
+      continue;
+    }
+
+    const Ring* ri = m.ringi(i);
+
+    if (! ri->is_fused()) {
+      continue;
+    }
+
+    int system_size = 1;
+    int second_aromatic_ring_number = -1;
+
+    for (int j = i + 1; j < nr; ++j) {
+      if (ring_already_done[j]) {
+        continue;
+      }
+
+      const Ring* rj = m.ringi(j);
+
+      if (rj->fused_system_identifier() != ri->fused_system_identifier()) {
+        continue;
+      }
+
+      ring_already_done[j] = 1;
+
+      ++system_size;
+
+      if (rj->is_aromatic()) {
+        second_aromatic_ring_number = j;
+      }
+    }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+    cerr << "from ring " << i << " second_aromatic_ring_number " << second_aromatic_ring_number << " system_size " << system_size << '\n';
+#endif
+    if (system_size == 2 && second_aromatic_ring_number > 0) {
+      rc += RemoveFusedRing(m, molecule_data, i, second_aromatic_ring_number, tmp.get(), results);
+    }
+  }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing rc " << rc << '\n';
+#endif
+
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveFusedArom].extra(rc);
+  }
+
+  return rc;
+}
+
+std::tuple<atom_number_t, atom_number_t>
+AtomsInCommon(const Molecule& m, const Ring& r1, const Ring& r2, int* tmp) {
+  const int matoms = m.natoms();
+
+  std::fill_n(tmp, matoms, 0);
+  r1.set_vector(tmp, 1);
+  r2.increment_vector(tmp, 1);
+
+  atom_number_t a1 = kInvalidAtomNumber;
+  atom_number_t a2 = kInvalidAtomNumber;
+
+  for (int i = 0; i < matoms; ++i) {
+    if (tmp[i] != 2) {
+      continue;
+    }
+
+    if (a1 == kInvalidAtomNumber) {
+      a1 = i;
+    } else if (a2 == kInvalidAtomNumber) {
+      a2 = i;
+    }
+  }
+
+  return std::tuple<atom_number_t, atom_number_t>{a1, a2};
+}
+
+void
+Connections(Molecule& m,
+            int rnumber,
+            int other_ring,
+            int* in_ring,
+            Set_of_Atoms& anchor,
+            Set_of_Atoms& result) {
+  std::fill_n(in_ring, m.natoms(), 0);
+  const Ring* r = m.ringi(rnumber);
+  r->set_vector(in_ring, 1);
+  m.ringi(other_ring)->set_vector(in_ring, 1);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << i << " in_ring " << in_ring[i] << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
+  }
+#endif
+
+  for (atom_number_t a : *r) {
+    const Atom& atom = m[a];
+    for (const Bond* b : atom) {
+      const atom_number_t o = b->other(a);
+      if (in_ring[o]) {
+        continue;
+      }
+      if (b->is_double_bond() && m.ncon(o) == 1) {
+        continue;
+      }
+      anchor << a;
+      result << o;
+    }
+  }
+}
+
+// Take a fused aromatic system and remove the least substituted ring.
+// There can be only 2 substituents on the ring being removed, since they
+// will be attached to the atoms that used to be the fusion.
+int
+Options::RemoveFusedRing(Molecule& m, MoleculeData& molecule_data,
+                         int r1number, int r2number,
+                         int* in_ring,
+                         resizable_array_p<Molecule>& results) {
+  // we are going to remove the second ring, so make sure it is the least
+  // connected ring.
+  Set_of_Atoms anchor1, conn1;
+  Set_of_Atoms anchor2, conn2;
+  Connections(m, r1number, r2number, in_ring, anchor1, conn1);
+  Connections(m, r2number, r1number, in_ring, anchor2, conn2);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Connections " << conn1 << " and " << conn2 << '\n';
+#endif
+
+  const Ring* r1 = m.ringi(r1number);
+  const Ring* r2 = m.ringi(r2number);
+
+  auto [c1, c2] = AtomsInCommon(m, *r1, *r2, in_ring);
+
+  int rc = 0;
+
+  if (conn1.size() <= 2) {
+    rc += RemoveFusedRing(m, *r1, c1, c2, anchor1, conn1, results);
+  }
+
+  if (conn1.size() <= 2) {
+    rc += RemoveFusedRing(m, *r2, c1, c2, anchor2, conn2, results);
+  }
+  
+  return rc;
+}
+
+// We have unfused a pair of aromatic rings. The fused atoms were `c1` and `c2`.
+// If these both end up fully saturated, put a double bond between then.
+int
+MaybePlaceDoubleBond(Molecule& m, atom_number_t c1, atom_number_t c2) {
+  if (m.nbonds(c1) == 2 && m.nbonds(c2) == 2) {
+    m.set_bond_type_between_atoms(c1, c2, DOUBLE_BOND);
+    return 1;
+  }
+
+  return 0;
+}
+
+// Fused ring `ring` is to be removed.
+// Atoms `c1` and `c2` are the fused atoms that will be retained.
+// `conn` are exocyclic atoms that are bonded to `ring`.
+int
+Options::RemoveFusedRing(Molecule& m,
+                const Ring& ring,
+                atom_number_t c1, atom_number_t c2,
+                const Set_of_Atoms& anchor,
+                Set_of_Atoms& conn,
+                resizable_array_p<Molecule>& results) {
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Ring being removed " << ring << " fused ring atoms c1 " << c1 << " c2 " << c2 << '\n';
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+#endif
+
+  const int initial_aromatic_atom_count = m.aromatic_atom_count();
+
+  // Identify 2 atoms in `ring` that are joined to `c1` and `c2`.
+  atom_number_t jc1 = kInvalidAtomNumber;
+  for (const Bond* b : m[c1]) {
+    const atom_number_t o = b->other(c1);
+    if (o == c2) {
+      continue;
+    }
+    if (ring.contains(o)) {
+      jc1 = o;
+      break;
+    }
+  }
+
+  atom_number_t jc2 = kInvalidAtomNumber;
+  for (const Bond* b : m[c2]) {
+    const atom_number_t o = b->other(c2);
+    if (o == c1) {
+      continue;
+    }
+    if (ring.contains(o)) {
+      jc2 = o;
+      break;
+    }
+  }
+
+  // Should not happen.
+  if (jc1 == kInvalidAtomNumber || jc2 == kInvalidAtomNumber) {
+    return 0;
+  }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Joined atoms c1 " << c1 << " to " << jc1 << " c2 " << c2 << " to " << jc2 << '\n';
+#endif
+
+  mcopy->remove_bond_between_atoms(c1, jc1);
+  mcopy->remove_bond_between_atoms(c2, jc2);
+  for (int i = 0; i < conn.number_elements(); ++i) {
+    mcopy->remove_bond_between_atoms(anchor[i], conn[i]);
+  }
+
+  MaybePlaceDoubleBond(*mcopy, c1, c2);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "After bond removal " << mcopy->aromatic_smiles() << '\n';
+#endif
+
+  // The remaining ring must still be aromatic. We can have list either 3 or 4 atoms
+  const int mcopy_aromatic_atom_count = mcopy->aromatic_atom_count();
+  if (mcopy_aromatic_atom_count + 3 == initial_aromatic_atom_count) {
+  } else if (mcopy_aromatic_atom_count + 4 == initial_aromatic_atom_count) {
+  } else {
+    return 0;
+  }
+
+  // Unsubstituted ring.
+  if (conn.empty()) {
+    // cerr << "Unsubstituted ring " << mcopy->aromatic_smiles() << '\n';
+    mcopy->remove_fragment_containing_atom(jc1);
+    // cerr << "TRANSFORM: RemoveFusedRing\n";
+    return AddToResultsIfNew(mcopy, results);
+  }
+
+  if (conn.size() == 1) {
+    return RemoveFusedRing1(mcopy, jc1, c1, c2, conn[0], results);
+  }
+
+  if (conn.size() == 2) {
+    return RemoveFusedRing2(mcopy, jc2, c1, c2, conn[0], conn[1], results);
+  }
+
+  return 0;
+}
+
+int
+Options::RemoveFusedRing1(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic,
+                          resizable_array_p<Molecule>& results) {
+  // Make a copy because we join exocyclic to both c1 and c2.
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(*m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing1 exocyclic " << exocyclic << " to_be_removed " << to_be_removed << '\n';
+  cerr << m->aromatic_smiles() << '\n';
+#endif
+
+  m->add_bond(c1, exocyclic, SINGLE_BOND);
+  UnsetAllImplicitHydrogenInformation(*m, c1, exocyclic);
+  m->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "TRANSFORM: RemoveFusedRing1\n";
+  int rc = AddToResultsIfNew(m, results);
+
+  mcopy->add_bond(c2, exocyclic, SINGLE_BOND);
+  mcopy->remove_fragment_containing_atom(to_be_removed);
+  UnsetAllImplicitHydrogenInformation(*mcopy, c2, exocyclic);
+  // cerr << "TRANSFORM: RemoveFusedRing1\n";
+  rc += AddToResultsIfNew(mcopy, results);
+
+  return rc;
+}
+
+int
+Options::RemoveFusedRing2(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic1, atom_number_t exocyclic2,
+                          resizable_array_p<Molecule>& results) {
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(*m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing2 c1 " << c1 << " c2 " << c2 << " to_be_removed " << to_be_removed << " exocyclic1 " << exocyclic1 << " exocyclic2 " << exocyclic2 << '\n';
+#endif
+
+  m->add_bond(c1, exocyclic1, SINGLE_BOND);
+  m->add_bond(c2, exocyclic2, SINGLE_BOND);
+  m->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "2 Trying " << m->aromatic_smiles() << '\n';
+  // cerr << "TRANSFORM: RemoveFusedRing2\n";
+  int rc = AddToResultsIfNew(m, results);
+
+  mcopy->add_bond(c1, exocyclic2, SINGLE_BOND);
+  mcopy->add_bond(c2, exocyclic1, SINGLE_BOND);
+  mcopy->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "2 Trying " << mcopy->aromatic_smiles() << '\n';
+
+  // cerr << "TRANSFORM: RemoveFusedRing2\n";
+  rc += AddToResultsIfNew(mcopy, results);
+
+  return rc;
 }
 
 }  // namespace minor_changes

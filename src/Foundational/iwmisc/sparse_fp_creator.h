@@ -54,6 +54,10 @@ class Sparse_Fingerprint_Creator
 
     void clear() { _fp.clear();}
 
+    // Multiply each count by `s`. Returns 1 if successful, 0 if this has
+    // resulted in overflows. Upon overflow counts are just truncated at 255.
+    int Scale(int s);
+
     void copy_bits_to_unsigned_int_array (unsigned int * b, int & ndx) const;
     int  fill_count_array (const unsigned int * b, int * c, int n) const;
 

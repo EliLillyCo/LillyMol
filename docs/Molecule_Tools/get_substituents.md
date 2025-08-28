@@ -90,6 +90,69 @@ after a C(CH3)(CH3) group `-s '[CD4](-[CH3])(-[CH3])-*'`, but note
 that this query will match both left and right. This can be tricky,
 just like any substructrure based matching.
 
+A common operation is to generate a list of aromatic substituents from
+something like Chembl. Suggest an invocation like
+```
+get_substituents -s '[aD3]' -M 10 -I 1 -c -n -S chembl.textproto -v -z i chembl.smi
+```
+which will accumulate all aromatic substituents in Chembl with 10 atoms or
+fewer. The smarts `[aD3]` says to look for substituents on all 3 connected
+aromatic atoms. The combination `-M 10` specifies the maximum size of substituents.
+Isotope 1 is placed on the join atom because of `-I 1`. In this case I have
+chosen to remove chirality with the `-c` option. Adjust to taste. Normal,
+per-molecule, output is suppressed with the `-n` option, and a textproto
+summary is written to `chembl.textproto`. Molecules that do not contain
+a three connected aromatic atom are ignored because of `-z i`. The `-v`
+option may yield useful information. This should take less than one
+minute on a modern computer.
+
+We recently needed to identify substituents growing from the N atom of
+amides. That invocation looked like
+```
+get_substituents_parallel.sh -thr 24 -S Sfile -c -n -M 10 -I 1 \
+        -s 'N!@-[CR0]=O' -O 0 -z i chembl.smi
+```
+which tool about 3 seconds. The first matched atom is the Nitrogen,
+and the `-O 0` combination specifies that the growth point is matched
+atom 0. The sorted results might look like
+```
+[1CH3]c1ccccc1 iso: ATT smi: "[1CH3]c1ccccc1" par: "CHEMBL46293" nat: 7 n: 224
+C[1CH2]C iso: ATT smi: "C[1CH2]C" par: "CHEMBL296027" nat: 3 n: 252
+[1CH3]CC iso: ATT smi: "[1CH3]CC" par: "CHEMBL297216" nat: 3 n: 263
+OC(=O)[1CH3] iso: ATT smi: "OC(=O)[1CH3]" par: "CHEMBL2028418" nat: 4 n: 265
+[1CH3]CCCC iso: ATT smi: "[1CH3]CCCC" par: "CHEMBL1232817" nat: 5 n: 294
+[1cH]1ccccc1 iso: ATT smi: "[1cH]1ccccc1" par: "CHEMBL1232659" nat: 6 n: 429
+[1CH3]COCC iso: ATT smi: "[1CH3]COCC" par: "CHEMBL3187188" nat: 5 n: 433
+[1NH3] iso: ATT smi: "[1NH3]" par: "CHEMBL3091859" nat: 1 n: 483
+[1CH3]C iso: ATT smi: "[1CH3]C" par: "CHEMBL9421" nat: 2 n: 569
+[1CH3]CCC iso: ATT smi: "[1CH3]CCC" par: "CHEMBL45466" nat: 4 n: 650
+[1OH2] iso: ATT smi: "[1OH2]" par: "CHEMBL467" nat: 1 n: 1012
+[1CH4] iso: ATT smi: "[1CH4]" par: "CHEMBL11544" nat: 1 n: 2055
+```
+hardly surprisingly the most common substituent at the end of an amide is
+a methyl group.
+![CHEMBL11544](CHEMBL11544.png)
+
+If we had wanted to include the Nitrogen atom in the fragments adding
+`-X anchor` would see the anchor atom (Nitrogen) included with the
+fragments.
+```
+[1NH]1CCCCC1 iso: ATT smi: "[1NH]1CCCCC1" par: "CHEMBL1232817" nat: 6 n: 267
+CC[1NH]CC iso: ATT smi: "CC[1NH]CC" par: "CHEMBL3186600" nat: 5 n: 273
+[1NH2]c1ccccc1 iso: ATT smi: "[1NH2]c1ccccc1" par: "CHEMBL1232659" nat: 7 n: 381
+O1CC[1NH]CC1 iso: ATT smi: "O1CC[1NH]CC1" par: "CHEMBL3187188" nat: 6 n: 429
+[1NH2]N iso: ATT smi: "[1NH2]N" par: "CHEMBL3091859" nat: 2 n: 478
+[1NH]1CCCC1 iso: ATT smi: "[1NH]1CCCC1" par: "CHEMBL11982" nat: 5 n: 479
+[1NH2]C iso: ATT smi: "[1NH2]C" par: "CHEMBL11544" nat: 2 n: 706
+O[1NH2] iso: ATT smi: "O[1NH2]" par: "CHEMBL467" nat: 2 n: 768
+C[1NH]C iso: ATT smi: "C[1NH]C" par: "CHEMBL268291" nat: 3 n: 903
+```
+Note the differences in numbers. When the Nitrogen atom was NOT included,
+first table, a methyl group shows up as the most frequent substituent. But
+in the second table, we see that the most common group is a di-methyl.
+When the Nitrogen is NOT included with the fragment, the di-methyl is
+recorded as two separate methyl substituents.
+
 ### Annotation
 You almost certainly want to specify an isotope for the attachment atom.
 This will be the atom in the fragment that would join to the matched atom 
@@ -164,7 +227,8 @@ Chembl that exemplified the query, and `n` which is the number of
 instances across all molecules examined.
 
 The last column is the number of instances of this fragment in the input.
-We can sort by that, and see the most common aromatic substituents.
+We can sort by that, and see the most common aromatic substituents, with
+at least 4 atoms `-m 4`, are
 ```
 COc1cc[1cH]cc1 iso: ATT smi: "COc1cc[1cH]cc1" par: "CHEMBL39210" nat: 8 n: 410 
 O1CC[1NH]CC1 iso: ATT smi: "O1CC[1NH]CC1" par: "CHEMBL1506642" nat: 6 n: 507 
@@ -223,7 +287,7 @@ increasing the probability of success. Of course more complex patterns for
 the substitution point will also increase that probability, one could
 easily imagine queries for substituted rings with various electron donating
 or withdrawing groups. Or what substituents have been found on the other
-side of an amide `-s 'C(=O)N' or the amide the other way round
+side of an amide `-s 'C(=O)N'` or the amide the other way round
 `-s 'N-[CD3]=O`.
 
 And of course, the no restriction substituent will also work

@@ -403,6 +403,8 @@ Main(int argc, char** argv) {
 
   options.Report(cerr);
 
+  needle::delete_max_possible_association();
+
   return 0;
 }
 

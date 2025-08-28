@@ -2,20 +2,14 @@
 # Deliberately simplistic in approach
 
 import os
+import subprocess
 
 import joblib
 import pandas as pd
-import sklearn
-
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import RandomForestRegressor
-
-from absl import app
-from absl import flags
-from absl import logging
-from google.protobuf import text_format
-
 import random_forest_model_pb2
+from absl import app, flags, logging
+from google.protobuf import text_format
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 FLAGS = flags.FLAGS
 
@@ -31,6 +25,7 @@ flags.DEFINE_integer("n_estimators", 100, "number of estimators")
 flags.DEFINE_integer("min_samples_split", 4, "minum number of samples required to split an internal node")
 flags.DEFINE_integer("min_samples_leaf", 2, "minum number of samples required to be in a leaf node")
 flags.DEFINE_integer("n_jobs", -1, "parallelism, -1 means use all available processors")
+flags.DEFINE_boolean("rescore", False, "rescore the training set in order to establish the linear scaling correction")
 
 class Options:
   def __init__(self):
@@ -39,6 +34,7 @@ class Options:
     self.max_num_features: int = 10
     self.feature_importance: bool = False
     self.proto = random_forest_model_pb2.RandomForestParameters()
+    self.rescore: bool = False
 
   def read_proto(self, fname)->bool:
     """Read self.proto from `fname`
@@ -108,7 +104,7 @@ def classification(x, y, options: Options):
   logging.info("Saving model to %s", os.path.join(options.mdir, "random_forest.joblib"))
   joblib.dump(booster, os.path.join(options.mdir, "random_forest.joblib"))
 
-  if len(options.feature_importance):
+  if options.feature_importance:
     do_feature_importance(booster, x.columns, options)
 
   return True
@@ -129,6 +125,10 @@ def regression(x, y, options: Options):
     do_feature_importance(booster, x.columns, options)
 
   return True
+
+
+def to_array(input:str) -> list[str]:
+  return input.split(' ')
 
 def build_random_forest_model(descriptor_fname: str,
                         activity_fname: str,
@@ -173,7 +173,7 @@ def build_random_forest_model(descriptor_fname: str,
 
   response = activity.columns[1]
 
-  proto = random_forest_model_pb2.RandomForestModel();
+  proto = random_forest_model_pb2.RandomForestModel()
   proto.model_type = "RF"
   proto.classification = options.classification
   proto.response = response
@@ -186,6 +186,29 @@ def build_random_forest_model(descriptor_fname: str,
     f.write(text_format.MessageToString(proto))
   with open(os.path.join(options.mdir, "model_metadata.dat"), "wb") as f:
     f.write(proto.SerializeToString())
+
+  if not options.rescore:
+    return True
+
+  # Code largely copied from xgbd_make. Could be consolidated...
+  train_pred = os.path.join(options.mdir, 'train.pred')
+  with open(train_pred, 'w') as output:
+    cmd = f"rf_evaluate.sh -mdir {options.mdir} {descriptor_fname}"
+    subprocess.run(to_array(cmd), stdout=output, text=True)
+
+  if not os.path.exists(train_pred):
+    logging.error("%s did not create %s", cmd, train_pred)
+    return False
+
+  train_stats = os.path.join(options.mdir, 'train.stats')
+  rescaling = os.path.join(options.mdir, 'rescaling')
+  cmd = f"iwstats -Y allequals -w -E {activity_fname} -p 2 -C {rescaling} {train_pred}"
+  with open(train_stats, 'w') as output:
+    subprocess.run(to_array(cmd), stdout=output, text=True)
+
+  if not os.path.exists(rescaling + ".textproto"):
+    logging.error("%s did not create %s", cmd, rescaling)
+    return False
 
   return True
 
@@ -226,6 +249,8 @@ def main(argv):
   if FLAGS.n_jobs > 0:
     options.proto.n_jobs = FLAGS.n_jobs
   options.proto.verbose = FLAGS.rfverbosity
+  if FLAGS.rescore:
+    options.rescore = True
 
   # print(options.proto)
 

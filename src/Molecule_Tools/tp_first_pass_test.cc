@@ -323,5 +323,15 @@ TEST_F(TestTpFirstPass, TestRingSystemTooLargeFails) {
   EXPECT_EQ(_reason, "ring_system_size");
 }
 
+TEST_F(TestTpFirstPass, TestRejectPhosphorus) {
+  ASSERT_TRUE(_m.build_from_smiles("c1nccccc1P(=O)O"));
+  const char argc = 3;
+  const char * argv[] = {"notused", "-n", "P"};
+  Command_Line cl(argc, const_cast<char**>(argv), "n:");
+  ASSERT_TRUE(_mc_first_pass.Build(cl));
+  EXPECT_TRUE(_mc_first_pass.Rejected(_m, _counter, _reason));
+  EXPECT_EQ(_reason, "covalent_non-organic") << _reason;
+}
+
 
 }  // namespace

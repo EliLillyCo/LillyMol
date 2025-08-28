@@ -21,17 +21,23 @@
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/iwdigits.h"
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwqsort/iwqsort.h"
+
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
+
 #include "gfp_standard.h"
 #include "nndata.h"
 
 using std::cerr;
-using std::endl;
 
 // Must be defined before neighbour_list.h
 static IWString identifier_tag("PCN<");
@@ -107,7 +113,7 @@ class Needle : public Neighbour_List<similarity_type_t, Smiles_ID_Dist, GFP_Stan
   void consider(similarity_type_t, const IWString& smiles, IWString& id);
 
   // Create a nnbr::NearNeighbours proto from our data.
-  nnbr::NearNeighbours MakeProto();
+  nnbr::NearNeighbours MakeProto(int include_neighbour_smiles);
 
   // Write .nn data to `output`.
   int WriteNNData(IWString_and_File_Descriptor& output);
@@ -206,7 +212,7 @@ Needle::_consider_min_nbrs(const similarity_type_t d, const IWString& smiles,
   // of neighbours grow without bounds
 
   // cerr << "nbrs " << number_neighbours() << " max d " <<
-  // distance_of_furthest_neighbour() << " max " << _upper_distance_threshold << endl;
+  // distance_of_furthest_neighbour() << " max " << _upper_distance_threshold << '\n';
 
   if (nn + 1 > min_number_neighbours &&
       distance_of_furthest_neighbour() > upper_distance_threshold) {
@@ -220,7 +226,7 @@ Needle::_consider_min_nbrs(const similarity_type_t d, const IWString& smiles,
 // Note that this interacts with several global variables, and
 // the state may be changed as a result.
 nnbr::NearNeighbours
-Needle::MakeProto() {
+Needle::MakeProto(int include_neighbour_smiles) {
   nnbr::NearNeighbours result;
   if (smiles_tag.length()) {
     result.set_smiles(_smiles.data(), _smiles.length());
@@ -240,7 +246,9 @@ Needle::MakeProto() {
 
     const IWString& id = sid->id();
     nbr->set_id(id.data(), id.length());
-    if (!smiles_tag.empty()) {
+    if (smiles_tag.empty()) {
+    } else if (! include_neighbour_smiles) {
+    } else {
       const IWString& smi = sid->smiles();
       nbr->set_smi(smi.data(), smi.length());
     }
@@ -533,19 +541,34 @@ usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Finds near neighbours\n";
-  cerr << "Usage " << prog_name << " ... -p <needles> <haystack>\n";
-  cerr << " -p <file>        specify file against which input is to be compared (needles)\n";
-  cerr << " -n <number>      specify how many neighbours to find\n";
-  cerr << " -T <distance>    specify upper distance threshold\n";
-  cerr << " -t <distance>    specify lower distance threshold\n";
-  cerr << " -m <number>      the minimum number of neighbours to find\n";
-  cerr << " -r <number>      report progress every <number> fingerprints\n";
-  cerr << " -h               discard neighbours with zero distance and the same ID as the target\n";
-  cerr << " -k               generate nnbr::NearNeighbours textproto output\n";
-  // cerr << " -B <qualifier>   various other options, enter '-B help' for details\n";
-  // cerr << " -V ...           Tversky specification, enter '-V help' for details\n";
-  cerr << " -v               verbose output\n";
+  cerr << R"(Finds nearest neighbours between fingerprint files.
+For each fingerprint file in a set of query fingerprints, needles, find the nearest
+neighbours in one or more 'haystack' files.
+
+Note that input can be from standard input, so fingerprints can be generated dynamically
+
+gfp_make.sh haystack.smi | gfp_lnearneighbours_standard -n 5 -p needles.gfp -
+
+Usage:
+gfp_lnearneighbours_standard ... -p <needles>  <haystack1> <haystack2> ... > needles.nn
+nplotnn needles.nn > needles.nn.smi
+
+Note that finding neighbours is expensive. Post-processing the output with nplotnn is
+cheap. It may be desirable to find more neighbours than anticipated, and then post
+process the output with nplotnn.
+
+ -p <file>        specify file against which input is to be compared (needles)
+ -n <number>      specify how many neighbours to find
+ -T <distance>    specify upper distance threshold
+ -t <distance>    specify lower distance threshold
+ -m <number>      the minimum number of neighbours to find
+ -h               discard neighbours with zero distance and the same ID as the target
+ -r <number>      report progress every <number> fingerprints
+ -k               generate nnbr::NearNeighbours textproto output
+ -S <fname>       write serialised nnbr::NearNeighbours protos to TFDataRecord file <fname>
+                  '-S NOSMI -S fname'    will omit neighbour smiles - much smaller file.
+ -v               verbose output
+)";
 // clang-format on
 
   exit(rc);
@@ -604,7 +627,7 @@ nearneighbours(int argc, char** argv) {
     lower_distance_threshold = t;
 
     if (verbose) {
-      cerr << "Lower distance threshold set to " << lower_distance_threshold << endl;
+      cerr << "Lower distance threshold set to " << lower_distance_threshold << '\n';
     }
   }
 
@@ -619,7 +642,7 @@ nearneighbours(int argc, char** argv) {
       }
 
       if (verbose) {
-        cerr << "Upper distance threshold set to " << upper_distance_threshold << endl;
+        cerr << "Upper distance threshold set to " << upper_distance_threshold << '\n';
       }
     }
   }
@@ -755,7 +778,7 @@ nearneighbours(int argc, char** argv) {
 
     if (neighbours_to_find > 0 && min_number_neighbours > neighbours_to_find) {
       cerr << "Inconsistent specification of neighbours_to_find " << neighbours_to_find
-           << " and min_number_neighbours " << min_number_neighbours << endl;
+           << " and min_number_neighbours " << min_number_neighbours << '\n';
       usage(4);
     }
   }
@@ -782,6 +805,38 @@ nearneighbours(int argc, char** argv) {
 
     if (verbose) {
       cerr << "Leading zero's stripped from identifiers\n";
+    }
+  }
+
+  // The no smiles capability is only enabled for serialised output.
+  // It could also be enabled for textproto output if needed.
+  std::unique_ptr<iw_tf_data_record::TFDataWriter> tfdata;
+  bool include_neighbour_smiles = true;
+
+  if (cl.option_present('S')) {
+    IWString s;
+    IWString fname;
+    for (int i = 0; cl.value('S', s, i); ++i) {
+      if (s.starts_with("NOSMI")) {
+        include_neighbour_smiles = false;
+      } else {
+        fname = s;
+      }
+    }
+
+    if (fname.empty()) {
+      cerr << "Must specify file name with TFDataRecord output (-S)\n";
+      return 1;
+    }
+
+    tfdata = std::make_unique<iw_tf_data_record::TFDataWriter>();
+    if (! tfdata->Open(fname)) {
+      cerr << "Cannot open TFDataRecord output '" << fname << "'\n";
+      return 1;
+    }
+
+    if (verbose) {
+      cerr << "Output written as serialised protos in TFDataRecord format to " << fname << '\n';
     }
   }
 
@@ -812,12 +867,23 @@ nearneighbours(int argc, char** argv) {
     for (int i = 0; i < pool_size; i++) {
       Needle& nni = needle[i];
 
-      nnbr::NearNeighbours proto = nni.MakeProto();
+      nnbr::NearNeighbours proto = nni.MakeProto(include_neighbour_smiles);
 
       if (verbose) {
         UpdateCounters(nni, neighbours, closest_neighbour_distance);
       }
       gfp::WriteNNData(proto, output);
+    }
+  } else if (tfdata) {
+    for (int i = 0; i < pool_size; ++i) {
+      Needle& nni = needle[i];
+
+      nnbr::NearNeighbours proto = nni.MakeProto(include_neighbour_smiles);
+
+      if (verbose) {
+        UpdateCounters(nni, neighbours, closest_neighbour_distance);
+      }
+      tfdata->WriteSerializedProto<nnbr::NearNeighbours>(proto);
     }
   } else {
     for (int i = 0; i < pool_size; i++) {

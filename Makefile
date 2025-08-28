@@ -37,7 +37,7 @@ default:
 
 all:
 	@echo "Build platform: $(UNAME)"
-	cd src && REPO_HOME=$(REPO_HOME) BUILD_BDB=1 BUILD_PYTHON=1 BUILD_XGBOOST=1 BUILD_VENDOR=1 ./$(BUILD_SCRIPT)
+	cd src && REPO_HOME=$(REPO_HOME) BUILD_BDB=1 BUILD_PYTHON=1 BUILD_XGBOOST=1 BUILD_VENDOR=1 BUILD_GO=1 ./$(BUILD_SCRIPT)
 
 advance:
 	@echo "Build platform: $(UNAME)"

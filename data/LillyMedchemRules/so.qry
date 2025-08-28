@@ -1,6 +1,10 @@
 (0 Query
   (A I Version 2)
   (A C Comment "SO")
+  (0 Elements_Needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 1)
+  )
   (0 Query_Atom
     (A I atomic_number 16)
     (A I unsaturation 0)

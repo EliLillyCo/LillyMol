@@ -1,10 +1,5 @@
 # Also known as benzofurazan
 name: "nitro_to_benzoxadiazol"
-scaffold_match_conditions {
-  match_conditions {
-    one_embedding_per_start_atom: true
-  }
-}
 
 scaffold {
   id: 0
@@ -48,5 +43,8 @@ scaffold {
     a1: 3
     a2: 4
     btype: SS_SINGLE_BOND
+  }
+  match_conditions {
+    one_embedding_per_start_atom: true
   }
 }

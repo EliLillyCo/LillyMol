@@ -31,7 +31,7 @@ def main(argv):
               ';', '<', '>', '?', '^', '_', 
               '`', '{', '|', '}', '~', '“', '”']
   p = re.compile("[" + re.escape("".join(my_punct)) + "]")
-  do_not_process = re.compile(".*\.(png|pdf|pyc)$")
+  do_not_process = re.compile(".*\.(png|pdf|pyc|so|xz)$")
 
   # initially implemented this to avoid finding the same molecule
   # multiple times, but we actually want to find all instances of
@@ -44,8 +44,8 @@ def main(argv):
       if do_not_process.match(fname):
         continue
       logging.info("Processing %s", fname)
-      with open(fname, "r") as reader:
-        for line in reader:
+      with open(fname, "r", encoding='utf-8', errors='ignore') as reader:
+        for line_number, line in enumerate(reader):
           no_punctuation = p.sub(" ", line.rstrip())
           for token in no_punctuation.split():
             # Ignore small 'molecules'
@@ -63,7 +63,7 @@ def main(argv):
             # if mol.unique_smiles() in seen:
             #   continue
             # seen.add(mol.unique_smiles())
-            print(f"{mol.aromatic_smiles()} {fname}")
+            print(f"{mol.aromatic_smiles()} {fname}:#{line_number+1}")
 
 if __name__ == "__main__":
   app.run(main)

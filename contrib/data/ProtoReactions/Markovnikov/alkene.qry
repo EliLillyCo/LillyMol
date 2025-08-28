@@ -1,0 +1,20 @@
+name: "alkene"
+query {
+  query_atom {
+    id: 0
+    atom_properties {
+      atomic_number: 6
+      ring_bond_count: 0
+      min_hcount: 1
+    }
+  }
+  query_atom {
+    id: 1
+    atom_properties {
+      atomic_number: 6
+      ring_bond_count: 0
+      min_hcount: 1
+    }
+    bond_smarts: "!@= 0"
+  }
+}

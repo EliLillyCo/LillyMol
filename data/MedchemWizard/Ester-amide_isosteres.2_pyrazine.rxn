@@ -5,10 +5,10 @@
   (0 Scaffold
     (A C smarts "[CX4R<2]-[N,O;R<2]-C(=O)-[#6R<2]")
     (A I embeddings_do_not_overlap 1)
-    (A I remove_atom (1 2 3))
+    (A I remove_atom (0 1 2))
   )
   (1 Sidechain
-    (A C smiles "C1=NC=CN=C1")
+    (A C smiles "C1=CN=CC=N1")
     (A C smarts "c1cnccn1")
     (A I join (0 1))
     (A I join (4 3))

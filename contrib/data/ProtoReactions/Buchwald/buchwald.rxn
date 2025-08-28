@@ -1,0 +1,15 @@
+name: "Buchwald"
+scaffold {
+  id: 0
+  query_file: "monosubstitued_aryl_halide.qry"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  comment: "Note heirarchy of reactivity"
+  smarts: "[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a"
+  join {
+    a1: 1
+    a2: 0
+  }
+}

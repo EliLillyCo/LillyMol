@@ -23,6 +23,11 @@ class TestSubstructure : public testing::Test
     Molecule _m;
 };
 
+TEST_F(TestSubstructure, TestSpaceAtEndOfSmiles) {
+  _smiles = "C ";
+  EXPECT_TRUE(_m.build_from_smiles(_smiles));
+}
+
 TEST_F(TestSubstructure, TestSwapAtoms1) {
   _smiles = "CC=N";
   ASSERT_TRUE(_m.build_from_smiles(_smiles));

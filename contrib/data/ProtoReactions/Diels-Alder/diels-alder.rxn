@@ -1,0 +1,27 @@
+name: "Diels-Alder"
+scaffold {
+  id: 0
+  smarts: "C=C-C=C"
+  single_bond: [0, 1]
+  double_bond: [1, 2]
+  single_bond: [2, 3]
+  atom_and_isotope: [1, 1]
+  atom_and_isotope: [2, 2]
+}
+sidechain {
+  id: 1
+  smarts: "[CH]=[CH]"
+  single_bond: [0, 1]
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  atom_and_isotope: [0, 3]
+  atom_and_isotope: [1, 4]
+}

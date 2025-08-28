@@ -1,0 +1,15 @@
+(0 Query
+  (1 Ring_System_Specifier
+    (A I min_nrings 3)
+    (A I ring_size (3 6 7 8))
+    (A I min_rings_that_must_match_ring_size 2)
+    (A I min_aromatic_ring_count 1)
+    (A I max_aromatic_ring_count 3)
+    (A I max_degree_of_fusion 2)
+    (A I max_atoms_in_system 50)
+    (A I number_spinach_groups 3)
+    (A I number_non_spinach_groups 3)
+    (A I max_length_of_spinach 5)
+    (A I min_distance_to_another_ring 4)
+  )
+)

@@ -29,6 +29,7 @@
 
 #include "Foundational/iwaray/iwaray.h"
 
+#ifdef OBSOLETE_STRING_FUNCTIONS_NO_LONGER_USED
 extern void strip_leading_blanks (char *);
 extern void strip_trailing_blanks (char *);
 extern void to_lowercase (char *, int = 0);
@@ -36,14 +37,16 @@ extern void to_lowercase (char *, int = 0);
 extern void to_uppercase (char *, int = 0);
 extern void to_uppercase (resizable_array_p<char> *);
 extern void no_newline            (char *);
-extern int  is_double (const char *, double *);
-extern int  is_int (const char *, int *);
-extern int  ccount (const char *, char);
 extern int  remove_blanks (char *);
 extern int  compress_blanks (char *);
 extern int  compress_blanks (char *, int);
 //extern int find_string (const resizable_array_p<char> *, const char *);
 extern const char * iwbasename (const char *);
+#endif // OBSOLETE_STRING_FUNCTIONS_NO_LONGER_USED
+
+extern int  is_int (const char *, int *);
+extern int  ccount (const char *, char);
+extern int  is_double (const char *, double *);
 
 extern char * make_copy (const char *);
 
@@ -52,16 +55,16 @@ extern int  words (const char *, char = ' ');
 extern int iwstrncasecmp (const char *, const char *, int);
 
 /*
-  An IWString object is very much like a standard C string.
-  In general, the string representation is NOT null terminated.
-  If you wish to access a NULL terminated const version, use chars ().
-  chars () will apply the null terminator and pass you the string.
-  Note that you are getting the actual data, not a copy, so it
-  will change as the underlying object changes.
+  The default string class used by LillyMol.
+  Why have your own string class?
+  Because when LillyMol was first developed in the mid 1990's there
+  was very poor standardisation and lack of functionality across
+  compiler implementations.
+  Truly nightmarish!
+  And for lack of functionality, for example std::string_view was introduced
+  to c++ as part of c++17, const_IWSubstring was part of LillyMol in 1995.
 
-  May 96: New calls, null_terminated_chars (), with the intention of
-  having chars () NOT do null termination
-  For now, rawchars () returns the chars.
+  Today IWString and std::string peacefully coexist.
 */
 
 class IWString;
@@ -73,11 +76,11 @@ class const_IWSubstring
     int          _nchars;
 
   friend
-    int operator == (const char * lhs, const const_IWSubstring & rhs);
+    bool operator == (const char * lhs, const const_IWSubstring & rhs);
   friend
-    int operator != (const char * lhs, const const_IWSubstring & rhs);
+    bool operator != (const char * lhs, const const_IWSubstring & rhs);
   friend
-    int operator == (char, const const_IWSubstring &);
+    bool operator == (char, const const_IWSubstring &);
   friend
     const_IWSubstring substr (const const_IWSubstring &, int, int);
   friend
@@ -279,22 +282,22 @@ class const_IWSubstring
 
     int write (int) const;     // write to an open file descriptor
 
-    int operator == (const char * rhs) const;
-    int operator != (const char * rhs) const;
-    int operator == (const const_IWSubstring &) const;
-    int operator != (const const_IWSubstring &) const;
-    int operator == (const IWString &) const;
-    int operator != (const IWString & rhs) const;
-    int operator == (char) const;
+    bool operator == (const char * rhs) const;
+    bool operator != (const char * rhs) const;
+    bool operator == (const const_IWSubstring &) const;
+    bool operator != (const const_IWSubstring &) const;
+    bool operator == (const IWString &) const;
+    bool operator != (const IWString & rhs) const;
+    bool operator == (char) const;
 
 //  The relational operators are implemented using strncmp
 
-    int operator < (const const_IWSubstring &) const;
-    int operator < (const IWString &) const;
-    int operator > (const const_IWSubstring &) const;
-    int operator > (const IWString &) const;
+    bool operator < (const const_IWSubstring &) const;
+    bool operator < (const IWString &) const;
+    bool operator > (const const_IWSubstring &) const;
+    bool operator > (const IWString &) const;
 
-    int operator < (int) const;
+#ifdef THESE_WERE_NEVER_IMPLEMENTED_AND_A_BAD_IDEA
     int operator <= (int) const;
     int operator > (int) const;
     int operator >= (int) const;
@@ -314,6 +317,7 @@ class const_IWSubstring
     int operator >= (double) const;
     int operator == (double) const;
     int operator != (double) const;
+#endif
 
 //  A common operation is to parse a string into 'directive=value'
 
@@ -344,13 +348,13 @@ class IWString : public resizable_array<char>
     template <typename I> void _append_int_form(I);
 
   friend
-    int operator == (char, const IWString &);
+    bool operator == (char, const IWString &);
   friend
-    int operator != (char, const IWString &);
+    bool operator != (char, const IWString &);
   friend
-    int operator == (const char * lhs, const IWString & rhs);
+    bool operator == (const char * lhs, const IWString & rhs);
   friend
-    int operator != (const char * lhs, const IWString & rhs);
+    bool operator != (const char * lhs, const IWString & rhs);
   friend
     IWString operator + (const char *, const IWString &);
   friend
@@ -404,14 +408,14 @@ class IWString : public resizable_array<char>
 
     IWString & operator = (IWString &&);
 
-    int operator == (char) const;
-    int operator != (char) const;
-    int operator == (const const_IWSubstring & rhs) const;
-    int operator != (const const_IWSubstring & rhs) const;
-    int operator == (const char *) const;
-    int operator != (const char *) const;
-    int operator == (const IWString &) const;
-    int operator != (const IWString &) const;
+    bool operator == (char) const;
+    bool operator != (char) const;
+    bool operator == (const const_IWSubstring & rhs) const;
+    bool operator != (const const_IWSubstring & rhs) const;
+    bool operator == (const char *) const;
+    bool operator != (const char *) const;
+    bool operator == (const IWString &) const;
+    bool operator != (const IWString &) const;
 
     // These are not instantiated. Did not work inside Google.
     bool operator== (const std::string& rhs) const;
@@ -421,10 +425,10 @@ class IWString : public resizable_array<char>
 
 //  The relational operators are implemented using strncmp
 
-    int operator < (const const_IWSubstring &) const;
-    int operator < (const IWString &) const;
-    int operator > (const const_IWSubstring &) const;
-    int operator > (const IWString &) const;
+    bool operator < (const const_IWSubstring &) const;
+    bool operator < (const IWString &) const;
+    bool operator > (const const_IWSubstring &) const;
+    bool operator > (const IWString &) const;
 
     int strncpy (const char *, int);
     int strncpy (const IWString &, int);
@@ -524,6 +528,9 @@ class IWString : public resizable_array<char>
     int numeric_value (unsigned long &) const;
 
     int numeric_value_fast(int &) const;
+
+    // Suffixes k(thousand), m(million) and g(giga) are recognised;
+    template <typename T> int NumericValueKMG(T& result) const;
 
     const char * chars ();
     const char * null_terminated_chars ();
@@ -704,6 +711,7 @@ class IWString : public resizable_array<char>
     IWString & operator << (const std::string_view & s) { this->operator+=(s); return *this;}
 #endif
 
+#ifdef NEVER_A_GOOD_IDEA_AND_NEVER_IMPLEMENTED
     int operator < (int) const;
     int operator <= (int) const;
     int operator > (int) const;
@@ -724,6 +732,7 @@ class IWString : public resizable_array<char>
     int operator >= (double) const;
     int operator == (double) const;
     int operator != (double) const;
+#endif
 
 //  Change characters between (and including) istart to istop to a new string. Grow or shorten as needed
 
@@ -736,9 +745,11 @@ class IWString : public resizable_array<char>
 
     // Try to interpolate any ${varname}.
     std::optional<IWString> ExpandEnvironmentVariables() const;
+    // Does the expansion and if changed, replaces the contents.
+    int ExpandEnvironmentVariablesInPlace();
 };
 
-inline int
+inline bool
 IWString::operator == (const char * rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -749,7 +760,7 @@ IWString::operator == (const char * rhs) const
   return 0 == ::strncmp (_things, rhs, _number_elements);    // loss of const OK for strcmp
 }
 
-inline int
+inline bool
 operator != (char lhs, const const_IWSubstring & rhs)
 {
   if (1 != rhs.length ())
@@ -758,7 +769,7 @@ operator != (char lhs, const const_IWSubstring & rhs)
   return lhs != rhs[0];
 }
 
-inline int
+inline bool
 const_IWSubstring::operator != (const const_IWSubstring & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -772,7 +783,7 @@ const_IWSubstring::operator != (const const_IWSubstring & rhs) const
     return 1;
 }
 
-inline int
+inline bool
 const_IWSubstring::operator != (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -786,7 +797,7 @@ const_IWSubstring::operator != (const IWString & rhs) const
     return 1;
 }
 
-inline int
+inline bool
 IWString::operator == (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -797,7 +808,7 @@ IWString::operator == (const IWString & rhs) const
   return (0 == ::memcmp (_things, rhs._things, _number_elements));
 }
 
-inline int
+inline bool
 IWString::operator != (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -809,7 +820,7 @@ IWString::operator != (const IWString & rhs) const
 }
 
 
-inline int
+inline bool
 const_IWSubstring::operator == (const const_IWSubstring & rhs) const
 {
   if (_nchars != rhs._nchars)
@@ -818,7 +829,7 @@ const_IWSubstring::operator == (const const_IWSubstring & rhs) const
   return (0 == ::strncmp (_data, rhs._data, _nchars));
 }
 
-inline int
+inline bool
 const_IWSubstring::operator == (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -828,7 +839,7 @@ const_IWSubstring::operator == (const IWString & rhs) const
   return (0 == ::strncmp (_data, rhs._things, _nchars));
 }
 
-inline int
+inline bool
 IWString::operator == (char rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -839,7 +850,7 @@ IWString::operator == (char rhs) const
   return rhs == _things[0];
 }
 
-inline int
+inline bool
 operator == (const char * lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -850,7 +861,7 @@ operator == (const char * lhs, const IWString & rhs)
   return 0 == ::strncmp (lhs, rhs._things, lchars);
 }
 
-inline int
+inline bool
 operator != (const char * lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -861,7 +872,7 @@ operator != (const char * lhs, const IWString & rhs)
   return 0 != ::strncmp (lhs, rhs._things, lchars);
 }
 
-inline int
+inline bool
 operator == (const char * lhs, const const_IWSubstring & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -872,7 +883,7 @@ operator == (const char * lhs, const const_IWSubstring & rhs)
   return (0 == ::strncmp (lhs, rhs._data, lchars));
 }
 
-inline int
+inline bool
 operator != (const char * lhs, const const_IWSubstring & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -883,7 +894,7 @@ operator != (const char * lhs, const const_IWSubstring & rhs)
   return (0 != ::strncmp (lhs, rhs._data, lchars));
 }
 
-inline int 
+inline bool 
 operator != (char lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -893,7 +904,7 @@ operator != (char lhs, const IWString & rhs)
   return lhs != rhs._things[0];
 }
 
-inline int
+inline bool
 const_IWSubstring::operator == (const char * rhs) const
 {
   int l2 = static_cast<int>(std::strlen (rhs));
@@ -904,7 +915,7 @@ const_IWSubstring::operator == (const char * rhs) const
   return 0 == ::strncmp (_data, rhs, _nchars);
 }
 
-inline int 
+inline bool 
 IWString::operator == (const const_IWSubstring & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -916,7 +927,7 @@ IWString::operator == (const const_IWSubstring & rhs) const
   return 0 == ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
-inline int 
+inline bool 
 IWString::operator != (const const_IWSubstring & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -927,7 +938,7 @@ IWString::operator != (const const_IWSubstring & rhs) const
   return 0 != ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
-inline int
+inline bool
 operator == (char lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -937,7 +948,7 @@ operator == (char lhs, const IWString & rhs)
   return lhs == rhs._things[0];
 }
 
-inline int
+inline bool
 operator == (char lhs, const const_IWSubstring & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -947,27 +958,29 @@ operator == (char lhs, const const_IWSubstring & rhs)
   return lhs == rhs._data[0];
 }
 
-inline int
+inline bool
 const_IWSubstring::operator == (char rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
-  if (1 != _nchars)
-    return 0;
+  if (1 != _nchars) {
+    return false;
+  }
 
   return rhs == _data[0];
 }
 
-inline int
+inline bool
 IWString::operator != (char rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
-  if (1 != _number_elements)
-    return 1;
+  if (1 != _number_elements) {
+    return true;
+  }
 
   return rhs != _things[0];
 }
 
-inline int
+inline bool
 IWString::operator != (const char * rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -978,7 +991,7 @@ IWString::operator != (const char * rhs) const
   return 0 != ::strncmp (_things, rhs, _number_elements);
 }
 
-inline int
+inline bool
 const_IWSubstring::operator != (const char * rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
@@ -1022,6 +1035,24 @@ Equals(const const_IWSubstring& lhs, const std::string_view& rhs) {
   }
   return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
+
+// Used for reading records from tabular files where there might
+// be quoted tokens.
+// For each token encountered, add to `tstart` and `tstop` the
+// start and stop for that token - excluding quotes.
+// The output can be processed with something like:
+//
+//  int ntokens = TokeniseWithQuotes(buffer, ',', _tstart, _tstop);
+//  if (ntokens < 0) .... fail.
+//  for (int i = 0; i < ntokens; ++i) {
+//    int b = _tstart[i];
+//    int e = _tstop[i];
+//    const_IWSubstring token(buffer.rawdata() + b, e - b);
+int
+TokeniseWithQuotes(const const_IWSubstring& buffer,
+                   char sep,
+                   resizable_array<int>& tstart,
+                   resizable_array<int>& tstop);
 
 }  // namespace iwstring
 

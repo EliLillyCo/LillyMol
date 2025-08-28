@@ -164,7 +164,7 @@ class AColumn : public Accumulator<double> {
 
   int extra(const_IWSubstring&, const int prevalence);
 
-  int report(std::ostream&) const;
+  int Report(std::ostream&);
 
   void set_name(const const_IWSubstring& s) {
     _name = s;
@@ -269,8 +269,9 @@ AColumn::_add_to_raw_values(float f) {
   return;
 }
 
+// Not const because of the random number generator.
 int
-AColumn::report(std::ostream& output) const {
+AColumn::Report(std::ostream& output) {
   if (_name.length() > 0) {
     output << _name << ' ';
   }
@@ -325,7 +326,7 @@ AColumn::report(std::ostream& output) const {
 
     const int nraw = _raw_values.number_elements();
 
-    std::random_shuffle(r, r + nraw);
+    std::shuffle(r, r + nraw, _rng);
     std::sort(r, r + nraw);
     for (auto i = 0; i < percentiles.number_elements(); ++i) {
       const auto p = percentiles[i];
@@ -680,7 +681,7 @@ average(const char* fname, iwstring_data_source& input, std::ostream& output) {
         continue;
       }
 
-      const AColumn& ci = acolumn[i];
+      AColumn& ci = acolumn[i];  // not const because Report uses a random number generator.
 
       if (0 == ci.n()) {
         continue;
@@ -695,7 +696,7 @@ average(const char* fname, iwstring_data_source& input, std::ostream& output) {
       } else if (0 == ci.name().length()) {
         output << "column " << (i + 1) << '\n';
       }
-      ci.report(output);
+      ci.Report(output);
 
       ci.update_global_accumulator(global_accumulator);
       columns_processed++;
@@ -711,7 +712,7 @@ average(const char* fname, iwstring_data_source& input, std::ostream& output) {
              << static_cast<float>(global_accumulator.average()) << "\n";
     }
   } else {
-    acolumn[0].report(output);
+    acolumn[0].Report(output);
   }
 
   return rc;

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package accumulator;
+
+// Allows saving an Accumulator type to proto form.
+// Only the float forms are supported.
+message AccumulatorData {
+  optional int64 n = 1;
+
+  optional double minval = 2;
+  optional double maxval = 3;
+
+  // Sum of values.
+  optional double xsum = 4;
+
+  // Sum of squred values.
+  optional double x2sum = 5;
+}

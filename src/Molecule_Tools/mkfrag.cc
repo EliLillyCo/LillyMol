@@ -21,9 +21,8 @@ using std::endl;
 #include "Molecule_Lib/standardise.h"
 
 static void
-usage(int rc)
-{
-// clang-format off
+usage(int rc) {
+  // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
@@ -124,8 +123,7 @@ static IWString reverse_mkfrag_name_separator;
 static int remove_chirality = 0;
 
 static int
-molecule_size_comparitor(Molecule* const* ppm1, Molecule* const* ppm2)
-{
+molecule_size_comparitor(Molecule* const* ppm1, Molecule* const* ppm2) {
   Molecule* pm1 = const_cast<Molecule*>(*ppm1);
   Molecule* pm2 = const_cast<Molecule*>(*ppm2);
 
@@ -153,8 +151,7 @@ molecule_size_comparitor(Molecule* const* ppm1, Molecule* const* ppm2)
 }
 
 static void
-remove_fragments_for_size(resizable_array_p<Molecule>& components)
-{
+remove_fragments_for_size(resizable_array_p<Molecule>& components) {
   int nfrag = components.number_elements();
   for (int i = 0; i < nfrag; i++) {
     int n = components[i]->natoms();
@@ -169,8 +166,7 @@ remove_fragments_for_size(resizable_array_p<Molecule>& components)
 }
 
 static int
-contains_non_organic_atoms(const Molecule& m)
-{
+contains_non_organic_atoms(const Molecule& m) {
   int matoms = m.natoms();
 
   for (int i = 0; i < matoms; i++) {
@@ -189,8 +185,7 @@ contains_non_organic_atoms(const Molecule& m)
 }
 
 static void
-remove_non_organic_fragments(resizable_array_p<Molecule>& components)
-{
+remove_non_organic_fragments(resizable_array_p<Molecule>& components) {
   int nc = components.number_elements();
 
   for (int i = 0; i < nc; i++) {
@@ -207,8 +202,7 @@ remove_non_organic_fragments(resizable_array_p<Molecule>& components)
 }
 
 static void
-remove_isotopic_fragments(resizable_array_p<Molecule>& components)
-{
+remove_isotopic_fragments(resizable_array_p<Molecule>& components) {
   int nc = components.number_elements();
 
   for (int i = 0; i < nc; i++) {
@@ -225,8 +219,7 @@ remove_isotopic_fragments(resizable_array_p<Molecule>& components)
 }
 
 static void
-do_discard_fragments_with_invalid_valences(resizable_array_p<Molecule>& components)
-{
+do_discard_fragments_with_invalid_valences(resizable_array_p<Molecule>& components) {
   int nc = components.number_elements();
 
   for (int i = 0; i < nc; i++) {
@@ -243,8 +236,7 @@ do_discard_fragments_with_invalid_valences(resizable_array_p<Molecule>& componen
 }
 
 static int
-do_write_whole_molecule(Molecule& m, int nfrag, Molecule_Output_Object& output)
-{
+do_write_whole_molecule(Molecule& m, int nfrag, Molecule_Output_Object& output) {
   IWString tmp;
   tmp.resize(m.name().length() + 10);
 
@@ -259,8 +251,7 @@ do_write_whole_molecule(Molecule& m, int nfrag, Molecule_Output_Object& output)
 }
 
 static int
-form_unique_fragments(resizable_array_p<Molecule>& components, int* xref)
-{
+form_unique_fragments(resizable_array_p<Molecule>& components, int* xref) {
   int nfrag = components.number_elements();
 
   IW_STL_Hash_Map_int usmi;
@@ -340,8 +331,7 @@ form_unique_fragments(resizable_array_p<Molecule>& components, int* xref)
 }
 
 static int
-form_unique_fragments(resizable_array_p<Molecule>& components)
-{
+form_unique_fragments(resizable_array_p<Molecule>& components) {
   int nfrag = components.number_elements();
 
   int* tmp = new int[nfrag];
@@ -356,8 +346,7 @@ form_unique_fragments(resizable_array_p<Molecule>& components)
 
 static int
 do_output(Molecule& m, const IWString& mname, int frag_number,
-          Molecule_Output_Object& output)
-{
+          Molecule_Output_Object& output) {
   if (append_frag_id) {
     if (fragment_ids_are_global) {
       frag_number = molecules_written;
@@ -377,8 +366,7 @@ do_output(Molecule& m, const IWString& mname, int frag_number,
 }
 
 static int
-mkfrag(Molecule& m, int nfrag, Molecule_Output_Object& output)
-{
+mkfrag(Molecule& m, int nfrag, Molecule_Output_Object& output) {
   if (write_whole_molecule && !do_write_whole_molecule(m, nfrag, output)) {
     return 0;
   }
@@ -467,8 +455,7 @@ mkfrag(Molecule& m, int nfrag, Molecule_Output_Object& output)
 }
 
 static void
-preprocess(Molecule& m)
-{
+preprocess(Molecule& m) {
   if (transform_to_non_isotopic_form) {
     m.transform_to_non_isotopic_form();
   }
@@ -485,8 +472,7 @@ preprocess(Molecule& m)
 }
 
 static int
-mkfrag(data_source_and_type<Molecule>& input, Molecule_Output_Object& output)
-{
+mkfrag(data_source_and_type<Molecule>& input, Molecule_Output_Object& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
@@ -518,8 +504,7 @@ mkfrag(data_source_and_type<Molecule>& input, Molecule_Output_Object& output)
 }
 
 static int
-mkfrag(const char* fname, FileType input_type, Molecule_Output_Object& output)
-{
+mkfrag(const char* fname, FileType input_type, Molecule_Output_Object& output) {
   assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
@@ -541,8 +526,7 @@ mkfrag(const char* fname, FileType input_type, Molecule_Output_Object& output)
 }
 
 static int
-do_name_appending(Molecule& m, const IWString& s)
-{
+do_name_appending(Molecule& m, const IWString& s) {
   IWString tmp(m.name());
   tmp.append_with_spacer(s, reverse_mkfrag_name_separator);
   m.set_name(tmp);
@@ -552,8 +536,7 @@ do_name_appending(Molecule& m, const IWString& s)
 
 static int
 do_reverse_mkfrag(data_source_and_type<Molecule>& input, IW_STL_Hash_Set& already_seen,
-                  Molecule& tot)
-{
+                  Molecule& tot) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
@@ -587,8 +570,7 @@ do_reverse_mkfrag(data_source_and_type<Molecule>& input, IW_STL_Hash_Set& alread
 
 static int
 do_reverse_mkfrag(const char* fname, FileType input_type, IW_STL_Hash_Set& already_seen,
-                  Molecule& tot)
-{
+                  Molecule& tot) {
   assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
@@ -610,8 +592,7 @@ do_reverse_mkfrag(const char* fname, FileType input_type, IW_STL_Hash_Set& alrea
 }
 
 static int
-do_reverse_mkfrag(Command_Line& cl, FileType input_type, Molecule_Output_Object& output)
-{
+do_reverse_mkfrag(Command_Line& cl, FileType input_type, Molecule_Output_Object& output) {
   Molecule tot;
   IW_STL_Hash_Set already_seen;
 
@@ -626,8 +607,7 @@ do_reverse_mkfrag(Command_Line& cl, FileType input_type, Molecule_Output_Object&
 }
 
 static int
-mkfrag(int argc, char** argv)
-{
+mkfrag(int argc, char** argv) {
   Command_Line cl(argc, argv, "vA:E:m:M:i:o:S:f:F:uasD:I:U:g:wO:VlR:c");
 
   if (cl.unrecognised_options_encountered()) {
@@ -814,12 +794,9 @@ mkfrag(int argc, char** argv)
   if (cl.option_present('R')) {
     reverse_mkfrag = 1;
     reverse_mkfrag_name_separator = cl.string_value('R');
-    if ("space" == reverse_mkfrag_name_separator) {
-      reverse_mkfrag_name_separator = ' ';
-    } else if ("tab" == reverse_mkfrag_name_separator) {
-      reverse_mkfrag_name_separator = '\t';
-    } else if ("empty" == reverse_mkfrag_name_separator) {
-      ;
+    if ( ! char_name_to_char(reverse_mkfrag_name_separator)) {
+      cerr << "Cannot discern character name\n";
+      return 1;
     }
 
     if (verbose) {
@@ -952,8 +929,7 @@ mkfrag(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   int rc = mkfrag(argc, argv);
 
   return rc;

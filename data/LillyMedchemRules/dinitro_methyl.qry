@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "dinitro_methyl")
+  (A I one_embedding_per_start_atom 1)
+  (A C smarts "[CD4](-N(=O)=O)-N(=O)=O")
+)

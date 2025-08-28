@@ -25,7 +25,11 @@
 #include "Molecule_Lib/molecule_to_query.h"
 #include "Molecule_Lib/substructure.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace parsimonious_set {
 
@@ -57,6 +61,10 @@ dicer -I 1 -X 64 -m 3 -M 20 -M maxnr=10 -v -B nbamide -B brcb -B serialized_prot
 The nature of the dicing is critically important, and there is no "right" answer for what
 is best. Fragments should definitely be labelled, either with a constant isotope or with an atom type.
 
+Then
+
+parsimonious_set -nsel 2000 -support 10 -sortf dicer.data > subset.smi
+
 The following options are recognised
 
 -support <n>    discard any fragment found in fewer than <n> molecules.
@@ -68,6 +76,7 @@ The following options are recognised
 -v              verbose output
 )";
   // clang-format on
+
   ::exit(rc);
 }
 
@@ -817,7 +826,7 @@ Candidates::FirstMoleculeWithFragment(const Fragment* f) const {
 
 int
 ParsimoniousSet(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-S=s-support=ipos-nsel=ipos-nosort-randf-sortf-report=ipos");
+  Command_Line_v2 cl(argc, argv, "-v-S=s-support=ipos-nsel=ipos-nosort-rand-sortf-report=ipos-nexample=ipos");
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     Usage(1);

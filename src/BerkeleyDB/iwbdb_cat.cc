@@ -238,7 +238,7 @@ usage(int rc) {
 
   cerr << "usage: iwbdb_cat target database1 database2 database3 ... \n";
   cerr << "        the contents of database1, database2, ... are put into TARGET\n";
-  cerr << " -d <target>  specify target database via different syntax\n";
+  cerr << " -d <target>  specify target database as an option rather than first argument (recommended)\n";
   cerr << " -o           overwrite existing entries in TARGET\n";
 //cerr << " -c <size>    value for GDBM_CACHESIZE (sometimes smaller is better here)\n";
   cerr << " -M <key>     key(s) whose value must be consistent in all databases\n";

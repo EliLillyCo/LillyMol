@@ -1,0 +1,9 @@
+(0 reaction
+  (0 scaffold
+    A C smarts "[CD3H@]"
+  )
+  (1 sidechain
+    A C smarts "[*]"
+    (A I join (0 0))
+  )
+)

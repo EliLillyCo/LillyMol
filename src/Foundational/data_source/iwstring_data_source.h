@@ -48,12 +48,13 @@ class iwstring_data_source
     int      _record_buffered;
     int      _record_delimiter;
     int      _longest_record;
-    int      _lines_read;
-    int      _lines_which_are_returned;
     int      _strip_leading_blanks;
     int      _strip_trailing_blanks;
     int      _compress_spaces;
     int      _skip_blank_lines;
+
+    uint64_t _lines_read;
+    uint64_t _lines_which_are_returned;
 
     std::unique_ptr<RE2> _ignore_pattern;
     std::unique_ptr<RE2> _filter_pattern;
@@ -114,7 +115,7 @@ protected:
     iwstring_data_source (const char *,   int = STRING_DEFAULT_BUF_SIZE);
     iwstring_data_source (const IWString &, int = STRING_DEFAULT_BUF_SIZE);
 		
-	iwstring_data_source (bool isstringbuffer, const char *stringbuffer, int stringbuffer_size);
+    iwstring_data_source (bool isstringbuffer, const char *stringbuffer, int stringbuffer_size);
 
     ~iwstring_data_source ();
 
@@ -159,7 +160,7 @@ protected:
 
     int most_recent_record (IWString &);
 
-    int lines_read () const { return _lines_read; }
+    uint64_t lines_read () const { return _lines_read; }
     int next_record_matches (const char *);
     int push_record ();
     int skip_to   (const char *);
@@ -201,6 +202,10 @@ protected:
     int read_bytes (void *, size_t);
 
     size_t copy_raw_bytes (void *, const size_t);    // does a save and restore of the state, so it will not advance the file pointer - just got too complicated...
+
+    // From the current position, read all records into `destination`.
+    // Lines are separated by newline characters.
+    int ReadAllRecords(IWString& destination);
 };
 
 #endif  // FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_

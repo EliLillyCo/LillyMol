@@ -2,11 +2,11 @@ description {
   feature_name: "w_alring"
   description: "Number of aliphatic rings"
   plot_title: "Number of aliphatic rings"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 10.0
-mean: 1.00252
+maxval: 12.0
+mean: 0.97236836
 median: 1.0
 quantile {
   quantile: 0.01
@@ -34,45 +34,53 @@ quantile {
   value: 5.0
 }
 int_values {
-  count: 19022
+  count: 725404
 }
 int_values {
   value: 1
-  count: 18642
+  count: 685079
 }
 int_values {
   value: 2
-  count: 8184
+  count: 292621
 }
 int_values {
   value: 3
-  count: 2469
+  count: 86262
 }
 int_values {
   value: 4
-  count: 1018
+  count: 35749
 }
 int_values {
   value: 5
-  count: 456
+  count: 15884
 }
 int_values {
   value: 6
-  count: 137
+  count: 5035
 }
 int_values {
   value: 7
-  count: 46
+  count: 1268
 }
 int_values {
   value: 8
-  count: 23
+  count: 561
 }
 int_values {
   value: 9
-  count: 1
+  count: 116
 }
 int_values {
   value: 10
+  count: 49
+}
+int_values {
+  value: 11
+  count: 31
+}
+int_values {
+  value: 12
   count: 2
 }

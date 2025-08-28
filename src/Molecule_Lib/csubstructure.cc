@@ -337,7 +337,8 @@ Substructure_Query::set_find_unique_embeddings_only(int s) {
   assert(ok());
 
   if (0 == _number_elements) {
-    cerr << "Substructure_Query::set_find_unique_embeddings_only: no queries\n";
+    // Warning is useful, but when used from trxn it becomes noisy, so turn off.
+    // cerr << "Substructure_Query::set_find_unique_embeddings_only: no queries\n";
     return 0;
   }
 
@@ -353,8 +354,7 @@ Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches(int s) {
   assert(ok());
 
   if (0 == _number_elements) {
-    cerr << "Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches: no "
-            "queries\n";
+    cerr << "Substructure_Query::set_do_not_perceive_symmetry_equivalent_matches: no queries\n";
     return 0;
   }
 
@@ -651,4 +651,24 @@ Substructure_Query::ForgetOriginatingSmarts() {
     rc += _things[i]->ForgetOriginatingSmarts();
   }
   return rc;
+}
+
+int
+Substructure_Query::embeddings_do_not_overlap() const {
+  if (empty()) {
+    cerr << "Substructure_Query::embeddings_do_not_overlap:no queries\n";
+    return 0;
+  }
+
+  return _things[0]->embeddings_do_not_overlap();
+}
+
+int
+Substructure_Query::find_unique_embeddings_only() const {
+  if (empty()) {
+    cerr << "Substructure_Query::find_unique_embeddings_only:no queries\n";
+    return 0;
+  }
+
+  return _things[0]->find_unique_embeddings_only();
 }

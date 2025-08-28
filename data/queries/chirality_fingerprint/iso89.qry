@@ -1,0 +1,5 @@
+name: "RS"
+comment: "Used by chiralp_1.sh"
+query {
+  smarts: "[8,9]"
+}

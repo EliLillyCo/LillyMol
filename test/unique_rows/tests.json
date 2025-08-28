@@ -1,0 +1,60 @@
+{
+  "executable": "unique_rows",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "-c 1 -c 2 #{indir}/t10.dat" ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "-c 1,2 #{indir}/t11.dat" ]
+        },
+        {
+          "name": "case_3",
+          "args": [ "-c 1-2 #{indir}/t12.dat" ]
+        },
+        {
+          "name": "case_4",
+          "args": [ "-c all #{indir}/t1.dat" ]
+        },
+        {
+          "name": "case_5",
+          "args": [ "-c 3 #{indir}/t2.dat" ]
+        },
+        {
+          "name": "case_6",
+          "args": [ "-c 2 #{indir}/t3.dat" ]
+        },
+        {
+          "name": "case_7",
+          "args": [ "-c -1 #{indir}/t4.dat" ]
+        },
+        {
+          "name": "case_8",
+          "args": [ "-c 1-5 -c 7-11 #{indir}/t5.dat" ]
+        },
+        {
+          "name": "case_9",
+          "args": [ "-c 1,2,3,4,5 -c 7,8,9,10,11 #{indir}/t6.dat" ]
+        },
+        {
+          "name": "case_10",
+          "args": [ "-x 6 #{indir}/t7.dat" ]
+        },
+        {
+          "name": "case_11",
+          "args": [ "-x 6 -nc #{indir}/t8.dat" ]
+        },
+        {
+          "name": "case_12",
+          "args": [ "-c all -r 4 #{indir}/t9.dat" ]
+        },
+        {
+          "name": "case_13",
+          "args": [ "-s -c 1 -c 2 #{indir}/t10.dat" ],
+          "comment": [ "like case_1, but with -s" ]
+        }
+      ]
+    }
+  }
+}

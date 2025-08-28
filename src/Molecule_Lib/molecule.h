@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <sys/types.h>
+
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -603,7 +604,7 @@ enum BondedStatus {
 
 class __attribute__((visibility("default"))) Molecule : private resizable_array_p<Atom> {
  private:
-  Bond_list _bond_list;
+  BondList _bond_list;
 
   //resizable_array_p<Chiral_Centre> _chiral_centres;
   SetOfChiralCentres _chiral_centres;
@@ -1020,8 +1021,13 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int set_element(atom_number_t a, const Element* e);
   int set_atomic_number(atom_number_t a, atomic_number_t);
 
+  // The number of atoms with an isotope.
   int number_isotopic_atoms() const;
+  // The number of atoms with isotope `iso`.
   int number_isotopic_atoms(isotope_t iso) const;
+  // Returns true if any atom has an isotope.
+  // For efficiency, stops counting once an isotopic atom is encountered.
+  bool ContainsIsotopicAtoms() const;
 
   // If `unset_implicit_h` is set, then all atoms that are changed will also
   // have their implicit Hydrogens known flag updated.
@@ -1376,7 +1382,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   bool bond_endpoints(int ndx, atom_number_t& a1,
                       atom_number_t& a2) const;  // bond endpoint indices
 
-  const Bond_list& bond_list() const {
+  const BondList& bond_list() const {
     return _bond_list;
   }  // dangerous, but we return it const
 
@@ -1423,7 +1429,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  Note that all angles are in radians. Note that angles are always positive.
 
   distance_t bond_length(atom_number_t, atom_number_t, BondedStatus = kOkNotBonded) const;
-  angle_t bond_angle(atom_number_t, atom_number_t, atom_number_t, BondedStatus = kOkNotBonded) const;
+  angle_t bond_angle(atom_number_t centre_atom, atom_number_t a1, atom_number_t a2, BondedStatus = kOkNotBonded) const;
   angle_t dihedral_angle(atom_number_t, atom_number_t, atom_number_t, atom_number_t,
                          BondedStatus = kOkNotBonded) const;
 
@@ -1689,8 +1695,8 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int compute_fragment_information(Fragment_Information&, const int*) const;
 
   int identify_spinach(int*);  // molecules outside and not between rings
-  int identify_spinach_preset(int* spinach)
-      const;  // same, but anything already set in SPINACH will also be included
+  // same, but anything already set in SPINACH will also be included
+  int identify_spinach_preset(int* spinach) const;
 
   int atoms_in_fragment(Set_of_Atoms&, int);  // Set_of_Atoms must start empty
   int add_atoms_in_fragment(Set_of_Atoms&,
@@ -2008,7 +2014,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   uint64_t quick_atom_hash() const;
   //  For each atom set in `include_atom`, form a radius 1 shell.
   int ShellHash(const int * include_atom, resizable_array<uint32_t>& result);
+  // A very approximate sum over all bonds. Because of the need to fit into a
+  // single 64 bit value, it is necessarily incomplete.
   uint64_t quick_bond_hash();  // not const because aromaticity is perceived
+  // A more complete bond hash that uses two 64 bit values. This way more information
+  // can be stored.
+  void QuickBondHash(uint64_t hash[2]); // not const because aromaticity is perceived.
 
   //  We are making a smarts of a subset and we want all the D and v directives to specify
   //  just the atoms in the subset or a minimum requirement
@@ -2597,16 +2608,19 @@ extern int set_reasonable_atomic_partial_charge_range(charge_t, charge_t);
 //extern int number_connection_table_errors_to_skip();
 //extern void set_number_connection_table_errors_to_skip(int);
 
+namespace lillymol {
 // Determine the number of atoms in a smiles just by examining text
-extern int count_atoms_in_smiles(const const_IWSubstring& smiles);
+int count_atoms_in_smiles(const const_IWSubstring& smiles);
+
 // Also discern the number of rings. Does NOT handle %nn forms.
-extern int count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings);
+int count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings);
+}  // namespace lillymol
 
 extern void set_copy_name_in_molecule_copy_constructor(int);
 
 extern int is_fixed_kekule_form(const Molecule& m, const Ring& r);
 
-extern int inchi_to_inchi_key(const char* inchi, IWString& key);
+extern int InChIToInChIKey(const char* inchi, IWString& key);
 
 template <typename F>
 void
@@ -2696,6 +2710,16 @@ int Position3D(const Molecule& m1, atom_number_t atom1,
 // fragments and the `atom2` fragment is moved so it could then form a
 // bond with `atom1` with bond length `distance`.
 int Position3D(Molecule& m, atom_number_t atom1, float distance, atom_number_t atom2);
+
+// Symmetry perception between substructure query matches is not robust and
+// needs to be worked on.
+// The problem comes from substructure embeddings that may locally appear
+// symmetric, but within the context of the larger molecule, they are not.
+// The default setting, a simplistic test of equivalence, may lead to
+// multiple matches that are in fact symmetry related. This has strong
+// impacts on trxn.
+int embedding_symmetry_perception_status();
+void set_simplistic_embedding_symmetry_perception(int s);
 
 }  // namespace lillymol
 

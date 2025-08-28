@@ -2,7 +2,12 @@
 
 #include "geometric_constraints.h"
 #include "substructure.h"
+
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "substructure.pb.h"
+#endif
 
 //#include "googlemock/include/gmock/gmock.h"
 //#include "googletest/include/gtest/gtest.h"

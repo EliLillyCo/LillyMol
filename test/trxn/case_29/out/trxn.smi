@@ -1,0 +1,2205 @@
+O.OC[C@@H](C)Oc1ccccc1 R1.1 + R2.1
+O.CC[C@H](C)Oc1ccccc1 R1.1 + R2.2
+O.CC[C@@H](C)Oc1ccccc1 R1.1 + R2.3
+O.NC[C@H](C)Oc1ccccc1 R1.1 + R2.4
+O.NC[C@@H](C)Oc1ccccc1 R1.1 + R2.5
+O.OC[C@H](C)Oc1ccccc1 R1.1 + R2.6
+O.C#C[C@@H](C)Oc1ccccc1 R1.1 + R2.7
+O.C#C[C@H](C)Oc1ccccc1 R1.1 + R2.8
+O.C=C[C@H](C)Oc1ccccc1 R1.1 + R2.9
+O.O=C[C@H](Oc1ccccc1)CO R1.1 + R2.10
+O.O=C(O)[C@H](C)Oc1ccccc1 R1.1 + R2.11
+O.O[C@H]([C@H](Oc1ccccc1)C)C R1.1 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccccc1 R1.1 + R2.13
+O.O[C@@H]([C@@H](Oc1ccccc1)C)C R1.1 + R2.14
+O.C[C@@H](Oc1ccccc1)C(C)C R1.1 + R2.15
+O.OCC[C@H](C)Oc1ccccc1 R1.1 + R2.16
+O.OCC[C@@H](C)Oc1ccccc1 R1.1 + R2.17
+O.O([C@@H]1CCOC1)c1ccccc1 R1.1 + R2.18
+O.O=C[C@@H](Oc1ccccc1)CO R1.1 + R2.19
+O.C[C@H](Oc1ccccc1)C(C)C R1.1 + R2.20
+O.CCC[C@@H](C)Oc1ccccc1 R1.1 + R2.21
+O.CCC[C@H](C)Oc1ccccc1 R1.1 + R2.22
+O.O([C@H]1CCOC1)c1ccccc1 R1.1 + R2.23
+O.O[C@H]([C@@H](Oc1ccccc1)C)C R1.1 + R2.24
+O.ClC[C@@H](Oc1ccccc1)CO R1.1 + R2.25
+O.OC[C@H](C=C)Oc1ccccc1 R1.1 + R2.26
+O.O([C@H]1CCNC1)c1ccccc1 R1.1 + R2.27
+O.OC[C@@H](C=C)Oc1ccccc1 R1.1 + R2.28
+O.O([C@@H]1CCNC1)c1ccccc1 R1.1 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccccc1 R1.1 + R2.30
+O.ClC[C@H](Oc1ccccc1)CO R1.1 + R2.31
+O.O=C(N)[C@H](C)Oc1ccccc1 R1.1 + R2.32
+O.OC[C@@H](Oc1ccccc1)CS R1.1 + R2.33
+O.OC[C@H](Oc1ccccc1)CN R1.1 + R2.34
+O.OC[C@@H](Oc1ccccc1)CN R1.1 + R2.35
+O.C[C@H](Oc1ccccc1)COC R1.1 + R2.36
+O.C[C@@H](Oc1ccccc1)COC R1.1 + R2.37
+O.OC[C@H](CCO)Oc1ccccc1 R1.1 + R2.41
+O.OC[C@@H](CCO)Oc1ccccc1 R1.1 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccccc1)C)C R1.1 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccccc1 R1.1 + R2.45
+O.O[C@H](C[C@H](Oc1ccccc1)C)C R1.1 + R2.46
+O.C[C@@H](Oc1ccccc1)CN(C)C R1.1 + R2.47
+O.C[C@H](Oc1ccccc1)CN(C)C R1.1 + R2.48
+O.CCCC[C@H](C)Oc1ccccc1 R1.1 + R2.49
+O.OC[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.1
+O.CC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.2
+O.CC[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.3
+O.NC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.4
+O.NC[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.5
+O.OC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.6
+O.C#C[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.7
+O.C#C[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.8
+O.C=C[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.9
+O.O=C[C@H](Oc1c(Cl)cccc1)CO R1.2 + R2.10
+O.O=C(O)[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.11
+O.O[C@H]([C@H](Oc1c(Cl)cccc1)C)C R1.2 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.13
+O.O[C@@H]([C@@H](Oc1c(Cl)cccc1)C)C R1.2 + R2.14
+O.Clc1c(O[C@@H](C(C)C)C)cccc1 R1.2 + R2.15
+O.OCC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.16
+O.OCC[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.17
+O.Clc1c(O[C@@H]2CCOC2)cccc1 R1.2 + R2.18
+O.O=C[C@@H](Oc1c(Cl)cccc1)CO R1.2 + R2.19
+O.Clc1c(O[C@H](C(C)C)C)cccc1 R1.2 + R2.20
+O.CCC[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.21
+O.CCC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.22
+O.Clc1c(O[C@H]2CCOC2)cccc1 R1.2 + R2.23
+O.O[C@H]([C@@H](Oc1c(Cl)cccc1)C)C R1.2 + R2.24
+O.ClC[C@@H](Oc1c(Cl)cccc1)CO R1.2 + R2.25
+O.OC[C@H](C=C)Oc1c(Cl)cccc1 R1.2 + R2.26
+O.Clc1c(O[C@H]2CCNC2)cccc1 R1.2 + R2.27
+O.OC[C@@H](C=C)Oc1c(Cl)cccc1 R1.2 + R2.28
+O.Clc1c(O[C@@H]2CCNC2)cccc1 R1.2 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.30
+O.ClC[C@H](Oc1c(Cl)cccc1)CO R1.2 + R2.31
+O.O=C(N)[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.32
+O.OC[C@@H](Oc1c(Cl)cccc1)CS R1.2 + R2.33
+O.OC[C@H](Oc1c(Cl)cccc1)CN R1.2 + R2.34
+O.OC[C@@H](Oc1c(Cl)cccc1)CN R1.2 + R2.35
+O.C[C@H](Oc1c(Cl)cccc1)COC R1.2 + R2.36
+O.C[C@@H](Oc1c(Cl)cccc1)COC R1.2 + R2.37
+O.Clc1c(O[C@@H](CCO)CO)cccc1 R1.2 + R2.41
+O.Clc1c(O[C@H](CCO)CO)cccc1 R1.2 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(Cl)cccc1)C)C R1.2 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(Cl)cccc1 R1.2 + R2.45
+O.O[C@H](C[C@H](Oc1c(Cl)cccc1)C)C R1.2 + R2.46
+O.C[C@@H](Oc1c(Cl)cccc1)CN(C)C R1.2 + R2.47
+O.C[C@H](Oc1c(Cl)cccc1)CN(C)C R1.2 + R2.48
+O.CCCC[C@H](C)Oc1c(Cl)cccc1 R1.2 + R2.49
+O.OC[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.1
+O.CC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.2
+O.CC[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.3
+O.NC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.4
+O.NC[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.5
+O.OC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.6
+O.C#C[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.7
+O.C#C[C@H](C)Oc1c(F)cccc1 R1.3 + R2.8
+O.C=C[C@H](C)Oc1c(F)cccc1 R1.3 + R2.9
+O.O=C[C@H](Oc1c(F)cccc1)CO R1.3 + R2.10
+O.O=C(O)[C@H](C)Oc1c(F)cccc1 R1.3 + R2.11
+O.O[C@H]([C@H](Oc1c(F)cccc1)C)C R1.3 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.13
+O.O[C@@H]([C@@H](Oc1c(F)cccc1)C)C R1.3 + R2.14
+O.Fc1c(O[C@@H](C(C)C)C)cccc1 R1.3 + R2.15
+O.OCC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.16
+O.OCC[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.17
+O.Fc1c(O[C@@H]2CCOC2)cccc1 R1.3 + R2.18
+O.O=C[C@@H](Oc1c(F)cccc1)CO R1.3 + R2.19
+O.Fc1c(O[C@H](C(C)C)C)cccc1 R1.3 + R2.20
+O.CCC[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.21
+O.CCC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.22
+O.Fc1c(O[C@H]2CCOC2)cccc1 R1.3 + R2.23
+O.O[C@H]([C@@H](Oc1c(F)cccc1)C)C R1.3 + R2.24
+O.ClC[C@@H](Oc1c(F)cccc1)CO R1.3 + R2.25
+O.OC[C@H](C=C)Oc1c(F)cccc1 R1.3 + R2.26
+O.Fc1c(O[C@H]2CCNC2)cccc1 R1.3 + R2.27
+O.OC[C@@H](C=C)Oc1c(F)cccc1 R1.3 + R2.28
+O.Fc1c(O[C@@H]2CCNC2)cccc1 R1.3 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.30
+O.ClC[C@H](Oc1c(F)cccc1)CO R1.3 + R2.31
+O.O=C(N)[C@H](C)Oc1c(F)cccc1 R1.3 + R2.32
+O.OC[C@@H](Oc1c(F)cccc1)CS R1.3 + R2.33
+O.OC[C@H](Oc1c(F)cccc1)CN R1.3 + R2.34
+O.OC[C@@H](Oc1c(F)cccc1)CN R1.3 + R2.35
+O.C[C@H](Oc1c(F)cccc1)COC R1.3 + R2.36
+O.C[C@@H](Oc1c(F)cccc1)COC R1.3 + R2.37
+O.Fc1c(O[C@@H](CCO)CO)cccc1 R1.3 + R2.41
+O.Fc1c(O[C@H](CCO)CO)cccc1 R1.3 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(F)cccc1)C)C R1.3 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(F)cccc1 R1.3 + R2.45
+O.O[C@H](C[C@H](Oc1c(F)cccc1)C)C R1.3 + R2.46
+O.C[C@@H](Oc1c(F)cccc1)CN(C)C R1.3 + R2.47
+O.C[C@H](Oc1c(F)cccc1)CN(C)C R1.3 + R2.48
+O.CCCC[C@H](C)Oc1c(F)cccc1 R1.3 + R2.49
+O.O.C[C@@H](Oc1c(O[C@H](C)CO)cccc1)CO R1.4 + R2.1 + R2.1
+O.O.C[C@@H](CC)Oc1c(O[C@@H](C)CC)cccc1 R1.4 + R2.2 + R2.2
+O.O.C[C@H](CC)Oc1c(O[C@H](C)CC)cccc1 R1.4 + R2.3 + R2.3
+O.O.C[C@H](Oc1c(O[C@@H](C)CN)cccc1)CN R1.4 + R2.4 + R2.4
+O.O.C[C@@H](Oc1c(O[C@H](C)CN)cccc1)CN R1.4 + R2.5 + R2.5
+O.O.C[C@H](Oc1c(O[C@@H](C)CO)cccc1)CO R1.4 + R2.6 + R2.6
+O.O.C[C@H](C#C)Oc1c(O[C@H](C)C#C)cccc1 R1.4 + R2.7 + R2.7
+O.O.C[C@@H](C#C)Oc1c(O[C@@H](C)C#C)cccc1 R1.4 + R2.8 + R2.8
+O.O.C[C@@H](C=C)Oc1c(O[C@@H](C)C=C)cccc1 R1.4 + R2.9 + R2.9
+O.O.OC[C@@H](Oc1c(O[C@@H](C=O)CO)cccc1)C=O R1.4 + R2.10 + R2.10
+O.O.C[C@H](Oc1c(O[C@@H](C)C(=O)O)cccc1)C(=O)O R1.4 + R2.11 + R2.11
+O.O.O[C@@H](C)[C@@H](C)Oc1c(O[C@@H]([C@@H](O)C)C)cccc1 R1.4 + R2.12 + R2.12
+O.O.C[C@@H](Oc1c(O[C@H](C)C(=O)O)cccc1)C(=O)O R1.4 + R2.13 + R2.13
+O.O.O[C@H](C)[C@H](C)Oc1c(O[C@H]([C@H](O)C)C)cccc1 R1.4 + R2.14 + R2.14
+O.O.C[C@@H](Oc1c(O[C@H](C)C(C)C)cccc1)C(C)C R1.4 + R2.15 + R2.15
+O.O.C[C@@H](CCO)Oc1c(O[C@@H](C)CCO)cccc1 R1.4 + R2.16 + R2.16
+O.O.C[C@H](CCO)Oc1c(O[C@H](C)CCO)cccc1 R1.4 + R2.17 + R2.17
+O.O.O([C@@H]1CCOC1)c1c(O[C@@H]2CCOC2)cccc1 R1.4 + R2.18 + R2.18
+O.O.OC[C@H](Oc1c(O[C@H](C=O)CO)cccc1)C=O R1.4 + R2.19 + R2.19
+O.O.C[C@H](Oc1c(O[C@@H](C)C(C)C)cccc1)C(C)C R1.4 + R2.20 + R2.20
+O.O.C[C@H](CCC)Oc1c(O[C@H](C)CCC)cccc1 R1.4 + R2.21 + R2.21
+O.O.C[C@@H](CCC)Oc1c(O[C@@H](C)CCC)cccc1 R1.4 + R2.22 + R2.22
+O.O.O([C@H]1CCOC1)c1c(O[C@H]2CCOC2)cccc1 R1.4 + R2.23 + R2.23
+O.O.O[C@@H](C)[C@H](C)Oc1c(O[C@H]([C@@H](O)C)C)cccc1 R1.4 + R2.24 + R2.24
+O.O.OC[C@H](Oc1c(O[C@@H](CO)CCl)cccc1)CCl R1.4 + R2.25 + R2.25
+O.O.OC[C@H](C=C)Oc1c(O[C@@H](C=C)CO)cccc1 R1.4 + R2.26 + R2.26
+O.O.O([C@H]1CCNC1)c1c(O[C@H]2CCNC2)cccc1 R1.4 + R2.27 + R2.27
+O.O.OC[C@@H](C=C)Oc1c(O[C@H](C=C)CO)cccc1 R1.4 + R2.28 + R2.28
+O.O.O([C@@H]1CCNC1)c1c(O[C@@H]2CCNC2)cccc1 R1.4 + R2.29 + R2.29
+O.O.C[C@@H](Oc1c(O[C@H](C)C(=O)N)cccc1)C(=O)N R1.4 + R2.30 + R2.30
+O.O.OC[C@@H](Oc1c(O[C@H](CO)CCl)cccc1)CCl R1.4 + R2.31 + R2.31
+O.O.C[C@H](Oc1c(O[C@@H](C)C(=O)N)cccc1)C(=O)N R1.4 + R2.32 + R2.32
+O.O.OC[C@@H](Oc1c(O[C@H](CO)CS)cccc1)CS R1.4 + R2.33 + R2.33
+O.O.OC[C@H](Oc1c(O[C@H](CN)CO)cccc1)CN R1.4 + R2.34 + R2.34
+O.O.OC[C@@H](Oc1c(O[C@@H](CN)CO)cccc1)CN R1.4 + R2.35 + R2.35
+O.O.C[C@H](Oc1c(O[C@@H](C)COC)cccc1)COC R1.4 + R2.36 + R2.36
+O.O.C[C@@H](Oc1c(O[C@H](C)COC)cccc1)COC R1.4 + R2.37 + R2.37
+O.O.OC[C@H](CCO)Oc1c(O[C@@H](CCO)CO)cccc1 R1.4 + R2.41 + R2.41
+O.O.OC[C@@H](CCO)Oc1c(O[C@H](CCO)CO)cccc1 R1.4 + R2.42 + R2.42
+O.O.O[C@H](C)C[C@H](C)Oc1c(O[C@H](C[C@H](O)C)C)cccc1 R1.4 + R2.43 + R2.43
+O.O.C[C@H](CC(=O)O)Oc1c(O[C@H](C)CC(=O)O)cccc1 R1.4 + R2.45 + R2.45
+O.O.O[C@@H](C)C[C@@H](C)Oc1c(O[C@@H](C[C@@H](O)C)C)cccc1 R1.4 + R2.46 + R2.46
+O.O.C[C@@H](Oc1c(O[C@H](C)CN(C)C)cccc1)CN(C)C R1.4 + R2.47 + R2.47
+O.O.C[C@H](Oc1c(O[C@@H](C)CN(C)C)cccc1)CN(C)C R1.4 + R2.48 + R2.48
+O.O.C[C@@H](CCCC)Oc1c(O[C@@H](C)CCCC)cccc1 R1.4 + R2.49 + R2.49
+O.OC[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.1
+O.CC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.2
+O.CC[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.3
+O.NC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.4
+O.NC[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.5
+O.OC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.6
+O.C#C[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.7
+O.C#C[C@H](C)Oc1c(C)cccc1 R1.5 + R2.8
+O.C=C[C@H](C)Oc1c(C)cccc1 R1.5 + R2.9
+O.O=C[C@H](Oc1c(C)cccc1)CO R1.5 + R2.10
+O.O=C(O)[C@H](C)Oc1c(C)cccc1 R1.5 + R2.11
+O.O[C@H]([C@H](Oc1c(C)cccc1)C)C R1.5 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.13
+O.O[C@@H]([C@@H](Oc1c(C)cccc1)C)C R1.5 + R2.14
+O.Cc1c(O[C@@H](C(C)C)C)cccc1 R1.5 + R2.15
+O.OCC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.16
+O.OCC[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.17
+O.Cc1c(O[C@@H]2CCOC2)cccc1 R1.5 + R2.18
+O.O=C[C@@H](Oc1c(C)cccc1)CO R1.5 + R2.19
+O.Cc1c(O[C@H](C(C)C)C)cccc1 R1.5 + R2.20
+O.CCC[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.21
+O.CCC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.22
+O.Cc1c(O[C@H]2CCOC2)cccc1 R1.5 + R2.23
+O.O[C@H]([C@@H](Oc1c(C)cccc1)C)C R1.5 + R2.24
+O.ClC[C@@H](Oc1c(C)cccc1)CO R1.5 + R2.25
+O.OC[C@H](C=C)Oc1c(C)cccc1 R1.5 + R2.26
+O.Cc1c(O[C@H]2CCNC2)cccc1 R1.5 + R2.27
+O.OC[C@@H](C=C)Oc1c(C)cccc1 R1.5 + R2.28
+O.Cc1c(O[C@@H]2CCNC2)cccc1 R1.5 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.30
+O.ClC[C@H](Oc1c(C)cccc1)CO R1.5 + R2.31
+O.O=C(N)[C@H](C)Oc1c(C)cccc1 R1.5 + R2.32
+O.OC[C@@H](Oc1c(C)cccc1)CS R1.5 + R2.33
+O.OC[C@H](Oc1c(C)cccc1)CN R1.5 + R2.34
+O.OC[C@@H](Oc1c(C)cccc1)CN R1.5 + R2.35
+O.C[C@H](Oc1c(C)cccc1)COC R1.5 + R2.36
+O.C[C@@H](Oc1c(C)cccc1)COC R1.5 + R2.37
+O.Cc1c(O[C@@H](CCO)CO)cccc1 R1.5 + R2.41
+O.Cc1c(O[C@H](CCO)CO)cccc1 R1.5 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(C)cccc1)C)C R1.5 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(C)cccc1 R1.5 + R2.45
+O.O[C@H](C[C@H](Oc1c(C)cccc1)C)C R1.5 + R2.46
+O.C[C@@H](Oc1c(C)cccc1)CN(C)C R1.5 + R2.47
+O.C[C@H](Oc1c(C)cccc1)CN(C)C R1.5 + R2.48
+O.CCCC[C@H](C)Oc1c(C)cccc1 R1.5 + R2.49
+O.OC[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.1
+O.CC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.2
+O.CC[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.3
+O.NC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.4
+O.NC[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.5
+O.OC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.6
+O.C#C[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.7
+O.C#C[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.8
+O.C=C[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.9
+O.O=C[C@H](Oc1cc(Cl)ccc1)CO R1.6 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.11
+O.O[C@H]([C@H](Oc1cc(Cl)ccc1)C)C R1.6 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(Cl)ccc1)C)C R1.6 + R2.14
+O.Clc1cc(O[C@@H](C(C)C)C)ccc1 R1.6 + R2.15
+O.OCC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.16
+O.OCC[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.17
+O.Clc1cc(O[C@@H]2CCOC2)ccc1 R1.6 + R2.18
+O.O=C[C@@H](Oc1cc(Cl)ccc1)CO R1.6 + R2.19
+O.Clc1cc(O[C@H](C(C)C)C)ccc1 R1.6 + R2.20
+O.CCC[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.21
+O.CCC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.22
+O.Clc1cc(O[C@H]2CCOC2)ccc1 R1.6 + R2.23
+O.O[C@H]([C@@H](Oc1cc(Cl)ccc1)C)C R1.6 + R2.24
+O.ClC[C@@H](Oc1cc(Cl)ccc1)CO R1.6 + R2.25
+O.OC[C@H](C=C)Oc1cc(Cl)ccc1 R1.6 + R2.26
+O.Clc1cc(O[C@H]2CCNC2)ccc1 R1.6 + R2.27
+O.OC[C@@H](C=C)Oc1cc(Cl)ccc1 R1.6 + R2.28
+O.Clc1cc(O[C@@H]2CCNC2)ccc1 R1.6 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.30
+O.ClC[C@H](Oc1cc(Cl)ccc1)CO R1.6 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.32
+O.OC[C@@H](Oc1cc(Cl)ccc1)CS R1.6 + R2.33
+O.OC[C@H](Oc1cc(Cl)ccc1)CN R1.6 + R2.34
+O.OC[C@@H](Oc1cc(Cl)ccc1)CN R1.6 + R2.35
+O.C[C@H](Oc1cc(Cl)ccc1)COC R1.6 + R2.36
+O.C[C@@H](Oc1cc(Cl)ccc1)COC R1.6 + R2.37
+O.Clc1cc(O[C@@H](CCO)CO)ccc1 R1.6 + R2.41
+O.Clc1cc(O[C@H](CCO)CO)ccc1 R1.6 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(Cl)ccc1)C)C R1.6 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.45
+O.O[C@H](C[C@H](Oc1cc(Cl)ccc1)C)C R1.6 + R2.46
+O.C[C@@H](Oc1cc(Cl)ccc1)CN(C)C R1.6 + R2.47
+O.C[C@H](Oc1cc(Cl)ccc1)CN(C)C R1.6 + R2.48
+O.CCCC[C@H](C)Oc1cc(Cl)ccc1 R1.6 + R2.49
+O.OC[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.1
+O.CC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.2
+O.CC[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.3
+O.NC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.4
+O.NC[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.5
+O.OC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.6
+O.C#C[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.7
+O.C#C[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.8
+O.C=C[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.9
+O.O=C[C@H](Oc1cc(F)ccc1)CO R1.7 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.11
+O.O[C@H]([C@H](Oc1cc(F)ccc1)C)C R1.7 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(F)ccc1)C)C R1.7 + R2.14
+O.Fc1cc(O[C@@H](C(C)C)C)ccc1 R1.7 + R2.15
+O.OCC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.16
+O.OCC[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.17
+O.Fc1cc(O[C@@H]2CCOC2)ccc1 R1.7 + R2.18
+O.O=C[C@@H](Oc1cc(F)ccc1)CO R1.7 + R2.19
+O.Fc1cc(O[C@H](C(C)C)C)ccc1 R1.7 + R2.20
+O.CCC[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.21
+O.CCC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.22
+O.Fc1cc(O[C@H]2CCOC2)ccc1 R1.7 + R2.23
+O.O[C@H]([C@@H](Oc1cc(F)ccc1)C)C R1.7 + R2.24
+O.ClC[C@@H](Oc1cc(F)ccc1)CO R1.7 + R2.25
+O.OC[C@H](C=C)Oc1cc(F)ccc1 R1.7 + R2.26
+O.Fc1cc(O[C@H]2CCNC2)ccc1 R1.7 + R2.27
+O.OC[C@@H](C=C)Oc1cc(F)ccc1 R1.7 + R2.28
+O.Fc1cc(O[C@@H]2CCNC2)ccc1 R1.7 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.30
+O.ClC[C@H](Oc1cc(F)ccc1)CO R1.7 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.32
+O.OC[C@@H](Oc1cc(F)ccc1)CS R1.7 + R2.33
+O.OC[C@H](Oc1cc(F)ccc1)CN R1.7 + R2.34
+O.OC[C@@H](Oc1cc(F)ccc1)CN R1.7 + R2.35
+O.C[C@H](Oc1cc(F)ccc1)COC R1.7 + R2.36
+O.C[C@@H](Oc1cc(F)ccc1)COC R1.7 + R2.37
+O.Fc1cc(O[C@@H](CCO)CO)ccc1 R1.7 + R2.41
+O.Fc1cc(O[C@H](CCO)CO)ccc1 R1.7 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(F)ccc1)C)C R1.7 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(F)ccc1 R1.7 + R2.45
+O.O[C@H](C[C@H](Oc1cc(F)ccc1)C)C R1.7 + R2.46
+O.C[C@@H](Oc1cc(F)ccc1)CN(C)C R1.7 + R2.47
+O.C[C@H](Oc1cc(F)ccc1)CN(C)C R1.7 + R2.48
+O.CCCC[C@H](C)Oc1cc(F)ccc1 R1.7 + R2.49
+O.O.C[C@@H](Oc1cc(O[C@H](C)CO)ccc1)CO R1.8 + R2.1 + R2.1
+O.O.C[C@@H](CC)Oc1cc(O[C@@H](C)CC)ccc1 R1.8 + R2.2 + R2.2
+O.O.C[C@H](CC)Oc1cc(O[C@H](C)CC)ccc1 R1.8 + R2.3 + R2.3
+O.O.C[C@H](Oc1cc(O[C@@H](C)CN)ccc1)CN R1.8 + R2.4 + R2.4
+O.O.C[C@@H](Oc1cc(O[C@H](C)CN)ccc1)CN R1.8 + R2.5 + R2.5
+O.O.C[C@H](Oc1cc(O[C@@H](C)CO)ccc1)CO R1.8 + R2.6 + R2.6
+O.O.C[C@H](C#C)Oc1cc(O[C@H](C)C#C)ccc1 R1.8 + R2.7 + R2.7
+O.O.C[C@@H](C#C)Oc1cc(O[C@@H](C)C#C)ccc1 R1.8 + R2.8 + R2.8
+O.O.C[C@@H](C=C)Oc1cc(O[C@@H](C)C=C)ccc1 R1.8 + R2.9 + R2.9
+O.O.OC[C@@H](Oc1cc(O[C@@H](C=O)CO)ccc1)C=O R1.8 + R2.10 + R2.10
+O.O.C[C@H](Oc1cc(O[C@@H](C)C(=O)O)ccc1)C(=O)O R1.8 + R2.11 + R2.11
+O.O.O[C@@H](C)[C@@H](C)Oc1cc(O[C@@H]([C@@H](O)C)C)ccc1 R1.8 + R2.12 + R2.12
+O.O.C[C@@H](Oc1cc(O[C@H](C)C(=O)O)ccc1)C(=O)O R1.8 + R2.13 + R2.13
+O.O.O[C@H](C)[C@H](C)Oc1cc(O[C@H]([C@H](O)C)C)ccc1 R1.8 + R2.14 + R2.14
+O.O.C[C@@H](Oc1cc(O[C@H](C)C(C)C)ccc1)C(C)C R1.8 + R2.15 + R2.15
+O.O.C[C@@H](CCO)Oc1cc(O[C@@H](C)CCO)ccc1 R1.8 + R2.16 + R2.16
+O.O.C[C@H](CCO)Oc1cc(O[C@H](C)CCO)ccc1 R1.8 + R2.17 + R2.17
+O.O.c1cc(cc(O[C@@H]2CCOC2)c1)O[C@@H]1CCOC1 R1.8 + R2.18 + R2.18
+O.O.OC[C@H](Oc1cc(O[C@H](C=O)CO)ccc1)C=O R1.8 + R2.19 + R2.19
+O.O.C[C@H](Oc1cc(O[C@@H](C)C(C)C)ccc1)C(C)C R1.8 + R2.20 + R2.20
+O.O.C[C@H](CCC)Oc1cc(O[C@H](C)CCC)ccc1 R1.8 + R2.21 + R2.21
+O.O.C[C@@H](CCC)Oc1cc(O[C@@H](C)CCC)ccc1 R1.8 + R2.22 + R2.22
+O.O.c1cc(cc(O[C@H]2CCOC2)c1)O[C@H]1CCOC1 R1.8 + R2.23 + R2.23
+O.O.O[C@@H](C)[C@H](C)Oc1cc(O[C@H]([C@@H](O)C)C)ccc1 R1.8 + R2.24 + R2.24
+O.O.OC[C@H](Oc1cc(O[C@@H](CO)CCl)ccc1)CCl R1.8 + R2.25 + R2.25
+O.O.OC[C@H](C=C)Oc1cc(O[C@@H](C=C)CO)ccc1 R1.8 + R2.26 + R2.26
+O.O.c1cc(cc(O[C@H]2CCNC2)c1)O[C@H]1CCNC1 R1.8 + R2.27 + R2.27
+O.O.OC[C@@H](C=C)Oc1cc(O[C@H](C=C)CO)ccc1 R1.8 + R2.28 + R2.28
+O.O.c1cc(cc(O[C@@H]2CCNC2)c1)O[C@@H]1CCNC1 R1.8 + R2.29 + R2.29
+O.O.C[C@@H](Oc1cc(O[C@H](C)C(=O)N)ccc1)C(=O)N R1.8 + R2.30 + R2.30
+O.O.OC[C@@H](Oc1cc(O[C@H](CO)CCl)ccc1)CCl R1.8 + R2.31 + R2.31
+O.O.C[C@H](Oc1cc(O[C@@H](C)C(=O)N)ccc1)C(=O)N R1.8 + R2.32 + R2.32
+O.O.OC[C@@H](Oc1cc(O[C@H](CO)CS)ccc1)CS R1.8 + R2.33 + R2.33
+O.O.OC[C@H](Oc1cc(O[C@H](CN)CO)ccc1)CN R1.8 + R2.34 + R2.34
+O.O.OC[C@@H](Oc1cc(O[C@@H](CN)CO)ccc1)CN R1.8 + R2.35 + R2.35
+O.O.C[C@H](Oc1cc(O[C@@H](C)COC)ccc1)COC R1.8 + R2.36 + R2.36
+O.O.C[C@@H](Oc1cc(O[C@H](C)COC)ccc1)COC R1.8 + R2.37 + R2.37
+O.O.OC[C@H](CCO)Oc1cc(O[C@@H](CCO)CO)ccc1 R1.8 + R2.41 + R2.41
+O.O.OC[C@@H](CCO)Oc1cc(O[C@H](CCO)CO)ccc1 R1.8 + R2.42 + R2.42
+O.O.O[C@H](C)C[C@H](C)Oc1cc(O[C@H](C[C@H](O)C)C)ccc1 R1.8 + R2.43 + R2.43
+O.O.C[C@H](CC(=O)O)Oc1cc(O[C@H](C)CC(=O)O)ccc1 R1.8 + R2.45 + R2.45
+O.O.O[C@@H](C)C[C@@H](C)Oc1cc(O[C@@H](C[C@@H](O)C)C)ccc1 R1.8 + R2.46 + R2.46
+O.O.C[C@@H](Oc1cc(O[C@H](C)CN(C)C)ccc1)CN(C)C R1.8 + R2.47 + R2.47
+O.O.C[C@H](Oc1cc(O[C@@H](C)CN(C)C)ccc1)CN(C)C R1.8 + R2.48 + R2.48
+O.O.C[C@@H](CCCC)Oc1cc(O[C@@H](C)CCCC)ccc1 R1.8 + R2.49 + R2.49
+O.OC[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.1
+O.CC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.2
+O.CC[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.3
+O.NC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.4
+O.NC[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.5
+O.OC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.6
+O.C#C[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.7
+O.C#C[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.8
+O.C=C[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.9
+O.O=C[C@H](Oc1cc(C)ccc1)CO R1.9 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.11
+O.O[C@H]([C@H](Oc1cc(C)ccc1)C)C R1.9 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(C)ccc1)C)C R1.9 + R2.14
+O.Cc1cc(O[C@@H](C(C)C)C)ccc1 R1.9 + R2.15
+O.OCC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.16
+O.OCC[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.17
+O.Cc1cc(O[C@@H]2CCOC2)ccc1 R1.9 + R2.18
+O.O=C[C@@H](Oc1cc(C)ccc1)CO R1.9 + R2.19
+O.Cc1cc(O[C@H](C(C)C)C)ccc1 R1.9 + R2.20
+O.CCC[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.21
+O.CCC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.22
+O.Cc1cc(O[C@H]2CCOC2)ccc1 R1.9 + R2.23
+O.O[C@H]([C@@H](Oc1cc(C)ccc1)C)C R1.9 + R2.24
+O.ClC[C@@H](Oc1cc(C)ccc1)CO R1.9 + R2.25
+O.OC[C@H](C=C)Oc1cc(C)ccc1 R1.9 + R2.26
+O.Cc1cc(O[C@H]2CCNC2)ccc1 R1.9 + R2.27
+O.OC[C@@H](C=C)Oc1cc(C)ccc1 R1.9 + R2.28
+O.Cc1cc(O[C@@H]2CCNC2)ccc1 R1.9 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.30
+O.ClC[C@H](Oc1cc(C)ccc1)CO R1.9 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.32
+O.OC[C@@H](Oc1cc(C)ccc1)CS R1.9 + R2.33
+O.OC[C@H](Oc1cc(C)ccc1)CN R1.9 + R2.34
+O.OC[C@@H](Oc1cc(C)ccc1)CN R1.9 + R2.35
+O.C[C@H](Oc1cc(C)ccc1)COC R1.9 + R2.36
+O.C[C@@H](Oc1cc(C)ccc1)COC R1.9 + R2.37
+O.Cc1cc(O[C@@H](CCO)CO)ccc1 R1.9 + R2.41
+O.Cc1cc(O[C@H](CCO)CO)ccc1 R1.9 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(C)ccc1)C)C R1.9 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(C)ccc1 R1.9 + R2.45
+O.O[C@H](C[C@H](Oc1cc(C)ccc1)C)C R1.9 + R2.46
+O.C[C@@H](Oc1cc(C)ccc1)CN(C)C R1.9 + R2.47
+O.C[C@H](Oc1cc(C)ccc1)CN(C)C R1.9 + R2.48
+O.CCCC[C@H](C)Oc1cc(C)ccc1 R1.9 + R2.49
+O.OC[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.1
+O.CC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.2
+O.CC[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.3
+O.NC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.4
+O.NC[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.5
+O.OC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.6
+O.C#C[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.7
+O.C#C[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.8
+O.C=C[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.9
+O.O=C[C@H](Oc1ccc(Cl)cc1)CO R1.10 + R2.10
+O.O=C(O)[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.11
+O.O[C@H]([C@H](Oc1ccc(Cl)cc1)C)C R1.10 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.13
+O.O[C@@H]([C@@H](Oc1ccc(Cl)cc1)C)C R1.10 + R2.14
+O.Clc1ccc(O[C@@H](C(C)C)C)cc1 R1.10 + R2.15
+O.OCC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.16
+O.OCC[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.17
+O.Clc1ccc(O[C@@H]2CCOC2)cc1 R1.10 + R2.18
+O.O=C[C@@H](Oc1ccc(Cl)cc1)CO R1.10 + R2.19
+O.Clc1ccc(O[C@H](C(C)C)C)cc1 R1.10 + R2.20
+O.CCC[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.21
+O.CCC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.22
+O.Clc1ccc(O[C@H]2CCOC2)cc1 R1.10 + R2.23
+O.O[C@H]([C@@H](Oc1ccc(Cl)cc1)C)C R1.10 + R2.24
+O.ClC[C@@H](Oc1ccc(Cl)cc1)CO R1.10 + R2.25
+O.OC[C@H](C=C)Oc1ccc(Cl)cc1 R1.10 + R2.26
+O.Clc1ccc(O[C@H]2CCNC2)cc1 R1.10 + R2.27
+O.OC[C@@H](C=C)Oc1ccc(Cl)cc1 R1.10 + R2.28
+O.Clc1ccc(O[C@@H]2CCNC2)cc1 R1.10 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.30
+O.ClC[C@H](Oc1ccc(Cl)cc1)CO R1.10 + R2.31
+O.O=C(N)[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.32
+O.OC[C@@H](Oc1ccc(Cl)cc1)CS R1.10 + R2.33
+O.OC[C@H](Oc1ccc(Cl)cc1)CN R1.10 + R2.34
+O.OC[C@@H](Oc1ccc(Cl)cc1)CN R1.10 + R2.35
+O.C[C@H](Oc1ccc(Cl)cc1)COC R1.10 + R2.36
+O.C[C@@H](Oc1ccc(Cl)cc1)COC R1.10 + R2.37
+O.Clc1ccc(O[C@@H](CCO)CO)cc1 R1.10 + R2.41
+O.Clc1ccc(O[C@H](CCO)CO)cc1 R1.10 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccc(Cl)cc1)C)C R1.10 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.45
+O.O[C@H](C[C@H](Oc1ccc(Cl)cc1)C)C R1.10 + R2.46
+O.C[C@@H](Oc1ccc(Cl)cc1)CN(C)C R1.10 + R2.47
+O.C[C@H](Oc1ccc(Cl)cc1)CN(C)C R1.10 + R2.48
+O.CCCC[C@H](C)Oc1ccc(Cl)cc1 R1.10 + R2.49
+O.OC[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.1
+O.CC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.2
+O.CC[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.3
+O.NC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.4
+O.NC[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.5
+O.OC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.6
+O.C#C[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.7
+O.C#C[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.8
+O.C=C[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.9
+O.O=C[C@H](Oc1ccc(F)cc1)CO R1.11 + R2.10
+O.O=C(O)[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.11
+O.O[C@H]([C@H](Oc1ccc(F)cc1)C)C R1.11 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.13
+O.O[C@@H]([C@@H](Oc1ccc(F)cc1)C)C R1.11 + R2.14
+O.Fc1ccc(O[C@@H](C(C)C)C)cc1 R1.11 + R2.15
+O.OCC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.16
+O.OCC[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.17
+O.Fc1ccc(O[C@@H]2CCOC2)cc1 R1.11 + R2.18
+O.O=C[C@@H](Oc1ccc(F)cc1)CO R1.11 + R2.19
+O.Fc1ccc(O[C@H](C(C)C)C)cc1 R1.11 + R2.20
+O.CCC[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.21
+O.CCC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.22
+O.Fc1ccc(O[C@H]2CCOC2)cc1 R1.11 + R2.23
+O.O[C@H]([C@@H](Oc1ccc(F)cc1)C)C R1.11 + R2.24
+O.ClC[C@@H](Oc1ccc(F)cc1)CO R1.11 + R2.25
+O.OC[C@H](C=C)Oc1ccc(F)cc1 R1.11 + R2.26
+O.Fc1ccc(O[C@H]2CCNC2)cc1 R1.11 + R2.27
+O.OC[C@@H](C=C)Oc1ccc(F)cc1 R1.11 + R2.28
+O.Fc1ccc(O[C@@H]2CCNC2)cc1 R1.11 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.30
+O.ClC[C@H](Oc1ccc(F)cc1)CO R1.11 + R2.31
+O.O=C(N)[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.32
+O.OC[C@@H](Oc1ccc(F)cc1)CS R1.11 + R2.33
+O.OC[C@H](Oc1ccc(F)cc1)CN R1.11 + R2.34
+O.OC[C@@H](Oc1ccc(F)cc1)CN R1.11 + R2.35
+O.C[C@H](Oc1ccc(F)cc1)COC R1.11 + R2.36
+O.C[C@@H](Oc1ccc(F)cc1)COC R1.11 + R2.37
+O.Fc1ccc(O[C@@H](CCO)CO)cc1 R1.11 + R2.41
+O.Fc1ccc(O[C@H](CCO)CO)cc1 R1.11 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccc(F)cc1)C)C R1.11 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccc(F)cc1 R1.11 + R2.45
+O.O[C@H](C[C@H](Oc1ccc(F)cc1)C)C R1.11 + R2.46
+O.C[C@@H](Oc1ccc(F)cc1)CN(C)C R1.11 + R2.47
+O.C[C@H](Oc1ccc(F)cc1)CN(C)C R1.11 + R2.48
+O.CCCC[C@H](C)Oc1ccc(F)cc1 R1.11 + R2.49
+O.O.C[C@@H](Oc1ccc(O[C@H](C)CO)cc1)CO R1.12 + R2.1 + R2.1
+O.O.C[C@@H](CC)Oc1ccc(O[C@@H](C)CC)cc1 R1.12 + R2.2 + R2.2
+O.O.C[C@H](CC)Oc1ccc(O[C@H](C)CC)cc1 R1.12 + R2.3 + R2.3
+O.O.C[C@H](Oc1ccc(O[C@@H](C)CN)cc1)CN R1.12 + R2.4 + R2.4
+O.O.C[C@@H](Oc1ccc(O[C@H](C)CN)cc1)CN R1.12 + R2.5 + R2.5
+O.O.C[C@H](Oc1ccc(O[C@@H](C)CO)cc1)CO R1.12 + R2.6 + R2.6
+O.O.C[C@H](C#C)Oc1ccc(O[C@H](C)C#C)cc1 R1.12 + R2.7 + R2.7
+O.O.C[C@@H](C#C)Oc1ccc(O[C@@H](C)C#C)cc1 R1.12 + R2.8 + R2.8
+O.O.C[C@@H](C=C)Oc1ccc(O[C@@H](C)C=C)cc1 R1.12 + R2.9 + R2.9
+O.O.OC[C@@H](Oc1ccc(O[C@@H](C=O)CO)cc1)C=O R1.12 + R2.10 + R2.10
+O.O.C[C@H](Oc1ccc(O[C@@H](C)C(=O)O)cc1)C(=O)O R1.12 + R2.11 + R2.11
+O.O.O[C@@H](C)[C@@H](C)Oc1ccc(O[C@@H]([C@@H](O)C)C)cc1 R1.12 + R2.12 + R2.12
+O.O.C[C@@H](Oc1ccc(O[C@H](C)C(=O)O)cc1)C(=O)O R1.12 + R2.13 + R2.13
+O.O.O[C@H](C)[C@H](C)Oc1ccc(O[C@H]([C@H](O)C)C)cc1 R1.12 + R2.14 + R2.14
+O.O.C[C@@H](Oc1ccc(O[C@H](C)C(C)C)cc1)C(C)C R1.12 + R2.15 + R2.15
+O.O.C[C@@H](CCO)Oc1ccc(O[C@@H](C)CCO)cc1 R1.12 + R2.16 + R2.16
+O.O.C[C@H](CCO)Oc1ccc(O[C@H](C)CCO)cc1 R1.12 + R2.17 + R2.17
+O.O.O([C@@H]1CCOC1)c1ccc(O[C@@H]2CCOC2)cc1 R1.12 + R2.18 + R2.18
+O.O.OC[C@H](Oc1ccc(O[C@H](C=O)CO)cc1)C=O R1.12 + R2.19 + R2.19
+O.O.C[C@H](Oc1ccc(O[C@@H](C)C(C)C)cc1)C(C)C R1.12 + R2.20 + R2.20
+O.O.C[C@H](CCC)Oc1ccc(O[C@H](C)CCC)cc1 R1.12 + R2.21 + R2.21
+O.O.C[C@@H](CCC)Oc1ccc(O[C@@H](C)CCC)cc1 R1.12 + R2.22 + R2.22
+O.O.O([C@H]1CCOC1)c1ccc(O[C@H]2CCOC2)cc1 R1.12 + R2.23 + R2.23
+O.O.O[C@@H](C)[C@H](C)Oc1ccc(O[C@H]([C@@H](O)C)C)cc1 R1.12 + R2.24 + R2.24
+O.O.OC[C@H](Oc1ccc(O[C@@H](CO)CCl)cc1)CCl R1.12 + R2.25 + R2.25
+O.O.OC[C@H](C=C)Oc1ccc(O[C@@H](C=C)CO)cc1 R1.12 + R2.26 + R2.26
+O.O.O([C@H]1CCNC1)c1ccc(O[C@H]2CCNC2)cc1 R1.12 + R2.27 + R2.27
+O.O.OC[C@@H](C=C)Oc1ccc(O[C@H](C=C)CO)cc1 R1.12 + R2.28 + R2.28
+O.O.O([C@@H]1CCNC1)c1ccc(O[C@@H]2CCNC2)cc1 R1.12 + R2.29 + R2.29
+O.O.C[C@@H](Oc1ccc(O[C@H](C)C(=O)N)cc1)C(=O)N R1.12 + R2.30 + R2.30
+O.O.OC[C@@H](Oc1ccc(O[C@H](CO)CCl)cc1)CCl R1.12 + R2.31 + R2.31
+O.O.C[C@H](Oc1ccc(O[C@@H](C)C(=O)N)cc1)C(=O)N R1.12 + R2.32 + R2.32
+O.O.OC[C@@H](Oc1ccc(O[C@H](CO)CS)cc1)CS R1.12 + R2.33 + R2.33
+O.O.OC[C@H](Oc1ccc(O[C@H](CN)CO)cc1)CN R1.12 + R2.34 + R2.34
+O.O.OC[C@@H](Oc1ccc(O[C@@H](CN)CO)cc1)CN R1.12 + R2.35 + R2.35
+O.O.C[C@H](Oc1ccc(O[C@@H](C)COC)cc1)COC R1.12 + R2.36 + R2.36
+O.O.C[C@@H](Oc1ccc(O[C@H](C)COC)cc1)COC R1.12 + R2.37 + R2.37
+O.O.OC[C@H](CCO)Oc1ccc(O[C@@H](CCO)CO)cc1 R1.12 + R2.41 + R2.41
+O.O.OC[C@@H](CCO)Oc1ccc(O[C@H](CCO)CO)cc1 R1.12 + R2.42 + R2.42
+O.O.O[C@H](C)C[C@H](C)Oc1ccc(O[C@H](C[C@H](O)C)C)cc1 R1.12 + R2.43 + R2.43
+O.O.C[C@H](CC(=O)O)Oc1ccc(O[C@H](C)CC(=O)O)cc1 R1.12 + R2.45 + R2.45
+O.O.O[C@@H](C)C[C@@H](C)Oc1ccc(O[C@@H](C[C@@H](O)C)C)cc1 R1.12 + R2.46 + R2.46
+O.O.C[C@@H](Oc1ccc(O[C@H](C)CN(C)C)cc1)CN(C)C R1.12 + R2.47 + R2.47
+O.O.C[C@H](Oc1ccc(O[C@@H](C)CN(C)C)cc1)CN(C)C R1.12 + R2.48 + R2.48
+O.O.C[C@@H](CCCC)Oc1ccc(O[C@@H](C)CCCC)cc1 R1.12 + R2.49 + R2.49
+O.OC[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.1
+O.CC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.2
+O.CC[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.3
+O.NC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.4
+O.NC[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.5
+O.OC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.6
+O.C#C[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.7
+O.C#C[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.8
+O.C=C[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.9
+O.O=C[C@H](Oc1ccc(C)cc1)CO R1.13 + R2.10
+O.O=C(O)[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.11
+O.O[C@H]([C@H](Oc1ccc(C)cc1)C)C R1.13 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.13
+O.O[C@@H]([C@@H](Oc1ccc(C)cc1)C)C R1.13 + R2.14
+O.Cc1ccc(O[C@@H](C(C)C)C)cc1 R1.13 + R2.15
+O.OCC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.16
+O.OCC[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.17
+O.Cc1ccc(O[C@@H]2CCOC2)cc1 R1.13 + R2.18
+O.O=C[C@@H](Oc1ccc(C)cc1)CO R1.13 + R2.19
+O.Cc1ccc(O[C@H](C(C)C)C)cc1 R1.13 + R2.20
+O.CCC[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.21
+O.CCC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.22
+O.Cc1ccc(O[C@H]2CCOC2)cc1 R1.13 + R2.23
+O.O[C@H]([C@@H](Oc1ccc(C)cc1)C)C R1.13 + R2.24
+O.ClC[C@@H](Oc1ccc(C)cc1)CO R1.13 + R2.25
+O.OC[C@H](C=C)Oc1ccc(C)cc1 R1.13 + R2.26
+O.Cc1ccc(O[C@H]2CCNC2)cc1 R1.13 + R2.27
+O.OC[C@@H](C=C)Oc1ccc(C)cc1 R1.13 + R2.28
+O.Cc1ccc(O[C@@H]2CCNC2)cc1 R1.13 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.30
+O.ClC[C@H](Oc1ccc(C)cc1)CO R1.13 + R2.31
+O.O=C(N)[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.32
+O.OC[C@@H](Oc1ccc(C)cc1)CS R1.13 + R2.33
+O.OC[C@H](Oc1ccc(C)cc1)CN R1.13 + R2.34
+O.OC[C@@H](Oc1ccc(C)cc1)CN R1.13 + R2.35
+O.C[C@H](Oc1ccc(C)cc1)COC R1.13 + R2.36
+O.C[C@@H](Oc1ccc(C)cc1)COC R1.13 + R2.37
+O.Cc1ccc(O[C@@H](CCO)CO)cc1 R1.13 + R2.41
+O.Cc1ccc(O[C@H](CCO)CO)cc1 R1.13 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccc(C)cc1)C)C R1.13 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccc(C)cc1 R1.13 + R2.45
+O.O[C@H](C[C@H](Oc1ccc(C)cc1)C)C R1.13 + R2.46
+O.C[C@@H](Oc1ccc(C)cc1)CN(C)C R1.13 + R2.47
+O.C[C@H](Oc1ccc(C)cc1)CN(C)C R1.13 + R2.48
+O.CCCC[C@H](C)Oc1ccc(C)cc1 R1.13 + R2.49
+O.OC[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.1
+O.CC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.2
+O.CC[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.3
+O.NC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.4
+O.NC[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.5
+O.OC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.6
+O.C#C[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.7
+O.C#C[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.8
+O.C=C[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.9
+O.O=C[C@H](Oc1ccc(S)cc1)CO R1.14 + R2.10
+O.O=C(O)[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.11
+O.O[C@H]([C@H](Oc1ccc(S)cc1)C)C R1.14 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.13
+O.O[C@@H]([C@@H](Oc1ccc(S)cc1)C)C R1.14 + R2.14
+O.Sc1ccc(O[C@@H](C(C)C)C)cc1 R1.14 + R2.15
+O.OCC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.16
+O.OCC[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.17
+O.Sc1ccc(O[C@@H]2CCOC2)cc1 R1.14 + R2.18
+O.O=C[C@@H](Oc1ccc(S)cc1)CO R1.14 + R2.19
+O.Sc1ccc(O[C@H](C(C)C)C)cc1 R1.14 + R2.20
+O.CCC[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.21
+O.CCC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.22
+O.Sc1ccc(O[C@H]2CCOC2)cc1 R1.14 + R2.23
+O.O[C@H]([C@@H](Oc1ccc(S)cc1)C)C R1.14 + R2.24
+O.ClC[C@@H](Oc1ccc(S)cc1)CO R1.14 + R2.25
+O.OC[C@H](C=C)Oc1ccc(S)cc1 R1.14 + R2.26
+O.Sc1ccc(O[C@H]2CCNC2)cc1 R1.14 + R2.27
+O.OC[C@@H](C=C)Oc1ccc(S)cc1 R1.14 + R2.28
+O.Sc1ccc(O[C@@H]2CCNC2)cc1 R1.14 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.30
+O.ClC[C@H](Oc1ccc(S)cc1)CO R1.14 + R2.31
+O.O=C(N)[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.32
+O.OC[C@@H](Oc1ccc(S)cc1)CS R1.14 + R2.33
+O.OC[C@H](Oc1ccc(S)cc1)CN R1.14 + R2.34
+O.OC[C@@H](Oc1ccc(S)cc1)CN R1.14 + R2.35
+O.C[C@H](Oc1ccc(S)cc1)COC R1.14 + R2.36
+O.C[C@@H](Oc1ccc(S)cc1)COC R1.14 + R2.37
+O.Sc1ccc(O[C@@H](CCO)CO)cc1 R1.14 + R2.41
+O.Sc1ccc(O[C@H](CCO)CO)cc1 R1.14 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccc(S)cc1)C)C R1.14 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccc(S)cc1 R1.14 + R2.45
+O.O[C@H](C[C@H](Oc1ccc(S)cc1)C)C R1.14 + R2.46
+O.C[C@@H](Oc1ccc(S)cc1)CN(C)C R1.14 + R2.47
+O.C[C@H](Oc1ccc(S)cc1)CN(C)C R1.14 + R2.48
+O.CCCC[C@H](C)Oc1ccc(S)cc1 R1.14 + R2.49
+O.OC[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.1
+O.CC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.2
+O.CC[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.3
+O.NC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.4
+O.NC[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.5
+O.OC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.6
+O.C#C[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.7
+O.C#C[C@H](C)Oc1c(N)cccc1 R1.15 + R2.8
+O.C=C[C@H](C)Oc1c(N)cccc1 R1.15 + R2.9
+O.O=C[C@H](Oc1c(N)cccc1)CO R1.15 + R2.10
+O.O=C(O)[C@H](C)Oc1c(N)cccc1 R1.15 + R2.11
+O.O[C@H]([C@H](Oc1c(N)cccc1)C)C R1.15 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.13
+O.O[C@@H]([C@@H](Oc1c(N)cccc1)C)C R1.15 + R2.14
+O.Nc1c(O[C@@H](C(C)C)C)cccc1 R1.15 + R2.15
+O.OCC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.16
+O.OCC[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.17
+O.Nc1c(O[C@@H]2CCOC2)cccc1 R1.15 + R2.18
+O.O=C[C@@H](Oc1c(N)cccc1)CO R1.15 + R2.19
+O.Nc1c(O[C@H](C(C)C)C)cccc1 R1.15 + R2.20
+O.CCC[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.21
+O.CCC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.22
+O.Nc1c(O[C@H]2CCOC2)cccc1 R1.15 + R2.23
+O.O[C@H]([C@@H](Oc1c(N)cccc1)C)C R1.15 + R2.24
+O.ClC[C@@H](Oc1c(N)cccc1)CO R1.15 + R2.25
+O.OC[C@H](C=C)Oc1c(N)cccc1 R1.15 + R2.26
+O.Nc1c(O[C@H]2CCNC2)cccc1 R1.15 + R2.27
+O.OC[C@@H](C=C)Oc1c(N)cccc1 R1.15 + R2.28
+O.Nc1c(O[C@@H]2CCNC2)cccc1 R1.15 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.30
+O.ClC[C@H](Oc1c(N)cccc1)CO R1.15 + R2.31
+O.O=C(N)[C@H](C)Oc1c(N)cccc1 R1.15 + R2.32
+O.OC[C@@H](Oc1c(N)cccc1)CS R1.15 + R2.33
+O.OC[C@H](Oc1c(N)cccc1)CN R1.15 + R2.34
+O.OC[C@@H](Oc1c(N)cccc1)CN R1.15 + R2.35
+O.C[C@H](Oc1c(N)cccc1)COC R1.15 + R2.36
+O.C[C@@H](Oc1c(N)cccc1)COC R1.15 + R2.37
+O.Nc1c(O[C@@H](CCO)CO)cccc1 R1.15 + R2.41
+O.Nc1c(O[C@H](CCO)CO)cccc1 R1.15 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(N)cccc1)C)C R1.15 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(N)cccc1 R1.15 + R2.45
+O.O[C@H](C[C@H](Oc1c(N)cccc1)C)C R1.15 + R2.46
+O.C[C@@H](Oc1c(N)cccc1)CN(C)C R1.15 + R2.47
+O.C[C@H](Oc1c(N)cccc1)CN(C)C R1.15 + R2.48
+O.CCCC[C@H](C)Oc1c(N)cccc1 R1.15 + R2.49
+O.OC[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.1
+O.CC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.2
+O.CC[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.3
+O.NC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.4
+O.NC[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.5
+O.OC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.6
+O.C#C[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.7
+O.C#C[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.8
+O.C=C[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.9
+O.O=C[C@H](Oc1cc(N)ccc1)CO R1.16 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.11
+O.O[C@H]([C@H](Oc1cc(N)ccc1)C)C R1.16 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(N)ccc1)C)C R1.16 + R2.14
+O.Nc1cc(O[C@@H](C(C)C)C)ccc1 R1.16 + R2.15
+O.OCC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.16
+O.OCC[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.17
+O.Nc1cc(O[C@@H]2CCOC2)ccc1 R1.16 + R2.18
+O.O=C[C@@H](Oc1cc(N)ccc1)CO R1.16 + R2.19
+O.Nc1cc(O[C@H](C(C)C)C)ccc1 R1.16 + R2.20
+O.CCC[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.21
+O.CCC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.22
+O.Nc1cc(O[C@H]2CCOC2)ccc1 R1.16 + R2.23
+O.O[C@H]([C@@H](Oc1cc(N)ccc1)C)C R1.16 + R2.24
+O.ClC[C@@H](Oc1cc(N)ccc1)CO R1.16 + R2.25
+O.OC[C@H](C=C)Oc1cc(N)ccc1 R1.16 + R2.26
+O.Nc1cc(O[C@H]2CCNC2)ccc1 R1.16 + R2.27
+O.OC[C@@H](C=C)Oc1cc(N)ccc1 R1.16 + R2.28
+O.Nc1cc(O[C@@H]2CCNC2)ccc1 R1.16 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.30
+O.ClC[C@H](Oc1cc(N)ccc1)CO R1.16 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.32
+O.OC[C@@H](Oc1cc(N)ccc1)CS R1.16 + R2.33
+O.OC[C@H](Oc1cc(N)ccc1)CN R1.16 + R2.34
+O.OC[C@@H](Oc1cc(N)ccc1)CN R1.16 + R2.35
+O.C[C@H](Oc1cc(N)ccc1)COC R1.16 + R2.36
+O.C[C@@H](Oc1cc(N)ccc1)COC R1.16 + R2.37
+O.Nc1cc(O[C@@H](CCO)CO)ccc1 R1.16 + R2.41
+O.Nc1cc(O[C@H](CCO)CO)ccc1 R1.16 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(N)ccc1)C)C R1.16 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(N)ccc1 R1.16 + R2.45
+O.O[C@H](C[C@H](Oc1cc(N)ccc1)C)C R1.16 + R2.46
+O.C[C@@H](Oc1cc(N)ccc1)CN(C)C R1.16 + R2.47
+O.C[C@H](Oc1cc(N)ccc1)CN(C)C R1.16 + R2.48
+O.CCCC[C@H](C)Oc1cc(N)ccc1 R1.16 + R2.49
+O.OC[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.1
+O.CC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.2
+O.CC[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.3
+O.NC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.4
+O.NC[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.5
+O.OC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.6
+O.C#C[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.7
+O.C#C[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.8
+O.C=C[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.9
+O.O=C[C@H](Oc1ccc(N)cc1)CO R1.17 + R2.10
+O.O=C(O)[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.11
+O.O[C@H]([C@H](Oc1ccc(N)cc1)C)C R1.17 + R2.12
+O.O=C(O)[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.13
+O.O[C@@H]([C@@H](Oc1ccc(N)cc1)C)C R1.17 + R2.14
+O.Nc1ccc(O[C@@H](C(C)C)C)cc1 R1.17 + R2.15
+O.OCC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.16
+O.OCC[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.17
+O.Nc1ccc(O[C@@H]2CCOC2)cc1 R1.17 + R2.18
+O.O=C[C@@H](Oc1ccc(N)cc1)CO R1.17 + R2.19
+O.Nc1ccc(O[C@H](C(C)C)C)cc1 R1.17 + R2.20
+O.CCC[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.21
+O.CCC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.22
+O.Nc1ccc(O[C@H]2CCOC2)cc1 R1.17 + R2.23
+O.O[C@H]([C@@H](Oc1ccc(N)cc1)C)C R1.17 + R2.24
+O.ClC[C@@H](Oc1ccc(N)cc1)CO R1.17 + R2.25
+O.OC[C@H](C=C)Oc1ccc(N)cc1 R1.17 + R2.26
+O.Nc1ccc(O[C@H]2CCNC2)cc1 R1.17 + R2.27
+O.OC[C@@H](C=C)Oc1ccc(N)cc1 R1.17 + R2.28
+O.Nc1ccc(O[C@@H]2CCNC2)cc1 R1.17 + R2.29
+O.O=C(N)[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.30
+O.ClC[C@H](Oc1ccc(N)cc1)CO R1.17 + R2.31
+O.O=C(N)[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.32
+O.OC[C@@H](Oc1ccc(N)cc1)CS R1.17 + R2.33
+O.OC[C@H](Oc1ccc(N)cc1)CN R1.17 + R2.34
+O.OC[C@@H](Oc1ccc(N)cc1)CN R1.17 + R2.35
+O.C[C@H](Oc1ccc(N)cc1)COC R1.17 + R2.36
+O.C[C@@H](Oc1ccc(N)cc1)COC R1.17 + R2.37
+O.Nc1ccc(O[C@@H](CCO)CO)cc1 R1.17 + R2.41
+O.Nc1ccc(O[C@H](CCO)CO)cc1 R1.17 + R2.42
+O.O[C@@H](C[C@@H](Oc1ccc(N)cc1)C)C R1.17 + R2.43
+O.O=C(O)C[C@@H](C)Oc1ccc(N)cc1 R1.17 + R2.45
+O.O[C@H](C[C@H](Oc1ccc(N)cc1)C)C R1.17 + R2.46
+O.C[C@@H](Oc1ccc(N)cc1)CN(C)C R1.17 + R2.47
+O.C[C@H](Oc1ccc(N)cc1)CN(C)C R1.17 + R2.48
+O.CCCC[C@H](C)Oc1ccc(N)cc1 R1.17 + R2.49
+O.OC[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.1
+O.CC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.2
+O.CC[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.3
+O.NC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.4
+O.NC[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.5
+O.OC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.6
+O.C#C[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.7
+O.C#C[C@H](C)Oc1c(S)cccc1 R1.18 + R2.8
+O.C=C[C@H](C)Oc1c(S)cccc1 R1.18 + R2.9
+O.O=C[C@H](Oc1c(S)cccc1)CO R1.18 + R2.10
+O.O=C(O)[C@H](C)Oc1c(S)cccc1 R1.18 + R2.11
+O.O[C@H]([C@H](Oc1c(S)cccc1)C)C R1.18 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.13
+O.O[C@@H]([C@@H](Oc1c(S)cccc1)C)C R1.18 + R2.14
+O.Sc1c(O[C@@H](C(C)C)C)cccc1 R1.18 + R2.15
+O.OCC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.16
+O.OCC[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.17
+O.Sc1c(O[C@@H]2CCOC2)cccc1 R1.18 + R2.18
+O.O=C[C@@H](Oc1c(S)cccc1)CO R1.18 + R2.19
+O.Sc1c(O[C@H](C(C)C)C)cccc1 R1.18 + R2.20
+O.CCC[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.21
+O.CCC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.22
+O.Sc1c(O[C@H]2CCOC2)cccc1 R1.18 + R2.23
+O.O[C@H]([C@@H](Oc1c(S)cccc1)C)C R1.18 + R2.24
+O.ClC[C@@H](Oc1c(S)cccc1)CO R1.18 + R2.25
+O.OC[C@H](C=C)Oc1c(S)cccc1 R1.18 + R2.26
+O.Sc1c(O[C@H]2CCNC2)cccc1 R1.18 + R2.27
+O.OC[C@@H](C=C)Oc1c(S)cccc1 R1.18 + R2.28
+O.Sc1c(O[C@@H]2CCNC2)cccc1 R1.18 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.30
+O.ClC[C@H](Oc1c(S)cccc1)CO R1.18 + R2.31
+O.O=C(N)[C@H](C)Oc1c(S)cccc1 R1.18 + R2.32
+O.OC[C@@H](Oc1c(S)cccc1)CS R1.18 + R2.33
+O.OC[C@H](Oc1c(S)cccc1)CN R1.18 + R2.34
+O.OC[C@@H](Oc1c(S)cccc1)CN R1.18 + R2.35
+O.C[C@H](Oc1c(S)cccc1)COC R1.18 + R2.36
+O.C[C@@H](Oc1c(S)cccc1)COC R1.18 + R2.37
+O.Sc1c(O[C@@H](CCO)CO)cccc1 R1.18 + R2.41
+O.Sc1c(O[C@H](CCO)CO)cccc1 R1.18 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(S)cccc1)C)C R1.18 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(S)cccc1 R1.18 + R2.45
+O.O[C@H](C[C@H](Oc1c(S)cccc1)C)C R1.18 + R2.46
+O.C[C@@H](Oc1c(S)cccc1)CN(C)C R1.18 + R2.47
+O.C[C@H](Oc1c(S)cccc1)CN(C)C R1.18 + R2.48
+O.CCCC[C@H](C)Oc1c(S)cccc1 R1.18 + R2.49
+O.OC[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.1
+O.CC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.2
+O.CC[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.3
+O.NC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.4
+O.NC[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.5
+O.OC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.6
+O.C#C[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.7
+O.C#C[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.8
+O.C=C[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.9
+O.O=C[C@H](Oc1cc(S)ccc1)CO R1.19 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.11
+O.O[C@H]([C@H](Oc1cc(S)ccc1)C)C R1.19 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(S)ccc1)C)C R1.19 + R2.14
+O.Sc1cc(O[C@@H](C(C)C)C)ccc1 R1.19 + R2.15
+O.OCC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.16
+O.OCC[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.17
+O.Sc1cc(O[C@@H]2CCOC2)ccc1 R1.19 + R2.18
+O.O=C[C@@H](Oc1cc(S)ccc1)CO R1.19 + R2.19
+O.Sc1cc(O[C@H](C(C)C)C)ccc1 R1.19 + R2.20
+O.CCC[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.21
+O.CCC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.22
+O.Sc1cc(O[C@H]2CCOC2)ccc1 R1.19 + R2.23
+O.O[C@H]([C@@H](Oc1cc(S)ccc1)C)C R1.19 + R2.24
+O.ClC[C@@H](Oc1cc(S)ccc1)CO R1.19 + R2.25
+O.OC[C@H](C=C)Oc1cc(S)ccc1 R1.19 + R2.26
+O.Sc1cc(O[C@H]2CCNC2)ccc1 R1.19 + R2.27
+O.OC[C@@H](C=C)Oc1cc(S)ccc1 R1.19 + R2.28
+O.Sc1cc(O[C@@H]2CCNC2)ccc1 R1.19 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.30
+O.ClC[C@H](Oc1cc(S)ccc1)CO R1.19 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.32
+O.OC[C@@H](Oc1cc(S)ccc1)CS R1.19 + R2.33
+O.OC[C@H](Oc1cc(S)ccc1)CN R1.19 + R2.34
+O.OC[C@@H](Oc1cc(S)ccc1)CN R1.19 + R2.35
+O.C[C@H](Oc1cc(S)ccc1)COC R1.19 + R2.36
+O.C[C@@H](Oc1cc(S)ccc1)COC R1.19 + R2.37
+O.Sc1cc(O[C@@H](CCO)CO)ccc1 R1.19 + R2.41
+O.Sc1cc(O[C@H](CCO)CO)ccc1 R1.19 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(S)ccc1)C)C R1.19 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(S)ccc1 R1.19 + R2.45
+O.O[C@H](C[C@H](Oc1cc(S)ccc1)C)C R1.19 + R2.46
+O.C[C@@H](Oc1cc(S)ccc1)CN(C)C R1.19 + R2.47
+O.C[C@H](Oc1cc(S)ccc1)CN(C)C R1.19 + R2.48
+O.CCCC[C@H](C)Oc1cc(S)ccc1 R1.19 + R2.49
+O.N#Cc1c(O[C@H](C)CO)cccc1 R1.20 + R2.1
+O.N#Cc1c(O[C@@H](C)CC)cccc1 R1.20 + R2.2
+O.N#Cc1c(O[C@H](C)CC)cccc1 R1.20 + R2.3
+O.N#Cc1c(O[C@@H](C)CN)cccc1 R1.20 + R2.4
+O.N#Cc1c(O[C@H](C)CN)cccc1 R1.20 + R2.5
+O.N#Cc1c(O[C@@H](C)CO)cccc1 R1.20 + R2.6
+O.N#Cc1c(O[C@H](C)C#C)cccc1 R1.20 + R2.7
+O.N#Cc1c(O[C@@H](C)C#C)cccc1 R1.20 + R2.8
+O.N#Cc1c(O[C@@H](C)C=C)cccc1 R1.20 + R2.9
+O.O=C[C@H](Oc1c(C#N)cccc1)CO R1.20 + R2.10
+O.N#Cc1c(O[C@@H](C)C(=O)O)cccc1 R1.20 + R2.11
+O.N#Cc1c(O[C@@H]([C@@H](O)C)C)cccc1 R1.20 + R2.12
+O.N#Cc1c(O[C@H](C)C(=O)O)cccc1 R1.20 + R2.13
+O.N#Cc1c(O[C@H]([C@H](O)C)C)cccc1 R1.20 + R2.14
+O.N#Cc1c(O[C@@H](C(C)C)C)cccc1 R1.20 + R2.15
+O.N#Cc1c(O[C@@H](C)CCO)cccc1 R1.20 + R2.16
+O.N#Cc1c(O[C@H](C)CCO)cccc1 R1.20 + R2.17
+O.N#Cc1c(O[C@@H]2CCOC2)cccc1 R1.20 + R2.18
+O.O=C[C@@H](Oc1c(C#N)cccc1)CO R1.20 + R2.19
+O.N#Cc1c(O[C@H](C(C)C)C)cccc1 R1.20 + R2.20
+O.N#Cc1c(O[C@H](C)CCC)cccc1 R1.20 + R2.21
+O.N#Cc1c(O[C@@H](C)CCC)cccc1 R1.20 + R2.22
+O.N#Cc1c(O[C@H]2CCOC2)cccc1 R1.20 + R2.23
+O.N#Cc1c(O[C@H]([C@@H](O)C)C)cccc1 R1.20 + R2.24
+O.ClC[C@@H](Oc1c(C#N)cccc1)CO R1.20 + R2.25
+O.N#Cc1c(O[C@@H](C=C)CO)cccc1 R1.20 + R2.26
+O.N#Cc1c(O[C@H]2CCNC2)cccc1 R1.20 + R2.27
+O.N#Cc1c(O[C@H](C=C)CO)cccc1 R1.20 + R2.28
+O.N#Cc1c(O[C@@H]2CCNC2)cccc1 R1.20 + R2.29
+O.N#Cc1c(O[C@H](C)C(=O)N)cccc1 R1.20 + R2.30
+O.ClC[C@H](Oc1c(C#N)cccc1)CO R1.20 + R2.31
+O.N#Cc1c(O[C@@H](C)C(=O)N)cccc1 R1.20 + R2.32
+O.N#Cc1c(O[C@H](CO)CS)cccc1 R1.20 + R2.33
+O.N#Cc1c(O[C@H](CN)CO)cccc1 R1.20 + R2.34
+O.N#Cc1c(O[C@@H](CN)CO)cccc1 R1.20 + R2.35
+O.N#Cc1c(O[C@@H](C)COC)cccc1 R1.20 + R2.36
+O.N#Cc1c(O[C@H](C)COC)cccc1 R1.20 + R2.37
+O.N#Cc1c(O[C@@H](CCO)CO)cccc1 R1.20 + R2.41
+O.N#Cc1c(O[C@H](CCO)CO)cccc1 R1.20 + R2.42
+O.N#Cc1c(O[C@H](C[C@H](O)C)C)cccc1 R1.20 + R2.43
+O.N#Cc1c(O[C@H](C)CC(=O)O)cccc1 R1.20 + R2.45
+O.N#Cc1c(O[C@@H](C[C@@H](O)C)C)cccc1 R1.20 + R2.46
+O.N#Cc1c(O[C@H](C)CN(C)C)cccc1 R1.20 + R2.47
+O.N#Cc1c(O[C@@H](C)CN(C)C)cccc1 R1.20 + R2.48
+O.N#Cc1c(O[C@@H](C)CCCC)cccc1 R1.20 + R2.49
+O.OC[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.1
+O.CC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.2
+O.CC[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.3
+O.NC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.4
+O.NC[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.5
+O.OC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.6
+O.C#C[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.7
+O.C#C[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.8
+O.C=C[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.9
+O.O=C[C@H](Oc1c(cc(Cl)cc1)Cl)CO R1.21 + R2.10
+O.O=C(O)[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.11
+O.O[C@H]([C@H](Oc1c(cc(Cl)cc1)Cl)C)C R1.21 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.13
+O.O[C@@H]([C@@H](Oc1c(cc(Cl)cc1)Cl)C)C R1.21 + R2.14
+O.Clc1cc(c(O[C@@H](C(C)C)C)cc1)Cl R1.21 + R2.15
+O.OCC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.16
+O.OCC[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.17
+O.Clc1cc(c(O[C@@H]2CCOC2)cc1)Cl R1.21 + R2.18
+O.O=C[C@@H](Oc1c(cc(Cl)cc1)Cl)CO R1.21 + R2.19
+O.Clc1cc(c(O[C@H](C(C)C)C)cc1)Cl R1.21 + R2.20
+O.CCC[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.21
+O.CCC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.22
+O.Clc1cc(c(O[C@H]2CCOC2)cc1)Cl R1.21 + R2.23
+O.O[C@H]([C@@H](Oc1c(cc(Cl)cc1)Cl)C)C R1.21 + R2.24
+O.ClC[C@@H](Oc1c(cc(Cl)cc1)Cl)CO R1.21 + R2.25
+O.OC[C@H](C=C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.26
+O.Clc1cc(c(O[C@H]2CCNC2)cc1)Cl R1.21 + R2.27
+O.OC[C@@H](C=C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.28
+O.Clc1cc(c(O[C@@H]2CCNC2)cc1)Cl R1.21 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.30
+O.ClC[C@H](Oc1c(cc(Cl)cc1)Cl)CO R1.21 + R2.31
+O.O=C(N)[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.32
+O.OC[C@@H](Oc1c(cc(Cl)cc1)Cl)CS R1.21 + R2.33
+O.OC[C@H](Oc1c(cc(Cl)cc1)Cl)CN R1.21 + R2.34
+O.OC[C@@H](Oc1c(cc(Cl)cc1)Cl)CN R1.21 + R2.35
+O.C[C@H](Oc1c(cc(Cl)cc1)Cl)COC R1.21 + R2.36
+O.C[C@@H](Oc1c(cc(Cl)cc1)Cl)COC R1.21 + R2.37
+O.Clc1cc(c(O[C@@H](CCO)CO)cc1)Cl R1.21 + R2.41
+O.Clc1cc(c(O[C@H](CCO)CO)cc1)Cl R1.21 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(cc(Cl)cc1)Cl)C)C R1.21 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.45
+O.O[C@H](C[C@H](Oc1c(cc(Cl)cc1)Cl)C)C R1.21 + R2.46
+O.C[C@@H](Oc1c(cc(Cl)cc1)Cl)CN(C)C R1.21 + R2.47
+O.C[C@H](Oc1c(cc(Cl)cc1)Cl)CN(C)C R1.21 + R2.48
+O.CCCC[C@H](C)Oc1c(cc(Cl)cc1)Cl R1.21 + R2.49
+O.OC[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.1
+O.CC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.2
+O.CC[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.3
+O.NC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.4
+O.NC[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.5
+O.OC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.6
+O.C#C[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.7
+O.C#C[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.8
+O.C=C[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.9
+O.O=C[C@H](Oc1c(Cl)cc(C)cc1)CO R1.22 + R2.10
+O.O=C(O)[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.11
+O.O[C@H]([C@H](Oc1c(Cl)cc(C)cc1)C)C R1.22 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.13
+O.O[C@@H]([C@@H](Oc1c(Cl)cc(C)cc1)C)C R1.22 + R2.14
+O.Clc1cc(C)ccc1O[C@@H](C(C)C)C R1.22 + R2.15
+O.OCC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.16
+O.OCC[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.17
+O.Clc1cc(C)ccc1O[C@@H]1CCOC1 R1.22 + R2.18
+O.O=C[C@@H](Oc1c(Cl)cc(C)cc1)CO R1.22 + R2.19
+O.Clc1cc(C)ccc1O[C@H](C(C)C)C R1.22 + R2.20
+O.CCC[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.21
+O.CCC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.22
+O.Clc1cc(C)ccc1O[C@H]1CCOC1 R1.22 + R2.23
+O.O[C@H]([C@@H](Oc1c(Cl)cc(C)cc1)C)C R1.22 + R2.24
+O.ClC[C@@H](Oc1c(Cl)cc(C)cc1)CO R1.22 + R2.25
+O.OC[C@H](C=C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.26
+O.Clc1cc(C)ccc1O[C@H]1CCNC1 R1.22 + R2.27
+O.OC[C@@H](C=C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.28
+O.Clc1cc(C)ccc1O[C@@H]1CCNC1 R1.22 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.30
+O.ClC[C@H](Oc1c(Cl)cc(C)cc1)CO R1.22 + R2.31
+O.O=C(N)[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.32
+O.OC[C@@H](Oc1c(Cl)cc(C)cc1)CS R1.22 + R2.33
+O.OC[C@H](Oc1c(Cl)cc(C)cc1)CN R1.22 + R2.34
+O.OC[C@@H](Oc1c(Cl)cc(C)cc1)CN R1.22 + R2.35
+O.C[C@H](Oc1c(Cl)cc(C)cc1)COC R1.22 + R2.36
+O.C[C@@H](Oc1c(Cl)cc(C)cc1)COC R1.22 + R2.37
+O.Clc1cc(C)ccc1O[C@@H](CCO)CO R1.22 + R2.41
+O.Clc1cc(C)ccc1O[C@H](CCO)CO R1.22 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(Cl)cc(C)cc1)C)C R1.22 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.45
+O.O[C@H](C[C@H](Oc1c(Cl)cc(C)cc1)C)C R1.22 + R2.46
+O.C[C@@H](Oc1c(Cl)cc(C)cc1)CN(C)C R1.22 + R2.47
+O.C[C@H](Oc1c(Cl)cc(C)cc1)CN(C)C R1.22 + R2.48
+O.CCCC[C@H](C)Oc1c(Cl)cc(C)cc1 R1.22 + R2.49
+O.OC[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.1
+O.CC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.2
+O.CC[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.3
+O.NC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.4
+O.NC[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.5
+O.OC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.6
+O.C#C[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.7
+O.C#C[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.8
+O.C=C[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.9
+O.O=C[C@H](Oc1c(Cl)cccc1Cl)CO R1.23 + R2.10
+O.O=C(O)[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.11
+O.O[C@H]([C@H](Oc1c(Cl)cccc1Cl)C)C R1.23 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.13
+O.O[C@@H]([C@@H](Oc1c(Cl)cccc1Cl)C)C R1.23 + R2.14
+O.C[C@@H](Oc1c(Cl)cccc1Cl)C(C)C R1.23 + R2.15
+O.OCC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.16
+O.OCC[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.17
+O.Clc1c(O[C@@H]2CCOC2)c(Cl)ccc1 R1.23 + R2.18
+O.O=C[C@@H](Oc1c(Cl)cccc1Cl)CO R1.23 + R2.19
+O.C[C@H](Oc1c(Cl)cccc1Cl)C(C)C R1.23 + R2.20
+O.CCC[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.21
+O.CCC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.22
+O.Clc1c(O[C@H]2CCOC2)c(Cl)ccc1 R1.23 + R2.23
+O.O[C@H]([C@@H](Oc1c(Cl)cccc1Cl)C)C R1.23 + R2.24
+O.ClC[C@@H](Oc1c(Cl)cccc1Cl)CO R1.23 + R2.25
+O.OC[C@H](C=C)Oc1c(Cl)cccc1Cl R1.23 + R2.26
+O.Clc1c(O[C@H]2CCNC2)c(Cl)ccc1 R1.23 + R2.27
+O.OC[C@@H](C=C)Oc1c(Cl)cccc1Cl R1.23 + R2.28
+O.Clc1c(O[C@@H]2CCNC2)c(Cl)ccc1 R1.23 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.30
+O.ClC[C@H](Oc1c(Cl)cccc1Cl)CO R1.23 + R2.31
+O.O=C(N)[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.32
+O.OC[C@@H](Oc1c(Cl)cccc1Cl)CS R1.23 + R2.33
+O.OC[C@H](Oc1c(Cl)cccc1Cl)CN R1.23 + R2.34
+O.OC[C@@H](Oc1c(Cl)cccc1Cl)CN R1.23 + R2.35
+O.C[C@H](Oc1c(Cl)cccc1Cl)COC R1.23 + R2.36
+O.C[C@@H](Oc1c(Cl)cccc1Cl)COC R1.23 + R2.37
+O.OC[C@H](CCO)Oc1c(Cl)cccc1Cl R1.23 + R2.41
+O.OC[C@@H](CCO)Oc1c(Cl)cccc1Cl R1.23 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(Cl)cccc1Cl)C)C R1.23 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.45
+O.O[C@H](C[C@H](Oc1c(Cl)cccc1Cl)C)C R1.23 + R2.46
+O.C[C@@H](Oc1c(Cl)cccc1Cl)CN(C)C R1.23 + R2.47
+O.C[C@H](Oc1c(Cl)cccc1Cl)CN(C)C R1.23 + R2.48
+O.CCCC[C@H](C)Oc1c(Cl)cccc1Cl R1.23 + R2.49
+O.OC[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.1
+O.CC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.2
+O.CC[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.3
+O.NC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.4
+O.NC[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.5
+O.OC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.6
+O.C#C[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.7
+O.C#C[C@H](C)Oc1c(F)cccc1F R1.24 + R2.8
+O.C=C[C@H](C)Oc1c(F)cccc1F R1.24 + R2.9
+O.O=C[C@H](Oc1c(F)cccc1F)CO R1.24 + R2.10
+O.O=C(O)[C@H](C)Oc1c(F)cccc1F R1.24 + R2.11
+O.O[C@H]([C@H](Oc1c(F)cccc1F)C)C R1.24 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.13
+O.O[C@@H]([C@@H](Oc1c(F)cccc1F)C)C R1.24 + R2.14
+O.C[C@@H](Oc1c(F)cccc1F)C(C)C R1.24 + R2.15
+O.OCC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.16
+O.OCC[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.17
+O.Fc1c(O[C@@H]2CCOC2)c(F)ccc1 R1.24 + R2.18
+O.O=C[C@@H](Oc1c(F)cccc1F)CO R1.24 + R2.19
+O.C[C@H](Oc1c(F)cccc1F)C(C)C R1.24 + R2.20
+O.CCC[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.21
+O.CCC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.22
+O.Fc1c(O[C@H]2CCOC2)c(F)ccc1 R1.24 + R2.23
+O.O[C@H]([C@@H](Oc1c(F)cccc1F)C)C R1.24 + R2.24
+O.ClC[C@@H](Oc1c(F)cccc1F)CO R1.24 + R2.25
+O.OC[C@H](C=C)Oc1c(F)cccc1F R1.24 + R2.26
+O.Fc1c(O[C@H]2CCNC2)c(F)ccc1 R1.24 + R2.27
+O.OC[C@@H](C=C)Oc1c(F)cccc1F R1.24 + R2.28
+O.Fc1c(O[C@@H]2CCNC2)c(F)ccc1 R1.24 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.30
+O.ClC[C@H](Oc1c(F)cccc1F)CO R1.24 + R2.31
+O.O=C(N)[C@H](C)Oc1c(F)cccc1F R1.24 + R2.32
+O.OC[C@@H](Oc1c(F)cccc1F)CS R1.24 + R2.33
+O.OC[C@H](Oc1c(F)cccc1F)CN R1.24 + R2.34
+O.OC[C@@H](Oc1c(F)cccc1F)CN R1.24 + R2.35
+O.C[C@H](Oc1c(F)cccc1F)COC R1.24 + R2.36
+O.C[C@@H](Oc1c(F)cccc1F)COC R1.24 + R2.37
+O.OC[C@H](CCO)Oc1c(F)cccc1F R1.24 + R2.41
+O.OC[C@@H](CCO)Oc1c(F)cccc1F R1.24 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(F)cccc1F)C)C R1.24 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(F)cccc1F R1.24 + R2.45
+O.O[C@H](C[C@H](Oc1c(F)cccc1F)C)C R1.24 + R2.46
+O.C[C@@H](Oc1c(F)cccc1F)CN(C)C R1.24 + R2.47
+O.C[C@H](Oc1c(F)cccc1F)CN(C)C R1.24 + R2.48
+O.CCCC[C@H](C)Oc1c(F)cccc1F R1.24 + R2.49
+O.OC[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.1
+O.CC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.2
+O.CC[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.3
+O.NC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.4
+O.NC[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.5
+O.OC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.6
+O.C#C[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.7
+O.C#C[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.8
+O.C=C[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.9
+O.O=C[C@H](Oc1c(c(Cl)ccc1)Cl)CO R1.25 + R2.10
+O.O=C(O)[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.11
+O.O[C@H]([C@H](Oc1c(c(Cl)ccc1)Cl)C)C R1.25 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.13
+O.O[C@@H]([C@@H](Oc1c(c(Cl)ccc1)Cl)C)C R1.25 + R2.14
+O.Clc1c(c(O[C@@H](C(C)C)C)ccc1)Cl R1.25 + R2.15
+O.OCC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.16
+O.OCC[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.17
+O.Clc1c(c(O[C@@H]2CCOC2)ccc1)Cl R1.25 + R2.18
+O.O=C[C@@H](Oc1c(c(Cl)ccc1)Cl)CO R1.25 + R2.19
+O.Clc1c(c(O[C@H](C(C)C)C)ccc1)Cl R1.25 + R2.20
+O.CCC[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.21
+O.CCC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.22
+O.Clc1c(c(O[C@H]2CCOC2)ccc1)Cl R1.25 + R2.23
+O.O[C@H]([C@@H](Oc1c(c(Cl)ccc1)Cl)C)C R1.25 + R2.24
+O.ClC[C@@H](Oc1c(c(Cl)ccc1)Cl)CO R1.25 + R2.25
+O.OC[C@H](C=C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.26
+O.Clc1c(c(O[C@H]2CCNC2)ccc1)Cl R1.25 + R2.27
+O.OC[C@@H](C=C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.28
+O.Clc1c(c(O[C@@H]2CCNC2)ccc1)Cl R1.25 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.30
+O.ClC[C@H](Oc1c(c(Cl)ccc1)Cl)CO R1.25 + R2.31
+O.O=C(N)[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.32
+O.OC[C@@H](Oc1c(c(Cl)ccc1)Cl)CS R1.25 + R2.33
+O.OC[C@H](Oc1c(c(Cl)ccc1)Cl)CN R1.25 + R2.34
+O.OC[C@@H](Oc1c(c(Cl)ccc1)Cl)CN R1.25 + R2.35
+O.C[C@H](Oc1c(c(Cl)ccc1)Cl)COC R1.25 + R2.36
+O.C[C@@H](Oc1c(c(Cl)ccc1)Cl)COC R1.25 + R2.37
+O.Clc1c(c(O[C@@H](CCO)CO)ccc1)Cl R1.25 + R2.41
+O.Clc1c(c(O[C@H](CCO)CO)ccc1)Cl R1.25 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(c(Cl)ccc1)Cl)C)C R1.25 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.45
+O.O[C@H](C[C@H](Oc1c(c(Cl)ccc1)Cl)C)C R1.25 + R2.46
+O.C[C@@H](Oc1c(c(Cl)ccc1)Cl)CN(C)C R1.25 + R2.47
+O.C[C@H](Oc1c(c(Cl)ccc1)Cl)CN(C)C R1.25 + R2.48
+O.CCCC[C@H](C)Oc1c(c(Cl)ccc1)Cl R1.25 + R2.49
+O.OC[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.1
+O.CC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.2
+O.CC[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.3
+O.NC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.4
+O.NC[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.5
+O.OC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.6
+O.C#C[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.7
+O.C#C[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.8
+O.C=C[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.9
+O.O=C[C@H](Oc1c(Cl)cc(F)cc1)CO R1.26 + R2.10
+O.O=C(O)[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.11
+O.O[C@H]([C@H](Oc1c(Cl)cc(F)cc1)C)C R1.26 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.13
+O.O[C@@H]([C@@H](Oc1c(Cl)cc(F)cc1)C)C R1.26 + R2.14
+O.Fc1cc(Cl)c(O[C@@H](C(C)C)C)cc1 R1.26 + R2.15
+O.OCC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.16
+O.OCC[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.17
+O.Fc1cc(Cl)c(O[C@@H]2CCOC2)cc1 R1.26 + R2.18
+O.O=C[C@@H](Oc1c(Cl)cc(F)cc1)CO R1.26 + R2.19
+O.Fc1cc(Cl)c(O[C@H](C(C)C)C)cc1 R1.26 + R2.20
+O.CCC[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.21
+O.CCC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.22
+O.Fc1cc(Cl)c(O[C@H]2CCOC2)cc1 R1.26 + R2.23
+O.O[C@H]([C@@H](Oc1c(Cl)cc(F)cc1)C)C R1.26 + R2.24
+O.ClC[C@@H](Oc1c(Cl)cc(F)cc1)CO R1.26 + R2.25
+O.OC[C@H](C=C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.26
+O.Fc1cc(Cl)c(O[C@H]2CCNC2)cc1 R1.26 + R2.27
+O.OC[C@@H](C=C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.28
+O.Fc1cc(Cl)c(O[C@@H]2CCNC2)cc1 R1.26 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.30
+O.ClC[C@H](Oc1c(Cl)cc(F)cc1)CO R1.26 + R2.31
+O.O=C(N)[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.32
+O.OC[C@@H](Oc1c(Cl)cc(F)cc1)CS R1.26 + R2.33
+O.OC[C@H](Oc1c(Cl)cc(F)cc1)CN R1.26 + R2.34
+O.OC[C@@H](Oc1c(Cl)cc(F)cc1)CN R1.26 + R2.35
+O.C[C@H](Oc1c(Cl)cc(F)cc1)COC R1.26 + R2.36
+O.C[C@@H](Oc1c(Cl)cc(F)cc1)COC R1.26 + R2.37
+O.Fc1cc(Cl)c(O[C@@H](CCO)CO)cc1 R1.26 + R2.41
+O.Fc1cc(Cl)c(O[C@H](CCO)CO)cc1 R1.26 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(Cl)cc(F)cc1)C)C R1.26 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.45
+O.O[C@H](C[C@H](Oc1c(Cl)cc(F)cc1)C)C R1.26 + R2.46
+O.C[C@@H](Oc1c(Cl)cc(F)cc1)CN(C)C R1.26 + R2.47
+O.C[C@H](Oc1c(Cl)cc(F)cc1)CN(C)C R1.26 + R2.48
+O.CCCC[C@H](C)Oc1c(Cl)cc(F)cc1 R1.26 + R2.49
+O.OC[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.1
+O.CC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.2
+O.CC[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.3
+O.NC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.4
+O.NC[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.5
+O.OC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.6
+O.C#C[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.7
+O.C#C[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.8
+O.C=C[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.9
+O.O=C[C@H](Oc1cc(Cl)ccc1Cl)CO R1.27 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.11
+O.O[C@H]([C@H](Oc1cc(Cl)ccc1Cl)C)C R1.27 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(Cl)ccc1Cl)C)C R1.27 + R2.14
+O.Clc1c(O[C@@H](C(C)C)C)cc(Cl)cc1 R1.27 + R2.15
+O.OCC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.16
+O.OCC[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.17
+O.Clc1c(O[C@@H]2CCOC2)cc(Cl)cc1 R1.27 + R2.18
+O.O=C[C@@H](Oc1cc(Cl)ccc1Cl)CO R1.27 + R2.19
+O.Clc1c(O[C@H](C(C)C)C)cc(Cl)cc1 R1.27 + R2.20
+O.CCC[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.21
+O.CCC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.22
+O.Clc1c(O[C@H]2CCOC2)cc(Cl)cc1 R1.27 + R2.23
+O.O[C@H]([C@@H](Oc1cc(Cl)ccc1Cl)C)C R1.27 + R2.24
+O.ClC[C@@H](Oc1cc(Cl)ccc1Cl)CO R1.27 + R2.25
+O.OC[C@H](C=C)Oc1cc(Cl)ccc1Cl R1.27 + R2.26
+O.Clc1c(O[C@H]2CCNC2)cc(Cl)cc1 R1.27 + R2.27
+O.OC[C@@H](C=C)Oc1cc(Cl)ccc1Cl R1.27 + R2.28
+O.Clc1c(O[C@@H]2CCNC2)cc(Cl)cc1 R1.27 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.30
+O.ClC[C@H](Oc1cc(Cl)ccc1Cl)CO R1.27 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.32
+O.OC[C@@H](Oc1cc(Cl)ccc1Cl)CS R1.27 + R2.33
+O.OC[C@H](Oc1cc(Cl)ccc1Cl)CN R1.27 + R2.34
+O.OC[C@@H](Oc1cc(Cl)ccc1Cl)CN R1.27 + R2.35
+O.C[C@H](Oc1cc(Cl)ccc1Cl)COC R1.27 + R2.36
+O.C[C@@H](Oc1cc(Cl)ccc1Cl)COC R1.27 + R2.37
+O.Clc1c(O[C@@H](CCO)CO)cc(Cl)cc1 R1.27 + R2.41
+O.Clc1c(O[C@H](CCO)CO)cc(Cl)cc1 R1.27 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(Cl)ccc1Cl)C)C R1.27 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.45
+O.O[C@H](C[C@H](Oc1cc(Cl)ccc1Cl)C)C R1.27 + R2.46
+O.C[C@@H](Oc1cc(Cl)ccc1Cl)CN(C)C R1.27 + R2.47
+O.C[C@H](Oc1cc(Cl)ccc1Cl)CN(C)C R1.27 + R2.48
+O.CCCC[C@H](C)Oc1cc(Cl)ccc1Cl R1.27 + R2.49
+O.OC[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.1
+O.CC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.2
+O.CC[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.3
+O.NC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.4
+O.NC[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.5
+O.OC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.6
+O.C#C[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.7
+O.C#C[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.8
+O.C=C[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.9
+O.O=C[C@H](Oc1cc(C)ccc1Cl)CO R1.28 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.11
+O.O[C@H]([C@H](Oc1cc(C)ccc1Cl)C)C R1.28 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(C)ccc1Cl)C)C R1.28 + R2.14
+O.Clc1c(O[C@@H](C(C)C)C)cc(C)cc1 R1.28 + R2.15
+O.OCC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.16
+O.OCC[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.17
+O.Clc1c(O[C@@H]2CCOC2)cc(C)cc1 R1.28 + R2.18
+O.O=C[C@@H](Oc1cc(C)ccc1Cl)CO R1.28 + R2.19
+O.Clc1c(O[C@H](C(C)C)C)cc(C)cc1 R1.28 + R2.20
+O.CCC[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.21
+O.CCC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.22
+O.Clc1c(O[C@H]2CCOC2)cc(C)cc1 R1.28 + R2.23
+O.O[C@H]([C@@H](Oc1cc(C)ccc1Cl)C)C R1.28 + R2.24
+O.ClC[C@@H](Oc1cc(C)ccc1Cl)CO R1.28 + R2.25
+O.OC[C@H](C=C)Oc1cc(C)ccc1Cl R1.28 + R2.26
+O.Clc1c(O[C@H]2CCNC2)cc(C)cc1 R1.28 + R2.27
+O.OC[C@@H](C=C)Oc1cc(C)ccc1Cl R1.28 + R2.28
+O.Clc1c(O[C@@H]2CCNC2)cc(C)cc1 R1.28 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.30
+O.ClC[C@H](Oc1cc(C)ccc1Cl)CO R1.28 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.32
+O.OC[C@@H](Oc1cc(C)ccc1Cl)CS R1.28 + R2.33
+O.OC[C@H](Oc1cc(C)ccc1Cl)CN R1.28 + R2.34
+O.OC[C@@H](Oc1cc(C)ccc1Cl)CN R1.28 + R2.35
+O.C[C@H](Oc1cc(C)ccc1Cl)COC R1.28 + R2.36
+O.C[C@@H](Oc1cc(C)ccc1Cl)COC R1.28 + R2.37
+O.Clc1c(O[C@@H](CCO)CO)cc(C)cc1 R1.28 + R2.41
+O.Clc1c(O[C@H](CCO)CO)cc(C)cc1 R1.28 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(C)ccc1Cl)C)C R1.28 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.45
+O.O[C@H](C[C@H](Oc1cc(C)ccc1Cl)C)C R1.28 + R2.46
+O.C[C@@H](Oc1cc(C)ccc1Cl)CN(C)C R1.28 + R2.47
+O.C[C@H](Oc1cc(C)ccc1Cl)CN(C)C R1.28 + R2.48
+O.CCCC[C@H](C)Oc1cc(C)ccc1Cl R1.28 + R2.49
+O.OC[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.1
+O.CC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.2
+O.CC[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.3
+O.NC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.4
+O.NC[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.5
+O.OC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.6
+O.C#C[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.7
+O.C#C[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.8
+O.C=C[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.9
+O.O=C[C@H](Oc1c(OC)cccc1)CO R1.29 + R2.10
+O.O=C(O)[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.11
+O.O[C@H]([C@H](Oc1c(OC)cccc1)C)C R1.29 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.13
+O.O[C@@H]([C@@H](Oc1c(OC)cccc1)C)C R1.29 + R2.14
+O.COc1c(O[C@@H](C(C)C)C)cccc1 R1.29 + R2.15
+O.OCC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.16
+O.OCC[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.17
+O.COc1c(O[C@@H]2CCOC2)cccc1 R1.29 + R2.18
+O.O=C[C@@H](Oc1c(OC)cccc1)CO R1.29 + R2.19
+O.COc1c(O[C@H](C(C)C)C)cccc1 R1.29 + R2.20
+O.CCC[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.21
+O.CCC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.22
+O.COc1c(O[C@H]2CCOC2)cccc1 R1.29 + R2.23
+O.O[C@H]([C@@H](Oc1c(OC)cccc1)C)C R1.29 + R2.24
+O.ClC[C@@H](Oc1c(OC)cccc1)CO R1.29 + R2.25
+O.OC[C@H](C=C)Oc1c(OC)cccc1 R1.29 + R2.26
+O.COc1c(O[C@H]2CCNC2)cccc1 R1.29 + R2.27
+O.OC[C@@H](C=C)Oc1c(OC)cccc1 R1.29 + R2.28
+O.COc1c(O[C@@H]2CCNC2)cccc1 R1.29 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.30
+O.ClC[C@H](Oc1c(OC)cccc1)CO R1.29 + R2.31
+O.O=C(N)[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.32
+O.OC[C@@H](Oc1c(OC)cccc1)CS R1.29 + R2.33
+O.OC[C@H](Oc1c(OC)cccc1)CN R1.29 + R2.34
+O.OC[C@@H](Oc1c(OC)cccc1)CN R1.29 + R2.35
+O.C[C@H](Oc1c(OC)cccc1)COC R1.29 + R2.36
+O.C[C@@H](Oc1c(OC)cccc1)COC R1.29 + R2.37
+O.COc1c(O[C@@H](CCO)CO)cccc1 R1.29 + R2.41
+O.COc1c(O[C@H](CCO)CO)cccc1 R1.29 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(OC)cccc1)C)C R1.29 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(OC)cccc1 R1.29 + R2.45
+O.O[C@H](C[C@H](Oc1c(OC)cccc1)C)C R1.29 + R2.46
+O.C[C@@H](Oc1c(OC)cccc1)CN(C)C R1.29 + R2.47
+O.C[C@H](Oc1c(OC)cccc1)CN(C)C R1.29 + R2.48
+O.CCCC[C@H](C)Oc1c(OC)cccc1 R1.29 + R2.49
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CO)cccc1O[C@H](C)CO)CO R1.30 + R2.1 + R2.1 + R2.1
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CC)cccc1O[C@@H](C)CC)CC R1.30 + R2.2 + R2.2 + R2.2
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CC)cccc1O[C@H](C)CC)CC R1.30 + R2.3 + R2.3 + R2.3
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CN)cccc1O[C@@H](C)CN)CN R1.30 + R2.4 + R2.4 + R2.4
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CN)cccc1O[C@H](C)CN)CN R1.30 + R2.5 + R2.5 + R2.5
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CO)cccc1O[C@@H](C)CO)CO R1.30 + R2.6 + R2.6 + R2.6
+O.O.O.C[C@@H](Oc1c(O[C@H](C)C#C)cccc1O[C@H](C)C#C)C#C R1.30 + R2.7 + R2.7 + R2.7
+O.O.O.C[C@H](Oc1c(O[C@@H](C)C#C)cccc1O[C@@H](C)C#C)C#C R1.30 + R2.8 + R2.8 + R2.8
+O.O.O.C[C@H](Oc1c(O[C@@H](C)C=C)cccc1O[C@@H](C)C=C)C=C R1.30 + R2.9 + R2.9 + R2.9
+O.O.O.OC[C@@H](Oc1c(O[C@@H](C=O)CO)cccc1O[C@@H](C=O)CO)C=O R1.30 + R2.10 + R2.10 + R2.10
+O.O.O.C[C@H](Oc1c(O[C@@H](C)C(=O)O)cccc1O[C@@H](C)C(=O)O)C(=O)O R1.30 + R2.11 + R2.11 + R2.11
+O.O.O.C[C@@H](Oc1c(O[C@@H]([C@@H](O)C)C)cccc1O[C@@H]([C@@H](O)C)C)[C@@H](O)C R1.30 + R2.12 + R2.12 + R2.12
+O.O.O.C[C@@H](Oc1c(O[C@H](C)C(=O)O)cccc1O[C@H](C)C(=O)O)C(=O)O R1.30 + R2.13 + R2.13 + R2.13
+O.O.O.C[C@H](Oc1c(O[C@H]([C@H](O)C)C)cccc1O[C@H]([C@H](O)C)C)[C@H](O)C R1.30 + R2.14 + R2.14 + R2.14
+O.O.O.C[C@@H](Oc1c(O[C@H](C)C(C)C)cccc1O[C@H](C)C(C)C)C(C)C R1.30 + R2.15 + R2.15 + R2.15
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CCO)cccc1O[C@@H](C)CCO)CCO R1.30 + R2.16 + R2.16 + R2.16
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CCO)cccc1O[C@H](C)CCO)CCO R1.30 + R2.17 + R2.17 + R2.17
+O.O.O.c1cc(c(O[C@@H]2CCOC2)c(O[C@@H]2CCOC2)c1)O[C@@H]1CCOC1 R1.30 + R2.18 + R2.18 + R2.18
+O.O.O.OC[C@H](Oc1c(O[C@H](C=O)CO)cccc1O[C@H](C=O)CO)C=O R1.30 + R2.19 + R2.19 + R2.19
+O.O.O.C[C@H](Oc1c(O[C@@H](C)C(C)C)cccc1O[C@@H](C)C(C)C)C(C)C R1.30 + R2.20 + R2.20 + R2.20
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CCC)cccc1O[C@H](C)CCC)CCC R1.30 + R2.21 + R2.21 + R2.21
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CCC)cccc1O[C@@H](C)CCC)CCC R1.30 + R2.22 + R2.22 + R2.22
+O.O.O.c1cc(c(O[C@H]2CCOC2)c(O[C@H]2CCOC2)c1)O[C@H]1CCOC1 R1.30 + R2.23 + R2.23 + R2.23
+O.O.O.C[C@H](Oc1c(O[C@H]([C@@H](O)C)C)cccc1O[C@H]([C@@H](O)C)C)[C@@H](O)C R1.30 + R2.24 + R2.24 + R2.24
+O.O.O.ClC[C@@H](Oc1c(O[C@@H](CO)CCl)cccc1O[C@@H](CO)CCl)CO R1.30 + R2.25 + R2.25 + R2.25
+O.O.O.OC[C@@H](Oc1c(O[C@@H](C=C)CO)cccc1O[C@@H](C=C)CO)C=C R1.30 + R2.26 + R2.26 + R2.26
+O.O.O.c1cc(c(O[C@H]2CCNC2)c(O[C@H]2CCNC2)c1)O[C@H]1CCNC1 R1.30 + R2.27 + R2.27 + R2.27
+O.O.O.OC[C@H](Oc1c(O[C@H](C=C)CO)cccc1O[C@H](C=C)CO)C=C R1.30 + R2.28 + R2.28 + R2.28
+O.O.O.c1cc(c(O[C@@H]2CCNC2)c(O[C@@H]2CCNC2)c1)O[C@@H]1CCNC1 R1.30 + R2.29 + R2.29 + R2.29
+O.O.O.C[C@@H](Oc1c(O[C@H](C)C(=O)N)cccc1O[C@H](C)C(=O)N)C(=O)N R1.30 + R2.30 + R2.30 + R2.30
+O.O.O.ClC[C@H](Oc1c(O[C@H](CO)CCl)cccc1O[C@H](CO)CCl)CO R1.30 + R2.31 + R2.31 + R2.31
+O.O.O.C[C@H](Oc1c(O[C@@H](C)C(=O)N)cccc1O[C@@H](C)C(=O)N)C(=O)N R1.30 + R2.32 + R2.32 + R2.32
+O.O.O.SC[C@H](Oc1c(O[C@H](CO)CS)cccc1O[C@H](CO)CS)CO R1.30 + R2.33 + R2.33 + R2.33
+O.O.O.OC[C@H](Oc1c(O[C@H](CN)CO)cccc1O[C@H](CN)CO)CN R1.30 + R2.34 + R2.34 + R2.34
+O.O.O.OC[C@@H](Oc1c(O[C@@H](CN)CO)cccc1O[C@@H](CN)CO)CN R1.30 + R2.35 + R2.35 + R2.35
+O.O.O.C[C@H](Oc1c(O[C@@H](C)COC)cccc1O[C@@H](C)COC)COC R1.30 + R2.36 + R2.36 + R2.36
+O.O.O.C[C@@H](Oc1c(O[C@H](C)COC)cccc1O[C@H](C)COC)COC R1.30 + R2.37 + R2.37 + R2.37
+O.O.O.OC[C@@H](Oc1c(O[C@@H](CCO)CO)cccc1O[C@@H](CCO)CO)CCO R1.30 + R2.41 + R2.41 + R2.41
+O.O.O.OC[C@H](Oc1c(O[C@H](CCO)CO)cccc1O[C@H](CCO)CO)CCO R1.30 + R2.42 + R2.42 + R2.42
+O.O.O.C[C@H](Oc1c(O[C@H](C[C@H](O)C)C)cccc1O[C@H](C[C@H](O)C)C)C[C@H](O)C R1.30 + R2.43 + R2.43 + R2.43
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CC(=O)O)cccc1O[C@H](C)CC(=O)O)CC(=O)O R1.30 + R2.45 + R2.45 + R2.45
+O.O.O.C[C@@H](Oc1c(O[C@@H](C[C@@H](O)C)C)cccc1O[C@@H](C[C@@H](O)C)C)C[C@@H](O)C R1.30 + R2.46 + R2.46 + R2.46
+O.O.O.C[C@@H](Oc1c(O[C@H](C)CN(C)C)cccc1O[C@H](C)CN(C)C)CN(C)C R1.30 + R2.47 + R2.47 + R2.47
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CN(C)C)cccc1O[C@@H](C)CN(C)C)CN(C)C R1.30 + R2.48 + R2.48 + R2.48
+O.O.O.C[C@H](Oc1c(O[C@@H](C)CCCC)cccc1O[C@@H](C)CCCC)CCCC R1.30 + R2.49 + R2.49 + R2.49
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CO)O[C@H](C)CO)CO R1.31 + R2.1 + R2.1 + R2.1
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CC)O[C@@H](C)CC)CC R1.31 + R2.2 + R2.2 + R2.2
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CC)O[C@H](C)CC)CC R1.31 + R2.3 + R2.3 + R2.3
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CN)O[C@@H](C)CN)CN R1.31 + R2.4 + R2.4 + R2.4
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CN)O[C@H](C)CN)CN R1.31 + R2.5 + R2.5 + R2.5
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CO)O[C@@H](C)CO)CO R1.31 + R2.6 + R2.6 + R2.6
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)C#C)O[C@H](C)C#C)C#C R1.31 + R2.7 + R2.7 + R2.7
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C#C)O[C@@H](C)C#C)C#C R1.31 + R2.8 + R2.8 + R2.8
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C=C)O[C@@H](C)C=C)C=C R1.31 + R2.9 + R2.9 + R2.9
+O.O.O.OC[C@@H](Oc1cc(c(cc1)O[C@@H](C=O)CO)O[C@@H](C=O)CO)C=O R1.31 + R2.10 + R2.10 + R2.10
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C(=O)O)O[C@@H](C)C(=O)O)C(=O)O R1.31 + R2.11 + R2.11 + R2.11
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)[C@@H](O)C)O[C@H](C)[C@@H](O)C)[C@@H](O)C R1.31 + R2.12 + R2.12 + R2.12
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)C(=O)O)O[C@H](C)C(=O)O)C(=O)O R1.31 + R2.13 + R2.13 + R2.13
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)[C@H](O)C)O[C@@H](C)[C@H](O)C)[C@H](O)C R1.31 + R2.14 + R2.14 + R2.14
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)C(C)C)O[C@H](C)C(C)C)C(C)C R1.31 + R2.15 + R2.15 + R2.15
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CCO)O[C@@H](C)CCO)CCO R1.31 + R2.16 + R2.16 + R2.16
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CCO)O[C@H](C)CCO)CCO R1.31 + R2.17 + R2.17 + R2.17
+O.O.O.c1c(O[C@@H]2CCOC2)ccc(c1O[C@@H]1CCOC1)O[C@@H]1CCOC1 R1.31 + R2.18 + R2.18 + R2.18
+O.O.O.OC[C@H](Oc1cc(c(cc1)O[C@H](C=O)CO)O[C@H](C=O)CO)C=O R1.31 + R2.19 + R2.19 + R2.19
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C(C)C)O[C@@H](C)C(C)C)C(C)C R1.31 + R2.20 + R2.20 + R2.20
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CCC)O[C@H](C)CCC)CCC R1.31 + R2.21 + R2.21 + R2.21
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CCC)O[C@@H](C)CCC)CCC R1.31 + R2.22 + R2.22 + R2.22
+O.O.O.c1c(O[C@H]2CCOC2)ccc(c1O[C@H]1CCOC1)O[C@H]1CCOC1 R1.31 + R2.23 + R2.23 + R2.23
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)[C@@H](O)C)O[C@@H](C)[C@@H](O)C)[C@@H](O)C R1.31 + R2.24 + R2.24 + R2.24
+O.O.O.ClC[C@@H](Oc1cc(c(cc1)O[C@@H](CO)CCl)O[C@@H](CO)CCl)CO R1.31 + R2.25 + R2.25 + R2.25
+O.O.O.OC[C@@H](Oc1cc(c(cc1)O[C@@H](C=C)CO)O[C@@H](C=C)CO)C=C R1.31 + R2.26 + R2.26 + R2.26
+O.O.O.c1c(O[C@H]2CCNC2)ccc(c1O[C@H]1CCNC1)O[C@H]1CCNC1 R1.31 + R2.27 + R2.27 + R2.27
+O.O.O.OC[C@H](Oc1cc(c(cc1)O[C@H](C=C)CO)O[C@H](C=C)CO)C=C R1.31 + R2.28 + R2.28 + R2.28
+O.O.O.c1c(O[C@@H]2CCNC2)ccc(c1O[C@@H]1CCNC1)O[C@@H]1CCNC1 R1.31 + R2.29 + R2.29 + R2.29
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)C(=O)N)O[C@H](C)C(=O)N)C(=O)N R1.31 + R2.30 + R2.30 + R2.30
+O.O.O.ClC[C@H](Oc1cc(c(cc1)O[C@H](CO)CCl)O[C@H](CO)CCl)CO R1.31 + R2.31 + R2.31 + R2.31
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C(=O)N)O[C@@H](C)C(=O)N)C(=O)N R1.31 + R2.32 + R2.32 + R2.32
+O.O.O.SC[C@H](Oc1cc(c(cc1)O[C@H](CO)CS)O[C@H](CO)CS)CO R1.31 + R2.33 + R2.33 + R2.33
+O.O.O.OC[C@H](Oc1cc(c(cc1)O[C@H](CN)CO)O[C@H](CN)CO)CN R1.31 + R2.34 + R2.34 + R2.34
+O.O.O.OC[C@@H](Oc1cc(c(cc1)O[C@@H](CN)CO)O[C@@H](CN)CO)CN R1.31 + R2.35 + R2.35 + R2.35
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)COC)O[C@@H](C)COC)COC R1.31 + R2.36 + R2.36 + R2.36
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)COC)O[C@H](C)COC)COC R1.31 + R2.37 + R2.37 + R2.37
+O.O.O.OC[C@@H](Oc1cc(c(cc1)O[C@@H](CCO)CO)O[C@@H](CCO)CO)CCO R1.31 + R2.41 + R2.41 + R2.41
+O.O.O.OC[C@H](Oc1cc(c(cc1)O[C@H](CCO)CO)O[C@H](CCO)CO)CCO R1.31 + R2.42 + R2.42 + R2.42
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)C[C@H](O)C)O[C@@H](C)C[C@H](O)C)C[C@H](O)C R1.31 + R2.43 + R2.43 + R2.43
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CC(=O)O)O[C@H](C)CC(=O)O)CC(=O)O R1.31 + R2.45 + R2.45 + R2.45
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)C[C@@H](O)C)O[C@H](C)C[C@@H](O)C)C[C@@H](O)C R1.31 + R2.46 + R2.46 + R2.46
+O.O.O.C[C@@H](Oc1cc(c(cc1)O[C@H](C)CN(C)C)O[C@H](C)CN(C)C)CN(C)C R1.31 + R2.47 + R2.47 + R2.47
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CN(C)C)O[C@@H](C)CN(C)C)CN(C)C R1.31 + R2.48 + R2.48 + R2.48
+O.O.O.C[C@H](Oc1cc(c(cc1)O[C@@H](C)CCCC)O[C@@H](C)CCCC)CCCC R1.31 + R2.49 + R2.49 + R2.49
+O.O.Cc1cc(c(cc1)O[C@H](C)CO)O[C@H](C)CO R1.32 + R2.1 + R2.1
+O.O.Cc1cc(c(cc1)O[C@@H](C)CC)O[C@@H](C)CC R1.32 + R2.2 + R2.2
+O.O.Cc1cc(c(cc1)O[C@H](C)CC)O[C@H](C)CC R1.32 + R2.3 + R2.3
+O.O.Cc1cc(c(cc1)O[C@@H](C)CN)O[C@@H](C)CN R1.32 + R2.4 + R2.4
+O.O.Cc1cc(c(cc1)O[C@H](C)CN)O[C@H](C)CN R1.32 + R2.5 + R2.5
+O.O.Cc1cc(c(cc1)O[C@@H](C)CO)O[C@@H](C)CO R1.32 + R2.6 + R2.6
+O.O.Cc1cc(c(cc1)O[C@H](C)C#C)O[C@H](C)C#C R1.32 + R2.7 + R2.7
+O.O.Cc1cc(c(cc1)O[C@@H](C)C#C)O[C@@H](C)C#C R1.32 + R2.8 + R2.8
+O.O.Cc1cc(c(cc1)O[C@@H](C)C=C)O[C@@H](C)C=C R1.32 + R2.9 + R2.9
+O.O.Cc1cc(c(cc1)O[C@@H](C=O)CO)O[C@@H](C=O)CO R1.32 + R2.10 + R2.10
+O.O.Cc1cc(c(cc1)O[C@@H](C)C(=O)O)O[C@@H](C)C(=O)O R1.32 + R2.11 + R2.11
+O.O.Cc1cc(c(cc1)O[C@H](C)[C@@H](O)C)O[C@H](C)[C@@H](O)C R1.32 + R2.12 + R2.12
+O.O.Cc1cc(c(cc1)O[C@H](C)C(=O)O)O[C@H](C)C(=O)O R1.32 + R2.13 + R2.13
+O.O.Cc1cc(c(cc1)O[C@@H](C)[C@H](O)C)O[C@@H](C)[C@H](O)C R1.32 + R2.14 + R2.14
+O.O.Cc1cc(c(cc1)O[C@H](C)C(C)C)O[C@H](C)C(C)C R1.32 + R2.15 + R2.15
+O.O.Cc1cc(c(cc1)O[C@@H](C)CCO)O[C@@H](C)CCO R1.32 + R2.16 + R2.16
+O.O.Cc1cc(c(cc1)O[C@H](C)CCO)O[C@H](C)CCO R1.32 + R2.17 + R2.17
+O.O.Cc1cc(c(cc1)O[C@@H]1CCOC1)O[C@@H]1CCOC1 R1.32 + R2.18 + R2.18
+O.O.Cc1cc(c(cc1)O[C@H](C=O)CO)O[C@H](C=O)CO R1.32 + R2.19 + R2.19
+O.O.Cc1cc(c(cc1)O[C@@H](C)C(C)C)O[C@@H](C)C(C)C R1.32 + R2.20 + R2.20
+O.O.Cc1cc(c(cc1)O[C@H](C)CCC)O[C@H](C)CCC R1.32 + R2.21 + R2.21
+O.O.Cc1cc(c(cc1)O[C@@H](C)CCC)O[C@@H](C)CCC R1.32 + R2.22 + R2.22
+O.O.Cc1cc(c(cc1)O[C@H]1CCOC1)O[C@H]1CCOC1 R1.32 + R2.23 + R2.23
+O.O.Cc1cc(c(cc1)O[C@@H](C)[C@@H](O)C)O[C@@H](C)[C@@H](O)C R1.32 + R2.24 + R2.24
+O.O.Cc1cc(c(cc1)O[C@@H](CO)CCl)O[C@@H](CO)CCl R1.32 + R2.25 + R2.25
+O.O.Cc1cc(c(cc1)O[C@@H](C=C)CO)O[C@@H](C=C)CO R1.32 + R2.26 + R2.26
+O.O.Cc1cc(c(cc1)O[C@H]1CCNC1)O[C@H]1CCNC1 R1.32 + R2.27 + R2.27
+O.O.Cc1cc(c(cc1)O[C@H](C=C)CO)O[C@H](C=C)CO R1.32 + R2.28 + R2.28
+O.O.Cc1cc(c(cc1)O[C@@H]1CCNC1)O[C@@H]1CCNC1 R1.32 + R2.29 + R2.29
+O.O.Cc1cc(c(cc1)O[C@H](C)C(=O)N)O[C@H](C)C(=O)N R1.32 + R2.30 + R2.30
+O.O.Cc1cc(c(cc1)O[C@H](CO)CCl)O[C@H](CO)CCl R1.32 + R2.31 + R2.31
+O.O.Cc1cc(c(cc1)O[C@@H](C)C(=O)N)O[C@@H](C)C(=O)N R1.32 + R2.32 + R2.32
+O.O.Cc1cc(c(cc1)O[C@H](CO)CS)O[C@H](CO)CS R1.32 + R2.33 + R2.33
+O.O.Cc1cc(c(cc1)O[C@H](CN)CO)O[C@H](CN)CO R1.32 + R2.34 + R2.34
+O.O.Cc1cc(c(cc1)O[C@@H](CN)CO)O[C@@H](CN)CO R1.32 + R2.35 + R2.35
+O.O.Cc1cc(c(cc1)O[C@@H](C)COC)O[C@@H](C)COC R1.32 + R2.36 + R2.36
+O.O.Cc1cc(c(cc1)O[C@H](C)COC)O[C@H](C)COC R1.32 + R2.37 + R2.37
+O.O.Cc1cc(c(cc1)O[C@@H](CCO)CO)O[C@@H](CCO)CO R1.32 + R2.41 + R2.41
+O.O.Cc1cc(c(cc1)O[C@H](CCO)CO)O[C@H](CCO)CO R1.32 + R2.42 + R2.42
+O.O.Cc1cc(c(cc1)O[C@@H](C)C[C@H](O)C)O[C@@H](C)C[C@H](O)C R1.32 + R2.43 + R2.43
+O.O.Cc1cc(c(cc1)O[C@H](C)CC(=O)O)O[C@H](C)CC(=O)O R1.32 + R2.45 + R2.45
+O.O.Cc1cc(c(cc1)O[C@H](C)C[C@@H](O)C)O[C@H](C)C[C@@H](O)C R1.32 + R2.46 + R2.46
+O.O.Cc1cc(c(cc1)O[C@H](C)CN(C)C)O[C@H](C)CN(C)C R1.32 + R2.47 + R2.47
+O.O.Cc1cc(c(cc1)O[C@@H](C)CN(C)C)O[C@@H](C)CN(C)C R1.32 + R2.48 + R2.48
+O.O.Cc1cc(c(cc1)O[C@@H](C)CCCC)O[C@@H](C)CCCC R1.32 + R2.49 + R2.49
+O.OC[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.1
+O.CC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.2
+O.CC[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.3
+O.NC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.4
+O.NC[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.5
+O.OC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.6
+O.C#C[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.7
+O.C#C[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.8
+O.C=C[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.9
+O.O=C[C@H](Oc1c(SC)cccc1)CO R1.33 + R2.10
+O.O=C(O)[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.11
+O.O[C@H]([C@H](Oc1c(SC)cccc1)C)C R1.33 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.13
+O.O[C@@H]([C@@H](Oc1c(SC)cccc1)C)C R1.33 + R2.14
+O.CSc1c(O[C@@H](C(C)C)C)cccc1 R1.33 + R2.15
+O.OCC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.16
+O.OCC[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.17
+O.CSc1c(O[C@@H]2CCOC2)cccc1 R1.33 + R2.18
+O.O=C[C@@H](Oc1c(SC)cccc1)CO R1.33 + R2.19
+O.CSc1c(O[C@H](C(C)C)C)cccc1 R1.33 + R2.20
+O.CCC[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.21
+O.CCC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.22
+O.CSc1c(O[C@H]2CCOC2)cccc1 R1.33 + R2.23
+O.O[C@H]([C@@H](Oc1c(SC)cccc1)C)C R1.33 + R2.24
+O.ClC[C@@H](Oc1c(SC)cccc1)CO R1.33 + R2.25
+O.OC[C@H](C=C)Oc1c(SC)cccc1 R1.33 + R2.26
+O.CSc1c(O[C@H]2CCNC2)cccc1 R1.33 + R2.27
+O.OC[C@@H](C=C)Oc1c(SC)cccc1 R1.33 + R2.28
+O.CSc1c(O[C@@H]2CCNC2)cccc1 R1.33 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.30
+O.ClC[C@H](Oc1c(SC)cccc1)CO R1.33 + R2.31
+O.O=C(N)[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.32
+O.OC[C@@H](Oc1c(SC)cccc1)CS R1.33 + R2.33
+O.OC[C@H](Oc1c(SC)cccc1)CN R1.33 + R2.34
+O.OC[C@@H](Oc1c(SC)cccc1)CN R1.33 + R2.35
+O.C[C@H](Oc1c(SC)cccc1)COC R1.33 + R2.36
+O.C[C@@H](Oc1c(SC)cccc1)COC R1.33 + R2.37
+O.CSc1c(O[C@@H](CCO)CO)cccc1 R1.33 + R2.41
+O.CSc1c(O[C@H](CCO)CO)cccc1 R1.33 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(SC)cccc1)C)C R1.33 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(SC)cccc1 R1.33 + R2.45
+O.O[C@H](C[C@H](Oc1c(SC)cccc1)C)C R1.33 + R2.46
+O.C[C@@H](Oc1c(SC)cccc1)CN(C)C R1.33 + R2.47
+O.C[C@H](Oc1c(SC)cccc1)CN(C)C R1.33 + R2.48
+O.CCCC[C@H](C)Oc1c(SC)cccc1 R1.33 + R2.49
+O.OC[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.1
+O.CC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.2
+O.CC[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.3
+O.NC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.4
+O.NC[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.5
+O.OC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.6
+O.C#C[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.7
+O.C#C[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.8
+O.C=C[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.9
+O.O=C[C@H](Oc1c(c(C)ccc1)C)CO R1.34 + R2.10
+O.O=C(O)[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.11
+O.O[C@H]([C@H](Oc1c(c(C)ccc1)C)C)C R1.34 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.13
+O.O[C@@H]([C@@H](Oc1c(c(C)ccc1)C)C)C R1.34 + R2.14
+O.Cc1c(C)cccc1O[C@@H](C(C)C)C R1.34 + R2.15
+O.OCC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.16
+O.OCC[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.17
+O.Cc1c(C)cccc1O[C@@H]1CCOC1 R1.34 + R2.18
+O.O=C[C@@H](Oc1c(c(C)ccc1)C)CO R1.34 + R2.19
+O.Cc1c(C)cccc1O[C@H](C(C)C)C R1.34 + R2.20
+O.CCC[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.21
+O.CCC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.22
+O.Cc1c(C)cccc1O[C@H]1CCOC1 R1.34 + R2.23
+O.O[C@H]([C@@H](Oc1c(c(C)ccc1)C)C)C R1.34 + R2.24
+O.ClC[C@@H](Oc1c(c(C)ccc1)C)CO R1.34 + R2.25
+O.OC[C@H](C=C)Oc1c(c(C)ccc1)C R1.34 + R2.26
+O.Cc1c(C)cccc1O[C@H]1CCNC1 R1.34 + R2.27
+O.OC[C@@H](C=C)Oc1c(c(C)ccc1)C R1.34 + R2.28
+O.Cc1c(C)cccc1O[C@@H]1CCNC1 R1.34 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.30
+O.ClC[C@H](Oc1c(c(C)ccc1)C)CO R1.34 + R2.31
+O.O=C(N)[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.32
+O.OC[C@@H](Oc1c(c(C)ccc1)C)CS R1.34 + R2.33
+O.OC[C@H](Oc1c(c(C)ccc1)C)CN R1.34 + R2.34
+O.OC[C@@H](Oc1c(c(C)ccc1)C)CN R1.34 + R2.35
+O.C[C@H](Oc1c(c(C)ccc1)C)COC R1.34 + R2.36
+O.C[C@@H](Oc1c(c(C)ccc1)C)COC R1.34 + R2.37
+O.Cc1c(C)cccc1O[C@@H](CCO)CO R1.34 + R2.41
+O.Cc1c(C)cccc1O[C@H](CCO)CO R1.34 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(c(C)ccc1)C)C)C R1.34 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.45
+O.O[C@H](C[C@H](Oc1c(c(C)ccc1)C)C)C R1.34 + R2.46
+O.C[C@@H](Oc1c(c(C)ccc1)C)CN(C)C R1.34 + R2.47
+O.C[C@H](Oc1c(c(C)ccc1)C)CN(C)C R1.34 + R2.48
+O.CCCC[C@H](C)Oc1c(c(C)ccc1)C R1.34 + R2.49
+O.OC[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.1
+O.CC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.2
+O.CC[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.3
+O.NC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.4
+O.NC[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.5
+O.OC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.6
+O.C#C[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.7
+O.C#C[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.8
+O.C=C[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.9
+O.O=C[C@H](Oc1c(cc(C)cc1)C)CO R1.35 + R2.10
+O.O=C(O)[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.11
+O.O[C@H]([C@H](Oc1c(cc(C)cc1)C)C)C R1.35 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.13
+O.O[C@@H]([C@@H](Oc1c(cc(C)cc1)C)C)C R1.35 + R2.14
+O.Cc1cc(C)ccc1O[C@@H](C(C)C)C R1.35 + R2.15
+O.OCC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.16
+O.OCC[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.17
+O.Cc1cc(C)ccc1O[C@@H]1CCOC1 R1.35 + R2.18
+O.O=C[C@@H](Oc1c(cc(C)cc1)C)CO R1.35 + R2.19
+O.Cc1cc(C)ccc1O[C@H](C(C)C)C R1.35 + R2.20
+O.CCC[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.21
+O.CCC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.22
+O.Cc1cc(C)ccc1O[C@H]1CCOC1 R1.35 + R2.23
+O.O[C@H]([C@@H](Oc1c(cc(C)cc1)C)C)C R1.35 + R2.24
+O.ClC[C@@H](Oc1c(cc(C)cc1)C)CO R1.35 + R2.25
+O.OC[C@H](C=C)Oc1c(cc(C)cc1)C R1.35 + R2.26
+O.Cc1cc(C)ccc1O[C@H]1CCNC1 R1.35 + R2.27
+O.OC[C@@H](C=C)Oc1c(cc(C)cc1)C R1.35 + R2.28
+O.Cc1cc(C)ccc1O[C@@H]1CCNC1 R1.35 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.30
+O.ClC[C@H](Oc1c(cc(C)cc1)C)CO R1.35 + R2.31
+O.O=C(N)[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.32
+O.OC[C@@H](Oc1c(cc(C)cc1)C)CS R1.35 + R2.33
+O.OC[C@H](Oc1c(cc(C)cc1)C)CN R1.35 + R2.34
+O.OC[C@@H](Oc1c(cc(C)cc1)C)CN R1.35 + R2.35
+O.C[C@H](Oc1c(cc(C)cc1)C)COC R1.35 + R2.36
+O.C[C@@H](Oc1c(cc(C)cc1)C)COC R1.35 + R2.37
+O.Cc1cc(C)ccc1O[C@@H](CCO)CO R1.35 + R2.41
+O.Cc1cc(C)ccc1O[C@H](CCO)CO R1.35 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(cc(C)cc1)C)C)C R1.35 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.45
+O.O[C@H](C[C@H](Oc1c(cc(C)cc1)C)C)C R1.35 + R2.46
+O.C[C@@H](Oc1c(cc(C)cc1)C)CN(C)C R1.35 + R2.47
+O.C[C@H](Oc1c(cc(C)cc1)C)CN(C)C R1.35 + R2.48
+O.CCCC[C@H](C)Oc1c(cc(C)cc1)C R1.35 + R2.49
+O.OC[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.1
+O.CC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.2
+O.CC[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.3
+O.NC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.4
+O.NC[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.5
+O.OC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.6
+O.C#C[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.7
+O.C#C[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.8
+O.C=C[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.9
+O.O=C[C@H](Oc1cc(C)ccc1C)CO R1.36 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.11
+O.O[C@H]([C@H](Oc1cc(C)ccc1C)C)C R1.36 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(C)ccc1C)C)C R1.36 + R2.14
+O.Cc1c(O[C@@H](C(C)C)C)cc(C)cc1 R1.36 + R2.15
+O.OCC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.16
+O.OCC[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.17
+O.Cc1c(O[C@@H]2CCOC2)cc(C)cc1 R1.36 + R2.18
+O.O=C[C@@H](Oc1cc(C)ccc1C)CO R1.36 + R2.19
+O.Cc1c(O[C@H](C(C)C)C)cc(C)cc1 R1.36 + R2.20
+O.CCC[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.21
+O.CCC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.22
+O.Cc1c(O[C@H]2CCOC2)cc(C)cc1 R1.36 + R2.23
+O.O[C@H]([C@@H](Oc1cc(C)ccc1C)C)C R1.36 + R2.24
+O.ClC[C@@H](Oc1cc(C)ccc1C)CO R1.36 + R2.25
+O.OC[C@H](C=C)Oc1cc(C)ccc1C R1.36 + R2.26
+O.Cc1c(O[C@H]2CCNC2)cc(C)cc1 R1.36 + R2.27
+O.OC[C@@H](C=C)Oc1cc(C)ccc1C R1.36 + R2.28
+O.Cc1c(O[C@@H]2CCNC2)cc(C)cc1 R1.36 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.30
+O.ClC[C@H](Oc1cc(C)ccc1C)CO R1.36 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.32
+O.OC[C@@H](Oc1cc(C)ccc1C)CS R1.36 + R2.33
+O.OC[C@H](Oc1cc(C)ccc1C)CN R1.36 + R2.34
+O.OC[C@@H](Oc1cc(C)ccc1C)CN R1.36 + R2.35
+O.C[C@H](Oc1cc(C)ccc1C)COC R1.36 + R2.36
+O.C[C@@H](Oc1cc(C)ccc1C)COC R1.36 + R2.37
+O.Cc1c(O[C@@H](CCO)CO)cc(C)cc1 R1.36 + R2.41
+O.Cc1c(O[C@H](CCO)CO)cc(C)cc1 R1.36 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(C)ccc1C)C)C R1.36 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(C)ccc1C R1.36 + R2.45
+O.O[C@H](C[C@H](Oc1cc(C)ccc1C)C)C R1.36 + R2.46
+O.C[C@@H](Oc1cc(C)ccc1C)CN(C)C R1.36 + R2.47
+O.C[C@H](Oc1cc(C)ccc1C)CN(C)C R1.36 + R2.48
+O.CCCC[C@H](C)Oc1cc(C)ccc1C R1.36 + R2.49
+O.OC[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.1
+O.CC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.2
+O.CC[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.3
+O.NC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.4
+O.NC[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.5
+O.OC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.6
+O.C#C[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.7
+O.C#C[C@H](C)Oc1c(C)cccc1C R1.37 + R2.8
+O.C=C[C@H](C)Oc1c(C)cccc1C R1.37 + R2.9
+O.O=C[C@H](Oc1c(C)cccc1C)CO R1.37 + R2.10
+O.O=C(O)[C@H](C)Oc1c(C)cccc1C R1.37 + R2.11
+O.O[C@H]([C@H](Oc1c(C)cccc1C)C)C R1.37 + R2.12
+O.O=C(O)[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.13
+O.O[C@@H]([C@@H](Oc1c(C)cccc1C)C)C R1.37 + R2.14
+O.C[C@@H](Oc1c(C)cccc1C)C(C)C R1.37 + R2.15
+O.OCC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.16
+O.OCC[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.17
+O.Cc1c(O[C@@H]2CCOC2)c(C)ccc1 R1.37 + R2.18
+O.O=C[C@@H](Oc1c(C)cccc1C)CO R1.37 + R2.19
+O.C[C@H](Oc1c(C)cccc1C)C(C)C R1.37 + R2.20
+O.CCC[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.21
+O.CCC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.22
+O.Cc1c(O[C@H]2CCOC2)c(C)ccc1 R1.37 + R2.23
+O.O[C@H]([C@@H](Oc1c(C)cccc1C)C)C R1.37 + R2.24
+O.ClC[C@@H](Oc1c(C)cccc1C)CO R1.37 + R2.25
+O.OC[C@H](C=C)Oc1c(C)cccc1C R1.37 + R2.26
+O.Cc1c(O[C@H]2CCNC2)c(C)ccc1 R1.37 + R2.27
+O.OC[C@@H](C=C)Oc1c(C)cccc1C R1.37 + R2.28
+O.Cc1c(O[C@@H]2CCNC2)c(C)ccc1 R1.37 + R2.29
+O.O=C(N)[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.30
+O.ClC[C@H](Oc1c(C)cccc1C)CO R1.37 + R2.31
+O.O=C(N)[C@H](C)Oc1c(C)cccc1C R1.37 + R2.32
+O.OC[C@@H](Oc1c(C)cccc1C)CS R1.37 + R2.33
+O.OC[C@H](Oc1c(C)cccc1C)CN R1.37 + R2.34
+O.OC[C@@H](Oc1c(C)cccc1C)CN R1.37 + R2.35
+O.C[C@H](Oc1c(C)cccc1C)COC R1.37 + R2.36
+O.C[C@@H](Oc1c(C)cccc1C)COC R1.37 + R2.37
+O.OC[C@H](CCO)Oc1c(C)cccc1C R1.37 + R2.41
+O.OC[C@@H](CCO)Oc1c(C)cccc1C R1.37 + R2.42
+O.O[C@@H](C[C@@H](Oc1c(C)cccc1C)C)C R1.37 + R2.43
+O.O=C(O)C[C@@H](C)Oc1c(C)cccc1C R1.37 + R2.45
+O.O[C@H](C[C@H](Oc1c(C)cccc1C)C)C R1.37 + R2.46
+O.C[C@@H](Oc1c(C)cccc1C)CN(C)C R1.37 + R2.47
+O.C[C@H](Oc1c(C)cccc1C)CN(C)C R1.37 + R2.48
+O.CCCC[C@H](C)Oc1c(C)cccc1C R1.37 + R2.49
+O.OC[C@@H](C)Oc1c(CC)cccc1 R1.38 + R2.1
+O.C[C@@H](CC)Oc1c(CC)cccc1 R1.38 + R2.2
+O.C[C@H](CC)Oc1c(CC)cccc1 R1.38 + R2.3
+O.NC[C@H](C)Oc1c(CC)cccc1 R1.38 + R2.4
+O.NC[C@@H](C)Oc1c(CC)cccc1 R1.38 + R2.5
+O.OC[C@H](C)Oc1c(CC)cccc1 R1.38 + R2.6
+O.C#C[C@@H](C)Oc1c(CC)cccc1 R1.38 + R2.7
+O.C#C[C@H](C)Oc1c(CC)cccc1 R1.38 + R2.8
+O.C=C[C@H](C)Oc1c(CC)cccc1 R1.38 + R2.9
+O.O=C[C@H](Oc1c(CC)cccc1)CO R1.38 + R2.10
+O.CCc1c(O[C@@H](C)C(=O)O)cccc1 R1.38 + R2.11
+O.CCc1c(O[C@@H]([C@@H](O)C)C)cccc1 R1.38 + R2.12
+O.CCc1c(O[C@H](C)C(=O)O)cccc1 R1.38 + R2.13
+O.CCc1c(O[C@H]([C@H](O)C)C)cccc1 R1.38 + R2.14
+O.CCc1c(O[C@@H](C(C)C)C)cccc1 R1.38 + R2.15
+O.OCC[C@H](C)Oc1c(CC)cccc1 R1.38 + R2.16
+O.OCC[C@@H](C)Oc1c(CC)cccc1 R1.38 + R2.17
+O.CCc1c(O[C@@H]2CCOC2)cccc1 R1.38 + R2.18
+O.O=C[C@@H](Oc1c(CC)cccc1)CO R1.38 + R2.19
+O.CCc1c(O[C@H](C(C)C)C)cccc1 R1.38 + R2.20
+O.C[C@H](CCC)Oc1c(CC)cccc1 R1.38 + R2.21
+O.C[C@@H](CCC)Oc1c(CC)cccc1 R1.38 + R2.22
+O.CCc1c(O[C@H]2CCOC2)cccc1 R1.38 + R2.23
+O.CCc1c(O[C@H]([C@@H](O)C)C)cccc1 R1.38 + R2.24
+O.ClC[C@@H](Oc1c(CC)cccc1)CO R1.38 + R2.25
+O.OC[C@H](C=C)Oc1c(CC)cccc1 R1.38 + R2.26
+O.CCc1c(O[C@H]2CCNC2)cccc1 R1.38 + R2.27
+O.OC[C@@H](C=C)Oc1c(CC)cccc1 R1.38 + R2.28
+O.CCc1c(O[C@@H]2CCNC2)cccc1 R1.38 + R2.29
+O.CCc1c(O[C@H](C)C(=O)N)cccc1 R1.38 + R2.30
+O.ClC[C@H](Oc1c(CC)cccc1)CO R1.38 + R2.31
+O.CCc1c(O[C@@H](C)C(=O)N)cccc1 R1.38 + R2.32
+O.OC[C@@H](Oc1c(CC)cccc1)CS R1.38 + R2.33
+O.OC[C@H](Oc1c(CC)cccc1)CN R1.38 + R2.34
+O.OC[C@@H](Oc1c(CC)cccc1)CN R1.38 + R2.35
+O.CCc1c(O[C@@H](C)COC)cccc1 R1.38 + R2.36
+O.CCc1c(O[C@H](C)COC)cccc1 R1.38 + R2.37
+O.CCc1c(O[C@@H](CCO)CO)cccc1 R1.38 + R2.41
+O.CCc1c(O[C@H](CCO)CO)cccc1 R1.38 + R2.42
+O.CCc1c(O[C@H](C[C@H](O)C)C)cccc1 R1.38 + R2.43
+O.CCc1c(O[C@H](C)CC(=O)O)cccc1 R1.38 + R2.45
+O.CCc1c(O[C@@H](C[C@@H](O)C)C)cccc1 R1.38 + R2.46
+O.CCc1c(O[C@H](C)CN(C)C)cccc1 R1.38 + R2.47
+O.CCc1c(O[C@@H](C)CN(C)C)cccc1 R1.38 + R2.48
+O.C[C@@H](CCCC)Oc1c(CC)cccc1 R1.38 + R2.49
+O.N#Cc1cc(O[C@H](C)CO)ccc1 R1.39 + R2.1
+O.N#Cc1cc(O[C@@H](C)CC)ccc1 R1.39 + R2.2
+O.N#Cc1cc(O[C@H](C)CC)ccc1 R1.39 + R2.3
+O.N#Cc1cc(O[C@@H](C)CN)ccc1 R1.39 + R2.4
+O.N#Cc1cc(O[C@H](C)CN)ccc1 R1.39 + R2.5
+O.N#Cc1cc(O[C@@H](C)CO)ccc1 R1.39 + R2.6
+O.N#Cc1cc(O[C@H](C)C#C)ccc1 R1.39 + R2.7
+O.N#Cc1cc(O[C@@H](C)C#C)ccc1 R1.39 + R2.8
+O.N#Cc1cc(O[C@@H](C)C=C)ccc1 R1.39 + R2.9
+O.O=C[C@H](Oc1cc(C#N)ccc1)CO R1.39 + R2.10
+O.N#Cc1cc(O[C@@H](C)C(=O)O)ccc1 R1.39 + R2.11
+O.N#Cc1cc(O[C@@H]([C@@H](O)C)C)ccc1 R1.39 + R2.12
+O.N#Cc1cc(O[C@H](C)C(=O)O)ccc1 R1.39 + R2.13
+O.N#Cc1cc(O[C@H]([C@H](O)C)C)ccc1 R1.39 + R2.14
+O.N#Cc1cc(O[C@@H](C(C)C)C)ccc1 R1.39 + R2.15
+O.N#Cc1cc(O[C@@H](C)CCO)ccc1 R1.39 + R2.16
+O.N#Cc1cc(O[C@H](C)CCO)ccc1 R1.39 + R2.17
+O.N#Cc1cc(O[C@@H]2CCOC2)ccc1 R1.39 + R2.18
+O.O=C[C@@H](Oc1cc(C#N)ccc1)CO R1.39 + R2.19
+O.N#Cc1cc(O[C@H](C(C)C)C)ccc1 R1.39 + R2.20
+O.N#Cc1cc(O[C@H](C)CCC)ccc1 R1.39 + R2.21
+O.N#Cc1cc(O[C@@H](C)CCC)ccc1 R1.39 + R2.22
+O.N#Cc1cc(O[C@H]2CCOC2)ccc1 R1.39 + R2.23
+O.N#Cc1cc(O[C@H]([C@@H](O)C)C)ccc1 R1.39 + R2.24
+O.ClC[C@@H](Oc1cc(C#N)ccc1)CO R1.39 + R2.25
+O.N#Cc1cc(O[C@@H](C=C)CO)ccc1 R1.39 + R2.26
+O.N#Cc1cc(O[C@H]2CCNC2)ccc1 R1.39 + R2.27
+O.N#Cc1cc(O[C@H](C=C)CO)ccc1 R1.39 + R2.28
+O.N#Cc1cc(O[C@@H]2CCNC2)ccc1 R1.39 + R2.29
+O.N#Cc1cc(O[C@H](C)C(=O)N)ccc1 R1.39 + R2.30
+O.ClC[C@H](Oc1cc(C#N)ccc1)CO R1.39 + R2.31
+O.N#Cc1cc(O[C@@H](C)C(=O)N)ccc1 R1.39 + R2.32
+O.N#Cc1cc(O[C@H](CO)CS)ccc1 R1.39 + R2.33
+O.N#Cc1cc(O[C@H](CN)CO)ccc1 R1.39 + R2.34
+O.N#Cc1cc(O[C@@H](CN)CO)ccc1 R1.39 + R2.35
+O.N#Cc1cc(O[C@@H](C)COC)ccc1 R1.39 + R2.36
+O.N#Cc1cc(O[C@H](C)COC)ccc1 R1.39 + R2.37
+O.N#Cc1cc(O[C@@H](CCO)CO)ccc1 R1.39 + R2.41
+O.N#Cc1cc(O[C@H](CCO)CO)ccc1 R1.39 + R2.42
+O.N#Cc1cc(O[C@H](C[C@H](O)C)C)ccc1 R1.39 + R2.43
+O.N#Cc1cc(O[C@H](C)CC(=O)O)ccc1 R1.39 + R2.45
+O.N#Cc1cc(O[C@@H](C[C@@H](O)C)C)ccc1 R1.39 + R2.46
+O.N#Cc1cc(O[C@H](C)CN(C)C)ccc1 R1.39 + R2.47
+O.N#Cc1cc(O[C@@H](C)CN(C)C)ccc1 R1.39 + R2.48
+O.N#Cc1cc(O[C@@H](C)CCCC)ccc1 R1.39 + R2.49
+O.OC[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.1
+O.CC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.2
+O.CC[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.3
+O.NC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.4
+O.NC[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.5
+O.OC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.6
+O.C#C[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.7
+O.C#C[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.8
+O.C=C[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.9
+O.O=C[C@H](Oc1cc(cc(c1)F)F)CO R1.40 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.11
+O.O[C@H]([C@H](Oc1cc(cc(c1)F)F)C)C R1.40 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(cc(c1)F)F)C)C R1.40 + R2.14
+O.C[C@@H](Oc1cc(cc(c1)F)F)C(C)C R1.40 + R2.15
+O.OCC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.16
+O.OCC[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.17
+O.Fc1cc(cc(O[C@@H]2CCOC2)c1)F R1.40 + R2.18
+O.O=C[C@@H](Oc1cc(cc(c1)F)F)CO R1.40 + R2.19
+O.C[C@H](Oc1cc(cc(c1)F)F)C(C)C R1.40 + R2.20
+O.CCC[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.21
+O.CCC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.22
+O.Fc1cc(cc(O[C@H]2CCOC2)c1)F R1.40 + R2.23
+O.O[C@H]([C@@H](Oc1cc(cc(c1)F)F)C)C R1.40 + R2.24
+O.ClC[C@@H](Oc1cc(cc(c1)F)F)CO R1.40 + R2.25
+O.OC[C@H](C=C)Oc1cc(cc(c1)F)F R1.40 + R2.26
+O.Fc1cc(cc(O[C@H]2CCNC2)c1)F R1.40 + R2.27
+O.OC[C@@H](C=C)Oc1cc(cc(c1)F)F R1.40 + R2.28
+O.Fc1cc(cc(O[C@@H]2CCNC2)c1)F R1.40 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.30
+O.ClC[C@H](Oc1cc(cc(c1)F)F)CO R1.40 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.32
+O.OC[C@@H](Oc1cc(cc(c1)F)F)CS R1.40 + R2.33
+O.OC[C@H](Oc1cc(cc(c1)F)F)CN R1.40 + R2.34
+O.OC[C@@H](Oc1cc(cc(c1)F)F)CN R1.40 + R2.35
+O.C[C@H](Oc1cc(cc(c1)F)F)COC R1.40 + R2.36
+O.C[C@@H](Oc1cc(cc(c1)F)F)COC R1.40 + R2.37
+O.OC[C@H](CCO)Oc1cc(cc(c1)F)F R1.40 + R2.41
+O.OC[C@@H](CCO)Oc1cc(cc(c1)F)F R1.40 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(cc(c1)F)F)C)C R1.40 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.45
+O.O[C@H](C[C@H](Oc1cc(cc(c1)F)F)C)C R1.40 + R2.46
+O.C[C@@H](Oc1cc(cc(c1)F)F)CN(C)C R1.40 + R2.47
+O.C[C@H](Oc1cc(cc(c1)F)F)CN(C)C R1.40 + R2.48
+O.CCCC[C@H](C)Oc1cc(cc(c1)F)F R1.40 + R2.49
+O.OC[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.1
+O.CC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.2
+O.CC[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.3
+O.NC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.4
+O.NC[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.5
+O.OC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.6
+O.C#C[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.7
+O.C#C[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.8
+O.C=C[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.9
+O.O=C[C@H](Oc1cc(Cl)c(F)cc1)CO R1.41 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.11
+O.O[C@H]([C@H](Oc1cc(Cl)c(F)cc1)C)C R1.41 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(Cl)c(F)cc1)C)C R1.41 + R2.14
+O.Fc1c(Cl)cc(O[C@@H](C(C)C)C)cc1 R1.41 + R2.15
+O.OCC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.16
+O.OCC[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.17
+O.Fc1c(Cl)cc(O[C@@H]2CCOC2)cc1 R1.41 + R2.18
+O.O=C[C@@H](Oc1cc(Cl)c(F)cc1)CO R1.41 + R2.19
+O.Fc1c(Cl)cc(O[C@H](C(C)C)C)cc1 R1.41 + R2.20
+O.CCC[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.21
+O.CCC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.22
+O.Fc1c(Cl)cc(O[C@H]2CCOC2)cc1 R1.41 + R2.23
+O.O[C@H]([C@@H](Oc1cc(Cl)c(F)cc1)C)C R1.41 + R2.24
+O.ClC[C@@H](Oc1cc(Cl)c(F)cc1)CO R1.41 + R2.25
+O.OC[C@H](C=C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.26
+O.Fc1c(Cl)cc(O[C@H]2CCNC2)cc1 R1.41 + R2.27
+O.OC[C@@H](C=C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.28
+O.Fc1c(Cl)cc(O[C@@H]2CCNC2)cc1 R1.41 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.30
+O.ClC[C@H](Oc1cc(Cl)c(F)cc1)CO R1.41 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.32
+O.OC[C@@H](Oc1cc(Cl)c(F)cc1)CS R1.41 + R2.33
+O.OC[C@H](Oc1cc(Cl)c(F)cc1)CN R1.41 + R2.34
+O.OC[C@@H](Oc1cc(Cl)c(F)cc1)CN R1.41 + R2.35
+O.C[C@H](Oc1cc(Cl)c(F)cc1)COC R1.41 + R2.36
+O.C[C@@H](Oc1cc(Cl)c(F)cc1)COC R1.41 + R2.37
+O.Fc1c(Cl)cc(O[C@@H](CCO)CO)cc1 R1.41 + R2.41
+O.Fc1c(Cl)cc(O[C@H](CCO)CO)cc1 R1.41 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(Cl)c(F)cc1)C)C R1.41 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.45
+O.O[C@H](C[C@H](Oc1cc(Cl)c(F)cc1)C)C R1.41 + R2.46
+O.C[C@@H](Oc1cc(Cl)c(F)cc1)CN(C)C R1.41 + R2.47
+O.C[C@H](Oc1cc(Cl)c(F)cc1)CN(C)C R1.41 + R2.48
+O.CCCC[C@H](C)Oc1cc(Cl)c(F)cc1 R1.41 + R2.49
+O.OC[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.1
+O.CC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.2
+O.CC[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.3
+O.NC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.4
+O.NC[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.5
+O.OC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.6
+O.C#C[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.7
+O.C#C[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.8
+O.C=C[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.9
+O.O=C[C@H](Oc1cc(c(cc1)Cl)Cl)CO R1.42 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.11
+O.O[C@H]([C@H](Oc1cc(c(cc1)Cl)Cl)C)C R1.42 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(c(cc1)Cl)Cl)C)C R1.42 + R2.14
+O.C[C@@H](Oc1cc(c(cc1)Cl)Cl)C(C)C R1.42 + R2.15
+O.OCC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.16
+O.OCC[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.17
+O.Clc1cc(O[C@@H]2CCOC2)ccc1Cl R1.42 + R2.18
+O.O=C[C@@H](Oc1cc(c(cc1)Cl)Cl)CO R1.42 + R2.19
+O.C[C@H](Oc1cc(c(cc1)Cl)Cl)C(C)C R1.42 + R2.20
+O.CCC[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.21
+O.CCC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.22
+O.Clc1cc(O[C@H]2CCOC2)ccc1Cl R1.42 + R2.23
+O.O[C@H]([C@@H](Oc1cc(c(cc1)Cl)Cl)C)C R1.42 + R2.24
+O.ClC[C@@H](Oc1cc(c(cc1)Cl)Cl)CO R1.42 + R2.25
+O.OC[C@H](C=C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.26
+O.Clc1cc(O[C@H]2CCNC2)ccc1Cl R1.42 + R2.27
+O.OC[C@@H](C=C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.28
+O.Clc1cc(O[C@@H]2CCNC2)ccc1Cl R1.42 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.30
+O.ClC[C@H](Oc1cc(c(cc1)Cl)Cl)CO R1.42 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.32
+O.OC[C@@H](Oc1cc(c(cc1)Cl)Cl)CS R1.42 + R2.33
+O.OC[C@H](Oc1cc(c(cc1)Cl)Cl)CN R1.42 + R2.34
+O.OC[C@@H](Oc1cc(c(cc1)Cl)Cl)CN R1.42 + R2.35
+O.C[C@H](Oc1cc(c(cc1)Cl)Cl)COC R1.42 + R2.36
+O.C[C@@H](Oc1cc(c(cc1)Cl)Cl)COC R1.42 + R2.37
+O.OC[C@H](CCO)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.41
+O.OC[C@@H](CCO)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(c(cc1)Cl)Cl)C)C R1.42 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.45
+O.O[C@H](C[C@H](Oc1cc(c(cc1)Cl)Cl)C)C R1.42 + R2.46
+O.C[C@@H](Oc1cc(c(cc1)Cl)Cl)CN(C)C R1.42 + R2.47
+O.C[C@H](Oc1cc(c(cc1)Cl)Cl)CN(C)C R1.42 + R2.48
+O.CCCC[C@H](C)Oc1cc(c(cc1)Cl)Cl R1.42 + R2.49
+O.OC[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.1
+O.CC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.2
+O.CC[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.3
+O.NC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.4
+O.NC[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.5
+O.OC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.6
+O.C#C[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.7
+O.C#C[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.8
+O.C=C[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.9
+O.O=C[C@H](Oc1cc(cc(c1)Cl)Cl)CO R1.43 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.11
+O.O[C@H]([C@H](Oc1cc(cc(c1)Cl)Cl)C)C R1.43 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(cc(c1)Cl)Cl)C)C R1.43 + R2.14
+O.C[C@@H](Oc1cc(cc(c1)Cl)Cl)C(C)C R1.43 + R2.15
+O.OCC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.16
+O.OCC[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.17
+O.Clc1cc(cc(O[C@@H]2CCOC2)c1)Cl R1.43 + R2.18
+O.O=C[C@@H](Oc1cc(cc(c1)Cl)Cl)CO R1.43 + R2.19
+O.C[C@H](Oc1cc(cc(c1)Cl)Cl)C(C)C R1.43 + R2.20
+O.CCC[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.21
+O.CCC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.22
+O.Clc1cc(cc(O[C@H]2CCOC2)c1)Cl R1.43 + R2.23
+O.O[C@H]([C@@H](Oc1cc(cc(c1)Cl)Cl)C)C R1.43 + R2.24
+O.ClC[C@@H](Oc1cc(cc(c1)Cl)Cl)CO R1.43 + R2.25
+O.OC[C@H](C=C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.26
+O.Clc1cc(cc(O[C@H]2CCNC2)c1)Cl R1.43 + R2.27
+O.OC[C@@H](C=C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.28
+O.Clc1cc(cc(O[C@@H]2CCNC2)c1)Cl R1.43 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.30
+O.ClC[C@H](Oc1cc(cc(c1)Cl)Cl)CO R1.43 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.32
+O.OC[C@@H](Oc1cc(cc(c1)Cl)Cl)CS R1.43 + R2.33
+O.OC[C@H](Oc1cc(cc(c1)Cl)Cl)CN R1.43 + R2.34
+O.OC[C@@H](Oc1cc(cc(c1)Cl)Cl)CN R1.43 + R2.35
+O.C[C@H](Oc1cc(cc(c1)Cl)Cl)COC R1.43 + R2.36
+O.C[C@@H](Oc1cc(cc(c1)Cl)Cl)COC R1.43 + R2.37
+O.OC[C@H](CCO)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.41
+O.OC[C@@H](CCO)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(cc(c1)Cl)Cl)C)C R1.43 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.45
+O.O[C@H](C[C@H](Oc1cc(cc(c1)Cl)Cl)C)C R1.43 + R2.46
+O.C[C@@H](Oc1cc(cc(c1)Cl)Cl)CN(C)C R1.43 + R2.47
+O.C[C@H](Oc1cc(cc(c1)Cl)Cl)CN(C)C R1.43 + R2.48
+O.CCCC[C@H](C)Oc1cc(cc(c1)Cl)Cl R1.43 + R2.49
+O.OC[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.1
+O.CC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.2
+O.CC[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.3
+O.NC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.4
+O.NC[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.5
+O.OC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.6
+O.C#C[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.7
+O.C#C[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.8
+O.C=C[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.9
+O.O=C[C@H](Oc1cc(OC)ccc1)CO R1.44 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.11
+O.O[C@H]([C@H](Oc1cc(OC)ccc1)C)C R1.44 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(OC)ccc1)C)C R1.44 + R2.14
+O.COc1cc(O[C@@H](C(C)C)C)ccc1 R1.44 + R2.15
+O.OCC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.16
+O.OCC[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.17
+O.COc1cc(O[C@@H]2CCOC2)ccc1 R1.44 + R2.18
+O.O=C[C@@H](Oc1cc(OC)ccc1)CO R1.44 + R2.19
+O.COc1cc(O[C@H](C(C)C)C)ccc1 R1.44 + R2.20
+O.CCC[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.21
+O.CCC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.22
+O.COc1cc(O[C@H]2CCOC2)ccc1 R1.44 + R2.23
+O.O[C@H]([C@@H](Oc1cc(OC)ccc1)C)C R1.44 + R2.24
+O.ClC[C@@H](Oc1cc(OC)ccc1)CO R1.44 + R2.25
+O.OC[C@H](C=C)Oc1cc(OC)ccc1 R1.44 + R2.26
+O.COc1cc(O[C@H]2CCNC2)ccc1 R1.44 + R2.27
+O.OC[C@@H](C=C)Oc1cc(OC)ccc1 R1.44 + R2.28
+O.COc1cc(O[C@@H]2CCNC2)ccc1 R1.44 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.30
+O.ClC[C@H](Oc1cc(OC)ccc1)CO R1.44 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.32
+O.OC[C@@H](Oc1cc(OC)ccc1)CS R1.44 + R2.33
+O.OC[C@H](Oc1cc(OC)ccc1)CN R1.44 + R2.34
+O.OC[C@@H](Oc1cc(OC)ccc1)CN R1.44 + R2.35
+O.C[C@H](Oc1cc(OC)ccc1)COC R1.44 + R2.36
+O.C[C@@H](Oc1cc(OC)ccc1)COC R1.44 + R2.37
+O.COc1cc(O[C@@H](CCO)CO)ccc1 R1.44 + R2.41
+O.COc1cc(O[C@H](CCO)CO)ccc1 R1.44 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(OC)ccc1)C)C R1.44 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(OC)ccc1 R1.44 + R2.45
+O.O[C@H](C[C@H](Oc1cc(OC)ccc1)C)C R1.44 + R2.46
+O.C[C@@H](Oc1cc(OC)ccc1)CN(C)C R1.44 + R2.47
+O.C[C@H](Oc1cc(OC)ccc1)CN(C)C R1.44 + R2.48
+O.CCCC[C@H](C)Oc1cc(OC)ccc1 R1.44 + R2.49
+O.O.Cc1c(O[C@H](C)CO)cccc1O[C@H](C)CO R1.45 + R2.1 + R2.1
+O.O.Cc1c(O[C@@H](C)CC)cccc1O[C@@H](C)CC R1.45 + R2.2 + R2.2
+O.O.Cc1c(O[C@H](C)CC)cccc1O[C@H](C)CC R1.45 + R2.3 + R2.3
+O.O.Cc1c(O[C@@H](C)CN)cccc1O[C@@H](C)CN R1.45 + R2.4 + R2.4
+O.O.Cc1c(O[C@H](C)CN)cccc1O[C@H](C)CN R1.45 + R2.5 + R2.5
+O.O.Cc1c(O[C@@H](C)CO)cccc1O[C@@H](C)CO R1.45 + R2.6 + R2.6
+O.O.Cc1c(O[C@H](C)C#C)cccc1O[C@H](C)C#C R1.45 + R2.7 + R2.7
+O.O.Cc1c(O[C@@H](C)C#C)cccc1O[C@@H](C)C#C R1.45 + R2.8 + R2.8
+O.O.Cc1c(O[C@@H](C)C=C)cccc1O[C@@H](C)C=C R1.45 + R2.9 + R2.9
+O.O.Cc1c(O[C@@H](C=O)CO)cccc1O[C@@H](C=O)CO R1.45 + R2.10 + R2.10
+O.O.Cc1c(O[C@@H](C)C(=O)O)cccc1O[C@@H](C)C(=O)O R1.45 + R2.11 + R2.11
+O.O.Cc1c(O[C@@H]([C@@H](O)C)C)cccc1O[C@@H]([C@@H](O)C)C R1.45 + R2.12 + R2.12
+O.O.Cc1c(O[C@H](C)C(=O)O)cccc1O[C@H](C)C(=O)O R1.45 + R2.13 + R2.13
+O.O.Cc1c(O[C@H]([C@H](O)C)C)cccc1O[C@H]([C@H](O)C)C R1.45 + R2.14 + R2.14
+O.O.Cc1c(O[C@H](C)C(C)C)cccc1O[C@H](C)C(C)C R1.45 + R2.15 + R2.15
+O.O.Cc1c(O[C@@H](C)CCO)cccc1O[C@@H](C)CCO R1.45 + R2.16 + R2.16
+O.O.Cc1c(O[C@H](C)CCO)cccc1O[C@H](C)CCO R1.45 + R2.17 + R2.17
+O.O.Cc1c(O[C@@H]2CCOC2)cccc1O[C@@H]1CCOC1 R1.45 + R2.18 + R2.18
+O.O.Cc1c(O[C@H](C=O)CO)cccc1O[C@H](C=O)CO R1.45 + R2.19 + R2.19
+O.O.Cc1c(O[C@@H](C)C(C)C)cccc1O[C@@H](C)C(C)C R1.45 + R2.20 + R2.20
+O.O.Cc1c(O[C@H](C)CCC)cccc1O[C@H](C)CCC R1.45 + R2.21 + R2.21
+O.O.Cc1c(O[C@@H](C)CCC)cccc1O[C@@H](C)CCC R1.45 + R2.22 + R2.22
+O.O.Cc1c(O[C@H]2CCOC2)cccc1O[C@H]1CCOC1 R1.45 + R2.23 + R2.23
+O.O.Cc1c(O[C@H]([C@@H](O)C)C)cccc1O[C@H]([C@@H](O)C)C R1.45 + R2.24 + R2.24
+O.O.Cc1c(O[C@@H](CO)CCl)cccc1O[C@@H](CO)CCl R1.45 + R2.25 + R2.25
+O.O.Cc1c(O[C@@H](C=C)CO)cccc1O[C@@H](C=C)CO R1.45 + R2.26 + R2.26
+O.O.Cc1c(O[C@H]2CCNC2)cccc1O[C@H]1CCNC1 R1.45 + R2.27 + R2.27
+O.O.Cc1c(O[C@H](C=C)CO)cccc1O[C@H](C=C)CO R1.45 + R2.28 + R2.28
+O.O.Cc1c(O[C@@H]2CCNC2)cccc1O[C@@H]1CCNC1 R1.45 + R2.29 + R2.29
+O.O.Cc1c(O[C@H](C)C(=O)N)cccc1O[C@H](C)C(=O)N R1.45 + R2.30 + R2.30
+O.O.Cc1c(O[C@H](CO)CCl)cccc1O[C@H](CO)CCl R1.45 + R2.31 + R2.31
+O.O.Cc1c(O[C@@H](C)C(=O)N)cccc1O[C@@H](C)C(=O)N R1.45 + R2.32 + R2.32
+O.O.Cc1c(O[C@H](CO)CS)cccc1O[C@H](CO)CS R1.45 + R2.33 + R2.33
+O.O.Cc1c(O[C@H](CN)CO)cccc1O[C@H](CN)CO R1.45 + R2.34 + R2.34
+O.O.Cc1c(O[C@@H](CN)CO)cccc1O[C@@H](CN)CO R1.45 + R2.35 + R2.35
+O.O.Cc1c(O[C@@H](C)COC)cccc1O[C@@H](C)COC R1.45 + R2.36 + R2.36
+O.O.Cc1c(O[C@H](C)COC)cccc1O[C@H](C)COC R1.45 + R2.37 + R2.37
+O.O.Cc1c(O[C@@H](CCO)CO)cccc1O[C@@H](CCO)CO R1.45 + R2.41 + R2.41
+O.O.Cc1c(O[C@H](CCO)CO)cccc1O[C@H](CCO)CO R1.45 + R2.42 + R2.42
+O.O.Cc1c(O[C@H](C[C@H](O)C)C)cccc1O[C@H](C[C@H](O)C)C R1.45 + R2.43 + R2.43
+O.O.Cc1c(O[C@H](C)CC(=O)O)cccc1O[C@H](C)CC(=O)O R1.45 + R2.45 + R2.45
+O.O.Cc1c(O[C@@H](C[C@@H](O)C)C)cccc1O[C@@H](C[C@@H](O)C)C R1.45 + R2.46 + R2.46
+O.O.Cc1c(O[C@H](C)CN(C)C)cccc1O[C@H](C)CN(C)C R1.45 + R2.47 + R2.47
+O.O.Cc1c(O[C@@H](C)CN(C)C)cccc1O[C@@H](C)CN(C)C R1.45 + R2.48 + R2.48
+O.O.Cc1c(O[C@@H](C)CCCC)cccc1O[C@@H](C)CCCC R1.45 + R2.49 + R2.49
+O.O.Clc1c(cc(O[C@H](C)CO)cc1)O[C@H](C)CO R1.46 + R2.1 + R2.1
+O.O.Clc1c(cc(O[C@@H](C)CC)cc1)O[C@@H](C)CC R1.46 + R2.2 + R2.2
+O.O.Clc1c(cc(O[C@H](C)CC)cc1)O[C@H](C)CC R1.46 + R2.3 + R2.3
+O.O.Clc1c(cc(O[C@@H](C)CN)cc1)O[C@@H](C)CN R1.46 + R2.4 + R2.4
+O.O.Clc1c(cc(O[C@H](C)CN)cc1)O[C@H](C)CN R1.46 + R2.5 + R2.5
+O.O.Clc1c(cc(O[C@@H](C)CO)cc1)O[C@@H](C)CO R1.46 + R2.6 + R2.6
+O.O.Clc1c(cc(O[C@H](C)C#C)cc1)O[C@H](C)C#C R1.46 + R2.7 + R2.7
+O.O.Clc1c(cc(O[C@@H](C)C#C)cc1)O[C@@H](C)C#C R1.46 + R2.8 + R2.8
+O.O.Clc1c(cc(O[C@@H](C)C=C)cc1)O[C@@H](C)C=C R1.46 + R2.9 + R2.9
+O.O.Clc1c(cc(O[C@@H](C=O)CO)cc1)O[C@@H](C=O)CO R1.46 + R2.10 + R2.10
+O.O.Clc1c(cc(O[C@@H](C)C(=O)O)cc1)O[C@@H](C)C(=O)O R1.46 + R2.11 + R2.11
+O.O.Clc1c(cc(O[C@H](C)[C@@H](O)C)cc1)O[C@H](C)[C@@H](O)C R1.46 + R2.12 + R2.12
+O.O.Clc1c(cc(O[C@H](C)C(=O)O)cc1)O[C@H](C)C(=O)O R1.46 + R2.13 + R2.13
+O.O.Clc1c(cc(O[C@@H](C)[C@H](O)C)cc1)O[C@@H](C)[C@H](O)C R1.46 + R2.14 + R2.14
+O.O.Clc1c(cc(O[C@H](C)C(C)C)cc1)O[C@H](C)C(C)C R1.46 + R2.15 + R2.15
+O.O.Clc1c(cc(O[C@@H](C)CCO)cc1)O[C@@H](C)CCO R1.46 + R2.16 + R2.16
+O.O.Clc1c(cc(O[C@H](C)CCO)cc1)O[C@H](C)CCO R1.46 + R2.17 + R2.17
+O.O.Clc1c(cc(O[C@@H]2CCOC2)cc1)O[C@@H]1CCOC1 R1.46 + R2.18 + R2.18
+O.O.Clc1c(cc(O[C@H](C=O)CO)cc1)O[C@H](C=O)CO R1.46 + R2.19 + R2.19
+O.O.Clc1c(cc(O[C@@H](C)C(C)C)cc1)O[C@@H](C)C(C)C R1.46 + R2.20 + R2.20
+O.O.Clc1c(cc(O[C@H](C)CCC)cc1)O[C@H](C)CCC R1.46 + R2.21 + R2.21
+O.O.Clc1c(cc(O[C@@H](C)CCC)cc1)O[C@@H](C)CCC R1.46 + R2.22 + R2.22
+O.O.Clc1c(cc(O[C@H]2CCOC2)cc1)O[C@H]1CCOC1 R1.46 + R2.23 + R2.23
+O.O.Clc1c(cc(O[C@@H](C)[C@@H](O)C)cc1)O[C@@H](C)[C@@H](O)C R1.46 + R2.24 + R2.24
+O.O.Clc1c(cc(O[C@@H](CO)CCl)cc1)O[C@@H](CO)CCl R1.46 + R2.25 + R2.25
+O.O.Clc1c(cc(O[C@@H](C=C)CO)cc1)O[C@@H](C=C)CO R1.46 + R2.26 + R2.26
+O.O.Clc1c(cc(O[C@H]2CCNC2)cc1)O[C@H]1CCNC1 R1.46 + R2.27 + R2.27
+O.O.Clc1c(cc(O[C@H](C=C)CO)cc1)O[C@H](C=C)CO R1.46 + R2.28 + R2.28
+O.O.Clc1c(cc(O[C@@H]2CCNC2)cc1)O[C@@H]1CCNC1 R1.46 + R2.29 + R2.29
+O.O.Clc1c(cc(O[C@H](C)C(=O)N)cc1)O[C@H](C)C(=O)N R1.46 + R2.30 + R2.30
+O.O.Clc1c(cc(O[C@H](CO)CCl)cc1)O[C@H](CO)CCl R1.46 + R2.31 + R2.31
+O.O.Clc1c(cc(O[C@@H](C)C(=O)N)cc1)O[C@@H](C)C(=O)N R1.46 + R2.32 + R2.32
+O.O.Clc1c(cc(O[C@H](CO)CS)cc1)O[C@H](CO)CS R1.46 + R2.33 + R2.33
+O.O.Clc1c(cc(O[C@H](CN)CO)cc1)O[C@H](CN)CO R1.46 + R2.34 + R2.34
+O.O.Clc1c(cc(O[C@@H](CN)CO)cc1)O[C@@H](CN)CO R1.46 + R2.35 + R2.35
+O.O.Clc1c(cc(O[C@@H](C)COC)cc1)O[C@@H](C)COC R1.46 + R2.36 + R2.36
+O.O.Clc1c(cc(O[C@H](C)COC)cc1)O[C@H](C)COC R1.46 + R2.37 + R2.37
+O.O.Clc1c(cc(O[C@@H](CCO)CO)cc1)O[C@@H](CCO)CO R1.46 + R2.41 + R2.41
+O.O.Clc1c(cc(O[C@H](CCO)CO)cc1)O[C@H](CCO)CO R1.46 + R2.42 + R2.42
+O.O.Clc1c(cc(O[C@@H](C)C[C@H](O)C)cc1)O[C@@H](C)C[C@H](O)C R1.46 + R2.43 + R2.43
+O.O.Clc1c(cc(O[C@H](C)CC(=O)O)cc1)O[C@H](C)CC(=O)O R1.46 + R2.45 + R2.45
+O.O.Clc1c(cc(O[C@H](C)C[C@@H](O)C)cc1)O[C@H](C)C[C@@H](O)C R1.46 + R2.46 + R2.46
+O.O.Clc1c(cc(O[C@H](C)CN(C)C)cc1)O[C@H](C)CN(C)C R1.46 + R2.47 + R2.47
+O.O.Clc1c(cc(O[C@@H](C)CN(C)C)cc1)O[C@@H](C)CN(C)C R1.46 + R2.48 + R2.48
+O.O.Clc1c(cc(O[C@@H](C)CCCC)cc1)O[C@@H](C)CCCC R1.46 + R2.49 + R2.49
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)CO)c1)O[C@H](C)CO)CO R1.47 + R2.1 + R2.1 + R2.1
+O.O.O.C[C@@H](CC)Oc1cc(cc(O[C@@H](C)CC)c1)O[C@@H](C)CC R1.47 + R2.2 + R2.2 + R2.2
+O.O.O.C[C@H](CC)Oc1cc(cc(O[C@H](C)CC)c1)O[C@H](C)CC R1.47 + R2.3 + R2.3 + R2.3
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)CN)c1)O[C@@H](C)CN)CN R1.47 + R2.4 + R2.4 + R2.4
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)CN)c1)O[C@H](C)CN)CN R1.47 + R2.5 + R2.5 + R2.5
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)CO)c1)O[C@@H](C)CO)CO R1.47 + R2.6 + R2.6 + R2.6
+O.O.O.C[C@H](C#C)Oc1cc(cc(O[C@H](C)C#C)c1)O[C@H](C)C#C R1.47 + R2.7 + R2.7 + R2.7
+O.O.O.C[C@@H](C#C)Oc1cc(cc(O[C@@H](C)C#C)c1)O[C@@H](C)C#C R1.47 + R2.8 + R2.8 + R2.8
+O.O.O.C[C@@H](C=C)Oc1cc(cc(O[C@@H](C)C=C)c1)O[C@@H](C)C=C R1.47 + R2.9 + R2.9 + R2.9
+O.O.O.OC[C@@H](Oc1cc(cc(O[C@@H](C=O)CO)c1)O[C@@H](C=O)CO)C=O R1.47 + R2.10 + R2.10 + R2.10
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)C(=O)O)c1)O[C@@H](C)C(=O)O)C(=O)O R1.47 + R2.11 + R2.11 + R2.11
+O.O.O.O[C@@H](C)[C@@H](C)Oc1cc(cc(O[C@@H]([C@@H](O)C)C)c1)O[C@@H]([C@@H](O)C)C R1.47 + R2.12 + R2.12 + R2.12
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)C(=O)O)c1)O[C@H](C)C(=O)O)C(=O)O R1.47 + R2.13 + R2.13 + R2.13
+O.O.O.O[C@H](C)[C@H](C)Oc1cc(cc(O[C@H]([C@H](O)C)C)c1)O[C@H]([C@H](O)C)C R1.47 + R2.14 + R2.14 + R2.14
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)C(C)C)c1)O[C@H](C)C(C)C)C(C)C R1.47 + R2.15 + R2.15 + R2.15
+O.O.O.C[C@@H](CCO)Oc1cc(cc(O[C@@H](C)CCO)c1)O[C@@H](C)CCO R1.47 + R2.16 + R2.16 + R2.16
+O.O.O.C[C@H](CCO)Oc1cc(cc(O[C@H](C)CCO)c1)O[C@H](C)CCO R1.47 + R2.17 + R2.17 + R2.17
+O.O.O.O([C@@H]1CCOC1)c1cc(cc(O[C@@H]2CCOC2)c1)O[C@@H]1CCOC1 R1.47 + R2.18 + R2.18 + R2.18
+O.O.O.OC[C@H](Oc1cc(cc(O[C@H](C=O)CO)c1)O[C@H](C=O)CO)C=O R1.47 + R2.19 + R2.19 + R2.19
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)C(C)C)c1)O[C@@H](C)C(C)C)C(C)C R1.47 + R2.20 + R2.20 + R2.20
+O.O.O.C[C@H](CCC)Oc1cc(cc(O[C@H](C)CCC)c1)O[C@H](C)CCC R1.47 + R2.21 + R2.21 + R2.21
+O.O.O.C[C@@H](CCC)Oc1cc(cc(O[C@@H](C)CCC)c1)O[C@@H](C)CCC R1.47 + R2.22 + R2.22 + R2.22
+O.O.O.O([C@H]1CCOC1)c1cc(cc(O[C@H]2CCOC2)c1)O[C@H]1CCOC1 R1.47 + R2.23 + R2.23 + R2.23
+O.O.O.O[C@@H](C)[C@H](C)Oc1cc(cc(O[C@H]([C@@H](O)C)C)c1)O[C@H]([C@@H](O)C)C R1.47 + R2.24 + R2.24 + R2.24
+O.O.O.ClC[C@@H](Oc1cc(cc(O[C@@H](CO)CCl)c1)O[C@@H](CO)CCl)CO R1.47 + R2.25 + R2.25 + R2.25
+O.O.O.OC[C@H](C=C)Oc1cc(cc(O[C@@H](C=C)CO)c1)O[C@@H](C=C)CO R1.47 + R2.26 + R2.26 + R2.26
+O.O.O.O([C@H]1CCNC1)c1cc(cc(O[C@H]2CCNC2)c1)O[C@H]1CCNC1 R1.47 + R2.27 + R2.27 + R2.27
+O.O.O.OC[C@@H](C=C)Oc1cc(cc(O[C@H](C=C)CO)c1)O[C@H](C=C)CO R1.47 + R2.28 + R2.28 + R2.28
+O.O.O.O([C@@H]1CCNC1)c1cc(cc(O[C@@H]2CCNC2)c1)O[C@@H]1CCNC1 R1.47 + R2.29 + R2.29 + R2.29
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)C(=O)N)c1)O[C@H](C)C(=O)N)C(=O)N R1.47 + R2.30 + R2.30 + R2.30
+O.O.O.ClC[C@H](Oc1cc(cc(O[C@H](CO)CCl)c1)O[C@H](CO)CCl)CO R1.47 + R2.31 + R2.31 + R2.31
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)C(=O)N)c1)O[C@@H](C)C(=O)N)C(=O)N R1.47 + R2.32 + R2.32 + R2.32
+O.O.O.SC[C@H](Oc1cc(cc(O[C@H](CO)CS)c1)O[C@H](CO)CS)CO R1.47 + R2.33 + R2.33 + R2.33
+O.O.O.OC[C@H](Oc1cc(cc(O[C@H](CN)CO)c1)O[C@H](CN)CO)CN R1.47 + R2.34 + R2.34 + R2.34
+O.O.O.OC[C@@H](Oc1cc(cc(O[C@@H](CN)CO)c1)O[C@@H](CN)CO)CN R1.47 + R2.35 + R2.35 + R2.35
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)COC)c1)O[C@@H](C)COC)COC R1.47 + R2.36 + R2.36 + R2.36
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)COC)c1)O[C@H](C)COC)COC R1.47 + R2.37 + R2.37 + R2.37
+O.O.O.OC[C@H](CCO)Oc1cc(cc(O[C@@H](CCO)CO)c1)O[C@@H](CCO)CO R1.47 + R2.41 + R2.41 + R2.41
+O.O.O.OC[C@@H](CCO)Oc1cc(cc(O[C@H](CCO)CO)c1)O[C@H](CCO)CO R1.47 + R2.42 + R2.42 + R2.42
+O.O.O.O[C@H](C)C[C@H](C)Oc1cc(cc(O[C@H](C[C@H](O)C)C)c1)O[C@H](C[C@H](O)C)C R1.47 + R2.43 + R2.43 + R2.43
+O.O.O.C[C@H](CC(=O)O)Oc1cc(cc(O[C@H](C)CC(=O)O)c1)O[C@H](C)CC(=O)O R1.47 + R2.45 + R2.45 + R2.45
+O.O.O.O[C@@H](C)C[C@@H](C)Oc1cc(cc(O[C@@H](C[C@@H](O)C)C)c1)O[C@@H](C[C@@H](O)C)C R1.47 + R2.46 + R2.46 + R2.46
+O.O.O.C[C@@H](Oc1cc(cc(O[C@H](C)CN(C)C)c1)O[C@H](C)CN(C)C)CN(C)C R1.47 + R2.47 + R2.47 + R2.47
+O.O.O.C[C@H](Oc1cc(cc(O[C@@H](C)CN(C)C)c1)O[C@@H](C)CN(C)C)CN(C)C R1.47 + R2.48 + R2.48 + R2.48
+O.O.O.C[C@@H](CCCC)Oc1cc(cc(O[C@@H](C)CCCC)c1)O[C@@H](C)CCCC R1.47 + R2.49 + R2.49 + R2.49
+O.O.Cc1cc(cc(O[C@H](C)CO)c1)O[C@H](C)CO R1.48 + R2.1 + R2.1
+O.O.Cc1cc(cc(O[C@@H](C)CC)c1)O[C@@H](C)CC R1.48 + R2.2 + R2.2
+O.O.Cc1cc(cc(O[C@H](C)CC)c1)O[C@H](C)CC R1.48 + R2.3 + R2.3
+O.O.Cc1cc(cc(O[C@@H](C)CN)c1)O[C@@H](C)CN R1.48 + R2.4 + R2.4
+O.O.Cc1cc(cc(O[C@H](C)CN)c1)O[C@H](C)CN R1.48 + R2.5 + R2.5
+O.O.Cc1cc(cc(O[C@@H](C)CO)c1)O[C@@H](C)CO R1.48 + R2.6 + R2.6
+O.O.Cc1cc(cc(O[C@H](C)C#C)c1)O[C@H](C)C#C R1.48 + R2.7 + R2.7
+O.O.Cc1cc(cc(O[C@@H](C)C#C)c1)O[C@@H](C)C#C R1.48 + R2.8 + R2.8
+O.O.Cc1cc(cc(O[C@@H](C)C=C)c1)O[C@@H](C)C=C R1.48 + R2.9 + R2.9
+O.O.Cc1cc(cc(O[C@@H](C=O)CO)c1)O[C@@H](C=O)CO R1.48 + R2.10 + R2.10
+O.O.Cc1cc(cc(O[C@@H](C)C(=O)O)c1)O[C@@H](C)C(=O)O R1.48 + R2.11 + R2.11
+O.O.Cc1cc(cc(O[C@@H]([C@@H](O)C)C)c1)O[C@@H]([C@@H](O)C)C R1.48 + R2.12 + R2.12
+O.O.Cc1cc(cc(O[C@H](C)C(=O)O)c1)O[C@H](C)C(=O)O R1.48 + R2.13 + R2.13
+O.O.Cc1cc(cc(O[C@H]([C@H](O)C)C)c1)O[C@H]([C@H](O)C)C R1.48 + R2.14 + R2.14
+O.O.Cc1cc(cc(O[C@H](C)C(C)C)c1)O[C@H](C)C(C)C R1.48 + R2.15 + R2.15
+O.O.Cc1cc(cc(O[C@@H](C)CCO)c1)O[C@@H](C)CCO R1.48 + R2.16 + R2.16
+O.O.Cc1cc(cc(O[C@H](C)CCO)c1)O[C@H](C)CCO R1.48 + R2.17 + R2.17
+O.O.Cc1cc(cc(O[C@@H]2CCOC2)c1)O[C@@H]1CCOC1 R1.48 + R2.18 + R2.18
+O.O.Cc1cc(cc(O[C@H](C=O)CO)c1)O[C@H](C=O)CO R1.48 + R2.19 + R2.19
+O.O.Cc1cc(cc(O[C@@H](C)C(C)C)c1)O[C@@H](C)C(C)C R1.48 + R2.20 + R2.20
+O.O.Cc1cc(cc(O[C@H](C)CCC)c1)O[C@H](C)CCC R1.48 + R2.21 + R2.21
+O.O.Cc1cc(cc(O[C@@H](C)CCC)c1)O[C@@H](C)CCC R1.48 + R2.22 + R2.22
+O.O.Cc1cc(cc(O[C@H]2CCOC2)c1)O[C@H]1CCOC1 R1.48 + R2.23 + R2.23
+O.O.Cc1cc(cc(O[C@H]([C@@H](O)C)C)c1)O[C@H]([C@@H](O)C)C R1.48 + R2.24 + R2.24
+O.O.Cc1cc(cc(O[C@@H](CO)CCl)c1)O[C@@H](CO)CCl R1.48 + R2.25 + R2.25
+O.O.Cc1cc(cc(O[C@@H](C=C)CO)c1)O[C@@H](C=C)CO R1.48 + R2.26 + R2.26
+O.O.Cc1cc(cc(O[C@H]2CCNC2)c1)O[C@H]1CCNC1 R1.48 + R2.27 + R2.27
+O.O.Cc1cc(cc(O[C@H](C=C)CO)c1)O[C@H](C=C)CO R1.48 + R2.28 + R2.28
+O.O.Cc1cc(cc(O[C@@H]2CCNC2)c1)O[C@@H]1CCNC1 R1.48 + R2.29 + R2.29
+O.O.Cc1cc(cc(O[C@H](C)C(=O)N)c1)O[C@H](C)C(=O)N R1.48 + R2.30 + R2.30
+O.O.Cc1cc(cc(O[C@H](CO)CCl)c1)O[C@H](CO)CCl R1.48 + R2.31 + R2.31
+O.O.Cc1cc(cc(O[C@@H](C)C(=O)N)c1)O[C@@H](C)C(=O)N R1.48 + R2.32 + R2.32
+O.O.Cc1cc(cc(O[C@H](CO)CS)c1)O[C@H](CO)CS R1.48 + R2.33 + R2.33
+O.O.Cc1cc(cc(O[C@H](CN)CO)c1)O[C@H](CN)CO R1.48 + R2.34 + R2.34
+O.O.Cc1cc(cc(O[C@@H](CN)CO)c1)O[C@@H](CN)CO R1.48 + R2.35 + R2.35
+O.O.Cc1cc(cc(O[C@@H](C)COC)c1)O[C@@H](C)COC R1.48 + R2.36 + R2.36
+O.O.Cc1cc(cc(O[C@H](C)COC)c1)O[C@H](C)COC R1.48 + R2.37 + R2.37
+O.O.Cc1cc(cc(O[C@@H](CCO)CO)c1)O[C@@H](CCO)CO R1.48 + R2.41 + R2.41
+O.O.Cc1cc(cc(O[C@H](CCO)CO)c1)O[C@H](CCO)CO R1.48 + R2.42 + R2.42
+O.O.Cc1cc(cc(O[C@H](C[C@H](O)C)C)c1)O[C@H](C[C@H](O)C)C R1.48 + R2.43 + R2.43
+O.O.Cc1cc(cc(O[C@H](C)CC(=O)O)c1)O[C@H](C)CC(=O)O R1.48 + R2.45 + R2.45
+O.O.Cc1cc(cc(O[C@@H](C[C@@H](O)C)C)c1)O[C@@H](C[C@@H](O)C)C R1.48 + R2.46 + R2.46
+O.O.Cc1cc(cc(O[C@H](C)CN(C)C)c1)O[C@H](C)CN(C)C R1.48 + R2.47 + R2.47
+O.O.Cc1cc(cc(O[C@@H](C)CN(C)C)c1)O[C@@H](C)CN(C)C R1.48 + R2.48 + R2.48
+O.O.Cc1cc(cc(O[C@@H](C)CCCC)c1)O[C@@H](C)CCCC R1.48 + R2.49 + R2.49
+O.OC[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.1
+O.CC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.2
+O.CC[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.3
+O.NC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.4
+O.NC[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.5
+O.OC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.6
+O.C#C[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.7
+O.C#C[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.8
+O.C=C[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.9
+O.O=C[C@H](Oc1cc(c(cc1)C)C)CO R1.49 + R2.10
+O.O=C(O)[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.11
+O.O[C@H]([C@H](Oc1cc(c(cc1)C)C)C)C R1.49 + R2.12
+O.O=C(O)[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.13
+O.O[C@@H]([C@@H](Oc1cc(c(cc1)C)C)C)C R1.49 + R2.14
+O.C[C@@H](Oc1cc(c(cc1)C)C)C(C)C R1.49 + R2.15
+O.OCC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.16
+O.OCC[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.17
+O.Cc1cc(O[C@@H]2CCOC2)ccc1C R1.49 + R2.18
+O.O=C[C@@H](Oc1cc(c(cc1)C)C)CO R1.49 + R2.19
+O.C[C@H](Oc1cc(c(cc1)C)C)C(C)C R1.49 + R2.20
+O.CCC[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.21
+O.CCC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.22
+O.Cc1cc(O[C@H]2CCOC2)ccc1C R1.49 + R2.23
+O.O[C@H]([C@@H](Oc1cc(c(cc1)C)C)C)C R1.49 + R2.24
+O.ClC[C@@H](Oc1cc(c(cc1)C)C)CO R1.49 + R2.25
+O.OC[C@H](C=C)Oc1cc(c(cc1)C)C R1.49 + R2.26
+O.Cc1cc(O[C@H]2CCNC2)ccc1C R1.49 + R2.27
+O.OC[C@@H](C=C)Oc1cc(c(cc1)C)C R1.49 + R2.28
+O.Cc1cc(O[C@@H]2CCNC2)ccc1C R1.49 + R2.29
+O.O=C(N)[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.30
+O.ClC[C@H](Oc1cc(c(cc1)C)C)CO R1.49 + R2.31
+O.O=C(N)[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.32
+O.OC[C@@H](Oc1cc(c(cc1)C)C)CS R1.49 + R2.33
+O.OC[C@H](Oc1cc(c(cc1)C)C)CN R1.49 + R2.34
+O.OC[C@@H](Oc1cc(c(cc1)C)C)CN R1.49 + R2.35
+O.C[C@H](Oc1cc(c(cc1)C)C)COC R1.49 + R2.36
+O.C[C@@H](Oc1cc(c(cc1)C)C)COC R1.49 + R2.37
+O.OC[C@H](CCO)Oc1cc(c(cc1)C)C R1.49 + R2.41
+O.OC[C@@H](CCO)Oc1cc(c(cc1)C)C R1.49 + R2.42
+O.O[C@@H](C[C@@H](Oc1cc(c(cc1)C)C)C)C R1.49 + R2.43
+O.O=C(O)C[C@@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.45
+O.O[C@H](C[C@H](Oc1cc(c(cc1)C)C)C)C R1.49 + R2.46
+O.C[C@@H](Oc1cc(c(cc1)C)C)CN(C)C R1.49 + R2.47
+O.C[C@H](Oc1cc(c(cc1)C)C)CN(C)C R1.49 + R2.48
+O.CCCC[C@H](C)Oc1cc(c(cc1)C)C R1.49 + R2.49

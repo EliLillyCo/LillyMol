@@ -256,6 +256,19 @@ set_max_offset_from_command_line(off_t s)
   _max_offset_from_command_line = s;
 }
 
+
+SeekAndMax
+UnsetSeekMax() {
+  SeekAndMax result;
+  result.seek_to = _seek_to_from_command_line;
+  result.max_offset = _max_offset_from_command_line;
+
+  _seek_to_from_command_line = 0;
+  _max_offset_from_command_line = std::numeric_limits<off_t>::max();
+
+  return result;
+}
+
 /*
   Optionally remove all bonds from non-organic elements.
   Possible values:

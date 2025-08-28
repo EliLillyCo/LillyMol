@@ -1,2 +1,4 @@
-smi: "[1CH2]1C2=C1SC=C2" smt: "[Ax2r3D>2]1[ax3r3r5D3]2:[ax3r3r5D3]1:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:2" id: "CHEMBL4109862.3A5a" n: 2 conn: true usmi: "s1c2[1CH2]c2cc1" 
-smi: "N1=C[1NH]C2=C1C2" smt: "[ax2r5D2]1:[ax2r5D2]:[ax2r5D3]:[ax3r3r5D3]2:[ax3r3r5D3]:1[Ax2r3D2]2" id: "CHEMBL561702.3A5a" n: 2 conn: true usmi: "[1nH]1c[n]c2Cc12" 
+smi: "C1C2=C1SC=C2" smt: "[Ax2r3]1[ax3r3r5]2:[ax3r3r5]1:[ax2r5]:[ax2r5]:[ax2r5]:2" id: "CHEMBL4109862.3A5a" n: 1 conn: false usmi: "s1ccc2Cc12" 
+smi: "N1=CNC2=C1C2" smt: "[ax2r5]1:[ax2r5]:[ax2r5]:[ax3r3r5]2:[ax3r3r5]:1[Ax2r3]2" id: "CHEMBL561702.3A5a" n: 1 conn: false usmi: "[n]1c[nH]c2Cc12" 
+smi: "[1CH2]1C2=C1SC=C2" smt: "[Ax2r3D>2]1[ax3r3r5D3]2:[ax3r3r5D3]1:[ax2r5D2]:[ax2r5D2]:[ax2r5D2]:2" id: "CHEMBL4109862.3A5a" n: 1 conn: true usmi: "s1c2[1CH2]c2cc1" 
+smi: "N1=C[1NH]C2=C1C2" smt: "[ax2r5D2]1:[ax2r5D2]:[ax2r5D3]:[ax3r3r5D3]2:[ax3r3r5D3]:1[Ax2r3D2]2" id: "CHEMBL561702.3A5a" n: 1 conn: true usmi: "[1nH]1c[n]c2Cc12" 

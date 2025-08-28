@@ -11,8 +11,16 @@
 
 #include "Molecule_Tools/rxn_to_openrxn.h"
 
+#ifdef BUILD_BAZEL
 #include "external/ord_schema/proto/reaction.pb.h"
+#else
+#include "external/ord_schema/proto.pb.h"
+#endif
+#ifdef BUILD_BAZEL
 #include "external/ord_schema/proto/dataset.pb.h"
+#else
+#include "external/ord_schema/proto.pb.h"
+#endif
 
 namespace rxn_to_openrxn {
 

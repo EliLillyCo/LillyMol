@@ -1,0 +1,44 @@
+{
+  "executable": "dicer",
+  "difftool": "same_structures",
+  "difftool_options": "-S 1",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "-k 2 -B atype=sb -B MAXFF=0.50001 -C auto -s 'ClC' -s 'BrC' -s 'FC' -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "-G iso01 -k 2 -B atype=sb -B MAXFF=0.50001 -C auto -s 'ClC' -s 'BrC' -s 'FC' -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_3",
+          "args": [ "-G iso01 -k 2 -B atype=sb -B MAXFF=0.50001 -C auto -s 'ClC' -s 'BrC' -s 'FC' -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_4",
+          "args": [ "-G iso01 -k 2 -B atype=sb -B MAXFF=0.50001 -C auto -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_5",
+          "args": [ "-G iso01 -k 2 -B atype=sb -B MAXFF=0.50001 -C auto -m 0 -M 15 -X 5000 -i smi -A I -A D -c #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_6",
+          "args": [ "-B nosmi -G iso01 -k 2 -B atype=sb -B MAXFF=0.50001 -C auto -m 0 -M 15 -X 5000 -i smi -A I -A D -c #{datadir}/rand.smi" ],
+          "comment": [ "to be added" ]
+        },
+        {
+          "name": "case_9",
+          "args": [ "-k 2 -X 5000 -B nbamide -m 5 -M 20 #{datadir}/rand.smi" ],
+          "comment": [ "nbamide" ]
+        }
+      ]
+    }
+  }
+}

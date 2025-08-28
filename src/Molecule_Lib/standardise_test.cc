@@ -171,6 +171,75 @@ TEST_F(TestStandardisation, TestEnoltKetoNoBecauseAdjacentUnsaturationDoubleBond
   EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
 }
 
+TEST_F(TestStandardisation, TestKetoToEnolNoTerminalDoubleBonds) {
+  _smiles = "CC(=O)C";
+  ASSERT_TRUE(_m1.build_from_smiles(_smiles));
+  _chemical_standardisation.set_keto_enol_preference(standardisation::KetoEnol::kToEnol);
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+
+  constexpr int kVerbose = false;
+
+  _chemical_standardisation.Activate(CS_KETO_ENOL, kVerbose);
+
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+}
+
+TEST_F(TestStandardisation, TestKetoToEnolSimple) {
+  _smiles = "CC(=O)CC";
+  ASSERT_TRUE(_m1.build_from_smiles(_smiles));
+  _chemical_standardisation.set_keto_enol_preference(standardisation::KetoEnol::kToEnol);
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+
+  constexpr int kVerbose = false;
+
+  _chemical_standardisation.Activate(CS_KETO_ENOL, kVerbose);
+
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 1);
+  EXPECT_EQ(_m1.unique_smiles(), "OC(=CC)C") << "from " << _smiles << " got "
+                << _m1.unique_smiles();
+}
+
+TEST_F(TestStandardisation, TestKetoToEnolAdjacentNotProcessed) {
+  _smiles = "OC(=O)CC(=O)CC(=O)C=CC(O)=O CHEMBL1743220";
+  ASSERT_TRUE(_m1.build_from_smiles(_smiles));
+  _chemical_standardisation.set_keto_enol_preference(standardisation::KetoEnol::kToEnol);
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+
+  constexpr int kVerbose = false;
+
+  _chemical_standardisation.Activate(CS_KETO_ENOL, kVerbose);
+
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+}
+
+TEST_F(TestStandardisation, TestKetoToEnolNotResolved) {
+  _smiles = "CCC(=O)CC";
+  ASSERT_TRUE(_m1.build_from_smiles(_smiles));
+  _chemical_standardisation.set_keto_enol_preference(standardisation::KetoEnol::kToEnol);
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+
+  constexpr int kVerbose = false;
+
+  _chemical_standardisation.Activate(CS_KETO_ENOL, kVerbose);
+
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+}
+
+TEST_F(TestStandardisation, TestKetoToEnolHigherConnectivity) {
+  _smiles = "CC(C)C(=O)CC";
+  ASSERT_TRUE(_m1.build_from_smiles(_smiles));
+  _chemical_standardisation.set_keto_enol_preference(standardisation::KetoEnol::kToEnol);
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 0);
+
+  constexpr int kVerbose = false;
+
+  _chemical_standardisation.Activate(CS_KETO_ENOL, kVerbose);
+
+  EXPECT_EQ(_chemical_standardisation.process(_m1), 1);
+  EXPECT_EQ(_m1.unique_smiles(), "OC(=C(C)C)CC") << "from " << _smiles << " get " << 
+            _m1.unique_smiles();
+}
+
 TEST_F(TestStandardisation, TestChargedPyrazole)
 {
   _smiles = "[N+]1(=C(C)C=CN1CC1OC(=O)C(C1)(C1=CC=CC=C1)C1=CC=CC=C1)CC";  // CHEMBL140300
@@ -298,7 +367,7 @@ TEST_F(TestStandardisation, TestUsmi) {
   ASSERT_TRUE(_m2.build_from_smiles(_smiles));
 
   _chemical_standardisation.activate_all();
-  _chemical_standardisation.set_convert_to_canonical_order(standardise::Canonicalise::kReinterpretSmiles);
+  _chemical_standardisation.set_convert_to_canonical_order(standardisation::Canonicalise::kReinterpretSmiles);
   EXPECT_GT(_chemical_standardisation.process(_m1), 0);
   EXPECT_GT(_chemical_standardisation.process(_m2), 0);
   EXPECT_EQ(_m1.unique_smiles(), _m2.unique_smiles());
@@ -441,11 +510,48 @@ TEST_F(TestStandardisation, TestExternalChargedAcid) {
   EXPECT_EQ(_m1.name(), "foo STD:acid") << "Name mismatch got " << _m1.name();
 }
 
+struct ExternalDirective {
+  IWString directive;
+  IWString smiles;
+  int expected_rc;
+  IWString expected_result;
+};
+
+class TestExternalDirective : public testing::TestWithParam<ExternalDirective> {
+  protected:
+    Chemical_Standardisation _chemical_standardisation;
+    Molecule _m;
+};
+
+TEST_P(TestExternalDirective, Tests) {
+  const auto params = GetParam();
+
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+
+  const_IWSubstring fname_not_used;
+  EXPECT_TRUE(_chemical_standardisation.ReadExternalProto(params.directive, fname_not_used));
+  EXPECT_EQ(_chemical_standardisation.process(_m), params.expected_rc);
+  if (params.expected_rc > 0) {
+    EXPECT_EQ(_m.unique_smiles(), params.expected_result) << " got " <<
+                _m.unique_smiles() << " expected " << params.expected_result;
+  }
+}
+INSTANTIATE_TEST_SUITE_P(TestExternalDirective, TestExternalDirective, testing::Values(
+  ExternalDirective({R"(smarts: "[ND1H1]=[CD3]-[OD1H]" smiles: "N-C=O" name: "amide")",
+                    "C1C2CCC1C(C2C(=N)O)C(=N)O CHEMBL1717199", 1,
+                    "O=C(N)C1C(C(=O)N)C2CC1CC2"}),
+  ExternalDirective({R"(smarts: "[NR0]=c1:[cD2]:[cD2]:[nH]:c:c1" smiles: "N-C=CC=N" name: "para-amino")",
+                    "N(C(=NC(C)C)O)S(=O)(=O)C1=CNC=CC1=NC1=CC(C)=CC=C1 CHEMBL1148", 1,
+                    "OC(=NC(C)C)NS(=O)(=O)c1c(Nc2cc(C)ccc2)cc[n]c1"})
+));
+
+
 struct ForStd {
   std::vector<IWString> directives;
   IWString smiles;
   IWString expected;
 };
+
 
 class TestStandardisationP: public testing::TestWithParam<ForStd> {
   protected:
@@ -462,15 +568,151 @@ TEST_P(TestStandardisationP, Tests) {
     ASSERT_TRUE(_chemical_standardisation.Activate(directive, kVerbose));
   }
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
-  ASSERT_TRUE(_chemical_standardisation.process(_m));
+  ASSERT_TRUE(_chemical_standardisation.process(_m)) << "doing " << params.directives[0] <<
+              ' ' << params.smiles;
   EXPECT_EQ(_m.unique_smiles(), params.expected) << "got " << 
             _m.unique_smiles() << " expected " << params.expected;
+
+  for (int i = 0; i < 10; ++i) {
+    _m.build_from_smiles(params.smiles);
+    const IWString s = _m.random_smiles();
+    ASSERT_TRUE(_m.build_from_smiles(s));
+    ASSERT_TRUE(_chemical_standardisation.process(_m)) << "doing " << params.directives[0] <<
+                ' ' << params.smiles << " rsmi " << s;
+    EXPECT_EQ(_m.unique_smiles(), params.expected) << "got " << 
+              _m.unique_smiles() << " expected " << params.expected << " rsmi " << s;
+  }
 }
 INSTANTIATE_TEST_SUITE_P(TestStandardisationP, TestStandardisationP, testing::Values(
   ForStd{{"rvnv5"}, "N1(=NC(=N(=O)C2=CC(=CC=C12)OCCCN1CCOCC1)CC)=O CHEMBL553213", 
          "CCc1[n][n+]([O-])c2c([n+]1[O-])cc(OCCCN1CCOCC1)cc2"},
   ForStd{{"isotope"}, "[2H]-C", "C[H]"},
-  ForStd{{"isotope", "all"}, "[2H]-C", "C"}
+  ForStd{{"isotope", "all"}, "[2H]-C", "C"},
+
+  ForStd{{"to2ap"}, "O=C(NN)c1cc[nH]c(=N)c1 CHEMBL3091876", "O=C(NN)c1cc([n]cc1)N"},
+  ForStd{{"to2ap"}, "N=C(N)N=c1sc([n][nH]1)c1c(C)cccc1 CHEMBL1188079", "NC(=N)Nc1sc(c2c(C)cccc2)[n][n]1"},
+
+  ForStd{{"isoxazole"}, "C12=C(SN=C1-O)CCCC2NC CHEMBL150489", "O=c1[nH]sc2c1C(NC)CCC2"},
+
+  ForStd{{"oxopyrimidine"}, "C1(=C(NC(=NC1=O)C)NCC1=CN=CC=C1)C#N CHEMBL17125", "O=c1[nH]c(C)[n]c(NCc2c[n]ccc2)c1C#N"},
+  ForStd{{"oxopyrimidine"}, "C1CCCC2=C1NC(=NC2=O)N=C(NC1=CC=C(C=C1)OC)N CHEMBL4932203",
+                            "O=c1[nH]c([n]c2c1CCCC2)N=C(Nc1ccc(OC)cc1)N"},
+
+//We are no longer standardising fused pyrazoles.
+//ForStd{{"pyrazole"}, "C1=C2C(=NC(=NC2=NN1)C)O CHEMBL154781",
+//              "Oc1c2c[n][nH]c2[n]c(C)[n]1"}
+
+  ForStd{{"indoleh"}, "BrC1=CNC2=NC=NC2=C1 CHEMBL1562708",
+                            "Brc1c[n]c2[n]c[nH]c2c1"},
+  ForStd{{"indoleh"}, "CC1=NC(=C2C=CN=C2N1)NC(=O)[C@@H]1CCCOC1 CHEMBL5442493",
+                      "O=C(Nc1c2c([nH]cc2)[n]c(C)[n]1)[C@H]1COCCC1"},
+  ForStd{{"guan"}, "C(=NC1=CC=CN=C1)(NC#N)N1CCCCC1 CHEMBL86956",
+                            "N#CN=C(N1CCCCC1)Nc1c[n]ccc1"}
+));
+
+struct ForStdKetoEnol {
+  std::vector<IWString> directives;
+  standardisation::KetoEnol keto_enol;
+  IWString smiles;
+  IWString expected;
+};
+
+class TestStandardisationKetoEnol : public testing::TestWithParam<ForStdKetoEnol> {
+  protected:
+    Chemical_Standardisation _chemical_standardisation;
+    Molecule _m;
+};
+
+TEST_P(TestStandardisationKetoEnol, Tests) {
+  const auto& params = GetParam();
+
+  static constexpr int kVerbose = 1;
+
+  for (const IWString& directive : params.directives) {
+    ASSERT_TRUE(_chemical_standardisation.Activate(directive, kVerbose));
+  }
+  _chemical_standardisation.set_keto_enol_preference(params.keto_enol);
+
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  EXPECT_TRUE(_chemical_standardisation.process(_m));
+
+  EXPECT_EQ(_m.unique_smiles(), params.expected) << "got " << 
+            _m.unique_smiles() << " expected " << params.expected << ' ' <<
+            _m.name();
+
+  ASSERT_TRUE(_m.valence_ok()) << "invalid valence " << _m.smiles() << ' ' <<
+              _m.name();
+
+  for (int i = 0; i < 10; ++i) {
+    _m.build_from_smiles(params.smiles);
+    const IWString s = _m.random_smiles();
+    _m.build_from_smiles(s);
+    ASSERT_TRUE(_chemical_standardisation.process(_m));
+    EXPECT_EQ(_m.unique_smiles(), params.expected) << " from " << s << " got "
+                << _m.unique_smiles() << " expected " << params.expected << '\n';
+  }
+}
+INSTANTIATE_TEST_SUITE_P(TestStandardisationKetoEnol, TestStandardisationKetoEnol, testing::Values(
+  ForStdKetoEnol{{"isoxazole"}, standardisation::KetoEnol::kToEnol, "C12=C(SNC1=O)CCCC2NC CHEMBL150489",
+                 "Oc1[n]sc2c1C(NC)CCC2"},
+  ForStdKetoEnol{{"isoxazole"}, standardisation::KetoEnol::kToKeto, "Oc1[n]sc2c1C(NC)CCC2 CHEMBL150489",
+                 "O=c1[nH]sc2c1C(NC)CCC2"},
+
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToEnol, "C1=CNNC1=O",
+                 "Oc1[n][nH]cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "Oc1[n][nH]cc1",
+                 "O=c1[nH][nH]cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToEnol, "C1(=C(O)C(=O)NN1CCC)O CHEMBL366101.toEnol",
+                "CCC[n]1[n]c(c(c1O)O)O"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "C1=CC(=CC=C1C1=NN(C)C(=C1)O)Cl CHEMBL4743178",
+                "Clc1ccc(c2[nH][n](c(=O)c2)C)cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "C(=O)(O)C1=CC=NC(=C1)N1N=CC=C1O CHEMBL4287317",
+                "OC(=O)c1cc([n]2[nH]ccc2=O)[n]cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "N1N=C(O)C=C1 CHEMBL4227850.toKeto",
+                "O=c1[nH][nH]cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToEnol, "O=c1[nH][nH]cc1 CHEMBL4227850.ToEnol",
+                "Oc1[n][nH]cc1"},
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "OC1=C(C)C(=NN1)C CHEMBL1476106.toKeto",
+                "O=c1[nH][nH]c(c1C)C"},
+  // Note that the round trip does not return to the starting molecule. We would then
+  // need to run the molecule through pyrazole standardisation.
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToEnol, "O=c1[nH][nH]c(c1C)C CHEMBL1476106.toEnol",
+                "Oc1[n][nH]c(c1C)C"},
+
+  ForStdKetoEnol{{"pyrazolone"}, standardisation::KetoEnol::kToKeto, "C1(=CC(=NN1)O)N toKeto",
+                "O=c1cc(N)[nH][nH]1"}
+
+
+));
+
+struct NoChange {
+  std::vector<IWString> directives;
+  IWString smiles;
+};
+
+class TestStandardisationNoChange : public testing::TestWithParam<NoChange> {
+  protected:
+    Chemical_Standardisation _chemical_standardisation;
+    Molecule _m;
+};
+
+TEST_P(TestStandardisationNoChange, Tests) {
+  const auto params = GetParam();
+
+  static constexpr int kVerbose = 0;
+
+  for (const IWString& directive : params.directives) {
+    ASSERT_TRUE(_chemical_standardisation.Activate(directive, kVerbose));
+  }
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  ASSERT_FALSE(_chemical_standardisation.process(_m)) << params.directives[0] << " changed " <<
+                params.smiles;
+}
+INSTANTIATE_TEST_SUITE_P(TestStandardisationNoChange, TestStandardisationNoChange, testing::Values(
+  NoChange{{"to2ap"}, "C12=NC(=N)C=CN1[C@H]1O[C@H]([C@H](O)[C@H]1O2)CO CHEMBL4303543"},
+  NoChange{{"to2ap"}, "CC=CC1=C(C(=CC(=C1)CC1=CNC(=N)NC1=N)CCC)OC CHEMBL528943"},
+  NoChange{{"indoleh"}, "CC1=CC(=O)N2N=CC=C2N1 CHEMBL4525057"},
+  NoChange{{"guan"}, "C(=N)(NC1=C2C(=CC=C1)C=CC=C2)N1CCCCC1 CHEMBL91145"}
 ));
 
 }  // namespace

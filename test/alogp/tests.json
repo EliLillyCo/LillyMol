@@ -1,0 +1,14 @@
+{
+  "executable": "alogp",
+    "test": [
+        {
+          "name": "case_1",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [ "-N F:${CHARGES} -d  -Y alcacid -Y RDKIT.N+ #{indir}/in.smi" ]
+        }
+      ]
+    }
+  }
+}

@@ -13,8 +13,8 @@
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
-#include "Molecule_Lib/iwmfingerprint.h"
 #include "Molecule_Lib/istream_and_type.h"
+#include "Molecule_Lib/iwmfingerprint.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/qry_wstats.h"
@@ -26,7 +26,7 @@
 using std::cerr;
 using std::endl;
 
-const char * prog_name = nullptr;
+const char* prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -52,11 +52,31 @@ static Molecule_Output_Object stream_for_labelled_molecules;
 
 static int extend_shell = 0;
 
+// When dealing with queries that are down the bond types, we need to keep
+// track of the matched atom numbers that define the bond.
+struct PairOfMatchedAtoms {
+  uint32_t a1;
+  uint32_t a2;
+
+  PairOfMatchedAtoms() {
+    a1 = kInvalidAtomNumber;
+    a2 = kInvalidAtomNumber;
+  }
+
+  PairOfMatchedAtoms(atom_number_t c1, atom_number_t c2) : a1(c1), a2(c2) {
+  }
+};
+
+static std::vector<PairOfMatchedAtoms> query_is_down_the_bond;
+
 static IWString input_smiles_tag("$SMI<");
 static IWString output_smiles_tag("SBSMI<");
 static IWString tag_for_isotopically_labelled_parent;
 
 static IWString identifier_tag("PCN<");
+
+// True if the -f option is specified.
+static int working_as_filter = 0;
 
 static IWString natoms_tag;
 
@@ -79,38 +99,67 @@ static int truncate_counted_fingerprints_to_one = 0;
 static Circular_Fingerprint_Generator circular_fingerprint_generator;
 
 static void
-usage (int rc)
-{
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Fingerprints just a subset of the atoms in a molecule\n";
-  cerr << "  -q ...        query specifications for identifying the subset\n";
-  cerr << "  -s <smarts>   smarts to identify the subset\n";
-  cerr << "  -x <number>   include atoms within <number> atoms of the subset\n";
-  cerr << "  -z i          ignore molecules not hitting any queries\n";
-  cerr << "  -z d          \n";
-  cerr << "  -z e          fingerprint each substructure match\n";
-  cerr << "  -z f          if multiple matches, take the first\n";
-  cerr << "  -S in=TAG     tag for reading smiles\n";
-  cerr << "  -S out=TAG    tag for writing smiles\n";
-  cerr << "  -S iso=TAG    tag for isotopically labelled molecules in output\n";
-  cerr << "  -N <tag>      tag for the number of atoms in the subset\n";
-  cerr << "  -I <stem>     file name stem for isotopically labelled subset molecules\n";
-  cerr << "  -Y ...        standard fingerprint options\n";
-  cerr << "  -j <n>        join disconnected sections <n> or closer bonds\n";
-  cerr << "  -J <tag>      tag to use for fingerprints\n";
-  cerr << "  -P ...        atom typing specification, enter '-P help' for info\n";
-  cerr << "  -M            produce atom pair fingerprints\n";
-  cerr << "  -f            work as a filter\n";
-  cerr << "  -T ...         standard element transformations -T I=Cl -T Br=Cl ...\n";
-  cerr << "  -e            truncate any counted fingerprint to 0/1\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+usage(int rc) {
+  // clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Fingerprints just a subset of the atoms in a molecule.
+ -q ...        query specifications for identifying the subset.
+ -s <smarts>   smarts to identify the subset.
+ -x <number>   include atoms within <number> atoms of the subset.
+ -z i          ignore molecules not hitting any queries.
+ -z d          
+ -z e          fingerprint each substructure match.
+ -z f          if multiple matches, take the first.
+ -d a1-a2      query is a down-the-bond type. Fingerprint all atoms down the bond
+               defined by matched atoms a1->a2.
+ -S in=TAG     tag for reading smiles.
+ -S out=TAG    tag for writing smiles.
+ -S iso=TAG    tag for isotopically labelled molecules in output.
+ -N <tag>      tag for the number of atoms in the subset.
+ -I <stem>     file name stem for isotopically labelled subset molecules.
+ -Y ...        standard fingerprint options.
+ -j <n>        join disconnected sections <n> or closer bonds.
+ -J <tag>      tag to use for fingerprints.
+ -P ...        atom typing specification, enter '-P help' for info.
+ -M            produce atom pair fingerprints.
+ -f            work as a filter.
+ -T ...         standard element transformations -T I=Cl -T Br=Cl ....
+ -e            truncate any counted fingerprint to 0/1.
+ -l            reduce to largest fragment.
+ -i <type>     input specification.
+ -g ...        chemical standardisation options.
+ -E ...        standard element specifications.
+ -A ...        standard aromaticity specifications.
+ -v            verbose output.
+)";
 
-  exit(rc);
+  ::exit(rc);
+}
+
+// Parse `d` as (\d+)-(\d+) and place the result in `destination`.
+static int
+AddQueryIsDownTheBond(const IWString& d, std::vector<PairOfMatchedAtoms>& destination) {
+  const_IWSubstring a1, a2;
+  if (! d.split(a1, '-', a2) || a1.empty() || a2.empty()) {
+    cerr << "AddQueryIsDownTheBond:invalid form, must be (\\d+)-(\\d+) '" << d << "'\n";
+    return 0;
+  }
+
+  uint32_t i1, i2;
+  if (! a1.numeric_value(i1) || ! a2.numeric_value(i2) || i1 == i2) {
+    cerr << "AddQueryIsDownTheBond:invalid numerics '" << d << "'\n";
+    return 0;
+  }
+
+  destination.emplace_back(PairOfMatchedAtoms(i1, i2));
+
+  return 1;
 }
 
 static int
@@ -142,10 +191,11 @@ write_natoms_if_needed (int natoms,
 }
 
 static int
-write_empty_molecule_result (IWString_and_File_Descriptor & output)
+write_empty_molecule_result(IWString_and_File_Descriptor & output)
 {
-  if (output_smiles_tag.length())
+  if (output_smiles_tag.length()) {
     output << output_smiles_tag << ".>\n";
+  }
 
   output << empty_fingerprint_with_closing_angle_bracket_and_newline;
 
@@ -214,6 +264,11 @@ fingerprint_substructure2 (Molecule & m,
                            IWString_and_File_Descriptor & output)
 {
 //cerr << "SM<ILES is " << m.smiles() << " contains " << m.natoms() << " atoms " << output_smiles_tag << m.smiles() << ">\n";
+  if (! working_as_filter) {
+    output << input_smiles_tag << m.smiles() << ">\n";
+    output << identifier_tag << m.name() << ">\n";
+  }
+
   if (output_smiles_tag.length())
     output << output_smiles_tag << m.smiles() << ">\n";
 
@@ -231,6 +286,10 @@ fingerprint_substructure2 (Molecule & m,
   output << fingerprint_tag << tmp << ">\n";
 
   write_natoms_if_needed(m.natoms(), output);
+
+  if (! working_as_filter) {
+    output << "|\n";
+  }
 
   return output.good();
 }
@@ -474,6 +533,123 @@ do_join_disconected_sections (Molecule & m,
   return 1;
 }
 
+// Given an embedding, and two matched atoms in it, fill `first_atom` and
+// `next_atom`.
+static bool
+IdentifyMatchedAtoms(const Set_of_Atoms& embedding,
+                     const PairOfMatchedAtoms& matched_atoms,
+                     atom_number_t& first_atom,
+                     atom_number_t& next_atom) {
+  if (embedding.size() < 2) {
+    cerr << "IdentifyMatchedAtoms:Not enough matched atoms in " << embedding << '\n';
+    return false;
+  }
+
+  if (! embedding.ok_index(matched_atoms.a1) || 
+      ! embedding.ok_index(matched_atoms.a2)) {
+    cerr << "IdentifyMatchedAtoms:invalid matched atom numbers. Requested " <<
+            matched_atoms.a1 << " and " << matched_atoms.a2 << 
+            " but embedding size " << embedding.size() << '\n';
+    return false;
+  }
+
+  first_atom = embedding[matched_atoms.a1];
+  next_atom = embedding[matched_atoms.a2];
+
+  return true;
+}
+
+// Recursively find all unvisited atoms from `zatom` and put the
+// visited atoms into `result`
+static int
+MarkDownTheBond(Molecule& m,
+                atom_number_t zatom, int* visited,
+                Set_of_Atoms& result) {
+  visited[zatom] = 1;
+  result << zatom;
+
+  int rc = 1;
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+
+    if (visited[o]) {
+      continue;
+    }
+
+    rc += MarkDownTheBond(m, o, visited, result);
+  }
+
+  return rc;
+}
+
+// The embedding is assumed to be a down the bond kind of match.
+// Identify all the atoms implied by that and put them in `result`.
+static int
+MarkDownTheBond(Molecule& m,
+                const Set_of_Atoms& embedding,
+                const PairOfMatchedAtoms& matched_atoms,
+                int* visited,
+                Set_of_Atoms& result) {
+  atom_number_t first_atom, next_atom;
+  if (! IdentifyMatchedAtoms(embedding, matched_atoms, first_atom, next_atom)) {
+    return 0;
+  }
+
+  std::fill_n(visited, m.natoms(), 0);
+
+  visited[first_atom] = 1;
+  result << first_atom;
+
+  return MarkDownTheBond(m, next_atom, visited, result);
+}
+
+// Recursively identify all the unvisited atoms attached to `zatom`.
+// For the atoms discovered, mark the corresponding entry in `include_these_atoms`
+// with the value `inc`.
+static int
+MarkDownTheBond(Molecule& m,
+                atom_number_t zatom,
+                int* visited,
+                int* include_these_atoms,
+                int inc) {
+  visited[zatom] = 1;
+  include_these_atoms[zatom] = inc;
+
+  int rc = 1;
+
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (visited[o]) {
+      continue;
+    }
+    rc += MarkDownTheBond(m, o, visited, include_these_atoms, inc);
+  }
+
+  return rc;
+}
+
+// `embedding` is assumed to specify a down the bond request.
+// Identify all the atoms implied by that the mark them in `include_these_atoms`
+// with the value `inc`.
+static int
+MarkDownTheBond(Molecule& m,
+                const Set_of_Atoms& embedding,
+                const PairOfMatchedAtoms& matched_atoms,
+                int* visited,
+                int* include_these_atoms,
+                int inc) {
+  atom_number_t first_atom, next_atom;
+  if (! IdentifyMatchedAtoms(embedding, matched_atoms, first_atom, next_atom)) {
+    return 0;
+  }
+
+  std::fill_n(visited, m.natoms(), 0);
+  visited[first_atom] = 1;
+  include_these_atoms[first_atom] = inc;
+
+  return MarkDownTheBond(m, next_atom, visited, include_these_atoms, inc);
+}
+
 static int
 do_fingerprint_each_substructure_match (Molecule & m,
                                         IWString_and_File_Descriptor & output)
@@ -495,14 +671,19 @@ do_fingerprint_each_substructure_match (Molecule & m,
 
   int queries_matching = 0;
 
-  for (int i = 0; i < nq; ++i)
-  {
+  std::unique_ptr<int[]> dtb;
+  if (!query_is_down_the_bond.empty()) {
+    dtb = std::make_unique<int[]>(matoms);
+  }
+
+  for (int i = 0; i < nq; ++i) {
     Substructure_Results sresults;
 
-    int nhits = queries[i]->substructure_search(target, sresults);
+    const int nhits = queries[i]->substructure_search(target, sresults);
 
-    if (0 == nhits)
+    if (0 == nhits) {
       continue;
+    }
 
     if (verbose > 2)
       cerr << m.name() << " " << nhits << " hits to query " << i << endl;
@@ -513,37 +694,44 @@ do_fingerprint_each_substructure_match (Molecule & m,
 
     set_vector(tmp, matoms, 0);
 
-    for (int j = 0; j < nhits; ++j)
-    {
-      const Set_of_Atoms & e = (*sresults.embedding(j));
+    for (int j = 0; j < nhits; ++j) {
+      const Set_of_Atoms* e = sresults.embedding(i);
 
-      e.set_vector(tmp, 1);    // note value of 1
+      // We need a Set_of_Atoms containing the atoms around which we do shell expansion.
+      // If this is a down the bond query, we must compute it. Otherwise it is `e`.
+      Set_of_Atoms matched_atoms;
 
-      const int n = e.number_elements();
+      if (! query_is_down_the_bond.empty()) {
+        MarkDownTheBond(m, *e, query_is_down_the_bond[i], dtb.get(), matched_atoms);
+      }  else {
+        e->set_vector(tmp, 1);    // note value of 1
+        matched_atoms = *e;
+      }
 
-      for (int k = 0; k < n; ++k)
-      {
-        const atom_number_t l = e[k];     // atom l is a matched atom
-
-        for (int a = 0; a < matoms; ++a)
-        {
-          if (0 != tmp[a])     // already marked
+      for (atom_number_t matched : matched_atoms) {
+        for (int k = 0; k < matoms; ++k) {
+          if (0 != tmp[k]) {  // already marked
             continue;
+          }
 
-          if (m.bonds_between(l, a) <= extend_shell)
-            tmp[a] = 2;     // note value 2
+          if (m.bonds_between(matched, k) <= extend_shell) {
+            tmp[k] = 2;     // note value 2
+          }
         }
       }
     }
 
+    // Not sure why we are using a circular fingerprint here.
     circular_fingerprint_generator.generate_fingerprint(m, atype, tmp, sfc);
   }
 
-  if (0 == queries_matching)    // should do more about this, but it really does not work...
-  {
+  if (0 == queries_matching) {    // should do more about this, but it really does not work...
     molecules_not_matching_queries++;
-    if (discard_molecules_not_matching_any_queries)
+    if (discard_molecules_not_matching_any_queries) {
       return 1;
+    }
+
+    return 1;
   }
 
   return write_sparse_fingerprint(sfc, output);
@@ -555,35 +743,31 @@ fingerprint_substructure (Molecule & m,
                           int embeddings_processed,
                           IWString_and_File_Descriptor & output)
 {
-  if (extend_shell)
+  if (extend_shell) {
     do_extend_shell(m, include_these_atoms, extend_shell - 1);
+  }
 
-  if (join_disconected_sections && embeddings_processed > 1)
+  if (join_disconected_sections && embeddings_processed > 1) {
     do_join_disconected_sections(m, include_these_atoms);
+  }
 
   const int matoms = m.natoms();
 
   int * isotopes = new_int(matoms); std::unique_ptr<int[]> free_isotopes(isotopes);
 
-  if (join_disconected_sections || extend_shell)
-  {
-    for (int i = 0; i < matoms; i++)
-    {
-      if (include_these_atoms[i] < 0)
-      {
+  if (join_disconected_sections || extend_shell) {
+    for (int i = 0; i < matoms; i++) {
+      if (include_these_atoms[i] < 0) {
         isotopes[i] = - include_these_atoms[i];
         include_these_atoms[i] = 1;
-      }
-      else if (include_these_atoms[i] > 0)
-      {
+      } else if (include_these_atoms[i] > 0) {
         isotopes[i] = include_these_atoms[i];
         include_these_atoms[i] = 1;
       }
     }
   }
 
-  if (stream_for_labelled_molecules.active())
-  {
+  if (stream_for_labelled_molecules.active()) {
     std::unique_ptr<isotope_t[]> isosave = m.GetIsotopes();
 
     m.transform_to_non_isotopic_form();
@@ -593,8 +777,9 @@ fingerprint_substructure (Molecule & m,
     m.set_isotopes(isosave.get());
   }
 
-  if (produce_atom_pair_fingerprint)
+  if (produce_atom_pair_fingerprint) {
     return do_produce_atom_pair_fingerprint(m, include_these_atoms, output);
+  }
 
   int * xref = new int[matoms]; std::unique_ptr<int[]> free_xref(xref);
 
@@ -686,6 +871,8 @@ fingerprint_substructure (Molecule & m,
   }
 //cerr << "Processing " << subset.smiles() << endl;
 
+  subset.set_name(m.name());
+
   return fingerprint_substructure2(subset, atype, output);
 }
 
@@ -715,18 +902,24 @@ fingerprint_substructure (Molecule & m,
 
   m.revert_all_directional_bonds_to_non_directional();   // until I get that working properly
 
-  if (fingerprint_each_substructure_match)
+  if (fingerprint_each_substructure_match) {
     return do_fingerprint_each_substructure_match(m, output);
+  }
 
-  int nq = queries.number_elements();
+  const int nq = queries.number_elements();
 
   Molecule_to_Match target(&m);
 
-  int * include_these_atoms = new_int(m.natoms()); std::unique_ptr<int[]> free_include_these_atoms(include_these_atoms);
+  std::unique_ptr<int[]> include_these_atoms = std::make_unique<int[]>(m.natoms());
 
   int queries_matching = 0;
 
   int embeddings_processed = 0;
+
+  std::unique_ptr<int[]> dtb;
+  if (!query_is_down_the_bond.empty()) {
+    dtb = std::make_unique<int[]>(m.natoms());
+  }
 
   int inc = 1;
   if (extend_shell && tag_for_isotopically_labelled_parent.length())
@@ -750,30 +943,36 @@ fingerprint_substructure (Molecule & m,
     if (break_at_first_match)
       jstop = 1;
 
-    for (int j = 0; j < jstop; j++)
-    {
+    for (int j = 0; j < jstop; j++) {
       const Set_of_Atoms * e = sresults.embedding(j);
-      e->set_vector(include_these_atoms, inc);
+      e->set_vector(include_these_atoms.get(), inc);
       // cerr << "Doing embedding " << (*e) << endl;
 
       embeddings_processed++;
+      if (dtb) {
+        MarkDownTheBond(m, *e, query_is_down_the_bond[i], dtb.get(), include_these_atoms.get(), inc);
+      }
     }
 
-    if (break_at_first_match)
-      return fingerprint_substructure(m, include_these_atoms, embeddings_processed, output);
+    if (break_at_first_match) {
+      return fingerprint_substructure(m, include_these_atoms.get(), embeddings_processed, output);
+    }
   }
 
-  if (0 == queries_matching)
-  {
+  if (0 == queries_matching) {
     molecules_not_matching_queries++;
-    if (ignore_molecules_not_matching_any_queries)
-      return write_empty_molecule_result(output);
+    if (ignore_molecules_not_matching_any_queries) {
+      return 1;
+      // Mar 2025. Don't think this is a good idea, molecules not matching any query
+      // should disappear.
+      //return write_empty_molecule_result(output);
+    }
 
     cerr << "None of " << nq << " queries matched '" << m.name() << "'\n";
     return 0;
   }
 
-  return fingerprint_substructure(m, include_these_atoms, embeddings_processed, output);
+  return fingerprint_substructure(m, include_these_atoms.get(), embeddings_processed, output);
 }
 
 static int
@@ -801,8 +1000,9 @@ fingerprint_substructure_filter (iwstring_data_source & input,
   {
     output << buffer << '\n';
 
-    if (! buffer.starts_with(input_smiles_tag))
+    if (! buffer.starts_with(input_smiles_tag)) {
       continue;
+    }
 
     buffer.remove_leading_chars(input_smiles_tag.length());
     buffer.chop();
@@ -841,15 +1041,16 @@ fingerprint_substructure (data_source_and_type<Molecule> & input,
   {
     std::unique_ptr<Molecule> free_m(m);
 
-    output << input_smiles_tag << m->smiles() << ">\n";
-    output << identifier_tag << m->name() << ">\n";
+//  output << input_smiles_tag << m->smiles() << ">\n";
+//  output << identifier_tag << m->name() << ">\n";
 
     preprocess(*m);
 
-    if (! fingerprint_substructure(*m, output))
+    if (! fingerprint_substructure(*m, output)) {
       return 0;
+    }
 
-    output << "|\n";
+//  output << "|\n";
   }
 
   return output.good();
@@ -883,7 +1084,7 @@ fingerprint_substructure (const char * fname, FileType input_type,
 static int
 fingerprint_substructure (int argc, char ** argv)
 {
-  Command_Line cl(argc, argv, "vA:E:i:g:lq:s:Y:fx:S:z:T:N:i:I:o:j:P:MJ:e");
+  Command_Line cl(argc, argv, "vA:E:i:g:lq:s:Y:fx:S:z:T:N:i:I:o:j:P:MJ:ed:");
 
   if (cl.unrecognised_options_encountered())
   {
@@ -938,12 +1139,10 @@ fingerprint_substructure (int argc, char ** argv)
       natoms_tag.add('<');
   }
 
-  if (cl.option_present('S'))
-  {
+  if (cl.option_present('S')) {
     int i = 0;
     IWString s;
-    while (cl.value('S', s, i++))
-    {
+    while (cl.value('S', s, i++)) {
       s.to_uppercase();
 
       if (s.starts_with("IN="))
@@ -1000,6 +1199,19 @@ fingerprint_substructure (int argc, char ** argv)
 
     if (! fingerprint_tag.ends_with('<'))
       fingerprint_tag.add('<');
+  }
+
+  if (cl.option_present('d')) {
+    IWString d;
+    for (int i = 0; cl.value('d', d, i); ++i) {
+      if (! AddQueryIsDownTheBond(d, query_is_down_the_bond)) {
+        cerr << "Invalid query is down the bond (-d) specification '" << d << "'\n";
+        return 1;
+      }
+    }
+    if (verbose) {
+      cerr << "The query defines a down the bond type query\n";
+    }
   }
 
   if (cl.option_present('x'))
@@ -1060,12 +1272,9 @@ fingerprint_substructure (int argc, char ** argv)
       fingerprint_tag = "FPSUB<";
   }
 
-  if (produce_atom_pair_fingerprint)
-  {
+  if (produce_atom_pair_fingerprint) {
     empty_fingerprint_with_closing_angle_bracket_and_newline << fingerprint_tag << ">\n";
-  }
-  else
-  {
+  } else {
     int produce_fingerprints = iwmfingerprint_nbits();
     assert (produce_fingerprints > 0);
 
@@ -1075,12 +1284,10 @@ fingerprint_substructure (int argc, char ** argv)
     empty_fingerprint_with_closing_angle_bracket_and_newline  << fingerprint_tag << tmp << ">\n";
   }
 
-  if (cl.option_present('P'))
-  {
+  if (cl.option_present('P')) {
     const const_IWSubstring p = cl.string_value('P');
 
-    if (! atom_typing_specification.build(p))
-    {
+    if (! atom_typing_specification.build(p)) {
       cerr << "Cannot initialise atom typing specification '" << p << "'\n";
       return 2;
     }
@@ -1120,7 +1327,7 @@ fingerprint_substructure (int argc, char ** argv)
     }
   }
 
-  if (0 == queries.number_elements())
+  if (queries.empty())
   {
     cerr << "No queries read, use the -q and/or -s options to specify queries\n";
     usage(4);
@@ -1189,8 +1396,7 @@ fingerprint_substructure (int argc, char ** argv)
       cerr << "Will join disconnected sections " << join_disconected_sections << " or closer\n";
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
@@ -1231,6 +1437,8 @@ fingerprint_substructure (int argc, char ** argv)
 
   if (cl.option_present('f'))
   {
+    working_as_filter = 1;
+
     tag_for_isotopically_labelled_parent.resize(0);
 
     rc = fingerprint_substructure_filter(output);

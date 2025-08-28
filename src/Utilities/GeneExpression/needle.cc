@@ -49,6 +49,10 @@ Needle::~Needle() {
 void
 Needle::SetMaxPossibleAssociation(uint32_t maxrank) {
 
+  if (_max_possible_association != nullptr) {
+    return;
+  }
+
   _max_possible_association = new double[maxrank + 1];
 
   // This should never be used since this is a division.
@@ -451,6 +455,19 @@ Needle::MaxNumberGenes() const {
   }
 
   return rc;
+}
+
+void 
+delete_max_possible_association() {
+  if (Needle::_max_possible_association != nullptr) {
+    delete [] Needle::_max_possible_association;
+    Needle::_max_possible_association = nullptr;
+  }
+}
+
+void
+initialise_max_possible_association() {
+  Needle::_max_possible_association = nullptr;
 }
 
 } // namespace needle

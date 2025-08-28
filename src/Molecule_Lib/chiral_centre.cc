@@ -2557,14 +2557,13 @@ Molecule::remove_chiral_centre_at_atom (atom_number_t a)
 int
 Molecule::remove_all_chiral_centres()
 {
-  int rc = _chiral_centres.number_elements();
-  if (0 == rc)
+  const int rc = _chiral_centres.number_elements();
+  if (rc == 0) {
     return 0;
+  }
 
-  for (int i = 0; i < rc; i++)
-  {
-    const Chiral_Centre * ci = _chiral_centres[i];
-    atom_number_t a = ci->a();
+  for (const Chiral_Centre* ci : _chiral_centres) {
+    const atom_number_t a = ci->a();
     _things[a]->set_implicit_hydrogens_known(0);
   }
 

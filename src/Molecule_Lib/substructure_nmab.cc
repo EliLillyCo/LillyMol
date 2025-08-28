@@ -1135,7 +1135,7 @@ No_Matched_Atoms_Between::Matches(Molecule_to_Match& target,
 
   _logexp.reset();
   for (int i = 0; i < _specs.number_elements(); ++i) {
-    cerr << " test " << i << " needed " << _logexp.result_needed(i) << '\n';
+    // cerr << " test " << i << " needed " << _logexp.result_needed(i) << '\n';
     if (!_logexp.result_needed(i)) {
       continue;
     }

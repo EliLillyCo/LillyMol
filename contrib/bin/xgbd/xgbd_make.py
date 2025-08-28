@@ -1,22 +1,17 @@
 # Build and commit an xgboost model
 # Deliberately simplistic in approach
 
-import os, sys
+import os
+import subprocess
+import sys
+from typing import List
 
 import pandas as pd
-import sklearn
-from matplotlib import pyplot
-
-from xgboost import plot_importance
-from xgboost import XGBClassifier
-from xgboost import XGBRegressor
-
-from absl import app
-from absl import flags
-from absl import logging
-from google.protobuf import text_format
-
 import xgboost_model_pb2
+from absl import app, flags, logging
+from google.protobuf import text_format
+from matplotlib import pyplot
+from xgboost import XGBClassifier, XGBRegressor, plot_importance
 
 FLAGS = flags.FLAGS
 
@@ -24,7 +19,7 @@ flags.DEFINE_string("activity", "", "Name of training set activity file")
 flags.DEFINE_boolean("classification", False, "True if this is a classification task")
 flags.DEFINE_string("mdir", "", "Directory into which the model is placed")
 flags.DEFINE_integer("max_num_features", 0, "Maximum number of features to plot in variable importance")
-flags.DEFINE_string("feature_importance", "", "File containing feature importance values")
+flags.DEFINE_string("feature_importance", "", "Compute feature importance. Use 'def' to use default file")
 flags.DEFINE_integer("xgverbosity", 0, "xgboost verbosity")
 flags.DEFINE_string("proto", "", "A file containing an XGBoostParameters proto")
 flags.DEFINE_float("eta", 0.4, "xgboost learning rate parameter eta")
@@ -35,6 +30,8 @@ flags.DEFINE_float("colsample_bytree", 1.0, "subsampling occurs once for every t
 flags.DEFINE_float("colsample_bylevel", 1.0, "subsampling occurs once for every new depth level reached")
 flags.DEFINE_float("colsample_bynode", 1.0, "subsampling occurs once for every time a new split is evaluated")
 flags.DEFINE_enum("tree_method", "auto", ["auto", "exact", "approx", "hist"], "tree construction method: auto exact approx hist")
+flags.DEFINE_integer("nthreads", 8, "number of threads to use, default is 8")
+flags.DEFINE_boolean("rescore", False, "Rescore the training set to establish linear correction function")
 
 
 class Options:
@@ -42,6 +39,8 @@ class Options:
     self.classification = False
     self.mdir: str = ""
     self.max_num_features: int = 10
+    self.descriptor_fname: str = ""
+    self.activity_fname: str = ""
     self.verbosity = 0
     self.proto = xgboost_model_pb2.XGBoostParameters()
 
@@ -57,6 +56,9 @@ class Options:
       return False
 
     return True
+
+def to_array(input:str) -> List[str]:
+  return input.split(' ')
 
 def classification(x, y, options: Options)->bool:
   """build a classification model
@@ -84,6 +86,10 @@ def regression(x, y, options: Options):
     case _:
       tree_method = 'hist'
 
+  nthread = None
+  if FLAGS.nthreads > 0:
+    nthread = FLAGS.nthreads
+
   booster = XGBRegressor(verbosity=options.verbosity,
                 eta=options.proto.eta,
                 max_depth=options.proto.max_depth,
@@ -92,27 +98,38 @@ def regression(x, y, options: Options):
                 colsample_bylevel=options.proto.colsample_bylevel,
                 colsample_bynode=options.proto.colsample_bynode,
                 subsample=options.proto.subsample,
-                tree_method=tree_method
+                tree_method=tree_method,
+                nthread=nthread
                 )
+
   booster.fit(x, y)
 
   booster.save_model(os.path.join(options.mdir, "xgboost.json"))
   logging.info("Saved model to %s", os.path.join(options.mdir, "xgboost.json"))
+
   if options.max_num_features:
     plot_importance(booster, max_num_features=options.max_num_features)
     pyplot.show()
-  if options.feature_importance:
-    feature_importance = booster.get_booster().get_score(importance_type='weight')
-    feature_importance = sorted(feature_importance.items(), key=lambda x:x[1])
-    if options.feature_importance:
-      with open(os.path.join(options.mdir, options.feature_importance), "w") as writer:
+
+  if len(options.feature_importance) > 0:
+    for itype in ["weight", "gain", "cover"]:
+      feature_importance = booster.get_booster().get_score(importance_type=itype)
+      feature_importance = sorted(feature_importance.items(), key=lambda x:x[1], reverse=True)
+
+      fname = options.feature_importance
+      if fname == "def" or fname == "DEF":
+        fname = os.path.join(options.mdir, f'feature_importance.{itype}.txt')
+      else:
+        # Or should this be placed in `mdir` by default?
+        fname = f"{fname}.{itype}.txt"
+
+      with open(fname, "w") as writer:
         print("Feature Weight", file=writer)
         for f, i in feature_importance:
           print(f"{f} {i}", file=writer)
 
-  # config = booster.save_config()
-
   return True
+
 
 def build_xgboost_model(descriptor_fname: str,
                         activity_fname: str,
@@ -135,7 +152,7 @@ def build_xgboost_model(descriptor_fname: str,
                         descriptors.set_index("Name")], axis=1, join='inner').reset_index() 
   if len(combined) != len(descriptors):
     logging.error("Combined set has %d rows, need %d", len(combined), len(descriptors))
-    return 1
+    return FALSE
 
   if not os.path.isdir(options.mdir):
     os.mkdir(options.mdir)
@@ -148,6 +165,9 @@ def build_xgboost_model(descriptor_fname: str,
   features = x.columns
   x.apply(pd.to_numeric).to_numpy()
 
+  options.descriptor_fname = descriptor_fname
+  options.activity_fname = activity_fname
+
   rc = False
   if options.classification:
     rc = classification(x, y, options)
@@ -155,11 +175,12 @@ def build_xgboost_model(descriptor_fname: str,
     rc = regression(x, y, options)
 
   if not rc:
+    logging.info("Model did not build")
     return False
 
   response = activity.columns[1]
 
-  proto = xgboost_model_pb2.XGBoostModel();
+  proto = xgboost_model_pb2.XGBoostModel()
   proto.model_type = "XGBD"
   proto.classification = options.classification
   proto.response = response
@@ -187,6 +208,31 @@ def option_present(flag)->bool:
     return True
   return False
 
+
+def rescore_training_set(options)->bool:
+  """ A model has just been build in `options.mdir`.
+      Rescore the training set and store the results.
+  """
+  train_pred = os.path.join(options.mdir, 'train.pred')
+  with open(train_pred, 'w') as output:
+    cmd = f"xgbd_evaluate.sh -mdir {options.mdir} {options.descriptor_fname}"
+    subprocess.run(to_array(cmd), stdout=output, text=True)
+
+  if not os.path.exists(train_pred):
+    logging.error("%s did not create %s", cmd, train_pred)
+    return False
+
+  train_stats = os.path.join(options.mdir, 'train.stats')
+  rescaling = os.path.join(options.mdir, 'rescaling.textproto')
+  cmd = f"iwstats.sh -Y allequals -w -E {options.activity_fname} -p 2 -C {rescaling} {train_pred}"
+  with open(train_stats, 'w') as output:
+    subprocess.run(to_array(cmd), stdout=output, text=True)
+
+  if not os.path.exists(rescaling):
+    logging.error("%s did not create %s", cmd, rescaling)
+    return False
+
+  return True
 
 def main(argv):
   """Build xgboost models from activity file and descriptor file.
@@ -258,6 +304,9 @@ def main(argv):
   if not build_xgboost_model(argv[1], FLAGS.activity, options):
     logging.error("Model %s not build", options.mdir)
     return False
+
+  if FLAGS.rescore:
+    rescore_training_set(options)
 
   # zero return code for success.
   return 0

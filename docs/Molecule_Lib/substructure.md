@@ -17,51 +17,6 @@ extensions to smarts.
 
 ## Extensions
 
-### Logical Operations
-The `Substructure_Query` object at the heart of LillyMol consists of a list of
-individual `Single_Substructure_Query` objects. These individual substructure
-queries are linked by logical operators.
-
-This can be expressed in smarts via a notation similar to what we use in
-atomic smarts logical expressions.
-
-For example
-```
-C&&[R]
-```
-matches any molecule that contains an aliphatic Carbon atom, and an atom in a ring. Note that
-this could be the same atom. The more traditional `C.[R]` will match a molecule
-that has an aliphatic Carbon atom, and a different atom that is in a ring. Within the
-Substructure_Query object, the component queries are evaluated separately.
-
-There is one important caveat to these composite queries. If the matched atoms are returned,
-the matched atoms will be for the last component that was evaluated. So, if the query was for
-either a Carbon or a Nitrogen atom `[#6]||[#7]`, if the molecule contains a Carbon
-atom, the Nitrogen query is not evaluated and the matched atom returned will be the
-first carbon atom. If the query was for both a carbon and a nitrogen, `[#6]&&[#7]` the
-matched atom returned will always be the first Nitrogen.
-
-If the and query was formulated as `[#6].[#7]` each query result would be two matched
-atoms, with the first being a Carbon and the second a Nitrogen. These are
-necessarily different atoms.
-
-The xor operator is supported, so if you want molecules that have either a Chlorine or
-a Bromine, but not both `Cl^^Br` should do that. The low priority and operator, `;;` is also
-supported, so complex queries can be constructed.
-
-The most common use is the `or` operator, where multiple queries for a reagent
-might be used to cover slightly different reagent types. Note too that
-by placing the most reactive group first, that is what will be returned
-if the molecule contains multiple matching groups.
-
-For example to perform a reaction which uses a primary amine first, a secondary
-amine next and then an aniline
-```
-[NH2]-[CX4]||[ND2HR0](-[CX4])-[CX4]||[NH2]-a
-```
-would do that with a single query. The most reactive group would be preferentially
-returned by the query.
-
 ### Numeric Qualifiers
 Expecially when preparing reagents for enumeration, it is often necessary
 to identify molecules that have just a single instance of a functional group. To
@@ -81,16 +36,11 @@ molecules that did not contain Phosphorus `0P` would do that.
 Relational operators are supported. So if you wanted molecules with fewer than 4
 Sulphur atoms `<4[#16]` would do that.
 
-It would be nice to be able to specify a range, but that is currently not
-possible. So if you need between 4 and 6 Nitrogen atoms,
+If you need to specify a range of values that can be done via 
 ```
->3[#7]&&<7[#7]
+4-10[#7]
 ```
-is all that you can do. This is of course very inefficient since it is
-run as two queries. 
-
-If this becomes important, we could implement `{4-6}[#16]`, but that is
-not there today.
+which will match molecules having between 4 and 10 Nitrogen atoms.
 
 #### Caution
 Beware that some substructure queries match multiple times. For example
@@ -122,7 +72,7 @@ smarts could be extended to `O=[$([CD3](-N)-[!N])]` which is starting
 to become complex.
 
 Differentiating an amide from a urea can also be done with an
-environment_no_match` directive in a query file.
+`environment_no_match` directive in a query file.
 ```
 query {
   smarts: "O=[CD3]-[NG0]"
@@ -177,6 +127,132 @@ efficiency.
 In the case above, the query file processes 20k molecules in 0.65 seconds
 whereas the smarts based query takes 10% longer.
 
+### Logical Operations
+In LillyMol smarts can be either a regular smarts, `C`, `N`, `c1ccccc1` OR a
+logical expression combining one or more smarts.
+This can be expressed in smarts via a notation similar to what we use in
+atomic smarts logical expressions.
+
+For example
+```
+C&&[R]
+```
+matches any molecule that contains an aliphatic Carbon atom, and an atom in a ring. Note that
+this could be the same atom. Why? The operator connecting the two components is an and operator
+so both components must be evaluated. First the question "does the molecule contain an aliphatic
+Carbon" is run. If this is true, the second part of the query is evaluated "does this molecule
+contain an atom in a ring". There is no connection between the LHS and RHS of the query. They
+are evaluated completely independently.
+
+The more traditional `C.[R]` will match a molecule
+that has an aliphatic Carbon atom, and a different atom that is in a ring. 
+
+There is one important caveat to these composite queries. If the matched atoms are returned,
+the matched atoms will be for the last component that was evaluated. So, if the query was for
+either a Carbon or a Nitrogen atom `[#6]||[#7]`, if the molecule contains a Carbon
+atom, the Nitrogen query is not evaluated and the matched atom returned will be the
+first carbon atom. If the query was for both a carbon and a nitrogen, `[#6]&&[#7]` the
+matched atom returned will always be the first Nitrogen.
+
+If the and query was formulated as `[#6].[#7]` each query result would be two matched
+atoms, with the first being a Carbon and the second a Nitrogen. These are
+necessarily different atoms.
+
+The xor operator is supported, so if you want molecules that have either a Chlorine or
+a Bromine, but not both `Cl^^Br` should do that. The low priority and operator, `;;` is also
+supported, so complex queries can be constructed.
+
+The most common use is the `or` operator, where multiple queries for a reagent
+might be used to cover slightly different reagent types. Note too that
+by placing the most reactive group first, that is what will be returned
+if the molecule contains multiple matching groups.
+
+For example to perform a reaction which uses a primary amine first, a secondary
+amine next and then an aniline
+```
+[NH2]-[CX4]||[ND2HR0](-[CX4])-[CX4]||[NH2]-a
+```
+would do that with a single query. The most reactive group would be preferentially
+returned by the query.
+
+### Environments
+We first saw mention of the term 'environment' in the discussion of
+rings and ring systems. There is a fundamental difference between the environment
+directives in a ring or ring system, and for the query. In the ring and ring system
+case the first matched atom must be an atom in the ring/system. In the case of
+query level environment directives, the first query atom is an atom that
+is attached to a matched query atom.
+
+Consider the need for a cyclic Ketone such as
+![ok_ring_ketone](Images/ok_ring_ketone.png) 
+but where molecules with adjacent C=O groups
+![ring_ketone_bad](Images/ring_ketone_bad.png)
+must be excluded.
+
+This can be done with recursive smarts
+```
+O=[CD3RT1]([!$([#6]=O)])[!$([#6]=O)
+```
+which would be even more complex without the 'T1` directive. Or a query file can
+be used.
+```
+query {
+  smarts: "O=[CD3RT1]([#6:2])[#6:3]"
+  environment_no_match {
+    smarts: "O"
+    attachment {
+      attachment_point: [2, 3]
+      btype: SS_DOUBLE_BOND
+    }
+  }
+}
+```
+In this case the extra, adjacent, Carbon atoms are included in the smarts, so the `T1`
+directive is not really necessary.
+
+The `environment_no_match` message specifies that the overall query will fail if there
+is an Oxygen atom (an atom that matches SMARTS "O") doubly bonded to matched atom 2 or
+to matched atom 3.
+
+#### Electron Withdrawing Groups
+Consider the case of a phenol with an ortho or para electron withdrawing group, where
+the EWD groups are from a list. While I suppose this could possibly be done with
+recursive smarts, I imagine it would be very difficult. This query file
+```
+name: "phenol + ewd"
+query {
+  smarts: "[OH]-c1:c:[cD2]c[cD2]c1"
+  environment {
+    smarts: "N(=O)=O"
+    smarts: "C=O"
+    smarts: "C#N"
+    smarts: "[F,Cl,Br,I]"
+    smarts: "S(=O)=O"
+    attachment {
+      attachment_point: [2, 4, 6]
+      btype: SS_SINGLE_BOND
+    }
+    no_other_substituents_allowed: true
+    hits_needed: 1
+  }
+}
+```
+can retrieve suitable molecules.
+
+The smarts looks for a phenol with substitutions only allowed at
+the ortho and para positions.
+
+The environment lists a number of possible sidechains, which can
+be attached via a single bond to any of matched atoms 2, 4 and 6,
+ortho, para, ortho. The sidechain queries are all constructed with the atom
+that joins to the phenol as the first atom of the smart.
+
+We do not allow any other kind of substituent at these sites. The
+`hits_needed` directive specifies that across all three possible
+attachment points, we only want one site to match.
+
+
+
 ### Diversion
 Smarts has been referred to as a write-only language, with extraodinarily
 complex smarts being written by experts. These create maintenance
@@ -226,6 +302,10 @@ Refer to that file and also the file containing C++
 [unit tests](/src/Molecule_Lib/substructure_nmab_test.cc)
 which also contains several examples of using the `...` linker group
 specification. While complex, it can be very useful.
+
+Note that a current limitation means that something that should reasonably
+be expected to work, `CC(...N)C` does not work. Currently `...` constructs
+cannot be within parentheses. This will be addressed.
 
 Whether it is better to express a complex linker relationship in
 smiles or via a query file is an open question.
@@ -289,6 +369,29 @@ that aromatic atoms are considered unsaturated. `[G1]` will match
 most atoms one double bond, and `[G2]` will match 
 atoms with a triple bond attached.
 
+## Ring Bond Count
+The '@' symbol is used to specify that a bond is in a ring. In LillyMol
+smarts multiple '@' symbols can be used to specify the number of rings
+that include that bond. By default, a single '@' symbol matches
+any number of rings including the bond. But '@@' will only match
+bonds that are covered by exactly two rings. For example `C@@C` matches
+Adamantane and `c@@c` matches the ring fusion bond in Napthalene.
+
+It is important to note that there is currently a discrepancy in how
+ring information
+is accounted for at atoms and at bonds. The `nrings` attribute for
+an atom is the number of SSSR rings including that atom. The `nrings`
+attribute for a bond may include counts for certain non SSSR rings as
+well. This may change. For atoms, using the ring bond count is
+generally preferred.
+
+For simple fused systems, which do not have non-SSSR rings, this discrepancy
+will not matter.
+
+There is no means of specifying that a bond is in  exactly one ring - use the ring
+bond count attribute on the atoms. `[cx3]:[cx3]` will mostly be 
+the same as `c@@c` - there are interesting differences.
+
 ## Not enough letters!
 As work continued on LillyMol, we found increasingly complex
 requests coming from chemists, and it was clear that we would run
@@ -321,7 +424,18 @@ The following `/IW` atomic smarts extensions are recognised.
 Specify a ring id for an atom. A query only matches if all atoms that have
 the same ring id are in the same ring. In order to find all N,N aromatic heterocycles
 `[/IWrid1n].[/IWrid1n]` will match all molecules where there are two
-aromatic Nitrogens in the same ring.
+aromatic Nitrogens in the same ring. Molecules like
+![CHEMBL2171711](Images/CHEMBL2171711.png) will match.
+
+If on the other hand we specify diffrent ring ids, `[/IWrid7n].[/IWrid2n]`, molecules
+like
+![CHEMBL389685](Images/CHEMBL389685.png) will match. These particular nitrogen
+atoms are in different rings, but in the same ring system. See `fsid` below.
+
+Note that specifying an rid value for a query atom means that atom will only
+match a ring atom. Earlier versions of LillyMol did not enforce this,
+but it proved contrary to reasonable expectations.
+
 
 ### /IWfsid
 Specify a fused system id for an atom. A query only matches if all atoms that have
@@ -330,7 +444,7 @@ molecules that have two aromatic Nitrogen atoms in a fused system, but where the
 Nitrogen atoms are in different rings `[/IWfsid1/IWrid1n].[/IWfsid1/IWrid2n]` would
 do that. The fused system identifiers must match, the ring id's must not.
 
-Note that both `rid` and `fsid` are limited to single digits. That limitation
+Note that both `rid` and `fsid` in a smarts are limited to single digits. That limitation
 is lifted in a query file.
 
 ### /IWfss
@@ -490,6 +604,11 @@ but if negative or floating point numbers are needed, then `[/IWNv{-3}C]`
 is needed. Note that since the '.' character is special in smiles, if
 you have a floating point number it must instead be entered with an
 underscore `[/IWNv{-3_14}C]` which is interpreted as `[/IWNv{-3.14}C]`.
+
+### /IWchiral0 /IWchiral1
+The matched atom must either have (/IWchiral1) or not have (/IWchiral0)
+an explicit chiral centre, regardless of any configuration around that atom.
+
 
 ## Future
 As use cases emerge further `/IW` directives may be added. Some can be
@@ -654,23 +773,32 @@ in a query file.
 The down the bond directive now supports further atomic properties. 
 Counts of atoms that are
 
-* heteroatom
-* aromatic
-* unsaturated
-* in a ring
-* atomic smarts
+* d - maximum bond distance from the attachment point
+* h - number of heteroatoms
+* m - number of aromatic atoms
+* r - atom that is in a ring
+* R - the number of rings down the bond
+* u - number of unsaturated atoms
+* atomic smarts [...]
 
 Currently all specifications are treated with an implicit `and` operator,
 so all specifications must be satisfied. In addition, multiple specifications
 must be separated by an ';' operator - leaving the door open for a future
 use case that might implement other operators.
 
+The 'd' directive specified the maximum distance from the first matched atom.
+So a bond might have 10 atoms down the bond, but we can restrict the maximum
+distance from the first matched atom to 5 bonds, which will ensure branching.
+
+The 'R' directive is not an atom count, but specifies the number of rings
+that involve atoms down the bond.
+
 So a complex down the bond smarts might look like
 
 ```
 [Nx0]-C(=O)-{a{2-5};h0;r>1;u>0}C
 ```
-which is an amide group, then down the bond with between 2 and 5 atoms, no
+which is a non-ring amide group, then down the bond with between 2 and 5 atoms, no
 heteroatoms, at least one ring atom (actually there would be at least
 three ring atoms) and at least one unsaturated atom. This matches molecules
 like
@@ -734,7 +862,7 @@ either a positive or negative requirement.
 
 The quite complex smarts
 ```
-[OHD1]-[CD3R0](=O)-[CD3R0](-{[CD2]1;[$(O=c1nsnc1)]1;d3;m5;r5;u1;a7}*)-[ND1H2]
+[OHD1]-[CD3R0](=O)-[CD3R0](-{[CD2]1;[$(O=c1nsnc1)]1;d4;m5;r5;u1;a7}*)-[ND1H2]
 ```
 will match
 !(CHEMBL1094324)[Images/CHEMBL1094324.png]
@@ -815,3 +943,54 @@ but clearly more could be added as the need arises.
 
 The C++ unit tests in the [src/Molecule_Lib](src/Molecule_Lib) directory contain
 more examples of proto specifications of complex queries that test these concepts.
+
+## MatchedAtomMatch
+This is a syntactic extension designed to help avoid overly complex recursive smarts.
+It is common for an atom to be specified by a lengthy list of properties that it
+either must have or must not have. This can generate things that are very difficult
+to pick apart - smarts has been described as a write-only language. This message
+provides an alternative representation.
+
+For example if we wanted a phenolic oxygen atom that was NOT ortho to a Nitrogen
+atom or to another phenolic oxygen, that could be represented as
+```
+query {
+  smarts: "[$([cD3]);!$(c:c-[OH])]-[OH]"
+}
+```
+which is a simple example of the many more complex case I have seen.
+
+This can be equivalently written as
+```
+query {
+  smarts: "[cD3]-[OH]"
+  matched_atom_must_be {
+    atom: 0
+    smarts: "!c:c-[OH]"
+  }
+}
+```
+Any number of smarts can be specified, it is a repeated field. And
+other matched_atom_must_be messages can be used to describe other
+matched atoms, atom numbering starts at 0.
+
+which is functionally equivalent, but considerably easier to understand.
+Note however that the current implementation does not allow arbitrary
+logical operators between the 'smarts' directives. They are combined
+as 'and' operators, but anything beginning with '!' is interpreted as
+a negative match. In practice, this is usually good enough to handle
+most cases of interest.
+
+The c++ unit test file [substructure_mam_test.cc](src/Molecule_Lib/substructure_mam_test.cc)
+contains examples of some quite complex cases, all of which would have
+varying degress of interpreting if represented as recursive smarts.
+
+### Preference Values
+In many cases where multiple possibilities are handled, primary amine, secondary amine...
+using an OR directive soll solve the problem. But in the case where a molecule has
+both a primary amine and a secondary amine, the or query will match the primary
+amine and return the matched atoms. The secondary amine will never be detected. Many
+times this is quite OK.
+
+In the Charge Assigner queries we run into interesting problems when there
+are constraints on matched atoms overlapping.

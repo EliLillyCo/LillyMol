@@ -14,7 +14,7 @@ else
 fi
 
 command=$BIN_DIR/gfp_to_descriptors_multiple
-case_id="Case 1"
+case_id="Case 2"
 echo "Testing:  $command"
 
 if [ ! -e "$command" ]
@@ -31,15 +31,26 @@ golden='out/chembl10.txt.gz'
 unzipped='unzipped'
 gunzip --stdout ${golden} > ${unzipped}
 golden=${unzipped}
+if [[ ! -s "${golden}" ]] ; then
+  echo "Unzip failed ${golden} missing or empty"
+  exit 1
+fi
 
 diff_tool='../../same_bits.py'
-${command} ${input} > ${stdout} 2> ${stderr}
+${command} -v ${input} > ${stdout} 2> ${stderr}
 $diff_tool ${stdout} ${unzipped}
 
 if [[ $? -eq 0 ]] ; then
   echo "${case_id} : TEST PASS"
 else
   echo "${case_id} : TEST FAIL"
+  echo "$case_id : TEST FAIL"
+  echo "Expected"
+  cat "${golden}"
+  echo "Got"
+  cat "${stdout}"
+  cat "${stderr}"
+  rm ${stdout} ${stderr}
   head ${stderr}
 fi
 

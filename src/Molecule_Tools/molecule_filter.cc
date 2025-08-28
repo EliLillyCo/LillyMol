@@ -22,7 +22,11 @@
 #include "Molecule_Tools/nvrtspsa.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_filter.pb.h"
+#else
+#include "molecule_filter.pb.h"
+#endif
 
 namespace molecule_filter {
 
@@ -72,7 +76,7 @@ class Options {
     uint64_t _molecules_read = 0;
     uint64_t _molecules_passed = 0;
 
-    MoleculeFilterData::Requirements _requirements;
+    molecule_filter_data::Requirements _requirements;
 
     quick_rotbond::QuickRotatableBonds _rotbond;
 
@@ -117,6 +121,10 @@ class Options {
     uint64_t _matches_exclusion_smarts = 0;
     uint64_t _no_match_required_smarts = 0;
 
+    // for use with parallel processing.
+    off_t _seek_to;
+    off_t _stop_at;
+
   // Private functions
     int Process(Molecule& m);
     int Process(Molecule& m, int matoms, int nrings);
@@ -138,6 +146,12 @@ class Options {
 
     int Process(const const_IWSubstring& buffer, IWString_and_File_Descriptor& output);
 
+    // If we are seeking and stopping.
+    // If _seek_to is set, seek to that offset in `input`.
+    int SeekIfNeeded(iwstring_data_source& input) const;
+    // If _stop_at is set, return OK of the current offset is less than _stop
+    int OkContinue(iwstring_data_source& input) const;
+
     // After processing, report a summary of what has been done.
     int Report(std::ostream& output) const;
 };
@@ -148,12 +162,15 @@ Options::Options() {
   _remove_chirality = 0;
   _molecules_read = 0;
   _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
-  set_display_psa_unclassified_atom_mesages(0);
+  nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
   xlogp::SetIssueUnclassifiedAtomMessages(0);
 
   _alogp.set_use_alcohol_for_acid(1);
   _alogp.set_use_alcohol_for_acid(1);
   _alogp.set_apply_zwitterion_correction(1);
+
+  _seek_to = 0;
+  _stop_at = 0;
 }
 
 int
@@ -188,8 +205,8 @@ Options::Initialise(Command_Line& cl) {
 
   if (cl.option_present('F')) {
     IWString fname = cl.string_value('F');
-    std::optional<MoleculeFilterData::Requirements> maybe_proto =
-        iwmisc::ReadTextProtoCommentsOK<MoleculeFilterData::Requirements>(fname);
+    std::optional<molecule_filter_data::Requirements> maybe_proto =
+        iwmisc::ReadTextProtoCommentsOK<molecule_filter_data::Requirements>(fname);
     if (! maybe_proto) {
       cerr << "Options::Initialise:cannot read textproto '" << fname << "'\n";
       return 0;
@@ -226,6 +243,28 @@ Options::Initialise(Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Rejected molecules written to " << fname << "'\n";
+    }
+  }
+
+  if (cl.option_present('i')) {
+    const_IWSubstring s;
+    for (int i = 0; cl.value('i', s, i); ++i) {
+      if (s.starts_with("seek=")) {
+        s.remove_leading_chars(5);
+        if (! s.numeric_value(_seek_to)) {
+          cerr << "Invalid seek specification '" << s << "'\n";
+          return 0;
+        }
+      } else if (s.starts_with("stop=")) {
+        s.remove_leading_chars(5);
+        if (! s.numeric_value(_stop_at)) {
+          cerr << "Invalid stop specification '" << s << "'\n";
+          return 0;
+        }
+      } else {
+        cerr << "Unrecognised -i qualifier '" << s << "'\n";
+        return 0;
+      }
     }
   }
 
@@ -398,7 +437,7 @@ LargestFragment(const const_IWSubstring& smiles,
   while (smiles.nextword(token, i, '.')) {
     ++fragments_examined;
     int nri;
-    int nat = count_atoms_in_smiles(token, nri);
+    int nat = lillymol::count_atoms_in_smiles(token, nri);
     if (nat > max_atoms) {
       max_atoms = nat;
       nrings = nri;
@@ -429,6 +468,7 @@ Options::Process(const const_IWSubstring& line,
     const int nfrag = smiles.ccount('.') + 1;
     if (nfrag > _requirements.max_number_fragments()) {
       ++_too_many_fragments;
+      MaybeWriteToRejectStream(line);
       return 0;
     }
   }
@@ -441,7 +481,7 @@ Options::Process(const const_IWSubstring& line,
       smiles_changed = true;
     }
   } else {
-    matoms = count_atoms_in_smiles(smiles, nrings);
+    matoms = lillymol::count_atoms_in_smiles(smiles, nrings);
     largest_frag = smiles;
   }
 
@@ -772,6 +812,30 @@ Options::Process(Molecule& m,
 }
 
 int
+Options::SeekIfNeeded(iwstring_data_source& input) const {
+  if (_seek_to == 0) {
+    return 1;
+  }
+
+  if (input.seekg(_seek_to)) {
+    return 1;
+  }
+
+  cerr << "Options::SeekIfNeeded:cannot seek to " << _seek_to << '\n';
+  return 0;
+}
+
+int
+Options::OkContinue(iwstring_data_source& input) const {
+  if (_stop_at == 0) {
+    return 1;
+  }
+
+  off_t o = input.tellg();
+  return o < _stop_at;
+}
+
+int
 MoleculeFilterLine(Options& options,
                    const const_IWSubstring& line,
                    IWString_and_File_Descriptor& output) {
@@ -786,8 +850,16 @@ MoleculeFilter(Options& options,
                 iwstring_data_source& input,
                 IWString_and_File_Descriptor& output) {
   const_IWSubstring buffer;
+  if (! options.SeekIfNeeded(input)) {
+    return 0;
+  }
+
   while (input.next_record(buffer)) {
     MoleculeFilterLine(options, buffer, output);
+
+    if (! options.OkContinue(input)) {
+      return 1;
+    }
   }
 
   return 1;
@@ -808,7 +880,7 @@ MoleculeFilter(Options& options,
 
 int
 MoleculeFilter(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:lcg:F:B:");
+  Command_Line cl(argc, argv, "vE:A:lcg:F:B:i:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

@@ -1,0 +1,5 @@
+(0 Query
+  (0 ring_system_specifier
+    (A I min_distance_to_another_ring 4)
+  )
+)

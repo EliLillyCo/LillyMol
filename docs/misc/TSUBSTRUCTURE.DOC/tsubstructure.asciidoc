@@ -1,0 +1,724 @@
+= *tsubstructure*
+Ian Watson <i.watson@lilly.com>
+Advanced Analytics
+:toc:
+
+:imagesdir: ./Images
+
+== Overview
+tsubstructure is a tool for performing substructure searches. Input can be any structure file
+the underlying Molecule object can read. Output can be any supported file format.
+
+Query specification will be either via smarts, molecule(s), or query file(s). These can
+be mixed together.  Each has advantages and disadvantages.
+
+By historical quirk, the default aromaticity definition is a very restrictive definition. Almost
+all current use should add `-A D` to the invocation.
+
+Substructure searching is made significantly easier if your input molecules are standardised.
+Adding the `-g all` combination may make matching less surprising, although this whole area
+is fraught and very complex.
+
+Normally substructure searches are done without explicit Hydrogens, the `-g all` option will
+remove any explicit Hydrogen atoms. Sometimes it may be convenient to have explicit
+Hydrogen atoms. In that case, the option combination `-M imp2exp` will first convert
+implicit Hydrogen atoms to explicit atoms. Once this is done, methane is now `[CD4]` rather
+than `[CD1]`. This can be very tricky. Generally use either all implicit or all explicit
+Hydrogen atoms.
+
+Normally, molecules that match the query specification(s) will be written to the `-m` file. Optionally,
+non matching molecules can be written to the `-n` stream. If neither is specified, tsubstructure will
+perform the search, and report the number of matches. Adding -v options will provide increasing levels
+of verbosity about the matching process.
+
+If desired, the specific matched atoms can be identified with the -j option, which can attach
+isotopic labels or atom map numbers.
+
+Output can also be made as an array (`-a`) or as a fingerprint (`-J`). With array output, there will
+be one column per query specified, whereas for fingerprint output, there will be one bit per query.
+If the tag starts with `NC` then a non-colliding, sparse fingerprint will be produced. Via the `-M`
+option there is the ability to control the number of bit replicates produced.
+
+If multiple query specifications are entered, a match is achieved if any of the queries match.
+
+By definition, many substructure searches will match multiple times - benzene will match itself 12 times.
+Sometimes this is desirable, sometimes not. You can usually improve search speed by restricting searches
+to just finding one embedding. This can be done with the `-f` option. For example, looking for `c1ccccc1`
+in 100k random Pubchem molecules takes 2.3 seconds. With the -f option, that drops to 1.6 seconds. In this
+particular case, 4 of those molecules had 120 matches.
+
+Note that as matches are found, they are stored. If a large number of embeddings are encountered, this
+can be expensive.
+
+Sometimes you might need to find non symmetric matches. Using the `-k` option, benzene will not find only 6
+matches when searching itself. Using the `-k` option, all matches are found, but those which are symmetry 
+related to previously found matches are discarded.
+
+Substructure matching is done starting with the first atom in the substructure specification. The `-r` option
+directs the search to move to another starting atom once it has found a match at a given atom - rather than
+looking for further matches starting at that atom. Often this may yield results similar to what is obtained
+with the -k option, but the -k option perceives symmetric atoms that are separated.
+
+The `-R` option can be useful in summarising the overall results from a search.
+
+Adding -v options will increase the level of verbosity with which tsubstructure reports results
+and matching attempts. Adding three -v options will have it report how many atoms within a query
+matched each target molecule. This can be helpful for debugging complex queries.
+
+There are several ways in which a query can be specified to tsubstructure. Enter `-q help` for
+details.
+
+smarts:: Usually on the command line via the -s option `-s 'sss'`, or `-q SMARTS:ssss`
+file of smarts:: `-q S:file`
+query:: Usually `-q file.qry`
+file of query files:: Usually `-q Q:file`
+molecule:: Usually `-q M:file`. File containing one or more molecules, or `-q smiles:....`
+isis query:: Usually `-q I:file`. Many, but not all ISIS substructure search concepts.
+
+Note that single quotes are preferred for smarts on the command line, since the shell
+will look inside double quotes.
+
+=== Smarts
+tsubstructure supports most smarts directives. See the Daylight theory manual.
+http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html. Recursive
+smarts are also supported, although complete compatibility is not guaranteed.
+Additionally some local extensions to smarts are supported.
+
+=== Smarts Extensions
+
+Several useful extensions to smarts have been implemented.
+
+==== Atomic Property Logical Operators
+
+Whereas standard smarts allows specification of various atomic properties, tsubstructure
+allows relational operators for many atomic attributes. In standard smarts, if you needed
+to specify a 3 or 4 connected aliphatic carbon atom, you might need to specify `[C;D3,D4]`, 
+whereas tsubstructure allows `[CD>2]`. Most atomic smarts directives can also be given
+with a `<` or `>` qualifier.
+
+==== Control Number of Matches
+
+If a smarts begins with a number, or a relational, that is interpreted as controlling the
+number of matches desired. So, `-s 1N` would only match molecules containing exactly one
+alipathic nitrogen atom. Similarly, `-s 0N` would match all molecules which do NOT contain
+an aliphatic Nitrogen. The smarts `-s >1N` will match molecules that contain two or more
+aliphatic Nitrogen atoms. The < operator is also supported.
+
+==== Logical Operations
+
+On the command line, a smarts can consist of multiple smarts components, joined via
+relational operations. The operator and, `&&`, or `||`, and xor `^^` are supported.
+So, a molecule containing precisely one primary amine and no acids might be specified as
+`-s '1[ND1H2]-[CX4T1]&&0[OH]-[C,S]=O'`. In this case, we introduce another local
+extension, the atomic T operator. This means one attached heteroatom.
+
+The daylight low priority and operator is also supported, so 
+[listing]
+  n1ccc2ccccc12||Cl-c;;[ND1]c1ccccc1
+
+would be find molecules that contain (either a benzimidazole or an aromatic Chlorine) *and*
+an aniline. Molecules like
+
+image:low_priority_and_00001.png[LowPrirotyAmd1,width=380,height=340]
+image:low_priority_and_00002.png[LowPrirotyAmd2,width=380,height=340]
+
+It is important to note that the components of a logical operation like this are separate,
+independent queries, as can be seen in the example above - the aniline overlaps with
+the benzimidazole, the Cl-c overlaps with the aniline. Contrast this with smarts
+that use the no bond specifier *.* to 
+designate no bond between query atoms. In that case, all query atoms must match different
+atoms in the molecule. So, ethanol, *CCO*, would be matched by the smarts `CC&&CO`, but *not*
+by the smarts `CC.CO`.
+
+In the earlier example of benzimidazole, aromatic Chlorine and aniline, if you required
+them all to be separate parts of the molecule, the smarts
+[listing]
+n1ccc2ccccc12.[ND1]c1ccccc1||Cl-c.[ND1]c1ccccc1
+
+would work.
+
+==== Single Letter Extensions
+
+Certain atomic extensions to smarts are available via single letter directives.
+
+[cols = "1,5"]
+|===
+| T | Attached Heteroatom Count
+| G | Unsaturation
+|===
+
+which again can all be used with relational qualifiers.
+
+The `T` directive is particularly useful when handling a common concept used
+by Chemists, where they will say that 'can be Carbon or Hydrogen only'. This
+can be very difficult, because normally Hydrogens are implicit. In essence
+what they are saying is there should not be a heteroatom at this location.
+Usually this can be easily handled via the `T` directive on the central atom.
+For example, a primary amine might be specified as `[NH2]-[CX4T1]`, which means
+an NH2 group, attached to a fully saturated carbon atom, that is attached
+to just one heteroatom, the Nitrogen atom.
+
+The `G` directive is useful if you need to specify a fully saturated atom,
+regardless of element. Without this, you might need to specify something like
+`[CX4,NX3,NX4+,OX2]` rather than `[G0]`. 
+
+=== Bond Separation
+The `...` directive is interpreted as no matched atoms betweenbetween. Therefore
+the smarts `[OD2]-C(=O)...C(=O)[OD2]` will match the molecule
+
+image:dotdotdot1_00001.png["DotDotDot1",width=400,height=300]
+But not
+image:dotdotdot2_00001.png["DotDotDot2",width=400,height=300]
+
+The `...` specifier can be coupled with a range of *atoms*, so the smarts
+`Cl-c...{5-9}c-[OH]` will match molecules like
+
+image:dotdotdot3_00001.png["DotDotDot3",width=500,height=400]
+
+The numerical qualifier is the number of non-matched *atoms* between
+the two matched atoms at either end.
+
+==== IW Directives
+Unfortunately (actually fortunately for us) there are a finite number
+of letters in the alphabet, and adding new directives via letters was
+clearly not going to work.  To gain increased flexibility, we
+introduce a prefix that can then be used to introduce various other,
+multi-letter directives.  The prefix is `/IW`.  The following
+qualifiers are recognised
+
+[cols = "1,7"]
+|===
+|`Ar` | Atom is adjacent to a Aryl type atom (but not aromatic itself)
+|`Vy` | Atom is adjacent to a Vinyl type atom (but not Vinyl itself)
+|`fss` | Fused system size. Benzene is 1, naphthalene is 2, etc
+|`fsid` | Fused system identifier
+|`rid` | Ring identifier
+|`spch` | Atom must be part of the molecular spinach - substituents
+|`hr` | Atom must be in a ring with this many heteroatoms
+|`rscb` | Scaffold bonds attached to a ring
+|`symd` | Symmetry Degree
+|`symg` | Symmetry Group Identifier
+|`Kl` | Atom must be in a Kekule type aromatic ring
+|`Nv` | Specify numeric value for atom
+|`x` | Do NOT include this atom in the set of matched atoms reported.
+|===
+
+===== Ar
+A Nitrogen atom that is NOT adjacent to an aliphatic ring could be `[/IWAr0N]`. This
+directive is seldom used in the positive sense, since '[NH2]-a' is a simple way of
+specifying a Nitrogen atom that is next to an aromatic ring.
+
+===== Vy
+Very similar to the Ar directive. A Vinyl group is something that has a non-single bond,
+but which is not aromatic. The alternative would be `[...][G0]`, indicating an atom, 
+attached to a fully saturated atom. Again, this directive is usually used as a negative
+selector.
+
+===== fss
+The Fused System Size directive allows specifying the number of rings in the system
+being matched. Benzene is size 1, naphthalene is size 2. Whether good or bad, spiro
+fused ring systems to NOT grow a fused system. It is unclear what correct should be.
+
+===== rid
+The Ring Identifier directive allows you to specify that two matched atoms must be
+in the same ring, or not in the same ring. The rid directive is followed by a digit.
+Matched atoms that have the same digit, must be in the same ring. Matched atoms
+that have different digits, must not be in the same ring. 
+Two chain atoms each with `/IWrid1` will not match - there is no ring that
+contains both of these atoms. But two chain atoms `[/IWrid1].[/IWrid2]` will match - 
+again because there is no ring that contains both atoms.
+
+===== spch
+To identify an atom that is not part of the scaffold, specify `[/IWspch0]`. Use 
+a value of 1 for atoms that must be part of the scaffold.
+
+===== hr
+Also recognised as `rh`. Number of heteratoms in the same ring as the matched atom.
+Note that if an atom is in multiple rings, it will check all possible rings for
+a match.
+
+===== rscb
+
+Useful for identifying terminal rings. A terminal ring will have only one bond
+to the molecular scaffold. So, `F-[/IWrscb>1c]` identifies a Fluorine atom 
+attached to an 'inner' aromatic ring.
+
+===== symmd
+Degree of symmetry. Number of atoms in the molecule that are symmetric with the
+matched atom
+
+===== symg
+Allows you to specify that groups of matched atoms must be symmetric with
+each other. The directive is followed by a digit indicating a symmetry grouping.
+Atoms with the same digit must be symmetric in the molecule.
+
+===== Kl
+ALlows specifying that a matched atom must be in a ring wit differing Kekule forms.
+So, `[/IWKl0a]` will match pyrrole and furan atomatic rings, whereas `[/IWKl1a]` will
+only match rings like benzene and pyridine, etc..
+
+===== Nv
+Substructure atoms can have associated numeric values. Arbitrary floating point values can
+be specified. This is only useful if the application is set up to handle these values
+
+===== x
+Do NOT include this atom in the Set_of_Atoms object(s) that are returned by the
+substructure matching process. This can be useful when trying to be more specific about a 
+match condition.
+
+==== Arbitrary Elements
+Using a combination of `-E autocreate -E anylength` arbitrary element names are possible.
+If substructure searching were attempted with such elements, impossible situations could 
+result. For example, if element R has been created, how should smarts `[R]` be interpreted?
+Arbitrary elements can be searched using `\#{Foo}` as smarts. In this particular case,
+we could search for `[#{R}R]` which would look for element R when it is in a ring.
+Text within the braces is added to the list of known elements and will be matched
+to any other instances of that element.
+
+==== Query Molecule
+`tsubstructure` can create a match query from a molecule. In this case the query is
+specified as `-q M:fname`, where fname contain the query molecule. Converting a
+molecule to a query is not trivial. When given a molecule as a query, `tsubstructure`
+will make an attempt to conver the molecule to a query. There is a separate tool, `mol2qry`
+which is specifically set up to convert molecules to query format.
+
+There is one option, `-M nrnr` which means that non ring atoms in a query molecule
+will only match non ring atoms during a search. But tool `mol2qry` has a great many
+different options for controlling the conversion of a molecule to a query.
+
+===== Isotopes
+Sometimes it is convenient to start with isotopically labelled molecules, which show
+the locations at which substitutions are allowed. Adding the `-M onlysubiso` option
+combination tells tsubstructure to use the molecule as a query, but all atoms
+without isotopic labels will have the same connectivity as they have in the starting
+molecule. Extensions will only be found starting at isotopically labelled atoms.
+
+=== Query file
+While a smarts provides a compact representation of a set of atoms to be matched. Many
+reasonable substructure concepts are very difficult to express via simple atom
+matching. For example, 'Fluorine attached somewhere to a benzamidazole', would be
+very complex as a smart, but easy with a query file.
+
+A query file is based on the Cerius 2 file format. This is an ancient file format. If
+this were being done today, we would use a more modern file format such as JSON or
+YAML.
+
+Some information in a query file is mostly about efficient searching. For example,
+if you know the smarts has contains two different aromatic rings, you can specify
+that atom mathing should not commence unless the molecule has at least two aromatic
+rings.
+
+A listing of the available pre atom match directive follows. Most of these directive
+can be specified as the name itself, or prefixed with either `min` or `max`. In almost
+all cases multiple specific values are also accepted. Ranges can be specified by
+specifying both a `min` and a `max` directive.
+
+==== natoms
+
+Specify the number of atoms a molecule must contain before atom matching is
+begun.
+
+[listing]
+  (A I min_natoms 20)
+
+would only search molecules that contained at least 20 atoms. The combination
+[listing]
+  (A I min_natoms 20)
+  (A I max_natoms 40)
+
+would search only molecules with between 20 and 40 atoms.
+
+==== nrings
+Specify the number of rings the molecule must contain
+[listing]
+  (A I nrings (3 5))
+
+will only search molecules that have either 3 or 5 rings. 
+
+==== isotopic_atoms
+Specify the number of isotopic atoms in the molecule
+[listing]
+  (A I isotopic_atoms 1)
+
+==== number_fragments
+Specify the number of fragments in the molecule
+[listing]
+  (A I max_number_fragments 2)
+
+==== inter_ring_atoms
+Specify the number of atoms that are between rings
+
+==== spinach_atoms
+Specify the number of atoms that are in the molecular 'spinach', or 
+substituents. Note that in a molecule with no rings, all atoms are
+considered to be 'spinach' atoms.
+
+==== net_formal_charge
+Specify the net formal charge on the molecule. To find a Zwitterion in a
+single fragment molecule search for smarts `1[*+].[*-]`. This will
+however find charges separated by one bond. It will also fail if there
+are multiple fragments present. In a potentially
+multi-fragment molecule, and to enforce a bond separation, use `1([+]...{>1}[-])`.
+
+==== heteroatom_count
+Specify the number of heteratoms a molecule must contain.
+[listing]
+  (A I min_heteroatom_count 4)
+  
+Less commonly used. Note that it is possible to define what should be considered
+a heteroatom for this comparison.
+
+[listing]
+  (A C define_heteroatoms "F Cl Br I")
+  (A I min_heteroatom_count 4)
+
+==== isolated_ring_count
+The number of ring systems in the molecule
+
+==== Rings and Ring Systems
+It is possible to perform complex queries on the rings and ring systems in a molecule. It is
+important to note that these queries are done prior to, and independent of any atom matching.
+Rather than introduce options one at a time, here is an example that contains all possible
+directives for a Ring (not a ring system).
+
+[listing]
+  (1 Ring_Specifier
+    (A I aromatic 1)
+    (A I min_ring_size 6)
+    (A I min_heteroatom_count 1)
+    (A I max_attached_heteroatom_count 2)
+    (A I hits_needed 2)
+    (A I min_ncon 3)
+    (A I all_hits_in_same_fragment 1)
+    (A I strongly_fused_ring_neighbours 0)
+    (A C environment "1a-[OH]&&<3c-F")
+    (A I environment_can_match_in_ring_atoms 0)
+    (A I fused 1)
+    (A I fused_aromatic_neighbours 1)
+    (A I fused_non_aromatic_neighbours 0)
+    (A I largest_number_of_bonds_shared_with_another_ring 1)
+    (A I min_atoms_with_pi_electrons 4)
+  )
+
+We are looking for an aromatic ring.  The ring must be of size 6 or
+more.  There must be at least one heteroatom in the ring.  There can
+be at most two heteroatoms attached to the ring.  There must be two
+such rings in the molecule.  There must be at least three connections
+outside the ring. All examples found must be in the same fragment.
+There must not be any strongly fused neighbours - no cage like structures,
+but since we are looking for an aromatic, this is very unlikely.
+Attached to this ring must be a Hydroxy *and* fewer than 3 F atoms - which
+might include zero. Note that the first atom in the environment
+is in the ring. In this case, we direct that environment atoms can
+only match atoms outside the ring, but there are special cases where you want
+to be able to match atoms in the ring. The ring must be fused. There
+must be one fused aromatic neighbour, and no fused non aromatic rings.
+Specifying largest_number_of_bonds_shared_with_another_ring as 1 is
+somewhat redundant with specifying no strongly fused ring neighbours.
+For an aromatic system, specifying min_atoms_with_pi_electrons is 
+likely redundant.
+
+Across Pubchem, there are 4733 molecules that match this query. Here is the smallest
+match
+
+image:ring0_00001.png["RingMatch",height=400,width=500]
+
+For a ring system, there are some extra specifications possible.
+
+[listing]
+  (1 Ring_System_Specifier
+    (A I min_rings_in_system 3)
+    (A I ring_sizes (3 6 7 8))
+    (A I min_aromatic_ring_count 1)
+    (A I max_aromatic_ring_count 3)
+    (A I max_degree_of_fusion 2)
+    (A I max_atoms_in_system 50)
+    (A I number_spinach_groups 3)
+    (A I number_non_spinach_groups 3)
+    (A I max_length_of_spinach 5)
+    (A I min_distance_to_another_ring 4)
+  )
+
+Here are examples of what matches from Pubchem
+
+image:ring_system0_00001.png["RingSystemMatch1"]
+image:ring_system0_00002.png["RingSystemMatch2"]
+
+Note that a spiro fused ring is treated rather specially. It is not part of the ring
+system, but it is not counted as part of the spinach. But it does count as two
+connections to non-spinach groups. Just beware that spiro fused groups can create
+many kinds of problems. Perhaps there should be a different default.
+
+Because we specified `max_degree_of_fusion` the largest number of rings joined to
+any other ring will be two.
+
+The ring sizes directive is interesting. This lets you specify a list of ring
+sizes that should be present in the ring system. If any ring of a size not listed
+is encountered, that ring system is not matched. But the system does not
+force every ring specified to be present. Perhaps that would be a better approach,
+since right now there is no easy way of saying you want a 5-6 aromatic system.
+Perhaps a `specific_ring_sizes` directive should be implemented, so something like
+[listing]
+  (A I specific_ring_sizes (5 5 6))
+
+would find ring systems with three rings, two of which had 5 atoms and one of which
+had 6 atoms. This would be possible using smarts, but is clumsy. The smarts
+[listing]
+[/IWfss3/IWfsid1/IWrid1r5].[/IWfsid1/IWrid2r5].[/IWfsid1/IWrid3r6]
+
+will match
+image:rid1_00001.png["RingId1",width=500,height=400]
+but this is very cumbersome.
+
+As an explanation, we first specify a fused system size
+of 3, and establish a fused system identifier of 1. Then we look for a ring of size 5
+with rind identifier 1. Then, within the same fused system id of 1, we look for a different
+ring, rid2, of size 5. Then similar for the ring of size 6.
+
+The `distance_to_another_ring` directive is also complex. If either min or max is
+specified, then any instance of a ring violating the constraints will result in a
+rejection. But if only specific values are entered, then if the molecule contains
+a single example of those specifications, then a match will be reported.
+
+The directive `ncon_ignore_singly_connected` says that when the ncon variable is
+computed for a ring, or ring system, discard singly connected atoms attached
+to the ring. This may no longer be useful.
+
+Both `Ring_Specifier` and `Ring_System_Specifier` objects can be joined via logical
+expressions.
+
+[listing]
+
+  (1 Ring_Specifier
+    (A I aromatic 1)
+    (A I ring_size 6)
+    (A I heteroatom_count 3)
+  )
+  (2 Ring_Specifier
+    (A I aromatic 0)
+    (A I ring_size 8)
+    (A I min_heteroatom_count 4)
+    (A C operator "or")
+  )
+
+which may not make much chemical sense. The default operator is the `and` operator. Note that
+the operator is specified with the second, and subsequent, object(s).
+
+Both Ring_Specifier and Ring_System_Specifier objects can have a `rejection` attribute,
+in which case molecules containing a matching ring or ring system will *not* be matched.
+
+==== Elements Needed
+This is mostly for efficiency. If you know a query involves three different Oxygen atoms,
+we can tell the query to only search molecules with at least three Oxygen atoms
+
+[listing]
+  (3 elements_needed
+    (A I atomic_number 8)
+    (A I min_hits_needed 2)
+  )
+
+== Conditions on Matches Found
+
+Just as it is possible to place conditions on the molecule before atom matching begins,
+it is possible to place constraints on the kinds of matches found. Atom embeddings that do not
+match these conditions will be discarded, and no match reported.
+
+=== max_matches_to_find
+Stop searching after a specified number of matches have been identified.
+
+=== subtract_from_rc
+For any given number of matches found, we can simply discard a number of matches. This is useful
+in cases like the medchem rules, where we want to demerit things like instances of CF3 beyond
+two in a molecule.
+[listing]
+  (A I subtract_from_rc 2)
+
+=== ring_atoms_matched
+If a query contains unspecified atoms, you migh still want (say) at least two of the matched
+atoms to be ring atoms.
+[listing]
+  (A I min_ring_atoms_matched 2)
+
+=== distance_between_hits
+You may want to ensure that matches are in separate parts of the molecule. Note that across
+the matched atoms, the shortest bond distance is the distance used. If a new embedding is found
+to be too close to an already found embedding, it will be discarded. Note that embeddings will
+be found based on atom order in the target molecule, so different results may be possible
+with different orderings of the input molecule.
+
+[listing]
+  (A I min_distance_between_hits 4)
+
+=== fail_if_embeddings_too_close
+
+Alternatively we may want to report no matches at all if any two matches violate 
+the `distance_between_hits` directive
+[listing]
+  (A I min_distance_between_hits 4)
+  (A I fail_if_embeddings_too_close 1)
+  
+=== embeddings_to_not_overlap
+By default, embeddings are found independetly.  This directive will discard subsequent embeddings
+found that include any atom previously matched by another embedding.
+
+[listing]
+  (A I embeddings_to_not_overlap 1)
+
+It is a historical accident that this is a negative selector.
+
+=== min_fraction_atoms_matched, max_fraction_atoms_matched
+Sometimes it is useful to put constraints on the fraction of the atoms in the molecule that
+are matched by substructure matched atoms.
+
+[listing]
+  (A D min_fraction_atoms_matched 0.5)
+
+=== element_hits_needed
+For each embedding, specify that certain numbers of elements must be among the matched atoms.
+
+[listing]
+  (1 element_hits_needed
+    (A I atomic_number 8)
+    (A I min_hits_needed 2)
+  )
+
+Contrast this with the `elements_needed` directive, which is applied to the molecule before
+matching begins.
+
+== Query Atoms
+Smarts provides a convenient way of specifying the atoms to be matched, and the connections
+between them. A smarts can be used in a query file.
+[listing]
+  (A I version 2)
+  (A C Comment "aromatic")
+  (A C smarts "a1aaaaa1")
+
+Will find 6 membered aromatic rings. If we want to find all variants that have or more heteroatoms,
+we can use.
+[listing]
+  (A C smarts "a1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+
+To make that an isolated ring
+[listing]
+  (A C smarts "[/IWfss1a]1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+
+We might want to heave at least two connections off this ring.
+[listing]
+  (A C smarts "[/IWfss1a]1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+  (A I min_ncon 2)
+
+We may want a halogen substituent, and NOT a nitro
+[listing]
+  (A C smarts "[/IWfss1a]1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+  (A I min_ncon 2)
+  (1 Environment
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "[F,Cl,Br,I]")
+  )
+  (2 Environment_no_Match
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "N(=O)=O")
+  )
+)
+
+Environments are powerful means of controlling query matches. Unlike the environments used
+with `Ring_Specifier` and `Ring_System_Specifier` objects, the first atom here does *not* 
+include the already matched atom. By default, the environment will only match unmatched
+atoms, although this can be controlled via a command line option, `-M aecmm`.
+
+Multiple smarts can be added within an environment and are executes with an implicit *or*
+operator.
+[listing]
+  (1 Environment
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "F")
+    (A C smarts "1[Cl,Br,I]")
+  )
+
+Which specifies either 1 heavy halogen, or any number of Fluorine subsituents.
+
+Environments can be combined via an *or* operation rather than the default *and* operation.
+In this case, each operator is identified by a number. Environments with the same number
+participate in the same logical grouping.
+
+[listing]
+(0 Query
+  (A I version 2)
+  (A C Comment "aromatic")
+  (A C smarts "[/IWfss1a]1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+  (A I min_ncon 2)
+  (1 Environment
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "F")
+    (A I min_hits_needed 2)
+    (A I or 1)
+  )
+  (2 Environment
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "N(=O)=O")
+    (A I hits_needed 1)
+    (A I or 1)
+  )
+)
+
+Yields molecules like
+
+image:or_environment_00001.png["OrEnvironment1",width=300,height=250]
+image:or_environment_00002.png["OrEnvironment2",width=300,height=250]
+
+While these examples have used a smarts to specify the query atoms, these too can be
+specified in query format instead.
+
+=== Preferences
+When there are multiple matches to a query, it can be useful to sort those matches so more
+desirable matches are reported ahead of less desirable matches. Sometimes this can be
+accomplished just by using or queries. For example, to find a primary amine before a
+secondary amine, the smarts `[ND1H2]-[CT1G0]||[ND2HT0](-[CX4T1])-[CX4T1]` might suffice.
+Note that the Nitrogen atom is the first atom in the query in each case.
+
+== Query Atom Specifications
+
+There are a range of atom specifications possible
+
+atomic_number::  the atomic number of the atom – single values only, no min_ or max_ possible. A halogen would be (A I atomic_number (9 17 35 53))
+ncon::  the number of explicit connections. If you are searching a molecule with explicit Hydrogen atoms, those atoms are will count.
+nbonds::  the number of explicit bonds to the atom. Double bonds count as 2 and triple bonds as 3. Implicit Hydrogens are ignored, explicit Hydrogens are counted. If the atom is aromatic, the bonds in the Kekule representation are counted.
+formal_charge::  the explicit formal charge on the atom
+nrings::  the number of Smallest Set of Smallest Rings (SSSR) rings the atom is in. Beware molecules like cubane which has 5 SSSR rings rather than 6.
+ring_size::  the atom must be in a ring of the specified size – it may also be in rings of other sizes too.
+hcount::  the number of explicit and implicit Hydrogen atoms bonded to the atom.
+aromatic::  whether or not the atom is aromatic
+aromatic_ring_size::  the atom must be in an aromatic ring of given size
+aliphatic_ring_size::  the atom must be in an aliphatic ring of given size
+attached_heteroatom_count::  the number of heteroatoms connected to the atom
+lone_pair_count::  the number of lone pairs on the atom
+unsaturation::  nbonds – ncon. Note that a triple bond counts 2
+daylight_x::  the same as the X directive in smarts – the total number of connections, including implicit Hydrogens.
+isotope::  isotopic label. Note that min_ and max_ constructs are allowed.
+aryl::  whether or not an aromatic environment is bonded.
+vinyl::  is there a vinyl environment attached
+fused_system_size::  the atom must be in a fused system with this many rings.
+carbocycle::  is the atom in a carbocycle
+ncon2::  seldom used, may be removed in future. The sum of ncon values for the atom as well as its directly attached neighbours.
+ring_id::  Sometimes it is important that matched atoms be in specific rings – the same ring as another matched atom, or in a different ring than another matched example.
+fragment_id::  Used to specify any fragment information. Atoms with the same fragment id must be in the same fragment. Atoms with different values must be in different fragments.
+
+
+== Parallel
+
+There are two parallel versions of tsubstructure. 
+
+=== tsubstructure_parallel
+
+Uses multiple cores on the same computer. Specify the number of threads via the -thr option. All tsubstructure
+options are supported. 
+
+=== qsub_tsubstructure
+
+Uses the cluster. Operates over a set of pre-split files, typically generated by iwsplit. You must specify
+the stem of that set of files via the -stem option

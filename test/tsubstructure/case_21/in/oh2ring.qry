@@ -1,0 +1,8 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment ">1 OH zero *=O")
+  (0 Ring_System_Specifier
+    (A I min_nrings 2)
+    (A C Environment ">1*-[OD1]&&0*=O")
+  )
+)
