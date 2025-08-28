@@ -1,0 +1,45 @@
+{
+  "executable": "nplotnn",
+  "test": [
+    {
+      "name": "default",
+      "args": [ "#{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "dash_T",
+      "args": [ "-T 0.25 #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "dash_n",
+      "args": [ "-n 2 #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "leader",
+      "args": [ "-L def #{datadir}/leader.nn" ]
+    },
+    {
+      "name": "spread",
+      "args": [ "#{datadir}/spread.nn" ]
+    },
+    {
+      "name": "z_option",
+      "args": [ "-n 1 -z #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "j_option",
+      "args": [ "-j ' ' -n 1 -z #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "h_option",
+      "args": [ "-v -L def -h -n 2 -z #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "dash_L_tbl",
+      "args": [ "-v -L tbl -X nodist #{datadir}/nn1.nn" ]
+    },
+    {
+      "name": "case_10",
+      "args": [ "-v -L def #{datadir}/leader.nn" ]
+    }
+  ]
+}

@@ -308,7 +308,7 @@ grid_fingerprint(Molecule& ligand, const Molecule& grid, const int* grid_atom_ty
   }
 
   if (write_3d_smiles) {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
   }
 
   output << smiles_tag << ligand.smiles() << ">\n";

@@ -9,10 +9,13 @@ iwdescr file.smi > file.w
 which will generate a tabular (space separated) file containing a couple of hundred
 molecular descriptors.
 
+There is also a shell wrapper in the contrib/bin directory that sets up some useful
+defaults. It is strongly recommended that the wrapper be used always. Otherwise you will
+see various missing columns.
+
 ## Descriptors.
 The following descriptors are computed.
 
-| ---- | ---------- |
 | name | definition |
 | ---- | ---------- |
 | natoms | the number of atoms in the molecule |
@@ -52,6 +55,7 @@ The following descriptors are computed.
 | fraromha | aromatic heteroatoms divided by number of ring atoms |
 | aromdens | fraction of the atoms that are aromatic |
 | ch2 | number of ch2 groups |
+| d2sp3 | number of two connected, fully saturated atoms |
 | ch | number of carbon atoms that have one or more hydrogens attached |
 | htroaf | fraction of atoms that are heteroatoms |
 | ohsh | oxygen or sulphur with a hydrogen attached |
@@ -117,6 +121,8 @@ The following descriptors are computed.
 | avalcon | average connectivity of aliphatic atoms |
 | fcrowdng | fraction of atoms that are crowded. crowded atoms are those that have > 2 connections and also have one or more neighbours with > 2 connections |
 | avchcon | average connectivity of non ring (chain) atoms |
+| mxlencchain2 | maximum length of an all [CD2] chain with no branching |
+| mxlencchain3 | maximum length of an all [CD2] chain with at most [CD3] as a branch point |
 | faiercst | fraction of atoms involved in electron rich areas of the molecule. these include aromatic rings |
 | aiercsct | number of atoms in electron rich areas of the molecule. |
 | erichsct | number of separate electron rich areas of the molecule |
@@ -219,12 +225,15 @@ The following descriptors are computed.
 | brnsdual | fred bruns: donor and acceptor |
 | brunspos | fred bruns: likely positive charge |
 | brunsneg | fred bruns: likely negative charge |
+| formal_charge| sum of brunspos + brunsneg. Net formal charge |
 | brunshbdsum | brunsacc + brunsdon - brnsdual |
 | cd4ring | carbon atoms with four connections in a ring |
 | cd4chain | carbon atoms with four connections not in a ring |
 | csp3_chain | sp3 carbon atoms not in a ring |
 | frsub | fraction of ring atoms that are subsituted outside the ring |
 | frssub | fraction of ring atoms that have a single atom subsituent |
+| alorthoring | number of ortho substituents on an aliphatic ring |
+| arorthoring | number of ortho substituents on an aromatic ring |
 | fsatspcha | fraction of spinach atoms that are saturated |
 | satspcha | number of spinach atoms that are saturated |
 | unsatspcha | number of unsaturated spinach atoms |
@@ -316,7 +325,7 @@ off all optional descriptors. This can make a big difference in run times. Runni
 ```
 iwdescr.sh -O all file.smi > file.w
 ```
-takes 5.7 seconds to process 20k molecules, generating 264 columns of ouput. Running
+takes 5.7 seconds to process 20k molecules, generating 277 columns of ouput. Running
 ```
 iwdescr.sh -O none file.smi > file.w
 ```

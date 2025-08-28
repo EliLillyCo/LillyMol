@@ -54,6 +54,10 @@ static int skip_non_chiral_molecules = 0;
 
 static int non_chiral_molecules_skipped = 0;
 
+// It seems that it will always be desirable to write an empty fingerprint
+// for molecules with no chirality at all.
+static int write_empty_fingerprint_for_non_chiral_molecules = 1;
+
 /*
   We differentiate between the number of chiral centres in the molecule, and the
   number we process.
@@ -73,6 +77,10 @@ static Atom_Typing_Specification atom_typing_specification;
 
 static int include_EC_bits_central_atom = 0;
 
+// If zero, nothing happens.
+// If 1, then we set a bit for each layer encountered during resolution.
+// If greater than 1, we set that number for the centre atom, that number - 1
+// for the next layer, until it is exhausted. Suggest a value of something like 6
 static int fingerprint_individual_layers = 0;
 
 static int replicates = 1;
@@ -83,6 +91,7 @@ static int replicates = 1;
 */
 
 static int ntest = 0;
+static uint32_t failed_tests = 0;
 
 static void
 usage(int rc) {
@@ -94,26 +103,28 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Computes chirality fingerprints\n";
-  cerr << "  -J <tag>      tag to procude\n";
-  cerr << "  -P <atype>    atom typing to use\n";
-  cerr << "  -s <smarts>   only process atoms matching <smarts>\n";
-  cerr << "  -q <query>    only process atoms matching <query>\n";
-  cerr << "  -f            function as a TDT filter\n";
-  cerr << "  -u            remove invalid chiral centres\n";
-  cerr << "  -3            discern chirality from 3D structure\n";
-  cerr << "  -x            discard all existing chirality information\n";
-  cerr << "  -n            discard molecules containing no chirality on input\n";
-  cerr << "  -e <rep>      produce EC type bits for central atom\n";
-  cerr << "  -r <rep>      how many bit replicates to generate\n";
-  cerr << "  -y <rep>      fingerprint each layer as the chiral centre is discerned\n";
-  cerr << "  -T <ntest>    work as a tester\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(Computes chirality fingerprints\n";
+ -J <tag>      fingerprint tag to produce - default is NCCHR.
+ -P <atype>    atom typing to use (default is atomic number).
+ -s <smarts>   only process atoms matching <smarts>. Default is to process all chiral centres.
+ -q <query>    only process atoms matching <query>
+ -f            function as a TDT filter.
+ -u            remove invalid chiral centres.
+ -3            discern chirality from 3D structure.
+ -x            discard all existing chirality information.
+ -n            discard molecules containing no chirality on input.
+ -M ...        more options, enter '-M help' for info..
+ -e <rep>      produce EC type bits for central atom.
+ -r <rep>      how many bit replicates to generate.
+ -y <n>        fingerprint each layer as the chiral centre is discerned. '-y 1' for uniforrm.
+ -T <ntest>    work as a tester.
+ -l            reduce to largest fragment.
+ -i <type>     input specification.
+ -g ...        chemical standardisation options.
+ -E ...        standard element specifications.
+ -A ...        standard aromaticity specifications.
+ -v            verbose output.
+)";
   // clang-format on
 
   exit(rc);
@@ -166,8 +177,6 @@ class Atom_Expansion {
   int _position;
 
  public:
-  //  Atom_Expansion(const atom_number_t, const atom_number_t, const int matoms, const int
-  //  * atype);
   Atom_Expansion(const atom_number_t, const Bond* b, const int matoms,
                  const unsigned int* atype);
   ~Atom_Expansion();
@@ -227,29 +236,6 @@ class Atom_Expansion {
   }
 };
 
-#ifdef OLLDDDDD
-Atom_Expansion::Atom_Expansion(const atom_number_t chiral_atom, const atom_number_t a1,
-                               const int matoms, const int* atype)
-    : _a(a1), _matoms(matoms) {
-  _atom_in_layer = new_int(matoms, -1);
-  _atom_in_layer[chiral_atom] = 0;
-
-  if (a1 >= 0) {
-    _atom_in_layer[a1] = 1;
-  }
-
-  _layer = 1;
-  _stopped = 0;
-  if (a1 >= 0) {
-    _hash = atype[a1];
-  } else {
-    _hash = 0;
-  }
-
-  _position = 0;
-}
-#endif
-
 Atom_Expansion::Atom_Expansion(const atom_number_t chiral_atom, const Bond* b,
                                const int matoms, const unsigned int* atype)
     : _matoms(matoms) {
@@ -258,10 +244,10 @@ Atom_Expansion::Atom_Expansion(const atom_number_t chiral_atom, const Bond* b,
   _atom_in_layer = new_int(matoms, -1);
   _atom_in_layer[chiral_atom] = 0;
 
-  if (NULL == b) {
+  if (nullptr == b) {
     _hash = 0;
     _stopped = 1;
-    _a = INVALID_ATOM_NUMBER;
+    _a = kInvalidAtomNumber;
   } else {
     _stopped = 0;
     _a = b->other(chiral_atom);
@@ -354,11 +340,7 @@ Atom_Expansion::expand(const Molecule& m, const unsigned int* atype) {
 
     const Atom* a = m.atomi(i);
 
-    const int acon = a->ncon();
-
-    for (int j = 0; j < acon; ++j) {
-      const Bond* b = a->item(j);
-
+    for (const Bond* b : *a) {
       const atom_number_t k = b->other(i);
 
       if (_layer + 1 == _atom_in_layer[k]) {  // forming a ring
@@ -403,7 +385,7 @@ resolved(const resizable_array_p<Atom_Expansion>& expansion) {
   const Atom_Expansion* prev = expansion[0];
 
   for (int i = 1; i < n; ++i) {
-    const auto* curr = expansion[i];
+    const Atom_Expansion* curr = expansion[i];
     if (prev->hash() == curr->hash()) {
       return 0;
     }
@@ -414,8 +396,10 @@ resolved(const resizable_array_p<Atom_Expansion>& expansion) {
   return 1;
 }
 
+#ifdef ONLY_NEEDED_IF_NO_IMPLIT_TEMPLATES
 template void resizable_array_base<Atom_Expansion*>::iwqsort<Atom_Expansion_Sorter>(
     Atom_Expansion_Sorter&);
+#endif  // ONLY_NEEDED_IF_NO_IMPLIT_TEMPLATES
 
 // #define DEBUG_CHIRALITY_FINGERPRINT
 
@@ -424,7 +408,7 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
                       const Chiral_Centre& c, Sparse_Fingerprint_Creator& sfc) {
   const int matoms = m.natoms();
 
-  const auto zatom = c.a();
+  const atom_number_t zatom = c.a();
 
   const Atom* a = m.atomi(zatom);
 
@@ -434,9 +418,7 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
   resizable_array_p<Atom_Expansion> expansion;
 
-  for (int i = 0; i < acon; ++i) {
-    const Bond* b = a->item(i);
-
+  for (const Bond* b : *a) {
     expansion.add(new Atom_Expansion(zatom, b, matoms, atype));
   }
 
@@ -461,7 +443,7 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
       return 0;
     }
 
-    Atom_Expansion* x = new Atom_Expansion(zatom, NULL, matoms, atype);
+    Atom_Expansion* x = new Atom_Expansion(zatom, nullptr, matoms, atype);
     x->set_stopped(1);
     x->set_hash(7);  // just some arbitrary, but small number
 
@@ -507,8 +489,8 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 #ifdef DEBUG_CHIRALITY_FINGERPRINT
   cerr << "Resolved around atom " << zatom << '\n';
   for (int i = 0; i < 4; ++i) {
-    const auto* ps = expansion[i];
-    if (INVALID_ATOM_NUMBER != ps->start_atom()) {
+    const Atom_Expansion* ps = expansion[i];
+    if (kInvalidAtomNumber != ps->start_atom()) {
       cerr << " atom " << ps->start_atom() << ' '
            << m.smarts_equivalent_for_atom(ps->start_atom()) << " hash " << ps->hash()
            << '\n';
@@ -521,7 +503,7 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
   int max_steps = 0;
 
-  for (auto* psi : expansion) {
+  for (Atom_Expansion* psi : expansion) {
     if (psi->nlayers() > max_steps) {
       max_steps = psi->nlayers();
     }
@@ -534,11 +516,11 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
     ecfpg.set_max_radius(max_steps);
 
-    resizable_array<unsigned int> bits;
+    resizable_array<uint32_t> bits;
 
     ecfpg.generate_fingerprint(m, zatom, atype, include_atom, 1, bits);
 
-    for (auto b : bits) {
+    for (uint32_t b : bits) {
       //    cerr << "Shell expansion setting bit " << b << '\n';
       sfc.hit_bit(b, include_EC_bits_central_atom);
     }
@@ -548,9 +530,9 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
   sfc.hit_bit(81923 * max_steps, 5);
 
-  const auto x0 = expansion[0]->start_atom();
-  const auto x1 = expansion[1]->start_atom();
-  const auto x2 = expansion[2]->start_atom();
+  const atom_number_t x0 = expansion[0]->start_atom();
+  const atom_number_t x1 = expansion[1]->start_atom();
+  const atom_number_t x2 = expansion[2]->start_atom();
   // never check the 4th item because it may be Hydrogen
   if (x0 == c.top_front()) {
     if (x1 == c.top_back()) {
@@ -617,8 +599,8 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 #ifdef DEBUG_CHIRALITY_FINGERPRINT
   cerr << "After uniqueness\n";
   for (int i = 0; i < 4; ++i) {
-    const auto* ps = expansion[i];
-    if (INVALID_ATOM_NUMBER != ps->start_atom()) {
+    const Atom_Expansion* ps = expansion[i];
+    if (kInvalidAtomNumber != ps->start_atom()) {
       cerr << " atom " << ps->start_atom() << ' '
            << m.smarts_equivalent_for_atom(ps->start_atom()) << " hash " << ps->hash()
            << '\n';
@@ -634,12 +616,11 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
   uint64_t h = atype[zatom];
 
-  for (int layer = 1; layer <= max_steps; ++layer)  // layer 0 is the central atom
-  {
+  for (int layer = 1; layer <= max_steps; ++layer) {  // layer 0 is the central atom
     uint64_t hlayer = 0;
 
     for (int j = 0; j < 4; ++j) {
-      const auto* psj = expansion[j];
+      const Atom_Expansion* psj = expansion[j];
 
 #ifdef DEBUG_CHIRALITY_FINGERPRINT
       cerr << "layer " << layer << " expansion[" << j << "] has " << psj->nlayers()
@@ -650,17 +631,14 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
         continue;
       }
 
-      const Atom_Layer* al =
-          psj->atom_layer(layer - 1);  // there is no zero layer in the sets of bonds
-
-      const int nb = al->number_elements();
+      // there is no zero layer in the sets of bonds
+      const Atom_Layer* al = psj->atom_layer(layer - 1);
 
 #ifdef DEBUG_CHIRALITY_FINGERPRINT
-      cerr << "Atom layer contains " << nb << " bonds\n";
+      cerr << "Atom layer contains " << al->size() << " bonds\n";
 #endif
 
-      for (int k = 0; k < nb; ++k) {
-        const Bond* b = al->item(k);
+      for (const Bond* b : *al) {
 
 #ifdef DEBUG_CHIRALITY_FINGERPRINT
         cerr << " k = " << k << " bond " << b->a1() << ' '
@@ -682,8 +660,11 @@ chirality_fingerprint(Molecule& m, const unsigned int* atype, const int* include
 
     h = h * layer * 3149 + (layer * hlayer);
 
-    if (fingerprint_individual_layers) {
-      sfc.hit_bit(h, fingerprint_individual_layers);
+    if (fingerprint_individual_layers == 0) {
+    } else if (fingerprint_individual_layers == 1) {
+        sfc.hit_bit(h, replicates);
+    } else if (layer < fingerprint_individual_layers) {
+      sfc.hit_bit(h, fingerprint_individual_layers - layer);
     }
   }
 
@@ -742,6 +723,7 @@ do_tests(Molecule& m, const int* include_atom, unsigned int* atype) {
       cerr << "Random variant       " << x.smiles() << '\n';
       cerr << "Expected " << fp << '\n';
       cerr << "Got      " << s << '\n';
+      ++failed_tests;
       rc = 0;
     }
   }
@@ -752,7 +734,7 @@ do_tests(Molecule& m, const int* include_atom, unsigned int* atype) {
 static int
 chirality_fingerprint(Molecule& m, const int* process_atom,
                       IWString_and_File_Descriptor& output) {
-  preprocess(m);
+  preprocess(m);  // a little dangerous since process_atom is already set?
 
   molecules_read++;
 
@@ -761,27 +743,30 @@ chirality_fingerprint(Molecule& m, const int* process_atom,
   chiral_centre_count[nchiral]++;  // the number in the molecule, which might be different
                                    // from how many we process
 
+#ifdef DEBUG_CHIRALITY_FINGERPRINT
+  cerr << "starting molecule has " << nchiral << " centres\n";
+  cerr << m.smiles() << '\n';
+#endif
   if (0 == nchiral && skip_non_chiral_molecules) {
     non_chiral_molecules_skipped++;
-
     return 1;
   }
 
   if (ntest || function_as_tdt_filter) {  // no need to write the tags
     ;
-  } else  // write the tags
-  {
+  } else {   // write the tags
     output << smiles_tag << m.smiles() << ">\n";
     output << identifier_tag << m.name() << ">\n";
   }
 
-  if (0 == nchiral)  // no chirality here
-  {
+  if (0 == nchiral) {  // no chirality here
     if (ntest) {
       ;
     } else if (!function_as_tdt_filter) {
       output << tag << ">\n";
       output << "|\n";
+    } else if (write_empty_fingerprint_for_non_chiral_molecules) {
+      output << tag << ">\n";
     }
 
     return 1;
@@ -818,6 +803,7 @@ chirality_fingerprint(Molecule& m, const int* process_atom,
     chirality_fingerprint(m, atype, include_atom, *c, sfc);
   }
 
+  // cerr << "End of processing processed " << rc << " chiral centres\n";
   chiral_centres_processed[rc]++;  // the number we process, rather than the number in the
                                    // molecule
 
@@ -847,12 +833,12 @@ chirality_fingerprint(Molecule& m, IWString_and_File_Descriptor& output) {
     lillymol::do_remove_invalid_chiral_centres(m);
   }
 
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   int* process_atom = new int[matoms];
   std::unique_ptr<int[]> free_process_atom(process_atom);
 
-  if (0 == only_process_atoms.number_elements()) {
+  if (only_process_atoms.empty()) {
     std::fill_n(process_atom, matoms, 1);
 
     return chirality_fingerprint(m, process_atom, output);
@@ -864,10 +850,10 @@ chirality_fingerprint(Molecule& m, IWString_and_File_Descriptor& output) {
 
   Molecule_to_Match target(&m);
 
-  for (int i = 0; i < only_process_atoms.number_elements(); ++i) {
+  for (Substructure_Query* qry : only_process_atoms) {
     Substructure_Results sresults;
 
-    const auto nhits = only_process_atoms[i]->substructure_search(target, sresults);
+    const int nhits = qry->substructure_search(target, sresults);
 
     if (0 == nhits) {
       continue;
@@ -879,7 +865,7 @@ chirality_fingerprint(Molecule& m, IWString_and_File_Descriptor& output) {
   }
 
   if (0 == queries_matching) {
-    cerr << "None of " << only_process_atoms.number_elements() << " queries matched "
+    cerr << "None of " << only_process_atoms.size() << " queries matched "
          << m.smiles() << ' ' << m.name() << '\n';
     return 0;
   }
@@ -891,7 +877,7 @@ static int
 chirality_fingerprint(data_source_and_type<Molecule>& input,
                       IWString_and_File_Descriptor& output) {
   Molecule* m;
-  while (NULL != (m = input.next_molecule())) {
+  while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
 
     if (!chirality_fingerprint(*m, output)) {
@@ -963,7 +949,7 @@ chirality_fingerprint_filter(const char* fname, IWString_and_File_Descriptor& ou
 static int
 chirality_fingerprint(const char* fname, FileType input_type,
                       IWString_and_File_Descriptor& output) {
-  assert(NULL != fname);
+  assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
     input_type = discern_file_type_from_name(fname);
@@ -983,9 +969,19 @@ chirality_fingerprint(const char* fname, FileType input_type,
   return chirality_fingerprint(input, output);
 }
 
+static void
+DisplayDashMOptions(std::ostream& output) {
+  output << " -M fpnochiral     write empty fingerprints for molecules with no chirality\n";
+  output << " -M discard        discard all existing chirality information\n";
+  output << " -M rminvalid      will discard any chiral centres that are not valid\n";
+
+
+  ::exit(1);
+}
+
 static int
 chirality_fingerprint(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lJ:P:fx3uq:s:nT:e:r:y:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lJ:P:fx3uq:s:nT:e:r:y:M:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1034,6 +1030,33 @@ chirality_fingerprint(int argc, char** argv) {
 
     if (!tag.ends_with('<')) {
       tag += '<';
+    }
+  }
+
+  if (cl.option_present('M')) {
+    IWString m;
+    for (int i = 0; cl.value('M', m, i); ++i) {
+      if (m == "fpnochiral") {  // this is the default, not needed
+        write_empty_fingerprint_for_non_chiral_molecules = 1;
+        if (verbose) {
+          cerr << "Will write an empty fingerprint for molecules with no chirality\n";
+        }
+      } else if (m == "discard") {
+        discard_existing_chirality = 1;
+        if (verbose) {
+          cerr << "Will discard all existing chirality information\n";
+        }
+      } else if (m == "rminvalid") {
+        remove_invalid_chiral_centres = 1;
+        if (verbose) {
+          cerr << "Will remove invalid chiral centres\n";
+        }
+      } else if (m == "help") {
+        DisplayDashMOptions(cerr);
+      } else {
+        cerr << "Unrecognised -M qualifier '" << m << "'\n";
+        DisplayDashMOptions(cerr);
+      }
     }
   }
 
@@ -1195,6 +1218,10 @@ chirality_fingerprint(int argc, char** argv) {
     if (skip_non_chiral_molecules) {
       cerr << "skipped " << non_chiral_molecules_skipped << " non chiral molecules\n";
     }
+  }
+
+  if (ntest) {
+    cerr << failed_tests << " failed tests\n";
   }
 
   return rc;

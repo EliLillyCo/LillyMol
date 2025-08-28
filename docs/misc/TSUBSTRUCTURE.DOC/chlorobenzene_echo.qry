@@ -1,0 +1,62 @@
+(0 Query
+  (A I version 2)
+  (A C comment "benzene")
+  (A I respect_initial_numbering 1)
+  (0 query_atom
+    (A I initial_atom_number 0)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+  )
+  (1 query_atom
+    (A I initial_atom_number 1)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond (0 1 4))
+  )
+  (2 query_atom
+    (A I initial_atom_number 2)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond (1 1 4))
+  )
+  (3 query_atom
+    (A I initial_atom_number 3)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond (2 1 4))
+  )
+  (4 query_atom
+    (A I initial_atom_number 4)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond (3 1 4))
+  )
+  (5 query_atom
+    (A I initial_atom_number 5)
+    (A I atomic_number 6)
+    (A I aromatic 1)
+    (A I bond (4 1 4))
+    (A I bond (0 1 4))
+  )
+  (1 environment
+    (A I no_other_substituents_allowed 1)
+    (A I single_bond (0 1 2 3 4))
+    (7 query_atom
+      (A I initial_atom_number 0)
+      (A I atomic_number 7)
+      (A I aromatic 0)
+    )
+    (8 query_atom
+      (A I initial_atom_number 1)
+      (A I atomic_number 8)
+      (A I aromatic 0)
+      (A I double_bond 7)
+    )
+    (9 query_atom
+      (A I initial_atom_number 2)
+      (A I atomic_number 8)
+      (A I aromatic 0)
+      (A I double_bond 7)
+    )
+  )
+)

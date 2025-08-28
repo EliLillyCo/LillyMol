@@ -6,7 +6,6 @@
 #include "gfp.h"
 
 using std::cerr;
-using std::endl;
 
 int
 count_tdts_in_file(iwstring_data_source & input,

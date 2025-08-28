@@ -3,11 +3,11 @@
 */
 
 #include <stdlib.h>
-#include <random>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
-#include <cmath>
+#include <random>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
@@ -481,7 +481,9 @@ discard_low_numbers (Association_Result<T> * r,
                      int n,
                      const int nkeep)
 {
-  std::random_shuffle(r, r + n);
+  static std::mt19937_64 rng(rd());
+
+  std::shuffle(r, r + n, rng);
 
   std::partial_sort (r, r + nkeep, r + n, [] (const Association_Result<T> & a1, const Association_Result<T> & a2) { return fabs(a1.v()) > fabs(a2.v());});
 
@@ -536,7 +538,9 @@ exon_correlated (const T * d,
     }
   }
 
-  std::random_shuffle(r2, r2 + nstored);
+  static std::mt19937_64 rng(rd());
+
+  std::shuffle(r2, r2 + nstored, rng);
 
   if (nstored > static_cast<unsigned int>(nwrite))
     std::partial_sort (r2, r2 + nwrite, r2 + nstored, [] (const Association_Result<T> & a1, const Association_Result<T> & a2) { return fabs(a1.v()) > fabs(a2.v());});

@@ -1,0 +1,224 @@
+{
+  "executable": "rxn_standardize",
+    "test": [
+        {
+          "name": "case_1",
+          "comment": [
+            "RDF example"
+          ],
+          "args": [  "-R  #{indir}/10_asl.rd" ]
+        },
+        {
+          "name": "case_2",
+          "comment": [
+            "RDF example ignoring chirality"
+          ],
+          "args": [  "-R  -c #{indir}/10_asl.rd" ]
+        },
+        {
+          "name": "case_3",
+          "comment": [
+            "forward reaction smiles defaults"
+          ],
+          "args": [  "#{indir}/10_asl.rxnsmi" ]
+        },
+        {
+          "name": "case_4",
+          "comment": [
+            "forward reaction smiles no chiral"
+          ],
+          "args": [  "-c  #{indir}/10_asl.rxnsmi" ]
+        },
+        {
+          "name": "case_5",
+          "comment": [
+            "forward reaction 100 default"
+          ],
+          "args": [  "#{indir}/R100Rev.rxnsmi" ]
+        },
+        {
+          "name": "case_6",
+          "comment": [
+            "forward reaction fix kekule"
+          ],
+          "args": [  "-K #{indir}/10_asl.rxnsmi" ]
+        },
+        {
+          "name": "case_8",
+          "comment": [
+            "forward reaction all dots"
+          ],
+          "args": [  "-d d #{indir}/10_asl.rxnsmi" ]
+        },
+        {
+          "name": "case_9",
+          "comment": [
+            "forward reaction all plusses"
+          ],
+          "args": [  "-d p #{indir}/10_asl.rxnsmi" ]
+        },
+        {
+          "name": "case_10",
+          "comment": [
+            "test of -f trunc"
+          ],
+          "args": [  "-f trunc #{indir}/10_asl_with_data.rxnsmi" ]
+        },
+        {
+          "name": "case_11",
+          "comment": [
+            "test of -f gub"
+          ],
+          "args": [  "-f gsub #{indir}/10_asl_with_data.rxnsmi" ]
+        },
+        {
+          "name": "case_12",
+          "comment": [
+            "test of -f __"
+          ],
+          "args": [  "-f gsub -f __ #{indir}/10_asl_with_data.rxnsmi" ]
+        },
+        {
+          "name": "case_13",
+          "comment": [
+            "test of -E"
+          ],
+          "args": [  "-E autocreate #{indir}/R1_with_X.rxnsmi" ]
+        },
+        {
+          "name": "case_14",
+          "comment": [
+            "test of -D rmdr  - remove duplicate reactants"
+          ],
+          "args": [  "-D rmdr #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_15",
+          "comment": [
+            "test of -D rmdp  - remove duplicate products"
+          ],
+          "args": [  "-D rmdp #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_16",
+          "comment": [
+            "test of -D rmda  - remove duplicate agents"
+          ],
+          "args": [  "-D rmda #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_17",
+          "comment": [
+            "test of -D rmaa  - remove all agents"
+          ],
+          "args": [  "-D rmaa #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_18",
+          "comment": [
+            "test of -D rmrnp  - remove all unmapped components"
+          ],
+          "args": [  "-D rmnmap #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_19",
+          "comment": [
+            "test of -D rmrnp  - remove all reactants not participating"
+          ],
+          "args": [  "-D rmrnp #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_20",
+          "comment": [
+            "test of -D rmfnp  - remove all reactant fragments not participating"
+          ],
+          "args": [  "-D rmfnp #{indir}/1_asl_withDupParts.rxnsmi" ]
+        },
+        {
+          "name": "case_21",
+          "comment": [
+            "test of -D rdlp  - reduce to largest product fragment"
+          ],
+          "args": [  "-D rdlp -Xigbad #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_22",
+          "comment": [
+            "test of -D rdlr  - reduce to largest reactant fragment"
+          ],
+          "args": [  "-D rdlr -Xigbad #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_23",
+          "comment": [
+            "test of -X rmmp  - skip reaction with multiple products"
+          ],
+          "args": [  "-X rmmp -X igbad #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_24",
+          "comment": [
+            "test of -X rmmr  - skip reaction with multiple reactants"
+          ],
+          "args": [  "-X rmmr -X igbad #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_25",
+          "comment": [
+            "test of -X rmiso  - skip reaction with chiral atoms"
+          ],
+          "args": [  "-X igbad -X rmiso #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_26",
+          "comment": [
+            "test of -X igbad - ignore bad reactions and keep going"
+          ],
+          "args": [  "-X igbad #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_27",
+          "comment": [
+            "test of -X nclf - ignore reactions that have no change in largest fragment"
+          ],
+          "args": [  "-X igbad -X nclf #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_28",
+          "comment": [
+            "test of -X  rmncma - ignore reactions that have no common mapped atoms between reactants and products"
+          ],
+          "args": [  "-X igbad -X rmncma #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_29",
+          "comment": [
+            "test of -X rmdmap - ignore reactions that duplicate mappings on atoms"
+          ],
+          "args": [  "-X igbad -X rmdmap #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_30",
+          "comment": [
+            "test of -D unmap  - remove the mapping from atoms that have duplicate mappings"
+          ],
+          "args": [  "-X igbad -D unmap  #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        },
+        {
+          "name": "case_31",
+          "comment": [
+            "ignore that have too many atoms in the largest reactant and the largest product"
+          ],
+          "args": [  "-X igbad -C 20 #{indir}/R100Rev.rxnsmi" ]
+        },
+        {
+          "name": "case_32",
+          "comment": [
+            "test of -D fmap - add unique mapping numbers to unmapped atoms"
+          ],
+          "args": [  "-X igbad -D fmap #{indir}/Rxn_Standardize_Test.rxnsmi" ]
+        }
+      ]
+    }
+  }
+}

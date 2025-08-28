@@ -8,6 +8,7 @@
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/misc2.h"
 #include "Molecule_Lib/path.h"
+#include "Molecule_Lib/rotbond_common.h"
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
@@ -291,6 +292,9 @@ Single_Substructure_Query::debug_print(std::ostream & os, const IWString & inden
     os << indentation << " embeddings do not overlap\n";
   if (_find_unique_embeddings_only)
     os << indentation << " find unique embeddings only\n";
+  if (_do_not_perceive_symmetry_equivalent_matches) {
+    os << indentation << " will NOT find symmetry related matches\n";
+  }
   if (_hits_needed.is_set())
     os << indentation << " hits_needed " << _hits_needed << '\n';
   if (_all_hits_in_same_fragment)
@@ -1217,10 +1221,11 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
       return 0;
   }
 
-  if (matched_query_atoms.empty())   // don't know how to handle the unmatched atoms stuff
+  if (matched_query_atoms.empty()) {   // don't know how to handle the unmatched atoms stuff
     return 1;
+  }
 
-  if (_unmatched_atoms.is_set())
+  if (_unmatched_atoms.is_set()) [[unlikely]]
   {
     const Molecule * m = matched_query_atoms[0]->current_hold_atom()->m();
 
@@ -1231,7 +1236,7 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
   }
 
   if (static_cast<float>(0.0) != _min_fraction_atoms_matched ||
-      static_cast<float>(0.0) != _max_fraction_atoms_matched)
+      static_cast<float>(0.0) != _max_fraction_atoms_matched) [[unlikely]]
   {
     const Molecule * m = matched_query_atoms[0]->current_hold_atom()->m();
 
@@ -1250,14 +1255,14 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
       return 0;
   }
 
-  if (_first_root_atom_with_symmetry_group >= 0)
+  if (_first_root_atom_with_symmetry_group >= 0) [[unlikely]]
   {
     if (! _symmetry_group_specifications_matches(matched_query_atoms, target_molecule))
       return 0;
   }
 
 
-  if (_geometric_constraints.number_elements() > 0) {
+  if (_geometric_constraints.number_elements() > 0) [[unlikely]] {
     Set_of_Atoms embedding;
     for (const auto * q : matched_query_atoms) {
       embedding << q->atom_number_matched();
@@ -1269,7 +1274,7 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
     }
   }
 
-  if (_separated_atoms.number_elements() > 0) {
+  if (_separated_atoms.number_elements() > 0) [[unlikely]] {
     std::unique_ptr<Set_of_Atoms> embedding = _make_new_embedding(matched_query_atoms);
     for (const SeparatedAtoms * separated_atoms : _separated_atoms) {
       if (! separated_atoms->Matches(*target_molecule.molecule(), *embedding)) {
@@ -1278,7 +1283,7 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
     }
   }
 
-  if (_region.size() > 0) {
+  if (_region.size() > 0) [[unlikely]] {
     for (const Region* r : _region) {
       if (! r->Matches(target_molecule, matched_query_atoms, already_matched)) {
         return 0;
@@ -1289,6 +1294,22 @@ Single_Substructure_Query::_global_query_conditions_also_matched(Query_Atoms_Mat
   if (_nearby_atoms.size() > 0) {
     for (NearbyAtoms* n : _nearby_atoms) {
       if (! n->Matches(target_molecule, matched_query_atoms, already_matched)) {
+        return 0;
+      }
+    }
+  }
+
+  if (! _same_atomic_number.empty()) [[unlikely]] {
+    for (const SameAtomicNumber* s : _same_atomic_number) {
+      if (! s->Matches(target_molecule, matched_query_atoms)) {
+        return 0;
+      }
+    }
+  }
+
+  if (! _different_atomic_number.empty()) [[unlikely]] {
+    for (const DifferentAtomicNumber* s : _different_atomic_number) {
+      if (! s->Matches(target_molecule, matched_query_atoms)) {
         return 0;
       }
     }
@@ -1724,7 +1745,7 @@ remove_atoms_with_same_or(Query_Atoms_Matched & matched_atoms,
   OR'd atoms.
 */
 
-//#define DEBUG_FIND_EMBEDDING
+// #define DEBUG_FIND_EMBEDDING
 
 int
 Single_Substructure_Query::_find_embedding(Molecule_to_Match & target_molecule,
@@ -1782,8 +1803,7 @@ Single_Substructure_Query::_find_embedding(Molecule_to_Match & target_molecule,
     if (nullptr == a->parent())    // must be a root atom, done
       return rc;
 
-    if (! a->move_to_next_match_from_current_anchor(already_matched, matched_atoms))
-    {
+    if (! a->move_to_next_match_from_current_anchor(already_matched, matched_atoms)) {
 #ifdef DEBUG_FIND_EMBEDDING
       cerr << "Move to next failed for atom " << a->unique_id() << '\n';
 #endif
@@ -3252,13 +3272,80 @@ Single_Substructure_Query::_atom_type_groupings_matched(const Query_Atoms_Matche
   return 1;
 }
 
+// Move from `a1` towards `a2` counting the number of rotatable bonds
+// encountered.
+int
+SeparatedAtoms::RotatableBondsBetween(Molecule& m,
+                        atom_number_t a1,
+                        atom_number_t a2,
+                        const int* bond_rotatable) const {
+  const int d = m.bonds_between(a1, a2);
+
+  //cerr << "RotatableBondsBetween from " << a1 << " to " << a2 << " d " << d << '\n';
+
+  for (const Bond* b : m[a1]) {
+    const atom_number_t o = b->other(a1);
+    if (m.bonds_between(o, a2) != d - 1) {
+      continue;
+    }
+
+    int rc = 0;
+    if (bond_rotatable[b->bond_number()]) {
+      rc = 1;
+    }
+    //cerr << "  to atom " << o << " rotatable? " << rc << '\n';
+
+    if (o == a2) {
+      return rc;
+    }
+
+    return rc + RotatableBondsBetween(m, o, a2, bond_rotatable);
+  }
+
+  return 0;
+}
+
+int
+SeparatedAtoms::RotatableBondsBetween(Molecule& m,
+                      atom_number_t a1,
+                      atom_number_t a2) const {
+  static quick_rotbond::QuickRotatableBonds rotbond;
+  rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
+
+  std::unique_ptr<int[]> bond_rotatable = std::make_unique<int[]>(m.nedges());
+
+  const uint32_t rotatable_bonds = rotbond.Process(m, bond_rotatable.get());
+  // If there is a minimum number of rotatable bonds between a1 and a2, and
+  // the total number of rotbonds in the molecule is below that, no match is possible.
+  // cerr << "MOlecule contains " << rotatable_bonds << " rotatable bonds\n";
+
+  uint32_t tmp;
+  if (_rotbond.min(tmp) && rotatable_bonds < tmp) {
+    return 0;
+  }
+
+  return RotatableBondsBetween(m, a1, a2, bond_rotatable.get());
+}
+
 int
 SeparatedAtoms::Matches(Molecule& m,
         const Set_of_Atoms& embedding) const {
   atom_number_t a1 = embedding[_a1];
   atom_number_t a2 = embedding[_a2];
   // cerr << "Matched atoms are " << a1 << " and " << a2 << " betw " << m.bonds_between(a1, a2) << '\n';
-  return _separation.matches(m.bonds_between(a1, a2));
+  if (! _separation.matches(m.bonds_between(a1, a2))) {
+    return 0;
+  }
+
+  if (_rotbond.is_set()) {
+    // int rbb = RotatableBondsBetween(m, a1, a2);
+    // cerr << " rbb " << rbb << " atoms " << a1 << ' ' << a2 << '\n';
+    if (! _rotbond.matches(RotatableBondsBetween(m, a1, a2))) {
+      return 0;
+    }
+  }
+
+  return 1;
 }
 
 int
@@ -3757,4 +3844,47 @@ RequiredMolecularProperties::SpinachAtomsMatch(Molecule_to_Match & target) const
 
 //cerr << "Single_Substructure_Query::_spinach_atoms_match:number_inter_ring_atoms " << number_inter_ring_atoms << '\n';
   return _inter_ring_atoms.matches(number_inter_ring_atoms);
+}
+
+int
+SameAtomicNumber::Matches(Molecule_to_Match& target_molecule,
+                          const Query_Atoms_Matched& matched_query_atoms) const {
+  atomic_number_t z = kInvalidAtomicNumber;
+  for (uint32_t a : _atom) {
+    if (! matched_query_atoms.ok_index(a)) {
+      cerr << "SameAtomicNumber::Matches:invalid matched atom " << a << '\n';
+      return 0;
+    }
+    atom_number_t matched = matched_query_atoms[a]->atom_number_matched();
+
+    if (z == kInvalidAtomicNumber) {
+      z = target_molecule[matched].atomic_number();
+    } else if (target_molecule[matched].atomic_number() != z) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+DifferentAtomicNumber::Matches(Molecule_to_Match& target_molecule,
+                               const Query_Atoms_Matched& matched_query_atoms) const {
+  assert(_atom.size() == 2);
+
+  if (! matched_query_atoms.ok_index(_atom[0])) {
+    cerr << "DifferentAtomicNumber::Matches:invalid matched atom number " << _atom[0] << 
+            " have " << matched_query_atoms.size() << " matched atoms\n";
+    return 0;
+  }
+  if (! matched_query_atoms.ok_index(_atom[1])) {
+    cerr << "DifferentAtomicNumber::Matches:invalid matched atom number " << _atom[1] <<
+            " have " << matched_query_atoms.size() << " matched atoms\n";
+    return 0;
+  }
+
+  const atom_number_t a0 = matched_query_atoms[_atom[0]]->atom_number_matched();
+  const atom_number_t a1 = matched_query_atoms[_atom[1]]->atom_number_matched();
+
+  return target_molecule[a0].atomic_number() != target_molecule[a1].atomic_number();
 }

@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "Utilities/Distance_Matrix/IWDistanceMatrixBase.h"
+#include "Obsolete/Distance_Matrix/IWDistanceMatrixBase.h"
 
 #include "Utilities/GFP_Tools/gfp.h"
 

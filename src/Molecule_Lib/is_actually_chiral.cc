@@ -264,7 +264,7 @@ Molecule::CahnIngoldPrelogValue(atom_number_t zatom) {
 std::optional<uint32_t>
 Molecule::ChiralCentreMemberToCipInt(int zatom) const {
   if (zatom >= 0 && zatom < _number_elements) {
-    return _things[zatom]->atomic_number();
+    return 1 + _things[zatom]->atomic_number();
   }
 
   if (zatom == kChiralConnectionIsImplicitHydrogen) {
@@ -312,6 +312,8 @@ enum Position { kTopFront = 0,
                 kRightDown = 3
 };
 // clang-format on
+
+// #define DEBUG_CAHN_INGOLD_PRELOG
 
 // An arbitrary value indicating that during an expansion, an atom is the centre
 // of the Chiral_Centre being resolved.

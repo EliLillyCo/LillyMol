@@ -11,7 +11,7 @@ template <typename T>
 class Combinations {
   private:
     // The number if items in each slot.
-    std::vector<int> _count;
+    std::vector<uint32_t> _count;
 
     bool _first_call;
 

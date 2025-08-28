@@ -10,7 +10,7 @@
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
-#include "Utilities/Distance_Matrix/IWDistanceMatrixBase.h"
+#include "Obsolete/Distance_Matrix/IWDistanceMatrixBase.h"
 
 #define IWDESCRIPTOR_IMPLEMENTATION 1
 #define SET_OF_DESCRIPTORS_IMPLEMENTATION 1

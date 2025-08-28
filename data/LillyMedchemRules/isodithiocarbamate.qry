@@ -3,5 +3,9 @@
   (A I version 2)
   (A D numeric_value 50)
   (A I unique_embeddings_only 1)
+  (1 elements_needed
+    (A I atomic_number 16)
+    (A I min_hits_needed 2)
+  )
   (A C smarts "S-C(=N)-S")
 )

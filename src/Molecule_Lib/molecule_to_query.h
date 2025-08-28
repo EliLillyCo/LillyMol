@@ -6,7 +6,11 @@
 #include "mdl_file_data.h"
 #include "substructure.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/molecule_to_query.pb.h"
+#else
+#include "molecule_to_query.pb.h"
+#endif
 
 /*
   To support the ability to specify substructures at atoms, we need a

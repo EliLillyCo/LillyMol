@@ -76,28 +76,28 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Identifies the unique rows in a file\n";
-  cerr << " -c <col>       only consider column(s) <col>\n";
-  cerr << " -x <col>       consider all column(s) except <col>\n";
-  cerr << " -D <file>      file for duplicate records\n";
-  cerr << " -o             display counts of how many times each identifier encountered\n";
-  cerr << " -O <fname>     write counts and times each identifier found to <fname>\n";
-  cerr << " -s             sort output from both -o and -O. Simlified output too, just token and count\n";
-//cerr << " -t <tol>       for columns that can be interpreted as numeric, allow a tolerance\n";
-  cerr << " -z             remove leading 0's from comparisons\n";
-  cerr << " -n             no output, just collect statistics\n";
-  cerr << " -nc            ignore case during comparisons\n";
-  cerr << " -r <number>    number of instances of each unique item to write (default 1)\n";
-  cerr << " -p <prob>      discard duplicate records with probability <prob>\n";
-  cerr << " -trunc <char>  truncate fields at first <char> - useful for truncating decimals\n";
-  // cerr << " -whash         wait for hash de-allocation - very slow, don't use\n";
-  cerr << " -tab,-csv      deal with differently formatted files\n";
-  cerr << " -i <...>       input column separator\n";
-  cerr << " -nwz           No Warnings about Zero length text comparisons\n";
-  cerr << " -subset        regexp specifying which part of the column to consider '(..*)...' would be all except last 3 chars\n";
-  cerr << " -h <n>         first <n> records in file\n";
-  cerr << " -j             treat as descriptor file\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Identifies the unique rows in a tabular file\n";
+ -c <col>       only consider column(s) <col>
+ -x <col>       consider all column(s) except <col>
+ -P <fname>     read a file of identifiers to be considered previously seen - added to the hash before reading the input file.
+ -D <file>      file for duplicate records - by default duplicate records are discarded.
+ -o             display counts of how many times each identifier encountered
+ -O <fname>     write counts and times each identifier found to <fname>
+ -s             sort output from both -o and -O. Simlified output too, just token and count
+ -z             remove leading 0's from comparisons
+ -n             no output, just collect statistics
+ -nc            ignore case during comparisons
+ -r <number>    number of instances of each unique item to write (default 1)
+ -p <prob>      discard duplicate records with probability <prob>
+ -trunc <char>  truncate fields at first <char> - useful for truncating decimals
+ -tab,-csv      deal with differently formatted files
+ -i <...>       input column separator - note that names are recognised '-i tab'. Default 'space'.
+ -nwz           No Warnings about Zero length text comparisons
+ -subset        regexp specifying which part of the column to consider '(..*)...' would be all except last 3 chars
+ -h <n>         first <n> records in file are header records
+ -j             treat as descriptor file - same as -h 1
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -129,11 +129,11 @@ static IWString_STL_Hash_Set previously_seen;
 
 static IW_STL_Hash_Map_int times_seen;
 
-static int lines_read = 0;
+static uint64_t lines_read = 0;
 
-static int duplicate_lines_found = 0;
+static uint64_t duplicate_lines_found = 0;
 
-static int lines_written = 0;
+static uint64_t lines_written = 0;
 
 static IWString_and_File_Descriptor stream_for_duplicate_lines;
 

@@ -1,0 +1,10 @@
+query {
+  smarts: "O=C-[O,N]"
+  environment {
+    attachment {
+      attachment_point: [1, 2]
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "[CX4T0][CD2H2][CD2H2][CD2H2]"
+  }
+}

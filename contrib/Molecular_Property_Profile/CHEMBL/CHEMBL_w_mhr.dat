@@ -2,11 +2,11 @@ description {
   feature_name: "w_mhr"
   description: "Max number of heteratoms in a ring"
   plot_title: "Max number of heteratoms in a ring"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 10.0
-mean: 1.57508
+maxval: 16.0
+mean: 1.5465366
 median: 2.0
 quantile {
   quantile: 0.01
@@ -34,45 +34,53 @@ quantile {
   value: 4.0
 }
 int_values {
-  count: 6703
+  count: 262724
 }
 int_values {
   value: 1
-  count: 14549
+  count: 545228
 }
 int_values {
   value: 2
-  count: 22874
+  count: 838701
 }
 int_values {
   value: 3
-  count: 5183
+  count: 174766
 }
 int_values {
   value: 4
-  count: 602
+  count: 23732
 }
 int_values {
   value: 5
-  count: 53
+  count: 1790
 }
 int_values {
   value: 6
-  count: 26
+  count: 838
 }
 int_values {
   value: 7
-  count: 4
+  count: 119
 }
 int_values {
   value: 8
-  count: 4
+  count: 99
 }
 int_values {
   value: 9
-  count: 1
+  count: 27
 }
 int_values {
   value: 10
-  count: 1
+  count: 30
+}
+int_values {
+  value: 12
+  count: 5
+}
+int_values {
+  value: 16
+  count: 2
 }

@@ -29,10 +29,7 @@ NDMRT<1>
 DMRTYP<imine_one_A>
 |
 $SMI<FC1=C(N([H])[H])C2=C(N(C3([H])C([H])([H])C3([H])[H])C(=C(C2=O)C(=O)O[H])[H])C(=C1N1C([H])([H])[C@@]([H])(N([H])C([H])([H])[H])C([H])([H])C1([H])[H])C([H])([H])[H]>
-PCN<PBCHM10833216 : D(140) 140:140|anthranil_one_A>
-DMRT<140>
-NDMRT<1>
-DMRTYP<anthranil_one_A>
+PCN<PBCHM10833216>
 |
 $SMI<S(C([H])([H])[H])C(=NC(=C1C(=O)OC(C([H])([H])[H])(C([H])([H])[H])OC1=O)[H])N([H])N=C(C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H]>
 PCN<PBCHM10927997 : D(70) 70:70|ene_six_het_A>

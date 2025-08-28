@@ -7,8 +7,13 @@
 #include "Foundational/iwbits/iwbits.h"
 #include "Foundational/iwstring/iwstring.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/atom_type_ext.pb.h"
 #include "Molecule_Lib/pharmacophore.pb.h"
+#else
+#include "atom_type_ext.pb.h"
+#include "pharmacophore.pb.h"
+#endif
 
 #include "charge_assigner.h"
 #include "donor_acceptor.h"

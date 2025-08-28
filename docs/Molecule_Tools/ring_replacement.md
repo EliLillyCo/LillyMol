@@ -192,7 +192,7 @@ smi: "[CH2:70]1NC=CC=[1CH]1" smt: "[ax2r6D2]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2
         id: "CHEMBL4558322.6a" n: 1 conn: true exo: "[70O]" usmi: "O=c1[nH]ccc[1cH]1"
 ```
 The exocyclic atoms are specified as a separate molecule with an isotopic label near
-70. Somewhere within the replacement ring 'smi:', there will be an atom map number
+70. Somewhere within the replacement ring 'smi:', there will be an atom with atom map number
 corresponding to this isotopic label. That is where the doubly bonded exocyclic
 atom will be joined. The corresponding atom within the smarts does still have 'D2'
 so we can not yet do fully flexibile ring replacement. Getting there...
@@ -205,34 +205,33 @@ currently there is really no limit to what can now be processed - see the '-Z'
 option.
 
 ## Aggregating Across Collections
-There is a script that can be used to aggregate data from multiple collections
+There is a C++ executable that can be used to aggregate data from multiple collections
 into a single collection.
-
 ```
-ruby aggregate_rings.rb corporate/rings chembl/rings ...
+aggregate_replacement_rings  -S ALL -v corporate/rings chembl/rings ...
 ```
 will aggregate all the data in the individual collections and create a unified set
 of protos in the current directory. The example used will be the first example
-encountered during the collation process. The script is quite dumb
-and mostly treats the protos as text, but it works well enough and
-is fast enough.
+encountered during the collation process. 
 
 ## Ring Replacement
 Once a set of replacement rings has been assembled, those can be used to
 perform ring replacement on molecules with existing ring/ring systems.
+```
  -R <fname>    file of labelled rings created by ring_extraction
  -s <smarts>   only replace rings matched by <smarts>
  -q <query>    only replace rings matched by <query>
  -u            unique molecules only
- -a            allow change of aromaticity on ring replacement
  -p            write parent molecule
  -n <ex>       only process replacement rings with <ex> or more examples
  -w            sort output by precedent count
  -d            do NOT preserve substitution patterns. Replacement rings may
                not have had the same substition pattern as they do here
- -Y <query>    product molecules MUST     match a query in <query>
- -N <query>    product molecules must NOT match any queries in <query>
- -D <query>    discard any replacement ring that matches <query>
+ -Y <query>    product molecules MUST     match a query in <query>.
+ -N <query>    product molecules must NOT match any queries in <query>.
+ -F <query>    only consider replacements rings that match <query>.
+ -D <query>    discard any replacement ring that matches <query>.
+
  -I .          remove isotopes from product molecules
  -I <n>        change all existing isotopes to <n> (useful if atom types used)
  -B <fname>    write molecules not transformed to <fname>
@@ -304,3 +303,202 @@ newly generated molecules being synthetically feasible, but at the cost of gener
 potentially many fewer new molecules.
 
 Atom typing is described in [atom typing](/docs/Molecule_Lib/atom_typing.md).
+
+## Major Changes
+While the original ring replacement tool described above works well, many people
+have requested the ability to replace a ring/ring system with ring systems that
+are different sizes. For example, remove the substituents from a 6 membered aromatic
+and try placing them on a five membered aromatic - if possible. The reverse is likely
+much easier. Or even remove the substituents from a Napthalene and try to place them
+onto a 6 membered isolated aromatic. Again, the opposite will be easier.
+
+The initial implementation enables these cases, but there are limitations.
+
+In a flat ring system, there may be a notion of directionality, ortho, meta, para, etc.
+But when substituents are removed from an existing ring/ring system, any information
+about their relative arrangement is lost. Of course this only matters if there are
+more than two substituents involved.
+
+Same if we are transforming, say a 6/6 fused aromatic to a 5/6 fused aromatic.
+All the substituents are removed, and placed on the new ring system in all
+possible locations - regardless of whether they started off in the same ring.
+This may be a bug or a feature - depending. It is likely fairly easy to
+impose a constraint that substituents that start off sharing a ring should
+share a ring in the product molecule.
+
+### HowTo
+The usage message is
+```
+ -R <fname>     one or more RplRing::ReplacementRing textproto files, such as what is generated
+                by ring_extraction.
+ -n <n>         minimum support level for replacement rings, the 'n:' value in the proto.
+ -j <n>         discard replacements with more than <n> points of attachment.
+ -s <smarts>    specify one or more ring atoms that define the ring(s) to be removed
+                and replaced.
+ -q <query>     query file specification of the atoms to be removed - same as the -s option.
+ -z i           ignore molecules that do not match any of the -s/-q queries.
+ -x <n>         max number of products per starting molecule. Arbitrary variants will be generated.
+ -o             disallow ortho substitions of rings.
+ -I             remove the isotopic labels from product molecules.
+ -p             write the parent molecule before writing the variants.
+ -V             discard any product with an invalid valence.
+ -e             preserve the same-ring attachment patterns of the starting molecule.
+ -Y <query>     queries that product molecules must contain.
+                tsubstructure -q syntax, so smarts is '-Y SMARTS:n'   
+                query file is '-Y PROTO:/path/to/file/qry`
+ -N <query>     queries for features that must NOT be in product molecules.
+ -c             remove chirality from input molecules.
+ -v             verbose output
+```
+
+The tool takes the same textproto input files as `ring_replacement`. Any
+number of replacement ring files are specified via the -R option.
+
+In this case we are looking to replace a fuxed 5a6a ring with 6a6a type
+rings.
+```
+ring_replacement_inexact -R /path/to/ring_replacement/rings_6a6a.smi \
+        -I -o -V -n 5 -s '[/IWfss2cr5r6]' -z i -p -c input.smi
+```
+The options are
+
+`-R` one or more replacement ring files generated by `ring_extraction`.
+
+`-I` during processing isotopic atoms are applied in order to keep track
+of atoms. Without the -I option, those isotopes will remain.
+
+`-o` means do not generate products where the substituents are placed
+ortho each other in the product molecule. This is part of a long term
+plan to be able to preserve distance around the ring constraints from
+the starting molecule. Not sure how how useful this option will be.
+
+`-V` discard product molecules that have valence errors. The tool tries
+hard to ensure this does happen, but it can.
+
+`-n 5` in order to keep the size of the job down, limit replacement
+ring/ring systems to those with at least 5 instances.
+
+`-s smarts` this particular smarts specifies an aromatic carbon atom,
+that is in both a 5 and 6 membered ring, and in a fused system size of 2.
+
+`-z i` means ignore any molecules in the input that do not match the -s
+smarts.
+
+`-p` write the parent molecule before writing the variants.
+
+`-c` chirality is removed from the input molecules. Mostly chirality really does
+not impact processing, but there may be some cases where chirality gets
+destroyed as atoms and bonds are temporarily switched around.
+
+The invocation above, starting with 11.3k molecules containing 5a6a type
+systems, found 152 replacement ring candidates and generated 1.84M new
+molecules in two minutes 18 seconds. The 6a6a file of replacement rings 
+had 2465 possible ring systems, so the support requirement, `-n 5` made
+a dramatic difference on the number of molecules generated.
+
+An example of how substituents can be scrambled. Given the parent
+molecule
+![CHEMBL7372](Images/CHEMBL7372_PARENT.png)
+the following molecules can be generated
+![generated](Images/CHEMBL7372_p1.png)
+![generated](Images/CHEMBL7372_p2.png)
+
+where we see that one product has preserved the original same ring
+associations, and the other product has scrambled them.
+
+There are means of limiting the number of variants generated. If there
+is a replacement ring with a lot of points of substitution a large
+number of products can be generated. The previous invocation reported
+```
+197 molecules generated 286 products
+191 molecules generated 304 products
+1 molecules generated 339 products
+2 molecules generated 375 products
+4 molecules generated 438 products
+6 molecules generated 456 products
+1 molecules generated 536 products
+Generated 1832187 molecules
+2313930 duplicates discarded
+```
+Use the `-x <n>` option to limit the number of product molecules generated
+from any given starting molecule. This cutoff is approximate since the tool
+only periodically checks that the limit has been exceeded.
+
+Use the -Y and -N options to enforce constraints on substructures that
+must be present in the product molecule (-Y) or not present in the
+product molecules (-N). To use a smarts
+```
+-Y SMARTS:[c;R2]:[aD3x2]
+```
+to require a substition at one of the atoms adjacent to the
+ring fusion. Or use the -N option to suppress these molecules. Or
+pipe the results to `tsubstructure`. The -Y and -N options use
+the same syntax as the -q option of `tsubstructure`.
+
+The replacement rings considered for use can be filtered by use of the
+-F and -D options. The -F option specifies queries that the replacement
+rings must contain, and the -D option specifies queries that the replacement
+rings must not contain. Note that
+```
+-F 'SMARTS:0[n]'      # only match rings with zero occurrences of an aromatic nitrogen.
+```
+is the same as
+```
+-D 'SMARTS:[n]'     # discard any ring that contains an aromatic nitrogen.
+```
+Although the second form is much more direct.
+
+A more complex example might be
+```
+... -s 'c12nccc1cccn2' -z i -d -F 'SMARTS:[cr5r6]:[nr5]'
+```
+where a particular heterocycle is being replaced, but the replacement ring
+should preserve the aromatic Nitrogen in the five membered ring. So if one
+started with
+![CHEMBL4202835](Images/CHEMBL4202835.png) 
+one would produce only molecules that might look like
+![CHEMBL4202835](Images/CHEMBL4202835_r1.png) 
+![CHEMBL4202835](Images/CHEMBL4202835_r2.png) 
+
+## Formula Difference
+Another means of limiting the scope of replacement is to place limits on the
+number of differences in the molecular formula. This is specified via the `-f`
+option. Note that it is impossible to have a formula diffeence of 1. For example
+if we are replacing benzene, c6, with pyridine c5n, the difference between
+those two formulae is 3 - different by one Carbon and different by one Nitrogen, as
+well as different by one Hydrogen.
+
+A typical invocaton, replacing a pyridine with something not that different, might look like
+```
+ring_replacement -z i -R 6a.smi -f 4 -p -s '[/IWfss1c]1ncccc1' file.smi > new.smi
+```
+The `-z i` combination says skip any input molecules not matching the query.
+
+The `-R` option gives a file containing the possible replacement rings, in this
+case all 6 membered aromatic rings, presumably from ring_extraction.
+
+Allow as many as two changes in the formula between the starting ring and the
+replacement ring - remember each change causes a difference in 2 in the computed
+difference.
+
+Specifying `-p` means write the starting molecule as well as the variants to the
+output.
+
+The smarts specifies an atom in the ring that will be replaced. In this case, it
+is a very specific specification for an unfused pyridine. `[/IWfss1c]` is an
+aroamtic carbon in a fused system size of one ring.
+
+## 3D
+Note that if your input molecule contains 3D information, add the -3 option
+and the atoms in the replacement ring will be translated to the exact position
+as the corresponding atom in the startign molecule. This can greatly facilitate
+structural explorations in cases of docked molecules.
+
+Note that output is in LillyMol smiles with coordinates embedded
+```
+O{{0.0021,-0.0041,0.002}}=[N+]{{-0.0158,1.3128,0.0093}}([O-]{{1.1157,1.9867,0.0021}})C{{-1.3076,2.0354,0.0193}}1=C{{-2.4963,1.3227,0.0211}}C{{-3.7023,1.9881,0.0353}}=C{{-3.7254,3.3879,0.0377}}(C{{-2.5206,4.1008,0.0305}}=C{{-1.3224,3.4213,0.0211}}1)S{{-5.2631,4.248,0.049}}S{{-6.4708,2.7683,0.0553}}C{{-6.5355,2.4335,1.784}}1=C{{-7.3306,1.3883,2.2688}}C{{-7.3724,1.1295,3.6212}}=C{{-6.6376,1.9074,4.5021}}(C{{-5.8526,2.9476,4.0302}}=C{{-5.7966,3.2151,2.68}}1)[N+]{{-6.692,1.6262,5.9543}}(=O{{-5.9956,2.3635,6.7944}})[O-]{{-7.4369,0.6386,6.4063}} 000000003986
+```
+which can be converted to .sdf form with
+```
+fileconv -o sdf in.smi
+```

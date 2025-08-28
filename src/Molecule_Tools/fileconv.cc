@@ -14,6 +14,7 @@ using std::cerr;
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
 
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/istream_and_type.h"
@@ -56,6 +57,8 @@ struct LocalOptions {
   // Optionally we can write connection table errors to a destination.
   IWString connection_table_error_file;
 
+  Report_Progress report_progress;
+
   // functions
   private:
     // If requested, write `smiles` to stream_for_smiles_before_filters
@@ -74,6 +77,8 @@ struct LocalOptions {
     void SetDebugPrintEachMolecule(Command_Line& cl, char flag);
 
     int ParseBadHandlingoptions(Command_Line& cl, char flag);
+
+    int SetupReporting(Command_Line& cl, char flag);
 
   public:
     // Initialise settings from command line options.
@@ -113,6 +118,8 @@ LocalOptions::Build(Command_Line& cl) {
   }
 
   SetDebugPrintEachMolecule(cl, 'Y');
+
+  SetupReporting(cl, 'Y');
 
   audit_input = cl.option_present('a');
 
@@ -282,6 +289,26 @@ LocalOptions::OpenPreFilteredSmilesFile(Command_Line& cl, char flag) {
   return 1;
 }
 
+int
+LocalOptions::SetupReporting(Command_Line& cl, char flag) {
+  const_IWSubstring y;
+  for (int i = 0; cl.value(flag, y, i); ++i) {
+    if (! y.starts_with("rpt=")) {
+      continue;
+    }
+    y.remove_leading_chars(4);
+    uint32_t rpt;
+    if (! y.numeric_value(rpt)) {
+      cerr << "Invalid -Y rpt=... directive '" << y << "'\n";
+      return 0;
+    }
+    report_progress.set_report_every(rpt);
+    return 1;
+  }
+
+  return 1;
+}
+
 void
 LocalOptions::SetupInputFile(data_source_and_type<Molecule>& input) const {
   if (verbose > 1) {
@@ -395,6 +422,18 @@ LocalOptions::ReportResults(const Command_Line& cl, std::ostream& output) const 
 int
 LocalOptions::Fileconv(Molecule& m,
                        fileconv::FileconvConfig& config) {
+
+  if (report_progress()) {
+    cerr << "Read " << molecules_read << " molecules";
+    if (! audit_input) {
+      cerr << ", wrote " << molecules_written;
+      if (molecules_changed) {
+        cerr << molecules_changed << " molecules changed";
+      }
+    }
+    cerr << '\n';
+  }
+
   if (debug_print_each_molecule) {
     m.compute_aromaticity_if_needed();
     m.debug_print(cerr);

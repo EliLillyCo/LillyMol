@@ -1,0 +1,36 @@
+{
+  "executable": "linker_replacement",
+  "difftool": "same_structures",
+  "test": [
+
+    {
+      "name": "default",
+      "args": [
+        "-L #{datadir}/DICER_2_4.textproto #{datadir}/R1.smi #{datadir}/R2.smi"
+      ]
+    },
+
+    {
+      "name": "support",
+      "args": [
+        "-p 5 -L #{datadir}/DICER_2_4.textproto #{datadir}/R1.smi #{datadir}/R2.smi"
+      ]
+    },
+
+    {
+      "name": "scaffold",
+      "args": [
+        "-O #{indir}/scaffold.smi -O maxdiff=6 -L #{datadir}/DICER_2_4.textproto #{datadir}/R1.smi #{datadir}/R2.smi"
+      ]
+    },
+
+    {
+      "name": "natoms",
+      "args": [
+        "-m 6 -M 12 -L #{datadir}/DICER_2_4.textproto #{datadir}/R1.smi #{datadir}/R2.smi"
+      ]
+    }
+
+  ]
+
+}

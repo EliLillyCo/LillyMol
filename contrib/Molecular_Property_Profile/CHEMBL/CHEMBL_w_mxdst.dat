@@ -2,12 +2,12 @@ description {
   feature_name: "w_mxdst"
   description: "Longest topological distance"
   plot_title: "Longest topological distance"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
 minval: 2.0
-maxval: 45.0
-mean: 14.2804
+maxval: 49.0
+mean: 14.148391
 median: 14.0
 quantile {
   quantile: 0.01
@@ -19,7 +19,7 @@ quantile {
 }
 quantile {
   quantile: 0.1
-  value: 10.0
+  value: 9.0
 }
 quantile {
   quantile: 0.5
@@ -39,165 +39,193 @@ quantile {
 }
 int_values {
   value: 2
-  count: 2
+  count: 56
 }
 int_values {
   value: 3
-  count: 14
+  count: 545
 }
 int_values {
   value: 4
-  count: 49
+  count: 2274
 }
 int_values {
   value: 5
-  count: 165
+  count: 6445
 }
 int_values {
   value: 6
-  count: 392
+  count: 14748
 }
 int_values {
   value: 7
-  count: 662
+  count: 27650
 }
 int_values {
   value: 8
-  count: 1374
+  count: 50900
 }
 int_values {
   value: 9
-  count: 2201
+  count: 85336
 }
 int_values {
   value: 10
-  count: 3196
+  count: 123958
 }
 int_values {
   value: 11
-  count: 4141
+  count: 157670
 }
 int_values {
   value: 12
-  count: 4896
+  count: 186452
 }
 int_values {
   value: 13
-  count: 5309
+  count: 197975
 }
 int_values {
   value: 14
-  count: 5359
+  count: 196145
 }
 int_values {
   value: 15
-  count: 4958
+  count: 179113
 }
 int_values {
   value: 16
-  count: 4119
+  count: 155382
 }
 int_values {
   value: 17
-  count: 3533
+  count: 127878
 }
 int_values {
   value: 18
-  count: 2876
+  count: 100364
 }
 int_values {
   value: 19
-  count: 2094
+  count: 75030
 }
 int_values {
   value: 20
-  count: 1528
+  count: 53096
 }
 int_values {
   value: 21
-  count: 1047
+  count: 35633
 }
 int_values {
   value: 22
-  count: 665
+  count: 23542
 }
 int_values {
   value: 23
-  count: 475
+  count: 15950
 }
 int_values {
   value: 24
-  count: 290
+  count: 9928
 }
 int_values {
   value: 25
-  count: 210
+  count: 6764
 }
 int_values {
   value: 26
-  count: 128
+  count: 4200
 }
 int_values {
   value: 27
-  count: 97
+  count: 3366
 }
 int_values {
   value: 28
-  count: 64
+  count: 2067
 }
 int_values {
   value: 29
-  count: 46
+  count: 1630
 }
 int_values {
   value: 30
-  count: 21
+  count: 887
 }
 int_values {
   value: 31
-  count: 29
+  count: 949
 }
 int_values {
   value: 32
-  count: 18
+  count: 592
 }
 int_values {
   value: 33
-  count: 17
+  count: 619
 }
 int_values {
   value: 34
-  count: 7
+  count: 210
 }
 int_values {
   value: 35
-  count: 7
+  count: 240
 }
 int_values {
   value: 36
-  count: 1
+  count: 101
 }
 int_values {
   value: 37
-  count: 1
+  count: 100
 }
 int_values {
   value: 38
-  count: 3
+  count: 39
 }
 int_values {
   value: 39
-  count: 2
+  count: 68
 }
 int_values {
   value: 40
-  count: 1
+  count: 34
+}
+int_values {
+  value: 41
+  count: 32
 }
 int_values {
   value: 42
-  count: 1
+  count: 9
+}
+int_values {
+  value: 43
+  count: 16
+}
+int_values {
+  value: 44
+  count: 7
 }
 int_values {
   value: 45
-  count: 2
+  count: 46
+}
+int_values {
+  value: 46
+  count: 5
+}
+int_values {
+  value: 47
+  count: 3
+}
+int_values {
+  value: 48
+  count: 1
+}
+int_values {
+  value: 49
+  count: 6
 }

@@ -28,7 +28,11 @@
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace dicer_fragment_lookup_bdb {
 
@@ -222,6 +226,12 @@ class DicerFragmentLookupImpl {
     // database.
     int _compute_atom_coverage;
 
+    // If enabled, we can lookup fragments generated as complete molecules in one
+    // or more smiles databases - probably built by buildsmidb_bdb.
+    resizable_array_p<Db> _smiles_db;
+    // The number of fragments found in the smiles databases.
+    uint32_t _found_in_smiles_db;
+
     IWString_and_File_Descriptor _stream_for_atom_coverage;
 
     // Private functions
@@ -244,6 +254,12 @@ class DicerFragmentLookupImpl {
                                 const IWString& name,
                                 resizable_array_p<SmilesNatoms>& fragments,
                                 IWString_and_File_Descriptor& output);
+    int LookupFragmentsAsMolecules(const IWString& smiles, const IWString& name,
+                                resizable_array_p<SmilesNatoms>& fragments,
+                                IWString_and_File_Descriptor& output);
+    int LookupFragmentAsMolecules(const IWString& parent_name,
+                Molecule& fragment,
+                IWString_and_File_Descriptor& output);
 
   public:
     DicerFragmentLookupImpl();
@@ -296,6 +312,7 @@ DicerFragmentLookupImpl::DicerFragmentLookupImpl() {
   _write_per_natoms_data = 0;
   _looking_for_highest_precedent = 0;
   _compute_atom_coverage = 0;
+  _found_in_smiles_db = 0;
 }
 
 void
@@ -320,30 +337,56 @@ DisplayDashYOptions(std::ostream& output) {
 int
 DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
   _verbose = cl.option_count('v');
-  if (! cl.option_present('d')) {
+  if (cl.option_present('d')) {
+  } else if (cl.option_present('S')) {
+  } else {
     cerr << "Must specify one or more databases via the -d option\n";
     return 0;
   }
 
-  int flags = 0;
+  if (cl.option_present('d') && cl.option_present('S')) {
+    cerr << "The -d and -S options are incompatible\n";
+    return 0;
+  }
+
   DBTYPE dbtype = DB_UNKNOWN;
   int mode = 0;
   DbEnv* env = NULL;
 
-  IWString dbname;
-  for (int i = 0; cl.value('d', dbname, i); ++i) {
-    std::unique_ptr<Db> db = std::make_unique<Db>(env, DB_CXX_NO_EXCEPTIONS);
-    if (int rc = db->open(NULL, dbname.null_terminated_chars(), NULL, dbtype, flags, mode);
-        rc != 0) {
-      cerr << "Cannot open '" << dbname << "' ";
-      db->err(rc, "");
-      return 0;
+  if (cl.option_present('d')) {
+    IWString dbname;
+    for (int i = 0; cl.value('d', dbname, i); ++i) {
+      std::unique_ptr<Db> db = std::make_unique<Db>(env, DB_CXX_NO_EXCEPTIONS);
+      if (int rc = db->open(NULL, dbname.null_terminated_chars(), NULL, dbtype, DB_RDONLY, mode);
+          rc != 0) {
+        cerr << "Cannot open '" << dbname << "' ";
+        db->err(rc, "");
+        return 0;
+      }
+      _database << db.release();
     }
-    _database << db.release();
+
+    if (_verbose) {
+      cerr << "Opened " << _database.size() << " dicer precedent databases\n";
+    }
   }
 
-  if (_verbose) {
-    cerr << "Opened " << _database.size() << " dicer precedent databases\n";
+  if (cl.option_present('S')) {
+    IWString dbname;
+    for (int i = 0; cl.value('S', dbname, i); ++i) {
+      std::unique_ptr<Db> db = std::make_unique<Db>(env, DB_CXX_NO_EXCEPTIONS);
+      if (int rc = db->open(NULL, dbname.null_terminated_chars(), NULL, dbtype, DB_RDONLY, mode);
+          rc != 0) {
+        cerr << "Cannot open '" << dbname << "' ";
+        db->err(rc, "");
+        return 0;
+      }
+      _smiles_db << db.release();
+    }
+
+    if (_verbose) {
+      cerr << "Opened " << _smiles_db.size() << " smiles databases\n";
+    }
   }
 
   if (cl.option_present('p')) {
@@ -411,7 +454,7 @@ DicerFragmentLookupImpl::Initialise(Command_Line& cl) {
     }
   }
 
-  if (_min_fragment_size > _max_fragment_size) {
+  if (_max_fragment_size > 0 && _min_fragment_size > _max_fragment_size) {
     cerr << "Inconsistent min " << _min_fragment_size << " and max " << 
             _max_fragment_size << " fragment size specifications\n";
     return 0;
@@ -513,7 +556,7 @@ DicerFragmentLookupImpl::Lookup(const const_IWSubstring& smiles) {
 }
 
 // Return the proto of the first match to `smiles` from any
-// of our databases.
+// of our dicer fragment databases.
 std::optional<dicer_data::DicerFragment>
 DicerFragmentLookupImpl::FirstMatch(const const_IWSubstring& smiles) {
   Dbt dkey;
@@ -546,6 +589,7 @@ DicerFragmentLookupImpl::FirstMatch(const const_IWSubstring& smiles) {
   return std::nullopt;
 }
 
+#ifdef IS_THIS_NEEDD
 int
 DicerFragmentLookupImpl::DoOutput(const const_IWSubstring& smiles,
                                   const const_IWSubstring& id,
@@ -581,6 +625,7 @@ DicerFragmentLookupImpl::DoOutput(const const_IWSubstring& smiles,
 
   return 1;
 }
+#endif
 
 static int
 WriteAtomCoverage(AtomCoverage& atom_coverage, 
@@ -616,6 +661,10 @@ DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
     ++_molecules_with_no_fragments;
     output << smiles << _sep << name << '\n';
     return 1;
+  }
+
+  if (_smiles_db.size() > 0) {
+    return LookupFragmentsAsMolecules(smiles, name, fragments, output);
   }
 
   if (_looking_for_highest_precedent) {
@@ -688,6 +737,52 @@ DicerFragmentLookupImpl::ProcessMolecule(const IWString& smiles,
 
   return Write(smiles, name, *fragments[index_with_lowest_count],
                lowest_count, _stream_for_below_threshold);
+}
+
+int
+DicerFragmentLookupImpl::LookupFragmentsAsMolecules(const IWString& smiles, const IWString& name,
+                                resizable_array_p<SmilesNatoms>& fragments,
+                                IWString_and_File_Descriptor& output) {
+  int rc = 0;
+  for (const SmilesNatoms* fragment : fragments) {
+    Molecule f;
+    if (! f.build_from_smiles(fragment->smiles)) {
+      cerr << "DicerFragmentLookupImpl::LookupFragments:invalid smiles " << fragment->smiles << '\n';
+      continue;
+    }
+
+    // None of the smiles databases have isotopes.
+    f.transform_to_non_isotopic_form();
+
+    rc += LookupFragmentAsMolecules(name, f, output);
+  }
+
+  return rc;
+}
+
+int
+DicerFragmentLookupImpl::LookupFragmentAsMolecules(const IWString& parent_name,
+                Molecule& fragment,
+                IWString_and_File_Descriptor& output) {
+  const IWString& usmi = fragment.unique_smiles();
+
+  Dbt dkey;
+  dkey.set_data((void*) usmi.data());
+  dkey.set_size(usmi.length());
+  Dbt fromdb;
+
+  for (Db* db: _smiles_db) {
+    if (0 != db->get(NULL, &dkey, &fromdb, 0)) {
+      continue;
+    }
+
+    const_IWSubstring id((const char*)fromdb.get_data(), fromdb.get_size());
+    output << fragment.smiles() << ' ' << id << " from " << parent_name << '\n';
+    ++_found_in_smiles_db;
+    return 1;
+  }
+
+  return 0;
 }
 
 int
@@ -781,7 +876,12 @@ int
 DicerFragmentLookupImpl::Report(std::ostream& output) const {
   output << "Read " << _molecules_processed << " molecules\n";
   output << _molecules_with_no_fragments << " molecules generated no fragments\n";
-  output << _above_min_count << " above " << _min_count_needed << '\n';
+  if (_above_min_count > 0) {
+    output << _above_min_count << " above " << _min_count_needed << '\n';
+  }
+  if (_smiles_db.size() > 0) {
+    output << _found_in_smiles_db << " fragments found in smiles databases\n";
+  }
   return 1;
 }
 
@@ -809,6 +909,8 @@ For example
  -C <natoms>            maximum fragment size to process - discards these fragments upon input
  -p <count>             minimum number of exemplars required for a molecule to pass.
                         enter a negative value and all molecules will pass
+ -S <dbname>            one or more smiles databases (buildsmidb_bdb). Fragments are looked up as complete
+                        molecules in these databases, rather than looking in the fragment databases (-d).
  -X <fname>             write failed molecules (one or more fragments below -p) to <fname>
  -J ...                 look up the most common fragments, enter '-J help' for info
  -Y ...                 various other options, enter '-Y help' for details.
@@ -867,19 +969,19 @@ DicerFragmentLookup(iwstring_data_source& input,
       continue;
     }
 
-    const int natoms = count_atoms_in_smiles(smiles);
+    const int natoms = lillymol::count_atoms_in_smiles(smiles);
     if (! dicer_fragment_lookup.OkAtomCount(natoms)) {
       continue;
     }
     fragments_this_molecule << new SmilesNatoms(smiles, natoms);
   }
 
-  if (!fragments_this_molecule.empty()) {
-    dicer_fragment_lookup.ProcessMolecule(current_smiles, current_name,
-                fragments_this_molecule, output);
+  if (fragments_this_molecule.empty()) {
+    return 1;
   }
-
-  return 1;
+  
+  return dicer_fragment_lookup.ProcessMolecule(current_smiles, current_name,
+                fragments_this_molecule, output);
 }
 
 int
@@ -919,7 +1021,9 @@ DicerFragmentLookupTextproto(const const_IWSubstring& buffer,
     return 0;
   }
 
-  return DicerFragmentLookupTextproto(mol, dicer_fragment_lookup, output);
+  DicerFragmentLookupTextproto(mol, dicer_fragment_lookup, output);
+
+  return 1;
 }
 
 int
@@ -957,7 +1061,7 @@ DicerFragmentLookup(const char * fname,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vd:c:C:X:yhwJ:tp:F:Y:");
+  Command_Line cl(argc, argv, "vd:c:C:X:yhwJ:tp:F:Y:S:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

@@ -1,0 +1,15 @@
+name: "acid_amine"
+scaffold {
+  id: 0
+  smarts: "[OD1H]-C=O"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  smarts: "[ND1H2]-[CX4T1]"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

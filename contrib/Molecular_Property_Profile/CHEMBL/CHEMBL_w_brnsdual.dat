@@ -2,11 +2,11 @@ description {
   feature_name: "w_brnsdual"
   description: "Number of Hydrogen bond donor/acceptors, Bruns"
   plot_title: "Number of Hydrogen bond donor/acceptors, Bruns"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 11.0
-mean: 0.40202
+maxval: 14.0
+mean: 0.395534
 quantile {
   quantile: 0.01
 }
@@ -32,49 +32,61 @@ quantile {
   value: 4.0
 }
 int_values {
-  count: 36149
+  count: 1340567
 }
 int_values {
   value: 1
-  count: 10081
+  count: 371393
 }
 int_values {
   value: 2
-  count: 2332
+  count: 86182
 }
 int_values {
   value: 3
-  count: 800
+  count: 26935
 }
 int_values {
   value: 4
-  count: 429
+  count: 15108
 }
 int_values {
   value: 5
-  count: 102
+  count: 4135
 }
 int_values {
   value: 6
-  count: 53
+  count: 2112
 }
 int_values {
   value: 7
-  count: 32
+  count: 889
 }
 int_values {
   value: 8
-  count: 15
+  count: 502
 }
 int_values {
   value: 9
-  count: 4
+  count: 100
 }
 int_values {
   value: 10
-  count: 1
+  count: 76
 }
 int_values {
   value: 11
-  count: 2
+  count: 35
+}
+int_values {
+  value: 12
+  count: 10
+}
+int_values {
+  value: 13
+  count: 12
+}
+int_values {
+  value: 14
+  count: 5
 }

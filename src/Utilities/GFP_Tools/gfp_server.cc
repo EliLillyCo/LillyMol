@@ -39,8 +39,13 @@ using std::cerr;
 #include "Molecule_Tools/mpr.h"
 #include "Utilities/GFP_Tools/gfp_standard.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
 #include "Utilities/GFP_Tools/nn_request.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#include "nn_request.pb.h"
+#endif
 
 const char* prog_name = nullptr;
 

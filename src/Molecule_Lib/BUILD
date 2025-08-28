@@ -1,7 +1,19 @@
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+# load("@rules_python//python:defs.bzl", "py_library")
+
+
 
 package(default_visibility = ["//visibility:public"])
+
+config_setting(
+    name = "inchi_yes",
+    values = {"define": "BUILD_INCHI=1"}
+)
+config_setting(
+    name = "inchi_no",
+    values = {"define": "BUILD_INCHI=0"}
+)
 
 #filegroup(
 #    name = "charge_assigner_data",
@@ -33,8 +45,8 @@ cc_proto_library(
 
 py_proto_library(
     name = "atom_type_ext_py_proto",
-    srcs = [
-        "atom_type_ext.proto",
+    deps = [
+        ":atom_type_ext_proto",
     ],
 )
 
@@ -49,6 +61,20 @@ cc_proto_library(
     name = "donor_acceptor_cc_proto",
     deps = [
         ":donor_acceptor_proto",
+    ],
+)
+
+proto_library(
+    name = "etrans_proto",
+    srcs = [
+        "etrans.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "etrans_cc_proto",
+    deps = [
+        "etrans_proto",
     ],
 )
 
@@ -68,8 +94,8 @@ cc_proto_library(
 
 py_proto_library(
     name = "mol2graph_py_proto",
-    srcs = [
-        "mol2graph.proto",
+    deps = [
+        ":mol2graph_proto",
     ],
 )
 
@@ -89,8 +115,8 @@ cc_proto_library(
 
 py_proto_library(
     name = "geometric_constraints_py_proto",
-    srcs = [
-        "geometric_constraints.proto",
+    deps = [
+        ":geometric_constraints_proto",
     ],
     visibility = ["//visibility:public"],
 )
@@ -123,13 +149,13 @@ cc_proto_library(
     name = "pharmacophore_cc_proto",
     deps = [
         ":pharmacophore_proto",
-    ]
+    ],
 )
 
 py_proto_library(
     name = "pharmacophore_py_proto",
-    srcs = [
-        "pharmacophore.proto",
+    deps = [
+        ":pharmacophore_proto",
     ],
     visibility = ["//visibility:public"],
 )
@@ -164,15 +190,15 @@ cc_proto_library(
         ":substructure_proto",
     ],
 )
+
 py_proto_library(
     name = "substructure_py_proto",
-    srcs = ["substructure.proto"],
-    deps = [
-        "geometric_constraints_py_proto",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":substructure_proto",
+        ":geometric_constraints_proto",
+    ],
 )
-
 
 proto_library(
     name = "reaction_proto",
@@ -181,7 +207,7 @@ proto_library(
     ],
     deps = [
         ":substructure_proto",
-        ":toggle_kekule_form",
+        ":toggle_kekule_form_proto",
     ],
 )
 
@@ -194,18 +220,16 @@ cc_proto_library(
 
 py_proto_library(
     name = "reaction_py_proto",
-    srcs = [
-        "reaction.proto",
-    ],
-    deps = [
-        "substructure_py_proto",
-        "toggle_kekule_form_py_proto",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":reaction_proto",
+        ":substructure_proto",
+        ":toggle_kekule_form_proto",
+    ],
 )
 
 proto_library(
-    name = "toggle_kekule_form",
+    name = "toggle_kekule_form_proto",
     srcs = [
         "toggle_kekule_form.proto",
     ],
@@ -217,19 +241,17 @@ proto_library(
 cc_proto_library(
     name = "toggle_kekule_form_cc_proto",
     deps = [
-        ":toggle_kekule_form",
+        ":toggle_kekule_form_proto",
     ],
 )
 
 py_proto_library(
     name = "toggle_kekule_form_py_proto",
-    srcs = [
-        "toggle_kekule_form.proto",
-    ],
-    deps = [
-        ":substructure_py_proto",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":toggle_kekule_form_proto",
+        ":substructure_proto",
+    ],
 )
 
 cc_library(
@@ -285,7 +307,6 @@ cc_library(
         "mdl_file_data.cc",
         "mdl_molecule.cc",
         "misc2.cc",
-        "moleculeio.cc",
         "mol2graph.cc",
         "mol2graph_proto.cc",
         "molecule.cc",
@@ -294,6 +315,7 @@ cc_library(
         "moleculeb.cc",
         "moleculed.cc",
         "moleculeh.cc",
+        "moleculeio.cc",
         "moleculer.cc",
         "numass.cc",
         "ostream_and_type.cc",
@@ -323,6 +345,7 @@ cc_library(
         "substructure_chiral.cc",
         "substructure_env.cc",
         "substructure_nmab.cc",
+        "substructure_query_match.cc",
         "substructure_results.cc",
         "substructure_spec.cc",
         "symm_class_can_rank.cc",
@@ -368,7 +391,6 @@ cc_library(
         "mdl_file_data.h",
         "mdl_molecule.h",
         "misc2.h",
-        "moleculeio.h",
         "mol2graph.h",
         "mol2graph_proto.h",
         "molecule.h",
@@ -376,6 +398,7 @@ cc_library(
         "molecule_mdl.h",
         "molecule_smi.h",
         "molecule_to_query.h",
+        "moleculeio.h",
         "moleculej.h",
         "numass.h",
         "ostream_and_type.h",
@@ -408,6 +431,7 @@ cc_library(
     deps = [
         ":atom_type_ext_cc_proto",
         ":donor_acceptor_cc_proto",
+        ":etrans_cc_proto",
         ":mol2graph_cc_proto",
         ":molecule_to_query_cc_proto",
         ":pharmacophore_cc_proto",
@@ -431,8 +455,7 @@ cc_library(
     ],
 )
 
-
-cc_library (
+cc_library(
     name = "charge_assigner",
     srcs = [
         "charge_assigner.cc",
@@ -445,7 +468,7 @@ cc_library (
     ],
 )
 
-cc_library (
+cc_library(
     name = "donor_acceptor",
     srcs = [
         "donor_acceptor.cc",
@@ -464,7 +487,6 @@ cc_library(
         "charmm.cc",
         "cif.cc",
         "csv.cc",
-        "inchi_dummy.cc",
         "marvin.cc",
         "mdl.cc",
         "mdl_v30.cc",
@@ -477,7 +499,12 @@ cc_library(
         "smi.cc",
         "tripos.cc",
         "xyz.cc",
-    ],
+    ] +
+    select({
+        "inchi_yes": ["inchi.cc"],
+        "inchi_no": ["inchi_dummy.cc"],
+        "//conditions:default": ["inchi_dummy.cc"],
+    }),
     hdrs = [
         "readmdl.h",
         "rwmolecule.h",
@@ -488,7 +515,12 @@ cc_library(
     ],
     deps = [
         ":iwmolecule",
-    ],
+    ] +
+    select({
+        "inchi_yes": ["@third_party//:inchi"],
+        "inchi_no": [],
+        "//conditions:default": [],
+    }),
     alwayslink = True,
 )
 
@@ -521,6 +553,7 @@ cc_library(
         ":reaction_cc_proto",
         "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -550,6 +583,20 @@ cc_library(
     deps = [
         ":geometric_constraints_cc_proto",
         ":iwmolecule",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "kabsch",
+    srcs = [
+        "kabsch.cpp",
+    ],
+    hdrs = [
+        "kabsch.hpp",
+    ],
+    deps = [
+        "@com_gitlab_libeigen_eigen//:eigen",
     ],
 )
 
@@ -576,10 +623,11 @@ cc_library(
         "molecular_formula.h",
     ],
     deps = [
-        "//Foundational/iwstring:iwstring",
-        "//Foundational/iwmisc",
         ":iwmolecule",
         ":moleculeio",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Foundational/iwmisc",
+        "//Foundational/iwstring",
     ],
 )
 
@@ -619,6 +667,7 @@ cc_test(
 
 cc_test(
     name = "cahn_ingold_prelog_test",
+    timeout = "short",
     srcs = [
         "cahn_ingold_prelog_test.cc",
     ],
@@ -627,11 +676,26 @@ cc_test(
         ":moleculeio",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
+)
+
+cc_test(
+    name = "charge_assigner_test",
+    srcs = [
+        "charge_assigner_test.cc",
+    ],
+    data = [
+        "@data//:charge_assigner_data",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "dihedral_test",
+    timeout = "short",
     srcs = [
         "dihedral_test.cc",
     ],
@@ -640,27 +704,27 @@ cc_test(
         ":moleculeio",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(
     name = "donor_acceptor_test",
+    timeout = "short",
     srcs = [
         "donor_acceptor_test.cc",
     ],
     data = [
-        "@donor_acceptor//:donor_acceptor_data",
+        "@data//:donor_acceptor_data",
     ],
     deps = [
         ":iwmolecule",
         ":moleculeio",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(
     name = "element_hits_needed_test",
+    timeout = "short",
     srcs = [
         "element_hits_needed_test.cc",
     ],
@@ -669,7 +733,6 @@ cc_test(
         ":moleculeio",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(
@@ -705,6 +768,7 @@ cc_test(
         ":geometric_constraints_cc_proto",
         ":iwmolecule",
         ":moleculeio",
+        "@com_google_protobuf//:protobuf",
         "@googletest//:gtest_main",
     ],
 )
@@ -748,7 +812,22 @@ cc_test(
 )
 
 cc_test(
+    name = "kabsch_test",
+    timeout = "short",
+    srcs = [
+        "kabsch_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":kabsch",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "molecular_formula_test",
+    timeout = "short",
     srcs = [
         "molecular_formula_test.cc",
     ],
@@ -756,7 +835,6 @@ cc_test(
         "molecular_formula_lib",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(
@@ -788,6 +866,18 @@ cc_test(
 )
 
 cc_test(
+    name = "moleculer_test",
+    srcs = [
+        "moleculer_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "ring_bond_count_test",
     timeout = "short",
     srcs = [
@@ -802,6 +892,7 @@ cc_test(
 
 cc_test(
     name = "ring_test",
+    timeout = "short",
     srcs = [
         "ring_test.cc",
     ],
@@ -810,7 +901,18 @@ cc_test(
         ":moleculeio",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
+)
+
+cc_test(
+    name = "rotation_test",
+    srcs = [
+        "rotation_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_test(
@@ -854,19 +956,20 @@ cc_test(
 
 cc_test(
     name = "substructure_a_test",
+    timeout = "short",
     srcs = ["substructure_a_test.cc"],
-    timeout="short",
     deps = [
         ":iwmolecule",
         ":moleculeio",
         ":substructure_cc_proto",
-        "@googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
+        "@googletest//:gtest_main",
     ],
 )
 
 cc_test(
     name = "ss_bonds_test",
+    timeout = "short",
     srcs = [
         "ss_bonds_test.cc",
     ],
@@ -877,7 +980,6 @@ cc_test(
         "@com_google_protobuf//:protobuf",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(
@@ -1001,6 +1103,7 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@com_google_protobuf//:protobuf",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
@@ -1126,6 +1229,7 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@com_google_protobuf//:protobuf",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],

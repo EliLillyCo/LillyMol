@@ -125,7 +125,8 @@ TEST_P(TestMam, Test1) {
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto_string, &_proto));
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   //cerr << "TestingH '" << params.smiles << "' smarts '" << params.proto_string << " xpt " << params.expected << '\n';
-  EXPECT_EQ(_query.substructure_search(&_m), params.expected);
+  EXPECT_EQ(_query.substructure_search(&_m), params.expected) << "smiles " << params.smiles << 
+                params.proto_string;
 }
 INSTANTIATE_TEST_SUITE_P(TestMam, TestMam, testing::Values(
   ProtoSmilesResult{nitrogen, "C", 0},

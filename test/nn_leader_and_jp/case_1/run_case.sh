@@ -27,12 +27,12 @@ name1=err.txt
 name1_out=out/err.txt
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/err.txt
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "${UNAME}" == "Linux" ]]; then
+    name1_out=out/${UNAME}/err.txt
+elif [[ "${UNAME}" == "darwin"* ]]; then
     name1_out=out/osx/err.txt
 else
-    echo "OS is not supported"
+    echo "${UNAME} is not supported"
 fi
 
 diff_tool=../../fileDiff.sh

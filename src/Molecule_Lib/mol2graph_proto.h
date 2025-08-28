@@ -3,7 +3,11 @@
 
 
 #include "Molecule_Lib/mol2graph.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/mol2graph.pb.h"
+#else
+#include "mol2graph.pb.h"
+#endif
 
 // interconversions between the two different means of controlling graph conversions.
 // Build a Mol2Graph class from the proto representation.

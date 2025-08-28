@@ -20,7 +20,11 @@
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/molecule_to_query.h"
 #include "Molecule_Lib/mol2graph.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/reaction.pb.h"
+#else
+#include "Molecule_Lib.pb.h"
+#endif
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
@@ -75,7 +79,8 @@ class ReactionAndStats {
       return _rxn.name();
     }
 
-    int ConstructFromProto(ReactionProto::Reaction& proto, IWString& fname);
+    int ConstructFromProto(ReactionProto::Reaction& proto, IWString& fname,
+                          const Sidechain_Match_Conditions& smc);
     int substructure_search(Molecule_to_Match& target, Substructure_Results& sresults);
     int substructure_search(Molecule& m, Substructure_Results& sresults);
 
@@ -98,8 +103,9 @@ ReactionAndStats::ReactionAndStats() {
 
 int
 ReactionAndStats::ConstructFromProto(ReactionProto::Reaction& proto,
-                        IWString& fname) {
-  return _rxn.ConstructFromProto(proto, fname);
+                          IWString& fname,
+                          const Sidechain_Match_Conditions& smc) {
+  return _rxn.ConstructFromProto(proto, fname, smc);
 }
 
 int
@@ -427,7 +433,8 @@ Options::ReadReactionProto(IWString& fname) {
   }
 
   std::unique_ptr<ReactionAndStats> rxn = std::make_unique<ReactionAndStats>();
-  if (! rxn->ConstructFromProto(*proto, fname)) {
+  Sidechain_Match_Conditions smc;
+  if (! rxn->ConstructFromProto(*proto, fname, smc)) {
     cerr << "Options::ReadReaction:cannot parse " << proto->ShortDebugString() << '\n';
     return 0;
   }

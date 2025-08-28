@@ -2,11 +2,11 @@ description {
   feature_name: "w_lsepsymatom"
   description: "Longest separation between symmetric atoms"
   plot_title: "Longest separation between symmetric atoms"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 45.0
-mean: 2.16416
+maxval: 49.0
+mean: 2.1983798
 median: 2.0
 quantile {
   quantile: 0.01
@@ -31,168 +31,196 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 14.0
+  value: 16.0
 }
 int_values {
-  count: 10529
+  count: 392356
 }
 int_values {
   value: 1
-  count: 428
+  count: 15192
 }
 int_values {
   value: 2
-  count: 32935
+  count: 1209646
 }
 int_values {
   value: 3
-  count: 286
+  count: 11248
 }
 int_values {
   value: 4
-  count: 2740
+  count: 101169
 }
 int_values {
   value: 5
-  count: 32
+  count: 1070
 }
 int_values {
   value: 6
-  count: 1392
+  count: 50960
 }
 int_values {
   value: 7
-  count: 50
+  count: 1995
 }
 int_values {
   value: 8
-  count: 520
+  count: 19519
 }
 int_values {
   value: 9
-  count: 35
+  count: 1372
 }
 int_values {
   value: 10
-  count: 245
+  count: 9496
 }
 int_values {
   value: 11
-  count: 30
+  count: 1730
 }
 int_values {
   value: 12
-  count: 119
+  count: 4786
 }
 int_values {
   value: 13
-  count: 52
+  count: 1917
 }
 int_values {
   value: 14
-  count: 110
+  count: 3958
 }
 int_values {
   value: 15
-  count: 36
+  count: 1924
 }
 int_values {
   value: 16
-  count: 77
+  count: 3034
 }
 int_values {
   value: 17
-  count: 46
+  count: 1890
 }
 int_values {
   value: 18
-  count: 46
+  count: 2275
 }
 int_values {
   value: 19
-  count: 36
+  count: 1943
 }
 int_values {
   value: 20
-  count: 41
+  count: 1673
 }
 int_values {
   value: 21
-  count: 36
+  count: 1570
 }
 int_values {
   value: 22
-  count: 33
+  count: 1142
 }
 int_values {
   value: 23
-  count: 33
+  count: 1318
 }
 int_values {
   value: 24
-  count: 19
+  count: 874
 }
 int_values {
   value: 25
-  count: 17
+  count: 935
 }
 int_values {
   value: 26
-  count: 8
+  count: 510
 }
 int_values {
   value: 27
-  count: 17
+  count: 668
 }
 int_values {
   value: 28
-  count: 9
+  count: 287
 }
 int_values {
   value: 29
-  count: 8
+  count: 417
 }
 int_values {
   value: 30
-  count: 3
+  count: 174
 }
 int_values {
   value: 31
-  count: 9
+  count: 310
 }
 int_values {
   value: 32
-  count: 4
+  count: 106
 }
 int_values {
   value: 33
-  count: 8
+  count: 217
 }
 int_values {
   value: 34
-  count: 1
+  count: 50
 }
 int_values {
   value: 35
-  count: 3
+  count: 119
 }
 int_values {
   value: 36
-  count: 1
+  count: 33
 }
 int_values {
   value: 37
-  count: 1
+  count: 58
 }
 int_values {
   value: 38
-  count: 2
+  count: 19
 }
 int_values {
   value: 39
+  count: 43
+}
+int_values {
+  value: 40
+  count: 13
+}
+int_values {
+  value: 41
+  count: 16
+}
+int_values {
+  value: 42
   count: 2
 }
 int_values {
+  value: 43
+  count: 10
+}
+int_values {
+  value: 44
+  count: 3
+}
+int_values {
   value: 45
-  count: 1
+  count: 6
+}
+int_values {
+  value: 47
+  count: 2
+}
+int_values {
+  value: 49
+  count: 6
 }

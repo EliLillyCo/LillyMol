@@ -1,0 +1,9 @@
+[CH3:1][CH2:2][Cl:3]+[BrH:4]>[O:5]>[CH3:6][CH2:7][Br:8]+[ClH:9] Rxn_Standardize_Test1
+[13CH3:1][CH2:2][Cl:3]+[BrH:4]>[O:5]>[13CH3:6][CH2:7][Br:7]+[ClH:8] Rxn_Standardize_Test2
+[CH3:1][CH2:2][Cl:3]>[O:5]>[CH3:6][CH3:7]+[ClH:9] Rxn_Standardize_Test3
+[CH3:6][CH3:7]+[ClH:9]>[O:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test4
+[CH3:6][CH3:7]+[ClH:9]>qqqwwwqqq>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test5
+[CH3:6][CH3:7]+[ClH:9]>[O:5]>[CH3:1][CH2:2][Cl:3] Rxn_Standardize_Test6
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[O:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test7
+[CH3:1][CH2:2][Cl:3]+[ClH:4]+c1ccccc1>[O:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test8
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[O:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test9

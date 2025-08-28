@@ -1,0 +1,134 @@
+description {
+  feature_name: "w_ro5_ohnh"
+  description: "Lipinski Donors"
+  plot_title: "Lipinski Donors"
+  line_color: "blue"
+  source: "chembl"
+}
+maxval: 24.0
+mean: 1.6782109
+median: 1.0
+quantile {
+  quantile: 0.01
+}
+quantile {
+  quantile: 0.05
+}
+quantile {
+  quantile: 0.1
+}
+quantile {
+  quantile: 0.5
+  value: 1.0
+}
+quantile {
+  quantile: 0.9
+  value: 4.0
+}
+quantile {
+  quantile: 0.95
+  value: 5.0
+}
+quantile {
+  quantile: 0.99
+  value: 7.0
+}
+int_values {
+  count: 392931
+}
+int_values {
+  value: 1
+  count: 619991
+}
+int_values {
+  value: 2
+  count: 428519
+}
+int_values {
+  value: 3
+  count: 210052
+}
+int_values {
+  value: 4
+  count: 103090
+}
+int_values {
+  value: 5
+  count: 43874
+}
+int_values {
+  value: 6
+  count: 23735
+}
+int_values {
+  value: 7
+  count: 10465
+}
+int_values {
+  value: 8
+  count: 6621
+}
+int_values {
+  value: 9
+  count: 3331
+}
+int_values {
+  value: 10
+  count: 2046
+}
+int_values {
+  value: 11
+  count: 1277
+}
+int_values {
+  value: 12
+  count: 749
+}
+int_values {
+  value: 13
+  count: 411
+}
+int_values {
+  value: 14
+  count: 351
+}
+int_values {
+  value: 15
+  count: 223
+}
+int_values {
+  value: 16
+  count: 168
+}
+int_values {
+  value: 17
+  count: 84
+}
+int_values {
+  value: 18
+  count: 71
+}
+int_values {
+  value: 19
+  count: 45
+}
+int_values {
+  value: 20
+  count: 14
+}
+int_values {
+  value: 21
+  count: 6
+}
+int_values {
+  value: 22
+  count: 5
+}
+int_values {
+  value: 23
+  count: 1
+}
+int_values {
+  value: 24
+  count: 1
+}

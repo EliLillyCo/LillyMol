@@ -1,0 +1,12 @@
+name: "Rings that are almost aromatic - just one saturated carbon"
+query {
+  ring_specifier {
+    aromatic: false
+    fused: 0
+    min_ring_size: 4
+    base {
+      min_heteroatom_count: 1
+      environment: "1[G0]"
+    }
+  }
+}

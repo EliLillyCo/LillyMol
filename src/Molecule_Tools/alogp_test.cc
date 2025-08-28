@@ -2,6 +2,10 @@
 
 #include <filesystem>
 #include <iostream>
+#include <random>
+
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -89,21 +93,25 @@ class TestAlogpP: public testing::TestWithParam<SmilesExpected> {
     void SetUp();
 };
 
+// #define DEBUG_FILE_PATHS
 void
 TestAlogpP::SetUp() {
   const char* test_srcdir = getenv("TEST_SRCDIR");
   // Some diagnostic stuff to see the relationship between TEST_SRCDIR
-  // and where our files actually show up.
+  // and where our files actually show up. This seems too hard, but have
+  // not figured out an easier way.
 #ifdef DEBUG_FILE_PATHS
   std::string qq(test_srcdir);
-  qq += "/../alogp_test.runfiles/charge_assigner/";
+  std::cerr << "test_srcdir " << test_srcdir << "\n";
+  qq += "/data+/queries/charges";
+  // qq += "/../alogp_test.runfiles/charge_assigner/";
   for (auto const& dir_entry : std::filesystem::directory_iterator{qq}) {
     std::cerr << dir_entry << '\n';
   }
 #endif
 
   IWString queries_file(test_srcdir);
-  queries_file << "/../alogp_test.runfiles/charge_assigner/queries";
+  queries_file << "/data+/queries/charges/queries";
 
   IWString cmd;
   cmd << "F:" << queries_file;
@@ -121,6 +129,19 @@ TestAlogpP::SetUp() {
   _alogp.set_rdkit_phoshoric_acid_hydrogen(1);
 }
 
+// I changed the indexing in how atom types are assigned and that
+// broke all the tests by shifting the isotopic label by one.
+// Rather than change all the tests, just shift the isotope.
+// I imagine one day having to fix this...
+void
+ChangeIsotope(Molecule& m, int delta) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    isotope_t iso = m.isotope(i);
+    m.set_isotope(i, iso + delta);
+  }
+}
+
 TEST_P(TestAlogpP, TestMolecules) {
   const auto& params = GetParam();
 
@@ -135,6 +156,7 @@ TEST_P(TestAlogpP, TestMolecules) {
         "\ncomp " << *a << 
         ' ' << _mol.aromatic_smiles();
   if (! params.labelled_smiles.empty()) {
+    ChangeIsotope(_mol, 1);
     EXPECT_EQ(_mol.aromatic_smiles(), params.labelled_smiles) << params.labelled_smiles <<
         " got\n" << _mol.aromatic_smiles() << ' ' << params.alogp << ' ' <<
         _mol.name();
@@ -166,7 +188,7 @@ INSTANTIATE_TEST_SUITE_P(TestAlogpP, TestAlogpP, testing::Values(
   SmilesExpected{"CC=O acetaldehyde", 0.205, "[1CH3][5CH]=[57O]"},
   SmilesExpected{"CC#N acetonitrile", 0.530, "[1CH3][7C]#[42N]"},
   SmilesExpected{"C=C methene", 0.802, "[6CH2]=[6CH2]"},
-  SmilesExpected{"CC=N ethanimine", 0.656, "[1CH3][5CH]=[40NH]"},
+  SmilesExpected{"CC=N ethanimine", 0.656, "[1CH3][5CH]=[38NH]"},
   SmilesExpected{"CCc1ccccc1 ethylbenzene", 2.249, "[1CH3][10CH2][21c]1[18cH][18cH][18cH][18cH][18cH]1"},
   SmilesExpected{"CC(C)c1ccccc1 isopropylbenezene", 2.810, "[1CH3][11CH]([1CH3])[21c]1[18cH][18cH][18cH][18cH][18cH]1"},
   SmilesExpected{"CC(C)(C)c1ccccc1 t-butyl benzene", 2.984, "[1CH3][12C]([1CH3])([1CH3])[21c]1[18cH][18cH][18cH][18cH][18cH]1"},
@@ -189,7 +211,7 @@ INSTANTIATE_TEST_SUITE_P(TestAlogpP, TestAlogpP, testing::Values(
   SmilesExpected{"O=S(=O)NCC Ethanesulfonamide", -0.878, "[54O]=[69SH](=[54O])[35NH][3CH2][1CH3]"},
   SmilesExpected{"C12=C(SNC1=O)CCNC2 CHEMBL171241", 0.082, "[21c]12[21c]([70s][44nH][25c]1=[56O])[10CH2][3CH2][35NH][10CH2]2"},
   SmilesExpected{"C1=CC=C2C(=C1)NC=N2 benzimidazole", 1.563, "[18cH]1[18cH][18cH][19c]2[19c]([18cH]1)[44nH][18cH][44n]2"},
-  SmilesExpected{"S1C(=C(C=C1)NC(N)=N)C(=O)OC CHEMBL4299981", 0.840, "[70s]1[21c]([22c]([18cH][18cH]1)[37NH][5C]([34NH2])=[40NH])[5C](=[58O])[51O][3CH3]"},
+  SmilesExpected{"S1C(=C(C=C1)NC(N)=N)C(=O)OC CHEMBL4299981", 0.840, "[70s]1[21c]([22c]([18cH][18cH]1)[37NH][5C]([34NH2])=[38NH])[5C](=[58O])[51O][3CH3]"},
   SmilesExpected{"C(=O)(C1=CC=CC(=C1)Br)NCCN CHEMBL128615", 1.138, "[5C](=[58O])([21c]1[18cH][18cH][18cH][16c]([18cH]1)[64Br])[35NH][3CH2][3CH2][34NH2]"},
   SmilesExpected{"O=N(=O)C1=CC(=CC(=C1)C(=O)N)N(=O)=O CHEMBL1437065", 0.602, "[53O]=[46N](=[53O])[22c]1[18cH][22c]([18cH][21c]([18cH]1)[5C](=[58O])[34NH2])[46N](=[53O])=[53O]"},
   SmilesExpected{"C(=O)(C1=CC=C(C=C1)CC(C)C)NO CHEMBL439659", 2.004, "[5C](=[58O])([21c]1[18cH][18cH][21c]([18cH][18cH]1)[10CH2][2CH]([1CH3])[1CH3])[35NH][50OH]"},
@@ -211,7 +233,7 @@ INSTANTIATE_TEST_SUITE_P(TestAlogpP, TestAlogpP, testing::Values(
   // RDKit gets atom 0 wrong, it assigns C20 when it should be C19. Probably aromaticity.
   SmilesExpected{"C12=C(N=C(NCC3=CC=CC=C3)NC1=NC(=N2)C(C)C)NC1=CC=C(Cl)C=C1 CHEMBL318880", 5.485, "[19c]12[22c]([44n][22c]([37NH][10CH2][21c]3[18cH][18cH][18cH][18cH][18cH]3)[44nH][19c]1[44n][21c]([44n]2)[11CH]([1CH3])[1CH3])[37NH][22c]1[18cH][18cH][15c]([63Cl])[18cH][18cH]1"},
   SmilesExpected{"O=S(=O)(N)C1=CC=C(C(=O)C2=C(N)N=C(S2)NC2=CC=C(C=C2)S(=O)(=O)N)C=C1 CHEMBL2377821", 0.995, "[54O]=[69S](=[54O])([34NH2])[24c]1[18cH][18cH][21c]([5C](=[58O])[21c]2[22c]([36NH2])[44n][22c]([70s]2)[37NH][22c]2[18cH][18cH][24c]([18cH][18cH]2)[69S](=[54O])(=[54O])[34NH2])[18cH][18cH]1"},
-  SmilesExpected{"C1(=C(C(F)(F)F)C=CC(=N1)OC1=CC(=CC=C1)C(=N)N)OC1=CC=CC(=C1)C(=N)N CHEMBL50714", 4.253, "[23c]1([21c]([12C]([62F])([62F])[62F])[18cH][18cH][23c]([44n]1)[52O][23c]1[18cH][21c]([18cH][18cH][18cH]1)[5C](=[40NH])[34NH2])[52O][23c]1[18cH][18cH][18cH][21c]([18cH]1)[5C](=[40NH])[34NH2]"},
+  SmilesExpected{"C1(=C(C(F)(F)F)C=CC(=N1)OC1=CC(=CC=C1)C(=N)N)OC1=CC=CC(=C1)C(=N)N CHEMBL50714", 4.253, "[23c]1([21c]([12C]([62F])([62F])[62F])[18cH][18cH][23c]([44n]1)[52O][23c]1[18cH][21c]([18cH][18cH][18cH]1)[5C](=[38NH])[34NH2])[52O][23c]1[18cH][18cH][18cH][21c]([18cH]1)[5C](=[38NH])[34NH2]"},
   // Aromaticity differences prevent this matching RDKit (0.977)
   SmilesExpected{"C1(C)(C)N(=C2C=CC(=CC2=N1=O)COC1=CC=C(C=C1)C=NNC(=S)NCC=C)=O CHEMBL3347314", 1.916, "[4C]1([1CH3])([1CH3])[48N](=[5C]2[6CH]=[6CH][6C](=[6CH][5C]2=[48N]1=[53O])[3CH2][52O][23c]1[18cH][18cH][21c]([18cH][18cH]1)[5CH]=[39N][35NH][5C](=[68S])[35NH][3CH2][6CH]=[6CH2])=[53O]"},
   // Aromaticity differences prevent this matching RDKit (0.689)
@@ -220,5 +242,66 @@ INSTANTIATE_TEST_SUITE_P(TestAlogpP, TestAlogpP, testing::Values(
   SmilesExpected{"C1=CC=CC(=C1)NC(=O)C(=O)NCC1=CC=C(O1)C=C1C(=O)N2C(=NCC2)S1 CHEMBL221991", 1.820, "[18cH]1[18cH][18cH][18cH][22c]([18cH]1)[37NH][5C](=[57O])[5C](=[57O])[35NH][10CH2][21c]1[18cH][18cH][21c]([49o]1)[26CH]=[6C]1[5C](=[57O])[40N]2[5C](=[39N][3CH2][3CH2]2)[68S]1"},
   SmilesExpected{"C1(=S)C=CSS1 CHEMBL368700", 2.539, "[28c]1(=[68S])[18cH][18cH][70s][70s]1"}
 ));
+
+struct SmilesValue {
+  IWString smiles;
+  float value;
+};
+
+class TestForFastScoring: public testing::TestWithParam<SmilesValue> {
+  protected:
+    Molecule _mol;
+    alogp::AlogpConfiguration _proto;
+    alogp::ALogP _alogp;
+    alogp::ForFastScoring _for_fast_scoring;
+
+  protected:
+    void SetUp();
+};
+
+// Fill the parameters in `proto` with random values.
+// Yes, random values in a test is not a great idea.
+void
+FillRandomly(alogp::AlogpParameters& proto) {
+  std::random_device rd;
+  std::mt19937 gen(rd()); 
+  std::uniform_real_distribution<float> u(0.0, 1.0);
+
+  const /*Reflection*/ auto* reflection = proto.GetReflection();
+
+  using google::protobuf::Descriptor;
+  const Descriptor* descriptor = proto.GetDescriptor();
+  std::cerr << "Randomly filling " << descriptor->field_count() << " fields\n";
+  for (int i = 0; i < descriptor->field_count(); ++i) {
+    reflection->SetFloat(&proto, descriptor->field(i), u(gen));
+  }
+}
+
+void
+TestForFastScoring::SetUp() {
+  FillRandomly(*_proto.mutable_parameters());
+  _alogp.ConfigFromProto(_proto);
+}
+
+TEST_P(TestForFastScoring, TestMolecules) {
+  const auto& params = GetParam();
+
+  ASSERT_TRUE(_mol.build_from_smiles(params.smiles)) << "bad smiles " << params.smiles;
+
+  std::optional<double> a = _alogp.LogP(_mol);
+  _alogp.FillForFastScoring(_mol, _for_fast_scoring);
+
+  float afast = _alogp.LogP(_mol, _for_fast_scoring);
+
+  EXPECT_NEAR(*a, afast, 0.001) << params.smiles;
+}
+INSTANTIATE_TEST_SUITE_P(TestForFastScoring, TestForFastScoring, testing::Values(
+  SmilesValue{"C", 0},
+  SmilesValue{"CC", 0},
+  SmilesValue{"CC(=O)OC1=CC=CC=C1C(=O)O", 0},
+  SmilesValue{"C1(=NOC=C1)C(=O)NC1=CC=C(F)C(=C1)Cl CHEMBL4103637", 0},
+  SmilesValue{"ClC1=CC(=CC=C1)C(=O)ONC(=N)C1=C(OC(=N1)C)C(F)(F)F CHEMBL1713739", 0}
+));
+
 
 }  // namespace

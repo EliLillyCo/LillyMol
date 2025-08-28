@@ -2,11 +2,11 @@ description {
   feature_name: "w_lercsct"
   description: "Largest conjugated section"
   plot_title: "Largest conjugated section"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 48.0
-mean: 14.21842
+maxval: 50.0
+mean: 14.206701
 median: 13.0
 quantile {
   quantile: 0.01
@@ -37,197 +37,205 @@ quantile {
   value: 32.0
 }
 int_values {
-  count: 13
+  count: 488
 }
 int_values {
   value: 1
-  count: 204
+  count: 7364
 }
 int_values {
   value: 2
-  count: 219
+  count: 8043
 }
 int_values {
   value: 3
-  count: 847
+  count: 31262
 }
 int_values {
   value: 4
-  count: 577
+  count: 18086
 }
 int_values {
   value: 5
-  count: 921
+  count: 29617
 }
 int_values {
   value: 6
-  count: 1880
+  count: 70687
 }
 int_values {
   value: 7
-  count: 2416
+  count: 85683
 }
 int_values {
   value: 8
-  count: 2710
+  count: 102220
 }
 int_values {
   value: 9
-  count: 3172
+  count: 115852
 }
 int_values {
   value: 10
-  count: 3669
+  count: 139304
 }
 int_values {
   value: 11
-  count: 3580
+  count: 133491
 }
 int_values {
   value: 12
-  count: 3482
+  count: 129305
 }
 int_values {
   value: 13
-  count: 2806
+  count: 104848
 }
 int_values {
   value: 14
-  count: 2404
+  count: 93493
 }
 int_values {
   value: 15
-  count: 2222
+  count: 83795
 }
 int_values {
   value: 16
-  count: 2154
+  count: 79371
 }
 int_values {
   value: 17
-  count: 2063
+  count: 78329
 }
 int_values {
   value: 18
-  count: 2048
+  count: 76659
 }
 int_values {
   value: 19
-  count: 1858
+  count: 70603
 }
 int_values {
   value: 20
-  count: 1805
+  count: 65889
 }
 int_values {
   value: 21
-  count: 1540
+  count: 58144
 }
 int_values {
   value: 22
-  count: 1399
+  count: 49904
 }
 int_values {
   value: 23
-  count: 1163
+  count: 42173
 }
 int_values {
   value: 24
-  count: 974
+  count: 35120
 }
 int_values {
   value: 25
-  count: 829
+  count: 28836
 }
 int_values {
   value: 26
-  count: 627
+  count: 23451
 }
 int_values {
   value: 27
-  count: 496
+  count: 19132
 }
 int_values {
   value: 28
-  count: 430
+  count: 15934
 }
 int_values {
   value: 29
-  count: 373
+  count: 12435
 }
 int_values {
   value: 30
-  count: 268
+  count: 9901
 }
 int_values {
   value: 31
-  count: 206
+  count: 7371
 }
 int_values {
   value: 32
-  count: 173
+  count: 5784
 }
 int_values {
   value: 33
-  count: 122
+  count: 3791
 }
 int_values {
   value: 34
-  count: 104
+  count: 3185
 }
 int_values {
   value: 35
-  count: 58
+  count: 2183
 }
 int_values {
   value: 36
-  count: 52
+  count: 1796
 }
 int_values {
   value: 37
-  count: 43
+  count: 1186
 }
 int_values {
   value: 38
-  count: 18
+  count: 879
 }
 int_values {
   value: 39
-  count: 22
+  count: 581
 }
 int_values {
   value: 40
-  count: 19
+  count: 644
 }
 int_values {
   value: 41
-  count: 18
+  count: 347
 }
 int_values {
   value: 42
-  count: 4
+  count: 321
 }
 int_values {
   value: 43
-  count: 2
+  count: 145
 }
 int_values {
   value: 44
-  count: 4
+  count: 125
 }
 int_values {
   value: 45
-  count: 1
+  count: 50
 }
 int_values {
   value: 46
-  count: 1
+  count: 82
 }
 int_values {
   value: 47
-  count: 3
+  count: 40
 }
 int_values {
   value: 48
-  count: 1
+  count: 78
+}
+int_values {
+  value: 49
+  count: 19
+}
+int_values {
+  value: 50
+  count: 35
 }

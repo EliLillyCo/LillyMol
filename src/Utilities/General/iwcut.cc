@@ -2,63 +2,62 @@
   My own cut utility
 */
 
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                                          + __GNUC_PATCHLEVEL__)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <memory>
-#include <algorithm>
 #include <random>
-#include <cctype>
-using std::cerr;
-using std::endl;
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
-#include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/iwre2.h"
+#include "Foundational/iwmisc/misc.h"
+
+using std::cerr;
 
 static void
-usage(int rc)
-{
-// clang-format off
+usage(int rc) {
+  // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
-// clang-format on
-// clang-format off
-  cerr << "Extracts columns - like cut\n";
-  cerr << " -f <col>         extract single column\n";
-  cerr << " -f <col1,col2>   extract multiple columns\n";
-  cerr << " -f <col1-col2>   extract range of columns\n";
-  cerr << " -F <file>        column numbers are in <file>\n";
-  cerr << " -m               descriptors in -F file are on multiple lines *\n";
-  cerr << " -d <descriptor>  extract single descriptor\n";
-  cerr << " -d <d1,d2,d3>    extract multiple descriptors\n";
-  cerr << " -D <file>        descriptors are in <file>\n";
-  cerr << " -b               do NOT always add the first column when specifying column headings\n";
-  cerr << " -m               descriptors in -D file are on multiple lines *\n";
-  cerr << " -K <char>        KLUDGE, remove descriptor name prefixes up to <char>\n";
-  cerr << " -R <regexp>      print column(s) matching <regexp> - do match on each line\n";
-  cerr << " -x               prints the columns that do not match\n";
-  cerr << " -r               match descriptor names as regular expressions\n";
-  cerr << " -c               ignore case when comparing descriptor names\n";
-  cerr << " -i <char>        input  token separator (default ' ')\n";
-  cerr << " -t               input is tab separated\n";
-  cerr << " -q <k|rm>        input may contain quoted tokens, keep or remove the quotes\n";
-  cerr << " -o <char>        output token separator (default ' ')\n";
-  cerr << " -z <string>      pad missing descriptors/columns with <string>\n";
-  cerr << " -u               consecutive delimiters mean empty words in between\n";
-  cerr << " -E <col>         columns that must NOT be empty - record not written if empty. Use . for any\n";
-#if GCC_VERSION > 50000
-  cerr << " -a <n>           select <n> columns at random\n";
-#endif
-  cerr << " -g <char>        in tokens with whitespace, replace with <char>\n";
-  cerr << " -v               verbose output\n";
-// clang-format on
+  // clang-format on
+  // clang-format off
+  cerr << R"(Extracts columns - like cut\n";
+ -f <col>         extract single column.
+ -f <col1,col2>   extract multiple columns.
+ -f <col1-col2>   extract range of columns.
+ -F <file>        column numbers are in <file>.
+ -m               descriptors in -F file are on multiple lines *.
+ -d <descriptor>  extract single descriptor.
+ -d <d1,d2,d3>    extract multiple descriptors.
+ -D <file>        descriptors are in <file>.
+ -b               do NOT always add the first column when specifying column headings.
+ -m               descriptors in -D file are on multiple lines *.
+                  Add a second -m option to skip the first line in the -D file (likely a header).
+ -k .             skip missing descriptors requested, '-k q' does is silently!
+ -K <char>        KLUDGE, remove descriptor name prefixes up to <char>.
+ -R <regexp>      print column(s) matching <regexp> - do match on each line.
+ -x               prints the columns that do not match.
+ -r               match descriptor names as regular expressions.
+ -c               ignore case when comparing descriptor names.
+ -i <char>        input  token separator (default ' '). Note that things like '-i tab' are recognised.
+ -t               input is tab separated.
+ -q <k|rm>        input may contain quoted tokens, keep or remove the quotes.
+ -o <char>        output token separator (default ' '). Note that character names are recognised.
+ -z <string>      pad missing descriptors/columns with <string>.
+ -u               consecutive delimiters mean empty words in between.
+ -E <col>         columns that must NOT be empty - record not written if empty. Use . for any.
+ -a <n>           select <n> columns at random.
+ -g <char>        in tokens with whitespace, replace with <char>.
+ -v               verbose output\n";
+)";
+
+  // clang-format on
 
   exit(rc);
 }
@@ -66,6 +65,9 @@ usage(int rc)
 static int verbose = 0;
 
 static int descriptor_names_on_one_line = 1;
+
+// When reading the -D file, do we skip the header or not
+static int skip_first_line_of_descriptor_file = 0;
 
 static int suppress_selected_columns = 0;
 
@@ -84,9 +86,11 @@ static char descriptor_name_remove_to = ' ';
 static int random_columns = 0;
 
 /*
-  If we are filling missing columns, we may have a constant thing to add to every output record
+  If we are filling missing columns, we may have a constant thing to add to every output
+  record
 
-  Note that what gets appended to the header is different from what gets appended to each record
+  Note that what gets appended to the header is different from what gets appended to each
+  record
 */
 
 static IWString extra_stuff_header_record;
@@ -109,67 +113,66 @@ static int add_first_token_when_processing_descriptors = 1;
 
 static int records_discarded_for_zero_field = 0;
 
+// When fetching columns by name, if a column is not present, that
+// is a fatal error. But we can just skip over the missing columns.
+static int ignore_missing_columns = 0;
+// By default, we complain if columns are missing - even if ignored.
+// but we can also be quiet.
+static int ignore_missing_columns_quietly = 0;
+
 static char gsub_spaces_in_tokens = ' ';
 
+// #define DEBUG_IWCUT
+
 static int
-invert_selections(resizable_array<int> & columns_requested, int ncol,
-                  int is_descriptor_file, int * tmp)
-{
+invert_selections(resizable_array<int>& columns_requested, int ncol,
+                  int is_descriptor_file) {
+#ifdef DEBUG_IWCUT
+  cerr << "Inverting selections, input contains " << ncol << " columns\n";
+#endif
+
+  int* tmp = new_int(ncol, 1);
+  std::unique_ptr<int> free_tmp(tmp);
+
   int nr = columns_requested.number_elements();
 
-  for (int i = 0; i < nr; i++)
-  {
+  for (int i = 0; i < nr; i++) {
     int c = columns_requested[i];
 
     tmp[c] = 0;
   }
 
-  if (is_descriptor_file)
+  if (is_descriptor_file) {
     tmp[0] = 1;
+  }
 
   columns_requested.resize(0);
-  columns_requested.resize(ncol);
+  columns_requested.resize(ncol + 1);
 
-  for (int i = 0; i < ncol; i++)
-  {
-    if (tmp[i])
+  for (int i = 0; i < ncol; i++) {
+    if (tmp[i]) {
       columns_requested.add(i);
+    }
   }
 
   return 1;
 }
 
-//#define DEBUG_IWCUT
-
 static int
-invert_selections(resizable_array<int> & columns_requested,
-                  int ncol,
-                  int is_descriptor_file)
-{
-#ifdef DEBUG_IWCUT
-  cerr << "Inverting selections, input contains " << ncol << " columns\n";
-#endif
-
-  int * tmp = new_int(ncol, 1); std::unique_ptr<int> free_tmp(tmp);
-
-  return invert_selections(columns_requested, ncol, is_descriptor_file, tmp);
-}
-
-static int
-parse_dash_D_option_multiple_lines(iwstring_data_source & input,
-                     resizable_array_p<IWString> & descriptors_to_get)
-{
+parse_dash_D_option_multiple_lines(iwstring_data_source& input,
+                                   resizable_array_p<IWString>& descriptors_to_get) {
   const_IWSubstring buffer;
 
-  while (input.next_record(buffer))
-  {
-    if (buffer.contains(input_token_separator))
+  while (input.next_record(buffer)) {
+    if (buffer.contains(input_token_separator)) {
       buffer.truncate_at_first(input_token_separator);
+    }
 
-    if (0 == buffer.length())
+    if (0 == buffer.length()) {
       continue;
+    }
 
-    IWString * tmp = new IWString(buffer);
+    IWString* tmp = new IWString(buffer);
 
     descriptors_to_get.add(tmp);
   }
@@ -178,15 +181,13 @@ parse_dash_D_option_multiple_lines(iwstring_data_source & input,
 }
 
 static int
-parse_dash_D_option_one_line(const const_IWSubstring & buffer,
-                     resizable_array_p<IWString> & descriptors_to_get)
-{
+parse_dash_D_option_one_line(const const_IWSubstring& buffer,
+                             resizable_array_p<IWString>& descriptors_to_get) {
   int i = 0;
   const_IWSubstring dname;
 
-  while (buffer.nextword(dname, i, input_token_separator))
-  {
-    IWString * tmp = new IWString(dname);
+  while (buffer.nextword(dname, i, input_token_separator)) {
+    IWString* tmp = new IWString(dname);
 
     descriptors_to_get.add(tmp);
   }
@@ -195,13 +196,11 @@ parse_dash_D_option_one_line(const const_IWSubstring & buffer,
 }
 
 static int
-parse_dash_D_option_one_line(iwstring_data_source & input,
-                     resizable_array_p<IWString> & descriptors_to_get)
-{
+parse_dash_D_option_one_line(iwstring_data_source& input,
+                             resizable_array_p<IWString>& descriptors_to_get) {
   const_IWSubstring buffer;
 
-  if (! input.next_record(buffer))
-  {
+  if (!input.next_record(buffer)) {
     cerr << "Cannot read descriptor names from file\n";
     return 0;
   }
@@ -210,22 +209,25 @@ parse_dash_D_option_one_line(iwstring_data_source & input,
 }
 
 static int
-parse_dash_D_option(iwstring_data_source & input,
-                    resizable_array_p<IWString> & descriptors_to_get)
-{
-  if (descriptor_names_on_one_line)
+parse_dash_D_option(iwstring_data_source& input,
+                    resizable_array_p<IWString>& descriptors_to_get) {
+  if (skip_first_line_of_descriptor_file) {
+    const_IWSubstring buffer;
+    input.next_record(buffer);
+  }
+
+  if (descriptor_names_on_one_line) {
     return parse_dash_D_option_one_line(input, descriptors_to_get);
-  else
+  } else {
     return parse_dash_D_option_multiple_lines(input, descriptors_to_get);
+  }
 }
 
 static int
 parse_dash_D_option(const_IWSubstring buffer,
-                    resizable_array_p<IWString> & descriptors_to_get)
-{
+                    resizable_array_p<IWString>& descriptors_to_get) {
   iwstring_data_source input(buffer);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open '" << buffer << "'\n";
     return 0;
   }
@@ -234,16 +236,12 @@ parse_dash_D_option(const_IWSubstring buffer,
 }
 
 static int
-parse_dash_D_option(Command_Line & cl,
-                    char flag,
-                    resizable_array_p<IWString> & descriptors_to_get)
-{
+parse_dash_D_option(Command_Line& cl, char flag,
+                    resizable_array_p<IWString>& descriptors_to_get) {
   int i = 0;
   const_IWSubstring d;
-  while (cl.value(flag, d, i++))
-  {
-    if (! parse_dash_D_option(d, descriptors_to_get))
-    {
+  while (cl.value(flag, d, i++)) {
+    if (!parse_dash_D_option(d, descriptors_to_get)) {
       cerr << "INvalid -" << flag << " combination '" << d << "'\n";
       return 0;
     }
@@ -253,27 +251,26 @@ parse_dash_D_option(Command_Line & cl,
 }
 
 static int
-parse_dash_d_option(const_IWSubstring buffer,      // our own copy
-                     resizable_array_p<IWString> & descriptors_to_get)
-{
-
+parse_dash_d_option(const_IWSubstring buffer,  // our own copy
+                    resizable_array_p<IWString>& descriptors_to_get) {
   int i = 0;
   const_IWSubstring token;
 
-  if (match_descriptor_names_as_regular_expressions)    // do NOT tokenise on comma, that can be part of the RX
+  if (match_descriptor_names_as_regular_expressions)  // do NOT tokenise on comma, that
+                                                      // can be part of the RX
   {
-    if (buffer.contains(','))
+    if (buffer.contains(',')) {
       cerr << "Assuming regular expression containing comma\n";
+    }
 
-    IWString * tmp = new IWString(buffer);
+    IWString* tmp = new IWString(buffer);
     descriptors_to_get.add(tmp);
 
     return 1;
   }
 
-  while (buffer.nextword(token, i, ','))
-  {
-    IWString * tmp = new IWString(token);
+  while (buffer.nextword(token, i, ',')) {
+    IWString* tmp = new IWString(token);
 
     descriptors_to_get.add(tmp);
   }
@@ -282,16 +279,12 @@ parse_dash_d_option(const_IWSubstring buffer,      // our own copy
 }
 
 static int
-parse_dash_d_option(Command_Line & cl,
-                     char flag,
-                     resizable_array_p<IWString> & descriptors_to_get)
-{
+parse_dash_d_option(Command_Line& cl, char flag,
+                    resizable_array_p<IWString>& descriptors_to_get) {
   int i = 0;
   const_IWSubstring d;
-  while (cl.value(flag, d, i++))
-  {
-    if (! parse_dash_d_option(d, descriptors_to_get))
-    {
+  while (cl.value(flag, d, i++)) {
+    if (!parse_dash_d_option(d, descriptors_to_get)) {
       cerr << "Invalid -" << flag << " option '" << d << "'\n";
       return 0;
     }
@@ -305,19 +298,17 @@ parse_dash_d_option(Command_Line & cl,
 */
 
 static int
-get_number(const_IWSubstring & buffer,
-            int & zresult)
-{
+get_number(const_IWSubstring& buffer, int& zresult) {
   zresult = 0;
 
   int chars_consumed = 0;
 
-  while (buffer.length())
-  {
+  while (buffer.length()) {
     int j = buffer[0] - '0';
 
-    if (j > 9 || j < 0)
+    if (j > 9 || j < 0) {
       return chars_consumed;
+    }
 
     zresult = zresult * 10 + j;
     chars_consumed++;
@@ -328,26 +319,21 @@ get_number(const_IWSubstring & buffer,
 }
 
 static int
-get_range(const_IWSubstring & buffer,
-           int rstart,
-           resizable_array<int> & columns_requested)
-{
+get_range(const_IWSubstring& buffer, int rstart,
+          resizable_array<int>& columns_requested) {
   int rend;
 
-  if (! get_number(buffer, rend))
-  {
+  if (!get_number(buffer, rend)) {
     cerr << "Invalid range specifier '" << buffer << "'\n";
     return 0;
   }
 
-  if (rend < rstart)
-  {
+  if (rend < rstart) {
     cerr << "Invalid range specifier - must increase\n";
     return 0;
   }
 
-  for (int i = rstart + 1; i <= rend; i++)
-  {
+  for (int i = rstart + 1; i <= rend; i++) {
     columns_requested.add_if_not_already_present(i - 1);
   }
 
@@ -356,11 +342,9 @@ get_range(const_IWSubstring & buffer,
 
 static int
 add_column_from_text_representation(const_IWSubstring buffer,
-                     resizable_array<int> & columns_requested)
-{
+                                    resizable_array<int>& columns_requested) {
   int col;
-  if (! buffer.numeric_value(col) || col < 1)
-  {
+  if (!buffer.numeric_value(col) || col < 1) {
     cerr << "INvalid column specifier '" << buffer << "'\n";
     return 0;
   }
@@ -373,28 +357,25 @@ add_column_from_text_representation(const_IWSubstring buffer,
 }
 
 static int
-parse_dash_F_option_one_line(const_IWSubstring & buffer,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_F_option_one_line(const_IWSubstring& buffer,
+                             resizable_array<int>& columns_requested) {
   int i = 0;
   const_IWSubstring token;
-  while (buffer.nextword(token, i))
-  {
-    if (! add_column_from_text_representation(token, columns_requested))
+  while (buffer.nextword(token, i)) {
+    if (!add_column_from_text_representation(token, columns_requested)) {
       return 0;
+    }
   }
 
   return 1;
 }
 
 static int
-parse_dash_F_option_one_line(iwstring_data_source & input,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_F_option_one_line(iwstring_data_source& input,
+                             resizable_array<int>& columns_requested) {
   const_IWSubstring buffer;
 
-  if (! input.next_record(buffer))
-  {
+  if (!input.next_record(buffer)) {
     cerr << "Cannot read first record of -F file\n";
     return 0;
   }
@@ -403,50 +384,44 @@ parse_dash_F_option_one_line(iwstring_data_source & input,
 }
 
 static int
-parse_dash_F_option_multiple_lines(iwstring_data_source & input,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_F_option_multiple_lines(iwstring_data_source& input,
+                                   resizable_array<int>& columns_requested) {
   const_IWSubstring buffer;
 
-  while (input.next_record(buffer))
-  {
-    if (! add_column_from_text_representation(buffer, columns_requested))
+  while (input.next_record(buffer)) {
+    if (!add_column_from_text_representation(buffer, columns_requested)) {
       return 0;
+    }
   }
 
   return 1;
 }
 
 static int
-parse_dash_F_option(const const_IWSubstring & fname,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_F_option(const const_IWSubstring& fname,
+                    resizable_array<int>& columns_requested) {
   iwstring_data_source input(fname);
 
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open -F file '" << fname << "'\n";
     return 0;
   }
 
-  if (descriptor_names_on_one_line)
+  if (descriptor_names_on_one_line) {
     return parse_dash_F_option_one_line(input, columns_requested);
-  else
+  } else {
     return parse_dash_F_option_multiple_lines(input, columns_requested);
+  }
 }
 
 static int
-parse_dash_F_option(Command_Line & cl,
-                     char flag,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_F_option(Command_Line& cl, char flag,
+                    resizable_array<int>& columns_requested) {
   int i = 0;
   const_IWSubstring f;
 
-  while (cl.value(flag, f, i++))
-  {
-    if (! parse_dash_F_option(f, columns_requested))
-    {
+  while (cl.value(flag, f, i++)) {
+    if (!parse_dash_F_option(f, columns_requested)) {
       cerr << "Invalid -" << flag << " qualifier '" << f << "'\n";
       return 0;
     }
@@ -464,20 +439,16 @@ parse_dash_F_option(Command_Line & cl,
 */
 
 static int
-parse_dash_f_option(const_IWSubstring buffer,     // our own copy, not passed by reference
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_f_option(const_IWSubstring buffer,  // our own copy, not passed by reference
+                    resizable_array<int>& columns_requested) {
   const_IWSubstring f;
   int i = 0;
 
-  while (buffer.nextword(f, i, ','))
-  {
+  while (buffer.nextword(f, i, ',')) {
     int col;
 
-    if (f.starts_with('-'))
-    {
-      if (! f.numeric_value(col) || 0 == col)
-      {
+    if (f.starts_with('-')) {
+      if (!f.numeric_value(col) || 0 == col) {
         cerr << "Invalid negative token offset '" << f << "'\n";
         return 0;
       }
@@ -485,31 +456,28 @@ parse_dash_f_option(const_IWSubstring buffer,     // our own copy, not passed by
       continue;
     }
 
-    if (! get_number(f, col) || 0 == col)
-    {
+    if (!get_number(f, col) || 0 == col) {
       cerr << "Invalid column number '" << f << "'\n";
       return 0;
     }
 
-    if (col > 0)
+    if (col > 0) {
       columns_requested.add_if_not_already_present(col - 1);
-    else
+    } else {
       columns_requested.add_if_not_already_present(col);
+    }
 
-    if (0 == f.length())     // just a single column number
+    if (0 == f.length()) {  // just a single column number
       continue;
+    }
 
-    if (f.starts_with('-'))
-    {
+    if (f.starts_with('-')) {
       f.remove_leading_chars(1);
-      if (! get_range(f, col, columns_requested))
-      {
+      if (!get_range(f, col, columns_requested)) {
         cerr << "Invalid range specifier -'" << f << "'\n";
         return 0;
       }
-    }
-    else
-    {
+    } else {
       cerr << "Invalid -f qualifier '" << f << "'\n";
       return 0;
     }
@@ -519,17 +487,13 @@ parse_dash_f_option(const_IWSubstring buffer,     // our own copy, not passed by
 }
 
 static int
-parse_dash_f_option (Command_Line & cl,
-                     char flag,
-                     resizable_array<int> & columns_requested)
-{
+parse_dash_f_option(Command_Line& cl, char flag,
+                    resizable_array<int>& columns_requested) {
   int i = 0;
   const_IWSubstring f;
 
-  while (cl.value(flag, f, i++))
-  {
-    if (! parse_dash_f_option(f, columns_requested))
-    {
+  while (cl.value(flag, f, i++)) {
+    if (!parse_dash_f_option(f, columns_requested)) {
       cerr << "Invalid -" << flag << " qualifier '" << f << "'\n";
       return 0;
     }
@@ -539,23 +503,19 @@ parse_dash_f_option (Command_Line & cl,
 }
 
 static int
-append_possible_translated(const const_IWSubstring & token,
-                           const char rep,
-                           IWString_and_File_Descriptor & output)
-{
+append_possible_translated(const const_IWSubstring& token, const char rep,
+                           IWString_and_File_Descriptor& output) {
   const int n = token.length();
 
   output.make_room_for_extra_items(n);
 
   int rc = 0;
 
-  for (int i = 0; i < n; ++i)
-  {
+  for (int i = 0; i < n; ++i) {
     const char c = token[i];
-    if (isspace(c))
+    if (isspace(c)) {
       output << rep;
-    else
-    {
+    } else {
       output << c;
       rc++;
     }
@@ -564,10 +524,9 @@ append_possible_translated(const const_IWSubstring & token,
 }
 
 static int
-iwcut_token_regexp(const const_IWSubstring & buffer,
-                   const resizable_array<int> & columns_requested,
-                   IWString_and_File_Descriptor & output)
-{
+iwcut_token_regexp(const const_IWSubstring& buffer,
+                   const resizable_array<int>& columns_requested,
+                   IWString_and_File_Descriptor& output) {
   int i = 0;
   const_IWSubstring token;
 
@@ -575,28 +534,32 @@ iwcut_token_regexp(const const_IWSubstring & buffer,
 
   int need_separator = false;
 
-  while (buffer.nextword(token, i, input_token_separator))
-  {
+  while (buffer.nextword(token, i, input_token_separator)) {
     int m;
 
-    if (columns_requested.contains(col))
+    if (columns_requested.contains(col)) {
       m = 1;
-//  else if (token_regexp.matches(token))
-    else if (iwre2::RE2PartialMatch(token, *token_regexp))
+    }
+    //  else if (token_regexp.matches(token))
+    else if (iwre2::RE2PartialMatch(token, *token_regexp)) {
       m = 1;
-    else
+    } else {
       m = 0;
+    }
 
     col++;
 
-    if (suppress_selected_columns)
+    if (suppress_selected_columns) {
       m = !m;
+    }
 
-    if (! m)
+    if (!m) {
       continue;
+    }
 
-    if (need_separator)
+    if (need_separator) {
       output << output_token_separator;
+    }
 
     need_separator = true;
     append_possible_translated(token, gsub_spaces_in_tokens, output);
@@ -608,12 +571,9 @@ iwcut_token_regexp(const const_IWSubstring & buffer,
 }
 
 static int
-next_quoted_token_inner(const const_IWSubstring & buffer,
-                  const int s,
-                  const char input_token_separator,
-                  const_IWSubstring & token)
-{
-  if (input_token_separator == buffer[s])   // empty field
+next_quoted_token_inner(const const_IWSubstring& buffer, const int s,
+                        const char input_token_separator, const_IWSubstring& token) {
+  if (input_token_separator == buffer[s])  // empty field
   {
     token.make_empty();
     return 1;
@@ -625,14 +585,12 @@ next_quoted_token_inner(const const_IWSubstring & buffer,
 
   int in_quote = buffer[s] == dquote;
 
-  for (int i = s+1; i < n; ++i)
-  {
-    if (dquote == buffer[i])
-      in_quote = ! in_quote;
-    else if (in_quote)
+  for (int i = s + 1; i < n; ++i) {
+    if (dquote == buffer[i]) {
+      in_quote = !in_quote;
+    } else if (in_quote)
       ;
-    else if (input_token_separator == buffer[i])
-    {
+    else if (input_token_separator == buffer[i]) {
       token.set(buffer.rawchars() + s, i - s);
       return 1;
     }
@@ -643,14 +601,11 @@ next_quoted_token_inner(const const_IWSubstring & buffer,
 }
 
 static int
-next_quoted_token(const const_IWSubstring & buffer,
-                  const int s,
-                  const char input_token_separator,
-                  const_IWSubstring & token)
-{
+next_quoted_token(const const_IWSubstring& buffer, const int s,
+                  const char input_token_separator, const_IWSubstring& token) {
   const int n = buffer.length();
 
-  if (s == n)    // last token is empty
+  if (s == n)  // last token is empty
   {
     token.make_empty();
     return 1;
@@ -660,16 +615,17 @@ next_quoted_token(const const_IWSubstring & buffer,
 
   next_quoted_token_inner(buffer, s, input_token_separator, token);
 
-  if (0 == token.length())
+  if (0 == token.length()) {
     return 1;
+  }
 
-  if (2 != input_is_quoted_tokens)
+  if (2 != input_is_quoted_tokens) {
     return 1;
+  }
 
   const char dquote('"');
 
-  if (token.starts_with(dquote) && token.ends_with(dquote))
-  {
+  if (token.starts_with(dquote) && token.ends_with(dquote)) {
     token.remove_leading_chars(1);
     token.chop();
   }
@@ -678,138 +634,138 @@ next_quoted_token(const const_IWSubstring & buffer,
 }
 
 static int
-iwcut_token_regexp(iwstring_data_source & input,
-                    const resizable_array<int> & columns_requested,
-                    IWString_and_File_Descriptor & output)
-{
+iwcut_token_regexp(iwstring_data_source& input,
+                   const resizable_array<int>& columns_requested,
+                   IWString_and_File_Descriptor& output) {
   const_IWSubstring buffer;
-  while (input.next_record(buffer))
-  {
-    if (! iwcut_token_regexp(buffer, columns_requested, output))
+  while (input.next_record(buffer)) {
+    if (!iwcut_token_regexp(buffer, columns_requested, output)) {
       return 0;
+    }
 
-    if (output.size() > 32768)
+    if (output.size() > 32768) {
       output.write_whole_blocks_shift_unwritten();
+    }
   }
 
   return 1;
 }
 
 static int
-iwcut(const const_IWSubstring & buffer,
-      const resizable_array<int> & word_beginnings,
-      const resizable_array<int> & columns_requested,
-      IWString_and_File_Descriptor & output)
-{
+iwcut(const const_IWSubstring& buffer, const resizable_array<int>& word_beginnings,
+      const resizable_array<int>& columns_requested,
+      IWString_and_File_Descriptor& output) {
   const int initial_size_output = output.number_elements();
 
   int nr = columns_requested.number_elements();
 
 #ifdef DEBUG_IWCUT
-  for (int i = 0; i < word_beginnings.number_elements(); i++)
-  {
+  cerr << "Processing " << word_beginnings.size() << " word beginnings\n";
+  for (int i = 0; i < word_beginnings.number_elements(); i++) {
     cerr << ' ' << word_beginnings[i];
   }
-  cerr << endl;
+  cerr << '\n';
 #endif
 
-  for (int i = 0; i < nr; i++)
-  {
+  for (int i = 0; i < nr; i++) {
     int c = columns_requested[i];
 
-    if (c < 0)
+    if (c < 0) {
       c = word_beginnings.number_elements() + c;
+    }
 
     int j;
 
-    if (word_beginnings.ok_index(c))
+    if (word_beginnings.ok_index(c)) {
       j = word_beginnings[c];
-    else if (missing_column_fill.length() > 0)
-    {
-      if (i > 0)
+    } else if (missing_column_fill.length() > 0) {
+      if (i > 0) {
         output += output_token_separator;
+      }
       output += missing_column_fill;
       continue;
-    }
-    else
-    {
-      cerr << "Column " << c << " out of range, only " << word_beginnings.number_elements() << " columns in input (use the -z option to fix)\n";
+    } else {
+      cerr << "Column " << c << " out of range, only "
+           << word_beginnings.size()
+           << " columns in input (use the -z option to fix)\n";
       return 0;
     }
 
     const_IWSubstring token;
 
-    if (input_is_quoted_tokens)
+    if (input_is_quoted_tokens) {
       next_quoted_token(buffer, j, input_token_separator, token);
-    else if (consecutive_delimiters_mean_empty_words_between)
-      (void) buffer.nextword_single_delimiter(token, j, input_token_separator);
-    else
-      (void) buffer.nextword(token, j, input_token_separator);
+    } else if (consecutive_delimiters_mean_empty_words_between) {
+      (void)buffer.nextword_single_delimiter(token, j, input_token_separator);
+    } else {
+      (void)buffer.nextword(token, j, input_token_separator);
+    }
 
-    if (0 == token.length() && (all_fields_must_have_content || columns_that_must_not_be_empty[c]))
-    {
+    if (0 == token.length() &&
+        (all_fields_must_have_content || columns_that_must_not_be_empty[c])) {
       output.resize_keep_storage(initial_size_output);
       records_discarded_for_zero_field++;
       return 1;
     }
 
-    if (i > 0)
+    if (i > 0) {
       output += output_token_separator;
+    }
 
-    if (' ' != gsub_spaces_in_tokens)
+    if (' ' != gsub_spaces_in_tokens) {
       append_possible_translated(token, gsub_spaces_in_tokens, output);
-    else
+    } else {
       output += token;
+    }
   }
 
-  if (extra_stuff_each_record.length())
+  if (extra_stuff_each_record.length()) {
     output << extra_stuff_each_record;
+  }
 
   output += '\n';
 
   return 1;
 }
 
-//#define DEBUG_QUOTED_WB
+// #define DEBUG_QUOTED_WB
 
 static int
-locate_quoted_tokens_word_beginnings(const const_IWSubstring & buffer,
-                                     resizable_array<int> & word_beginnings,
-                                     const char input_token_separator)
-{
+locate_quoted_tokens_word_beginnings(const const_IWSubstring& buffer,
+                                     resizable_array<int>& word_beginnings,
+                                     const char input_token_separator) {
   const int n = buffer.length();
 
-  if (0 == n)
+  if (0 == n) {
     return 0;
+  }
 
   const char dquote = '"';
 
   word_beginnings.add(0);
 
   int in_quote;
-  if (input_token_separator == buffer[0])
-  {
+  if (input_token_separator == buffer[0]) {
     word_beginnings.add(1);
     in_quote = false;
-  }
-  else
+  } else {
     in_quote = buffer[0] == dquote;
+  }
 
-  for (int i = 1; i < n; ++i)
-  {
-//  cerr << " char " << i << " '" << buffer[i] << "' quote " << in_quote << endl;
-    if (dquote == buffer[i])
-      in_quote = ! in_quote;
-    else if (in_quote)
+  for (int i = 1; i < n; ++i) {
+    //  cerr << " char " << i << " '" << buffer[i] << "' quote " << in_quote << '\n';
+    if (dquote == buffer[i]) {
+      in_quote = !in_quote;
+    } else if (in_quote)
       ;
-    else if (input_token_separator == buffer[i])
-      word_beginnings.add(i+1);
+    else if (input_token_separator == buffer[i]) {
+      word_beginnings.add(i + 1);
+    }
   }
 
 #ifdef DEBUG_QUOTED_WB
-  for (int i = 0; i < word_beginnings.size(); ++i)
-  {
-    cerr << " wb " << i << ' ' << word_beginnings[i] << endl;
+  for (int i = 0; i < word_beginnings.size(); ++i) {
+    cerr << " wb " << i << ' ' << word_beginnings[i] << '\n';
   }
 #endif
 
@@ -817,34 +773,45 @@ locate_quoted_tokens_word_beginnings(const const_IWSubstring & buffer,
 }
 
 static int
-iwcut(const const_IWSubstring & buffer,
-      const resizable_array<int> & columns_requested,
-      IWString_and_File_Descriptor & output)
-{
+iwcut(const const_IWSubstring& buffer, const resizable_array<int>& columns_requested,
+      IWString_and_File_Descriptor& output) {
   static int columns_in_input = 0;
 
   resizable_array<int> word_beginnings;
 
-  if (columns_in_input > 0)
+  if (columns_in_input > 0) {
     word_beginnings.resize(columns_in_input);
+  }
 
-//cerr << "Line " << __LINE__ << " iqt " << input_is_quoted_tokens << endl;
+  // cerr << "Line " << __LINE__ << " iqt " << input_is_quoted_tokens << '\n';
 
   int ncol;
-  if (input_is_quoted_tokens)
-    ncol = locate_quoted_tokens_word_beginnings(buffer, word_beginnings, input_token_separator);
-  else if (consecutive_delimiters_mean_empty_words_between)
-    ncol = buffer.locate_word_beginnings_single_delimiter(word_beginnings, input_token_separator);
-  else
+  if (input_is_quoted_tokens) {
+    ncol = locate_quoted_tokens_word_beginnings(buffer, word_beginnings,
+                                                input_token_separator);
+  } else if (consecutive_delimiters_mean_empty_words_between) {
+    ncol = buffer.locate_word_beginnings_single_delimiter(word_beginnings,
+                                                          input_token_separator);
+  } else {
     ncol = buffer.locate_word_beginnings(word_beginnings, input_token_separator);
+  }
 
 #ifdef DEBUG_IWCUT
   cerr << "Processing '" << buffer << "'\n";
-  cerr << "ncol " << ncol << " count " << buffer.ccount(input_token_separator) << endl;
+  cerr << "ncol " << ncol << " count " << buffer.ccount(input_token_separator) << '\n';
 #endif
 
-  if (ncol > columns_in_input)
+  if (ncol > columns_in_input) {
     columns_in_input = ncol;
+  }
+
+  for (int col : columns_requested) {
+    if ((col + 1) > columns_in_input) {
+      cerr << "iwcut:request column " << (col + 1) << " but only " << columns_in_input
+           << "columns in input\n";
+      return 0;
+    }
+  }
 
   return iwcut(buffer, word_beginnings, columns_requested, output);
 }
@@ -852,41 +819,42 @@ iwcut(const const_IWSubstring & buffer,
 #if GCC_VERSION > 50000
 
 static int
-identify_random_columns(const const_IWSubstring & buffer,
-                        resizable_array<int> & columns_requested)
-{
+identify_random_columns(const const_IWSubstring& buffer,
+                        resizable_array<int>& columns_requested) {
   int nw;
-  if (' ' == input_token_separator)
+  if (' ' == input_token_separator) {
     nw = buffer.nwords();
-  else
+  } else {
     nw = buffer.nwords_single_delimiter(input_token_separator);
+  }
 
-  if (nw <= random_columns)
-  {
-    cerr << "identify_random_columns::request " << random_columns << " random columns, but input only contains " << nw << " impossible\n";
+  if (nw <= random_columns) {
+    cerr << "identify_random_columns::request " << random_columns
+         << " random columns, but input only contains " << nw << " impossible\n";
     return 0;
   }
 
-  int * tmp = new int[nw]; std::unique_ptr<int[]> free_tmp(tmp);
+  int* tmp = new int[nw];
+  std::unique_ptr<int[]> free_tmp(tmp);
 
   std::fill_n(tmp, nw, 0);
 
-  for (int i = 0; i < random_columns; ++i)
-  {
+  for (int i = 0; i < random_columns; ++i) {
     tmp[i] = 1;
   }
 
   std::random_device rd;
   std::mt19937 rng(rd());
 
-  std::shuffle(tmp + 1, tmp + nw - 1, rng);   // leave the first one set to 1 - presumably most common case
+  std::shuffle(tmp + 1, tmp + nw - 1,
+               rng);  // leave the first one set to 1 - presumably most common case
 
   columns_requested.resize_keep_storage(0);
 
-  for (int i = 0; i < nw; ++i)
-  {
-    if (tmp[i])
+  for (int i = 0; i < nw; ++i) {
+    if (tmp[i]) {
       columns_requested.add(i);
+    }
   }
 
   return 1;
@@ -894,43 +862,41 @@ identify_random_columns(const const_IWSubstring & buffer,
 #endif
 
 static int
-matches_except_for_quotes(const IWString & descriptor,
-                          const const_IWSubstring & d)
-{
-  if (! d.starts_with('"'))
+matches_except_for_quotes(const IWString& descriptor, const const_IWSubstring& d) {
+  if (!d.starts_with('"')) {
     return 0;
+  }
 
-  if (! d.ends_with('"'))
+  if (!d.ends_with('"')) {
     return 0;
+  }
 
   const int istop = d.length() - 1;
-  for (int i = 1; i < istop; ++i)
-  {
-    if (descriptor[i-1] != d[i])
+  for (int i = 1; i < istop; ++i) {
+    if (descriptor[i - 1] != d[i]) {
       return 0;
+    }
   }
 
   return 1;
 }
 
 static int
-find_column_number(const IWString & descriptor,
-                   const resizable_array_p<const_IWSubstring> & header,
-                   resizable_array<int> & columns_requested)
-{
+find_column_number(const IWString& descriptor,
+                   const resizable_array_p<const_IWSubstring>& header,
+                   resizable_array<int>& columns_requested) {
   int n = header.number_elements();
 
   const_IWSubstring noquotes;
-  if (',' == input_token_separator && noquotes.starts_with('"') && descriptor.ends_with('"'))
-  {
+  if (',' == input_token_separator && noquotes.starts_with('"') &&
+      descriptor.ends_with('"')) {
     descriptor.from_to(1, descriptor.length() - 2, noquotes);
   }
 
-  for (int i = 0; i < n; i++)
-  {
-    const const_IWSubstring & d = *(header[i]);
+  for (int i = 0; i < n; i++) {
+    const const_IWSubstring& d = *(header[i]);
 
-//  cerr << "Comparing '" << descriptor << "' with '" << d << "'\n";
+    //  cerr << "Comparing '" << descriptor << "' with '" << d << "'\n";
 
     if (descriptor == d)
       ;
@@ -938,23 +904,25 @@ find_column_number(const IWString & descriptor,
       ;
     else if (',' == input_token_separator && matches_except_for_quotes(descriptor, d))
       ;
-    else
+    else {
       continue;
+    }
 
     columns_requested.add_if_not_already_present(i);
 
-    if (verbose > 1)
-      cerr << "Descriptor '" << d << " in column " << (i + 1) << endl;
+    if (verbose > 1) {
+      cerr << "Descriptor '" << d << " in column " << (i + 1) << '\n';
+    }
 
     return 1;
   }
 
-  cerr << "Strange, no column matches '" << descriptor << "'\n";
-  if (verbose)
-  {
+  if (! ignore_missing_columns_quietly) {
+    cerr << "Strange, no column matches '" << descriptor << "'\n";
+  }
+  if (verbose) {
     cerr << "Found these descriptors\n";
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
       cerr << " col " << i << " desc '" << *(header[i]) << "'\n";
     }
   }
@@ -963,18 +931,18 @@ find_column_number(const IWString & descriptor,
 }
 
 static int
-identify_column (const IWString & descriptor,
-                 const resizable_array_p<const_IWSubstring> & header,
-                 resizable_array<int> & columns_requested)
-        
+identify_column(const IWString& descriptor,
+                const resizable_array_p<const_IWSubstring>& header,
+                resizable_array<int>& columns_requested)
+
 {
-  if (! match_descriptor_names_as_regular_expressions)
+  if (!match_descriptor_names_as_regular_expressions) {
     return find_column_number(descriptor, header, columns_requested);
+  }
 
   re2::StringPiece tmp(descriptor.data(), descriptor.length());
   RE2 rx(tmp);
-  if (! rx.ok())
-  {
+  if (!rx.ok()) {
     cerr << "INvalid regular expression '" << descriptor << "'\n";
     return 0;
   }
@@ -983,19 +951,18 @@ identify_column (const IWString & descriptor,
 
   int rc = 0;
 
-  for (int i = 0; i < n; i++)
-  {
-    const const_IWSubstring & d = *(header[i]);
+  for (int i = 0; i < n; i++) {
+    const const_IWSubstring& d = *(header[i]);
 
-//  cerr << "Comparing '" << descriptor << "' with '" << d << "'\n";
+    //  cerr << "Comparing '" << descriptor << "' with '" << d << "'\n";
 
-    if (iwre2::RE2PartialMatch(d, rx))
-    {
+    if (iwre2::RE2PartialMatch(d, rx)) {
       columns_requested.add_if_not_already_present(i);
       rc++;
 
-      if (verbose > 1)
-        cerr << "Descriptor '" << d << " in column " << (i + 1) << endl;
+      if (verbose > 1) {
+        cerr << "Descriptor '" << d << " in column " << (i + 1) << '\n';
+      }
     }
   }
 
@@ -1003,61 +970,55 @@ identify_column (const IWString & descriptor,
 }
 
 static int
-do_split(const const_IWSubstring & buffer,
-         const char input_token_separator,
-         resizable_array_p<const_IWSubstring> & word_beginnings)
-{
+do_split(const const_IWSubstring& buffer, const char input_token_separator,
+         resizable_array_p<const_IWSubstring>& word_beginnings) {
   const int n = buffer.length();
 
-  if (0 == n)
+  if (0 == n) {
     return 0;
+  }
 
   const char dquote = '"';
 
-//cerr << "Looking for wb in '" << buffer << endl;
+  // cerr << "Looking for wb in '" << buffer << '\n';
 
-  int previous_delimiter = -1;    // 
+  int previous_delimiter = -1;  //
 
   int in_quote;
-  if (input_token_separator == buffer[0])
-  {
+  if (input_token_separator == buffer[0]) {
     word_beginnings.add(new const_IWSubstring());
     in_quote = 0;
     previous_delimiter = 0;
-  }
-  else
+  } else {
     in_quote = dquote == buffer[0];
+  }
 
-  for (int i = 1; i < n; ++i)
-  {
-    if (dquote == buffer[i])
-      in_quote = ! in_quote;
-    else if (in_quote)
+  for (int i = 1; i < n; ++i) {
+    if (dquote == buffer[i]) {
+      in_quote = !in_quote;
+    } else if (in_quote)
       ;
-    else if (input_token_separator == buffer[i])
-    {
+    else if (input_token_separator == buffer[i]) {
       if (in_quote)
         ;
-      else 
-      {
-        word_beginnings.add(new const_IWSubstring(buffer.rawchars() + previous_delimiter + 1, i - previous_delimiter - 1));
+      else {
+        word_beginnings.add(new const_IWSubstring(
+            buffer.rawchars() + previous_delimiter + 1, i - previous_delimiter - 1));
         previous_delimiter = i;
       }
     }
   }
 
-  word_beginnings.add(new const_IWSubstring(buffer.rawchars() + previous_delimiter + 1, n - previous_delimiter - 1));
+  word_beginnings.add(new const_IWSubstring(buffer.rawchars() + previous_delimiter + 1,
+                                            n - previous_delimiter - 1));
 
-  if (2 == input_is_quoted_tokens)
-  {
+  if (2 == input_is_quoted_tokens) {
     const char dquote = '"';
 
-    for (int i = 0; i < word_beginnings.number_elements(); ++i)
-    {
-      auto * x = word_beginnings[i];
+    for (int i = 0; i < word_beginnings.number_elements(); ++i) {
+      auto* x = word_beginnings[i];
 
-      if (x->starts_with(dquote) && x->ends_with(dquote))
-      {
+      if (x->starts_with(dquote) && x->ends_with(dquote)) {
         x->remove_leading_chars(1);
         x->chop();
       }
@@ -1072,128 +1033,152 @@ do_split(const const_IWSubstring & buffer,
 */
 
 static int
-determine_descriptors_to_be_output(const const_IWSubstring & buffer,
-                                   resizable_array_p<IWString> & descriptors_requested,
-                                   resizable_array<int> & columns_requested)
-{
+determine_descriptors_to_be_output(const const_IWSubstring& buffer,
+                                   resizable_array_p<IWString>& descriptors_requested,
+                                   resizable_array<int>& columns_requested) {
   resizable_array_p<const_IWSubstring> header;
 
-  if (input_is_quoted_tokens)
+  if (input_is_quoted_tokens) {
     do_split(buffer, input_token_separator, header);
-  else
+  } else {
     buffer.split(header, input_token_separator);
+  }
 
 #ifdef DEBUG_IWCUT
   cerr << "header split into " << header.size() << " items\n";
-  for (int i = 0; i < header.number_elements(); ++i)
-  {
-    cerr << " col " << i << " dname " << *header[i] << endl;
+  for (int i = 0; i < header.number_elements(); ++i) {
+    cerr << " col " << i << " dname " << *header[i] << '\n';
   }
 #endif
 
-  if (' ' != descriptor_name_remove_to)
-  {
-    for (int i = 0; i < header.number_elements(); i++)
-    {
-      const_IWSubstring & d = *(header[i]);
+  if (' ' != descriptor_name_remove_to) {
+    for (int i = 0; i < header.number_elements(); i++) {
+      const_IWSubstring& d = *(header[i]);
 
-      if (d.contains(descriptor_name_remove_to))
+      if (d.contains(descriptor_name_remove_to)) {
         d.remove_up_to_first(descriptor_name_remove_to);
+      }
     }
   }
 
-  if (add_first_token_when_processing_descriptors)
+  if (add_first_token_when_processing_descriptors) {
     columns_requested.add_if_not_already_present(0);
+  }
 
   int nr = descriptors_requested.number_elements();
 
   int rc = nr;
 
-  for (int i = 0; i < nr; i++)
-  {
-    const IWString & d = *(descriptors_requested[i]);
+  int columns_found = 0;
+  int columns_not_found = 0;
 
-    if (identify_column(d, header, columns_requested))
+  for (int i = 0; i < nr; i++) {
+    const IWString& d = *(descriptors_requested[i]);
+
+    if (identify_column(d, header, columns_requested)) {
+      ++columns_found;
       continue;
+    }
+
+    ++columns_not_found;
+    if (ignore_missing_columns_quietly) {
+      continue;
+    }
 
     cerr << "Cannot find descriptor matching '" << d << "' in header\n";
+    if (ignore_missing_columns) {
+      continue;
+    }
 
-// Note that we temporarily reverse the meanings of each and header. They will be swapped after the first record in the main loop
 
-    if (missing_column_fill.length())
-    {
+    // Note that we temporarily reverse the meanings of each and header. They will be
+    // swapped after the first record in the main loop
+
+    if (missing_column_fill.length()) {
       extra_stuff_each_record << output_token_separator << d;
       extra_stuff_header_record << missing_column_fill;
       continue;
     }
 
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     rc = 0;
   }
 
-  if (verbose)
-    cerr << "Selected " << columns_requested.number_elements() << " descriptors for output\n";
+  if (columns_found == 0) {
+    cerr << "No columns selected for output\n";
+    return 0;
+  }
+
+  if (verbose) {
+    cerr << "Selected " << columns_requested.size()
+         << " descriptors for output\n";
+    if (columns_not_found > 0) {
+      cerr << "No match for " << columns_not_found << " columns\n";
+    }
+  }
 
   return rc;
 }
 
 static int
-iwcut(iwstring_data_source & input,
-      resizable_array<int> & columns_requested,
-      resizable_array_p<IWString> & descriptors_requested,
-      IWString_and_File_Descriptor & output)
-{
+iwcut(iwstring_data_source& input, resizable_array<int>& columns_requested,
+      resizable_array_p<IWString>& descriptors_requested,
+      IWString_and_File_Descriptor& output) {
   static int first_record = 1;
 
   const_IWSubstring buffer;
 
-  IWString tmp;     // needs to be kept in scope. Could go in the whole loop, but very inefficient to instantiate it each iteration but only use it on the first record
+  IWString
+      tmp;  // needs to be kept in scope. Could go in the whole loop, but very inefficient
+            // to instantiate it each iteration but only use it on the first record
 
-  while (input.next_record(buffer))
-  {
+  while (input.next_record(buffer)) {
     int first_record_this_file = (1 == input.lines_read());
 
-    if (first_record_this_file && descriptors_requested.number_elements())
-    {
-      if (1 == ignore_case)
-      {
+    if (first_record_this_file && descriptors_requested.number_elements()) {
+      if (1 == ignore_case) {
         tmp = buffer;
         tmp.to_lowercase();
         buffer = tmp;
       }
 
-      if (! determine_descriptors_to_be_output(buffer, descriptors_requested, columns_requested))
+      if (!determine_descriptors_to_be_output(buffer, descriptors_requested,
+                                              columns_requested)) {
         return 0;
+      }
 
-      if (first_record)   // first file being processed
+      if (first_record) {  // first file being processed
         first_record = 0;
-      else                // don't write out the header again
+      } else {  // don't write out the header again
         continue;
+      }
     }
 #if GCC_VERSION > 50000
-    else if (random_columns)
-    {
-      if (! identify_random_columns(buffer, columns_requested))
+    else if (random_columns) {
+      if (!identify_random_columns(buffer, columns_requested)) {
         return 0;
+      }
     }
 #endif
 
-    if (suppress_selected_columns && first_record_this_file && columns_requested.number_elements())
-    {
-      if (' ' == input_token_separator)
-        invert_selections(columns_requested, buffer.nwords(), descriptors_requested.number_elements());
-      else
-        invert_selections(columns_requested, buffer.nwords_single_delimiter(input_token_separator), descriptors_requested.number_elements());
+    if (suppress_selected_columns && first_record_this_file &&
+        columns_requested.size()) {
+      if (' ' == input_token_separator) {
+        invert_selections(columns_requested, buffer.nwords(),
+                          descriptors_requested.number_elements());
+      } else {
+        invert_selections(columns_requested,
+                          buffer.nwords_single_delimiter(input_token_separator),
+                          descriptors_requested.number_elements());
+      }
     }
 
-    if (! iwcut(buffer, columns_requested, output))
-    {
-      cerr << "Fatal error on line " << input.lines_read() << endl;
+    if (!iwcut(buffer, columns_requested, output)) {
+      cerr << "Fatal error on line " << input.lines_read() << '\n';
       return 0;
     }
 
-    if (first_record_this_file && extra_stuff_header_record.length())
-    {
+    if (first_record_this_file && extra_stuff_header_record.length()) {
       extra_stuff_each_record = extra_stuff_header_record;
       extra_stuff_header_record.resize(0);
     }
@@ -1207,355 +1192,344 @@ iwcut(iwstring_data_source & input,
 }
 
 static int
-iwcut(const char * fname,
-      resizable_array<int> & columns_requested,
-      resizable_array_p<IWString> & descriptors_requested,
-      IWString_and_File_Descriptor & output)
-{
+iwcut(const char* fname, resizable_array<int>& columns_requested,
+      resizable_array_p<IWString>& descriptors_requested,
+      IWString_and_File_Descriptor& output) {
   iwstring_data_source input(fname);
 
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
 
   input.set_dos(1);
 
-  if (token_regexp)
+  if (token_regexp) {
     return iwcut_token_regexp(input, columns_requested, output);
+  }
 
   return iwcut(input, columns_requested, descriptors_requested, output);
 }
 
 static int
-iwcut (int argc, char ** argv)
-{
-  Command_Line cl(argc, argv, "vf:F:d:D:mxcrz:R:i:o:K:utq:a:E:bg:");
+iwcut(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vf:F:d:D:mxcrz:R:i:o:K:utq:a:E:bg:k:");
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
   verbose = cl.option_count('v');
 
-  if (cl.option_present('a'))
-  {
-    if (! cl.value('a', random_columns) || random_columns < 1)
-    {
+  if (cl.option_present('a')) {
+    if (!cl.value('a', random_columns) || random_columns < 1) {
       cerr << "The number of random columns (-a) must be a whole +ve number\n";
       usage(1);
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will select " << random_columns << " random columns\n";
-  }
-  else if (! cl.option_present('f') && ! cl.option_present('d') && ! cl.option_present('D') && ! cl.option_present('F') && ! cl.option_present('R'))
-  {
+    }
+  } else if (!cl.option_present('f') && !cl.option_present('d') &&
+             !cl.option_present('D') && !cl.option_present('F') &&
+             !cl.option_present('R')) {
     cerr << "Must specify which columns to omit via the -f, -d or -D options\n";
     usage(4);
   }
 
-  if (cl.option_present('i') && cl.option_present('t'))
-  {
+  if (cl.option_present('i') && cl.option_present('t')) {
     cerr << "Sorry, cannot use both -i and -t options\n";
     usage(3);
   }
 
-  if (cl.option_present('i'))
-  {
+  if (cl.option_present('i')) {
     IWString i = cl.string_value('i');
 
-    if (! char_name_to_char(i))
-    {
+    if (!char_name_to_char(i)) {
       cerr << "Unrecognised input token specifier '" << i << "'\n";
       return 1;
     }
 
     input_token_separator = i[0];
 
-    if (verbose)
+    if (verbose) {
       cerr << "Input token separator '" << input_token_separator << "'\n";
-  }
-  else if (cl.option_present('t'))
-  {
+    }
+  } else if (cl.option_present('t')) {
     input_token_separator = '\t';
 
-    if (verbose)
+    if (verbose) {
       cerr << "Input token separator set to tab\n";
+    }
   }
 
-  if (cl.option_present('q'))
-  {
+  if (cl.option_present('q')) {
     const_IWSubstring q = cl.string_value('q');
 
-    if ("rm" == q)
-    {
+    if ("rm" == q) {
       input_is_quoted_tokens = 2;
-    }
-    else if ("k" == q || "keep" == q)
-    {
+    } else if ("k" == q || "keep" == q) {
       input_is_quoted_tokens = 1;
-      if (verbose)
+      if (verbose) {
         cerr << "Input is quoted tokens\n";
-    }
-    else
-    {
+      }
+    } else {
       cerr << "Unrecognised -q qualifier '" << q << "'\n";
       usage(1);
     }
   }
 
-  if (cl.option_present('o'))
-  {
+  if (cl.option_present('k')) {
+    const IWString k = cl.string_value('k');
+    ignore_missing_columns = 1;
+    if (k == ',') {
+    } else if (k.starts_with('q')) {
+      ignore_missing_columns_quietly = 1;
+    }
+    if (verbose) {
+      cerr << "Will ignore missing named columns\n";
+    }
+  }
+
+  if (cl.option_present('o')) {
     IWString o = cl.string_value('o');
-    if (! char_name_to_char(o))
-    {
+    if (!char_name_to_char(o)) {
       cerr << "Sorry, the output token separator can only be a single character\n";
       usage(5);
     }
 
     output_token_separator = o[0];
 
-    if (verbose)
+    if (verbose) {
       cerr << "Output token separator '" << output_token_separator << "'\n";
+    }
   }
 
-  if (cl.option_present('u'))
-  {
+  if (cl.option_present('u')) {
     consecutive_delimiters_mean_empty_words_between = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Consecutive delimiters mean empty words in between adjacent delimiters\n";
+    }
   }
 
-  if (' ' != input_token_separator)
+  if (' ' != input_token_separator) {
     consecutive_delimiters_mean_empty_words_between = 1;
+  }
 
-  if (cl.option_present('g'))
-  {
+  if (cl.option_present('g')) {
     const_IWSubstring g = cl.string_value('g');
 
-    if (1 != g.length())
-    {
-      cerr << "The space replace option (-g) must specify a single character, '" << g << "' invalid\n";
+    if (1 != g.length()) {
+      cerr << "The space replace option (-g) must specify a single character, '" << g
+           << "' invalid\n";
       return 1;
     }
 
     gsub_spaces_in_tokens = g[0];
 
-    if (verbose)
-      cerr << "Whilespace inside tokens translated to '" << gsub_spaces_in_tokens << "'\n";
+    if (verbose) {
+      cerr << "Whilespace inside tokens translated to '" << gsub_spaces_in_tokens
+           << "'\n";
+    }
   }
 
-  if (cl.option_present('c'))
-  {
+  if (cl.option_present('c')) {
     ignore_case = cl.option_count('c');
-    if (verbose)
+    if (verbose) {
       cerr << "Will ignore case when comparing descriptor names\n";
+    }
   }
 
-  if (cl.option_present('r'))
-  {
+  if (cl.option_present('r')) {
     match_descriptor_names_as_regular_expressions = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will match descriptors as regular expressions\n";
+    }
   }
 
   resizable_array<int> columns_requested;
 
-  if (cl.option_present('f'))
-  {
-    if (! parse_dash_f_option(cl, 'f', columns_requested))
-    {
+  if (cl.option_present('f')) {
+    if (!parse_dash_f_option(cl, 'f', columns_requested)) {
       cerr << "Invalid -f specifiers\n";
       usage(3);
     }
 
-//    if (verbose)
-//    {
-//      cerr << "Will extract these columns\n";
-//      for (int i = 0; i < columns_requested.number_elements(); i++)
-//      {
-//        cerr << ' ' << (columns_requested[i] + 1);
-//      }
-//      cerr << endl;
-//    }
+    if (verbose) {
+      cerr << "Will extract these columns\n";
+      for (int i = 0; i < columns_requested.number_elements(); i++) {
+        cerr << ' ' << (columns_requested[i] + 1);
+      }
+      cerr << '\n';
+    }
   }
 
-  if (cl.option_present('E'))
-  {
-    if (1 == cl.option_count('E'))
-    {
+  if (cl.option_present('E')) {
+    if (1 == cl.option_count('E')) {
       const_IWSubstring e = cl.string_value('E');
 
-      if ('.' == e)
+      if ('.' == e) {
         all_fields_must_have_content = 1;
+      }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Will discard any record with an empty selected field\n";
+      }
     }
 
-    if (! all_fields_must_have_content)
-    {
+    if (!all_fields_must_have_content) {
       resizable_array<int> tmp;
-      if (! parse_dash_f_option(cl, 'E', tmp))
-      {
+      if (!parse_dash_f_option(cl, 'E', tmp)) {
         cerr << "Invalid -E specifiers\n";
         usage(1);
       }
 
-      for (int i = 0; i < tmp.number_elements(); ++i)
-      {
+      for (int i = 0; i < tmp.number_elements(); ++i) {
         columns_that_must_not_be_empty[tmp[i]] = 1;
       }
 
-      if (verbose)
-        cerr << "Defined " << tmp.number_elements() << " columns that must not be empty\n";
+      if (verbose) {
+        cerr << "Defined " << tmp.size()
+             << " columns that must not be empty\n";
+      }
     }
   }
 
-// Make sure the -m option is examined before the -F and -D options
+  // Make sure the -m option is examined before the -F and -D options
 
-  if (cl.option_present('m'))
-  {
+  if (cl.option_present('m')) {
     descriptor_names_on_one_line = 0;
 
-    if (verbose)
-      cerr << "Descriptor names one per line in -D file(s), columns one per line in -F file(s)\n";
+    if (verbose) {
+      cerr << "Descriptor names one per line in -D file(s), columns one per line in -F "
+              "file(s)\n";
+    }
+    if (cl.option_count('m') > 1) {
+      skip_first_line_of_descriptor_file = 1;
+      if (verbose) {
+        cerr << "Will skip the first line of the -D file - multiple -m options\n";
+      }
+    }
   }
 
-  if (cl.option_present('F'))
-  {
-    if (! parse_dash_F_option(cl, 'F', columns_requested))
-    {
+  if (cl.option_present('F')) {
+    if (!parse_dash_F_option(cl, 'F', columns_requested)) {
       cerr << "Invalid -F combinations\n";
       usage(6);
     }
   }
 
   resizable_array_p<IWString> descriptors_requested;
-  if (cl.option_present('d'))
-  {
-    if (! parse_dash_d_option(cl, 'd', descriptors_requested))
-    {
+  if (cl.option_present('d')) {
+    if (!parse_dash_d_option(cl, 'd', descriptors_requested)) {
       cerr << "INvalid -d combinations\n";
       usage(5);
     }
   }
 
-  if (cl.option_present('D'))
-  {
-    if (! parse_dash_D_option(cl, 'D', descriptors_requested))
-    {
+  if (cl.option_present('D')) {
+    if (!parse_dash_D_option(cl, 'D', descriptors_requested)) {
       cerr << "Invalid -D combinations\n";
       usage(5);
     }
   }
 
-  if (cl.option_present('b'))
-  {
+  if (cl.option_present('b')) {
     add_first_token_when_processing_descriptors = 0;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will not automatically add first column\n";
+    }
   }
 
-  if (cl.option_present('K'))
-  {
+  if (cl.option_present('K')) {
     IWString tmp;
 
     cl.value('K', tmp);
 
-    assert (tmp.length() > 0);
+    assert(tmp.length() > 0);
 
     descriptor_name_remove_to = tmp[0];
 
-    if (verbose)
-      cerr << "Will remove characters up to " << descriptor_name_remove_to << " from descriptor names\n";
+    if (verbose) {
+      cerr << "Will remove characters up to " << descriptor_name_remove_to
+           << " from descriptor names\n";
+    }
 
-    for (int i = 0; i < descriptors_requested.number_elements(); i++)
-    {
-      IWString & d = *(descriptors_requested[i]);
+    for (int i = 0; i < descriptors_requested.number_elements(); i++) {
+      IWString& d = *(descriptors_requested[i]);
 
-      if (d.contains(descriptor_name_remove_to))
+      if (d.contains(descriptor_name_remove_to)) {
         d.remove_up_to_first(descriptor_name_remove_to);
+      }
     }
   }
 
-  if (cl.option_present('R'))
-  {
-    if (cl.option_count('R') > 1)
-    {
-      cerr << "Only one -R option is supported. Create a component regexp '(XXX|YYY|ZZZ)'\n";
+  if (cl.option_present('R')) {
+    if (cl.option_count('R') > 1) {
+      cerr << "Only one -R option is supported. Create a component regexp "
+              "'(XXX|YYY|ZZZ)'\n";
       return 4;
     }
 
     const_IWSubstring r = cl.string_value('R');
 
-    if (! iwre2::RE2Reset(token_regexp, r))
-    {
+    if (!iwre2::RE2Reset(token_regexp, r)) {
       cerr << "Invalid token regular expression '" << r << "'\n";
       return 3;
     }
 
-    if (verbose)
+    if (verbose) {
       cerr << "Columns matching '" << token_regexp->pattern() << "' will be output\n";
+    }
   }
 
-  if (! ignore_case)
+  if (!ignore_case)
     ;
-  else if (0 == descriptors_requested.number_elements())
-  {
+  else if (descriptors_requested.empty()) {
     cerr << "Very strange, ignoring case, but no descriptors requested for selection\n";
-  }
-  else    // convert the descriptor names to lowercase
+  } else  // convert the descriptor names to lowercase
   {
-//  for (int i = 0; i < descriptors_requested.number_elements (); i++)
-//  {
-//    descriptors_requested[i]->to_lowercase();
-//  }
+    //  for (int i = 0; i < descriptors_requested.number_elements (); i++)
+    //  {
+    //    descriptors_requested[i]->to_lowercase();
+    //  }
   }
 
-  if (verbose && descriptors_requested.number_elements())
-  {
+  if (verbose && descriptors_requested.size()) {
     cerr << "Will extract these descriptors\n";
-    for (int i = 0; i < descriptors_requested.number_elements(); i++)
-    {
-      cerr << ' ' << *(descriptors_requested[i]) << endl;
+    for (int i = 0; i < descriptors_requested.number_elements(); i++) {
+      cerr << ' ' << *(descriptors_requested[i]) << '\n';
     }
   }
 
-  if (verbose && columns_requested.number_elements())
-  {
+  if (verbose && columns_requested.number_elements()) {
     cerr << "Will extract these columns\n";
-    for (int i = 0; i < columns_requested.number_elements(); i++)
-    {
-      cerr << ' ' << (columns_requested[i] + 1) << endl;
+    for (int i = 0; i < columns_requested.number_elements(); i++) {
+      cerr << ' ' << (columns_requested[i] + 1) << '\n';
     }
   }
 
-  if (cl.option_present('x'))
-  {
+  if (cl.option_present('x')) {
     suppress_selected_columns = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will suppress selected columns\n";
+    }
   }
 
-  if (cl.option_present('z'))
-  {
+  if (cl.option_present('z')) {
     missing_column_fill = cl.string_value('z');
 
-    if (verbose)
+    if (verbose) {
       cerr << "Missing column(s) filled with '" << missing_column_fill << "'\n";
+    }
 
     missing_column_fill.insert_before(0, output_token_separator);
   }
 
-  if (0 == cl.number_elements())
-  {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(1);
   }
@@ -1563,27 +1537,25 @@ iwcut (int argc, char ** argv)
   IWString_and_File_Descriptor output(1);
 
   int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (! iwcut(cl[i], columns_requested, descriptors_requested, output))
-    {
+  for (int i = 0; i < cl.number_elements(); i++) {
+    if (!iwcut(cl[i], columns_requested, descriptors_requested, output)) {
       cerr << "iwcut: error processing '" << cl[i] << "'\n";
       rc = i + 1;
       break;
     }
   }
 
-  if (verbose)
-  {
-    if (records_discarded_for_zero_field)
+  if (verbose) {
+    if (records_discarded_for_zero_field) {
       cerr << records_discarded_for_zero_field << " records discarded for empty field\n";
+    }
   }
 
   return rc;
 }
+
 int
-main (int argc, char ** argv)
-{
+main(int argc, char** argv) {
   int rc = iwcut(argc, argv);
 
   return rc;

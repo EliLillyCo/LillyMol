@@ -2,11 +2,11 @@ description {
   feature_name: "w_nrings7"
   description: "Number of 7 membered rings"
   plot_title: "Number of 7 membered rings"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 2.0
-mean: 0.03982
+maxval: 3.0
+mean: 0.040840644
 quantile {
   quantile: 0.01
 }
@@ -30,13 +30,17 @@ quantile {
   value: 1.0
 }
 int_values {
-  count: 48064
+  count: 1774473
 }
 int_values {
   value: 1
-  count: 1881
+  count: 71714
 }
 int_values {
   value: 2
-  count: 55
+  count: 1860
+}
+int_values {
+  value: 3
+  count: 14
 }

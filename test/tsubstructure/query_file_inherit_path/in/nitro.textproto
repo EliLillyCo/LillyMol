@@ -1,0 +1,5 @@
+name: "nitro"
+query {
+  smarts: "N(=O)=O"
+  one_embedding_per_start_atom: true
+}

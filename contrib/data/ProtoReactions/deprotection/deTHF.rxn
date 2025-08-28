@@ -1,0 +1,10 @@
+name: "deTHF"
+scaffold {
+  id: 0
+  smarts: "[O,n]C1OCCCC1"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  remove_fragment: 1
+}

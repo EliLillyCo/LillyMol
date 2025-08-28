@@ -1,0 +1,5 @@
+name: "benzene"
+query {
+  smarts: "c1ccccc1"
+  unique_embeddings_only: true
+}

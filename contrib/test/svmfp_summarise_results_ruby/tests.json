@@ -1,0 +1,67 @@
+{
+  "executable": "${LILLYMOL_HOME}/contrib/bin/svmfp_summarise_results.sh",
+    "test": [
+        {
+          "name": "case_1",
+          "comment": [ "aggregates svmfp_calibrate results into a single file." ],
+          "args": [ "-F #{indir}/in/results.txt -v -B ./best" ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R B2 -B ./best" ],
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R B2 option" ]
+        },
+        {
+          "name": "case_3",
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R AE -B ./best" ],
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R AE option" ]
+        },
+        {
+          "name": "case_4",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R RMS option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R RMS -B ./best" ]
+        },
+        {
+          "name": "case_5",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R R2 option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R R2 -B ./best" ]
+        },
+        {
+          "name": "case_6",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R Q2 option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R Q2 -B ./best" ]
+        },
+        {
+          "name": "case_7",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R AE50 option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R AE50 -B ./best" ]
+        },
+        {
+          "name": "case_8",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R AE95 option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R AE95 -B ./best" ]
+        },
+        {
+          "name": "case_9",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R cMSR90_mad option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R cMSR90_mad -B ./best" ]
+        },
+        {
+          "name": "case_10",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R cMSR90_sd option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R cMSR90_sd -B ./best" ]
+        },
+        {
+          "name": "case_11",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R cMSR95_mad option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R cMSR95_mad -B ./best" ]
+        },
+        {
+          "name": "case_12",
+          "comment": [ "aggregates svmfp_calibrate results into a single file with -R cMSR95_sd option" ],
+          "args": [ "-F ${C3TK_HOME}/test/tools/test-svmfp_summarise_results.sh/in/results.txt -R cMSR95_sd -B ./best" ]
+        }
+      ]
+    }
+  }
+}

@@ -555,6 +555,11 @@ Molecule::_parse_v30_bond_record(const const_IWSubstring & buffer,
 
   // for backward compatibility, we need to convert back to V2 numbers
   if (cfg) {
+    static int issue_warning = 1;
+    if (issue_warning) {
+      cerr << "Warning reading MDL 3000 CFG= bond records does not work well\n";
+      issue_warning = 0;
+    }
 #define CORRECT
 #ifdef CORRECT
     if (1 == cfg)

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package lillymol_tests;
+
+message TestCase {
+  // We assume that the directory layout looks like
+  // lillymol/test
+  // lillymol/test/fileconv
+  // lillymol/test/fileconv/case_1
+  // lillymol/test/fileconv/case_1/in
+  // lillymol/test/fileconv/case_1/out
+  // The `name` attribute must be the name of a directory within the
+  // lillymol/test/fileconv
+  // directory. Likely something like 'case_1' or a descriptive
+  // name of what is being tested.
+  optional string name = 1;
+
+  // If there are things like shell variables that need to be set,
+  // those go here. They will be prepended to the command that
+  // gets executed.
+  repeated string preamble = 2;
+
+  // The command string is repeated only to avoid very long strings.
+  // These are concatenated during processing.
+  // The assumption is that input files are relative to the lillymol/test/fileconv
+  // directory, so input files should be denoted as
+  // "#{test_dir}/case_1/in/foo.smi"
+  // Where `test_dir` will be expanded via ruby string interpolation and
+  // will have a value like 'lillymol/test/fileconv'
+  //  args = "-i smi -o smi -S correct ... #{indir}/input.smi"
+  repeated string args = 3;
+
+  // By default the test driver uses diff to discern differences between
+  // files. That can be changed.
+  optional string difftool = 4;
+  // Sometimes the difftool needs options.
+
+  // Ignored by the test driver.
+  repeated string comment = 5;
+
+  // Files that might be in the out directory, but which will not
+  // be compared with newly generated files. Typically that might
+  // be stderr.
+  repeated string ignore_file = 6;
+
+  // Some tests may be expected to exit with a nonzero return code.
+  optional bool non_zero_rc_expected = 7;
+
+  // We can sidestep temporarily broken tests.
+  optional bool broken_do_not_evaluate = 8;
+
+  // The tool that does the needs a way of passing the name of
+  // the executable around, and for convenience it stores it here.
+  // Do not enter data for this value - it will be ignored.
+  optional string executable = 14;
+
+  // This is also just used for passing around information in the driver.
+  repeated string default_command_components = 15;
+}
+
+message TestCases {
+  // The name of the c++ executable being tested.
+  optional string executable = 1;
+
+  repeated TestCase test = 2;
+
+  // Individual tests can "inherit" this difftool.
+  optional string difftool = 3;
+  optional string difftool_options = 6;
+
+  // We can pass default parts of the command to each test.
+  // For example options that are applied to all tests.
+  repeated string default_command_components = 4;
+
+  // We can sidestep temporarily broken tests.
+  optional bool broken_do_not_evaluate = 5;
+
+  // There are executables that only get run inside Lilly - typically
+  // Vendor related.
+  optional bool only_inside_lilly = 7;
+}
+

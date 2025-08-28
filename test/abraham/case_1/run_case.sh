@@ -29,9 +29,9 @@ name1_out=out/log.txt
 
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/log.txt
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "${UNAME}" == "Linux" ]]; then
+    name1_out=out/${UNAME}/log.txt
+elif [[ "${UNAME}" == "darwin"* ]]; then
     name1_out=out/osx/log.txt
 else
     echo "OS is not supported"

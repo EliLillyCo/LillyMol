@@ -1,20 +1,3 @@
-load("//build_deps:install.bzl", "local_install")
-
-local_install(
-    name = "install",
-    srcs = [
-        ":enough_inventory_bdb",
-        ":iwbdb_cat",
-        ":iwbdb_compare",
-        ":iwbdb_delete",
-        ":iwbdb_exists",
-        ":iwbdb_fetch",
-        ":iwbdb_from_tdt",
-        ":iwbdb_list",
-        ":iwbdb_load",
-        ":iwbdb_merge_into_tdt",
-    ],
-)
 
 cc_binary(
     name = "enough_inventory_bdb",
@@ -23,12 +6,12 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
-        "@berkeleydb",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -43,7 +26,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -59,7 +42,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -74,7 +57,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -89,7 +72,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -105,7 +88,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwbits",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -121,7 +104,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@re2",
         "@zlib",
     ],
@@ -139,7 +122,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -154,22 +137,23 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
+
 cc_binary(
     name = "iwbdb_merge_into_tdt",
     srcs = [
         "iwbdb_merge_into_tdt.cc",
     ],
-    tags = ["berkeleydb"],   
+    tags = ["berkeleydb"],
     deps = [
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@re2",
     ],
 )

@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -370,7 +371,7 @@ IsAmide(Molecule& m,
 }
 
 int
-QuickRotatableBonds::Process(Molecule& m) {
+QuickRotatableBonds::Process(Molecule& m, int* bond_rotatable) {
   if (m.empty()) {
     return 0;
   }
@@ -378,6 +379,11 @@ QuickRotatableBonds::Process(Molecule& m) {
   const int matoms = m.natoms();
   if (matoms < 2) {
     return 0;
+  }
+
+  if (bond_rotatable != nullptr) {
+    std::fill_n(bond_rotatable, m.nedges(), 0);
+    m.assign_bond_numbers_to_bonds_if_needed();
   }
 
   // Force sssr.
@@ -390,7 +396,7 @@ QuickRotatableBonds::Process(Molecule& m) {
     case RotBond::kQuick:
       return Quickest(m);
     case RotBond::kExpensive:
-      return Expensive(m);
+      return Expensive(m, bond_rotatable);
     default:
       cerr << "QuickRotatableBonds::Process:should not come here\n";
       return 0;
@@ -414,7 +420,7 @@ AtomsWithTripleBonds(const Molecule& m) {
 }
 
 int
-QuickRotatableBonds::Expensive(Molecule& m) {
+QuickRotatableBonds::Expensive(Molecule& m, int* bond_rotatable) {
   const int matoms = m.natoms();
 
   resizable_array<const Bond*> candidate_bonds;
@@ -485,6 +491,11 @@ QuickRotatableBonds::Expensive(Molecule& m) {
     }
 
     ++rc;
+
+    if (bond_rotatable != nullptr) {
+      bond_rotatable[b->bond_number()] = 1;
+    }
+
     if (_isotope == 0) {
       continue;
     }
@@ -538,6 +549,87 @@ QuickRotatableBonds::Quickest(Molecule& m) {
   }
 
   return rc;
+}
+
+int
+RotatableBondsBetween(Molecule& m,
+                      atom_number_t a1,
+                      atom_number_t a2,
+                      const int* bond_rotatable) {
+  const int d = m.bonds_between(a1, a2);
+
+  //cerr << "RotatableBondsBetween from " << a1 << " to " << a2 << " d " << d << '\n';
+
+  for (const Bond* b : m[a1]) {
+    const atom_number_t o = b->other(a1);
+    if (m.bonds_between(o, a2) != d - 1) {
+      continue;
+    }
+
+    int rc = 0;
+    if (bond_rotatable[b->bond_number()]) {
+      rc = 1;
+    }
+
+    if (o == a2) {
+      return rc;
+    }
+
+    return rc + RotatableBondsBetween(m, o, a2, bond_rotatable);
+  }
+
+  return 0;
+}
+
+int
+QuickRotatableBonds::RotatableBondsBetween(Molecule& m,
+                atom_number_t a1,
+                atom_number_t a2) {
+  const int matoms = m.natoms();
+  if (matoms < 2) {
+    return 0;
+  }
+
+  if (m.fragment_membership(a1) != m.fragment_membership(a2)) {
+    cerr << "QuickRotatableBonds::RotatableBondsBetween:inconsistent fragment membership\n";
+    return 0;
+  }
+
+  std::unique_ptr<int[]> bond_rotatable = std::make_unique<int[]>(m.nedges());
+
+  Process(m, bond_rotatable.get());
+
+  return quick_rotbond::RotatableBondsBetween(m, a1, a2, bond_rotatable.get());
+}
+
+std::unique_ptr<int[]>
+QuickRotatableBonds::RotatableBondsBetween(Molecule& m) {
+  const int matoms = m.natoms();
+  std::unique_ptr<int[]> result = std::make_unique<int[]>(matoms * matoms);
+
+  if (matoms <= 1) {
+    return result;
+  }
+
+  if (matoms == 2) {
+    std::fill_n(result.get(), 0, 2*2);
+    return result;
+  }
+
+  std::unique_ptr<int[]> bond_rotatable = std::make_unique<int[]>(m.nedges() * m.nedges());
+
+  Process(m, bond_rotatable.get());
+
+  for (int i = 0; i < matoms; ++i) {
+    result[i * matoms + i] = 0;
+    for (int j = i + 1; j < matoms; ++j) {
+      int r = quick_rotbond::RotatableBondsBetween(m, i, j, bond_rotatable.get());
+      result[i * matoms + j] = r;
+      result[j * matoms + i] = r;
+    }
+  }
+
+  return result;
 }
 
 }  // namespace quick_rotbond

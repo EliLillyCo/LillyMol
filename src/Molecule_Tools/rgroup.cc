@@ -9,12 +9,12 @@
 #include <limits>
 #include <memory>
 
-#define RESIZABLE_ARRAY_IMPLEMENTATION
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/misc2.h"
 #include "Molecule_Lib/molecule.h"
@@ -38,6 +38,7 @@ static const Element* dummy_atom_element = nullptr;
 
 static Chemical_Standardisation chemical_standardisation;
 
+// Usually we will want to mark the attachment points.
 static isotope_t isotope_for_join_atom = 0;
 
 static int include_attachment_point_in_all_substituents = 0;
@@ -61,6 +62,8 @@ static int combine_substituents_on_same_atom = 1;
 
 static int process_ring_substituents = 0;
 
+static resizable_array_p<Substructure_Hit_Statistics> queries;
+
 //  What do we do when a molecule does not match the query
 
 static int ignore_molecules_which_dont_match_query = 0;
@@ -72,6 +75,15 @@ static int ignore_molecules_with_multiple_hits = 0;
 static extending_resizable_array<int>* query_stats = nullptr;
 static IW_STL_Hash_Map_int** rgroups_found = nullptr;
 
+// If fragments are being collected, it can be useful to have
+// them easily associated with the parent.
+static int write_parent_name_with_fragment = 0;
+
+static Atom_Typing_Specification atom_typing_specification;
+
+using lillymol::kCalcium;
+using lillymol::kSodium;
+
 static void
 usage(int rc = 0) {
 // clang-format off
@@ -82,7 +94,6 @@ usage(int rc = 0) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Usage: " << prog_name << " -q/-s query <options> <input file>\n";
   cerr << "Identifies substituents based on what is attached to query atoms\n";
   cerr << "  -q <file>      specify query(s)\n";
   cerr << "  -s <smarts>    queries as smarts\n";
@@ -95,12 +106,13 @@ usage(int rc = 0) {
   cerr << "  -e             do multiple substituents on same atom separately\n";
   cerr << "  -k             include attachment atom in R groups\n";
   cerr << "  -I <iso>       label join points with isotope <iso>\n";
-  cerr << "  -X <symbol>    after building, remove all elements of type <symbol>\n";
   cerr << "  -c <natoms>    min atoms in an R group\n";
   cerr << "  -C <natoms>    max atoms in an R group\n";
   cerr << "  -H             make implicit hydrogens explicit\n";
   cerr << "  -h             after processing, remove explicit Hydrogens not attached to isotope (-I)\n";
   cerr << "  -y             process substituents involved in ring bonds\n";
+  cerr << "  -P <atype>     atom typing specification - isotopes will be atom types\n";
+  cerr << "  -X ...         other options, enter '-X help' for info\n";
   cerr << "  -i <type>      input type\n";
   display_standard_aromaticity_options (cerr);
   display_standard_smiles_options (cerr);
@@ -123,6 +135,8 @@ class RGroup_Construction_Current_State {
   int _parent_molecule_written;
 
   int* _atom_already_done;
+
+  uint32_t* _atype;
 
  public:
   RGroup_Construction_Current_State(int);
@@ -163,11 +177,17 @@ class RGroup_Construction_Current_State {
     _parent_molecule_written = s;
   }
 
+  int AssignAtomTypes(Molecule& m);
+
+  // If the _atype array has been established, set the isotope on `zatom`
+  // in `m` to _atype[in_parent].
+  int MaybeSetIsotope(Molecule& m, atom_number_t zatom, atom_number_t in_parent) const;
+
   int write_parent_molecule_if_needed(Molecule&, IWString_and_File_Descriptor&);
 
   int do_output(Molecule& r, int ndx, IWString_and_File_Descriptor& output) const;
 
-  int add_dummy_element_and_do_output(Molecule& r, int ndx,
+  int add_dummy_element_and_do_output(Molecule& r, int ndx, atom_number_t afrom,
                                       IWString_and_File_Descriptor& output) const;
 
   int* atom_already_done() {
@@ -180,12 +200,18 @@ RGroup_Construction_Current_State::RGroup_Construction_Current_State(int matoms)
 
   _parent_molecule_written = 0;
 
+  _atype = nullptr;
+
   return;
 }
 
 RGroup_Construction_Current_State::~RGroup_Construction_Current_State() {
   if (nullptr != _atom_already_done) {
     delete[] _atom_already_done;
+  }
+
+  if (_atype !=  nullptr) {
+    delete [] _atype;
   }
 
   return;
@@ -203,6 +229,19 @@ RGroup_Construction_Current_State::write_parent_molecule_if_needed(
   output.write_if_buffer_holds_more_than(32768);
 
   _parent_molecule_written = 1;
+
+  return 1;
+}
+
+int
+RGroup_Construction_Current_State::MaybeSetIsotope(Molecule& m,
+                atom_number_t zatom,
+                atom_number_t in_parent) const {
+  if (_atype == nullptr) {
+    return 0;
+  }
+
+  m.set_isotope(zatom, _atype[in_parent]);
 
   return 1;
 }
@@ -240,16 +279,26 @@ do_remove_explicit_hydrogens_not_attached_to_isotope(Molecule& m, isotope_t iso)
   return rc;
 }
 
+// Add a dummy atom to `r` attaching to atom 0 with a single bond.
+// `ndx` is just an index number into the query/match.
+// `afrom` is an atom number in the parent molecule.
 int
 RGroup_Construction_Current_State::add_dummy_element_and_do_output(
-    Molecule& r, int ndx, IWString_and_File_Descriptor& output) const {
+    Molecule& r, int ndx, atom_number_t afrom,
+    IWString_and_File_Descriptor& output) const {
   if (nullptr != dummy_atom_element) {
     Atom* aa = new Atom(dummy_atom_element);
     r.add(aa);
     r.add_bond(0, r.natoms() - 1, SINGLE_BOND);
   }
 
-  if (isotope_for_join_atom) {
+  if (atom_typing_specification.active()) {
+    r.set_isotope(0, _atype[afrom]);
+
+    if (remove_explicit_hydrogens_not_attached_to_isotope) {
+      do_remove_explicit_hydrogens_not_attached_to_isotope(r, isotope_for_join_atom);
+    }
+  } else if (isotope_for_join_atom) {
     r.set_isotope(0, isotope_for_join_atom);
 
     if (remove_explicit_hydrogens_not_attached_to_isotope) {
@@ -261,10 +310,24 @@ RGroup_Construction_Current_State::add_dummy_element_and_do_output(
 }
 
 int
+RGroup_Construction_Current_State::AssignAtomTypes(Molecule& m) {
+  if (_atype == nullptr) {
+    _atype = new uint32_t[m.natoms()];
+  }
+
+  return atom_typing_specification.assign_atom_types(m, _atype);
+}
+
+int
 RGroup_Construction_Current_State::do_output(Molecule& r, int ndx,
                                              IWString_and_File_Descriptor& output) const {
   output << r.unique_smiles() << " RG " << _query_number << '.' << _embedding_number
-         << '.' << _query_atom_number << '.' << ndx << '\n';
+         << '.' << _query_atom_number << '.' << ndx;
+         
+  if (write_parent_name_with_fragment) {
+    output << ' ' << r.name();
+  }
+  output << '\n';
 
   molecules_written++;
 
@@ -303,7 +366,7 @@ build_molecule(const Molecule& m, atom_number_t parent_atom,
   Atom* aa = new Atom(m.atomic_number(parent_atom));
   r.add(aa);
 
-  if (INVALID_ATOM_NUMBER != anchor) {
+  if (kInvalidAtomNumber != anchor) {
     r.add_bond(initial_natoms, atom_already_done[anchor] - 1, bt);
   }
 
@@ -349,10 +412,11 @@ class Set_of_Query_Atoms : public resizable_array<int> {
  public:
 };
 
-static resizable_array_p<Set_of_Query_Atoms> query_atoms;
+//static resizable_array_p<Set_of_Query_Atoms> query_atoms;
+static std::unique_ptr<Set_of_Query_Atoms[]> query_atoms;
 
-template class resizable_array_p<Set_of_Query_Atoms>;
-template class resizable_array_base<Set_of_Query_Atoms*>;
+// template class resizable_array_p<Set_of_Query_Atoms>;
+// template class resizable_array_base<Set_of_Query_Atoms*>;
 
 static int
 size_constraints_met(Molecule& m) {
@@ -370,8 +434,9 @@ size_constraints_met(Molecule& m) {
 }
 
 /*
-  Build a molecule that includes the attachment point and all
-  attachments
+  Build a molecule that includes the attachment point and all attachments.
+  If there are multiple atoms attached to a matched atom, there is no concept
+  of the ordering of those attachments.
 */
 
 static int
@@ -390,26 +455,25 @@ rgroup_including_substituents(Molecule& m, RGroup_Construction_Current_State& rg
     r.add(aa);
   }
 
-  if (isotope_for_join_atom) {
+  if (rgrcs.MaybeSetIsotope(r, 0, a)) {
+  } else if (isotope_for_join_atom) {
     r.set_isotope(0, isotope_for_join_atom);
   }
 
   int* atom_already_done = rgrcs.atom_already_done();
 
-  for (int i = 0; i < atoms_in_substituent.number_elements(); i++) {
-    atom_number_t j = atoms_in_substituent[i];
-
+  for (atom_number_t j : atoms_in_substituent) {
     const Bond* b = m.bond_between_atoms(a, j);
 
-    if (atom_already_done[j])  // ring
-    {
+    // cerr << "  from atom " << a << " to " << j << " atom_already_done " << atom_already_done[j] << '\n';
+    if (atom_already_done[j]) {  // ring
       r.add_bond(0, atom_already_done[j] - 1, b->btype());
       continue;
     }
 
     int natoms_before_addition = r.natoms();
 
-    build_molecule(m, j, NOT_A_BOND, INVALID_ATOM_NUMBER, embedding, atom_already_done, r);
+    build_molecule(m, j, NOT_A_BOND, kInvalidAtomNumber, embedding, atom_already_done, r);
 
     r.add_bond(0, natoms_before_addition, b->btype());
   }
@@ -423,6 +487,11 @@ rgroup_including_substituents(Molecule& m, RGroup_Construction_Current_State& rg
   return rgrcs.do_output(r, 0, output);
 }
 
+// Identify the atoms in a substituent that begins with `zatom`.
+// We fail if we return to a matched atom in the original embedding
+// which will have a 'magic' value of 2 in the `atom_already_done` array.
+// Also `ok_to_hit` is special. Encountering that atom is not an error,
+// just ignored.
 static int
 identify_atoms_in_substituent(const Molecule& m, atom_number_t ok_to_hit,
                               atom_number_t zatom, int* atom_already_done) {
@@ -432,9 +501,7 @@ identify_atoms_in_substituent(const Molecule& m, atom_number_t ok_to_hit,
 
   atom_already_done[zatom] = 1;
 
-  const Atom* a = m.atomi(zatom);
-
-  for (const Bond* b : *a) {
+  for (const Bond* b : m[zatom]) {
     atom_number_t j = b->other(zatom);
 
     if (1 == atom_already_done[j]) {  // been this way before
@@ -445,8 +512,7 @@ identify_atoms_in_substituent(const Molecule& m, atom_number_t ok_to_hit,
       ;
     } else if (ok_to_hit == j) {
       continue;
-    } else if (2 == atom_already_done[j])  // bad, looped back to initial embedding
-    {
+    } else if (2 == atom_already_done[j]) {  // bad, looped back to initial embedding
       if (zatom == ok_to_hit) {  // coming off the attachment point, of course we hit
                                  // other matched atoms
         continue;
@@ -473,11 +539,11 @@ add_attachment_point(Molecule& m,  // not const because the is_aromatic is non c
   if (!m.is_aromatic(zatom)) {
     aa = new Atom(m.atomic_number(zatom));
   } else if (6 == m.atomic_number(zatom)) {
-    aa = new Atom(20);
+    aa = new Atom(kCalcium);
   } else if (7 == m.atomic_number(zatom)) {
-    aa = new Atom(11);
+    aa = new Atom(kSodium);
   } else {
-    aa = new Atom(20);  // huh?
+    aa = new Atom(kCalcium);  // huh?
   }
 
   r.add(aa);
@@ -503,7 +569,7 @@ rgroup_do_ring(Molecule& m, RGroup_Construction_Current_State& rgrcs,
 
   int matoms = m.natoms();
 
-  set_vector(atom_already_done, m.natoms(), 0);
+  std::fill_n(atom_already_done, m.natoms(), 0);
 
   embedding.set_vector(atom_already_done, 2);  // 2 means in original embedding
 
@@ -539,25 +605,25 @@ rgroup_do_ring(Molecule& m, RGroup_Construction_Current_State& rgrcs,
     ndx++;
   }
 
-  if (isotope_for_join_atom) {
+  if (rgrcs.MaybeSetIsotope(r, xref[zatom], zatom)) {
+  } else if (isotope_for_join_atom) {
     r.set_isotope(xref[zatom], isotope_for_join_atom);
   }
 
   atom_already_done[zatom] = 1;  // now we want it processed
 
   for (const Bond* b : m.bond_list()) {
-    if (1 != atom_already_done[b->a1()]) {
+    const atom_number_t a1 = b->a1();
+    if (1 != atom_already_done[a1]) {
       continue;
     }
 
-    if (1 != atom_already_done[b->a2()]) {
+    const atom_number_t a2 = b->a2();
+    if (1 != atom_already_done[a2]) {
       continue;
     }
 
-    atom_number_t r1 = xref[b->a1()];
-    atom_number_t r2 = xref[b->a2()];
-
-    r.add_bond(r1, r2, b->btype());
+    r.add_bond(xref[a1], xref[a2], b->btype());
   }
 
   molecules_created++;
@@ -581,7 +647,16 @@ UnmatchedConnections(Molecule& m,
                      atom_number_t zatom) {
   Set_of_Atoms result;
 
+  // Ensure bonds know ring membership
+  m.ring_membership();
+
+  // cerr << "Embedding " << embedding << '\n';
+
   for (const Bond* b : m[zatom]) {
+    if (b->nrings()) {  // we never follow ring connections.
+      continue;
+    }
+
     const atom_number_t j = b->other(zatom);
 
     if (verbose > 1) {
@@ -598,15 +673,6 @@ UnmatchedConnections(Molecule& m,
     }
 
     if (embedding.contains(j)) {
-      continue;
-    }
-
-    if (m.in_same_ring(zatom, j)) {
-      continue;
-    }
-
-    // Do not break biphenyl type linkages.
-    if (m.nrings(zatom) && m.nrings(j) && b->nrings()) {
       continue;
     }
 
@@ -645,14 +711,15 @@ rgroup_combine_same_atom_substituents(Molecule& m,
     return 0;
   }
 
-  int n = atoms_in_substituent.number_elements();
+  const int n = atoms_in_substituent.number_elements();
   // cerr << "At atom " << zatom << " unmatched atoms are " << atoms_in_substituent << '\n';
 
   // Jun 2023. I am not sure why hcount should make a difference. If Hydrogens are
   // explicit, then they will be captured in `atoms_in_substituent`. If they are implicit
   // then they do not matter.
+  cerr << "make_implicit_hydrogens_explicit " << make_implicit_hydrogens_explicit << " n " << n << '\n';
   // I have changed this, but am a little nervous about the effects.
-  // if (n > 1 || m.hcount(zatom)) {
+  // if (n > 1 || m.hcount(zatom)) 
   if (n > 1 || (make_implicit_hydrogens_explicit && m.hcount(zatom))) {
     return rgroup_including_substituents(m, rgrcs, zatom, atoms_in_substituent, embedding,
                                          output);
@@ -666,23 +733,22 @@ rgroup_combine_same_atom_substituents(Molecule& m,
     if (!m.is_aromatic(zatom)) {
       m.add(new Atom(m.atomic_number(zatom)));
     } else if (6 == m.atomic_number(zatom)) {
-      m.add(new Atom(20));
+      m.add(new Atom(kCalcium));
     } else if (7 == m.atomic_number(zatom)) {
-      m.add(new Atom(11));
+      m.add(new Atom(kSodium));
     } else {
-      m.add(new Atom(20));  // huh?
+      m.add(new Atom(kCalcium));  // huh?
     }
 
     atom_already_done[zatom] = 1;
 
     atom_number_t j = atoms_in_substituent[0];
 
-    // const Bond * b = m.atomi(zatom)->bond_to_atom(j);
     const Bond* b = m.atomi(zatom)->bond_to_atom(zatom, j);
 
     build_molecule(m, j, b->btype(), zatom, embedding, atom_already_done, r);
   } else {
-    build_molecule(m, atoms_in_substituent[0], NOT_A_BOND, INVALID_ATOM_NUMBER, embedding,
+    build_molecule(m, atoms_in_substituent[0], NOT_A_BOND, kInvalidAtomNumber, embedding,
                    atom_already_done, r);
   }
 
@@ -694,24 +760,32 @@ rgroup_combine_same_atom_substituents(Molecule& m,
 
   rgrcs.write_parent_molecule_if_needed(m, output);
 
-  return rgrcs.add_dummy_element_and_do_output(r, 0, output);
+  if (write_parent_name_with_fragment) {
+    r.set_name(m.name());
+  }
+
+  return rgrcs.add_dummy_element_and_do_output(r, 0, zatom, output);
 }
 
 static int
 rgroup(Molecule& m, RGroup_Construction_Current_State& rgrcs,
        const Set_of_Atoms& embedding, atom_number_t parent_atom,
        IWString_and_File_Descriptor& output) {
-  int rc = 0;
-
   if (verbose > 1) {
     cerr << "Trying to find R group from atom " << parent_atom << " ncon = " << m.ncon(parent_atom) << '\n';
   }
+
+  m.ring_membership();
 
   int* atom_already_done = rgrcs.atom_already_done();
 
   int ndx = 0;
 
   for (const Bond* b : m[parent_atom]) {
+    if (b->nrings()) {
+      continue;
+    }
+
     atom_number_t j = b->other(parent_atom);
 
     if (verbose > 1) {
@@ -730,13 +804,9 @@ rgroup(Molecule& m, RGroup_Construction_Current_State& rgrcs,
       continue;
     }
 
-    if (m.in_same_ring(parent_atom, j)) {  // cannot process these
-      continue;
-    }
-
     Molecule r;
 
-    rc += build_molecule(m, j, NOT_A_BOND, INVALID_ATOM_NUMBER, embedding,
+    build_molecule(m, j, NOT_A_BOND, kInvalidAtomNumber, embedding,
                          atom_already_done, r);
 
     molecules_created++;
@@ -747,17 +817,21 @@ rgroup(Molecule& m, RGroup_Construction_Current_State& rgrcs,
 
     rgrcs.write_parent_molecule_if_needed(m, output);
 
-    rgrcs.add_dummy_element_and_do_output(r, ndx, output);
+    rgrcs.add_dummy_element_and_do_output(r, ndx, parent_atom, output);
     ++ndx;
   }
 
-  return rc;
+  return ndx;
 }
 
 // Return true if `zatom` is attached via a ring bond to something
 // outside `s`.
+// All checking turned off, ring related processing being done via
+// ring membership of bonds.
 static int
 is_within_ring(Molecule& m, const Set_of_Atoms& s, atom_number_t zatom) {
+  return 0;   // Turned off. TODO:ianwatson remove this function.
+
   (void)m.ring_membership();
 
   if (0 == m.nrings(zatom)) {
@@ -789,6 +863,7 @@ is_within_ring(Molecule& m, const Set_of_Atoms& s, atom_number_t zatom) {
   return 0;
 }
 
+#ifdef NO_LONGER_NEEDED
 // REturn true if any atom in `s` is bonded, via a ring bond, to
 // an atom outside `s`.
 static int
@@ -807,6 +882,7 @@ is_within_ring(Molecule& m, const Set_of_Atoms& s) {
 
   return 0;
 }
+#endif
 
 // #define DEBUG_START_RGROUP
 
@@ -817,22 +893,23 @@ is_within_ring(Molecule& m, const Set_of_Atoms& s) {
 
 static int
 rgroups(Molecule& m, RGroup_Construction_Current_State& rgrcs,
-        const Set_of_Atoms& embedding, const Set_of_Query_Atoms* atoms,
+        const Set_of_Atoms& embedding, const Set_of_Query_Atoms& atoms,
         IWString_and_File_Descriptor& output) {
   int rc = 0;
 
-  int na = atoms->number_elements();
+  int na = atoms.number_elements();
+
   for (int i = 0; i < na; i++) {
-    int j = atoms->item(i);
+    int j = atoms[i];
 
 #ifdef DEBUG_START_RGROUP
-    cerr << "In query " << query_number << ", embedding " << embedding_number << " item "
+    cerr << "In query " << rgrcs.query_number() << ", embedding " << j << " item "
          << i << " query atom " << j << " matches atom " << embedding->item(j) << '\n';
-    cerr << " embedding " << *atoms << " atom " << j << 
 #endif
 
     rgrcs.set_query_atom_number(i);
 
+    // cerr << "Checking is_within_ring " << is_within_ring(m, embedding, embedding[i]) << '\n';
     if (is_within_ring(m, embedding, embedding[j])) {
       if (process_ring_substituents) {
         rc += rgroup_do_ring(m, rgrcs, embedding, embedding[j], output);
@@ -852,6 +929,7 @@ rgroups(Molecule& m, RGroup_Construction_Current_State& rgrcs,
   Even if just one atom is in a ring, we will discard the embedding
 */
 
+#ifdef NO_LONGER_NEEDED
 static int
 remove_embeddings_within_rings(Molecule& m, Substructure_Results& sresults) {
   for (int i = sresults.number_embeddings() - 1; i >= 0; i--) {
@@ -864,10 +942,11 @@ remove_embeddings_within_rings(Molecule& m, Substructure_Results& sresults) {
 
   return sresults.number_embeddings();
 }
+#endif
 
 static int
 rgroups(Molecule& m, Substructure_Hit_Statistics* q,
-        RGroup_Construction_Current_State& rgrcs, const Set_of_Query_Atoms* atoms,
+        RGroup_Construction_Current_State& rgrcs, const Set_of_Query_Atoms& atoms,
         IWString_and_File_Descriptor& output) {
   Substructure_Results sresults;
 
@@ -885,6 +964,7 @@ rgroups(Molecule& m, Substructure_Hit_Statistics* q,
     return 0;
   }
 
+#ifdef NO_LONGER_NEEDED
   if (!process_ring_substituents) {
     nhits = remove_embeddings_within_rings(m, sresults);
     if (nhits == 0) {
@@ -894,6 +974,7 @@ rgroups(Molecule& m, Substructure_Hit_Statistics* q,
       return 0;
     }
   }
+#endif
 
   if (1 == nhits) {
     ;
@@ -908,6 +989,7 @@ rgroups(Molecule& m, Substructure_Hit_Statistics* q,
     istop = nhits;
   }
 
+  //cerr << "Doing " << istop << " matches to query\n";
   for (int i = 0; i < istop; i++) {
     const Set_of_Atoms* p = sresults.embedding(i);
 
@@ -919,20 +1001,21 @@ rgroups(Molecule& m, Substructure_Hit_Statistics* q,
   return 1;
 }
 
-static resizable_array_p<Substructure_Hit_Statistics> queries;
-
 static int
 rgroups(Molecule& m, IWString_and_File_Descriptor& output) {
-  int nq = queries.number_elements();
+  const int nq = queries.number_elements();
 
   int rc = 0;
 
   RGroup_Construction_Current_State rgrcs(m.natoms());
+  if (atom_typing_specification.active()) {
+    rgrcs.AssignAtomTypes(m);
+  }
 
   for (int i = 0; i < nq; i++) {
     Substructure_Hit_Statistics* q = queries[i];
 
-    const Set_of_Query_Atoms* sqa = query_atoms[i];
+    const Set_of_Query_Atoms& sqa = query_atoms[i];
 
     rgrcs.set_query_number(i);
 
@@ -1015,9 +1098,9 @@ parse_query_and_matched_atom_specification(const const_IWSubstring& r) {
     Substructure_Hit_Statistics* q = queries[query_number];
     int n = q->max_atoms_in_query();
 
-    Set_of_Query_Atoms* s = query_atoms[query_number];
+    Set_of_Query_Atoms& s = query_atoms[query_number];
     for (int i = 0; i < n; i++) {
-      s->add(i);
+      s.add(i);
     }
 
     return 1;
@@ -1049,8 +1132,8 @@ parse_query_and_matched_atom_specification(const const_IWSubstring& r) {
     return 0;
   }
 
-  Set_of_Query_Atoms* s = query_atoms[query_number];
-  s->add(a);
+  Set_of_Query_Atoms& s = query_atoms[query_number];
+  s.add(a);
 
   if (verbose) {
     cerr << "Will report R Groups from atom " << a << " in query " << query_number
@@ -1076,9 +1159,16 @@ rgroups(const char* fname, FileType input_type, IWString_and_File_Descriptor& ou
   return rgroups(input, output);
 }
 
+static void
+DisplayDashXOptions(std::ostream& output) {
+  output << " -x rname          write the parent name with the R group\n";
+
+  ::exit(0);
+}
+
 static int
 rgroups(int argc, char** argv) {
-  Command_Line cl(argc, argv, "A:E:vi:d:r:z:q:s:c:C:HhaeI:ukyb");
+  Command_Line cl(argc, argv, "A:E:vi:d:r:z:q:s:c:C:HhaeI:ukybX:P:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -1299,11 +1389,7 @@ rgroups(int argc, char** argv) {
     usage(25);
   }
 
-  query_atoms.resize(nq);
-  for (int i = 0; i < nq; i++) {
-    Set_of_Query_Atoms* tmp = new Set_of_Query_Atoms;
-    query_atoms.add(tmp);
-  }
+  query_atoms = std::make_unique<Set_of_Query_Atoms[]>(nq);
 
   if (cl.option_present('r')) {
     int i = 0;
@@ -1331,9 +1417,31 @@ rgroups(int argc, char** argv) {
       parse_query_and_matched_atom_specification(r);
     }
   }
-  // cerr << "Got to rerqwer\n";
 
-  if (0 == cl.number_elements()) {
+  if (cl.option_present('X')) {
+    IWString x;
+    for (int i = 0; cl.value('X', x, i); ++i) {
+      if (x == "rname") {
+        write_parent_name_with_fragment = 1;
+      } else if (x == "help") {
+        DisplayDashXOptions(cerr);
+      } else {
+        cerr << "Unrecognised -X qualifier '" << x << "'\n";
+        DisplayDashXOptions(cerr);
+      }
+    }
+  }
+
+  if (cl.option_present('P')) {
+    IWString p = cl.string_value('P');
+
+    if (! atom_typing_specification.build(p)) {
+      cerr << "Invalid atom typing specification '" << p << "'\n";
+      return 0;
+    }
+  }
+
+  if (cl.empty()) {
     cerr << "No input files specified\n";
     return 2;
   }

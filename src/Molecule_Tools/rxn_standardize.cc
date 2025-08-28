@@ -867,36 +867,36 @@ rxn_standardize_rdfile(iwstring_data_source& input,
 
 static void
 display_misc_X_options(std::ostream& output) {
+  // clang-format off
   output << " -X rmmr         discard reactions that have multiple reactants\n";
   output << " -X rmmp         discard reactions that have multiple products\n";
   output << " -X rmiso        discard reactions containing isotopic atoms\n";
   output << " -X igbad        discard bad reactions (default is to exit)\n";
-  output << " -X nclf         discard reactions where there is no change in the largest "
-            "fragment\n";
-  output << " -X rmncma       discard reactions that have no common mapped atoms in the "
-            "reactants and product\n";
+  output << " -X nclf         discard reactions where there is no change in the largest fragment\n";
+  output << " -X rmncma       discard reactions that have no common mapped atoms in the reactants and product\n";
   output << " -X rmab         discard reactions that contain aromatic bonds\n";
   output << " -X rmdmap       discard reactions containing duplicate atom map numbers\n";
+  // clang-format on
 
   exit(0);
 }
 
 static void
 display_misc_D_options(std::ostream& output) {
+  // clang-format off
   output << " -D rmdr         remove duplicate reactants\n";
   output << " -D rmdp         remove duplicate products\n";
   output << " -D rmda         remove duplicate agents\n";
   output << " -D rmaa         remove all agents\n";
   output << " -D rmnmap       remove any component with no atom mapping at all\n";
-  output << " -D rmdup        remove components that are shown as both reactants and "
-            "products\n";
+  output << " -D rmdup        remove components that are shown as both reactants and products\n";
   output << " -D rdlp         reduce product to largest product\n";
   output << " -D rdlr         reduce reactant to largest reactant\n";
   output << " -D rmrnp        remove reactants not participating\n";
   output << " -D rmfnp        remove any reactant fragments not participating\n";
   output << " -D unmap        unmap all atoms with duplicate atom map numbers\n";
-  output << " -D fmap         add unique mapping numbers for any atoms that are not "
-            "mapped\n";
+  output << " -D fmap         add unique mapping numbers for any atoms that are not mapped\n";
+  // clang-format on
 
   exit(0);
 }
@@ -961,7 +961,6 @@ rxn_standardize(const char* fname, IWString_and_File_Descriptor& output) {
 
 static int
 rxn_standardize(int argc, char** argv) {
-  // Command_Line cl(argc, argv, "vA:E:g:lomU:Ibf:Kd:C:eRX:cD:s");
   Command_Line cl(argc, argv, "scKowd:f:D:F:C:X:U:Rg:E:A:Mqv");
 
   if (cl.unrecognised_options_encountered()) {

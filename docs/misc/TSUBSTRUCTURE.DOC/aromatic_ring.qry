@@ -1,0 +1,16 @@
+(0 Query
+  (A I version 2)
+  (A C Comment "aromatic")
+  (A C smarts "[/IWfss1a]1aaaaa1")
+  (A I min_heteroatoms_matched 2)
+  (A I min_ncon 2)
+  (1 Environment
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "F")
+    (A C smarts "1[Cl,Br,I]")
+  )
+  (2 Environment_no_Match
+    (A I single_bond (0 1 2 3 4 5))
+    (A C smarts "N(=O)=O")
+  )
+)

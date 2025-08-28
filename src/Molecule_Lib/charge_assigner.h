@@ -2,6 +2,8 @@
 #define MOLECULE_LIB_CHARGE_ASSIGNER_H_
 
 #include <iostream>
+#include <optional>
+#include <vector>
 
 #include "Foundational/iwaray/iwaray.h"
 
@@ -14,6 +16,15 @@ class Single_Substructure_Query;
 class Substructure_Atom;
 class Molecule_to_Match;
 class Command_Line;
+
+struct ChargeAndQuery {
+  atom_number_t atom;
+  formal_charge_t formal_charge;
+  int query_number;
+  bool operator==(const ChargeAndQuery& rhs) const;
+};
+
+extern std::ostream& operator<<(std::ostream& output, const ChargeAndQuery& afq);
 
 class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 {
@@ -75,22 +86,17 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
     int _apply_charges_to_molecule;
 
-//  Feb 2006. I want to know which queries were responsible for placing the
-//  charges. To do this, we can assign each formal charge to a multiplier
-//  times the query number. So, if query 0 assigned a +1 charge, that would
-//  still be +1, but if query 2 assigned +1, that would be 201. If query 2
-//  assigned a negative charge, it would be -201
-
-    int _assigned_charge_multiplier;
-
 //  private functions
 
     int BuildFromDefaultEnvs();
     int BuildFromEnv(const IWString& env);
     int BuildFromEnvValue(const IWString& dir);
 
+    void InitialiseWhichAtom();
+
     void _increment_global_counters (const Set_of_Atoms & positive_charges_assigned,
                                              const Set_of_Atoms & negative_charges_assigned);
+    void _increment_global_counters(std::vector<ChargeAndQuery>& results);
 
     int _enumerate_possibilities0 (Molecule & m,
                                           const Set_of_Atoms & s,
@@ -109,16 +115,28 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
                            formal_charge_t * charges_assigned,
                            atom_number_t zatom,
                            formal_charge_t fc) const;
+    int _add_charge_to_result(Molecule_to_Match& target,
+                        int query_number,
+                        atom_number_t zatom,
+                        formal_charge_t fc,
+                        formal_charge_t* charges_assigned,
+                        std::vector<ChargeAndQuery>& result);
 
     int _identify_charged_atoms_too_close (Molecule & m,
                                            const Set_of_Atoms & s,
                                            int * times_too_close) const;
+
+    int AtomsTooClose(Molecule& m, atom_number_t a1, atom_number_t a2) const;
+
     void _remove_hits_too_close (Molecule & m,
                                          Set_of_Atoms & s,
                                          formal_charge_t * charges_assigned) const;
     void _remove_hits_too_close_isolation_score (Molecule & m,
                                          Set_of_Atoms & s,
                                          formal_charge_t * charges_assigned) const;
+    void RemoveSitesTooClose(Molecule & m,
+                formal_charge_t* charges_assigned,
+                std::vector<ChargeAndQuery>& result);
     int _remove_lower_preference_hits(Molecule & m,
                                 Substructure_Results & sresults) const;
     int _do_make_implicit_hydrogens_explicit (Molecule & m, const int * charges_assigned) const;
@@ -126,22 +144,23 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
     int _numeric_value_present (const Single_Substructure_Query * q) const;
     int _all_queries_have_numeric_value () const;
 
+    int MaybeUnscaled(formal_charge_t fc) const;
+
     int _process (Molecule &, resizable_array_p<Molecule> & charged_forms);
     int _process (Molecule_to_Match &, Set_of_Atoms &, Set_of_Atoms &, formal_charge_t *);
     int _process (Molecule &, formal_charge_t *);
+    int _process(Molecule& m, formal_charge_t* charges_assigned, std::vector<ChargeAndQuery>& result);
 
   public:
     Charge_Assigner ();
     ~Charge_Assigner ();
 
-    int construct_from_command_line (Command_Line &, int = 0, char = 'G');
+    int construct_from_command_line (Command_Line& cl, int verbose = 0, char flag = 'G');
     int build (const const_IWSubstring &);
 
     void set_verbose (int v) { _verbose = v;}
 
     int report (std::ostream &) const;
-
-    void set_assigned_charge_multiplier (int s) { _assigned_charge_multiplier = s;}
 
     void set_min_distance_between_charges (int s) { _min_distance_between_charges = s;}
 
@@ -149,6 +168,8 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
     int process (Molecule &, formal_charge_t * = nullptr);
     int process (Molecule &, resizable_array_p<Molecule> & charged_forms);
+
+    int Process(Molecule& m, std::vector<ChargeAndQuery>& afq);
 
     int number_queries () const { return _number_elements;}
 

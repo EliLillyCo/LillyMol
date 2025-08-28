@@ -24,7 +24,11 @@
 
 #include "Utilities/GFP_Tools/bit_subset.h"
 #include "Utilities/GFP_Tools/gfp.h"
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
+#else
+#include "gfp_to_svm_lite.pb.h"
+#endif
 
 namespace gfp_to_svm_lite
 {
@@ -202,10 +206,8 @@ class GfpBitsRetained
                  int& ndx);
 
   // Convert to proto form.
-  GfpBitSubset::GfpBitSubset
-  ToBitSubsetProto() const;
-  GfpBitSubset::GfpBitToFeature
-  ToBitXrefProto() const;
+  GfpBitSubset::GfpBitSubset ToBitSubsetProto() const;
+  GfpBitSubset::GfpBitToFeature ToBitXrefProto() const;
 
   // Write the bit cross reference and bit subset data in proto form.
   int
@@ -1143,7 +1145,6 @@ GfpToSvmLite(int argc, char** argv)
   if (cl.option_present('C')) {
     IWString fname = cl.string_value('C');
     for (const char* fname : cl) {
-      cerr << "Profiling " << fname << '\n';
       if (!ProfileBits(fname, bit_xref)) {
         cerr << "Cannot profile bits in " << fname << '\n';
         return 1;
@@ -1154,7 +1155,6 @@ GfpToSvmLite(int argc, char** argv)
     // Generate both protos, even if only one needed. Should be cheap.
     args.bit_subset.Build(bit_xref.ToBitSubsetProto());
     args.bit_xref.Build(bit_xref.ToBitXrefProto());
-    // args.bit_xref.DebugPrint(cerr);
   } else if (cl.option_present('U')) {
     IWString fname = cl.string_value('U');
     if (!args.bit_subset.Build(fname)) {

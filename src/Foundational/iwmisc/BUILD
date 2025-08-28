@@ -1,3 +1,38 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "for_testing_proto",
+    srcs = [
+        "for_testing.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+    name = "for_testing_cc_proto",
+    deps = [
+        "for_testing_proto",
+    ],
+)
+
+proto_library(
+    name = "normalisation_proto",
+    srcs = [
+        "normalisation.proto",
+    ],
+    deps = [
+        "//Foundational/accumulator:accumulator_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "normalisation_cc_proto",
+    deps = [
+        "normalisation_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "activity_from_file",
     srcs = [
@@ -86,10 +121,22 @@ cc_library(
     deps = [
         ":internal",
         ":iwconfig",
+        ":ltoml",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwqsort",
         "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ltoml",
+    srcs = [
+        "toml_support.h",
+    ],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@tomlplusplus//:toml++",
     ],
 )
 
@@ -156,7 +203,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//Foundational/iwstring",
-        "@com_google_absl//absl/strings:strings",
+        "@com_google_absl//absl/strings",
         "@re2",
     ],
 )
@@ -209,8 +256,24 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":normalisation_cc_proto",
+        ":iwmisc",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
+    ],
+)
+
+cc_library(
+    name = "sorted_list",
+    srcs = [
+        "sorted_list.cc",
+    ],
+    hdrs = [
+        "sorted_list.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Foundational/iwaray",
     ],
 )
 
@@ -278,5 +341,44 @@ cc_test(
     deps = [
         ":memoized_floats",
         "@benchmark//:benchmark_main",
+    ],
+)
+
+cc_test(
+    name = "normalisation_test",
+    srcs = [
+        "normalisation_test.cc",
+    ],
+    deps = [
+        ":normalisation",
+        ":normalisation_cc_proto",
+        "//Foundational/accumulator",
+        "@googletest//:gtest_main",
+    ],
+)
+
+
+cc_test(
+    name = "sorted_list_test",
+    srcs = [
+        "sorted_list_test.cc",
+    ],
+    deps = [
+        ":sorted_list",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "toml_support_test",
+    srcs = [
+        "toml_support_test.cc",
+    ],
+    deps = [
+        "for_testing_cc_proto",
+        ":iwmisc",
+        ":ltoml",
+        "@googletest//:gtest_main",
+        "@tomlplusplus//:toml++",
     ],
 )

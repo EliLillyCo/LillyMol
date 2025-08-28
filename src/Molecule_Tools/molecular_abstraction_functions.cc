@@ -1,3 +1,10 @@
+// Generates various abstract and transformed variants of molecules.
+// This code is slightly problematic because many of the oprations
+// are not canonical, and can vary according to the ordering of
+// the input molecule.
+// Since the tool is not usually used in circumstances where this
+// is important, we skip over the issue.
+
 #include "molecular_abstraction_functions.h"
 
 #include <stdlib.h>
@@ -1514,7 +1521,7 @@ Molecular_Abstraction_Rings::process(Molecule_With_Info_About_Parent& m,
                                      IWString_and_File_Descriptor& output) {
   _molecules_processed++;
 
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
   if (0 == matoms) {
     return _do_any_writing_needed(m, 0, output);
@@ -1591,6 +1598,56 @@ Molecular_Abstraction_Largest_Ring_System::build(
   return 1;
 }
 
+static int
+AromaticAtoms(Molecule& m, int sys, const int* ring_system_membership) {
+  const int matoms = m.natoms();
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (ring_system_membership[i] != sys) {
+      continue;
+    }
+    if (m.is_aromatic(i)) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+static int
+HeteroatomCount(const Molecule& m, int sys, const int* ring_system_membership) {
+  const int matoms = m.natoms();
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (ring_system_membership[i] != sys) {
+      continue;
+    }
+    if (m.atomic_number(i) != 6) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
+static int
+NitrogenCount(const Molecule& m, int sys, const int* ring_system_membership) {
+  const int matoms = m.natoms();
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (ring_system_membership[i] != sys) {
+      continue;
+    }
+    if (m.atomic_number(i) == 7) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
 int
 Molecular_Abstraction_Largest_Ring_System::process(Molecule_With_Info_About_Parent& m,
                                                    IWString_and_File_Descriptor& output) {
@@ -1628,11 +1685,44 @@ Molecular_Abstraction_Largest_Ring_System::process(Molecule_With_Info_About_Pare
 
   int atoms_in_largest_ring_system = 0;
   int largest_ring_system = -1;
+  // Attempts to make the selection somewhat canonical.
+  int aromatic_atoms_in_largest_system = 0;
+  int heteroatoms_in_largest_system = 0;
+  int nitrogens_in_largest_system = 0;
 
   for (int i = 1; i <= nr; i++) {
+    if (atoms_in_system[i] < atoms_in_largest_ring_system) {
+      continue;
+    }
+
     if (atoms_in_system[i] > atoms_in_largest_ring_system) {
       atoms_in_largest_ring_system = atoms_in_system[i];
       largest_ring_system = i;
+      aromatic_atoms_in_largest_system = AromaticAtoms(m, i, ring_system_membership);
+      heteroatoms_in_largest_system = HeteroatomCount(m, i, ring_system_membership);
+      nitrogens_in_largest_system = NitrogenCount(m, i, ring_system_membership);
+    } else if (atoms_in_system[i] == atoms_in_largest_ring_system) {  // only possibility
+      const int h = HeteroatomCount(m, i, ring_system_membership);
+      const int a = AromaticAtoms(m, i, ring_system_membership);
+      const int n = NitrogenCount(m, i, ring_system_membership);
+      if (h > heteroatoms_in_largest_system) {
+        heteroatoms_in_largest_system = h;
+        aromatic_atoms_in_largest_system = a;
+        nitrogens_in_largest_system = n;
+        largest_ring_system = i;
+      } else if (h < heteroatoms_in_largest_system) {
+      } else if (a > aromatic_atoms_in_largest_system) {
+        heteroatoms_in_largest_system = h;
+        aromatic_atoms_in_largest_system = a;
+        nitrogens_in_largest_system = n;
+        largest_ring_system = i;
+      } else if (a < aromatic_atoms_in_largest_system) {
+      } else if (n > nitrogens_in_largest_system) {
+        heteroatoms_in_largest_system = h;
+        aromatic_atoms_in_largest_system = a;
+        nitrogens_in_largest_system = n;
+        largest_ring_system = i;
+      }
     }
   }
 
@@ -1668,6 +1758,7 @@ Molecular_Abstraction_Abstract_Ring_Form::Molecular_Abstraction_Abstract_Ring_Fo
   _arom_ele = nullptr;
   _aliph_ele = nullptr;
   _label_by_ring_size = 0;
+  _label_by_heteroatom_count = 0;
 
   return;
 }
@@ -1882,23 +1973,63 @@ Joins_to_Abstract_Ring::count_heteroatoms(const Molecule& m, const Ring& r) {
 }
 
 static int
-eliminate_duplicates(const resizable_array_p<Connection>& btai,
-                     resizable_array_p<Connection>& btaj) {
+HeteroatomCount(const Molecule& m, const Ring& r) {
+  int rc = 0;
+  for (atom_number_t a : r) {
+    if (m.atomic_number(a) != 6) {
+      ++rc;
+    }
+  }
+
+  return rc;
+}
+
+// We two fused rings and the sets of atoms bonded to each. There may be atoms
+// which are joined to both rings - steroid like structures.
+// We need to eliminate one of those connections.
+// But we need to do it in some kind of canonical way of possible.
+static int
+eliminate_duplicates(const Molecule& m,
+                     const Ring& ri, resizable_array_p<Connection>& btai,
+                     const Ring& rj, resizable_array_p<Connection>& btaj) {
   int rc = 0;
 
-  int ni = btai.number_elements();
-
-  for (int i = 0; i < ni; i++) {
+  for (int i = 0; i < btai.number_elements(); ++i) {
     const Connection* ci = btai[i];
 
-    atom_number_t a1 = ci->a2();
+    const atom_number_t a1 = ci->a2();
 
-    for (int j = 0; j < btaj.number_elements(); j++) {
+    for (int j = 0; j < btaj.number_elements(); ++j) {
       const Connection* cj = btaj[j];
+      if (cj->a2() != a1) {
+        continue;
+      }
 
-      if (cj->a2() == a1) {
+      // Figure out which on will be removed.
+      if (ri.size() < rj.size()) {
+        btai.remove_item(i);
+      } else if (rj.size() < ri.size()) {
+        btaj.remove_item(i);
+      } else if (ri.fused_ring_neighbours() < rj.fused_ring_neighbours()) {
         btaj.remove_item(j);
-        rc++;
+      } else if (ri.fused_ring_neighbours() > rj.fused_ring_neighbours()) {
+        btai.remove_item(i);
+      } else {
+        int h1 = HeteroatomCount(m, ri);
+        int h2 = HeteroatomCount(m, rj);
+        if (h1 < h2) {
+          btai.remove_item(i);
+        } else if (h1 > h2) {
+          btaj.remove_item(j);
+        } else if (btai.size() < btaj.size()) {  // Note these are not canonical
+          btaj.remove_item(j);
+        } else if (btai.size() > btaj.size()) {
+          btai.remove_item(i);
+        } else {
+        // an arbitrary decision
+          btai.remove_item(i);
+        }
+        ++rc;
         break;
       }
     }
@@ -1913,11 +2044,11 @@ remove_duplicate_attachments_to_fused_rings(Molecule_With_Info_About_Parent& m, 
   int rc = 0;
 
   for (int i = 0; i < n; i++) {
-    const Joins_to_Abstract_Ring& jari = jar[i];
+    Joins_to_Abstract_Ring& jari = jar[i];
 
     const Ring* ri = m.ringi(i);
 
-    const resizable_array_p<Connection>& btai = jari.bonds_to_atoms();
+    resizable_array_p<Connection>& btai = jari.bonds_to_atoms();
 
     for (int j = i + 1; j < n; j++) {
       Joins_to_Abstract_Ring& jarj = jar[j];
@@ -1930,7 +2061,7 @@ remove_duplicate_attachments_to_fused_rings(Molecule_With_Info_About_Parent& m, 
 
       resizable_array_p<Connection>& btaj = jarj.bonds_to_atoms();
 
-      rc += eliminate_duplicates(btai, btaj);
+      rc += eliminate_duplicates(m, *ri, btai, *rj, btaj);
     }
   }
 
@@ -2001,9 +2132,7 @@ Molecular_Abstraction_Abstract_Ring_Form::_place_abstract_rings(
     cerr << "Ring " << i << " has " << n << " atoms\n";
 #endif
 
-    for (int j = 0; j < n; j++) {
-      atom_number_t k = ri->item(j);
-
+    for (atom_number_t k : *ri) {
       const Atom* ak = m.atomi(k);
 
       int kcon = ak->ncon();
@@ -2104,10 +2233,7 @@ Molecular_Abstraction_Abstract_Ring_Form::_place_abstract_rings(
 
     const resizable_array_p<Connection>& s = jar[i].bonds_to_atoms();
 
-    int n = s.number_elements();
-    for (int j = 0; j < n; j++) {
-      const Connection* c = s[j];
-
+    for (const Connection* c : s) {
       atom_number_t k = c->a2();
 
       //    cerr << "Adding bond between " << k << " and " << matoms << '\n';
@@ -2367,7 +2493,6 @@ Molecular_Abstraction_Abstract_Ring_Form::process(Molecule_With_Info_About_Paren
   }
 
   return _do_any_writing_needed(m, rc, output);
-  ;
 }
 
 Molecular_Abstraction_Replace_Linker::Molecular_Abstraction_Replace_Linker() {

@@ -1,0 +1,12 @@
+{
+  "executable": "activity_consistency",
+  "test": [
+    {
+      "name": "case_2",
+      "args": [
+          "-l -e 2 -X #{test_dir}/case_2/in/pubchem_in.act",
+          " #{test_dir}/case_2/in/pubchem.smi"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+scaffold {
+  id: 0
+  smarts: "[CR0H3]!@=[CR0H{1-2}]||[CR0H2]!@=[CR0H1]||[CR0H>0]!@=[CR0H>0]"
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+  isotope {
+    atom: 1
+    isotope: 2
+  }
+}
+sidechain {
+  id: 1
+  smarts: "Br-*"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  join {
+    a1: 0
+    a2: 0
+  }
+  join {
+    a1: 1
+    a2: 1
+  }
+  isotope {
+    atom: 1
+    isotope: 3
+  }
+}

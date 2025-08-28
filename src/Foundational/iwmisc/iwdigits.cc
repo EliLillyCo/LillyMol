@@ -97,12 +97,10 @@ IWDigits::_fill_in_the_digits()
 int
 IWDigits::append_number(T & buffer, int zdigit) const
 {
-  if (zdigit < 0)
-  {
+  if (zdigit < 0) {
     zdigit = - zdigit;     // convert to something >= 0
 
-    if (_leading_space.length() > 0)
-    {
+    if (_leading_space.length() > 0) {
       buffer << _leading_space;
       buffer << '-';
       buffer.append_number( zdigit);

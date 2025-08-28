@@ -26,19 +26,21 @@ fi
 stdout='stdout'
 stderr='stderr'
 
-golden=out/log.txt
+set -x
+golden=out/stdout
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    golden=out/linux/log.txt
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    golden=out/osx/log.txt
+if [[ "${UNAME}" == "Linux" ]]; then
+    golden=out/${UNAME}/stdout
+elif [[ "${UNAME}" == "darwin"* ]]; then
+    golden=out/osx/stdout
 else
-    echo "OS is not supported"
+    echo "${UNAME} is not supported"
+    golden=out/${UNAME}/stdout
 fi
 
 diff_tool=../../fileDiff.sh
 same_bits=../../same_bits.py
-$command -x 0.5 -F FPMK $LILLYMOL_HOME/data/pubchem_example.gfp > ${stdout} 2> ${stderr}
+$command -v -x 0.5 -F FPMK $LILLYMOL_HOME/data/pubchem_example.gfp > ${stdout} 2> ${stderr}
 $diff_tool ${stdout} ${golden}
 
 if [[ $? -eq 1 ]] ; then
@@ -55,4 +57,9 @@ if [[ $? -eq 0 ]] ; then
 fi
 
 echo "$case_id : TEST FAIL"
+echo "Expected"
+cat "${golden}"
+echo "Got"
+cat "${stdout}"
+cat "${stderr}"
 rm ${stdout} ${stderr}

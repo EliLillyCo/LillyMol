@@ -583,6 +583,11 @@ Substructure_Ring_Base::ExtendToCarbonyl(const Molecule& m,
   return rc;
 }
 
+// A magic number that when encountered in the `in_substituent` array
+// means this is the starting atom and it is OK to revisit it - the
+// substituent is a ring.
+static constexpr int kOkForRingClosure = 72997;
+
 int
 IdentifySubstituent(const Molecule& m,
                     atom_number_t zatom,
@@ -597,6 +602,9 @@ IdentifySubstituent(const Molecule& m,
       continue;
     }
 
+    if (in_substituent[j] == kOkForRingClosure) {
+      continue;
+    }
     if (in_substituent[j] == 1 || in_substituent[j] == 3) {
       return -1;
     }
@@ -613,6 +621,7 @@ IdentifySubstituent(const Molecule& m,
   return rc;
 }
 
+#ifdef NO_LONGER_USED_SDASDASD
 int
 IdentifySubstituent(const Molecule& m,
                     atom_number_t zatom,
@@ -633,6 +642,7 @@ IdentifySubstituent(const Molecule& m,
 
   return rc;
 }
+#endif
 
 void
 TranslateNumbers(int * storage,
@@ -647,7 +657,10 @@ TranslateNumbers(int * storage,
 }
 
 Substituent::Substituent() {
+  _match_as_match_or_rejection = 1;
   _set_global_id = -1;
+  _is_ring_substituent = 1;
+  _no_other_substituents_allowed = 0;
 }
 
 // for all atoms for which storage[i] == flag, set the global_id
@@ -702,7 +715,7 @@ InvalidateOtherAtoms(const int* subset,
   return rc;
 }
 
-//#define DEBUG_SUBSTITUENT_MATCHES
+// #define DEBUG_SUBSTITUENT_MATCHES
 
 // A wrapper for MatchesInner, that handles _set_global_id if needed.
 // If queries are present, things are more complex. We only want to
@@ -715,7 +728,10 @@ int
 Substituent::Matches(Molecule_to_Match& target, const int * ring_atoms,
                      int * storage,
                      std::unique_ptr<int[]>& matched_by_global_specs) {
-  const int rc = MatchesInner(target, ring_atoms, storage);
+  int rc = MatchesInner(target, ring_atoms, storage);
+  if (_match_as_match_or_rejection == 0) {
+    rc = ! rc;
+  }
 
 #ifdef DEBUG_SUBSTITUENT_MATCHES
   cerr << "Substituent::Matches:from Inner " << rc << '\n';
@@ -786,55 +802,86 @@ Substituent::MatchesInner(Molecule_to_Match& target, const int * ring_atoms,
     }
     const Atom& a = m.atom(i);
     // ring atoms will not have substituents if they are 2 connected.
-    // If we ever process things other than ring atoms, this will need to be changed.
-    if (a.ncon() == 2) {
+    if (_is_ring_substituent && a.ncon() == 2) {
       continue;
     }
 
-    // Turn off atoms left by a previously failed attempt.
-    TranslateNumbers(storage, matoms, 2, 0);
-    const int atoms_in_substituent = IdentifySubstituent(m, i, storage);
+    int substituents_this_atom = 0;
+    int matches_this_atom = 0;
+    for (const Bond* b : a) {
+      const atom_number_t o = b->other(i);
+      if (storage[o]) {
+        continue;
+      }
+      // Turn off atoms left by a previously failed attempt.
+      TranslateNumbers(storage, matoms, 2, 0);
+      storage[i] = kOkForRingClosure;
+      const int atoms_in_substituent = IdentifySubstituent(m, o, i, storage);
+      storage[i] = 1;
 #ifdef DEBUG_SUBSTITUENT_MATCHES
-    cerr << "from atom " << i << " " << atoms_in_substituent << " atoms_in_substituent\n";
+      cerr << "from atom " << i << " to " << o << " find " << atoms_in_substituent << " atoms_in_substituent\n";
 #endif
-    if (atoms_in_substituent <= 0) {
-      continue;
-    }
+      ++substituents_found;
 
-    ++substituents_found;
-
-    if (! _natoms.is_set()) {
-    } else if (_natoms.matches(atoms_in_substituent)) {
-    } else {
-      continue;
-    }
-
-    if (! _nrings.is_set()) {
-    } else if (OkNrings(m, storage, 2)) {
-    } else {
-      continue;
-    }
-
-    if (! _length.is_set()) {
-    } else if (OkLength(m, storage, i, 2)) {
-    } else {
-      continue;
-    }
-
-    if (_required.size() > 0 || _disqualifying.size() > 0) {
-      int got_required_match = 0;
-      int got_rejected_match = 0;
-      RunQueries(target, storage, 2, got_required_match, got_rejected_match);
-      if (got_rejected_match) {
+      if (atoms_in_substituent <= 0) {
         continue;
       }
-      if (_required.size() > 0 && ! got_required_match) {
+
+      ++substituents_this_atom;
+
+      if (! _natoms.is_set()) {
+      } else if (_natoms.matches(atoms_in_substituent)) {
+      } else {
         continue;
       }
+
+      if (! _nrings.is_set()) {
+      } else if (OkNrings(m, storage, 2)) {
+      } else {
+        continue;
+      }
+
+      if (! _length.is_set()) {
+      } else if (OkLength(m, storage, i, 2)) {
+      } else {
+        continue;
+      }
+
+      if (! _heteroatom_count.is_set()) {
+      } else if (OkHeteratomCount(m, storage, i, 2)) {
+      } else {
+        continue;
+      }
+      
+      if (! _unsaturation_count.is_set()) {
+      } else if (OkUnsaturation(m, storage, i, 2)) {
+      } else {
+        continue;
+      }
+
+      if (_required.size() > 0 || _disqualifying.size() > 0) {
+        int got_required_match = 0;
+        int got_rejected_match = 0;
+        RunQueries(target, storage, 2, got_required_match, got_rejected_match);
+        if (got_rejected_match) {
+          continue;
+        }
+        if (_required.size() > 0 && ! got_required_match) {
+          continue;
+        }
+      }
+
+      TranslateNumbers(storage, matoms, 2, 3);  // Mark as having a successful substituent match.
+      ++matches_found;
+      ++matches_this_atom;
     }
 
-    TranslateNumbers(storage, matoms, 2, 3);  // Mark as having a successful substituent match.
-    ++matches_found;
+    if (substituents_this_atom == 0) {
+      continue;
+    }
+    if (_no_other_substituents_allowed && matches_this_atom < substituents_this_atom) {
+      return 0;
+    }
   }
 
 #ifdef DEBUG_SUBSTITUENT_MATCHES
@@ -899,6 +946,63 @@ Substituent::OkLength(Molecule& m, const int* storage, atom_number_t anchor, int
   cerr << longest_length << " longest_length, matches? " << _length.matches(longest_length) << '\n';
 #endif
   return _length.matches(longest_length);
+}
+
+int
+Substituent::OkHeteratomCount(const Molecule& m, const int* storage,
+                atom_number_t anchor, int flag) const {
+  assert(_heteroatom_count.is_set());
+
+  const int matoms = m.natoms();
+  int h = 0;
+  for (int i = 0; i < matoms; ++i) {
+#ifdef DEBUG_OKLENGTH
+    cerr << i << " " << m.smarts_equivalent_for_atom(i) << " storage " << storage[i] << '\n';
+#endif
+    if (storage[i] != flag) {
+      continue;
+    }
+    if (m.atomic_number(i) != 6) {
+      ++h;
+    }
+  }
+
+#ifdef DEBUG_OKLENGTH
+  cerr << "Count " << h << " heteratoms, match " << _heteroatom_count.matches(h) << '\n';
+#endif
+
+  return _heteroatom_count.matches(h);
+}
+
+int
+Substituent::OkUnsaturation(Molecule& m, const int* storage,
+                atom_number_t anchor, int flag) const {
+  assert(_unsaturation_count.is_set());
+
+  const int matoms = m.natoms();
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+#ifdef DEBUG_OKLENGTH
+    cerr << i << " " << m.smarts_equivalent_for_atom(i) << " storage " << storage[i] << '\n';
+#endif
+    if (storage[i] != flag) {
+      continue;
+    }
+
+    if (m.is_aromatic(i)) {
+      continue;
+    }
+
+    if (m.unsaturation(i)) {
+      ++rc;
+    }
+  }
+
+#ifdef DEBUG_OKLENGTH
+  cerr << "Count " << rc << " heteratoms, match " << _heteroatom_count.matches(rc) << '\n';
+#endif
+
+  return _unsaturation_count.matches(rc);
 }
 
 int

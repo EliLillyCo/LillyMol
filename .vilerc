@@ -1,0 +1,35 @@
+set nowrapscan
+set ignorecase
+set autoindent
+set nobackspacelimit
+set check-modtime
+set notabinsert
+set undolimit 100
+set view-on-readonly
+set c-shiftwidth 2
+set shiftwidth 2
+set cmode
+set showmatch
+set shell=/bin/bash
+set popup-choices immediate
+bind-key next-page \s
+set c-suffixes "\\.\\(\\([Cchis]\\)\\|CC\\|cpp\\|cxx\\|hxx\\|scm\\|cc\\)$"
+
+store-procedure buffer_action
+  set title $cfilname
+  set iconname $cbufname
+~endm
+~if &seq $progname "xvile"
+  set buffer-hook buffer_action
+~endif
+
+; word completion in insert mode (Komplete, Next, Previous)
+; allows backspacing over inserted word
+; ^K        map      complete word
+; ^N        map      try next word for completion
+; ^P        map      try previous word for completion
+
+map!  . hbmmi?\<2h"zdt.@zywmx`mPea dwbis"zdt.x@z
+map!  . hbmmi/\<2h"zdt.@zywmx`mPea dwbis"zdt.x@z
+map!  . hbdwmm`xnywmx`mPea dwbis"zdt.x@z
+map!  . hbdwmm`xNywmx`mPea dwbis"zdt.x@z

@@ -3,6 +3,7 @@
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/iwstring.h"
 
 #include "molecule_to_query.h"
 #include "qry_wstats.h"
@@ -12,8 +13,8 @@
 template class resizable_array_p<Substructure_Hit_Statistics>;
 template class resizable_array_base<Substructure_Hit_Statistics *>;
 
-template int process_queries(Command_Line &, resizable_array_p<Substructure_Hit_Statistics> &, int, char);
-template int process_cmdline_token(char, const const_IWSubstring &, resizable_array_p<Substructure_Hit_Statistics> &, int);
+template int process_queries(Command_Line &, resizable_array_p<Substructure_Hit_Statistics> &, int, char, Molecule_to_Query_Specifications*);
+template int process_cmdline_token(char, const const_IWSubstring &, resizable_array_p<Substructure_Hit_Statistics> &, int, Molecule_to_Query_Specifications*);
 template int process_files_of_queries(Command_Line &, resizable_array_p<Substructure_Hit_Statistics> &, int, int, char);
 //template int process_cmdline_token(const char, const const_IWSubstring&, resizable_array_p<Substructure_Hit_Statistics>&, int);
 //template int process_cmdline_token<Substructure_Hit_Statistics>(char, const_IWSubstring&, resizable_array_p<Substructure_Hit_Statistics>&, int);
@@ -29,9 +30,9 @@ template int smarts_or_smiles_from_file(iwstring_data_source &, resizable_array_
 template int file_record_is_file(resizable_array_p<Substructure_Hit_Statistics> & queries, const IWString & directory_path, IWString & buffer, int verbose);
 template int file_record_is_smarts(resizable_array_p<Substructure_Hit_Statistics> & queries, IWString & buffer, int verbose);
 
-template int queries_from_file_of_molecules<Substructure_Hit_Statistics>(const_IWSubstring const &, resizable_array_p<Substructure_Hit_Statistics> &, int);
+template int queries_from_file_of_molecules<Substructure_Hit_Statistics>(const_IWSubstring const &, resizable_array_p<Substructure_Hit_Statistics> &, int, Molecule_to_Query_Specifications*);
 template int queries_from_file_of_molecules<Substructure_Hit_Statistics>(data_source_and_type<MDL_Molecule> &, Molecule_to_Query_Specifications &, resizable_array_p<Substructure_Hit_Statistics> &, int);
-template int queries_from_file_of_molecules<Substructure_Hit_Statistics>(MDL_Molecule &, Molecule_to_Query_Specifications  &, resizable_array_p<Substructure_Hit_Statistics> &, int);
+template int query_from_molecule<Substructure_Hit_Statistics>(MDL_Molecule &, Molecule_to_Query_Specifications  &, resizable_array_p<Substructure_Hit_Statistics> &);
 template int queries_from_file_of_molecules<Substructure_Hit_Statistics>(const_IWSubstring const&, Molecule_to_Query_Specifications &, resizable_array_p<Substructure_Hit_Statistics>&, int);
 
 template int read_one_or_more_queries_from_file(resizable_array_p<Substructure_Hit_Statistics> & queries, const const_IWSubstring & fname, int verbose);

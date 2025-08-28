@@ -1,6 +1,8 @@
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <unordered_set>
 
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
@@ -11,9 +13,261 @@
 #include "iwreaction.h"
 
 using std::cerr;
-using std::endl;
 
 namespace fs = std::filesystem;
+
+// A set of atoms which are being removed during the reaction.
+struct ChangingAtoms {
+  resizable_array<uint32_t> atom_being_removed;
+};
+
+// Applies to ScaffoldReactionSite and SidechainReactionSite protos.
+// Mostly looks for atoms that are associated with some directive that
+// are in the set of atoms being deleted.
+// Would be nice to have an estimate of the number of atoms in the
+// smarts or query so we could check matched atom numbers...
+template <typename P>
+bool
+InternallyConsistent(const P& proto, const ChangingAtoms& changing_atoms) {
+  for (const auto& make_bond : proto.make_bond()) {
+    if (changing_atoms.atom_being_removed.contains(make_bond.a1())) {
+      cerr << "Matched atom " << make_bond.a1() << " in make bond being deleted\n";
+      return false;
+    }
+    if (changing_atoms.atom_being_removed.contains(make_bond.a2())) {
+      cerr << "Matched atom " << make_bond.a2() << " in make bond being deleted\n";
+      return false;
+    }
+  }
+
+  for (const auto& change_bond : proto.change_bond()) {
+    if (changing_atoms.atom_being_removed.contains(change_bond.a1())) {
+      cerr << "Matched atom " << change_bond.a1() << " in change_bond being deleted\n";
+      return false;
+    }
+    if (changing_atoms.atom_being_removed.contains(change_bond.a2())) {
+      cerr << "Matched atom " << change_bond.a2() << " in change_bond being deleted\n";
+      return false;
+    }
+  }
+
+  for (const auto& isotope : proto.isotope()) {
+    for (uint32_t a : isotope.atom()) {
+      if (changing_atoms.atom_being_removed.contains(a)) {
+        cerr << "Matched atom " << a << " isotope being deleted\n";
+        return false;
+      }
+    }
+  }
+
+  for (const auto& change_isotope : proto.change_isotope()) {
+    for (uint32_t a : change_isotope.atom()) {
+      if (changing_atoms.atom_being_removed.contains(a)) {
+        cerr << "Change isotope atom " << a << " being deleted\n";
+        return false;
+      }
+    }
+  }
+
+  for (const auto& change_isotope : proto.change_isotope()) {
+    for (uint32_t a : change_isotope.atom()) {
+      if (changing_atoms.atom_being_removed.contains(a)) {
+        cerr << "Change isotope atom " << a << " being deleted\n";
+        return false;
+      }
+    }
+  }
+
+  for (uint32_t a : proto.single_bond()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "Single bond atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.double_bond()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "double bond atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.triple_bond()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "triple bond atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (const auto& change_element : proto.change_element()) {
+    if (changing_atoms.atom_being_removed.contains(change_element.atom())) {
+      cerr << "Change element atom " << change_element.atom() << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (const auto& formal_charge : proto.formal_charge()) {
+    if (changing_atoms.atom_being_removed.contains(formal_charge.atom())) {
+      cerr << "Formal charge atom " << formal_charge.atom() << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (const auto& change_formal_charge : proto.change_formal_charge()) {
+    if (changing_atoms.atom_being_removed.contains(change_formal_charge.atom())) {
+      cerr << "Change formal charge atom " << change_formal_charge.atom() << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.unfix_implicit_hydrogens()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "Unfix implicit hydrogens atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.invert_chirality()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "invert_chirality atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.remove_chirality()) {
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "remove_chirality atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  for (int i = 0; i < proto.atom_and_isotope_size(); i += 2) {
+    uint32_t a = proto.atom_and_isotope(i);
+    if (changing_atoms.atom_being_removed.contains(a)) {
+      cerr << "atom_and_isotope atom " << a << " being deleted\n";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <typename P>
+bool
+IdentifyAtomsBeingRemoved(const P& proto,
+                          ChangingAtoms& changing_atoms) {
+  for (uint32_t a : proto.remove_atom()) {
+    if (! changing_atoms.atom_being_removed.add_if_not_already_present(a)) {
+      cerr << "Duplicate atom being removed " << a << '\n';
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.remove_atoms()) {
+    if (! changing_atoms.atom_being_removed.add_if_not_already_present(a)) {
+      cerr << "Duplicate atom being removed " << a << '\n';
+      return false;
+    }
+  }
+
+  for (uint32_t a : proto.remove_fragment()) {
+    if (! changing_atoms.atom_being_removed.add_if_not_already_present(a)) {
+      cerr << "Duplicate remove fragment " << a << '\n';
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool
+InternallyConsistent(const ReactionProto::ScaffoldReactionSite& proto,
+                ChangingAtoms& changing_atoms) {
+  if (!IdentifyAtomsBeingRemoved(proto, changing_atoms)) {
+    cerr << proto.ShortDebugString() << '\n';
+    return false;
+  }
+
+  return InternallyConsistent<ReactionProto::ScaffoldReactionSite>(proto, changing_atoms);
+}
+
+static bool
+SidechainInternallyConsistent(const ReactionProto::SidechainReactionSite& proto,
+                const ChangingAtoms& changing_in_scaffold) {
+  ChangingAtoms changing_in_sidechain;
+
+  if (! IdentifyAtomsBeingRemoved(proto, changing_in_sidechain)) {
+    cerr << proto.ShortDebugString() << '\n';
+    return false;
+  }
+
+  if (! InternallyConsistent(proto, changing_in_sidechain)) {
+    return false;
+  }
+
+  for (const auto& join : proto.join()) {
+    if (join.has_a1()) {  // TOo hard to check component specifications.
+      uint32_t a1 = join.a1();
+      if (changing_in_scaffold.atom_being_removed.contains(a1)) {
+        cerr << "Scaffold join atom " << a1 << " being removed\n";
+        return false;
+      }
+    }
+
+    if (join.has_a2()) {
+      uint32_t a2 = join.a2();
+      if (changing_in_sidechain.atom_being_removed.contains(a2)) {
+        cerr << "Sidechain join atom " << a2 << " being removed\n";
+        return false;
+      }
+    }
+  }
+
+  // Replace atoms are different. They MUST be removed in the scaffold.
+  for (const auto& replace_atom : proto.replace_atom()) {
+    if (!replace_atom.has_a1()) {
+      uint32_t a1 = replace_atom.a1();
+      if (changing_in_scaffold.atom_being_removed.contains(a1)) {
+        cerr << "Scaffold replace atom " << a1 << " NOT being removed\n";
+        return false;
+      }
+    }
+    if (replace_atom.has_a2()) {
+      uint32_t a2 = replace_atom.a2();
+      if (changing_in_sidechain.atom_being_removed.contains(a2)) {
+        cerr << "Sidechain replace atom " << a2 << " being removed\n";
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+static bool
+InternallyConsistent(const ReactionProto::Reaction& proto) {
+  if (! proto.has_scaffold()) {
+    cerr << "InternallyConsistent:no scaffold\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return false;
+  }
+
+  ChangingAtoms changing_atoms;
+
+  if (! InternallyConsistent(proto.scaffold(), changing_atoms)) {
+    cerr << proto.scaffold().ShortDebugString() << '\n';
+    return false;
+  }
+
+  for (const auto& sidechain : proto.sidechain()) {
+    if (! SidechainInternallyConsistent(sidechain, changing_atoms)) {
+      cerr << sidechain.ShortDebugString() << '\n';
+      return false;
+    }
+  }
+
+  return true;
+}
 
 template <typename P>
 int
@@ -41,6 +295,12 @@ Match_Conditions::ConstructFromProto(const P& proto) {
     _multiple_match_string = proto.multiple_match_string();
   if (proto.has_suppress_if_more_than_this_many_substructure_search_hits())
     _suppress_if_more_than_this_many_substructure_search_hits = proto.suppress_if_more_than_this_many_substructure_search_hits();
+  if (proto.has_embeddings_can_overlap()) {
+    _embeddings_can_overlap = proto.embeddings_can_overlap();
+  }
+  if (proto.has_max_matches_to_find()) {
+    _max_matches_to_find = proto.max_matches_to_find();
+  }
 
   return 1;
 }
@@ -51,6 +311,7 @@ Scaffold_Match_Conditions::ConstructFromProto(const ReactionProto::ScaffoldMatch
 
   _enumerate_scaffold_hits_individually  = proto.enumerate_scaffold_hits_individually();
   _combinatorial_expansion_of_scaffold_hits = proto.combinatorial_expansion_of_scaffold_hits();
+  _max_matches_to_find = proto.max_matches_to_find();
 
   return 1;
 }
@@ -277,16 +538,87 @@ Reaction_Place_Isotope::ConstructFromProto(const ReactionProto::PlaceIsotope& pr
 int
 Reaction_Increment_Isotope::ConstructFromProto(const ReactionProto::IncrementIsotope& proto)
 {
-  if (proto.atom().empty())
+  if (proto.atom().empty()) {
     return WriteError("Reaction_Increment_Isotope::ConstructFromProto:no atom", proto);
-  if (! proto.has_delta())
-    return WriteError("Reaction_Increment_Isotope::ConstructFromProto:no delta", proto);
+  }
+
+  int properties_found = 0;
 
   for (int m : proto.atom()) {
     _atom << m;
   }
 
-  _isotope = proto.delta();
+  if (proto.has_delta()) {
+    _isotope = proto.delta();
+    ++properties_found;
+  }
+  if (proto.has_multiply()) {
+    _multiply = proto.multiply();
+    ++properties_found;
+  }
+  if (proto.has_integer_divide()) {
+    _integer_divide = proto.integer_divide();
+    ++properties_found;
+  }
+  if (proto.has_modulo()) {
+    _modulo = proto.modulo();
+    ++properties_found;
+  }
+
+  if (properties_found == 0) {
+    cerr << "Reaction_Increment_Isotope:ConstructFromProto:no increments\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.has_only_change_if()) {
+    if (proto.only_change_if().has_values()) {
+      if (! BuildOnlyChangeIf(proto.only_change_if().values())) {
+        cerr << "Reaction_Increment_Isotope::ConstructFromProto:invalid only change if\n";
+        cerr << proto.ShortDebugString() << '\n';
+        return 0;
+      }
+    } else if (proto.only_change_if().has_range()) {
+      if (! BuildOnlyChangeIf(proto.only_change_if().range())) {
+        cerr << "Reaction_Increment_Isotope::ConstructFromProto:invalid only change if\n";
+        cerr << proto.ShortDebugString() << '\n';
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Reaction_Increment_Isotope::BuildOnlyChangeIf(const ReactionProto::Range& proto) {
+  if (! proto.has_min() || ! proto.has_max() || proto.min() > proto.max()) {
+    cerr << "ReactionProto::BuildOnlyChangeIf:invalid proto " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  _only_change_if.set_min(proto.min());
+  _only_change_if.set_max(proto.max());
+
+  return 1;
+}
+
+int
+Reaction_Increment_Isotope::BuildOnlyChangeIf(const ReactionProto::Values& proto) {
+  if (proto.values().empty()) {
+    cerr << "ReactionProto::BuildOnlyChangeIf:invalid proto " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  for (int a : proto.values()) {
+    if (! _only_change_if.add_if_not_already_present(a)) {
+      cerr << "ReactionProto::BuildOnlyChangeIf:duplicate value " << a << '\n';
+      cerr << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+  }
 
   return 1;
 }
@@ -603,7 +935,7 @@ Replace_Atom::ConstructFromProto(const ReactionProto::ReplaceAtom& proto,
 
   if (proto.has_a1()) {
     _a1.set_matched_atom(proto.a1());
-    _a1.set_in_component(component - 1);
+    _a1.set_in_component(-1);  // In scaffold.
   } else if (proto.has_c1()) {
     if (! _a1.ConstructFromProto(proto.c1()))
       return WriteError("Replace_Atom::ConstructFromProto:invalid c1", proto);
@@ -615,6 +947,10 @@ Replace_Atom::ConstructFromProto(const ReactionProto::ReplaceAtom& proto,
   } else if (proto.has_c2()) {
     if (! _a2.ConstructFromProto(proto.c2()))
       return WriteError("Replace_Atom::ConstructFromProto:invalid c2", proto);
+  }
+
+  if (proto.has_invert_chirality()) {
+    _invert_chirality = proto.invert_chirality();
   }
 
   return 1;
@@ -688,11 +1024,27 @@ Inter_Particle_Bond::ConstructFromProto(const ReactionProto::InterParticleBond& 
   return 1;
 }
 
+// If the proto has a comment field, copy it to `destination`.
+template <typename P>
+void
+MaybeCopyComment(const P& proto,
+                 IWString& destination) {
+  if (proto.comment_size() == 0) {
+    return;
+  }
+
+  // Should we insert a separator between entries?
+  if (proto.comment_size()) {
+    for (const std::string& s : proto.comment()) {
+      destination << s;
+    }
+  }
+}
+
 int
 No_Reaction::ConstructFromProto(const ReactionProto::NoReaction& proto)
 {
-  if (proto.has_comment())
-    _comment = proto.comment();
+  MaybeCopyComment(proto, _comment);
 
   if (proto.has_scaffold_no_reaction() &&
       ! _scaffold_no_reaction.ConstructFromProto(proto.scaffold_no_reaction()))
@@ -775,6 +1127,12 @@ Reaction_Site::InitialiseQueryConstraints(const M& match_conditions) {
     if (match_conditions.ignore_symmetry_related_matches()) {
       q->set_do_not_perceive_symmetry_equivalent_matches(1);
     }
+    if (! match_conditions.embeddings_can_overlap()) {
+      q->set_embeddings_do_not_overlap(1);
+    }
+    if (auto s = match_conditions.max_matches_to_find(); s) {
+      q->set_max_matches_to_find(s);
+    }
   }
 
   return 1;
@@ -784,8 +1142,7 @@ template <typename P>
 int
 Reaction_Site::ConstructFromProto(const P& proto, const IWString& fname)
 {
-  if (proto.has_comment())
-    _comment = proto.comment();
+  MaybeCopyComment(proto, _comment);
 
   if (proto.query_size() > 0) {
     for (const SubstructureSearch::SubstructureQuery& query : proto.query()) {
@@ -832,12 +1189,33 @@ Reaction_Site::ConstructFromProto(const P& proto, const IWString& fname)
     _bonds_to_be_made.add(b.release());
   }
 
+  for (const auto& bond_to_be_changed : proto.change_bond()) {
+    std::unique_ptr<Bond> b(new Bond());
+    if (! BondFromProto(*b, bond_to_be_changed))
+      return WriteError("Reaction_Site::ConstructFromProto:invalid bond to be changed ", bond_to_be_changed);
+    _bonds_to_be_changed.add(b.release());
+  }
+
   for (const auto& bond_to_be_broken : proto.break_bond()) {
     std::unique_ptr<Bond> b(new Bond());
     b->set_bond_type(SINGLE_BOND);   // Seems invalid if not set.
     if (! BondFromPairOfAtoms(*b, bond_to_be_broken, /*no self bonds*/false))
       return WriteError("Reaction_Site::ConstructFromProto:invalid bond to be made ", bond_to_be_broken);
     _bonds_to_be_broken.add(b.release());
+  }
+
+  if (proto.break_bond_between_atoms_size() > 0) {
+    if (proto.break_bond_between_atoms_size() % 2 != 0) {
+      return WriteError("Reaction_Site::ConstructFromProto:must have even number of break_bond_between_atoms ",
+                         proto);
+    }
+
+    for (int i = 0; i < proto.break_bond_between_atoms_size(); i += 2) {
+      uint32_t a1 = proto.break_bond_between_atoms(i);
+      uint32_t a2 = proto.break_bond_between_atoms(i + 1);
+      // The bond type is not used.
+      _bonds_to_be_broken << new Bond(a1, a2, SINGLE_BOND);
+    }
   }
 
   for (const auto atom :proto.remove_atom()) {
@@ -882,6 +1260,18 @@ Reaction_Site::ConstructFromProto(const P& proto, const IWString& fname)
     if (! rpi->ConstructFromProto(isotope_to_assign))
        return WriteError("Reaction_Site::ConstructFromProto:invalid isotope", proto);
     _isotopes_to_assign.add(rpi.release());
+  }
+
+  if (proto.atom_and_isotope_size() > 0) {
+    if (proto.atom_and_isotope_size() % 2 != 0) {
+      return WriteError("Reaction_Site::ConstructFromProto:atom_and_isotope must have even number of entries",
+                proto);
+    }
+    for (int i = 0; i < proto.atom_and_isotope_size(); i += 2) {
+      uint32_t atom = proto.atom_and_isotope(i);
+      uint32_t iso = proto.atom_and_isotope(i + 1);
+      _isotopes_to_assign << new Reaction_Place_Isotope(atom, iso);
+    }
   }
 
   for (const auto& isotope_to_be_changed : proto.change_isotope()) {
@@ -942,8 +1332,19 @@ Reaction_Site::ConstructFromProto(const P& proto, const IWString& fname)
     _replace_atom.add(rpla.release());
   }
 
-  for (const auto x : proto.unfix_implicit_hydrogens())
+  for (const auto& data : proto.copy_isotope()) {
+    std::unique_ptr<CopyIsotope> ci = std::make_unique<CopyIsotope>();
+    if (! ci->ConstructFromProto(data, _unique_id - 1)) {
+      cerr << "SidechainReactionSite::ConstructFromProto:invalid copy isotope\n";
+      cerr << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+    _copy_isotope << ci.release();
+  }
+
+  for (const auto x : proto.unfix_implicit_hydrogens()) {
     _unfix_implicit_hydrogens.add_if_not_already_present(x);
+  }
 
   for (const auto& inactive : proto.inactive()) {
     std::unique_ptr<Substructure_Query> ss(new Substructure_Query);
@@ -990,10 +1391,11 @@ Scaffold_Reaction_Site::ConstructFromProto(const ReactionProto::ScaffoldReaction
     _unique_id = 0;
   }
 
-  // Han 2024.
+  // Jan 2024.
   // The initial implementation of match_conditions with textproto input did not
   // properly process the match_conditions, so the default was never seen. Set it.
   if (! proto.has_match_conditions()) {
+    set_find_unique_embeddings_only(0);
     _match_conditions.set_find_unique_embeddings_only(0);
   } else if (! _match_conditions.ConstructFromProto(proto.match_conditions())) {
     return WriteError("Reaction_Site::ConstructFromProto:invalid match conditions", proto);
@@ -1003,33 +1405,87 @@ Scaffold_Reaction_Site::ConstructFromProto(const ReactionProto::ScaffoldReaction
     return WriteError("ScaffoldReactionSite::ConstructFromProto:invalid Reaction_Site", proto);
   }
 
+  // Transfer settings from _match_conditions to queries.
   InitialiseQueryConstraints<Scaffold_Match_Conditions>(_match_conditions);
+
+  if (proto.single_bond_size() > 0) {
+    if (proto.single_bond_size() % 2 != 0) {
+      return WriteError("Reaction_Site::ConstructFromProto:single_bond requires even number of atoms ",
+                        proto);
+    }
+    for (int i = 0; i < proto.single_bond_size(); i += 2) {
+      uint32_t a1 = proto.single_bond(i);
+      uint32_t a2 = proto.single_bond(i + 1);
+      _bonds_to_be_made << new Bond(a1, a2, SINGLE_BOND);
+    }
+  }
+
+  if (proto.double_bond_size() > 0) {
+    if (proto.double_bond_size() % 2 != 0) {
+      return WriteError("Reaction_Site::ConstructFromProto:double_bond requires even number of atoms ",
+                        proto);
+    }
+    for (int i = 0; i < proto.double_bond_size(); i += 2) {
+      uint32_t a1 = proto.double_bond(i);
+      uint32_t a2 = proto.double_bond(i + 1);
+      _bonds_to_be_made << new Bond(a1, a2, DOUBLE_BOND);
+    }
+  }
+
+  if (proto.triple_bond_size() > 0) {
+    if (proto.triple_bond_size() % 2 != 0) {
+      return WriteError("Reaction_Site::ConstructFromProto:triple_bond requires even number of atoms ",
+                        proto);
+    }
+    for (int i = 0; i < proto.triple_bond_size(); i += 2) {
+      uint32_t a1 = proto.triple_bond(i);
+      uint32_t a2 = proto.triple_bond(i + 1);
+      _bonds_to_be_made << new Bond(a1, a2, TRIPLE_BOND);
+    }
+  }
 
   return 1;
 }
 
+// This is complicated by the fact that there may be match conditions specified in the
+// proto and there might also be conditions in `smc` - which has typically come from the
+// -M option to trxn. 
 int
 Sidechain_Reaction_Site::ConstructFromProto(const ReactionProto::SidechainReactionSite& proto,
-                        const IWString& fname)
-{
-  if (!proto.has_id())
-    return WriteError("Sidechain_Reaction_Site::ConstructFromProto:no id", proto);
+                        int uid,
+                        const IWString& fname,
+                        const Sidechain_Match_Conditions& smc) {
+  if (!proto.has_id()) {
+    cerr << "SidechainReactionSite::ConstructFromProto:no id, setting " << uid << '\n';
+    cerr << proto.ShortDebugString() << '\n';
+    _unique_id = uid;
+  } else if (uid == proto.id()) {
+    _unique_id = proto.id();
+  } else {
+    cerr << "SidechainReactionSite::ConstructFromProto:non sequential id got " <<
+             proto.id() << " expected " << uid << " expect trouble\n";
+    cerr << proto.ShortDebugString() << '\n';
+  }
 
-  _unique_id = proto.id();
-
-  // Han 2024.
-  // The initial implementation of match_conditions with textproto input did not
-  // properly process the match_conditions, so the default was never seen. Set it.
-  if (! proto.has_match_conditions()) {
-    _match_conditions.set_find_unique_embeddings_only(0);
-  } else if ( ! _match_conditions.ConstructFromProto(proto.match_conditions())) {
-    return WriteError("Reaction_Site::ConstructFromProto:invalid match conditions", proto);
+  // First priority is what might have come from the command line.
+  if (smc.active()) {
+    _match_conditions = smc;
+  } else if (proto.has_match_conditions()) {
+    if (! _match_conditions.ConstructFromProto(proto.match_conditions())) {
+      return WriteError("Reaction_Site::ConstructFromProto:invalid match conditions", proto);
+    }
+  } else {
+    // In sidechains it is OK to suppress symmetry related matches by default.
+    // Monitor this, symmetry has been an ongoing problem.
+    //set_do_not_perceive_symmetry_equivalent_matches(1);
+    _match_conditions.set_find_unique_embeddings_only(1);
   }
 
   if (!Reaction_Site::ConstructFromProto(proto, fname)) {
     return WriteError("ScaffoldReactionSite::ConstructFromProto:invalid Reaction_Site", proto);
   }
 
+  // Transfer settings from _match_conditions to queries.
   InitialiseQueryConstraints<Sidechain_Match_Conditions>(_match_conditions);
 
   for (const auto& inter_particle_bond : proto.join()) {
@@ -1037,6 +1493,42 @@ Sidechain_Reaction_Site::ConstructFromProto(const ReactionProto::SidechainReacti
     if (! ipb->ConstructFromProto(inter_particle_bond, _unique_id))
        return WriteError("Reaction_Site::ConstructFromProto:invalid inter particle bond", proto);
     _inter_particle_bonds.add(ipb.release());
+  }
+
+  if (proto.single_bond_size() > 0) {
+    if (proto.single_bond_size() % 2 != 0) {
+      cerr << "SidechainReactionSite::ConstructFromProto:number single bonds must be even\n";
+      return 0;
+    }
+    for (int i = 0; i < proto.single_bond_size(); i += 2) {
+      std::unique_ptr<Inter_Particle_Bond> ipb = std::make_unique<Inter_Particle_Bond>();
+      ipb->SetDefaultJoin(proto.single_bond(i), _unique_id - 1, proto.single_bond(i + 1), SINGLE_BOND);
+      _inter_particle_bonds << ipb.release();
+    }
+  }
+
+  if (proto.double_bond_size() > 0) {
+    if (proto.double_bond_size() % 2 != 0) {
+      cerr << "SidechainReactionSite::ConstructFromProto:number double bonds must be even\n";
+      return 0;
+    }
+    for (int i = 0; i < proto.double_bond_size(); i += 2) {
+      std::unique_ptr<Inter_Particle_Bond> ipb = std::make_unique<Inter_Particle_Bond>();
+      ipb->SetDefaultJoin(proto.double_bond(i), _unique_id - 1, proto.double_bond(i + 1), DOUBLE_BOND);
+      _inter_particle_bonds << ipb.release();
+    }
+  }
+
+  if (proto.triple_bond_size() > 0) {
+    if (proto.triple_bond_size() % 2 != 0) {
+      cerr << "SidechainReactionSite::ConstructFromProto:number triple bonds must be even\n";
+      return 0;
+    }
+    for (int i = 0; i < proto.triple_bond_size(); i += 2) {
+      std::unique_ptr<Inter_Particle_Bond> ipb = std::make_unique<Inter_Particle_Bond>();
+      ipb->SetDefaultJoin(proto.triple_bond(i), _unique_id - 1, proto.triple_bond(i + 1), TRIPLE_BOND);
+      _inter_particle_bonds << ipb.release();
+    }
   }
 
   // TODO:ianwatson
@@ -1050,14 +1542,18 @@ Sidechain_Reaction_Site::ConstructFromProto(const ReactionProto::SidechainReacti
     _no_reaction.add(nrxn.release());
   }
 
-  if (proto.has_make_implicit_hydrogens_explicit())
+  if (proto.has_make_implicit_hydrogens_explicit()) {
     _make_implicit_hydrogens_explicit = proto.make_implicit_hydrogens_explicit();
+  }
 
   // Do this last after all query modifiers have been applied.
   if (proto.reagent_size() > 0) {
-    set_do_not_perceive_symmetry_equivalent_matches(1);   // let's just make this the default
-
-    _copy_match_conditions_to_query();
+    if (_queries.size()) {
+      _copy_match_conditions_to_query();
+    } else {
+      Substructure_Query::create_from_smarts("[*]");
+      Substructure_Query::set_max_matches_to_find(1);
+    }
 
     for (const auto& reagent : proto.reagent()) {
       if (! _add_reagent(reagent)) {
@@ -1067,6 +1563,22 @@ Sidechain_Reaction_Site::ConstructFromProto(const ReactionProto::SidechainReacti
     }
   }
 
+
+  return 1;
+}
+
+// Add an inter particle join involving matched atom `a1` in the scaffold and matched
+// atoms `a2` in our sidechain.
+int
+Sidechain_Reaction_Site::AddInterParticleBond(atom_number_t a1, atom_number_t a2,
+                bond_type_t btype) {
+  static constexpr int kScaffold = -1;
+
+  _inter_particle_bonds << new Inter_Particle_Bond(kScaffold, a1, a2, btype);
+
+  // A little dangerous, we should be using the index into the _sidechain array.
+  _inter_particle_bonds.back()->is_part_of_component(_unique_id - 1);
+
   return 1;
 }
 
@@ -1074,23 +1586,21 @@ int
 Sidechain_Reaction_Site::_add_reagent(const std::string& smiles)
 {
   const_IWSubstring mysmiles(smiles.data(), smiles.length());
+  cerr << "Addomg reagent " << mysmiles << '\n';
 
   Molecule_and_Embedding * mae = new Molecule_and_Embedding();
-  if (! mae->build_from_smiles(mysmiles))
-  {
+  if (! mae->build_from_smiles(mysmiles)) {
     cerr << "Sidechain_Reaction_Site::_add_reagent:invalid reagent smiles '" << smiles << "'\n";
     return 0;
   }
 
-  if (_make_implicit_hydrogens_explicit)
-  {
+  if (_make_implicit_hydrogens_explicit) {
     Make_Implicit_Hydrogens_Explicit mihe;
     mihe.set_isotope(_make_implicit_hydrogens_explicit);
     mae->make_implicit_hydrogens_explicit(mihe);
   }
 
-  if (! add_reagent(mae, _match_conditions))
-  {
+  if (! add_reagent(mae, _match_conditions)) {
     delete mae;
     cerr << "Sidechain_Reaction_Site::_add_reagent:cannot add reagent " << smiles << "\n";
     return 0;
@@ -1108,13 +1618,19 @@ IWReaction::Read(IWString& fname) {
     return 0;
   }
 
-  return ConstructFromProto(*maybe_proto, fname);
+  Sidechain_Match_Conditions smc;
+
+  return ConstructFromProto(*maybe_proto, fname, smc);
 }
 
 int
 IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
-                               const IWString& file_name)
-{
+                               const IWString& file_name,
+                               const Sidechain_Match_Conditions& smc) {
+  if (! InternallyConsistent(proto)) {
+    return 0;
+  }
+
   if (!proto.has_scaffold()) {
     return WriteError("IWReaction::ConstructFromProto:no scaffold", proto);
   }
@@ -1123,12 +1639,18 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
     return WriteError("IWReaction::ConstructFromProto:invalid scaffold", proto);
   }
 
-  if (proto.has_comment()) {
-    _comment = proto.comment();
-  } else if (proto.has_name()) {
+  if (proto.has_name()) {
     _comment = proto.name();
+  } else  {
+    MaybeCopyComment(proto, _comment);
   }
 
+  if (proto.has_scaffold_match_conditions()) {
+    cerr << "IWReaction::ConstructFromProto:deprecation error, reaction has scaffold_match_conditions\n";
+    cerr << "Move to ScaffoldMatchConditions message in the scaffold\n";
+    return 0;
+  }
+#ifdef OBSOLETE
   if (proto.has_scaffold_match_conditions() &&
       ! _match_conditions.ConstructFromProto(proto.scaffold_match_conditions()))
     return WriteError("IWReaction::ConstructFromProto:invalid scaffold match conditions", proto);
@@ -1140,13 +1662,19 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   if (_match_conditions.one_embedding_per_start_atom()) {
     set_one_embedding_per_start_atom(1);
   }
+  if (! _match_conditions.embeddings_can_overlap()) {
+    set_embeddings_do_not_overlap(1);
+  }
+#endif
 
-  for (const auto& sidechain : proto.sidechain()) {
-    std::unique_ptr<Sidechain_Reaction_Site> sc(new Sidechain_Reaction_Site);
-    if (! sc->ConstructFromProto(sidechain, file_name)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid sidechain", proto);
+  if (proto.sidechain_size() > 0) {
+    for (int i = 0; i < proto.sidechain_size(); ++i) {
+      std::unique_ptr<Sidechain_Reaction_Site> sc(new Sidechain_Reaction_Site);
+      if (! sc->ConstructFromProto(proto.sidechain(i), i+1, file_name, smc)) {
+        return WriteError("IWReaction::ConstructFromProto:invalid sidechain", proto);
+      }
+      _sidechains.add(sc.release());
     }
-    _sidechains.add(sc.release());
   }
 
 //cerr << "Read " << _sidechains.number_elements() << " sidechains\n";
@@ -1154,7 +1682,7 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   for (const auto& stereo_center : proto.reaction_stereo_center()) {
     std::unique_ptr<Reaction_Stereo_Centre> sc(new Reaction_Stereo_Centre);
     if (! sc->ConstructFromProto(stereo_center)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid reacton stereo center", proto);
+      return WriteError("IWReaction::ConstructFromProto:invalid reacton stereo center", proto);
     }
     _reaction_stereo_centre.add(sc.release());
   }
@@ -1185,12 +1713,16 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   for (const auto& cip:  proto.cip_stereo()) {
     std::unique_ptr<ReactionCipStereo> tmp = std::make_unique<ReactionCipStereo>();
     if (! tmp->ConstructFromProto(cip)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid cip stereo center", proto);
+      return WriteError("IWReaction::ConstructFromProto:invalid cip stereo center", proto);
     }
     _cip_stereo << tmp.release();
   }
 
   _determine_has_sidechain_isotope_requirement();
+
+  if (! check_internal_consistency()) {
+    return WriteError("IWReaction::ConstructFromProto:not internally consistent", proto);
+  }
 
   return 1;
 }
@@ -1207,6 +1739,7 @@ IWReaction::_determine_has_sidechain_isotope_requirement() {
 
   return _has_sidechain_isotope_requirement;
 }
+
 
 int
 Sidechain_Reaction_Site::has_sidechain_isotope_requirement() const {
@@ -1295,14 +1828,15 @@ ReactionCipStereo::ConstructFromProto(ReactionProto::CipStereoReaction const& pr
 }
 
 int
-IWReaction::ConstructFromTextProto(const std::string& textproto, const IWString& file_name) {
+IWReaction::ConstructFromTextProto(const std::string& textproto, const IWString& file_name,
+                const Sidechain_Match_Conditions& smc) {
   ReactionProto::Reaction proto;
   if (!google::protobuf::TextFormat::ParseFromString(textproto, &proto)) {
     cerr << "IWReaction:ConstructFromTextProto:cannot parse text proto " << textproto << '\n';
     return 0;
   }
 
-  return ConstructFromProto(proto, file_name);
+  return ConstructFromProto(proto, file_name, smc);
 }
 
 int
@@ -1360,6 +1894,77 @@ IWReaction::BuildProto(ReactionProto::Reaction& proto) const {
 
   Reaction_Site::BuildProto(*proto.mutable_scaffold());
 
+  // This should be deprecated, match conditions are no longer part of a reaction
+  // but instead belong to scaffolds and sidechains.
+  if (! _match_conditions.IsDefault()) {
+    AddMatchConditions(*proto.mutable_scaffold());
+  }
+
+  return 1;
+}
+
+// BOth the Scaffold_Reaction_Site and Sidechain_Reaction_Site need to set
+// match conditions kinds of proto messages. 
+// The underlying Match_Conditions object can set the common values into
+// whichever type P is.
+template <typename P>
+int
+Match_Conditions::BuildProto(P& proto) const {
+
+  if (_ignore_not_reacting) {
+    proto.set_ignore_not_reacting(_ignore_not_reacting);
+  }
+
+  if (_find_unique_embeddings) {
+    proto.set_find_unique_embeddings(_find_unique_embeddings);
+  }
+
+  if (_process_hit_number >= 0) {
+    proto.set_process_hit_number(_process_hit_number);
+  }
+
+  if (_one_embedding_per_start_atom) {
+    proto.set_one_embedding_per_start_atom(_one_embedding_per_start_atom);
+  }
+
+  if (_ignore_symmetry_related_matches) {
+    proto.set_ignore_symmetry_related_matches(_ignore_symmetry_related_matches);
+  }
+
+  if (_embeddings_can_overlap) {
+    proto.set_embeddings_can_overlap(true);
+  } else {
+    proto.set_embeddings_can_overlap(false);
+  }
+
+  if (_multiple_match_string.size() > 0) {
+    const IWString& s = _multiple_match_string;
+    proto.set_multiple_match_string(s.data(), s.length());
+  }
+
+  if (uint32_t s = _suppress_if_more_than_this_many_substructure_search_hits;
+        s < std::numeric_limits<int32_t>::max()) {
+    proto.set_suppress_if_more_than_this_many_substructure_search_hits(s);
+  }
+
+  if (_max_matches_to_find > 0) {
+    proto.set_max_matches_to_find(_max_matches_to_find);
+  }
+
+  return 1;
+}
+
+// Call the underlying Reaction_Site method for all the inherited attributes.
+int
+Scaffold_Reaction_Site::AddMatchConditions(ReactionProto::ScaffoldReactionSite& proto) const {
+  if (_match_conditions.IsDefault()) {
+    return 1;
+  }
+
+  ReactionProto::ScaffoldMatchConditions* smc = proto.mutable_match_conditions();
+
+  _match_conditions.BuildProto(*smc);
+
   return 1;
 }
 
@@ -1372,6 +1977,19 @@ Reaction_Site::BuildProto(P& proto) const {
 
   for (const Bond* bond : _bonds_to_be_made) {
     auto* b = proto.add_make_bond();
+    b->set_a1(bond->a1());
+    b->set_a2(bond->a2());
+    if (bond->is_single_bond()) {
+      b->set_btype(SubstructureSearch::SS_SINGLE_BOND);
+    } else if (bond->is_double_bond()) {
+      b->set_btype(SubstructureSearch::SS_DOUBLE_BOND);
+    } else if (bond->is_triple_bond()) {
+      b->set_btype(SubstructureSearch::SS_TRIPLE_BOND);
+    }
+  }
+
+  for (const Bond* bond : _bonds_to_be_changed) {
+    auto* b = proto.add_change_bond();
     b->set_a1(bond->a1());
     b->set_a2(bond->a2());
     if (bond->is_single_bond()) {
@@ -1472,7 +2090,9 @@ Reaction_Site::BuildProto(P& proto) const {
     proto.add_remove_chirality(a);
   }
 
-  // Toggle Kekule Form?
+  if (_toggle_kekule_form.active()) {
+    _toggle_kekule_form.BuildProto(*proto.mutable_toggle_kekule_form());
+  }
 
   if (_ignore_multiple_matches_involving_atoms_not_changing) {
     proto.set_ignore_multiple_matches_involving_atoms_not_changing(true);
@@ -1509,7 +2129,53 @@ Sidechain_Reaction_Site::BuildProto(ReactionProto::SidechainReactionSite& proto)
 
   for (Molecule_and_Embedding* r : _reagents) {
     const IWString& s = r->smiles();
-    proto.add_reagent(s.data(), s.size());
+    if (r->name().empty()) {
+      proto.add_reagent(s.data(), s.size());
+    } else {
+      IWString tmp(s);
+      tmp << ' ' << r->name();
+      proto.add_reagent(tmp.data(), tmp.size());
+    }
+  }
+
+  Reaction_Site::BuildProto(proto);
+
+  if (! _match_conditions.IsDefault()) {
+    _match_conditions.BuildProto(*proto.mutable_match_conditions());
+  }
+
+  return 1;
+}
+
+int
+Sidechain_Match_Conditions::BuildProto(ReactionProto::SidechainMatchConditions& proto) const {
+  Match_Conditions::BuildProto(proto);
+
+  if (_make_new_reagent_for_each_hit) {
+    proto.set_make_new_reagent_for_each_hit(_make_new_reagent_for_each_hit);
+  }
+
+  if (_strip_reagents_to_largest_fragment) {
+    proto.set_strip_reagents_to_largest_fragment(true);
+  }
+
+  if (_make_new_reagent_for_each_hit) {
+    proto.set_make_new_reagent_for_each_hit(true);
+  }
+
+  return 1;
+}
+
+int
+Scaffold_Match_Conditions::BuildProto(ReactionProto::ScaffoldMatchConditions& proto) const {
+  Match_Conditions::BuildProto(proto);
+
+  if (_combinatorial_expansion_of_scaffold_hits) {
+    proto.set_combinatorial_expansion_of_scaffold_hits(_combinatorial_expansion_of_scaffold_hits);
+  }
+
+  if (_enumerate_scaffold_hits_individually) {
+    proto.set_enumerate_scaffold_hits_individually(true);
   }
 
   return 1;
@@ -1518,6 +2184,7 @@ Sidechain_Reaction_Site::BuildProto(ReactionProto::SidechainReactionSite& proto)
 int
 Inter_Particle_Bond::BuildProto(ReactionProto::InterParticleBond& proto) const {
   if (_bt == SINGLE_BOND) {
+    proto.set_btype(SubstructureSearch::SS_SINGLE_BOND);
   } else if (_bt == DOUBLE_BOND) {
     proto.set_btype(SubstructureSearch::SS_DOUBLE_BOND);
   } else if (_bt == TRIPLE_BOND) {
@@ -1557,7 +2224,31 @@ Reaction_Increment_Isotope::BuildProto(ReactionProto::IncrementIsotope& proto) c
     proto.add_atom(a);
   }
 
-  proto.set_delta(_isotope);
+  if (_multiply > 0) {
+    proto.set_multiply(_multiply);
+  }
+  if (_isotope != 0) {
+    proto.set_delta(_isotope);
+  }
+  if (_integer_divide > 0) {
+    proto.set_integer_divide(_integer_divide);
+  }
+  if (_modulo > 0) {
+    proto.set_modulo(_modulo);
+  }
+
+  if (! _only_change_if.is_set())  {
+  } else if (_only_change_if.empty()) {  // must be min and max
+    isotope_t tmp = 0;
+    _only_change_if.min(tmp);
+    proto.mutable_only_change_if()->mutable_range()->set_min(tmp);
+    _only_change_if.max(tmp);
+    proto.mutable_only_change_if()->mutable_range()->set_max(tmp);
+  } else {
+    for (int a : _only_change_if.ValuesMatched()) {
+      proto.mutable_only_change_if()->mutable_values()->mutable_values()->Add(a);
+    }
+  }
 
   return 1;
 }
@@ -1583,5 +2274,49 @@ Replace_Atom::BuildProto(ReactionProto::ReplaceAtom& proto) const {
 
   proto.set_a2(_a2.atom());
 
+  if (_invert_chirality) {
+    proto.set_invert_chirality(true);
+  }
+
+  return 1;
+}
+
+int
+CopyIsotope::ConstructFromProto(const ReactionProto::CopyIsotopeData& proto,
+                                int component) {
+  if (! proto.has_from() && ! proto.has_cfrom())
+    return WriteError("CopyIsotope::ConstructFromProto:no from1/cfrom", proto);
+  if (! proto.has_to() && ! proto.has_cto())
+    return WriteError("CopyIsotope::ConstructFromProto:no from2/cto", proto);
+
+  // cerr << "CopyIsotope::ConstructFromProto component " << component << '\n';
+  if (proto.has_from()) {
+    _from.set_matched_atom(proto.from());
+    _from.set_in_component(component);
+  } else if (proto.has_cfrom()) {
+    if (! _from.ConstructFromProto(proto.cfrom()))
+      return WriteError("Inter_Particle_Bond::ConstructFromProto:invalid cfrom", proto);
+  }
+
+  if (proto.has_to()) {
+    _to.set_matched_atom(proto.to());
+    _to.set_in_component(component);
+  } else if (proto.has_cto()) {
+    if (! _to.ConstructFromProto(proto.cto()))
+      return WriteError("CopyIsotope::ConstructFromProto:invalid cto", proto);
+  }
+
+  if (_from.in_component() == _to.in_component() && _from.atom() == _to.atom()) {
+    cerr << "CopyIsotope::ConstructFromProto:from and to identical\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+CopyIsotope::BuildProto(ReactionProto::CopyIsotopeData& proto) const {
+  cerr << "CopyIsotopeData::BuildProto:not implemented, see Ian\n";
   return 1;
 }

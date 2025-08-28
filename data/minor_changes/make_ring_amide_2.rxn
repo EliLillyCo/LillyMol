@@ -1,0 +1,39 @@
+scaffold {
+  id: 0
+  smarts: "[/IWfss1cD3](-[NR0]C(=O)):[cD2]"
+  remove_atom: 3
+  change_element {
+    atom: 1
+    element: "N"
+  }
+  isotope {
+    atom: 0
+    isotope: 1
+  }
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+  make_bond {
+    a1: 1
+    a2: 2
+    btype: SS_DOUBLE_BOND
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C=C"
+  smarts: "C=C"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+
+  join {
+    a1: 2
+    a2: 0
+  }
+  join {
+    a1: 4
+    a2: 1
+  }
+}

@@ -1,10 +1,14 @@
+// This is a dreadful mess with the relationship with this code and Foundational/iwmisc.
+// That needs to be transformed into a proper class. This current state is a step along
+// that path, but it is not a good state.
+
 #include <stdint.h>
 #include <stdlib.h>
 
 #include <iostream>
+#include <optional>
 
 using std::cerr;
-using std::endl;
 
 #include <assert.h>
 #include <ctype.h>
@@ -15,7 +19,17 @@ using std::endl;
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/minmaxspc.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/normalisation.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
+
+#include "Utilities/General/linear_scaling.h"
+
+#ifdef BUILD_BAZEL
+#include "Foundational/iwmisc/normalisation.pb.h"
+#else
+#include "Foundational/iwmisc/normalisation.pb.h"
+#endif
 
 const char* prog_name = nullptr;
 
@@ -89,6 +103,14 @@ static int suppress_zero_variance_columns = 1;
 static int categorical_variables_possibly_present = 0;
 static extending_resizable_array<int> categorical_variables_found_in_column;
 
+// By default, we put the name of the file from which our information was
+// derived in the -C file. But that can be problematic for testing, so make
+// that optional.
+static int write_source_file = 1;
+
+// Values read from a -U file. Likely created by iwstats.
+static linear_scaling::LinearScaling linear_scaling_fn;
+
 /*
   Nov 2006
   I have descriptor files where the first column is the ID,
@@ -97,9 +119,12 @@ static extending_resizable_array<int> categorical_variables_found_in_column;
 
   We apply one kind of scaling to the response (column 2) and
   another to the rest.
+
+  THis code needs to be restructured...
 */
 
-class NColumn : private Accumulator<double> {
+#ifdef NOW_IN_HEADER_FILE_JJJ
+class NColumn : public Accumulator<double> {
  private:
   IWString _descriptor_name;
 
@@ -150,8 +175,6 @@ class NColumn : private Accumulator<double> {
     return Accumulator<double>::n();
   }
 
-  void extra(double f);
-
   void
   extra_missing_value() {
     _missing_values_encountered++;
@@ -167,8 +190,6 @@ class NColumn : private Accumulator<double> {
 
   int write_scaling_information(int col, IWString_and_File_Descriptor& output) const;
 };
-
-static NColumn* column = nullptr;
 
 NColumn::NColumn() {
   _skip = 0;
@@ -256,13 +277,6 @@ NColumn::write_scaling_information(int col, IWString_and_File_Descriptor& output
   return 1;
 }
 
-void
-NColumn::extra(double f) {
-  Accumulator<double>::extra(f);
-
-  return;
-}
-
 int
 NColumn::establish_ranges() {
   if (0 == _n) {
@@ -297,16 +311,6 @@ NColumn::establish_ranges() {
   _skip = 0;
 
   return 1;
-}
-
-template <typename S1, typename S2>
-int
-do_nextword(const S1& buffer, int& i, S2& token) {
-  if (' ' != input_separator) {
-    return buffer.nextword_single_delimiter(token, i, input_separator);
-  } else {
-    return buffer.nextword(token, i);
-  }
 }
 
 int
@@ -379,7 +383,7 @@ NColumn::scale(double f, double& rc) const {
     //  if (rc < 0.0)
     //    cerr <<"Negative value from " << f << " _minval " << _minval << " _maxval " <<
     //    _maxval << ", got " << rc << " truncate_low_values " << truncate_low_values <<
-    //    endl;
+    //    '\n';
   } else if (NRML_UNIT_VARIANCE == scaling_type) {
     rc = range_min + (f - _average) / _variance * (range_max - range_min);
   } else if (NRML_MEAN_CENTER == scaling_type) {
@@ -392,7 +396,7 @@ NColumn::scale(double f, double& rc) const {
     }
     rc = static_cast<int>((f - _minval) / (_maxval - _minval) * 255.0 + 0.49999);
   } else {
-    cerr << "NColumn::scale: what kind of scaling " << scaling_type << endl;
+    cerr << "NColumn::scale: what kind of scaling " << scaling_type << '\n';
     abort();
   }
 
@@ -416,11 +420,11 @@ NColumn::unscale(double f, double& rc) const {
         if (_descriptor_name.length() > 0) {
           cerr << ' ' << _descriptor_name;
         }
-        cerr << endl;
+        cerr << '\n';
       }
 
       //    cerr << "low " << truncate_low_values << " high " << truncate_high_values << "
-      //    " << (truncate_low_values && f < range_min) << endl;
+      //    " << (truncate_low_values && f < range_min) << '\n';
 
       if (truncate_low_values && f < range_min) {
         f = range_min;
@@ -432,7 +436,7 @@ NColumn::unscale(double f, double& rc) const {
         return 0;
       }
 
-      //    cerr << "Truncated to " << f << endl;
+      //    cerr << "Truncated to " << f << '\n';
 
       rc = _minval + (f - range_min) / (range_max - range_min) * (_maxval - _minval);
     }
@@ -443,7 +447,7 @@ NColumn::unscale(double f, double& rc) const {
   } else if (NRML_0255 == scaling_type) {
     rc = _minval + (f - range_min) / (range_max - range_min) * (_maxval - _minval);
   } else {
-    cerr << "NColumn::unscale: what kind of scaling " << scaling_type << endl;
+    cerr << "NColumn::unscale: what kind of scaling " << scaling_type << '\n';
     abort();
   }
 
@@ -453,6 +457,7 @@ NColumn::unscale(double f, double& rc) const {
 
   return 1;
 }
+#endif  // NOW_IN_HEADER_FILE_JJJ
 
 /*
   Tokens are read in
@@ -532,11 +537,26 @@ initialise_ranges_for_scaling() {
     range_max = 255.0;
   } else {
     cerr << "initialise_ranges_for_scaling:what kind of scaling is this " << scaling_type
-         << endl;
+         << '\n';
     return 0;
   }
 
+  NColumn_set_range_min(range_min);
+  NColumn_set_range_max(range_max);
+
   return 1;
+}
+
+static NColumn* column = nullptr;
+
+template <typename S1, typename S2>
+int
+do_nextword(const S1& buffer, int& i, S2& token) {
+  if (' ' != input_separator) {
+    return buffer.nextword_single_delimiter(token, i, input_separator);
+  } else {
+    return buffer.nextword(token, i);
+  }
 }
 
 static int
@@ -619,7 +639,7 @@ read_record(iwstring_data_source& input, Data_Item* d, int& fatal) {
 
   if (nw != columns_in_input) {
     cerr << "Column count mismatch, found " << nw << " expected " << columns_in_input
-         << endl;
+         << '\n';
     fatal = 1;
     return 0;
   }
@@ -632,7 +652,7 @@ read_record(iwstring_data_source& input, Data_Item* d, int& fatal) {
     Data_Item& di = d[col];
 
     //  cerr << "Reading column " << col << " skip = " << column[col].skip() << " i = " <<
-    //  i << endl;
+    //  i << '\n';
 
     if (column[col].skip()) {
       di.set_text_rep(token);
@@ -653,6 +673,7 @@ read_record(iwstring_data_source& input, Data_Item* d, int& fatal) {
 
   return 1;
 }
+
 
 static int
 do_write_record(const const_IWSubstring& buffer, IWString_and_File_Descriptor& output) {
@@ -764,7 +785,7 @@ read_scaling_file(iwstring_data_source& input, IW_STL_Hash_Map_String& xref) {
     } else if (buffer.starts_with("#UMAX")) {
       buffer.remove_leading_words(1);
       if (!buffer.numeric_value(user_specified_range_max_value)) {
-        cerr << "read_scaling_file:invalid UMAX directive " << buffer << endl;
+        cerr << "read_scaling_file:invalid UMAX directive " << buffer << '\n';
         return 0;
       }
       user_specified_range_max = 1;
@@ -772,10 +793,28 @@ read_scaling_file(iwstring_data_source& input, IW_STL_Hash_Map_String& xref) {
     } else if (buffer.starts_with("#OFFSET")) {
       buffer.remove_leading_words(1);
       if (!buffer.numeric_value(constant_offset)) {
-        cerr << "read_scaling_file:invalid OFFSET directive " << buffer << endl;
+        cerr << "read_scaling_file:invalid OFFSET directive " << buffer << '\n';
         return 0;
       }
       continue;
+    }
+
+    if (buffer.starts_with("slope:")) {
+      buffer.remove_leading_words(1);
+      double tmp;
+      if (! buffer.numeric_value(tmp)) {
+        cerr << "Invalid slope: qualifier '" << buffer << "'\n";
+        return 0;
+      }
+      linear_scaling_fn.set_slope(tmp);
+    } else if (buffer.starts_with("intercept:")) {
+      buffer.remove_leading_words(1);
+      double tmp;
+      if (! buffer.numeric_value(tmp)) {
+        cerr << "Invalid intercept: qualifier '" << buffer << "'\n";
+        return 0;
+      }
+      linear_scaling_fn.set_intercept(tmp);
     }
 
     if (buffer.starts_with('#')) {
@@ -790,6 +829,8 @@ read_scaling_file(iwstring_data_source& input, IW_STL_Hash_Map_String& xref) {
       return 0;
     }
   }
+
+  NColumn_set_scaling_type(scaling_type);
 
   return xref.size();
 }
@@ -1016,6 +1057,8 @@ do_normalise(iwstring_data_source& input, IWString_and_File_Descriptor& output) 
   int records = 0;
   int fatal;
 
+  // cerr << "linear_scaling " << linear_scaling.slope << ',' << linear_scaling.intercept << '\n';
+
   while (input.good() && output.good()) {
     if (!read_record(input, d, fatal)) {
       if (fatal) {
@@ -1060,6 +1103,8 @@ do_normalise(iwstring_data_source& input, IWString_and_File_Descriptor& output) 
         output << missing_value;
         continue;
       }
+
+      linear_scaling_fn.MaybeTransform(scaled);
 
       items_read++;
       if (nearest_integer > 0.0) {
@@ -1109,9 +1154,8 @@ normalise(iwstring_data_source& input, IWString_and_File_Descriptor& output) {
 
   cerr.setf(std::ios::showpoint);
 
-  if (verbose && 0 == name_of_existing_scaling_file_to_use
-                          .length())  // we have profiled the input file
-  {
+  // we have profiled the input file
+  if (verbose && name_of_existing_scaling_file_to_use.empty()) {
     for (int i = 0; i < columns_in_input; i++) {
       NColumn& ci = column[i];
 
@@ -1153,46 +1197,88 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
-  cerr << "Normalises columns\n";
-  cerr << " -m <string>        set missing value specifier to <string>\n";
-  cerr << " -s <records>       discard <records> from the top of the file\n";
-  cerr << " -i <number>        ignore the first <number> columns in each record\n";
-  cerr << " -j                 treat as a descriptor file\n";
-  // cerr << " -O <operator>      apply operator <operator> to all values\n";
-  cerr << " -N 01              scale so data in each column is in the range [0,1] "
-          "(default)\n";
-  cerr << " -N 11              scale so data in each column is in the range [-1,1]\n";
-  cerr << " -N uv              scale so columns have unit variance\n";
-  cerr << " -N mc              scale so columns mean centered\n";
-  cerr << " -x <x>             add <x> to all values before output (not saved to -C "
-          "file)\n";
-  cerr << " -X <x>             with 01 scaling, use <x> as max value rather than 1.0\n";
-  cerr << " -p f               write output as float rather than double\n";
-  cerr << " -p <n>             output precision\n";
-  cerr << " -C <fname>         write scaling information to <fname>\n";
-  cerr << " -U <fname>         use scaling information to previously created by a -C "
-          "invocation\n";
-  cerr << " -u                 perform a reverse normalisation - convert normalised back "
-          "to un-normalised\n";
-  cerr << " -o allow           allow out of range reverse normalisations\n";
-  cerr << " -o trunc           truncate all out of range reverse normalisations\n";
-  cerr << " -o trunclow,trunchigh   truncate only low or high reverse normalisations\n";
-  cerr << " -b <sep>           input separator (tab, comma, space)\n";
-  cerr << " -q                 do not report out of range errors\n";
-  cerr << " -c                 translate all descriptor names to lowercase\n";
-  cerr << " -z                 retain zero variance columns\n";
-  cerr << " -R <float>         round output values to the nearest integer if within "
-          "<float> of that nearest int\n";
-  cerr << " -A                 categorical variables may be present - beware, may hide "
-          "erroneous input\n";
-  cerr << " -v                 verbose output\n";
+  // clang-format off
+  cerr << R"(Normalises and de-normalises columnar data.
+During normalisation, data in an arbitrary range is normalised to be within a fixed interval - usually [-1,1] or [0,1] (-N).
+During normalisation, the tool can write a normalisation file that will allow subsequent raw data to have the same operation applied.
+During de-normalisation, data is transformed from the compact range back to the range of the input data (-U).
+
+A round trip should re-create the starting file.
+
+normalise -N 01 -j -C scaling.txt file.dat > file.normalised.dat
+normalise -j -U scaling.txt file.normalised.dat > file.dat
+
+although inevitably precision will be lost.
+
+ -N 01              scale so data in each column is in the range [0,1] (default).
+ -N 11              scale so data in each column is in the range [-1,1].
+ -N uv              scale so columns have unit variance.
+ -N mc              scale so columns mean centered.
+ -C <fname>         write scaling information to <fname>.
+ -C TEXTPROTO:<fname>  write a normalisation::NormalisationS textproto.
+ -U <fname>         unscale data - use the scaling information in <fname> which was generated by 'normalise -C <fname> ...'.
+ -L <fname>         read a linear rescaling textproto written by 'iwstats -C', applies a linear correction to unscaled values.
+
+ -s <records>       discard <records> from the top of the file.
+ -i <number>        ignore the first <number> columns in each record.
+ -j                 treat as a descriptor file - one header record, first column is identifiers - same as '-s 1 -i 1'.
+ -x <x>             add <x> to all values before output (not saved to -C file).
+ -X <x>             with 01 scaling, use <x> as max value rather than 1.0.
+ -o allow           allow out of range reverse normalisations.
+ -o trunc           truncate all out of range reverse normalisations.
+ -o trunclow,trunchigh   truncate only low or high reverse normalisations.
+ -o quiet           do not report out of range errors.
+ -b <sep>           input separator (tab, comma, space).
+ -z                 retain zero variance columns - during normalisation only.
+ -R <float>         round output values to the nearest integer if within "<float> of that nearest int.
+                    can recover integer variables - 5.0 can get rescaled to 4.99999, so '-R 0.001' will recover it.
+ -m <string>        set missing value specifier to <string> (default .).
+ -M ...             miscellaneous and obscure options, enter '-M help' for info.
+ -v                 verbose output.
+)";
+  // clang-format on
 
   exit(rc);
 }
 
 static int
+WriteTextprotoScalingFile(IWString& fname, const char* input_fname) {
+  normalisation::Normalisations proto;
+  proto.set_fname(input_fname);
+
+  for (int i = initial_columns_to_skip; i < columns_in_input; i++) {
+    normalisation::Normalisation mynorm;
+    normalisation::NormalisationData* n = proto.mutable_normalisation()->Add();
+    if (scaling_type == NRML_SPREAD_ZERO) {
+      n->set_type(normalisation::NTYPE_11);
+      mynorm.SetScalingType(normalisation::NormalisationType::k11);
+    } else if (scaling_type == NRML_MIN_TO_MAX) {
+      n->set_type(normalisation::NTYPE_01);
+      mynorm.SetScalingType(normalisation::NormalisationType::k01);
+    } else if (scaling_type == NRML_UNIT_VARIANCE) {
+      n->set_type(normalisation::NTYPE_UNIT_VARIANCE);
+      mynorm.SetScalingType(normalisation::NormalisationType::kUnitVariance);
+    } else if (scaling_type == NRML_MEAN_CENTER) {
+      n->set_type(normalisation::NTYPE_ZERO_MEAN);
+      mynorm.SetScalingType(normalisation::NormalisationType::kZeroMean);
+    }
+
+    mynorm.Build(column[i]);
+    mynorm.BuildProto(*n);
+    if (!column[i].descriptor_name().empty()) {
+      const IWString& s = column[i].descriptor_name();
+      n->set_descriptor_name(s.data(), s.length());
+    }
+  }
+
+  return iwmisc::WriteTextProto<normalisation::Normalisations>(proto, fname);
+}
+
+static int
 write_scaling_file(IWString_and_File_Descriptor& output, const char* input_fname) {
-  output << "#Scaling file written by normalise, from '" << input_fname << "'\n";
+  if (write_source_file) {
+    output << "#Scaling file written by normalise, from '" << input_fname << "'\n";
+  }
   output << "#NTYPE ";
   if (scaling_type == NRML_UNIT_VARIANCE) {
     output << "UV\n";
@@ -1232,7 +1318,7 @@ write_scaling_file(IWString_and_File_Descriptor& output, const char* input_fname
 
 static int
 write_scaling_file(
-    const char* fname,
+    IWString& fname,
     const char* input_fname)  // the file from which our distribution is built
 {
   IWString_and_File_Descriptor output;
@@ -1246,8 +1332,21 @@ write_scaling_file(
 }
 
 static int
+DisplayDashMOptins(std::ostream& output) {
+  output << R"( -M float             write output as float rather than double (saves space).
+ -M precision=<n>                floating point precision in output.
+ -M lowercase           translate desctiptor names to lowercase.
+ -M categorical         categorical variables may be present. If numeric this may be problematic.
+ -M osep=<s>            output separator - default space. Character names are recognised.
+ -M nosourcefname       do NOT write the file name of the source file to the -C file - for testing.
+)";
+
+  ::exit(0);
+}
+
+static int
 normalise(int argc, char** argv) {
-  Command_Line cl(argc, argv, "O:i:s:m:vjN:p:C:U:uKo:qcb:zR:Ax:X:");
+  Command_Line cl(argc, argv, "O:i:s:m:vjN:p:C:U:uKo:qcb:zR:Ax:X:M:");
 
   verbose = cl.option_count('v');
 
@@ -1258,6 +1357,7 @@ normalise(int argc, char** argv) {
 
   if (cl.option_present('m')) {
     cl.value('m', missing_value);
+    char_name_to_char(missing_value, 0 /* no error if unrecognised */);
 
     if (verbose) {
       cerr << "Missing value '" << missing_value << "'\n";
@@ -1328,10 +1428,11 @@ normalise(int argc, char** argv) {
 
     if (verbose) {
       cerr << "Will round output values to nearest integer if within " << nearest_integer
-           << endl;
+           << '\n';
     }
   }
 
+  // Deprecated, available as -M option.
   if (cl.option_present('A')) {
     categorical_variables_possibly_present = 1;
 
@@ -1340,6 +1441,7 @@ normalise(int argc, char** argv) {
     }
   }
 
+  // Not documented, not sure why this would have been needed.
   if (cl.option_present('O')) {
     assert(1 == cl.option_count('O'));
 
@@ -1356,6 +1458,7 @@ normalise(int argc, char** argv) {
     }
   }
 
+  // Deprecated.
   if (cl.option_present('u')) {
     if (cl.option_present('C')) {
       cerr << "The -u and -C options are mutually exclusive\n";
@@ -1378,12 +1481,14 @@ normalise(int argc, char** argv) {
     for (int i = 0; cl.value('o', o, i); ++i) {
       if ("allow" == o) {
         allow_out_of_range_unscalings = 1;
+        NColumn_set_allow_out_of_range_unscalings(1);
         if (verbose) {
           cerr << "Out of range scalings will be allowed\n";
         }
       } else if ("trunc" == o) {
         truncate_low_values = 1;
         truncate_high_values = 1;
+        NColumn_set_truncate_out_of_range_unscalings(1);
         if (verbose) {
           cerr << "Out of range scalings will be truncated\n";
         }
@@ -1399,6 +1504,7 @@ normalise(int argc, char** argv) {
         }
       } else if ("quiet" == o) {
         report_out_of_range_values = 0;
+        NColumn_set_report_out_of_range_values(0);
         if (verbose) {
           cerr << "Will not report out of range errors\n";
         }
@@ -1409,6 +1515,7 @@ normalise(int argc, char** argv) {
     }
   }
 
+  // Also available as '-o quiet' but not deprecated.
   if (cl.option_present('q')) {
     report_out_of_range_values = 0;
     if (verbose) {
@@ -1416,6 +1523,7 @@ normalise(int argc, char** argv) {
     }
   }
 
+  // Deprecated, now handled with -M option.
   if (cl.option_present('c')) {
     translate_descriptor_names_to_lowercase = 1;
 
@@ -1476,7 +1584,7 @@ normalise(int argc, char** argv) {
     }
 
     if (verbose) {
-      cerr << "Range max set to " << user_specified_range_max_value << endl;
+      cerr << "Range max set to " << user_specified_range_max_value << '\n';
     }
 
     user_specified_range_max = true;
@@ -1493,6 +1601,7 @@ normalise(int argc, char** argv) {
     }
   }
 
+  // Deprecated, now handled via -M option. 
   if (cl.option_present('p')) {
     const_IWSubstring p(cl.string_value('p'));
 
@@ -1511,7 +1620,7 @@ normalise(int argc, char** argv) {
     }
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments " << argc << "\n";
     usage(3);
   }
@@ -1538,6 +1647,65 @@ normalise(int argc, char** argv) {
       cerr << "Existing distribution data in '" << name_of_existing_scaling_file_to_use
            << "'\n";
     }
+    perform_unscaling_operation = 1;
+  }
+
+  // There is actually a decision to be made about the ordering of -U and -L options.
+  // This is because the LinearScaling object can be initialised via either option.
+  if (cl.option_present('L')) {
+    IWString fname = cl.string_value('L');
+    if (! linear_scaling_fn.Build(fname)) {
+      cerr << "Cannot read linear scaling data '" << fname << "'\n";
+      return 0;
+    }
+  }
+  
+  if (cl.option_present('M')) {
+    IWString m;
+    for (int i = 0; cl.value('M', m, i); ++i) {
+      if (m == "float") {
+        write_results_as_float = 1;
+        if (verbose) {
+          cerr << "Will write results as float numbers\n";
+        }
+      } else if (m.starts_with("precision=")) {
+        m.remove_leading_chars(10);
+        if (! m.numeric_value(output_precision) || output_precision < 5) {
+          cerr << "The output precision must be a valid integer\n";
+          return 1;
+        }
+        if (verbose) {
+          cerr << "Will show " << output_precision << " digits in output\n";
+        }
+      } else if (m == "lowercase") {
+        translate_descriptor_names_to_lowercase = 1;
+        if (verbose) {
+          cerr << "Descriptor names will be translated to lowercase\n";
+        }
+      } else if (m == "categorical") {
+        categorical_variables_possibly_present = 1;
+        if (verbose) {
+          cerr << "Categorial variables may be present\n";
+        }
+      } else if (m.starts_with("osep=")) {
+        m.remove_leading_chars(5);
+        char_name_to_char(m, 0 /* no error if unrecognised */);
+        output_separator = m[0];
+        if (verbose) {
+          cerr << "Output separator '" << output_separator << '\n';
+        }
+      } else if (m == "nosourcefname") {
+        write_source_file = 0;
+        if (verbose) {
+          cerr << "Will NOT write the source file name to the -C file\n";
+        }
+      } else if (m == "help") {
+        DisplayDashMOptins(cerr);
+      } else {
+        cerr << "Unrecognised -M qualifier '" << m << "'\n";
+        DisplayDashMOptins(cerr);
+      }
+    }
   }
 
   IWString_and_File_Descriptor output(1);
@@ -1562,11 +1730,29 @@ normalise(int argc, char** argv) {
       return 2;
     }
 
-    const char* c = cl.option_value('C');
+    IWString fname;
+    IWString textproto_fname;
+    IWString c;
+    for (int i = 0; cl.value('C', c, i); ++i) {
+      if (c.starts_with("TEXTPROTO:")) {
+        c.remove_leading_chars(10);
+        textproto_fname = c;
+      } else {
+        fname = c;
+      }
+    }
 
-    if (!write_scaling_file(c, cl[0])) {
-      cerr << "Cannot create scaling information file '" << c << "'\n";
-      return 4;
+    if (! fname.empty()) {
+      if (!write_scaling_file(fname, cl[0])) {
+        cerr << "Cannot create scaling information file '" << c << "'\n";
+        return 4;
+      }
+    }
+    if (! textproto_fname.empty()) {
+      if (! WriteTextprotoScalingFile(textproto_fname, cl[0])) {
+        cerr << "Cannot write textproto scaling information file '" << textproto_fname << "'\n";
+        return 1;
+      }
     }
 
     if (verbose) {
@@ -1582,7 +1768,7 @@ normalise(int argc, char** argv) {
     for (int i = 0; i < categorical_variables_found_in_column.number_elements(); ++i) {
       if (categorical_variables_found_in_column[i]) {
         cerr << categorical_variables_found_in_column[i]
-             << " non numeric (assumed categorical) variables in column " << i << endl;
+             << " non numeric (assumed categorical) variables in column " << i << '\n';
       }
     }
   }

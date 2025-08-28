@@ -40,7 +40,11 @@
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools_Bdb/smi2rings.pb.h"
+#else
+#include "smi2rings.pb.h"
+#endif
 
 using std::cerr;
 
@@ -77,6 +81,12 @@ static int always_process_unsubstituted_ring = 0;
 static int label_ring_atoms = 0;
 
 static int label_attachment_points_with_environment = 0;
+
+// The isotope of the remaining ring atom is whatever isotopic value
+// was on the extra-ring atom.
+// Note this is ambiguous in the case of two connections to the ring,
+// so we arbitrarily choose the highest isotope.
+static int label_attachment_points_with_existing_isotope = 0;
 
 static int report_all_ring_uniqueness_measurements_looked_up = 1;
 
@@ -135,6 +145,12 @@ static Report_Progress report_progress;
 
 static IWString urs_string(" URS:");
 
+// For rings that are not found in the database, that might be because the
+// molecule contains a ring larger than what is stored in the database.
+// It can be a useful diagnostic to append the largest ring size in the
+// molecule if there is a failed lookup.
+static int append_largest_ring_size_if_no_match = 0;
+
 //  A count of the number of times a ring system with a given number of
 //  component rings is found
 
@@ -175,6 +191,9 @@ static int smiles_and_textproto = 0;
 static int full_proto_output = 0;
 
 static IWString_and_File_Descriptor stream_for_missing_ring_systems;
+
+// Why not build a database using the scaffold rather than ring systems.
+static int use_scaffolds = 0;
 
 // The programme attempts to re-use code for both the store
 // and lookup tasks as common as possible.
@@ -303,8 +322,9 @@ usage(int rc) {
 // clang-format on
 // clang-format off
   cerr << R"(Identifies rings and ring systems. Stores or retrieves by unique smiles of the ring.
-Data is stored in a BerkeleyDb database with key unique smiles and value a textproto
-Smi2Rings::Ring proto.
+Data is stored in a BerkeleyDb database with key unique smiles and value a Smi2Rings.Ring textproto
+describing the ring system, including parent structure and number of instances.
+Usage:
 smi2rings_bdb -d dbname -d STORE|LOOKUP <options> file.smi
   -j ...         options for adding atoms to rings, enter '-j help' for info
   -N add         add non-ring connection to positive aromatic nitrogen
@@ -323,7 +343,6 @@ smi2rings_bdb -d dbname -d STORE|LOOKUP <options> file.smi
   -f <cutoff>    function as filter (lookup), discard molecules below <cutoff> URS
                  -f file=<fname> to write rejected molecules to <fname>
   -S <query>     one or more queries for functional groups. Typically single atom ring substituents
-  -r <number>    report progress every <number> molecules processed
   -a             only report rarest in lookups
   -e             discard rings where the ring is the entire molecule
   -c             remove all chiral centres
@@ -457,12 +476,12 @@ PerMoleculeData::PerMoleculeData(Molecule& mol) : m(mol) {
     ring_system_size = new int[m.nrings()];
   }
 
-  if (m.number_isotopic_atoms() > 0) {
-    starting_isotopes = m.GetIsotopes();
-    m.transform_to_non_isotopic_form();
-  }
-
   xref.reset(new int[matoms]);
+
+  // Original version had isotopic atoms saved here, but that breaks the
+  // case of the atom typing including the isotopic label.
+  // So isotopes in the incoming molecule are saved and removed in
+  // AssignAtomTypes.
 }
 
 PerMoleculeData::~PerMoleculeData() {
@@ -483,7 +502,14 @@ PerMoleculeData::~PerMoleculeData() {
 int
 PerMoleculeData::AssignAtomTypes(Atom_Typing_Specification& atom_typing) {
   atype = new uint32_t[m.natoms()];
-  return atom_typing.assign_atom_types(m, atype);
+  const int rc = atom_typing.assign_atom_types(m, atype);
+
+  if (m.number_isotopic_atoms() > 0) {
+    starting_isotopes = m.GetIsotopes();
+    m.transform_to_non_isotopic_form();
+  }
+
+  return rc;
 }
 
 int
@@ -495,18 +521,23 @@ PerMoleculeData::MaybeRevertInitialIsotopes(Molecule& m) {
   return m.set_isotopes(starting_isotopes.get());
 }
 
+// Modified to also detect S+ and O+
+// C12=C(ON=C1OC)CC[S+](C)C2 CHEMBL278618
 int
 PerMoleculeData::IdentifyThreeConnectedAromaticSulphur(Molecule& m) {
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; ++i) {
+    if (m.ring_bond_count(i) == 0) {
+      continue;
+    }
+
     const Atom& a = m[i];
-    if (a.atomic_number() != 16) {
-      continue;
-    }
-    if (a.ncon() != 3) {
-      continue;
-    }
-    if (! m.is_aromatic(i)) {
+
+    if (a.formal_charge() == 1 &&
+        (a.atomic_number() == 8 || a.atomic_number() == 16)) {
+    } else if (a.atomic_number() == 16 && a.ncon() == 3 &&
+               m.is_aromatic(i)) {
+    } else {
       continue;
     }
 
@@ -646,12 +677,12 @@ do_write_non_ring_atoms(Molecule& m, int* in_system,
 static void
 WriteSmiles(Molecule& m, IWString_and_File_Descriptor& output) {
   if (write_3d_smiles_if_needed && m.highest_coordinate_dimensionality() == 3) {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
   }
 
   output << m.smiles();
 
-  set_append_coordinates_after_each_atom(0);
+  lillymol::set_include_coordinates_with_smiles(0);
 }
 
 static int
@@ -788,6 +819,43 @@ compute_environment_isotope(Molecule& m, atom_number_t zatom, const Bond* b) {
   }
 
   return 33;  // huh, what is this?
+}
+
+static int
+do_label_attachment_points_with_existing_isotope(Molecule& m, const int* in_system,
+                int uid ) {
+  m.transform_to_non_isotopic_form();
+
+  const int matoms = m.natoms();
+
+  for (int i = 0; i < matoms; ++i) {
+    if (uid != in_system[i]) {
+      continue;
+    }
+
+    const Atom& a = m[i];
+
+    if (2 == a.ncon()) {
+      continue;
+    }
+
+    isotope_t to_assign = 0;
+    for (const Bond* b : a) {
+      atom_number_t k = b->other(i);
+
+      if (uid == in_system[k]) {
+        continue;
+      }
+
+      if (isotope_t iso = m.isotope(k); iso > to_assign) {
+        to_assign = iso;
+      }
+    }
+
+    m.set_isotope(i, to_assign);
+  }
+
+  return 1;
 }
 
 static int
@@ -1174,6 +1242,29 @@ assign_atoms_to_ring_system(Molecule& m, Ring_System_Info& rsi, int zring,
   return rsi.keep_this_ring_system();
 }
 
+// For atoms that are part of the scaffold, set their `in_system` value to 0,
+// other atoms get -1 - they probably have this value already due to defaults in PerMoleculeData
+static int
+assign_atoms_to_scaffold(Molecule& m, int* in_system, int* ring_system_size) {
+  const int matoms = m.natoms();
+
+  std::unique_ptr<int[]> spinach = std::make_unique<int[]>(matoms);
+  m.identify_spinach(spinach.get());
+
+  for (int i = 0; i < matoms; ++i) {
+    if (spinach[i] == 0) {
+      in_system[i] = 0;
+    } else if (in_system[i] >= 0) {
+    } else {
+      in_system[i] = -1;
+    }
+  }
+
+  ring_system_size[0] = m.nrings();
+
+  return 1;  // One "ring system" found
+}
+
 static int
 assign_atoms_to_ring_systems(Molecule& m, int* in_system, int* ring_system_size) {
   int matoms = m.natoms();
@@ -1237,7 +1328,7 @@ MaybeWriteNotFoundRings(Molecule& m,
   return 1;
 }
 
-//#define DEBUG_DO_DATABASE_LOOKUP
+// #define DEBUG_DO_DATABASE_LOOKUP
 
 static int
 do_database_lookup_multiple_dbs(Molecule& m,
@@ -1379,6 +1470,18 @@ DoLookups(Molecule& m, int ring_number, PerMoleculeData& mdata,
 
     m.transform_to_non_isotopic_form();
   }
+  if (label_attachment_points_with_existing_isotope) {
+    do_label_attachment_points_with_existing_isotope(m, mdata.in_system, ring_number);
+    if (write_rings) {
+      write_ring(m, mdata, ring_number, output);
+    }
+
+    if (do_database_lookup(m, mdata, ring_number, databases)) {
+      return 1;
+    }
+
+    m.transform_to_non_isotopic_form();
+  }
 
   if (label_attachment_points) {
     do_label_attachment_points(m, mdata.in_system, ring_number);
@@ -1485,6 +1588,9 @@ StoreInHash(Molecule& m,
 
   return 1;
 }
+
+// #define DEBUG_STORE
+
 static int
 DoDatabaseStore(Molecule& m, PerMoleculeData& mdata, int uid,
                 std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
@@ -1678,6 +1784,12 @@ PerMoleculeData::MaybeAddOutsideRingAtoms(Molecule& m,
   return AddExtraRingSingleBondedNeighgours(m, ring_system_number);
 }
 
+static int
+LargestRing(Molecule& m) {
+  const Ring* r = m.ringi(m.nrings() - 1);
+
+  return r->number_elements();
+}
 
 static int
 smi2rings(Molecule& m, PerMoleculeData& mdata,
@@ -1686,7 +1798,12 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   const int matoms = m.natoms();
 
   // The number of ring systems.
-  const int n = assign_atoms_to_ring_systems(m, mdata.in_system, mdata.ring_system_size);
+  int n;
+  if (use_scaffolds) {
+     n = assign_atoms_to_scaffold(m, mdata.in_system, mdata.ring_system_size);
+  } else {
+     n = assign_atoms_to_ring_systems(m, mdata.in_system, mdata.ring_system_size);
+  }
 
   for (int i = 0; i < n; i++) {
     mdata.rsu[i].set_uid(i);
@@ -1771,6 +1888,9 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   tmp << urs_string << mdata.rsu[0].uniqueness_measure();
   if (0 == mdata.rsu[0].uniqueness_measure()) {
     tmp << " .";
+    if (append_largest_ring_size_if_no_match) {
+      tmp << ' ' << LargestRing(m);
+    }
   } else {
     tmp << ' ' << mdata.rsu[0].name_from_database();
   }
@@ -1805,17 +1925,6 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
     IWString name(m.name());
     name << urs_string << mdata.rsu[0].uniqueness_measure();
     m.set_name(name);
-#ifdef OLD_VERSION_THAT_IS_NOT_VERY_USEFUL
-    for (int i = 0; i < n; i++) {
-      const int u = mdata.rsu[i].uid();
-
-      for (int j = 0; j < matoms; j++) {
-        if (u == mdata.in_system[j]) {
-          m.set_isotope(j, i + 1);
-        }
-      }
-    }
-#endif
   }
 
   WriteSmiles(m, output);
@@ -1856,8 +1965,9 @@ PerMoleculeData::IdentifyPositiveAromaticNitrogen(Molecule& m) {
 }
 
 
-//  Create the unique smiles for a given subset of the molecule
+// #define DEBUG_SUBSET_CREATION
 
+//  Create the unique smiles for a given subset `uid` of the molecule.
 int
 PerMoleculeData::CreateSubset(Molecule& m, int uid,
                 IWString& unique_smiles) const {
@@ -1865,16 +1975,18 @@ PerMoleculeData::CreateSubset(Molecule& m, int uid,
 
   m.create_subset(tmp, in_system, uid, xref.get());
 
-  int matoms = tmp.natoms();
-  for (int i = 0; i < matoms; i++) {
+  // We could be more precise about this - change just the atoms
+  // that have changed bonding.
+  // O[C@@H]1C[C@H]2[N+](C)(C)[C@@H](C1)[C@H]1[C@@H]2O1 CHEMBL3706465
+  const int matoms = tmp.natoms();
+  for (int i = 0; i < matoms; ++i) {
     tmp.set_implicit_hydrogens_known(i, 0);
-
-    if (0 == tmp.isotope(i)) {
-      continue;
-    }
-
-    tmp.recompute_implicit_hydrogens(i);
   }
+
+  //cerr << tmp.unique_smiles() << " after formation\n";
+  //tmp.invalidate_smiles();
+  tmp.recompute_implicit_hydrogens();
+  //cerr << tmp.unique_smiles() << " after implicit H " << m.valence_ok() << '\n';
 
   for (atom_number_t s : aromatic_sulphur) {
     if (xref[s] >= 0) {
@@ -1882,7 +1994,6 @@ PerMoleculeData::CreateSubset(Molecule& m, int uid,
     }
   }
 
-// #define DEBUG_SUBSET_CREATION
 #ifdef DEBUG_SUBSET_CREATION
   tmp.debug_print(cerr);
   cerr << "Smiles for subset '" << tmp.smiles() << "' unique '";
@@ -1894,11 +2005,11 @@ PerMoleculeData::CreateSubset(Molecule& m, int uid,
   }
 
   if (write_3d_smiles_if_needed && tmp.highest_coordinate_dimensionality() == 3) {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
   }
 
   unique_smiles = tmp.unique_smiles();
-  set_append_coordinates_after_each_atom(0);
+  lillymol::set_include_coordinates_with_smiles(0);
 
   return 1;
 }
@@ -2040,9 +2151,13 @@ static int
 smi2rings(Molecule& m,
           std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
           IWString_and_File_Descriptor& output) {
-  if (report_progress()) {
+  if (! report_progress()) {
+  } else if (store_in_database) {
     cerr << "Read " << molecules_read << " molecules, found " << new_ring_systems_stored
          << " new ring systems\n";
+  } else {
+    cerr << "Read " << molecules_read << ", " << exemplar_count[0] << 
+            " unique ring systems found\n";
   }
 
   if (write_parent_structure || write_non_ring_atoms) {
@@ -2090,11 +2205,11 @@ Preprocess(Molecule& m) {
     (void)chemical_standardisation.process(m);
   }
 
+  m.revert_all_directional_bonds_to_non_directional();
+
   if (remove_all_chiral_centres) {
     m.remove_all_chiral_centres();
   }
-
-  m.revert_all_directional_bonds_to_non_directional();
 
   return;
 }
@@ -2117,6 +2232,7 @@ smi2rings(data_source_and_type<Molecule>& input,
 
     output.write_if_buffer_holds_more_than(16384);
   }
+  cerr << "Reading complete\n";
 
   return output.good();
 }
@@ -2165,6 +2281,7 @@ DoStore(const IWString& usmi,
 static int
 WriteHash(absl::flat_hash_map<IWString, Smi2Rings::Ring>& dbhash,
           Db* database) {
+  cerr << "Writing hash\n";
   for (const auto& [usmi, proto] : dbhash) {
     DoStore(usmi, proto, *database);
   }
@@ -2177,16 +2294,17 @@ display_dash_j_options(std::ostream& os) {
   // clang-format off
   os << R"(
  -j double      add doubly bonded neighbours to rings - always do this.
- -j all         add all singly bonded neighbours to rings
- -j fg          add only singly bonded functional groups to rings
- -j unsat       add all atoms bonded to an unsaturated neighbour
- -j spiro       include spiro fusions in ring systems
- -j safg        include all single atom functional groups, CH3, NH2, OH, F etc
- -j iso         isotopically label the attachment points
- -j isocon      isotope number is number of outside-system attachments
- -j env         isotope number reflects environment of attachment
-                use '-j env=UST:achry' to specify an atom type for the env
- -j ring        always process the bare ring - in addition to isotopic forms
+ -j all         add all singly bonded neighbours to rings.
+ -j fg          add only singly bonded functional groups to rings.
+ -j unsat       add all atoms bonded to an unsaturated neighbour.
+ -j spiro       include spiro fusions in ring systems.
+ -j safg        include all single atom functional groups, CH3, NH2, OH, F etc.
+ -j iso         isotopically label the attachment points.
+ -j isocon      isotope number is number of outside-system attachments.
+ -j env         isotope number reflects environment of attachment.
+ -j isoatt      isotope number is the highest isotope of attached atoms.
+                use '-j env=UST:achry' to specify an atom type for the env.
+ -j ring        always process the bare ring - in addition to isotopic forms.
 When building a database (-d STORE) use all of '-j ring', '-j iso' and '-j env'.
 When doing lookups use one or more of them.
 )";
@@ -2198,11 +2316,16 @@ When doing lookups use one or more of them.
 static void
 DisplayDashYOptions(std::ostream& output) {
   // clang-format off
-  cerr << R"( -Y smi3d        write 3D smiles when 3D information present
- -Y smiproto     write smiles, id followed by textproto output
- -Y proto        write as Smi2Rings::Results textproto
- -Y writemissing=<fname> during lookup write any missing rings to <fname>.smi
- -Y hash         when storing, hash all results and write database at end (recommended)
+  cerr << R"( -Y smi3d        write 3D smiles when 3D information present.
+ -Y smiproto     write smiles, id followed by textproto output.
+ -Y proto        write as Smi2Rings::Results textproto.
+ -Y writemissing=<fname> during lookup write any missing rings to <fname>.smi.
+ -Y hash         when storing, hash all results and write database at end (recommended).
+ -Y rpt=<n>      when storing, report progress every <n> molecules processed.
+ -Y applarge     if a molecule has a ring not in the database, also write the size of the largest ring.
+                 Quite possible that the ring is larger than what is in the database.
+                 Adds an extra token to the output 'smiles id URS: 0 12' for example.
+ -Y scaffold     Store and lookup by scaffold instead of ring systems.
 )";
   // clang-format on
 
@@ -2211,7 +2334,7 @@ DisplayDashYOptions(std::ostream& output) {
 
 static int
 smi2rings(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:T:i:d:j:D:g:nN:s:R:f:z:S:r:p:U:uycCaeY:");
+  Command_Line cl(argc, argv, "vE:A:T:i:d:j:D:g:nN:s:R:f:z:S:p:U:uycCaeY:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -2227,13 +2350,6 @@ smi2rings(int argc, char** argv) {
   if (!process_standard_aromaticity_options(cl, verbose)) {
     cerr << "Cannot process aromaticity options (-A)\n";
     usage(5);
-  }
-
-  if (cl.option_present('r')) {
-    if (!report_progress.initialise(cl, 'r', verbose)) {
-      cerr << "The report progress option (-r) must be whole positive number\n";
-      usage(5);
-    }
   }
 
   if (cl.option_present('U')) {
@@ -2313,6 +2429,11 @@ smi2rings(int argc, char** argv) {
         label_attachment_points_with_environment = 1;
         if (verbose) {
           cerr << "isotopic labels will reflect environment\n";
+        }
+      } else if (j == "isoatt") {
+        label_attachment_points_with_existing_isotope = 1;
+        if (verbose) {
+          cerr << "Isotopic labels are the isotope of the attached atom\n";
         }
       } else if (j.starts_with("env=")) {
         j.remove_leading_chars(4);
@@ -2557,7 +2678,7 @@ smi2rings(int argc, char** argv) {
       if (f.starts_with("file=") || f.starts_with("FILE=")) {
         f.remove_leading_chars(5);
         fname = f;
-      } else if (!cl.value('f', min_urs_needed) || min_urs_needed < 0) {
+      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 1) {
         cerr << "The filter option requires a whole non-negative cutoff (-f)\n";
         usage(2);
       }
@@ -2628,6 +2749,26 @@ smi2rings(int argc, char** argv) {
         hash_store = 1;
         if (verbose) {
           cerr << "Will cache rings and flush at the end\n";
+        }
+      } else if (y == "applarge") {
+        append_largest_ring_size_if_no_match = 1;
+        if (verbose) {
+          cerr << "For molecules with missing rings, append size of largest ring\n";
+        }
+      } else if (y.starts_with("rpt=")) {
+        uint32_t rpt;
+        if (! y.numeric_value(rpt) || rpt == 0) {
+          cerr << "Invalid report progress directive '" << y << "'\n";
+          return 1;
+        }
+        report_progress.set_report_every(rpt);
+        if (verbose) {
+          cerr << "Will report progress every " << rpt << " molecules processed\n";
+        }
+      } else if (y == "scaffold") {
+        use_scaffolds = 1;
+        if (verbose) {
+          cerr << "Will store and lookup scaffolds\n";
         }
       } else if (y == "help") {
         DisplayDashYOptions(cerr);
@@ -2716,6 +2857,7 @@ smi2rings(int argc, char** argv) {
       cerr << "Exemplar count values btw " << acc_exemplar.minval() << " and "
            << acc_exemplar.maxval() << " average "
            << static_cast<float>(acc_exemplar.average()) << "\n";
+      cerr << "Note examplar counts are truncated at " << max_exemplar_count << '\n';
       for (int i = 0; i < exemplar_count.number_elements(); ++i) {
         if (exemplar_count[i]) {
           cerr << exemplar_count[i] << " rings had exemplar count " << i << '\n';

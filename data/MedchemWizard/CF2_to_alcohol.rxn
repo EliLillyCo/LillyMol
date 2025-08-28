@@ -1,0 +1,19 @@
+name: "CF2 to Alcohol"
+scaffold {
+  id: 0
+  smarts: "F-[CD3](F)-*"
+  remove_atom: [0, 1, 2]
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  smarts: "O"
+  join {
+    a1: 3
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

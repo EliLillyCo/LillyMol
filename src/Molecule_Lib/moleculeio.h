@@ -49,6 +49,22 @@ off_t seek_to_from_command_line();
 off_t max_offset_from_command_line();
 void set_max_offset_from_command_line(off_t);
 
+// If there is a need to temporarily turn off these global seettings,
+// UnsetSeekMax returns this structure and sets both values back
+// to their defaults.
+// The values in the returned struct can then be used to re-enable.
+// This was introduced to support trxn_parallel.
+// Better might be to think about something like file names being
+// annotated
+//   /path/to/file,seek=123,stop=456
+struct SeekAndMax {
+  off_t seek_to;
+  off_t max_offset;
+};
+
+SeekAndMax
+UnsetSeekMax();
+
 void set_discern_cis_trans_bonds(int);
 int discern_cis_trans_bonds();
 void set_discern_chirality_from_3d_coordinates(int);

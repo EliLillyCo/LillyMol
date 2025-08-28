@@ -1,0 +1,44 @@
+{
+  "executable": "make_these_molecules",
+  "difftool": "same_structures",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "-E autocreate -R #{indir}/amideFormation.rxn -A D -z i -z f -l -v -M #{indir}/amine_acid.lbl -S ./amide_mtm.smi #{indir}/amineFilterRule.smi #{indir}/acidFilterRule.smi" ],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "-W _ -s -E autocreate -R #{indir}/carboxamideSynthesis.rxn -A D -v -z i -z f -M #{indir}/10_correct_carboxamideSynthesis_opsl_rscrs.lbl #{indir}/10_amineFilterRule_carboxamideSynthesis_opsl.unique.smi #{indir}/co.unique.smi #{indir}/arylHalideFilterRule_carboxamideSynthesis_opsl.unique.smi" ],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_3",
+          "args": [ "-E autocreate -R #{indir}/X.X.X_Amine_DMT_reaction_FROM_amines_AND_DMT.rxn -A D -z i -z f -l -v -M #{indir}/amine.lbl #{indir}/amineFilterRule.smi" ],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_4",
+          "args": [ "-E autocreate -R #{indir}/4.3.9_Benzothiazole_synthesis_FROM_amines_aromatic_primary_AND_o_amino_thiophenols.rxn -A D -z i -z f -l -v -s -M #{indir}/id.lbl #{indir}/scaffold.smi #{indir}/sidechain1.smi" ],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_5",
+          "args": [ "-E autocreate -R #{indir}/amideFormation.rxn -R #{indir}/amideFormation.rxn -A D -z i -z f -l -v -M #{indir}/amine_aminoacid_acid.lbl #{indir}/amineFilterRule.smi #{indir}/enamineaminoacids.smi #{indir}/acidFilterRule.smi" ],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_6",
+          "args": [ " -E autocreate -A D -z i -z f -l -R #{indir}/amideFormation.rxn -M #{indir}/products.lbl #{indir}/amines.smi #{indir}/acids.smi"],
+          "comment": [ "Simple test" ]
+        },
+        {
+          "name": "case_7",
+          "args": [ " -E autocreate -A D -z i -z f -l -R #{indir}/amideFormation.rxn -R #{indir}/amideFormation.rxn",
+                   " -M #{indir}/products.lbl #{indir}/amines.smi #{indir}/enamine_bb.smi #{indir}/acids.smi " ],
+          "comment": [ "Simple test" ]
+        }
+      ]
+    }
+  }
+}

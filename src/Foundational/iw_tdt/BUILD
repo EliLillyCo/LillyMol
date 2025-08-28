@@ -1,15 +1,3 @@
-load("//build_deps:install.bzl", "local_install")
-
-local_install(
-    name = "install",
-    srcs = [
-        ":fetch_tdt",
-        ":fetch_tdt_quick",
-        ":tdt_join",
-        ":tdt_sort",
-        ":tdt_stats",
-    ],
-)
 
 cc_binary(
     name = "fetch_tdt",

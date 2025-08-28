@@ -14,7 +14,6 @@
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = NULL;
 
@@ -255,7 +254,7 @@ read_next_sd(iwstring_data_source& input, IWString& id)
                looks_like_sdf_id(buffer, identifier_tag)) {
       if (id.length() > 0) {
         cerr << "yipes, duplicate " << identifier_tag_in_sd_file << "' in file, id '"
-             << id << "', line " << input.lines_read() << endl;
+             << id << "', line " << input.lines_read() << '\n';
       }
       next_record_is_id = 1;
     } else if (next_record_is_id) {
@@ -334,7 +333,7 @@ determine_identifier_offsets(iwstring_data_source& input,
     offset = input.tellg();
   }
 
-  // cerr << "File starts at " << offset << endl;
+  // cerr << "File starts at " << offset << '\n';
 
   IWString id;
   while (read_next_sd(input, id)) {
@@ -535,7 +534,7 @@ fetch_sdf(int argc, char** argv)
 
     if (verbose) {
       cerr << "Identifiers in identifier file in column "
-           << identifier_column_in_identifier_file << endl;
+           << identifier_column_in_identifier_file << '\n';
     }
 
     identifier_column_in_identifier_file--;
@@ -587,7 +586,7 @@ fetch_sdf(int argc, char** argv)
 
     if (verbose) {
       cerr << "Identifier column in .sdf file in column " << identifier_column_in_sdf_name
-           << endl;
+           << '\n';
     }
 
     identifier_column_in_sdf_name--;

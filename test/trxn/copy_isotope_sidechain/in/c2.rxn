@@ -1,0 +1,17 @@
+scaffold {
+  id: 0
+  smarts: "C-O"
+}
+sidechain {
+  id: 1
+  reagent: "[9F]"
+  smarts: "F"
+  copy_isotope {
+    from: 0
+    cto {
+      component: 0
+      atom: 1
+    }
+  }
+  single_bond: [0, 0]
+}

@@ -12,6 +12,7 @@
 #include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
+#include "smiles.h"
 
 using std::cerr;
 
@@ -382,6 +383,10 @@ Molecule::DihedralScan(atom_number_t a2,
   }
 
   SetXyz(starting_coords.get());
+
+  if (lillymol::include_coordinates_with_smiles()) {
+    invalidate_smiles();
+  }
 
   return result;
 }
@@ -942,10 +947,12 @@ Position3D(const Molecule& m1, atom_number_t atom1,
   return 1;
 }
 
+#include "smiles.h"
+
 
 namespace lillymol {
 
-//#define DEBUG_3D_POSITIONING
+// #define DEBUG_3D_POSITIONING
 
 // try to position the fragment defined by `atom2` so it can join with
 // `atom1`. `hydrogen1` and `hydrogen2` are coordinats of what would be
@@ -964,7 +971,12 @@ TryPlacing(Molecule& m,
   const Atom& a2 = m[atom2];
 
 #ifdef DEBUG_3D_POSITIONING
+  cerr << "atoms " << atom1 << ' ' << m.smarts_equivalent_for_atom(atom1) << " and " <<
+                      atom2 << ' ' << m.smarts_equivalent_for_atom(atom2) << '\n';
   cerr << " h1dist " << m[atom1].distance(hydrogen1) << " h2dist " << m[atom2].distance(hydrogen2) << '\n';
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << i << ' ' << m.smarts_equivalent_for_atom(i) << " frag " << fragment_membership[i] << '\n';
+  }
 #endif
 
   int moving_fragment = fragment_membership[atom2];
@@ -972,26 +984,41 @@ TryPlacing(Molecule& m,
   Coordinates v1 = hydrogen1 - a1;
   Coordinates v2 = hydrogen2 - a2;
 
+#ifdef DEBUG_3D_POSITIONING
+  lillymol::set_include_coordinates_with_smiles(1);
+  cerr << m.smiles() << ' ' << m.name() << " before any movement\n";
+#endif
   // translate the moving fragment to the origin.
+   
   m.translate_atoms(-a2, fragment_membership, moving_fragment);
 
   const angle_t angle = v1.angle_between(v2);
 #ifdef DEBUG_3D_POSITIONING
+  cerr << m.smiles() << ' ' << m.name() << " after translation to origin\n";
   cerr << "Initial angle " << (angle * RAD2DEG) << '\n';
 #endif
 
   v1.normalise();
   v2.normalise();
   v2.cross_product(v1);
+  v2.normalise();
 
+#ifdef DEBUG_3D_POSITIONING
+  cerr << "Rotate by " << (-static_cast<coord_t>(M_PI - angle)) << '\n';
+  cerr << "rotate around " << v2 << '\n';
+#endif
   m.rotate_atoms(v2, -static_cast<coord_t>(M_PI - angle),
                  fragment_membership, moving_fragment);
+#ifdef DEBUG_3D_POSITIONING
+  cerr << m.smiles() << ' ' << m.name() << " after rotation\n";
+#endif
 
   // Now translate the moving fragment back to where atom1 wants it to be
   // what about distance...
   m.translate_atoms(hydrogen1, fragment_membership, moving_fragment);
 
 #ifdef DEBUG_3D_POSITIONING
+  cerr << m.smiles() << ' ' << m.name() << " after transation\n";
   cerr << "atom 2 now at " << m.x(atom2) << ',' << m.y(atom2) << ',' << m.z(atom2) << '\n';
   cerr << "Distance between " << m.distance_between_atoms(atom1, atom2) << '\n';
   v1 = hydrogen1 - a1;
@@ -1008,15 +1035,27 @@ TryPlacing(Molecule& m,
   m.translate_atoms(v1, fragment_membership, moving_fragment);
 
   // Return the shortest distance between fragments.
-  // Note that we do not specifically check that the atoms are
-  // in fragment_membership[atom1] and fragment_membership[atom2]
-  // since it would slow things down for likely no benefit.
+  // We need to carefully consider fragment membership since at this stage
+  // of the reaction there may be atoms which will ultimately be removed
+  // but which are still present.
+
+  const int f1 = fragment_membership[atom1];
+  const int f2 = fragment_membership[atom2];
+
   float rc = std::numeric_limits<float>::max();
   for (int i = 0; i < initial_natoms; ++i) {
     for (int j = i + 1; j < initial_natoms; ++j) {
       if (fragment_membership[i] == fragment_membership[j]) {
         continue;
       }
+      if (fragment_membership[i] == f1 &&
+          fragment_membership[j] == f2) {
+      } else if (fragment_membership[i] == f2 &&
+                 fragment_membership[j] == f1) {
+      } else {
+        continue;
+      }
+
       float d = m.distance_between_atoms(i, j);
       if (d < rc) {
         rc = d;
@@ -1194,8 +1233,10 @@ Position3D(Molecule& m, atom_number_t atom1, float distance, atom_number_t atom2
 
   if (m.hcount(atom1) == 0 || m.hcount(atom2) == 0) {
     cerr << "Position3D:No Hydrogen atoms on " << atom1 << ' ' << 
-            m.smarts_equivalent_for_atom(atom1) << " or " << atom2 << 
-            m.smarts_equivalent_for_atom(atom2) << '\n';
+            m.smarts_equivalent_for_atom(atom1) << ' ' << m.hcount(atom1) << 
+            " or " << atom2 << ' ' << m.smarts_equivalent_for_atom(atom2) << ' ' <<
+            m.hcount(atom2) << '\n';
+    cerr << m.smiles() << ' ' << m.name() << '\n';
     return 0;
   }
 

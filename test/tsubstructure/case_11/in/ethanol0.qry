@@ -1,0 +1,30 @@
+(4 Query
+  (A I version 2)
+  (A C comment "ethanol")
+  (A I respect_initial_numbering 1)
+  (A I min_natoms 3)
+  (5 elements_needed
+    (A I atomic_number 6)
+    (A I min_hits_needed 2)
+  )
+  (6 elements_needed
+    (A I atomic_number 8)
+    (A I min_hits_needed 1)
+  )
+  (0 query_atom
+    (A I initial_atom_number 7)
+    (A I atomic_number 6)
+    (A I min_ncon 1)
+  )
+  (1 query_atom
+    (A I initial_atom_number 0)
+    (A I atomic_number 6)
+    (A I min_ncon 2)
+    (A I bond (0 1 2 3 4))
+  )
+  (2 query_atom
+    (A I initial_atom_number 4)
+    (A I atomic_number 8)
+    (A I bond (1 1 2 3 4))
+  )
+)

@@ -13,9 +13,9 @@ using combinations::Combinations;
 using testing::ElementsAreArray;
 
 TEST(Combinations, Test1NoVariability) {
-  std::vector<int> count({1});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({1});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(1, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0}));
@@ -23,9 +23,9 @@ TEST(Combinations, Test1NoVariability) {
 }
 
 TEST(Combinations, Test1WithVariability) {
-  std::vector<int> count({2});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({2});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(1, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0}));
@@ -35,9 +35,9 @@ TEST(Combinations, Test1WithVariability) {
 }
 
 TEST(Combinations, Test2NoVariability) {
-  std::vector<int> count({1, 1});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({1, 1});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(2, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0, 0}));
@@ -45,9 +45,9 @@ TEST(Combinations, Test2NoVariability) {
 }
 
 TEST(Combinations, Test2VaryFirst) {
-  std::vector<int> count({2, 1});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({2, 1});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(2, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0, 0}));
@@ -57,9 +57,9 @@ TEST(Combinations, Test2VaryFirst) {
 }
 
 TEST(Combinations, Test2VarySecond) {
-  std::vector<int> count({1, 2});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({1, 2});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(2, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0, 0}));
@@ -69,9 +69,9 @@ TEST(Combinations, Test2VarySecond) {
 }
 
 TEST(Combinations, Test2VaryBoth) {
-  std::vector<int> count({2, 2});
-  Combinations<int> combinations(count);
-  std::vector<int> state;
+  std::vector<uint32_t> count({2, 2});
+  Combinations<uint32_t> combinations(count);
+  std::vector<uint32_t> state;
   state.resize(2, 0);
   ASSERT_TRUE(combinations.Next(state));
   EXPECT_THAT(state, ElementsAreArray({0, 0}));

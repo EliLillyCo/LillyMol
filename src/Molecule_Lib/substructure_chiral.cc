@@ -812,7 +812,7 @@ Single_Substructure_Query::_build_chirality_specification_from_atom_chiral_info(
   // cerr << "Building chirality information for atom " << a->initial_atom_number() <<
   // '\n';
 
-  Substructure_Chiral_Centre* tmp = new Substructure_Chiral_Centre;
+  std::unique_ptr<Substructure_Chiral_Centre> tmp = std::make_unique<Substructure_Chiral_Centre>();
 
   tmp->set_centre(a);
 
@@ -925,7 +925,7 @@ Single_Substructure_Query::_build_chirality_specification_from_atom_chiral_info(
     tmp->invert();
   }
 
-  _chirality.add(tmp);
+  _chirality.add(tmp.release());
 
   // cerr << "Now have " << _chirality.number_elements() << " chirality specifications\n";
 

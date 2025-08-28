@@ -20,7 +20,7 @@ since many large scale Cheminformatics problems are quite
 sharded form. It also works well with pipelined command
 processing, where the output from one command is fed to
 the next command, thereby taking advantage of the multi-core
-environments that today are uniquitous.
+environments that today are ubiquitous.
 
 Since all LillyMol tools are built on a common code base,
 tools tend to have common arguments and behaviours.

@@ -1,0 +1,12 @@
+{
+  "executable": "medchemwizard",
+  "test": [
+    {
+      "name": "default",
+      "args": [
+        "-R ${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS -W space -v #{indir}/in.smi"
+      ]
+    }
+  ]
+
+}

@@ -1,0 +1,13 @@
+(0 Query
+  (1 Ring_Specifier
+    (A I aromatic 1)
+    (A I ring_size 6)
+    (A I heteroatom_count 3)
+  )
+  (2 Ring_Specifier
+    (A I aromatic 0)
+    (A I ring_size 8)
+    (A I heteroatom_count 4)
+    (A C operator "or")
+  )
+)

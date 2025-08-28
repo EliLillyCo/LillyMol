@@ -24,19 +24,19 @@ then
   exit 1
 fi
 
-golden=out/out.txt
+golden=out/stdout
 
-stdout=out.txt
+stdout='stdout'
 stderr='stderr'
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-  golden='out/linux/out.txt'
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-  golden='out/osx/out.txt'
+if [[ "${UNAME}" == "Linux" ]]; then
+  golden="out/${UNAME}/stdout"
+elif [[ "${UNAME}" == "darwin"* ]]; then
+  golden="out/osx/stdout"
 else
-  echo "OS is not supported"
-  golden='out/linux/out.txt'  # Might work...
+  echo "${UNAME} is not supported"
+  golden="out/${UNAME}/stdout"  # Might work...
 fi
 
 diff_tool='../../fileDiff.sh'

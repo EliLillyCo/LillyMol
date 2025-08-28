@@ -28,25 +28,25 @@ common_less_than (const char * s1,
   return 0;
 }
 
-int
+bool
 IWString::operator < (const IWString & rhs) const
 {
   return common_less_than (_things, _number_elements, rhs._things, rhs._number_elements);
 }
 
-int
+bool
 IWString::operator < (const const_IWSubstring & rhs) const
 {
   return common_less_than (_things, _number_elements, rhs.rawchars (), rhs.length ());
 }
 
-int
+bool
 const_IWSubstring::operator < (const IWString & rhs) const
 {
   return common_less_than (_data, _nchars, rhs.rawchars (), rhs.length ());
 }
 
-int
+bool
 const_IWSubstring::operator < (const const_IWSubstring & rhs) const
 {
   return common_less_than (_data, _nchars, rhs._data, rhs._nchars);
@@ -78,25 +78,25 @@ common_greater_than (const char * s1,
   return 0;
 }
 
-int
+bool
 IWString::operator > (const IWString & rhs) const
 {
   return common_greater_than (_things, _number_elements, rhs._things, rhs._number_elements);
 }
 
-int
+bool
 IWString::operator > (const const_IWSubstring & rhs) const
 {
   return common_greater_than (_things, _number_elements, rhs.rawchars (), rhs.length ());
 }
 
-int
+bool
 const_IWSubstring::operator > (const IWString & rhs) const
 {
   return common_greater_than (_data, _nchars, rhs.rawchars (), rhs.length ());
 }
 
-int
+bool
 const_IWSubstring::operator > (const const_IWSubstring & rhs) const
 {
   return common_greater_than (_data, _nchars, rhs._data, rhs._nchars);

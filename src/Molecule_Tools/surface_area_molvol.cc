@@ -17,7 +17,7 @@ using std::endl;
 
 // n_Max must be the same as in volume.f
 
-#define n_Max 301
+#define n_Max 901
 
 struct RawData
 {

@@ -7,6 +7,12 @@
 
 #include "kahan_sum.h"
 
+#ifdef BUILD_BAZEL
+#include "Foundational/accumulator/accumulator.pb.h"
+#else
+#include "accumulator.pb.h"
+#endif
+
 template <typename T, typename SUMMER>
 class Accumulator_Base
 {
@@ -28,6 +34,10 @@ class Accumulator_Base
     int ok () const;
 
     unsigned int n () const { return _n;}
+
+    bool empty() const {
+      return _n == 0;
+    }
 
     T minval () const { return _minval;}
     T maxval () const { return _maxval;}
@@ -80,6 +90,8 @@ class Accumulator : public Accumulator_Base<T, KahanSum>
     void _default_values ();
 
   public:
+
+    int BuildProto(accumulator::AccumulatorData& proto) const;
 
 };
 
@@ -447,6 +459,18 @@ Accumulator_Base<T, SUMMER>::average_if_available_minval_if_not () const
 
   std::cerr << "Accumulator_Base::average_if_available_minval_if_not: no data!\n";
   return 0.0;
+}
+
+template <typename T>
+int
+Accumulator<T>::BuildProto(accumulator::AccumulatorData& proto) const {
+  proto.set_n(_n);
+  proto.set_minval(_minval);
+  proto.set_maxval(_maxval);
+  proto.set_xsum(_xsum);
+  proto.set_x2sum(_x2sum);
+
+  return 1;
 }
 
 #endif

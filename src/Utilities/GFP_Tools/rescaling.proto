@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package rescaling;
+
+// Used for rescaling the output of a prediction model.
+// Score the training set and run
+// iwstats -C mdir/rescaling.textproto -E train.activity -p 2 train.pred
+// which will create this proto in the model directory.
+// THis is a linear model with a slope and intercept.
+// The inverse is applied to predicted values.
+
+message Rescaling {
+  optional float slope = 1;
+  optional float intercept = 2;
+}

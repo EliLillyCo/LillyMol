@@ -20,7 +20,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/atomic_distance_fingerprint.pb.h"
+#else
+#include "atomic_distance_fingerprint.pb.h"
+#endif
 
 namespace three_dimensional_fp {
 

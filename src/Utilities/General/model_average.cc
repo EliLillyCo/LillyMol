@@ -13,7 +13,6 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = NULL;
 
@@ -60,21 +59,23 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Performs model averaging for regression models. All values in one file\n";
-  cerr << " -c <col>       model in column <col>\n";
-  cerr << " -c <col>,w=0.2 model in column <col>, specify relative weight\n";
-  cerr << " -a ...         type of averaging to do\n";
-  cerr << " -a ave         average of all values (default)\n";
-  cerr << " -a max         final result is max of all values encountered\n";
-  cerr << " -a sum         final result is sum of all values encountered\n";
-  cerr << " -a pairs       many-class model, pair-wise models built\n";
-  cerr << " -a ovsall      many-class model, individual built\n";
-  cerr << " -C <cutoff>    classification model, convert result to class\n";
-  cerr << " -d             discern class labels from input\n";
-  cerr << " -f             write composite prediction first rather than last\n";
-  cerr << " -n             just write the composite prediction\n";
-  cerr << " -r             include range/average/standard deviation of component models\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(
+Performs model averaging for regression models. All values in one file
+ -c <col>       model in column <col>. c1,c2,c3 and c1-c4 also recognised.
+ -c <col>,w=0.2 model in column <col>, specify relative weight
+ -a ...         type of averaging to do
+ -a ave         average of all values (default)
+ -a max         final result is max of all values encountered
+ -a sum         final result is sum of all values encountered
+ -a pairs       many-class model, pair-wise models built
+ -a ovsall      many-class model, individual built
+ -C <cutoff>    classification model, convert result to class
+ -d             discern class labels from input
+ -f             write composite prediction first rather than last
+ -n             just write the composite prediction
+ -r             include range/average/standard deviation of component models
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -230,50 +231,41 @@ class Average
  public:
   Average();
 
-  void
-  reset();
+  void reset();
 
   const char*
-  text_description() const
-  {
+  text_description() const {
     return "avescore";
   }
 
-  int
-  extra(double v, double w, int);
+  int extra(double v, double w, int);
 
-  double
-  final_result();
+  double final_result();
 
   template <typename T>
-  int
-  write_range_ave_std(T&);
+  int write_range_ave_std(T&);
 };
 
 void
-Average::_default_values()
-{
+Average::_default_values() {
   _n = 0;
   _sum = 0.0;
   _wsum = 0.0;
 }
 
-Average::Average()
-{
+Average::Average() {
   _default_values();
 }
 
 void
-Average::reset()
-{
+Average::reset() {
   _acc.reset();
 
   _default_values();
 }
 
 int
-Average::extra(double v, double w, int from_arbor)
-{
+Average::extra(double v, double w, int from_arbor) {
   _acc.extra(v);
 
   _n += 1;
@@ -289,8 +281,7 @@ Average::extra(double v, double w, int from_arbor)
 }
 
 double
-Average::final_result()
-{
+Average::final_result() {
   if (0 == _n) {
     cerr << "Average::final_result:no data\n";
     return 0.0;
@@ -306,8 +297,7 @@ Average::final_result()
 
 template <typename T>
 int
-Average::write_range_ave_std(T& output)
-{
+Average::write_range_ave_std(T& output) {
   output << output_separator << _acc.minval() << output_separator << _acc.maxval()
          << output_separator << static_cast<float>(_acc.maxval() - _acc.minval())
          << output_separator << static_cast<float>(_acc.average()) << output_separator
@@ -342,8 +332,7 @@ class MaxVal
   extra(double v, double w, int);
 
   const char*
-  text_description() const
-  {
+  text_description() const {
     return "maxscore";
   }
 
@@ -436,8 +425,7 @@ class Voting
   extra(double v, double w, int);
 
   const char*
-  text_description() const
-  {
+  text_description() const {
     return "vote";
   }
 
@@ -517,8 +505,7 @@ class Sum
   extra(double v, double w, int);
 
   const char*
-  text_description() const
-  {
+  text_description() const {
     return "sum";
   }
 
@@ -570,8 +557,8 @@ Sum::write_range_ave_std(T& output)
   return 1;
 }
 
-template int
-Sum::write_range_ave_std(IWString_and_File_Descriptor&);
+//template int
+//Sum::write_range_ave_std(IWString_and_File_Descriptor&);
 
 template <typename T>
 int
@@ -619,10 +606,10 @@ model_average2(const const_IWSubstring& buffer, T& c,
 
   score_acc.extra(result);
 
-  output << ' ' << static_cast<float>(result);
-
   if (include_range_average_std) {
     c.write_range_ave_std(output);
+  } else {
+    output << ' ' << static_cast<float>(result);
   }
 
   if (!classification_model) {  // no class label to write
@@ -636,6 +623,7 @@ model_average2(const const_IWSubstring& buffer, T& c,
   return 1;
 }
 
+#ifdef NOT_NEEDED_WITH_IMPLICIT_TEMPLATES
 template int
 model_average2(const const_IWSubstring&, Average&, IWString_and_File_Descriptor&);
 template int
@@ -644,6 +632,7 @@ template int
 model_average2<Voting>(const_IWSubstring const&, Voting&, IWString_and_File_Descriptor&);
 template int
 model_average2<Sum>(const_IWSubstring const&, Sum&, IWString_and_File_Descriptor&);
+#endif
 
 /*
   We have a classification problem. We need to discern that the class labels are
@@ -729,8 +718,7 @@ do_discern_class_labels_from_input_file(iwstring_data_source& input,
 
 template <typename C>
 int
-model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& output)
-{
+model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& output) {
   IWString buffer;  // must save state!
 
   if (!input.next_record(buffer)) {
@@ -748,9 +736,12 @@ model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& o
     buffer.nextword(token, i, input_separator);
 
     output << token;
-    output << ' ' << c.text_description();
-    if (include_range_average_std) {
+    if (just_write_composite_prediction) {
+      output << ' ' << c.text_description();
+    } else if (include_range_average_std) {
       output << " MA.min MA.max MA.range MA.ave MA.std";
+    } else {
+      output << " COMPOSITE";
     }
     if (classification_model) {
       output << " C.CLASS";
@@ -764,9 +755,11 @@ model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& o
       }
     }
   } else {
-    output << buffer << ' ' << c.text_description();
-    if (include_range_average_std) {
-      output << " MA.min MA.max MA.range MA.std";
+    output << buffer << ' ';
+    if (just_write_composite_prediction) {
+      output << c.text_description();
+    } else if (include_range_average_std) {
+      output << "MA.min MA.max MA.range MA.ave MA.std";
     }
     if (classification_model) {
       output << " C.CLASS";

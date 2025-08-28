@@ -1,0 +1,3 @@
+#NTYPE 01
+#N = 12
+D0 0 2 1.059833333 0.6504728117 # min max average variance

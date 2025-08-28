@@ -1,4 +1,4 @@
-/* Molecule_Tools/smolvol.f -- translated by f2c (version 20200916).
+/* Molecule_Tools/smolvol.f -- translated by f2c (version 20240504).
    You must link the resulting object file with libf2c:
 	on Microsoft Windows system, link with libf2c.lib;
 	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
@@ -15,7 +15,7 @@
 /* Common Block Declarations */
 
 struct {
-    doublereal x_chain__[301], y_chain__[301], z_chain__[301], radii[301], 
+    doublereal x_chain__[901], y_chain__[901], z_chain__[901], radii[901], 
 	    refradius;
     integer n_spheres__;
 } rawdata_;
@@ -23,18 +23,19 @@ struct {
 #define rawdata_1 rawdata_
 
 struct {
-    doublereal nx[11250], ny[11250], nz[11250], magnitude[22500]	/* 
-	    was [11250][2] */, rho_sq__[11250];
-    integer n_planes__[301], plane_list__[271803]	/* was [301][301][3] 
-	    */, point[22500]	/* was [11250][2] */, planef[11250], planecnt;
+    doublereal nx[101250], ny[101250], nz[101250], magnitude[202500]	/* 
+	    was [101250][2] */, rho_sq__[101250];
+    integer n_planes__[901], plane_list__[2435403]	/* was [901][901][3] 
+	    */, point[202500]	/* was [101250][2] */, planef[101250], 
+	    planecnt;
 } planeinfo_;
 
 #define planeinfo_1 planeinfo_
 
 struct {
-    doublereal areag[22500]	/* was [11250][2] */;
-    integer numarcsg[22500]	/* was [11250][2] */, trueedgesg[22500]	/* 
-	    was [11250][2] */;
+    doublereal areag[202500]	/* was [101250][2] */;
+    integer numarcsg[202500]	/* was [101250][2] */, trueedgesg[202500]	
+	    /* was [101250][2] */;
 } global_;
 
 #define global_1 global_
@@ -47,7 +48,7 @@ struct {
 #define sphereinfo_1 sphereinfo_
 
 struct {
-    doublereal atomic_volume__[301], atomic_area__[301];
+    doublereal atomic_volume__[901], atomic_area__[901];
 } volumeoutput_;
 
 #define volumeoutput_1 volumeoutput_
@@ -61,29 +62,29 @@ struct {
 #define conclusion_1 conclusion_
 
 struct {
-    doublereal nxs[6000], nys[6000], nzs[6000], v_mags__[6000], rho_sqs__[
-	    6000];
-    integer indexs[6000], planes[6000], points[6000], ith, jth;
+    doublereal nxs[18000], nys[18000], nzs[18000], v_mags__[18000], rho_sqs__[
+	    18000];
+    integer indexs[18000], planes[18000], points[18000], ith, jth;
 } spheresplanes_;
 
 #define spheresplanes_1 spheresplanes_
 
 struct {
-    doublereal apexx[6000], apexy[6000], apexz[6000];
-    integer apexf[12000]	/* was [6000][2] */, n_edges__[300], 
-	    edge_list__[5400000]	/* was [300][6000][3] */, apexcnt;
+    doublereal apexx[18000], apexy[18000], apexz[18000];
+    integer apexf[36000]	/* was [18000][2] */, n_edges__[900], 
+	    edge_list__[48600000]	/* was [900][18000][3] */, apexcnt;
 } apexinfo_;
 
 #define apexinfo_1 apexinfo_
 
 struct {
-    integer twin[6000];
+    integer twin[18000];
 } twinlist_;
 
 #define twinlist_1 twinlist_
 
 struct {
-    integer plane_order__[18000]	/* was [6000][3] */;
+    integer plane_order__[54000]	/* was [18000][3] */;
 } debug_;
 
 #define debug_1 debug_
@@ -91,16 +92,16 @@ struct {
 struct {
     doublereal ni[3], vi_mag__, rhoi_sq__, curvei, o_rhoi_sq__, r_rhoi__, 
 	    vi_rhoi__;
-    integer edgesi[12000]	/* was [6000][2] */, indexi, planei, pointi, 
+    integer edgesi[36000]	/* was [18000][2] */, indexi, planei, pointi, 
 	    planenum, numedges;
 } thisplane_;
 
 #define thisplane_1 thisplane_
 
 struct {
-    doublereal vertexx[300], vertexy[300], vertexz[300], ngx[300], ngy[300], 
-	    ngz[300], tangeo[300];
-    integer arc_list__[600]	/* was [300][2] */, arc_map__[300], arccnt, 
+    doublereal vertexx[900], vertexy[900], vertexz[900], ngx[900], ngy[900], 
+	    ngz[900], tangeo[900];
+    integer arc_list__[1800]	/* was [900][2] */, arc_map__[900], arccnt, 
 	    vertexcnt;
 } arcinfo_;
 
@@ -127,15 +128,15 @@ struct {
 #define formove_1 formove_
 
 struct {
-    integer numstart[5], numend[5], locstart[30000]	/* was [6000][5] */, 
-	    locend[30000]	/* was [6000][5] */, edge_num__[18003]	/* 
-	    was [6001][3] */;
+    integer numstart[5], numend[5], locstart[90000]	/* was [18000][5] */, 
+	    locend[90000]	/* was [18000][5] */, edge_num__[54003]	/* 
+	    was [18001][3] */;
 } sortedout_;
 
 #define sortedout_1 sortedout_
 
 struct {
-    integer local_list__[12000]	/* was [6000][2] */, numarcs;
+    integer local_list__[36000]	/* was [18000][2] */, numarcs;
 } localarcinfo_;
 
 #define localarcinfo_1 localarcinfo_
@@ -147,7 +148,7 @@ struct {
 #define foraccum_1 foraccum_
 
 struct {
-    integer festoon[9000]	/* was [300][30] */, festarcs[30], festooncnt;
+    integer festoon[81000]	/* was [900][90] */, festarcs[90], festooncnt;
 } festooninfo_;
 
 #define festooninfo_1 festooninfo_
@@ -408,14 +409,14 @@ static integer c__5 = 5;
 				i__2 = planeinfo_1.n_planes__[sphi];
 				for (k = 1; k <= i__2; ++k) {
 				    i__ = planeinfo_1.plane_list__[sphi + (k 
-					    + 301) * 301 - 90601];
+					    + 901) * 901 - 811801];
 				    j = planeinfo_1.plane_list__[sphi + (k + 
-					    602) * 301 - 90601];
+					    1802) * 901 - 811801];
 				    planeinfo_1.planef[i__ - 1] = -1;
-				    global_1.numarcsg[i__ + j * 11250 - 11251]
-					     = -2;
-				    global_1.trueedgesg[i__ + j * 11250 - 
-					    11251] = -2;
+				    global_1.numarcsg[i__ + j * 101250 - 
+					    101251] = -2;
+				    global_1.trueedgesg[i__ + j * 101250 - 
+					    101251] = -2;
 				}
 /*                   < Turn-off sphere SphI itself */
 				planeinfo_1.n_planes__[sphi] = -1;
@@ -431,14 +432,14 @@ static integer c__5 = 5;
 				i__2 = planeinfo_1.n_planes__[sphj];
 				for (k = 1; k <= i__2; ++k) {
 				    i__ = planeinfo_1.plane_list__[sphj + (k 
-					    + 301) * 301 - 90601];
+					    + 901) * 901 - 811801];
 				    j = planeinfo_1.plane_list__[sphj + (k + 
-					    602) * 301 - 90601];
+					    1802) * 901 - 811801];
 				    planeinfo_1.planef[i__ - 1] = -1;
-				    global_1.numarcsg[i__ + j * 11250 - 11251]
-					     = -2;
-				    global_1.trueedgesg[i__ + j * 11250 - 
-					    11251] = -2;
+				    global_1.numarcsg[i__ + j * 101250 - 
+					    101251] = -2;
+				    global_1.trueedgesg[i__ + j * 101250 - 
+					    101251] = -2;
 				}
 /*                   < Turn-off sphere SphJ itself */
 				planeinfo_1.n_planes__[sphj] = -1;
@@ -456,23 +457,23 @@ static integer c__5 = 5;
 /*                 < Store the plane associated with spheres SphI and SphJ */
 /*                 < Also store location in normal vector array */
 			    planeinfo_1.plane_list__[sphi + (
-				    planeinfo_1.n_planes__[sphi] + 301) * 301 
-				    - 90601] = plane;
+				    planeinfo_1.n_planes__[sphi] + 901) * 901 
+				    - 811801] = plane;
 			    planeinfo_1.plane_list__[sphi + (
-				    planeinfo_1.n_planes__[sphi] + 602) * 301 
-				    - 90601] = 1;
+				    planeinfo_1.n_planes__[sphi] + 1802) * 
+				    901 - 811801] = 1;
 			    planeinfo_1.plane_list__[sphi + (
-				    planeinfo_1.n_planes__[sphi] + 903) * 301 
-				    - 90601] = sphj;
+				    planeinfo_1.n_planes__[sphi] + 2703) * 
+				    901 - 811801] = sphj;
 			    planeinfo_1.plane_list__[sphj + (
-				    planeinfo_1.n_planes__[sphj] + 301) * 301 
-				    - 90601] = plane;
+				    planeinfo_1.n_planes__[sphj] + 901) * 901 
+				    - 811801] = plane;
 			    planeinfo_1.plane_list__[sphj + (
-				    planeinfo_1.n_planes__[sphj] + 602) * 301 
-				    - 90601] = 2;
+				    planeinfo_1.n_planes__[sphj] + 1802) * 
+				    901 - 811801] = 2;
 			    planeinfo_1.plane_list__[sphj + (
-				    planeinfo_1.n_planes__[sphj] + 903) * 301 
-				    - 90601] = sphi;
+				    planeinfo_1.n_planes__[sphj] + 2703) * 
+				    901 - 811801] = sphi;
 /*                 < Find the unit normal plane vectors, n.  These are */
 /*                 < the unit normal vector pointing outside cutout for */
 /*                 < each sphere.  It is defined as */
@@ -524,9 +525,9 @@ static integer c__5 = 5;
 			    planeinfo_1.nz[plane - 1] = del_z__ * rdij;
 /*                 < Initialize the global lists for consistency checks. */
 			    global_1.numarcsg[plane - 1] = -999;
-			    global_1.numarcsg[plane + 11249] = -999;
+			    global_1.numarcsg[plane + 101249] = -999;
 			    global_1.trueedgesg[plane - 1] = -999;
-			    global_1.trueedgesg[plane + 11249] = -999;
+			    global_1.trueedgesg[plane + 101249] = -999;
 /*                 < Determine the proper vector magnitudes, the */
 /*                 < location of the plane of intersection and the */
 /*                 < radius of the inscribed circle. */
@@ -570,9 +571,9 @@ static integer c__5 = 5;
 /*                   <           |----- dij -----| */
 /*                   <           |               | */
 				planeinfo_1.point[plane - 1] = 0;
-				planeinfo_1.point[plane + 11249] = 1;
+				planeinfo_1.point[plane + 101249] = 1;
 				planeinfo_1.magnitude[plane - 1] = 0.;
-				planeinfo_1.magnitude[plane + 11249] = dij;
+				planeinfo_1.magnitude[plane + 101249] = dij;
 				planeinfo_1.rho_sq__[plane - 1] = ri_sq__;
 			    } else if (atermj < 1e-8) {
 /*                   < If |Termj| is less than Eps then we know that */
@@ -609,9 +610,9 @@ static integer c__5 = 5;
 /*                   <           |----- dij -----| */
 /*                   <           |               | */
 				planeinfo_1.point[plane - 1] = 1;
-				planeinfo_1.point[plane + 11249] = 0;
+				planeinfo_1.point[plane + 101249] = 0;
 				planeinfo_1.magnitude[plane - 1] = dij;
-				planeinfo_1.magnitude[plane + 11249] = 0.;
+				planeinfo_1.magnitude[plane + 101249] = 0.;
 				planeinfo_1.rho_sq__[plane - 1] = rj * rj;
 			    } else {
 /*                   < The plane of intersection does not pass through */
@@ -682,12 +683,12 @@ static integer c__5 = 5;
 				d__1 = d_sign(&c_b4, &termi);
 				planeinfo_1.point[plane - 1] = i_dnnt(&d__1);
 				d__1 = d_sign(&c_b4, &termj);
-				planeinfo_1.point[plane + 11249] = i_dnnt(&
+				planeinfo_1.point[plane + 101249] = i_dnnt(&
 					d__1);
 				planeinfo_1.magnitude[plane - 1] = atermi * 
 					rdij;
-				planeinfo_1.magnitude[plane + 11249] = atermj 
-					* rdij;
+				planeinfo_1.magnitude[plane + 101249] = 
+					atermj * rdij;
 				planeinfo_1.rho_sq__[plane - 1] = ri_sq__ - 
 					planeinfo_1.magnitude[plane - 1] * 
 					planeinfo_1.magnitude[plane - 1];
@@ -705,7 +706,7 @@ static integer c__5 = 5;
     i__1 = planeinfo_1.planecnt;
     for (i__ = 1; i__ <= i__1; ++i__) {
 	global_1.areag[i__ - 1] = 0.;
-	global_1.areag[i__ + 11249] = 0.;
+	global_1.areag[i__ + 101249] = 0.;
     }
     return 0;
 /* L100: */
@@ -740,11 +741,11 @@ static integer c__5 = 5;
     static doublereal rcu;
     extern /* Subroutine */ int each_sphere__(doublereal *, doublereal *, 
 	    logical *);
-    static doublereal area[301];
+    static doublereal area[901];
     static integer trueplanecnt;
     static doublereal diffa;
     static integer diffn, difft, planei;
-    static doublereal refvol, volume[301], refarea, asphere, vsphere;
+    static doublereal refvol, volume[901], refarea, asphere, vsphere;
 
     /* Fortran I/O blocks */
     static cilist io___39 = { 0, 0, 0, fmt_200, 0 };
@@ -816,11 +817,11 @@ static integer c__5 = 5;
     notequal = 0;
     i__1 = planeinfo_1.planecnt;
     for (planei = 1; planei <= i__1; ++planei) {
-	diffa = global_1.areag[planei - 1] - global_1.areag[planei + 11249];
+	diffa = global_1.areag[planei - 1] - global_1.areag[planei + 101249];
 	diffn = global_1.numarcsg[planei - 1] - global_1.numarcsg[planei + 
-		11249];
+		101249];
 	difft = global_1.trueedgesg[planei - 1] - global_1.trueedgesg[planei 
-		+ 11249];
+		+ 101249];
 	if (abs(diffa) > 1e-6 || diffn != 0 || difft != 0) {
 	    ++notequal;
 	    s_wsfe(&io___39);
@@ -831,11 +832,11 @@ static integer c__5 = 5;
 		    sizeof(integer));
 	    do_fio(&c__1, (char *)&global_1.trueedgesg[planei - 1], (ftnlen)
 		    sizeof(integer));
-	    do_fio(&c__1, (char *)&global_1.areag[planei + 11249], (ftnlen)
+	    do_fio(&c__1, (char *)&global_1.areag[planei + 101249], (ftnlen)
 		    sizeof(doublereal));
-	    do_fio(&c__1, (char *)&global_1.numarcsg[planei + 11249], (ftnlen)
-		    sizeof(integer));
-	    do_fio(&c__1, (char *)&global_1.trueedgesg[planei + 11249], (
+	    do_fio(&c__1, (char *)&global_1.numarcsg[planei + 101249], (
+		    ftnlen)sizeof(integer));
+	    do_fio(&c__1, (char *)&global_1.trueedgesg[planei + 101249], (
 		    ftnlen)sizeof(integer));
 	    do_fio(&c__1, (char *)&diffa, (ftnlen)sizeof(doublereal));
 	    do_fio(&c__1, (char *)&diffn, (ftnlen)sizeof(integer));
@@ -885,10 +886,6 @@ static integer c__5 = 5;
 /*     < PASSED */
 /*     < LOCAL */
 /*     < Initialize some stuff. */
-    /* voids added IAW to keep the compiler quiet */
-    (void) areat;
-    (void) volumet;
-
     *error_encountered__ = FALSE_;
     *volume = 0.;
     volumet = 0.;
@@ -979,11 +976,11 @@ static integer c__5 = 5;
     i__1 = sphereinfo_1.numplanes;
     for (i__ = 1; i__ <= i__1; ++i__) {
 /*       < Find plane I, (P) */
-	planei = planeinfo_1.plane_list__[sphereinfo_1.sphere + (i__ + 301) * 
-		301 - 90601];
+	planei = planeinfo_1.plane_list__[sphereinfo_1.sphere + (i__ + 901) * 
+		901 - 811801];
 /*       < Index of plane (P) (i.e., 1st or 2nd sphere?) */
-	indexi = planeinfo_1.plane_list__[sphereinfo_1.sphere + (i__ + 602) * 
-		301 - 90601];
+	indexi = planeinfo_1.plane_list__[sphereinfo_1.sphere + (i__ + 1802) *
+		 901 - 811801];
 /*       < Has this plane been removed for this sphere? */
 	if (planeinfo_1.planef[planei - 1] == -1) {
 /*         < Yes, it has.  Turn off all its edges. */
@@ -999,7 +996,7 @@ static integer c__5 = 5;
 	    spheresplanes_1.planes[i__ - 1] = planei;
 /*         << Sign of plane (P) */
 	    spheresplanes_1.points[i__ - 1] = planeinfo_1.point[planei + 
-		    indexi * 11250 - 11251];
+		    indexi * 101250 - 101251];
 /*         << Normal vector for plane (P) pointing out of cutout. */
 /*         << Note that if Indexi is unity then the sphere we are */
 /*         << currently on was the leading sphere in forming the */
@@ -1018,7 +1015,7 @@ static integer c__5 = 5;
 	    spheresplanes_1.nzs[i__ - 1] = planeinfo_1.nz[planei - 1] * sgn;
 /*         << Magnitude of vector connecting r0 to rk, |vk| */
 	    spheresplanes_1.v_mags__[i__ - 1] = planeinfo_1.magnitude[planei 
-		    + indexi * 11250 - 11251];
+		    + indexi * 101250 - 101251];
 /*         << Squared radius of circle enscribed by plane I on sphere */
 	    spheresplanes_1.rho_sqs__[i__ - 1] = planeinfo_1.rho_sq__[planei 
 		    - 1];
@@ -1067,11 +1064,11 @@ static integer c__5 = 5;
 			    global_1.numarcsg[spheresplanes_1.planes[i__ - 1] 
 				    - 1] = -2;
 			    global_1.numarcsg[spheresplanes_1.planes[i__ - 1] 
-				    + 11249] = -2;
+				    + 101249] = -2;
 			    global_1.trueedgesg[spheresplanes_1.planes[i__ - 
 				    1] - 1] = -2;
 			    global_1.trueedgesg[spheresplanes_1.planes[i__ - 
-				    1] + 11249] = -2;
+				    1] + 101249] = -2;
 			}
 			planeinfo_1.n_planes__[sphereinfo_1.sphere] = -1;
 			sphereinfo_1.numplanes = -1;
@@ -1097,9 +1094,9 @@ static integer c__5 = 5;
 /*               < For each apex, flag that it exists as part of */
 /*               < an apex pair (i.e., edge) */
 			apexinfo_1.apexf[apexa - 1] = 2;
-			apexinfo_1.apexf[apexa + 5999] = -1;
+			apexinfo_1.apexf[apexa + 17999] = -1;
 			apexinfo_1.apexf[apexb - 1] = 2;
-			apexinfo_1.apexf[apexb + 5999] = -1;
+			apexinfo_1.apexf[apexb + 17999] = -1;
 /*               < Initialize the Twin list. */
 			twinlist_1.twin[apexa - 1] = 0;
 			twinlist_1.twin[apexb - 1] = 0;
@@ -1109,13 +1106,13 @@ static integer c__5 = 5;
 /*               < of plane i with plane j within the sphere. */
 			apexinfo_1.edge_list__[spheresplanes_1.ith + (
 				apexinfo_1.n_edges__[spheresplanes_1.ith - 1] 
-				+ 6000) * 300 - 1800301] = apexa;
+				+ 18000) * 900 - 16200901] = apexa;
 			apexinfo_1.edge_list__[spheresplanes_1.ith + (
 				apexinfo_1.n_edges__[spheresplanes_1.ith - 1] 
-				+ 12000) * 300 - 1800301] = apexb;
+				+ 36000) * 900 - 16200901] = apexb;
 			apexinfo_1.edge_list__[spheresplanes_1.ith + (
 				apexinfo_1.n_edges__[spheresplanes_1.ith - 1] 
-				+ 18000) * 300 - 1800301] = 
+				+ 54000) * 900 - 16200901] = 
 				spheresplanes_1.jth;
 /*               < Store (in order) apices associated with plane j */
 /*               < (Pj):(B,A) stored anti-clockwise looking from */
@@ -1123,28 +1120,28 @@ static integer c__5 = 5;
 /*               < of plane i with plane j within the sphere. */
 			apexinfo_1.edge_list__[spheresplanes_1.jth + (
 				apexinfo_1.n_edges__[spheresplanes_1.jth - 1] 
-				+ 6000) * 300 - 1800301] = apexb;
+				+ 18000) * 900 - 16200901] = apexb;
 			apexinfo_1.edge_list__[spheresplanes_1.jth + (
 				apexinfo_1.n_edges__[spheresplanes_1.jth - 1] 
-				+ 12000) * 300 - 1800301] = apexa;
+				+ 36000) * 900 - 16200901] = apexa;
 			apexinfo_1.edge_list__[spheresplanes_1.jth + (
 				apexinfo_1.n_edges__[spheresplanes_1.jth - 1] 
-				+ 18000) * 300 - 1800301] = 
+				+ 54000) * 900 - 16200901] = 
 				spheresplanes_1.ith;
 /*               < Store (in order) the planes around apex A */
 /*               < (A):(Pj,Pi) stored anti-clockwise from outside */
 			debug_1.plane_order__[apexa - 1] = 
 				spheresplanes_1.jth;
-			debug_1.plane_order__[apexa + 5999] = 
+			debug_1.plane_order__[apexa + 17999] = 
 				spheresplanes_1.ith;
-			debug_1.plane_order__[apexa + 11999] = 0;
+			debug_1.plane_order__[apexa + 35999] = 0;
 /*               < Store (in order) the planes around apex B */
 /*               < (B):(Pi,Pj) stored anti-clockwise from outside */
 			debug_1.plane_order__[apexb - 1] = 
 				spheresplanes_1.ith;
-			debug_1.plane_order__[apexb + 5999] = 
+			debug_1.plane_order__[apexb + 17999] = 
 				spheresplanes_1.jth;
-			debug_1.plane_order__[apexb + 11999] = 0;
+			debug_1.plane_order__[apexb + 35999] = 0;
 		    } else if (conclusion_1.remove) {
 			conclusion_1.remove = FALSE_;
 /*               < Planes intersect outside sphere such */
@@ -1156,22 +1153,22 @@ static integer c__5 = 5;
 				1];
 			for (i__ = 1; i__ <= i__2; ++i__) {
 			    apexinfo_1.apexf[apexinfo_1.edge_list__[
-				    conclusion_1.deadplane + (i__ + 6000) * 
-				    300 - 1800301] - 1] = -2;
+				    conclusion_1.deadplane + (i__ + 18000) * 
+				    900 - 16200901] - 1] = -2;
 			    apexinfo_1.apexf[apexinfo_1.edge_list__[
-				    conclusion_1.deadplane + (i__ + 12000) * 
-				    300 - 1800301] - 1] = -2;
+				    conclusion_1.deadplane + (i__ + 36000) * 
+				    900 - 16200901] - 1] = -2;
 			}
 /*               < Turn-off dead plane itself */
 			apexinfo_1.n_edges__[conclusion_1.deadplane - 1] = -1;
 			global_1.numarcsg[spheresplanes_1.planes[
 				conclusion_1.deadplane - 1] + 
 				spheresplanes_1.indexs[conclusion_1.deadplane 
-				- 1] * 11250 - 11251] = -2;
+				- 1] * 101250 - 101251] = -2;
 			global_1.trueedgesg[spheresplanes_1.planes[
 				conclusion_1.deadplane - 1] + 
 				spheresplanes_1.indexs[conclusion_1.deadplane 
-				- 1] * 11250 - 11251] = -2;
+				- 1] * 101250 - 101251] = -2;
 /*               < Get out of inner loop if necessary.  That is, if the */
 /*               < plane that has been killed is the Jth plane then do */
 /*               < nothing to the inner loop counter.  However, if the */
@@ -1806,10 +1803,10 @@ static integer c__5 = 5;
 	    *area_sphseg__ += pvi_mag__;
 	    thisplane_1.indexi = spheresplanes_1.indexs[i__ - 1];
 	    thisplane_1.planei = spheresplanes_1.planes[i__ - 1];
-	    global_1.numarcsg[thisplane_1.planei + thisplane_1.indexi * 11250 
-		    - 11251] = -3;
+	    global_1.numarcsg[thisplane_1.planei + thisplane_1.indexi * 
+		    101250 - 101251] = -3;
 	    global_1.trueedgesg[thisplane_1.planei + thisplane_1.indexi * 
-		    11250 - 11251] = -3;
+		    101250 - 101251] = -3;
 	} else if (thisplane_1.numedges > 0) {
 /*         < We have an ARC-POLYGON */
 /*         < Pull out this plane's information */
@@ -1838,12 +1835,12 @@ static integer c__5 = 5;
 	    i__2 = thisplane_1.numedges;
 	    for (edgei = 1; edgei <= i__2; ++edgei) {
 		if (apexinfo_1.apexf[apexinfo_1.edge_list__[i__ + (edgei + 
-			6000) * 300 - 1800301] - 1] != -2) {
+			18000) * 900 - 16200901] - 1] != -2) {
 		    ++j;
 		    thisplane_1.edgesi[j - 1] = apexinfo_1.edge_list__[i__ + (
-			    edgei + 6000) * 300 - 1800301];
-		    thisplane_1.edgesi[j + 5999] = apexinfo_1.edge_list__[i__ 
-			    + (edgei + 12000) * 300 - 1800301];
+			    edgei + 18000) * 900 - 16200901];
+		    thisplane_1.edgesi[j + 17999] = apexinfo_1.edge_list__[
+			    i__ + (edgei + 36000) * 900 - 16200901];
 		}
 	    }
 	    thisplane_1.numedges = j;
@@ -1856,9 +1853,9 @@ static integer c__5 = 5;
 /*         < Has this plane been killed? */
 	    if (thisplane_1.numedges <= 0) {
 		global_1.numarcsg[thisplane_1.planei + thisplane_1.indexi * 
-			11250 - 11251] = -1;
+			101250 - 101251] = -1;
 		global_1.trueedgesg[thisplane_1.planei + thisplane_1.indexi * 
-			11250 - 11251] = -1;
+			101250 - 101251] = -1;
 	    } else {
 /*           < Form the Arc-Polygon. Connect all the edges properly and */
 /*           < find its area and the area of angle of its diangles. */
@@ -1928,7 +1925,7 @@ static integer c__5 = 5;
     for (edgepair_1.edgei = 1; edgepair_1.edgei <= i__1; ++edgepair_1.edgei) {
 /*       < Pull out apices A and B of EdgeI */
 	edgepair_1.apexa = thisplane_1.edgesi[edgepair_1.edgei - 1];
-	edgepair_1.apexb = thisplane_1.edgesi[edgepair_1.edgei + 5999];
+	edgepair_1.apexb = thisplane_1.edgesi[edgepair_1.edgei + 17999];
 	i__2 = thisplane_1.numedges;
 	for (edgepair_1.edgej = edgepair_1.edgei + 1; edgepair_1.edgej <= 
 		i__2; ++edgepair_1.edgej) {
@@ -1958,7 +1955,7 @@ static integer c__5 = 5;
 	    edgepair_1.eab[2] *= edgepair_1.rmagab;
 /*         < Pull out apices C and D of EdgeJ */
 	    edgepair_1.apexc = thisplane_1.edgesi[edgepair_1.edgej - 1];
-	    edgepair_1.apexd = thisplane_1.edgesi[edgepair_1.edgej + 5999];
+	    edgepair_1.apexd = thisplane_1.edgesi[edgepair_1.edgej + 17999];
 /*         < Pull out and store apex C's coordinates */
 	    edgepair_1.rc[0] = apexinfo_1.apexx[edgepair_1.apexc - 1];
 	    edgepair_1.rc[1] = apexinfo_1.apexy[edgepair_1.apexc - 1];
@@ -2101,7 +2098,7 @@ static integer c__5 = 5;
 		integer) (d_sign(&c_b31, &acxab_dollar_ni__) + 1.);
 /*       < Remove the edge ELIM. */
 	apexinfo_1.apexf[thisplane_1.edgesi[elim - 1] - 1] = -1;
-	apexinfo_1.apexf[thisplane_1.edgesi[elim + 5999] - 1] = -1;
+	apexinfo_1.apexf[thisplane_1.edgesi[elim + 17999] - 1] = -1;
     }
     return 0;
 } /* parallel_edges__ */
@@ -2174,14 +2171,14 @@ static integer c__5 = 5;
 	    if (apexinfo_1.apexf[edgepair_1.apexa - 1] == 2 && 
 		    apexinfo_1.apexf[twinlist_1.twin[edgepair_1.apexc - 1] - 
 		    1] == 2) {
-		apexinfo_1.apexf[edgepair_1.apexa + 5999] = apexinfo_1.apexf[
-			twinlist_1.twin[edgepair_1.apexc - 1] + 5999];
+		apexinfo_1.apexf[edgepair_1.apexa + 17999] = apexinfo_1.apexf[
+			twinlist_1.twin[edgepair_1.apexc - 1] + 17999];
 	    }
 	    if (apexinfo_1.apexf[edgepair_1.apexb - 1] == 2 && 
 		    apexinfo_1.apexf[twinlist_1.twin[edgepair_1.apexd - 1] - 
 		    1] == 2) {
-		apexinfo_1.apexf[edgepair_1.apexb + 5999] = apexinfo_1.apexf[
-			twinlist_1.twin[edgepair_1.apexd - 1] + 5999];
+		apexinfo_1.apexf[edgepair_1.apexb + 17999] = apexinfo_1.apexf[
+			twinlist_1.twin[edgepair_1.apexd - 1] + 17999];
 	    }
 	}
     } else if (apexinfo_1.apexf[edgepair_1.apexc - 1] != -1 && 
@@ -2196,13 +2193,13 @@ static integer c__5 = 5;
 /*       < use in forming the vertices. */
 	if (apexinfo_1.apexf[edgepair_1.apexc - 1] == 2 && apexinfo_1.apexf[
 		twinlist_1.twin[edgepair_1.apexa - 1] - 1] == 2) {
-	    apexinfo_1.apexf[edgepair_1.apexc + 5999] = apexinfo_1.apexf[
-		    twinlist_1.twin[edgepair_1.apexa - 1] + 5999];
+	    apexinfo_1.apexf[edgepair_1.apexc + 17999] = apexinfo_1.apexf[
+		    twinlist_1.twin[edgepair_1.apexa - 1] + 17999];
 	}
 	if (apexinfo_1.apexf[edgepair_1.apexd - 1] == 2 && apexinfo_1.apexf[
 		twinlist_1.twin[edgepair_1.apexb - 1] - 1] == 2) {
-	    apexinfo_1.apexf[edgepair_1.apexd + 5999] = apexinfo_1.apexf[
-		    twinlist_1.twin[edgepair_1.apexb - 1] + 5999];
+	    apexinfo_1.apexf[edgepair_1.apexd + 17999] = apexinfo_1.apexf[
+		    twinlist_1.twin[edgepair_1.apexb - 1] + 17999];
 	}
     }
     return 0;
@@ -2449,7 +2446,8 @@ static integer c__5 = 5;
 /*       < Kill both of the apices of the First edge. */
 /*       < ELIMINATION */
 	apexinfo_1.apexf[thisplane_1.edgesi[formove_1.first - 1] - 1] = -1;
-	apexinfo_1.apexf[thisplane_1.edgesi[formove_1.first + 5999] - 1] = -1;
+	apexinfo_1.apexf[thisplane_1.edgesi[formove_1.first + 17999] - 1] = 
+		-1;
 	elimination = TRUE_;
     } else if (1. - formove_1.lambdaf > 5e-7 && edgealive[leading - 1]) {
 /*       < We know that (-LambdaF < -Eps) and now we also know that */
@@ -2510,8 +2508,8 @@ static integer c__5 = 5;
 /*         < lagging edge. */
 	    apexinfo_1.apexf[thisplane_1.edgesi[formove_1.second - 1] - 1] = 
 		    -1;
-	    apexinfo_1.apexf[thisplane_1.edgesi[formove_1.second + 5999] - 1] 
-		    = -1;
+	    apexinfo_1.apexf[thisplane_1.edgesi[formove_1.second + 17999] - 1]
+		     = -1;
 	}
     } else if (-formove_1.lambdas < -5e-7 && edgealive[lagging - 1]) {
 /*       < We know that (1 - LambdaS > Eps) and now we also know that */
@@ -2558,7 +2556,7 @@ static integer c__5 = 5;
 /*     < LOCAL */
 /*     < Pull out the location of second apex of leading edge and the */
 /*     < location of first apex of lagging edge. */
-    apex1 = thisplane_1.edgesi[formove_1.first + 5999];
+    apex1 = thisplane_1.edgesi[formove_1.first + 17999];
     apex2 = thisplane_1.edgesi[formove_1.second - 1];
     if (formove_1.movement == 3) {
 /*       < Both apices have to be moved.  We have an intersection of */
@@ -2593,16 +2591,16 @@ static integer c__5 = 5;
 /*       < store the number of the 3-plane intersection for future */
 /*       < reference. */
 	apexinfo_1.apexf[apex1 - 1] = 3;
-	apexinfo_1.apexf[apex1 + 5999] = sphereinfo_1.tripcnt;
+	apexinfo_1.apexf[apex1 + 17999] = sphereinfo_1.tripcnt;
 	apexinfo_1.apexf[apex2 - 1] = 3;
-	apexinfo_1.apexf[apex2 + 5999] = sphereinfo_1.tripcnt;
+	apexinfo_1.apexf[apex2 + 17999] = sphereinfo_1.tripcnt;
 	ordering_(&apex1, &apex2, &thisplane_1.planenum, &p2, &p3);
 	debug_1.plane_order__[apex1 - 1] = thisplane_1.planenum;
-	debug_1.plane_order__[apex1 + 5999] = p2;
-	debug_1.plane_order__[apex1 + 11999] = p3;
+	debug_1.plane_order__[apex1 + 17999] = p2;
+	debug_1.plane_order__[apex1 + 35999] = p3;
 	debug_1.plane_order__[apex2 - 1] = thisplane_1.planenum;
-	debug_1.plane_order__[apex2 + 5999] = p2;
-	debug_1.plane_order__[apex2 + 11999] = p3;
+	debug_1.plane_order__[apex2 + 17999] = p2;
+	debug_1.plane_order__[apex2 + 35999] = p3;
     } else if (formove_1.movement == 1) {
 	if (abs(formove_1.lambdas) < 1e-8) {
 /*         < Only the terminus of the leading edge needs to be moved. */
@@ -2632,13 +2630,13 @@ static integer c__5 = 5;
 	    apexinfo_1.apexy[apex1 - 1] = apexinfo_1.apexy[apex2 - 1];
 	    apexinfo_1.apexz[apex1 - 1] = apexinfo_1.apexz[apex2 - 1];
 	    apexinfo_1.apexf[apex1 - 1] = 3;
-	    apexinfo_1.apexf[apex1 + 5999] = apexinfo_1.apexf[apex2 + 5999];
+	    apexinfo_1.apexf[apex1 + 17999] = apexinfo_1.apexf[apex2 + 17999];
 	    debug_1.plane_order__[apex1 - 1] = debug_1.plane_order__[apex2 - 
 		    1];
-	    debug_1.plane_order__[apex1 + 5999] = debug_1.plane_order__[apex2 
-		    + 5999];
-	    debug_1.plane_order__[apex1 + 11999] = debug_1.plane_order__[
-		    apex2 + 11999];
+	    debug_1.plane_order__[apex1 + 17999] = debug_1.plane_order__[
+		    apex2 + 17999];
+	    debug_1.plane_order__[apex1 + 35999] = debug_1.plane_order__[
+		    apex2 + 35999];
 	} else {
 /*         < Only Apex1 has to be moved but the start of the lagging */
 /*         < does not make actual contact with the leading edge. */
@@ -2667,15 +2665,15 @@ static integer c__5 = 5;
 /*         < Let Apex1 adopt all of the characteristics of Apex2 except */
 /*         < for its TripCnt number. */
 	    apexinfo_1.apexf[apex1 - 1] = 3;
-	    apexinfo_1.apexf[apex1 + 5999] = sphereinfo_1.tripcnt;
+	    apexinfo_1.apexf[apex1 + 17999] = sphereinfo_1.tripcnt;
 /*         < Assign plane ordering to the new end of the leading edge as */
 /*         < if the lagging edge truly did pass through the leading */
 /*         < edge and we had real contact.  We will not modify the plane */
 /*         < ordering of Apex2 however. */
 	    ordering_(&apex1, &apex2, &thisplane_1.planenum, &p2, &p3);
 	    debug_1.plane_order__[apex1 - 1] = thisplane_1.planenum;
-	    debug_1.plane_order__[apex1 + 5999] = p2;
-	    debug_1.plane_order__[apex1 + 11999] = p3;
+	    debug_1.plane_order__[apex1 + 17999] = p2;
+	    debug_1.plane_order__[apex1 + 35999] = p3;
 	}
 	if (apexinfo_1.apexf[apex2 - 1] == 2) {
 /*         < RARE CASE: The start of the lagging edge is still a */
@@ -2687,13 +2685,13 @@ static integer c__5 = 5;
 	    apexinfo_1.apexy[apex2 - 1] = apexinfo_1.apexy[apex1 - 1];
 	    apexinfo_1.apexz[apex2 - 1] = apexinfo_1.apexz[apex1 - 1];
 	    apexinfo_1.apexf[apex2 - 1] = 3;
-	    apexinfo_1.apexf[apex2 + 5999] = apexinfo_1.apexf[apex1 + 5999];
+	    apexinfo_1.apexf[apex2 + 17999] = apexinfo_1.apexf[apex1 + 17999];
 	    debug_1.plane_order__[apex2 - 1] = debug_1.plane_order__[apex1 - 
 		    1];
-	    debug_1.plane_order__[apex2 + 5999] = debug_1.plane_order__[apex1 
-		    + 5999];
-	    debug_1.plane_order__[apex2 + 11999] = debug_1.plane_order__[
-		    apex1 + 11999];
+	    debug_1.plane_order__[apex2 + 17999] = debug_1.plane_order__[
+		    apex1 + 17999];
+	    debug_1.plane_order__[apex2 + 35999] = debug_1.plane_order__[
+		    apex1 + 35999];
 	}
     } else {
 /*       < Movement must equal 2. Only Apex2 has to be moved. */
@@ -2726,13 +2724,13 @@ static integer c__5 = 5;
 	    apexinfo_1.apexy[apex2 - 1] = apexinfo_1.apexy[apex1 - 1];
 	    apexinfo_1.apexz[apex2 - 1] = apexinfo_1.apexz[apex1 - 1];
 	    apexinfo_1.apexf[apex2 - 1] = 3;
-	    apexinfo_1.apexf[apex2 + 5999] = apexinfo_1.apexf[apex1 + 5999];
+	    apexinfo_1.apexf[apex2 + 17999] = apexinfo_1.apexf[apex1 + 17999];
 	    debug_1.plane_order__[apex2 - 1] = debug_1.plane_order__[apex1 - 
 		    1];
-	    debug_1.plane_order__[apex2 + 5999] = debug_1.plane_order__[apex1 
-		    + 5999];
-	    debug_1.plane_order__[apex2 + 11999] = debug_1.plane_order__[
-		    apex1 + 11999];
+	    debug_1.plane_order__[apex2 + 17999] = debug_1.plane_order__[
+		    apex1 + 17999];
+	    debug_1.plane_order__[apex2 + 35999] = debug_1.plane_order__[
+		    apex1 + 35999];
 	} else {
 /*         < The end of the leading edge cuts the lagging edge but does */
 /*         < not make actual contact with it. */
@@ -2761,15 +2759,15 @@ static integer c__5 = 5;
 /*         < Let Apex2 adopt all of the characteristics of Apex1 except */
 /*         < for the TripCnt of Apex1. */
 	    apexinfo_1.apexf[apex2 - 1] = 3;
-	    apexinfo_1.apexf[apex2 + 5999] = sphereinfo_1.tripcnt;
+	    apexinfo_1.apexf[apex2 + 17999] = sphereinfo_1.tripcnt;
 /*         < Assign plane ordering to the new start of the lagging edge */
 /*         < as if the leading edge truly did pass through the lagging */
 /*         < edge and we had real contact.  We will not modify the plane */
 /*         < ordering of Apex1 however. */
 	    ordering_(&apex1, &apex2, &thisplane_1.planenum, &p2, &p3);
 	    debug_1.plane_order__[apex2 - 1] = thisplane_1.planenum;
-	    debug_1.plane_order__[apex2 + 5999] = p2;
-	    debug_1.plane_order__[apex2 + 11999] = p3;
+	    debug_1.plane_order__[apex2 + 17999] = p2;
+	    debug_1.plane_order__[apex2 + 35999] = p3;
 	}
 	if (apexinfo_1.apexf[apex1 - 1] == 2) {
 /*         < RARE CASE: The end of the leading edge is still a */
@@ -2781,13 +2779,13 @@ static integer c__5 = 5;
 	    apexinfo_1.apexy[apex1 - 1] = apexinfo_1.apexy[apex2 - 1];
 	    apexinfo_1.apexz[apex1 - 1] = apexinfo_1.apexz[apex2 - 1];
 	    apexinfo_1.apexf[apex1 - 1] = 3;
-	    apexinfo_1.apexf[apex1 + 5999] = apexinfo_1.apexf[apex2 + 5999];
+	    apexinfo_1.apexf[apex1 + 17999] = apexinfo_1.apexf[apex2 + 17999];
 	    debug_1.plane_order__[apex1 - 1] = debug_1.plane_order__[apex2 - 
 		    1];
-	    debug_1.plane_order__[apex1 + 5999] = debug_1.plane_order__[apex2 
-		    + 5999];
-	    debug_1.plane_order__[apex1 + 11999] = debug_1.plane_order__[
-		    apex2 + 11999];
+	    debug_1.plane_order__[apex1 + 17999] = debug_1.plane_order__[
+		    apex2 + 17999];
+	    debug_1.plane_order__[apex1 + 35999] = debug_1.plane_order__[
+		    apex2 + 35999];
 	}
     }
     return 0;
@@ -2901,9 +2899,9 @@ static integer c__5 = 5;
 /*     <   o Form the triple plane order by combining the present */
 /*     <     plane with the two other planes located. */
     if (debug_1.plane_order__[*apex1 - 1] == *planenum) {
-	*p2 = debug_1.plane_order__[*apex1 + 5999];
-    } else if (debug_1.plane_order__[*apex1 + 5999] == *planenum) {
-	*p2 = debug_1.plane_order__[*apex1 + 11999];
+	*p2 = debug_1.plane_order__[*apex1 + 17999];
+    } else if (debug_1.plane_order__[*apex1 + 17999] == *planenum) {
+	*p2 = debug_1.plane_order__[*apex1 + 35999];
 	if (*p2 == 0) {
 	    *p2 = debug_1.plane_order__[*apex1 - 1];
 	}
@@ -2911,14 +2909,14 @@ static integer c__5 = 5;
 	*p2 = debug_1.plane_order__[*apex1 - 1];
     }
     if (debug_1.plane_order__[*apex2 - 1] == *planenum) {
-	*p3 = debug_1.plane_order__[*apex2 + 11999];
+	*p3 = debug_1.plane_order__[*apex2 + 35999];
 	if (*p3 == 0) {
-	    *p3 = debug_1.plane_order__[*apex2 + 5999];
+	    *p3 = debug_1.plane_order__[*apex2 + 17999];
 	}
-    } else if (debug_1.plane_order__[*apex2 + 5999] == *planenum) {
+    } else if (debug_1.plane_order__[*apex2 + 17999] == *planenum) {
 	*p3 = debug_1.plane_order__[*apex2 - 1];
     } else {
-	*p3 = debug_1.plane_order__[*apex2 + 5999];
+	*p3 = debug_1.plane_order__[*apex2 + 17999];
     }
     return 0;
 } /* ordering_ */
@@ -3004,23 +3002,23 @@ static integer c__5 = 5;
 	++sortedout_1.numstart[flag_i__ + 1];
 /*       << Store the location of this type of apex */
 	sortedout_1.locstart[sortedout_1.numstart[flag_i__ + 1] + flag_i__ * 
-		6000 + 5999] = loc_i__;
+		18000 + 17999] = loc_i__;
 /*       < END */
 /*       << Pull out the Edge I's end and its flag */
 /*       << Flag_I will be equal to -1, +2 or +3 depending on */
 /*       << whether the edge is dead, a 2-plane or a 3-plane */
-	loc_i__ = thisplane_1.edgesi[i__ + 5999];
+	loc_i__ = thisplane_1.edgesi[i__ + 17999];
 	flag_i__ = apexinfo_1.apexf[loc_i__ - 1];
 /*       << Increment the proper flag counter */
 	++sortedout_1.numend[flag_i__ + 1];
 /*       << Store the location of this type of apex */
-	sortedout_1.locend[sortedout_1.numend[flag_i__ + 1] + flag_i__ * 6000 
-		+ 5999] = loc_i__;
+	sortedout_1.locend[sortedout_1.numend[flag_i__ + 1] + flag_i__ * 
+		18000 + 17999] = loc_i__;
 /*       < EDGE */
 /*       << Store the number of this type of edge */
 /*       << (NB, the types here are -1 and +1) */
 	sortedout_1.edge_num__[sortedout_1.numstart[3] + sortedout_1.numstart[
-		4] + i_sign(&c__1, &flag_i__) * 6001 + 6001] = i__;
+		4] + i_sign(&c__1, &flag_i__) * 18001 + 18001] = i__;
     }
 /*     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 /*     < NOTE: These lines test whether or not the number of two-plane */
@@ -3125,12 +3123,12 @@ static integer c__5 = 5;
 /*     < plane cutting the sphere. */
     *eta_ap__ = arcareas + polyarea;
 /*     < Store these globally for purposes of debugging. */
-    global_1.areag[thisplane_1.planei + thisplane_1.indexi * 11250 - 11251] = 
-	    *eta_ap__ * .15915494309189535;
-    global_1.numarcsg[thisplane_1.planei + thisplane_1.indexi * 11250 - 11251]
-	     = localarcinfo_1.numarcs;
-    global_1.trueedgesg[thisplane_1.planei + thisplane_1.indexi * 11250 - 
-	    11251] = trueedges;
+    global_1.areag[thisplane_1.planei + thisplane_1.indexi * 101250 - 101251] 
+	    = *eta_ap__ * .15915494309189535;
+    global_1.numarcsg[thisplane_1.planei + thisplane_1.indexi * 101250 - 
+	    101251] = localarcinfo_1.numarcs;
+    global_1.trueedgesg[thisplane_1.planei + thisplane_1.indexi * 101250 - 
+	    101251] = trueedges;
     return 0;
 } /* build_ap__ */
 
@@ -3141,7 +3139,7 @@ static integer c__5 = 5;
 {
     /* Initialized data */
 
-    static doublereal thetastart[6000] = { 6.2831853071795862 };
+    static doublereal thetastart[18000] = { 6.2831853071795862 };
 
     /* System generated locals */
     integer i__1;
@@ -3150,17 +3148,17 @@ static integer c__5 = 5;
     double sin(doublereal);
 
     /* Local variables */
-    static doublereal thetaend[6000];
+    static doublereal thetaend[18000];
     extern /* Subroutine */ int renumarc_(integer *, integer *);
     static integer i__, j, k;
     static doublereal ra[3], rb[3];
-    static integer iend[6000];
+    static integer iend[18000];
     extern /* Subroutine */ int sort_(doublereal *, integer *, integer *);
     static integer loc_a__, loc_b__;
     extern /* Subroutine */ int angle_(doublereal *, doublereal *, doublereal 
 	    *);
     static doublereal theta;
-    static integer istart[6000];
+    static integer istart[18000];
 
 /*     < PASSED */
 /*     < LOCAL */
@@ -3170,14 +3168,14 @@ static integer c__5 = 5;
 /*     < radians. */
 /*     < Pull out the reference 2-plane apex start, call it A */
 /*     < Apex A's angle is defined as 2Pi */
-    loc_a__ = sortedout_1.locstart[18000];
+    loc_a__ = sortedout_1.locstart[54000];
 /*     < Pull out A's coordinates. Note that these are vectors */
 /*     < connecting the sphere center to the point A on the edge. */
     ra[0] = apexinfo_1.apexx[loc_a__ - 1];
     ra[1] = apexinfo_1.apexy[loc_a__ - 1];
     ra[2] = apexinfo_1.apexz[loc_a__ - 1];
 /*     < Pull out the first 2-plane apex end, call it B */
-    loc_b__ = sortedout_1.locend[18000];
+    loc_b__ = sortedout_1.locend[54000];
 /*     < Pull out B's coordinates. Note that these are vectors */
 /*     < connecting the sphere center to the point B on the edge. */
     rb[0] = apexinfo_1.apexx[loc_b__ - 1];
@@ -3197,7 +3195,7 @@ static integer c__5 = 5;
     i__1 = localarcinfo_1.numarcs;
     for (i__ = 2; i__ <= i__1; ++i__) {
 /*       < Pull out the next 2-plane apex start */
-	loc_b__ = sortedout_1.locstart[i__ + 17999];
+	loc_b__ = sortedout_1.locstart[i__ + 53999];
 /*       < Pull out B's coordinates. Note that these are vectors */
 /*       < connecting the sphere center to the point B on the edge. */
 	rb[0] = apexinfo_1.apexx[loc_b__ - 1];
@@ -3206,7 +3204,7 @@ static integer c__5 = 5;
 /*       < Find the angle between A and B */
 	angle_(ra, rb, &thetastart[i__ - 1]);
 /*       < Pull out the next 2-plane apex end */
-	loc_b__ = sortedout_1.locend[i__ + 17999];
+	loc_b__ = sortedout_1.locend[i__ + 53999];
 /*       < Pull out B's coordinates. Note that these are vectors */
 /*       < connecting the sphere center to the point B on the edge. */
 	rb[0] = apexinfo_1.apexx[loc_b__ - 1];
@@ -3250,9 +3248,9 @@ static integer c__5 = 5;
 	i__ = istart[k - 1];
 	j = iend[k - 1];
 /*       < Store this arc as a 2-plane end and 2-plane start */
-	localarcinfo_1.local_list__[k - 1] = sortedout_1.locend[j + 17999];
-	localarcinfo_1.local_list__[k + 5999] = sortedout_1.locstart[i__ + 
-		17999];
+	localarcinfo_1.local_list__[k - 1] = sortedout_1.locend[j + 53999];
+	localarcinfo_1.local_list__[k + 17999] = sortedout_1.locstart[i__ + 
+		53999];
 /*       < Find the true anti-clockwise angle for the arc in radians */
 	theta = thetastart[i__ - 1] - thetaend[j - 1];
 /*       < Find the area of the circle segment formed by the arc and the */
@@ -3264,8 +3262,8 @@ static integer c__5 = 5;
 /*       < There might be a way to get Sin of Theta from (rAxrB).n - LRD */
 	*arcareas += theta - sin(theta);
 /*       < Find all the arc information for use later with the festoons. */
-	renumarc_(&sortedout_1.locend[j + 17999], &sortedout_1.locstart[i__ + 
-		17999]);
+	renumarc_(&sortedout_1.locend[j + 53999], &sortedout_1.locstart[i__ + 
+		53999]);
     }
     return 0;
 } /* form_arcs__ */
@@ -3348,7 +3346,7 @@ static integer c__5 = 5;
 /*     < not already have a new vertex number. */
 /*     < START */
 /*     < Have we done this vertex yet? */
-    if (apexinfo_1.apexf[*start + 5999] == -1) {
+    if (apexinfo_1.apexf[*start + 17999] == -1) {
 /*       < We have NOT done this vertex before. */
 /*       < Assign the apex a new vertex number. */
 	++arcinfo_1.vertexcnt;
@@ -3360,14 +3358,14 @@ static integer c__5 = 5;
 	arcinfo_1.vertexz[arcinfo_1.vertexcnt - 1] = apexinfo_1.apexz[*start 
 		- 1];
 /*       < Mark this apex as done for next time. */
-	apexinfo_1.apexf[*start + 5999] = arcinfo_1.vertexcnt;
+	apexinfo_1.apexf[*start + 17999] = arcinfo_1.vertexcnt;
 /*       < Define this arc as starting with this vertex. */
 	arcinfo_1.arc_list__[arcinfo_1.arccnt - 1] = arcinfo_1.vertexcnt;
     } else {
 /*       < We have come across this apex before.  Pull out its new */
 /*       < vertex number and define this arc as starting with it. */
 	arcinfo_1.arc_list__[arcinfo_1.arccnt - 1] = apexinfo_1.apexf[*start 
-		+ 5999];
+		+ 17999];
     }
 /*     < Later we will need to be able to establish the connectiveness */
 /*     < of the arcs for this sphere so it will be incredibly useful to */
@@ -3377,7 +3375,7 @@ static integer c__5 = 5;
 	    arcinfo_1.arccnt;
 /*     < TERMINUS */
 /*     < Now repeat for the arc terminus. */
-    if (apexinfo_1.apexf[*terminus + 5999] == -1) {
+    if (apexinfo_1.apexf[*terminus + 17999] == -1) {
 /*       < We have NOT done this vertex before. */
 /*       < Assign the apex a new vertex number. */
 	++arcinfo_1.vertexcnt;
@@ -3389,20 +3387,20 @@ static integer c__5 = 5;
 	arcinfo_1.vertexz[arcinfo_1.vertexcnt - 1] = apexinfo_1.apexz[*
 		terminus - 1];
 /*       < Mark this apex as done for next time. */
-	apexinfo_1.apexf[*terminus + 5999] = arcinfo_1.vertexcnt;
+	apexinfo_1.apexf[*terminus + 17999] = arcinfo_1.vertexcnt;
 /*       < Define this arc as terminating with this vertex. */
-	arcinfo_1.arc_list__[arcinfo_1.arccnt + 299] = arcinfo_1.vertexcnt;
+	arcinfo_1.arc_list__[arcinfo_1.arccnt + 899] = arcinfo_1.vertexcnt;
     } else {
 /*       < We have come across this apex before.  Pull out its new */
 /*       < vertex number and define this arc as terminating with it. */
-	arcinfo_1.arc_list__[arcinfo_1.arccnt + 299] = apexinfo_1.apexf[*
-		terminus + 5999];
+	arcinfo_1.arc_list__[arcinfo_1.arccnt + 899] = apexinfo_1.apexf[*
+		terminus + 17999];
     }
 /*     < Now that we have the arc start and terminus we need to find */
 /*     < the geodesic quarter-angle, the diangle area, and the geodesic */
 /*     < unit normal for this arc. */
     diangle_(&arcinfo_1.arc_list__[arcinfo_1.arccnt - 1], &
-	    arcinfo_1.arc_list__[arcinfo_1.arccnt + 299]);
+	    arcinfo_1.arc_list__[arcinfo_1.arccnt + 899]);
     return 0;
 } /* renumarc_ */
 
@@ -3618,9 +3616,9 @@ static integer c__5 = 5;
 	i__1 = *trueedges;
 	for (i__ = 1; i__ <= i__1; ++i__) {
 /*         < Pull out living (not dead) edge number */
-	    edgei = sortedout_1.edge_num__[i__ + 12002];
+	    edgei = sortedout_1.edge_num__[i__ + 36002];
 /*         < Pull out the end of edge I */
-	    eend = thisplane_1.edgesi[edgei + 5999];
+	    eend = thisplane_1.edgesi[edgei + 17999];
 /*         < Is it our reference apex? */
 /*         < Note by definition this edge is alive. */
 	    if (eend != a1) {
@@ -3642,14 +3640,14 @@ static integer c__5 = 5;
 /*         < arc start, Local_List(I,1), and the vector from A1 */
 /*         < to the arc end, Local_List(I,2). */
 	    accumulate_(&localarcinfo_1.local_list__[i__ - 1], &
-		    localarcinfo_1.local_list__[i__ + 5999]);
+		    localarcinfo_1.local_list__[i__ + 17999]);
 	}
     } else {
 /*       < Pull out the 3-plane apex start that forms the start of the */
 /*       < first living (non-dead) edge in the edge list.  Note that we */
 /*       < know that its not dead because we are selecting it from the */
 /*       < Edge_Num list. */
-	a1 = thisplane_1.edgesi[sortedout_1.edge_num__[12003] - 1];
+	a1 = thisplane_1.edgesi[sortedout_1.edge_num__[36003] - 1];
 /*       < Pull out the coordinates of our reference apex */
 	foraccum_1.ra1[0] = apexinfo_1.apexx[a1 - 1];
 	foraccum_1.ra1[1] = apexinfo_1.apexy[a1 - 1];
@@ -3658,17 +3656,17 @@ static integer c__5 = 5;
 /*       < We know that ApexF(A1,1)= +3 because we have no 2-plane */
 /*       < apices and this edge is the first living (non-dead) edge */
 /*       < (i.e., we know that ApexF(A1,1) is not -1). */
-	a1tripnum = apexinfo_1.apexf[a1 + 5999];
+	a1tripnum = apexinfo_1.apexf[a1 + 17999];
 /*       < Loop through the REMAINING living (non-dead) edges */
 	i__1 = *trueedges;
 	for (i__ = 2; i__ <= i__1; ++i__) {
 /*         < Pull out living (not dead) edge number */
-	    edgei = sortedout_1.edge_num__[i__ + 12002];
+	    edgei = sortedout_1.edge_num__[i__ + 36002];
 /*         < Pull out the end of edge I */
-	    eend = thisplane_1.edgesi[edgei + 5999];
+	    eend = thisplane_1.edgesi[edgei + 17999];
 /*         < Is it our reference apex? */
 /*         < Note we know that this edge is alive (non-dead) */
-	    if (apexinfo_1.apexf[eend + 5999] != a1tripnum) {
+	    if (apexinfo_1.apexf[eend + 17999] != a1tripnum) {
 /*           < The end of edge I, Eend does not have the same triple */
 /*           < plane number as the triple plane number of our reference */
 /*           < apex A1.  We must form the area of the triangle */
@@ -3787,7 +3785,7 @@ static integer c__5 = 5;
 
     /* Local variables */
     static integer usedarcs, arc, cnt, arcref;
-    static logical notused[300];
+    static logical notused[900];
 
     /* Fortran I/O blocks */
     static cilist io___165 = { 0, 0, 0, 0, 0 };
@@ -3817,10 +3815,10 @@ static integer c__5 = 5;
 /*         < Initialize the arc count for this festoon. */
 	    cnt = 1;
 /*         < Store the first arc. */
-	    festooninfo_1.festoon[cnt + festooninfo_1.festooncnt * 300 - 301] 
+	    festooninfo_1.festoon[cnt + festooninfo_1.festooncnt * 900 - 901] 
 		    = arcref;
 /*         < Find the arc that reference arc's terminus starts. */
-	    arc = arcinfo_1.arc_map__[arcinfo_1.arc_list__[arcref + 299] - 1];
+	    arc = arcinfo_1.arc_map__[arcinfo_1.arc_list__[arcref + 899] - 1];
 /*         < Tag this arc as used. */
 	    notused[arc - 1] = FALSE_;
 /*         < Connect the arcs until the reference arc appears again. */
@@ -3832,7 +3830,7 @@ static integer c__5 = 5;
 /*           < See note in routine Build_AP concerning two-plane versus */
 /*           < three-plane apices. */
 /*           < LRD - Saturday, February 08, 1992, 10:14:54 PST */
-		if (cnt > 300) {
+		if (cnt > 900) {
 		    s_wsle(&io___165);
 		    do_lio(&c__9, &c__1, " Perturb some coordinates ", (
 			    ftnlen)26);
@@ -3842,10 +3840,10 @@ static integer c__5 = 5;
 		}
 /*           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 /*           < Store the arc. */
-		festooninfo_1.festoon[cnt + festooninfo_1.festooncnt * 300 - 
-			301] = arc;
+		festooninfo_1.festoon[cnt + festooninfo_1.festooncnt * 900 - 
+			901] = arc;
 /*           < Find the arc that the last arc's terminus starts. */
-		arc = arcinfo_1.arc_map__[arcinfo_1.arc_list__[arc + 299] - 1]
+		arc = arcinfo_1.arc_map__[arcinfo_1.arc_list__[arc + 899] - 1]
 			;
 /*           < Tag this arc as used. */
 		notused[arc - 1] = FALSE_;
@@ -3925,7 +3923,7 @@ static integer c__5 = 5;
 	if (numarcs > 2) {
 /*         < Pull out the arc number of the first arc for this festoon. */
 /*         < This first arc will be our reference arc. */
-	    arcref = festooninfo_1.festoon[fest * 300 - 300];
+	    arcref = festooninfo_1.festoon[fest * 900 - 900];
 /*         < Pull out the square tangent of the geodesic quarter-angle */
 /*         < for this reference arc. We will disguise it as diagonal's. */
 	    tanold = arcinfo_1.tangeo[arcref - 1];
@@ -3946,12 +3944,12 @@ static integer c__5 = 5;
 /*           < Increment counter. */
 		++cnt;
 /*           < Pull out the arc number of arc Cnt. */
-		arc = festooninfo_1.festoon[cnt + fest * 300 - 301];
+		arc = festooninfo_1.festoon[cnt + fest * 900 - 901];
 /*           < Pull out the square tangent of the geodesic quarter-angle */
 /*           < for the present arc Cnt. */
 		tanarc = arcinfo_1.tangeo[arc - 1];
 /*           < Pull out the number of the terminating vertex of arc Cnt. */
-		vert = arcinfo_1.arc_list__[arc + 299];
+		vert = arcinfo_1.arc_list__[arc + 899];
 /*           < Pull out the vector connecting the sphere center to the */
 /*           < end of arc Arc.  Call it xT; T is for terminus. */
 		xt[0] = arcinfo_1.vertexx[vert - 1];
@@ -4101,12 +4099,12 @@ static integer c__5 = 5;
 /*           < At this point only the last two arcs of the spherical */
 /*           < polygon have not been used yet.  Pull out the number of */
 /*           < the penultimate arc. */
-		arc = festooninfo_1.festoon[numarcs - 1 + fest * 300 - 301];
+		arc = festooninfo_1.festoon[numarcs - 1 + fest * 900 - 901];
 /*           < Pull out the square tangent of the geodesic quarter-angle */
 /*           < for the penultimate arc. */
 		tanarc = arcinfo_1.tangeo[arc - 1];
 /*           < Pull out the number of the final arc. */
-		arclast = festooninfo_1.festoon[numarcs + fest * 300 - 301];
+		arclast = festooninfo_1.festoon[numarcs + fest * 900 - 901];
 /*           < Pull out the square tangent of the geodesic quarter-angle */
 /*           < for the final arc. */
 		tanlast = arcinfo_1.tangeo[arclast - 1];
@@ -4230,7 +4228,7 @@ static integer c__5 = 5;
 /*     < Increment the arc number. */
     ++(*cnt);
 /*     < Pull out the arc number of arc Cnt. */
-    *arc = festooninfo_1.festoon[*cnt + *fest * 300 - 301];
+    *arc = festooninfo_1.festoon[*cnt + *fest * 900 - 901];
 /*     < Find the cosine of the angle between nG and the unit */
 /*     < geodesic norm for the second arc, cos(w)= nG.nG(Arc). */
     cos_omega__ = ng[0] * arcinfo_1.ngx[*arc - 1] + ng[1] * arcinfo_1.ngy[*
@@ -4243,7 +4241,7 @@ static integer c__5 = 5;
     *area = acos(-cos_omega__) * .5;
 /*     < Pull out the number of the terminating vertex of this */
 /*     < second arc Cnt. */
-    vert = arcinfo_1.arc_list__[*arc + 299];
+    vert = arcinfo_1.arc_list__[*arc + 899];
 /*     < Pull out the vector connecting the sphere center to the */
 /*     < end of arc Arc.  Call it xT; T is for terminus. */
     xt[1] = arcinfo_1.vertexx[vert - 1];

@@ -83,7 +83,7 @@ class resizable_array_base
     // Same as std::vector.
     void reserve(int new_capacity);
 
-    // Unlike std::vector, resize() does not change size();
+    // Unlike std::vector, resize() does not change size(), unless new size is smaller.
     int  resize                 (int);
     int  add                    (T);  // Same as std::vector::push_back
     void  add_no_check_space     (T extra) { _things[_number_elements] = extra; _number_elements++;}

@@ -10,18 +10,18 @@ using std::cerr;
 
 #include "bond_list.h"
 
-Bond_list::Bond_list()
+BondList::BondList()
 {
   _magic = BOND_LIST_MAGIC;
 }
 
-Bond_list::~Bond_list()
+BondList::~BondList()
 {
   _magic = 0;
 }
 
 #ifdef BOND_LIST_COPY_CONSTRUCTOR
-Bond_list::Bond_list(const Bond_list& rhs) {
+BondList::BondList(const BondList& rhs) {
   _magic = BOND_LIST_MAGIC;
   for (const Bond * b : rhs) {
     this->add(new Bond(*b));
@@ -30,7 +30,7 @@ Bond_list::Bond_list(const Bond_list& rhs) {
 #endif
 
 int
-Bond_list::ok() const
+BondList::ok() const
 {
   if (BOND_LIST_MAGIC != _magic)
     return 0;
@@ -42,7 +42,7 @@ Bond_list::ok() const
 }
 
 int
-Bond_list::debug_print(std::ostream & os) const
+BondList::debug_print(std::ostream & os) const
 {
   assert(os.good());
 
@@ -59,7 +59,7 @@ Bond_list::debug_print(std::ostream & os) const
 }
 
 int
-Bond_list::which_bond (atom_number_t a1, atom_number_t a2) const
+BondList::which_bond (atom_number_t a1, atom_number_t a2) const
 {
   assert(ok());
   assert(a1 >= 0 && a2 >= 0 && a1 != a2);
@@ -73,8 +73,8 @@ Bond_list::which_bond (atom_number_t a1, atom_number_t a2) const
   return -1;
 }
 
-Bond_list &
-Bond_list::operator = (Bond_list && rhs)
+BondList &
+BondList::operator = (BondList && rhs)
 {
   resizable_array_p<Bond> & prhs = rhs;
   resizable_array_p<Bond> & plhs = *this;
@@ -85,7 +85,7 @@ Bond_list::operator = (Bond_list && rhs)
 }
 
 int
-Bond_list::remove_bond_between_atoms (atom_number_t a1, atom_number_t a2)
+BondList::remove_bond_between_atoms (atom_number_t a1, atom_number_t a2)
 {
   for (int i = 0; i < _number_elements; i++)
   {
@@ -96,13 +96,13 @@ Bond_list::remove_bond_between_atoms (atom_number_t a1, atom_number_t a2)
     }
   }
 
-  cerr << "Bond_list::remove_bond_between_atoms: no bond between atoms " << a1 << " and " << a2 << '\n';
+  cerr << "BondList::remove_bond_between_atoms: no bond between atoms " << a1 << " and " << a2 << '\n';
   assert(NULL == "this should not happen");
   return 0;
 }
 
 int
-Bond_list::remove_bonds_involving_these_atoms (const int * rm)
+BondList::remove_bonds_involving_these_atoms (const int * rm)
 {
   int rc = 0;
 
@@ -126,7 +126,7 @@ Bond_list::remove_bonds_involving_these_atoms (const int * rm)
 */
 
 int
-Bond_list::swap_atoms (atom_number_t a1, atom_number_t a2)
+BondList::swap_atoms (atom_number_t a1, atom_number_t a2)
 {
   int rc = 0;
 
@@ -140,7 +140,7 @@ Bond_list::swap_atoms (atom_number_t a1, atom_number_t a2)
 }
 
 int
-Bond_list:: move_atom_to_end_of_atom_list (atom_number_t zatom, int atoms_in_molecule)
+BondList:: move_atom_to_end_of_atom_list (atom_number_t zatom, int atoms_in_molecule)
 {
   for (int i = 0; i < _number_elements; i++)
   {
@@ -175,7 +175,7 @@ Bond_list:: move_atom_to_end_of_atom_list (atom_number_t zatom, int atoms_in_mol
 */
 
 int
-Bond_list::invalidate_ring_info()
+BondList::invalidate_ring_info()
 {
   if (_number_elements > 0 && ! _things[0]->nrings_known())   // /work on the assumption that if the first bond does not have ring info. then none of them do.
     return 0;
@@ -191,7 +191,7 @@ Bond_list::invalidate_ring_info()
 #endif
 
 int
-Bond_list::copy_bond_types (bond_type_t * b) const
+BondList::copy_bond_types (bond_type_t * b) const
 {
   assert(nullptr != b);
 
@@ -209,7 +209,7 @@ Bond_list::copy_bond_types (bond_type_t * b) const
 */
 
 void
-Bond_list::invalidate_bond_numbers()
+BondList::invalidate_bond_numbers()
 {
   if (0 == _number_elements)
     return;
@@ -226,7 +226,7 @@ Bond_list::invalidate_bond_numbers()
 }
 
 int
-Bond_list::set_all_bond_types (bond_type_t bt)
+BondList::set_all_bond_types (bond_type_t bt)
 {
   int rc = 0;
   for (int i = 0; i < _number_elements; i++)
@@ -244,7 +244,7 @@ Bond_list::set_all_bond_types (bond_type_t bt)
 }
 
 int
-Bond_list::cis_trans_bonds_present() const
+BondList::cis_trans_bonds_present() const
 {
   for (int i = 0; i < _number_elements; i++)
   {
@@ -256,7 +256,7 @@ Bond_list::cis_trans_bonds_present() const
 }
 
 int
-Bond_list::remove_bonds_involving_these_atoms (const int * r,
+BondList::remove_bonds_involving_these_atoms (const int * r,
                                                int adjust_atom_numbers)
 {
   int rc = 0;
@@ -276,7 +276,7 @@ Bond_list::remove_bonds_involving_these_atoms (const int * r,
 }
 
 int
-Bond_list::adjust_atom_numbers_for_loss_of_atom (const atom_number_t zatom)
+BondList::adjust_atom_numbers_for_loss_of_atom (const atom_number_t zatom)
 {
   for (int i = 0; i < _number_elements; ++i)
   {
@@ -287,7 +287,7 @@ Bond_list::adjust_atom_numbers_for_loss_of_atom (const atom_number_t zatom)
 }
 
 int
-Bond_list::new_atom_numbers (const int * xref)
+BondList::new_atom_numbers (const int * xref)
 {
   for (int i = 0; i < _number_elements; ++i)
   {

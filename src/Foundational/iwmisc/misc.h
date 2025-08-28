@@ -364,9 +364,9 @@ int IntBtwij(T min, T max) {
 
 // Compute `numerator`/`denominator` by converting to a float
 // form.
-template <typename T, typename I>
+template <typename T, typename I, typename J>
 T
-Fraction(I numerator, I denominator)
+Fraction(I numerator, J denominator)
 {
   return static_cast<T>(numerator) / static_cast<T>(denominator);
 }

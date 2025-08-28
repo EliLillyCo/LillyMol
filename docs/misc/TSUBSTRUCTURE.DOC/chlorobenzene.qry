@@ -1,0 +1,10 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "pyridine")
+  (A C smarts "n1ccccc1")
+  (1 Environment 
+    (A I single_bond (0 1 2 3 4))
+    (A C smarts "N(=O)=O")
+    (A I no_other_substituents_allowed 1)
+  )
+)

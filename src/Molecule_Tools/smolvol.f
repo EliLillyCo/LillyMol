@@ -166,7 +166,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Plane
 
-        Parameter ( n_Max= 300, Max_Plane= n_Max*n_Max/8 )
+        Parameter ( n_Max = 900, Max_Plane= n_Max*n_Max/8 )
 
       Real*8 Diminutive
 
@@ -667,7 +667,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Plane
 
-        Parameter ( n_Max= 300, Max_Plane= n_Max*n_Max/8 )
+        Parameter ( n_Max = 900, Max_Plane= n_Max*n_Max/8 )
 
 C     passed
 
@@ -865,7 +865,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max
 
-        Parameter ( n_Max= 300 )
+        Parameter ( n_Max = 900 )
 
       Real*8 Pi, Pi4, Pi4_3
 
@@ -999,7 +999,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Plane, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Plane= n_Max*n_Max/8
+        Parameter ( n_Max = 900, Max_Plane= n_Max*n_Max/8
      >            , Max_Apex= 20*n_Max )
 
       Common /Plane Info/ nx, ny, nz, Magnitude, rho_sq
@@ -1346,7 +1346,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -1410,7 +1410,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -1488,7 +1488,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -1597,7 +1597,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -1677,7 +1677,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -1753,7 +1753,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -1890,7 +1890,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -2068,7 +2068,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -2135,7 +2135,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -2259,7 +2259,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Plane, Max_Apex, Max_Arc
 
-        Parameter ( n_Max= 300, Max_Plane= n_Max*n_Max/8
+        Parameter ( n_Max = 900, Max_Plane= n_Max*n_Max/8
      >            , Max_Apex= 20*n_Max
      >            , Max_Arc= n_Max )
 
@@ -2527,7 +2527,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -2757,7 +2757,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -2865,7 +2865,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -3034,7 +3034,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -3147,7 +3147,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -3538,7 +3538,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Diminutive
 
@@ -4002,7 +4002,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -4068,7 +4068,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Plane, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Plane= n_Max*n_Max/8
+        Parameter ( n_Max = 900, Max_Plane= n_Max*n_Max/8
      >            , Max_Apex= 20*n_Max )
 
       Real*8 Pi, O_2Pi
@@ -4330,7 +4330,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Real*8 Pi, Two_Pi
 
@@ -4557,7 +4557,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -4639,7 +4639,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex, Max_Arc
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max, Max_Arc= n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max, Max_Arc= n_Max )
 
 C     < PASSED
 
@@ -4776,7 +4776,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex, Max_Arc
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max, Max_Arc= n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max, Max_Arc= n_Max )
 
       Real*8 Diminutive
 
@@ -4992,7 +4992,7 @@ C     < PASSED
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
       Common /This Plane/ ni, vi_Mag, rhoi_sq
      >       , Curvei, O_rhoi_sq, R_rhoi, vi_rhoi
@@ -5230,7 +5230,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Apex
 
-        Parameter ( n_Max= 300, Max_Apex= 20*n_Max )
+        Parameter ( n_Max = 900, Max_Apex= 20*n_Max )
 
 C     < PASSED
 
@@ -5309,7 +5309,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Arc
 
-        Parameter ( n_Max= 300, Max_Arc= n_Max )
+        Parameter ( n_Max = 900, Max_Arc= n_Max )
 
 C     < PASSED
 
@@ -5383,7 +5383,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Arc, Max_Fest
 
-        Parameter ( n_Max= 300, Max_Arc= n_Max, Max_Fest= n_Max/10 )
+        Parameter ( n_Max = 900, Max_Arc= n_Max, Max_Fest= n_Max/10 )
 
       Common /Sphere Info/ Radius, Rsq, O_Radius, O_Rsq, O_Rcu
      >                   , Sphere, NumPlanes
@@ -5529,7 +5529,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Arc, Max_Fest
 
-        Parameter ( n_Max= 300, Max_Arc= n_Max, Max_Fest= n_Max/10 )
+        Parameter ( n_Max = 900, Max_Arc= n_Max, Max_Fest= n_Max/10 )
 
       Real*8 Diminutive
 
@@ -5985,7 +5985,7 @@ C---------------------------------------------------------------------C
 
       Integer*4 n_Max, Max_Arc, Max_Fest
 
-        Parameter ( n_Max= 300, Max_Arc= n_Max, Max_Fest= n_Max/10 )
+        Parameter ( n_Max = 900, Max_Arc= n_Max, Max_Fest= n_Max/10 )
 
 C     < PASSED
 

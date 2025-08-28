@@ -8,7 +8,7 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
-#include "Utilities/Distance_Matrix/IWDistanceMatrixBase.h"
+#include "Obsolete/Distance_Matrix/IWDistanceMatrixBase.h"
 
 #include "nn_results.h"
 #include "extract_from_tdt_form.h"

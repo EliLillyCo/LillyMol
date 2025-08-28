@@ -21,7 +21,12 @@
 
 // #define FB_ENTROPY_WEIGHTED_FPS
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
+
 #include "gfp.h"
 #include "neighbour_list.h"
 #include "nndata.h"
@@ -717,6 +722,11 @@ nearneighbours(const const_IWSubstring& fname, IWString_and_File_Descriptor& out
   return nearneighbours(input, output);
 }
 
+// Some options have been deprecated. They are in the Command_Line object
+// and are procesed in the main function. Some have been moved to the -B
+// option, and some just remain silent (-i and -I for example).  Those two
+// options should never have been implemented.
+
 // clang-format off
 static void
 usage (int rc)
@@ -729,27 +739,29 @@ usage (int rc)
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Finds near neighbours\n";
-  cerr << "Usage " << prog_name << " ... -p <needles> <haystack>\n";
-  cerr << " -p <file>        specify file against which input is to be compared (needles)\n";
-  cerr << " -s <number>      specify max pool size\n";
-  cerr << " -n <number>      specify how many neighbours to find\n";
-  cerr << " -T <distance>    specify upper distance threshold\n";
-  cerr << " -m <number>      the minimum number of neighbours to find\n";
-  cerr << " -T TAG=tag       upper distance threshold for each molecule in TAG<>\n";
-  cerr << " -t <distance>    specify lower distance threshold\n";
-  cerr << " -i <dataitem>    specify identifier dataitem in pool\n";
-  cerr << " -I <dataitem>    specify identifier dataitem in input file\n";
-  cerr << " -e <dataitem>    specify pool object dataitems to be echo'd (default $SMI and PCN)\n";
-  cerr << " -r <number>      report progress every <number> fingerprints\n";
-  cerr << " -D <tag>         tag for distances (default '" << distance_tag << "')\n";
-  cerr << " -h               discard neighbours with zero distance and the same ID as the target\n";
-  cerr << " -B <qualifier>   various other options, enter '-B help' for details\n";
-  cerr << " -F ...           gfp options, enter '-F help' for details\n";
-  cerr << " -V ...           Tversky specification, enter '-V help' for details\n";
-  cerr << " -g <dist>        Abandon distance computation if any component > dist \n";
-  cerr << " -k               generate nnbr::NearNeighbours textproto output\n";
-  cerr << " -v               verbose output\n";
+  cerr << R"(Finds near neighbours.
+Uses the concept of needles and haystack. For each needle fingerprint, find the
+closest fingerprints in the haystack. The needles are in the -p file, and the
+haystack is in one or more input files.
+gfp_lnearneighbours -p needles.gfp haystack.gfp > needles.nn
+Output can be processed with nplotnn.
+
+ -p <file>        specify file against which input is to be compared (needles).
+ -s <number>      specify max pool size.
+ -n <number>      specify how many neighbours to find.
+ -T <distance>    specify upper distance threshold.
+ -m <number>      the minimum number of neighbours to find.
+ -T TAG=tag       upper distance threshold for each molecule in TAG<>.
+ -t <distance>    specify lower distance threshold.
+ -r <number>      report progress every <number> fingerprints.
+ -h               discard neighbours with zero distance and the same ID as the target.
+ -B <qualifier>   various other options, enter '-B help' for details.
+ -F ...           gfp options, enter '-F help' for details.
+ -V ...           Tversky specification, enter '-V help' for details.
+ -g <dist>        Abandon distance computation if any component > dist .
+ -k               generate nnbr::NearNeighbours textproto output.
+ -v               verbose output.
+)";
 // clang-format on
 
   exit (rc);
@@ -766,6 +778,23 @@ UpdateCounters(const NN_Object& needle, extending_resizable_array<int>& neighbou
   if (nbrs) {
     closest_neighbour_distance.extra(needle.distance_of_closest_neighbour());
   }
+}
+
+static void
+DisplayDashBOptions(std::ostream& output) {
+  cerr << R"(The following -B qualifiers are recognised.
+ -B nofatal         ignore otherwise fatal errors.
+ -B nosmiles        discard neighbour smiles - things run faster and consume less memory.
+ -B nbrtag=<tag>    write the number of neighbours for each target in <tag>.
+ -B bignn           use algorithm optimum for large neighour lists.
+ -B rmzero          remove leading zero's from identifiers.
+ -B ewt             distance metric is equal weight Tanimoto.
+ -B maxdistanceinclusive    distances up to and including the max distance are considered matches.
+ -B ID=<tag>        in the output, the tag that gets echo'd as the identifier (default PCN).
+ -B DIST=<tag>      in the output, write distances with the <tag> (default DIST).
+)";
+
+  ::exit(0);
 }
 
 static int
@@ -964,20 +993,21 @@ nearneighbours(int argc, char** argv) {
         if (verbose) {
           cerr << "Distance metric is equal weight Tanimoto\n";
         }
+      } else if (b.starts_with("ID=")) {
+        b.remove_leading_chars(3);
+        output_identifier = b;
+        if (verbose) {
+          cerr << "Output identifier tag " << output_identifier << '\n';
+        }
+      } else if (b.starts_with("DIST=")) {
+        b.remove_leading_chars(5);
+        distance_tag = b;
+        distance_tag.EnsureEndsWith('<');
+        if (verbose) {
+          cerr << "Disances in output written with tag " << distance_tag << '\n';
+        }
       } else if ("help" == b) {
-        cerr << "The following -B qualifiers are recognised\n";
-
-        cerr << " -B nofatal    ignore otherwise fatal errors\n";
-        cerr << " -B nosmiles   discard neighbour smiles - things run faster and consume "
-                "less memory\n";
-        cerr << " -B nbrtag=<tag> write the number of neighbours for each target in "
-                "<tag>\n";
-        cerr << " -B bignn      use algorithm optimum for large neighour lists\n";
-        cerr << " -B rmzero     remove leading zero's from identifiers\n";
-        cerr << " -B ewt        distance metric is equal weight Tanimoto\n";
-        cerr << " -B maxdistanceinclusive    distnaces up to and including the max "
-                "distance are considered matches\n";
-        return 0;
+        DisplayDashBOptions(cerr);
       } else {
         cerr << "Unrecognised -B qualifier '" << b << "'\n";
         usage(7);

@@ -1,0 +1,9 @@
+(0 Query
+  (A I version 2)
+  (A C smarts "[ND1H2]CCc1ccccc1")
+  (1 Environment
+    (A I single_bond (4 5 6 7 8))
+    (A I hits_needed 1)
+    (A C smarts ">1[F,Cl,Br,I]")
+  )
+)

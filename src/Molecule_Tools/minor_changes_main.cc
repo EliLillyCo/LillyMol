@@ -31,20 +31,23 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Makes a potentially large number of small changes to a molecule.\n";
-  cerr << " -C <fname>    textproto file with MinorChangesData options\n";
-  cerr << " -F <fname>    one or more DicerFragment textproto files (from get_substituents)\n";
-  cerr << " -B <fname>    one or more DicerFragment textproto files with bivalent (two isotopes) fragments\n";
-  cerr << " -P <atype>    atom typing specification -needed if atom types in the get_substituents data\n";
-  cerr << " -s <smarts>   specify atoms that can change\n";
-  cerr << " -q <query>    specify atoms that can change\n";
-  cerr << " -x            remove isotopes from product molecules\n";
-  cerr << " -u <support>  support level for inclusion from fragment libraries\n";
-  cerr << " -M <max>      maximum number of products per starting molecule\n";
-  cerr << " -c            remove chirality\n";
-  cerr << " -l            strip to largest fragment\n";
-  cerr << " -g ...        chemical standardisation\n";
-  cerr << " -v            verbose output\n";
+  cerr << R"(Makes a potentially large number of small changes to a molecule.\n";
+ -C <fname>    textproto file with MinorChangesData options.
+ -F <fname>    one or more DicerFragment textproto files (from get_substituents).
+ -B <fname>    one or more DicerFragment textproto files with bivalent (two isotopes) fragments.
+ -P <atype>    atom typing specification -needed if atom types in the get_substituents data.
+ -s <smarts>   specify atoms that can change.
+ -n <query>    specify atoms that cannot be changed - applied after the -s/-q options.
+ -q <query>    specify atoms that can change.
+ -x            remove isotopes from product molecules.
+ -u <support>  support level for inclusion from fragment libraries.
+ -M <max>      maximum number of products per starting molecule.
+ -p            write the parent molecule.
+ -c            remove chirality.
+ -l            strip to largest fragment.
+ -g ...        chemical standardisation.
+ -v            verbose output.
+)";
 // clang-format on
 
   ::exit(rc);
@@ -246,7 +249,7 @@ MinorChanges(LocalOptions& local_options,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:F:pC:B:xu:M:s:q:");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:P:F:pC:B:xu:M:s:q:n:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -302,6 +305,8 @@ Main(int argc, char** argv) {
       return 1;
     }
   }
+
+  output.flush();
 
   if (verbose) {
     options.Report(cerr);

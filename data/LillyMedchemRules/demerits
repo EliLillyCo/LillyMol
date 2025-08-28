@@ -86,6 +86,7 @@ isothioamide_cyclic.qry
 hydrazide_acyclic.qry
 hydrazide_cyclic.qry
 thioester_acyclic_aliphatic.qry
+thioester_acyclic.qry
 halo_phthalazine.qry
 furan.qry
 michael_demerited.qry
@@ -118,6 +119,9 @@ acyl_isoamide_aromatic.qry
 
 6_membered_aromatic_sulfur.qry
 
-sulphur.qry
+too_many_sulphur.qry
 
 hemiaminal.qry
+
+menthol.qry
+aliphatic_nitro.qry

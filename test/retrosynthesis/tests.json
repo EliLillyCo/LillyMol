@@ -1,0 +1,25 @@
+{
+  "executable": "retrosynthesis",
+  "test": [
+    {
+      "name": "bromo_grignard",
+      "args": [ "-S -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 1 -I #{datadir}/Bromo_Grignard_CentroidRxnSmi_1 -P UST:AZUCORS #{datadir}/grignard.smi" ]
+    },
+    {
+      "name": "mannich",
+      "args": [ "-S -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 2 -I #{datadir}/Mannich_CentroidRxnSmi_2 -P UST:AZUCORS #{datadir}/mannich.smi" ]
+    },
+    {
+      "name": "reductive_amination",
+      "args": [ "-S -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 0 -I #{datadir}/Aldehyde_CentroidRxnSmi_0 -P UST:AZUCORS #{datadir}/random1000.smi" ]
+    },
+    {
+      "name": "sameParticleAddBondBreakBond",
+      "args": [ "-S -Y all -X kg -X kekule -X ersfrm -a 2 -q f -v -R 1 -I #{datadir}/CentroidTad.smi -P UST:AZUCORS #{datadir}/testMol1.smi" ],
+      "comment": [ "Bug generate bogus output when rxn called for a new bond in one component that was NOT the first Component",
+          "May 2025. The bug is now detected during the internal consistency check"
+      ],
+      "broken_do_not_evaluate": true
+    }
+  ]
+}

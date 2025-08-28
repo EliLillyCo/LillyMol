@@ -1,0 +1,13 @@
+query {
+  ring_system_specifier {
+    rings_in_system: 3
+    ring_size_requirement {
+      ring_size: 6
+      count: 1
+    }
+    ring_size_requirement {
+      ring_size: 5
+      count: 2
+    }
+  }
+}

@@ -26,12 +26,15 @@
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/demerit.pb.h"
+#else
+#include "demerit.pb.h"
+#endif
 #include "substructure_demerits.h"
 #include "demerit.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;     // visible in substructure_demerits
 
@@ -41,8 +44,8 @@ static uint64_t molecules_read = 0;
 
 const char * prog_name = nullptr;
 
-static int molecules_receiving_demerits = 0;
-static int molecules_rejected = 0;
+static uint64_t molecules_receiving_demerits = 0;
+static uint64_t molecules_rejected = 0;
 
 static Elements_to_Remove elements_to_remove;
 
@@ -65,7 +68,7 @@ static int write_rejection_reasons_separately = 0;
 static int write_sorted_vbar_list = 0;
 
 static int skip_molecules_with_abnormal_valences;
-static int molecules_with_abnormal_valences = 0;
+static uint64_t molecules_with_abnormal_valences = 0;
 
 static resizable_array_p<Substructure_Hit_Statistics> queries;
 
@@ -122,7 +125,7 @@ do_atom_count_demerits(Molecule & m,
   {
     demerit.extra(rejection_threshold() + 6 * (matoms - hard_upper_atom_count_cutoff), "too_many_atoms");
 
-//  cerr << hard_upper_atom_count_cutoff << " hard_upper_atom_count_cutoff, matoms = " << matoms << endl;
+//  cerr << hard_upper_atom_count_cutoff << " hard_upper_atom_count_cutoff, matoms = " << matoms << '\n';
     return;
   }
 
@@ -143,9 +146,9 @@ do_atom_count_demerits(Molecule & m,
   {
     float r = static_cast<float>(matoms - soft_upper_atom_count_cutoff) / static_cast<float>(hard_upper_atom_count_cutoff - soft_upper_atom_count_cutoff);
     int d = static_cast<int>(upper_atom_count_demerit * r);
-//  cerr << "too_many_atoms: " << soft_upper_atom_count_cutoff << " soft_upper_atom_count_cutoff, matoms = " << matoms << ", d = " << d << endl;
-//  cerr << "upper_atom_count_demerit " << upper_atom_count_demerit << endl;
-//  cerr << "too_many_atoms: soft_upper_atom_count_cutoff " << soft_upper_atom_count_cutoff << " hard_upper_atom_count_cutoff " << hard_upper_atom_count_cutoff << " matoms " << matoms << " D = " << d << endl;
+//  cerr << "too_many_atoms: " << soft_upper_atom_count_cutoff << " soft_upper_atom_count_cutoff, matoms = " << matoms << ", d = " << d << '\n';
+//  cerr << "upper_atom_count_demerit " << upper_atom_count_demerit << '\n';
+//  cerr << "too_many_atoms: soft_upper_atom_count_cutoff " << soft_upper_atom_count_cutoff << " hard_upper_atom_count_cutoff " << hard_upper_atom_count_cutoff << " matoms " << matoms << " D = " << d << '\n';
     if (0 == d)
       d = 1;
 
@@ -163,18 +166,13 @@ run_a_set_of_queries(Molecule_to_Match & target,
                      Demerit & demerit,
                      resizable_array_p<Substructure_Hit_Statistics> & queries)
 {
-  int nqueries = queries.number_elements();
-
-  for (int i = 0; i < nqueries; i++)
-  {
-    Substructure_Hit_Statistics * q = queries[i];
-
+  for (Substructure_Hit_Statistics* q : queries) {
     int nhits = q->substructure_search(target);
     if (0 == nhits)
       continue;
 
     if (verbose > 1)
-      cerr << nhits << " matches to query " << i << ' ' << q->comment() << endl;
+      cerr << nhits << " matches to query " << ' ' << q->comment() << '\n';
 
     double d;
     (void) q->numeric_value(d, demerit_numeric_value_index);
@@ -223,7 +221,7 @@ iwdemerit(Molecule & m,
   if (do_hard_coded_substructure_queries)
   {
     substructure_demerits::hard_coded_queries(m, demerit);
-//  cerr << "After hard coded queries, score is " << demerit.score() << endl;
+//  cerr << "After hard coded queries, score is " << demerit.score() << '\n';
 
     if (demerit.rejected() && 0 == keep_going_after_rejection)
       return;
@@ -235,7 +233,7 @@ iwdemerit(Molecule & m,
 
     run_a_set_of_queries(target, demerit, q1);
 
-//  cerr << "After command line queries, score is " << demerit.score() << " rej? " << demerit.rejected() << endl;
+//  cerr << "After command line queries, score is " << demerit.score() << " rej? " << demerit.rejected() << '\n';
     if (demerit.rejected())
       return;
   }
@@ -276,7 +274,7 @@ do_append_demerit_text_to_name(Molecule & m,
                                const int score,
                                const IWString & reason)
 {
-//cerr << "do_append_demerit_text_to_name " << score << ' ' << reason << endl;
+//cerr << "do_append_demerit_text_to_name " << score << ' ' << reason << '\n';
 
   IWString new_name(m.molecule_name());
 
@@ -289,7 +287,7 @@ do_append_demerit_text_to_name(Molecule & m,
 
   m.set_name(new_name);
 
-//cerr << "new_name " << new_name << endl;
+//cerr << "new_name " << new_name << '\n';
 
   return 1;
 }
@@ -420,7 +418,7 @@ iwdemerit(Molecule & m,
       do_append_demerit_text_to_name(m, demerit);
   }
 
-//cerr << m.name() << " rejected? " << demerit.rejected() << " stream is " << stream_for_non_rejected_molecules.active() << endl;
+//cerr << m.name() << " rejected? " << demerit.rejected() << " stream is " << stream_for_non_rejected_molecules.active() << '\n';
 
   if (proto_stream.active()) {
     WriteAsProto(m, save_name, demerit, proto_stream);
@@ -504,7 +502,7 @@ iwdemerit(data_source_and_type<Molecule> & input,
 
     for (int i = 0; i < queries.number_elements(); i++)
     {
-      cerr << "Results of query " << i << endl;
+      cerr << "Results of query " << i << '\n';
       queries[i]->report(cerr, verbose);
     }
   }
@@ -726,7 +724,7 @@ iwdemerit(int argc, char ** argv)
     set_rejection_threshold(f);
 
     if (verbose)
-      cerr << "Rejection threshold set to " << f << endl;
+      cerr << "Rejection threshold set to " << f << '\n';
 
     if (! cl.option_present('x'))
     {
@@ -938,7 +936,7 @@ iwdemerit(int argc, char ** argv)
       ;
     else
     {
-      cerr << "Invalid lower atom count cutoff values soft:" << soft_lower_atom_count_cutoff << " hard:" << hard_lower_atom_count_cutoff << endl;
+      cerr << "Invalid lower atom count cutoff values soft:" << soft_lower_atom_count_cutoff << " hard:" << hard_lower_atom_count_cutoff << '\n';
       return 5;
     }
 
@@ -948,7 +946,7 @@ iwdemerit(int argc, char ** argv)
       ;
     else
     {
-      cerr << "Invalid upper atom count cutoff values soft:" << soft_upper_atom_count_cutoff << " hard:" << hard_upper_atom_count_cutoff << endl;
+      cerr << "Invalid upper atom count cutoff values soft:" << soft_upper_atom_count_cutoff << " hard:" << hard_upper_atom_count_cutoff << '\n';
       return 5;
     }
 
@@ -958,7 +956,7 @@ iwdemerit(int argc, char ** argv)
       ;
     else
     {
-      cerr << "Soft cutoffs invalid, lower:" << soft_lower_atom_count_cutoff << " upper:" << soft_upper_atom_count_cutoff << endl;
+      cerr << "Soft cutoffs invalid, lower:" << soft_lower_atom_count_cutoff << " upper:" << soft_upper_atom_count_cutoff << '\n';
       return 8;
     }
 
@@ -1021,7 +1019,7 @@ iwdemerit(int argc, char ** argv)
         }
 
         if (verbose)
-          cerr << "Demerit numeric value index set to " << demerit_numeric_value_index << endl;
+          cerr << "Demerit numeric value index set to " << demerit_numeric_value_index << '\n';
       }
       else if (w.starts_with("maxe="))
       {
@@ -1107,7 +1105,7 @@ iwdemerit(int argc, char ** argv)
     }
 
     if (verbose)
-      cerr << "All demerits assigned numeric value " << all_demerits_same_numeric_value << endl;
+      cerr << "All demerits assigned numeric value " << all_demerits_same_numeric_value << '\n';
 
     substructure_demerits::set_all_numeric_demerit_values(all_demerits_same_numeric_value);
   }
@@ -1156,7 +1154,7 @@ iwdemerit(int argc, char ** argv)
   
         if (d < 0.0)
         {
-          cerr << "Hmmm, query '" << q->comment() << "' has a negative demerit " << d << endl;
+          cerr << "Hmmm, query '" << q->comment() << "' has a negative demerit " << d << '\n';
           return 14;
         }
 

@@ -1,0 +1,47 @@
+{
+  "executable": "rxn_substructure_search",
+  "test": [
+
+    {
+      "name": "case_10_asl_trifluoromethyl",
+      "comment": [
+        "Find triflouromethane even if it is not involved in the reaction"
+      ],
+      "args": [
+        "-v -q 'C(F)(F)F>>' -m found #{indir}/10_asl.smi"
+      ]
+    },
+
+    {
+      "name": "case_10_asl_agents",
+      "comment": [
+        "Find by searching the agents"
+      ],
+      "args": [
+        "-v -q '[CH](=[O])[OH]+[c]1([NH2])[cH][c]([Br])[cH][cH][cH]1>[CH2]1[CH2][CH2][CH2][O]1+[CH2]([Cl])[Cl]+[CH3][C](=[O])[O][C]([CH3])=[O]+[OH2]+[c]1([NH2])[cH][c]([Br])[cH][cH][cH]1>[c]1([NH][CH]=[O])[cH][c]([Br])[cH][cH][cH]1 MX5-E00382-099-3'",
+        "-m found #{indir}/10_asl.smi"
+      ]
+    },
+
+    {
+      "name": "case_10_asl_miss_agents",
+      "comment": [
+        "Do not find anthing base on agent search"
+      ],
+      "args": [
+        "-v -q '>[CH2]1[CH2][CH2][CH2][O]1+[Al]>' -m found #{indir}/10_asl.smi"
+      ]
+    },
+
+    {
+      "name": "case_10_asl_rxnqry_file",
+      "comment": [
+        "case_10_asl_rxnqry_file"
+      ],
+      "args": [
+        "-v -s 'F:#{indir}/queries.rxnqry' -m found #{indir}/10_asl.smi"
+      ]
+    }
+
+  ]
+}

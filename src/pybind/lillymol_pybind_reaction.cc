@@ -22,7 +22,9 @@ ReadReaction(const std::string& fname, IWReaction& rxn) {
     return false;
   }
 
-  if (! rxn.ConstructFromProto(*proto, tmp)) {
+  Sidechain_Match_Conditions smc;
+
+  if (! rxn.ConstructFromProto(*proto, tmp, smc)) {
     return false;
   }
 
@@ -98,7 +100,8 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
     .def("construct_from_textproto",
       [](IWReaction& rxn, const std::string& textproto)->bool {
         IWString dirname(".");  // maybe make an argument
-        if (! rxn.ConstructFromTextProto(textproto, dirname))  {
+        Sidechain_Match_Conditions smc;
+        if (! rxn.ConstructFromTextProto(textproto, dirname, smc))  {
           return false;
         }
 
@@ -195,8 +198,9 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
     .def("perform_reaction",
       [](IWReaction& rxn, Molecule& scaffold, std::vector<Molecule>& sidechain)->std::optional<Molecule> {
 
-        // Just use default match conditions.
+        // Default conditions, multiple matches not allowed.
         Sidechain_Match_Conditions smc;
+
         for (uint32_t i = 0; i < sidechain.size(); ++i) {
           if (! rxn.add_sidechain_reagent(i, sidechain[i], smc)) {
             std::cerr << "perform_reaction:cannot add sidechain reagent " << sidechain[i].name() << '\n';
@@ -208,6 +212,7 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
         Substructure_Results sresults;
         if (rxn.substructure_search(scaffold, sresults) != 1) {
           std::cerr << "perform_reaction:not 1 match to scaffold " << scaffold.name() << '\n';
+          rxn.remove_no_delete_all_reagents();
           return std::nullopt;
         }
 
@@ -223,6 +228,50 @@ PYBIND11_MODULE(lillymol_reaction, rxn)
 
       },
       "React scaffold with sidechains, assuming one substructure match all round"
+    )
+    .def("perform_reaction_to_list",
+      [](IWReaction& rxn, Molecule& scaffold, std::vector<Molecule>& sidechain)->std::vector<Molecule> {
+        std::vector<Molecule> result;
+
+        Sidechain_Match_Conditions smc;
+        // Multiple sidechain matches enumerated.
+        smc.set_make_new_reagent_for_each_hit(1);
+
+        int number_reagents = 0;
+        for (uint32_t i = 0; i < sidechain.size(); ++i) {
+          if (! rxn.add_sidechain_reagent(i, sidechain[i], smc)) {
+            std::cerr << "perform_reaction:cannot add sidechain reagent " << sidechain[i].name() << '\n';
+            rxn.remove_no_delete_all_reagents();
+            return result;
+          }
+          number_reagents += rxn.sidechain(0)->number_reagents();
+        }
+
+        // Make allowances for 2 scaffold matches. Resizing is expected to be expensive.
+        result.reserve(2 * number_reagents);
+
+        Substructure_Results sresults;
+        if (rxn.substructure_search(scaffold, sresults) == 0) {
+          std::cerr << "perform_reaction:no match to scaffold " << scaffold.name() << '\n';
+          rxn.remove_no_delete_all_reagents();
+          return result;
+        }
+
+        Reaction_Iterator iter;
+        for (iter.initialise(rxn); iter.active(); iter++) {
+          Molecule product;
+          if (! rxn.perform_reaction(&scaffold, sresults, iter, product)) {
+            std::cerr << "Reaction involving " << scaffold.name() << " failed, returning partial result\n";
+            rxn.remove_no_delete_all_reagents();
+            return result;
+          }
+          result.push_back(product);
+        }
+
+        rxn.remove_no_delete_all_reagents();
+        return result;
+      },
+      "For each scaffold embedding, generate list of products"
     )
       
   ;

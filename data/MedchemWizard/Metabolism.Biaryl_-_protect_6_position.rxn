@@ -3,7 +3,7 @@
 
   (A C Comment "Metabolism.Biaryl_-_protect_6_position_F")
   (0 Scaffold
-    (A C smarts "[cD3]1aaaa2a[cD2]aaa12")
+    (A C smarts "[cx2D3]1aaaa2a[cD2]aaa12")
   )
   (1 Sidechain
     (A C smiles "F")

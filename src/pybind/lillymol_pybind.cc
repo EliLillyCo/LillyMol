@@ -145,6 +145,24 @@ ToScaffold(Molecule& m) {
     return 0;
   }
 
+  // Add back in singly connected =O and =N
+  // Note that we do this for all scaffold atoms,
+  // aromatic rings, aliphatic rings and in linker groups.
+  for (int i = 0; i < matoms; ++i) {
+    const Atom& a = m[i];
+    if (a.ncon() != 1) {
+      continue;
+    }
+    const Bond* b = a[0];
+    if (! b->is_double_bond()) {
+      continue;
+    }
+    atom_number_t o = b->other(i);
+    if (spinach[o] == 0) {
+      spinach[i] = 0;
+    }
+  }
+
   return m.remove_atoms(spinach.get(), 1);
 }
 
@@ -230,6 +248,7 @@ PYBIND11_MODULE(lillymol, m)
     .def("set_append_molecular_formula", &Mol2Graph::set_append_molecular_formula, "set_append_molecular_formula")
     .def("set_aromatic_distinguishing_formula", &Mol2Graph::set_aromatic_distinguishing_formula, "set_aromatic_distinguishing_formula")
     .def("set_remove_chiral_centres", &Mol2Graph::set_remove_chiral_centres, "set_remove_chiral_centres")
+    .def("turn_on_most_useful_options", &Mol2Graph::TurnOnMostUsefulOptions, "turn on the options you probably want")
     .def("set_active", &Mol2Graph::set_active, "Set active")
     .def("active", &Mol2Graph::active, "True if active")
   ;
@@ -275,6 +294,7 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "True if molecule is empty"
                 )
+                .def("resize", &Molecule::resize, "Change number of atoms - dangerous")
                 .def("nedges", static_cast<int (Molecule::*)()const>(&Molecule::nedges), "Number edges in molecule")
                 .def("add_atom",
                   [](Molecule& m, int atnum)->bool {
@@ -383,6 +403,16 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "For each atom the ring system identifier"
                 )
+                .def("label_atoms_by_ring_system_including_spiro_fused_np",
+                  [](Molecule& m)-> py::array_t<int> {
+                    py::array_t<float> result = mkarray_via_buffer<int>(m.natoms());
+                    auto req = result.request();
+                    int* ptr = static_cast<int*>(req.ptr);
+                    m.label_atoms_by_ring_system_including_spiro_fused(ptr);
+                    return result;
+                  },
+                  "For each atom the ring system identifier"
+                )
                 .def("amw", static_cast<float (Molecule::*)()const>(&Molecule::molecular_weight), "AMW")
                 .def("exact_mass", static_cast<exact_mass_t (Molecule::*)()const>(&Molecule::exact_mass), "Exact Mass")
                 .def("ncon", static_cast<int (Molecule::*)(atom_number_t)const>(&Molecule::ncon), "Connections to Atom")
@@ -487,6 +517,21 @@ PYBIND11_MODULE(lillymol, m)
                     return m.remove_atoms(s);
                   },
                   "Remove a set of atoms"
+                )
+                .def("remove_atoms",
+                  [](Molecule& m, py::array_t<int> to_remove, int flag)->int {
+                    //auto req = to_remove.request();
+                    int* ptr = static_cast<int*>(to_remove.request().ptr);
+                    int rc = 0;
+                    for (int i = m.natoms() - 1; i >= 0; --i) {
+                      if (ptr[i] == flag) {
+                        m.remove_atom(i);
+                        ++rc;
+                      }
+                    }
+                    return rc;
+                  },
+                  "Remove atoms where to_remove[i] == flag"
                 )
                 .def("sort_atoms",
                   [](Molecule& m, const std::vector<int>& order) {
@@ -771,12 +816,22 @@ PYBIND11_MODULE(lillymol, m)
                   },
                   "Set isotope for atoms in 's'"
                 )
+                .def("set_isotopes",
+                  [](Molecule& m, py::array_t<int> iso) {
+                    int* ptr = static_cast<int*>(iso.request().ptr);
+                    const int matoms = m.natoms();
+                    for (int i = 0; i < matoms; ++i) {
+                      m.set_isotope(i, ptr[i]);
+                    }
+                  },
+                  "Set isotope for each atom"
+                )
                 .def("number_isotopic_atoms", static_cast<int (Molecule::*)()const>(&Molecule::number_isotopic_atoms), "Number atoms with isotopes")
                 .def("first_atom_with_isotope",
                   [](const Molecule& m, isotope_t iso) -> atom_number_t {
                     return m.atom_with_isotope(iso);
                   },
-                  "First atom with isitioe:|"
+                  "First atom with isotope:|"
                 )
 
                 .def("bonds_between", static_cast<int (Molecule::*)(atom_number_t, atom_number_t)>(&Molecule::bonds_between), "bonds between atoms")
@@ -803,6 +858,46 @@ PYBIND11_MODULE(lillymol, m)
                     return std::make_pair(a1, a2);
                   },
                   "Most separated atoms"
+                )
+                .def("atoms_on_shortest_path",
+                  [](Molecule& m, atom_number_t a1, atom_number_t a2) ->std::optional<Set_of_Atoms> {
+                    Set_of_Atoms result;
+                    if (! m.atoms_between(a1, a2, result)) {
+                      return std::nullopt;
+                    }
+
+                    if (result.empty()) {
+                      return std::nullopt;
+                    }
+
+                    return result;
+                  },
+                  "Return list of atoms on the shortest path between a1 and a2"
+                )
+                .def("down_the_bond",
+                  [](Molecule& m, atom_number_t a1, atom_number_t a2)->std::optional<Set_of_Atoms> {
+                    const int matoms = m.natoms();
+                    std::unique_ptr<int[]> dtb = std::make_unique<int[]>(matoms);
+                    std::fill_n(dtb.get(), matoms, 0);
+                    std::optional<int> maybe_n = m.DownTheBond(a1, a2, dtb.get());
+                    if (! maybe_n) {
+                      return std::nullopt;
+                    }
+                    // std::cerr << "Found " << *maybe_n << " atoms down the " << a1 << " " << a2 << " bond\n";
+                    Set_of_Atoms result;
+                    result.reserve(*maybe_n);
+                    for (int i = 0; i < matoms; ++i) {
+                      if (i == a2) {
+                        continue;
+                      }
+                      if (dtb[i]) {
+                        result << i;
+                      }
+                    }
+                    // std::cerr << "Returning " << result << '\n';
+                    return result;
+                  },
+                  "Return all the atoms found looking down the bond from a1 to a2"
                 )
 
                 .def("reset_atom_map_numbers", static_cast<void (Molecule::*)()>(&Molecule::reset_all_atom_map_numbers), "Reset atom map numbers")
@@ -970,6 +1065,20 @@ PYBIND11_MODULE(lillymol, m)
                 //.def("compute_Del_Re_partial_charges", &Molecule::compute_Del_Re_partial_charges, "Del Re partial charges")
                 //.def("compute_Pullman_partial_charges", &Molecule::compute_Pullman_partial_charges, "Pullman partial charges")
 
+                .def("gasteiger_partial_charges",
+                  [](Molecule& m) -> std::vector<float> {
+                    m.compute_Gasteiger_partial_charges();
+                    const int matoms = m.natoms();
+                    std::vector<float> result;
+                    result.reserve(matoms);
+                    for (int i = 0; i < matoms; ++i) {
+                      result.push_back(m.partial_charge(i));
+                    }
+                    return result;
+                  },
+                  "Return list of Gasteiger partial charges"
+                )
+
                 .def("highest_coordinate_dimensionality", static_cast<int (Molecule::*)()const>(&Molecule::highest_coordinate_dimensionality), "highest coordinate dimensionality")
                 .def("debug_string", static_cast<std::string (Molecule::*)()const>(&Molecule::debug_string), "Dump of internal data structures")
                 .def(py::self += py::self)
@@ -1089,6 +1198,11 @@ PYBIND11_MODULE(lillymol, m)
         return a1->distance(*a2);
       },
       "spatial distance between atoms"
+    )
+    .def("distance", [](const Atom* a1, const Coordinates& c)->float {
+        return a1->distance(c);
+      },
+      "spatial distance between atom and point"
     )
 
     .def("__repr__",
@@ -1423,7 +1537,14 @@ PYBIND11_MODULE(lillymol, m)
         lhs += rhs;
         return lhs;
       },
-      "add contents of RHS to LHS returning new Set_of_Atoms"
+      "add contents of RHS to LHS returning lhs"
+    )
+    .def("__iadd__",
+      [](Set_of_Atoms& lhs, atom_number_t a)->Set_of_Atoms {
+        lhs.add(a);
+        return lhs;
+      },
+      "Add atom `a` to lhs"
     )
   ;
 
@@ -1545,6 +1666,16 @@ PYBIND11_MODULE(lillymol, m)
     .def(py::init<>())
     .def(py::init<float, float, float>())
     .def("normalise", &Coordinates::normalise)
+    .def("__repr__", [](const Coordinates& coords) {
+      IWString tmp;
+      tmp << '(' << coords.x() << ',' << coords.y() << ',' << coords.z() << ')';
+      return tmp.AsString();
+    })
+    .def("__str__", [](const Coordinates& coords) {
+      IWString tmp;
+      tmp << '(' << coords.x() << ',' << coords.y() << ',' << coords.z() << ')';
+      return tmp.AsString();
+    })
   ;
 
   m.def("set_copy_name_in_molecule_copy_constructor", &set_copy_name_in_molecule_copy_constructor, "Copy name in constructor");
@@ -1569,18 +1700,17 @@ PYBIND11_MODULE(lillymol, m)
     },
     "Return a list of molecules"
   );
-  m.def("set_auto_create_new_elements", &set_auto_create_new_elements, "auto create new elements");
+  m.def("set_auto_create_new_elements", &set_auto_create_new_elements, "Allow arbitrary two letter elements");
   m.def("set_atomic_symbols_can_have_arbitrary_length", &set_atomic_symbols_can_have_arbitrary_length, "any string is an element");
   m.def("interpret_D_as_deuterium", &element::interpret_d_as_deuterium, "D means '[2H]'");
   m.def("interpret_T_as_deuterium", &element::interpret_t_as_tritium, "T means '[3H]'");
   m.def("set_display_strange_chemistry_messages", &set_display_strange_chemistry_messages, "turn off messages about bad valences");
-  m.def("set_auto_create_new_elements", &set_auto_create_new_elements, "Allow arbitrary two letter elements");
   m.def("set_atomic_symbols_can_have_arbitrary_length", &set_atomic_symbols_can_have_arbitrary_length, "Enable elements like 'Ala', 'Gly'");
   m.def("set_display_smiles_interpretation_error_messages", &set_display_smiles_interpretation_error_messages, "Set smiles error messages");
   m.def("count_atoms_in_smiles",
     [](const std::string& smiles) {
       const const_IWSubstring tmp(smiles);
-      return count_atoms_in_smiles(tmp);
+      return lillymol::count_atoms_in_smiles(tmp);
     }
   );
 
@@ -1630,7 +1760,11 @@ PYBIND11_MODULE(lillymol, m)
         "mimic RDKit in how Hydrogens on phosphoric acids are handled")
     .def("set_use_alcohol_for_acid", &alogp::ALogP::set_use_alcohol_for_acid,
         "mimic RDKit in how oxygen atoms in acids are handled")
-    .def("logp", &alogp::ALogP::LogP, "Compute alogp - or None")
+    .def("logp",
+         [](alogp::ALogP& mylogp, Molecule& m) {
+          return mylogp.LogP(m);
+         },
+         "Compute AlogP - or None")
   ;
 
   // Rotatable bonds.
@@ -1643,7 +1777,12 @@ PYBIND11_MODULE(lillymol, m)
 
   py::class_<quick_rotbond::QuickRotatableBonds>(m, "RotatableBonds")
     .def(py::init<>())
-    .def("rotatable_bonds", &quick_rotbond::QuickRotatableBonds::Process)
+    .def("rotatable_bonds", 
+      [](quick_rotbond::QuickRotatableBonds& rotb, Molecule& m)->int {
+        return rotb.Process(m, nullptr);
+      },
+      "Number of rotatable bonds in `m`"
+    )
     .def("set_calculation_type", &quick_rotbond::QuickRotatableBonds::set_calculation_type)
   ;
 

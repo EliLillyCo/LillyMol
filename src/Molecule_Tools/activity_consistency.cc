@@ -850,7 +850,7 @@ fetch_activity(const ID_to_Activity &id_to_activity, IWString &id,
 static int
 perform_transformations(Molecule &m) {
   if (reduce_to_largest_fragment) {
-    m.reduce_to_largest_fragment();
+    m.reduce_to_largest_fragment_carefully();
   }
 
   if (ignore_chirality) {

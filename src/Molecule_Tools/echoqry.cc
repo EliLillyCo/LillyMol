@@ -7,12 +7,15 @@
 
 #include "Molecule_Lib/rwsubstructure.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "Molecule_Lib/substructure.pb.h"
+#endif
 
 namespace echoqry {
 
 using std::cerr;
-using std::endl;
 
 int verbose = 0;
 
@@ -22,6 +25,26 @@ struct JobOptions {
 
 void
 Usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+cerr << R"(Read and write query files.
+To convert an old style query file to textproto form
+echoqry -S stem file.qry
+will create stem.0.0_qry.textproto
+ -S <stem>              file name stem for newly created query files
+ -O keep_smarts         if there is a smarts directive in the initial file, re-use it,
+                        do not convert to SubstructureAtom messages.
+ -v                     verbose output
+)";
+
+  // clang-format on
+
   exit(rc);
 }
 
@@ -60,7 +83,6 @@ EchoQry(const char * token,
     return 0;
   }
 
-  cerr << "todo " << options.forget_originating_smarts << '\n';
   if (options.forget_originating_smarts) {
     for (Substructure_Query * q : queries) {
       q->ForgetOriginatingSmarts();

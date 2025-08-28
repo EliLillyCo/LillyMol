@@ -1,0 +1,17 @@
+{
+  "executable": "gfp_to_descriptors_multiple",
+  "difftool": "${LILLYMOL_HOME}/test/same_lines.py",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "${LILLYMOL_HOME}/data/chembl10.gfp" ]
+        },
+
+        {
+          "name": "case_2",
+          "args": [ "-v -x 0.5 -F FPIW ${LILLYMOL_HOME}/data/chembl10.gfp" ]
+        }
+      ]
+    }
+  }
+}

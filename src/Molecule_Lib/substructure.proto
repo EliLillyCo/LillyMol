@@ -4,6 +4,9 @@ package SubstructureSearch;
 
 import "Molecule_Lib/geometric_constraints.proto";
 
+// LillyMol:UserDocumentation
+// Proto for substructure queries. tsubstructure -q PROTO:file.qry...
+
 // Many of these protos fairly closely match correspondingly named
 // classes in the C++ code.
 
@@ -170,6 +173,10 @@ message Region {
   optional uint32 max_atoms_not_on_shortest_path = 9;
   repeated uint32 atoms_not_on_shortest_path = 10;
 
+  repeated uint32 heteroatom_count = 11;
+  optional uint32 min_heteroatom_count = 12;
+  optional uint32 max_heteroatom_count = 13;
+
   // Many more things could be added here....
 }
 
@@ -181,8 +188,22 @@ message LinkAtoms {
   optional uint32 max_distance = 5;
 }
 
+// Within a DownTheBond message, we can have instances of these.
+// They describe a substructure match and the number of hits needed.
+message QueryMatches {
+  // This can only be built from smarts. It builds a Substructure_Atom.
+  optional string smarts = 1;
+
+  repeated uint32 hits_needed = 2;
+  optional uint32 min_hits_needed = 3;
+  optional uint32 max_hits_needed = 4;
+}
+
 // The -{} directive in smarts is parsed into this structure.
 // The perception is looking from a1->a2. Atom 2 is counted.
+// The properties are for all atoms found down the a1->a2 bond, but
+// this can be modified with the match_individual_substituent setting.
+
 message DownTheBond {
   // The matched atoms that describe the bond
   optional uint32 a1 = 1;
@@ -193,6 +214,40 @@ message DownTheBond {
   optional uint32 max_natoms = 4;
   repeated uint32 natoms = 5;
 
+  // Number of heteroatoms encountered
+  repeated uint32 heteroatom_count = 6;
+  optional uint32 min_heteroatom_count = 7;
+  optional uint32 max_heteroatom_count = 8;
+
+  // Number of ring atoms encountered
+  repeated uint32 ring_atom_count = 9;
+  optional uint32 min_ring_atom_count = 10;
+  optional uint32 max_ring_atom_count = 11;
+
+  // Number of unsaturated atoms encountered
+  repeated uint32 unsaturation_count = 12;
+  optional uint32 min_unsaturation_count = 13;
+  optional uint32 max_unsaturation_count = 14;
+
+  // Number of aromatic atoms encountered
+  repeated uint32 aromatic_count = 15;
+  optional uint32 min_aromatic_count = 16;
+  optional uint32 max_aromatic_count = 17;
+
+  // By default, all substituents attached to the anchor atom are
+  // aggregated and the totals are for all atoms found down that bond.
+  // If this is set, totals are summed per connection, and a match is
+  // returned only if there is at least one substituent satisfying the requirements.
+  optional bool match_individual_substituent = 18;
+
+  // If doing individual substituents, do we allow non-matching substituents.
+  optional bool no_other_substituents_allowed = 19;
+
+  repeated QueryMatches query_matches = 20;
+
+  // By default, DownTheBond directives are for a positive match.
+  // Set this to invert.
+  optional bool match_as_match = 21;
 }
 
 // How an environment is attached to matched atoms.
@@ -380,12 +435,27 @@ message Substituent {
   optional uint32 max_length = 11;
   repeated uint32 length = 12;
 
+  // This only works if the Substituent is part of a ring specification.
   optional uint32 set_global_id = 13;
 
   // If any of `required_smarts` match, the substituent is accepted.
   repeated string required_smarts = 14;
   // If any of `disqualifying_smarts` match, the substituent is rejected.
   repeated string disqualifying_smarts = 15;
+
+  repeated uint32 heteroatom_count = 16;
+  optional uint32 min_heteroatom_count = 17;
+  optional uint32 max_heteroatom_count = 18;
+
+  repeated uint32 unsaturation_count = 19;
+  optional uint32 min_unsaturation_count = 20;
+  optional uint32 max_unsaturation_count = 21;
+
+  // Mostly intended for use with a smarts match rather than a ring.
+  optional bool match_as_match = 22;
+
+  // Mostly intended for use with a smarts match rather than a ring.
+  optional bool no_other_substituents_allowed = 23;
 }
 
 // When describing an inter-ring region with > 2 rings connected, we need to
@@ -463,7 +533,7 @@ message InterRingAtoms {
   // implementation to make it work.
   // An inter-ring region can be defined by global_id's set by ring or
   // ring systems. What this means is that internally, rings and ring systems
-  // must be perceived beofre inter-ring regions are perceived.
+  // must be perceived before inter-ring regions are perceived.
   // There must be at least two values specified. ALL atoms between those rings
   // are included - even if that includes ring atoms.
   // what happens if we specify two numbers, but there is another ring attached? That fails?
@@ -923,7 +993,7 @@ message MatchedAtomMatch {
 }
 
 // Specifications for pairs of matched atoms.
-// This is redundant with linkers - as currently implemented.
+// This is redundant with linkers, but new development will be here.
 message SeparatedAtoms {
   // A pair of matched atoms
   optional uint32 a1 = 1;
@@ -933,6 +1003,12 @@ message SeparatedAtoms {
   repeated uint32 bonds_between = 3;
   optional uint32 min_bonds_between = 4;
   optional uint32 max_bonds_between = 5;
+
+  // Constraints on the number of rotatable bonds found between the two
+  // matched atoms.
+  repeated uint32 rotbond = 6;
+  optional uint32 min_rotbond = 7;
+  optional uint32 max_rotbond = 8;
 }
 
 // Before atom matching is attempted we can quickly check some whole
@@ -1041,6 +1117,11 @@ message RequiredMolecularProperties {
   repeated ElementsNeeded elements_needed = 47;
 
   repeated RequiredBond required_bond = 48;
+}
+
+// Various functionalities operate on a set of matched atoms.
+message SetOfMatchedAtoms {
+  repeated uint32 atom = 1;
 }
 
 // The concept of other atoms that must be somewhere near the matched
@@ -1311,7 +1392,15 @@ message SingleSubstructureQuery {
   // This is probably the most flexible.
   repeated NearbyAtoms nearby_atoms = 82;
 
-  // Next to assign 83
+  // It is convenient to be able to specify that goups of matched
+  // atoms must be the same, or different atomic numbers.
+  repeated SetOfMatchedAtoms same_atomic_number = 84;
+  // While the SetOfMatchedAtoms allows any number of matched atoms
+  // to be stored, in the case of different atomic numbers, only
+  // two makes sense.
+  repeated SetOfMatchedAtoms different_atomic_number = 85;
+
+  // Next to assign 86
 }
 
 // A SubstructureQuery is merely a collection of individual
@@ -1336,6 +1425,16 @@ message SubstructureQuery {
 
   // Rather than having textproto queries, we can have files.
   repeated string query_file = 6;
+
+  // This is for internal use only. If the proto has query
+  // files embedded, those query files may be relative to the
+  // location of the containing query file. We need a means of passing to
+  // Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto)
+  // the location of the query that generated the proto, so that when it
+  // encountered a query_file directive, it can go looking for it
+  // in the right place.
+  // Do not use this for any other purpose, it will be ignored.
+  optional string originating_file_name_internal_use_only = 15;
 }
 
 // An interesting design choice. Should the various properties

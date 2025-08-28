@@ -1,0 +1,107 @@
+# Makefile for database pipeline
+
+# Check if the STEM variable is defined
+ifndef STEM
+$(error STEM is not defined. Please provide a STEM argument.)
+endif
+
+BUILDSMIDB = buildsmidb_bdb.sh -y -E autocreate -r 500000 -v
+
+# Used for building the standardized set of smiles.
+COMMON_FILECONV_OPTS = -i smi -i mfc=9 -i ICTE -i mdlquiet -E autocreate -g all -v
+
+all: $(STEM)g.smi $(STEM)gO_70.smi $(STEM)gO.smi $(STEM)_selimsteg.bdb $(STEM)_selimsteg_raw.bdb \
+	$(STEM).gfp.gz split_smi_$(STEM) split_gfp_$(STEM) $(STEM).exact.bdb $(STEM).lf.bdb \
+	$(STEM).nc.bdb $(STEM).graph.bdb $(STEM).spc.bdb $(STEM).rings.bdb $(STEM).vs \
+	$(STEM).fragstat ring_replacement_$(STEM) $(STEM).substituent.5.bdb \
+	$(STEM).dicer_fragments/DICER_1_3.textproto $(STEM).dicer.bdb \
+	$(STEM).substituents.textproto
+
+bb: $(STEM)g.smi $(STEM)gO_70.smi $(STEM)gO.smi $(STEM)_selimsteg.bdb $(STEM)_selimsteg_raw.bdb \
+	$(STEM).gfp.gz $(STEM).exact.bdb $(STEM).lf.bdb $(STEM).nc.bdb $(STEM).graph.bdb \
+	$(STEM).spc.bdb $(STEM).rings.bdb $(STEM).vs 
+
+# Allow boronic acids into the organic subset.
+$(STEM)g.smi: $(STEM)_raw.smi
+	fileconv.sh $(COMMON_FILECONV_OPTS) -S $@ $<
+
+# Boron is organic, except that only boronic acids are
+# Make sure all molecules have a carbon atom.
+$(STEM)gO_70.smi: $(STEM)g.smi
+	fileconv.sh -c 5 -C 70 -O B -O okOBO -V -i ICTE -s xctb -s rmbad -f lod -f rmxt=14 -I 0 -E autocreate -g all -S - -v $< | \
+	tsubstructure.sh -s '[#6]' -m $@ -i smi -
+
+$(STEM)gO.smi: $(STEM)gO_70.smi
+	fileconv.sh -c 5 -C 50 -S $(STEM)gO -v $<
+
+$(STEM)_selimsteg.bdb: $(STEM)g.smi
+	iwbdb_load.sh -d /dev/shm/$@ -c 2 -C 1 -v $<
+	mv /dev/shm/$@ .
+
+$(STEM)_selimsteg_raw.bdb: $(STEM)_raw.smi
+	iwbdb_load.sh -d /dev/shm/$@ -c 2 -C 1 -v $<
+	mv /dev/shm/$@ .
+
+$(STEM).gfp.gz: $(STEM)gO.smi
+	gfp_make.sh -STD $< | gzip --stdout > $@
+
+split_smi_$(STEM): $(STEM)gO.smi
+	iwsplit.sh -suffix smi -stem $(STEM)_split -n 100000 $<
+	mkdir -p $@ 
+	mv $(STEM)_split*.smi $@
+
+split_gfp_$(STEM): $(STEM).gfp.gz
+	iwsplit.sh -suffix gfp.gz -tdt -stem $(STEM)_split -n 100000 $<
+	mkdir -p $@
+	mv $(STEM)_split*.gfp.gz $@
+
+$(STEM).exact.bdb: $(STEM)g.smi
+	$(BUILDSMIDB) -d /dev/shm/$@ $<
+	mv /dev/shm/$@ .	
+
+$(STEM).lf.bdb: $(STEM)g.smi
+	$(BUILDSMIDB) -l -d /dev/shm/$@ $<
+	mv /dev/shm/$@ .
+
+$(STEM).nc.bdb: $(STEM)g.smi
+	$(BUILDSMIDB) -l -c -d /dev/shm/$@ $<
+	mv /dev/shm/$@ .
+
+$(STEM).graph.bdb: $(STEM)g.smi
+	$(BUILDSMIDB) -H allg -d /dev/shm/$@ $<
+	mv /dev/shm/$@ .
+
+$(STEM).spc.bdb: $(STEM)gO.smi
+	iwecfp_database_load.sh -R 3 -d $@ -M noex -P sfx $<
+
+$(STEM).rings.bdb: $(STEM)gO.smi
+	smi2rings_bdb.sh -c -N add -z 10 -R 8 -d STORE -j env=UST:ACHRY -j double -j spiro -j ring -j iso -j env -n -d /dev/shm/$@ $<
+	mv /dev/shm/$@ .
+
+# virtual screening files need to be generated based on 70 atoms cutoff
+$(STEM).vs: $(STEM)gO_70.smi
+	w.sh -s . -O none -O psa -O xlogp $< | iwcut.sh -d smiles,w_amw,w_natoms,w_nvrtspsa,w_ro5_on,w_ro5_ohnh,w_rotbond,w_csp3,w_xlogp - > $@
+	sed -i '1s/.*/ID SMILES mw natoms tpsa hba hbd rotbond sp3 xlogp/' $@
+	python ${C3TK_HOME}/bin/py/pytk/csv2parquet.py -i $@	
+
+# Make sure this is kept consistent with dicer_fragment_lookup.v2.rb
+$(STEM).fragstat: $(STEM)gO.smi
+	dicer.sh -B proto -B nbamide -B brcb -B fragstat=$@ -B fragstatproto -k 3 -X 512 -I 1 -M 20 -M maxnr=11 -c -T I=Cl -T Br=Cl -v $< > ${STEM}.dicer.smi 2> $(STEM).dicer.log
+
+$(STEM).dicer.bdb: $(STEM).fragstat
+	dicer2bdb.sh -d $@ -textproto $<
+
+$(STEM).dicer_fragments/DICER_1_3.textproto: $(STEM).fragstat
+	mkdir -p $(STEM).dicer_fragments
+	dicer_to_topological_types.sh -S $(STEM).dicer_fragments/DICER -z $<
+
+ring_replacement_$(STEM): $(STEM)gO.smi
+	mkdir -p $@
+	ring_extraction.sh -R 7 -k -c -v -S $@/$(STEM) $<
+	ring_extraction.sh -R 7 -k -c -v -S $@/$(STEM) -X noarom $<
+
+$(STEM).substituent.5.bdb: $(STEM)gO.smi
+	substituent_identification.sh -d $@ -B -R 5 -w 10 -M 12 -v -Y dbproto $<
+
+$(STEM).substituents.textproto: $(STEM)gO.smi
+	get_substituents.sh -s '[cx2D3]-!@*' -O 1 -X anchor -M 12 -I 1 -n -z i -S $@ $<

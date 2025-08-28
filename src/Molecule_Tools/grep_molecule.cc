@@ -36,8 +36,11 @@ are files to be searched.
 Multiple patterns (smiles) can be specified on the command line separated by commas
   'C methane,CC ethane,CCC propane'
 will search for methane, ethane and propane in subsequent files. Quotes are essential.
- -f <fname>             like the -f option to grep, read the patterns (smiles) from <fname>
- -v                     verbose output
+ -f <fname>             like the -f option to grep, read the patterns (smiles) from <fname>.
+ -c                     remove chirality before comparing.
+ -l                     reduce to largest fragment.
+ -g ...                 chemical standardisation.
+ -v                     verbose output.
   )";
 
   ::exit(rc);
@@ -544,7 +547,7 @@ ApplicationName(Options& options,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:f:clr:R:s");
+  Command_Line cl(argc, argv, "vE:A:f:clr:R:sg:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

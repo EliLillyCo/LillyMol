@@ -477,7 +477,7 @@ arbitrary_geometric_changes(int argc, char ** argv)
 
   if (cl.option_present('c'))
   {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
 
     if (verbose)
       cerr << "Will append atomic coordinates after each atom in a smiles\n";

@@ -1033,9 +1033,17 @@ Molecule::_mdl_set_bond_directionality(atom_number_t a1, atom_number_t a2,
     }
 
     if (1 == directionality) {
-      b->set_wedge_up();
+      if (a1 == b->a1()) {
+        b->set_wedge_up();
+      } else {
+        b->set_wedge_down();
+      }
     } else if (6 == directionality) {
-      b->set_wedge_down();
+      if (a1 == b->a1()) {
+        b->set_wedge_down();
+      } else {
+        b->set_wedge_up();
+      }
     } else if (4 == directionality) {
       b->set_wedge_either();
     } else if (3 == directionality) {
@@ -2236,6 +2244,9 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1, atom_number_t a2,
 
 /*
   Atom ZATOM is 4 connected and has a wedge bond to atom A2
+
+  THis is buggy and not correct. I need to figure out how to parse
+  wedge bonds.
 */
 
 // #define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4

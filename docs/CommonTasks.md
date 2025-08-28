@@ -40,8 +40,7 @@ and several others. To filter to an "organic" subset, something like
 ```
 fileconv -c 10 -C 50 -I 0 -O def -E autocreate -e -V -f lod -f rmxt=15 -v -g all -S organic ... file.smi
 ```
-. allow creation of non periodic table
-elements `-E autocreate` but then discard those molecules `-e`.
+. allow creation of non periodic table elements via `-E autocreate` but then discard those molecules `-e`.
 
 . drop molecules containing invalid valences `-V`.
 
@@ -55,12 +54,17 @@ and drop it. Otherwise reduce to the likely largest fragment.
 
 . Apply Chemical standardisation `-g all` - this includes removing explicit Hydrogen atoms.
 
-. Drop molecules with fewer than 10 or more than 100 heavy atoms.
+. Drop molecules with fewer than 10 or more than 50 heavy atoms.
 
-. Write suviving molecules to `organic.smi`.
+. Write suviving molecules to `organic.smi`. Note the suffix is added for you.
 
 If you had a .sdf file as input and wanted a .sdf file as output, just add `-o sdf` and
-it will write `unique.sdf` instead.
+it will write `unique.sdf` instead. If you have extra .sdf records you want preserved
+```
+fileconv -i info -i sdf -o sdf -o info ... -v -S output input.sdf
+```
+See the [fileconv](/docs/Molecule_Tools/fileconv.md) documentation for info on
+the extensive functionality fileconv has for dealing with .sdf files.
 
 ## tsubstructure
 This is the first point of call for all things related to substructure searching.
@@ -72,7 +76,10 @@ tsubstructure -s '1[OH]-C=O' -m carboxyllic_acid -v all.smi
 ```
 will write those molecules that have one instance of a carboxyllic acid to
 `carboxyllic_acid.smi`. The `-v` option means it will report the results of
-the matching.
+the matching. Normally LillyMol tools work silently.
+
+If you care about the molecules that did NOT match any of the queries, use
+the `-n` option to specify a file for non matches.
 
 Substructure searching can be very hard and frustrating. If you are dealing with
 a complex query and having trouble figuring out what is wrong, try adding three
@@ -92,7 +99,7 @@ tsubstructure -s '1[OH]-[/IWxC]=[/IWxO]' -j 1 -m carboxyllic_acid ...
 ```
 each of these approaches is complex in their own way. Both yield the
 same result. And of course each query could be constructed to leave the
-isotope in any atom.
+isotope on any atom.
 
 By default, the `-j` option to tsubstructure will increment the isotopic
 number applied to matched atoms. This is seldom what is wanted, so most
@@ -120,6 +127,11 @@ common_names -g all -l -c -z -v -S common file.smi
 ```
 see [common_names](/docs/Molecule_Tools/common_names.md);
 
+If dealing with large numbers of molecules, it may be useful to use
+[msort_parallel](/docs/Molecule_Tools/msort.md) to divide a set of
+molecules into disjoint sets - separate files each containing molecules
+with different atom counts for example.
+
 ## Fragmenting
 Many times there is need to decompose molecules into fragments. [dicer](/docs/Molecule_Tools/dicer.md]
 is one way of doing that.
@@ -143,3 +155,28 @@ will likely do what is needed. See [msort](/docs/Molecule_Tools/msort.md].
 
 ## Reactions
 See [trxn](/docs/Molecule_Tools/trxn.md).
+
+## DeNovo Molecule Generation
+See [denovo](/docs/Molecule_Tools/denovo.md)
+
+## dopattern
+One of the most useful tools for performing related operations across a set of files.
+[dopattern](/docs/General/dopattern.md).
+Most LillyMol tools are frequently used with dopattern operating across split/sharded
+files. For example if you have a large number of molecules and wish to do a parallel
+substructure search.
+
+Split the files into 100k chunks.
+```
+iwsplit -suffix smi -n 100000 big.smi
+```
+There might be 24 chunks
+```
+dopattern.sh -o 24 -parallel 8 "tsubstructure -s '[OH]-c' -m phenol% iwsplit%.smi"
+```
+will run 24 substructure searches, with as many as 8 running simultaneously,
+writing matching files 'phenol1.smi', 'phenol2.smi' .... In practice 100k is
+too small, that search takes just over 1 second to do 100k molecules.
+
+Inside Lilly, replace the '-parallel 8' with '-cluster' and the dopattern
+tasks will be sent to qsub instead for execution on the cluster.

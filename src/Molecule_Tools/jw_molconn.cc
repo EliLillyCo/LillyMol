@@ -34,6 +34,7 @@ using std::cerr;
 
 static int compute_additional_connectivity_related_descriptors = 0;
 static int max_allowed_heavy_atom = 100;
+static uint64_t discarded_for_too_many_atoms = 0;
 
 static double simple_linear_path_chi[11];
 static double valence_linear_path_chi[11];
@@ -75,10 +76,11 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "  -l             compute more connectivity related descriptors besides those in MOLCONNZ program\n";
-  cerr << "  -m <n>         maximum allowed heavy atom number for input molecule (default 100)\n";
-  cerr << "  -i <type>      input type\n";
-  cerr << "  -Y ...         other options, enter '-Y help' for details\n";
+  cerr << " -l             compute more connectivity related descriptors besides those in MOLCONNZ program\n";
+  cerr << " -m <n>         maximum allowed heavy atom number for input molecule (default 100)\n";
+  cerr << " -C <maxat>      maximum number of atoms to process (default 100)\n";
+  cerr << " -Y ...         other options, enter '-Y help' for details\n";
+  cerr << " -i <type>      input type\n";
   (void) display_standard_chemical_standardisation_options(cerr, 'g');
   cerr << "  -v             verbose output\n";
   // clang-format on
@@ -90,6 +92,7 @@ static int
 preprocess_molecule(Molecule& m) {
   //  only deal with the graph of no hydrogen atoms
 
+  m.transform_to_non_isotopic_form();
   m.remove_all(1);
   m.reduce_to_largest_fragment();  // always reduce to largest fragment
 
@@ -100,6 +103,7 @@ preprocess_molecule(Molecule& m) {
 
   // do not process big molecules
   if (m.natoms() > max_allowed_heavy_atom) {
+    ++discarded_for_too_many_atoms;
     return 0;
   }
 
@@ -246,15 +250,47 @@ prime_quantum_number(atomic_number_t atomic_number_i) {
   return pq_number;
 }
 
+struct MoleculeData {
+  atomic_number_t* atomic_number;
+  const Atom** atoms;
+  int* hcount;
+
+  MoleculeData(Molecule& m);
+  ~MoleculeData();
+};
+
+MoleculeData::MoleculeData(Molecule& m) {
+  const int matoms = m.natoms();
+  atomic_number = new atomic_number_t[matoms];
+  m.atomic_numbers(atomic_number);
+
+  atoms = new const Atom*[matoms];
+  m.atoms(atoms);
+
+  hcount = new int[matoms];
+  for (int i = 0; i < matoms; ++i) {
+    hcount[i] = m.hcount(i);
+  }
+}
+
+MoleculeData::~MoleculeData() {
+  delete [] atomic_number;
+  delete [] atoms;
+  delete [] hcount;
+}
+
+
 static double
-find_alpha_value_for_molecule(Molecule& m, const Atom* const* atoms,
-                              const atomic_number_t* z, const int* hcount) {
+find_alpha_value_for_molecule(Molecule& m, const MoleculeData& molecule_data) {
+  const atomic_number_t* z = molecule_data.atomic_number;
+  const int* hcount = molecule_data.hcount;
+
   double alpha = 0.0;
 
   int n_atoms = m.natoms();
 
   for (int i = 0; i < n_atoms; i++) {
-    const Atom* atomi = atoms[i];
+    const Atom* atomi = molecule_data.atoms[i];
     int nconi = atomi->ncon();
     int nbondsi = atomi->nbonds();
 
@@ -368,9 +404,9 @@ number_of_three_bond_count(Molecule& m, const Atom* const* atoms) {
 static double
 shannon_information_content(Molecule& m, int n_classes, int& n_symmetry_class,
                             int& n_lone_symmetry_class, int symmetry_class_count[]) {
-  int n_atoms = m.natoms();
+  const int n_atoms = m.natoms();
 
-  set_vector(symmetry_class_count, n_classes, 0);
+  std::fill_n(symmetry_class_count, n_classes, 0);
 
   const int* symmetry_classes_array = m.symmetry_classes();
 
@@ -403,24 +439,54 @@ shannon_information_content(Molecule& m, int n_classes, int& n_symmetry_class,
 static double
 shannon_information_content(Molecule& m, int& n_symmetry_class,
                             int& n_lone_symmetry_class) {
-  int n_classes = m.number_symmetry_classes();
+  const int n_atoms = m.natoms();
+  const int n_classes = m.number_symmetry_classes();
 
   int* symmetry_class_count = new int[n_classes];
   std::unique_ptr<int[]> free_symmetry_class_count(symmetry_class_count);
 
-  return shannon_information_content(m, n_classes, n_symmetry_class,
-                                     n_lone_symmetry_class, symmetry_class_count);
+  std::fill_n(symmetry_class_count, n_classes, 0);
+
+  const int* symmetry_classes_array = m.symmetry_classes();
+
+  for (int i = 0; i < n_atoms; i++) {
+    symmetry_class_count[symmetry_classes_array[i] - 1]++;
+  }
+
+  int non_hydrogen_atom = m.natoms();  // - m.natoms(1);
+
+  double shannon_content = 0.0;
+
+  n_symmetry_class = 0;
+  n_lone_symmetry_class = 0;
+
+  for (int i = 0; i < n_classes; i++) {
+    if (symmetry_class_count[i] != 0) {
+      if (1 == symmetry_class_count[i]) {
+        n_lone_symmetry_class++;
+      }
+
+      n_symmetry_class++;
+      double probability = (double)symmetry_class_count[i] / (double)non_hydrogen_atom;
+      shannon_content -= probability * log10(probability);
+    }
+  }
+
+  return (shannon_content);
+//return shannon_information_content(m, n_classes, n_symmetry_class,
+//                                   n_lone_symmetry_class, symmetry_class_count);
 }
+
 
 static void
 compute_kappa_descriptors(Molecule& m, double kappa_simple_descriptors[],
-                          double kappa_alpha_descriptors[], const Atom* const* atoms,
-                          const atomic_number_t* z, const int* hcount) {
-  double alpha = find_alpha_value_for_molecule(m, atoms, z, hcount);
+                          double kappa_alpha_descriptors[], 
+                          const MoleculeData& molecule_data) {
+  double alpha = find_alpha_value_for_molecule(m, molecule_data);
 
   int one_bond_count = m.nedges();
-  int two_bond_count = number_of_two_bond_count(m, atoms);
-  int three_bond_count = number_of_three_bond_count(m, atoms);
+  int two_bond_count = number_of_two_bond_count(m, molecule_data.atoms);
+  int three_bond_count = number_of_three_bond_count(m, molecule_data.atoms);
 
   int non_hydrogen_atom = m.natoms() - m.natoms(1);
 
@@ -504,7 +570,10 @@ compute_simple_delta_value(const Molecule& m, double simple_delta[],
 
 static void
 compute_valence_delta_value(const Molecule& m, double valence_delta[],
-                            const atomic_number_t* z, const int* hcount) {
+                            const MoleculeData& molecule_data) {
+  const atomic_number_t* z = molecule_data.atomic_number;
+  const int* hcount = molecule_data.hcount;
+
   int n_atoms = m.natoms();
   for (int i = 0; i < n_atoms; i++) {
     int atomic_number_i = z[i];
@@ -516,7 +585,10 @@ compute_valence_delta_value(const Molecule& m, double valence_delta[],
 
 static void
 compute_modified_valence_delta_value(const Molecule& m, double modified_valence_delta[],
-                                     const atomic_number_t* z, const int* hcount) {
+                                     const MoleculeData& molecule_data) {
+  const atomic_number_t* z = molecule_data.atomic_number;
+  const int* hcount = molecule_data.hcount;
+
   int n_atoms = m.natoms();
   for (int i = 0; i < n_atoms; i++) {
     int valence = atom_valence(z[i]);
@@ -579,35 +651,6 @@ DeltaDescriptors::DeltaDescriptors(int natoms) {
   values = new double[natoms];
 }
 
-struct MoleculeData {
-  atomic_number_t* atomic_number;
-  const Atom** atoms;
-  int* hcount;
-
-  MoleculeData(Molecule& m);
-  ~MoleculeData();
-};
-
-MoleculeData::MoleculeData(Molecule& m) {
-  const int matoms = m.natoms();
-  atomic_number = new atomic_number_t[matoms];
-  m.atomic_numbers(atomic_number);
-
-  atoms = new const Atom*[matoms];
-  m.atoms(atoms);
-
-  hcount = new int[matoms];
-  for (int i = 0; i < matoms; ++i) {
-    hcount[i] = m.hcount(i);
-  }
-}
-
-MoleculeData::~MoleculeData() {
-  delete [] atomic_number;
-  delete [] atoms;
-  delete [] hcount;
-}
-
 DeltaDescriptors::~DeltaDescriptors() {
   delete [] simple_delta;
   delete [] valence_delta;
@@ -625,8 +668,8 @@ higher_order_chi_descriptor_computation_procedure(
     resizable_array_p<Path_with_values>& paths, double& chi_descriptors,
     double& valence_chi_descriptors, double& modified_v_chi_descriptors,
     double* topological_index, double* etopological_index, double& chain_chi,
-    double& chain_v_chi, double& chain_m_v_chi, int& n_rings, const Atom* const* atoms,
-    const atomic_number_t* z, const int* hcount) {
+    double& chain_v_chi, double& chain_m_v_chi, int& n_rings, 
+    const MoleculeData& molecule_data) {
   double values[NUMBER_OF_VALUES_FOR_PATH];
 
   n_rings = 0;
@@ -659,7 +702,7 @@ higher_order_chi_descriptor_computation_procedure(
 
     atom_number_t a1 = path->a1();
 
-    const Atom* atoma1 = atoms[a1];
+    const Atom* atoma1 = molecule_data.atoms[a1];
     int ncona1 = atoma1->ncon();
     if (ncona1 < 2) {
       continue;
@@ -667,7 +710,7 @@ higher_order_chi_descriptor_computation_procedure(
 
     atom_number_t a2 = path->a2();
 
-    const Atom* atoma2 = atoms[a2];
+    const Atom* atoma2 = molecule_data.atoms[a2];
     int ncona2 = atoma2->ncon();
     if (ncona2 < 2) {
       continue;
@@ -677,15 +720,15 @@ higher_order_chi_descriptor_computation_procedure(
 
     const double* v = path->raw_values();
 
-    for (int k = 0; k < ncona1; k++) {
-      atom_number_t a1_next = atoma1->other(a1, k);
+    for (const Bond* b1 : *atoma1) {
+      const atom_number_t a1_next = b1->other(a1);
 
       if (path->contains(a1_next)) {
         continue;
       }
 
-      for (int l = 0; l < ncona2; l++) {
-        atom_number_t a2_next = atoma2->other(a2, l);
+      for (const Bond* b2 : *atoma2) {
+        const atom_number_t a2_next = b2->other(a2);
 
         if (path->contains(a2_next)) {
           continue;
@@ -771,8 +814,8 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
                                  double& mvc3, double& mvc4, double& mvpc4,
                                  double& mvc3_mvpc4, double* modified_valence_delta,
                                  int& c3_count, int& c4_count, int& pc4_count,
-                                 const Atom* const* atoms, const atomic_number_t* z,
-                                 const int* hcount) {
+                                 const MoleculeData& molecule_data) {
+
   c3 = 0.0;
   c4 = 0.0;
   pc4 = 0.0;
@@ -795,8 +838,12 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
   int n_atoms = m.natoms();
   atom_number_t cluster_end_atom[3];
 
+  // Scope here for efficiency.
+  Set_of_Atoms connections;
+  connections.reserve(4);
+
   for (int i = 0; i < n_atoms; i++) {
-    const Atom* atomi = atoms[i];
+    const Atom* atomi = molecule_data.atoms[i];
 
     int nconi = atomi->ncon();
 
@@ -805,14 +852,16 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
       continue;
     }
 
+    atomi->connections(i, connections);
+
     for (int j = 0; j < nconi; j++) {
-      cluster_end_atom[0] = atomi->other(i, j);
+      cluster_end_atom[0] = connections[j];
 
       for (int k = j + 1; k < nconi; k++) {
-        cluster_end_atom[1] = atomi->other(i, k);
+        cluster_end_atom[1] = connections[k];
 
         for (int l = k + 1; l < nconi; l++) {
-          cluster_end_atom[2] = atomi->other(i, l);
+          cluster_end_atom[2] = connections[l];
 
           double component =
               1.0 / sqrt(delta[i] * delta[cluster_end_atom[0]] *
@@ -833,7 +882,7 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
           c3_count++;
 
           for (int ll = l + 1; ll < nconi; ll++) {
-            atom_number_t atom_ll = atomi->other(i, ll);
+            atom_number_t atom_ll = connections[ll];
 
             c4 += component * 1. / sqrt(delta[atom_ll]);
             c4v += component_v * 1. / sqrt(valence_delta[atom_ll]);
@@ -843,7 +892,7 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
           }
 
           for (int ll = 0; ll < 3; ll++) {
-            const Atom* cluster_end_atom_ll = atoms[cluster_end_atom[ll]];
+            const Atom* cluster_end_atom_ll = molecule_data.atoms[cluster_end_atom[ll]];
 
             int nconll = cluster_end_atom_ll->ncon();
 
@@ -891,14 +940,16 @@ compute_path_cluster_descriptors(Molecule m, double& c3, double& c4, double& pc4
 }
 
 static void
-setup_terminal_delta(const Molecule& m, double* terminal_delta, const Atom* const* atoms,
-                     const atomic_number_t* z, const int* hcount) {
+setup_terminal_delta(const Molecule& m, double* terminal_delta, 
+                     const MoleculeData& molecule_data) {
+  const atomic_number_t* z = molecule_data.atomic_number;
+
   int n_atoms = m.natoms();
   for (int i = 0; i < n_atoms; i++) {
     int valence = 0;
     int terminal_hydrogen = 1;
 
-    int atomic_number_i = z[i];
+    atomic_number_t atomic_number_i = z[i];
     // C
     if (6 == atomic_number_i) {
       valence = 4;
@@ -936,7 +987,7 @@ setup_terminal_delta(const Molecule& m, double* terminal_delta, const Atom* cons
 static void
 setup_terminal_modified_delta(Molecule& m, double* terminal_modified_delta,
                               const atomic_number_t* z) {
-  int n_atoms = m.natoms();
+  const int n_atoms = m.natoms();
   for (int i = 0; i < n_atoms; i++) {
     int valence = 0;
     int terminal_hydrogen = 1;
@@ -980,17 +1031,25 @@ setup_terminal_modified_delta(Molecule& m, double* terminal_modified_delta,
 static void
 setup_linear_path_chi(Molecule& m, double* valence_delta, double* simple_linear_path_chi,
                       double* valence_linear_path_chi,
-                      double* modified_valence_linear_path_chi, double* terminal_delta,
-                      double* terminal_modified_delta, const Atom* const* atoms,
-                      const atomic_number_t* z, const int* hcount) {
-  int n_atoms = m.natoms();
+                      double* modified_valence_linear_path_chi,
+                      const MoleculeData& molecule_data) {
+  const int n_atoms = m.natoms();
+
+  double* terminal_delta = new double[n_atoms];
+  std::unique_ptr<double[]> free_terminal_delta(terminal_delta);
+  double* terminal_modified_delta = new double[n_atoms];
+  std::unique_ptr<double[]> free_terminal_modified_delta(terminal_modified_delta);
+
+  const atomic_number_t* z = molecule_data.atomic_number;
+
   int non_hydrogen_atoms = n_atoms;  // - m.natoms(1);
 
   double sqrt2 = sqrt(2.0);
 
-  set_vector(valence_linear_path_chi, 11, 0.0);
-  set_vector(modified_valence_linear_path_chi, 11, 0.0);
-  set_vector(simple_linear_path_chi, 11, 0.0);
+  std::fill_n(valence_linear_path_chi, 11, 0.0);
+  std::fill_n(modified_valence_linear_path_chi, 11, 0.0);
+  std::fill_n(simple_linear_path_chi, 11, 0.0);
+
   if (0 == non_hydrogen_atoms) {
     return;
   }
@@ -1018,7 +1077,7 @@ setup_linear_path_chi(Molecule& m, double* valence_delta, double* simple_linear_
     temp_chi[i] = temp_chi[i - 1] / sqrt(2.0);
   }
 
-  setup_terminal_delta(m, terminal_delta, atoms, z, hcount);
+  setup_terminal_delta(m, terminal_delta, molecule_data);
   setup_terminal_modified_delta(m, terminal_modified_delta, z);
 
   double valence_delta_sum = 0;
@@ -1098,23 +1157,6 @@ setup_linear_path_chi(Molecule& m, double* valence_delta, double* simple_linear_
 }
 
 static void
-setup_linear_path_chi(Molecule& m, double* valence_delta, double* simple_linear_path_chi,
-                      double* valence_linear_path_chi,
-                      double* modified_valence_linear_path_chi, const Atom* const* atoms,
-                      const atomic_number_t* z, const int* hcount) {
-  int n_atoms = m.natoms();
-
-  double* terminal_delta = new double[n_atoms];
-  std::unique_ptr<double[]> free_terminal_delta(terminal_delta);
-  double* terminal_modified_delta = new double[n_atoms];
-  std::unique_ptr<double[]> free_terminal_modified_delta(terminal_modified_delta);
-
-  setup_linear_path_chi(m, valence_delta, simple_linear_path_chi, valence_linear_path_chi,
-                        modified_valence_linear_path_chi, terminal_delta,
-                        terminal_modified_delta, atoms, z, hcount);
-}
-
-static void
 compute_difference_chi_descriptors(double* difference_chi_descriptors,
                                    double* chi_descriptors, double* linear_path_chi) {
   for (int i = 0; i < 11; i++) {
@@ -1124,16 +1166,19 @@ compute_difference_chi_descriptors(double* difference_chi_descriptors,
 
 static void
 compute_terminal_methyl_group(Molecule& m, resizable_array_p<Path_with_values>& paths,
-                              int& terminal_methyl_count, const Atom* const* atoms,
-                              const atomic_number_t* z, const int* hcount) {
+                              int& terminal_methyl_count, 
+                              const MoleculeData& molecule_data) {
+  const int* hcount = molecule_data.hcount;
+  const atomic_number_t*z = molecule_data.atomic_number;
+
   int n_path = paths.number_elements();
   for (int j = 0; j < n_path; j++) {
     Path_with_values* path = paths.item(j);
     atom_number_t a1 = path->a1();
     atom_number_t a2 = path->a2();
 
-    const Atom* atoma1 = atoms[a1];
-    const Atom* atoma2 = atoms[a2];
+    const Atom* atoma1 = molecule_data.atoms[a1];
+    const Atom* atoma2 = molecule_data.atoms[a2];
 
     int ncona1 = atoma1->ncon();
     int ncona2 = atoma2->ncon();
@@ -1151,7 +1196,7 @@ compute_terminal_methyl_group(Molecule& m, resizable_array_p<Path_with_values>& 
         continue;
       }
 
-      const Atom* atoma1_next = atoms[a1_next];
+      const Atom* atoma1_next = molecule_data.atoms[a1_next];
 
       for (int l = 0; l < ncona2; l++) {
         atom_number_t a2_next = atoma2->other(a2, l);
@@ -1159,7 +1204,7 @@ compute_terminal_methyl_group(Molecule& m, resizable_array_p<Path_with_values>& 
           continue;
         }
 
-        const Atom* atoma2_next = atoms[a2_next];
+        const Atom* atoma2_next = molecule_data.atoms[a2_next];
 
         if ((6 == atoma1_next->atomic_number()) && (3 == hcount[a1_next]) &&
             (atoma1_next->ncon() == atoma1_next->nbonds())) {
@@ -1173,43 +1218,68 @@ compute_terminal_methyl_group(Molecule& m, resizable_array_p<Path_with_values>& 
   }
 }
 
+
 static void
 compute_chi_descriptors(
-    Molecule& m, double simple_delta[], double valence_delta[],
-    double modified_valence_delta[], double estate_index[], double chi_descriptors[],
-    double valence_chi_descriptors[], double modified_v_chi_descriptors[],
-    int& total_wiener_number, double chain_chi_descriptors[],
-    double chain_valence_chi_descriptors[], double chain_modified_v_chi_descriptors[],
-    double difference_chi_descriptors[], double difference_valence_chi_descriptors[],
-    double difference_modified_v_chi_descriptors[], int bond_count[],
-    double& total_topological_index, double& total_e_topological_index,
-    double topological_index[], double e_topological_index[], int& n_rings,
-    double* values, const Atom* const* atoms, const atomic_number_t* z,
-    const int* hcount) {
+    Molecule& m, double chi_descriptors[], double valence_chi_descriptors[],
+    double modified_v_chi_descriptors[], int& total_wiener_number,
+    double* chain_chi_descriptors, double* chain_valence_chi_descriptors,
+    double* chain_modified_v_chi_descriptors, double* difference_chi_descriptors,
+    double* difference_valence_chi_descriptors,
+    double* difference_modified_v_chi_descriptors, int* bond_count,
+    double& total_topological_index, double& total_e_topological_index, int& n_rings,
+    const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
 
-  set_vector(chi_descriptors, 14, 0.);
-  set_vector(valence_chi_descriptors, 14, 0.);
-  set_vector(modified_v_chi_descriptors, 15, 0.);
+#ifdef MULTIPLE_ALLOCATIONS
+  double* simple_delta = new double[n_atoms];
+  std::unique_ptr<double[]> free_simple_delta(simple_delta);
+  double* valence_delta = new double[n_atoms];
+  std::unique_ptr<double[]> free_valence_delta(valence_delta);
+  double* modified_valence_delta = new double[n_atoms];
+  std::unique_ptr<double[]> free_modified_valence_delta(modified_valence_delta);
+  double* estate_index = new double[n_atoms];
+  std::unique_ptr<double[]> free_estate_index(estate_index);
+  double* tp_index = new double[n_atoms];
+  std::unique_ptr<double[]> free_tp_index(tp_index);
+  double* etp_index = new double[n_atoms];
+  std::unique_ptr<double[]> free_etp_index(etp_index);
+#endif
 
-  set_vector(chain_chi_descriptors, 8, 0.);
-  set_vector(chain_valence_chi_descriptors, 8, 0.);
-  set_vector(chain_modified_v_chi_descriptors, 8, 0.);
+  std::unique_ptr<double[]> tmp = std::make_unique<double[]>(n_atoms * 6);
+  double* simple_delta = tmp.get();
+  double* valence_delta = tmp.get() + n_atoms;
+  double* modified_valence_delta = tmp.get() + n_atoms + n_atoms;
+  double* estate_index = tmp.get() + n_atoms + n_atoms + n_atoms;
+  double* topological_index = tmp.get() + n_atoms + n_atoms + n_atoms + n_atoms;
+  double* e_topological_index = tmp.get() + n_atoms + n_atoms + n_atoms + n_atoms + n_atoms;
 
-  set_vector(bond_count, 15, 0);
+  double values[NUMBER_OF_VALUES_FOR_PATH];
 
-  set_vector(topological_index, n_atoms, 0.0);
-  set_vector(e_topological_index, n_atoms, 0.0);
+  std::fill_n(chi_descriptors, 14, 0.0);
+  std::fill_n(valence_chi_descriptors, 14, 0.0);
+  std::fill_n(modified_v_chi_descriptors, 15, 0.0);
+
+
+  std::fill_n(chain_chi_descriptors, 8, 0.0);
+  std::fill_n(chain_valence_chi_descriptors, 8, 0.0);
+  std::fill_n(chain_modified_v_chi_descriptors, 8, 0.0);
+
+  std::fill_n(bond_count, 15, 0);
+
+  std::fill_n(topological_index, n_atoms, 0.0);
+  std::fill_n(e_topological_index, n_atoms, 0.0);
 
   total_wiener_number = 0;
 
   // compute the delta_value and valence delta value
-  compute_simple_delta_value(m, simple_delta, atoms);
-  compute_valence_delta_value(m, valence_delta, z, hcount);
-  compute_modified_valence_delta_value(m, modified_valence_delta, z, hcount);
+  compute_simple_delta_value(m, simple_delta, molecule_data.atoms);
+  compute_valence_delta_value(m, valence_delta, molecule_data);
+  compute_modified_valence_delta_value(m, modified_valence_delta, molecule_data);
 
   // compute the estate index
-  (void)determine_atom_e_state_index(m, estate_index, atoms, z, hcount);
+  (void)determine_atom_e_state_index(m, estate_index,
+                        molecule_data.atoms, molecule_data.atomic_number, molecule_data.hcount);
 
   for (int i = 0; i < n_atoms; i++) {
     estate_index[i] = fabs(estate_index[i]);
@@ -1283,7 +1353,7 @@ compute_chi_descriptors(
   bond_count[1] = odd_path.number_elements();
   bond_count[0] += bond_count[1];
 
-  compute_terminal_methyl_group(m, odd_path, bond_count[14], atoms, z, hcount);
+  compute_terminal_methyl_group(m, odd_path, bond_count[14], molecule_data);
 
   // set up even number bond path
   int n_non_hydrogen_atom = n_atoms;  // - m.natoms(1);
@@ -1293,7 +1363,7 @@ compute_chi_descriptors(
   modified_v_chi_descriptors[2] = 0;
 
   for (int i = 0; i < n_atoms; i++) {
-    const Atom* ai = atoms[i];
+    const Atom* ai = molecule_data.atoms[i];
 
     int nconi = ai->ncon();
 
@@ -1384,8 +1454,7 @@ compute_chi_descriptors(
       higher_order_chi_descriptor_computation_procedure(
           m, simple_delta, valence_delta, modified_valence_delta, estate_index, odd_path,
           temp_chi, temp_v_chi, temp_m_v_chi, topological_index, e_topological_index,
-          temp_chain_chi, temp_chain_v_chi, temp_chain_m_v_chi, temp_n_rings, atoms, z,
-          hcount);
+          temp_chain_chi, temp_chain_v_chi, temp_chain_m_v_chi, temp_n_rings, molecule_data);
 
       n_rings += temp_n_rings;
       bond_count[0] += odd_path.number_elements();
@@ -1432,8 +1501,8 @@ compute_chi_descriptors(
       higher_order_chi_descriptor_computation_procedure(
           m, simple_delta, valence_delta, modified_valence_delta, estate_index, even_path,
           temp_chi, temp_v_chi, temp_m_v_chi, topological_index, e_topological_index,
-          temp_chain_chi, temp_chain_v_chi, temp_chain_m_v_chi, temp_n_rings, atoms, z,
-          hcount);
+          temp_chain_chi, temp_chain_v_chi, temp_chain_m_v_chi, temp_n_rings,
+          molecule_data);
 
       n_rings += temp_n_rings;
 
@@ -1485,13 +1554,13 @@ compute_chi_descriptors(
       valence_chi_descriptors[14], valence_delta, modified_v_chi_descriptors[11],
       modified_v_chi_descriptors[12], modified_v_chi_descriptors[13],
       modified_v_chi_descriptors[14], modified_valence_delta, bond_count[11],
-      bond_count[12], bond_count[13], atoms, z, hcount);
+      bond_count[12], bond_count[13], molecule_data);
 
   //  compute_ring_chi_descriptors(m, chain_chi_descriptors, simple_delta,
   //  chain_valence_chi_descriptors, valence_delta);
 
   setup_linear_path_chi(m, valence_delta, simple_linear_path_chi, valence_linear_path_chi,
-                        modified_valence_linear_path_chi, atoms, z, hcount);
+                        modified_valence_linear_path_chi, molecule_data);
 
   compute_difference_chi_descriptors(difference_chi_descriptors, chi_descriptors,
                                      simple_linear_path_chi);
@@ -1503,54 +1572,16 @@ compute_chi_descriptors(
 }
 
 static void
-compute_chi_descriptors(
-    Molecule& m, double chi_descriptors[], double valence_chi_descriptors[],
-    double modified_v_chi_descriptors[], int& total_wiener_number,
-    double* chain_chi_descriptors, double* chain_valence_chi_descriptors,
-    double* chain_modified_v_chi_descriptors, double* difference_chi_descriptors,
-    double* difference_valence_chi_descriptors,
-    double* difference_modified_v_chi_descriptors, int* bond_count,
-    double& total_topological_index, double& total_e_topological_index, int& n_rings,
-    const Atom* const* atoms, const atomic_number_t* z, const int* hcount) {
-  int n_atoms = m.natoms();
-
-  double* simple_delta = new double[n_atoms];
-  std::unique_ptr<double[]> free_simple_delta(simple_delta);
-  double* valence_delta = new double[n_atoms];
-  std::unique_ptr<double[]> free_valence_delta(valence_delta);
-  double* modified_valence_delta = new double[n_atoms];
-  std::unique_ptr<double[]> free_modified_valence_delta(modified_valence_delta);
-  double* estate_index = new double[n_atoms];
-  std::unique_ptr<double[]> free_estate_index(estate_index);
-  double* tp_index = new double[n_atoms];
-  std::unique_ptr<double[]> free_tp_index(tp_index);
-  double* etp_index = new double[n_atoms];
-  std::unique_ptr<double[]> free_etp_index(etp_index);
-  double* values = new double[NUMBER_OF_VALUES_FOR_PATH];
-  std::unique_ptr<double[]> free_values(values);
-
-  compute_chi_descriptors(
-      m, simple_delta, valence_delta, modified_valence_delta, estate_index,
-      chi_descriptors, valence_chi_descriptors, modified_v_chi_descriptors,
-      total_wiener_number, chain_chi_descriptors, chain_valence_chi_descriptors,
-      chain_modified_v_chi_descriptors, difference_chi_descriptors,
-      difference_valence_chi_descriptors, difference_modified_v_chi_descriptors,
-      bond_count, total_topological_index, total_e_topological_index, tp_index, etp_index,
-      n_rings, values, atoms, z, hcount);
-
-  return;
-}
-
-static void
 compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
     Molecule& m, double* bt_indexes, int* wiener_number, int* bond_distance_count,
-    const Atom* const* atoms, const atomic_number_t* z) {
+    const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
 
   // initialize the distance count array and the default bt_indexes
-  set_vector(wiener_number, 4, 0);
-  set_vector(bond_distance_count, n_atoms, 0);
-  set_vector(bt_indexes, 5, 0.0);
+
+  std::fill_n(wiener_number, 4, 0);
+  std::fill_n(bond_distance_count, n_atoms, 0);
+  std::fill_n(bt_indexes, 5, 0.0);
 
   // set up the distance count array
   for (int i = 0; i < n_atoms; i++) {
@@ -1604,9 +1635,9 @@ compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
     bt_indexes[2] = log10(bt_indexes[2]);  // iaw modification
   }
 
-  wiener_number[1] = number_of_three_bond_count(m, atoms);
+  wiener_number[1] = number_of_three_bond_count(m, molecule_data.atoms);
 
-  wiener_number[2] = number_of_two_bond_count(m, atoms) * 2;
+  wiener_number[2] = number_of_two_bond_count(m, molecule_data.atoms) * 2;
 
 #ifdef ECHOWBT
   for (int i = 0; i < 4; i++) {
@@ -1620,14 +1651,14 @@ compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
 
 static void
 compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
-    Molecule& m, double* bt_indexes, int* wiener_number, const Atom* const* atoms,
-    const atomic_number_t* z) {
+    Molecule& m, double* bt_indexes, int* wiener_number,
+    const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
   int* bond_distance_count = new int[n_atoms];
   std::unique_ptr<int[]> free_bond_distance_count(bond_distance_count);
 
   compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
-      m, bt_indexes, wiener_number, bond_distance_count, atoms, z);
+      m, bt_indexes, wiener_number, bond_distance_count, molecule_data);
 
   return;
 }
@@ -1635,13 +1666,14 @@ compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
 static void
 determine_number_of_hydrogen_bond_donor_acceptor(Molecule& m, int& h_bond_donor,
                                                  int& h_bond_acceptor,
-                                                 const Atom* const* atoms,
-                                                 const atomic_number_t* z,
-                                                 const int* hcount) {
+                                                 const MoleculeData& molecule_data) {
+  const atomic_number_t* z = molecule_data.atomic_number;
+  const int* hcount = molecule_data.hcount;
+
   int n_atoms = m.natoms();
 
   for (int i = 0; i < n_atoms; i++) {
-    const Atom* atomi = atoms[i];
+    const Atom* atomi = molecule_data.atoms[i];
 
     int atomic_number_i = z[i];
 
@@ -1702,7 +1734,7 @@ determine_number_of_hydrogen_bond_donor_acceptor(Molecule& m, int& h_bond_donor,
         int f_cl_count = 0;
         int f_cl_br_count = 0;
         for (int j = 0; j < nconi; j++) {
-          const Atom* atomj = atoms[atomi->other(i, j)];
+          const Atom* atomj = molecule_data.atoms[atomi->other(i, j)];
 
           int atomic_number_j = atomj->atomic_number();
           if ((9 == atomic_number_j) || (17 == atomic_number_j)) {
@@ -1746,30 +1778,31 @@ value_of_redundancy(const Molecule& m, double shannon_ic) {
 }
 
 static double
-value_of_sum_of_intrinsic_state(Molecule& m, const Atom* const* atoms,
-                                const atomic_number_t* z, const int* hcount) {
+value_of_sum_of_intrinsic_state(Molecule& m, const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
 
   double sumI = 0;
   for (int i = 0; i < n_atoms; i++) {
-    sumI += value_of_Kier_and_Hall_atom_intrinsic_state(m, i, atoms, z, hcount);
+    sumI += value_of_Kier_and_Hall_atom_intrinsic_state(m, i,
+                        molecule_data.atoms, molecule_data.atomic_number, molecule_data.hcount);
   }
 
   return sumI;
 }
 
 static double
-value_of_sum_of_delta_intrinsic_state(Molecule& m, const Atom* const* atoms,
-                                      const atomic_number_t* z, const int* hcount) {
+value_of_sum_of_delta_intrinsic_state(Molecule& m, const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
 
   double sumdelI = 0;
   for (int i = 0; i < n_atoms; i++) {
     for (int j = i + 1; j < n_atoms; j++) {
       double i_value_i =
-          value_of_Kier_and_Hall_atom_intrinsic_state(m, i, atoms, z, hcount);
+          value_of_Kier_and_Hall_atom_intrinsic_state(m, i, 
+                        molecule_data.atoms, molecule_data.atomic_number, molecule_data.hcount);
       double i_value_j =
-          value_of_Kier_and_Hall_atom_intrinsic_state(m, j, atoms, z, hcount);
+          value_of_Kier_and_Hall_atom_intrinsic_state(m, j, 
+                        molecule_data.atoms, molecule_data.atomic_number, molecule_data.hcount);
 
       double distance = m.bonds_between(i, j) + 1;
       sumdelI += fabs((i_value_i - i_value_j) / distance / distance);
@@ -1804,11 +1837,10 @@ static void
 compute_values_of_first_order_Zagreb_index(Molecule& m, double* simple_delta,
                                            double* v_delta, double* mv_delta, double& z1,
                                            double& z1v, double& z1mv,
-                                           const Atom* const* atoms,
-                                           const atomic_number_t* z, const int* hcount) {
-  compute_simple_delta_value(m, simple_delta, atoms);
-  compute_valence_delta_value(m, v_delta, z, hcount);
-  compute_modified_valence_delta_value(m, mv_delta, z, hcount);
+                                           const MoleculeData& molecule_data) {
+  compute_simple_delta_value(m, simple_delta, molecule_data.atoms);
+  compute_valence_delta_value(m, v_delta, molecule_data);
+  compute_modified_valence_delta_value(m, mv_delta, molecule_data);
 
   z1 = value_of_first_order_Zagreb_index(m, simple_delta);
   z1v = value_of_first_order_Zagreb_index(m, v_delta);
@@ -1817,8 +1849,8 @@ compute_values_of_first_order_Zagreb_index(Molecule& m, double* simple_delta,
 
 static void
 compute_values_of_first_order_Zagreb_index(Molecule& m, double& z1, double& z1v,
-                                           double& z1mv, const Atom* const* atoms,
-                                           const atomic_number_t* z, const int* hcount) {
+                                           double& z1mv, 
+                                           const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
   double* simple_delta = new double[n_atoms];
   std::unique_ptr<double[]> free_simple_delta(simple_delta);
@@ -1828,8 +1860,8 @@ compute_values_of_first_order_Zagreb_index(Molecule& m, double& z1, double& z1v,
   std::unique_ptr<double[]> free_modified_valence_delta(modified_valence_delta);
 
   compute_values_of_first_order_Zagreb_index(m, simple_delta, valence_delta,
-                                             modified_valence_delta, z1, z1v, z1mv, atoms,
-                                             z, hcount);
+                                             modified_valence_delta, z1, z1v, z1mv,
+                                             molecule_data);
 
   return;
 }
@@ -1852,11 +1884,10 @@ static void
 compute_values_of_second_order_Zagreb_index(Molecule& m, double* simple_delta,
                                             double* v_delta, double* mv_delta, double& z2,
                                             double& z2v, double& z2mv,
-                                            const Atom* const* atoms,
-                                            const atomic_number_t* z, const int* hcount) {
-  compute_simple_delta_value(m, simple_delta, atoms);
-  compute_valence_delta_value(m, v_delta, z, hcount);
-  compute_modified_valence_delta_value(m, mv_delta, z, hcount);
+                                            const MoleculeData& molecule_data) {
+  compute_simple_delta_value(m, simple_delta, molecule_data.atoms);
+  compute_valence_delta_value(m, v_delta, molecule_data);
+  compute_modified_valence_delta_value(m, mv_delta, molecule_data);
 
   z2 = value_of_second_order_Zagreb_index(m, simple_delta);
   z2v = value_of_second_order_Zagreb_index(m, v_delta);
@@ -1865,8 +1896,8 @@ compute_values_of_second_order_Zagreb_index(Molecule& m, double* simple_delta,
 
 static void
 compute_values_of_second_order_Zagreb_index(Molecule& m, double& z2, double& z2v,
-                                            double& z2mv, const Atom* const* atoms,
-                                            const atomic_number_t* z, const int* hcount) {
+                                            double& z2mv,
+                                            const MoleculeData& molecule_data) {
   int n_atoms = m.natoms();
   double* simple_delta = new double[n_atoms];
   std::unique_ptr<double[]> free_simple_delta(simple_delta);
@@ -1877,7 +1908,7 @@ compute_values_of_second_order_Zagreb_index(Molecule& m, double& z2, double& z2v
 
   compute_values_of_second_order_Zagreb_index(m, simple_delta, valence_delta,
                                               modified_valence_delta, z2, z2v, z2mv,
-                                              atoms, z, hcount);
+                                              molecule_data);
 
   return;
 }
@@ -1887,15 +1918,13 @@ compute_values_of_second_order_Zagreb_index(Molecule& m, double& z2, double& z2v
  */
 
 static int
-jw_molconn(Molecule& m, IWString_and_File_Descriptor& output, const Atom* const* atoms,
-           const atomic_number_t* z, const int* hcount) {
+jw_molconn(Molecule& m, const MoleculeData& molecule_data, IWString_and_File_Descriptor& output) {
   int n_rings = 0;
 
   double kappa_simple_descriptors[3];
   double kappa_alpha_descriptors[3];
 
-  (void)compute_kappa_descriptors(m, kappa_simple_descriptors, kappa_alpha_descriptors,
-                                  atoms, z, hcount);
+  (void)compute_kappa_descriptors(m, kappa_simple_descriptors, kappa_alpha_descriptors, molecule_data);
 
   int n_symmetry_class = 0;
   int n_lone_symmetry_class = 0;
@@ -1932,7 +1961,7 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output, const Atom* const*
 
   int wiener_number[4];
   (void)compute_Bonchev_Trinajstic_informaiton_indexes_and_wiener_numbers(
-      m, bt_indexes, wiener_number, atoms, z);
+      m, bt_indexes, wiener_number, molecule_data);
 
   double total_topological_index = 0.0;
   double total_e_topological_index = 0.0;
@@ -1944,16 +1973,16 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output, const Atom* const*
       chain_modified_v_chi_descriptors, difference_chi_descriptors,
       difference_valence_chi_descriptors, difference_modified_v_chi_descriptors,
       bond_distance_count, total_topological_index, total_e_topological_index, n_rings,
-      atoms, z, hcount);
+      molecule_data);
 
   int h_bond_donor = 0;
   int h_bond_acceptor = 0;
 
   determine_number_of_hydrogen_bond_donor_acceptor(m, h_bond_donor, h_bond_acceptor,
-                                                   atoms, z, hcount);
+                                                   molecule_data);
 
-  double sumI = value_of_sum_of_intrinsic_state(m, atoms, z, hcount);
-  double sumdelI = value_of_sum_of_delta_intrinsic_state(m, atoms, z, hcount);
+  double sumI = value_of_sum_of_intrinsic_state(m, molecule_data);
+  double sumdelI = value_of_sum_of_delta_intrinsic_state(m, molecule_data);
 
   double flexible_index_phia = value_of_flexible_index_phia(m, kappa_alpha_descriptors);
 
@@ -1965,10 +1994,8 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output, const Atom* const*
   double zagreb_2_v = 0.0;
   double zagreb_2_mv = 0.0;
 
-  compute_values_of_first_order_Zagreb_index(m, zagreb_1, zagreb_1_v, zagreb_1_mv, atoms,
-                                             z, hcount);
-  compute_values_of_second_order_Zagreb_index(m, zagreb_2, zagreb_2_v, zagreb_2_mv, atoms,
-                                              z, hcount);
+  compute_values_of_first_order_Zagreb_index(m, zagreb_1, zagreb_1_v, zagreb_1_mv, molecule_data);
+  compute_values_of_second_order_Zagreb_index(m, zagreb_2, zagreb_2_v, zagreb_2_mv, molecule_data);
 
   if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
     output << m.smiles() << ' ';
@@ -2175,6 +2202,8 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output) {
     return 1;
   }
 
+  MoleculeData molecule_data(m);
+
   const Atom** atoms = new const Atom*[matoms];
   std::unique_ptr<const Atom*[]> free_atoms(atoms);
   m.atoms(atoms);
@@ -2195,7 +2224,7 @@ jw_molconn(Molecule& m, IWString_and_File_Descriptor& output) {
   std::unique_ptr<atomic_number_t[]> free_z(z);
   m.atomic_numbers(z);
 
-  int rc = jw_molconn(m, output, atoms, z, hcount);
+  int rc = jw_molconn(m, molecule_data, output);
 
   if (0 == rc) {
     number_of_error++;
@@ -2316,7 +2345,7 @@ DisplayDashYOptions() {
 
 static int
 jw_molconn(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vli:g:m:p:Y:");
+  Command_Line cl(argc, argv, "vli:g:m:p:Y:C:E:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -2334,6 +2363,17 @@ jw_molconn(int argc, char** argv) {
   //      cerr << "Cannot process aromaticity options (-A)\n";
   //      usage (5);
   //    }
+
+  if (cl.option_present('C')) {
+    if (! cl.value('C', max_allowed_heavy_atom) || max_allowed_heavy_atom <= 1) {
+      cerr << "The max atoms to be processed (-C) option must be a whole +ve number\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will only process molecules with as many as " << max_allowed_heavy_atom <<
+              " atoms\n";
+    }
+  }
 
   if (cl.option_present('Y')) {
     const_IWSubstring y;
@@ -2457,6 +2497,10 @@ jw_molconn(int argc, char** argv) {
 
   if (verbose) {
     cerr << "Read " << molecules_read << " molecules\n";
+    if (discarded_for_too_many_atoms) {
+      cerr << discarded_for_too_many_atoms << " molecules with more than " << 
+             max_allowed_heavy_atom << " heavy atoms skipped\n";
+    }
   }
 
   return 0;

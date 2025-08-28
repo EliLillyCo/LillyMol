@@ -1,0 +1,149 @@
+description {
+  feature_name: "w_ro5_on"
+  description: "Lipinski Acceptors"
+  plot_title: "Lipinski Acceptors"
+  line_color: "blue"
+  source: "chembl"
+}
+maxval: 27.0
+mean: 6.079498
+median: 6.0
+quantile {
+  quantile: 0.01
+  value: 1.0
+}
+quantile {
+  quantile: 0.05
+  value: 2.0
+}
+quantile {
+  quantile: 0.1
+  value: 3.0
+}
+quantile {
+  quantile: 0.5
+  value: 6.0
+}
+quantile {
+  quantile: 0.9
+  value: 9.0
+}
+quantile {
+  quantile: 0.95
+  value: 10.0
+}
+quantile {
+  quantile: 0.99
+  value: 13.0
+}
+int_values {
+  count: 1898
+}
+int_values {
+  value: 1
+  count: 17960
+}
+int_values {
+  value: 2
+  count: 73591
+}
+int_values {
+  value: 3
+  count: 154283
+}
+int_values {
+  value: 4
+  count: 250902
+}
+int_values {
+  value: 5
+  count: 311905
+}
+int_values {
+  value: 6
+  count: 320069
+}
+int_values {
+  value: 7
+  count: 258937
+}
+int_values {
+  value: 8
+  count: 188533
+}
+int_values {
+  value: 9
+  count: 113047
+}
+int_values {
+  value: 10
+  count: 68124
+}
+int_values {
+  value: 11
+  count: 37689
+}
+int_values {
+  value: 12
+  count: 21928
+}
+int_values {
+  value: 13
+  count: 11358
+}
+int_values {
+  value: 14
+  count: 7016
+}
+int_values {
+  value: 15
+  count: 3921
+}
+int_values {
+  value: 16
+  count: 2526
+}
+int_values {
+  value: 17
+  count: 1598
+}
+int_values {
+  value: 18
+  count: 1123
+}
+int_values {
+  value: 19
+  count: 607
+}
+int_values {
+  value: 20
+  count: 392
+}
+int_values {
+  value: 21
+  count: 216
+}
+int_values {
+  value: 22
+  count: 179
+}
+int_values {
+  value: 23
+  count: 120
+}
+int_values {
+  value: 24
+  count: 82
+}
+int_values {
+  value: 25
+  count: 19
+}
+int_values {
+  value: 26
+  count: 21
+}
+int_values {
+  value: 27
+  count: 17
+}

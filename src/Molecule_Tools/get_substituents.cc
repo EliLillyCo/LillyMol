@@ -3,12 +3,14 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "google/protobuf/text_format.h"
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/tfdatarecord.h"
+#include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwmisc/misc.h"
 
@@ -16,12 +18,17 @@
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/path.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace get_substituents {
 
@@ -40,27 +47,28 @@ Usage(int rc) {
 // clang-format on
 // clang-format off
   const char* msg = R"(Extract substituents based on a query and the adjacent unmatched atoms
- -s <smarts>       identify the matched atoms
- -q <query>        identify the matched atoms
- -O <atom>         from which query atom does the substituent sprout (default 0)
- -O all            process each query atom match
- -m <natoms>       min fragment size
- -M <natoms>       max fragment size
- -r <nrings>       min number of rings in the fragment
- -R <nrings>       max number of rings in the fragment
- -y <nsys>         min number of ring systems in the fragment
- -Y <nsys>         max number of ring systems in the fragment
- -I <isotope>      place <isotope> at the join atoms
- -P ...            atom typing specification - isotopes are for adjacent atom
- -f <smarts>       fragment must contain smarts (matches as `or`) 
- -F <query>        fragment must contain query specification *matches as `or`)
- -a                each of the fragment must contain queries must match (by default any)
- -n                suppress normal output (write summary via -S)
- -d                allow substituents bonded via double (or triple) bonds
+ -s <smarts>       identify the matched atoms.
+ -q <query>        identify the matched atoms.
+ -O <atom>         from which query atom does the substituent sprout (default 0).
+ -O all            process each query atom match.
+ -m <natoms>       min fragment size.
+ -M <natoms>       max fragment size.
+ -r <nrings>       min number of rings in the fragment.
+ -R <nrings>       max number of rings in the fragment.
+ -y <nsys>         min number of ring systems in the fragment.
+ -Y <nsys>         max number of ring systems in the fragment.
+ -I <isotope>      place <isotope> at the join atoms.
+ -P ...            atom typing specification - isotopes are for adjacent atom.
+ -f <smarts>       fragment must contain smarts (matches as `or`) .
+ -F <query>        fragment must contain query specification *matches as `or`).
+ -a                each of the fragment must contain queries must match (by default any).
+ -n                suppress normal output (write summary via -S).
+ -d                allow substituents bonded via double (or triple) bonds.
+ -t ...            also generate truncated fragments, enter '-t help' for info.
  -S <fname>        write summary data Dicer.DicerFragment proto, to <fname>
- -z i              ignore molecules not matching any query
- -X ...            obscure options, enter '-X help' for info
- -v                verbose output
+ -z i              ignore molecules not matching any query.
+ -X ...            obscure options, enter '-X help' for info.
+ -v                verbose output.
 
 Specifying the query and the matched atom can be tricky. A common use case is to look
 for substituents on a ring. A typical invocation might look like
@@ -122,6 +130,12 @@ class Options {
 
     IW_STL_Hash_Map<IWString, dicer_data::DicerFragment> _fragments;
 
+    // If we are generating subsets of the substients.
+    int _truncated_fragments = 0;
+    IW_STL_Hash_Map<IWString, dicer_data::DicerFragment> _subset;
+    // If we are accumulating subset fragments, we will write them here.
+    IWString _subset_fname;
+
     // String appended to fragment names.
     IWString _suffix;
 
@@ -146,6 +160,10 @@ class Options {
     std::unique_ptr<int[]> _storage;
     // When we call create_subset, we need the atom cross refernce.
     std::unique_ptr<int[]> _xref;
+
+    // If we are generating truncated fragments, we need separate
+    // storage for that.
+    std::unique_ptr<int[]> _for_subset;
 
     // Optionally write the parent molecule. Mostly helpful for
     // debugging.
@@ -172,6 +190,8 @@ class Options {
 
     // By default we write textproto forms.
     int _write_serialized_protos;
+
+    Report_Progress _report_progress;
 
   // private functions
 
@@ -205,12 +225,20 @@ class Options {
                   atom_number_t zatom,
                   const int* matched) const;
 
+    int GenerateTruncatedFragment(Molecule& m);
+    int AddToSubsetHashes(Molecule& m);
+
     int IdentifyFragmentAtoms(const Molecule& m,
                       atom_number_t zatom,
                       int* storage,
                       int& atoms_in_fragment) const;
-    int WriteSerialisedProtos(const char* fname) const;
-    int WriteSerialisedProtos(TFDataWriter& output) const;
+    int WriteFragmentData(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                         IWString_and_File_Descriptor& output) const;
+    int WriteSerialisedProtos(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                              TFDataWriter& output) const;
+    int WriteSerialisedProtos(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                              const char* fname) const;
+
 
   public:
     Options();
@@ -221,6 +249,10 @@ class Options {
 
     int MaybeDiscernInputType(const char * fname);
 
+    void set_report_every(uint32_t rpt) {
+      _report_progress.set_report_every(rpt);
+    }
+
     FileType input_type() const {
       return _input_type;
     }
@@ -228,7 +260,10 @@ class Options {
     int Process(Molecule& m, IWString_and_File_Descriptor& output);
 
     int WriteFragmentData(const char* fname) const;
-    int WriteFragmentData(IWString_and_File_Descriptor& output) const;
+
+    // If we are collecting truncated subsituents, write what has been accumulated.
+    // The assumption that _subset_fname holds the destination.
+    int MaybeWriteTruncatedFragments() const;
 
     int Report(std::ostream& output) const;
 
@@ -288,6 +323,13 @@ Options::Options() {
   _singly_bonded_attachments_only = 1;
 
   _write_serialized_protos = 0;
+}
+
+void
+DisplayDashtOptions(std::ostream& output) {
+  output << " -t dist=<n>           generate truncated fragments to <n> bonds\n";
+  output << " -t file=<fname>       write the resulting summary textproto to 'fname'\n";
+  ::exit(0);
 }
 
 int
@@ -368,6 +410,12 @@ Options::Initialise(Command_Line& cl) {
       cerr << "All fragment must have queries (-f, -F) must match\n";
     }
   }
+
+  if (cl.option_present('n') && cl.option_present('p')) {
+    cerr << "The write parent (-p) and suppress output (-n) options are not compatible\n";
+    return 0;
+  }
+
 
   if (cl.option_present('n')) {
     _write_fragments = 0;
@@ -518,6 +566,41 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('t')) {
+    if (! cl.option_present('I')) {
+      cerr << "The truncated fragment option only works with isotopes (-I)\n";
+      return 0;
+    }
+
+    IWString t;
+    for (int i = 0; cl.value('t', t, i); ++i) {
+      if (t.starts_with("dist=")) {
+        t.remove_leading_chars(5);
+        if (!t.numeric_value(_truncated_fragments) || _truncated_fragments < 1) {
+          cerr << "Options::Initialise:invalid maximum distance for truncated fragments '" << t << "'\n";
+          return 0;
+        }
+        if (_verbose) {
+          cerr << "Will also generate truncated fragments to " << _truncated_fragments << " atoms\n";
+        }
+      } else if (t.starts_with("file=")) {
+        t.remove_leading_chars(5);
+        _subset_fname = t;
+        _subset_fname.EnsureEndsWith(".textproto");
+      } else if (t == "help") {
+        DisplayDashtOptions(cerr);
+      } else {
+        cerr << "Unrecognised -t qualifier '" << t << "'\n";
+        DisplayDashtOptions(cerr);
+      }
+    }
+
+    if (_subset_fname.empty()) {
+      cerr << "Must specify subset file name via '-t file=<fname>'\n";
+      return 0;
+    }
+  }
+
   if (cl.option_present('i')) {
     if (! process_input_type(cl, _input_type)) {
       cerr << "Cannot determine input type\n";
@@ -593,6 +676,10 @@ Options::Process(Molecule& m,
                  IWString_and_File_Descriptor& output) {
   ++_molecules_read;
 
+  if (_report_progress()) {
+    cerr << "Processed " << _molecules_read << " molecules\n";
+  }
+
   std::unique_ptr<uint32_t[]> atype;
   if (_atom_typing.active()) {
     atype = std::make_unique<uint32_t[]>(m.natoms());
@@ -605,6 +692,10 @@ Options::Process(Molecule& m,
 
   _storage.reset(new_int(m.natoms()));
   _xref.reset(new int[m.natoms()]);
+
+  if (_truncated_fragments) {
+    _for_subset.reset(new int[m.natoms()]);
+  }
 
   int queries_matched = 0;
 
@@ -619,6 +710,7 @@ Options::Process(Molecule& m,
     if (nhits == 0) {
       continue;
     }
+    // cerr << "Got " << nhits << " hits to query\n";
 
     ++queries_matched;
     if (QueryMatchToFragment(m, sresults, atype, output)) {
@@ -645,10 +737,7 @@ Options::QueryMatchToFragment(Molecule& m,
                         const std::unique_ptr<uint32_t[]>& atype,
                         IWString_and_File_Descriptor& output) {
   for (const Set_of_Atoms* atoms : sresults.embeddings()) {
-    if (QueryMatchToFragment(m, *atoms, atype, output)) {
-      // Not sure why this was returning, processing all embeddings is what we want.
-      // return 1;
-    }
+    QueryMatchToFragment(m, *atoms, atype, output);
   }
 
   return 0;
@@ -684,8 +773,7 @@ Options::IdentifyFragmentAtoms(const Molecule& m,
 }
 
 // Return the list of connections to `zatom` which are NOT set
-// in `matched`. Do not include ring bonds, since we will be
-// growing substituents from these atoms.
+// in `matched`.
 // If we are only processing singly bonded attachments, skip
 // any attachments that do not match.
 Set_of_Atoms
@@ -699,6 +787,12 @@ Options::GetUnmatchedAtoms(const Molecule& m,
     if (_singly_bonded_attachments_only && ! b->is_single_bond()) {
       continue;
     }
+
+//  Not correct, will fail to identify substituents that are rings directly attached to the anchor atom.
+//  c1ccccc1C1CC1
+//  if (b->nrings()) {
+//    continue;
+//  }
 
     atom_number_t j = b->other(zatom);
     //cerr << "From matched atom " << zatom << " to atom " << j << " matched " << matched[j] << " ring " << b->nrings() << '\n';
@@ -771,7 +865,7 @@ Options::QueryMatchToFragment(Molecule& m,
   std::fill_n(_storage.get(), matoms, 0);
   embedding.set_vector(_storage.get(), 1);
 
-  if (! embedding.ok_index(start_atom)) {
+  if (! embedding.ok_index(start_atom)) [[ unlikely ]] {
     cerr << "Options::QueryMatchToFragment:invalid matched atom\n";
     cerr << "Embedding " << embedding << " ndx " << start_atom << " invald\n";
     return 0;
@@ -789,7 +883,7 @@ Options::QueryMatchToFragment(Molecule& m,
   m.ring_membership();
 
   const atom_number_t zatom = embedding[start_atom];
-  if (zatom < 0) {
+  if (zatom < 0) [[ unlikely ]] {
     cerr << "QueryMatchToFragment:excluded atom is start atom " << embedding << '\n';
     return 0;
   }
@@ -840,12 +934,301 @@ Options::QueryMatchToFragment(Molecule& m,
       ++_fragments_written;
       output << frag.unique_smiles() << ' ' << m.name() <<  _suffix << '\n';
     }
+
+    if (_truncated_fragments > 0) {
+      frag.set_name(m.name());
+      GenerateTruncatedFragment(frag);
+    }
   }
 
   output.write_if_buffer_holds_more_than(4096);
 
   return 1;
 }
+
+#ifdef NOT_SURE_IF_THIS_IS_A_GOOD_IDEA
+// I had wanted to guard against amide bonds getting broken
+// but not sure it matters. Wrote this then changed my mind.
+// maybe revisit sometime.
+int
+ExtendAcrossBrokenAmideBonds(Molecule& m,
+                 int* subset,
+                 int flag) {
+  const int matoms = m.natoms();
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (subset[i] == 0) {
+      continue;
+    }
+
+    if (m.atomic_number(i) == 6) {
+      if (m.ncon(i) != 3) {
+        continue;
+      }
+    } else if (m.atomic_number(i) == 16) {
+      if (m.ncon(i) != 4) {
+        continue;
+      }
+    } else {
+      continue;
+    }
+
+    atom_number_t heteroatom = kInvalidAtomNumber;
+    int found_double_bond = 0;
+    for (const Bond* b : m[i]) {
+      atom_number_t o = b->other(i);
+
+      if (subset[o]) {
+        continue;
+      }
+
+      atomic_number_t z = m.atomic_number(o);
+
+      if (b->is_double_bond()) {
+        if ((z == 8 || z == 16) && m.ncon(o) == 1) {
+          ++found_double_bond;
+        }
+        continue;
+      }
+
+      if (z == 7 || z == 8) {
+        if (heteratom == kInvalidAtomNumber) {
+          heteratom = o;
+        } else {  // do not want to process case of 2 attached heteroatoms
+          heteratom = kInvalidAtomNumber;
+        }
+      }
+    }
+
+    if (found_double_bond == 0 || found_heteratom == kInvalidAtomNumber) {
+      continue;
+    }
+
+    subset[heteratom] = flag;
+    ++rc;
+  }
+
+  return rc;
+}
+#endif
+
+std::optional<atom_number_t>
+FirstIsotopicAtom(const Molecule& m) {
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (m.isotope(i) > 0) {
+      return i;
+    }
+  }
+
+  return std::nullopt;
+}
+
+// Atom `zatom` is an aromatic atom in `m` and it is in `subset`.
+// FInd all rings that are in the ring system that contains `zatom`
+// and set the entries in `subset`.
+int
+AddAllAtomsInRingSystem(Molecule& m,
+                        atom_number_t from,
+                        atom_number_t to,
+                        int* subset,
+                        int flag) {
+  const Ring* r0 = m.ring_containing_atom(to);
+  assert(r0 != nullptr);
+
+  r0->set_vector(subset, flag);
+
+  if (! r0->is_fused()) {
+    return 1;
+  }
+
+  for (const Ring* ri : m.sssr_rings()) {
+    if (ri == r0) {
+      continue;
+    }
+
+    if (r0->fused_system_identifier() == ri->fused_system_identifier()) {
+      ri->set_vector(subset, flag);
+    }
+  }
+
+  return 1;
+}
+
+int
+ExtendToUnsaturated(Molecule& m, int* subset, int flag) {
+
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (subset[i] == 0) {
+      continue;
+    }
+    if (subset[i] == flag) {
+      continue;
+    }
+
+    for (const Bond* b : m[i]) {
+      atom_number_t o = b->other(i);
+      if (subset[o]) {
+        continue;
+      }
+      if (b->is_double_bond()) {
+        subset[o] = flag;
+      } else if (m.is_aromatic(i) && m.is_aromatic(o)) {
+        AddAllAtomsInRingSystem(m, i, o, subset, 2);
+      }
+    }
+  }
+
+  int rc = 0;
+  for (int i = 0; i < matoms; ++i) {
+    if (subset[i] == 0) {
+      continue;
+    }
+
+    ++rc;
+
+    if (subset[i] == flag) {
+      subset[i] = 1;
+    }
+  }
+
+  return rc;
+}
+
+int
+ExtendShell(const Molecule& m,
+            atom_number_t zatom,
+            int distance,
+            int max_distance,
+            int* visited) {
+  visited[zatom] = 1;
+  int rc = 1;
+
+  if (distance == max_distance) {
+    return 1;
+  }
+
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (visited[o]) {
+      continue;
+    }
+    rc += ExtendShell(m, o, distance + 1, max_distance, visited);
+  }
+
+  return rc;
+}
+
+
+int
+Options::GenerateTruncatedFragment(Molecule& m) {
+
+  if (m.natoms() < _truncated_fragments) {
+    // Not sure this is correct, let's see...
+    return 0;
+  }
+
+  std::optional<atom_number_t> zatom = FirstIsotopicAtom(m);
+  if (! zatom) {
+    cerr << "No isotope in " << m.smiles() << "\n";
+    return 0;
+  }
+
+  // cerr << m.smiles() << " at start of subset\n";
+
+  static constexpr int kSetHere = 2;
+
+  // For convenience
+  int* subset = _for_subset.get();
+
+  std::fill_n(subset, m.natoms(), 0);
+  ExtendShell(m, *zatom, 0, _truncated_fragments, subset);
+  ExtendToUnsaturated(m, subset, kSetHere);
+
+  // We cannot perturb the bond list while scanning it, so we
+  // keep track of the atoms that define the bonds to be broken
+  // and remove those bonds in a seprate loop.
+  Set_of_Atoms atoms_to_keep, atoms_to_remove;
+
+  for (const Bond* b : m.bond_list()) {
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+    if (subset[a1] == subset[a2]) {
+      continue;
+    }
+
+    if (subset[a1]) {
+      atoms_to_keep << a1;
+      atoms_to_remove << a2;
+      m.set_isotope(a1, kSetHere);
+    } else {
+      atoms_to_keep << a2;
+      atoms_to_remove << a1;
+      m.set_isotope(a2, kSetHere);
+    }
+  }
+
+  // Skip if there was no trimming
+  if (atoms_to_keep.empty()) {
+    return 1;
+  }
+
+  for (int i = 0; i < atoms_to_keep.number_elements(); ++i) {
+    m.remove_bond_between_atoms(atoms_to_keep[i], atoms_to_remove[i]);
+  }
+
+  m.remove_atoms(subset, 0);
+
+  if (m.natoms() > _max_fragment_size) {
+    return 1;
+  }
+
+  return AddToSubsetHashes(m);
+}
+
+int
+Options::AddToSubsetHashes(Molecule& m) {
+  auto iter = _subset.find(m.unique_smiles());
+
+  if (iter != _subset.end()) {
+    auto current = iter->second.n();
+    iter->second.set_n(current + 1);
+    return 1;
+  }
+
+  auto [iter2, _] = _subset.emplace(m.unique_smiles(), dicer_data::DicerFragment());
+  iter2->second.set_iso(dicer_data::ATT);
+  iter2->second.set_n(1);
+  iter2->second.set_par(m.name().data(), m.name().length());
+  iter2->second.set_smi(m.unique_smiles().AsString());
+  iter2->second.set_nat(m.natoms());
+
+  return 1;
+}
+
+int
+Options::MaybeWriteTruncatedFragments() const {
+  if (_truncated_fragments == 0) {
+    return 1;
+  }
+
+  // We are const, so make a copy...
+  IWString tmp(_subset_fname);
+
+  if (_write_serialized_protos) {
+    return WriteSerialisedProtos(_subset, tmp.null_terminated_chars());
+  }
+
+  IWString_and_File_Descriptor output;
+  if (! output.open(tmp)) {
+    cerr << "Options::MaybeWriteTruncatedFragments:cannot open '" << tmp << "'\n";
+    return 0;
+  }
+
+  return WriteFragmentData(_subset, output);
+}
+
 
 int
 Options::MaybeAddToHash(const Molecule& parent, 
@@ -870,7 +1253,7 @@ Options::MaybeAddToHash(const Molecule& parent,
     // No isotope.
   }
   iter2->second.set_n(1);
-  iter2->second.set_par(parent.name().AsString());
+  iter2->second.set_par(parent.name().data(), parent.name().length());
   iter2->second.set_smi(frag.unique_smiles().AsString());
   iter2->second.set_nat(frag.natoms());
 
@@ -920,7 +1303,7 @@ Options::UpdateStatistics(Molecule& frag) {
 int
 Options::WriteFragmentData(const char* fname) const {
   if (_write_serialized_protos) {
-    return WriteSerialisedProtos(fname);
+    return WriteSerialisedProtos(_fragments, fname);
   }
 
   IWString_and_File_Descriptor output;
@@ -929,23 +1312,26 @@ Options::WriteFragmentData(const char* fname) const {
     return 0;
   }
 
-  return WriteFragmentData(output);
+  return WriteFragmentData(_fragments, output);
 }
 
 int
-Options::WriteSerialisedProtos(const char* fname) const {
+Options::WriteSerialisedProtos(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                               const char* fname) const {
   TFDataWriter output;
   if (! output.Open(fname)) {
     cerr << "Options::WriteSerialisedProtos:cannot open '" << fname << "'\n";
     return 0;
   }
 
-  return WriteSerialisedProtos(output);
+  return WriteSerialisedProtos(frags, output);
 }
+
 int
-Options::WriteSerialisedProtos(TFDataWriter& output) const {
+Options::WriteSerialisedProtos(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                        TFDataWriter& output) const {
   std::string buffer;
-  for (const auto& [_, proto] : _fragments) {
+  for (const auto& [_, proto] : frags) {
     output.WriteSerializedProto<dicer_data::DicerFragment>(proto);
   }
 
@@ -953,14 +1339,15 @@ Options::WriteSerialisedProtos(TFDataWriter& output) const {
 }
 
 int
-Options::WriteFragmentData(IWString_and_File_Descriptor& output) const {
+Options::WriteFragmentData(const IW_STL_Hash_Map<IWString, dicer_data::DicerFragment>& frags,
+                           IWString_and_File_Descriptor& output) const {
 
   static google::protobuf::TextFormat::Printer printer;  
   printer.SetSingleLineMode(true);
 
   static constexpr char kSep = ' ';
 
-  for (const auto& [key, proto] : _fragments) {
+  for (const auto& [key, proto] : frags) {
     std::string buffer;
     if (! printer.PrintToString(proto, &buffer)) {
       cerr << "Options::WriteFragmentData:cannot write '" << proto.ShortDebugString() << "'\n";
@@ -1068,6 +1455,7 @@ GetSubstituents(Options& options,
     if (! GetSubstituents(options, *m, output)) {
       return 0;
     }
+
   }
 
   return 1;
@@ -1094,15 +1482,17 @@ GetSubstituents(Options& options,
 
 void
 DisplayDashXOptions(std::ostream& output) {
+  output << "\n";
   output << " -X 3d              include coordinates with smiles (needs 3D input)\n";
   output << " -X okdouble        allow doubly bonded substituents\n";
   output << " -X anchor          include the anchor atom with the fragment\n";
+
   ::exit(0);
 }
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:lcg:i:S:I:s:q:f:F:m:M:nz:O:aX:pdP:r:R:y:Y:");
+  Command_Line cl(argc, argv, "vE:A:lcg:i:S:I:s:q:f:F:m:M:nz:O:aX:pdP:r:R:y:Y:t:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1125,7 +1515,7 @@ Main(int argc, char** argv) {
     const_IWSubstring x;
     for (int i = 0; cl.value('X', x, i); ++i) {
       if (x == "3d") {
-        set_append_coordinates_after_each_atom(1);
+        lillymol::set_include_coordinates_with_smiles(1);
         if (verbose) {
           cerr << "Will write 3D smiles\n";
         }
@@ -1143,6 +1533,17 @@ Main(int argc, char** argv) {
         options.set_write_serialized_protos(1);
         if (verbose) {
           cerr << "Will write serialized protos\n";
+        }
+      } else if (x.starts_with("rpt=")) {
+        x.remove_leading_chars(4);
+        uint32_t rpt;
+        if (! x.numeric_value(rpt) || rpt == 0) {
+          cerr << "The -X rpt= value must be a whole +ve number, '" << x << "' invalid\n";
+          return 0;
+        }
+        options.set_report_every(rpt);
+        if (verbose) {
+          cerr << "Will report progress every " << rpt << " molecules\n";
         }
       } else if (x == "help") {
         cerr << "Unrecognised -X qualifier '" << x << "'\n";
@@ -1177,6 +1578,9 @@ Main(int argc, char** argv) {
       cerr << "Count not write fragment data '" << fname << "'\n";
     }
   }
+
+  // The options object has kept track of the file name.
+  options.MaybeWriteTruncatedFragments();
 
   output.flush();
 

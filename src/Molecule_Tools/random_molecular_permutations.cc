@@ -23,6 +23,9 @@
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
+#include "Utilities/GFP_Tools/gfp_standard.h"
+#include "Utilities/GFP_Tools/sparse_collection.h"
+
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
@@ -32,10 +35,12 @@
 #include "Molecule_Lib/qry_wstats.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/random_molecular_permutations.pb.h"
-#include "Molecule_Tools/set_of_target_molecules.h"
-#include "Utilities/GFP_Tools/gfp_standard.h"
-#include "Utilities/GFP_Tools/sparse_collection.h"
+#else
+#include "random_molecular_permutations.pb.h"
+#endif
+#include "set_of_target_molecules.h"
 
 using std::cerr;
 using iwmisc::Fraction;
@@ -1222,9 +1227,10 @@ Probabilities(const Config& config) {
   reflection->ListFields(config.probability(), &fields);
 
   for (const FieldDescriptor* f : fields) {
-    cerr << f->name() << '\n';
+    // cerr << f->name() << '\n';
     float tmp = reflection->GetFloat(config.probability(), f);
-    result[f->name()] = tmp;
+    std::string key(f->name());
+    result[key] = tmp;
   }
 
   return result;
@@ -1366,7 +1372,7 @@ initialise_never_change_atoms(Molecule& m, Can_Change& can_change) {
 #endif
 
 
-#define FREQUENTLY_CHECK_VALENCES 1
+//#define FREQUENTLY_CHECK_VALENCES 1
 
 /*
   The convention is that each member of the double attachment library

@@ -7,6 +7,12 @@
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/etrans.pb.h"
+#else
+#include "etrans.pb.h"
+#endif
+
 class Element;
 class Molecule;
 class Molecule_to_Match;
@@ -43,6 +49,8 @@ class Element_Transformation
 //  int build(const char *);
     int build(const IWString& value);
 
+    int Build(const element_transformation::ElementTransformation& proto);
+
     int process(Molecule &);
 
     int process(Molecule_to_Match &);
@@ -58,10 +66,12 @@ class Element_Transformations : public resizable_array_p<Element_Transformation>
 
     int active() const { return _number_elements;}
 
-    int construct_from_command_line(Command_Line &, int = 0, char = 't');
+    int construct_from_command_line(Command_Line &, int verbose= 0, char = 't');
 
     // Add a transformation directive 'Br=Cl' for example.
     int Add(const IWString& token);
+
+    int Build(const element_transformation::ElementTransformations& proto);
 
     int process(Molecule *);
 

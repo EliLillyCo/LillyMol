@@ -78,6 +78,9 @@ fileconv -v -a rand.smi
 ```
 Is a common means of assessing a file of molecules.
 
+Because the file name ends with '.smi', fileconv reads the file as a smiles
+file.
+
 ## Flow
 `fileconv` operates as a pipeline. Molecules are read from the 
 input source. They are then processed, which may be a no-op, and
@@ -109,12 +112,18 @@ generate smiles | fileconv <alter/filter smiles> -S - - | consume smiles
 where both input and output (which defaults to smiles) are
 from stdin and to stdout.
 
+The type of file written, by default smiles, can be set with the -o option.
+See [io](docs/Molecule_Lib/io.md) for more information about I/O in LillyMol,
+including how to produce other file types, unique smiles, multiple files and
+other capabilities.
+
 `fileconv` can also read and write gzip'd files
 ```
 fileconv -v -a file.smi.gz
 ```
 will work. The file type is discerned by stripping off the `.gz` and
-looking at the suffix.
+looking at the suffix. Most LillyMol tools are built on the same common
+I/O platform, so most LillyMol tools can read gzip'd files.
 
 Like all LillyMol based tools, `fileconv` is designed to operate
 silently. Adding one or more `-v` options will increase the verbosity
@@ -241,6 +250,9 @@ Should there be a dictionary of known counterions, this option, or are
 things better done via heuristics. Most use of fileconv relies on
 heuristics, but there have been times when a saltfile has been needed.
 
+An example saltfile is included as (saltfile)[/contrib/data/saltfile.smi]
+derived from Chembl and other sources.
+
 ###-f saltsmartsfile=\<file\>
 Designed to read an RDKit salt file - those are smarts. They must match
 all the atoms in the fragment. This makes no sense, but is included for
@@ -271,7 +283,7 @@ provides a convenient default for `rmxt=\<n\>`.
 ### -f sfs
 Sort fragments by size.  Does not do any fragment selection,
 just re-orders the atoms on the molecule so that the fragments
-appear sorted by size.
+appear sorted by size, largest fragments first.
 
 ### -f dmxt=\<d\>
 Discard molecules where largest fragments differ by \<d\> atoms or fewer.

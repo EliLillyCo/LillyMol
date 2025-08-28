@@ -1207,7 +1207,7 @@ determine_ring_status(Molecule& m, int* ring_status) {
     const int ring_size = ri->number_elements();
 
     for (int j = 0; j < ring_size; ++j) {
-      const auto k = ri->item(j);
+      const atom_number_t k = ri->item(j);
 
       if (3 == ring_status[k]) {  // has been identified as aromatic, so it is in both
                                   // aliphatic and aromatic rings
@@ -1456,7 +1456,7 @@ int
 assign_atom_types_nox(const Molecule& m, T* atype) {
   const int matoms = m.natoms();
 
-  for (auto i = 0; i < matoms; ++i) {
+  for (int i = 0; i < matoms; ++i) {
     const atomic_number_t z = m.atomic_number(i);
 
     if (6 == z) {
@@ -1487,7 +1487,7 @@ assign_atom_types_nox(const Molecule& m, T* atype) {
 template <typename T>
 int
 Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atype) {
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   // cerr << "Atom_Typing_Specification::_assign_atom_types_pharmacophore, ust " <<
   // _user_specified_type << '\n';
@@ -1510,7 +1510,7 @@ Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atyp
 
   Molecule_to_Match target(&m);
 
-  for (auto i = 0; i < _hydrophobe.number_elements(); ++i) {
+  for (int i = 0; i < _hydrophobe.number_elements(); ++i) {
     Substructure_Results sresults;
 
     uint32_t nhits = _hydrophobe[i]->substructure_search(target, sresults);
@@ -1528,12 +1528,12 @@ Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atyp
     }
   }
 
-  for (auto i = 0; i < matoms; ++i) {
+  for (int i = 0; i < matoms; ++i) {
     const Atom* a = m.atomi(i);
 
-    const auto dai = da[i];
+    const int dai = da[i];
 
-    const auto fc = a->formal_charge();
+    const formal_charge_t fc = a->formal_charge();
 
     if (0 == dai && 0 == fc) {
       if (_assign_other_type) {
@@ -1569,7 +1569,7 @@ Atom_Typing_Specification::_assign_atom_types_pharmacophore(Molecule& m, T* atyp
 
   if (_write_isotopically_labelled.active()) {
     Molecule mcopy(m);
-    for (auto i = 0; i < matoms; ++i) {
+    for (int i = 0; i < matoms; ++i) {
       mcopy.set_isotope(i, atype[i]);
     }
     _write_isotopically_labelled.write(mcopy);
@@ -1770,6 +1770,7 @@ assign_atom_types(Molecule& m, int typing_to_use, T* atype, const int* ncon) {
 
 static void
 display_atom_type_specifications(std::ostream& os) {
+  // clang-format off
   os << " -P z              atomic number atom type\n";
   os << " -P c              \"c\" atom type\n";
   os << " -P tt             topological torsion atom type\n";
@@ -1778,8 +1779,7 @@ display_atom_type_specifications(std::ostream& os) {
   os << " -P UST:achprtyzne User Specified Type\n";
   os << "        A          aromatic or not\n";
   os << "        C          number of connections\n";
-  os << "        E          carbon atoms get one type, all heteroatoms a different "
-        "type\n";
+  os << "        E          carbon atoms get one type, all heteroatoms a different type\n";
   os << "        F          ring fusion\n";
   os << "        G          atomic symbol hash\n";
   os << "        H          implicit hydrogen count\n";
@@ -1799,6 +1799,7 @@ display_atom_type_specifications(std::ostream& os) {
   os << "        Y          atomic number, heavy halogens compressed\n";
   os << "        Z          atomic numbers\n";
   os << "              end specification with number for shell expansion\n";
+  // clang-format on
 
   exit(1);
 }
@@ -1894,9 +1895,8 @@ int
 Atom_Typing_Specification::assign_atom_types(Molecule& m, T* atype, const int* ncon) {
   std::fill_n(atype, m.natoms(), 0);
 
-  if (IWATTYPE_PPHORE ==
-      _type)  // because this owns the charge assigner etc queries. Must be done first
-  {
+  // because this owns the charge assigner etc queries. Must be done first
+  if (IWATTYPE_PPHORE == _type) {
     if (!_assign_atom_types_pharmacophore(m, atype)) {  // we allow
       return 0;
     }
@@ -1989,17 +1989,17 @@ Atom_Typing_Specification::_perform_shell_expansion_v2(Molecule& m, T* atype) co
   }
 
   m.compute_aromaticity_if_needed();
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   assert(sizeof(T) == sizeof(int));
 
+  // hopefully one larger allocation faster than two smaller
   int* complete = new int[matoms + matoms];
-  std::unique_ptr<int[]> free_complete(
-      complete);  // hopefully one larger allocation faster than two smaller
+  std::unique_ptr<int[]> free_complete(complete);
   T* newtype = reinterpret_cast<T*>(complete + matoms);
 
-  for (auto i = 0; i < _perform_shell_iteration; ++i) {
-    for (auto j = 0; j < matoms; j++) {
+  for (int i = 0; i < _perform_shell_iteration; ++i) {
+    for (int j = 0; j < matoms; j++) {
       std::fill_n(complete, matoms, 0);
 
       newtype[j] = _perform_shell_iteration_v2(m, j, atype, complete,
@@ -2031,17 +2031,12 @@ Atom_Typing_Specification::_perform_shell_iteration_v2(Molecule& m,
                                                        int radius) const {
   complete[zatom] = 1;
 
-  int rc = 792 * atype[zatom] + radius -
-           _perform_shell_iteration;  // we want the first iteration of expansion to
-                                      // reflect the proper atom type
+  // we want the first iteration of expansion to
+  // reflect the proper atom type
+  int rc = 792 * atype[zatom] + radius - _perform_shell_iteration;
 
-  const Atom* a = m.atomi(zatom);
-
-  auto acon = a->ncon();
-
-  for (auto i = 0; i < acon; ++i) {
-    const Bond* b = a->item(i);
-    auto j = b->other(zatom);
+  for (const Bond* b : m[zatom]) {
+    atom_number_t j = b->other(zatom);
 
     if (complete[j]) {
       continue;
@@ -2189,7 +2184,9 @@ int
 Atom_Typing_Specification::_ust_assign_atom_types_isotope(const Molecule& m,
                                                           T* atype) const {
   for (int i = m.natoms() - 1; i >= 0; i--) {
-    atype[i] += m.isotope(i);
+    if (m.isotope(i) > 0) {
+      atype[i] += m.isotope(i);
+    }
   }
 
   return 1;
@@ -2248,9 +2245,9 @@ Atom_Typing_Specification::_ust_assign_atom_types_aromatic_all_the_same(Molecule
     return 1;
   }
 
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
-  for (auto i = 0; i < matoms; ++i) {
+  for (int i = 0; i < matoms; ++i) {
     if (m.is_aromatic(i)) {
       atype[i] = TYPE_M_COMMON_AROMATIC_TYPE;
     }
@@ -2302,12 +2299,12 @@ ust_assign_atom_types_t_ring(Molecule& m, const Ring& r, T* atype) {
 
   Set_of_Atoms two_connected_nitrogen_count, exocyclic_oxygen;
 
-  for (auto i = 0; i < ring_size; ++i) {
-    const auto j = r[i];
+  for (int i = 0; i < ring_size; ++i) {
+    const atom_number_t j = r[i];
 
-    const auto a = m.atomi(j);
+    const Atom* a = m.atomi(j);
 
-    const auto z = a->atomic_number();
+    const atomic_number_t z = a->atomic_number();
 
     if (7 == z && 2 == a->ncon()) {
       two_connected_nitrogen_count.add(j);
@@ -2322,14 +2319,14 @@ ust_assign_atom_types_t_ring(Molecule& m, const Ring& r, T* atype) {
       continue;
     }
 
-    for (auto k = 0; k < 3; ++k) {
+    for (int k = 0; k < 3; ++k) {
       const Bond* b = a->item(k);
 
       if (b->nrings()) {
         continue;
       }
 
-      const auto o = b->other(j);
+      const atom_number_t o = b->other(j);
 
       if (1 == m.ncon(o) && 8 == m.atomic_number(o)) {  // =O or -O is fine
         exocyclic_oxygen.add(o);
@@ -3076,17 +3073,17 @@ Atom_Typing_Specification::_build_pharmacophore_specification(
 
 static int
 string_interpolation(const const_IWSubstring& starting_string, IWString& expanded) {
-  auto dollar = starting_string.index("${");
+  int dollar = starting_string.index("${");
   if (dollar < 0) {
     expanded = starting_string;
     return 1;
   }
 
-  const auto n = starting_string.length();
+  const int n = starting_string.length();
 
   int closing_brace = -1;
 
-  for (auto i = dollar + 2; i < n; ++i) {
+  for (int i = dollar + 2; i < n; ++i) {
     if ('}' == starting_string[i]) {
       closing_brace = i;
       break;
@@ -3164,7 +3161,7 @@ Atom_Typing_Specification::_build_pharmacophore_specification(
   input.set_strip_trailing_blanks(1);
   input.set_skip_blank_lines(1);
 
-  auto echo_inputs = false;
+  int echo_inputs = false;
 
   const_IWSubstring buffer;
 

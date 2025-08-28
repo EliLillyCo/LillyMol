@@ -1,0 +1,16 @@
+name: "Alcohol to CF2"
+scaffold {
+  id: 0
+  smarts: "[O,S;D1]-[G0]"
+  remove_atom: 0
+}
+sidechain {
+  id: 1
+  reagent: "F-C-F"
+  smarts: "C"
+  join {
+    a1: 1
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+}

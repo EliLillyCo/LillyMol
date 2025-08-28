@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package gene_expression;
+
+message Gene {
+  uint32 gene_id = 1;
+  float score = 2;
+}
+
+message Profile {
+  optional string name = 1;
+
+  repeated Gene gene = 2;
+}

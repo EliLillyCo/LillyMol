@@ -19,7 +19,11 @@
 #include "Foundational/iwmisc/compile_time.h"
 #include "Foundational/iwmisc/misc.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 namespace grid_overlap {
 

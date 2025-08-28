@@ -58,43 +58,6 @@ extern int SplitOnPlusses(const const_IWSubstring& buffer,
 
 namespace misc2 {
 
-template <typename PROTO, typename T>
-int
-ReadProtoFile(const const_IWSubstring fname, T& destination) {
-  iwstring_data_source input(fname);
-
-  if (!input.good()) {
-    std::cerr << "ReadProtoFile:cannot open '" << fname;
-    return 0;
-  }
-
-  IWString file_contents;
-
-  const_IWSubstring buffer;
-  while (input.next_record(buffer)) {
-    file_contents << buffer;
-  }
-
-  const std::string string_proto(file_contents.rawdata(),
-                                 file_contents.number_elements());
-
-  PROTO proto;
-
-  if (!google::protobuf::TextFormat::ParseFromString(string_proto, &proto)) {
-    std::cerr << "ReadProtoFile:cannot parse proto\n";
-    std::cerr << string_proto << '\n';
-    return 0;
-  }
-
-  if (!destination.ConstructFromProto(proto)) {
-    std::cerr << "ReadProtoFile:cannot build object from proto\n";
-    std::cerr << proto.ShortDebugString() << '\n';
-    return 0;
-  }
-
-  return 1;
-}
-
 // Starting at buffer[i], which must be `open`, return the
 // index of the matching `close` character.
 // Returns a negative number if not found.
@@ -102,4 +65,5 @@ ReadProtoFile(const const_IWSubstring fname, T& destination) {
 int MatchingOpenCloseChar(const const_IWSubstring& buffer, int i, const char open,
                           const char close);
 }  // namespace misc2
+
 #endif  // MOLECULE_LIB_MISC2_H_

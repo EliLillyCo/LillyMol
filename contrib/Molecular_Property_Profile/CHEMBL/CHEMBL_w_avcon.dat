@@ -2,16 +2,16 @@ description {
   feature_name: "w_avcon"
   description: "Average connectivity"
   plot_title: "Average connectivity"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
 minval: 1.6
 maxval: 2.889
-mean: 2.1714587
-median: 2.178
+mean: 2.169849
+median: 2.176
 quantile {
   quantile: 0.01
-  value: 2.0
+  value: 1.949
 }
 quantile {
   quantile: 0.05
@@ -23,11 +23,11 @@ quantile {
 }
 quantile {
   quantile: 0.5
-  value: 2.178
+  value: 2.176
 }
 quantile {
   quantile: 0.9
-  value: 2.261
+  value: 2.258
 }
 quantile {
   quantile: 0.95
@@ -39,7 +39,7 @@ quantile {
 }
 float_values {
   value: 1.6
-  count: 7
+  count: 220
 }
 float_values {
   value: 1.61289
@@ -55,7 +55,7 @@ float_values {
 }
 float_values {
   value: 1.66445
-  count: 9
+  count: 371
 }
 float_values {
   value: 1.67734
@@ -65,7 +65,7 @@ float_values {
 }
 float_values {
   value: 1.70312
-  count: 8
+  count: 450
 }
 float_values {
   value: 1.71601
@@ -75,68 +75,68 @@ float_values {
 }
 float_values {
   value: 1.74179
-  count: 13
+  count: 638
 }
 float_values {
   value: 1.75468
 }
 float_values {
   value: 1.76757
-  count: 18
+  count: 740
 }
 float_values {
   value: 1.78046
 }
 float_values {
   value: 1.79335
-  count: 19
+  count: 944
 }
 float_values {
   value: 1.80624
-  count: 26
+  count: 968
 }
 float_values {
   value: 1.81913
 }
 float_values {
   value: 1.83202
-  count: 26
+  count: 974
 }
 float_values {
   value: 1.84491
-  count: 49
+  count: 1968
 }
 float_values {
   value: 1.8578
-  count: 24
+  count: 925
 }
 float_values {
   value: 1.87069
-  count: 28
+  count: 1594
 }
 float_values {
   value: 1.88358
-  count: 26
+  count: 1342
 }
 float_values {
   value: 1.89647
-  count: 37
+  count: 2061
 }
 float_values {
   value: 1.90936
-  count: 47
+  count: 1669
 }
 float_values {
   value: 1.92225
-  count: 47
+  count: 2241
 }
 float_values {
   value: 1.93514
-  count: 39
+  count: 1326
 }
 float_values {
   value: 1.94803
-  count: 30
+  count: 971
 }
 float_values {
   value: 1.96092
@@ -149,7 +149,7 @@ float_values {
 }
 float_values {
   value: 1.99959
-  count: 2311
+  count: 86841
 }
 float_values {
   value: 2.01248
@@ -159,215 +159,228 @@ float_values {
 }
 float_values {
   value: 2.03826
-  count: 217
+  count: 7572
 }
 float_values {
   value: 2.05115
-  count: 383
+  count: 13686
 }
 float_values {
   value: 2.06404
-  count: 898
+  count: 33430
 }
 float_values {
   value: 2.07693
-  count: 1856
+  count: 74674
 }
 float_values {
   value: 2.08982
-  count: 2356
+  count: 85956
 }
 float_values {
   value: 2.10271
-  count: 1900
+  count: 69829
 }
 float_values {
   value: 2.1156
-  count: 1932
+  count: 74732
 }
 float_values {
   value: 2.12849
-  count: 2384
+  count: 92073
 }
 float_values {
   value: 2.14138
-  count: 3889
+  count: 151553
 }
 float_values {
   value: 2.15427
-  count: 3798
+  count: 141248
 }
 float_values {
   value: 2.16716
-  count: 2676
+  count: 96262
 }
 float_values {
   value: 2.18005
-  count: 4230
+  count: 153956
 }
 float_values {
   value: 2.19294
-  count: 3654
+  count: 131603
 }
 float_values {
   value: 2.20583
-  count: 3580
+  count: 129235
 }
 float_values {
   value: 2.21872
-  count: 3603
+  count: 126479
 }
 float_values {
   value: 2.23161
-  count: 2587
+  count: 93062
 }
 float_values {
   value: 2.2445
-  count: 1696
+  count: 63284
 }
 float_values {
   value: 2.25739
-  count: 1979
+  count: 69874
 }
 float_values {
   value: 2.27028
-  count: 955
+  count: 35801
 }
 float_values {
   value: 2.28317
-  count: 1162
+  count: 42132
 }
 float_values {
   value: 2.29606
-  count: 537
+  count: 18954
 }
 float_values {
   value: 2.30895
-  count: 316
+  count: 11996
 }
 float_values {
   value: 2.32184
-  count: 303
+  count: 11062
 }
 float_values {
   value: 2.33473
-  count: 65
+  count: 2143
 }
 float_values {
   value: 2.34762
-  count: 111
+  count: 4150
 }
 float_values {
   value: 2.36051
-  count: 57
+  count: 2317
 }
 float_values {
   value: 2.3734
-  count: 41
+  count: 1783
 }
 float_values {
   value: 2.38629
-  count: 12
+  count: 427
 }
 float_values {
   value: 2.39918
-  count: 22
+  count: 1106
 }
 float_values {
   value: 2.41207
-  count: 9
+  count: 417
 }
 float_values {
   value: 2.42496
-  count: 7
+  count: 219
 }
 float_values {
   value: 2.43785
-  count: 2
+  count: 194
 }
 float_values {
   value: 2.45074
-  count: 7
+  count: 185
 }
 float_values {
   value: 2.46363
-  count: 2
+  count: 81
 }
 float_values {
   value: 2.47652
-  count: 2
+  count: 71
 }
 float_values {
   value: 2.48941
-  count: 2
+  count: 83
 }
 float_values {
   value: 2.5023
+  count: 5
 }
 float_values {
   value: 2.51519
+  count: 44
 }
 float_values {
   value: 2.52808
+  count: 14
 }
 float_values {
   value: 2.54097
+  count: 18
 }
 float_values {
   value: 2.55386
-  count: 1
+  count: 6
 }
 float_values {
   value: 2.56675
-  count: 1
+  count: 21
 }
 float_values {
   value: 2.57964
-  count: 1
+  count: 8
 }
 float_values {
   value: 2.59253
+  count: 9
 }
 float_values {
   value: 2.60542
-  count: 1
+  count: 10
 }
 float_values {
   value: 2.61831
+  count: 9
 }
 float_values {
   value: 2.6312
+  count: 1
 }
 float_values {
   value: 2.64409
 }
 float_values {
   value: 2.65698
+  count: 17
 }
 float_values {
   value: 2.66987
 }
 float_values {
   value: 2.68276
+  count: 3
 }
 float_values {
   value: 2.69565
+  count: 3
 }
 float_values {
   value: 2.70854
+  count: 2
 }
 float_values {
   value: 2.72143
+  count: 3
 }
 float_values {
   value: 2.73432
 }
 float_values {
   value: 2.74721
+  count: 1
 }
 float_values {
   value: 2.7601
-  count: 1
+  count: 8
 }
 float_values {
   value: 2.77299
@@ -377,9 +390,11 @@ float_values {
 }
 float_values {
   value: 2.79877
+  count: 3
 }
 float_values {
   value: 2.81166
+  count: 2
 }
 float_values {
   value: 2.82455
@@ -389,6 +404,7 @@ float_values {
 }
 float_values {
   value: 2.85033
+  count: 1
 }
 float_values {
   value: 2.86322

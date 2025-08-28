@@ -156,6 +156,21 @@ MCFirstPass::Build(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('n')) {
+    IWString ele;
+    for (int i = 0; cl.value('n', ele, i); ++i) {
+      const Element * e = get_element_from_symbol_no_case_conversion(ele);
+      if (e == NULL) {
+        cerr << "Unrecognised element '" << ele << "'\n";
+        return 1;
+      }
+      const_cast<Element*>(e)->set_organic(0);
+      if (_verbose) {
+        cerr << "Element '" << ele << "' marked non organic\n";
+      }
+    }
+  }
+
   for (int i = 1; i < HIGHEST_ATOMIC_NUMBER; i++)
   {
     if (_ok_elements[i])

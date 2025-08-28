@@ -1,0 +1,35 @@
+O=[CR0T2]!@-[NR0] Amide
+[NR0]-C(=O)-[NR0] Urea
+O=[CR0]!@-[OD2] Ester
+O=[CR0]!@-[OD1] Acid
+O=S(=O)-N Sulfonamide
+O=S(=O)-O SulfonicAcid
+O=S=O Sulphate
+[CD4R0](-[CD1])(-[CD1])-[CD1] t-Butyl
+[CD4R0](-F)(-F)-F CF3
+[ND3](=O)=O Nitro
+C#N Cyano
+[NR0]-[CD3](=N)-N Guanidine
+[NR0]-[CD3](=N) Amidine
+[CR0G0] CarbonAliphaticSaturatedNonRing
+[CR0G>0] CarbonAliphaticUnsaturatedNonRing
+c CarbonAromatic
+[CRG0] CarbonAlphaticSaturatedRing
+[CRG>0] CarbonAlphaticUnSaturatedRing
+[NR0G0] NitrogenAliphaticSaturatedNonRing
+[NR0G>0] NitrogenAliphaticUnSaturatedNonRing
+[n] n NitrogenAromatic
+[NRG0] NR NitrogenAliphaticSaturatedRing
+[NRG>0] NR NitrogenAliphaticUnSaturatedRing
+[OR0] OxygenAliphaticNonRing
+o OxygenAromatic
+[OR] OxygenAliphaticRing
+F Fluorine
+P Phosphorus
+S(=O)(=O) Sulfate
+[SR0] SulphurAliphaticNonRing
+s SuphurAromatic
+[SR] SulphurAliphaticRing
+Cl Chlorine
+Br Bromine
+I Iodine

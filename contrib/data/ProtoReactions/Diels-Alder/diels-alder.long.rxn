@@ -1,0 +1,55 @@
+name: "Diels-Alder"
+scaffold {
+  id: 0
+  smarts: "C=C-C=C"
+  make_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 2
+    btype: SS_DOUBLE_BOND
+  }
+  make_bond {
+    a1: 2
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+  isotope {
+    atom: 2
+    isotope: 2
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[CH]=[CH]"
+  make_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  isotope {
+    atom: 0
+    isotope: 3
+  }
+  isotope {
+    atom: 1
+    isotope: 4
+  }
+}

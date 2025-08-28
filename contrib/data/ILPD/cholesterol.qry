@@ -1,0 +1,11 @@
+name: "cholesterol"
+query {
+  smarts: "c-[OD2]"
+  environment {
+    attachment {
+      attachment_point: 1
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "[/IWfss4Cx2r6]"
+  }
+}

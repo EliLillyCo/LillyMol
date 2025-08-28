@@ -2,18 +2,18 @@ description {
   feature_name: "w_rotbond"
   description: "Number of rotatable bonds"
   plot_title: "Number of rotatable bonds"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 43.0
-mean: 5.85868
+maxval: 47.0
+mean: 5.82029
 median: 5.0
 quantile {
   quantile: 0.01
 }
 quantile {
   quantile: 0.05
-  value: 2.0
+  value: 1.0
 }
 quantile {
   quantile: 0.1
@@ -36,169 +36,193 @@ quantile {
   value: 18.0
 }
 int_values {
-  count: 710
+  count: 28493
 }
 int_values {
   value: 1
-  count: 1621
+  count: 66230
 }
 int_values {
   value: 2
-  count: 3522
+  count: 134860
 }
 int_values {
   value: 3
-  count: 5578
+  count: 209083
 }
 int_values {
   value: 4
-  count: 7425
+  count: 267375
 }
 int_values {
   value: 5
-  count: 7527
+  count: 272566
 }
 int_values {
   value: 6
-  count: 6789
+  count: 245713
 }
 int_values {
   value: 7
-  count: 5079
+  count: 189151
 }
 int_values {
   value: 8
-  count: 3616
+  count: 137138
 }
 int_values {
   value: 9
-  count: 2387
+  count: 90174
 }
 int_values {
   value: 10
-  count: 1639
+  count: 60549
 }
 int_values {
   value: 11
-  count: 1128
+  count: 40657
 }
 int_values {
   value: 12
-  count: 791
+  count: 28313
 }
 int_values {
   value: 13
-  count: 576
+  count: 19372
 }
 int_values {
   value: 14
-  count: 400
+  count: 14141
 }
 int_values {
   value: 15
-  count: 287
+  count: 10285
 }
 int_values {
   value: 16
-  count: 234
+  count: 7728
 }
 int_values {
   value: 17
-  count: 170
+  count: 6198
 }
 int_values {
   value: 18
-  count: 130
+  count: 4806
 }
 int_values {
   value: 19
-  count: 103
+  count: 3649
 }
 int_values {
   value: 20
-  count: 61
+  count: 2650
 }
 int_values {
   value: 21
-  count: 55
+  count: 2025
 }
 int_values {
   value: 22
-  count: 39
+  count: 1396
 }
 int_values {
   value: 23
-  count: 19
+  count: 1162
 }
 int_values {
   value: 24
-  count: 18
+  count: 770
 }
 int_values {
   value: 25
-  count: 21
+  count: 907
 }
 int_values {
   value: 26
-  count: 12
+  count: 606
 }
 int_values {
   value: 27
-  count: 9
+  count: 497
 }
 int_values {
   value: 28
-  count: 10
+  count: 345
 }
 int_values {
   value: 29
-  count: 12
+  count: 304
 }
 int_values {
   value: 30
-  count: 2
+  count: 170
 }
 int_values {
   value: 31
-  count: 7
+  count: 209
 }
 int_values {
   value: 32
-  count: 4
+  count: 91
 }
 int_values {
   value: 33
-  count: 8
+  count: 109
 }
 int_values {
   value: 34
-  count: 3
+  count: 64
 }
 int_values {
   value: 35
-  count: 1
+  count: 89
 }
 int_values {
   value: 36
-  count: 1
+  count: 48
 }
 int_values {
   value: 37
-  count: 2
+  count: 43
 }
 int_values {
   value: 38
-  count: 1
+  count: 31
+}
+int_values {
+  value: 39
+  count: 16
 }
 int_values {
   value: 40
-  count: 1
+  count: 9
 }
 int_values {
   value: 41
-  count: 1
+  count: 14
+}
+int_values {
+  value: 42
+  count: 7
 }
 int_values {
   value: 43
+  count: 5
+}
+int_values {
+  value: 44
   count: 1
+}
+int_values {
+  value: 45
+  count: 4
+}
+int_values {
+  value: 46
+  count: 6
+}
+int_values {
+  value: 47
+  count: 2
 }

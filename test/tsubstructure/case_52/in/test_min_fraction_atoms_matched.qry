@@ -1,0 +1,6 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Test of min_fraction_atoms_matched")
+  (A D min_fraction_atoms_matched 0.270)
+  (A C smarts "c1ccccc1")
+)

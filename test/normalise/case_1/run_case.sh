@@ -27,9 +27,9 @@ name1=stdout
 name1_out=out/${name1}
 
 # Support linux and mac 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    name1_out=out/linux/${name1}
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "${UNAME}" == "Linux" ]]; then
+    name1_out=out/${UNAME}/${name1}
+elif [[ "${UNAME}" == "darwin"* ]]; then
     name1_out=out/osx/${name1}
 else
     echo "OS is not supported"

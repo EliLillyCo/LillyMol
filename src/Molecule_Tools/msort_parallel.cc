@@ -41,7 +41,6 @@
 #include "Molecule_Lib/target.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 
@@ -83,6 +82,18 @@ static int* direction = nullptr;
 #define CMP_ANY_CHARGE 25
 #define CMP_SMALLEST_RING_SIZE 26
 #define CMP_ATOMIC_NUMBER_TOTAL 27
+// Note that in the array of computed properties, carbon is first.
+#define CMP_COUNT_HYDROGEN 28
+#define CMP_COUNT_CARBON 29
+#define CMP_COUNT_NITROGEN 30
+#define CMP_COUNT_OXYGEN 31
+#define CMP_COUNT_FLUORINE 32
+#define CMP_COUNT_PHOSPHORUS 33
+#define CMP_COUNT_SULPHUR 34
+#define CMP_COUNT_CHLORINE 35
+#define CMP_COUNT_BROMINE 36
+#define CMP_COUNT_IODONE 37
+#define CMP_COUNT_OTHER_ELEMENT 38
 
 static extending_resizable_array<int> comparison_column;
 
@@ -151,52 +162,52 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Sorts a structure file by various criteria\n";
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "  -a             sort by number of atoms\n";
-  cerr << "  -k <key(s)>    sort specification(s)\n";
-  cerr << "                 a preceeding negative sign indicates reverse order for that property\n";
-  cerr << "                 'a' 'natoms' number of atoms\n";
-  cerr << "                 'r' 'nring'  number of rings\n";
-  cerr << "                 'w' 'amw'    molecular weight\n";
-  cerr << "                     'amwnH'  molecular weight, excluding Hydrogens - groups tautomers\n";
-  cerr << "                 'f' 'nfrag'  number of fragments\n";
-  cerr << "                 'c' 'nchiral' number of explicit chiral centres\n";
-  cerr << "                 'h' 'hetero' number of heteroatoms\n";
-  cerr << "                 'j' 'aroma'  number of aromatic atoms\n";
-  cerr << "                 'k' 'aromr'  number of aromatic rings\n";
-  cerr << "                 'R' 'lgrsz'  atoms in largest ring\n";
-  cerr << "                 'S' 'lgrss'  rings in largest ring system\n";
-  cerr << "                 'e' 'alrss'  atoms in largest ring system\n";
-  cerr << "                 'b' 'rotbond' number rotatable bonds\n";
-  cerr << "                     'unsat' number of (non aromatic) unsaturated bonds\n";
-  cerr << "                     'ailf'   atoms in largest fragment\n";
-  cerr << "                     'aiff'   atoms in first fragment\n";
-  cerr << "                     'amwlf'  amw in largest fragment\n";
-  cerr << "                     'aicm=<n>' atoms in counterions, missing assigned <n>\n";
-  cerr << "                     'amwcm=<x>' amw in counterions, missing assigned <x>\n";
-  cerr << "                     'col=nn' numeric contents of column <nn> of the name\n";
-  cerr << "                     'niso' number of isotopic atoms\n";
-  cerr << "                     'rngat' number of ring atoms\n";
-  cerr << "                     'charge' number atoms with formal charges\n";
-  cerr << "                     'Z' sum of atomic numbers\n";
-//cerr << "                     'qry=...' hits to substructure query\n";
+  cerr << R"(Parallelorts a structure file by various criteria\n";
+ -a             sort by number of atoms
+ -k <key(s)>    sort specification(s)
+                a preceeding negative sign indicates reverse order for that property
+                'a' 'natoms' number of atoms
+                'r' 'nring'  number of rings
+                'w' 'amw'    molecular weight
+                    'amwnH'  molecular weight, excluding Hydrogens - groups tautomers
+                'f' 'nfrag'  number of fragments
+                'c' 'nchiral' number of explicit chiral centres
+                'h' 'hetero' number of heteroatoms
+                'j' 'aroma'  number of aromatic atoms
+                'k' 'aromr'  number of aromatic rings
+                'R' 'lgrsz'  atoms in largest ring
+                'S' 'lgrss'  rings in largest ring system
+                'e' 'alrss'  atoms in largest ring system
+                'b' 'rotbond' number rotatable bonds
+                    'unsat' number of (non aromatic) unsaturated bonds
+                    'ailf'   atoms in largest fragment
+                    'aiff'   atoms in first fragment
+                    'amwlf'  amw in largest fragment
+                    'aicm=<n>' atoms in counterions, missing assigned <n>
+                    'amwcm=<x>' amw in counterions, missing assigned <x>
+                    'col=nn' numeric contents of column <nn> of the name
+                    'niso' number of isotopic atoms
+                    'rngat' number of ring atoms
+                    'charge' number atoms with formal charges
+                    'Z' sum of atomic numbers
+                    'formula' count of each element
+                If no sort key is specified, a default consisting of natoms and various element counts is used.\n"
+ -d             descending order
+ -y             if multiple queries present, treat as a group
+ -D <stem>      write different groups to output files starting with <stem>
+ -e <number>    hint for minimum number of molecules per output file
+ -q             quick exit - avoids overhead for deallocation
+ -h <nthreads>  use Posix threads with <nthreads> threads
+ -f             forked process for each input file (recommended)
+ -p             use parallel sort for final sort (recommended)
+ -Y <x>         decrease size of chunk with highest atom count to <x> pct of rest
+ -M ...         other options, enter '-M help' for info
+ -A ...         standard aromaticity options
+ -E <symbol>    create element with symbol
+ -i <type>      specify input file type. Enter '-i help' for details
+ -v             verbose output
+)";
 
-//cerr << "                     'smt=...' hits to substructure query\n";
-  cerr << "  -d             descending order\n";
-  cerr << "  -y             if multiple queries present, treat as a group\n";
-  cerr << "  -D <stem>      write different groups to output files starting with <stem>\n";
-  cerr << "  -e <number>    hint for minimum number of molecules per output file\n";
-  cerr << "  -q             quick exit - avoids overhead for deallocation\n";
-  cerr << "  -h <nthreads>  use Posix threads with <nthreads> threads\n";
-  cerr << "  -f             forked process for each input file (recommended)\n";
-  cerr << "  -p             use parallel sort for final sort (recommended)\n";
-  cerr << "  -Y <x>         decrease size of chunk with highest atom count to <x> pct of rest\n";
-  cerr << "  -M ...         other options, enter '-M help' for info\n";
-  display_standard_aromaticity_options(cerr);
-  cerr << "  -E <symbol>    create element with symbol\n";
-  cerr << "  -i <type>      specify input file type. Enter '-i help' for details\n";
-  cerr << "  -v             verbose output\n";
   // clang-format on
 
   exit(rc);
@@ -392,7 +403,7 @@ compute_absolute_formal_charge (const Molecule & m)
       rc += fc;
   }
 
-//cerr << "Rc for " << m.name() << " is " << rc << endl;
+//cerr << "Rc for " << m.name() << " is " << rc << '\n';
 
   return rc;
 }*/
@@ -835,6 +846,78 @@ File_Record::set_molecule(const const_IWSubstring& buffer)
   return 1;
 }
 
+// We must return the number of items we place into `property`
+static int
+ElementCounts(Molecule& m, float* property) {
+  static constexpr int kNproperties = 11;
+
+  int hydrogen = 0;
+  int carbon = 0;
+  int nitrogen = 0;
+  int oxygen = 0;
+  int fluorine = 0;
+  int phosphorus = 0;
+  int sulphur = 0;
+  int chlorine = 0;
+  int bromine = 0;
+  int iodine = 0;
+  int other_element = 0;
+
+  const int matoms = m.natoms();
+
+  for (int i = 0; i < matoms; ++i) {
+    const atomic_number_t z = m.atomic_number(i);
+    switch (z) {
+      case 6:
+        ++carbon;
+        break;
+      case 7:
+        ++nitrogen;
+        break;
+      case 8:
+        ++oxygen;
+        break;
+      case 9:
+        ++fluorine;
+        break;
+      case 15:
+        ++phosphorus;
+        break;
+      case 16:
+        ++sulphur;
+        break;
+      case 17:
+        ++chlorine;
+        break;
+      case 35:
+        ++bromine;
+        break;
+      case 53:
+        ++iodine;
+        break;
+      default:
+        ++other_element;
+        break;
+    }
+
+    hydrogen += m.hcount(i);
+  }
+
+  property[0] = carbon;
+  property[1] = nitrogen;
+  property[2] = oxygen;
+  property[3] = fluorine;
+  property[4] = phosphorus;
+  property[5] = sulphur;
+  property[6] = chlorine;
+  property[7] = bromine;
+  property[8] = iodine;
+  property[9] = hydrogen;
+  property[10] = other_element;
+
+  return kNproperties;
+}
+
 static int
 do_quick_set_of_properties(Molecule& m, float* property)
 {
@@ -956,6 +1039,9 @@ file_scope_compute_properties(Molecule& m, const IWString& id, float* property)
       property[i] = m.number_formally_charged_atoms();
     } else if (CMP_SMALLEST_RING_SIZE == comparison_criterion[i]) {
       property[i] = smallest_ring_size(m);
+    } else if (CMP_COUNT_CARBON == comparison_criterion[i]) {
+      // Note that because we are altering i, directional sorting is broken. Should not matter...
+      i += ElementCounts(m, property + i) - 1;
     } else {
       cerr << "Unrecognised property " << i << " " << comparison_criterion[i] << "\n";
       return 0;
@@ -969,7 +1055,7 @@ file_scope_compute_properties(Molecule& m, const IWString& id, float* property)
 // #define ECHO_COMPUTED_PROPERTIES
 #ifdef ECHO_COMPUTED_PROPERTIES
   for (int i = 0; i < nproperties; i++) {
-    cerr << " i = " << i << " property " << property[i] << endl;
+    cerr << " i = " << i << " property " << property[i] << '\n';
   }
 #endif
 
@@ -996,7 +1082,7 @@ File_Record::compare(const File_Record& rhs) const
 {
   for (int i = 0; i < nproperties; i++) {
     //  cerr << " i = " << i << " comparing " << _property[i] << " with " <<
-    //  rhs._property[i] << endl;
+    //  rhs._property[i] << '\n';
     if (_property[i] < rhs._property[i]) {
       return 1;
     } else if (_property[i] > rhs._property[i]) {
@@ -1291,7 +1377,7 @@ identify_next_group(const resizable_array_p<File_Record>& records, int& istart,
   int n = records.number_elements();
 
   // cerr << "identify_next_group:on entry istart " << istart << " istop " << istop << ",
-  // min_size_hint " << min_size_hint << endl;
+  // min_size_hint " << min_size_hint << '\n';
 
   if (istop >= n) {
     return 0;
@@ -1348,7 +1434,7 @@ echo_set_of_molecules(const resizable_array_p<T>& records, int istart, int istop
 
   for (int i = istart; i < istop; i++) {
     if (!records[i]->echo(output)) {
-      cerr << "Cannot write item " << i << endl;
+      cerr << "Cannot write item " << i << '\n';
       return 0;
     }
 
@@ -1363,7 +1449,7 @@ echo_set_of_molecules(const resizable_array_p<T>& records, int istart, int istop
 template <typename T>
 int
 write_group(const resizable_array_p<T>& molecules, int istart, int istop,
-            const IWString& stem, int ndx)
+            const IWString& stem, uint32_t ndx)
 {
   IWString fname;
 
@@ -1386,12 +1472,12 @@ write_group(const resizable_array_p<T>& molecules, int istart, int istop,
 
 template <typename T>
 int
-identify_next_equi_atom_group_descending(const resizable_array_p<T>& records, int& istart,
-                                         int& istop, const int atoms_per_chunk,
-                                         unsigned int& atoms)
+identify_next_equi_atom_group_descending(const resizable_array_p<T>& records, uint32_t& istart,
+                                         uint32_t& istop, const int atoms_per_chunk,
+                                         uint32_t& atoms)
 {
   // cerr << "identify_next_group:on entry istart " << istart << " istop " << istop << ",
-  // min_size_hint " << min_size_hint << endl;
+  // min_size_hint " << min_size_hint << '\n';
 
   if (istop <= 0) {
     return 0;
@@ -1418,7 +1504,7 @@ identify_next_equi_atom_group_descending(const resizable_array_p<T>& records, in
 
     if (atoms_this_chunk >= atoms_per_chunk) {
       //    cerr << "atoms_this_chunk " << atoms_this_chunk << " per chunk " <<
-      //    atoms_per_chunk << endl;
+      //    atoms_per_chunk << '\n';
 
       atoms -= atoms_this_chunk;
       if (atoms < (static_cast<unsigned int>(atoms_per_chunk) * 90 / 100)) {
@@ -1446,7 +1532,7 @@ identify_next_equi_atom_group(const resizable_array_p<T>& records, int& istart,
   int n = records.number_elements();
 
   // cerr << "identify_next_group:on entry istart " << istart << " istop " << istop << ",
-  // min_size_hint " << min_size_hint << endl;
+  // min_size_hint " << min_size_hint << '\n';
 
   if (istop >= n) {
     return 0;
@@ -1488,17 +1574,18 @@ identify_next_equi_atom_group(const resizable_array_p<T>& records, int& istart,
 
   return 1;
 }
+
 template <typename T>
 int
 do_same_score_chunked_output(const resizable_array_p<T>& molecules,
                   const IWString& stem_for_output_files)
 {
-  int ndx = 1;
+  uint32_t ndx = 1;
 
   int istart = 0;
   int istop = 0;
   while (identify_next_group_same_value_same_file(molecules, istart, istop)) {
-    //  cerr << "Writing from " << istart << " to " << istop << endl;
+    //  cerr << "Writing from " << istart << " to " << istop << '\n';
 
     if (file_name_index_is_first_property) {
       ndx = static_cast<int>(molecules[istart]->FirstProperty() + 0.001);
@@ -1518,6 +1605,85 @@ do_same_score_chunked_output(const resizable_array_p<T>& molecules,
 }
 
 
+// Return the index of a point near `ndx` that is the start of an equivalent
+// group within `molecules`.
+template <typename T>
+std::optional<uint32_t>
+Boundary(const resizable_array_p<T>& molecules,
+         uint32_t ndx) {
+  uint32_t istop = molecules.size() - ndx;
+  if (ndx < istop) {
+    istop = ndx;
+  }
+
+  int left = ndx - 1;
+  int right = ndx;
+  const int rstop = molecules.number_elements() - 1;
+  for (uint32_t i = 1; i < istop; ++i) {
+    if (right >= rstop) {
+    } else if (molecules[right]->compare(*molecules[right + 1])) {
+      return right + 1;
+    }
+
+    ++right;
+
+    if (left < 0) {
+    } else if (molecules[left]->compare(*molecules[left + 1])) {
+      return left + 1;
+    }
+    --left;
+  }
+
+  return std::nullopt;
+}
+
+template <typename T>
+int
+SplitIntoChunks(const resizable_array_p<T>& molecules,
+                        uint32_t number_chunks,
+                        const IWString& stem_for_chunked_output) {
+  std::unique_ptr<uint32_t[]> cstart = std::make_unique<uint32_t[]>(number_chunks + 1);
+  cstart[0] = 0;
+  cstart[number_chunks] = molecules.size();
+
+  uint32_t n = molecules.size();
+
+  for (uint32_t i = 1; i < number_chunks; ++i) {
+    uint32_t ndx = (n * i / number_chunks);
+    std::optional<uint32_t> o = Boundary(molecules, ndx);
+    if (! o) {
+      cerr << "Cannot find boundary near " << ndx << '\n';
+      return 0;
+    }
+    if (*o == cstart[i - 1]) {
+      cerr << "Cannot find unique boundary near " << ndx << '\n';
+      return 0;
+    }
+    cstart[i] = *o;
+  }
+  
+  if (verbose) {
+    cerr << "Creating " <<number_chunks << " chunks from " << molecules.size() << " molecules\n";
+    for (uint32_t i = 0; i < number_chunks; ++i) {
+      cerr << i << " boundary " << cstart[i];
+      if (i > 0) {
+        cerr << " N = " << (cstart[i] - cstart[i-1]);
+      }
+      cerr << '\n';
+    }
+  }
+
+  for (uint32_t i = 0; i < number_chunks; ++i) {
+    uint32_t istart = cstart[i];
+    uint32_t istop = cstart[i + 1];
+    if (!write_group(molecules, istart, istop, stem_for_chunked_output, i)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 template <typename T>
 int
 do_equal_atom_count_chunked_output(const resizable_array_p<T>& molecules,
@@ -1526,7 +1692,7 @@ do_equal_atom_count_chunked_output(const resizable_array_p<T>& molecules,
 {
   int atoms_per_chunk = total_atom_count / splits_to_contain_equal_total_atoms;
 
-  // cerr << "total_atom_count " << total_atom_count << endl;
+  // cerr << "total_atom_count " << total_atom_count << '\n';
 
   if (verbose) {
     cerr << "Chunks will contain roughly " << atoms_per_chunk << " atoms\n";
@@ -1536,10 +1702,10 @@ do_equal_atom_count_chunked_output(const resizable_array_p<T>& molecules,
 
   unsigned int atoms = total_atom_count;
 
-  int istart = 0;
-  int istop = 0;
+  uint32_t istart = 0;
+  uint32_t istop = 0;
 
-  istart = molecules.number_elements() - 1;
+  istart = molecules.size() - 1;
   istop = istart;
 
   int apc = atoms_per_chunk * scale_first_chunk /
@@ -1550,7 +1716,7 @@ do_equal_atom_count_chunked_output(const resizable_array_p<T>& molecules,
       cerr << "Writing from " << istart << " to " << istop << "\n";
     }
 
-    if (!write_group(molecules, istop, istart, stem_for_chunked_output, ndx)) {
+    if (!write_group(molecules, istart, istop, stem_for_chunked_output, ndx)) {
       return 0;
     }
 
@@ -1577,7 +1743,7 @@ do_chunked_output(const resizable_array_p<T>& molecules,
   int istart = 0;
   int istop = 0;
   while (identify_next_group(molecules, istart, istop)) {
-    //  cerr << "Writing from " << istart << " to " << istop << endl;
+    //  cerr << "Writing from " << istart << " to " << istop << '\n';
 
     if (!write_group(molecules, istart, istop, stem_for_output_files, ndx)) {
       return 0;
@@ -1678,7 +1844,7 @@ read_child_data(int fd, float* zdata, off_t bytes_to_read)
   }
 
   cerr << "Gack, cannot read " << bytes_to_read << " bytes of child data rc = " << rc
-       << " errbo " << errno << endl;
+       << " errbo " << errno << '\n';
   perror("read");
   return 0;
 }
@@ -1707,7 +1873,7 @@ read_child_data(const char* fname, float* zdata, int& ndx)
 
   ndx += file_size / sizeof(float);  // number data points we just read
 
-  // cerr << "ndx incremented to " << ndx << endl;
+  // cerr << "ndx incremented to " << ndx << '\n';
 
   return 1;
 }
@@ -1728,7 +1894,7 @@ write_some_data(const float* zdata, int nmolecules, int fd)
   if (rc < 0) {
     cerr << "Cannot write " << bytes_to_write << " bytes\n";
     perror("write");
-    cerr << endl;
+    cerr << '\n';
   } else {
     cerr << "Partial write, wrote " << rc << " of " << bytes_to_write << " bytes\n";
   }
@@ -1916,7 +2082,7 @@ do_via_fork(Command_Line& cl, FileType input_type)
       do_forked_child_process(cl[i], input_type, i, forked_process_stem);
     } else {
       children.add(p);
-      cerr << "kill " << p << endl;
+      cerr << "kill " << p << '\n';
     }
   }
 
@@ -1965,7 +2131,7 @@ do_via_fork(Command_Line& cl, FileType input_type)
     }
 
     if (0 != (file_size % (nproperties * sizeof(float)))) {
-      cerr << "Child file '" << fname << "' invalid size " << file_size << endl;
+      cerr << "Child file '" << fname << "' invalid size " << file_size << '\n';
       fatal_error = 1;
     }
 
@@ -1988,7 +2154,7 @@ do_via_fork(Command_Line& cl, FileType input_type)
   if (molecules_computed != cd.number_elements()) {
     cerr << "Yipes, size mismatch between parent and children\n";
     cerr << "Parent read " << cd.number_elements() << " smiles, children computed "
-         << molecules_computed << endl;
+         << molecules_computed << '\n';
     return 0;
   }
 
@@ -2021,7 +2187,7 @@ do_via_fork(Command_Line& cl, FileType input_type)
     }
   }
 
-  // cerr << "After reading child data ndx " << ndx << endl;
+  // cerr << "After reading child data ndx " << ndx << '\n';
 
   for (int i = 0; i < molecules_computed; i++) {
     cd[i]->set_data(zdata + i * nproperties);
@@ -2172,7 +2338,7 @@ process_via_pthreads(File_Record** pool, int nmolecules, int nthreads)
     cerr << "Performed " << computations_done << " computations\n";
     if (computation.n() > 1) {
       cerr << "Rates between " << computation.minval() << " and " << computation.maxval()
-           << " ave " << computation.average() << endl;
+           << " ave " << computation.average() << '\n';
     }
   }
 
@@ -2270,8 +2436,13 @@ TBB_Compute_Properties::operator()(const tbb::blocked_range<File_Record**>& r) c
 static int
 display_dash_m_options(std::ostream& os)
 {
-  os << " -M ea=<n>         write <n> chunks of output each containing roughly equal "
-        "total atoms\n";
+  // clang-format off
+  os << R"( -M ea=<n>         write <n> chunks of output each containing roughly equal total atoms.
+ -M svsf        ensure that all values wthin the same chunk (-D required) have the same properties.           
+ -M firstprop   the file name generated will be based on the first sort criterion.
+ -M nc=<chunks> Write the data in <nc> chunks (-D required).
+)";
+  // clang-format on
 
   exit(1);
 }
@@ -2366,6 +2537,7 @@ msort(int argc, char** argv)
   }
 
   int splits_contain_equal_values = 0;
+  int number_chunks = 0;
 
   if (cl.option_present('M')) {
     const_IWSubstring m;
@@ -2375,7 +2547,7 @@ msort(int argc, char** argv)
         if (!cl.option_present('D')) {
           cerr << "The equal atom count chunk directive (-M ea) only makes sense with "
                   "the -D option\n";
-          usage(2);
+          usage(1);
         }
 
         m.remove_leading_chars(3);
@@ -2399,6 +2571,19 @@ msort(int argc, char** argv)
         file_name_index_is_first_property = 1;
         if (verbose) {
           cerr << "The -D files will be created with name containing the first property\n";
+        }
+      } else if (m.starts_with("nc=")) {
+        if (! cl.option_present('D')) {
+          cerr << "The -M nc= directive only makes sense with the -D option\n";
+          usage(1);
+        }
+        m.remove_leading_chars(3);
+        if (! m.numeric_value(number_chunks) || number_chunks < 2) {
+          cerr << "The -M nc= directive must be a valid number of chunks\n";
+          return 0;
+        }
+        if (verbose) {
+          cerr << "Will write as " << number_chunks << " chunks\n";
         }
       } else if ("help" == m) {
         display_dash_m_options(cerr);
@@ -2437,7 +2622,7 @@ msort(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Initial size " << initial_size_estimate << endl;
+      cerr << "Initial size " << initial_size_estimate << '\n';
     }
   }
 
@@ -2458,7 +2643,7 @@ msort(int argc, char** argv)
     }
 
     int nk = cl.option_count('k');
-    //  cerr << "nk " << nk << endl;
+    //  cerr << "nk " << nk << '\n';
 
     comparison_tag = new IWString[nk];
     property_number_to_query_number = new_int(nk, -1);
@@ -2590,6 +2775,39 @@ msort(int argc, char** argv)
           comparison_tag[nproperties] << ">  <" << token << '>';
         } else if (token == "charge") {
           comparison_criterion[nproperties] = CMP_ANY_CHARGE;
+        } else if (token == "formula") {
+          comparison_criterion[nproperties] = CMP_COUNT_CARBON;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_NITROGEN;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_OXYGEN;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_FLUORINE;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_PHOSPHORUS;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_SULPHUR;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_CHLORINE;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_BROMINE;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_IODONE;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_OTHER_ELEMENT;
+          direction[nproperties] = 1;
+          ++nproperties;
+          comparison_criterion[nproperties] = CMP_COUNT_HYDROGEN;
+          direction[nproperties] = 1;
         }
         //      else if (token.starts_with("rx="))
         //      {
@@ -2602,7 +2820,7 @@ msort(int argc, char** argv)
         }
 
         //      cerr << "Just set comparison_criterion " << nproperties << " to " <<
-        //      comparison_criterion[nproperties] << endl;
+        //      comparison_criterion[nproperties] << '\n';
         nproperties++;
       }
     }
@@ -2618,7 +2836,7 @@ msort(int argc, char** argv)
 
 #ifdef ECHO_CRITERIA
   for (int i = 0; i < nproperties; i++) {
-    cerr << "Sort criterion " << i << " is " << comparison_criterion[i] << endl;
+    cerr << "Sort criterion " << i << " is " << comparison_criterion[i] << '\n';
   }
 #endif
 
@@ -2636,8 +2854,7 @@ msort(int argc, char** argv)
   }
 
   if (number_query_specifications >
-      queries.number_elements())  // don't think this could even happen
-  {
+      queries.number_elements()) {  // don't think this could even happen
     cerr << "Specified " << number_query_specifications << " queries, but only "
          << queries.number_elements() << " queries, impossible\n";
     return 7;
@@ -2706,7 +2923,7 @@ msort(int argc, char** argv)
   }
 
   resizable_array_p<File_Record> records;
-  records.resize(1000000);
+  records.reserve(1000000);
 
   int molecules_read = 0;
 
@@ -2736,7 +2953,6 @@ msort(int argc, char** argv)
   if (verbose) {
     cerr << "Read " << molecules_read << " molecules\n";
   }
-
   // Use parallelism to compute the properties
 
   File_Record** zdata = (File_Record**)records.rawdata();
@@ -2757,11 +2973,11 @@ msort(int argc, char** argv)
     tzero = time(NULL);
   }
 
-// #define DEBUG_SORTING
+//#define DEBUG_SORTING
 #ifdef DEBUG_SORTING
-  cerr << "Will compare " << nproperties << " properties\n";
+  cerr << "Will compare " << nproperties << " properties for " << records.size() << " molecules\n";
   for (auto i = 0; i < records.number_elements(); ++i) {
-    cerr << records[i]->id() << ' ' << records[i]->zdata()[0] << endl;
+    cerr << records[i]->id() << ' ' << records[i]->zdata()[0] << '\n';
   }
 #endif
 
@@ -2777,7 +2993,7 @@ msort(int argc, char** argv)
     for (int i = 1; i < records.number_elements(); i++) {
       cerr << " i = " << i << " compare:\n";
       bool result = frc(cd[i - 1], cd[i]);
-      cerr << "Result " << result << endl;
+      cerr << "Result " << result << '\n';
     }
 #endif
   } else if (ascending_order) {
@@ -2794,7 +3010,7 @@ msort(int argc, char** argv)
 #ifdef DEBUG_SORTING
   cerr << "After sort\n";
   for (auto i = 0; i < records.number_elements(); ++i) {
-    cerr << records[i]->id() << ' ' << zdata[i]->zdata()[0] << endl;
+    cerr << records[i]->id() << ' ' << zdata[i]->zdata()[0] << '\n';
   }
 #endif
 
@@ -2816,6 +3032,8 @@ msort(int argc, char** argv)
       do_equal_atom_count_chunked_output(records, total_atom_count, stem_for_chunked_output);
     } else if (splits_contain_equal_values) {
       do_same_score_chunked_output(records, stem_for_chunked_output);
+    } else if (number_chunks > 0) {
+      SplitIntoChunks(records, number_chunks, stem_for_chunked_output);
     } else {
       do_chunked_output(records, stem_for_chunked_output);
     }

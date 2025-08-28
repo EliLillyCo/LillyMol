@@ -15,7 +15,11 @@ using std::cout;
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 #include "gfp_standard.h"
 #include "nndata.h"

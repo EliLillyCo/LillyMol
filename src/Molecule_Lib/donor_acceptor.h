@@ -5,7 +5,12 @@
 
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
+
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/donor_acceptor.pb.h"
+#else
+#include "donor_acceptor.pb.h"
+#endif
 #include "output.h"
 #include "temp_detach_atoms.h"
 

@@ -1439,16 +1439,15 @@ do_fingerprint_output(const resizable_array<float>& shd,
     } else {
       const int c = static_cast<int>((v - shd_minval[i]) /
                                          (shd_maxval[i] - shd_minval[i]) * max_bit_count +
-                                     0.4999) +
-                    1;
+                                     0.4999) + 1;
       sfc.hit_bit(i, c);
     }
   }
 
-  IWString tmp;
-  sfc.daylight_ascii_form_with_counts_encoded(tag, output);
+  // cerr << "Sparse figerprint creator has " << sfc.nbits() << " bits\n";
 
-  output << tmp << '\n';
+  sfc.daylight_ascii_form_with_counts_encoded(tag, output);
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(4096);
 
@@ -1492,13 +1491,13 @@ do_output(Molecule& m, const resizable_array<float>& shd,
 
   if (read_descriptor_file_pipeline && write_descriptor_file_pipeline) {
     m.invalidate_smiles();
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
     output << m.smiles() << ' ';
     output << m.name();  // includes all previously calculated descriptors.
   } else if (read_descriptor_file_pipeline) {
     output << m.name();  // includes all previously calculated descriptors.
   } else if (write_descriptor_file_pipeline) {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
     m.invalidate_smiles();
     output << m.smiles() << ' ';
     append_first_token_of_name(m.name(), output);
@@ -1800,7 +1799,7 @@ tshadow(int argc, char** argv) {
         }
       } else if (b == "wpipe") {
         write_descriptor_file_pipeline = 1;
-        set_append_coordinates_after_each_atom(1);
+        lillymol::set_include_coordinates_with_smiles(1);
         if (verbose) {
           cerr << "Will write a descriptor file pipeline\n";
         }

@@ -1,0 +1,47 @@
+{
+  "executable": "normalise",
+  "default_command_components": [ "-M nosourcefname" ],
+  "test": [
+    {
+      "name": "C_already_normalised_11",
+      "args": [
+        "-N 11 -j -C norm.txt #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "C_already_normalised_01",
+      "args": [
+        "-N 01 -j -C norm.txt #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "C_from_02",
+      "args": [
+        "-N 01 -j -C norm.txt #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "C_range-2-2",
+      "args": [
+        "-N 11 -j -C norm.txt #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "U_range-2-2",
+      "args": [
+        "-j -U #{indir}/norm.txt #{indir}/in.dat"
+      ]
+    },
+
+    {
+      "name": "U_range-0-2",
+      "args": [
+        "-j -U #{indir}/norm.txt #{indir}/in.dat"
+      ]
+    }
+  ]
+}

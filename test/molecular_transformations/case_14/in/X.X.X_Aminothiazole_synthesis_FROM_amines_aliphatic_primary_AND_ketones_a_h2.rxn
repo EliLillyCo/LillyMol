@@ -1,0 +1,19 @@
+(0 Reaction
+  (A C Comment "X.X.X_Aminothiazole_synthesis_FROM_amines_aliphatic_primary_AND_ketones_a_h2")
+  (0 Scaffold
+    (A C smarts "[ND1H2]-[CX4]")
+  )
+  (1 Sidechain
+    (A C smiles "CN=CS CN=CS")
+    (A C smarts "N=CS") 
+    (A I join (0 1))
+  )
+  (2 Sidechain
+    (A C smarts "O=C(c)[CH3]")
+    (A I remove_atom 0)
+    (A C join "1.0 1")
+    (A C join "1.2 3")
+    (A I double_bond (1 3))
+  )
+)
+

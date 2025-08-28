@@ -23,22 +23,16 @@ classes is preserved.
 # HOWTO
 First generate fingerprints and neighbours. Use as long a distance as seems reasonable.
 ```
-gfp_make.sh file.smi > file.gfp
-gfp_nearneighbours_single_file -v -T 0.4 file.gfp > file.nn
+gfp_make.sh <fingeprints> file.smi > file.gfp
+gfp_nearneighbours_single_file -v -T 0.4 -S file.tfdata file.gfp
 ```
-Convert to tfdata format
-```
-nn2proto -T file.tfdata -v file.nn
-```
-Note that eventually `gfp_nearneighbours_single_file` will be able to 
-generate this file directly.
-
-Update: That is now available.
-```
-gfp_nearneighbours_single_file -v -T 0.4 -S file.tfdata file.gfp 
-```
+The -S option means that the data is written as TFDataRecord serialized protos.
 Depending on the size of the dataset and the distance selected, this
 file can be large.
+
+To save time and take advantage of multiple cores consider using 
+[gfp_nearneighbours_single_file_tbb](gfp_nearneighbours_single_file_tbb.md) which
+runs the nearest neighbour determination using multiple threads.
 
 Run the optimisation.
 ```
@@ -86,6 +80,20 @@ the successful optimisations found. This is on very old hardware...
 Clearly we need to add an option to terminate an optimisation if it has
 become unproductive.
 
+### Update
+That has been done. And as a scalability test, this method has been used to
+split a 100k dataset.
+```
+train_test_split_optimise -x 30000 -f 0.80 -n 3 -S /tmp/S -o 2500000 -r 10000 -v /tmp/nn 
+```
+which takes about 5 minutes per split - on a faster computer than was used earlier.
+
+The new option is the -x option, which specifies that if there is a period of
+30k optimisations without any change, the optimisation is abandoned. Again, there
+is no "right" answer for what that number should be.
+
+## Results
+
 Does this actually work? It appears the answer is yes.
 
 We can plot the distribution of nearest neighbours generated via two different
@@ -131,3 +139,6 @@ than what a stratified, or random set might have.
 that are both measurably more separated than random or other splitting
 strategies, and which have been found to be very challenging for
 model building.
+
+Update: a more specific example of use of the tool is at
+[Workflow](/docs/Workflows/train_test_split_optimise.md)

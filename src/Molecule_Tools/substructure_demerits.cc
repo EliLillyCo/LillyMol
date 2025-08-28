@@ -562,8 +562,10 @@ grow_chain(Molecule & m,
 
     assert(0 == already_done[tmp]);
 
-    if (6 != mz[tmp] || ncon[tmp] > 2 || m.is_ring_atom(tmp) || m.formal_charge(tmp))
+    if (6 != mz[tmp] || ncon[tmp] > 2 || m.is_ring_atom(tmp) || m.formal_charge(tmp) ||
+        ! m.saturated(tmp)) {
       return rc;
+    }
 
     zatom = tmp;
   }
@@ -575,24 +577,35 @@ determine_chain(Molecule & m,
                  const atomic_number_t * mz, const int * ncon,
                  int * already_done)
 {
-//int matoms = m.natoms();
-
   already_done[zatom] = 1;
   int rc = 1;
 
   assert(2 == ncon[zatom]);
 
-  const Atom * a = m.atomi(zatom);
+  const Atom& a = m[zatom];
+  assert(a.ncon() == 2);
 
-  for (int i = 0; i < 2; i++)
-  {
-    atom_number_t a1 = a->other(zatom, i);
+  for (const Bond* b : a) {
+    const atom_number_t a1 = b->other(zatom);
     assert(a1 >= 0 && a1 < m.natoms() && 0 == already_done[a1]);
 
-    if (6 == mz[a1] && ncon[a1] <= 2 && m.is_non_ring_atom(a1) && 0 == m.formal_charge(a1))
-    {
-      rc += grow_chain(m, a1, mz, ncon, already_done);
+    if (mz[a1] != 6) {
+      continue;
     }
+    if (ncon[a1] > 2) {
+      continue;
+    }
+    if (m.ring_bond_count(a1)) {
+      continue;
+    }
+    if (m.formal_charge(a1)) {
+      continue;
+    }
+    if (! m.saturated(a1)) {
+      continue;
+    }
+
+    rc += grow_chain(m, a1, mz, ncon, already_done);
   }
 
   return rc;
@@ -634,6 +647,7 @@ long_carbon_chains(const Molecule & m_in, Demerit & demerit,
     if (2 != ncon[i])
       continue;
 
+
     if (already_done[i])
       continue;
 
@@ -641,6 +655,10 @@ long_carbon_chains(const Molecule & m_in, Demerit & demerit,
       continue;
 
     const Atom * a = m.atomi(i);
+
+    if (! a->fully_saturated()) {
+      continue;
+    }
 
     if (2 == a->nbonds() && 0 == a->formal_charge())
     {

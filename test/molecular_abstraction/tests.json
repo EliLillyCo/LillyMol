@@ -1,0 +1,242 @@
+{
+  "executable": "molecular_abstraction",
+  "difftool": "same_structures",
+  "broken_do_not_evaluate": true,
+  "default_command_components": [
+  ],
+  "test": [
+
+
+    {
+      "name": "case_1",
+      "args": [
+        "-c -a 'allbonds(single).allatoms(N WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_2",
+      "args": [
+        "-c -a 'arf(ELE=S WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_3",
+      "args": [
+        "-c -a 'arf(ALIPH=U AROM=Ra WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_4",
+      "args": [
+        "-C -a 'bigring(WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_5",
+      "args": [
+        "-C -a 'bigring(ISO WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_6",
+      "args": [
+        "-c -a 'cbt([A;R]@=[A;R]=- WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_7",
+      "args": [
+        "-c -a 'cbt([R]-!@[R]=. WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_8",
+      "args": [
+        "-c -a 'charge(SMARTS=O=C-[OD1] 2=-1 WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_9",
+      "args": [
+        "-c -a 'comprconsec([CD2R1H2] ISO WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_10",
+      "args": [
+        "-c -a 'frag(WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_frag.smi"
+      ]
+    },
+
+    {
+      "name": "case_11",
+      "args": [
+        "-c -a 'frag(WRITEIF KEEP=[OH]-[/IWfss1c] WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_frag2.smi"
+      ]
+    },
+
+    {
+      "name": "case_12",
+      "args": [
+        "-c -a 'frag(WRITEIF REMOVE=[OH]-[/IWfss1c] WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_frag2.smi"
+      ]
+    },
+
+    {
+      "name": "case_13",
+      "args": [
+        "-c -a 'isotope(SMARTS=c WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_isotope.smi"
+      ]
+    },
+
+    {
+      "name": "case_14",
+      "args": [
+        "-c -a 'isotope(WRITEIF SMARTS=[OD2]-C=O 1=3 WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_isotope.smi"
+      ]
+    },
+
+    {
+      "name": "case_15",
+      "args": [
+        "-c -A D -a 'isotope(WRITEIF SMARTS=[/IWfss1nH0]c-O 2=3 WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_16",
+      "args": [
+        "-C -a 'rings(ISO WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_17",
+      "args": [
+        "-C -a 'rings(WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_18",
+      "args": [
+        "-c -a 'rmat([/IWspch1CD2H2] WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_19",
+      "args": [
+        "-c -a 'rmatoms(WRITEIF [/IWfss1n]1ccccc1 WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_20",
+      "args": [
+        "-c -a 'rmat(RJ=3 [/IWspch1CD2H2] WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_20",
+      "args": [
+        "-c -a 'rmat(rejoin [/IWspch1CD2H2] WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_21",
+      "args": [
+        "-c -a 'rmbond(a-!@a WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_22",
+      "args": [
+        "-c -a 'rmbond(WRITEIF [CD2T0]-[CD3]=O REMOVE=1 WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_23",
+      "args": [
+        "-c -a 'rmrd2(ISO WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_24",
+      "args": [
+        "-c -a 'rplink(WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_25",
+      "args": [
+        "-c -a 'rplink(S WRITE)' -A D ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_26",
+      "args": [
+        "-C -a 'scaffold(WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_27",
+      "args": [
+        "-C -a 'scaffold(ISO WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_28",
+      "args": [
+        "-C -a 'scaffold(keepfirst WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_29",
+      "args": [
+        "-C -a 'scaffold(WRITEIF WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_30",
+      "args": [
+        "-C -a 'translate([I,Br]=Cl WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_31",
+      "args": [
+        "-C -a 'translate(WRITEIF [I,Br]=Cl WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    },
+
+    {
+      "name": "case_32",
+      "args": [
+        "-C -z 0empty -a 'rings(WRITE)' ${LILLYMOL_HOME}/test/molecular_abstraction/in/test_scaffold.smi"
+      ]
+    }
+  ]
+
+}

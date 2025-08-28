@@ -28,7 +28,11 @@
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/common_names.pb.h"
+#else
+#include "common_names.pb.h"
+#endif
 
 namespace common_names {
 
@@ -172,7 +176,7 @@ usage(int rc) {
 void
 do_conversions_needed_for_unique_smiles_generation(Molecule& m, int& hcount) {
   if (reduce_to_largest_fragment) {
-    m.reduce_to_largest_fragment();
+    m.reduce_to_largest_fragment_carefully();
   }
 
   if (compare_as_graph) {

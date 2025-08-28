@@ -1,0 +1,39 @@
+# THESE TARGETS REQUIRE THIRD PARTY LICENSED PRODUCTS.
+# If you have these products available, adjust the file
+# paths to reflect the locations.
+
+bazel_dep(name = "corina")
+bazel_dep(name = "biobyte")
+
+local_path_override(
+    module_name = "corina",
+    path = "/lrlhps/apps/gc3tk/c3tk-core/lib/corina",
+    build_file_content = """
+cc_library(
+    name = "corina",
+    srcs = [
+#      "lib/corina.so",
+       "lib/libcorina_linux_rhel6_x86_64_libc2.12_gcc4.4.7.so",
+    ],
+    hdrs = ["include/corina_lib.h"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+# Note that this includes a libf2c that might be different from @local_f2c.
+# definitely possibility of problems...
+local_path_override(
+    name = "biobyte",
+    path= "/lrlhps/apps/gc3tk/c3tk-core/lib/biobyte/linux-64/",
+    build_file_content = """
+cc_library (
+    name = "biobyte",
+    srcs = [ "lib/libBB.a", "lib/libf2c.a" ],
+    hdrs = glob(["h/*.h"]),
+    strip_include_prefix = "h",
+    visibility = ["//visibility:public"],
+)
+""",
+)

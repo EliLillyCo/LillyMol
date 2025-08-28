@@ -11,6 +11,8 @@ using std::endl;
 constexpr char kOpenBrace = '{';
 constexpr char kCloseBrace = '}';
 
+namespace lillymol {
+
 int
 count_atoms_in_smiles(const const_IWSubstring& smiles) {
   int rc = 0;
@@ -93,6 +95,7 @@ count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings) {
 
   return rc;
 }
+}  // namespace lillymol
 
 Smiles_Text::Smiles_Text() {
   _ntokens = 0;

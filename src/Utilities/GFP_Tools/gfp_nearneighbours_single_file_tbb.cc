@@ -2,10 +2,6 @@
   Finds near neighbours within a single fingerprint file
 */
 
-#include <omp.h>
-#include <pthread.h>
-#include <stdint.h>
-
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -20,6 +16,7 @@
 
 #include "tbb/scalable_allocator.h"
 #include "tbb/task_group.h"
+#include "tbb/spin_mutex.h"
 
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 
@@ -30,12 +27,17 @@
 #include "Foundational/histogram/iwhistogram.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
 #include "Foundational/iwmisc/iwdigits.h"
+#include "Foundational/iwmisc/sorted_list.h"
 #include "Foundational/iwqsort/iwqsort.h"
 
 #include "Utilities/GFP_Tools/gfp.h"
 #include "Utilities/GFP_Tools/sparse_collection.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 using std::cerr;
 
@@ -467,16 +469,14 @@ FP_Number_Nbrs::extra(const float d, const int id)
 
   // cerr << "encoded " << e << ' ' << (1.0f - d) << '\n';
 
-  if (0 == _sorted.number_elements()) {
+  if (_sorted.empty()) {
     _sorted.add(e);
     _dmax = d;
     return;
   }
 
-  if (_sorted.number_elements() == neighbours_to_find)  // make room
-  {
-    if (1 == neighbours_to_find)  // must be treated specially
-    {
+  if (_sorted.number_elements() == neighbours_to_find) {  // make room
+    if (1 == neighbours_to_find) {  // must be treated specially
       _sorted[0] = e;
       _dmax = d;
       return;
@@ -497,29 +497,7 @@ FP_Number_Nbrs::extra(const float d, const int id)
     return;
   }
 
-  int left = 0;
-  int right = _sorted.number_elements() - 1;
-  int middle = (left + right) / 2;
-
-  const auto s = _sorted.rawdata();
-
-  // cerr << "INserting " << e << " into list of size " << _sorted.size() << '\n';
-
-  while (middle > left) {
-    const auto m = s[middle];
-
-    if (e < m) {
-      right = middle;
-    } else if (e > m) {
-      left = middle;
-    }
-
-    middle = (left + right) / 2;
-
-    //  cerr << "Update " << left << " " << middle << " " << right << '\n';
-  }
-
-  _sorted.insert_before(middle + 1, e);
+  sorted_list::InsertIntoList(_sorted, e);
 
   return;
 }
@@ -584,7 +562,13 @@ void
 gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
                    const int jstop)
 {
-  // cerr << istart << ' ' << istop << ' ' << jstart << ' ' << jstop << '\n';
+//#define SERIALIZE_NN
+#ifdef SERIALIZE_NN
+  static tbb::spin_mutex qmutex;
+
+  std::scoped_lock lock(qmutex);
+  cerr << "begin " << istart << ' ' << istop << ' ' << jstart << ' ' << jstop << '\n';
+#endif
   if (property_based_windows_present()) {
     for (int i = istart; i < istop; ++i) {
       auto& pi = pool[i];
@@ -610,7 +594,7 @@ gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
         auto& pj = pool[j];
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
+        // cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -618,6 +602,9 @@ gfp_nearneighbours(F* pool, const int istart, const int istop, const int jstart,
     }
   }
 
+#ifdef SERIALIZE_NN
+  cerr << "End chunk " << istart << ' ' << istop << ' ' << jstart << ' ' << jstop << '\n';
+#endif
   return;
 }
 
@@ -651,7 +638,7 @@ gfp_nearneighbours_diagonal(F* pool, const int istart, const int istop)
         auto& pj = pool[j];
 
         const auto d = 1.0f - pi.tanimoto(pj);
-        //      cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
+        // cerr << " i = " << i << " j = " << j << " dist " << d << '\n';
 
         pi.extra(d, j);
         pj.extra(d, i);
@@ -662,14 +649,11 @@ gfp_nearneighbours_diagonal(F* pool, const int istart, const int istop)
   return;
 }
 
-/*
-  Not really parallel at all
-*/
+//  Not really parallel at all
 
 template <typename F>
 void
-gfp_nearneighbours_parallel1(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel1(F* pool, const int pool_size) {
   gfp_nearneighbours_diagonal(pool, 0, pool_size);
 
   return;
@@ -677,8 +661,7 @@ gfp_nearneighbours_parallel1(F* pool, const int pool_size)
 
 template <typename F>
 void
-gfp_nearneighbours_parallel2(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel2(F* pool, const int pool_size) {
   const int half = pool_size / 2;
 
   tbb::task_group g1;
@@ -699,8 +682,7 @@ gfp_nearneighbours_parallel2(F* pool, const int pool_size)
 
 template <typename F>
 void
-gfp_nearneighbours_parallel3(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel3(F* pool, const int pool_size) {
   const int third = pool_size / 3;
   const int two_thirds = (2 * pool_size) / 3;
 
@@ -719,6 +701,219 @@ gfp_nearneighbours_parallel3(F* pool, const int pool_size)
   return;
 }
 
+template <typename F>
+void
+gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
+{
+  int p[17];
+  for (int i = 0; i < 16; ++i) {
+    p[i] = (i * pool_size) / 16;
+  }
+
+  p[16] = pool_size;
+
+  // Written by gfp_nearneighbours_single_file_tbb.rb
+
+  tbb::task_group g0;
+  g0.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[1], p[2]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[3], p[4]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[5], p[6]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[7], p[8]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[9], p[10]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[11], p[12]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[13], p[14]); });
+  gfp_nearneighbours_diagonal(pool, p[14], p[15]);
+  g0.wait();
+  if (verbose) {
+    cerr << " end g0\n";
+  }
+  tbb::task_group g1;
+  g1.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[2], p[3]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[3], p[4]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[6], p[7]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[7], p[8]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[10], p[11]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[11], p[12]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[13], p[14]);
+  g1.wait();
+  if (verbose) {
+    cerr << " end g1\n";
+  }
+  tbb::task_group g2;
+  g2.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[3], p[4]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[2], p[3]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[7], p[8]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[6], p[7]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[11], p[12]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[10], p[11]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[12], p[13]);
+  g2.wait();
+  if (verbose) {
+    cerr << " end g2\n";
+  }
+  tbb::task_group g3;
+  g3.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[4], p[5]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[5], p[6]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[6], p[7]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[7], p[8]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[12], p[13]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[13], p[14]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[11], p[12]);
+  g3.wait();
+  if (verbose) {
+    cerr << " end g3\n";
+  }
+  tbb::task_group g4;
+  g4.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[5], p[6]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[4], p[5]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[7], p[8]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[6], p[7]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[13], p[14]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[12], p[13]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[10], p[11]);
+  g4.wait();
+  if (verbose) {
+    cerr << " end g4\n";
+  }
+  tbb::task_group g5;
+  g5.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[6], p[7]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[7], p[8]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[4], p[5]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[5], p[6]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[14], p[15]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[12], p[13]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[13], p[14]); });
+  gfp_nearneighbours_diagonal(pool, p[9], p[10]);
+  g5.wait();
+  if (verbose) {
+    cerr << " end g5\n";
+  }
+  tbb::task_group g6;
+  g6.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[7], p[8]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[6], p[7]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[5], p[6]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[4], p[5]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[14], p[15]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[13], p[14]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[12], p[13]); });
+  gfp_nearneighbours_diagonal(pool, p[8], p[9]);
+  g6.wait();
+  if (verbose) {
+    cerr << " end g6\n";
+  }
+  tbb::task_group g7;
+  g7.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[8], p[9]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[9], p[10]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[10], p[11]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[11], p[12]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[12], p[13]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[13], p[14]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[7], p[8]);
+  g7.wait();
+  if (verbose) {
+    cerr << " end g7\n";
+  }
+  tbb::task_group g8;
+  g8.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[9], p[10]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[8], p[9]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[11], p[12]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[10], p[11]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[13], p[14]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[12], p[13]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[14], p[15]); });
+  gfp_nearneighbours_diagonal(pool, p[6], p[7]);
+  g8.wait();
+  if (verbose) {
+    cerr << " end g8\n";
+  }
+  tbb::task_group g9;
+  g9.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[10], p[11]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[11], p[12]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[8], p[9]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[9], p[10]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[14], p[15]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[12], p[13]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[13], p[14]); });
+  gfp_nearneighbours_diagonal(pool, p[5], p[6]);
+  g9.wait();
+  if (verbose) {
+    cerr << " end g9\n";
+  }
+  tbb::task_group g10;
+  g10.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[11], p[12]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[10], p[11]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[9], p[10]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[8], p[9]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[14], p[15]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[13], p[14]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[12], p[13]); });
+  gfp_nearneighbours_diagonal(pool, p[4], p[5]);
+  g10.wait();
+  if (verbose) {
+    cerr << " end g10\n";
+  }
+  tbb::task_group g11;
+  g11.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[12], p[13]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[13], p[14]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[14], p[15]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[8], p[9]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[9], p[10]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[10], p[11]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[11], p[12]); });
+  gfp_nearneighbours_diagonal(pool, p[3], p[4]);
+  g11.wait();
+  if (verbose) {
+    cerr << " end g11\n";
+  }
+  tbb::task_group g12;
+  g12.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[13], p[14]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[12], p[13]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[14], p[15]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[9], p[10]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[8], p[9]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[11], p[12]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[10], p[11]); });
+  gfp_nearneighbours_diagonal(pool, p[2], p[3]);
+  g12.wait();
+  if (verbose) {
+    cerr << " end g12\n";
+  }
+  tbb::task_group g13;
+  g13.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[14], p[15]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[12], p[13]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[13], p[14]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[10], p[11]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[11], p[12]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[8], p[9]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[9], p[10]); });
+  gfp_nearneighbours_diagonal(pool, p[1], p[2]);
+  g13.wait();
+  if (verbose) {
+    cerr << " end g13\n";
+  }
+  tbb::task_group g14;
+  g14.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[14], p[15]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[13], p[14]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[12], p[13]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[11], p[12]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[10], p[11]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[9], p[10]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[8], p[9]); });
+  gfp_nearneighbours_diagonal(pool, p[0], p[1]);
+  g14.wait();
+  if (verbose) {
+    cerr << " end g14\n";
+  }
+  gfp_nearneighbours_diagonal(pool, p[15], p[16]);
+
+  return;
+}
+
 /*
  Greco Latin square design
  http://www.unh.edu/halelab/BIOL933/supp_mats/Useful_LSs.pdf
@@ -733,12 +928,14 @@ gfp_nearneighbours_parallel3(F* pool, const int pool_size)
   h g f e d c b a
 
   Idea from Steve Ruberg
+
+  Actually this is kind of like a Latin Square, but I ended up writing a ruby
+  script that does this explicitly.
 */
 
 template <typename F>
 void
-gfp_nearneighbours_parallel8_latin_square(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel8_latin_square(F* pool, const int pool_size) {
   int p[9];
   for (int i = 0; i < 8; ++i) {
     p[i] = (i * pool_size) / 8;
@@ -1008,6 +1205,8 @@ gfp_nearneighbours(F* pool, const int pool_size, IWString_and_File_Descriptor& o
     gfp_nearneighbours_parallel6(pool, pool_size);
   } else if (8 == nworkers) {
     gfp_nearneighbours_parallel8_latin_square(pool, pool_size);
+  } else if (16 == nworkers) {
+    gfp_nearneighbours_parallel16_latin_square(pool, pool_size);
   } else if (1 == nworkers) {
     gfp_nearneighbours_parallel1(pool, pool_size);
   } else {
@@ -1368,6 +1567,7 @@ usage(int rc)
   cerr << " -s <number>      specify max pool size\n";
   cerr << " -n <number>      specify how many neighbours to find\n";
   cerr << " -T <dis>         discard distances longer than <dis>\n";
+  cerr << " -h <nworkers>    number of worker threads\n";
   cerr << " -z               don't write molecules with no neighbours\n";
   cerr << " -I <tag>         specify identifier dataitem (default '" << identifier_tag << ")\n";
   cerr << " -A <TAG>         write average neighbour distance to <TAG>\n";
@@ -1403,7 +1603,7 @@ do_write_histogram(std::ostream& os)
 static int
 nearneighbours(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:uS:");
+  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:uS:h:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1425,6 +1625,16 @@ nearneighbours(int argc, char** argv)
   if (!iw_little_endian()) {
     cerr << "Sorry, this programme only works on little endian machines, contact Ian\n";
     return 1;
+  }
+
+  if (cl.option_present('h')) {
+    if (! cl.value('h', nworkers) || nworkers < 1 || nworkers > 16) {
+      cerr << "The number of workers (-h) must be one of 1, 2, 3, 4, 6, 8, 16\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will be processed with " << nworkers << " worker threads\n";
+    }
   }
 
 // #define DEBUG_ENCODING_STUFF
@@ -1525,6 +1735,7 @@ nearneighbours(int argc, char** argv)
     if (verbose) {
       cerr << "TFdataRecord protos written to '" << fname << "'\n";
     }
+    write_as_tfdata_record = 1;
   }
 
   std::ofstream stream_for_nearest_neighbour_histogram;

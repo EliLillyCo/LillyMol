@@ -9,12 +9,91 @@ chemistry first is often a good strategy. By replacing a problematic sidechain
 with sidechains that have been observed in exemplified chemistry to exist in a
 similar chemical environment, the likelihood of a viable molecule increases.
 
-# Case Study
+## Data
+LillyMol comes with a file of aromatic sidechains extracted from a recent Chembl.
+This [file](/data/chembl_sidechains.textproto) contains about 67k sidechains. It is
+sorted by prevalence, so the first few records might be
+```
+[1OH]C iso: ATT smi: "[1OH]C" par: "CHEMBL232552" nat: 2 n: 561404 
+F[1CH](F)F iso: ATT smi: "F[1CH](F)F" par: "CHEMBL15897" nat: 4 n: 360369 
+C[1CH](C)C iso: ATT smi: "C[1CH](C)C" par: "CHEMBL1797277" nat: 4 n: 77121 
+O[1CH]=O iso: ATT smi: "O[1CH]=O" par: "CHEMBL21708" nat: 3 n: 66808 
+```
+and unsurprisingly, the most frequent aromatic substituent in Chembl is
+a methoxy - the isotopic atom indicates the attachment point. In this case
+we see that there are 561404 examples in Chembl. The first molecule
+that examplified this substituent was 'CHEMBL232552' but that will be
+arbitrary. The 'nat' attribute is the number of atoms in the sidechain.
+
+The maximum atom count in this file is 11, but that could be filtered via any of
+the filtering tools in LillyMol - [fileconv](/docs/Molecule_Tools/fileconv.md)
+or [molecule_filter](/docs/molecule_filter/molecule_filter.md).
+
+## Simple Tool
+In contrib/bin the tool [replace_sidechain](/contrib/bin/replace_sidechain.rb)
+can be used to quickly perform either sidechain addition or sidechain replacement
+using the substituents extracted from Chembl.
+
+The default mode is to add every known substituent to each two connected aromatic
+carbon atom - which will have an implicit Hydrogen.
+```
+replace_sidechain.sh file.smi > new.smi
+```
+This will however generate LARGE numbers of molecules. As a test, running
+on 100 random molecules from Chembl produced about 9.7M products in just
+over one minute.
+
+The -support option allows specification of a minimum prevalence of the
+reagents added. It is quite possible that some of the low prevalence
+sidechains may be drawing errors.
+```
+replace_sidechain.sh -support 20 file.smi > new.smi
+```
+will result in about 6300 new substituents rather than the initial 67k.
+There is no 'right' number. The lower the number, the greater the chance
+of generating molecules that Chemists may disdain.
+
+The -smarts1 option allows you to specify a smarts for those atoms to
+which new substituents can be attached. By default that is a two
+connected aromatic carbon, with an implicit Hydrogen, and the two
+adjacent ring atoms are also 2 connected - to avoid creating "crodwed"
+substitution patterns. Adjust to taste...
+
+Note that the default smarts restricts sites to aromatic carbon atoms.
+Adjust if you wish to allow [nH] type atoms to be used, but beware
+that this will introduce products with n-N bonds, which may be
+undesirable.
+
+### Sidechain Replacement
+If you with to remove an existing sidechain, that is necessarily more
+complex. The tool has a default smarts, which is a three connected aromatic
+carbon attached to a sidechain with fewer than 10 heavy atoms. The existing
+sidechain is removed and the replacement inserted.
+
+```
+replace_sidechain.sh -smarts2 def -support 10 -v file.smi > new.smi
+```
+will do that. Again, if you have specific requirements for the sidechain(s)
+to be removed enter those via the -smarts2 option.
+```
+replace_sidechain.sh -smarts2 '[$(c:a:cO[CH3])]-!@[R0]' -support 10 -v file.smi > new.smi
+```
+will remove all existing sidechains that are meta to a methoxy 'O[CH3]'. Note that
+the bond to be broken must be the first two atoms in the smarts. If you want more
+flexibility, build a reaction file - this tool calls trxn with a custom
+reaction file.
+
+replace_sidechain.sh provides a quick and relatively easy-to-use means
+of quickly generating significant numbers of likely plausible new molecules.
+Generally either the sidechains used, and/or the products generated should be filtered
+for desirable properties, fileconv, tsubstructure, molecule_filter, iwdescr, models...
+
+# More Complex Case Study
 The most common sidechain replacement is something attached to an aromatic ring.
 
 The first task would be to extract all known aromatic substituents from all
 sources at your disposal. In this case we restrict this to Chembl, but in general
-more sources should be used.
+more sources should be used. 
 
 For this exercise we choose a random molecule from Chembl, CHEMBL3958656
 
@@ -30,7 +109,7 @@ by default the `-f` option matches as an **or** condition. If you want it
 to match as an **and** condition, add the `-a` option, but that will
 necessarily reduce the number of fragments found.
 ```
-time get_substituents.sh -S substituent.smi -n -s '[nr5]1nc(cc1)' -O 2 -m  5 -M 12 -f F -f '[#7]' -I 1 -z i -v chembl.smi
+time get_substituents.sh -S substituent.textproto -n -s '[nr5]1nc(cc1)' -O 2 -m  5 -M 12 -f F -f '[#7]' -I 1 -z i -v chembl.smi
 ```
 which takes 60 seconds to run and reports
 ```
@@ -61,8 +140,8 @@ Read 2213922 molecules
 Note that we have placed an isotopic labe of 1 on the matched atom
 that will be attached to the core of Chembl
 
-The file created `substituent.smi` is a variant on a protcol buffer
-textproto form. It might look like (after sorting on column 11)
+The file created `substituent.textproto` is a variant on a protcol buffer
+textproto form (it has a leading smiles string). It might look like (after sorting on column 11)
 ```
 Fc1cc[1cH]cc1 iso: ATT smi: "Fc1cc[1cH]cc1" par: "CHEMBL501070" nat: 7 n: 981 
 [n]1cc[1cH]cc1 iso: ATT smi: "[n]1cc[1cH]cc1" par: "CHEMBL570872" nat: 6 n: 431 
@@ -80,7 +159,7 @@ are 981 occurrences of that sidechain in Chembl. This is the highest count, and
 clearly using this as a replacement would be very low risk in terms of synthetic
 feasibility.
 
-last one listed above has only 1 instance, and would therefore be is potentially
+The last one listed above has only 1 instance, and would therefore be is potentially
 higher risk of sythetic difficulties. Of course at this stage, we have no
 idea how these particular fragments might actually work for the intended purpose.
 

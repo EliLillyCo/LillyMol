@@ -2,27 +2,27 @@ description {
   feature_name: "w_hcount"
   description: "Number of Hydrogen atoms"
   plot_title: "Number of Hydrogen atoms"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
 maxval: 102.0
-mean: 22.92096
-median: 22.0
+mean: 22.606108
+median: 21.0
 quantile {
   quantile: 0.01
   value: 7.0
 }
 quantile {
   quantile: 0.05
-  value: 11.0
+  value: 10.0
 }
 quantile {
   quantile: 0.1
-  value: 13.0
+  value: 12.0
 }
 quantile {
   quantile: 0.5
-  value: 22.0
+  value: 21.0
 }
 quantile {
   quantile: 0.9
@@ -30,336 +30,400 @@ quantile {
 }
 quantile {
   quantile: 0.95
-  value: 40.0
+  value: 39.0
 }
 quantile {
   quantile: 0.99
-  value: 52.0
+  value: 51.0
 }
 int_values {
-  count: 4
+  count: 126
 }
 int_values {
   value: 1
-  count: 5
+  count: 147
 }
 int_values {
   value: 2
-  count: 7
+  count: 346
 }
 int_values {
   value: 3
-  count: 25
+  count: 736
 }
 int_values {
   value: 4
-  count: 53
+  count: 1725
 }
 int_values {
   value: 5
-  count: 65
+  count: 3034
 }
 int_values {
   value: 6
-  count: 137
+  count: 5992
 }
 int_values {
   value: 7
-  count: 218
+  count: 9261
 }
 int_values {
   value: 8
-  count: 398
+  count: 16074
 }
 int_values {
   value: 9
-  count: 534
+  count: 22717
 }
 int_values {
   value: 10
-  count: 812
+  count: 32904
 }
 int_values {
   value: 11
-  count: 971
+  count: 40434
 }
 int_values {
   value: 12
-  count: 1378
+  count: 51501
 }
 int_values {
   value: 13
-  count: 1477
+  count: 58041
 }
 int_values {
   value: 14
-  count: 1882
+  count: 70542
 }
 int_values {
   value: 15
-  count: 1963
+  count: 73679
 }
 int_values {
   value: 16
-  count: 2323
+  count: 83633
 }
 int_values {
   value: 17
-  count: 2257
+  count: 84638
 }
 int_values {
   value: 18
-  count: 2440
+  count: 92924
 }
 int_values {
   value: 19
-  count: 2489
+  count: 91816
 }
 int_values {
   value: 20
-  count: 2601
+  count: 96290
 }
 int_values {
   value: 21
-  count: 2405
+  count: 92130
 }
 int_values {
   value: 22
-  count: 2582
+  count: 94090
 }
 int_values {
   value: 23
-  count: 2340
+  count: 86338
 }
 int_values {
   value: 24
-  count: 2347
+  count: 84453
 }
 int_values {
   value: 25
-  count: 2063
+  count: 74877
 }
 int_values {
   value: 26
-  count: 2026
+  count: 71444
 }
 int_values {
   value: 27
-  count: 1634
+  count: 61582
 }
 int_values {
   value: 28
-  count: 1600
+  count: 57663
 }
 int_values {
   value: 29
-  count: 1299
+  count: 47705
 }
 int_values {
   value: 30
-  count: 1235
+  count: 46199
 }
 int_values {
   value: 31
-  count: 1022
+  count: 36004
 }
 int_values {
   value: 32
-  count: 967
+  count: 36391
 }
 int_values {
   value: 33
-  count: 792
+  count: 26756
 }
 int_values {
   value: 34
-  count: 743
+  count: 27500
 }
 int_values {
   value: 35
-  count: 598
+  count: 19492
 }
 int_values {
   value: 36
-  count: 599
+  count: 20498
 }
 int_values {
   value: 37
-  count: 404
+  count: 14462
 }
 int_values {
   value: 38
-  count: 452
+  count: 15371
 }
 int_values {
   value: 39
-  count: 260
+  count: 10427
 }
 int_values {
   value: 40
-  count: 364
+  count: 11811
 }
 int_values {
   value: 41
-  count: 229
+  count: 7950
 }
 int_values {
   value: 42
-  count: 245
+  count: 9230
 }
 int_values {
   value: 43
-  count: 182
+  count: 6069
 }
 int_values {
   value: 44
-  count: 235
+  count: 7466
 }
 int_values {
   value: 45
-  count: 123
+  count: 4692
 }
 int_values {
   value: 46
-  count: 150
+  count: 6092
 }
 int_values {
   value: 47
-  count: 106
+  count: 3536
 }
 int_values {
   value: 48
-  count: 139
+  count: 5004
 }
 int_values {
   value: 49
-  count: 81
+  count: 2600
 }
 int_values {
   value: 50
-  count: 124
+  count: 3980
 }
 int_values {
   value: 51
-  count: 54
+  count: 2103
 }
 int_values {
   value: 52
-  count: 85
+  count: 2912
 }
 int_values {
   value: 53
-  count: 68
+  count: 1707
 }
 int_values {
   value: 54
-  count: 63
+  count: 2193
 }
 int_values {
   value: 55
-  count: 51
+  count: 1264
 }
 int_values {
   value: 56
-  count: 45
+  count: 1700
 }
 int_values {
   value: 57
-  count: 26
+  count: 931
 }
 int_values {
   value: 58
-  count: 48
+  count: 1286
 }
 int_values {
   value: 59
-  count: 27
+  count: 646
 }
 int_values {
   value: 60
-  count: 24
+  count: 917
 }
 int_values {
   value: 61
-  count: 11
+  count: 444
 }
 int_values {
   value: 62
-  count: 19
+  count: 726
 }
 int_values {
   value: 63
-  count: 8
+  count: 337
 }
 int_values {
   value: 64
-  count: 17
+  count: 488
 }
 int_values {
   value: 65
-  count: 7
+  count: 187
 }
 int_values {
   value: 66
-  count: 12
+  count: 447
 }
 int_values {
   value: 67
-  count: 3
+  count: 132
 }
 int_values {
   value: 68
-  count: 9
+  count: 270
 }
 int_values {
   value: 69
-  count: 3
+  count: 92
 }
 int_values {
   value: 70
-  count: 8
+  count: 198
 }
 int_values {
   value: 71
-  count: 1
+  count: 51
 }
 int_values {
   value: 72
-  count: 4
+  count: 114
+}
+int_values {
+  value: 73
+  count: 34
 }
 int_values {
   value: 74
-  count: 6
+  count: 95
+}
+int_values {
+  value: 75
+  count: 34
 }
 int_values {
   value: 76
-  count: 5
+  count: 63
+}
+int_values {
+  value: 77
+  count: 18
 }
 int_values {
   value: 78
-  count: 1
+  count: 74
+}
+int_values {
+  value: 79
+  count: 13
 }
 int_values {
   value: 80
-  count: 1
+  count: 38
+}
+int_values {
+  value: 81
+  count: 12
 }
 int_values {
   value: 82
-  count: 2
+  count: 22
+}
+int_values {
+  value: 83
+  count: 14
 }
 int_values {
   value: 84
-  count: 4
+  count: 32
+}
+int_values {
+  value: 85
+  count: 9
 }
 int_values {
   value: 86
-  count: 1
+  count: 28
 }
 int_values {
   value: 87
+  count: 4
+}
+int_values {
+  value: 88
+  count: 8
+}
+int_values {
+  value: 89
+  count: 3
+}
+int_values {
+  value: 90
+  count: 21
+}
+int_values {
+  value: 91
   count: 1
 }
 int_values {
-  value: 102
+  value: 92
+  count: 6
+}
+int_values {
+  value: 93
   count: 1
+}
+int_values {
+  value: 94
+  count: 6
+}
+int_values {
+  value: 95
+  count: 2
+}
+int_values {
+  value: 97
+  count: 2
+}
+int_values {
+  value: 102
+  count: 4
 }

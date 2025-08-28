@@ -2,11 +2,11 @@ description {
   feature_name: "w_aromha"
   description: "Number of aromatic heteroatoms"
   plot_title: "Number of aromatic heteroatoms"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 12.0
-mean: 1.62398
+maxval: 14.0
+mean: 1.5544255
 median: 1.0
 quantile {
   quantile: 0.01
@@ -34,53 +34,61 @@ quantile {
   value: 6.0
 }
 int_values {
-  count: 17520
+  count: 677542
 }
 int_values {
   value: 1
-  count: 8742
+  count: 327510
 }
 int_values {
   value: 2
-  count: 10344
+  count: 375157
 }
 int_values {
   value: 3
-  count: 6277
+  count: 222528
 }
 int_values {
   value: 4
-  count: 4274
+  count: 151921
 }
 int_values {
   value: 5
-  count: 1726
+  count: 56808
 }
 int_values {
   value: 6
-  count: 750
+  count: 25031
 }
 int_values {
   value: 7
-  count: 266
+  count: 8262
 }
 int_values {
   value: 8
-  count: 71
+  count: 2607
 }
 int_values {
   value: 9
-  count: 21
+  count: 433
 }
 int_values {
   value: 10
-  count: 7
+  count: 171
 }
 int_values {
   value: 11
-  count: 1
+  count: 50
 }
 int_values {
   value: 12
-  count: 1
+  count: 30
+}
+int_values {
+  value: 13
+  count: 6
+}
+int_values {
+  value: 14
+  count: 5
 }

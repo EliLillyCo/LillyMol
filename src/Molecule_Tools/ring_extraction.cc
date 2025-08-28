@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -39,11 +40,16 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/replacement_ring.pb.h"
+#else
+#include "replacement_ring.pb.h"
+#endif
 
 namespace ring_extraction {
 
 using std::cerr;
+namespace fs = std::filesystem;
 
 constexpr char kOpenSquareBracket = '[';
 constexpr char kCloseSquareBracket = ']';
@@ -185,8 +191,15 @@ class ExtractRings {
     // smiles to protos.
     IW_STL_Hash_Map<IWString, IW_STL_Hash_Map<IWString, RplRing::ReplacementRing>> _ring;
 
+    // We can write the degree of substructure atoms as either D>n or as
+    // bracketed ranges D[n-].
+    int _write_degree_as_bracketed_range;
+
     // Outputs will be written to a set of files with prefix `_stem`.
     IWString _stem;
+
+    // We can optionally write a file containing the names of all files generated.
+    IWString _file_for_list_of_files;
 
     // As a check, once the smarts for a ring is generated, we can do a search
     // in the starting molecule.
@@ -249,6 +262,8 @@ class ExtractRings {
                         const int * ring_sys,
                         int sys) const;
 
+    int AppendDegree(int ncon, IWString& smt) const;
+
     void ChangeRingDoubleBonds(Molecule& m,
                       IWString& smt) const;
     int MaybeCheckSubstructureMatch(Molecule& m, const IWString& smt);
@@ -293,6 +308,7 @@ ExtractRings::ExtractRings() {
   _substructure_search_failures = 0;
   _invalid_smarts = 0;
   _generate_substitution_not_specified = 0;
+  _write_degree_as_bracketed_range = 0;
 }
 
 void
@@ -301,6 +317,8 @@ DisplayDashXOption(std::ostream& output) {
   output << " -X a:A     letters assigned to aromatic and aliphatic rings\n";
   output << " -X noarom  generate smarts that do not specify aromaticity,\n";
   output << "            this enables replacing aromatic with aliphatic rings and vice verse\n";
+  output << " -X degsqb  write the degree designator as a bracketed range rather than >\n";
+  output << " -X list=<fname>  write a list of all files generated to <fname\n";
 
   ::exit(0);
 }
@@ -410,6 +428,17 @@ ExtractRings::Initialise(Command_Line& cl) {
         _respect_aromaticity = 0;
         if (_verbose) {
           cerr << "Will create aromatic agnostic replacement rings\n";
+        }
+      } else if (x.starts_with("list=")) {
+        x.remove_leading_chars(5);
+        _file_for_list_of_files = x;
+        if (_verbose) {
+          cerr << "A list of all files generated written to '" << _file_for_list_of_files << "'\n";
+        }
+      } else if (x == "degsqb") {
+        _write_degree_as_bracketed_range = 1;
+        if (_verbose) {
+          cerr << "Will write atomic degree specifications as bracketed ranges rather than > operators\n";
         }
       } else if (x == "help") {
         DisplayDashXOption(cerr);
@@ -1169,6 +1198,17 @@ ExtractRings::ChangeRingDoubleBonds(Molecule& m,
   smt = new_smt;
 }
 
+int
+ExtractRings::AppendDegree(int ncon, IWString& smt) const {
+  if (_write_degree_as_bracketed_range) {
+    smt << "D[" << (ncon + 1) << ']';
+  } else {
+    smt << "D>" << ncon;
+  }
+
+  return 1;
+}
+
 // Given a subset of atoms in `m` indicated by `include_atom`,
 // generate a smarts.
 // If `include_d` is set, each atomic smarts will include the D directive,
@@ -1377,12 +1417,38 @@ ExtractRings::GenerateRing(Molecule& parent,
 // with prefix `_stem`.
 int
 ExtractRings::WriteRings() const {
+  std::vector<IWString> files_generated;
+  if (!_file_for_list_of_files.empty()) {
+    files_generated.reserve(_ring.size());
+  }
+
   for (const auto& [label, rings] : _ring) {
     IWString fname;
     fname << _stem << '_' << label << ".smi";
     if (! WriteRings(fname, rings)) {
       cerr << "ExtractRings::WriteRings:cannot write '" << fname << "'\n";
       return 0;
+    }
+
+    if (!_file_for_list_of_files.empty()) {
+      files_generated.emplace_back(std::move(fname));
+    }
+  }
+
+  if ( !_file_for_list_of_files.empty()) {
+    IWString_and_File_Descriptor output;
+    // This function is const, so create a temporary...
+    IWString tmp(_file_for_list_of_files);
+    if (! output.open(tmp)) {
+      cerr << "ExtractRings::WriteRings:cannot open " << _file_for_list_of_files << '\n';
+      return 0;
+    }
+
+    // By convention we write just the file name, not directory.
+    for (IWString& fname : files_generated) {
+      fs::path path(fname.null_terminated_chars());
+
+      output << path.filename() << '\n';
     }
   }
 

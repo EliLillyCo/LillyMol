@@ -24,7 +24,6 @@
 #include "Molecule_Lib/target.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 
@@ -125,48 +124,52 @@ usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "  -k <key(s)>    sort specification(s)\n";
-  cerr << "                 a preceeding negative sign indicates reverse order for that property\n";
-  cerr << "                 'a' 'natoms' number of atoms\n";
-  cerr << "                 'r' 'nring'  number of rings\n";
-  cerr << "                 'w' 'amw'    molecular weight\n";
-  cerr << "                     'amwnH'  molecular weight, excluding Hydrogens - groups tautomers\n";
-  cerr << "                 'f' 'nfrag'  number of fragments\n";
-  cerr << "                 'c' 'nchiral' number of explicit chiral centres\n";
-  cerr << "                 'h' 'hetero' number of heteroatoms\n";
-  cerr << "                 'j' 'aroma'  number of aromatic atoms\n";
-  cerr << "                 'k' 'aromr'  number of aromatic rings\n";
-  cerr << "                 'R' 'lgrsz'  atoms in largest ring\n";
-  cerr << "                 'S' 'lgrss'  rings in largest ring system\n";
-  cerr << "                 'b' 'rotbond' number rotatable bonds\n";
-  cerr << "                     'asr'    atoms in smallest ring\n";
-  cerr << "                     'alrss'  atoms in largest ring system\n";
-  cerr << "                     'unsat' number of (non aromatic) unsaturated bonds\n";
-  cerr << "                     'ailf'   atoms in largest fragment\n";
-  cerr << "                     'aiff'   atoms in first fragment\n";
-  cerr << "                     'amwlf'  amw in largest fragment\n";
-  cerr << "                     'aicm=<n>' atoms in counterions, missing assigned <n>\n";
-  cerr << "                     'amwcm=<x>' amw in counterions, missing assigned <x>\n";
-  cerr << "                     'col=nn' numeric contents of column <nn> of the name\n";
-  cerr << "                     'niso' number of isotopic atoms\n";
-  cerr << "                     'rngat' number of ring atoms\n";
-  cerr << "                     'Z' sum of atomic numbers in the molecule\n";
-  cerr << "                     'sp3' number of sp3 atoms\n";
-  cerr << "                     'nbonds' number of bonds (single=1, double=2, triple=3)\n";
-  cerr << "                     'charge' number atoms with formal charges\n";
-  cerr << "                     'qry=...' hits to substructure query\n";
-  cerr << "                     'smt=...' hits to substructure query\n";
-  cerr << "                     'sdf=...' values in SDF tag\n";
-  cerr << "  -d             descending order\n";
-  cerr << "  -y             if multiple queries present, treat as a group\n";
-  cerr << "  -D <stem>      write different groups to output files starting with <stem>\n";
-  cerr << "  -e <number>    hint for minimum number of molecules per output file\n";
-  cerr << "  -M ...         miscellaneous other options, enter '-M help' for info\n";
-  cerr << "  -q             quick exit - avoids overhead for deallocation\n";
+  cerr << R"(Sorts molecules based on one or more sorting criteria.
+msort -k natoms -k nring file.smi > file_sorted.smi
+
+  -k <key(s)>    sort specification(s)
+                 a preceeding negative sign indicates reverse order for that property
+                 'a' 'natoms' number of atoms
+                 'r' 'nring'  number of rings
+                 'w' 'amw'    molecular weight
+                     'amwnH'  molecular weight, excluding Hydrogens - groups tautomers
+                 'f' 'nfrag'  number of fragments
+                 'c' 'nchiral' number of explicit chiral centres
+                 'h' 'hetero' number of heteroatoms
+                 'j' 'aroma'  number of aromatic atoms
+                 'k' 'aromr'  number of aromatic rings
+                 'R' 'lgrsz'  atoms in largest ring
+                 'S' 'lgrss'  rings in largest ring system
+                 'b' 'rotbond' number rotatable bonds
+                     'asr'    atoms in smallest ring
+                     'alrss'  atoms in largest ring system
+                     'unsat' number of (non aromatic) unsaturated bonds
+                     'ailf'   atoms in largest fragment
+                     'aiff'   atoms in first fragment
+                     'amwlf'  amw in largest fragment
+                     'aicm=<n>' atoms in counterions, missing assigned <n>
+                     'amwcm=<x>' amw in counterions, missing assigned <x>
+                     'col=nn' numeric contents of column <nn> of the name
+                     'niso' number of isotopic atoms
+                     'rngat' number of ring atoms
+                     'Z' sum of atomic numbers in the molecule
+                     'sp3' number of sp3 atoms
+                     'nbonds' number of bonds (single=1, double=2, triple=3)
+                     'charge' number atoms with formal charges
+                     'qry=...' hits to substructure query
+                     'smt=...' hits to substructure query
+                     'sdf=...' values in SDF tag
+  -d             descending order
+  -y             if multiple queries present, treat as a group
+  -D <stem>      write different groups to output files starting with <stem>
+  -e <number>    hint for minimum number of molecules per output file
+  -M ...         miscellaneous other options, enter '-M help' for info
+  -q             quick exit - avoids overhead for deallocation
   display_standard_aromaticity_options (cerr);
-  cerr << "  -E <symbol>    create element with symbol\n";
-  cerr << "  -i <type>      specify input file type. Enter '-i help' for details\n";
-  cerr << "  -v             verbose output\n";
+  -E <symbol>    create element with symbol
+  -i <type>      specify input file type. Enter '-i help' for details
+  -v             verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -860,7 +863,7 @@ File_Record::initialise(Molecule &m, const off_t o, IW_STL_Hash_Map_int *string_
     } else if (CMP_SMALLEST_RING_SIZE == comparison_criterion[i]) {
       _property[i] = smallest_ring_size(m);
     } else {
-      cerr << "Unrecognised property '" << comparison_criterion[i] << endl;
+      cerr << "Unrecognised property '" << comparison_criterion[i] << '\n';
       return 0;
     }
 
@@ -872,7 +875,7 @@ File_Record::initialise(Molecule &m, const off_t o, IW_STL_Hash_Map_int *string_
 // #define ECHO_COMPUTED_PROPERTIES
 #ifdef ECHO_COMPUTED_PROPERTIES
   for (int i = 0; i < nproperties; i++) {
-    cerr << " i = " << i << " property " << _property[i] << endl;
+    cerr << " i = " << i << " property " << _property[i] << '\n';
   }
 #endif
 
@@ -920,7 +923,7 @@ File_Record::echo(iwstring_data_source &input, IWString &output) const {
 
   // cerr << "Seeking to " << _offset << ", will write " << _nlines << " lines\n";
   if (!input.seekg(_offset)) {
-    cerr << "File_Record::echo: cannot seek to " << _offset << endl;
+    cerr << "File_Record::echo: cannot seek to " << _offset << '\n';
     return 0;
   }
 
@@ -994,7 +997,7 @@ static int
 identify_next_group(const resizable_array<File_Record *> &records, int &istart,
                     int &istop) {
   // cerr << "identify_next_group:on entry istart " << istart << " istop " << istop << ",
-  // min_size_hint " << min_size_hint << endl;
+  // min_size_hint " << min_size_hint << '\n';
   const auto number_molecules = records.number_elements();
 
   if (istop >= number_molecules) {
@@ -1018,8 +1021,7 @@ identify_next_group(const resizable_array<File_Record *> &records, int &istart,
 
     //  We are at a discontinuity
 
-    //  cerr << "At sorting discontinuity istart " << istart << " istop " << istop <<
-    //  endl;
+    //  cerr << "At sorting discontinuity istart " << istart << " istop " << istop << '\n';
 
     if (istop - istart < min_size_hint) {  // not enough to write
       ;
@@ -1052,7 +1054,7 @@ echo_set_of_molecules(const resizable_array<File_Record *> &records, int istart,
 
   for (int i = istart; i < istop; i++) {
     if (!records[i]->echo(input, output)) {
-      cerr << "Cannot write item " << i << endl;
+      cerr << "Cannot write item " << i << '\n';
       return 0;
     }
 
@@ -1084,7 +1086,7 @@ static int
 identify_next_equi_atom_group(const resizable_array<File_Record *> &records, int &istart,
                               int &istop, int atoms_per_chunk, unsigned int &atoms) {
   // cerr << "identify_next_group:on entry istart " << istart << " istop " << istop << ",
-  // min_size_hint " << min_size_hint << endl;
+  // min_size_hint " << min_size_hint << '\n';
 
   const auto number_molecules = records.number_elements();
 
@@ -1133,7 +1135,7 @@ do_same_score_chunked_output(const resizable_array<File_Record *> &molecules,
 
   while (identify_next_group_same_value_same_file(molecules, istart, istop)) {
     if (verbose) {
-      cerr << "Writing from " << istart << " to " << istop << endl;
+      cerr << "Writing from " << istart << " to " << istop << '\n';
     }
 
     if (file_name_index_is_first_property) {
@@ -1168,7 +1170,7 @@ do_equal_atom_count_chunked_output(const resizable_array<File_Record *> &molecul
 
   while (identify_next_equi_atom_group(molecules, istart, istop, atoms_per_chunk, atoms)) {
     if (verbose) {
-      cerr << "Writing from " << istart << " to " << istop << endl;
+      cerr << "Writing from " << istart << " to " << istop << '\n';
     }
 
     if (!write_group(molecules, istart, istop, input, stem_for_output_files, ndx)) {
@@ -1191,7 +1193,7 @@ do_chunked_output(const resizable_array<File_Record *> &molecules,
   int istop = 0;
   while (identify_next_group(molecules, istart, istop)) {
     if (verbose) {
-      cerr << "Writing from " << istart << " to " << istop << endl;
+      cerr << "Writing from " << istart << " to " << istop << '\n';
     }
 
     if (!write_group(molecules, istart, istop, input, stem_for_output_files, ndx)) {

@@ -27,13 +27,13 @@ if [ ! -x "$command" ]; then
 fi
 
 in="$test_cmd_top/$case/in/test.smi"
-out=test.out
-cmp_out="$test_cmd_top/$case/out/test.out"
+stdout='stdout'
+cmp_out="${test_cmd_top}/${case}/out/stdout"
 
 echo "Testing: $command"
 
-$command -A D "$in" 1>> "$out" 2>> err.txt
-$diff_tool "$out" "$cmp_out"
+$command -A D "$in" 1>> "${stdout}" 2>> err.txt
+$diff_tool "${stdout}" "$cmp_out"
 ret=$?
 
 if [ $ret -eq 1 ]
@@ -43,5 +43,5 @@ else
     echo "$case_id : TEST FAIL"
 fi
 
-rm -f "$out"
+rm -f "${stdout}"
 rm -f err.txt

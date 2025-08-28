@@ -1,0 +1,13 @@
+name: "monosubstitued aryl halide"
+query {
+  ring_specifier {
+    base {
+      heteroatom_count: 0
+      environment: "1c-[Cl,Br,I]"
+      set_global_id: 1
+    }
+    ring_size: 6
+    fused: 0
+  }
+  smarts: "[Cl,Br,I]-[/IWgid1c](:[D2]):[D2]"
+}

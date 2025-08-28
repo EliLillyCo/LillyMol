@@ -1,0 +1,24 @@
+name: "mitsunobu"
+scaffold {
+  id: 0
+  smarts: "[OH]-[CD3X4]"
+# Must use remove_fragment rather than remove_atom when using replace_atom.
+  remove_fragment: 0
+  invert_chirality: 1
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[OH]-C=O"
+  replace_atom {
+    a1: 0
+    a2: 0
+  }
+  isotope  {
+    atom: 0
+    isotope: 2
+  }
+}

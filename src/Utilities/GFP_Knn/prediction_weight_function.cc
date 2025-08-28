@@ -528,7 +528,7 @@ NN_Weight_Function::_read_weights_from_file (iwstring_data_source & input)
 
     _weight[input.lines_read()] = w;
 
-    if (input.lines_read() >= number_points_in_weight_array)
+    if (input.lines_read() >= static_cast<uint64_t>(number_points_in_weight_array))
       break;
   }
 

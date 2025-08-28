@@ -1,0 +1,33 @@
+
+syntax = "proto3";
+
+package dbf;
+
+message FeaturePair {
+  // The smarts and atom number of the first atom.
+  optional string smt1 = 1;
+  optional uint32 anum1 = 2;
+
+  // The feature number.
+  optional uint32 fnum1 = 3;
+
+  // The smarts and atom number of the second atom.
+  optional string smt2 = 4;
+  optional uint32 anum2 = 5;
+
+  // The feature number.
+  optional uint32 fnum2 = 6;
+
+  optional float distance = 7;
+};
+
+message Features {
+  optional string smi = 1;
+
+  optional string id = 2;
+
+  // It can be helpful to have the smiles with atom numbers labelled as isotopes.
+  optional string num_smi = 3;
+
+  repeated FeaturePair features = 4;
+}

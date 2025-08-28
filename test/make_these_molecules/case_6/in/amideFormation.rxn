@@ -1,0 +1,11 @@
+(0 Reaction
+  (A C Comment "Amide Synthesis")
+  (0 Scaffold
+     (A C smarts "[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a||[ND2H](a)-a")
+  )
+  (1 Sidechain
+     (A C smarts "[C](=O)([OH])") 
+     (A I remove_atom 2)
+     (A I join (0 0))
+  )
+)

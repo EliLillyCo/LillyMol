@@ -1,0 +1,7 @@
+(0 Query
+  (A C comment "aliphatic_nitro")
+  (A I version 2)
+  (A D numeric_value 75)
+  (A C smarts "[ND3R0](=O)(=O)-A")
+  (A I one_embedding_per_start_atom 1)
+)

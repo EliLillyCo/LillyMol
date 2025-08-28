@@ -20,7 +20,6 @@
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
 using std::cerr;
-using std::endl;
 
 const char * prog_name = nullptr;
 
@@ -447,14 +446,14 @@ Descriptor_Processing::build (const const_IWSubstring & buffer)
     }
   }
 
-//cerr << "Descriptor_Processing::build:values " << _round_to_significant_figures << " and " << _round_to_nearest_int << " from " << buffer << endl;
+//cerr << "Descriptor_Processing::build:values " << _round_to_significant_figures << " and " << _round_to_nearest_int << " from " << buffer << '\n';
 
   return 1;
 }
 
 void Descriptor_Processing::initialise (float & rounding, int & round_to_nearest, int & normalisation) const
 {
-//cerr << "Descriptor_Processing::initialise:input " << rounding << " me " << _round_to_significant_figures << " " << round_to_nearest << " me " << _round_to_nearest_int << endl;
+//cerr << "Descriptor_Processing::initialise:input " << rounding << " me " << _round_to_significant_figures << " " << round_to_nearest << " me " << _round_to_nearest_int << '\n';
   if (0.0f == rounding)
     rounding = _round_to_significant_figures;
   if (0 == round_to_nearest)
@@ -720,7 +719,7 @@ Data_From_File::set_columns_to_process (Command_Line & cl, char flag)
     }
 
     if (verbose)
-      cerr << "Will process data in column " << col << endl;
+      cerr << "Will process data in column " << col << '\n';
 
     _columns_specified_on_command_line.add_if_not_already_present(col - 1);
   }
@@ -914,25 +913,25 @@ Data_From_File::_extract_data (const const_IWSubstring & buffer)
 #endif
       do_nearest_int_rounding(v, _round_to_nearest_int[col]);
 #ifdef DEBUG_NEAREST_INT_ROUNDING
-      cerr << " to " << v << endl;
+      cerr << " to " << v << '\n';
 #endif
     }
   
     auto f = _zdata[col].find(v);
     if (f == _zdata[col].end())
     {
-//    cerr << "col " << col << " first encounter " << v << endl;
+//    cerr << "col " << col << " first encounter " << v << '\n';
 //    _zdata[col][v] = 1;
       _zdata[col].insert({v,1});
 //    if (_zdata[col].find(v) == _zdata[col].end())
 //    {
-//      cerr << "hash insertion failed, col " << col << ", size " << _zdata[col].size() << " value " << v << endl;
+//      cerr << "hash insertion failed, col " << col << ", size " << _zdata[col].size() << " value " << v << '\n';
 //    }
     }
     else
     {
       (*f).second++;
-//    cerr << "col " << col << " updated value " << _zdata[col][v] << " for " << v << endl;
+//    cerr << "col " << col << " updated value " << _zdata[col][v] << " for " << v << '\n';
     }
   }
 
@@ -954,7 +953,7 @@ Data_From_File::_determine_columns_to_process (const const_IWSubstring & buffer)
     {
       _process_column[col] = 1;
       if (verbose)
-        cerr << "descriptor '" << token << " found in column " << (col + 1) << endl;
+        cerr << "descriptor '" << token << " found in column " << (col + 1) << '\n';
 
       rc++;
     }
@@ -973,7 +972,7 @@ Data_From_File::_determine_columns_to_process (const const_IWSubstring & buffer)
 
       _process_column[f - _descriptor_name] = 1;
 
-//    cerr << "FROM FILE found in col " << (f - _descriptor_name) << endl;
+//    cerr << "FROM FILE found in col " << (f - _descriptor_name) << '\n';
 
       rc++;
     }
@@ -989,7 +988,7 @@ Data_From_File::_determine_columns_to_process (const const_IWSubstring & buffer)
       continue;
 
     const auto col = f - _descriptor_name;
-//  cerr << "Initialising rounding for '" << i.first << "' found in column " << col << endl;
+//  cerr << "Initialising rounding for '" << i.first << "' found in column " << col << '\n';
 
     i.second->initialise(_rounding[col], _round_to_nearest_int[col], _y_normalisation[col]);
   }
@@ -1018,7 +1017,7 @@ Data_From_File::_determine_columns_to_process (const const_IWSubstring & buffer)
       if (0 == _process_column[i])
         continue;
   
-      cerr << "Column " << i << " " << _descriptor_name[i] << " rounding " << _rounding[i] << " nearest int " << _round_to_nearest_int[i] << endl;
+      cerr << "Column " << i << " " << _descriptor_name[i] << " rounding " << _rounding[i] << " nearest int " << _round_to_nearest_int[i] << '\n';
     }
   }
 
@@ -1098,7 +1097,7 @@ Data_From_File::build (iwstring_data_source & input)
 
     if (! _extract_data(buffer))
     {
-      cerr << "Cannot extract data from '" << buffer << "', line " << input.lines_read() << endl;
+      cerr << "Cannot extract data from '" << buffer << "', line " << input.lines_read() << '\n';
       return 0;
     }
   }
@@ -1184,7 +1183,7 @@ Data_From_File::doit (const IWString & stats_file_stem,
       cerr << "Data_From_File::doit:fatal error processing column " << i;
       if (nullptr != _descriptor_name)
         cerr << ' ' << _descriptor_name[i];
-      cerr << endl;
+      cerr << '\n';
       return 0;
     }
   }
@@ -1215,7 +1214,7 @@ Data_From_File::_final_processing (const int col,
     float v = i.first;
     int c = i.second;
 
-//  cerr << " gather raw " << v << " " << c << endl;
+//  cerr << " gather raw " << v << " " << c << '\n';
 
     n += c;
     if (c > highest)
@@ -1231,12 +1230,12 @@ Data_From_File::_final_processing (const int col,
   vcf.iwqsort(vcc);
 
   if (verbose)
-    cerr << " col " << col << ' ' <<  n << " samples, largest count " << highest << endl;
+    cerr << " col " << col << ' ' <<  n << " samples, largest count " << highest << '\n';
 
 #ifdef ECHO_SORTED_VALUES_QWE
   for (int i = 0; i < vcf.number_elements(); ++i)
   {
-    cerr << " value " << vcf[i]->v() << " count " << vcf[i]->count() << endl;
+    cerr << " value " << vcf[i]->v() << " count " << vcf[i]->count() << '\n';
   }
 #endif
 
@@ -1378,7 +1377,7 @@ Data_From_File::_write_sorted_values_insert_zero_float (const resizable_array_p<
     auto v = vi->v();
 
     int j = static_cast<int>(v * _rounding[col] +  (v < 0.0f ? -0.01 : 0.01));
-//  cerr << "Value " << v << " rounding " << _rounding[col] << " int " << j << endl;
+//  cerr << "Value " << v << " rounding " << _rounding[col] << " int " << j << '\n';
 
     for (int k = iprev + 1; k < j; ++k)    // may not execute at all
     {
@@ -1387,7 +1386,7 @@ Data_From_File::_write_sorted_values_insert_zero_float (const resizable_array_p<
 
     output << vi->v() << ' ';
 
-//  cerr << _descriptor_name[col] << " value " <<  v << " count " << vi->count() << endl;
+//  cerr << _descriptor_name[col] << " value " <<  v << " count " << vi->count() << '\n';
 
     _write_normalised_value(vi->count(), col, n, highest, output);
     
@@ -1419,7 +1418,7 @@ Data_From_File::_write_sorted_values_insert_zero_int (const resizable_array_p<VC
 
     int j = static_cast<int>(vi->v() + (vi->v() < 0.0f ? -0.01 : 0.01));
 
-//  cerr << "INT value " << vi->v() << " int " << j << " prev " << iprev << endl;
+//  cerr << "INT value " << vi->v() << " int " << j << " prev " << iprev << '\n';
 
     for (int k = iprev + _round_to_nearest_int[col]; k < j; k += _round_to_nearest_int[col])
     {
@@ -1480,7 +1479,7 @@ Data_From_File::_transfer_data_to_rfile_float (Rfile & rfile,
     auto v = vi->v();
 
     int j = static_cast<int>(v * _rounding[col] +  (v < 0.0f ? -0.01 : 0.01));
-//  cerr << "Value " << v << " rounding " << _rounding[col] << " int " << j << endl;
+//  cerr << "Value " << v << " rounding " << _rounding[col] << " int " << j << '\n';
 
     for (int k = iprev + 1; k < j; ++k)    // may not execute at all
     {
@@ -1516,7 +1515,7 @@ Data_From_File::_transfer_data_to_rfile_int (Rfile & rfile,
 
     int j = static_cast<int>(vi->v() + (vi->v() < 0.0f ? -0.01 : 0.01));
 
-//  cerr << "INT value " << vi->v() << " int " << j << " prev " << iprev << endl;
+//  cerr << "INT value " << vi->v() << " int " << j << " prev " << iprev << '\n';
 
     for (int k = iprev + _round_to_nearest_int[col]; k < j; k += _round_to_nearest_int[col])
     {

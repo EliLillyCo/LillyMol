@@ -3,7 +3,7 @@ services:
   app:
     image: lillymolprivate
     container_name: lilly_mol
-    volumes:
-      - ./test:/LillyMol/test
+      #volumes:
+      #- ./test:/LillyMol/test
     command: >
       bash -c "tail -f /dev/null"

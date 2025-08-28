@@ -1,0 +1,20 @@
+Contains 2 reagents and 2 products
+RXN_File::create_reaction: highest atom map number 7
+Component 0 7 atoms, 7 atoms mapped
+Component 1 3 atoms, 3 atoms mapped
+2 molecules, 10 atoms, 10 atoms mapped
+Component 0 9 atoms, 9 atoms mapped
+Component 1 1 atoms, 1 atoms mapped
+2 molecules, 10 atoms, 10 atoms mapped
+read mol smi eof
+4 'MFCD00002188' 2 hits in scaffold
+8 'MFCD00002269' 2 hits in scaffold
+12 'MFCD00002339' 2 hits in scaffold
+30 'MFCD00002192' 3 hits in scaffold
+31 'MFCD00002198' 3 hits in scaffold
+32 'MFCD00002205' 2 hits in scaffold
+45 'MFCD00002271' 2 hits in scaffold
+46 'MFCD00002272' 2 hits in scaffold
+47 'MFCD00002286' 3 hits in scaffold
+48 'MFCD00002291' 2 hits in scaffold
+read mol smi eof

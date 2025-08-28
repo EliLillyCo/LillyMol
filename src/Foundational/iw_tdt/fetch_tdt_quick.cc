@@ -61,26 +61,33 @@ static int strip_leading_zeros = 0;
 static void
 usage (int rc)
 {
-  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << endl;
-  cerr << "Fetches a subset of TDT's from a file of TDT's\n";
-  cerr << prog_name << " options <identifier_file> <tdt_file>\n";
-  cerr << " -T <tag>       tag for identifiers\n";
-  cerr << " -w <number>    which instance of <tag> to process (default 1)\n";
-  cerr << " -p <rx>        identifiers must match regular expression <rx>\n";
-  cerr << " -i             ignore identifiers not matching <rx>\n";
-  cerr << " -d ignore      ignore duplicates in <identifier_file>\n";
-  cerr << " -D all         fetch all instances of an identifier in <tdt_file>\n";
-  cerr << " -c <col>       identifier in column <col> in the identifier file\n";
-  cerr << " -C <col>       identifier in column <col> in the tdt file\n";
-  cerr << " -X <fname>     write tdts not in <identifier file> to <fname>\n";
-  cerr << " -Y <fname>     write identifiers not in <tdt_file> to <fname>\n";
-  cerr << " -I <id>        identifiers to fetch\n";
-  cerr << " -R <rx>        identifiers to fetch - specified by regular expressions\n";
-  cerr << " -r             replace identifier in TDT with data from identifier file\n";
-//cerr << " -b <bytes>     write buffer size\n";
-  cerr << " -x             invert behaviour, selection becomes deselection\n";
-  cerr << " -z             strip leading 0's from identifiers\n";
-  cerr << " -v             verbose output\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Fetches TDT's from a .tdt file based on identifiers in another file.
+fetch_tdt_quick idfile file.tdt > subset.tdt
+ -T <tag>       tag for identifiers
+ -w <number>    which instance of <tag> to process (default 1)
+ -p <rx>        identifiers must match regular expression <rx>
+ -i             ignore identifiers not matching <rx>
+ -d ignore      ignore duplicates in <identifier_file>
+ -D all         fetch all instances of an identifier in <tdt_file>
+ -c <col>       identifier in column <col> in the identifier file
+ -C <col>       identifier in column <col> in the tdt file
+ -X <fname>     write tdts not in <identifier file> to <fname>
+ -Y <fname>     write identifiers not in <tdt_file> to <fname>
+ -I <id>        identifiers to fetch
+ -R <rx>        identifiers to fetch - specified by regular expressions
+ -r             replace identifier in TDT with data from identifier file
+ -x             invert behaviour, selection becomes deselection
+ -z             strip leading 0's from identifiers
+ -v             verbose output
+)";
 
   exit (rc);
 }

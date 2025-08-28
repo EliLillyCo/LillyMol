@@ -1,15 +1,15 @@
+# Actually PO4 seems not to exist, this is found.
 (0 Query
   (A C Comment "po4")
   (A I Version 2)
   (0 Query_Atom
     (A I atomic_number 15)
     (A I ncon 4)
-    (A I nbonds 4)
+    (A I nbonds 5)
   )
   (1 Query_Atom
     (A I atomic_number 8)
-    (A I ncon 2)
-    (A I single_bond 0)
+    (A I double_bond 0)
   )
   (2 Query_Atom
     (A I atomic_number 8)
@@ -17,12 +17,10 @@
     (A I single_bond 0)
   )
   (3 Query_Atom
-    (A I atomic_number 8)
     (A I ncon 2)
     (A I single_bond 0)
   )
   (4 Query_Atom
-    (A I atomic_number 8)
     (A I ncon 2)
     (A I single_bond 0)
   )

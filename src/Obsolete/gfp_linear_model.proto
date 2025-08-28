@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package gfp_linear_model;
+
+message GfpLinearModel {
+  repeated float weight = 1;
+
+  optional string response = 2;
+}

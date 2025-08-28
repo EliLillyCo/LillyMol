@@ -1,13 +1,16 @@
 // Consumes the output of dicer_to_topology_types to make changes
 // We may still generate no products, but let's write the parent here
 // if requested.
-// to input molecules.
 
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
 
 #include "re2/re2.h"
+
+#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
+#include "google/protobuf/text_format.h"
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/tfdatarecord.h"
@@ -24,9 +27,17 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#include "Molecule_Tools/mformula.h"
+
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
-#include "Molecule_Tools/molecule_filter_lib.h"
 #include "Molecule_Tools/molecule_filter.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#include "molecule_filter.pb.h"
+#endif
+
+#include "Molecule_Tools/molecule_filter_lib.h"
 
 namespace dicer_fragment_replace {
 
@@ -34,6 +45,7 @@ using std::cerr;
 using iw_tf_data_record::TFDataReader;
 using dicer_data::DicerFragment; 
 using combinations::Combinations;
+using mformula::MFormula;
 
 // Warning, this will need to be updated when we make the switch globally.
 constexpr int kSingleBond = SINGLE_BOND;
@@ -53,9 +65,12 @@ cerr << R"(
 Uses fragments from dicer_to_topology_types to make changes to molecules.
 Fragment files are specified via the -F option(s). From the name, we can figure out what kind of
 frgaments are in that file, and we handle them as either
-  Sidechain
-  2 connected linker
-  3 connected linker
+  Sidechain - one connection point.
+  Linker - two connection points.
+
+For example a file like _1_5.textproto is a sigle attachment with 5 atoms.
+            a file like _2_5.textproto is a linker (2 attachments) with 5 bonds between the attachment points.
+
  -F <fname>             file(s) from the -S option to dicer_to_topology_types
  -L <fname              molecule_filter textproto applied to replacement fragments.
 
@@ -63,18 +78,18 @@ frgaments are in that file, and we handle them as either
  -M <qry>               query file for features the replacement fragment must have
  -x <smarts>            smarts for features the replacement fragment must NOT have
  -X <qry>               query file for features the replacement fragment must NOT have
+ -u <n>                 only retain queries with at least <n> examples: -u 1   to get rid of singletons.
 
  -s <smarts>            smarts for one or more bonds to break.
  -q <query>             query form for the same thing.
                         If 1 query, sidechain replacement.
-                        If 2-3 queries, linker replacement.
+                        If 2-3 queries, linker replacement. Bonds between first two matched atoms are broken.
                         If sidechains, we assume the second matched atom is lost.
                         If a linker, we assume the first query atom is in the region being removed.
- -P ...                 atom typing specification. If used must be the same atom typing that was
-                        used during the dicer run used by dicer_to_topology_types.
  -Y ...                 various other options, enter '-Y help' for info
  -V <fname>             discard invalid valences, write to <fname>, Use '-V none' to just discard
  -z ...                 ignore various failures, enter '-z help' for info
+ -f <diff>              maximum molecular formula difference between initial fragment and replaced fragment.
  -l                     reduce to largest fragment
  -c                     remove chirality
  -g ...                 chemical standardisation
@@ -82,6 +97,7 @@ frgaments are in that file, and we handle them as either
  -E ...                 standard element options
  -v          verbose output
 )";
+// clang-format on
 
   ::exit(rc);
 }
@@ -96,6 +112,7 @@ DisplayDashYOptions(int rc) {
  -Y maxfewer=<n>          maximum fewer atoms that must be in a product
  -Y rmiso                 remove isotopes from product molecules
  -Y wrparent              write the parent molecule before each calculation
+ -Y maxgen=<n>            do not generate more than <n> products per starting molecule - approximately.
  
 )";
   // clang-format on
@@ -135,9 +152,11 @@ class ReplacementSpecifications {
     int _filter_active;
     uint32_t _rejected_by_filter;
 
-
     // Aromatised proto smiles might be hard to interpret.
     int _ignore_smiles_interpretation_errors;
+
+    // Some fragments may have valence errors.
+    int _discard_invalid_valence;
 
     // Statistics on the impact of our requirements.
     int _protos_examined;
@@ -166,11 +185,19 @@ ReplacementSpecifications::ReplacementSpecifications() {
   _fragments_below_support_requirement = 0;
   _fail_must_contain = 0;
   _fail_must_not_contain = 0;
+  _discard_invalid_valence = 0;
 }
 
 int
 ReplacementSpecifications::Initialise(Command_Line& cl) {
   const int verbose = cl.option_present('v');
+
+  if (cl.option_present('V')) {
+    _discard_invalid_valence = 1;
+    if (verbose) {
+      cerr << "Will discard fragments containing invalid valences\n";
+    }
+  }
 
   if (cl.option_present('m')) {
     const_IWSubstring m;
@@ -221,9 +248,9 @@ ReplacementSpecifications::Initialise(Command_Line& cl) {
     _filter_active = 1;
   }
 
-  if (cl.option_present('p')) {
-    if (! cl.value('p', _min_support) || _min_support < 1) {
-      cerr << "The min support level (-p) must be a valid +ve number\n";
+  if (cl.option_present('u')) {
+    if (! cl.value('u', _min_support) || _min_support < 1) {
+      cerr << "The min support level (-u) must be a valid +ve number\n";
       return 0;
     }
 
@@ -271,6 +298,7 @@ ReplacementSpecifications::Report(std::ostream& output) const {
   return 1;
 }
 
+#ifdef NOW_IN_LIBRARY
 int
 AnyQueryMatches(resizable_array_p<Substructure_Query> & query,
                 Molecule_to_Match& target) {
@@ -282,6 +310,7 @@ AnyQueryMatches(resizable_array_p<Substructure_Query> & query,
 
   return 0;
 }
+#endif
 
 // Both _fragment_must_contain and _fragment_must_not_contain are interpreted
 // as OR matches.
@@ -300,12 +329,12 @@ ReplacementSpecifications::PassesConstraints(Molecule& m,
       _fragment_must_not_contain.size() > 0) {
     Molecule_to_Match target(&m);
     if (_fragment_must_not_contain.size() > 0 && 
-        AnyQueryMatches(_fragment_must_not_contain, target)) {
+        lillymol::AnyQueryMatches(target, _fragment_must_not_contain)) {
       ++_fail_must_contain;
       return 0;
     }
     if (_fragment_must_contain.size() > 0 &&
-        ! AnyQueryMatches(_fragment_must_contain, target)) {
+        ! lillymol::AnyQueryMatches(target, _fragment_must_contain)) {
       ++_fail_must_not_contain;
       return 0;
     }
@@ -325,10 +354,21 @@ class MoleculeOneAtom : public Molecule {
   private:
     atom_number_t _attach;
 
+    // If we are doing formula differences.
+    mformula::MFormula _mformula;
+
   public:
     MoleculeOneAtom();
 
     int IdentifyAttachmentPoints();
+
+    int ComputeMFormula() {
+      return _mformula.Build(*this);
+    }
+
+    const mformula::MFormula mformula() const {
+      return _mformula;
+    }
 
     atom_number_t attach() const {
       return _attach;
@@ -361,6 +401,8 @@ class MoleculeTwoAtoms : public Molecule {
     atom_number_t _attach1;
     atom_number_t _attach2;
 
+    mformula::MFormula _mformula;
+
   public:
     MoleculeTwoAtoms();
 
@@ -371,6 +413,13 @@ class MoleculeTwoAtoms : public Molecule {
     }
     atom_number_t attach2() const { 
       return _attach2;
+    }
+
+    int ComputeMFormula() {
+      return _mformula.Build(*this);
+    }
+    const mformula::MFormula mformula() const {
+      return _mformula;
     }
 };
 
@@ -404,6 +453,8 @@ class MoleculeThreeAtoms : public Molecule {
     atom_number_t _attach2;
     atom_number_t _attach3;
 
+    mformula::MFormula _mformula;
+
   public:
     MoleculeThreeAtoms();
 
@@ -417,6 +468,13 @@ class MoleculeThreeAtoms : public Molecule {
     }
     atom_number_t attach3() const { 
       return _attach3;
+    }
+
+    int ComputeMFormula() {
+      return _mformula.Build(*this);
+    }
+    const mformula::MFormula mformula() const {
+      return _mformula;
     }
 };
 
@@ -458,23 +516,38 @@ class BaseFragment {
     // The file name from which this was read.
     IWString _fname;
 
+    // If set, discard invalid valences encountered during the Read functions.
+    int _discard_invalid_valence;
+
   private:
+     int ReadTextProto(iwstring_data_source& unput, ReplacementSpecifications& replacement_specifications);
      int Read(TFDataReader& reader, ReplacementSpecifications& replacement_specifications);
      int DetermineFragmentType();
 
   protected:
     int Read(IWString & fname, ReplacementSpecifications& replacement_specifications);
+    int ReadTextProto(IWString & fname, ReplacementSpecifications& replacement_specifications);
 
   public:
     BaseFragment();
     ~BaseFragment();
 
+    void set_discard_invalid_valence(int s) {
+      _discard_invalid_valence = s;
+    }
+
     int NumberFragments() const {
       return _fragment.number_elements();
     }
+
     const IWString& FileName() const {
       return _fname;
     }
+
+    // For each molecule we hold.
+    int ComputeMFormula();
+
+    // Enable iterators
     const M** cbegin() const {
       return _mol.cbegin();
     }
@@ -489,9 +562,9 @@ class BaseFragment {
     }
 };
 
-
 template <typename M>
 BaseFragment<M>::BaseFragment() {
+  _discard_invalid_valence = 0;
 }
 
 template <typename M>
@@ -501,6 +574,10 @@ BaseFragment<M>::~BaseFragment() {
 template <typename M>
 int
 BaseFragment<M>::Read(IWString& fname, ReplacementSpecifications& replacement_specifications) {
+  if (fname.ends_with(".textproto")) {
+    return ReadTextProto(fname, replacement_specifications);
+  }
+
   TFDataReader reader(fname.null_terminated_chars());
   if (! reader.good()) {
     cerr << "BaseFragment::Read:cannot open '" << fname << "'\n";
@@ -514,9 +591,25 @@ BaseFragment<M>::Read(IWString& fname, ReplacementSpecifications& replacement_sp
 
 template <typename M>
 int
+BaseFragment<M>::ReadTextProto(IWString& fname, ReplacementSpecifications& replacement_specifications) {
+  iwstring_data_source input;
+  if (! input.open(fname)) {
+    cerr << "BaseFragment::ReadTextProto:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  _fname = fname;
+
+  return ReadTextProto(input, replacement_specifications);
+}
+
+template <typename M>
+int
 BaseFragment<M>::Read(TFDataReader& reader, ReplacementSpecifications& replacement_specifications) {
-  int protos_read = 0;
-  int failed_constraints = 0;
+  uint32_t protos_read = 0;
+  uint32_t failed_constraints = 0;
+  uint32_t bad_valence = 0;
+
   while (1) {
     std::unique_ptr<DicerFragment> maybe_proto = reader.ReadProtoPtr<DicerFragment>();
     if (! maybe_proto) {
@@ -527,6 +620,11 @@ BaseFragment<M>::Read(TFDataReader& reader, ReplacementSpecifications& replaceme
     std::unique_ptr<M> m = std::make_unique<M>();
     if (! m->build_from_smiles(maybe_proto->smi())) {
       return replacement_specifications.ignore_smiles_interpretation_errors();
+    }
+
+    if (_discard_invalid_valence && ! m->valence_ok()) {
+      ++bad_valence;
+      continue;
     }
 
     if (! replacement_specifications.PassesConstraints(*m, *maybe_proto)) {
@@ -548,6 +646,70 @@ BaseFragment<M>::Read(TFDataReader& reader, ReplacementSpecifications& replaceme
     cerr << "BaseFragment::Read:no fragments\n";
     cerr << "Read " << protos_read << " protos, " << failed_constraints << " failed constraints\n";
     return 0;
+  }
+
+  return 1;
+}
+
+template <typename M>
+int
+BaseFragment<M>::ReadTextProto(iwstring_data_source& input, ReplacementSpecifications& replacement_specifications) {
+  uint32_t protos_read = 0;
+  uint32_t failed_constraints = 0;
+  uint32_t bad_valence = 0;
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    std::unique_ptr<DicerFragment> proto = std::make_unique<DicerFragment>();
+    google::protobuf::io::ArrayInputStream zero_copy_array(buffer.data(), buffer.nchars());
+    if (!google::protobuf::TextFormat::Parse(&zero_copy_array, proto.get())) {
+      cerr << "BaseFragment:ReadTextProto:cannot parse proto " << buffer << '\n';
+      return 0;
+    }
+
+    ++protos_read;
+
+    std::unique_ptr<M> m = std::make_unique<M>();
+    if (! m->build_from_smiles(proto->smi())) {
+      return replacement_specifications.ignore_smiles_interpretation_errors();
+    }
+
+    if (m->valence_ok()) {
+      // great.
+    } else if (! _discard_invalid_valence) {
+      // bad valence not being discarded, do nothing.
+    } else {
+      m->unset_unnecessary_implicit_hydrogens_known_values();
+      if (! m->valence_ok()) {
+        cerr << m->smiles() << " BaseFragment::ReadTextProto:BadValence, skipped\n";
+        ++bad_valence;
+        continue;
+      }
+    }
+
+    if (! m->IdentifyAttachmentPoints()) {
+      return 0;
+    }
+
+    m->set_name(proto->par());
+
+    _fragment << proto.release();
+    _mol << m.release();
+  }
+
+  if (_fragment.empty()) {
+    cerr << "BaseFragment::Read:no fragments\n";
+    cerr << "Read " << protos_read << " protos, " << failed_constraints << " failed constraints\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+template <typename M>
+int
+BaseFragment<M>::ComputeMFormula() {
+  for (M* m : _mol) {
+    m->ComputeMFormula();
   }
 
   return 1;
@@ -753,7 +915,11 @@ class Options {
     int _need_to_check_atom_counts;
     int _rejected_due_to_size_constraints;
 
-    int _molecules_read = 0;
+    // We can set limits on by how much the fragment can change things.
+    int _max_formula_difference;
+    uint32_t _rejected_for_formula_difference;
+
+    uint64_t _molecules_read = 0;
 
     resizable_array_p<SubstituentFragments> _substituent;
     resizable_array_p<Linker2Fragments> _linker2;
@@ -788,6 +954,7 @@ class Options {
                 IWString_and_File_Descriptor& output);
     int ReplaceSubstituent(Molecule& m, atom_number_t attach,
                 int atoms_removed,
+                std::unique_ptr<MFormula>& lost_fragment,
                 const SubstituentFragments& frags,
                 IWString_and_File_Descriptor& output);
     int ReplaceLinker2(Molecule& m, const Substructure_Results* sresults,
@@ -804,17 +971,19 @@ class Options {
                 int atoms_removed,
                 const Linker3Fragments& frags,
                 IWString_and_File_Descriptor& output);
-    int OkValence(Molecule& m);
-    int OkProduct(Molecule& m, atom_number_t a1, atom_number_t f1);
+    int OkValence(Molecule& m, const IWString& frag_name);
+    int OkProduct(Molecule& m, atom_number_t a1, atom_number_t f1, const IWString& frag_name);
     int OkProduct(Molecule& m,
                   atom_number_t a1, atom_number_t f1,
-                  atom_number_t a2, atom_number_t f2);
+                  atom_number_t a2, atom_number_t f2, const IWString& frag_name);
     int OkProduct(Molecule& m,
                   atom_number_t a1, atom_number_t f1,
                   atom_number_t a2, atom_number_t f2,
-                  atom_number_t a3, atom_number_t f3);
+                  atom_number_t a3, atom_number_t f3, const IWString& frag_name);
     int OkSizeConstraints(const Molecule& m, int atoms_lost, const Molecule& frag);
     int OkSizeConstraintsInner(int atoms_list, int atoms_gained) const;
+
+    int OkFormulaDifference(const MFormula& f1, const MoleculeOneAtom& frag);
 
     int Write(Molecule& m, const IWString& frag_name,
                IWString_and_File_Descriptor& output) const;
@@ -848,7 +1017,7 @@ Options::Options() {
   _ignore_molecules_not_matching = 0;
   _name_token_separator = " %% ";
 
-  _max_products_per_starting_molecule = 0;
+  _max_products_per_starting_molecule = std::numeric_limits<uint32_t>::max();
 
   _min_extra_atoms = -1;
   _max_extra_atoms = -1;
@@ -867,14 +1036,21 @@ Options::Options() {
     
   _molecules_not_matching_bond_break_queries = 0;
 
-  _discard_invalid_valence = 0;
   _invalid_valence_generated = 0;
+
+  _discard_invalid_valence = 0;
+
+  // Initialised negative since 0 is a valid value.
+  _max_formula_difference = -1;
+  _rejected_for_formula_difference = 0;
 }
 
 int
 Options::Initialise(Command_Line& cl) {
 
   _verbose = cl.option_count('v');
+
+  const int discard_invalid_valence = cl.option_present('V');
 
   if (cl.option_present('g')) {
     if (!_chemical_standardisation.construct_from_command_line(cl, _verbose > 1, 'g')) {
@@ -914,9 +1090,9 @@ Options::Initialise(Command_Line& cl) {
 
   if (cl.option_present('F')) {
     IWString fname;
-    std::unique_ptr<RE2> frag_rx_1 = std::make_unique<RE2>(R"(\S+_1_(\d+)\.tfdata$)");
-    std::unique_ptr<RE2> frag_rx_2 = std::make_unique<RE2>(R"(\S+_2_(\d+)\.tfdata$)");
-    std::unique_ptr<RE2> frag_rx_3 = std::make_unique<RE2>(R"(\S+_3_(\d+)\.(\d+)\.(\d+)\.tfdata$)");
+    std::unique_ptr<RE2> frag_rx_1 = std::make_unique<RE2>(R"(\S+_1_(\d+)\.(textproto|tfdata)$)");
+    std::unique_ptr<RE2> frag_rx_2 = std::make_unique<RE2>(R"(\S+_2_(\d+)\.(textproto|tfdata)$)");
+    std::unique_ptr<RE2> frag_rx_3 = std::make_unique<RE2>(R"(\S+_3_(\d+)\.(\d+)\.(\d+)\.(textproto|tfdata)$)");
     for (int i = 0; cl.value('F', fname, i); ++i) {
       absl::string_view tmp(fname.data(), fname.size());
       int d1;
@@ -924,6 +1100,7 @@ Options::Initialise(Command_Line& cl) {
       int d3;
       if (RE2::FullMatch(tmp, *frag_rx_1, &d1)) {
         std::unique_ptr<SubstituentFragments> s = std::make_unique<SubstituentFragments>();
+        s->set_discard_invalid_valence(discard_invalid_valence);
         if (! s->Read(fname, replacement_specifications, d1)) {
           cerr << "Cannot read substituent '" << fname << "'\n";
           return 0;
@@ -931,6 +1108,7 @@ Options::Initialise(Command_Line& cl) {
         _substituent << s.release();
       } else if (RE2::FullMatch(tmp, *frag_rx_2, &d1)) {
         std::unique_ptr<Linker2Fragments> s = std::make_unique<Linker2Fragments>();
+        s->set_discard_invalid_valence(discard_invalid_valence);
         if (! s->Read(fname, replacement_specifications, d1)) {
           cerr << "Cannot read linker2 '" << fname << "'\n";
           return 0;
@@ -938,6 +1116,7 @@ Options::Initialise(Command_Line& cl) {
         _linker2 << s.release();
       } else if (RE2::FullMatch(tmp, *frag_rx_3, &d1, &d2, &d3)) {
         std::unique_ptr<Linker3Fragments> s = std::make_unique<Linker3Fragments>();
+        s->set_discard_invalid_valence(discard_invalid_valence);
         if (! s->Read(fname, replacement_specifications, d1, d2, d3)) {
           cerr << "Cannot read linker3 '" << fname << "'\n";
           return 0;
@@ -1078,13 +1257,41 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('f')) {
+    if (! cl.value('f', _max_formula_difference) || _max_formula_difference < 0) {
+      cerr << "The maximum molecular formula difference (-f) must be a non-negative number\n";
+      Usage(1);
+    }
+    if (_verbose) {
+      cerr << "Maximum molecular formula difference " << _max_formula_difference << '\n';
+    }
+
+    for (SubstituentFragments* s : _substituent) {
+      s->ComputeMFormula();
+    }
+    for (Linker2Fragments* l : _linker2) {
+      l->ComputeMFormula();
+    }
+    for (Linker3Fragments* l : _linker3) {
+      l->ComputeMFormula();
+    }
+  }
+
+
+  if (cl.option_present('P')) {
+    const IWString p = cl.string_value('P');
+    if (!_atom_typing.build(p)) {
+      cerr << "Options::Initialise:invalid atom typing '" << p << "'\n";
+      return 0;
+    }
+  }
+
   if (cl.option_present('V')) {
     _discard_invalid_valence = 1;
     IWString fname = cl.string_value('V');
     if (fname == "none") {
     } else {
       fname.EnsureEndsWith(".smi");
-      cerr << "Not null, opening '" << fname << "'\n";
       if (! _stream_for_invalid_valence.open(fname.null_terminated_chars())) {
         cerr << "Cannot open stream for invalid valences '" << fname << "'\n";
         return 0;
@@ -1193,6 +1400,10 @@ Options::Report(std::ostream& output) const {
   }
 
   output << _rejected_due_to_size_constraints << " products rejected for size constraints\n";
+  if (_max_formula_difference >= 0) {
+    output << _rejected_for_formula_difference << " products rejected for formula differences\n";
+  }
+
   output << "Generated " << _substituent_generated << " substituent variations\n";
   output << "Generated " << _linker2_generated << " two connected linkers\n";
   output << "Generated " << _linker3_generated << " three connected linkers\n";
@@ -1295,6 +1506,44 @@ Options::ReplaceSubstituents(Molecule& m, const Substructure_Results& sresults,
   return 1;
 }
 
+// `m` consists of two fragments. We remove the one containing atom number `being_removed`
+// from `m` and the formula of the removed fragment placed in `result`.
+// Return the number of atoms lost.
+int
+RetrieveFragmentBeingRemoved(Molecule& m,
+                             atom_number_t being_removed,
+                             std::unique_ptr<MFormula>& result) {
+  if (m.number_fragments() == 1) {
+    cerr << "RetrieveFragmentBeingRemoved no fragments " << m.name() << '\n';
+    return 0;
+  }
+
+  int my_frag = m.fragment_membership(being_removed);
+
+  const int matoms = m.natoms();
+  std::unique_ptr<int[]> my_atoms = std::make_unique<int[]>(matoms);
+  std::fill_n(my_atoms.get(), matoms, 0);
+
+  for (int i = 0; i < matoms; ++i) {
+    if (m.fragment_membership(i) == my_frag) {
+      my_atoms[i] = 1;
+    }
+  }
+
+  Molecule my_molecule;
+  m.create_subset(my_molecule, my_atoms.get());
+
+  m.remove_atoms(my_atoms.get());
+
+  result = std::make_unique<MFormula>();
+
+  result->Build(my_molecule);
+
+  assert(my_molecule.natoms == matoms - m.natoms());
+
+  return matoms - m.natoms();
+}
+
 int
 Options::ReplaceSubstituent(Molecule& m, const Set_of_Atoms& embedding,
                 IWString_and_File_Descriptor& output) {
@@ -1309,11 +1558,18 @@ Options::ReplaceSubstituent(Molecule& m, const Set_of_Atoms& embedding,
   atom_number_t attach0 = embedding[0];
   AdjustForLossOfFragmentContainingAtom(mcopy, being_removed, attach0);
 
-  const int atoms_removed = mcopy.remove_fragment_containing_atom(being_removed);
+  std::unique_ptr<MFormula> lost_fragment;
+  int atoms_removed;
+  if (_max_formula_difference >= 0) {
+    atoms_removed = RetrieveFragmentBeingRemoved(mcopy, being_removed, lost_fragment);
+  } else {
+    atoms_removed = mcopy.remove_fragment_containing_atom(being_removed);
+  }
+
   assert(mcopy.ok_atom_number(attach0));
 
   for (const SubstituentFragments* substituent : _substituent) {
-    if (ReplaceSubstituent(mcopy, attach0, atoms_removed, *substituent, output)) {
+    if (ReplaceSubstituent(mcopy, attach0, atoms_removed, lost_fragment, *substituent, output)) {
       ++rc;
       if (rc > _max_products_per_starting_molecule) {
         break;
@@ -1329,6 +1585,7 @@ Options::ReplaceSubstituent(Molecule& m, const Set_of_Atoms& embedding,
 int
 Options::ReplaceSubstituent(Molecule& m, atom_number_t attach,
                 int atoms_removed,
+                std::unique_ptr<MFormula>& lost_fragment,
                 const SubstituentFragments& frags,
                 IWString_and_File_Descriptor& output) {
   int rc = 0;
@@ -1344,23 +1601,39 @@ Options::ReplaceSubstituent(Molecule& m, atom_number_t attach,
       continue;
     }
 
-    m.add_molecule(frag);
-    atom_number_t a2 = initial_natoms + frag->attach();
-    if (m.hcount(a2) == 0) {
+    if (lost_fragment && ! OkFormulaDifference(*lost_fragment.get(), *frag)) {
       continue;
     }
-    m.add_bond(attach, a2, kSingleBond);
-    if (OkProduct(m, attach, a2)) {
-      Write(m, frag->name(), output);
+
+    Molecule mcopy(m);
+    mcopy.add_molecule(frag);
+    atom_number_t a2 = initial_natoms + frag->attach();
+    if (mcopy.hcount(a2) == 0) {
+      continue;
+    }
+    mcopy.add_bond(attach, a2, kSingleBond);
+    if (OkProduct(mcopy, attach, a2, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
     }
-
-    m.resize(initial_natoms);
   }
 
   _substituent_generated += rc;
 
   return 1;
+}
+
+int
+Options::OkFormulaDifference(const MFormula& f1, const MoleculeOneAtom& frag) {
+  assert(_max_formula_difference >= 0);
+
+  const int diff = f1.Diff(frag.mformula());
+  if (diff <= _max_formula_difference) {
+    return 1;
+  }
+
+  ++_rejected_for_formula_difference;
+  return 0;
 }
 
 // Return true if a1 and a2 are both heteroatoms.
@@ -1445,7 +1718,7 @@ Aminal(Molecule& m, atom_number_t a1, atom_number_t a2) {
 }
 
 int
-Options::OkValence(Molecule& m) {
+Options::OkValence(Molecule& m, const IWString& frag_name) {
   if (! _discard_invalid_valence) {
     return 1;
   }
@@ -1472,8 +1745,10 @@ Options::OkValence(Molecule& m) {
   ++_invalid_valence_generated;
 
   if (_stream_for_invalid_valence.is_open()) {
+   for (int i = 0; i < matoms; ++i) {
+   }
     static constexpr char kSep = ' ';
-    _stream_for_invalid_valence << m.smiles() << kSep << m.name() << '\n';
+    _stream_for_invalid_valence << m.smiles() << kSep << m.name() << kSep << frag_name << '\n';
     _stream_for_invalid_valence.write_if_buffer_holds_more_than(4096);
   }
 
@@ -1481,8 +1756,8 @@ Options::OkValence(Molecule& m) {
 }
 
 int
-Options::OkProduct(Molecule& m, atom_number_t a1, atom_number_t f1) {
-  if (! OkValence(m)) {
+Options::OkProduct(Molecule& m, atom_number_t a1, atom_number_t f1, const IWString& frag_name) {
+  if (! OkValence(m, frag_name)) {
     return 0;
   }
   if (AdjacentHeteroatoms(m, a1, f1)) {
@@ -1521,17 +1796,19 @@ Options::ReplaceLinker2(Molecule& m, const Substructure_Results* sresults,
                         IWString_and_File_Descriptor& output) {
   uint32_t rc = 0;
 
-  std::vector<int> count(2);
+  std::vector<uint32_t> count(2);
   count[0] = sresults[0].number_embeddings();
   count[1] = sresults[1].number_embeddings();
 
   Combinations comb(count);
-  std::vector<int> state(2);
+  std::vector<uint32_t> state(2, 0);
+
   while (comb.Next(state)) {
-    atom_number_t remove1 = sresults[0].embedding(state[0])->item(0);
-    atom_number_t attach1 = sresults[0].embedding(state[0])->item(1);
-    atom_number_t remove2 = sresults[1].embedding(state[1])->item(0);
-    atom_number_t attach2 = sresults[1].embedding(state[1])->item(1);
+    cerr << "Next has worked " << state[0] << ' ' << state[1] << '\n';
+    atom_number_t attach1 = sresults[0].embedding(state[0])->item(0);
+    atom_number_t remove1 = sresults[0].embedding(state[0])->item(1);
+    atom_number_t attach2 = sresults[1].embedding(state[1])->item(0);
+    atom_number_t remove2 = sresults[1].embedding(state[1])->item(1);
 
     Molecule mcopy(m);
 
@@ -1542,24 +1819,36 @@ Options::ReplaceLinker2(Molecule& m, const Substructure_Results* sresults,
 
     // Some query matches may not set up a proper region.
     if (mcopy.fragment_membership(remove1) != mcopy.fragment_membership(remove2)) {
-      continue;
+      cerr << "Fragment membership no good\n";
+//    continue;
     }
 
     AdjustForLossOfFragmentContainingAtom(mcopy, remove1, attach1, attach2);
 
-    const int atoms_removed = mcopy.remove_fragment_containing_atom(remove1);
+    std::unique_ptr<MFormula> lost_formula;
+    int atoms_removed;
+    if (_max_formula_difference >= 0) {
+      atoms_removed = RetrieveFragmentBeingRemoved(mcopy, remove1, lost_formula);
+    } else {
+      atoms_removed = mcopy.remove_fragment_containing_atom(remove1);
+    }
+
     cerr << "Base molecule ";
     write_isotopically_labelled_smiles(mcopy, true, cerr);
     cerr << " atoms " << remove1 << ',' << attach1 << ',' << remove2 << ',' << attach2 << '\n';
 
-    for (const Linker2Fragments* frag : _linker2) {
-      if (ReplaceLinker2(mcopy, attach1, attach2, atoms_removed, *frag, output)) {
+    cerr << "Begin loo over " << _linker2.size() << " linker fragments\n";
+    for (const Linker2Fragments* frags : _linker2) {
+      cerr << "Begin fragment\n";
+      if (ReplaceLinker2(mcopy, attach1, attach2, atoms_removed, *frags, output)) {
         ++rc;
+        cerr << "Success " << rc << '\n';
         if (rc > _max_products_per_starting_molecule) {
           break;
         }
       }
     }
+    cerr << "After looping through fragments " << rc << '\n';
     if (rc > _max_products_per_starting_molecule) {
       break;
     }
@@ -1580,37 +1869,41 @@ Options::ReplaceLinker2(Molecule& m,
 
   const int initial_matoms = m.natoms();
 
+
+  cerr << "ReplaceLinker2 have " << frags.NumberFragments() << " fragments\n";
   for (const MoleculeTwoAtoms* frag : frags) {
+    cerr << "Trying another fragment, rc " << rc << '\n';
     if (! OkSizeConstraints(m, atoms_removed, *frag)) {
       continue;
     }
-    m.add_molecule(frag);
+
+    Molecule mcopy(m);
+    mcopy.add_molecule(frag);
 
     atom_number_t f1 = initial_matoms + frag->attach1();
     atom_number_t f2 = initial_matoms + frag->attach2();
 
-    m.add_bond(a1, f1, kSingleBond);
-    m.add_bond(a2, f2, kSingleBond);
-    if (OkProduct(m, a1, f1, a2, f2)) {
-      Write(m, frag->name(), output);
+    mcopy.add_bond(a1, f1, kSingleBond);
+    mcopy.add_bond(a2, f2, kSingleBond);
+    if (OkProduct(mcopy, a1, f1, a2, f2, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
     }
 
-    m.remove_bond_between_atoms(a1, f1);
-    m.remove_bond_between_atoms(a2, f2);
+    mcopy.remove_bond_between_atoms(a1, f1);
+    mcopy.remove_bond_between_atoms(a2, f2);
 
-    m.add_bond(a1, f2, kSingleBond);
-    m.add_bond(a2, f1, kSingleBond);
+    mcopy.add_bond(a1, f2, kSingleBond);
+    mcopy.add_bond(a2, f1, kSingleBond);
 
-    if (OkProduct(m, a1, f2, a2, f1)) {
-      Write(m, frag->name(), output);
+    if (OkProduct(mcopy, a1, f2, a2, f1, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
       if (rc > _max_products_per_starting_molecule) {
+        cerr << "_max_products_per_starting_molecule " << rc << '\n';
         break;
       }
     }
-
-    m.resize(initial_matoms);
   }
 
   _linker2_generated += rc;
@@ -1623,12 +1916,12 @@ Options::ReplaceLinker3(Molecule& m, const Substructure_Results* sresults,
                         IWString_and_File_Descriptor& output) {
   uint32_t rc = 0;
 
-  std::vector<int> count(3);
+  std::vector<uint32_t> count(3, 0);
   for (int i = 0; i < 3; ++i) {
     count[i] = sresults[i].number_embeddings();
   }
 
-  std::vector<int> state(3);
+  std::vector<uint32_t> state(3);
   Combinations comb(count);
   while (comb.Next(state)) {
     atom_number_t remove1 = sresults[0].embedding(state[0])->item(0);
@@ -1666,8 +1959,9 @@ Options::ReplaceLinker3(Molecule& m, const Substructure_Results* sresults,
 int
 Options::OkProduct(Molecule& m,
                   atom_number_t a1, atom_number_t f1,
-                  atom_number_t a2, atom_number_t f2) {
-  if (! OkValence(m)) {
+                  atom_number_t a2, atom_number_t f2,
+                  const IWString& frag_name) {
+  if (! OkValence(m, frag_name)) {
     return 0;
   }
   if (AdjacentHeteroatoms(m, a1, f1)) {
@@ -1701,44 +1995,43 @@ Options::ReplaceLinker3(Molecule& m,
     atom_number_t f2 = initial_natoms + frag->attach2();
     atom_number_t f3 = initial_natoms + frag->attach3();
 
-    m.add_molecule(frag);
+    Molecule mcopy(m);
+    mcopy.add_molecule(frag);
 
-    m.add_bond(a1, f1, kSingleBond);
-    m.add_bond(a2, f2, kSingleBond);
-    m.add_bond(a3, f3, kSingleBond);
+    mcopy.add_bond(a1, f1, kSingleBond);
+    mcopy.add_bond(a2, f2, kSingleBond);
+    mcopy.add_bond(a3, f3, kSingleBond);
 
-    if (OkProduct(m, a1, f1, a2, f2, a3, f3)) {
-      Write(m, frag->name(), output);
+    if (OkProduct(mcopy, a1, f1, a2, f2, a3, f3, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
     }
 
-    m.remove_bond_between_atoms(a1, f1);
-    m.remove_bond_between_atoms(a2, f2);
-    m.remove_bond_between_atoms(a3, f3);
+    mcopy.remove_bond_between_atoms(a1, f1);
+    mcopy.remove_bond_between_atoms(a2, f2);
+    mcopy.remove_bond_between_atoms(a3, f3);
 
-    m.add_bond(a1, f2, kSingleBond);
-    m.add_bond(a2, f3, kSingleBond);
-    m.add_bond(a3, f1, kSingleBond);
+    mcopy.add_bond(a1, f2, kSingleBond);
+    mcopy.add_bond(a2, f3, kSingleBond);
+    mcopy.add_bond(a3, f1, kSingleBond);
 
-    if (OkProduct(m, a1, f2, a2, f3, a3, f1)) {
-      Write(m, frag->name(), output);
+    if (OkProduct(mcopy, a1, f2, a2, f3, a3, f1, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
     }
 
-    m.remove_bond_between_atoms(a1, f2);
-    m.remove_bond_between_atoms(a2, f3);
-    m.remove_bond_between_atoms(a3, f1);
+    mcopy.remove_bond_between_atoms(a1, f2);
+    mcopy.remove_bond_between_atoms(a2, f3);
+    mcopy.remove_bond_between_atoms(a3, f1);
 
-    m.add_bond(a1, f3, kSingleBond);
-    m.add_bond(a2, f1, kSingleBond);
-    m.add_bond(a3, f2, kSingleBond);
+    mcopy.add_bond(a1, f3, kSingleBond);
+    mcopy.add_bond(a2, f1, kSingleBond);
+    mcopy.add_bond(a3, f2, kSingleBond);
 
-    if (OkProduct(m, a1, f3, a2, f1, a3, f2)) {
-      Write(m, frag->name(), output);
+    if (OkProduct(mcopy, a1, f3, a2, f1, a3, f2, frag->name())) {
+      Write(mcopy, frag->name(), output);
       ++rc;
     }
-
-    m.resize(initial_natoms);
   }
 
   _linker3_generated += rc;
@@ -1750,8 +2043,9 @@ int
 Options::OkProduct(Molecule& m,
                   atom_number_t a1, atom_number_t f1,
                   atom_number_t a2, atom_number_t f2,
-                  atom_number_t a3, atom_number_t f3) {
-  if (! OkValence(m)) {
+                  atom_number_t a3, atom_number_t f3,
+                  const IWString& frag_name) {
+  if (! OkValence(m, frag_name)) {
     return 0;
   }
   if (AdjacentHeteroatoms(m, a1, f1)) {
@@ -1818,7 +2112,7 @@ ApplicationName(Options& options,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:lcg:i::F:m:M:x:X:p:z:Y:s:q:L:V:");
+  Command_Line cl(argc, argv, "vE:A:lcg:i:F:m:M:x:X:u:z:Y:s:q:L:V:f:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1852,6 +2146,7 @@ Main(int argc, char** argv) {
   } else if (1 == cl.number_elements() && 0 == strcmp(cl[0], "-")) {
     input_type = FILE_TYPE_SMI;
   } else if (! all_files_recognised_by_suffix(cl)) {
+    cerr << "Checking all_files_recognised_by_suffix\n";
     return 1;
   }
 

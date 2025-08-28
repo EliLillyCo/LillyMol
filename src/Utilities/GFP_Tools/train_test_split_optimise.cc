@@ -22,7 +22,11 @@
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 namespace train_test_split {
 
@@ -49,6 +53,7 @@ Usage(int rc) {
   cerr << " -r <n>              report progress every <n> steps\n";
 //  enable once I figure out why this does not work.
 //  cerr << " -T <dist>           discard neighbours <dist>\n";
+  cerr << " -x <n>              abandon optimisation of <n> steps since last switch accepted\n";
   cerr << " -v                  verbose output\n";
 // clang-format on
   
@@ -290,6 +295,9 @@ class Optimise {
     // Activated by the -r option.
     Report_Progress _report_progress;
 
+    // If nothing is accepted for this many steps, abandon optimisation.
+    uint32_t _abandon_if;
+
   // Private functions.
     uint32_t GatherIdentifiers(const char* fname,
                             std::unordered_map<std::string, std::uint32_t>& id_to_ndx);
@@ -353,6 +361,8 @@ Optimise::Optimise() {
   _name = nullptr;
   _times_in_train = nullptr;
 
+  _abandon_if = 0;
+
   std::random_device rd;
   _rng.seed(rd());
 }
@@ -411,6 +421,16 @@ Optimise::Initialise(const Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Will perform " << _nopt << " optimisation attempts\n";
+    }
+  }
+
+  if (cl.option_present('x')) {
+    if (! cl.value('x', _abandon_if) || _abandon_if < 100) {  // 100 is arbitrary
+      cerr << "The abandon if too long since last successful switch (-x) must be a number > 100\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will abandon optimistion of " << _abandon_if << " unsuccessful steps have been tried\n";
     }
   }
 
@@ -867,6 +887,13 @@ Optimise::MakeSplit(int split) {
       break;
     }
 
+    if (_abandon_if > 0 && (j - last_successful_switch > _abandon_if)) {
+      if (_verbose) {
+        cerr << "Abandon optimisation, steps " << j << " last successful " << last_successful_switch << '\n';
+      }
+      break;
+    }
+
 #ifdef DEBUG_SWAP_ITEMS
     auto r = RecomputeCurrentScore();
     cerr << j << " compute " << r << " new_score " << new_score << '\n';
@@ -1096,7 +1123,7 @@ Optimise::Report(std::ostream& output) const {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:t:");
+  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:t:x:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

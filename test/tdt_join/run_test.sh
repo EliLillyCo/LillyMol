@@ -1,12 +1,16 @@
 #! /bin/bash
+declare -i failures=0
 for dir in ./*; do
     if [ -d "$dir" ]; then
-        current_path= pwd &> /dev/null
-        pushd "$dir" &> /dev/null
-        if [ -f "run_case.sh" ]
+        if [ -x "${dir}/run_case.sh" ]
         then
-            ./run_case.sh
+            cd ${dir} && ./run_case.sh
+            echo "Return code $?"
+            if [[ $? -ne 0 ]] ; then
+              failures=$((failures+1))
+            fi
         fi
-        popd $current_path &> /dev/null
     fi
 done
+
+exit ${failures}

@@ -1,0 +1,10 @@
+(0 Query
+  (1 Ring_System_Specifier
+    (A I number_non_spinach_groups 1)
+    (A I nrings 1)
+    (A I min_heteroatom_count 2)
+    (A I aromatic_ring_count 1)
+    (A I max_atoms_in_spinach_group 4)
+    (A I ring_size 5)
+  )
+)

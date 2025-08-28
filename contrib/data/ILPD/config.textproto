@@ -1,0 +1,23 @@
+applied_to_neutral: "SMARTS:B"
+applied_to_neutral: "SMARTS:[ND1H2]-c"
+applied_to_neutral: "SMARTS:[ND2H]-c"
+
+chain_dividers: "PROTOFILE:${LILLYMOL_HOME}/contrib/data/ILPD/flist"
+chain_dividers: "PROTO:${LILLYMOL_HOME}/contrib/data/ILPD/cholesterol.qry"
+chain_dividers: "PROTO:${LILLYMOL_HOME}/contrib/data/ILPD/special_divider1.qry"
+
+min_chain_length: 3
+min_atoms_in_all_carbon_chain: 3
+
+between_linker_query: "SMARTS:O=C-O-C-C-O-C=O"
+between_linker_query: "SMARTS:O=C-O-C-C-C-O-C=O"
+
+carbon_chain_join: "SMARTS:[CD3G0](-{a>3;h0}[CD2H2])-{a>4;h0}[CD2H2]"
+
+break_tail_at_attachment: "SMARTS:[1N]"
+
+break_head_at: "SMARTS:[ND3](-{a>10}[R0])-{a>10}[R0]"
+
+head_linker_tail: true
+
+label_chains_from_head: true

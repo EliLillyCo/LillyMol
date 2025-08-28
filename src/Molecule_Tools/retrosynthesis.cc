@@ -34,7 +34,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/retrosynthesis.pb.h"
+#else
+#include "retrosynthesis.pb.h"
+#endif
 
 typedef unsigned int atype_t;
 

@@ -2,15 +2,14 @@ description {
   feature_name: "w_lrsz"
   description: "Size of largest ring"
   plot_title: "Size of largest ring"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 32.0
-mean: 6.05312
+maxval: 42.0
+mean: 6.041419
 median: 6.0
 quantile {
   quantile: 0.01
-  value: 4.0
 }
 quantile {
   quantile: 0.05
@@ -34,108 +33,152 @@ quantile {
 }
 quantile {
   quantile: 0.99
-  value: 9.0
+  value: 8.0
 }
 int_values {
-  count: 453
+  count: 19402
 }
 int_values {
   value: 3
-  count: 34
+  count: 1189
 }
 int_values {
   value: 4
-  count: 20
+  count: 691
 }
 int_values {
   value: 5
-  count: 1091
+  count: 37882
 }
 int_values {
   value: 6
-  count: 45740
+  count: 1689746
 }
 int_values {
   value: 7
-  count: 1923
+  count: 73233
 }
 int_values {
   value: 8
-  count: 214
+  count: 7772
 }
 int_values {
   value: 9
-  count: 45
+  count: 1564
 }
 int_values {
   value: 10
-  count: 52
+  count: 1533
 }
 int_values {
   value: 11
-  count: 31
+  count: 955
 }
 int_values {
   value: 12
-  count: 70
+  count: 2744
 }
 int_values {
   value: 13
-  count: 44
+  count: 1458
 }
 int_values {
   value: 14
-  count: 79
+  count: 2847
 }
 int_values {
   value: 15
-  count: 34
+  count: 1375
 }
 int_values {
   value: 16
-  count: 47
+  count: 1733
 }
 int_values {
   value: 17
-  count: 12
+  count: 455
 }
 int_values {
   value: 18
-  count: 61
+  count: 1744
 }
 int_values {
   value: 19
-  count: 20
+  count: 726
 }
 int_values {
   value: 20
-  count: 8
+  count: 325
 }
 int_values {
   value: 21
-  count: 6
+  count: 189
 }
 int_values {
   value: 22
-  count: 3
+  count: 129
 }
 int_values {
   value: 23
-  count: 4
+  count: 45
 }
 int_values {
   value: 24
-  count: 5
+  count: 148
+}
+int_values {
+  value: 25
+  count: 22
 }
 int_values {
   value: 26
-  count: 1
+  count: 22
+}
+int_values {
+  value: 27
+  count: 16
 }
 int_values {
   value: 28
-  count: 2
+  count: 40
+}
+int_values {
+  value: 29
+  count: 14
+}
+int_values {
+  value: 30
+  count: 21
+}
+int_values {
+  value: 31
+  count: 8
 }
 int_values {
   value: 32
+  count: 15
+}
+int_values {
+  value: 33
+  count: 7
+}
+int_values {
+  value: 34
+  count: 5
+}
+int_values {
+  value: 35
+  count: 1
+}
+int_values {
+  value: 36
+  count: 2
+}
+int_values {
+  value: 40
+  count: 2
+}
+int_values {
+  value: 42
   count: 1
 }

@@ -1,0 +1,65 @@
+{
+  "executable": "clogp2descriptors_biobyte",
+    "test": [
+        {
+          "name": "default",
+          "args": [ "#{datadir}/in.clp" ]
+        },
+
+        {
+          "name": "filter",
+          "args": [
+              "-c 2.0 -C 4.0 -a -B Bfile -b #{datadir}/in.clp"
+          ]
+        },
+
+        {
+          "name": "logd_default",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} #{datadir}/in.clp"
+          ]
+        },
+
+        {
+          "name": "logd_filter",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} -d 2.0 -D 4.0 -B Bfile -b -a #{datadir}/in.clp"
+          ]
+        },
+
+        {
+          "name": "logp_fingerprint",
+          "args": [
+              "-J NCCLP -p 15 #{datadir}/in.clp"
+          ]
+        },
+
+        {
+          "name": "logd_fingerprint",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} -J NCCLP -p 10 #{datadir}/in.clp"
+          ]
+        },
+
+        {
+          "name": "rerun_charge_assigner_queries",
+          "preamble": [
+             "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries"
+          ],
+          "args": [
+              "-N F:${CHARGES} -r #{datadir}/in.clp"
+          ]
+        }
+      ]
+    }
+  
+}

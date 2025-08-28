@@ -12,8 +12,12 @@
 
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/substructure.h"
-#include "Molecule_Tools/ring_closure.pb.h"
 #include "Molecule_Lib/temp_detach_atoms.h"
+#ifdef BUILD_BAZEL
+#include "Molecule_Tools/ring_closure.pb.h"
+#else
+#include "ring_closure.pb.h"
+#endif
 
 namespace ring_closure {
 

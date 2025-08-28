@@ -1,0 +1,19 @@
+name: "Ester-amide_isosteres.reversed_amino-1-2-4-oxazole"
+comment: "[NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]>>[#6:1]Nc=1oc(=nn=1)[#6:2] reversed amino-1,2,4-oxazole"
+
+
+scaffold {
+  id: 0
+  smarts: "[OD1]=[CD3R0]([#6])[N,O;D2][CX4,c]"
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+  remove_atom: [0, 1, 3]
+}
+sidechain {
+  id: 1
+  reagent: "Nc1ocnn1"
+  smarts: "Nc1ocnn1"
+  single_bond: [2, 0]
+  single_bond: [4, 3]
+}

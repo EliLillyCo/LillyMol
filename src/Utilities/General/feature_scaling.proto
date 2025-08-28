@@ -2,6 +2,14 @@ syntax = "proto3";
 
 package FeatureScaling;
 
+// Likely written by iwstats
+// A linear adjustment applied to the predicted values after then are scaled back
+// to // the training set range.
+message LinearAdjustment {
+  optional float slope = 1;
+  optional float intercept = 2;
+}
+
 message FeatureScaling {
   // The range of the features
   double min = 1;
@@ -20,4 +28,10 @@ message FeatureScaling {
     R11 = 2;
   }
   optional RangeType range_type = 5;
+
+  // The name of the file(s) from which these results were generated.
+  // Mostly for helping keep track of things.
+  repeated string from_file = 6;
+
+  optional LinearAdjustment linear_adjustment = 7;
 };

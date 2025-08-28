@@ -1,0 +1,9 @@
+(0 Query
+  (A I version 2)
+  (A I min_strongly_fused_ring_count 1)
+  (0 ring_system_specifier
+    (A I min_strongly_fused_ring_count 1)
+    (A I min_natoms 10)
+    (A I min_nrings 3)
+  )
+)

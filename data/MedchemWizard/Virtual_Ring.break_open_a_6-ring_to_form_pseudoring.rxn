@@ -3,10 +3,10 @@
 
   (A C Comment "Virtual_Ring.break_open_a_6-ring_to_form_pseudoring")
   (0 Scaffold
-    (A C smarts "[F,Cl,Br,I]c1aac([F,Cl,Br,I])aa1")
+    (A C smarts "[C]c1aac([C,O,N])aa1")
     (A I remove_atom (6 7))
     (A I single_bond (1 2))
-    (A I single_bond (2 3))
+    (A I double_bond (2 3))
     (A I single_bond (3 4))
     (A C change_element "1 N")
   )

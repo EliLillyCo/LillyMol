@@ -95,6 +95,8 @@ Ring::set_fused_to(Ring * r, int bic)
   assert(ok());
   assert(r->ok());
 
+  // std::cerr << "ring::set_fused_to: lhs " << *this << " rhs " << *r << " bic " << bic << '\n';
+
   _fused_neighbours.add_if_not_already_present(r);
 
   if (bic > _largest_number_of_bonds_shared_with_another_ring)
@@ -302,7 +304,7 @@ int
 Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
 {
 #ifdef DEBUG_SET_BONDS_IN_RING
-  cerr << "Finding bonds for ring " << (*r) << endl;
+  cerr << "Finding bonds for ring " << (*r) << '\n';
   cerr << "Hits bonds";
 #endif
 
@@ -324,7 +326,7 @@ Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
   }
 
 #ifdef DEBUG_SET_BONDS_IN_RING
-  cerr << endl;
+  cerr << '\n';
 #endif
 
   return 1;
@@ -350,7 +352,7 @@ Molecule::_set_bonds_in_ring(IW_Bits_Base * bits, const Ring * r)
   }
 
 #ifdef DEBUG_SET_BONDS_IN_RING
-  cerr << endl;
+  cerr << '\n';
 #endif
 
   return 1;

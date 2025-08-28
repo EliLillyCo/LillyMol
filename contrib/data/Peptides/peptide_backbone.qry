@@ -1,0 +1,54 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Peptide Backbone")
+# (A C smarts "[OD1]=[C!r4]([/IWxN,OD1])C-N")    # allow either terminal N or N continuing
+  (A I sort_by_preference_value 1)
+  (0 Query_Atom
+    (A I atomic_number 8)
+    (A I ncon 1)
+  )
+  (1 Query_Atom
+    (6 Query_Atom_Specifier
+      (A I atomic_number 6)
+    )
+    (7 Query_Atom_Specifier
+      (A I rejection 1)
+      (A C operator "and")
+      (A I ring_size 4)
+    )
+    (A I double_bond 0)
+  )
+  (2 Query_Atom
+    (A I include_in_embedding 0)
+    (8 Query_Atom_Specifier
+      (A I atomic_number 7)
+    )
+    (9 Query_Atom_Specifier
+      (A I atomic_number 8)
+      (A I ncon 1)
+      (A C operator "or")
+    )
+    (10 Query_Atom_Specifier
+      (A I atomic_number 16)
+      (A I ncon 2)
+      (A C operator "or")
+    )
+    (A I single_bond 1)
+  )
+  (3 Query_Atom
+    (A I atomic_number 6)
+    (A I single_bond 1)
+  )
+  (4 Query_Atom
+    (A I atomic_number 7)
+    (A I single_bond 3)
+    (10 Query_Atom_Preference
+      (A I ncon 2)
+      (A I preference_value 20)
+    )
+    (11 Query_Atom_Preference
+      (A I ncon 1)
+      (A I preference_value 10)
+    )
+  )
+)

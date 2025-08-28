@@ -88,7 +88,7 @@ IWString_and_File_Descriptor::open(const char * fname)
 
   int mode;
 
-  if (strlen_fname > 2 && 0 == ::strcmp(fname, ">>"))
+  if (strlen_fname > 2 && 0 == ::strncmp(fname, ">>", 2))
   {
     fname += 2;
     mode = O_WRONLY | O_APPEND | O_CREAT;

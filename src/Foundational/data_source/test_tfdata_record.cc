@@ -26,7 +26,7 @@ TestWriteRead(const std::string& fname) {
   }
   constexpr int nitmes = 10;
   for (int i = 0; i < nitmes; ++i) {
-    JustForTesting::TestMessage message;
+    just_for_testing::TestMessage message;
     message.set_i(-i);
     message.set_u(i);
 
@@ -45,7 +45,7 @@ TestWriteRead(const std::string& fname) {
     if (! maybe_data) {
       break;
     }
-    JustForTesting::TestMessage message;
+    just_for_testing::TestMessage message;
     std::string as_string(maybe_data->data(), maybe_data->length());
     if (! message.ParseFromString(as_string)) {
       cerr << "Invalid data for i=" << items_read << '\n';

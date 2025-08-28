@@ -59,12 +59,13 @@ When building a rings database, extract all representations, which one
 to use can be decided at lookup time.
 ```
 smi2rings_bdb -d STORE -d /dev/shm/collection.rings.bdb -g all -v -n \
-    -j ring -j iso -j env=UST:achry -j double -j spiro -z 8 -N add collection.smi
+    -Y hash -j ring -j iso -j env=UST:achry -j double -j spiro \
+    -z 8 -N add collection.smi
 ```
 
 ### -d STORE -d /dev/shm/collection.rings.bdb
 Specify the database to be built. Note that large Berkeley databases can
-suffer performance problems if on nfs mounted file systems.
+suffer performance problems if built on nfs mounted file systems.
 
 ### -g all -v -n
 Chemical standardisation, verbose, and suppress normal standard output -
@@ -73,14 +74,18 @@ which is a list of the rings produced.
 ### -j options
 
 -j double: Append exocyclic doubly bonded atoms to the ring. This will be very
-important for aromaticity. 
+important for aromaticity. This should be used all the time, perhaps it should
+not be an option.
 
 -j spiro: Ring systems span spiro fusions - by default in LillyMol ring systems
-do not span spiro fusions.
+do not span spiro fusions. In this situation you probably do want this.
 
--j ring: store the unsubstitued ring. No information about substitution.
+-j iso: Generate the version with an isotope (1) at the attachment point(s). During
+lookup this means that a molecule will only match if all the ring atoms are the
+same, but the substitution pattern must also match.
 
--j iso: Generate the version with an isotope (1) at the attachment point(s).
+-j ring: store/retrieve the unsubstitued ring. No information about substitution.
+During lookups, a ring will match regardless of the substitution pattern.
 
 -j env=UST:achry: Generate a version where the atom type of the attached
 atom is placed as an isotopic label in the ring. This will likely lead to
@@ -91,9 +96,36 @@ in LillyMol. There is no 'right' or 'best' atom type to use. This one includes
 the aromaticity, number of connections, number of hydrogens, ring and compressed
 atomic number.
 
--z 8: do not store any ring with more than 8 atoms.
+-z 8: do not store any ring with more than 8 atoms. Note that this means that
+during lookup if a ring contains more than 8 atoms, it will not be found.
 
--N add: In the case of [n+] atoms, add the connected atom.
+-N add: In the case of [n+] atoms, add the connected atom. You probably want this.
+
+-Y hash
+By default, smi2rings_bdb writes each ring to the database as it is found.
+If that ring is found again, the number of examples already encountered
+must be fetched from the database, the count incremented and the proto is
+written back to the database. That can be quite inefficient. The `-Y hash`
+combination holds all ring information in memory and only writes the
+database once all molecules have been read.
+
+For example processing a collection of about 2.7M molecules 6:31
+minutes with the default invocation but only 5:09 using the hash.
+
+-Y scaffold
+The ring systems of a molecule are just a well defined subset of atoms.
+The scaffold is another such well defined set, so instead of storing
+ring systems, the scaffold can be stored and used for lookups.
+Note that if you build a database with `-Y scaffold` and then want
+to do scaffold lookups, you must also specify that during lookups
+```
+smi2rings_bdb -d /path/to/db.bdb -Y scaffold -d LOOKUP ... unknown.smi
+```
+It is an interesting thought experiment to consider what would happen if we
+stored the scaffold complement, the molecular 'spinach' in the database
+instead. Given an active molecule we could then find other molecules
+that presented the same functional groups, but with different
+cores. Kind of like ring replacement, but for scaffolds.
 
 Other options to consider:
 
@@ -130,7 +162,7 @@ that there will be instances of aromatic forms that cannot be decoded.
 
 When operating in
 lookup mode, `smi2rings_bdb` can open multiple databases, just specify
-multiple -d options. 
+multiple -d options. But only one database during building.
 
 ### Concatenation
 As we see above, the count is the second token in the database value. So
@@ -139,12 +171,17 @@ if you wish to concatenate multiple databases it can be done with
 iwbdb_cat -d result.bdb -v -R 2 split1.bdb split2.bdb ...
 ```
 Or if you have multiple collections, use this to make an aggregate
-database, to avoid having to open multiple databases.
+database, to avoid having to open multiple databases. Note that
+using the column ordering is not robust, better would be to
+write a tool that parsed the proto.
+
+During lookup, it can be handy to know how the processing is progressing, use
+`-Y rpt=<nn>` to have smi2rings_bdb report every <nn> molecules processed.
 
 ## Lookup
 Once the known collections have been profiled, new molecules can be looked up
 ```
-smi2rings_bdb -d LOOKUP -d collection1.bdb -d collection2.bdb... -n -v unknown.smi
+smi2rings_bdb -d LOOKUP -d collection1.bdb -d collection2.bdb... -v unknown.smi
 ```
 specifying via the -j option(s) which ring forms to lookup
 
@@ -159,13 +196,22 @@ O1CC(N=C1C1=NC(=CC=C1)C1=NC(C(C)C)CO1)C(C)C PBCHM500120 URS:3 CHEMBL3652777 3, 6
 The first tokens are the smiles and ID of the input molecule.
 
 Following is a URS:<n> token that us the number of instances of the rarest
-ring in the PBCHM500120, in this case in the database_
+ring in PBCHM500120, in this case in that rarest ring was found
+in the Chembl rings database, id CHEMBL3652777.
 
 If the ring is found, the name of the exemplar structure in the database will
 be reported.
 
 Following that will be a variable number of tokens, according to the number
 of ring systems in the input molecule, and the 'URS' score for each one.
+
+Note that in practice most databases are built with a limit on the ring size
+stored. This can create confusion if a query molecule with a ring larger than what
+is stored in the database is used. The output will show 'URS:0' which means
+the molecule contains a ring not in the database. But that molecule may have
+been in the file from which the database was built. It may be convenient to
+add `-Y applarge` which appends to each molecule with URS:0 the size of the
+largest ring in that molecule.
 
 #### -Y proto
 This enables output of Smi2Rings::Results protos.
@@ -190,5 +236,4 @@ and there are 28k instances in the database.
 You can use the tool as a filter with the '-f' option. This allows specifying
 a minimum 'URS' value for output. Note again that most collections contain
 likely data entry errors. In practice, we have found a value of 5 or 10 for '-f' to
-be a reasonable compromise.
-
+be a reasonable compromise. Adjust to taste.

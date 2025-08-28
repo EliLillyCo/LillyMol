@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package bond_length_distribution;
+
+message BondLengthDistribution {
+  optional uint32 atomic_number1 = 1;
+  optional uint32 atomic_number2 = 2;
+
+  // By convention we discretise distances to buckets of 0.01 Angstroms.
+  // We subtract 1.0 from each distance and bucketise that distance and
+  // use that value as an array index.
+  repeated uint32 single = 3;
+  repeated uint32 double = 4;
+  repeated uint32 triple = 5;
+  repeated uint32 aromatic = 6;
+}

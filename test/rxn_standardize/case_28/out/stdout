@@ -1,0 +1,3 @@
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[OH2:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test7
+[CH3:1][CH2:2][Cl:3]+[ClH:4]+C1=CC=CC=C1>[OH2:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test8
+[CH3:1][CH2:2][Cl:3]+[ClH:4]>[OH2:5]>[CH3:1][CH2:2][Cl:3]+[ClH:4] Rxn_Standardize_Test9

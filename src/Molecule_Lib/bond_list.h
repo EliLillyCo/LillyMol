@@ -9,7 +9,7 @@ class Beep;
 
 #define BOND_LIST_MAGIC -134211
 
-class Bond_list : public resizable_array_p<Bond>
+class BondList : public resizable_array_p<Bond>
 {
   private:
     magic_number_t _magic;
@@ -19,14 +19,14 @@ class Bond_list : public resizable_array_p<Bond>
     int _maximum_connectivity (int *, int) const;
 
   public:
-    Bond_list ();
-    ~Bond_list ();
+    BondList ();
+    ~BondList ();
 
     int ok () const;
 
     int debug_print (std::ostream &) const;
 
-    Bond_list & operator = (Bond_list && rhs);
+    BondList & operator = (BondList && rhs);
 
     int nbonds () const { return _number_elements;}
 

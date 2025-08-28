@@ -1,0 +1,5 @@
+# various things for getting rid of ungly ring things
+
+(0 Query
+  (A I min_nrings 7)
+)

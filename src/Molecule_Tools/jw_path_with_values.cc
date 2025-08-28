@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -117,13 +118,15 @@ Path_with_values::Path_with_values(const Path_with_values& p, atom_number_t a1,
   _max_path_length = p._max_path_length;
   _atom_numbers_in_path = new int[_max_path_length];
 
-  copy_vector(_atom_numbers_in_path, p._atom_numbers_in_path, _max_path_length);
+//  copy_vector(_atom_numbers_in_path, p._atom_numbers_in_path, _max_path_length);
+  std::copy_n(p._atom_numbers_in_path, _max_path_length, _atom_numbers_in_path);
 
   _atom_numbers_in_path[a1] = 1;
   _atom_numbers_in_path[a2] = 1;
 
   _values = new double[_number_values];
-  copy_vector(_values, values, _number_values);
+//  copy_vector(_values, values, _number_values);
+  std::copy_n(values, _number_values, _values);
 };
 
 Path_with_values::~Path_with_values() {

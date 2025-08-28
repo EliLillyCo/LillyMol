@@ -513,12 +513,6 @@ jw_cat_search(Molecule& m, IWString_and_File_Descriptor& output, int donor_accep
   if (fingerprint_tag.length() > 0) {
     do_fingerprint_output(m, array_size, scaled_counts, output);
 
-    if (function_as_gfp_filter) {
-      ;
-    } else {
-      output << "|\n";
-    }
-
     if (flush_after_every_molecule) {
       output.flush();
     }

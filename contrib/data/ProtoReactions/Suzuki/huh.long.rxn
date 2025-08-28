@@ -1,0 +1,28 @@
+name: "suzuki"
+scaffold {
+  id: 0
+  smarts: "[Li]-c"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}
+sidechain {
+  id: 1
+  smarts: "[B;R0](O)(O)-c"
+  break_bond {
+    a1: 0
+    a2: 3
+  }
+  remove_fragment: 0
+  isotope {
+    atom: 3
+    isotope: 2
+  }
+  join {
+    a1: 1
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

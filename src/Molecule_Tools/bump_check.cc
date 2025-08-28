@@ -33,6 +33,7 @@ Usage(int rc) {
   cerr << " -q <qury>         specify atom pairs as queries\n";
   cerr << " -S <fname>        write passing molecules to <fname>\n";
   cerr << " -U <fname>        write failing molecules to <fname>\n";
+  cerr << " -d <nbonds>       do not consider atoms unless they are more than <nbonds> separated\n";
   cerr << " -c                remove chirality\n";
   cerr << " -l                strip to largest fragment\n";
   cerr << " -v                verbose output\n";
@@ -62,6 +63,9 @@ class CheckTooClose {
     int _exclude_hydrogen;
 
     resizable_array_p<Substructure_Query> _query;
+
+    // the -d option. Do not check atoms that are closer than this.
+    int _min_bond_separation;
 
     // Write molecules that do NOT violate bump checks.
     Molecule_Output_Object _output;
@@ -106,6 +110,7 @@ CheckTooClose::CheckTooClose() {
   _report_too_short = 0;
   _exclude_hydrogen = 0;
   _reduce_to_largest_fragment = 0;
+  _min_bond_separation = 0;
   _remove_chirality = 0;
   _input_type = FILE_TYPE_INVALID;
 }
@@ -212,7 +217,17 @@ CheckTooClose::Initialise(Command_Line& cl) {
     q->set_perceive_symmetry_equivalent_matches(0);
   }
 
-  set_append_coordinates_after_each_atom(1);
+  if (cl.option_present('d')) {
+    if (! cl.value('d', _min_bond_separation) || _min_bond_separation < 2) {
+      cerr << "The min bond separation option (-d) must be a whole +ve number\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will only check atoms separate by more than " << _min_bond_separation << " bonds\n";
+    }
+  }
+
+  lillymol::set_include_coordinates_with_smiles(1);
 
   if (cl.option_present('S')) {
     _output.add_output_type(FILE_TYPE_SMI);
@@ -337,6 +352,10 @@ CheckTooClose::Process(Molecule& m) {
     }
   }
 
+  if (_min_bond_separation > 0) {
+    m.recompute_distance_matrix();
+  }
+
   int too_close = 0;
 
   for (int i = 0; i < matoms; ++i) {
@@ -347,6 +366,7 @@ CheckTooClose::Process(Molecule& m) {
     if (_exclude_hydrogen && m.atomic_number(i) == 1) {
       continue;
     }
+
     for (int j = i + 1; j < matoms; ++j) {
       if (! process_atom[j]) {
         continue;
@@ -365,6 +385,11 @@ CheckTooClose::Process(Molecule& m) {
       }
 
       if (_skip_adjacent && JoinedToSameAtom(m, i, j)) {
+        continue;
+      }
+
+      if (_min_bond_separation > 0 &&
+          m.bonds_between(i, j) <= _min_bond_separation) {
         continue;
       }
 
@@ -468,7 +493,7 @@ BumpCheck(CheckTooClose& check_too_close,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:i:g:lcs:q:S:U:t:xrhR");
+  Command_Line cl(argc, argv, "vE:A:i:g:lcs:q:S:U:t:xrhRd:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);

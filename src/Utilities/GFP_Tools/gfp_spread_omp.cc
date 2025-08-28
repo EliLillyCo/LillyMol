@@ -65,6 +65,7 @@ static Accumulator<similarity_type_t> nearest_selected_neighbour_distance;
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
 static IWString distance_tag("DIST<");
+static IWString scale_tag("SCALE<");
 
 static IWString previously_computed_nn_distance_tag;
 
@@ -94,12 +95,11 @@ static similarity_type_t longest_distance_recognised =
 
 static int
 get_previously_computed_nearest_neighbour(
-    Spread_Object& p, const IW_STL_Hash_Map_float& previously_computed_distances)
-{
+    Spread_Object& p, const IW_STL_Hash_Map_float& previously_computed_distances) {
   IW_STL_Hash_Map_float::const_iterator f = previously_computed_distances.find(p.id());
 
-  if (f ==
-      previously_computed_distances.end()) {  // OK if no previously computed distance
+  // OK if no previously computed distance
+  if (f == previously_computed_distances.end()) {
     return 1;
   }
 
@@ -111,8 +111,7 @@ get_previously_computed_nearest_neighbour(
 static int
 get_previously_computed_nearest_neighbour(
     const IW_TDT& tdt, Spread_Object& p,
-    const IWString& previously_computed_nn_distance_tag)
-{
+    const IWString& previously_computed_nn_distance_tag) {
   similarity_type_t d;
   if (!tdt.dataitem_value(previously_computed_nn_distance_tag, d)) {
     return 0;
@@ -137,8 +136,7 @@ get_previously_computed_nearest_neighbour(
 
 static int
 build_pool(iwstring_data_source& input,
-           const IWString& previously_computed_nn_distance_tag)
-{
+           const IWString& previously_computed_nn_distance_tag) {
   assert(pool_size > 0);
   // cerr << "Pool ptr " << poolptr << ", pool size " << pool_size << '\n';
   assert(poolptr >= 0 && poolptr < pool_size);
@@ -203,8 +201,7 @@ build_pool(iwstring_data_source& input,
 }
 
 static int
-allocate_pool()
-{
+allocate_pool() {
   assert(pool_size > 0);
   assert(NULL == pool);
 
@@ -222,8 +219,7 @@ allocate_pool()
 }
 
 static int
-build_pool(const char* fname, const IWString& previously_computed_nn_distance_tag)
-{
+build_pool(const char* fname, const IWString& previously_computed_nn_distance_tag) {
   iwstring_data_source input(fname);
   if (!input.ok()) {
     cerr << "Cannot open '" << fname << "' for input\n";
@@ -249,8 +245,7 @@ build_pool(const char* fname, const IWString& previously_computed_nn_distance_ta
 }
 
 static int
-do_squeeze_pool(Spread_Object* pool, int& pool_size)
-{
+do_squeeze_pool(Spread_Object* pool, int& pool_size) {
   int iptr = 0;
   for (int i = 0; i < pool_size; i++) {
     if (pool[i].selected()) {
@@ -276,8 +271,7 @@ do_squeeze_pool(Spread_Object* pool, int& pool_size)
 
 #ifdef NOT_USED_QWLEQWE
 static int
-rescan_for_no_neighbours(iwstring_data_source& input, IW_TDT_Filter& filter)
-{
+rescan_for_no_neighbours(iwstring_data_source& input, IW_TDT_Filter& filter) {
   resizable_array<Spread_Object*> to_scan;
   to_scan.resize(pool_size);
 
@@ -332,8 +326,7 @@ rescan_for_no_neighbours(iwstring_data_source& input, IW_TDT_Filter& filter)
 #endif
 
 static int
-establish_initial_distances(iwstring_data_source& input)
-{
+establish_initial_distances(iwstring_data_source& input) {
   int ntdt = 0;
 
   IW_TDT tdt;
@@ -388,8 +381,7 @@ establish_initial_distances(iwstring_data_source& input)
 }
 
 static int
-establish_initial_distances(const const_IWSubstring& fname)
-{
+establish_initial_distances(const const_IWSubstring& fname) {
   static int first_call = 1;
 
   if (first_call) {
@@ -428,8 +420,7 @@ establish_initial_distances(const const_IWSubstring& fname)
 static int use_atom_count_window = 0;
 
 static void
-do_object_has_been_selected_tversky(int isel)
-{
+do_object_has_been_selected_tversky(int isel) {
   Spread_Object& fpsel = pool[isel];
 
   for (int i = 0; i < pool_size; i++) {
@@ -448,8 +439,7 @@ do_object_has_been_selected_tversky(int isel)
 }
 
 static void
-do_object_has_been_selected_no_blurring(int isel)
-{
+do_object_has_been_selected_no_blurring(int isel) {
   Spread_Object& fpsel = pool[isel];
 
   for (int i = 0; i < pool_size; i++) {
@@ -464,8 +454,7 @@ do_object_has_been_selected_no_blurring(int isel)
 }
 
 static void
-do_object_has_been_selected_with_blurring(int isel)
-{
+do_object_has_been_selected_with_blurring(int isel) {
   Spread_Object& fpsel = pool[isel];
 
   for (int i = 0; i < pool_size; i++) {
@@ -480,8 +469,7 @@ do_object_has_been_selected_with_blurring(int isel)
 }
 
 static void
-do_object_has_been_selected_with_distance_cutoff(int isel)
-{
+do_object_has_been_selected_with_distance_cutoff(int isel) {
   Spread_Object& fpsel = pool[isel];
   for (int i = 0; i < pool_size; i++) {
     if (pool[i].selected() || i == isel) {
@@ -495,8 +483,7 @@ do_object_has_been_selected_with_distance_cutoff(int isel)
 }
 
 static void
-do_object_has_been_selected(int isel)
-{
+do_object_has_been_selected(int isel) {
   if (tversky.active()) {
     do_object_has_been_selected_tversky(isel);
   } else if (static_cast<float>(0.0) != blurr_distances) {
@@ -511,8 +498,7 @@ do_object_has_been_selected(int isel)
 }
 
 static similarity_type_t
-compute_the_distance(Spread_Object& fp1, Spread_Object& fp2)
-{
+compute_the_distance(Spread_Object& fp1, Spread_Object& fp2) {
   if (tversky.active()) {
     return static_cast<similarity_type_t>(1.0) -
            fp1.IW_General_Fingerprint::tversky(fp2, tversky);
@@ -522,8 +508,7 @@ compute_the_distance(Spread_Object& fp1, Spread_Object& fp2)
 }
 
 static int
-choose_largest_previously_computed_distance()
-{
+choose_largest_previously_computed_distance() {
   int rc = -1;
   similarity_type_t dmax = static_cast<similarity_type_t>(0.0);
 
@@ -554,8 +539,7 @@ choose_largest_previously_computed_distance()
 */
 
 static int
-item_with_highest_scale_factor()
-{
+item_with_highest_scale_factor() {
   float highest_scale = pool[0].scale();
   int rc = 0;
 
@@ -574,8 +558,7 @@ item_with_highest_scale_factor()
 */
 
 static int
-do_start_with_object_furthest_from_everything(int& istart)
-{
+do_start_with_object_furthest_from_everything(int& istart) {
   int id_of_further_distance_encountered = -1;
   similarity_type_t furthest_distance_encountered = 0.0;
 
@@ -602,8 +585,7 @@ do_start_with_object_furthest_from_everything(int& istart)
 }
 
 static int
-do_start_with_object_furthest_from_first(int& istart)
-{
+do_start_with_object_furthest_from_first(int& istart) {
   resizable_array<int> already_done;
   already_done.resize(start_with_object_furthest_from_first);
   similarity_type_t furthest_distance_encountered = 0.0;
@@ -658,8 +640,7 @@ do_start_with_object_furthest_from_first(int& istart)
 }
 
 static int
-furthest_from_already_selected()
-{
+furthest_from_already_selected() {
   int rc = 0;
   similarity_type_t maxd = pool[0].distance();
 
@@ -681,8 +662,7 @@ furthest_from_already_selected()
 }
 
 static int
-fpobj_spread(IWString_and_File_Descriptor& output)
-{
+fpobj_spread(IWString_and_File_Descriptor& output) {
   int first_selected;
 
   if (choose_first_item_randomly) {
@@ -778,7 +758,7 @@ fpobj_spread(IWString_and_File_Descriptor& output)
     output << smiles_tag << sid.smiles() << ">\n";
     output << identifier_tag << sid.id() << ">\n";
     if (static_cast<float>(1.0) != fpsel.scale()) {
-      output << "SCALE<" << fpsel.scale() << ">\n";
+      output << scale_tag << fpsel.scale() << ">\n";
     }
     output << distance_tag << fpsel.distance()
            << ">\n";  // the sid object does not know about any scaling of the distance
@@ -834,9 +814,8 @@ fpobj_spread(IWString_and_File_Descriptor& output)
 }
 
 static void
-usage(int rc)
-{
-// clang-format off
+usage(int rc) {
+  // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
 #else
@@ -844,57 +823,73 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Usage <options> <input_file>\n";
-  cerr << " -s <number>      specify max pool size\n";
-  cerr << " -n <number>      specify how many items to select\n";
-  cerr << " -t <dist>        stop selection once distance drops below <dist>\n";
-  cerr << " -A <file>        specify file of already selected items\n";
-  cerr << " -N <tag>         gfp_nearneighbours has been run and initial distances are in <tag>\n";
-  cerr << " -p COL=<col>     distance scaling factor is column <col> of name\n";
-  cerr << " -p <tag>         specify distance scaling factor in <tag>\n";
-  cerr << " -p FILE=<fname>  distance scaling factors in <fname>\n";
-  cerr << " -p oknoscale     ok if not all items have a distance scaling factor - will default to 1.0\n";
-  cerr << " -r <number>      report progress of initial distance assignments\n";
-  cerr << " -S ...           options for specifying first item selected, enter '-S help'\n";
-  cerr << " -M ...           miscellaneous options, enter '-M help' for info\n";
-  cerr << " -b <number>      \"blurr\" distances to <number> resolution per range\n";
-//cerr << " -i <tag>         specify identifier tag in pool\n";
-//cerr << " -I <tag>         specify identifier tag in input file\n";
-  cerr << " -F,-P,...        gfp options, enter '-F help' for details (note -W not supported here)\n";
-  cerr << " -V <...>         Tversky conditions, enter '-V help' for details\n";
-  cerr << " -C <n>           number of OMP workers\n";
-  cerr << " -v               verbose output\n";
+  cerr << R"(Performs a max diversity selection from a set of fingerprints.
+ -n <number>      Specify how many items to select.
+ -t <dist>        Stop selection once distance drops below <dist>.
+ -A <file>        Specify file of already selected items.
+ -N <tag>         gfp_nearneighbours has been run and initial distances are in <tag>.
+ -p COL=<col>     Distance scaling factor is column <col> of name.
+ -p <tag>         Specify distance scaling factor in <tag>.
+ -p FILE=<fname>  Distance scaling factors in <fname>.
+ -p oknoscale     ok if not all items have a distance scaling factor - will default to 1.0.
+ -r <number>      Report progress of initial distance assignments.
+ -S ...           Options for specifying first item selected, enter '-S help'.
+ -M ...           Miscellaneous options, enter '-M help' for info.
+ -F,-P,...        gfp options, enter '-F help' for details (note -W not supported here).
+ -V <...>         Tversky conditions, enter '-V help' for details.
+ -C <n>           Number of OMP workers - suggest less than 16, depending on hardware.
+ -s <number>      Specify max pool size - the tool will do a count if not specified.
+ -v               Verbose output.
+)";
+
   // clang-format on
 
   exit(rc);
 }
 
 static void
-display_miscellaneous_options(std::ostream& os)
-{
+display_miscellaneous_options(std::ostream& os) {
+  // clang-format off
   os << " -M recomp       recompute distance if no nbrs found\n";
   os << " -M nscale       include scale factor of nbr with scale\n";
   os << " -M squeeze=nnn  squeeze out selected molecules evern <nnn> steps\n";
   os << " -M ldist=<dist> all distances truncated to <dist>\n";
+  os << " -M blurr=<nn>   blurr distances so there are only <nn> values. Should be > 10\n";
+  // clang-format on
 
   exit(3);
 }
 
 static void
-display_first_item_selection_options(std::ostream& os)
-{
+display_first_item_selection_options(std::ostream& os) {
+  // clang-format off
   os << " -S rand         randomly choose first item\n";
   os << " -S hsf          start with item with highest scale factor\n";
   os << " -S furthest     start with item furthest from all other items\n";
   os << " -S fff=nnn      start with item nnn times furthest from first item\n";
+  // clang-format on
 
   exit(1);
 }
 
+// The user has specified a blurr=<nn> directive. Show a small number of
+// examples of the impact of that.
+static void
+ShowBlurring(int blurr_distances) {
+  std::random_device rd;
+  std::default_random_engine generator(rd());
+  std::uniform_real_distribution<similarity_type_t> u(0.0f, 1.0f);
+
+  cerr << "Distance blurring factor set to " << blurr_distances << '\n';
+  for (int i = 0; i < 9; i++) {
+    similarity_type_t r = u(generator);
+    cerr << "distance " << r << " becomes " << do_blurring(r, blurr_distances) << '\n';
+  }
+}
+
 static int
-fpobj_spread(int argc, char** argv)
-{
-  Command_Line cl(argc, argv, "vs:n:I:i:A:r:p:F:P:Q:N:V:b:S:M:C:t:");
+fpobj_spread(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vs:n:I:i:A:r:p:F:P:Q:N:V:S:M:C:t:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -969,6 +964,15 @@ fpobj_spread(int argc, char** argv)
 
         if (verbose) {
           cerr << "Long distances truncated to " << longest_distance_recognised << '\n';
+        }
+        m.remove_leading_chars(6);
+        if (!m.numeric_value(blurr_distances) || blurr_distances < 10) {
+          cerr << "The blurr=<nn> directive must have a reasonable number of bins "
+               << blurr_distances << " not valid\n";
+          return 1;
+        }
+        if (verbose) {
+          ShowBlurring(blurr_distances);
         }
       } else if ("help" == m) {
         display_miscellaneous_options(cerr);
@@ -1265,24 +1269,6 @@ fpobj_spread(int argc, char** argv)
       display_first_item_selection_options(cerr);
     }
   }
-  if (cl.option_present('b')) {
-    if (!cl.value('b', blurr_distances) || blurr_distances < static_cast<float>(0.0)) {
-      cerr << "The blurr distances option (-b) must be a non negative number\n";
-      usage(4);
-    }
-
-    if (verbose) {
-      cerr << "Distance blurring factor set to " << blurr_distances << '\n';
-      std::random_device rd;
-      std::uniform_real_distribution<similarity_type_t> u(0.0f, 1.0f);
-
-      for (int i = 0; i < 5; i++) {
-        similarity_type_t r = u(rd);
-        cerr << "distance " << r << " becomes " << do_blurring(r, blurr_distances)
-             << '\n';
-      }
-    }
-  }
 
   if (cl.option_present('n')) {
     int n;
@@ -1340,8 +1326,7 @@ fpobj_spread(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   int rc = fpobj_spread(argc, argv);
 
   return rc;

@@ -214,6 +214,15 @@ unpredictable results should be expected.
 Usually `seek=` is used on conjunction with `stop=` and when the
 reader determines that it has reached the stop offset, it will terminate.
 
+It is important to note that any seek or stop directive applies to all
+files on the command line - in most cases, this is not what you want.
+Longer terms there are plans to enable per-file specifications, probably
+along the lines of
+```
+/path/to/file,seek=5,stop=20
+```
+But that is not yet implemented.
+
 ### Charges
 Both formal and partial charges are subject to acceptable ranges, and
 molecules containing values out of range are flagged as errors. The
@@ -393,7 +402,13 @@ to V2000 files which have the isotope in the atom record.
 ### -i mdlsep=\<..\>
 Separator between tags when reading mdl files. If a name is built up
 from the concatentation of multiple tags, this is the separator between
-those tags. Default is space.
+those tags. Default is space. Character names are recognised so
+`-i mdlsep=tab` is valid. To convert a .sdf file with tags to a tab
+separated file, we recently used this invocation.
+```
+fileconv -i mdlquiet -i 'SDFID:(idnumber|LogP|Collection)' -o smi -o smisep=tab
+        -i mdlsep=tab -S newfile /path/to/input.sdf
+```
 
 ### -i mdlnwce
 Discerning chirality from wedge bonds and atom positions can often

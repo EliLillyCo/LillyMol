@@ -78,11 +78,11 @@ void
 TestHbonds::SetUp() {
   const char* test_srcdir = getenv("TEST_SRCDIR");
   IWString queries_dir(test_srcdir);
-  queries_dir << "/../donor_acceptor_test.runfiles/donor_acceptor/";
+  queries_dir << "/../donor_acceptor_test.runfiles/data+/queries/hbonds/";
 
 #ifdef LIST_DIRECTORY
   std::string qq(test_srcdir);
-  qq += "/../donor_acceptor_test.runfiles/donor_acceptor/";
+  qq += "/../donor_acceptor_test.runfiles/data+/queries/hbonds";
   for (auto const& dir_entry : std::filesystem::directory_iterator{qq}) {
     std::cerr << dir_entry << '\n';
   }

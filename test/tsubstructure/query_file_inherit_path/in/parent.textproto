@@ -1,0 +1,3 @@
+name: "composite query"
+query_file: "benzene.textproto"
+query_file: "nitro.textproto"

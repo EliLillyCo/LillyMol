@@ -4753,8 +4753,7 @@ Single_Substructure_Query::_parse_smarts_specifier(const const_IWSubstring &smar
     }
 
     if (-1 == paren_balance &&
-        disconnected.ends_with(')'))  // closing a component grouping
-    {
+        disconnected.ends_with(')')) {  // closing a component grouping
       disconnected.chop();
       component_grouping = 0;
     }
@@ -7156,3 +7155,7 @@ Substructure_Query::CreateFromSmarts(const std::string& smt) {
 
   return create_from_smarts(s);
 }
+
+namespace lillymol {
+
+}  // namespace lillymol

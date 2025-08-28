@@ -23,7 +23,11 @@
 #include "sparse_collection.h"
 #include "tversky.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 using std::cerr;
 
@@ -690,32 +694,33 @@ usage(int rc) {
   // clang-format on
 
   // clang-format off
-  cerr << "Finds near neighbours of a set of fingerprints\n";
-  cerr << "Usage <options> <input_file>\n";
-  cerr << " -n <number>      specify how many neighbours to find\n";
-  cerr << " -t <dis>         discard distances shorter than <dis>\n";
-  cerr << " -T <dis>         discard distances longer than <dis>\n";
-  cerr << " -r <number>      ensure that all molecules have at least <number> neighbours\n";
-  cerr << " -z               don't write molecules with no neighbours\n";
-  cerr << " -H <fname>       write histogram of closest distances to <fname>\n";
-  cerr << " -b               write minimal histogram data - two columns\n";
-  cerr << " -N <tag>         write number neighbours as <tag>\n";
-  cerr << " -A <TAG>         write average neighbour distance to <TAG>\n";
-  cerr << " -p               write all pair-wise distances in 3 column form\n";
-  cerr << " -j <precision>   output precision for distances\n";
-  cerr << " -y               allow arbitrary distances\n";
-  cerr << " -R <number>      report progress every <number> items processed\n";
-  cerr << " -S <fname>       write nnbr::NearNeighbours TFDataRecord serialized protos to <fname>\n";
-  cerr << " -d               do NOT write neighbour smiles in the -S file (makes the file much smaller)\n";
-  cerr << " -x               exclude smiles from the output\n";
-  cerr << " -F ...           gfp options, enter '-F help' for details\n";
-  cerr << " -V ...           Tversky specification, enter '-V help' for details\n";
-  cerr << " -K ...           options for converting sparse fingerprints to fixed\n";
-  cerr << " -X <distance>    abandon distance computation if any component > distance\n";
-  cerr << " -o               cross referencing a single file. Write neighbours as index numbers\n";
-  cerr << " -s <number>      specify number of fingerprints in input - not necessary\n";
-//cerr << " -I <tag>         specify identifier dataitem (default '" << identifier_tag << ")\n";
-  cerr << " -v               verbose output\n";
+  cerr << R"(Finds near neighbours of a set of fingerprints\n";
+Usage <options> <input_file>\n";
+ -n <number>      specify how many neighbours to find
+ -t <dis>         discard distances shorter than <dis>
+ -h               do NOT find self neighbours
+ -T <dis>         discard distances longer than <dis>
+ -r <number>      ensure that all molecules have at least <number> neighbours
+ -z               don't write molecules with no neighbours
+ -H <fname>       write histogram of closest distances to <fname>
+ -b               write minimal histogram data - two columns
+ -N <tag>         write number neighbours as <tag>
+ -A <TAG>         write average neighbour distance to <TAG>
+ -p               write all pair-wise distances in 3 column form
+ -j <precision>   output precision for distances
+ -y               allow arbitrary distances
+ -R <number>      report progress every <number> items processed
+ -S <fname>       write nnbr::NearNeighbours TFDataRecord serialized protos to <fname>
+ -d               do NOT write neighbour smiles in the -S file (makes the file much smaller)
+ -x               exclude smiles from the output
+ -F ...           gfp options, enter '-F help' for details
+ -V ...           Tversky specification, enter '-V help' for details
+ -K ...           options for converting sparse fingerprints to fixed
+ -X <distance>    abandon distance computation if any component > distance
+ -o               cross referencing a single file. Write neighbours as index numbers
+ -s <number>      specify number of fingerprints in input - not necessary
+ -v               verbose output
+)";
   // clang-format on
 
   exit(rc);

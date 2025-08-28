@@ -2,11 +2,11 @@ description {
   feature_name: "w_brunspos"
   description: "Number of positively charged atoms, Bruns"
   plot_title: "Number of positively charged atoms, Bruns"
-  line_color: "green"
-  source: "CHEMBL"
+  line_color: "blue"
+  source: "chembl"
 }
-maxval: 6.0
-mean: 0.33602
+maxval: 10.0
+mean: 0.33210754
 quantile {
   quantile: 0.01
 }
@@ -32,29 +32,45 @@ quantile {
   value: 2.0
 }
 int_values {
-  count: 35080
+  count: 1300887
 }
 int_values {
   value: 1
-  count: 13293
+  count: 490073
 }
 int_values {
   value: 2
-  count: 1460
+  count: 50979
 }
 int_values {
   value: 3
-  count: 99
+  count: 3687
 }
 int_values {
   value: 4
-  count: 52
+  count: 1847
 }
 int_values {
   value: 5
-  count: 13
+  count: 359
 }
 int_values {
   value: 6
-  count: 3
+  count: 179
+}
+int_values {
+  value: 7
+  count: 17
+}
+int_values {
+  value: 8
+  count: 17
+}
+int_values {
+  value: 9
+  count: 9
+}
+int_values {
+  value: 10
+  count: 7
 }

@@ -1,26 +1,54 @@
 # minor_changes
 
-## TLDR
+## Objective
 
-Want a potentially large number of new molecules that are derived
-from a set of starting molecules:
+This tool uses rule based transformations to make small changes to starting
+molecules. The most common usage is to help fill out an SAR around
+a set of active molecules. The transformations applied might
+include adding small fragments, removing CH2 groups, changing
+a substitution pattern, etc... Since it applies all available
+transformations exhaustively, potentially large numbers of molecules
+can be formed.
+
+Taking the default, which turns on all known transformations that
+do not depend on external fragments, and which operates on all
+possible sites in the starting molecule
 ```
-minor_changes.sh -c file.smi > file.variants.smi
+minor_changes file.smi > file.variants.smi
 ```
+generates 31k molecules from a starting set of 1000 in 1.2 seconds.
 
-Probably generates more than you need. 500 random molecules from
-ChEMBL took 30 minutes to generate 10.5M unique variants. There are
-many ways in which these numbers can be reduced.
+The rules applied can be controlled via a configuration file, which will
+also enable specification of fragments to be added, and reactions to be
+performed. A shell script [minor_changes.sh](../../contrib/bin/minor_changes.sh)
+invokes the executable with all options turned on, as well as making
+available some reaction based transformations, as well as a small
+fragment library (60 functional groups, max 3 atoms). Given
+1000 random starting molecules the tool generates 337k new molecules in about
+15 seconds using that configuration file.
 
-## Introduction
+Obviously if a larger fragment library is used, those number can increase
+dramatically - see below for how to generate fragment libraries.
 
-This tool is designed for making minor modifications to an existing molecule,
-using simple transformations, as well as externally derived fragments. Many
-attempts are made to have it generate plausible molecules, so the results
-should mostly be reasonable, but this is definitely not guaranteed. Passing the
-results through a synthetic feasibility assessment would generally be
-desirable. Experience says that this may eliminate 80% of what is generated,
-but this is obviously very dependent on the parameters selected.
+The reactions specified with the script include a number of common
+isostere type transformations. More could be added - definitely open
+to ideas... Reactions in the [medchem wizard](/data/MedchemWizard) tool
+could also be used here.
+
+The tool struggles with chirality and needs fixes to make that robust.
+For now, the safest thing to do is remove chirality from your input
+molecules via the -c option.
+
+## Details
+
+The tool is designed for making minor modifications to an existing molecule,
+using simple transformations, as well as externally derived fragments.  Many
+attempts are made to have it generate plausible molecules, so the results should
+mostly be reasonable, but this is definitely not guaranteed.  Passing the
+results through a synthetic feasibility assessment would generally be desirable. 
+Experience says that this may eliminate a significant fraction of what is
+generated, but this is obviously very dependent on the parameters selected and
+the starting molecules.
 
 ## Complementary Tools
 `ring_replacement` can be used for exploring different substitution patterns
@@ -28,19 +56,21 @@ in rings. By default, `minor_changes` does not swap atoms in an aromatic ring. P
 the output from `ring_replacement` to this tool in order to explore
 further variants involving different ring atom arrangements.
 
-Isostere replacement can be done with the reactions associated with the
-`molecular_variants` tool - although some of those need to have the
-reverse transformation also implemented. Again, a pipeline of generators
-can be formed.
+[substituent_identification](substituent_identification.md) can perform 
+sidechain replacements of varying precision.
 
-## Numbers
-This tool can generate large numbers of molecules - largely driven
-by the libraries of fragments specified, as noted previously. This
-is despite the fact that the fragment libraries contained no more
-than 4 atoms per molecule.
+[random_molecular_permuations](random_molecular_permuations.md) also contains
+various transformations, possibly not as well developed as in minor_changes,
+but which can often generate interesting modifications of a starting structure.
 
-Again, it is recommended that the output be passed to a synthetic precedent
-tool to eliminate unlikely atomic arrangements.
+[smiles_mutation](smiles_mutation.md) performs random string based transformations
+on smiles strings, attempting molecule interpretation on the resulting strings.
+Most strings generated are invalid.
+
+[SAFE](SAFE.md) provides a very flexible and powerful means of generating
+molecular variants. Although a newer tool, developed after the publication
+of SAFE, it is probably the most 'interesting' de-novo generator in LillyMol.
+
 
 ## Specifics.
 The tool is complex, with a lot of choices made about how it behaves. For
@@ -56,6 +86,7 @@ remove_fragment: [1, 2, 3]
 max_variants: 10000
 # Running with atom typing is generally recommended
 # This type contains the element and whether it is aromatic or not.
+# This must be the same as what was used to build the library fragment files.
 atype: "UST:AY"
 # Do not use rare fragments. Helps cut numbers too.
 # in this example, prefer setting library size
@@ -80,21 +111,19 @@ swap_adjacent_atoms: true
 swap_adjacent_aromatic_atoms: true
 insert_fragments: true
 replace_inner_fragments: true
+remove_fused_aromatics: true
 
 # These substantially cut the run time.
 max_fragment_lib_size: 100
 max_bivalent_fragment_lib_size: 200
 ```
-The proto definition is [GitHub](https://github.com/EliLillyCo/LillyMolPrivate/blob/a6b84fa94d451438a6a16166c9eaf4b5f4c76d53/src/Molecule_Tools/minor_changes.proto#L1)
-
-The instance above takes 52 seconds to generated 680k variants from 500 input
-molecules.
+The proto definition is [GitHub](../../src/Molecule_Tools/minor_changes.proto)
 
 ## Atom Typing.
-It is recommended that the tool be used with atom typing enabled. As
-seen in the proto above, I have been using `UST:AY` which classifies
-atoms by their atomic number and aromaticity only. Other atom types
-would clearly be possible.
+If library fragments are being added, it is recommended that the tool be used
+with atom typing enabled.  As seen in the proto above, I have been using
+`UST:AY` which classifies atoms by their atomic number and aromaticity only. 
+Other atom types would clearly be possible.
 
 The reason to use atom types in the library is that ensures that the
 fragment is joined to an atom similar to the atomic context from
@@ -123,7 +152,7 @@ atom types match, to the join point.  `replace_terminal_fragments` directive.
 Bivalent fragments can have either 1 or 2 attachment points. If there is
 a single attachment point, it is inserted between two atoms, and each of
 those two atoms bond to the same atom in the fragment. If there are two
-attachment points, a bond in the parent molecle is selected and removed.
+attachment points, a bond in the parent molecule is selected and removed.
 The bivalent fragment is inserted by bonding (in both directions) to the
 remaining atoms in the parent.
 
@@ -144,7 +173,13 @@ all standard tools, at the cost of requiring special processing in order
 to read the proto.
 
 It is possible that `dicer` could generate both the monovalent and the
-bivalent substitunts, here I show using `get_substituents` and `dicer`.
+bivalent substitunts, here I show using `get_substituents` and `dicer`,
+although it should be noted that if you need to run `dicer` in order to 
+get bivalent fragments, you get the substituents essentially for free
+during that run.
+
+If you just care about between ring linkers, you might be able to use 
+get_linkers in order to generate bivalent linkers.
 
 ### Monovalent Fragments
 Use `get_substituents` to extract fragments from known collections. In this
@@ -165,7 +200,7 @@ F[9001CH2]N iso: ATYPE smi: "F[9001CH2]N" par: "CHEMBL3897128" nat: 3 n: 1
 ```
 Again, note the extra token in column 1. The isotopes are the atom types
 of the atoms to which these fragments used to be attached. These numbers of
-course make no sense on their own. If curios, use `fileconv` to get molecules
+course make no sense on their own. If curious, use `fileconv` to get molecules
 labelled by atom type
 ```
 fileconv.sh -I atype -Y atype=UST:AY -S - file.smi
@@ -236,3 +271,5 @@ prolific variants are done last.
 Note that even if a max number of variants is specified, you may get more
 than that number produced, because the tool only checks periodically on
 the number if items generated.
+
+More information about the transformations are in the [proto](../../src/Molecule_Tools/minor_changes.proto)

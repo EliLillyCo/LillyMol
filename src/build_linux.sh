@@ -4,7 +4,7 @@
 # if directly calling this script, set it
 if [[ ! -v REPO_HOME ]] ; then
     echo "REPO_HOME is not set, initializing..."
-    REPO_HOME=$(dirname $(dirname  "$(readlink -f "$0")"))
+    REPO_HOME=$(dirname $(dirname  "$(realpath "$0")"))
 fi
 
 echo "REPO_HOME is: $REPO_HOME"
@@ -18,28 +18,30 @@ else
     echo "No bazel/bazelisk, see README.md" && exit 1
 fi
 
-# Step 1: udpate WORKSPACE and install.bzl
-# Update WORKSPACE and install.bzl for the current location.
+# Step 1: udpate MODULE.bazel and install.bzl
+# Update MODULE.bazel and install.bzl for the current location.
 # Must be invoked from the src directory /path/to/LillyMol/src
 pushd $REPO_HOME/src
 
-if [[ ! -s 'WORKSPACE' ]] ; then
-    echo "Must be invoked in the directory with WORKSPACE" && exit 1
+if [[ ! -s 'MODULE.bazel' ]] ; then
+    echo "Must be invoked in the directory with MODULE.bazel" && exit 1
 fi
 
 # Only build python if requested
 if [[ -v BUILD_PYTHON ]] ; then
-    # Use python to update WORKSPACE for python locations.
-    if [[ -s 'update_python_in_workspace.py' ]] ; then
-        cp WORKSPACE /tmp
-        python3 ./update_python_in_workspace.py /tmp/WORKSPACE > WORKSPACE
-            if [[ ! -s WORKSPACE ]] ; then
-                echo "Updating WORKSPACE failed, restoring orignal, python bindings will not work"
-                cp -f /tmp/WORKSPACE WORKSPACE
-            fi
-        echo "WORKSPACE updated"
+    # Use python to update MODULE.bazel for python locations.
+    if [[ -s 'update_python_in_module_bazel.py' ]] ; then
+        tmpfile="/tmp/MODULE.bazel.${USER}"
+        cp MODULE.bazel ${tmpfile}
+        python3 ./update_python_in_module_bazel.py ${tmpfile} > MODULE.bazel
+        if [[ -s MODULE.bazel ]] ; then
+          echo "MODULE.bazel updated"
+        else
+          echo "Updating MODULE.bazel failed, restoring orignal, python bindings will not work"
+          cp -f ${tmpfile} MODULE.bazel
+        fi
     else
-        echo "Missing update_python_in_workspace.py, WORKSPACE not updated for python"
+        echo "Missing update_python_in_module_bazel.py, MODULE.bazel not updated for python"
     fi
 fi
 
@@ -52,13 +54,13 @@ fi
 bindir=$(echo $REPO_HOME/bin/$(uname) | sed -e 's/\//\\\//g')
 
 # Make a copy
-cp build_deps/install.bzl /tmp/install.bzl.orig
+cp build_deps/install.bzl /tmp/install.bzl.${USER}
 
 sed -i -e "s/default *= *\".*\",/default = \"${bindir}\",/" build_deps/install.bzl
 
 # Create bindir if not already present
 bindir=$REPO_HOME/bin/$(uname)
-if [[ ! -d  ${bindir} ]] ; then
+if [[ ! -d ${bindir} ]] ; then
   mkdir -p ${bindir}
 fi
 
@@ -80,14 +82,14 @@ third_party=$REPO_HOME/third_party
 echo "third_party in ${third_party}"
 
 if [[ ! -d "${third_party}" ]] ; then
-    mkdir -p "${third_party}"
+  mkdir -p "${third_party}"
 fi
 
 lib=$REPO_HOME/lib
 echo "lib in ${lib}"
 
 if [[ ! -d "${lib}" ]] ; then
-    mkdir -p "${lib}"
+  mkdir -p "${lib}"
 fi
 
 
@@ -100,7 +102,7 @@ fi
 pushd $third_party
 
 if [[ ! -d ${third_party}/bin ]] ; then
-    mkdir -p ${third_party}/bin
+  mkdir -p ${third_party}/bin
 fi
 
 # If we clone the repo we must build it, even if the
@@ -158,7 +160,7 @@ fi
 if [[ -v BUILD_XGBOOST ]] ; then
   git clone --recursive https://github.com/dmlc/xgboost
   mkdir xgboost/build
-  (cd xgboost/build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} ..)
+  (cd xgboost/build && cmake -DCMAKE_INSTALL_PREFIX=${third_party} -DCMAKE_INSTALL_LIBDIR=${third_party}/lib ..)
   (cd xgboost/build && make -j${THREADS})
   (cd xgboost/build && make install)
 fi
@@ -175,10 +177,29 @@ if [[ -v BUILD_ZEROMQ ]] ; then
   cp cppzmq/zmq.hpp ${third_party}/include
 fi
 
+if [[ -v BUILD_INCHI ]] ; then
+  git clone https://github.com/IUPAC-InChI/InChI
+  if [[ ! -d 'InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/' ]] ; then
+    echo 'INCHI directory InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/ not found, no Inchi' >&2
+    unset BUILD_INCHI
+  else
+    (cd InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/ && bash run_make_on_linux.sh)
+  fi
+  # Ensure canonical form for shell variable.
+  BUILD_INCHI=1
+fi
+
+if [[ -v BUILD_NLOPT ]] ; then
+  git clone https://github.com/stevengj/nlopt/archive/v2.7.1.tar.gz
+  (cd nlopt && mkdir build)
+  (cd nlopt/build && cmake -DCMAKE_INSTALL_PREFIX=${REPO_HOME}/third_party)
+  (cd nlopt/build && make -j ${THREADS})
+  (cd nlopt/build && make install)
+  BUILD_NLOPT=1
+fi
+
 # Step 3: build LillyMol executables
 echo "Builds and installs LillyMol executables"
-echo "The assumption is that WORKSPACE and build_deps/install.bzl"
-echo "have both been configured."
 echo ""
 echo "First task is to build and run C++ unit tests."
 
@@ -215,9 +236,12 @@ build_options="--cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --
 
 build_options="${build_options} --noincompatible_use_python_toolchains"
 
-# Outside Lily use native architective
+# Enable partial builds.
+build_options="${build_options} -k"
+
+# Possible selection of location specific architecture
 if [[ ${inside_lilly} -eq 1 ]] ; then
-  build_options="${build_options} --cxxopt=-march=sandybridge --cxxopt=-mtune=sandybridge"
+  build_options="${build_options} --cxxopt=-march=native --cxxopt=-mtune=native"
 else
   build_options="${build_options} --cxxopt=-march=native --cxxopt=-mtune=native"
 fi
@@ -243,8 +267,21 @@ if [[ ! -v BUILD_ZEROMQ ]] ; then
     build_tag_filters+=('-gfp_server' '-zeromq')
 fi
 
+# Acknowledge that this is not the best way to handle something like this.
+if [[ -v BUILD_INCHI ]] ; then
+  build_options="${build_options} --define 'BUILD_INCHI=1'"
+fi
+
 if [[ ! -v BUILD_XGBOOST ]] ; then
     build_tag_filters+=('-xgboost')
+fi
+
+if [[ ! -v BUILD_NLOPT ]] ; then
+    build_tag_filters+=('-nlopt')
+fi
+
+if [[ ${inside_lilly} -eq 0 ]] ; then
+  build_tag_filters+=('-vendor')
 fi
 
 if [[ "${#build_tag_filters[@]}" -gt 0 ]] ; then
@@ -279,8 +316,16 @@ if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
     ${bazel} ${bazel_options} build ${build_options} Utilities/...:all
 fi  
 
-if [[ ${inside_lilly} -eq 1 || -v BUILD_VENDOR ]] ; then
+# Build the Vendor directory regardless of where we are. Executables that
+# link to vendor supplied libraries are tagged with "vendor" and those will not
+# be built outside Lilly.
+# What will be built are pure LillyMol tools that do things like parse the
+# output from Vendor tools.
+if [[ ${inside_lilly} -eq 1 || -v BUILD_VENDOR || true ]] ; then
+    echo "Building Vendor target"
     ${bazel} ${bazel_options} build ${build_options} Vendor/...:all
+else
+  echo "Vendor target not built"
 fi
 
 if [[ -v BUILD_BDB ]] ; then
@@ -292,29 +337,30 @@ if [[ -v BUILD_GO ]] ; then
     ${bazel} ${bazel_options} build ${build_options} go:all
 fi
 
+if [[ -v BUILD_XGBOOST ]] ; then
+    ${bazel} ${bazel_options} build ${build_options} xgboost:all
+fi
+
 # Now install the targets
 
-if [[ ! -v BUILD_LIBRARY_ONLY ]] ; then
-    echo "Installing tools"
-    ${bazel} ${bazel_options} run ${build_options} Foundational/iw_tdt:install
-    ${bazel} ${bazel_options} run ${build_options} Molecule_Tools:install
-    ${bazel} ${bazel_options} run ${build_options} Obsolete:install
-    ${bazel} ${bazel_options} run ${build_options} Obsolete/Descriptor_Similarity:install
-    ${bazel} ${bazel_options} run ${build_options} Utilities/General:install
-    ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Tools:install
-    ${bazel} ${bazel_options} run ${build_options} Utilities/GFP_Knn:install
-    ${bazel} ${bazel_options} run ${build_options} Utilities/Distance_Matrix:install
-    ${bazel} ${bazel_options} run ${build_options} go:install
+./install.sh
+
+# uninstall executables not currently being used within Lilly.
+if [[ ${inside_lilly} -eq 1 ]] ; then
+    ./uninstall.sh
 fi
 
-if [[ ${inside_lilly} -eq 1 || -v BUILD_VENDOR ]] ; then
-    ${bazel} ${bazel_options} run ${build_options} Vendor:install
-fi
+#if [[ -v BUILD_BDB ]] ; then
+#    ${bazel} ${bazel_options} run ${build_options} BerkeleyDB:install
+#    ${bazel} ${bazel_options} run ${build_options} Molecule_Tools_Bdb:install
+#fi
 
-if [[ -v BUILD_BDB ]] ; then
-    ${bazel} ${bazel_options} run ${build_options} BerkeleyDB:install
-    ${bazel} ${bazel_options} run ${build_options} Molecule_Tools_Bdb:install
-fi
+#if [[ -v BUILD_XGBOOST ]] ; then
+#    ${bazel} ${bazel_options} run ${build_options} xgboost:install
+#fi
+
+# Deal with compressed files and hidden file names
+./uncompress_and_install.sh
 
 # Python if requested, build, install and test.
 # Note that PYTHONPATH will need to be adjusted, or copy the shared

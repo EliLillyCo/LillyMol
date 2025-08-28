@@ -26,6 +26,7 @@
 #include "Molecule_Lib/standardise.h"
 
 using std::cerr;
+namespace fs = std::filesystem;
 
 static int verbose = 0;
 
@@ -562,28 +563,32 @@ Set_of_Reactions::_reactions_have_starting_molecules() {
   return 1;
 }
 
+// We have read 'foo' from a config file.
+// If 'foo' is present in the current directory, we are good.
+// If not, it is in the same directory as the config file. If so, set `fname`
 int
-Set_of_Reactions::_maybe_prepend_directory_name(IWString& file) const {
-  if (dash_s(file.null_terminated_chars())) {
+Set_of_Reactions::_maybe_prepend_directory_name(IWString& fname) const {
+  if (fs::exists(fname.null_terminated_chars())) {
     return 1;
   }
 
-  IWString tmp(_input.fname());
+  // Construct a path name for the file
+  IWString pname(_input.fname());
 
   // cerr << tmp << '\n';
 
-  int i = tmp.rindex('/');
+  int i = pname.rindex('/');
 
   if (i < 0) {  // no directory component
     return 0;
   }
 
-  tmp.iwtruncate(i);
+  pname.iwtruncate(i);
 
-  tmp << '/' << file;
+  pname << '/' << fname;
 
-  if (dash_s(tmp.null_terminated_chars())) {
-    file = tmp;
+  if (fs::exists(pname.null_terminated_chars())) {
+    fname = pname;
     return 1;
   }
 
@@ -1637,6 +1642,10 @@ _doAllRegioIsomersAndSitesRecurs(Molecule& m, int& changes_this_molecule, int* c
         // matches to the query.  If it added hits, we bail out - this could mean that the
         // sidechain had a match to the core part of the reaction, and this would/could be
         // an infinate loop if we tried to react the new matches
+        // IAW April 2025. This is buggy.
+        // If the reaction makes a change that does not perturb the smarts matching that
+        // will be caught here. For example the reaction might be to place an isotope
+        // and the query will still match that atom.
 
         const int nhits = ri.determine_matched_atoms(mcopy, newSresults);
 
@@ -2737,7 +2746,7 @@ Set_of_Reactions::prepOneSideChain(
 
       Molecule* mCopy(currentMolAndEmbeddings[sideIndex]);
       Set_of_Atoms* eCopy =
-          new Set_of_Atoms(*(currentMolAndEmbeddings[sideIndex]->embedding()));
+          new Set_of_Atoms(currentMolAndEmbeddings[sideIndex]->embedding());
 
       Molecule_and_Embedding* qCopy = new Molecule_and_Embedding();
       qCopy->add_molecule(mCopy);
@@ -2794,8 +2803,7 @@ Set_of_Reactions::prepOneSideChain(
     // we need a  reaction to do the search
 
     IWReaction rxn;
-    set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(
-        0);  // do not show the message
+    set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);
     if (!rxn.do_read(rxn_string, smc)) {
       cerr << "Set_of_Reactions::prepOneSideChain:cannot read '" << rxn_string << "'\n";
       return 0;
@@ -2817,7 +2825,8 @@ Set_of_Reactions::prepOneSideChain(
     }
 
     if (0 == nhits) {
-      cerr << "no hits to query 0 " << rxn.comment() << ' ' << m.smiles() << '\n';
+      cerr << "No hits to query 0 " << rxn.comment() << ' ' << m.smiles() << '\n';
+      cerr << "Only matched " << sresults.max_query_atoms_matched_in_search() << " query atoms\n";
       if (smc.ignore_not_reacting()) {
         return 1;
       }
@@ -2891,13 +2900,14 @@ Set_of_Reactions::_read_reaction(const IWString& buffer, Sidechain_Match_Conditi
       cerr << "Found reaction without sidechain information: " << buffer << '\n';
     }
 
-    IWReaction* r = new IWReaction();
-    set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(
-        0);  // do not show the message
+    std::unique_ptr<IWReaction> r = std::make_unique<IWReaction>();
+    set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);
 
-    if (!r->do_read(buffer, smc)) {
+    IWString fname = buffer;
+    _maybe_prepend_directory_name(fname);
+
+    if (!r->do_read(fname, smc)) {
       cerr << "Set_of_Reactions::_read_reaction:cannot read '" << buffer << "'\n";
-      delete r;
       return 0;
     }
 
@@ -2907,7 +2917,7 @@ Set_of_Reactions::_read_reaction(const IWString& buffer, Sidechain_Match_Conditi
       r->set_user_specified_void_ptr(new AndORProb(++group, NO_GROUPING));
     }
 
-    _reaction.add(r);
+    _reaction << r.release();
 
     return 1;
   }
@@ -2939,8 +2949,7 @@ Set_of_Reactions::_read_reaction(const IWString& buffer, Sidechain_Match_Conditi
   // get a reaction for checking things
 
   IWReaction rxn;
-  set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(
-      0);  // do not show the message
+  set_iwreaction_display_take_first_reagent_from_each_sidechain_warning_message(0);
   if (!rxn.do_read(rxn_string, smc)) {
     cerr << "Set_of_Reactions::prepOneSideChain:cannot read '" << rxn_string << "'\n";
     return 0;
@@ -3062,10 +3071,10 @@ Set_of_Reactions::_read_reaction(const IWString& buffer, Sidechain_Match_Conditi
 
   // now process each smiles for each sidechain - recursively
 
+  // IAW: this is a memory leak.
   std::vector<Molecule_and_Embedding*> currentMolAndEmbeddings(smilesLists.size());
   if (!prepOneSideChain(rxn_string, smilesLists,
-                        0 /* first sidechain - rest are done recursively*/
-                        ,
+                        0, /* first sidechain - rest are done recursively*/
                         currentMolAndEmbeddings, smc, thisGroup, thisAndor,
                         current_group_probability, regioIsomer)) {
     return 0;
@@ -3289,7 +3298,7 @@ Set_of_Reactions::_add_reaction_from_proto_file(const_IWSubstring& fname,
     return 0;
   }
   std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
-  if (!rxn->ConstructFromProto(*maybe_rxn, fname)) {
+  if (!rxn->ConstructFromProto(*maybe_rxn, fname, smc)) {
     cerr << "Set_of_Reactions::_add_reaction_from_proto_file:cannot parse proto\n";
     return 0;
   }
@@ -3367,6 +3376,18 @@ Set_of_Reactions::_add_reaction(const_IWSubstring& fname,
   return 1;
 }
 
+static void
+DisplayReactionSpecificationOptions(std::ostream& output) {
+  output << R"(Reactions can be specified via the -R option in these forms:
+  -R F:<fname>          <fname> contains a list of old style reaction files.
+  -R SMIRKS:<smirks>    smirks - remember to use quotes.
+  -R K:<fname>          a file containing smirks - one per line.
+  -R proto:<fname>      a single proto reaction.
+  -R PROTO:<fname>      a single containing a list of textproto file names.
+)";
+  ::exit(0);
+}
+
 int
 Set_of_Reactions::build(Command_Line& cl, const char opt, Sidechain_Match_Conditions& smc,
                         const int verbose) {
@@ -3416,6 +3437,8 @@ Set_of_Reactions::build(Command_Line& cl, const char opt, Sidechain_Match_Condit
         cerr << "Invalid proto file '" << r << "'\n";
         return 0;
       }
+    } else if (r == "help") {
+      DisplayReactionSpecificationOptions(cerr);
     } else if (!_add_reaction(r, smc)) {
       cerr << "Cannot create reaction from '" << r << "'\n";
       return 0;

@@ -11,12 +11,18 @@ extern double novartis_polar_surface_area (Molecule & m,
                              const atomic_number_t * z,
                              const Atom ** atom,
                              const int * is_aromatic);
-extern void   set_display_psa_unclassified_atom_mesages(int s);
-extern void   set_return_zero_for_unclassified_atoms (int s);
-// default is 1
-extern void   set_non_zero_constribution_for_SD2(int s);
 
 namespace nvrtspsa {
+
+void   set_display_psa_unclassified_atom_mesages(int s);
+void   set_return_zero_for_unclassified_atoms (int s);
+
+// The paper is uncertain on how certain S atoms are handled.
+// By default, we have a non zero contribution for [SD2] atoms.
+void set_non_zero_constribution_for_SD2(int s);
+
+// Looks like the RDKit implementation assigns 0.0 to all Sulphur atoms.
+void set_zero_for_all_sulphur_atoms(int s);
 
 // Class for performing Novartis Polar Surface Area calculations.
 // Note, currently this code just calls the standalone functions above.
@@ -34,15 +40,15 @@ class NovartisPolarSurfaceArea {
 
     void set_display_psa_unclassified_atom_mesages(int s) {
       _display_psa_unclassified_atom_mesages = s;
-      ::set_display_psa_unclassified_atom_mesages(s);
+      nvrtspsa::set_display_psa_unclassified_atom_mesages(s);
     }
     void set_return_zero_for_unclassified_atoms(int s) {
       _return_zero_for_unclassified_atoms = s;
-      ::set_return_zero_for_unclassified_atoms(s);
+      nvrtspsa::set_return_zero_for_unclassified_atoms(s);
     }
     void set_non_zero_constribution_for_SD2(int s) {
       _non_zero_constribution_for_SD2 = s;
-      ::set_non_zero_constribution_for_SD2(s);
+      nvrtspsa::set_non_zero_constribution_for_SD2(s);
     }
 
     // Long term, this should return nullopt if there is an unclassified

@@ -253,10 +253,12 @@ Toggle_Kekule_Form::_all_bonds_aromatic(Molecule& m,
     const atom_number_t a2 = embedding[b->a2()];
 
     if (!m.in_same_aromatic_ring(a1, a2)) {
-      cerr << "Matched atoms " << a1 << " and " << a2
-           << " not in the same aromatic ring\n";
-      cerr << "Bond " << i << " item " << b->a1() << " and item " << b->a2() << " in "
-           << embedding << '\n';
+      if (_display_error_messages) {
+        cerr << "Matched atoms " << a1 << " and " << a2
+             << " not in the same aromatic ring\n";
+        cerr << "Bond " << i << " item " << b->a1() << " and item " << b->a2() << " in "
+             << embedding << '\n';
+      }
       return 0;
     }
   }
@@ -439,8 +441,10 @@ Toggle_Kekule_Form::process(Molecule& m, const Set_of_Atoms& embedding, int& cha
 #endif
   if (!_check_all_bonds_aromatic) {
   } else if (!_all_bonds_aromatic(m, embedding)) {
-    cerr << "Toggle_Kekule_Form::process:not all bonds aromatic " << m.name() << " : "
-         << embedding << '\n';
+    if (_display_error_messages) {
+      cerr << "Toggle_Kekule_Form::process:not all bonds aromatic " << m.name() << " : "
+           << embedding << '\n';
+    }
     return 0;
   }
 
@@ -1609,6 +1613,42 @@ Toggle_Kekule_Form::ConstructFromProto(const ToggleKekuleForm::ToggleKekuleForm&
   }
 
   return _bond.number_elements();
+}
+
+int
+Toggle_Kekule_Form::BuildProto(ToggleKekuleForm::ToggleKekuleForm& proto) const {
+  if (_bond.empty()) {
+    return 1;
+  }
+
+  for (const Bond* b : _bond) {
+    ToggleKekuleForm::KekuleBond* proto_bond = proto.mutable_bond()->Add();
+    proto_bond->set_a1(b->a1());
+    proto_bond->set_a2(b->a2());
+    if (b->is_single_bond()) {
+      proto_bond->set_btype(SubstructureSearch::SS_SINGLE_BOND);
+    } else if (b->is_double_bond()) {
+      proto_bond->set_btype(SubstructureSearch::SS_DOUBLE_BOND);
+    }
+  }
+
+  if (_allow_pyrrole_to_change) {
+    proto.set_allow_pyrrole_to_change(true);
+  }
+
+  if (_display_error_messages) {
+    proto.set_display_error_messages(true);
+  }
+
+  if (_unset_unnecessary_implicit_hydrogens_known_values) {
+    proto.set_unset_unnecessary_implicit_hydrogens_known_values(true);
+  }
+
+  if (_check_all_bonds_aromatic) {
+    proto.set_check_all_bonds_aromatic(true);
+  }
+
+  return 1;
 }
 
 Toggle_Kekule_Form_Temporary_Arrays::Toggle_Kekule_Form_Temporary_Arrays(Molecule& m) {

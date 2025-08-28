@@ -1,0 +1,42 @@
+{
+  "executable": "rgroup",
+  "test": [
+
+    {
+      "name": "benzene_default",
+      "args": [
+        "-s c1ccccc1 #{indir}/pubchem_example.smi"
+      ]
+    },
+
+    {
+      "name": "multiple_substituents",
+      "args": [
+        "-s [CD3] #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "dash_e",
+      "args": [
+        "-e -s [CD3] #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "all_embeddings",
+      "args": [
+        "-s c1ccccc1 -u -a -I 1 #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "explicitH",
+      "args": [
+        "-H -h -I 1 -s [CD4] #{indir}/in.smi"
+      ]
+    }
+
+  ]
+
+}

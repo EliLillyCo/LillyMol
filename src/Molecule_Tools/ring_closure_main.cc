@@ -172,9 +172,9 @@ LocalOptions::MaybeWriteParent(Molecule& m,
 void
 Check3D(const Molecule& m) {
   if (m.highest_coordinate_dimensionality() == 3) {
-    set_append_coordinates_after_each_atom(1);
+    lillymol::set_include_coordinates_with_smiles(1);
   } else {
-    set_append_coordinates_after_each_atom(0);
+    lillymol::set_include_coordinates_with_smiles(0);
   }
 }
 

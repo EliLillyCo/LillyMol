@@ -553,7 +553,44 @@ query {
     atoms_not_on_shortest_path: 0
   }
 }
-)pb", "CNCC1C(=O)C(C1)CNC", 1}
+)pb", "CNCC1C(=O)C(C1)CNC", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 0
+    heteroatom_count: 0
+  }
+}
+)pb", "NCCCCCCN", 1},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    atoms_not_on_shortest_path: 0
+    heteroatom_count: [1, 3]
+  }
+}
+)pb", "NCCCCCCN", 0},
+
+  ProtoMolMatches{R"pb(
+query {
+  smarts: "[N].[N]"
+  unique_embeddings_only: true
+  region {
+    atom: [0, 1]
+    natoms: 6
+    atoms_not_on_shortest_path: 0
+    heteroatom_count: [2, 3]
+  }
+}
+)pb", "NCOCOCCN", 1}
 
 ));
 

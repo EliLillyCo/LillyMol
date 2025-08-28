@@ -13,7 +13,11 @@
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwqsort/iwqsort.h"
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 #include "Utilities/GFP_Tools/nndata.h"
 
 namespace nn2proto {
@@ -37,15 +41,17 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Converts a .nn file to proto form\n";
-  cerr << " -o <sep>      set token separator (default ,)\n";
-  cerr << " -n <nbrs>     only include <nbrs> neighbours\n";
-  cerr << " -s ...        sort the targets, enter '-s help' for info\n";
-  cerr << " -z            do not write molecules with no neighbours\n";
-  cerr << " -l            input has come from leader\n";
-  cerr << " -S <fname>    write serialized ListOfNearNeighbours proto to <fname>\n";
-  cerr << " -T <fname>    write TFDataRecord file of serialized Nbr protos to <fname>\n";
-  cerr << " -v            verbose output\n";
+  cerr << R"(Converts a .nn file to proto form.
+ -o <sep>      output token separator (default ,)
+ -n <nbrs>     only include <nbrs> neighbours
+ -s ...        sort the targets, enter '-s help' for info
+ -z            do not write molecules with no neighbours
+ -l            input has come from leader
+ -S <fname>    write serialized ListOfNearNeighbours proto to <fname>
+ -T <fname>    write TFDataRecord file of serialized Nbr protos to <fname>
+ -x            when writing proto output, do NOT include neighbour smiles - makes for smaller output.
+ -v            verbose output
+)";
 // clang-format on
 
   ::exit(rc);
@@ -152,7 +158,9 @@ class NNData {
     return _neighbour[ndx];
   }
 
-  nnbr::NearNeighbours ToProto() const;
+  // We can significantly lessen the size of the resulting data files
+  // if we can exclude the smiles of all the neighbours.
+  nnbr::NearNeighbours ToProto(int include_nbr_smiles) const;
 
   int Write(IWString_and_File_Descriptor& output) const;
 };
@@ -245,13 +253,14 @@ NNData::Build(int from_leader, iwstring_data_source& input) {
 // and we must produce `max_nbrs` columns.
 int
 NNData::Write(IWString_and_File_Descriptor& output) const {
-  nnbr::NearNeighbours proto = ToProto();
+  static constexpr int kIncludeNbrSmiles = 1;
+  nnbr::NearNeighbours proto = ToProto(kIncludeNbrSmiles);
 
   return gfp::WriteNNData(proto, output);
 }
 
 nnbr::NearNeighbours
-NNData::ToProto() const {
+NNData::ToProto(int include_nbr_smiles) const {
   nnbr::NearNeighbours proto;  // to be returned.
   proto.set_name(_id.data(), _id.length());
   proto.set_smiles(_smiles.data(), _smiles.length());
@@ -260,7 +269,9 @@ NNData::ToProto() const {
     nnbr::Nbr* nbr = proto.add_nbr();
     const IWString& smi = neighbour->smiles();
     const IWString& id = neighbour->id();
-    nbr->set_smi(smi.data(), smi.length());
+    if (include_nbr_smiles) {
+      nbr->set_smi(smi.data(), smi.length());
+    }
     nbr->set_id(id.data(), id.length());
     nbr->set_dist(neighbour->distance());
   }
@@ -326,9 +337,9 @@ class NN2Proto {
   // Writes text_format to `output`.
   int Write(IWString_and_File_Descriptor& output) const;
 
-  int WriteBinary(IWString& fname) const;
+  int WriteBinary(int include_nbr_smiles, IWString& fname) const;
 
-  int WriteTFDataRecord(iw_tf_data_record::TFDataWriter& output) const;
+  int WriteTFDataRecord(int include_nbr_smiles, iw_tf_data_record::TFDataWriter& output) const;
 };
 
 NN2Proto::NN2Proto() {
@@ -515,9 +526,10 @@ NN2Proto::Write(IWString_and_File_Descriptor& output) const {
 }
 
 int
-NN2Proto::WriteTFDataRecord(iw_tf_data_record::TFDataWriter& output) const {
+NN2Proto::WriteTFDataRecord(int include_nbr_smiles, 
+                            iw_tf_data_record::TFDataWriter& output) const {
   for (const NNData* nn_data : _nn_data) {
-    const nnbr::NearNeighbours proto = nn_data->ToProto();
+    const nnbr::NearNeighbours proto = nn_data->ToProto(include_nbr_smiles);
     output.WriteSerializedProto<nnbr::NearNeighbours>(proto);
   }
 
@@ -525,7 +537,7 @@ NN2Proto::WriteTFDataRecord(iw_tf_data_record::TFDataWriter& output) const {
 }
 
 int
-NN2Proto::WriteBinary(IWString& fname) const {
+NN2Proto::WriteBinary(int include_nbr_smiles, IWString& fname) const {
   int targets_with_no_neighbours = 0;
 
   nnbr::ListOfNearNeighbours proto;
@@ -538,7 +550,7 @@ NN2Proto::WriteBinary(IWString& fname) const {
 
     nnbr::NearNeighbours* extra = proto.add_nearneighbours();
     // Potentially expensive operation.
-    *extra = std::move(nn_data->ToProto());
+    *extra = std::move(nn_data->ToProto(include_nbr_smiles));
   }
 
   if (_verbose && !_write_molecules_with_zero_neighbours) {
@@ -550,7 +562,7 @@ NN2Proto::WriteBinary(IWString& fname) const {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vo:s:n:zlS:T:");
+  Command_Line cl(argc, argv, "vo:s:n:zlS:T:x");
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     Usage(1);
@@ -582,9 +594,18 @@ Main(int argc, char** argv) {
 
   nn_to_csv.SortIfRequested();
 
+  int include_nbr_smiles = 1;
+
+  if (cl.option_present('x')) {
+    include_nbr_smiles = 0;
+    if (verbose) {
+      cerr << "Will NOT write neighbour smiles in proto output\n";
+    }
+  }
+
   if (cl.option_present('S')) {
     IWString fname = cl.string_value('S');
-    if (! nn_to_csv.WriteBinary(fname)) {
+    if (! nn_to_csv.WriteBinary(include_nbr_smiles, fname)) {
       cerr << "Binary write to '" << fname << "' failed\n";
       return 1;
     }
@@ -603,7 +624,7 @@ Main(int argc, char** argv) {
       cerr << "Writing TFDataRecord '" << fname << "'\n";
     }
 
-    if (! nn_to_csv.WriteTFDataRecord(writer)) {
+    if (! nn_to_csv.WriteTFDataRecord(include_nbr_smiles, writer)) {
       cerr << "TFDataRecord write to '" << fname << "' failed\n";
       return 1;
     }

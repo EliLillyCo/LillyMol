@@ -21,7 +21,11 @@
 #include "Foundational/iw_tdt/iw_tdt.h"
 
 #include "Utilities/GFP_Tools/bit_subset.h"
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
+#else
+#include "gfp_to_svm_lite.pb.h"
+#endif
 
 namespace {
 

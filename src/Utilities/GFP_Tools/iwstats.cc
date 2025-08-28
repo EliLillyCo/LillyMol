@@ -9,20 +9,26 @@
 #include <memory>
 #include <random>
 
+#include "google/protobuf/text_format.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 
 #include "Metric.h"
 #include "bsquared.h"
 
+#include "Utilities/General/linear_scaling.h"
+
 using std::cerr;
-using std::cout;
 using std::endl;
 
 static Enrichment enrichment;
@@ -106,6 +112,13 @@ static resizable_array<float> fold_difference_multiplicative;
 
 static IWString_and_File_Descriptor stream_for_residuals;
 
+// Idea from Dave Cummins.
+// We can score the training set, and identify a line of best fit.
+// Write the slope and intercept of that equation to this file.
+// Note that the equation is for correcting predictions.
+// The data will be used by normalise.cc
+static IWString fname_for_correction_formula;
+
 // The percentiles for which we report errors 
 static resizable_array<int> ae_percentiles{50, 75, 95};
 
@@ -117,6 +130,10 @@ static resizable_array<float> fraction_within;
 // so an option enables that.
 
 static int all_outputs_have_equals_sign = 0;
+
+// May 2025. Allow specification of MSR.
+// If set, we report the fraction of predictions within 1,2,3x of the experimental.
+static float msr = 0.0f;
 
 static void
 usage(int rc) {
@@ -133,9 +150,9 @@ Compares an experimental set of values (-E,-e) with one more predicted sets of v
 generating summary statistics between the sets of numbers.
 Can have the experimental data in a separate file, or as a column in the predicted file.
  -E <file>      activities are in a different file <file>
- -e <col>       column for experimental (measured) values - either
+ -e <col>       column for experimental (measured) values - either.
  -z             strip leading 0's from identifiers when using -E
- -p <col>       column for predicted values - can specify any number
+ -p <col>       column for predicted values - can specify any number, csv or range.
  -s <number>    skip <number> records at the top of each file
  -j             treat as a descriptor file
  -n <number>    process only the first/best <number> records
@@ -158,6 +175,7 @@ Can have the experimental data in a separate file, or as a column in the predict
  -D <f>         calculate number of predictions differing by <d> from experimental (additive)
  -k             just skip predicted values that have no experimental value (repeat for quiet)
  -d             compute Dave's cMSD rather than cMSR
+ -G <msr>       MSR value for the assay. Will report the fraction of predictions within 1,2,3x MSR.
  -o <float>     cutoff for active/inactive (for enrichment metrics BEDROC EF ...)
  -a <float>     BEDROC alpha value (default " << bedroc_alpha << ")
  -f <float>     Enrichment Factor default fraction (default " << enrichment_factor_fraction << ")
@@ -165,6 +183,8 @@ Can have the experimental data in a separate file, or as a column in the predict
  -U <fraction>  keep only the <fraction> most active experimental values
  -m <col/name>  do analysis by data in column <col> or descriptor name <name>
  -L <fname>     write residuals to <fname>
+ -C <fname>     write slope and intercept for line of best fit to <fname>.  Enter '-C help' for info.
+ -H <fname>     write coverage data - prediction error vs coverage - to <fname>.txt. Also creates <fname>.jl for plotting.
  -Y ...         miscellaneous and obscure options, enter '-Y help' for info
  -i <char>      input column separator (default ' ') use '-i tab' for tsv
  -v             verbose output
@@ -209,6 +229,157 @@ static IWString* column_titles = nullptr;
 static int compute_range_of_bsquared_values_when_duplicates_present = 1;
 
 static int number_distribution_buckets = 0;
+
+// A class for writing things related to coverage data.
+class CoverageData {
+  private:
+    // the file name stem for files created.
+    IWString _stem;
+
+    int _n;
+
+    float* _values;
+
+    // Private functions.
+    int WriteCoverage();
+    int WriteCoveragePlot();
+
+  public:
+    CoverageData();
+    ~CoverageData();
+
+    int Initialise(Command_Line& cl, char flag);
+
+    int active() const {
+      return _stem.length() > 0;
+    }
+
+    int Process(int n, const float* residuals);
+};
+
+CoverageData::CoverageData() {
+  _n = 0;
+  _values = nullptr;
+}
+
+CoverageData::~CoverageData() {
+  delete [] _values;
+}
+
+int
+CoverageData::Initialise(Command_Line& cl, char flag) {
+  if (! cl.option_present(flag)) {
+    return 0;
+  }
+
+  cl.value(flag, _stem);
+
+  if (cl.option_present('v')) {
+    cerr << "CoverageData::Initialise:coverage data files written with stem '" << _stem << "'\n";
+  }
+
+  return 1;
+}
+
+int
+CoverageData::Process(int n, const float* residuals) {
+  if (n <= 100) {
+    cerr << "CoverageData::Process:too few points " << n << '\n';
+    return 0;
+  }
+
+  std::unique_ptr<float[]> tmp = std::make_unique<float[]>(n);
+  for (int i = 0; i < n; ++i) {
+    tmp[i] = std::abs(residuals[i]);
+  }
+  std::sort(tmp.get(), tmp.get() + n);
+
+  _values = new float[101];
+  _values[0] = 2.0f * std::abs(tmp[0]);
+
+  int next_pct = 1;
+  int next_i = n / 100;
+
+  for (int i = 1; i < n; ++i) {
+    if (i < next_i) {
+      continue;
+    }
+
+    _values[next_pct] = 2.0f * std::abs(tmp[i]);
+    ++next_pct;
+    next_i = n * iwmisc::Fraction<float>(next_pct, 100);
+  }
+  _values[100] = 2.0f * tmp[n - 1];
+
+  WriteCoverage();
+  WriteCoveragePlot();
+
+  return 1;
+}
+
+int
+CoverageData::WriteCoverage() {
+  IWString fname(_stem);
+  fname << ".txt";
+
+  IWString_and_File_Descriptor output;
+  if (! output.open(fname)) {
+    cerr << "CoverageData::WriteCoverage:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  static constexpr char kSep = ' ';
+
+  output << "Percent" << kSep << "Coverage\n";
+  for (int i = 0; i <= 100; ++i) {
+    output << i << kSep << _values[i] << '\n';
+  }
+
+  return 1;
+}
+
+int
+CoverageData::WriteCoveragePlot() {
+  IWString fname(_stem);
+  fname << ".jl";
+
+  IWString_and_File_Descriptor output;
+  if (! output.open(fname)) {
+    cerr << "CoverageData::WriteCoverage:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  output << "using Plots\n";
+  output << "x=[0";
+  for (int i = 1; i <= 100; ++i) {
+    output << ',' << i;
+  }
+  output << "];\n";
+
+  output << "y=[" << _values[0];
+  for (int i = 1; i <= 100; ++i) {
+    output << ',' << _values[i];
+  }
+  output << "];\n";
+
+  output << R"(plot(x, y, xlabel="Percent Coverage", ylabel="Width", lw=3, col=:blue, legend=false, title="Coverage 80 Width )";
+  output << _values[80] << "\")\n";
+  output << "x=[80, 80];\n";
+  output << "y=[0.0," << _values[80] << "];\n";
+  output << "plot!(x, y, linecolor=:gray, linestyle=:dash)\n";
+  output << "x=[0,80]\n";
+  output << "y=[" << _values[80] << ',' << _values[80] << "];\n";
+  output << "plot!(x, y, linecolor=:gray, linestyle=:dash)\n";
+
+  IWString png(_stem);
+  png << ".png";
+
+  output << "savefig(\"" << png << "\")\n";
+
+  return 1;
+}
+
+static CoverageData coverage_data;
 
 template <typename T>
 T
@@ -1316,6 +1487,33 @@ write_cmsr(const CMSR_Parameters& cmsrp, const int which_predicted_set,
   return 1;
 }
 
+// Write the equation of best fit between x and y.
+// https://www.mathsisfun.com/data/least-squares-regression.html
+// y = m * x + b
+//     m = (N * symxy - sumx * sumy) / (N * sumx2 - sumx * sumx)
+//     b = (sumy - m * sumx) / N
+static int
+WriteLinearTransformation(int intn, const double sumx, const double sumy, double sumx2, 
+                          double sumxy,
+                          IWString& fname) {
+  double n = static_cast<double>(intn);
+
+  const double m = (n * sumxy - sumx * sumy) / (n * sumx2 - sumx * sumx);
+  const double b = (sumy - m * sumx) / n;
+
+  linear_scaling::LinearScalingData proto;
+  proto.set_slope(m);
+  proto.set_intercept(b);
+
+  IWString my_fname(fname);
+  my_fname.EnsureEndsWith(".textproto");
+  iwmisc::WriteTextProto<linear_scaling::LinearScalingData>(proto, my_fname);
+
+  my_fname = fname;
+  my_fname << ".dat";
+  return iwmisc::WriteBinaryProto<linear_scaling::LinearScalingData>(proto, my_fname);
+}
+
 static int
 write_fold_data(const int predicted_column, const resizable_array<float>& fold_difference,
                 const int* n_fold_difference, const int N, const char star_or_plus,
@@ -1340,7 +1538,7 @@ compute_fold_difference_values_additive(const float obs, const float pred,
   float d = fabs(obs - pred);
 
   for (int i = 0; i < fold_difference.number_elements(); ++i) {
-    if (d < fold_difference[i]) {
+    if (d <= fold_difference[i]) {
       n_fold_difference[i]++;
     }
   }
@@ -1374,6 +1572,43 @@ compute_fold_difference_values_multiplicative(
   }
 
   return;
+}
+
+static float
+WithinRange(uint32_t number_records, const float* expt, const float* pred, float msr) {
+  uint32_t in_range = 0;
+  for (uint32_t i = 0; i < number_records; ++i) {
+    if (abs(expt[i] - pred[i]) <= msr) {
+      ++in_range;
+    }
+  }
+
+  return iwmisc::Fraction<float>(in_range, number_records);
+}
+
+
+static void
+ReportMSRDefaults(uint32_t number_records, const float* expt, const float* pred, float msr) {
+  if (! verbose) {
+    return;
+  }
+
+  std::unique_ptr<float[]> tmp = std::make_unique<float[]>(number_records);
+
+  float ave = std::reduce(expt, expt + number_records, 0.0f) / static_cast<float>(number_records);
+
+  std::fill_n(tmp.get(), number_records, ave);
+
+  float m = WithinRange(number_records, expt, tmp.get(), msr);
+
+  cerr << "MSR " << msr << " all predictions average " << ave << " within " << m << '\n';
+
+  std::copy_n(pred, number_records, tmp.get());
+  for (int i = 0; i < 3; ++i) {
+    std::random_shuffle(tmp.get(), tmp.get() + number_records);
+    float m = WithinRange(number_records, expt, tmp.get(), msr);
+    cerr << " shuffled " << m << '\n';
+  }
 }
 
 // Return the number of items in `values` that are less than or equal to cutoff
@@ -1438,7 +1673,12 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
   Accumulator<double> e, ae;  // the error and absolute error
   Accumulator<double> are;    // average relative error
   Accumulator<double> rnre;   // range normalised average relative error
-  double r = 0.0;
+
+  double r = 0.0;  // sumxy
+
+  // For computing the line of best fit. sumx and sumy from the accumulators.
+  double sumx2 = 0.0;
+
   int ndx = 0;
 
   int* n_fold_difference_additive = nullptr;
@@ -1481,6 +1721,8 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
       }
 
       o.extra(obs);
+
+      sumx2 += obs * obs;
 
       r += obs * pred;
 
@@ -1711,6 +1953,10 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     //  write_something_identifying_the_column (predicted_column, output);
     //  output << " R2 " << (sum1 / (p.variance() * o.variance()) / static_cast<double>
     //  (number_records)) << '\n';
+
+    if (fname_for_correction_formula.length() > 0) {
+      WriteLinearTransformation(number_records, o.sum(), p.sum(), sumx2, r, fname_for_correction_formula);
+    }
   }
 
   if (fold_difference_additive.number_elements()) {
@@ -1721,6 +1967,16 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
   if (fold_difference_multiplicative.number_elements()) {
     write_fold_data(predicted_column, fold_difference_multiplicative,
                     n_fold_difference_multiplicative, number_records, '*', output);
+  }
+
+  if (msr > 0.0f) {
+    ReportMSRDefaults(number_records, tmp1, tmp2, msr);
+
+    for (int i = 1; i <= 3; ++i) {
+      write_something_identifying_the_column(predicted_column, output);
+      float m = WithinRange(number_records, tmp1, tmp2, msr * i);
+      output << " MSR" << i << ' ' << m << '\n';
+    }
   }
 
   int duplicate_predicted_values_present;
@@ -1782,12 +2038,19 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
 #endif
 
   if (stream_for_residuals.is_open()) {
-    write_something_identifying_the_column(predicted_column, stream_for_residuals);
-    stream_for_residuals << '\n';
+    IWString id;
+    write_something_identifying_the_column(predicted_column, id);
+    id.gsub(':', '_');
+    id.remove_leading_chars(1);
+    stream_for_residuals << id << '\n';
     for (int i = 0; i < ndx; ++i) {
       stream_for_residuals << tmp2[i] << '\n';
       stream_for_residuals.write_if_buffer_holds_more_than(4096);
     }
+  }
+
+  if (coverage_data.active()) {
+    coverage_data.Process(ndx, tmp2);
   }
 
   CMSR_Parameters cmsrp;
@@ -1864,13 +2127,17 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
 
   // To avoid horrible problems with iwqsort, which really doesn't do well sorting
   // a nearly sorted list, we sort by a random value before each sort!
+  // TODO:ianwatson switch to timsort.
 
   if (which_predicted_set >= 0 && duplicate_predicted_values_present &&
       compute_range_of_bsquared_values_when_duplicates_present) {
     output << "Contains duplicate predicted values in column " << (predicted_column + 1)
            << ", computing best and worst Bsquared\n";
 
-    std::random_shuffle(zdata.begin(), zdata.end());  // randomise before sorting
+    static std::random_device rd;
+    static std::mt19937 rng(rd());
+
+    std::shuffle(zdata.begin(), zdata.end(), rng);  // randomise before sorting
 
     Predicted_Value_Comparitor_Best pvcb(which_predicted_set);
 
@@ -1886,7 +2153,7 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
       output << " Best Bsquared " << best_bsquared << '\n';
     }
 
-    std::random_shuffle(zdata.begin(), zdata.end());  // randomise before sorting
+    std::shuffle(zdata.begin(), zdata.end(), rng);  // randomise before sorting
 
     Predicted_Value_Comparitor_Worst pvcw(which_predicted_set);
     zdata.iwqsort(pvcw);
@@ -2248,15 +2515,30 @@ parse_dash_p(const const_IWSubstring& p, resizable_array<int>& predicted_column)
 }
 
 static void
-DisplayDasyYOptions(std::ostream& output) {
+DisplayDashYOptions(std::ostream& output) {
   output << " -Y allequals      all values written will be of the form '<Measure> = <value>'\n";
 
   ::exit(0);
 }
 
+static void
+DisplayDashCOptions(std::ostream& output) {
+  output << R"( -C <fname>        write the slope and intercept for the relationship   expt = slope * pred + intercept.
+For an svmfp model, score the training set to generate train.pred.
+  iwstats -p 2 -E train.activity -C '>>MODEL/activity_normalisation_data' train.pred
+This will append two records to the normalisation file.
+
+When gfp_svmfp_evaluate then reads the normalisation data file it detects that these extra
+parameters are set and will apply the inverse equation to the predicted values.
+)";
+
+  exit(0);
+
+}
+
 static int
 iwstats(int argc, char** argv) {
-  Command_Line cl(argc, argv, "ve:E:p:s:jwn:t:P:M:qR:zc:TA:b:hr:ko:a:f:u:U:i:Km:dF:D:L:B:W:Y:");
+  Command_Line cl(argc, argv, "ve:E:p:s:jwn:t:P:M:qR:zc:TA:b:hr:ko:a:f:u:U:i:Km:dF:D:L:B:W:Y:G:C:H:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -2292,10 +2574,10 @@ iwstats(int argc, char** argv) {
           cerr << "All measures reported will have an equals sign\n";
         }
       } else if (y == "help") {
-        DisplayDasyYOptions(cerr);
+        DisplayDashYOptions(cerr);
       } else {
         cerr << "Unrecognised -Y qualifier '" << y << "'\n";
-        DisplayDasyYOptions(cerr);
+        DisplayDashYOptions(cerr);
       }
     }
   }
@@ -2456,6 +2738,16 @@ iwstats(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('G')) {
+    if (! cl.value('G', msr) || msr <= 0.0f) {
+      cerr << "The MSR value (-G) must be a positive value\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will report coverage wrt MSR " << msr << '\n';
+    }
+  }
+
   if (cl.option_present('q') && !cl.option_present('M')) {
     cerr << "Sorry, the no-report missing values option (-q) only makes sense with the "
             "-M option\n";
@@ -2511,8 +2803,8 @@ iwstats(int argc, char** argv) {
     }
 
     if (0 == experimental_column && !cl.option_present('E')) {
-      cerr << "Descriptor file, but you gave the experimental column as 1, sorry...\n";
-      usage(7);
+      cerr << "Descriptor file, but you gave the experimental column as 1, strange...\n";
+//    usage(7);
     }
 
     if (predicted_column.contains(0)) {
@@ -2789,6 +3081,21 @@ iwstats(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('H')) {
+    if (! coverage_data.Initialise(cl, 'H')) {
+      cerr << "Cannot initialise coverage data output (-H)\n";
+      return 1;
+    }
+  }
+
+  if (cl.option_present('C')) {
+    fname_for_correction_formula = cl.string_value('C');
+
+    if (verbose) {
+      cerr << "Formula for linear corrections written to '" << fname_for_correction_formula << "'\n";
+    }
+  }
+
   int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++) {
     resizable_array_p<Predicted_Values> zdata(2000);
@@ -2814,7 +3121,7 @@ iwstats(int argc, char** argv) {
       continue;
     }
 
-    if (!iwstats(predicted_column, experimental_column, zdata, cout)) {
+    if (!iwstats(predicted_column, experimental_column, zdata, std::cout)) {
       cerr << "Fatal error processing '" << cl[i] << "'\n";
       rc = i + 1;
       break;
@@ -2833,9 +3140,9 @@ iwstats(int argc, char** argv) {
           continue;
         }
 
-        cout << "By " << (*j).first << "\n";
+        std::cout << "By " << (*j).first << "\n";
 
-        if (!iwstats(j, predicted_column, experimental_column, zdata, cout)) {
+        if (!iwstats(j, predicted_column, experimental_column, zdata, std::cout)) {
           cerr << "Fatal error processing marker '" << (*j).first << " in '" << cl[i]
                << "'\n";
           rc = i + 1;

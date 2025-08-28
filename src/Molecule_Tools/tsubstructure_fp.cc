@@ -16,6 +16,7 @@ TSubstructure_FP::TSubstructure_FP() {
    _bit_replicates = 1;
    _default_fingerprint_nbits = 1;
    _extra_bit_total_hits = 0;
+   _each_query_writes_bit = 1;
 }
 
 template <typename OUTPUT> int
@@ -45,13 +46,19 @@ TSubstructure_FP::_do_sparse_fingerprint_output(const int nq, const int * hits, 
 {
   Sparse_Fingerprint_Creator sfc;
 
-  int total_hits = 0;
+  uint32_t total_hits = 0;
+  uint32_t queries_matching = 0;
   for (int i = 0; i < nq; ++i) {
     if (0 == hits[i]) {
       continue;
     }
 
     total_hits += hits[i];
+    ++queries_matching;
+
+    if (! _each_query_writes_bit) {
+      continue;
+    }
 
     sfc.hit_bit(i * _bit_replicates, hits[i]);  // always.
     for (int j = 1; j < _bit_replicates; ++j) {
@@ -59,7 +66,15 @@ TSubstructure_FP::_do_sparse_fingerprint_output(const int nq, const int * hits, 
     }
   }
 
-  if (_extra_bit_total_hits && total_hits > 0) {
+  if (! _each_query_writes_bit && queries_matching > 0) {
+    if (queries_matching > std::numeric_limits<uint8_t>::max()) {
+      queries_matching = std::numeric_limits<uint8_t>::max();
+    }
+
+    for (int i = 0; i < _bit_replicates; ++i) {
+      sfc.hit_bit(_bit_replicates * i, queries_matching);
+    }
+  } else if (_extra_bit_total_hits && total_hits > 0) {
     if (total_hits > std::numeric_limits<uint8_t>::max()) {
       total_hits = std::numeric_limits<uint8_t>::max();
     }
@@ -81,7 +96,9 @@ template <typename OUTPUT> int
 TSubstructure_FP::_do_fingerprint_output(const int nq, const int * hits, OUTPUT& output) const
 {
   int bits_needed = 0;
-  if (_default_fingerprint_nbits) {
+  if (! _each_query_writes_bit) {
+    bits_needed = _bit_replicates;
+  } else if (_default_fingerprint_nbits) {
     bits_needed = _default_fingerprint_nbits * _bit_replicates;
   } else if (_bit_replicates > 0) {
     bits_needed = nq * _bit_replicates;
@@ -92,7 +109,8 @@ TSubstructure_FP::_do_fingerprint_output(const int nq, const int * hits, OUTPUT&
   const int extra_bit_bstart = bits_needed;
 
   // In a binary fingerprint this just indicates whether any of the queries matched.
-  if (_extra_bit_total_hits) {
+  if (! _each_query_writes_bit) {
+  } else if (_extra_bit_total_hits) {
     bits_needed += _extra_bit_total_hits;
   }
 
@@ -111,6 +129,9 @@ TSubstructure_FP::_do_fingerprint_output(const int nq, const int * hits, OUTPUT&
     }
 
     ++total_hits;
+    if (! _each_query_writes_bit) {
+      continue;
+    }
 
     fp.set(i * _bit_replicates);
     for (int j = 1; j < _bit_replicates; ++j) {

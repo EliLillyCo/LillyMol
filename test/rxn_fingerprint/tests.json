@@ -1,0 +1,13 @@
+{
+  "executable": "rxn_fingerprint",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "-i -M ebch -M cbc -M noiso -M naqm -I 1 -a -d -h -r 1 -J NCR",
+        " -E autocreate -m first -u -P UST:AZUCORS -j . #{indir}/test.rxnsmi"
+      ]
+    }
+  ]
+
+}

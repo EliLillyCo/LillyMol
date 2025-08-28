@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package alogp;
+
+// The numeric group contribution values.
+message AlogpParameters {
+  optional float c1 = 1;
+  optional float c2 = 2;
+  optional float c3 = 3;
+  optional float c4 = 4;
+  optional float c5 = 5;
+  optional float c6 = 6;
+  optional float c7 = 7;
+  optional float c8 = 8;
+  optional float c9 = 9;
+  optional float c10 = 10;
+  optional float c11 = 11;
+  optional float c12 = 12;
+  optional float c13 = 13;
+  optional float c14 = 14;
+  optional float c15 = 15;
+  optional float c16 = 16;
+  optional float c17 = 17;
+  optional float c18 = 18;
+  optional float c19 = 19;
+  optional float c20 = 20;
+  optional float c21 = 21;
+  optional float c22 = 22;
+  optional float c23 = 23;
+  optional float c24 = 24;
+  optional float c25 = 25;
+  optional float c26 = 26;
+  optional float c27 = 27;
+  optional float cs = 28;
+
+  optional float h1 = 29;
+  optional float h2 = 30;
+  optional float h3 = 31;
+  optional float h4 = 32;
+  optional float hs = 33;
+
+  optional float n1 = 34;
+  optional float n2 = 35;
+  optional float n3 = 36;
+  optional float n4 = 37;
+  optional float n5 = 38;
+  optional float n6 = 39;
+  optional float n7 = 40;
+  optional float n8 = 41;
+  optional float n9 = 42;
+  optional float n10 = 43;
+  optional float n11 = 44;
+  optional float n12 = 45;
+  optional float n13 = 46;
+  optional float n14 = 47;
+  optional float ns = 48;
+
+  optional float o1 = 49;
+  optional float o2 = 50;
+  optional float o3 = 51;
+  optional float o4 = 52;
+  optional float o5 = 53;
+  optional float o6 = 54;
+  optional float o7 = 55;
+  optional float o8 = 56;
+  optional float o9 = 57;
+  optional float o10 = 58;
+  optional float o11 = 59;
+  optional float o12 = 60;
+  optional float os = 61;
+
+  optional float f = 62;
+  optional float cl = 63;
+  optional float br = 64;
+  optional float i = 65;
+
+  optional float hal = 66;
+  optional float p = 67;
+
+  optional float s1 = 68;
+  optional float s2 = 69;
+  optional float s3 = 70;
+  optional float me1 = 71;
+  optional float me2 = 72;
+  optional float zwit = 73;
+
+  // An offset.
+  optional float bias = 74;
+}
+
+// The overall configuration.
+message AlogpConfiguration {
+  optional AlogpParameters parameters = 1;
+
+  // Parameters that control certain aspects of the calculation
+  // See alogp.h for info
+  optional bool use_alcohol_for_acid = 2;
+  optional bool rdkit_phoshoric_acid_hydrogen = 3;
+  optional bool rdkit_charged_nitrogen = 4; 
+  optional bool add_zwitterion_correction = 5;
+
+  // Does the ALOGP object display messages about unclassified atoms and such...
+  optional bool display_error_messages = 6;
+}

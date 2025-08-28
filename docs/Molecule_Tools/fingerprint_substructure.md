@@ -93,3 +93,35 @@ fingerprints will be generated. The new version also allows EC type fingerprints
 
 The `-P` option allows for custom atom typing, which will apply to all fingerprints
 generated.
+
+## Down The Bond
+Rather than a fixed radius from matched atoms, we can instead use the query to
+identify a substituent. The -d option allows specification of two matched
+atoms where the first matched atom defines an anchor, and the second matched
+atom the first atom in the substituent. All atoms in the substituent are
+included in the subset of atoms fingerprinted.
+
+For example to examine substituents at an indole, one might try
+```
+fingerprint_substructure -s ' n1c2aaana2aa1-!@[R0]' -d 8-9 -J FPS file.smi > file.gfp
+```
+
+and we find that these two structures
+![CHEMBL566793](Images/CHEMBL566793.png)
+![CHEMBL1210113](Images/CHEMBL1210113.png)
+are identical and
+![CHEMBL26069](/Images/CHEMBL26069.png)
+is a near neighbour.
+
+The -x option also works, which can add more context to the matches. Adding
+'-x 3' now finds matches like
+![CHEMBL275179](/Images/CHEMBL275179.png)
+and
+![CHEMBL346728](/Images/CHEMBL346728.png)
+to be identical. The substituent is an ethyl in both cases, and the
+substituents on the ring, to 3 bonds, are identical.
+
+Using the down the bond construct here is basically equivalent to 
+detaching the substituents, possibly with a part of the scaffold
+and fingerprinting fragment. This is just more convenient, and
+may be useful helping to understand an SAR series.

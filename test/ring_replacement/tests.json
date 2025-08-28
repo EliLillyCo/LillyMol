@@ -1,0 +1,79 @@
+{
+  "executable": "ring_replacement",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "6a_para",
+      "args": [
+          "-R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "D_option",
+      "args": [
+          "-D 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "F_option",
+      "args": [
+          "-F 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "N_option",
+      "args": [
+          " -N 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "n_option",
+      "args": [
+          " -n 10 -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "f_option",
+      "args": [
+          " -f 2 -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "d_option",
+      "args": [
+          " -d -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "spiro_fused",
+      "args": [
+          "-p -R #{indir}/spiro.textproto -s '[/IWspiro]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "556",
+      "comment": [
+      ],
+      "args": [
+          "-z i -p  -v -R #{indir}/556.textproto -s '[r5]' #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "u_option",
+      "args": [
+        "-v -R #{indir}/6a.textproto -s '[r6c]' #{indir}/in.smi"
+      ]
+    }
+
+
+  ]
+}

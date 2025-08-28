@@ -1,0 +1,359 @@
+{
+  "executable": "trxn",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "-D rmfrag -o usmi -v -z i -D echo=echo.rxn -D SR2 -D rmxh ",
+        "-D #{indir}/aldehyde_oxydation.rxn #{indir}/aldehyde_oxydation.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_2",
+      "args": [
+        "-J numok -J rmovm -z i -m each -M all -D rmxh -o usmi -k ",
+        "-D #{indir}/aldol_condensation.rxn #{indir}/aldol_condensation.R1.smi #{indir}/aldol_condensation.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_3",
+      "args": [
+        "-D alias2iso -o usmi ",
+        "-D #{indir}/alias2iso.rxn #{indir}/alias2iso.R1.smi #{indir}/alias2iso.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_4",
+      "args": [
+        "-o usmi -J rmovm -J wrscaf -z i -z write=huh.smi -D rmxh -D echo=foo.rxn -D SR2 ",
+        "-D #{indir}/alkene_oxydation.rxn #{indir}/alkene_oxydation.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_5",
+      "args": [
+        "-o usmi -z i -J rmovm -J rmncm -J numok -v -v -Z -M all -D rmxh ",
+        "-D #{indir}/amide_recursive.rxn #{indir}/amide_recursive.R1.smi #{indir}/amide_recursive.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_6",
+      "args": [
+        "-D rmxh -J rmncm -m each -M do=0 -z i -Z -D rmxh -k",
+        "-D #{indir}/amide.rxn #{indir}/16_amines_8_problems.smi #{indir}/13_acids_7_problems.smi"
+      ]
+    },
+
+    {
+      "name": "case_7",
+      "args": [
+        "-o usmi -D aromAC -z i -A D -D ucumrapve -D rmunmp ",
+        "-J numok -J rmncm -J rmovm -D rmxh ",
+        "-D #{indir}/BeamRxnCU.rxn #{indir}/BeamRxn.R1.smi #{indir}/BeamRxn.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_8",
+      "args": [
+        "-D rmxh -u -o usmi -M all -A D ",
+        "-D #{indir}/beckmann.rxn #{indir}/beckmann.smi"
+      ]
+    },
+
+    {
+      "name": "case_9",
+      "args": [
+        "-o usmi -D rmunmp -J rmovm ",
+        "-D #{indir}/benzimidazole.rxn #{indir}/benzimidazole.R1.smi #{indir}/benzimidazole.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_10",
+      "args": [
+        "-z i -z w -A D -o usmi -M all ",
+        "-r #{indir}/chiral1.rxn #{indir}/chiral1.R1.smi #{indir}/chiral1.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_11",
+      "args": [
+        "-o usmi -M do=0 -M each",
+        "-r #{indir}/chiral2.rxn #{indir}/chiral2.R1.smi #{indir}/chiral2.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_12",
+      "comment": [
+        "This stops processing when it gets a reagent that does not match",
+        "That is the expected behaviour"
+      ],
+      "non_zero_rc_expected": true,
+      "args": [
+        "-L -D rmunmp -D rmxh",
+        "-D #{indir}/exph1.rxn #{indir}/acidr.smi #{indir}/aminer.smi"
+      ]
+    },
+
+    {
+      "name": "case_13",
+      "args": [
+        "-z i -z w -A D -o usmi -M all ",
+        "-D #{indir}/fischer_indole.rxn #{indir}/fischer_indole.R1.smi #{indir}/fischer_indole.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_14",
+      "args": [
+        "-J rmovm -D aromAC -v -M all -Z -D rmxh",
+        "-D #{indir}/hydrazine_aldehyde2.rxn #{indir}/hydrazine_aldehyde.R1.smi #{indir}/hydrazine_aldehyde.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_15",
+      "args": [
+        "-o usmi -J rmovm -D aromAC -v -M all -Z -D rmxh ",
+        "-D #{indir}/hydrazine_aldehyde.rxn #{indir}/hydrazine_aldehyde.R1.smi #{indir}/hydrazine_aldehyde.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_16",
+      "args": [
+        "-J numok -J rcksm -o usmi -v -z i -M all -Z -D rmxh ",
+        "-D #{indir}/imine_azawittig2.rxn #{indir}/imine_azawittig2.R1.smi #{indir}/imine_azawittig2.R2.smi #{indir}/imine_azawittig2.R3.smi"
+      ]
+    },
+
+    {
+      "name": "case_17",
+      "args": [
+        "-J rcksm -o usmi -D rmxh -Z -M do=0 -z i -z write=oyoy ",
+        "-D #{indir}/imine_azawittig.rxn #{indir}/imine_azawittig.R1.smi #{indir}/imine_azawittig.R2.smi #{indir}/imine_azawittig.R3.smi"
+      ]
+    },
+
+    {
+      "name": "case_18",
+      "args": [
+         "-m each -D rmfrag -z i -u -o usmi -M all -A D -k",
+         " -D #{indir}/ISIS10.rxn #{indir}/ISIS10.R1.smi #{indir}/ISIS10.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_19",
+      "args": [
+         "-D rmfrag -z i -u -o usmi -M all -A D ",
+         "-D #{indir}/ISIS11.rxn #{indir}/ISIS11.R1.smi #{indir}/ISIS11.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_20",
+      "args": [
+        "-D rmfrag -z i -u -o usmi -M all -A D ",
+        "-D #{indir}/ISIS14.rxn #{indir}/ISIS14.R1.smi #{indir}/ISIS14.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_21",
+      "args": [
+        "-D rmfrag -z i -u -o usmi -M all -A D ",
+        "-D #{indir}/ISIS15.rxn #{indir}/ISIS15.R1.smi #{indir}/ISIS15.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_22",
+      "args": [
+        "-D rmfrag -z i -u -o usmi -M all -A D ",
+        "-D #{indir}/ISIS16.rxn #{indir}/ISIS16.R1.smi #{indir}/ISIS16.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_23",
+      "args": [
+        "-D rmxh -J rmovm -o usmi -M all -A D ",
+        "-D #{indir}/ISIS2.rxn -z i #{indir}/ISIS2.R1.smi #{indir}/ISIS2.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_24",
+      "args": [
+        "-J rmovm -o usmi -M all -A D ",
+        "-D #{indir}/ISIS4.rxn -z i #{indir}/ISIS4.R1.smi #{indir}/ISIS4.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_25",
+      "args": [
+        "-J rmovm -o usmi -M all -A D ",
+        "-D #{indir}/ISIS5.rxn #{indir}/ISIS5.R1.smi #{indir}/ISIS5.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_26",
+      "args": [
+        "-J rmovm -o usmi -M all -A D ",
+        "-D #{indir}/ISIS6.rxn #{indir}/ISIS6.R1.smi #{indir}/ISIS6.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_27",
+      "args": [
+        "-u -o usmi -M all -A D ",
+        "-D #{indir}/ISIS8.rxn #{indir}/ISIS8.R1.smi #{indir}/ISIS8.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_28",
+      "args": [
+        "-z i -D rmfrag -u -o usmi -M all -A D ",
+        "-D #{indir}/ISIS9.rxn #{indir}/ISIS9.R1.smi #{indir}/ISIS9.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_29",
+      "args": [
+         "-o usmi -D rmxh -M do=0 ",
+         "-D #{indir}/mitsunobu_primary_secondary.rxn #{indir}/mitsunobu_primary_secondary.R1.smi #{indir}/mitsunobu_primary_secondary.R2.smi"
+      ],
+      "ignore_file": [ "stderr" ]
+    },
+
+    {
+      "name": "case_30",
+      "args": [
+        "-D rmxh -M all ",
+        "-D #{indir}/multi_component.rxn -A D #{indir}/multi_component.R1.smi #{indir}/multi_component.R2.smi #{indir}/multi_component.R3.smi #{indir}/multi_component.R4.smi"
+      ]
+    },
+
+    {
+      "name": "case_31",
+      "args": [
+        "-z i -M do=0 -o usmi",
+        "-D #{indir}/notlist.rxn #{indir}/not_list.R1.smi #{indir}/not_list.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_32",
+      "args": [
+        "-D rmxh -J rmncm -D rmunmp -z i -o usmi",
+        "-D #{indir}/pyrazole_part_1.rxn #{indir}/pyrazole_part_1.R1.smi #{indir}/pyrazole_part_1.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_33",
+      "args": [
+        "-D rmxh -D echo=foo",
+        "-D #{indir}/smarts.rxn #{indir}/smarts.R1.smi #{indir}/smarts.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_34",
+      "args": [
+        "-o usmi -z i -J wrscaf -D SR2 -D rmxh",
+        "-D #{indir}/sn2.rxn #{indir}/sn2.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_35",
+      "args": [
+        "-z i -D SR2",
+        "-D #{indir}/sr1.rxn #{indir}/sr1.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_35_keep",
+      "args": [
+        "-z i -J keepatmn -D SR2",
+        "-D #{indir}/sr1.rxn #{indir}/sr1.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_36",
+      "args": [
+        "-z i -M do=0",
+        "-D #{indir}/triazole.rxn #{indir}/triazole.R1.smi #{indir}/triazole.R2.smi"
+      ]
+    },
+
+    {
+      "name": "case_37",
+      "args": [
+        "-z i -A D",
+        "-D #{indir}/triazolopyridine_rearrangement.rxn #{indir}/triazolopyridine_rearrangement.R1.smi"
+      ]
+    },
+
+    {
+      "name": "case_38",
+      "args": [
+        "-D rmxh -o usmi -J rmovm -z i",
+        "-D #{indir}/triazolopyridine.rxn #{indir}/triazolopyridine.R1.smi #{indir}/triazolopyridine.R2.smi"
+      ]
+    },
+
+    {
+      "name": "copy_isotope_scaffold",
+      "args": [
+        "-P #{indir}/copy_isotope.rxn #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "copy_isotope_scaffold_remove",
+      "args": [
+        "-P #{indir}/copy_isotope.rxn #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "copy_isotope_sidechain",
+      "args": [
+        "-P #{indir}/c2.rxn #{indir}/c2.smi"
+      ]
+    },
+
+    {
+      "name": "copy_isotope_sidechain_remove",
+      "args": [
+        "-P #{indir}/copy_isotope.rxn #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "smarts_in_rxn_file",
+      "args": [
+        "-D #{indir}/acid_amine.rxn #{indir}/r1.smi #{indir}/r2.smi"
+      ]
+    }
+  ]
+}

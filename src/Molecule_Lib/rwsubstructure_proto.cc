@@ -28,7 +28,11 @@
 #include "Molecule_Lib/set_of_atoms.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "Molecule_Lib/substructure.pb.h"
+#endif
 #include "Molecule_Lib/target.h"
 
 using std::cerr;
@@ -38,8 +42,8 @@ using down_the_bond::DownTheBond;
 constexpr uint32_t no_limit = std::numeric_limits<uint32_t>::max();
 
 // Having unbalanced braces in the code messes up matching in the editor.
-constexpr char kOpenBrace = '{';
-constexpr char kCloseBrace = '}';
+static constexpr char kOpenBrace = '{';
+static constexpr char kCloseBrace = '}';
 
 using google::protobuf::Descriptor;
 using google::protobuf::FieldDescriptor;
@@ -2122,6 +2126,7 @@ SeparatedAtoms::Build(const SubstructureSearch::SeparatedAtoms& proto) {
       return 0;
     }
   }
+  MATCHER_FROM_PROTO(proto, rotbond, uint32_t, _rotbond);
 
   return 1;
 }
@@ -2343,6 +2348,7 @@ Single_Substructure_Query::_construct_from_proto(const SubstructureSearch::Singl
         cerr << subst.ShortDebugString() << '\n';
         return 0;
       }
+      substituent->set_is_ring_substituent(0);
       _substituent.add(substituent.release());
     }
   }
@@ -2380,6 +2386,30 @@ Single_Substructure_Query::_construct_from_proto(const SubstructureSearch::Singl
         return 0;
       }
       _nearby_atoms.add(nearby.release());
+    }
+  }
+
+  if (proto.same_atomic_number_size() > 0) {
+    for (const auto& r : proto.same_atomic_number()) {
+      std::unique_ptr<SameAtomicNumber> s = std::make_unique<SameAtomicNumber>();
+      if (! s->ConstructFromProto(r)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid SameAtomicNumber\n";
+        cerr << r.ShortDebugString() << '\n';
+        return 0;
+      }
+      _same_atomic_number << s.release();
+    }
+  }
+
+  if (proto.different_atomic_number_size() > 0) {
+    for (const auto& r : proto.different_atomic_number()) {
+      std::unique_ptr<DifferentAtomicNumber> s = std::make_unique<DifferentAtomicNumber>();
+      if (! s->ConstructFromProto(r)) {
+        cerr << "Single_Substructure_Query::_construct_from_proto:invalid DifferentAtomicNumber\n";
+        cerr << r.ShortDebugString() << '\n';
+        return 0;
+      }
+      _different_atomic_number << s.release();
     }
   }
 
@@ -3303,16 +3333,16 @@ Link_Atom::ConstructFromProto(const SubstructureSearch::LinkAtoms & proto)
 
   _a1 = proto.a1();
   _a2 = proto.a2();
-  if (_a1 == _a2)
-  {
+  if (_a1 == _a2) {
     cerr << "Link_Atom::ConstructFromProto:atoms must be distinct " << proto.ShortDebugString() << "\n";
     return 0;
   }
 
   static constexpr uint32_t no_limit = std::numeric_limits<uint32_t>::max();
 
-  if (!GETVALUES(proto, distance, 0, no_limit))
+  if (!GETVALUES(proto, distance, 0, no_limit)) {
     return 0;
+  }
 
   return 1;
 }
@@ -3326,16 +3356,44 @@ DownTheBond::ConstructFromProto(const SubstructureSearch::DownTheBond& proto) {
   _a1 = proto.a1();
   _a2 = proto.a2();
 
+  if (proto.has_match_as_match()) {
+    _match_as_match = proto.match_as_match();
+  }
+
   if (_a1 == _a2) {
     cerr << "DownTheBond::ConstructFromProto:a1 a2 the same " << proto.ShortDebugString() << '\n';
     return 0;
   }
-
-  static constexpr uint32_t no_limit = std::numeric_limits<uint32_t>::max();
-
-  if (! GETVALUES(proto, natoms, 0, no_limit)) {
-    return 0;
+  if (proto.has_no_other_substituents_allowed()) {
+    _no_other_substituents_allowed = proto.no_other_substituents_allowed();
   }
+  if (proto.has_match_individual_substituent()) {
+    _match_individual_substituent = proto.match_individual_substituent();
+  }
+  if (_no_other_substituents_allowed) {
+    _match_individual_substituent = true;
+  }
+
+  MATCHER_FROM_PROTO(proto, natoms, uint32_t, _natoms);
+  MATCHER_FROM_PROTO(proto, heteroatom_count, uint32_t, _heteroatom_count);
+  MATCHER_FROM_PROTO(proto, ring_atom_count, uint32_t, _ring_atom_count);
+  MATCHER_FROM_PROTO(proto, unsaturation_count, uint32_t, _unsaturation_count);
+  MATCHER_FROM_PROTO(proto, aromatic_count, uint32_t, _aromatic_count);
+
+
+  for (const auto& query_match : proto.query_matches()) {
+    std::unique_ptr<QueryMatches> qm = std::make_unique<QueryMatches>();
+    if (! qm->Build(query_match)) {
+      cerr << "DownTheBond::Build:invalid query match " << proto.ShortDebugString() << '\n';
+      return 0;
+    }
+    _query << qm.release();
+  }
+
+  if (_query.size()) {
+    _all_queries_require_zero_hits = AllQueriesRequireZeroHits();
+  }
+
 
   return 1;
 }
@@ -3344,10 +3402,70 @@ int
 DownTheBond::BuildProto(SubstructureSearch::DownTheBond& proto) const {
   proto.set_a1(_a1);
   proto.set_a2(_a2);
-  SETPROTOVALUES(proto, natoms, int);
+
+  if (! _match_as_match) {
+    proto.set_match_as_match(false);
+  }
+
+  if (_no_other_substituents_allowed) {
+    proto.set_no_other_substituents_allowed(true);
+  }
+  if (_match_individual_substituent) {
+    proto.set_match_individual_substituent(true);
+  }
+
+  PROTO_FROM_MATCHER(_natoms, natoms, uint32_t, proto);
+  PROTO_FROM_MATCHER(_heteroatom_count, heteroatom_count, uint32_t, proto);
+  PROTO_FROM_MATCHER(_ring_atom_count, ring_atom_count, uint32_t, proto);
+  PROTO_FROM_MATCHER(_unsaturation_count, unsaturation_count, uint32_t, proto);
+  PROTO_FROM_MATCHER(_aromatic_count, aromatic_count, uint32_t, proto);
+
+  for (const auto* qm : _query) {
+    SubstructureSearch::QueryMatches* destination = proto.mutable_query_matches()->Add();
+    qm->BuildProto(*destination);
+  }
 
   return 1;
 }
+
+namespace down_the_bond {
+int
+QueryMatches::Build(const SubstructureSearch::QueryMatches& proto) {
+  if (! proto.has_smarts()) {
+    cerr << "QueryMatches::Build:no smarts attribute in " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // Might not be a smarts, but that is OK.
+  _smarts = proto.smarts();
+
+  _query = std::make_unique<Substructure_Atom>();
+  if (! _query->construct_from_smarts_token(proto.smarts().data(), proto.smarts().size())) {
+    cerr << "QueryMatches::Build:cannot parse " << proto.smarts() << '\n';
+    return 0;
+  }
+  _query->count_attributes_specified();
+
+  MATCHER_FROM_PROTO(proto, hits_needed, uint32_t, _hits_needed);
+  if (! _hits_needed.is_set()) {
+    cerr << "QueryMatches::Build:hits_needed not set " << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  return 1;
+}
+
+int
+QueryMatches::BuildProto(SubstructureSearch::QueryMatches& proto) const {
+  if (! _query || _smarts.empty()) {
+    return 1;
+  }
+  proto.set_smarts(_smarts.data(), _smarts.length());
+  PROTO_FROM_MATCHER(_hits_needed, hits_needed, uint32_t, proto);
+  return 1;
+}
+
+}  // namespace down_the_bond
 
 #ifdef IMPLEMENT_THIS
 TODO
@@ -3503,9 +3621,26 @@ Single_Substructure_Query::_build_chirality_specification_from_proto(const Subst
   return 1;
 }
 
+static int
+MaybeAddDirectory(const SubstructureSearch::SubstructureQuery& proto,
+                  IWString& fname) {
+  if (! proto.has_originating_file_name_internal_use_only()) {
+    return 1;
+  }
+
+  IWString originating_file_name(proto.originating_file_name_internal_use_only());
+  std::optional<IWString> maybe_new_file = iwmisc::FileOrPath(originating_file_name, fname);
+  if (! maybe_new_file) {
+    return 1;
+  }
+
+  fname = *maybe_new_file;
+
+  return 1;
+}
+
 int
-Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto)
-{
+Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQuery& proto) {
   if (proto.has_name()) {
     _comment = proto.name();
   } else if (proto.comment().size() > 0) {
@@ -3517,8 +3652,7 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
     return 0;
   }
 
-  for (const auto& query : proto.query())
-  {
+  for (const auto& query : proto.query()) {
     std::unique_ptr<Single_Substructure_Query> q = std::make_unique<Single_Substructure_Query>();
 
     if (! q->ConstructFromProto(query)) {
@@ -3531,6 +3665,8 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
 
   for (const std::string& fname : proto.query_file()) {
     IWString tmp(fname);
+    MaybeAddDirectory(proto, tmp);
+    tmp.ExpandEnvironmentVariablesInPlace();
     std::optional<SubstructureSearch::SubstructureQuery> maybe_qry =
        iwmisc::ReadTextProtoCommentsOK<SubstructureSearch::SubstructureQuery>(tmp);
     if (! maybe_qry) {
@@ -3572,8 +3708,8 @@ Substructure_Query::ConstructFromProto(const SubstructureSearch::SubstructureQue
 
   _operator.RemoveAllOperators();
 
-  if (! ExtractOperator(proto.logexp(), _number_elements - 1, _operator, IW_LOGEXP_OR, "Substructure_Query::ConstructFromProto"))
-  {
+  if (! ExtractOperator(proto.logexp(), _number_elements - 1, _operator, IW_LOGEXP_OR,
+        "Substructure_Query::ConstructFromProto")) {
     cerr << "Substructure_Query::ConstructFromProto:cannot process operators\n";
     cerr << proto.ShortDebugString() << '\n';
     return 0;
@@ -3591,6 +3727,8 @@ Substructure_Query::ReadProto(const IWString& fname) {
     cerr << "Substructure_Query::ReadProto:cannot read proto from '" << fname << "'\n";
     return 0;
   }
+
+  maybe_proto->set_originating_file_name_internal_use_only(fname.data(), fname.length());
 
   return ConstructFromProto(*maybe_proto);
 }
@@ -3836,11 +3974,19 @@ SeparatedAtoms::BuildProto(SubstructureSearch::SeparatedAtoms& proto) const {
   proto.set_a1(_a1);
   proto.set_a2(_a2);
   SetProtoValues(_separation, "bonds_between", proto);
+  PROTO_FROM_MATCHER(_rotbond, rotbond, uint32_t, proto);
   return 1;
 }
 
 int
 Substituent::ConstructFromProto(const SubstructureSearch::Substituent& proto) {
+  if (proto.has_match_as_match()) {
+    _match_as_match_or_rejection = proto.match_as_match();
+  }
+  if (proto.has_no_other_substituents_allowed()) {
+    _no_other_substituents_allowed = proto.no_other_substituents_allowed();
+  }
+
   if (!GETVALUES(proto, hits_needed, 0, no_limit))
     return 0;
   if (!GETVALUES(proto, natoms, 1, no_limit))
@@ -3849,6 +3995,9 @@ Substituent::ConstructFromProto(const SubstructureSearch::Substituent& proto) {
     return 0;
   if (!GETVALUES(proto, length, 1, no_limit))
     return 0;
+
+  MATCHER_FROM_PROTO(proto, heteroatom_count, uint32_t, _heteroatom_count);
+  MATCHER_FROM_PROTO(proto, unsaturation_count, uint32_t, _unsaturation_count);
 
   if (proto.has_set_global_id()) {
     _set_global_id = proto.set_global_id();
@@ -3883,6 +4032,12 @@ Substituent::ConstructFromProto(const SubstructureSearch::Substituent& proto) {
 
 int
 Substituent::BuildProto(SubstructureSearch::Substituent& proto) const {
+  if (_match_as_match_or_rejection == 0) {
+    proto.set_match_as_match(false);
+  }
+  if (_no_other_substituents_allowed) {
+    proto.set_no_other_substituents_allowed(true);
+  }
   SetProtoValues(_hits_needed, "hits_needed", proto);
   SetProtoValues(_natoms, "natoms", proto);
   SetProtoValues(_nrings, "nrings", proto);
@@ -3899,6 +4054,8 @@ Substituent::BuildProto(SubstructureSearch::Substituent& proto) const {
   for (const IWString* smt : _disqualifying_smarts) {
     proto.add_disqualifying_smarts(smt->AsString());
   }
+  PROTO_FROM_MATCHER(_heteroatom_count, heteroatom_count, uint32_t, proto);
+  PROTO_FROM_MATCHER(_unsaturation_count, unsaturation_count, uint32_t, proto);
 
   cerr << "Substituent::BuildProto:implement this something\n";
   return 0;
@@ -4235,9 +4392,12 @@ Region::ConstructFromProto(const SubstructureSearch::Region& proto) {
     return 0;
   }
 
+  MATCHER_FROM_PROTO(proto, heteroatom_count, uint32_t, _heteroatom_count);
+
   if (_natoms.is_set()) {
   } else if (_nrings.is_set()) {
   } else if (_atoms_not_on_shortest_path.is_set()) {
+  } else if (_heteroatom_count.is_set()) {
   } else {
     cerr << "Region::ConstructFromProto:nothing specified\n";
     return 0;
@@ -4262,6 +4422,10 @@ Region::BuildProto(SubstructureSearch::Region& proto) const {
 
   if (_atoms_not_on_shortest_path.is_set()) {
     SetProtoValues(_atoms_not_on_shortest_path, "atoms_not_on_shortest_path", proto);
+  }
+
+  if (_heteroatom_count.is_set()) {
+    PROTO_FROM_MATCHER(_heteroatom_count, heteroatom_count, uint32_t, proto);
   }
 
   return 1;
@@ -4440,6 +4604,69 @@ NearbyAtoms::ConstructFromProto(const SubstructureSearch::NearbyAtoms& proto) {
 
   if (proto.has_rejection()) {
     _rejection = proto.rejection();
+  }
+
+  return 1;
+}
+
+int
+SameAtomicNumber::ConstructFromProto(const SubstructureSearch::SetOfMatchedAtoms& proto) {
+  if (proto.atom_size() == 0) {
+    cerr << "SameAtomicNumber::ConstructFromProto: no data\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.atom_size() == 1) {
+    cerr << "SameAtomicNumber::ConstructFromProto:cannot have just one entry\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // Should warn about duplicated values.
+  for (const uint32_t a : proto.atom()) {
+    _atom.add_if_not_already_present(a);
+  }
+
+  return 1;
+}
+
+int
+DifferentAtomicNumber::ConstructFromProto(const SubstructureSearch::SetOfMatchedAtoms& proto) {
+  if (proto.atom_size() == 0) {
+    cerr << "DifferentAtomicNumber::ConstructFromProto: no data\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (proto.atom_size() != 2) {
+    cerr << "DifferentAtomicNumber::ConstructFromProto:not sure how to process " << proto.atom_size() <<
+            " matched atoms\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  // Should warn about duplicated values.
+  for (const uint32_t a : proto.atom()) {
+    _atom.add_if_not_already_present(a);
+  }
+
+  return 1;
+}
+
+int
+SameAtomicNumber::BuildProto(SubstructureSearch::SetOfMatchedAtoms& proto) const {
+  for (uint32_t a : _atom) {
+    proto.mutable_atom()->Add(a);
+  }
+
+  return 1;
+}
+
+int
+DifferentAtomicNumber::BuildProto(SubstructureSearch::SetOfMatchedAtoms& proto) const {
+  for (uint32_t a : _atom) {
+    proto.mutable_atom()->Add(a);
   }
 
   return 1;

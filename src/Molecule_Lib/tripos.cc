@@ -1,8 +1,6 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-using std::cerr;
-using std::endl;
 
 #define COMPILING_TRIPOS_CC
 
@@ -17,6 +15,8 @@ using std::endl;
 #include "molecule.h"
 #include "moleculeio.h"
 #include "rwmolecule.h"
+
+using std::cerr;
 
 namespace tripos {
 int assign_default_formal_charges = 0;
@@ -283,8 +283,8 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input)
 
   if (! buffer.starts_with("@<TRIPOS>MOLECULE"))
   {
-    cerr << "Molecule::_read_molecule_mol2_ds: invalid starting record, line " << input.lines_read() << endl;
-    cerr << buffer << endl;
+    cerr << "Molecule::_read_molecule_mol2_ds: invalid starting record, line " << input.lines_read() << '\n';
+    cerr << buffer << '\n';
 
     return 0;
   }
@@ -409,8 +409,8 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input,
 
     if (! _parse_tripos_atom_record(buffer, i, aromatic_atom[i], tri))
     {
-      cerr << "Molecule::_read_molecule_mol2_ds: invalid atom record, line " << input.lines_read() << endl;
-      cerr << buffer << endl;
+      cerr << "Molecule::_read_molecule_mol2_ds: invalid atom record, line " << input.lines_read() << '\n';
+      cerr << buffer << '\n';
       return 0;
     }
   }
@@ -422,8 +422,8 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input,
 
   if (! buffer.starts_with("@<TRIPOS>BOND"))
   {
-    cerr << "Molecule::_read_molecule_mol2_ds: should be start of bonds, line " << input.lines_read() << endl;
-    cerr << buffer << endl;
+    cerr << "Molecule::_read_molecule_mol2_ds: should be start of bonds, line " << input.lines_read() << '\n';
+    cerr << buffer << '\n';
     return 0;
   }
 
@@ -433,8 +433,8 @@ Molecule::_read_molecule_mol2_ds (iwstring_data_source & input,
 
     if (! _parse_tripos_bond_record(buffer, aromatic_atom, i, aromatic_bond))
     {
-      cerr << "Molecule::_read_molecule_mol2_ds: invalid bond record, line " << input.lines_read() << endl;
-      cerr << buffer << endl;
+      cerr << "Molecule::_read_molecule_mol2_ds: invalid bond record, line " << input.lines_read() << '\n';
+      cerr << buffer << '\n';
       return 0;
     }
   }
@@ -480,7 +480,7 @@ Molecule::_parse_tripos_bond_record (const const_IWSubstring & buffer,
 
   if (a2 == a1 + 1)
   {
-    cerr << "Molecule::_parse_tripos_bond_record: self bond found " << buffer << endl;
+    cerr << "Molecule::_parse_tripos_bond_record: self bond found " << buffer << '\n';
     if (ignore_self_bonds())
     {
       cerr << "Ignored\n";
@@ -594,7 +594,7 @@ Molecule::_parse_tripos_atom_record (const const_IWSubstring & buffer,
   else   
     arom = 0;
 
-//cerr << "Type '" << token << " arom " << arom << endl;
+//cerr << "Type '" << token << " arom " << arom << '\n';
 
   int atype = _tripos_atom_type_from_string(zatom, token);
 
@@ -964,7 +964,7 @@ Molecule::write_molecule_mol2 (std::ostream & os)
 
 //for (int i = 0; i < _number_elements; i++)
 //{
-//  cerr << "Atom " << i << " '" << smarts_equivalent_for_atom (i) << "' type " << atype[i] << endl;
+//  cerr << "Atom " << i << " '" << smarts_equivalent_for_atom (i) << "' type " << atype[i] << '\n';
 //}
 
   return _write_molecule_mol2(os, atype);
@@ -980,7 +980,11 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
   }
 
   os << "#\n";
-  os << "# Written by tripos.cc compiled " << __DATE__ << ' ' << __TIME__ << endl;
+#if defined(GIT_HASH) && defined(TODAY)
+  os << "# Written by tripos.cc compiled " << TODAY << '\n';
+#else
+  os << "# Written by tripos.cc compiled " << __DATE__ << '\n';
+#endif
   os << "#\n";
   os << "@<TRIPOS>MOLECULE\n";
 
@@ -1031,7 +1035,7 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
       os << 'T' << std::left << std::setw(5) << _atom_type->item(i);
     else if (! append_sybyl_atom_type(os, atype[i], a->atomic_symbol()))
     {
-      cerr << "molecule::_write_molecule_mol2: unrecognised type " << atype[i] << endl;
+      cerr << "molecule::_write_molecule_mol2: unrecognised type " << atype[i] << '\n';
       cerr << "Atom " << i << " type " << a->atomic_symbol() << ", " << a->ncon() << " connections\n";
     }
 
@@ -1086,7 +1090,7 @@ Molecule::_write_molecule_mol2 (std::ostream & os, const int * atype)
       os << '3';
     else
     {
-      cerr << "Molecule::write_molecule_mol2: what kind of bond is this " << b->a1() << " to " << b->a2() << endl;
+      cerr << "Molecule::write_molecule_mol2: what kind of bond is this " << b->a1() << " to " << b->a2() << '\n';
       os << '?';
     }
 

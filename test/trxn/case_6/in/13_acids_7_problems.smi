@@ -1,0 +1,13 @@
+OC(=O)C acetic_acid
+OC(=O)C1CCCC1 cyclohexanecarboxylic_acid
+OC(=O)C1=CC=CC=C1 benzoic_acid
+OC(=O)CC1=CC=CC=C1 phenylactetic_acid
+OC(=O)C1=CC=C(Cl)C=C1 p_chlorobenzoic_acid
+OC(=O)C1=CC(Cl)=CC=C1 m_chlorobenzoic_acid
+OC(=O)CCCC(=O)O sym_diacid
+OC(=O)CCC(C)C(=O)O unsym_diacid
+OC(=O)CC(CC(=O)O)CC(=O)O sym_triacid
+OC(=O)CC(CC(=O)O)C(C)C(=O)O somesym_triacid
+OC(=O)CC(C(F)C(=O)O)C(C)C(=O)O unsym_triacid
+C1CCCCC1 cyclohexane
+N.OC(=O)C ammonium_acetate

@@ -1,0 +1,9 @@
+scaffold {
+  id: 0
+  smarts: "CBF"
+  copy_isotope {
+    from: 2
+    to: 0
+  }
+  remove_atom: 2
+}

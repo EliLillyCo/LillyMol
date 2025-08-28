@@ -1,0 +1,9 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "Ring 4 in system")
+  (0 Ring_System_Specifier
+    (A I ring_size 4)
+    (A I min_rings_that_must_match_ring_size 1)
+    (A I min_nrings 2)
+  )
+)

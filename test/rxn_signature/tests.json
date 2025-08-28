@@ -1,0 +1,12 @@
+{
+  "executable": "rxn_signature",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "-v -r 0,1,2 -C Cfile -F Ffile #{indir}/all.rxnsmi"
+      ]
+    }
+  ]
+
+}

@@ -12,7 +12,7 @@ using std::endl;
 
 namespace internal {
 
-constexpr int exclude_atom = -1;
+constexpr int kExcludeAtom = -1;
 
 Options::Options () 
 {
@@ -89,7 +89,7 @@ LinearFpStatus::LinearFpStatus(const Options& opt, const Molecule& m,
       if (include_atom[i])
         _atom_in_path[i] = 0;
       else
-        _atom_in_path[i] = exclude_atom;
+        _atom_in_path[i] = kExcludeAtom;
     }
 
     for (int i = 0; i < _nedges; ++i) {
@@ -133,6 +133,26 @@ LinearFpStatus::~LinearFpStatus()
   return;
 }
 
+int
+LinearFpStatus::DebugPrint(std::ostream& output) const {
+  output << "LinearFpStatus:path length " << _path_length << '\n';
+  if (_path_length == 0) {
+    return output.good();
+  }
+
+  output << "0 atom " << _path_index[0] << '\n';
+  for (int i = 1; i < _path_length; i += 2) {
+    output << i << " bond " << _path_index[i] << " atom " << _path_index[i + 1] << '\n';
+  }
+
+  for (int i = 0; i < _matoms; ++i) {
+    output << " atom " << i << " in path " << _atom_in_path[i] << '\n';
+  }
+
+
+  return output.good();
+}
+
 uint64_t
 LinearFpStatus::_BondHash(const Bond& b) const {
   if (b.is_aromatic())
@@ -160,6 +180,7 @@ LinearFpStatus::_AddBondToPath(const Bond & b, const atom_number_t next_atom) {
 
 #ifdef DEBUG_LINEAR_FP
   cerr << "At length " << _path_length << " adding bond number " << bond_number << " value " << _bond_constant[bond_number] << endl;
+  cerr << "_AddBondToPath adding atom " << next_atom << " length " << _path_length << '\n';
 #endif
 
   _path[_path_length] = _bond_constant[bond_number];
@@ -186,6 +207,9 @@ LinearFpStatus::_PopPath() {
   const int atom_number = _path_index[_path_length];
   assert(_atom_in_path[atom_number]);
   _atom_in_path[atom_number]--;
+#ifdef DEBUG_EXPAND
+  cerr << "_PopPath removing atom " << atom_number << " at length " << _path_length << '\n';
+#endif
 
   _path_length--;
 
@@ -223,13 +247,14 @@ LinearFpStatus::Fingerprint() {
     return 1;
   }
 
-  if (nullptr != _stream_for_bit_meanings)
+  if (nullptr != _stream_for_bit_meanings) {
     _WriteLabelledSmiles();
+  }
 
-  for (int i = 0; i < _matoms; ++i)
-  {
-    if (exclude_atom == _atom_in_path[i])
+  for (int i = 0; i < _matoms; ++i) {
+    if (kExcludeAtom == _atom_in_path[i]) {
       continue;
+    }
 
     _StartPath(i);
     _MaybeFormBit();
@@ -249,37 +274,56 @@ LinearFpStatus::Fingerprint() {
 void
 LinearFpStatus::_Expand() 
 {
-  if (_path_length / 2 >= _options._max_length)
+  if (_path_length / 2 >= _options._max_length) {
     return;
+  }
+
+  // Extract to single variable to avoid complex comparisons in the loop.
+  bool rings_or_crossing_paths;
+  if (_path_length / 2 < 3) {
+    rings_or_crossing_paths = false;
+  } else {
+    rings_or_crossing_paths = (_options._fingerprint_ring_presence ||
+                               _options._paths_can_cross);
+  }
 
   const atom_number_t a1 = _path_index[_path_length - 1];
+#ifdef DEBUG_EXPAND
+  cerr << "Expand from atom " << a1 << '\n';
+  DebugPrint(cerr);
+#endif
 
-  const Atom * a = _atom[a1];
+  const Atom* a = _atom[a1];
 
-  const int acon = a->ncon();
-
-  for (int i = 0; i < acon; ++i) {
-    const Bond * b = a->item(i);
-    if (_bond_in_path[b->bond_number()])
+  for (const Bond* b : *a) {
+    if (_bond_in_path[b->bond_number()]) {  // catches return to previous atom.
       continue;
+    }
 
     const atom_number_t a2 = b->other(a1);
-    if (exclude_atom == _atom_in_path[a2])
+    if (kExcludeAtom == _atom_in_path[a2]) {
       continue;
+    }
 
-    bool a2_already_in_path;
-    if (!_atom_in_path[a2])  // The easy case
-      a2_already_in_path = false;
-    else if (_options._fingerprint_ring_presence ||
-             _options._paths_can_cross)
-      a2_already_in_path = true;
-    else  // Avoid placed atom.
+    bool a2_already_in_path = false;
+    if (! _atom_in_path[a2]) {
+      // New atom, great.
+    } else if (! rings_or_crossing_paths) {
+      // In path, but not doing anything with rings or crossing paths.
       continue;
+    } else {  // Already in path, maybe ring and/or crossing path.
+      if (_options._fingerprint_ring_presence) {
+        _AddBondToPath(*b, a2);
+        _FormRingBit();
+        _PopPath();
+      }
+      // TODO:ianwatson implement crossing path idea.
+      continue;
+    }
 
     _AddBondToPath(*b, a2);
     _MaybeFormBit();
-    if (a2_already_in_path) 
-    {
+    if (a2_already_in_path) {
       if (_options._fingerprint_ring_presence)
         _FormRingBit();
       if (!_options._paths_can_cross)
@@ -346,34 +390,32 @@ LinearFpStatus::_MaybeFormBit() {
 
 // Atom at end of path occurs somewhere previously. Find it.
 void
-LinearFpStatus::_FormRingBit()
-{
+LinearFpStatus::_FormRingBit() {
   const int target = _path_index[_path_length - 1];
 
-  int first_index = -1;
-  for (int i = 0; i < (_path_length - 1); i += 2)
-  {
-    if (_path_index[i] == target)
-    {
-      first_index = i;
+  int last_index = -1;
+  for (int i = _path_length -3; i >= 0; i -= 2) {
+    if (_path_index[i] == target) {
+      last_index = i;
       break;
     }
   }
 
-  if (first_index < 0) 
-  {
-    cerr << "LinearFpStatus:_FormRingBit:first occurrence not found\n";
+  if (last_index < 0) {
+    cerr << "LinearFpStatus:_FormRingBit:first occurrence not found, target " << target << '\n';
     _PrintPath(cerr);
     return;
   }
 
-  uint64_t t1 = _path[first_index];
+  uint64_t t1 = _path[last_index];
   uint64_t t2 = _path[_path_length - 1];
 
-  if (t1 < t2)
+  if (t1 < t2) {
     std::swap(t1, t2);
+  }
 
-  _sfc.hit_bit(_magic1 * t1 + (_path_length - first_index) * (t2 + _magic2));
+  // Open question, should we include the bond type in this calculation?
+  _sfc.hit_bit(_magic1 * t1 + (_path_length - last_index) * (t2 + _magic2));
 }
 
 void
@@ -410,20 +452,22 @@ LinearFpStatus::_FormFingerprintBackward()
 }
 
 void
-LinearFpStatus::_ExamineBit(const uint64_t b)
-{
+LinearFpStatus::_ExamineBit(const uint64_t b) {
 #ifdef DEBUG_LINEAR_FP
   cerr << "Formed bit " << b <<endl;
 #endif
 
-  if (! _need_to_examine_bits_formed)
+  if (! _need_to_examine_bits_formed) {
     return;
+  }
 
-  if (_options._check_coverage)
+  if (_options._check_coverage) {
     _DoCheckCoverage();
+  }
 
-  if (nullptr != _stream_for_bit_meanings)
+  if (nullptr != _stream_for_bit_meanings) {
     _WriteBit(b);
+  }
 
   return;
 }

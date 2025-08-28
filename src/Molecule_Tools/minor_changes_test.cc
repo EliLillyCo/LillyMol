@@ -107,9 +107,10 @@ TEST_P(TestMinorChangesP, Tests) {
   const auto params = GetParam();
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
   ASSERT_TRUE(TextFormat::ParseFromString(params.proto, &_proto));
-  std::cerr << "Starting with " << params.smiles << '\n';
+  // std::cerr << "Starting with " << params.smiles << '\n';
   _options.SetConfig(_proto);
-  EXPECT_EQ(_options.Process(_mol, _results), params.expected.size());
+  EXPECT_EQ(_options.Process(_mol, _results), params.expected.size()) << params.smiles 
+        << " proto " << params.proto;
   if (params.expected.empty()) {
     return;
   }
@@ -117,8 +118,11 @@ TEST_P(TestMinorChangesP, Tests) {
   std::vector<IWString> smiles;
   for (Molecule* m : _results) {
     smiles.push_back(m->unique_smiles());
-    std::cerr << "Added " << m->unique_smiles() << '\n';
+    // std::cerr << "Added " << m->unique_smiles() << '\n';
   }
+
+  EXPECT_EQ(smiles.size(), params.expected.size());
+
   EXPECT_THAT(smiles, UnorderedElementsAreArray(params.expected));
 }
 INSTANTIATE_TEST_SUITE_P(TestMinorChangesP, TestMinorChangesP, testing::Values(
@@ -442,7 +446,39 @@ INSTANTIATE_TEST_SUITE_P(TestMinorChangesP, TestMinorChangesP, testing::Values(
   InputData{"CCCCO", R"pb(
     remove_fragment: [1, 2]
 )pb",
-    {"OCCC", "CCCC"}}
+    {"OCCC", "CCCC"}},
+
+  // remove_fused_aromatics 1. #50
+  InputData{"C1=CC=C2C(=C1C(N)=O)N=C(N2)C(C)(C)NC CHEMBL481081", R"pb(
+    remove_fused_aromatics: true
+)pb",
+    {"O=C(N)c1cc(C(NC)(C)C)ccc1",
+     "O=C(N)c1c(C(NC)(C)C)cccc1",
+     "O=C(N)c1[nH]c([n]c1)C(NC)(C)C",
+     "O=C(N)c1[n]c([nH]c1)C(NC)(C)C"}},
+
+  // remove_fused_aromatics 2. #51
+  InputData{"N1=CC=C(N=C1N)N1C(=NC2=C1C=C(Cl)C=C2)C CHEMBL2334592", R"pb(
+    remove_fused_aromatics: true
+)pb",
+    {"Clc1cc(C)c(c2[n]c(N)[n]cc2)cc1",
+     "Clc1cc(c(C)cc1)c1[n]c(N)[n]cc1",
+     "Clc1[n]c(C)[n](c1)c1cc[n]c(N)[n]1",
+     "Clc1c[n]c(C)[n]1c1cc[n]c(N)[n]1"}},
+
+  // remove_fused_aromatics 2. #52
+  InputData{"O=C1C2=CC=CN=C2C2=NC=CC=C12 CHEMBL1449639", R"pb(
+    remove_fused_aromatics: true
+)pb",
+    {}},
+
+  // remove_fused_aromatics 2. #52
+  InputData{"C1=CC(=C2C(=C1C)C=CC=N2)S CHEMBL4084782", R"pb(
+    remove_fused_aromatics: true
+)pb",
+    {"Sc1ccc[n]c1C",
+     "Sc1[n]cccc1C",
+     "Sc1ccc(C)cc1"}}
 ));
 
 }  // namespace

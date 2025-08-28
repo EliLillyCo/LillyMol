@@ -1,0 +1,89 @@
+{
+  "executable": "molecular_transformations",
+  "difftool": "same_structures",
+    "test": [
+        {
+          "name": "case_1",
+          "args": [ "-A I -A D -d -z d -m each -R #{indir}/heteroHalideTransformationRule.rxn #{indir}/heteroHalid.smi" ],
+          "comment": [ "1550  2014-10-03 18:32:25 molecular_transformations  -A I -A D -d -z d -m each -R  heteroHalideTransformationRule.rxn heteroHalid.smi &gt; out.smi" ]
+        },
+        {
+          "name": "case_2",
+          "args": [ "-v -v -N 100 -S 100_ADEL18A -O apprxn -O apprgnt -z i -z w -W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/ADEL18A.config" ],
+          "comment": [ "multistep library enumeration useful for DEL" ],
+          "broken_do_not_evaluate": true
+        },
+        {
+          "name": "case_3",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design2.config -z i" ],
+          "comment": [ "3hit Scaffold test -  no -M" ]
+        },
+        {
+          "name": "case_4",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design2.config -z i -m all" ],
+          "comment": [ "3hit Scaffold test -  no -M" ]
+        },
+        {
+          "name": "case_5",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design2.config -z i -m do=0" ],
+          "comment": [ "3hit Scaffold test -  -M do=0" ]
+        },
+        {
+          "name": "case_6",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design2.config -z i -m do=2" ],
+          "comment": [ "3hit Scaffold test -  -M do=2" ]
+        },
+        {
+          "name": "case_7",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design2.config -z i -m RMX" ],
+          "comment": [ "3hit Scaffold test -  -M RMX" ]
+        },
+        {
+          "name": "case_8",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design3.config -z i -Z -m all -Mall" ],
+          "comment": [ "3hit Sidechain test -  -m all -M all" ]
+        },
+        {
+          "name": "case_9",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design3.config -z i -m all -Z -M do=0" ],
+          "comment": [ "3hit Sidechain test -  -m all -M do=0" ]
+        },
+        {
+          "name": "case_10",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design3.config -z i -m all -Z -M do=1" ],
+          "comment": [ "3hit Sidechain test -  -m all -M do=1" ]
+        },
+        {
+          "name": "case_11",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/design3.config -z i -m all -Z -M RMX" ],
+          "comment": [ "3hit Sidechain test -  -m all -M RMX" ]
+        },
+        {
+          "name": "case_12",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/first2anddollars.config -z i -m all -Z -M all" ],
+          "comment": [ "test of config file with dollar signs at the end" ]
+        },
+        {
+          "name": "case_13",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/SidechainRxn.config -z i -m all -Z -M all" ],
+          "comment": [ "test of a reaction with two sidechains, one of which is constant" ]
+        },
+        {
+          "name": "case_14",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/SidechainRxnFromFile.config -z i -m all -Z -M all" ],
+          "comment": [ "test of a reaction with two sidechains, one of which is constant, and the smiles for the other are in a file" ]
+        },
+        {
+          "name": "case_15",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/SidechainRxnBothSidesNeeded.config -z i -m all -Z -M all" ],
+          "comment": [ "test of a reaction with two sidechains,both of which require smiles input" ]
+        },
+        {
+          "name": "case_16",
+          "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/SidechainRxnBothSidesNeededFromFiles.config -z i -m all -Z -M all" ],
+          "comment": [ "test of a reaction with two sidechains,both of which require smiles input, and smiles are in files" ]
+        }
+      ]
+    }
+  }
+}

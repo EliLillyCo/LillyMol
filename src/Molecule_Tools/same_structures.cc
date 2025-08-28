@@ -7,6 +7,8 @@
 // NB: today this stops once a difference is found. TODO:ianwatson enable
 // processing to continue;
 
+// Added functionality to slurp the unique smiles from each file and compare.
+
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -17,6 +19,8 @@
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/iwre2.h"
+#define IWQSORT_FO_IMPLEMENTATION
+#include "Foundational/iwqsort/iwqsort.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/molecule.h"
@@ -29,19 +33,33 @@ namespace fs = std::filesystem;
 void
 Usage(int rc)
 {
-  cerr << "Performs chemically and numerically aware comparisons of files\n";
-  cerr << " -D d1,d2     specify directories to be scanned for same files\n";
-  cerr << " -r <tol>      relative tolerance for numeric values\n";
-  cerr << " -h <nskip>    number of header records to skip\n";
-  cerr << " -I            remove isotopes before comparing\n";
-  cerr << " -s            slurp and sort the contents of the files\n";
-  cerr << " -k            do NOT stop after encountering a difference, detect all diffs\n";
-  cerr << " -S <col>      slupr and sort the file contents based on column <col>\n";
-  cerr << " -i <sep>      name of input separator -i ,   -i tab\n";
-  cerr << " -A ...        standard aromaticity options\n";
-  cerr << " -E ...        standard elements options\n";
-  cerr << " -K ...        standard smiles options\n";
-  cerr << " -v            verbose output\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << R"(Computes measures of internal consistency for a series of measured values based on how
+Performs chemically and numerically aware comparisons of sets of files.
+Examines each file line by line - the same line is compared across all files - no 'diff' here.
+ -D d1,d2     specify directories to be scanned for same files.
+ -r <tol>      relative tolerance for numeric values.
+ -h <nskip>    number of header records to skip.
+ -I            remove isotopes before comparing
+ -c            if structure comparisons fail, try removing chirality and check again.
+ -s            slurp and sort the contents of the files.
+ -k            do NOT stop after encountering a difference, detect all diffs.
+ -S <col>      slurp and sort the file contents based on column <col>.
+ -m            skip over missing files - default is to die.
+ -i <sep>      name of input separator -i ,   -i tab.
+ -A ...        standard aromaticity options.
+ -E ...        standard elements options.
+ -K ...        standard smiles options.
+ -v            verbose output.
+)";
+  // clang-format on
   ::exit(rc);
 }
 
@@ -126,6 +144,9 @@ struct Afile {
   private:
     // There may be transformations performed on each line as it is read.
     void DoAnyRecordTransformations(IWString& line);
+ 
+    int SortByToken(int sort_column);
+
   public:
 
   // Opening and closing
@@ -182,19 +203,64 @@ Afile::Slurp() {
   return file_contents.size();
 }
 
+struct TokenFromLine {
+  const_IWSubstring token;
+  uint32_t line_number;
+};
+
+class TokenFromLineSorter {
+  private:
+  public:
+    int operator() (const TokenFromLine& tfl1, const TokenFromLine& tfl2) const {
+      const const_IWSubstring& t1 = tfl1.token;
+      const const_IWSubstring& t2 = tfl2.token;
+
+      if (t1.length() < t2.length()) {
+        return 1;
+      }
+      if (t1.length() > t2.length()) {
+        return -1;
+      }
+
+      return t1.strcmp(t2);
+    }
+};
+
+int
+Afile::SortByToken(int sort_column) {
+  uint32_t n = file_contents.size();
+
+  std::unique_ptr<TokenFromLine[]> token_from_line = std::make_unique<TokenFromLine[]>(n);
+  for (uint32_t i = 0; i < n; ++i) {
+    file_contents[i].word(sort_column, token_from_line[i].token);
+    // cerr << "column " << sort_column << " is '" << token_from_line[i].token << "'\n";
+    token_from_line[i].line_number = i;
+  }
+
+  TokenFromLineSorter sorter;
+  iwqsort(token_from_line.get(), n, sorter);
+
+  // Very inefficient here.
+  std::vector<IWString> new_value(n);
+
+  for (uint32_t i = 0; i < n; ++i) {
+    uint32_t j = token_from_line[i].line_number;
+    new_value[j] = file_contents[i];
+  }
+
+  file_contents = std::move(new_value);
+
+  return 1;
+}
+
 int
 Afile::SortFileContents(int sort_column) {
   if (sort_column < 0) {
     std::sort(file_contents.begin(), file_contents.end());
   } else {
-    // Very inefficient.
-    std::sort(file_contents.begin(), file_contents.end(), [sort_column](const IWString& line1, const IWString& line2) {
-      const_IWSubstring token1 = line1.word(sort_column);
-      const_IWSubstring token2 = line2.word(sort_column);
-      return token1.strcmp(token2);
-    });
+    SortByToken(sort_column);
   }
-#define ECHO_SORT
+// #define ECHO_SORT
 #ifdef ECHO_SORT
   cerr << "File sorted\n";
   for (const IWString& line : file_contents) {
@@ -325,8 +391,9 @@ struct Options {
 
   // If comparisons are done other than as text, how many such
   // comparisons are there.
-  int same_via_numeric = 0;
-  int same_via_smiles = 0;
+  uint32_t all_tokens_match = 0;
+  uint32_t same_via_numeric = 0;
+  uint32_t same_via_smiles = 0;
 
   // Relative tolerance for numeric comparisons.
   double rtol = 0.0;
@@ -355,9 +422,14 @@ struct Options {
 
   int remove_isotopes = 0;
 
+  int try_without_chirality = 0;
+  uint32_t same_without_chirality = 0;
+
   // by default, we fail upon encountering an error.
   int detect_all_failures = 0;
   int records_with_differences = 0;
+
+  int skip_missing_files = 0;
 
   // Input token separator.
   char sep = ' ';
@@ -484,10 +556,24 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('c')) {
+    try_without_chirality = 1;
+    if (verbose) {
+      cerr << "If equality of structures fails, will try removing chirality\n";
+    }
+  }
+
   if (cl.option_present('k')) {
     detect_all_failures = 1;
     if (verbose) {
       cerr << "Will detect all failures\n";
+    }
+  }
+
+  if (cl.option_present('m')) {
+    skip_missing_files = 1;
+    if (verbose) {
+      cerr << "Will ignore missing files\n";
     }
   }
 
@@ -608,7 +694,7 @@ Options::CompareFilesInner(Afile* files)
     }
 
     if (verbose > 1) {
-      cerr << current_line_number << " lines read, " << got_data << " got data\n";
+      cerr << (current_line_number + 1) << " lines read, " << got_data << " got data\n";
     }
     // All files are at eof, good.
     if (got_data == 0) {
@@ -622,7 +708,7 @@ Options::CompareFilesInner(Afile* files)
     }
 
     if (! AllStructuresTheSame(files)) {
-      cerr << "Differences detected on line " << current_line_number << '\n';
+      cerr << "Differences detected on line " << (current_line_number + 1) << '\n';
       ++records_with_differences;
       if (detect_all_failures) {
         continue;
@@ -654,7 +740,8 @@ Options::CompareDirectories()
       if (directory[i].HaveFile(fname)) {
         path_names.emplace_back(directory[i].PathName(fname));
       } else {
-        cerr << "Options::CompareDirectories:directory " << directory[i].dirname << " does not have " << fname << '\n';
+        cerr << "Options::CompareDirectories:directory " << directory[i].dirname <<
+                " does not have " << fname << '\n';
       }
     }
 
@@ -663,7 +750,11 @@ Options::CompareDirectories()
         cerr << "Options::CompareDirectories: " << path_names.size() << " of " << ndir << " directories had " << fname << '\n';
       }
       ++missing_files;
-      return 0;
+      if (skip_missing_files) {
+        continue;
+      } else {
+        return 0;
+      }
     }
 
     if (! CompareFiles(path_names)) {
@@ -700,6 +791,7 @@ Options::AllStructuresTheSame(Afile* files)
   }
 
   if (all_records_identical) {
+    ++all_tokens_match;
     return 1;
   }
 
@@ -729,7 +821,7 @@ Options::AllStructuresTheSame(Afile* files)
     }
 
     if (! AllStructuresTheSameToken(files)) {
-      cerr << "Options::AllStructuresTheSame: mismatch on line " << lines_read << '\n';
+      cerr << "Options::AllStructuresTheSame: mismatch on line " << (lines_read + 1) << '\n';
       for (int i = 0; i < nfiles; ++i) {
         cerr << files[i].Buffer() << "    :  " << token[i] << '\n';
       }
@@ -764,6 +856,7 @@ Options::AllStructuresTheSameToken(const Afile* files)
   }
 
   if (same_text == nfiles) {
+    ++all_tokens_match;
     return 1;
   }
 
@@ -834,7 +927,7 @@ Options::AllStructuresTheSameToken(const Afile* files)
   bool all_smiles_the_same = true;
   for (int i = 0; i < nfiles; ++i) {
     usmi[i] = mol[i].unique_smiles();
-    // cerr << "generated " << usmi[i] << '\n';
+    // cerr << usmi[i] << " generated from file " << i << '\n';
     if (i > 0 && usmi[i-1] != usmi[i]) {
       cerr << "Smiles mismatch " << usmi[i-1] << " vs " << usmi[i] << '\n';
       cerr << " aromatic atom count " << mol[i-1].aromatic_atom_count() << " and " << mol[i].aromatic_atom_count() << '\n';
@@ -842,11 +935,32 @@ Options::AllStructuresTheSameToken(const Afile* files)
     }
   }
 
-  if (! all_smiles_the_same) {
+  if (all_smiles_the_same) {
+    ++same_via_smiles;
+    return 1;
+  }
+
+  if (! try_without_chirality) {
     return 0;
   }
 
-  ++same_via_smiles;
+  int removed = 0;
+  for (int i = 0; i < nfiles; ++i) {
+   removed += mol[i].remove_all_chiral_centres();
+  }
+
+  if (removed == 0) {
+    return 0;
+  }
+
+  for (int i = 1; i < nfiles; ++i) {
+    if (mol[i-1].unique_smiles() != mol[i].unique_smiles()) {
+      return 0;
+    }
+  }
+
+  ++same_without_chirality;
+
   return 1;
 }
 
@@ -898,16 +1012,20 @@ Options::AboutTheSame(double v1, double v2) const {
 void
 Options::Report(std::ostream& output) const {
   output << "Read " <<  lines_read << " lines, across " << nfiles << " files " << molecules_read << " molecules\n";
-  cerr << same_via_smiles << " same via unique smiles\n";
-  cerr << same_via_numeric << " same via rtol " << rtol << '\n';
+  output << all_tokens_match << " all tokens matched as strings\n";
+  output << same_via_smiles << " same via unique smiles\n";
+  output << same_via_numeric << " same via rtol " << rtol << '\n';
+  if (try_without_chirality) {
+    output << same_without_chirality << " comparisons identical only after chirality removal\n";
+  }
   if (verbose && detect_all_failures) {
-    cerr << records_with_differences << " of " << lines_read << " lines contained differences\n";
+    output << records_with_differences << " of " << lines_read << " lines contained differences\n";
   }
 }
 
 int
 SameStructures(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:g:E:K:r:h:i:D:sS:X:IkW:");
+  Command_Line cl(argc, argv, "vA:g:E:K:r:h:i:D:sS:X:IkW:c");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -915,6 +1033,8 @@ SameStructures(int argc, char** argv) {
   }
 
   set_display_smiles_interpretation_error_messages(0);
+
+  const int verbose = cl.option_present('v');
 
   Options options;
   if (! options.Initialise(cl)) {
@@ -927,7 +1047,9 @@ SameStructures(int argc, char** argv) {
     return 1;
   }
 
-  options.Report(cerr);
+  if (verbose) {
+    options.Report(cerr);
+  }
 
   return 0;
 }
