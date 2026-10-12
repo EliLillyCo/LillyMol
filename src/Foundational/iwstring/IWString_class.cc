@@ -4738,183 +4738,185 @@ char_name_to_char(IWString& s, int message_if_unrecognised) {
     return 1;
   }
 
-  s.to_lowercase();
-  if ("tab" == s) {
+  IWString mys(s);
+
+  mys.to_lowercase();
+  if ("tab" == mys) {
     s = '\t';
     return 1;
   }
 
-  if ("comma" == s) {
+  if ("comma" == mys) {
     s = ',';
     return 1;
   }
 
-  if ("space" == s) {
+  if ("space" == mys) {
     s = ' ';
     return 1;
   }
 
-  if ("vbar" == s || "bar" == s) {
+  if ("vbar" == mys || "bar" == mys) {
     s = '|';
     return 1;
   }
 
-  if ("squote" == s) {
+  if ("squote" == mys) {
     s = '\'';
     return 1;
   }
 
-  if ("dquote" == s) {
+  if ("dquote" == mys) {
     s = '"';
     return 1;
   }
 
-  if ("semic" == s) {
+  if ("semic" == mys) {
     s = ';';
     return 1;
   }
 
-  if ("colon" == s) {
+  if ("colon" == mys) {
     s = ':';
     return 1;
   }
 
-  if ("and" == s || "amp" == s) {
+  if ("and" == mys || "amp" == mys) {
     s = '&';
     return 1;
   }
 
-  if ("dollar" == s) {
+  if ("dollar" == mys) {
     s = '$';
     return 1;
   }
 
-  if ("hash" == s) {
+  if ("hash" == mys) {
     s = '#';
     return 1;
   }
 
-  if ("at" == s) {
+  if ("at" == mys) {
     s = '@';
     return 1;
   }
 
-  if ("excl" == s || "bang" == s) {
+  if ("excl" == mys || "bang" == mys) {
     s = '!';
     return 1;
   }
 
-  if ("squiggle" == s || "tilde" == s) {
+  if ("squiggle" == mys || "tilde" == mys) {
     s = '~';
     return 1;
   }
 
-  if ("star" == s || "asterisk" == s) {
+  if ("star" == mys || "asterisk" == mys) {
     s = '*';
     return 1;
   }
 
-  if ("hat" == s || "caret" == s) {
+  if ("hat" == mys || "caret" == mys) {
     s = '^';
     return 1;
   }
 
-  if ("oparen" == s || "lparen" == s) {
+  if ("oparen" == mys || "lparen" == mys) {
     s = '(';
     return 1;
   }
 
-  if ("cparen" == s || "rparen" == s) {
+  if ("cparen" == mys || "rparen" == mys) {
     s = ')';
     return 1;
   }
 
-  if ("uscore" == s) {
+  if ("uscore" == mys) {
     s = '_';
     return 1;
   }
 
-  if ("plus" == s) {
+  if ("plus" == mys) {
     s = '+';
     return 1;
   }
 
-  if ("minus" == s || "dash" == s) {
+  if ("minus" == mys || "dash" == mys) {
     s = '-';
     return 1;
   }
 
-  if ("ocbrace" == s || "lcbrace" == s) {
+  if ("ocbrace" == mys || "lcbrace" == mys) {
     s = '{';
     return 1;
   }
 
-  if ("ccbrace" == s || "rcbrace" == s) {
+  if ("ccbrace" == mys || "rcbrace" == mys) {
     s = '}';
     return 1;
   }
 
-  if ("osqb" == s || "lsqb" == s) {
+  if ("osqb" == mys || "lsqb" == mys) {
     s = '[';
     return 1;
   }
 
-  if ("csqb" == s || "rsqb" == s) {
+  if ("csqb" == mys || "rsqb" == mys) {
     s = ']';
     return 1;
   }
 
-  if ("bslash" == s) {
+  if ("bslash" == mys) {
     s = '\\';
     return 1;
   }
 
-  if ("fslash" == s || "slash" == s) {
+  if ("fslash" == mys || "slash" == mys) {
     s = '/';
     return 1;
   }
 
-  if ("dot" == s || "period" == s) {
+  if ("dot" == mys || "period" == mys) {
     s = '.';
     return 1;
   }
 
-  if ("oangle" == s || "less" == s) {
+  if ("oangle" == mys || "less" == mys) {
     s = '<';
     return 1;
   }
 
-  if ("cangle" == s || "greater" == s) {
+  if ("cangle" == mys || "greater" == mys) {
     s = '>';
     return 1;
   }
 
-  if ("qmark" == s) {
+  if ("qmark" == mys) {
     s = '?';
     return 1;
   }
 
-  if ("pct" == s) {
+  if ("pct" == mys) {
     s = '%';
     return 1;
   }
 
-  if ("grave" == s || "backquote" == s) {
+  if ("grave" == mys || "backquote" == mys) {
     s = '`';
     return 1;
   }
 
-  else if (s == "empty") {
+  else if (mys == "empty") {
     s.resize(0);
     return 1;
   }
 
-  else if (s == "newline") {
+  else if (mys == "newline") {
     s = '\n';
     return 1;
   }
 
-  if ("help" == s) {
+  if ("help" == mys) {
     char_name_to_char_usage("");
     return (0);
   }
