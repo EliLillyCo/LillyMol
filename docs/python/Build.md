@@ -29,13 +29,13 @@ helpers. `protobuf` is needed for proto-backed configuration objects and tests.
 If you use the xgboost QSAR model building tools in LillyMol:
 
 ```shell
-python -m pip install xgboost scikit-learn matplotlib pandas
+python -m pip install xgboost scikit-learn matplotlib pandas optuna
 ```
 
 If you use the molecular property profile tool:
 
 ```shell
-python -m pip install scipy numpy
+python -m pip install scipy numpy matplotlib
 ```
 
 Virtual environments and `uv` both work well. For example:
@@ -51,7 +51,7 @@ From the source checkout:
 
 ```shell
 cd ${LILLYMOL_HOME}/src
-bazel build -c opt //nanobind:all
+bazel build --config=native -c opt //nanobind:all
 ./copy_shared_libraries.sh ../lib
 ```
 
