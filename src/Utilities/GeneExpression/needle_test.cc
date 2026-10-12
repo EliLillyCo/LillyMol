@@ -45,7 +45,7 @@ gene {
   
   needle.Compare(proto1, kLarge, kLarge);
 
-  EXPECT_EQ(needle.number_neighbours(), 1);
+  EXPECT_EQ(needle.number_neighbours(), 1u);
 
   Neighbour expected{"t1", 1.0f, 2};
   EXPECT_EQ(*needle.nbr(0), expected);
@@ -81,7 +81,7 @@ gene {
   proto1.mutable_gene(1)->set_score(-0.5);
   needle.Compare(proto1, kLarge, kLarge);
 
-  EXPECT_EQ(needle.number_neighbours(), 1);
+  EXPECT_EQ(needle.number_neighbours(), 1u);
 
   Neighbour expected{"t1", -1.0f, 2};
   EXPECT_EQ(*needle.nbr(0), expected);
@@ -144,7 +144,7 @@ TEST_P(TestGeneExpression, Test1) {
 
   EXPECT_EQ(_n1.number_neighbours(), params.expected.size());
   if (_n1.number_neighbours() > 0) {
-    for (int i = 0; i < _n1.number_neighbours(); ++i) {
+    for (uint32_t i = 0; i < _n1.number_neighbours(); ++i) {
       EXPECT_EQ(*_n1.nbr(i), params.expected[i]);
     }
   }
@@ -1502,11 +1502,11 @@ TEST_P(TestGeneExpressionThreshold, Test1) {
 
   // If no threshold, all genes should be in the array.
   if (large_gene_threshold == 0) {
-    EXPECT_EQ(_n1.GeneIdsInHash(), 0);
-    EXPECT_EQ(_n2.GeneIdsInHash(), 0);
+    EXPECT_EQ(_n1.GeneIdsInHash(), 0u);
+    EXPECT_EQ(_n2.GeneIdsInHash(), 0u);
   } else {
-    EXPECT_GT(_n1.GeneIdsInHash(), 0);
-    EXPECT_GT(_n2.GeneIdsInHash(), 0);
+    EXPECT_GT(_n1.GeneIdsInHash(), 0u);
+    EXPECT_GT(_n2.GeneIdsInHash(), 0u);
   }
 
   _n1.SetMaxPossibleAssociation(params.max_association);
@@ -1516,7 +1516,7 @@ TEST_P(TestGeneExpressionThreshold, Test1) {
 
   EXPECT_EQ(_n1.number_neighbours(), params.expected.size());
   if (_n1.number_neighbours() > 0) {
-    for (int i = 0; i < _n1.number_neighbours(); ++i) {
+    for (uint32_t i = 0; i < _n1.number_neighbours(); ++i) {
       EXPECT_EQ(*_n1.nbr(i), params.expected[i]);
     }
   }

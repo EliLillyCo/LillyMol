@@ -103,11 +103,11 @@ TEST(TestSparseFingerprint, TestBuild) {
 
   for (int i = 0; i < nbits; ++i) {
     EXPECT_TRUE(sfp.is_set(bits[i]));
-    EXPECT_EQ(sfp.count_for_bit(bits[i]), counts[i]);
+    EXPECT_EQ(static_cast<uint8_t>(sfp.count_for_bit(bits[i])), counts[i]);
   }
 
   EXPECT_EQ(sfp.nbits(), nbits);
-  EXPECT_EQ(sfp.nset(), nset);
+  EXPECT_EQ(static_cast<uint32_t>(sfp.nset()), nset);
 
   sfp.truncate_counts_at(50);
   EXPECT_EQ(sfp.nset(), trunc50);
@@ -188,18 +188,18 @@ TEST(TestSparseFingerprint, TestRemoveBit) {
   ASSERT_EQ(sfp.nbits(), nbits);
   ASSERT_EQ(sfp.nset(), nset);
   for (int i = 0; i < nbits; ++i) {
-    EXPECT_EQ(sfp.count_for_bit(bits[i]), counts[i]);
+    EXPECT_EQ(static_cast<uint8_t>(sfp.count_for_bit(bits[i])), counts[i]);
   }
 
   EXPECT_EQ(sfp.remove_bit(bits[3]), 1);
 
   EXPECT_EQ(sfp.nbits(), nbits - 1);
-  EXPECT_EQ(sfp.nset(), nset - counts[3]);
+  EXPECT_EQ(static_cast<uint32_t>(sfp.nset()), nset - counts[3]);
 
   // Remove the last bit.
   EXPECT_EQ(sfp.remove_bit(bits[nbits - 1]), 1);
   EXPECT_EQ(sfp.nbits(), nbits - 2);
-  EXPECT_EQ(sfp.nset(), nset - counts[3] - counts[nbits - 1]);
+  EXPECT_EQ(static_cast<uint32_t>(sfp.nset()), nset - counts[3] - counts[nbits - 1]);
 }
 
 TEST(TestSparseFingerprint, TestSubset) {
@@ -208,7 +208,7 @@ TEST(TestSparseFingerprint, TestSubset) {
   std::array<uint32_t, nbits> bits {32768, 0, 19282, 11, 1, 
                              std::numeric_limits<uint32_t>::max(),
                              104};
-  std::array<uint32_t, nbits> count {1, 5, 3, 1, 4, 255, 1};
+  std::array<int, nbits> count {1, 5, 3, 1, 4, 255, 1};
 
   for (int i = 0; i < nbits; ++i) {
     sfc.hit_bit(bits[i], count[i]);
@@ -443,7 +443,7 @@ TEST(TestSparseFingerprint, TestUncounted) {
 
   ASSERT_TRUE(sfp.construct_from_daylight_ascii_representation_uncounted(daylight));
 
-  EXPECT_EQ(sfp.nbits(), bits.size());
+  EXPECT_EQ(static_cast<uint32_t>(sfp.nbits()), bits.size());
   for (auto b : bits) {
     EXPECT_TRUE(sfp.is_set(b));
   }
