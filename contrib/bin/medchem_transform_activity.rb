@@ -488,6 +488,12 @@ def parse_command_line(argv)
     die e.message
   end
 
+  # Lookup output and subsequent scoring/analysis must use the same SMILES path.
+  %i[found notfound].each do |key|
+    path = options[key]
+    options[key] = "#{path}.smi" if path && !path.end_with?('.smi')
+  end
+
   [mode, options, parser, argv]
 end
 
