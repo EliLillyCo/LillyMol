@@ -50,8 +50,8 @@ TEST_F(TestMoveHydrogensLast, AlreadyLast2) {
   EXPECT_EQ(_m.move_hydrogens_to_end_of_connection_table(), 0);
   EXPECT_EQ(_m.atomic_number(matoms - 1), 1);
   EXPECT_EQ(_m.atomic_number(matoms - 2), 1);
-  EXPECT_EQ(_m.isotope(matoms - 2), 1);
-  EXPECT_EQ(_m.isotope(matoms - 1), 2);
+  EXPECT_EQ(_m.isotope(matoms - 2), static_cast<isotope_t>(1));
+  EXPECT_EQ(_m.isotope(matoms - 1), static_cast<isotope_t>(2));
 }
 
 class TestMoveHydrogensLastP : public testing::TestWithParam<IWString> {
@@ -92,7 +92,7 @@ TEST_P(TestMoveHydrogensLastOrderPreserved, TestOrderPreserved) {
     _m.set_isotope(i, hydrogens);
   }
   _m.MoveToEndOfConnectionTable(1);
-  int next_isotope_expected = 1;
+  isotope_t next_isotope_expected = 1;
   for (int i = 0; i < matoms; ++i) {
     if (_m.atomic_number(i) != 1) {
       continue;

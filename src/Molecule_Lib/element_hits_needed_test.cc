@@ -26,7 +26,7 @@ query{
 struct Data {
   std::string proto;
   IWString smiles;
-  int nhits;
+  uint32_t nhits;
 };
 
 class TestRingSys: public testing::TestWithParam<Data> {

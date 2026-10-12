@@ -313,7 +313,7 @@ TEST(TestDistance, FromSmiles) {
 struct SmilesConstraint {
   IWString smiles;
   std::string proto;
-  int expected_result;
+  uint32_t expected_result;
 };
 
 class TestPositionalConstraintsP: public testing::TestWithParam<SmilesConstraint> {

@@ -75,11 +75,11 @@ TEST(MoleculePreprocessing, RemoveIsotopes) {
   EXPECT_TRUE(preprocessing.active());
 
   Molecule m = MolFromSmiles("[1CH4]");
-  ASSERT_EQ(m.isotope(0), 1);
+  ASSERT_EQ(m.isotope(0), static_cast<isotope_t>(1));
 
   EXPECT_GT(preprocessing.Process(m), 0);
 
-  EXPECT_EQ(m.isotope(0), 0);
+  EXPECT_EQ(m.isotope(0), static_cast<isotope_t>(0));
 }
 
 TEST(MoleculePreprocessing, MultipleOperations) {
@@ -99,7 +99,7 @@ TEST(MoleculePreprocessing, MultipleOperations) {
   EXPECT_EQ(m.chiral_centres(), 0);
 
   for (int i = 0; i < m.natoms(); ++i) {
-    EXPECT_EQ(m.isotope(i), 0) << "atom " << i;
+    EXPECT_EQ(m.isotope(i), static_cast<isotope_t>(0)) << "atom " << i;
   }
 }
 

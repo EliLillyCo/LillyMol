@@ -11,7 +11,7 @@ using molecular_formula::MolecularFormula;
 
 struct SmilesMf {
   IWString smiles;
-  int expected;
+  uint32_t expected;
   int mf[molecular_formula::kNTypes];
 };
 
