@@ -13,14 +13,16 @@ end
 raise 'missing -F' unless found
 raise 'missing -U' unless notfound
 
-File.open(found, 'w') do |output|
-  output.puts 'CC mol1 add_carbon mol2'
-  output.puts 'CCC mol2 add_carbon mol3'
+File.open(found, 'w') do |matched|
+  File.open(notfound, 'w') do |unmatched|
+    STDIN.each_line do |line|
+      smiles, name = line.split
+      if name.end_with?('__MCTA__add_carbon')
+        target = name.start_with?('mol1__MCTA__') ? 'mol2' : 'mol3'
+        matched.puts "#{smiles} #{name} #{target}"
+      else
+        unmatched.puts "#{smiles} #{name}"
+      end
+    end
+  end
 end
-
-File.open(notfound, 'w') do |output|
-  output.puts 'CO mol1 add_oxygen'
-  output.puts 'CN mol2 add_nitrogen'
-end
-
-STDIN.read

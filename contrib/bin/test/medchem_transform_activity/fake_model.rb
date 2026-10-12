@@ -9,13 +9,14 @@ predictions = {
 }
 
 File.open(output, 'w') do |out|
-  out.puts 'id transformation prediction'
+  out.puts 'id prediction'
   File.foreach(input) do |line|
     tokens = line.split
     next if tokens.empty?
 
-    _smiles, starting_id, transformation = tokens
+    _smiles, name = tokens
+    transformation = name.split('__MCTA__').fetch(1)
     prediction = predictions.fetch(transformation)
-    out.puts [starting_id, transformation, prediction].join(' ')
+    out.puts [name, prediction].join(' ')
   end
 end

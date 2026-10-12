@@ -6,12 +6,15 @@ require 'fileutils'
 require 'json'
 require 'open3'
 require 'optparse'
+require 'rbconfig'
 require 'shellwords'
 require 'tmpdir'
 
 # Group activity changes by transformation, keeping measured and model-predicted
 # changes separate. Run mode generates and looks up transformed molecules first;
 # analyse mode consumes the same intermediate files without invoking those tools.
+NAME_SEPARATOR = '__MCTA__'.freeze
+
 Stats = Struct.new(:n, :min, :max, :mean, :median, keyword_init: true)
 
 # Retain individual changes so the median can be calculated alongside the mean.
@@ -93,6 +96,7 @@ def read_smiles_ids(fname)
     die "#{fname}:#{line_number}: expected 2 tokens, got #{tokens.size}" unless tokens.size == 2
 
     _smiles, id = tokens
+    die "#{fname}:#{line_number}: id contains reserved separator #{NAME_SEPARATOR}" if id.include?(NAME_SEPARATOR)
     die "#{fname}:#{line_number}: duplicate id '#{id}'" if ids.key?(id)
 
     ids[id] = true
@@ -200,6 +204,9 @@ def read_reaction_file_map(fname)
     name = extract_reaction_name(path)
     die "#{fname}:#{line_number}: cannot determine reaction name in '#{reaction_file}'" unless name
 
+    if name.match?(/\s/) || name.include?(NAME_SEPARATOR)
+      die "#{fname}:#{line_number}: reaction name must contain no whitespace or #{NAME_SEPARATOR}: '#{name}'"
+    end
     if mapping.key?(name)
       die "#{fname}:#{line_number}: duplicate transformation name '#{name}' in '#{reaction_file}' and '#{mapping[name]}'"
     end
@@ -212,16 +219,41 @@ def read_reaction_file_map(fname)
   mapping
 end
 
-# Database matches contain: smiles starting_id transformation found_id.
+# Database matches contain: smiles combined_name found_id. Legacy files with
+# separate starting_id and transformation columns are also accepted.
 # Compare the matched molecule's measured activity with the starting molecule's
 # measured activity. Positive deltas mean the numerical activity increased;
 # whether that is desirable depends on the activity scale supplied by the user.
+def split_product_name(name, context)
+  parts = name.split(NAME_SEPARATOR, -1)
+  unless parts.size == 2 && parts.all? { |part| !part.empty? && !part.match?(/\s/) }
+    die "#{context}: invalid product name '#{name}'; expected id#{NAME_SEPARATOR}reaction"
+  end
+  parts
+end
+
+# Check wizard output before lookup or scoring can truncate a malformed name.
+def validate_generated_names
+  STDIN.each_line.with_index(1) do |line, number|
+    tokens = line.split
+    next if tokens.empty?
+    die "Wizard output:#{number}: expected SMILES and one product-name token" unless tokens.size == 2
+    split_product_name(tokens[1], "Wizard output:#{number}")
+    $stdout.write(line)
+  end
+end
+
 def accumulate_found(fname, activity, observed)
   each_non_blank_line(fname) do |line, line_number|
     tokens = line.split
-    die "#{fname}:#{line_number}: expected 4 tokens, got #{tokens.size}" unless tokens.size == 4
-
-    _smiles, starting_id, transformation, found_id = tokens
+    if tokens.size == 3
+      _smiles, name, found_id = tokens
+      starting_id, transformation = split_product_name(name, "#{fname}:#{line_number}")
+    elsif tokens.size == 4
+      _smiles, starting_id, transformation, found_id = tokens
+    else
+      die "#{fname}:#{line_number}: expected 3 or 4 tokens, got #{tokens.size}"
+    end
     die "#{fname}:#{line_number}: unknown starting id '#{starting_id}'" unless activity.key?(starting_id)
     die "#{fname}:#{line_number}: unknown found id '#{found_id}'" unless activity.key?(found_id)
 
@@ -231,7 +263,8 @@ end
 
 # Optional predicted-value input. The first non-blank line is a header.
 # Subsequent records contain:
-#   starting_id transformation predicted_activity
+#   starting_id__MCTA__transformation predicted_activity
+# Legacy starting_id transformation predicted_activity records are also accepted.
 # Predictions are absolute activities for transformed molecules. Subtract the
 # starting molecule's measured activity to put them on the observed delta scale.
 def accumulate_predictions(fname, activity, predicted)
@@ -243,9 +276,14 @@ def accumulate_predictions(fname, activity, predicted)
     end
 
     tokens = line.split
-    die "#{fname}:#{line_number}: expected 3 tokens, got #{tokens.size}" unless tokens.size == 3
-
-    starting_id, transformation, value = tokens
+    if tokens.size == 2
+      name, value = tokens
+      starting_id, transformation = split_product_name(name, "#{fname}:#{line_number}")
+    elsif tokens.size == 3
+      starting_id, transformation, value = tokens
+    else
+      die "#{fname}:#{line_number}: expected 2 or 3 tokens, got #{tokens.size}"
+    end
     die "#{fname}:#{line_number}: unknown starting id '#{starting_id}'" unless activity.key?(starting_id)
 
     predicted[transformation].add(Float(value) - activity[starting_id])
@@ -412,7 +450,7 @@ def add_common_options(opts, options)
   end
   opts.on('--found FILE', 'Found structures file') { |value| options[:found] = value }
   opts.on('--notfound FILE', 'Not-found structures file') { |value| options[:notfound] = value }
-  opts.on('--predictions FILE', 'Existing predictions: id transformation predicted_activity') do |value|
+  opts.on('--predictions FILE', 'Predictions: combined_name value (or legacy id transformation value)') do |value|
     options[:predictions] = value
   end
   opts.on('--model-command COMMAND', 'Shell command producing predictions; use unquoted {input}/{output} placeholders') do |value|
@@ -462,12 +500,13 @@ def generate_transformed_molecules(smiles, options)
     verbose: options.fetch(:verbose)
   )
 
-  medchem = [options.fetch(:medchem_wizard), '-W', 'space', smiles]
+  medchem = [options.fetch(:medchem_wizard), '-W', NAME_SEPARATOR, '-V', '.', smiles]
   lookup = [
     options.fetch(:in_database), '-d', options.fetch(:database), '-l', '-c', '-p',
     '-F', options.fetch(:found), '-U', options.fetch(:notfound), '-i', 'smi', '-'
   ]
-  run_pipeline([medchem, lookup], verbose: options.fetch(:verbose))
+  validator = [RbConfig.ruby, File.expand_path(__FILE__), '--validate-generated-names']
+  run_pipeline([medchem, validator, lookup], verbose: options.fetch(:verbose))
 end
 
 def analyse_transformations(options, activity_ids = nil)
@@ -518,8 +557,8 @@ def run_mode(options, argv, parser)
   begin
     generate_transformed_molecules(smiles, options)
 
-    # The model must write a header followed by the three-column prediction
-    # records consumed by accumulate_predictions before analysis starts.
+    # Scorers return a header and combined product-name/value records. Legacy
+    # three-column predictions remain accepted by the analysis parser.
     if options[:model_command]
       model = command_from_template(options.fetch(:model_command), options.fetch(:notfound),
                                     options.fetch(:predictions))
@@ -546,6 +585,11 @@ def analyse_mode(options, argv, parser)
   usage(parser, 'analyse') unless argv.empty?
   usage(parser, 'analyse') unless options[:activity] && options[:found]
   analyse_transformations(options)
+end
+
+if ARGV == ['--validate-generated-names']
+  validate_generated_names
+  exit 0
 end
 
 mode, options, parser, remaining_args = parse_command_line(ARGV)
