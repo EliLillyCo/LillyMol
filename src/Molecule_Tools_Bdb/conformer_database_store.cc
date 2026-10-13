@@ -199,7 +199,7 @@ ConformerDB::AddConformer(MoleculeWithEnergy& m,
   conformer_database::Conformer* c  = proto.mutable_conformers()->Add();
   c->set_energy(m.energy());
   const int matoms = m.natoms();
-  c->mutable_xyz()->Resize(matoms * 3, 0.0f);
+  c->mutable_xyz()->resize(matoms * 3, 0.0f);
   for (int i = 0; i < matoms; ++i) {
     int j = atom_order_in_smiles[i];
     const Atom& a = m[j];
