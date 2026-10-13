@@ -485,7 +485,7 @@ def run_tests_in_dir(options, dirname, parent_tmpdir)
     proto.difftool = maybe_lillymol_executable(options, proto.difftool)
   else
     difftool = 'diff -w'
-    proto.difftool_options = '-w'
+#   proto.difftool_options = '-w'
   end
 
   passed = 0
