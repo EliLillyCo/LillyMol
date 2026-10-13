@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <cerrno>
 
 #include "Foundational/iwmisc/iwconfig.h"
 #ifdef _WIN32
@@ -126,7 +127,7 @@ IWString_and_File_Descriptor::_open_gzipd_stream(const char* fname) {
 
 int
 IWString_and_File_Descriptor::_do_resize(int keep_storage) {
-  if (IWSFD_KEEP_STORAGE_ON_FLUSH == keep_storage) {
+  if (IWSFD_KEEP_STORAGE_ON_FLUSH == keep_storage || keep_storage == 1) {
     IWString::resize_keep_storage(0);
   } else if (0 == keep_storage) {
     IWString::resize(0);
@@ -146,15 +147,30 @@ IWString_and_File_Descriptor::flush(int keep_storage) {
   }
 
   if (_gzfile) {
-    _compress_and_write();
+    if (! _compress_and_write()) {
+      return 0;
+    }
   } else if (_fd < 0) {
     cerr << "IWString_and_File_Descriptor::flush:no file descriptor\n";
     return 0;
   } else {
-    IWString::write(_fd);
+    int written = 0;
+    while (written < _number_elements) {
+      const ssize_t rc = IW_FD_WRITE(_fd, _things + written, _number_elements - written);
+      if (rc < 0 && errno == EINTR) {
+        continue;
+      }
+      if (rc <= 0) {
+        // Preserve only the unwritten tail, so a retry cannot duplicate output.
+        if (written > 0) {
+          remove_leading_chars(written);
+        }
+        return 0;
+      }
+      written += rc;
+    }
   }
-
-  return _do_resize(IWSFD_KEEP_STORAGE_ON_FLUSH);
+  return _do_resize(keep_storage);
 }
 
 int
@@ -183,11 +199,12 @@ IWString_and_File_Descriptor::write_whole_blocks_shift_unwritten() {
 int
 IWString_and_File_Descriptor::close() {
   if (_gzfile) {
-    _compress_and_write();
-    gzclose(_gzfile);
+    if (! flush()) {
+      return 0;
+    }
+    const int rc = gzclose(_gzfile);
     _gzfile = nullptr;
-    _do_resize(0);
-    return 1;
+    return rc == Z_OK;
   }
 
   if (_fd < 0) {
@@ -196,14 +213,16 @@ IWString_and_File_Descriptor::close() {
   }
 
   if (_number_elements) {
-    flush();
+    if (! flush()) {
+      return 0;
+    }
   }
 
-  IW_FD_CLOSE(_fd);
+  const int rc = IW_FD_CLOSE(_fd);
 
   _fd = -1;
 
-  return 1;
+  return rc == 0;
 }
 
 int
@@ -214,8 +233,11 @@ IWString_and_File_Descriptor::_compress_and_write() {
 
   int bytes_written = gzwrite(_gzfile, _things, static_cast<unsigned>(_number_elements));
 
+  if (bytes_written == _number_elements) {
+    return 1;
+  }
   if (bytes_written > 0) {
-    return bytes_written;
+    remove_leading_chars(bytes_written);
   }
 
   cerr << "IWString_and_File_Descriptor::_compress_and_write:cannot write\n";

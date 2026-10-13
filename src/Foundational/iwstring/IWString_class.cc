@@ -5,6 +5,9 @@
 #include <string.h>
 
 #include <charconv>
+#include <cstdint>
+#include <string>
+#include <type_traits>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -27,6 +30,42 @@ using std::endl;
   The philosophy of this class is that everything is inherited from
   resizable_array<char>.
 */
+
+namespace {
+// Integer address comparisons avoid relational comparisons of unrelated pointers.
+// Only aliased mutations need staging; ordinary callers keep the direct path.
+bool AliasesStorage(const char* source, const char* storage, int capacity) {
+  if (source == nullptr || storage == nullptr) {
+    return false;
+  }
+  const auto address = reinterpret_cast<std::uintptr_t>(source);
+  const auto begin = reinterpret_cast<std::uintptr_t>(storage);
+  return address >= begin && address - begin < static_cast<std::uintptr_t>(capacity);
+}
+
+template <typename T>
+int ParseInteger(const char* text, int length, T& result) {
+  if (length <= 0) {
+    return 0;
+  }
+  if constexpr (std::is_signed_v<T>) {
+    if (*text == '+') {
+      ++text;
+      --length;
+      if (length == 0 || *text == '-' || *text == '+') {
+        return 0;
+      }
+    }
+  }
+  T value;
+  const auto parsed = std::from_chars(text, text + length, value, 10);
+  if (parsed.ec != std::errc() || parsed.ptr != text + length) {
+    return 0;
+  }
+  result = value;
+  return 1;
+}
+}  // namespace
 
 void
 IWString::_default_values() {
@@ -547,21 +586,8 @@ IWString::compress_blanks() {
 
 IWString&
 IWString::operator=(const char* rhs) {
-  int nchars = static_cast<int>(::strlen(rhs));
-
-  if (0 == nchars) {
-    resize(0);
-    return *this;
-  }
-
-  resize(nchars + 1);
-  assert(_things);
-
-  IW_STRCPY(_things, rhs);
-  _number_elements = nchars;
-
-  assert(ok());
-
+  strncpy(rhs, static_cast<int>(::strlen(rhs)));
+  null_terminate();
   return *this;
 }
 
@@ -603,7 +629,12 @@ IWString::operator+=(const char* rhs) {
     return;
   }
 
-  (void)add(rhs, nchars);
+  if (_number_elements + nchars <= _elements_allocated) {
+    // No reallocation: a source in the existing string remains valid.
+    add(rhs, nchars);
+  } else {
+    strncat(rhs, nchars);
+  }
 
   return;
 }
@@ -614,7 +645,12 @@ IWString::operator+=(const IWString& rhs) {
     return;
   }
 
-  add(rhs._things, rhs._number_elements);
+  if (_number_elements + rhs._number_elements <= _elements_allocated) {
+    // No reallocation: a source in the existing string remains valid.
+    add(rhs._things, rhs._number_elements);
+  } else {
+    strncat(rhs._things, rhs._number_elements);
+  }
 
   return;
 }
@@ -625,7 +661,12 @@ IWString::operator+=(const const_IWSubstring& rhs) {
     return;
   }
 
-  (void)add(rhs.rawchars(), rhs.nchars());
+  if (_number_elements + rhs.nchars() <= _elements_allocated) {
+    // No reallocation: a source in the existing string remains valid.
+    add(rhs.rawchars(), rhs.nchars());
+  } else {
+    strncat(rhs.rawchars(), rhs.nchars());
+  }
 
   return;
 }
@@ -888,54 +929,13 @@ const_IWSubstring::find(const const_IWSubstring& needle) const {
 }
 
 /*
-  Unsigned int conversion
-  This is not robust
+  Unsigned integer conversion with full-input and range validation
 */
 
 template <typename T>
 int
 string_class_is_unsigned_int_4(const char* s, int nchars, T& result) {
-  if (nchars == 0) {
-    return 0;
-  }
-
-  if (nchars < 10)
-    ;
-  else if (nchars > 10) {
-    return 0;
-  } else if (s[0] > '4') {  // very rough check, fix this mess sometime
-    return 0;
-  }
-
-  if (nchars < 10) {
-    result = 0;
-    for (int i = 0; i < nchars; i++) {
-      int j = s[i] - '0';
-      if (j < 0) {
-        return 0;
-      }
-      if (j > 9) {
-        return 0;
-      }
-
-      result = 10 * result + j;
-    }
-
-    return 1;
-  }
-
-  T tmp;
-  if (!string_class_is_unsigned_int_4(s, nchars - 1, tmp)) {
-    return 0;
-  }
-
-  result = tmp * 10 + s[9] - '0';
-
-  if (result > tmp) {
-    return 1;
-  }
-
-  return 0;
+  return ParseInteger(s, nchars, result);
 }
 
 /*
@@ -945,51 +945,7 @@ string_class_is_unsigned_int_4(const char* s, int nchars, T& result) {
 template <typename T>
 int
 string_class_is_unsigned_int_8(const char* s, int nchars, T& result) {
-  if (nchars == 0) {
-    return 0;
-  }
-
-  if (nchars > 20) {
-    return 0;
-  }
-
-  if (nchars < 20)
-    ;
-  else if (s[0] > '1') {  // very rough check, fix this mess sometime
-    return 0;
-  }
-
-  result = 0;
-  if (nchars < 20) {
-    for (int i = 0; i < nchars; i++) {
-      int j = s[i] - '0';
-      if (j < 0) {
-        return 0;
-      }
-      if (j > 9) {
-        return 0;
-      }
-
-      result = 10 * result + j;
-    }
-
-    return 1;
-  }
-
-  T tmp;
-  if (!string_class_is_unsigned_int_8(s, nchars - 1, tmp)) {
-    return 0;
-  }
-
-  result = tmp * 10 + s[19] - '0';
-
-  if (result > tmp) {
-    return 1;
-  }
-
-  // cerr << "Overflowed int 8\n";
-
-  return 0;
+  return ParseInteger(s, nchars, result);
 }
 
 // #ifdef __GNUG__
@@ -1002,177 +958,23 @@ template int string_class_is_unsigned_int_4<unsigned long>(char const*, int,
 // #endif
 
 /*
-  Pretty dumb int conversion. Note that this does not deal adequately with
-  large negative values and such.
+  Signed integer conversion. A leading plus is supported for compatibility.
 */
 
 template <typename T>
 int
 string_class_is_int_4(const char* s, int nchars, T& result) {
-  if (0 == nchars) {
-    return 0;
-  }
-
-  int sign = 0;
-  if ('-' == *s) {
-    sign = 1;
-    s++;
-    nchars--;
-  } else if ('+' == *s) {
-    s++;
-    nchars--;
-  }
-
-  if (0 == nchars) {
-    return 0;
-  }
-
-  if (nchars > 10) {  // must be erroneous
-    return 0;
-  }
-
-  if (nchars < 10)  // the most common case
-  {
-    result = 0;
-    for (int i = 0; i < nchars; i++) {
-      if (s[i] >= '0' && s[i] <= '9') {
-        result = 10 * result + (s[i] - '0');
-      } else {
-        return 0;
-      }
-    }
-
-    if (sign) {
-      result = -result;
-    }
-
-    return 1;
-  }
-
-  // Now the case of 10 digits. Let the system function do this
-
-  if (*s >
-      '3') {  // int max is 2147483647, so any 10 digit number starting with 3 is invalid
-    return 0;
-  }
-
-  // cerr << "Converting long string\n";
-
-  unsigned int tmp;
-  if (!string_class_is_unsigned_int_4(s, nchars, tmp)) {
-    return 0;
-  }
-
-  if (0 == sign) {
-    if (tmp > static_cast<unsigned int>(std::numeric_limits<T>::max())) {
-      return 0;
-    }
-    result = static_cast<T>(tmp);
-  } else if (tmp > 2147483648u) {
-    return 0;
-  } else {
-    result = -tmp;
-  }
-
-  return 1;
-
-#ifdef OLD_STUFFQ
-  // Strings must be null terminated for the system functions
-
-  char buffer[13];
-  IW_STRNCPY(buffer, s, nchars);
-  buffer[nchars] = '\0';
-
-  char* p;
-  unsigned long tmp = strtoul(buffer, &p, 10);
-
-  if ('\0' != *p) {
-    return 0;
-  }
-
-  if (tmp > static_cast<unsigned long>(std::numeric_limits<int>::max())) {
-    return 0;
-  }
-
-  result = T(tmp);
-  if (sign) {
-    result = -result;
-  }
-
-  return 1;
-#endif
+  return ParseInteger(s, nchars, result);
 }
 
 /*
-  This is not robust, should be fixed sometime.
-  Highest 8 byte signed int is 9223372036854775807
+  Conversion uses the destination type limits, including the minimum signed value.
 */
 
 template <typename T>
 int
 string_class_is_int_8(const char* s, int nchars, T& result) {
-  if (0 == nchars) {
-    return 0;
-  }
-
-  int sign = 0;
-  if ('-' == *s) {
-    sign = 1;
-    s++;
-    nchars--;
-  } else if ('+' == *s) {
-    s++;
-    nchars--;
-  }
-
-  if (0 == nchars) {
-    return 0;
-  }
-
-  if (nchars > 19) {  // must be erroneous
-    return 0;
-  }
-
-  if (nchars < 19)  // the most common case
-  {
-    result = 0;
-    for (int i = 0; i < nchars; i++) {
-      if (s[i] >= '0' && s[i] <= '9') {
-        result = 10 * result + (s[i] - '0');
-      } else {
-        return 0;
-      }
-    }
-
-    if (sign) {
-      result = -result;
-    }
-
-    return 1;
-  }
-
-  // Now the case of 19 digits. just need to be careful. Use an unsigned value to get the
-  // number then check to see if it is OK
-
-  unsigned long int tmp;
-  if (!string_class_is_unsigned_int_8(s, nchars, tmp)) {
-    return 0;
-  }
-
-  if (0 == sign) {
-    if (tmp > static_cast<unsigned long int>(std::numeric_limits<long int>::max())) {
-      return 0;
-    }
-  } else if (tmp > 9223372036854775808U) {
-    return 0;
-  }
-
-  result = static_cast<T>(tmp);
-  if (sign) {
-    result = -result;
-  }
-
-  return 1;
+  return ParseInteger(s, nchars, result);
 }
 
 // #if defined (__GNUG__) || defined (__SUNPRO_CC)
@@ -1435,7 +1237,7 @@ IWString::numeric_value(long long& result) const {
 
 int
 IWString::numeric_value(unsigned long long& result) const {
-  return string_class_is_int_8(_things, _number_elements, result);
+  return string_class_is_unsigned_int_8(_things, _number_elements, result);
 }
 
 int
@@ -2275,13 +2077,7 @@ const_IWSubstring::from_to(int istart, IWString& zresult) const {
 
 IWString&
 IWString::operator=(const const_IWSubstring& rhs) {
-  if (_elements_allocated < rhs._nchars) {
-    resize(rhs._nchars + 1);
-  }
-
-  IW_STRNCPY(_things, rhs._data, rhs._nchars);
-  _number_elements = rhs._nchars;
-
+  strncpy(rhs._data, rhs._nchars);
   return *this;
 }
 
@@ -2342,6 +2138,9 @@ const_IWSubstring::operator=(const const_IWSubstring& other) {
 
 IWString&
 IWString::operator=(const IWString& other) {
+  if (this == &other) {
+    return *this;
+  }
   if (_elements_allocated < other._number_elements) {
     resize(other._number_elements);
   }
@@ -3222,6 +3021,11 @@ IWString::insert(const const_IWSubstring& c, int pos) {
 
 int
 IWString::_insert(int pos, const char* s, int lens) {
+  std::string stable_source;
+  if (lens > 0 && AliasesStorage(s, _things, _elements_allocated)) {
+    stable_source.assign(s, lens);
+    s = stable_source.data();
+  }
   if (_number_elements + lens > _elements_allocated) {
     resize(_number_elements + lens);
   }
@@ -3270,8 +3074,8 @@ IWString::_overwrite(const char* s, int nchars, int pos) {
   assert(pos >= 0 && pos < _number_elements);
   assert(pos + nchars - 1 < _number_elements);
 
-  for (int i = 0; i < nchars; i++) {
-    _things[pos + i] = s[i];
+  if (nchars > 0) {
+    ::memmove(_things + pos, s, nchars);
   }
 
   return 1;
@@ -3332,33 +3136,38 @@ IWString::ccount(char c) const {
 
 int
 IWString::strncpy(const char* s, int nchars) {
+  assert(nchars >= 0);
+  // Existing storage already fits any valid source inside this string.
   if (_elements_allocated < nchars + 1) {
-    resize(nchars + 1);
+    if (nchars > 0 && AliasesStorage(s, _things, _elements_allocated)) {
+      const auto offset = s - _things;
+      resize(nchars + 1);
+      s = _things + offset;
+    } else {
+      resize(nchars + 1);
+    }
   }
-
-#ifdef _WIN32
-  IW_STRNCPY(_things, s, nchars);
-#else
-  ::memcpy(_things, s, static_cast<uint32_t>(nchars));
-#endif
-
+  if (nchars > 0) {
+    ::memmove(_things, s, nchars);
+  }
   _number_elements = nchars;
-
   return 1;
 }
 
 int
 IWString::strncat(const char* s, int nchars) {
-  make_room_for_extra_items(nchars);
-
-  ::memcpy(_things + _number_elements, s, nchars);
-
-  for (int i = 0; i < nchars; i++) {
-    _things[_number_elements + i] = s[i];
+  assert(nchars >= 0);
+  if (nchars == 0) {
+    return _number_elements;
   }
-
+  const bool aliased = AliasesStorage(s, _things, _elements_allocated);
+  const auto offset = aliased ? s - _things : 0;
+  make_room_for_extra_items(nchars);
+  if (aliased) {
+    s = _things + offset;
+  }
+  ::memmove(_things + _number_elements, s, nchars);
   _number_elements += nchars;
-
   return _number_elements;
 }
 
@@ -4139,6 +3948,11 @@ IWString::append(int n, const IWString& s) {
 
 void
 IWString::_append(int n, const char* s, int nchars) {
+  std::string stable_source;
+  if (n > 0 && nchars > 0 && AliasesStorage(s, _things, _elements_allocated)) {
+    stable_source.assign(s, nchars);
+    s = stable_source.data();
+  }
   int storage_needed = _number_elements + n * nchars;
 
   if (_elements_allocated < storage_needed) {

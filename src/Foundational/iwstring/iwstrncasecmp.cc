@@ -273,8 +273,8 @@ iwstrncasecmp (const char * s1,
     if (s1[i] == s2[i])
       continue;
 
-    i1 = lowercase_translation_table[static_cast<unsigned int>(s1[i])];
-    i2 = lowercase_translation_table[static_cast<unsigned int>(s2[i])];
+    i1 = lowercase_translation_table[static_cast<unsigned char>(s1[i])];
+    i2 = lowercase_translation_table[static_cast<unsigned char>(s2[i])];
 
     if (i1 == i2)
       continue;

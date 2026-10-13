@@ -749,7 +749,7 @@ IWString::operator == (const char * rhs) const
   if (_number_elements != (int) std::strlen (rhs))    // cannot be the same if different lengths
     return false;
 
-  return 0 == ::strncmp (_things, rhs, _number_elements);    // loss of const OK for strcmp
+  return _number_elements == 0 || 0 == ::strncmp (_things, rhs, _number_elements);    // loss of const OK for strcmp
 }
 
 inline bool
@@ -769,7 +769,7 @@ const_IWSubstring::operator != (const const_IWSubstring & rhs) const
   if (_nchars != l2)
     return true;
 
-  if (0 == ::strncmp (_data, rhs._data, _nchars))
+  if (_nchars == 0 || 0 == ::strncmp (_data, rhs._data, _nchars))
     return false;
   else
     return true;
@@ -783,7 +783,7 @@ const_IWSubstring::operator != (const IWString & rhs) const
   if (_nchars != rhs.nchars ())
     return true;
 
-  if (0 == ::strncmp (_data, rhs.rawchars (), _nchars))
+  if (_nchars == 0 || 0 == ::strncmp (_data, rhs.rawchars (), _nchars))
     return false;
   else
     return true;
@@ -797,7 +797,7 @@ IWString::operator == (const IWString & rhs) const
     return false;
 
 //return (0 == ::strncmp (_things, rhs._things, _number_elements));
-  return (0 == ::memcmp (_things, rhs._things, _number_elements));
+  return (_number_elements == 0 || 0 == ::memcmp (_things, rhs._things, _number_elements));
 }
 
 inline bool
@@ -808,7 +808,7 @@ IWString::operator != (const IWString & rhs) const
   if (_number_elements != rhs._number_elements)
     return true;
 
-  return (0 != ::strncmp (_things, rhs._things, _number_elements));
+  return (_number_elements != 0 && 0 != ::strncmp (_things, rhs._things, _number_elements));
 }
 
 
@@ -818,7 +818,7 @@ const_IWSubstring::operator == (const const_IWSubstring & rhs) const
   if (_nchars != rhs._nchars)
     return false;
 
-  return (0 == ::strncmp (_data, rhs._data, _nchars));
+  return (_nchars == 0 || 0 == ::strncmp (_data, rhs._data, _nchars));
 }
 
 inline bool
@@ -828,7 +828,7 @@ const_IWSubstring::operator == (const IWString & rhs) const
   if (_nchars != rhs._number_elements)
     return false;
 
-  return (0 == ::strncmp (_data, rhs._things, _nchars));
+  return (_nchars == 0 || 0 == ::strncmp (_data, rhs._things, _nchars));
 }
 
 inline bool
@@ -850,7 +850,7 @@ operator == (const char * lhs, const IWString & rhs)
   if (lchars != rhs._number_elements)
     return false;
 
-  return 0 == ::strncmp (lhs, rhs._things, lchars);
+  return lchars == 0 || 0 == ::strncmp (lhs, rhs._things, lchars);
 }
 
 inline bool
@@ -861,7 +861,7 @@ operator != (const char * lhs, const IWString & rhs)
   if (lchars != rhs._number_elements)
     return true;
 
-  return 0 != ::strncmp (lhs, rhs._things, lchars);
+  return lchars != 0 && 0 != ::strncmp (lhs, rhs._things, lchars);
 }
 
 inline bool
@@ -872,7 +872,7 @@ operator == (const char * lhs, const const_IWSubstring & rhs)
   if (lchars != rhs._nchars)
     return false;
 
-  return (0 == ::strncmp (lhs, rhs._data, lchars));
+  return (lchars == 0 || 0 == ::strncmp (lhs, rhs._data, lchars));
 }
 
 inline bool
@@ -883,7 +883,7 @@ operator != (const char * lhs, const const_IWSubstring & rhs)
   if (lchars != rhs._nchars)
     return true;
 
-  return (0 != ::strncmp (lhs, rhs._data, lchars));
+  return (lchars != 0 && 0 != ::strncmp (lhs, rhs._data, lchars));
 }
 
 inline bool 
@@ -904,7 +904,7 @@ const_IWSubstring::operator == (const char * rhs) const
   if (_nchars != l2)
     return false;
 
-  return 0 == ::strncmp (_data, rhs, _nchars);
+  return _nchars == 0 || 0 == ::strncmp (_data, rhs, _nchars);
 }
 
 inline bool 
@@ -916,7 +916,7 @@ IWString::operator == (const const_IWSubstring & rhs) const
   if (_number_elements != l2)
     return false;
 
-  return 0 == ::strncmp (_things, rhs.rawchars (), _number_elements);
+  return _number_elements == 0 || 0 == ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
 inline bool 
@@ -927,7 +927,7 @@ IWString::operator != (const const_IWSubstring & rhs) const
   if (_number_elements != rhs.nchars ())
     return true;
 
-  return 0 != ::strncmp (_things, rhs.rawchars (), _number_elements);
+  return _number_elements != 0 && 0 != ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
 inline bool
@@ -980,7 +980,7 @@ IWString::operator != (const char * rhs) const
   if (_number_elements != (int) std::strlen (rhs))    // indeed they are different if different lengths
     return true;
 
-  return 0 != ::strncmp (_things, rhs, _number_elements);
+  return _number_elements != 0 && 0 != ::strncmp (_things, rhs, _number_elements);
 }
 
 inline bool
@@ -992,7 +992,7 @@ const_IWSubstring::operator != (const char * rhs) const
   if (l2 != _nchars)    // the two strings are definitely not equal
     return true;
 
-  return 0 != ::strncmp (_data, rhs, l2);
+  return l2 != 0 && 0 != ::strncmp (_data, rhs, l2);
 }
 
 namespace iwstring {
@@ -1004,28 +1004,28 @@ Equals(const IWString& lhs, const std::string& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const const_IWSubstring& lhs, const std::string& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const IWString& lhs, const std::string_view& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const const_IWSubstring& lhs, const std::string_view& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 
 // Used for reading records from tabular files where there might
@@ -1107,7 +1107,7 @@ class IWString_and_File_Descriptor : public IWString
     ~IWString_and_File_Descriptor();
 
     int write_whole_blocks_shift_unwritten();
-    int write_if_buffer_holds_more_than (int s) { if (_number_elements > s) write_whole_blocks_shift_unwritten(); return 1;}
+    int write_if_buffer_holds_more_than (int s) { if (_number_elements > s) return write_whole_blocks_shift_unwritten(); return 1;}
     int flush(int keep_storage = 0);   // by default, we size our buffer back to 0
 
     int good () const { return (-1 != _fd && IWString::ok());}  // failed open sets _fd to -1

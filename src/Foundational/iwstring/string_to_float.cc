@@ -6,6 +6,31 @@
 #endif
 
 #include "iwstring.h"
+#include <vector>
+#include <limits>
+
+namespace {
+// Common formats stay on the stack; allocate only when the output exceeds it.
+void AppendFormatted(IWString& output, double value, const char* format, int precision = -1) {
+  char buffer[64];
+  int length = precision < 0 ? snprintf(buffer, sizeof(buffer), format, value)
+                            : snprintf(buffer, sizeof(buffer), format, precision, value);
+  if (length < 0) {
+    return;
+  }
+  if (length < static_cast<int>(sizeof(buffer))) {
+    output.strncat(buffer, length);
+    return;
+  }
+  std::vector<char> expanded(static_cast<size_t>(length) + 1);
+  if (precision < 0) {
+    snprintf(expanded.data(), expanded.size(), format, value);
+  } else {
+    snprintf(expanded.data(), expanded.size(), format, precision, value);
+  }
+  output.strncat(expanded.data(), length);
+}
+}  // namespace
 
 static int float_precision = 7;
 
@@ -26,13 +51,16 @@ set_default_iwstring_double_concatenation_precision (int s)
 void
 IWString::append_number(float f, int fprecision)
 {
-  char buffer[32];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-  gcvt(static_cast<double>(f), fprecision, buffer);
-#pragma GCC diagnostic pop
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-  return;
+  // Preserve gcvt output on the usual path, with a safe significant-digit bound.
+  if (fprecision > 0 && fprecision <= std::numeric_limits<double>::max_digits10) {
+    char buffer[32];
+    const char* formatted = gcvt(static_cast<double>(f), fprecision, buffer);
+    if (formatted == nullptr) return;
+    strncat(buffer, static_cast<int>(::strlen(buffer)));
+  } else {
+    AppendFormatted(*this, f, "%.*g", std::max(1, fprecision));
+  }
+
 }
 
 void
@@ -49,25 +77,23 @@ IWString::append_number(double d)
 void
 IWString::append_number(double d, int dprecision)
 {
-  char buffer[32];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-  gcvt(d, dprecision, buffer);
-#pragma GCC diagnostic pop
-  resizable_array<char>::add(buffer, static_cast<int>(::strlen(buffer)));
-  return;
+  // Preserve gcvt output on the usual path, with a safe significant-digit bound.
+  if (dprecision > 0 && dprecision <= std::numeric_limits<double>::max_digits10) {
+    char buffer[32];
+    const char* formatted = gcvt(static_cast<double>(d), dprecision, buffer);
+    if (formatted == nullptr) return;
+    strncat(buffer, static_cast<int>(::strlen(buffer)));
+  } else {
+    AppendFormatted(*this, d, "%.*g", std::max(1, dprecision));
+  }
+
 }
 
 void
 IWString::append_number(float f, const char * fformat)
 {
-  char buffer[32];
+  AppendFormatted(*this, f, fformat);
 
-  int nchars = IW_SPRINTF(buffer, fformat, f);
-
-  resizable_array<char>::add(buffer, nchars);
-
-  return;
 }
 
 #ifdef USE_DRAGONBOX
