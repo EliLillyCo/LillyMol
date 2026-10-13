@@ -30,6 +30,7 @@
 #include "Foundational/iwaray/iwaray.h"
 
 #ifdef OBSOLETE_STRING_FUNCTIONS_NO_LONGER_USED
+[[deprecated("Use IWString::strip_leading_blanks or const_IWSubstring::strip_leading_blanks instead")]]
 extern void strip_leading_blanks (char *);
 extern void strip_trailing_blanks (char *);
 extern void to_lowercase (char *, int = 0);

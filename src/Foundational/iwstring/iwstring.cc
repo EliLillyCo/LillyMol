@@ -6,12 +6,15 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#include <cerrno>
+#include <limits>
 
 #include <iostream>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #include "iwstring.h"
 
+[[deprecated("Use IWString::strip_leading_blanks or const_IWSubstring::strip_leading_blanks instead")]]
 void
 strip_leading_blanks (char *cc)
 {
@@ -228,18 +231,23 @@ compress_blanks (char * zstring, int nchars)
 int
 is_int (const char *buffer, int *i)
 {
-  char *c;
-  int tmp = strtol (buffer, &c, 10);
-
-  if (c == buffer)
+  if (buffer == nullptr || i == nullptr) {
     return 0;
-
-  if ('\0' == *c)
-    ;     // good
-  else if (! isspace (*c))
+  }
+  errno = 0;
+  char* end;
+  const long value = strtol(buffer, &end, 10);
+  if (end == buffer || errno == ERANGE ||
+      value < std::numeric_limits<int>::min() ||
+      value > std::numeric_limits<int>::max()) {
     return 0;
-
-  *i = tmp;
+  }
+  // Preserve the C-string helper's first-token behavior: whitespace may
+  // terminate the integer, even when subsequent tokens remain in the buffer.
+  if (*end != '\0' && !isspace(static_cast<unsigned char>(*end))) {
+    return 0;
+  }
+  *i = static_cast<int>(value);
   return 1;
 }
 

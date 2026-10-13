@@ -2121,3 +2121,61 @@ TEST(OutputSafety, SuccessfulFlushWritesBytes) {
 }
 #endif
 }  // namespace
+
+namespace {
+TEST(AfterDelimiter, OwnedAndSubstringBoundaryCases) {
+  for (const auto& [input, expected] : std::vector<std::pair<const char*, const char*>>{
+           {":abc", "abc"}, {"a:bc", "bc"}, {"abc:", ""},
+           {":", ""}, {"", ""}, {"abc", ""}, {"::abc", ":abc"}}) {
+    IWString owned(input);
+    const_IWSubstring view(owned);
+    EXPECT_EQ(owned.after(':'), expected) << input;
+    EXPECT_EQ(view.after(':'), expected) << input;
+  }
+}
+}  // namespace
+
+namespace {
+TEST(FreeIsInt, WhitespaceSignsAndRange) {
+  struct Case { const char* text; bool valid; int value; };
+  for (const Case& c : std::vector<Case>{
+       {"", false, 0}, {"   ", false, 0}, {"+", false, 0}, {"-", false, 0},
+       {"  +123", true, 123}, {" \t-009", true, -9}, {"+-1", false, 0},
+       {"2147483647", true, std::numeric_limits<int>::max()},
+       {"-2147483648", true, std::numeric_limits<int>::min()},
+       {"2147483648", false, 0}, {"-2147483649", false, 0},
+       {"999999999999999999999999", false, 0}, {"12x", false, 0}}) {
+    IWString owned(c.text);
+    const_IWSubstring view(owned);
+    int a = 42, b = 42, d = 42;
+    EXPECT_EQ(is_int(c.text, &a) != 0, c.valid) << c.text;
+    EXPECT_EQ(is_int(owned, b) != 0, c.valid) << c.text;
+    EXPECT_EQ(is_int(view, d) != 0, c.valid) << c.text;
+    if (c.valid) {
+      EXPECT_EQ(a, c.value);
+      EXPECT_EQ(b, c.value);
+      EXPECT_EQ(d, c.value);
+    } else {
+      EXPECT_EQ(a, 42);
+      EXPECT_EQ(b, 42);
+      EXPECT_EQ(d, 42);
+    }
+  }
+}
+TEST(FreeIsInt, NonTerminatedWhitespaceAndSlice) {
+  const char whitespace[] = {' ', '\t', ' '};
+  int value = 17;
+  EXPECT_EQ(is_int(const_IWSubstring(whitespace, 3), value), 0);
+  const char digits[] = {' ', '-', '1', '2', 'x'};
+  ASSERT_NE(is_int(const_IWSubstring(digits, 4), value), 0);
+  EXPECT_EQ(value, -12);
+}
+TEST(FreeIsInt, CStringTokenBehavior) {
+  int value = 0;
+  ASSERT_NE(is_int("  -12 other", &value), 0);
+  EXPECT_EQ(value, -12);
+  EXPECT_EQ(is_int(const_IWSubstring("  -12 other"), value), 0);
+  EXPECT_EQ(is_int(nullptr, &value), 0);
+  EXPECT_EQ(is_int("12", nullptr), 0);
+}
+}  // namespace

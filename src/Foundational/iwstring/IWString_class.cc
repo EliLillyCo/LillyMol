@@ -2711,51 +2711,27 @@ from_to(const IWString& s, int cstart, int cstop) {
   return s.from_to(cstart, cstop);
 }
 
-/*
-  Note that this is a non-robust version. Things larger than MAX_INT will
-  just die.
-*/
-
+// The free string overloads accept leading whitespace, but require the rest
+// of the bounded string to be an integer. Member numeric_value stays strict.
 static int
 _is_int(const char* s, int nchars, int& result) {
-  // skip over leading blanks
-
-  int istart = 0;
-  while (isspace(s[istart]) && istart < nchars) {
-    istart++;
+  int first = 0;
+  while (first < nchars && isspace(static_cast<unsigned char>(s[first]))) {
+    ++first;
   }
-
-  if (nchars == istart) {  // blank token
+  if (first == nchars) {
     return 0;
   }
-
-  int tmp = 0;
-  int zsign = 1;
-  if ('-' == s[istart]) {
-    zsign = -1;
-    istart = 1;
-  } else if ('+' == s[istart]) {
-    istart = 1;
-  }
-
-  for (int i = istart; i < nchars; i++) {
-    int j = s[i] - '0';
-    if (j < 0 || j > 9) {
-      return 0;
-    }
-
-    tmp = 10 * tmp + j;
-    if (tmp < 0) {  // feeble attempt at detecting overflow
-      return 0;
-    }
-  }
-
-  result = zsign * tmp;
-  return 1;
+  return ParseInteger(s + first, nchars - first, result);
 }
 
 int
 is_int(const const_IWSubstring& s, int& result) {
+  return _is_int(s.rawchars(), s.nchars(), result);
+}
+
+int
+is_int(const IWString& s, int& result) {
   return _is_int(s.rawchars(), s.nchars(), result);
 }
 
@@ -3980,7 +3956,7 @@ const_IWSubstring::before(char c) const {
 const_IWSubstring
 const_IWSubstring::after(char c) const {
   int i = index(c);
-  if (i <= 0) {
+  if (i < 0) {
     return "";
   }
 
@@ -4000,7 +3976,7 @@ IWString::before(char c) const {
 const_IWSubstring
 IWString::after(char c) const {
   int i = index(c);
-  if (i <= 0) {
+  if (i < 0) {
     return "";
   }
 
