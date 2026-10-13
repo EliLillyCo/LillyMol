@@ -177,7 +177,6 @@ bool
 Options::TooCloseParallel(IW_General_Fingerprint& fp) {
   const int n = _retained.number_elements();
 //std::atomic<bool> too_close(false);
-  uint64_t comparisons = 0;
   bool too_close = false;
 
 #pragma omp parallel for schedule(static) reduction(|| : too_close)
