@@ -1,0 +1,11 @@
+{
+  "executable": "mispredicted",
+  "test": [
+    {
+      "name": "correctness",
+      "shell_script": {
+        "script_name": "run_test.py"
+      }
+    }
+  ]
+}

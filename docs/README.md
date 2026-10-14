@@ -456,8 +456,9 @@ up to read the reactions from the paper. Makes isosteric replacements of
 functional groups.
 
 ## mispredicted
-Across a set of train/test splits, examine the predicted files and identify those
-molecules that are always predicted poorly. 
+Across prediction files, identify molecules with large average prediction errors.
+See [mispredicted](Utilities/mispredicted.md) for input formats, minimum prediction
+counts, selection, and output options.
 
 ## mkfrag
 Convert a multi-fragment molecule to separate molecules.
