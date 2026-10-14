@@ -395,7 +395,7 @@ def write_profile_json(output, observed, predicted, reaction_files)
 end
 
 def usage(parser, mode = nil)
-  command = mode ? " #{mode}" : ' [run|generate|analyse]'
+  command = mode ? " #{mode}" : ' [run|generate|analyse|restart]'
   warn <<~USAGE
     Accumulate activity changes by medchem_wizard transformation.
 
@@ -405,6 +405,7 @@ def usage(parser, mode = nil)
       run       Generate transformed molecules, optionally score not-found molecules, and analyse.
       generate  Generate transformed molecules and split them into found/notfound files.
       analyse   Analyse existing found and prediction files.
+      restart   Alias for analyse; resume after external scoring.
 
     If no mode is specified, run mode is used for backward compatibility.
 
@@ -418,6 +419,15 @@ def usage(parser, mode = nil)
 
     If the activity file name ends in .csv, it is parsed as CSV.
     Otherwise it is parsed as whitespace separated text.
+
+    To generate persistent found.smi/notfound.smi files, score externally, then resume:
+      #{File.basename($PROGRAM_NAME)} generate -d structures.bdb input.smi
+      # Score notfound.smi externally, preserving its full combined identifiers.
+      #{File.basename($PROGRAM_NAME)} restart -A activity.txt --found found.smi --predictions notfound.pred
+
+    Prediction files must have a header, followed by combined_identifier value:
+      id prediction
+      mol1__MCTA__add_oxygen 3.0
 
     The --model-command option might be something like
       --model-command 'xgbd_evaluate.sh -mdir /path/to/model {input} > {output}'
@@ -470,7 +480,7 @@ def add_common_options(opts, options)
 end
 
 def parse_command_line(argv)
-  mode = if %w[run generate analyse].include?(argv.first)
+  mode = if %w[run generate analyse restart].include?(argv.first)
            argv.shift
          else
            'run'
@@ -605,7 +615,7 @@ when 'run'
   run_mode(options, remaining_args, parser)
 when 'generate'
   generate_mode(options, remaining_args, parser)
-when 'analyse'
+when 'analyse', 'restart'
   analyse_mode(options, remaining_args, parser)
 else
   die "Unrecognised mode '#{mode}'"
