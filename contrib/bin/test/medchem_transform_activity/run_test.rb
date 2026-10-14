@@ -103,6 +103,19 @@ Dir.mktmpdir('medchem_transform_activity_split_test') do |tmpdir|
 
   compare_text(output, File.join(fixture, 'expected.txt'), 'Split output')
   compare_json(profile_json, File.join(fixture, 'expected_profile.json'), 'Split profile JSON')
+
+  # Restart consumes existing results, even when generation executables are unavailable.
+  run_or_die([
+    RbConfig.ruby, script, 'restart',
+    '-A', File.join(fixture, 'activity.txt'), '--found', found,
+    '--predictions', predictions, '-o', output, '--profile-json', profile_json,
+    '--reactions', File.join(fixture, 'REACTIONS'),
+    '--buildsmidb', File.join(tmpdir, 'unavailable_builder'),
+    '--medchem-wizard', File.join(tmpdir, 'unavailable_wizard'),
+    '--in-database', File.join(tmpdir, 'unavailable_lookup')
+  ])
+  compare_text(output, File.join(fixture, 'expected.txt'), 'Restart output')
+  compare_json(profile_json, File.join(fixture, 'expected_profile.json'), 'Restart profile JSON')
 end
 
 # Reject malformed wizard names before they reach lookup/scoring.
@@ -126,6 +139,30 @@ Dir.mktmpdir('medchem_transform_activity_legacy_test') do |tmpdir|
   run_or_die([RbConfig.ruby, script, 'analyse', '-A', File.join(fixture, 'activity.txt'),
               '--found', found, '--predictions', predictions, '-o', output])
   compare_text(output, File.join(fixture, 'expected.txt'), 'Legacy analysis')
+end
+
+# Explicit stems are normalized, including names with an existing other suffix.
+Dir.mktmpdir('medchem_transform_activity_suffix_test') do |tmpdir|
+  found_stem = File.join(tmpdir, 'found')
+  notfound_stem = File.join(tmpdir, 'notfound.txt')
+  predictions = File.join(tmpdir, 'predictions.txt')
+  output = File.join(tmpdir, 'output.txt')
+  run_or_die([
+    RbConfig.ruby, script, 'generate',
+    '-d', File.join(tmpdir, 'structures.bdb'), '-o', output,
+    '--found', found_stem, '--notfound', notfound_stem,
+    '--predictions', predictions,
+    '--buildsmidb', File.join(fixture, 'fake_buildsmidb.rb'),
+    '--medchem-wizard', File.join(fixture, 'fake_medchem_wizard.rb'),
+    '--in-database', File.join(fixture, 'fake_in_database.rb'),
+    File.join(fixture, 'input.smi')
+  ])
+  raise 'Found suffix missing' unless File.file?("#{found_stem}.smi")
+  raise 'Notfound suffix missing' unless File.file?("#{notfound_stem}.smi")
+  run_or_die([RbConfig.ruby, File.join(fixture, 'fake_model.rb'), "#{notfound_stem}.smi", predictions])
+  run_or_die([RbConfig.ruby, script, 'analyse', '-A', File.join(fixture, 'activity.txt'),
+              '--found', found_stem, '--predictions', predictions, '-o', output])
+  compare_text(output, File.join(fixture, 'expected.txt'), 'Normalized filenames')
 end
 
 puts 'medchem_transform_activity test passed'
