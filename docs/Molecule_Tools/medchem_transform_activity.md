@@ -68,3 +68,6 @@ temporary files.
 Use `--profile-json profiles.json --reactions /path/to/REACTIONS` with `run`,
 `analyse`, or `restart` to additionally write reaction profiles containing
 measured and predicted effects.
+
+For an offline report with molecular examples, distributions, sorting, and count
+filters, see [Medchem transformation activity report](medchem_transform_activity_html.md).
