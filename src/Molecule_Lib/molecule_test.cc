@@ -767,4 +767,29 @@ INSTANTIATE_TEST_SUITE_P(TestSpinach, TestSpinach, testing::Values(
   SmilesAndSpinach{"CC1CC1=O", 1, {1, 0, 0, 0, 0}, "[1CH3][1CH]1CC1=O"} 
 ));
 
+TEST(BondTypeChange, RemoveObsoleteAlkeneDirectionFlags) {
+  for (const char* smiles : {"C/C=C/C", "C/C=C\\C"}) {
+    Molecule mol;
+    ASSERT_TRUE(mol.build_from_smiles(smiles));
+    ASSERT_TRUE(mol.set_bond_type_between_atoms(1, 2, SINGLE_BOND));
+    Molecule expected;
+    ASSERT_TRUE(expected.build_from_smiles("CCCC"));
+    EXPECT_EQ(mol.unique_smiles(), expected.unique_smiles());
+    EXPECT_FALSE(mol.bond_between_atoms(0, 1)->is_directional());
+    EXPECT_FALSE(mol.bond_between_atoms(2, 3)->is_directional());
+  }
+}
+
+TEST(BondTypeChange, PreserveNeighbouringAlkeneGeometry) {
+  Molecule mol;
+  ASSERT_TRUE(mol.build_from_smiles("C/C=C/C=C/C"));
+  ASSERT_TRUE(mol.set_bond_type_between_atoms(1, 2, SINGLE_BOND));
+  Molecule expected;
+  ASSERT_TRUE(expected.build_from_smiles("CCC/C=C/C"));
+  EXPECT_EQ(mol.unique_smiles(), expected.unique_smiles());
+  EXPECT_FALSE(mol.bond_between_atoms(0, 1)->is_directional());
+  EXPECT_TRUE(mol.bond_between_atoms(2, 3)->is_directional());
+  EXPECT_TRUE(mol.bond_between_atoms(3, 4)->part_of_cis_trans_grouping());
+}
+
 }  // namespace

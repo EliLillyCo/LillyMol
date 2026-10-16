@@ -803,12 +803,12 @@ Molecule::set_bond_type_between_atoms(atom_number_t a1, atom_number_t a2,
     abort();
   }
 
+  const bool was_cis_trans = b->part_of_cis_trans_grouping();
+
   // was directional, now no longer a single bond
   if (0 == (bt & SINGLE_BOND) && b->is_directional()) {
     b->set_not_directional();
   }
-
-  // We don't check whether any cis-trans bond groupings should be broken up...
 
   // was part of cis/trans, now cannot be
   if (0 == (bt & DOUBLE_BOND) && b->part_of_cis_trans_grouping()) {
@@ -841,6 +841,12 @@ Molecule::set_bond_type_between_atoms(atom_number_t a1, atom_number_t a2,
   // double bond in middle of cis trans group was made into a single bond
   if (!b->is_double_bond() && b->part_of_cis_trans_grouping()) {
     b->set_part_of_cis_trans_grouping(0);
+  }
+
+  if (was_cis_trans && !(bt & DOUBLE_BOND)) {
+    // Discard only obsolete direction flags; shared bonds may still define
+    // the geometry of a neighbouring double bond.
+    _remove_directionality_from_bonds_not_actually_directional();
   }
 
   return 1;

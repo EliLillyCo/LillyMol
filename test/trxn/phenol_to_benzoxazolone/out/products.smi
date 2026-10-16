@@ -1,0 +1,6 @@
+O=C1Oc2ccccc2N1 phenol +
+O=C1Oc2c(C)cccc2N1 one_ortho +
+O=C1Oc2cc(C)ccc2N1 asymmetric.0 +
+O=C1Oc2cccc(C)c2N1 asymmetric.1 +
+C[C@H](F)c1ccc2oc(=O)[nH]c2c1 remote_chiral +
+O=C1[18O]c2ccccc2N1 labelled_oxygen +

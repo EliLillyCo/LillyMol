@@ -366,6 +366,58 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn" \
   -m each -z i -S acetals diols.smi
 ```
 
+## Forward-only phenol, ketone and Michael-acceptor alternatives
+
+These transformations propose alternatives to motifs associated with particular
+metabolic or reactivity concerns. Their presence does not establish that the
+input is problematic, and the transformations do not predict improved safety,
+metabolism or activity. No reverse reactions are registered.
+
+| Transformation | Example | Structural effect |
+| --- | --- | --- |
+| `phenol_to_benzoxazolone` | `Oc1ccccc1` -> `O=C1Oc2ccccc2N1` | Replace a free phenolic OH with a fused cyclic carbamate, retaining the original oxygen. |
+| `ketone_to_oxetane` | `CC(=O)c1ccccc1` -> `CC1(c2ccccc2)COC1` | Retain the carbonyl carbon, oxygen and both carbon substituents; insert two methylenes to make a 3,3-disubstituted oxetane. |
+| `michael_acceptor_to_cyclopropane` | `C=CC(=O)NC` -> `O=C(NC)C1CC1` | Add CH2 across a carbonyl-conjugated alkene, retaining the carbonyl and all existing substituents. |
+
+The phenol reaction requires a neutral free OH and an available adjacent
+aromatic C-H position. Each inequivalent ortho position can give a product;
+symmetry-equivalent matches are suppressed. Fully blocked ortho positions,
+ethers, phenoxide ions and aliphatic alcohols do not match. The product replaces
+the OH donor with a cyclic-carbamate NH donor and adds a carbonyl acceptor, with
+corresponding changes in donor position, size and geometry.
+
+The ketone reaction requires two carbon substituents attached by single bonds
+to the carbonyl carbon. Aliphatic, aryl and cyclic ketones are accepted; cyclic
+ketones give spiro oxetanes. Aldehydes, amides, esters and carboxylic acids are
+excluded. The original oxygen is retained at the opposite position of the new
+four-membered ring, including its isotope label. Both external attachment
+points remain at the original carbonyl carbon, which becomes tetrahedral;
+the oxygen acceptor's position changes.
+
+The Michael-acceptor reaction requires an acyclic C=C directly conjugated to a
+carbonyl. It includes terminal acrylamides, substituted alkenes, enoates, enones,
+enals and unsaturated carboxylic acids. Ordinary alkenes, non-conjugated alkenes,
+cyclic enones and acrylonitriles do not match. The existing generic
+`Metabolism.alkene_T_cyclopropyl` reaction remains registered; there can be
+overlap for internally substituted alkenes, while this targeted rule also
+handles terminal acrylamide-like groups. This suggestion is intended for cases
+where electrophilic reactivity is unwanted, rather than intentional covalent
+warheads.
+
+Newly created stereocentres are left unspecified. Existing unaffected
+stereochemistry and isotope labels are retained. The Michael-acceptor reaction
+discards the transformed alkene's E/Z information; obsolete directional-bond
+flags are cleared while unrelated alkene geometry is preserved.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzoxazolone.rxn" \
+  -m each -z i -S alternatives input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/ketone_to_oxetane.rxn" \
+  -m each -z i -S oxetanes ketones.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/michael_acceptor_to_cyclopropane.rxn" \
+  -m each -z i -S cyclopropanes acceptors.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every

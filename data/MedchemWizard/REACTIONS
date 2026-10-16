@@ -327,3 +327,6 @@ PROTO:fluorene_to_biphenyl.rxn
 PROTO:catechol_to_benzodioxane.rxn
 PROTO:vicinal_diol_to_methylene_acetal.rxn
 PROTO:vicinal_diol_to_acetonide.rxn
+PROTO:phenol_to_benzoxazolone.rxn
+PROTO:ketone_to_oxetane.rxn
+PROTO:michael_acceptor_to_cyclopropane.rxn

@@ -605,6 +605,24 @@
       "args": [
         "-r ${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
       ]
+    },
+    {
+      "name": "phenol_to_benzoxazolone",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzoxazolone.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "ketone_to_oxetane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/ketone_to_oxetane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "michael_acceptor_to_cyclopropane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/michael_acceptor_to_cyclopropane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
     }
   ]
 }

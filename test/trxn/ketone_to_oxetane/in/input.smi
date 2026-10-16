@@ -1,0 +1,11 @@
+CC(=O)C acetone
+CC(=O)c1ccccc1 acetophenone
+O=C(c1ccccc1)c1ccccc1 benzophenone
+O=C1CCCCC1 cyclic_ketone
+[18O]=C(C)c1ccccc1 labelled_oxygen
+C[C@H](F)C(=O)C remote_chiral
+CC=O aldehyde
+CC(=O)NC amide
+CC(=O)OC ester
+CC(=O)O acid
+O=C=O carbon_dioxide

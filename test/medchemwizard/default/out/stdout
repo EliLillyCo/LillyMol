@@ -1245,6 +1245,8 @@ C(O)(=O)C=CNC CHEMBL134979 Virtual_Ring.break_open_a_6-ring_to_form_pseudoring
 N1=C2C(=CC=C1C)OC=C2 CHEMBL134979 phenol_to_benzofuran
 N1=CC2=C(C=C1C)C=CO2 CHEMBL134979 phenol_to_benzofuran
 N1=CC(=CC=C1O)C CHEMBL134979 ring_orientation_swap
+N1=C2C(=CC=C1C)OC(=O)N2 CHEMBL134979 phenol_to_benzoxazolone
+N1=CC2=C(C=C1C)NC(=O)O2 CHEMBL134979 phenol_to_benzoxazolone
 N1=C(CC2=NC=CC=C2)C=NC(=C1)C CHEMBL94709 Aryl_group_addition.add_2-pyridyl
 N1=C(C)C(=NC(=C1)C)C1=NC=CC=C1 CHEMBL94709 Aryl_group_addition.add_2-pyridyl
 N1=C(C)C=NC(=C1C1=NC=CC=C1)C CHEMBL94709 Aryl_group_addition.add_2-pyridyl
@@ -1938,6 +1940,7 @@ CNC=CC(O)=O CHEMBL16645 Virtual_Ring.break_open_a_6-ring_to_form_pseudoring
 CC1=CC2=C(OC=C2)C=C1 CHEMBL16645 phenol_to_benzofuran
 CC12CC(O)(CC1)CO2 CHEMBL16645 benzene_para_to_oxabicyclo_octane
 CC12CC(O)(C1)C2 CHEMBL16645 benzene_para_to_bcp
+CC1=CC2=C(OC(=O)N2)C=C1 CHEMBL16645 phenol_to_benzoxazolone
 C(C=O)C(=O)NC1=NNN=N1 CHEMBL3986754 Acid_isosteres.10
 C(C=O)C(=O)C1=NNN=N1 CHEMBL3986754 Acid_isosteres.11
 C(C=O)N1OC(=O)NC1=O CHEMBL3986754 Acid_isosteres.12
@@ -2505,6 +2508,7 @@ OC(=O)C(=C)S(=O)C CHEMBL3184669 Simple_H_Replacement.add_sulfone
 OC(=O)C=CS(=O)C CHEMBL3184669 Simple_H_Replacement.add_sulfone
 OC(=O)C(=C)C(C)(C)C CHEMBL3184669 Simple_H_Replacement.add_t-butyl
 OC(=O)C=CC(C)(C)C CHEMBL3184669 Simple_H_Replacement.add_t-butyl
+OC(=O)C1CC1 CHEMBL3184669 michael_acceptor_to_cyclopropane
 S(=O)(=O)(F)CC1=NC=CC=C1 CHEMBL4297433 Aryl_group_addition.add_2-pyridyl
 S(=O)(=O)(F)CC1=CN=CC=C1 CHEMBL4297433 Aryl_group_addition.add_3-pyridyl
 S(=O)(=O)(F)CC1=CC=NC=C1 CHEMBL4297433 Aryl_group_addition.add_4-pyridyl
@@ -2873,6 +2877,7 @@ C(=C)(C)C(=O)S(=O)C CHEMBL4063095 Simple_H_Replacement.add_sulfone
 C(=CC(C)(C)C)(C)C=O CHEMBL4063095 Simple_H_Replacement.add_t-butyl
 C(=C)(CC(C)(C)C)C=O CHEMBL4063095 Simple_H_Replacement.add_t-butyl
 C(=C)(C)C(=O)C(C)(C)C CHEMBL4063095 Simple_H_Replacement.add_t-butyl
+C1(C)(CC1)C=O CHEMBL4063095 michael_acceptor_to_cyclopropane
 N(CC=CCl)C1=NC=CC=C1 CHEMBL3974691 Aryl_group_addition.add_2-pyridyl
 NC(C=CCl)C1=NC=CC=C1 CHEMBL3974691 Aryl_group_addition.add_2-pyridyl
 NCC(=CCl)C1=NC=CC=C1 CHEMBL3974691 Aryl_group_addition.add_2-pyridyl
@@ -4309,6 +4314,7 @@ C(#CC(C)=O)C(=C)C(C)(C)C CHEMBL4081971 Simple_H_Replacement.add_t-butyl
 C(#CC(C)=O)C=CC(C)(C)C CHEMBL4081971 Simple_H_Replacement.add_t-butyl
 C(#CC(N)=O)C=C CHEMBL4081971 ketone_to_amide
 C(C)(=O)C12CC(C1)(C2)C=C CHEMBL4081971 alkyne_to_bcp
+C(#CC1(C)COC1)C=C CHEMBL4081971 ketone_to_oxetane
 C(C(O)C#CCO)C1=NC=CC=C1 CHEMBL3798796 Aryl_group_addition.add_2-pyridyl
 CC(O)(C#CCO)C1=NC=CC=C1 CHEMBL3798796 Aryl_group_addition.add_2-pyridyl
 CC(OC1=NC=CC=C1)C#CCO CHEMBL3798796 Aryl_group_addition.add_2-pyridyl
@@ -4602,6 +4608,7 @@ O=C(C=CC)C(C)(C)C CHEMBL3561468 Simple_H_Replacement.add_t-butyl
 O=CC(=CC)C(C)(C)C CHEMBL3561468 Simple_H_Replacement.add_t-butyl
 O=CC=C(C)C(C)(C)C CHEMBL3561468 Simple_H_Replacement.add_t-butyl
 O=CC=CCC(C)(C)C CHEMBL3561468 Simple_H_Replacement.add_t-butyl
+O=CC1C(C)C1 CHEMBL3561468 michael_acceptor_to_cyclopropane
 C1(=CCC=C1)C1=NC=CC=C1 CHEMBL3188826 Aryl_group_addition.add_2-pyridyl
 C1=C(CC=C1)C1=NC=CC=C1 CHEMBL3188826 Aryl_group_addition.add_2-pyridyl
 C1=CC(C=C1)C1=NC=CC=C1 CHEMBL3188826 Aryl_group_addition.add_2-pyridyl
@@ -5217,6 +5224,8 @@ C(=C(C)C(C)(C)C)C(C)=O CHEMBL4099976 Simple_H_Replacement.add_t-butyl
 C(=CCC(C)(C)C)C(C)=O CHEMBL4099976 Simple_H_Replacement.add_t-butyl
 C(=CC)C(=O)CC(C)(C)C CHEMBL4099976 Simple_H_Replacement.add_t-butyl
 C(=CC)C(N)=O CHEMBL4099976 ketone_to_amide
+C(=CC)C1(C)COC1 CHEMBL4099976 ketone_to_oxetane
+C1(C(C)C1)C(C)=O CHEMBL4099976 michael_acceptor_to_cyclopropane
 O1C(=C(C=C1)C1=NC=CC=C1)CN CHEMBL3561633 Aryl_group_addition.add_2-pyridyl
 O1C(=CC(=C1)C1=NC=CC=C1)CN CHEMBL3561633 Aryl_group_addition.add_2-pyridyl
 O1C(=CC=C1C1=NC=CC=C1)CN CHEMBL3561633 Aryl_group_addition.add_2-pyridyl
@@ -6272,6 +6281,7 @@ N1=C2C3=NC(=O)C=C3C=CC2=CN=C1 CHEMBL4202693 Phenol_isosteres.oxindole
 N1=C2C(=CC=CC2=CN=C1)NS(=O)(=O)N CHEMBL4202693 Phenol_isosteres.sulfamide
 N1=C2C(=CC=CC2=CN=C1)NS(=O)(=O)C CHEMBL4202693 Phenol_isosteres.sulfonamide
 N1=C2C(=CC=CC2=CN=C1)NC(=O)N CHEMBL4202693 Phenol_isosteres.Urea
+N1=C2C3=C(C=CC2=CN=C1)NC(=O)O3 CHEMBL4202693 phenol_to_benzoxazolone
 C1(=CC(=C2C(=C1)C=CC=C2)S)C1=NC=CC=C1 CHEMBL4094874 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=C2C(=C1)C=CC=C2)S)C1=NC=CC=C1 CHEMBL4094874 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C2C(=C1C1=NC=CC=C1)C=CC=C2)S CHEMBL4094874 Aryl_group_addition.add_2-pyridyl
@@ -7357,6 +7367,7 @@ C12=CC(=O)N=C1C1=C(C=C2)N=CC=N1 CHEMBL3634137 Phenol_isosteres.oxindole
 C1=CC=C2C(=C1NS(=O)(=O)N)N=CC=N2 CHEMBL3634137 Phenol_isosteres.sulfamide
 C1=CC=C2C(=C1NS(=O)(=O)C)N=CC=N2 CHEMBL3634137 Phenol_isosteres.sulfonamide
 C1=CC=C2C(=C1NC(=O)N)N=CC=N2 CHEMBL3634137 Phenol_isosteres.Urea
+C12=CC=C3C(=C1OC(=O)N2)N=CC=N3 CHEMBL3634137 phenol_to_benzoxazolone
 O(C1=CC=CC2=C1N=CC=C2)C1=NC=CC=C1 CHEMBL4299230 Aryl_group_addition.add_2-pyridyl
 OC1=C(C=CC2=C1N=CC=C2)C1=NC=CC=C1 CHEMBL4299230 Aryl_group_addition.add_2-pyridyl
 OC1=CC(=CC2=C1N=CC=C2)C1=NC=CC=C1 CHEMBL4299230 Aryl_group_addition.add_2-pyridyl
@@ -7565,6 +7576,7 @@ C12=NC(=O)C=C1C=CC1=C2N=CC=C1 CHEMBL4299230 Phenol_isosteres.oxindole
 C1(=CC=CC2=C1N=CC=C2)NS(=O)(=O)N CHEMBL4299230 Phenol_isosteres.sulfamide
 C1(=CC=CC2=C1N=CC=C2)NS(=O)(=O)C CHEMBL4299230 Phenol_isosteres.sulfonamide
 C1(=CC=CC2=C1N=CC=C2)NC(=O)N CHEMBL4299230 Phenol_isosteres.Urea
+O1C2=C(C=CC3=C2N=CC=C3)NC1=O CHEMBL4299230 phenol_to_benzoxazolone
 N1=C2C(=C(C=CC2=CC=N1)C1=NC=CC=C1)O CHEMBL4204564 Aryl_group_addition.add_2-pyridyl
 N1=C2C(=CC(=CC2=CC=N1)C1=NC=CC=C1)O CHEMBL4204564 Aryl_group_addition.add_2-pyridyl
 N1=C2C(=CC=C(C2=CC=N1)C1=NC=CC=C1)O CHEMBL4204564 Aryl_group_addition.add_2-pyridyl
@@ -7737,6 +7749,7 @@ N1=C2C3=NC(=O)C=C3C=CC2=CC=N1 CHEMBL4204564 Phenol_isosteres.oxindole
 N1=C2C(=CC=CC2=CC=N1)NS(=O)(=O)N CHEMBL4204564 Phenol_isosteres.sulfamide
 N1=C2C(=CC=CC2=CC=N1)NS(=O)(=O)C CHEMBL4204564 Phenol_isosteres.sulfonamide
 N1=C2C(=CC=CC2=CC=N1)NC(=O)N CHEMBL4204564 Phenol_isosteres.Urea
+N1=C2C3=C(C=CC2=CC=N1)NC(=O)O3 CHEMBL4204564 phenol_to_benzoxazolone
 C1(=CC(=C2C(=N1)C=CC=N2)S)C1=NC=CC=C1 CHEMBL4069573 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=C2C(=N1)C=CC=N2)S)C1=NC=CC=C1 CHEMBL4069573 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C2C(=N1)C(=CC=N2)C1=NC=CC=C1)S CHEMBL4069573 Aryl_group_addition.add_2-pyridyl
@@ -8319,6 +8332,7 @@ C1(=CC=CC=C1)NS(=O)(=O)C CHEMBL2107497 Phenol_isosteres.sulfonamide
 C1(=CC=CC=C1)NC(=O)N CHEMBL2107497 Phenol_isosteres.Urea
 C1(=CC=CC=C1)NC(=O)N CHEMBL2107497 Phenol_isosteres.Urea
 O1C2=C(C=CC=C2)C=C1 CHEMBL2107497 phenol_to_benzofuran
+O1C2=C(C=CC=C2)NC1=O CHEMBL2107497 phenol_to_benzoxazolone
 S1C(=NC(=C1C1=NC=CC=C1)O)O CHEMBL2071163 Aryl_group_addition.add_2-pyridyl
 S1C(=NC(=C1)OC1=NC=CC=C1)O CHEMBL2071163 Aryl_group_addition.add_2-pyridyl
 S1C(=NC(=C1)O)OC1=NC=CC=C1 CHEMBL2071163 Aryl_group_addition.add_2-pyridyl
@@ -8375,6 +8389,7 @@ S1C(=NC(=N1)O)O CHEMBL2071163 More_aryl_rings.ncc_T_ncn
 N1C(=NC(=C1)O)O CHEMBL2071163 More_aryl_rings.s_T_NH
 O1C(=NC(=C1)O)O CHEMBL2071163 More_aryl_rings.s_T_o
 S1C(=NC2=C1C=CO2)O CHEMBL2071163 phenol_to_benzofuran
+S1C(=NC2=C1NC(=O)O2)O CHEMBL2071163 phenol_to_benzoxazolone
 O=C1C(=O)C(=C1O)C1=NC=CC=C1 CHEMBL1977616 Aryl_group_addition.add_2-pyridyl
 O=C1C(=O)C=C1OC1=NC=CC=C1 CHEMBL1977616 Aryl_group_addition.add_2-pyridyl
 O=C1C(=O)C(=C1O)C1=CN=CC=C1 CHEMBL1977616 Aryl_group_addition.add_3-pyridyl
@@ -8416,6 +8431,7 @@ O=C1C(=O)C=C1OC CHEMBL1977616 Metabolism.OH_T_OMe
 O=C1C(=O)C=C1CO CHEMBL1977616 Metabolism.Phenol_T_hydroxymethyl
 O=C1C(=O)N=C1O CHEMBL1977616 More_aryl_rings.aryl_C_T_aryl_N
 O=C1C(=O)C2=C1OC=C2 CHEMBL1977616 phenol_to_benzofuran
+O=C1C(=O)C2=C1OC(=O)N2 CHEMBL1977616 phenol_to_benzoxazolone
 C1(=CC=NC=C1O)C1=NC=CC=C1 CHEMBL237847 Aryl_group_addition.add_2-pyridyl
 C1=C(C=NC=C1O)C1=NC=CC=C1 CHEMBL237847 Aryl_group_addition.add_2-pyridyl
 C1=CC(=NC=C1O)C1=NC=CC=C1 CHEMBL237847 Aryl_group_addition.add_2-pyridyl
@@ -8589,6 +8605,8 @@ C1=CC=NC=C1NC(=O)N CHEMBL237847 Phenol_isosteres.Urea
 C1=CC=NC=C1NC(=O)N CHEMBL237847 Phenol_isosteres.Urea
 C1=CC=NC2=C1OC=C2 CHEMBL237847 phenol_to_benzofuran
 C12=CC=NC=C1OC=C2 CHEMBL237847 phenol_to_benzofuran
+C1=CC=NC2=C1OC(=O)N2 CHEMBL237847 phenol_to_benzoxazolone
+C12=CC=NC=C1OC(=O)N2 CHEMBL237847 phenol_to_benzoxazolone
 C1(=CN=CC=C1O)C1=NC=CC=C1 CHEMBL237459 Aryl_group_addition.add_2-pyridyl
 C1=C(N=CC=C1O)C1=NC=CC=C1 CHEMBL237459 Aryl_group_addition.add_2-pyridyl
 C1=CN=C(C=C1O)C1=NC=CC=C1 CHEMBL237459 Aryl_group_addition.add_2-pyridyl
@@ -8763,6 +8781,7 @@ C1=CN=CC=C1NS(=O)(=O)C CHEMBL237459 Phenol_isosteres.sulfonamide
 C1=CN=CC=C1NC(=O)N CHEMBL237459 Phenol_isosteres.Urea
 C1=CN=CC=C1NC(=O)N CHEMBL237459 Phenol_isosteres.Urea
 C1=CN=CC2=C1OC=C2 CHEMBL237459 phenol_to_benzofuran
+C1=CN=CC2=C1OC(=O)N2 CHEMBL237459 phenol_to_benzoxazolone
 C1(=N(=O)C(=CC=C1)C1=NC=CC=C1)O CHEMBL3898657 Aryl_group_addition.add_2-pyridyl
 C1(=N(=O)C=C(C=C1)C1=NC=CC=C1)O CHEMBL3898657 Aryl_group_addition.add_2-pyridyl
 C1(=N(=O)C=CC(=C1)C1=NC=CC=C1)O CHEMBL3898657 Aryl_group_addition.add_2-pyridyl
@@ -8902,6 +8921,7 @@ C1(=N(=O)C=CC=C1)NS(=O)(=O)N CHEMBL3898657 Phenol_isosteres.sulfamide
 C1(=N(=O)C=CC=C1)NS(=O)(=O)C CHEMBL3898657 Phenol_isosteres.sulfonamide
 C1(=N(=O)C=CC=C1)NC(=O)N CHEMBL3898657 Phenol_isosteres.Urea
 C12=N(=O)C=CC=C1C=CO2 CHEMBL3898657 phenol_to_benzofuran
+C12=N(=O)C=CC=C1NC(=O)O2 CHEMBL3898657 phenol_to_benzoxazolone
 C1(=C(Cl)N=CC(=C1)O)C1=NC=CC=C1 CHEMBL3236918 Aryl_group_addition.add_2-pyridyl
 C1=C(Cl)N=C(C(=C1)O)C1=NC=CC=C1 CHEMBL3236918 Aryl_group_addition.add_2-pyridyl
 C1=C(Cl)N=CC(=C1C1=NC=CC=C1)O CHEMBL3236918 Aryl_group_addition.add_2-pyridyl
@@ -9042,6 +9062,8 @@ C1=C(Cl)N=CC(=C1)NC(=O)N CHEMBL3236918 Phenol_isosteres.Urea
 C1=C(Cl)N=C2C(=C1)OC=C2 CHEMBL3236918 phenol_to_benzofuran
 C1=C(Cl)N=CC2=C1C=CO2 CHEMBL3236918 phenol_to_benzofuran
 C1=C(O)N=CC(=C1)Cl CHEMBL3236918 ring_orientation_swap
+C1=C(Cl)N=C2C(=C1)OC(=O)N2 CHEMBL3236918 phenol_to_benzoxazolone
+C1=C(Cl)N=CC2=C1NC(=O)O2 CHEMBL3236918 phenol_to_benzoxazolone
 C1(=C(Br)N=CC(=C1)O)C1=NC=CC=C1 CHEMBL3236917 Aryl_group_addition.add_2-pyridyl
 C1=C(Br)N=C(C(=C1)O)C1=NC=CC=C1 CHEMBL3236917 Aryl_group_addition.add_2-pyridyl
 C1=C(Br)N=CC(=C1C1=NC=CC=C1)O CHEMBL3236917 Aryl_group_addition.add_2-pyridyl
@@ -9182,6 +9204,8 @@ C1=C(Br)N=CC(=C1)NC(=O)N CHEMBL3236917 Phenol_isosteres.Urea
 C1=C(Br)N=C2C(=C1)OC=C2 CHEMBL3236917 phenol_to_benzofuran
 C1=C(Br)N=CC2=C1C=CO2 CHEMBL3236917 phenol_to_benzofuran
 C1=C(O)N=CC(=C1)Br CHEMBL3236917 ring_orientation_swap
+C1=C(Br)N=C2C(=C1)OC(=O)N2 CHEMBL3236917 phenol_to_benzoxazolone
+C1=C(Br)N=CC2=C1NC(=O)O2 CHEMBL3236917 phenol_to_benzoxazolone
 C1(=C(C)C=CC=C1O)C1=NC=CC=C1 CHEMBL1410808 Aryl_group_addition.add_2-pyridyl
 C1=C(CC2=NC=CC=C2)C=CC=C1O CHEMBL1410808 Aryl_group_addition.add_2-pyridyl
 C1=C(C)C(=CC=C1O)C1=NC=CC=C1 CHEMBL1410808 Aryl_group_addition.add_2-pyridyl
@@ -9413,6 +9437,8 @@ C1=C(CS(=O)C)C=CC=C1O CHEMBL1410808 Simple_H_Replacement.add_sulfone
 C1=C(CC(C)(C)C)C=CC=C1O CHEMBL1410808 Simple_H_Replacement.add_t-butyl
 C1=C(C)C=CC2=C1OC=C2 CHEMBL1410808 phenol_to_benzofuran
 C12=C(C)C=CC=C1OC=C2 CHEMBL1410808 phenol_to_benzofuran
+C1=C(C)C=CC2=C1OC(=O)N2 CHEMBL1410808 phenol_to_benzoxazolone
+C12=C(C)C=CC=C1OC(=O)N2 CHEMBL1410808 phenol_to_benzoxazolone
 C1(=CC=C(N)C=C1O)C1=NC=CC=C1 CHEMBL269755 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(N)C=C1O)C1=NC=CC=C1 CHEMBL269755 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C(N)C=C1O)C1=NC=CC=C1 CHEMBL269755 Aryl_group_addition.add_2-pyridyl
@@ -9630,6 +9656,8 @@ C1=CC=C(N)C2=C1OC=C2 CHEMBL269755 phenol_to_benzofuran
 C12=CC=C(N)C=C1OC=C2 CHEMBL269755 phenol_to_benzofuran
 C1=CC2=C(CC=N2)C=C1O CHEMBL269755 aniline_to_indole_b
 C1=CC2=C(NC=C2)C=C1O CHEMBL269755 aniline_to_indole_a
+C1=CC=C(N)C2=C1OC(=O)N2 CHEMBL269755 phenol_to_benzoxazolone
+C12=CC=C(N)C=C1OC(=O)N2 CHEMBL269755 phenol_to_benzoxazolone
 C1(=CC(O)=C(O)C=C1)C1=NC=CC=C1 CHEMBL280998 Aryl_group_addition.add_2-pyridyl
 C1=C(C(O)=C(O)C=C1)C1=NC=CC=C1 CHEMBL280998 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C(O)C=C1)OC1=NC=CC=C1 CHEMBL280998 Aryl_group_addition.add_2-pyridyl
@@ -9859,6 +9887,7 @@ C1=CC(=C(O)C=C1)NC(=O)N CHEMBL280998 Phenol_isosteres.Urea
 C1=CC(O)=C(C=C1)NC(=O)N CHEMBL280998 Phenol_isosteres.Urea
 C1=C2C(=C(O)C=C1)OC=C2 CHEMBL280998 phenol_to_benzofuran
 C1=CC2=C(OCCO2)C=C1 CHEMBL280998 catechol_to_benzodioxane
+C1=C2C(=C(O)C=C1)OC(=O)N2 CHEMBL280998 phenol_to_benzoxazolone
 C1(=CC(=CC(=C1O)O)O)C1=NC=CC=C1 CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1O)O)O)C1=NC=CC=C1 CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C(C(=C1O)O)C1=NC=CC=C1)O CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
@@ -10071,6 +10100,10 @@ C1=CC(=C2C(=C1O)OC=C2)O CHEMBL3092389 phenol_to_benzofuran
 C12=CC(=CC(=C1OC=C2)O)O CHEMBL3092389 phenol_to_benzofuran
 C1=CC(=CC(=C1O)O)O CHEMBL3092389 ortho_swap
 C1=CC(=CC2=C1OCCO2)O CHEMBL3092389 catechol_to_benzodioxane
+C12=CC(=CC(=C1OC(=O)N2)O)O CHEMBL3092389 phenol_to_benzoxazolone
+C1=CC(=C2C(=C1O)OC(=O)N2)O CHEMBL3092389 phenol_to_benzoxazolone
+C1=C2C(=CC(=C1O)O)OC(=O)N2 CHEMBL3092389 phenol_to_benzoxazolone
+C1=CC2=C(C(=C1O)O)NC(=O)O2 CHEMBL3092389 phenol_to_benzoxazolone
 O(C1=C(F)C=CC=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
 OC1=C(F)C(=CC=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
 OC1=C(F)C=C(C=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
@@ -10237,6 +10270,7 @@ OC1=C(F)C=CC2=C1OC=C2 CHEMBL1230120 phenol_to_benzofuran
 OC1=C(F)C(=CC=C1)O CHEMBL1230120 ortho_swap
 OC1=CC=CC(=C1O)F CHEMBL1230120 ortho_swap
 O1C2=C(F)C=CC=C2OCC1 CHEMBL1230120 catechol_to_benzodioxane
+OC1=C(F)C=CC2=C1OC(=O)N2 CHEMBL1230120 phenol_to_benzoxazolone
 C1(=C(O)C(C)=CC=C1)OC1=NC=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
 C1(O)=C(OC2=NC=CC=C2)C(C)=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
 C1(O)=C(O)C(=CC=C1)CC1=NC=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
@@ -10430,6 +10464,7 @@ C12=C(O)C(C)=CC=C1C=CO2 CHEMBL1173328 phenol_to_benzofuran
 C1(=C(O)C(C)=CC=C1)O CHEMBL1173328 ortho_swap
 C1(O)=C(C)C(=CC=C1)O CHEMBL1173328 ortho_swap
 C12=C(OCCO1)C(C)=CC=C2 CHEMBL1173328 catechol_to_benzodioxane
+C12=C(O)C(C)=CC=C1NC(=O)O2 CHEMBL1173328 phenol_to_benzoxazolone
 C1(=C(OC2=NC=CC=C2)C(=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=C(C=C1)C1=NC=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=CC(=C1)C1=NC=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
@@ -10624,6 +10659,7 @@ C1(=C(O)C(=CC=C1)O)O CHEMBL307145 ortho_swap
 C1(=C(O)C(=CC=C1)O)O CHEMBL307145 ortho_swap
 C12=C(OCCO1)C(=CC=C2)O CHEMBL307145 catechol_to_benzodioxane
 C1(=C2OCCOC2=CC=C1)O CHEMBL307145 catechol_to_benzodioxane
+C1(=C(O)C2=C(C=C1)NC(=O)O2)O CHEMBL307145 phenol_to_benzoxazolone
 C1(=C(OC2=NC=CC=C2)C=CN=C1C)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=CN=C1C)C1=NC=CC=C1)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C=C(N=C1C)C1=NC=CC=C1)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
@@ -10752,6 +10788,7 @@ C1(=C2OC=CC2=CN=C1C)O CHEMBL295082 phenol_to_benzofuran
 C1(=C(O)C=CN=C1C)O CHEMBL295082 ortho_swap
 C1(=C(O)C=CN=C1O)C CHEMBL295082 ortho_swap
 C12=C(OCCO1)C=CN=C2C CHEMBL295082 catechol_to_benzodioxane
+C1(=C2OC(=O)NC2=CN=C1C)O CHEMBL295082 phenol_to_benzoxazolone
 C1(=C(C(O)=C(O)C=C1)C1=NC=CC=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(O)C=C1)OC1=NC=CC=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
 C1(=CC(O)=C(OC2=NC=CC=C2)C=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
@@ -10940,6 +10977,8 @@ C1(=C2C(=C(O)C=C1)OC=C2)C CHEMBL158766 phenol_to_benzofuran
 C1(=CC(O)=C2OC=CC2=C1)C CHEMBL158766 phenol_to_benzofuran
 C1(=CC(=C(O)C=C1)O)C CHEMBL158766 ortho_swap
 C1(=CC2=C(OCCO2)C=C1)C CHEMBL158766 catechol_to_benzodioxane
+C1(=C2C(=C(O)C=C1)OC(=O)N2)C CHEMBL158766 phenol_to_benzoxazolone
+C1(=CC(O)=C2OC(=O)NC2=C1)C CHEMBL158766 phenol_to_benzoxazolone
 C1(=C(C(=C(O)C(=C1)O)C)C1=NC=CC=C1)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(OC2=NC=CC=C2)C(=C1)O)C)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(O)C(=C1C1=NC=CC=C1)O)C)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
@@ -11114,6 +11153,9 @@ C1(=CC(=C(O)C2=C1C=CO2)C)O CHEMBL4102748 phenol_to_benzofuran
 C1(=CC(=C(C)C(=C1)O)O)O CHEMBL4102748 ortho_swap
 C1(=CC(=C(O)C(=C1)O)C)O CHEMBL4102748 ortho_swap
 C1(=CC(=C2OCCOC2=C1)C)O CHEMBL4102748 catechol_to_benzodioxane
+C1(=CC(=C(O)C2=C1NC(=O)O2)C)O CHEMBL4102748 phenol_to_benzoxazolone
+C12=C(C(=C(O)C(=C1)O)C)NC(=O)O2 CHEMBL4102748 phenol_to_benzoxazolone
+C12=CC(=C(O)C(=C1NC(=O)O2)O)C CHEMBL4102748 phenol_to_benzoxazolone
 C(S(O)(=O)=O)C1=NC=CC=C1 CHEMBL3949263 Aryl_group_addition.add_2-pyridyl
 CS(=O)(=O)OC1=NC=CC=C1 CHEMBL3949263 Aryl_group_addition.add_2-pyridyl
 C(S(O)(=O)=O)C1=CN=CC=C1 CHEMBL3949263 Aryl_group_addition.add_3-pyridyl
@@ -16973,6 +17015,7 @@ C1=CC=C2C(=C1NS(=O)(=O)N)NC=C2 CHEMBL3634136 Phenol_isosteres.sulfamide
 C1=CC=C2C(=C1NS(=O)(=O)C)NC=C2 CHEMBL3634136 Phenol_isosteres.sulfonamide
 C1=CC=C2C(=C1NC(=O)N)NC=C2 CHEMBL3634136 Phenol_isosteres.Urea
 C1=CC=C2C(=C1O)NCC2 CHEMBL3634136 indole_to_indoline
+C12=CC=C3C(=C1OC(=O)N2)NC=C3 CHEMBL3634136 phenol_to_benzoxazolone
 C1(=C2C(=CC=C1Br)C=CN2)C1=NC=CC=C1 CHEMBL3414692 Aryl_group_addition.add_2-pyridyl
 C1=C2C(=C(C=C1Br)C1=NC=CC=C1)C=CN2 CHEMBL3414692 Aryl_group_addition.add_2-pyridyl
 C1=C2C(=CC(=C1Br)C1=NC=CC=C1)C=CN2 CHEMBL3414692 Aryl_group_addition.add_2-pyridyl
@@ -17325,6 +17368,8 @@ N1C=CC2=C1C=C(C=C2)NS(=O)(=O)C CHEMBL2413822 Phenol_isosteres.sulfonamide
 N1C=CC2=C1C=C(C=C2)NC(=O)N CHEMBL2413822 Phenol_isosteres.Urea
 N1C=CC2=C1C=C(C=C2)NC(=O)N CHEMBL2413822 Phenol_isosteres.Urea
 N1CCC2=C1C=C(O)C=C2 CHEMBL2413822 indole_to_indoline
+N1C=CC2=C1C1=C(OC(=O)N1)C=C2 CHEMBL2413822 phenol_to_benzoxazolone
+N1C=CC2=C1C=C1OC(=O)NC1=C2 CHEMBL2413822 phenol_to_benzoxazolone
 C1(=CC=C2C(=C1Br)C=CN2)C1=NC=CC=C1 CHEMBL1922275 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C2C(=C1Br)C=CN2)C1=NC=CC=C1 CHEMBL1922275 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C2C(=C1Br)C=CN2)C1=NC=CC=C1 CHEMBL1922275 Aryl_group_addition.add_2-pyridyl
@@ -26855,6 +26900,7 @@ CC(=O)NC=C CHEMBL3352942 Switches.reverse_amide
 CNC(=O)NC=C CHEMBL3352942 amide_to_urea
 CC1=NC(=NO1)C=C CHEMBL3352942 amide_to_1_2_4_oxadiazole
 CC1=CN=C(S1)C=C CHEMBL3352942 amide_to_thiazole
+CNC(=O)C1CC1 CHEMBL3352942 michael_acceptor_to_cyclopropane
 C(=O)(CC1=NC=CC=C1)N(C)C CHEMBL11873 Aryl_group_addition.add_2-pyridyl
 C(=O)(C)N(C)CC1=NC=CC=C1 CHEMBL11873 Aryl_group_addition.add_2-pyridyl
 C(=O)(C)N(C)CC1=NC=CC=C1 CHEMBL11873 Aryl_group_addition.add_2-pyridyl
@@ -29179,6 +29225,7 @@ O=C1CCCCC1 CHEMBL18607 remove_ch2
 O=C1CCCCC1 CHEMBL18607 remove_ch2
 O=C1CCCCC1 CHEMBL18607 remove_ch2
 O=C1CCCCC1 CHEMBL18607 remove_ch2
+O1CC2(CCCCCC2)C1 CHEMBL18607 ketone_to_oxetane
 C1(=O)N(CCCCN1)C1=NC=CC=C1 CHEMBL12376 Aryl_group_addition.add_2-pyridyl
 C1(=O)NC(CCCN1)C1=NC=CC=C1 CHEMBL12376 Aryl_group_addition.add_2-pyridyl
 C1(=O)NCC(CCN1)C1=NC=CC=C1 CHEMBL12376 Aryl_group_addition.add_2-pyridyl
