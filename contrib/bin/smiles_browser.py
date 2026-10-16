@@ -7,6 +7,7 @@ from rdkit.Chem import Draw
 
 import argparse
 import csv
+from contextlib import nullcontext
 import html
 import json
 import re
@@ -112,7 +113,9 @@ def read_smiles_file(fname, separator=None, has_header=False, max_molecules=None
     max_fields = 0
     smiles_columns = smiles_columns or [0]
 
-    with open(fname, newline="") as f:
+    # Leave stdin open; only streams opened here belong to this reader.
+    source = nullcontext(sys.stdin) if fname == "-" else open(fname, newline="")
+    with source as f:
         if separator == ",":
             reader = csv.reader(f)
             has_header = True
@@ -620,12 +623,12 @@ $(document).ready(function () {
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Input file containing one or more SMILES columns.")
+    parser.add_argument("input", help="Input file containing one or more SMILES columns; use - for standard input.")
     parser.add_argument("-o", "--output", default="molecules.html")
     parser.add_argument("-n", type=int, default=None,
                         help="Maximum number of molecules to read")
     parser.add_argument("-s", "--separator", default=None,
-                        help="Input separator. Use '\\t' for tab. Defaults to comma for .csv, otherwise whitespace.")
+                        help="Input separator. Use '\\t' for tab. Defaults to comma for .csv, otherwise whitespace (including stdin).")
     parser.add_argument("--header", action="store_true",
                         help="First record contains column titles.")
     parser.add_argument("--smiles_column", action="append", default=None, metavar="COLUMN[,COLUMN...]",
