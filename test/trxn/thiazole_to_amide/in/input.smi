@@ -1,0 +1,13 @@
+Cc1ncc(C)s1 aliphatic
+c1ccccc1c1ncc(C)s1 ring_on_carbonyl_side
+Cc1ncc(c2ccccc2)s1 ring_on_nitrogen_side
+c1ccccc1c1ncc(Cc2ccccc2)s1 two_ring_substituents
+C[C@H](O)c1ncc([C@@H](F)Cl)s1 chiral_attachments
+Cc1nccs1 monosubstituted_C2_no_match
+c1ncc(C)s1 monosubstituted_C5_no_match
+c1nccs1 unsubstituted_no_match
+Cc1nc(C)c(C)s1 trisubstituted_no_match
+Cc1nc(C)cs1 2_4_disubstituted_no_match
+Cc1ncc(C)o1 oxazole_no_match
+Cc1ncc(C)[nH]1 imidazole_no_match
+Cc1nc2ccccc2s1 fused_benzothiazole_no_match

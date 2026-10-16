@@ -305,3 +305,5 @@ PROTO:remove_ch2.rxn
 PROTO:ester_to_oxazole.rxn
 PROTO:amide_to_1_2_4_oxadiazole.rxn
 PROTO:1_2_4_oxadiazole_to_amide.rxn
+PROTO:amide_to_thiazole.rxn
+PROTO:thiazole_to_amide.rxn

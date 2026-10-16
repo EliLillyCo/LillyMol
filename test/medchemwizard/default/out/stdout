@@ -93,6 +93,7 @@ CC(=O)N(C)O CHEMBL11544 Simple_H_Replacement.nitrogen_to_oxygen
 CNC(=O)C CHEMBL11544 Switches.reverse_amide
 CNC(=O)NC CHEMBL11544 amide_to_urea
 CC1=NOC(=N1)C CHEMBL11544 amide_to_1_2_4_oxadiazole
+CC1=NC=C(C)S1 CHEMBL11544 amide_to_thiazole
 C(=O)(CC1=NC=CC=C1)OC CHEMBL14079 Aryl_group_addition.add_2-pyridyl
 C(=O)(C)OCC1=NC=CC=C1 CHEMBL14079 Aryl_group_addition.add_2-pyridyl
 C(=O)(CC1=CN=CC=C1)OC CHEMBL14079 Aryl_group_addition.add_3-pyridyl
@@ -481,6 +482,7 @@ C(Cl)C(=O)N(C)O CHEMBL3352950 Simple_H_Replacement.nitrogen_to_oxygen
 C(Cl)NC(=O)C CHEMBL3352950 Switches.reverse_amide
 C(Cl)NC(=O)NC CHEMBL3352950 amide_to_urea
 C(Cl)C1=NOC(=N1)C CHEMBL3352950 amide_to_1_2_4_oxadiazole
+C(Cl)C1=NC=C(C)S1 CHEMBL3352950 amide_to_thiazole
 C(Br)(C(=O)NC)C1=NC=CC=C1 CHEMBL3352949 Aryl_group_addition.add_2-pyridyl
 C(Br)C(=O)N(C)C1=NC=CC=C1 CHEMBL3352949 Aryl_group_addition.add_2-pyridyl
 C(Br)C(=O)NCC1=NC=CC=C1 CHEMBL3352949 Aryl_group_addition.add_2-pyridyl
@@ -576,6 +578,7 @@ C(Br)C(=O)N(C)O CHEMBL3352949 Simple_H_Replacement.nitrogen_to_oxygen
 C(Br)NC(=O)C CHEMBL3352949 Switches.reverse_amide
 C(Br)NC(=O)NC CHEMBL3352949 amide_to_urea
 C(Br)C1=NOC(=N1)C CHEMBL3352949 amide_to_1_2_4_oxadiazole
+C(Br)C1=NC=C(C)S1 CHEMBL3352949 amide_to_thiazole
 S(CC(=O)OC)C1=NC=CC=C1 CHEMBL1341329 Aryl_group_addition.add_2-pyridyl
 SC(C(=O)OC)C1=NC=CC=C1 CHEMBL1341329 Aryl_group_addition.add_2-pyridyl
 SCC(=O)OCC1=NC=CC=C1 CHEMBL1341329 Aryl_group_addition.add_2-pyridyl
@@ -20032,6 +20035,7 @@ C1=C(N(C(=O)C2=NON=C2)C(=O)N(C)C)C=CC=C1 CHEMBL1651785 Simple_H_Replacement.amin
 C1=C(N(O)C(=O)C2=NON=C2)C=CC=C1 CHEMBL1651785 Simple_H_Replacement.nitrogen_to_oxygen
 C1=C(C=CC=C1)C(=O)NC1=NON=C1 CHEMBL1651785 Switches.reverse_amide
 C1=C(C=CC=C1)C1=NC(=NO1)C1=NON=C1 CHEMBL1651785 amide_to_1_2_4_oxadiazole
+C1=C(C=CC=C1)C1=CN=C(S1)C1=NON=C1 CHEMBL1651785 amide_to_thiazole
 C1(=C(C=CC(=C1)C)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651786 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1)C)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651786 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(C(=C1)C)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651786 Aryl_group_addition.add_2-pyridyl
@@ -20292,6 +20296,7 @@ C(=O)(C=CNC)NC(=O)C1=NON=C1 CHEMBL1651786 Virtual_Ring.break_open_a_6-ring_to_fo
 CC12CC(CC1)(CO2)NC(=O)C1=NON=C1 CHEMBL1651786 benzene_para_to_oxabicyclo_octane
 C1C2(CC1(C)C2)NC(=O)C1=NON=C1 CHEMBL1651786 benzene_para_to_bcp
 C1=C(C=CC(=C1)C)C1=NC(=NO1)C1=NON=C1 CHEMBL1651786 amide_to_1_2_4_oxadiazole
+C1=C(C=CC(=C1)C)C1=CN=C(S1)C1=NON=C1 CHEMBL1651786 amide_to_thiazole
 C1(=C(C=C(F)C=C1)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651781 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=C(F)C=C1)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651781 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(F)C(=C1)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651781 Aryl_group_addition.add_2-pyridyl
@@ -20522,6 +20527,7 @@ C1=C(C=C(F)C=C1)N(C(=O)C1=NON=C1)C(=O)N(C)C CHEMBL1651781 Simple_H_Replacement.a
 C1=C(C=C(F)C=C1)N(O)C(=O)C1=NON=C1 CHEMBL1651781 Simple_H_Replacement.nitrogen_to_oxygen
 C1=C(C=C(F)C=C1)C(=O)NC1=NON=C1 CHEMBL1651781 Switches.reverse_amide
 C1=C(C=C(F)C=C1)C1=NC(=NO1)C1=NON=C1 CHEMBL1651781 amide_to_1_2_4_oxadiazole
+C1=C(C=C(F)C=C1)C1=CN=C(S1)C1=NON=C1 CHEMBL1651781 amide_to_thiazole
 C1(=C(C=CC(=C1)F)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651780 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1)F)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651780 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(C(=C1)F)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651780 Aryl_group_addition.add_2-pyridyl
@@ -20753,6 +20759,7 @@ C1=C(C=CC(=C1)F)N(O)C(=O)C1=NON=C1 CHEMBL1651780 Simple_H_Replacement.nitrogen_t
 C1=C(C=CC(=C1)F)C(=O)NC1=NON=C1 CHEMBL1651780 Switches.reverse_amide
 C1C2(CC1(F)C2)NC(=O)C1=NON=C1 CHEMBL1651780 benzene_para_to_bcp
 C1=C(C=CC(=C1)F)C1=NC(=NO1)C1=NON=C1 CHEMBL1651780 amide_to_1_2_4_oxadiazole
+C1=C(C=CC(=C1)F)C1=CN=C(S1)C1=NON=C1 CHEMBL1651780 amide_to_thiazole
 C1(=C(C(=CC=C1)F)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651782 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=C(C=C1)C1=NC=CC=C1)F)NC(=O)C1=NON=C1 CHEMBL1651782 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1)C1=NC=CC=C1)F)NC(=O)C1=NON=C1 CHEMBL1651782 Aryl_group_addition.add_2-pyridyl
@@ -21006,6 +21013,7 @@ C1=C(C(=CC=C1)F)N(O)C(=O)C1=NON=C1 CHEMBL1651782 Simple_H_Replacement.nitrogen_t
 C1=C(C(=CC=C1)F)C(=O)NC1=NON=C1 CHEMBL1651782 Switches.reverse_amide
 C1=C(F)C(=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651782 ortho_swap
 C1=C(C(=CC=C1)F)C1=NC(=NO1)C1=NON=C1 CHEMBL1651782 amide_to_1_2_4_oxadiazole
+C1=C(C(=CC=C1)F)C1=CN=C(S1)C1=NON=C1 CHEMBL1651782 amide_to_thiazole
 C1(=C(C=CC(=C1)OC)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651787 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1)OC)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651787 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(C(=C1)OC)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651787 Aryl_group_addition.add_2-pyridyl
@@ -21274,6 +21282,7 @@ C1=C(C=C2C(=C1)OC=C2)NC(=O)C1=NON=C1 CHEMBL1651787 anisole_to_benzofuran_b
 C1=C(C=C2C(=C1)OC=C2)NC(=O)C1=NON=C1 CHEMBL1651787 anisole_to_benzofuran_a
 C1C2(CC1(C2)OC)NC(=O)C1=NON=C1 CHEMBL1651787 benzene_para_to_bcp
 C1=C(C=CC(=C1)OC)C1=NC(=NO1)C1=NON=C1 CHEMBL1651787 amide_to_1_2_4_oxadiazole
+C1=C(C=CC(=C1)OC)C1=CN=C(S1)C1=NON=C1 CHEMBL1651787 amide_to_thiazole
 C1(=C(C=C(F)C=C1F)NC(=O)C1=NON=C1)C1=NC=CC=C1 CHEMBL1651783 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=C(F)C=C1F)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651783 Aryl_group_addition.add_2-pyridyl
 C1=C(C=C(F)C(=C1F)C1=NC=CC=C1)NC(=O)C1=NON=C1 CHEMBL1651783 Aryl_group_addition.add_2-pyridyl
@@ -21433,6 +21442,7 @@ C1=C(C=C(F)C=C1F)N(C(=O)C1=NON=C1)C(=O)N(C)C CHEMBL1651783 Simple_H_Replacement.
 C1=C(C=C(F)C=C1F)N(O)C(=O)C1=NON=C1 CHEMBL1651783 Simple_H_Replacement.nitrogen_to_oxygen
 C1=C(C=C(F)C=C1F)C(=O)NC1=NON=C1 CHEMBL1651783 Switches.reverse_amide
 C1=C(C=C(F)C=C1F)C1=NC(=NO1)C1=NON=C1 CHEMBL1651783 amide_to_1_2_4_oxadiazole
+C1=C(C=C(F)C=C1F)C1=CN=C(S1)C1=NON=C1 CHEMBL1651783 amide_to_thiazole
 C1(=NC(=CO1)C=O)C1=NC=CC=C1 CHEMBL444137 Aryl_group_addition.add_2-pyridyl
 C1=NC(=C(O1)C1=NC=CC=C1)C=O CHEMBL444137 Aryl_group_addition.add_2-pyridyl
 C1=NC(=CO1)C(=O)C1=NC=CC=C1 CHEMBL444137 Aryl_group_addition.add_2-pyridyl
@@ -26598,6 +26608,7 @@ C(#N)N(O)C(=O)C CHEMBL1744431 Simple_H_Replacement.nitrogen_to_oxygen
 C(#N)C(=O)NC CHEMBL1744431 Switches.reverse_amide
 C(#N)NC(=O)NC CHEMBL1744431 amide_to_urea
 C(#N)C1=NC(=NO1)C CHEMBL1744431 amide_to_1_2_4_oxadiazole
+C(#N)C1=CN=C(C)S1 CHEMBL1744431 amide_to_thiazole
 C(#CC1=NC=CC=C1)C(=O)NC CHEMBL3352948 Aryl_group_addition.add_2-pyridyl
 C(#C)C(=O)N(C)C1=NC=CC=C1 CHEMBL3352948 Aryl_group_addition.add_2-pyridyl
 C(#C)C(=O)NCC1=NC=CC=C1 CHEMBL3352948 Aryl_group_addition.add_2-pyridyl
@@ -26692,6 +26703,7 @@ C(#C)C(=O)N(C)O CHEMBL3352948 Simple_H_Replacement.nitrogen_to_oxygen
 C(#C)NC(=O)C CHEMBL3352948 Switches.reverse_amide
 C(#C)NC(=O)NC CHEMBL3352948 amide_to_urea
 C(#C)C1=NOC(=N1)C CHEMBL3352948 amide_to_1_2_4_oxadiazole
+C(#C)C1=NC=C(C)S1 CHEMBL3352948 amide_to_thiazole
 C(NC(=O)C=C)C1=NC=CC=C1 CHEMBL3352942 Aryl_group_addition.add_2-pyridyl
 CN(C(=O)C=C)C1=NC=CC=C1 CHEMBL3352942 Aryl_group_addition.add_2-pyridyl
 CNC(=O)C(=C)C1=NC=CC=C1 CHEMBL3352942 Aryl_group_addition.add_2-pyridyl
@@ -26812,6 +26824,7 @@ CN(O)C(=O)C=C CHEMBL3352942 Simple_H_Replacement.nitrogen_to_oxygen
 CC(=O)NC=C CHEMBL3352942 Switches.reverse_amide
 CNC(=O)NC=C CHEMBL3352942 amide_to_urea
 CC1=NC(=NO1)C=C CHEMBL3352942 amide_to_1_2_4_oxadiazole
+CC1=CN=C(S1)C=C CHEMBL3352942 amide_to_thiazole
 C(=O)(CC1=NC=CC=C1)N(C)C CHEMBL11873 Aryl_group_addition.add_2-pyridyl
 C(=O)(C)N(C)CC1=NC=CC=C1 CHEMBL11873 Aryl_group_addition.add_2-pyridyl
 C(=O)(C)N(C)CC1=NC=CC=C1 CHEMBL11873 Aryl_group_addition.add_2-pyridyl

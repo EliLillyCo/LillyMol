@@ -94,7 +94,30 @@ trxn -P "${LILLYMOL_HOME}/data/MedchemWizard/amide_to_1_2_4_oxadiazole.rxn" \
 ```
 
 This writes `products.smi`, generating a product for each matching site and
-ignoring input molecules without a match. `-r` is for the older reaction format.
+ignoring input molecules without a match. `-r` also recognises textproto files
+whose first non-comment record starts with `name:`.
+
+## Amide / thiazole pair
+
+The standard reaction set includes `amide_to_thiazole` and `thiazole_to_amide`:
+
+```text
+[*:1]C(=O)N[*:2] <-> [*:1]c1ncc([*:2])s1
+```
+
+Forward matching requires a secondary acyclic amide: both the carbonyl carbon
+and the amide nitrogen must be outside rings. Primary amides, tertiary amides,
+lactams, and esters do not match. The external attachment atoms may belong to
+rings. The carbonyl-side attachment becomes thiazole C2; the nitrogen-side
+attachment becomes C5. Reverse matching requires a non-fused 2,5-disubstituted
+thiazole with an unsubstituted C4, preserving the same attachment orientation.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/amide_to_thiazole.rxn" \
+  -m each -z i -S thiazoles input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/thiazole_to_amide.rxn" \
+  -m each -z i -S amides thiazoles.smi
+```
 
 ## Checking proposed reactions for overlap
 

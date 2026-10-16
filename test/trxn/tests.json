@@ -383,6 +383,24 @@
       "args": [
         "-r #{indir}/reaction.rxn -S products #{indir}/input.smi"
       ]
+    },
+    {
+      "name": "amide_to_thiazole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/amide_to_thiazole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "thiazole_to_amide",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/thiazole_to_amide.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "amide_thiazole_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
     }
   ]
 }
