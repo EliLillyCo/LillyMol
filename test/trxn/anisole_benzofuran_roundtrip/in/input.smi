@@ -1,0 +1,5 @@
+COc1ccccc1 anisole
+COc1ccccc1C one_ortho_available
+COc1ccc(C)cc1 symmetric_ortho
+C[C@H](F)c1ccc(OC)cc1 chiral_substituent
+[13CH3]Oc1ccccc1 labelled_methoxy

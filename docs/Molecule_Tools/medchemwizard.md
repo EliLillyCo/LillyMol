@@ -187,6 +187,72 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indole_to_phenethylamine.rxn" \
   -m each -z i -S open_chain indoles.smi
 ```
 
+## Phenol / benzofuran pair
+
+`phenol_to_benzofuran` adds a two-carbon unsaturated bridge from a phenolic oxygen
+to an available ortho aromatic carbon, forming a fused aromatic oxygen ring:
+
+```text
+Oc1ccccc1 <-> c1ccc2occc2c1
+```
+
+Only one ortho C-H position is required. This broadens the previous reaction,
+which required both ortho positions to be available and processed one embedding
+per starting atom. The updated reaction generates both regioisomers when the
+available positions are inequivalent and suppresses symmetry-equivalent matches.
+It can therefore produce more products than the previous definition. The
+original single-ring fused-system restriction on the phenolic aromatic ring is
+retained; naphthols are excluded. Phenolic oxygen must be neutral and carry a
+hydrogen; ethers and phenoxide ions do not match.
+
+`benzofuran_to_phenol` removes the two added carbons and retains the oxygen as a
+phenolic OH. It requires unsubstituted C2 and C3 atoms and a two-ring fused
+system, so attached groups or additional fused rings cannot be discarded.
+Aromatic-ring substituents and their stereochemistry are retained. Aromatic and
+Kekule SMILES are accepted; dihydrobenzofurans do not match this reverse reaction.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzofuran.rxn" \
+  -m each -z i -S benzofurans input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_phenol.rxn" \
+  -m each -z i -S phenols benzofurans.smi
+```
+
+## Anisole / benzofuran pair
+
+`anisole_to_benzofuran` retains the oxygen and methyl carbon of an aromatic
+methoxy group and adds one carbon to form a benzofuran at an available ortho C-H:
+
+```text
+COc1ccccc1 <-> c1ccc2occc2c1
+```
+
+The oxygen remains an ether oxygen in both structures. The forward reaction
+requires only one available ortho position, generates both regioisomers when
+positions are inequivalent, and suppresses symmetry-equivalent matches. It
+requires a neutral methoxy group on an aromatic ring in a single-ring fused
+system. Ethoxy groups, phenols, and methoxynaphthalenes do not match.
+
+This consolidated forward reaction replaces `anisole_to_benzofuran_a` and
+`anisole_to_benzofuran_b` in the standard `REACTIONS` list. Those files remain
+available for custom lists. The consolidated reaction removes their duplicate
+coverage and broadens their requirement that both ortho positions be free.
+Standard output now uses the name `anisole_to_benzofuran`.
+
+`benzofuran_to_anisole` retains the ring oxygen and C2 as the methoxy group,
+removing C3. It requires unsubstituted C2/C3 positions and a two-ring fused system
+to avoid discarding substituents or breaking additional fused rings. Aromatic
+substituents, stereochemistry, and isotopes on retained atoms are preserved.
+Both aromatic and Kekule SMILES are accepted. This reverse is separate from
+`benzofuran_to_phenol`, which removes both C2 and C3 and produces a phenolic OH.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/anisole_to_benzofuran.rxn" \
+  -m each -z i -S benzofurans input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_anisole.rxn" \
+  -m each -z i -S anisoles benzofurans.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every

@@ -437,6 +437,42 @@
       "shell_script": {
         "script_name": "run.sh"
       }
+    },
+    {
+      "name": "phenol_to_benzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzofuran_to_phenol",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_phenol.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenol_benzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "anisole_to_benzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/anisole_to_benzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzofuran_to_anisole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_anisole.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "anisole_benzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
     }
   ]
 }
