@@ -1,0 +1,21 @@
+# Bridge the two free catechol oxygens with CH2; retain the aromatic substituents.
+# Forward-only analogue generation; no stereocentres are assigned.
+name: "catechol_to_benzodioxole"
+scaffold {
+  smarts: "[OD1H1+0]-[cD3]:[cD3]-[OD1H1+0]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  unfix_implicit_hydrogens: [0, 3]
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join { a1: 0 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 3 a2: 0 btype: SS_SINGLE_BOND }
+  match_conditions {
+    max_matches_to_find: 1
+  }
+}

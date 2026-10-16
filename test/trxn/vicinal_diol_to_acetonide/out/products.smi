@@ -1,0 +1,8 @@
+CC1(C)OCCO1 ethylene_glycol +
+CC1OC(OC1)(C)C propylene_glycol +
+CC1(C)O[C@@H](C)[C@@H](O1)C chiral_diol +
+CC1(C)O[C@H]2CCC[C@@H]2O1 cyclic_diol +
+CC1([18O]CCO1)C labelled_oxygen +
+CC1(C)OC(C(O1)(C)C)(C)C tertiary_diol +
+CC1OC(C)(C)OC1CO triol.0 +
+CC(O)C1OC(C)(C)OC1 triol.1 +

@@ -324,6 +324,48 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/isoindoline_to_benzylamine.rxn" \
   -m each -z i -S open_chain cyclic.smi
 ```
 
+## Forward-only catechol and vicinal-diol alternatives
+
+These four transformations bridge two free hydroxyl oxygens while retaining the
+original carbon skeleton, substituents, oxygen isotopes, and existing
+stereochemistry. No reverse reactions are registered for these pairs.
+
+| Transformation | Added bridge | Example |
+| --- | --- | --- |
+| `catechol_to_benzodioxole` | O-CH2-O | `Oc1ccccc1O` -> `c1ccc2OCOc2c1` |
+| `catechol_to_benzodioxane` | O-CH2-CH2-O | `Oc1ccccc1O` -> `c1ccc2OCCOc2c1` |
+| `vicinal_diol_to_methylene_acetal` | O-CH2-O | `OCCO` -> `C1OCCO1` |
+| `vicinal_diol_to_acetonide` | O-C(CH3)2-O | `OCCO` -> `CC1(C)OCCO1` |
+
+The catechol query requires two neutral, free OH groups attached to adjacent
+aromatic carbons. Resorcinols, hydroquinones, partially or fully methylated
+catechols, and phenoxide ions do not match. The remainder of the aromatic system
+is unrestricted. `catechol_to_benzodioxole` replaces the legacy
+`Metabolism.Catechol_T_methylenedioxy` entry in the default list, eliminating
+symmetry-equivalent duplicate matches. The legacy file remains available for
+custom lists; standard output now uses `catechol_to_benzodioxole`.
+
+The aliphatic query requires two neutral, free OH groups attached to adjacent,
+saturated carbon atoms (`[OD1H1+0]-[CX4+0]-[CX4+0]-[OD1H1+0]`). It accepts
+acyclic and cyclic diols and primary, secondary or tertiary alcohol carbons.
+Non-vicinal diols, ethers, alkoxides, carbonyl groups and catechols do not match.
+Polyols can give a separate product for each inequivalent eligible OH pair.
+The added bridges introduce no stereocentres; existing specified or unspecified
+stereochemistry is retained. No geometric feasibility check is performed.
+
+These are analogue-generation hypotheses rather than guaranteed improvements
+in metabolism or safety. They replace both OH donors with ether/acetal oxygens.
+Methylenedioxyphenyl compounds can inhibit CYP enzymes, and cyclic acetals can
+hydrolyse to regenerate diols. The original liability and the properties of the
+new analogue still need experimental assessment.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxane.rxn" \
+  -m each -z i -S alternatives input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn" \
+  -m each -z i -S acetals diols.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every

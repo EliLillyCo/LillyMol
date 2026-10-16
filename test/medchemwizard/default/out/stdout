@@ -9750,8 +9750,7 @@ C1=C(Cl)C(O)=C(O)C=C1 CHEMBL280998 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1=CC(O)=C(O)C(=C1)Cl CHEMBL280998 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1=C(F)C(O)=C(O)C=C1 CHEMBL280998 Metabolism.Block_ortho_to_a_phenol_F1
 C1=CC(O)=C(O)C(=C1)F CHEMBL280998 Metabolism.Block_ortho_to_a_phenol_F1
-C1=CC2=C(OCO2)C=C1 CHEMBL280998 Metabolism.Catechol_T_methylenedioxy
-C1=CC2=C(OCO2)C=C1 CHEMBL280998 Metabolism.Catechol_T_methylenedioxy
+C1=CC2=C(OCO2)C=C1 CHEMBL280998 catechol_to_benzodioxole
 C1=CC(=C(O)C=C1)C(F)(F)F CHEMBL280998 Metabolism.OH_T_OCF3
 C1=CC(O)=C(C=C1)C(F)(F)F CHEMBL280998 Metabolism.OH_T_OCF3
 C1=CC(=C(O)C=C1)OCF CHEMBL280998 Metabolism.OH_T_OCH2F
@@ -9859,6 +9858,7 @@ C1=CC(O)=C(C=C1)NS(=O)(=O)C CHEMBL280998 Phenol_isosteres.sulfonamide
 C1=CC(=C(O)C=C1)NC(=O)N CHEMBL280998 Phenol_isosteres.Urea
 C1=CC(O)=C(C=C1)NC(=O)N CHEMBL280998 Phenol_isosteres.Urea
 C1=C2C(=C(O)C=C1)OC=C2 CHEMBL280998 phenol_to_benzofuran
+C1=CC2=C(OCCO2)C=C1 CHEMBL280998 catechol_to_benzodioxane
 C1(=CC(=CC(=C1O)O)O)C1=NC=CC=C1 CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
 C1=C(C(=CC(=C1O)O)O)C1=NC=CC=C1 CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
 C1=CC(=C(C(=C1O)O)C1=NC=CC=C1)O CHEMBL3092389 Aryl_group_addition.add_2-pyridyl
@@ -9972,8 +9972,7 @@ C1=C(F)C(=C(F)C(=C1O)O)O CHEMBL3092389 Metabolism.Block_ortho_to_a_phenol_F2
 C1=C(F)C(=C(F)C(=C1O)O)O CHEMBL3092389 Metabolism.Block_ortho_to_a_phenol_F2
 C1=C(C)C(=C(C)C(=C1O)O)O CHEMBL3092389 Metabolism.Block_ortho_to_a_phenol
 C1=C(C)C(=C(C)C(=C1O)O)O CHEMBL3092389 Metabolism.Block_ortho_to_a_phenol
-C1=CC(=CC2=C1OCO2)O CHEMBL3092389 Metabolism.Catechol_T_methylenedioxy
-C1=CC(=CC2=C1OCO2)O CHEMBL3092389 Metabolism.Catechol_T_methylenedioxy
+C1=CC(=CC2=C1OCO2)O CHEMBL3092389 catechol_to_benzodioxole
 C1=CC(=CC(=C1O)O)C(F)(F)F CHEMBL3092389 Metabolism.OH_T_OCF3
 C1=CC(=CC(=C1O)C(F)(F)F)O CHEMBL3092389 Metabolism.OH_T_OCF3
 C1=CC(=CC(=C1C(F)(F)F)O)O CHEMBL3092389 Metabolism.OH_T_OCF3
@@ -10071,6 +10070,7 @@ C1=CC2=C(C(=C1O)O)C=CO2 CHEMBL3092389 phenol_to_benzofuran
 C1=CC(=C2C(=C1O)OC=C2)O CHEMBL3092389 phenol_to_benzofuran
 C12=CC(=CC(=C1OC=C2)O)O CHEMBL3092389 phenol_to_benzofuran
 C1=CC(=CC(=C1O)O)O CHEMBL3092389 ortho_swap
+C1=CC(=CC2=C1OCCO2)O CHEMBL3092389 catechol_to_benzodioxane
 O(C1=C(F)C=CC=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
 OC1=C(F)C(=CC=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
 OC1=C(F)C=C(C=C1O)C1=NC=CC=C1 CHEMBL1230120 Aryl_group_addition.add_2-pyridyl
@@ -10162,8 +10162,7 @@ OC1=C(F)C=CC(=C1O)N(C)C(=O)N(C)C CHEMBL1230120 Aryl_substituent_Scan.add_urea
 OC1=C(F)C=CC(=C1O)C CHEMBL1230120 Metabolism.Block_ortho_to_a_phenol_C1
 OC1=C(F)C=CC(=C1O)Cl CHEMBL1230120 Metabolism.Block_ortho_to_a_phenol_Cl1
 OC1=C(F)C=CC(=C1O)F CHEMBL1230120 Metabolism.Block_ortho_to_a_phenol_F1
-O1C2=C(F)C=CC=C2OC1 CHEMBL1230120 Metabolism.Catechol_T_methylenedioxy
-O1C2=C(F)C=CC=C2OC1 CHEMBL1230120 Metabolism.Catechol_T_methylenedioxy
+O1C2=C(F)C=CC=C2OC1 CHEMBL1230120 catechol_to_benzodioxole
 C1(=C(F)C=CC=C1O)C(F)(F)F CHEMBL1230120 Metabolism.OH_T_OCF3
 OC1=C(F)C=CC=C1C(F)(F)F CHEMBL1230120 Metabolism.OH_T_OCF3
 O(C1=C(F)C=CC=C1O)CF CHEMBL1230120 Metabolism.OH_T_OCH2F
@@ -10237,6 +10236,7 @@ OC1=C(F)C=CC=C1NC(=O)N CHEMBL1230120 Phenol_isosteres.Urea
 OC1=C(F)C=CC2=C1OC=C2 CHEMBL1230120 phenol_to_benzofuran
 OC1=C(F)C(=CC=C1)O CHEMBL1230120 ortho_swap
 OC1=CC=CC(=C1O)F CHEMBL1230120 ortho_swap
+O1C2=C(F)C=CC=C2OCC1 CHEMBL1230120 catechol_to_benzodioxane
 C1(=C(O)C(C)=CC=C1)OC1=NC=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
 C1(O)=C(OC2=NC=CC=C2)C(C)=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
 C1(O)=C(O)C(=CC=C1)CC1=NC=CC=C1 CHEMBL1173328 Aryl_group_addition.add_2-pyridyl
@@ -10333,8 +10333,7 @@ C1(O)=C(O)C(C)=CC=C1N(C)C(=O)N(C)C CHEMBL1173328 Aryl_substituent_Scan.add_urea
 C1(O)=C(O)C(C)=CC=C1C CHEMBL1173328 Metabolism.Block_ortho_to_a_phenol_C1
 C1(O)=C(O)C(C)=CC=C1Cl CHEMBL1173328 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(O)=C(O)C(C)=CC=C1F CHEMBL1173328 Metabolism.Block_ortho_to_a_phenol_F1
-C12=C(OCO1)C(C)=CC=C2 CHEMBL1173328 Metabolism.Catechol_T_methylenedioxy
-C12=C(OCO1)C(C)=CC=C2 CHEMBL1173328 Metabolism.Catechol_T_methylenedioxy
+C12=C(OCO1)C(C)=CC=C2 CHEMBL1173328 catechol_to_benzodioxole
 C1(O)=C(O)C(=CC=C1)CO CHEMBL1173328 Metabolism.methyl_T_hydroxymethyl
 C1(=C(O)C(C)=CC=C1)C(F)(F)F CHEMBL1173328 Metabolism.OH_T_OCF3
 C1(O)=C(C(C)=CC=C1)C(F)(F)F CHEMBL1173328 Metabolism.OH_T_OCF3
@@ -10430,6 +10429,7 @@ C1(O)=C(O)C(=CC=C1)CC(C)(C)C CHEMBL1173328 Simple_H_Replacement.add_t-butyl
 C12=C(O)C(C)=CC=C1C=CO2 CHEMBL1173328 phenol_to_benzofuran
 C1(=C(O)C(C)=CC=C1)O CHEMBL1173328 ortho_swap
 C1(O)=C(C)C(=CC=C1)O CHEMBL1173328 ortho_swap
+C12=C(OCCO1)C(C)=CC=C2 CHEMBL1173328 catechol_to_benzodioxane
 C1(=C(OC2=NC=CC=C2)C(=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=C(C=C1)C1=NC=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=CC(=C1)C1=NC=CC=C1)O)O CHEMBL307145 Aryl_group_addition.add_2-pyridyl
@@ -10529,10 +10529,8 @@ C1(=C(O)C(=C(Cl)C=C1)O)O CHEMBL307145 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(=C(O)C(=CC=C1Cl)O)O CHEMBL307145 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(=C(O)C(=C(F)C=C1)O)O CHEMBL307145 Metabolism.Block_ortho_to_a_phenol_F1
 C1(=C(O)C(=CC=C1F)O)O CHEMBL307145 Metabolism.Block_ortho_to_a_phenol_F1
-C12=C(OCO1)C(=CC=C2)O CHEMBL307145 Metabolism.Catechol_T_methylenedioxy
-C1(=C2OCOC2=CC=C1)O CHEMBL307145 Metabolism.Catechol_T_methylenedioxy
-C1(=C2OCOC2=CC=C1)O CHEMBL307145 Metabolism.Catechol_T_methylenedioxy
-C12=C(OCO1)C(=CC=C2)O CHEMBL307145 Metabolism.Catechol_T_methylenedioxy
+C12=C(OCO1)C(=CC=C2)O CHEMBL307145 catechol_to_benzodioxole
+C1(=C2OCOC2=CC=C1)O CHEMBL307145 catechol_to_benzodioxole
 C1(=C(O)C(=CC=C1)O)C(F)(F)F CHEMBL307145 Metabolism.OH_T_OCF3
 C1(=C(C(=CC=C1)O)C(F)(F)F)O CHEMBL307145 Metabolism.OH_T_OCF3
 C1(=C(O)C(=CC=C1)C(F)(F)F)O CHEMBL307145 Metabolism.OH_T_OCF3
@@ -10624,6 +10622,8 @@ C1(=C(O)C(=CC=C1)O)NC(=O)N CHEMBL307145 Phenol_isosteres.Urea
 C12=C(O)C(=CC=C1C=CO2)O CHEMBL307145 phenol_to_benzofuran
 C1(=C(O)C(=CC=C1)O)O CHEMBL307145 ortho_swap
 C1(=C(O)C(=CC=C1)O)O CHEMBL307145 ortho_swap
+C12=C(OCCO1)C(=CC=C2)O CHEMBL307145 catechol_to_benzodioxane
+C1(=C2OCCOC2=CC=C1)O CHEMBL307145 catechol_to_benzodioxane
 C1(=C(OC2=NC=CC=C2)C=CN=C1C)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C(=CN=C1C)C1=NC=CC=C1)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
 C1(=C(O)C=C(N=C1C)C1=NC=CC=C1)O CHEMBL295082 Aryl_group_addition.add_2-pyridyl
@@ -10694,8 +10694,7 @@ C1(=C(O)C=C(N=C1C)N(C)C(=O)N(C)C)O CHEMBL295082 Aryl_substituent_Scan.add_urea
 C1(=C(O)C(=CN=C1C)C)O CHEMBL295082 Metabolism.Block_ortho_to_a_phenol_C1
 C1(=C(O)C(=CN=C1C)Cl)O CHEMBL295082 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(=C(O)C(=CN=C1C)F)O CHEMBL295082 Metabolism.Block_ortho_to_a_phenol_F1
-C12=C(OCO1)C=CN=C2C CHEMBL295082 Metabolism.Catechol_T_methylenedioxy
-C12=C(OCO1)C=CN=C2C CHEMBL295082 Metabolism.Catechol_T_methylenedioxy
+C12=C(OCO1)C=CN=C2C CHEMBL295082 catechol_to_benzodioxole
 C1(=C(O)C=CN=C1CO)O CHEMBL295082 Metabolism.methyl_T_hydroxymethyl
 C1(=C(O)C=CN=C1C)C(F)(F)F CHEMBL295082 Metabolism.OH_T_OCF3
 C1(=C(C=CN=C1C)C(F)(F)F)O CHEMBL295082 Metabolism.OH_T_OCF3
@@ -10752,6 +10751,7 @@ C1(=C(O)C=CN=C1CC(C)(C)C)O CHEMBL295082 Simple_H_Replacement.add_t-butyl
 C1(=C2OC=CC2=CN=C1C)O CHEMBL295082 phenol_to_benzofuran
 C1(=C(O)C=CN=C1C)O CHEMBL295082 ortho_swap
 C1(=C(O)C=CN=C1O)C CHEMBL295082 ortho_swap
+C12=C(OCCO1)C=CN=C2C CHEMBL295082 catechol_to_benzodioxane
 C1(=C(C(O)=C(O)C=C1)C1=NC=CC=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(O)C=C1)OC1=NC=CC=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
 C1(=CC(O)=C(OC2=NC=CC=C2)C=C1)C CHEMBL158766 Aryl_group_addition.add_2-pyridyl
@@ -10851,8 +10851,7 @@ C1(=C(Cl)C(O)=C(O)C=C1)C CHEMBL158766 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(=CC(O)=C(O)C(=C1)Cl)C CHEMBL158766 Metabolism.Block_ortho_to_a_phenol_Cl1
 C1(=C(F)C(O)=C(O)C=C1)C CHEMBL158766 Metabolism.Block_ortho_to_a_phenol_F1
 C1(=CC(O)=C(O)C(=C1)F)C CHEMBL158766 Metabolism.Block_ortho_to_a_phenol_F1
-C1(=CC2=C(OCO2)C=C1)C CHEMBL158766 Metabolism.Catechol_T_methylenedioxy
-C1(=CC2=C(OCO2)C=C1)C CHEMBL158766 Metabolism.Catechol_T_methylenedioxy
+C1(=CC2=C(OCO2)C=C1)C CHEMBL158766 catechol_to_benzodioxole
 C1(=CC(O)=C(O)C=C1)CO CHEMBL158766 Metabolism.methyl_T_hydroxymethyl
 C1(=CC(=C(O)C=C1)C(F)(F)F)C CHEMBL158766 Metabolism.OH_T_OCF3
 C1(=CC(O)=C(C=C1)C(F)(F)F)C CHEMBL158766 Metabolism.OH_T_OCF3
@@ -10940,6 +10939,7 @@ N(C)C=C(O)C(O)=O CHEMBL158766 Virtual_Ring.break_open_a_6-ring_to_form_pseudorin
 C1(=C2C(=C(O)C=C1)OC=C2)C CHEMBL158766 phenol_to_benzofuran
 C1(=CC(O)=C2OC=CC2=C1)C CHEMBL158766 phenol_to_benzofuran
 C1(=CC(=C(O)C=C1)O)C CHEMBL158766 ortho_swap
+C1(=CC2=C(OCCO2)C=C1)C CHEMBL158766 catechol_to_benzodioxane
 C1(=C(C(=C(O)C(=C1)O)C)C1=NC=CC=C1)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(OC2=NC=CC=C2)C(=C1)O)C)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
 C1(=CC(=C(O)C(=C1C1=NC=CC=C1)O)C)O CHEMBL4102748 Aryl_group_addition.add_2-pyridyl
@@ -11029,8 +11029,7 @@ C1(=C(F)C(=C(O)C(=C1F)O)C)O CHEMBL4102748 Metabolism.Block_ortho_to_a_phenol_F2
 C1(=C(F)C(=C(O)C(=C1F)O)C)O CHEMBL4102748 Metabolism.Block_ortho_to_a_phenol_F2
 C1(=C(C)C(=C(O)C(=C1C)O)C)O CHEMBL4102748 Metabolism.Block_ortho_to_a_phenol
 C1(=C(C)C(=C(O)C(=C1C)O)C)O CHEMBL4102748 Metabolism.Block_ortho_to_a_phenol
-C1(=CC(=C2OCOC2=C1)C)O CHEMBL4102748 Metabolism.Catechol_T_methylenedioxy
-C1(=CC(=C2OCOC2=C1)C)O CHEMBL4102748 Metabolism.Catechol_T_methylenedioxy
+C1(=CC(=C2OCOC2=C1)C)O CHEMBL4102748 catechol_to_benzodioxole
 C1(=CC(=C(O)C(=C1)O)CO)O CHEMBL4102748 Metabolism.methyl_T_hydroxymethyl
 C1(=CC(=C(O)C(=C1)O)C)C(F)(F)F CHEMBL4102748 Metabolism.OH_T_OCF3
 C1(=CC(=C(C(=C1)O)C(F)(F)F)C)O CHEMBL4102748 Metabolism.OH_T_OCF3
@@ -11114,6 +11113,7 @@ C12=CC(=C(O)C(=C1C=CO2)O)C CHEMBL4102748 phenol_to_benzofuran
 C1(=CC(=C(O)C2=C1C=CO2)C)O CHEMBL4102748 phenol_to_benzofuran
 C1(=CC(=C(C)C(=C1)O)O)O CHEMBL4102748 ortho_swap
 C1(=CC(=C(O)C(=C1)O)C)O CHEMBL4102748 ortho_swap
+C1(=CC(=C2OCCOC2=C1)C)O CHEMBL4102748 catechol_to_benzodioxane
 C(S(O)(=O)=O)C1=NC=CC=C1 CHEMBL3949263 Aryl_group_addition.add_2-pyridyl
 CS(=O)(=O)OC1=NC=CC=C1 CHEMBL3949263 Aryl_group_addition.add_2-pyridyl
 C(S(O)(=O)=O)C1=CN=CC=C1 CHEMBL3949263 Aryl_group_addition.add_3-pyridyl

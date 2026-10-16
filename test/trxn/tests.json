@@ -581,6 +581,30 @@
       "shell_script": {
         "script_name": "run.sh"
       }
+    },
+    {
+      "name": "catechol_to_benzodioxole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxole.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "catechol_to_benzodioxane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "vicinal_diol_to_methylene_acetal",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_methylene_acetal.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "vicinal_diol_to_acetonide",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
     }
   ]
 }

@@ -1,0 +1,13 @@
+OCCO ethylene_glycol
+CC(O)CO propylene_glycol
+C[C@H](O)[C@@H](O)C chiral_diol
+O[C@H]1CCC[C@@H]1O cyclic_diol
+[18OH]CCO labelled_oxygen
+CC(O)(C)C(O)(C)C tertiary_diol
+CC(O)C(O)CO triol
+OCCCO nonvicinal
+OCCOC ether
+O=CCO carbonyl
+Oc1ccccc1O catechol
+[O-]CCO alkoxide
+CCO single_alcohol

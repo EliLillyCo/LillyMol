@@ -131,7 +131,7 @@ Metabolism.Block_ortho_to_a_phenol_Cl2.rxn
 Metabolism.Block_ortho_to_a_phenol_F1.rxn
 Metabolism.Block_ortho_to_a_phenol_F2.rxn
 Metabolism.Block_ortho_to_a_phenol.rxn
-Metabolism.Catechol_T_methylenedioxy.rxn
+PROTO:catechol_to_benzodioxole.rxn
 Metabolism.methyl_T_hydroxymethyl.rxn
 Metabolism.OEt_T_OCH2CF3.rxn
 Metabolism.OEt_T_OcPr.rxn
@@ -324,3 +324,6 @@ PROTO:butylamine_to_pyrrolidine.rxn
 PROTO:pyrrolidine_to_butylamine.rxn
 PROTO:biphenyl_to_fluorene.rxn
 PROTO:fluorene_to_biphenyl.rxn
+PROTO:catechol_to_benzodioxane.rxn
+PROTO:vicinal_diol_to_methylene_acetal.rxn
+PROTO:vicinal_diol_to_acetonide.rxn
