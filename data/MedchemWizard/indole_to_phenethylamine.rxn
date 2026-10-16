@@ -1,0 +1,15 @@
+# Open an N-substituted indole and restore the saturated ethylamine chain.
+# Require unsubstituted C2/C3 and an unfused five-membered heterocyclic portion.
+name: "indole_to_phenethylamine"
+scaffold {
+  smarts: "[cD3]1:[cD3]:[cD2H1R1]:[cD2H1R1]:[nD3H0R1+0]:1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  break_bond { a1: 0 a2: 4 }
+  # Set every bond in the opened chain explicitly, independent of Kekule form.
+  change_bond { a1: 1 a2: 2 btype: SS_SINGLE_BOND }
+  change_bond { a1: 2 a2: 3 btype: SS_SINGLE_BOND }
+  change_bond { a1: 3 a2: 4 btype: SS_SINGLE_BOND }
+}

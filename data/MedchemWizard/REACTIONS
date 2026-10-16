@@ -309,3 +309,5 @@ PROTO:amide_to_thiazole.rxn
 PROTO:thiazole_to_amide.rxn
 PROTO:phenethylamine_to_indoline.rxn
 PROTO:indoline_to_phenethylamine.rxn
+PROTO:phenethylamine_to_indole.rxn
+PROTO:indole_to_phenethylamine.rxn

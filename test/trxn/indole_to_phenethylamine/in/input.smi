@@ -1,0 +1,12 @@
+Cn1ccc2ccccc21 secondary_amine
+CC(=O)n1ccc2ccccc21 amide
+CS(=O)(=O)n1ccc2ccccc21 sulfonamide
+C[C@H](F)n1ccc2ccccc21 chiral_substituent
+Cc1ccc2n(C)ccc2c1 first_regioisomer
+Cc1cccc2ccn(C)c12 second_regioisomer
+CN1C=CC2=CC=CC=C12 kekule_input
+c1ccc2[nH]ccc2c1 unsubstituted_nitrogen
+Cn1c(C)cc2ccccc21 substituted_C2
+Cn1cc(C)c2ccccc21 substituted_C3
+CN1CCc2ccccc21 indoline
+Cn1cccc1 pyrrole

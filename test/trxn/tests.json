@@ -419,6 +419,24 @@
       "shell_script": {
         "script_name": "run.sh"
       }
+    },
+    {
+      "name": "phenethylamine_to_indole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "indole_to_phenethylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/indole_to_phenethylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenethylamine_indole_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
     }
   ]
 }

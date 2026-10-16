@@ -157,6 +157,36 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indoline_to_phenethylamine.rxn" \
   -m each -z i -S open_chain indolines.smi
 ```
 
+## Phenethylamine / indole pair
+
+`phenethylamine_to_indole` uses the same starting motif and ortho-site
+requirements as `phenethylamine_to_indoline`, but also changes the bond between
+the two methylene carbons to a double bond, forming an indole-like aromatic ring:
+
+```text
+CNCCc1ccccc1 <-> Cn1ccc2ccccc21
+CC(=O)NCCc1ccccc1 <-> CC(=O)n1ccc2ccccc21
+```
+
+Nitrogen substituents, including acyl and sulfonyl groups, are retained.
+Symmetry-equivalent closures are suppressed; inequivalent available ortho sites
+can generate two products. This direct transformation does not require recursive
+application of the separate indoline-to-indole reaction.
+
+`indole_to_phenethylamine` opens the N-to-aromatic-carbon bond and explicitly
+sets all three bonds of the opened side chain to single bonds, restoring the
+saturated `Ar-CH2-CH2-NH-R` motif. It requires a neutral N-substituted aromatic
+nitrogen and unsubstituted C2 and C3 atoms belonging to just one ring. NH indoles,
+C2/C3-substituted indoles, and indolines do not match. Both aromatic and Kekule
+SMILES representations are accepted.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indole.rxn" \
+  -m each -z i -S indoles input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indole_to_phenethylamine.rxn" \
+  -m each -z i -S open_chain indoles.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every
