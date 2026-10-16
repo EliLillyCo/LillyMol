@@ -377,6 +377,12 @@
     {
       "name": "amide_oxadiazole_roundtrip",
       "shell_script": {"script_name": "run.sh"}
+    },
+    {
+      "name": "textproto_leading_comments",
+      "args": [
+        "-r #{indir}/reaction.rxn -S products #{indir}/input.smi"
+      ]
     }
   ]
 }

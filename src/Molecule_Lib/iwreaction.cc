@@ -3382,6 +3382,8 @@ IWReaction::do_read(const const_IWSubstring& fname,
     return 0;
   }
 
+  input.set_ignore_pattern("^#");
+
   _reaction_directory = fname;
 
   // Now strip down to the directory part
