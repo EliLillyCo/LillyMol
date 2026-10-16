@@ -1,0 +1,11 @@
+CNCCc1ccccc1 secondary_amine
+CC(=O)NCCc1ccccc1 amide
+CS(=O)(=O)NCCc1ccccc1 sulfonamide
+C[C@H](F)NCCc1ccccc1 chiral_substituent
+CNCCc1cccc(C)c1 two_ortho_positions
+CNCCc1c(C)cccc1C blocked_ortho
+NCCc1ccccc1 primary_amine
+CN(C)CCc1ccccc1 tertiary_amine
+CNCCCc1ccccc1 wrong_length
+C1CNCC1c1ccccc1 cyclic_chain
+C[NH+]CCc1ccccc1 charged_nitrogen

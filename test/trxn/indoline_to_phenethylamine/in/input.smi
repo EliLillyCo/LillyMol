@@ -1,0 +1,12 @@
+CN1CCc2ccccc21 secondary_amine
+CC(=O)N1CCc2ccccc21 amide
+CS(=O)(=O)N1CCc2ccccc21 sulfonamide
+C[C@H](F)N1CCc2ccccc21 chiral_substituent
+Cc1ccc2N(C)CCc2c1 first_regioisomer
+Cc1cccc2CCN(C)c12 second_regioisomer
+c1ccc2c(c1)CCN2 unsubstituted_nitrogen
+CN1C(C)Cc2ccccc21 substituted_C2
+CN1CC(C)c2ccccc21 substituted_C3
+Cn1ccc2ccccc21 indole
+CN1CCCc2ccccc21 six_membered_ring
+C[NH+]1CCc2ccccc21 charged_nitrogen

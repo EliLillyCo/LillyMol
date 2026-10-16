@@ -1,0 +1,11 @@
+# Close the N-to-ortho-carbon bond in Ar-CH2-CH2-NH-R.
+# The chain and nitrogen must be acyclic; N-acyl substituents are allowed.
+name: "phenethylamine_to_indoline"
+scaffold {
+  smarts: "[cD2H1]:[cD3]-[CH2R0]-[CH2R0]-[ND2H1R0+0]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  make_bond { a1: 0 a2: 4 btype: SS_SINGLE_BOND }
+}

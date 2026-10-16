@@ -307,3 +307,5 @@ PROTO:amide_to_1_2_4_oxadiazole.rxn
 PROTO:1_2_4_oxadiazole_to_amide.rxn
 PROTO:amide_to_thiazole.rxn
 PROTO:thiazole_to_amide.rxn
+PROTO:phenethylamine_to_indoline.rxn
+PROTO:indoline_to_phenethylamine.rxn

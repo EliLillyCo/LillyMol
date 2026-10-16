@@ -1,0 +1,6 @@
+CNCCc1ccccc1 secondary_amine
+CC(=O)NCCc1ccccc1 amide
+CS(=O)(=O)NCCc1ccccc1 sulfonamide
+C[C@H](F)NCCc1ccccc1 chiral_substituent
+CNCCc1cccc(C)c1 first_regioisomer
+CNCCc1cccc(C)c1 second_regioisomer

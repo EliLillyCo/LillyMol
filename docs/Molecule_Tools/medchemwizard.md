@@ -119,6 +119,44 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/thiazole_to_amide.rxn" \
   -m each -z i -S amides thiazoles.smi
 ```
 
+## Phenethylamine / indoline pair
+
+`phenethylamine_to_indoline` closes the bond between the nitrogen of
+`Ar-CH2-CH2-NH-R` and an available ortho aromatic carbon. The reverse reaction,
+`indoline_to_phenethylamine`, breaks that N-to-aromatic-carbon bond while
+retaining the ethyl chain and the nitrogen substituent:
+
+```text
+CNCCc1ccccc1 <-> CN1CCc2ccccc21
+CC(=O)NCCc1ccccc1 <-> CC(=O)N1CCc2ccccc21
+```
+
+The forward scaffold SMARTS is:
+
+```text
+[cD2H1]:[cD3]-[CH2R0]-[CH2R0]-[ND2H1R0+0]
+```
+
+The two methylene atoms and the neutral secondary nitrogen must be acyclic.
+Amide and sulfonamide nitrogens are allowed. Both ortho aromatic atoms must be
+carbon; the remaining aromatic ring atoms are unrestricted. Fully blocked ortho
+positions, primary or tertiary amines, and charged nitrogens do not match.
+Symmetry-equivalent sites are suppressed; inequivalent available ortho sites
+can generate two products.
+
+The reverse requires two unsubstituted methylene atoms and a neutral,
+N-substituted five-membered ring nitrogen belonging to just one ring. It excludes
+NH indolines, indoles, substituted methylene positions, and six-membered nitrogen
+rings. Substituents on the aromatic ring and the external nitrogen substituent
+are retained in both directions.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indoline.rxn" \
+  -m each -z i -S indolines input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indoline_to_phenethylamine.rxn" \
+  -m each -z i -S open_chain indolines.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every
