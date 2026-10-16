@@ -1,0 +1,10 @@
+# Close a secondary amine four-carbon acyclic chain; retain terminal substituents.
+name: "butylamine_to_pyrrolidine"
+scaffold {
+  smarts: "[ND2H1R0+0]-[CH2D2R0]-[CH2D2R0]-[CH2D2R0]-[CD<3H>1R0+0]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  make_bond { a1: 0 a2: 4 btype: SS_SINGLE_BOND }
+}

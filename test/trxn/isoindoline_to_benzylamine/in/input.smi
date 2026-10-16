@@ -1,0 +1,8 @@
+CN1Cc2ccccc2C1 amine
+CC(=O)N1Cc2ccccc2C1 amide
+C[C@H](F)N1Cc2ccccc2C1 remote_chiral
+Cc1ccc2c(c1)CN(C)C2 asymmetric
+N1Cc2ccccc2C1 unsubstituted_N
+CN1CCc2ccccc21 indoline
+Cn1ccc2ccccc21 indole
+CN1C(C)c2ccccc2C(C)1 substituted_both_methylenes

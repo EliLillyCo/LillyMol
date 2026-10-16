@@ -1,0 +1,8 @@
+CN1CCCc2ccccc21 amine
+CC(=O)N1CCCc2ccccc21 amide
+C[C@H](F)N1CCCc2ccccc21 remote_chiral
+Cc1ccc2N(C)CCCc2c1 asymmetric
+N1CCCc2ccccc21 unsubstituted_N
+CN1CCc2ccccc21 indoline
+Cn1ccc2ccccc21 indole
+CN1C(C)CCc2ccccc21 substituted_chain

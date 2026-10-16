@@ -312,3 +312,15 @@ PROTO:phenethylamine_to_indole.rxn
 PROTO:indole_to_phenethylamine.rxn
 PROTO:benzofuran_to_phenol.rxn
 PROTO:benzofuran_to_anisole.rxn
+PROTO:phenoxyethyl_to_dihydrobenzofuran.rxn
+PROTO:dihydrobenzofuran_to_phenoxyethyl.rxn
+PROTO:benzylamine_to_isoindoline.rxn
+PROTO:isoindoline_to_benzylamine.rxn
+PROTO:benzyl_alcohol_to_phthalan.rxn
+PROTO:phthalan_to_benzyl_alcohol.rxn
+PROTO:phenylpropylamine_to_tetrahydroquinoline.rxn
+PROTO:tetrahydroquinoline_to_phenylpropylamine.rxn
+PROTO:butylamine_to_pyrrolidine.rxn
+PROTO:pyrrolidine_to_butylamine.rxn
+PROTO:biphenyl_to_fluorene.rxn
+PROTO:fluorene_to_biphenyl.rxn

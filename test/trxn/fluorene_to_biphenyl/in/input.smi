@@ -1,0 +1,7 @@
+C1c2ccccc2c2ccccc12 biphenyl
+Cc1ccc2Cc3c(c2c1)cccc3 asymmetric
+C[C@H](F)c1ccc2c(c1)Cc1ccccc12 remote_chiral
+CC1c2ccccc2c2ccccc12 substituted_bridge
+O=C1c2ccccc2c2ccccc12 fluorenone
+c1ccc2[nH]c3ccccc3c2c1 carbazole
+C1c2ccccc2CCc2ccccc21 larger_bridge

@@ -5676,6 +5676,8 @@ N1N=CC(=C1)C(O)N(C)S(=O)(=O)C CHEMBL3276272 Simple_H_Replacement.add_sulfonamide
 N1N=CC(=C1)C(O)S(=O)C CHEMBL3276272 Simple_H_Replacement.add_sulfone
 N1N=CC(=C1)C(O)C(C)(C)C CHEMBL3276272 Simple_H_Replacement.add_t-butyl
 N1N=CC(=C1)CC(F)F CHEMBL3276272 alcohol_to_CF2
+N1N=C2C(=C1)COC2 CHEMBL3276272 benzyl_alcohol_to_phthalan
+N1N=CC2=C1COC2 CHEMBL3276272 benzyl_alcohol_to_phthalan
 N1=C(C=C(N1)CO)C1=NC=CC=C1 CHEMBL3275945 Aryl_group_addition.add_2-pyridyl
 N1=CC(=C(N1)CO)C1=NC=CC=C1 CHEMBL3275945 Aryl_group_addition.add_2-pyridyl
 N1=CC=C(N1C1=NC=CC=C1)CO CHEMBL3275945 Aryl_group_addition.add_2-pyridyl
@@ -5789,6 +5791,7 @@ N1=CC=C(N1)C(O)N(C)S(=O)(=O)C CHEMBL3275945 Simple_H_Replacement.add_sulfonamide
 N1=CC=C(N1)C(O)S(=O)C CHEMBL3275945 Simple_H_Replacement.add_sulfone
 N1=CC=C(N1)C(O)C(C)(C)C CHEMBL3275945 Simple_H_Replacement.add_t-butyl
 N1=CC=C(N1)CC(F)F CHEMBL3275945 alcohol_to_CF2
+N1=CC2=C(N1)COC2 CHEMBL3275945 benzyl_alcohol_to_phthalan
 N1=C(C=C(N1)CCl)C1=NC=CC=C1 CHEMBL3275946 Aryl_group_addition.add_2-pyridyl
 N1=CC(=C(N1)CCl)C1=NC=CC=C1 CHEMBL3275946 Aryl_group_addition.add_2-pyridyl
 N1=CC=C(N1C1=NC=CC=C1)CCl CHEMBL3275946 Aryl_group_addition.add_2-pyridyl
@@ -22448,6 +22451,8 @@ C12=CC=NC=C1SCC1=C2OC=N1 CHEMBL1643353 Virtual_Ring.create_a_new_ring_with_S-CH2
 C12=C(C=NC=C1)CSC1=C2OC=N1 CHEMBL1643353 Virtual_Ring.create_a_new_ring_with_S-CH2
 C12=CC=NC=C1CSC1=C2OC=N1 CHEMBL1643353 Virtual_Ring.create_a_new_ring_with_S-CH2
 C1=NC=CC2=C1N=CO2 CHEMBL1643353 fuse_biphenyl
+C12=C(C=NC=C1)CC1=C2OC=N1 CHEMBL1643353 biphenyl_to_fluorene
+C12=CC=NC=C1CC1=C2OC=N1 CHEMBL1643353 biphenyl_to_fluorene
 N1C2=C(C=C1CC(=O)NC1=NNN=N1)OC=N2 CHEMBL496303 Acid_isosteres.10
 N1C2=C(C=C1CC(=O)C1=NNN=N1)OC=N2 CHEMBL496303 Acid_isosteres.11
 N1C2=C(C=C1CN1OC(=O)NC1=O)OC=N2 CHEMBL496303 Acid_isosteres.12
@@ -23065,6 +23070,7 @@ O1C(=C2C(=N1)COC1=C2SC=C1)N CHEMBL4165554 Virtual_Ring.create_a_new_ring_with_O-
 O1C(=C2C(=N1)SCC1=C2SC=C1)N CHEMBL4165554 Virtual_Ring.create_a_new_ring_with_S-CH2
 O1C(=C2C(=N1)CSC1=C2SC=C1)N CHEMBL4165554 Virtual_Ring.create_a_new_ring_with_S-CH2
 O1C(=C(N)C=N1)C1=CC=CS1 CHEMBL4165554 ortho_swap
+O1C(=C2C(=N1)CC1=C2SC=C1)N CHEMBL4165554 biphenyl_to_fluorene
 O1C(=C(C(=N1)C1=NC=CC=C1)C1CCCC1)N CHEMBL4166941 Aryl_group_addition.add_2-pyridyl
 O1C(=C(C=N1)C1(CCCC1)C1=NC=CC=C1)N CHEMBL4166941 Aryl_group_addition.add_2-pyridyl
 O1C(=C(C=N1)C1C(CCC1)C1=NC=CC=C1)N CHEMBL4166941 Aryl_group_addition.add_2-pyridyl
@@ -23524,6 +23530,8 @@ O1C(=C2C(=N1)SCC1=CSC=C12)N CHEMBL4173485 Virtual_Ring.create_a_new_ring_with_S-
 O1C(=C2C(=N1)CSC1=C2C=CS1)N CHEMBL4173485 Virtual_Ring.create_a_new_ring_with_S-CH2
 O1C(=C2C(=N1)CSC1=CSC=C12)N CHEMBL4173485 Virtual_Ring.create_a_new_ring_with_S-CH2
 O1C(=C(N)C=N1)C1=CSC=C1 CHEMBL4173485 ortho_swap
+O1C(=C2C(=N1)CC1=C2C=CS1)N CHEMBL4173485 biphenyl_to_fluorene
+O1C(=C2C(=N1)CC1=CSC=C12)N CHEMBL4173485 biphenyl_to_fluorene
 C1(=CC=CC=C1)C1=NC=CC=C1 CHEMBL277500 Aryl_group_addition.add_2-pyridyl
 C1=C(C=CC=C1)C1=NC=CC=C1 CHEMBL277500 Aryl_group_addition.add_2-pyridyl
 C1=CC(=CC=C1)C1=NC=CC=C1 CHEMBL277500 Aryl_group_addition.add_2-pyridyl
@@ -26316,6 +26324,8 @@ C1(=CSC=C1)C(O)N(C)S(=O)(=O)C CHEMBL76469 Simple_H_Replacement.add_sulfonamide
 C1(=CSC=C1)C(O)S(=O)C CHEMBL76469 Simple_H_Replacement.add_sulfone
 C1(=CSC=C1)C(O)C(C)(C)C CHEMBL76469 Simple_H_Replacement.add_t-butyl
 C1(=CSC=C1)CC(F)F CHEMBL76469 alcohol_to_CF2
+C12=C(SC=C1)COC2 CHEMBL76469 benzyl_alcohol_to_phthalan
+C12=CSC=C1COC2 CHEMBL76469 benzyl_alcohol_to_phthalan
 N1(OC2=NC=CC=C2)C(=S)C=CC=C1 CHEMBL3392049 Aryl_group_addition.add_2-pyridyl
 N1(O)C(=S)C(=CC=C1)C1=NC=CC=C1 CHEMBL3392049 Aryl_group_addition.add_2-pyridyl
 N1(O)C(=S)C=C(C=C1)C1=NC=CC=C1 CHEMBL3392049 Aryl_group_addition.add_2-pyridyl
@@ -27917,6 +27927,7 @@ O=S(=O)(NCCCC)C=C CHEMBL3352953 Virtual_Ring.break_open_a_cyclopentyl_1
 O=S(=O)(NCCCC)C=C CHEMBL3352953 Virtual_Ring.break_open_a_cyclopentyl_1
 O=S(=O)(N(C)CCC)C=C CHEMBL3352953 Virtual_Ring.break_open_a_cyclopentyl_2
 O=S(=O)(N(C)CCC)C=C CHEMBL3352953 Virtual_Ring.break_open_a_cyclopentyl_2
+O=S(=O)(NCCCC)C=C CHEMBL3352953 pyrrolidine_to_butylamine
 N1=C(Cl)N(CC2=NC=CC=C2)C=C1Cl CHEMBL2071159 Aryl_group_addition.add_2-pyridyl
 N1=C(Cl)N(C)C(=C1Cl)C1=NC=CC=C1 CHEMBL2071159 Aryl_group_addition.add_2-pyridyl
 N1=C(Cl)N(CC2=CN=CC=C2)C=C1Cl CHEMBL2071159 Aryl_group_addition.add_3-pyridyl
@@ -31126,6 +31137,7 @@ C12=C(N=NS1)C1=C(C=CS1)CO2 CHEMBL1631423 Virtual_Ring.create_a_new_ring_with_-O-
 C12=C(N=NS1)C1=C(C=CS1)OC2 CHEMBL1631423 Virtual_Ring.create_a_new_ring_with_O-CH2
 C12=C(N=NS1)C1=C(C=CS1)CS2 CHEMBL1631423 Virtual_Ring.create_a_new_ring_with_S-CH2
 C12=C(N=NS1)C1=C(C=CS1)SC2 CHEMBL1631423 Virtual_Ring.create_a_new_ring_with_S-CH2
+C12=C(N=NS1)C1=C(C=CS1)C2 CHEMBL1631423 biphenyl_to_fluorene
 C1(=C(N=NS1)C1=CC=CO1)C1=NC=CC=C1 CHEMBL1631422 Aryl_group_addition.add_2-pyridyl
 C1=C(N=NS1)C1=C(C=CO1)C1=NC=CC=C1 CHEMBL1631422 Aryl_group_addition.add_2-pyridyl
 C1=C(N=NS1)C1=CC(=CO1)C1=NC=CC=C1 CHEMBL1631422 Aryl_group_addition.add_2-pyridyl
@@ -31255,6 +31267,7 @@ C12=C(N=NS1)C1=C(C=CO1)CO2 CHEMBL1631422 Virtual_Ring.create_a_new_ring_with_-O-
 C12=C(N=NS1)C1=C(C=CO1)OC2 CHEMBL1631422 Virtual_Ring.create_a_new_ring_with_O-CH2
 C12=C(N=NS1)C1=C(C=CO1)CS2 CHEMBL1631422 Virtual_Ring.create_a_new_ring_with_S-CH2
 C12=C(N=NS1)C1=C(C=CO1)SC2 CHEMBL1631422 Virtual_Ring.create_a_new_ring_with_S-CH2
+C12=C(N=NS1)C1=C(C=CO1)C2 CHEMBL1631422 biphenyl_to_fluorene
 S1C(=C(C=C1)C1=NC=CC=C1)C1=CC=NN1 CHEMBL1595963 Aryl_group_addition.add_2-pyridyl
 S1C(=CC(=C1)C1=NC=CC=C1)C1=CC=NN1 CHEMBL1595963 Aryl_group_addition.add_2-pyridyl
 S1C(=CC=C1C1=NC=CC=C1)C1=CC=NN1 CHEMBL1595963 Aryl_group_addition.add_2-pyridyl
@@ -31427,6 +31440,7 @@ S1C2=C(C=C1)SCC1=C2NN=C1 CHEMBL1595963 Virtual_Ring.create_a_new_ring_with_S-CH2
 S1C2=C(C=C1)SCN1N=CC=C12 CHEMBL1595963 Virtual_Ring.create_a_new_ring_with_S-CH2
 S1C2=C(C=C1)CSC1=C2NN=C1 CHEMBL1595963 Virtual_Ring.create_a_new_ring_with_S-CH2
 S1C2=C(C=C1)CSN1N=CC=C12 CHEMBL1595963 Virtual_Ring.create_a_new_ring_with_S-CH2
+S1C2=C(C=C1)CC1=C2NN=C1 CHEMBL1595963 biphenyl_to_fluorene
 N1=C(N(N=N1)C1=NC=CC=C1)C1=NN=NN1 CHEMBL1455073 Aryl_group_addition.add_2-pyridyl
 N1=C(NN=N1)C1=NN=NN1C1=NC=CC=C1 CHEMBL1455073 Aryl_group_addition.add_2-pyridyl
 N1=C(N(N=N1)C1=CN=CC=C1)C1=NN=NN1 CHEMBL1455073 Aryl_group_addition.add_3-pyridyl
@@ -31913,6 +31927,7 @@ C12=C(NC=N1)C1=C(C=CS1)CS2 CHEMBL447965 Virtual_Ring.create_a_new_ring_with_S-CH
 C1=C2N(C=N1)SCC1=C2SC=C1 CHEMBL447965 Virtual_Ring.create_a_new_ring_with_S-CH2
 C12=C(NC=N1)C1=C(C=CS1)SC2 CHEMBL447965 Virtual_Ring.create_a_new_ring_with_S-CH2
 C1=C2N(C=N1)CSC1=C2SC=C1 CHEMBL447965 Virtual_Ring.create_a_new_ring_with_S-CH2
+C12=C(NC=N1)C1=C(C=CS1)C2 CHEMBL447965 biphenyl_to_fluorene
 N1=C(C=C(N1)C1=NN=NN1)C1=NC=CC=C1 CHEMBL393063 Aryl_group_addition.add_2-pyridyl
 N1=CC(=C(N1)C1=NN=NN1)C1=NC=CC=C1 CHEMBL393063 Aryl_group_addition.add_2-pyridyl
 N1=CC=C(N1C1=NC=CC=C1)C1=NN=NN1 CHEMBL393063 Aryl_group_addition.add_2-pyridyl

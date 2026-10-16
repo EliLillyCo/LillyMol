@@ -1,0 +1,10 @@
+# Remove either unsubstituted methylene bridge; keep distinct asymmetric openings.
+name: "isoindoline_to_benzylamine"
+scaffold {
+  smarts: "[cD3]1:[cD3]-[CH2D2R1]-[ND3H0R1+0]-[CH2D2R1]-1"
+  match_conditions {
+    find_unique_embeddings: false
+    ignore_symmetry_related_matches: true
+  }
+  remove_atom: 4
+}

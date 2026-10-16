@@ -1,0 +1,10 @@
+# Remove only an unsubstituted fluorene methylene bridge; retain both aryl rings.
+name: "fluorene_to_biphenyl"
+scaffold {
+  smarts: "[cD3]1:[cD3]-[cD3]:[cD3]-[CH2D2R1]-1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  remove_atom: 4
+}

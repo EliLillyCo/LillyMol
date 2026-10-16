@@ -473,6 +473,114 @@
       "shell_script": {
         "script_name": "run.sh"
       }
+    },
+    {
+      "name": "phenoxyethyl_to_dihydrobenzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenoxyethyl_to_dihydrobenzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "dihydrobenzofuran_to_phenoxyethyl",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/dihydrobenzofuran_to_phenoxyethyl.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenoxyethyl_dihydrobenzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "benzylamine_to_isoindoline",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzylamine_to_isoindoline.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "isoindoline_to_benzylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/isoindoline_to_benzylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzylamine_isoindoline_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "benzyl_alcohol_to_phthalan",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzyl_alcohol_to_phthalan.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phthalan_to_benzyl_alcohol",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phthalan_to_benzyl_alcohol.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzyl_alcohol_phthalan_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenylpropylamine_to_tetrahydroquinoline",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenylpropylamine_to_tetrahydroquinoline.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "tetrahydroquinoline_to_phenylpropylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/tetrahydroquinoline_to_phenylpropylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenylpropylamine_tetrahydroquinoline_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "butylamine_to_pyrrolidine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/butylamine_to_pyrrolidine.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "pyrrolidine_to_butylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/pyrrolidine_to_butylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "butylamine_pyrrolidine_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "biphenyl_to_fluorene",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/biphenyl_to_fluorene.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "fluorene_to_biphenyl",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/fluorene_to_biphenyl.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "biphenyl_fluorene_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
     }
   ]
 }

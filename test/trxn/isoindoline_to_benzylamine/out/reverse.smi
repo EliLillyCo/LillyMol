@@ -1,0 +1,5 @@
+CNCc1ccccc1 amine
+CC(=O)NCc1ccccc1 amide
+C[C@H](F)NCc1ccccc1 remote_chiral
+CNCc1cccc(C)c1 asymmetric.0
+CNCc1ccc(C)cc1 asymmetric.1

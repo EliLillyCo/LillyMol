@@ -1,0 +1,9 @@
+CN1CCCC1 unsubstituted
+CN1CCC[C@H]1C lost_ring_chirality
+CC(=O)N1CCCC1 amide
+CS(=O)(=O)N1CCCC1 sulfonamide
+C[C@H](F)N1CCC[C@H]1C remote_chiral
+N1CCCC1 unsubstituted_N
+CN1CCCCC1 piperidine
+CN1CCC1 azetidine
+CN1CC(C)CC1 substituted_internal_ring

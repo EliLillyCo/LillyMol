@@ -1,0 +1,8 @@
+CCOc1ccccc1 ethoxy
+CCCOc1ccccc1 propoxy
+CC(=O)CCOc1ccccc1 carbonyl_tail
+C[C@H](F)CCOc1ccccc1 remote_chiral
+CCOc1cccc(C)c1 asymmetric
+CCOc1c(C)cccc1C blocked_ortho
+COc1ccccc1 too_short
+CCCOC1CCCCC1 non_aromatic

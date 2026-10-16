@@ -253,6 +253,77 @@ trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_anisole.rxn" \
   -m each -z i -S anisoles benzofurans.smi
 ```
 
+## Additional saturated-ring closures and openings
+
+The standard set includes the following six bidirectional analogue-generation
+pairs. These transformations introduce no stereochemical assignments at newly
+created stereocentres. Existing stereochemistry on retained, unaffected atoms
+is preserved. Opening a ring clears stereochemistry at a carbon that becomes a
+methylene and recalculates its hydrogen count.
+
+| Forward reaction | Reverse reaction | Example |
+| --- | --- | --- |
+| `phenoxyethyl_to_dihydrobenzofuran` | `dihydrobenzofuran_to_phenoxyethyl` | `CCCOc1ccccc1` <-> `CC1COc2ccccc21` |
+| `benzylamine_to_isoindoline` | `isoindoline_to_benzylamine` | `CNCc1ccccc1` <-> `CN1Cc2ccccc2C1` |
+| `benzyl_alcohol_to_phthalan` | `phthalan_to_benzyl_alcohol` | `OCc1ccccc1` <-> `O1Cc2ccccc2C1` |
+| `phenylpropylamine_to_tetrahydroquinoline` | `tetrahydroquinoline_to_phenylpropylamine` | `CNCCCc1ccccc1` <-> `CN1CCCc2ccccc21` |
+| `butylamine_to_pyrrolidine` | `pyrrolidine_to_butylamine` | `CNCCCCC` <-> `CN1CCCC1C` |
+| `biphenyl_to_fluorene` | `fluorene_to_biphenyl` | `c1ccccc1-c1ccccc1` <-> `C1c2ccccc2c2ccccc12` |
+
+All aromatic closures require an available aromatic carbon bearing a hydrogen
+at the proposed bridge position. Inequivalent available ortho positions can
+produce distinct regioisomers. The names describe the benzenoid examples;
+carbon-only SMARTS at the bridge positions also permit heteroatoms elsewhere
+in the aromatic rings.
+
+The phenoxyethyl closure retains the oxygen and both chain carbons, forming a
+new C-to-aryl bond. The starting O-CH2-CH2-R chain must be acyclic; ethoxy groups
+(R = H, terminal CH3) are also accepted. The reverse requires an unsubstituted
+O-adjacent methylene and allows a substituent on the other saturated carbon.
+That substituent is retained when the C-to-aryl bond is opened. Benzofurans and
+six-membered oxygen rings do not match this reverse.
+
+The benzylamine and benzyl-alcohol closures add a CH2 bridge between the
+nitrogen or oxygen and an ortho aromatic carbon. A secondary neutral nitrogen
+is required, including amide and sulfonamide nitrogens. Alcohols must be free OH
+groups; ethers are excluded. The reverse removes an unsubstituted methylene
+bridge and requires both saturated ring carbons to be methylenes. **For an
+asymmetric isoindoline or phthalan, either methylene can be removed and both
+distinct openings are generated.** A round trip may therefore include additional
+positional isomers of the starting molecule.
+
+The phenylpropylamine closure retains the three-carbon saturated chain and
+connects its nitrogen to an ortho aromatic carbon. The starting chain and neutral
+secondary nitrogen must be acyclic, and all three chain carbons must be
+methylenes. Nitrogen substituents, including acyl and sulfonyl groups, are
+retained. The reverse opens only the N-to-aryl bond and excludes NH rings and
+substitution on those three saturated carbons.
+
+The butylamine closure joins a secondary neutral nitrogen to the fourth carbon
+of an acyclic saturated chain. The first three carbons must be methylenes; the
+fourth can be CH3 or CH2-R. Its external substituent is retained in the
+pyrrolidine and in the reverse reaction. The reverse accepts unsubstituted or
+2-substituted N-substituted pyrrolidines, but excludes substitution on the other
+three ring carbons, NH rings, and other ring sizes. Amide and sulfonamide
+nitrogens are allowed.
+
+The biphenyl closure adds CH2 between facing ortho C-H positions across a
+non-ring biaryl bond. The four matched aromatic atoms must each belong to one
+ring before closure. The reverse removes only an unsubstituted methylene bridge;
+9-substituted fluorenes, fluorenones and carbazoles do not match. Equivalent
+bridge placements can produce duplicate products even with symmetry filtering.
+Use `medchemwizard -U each` to suppress duplicate products per parent. Use
+`trxn -u` for duplicate suppression when applying an individual reaction.
+
+Apply any pair with the same command structure as the earlier examples:
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzylamine_to_isoindoline.rxn" \
+  -m each -z i -S cyclic input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/isoindoline_to_benzylamine.rxn" \
+  -m each -z i -S open_chain cyclic.smi
+```
+
 ## Checking proposed reactions for overlap
 
 `contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every

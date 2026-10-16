@@ -1,0 +1,11 @@
+CNCCCC unsubstituted
+CNCCCCC substituted
+CC(=O)NCCCC amide
+CS(=O)(=O)NCCCC sulfonamide
+C[C@H](F)NCCCC remote_chiral
+NCCCC primary_amine
+CN(C)CCCC tertiary_amine
+C[NH+]CCCC charged_N
+CNCCC too_short
+CNCC(C)CC substituted_internal_chain
+CN1CCCC1 already_cyclic

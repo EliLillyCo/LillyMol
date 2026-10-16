@@ -1,0 +1,5 @@
+OCc1ccccc1 alcohol
+OCc1cccc(C)c1 asymmetric.0
+OCc1ccc(C)cc1 asymmetric.1
+C[C@H](F)c1cccc(CO)c1 remote_chiral.0
+C[C@H](F)c1ccc(CO)cc1 remote_chiral.1
