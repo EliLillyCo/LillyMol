@@ -80,6 +80,9 @@ static IW_STL_Hash_Map_String id_to_smiles;
 
 static int seq_start = 0;
 
+// Explicit -b also requests numbered activity filenames for a single split.
+static bool number_output_files = false;
+
 static int produce_chronological_split = 0;
 
 /*
@@ -113,6 +116,10 @@ TEST0.smi
 TRAIN1.activity
 etc.
 
+Add -b 7 to start all numbered outputs at TRAIN7 and TEST7.
+With -N 1, -b also enables numbered activity filenames; without -b,
+the activity filenames are exactly those supplied with -R and -E.
+
  -R <fname>     write training set records to <fname> (TRAIN above)
  -E <fname>     write test set records to <fname> (TEST above)
  -c <col>       activity in column<c>
@@ -129,7 +136,7 @@ etc.
  -S <suffix>    create activity files with suffix <suffix>
  -M <fname>     smiles file, if specified, smiles files will be generated for each split.
  -K             drop input values for which smiles not available
- -b <start>     normally files produced start with 0, start with <start> instead
+ -b <start>     first split number (default 0); also numbers a single split
  -C             produce an extra chronological split - non numeric characters removed from the name.
  -v             verbose output
 )";
@@ -646,7 +653,7 @@ _do_split(resizable_array_p<ID_Stratum_Selected>& idss, int ndx,
 
   IWString fname;
 
-  if (1 == nsplit) {
+  if (!number_output_files) {
     fname = stem_for_test_set;
   } else {
     fname << stem_for_test_set << ndx << suffix;
@@ -981,10 +988,10 @@ stratified_sample(iwstring_data_source& input)
 
   // Handle the case of just one split specially
 
-  if (1 == nsplit) {
+  if (1 == nsplit && (!number_output_files || stem_for_training_set.empty())) {
     if (0 == stem_for_training_set.length()) {
       IWString_and_File_Descriptor output(1);
-      do_split(idss, 0, stratum_start, stratum_stop, output);
+      do_split(idss, seq_start, stratum_start, stratum_stop, output);
     } else {
       IWString_and_File_Descriptor output;
 
@@ -994,7 +1001,7 @@ stratified_sample(iwstring_data_source& input)
         return 0;
       }
 
-      do_split(idss, 0, stratum_start, stratum_stop, output);
+      do_split(idss, seq_start, stratum_start, stratum_stop, output);
     }
   } else {
     for (int i = 0; i < nsplit; i++) {
@@ -1009,7 +1016,8 @@ stratified_sample(iwstring_data_source& input)
         return 0;
       }
 
-      if (!do_split(idss, i, stratum_start, stratum_stop, training_set_output)) {
+      // Use the same sequence number for activity and SMILES files in both sets.
+      if (!do_split(idss, i + seq_start, stratum_start, stratum_stop, training_set_output)) {
         return 0;
       }
     }
@@ -1357,6 +1365,8 @@ stratified_sample(int argc, char** argv)
       cerr << "Output files start at " << seq_start << '\n';
     }
   }
+
+  number_output_files = nsplit > 1 || cl.option_present('b');
 
   if (cl.option_present('C')) {
     produce_chronological_split = 1;

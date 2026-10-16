@@ -1,0 +1,9 @@
+{
+  "executable": "stratified_samples",
+  "test": [
+    {
+      "name": "sequence_numbers",
+      "shell_script": {"script_name": "run.rb"}
+    }
+  ]
+}
