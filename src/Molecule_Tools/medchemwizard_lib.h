@@ -93,6 +93,8 @@ class MedchemWizard {
   }
 
   int ReadReactions(const char* fname);
+  // Append a file, resolving resources beside it. Failed reads leave the set unchanged.
+  int ReadReactionFile(const char* fname, bool textproto);
   int InitialiseFromEnvironment();
   int number_reactions() const {
     return _rxn.number_elements();

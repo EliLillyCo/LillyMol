@@ -361,6 +361,22 @@
       "args": [
         "-D #{indir}/acid_amine.rxn #{indir}/r1.smi #{indir}/r2.smi"
       ]
+    },
+    {
+      "name": "amide_to_1_2_4_oxadiazole",
+      "args": [
+        "-P ${LILLYMOL_HOME}/data/MedchemWizard/amide_to_1_2_4_oxadiazole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "1_2_4_oxadiazole_to_amide",
+      "args": [
+        "-P ${LILLYMOL_HOME}/data/MedchemWizard/1_2_4_oxadiazole_to_amide.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "amide_oxadiazole_roundtrip",
+      "shell_script": {"script_name": "run.sh"}
     }
   ]
 }

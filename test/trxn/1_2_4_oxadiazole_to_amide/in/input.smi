@@ -1,0 +1,9 @@
+Cc1noc(C)n1 aliphatic
+c1ccccc1c1noc(C)n1 ring_on_carbonyl_side
+Cc1noc(c2ccccc2)n1 ring_on_nitrogen_side
+c1ccccc1c1noc(Cc2ccccc2)n1 two_ring_substituents
+C[C@H](O)c1noc([C@@H](F)Cl)n1 chiral_attachments
+Cc1nocn1 monosubstituted_no_match
+c1nocn1 unsubstituted_no_match
+Cc1nnc(C)o1 other_oxadiazole_regioisomer_no_match
+Cc1ncc(C)o1 oxazole_no_match

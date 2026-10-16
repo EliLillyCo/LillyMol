@@ -1,0 +1,12 @@
+CC(=O)NC aliphatic
+O=C(NC)c1ccccc1 ring_on_carbonyl_side
+CC(=O)Nc1ccccc1 ring_on_nitrogen_side
+O=C(NCc1ccccc1)c1ccccc1 two_ring_substituents
+C[C@H](O)C(=O)N[C@@H](F)Cl chiral_attachments
+CC(=O)NCC(=O)NC two_amides
+CC(=O)N primary_amide_no_match
+CC(=O)N(C)C tertiary_amide_no_match
+O=C1NCCCC1 lactam_no_match
+O=C1NCCN1 cyclic_urea_no_match
+CC(=O)OC ester_no_match
+CS(=O)(=O)NC sulfonamide_no_match

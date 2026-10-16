@@ -1658,6 +1658,29 @@ query {
         wizard.set_name_separator(" ")
         return wizard
 
+    def test_medchemwizard_read_single_reaction_with_relative_query(self):
+        with tempfile.TemporaryDirectory() as directory:
+            query = os.path.join(directory, "query.textproto")
+            with open(query, "w") as output:
+                output.write('query { smarts: "[C]-[OD1]" }')
+            reaction = os.path.join(directory, "reaction.textproto")
+            with open(reaction, "w") as output:
+                output.write('scaffold { query_file: "query.textproto" '
+                             'change_element { atom: 1 element: "N" } }')
+            wizard = lillymol.MedchemWizard()
+            wizard.read_reaction(reaction)
+            mol = lillymol.MolFromSmiles("CO methanol")
+            products = wizard.process(mol)
+            self.assertEqual(len(products), 1)
+            self.assertEqual(products[0].unique_smiles(),
+                             lillymol.MolFromSmiles("CN").unique_smiles())
+            with self.assertRaises(RuntimeError):
+                wizard.read_reaction(os.path.join(directory, "missing.rxn"))
+            self.assertEqual(wizard.number_reactions(), 1)
+            wizard.read_reaction(reaction)
+            self.assertEqual(wizard.number_reactions(), 2)
+            self.assertEqual(len(wizard.process(mol)), 2)
+
     def test_medchemwizard_initialise_from_environment(self):
         if "LILLYMOL_HOME" not in os.environ:
             self.skipTest("LILLYMOL_HOME not set")

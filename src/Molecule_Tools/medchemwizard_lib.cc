@@ -16,7 +16,7 @@ using std::cerr;
 namespace {
 
 int
-ReadTextProtoReaction(const IWString& fname, const IWString& dirname,
+ReadTextProtoReaction(const IWString& fname,
                       resizable_array_p<IWReaction>& destination) {
   IWString proto_fname(fname);
   std::optional<ReactionProto::Reaction> maybe_proto =
@@ -29,7 +29,7 @@ ReadTextProtoReaction(const IWString& fname, const IWString& dirname,
   Sidechain_Match_Conditions smc;
 
   std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
-  if (!rxn->ConstructFromProto(*maybe_proto, dirname, smc)) {
+  if (!rxn->ConstructFromProto(*maybe_proto, fname, smc)) {
     cerr << "ReadTextProtoReaction:cannot build reaction from proto\n";
     cerr << maybe_proto->ShortDebugString() << '\n';
     return 0;
@@ -60,7 +60,7 @@ ReadReaction(const_IWSubstring& buffer, const IWString& dir,
   }
 
   if (reaction_is_textproto) {
-    return ReadTextProtoReaction(fname, dir, rxn);
+    return ReadTextProtoReaction(fname, rxn);
   }
 
   iwstring_data_source input(fname.null_terminated_chars());
@@ -146,6 +146,42 @@ MedchemWizard::ReadReactions(const char* fname) {
   _molecules_hitting_reaction = std::make_unique<int[]>(_rxn.number_elements());
 
   return _rxn.number_elements();
+}
+
+int
+MedchemWizard::ReadReactionFile(const char* fname, bool textproto) {
+  set_warn_no_query_in_reaction_object(0);
+  const_IWSubstring path(fname);
+  const int slash = path.rindex('/');
+  IWString dir(".");
+  IWString record;
+  if (textproto) {
+    record << "PROTO:";
+  }
+  if (slash >= 0) {
+    dir = fname;
+    dir.iwtruncate(slash == 0 ? 1 : slash);
+    record << (fname + slash + 1);
+  } else {
+    record << fname;
+  }
+
+  // Legacy files may contain multiple reactions. Do not keep a partially read file.
+  resizable_array_p<IWReaction> pending;
+  Sidechain_Match_Conditions smc;
+  const_IWSubstring buffer(record);
+  if (!ReadReaction(buffer, dir, smc, pending, _options.verbose) || pending.empty()) {
+    return 0;
+  }
+  const int added = pending.number_elements();
+  const int previous = _rxn.number_elements();
+  _rxn.transfer_in(pending);
+  auto hits = std::make_unique<int[]>(_rxn.number_elements());
+  for (int i = 0; i < previous; ++i) {
+    hits[i] = _molecules_hitting_reaction[i];
+  }
+  _molecules_hitting_reaction = std::move(hits);
+  return added;
 }
 
 int

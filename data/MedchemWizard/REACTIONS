@@ -247,7 +247,7 @@ Virtual_Ring.break_open_a_cycloheptyl_4.rxn
 Virtual_Ring.break_open_a_cycloheptyl.rxn
 PROTO:Virtual_Ring.break_open_a_cyclohexyl_1.rxn
 PROTO:Virtual_Ring.break_open_a_cyclohexyl_2.rxn
-Virtual_Ring.break_open_a_cyclohexyl_3.rxn
+PROTO:Virtual_Ring.break_open_a_cyclohexyl_3.rxn
 Virtual_Ring.break_open_a_cyclopentyl_1.rxn
 Virtual_Ring.break_open_a_cyclopentyl_2.rxn
 Virtual_Ring.create_a_new_ring_with_CH2-CH2-O.rxn
@@ -303,3 +303,5 @@ PROTO:gem_dimethyl_to_cyclopropane.rxn
 PROTO:cyclopropane_to_gem_dimethyl.rxn
 PROTO:remove_ch2.rxn
 PROTO:ester_to_oxazole.rxn
+PROTO:amide_to_1_2_4_oxadiazole.rxn
+PROTO:1_2_4_oxadiazole_to_amide.rxn

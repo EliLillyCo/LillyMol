@@ -1,0 +1,24 @@
+# [*:1]c1noc([*:2])n1 -> [*:1]C(=O)N[*:2]
+# Attachment 1 is at C3 (between two N atoms); attachment 2 is at C5.
+# Require a non-fused, disubstituted ring with no extra heteroatom attachments.
+name: "1_2_4_oxadiazole_to_amide"
+scaffold {
+  smarts: "[*:1]-[cD3R1]1[nD2R1][oD2R1][cD3R1](-[*:2])[nD2R1]1"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  remove_atom: [1, 2, 3, 4, 6]
+}
+sidechain {
+  id: 1
+  reagent: "C(=O)N"
+  smarts: "C(=O)N"
+  join {
+    a1: 0
+    a2: 0
+  }
+  join {
+    a1: 5
+    a2: 2
+  }
+}

@@ -701,6 +701,16 @@ BindTools(nb::module_& m) {
              }
            },
            nb::arg("fname"), "Read reactions from a MedchemWizard REACTIONS file")
+      .def("read_reaction",
+           [](medchemwizard::MedchemWizard& wizard, const std::string& fname,
+              bool textproto) {
+             if (!wizard.ReadReactionFile(fname.c_str(), textproto)) {
+               throw std::runtime_error("Cannot read MedchemWizard reaction from '" +
+                                        fname + "'");
+             }
+           },
+           nb::arg("fname"), nb::arg("textproto") = true,
+           "Append a reaction file; resolve resources beside it. Use textproto=False for MSI.")
       .def("number_reactions", &medchemwizard::MedchemWizard::number_reactions)
       .def("process", &MedchemWizardProcess, nb::arg("mol"),
            "Generate MedchemWizard products for a molecule")
