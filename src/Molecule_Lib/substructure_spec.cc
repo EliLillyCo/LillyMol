@@ -2680,8 +2680,6 @@ Substructure_Atom_Specifier::AddNonOrganicElements() {
 int
 Substructure_Atom_Specifier::construct_from_smarts_token(
     const const_IWSubstring& zsmarts) {
-  int not_operator = 0;  // Not being handled here, remove sometime.
-
   const int characters_to_process = zsmarts.length();
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMARTS_TOKEN
@@ -3047,7 +3045,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
 
     else if ('!' == s) {  // negation (tight bonding)
       previous_token_was = SMARTS_PREVIOUS_TOKEN_OPERATOR_NOT;
-      not_operator = 1;
       smiles_error_message(initial_smarts_ptr, characters_to_process,
                            characters_processed, "! operator not supported");
       return 0;

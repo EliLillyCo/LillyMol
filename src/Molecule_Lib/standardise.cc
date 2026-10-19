@@ -12104,7 +12104,7 @@ Chemical_Standardisation::_do_transform_oxo_pyrimidine(
       continue;
     }
 
-    const atom_number_t c1 = candidates[i]->c1;
+    //const atom_number_t c1 = candidates[i]->c1;
     const atom_number_t n1 = candidates[i]->n1;
     const atom_number_t c2 = candidates[i]->c2;
     const atom_number_t n2 = candidates[i]->n2;
