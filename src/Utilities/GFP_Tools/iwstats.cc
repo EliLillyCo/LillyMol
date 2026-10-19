@@ -2538,7 +2538,6 @@ parameters are set and will apply the inverse equation to the predicted values.
 )";
 
   exit(0);
-
 }
 
 static int
@@ -3106,6 +3105,9 @@ iwstats(int argc, char** argv) {
 
   if (cl.option_present('C')) {
     fname_for_correction_formula = cl.string_value('C');
+    if (fname_for_correction_formula == "help") {
+      DisplayDashCOptions(cerr);
+    }
 
     if (verbose) {
       cerr << "Formula for linear corrections written to '" << fname_for_correction_formula << "'\n";
