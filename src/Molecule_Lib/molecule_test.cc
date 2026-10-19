@@ -792,4 +792,36 @@ TEST(BondTypeChange, PreserveNeighbouringAlkeneGeometry) {
   EXPECT_TRUE(mol.bond_between_atoms(3, 4)->part_of_cis_trans_grouping());
 }
 
+TEST(DeleteAllFragmentsExcept, KeepsSelectedFragmentAndReturnsRemovedAtomCount) {
+  for (int frag = 0; frag < 3; ++frag) {
+    Molecule mol;
+    ASSERT_TRUE(mol.build_from_smiles("CC.O.N mixture"));
+    const char* expected[] = {"CC", "O", "N"};
+    EXPECT_EQ(mol.delete_all_fragments_except(frag), frag == 0 ? 2 : 3);
+    EXPECT_EQ(mol.unique_smiles(), expected[frag]);
+    EXPECT_EQ(mol.number_fragments(), 1);
+    EXPECT_EQ(mol.name(), "mixture");
+  }
+}
+
+TEST(DeleteAllFragmentsExcept, RejectsInvalidInputWithoutChangingMolecule) {
+  for (const char* smiles : {"", "CC", "CC.O.N"}) {
+    Molecule mol;
+    if (*smiles) ASSERT_TRUE(mol.build_from_smiles(smiles));
+    mol.set_name("invalid_input");
+    const IWString before = mol.unique_smiles();
+    const int natoms = mol.natoms();
+    const int nf = mol.number_fragments();
+    for (int frag : {-1, nf}) {
+      EXPECT_EQ(mol.delete_all_fragments_except(frag), 0);
+      EXPECT_EQ(mol.unique_smiles(), before);
+      EXPECT_EQ(mol.natoms(), natoms);
+    }
+    if (nf <= 1) {
+      EXPECT_EQ(mol.delete_all_fragments_except(0), 0);
+      EXPECT_EQ(mol.unique_smiles(), before);
+    }
+  }
+}
+
 }  // namespace

@@ -529,6 +529,24 @@ BindMolecule(nb::module_& m) {
            nb::arg("fragment"), "Remove a fragment")
       .def("remove_fragment", nb::overload_cast<int>(&Molecule::delete_fragment),
            nb::arg("fragment"), "Remove a fragment")
+      .def("delete_all_fragments_except",
+           [](Molecule& mol, int frag) {
+             if (mol.empty()) {
+               throw std::invalid_argument("molecule contains no atoms");
+             }
+             const int nf = mol.number_fragments();
+             if (nf == 1) {
+               throw std::invalid_argument("molecule contains only one fragment");
+             }
+             if (frag < 0 || frag >= nf) {
+               throw std::invalid_argument("fragment index outside [0, number_fragments)");
+             }
+             return mol.delete_all_fragments_except(frag);
+           },
+           nb::arg("frag"),
+           "Delete all fragments except the zero-based fragment index frag, in place. "
+           "Return the number of atoms removed. "
+           "Raise ValueError for empty or single-fragment molecules or an invalid fragment index.")
       .def("remove_fragment_containing_atom", &Molecule::remove_fragment_containing_atom,
            nb::arg("atom"), "Remove the fragment containing atom")
       .def("reduce_to_largest_fragment", nb::overload_cast<>(&Molecule::reduce_to_largest_fragment),

@@ -4998,22 +4998,32 @@ int
 Molecule::delete_all_fragments_except(int frag) {
   assert(ok());
 
-  assert(frag >= 0 && frag < number_fragments());
-
-  const int* fragment_membership = _fragment_information.fragment_membership();
-
-  Set_of_Atoms atoms_to_be_removed;
-  atoms_to_be_removed.resize(_number_elements);
-
-  for (int i = 0; i < _number_elements; i++) {
-    if (frag != fragment_membership[i]) {
-      atoms_to_be_removed.add(i);
-    }
+  if (empty()) {
+    cerr << "Molecule::delete_all_fragments_except:" << _molecule_name
+         << " contains no atoms\n";
+    return 0;
   }
 
-  assert(atoms_to_be_removed.number_elements());
+  const int nf = number_fragments();
+  if (nf == 1) {
+    cerr << "Molecule::delete_all_fragments_except:" << _molecule_name
+         << " contains only one fragment\n";
+    return 0;
+  }
 
-  return remove_atoms(atoms_to_be_removed);
+  if (frag < 0 || frag >= nf) {
+    cerr << "Molecule::delete_all_fragments_except:" << _molecule_name
+         << " invalid fragment index " << frag << ", contains " << nf << " fragments\n";
+    return 0;
+  }
+
+  const int* fragment_membership = _fragment_information.fragment_membership();
+  std::unique_ptr<int[]> to_remove(new int[_number_elements]);
+  for (int i = 0; i < _number_elements; ++i) {
+    to_remove[i] = fragment_membership[i] != frag;
+  }
+
+  return remove_atoms(to_remove.get());
 }
 
 distance_t

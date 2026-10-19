@@ -1599,7 +1599,9 @@ class __attribute__((visibility("default"))) Molecule : protected resizable_arra
   //     Delete a set of fragment numbers.
   int delete_fragments(const int*);
   int remove_fragment_containing_atom(atom_number_t);
-  int delete_all_fragments_except(int);
+  // Keep one zero-based fragment, returning the number of atoms removed.
+  // Empty/single-fragment molecules and invalid indices emit a diagnostic and return 0.
+  int delete_all_fragments_except(int frag);
   int remove_all(atomic_number_t);
   int remove_all(const Element*);
   int remove_all_non_natural_elements();

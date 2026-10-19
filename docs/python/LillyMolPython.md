@@ -382,6 +382,7 @@ The most common methods for a Molecule currently implemented are
 | fragment_membership(atom) | Fragment number for 'atom' |
 | atoms_in_fragment(frag) | Number of atoms in a fragment |
 | delete_fragment(frag) | Delete a fragment |
+| delete_all_fragments_except(frag) | Keep only zero-based fragment `frag`, in place; return atoms removed. Empty/single-fragment molecules and invalid indices raise `ValueError`. |
 | remove_fragment_containing_atom(atom) | Remove fragment containing atom |
 | reduce_to_largest_fragment() | Discard all but the largest fragment |
 | reduce_to_largest_fragment_carefully() | Contains heuristics to do a better selection |

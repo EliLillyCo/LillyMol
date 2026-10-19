@@ -990,6 +990,28 @@ $$$$
         self.assertEqual(mol.reduce_to_largest_fragment_carefully(), 1)
         self.assertEqual(mol.natoms(), 2)
 
+    def test_delete_all_fragments_except(self):
+        for frag, expected, removed in [(0, "CC", 2), (1, "O", 3), (2, "N", 3)]:
+            with self.subTest(frag=frag):
+                mol = lillymol.MolFromSmiles("CC.O.N mixture")
+                self.assertEqual(mol.delete_all_fragments_except(frag=frag), removed)
+                self.assertEqual(mol.unique_smiles(), expected)
+                self.assertEqual(mol.number_fragments(), 1)
+                self.assertEqual(mol.name(), "mixture")
+                with self.assertRaisesRegex(ValueError, "only one fragment"):
+                    mol.delete_all_fragments_except(0)
+                self.assertEqual(mol.unique_smiles(), expected)
+
+    def test_delete_all_fragments_except_invalid_index(self):
+        for smiles, indices in [("CC.O.N", [-1, 3]), ("CC", [-1, 0, 1]), ("", [-1, 0])]:
+            for frag in indices:
+                with self.subTest(smiles=smiles, frag=frag):
+                    mol = lillymol.MolFromSmiles(smiles) if smiles else lillymol.Molecule()
+                    before = mol.unique_smiles()
+                    with self.assertRaises(ValueError):
+                        mol.delete_all_fragments_except(frag)
+                    self.assertEqual(mol.unique_smiles(), before)
+
     def test_molecular_weight(self):
         mol = lillymol.MolFromSmiles("CCO ethanol")
         self.assertAlmostEqual(mol.amw(), 46.069, delta=0.001)
