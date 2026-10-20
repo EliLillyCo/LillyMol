@@ -355,6 +355,7 @@ smi2rings_bdb -d dbname -d STORE|LOOKUP <options> file.smi
   -v             verbose output
 Typical usage
   smi2rings_bdb -d rings.bdb -d STORE -j ring -j iso -j env -j double -N add -n -c collection.smi
+# To filter to molecules where the rarest ring has at least 10 instances
   smi2rings_bdb -d rings.bdb -d LOOKUP -n -f 10 -v -c -j double -N add -j iso query.smi
 )";
 // clang-format on
