@@ -34,6 +34,9 @@ if [[ ! -d ${BDB} ]] ; then
 fi
 
 export LD_LIBRARY_PATH=${my_dir}/lib:${BDB}:${LD_LIBRARY_PATH}
+if [[ $(uname) == 'Darwin' ]] ; then
+  export DYLD_LIBRARY_PATH=${my_dir}/lib:${BDB}:${DYLD_LIBRARY_PATH}
+fi
 python_flags=()
 if ${PYTHON} -h 2>&1 | grep -q -- " -P "; then
   python_flags=(-P)
