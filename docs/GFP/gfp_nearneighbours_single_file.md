@@ -43,6 +43,33 @@ when the output should represent a truncated symmetric distance matrix.
 gfp_nearneighbours_single_file_tbb -T 0.4 -h 8 file.gfp > file.nn
 ```
 
+## Neighbours for selected identifiers
+
+The serial `gfp_nearneighbours_single_file` tool accepts `-O` to restrict which
+fingerprints are used as queries while searching the entire loaded pool:
+
+```shell
+gfp_nearneighbours_single_file -n 10 -O mol1 fingerprints.gfp > mol1.nn
+gfp_nearneighbours_single_file -n 10 -O mol1,mol2 -O mol3 fingerprints.gfp > selected.nn
+```
+
+Repeat `-O`, use comma-separated IDs, or combine both forms. Identifiers match
+exactly as read by the tool. Repeated requested IDs are processed once, and
+results appear in input-file order rather than command-line order. Empty IDs,
+missing IDs, and requested IDs matching multiple pool records are errors. All
+requested IDs are resolved before calculations start or output files are opened.
+If `-s` limits the loaded pool, IDs must be present in that loaded pool.
+
+Unselected fingerprints remain available as neighbours. Existing neighbour counts,
+distance thresholds, self-exclusion, Tversky settings, index output, and text or
+`-S` TFDataRecord output are unchanged. Without `-O`, every fingerprint remains a
+query. `-O` cannot be combined with the separate all-pairs `-p` mode.
+
+For M selected queries and N loaded fingerprints, the search performs roughly
+M times N comparisons rather than searching for every query. The complete pool
+still resides in memory. This option is currently implemented in the serial tool;
+it is not an option of `gfp_nearneighbours_single_file_tbb`.
+
 ## TFDataRecord Output
 
 `-S <fname>` writes serialized `nnbr::NearNeighbours` protos in TFDataRecord

@@ -35,6 +35,12 @@
       "args": [
         "-p -F FPDSC #{indir}/input.gfp"
       ]
+    },
+    {
+      "name": "selected_queries",
+      "shell_script": {
+        "script_name": "run.rb"
+      }
     }
   ]
 }
