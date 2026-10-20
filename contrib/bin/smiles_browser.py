@@ -105,7 +105,8 @@ def split_smiles_and_extra(tokens: list[str], smiles_columns: list[int], record_
     return smiles, extra, fields
 
 
-def read_smiles_file(fname, separator=None, has_header=False, max_molecules=None, smiles_columns=None):
+def read_smiles_file(fname, separator=None, has_header=False, max_molecules=None, smiles_columns=None,
+                     skip_molecules=0):
     rows = []
     max_extra = 0
     headers = None
@@ -138,6 +139,10 @@ def read_smiles_file(fname, separator=None, has_header=False, max_molecules=None
                 if not any(smiles):
                     continue
 
+                if skip_molecules:
+                    skip_molecules -= 1
+                    continue
+
                 rows.append((record_number, smiles, extra, fields))
                 max_extra = max(max_extra, len(extra))
                 max_fields = max(max_fields, len(fields))
@@ -157,6 +162,10 @@ def read_smiles_file(fname, separator=None, has_header=False, max_molecules=None
                     continue
 
                 smiles, extra, fields = split_smiles_and_extra(tokens, smiles_columns, record_number)
+
+                if skip_molecules:
+                    skip_molecules -= 1
+                    continue
 
                 rows.append((record_number, smiles, extra, fields))
                 max_extra = max(max_extra, len(extra))
@@ -627,6 +636,8 @@ def main():
     parser.add_argument("-o", "--output", default="molecules.html")
     parser.add_argument("-n", type=int, default=None,
                         help="Maximum number of molecules to read")
+    parser.add_argument("-f", type=int, default=0, metavar="N",
+                        help="Skip the first N molecules, excluding headers; -n limits molecules displayed after skipping")
     parser.add_argument("-s", "--separator", default=None,
                         help="Input separator. Use '\\t' for tab. Defaults to comma for .csv, otherwise whitespace (including stdin).")
     parser.add_argument("--header", action="store_true",
@@ -664,6 +675,8 @@ def main():
 
     if args.n is not None and args.n < 1:
         sys.exit("-n must be a positive integer")
+    if args.f < 0:
+        sys.exit("-f must be a non-negative integer")
     if args.page_length < 1:
         sys.exit("--page-length must be a positive integer")
     if args.image_width < 1:
@@ -677,6 +690,7 @@ def main():
         has_header=args.header,
         max_molecules=args.n,
         smiles_columns=smiles_columns,
+        skip_molecules=args.f,
     )
 
     link_specs = parse_link_columns(args.link_column, headers)
