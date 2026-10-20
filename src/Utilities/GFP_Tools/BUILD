@@ -1709,3 +1709,24 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "nearest_neighbour_data",
+    srcs = ["nearest_neighbour_data.cc"],
+    hdrs = ["nearest_neighbour_data.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":nearneighbours_cc_proto",
+        "//Foundational/data_source:iwtfdata_record",
+    ],
+)
+
+cc_test(
+    name = "nearest_neighbour_data_test",
+    srcs = ["nearest_neighbour_data_test.cc"],
+    deps = [
+        ":nearest_neighbour_data",
+        "//Foundational/data_source:iwtfdata_record",
+        "@googletest//:gtest_main",
+    ],
+)

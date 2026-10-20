@@ -44,6 +44,42 @@ experimental identifiers. `-g` ignores predictions with no experimental match.
 valid records before and after the error. Invalid records do not contribute to
 prediction counts. It does not relax experimental-data validation.
 
+## Nearest-neighbour context
+
+Use `-N` to append the nearest non-self neighbour distance from a TFDataRecord
+file containing serialized `nnbr::NearNeighbours` protos:
+
+```shell
+gfp_nearneighbours_single_file_tbb -S dataset.neighbours.tfrecord dataset.gfp
+mispredicted -E measured.txt -N dataset.neighbours.tfrecord -d pred1.txt pred2.txt
+```
+
+With `-d`, an additional `NN_DIST` column appears in both continuous and
+classification output. Normal descriptive output appends `NN_DIST <distance>`.
+The continuous `-Y` summary also gains an `NN_DIST` column, and `-T` textprotos
+include optional `nearest_neighbour_distance`. Existing ranking, prediction
+counts, filtering, and output order are unchanged. Without `-N`, output remains
+unchanged.
+
+Identifiers are matched exactly. Missing query IDs and records containing no
+non-self neighbours produce `.` in text output; the proto field is absent.
+Distinct neighbours with distance zero are retained. Duplicate query IDs are an
+error. Neighbour lists are trusted to be sorted nearest first; self-neighbours
+are skipped. This option reads full `NearNeighbours` protos, not the alternative
+`NearNeighboursIndices` format.
+
+With `-v`, report how many records were loaded and coverage among all identifiers
+with at least one valid prediction, before prediction-count and error filters:
+identifiers with distances, absent IDs, and empty neighbour lists are counted
+separately.
+
+The distance describes the reference dataset used to create the supplied file.
+For repeated prediction splits, a whole-dataset neighbour file provides structural
+context for persistent mispredictions, rather than the exact nearest distance
+in each split's training set. A small distance alongside a large prediction error
+can suggest a different investigation from a large nearest-neighbour distance;
+the tool does not determine the cause.
+
 ## Error metrics and selection
 
 Continuous errors default to **mean absolute error**:

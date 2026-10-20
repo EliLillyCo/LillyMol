@@ -671,6 +671,7 @@ cc_binary(
     ],
     deps = [
         ":mispredicted_cc_proto",
+        "//Utilities/GFP_Tools:nearest_neighbour_data",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",

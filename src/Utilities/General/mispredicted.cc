@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <sys/types.h>
@@ -32,6 +33,8 @@
 #else
 #include "mispredicted.pb.h"
 #endif
+
+#include "Utilities/GFP_Tools/nearest_neighbour_data.h"
 
 using std::cerr;
 
@@ -166,6 +169,8 @@ class Entity
  protected:
   const IWString _id;
   int _times_predicted;
+  bool _report_nearest_distance = false;
+  std::optional<float> _nearest_distance;
 
  public:
   Entity(const IWString&);
@@ -180,6 +185,24 @@ class Entity
   times_predicted() const
   {
     return _times_predicted;
+  }
+
+  void SetNearestDistance(std::optional<float> distance) {
+    _report_nearest_distance = true;
+    _nearest_distance = distance;
+  }
+
+  void AppendNearestDistance(IWString_and_File_Descriptor& output,
+                             bool labelled = false) const {
+    if (!_report_nearest_distance) return;
+    output << (labelled ? " NN_DIST " : " ");
+    if (_nearest_distance) output << *_nearest_distance;
+    else output << '.';
+  }
+
+  template <typename P>
+  void AddNearestDistance(P& proto) const {
+    if (_nearest_distance) proto.set_nearest_neighbour_distance(*_nearest_distance);
   }
 
   //  virtual int append_details(IWString_and_File_Descriptor &) const;
@@ -274,6 +297,7 @@ Entity_Classification::report(IWString_and_File_Descriptor& output) const
     }
   }
 
+  AppendNearestDistance(output, !produce_descriptor_file);
   output << '\n';
 
   return 1;
@@ -285,7 +309,9 @@ Entity_Classification::write_summary_data(IWString_and_File_Descriptor& output) 
   output << _id << ' '
          << static_cast<float>(_correct_predictions) /
                 static_cast<float>(_times_predicted)
-         << " . " << _times_predicted << '\n';
+         << " . " << _times_predicted;
+  AppendNearestDistance(output);
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(4096);
 
@@ -321,6 +347,7 @@ Entity_Classification::write_textproto_data(IWString_and_File_Descriptor& output
   proto.set_npred(_times_predicted);
   proto.set_times_correct(_correct_predictions);
 
+  AddNearestDistance(proto);
   return MPWriteProto<mispredicted::MispredictedClassification>(proto, output);
 }
 
@@ -462,6 +489,7 @@ Entity_Continuous<T>::report(IWString_and_File_Descriptor& output) const
     }
   }
 
+  AppendNearestDistance(output, !produce_descriptor_file);
   output << '\n';
 
   return 1;
@@ -482,8 +510,10 @@ Entity_Continuous<T>::write_summary_data(IWString_and_File_Descriptor& output) c
             static_cast<float>(_predictions.average()) << kSep <<
             static_cast<float>(_diffs.average()) <<  kSep <<
             _diffs.maxval() << kSep <<
-            static_cast<float>(DifferenceStandardDeviation()) << "\n";
+            static_cast<float>(DifferenceStandardDeviation());
   // clang-format on
+  AppendNearestDistance(output);
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(4096);
 
@@ -503,6 +533,7 @@ Entity_Continuous<T>::write_textproto_data(IWString_and_File_Descriptor& output)
   proto.set_average_difference(_diffs.average());
   proto.set_std_difference(DifferenceStandardDeviation());
 
+  AddNearestDistance(proto);
   return MPWriteProto<mispredicted::MispredictedContinuous>(proto, output);
 }
 
@@ -616,6 +647,7 @@ Continuous errors default to mean absolute error, including with -w and -W.
  -w <number>    write at most <number> molecules with the largest mean errors
  -b             with -w, balance under/over-predictions by signed error; implies -s
  -W <value>     write molecules with mean error magnitude >= <value>
+ -N <fname>     nearest-neighbour NearNeighbours TFDataRecord file
  -d             write a headered table (continuous: ID EXPT AVDIFF)
  -k             input files were produced by svmfp_evaluate with the -c option (dist to SV)
  -D <fname>     distance/error output (not implemented)
@@ -673,6 +705,32 @@ ReadSmiles(const char* fname, IW_STL_Hash_Map_String& id_to_smiles) {
 
 typedef IW_STL_Hash_Map<IWString, Entity_Classification*> ID_to_Classification_Data;
 typedef IW_STL_Hash_Map<IWString, Entity_Continuous<float>*> ID_to_Continuous_Data;
+
+// Attach context without changing prediction ranking or selection. Coverage is
+// over all identifiers with predictions, before output filters are applied.
+template <typename T>
+void AnnotateNeighbours(const T& entities,
+    const nearest_neighbour_data::NearestNeighbourData& neighbours) {
+  uint64_t available = 0, missing = 0, empty = 0;
+  for (const auto& [id, entity] : entities) {
+    if (entity->times_predicted() == 0) continue;
+    const nnbr::NearNeighbours* proto = neighbours.Lookup(id.AsString());
+    if (!proto) {
+      ++missing;
+      entity->SetNearestDistance(std::nullopt);
+    } else if (proto->nbr_size() == 0) {
+      ++empty;
+      entity->SetNearestDistance(std::nullopt);
+    } else {
+      ++available;
+      entity->SetNearestDistance(proto->nbr(0).dist());
+    }
+  }
+  if (verbose) {
+    cerr << "Nearest-neighbour coverage: " << available << " prediction identifiers with distances, "
+         << missing << " absent IDs, " << empty << " empty neighbour lists\n";
+  }
+}
 
 template <typename T>
 int
@@ -1505,7 +1563,7 @@ CheckOutputFiles(const Command_Line& cl) {
     return 1;
   }
   std::vector<IWString> inputs;
-  for (char flag : {'E', 'S'}) {
+  for (char flag : {'E', 'S', 'N'}) {
     if (cl.option_present(flag)) inputs.emplace_back(cl.string_value(flag));
   }
   for (const char* arg : cl) {
@@ -1559,7 +1617,7 @@ CheckOutputFiles(const Command_Line& cl) {
 static int
 Mispredicted(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:hT:D:n:");
+  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:hT:D:n:N:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1569,6 +1627,21 @@ Mispredicted(int argc, char** argv)
   verbose = cl.option_count('v');
   if (! CheckOutputFiles(cl)) {
     return 1;
+  }
+
+  std::unique_ptr<nearest_neighbour_data::NearestNeighbourData> neighbours;
+  if (cl.option_present('N')) {
+    if (cl.option_count('N') != 1) {
+      cerr << "Specify one nearest-neighbour file with -N\n";
+      return 1;
+    }
+    neighbours = std::make_unique<nearest_neighbour_data::NearestNeighbourData>();
+    const char* fname = cl.option_value('N');
+    if (!neighbours->SetNeighboursToRetain(1) || !neighbours->Read(fname)) {
+      cerr << "Cannot read nearest-neighbour data '" << fname << "'\n";
+      return 1;
+    }
+    if (verbose) cerr << "Read " << neighbours->size() << " nearest-neighbour records\n";
   }
 
   if (cl.option_present('n')) {
@@ -1758,6 +1831,7 @@ Mispredicted(int argc, char** argv)
     } else {
       output << "ID EXPT AVDIFF";
     }
+    if (neighbours) output << " NN_DIST";
     output << '\n';
   }
 
@@ -1778,7 +1852,9 @@ Mispredicted(int argc, char** argv)
       cerr << "Summary data written to '" << y << "'\n";
     }
 
-    stream_for_summary << "ID Expt N minpred maxpred avepred avediff maxdiff stddiff\n";
+    stream_for_summary << "ID Expt N minpred maxpred avepred avediff maxdiff stddiff";
+    if (neighbours) stream_for_summary << " NN_DIST";
+    stream_for_summary << '\n';
   }
 
   if (cl.option_present('r')) {
@@ -1858,6 +1934,7 @@ Mispredicted(int argc, char** argv)
     }
 
     if (0 == rc) {
+      if (neighbours) AnnotateNeighbours(idcd, *neighbours);
       if (! report_classification_results(idcd, output) || ! output.flush()) {
         return 1;
       }
@@ -1893,6 +1970,7 @@ Mispredicted(int argc, char** argv)
     }
 
     if (0 == rc) {
+      if (neighbours) AnnotateNeighbours(idcd, *neighbours);
       if (! report_continuous_results(idcd, output) || ! output.flush()) {
         return 1;
       }

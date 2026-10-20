@@ -6,6 +6,12 @@
       "shell_script": {
         "script_name": "run_test.py"
       }
+    },
+    {
+      "name": "neighbours",
+      "shell_script": {
+        "script_name": "run.rb"
+      }
     }
   ]
 }

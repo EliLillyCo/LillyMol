@@ -1,0 +1,6 @@
+ID class
+a A
+b B
+c A
+d B
+e A
