@@ -30,6 +30,75 @@ import lillymol_bdb
 
 class TestNanobindBdb(unittest.TestCase):
 
+    def test_ring_database(self):
+        tool = _runfile_path("Molecule_Tools_Bdb/smi2rings_bdb")
+        self.assertIsNotNone(tool)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def build(name, smiles):
+                source = os.path.join(tmpdir, name + ".smi")
+                database = os.path.join(tmpdir, name + ".bdb")
+                with open(source, "w", encoding="utf-8") as writer:
+                    for i, smi in enumerate(smiles):
+                        writer.write(f"{smi} mol{i}\n")
+                subprocess.run([tool, "-d", database, "-d", "STORE", "-j", "ring",
+                                "-n", source], check=True, capture_output=True)
+                return database
+
+            first = build("first", ["c1ccccc1"] * 2 + ["C1CCCCC1"] * 3)
+            second = build("second", ["c1ccccc1"] * 4)
+            benzene = lillymol.MolFromSmiles("c1ccccc1 benzene")
+            mixed = lillymol.MolFromSmiles("c1ccccc1.C1CCCCC1 mixed")
+            unseen = lillymol.MolFromSmiles("C1CCCC1 unseen")
+            acyclic = lillymol.MolFromSmiles("CCO ethanol")
+            original = (mixed.unique_smiles(), mixed.name())
+            with lillymol_bdb.RingDatabase(first, bare_ring_fallback=True) as db:
+                self.assertEqual(db.rarest_ring_count(benzene), 2)
+                self.assertEqual(db.rarest_ring_count(mixed), 2)
+                self.assertEqual(db.rarest_ring_count(unseen), 0)
+                self.assertIsNone(db.rarest_ring_count(acyclic))
+                self.assertEqual((mixed.unique_smiles(), mixed.name()), original)
+                self.assertEqual(db.rarest_ring_count(
+                    lillymol.MolFromSmiles("c1ccccc1.C1CCCC1")), 0)
+            db.close()
+            with self.assertRaises(RuntimeError):
+                db.rarest_ring_count(benzene)
+            with lillymol_bdb.RingDatabase([first, second], bare_ring_fallback=True) as db:
+                self.assertEqual(db.rarest_ring_count(benzene), 4)
+                self.assertEqual(db.rarest_ring_count(mixed), 3)
+            with lillymol_bdb.RingDatabase(first, max_ring_size=5) as db:
+                self.assertIsNone(db.rarest_ring_count(benzene))
+            toluene = lillymol.MolFromSmiles("Cc1ccccc1 toluene")
+            with lillymol_bdb.RingDatabase(first) as db:
+                self.assertEqual(db.rarest_ring_count(toluene), 0)
+            with lillymol_bdb.RingDatabase(first, bare_ring_fallback=True) as db:
+                self.assertEqual(db.rarest_ring_count(toluene), 2)
+            corrupt_input = os.path.join(tmpdir, "corrupt.txt")
+            corrupt_db = os.path.join(tmpdir, "corrupt.bdb")
+            with open(corrupt_input, "w", encoding="utf-8") as writer:
+                writer.write(f"{benzene.unique_smiles()} not_a_ring_proto\n")
+            subprocess.run([_runfile_path("BerkeleyDB/iwbdb_load"), "-d", corrupt_db,
+                            corrupt_input], check=True, capture_output=True)
+            with lillymol_bdb.RingDatabase(corrupt_db) as db:
+                with self.assertRaises(RuntimeError):
+                    db.rarest_ring_count(benzene)
+            labelled = lillymol.MolFromSmiles("[13CH2]1CCCCC1 labelled")
+            before = labelled.unique_smiles()
+            with lillymol_bdb.RingDatabase(
+                    first, remove_isotopes=True, attachment_labels=False,
+                    bare_ring_fallback=True, standardize=True) as db:
+                self.assertEqual(db.rarest_ring_count(labelled), 3)
+                self.assertEqual(labelled.unique_smiles(), before)
+            with lillymol_bdb.RingDatabase(first, standardize=["all"]) as db:
+                self.assertIsNone(db.rarest_ring_count(acyclic))
+            with self.assertRaises(ValueError):
+                lillymol_bdb.RingDatabase(first, max_ring_size=2)
+            with self.assertRaises(ValueError):
+                lillymol_bdb.RingDatabase(first, attachment_labels=False)
+            with self.assertRaises(ValueError):
+                lillymol_bdb.RingDatabase([])
+            with self.assertRaises(RuntimeError):
+                lillymol_bdb.RingDatabase(os.path.join(tmpdir, "missing.bdb"))
+
     def test_import_and_construct(self):
         self.assertIsNotNone(lillymol_bdb.Selimsteg())
         precedent = lillymol_bdb.SyntheticPrecedentDatabases()

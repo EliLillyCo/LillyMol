@@ -333,7 +333,7 @@ after extraction, but it remains a process-wide setting.
 Public Bazel targets include `:ring_extraction`, `:ring_preprocessing`,
 `:ring_system_lookup`, `:ring_database_lookup`, and `:ring_database_builder` under
 `//Molecule_Tools_Bdb`. Database-dependent libraries also have `_shared` variants
-for consumers using shared BerkeleyDB, including future Python bindings.
+for consumers using shared BerkeleyDB, including Python bindings.
 
 The three unit-test targets are `:ring_database_lookup_test`,
 `:ring_system_lookup_test`, and `:ring_database_builder_test`. The executable
@@ -341,3 +341,51 @@ regressions under `test/smi2rings_bdb` build temporary databases rather than
 checking binary database files into the repository. They cover direct and cached
 builds, multiple-database fallback, and eight extraction configurations with text
 and proto output checked against the pre-refactor optimised executable.
+
+## Python: filtering by ring precedent
+
+The optional BerkeleyDB-dependent `lillymol_bdb` module provides `RingDatabase`.
+Open the database once, then query the least common eligible ring system in each
+molecule:
+
+```python
+from lillymol_bdb import RingDatabase
+
+with RingDatabase("rings.bdb", bare_ring_fallback=True) as ring_database:
+    for mol in molecules:
+        count = ring_database.rarest_ring_count(mol)
+        if count is not None and count < 4:
+            continue
+        # Retain this molecule, including acyclic molecules in this example.
+```
+
+`rarest_ring_count(mol)` returns zero if any eligible ring system is missing,
+a positive integer for the minimum precedent count, or `None` if there are no
+eligible ring systems. Both acyclic molecules and molecules whose rings are all
+excluded by the extraction limits return `None`. Counts across multiple databases
+use the maximum for each matched ring key, then the minimum across ring systems.
+The input molecule is preserved. Processing and database errors raise
+`RuntimeError`; invalid option values raise `ValueError`.
+
+The first argument accepts a database path string or a sequence of path strings.
+All other arguments are keyword-only and configure the object at construction:
+
+| Keyword | Default | Meaning |
+|---|---|---|
+| `standardize` | `False` | `True` activates `all`; a directive string or sequence of strings selects explicit standardisations. |
+| `remove_isotopes` | `False` | Remove input isotope labels before extraction. |
+| `remove_chirality` | `False` | Remove chirality before extraction. |
+| `largest_fragment` | `False` | Process only the largest fragment. |
+| `attachment_labels` | `True` | Query attachment-labelled ring keys. |
+| `bare_ring_fallback` | `False` | Also query unsubstituted ring keys after more specific keys miss. |
+| `max_ring_size` | Maximum integer | Exclude systems containing a ring larger than this limit; minimum 3. |
+| `max_rings_per_system` | Maximum integer | Exclude systems with more component rings; minimum 1. |
+| `atom_typing` | `""` | LillyMol atom-typing specification enabling environmental attachment labels. |
+
+Choose settings compatible with the database build. In particular, enabling
+bare-ring fallback broadens the definition of precedent: a ring may have
+precedent even when its particular attachment pattern does not.
+
+`close()` releases database handles and is idempotent. The context manager closes
+them automatically, including when its body raises an exception. Queries after
+closing raise `RuntimeError`. There are no database-building Python methods.

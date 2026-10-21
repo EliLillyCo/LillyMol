@@ -132,11 +132,12 @@ py_test(
 
 nanobind_extension(
     name = "lillymol_bdb",
-    srcs = ["lillymol_nb_bdb.cc"],
+    srcs = ["lillymol_nb_bdb.cc", "lillymol_nb_ring_database.cc"],
     deps = [
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Tools_Bdb:iwecfp_database_lookup_lib_shared",
+        "//Molecule_Tools_Bdb:ring_system_lookup_shared",
         "//Molecule_Tools_Bdb:selimsteg",
         "//Molecule_Tools_Bdb:structure_database_shared",
         "//Molecule_Tools_Bdb:substituent_identification_lib_shared",
@@ -151,6 +152,7 @@ py_test(
     data = [
         ":lillymol",
         ":lillymol_bdb",
+        "//Molecule_Tools_Bdb:smi2rings_bdb",
         "//BerkeleyDB:iwbdb_load",
         "//Molecule_Tools_Bdb:structure_database_load",
         "//Molecule_Tools_Bdb:substituent_identification",

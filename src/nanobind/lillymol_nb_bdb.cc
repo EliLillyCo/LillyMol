@@ -55,7 +55,10 @@ StructureDatabaseOpenRead(structure_database::StructureDatabase& db,
 
 }  // namespace
 
+void RegisterRingDatabase(nb::module_& m);
+
 NB_MODULE(lillymol_bdb, m) {
+  RegisterRingDatabase(m);
   nb::enum_<structure_database::Lookup>(m, "LookupParams")
       .value("EXACT", structure_database::kExact)
       .value("STRIP", structure_database::kStrip)

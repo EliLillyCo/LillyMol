@@ -1462,6 +1462,48 @@ for mol in mols:
 The `process` method returns the number of assignments made. Note that if an atom
 is both acceptor and donor, it will count twice in the return code value.
 
+## Ring precedent with BerkeleyDB
+
+`RingDatabase` in the optional BerkeleyDB-dependent `lillymol_bdb` module can
+identify molecules containing unprecedented or minimally precedented ring
+systems. Build the ring database with `smi2rings_bdb`, then open it once for
+repeated molecule lookups:
+
+```python
+from lillymol_bdb import RingDatabase
+
+minimum_count = 4
+with RingDatabase("rings.bdb", bare_ring_fallback=True) as ring_database:
+    for mol in mols:
+        count = ring_database.rarest_ring_count(mol)
+        if count is not None and count < minimum_count:
+            continue
+        # Retain this molecule.
+```
+
+`rarest_ring_count(mol)` returns:
+
+- `0` if any eligible ring system has no database precedent.
+- A positive integer giving the count of the least common eligible ring system.
+- `None` if there are no eligible ring systems, either because the molecule is
+  acyclic or because extraction limits exclude all its rings.
+
+This example retains molecules returning `None`; callers can instead discard
+those molecules explicitly. Lookups preserve the input molecule. Database and
+processing failures raise `RuntimeError` rather than returning a missing-ring
+count. The context manager closes database handles automatically.
+
+The constructor also accepts a sequence of database path strings. Across multiple
+databases, the count for each matched ring key is the maximum, not the sum.
+Preprocessing and extraction settings are keyword-only, for example
+`standardize=True`, `remove_isotopes=True`, and `max_ring_size=8`. Settings should
+match those used to build the database. `bare_ring_fallback=True` broadens
+precedent to include a ring whose particular attachment pattern is unseen; it is
+disabled by default.
+
+See [smi2rings Python documentation](../Molecule_Tools/smi2rings.md#python-filtering-by-ring-precedent)
+for the complete constructor options and matching semantics.
+
 ## Speed Comparisons
 One speed comparison is described in [tsubstructure](/docs/Workflows/substructure_comparison.md).
 That shows excellent speed from LillyMol python, but in that case there was not much
