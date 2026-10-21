@@ -48,6 +48,8 @@
 #include "smi2rings.pb.h"
 #endif
 
+#include "Molecule_Tools_Bdb/ring_database_lookup.h"
+
 using std::cerr;
 
 static Chemical_Standardisation chemical_standardisation;
@@ -1330,122 +1332,24 @@ MaybeWriteNotFoundRings(Molecule& m,
   return 1;
 }
 
-// #define DEBUG_DO_DATABASE_LOOKUP
-
+// Return one for a hit, zero for a miss and minus one for a database error.
+// Missing-ring output and CLI counters remain outside the database library.
 static int
-do_database_lookup_multiple_dbs(Molecule& m,
-                                resizable_array_p<Db>& databases,
-                                const IWString& unique_smiles,
-                                Ring_System_Uniqueness& rsu) {
-  Dbt dkey((void*)unique_smiles.rawchars(), unique_smiles.length());
-
-  // The number of databases in which this if found.
-  int ndb_found = 0;
-  uint32_t highest_count = 0;
-  IWString exemplar_with_highest_count;
-
-  for (auto* database : databases) {
-    Dbt fromdb;
-
-    if (0 != database->get(NULL, &dkey, &fromdb, 0)) {  // not in this db.
-      continue;
-    }
-
-    ++ndb_found;
-
-    google::protobuf::io::ArrayInputStream input(fromdb.get_data(), fromdb.get_size());
-    Smi2Rings::Ring ring;
-    if (!google::protobuf::TextFormat::Parse(&input, &ring)) {
-      cerr << "do_database_lookup_multiple_dbs:invalid db contents '";
-      cerr.write(reinterpret_cast<const char*>(fromdb.get_data()), fromdb.get_size());
-      cerr << "'\n";
-      return 0;
-    }
-
-    if (ring.n() < highest_count) {
-      continue;
-    }
-    highest_count = ring.n();
-    exemplar_with_highest_count = ring.ex();
-  }
-
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "Found in database, dcount " << ndb_found << '\n';
-#endif
-
-  rsu.set_uniqueness_measure(highest_count);
-  rsu.set_name_from_database(exemplar_with_highest_count);
-  rsu.set_ndb_found(ndb_found);
-
-  if (ndb_found == 0) {
-    MaybeWriteNotFoundRings(m, unique_smiles);
-  }
-
-  return 0;
-}
-
-static int
-do_database_lookup_single_db(Molecule& m,
-                             Db& database, const IWString& unique_smiles,
-                             Ring_System_Uniqueness& rsu) {
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "do_database_lookup_single_db key " << unique_smiles << '\n';
-#endif
-
-  Dbt dkey((void*)unique_smiles.rawchars(), unique_smiles.length());
-
-  Dbt fromdb;
-
-  if (0 != database.get(NULL, &dkey, &fromdb, 0)) {  // found new ring
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-    cerr << "Not found in database '" << unique_smiles << "'\n";
-#endif
-    rsu.set_uniqueness_measure(0);
-    ring_systems_not_found_in_database++;
-    MaybeWriteNotFoundRings(m, unique_smiles);
-    return 0;
-  }
-
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "FOUND\n";
-#endif
-
-  google::protobuf::io::ArrayInputStream input(fromdb.get_data(), fromdb.get_size());
-  Smi2Rings::Ring ring;
-  if (!google::protobuf::TextFormat::Parse(&input, &ring)) {
-    cerr << "do_database_lookup_single_db:invalid db contents '";
-    cerr.write(reinterpret_cast<const char*>(fromdb.get_data()), fromdb.get_size());
-    cerr << "'\n";
-    return 0;
-  }
-
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "Found in database, " << ring.ShortDebugString() << '\n';
-#endif
-
-  rsu.set_uniqueness_measure(ring.n());
-  rsu.set_name_from_database(ring.ex());
-
-  return 1;
-}
-
-static int
-do_database_lookup(Molecule& m,
-                   PerMoleculeData& mdata,
-                   int uid,
+do_database_lookup(Molecule& m, PerMoleculeData& mdata, int uid,
                    resizable_array_p<Db>& databases) {
   IWString unique_smiles;
   mdata.CreateSubset(m, uid, unique_smiles);
-
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "Unique smiles of subset '" << unique_smiles << "' from " << m.name() << '\n';
-#endif
-
-  if (databases.size() == 1) {
-    return do_database_lookup_single_db(m, *databases[0], unique_smiles, mdata.rsu[uid]);
-  } else {
-    return do_database_lookup_multiple_dbs(m, databases, unique_smiles, mdata.rsu[uid]);
-  }
+  smi2rings_bdb::RingLookupResult result;
+  const smi2rings_bdb::LookupStatus status = smi2rings_bdb::LookupRingInDatabases(
+      std::span<Db* const>(databases.rawdata(), databases.size()), unique_smiles, result);
+  if (status == smi2rings_bdb::LookupStatus::kError) return -1;
+  mdata.rsu[uid].set_uniqueness_measure(result._count);
+  mdata.rsu[uid].set_name_from_database(IWString(result._exemplar));
+  mdata.rsu[uid].set_ndb_found(result._databases_matched);
+  if (status == smi2rings_bdb::LookupStatus::kFound) return 1;
+  if (databases.size() == 1) ++ring_systems_not_found_in_database;
+  MaybeWriteNotFoundRings(m, unique_smiles);
+  return 0;
 }
 
 // These operations are ordered in a specific way, only for doing lookups.
@@ -1466,9 +1370,8 @@ DoLookups(Molecule& m, int ring_number, PerMoleculeData& mdata,
       write_ring(m, mdata, ring_number, output);
     }
 
-    if (do_database_lookup(m, mdata, ring_number, databases)) {
-      return 1;
-    }
+    const int rc = do_database_lookup(m, mdata, ring_number, databases);
+    if (rc != 0) return rc;
 
     m.transform_to_non_isotopic_form();
   }
@@ -1478,9 +1381,8 @@ DoLookups(Molecule& m, int ring_number, PerMoleculeData& mdata,
       write_ring(m, mdata, ring_number, output);
     }
 
-    if (do_database_lookup(m, mdata, ring_number, databases)) {
-      return 1;
-    }
+    const int rc = do_database_lookup(m, mdata, ring_number, databases);
+    if (rc != 0) return rc;
 
     m.transform_to_non_isotopic_form();
   }
@@ -1491,17 +1393,15 @@ DoLookups(Molecule& m, int ring_number, PerMoleculeData& mdata,
       write_ring(m, mdata, ring_number, output);
     }
 
-    if (do_database_lookup(m, mdata, ring_number, databases)) {
-      return 1;
-    }
+    const int rc = do_database_lookup(m, mdata, ring_number, databases);
+    if (rc != 0) return rc;
 
     m.transform_to_non_isotopic_form();
   }
 
   if (always_process_unsubstituted_ring) {
-    if (do_database_lookup(m, mdata, ring_number, databases)) {
-      return 1;
-    }
+    const int rc = do_database_lookup(m, mdata, ring_number, databases);
+    if (rc != 0) return rc;
   }
 
   return 1;
@@ -1832,7 +1732,9 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
       continue;
     }
 
-    DoLookupsOrStore(m, i, mdata, databases, dbhash, output);
+    if (DoLookupsOrStore(m, i, mdata, databases, dbhash, output) < 0) {
+      return 0;
+    }
   }
 
   if (write_non_ring_atoms) {

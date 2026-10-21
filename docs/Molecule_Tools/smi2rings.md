@@ -237,3 +237,53 @@ You can use the tool as a filter with the '-f' option. This allows specifying
 a minimum 'URS' value for output. Note again that most collections contain
 likely data entry errors. In practice, we have found a value of 5 or 10 for '-f' to
 be a reasonable compromise. Adjust to taste.
+
+## C++ lookup library and refactoring status
+
+The first stage of the library refactor is available in
+`Molecule_Tools_Bdb/ring_database_lookup.h`. `smi2rings_bdb::RingDatabaseReader`
+owns one or more read-only BerkeleyDB handles and looks up an existing ring
+unique-SMILES key. It returns a structured result with count, exemplar, and the
+number of databases containing the key:
+
+```cpp
+smi2rings_bdb::RingDatabaseReader reader;
+if (!reader.Open({"rings.bdb"})) {
+  // Opening failed; databases are never created by this reader.
+}
+smi2rings_bdb::RingLookupResult result;
+auto status = reader.Lookup(ring_unique_smiles, result);
+```
+
+`LookupStatus` distinguishes `kFound`, `kNotFound`, and `kError`. Missing keys and
+errors clear the result; database access errors and malformed stored textprotos
+are errors rather than ordinary misses. Across multiple databases, the returned
+count is the maximum count, not the sum. Equal maxima retain the last database's
+exemplar, matching the existing tool's tie behaviour. Each reader has independent
+handles. Opening a replacement collection is transactional: failed opens leave
+previously opened databases available. Handles close on object destruction.
+The same reader should not be used concurrently from multiple threads.
+
+The public Bazel targets are `//Molecule_Tools_Bdb:ring_database_lookup` for the
+static BerkeleyDB dependency and `:ring_database_lookup_shared` for the shared
+BerkeleyDB dependency used by the optional Python module. The CLI uses the same
+lookup implementation through `LookupRingInDatabases`, which accepts a view of
+its existing database handles. Stored keys and `Smi2Rings::Ring` values are unchanged.
+
+Multi-database lookups now stop when a more-specific representation is found,
+matching single-database behaviour. Previously, the multi-database path reported
+a miss even after finding a key, allowing a later bare-ring fallback to overwrite
+an attachment-specific result.
+
+This is a database-lookup component, not yet a molecule-processing API. Extraction
+settings, chemical preprocessing, key generation, building/caching, and CLI
+formatting remain in the command-line tool. The next stage is to move the shared
+ring extraction and its configuration into an object, then expose molecule lookup
+through the optional `lillymol_bdb` Python module. Python bindings are not added
+by this first stage. Both store and lookup must continue using the same key-generation
+rules, including attachment labels, environmental atom types, and scaffold/spiro
+settings.
+
+Tests include `//Molecule_Tools_Bdb:ring_database_lookup_test` and the
+`test/smi2rings_bdb` executable regression. The regression builds its own temporary
+databases, so BerkeleyDB database files are not checked into the repository.
