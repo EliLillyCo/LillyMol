@@ -1,4 +1,17 @@
 {
   "executable": "smi2rings_bdb",
-  "test": [{"name": "lookup", "shell_script": {"script_name": "run.rb"}}]
+  "test": [
+    {
+      "name": "lookup",
+      "shell_script": {
+        "script_name": "run.rb"
+      }
+    },
+    {
+      "name": "extraction_modes",
+      "shell_script": {
+        "script_name": "run.rb"
+      }
+    }
+  ]
 }

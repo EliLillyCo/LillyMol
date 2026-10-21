@@ -90,6 +90,11 @@ RingDatabaseReader::Open(const std::vector<std::string>& filenames) {
   return true;
 }
 
+bool
+RingDatabaseReader::is_open() const {
+  return !_impl->_databases.empty();
+}
+
 LookupStatus
 RingDatabaseReader::Lookup(const IWString& key, RingLookupResult& result) const {
   return LookupRingInDatabases(

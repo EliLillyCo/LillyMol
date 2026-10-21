@@ -289,6 +289,9 @@ cc_binary(
         "//Foundational/iwstring:string_with_commas",
         ":smi2rings_cc_proto",
         ":ring_database_lookup",
+        ":ring_database_builder",
+        ":ring_extraction",
+        ":ring_preprocessing",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
         "//Foundational/iwstring:absl_hash",
@@ -585,6 +588,108 @@ cc_test(
         ":smi2rings_cc_proto",
         "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ring_extraction",
+    srcs = ["ring_extraction.cc"],
+    hdrs = ["ring_extraction.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_library(
+    name = "ring_preprocessing",
+    srcs = ["ring_preprocessing.cc"],
+    hdrs = ["ring_preprocessing.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_library(
+    name = "ring_system_lookup",
+    srcs = ["ring_system_lookup.cc"],
+    hdrs = ["ring_system_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ring_database_lookup",
+        ":ring_extraction",
+        ":ring_preprocessing",
+    ],
+)
+
+cc_library(
+    name = "ring_system_lookup_shared",
+    srcs = ["ring_system_lookup.cc"],
+    hdrs = ["ring_system_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ring_database_lookup_shared",
+        ":ring_extraction",
+        ":ring_preprocessing",
+    ],
+)
+
+cc_test(
+    name = "ring_system_lookup_test",
+    srcs = ["ring_system_lookup_test.cc"],
+    tags = ["berkeleydb"],
+    deps = [
+        ":ring_system_lookup",
+        ":smi2rings_cc_proto",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ring_database_builder",
+    srcs = ["ring_database_builder.cc"],
+    hdrs = ["ring_database_builder.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwstring:absl_hash",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ring_database_builder_shared",
+    srcs = ["ring_database_builder.cc"],
+    hdrs = ["ring_database_builder.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwstring:absl_hash",
+        "@third_party//:berkeley_shared",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "ring_database_builder_test",
+    srcs = ["ring_database_builder_test.cc"],
+    tags = ["berkeleydb"],
+    deps = [
+        ":ring_database_builder",
+        ":ring_database_lookup",
+        "@third_party//:berkeley_static",
         "@googletest//:gtest_main",
     ],
 )

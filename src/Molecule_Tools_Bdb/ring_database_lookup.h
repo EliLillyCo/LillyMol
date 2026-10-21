@@ -44,6 +44,7 @@ class RingDatabaseReader {
   // Replace databases only after every file has opened successfully. Empty
   // filename lists are errors. Files are opened read-only and never created.
   bool Open(const std::vector<std::string>& filenames);
+  bool is_open() const;
   LookupStatus Lookup(const IWString& key, RingLookupResult& result) const;
 };
 

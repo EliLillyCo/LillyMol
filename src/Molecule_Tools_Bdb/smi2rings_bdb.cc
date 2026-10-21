@@ -17,7 +17,6 @@
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
-#include "Foundational/iwmisc/primes.h"
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwstring/absl_hash.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
@@ -48,193 +47,57 @@
 #include "smi2rings.pb.h"
 #endif
 
+#include "Molecule_Tools_Bdb/ring_database_builder.h"
 #include "Molecule_Tools_Bdb/ring_database_lookup.h"
+#include "Molecule_Tools_Bdb/ring_extraction.h"
+#include "Molecule_Tools_Bdb/ring_preprocessing.h"
 
 using std::cerr;
 
-static Chemical_Standardisation chemical_standardisation;
+// Shared chemistry configuration is owned by reusable library objects. Only
+// command-line input/output settings and job statistics remain in this wrapper.
+static smi2rings_bdb::RingExtractor ring_extractor;
+static smi2rings_bdb::RingPreprocessor preprocessor;
+static smi2rings_bdb::RingDatabaseBuildOptions build_options;
 
-static Atom_Typing_Specification atom_typing;
-
-const char* prog_name = nullptr;
-
-static int verbose = 0;
-
-// If working as a filter, the minimum number of exemplars required.
-static int min_urs_needed = 0;
-
-static int discarded_for_urs_too_low = 0;
-
-// We can optionally add ALL exocyclic double bonds.
-static int add_double_bonded_neighbors_to_rings = 0;
-
-static int add_single_bonded_neighbours_to_rings = 0;
-
-// This will add CH3, OH, NH2, etc groups
-
-static int add_all_single_atom_ring_substituents = 0;
-
-static int continue_chain_neighbours_through_multiple_bonds = 0;
-
-static int label_attachment_points = 0;
-
-// If we are processing isotopically labelled attachment points, we can also
-// process the unsubstuted ring.
-static int always_process_unsubstituted_ring = 0;
-
-static int label_ring_atoms = 0;
-
-static int label_attachment_points_with_environment = 0;
-
-// The isotope of the remaining ring atom is whatever isotopic value
-// was on the extra-ring atom.
-// Note this is ambiguous in the case of two connections to the ring,
-// so we arbitrarily choose the highest isotope.
-static int label_attachment_points_with_existing_isotope = 0;
-
-static int report_all_ring_uniqueness_measurements_looked_up = 1;
-
-/*
-  In talking with Michal Vieth, he wants to capture functional groups
-*/
-
-static resizable_array_p<Substructure_Query> singly_bonded_queries;
-
-static int max_ring_size_to_consider = std::numeric_limits<int>::max();
-
-static int discard_molecules_where_ring_is_whole_molecule = 0;
-
-static uint64_t molecules_read = 0;
-
-static resizable_array_p<Db> databases;
-
-static int new_ring_systems_stored = 0;
-
-static int lookup_in_database = 0;
-static int store_in_database = 0;
-
-static int molecules_with_unique_ring_systems_found = 0;
-
-static int ring_systems_not_found_in_database = 0;
-
-static int write_rings = 1;
-
-// Rather than storing rings in the database as they are found, we can
-// cache the results and then copy that hash to the database when done.
-// This is very desirable for performance.
-static int hash_store = 0;
-
-static IWString smiles_tag("$SMI<");
-
-static int write_parent_structure = 0;
-
-static int use_parent_name_for_rings = 0;
-
-static int write_non_ring_atoms = 0;
-
-static Element_Transformations element_transformations;
-
-static int max_ring_system_size_to_consider = std::numeric_limits<int>::max();
-
-//  Various things we can do if we have positively charged aromatic Nitrogens
-
-static int convert_positive_aromatic_nitrogen_to_neutral = 0;
-static int add_connected_atom_to_positive_aromatic_nitrogen = 0;
-
-//  Various statistics on the ring systems found
-
-static Report_Progress report_progress;
-
-// The text appended to each molecule to give the count of the lowest count ring system
-
-static IWString urs_string(" URS:");
-
-// For rings that are not found in the database, that might be because the
-// molecule contains a ring larger than what is stored in the database.
-// It can be a useful diagnostic to append the largest ring size in the
-// molecule if there is a failed lookup.
-static int append_largest_ring_size_if_no_match = 0;
-
-//  A count of the number of times a ring system with a given number of
-//  component rings is found
-
-static extending_resizable_array<int> ring_system_size_array;
-
-//  An accumulator of the number of rings in the systems
-
-static Accumulator_Int<uint64_t> ring_system_ring_stats;
-
-//  An accumulator of the number of atoms in the systems
-
-static Accumulator_Int<uint64_t> ring_system_atom_stats;
-
-// Accumulator on the number of exemplars.
-static Accumulator_Int<uint64_t> acc_exemplar;
-// And for low numbers, we keep track of the number of instances of
-// each number of exemplars.
-static int max_exemplar_count = 20;
-
-static extending_resizable_array<uint64_t> exemplar_count;
-
-static int bridge_across_spiro_groups = 0;
-
-static int remove_all_chiral_centres = 0;
-
-static int remove_invalid_chiral_centres = 0;
-
-static IWString_and_File_Descriptor stream_for_rejected_molecules;
-
-static int write_3d_smiles_if_needed = 0;
-
-// We can do two kinds of proto output.
-// Note that currently we are not filling in the ring_type attribute.
-// Not sure it is necessary.
-// smiles id textproto
-static int smiles_and_textproto = 0;
-// smiles and id are part of the proto.
-static int full_proto_output = 0;
-
-static IWString_and_File_Descriptor stream_for_missing_ring_systems;
-
-// Why not build a database using the scaffold rather than ring systems.
-static int use_scaffolds = 0;
-
-// The programme attempts to re-use code for both the store
-// and lookup tasks as common as possible.
-// WHile it would be better to refactor this into a library,
-// we can make things a little smoother with a class that
-// holds all the output information.
-class Output {
-  private:
-    // If we are writing all rings to an output stream.
-    IWString_and_File_Descriptor* _text_output = nullptr;
-
-    // If doing lookups there will be one or more databases being
-    // queried.
-    // If we are doing a store, there will be a single database that
-    // will be updated.
-    resizable_array_p<Db> _database;
-
-    // As an optimisation during database loads, we can cache all the rings
-    // in memory and write them when done.
-    // Output will be to the first (and only) database in `_database`.
-    int _accumulate_rings = 0;
-    absl::flat_hash_map<std::string, Smi2Rings::Ring> _hash;
-
-  public:
-    Output();
-    ~Output();
-
-    void set_accumulate_rings(int s) {
-      _accumulate_rings = s;
-    }
+struct LookupOptions {
+  int _min_urs_needed = 0;
+  int _report_all_ring_uniqueness_measurements_looked_up = 1;
+  IWString _urs_string = " URS:";
+  int _append_largest_ring_size_if_no_match = 0;
+  int _max_exemplar_count = 20;
 };
 
-/*
-  When we are applying isotopic labels to the rings, we need to
-  keep track of the uniqueness of each ring system
-*/
+static LookupOptions lookup_options;
 
+static int verbose = 0;
+static int lookup_in_database = 0;
+static int store_in_database = 0;
+static resizable_array_p<Db> databases;
+static std::unique_ptr<smi2rings_bdb::RingDatabaseBuilder> database_builder;
+
+static int write_rings = 1;
+static IWString smiles_tag("$SMI<");
+static int write_parent_structure = 0;
+static int use_parent_name_for_rings = 0;
+static int write_non_ring_atoms = 0;
+static int smiles_and_textproto = 0;
+static int full_proto_output = 0;
+static IWString_and_File_Descriptor stream_for_rejected_molecules;
+static IWString_and_File_Descriptor stream_for_missing_ring_systems;
+static Report_Progress report_progress;
+
+static uint64_t molecules_read = 0;
+static int discarded_for_urs_too_low = 0;
+static int molecules_with_unique_ring_systems_found = 0;
+static int ring_systems_not_found_in_database = 0;
+static extending_resizable_array<int> ring_system_size_array;
+static Accumulator_Int<uint64_t> ring_system_ring_stats;
+static Accumulator_Int<uint64_t> ring_system_atom_stats;
+static Accumulator_Int<uint64_t> acc_exemplar;
+static extending_resizable_array<uint64_t> exemplar_count;
+
+// CLI output ranking and annotation, separate from library lookup results.
 class Ring_System_Uniqueness {
  private:
   int _uid;
@@ -252,35 +115,43 @@ class Ring_System_Uniqueness {
  public:
   Ring_System_Uniqueness();
 
-  void set_uid(int s) {
+  void
+  set_uid(int s) {
     _uid = s;
   }
 
-  int uid() const {
+  int
+  uid() const {
     return _uid;
   }
 
-  void set_uniqueness_measure(int s) {
+  void
+  set_uniqueness_measure(int s) {
     _uniqueness_measure = s;
   }
 
-  int uniqueness_measure() const {
+  int
+  uniqueness_measure() const {
     return _uniqueness_measure;
   }
 
-  void set_name_from_database(const const_IWSubstring& s) {
+  void
+  set_name_from_database(const const_IWSubstring& s) {
     _name_from_database = s;
   }
 
-  const IWString& name_from_database() const {
+  const IWString&
+  name_from_database() const {
     return _name_from_database;
   }
 
-  void set_ndb_found(int s) {
+  void
+  set_ndb_found(int s) {
     _ndb_found = s;
   }
 
-  int ndb_found() const {
+  int
+  ndb_found() const {
     return _ndb_found;
   }
 };
@@ -323,8 +194,8 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 
-// clang-format on
-// clang-format off
+  // clang-format on
+  // clang-format off
   cerr << R"(Identifies rings and ring systems. Stores or retrieves by unique smiles of the ring.
 Data is stored in a BerkeleyDb database with key unique smiles and value a Smi2Rings.Ring textproto
 describing the ring system, including parent structure and number of instances.
@@ -360,280 +231,44 @@ Typical usage
 # To filter to molecules where the rarest ring has at least 10 instances
   smi2rings_bdb -d rings.bdb -d LOOKUP -n -f 10 -v -c -j double -N add -j iso query.smi
 )";
-// clang-format on
+  // clang-format on
 
   exit(rc);
 }
 
-// Return true if all members of the array `v` are `value`.
-// There is probably a library function to do this...
-static bool
-AllValuesAre(const int* v,
-             const int n,
-             int value) {
-  for (int i = 0; i < n; ++i) {
-    if (v[i] != value) {
-      return false;
-    }
+struct PerMoleculeData : public smi2rings_bdb::RingExtractionData {
+  std::unique_ptr<Ring_System_Uniqueness[]> _rsu;
+
+  PerMoleculeData(Molecule& m, bool lookup)
+      : RingExtractionData(m, ring_extractor.options()),
+        _rsu(lookup ? std::make_unique<Ring_System_Uniqueness[]>(m.nrings()) : nullptr) {
   }
-
-  return true;
-}
-
-/*
-  Atom OUTSIDE_RING is an unsaturated atom outside the ring (attached to
-  atom IN_RING). Add its neighbours
-*/
-
-static int
-do_continue_chain_neighbours_through_multiple_bonds(Molecule& m, atom_number_t in_ring,
-                                                    atom_number_t outside_ring,
-                                                    int* in_set, int uid) {
-  in_set[outside_ring] = uid;
-
-  const Atom* a = m.atomi(outside_ring);
-
-  for (const Bond * b : *a) {
-    atom_number_t j = b->other(outside_ring);
-
-    if (j == in_ring) {
-      continue;
-    }
-
-    in_set[j] = uid;
-  }
-
-  return 1;
-}
-
-struct PerMoleculeData {
-  Molecule& m;
-  int* in_system;
-  uint32_t* atype;
-
-  // For each ring system discovered, we need to know the number of rings in
-  // it. This array will only be partially filled if there are fused rings.
-  int* ring_system_size;
-
-  // For each ring system found, a measure of uniqueness.
-  Ring_System_Uniqueness* rsu;
-
-  // the unique smiles of the rings identified in this molecule.
-  IW_STL_Hash_Set found_this_molecule;
-
-  // If the molecule has isotopes, we capture them here.
-  std::unique_ptr<isotope_t[]> starting_isotopes;
-
-  // If we are adding functional groups.
-  std::unique_ptr<isotope_t[]> functional_group;
-
-  // We may need to adjust the smiles written for certain atom types.
-  Set_of_Atoms positive_aromatic_nitrogen;
-  // Three connected only;
-  Set_of_Atoms aromatic_sulphur;
-
-  // create_subset needs a cross reference array.
-  std::unique_ptr<int[]> xref;
-
- public:
-  PerMoleculeData(Molecule& m);
-  ~PerMoleculeData();
-
-  int natoms() const {
-    return m.natoms();
-  }
-
-  int AssignAtomTypes(Atom_Typing_Specification& atom_typing);
-
-  int IdentifyThreeConnectedAromaticSulphur(Molecule& m);
-  int IdentifyPositiveAromaticNitrogen(Molecule& m);
-  int IdentifyFunctionalGroups(Molecule& m);
-
-  int MaybeAddOutsideRingAtoms(Molecule& m,
-                         int ring_system_number);
-  int MaybeConvertPositiveAromaticNitrogen(Molecule& m,
-                int ring_system) const;
-
-  int AddExtraRingSingleBondedNeighgours(Molecule& m, int uid);
-  int AddConnectedAtomToPositiveAromaticNitrogen(Molecule& m, int uid) const;
-  int ConvertPositiveAroamticNitrogenToNeutral(Molecule& m, int uid) const;
-  int AddImplicitHydrogenToAromaticSulphur(Molecule& m, int ring_system) const;
-
-  int CreateSubset(Molecule& m, int uid,
-                IWString& unique_smiles) const;
-
-  // Return true if found_this_molecule contains m.unique_smiles().
-  bool AlreadySeen(const IWString& unique_smiles);
-
-  // If starting_isotopes is set, set those isotopes in `m`.
-  int MaybeRevertInitialIsotopes(Molecule& m);
 };
-
-PerMoleculeData::PerMoleculeData(Molecule& mol) : m(mol) {
-  const int matoms = m.natoms();
-  in_system = new_int(matoms, -1);
-  atype = nullptr;
-  if (m.nrings() == 0) {
-    rsu = nullptr;
-    ring_system_size = 0;
-  } else {
-    rsu = new Ring_System_Uniqueness[m.nrings()];
-    ring_system_size = new int[m.nrings()];
-  }
-
-  xref.reset(new int[matoms]);
-
-  // Original version had isotopic atoms saved here, but that breaks the
-  // case of the atom typing including the isotopic label.
-  // So isotopes in the incoming molecule are saved and removed in
-  // AssignAtomTypes.
-}
-
-PerMoleculeData::~PerMoleculeData() {
-  if (in_system != nullptr) {
-    delete[] in_system;
-  }
-  if (atype != nullptr) {
-    delete[] atype;
-  }
-  if (rsu != nullptr) {
-    delete[] rsu;
-  }
-  if (ring_system_size != nullptr) {
-    delete[] ring_system_size;
-  }
-}
-
-int
-PerMoleculeData::AssignAtomTypes(Atom_Typing_Specification& atom_typing) {
-  atype = new uint32_t[m.natoms()];
-  const int rc = atom_typing.assign_atom_types(m, atype);
-
-  if (m.number_isotopic_atoms() > 0) {
-    starting_isotopes = m.GetIsotopes();
-    m.transform_to_non_isotopic_form();
-  }
-
-  return rc;
-}
-
-int
-PerMoleculeData::MaybeRevertInitialIsotopes(Molecule& m) {
-  if (! starting_isotopes) {
-    return 0;
-  }
-
-  return m.set_isotopes(starting_isotopes.get());
-}
-
-// Modified to also detect S+ and O+
-// C12=C(ON=C1OC)CC[S+](C)C2 CHEMBL278618
-int
-PerMoleculeData::IdentifyThreeConnectedAromaticSulphur(Molecule& m) {
-  const int matoms = m.natoms();
-  for (int i = 0; i < matoms; ++i) {
-    if (m.ring_bond_count(i) == 0) {
-      continue;
-    }
-
-    const Atom& a = m[i];
-
-    if (a.formal_charge() == 1 &&
-        (a.atomic_number() == 8 || a.atomic_number() == 16)) {
-    } else if (a.atomic_number() == 16 && a.ncon() == 3 &&
-               m.is_aromatic(i)) {
-    } else {
-      continue;
-    }
-
-    aromatic_sulphur << i;
-  }
-
-  return aromatic_sulphur.size();
-}
-
-
-int
-PerMoleculeData::AddConnectedAtomToPositiveAromaticNitrogen(Molecule& m, int uid) const { 
-  int rc = 0;
-
-  for (const atom_number_t n : positive_aromatic_nitrogen) {
-    //  cerr << "Atom " << j << " +ve arom N, flag " << uid << " val " << in_set[j] << '\n';
-    if (uid != in_system[n]) {
-      continue;
-    }
-
-    const Atom* a = m.atomi(n);
-    if (a->ncon() == 2) {
-      continue;
-    }
-
-    for (const Bond* b : *a) {
-      atom_number_t l = b->other(n);
-
-      if (uid == in_system[l]) {
-        continue;
-      }
-
-      if (m.is_ring_atom(l)) {  // hmmm, is this correct?
-        continue;
-      }
-
-      in_system[l] = uid;
-
-      rc++;
-    }
-  }
-
-  return rc;
-}
-
-int
-PerMoleculeData::ConvertPositiveAroamticNitrogenToNeutral(Molecule& m, int uid) const {
-  int rc = 0;
-
-  for (atom_number_t j : positive_aromatic_nitrogen) {
-    if (uid != in_system[j]) {
-      continue;
-    }
-
-    m.set_formal_charge(j, 0);
-
-    rc++;
-  }
-
-  return rc;
-}
 
 static int
 all_fragments_too_small(Molecule& m, int min_atoms_per_fragment) {
-  int matoms = m.natoms();
+  const int matoms = m.natoms();
 
-  int* fm = new_int(matoms);
-  std::unique_ptr<int[]> free_fm(fm);
+  std::unique_ptr<int[]> fragment_membership = m.fragment_membership();
 
-  m.fragment_membership(fm);
+  int* to_remove = new_int(matoms);
+  std::unique_ptr<int[]> free_to_remove(to_remove);
 
-  Set_of_Atoms to_remove;
-  to_remove.resize(matoms);
+  int atoms_removed = 0;
 
-  int nf = m.number_fragments();
-
-  for (int i = 0; i < nf; i++) {
-    if (m.atoms_in_fragment(i) < min_atoms_per_fragment) {
-      for (int j = 0; j < matoms; j++) {
-        if (i == fm[j]) {
-          to_remove.add(j);
-        }
-      }
+  for (int i = 0; i < matoms; ++i) {
+    const int frag = fragment_membership[i];
+    if (m.atoms_in_fragment(frag) < min_atoms_per_fragment) {
+      to_remove[i] = 1;
+      ++atoms_removed;
     }
   }
 
-  if (to_remove.empty()) {
+  if (atoms_removed == 0) {
     return 0;
   }
 
-  if (matoms == to_remove.number_elements()) {
+  if (atoms_removed == matoms) {
     return 1;
   }
 
@@ -648,8 +283,7 @@ do_write_non_ring_atoms(Molecule& m, int* in_system,
   int matoms = m.natoms();
   int atoms_in_subset = 0;
   for (int i = 0; i < matoms; i++) {
-    if (in_system[i])  // was a ring atom, don't want those
-    {
+    if (in_system[i]) {  // was a ring atom, don't want those
       in_system[i] = 0;
     } else {
       in_system[i] = 1;
@@ -670,7 +304,7 @@ do_write_non_ring_atoms(Molecule& m, int* in_system,
     }
   }
 
-  if (remove_invalid_chiral_centres) {
+  if (ring_extractor.options()._remove_invalid_chiral_centres) {
     lillymol::do_remove_invalid_chiral_centres(subset);
   }
 
@@ -681,7 +315,8 @@ do_write_non_ring_atoms(Molecule& m, int* in_system,
 
 static void
 WriteSmiles(Molecule& m, IWString_and_File_Descriptor& output) {
-  if (write_3d_smiles_if_needed && m.highest_coordinate_dimensionality() == 3) {
+  if (ring_extractor.options()._write_3d_smiles_if_needed &&
+      m.highest_coordinate_dimensionality() == 3) {
     lillymol::set_include_coordinates_with_smiles(1);
   }
 
@@ -691,615 +326,14 @@ WriteSmiles(Molecule& m, IWString_and_File_Descriptor& output) {
 }
 
 static int
-write_ring(Molecule& m, const PerMoleculeData& mdata, int uid,
+write_ring(Molecule& m, const IWString& unique_smiles,
            IWString_and_File_Descriptor& output) {
-  IWString unique_smiles;
-
-#ifdef DEBUG_WRITE_RING
-  cerr << "Creating subset id " << uid << " :";
-  for (int i = 0; i < m.natoms(); i++) {
-    if (uid == in_set[i]) {
-      cerr << ' ' << i;
-    }
-  }
-  cerr << '\n';
-#endif
-
-  mdata.CreateSubset(m, uid, unique_smiles);
-
   output << unique_smiles;
-
   if (use_parent_name_for_rings) {
     output << ' ' << m.name() << 'R';
   }
-
   output << '\n';
-
   return output.good();
-}
-
-static uint32_t
-compute_environment_isotope(Molecule& m, atom_number_t zatom, const Bond* b) {
-  atom_number_t j = b->other(zatom);
-
-  int jcon = m.ncon(j);
-
-  atomic_number_t jz = m.atomic_number(j);
-
-  if (1 == jcon && b->is_single_bond()) {
-    if (6 == jz) {
-      return 1;
-    }
-    if (7 == jz) {
-      return 2;
-    }
-    if (8 == jz) {
-      return 3;
-    }
-    if (9 == jz) {
-      return 4;
-    }
-    if (16 == jz) {
-      return 5;
-    }
-    if (17 == jz) {
-      return 6;
-    }
-    if (35 == jz) {
-      return 7;
-    }
-    if (53 == jz) {
-      return 8;
-    }
-
-    return 9;
-  }
-
-  if (1 == jcon)  // double bond
-  {
-    if (6 == jz) {
-      return 10;
-    }
-    if (7 == jz) {
-      return 11;
-    }
-    if (8 == jz) {
-      return 12;
-    }
-    if (16 == jz) {
-      return 13;
-    }
-
-    return 14;
-  }
-
-  if (!b->is_single_bond())  // some kind of multiply connected double bond
-  {
-    if (6 == jz) {
-      return 15;
-    }
-    if (7 == jz) {
-      return 16;
-    }
-
-    return 17;
-  }
-
-  // All the single bond cases
-
-  if (8 == jz) {
-    return 20;
-  }
-
-  if (16 == jz) {
-    return 21;
-  }
-
-  if (6 == jz) {
-    if (4 == jcon) {
-      return 22;
-    }
-
-    if (2 == jcon) {
-      return 23;
-    }
-
-    if (m.nbonds(j) == jcon) {
-      return 24;
-    }
-
-    return 25;
-  }
-
-  if (7 == jz) {
-    if (2 == jcon) {
-      return 30;
-    }
-
-    if (m.nbonds(j) == jcon) {
-      return 31;
-    }
-
-    return 32;
-  }
-
-  return 33;  // huh, what is this?
-}
-
-static int
-do_label_attachment_points_with_existing_isotope(Molecule& m, const int* in_system,
-                int uid ) {
-  m.transform_to_non_isotopic_form();
-
-  const int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; ++i) {
-    if (uid != in_system[i]) {
-      continue;
-    }
-
-    const Atom& a = m[i];
-
-    if (2 == a.ncon()) {
-      continue;
-    }
-
-    isotope_t to_assign = 0;
-    for (const Bond* b : a) {
-      atom_number_t k = b->other(i);
-
-      if (uid == in_system[k]) {
-        continue;
-      }
-
-      if (isotope_t iso = m.isotope(k); iso > to_assign) {
-        to_assign = iso;
-      }
-    }
-
-    m.set_isotope(i, to_assign);
-  }
-
-  return 1;
-}
-
-static int
-do_label_attachment_points_with_environment(Molecule& m, const int* in_system, int uid,
-                                            const uint32_t* atype) {
-  m.transform_to_non_isotopic_form();
-
-  int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; i++) {
-    if (uid != in_system[i]) {
-      continue;
-    }
-
-    const Atom* a = m.atomi(i);
-
-    int acon = a->ncon();
-
-    if (2 == acon) {
-      continue;
-    }
-
-    for (int j = 0; j < acon; j++) {
-      const Bond* b = a->item(j);
-
-      atom_number_t k = b->other(i);
-
-      if (uid == in_system[k]) {
-        continue;
-      }
-
-      isotope_t iso;
-      if (nullptr != atype) {
-        iso = atype[k];
-      } else {
-        iso = compute_environment_isotope(m, i, b);
-      }
-
-      m.set_isotope(i, iso);
-    }
-  }
-
-  return 1;
-}
-
-/*
-  No differentiation as to the number of connections outside the system
-*/
-
-static int
-do_label_attachment_points_1(Molecule& m, const int* in_system, int uid) {
-  const int matoms = m.natoms();
-
-  int rc = 0;
-
-  for (int i = 0; i < matoms; i++) {
-    if (uid != in_system[i]) {
-      continue;
-    }
-
-    const Atom* a = m.atomi(i);
-
-    for (const Bond* b : *a) {
-      atom_number_t k = b->other(i);
-
-      if (uid == in_system[k]) {
-        continue;
-      }
-
-      if (b->is_single_bond()) {
-        m.set_isotope(i, 1);
-      } else if (add_double_bonded_neighbors_to_rings) {
-      } else {
-        m.set_isotope(i, 2);
-      }
-
-      rc++;
-    }
-  }
-
-  return rc;
-}
-
-static int
-do_label_attachment_points_2(Molecule& m, const int* in_system, int uid) {
-  int matoms = m.natoms();
-
-  int rc = 0;
-
-  for (int i = 0; i < matoms; i++) {
-    if (uid != in_system[i]) {
-      continue;
-    }
-
-    const Atom* a = m.atomi(i);
-
-    int acon = a->ncon();
-
-    if (2 == acon && m.is_ring_atom(i)) {
-      continue;
-    }
-
-    int connections_outside_ring = 0;
-
-    for (int j = 0; j < acon; j++) {
-      atom_number_t k = a->other(i, j);
-
-      if (uid != in_system[k]) {
-        connections_outside_ring++;
-      }
-    }
-
-    if (connections_outside_ring) {
-      m.set_isotope(i, connections_outside_ring);
-      rc++;
-    }
-  }
-
-  return rc;
-}
-
-static int
-do_label_attachment_points(Molecule& m, const int* in_system, int uid) {
-  m.transform_to_non_isotopic_form();
-
-  if (1 == label_ring_atoms) {
-    return do_label_attachment_points_1(m, in_system, uid);
-  } else {
-    return do_label_attachment_points_2(m, in_system, uid);
-  }
-}
-
-/*static int
-is_spiro_fused (Molecule & m,
-                const Ring & r,
-                const int * in_system)
-{
-  int ring_size = r.number_elements();
-
-  for (int i = 0; i < ring_size; i++)
-  {
-  }
-}*/
-
-static int
-embedding_contains_ring_atom(Molecule& m, const Set_of_Atoms& e) {
-  int n = e.number_elements();
-
-  for (int i = 0; i < n; i++) {
-    atom_number_t j = e[i];
-
-    if (m.is_ring_atom(j)) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
-//  Identifying functional groups is hard, because an atom can be part of
-//  several functional groups. We use prime numbers to allow this.
-
-int
-PerMoleculeData::IdentifyFunctionalGroups(Molecule& m) {
-  functional_group = std::make_unique<uint32_t[]>(m.natoms());
-
-  Molecule_to_Match target(&m);
-
-  int rc = 0;
-
-  for (Substructure_Query* q : singly_bonded_queries) {
-    Substructure_Results sresults;
-    if (q->substructure_search(target, sresults) == 0) {
-      continue;
-    }
-
-    for (const Set_of_Atoms* embedding : sresults.embeddings()) {
-      if (!embedding_contains_ring_atom(m, *embedding)) {
-        continue;
-      }
-
-      int p = primes[rc];
-      rc++;
-
-      for (atom_number_t l : *embedding) {
-        if (0 == functional_group[l]) {
-          functional_group[l] = p;
-        } else {
-          functional_group[l] *= p;
-        }
-      }
-    }
-  }
-
-  return rc;
-}
-
-//  In order to avoid passing around lots of arguments, create a class
-
-class Ring_System_Info {
- private:
-  int _rings_in_system;
-  int _keep_this_ring_system;
-  int _uid_to_assign;
-  int* _ring_already_done;
-
- public:
-  Ring_System_Info(int);
-  ~Ring_System_Info();
-
-  int ring_already_done(int r) const {
-    return _ring_already_done[r];
-  }
-
-  int* ring_already_done() {
-    return _ring_already_done;
-  }
-
-  int uid_to_assign() const {
-    return _uid_to_assign;
-  }
-
-  void initialise(int u);
-
-  int add_ring(const Ring* r);
-  int already_processed(const Ring* r);
-
-  int keep_this_ring_system() const {
-    return _keep_this_ring_system;
-  }
-
-  void set_keep_this_ring_system(int s) {
-    _keep_this_ring_system = s;
-  }
-
-  int rings_in_system() const {
-    return _rings_in_system;
-  }
-};
-
-Ring_System_Info::Ring_System_Info(int nr) {
-  _ring_already_done = new_int(nr);
-
-  return;
-}
-
-Ring_System_Info::~Ring_System_Info() {
-  delete[] _ring_already_done;
-
-  return;
-}
-
-void
-Ring_System_Info::initialise(int u) {
-  _rings_in_system = 0;
-  _keep_this_ring_system = 1;
-  _uid_to_assign = u;
-
-  return;
-}
-
-int
-Ring_System_Info::add_ring(const Ring* r) {
-  _rings_in_system++;
-
-  if (r->number_elements() > max_ring_size_to_consider) {
-    _keep_this_ring_system = 0;
-  }
-
-  assert(0 == _ring_already_done[r->ring_number()]);
-
-  _ring_already_done[r->ring_number()] = 1;
-
-  return _keep_this_ring_system;
-}
-
-/*
-  Are any of the atoms in R already set in the IN_SYSTEM array?
-*/
-
-static int
-any_members_non_negative_in_array(const int* in_system, const Ring& ring) {
-
-  for (atom_number_t r : ring) {
-    if (in_system[r] >= 0) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
-/*int
-Ring_System_Info::already_processed(const Ring * r)
-{
-  return _ring_already_done[r->ring_number()];
-}*/
-
-static atom_number_t
-identify_all_double_bonds_outside_ring(Molecule& m, const Ring* r, atom_number_t zatom,
-                                       const Ring_System_Info& rsi, int* in_system) {
-  const Atom* a = m.atomi(zatom);
-
-  int acon = a->ncon();
-
-  int rc = 0;
-
-  for (int i = 0; i < acon; i++) {
-    const Bond* b = a->item(i);
-    if (!b->is_double_bond()) {
-      continue;
-    }
-
-    atom_number_t j = b->other(zatom);
-
-    if (r->contains(j)) {  // not interested within ring
-      continue;
-    }
-
-    in_system[j] = rsi.uid_to_assign();
-    rc++;
-  }
-
-  return rc;
-}
-
-/*
-  We are bridging across spiro rings, or adding all double bonds to rings.
-  Either of these actions may bring other rings into a group. Since we
-  don't know how large this may make a ring system, we need an infinite loop
-*/
-
-static int
-assign_atoms_to_ring_system(Molecule& m, Ring_System_Info& rsi, int zring,
-                            int* in_system) {
-  const Ring* r = m.ringi(zring);
-
-  r->set_vector(in_system, rsi.uid_to_assign());
-
-  rsi.add_ring(r);
-
-  if (add_double_bonded_neighbors_to_rings) {
-    int ring_size = r->number_elements();
-
-    for (int i = 0; i < ring_size; i++) {
-      atom_number_t j = r->item(i);
-
-      const Atom* aj = m.atomi(j);
-
-      if (2 == aj->ncon()) {
-        continue;
-      }
-
-      if (aj->nbonds() == aj->ncon()) {  // fully saturated
-        continue;
-      }
-
-      identify_all_double_bonds_outside_ring(m, r, j, rsi, in_system);
-    }
-  }
-
-  int nr = m.nrings();
-
-  // Now that we have added the doubly bonded atoms, any ring
-  // that touches any set atom, gets added
-
-  for (int i = 0; i < nr; i++) {
-    if (i == zring) {
-      continue;
-    }
-
-    if (rsi.ring_already_done(i)) {
-      continue;
-    }
-
-    const Ring* ri = m.ringi(i);
-
-    if (any_members_non_negative_in_array(in_system, *ri)) {
-      assign_atoms_to_ring_system(m, rsi, i, in_system);
-    }
-  }
-
-  return rsi.keep_this_ring_system();
-}
-
-// For atoms that are part of the scaffold, set their `in_system` value to 0,
-// other atoms get -1 - they probably have this value already due to defaults in PerMoleculeData
-static int
-assign_atoms_to_scaffold(Molecule& m, int* in_system, int* ring_system_size) {
-  const int matoms = m.natoms();
-
-  std::unique_ptr<int[]> spinach = std::make_unique<int[]>(matoms);
-  m.identify_spinach(spinach.get());
-
-  for (int i = 0; i < matoms; ++i) {
-    if (spinach[i] == 0) {
-      in_system[i] = 0;
-    } else if (in_system[i] >= 0) {
-    } else {
-      in_system[i] = -1;
-    }
-  }
-
-  ring_system_size[0] = m.nrings();
-
-  return 1;  // One "ring system" found
-}
-
-static int
-assign_atoms_to_ring_systems(Molecule& m, int* in_system, int* ring_system_size) {
-  int matoms = m.natoms();
-
-  int nr = m.nrings();
-
-  Ring_System_Info rsi(nr);
-
-  int uid_to_assign = 0;
-
-  for (int i = 0; i < nr; i++) {
-    if (rsi.ring_already_done(i)) {
-      continue;
-    }
-
-    rsi.initialise(uid_to_assign);
-
-    if (assign_atoms_to_ring_system(m, rsi, i, in_system)) {
-      ring_system_size[uid_to_assign] = rsi.rings_in_system();
-      uid_to_assign++;
-    } else  // some reason to not keep that ring system
-    {
-      for (int j = 0; j < matoms; j++) {
-        if (uid_to_assign == in_system[j]) {
-          in_system[j] = -1;
-        }
-      }
-    }
-  }
-
-  return uid_to_assign;  // the number of ring systems we have identified
 }
 
 static Ring_System_Uniqueness_Comparitor ring_system_uniqueness_comparitor;
@@ -1310,8 +344,9 @@ static int
 HandleDiscardedForMinUrs(Molecule& m, int lowest_ring_count) {
   discarded_for_urs_too_low++;
   if (stream_for_rejected_molecules.active()) {
-    stream_for_rejected_molecules << m.smiles() << ' ' << m.name() << urs_string
-                                  << lowest_ring_count << '\n';
+    stream_for_rejected_molecules << m.smiles() << ' ' << m.name()
+                                  << lookup_options._urs_string << lowest_ring_count
+                                  << '\n';
     stream_for_rejected_molecules.write_if_buffer_holds_more_than(4096);
   }
 
@@ -1319,9 +354,8 @@ HandleDiscardedForMinUrs(Molecule& m, int lowest_ring_count) {
 }
 
 static int
-MaybeWriteNotFoundRings(Molecule& m,
-                        const IWString& unique_smiles) {
-  if (! stream_for_missing_ring_systems.is_open()) {
+MaybeWriteNotFoundRings(Molecule& m, const IWString& unique_smiles) {
+  if (!stream_for_missing_ring_systems.is_open()) {
     return 0;
   }
 
@@ -1336,18 +370,22 @@ MaybeWriteNotFoundRings(Molecule& m,
 // Missing-ring output and CLI counters remain outside the database library.
 static int
 do_database_lookup(Molecule& m, PerMoleculeData& mdata, int uid,
-                   resizable_array_p<Db>& databases) {
-  IWString unique_smiles;
-  mdata.CreateSubset(m, uid, unique_smiles);
+                   resizable_array_p<Db>& databases, const IWString& unique_smiles) {
   smi2rings_bdb::RingLookupResult result;
   const smi2rings_bdb::LookupStatus status = smi2rings_bdb::LookupRingInDatabases(
       std::span<Db* const>(databases.rawdata(), databases.size()), unique_smiles, result);
-  if (status == smi2rings_bdb::LookupStatus::kError) return -1;
-  mdata.rsu[uid].set_uniqueness_measure(result._count);
-  mdata.rsu[uid].set_name_from_database(IWString(result._exemplar));
-  mdata.rsu[uid].set_ndb_found(result._databases_matched);
-  if (status == smi2rings_bdb::LookupStatus::kFound) return 1;
-  if (databases.size() == 1) ++ring_systems_not_found_in_database;
+  if (status == smi2rings_bdb::LookupStatus::kError) {
+    return -1;
+  }
+  mdata._rsu[uid].set_uniqueness_measure(result._count);
+  mdata._rsu[uid].set_name_from_database(IWString(result._exemplar));
+  mdata._rsu[uid].set_ndb_found(result._databases_matched);
+  if (status == smi2rings_bdb::LookupStatus::kFound) {
+    return 1;
+  }
+  if (databases.size() == 1) {
+    ++ring_systems_not_found_in_database;
+  }
   MaybeWriteNotFoundRings(m, unique_smiles);
   return 0;
 }
@@ -1358,245 +396,59 @@ do_database_lookup(Molecule& m, PerMoleculeData& mdata, int uid,
 static int
 DoLookups(Molecule& m, int ring_number, PerMoleculeData& mdata,
           resizable_array_p<Db>& databases, IWString_and_File_Descriptor& output) {
-
-#ifdef DEBUG_DO_DATABASE_LOOKUP
-  cerr << "DoLookups " << m.smiles() << '\n';
-#endif
-
-  if (label_attachment_points_with_environment) {
-    do_label_attachment_points_with_environment(m, mdata.in_system, ring_number,
-                                                mdata.atype);
-    if (write_rings) {
-      write_ring(m, mdata, ring_number, output);
+  for (smi2rings_bdb::RingKeyType type : ring_extractor.KeyTypes()) {
+    IWString key;
+    if (!ring_extractor.CreateKey(m, mdata, ring_number, type, key)) {
+      return -1;
     }
-
-    const int rc = do_database_lookup(m, mdata, ring_number, databases);
-    if (rc != 0) return rc;
-
-    m.transform_to_non_isotopic_form();
-  }
-  if (label_attachment_points_with_existing_isotope) {
-    do_label_attachment_points_with_existing_isotope(m, mdata.in_system, ring_number);
-    if (write_rings) {
-      write_ring(m, mdata, ring_number, output);
+    if (write_rings && type != smi2rings_bdb::RingKeyType::kBare) {
+      write_ring(m, key, output);
     }
-
-    const int rc = do_database_lookup(m, mdata, ring_number, databases);
-    if (rc != 0) return rc;
-
-    m.transform_to_non_isotopic_form();
-  }
-
-  if (label_attachment_points) {
-    do_label_attachment_points(m, mdata.in_system, ring_number);
-    if (write_rings) {
-      write_ring(m, mdata, ring_number, output);
+    if (const int rc = do_database_lookup(m, mdata, ring_number, databases, key);
+        rc != 0) {
+      return rc;
     }
-
-    const int rc = do_database_lookup(m, mdata, ring_number, databases);
-    if (rc != 0) return rc;
-
-    m.transform_to_non_isotopic_form();
+    if (type != smi2rings_bdb::RingKeyType::kBare) {
+      m.transform_to_non_isotopic_form();
+    }
   }
-
-  if (always_process_unsubstituted_ring) {
-    const int rc = do_database_lookup(m, mdata, ring_number, databases);
-    if (rc != 0) return rc;
-  }
-
   return 1;
 }
-
-// Print `proto` and place in `destination`.
-// Variable `in_scope` is used to hold the newly
-// allocated data, and must remain in scope during
-// the lifetime of `destination`.
-template <typename P>
-void
-ProtoToDbt(const P& proto, Dbt& destination, std::string& in_scope) {
-  google::protobuf::TextFormat::Printer printer;
-  printer.SetSingleLineMode(1);
-  if (! printer.PrintToString(proto, &in_scope)) {
-    cerr << "PrintToString failed\n";
-    return;
-  }
-
-  destination.set_data(in_scope.data());
-  destination.set_size(in_scope.size());
-}
-
-static int
-do_store(Db& database, Dbt& dkey, Dbt& zdata) {
-  int rc = database.put(NULL, &dkey, &zdata, 0);
-  if (0 == rc) {
-    return 1;
-  }
-
-  database.err(rc, "Cannot store");
-  return 0;
-}
-
-static int
-store_new_ring(Db& database, Dbt& dkey, const IWString& mname) {
-  new_ring_systems_stored++;
-
-  Smi2Rings::Ring ring;
-  ring.set_n(1);
-  ring.set_ex(mname.AsString());
-
-  Dbt to_store;
-  std::string in_scope;
-  ProtoToDbt(ring, to_store, in_scope);
-  return do_store(database, dkey, to_store);
-}
-
-// A ring, `dkey` has been retrieved from the database, with the string
-// representation of the proto in `fromdb`.
-// Convert `fromdb` to proto form, increment count and write back to `database`.
-static int
-increment_count(Db& database, Dbt& dkey, Dbt& fromdb) {
-  google::protobuf::io::ArrayInputStream input(fromdb.get_data(), fromdb.get_size());
-  Smi2Rings::Ring ring;
-  if (!google::protobuf::TextFormat::Parse(&input, &ring)) {
-    cerr << "increment_count:invalid db contents '";
-    cerr.write(reinterpret_cast<const char*>(fromdb.get_data()), fromdb.get_size());
-    cerr << "'\n";
-    return 0;
-  }
-
-  ring.set_n(ring.n() + 1);
-
-  std::string in_scope;
-  Dbt value;
-  ProtoToDbt(ring, value, in_scope);
-  return do_store(database, dkey, value);
-}
-
-static int
-StoreInHash(Molecule& m,
-            const IWString& unique_smiles,
-            std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash) {
-  auto iter = dbhash->find(unique_smiles);
-  if (iter != dbhash->end()) {
-    auto n = iter->second.n();
-    iter->second.set_n(n + 1);
-    return 1;
-  }
-
-  ++new_ring_systems_stored;
-
-  Smi2Rings::Ring proto;
-  proto.set_n(1);
-  proto.set_ex(m.name().data(), m.name().length());
-
-  dbhash->emplace(std::make_pair(unique_smiles, std::move(proto)));
-
-  return 1;
-}
-
-// #define DEBUG_STORE
-
-static int
-DoDatabaseStore(Molecule& m, PerMoleculeData& mdata, int uid,
-                std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-                Db& database) {
-  IWString unique_smiles;
-  mdata.CreateSubset(m, uid, unique_smiles);
-
-#ifdef DEBUG_STORE
-  cerr << "do_database_store " << unique_smiles << '\n';
-#endif
-  if (mdata.AlreadySeen(unique_smiles)) {
-    return 1;
-  }
-
-  if (dbhash) {
-    return StoreInHash(m, unique_smiles, dbhash);
-  }
-
-  Dbt dkey((void*)unique_smiles.rawchars(), unique_smiles.length());
-  // dkey.set_data((void *)unique_smiles.rawchars());   // loss of const OK
-  // dkey.set_size(unique_smiles.nchars());
-
-  Dbt fromdb;
-  fromdb.set_data(NULL);
-  fromdb.set_size(0);
-
-  if (0 != database.get(NULL, &dkey, &fromdb, 0)) {
-    return store_new_ring(database, dkey, m.name());
-  }
-
-  int rc = increment_count(database, dkey, fromdb);
-
-  // delete reinterpret_cast<char *>(fromdb.get_data());
-
-  return rc;
-}
-
 
 static int
 DoStore(Molecule& m, int ring_number, PerMoleculeData& mdata,
-        Db& database,
-        std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
         IWString_and_File_Descriptor& output) {
-  if (label_attachment_points_with_environment) {
-    do_label_attachment_points_with_environment(m, mdata.in_system, ring_number,
-                                                mdata.atype);
-    if (write_rings) {
-      write_ring(m, mdata, ring_number, output);
+  for (smi2rings_bdb::RingKeyType type : ring_extractor.KeyTypes(true)) {
+    IWString key;
+    if (!ring_extractor.CreateKey(m, mdata, ring_number, type, key, true)) {
+      return -1;
     }
-
-    DoDatabaseStore(m, mdata, ring_number, dbhash, database);
-
-    m.transform_to_non_isotopic_form();
-  }
-
-  if (label_attachment_points) {
-    do_label_attachment_points(m, mdata.in_system, ring_number);
-    if (write_rings) {
-      write_ring(m, mdata, ring_number, output);
+    if (write_rings && type != smi2rings_bdb::RingKeyType::kBare) {
+      write_ring(m, key, output);
     }
-
-    DoDatabaseStore(m, mdata, ring_number, dbhash, database);
-
-    m.transform_to_non_isotopic_form();
+    if (!mdata.AlreadySeen(key) && !database_builder->Store(key, m.name())) {
+      return -1;
+    }
+    if (type != smi2rings_bdb::RingKeyType::kBare) {
+      m.transform_to_non_isotopic_form();
+    }
   }
-
-  if (always_process_unsubstituted_ring) {
-    m.transform_to_non_isotopic_form();
-
-    DoDatabaseStore(m, mdata, ring_number, dbhash, database);
-  }
-
   return 1;
 }
 
 static int
-DoLookupsOrStore(Molecule& m, int ring_number, PerMoleculeData& mdata,
-                 resizable_array_p<Db>& databases,
-                 std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-                 IWString_and_File_Descriptor& output) {
-
-  if (lookup_in_database) {
-    return DoLookups(m, ring_number, mdata, databases, output);
-  } else {
-    return DoStore(m, ring_number, mdata, *databases[0], dbhash, output);
-  }
-}
-
-static int
-WriteProto(Molecule& m, const PerMoleculeData& mdata,
-           int number_ring_systems,
+WriteProto(Molecule& m, const PerMoleculeData& mdata, int number_ring_systems,
            IWString_and_File_Descriptor& output) {
-  static google::protobuf::TextFormat::Printer printer;  
+  static google::protobuf::TextFormat::Printer printer;
   printer.SetSingleLineMode(true);
 
   Smi2Rings::Results results;
-  int nprocess = report_all_ring_uniqueness_measurements_looked_up ?
-        number_ring_systems : 1;
+  int nprocess = lookup_options._report_all_ring_uniqueness_measurements_looked_up
+                     ? number_ring_systems
+                     : 1;
   for (int i = 0; i < nprocess; ++i) {
     Smi2Rings::Result* r = results.add_result();
-    const auto& u = mdata.rsu[i];
+    const auto& u = mdata._rsu[i];
     r->set_urs(u.uniqueness_measure());
     if (u.uniqueness_measure() > 0) {
       const IWString& s = u.name_from_database();
@@ -1614,7 +466,7 @@ WriteProto(Molecule& m, const PerMoleculeData& mdata,
   }
 
   std::string buffer;
-  if (! printer.PrintToString(results, &buffer)) {
+  if (!printer.PrintToString(results, &buffer)) {
     cerr << "PrintToString failed\n";
     return 0;
   }
@@ -1624,72 +476,23 @@ WriteProto(Molecule& m, const PerMoleculeData& mdata,
   return 1;
 }
 
-int
-PerMoleculeData::AddImplicitHydrogenToAromaticSulphur(Molecule& m,
-                int ring_system) const {
-  if (aromatic_sulphur.empty()) {
-    return 0;
-  }
-
-  int rc = 0;
-  for (atom_number_t s : aromatic_sulphur) {
-    if (in_system[s] != ring_system) {
-      continue;
-    }
-    m.set_implicit_hydrogens(s, 1, 1);
-    ++rc;
-  }
-
-  return rc;
-}
-
-// Do we need to modify any charged aromatic nitrogen atoms.
-// `positive_aromatic_nitrogen` contains a list of '[n+]' atoms.
-// `ring_system` is the ring system we are processing.
-int
-PerMoleculeData::MaybeConvertPositiveAromaticNitrogen(Molecule& m,
-                int ring_system) const {
-  if (positive_aromatic_nitrogen.empty()) {
-    return 0;
-  }
-
-  if (add_connected_atom_to_positive_aromatic_nitrogen) {
-    AddConnectedAtomToPositiveAromaticNitrogen(m, ring_system);
-  } else if (convert_positive_aromatic_nitrogen_to_neutral) {
-     ConvertPositiveAroamticNitrogenToNeutral(m, ring_system);
-  }
-
-  return 1;
-}
-
 // Update various file scope statistics
 
 static void
-UpdateGlobalStatistics(const PerMoleculeData& mdata,
-                int ring_system_number) {
+UpdateGlobalStatistics(const PerMoleculeData& mdata, int ring_system_number) {
   if (verbose == 0) {
     return;
   }
 
-  int rings_in_system = mdata.ring_system_size[ring_system_number];
+  int rings_in_system = mdata._ring_system_size[ring_system_number];
 
   ring_system_size_array[rings_in_system]++;
   ring_system_ring_stats.extra(rings_in_system);
 
-  int atoms_in_system = std::count(mdata.in_system, mdata.in_system + mdata.natoms(),
-                ring_system_number);
+  int atoms_in_system =
+      std::count(mdata._in_system, mdata._in_system + mdata.natoms(), ring_system_number);
 
   ring_system_atom_stats.extra(atoms_in_system);
-}
-
-int
-PerMoleculeData::MaybeAddOutsideRingAtoms(Molecule& m,
-                         int ring_system_number) {
-  if (! functional_group) {
-    return 0;
-  }
-
-  return AddExtraRingSingleBondedNeighgours(m, ring_system_number);
 }
 
 static int
@@ -1699,61 +502,52 @@ LargestRing(Molecule& m) {
   return r->number_elements();
 }
 
+template <bool LookupMode>
 static int
-smi2rings(Molecule& m, PerMoleculeData& mdata,
-          std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-          IWString_and_File_Descriptor& output) {
+smi2rings(Molecule& m, PerMoleculeData& mdata, IWString_and_File_Descriptor& output) {
   const int matoms = m.natoms();
-
-  // The number of ring systems.
-  int n;
-  if (use_scaffolds) {
-     n = assign_atoms_to_scaffold(m, mdata.in_system, mdata.ring_system_size);
-  } else {
-     n = assign_atoms_to_ring_systems(m, mdata.in_system, mdata.ring_system_size);
-  }
+  const int n = ring_extractor.IdentifySystems(m, mdata);
 
   for (int i = 0; i < n; i++) {
-    mdata.rsu[i].set_uid(i);
+    if constexpr (LookupMode) {
+      mdata._rsu[i].set_uid(i);
+    }
 
     UpdateGlobalStatistics(mdata, i);
 
-    if (mdata.ring_system_size[i] > max_ring_system_size_to_consider) {
+    if (!ring_extractor.PrepareSystem(m, mdata, i)) {
       continue;
     }
 
-    mdata.MaybeConvertPositiveAromaticNitrogen(m, i);
-    mdata.AddImplicitHydrogenToAromaticSulphur(m, i);
-
-    mdata.MaybeAddOutsideRingAtoms(m, i);
-
-    if (discard_molecules_where_ring_is_whole_molecule &&
-        AllValuesAre(mdata.in_system, matoms, i)) {
-      continue;
-    }
-
-    if (DoLookupsOrStore(m, i, mdata, databases, dbhash, output) < 0) {
-      return 0;
+    if constexpr (LookupMode) {
+      if (DoLookups(m, i, mdata, databases, output) < 0) {
+        return 0;
+      }
+    } else {
+      if (DoStore(m, i, mdata, output) < 0) {
+        return 0;
+      }
     }
   }
 
   if (write_non_ring_atoms) {
-    do_write_non_ring_atoms(m, mdata.in_system, output);
+    do_write_non_ring_atoms(m, mdata._in_system, output);
   }
 
-  if (!lookup_in_database) {
+  if constexpr (!LookupMode) {
     return output.good();
   }
 
   // If we were doing a lookup, check the results
 
-  if (label_attachment_points || label_attachment_points_with_environment ||
-      always_process_unsubstituted_ring) {
+  if (ring_extractor.options()._label_attachment_points ||
+      ring_extractor.options()._label_attachment_points_with_environment ||
+      ring_extractor.options()._always_process_unsubstituted_ring) {
     m.transform_to_non_isotopic_form();
   }
 
   if (n > 1) {
-    iwqsort(mdata.rsu, n, ring_system_uniqueness_comparitor);
+    iwqsort(mdata._rsu.get(), n, ring_system_uniqueness_comparitor);
   }
 
 #ifdef ECHO_SORTED_LIST
@@ -1764,10 +558,10 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   }
 #endif
 
-  int lowest_ring_count = mdata.rsu[0].uniqueness_measure();
+  int lowest_ring_count = mdata._rsu[0].uniqueness_measure();
 
   // none of the ring systems were looked up
-  if (std::numeric_limits<int>::max() == lowest_ring_count) { 
+  if (std::numeric_limits<int>::max() == lowest_ring_count) {
     return output.good();
   }
 
@@ -1777,7 +571,7 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   }
 
   acc_exemplar.extra(lowest_ring_count);
-  if (lowest_ring_count <= max_exemplar_count) {
+  if (lowest_ring_count <= lookup_options._max_exemplar_count) {
     ++exemplar_count[lowest_ring_count];
   }
 
@@ -1785,7 +579,7 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
     molecules_with_unique_ring_systems_found++;
   }
 
-  if (lowest_ring_count < min_urs_needed) {
+  if (lowest_ring_count < lookup_options._min_urs_needed) {
     return HandleDiscardedForMinUrs(m, lowest_ring_count);
   }
 
@@ -1795,19 +589,19 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
 
   IWString tmp(m.name());
 
-  tmp << urs_string << mdata.rsu[0].uniqueness_measure();
-  if (0 == mdata.rsu[0].uniqueness_measure()) {
+  tmp << lookup_options._urs_string << mdata._rsu[0].uniqueness_measure();
+  if (0 == mdata._rsu[0].uniqueness_measure()) {
     tmp << " .";
-    if (append_largest_ring_size_if_no_match) {
+    if (lookup_options._append_largest_ring_size_if_no_match) {
       tmp << ' ' << LargestRing(m);
     }
   } else {
-    tmp << ' ' << mdata.rsu[0].name_from_database();
+    tmp << ' ' << mdata._rsu[0].name_from_database();
   }
 
-  if (report_all_ring_uniqueness_measurements_looked_up) {
+  if (lookup_options._report_all_ring_uniqueness_measurements_looked_up) {
     for (int i = 1; i < n; i++) {
-      tmp << ' ' << mdata.rsu[i].uniqueness_measure();
+      tmp << ' ' << mdata._rsu[i].uniqueness_measure();
 
       if (i != (n - 1)) {
         tmp << ',';
@@ -1816,24 +610,25 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   }
 
 #ifdef DEBUG_WRITE_RING
-  cerr << label_ring_atoms << " label_ring_atoms, n = " << n << '\n';
+  cerr << ring_extractor.options()._label_ring_atoms << " label_ring_atoms, n = " << n
+       << '\n';
   for (int i = 0; i < matoms; ++i) {
-    cerr << i << " in_system " << mdata.in_system[i] << ' '
+    cerr << i << " in_system " << mdata._in_system[i] << ' '
          << m.smarts_equivalent_for_atom(i) << '\n';
   }
 #endif
 
   mdata.MaybeRevertInitialIsotopes(m);
 
-  if (label_ring_atoms) {
-    int uid = mdata.rsu[0].uid();
+  if (ring_extractor.options()._label_ring_atoms) {
+    int uid = mdata._rsu[0].uid();
     for (int i = 0; i < matoms; ++i) {
-      if (mdata.in_system[i] == uid) {
+      if (mdata._in_system[i] == uid) {
         m.set_isotope(i, 1);
       }
     }
     IWString name(m.name());
-    name << urs_string << mdata.rsu[0].uniqueness_measure();
+    name << lookup_options._urs_string << mdata._rsu[0].uniqueness_measure();
     m.set_name(name);
   }
 
@@ -1843,231 +638,17 @@ smi2rings(Molecule& m, PerMoleculeData& mdata,
   return output.good();
 }
 
-int
-PerMoleculeData::IdentifyPositiveAromaticNitrogen(Molecule& m) {
-  int matoms = m.natoms();
-
-  for (int i = 0; i < matoms; i++) {
-    const Atom* a = m.atomi(i);
-
-    if (1 != a->formal_charge()) {
-      continue;
-    }
-
-    if (3 != a->ncon()) {
-      continue;
-    }
-
-    if (7 != a->atomic_number()) {
-      continue;
-    }
-
-    if (!m.is_aromatic(i)) {
-      continue;
-    }
-
-    if (1 == m.nrings(i)) {
-      positive_aromatic_nitrogen.add(i);
-    }
-  }
-
-  return positive_aromatic_nitrogen.number_elements();
-}
-
-
-// #define DEBUG_SUBSET_CREATION
-
-//  Create the unique smiles for a given subset `uid` of the molecule.
-int
-PerMoleculeData::CreateSubset(Molecule& m, int uid,
-                IWString& unique_smiles) const {
-  Molecule tmp;
-
-  m.create_subset(tmp, in_system, uid, xref.get());
-
-  // We could be more precise about this - change just the atoms
-  // that have changed bonding.
-  // O[C@@H]1C[C@H]2[N+](C)(C)[C@@H](C1)[C@H]1[C@@H]2O1 CHEMBL3706465
-  const int matoms = tmp.natoms();
-  for (int i = 0; i < matoms; ++i) {
-    tmp.set_implicit_hydrogens_known(i, 0);
-  }
-
-  //cerr << tmp.unique_smiles() << " after formation\n";
-  //tmp.invalidate_smiles();
-  tmp.recompute_implicit_hydrogens();
-  //cerr << tmp.unique_smiles() << " after implicit H " << m.valence_ok() << '\n';
-
-  for (atom_number_t s : aromatic_sulphur) {
-    if (xref[s] >= 0) {
-      tmp.set_implicit_hydrogens(xref[s], 1, 1);
-    }
-  }
-
-#ifdef DEBUG_SUBSET_CREATION
-  tmp.debug_print(cerr);
-  cerr << "Smiles for subset '" << tmp.smiles() << "' unique '";
-  cerr << tmp.unique_smiles() << "'\n";
-#endif
-
-  if (remove_invalid_chiral_centres) {
-    lillymol::do_remove_invalid_chiral_centres(tmp);
-  }
-
-  if (write_3d_smiles_if_needed && tmp.highest_coordinate_dimensionality() == 3) {
-    lillymol::set_include_coordinates_with_smiles(1);
-  }
-
-  unique_smiles = tmp.unique_smiles();
-  lillymol::set_include_coordinates_with_smiles(0);
-
-  return 1;
-}
-
+template <bool LookupMode>
 static int
-get_next_prime_factor(int znumber, int& pindex, int istop) {
-  while (1) {
-    int p = primes[pindex++];
-
-    if (0 == znumber % p) {
-      return p;
-    }
-
-    if (p > istop) {
-      return 0;
-    }
-  }
-
-  return 0;  // should not come to here
-}
-
-/*
-  Add all the atoms which were hit by a functional group query to the set.
-  Atom K is part of the set. Any atom whose functional_group value is the
-  same as K's will be added
-*/
-
-static void
-add_functional_group(int matoms, int k, const uint32_t* functional_group, int* in_set,
-                     int uid) {
-  int istop = static_cast<int>(sqrt(static_cast<double>(functional_group[k])));
-
-  int i = 0;
-  int p;
-  while (0 != (p = get_next_prime_factor(functional_group[k], i, istop))) {
-    for (int i = 0; i < matoms; i++) {
-      if (0 == functional_group[i]) {
-        continue;
-      }
-
-      if (0 == (functional_group[i] % p)) {
-        in_set[i] = uid;
-      }
-    }
-  }
-
-  return;
-}
-
-/*
-  Must make sure we don't accidentially add too many things
-  We process the atoms for which UID == IN_SYSTEM[i]
-*/
-
-static constexpr int kTmpid = -55512;
-
-int
-PerMoleculeData::AddExtraRingSingleBondedNeighgours(Molecule& m, int uid) {
-  int matoms = m.natoms();
-
-  int rc = 0;
-  for (int i = 0; i < matoms; i++) {
-    if (uid != in_system[i]) {  // just examine our subset
-      continue;
-    }
-
-    Atom* a = const_cast<Atom*>(m.atomi(i));  // loss of const OK
-
-    if (a->ncon() == 2) {  // cannot have branches outside the system
-      continue;
-    }
-
-    for (const Bond* b : *a) {
-      if (!b->is_single_bond()) {
-        continue;
-      }
-
-      atom_number_t k = b->other(i);
-      if (uid == in_system[k]) {  // we are looking for atoms outside the ring system
-        continue;
-      }
-
-      // adding all singly bonded attachments
-      if (2 == add_single_bonded_neighbours_to_rings) {
-        in_system[k] = kTmpid;
-        if (functional_group[i] && functional_group[k]) {
-          add_functional_group(matoms, i, functional_group.get(), in_system, kTmpid);
-        }
-
-        rc++;
-      } else if (functional_group[i] &&
-                 functional_group[k])  // just adding extra's which are part of a
-                                       // functional group
-      {
-        in_system[k] = kTmpid;
-        add_functional_group(matoms, i, functional_group.get(), in_system, kTmpid);
-        rc++;
-      } else if (add_all_single_atom_ring_substituents && 1 == m.ncon(k)) {
-        in_system[k] = kTmpid;
-        rc++;
-      }
-
-      if (continue_chain_neighbours_through_multiple_bonds && 0 == m.nrings(k)) {
-        Atom* ak = const_cast<Atom*>(m.atomi(k));
-
-        if (ak->nbonds() > ak->ncon()) {
-          do_continue_chain_neighbours_through_multiple_bonds(m, i, k, in_system, kTmpid);
-        }
-        rc++;
-      }
-    }
-  }
-
-  if (rc) {
-    for (int i = 0; i < matoms; i++) {
-      //    cerr << "Atom " << i << " set " << in_system[i] << '\n';
-      if (kTmpid == in_system[i]) {
-        in_system[i] = uid;
-      }
-    }
-  }
-
-  // a zero return code is OK - just means no extra-ring double bonds found
-  return rc;
-}
-
-bool
-PerMoleculeData::AlreadySeen(const IWString& unique_smiles) {
-  if (found_this_molecule.contains(unique_smiles)) {
-    return true;
-  }
-
-  found_this_molecule.insert(unique_smiles);
-
-  return false;
-}
-
-static int
-smi2rings(Molecule& m,
-          std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-          IWString_and_File_Descriptor& output) {
-  if (! report_progress()) {
-  } else if (store_in_database) {
-    cerr << "Read " << iwstring::with_commas(molecules_read) << " molecules, found "
-         << iwstring::with_commas(new_ring_systems_stored) << " new ring systems\n";
-  } else {
+smi2rings(Molecule& m, IWString_and_File_Descriptor& output) {
+  if (!report_progress()) {
+  } else if constexpr (LookupMode) {
     cerr << "Read " << iwstring::with_commas(molecules_read) << ", "
          << iwstring::with_commas(exemplar_count[0]) << " unique ring systems found\n";
+  } else {
+    cerr << "Read " << iwstring::with_commas(molecules_read) << " molecules, found "
+         << iwstring::with_commas(database_builder->new_ring_systems())
+         << " new ring systems\n";
   }
 
   if (write_parent_structure || write_non_ring_atoms) {
@@ -2075,68 +656,30 @@ smi2rings(Molecule& m,
     output << ' ' << m.name() << '\n';
   }
 
-  int nr = m.nrings();
-
-  if (0 == nr) {  // that's OK, we just have nothing to do
+  if (m.nrings() == 0) {  // that's OK, we just have nothing to do
     return 1;
   }
 
-  PerMoleculeData mdata(m);
-  if (atom_typing.active()) {
-    mdata.AssignAtomTypes(atom_typing);
+  PerMoleculeData mdata(m, LookupMode);
+  if (!ring_extractor.Prepare(m, mdata)) {
+    return 0;
   }
 
-  if (singly_bonded_queries.number_elements()) {
-    mdata.IdentifyFunctionalGroups(m);
-  }
-
-  if (add_connected_atom_to_positive_aromatic_nitrogen ||
-      convert_positive_aromatic_nitrogen_to_neutral) {
-    mdata.IdentifyPositiveAromaticNitrogen(m);
-  }
-
-  mdata.IdentifyThreeConnectedAromaticSulphur(m);
-
-  return smi2rings(m, mdata, dbhash, output);
+  return smi2rings<LookupMode>(m, mdata, output);
 }
 
-/*
-  Until we get directional bonds in create_subset working, just strip
-  directional bonds. Besides there aren't any in rings
-*/
-
-static void
-Preprocess(Molecule& m) {
-  if (element_transformations.active()) {
-    (void)element_transformations.process(&m);
-  }
-
-  if (chemical_standardisation.active()) {
-    (void)chemical_standardisation.process(m);
-  }
-
-  m.revert_all_directional_bonds_to_non_directional();
-
-  if (remove_all_chiral_centres) {
-    m.remove_all_chiral_centres();
-  }
-
-  return;
-}
-
+template <bool LookupMode>
 static int
-smi2rings(data_source_and_type<Molecule>& input,
-          std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-          IWString_and_File_Descriptor& output) {
+smi2rings(data_source_and_type<Molecule>& input, IWString_and_File_Descriptor& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule()) && output.good()) {
     std::unique_ptr<Molecule> free_m(m);
 
-    Preprocess(*m);
+    preprocessor.Process(*m);
 
     molecules_read++;
 
-    if (!smi2rings(*m, dbhash, output)) {
+    if (!smi2rings<LookupMode>(*m, output)) {
       return 0;
     }
 
@@ -2146,10 +689,9 @@ smi2rings(data_source_and_type<Molecule>& input,
   return output.good();
 }
 
+template <bool LookupMode>
 static int
-smi2rings(const char* fname, FileType input_type,
-          std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>>& dbhash,
-          IWString_and_File_Descriptor& output) {
+smi2rings(const char* fname, FileType input_type, IWString_and_File_Descriptor& output) {
   assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
@@ -2159,7 +701,7 @@ smi2rings(const char* fname, FileType input_type,
 
   data_source_and_type<Molecule> input(input_type, fname);
   if (!input.good()) {
-    cerr << prog_name << ": cannot open '" << fname << "'\n";
+    cerr << "smi2rings: cannot open '" << fname << "'\n";
     return 1;
   }
 
@@ -2167,38 +709,7 @@ smi2rings(const char* fname, FileType input_type,
     input.set_verbose(1);
   }
 
-  return smi2rings(input, dbhash, output);
-}
-
-static int
-DoStore(const IWString& usmi,
-        const Smi2Rings::Ring& proto,
-        Db& database) {
-  Dbt dbkey((void*)usmi.data(), usmi.length());
-
-  static google::protobuf::TextFormat::Printer printer;  
-  printer.SetSingleLineMode(true);
-
-  std::string buffer;
-  if (! printer.PrintToString(proto, &buffer)) {
-    cerr << "PrintToString failed\n";
-    return 0;
-  }
-
-  Dbt dbdata((void*)buffer.data(), buffer.length());
-
-  return do_store(database, dbkey, dbdata);
-}
-
-static int
-WriteHash(absl::flat_hash_map<IWString, Smi2Rings::Ring>& dbhash,
-          Db* database) {
-  cerr << "Writing hash\n";
-  for (const auto& [usmi, proto] : dbhash) {
-    DoStore(usmi, proto, *database);
-  }
-
-  return 1;
+  return smi2rings<LookupMode>(input, output);
 }
 
 static void
@@ -2244,9 +755,21 @@ DisplayDashYOptions(std::ostream& output) {
   usage(1);
 }
 
+template <bool LookupMode>
+static int
+ProcessInputs(const Command_Line& cl, FileType input_type,
+              IWString_and_File_Descriptor& output) {
+  for (int i = 0; i < cl.number_elements(); ++i) {
+    if (!smi2rings<LookupMode>(cl[i], input_type, output)) {
+      return i + 1;
+    }
+  }
+  return 0;
+}
+
 static int
 smi2rings(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:T:i:d:j:D:g:nN:s:R:f:z:S:p:U:uycCaeY:");
+  Command_Line cl(argc, argv, "vE:A:i:d:j:D:g:nN:s:R:f:z:S:p:U:uycCaeY:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -2265,26 +788,20 @@ smi2rings(int argc, char** argv) {
   }
 
   if (cl.option_present('U')) {
-    cl.value('U', urs_string);
+    cl.value('U', lookup_options._urs_string);
 
     if (verbose) {
-      cerr << "URS string set to '" << urs_string << "'\n";
+      cerr << "URS string set to '" << lookup_options._urs_string << "'\n";
     }
 
-    if (urs_string.empty()) {
+    if (lookup_options._urs_string.empty()) {
       cerr << "Warning, zero length Unique Ring System string\n";
     }
   }
 
-  if (cl.option_present('T')) {
-    if (!element_transformations.construct_from_command_line(cl, verbose, 'T')) {
-      cerr << "Cannot parse -T option\n";
-      usage(11);
-    }
-  }
-
   if (cl.option_present('g')) {
-    if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
+    if (!preprocessor.standardisation().construct_from_command_line(cl, verbose > 1,
+                                                                    'g')) {
       usage(6);
     }
   }
@@ -2294,72 +811,72 @@ smi2rings(int argc, char** argv) {
     const_IWSubstring j;
     while (cl.value('j', j, i++)) {
       if ("all" == j) {
-        add_single_bonded_neighbours_to_rings = 2;
+        ring_extractor.options().set_add_single_bonded_neighbours_to_rings(2);
         if (verbose) {
           cerr << "Will include singly bonded atoms outside the ring system\n";
         }
       } else if ("iso" == j) {
-        label_attachment_points = 1;
+        ring_extractor.options().set_label_attachment_points(1);
         if (verbose) {
           cerr << "Isotopic labels applied at attachment points\n";
         }
       } else if ("isocon" == j) {
-        label_attachment_points = 2;
+        ring_extractor.options().set_label_attachment_points(2);
         if (verbose) {
           cerr << "The isotopic labels applied will be the number of connections\n";
         }
       } else if ("spiro" == j) {
-        bridge_across_spiro_groups = 1;
+        ring_extractor.options().set_bridge_across_spiro_groups(1);
         if (verbose) {
           cerr << "Will bridge across spiro fusions for ring systems\n";
         }
       } else if ("fg" == j) {
-        add_single_bonded_neighbours_to_rings = 1;
+        ring_extractor.options().set_add_single_bonded_neighbours_to_rings(1);
         if (verbose) {
           cerr << "Will add singly bonded, identified functional groups to the ring "
                   "system\n";
         }
       } else if ("double" == j) {
-        add_double_bonded_neighbors_to_rings = 1;
+        ring_extractor.options().set_add_double_bonded_neighbors_to_rings(1);
         if (verbose) {
           cerr << "Multiple bonds outside the ring system will be included\n";
         }
       } else if ("unsat" == j) {
-        continue_chain_neighbours_through_multiple_bonds = 1;
+        ring_extractor.options().set_continue_chain_neighbours_through_multiple_bonds(1);
         if (verbose) {
           cerr << "Will continue chain neighbours through multiple bonds\n";
         }
       } else if ("glaxo" == j) {
-        label_attachment_points = 1;
-        add_double_bonded_neighbors_to_rings = 1;
+        ring_extractor.options().set_label_attachment_points(1);
+        ring_extractor.options().set_add_double_bonded_neighbors_to_rings(1);
       } else if ("safg" == j) {
-        add_all_single_atom_ring_substituents = 1;
+        ring_extractor.options().set_add_all_single_atom_ring_substituents(1);
         if (verbose) {
           cerr << "Will add all single atom functional groups\n";
         }
       } else if ("env" == j) {
-        label_attachment_points_with_environment = 1;
+        ring_extractor.options().set_label_attachment_points_with_environment(1);
         if (verbose) {
           cerr << "isotopic labels will reflect environment\n";
         }
       } else if (j == "isoatt") {
-        label_attachment_points_with_existing_isotope = 1;
+        ring_extractor.options().set_label_attachment_points_with_existing_isotope(1);
         if (verbose) {
           cerr << "Isotopic labels are the isotope of the attached atom\n";
         }
       } else if (j.starts_with("env=")) {
         j.remove_leading_chars(4);
 
-        if (!atom_typing.build(j)) {
+        if (!ring_extractor.atom_typing().build(j)) {
           cerr << "Cannot determing atom typing for environment '" << j << "'\n";
           return 3;
         }
-        label_attachment_points_with_environment = 1;
+        ring_extractor.options().set_label_attachment_points_with_environment(1);
         if (verbose) {
           cerr << "Isotopic labels will reflect environment with type '" << j << "'\n";
         }
       } else if (j == "ring") {
-        always_process_unsubstituted_ring = 1;
+        ring_extractor.options().set_always_process_unsubstituted_ring(1);
         if (verbose) {
           cerr << "Will always examine the non-isotopically labelled ring\n";
         }
@@ -2372,60 +889,65 @@ smi2rings(int argc, char** argv) {
     }
   }
 
-  if (label_attachment_points_with_environment) {
-  } else if (label_attachment_points) {
-  } else if (always_process_unsubstituted_ring) {
+  if (ring_extractor.options()._label_attachment_points_with_environment) {
+  } else if (ring_extractor.options()._label_attachment_points) {
+  } else if (ring_extractor.options()._always_process_unsubstituted_ring) {
   } else {
     cerr << "Default action, store labelled attachment points\n";
-    label_attachment_points = 1;
+    ring_extractor.options().set_label_attachment_points(1);
   }
 
   if (cl.option_present('S')) {
-    if (!process_queries(cl, singly_bonded_queries, verbose, 'S')) {
+    if (!process_queries(cl, ring_extractor.functional_group_queries(), verbose, 'S')) {
       cerr << "Cannot parse functional group queries\n";
       usage(4);
     }
 
-    add_single_bonded_neighbours_to_rings = 1;
+    ring_extractor.options().set_add_single_bonded_neighbours_to_rings(1);
 
     if (verbose) {
-      cerr << "Defined " << singly_bonded_queries.number_elements()
+      cerr << "Defined " << ring_extractor.functional_group_queries().number_elements()
            << " queries for singly bonded functional groups\n";
     }
 
-    for (int i = 0; i < singly_bonded_queries.number_elements(); i++) {
-      singly_bonded_queries[i]->set_find_unique_embeddings_only(1);
+    for (int i = 0; i < ring_extractor.functional_group_queries().number_elements();
+         i++) {
+      ring_extractor.functional_group_queries()[i]->set_find_unique_embeddings_only(1);
     }
   }
 
   if (cl.option_present('a')) {
-    report_all_ring_uniqueness_measurements_looked_up = 0;
+    lookup_options._report_all_ring_uniqueness_measurements_looked_up = 0;
     if (verbose) {
       cerr << "Will only report the rarest ring system during lookups\n";
     }
   }
 
   if (cl.option_present('z')) {
+    int max_ring_size_to_consider;
     if (!cl.value('z', max_ring_size_to_consider) || max_ring_size_to_consider < 3) {
       cerr << "The max ring size to consider option (-z) must be followed by a whole "
               "number > 2\n";
       usage(41);
     }
 
+    ring_extractor.options().set_max_ring_size_to_consider(max_ring_size_to_consider);
+
     if (verbose) {
-      cerr << "Will not consider rings larger than " << max_ring_size_to_consider << '\n';
+      cerr << "Will not consider rings larger than "
+           << ring_extractor.options()._max_ring_size_to_consider << '\n';
     }
   }
 
   if (cl.option_present('e')) {
-    discard_molecules_where_ring_is_whole_molecule = 1;
+    ring_extractor.options().set_discard_molecules_where_ring_is_whole_molecule(1);
 
     if (verbose) {
       cerr << "Discard molecules where the ring is the whole molecule\n";
     }
   }
 
-  if (! cl.option_present('d')) {
+  if (!cl.option_present('d')) {
     cerr << "Must specify database(s) to process via the -d option\n";
     usage(1);
   }
@@ -2468,7 +990,7 @@ smi2rings(int argc, char** argv) {
       usage(17);
     }
 
-    databases.resize(dbnames.number_elements());
+    databases.reserve(dbnames.number_elements());
     for (IWString& dbname : dbnames) {
       std::unique_ptr<Db> db(new Db(NULL, DB_CXX_NO_EXCEPTIONS));
       if (int rc =
@@ -2492,7 +1014,7 @@ smi2rings(int argc, char** argv) {
       usage(5);
     }
 
-    label_ring_atoms = 1;
+    ring_extractor.options().set_label_ring_atoms(1);
 
     if (verbose) {
       cerr << "Atoms labelled by ring system membership\n";
@@ -2504,14 +1026,19 @@ smi2rings(int argc, char** argv) {
   }
 
   if (cl.option_present('R')) {
+    int max_ring_system_size_to_consider;
     if (!cl.value('R', max_ring_system_size_to_consider) ||
         max_ring_system_size_to_consider < 1) {
       cerr << "The -R option must be followed by a whole positive number\n";
       usage(39);
     }
 
+    ring_extractor.options().set_max_ring_system_size_to_consider(
+        max_ring_system_size_to_consider);
+
     if (verbose) {
-      cerr << "Ring systems with more than " << max_ring_system_size_to_consider
+      cerr << "Ring systems with more than "
+           << ring_extractor.options()._max_ring_system_size_to_consider
            << " rings will be ignored\n";
     }
   }
@@ -2528,12 +1055,12 @@ smi2rings(int argc, char** argv) {
     const_IWSubstring n;
     while (cl.value('N', n, i++)) {
       if ("add" == n) {
-        add_connected_atom_to_positive_aromatic_nitrogen = 1;
+        ring_extractor.options().set_add_connected_atom_to_positive_aromatic_nitrogen(1);
         if (verbose) {
           cerr << "Will add connected atoms to positive aromatic nitrogens\n";
         }
       } else if ("neut" == n) {
-        convert_positive_aromatic_nitrogen_to_neutral = 1;
+        ring_extractor.options().set_convert_positive_aromatic_nitrogen_to_neutral(1);
         if (verbose) {
           cerr << "Will convert positive aromatic nitrogen to neutral form\n";
         }
@@ -2590,20 +1117,20 @@ smi2rings(int argc, char** argv) {
       if (f.starts_with("file=") || f.starts_with("FILE=")) {
         f.remove_leading_chars(5);
         fname = f;
-      } else if (!f.numeric_value(min_urs_needed) || min_urs_needed < 1) {
+      } else if (!f.numeric_value(lookup_options._min_urs_needed) ||
+                 lookup_options._min_urs_needed < 1) {
         cerr << "The filter option requires a whole non-negative cutoff (-f)\n";
         usage(2);
       }
     }
 
     if (verbose) {
-      cerr << "Will discard molecules with URS values below " << min_urs_needed << "\n";
+      cerr << "Will discard molecules with URS values below "
+           << lookup_options._min_urs_needed << "\n";
     }
 
     if (!fname.empty()) {
-      if (!fname.ends_with(".smi")) {
-        fname << ".smi";
-      }
+      fname.EnsureEndsWith(".smi");
       if (!stream_for_rejected_molecules.open(fname)) {
         cerr << "Cannot open stream for discarded molecules '" << fname << "'\n";
         return 0;
@@ -2615,12 +1142,12 @@ smi2rings(int argc, char** argv) {
   }
 
   if (cl.option_present('c')) {
-    remove_all_chiral_centres = 1;
+    preprocessor.options().set_remove_chirality(1);
     if (verbose) {
       cerr << "Chirality will be discarded\n";
     }
   } else if (cl.option_present('C')) {
-    remove_invalid_chiral_centres = 1;
+    ring_extractor.options().set_remove_invalid_chiral_centres(1);
     if (verbose) {
       cerr << "Will remove any invalid chiral centres in rings produced\n";
     }
@@ -2630,7 +1157,7 @@ smi2rings(int argc, char** argv) {
     const_IWSubstring y;
     for (int i = 0; cl.value('Y', y, i); ++i) {
       if (y == "smi3d") {
-        write_3d_smiles_if_needed = 1;
+        ring_extractor.options().set_write_3d_smiles_if_needed(1);
         if (verbose) {
           cerr << "Will write 3D smiles if coordinates present\n";
         }
@@ -2647,10 +1174,10 @@ smi2rings(int argc, char** argv) {
       } else if (y.starts_with("writemissing=")) {
         y.remove_leading_chars(13);
         IWString fname(y);
-        if (! fname.ends_with(".smi")) {
+        if (!fname.ends_with(".smi")) {
           fname << ".smi";
         }
-        if (! stream_for_missing_ring_systems.open(fname)) {
+        if (!stream_for_missing_ring_systems.open(fname)) {
           cerr << "Cannot open stream for missing rings '" << fname << "'\n";
           return 1;
         }
@@ -2658,18 +1185,18 @@ smi2rings(int argc, char** argv) {
           cerr << "Missing rings written to '" << fname << "'\n";
         }
       } else if (y == "hash") {
-        hash_store = 1;
+        build_options.set_cache(1);
         if (verbose) {
           cerr << "Will cache rings and flush at the end\n";
         }
       } else if (y == "applarge") {
-        append_largest_ring_size_if_no_match = 1;
+        lookup_options._append_largest_ring_size_if_no_match = 1;
         if (verbose) {
           cerr << "For molecules with missing rings, append size of largest ring\n";
         }
       } else if (y.starts_with("rpt=")) {
         uint32_t rpt;
-        if (! y.numeric_value(rpt) || rpt == 0) {
+        if (!y.numeric_value(rpt) || rpt == 0) {
           cerr << "Invalid report progress directive '" << y << "'\n";
           return 1;
         }
@@ -2678,7 +1205,7 @@ smi2rings(int argc, char** argv) {
           cerr << "Will report progress every " << rpt << " molecules processed\n";
         }
       } else if (y == "scaffold") {
-        use_scaffolds = 1;
+        ring_extractor.options().set_use_scaffolds(1);
         if (verbose) {
           cerr << "Will store and lookup scaffolds\n";
         }
@@ -2711,24 +1238,31 @@ smi2rings(int argc, char** argv) {
 
   IWString_and_File_Descriptor output(1);
 
-  std::unique_ptr<absl::flat_hash_map<IWString, Smi2Rings::Ring>> dbhash;
-  if (hash_store) {
-    dbhash = std::make_unique<absl::flat_hash_map<IWString, Smi2Rings::Ring>>();
-  }
-
-  int rc = 0;
-  for (int i = 0; i < cl.number_elements(); i++) {
-    if (!smi2rings(cl[i], input_type, dbhash, output)) {
-      rc = i + 1;
-      break;
+  if (store_in_database) {
+    if (databases.empty()) {
+      cerr << "No database specified for storage\n";
+      return 1;
     }
+    database_builder = std::make_unique<smi2rings_bdb::RingDatabaseBuilder>(
+        *databases[0], build_options);
   }
-
-  if (hash_store) {
-    if (verbose) {
-      cerr << "Writing " << dbhash->size() << " ring systems to the database\n";
+  int rc;
+  if (lookup_in_database) {
+    rc = ProcessInputs<true>(cl, input_type, output);
+  } else if (store_in_database) {
+    rc = ProcessInputs<false>(cl, input_type, output);
+  } else {
+    cerr << "Specify a database build or lookup mode\n";
+    return 1;
+  }
+  if (database_builder) {
+    if (build_options._cache && verbose) {
+      cerr << "Writing " << database_builder->pending_ring_systems()
+           << " ring systems to the database\n";
     }
-    WriteHash(*dbhash, databases[0]);
+    if (!database_builder->Finish()) {
+      rc = 1;
+    }
   }
 
   output.flush();
@@ -2761,7 +1295,7 @@ smi2rings(int argc, char** argv) {
     cerr << '\n';
 
     if (store_in_database) {
-      cerr << "Stored " << new_ring_systems_stored << " new ring systems\n";
+      cerr << "Stored " << database_builder->new_ring_systems() << " new ring systems\n";
     } else {
       cerr << "Found " << molecules_with_unique_ring_systems_found
            << " molecules with unique ring systems, "
@@ -2769,7 +1303,8 @@ smi2rings(int argc, char** argv) {
       cerr << "Exemplar count values btw " << acc_exemplar.minval() << " and "
            << acc_exemplar.maxval() << " average "
            << static_cast<float>(acc_exemplar.average()) << "\n";
-      cerr << "Note examplar counts are truncated at " << max_exemplar_count << '\n';
+      cerr << "Note examplar counts are truncated at "
+           << lookup_options._max_exemplar_count << '\n';
       for (int i = 0; i < exemplar_count.number_elements(); ++i) {
         if (exemplar_count[i]) {
           cerr << exemplar_count[i] << " rings had exemplar count " << i << '\n';
@@ -2777,9 +1312,9 @@ smi2rings(int argc, char** argv) {
       }
     }
 
-    if (min_urs_needed > 0) {
+    if (lookup_options._min_urs_needed > 0) {
       cerr << discarded_for_urs_too_low << " molecules discarded for URS below "
-           << min_urs_needed << '\n';
+           << lookup_options._min_urs_needed << '\n';
     }
   }
 
@@ -2788,8 +1323,6 @@ smi2rings(int argc, char** argv) {
 
 int
 main(int argc, char** argv) {
-  prog_name = argv[0];
-
   int rc = smi2rings(argc, argv);
 
   return rc;

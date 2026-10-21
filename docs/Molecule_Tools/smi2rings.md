@@ -238,52 +238,106 @@ a minimum 'URS' value for output. Note again that most collections contain
 likely data entry errors. In practice, we have found a value of 5 or 10 for '-f' to
 be a reasonable compromise. Adjust to taste.
 
-## C++ lookup library and refactoring status
+## C++ library
 
-The first stage of the library refactor is available in
-`Molecule_Tools_Bdb/ring_database_lookup.h`. `smi2rings_bdb::RingDatabaseReader`
-owns one or more read-only BerkeleyDB handles and looks up an existing ring
-unique-SMILES key. It returns a structured result with count, exemplar, and the
-number of databases containing the key:
+The command-line tool now uses shared ring extraction and preprocessing code,
+with separate database-building and molecule-lookup objects. Stored keys and
+`Smi2Rings::Ring` values retain their existing format. Python bindings are a
+separate next step; these interfaces provide the reusable C++ implementation.
+
+### Molecule lookup
+
+`Molecule_Tools_Bdb/ring_system_lookup.h` provides `smi2rings_bdb::RingSystemLookup`:
 
 ```cpp
-smi2rings_bdb::RingDatabaseReader reader;
-if (!reader.Open({"rings.bdb"})) {
-  // Opening failed; databases are never created by this reader.
+smi2rings_bdb::RingSystemLookup lookup;
+// Attachment-labelled keys are enabled by default. Enable bare-ring fallback:
+lookup.extractor().options().set_always_process_unsubstituted_ring(1);
+if (!lookup.Open({"rings.bdb"})) {
+  return false;
 }
-smi2rings_bdb::RingLookupResult result;
-auto status = reader.Lookup(ring_unique_smiles, result);
+std::vector<smi2rings_bdb::RingSystemMatch> results;
+if (!lookup.Lookup(molecule, results)) {
+  return false;
+}
 ```
 
-`LookupStatus` distinguishes `kFound`, `kNotFound`, and `kError`. Missing keys and
-errors clear the result; database access errors and malformed stored textprotos
-are errors rather than ordinary misses. Across multiple databases, the returned
-count is the maximum count, not the sum. Equal maxima retain the last database's
-exemplar, matching the existing tool's tie behaviour. Each reader has independent
-handles. Opening a replacement collection is transactional: failed opens leave
-previously opened databases available. Handles close on object destruction.
-The same reader should not be used concurrently from multiple threads.
+Configure the object once and reuse it. Extraction settings must match those
+used to build the database; the database does not infer those settings.
+`Lookup` preserves the input by making one working molecule copy.
+`LookupInPlace` avoids that whole-molecule copy and can modify the supplied
+molecule. Both still construct ring subsets when generating keys.
 
-The public Bazel targets are `//Molecule_Tools_Bdb:ring_database_lookup` for the
-static BerkeleyDB dependency and `:ring_database_lookup_shared` for the shared
-BerkeleyDB dependency used by the optional Python module. The CLI uses the same
-lookup implementation through `LookupRingInDatabases`, which accepts a view of
-its existing database handles. Stored keys and `Smi2Rings::Ring` values are unchanged.
+Each result describes an eligible ring system, whether it was found, the
+representation and key that matched, and its database count and exemplar.
+Missing keys are ordinary results with `_found == false`. Acyclic molecules,
+or molecules whose ring systems are all excluded by extraction limits, succeed
+with an empty result vector. Errors return false and clear the result vector.
+Sorting, URS filtering, formatting, and reporting remain CLI responsibilities.
 
-Multi-database lookups now stop when a more-specific representation is found,
-matching single-database behaviour. Previously, the multi-database path reported
-a miss even after finding a key, allowing a later bare-ring fallback to overwrite
-an attachment-specific result.
+### Preprocessing and extraction
 
-This is a database-lookup component, not yet a molecule-processing API. Extraction
-settings, chemical preprocessing, key generation, building/caching, and CLI
-formatting remain in the command-line tool. The next stage is to move the shared
-ring extraction and its configuration into an object, then expose molecule lookup
-through the optional `lillymol_bdb` Python module. Python bindings are not added
-by this first stage. Both store and lookup must continue using the same key-generation
-rules, including attachment labels, environmental atom types, and scaffold/spiro
-settings.
+`ring_preprocessing.h` provides `RingPreprocessor`. Standardisation is disabled
+by default. To explicitly activate the existing all-standardisations profile:
 
-Tests include `//Molecule_Tools_Bdb:ring_database_lookup_test` and the
-`test/smi2rings_bdb` executable regression. The regression builds its own temporary
-databases, so BerkeleyDB database files are not checked into the repository.
+```cpp
+if (!lookup.preprocessor().SetStandardisation(IWString("all"))) {
+  return false;
+}
+lookup.preprocessor().options().set_remove_isotopes(true);
+```
+
+Other standardisation directives can be supplied in the same way. Preprocessing
+runs in this order: optional largest-fragment selection, element transformations,
+standardisation, optional input-isotope removal, directional-bond stripping, and
+optional chirality removal. Largest-fragment selection, isotope removal, and
+chirality removal are disabled by default; directional-bond stripping is enabled
+to preserve the CLI default. Input-isotope removal happens before extraction and
+does not remove attachment labels subsequently generated for database keys.
+
+`ring_extraction.h` provides `RingExtractor` and `RingExtractionOptions` for both
+building and lookup. Atom typing and functional-group queries belong to the
+extractor. Key generation retains the existing ordering: environmental context,
+existing isotopes where requested for lookup, attachment labels, then bare rings.
+Only enabled representations are attempted, and lookup stops at the first match.
+The existing CLI flags configure these shared objects.
+
+### Database access and building
+
+`ring_database_lookup.h` also exposes the lower-level `RingDatabaseReader` for
+looking up an already generated unique-SMILES key. It owns read-only database
+handles and never creates databases. `LookupStatus` distinguishes `kFound`,
+`kNotFound`, and `kError`; missing keys and errors clear the result. Database
+access errors and malformed stored textprotos are errors rather than misses.
+Across multiple databases, counts use the maximum rather than the sum; equal
+maxima retain the last database's exemplar. Failed replacement opens leave the
+previous collection available, and handles close on destruction.
+
+`ring_database_builder.h` provides `RingDatabaseBuilder`. It can own a database
+opened with `Open`, or borrow a CLI-owned handle. `Store(key, exemplar)` updates
+a key; the caller must suppress duplicate keys within each input molecule.
+Call `Finish` explicitly to flush cached records and synchronise the database.
+Successful repeated `Finish` calls are harmless, and cached memory is released.
+
+Direct builds increment existing counts. Cached builds preserve the historical
+CLI behaviour: cached counts replace existing counts for the affected keys.
+Use a fresh database for cached builds when replacement is not intended.
+The first exemplar is retained within each build's accumulated records.
+
+Each object owns its configuration and working resources. Do not use the same
+object concurrently. The legacy coordinate-SMILES formatting setting is restored
+after extraction, but it remains a process-wide setting.
+
+### Build and tests
+
+Public Bazel targets include `:ring_extraction`, `:ring_preprocessing`,
+`:ring_system_lookup`, `:ring_database_lookup`, and `:ring_database_builder` under
+`//Molecule_Tools_Bdb`. Database-dependent libraries also have `_shared` variants
+for consumers using shared BerkeleyDB, including future Python bindings.
+
+The three unit-test targets are `:ring_database_lookup_test`,
+`:ring_system_lookup_test`, and `:ring_database_builder_test`. The executable
+regressions under `test/smi2rings_bdb` build temporary databases rather than
+checking binary database files into the repository. They cover direct and cached
+builds, multiple-database fallback, and eight extraction configurations with text
+and proto output checked against the pre-refactor optimised executable.
