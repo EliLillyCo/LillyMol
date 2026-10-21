@@ -512,7 +512,7 @@ def generate_transformed_molecules(smiles, options)
   # Lookup writes matching products to found and unmatched products to notfound;
   # the latter are candidates for model scoring.
   run_command(
-    [options.fetch(:buildsmidb), '-d', options.fetch(:database), '-g', 'all', '-l', '-c', smiles],
+    [options.fetch(:buildsmidb), '-d', options.fetch(:database), '-g', 'all', '-p', '-l', '-c', smiles],
     verbose: options.fetch(:verbose)
   )
 
