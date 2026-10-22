@@ -15,9 +15,7 @@
 
 #include "Utilities/General/linear_scaling.h"
 
-#ifndef __APPLE__
 #include "xgboost/json_io.h"
-#endif
 #include "xgboost/c_api.h"
 
 #ifdef BUILD_BAZEL
