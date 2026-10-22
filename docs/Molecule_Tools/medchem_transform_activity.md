@@ -71,3 +71,53 @@ measured and predicted effects.
 
 For an offline report with molecular examples, distributions, sorting, and count
 filters, see [Medchem transformation activity report](medchem_transform_activity_html.md).
+
+## Sorting candidates for prediction
+
+After database lookup, `generate` and `run` sort the not-found molecules by
+ascending atom count using `msort_parallel -k natoms`. The sorted structures
+replace the contents of the same not-found file, so external scoring and
+`--model-command` consume the sorted candidates. Combined molecule/reaction
+identifiers are retained. All candidates are retained unless per-reaction sampling
+is enabled as described below.
+
+Sorting uses eight threads by default. Override the thread count or executable:
+
+```shell
+medchem_transform_activity.rb generate -d structures.bdb \
+  --sort-threads 4 --msort-parallel /path/to/msort_parallel input.smi
+```
+
+For small files, the thread count is capped at the number of nonblank records.
+Empty files are left untouched. Sorting writes to a temporary file in the same
+directory and replaces the not-found file only after success and verification
+that its byte size matches the original. A sorting failure or size mismatch
+stops processing and leaves the original lookup output intact. `analyse` and
+`restart` do not invoke the sorter.
+
+## Sampling candidates by reaction
+
+Use `--max-per-reaction N` to retain at most N products for each reaction from
+the sorted not-found file:
+
+```shell
+medchem_transform_activity.rb generate -d structures.bdb \
+  --max-per-reaction 100 --sort-threads 8 input.smi
+```
+
+Sampling runs after atom-count sorting in both `generate` and `run`, so the
+smallest products are retained first. This favours simpler molecules for estimating
+transformation effects. It does not limit reuse of a starting molecule.
+No sampling is performed unless the option is supplied; N must be positive.
+
+The script invokes `unique_rows -c 2 -r N -subset '.*__MCTA__(.*)'` to count only
+the reaction portion of each combined identifier. Different starting identifiers
+therefore share the same per-reaction allowance. Full identifiers, structures,
+and sorted order remain intact. `--unique-rows EXE` selects a different executable;
+otherwise `unique_rows` is resolved through PATH.
+
+The sampled output replaces the same not-found file only after the command
+succeeds. Unlike sorting, sampling intentionally reduces file size. If sampling
+fails, the sorted file remains intact and scoring does not start. Empty files
+skip sampling. Found molecules and their experimental summaries are unaffected;
+`analyse` and `restart` do not sample existing results.

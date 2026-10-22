@@ -9,6 +9,7 @@ require 'optparse'
 require 'rbconfig'
 require 'shellwords'
 require 'tmpdir'
+require 'tempfile'
 
 # Group activity changes by transformation, keeping measured and model-predicted
 # changes separate. Run mode generates and looks up transformed molecules first;
@@ -58,9 +59,9 @@ def quote_command(argv)
   argv.map(&:to_s).shelljoin
 end
 
-def run_command(argv, verbose:)
+def run_command(argv, verbose:, stdout: nil)
   warn quote_command(argv) if verbose
-  system(*argv)
+  stdout ? system(*argv, out: stdout) : system(*argv)
   die "Command failed: #{quote_command(argv)}" unless $CHILD_STATUS.success?
 end
 
@@ -440,6 +441,10 @@ def default_options
     buildsmidb: 'buildsmidb_bdb',
     in_database: 'in_database_bdb',
     medchem_wizard: 'medchem_wizard.sh',
+    msort_parallel: 'msort_parallel',
+    sort_threads: 8,
+    unique_rows: 'unique_rows',
+    max_per_reaction: nil,
     output: '-',
     profile_json: nil,
     reactions: nil,
@@ -475,6 +480,22 @@ def add_common_options(opts, options)
   opts.on('--medchem-wizard EXE', 'medchem_wizard executable, default medchem_wizard.sh') do |value|
     options[:medchem_wizard] = value
   end
+  opts.on('--msort-parallel EXE', 'Sorter executable, default msort_parallel') do |value|
+    options[:msort_parallel] = value
+  end
+  opts.on('--sort-threads N', Integer, 'Threads for sorting not-found molecules, default 8') do |value|
+    raise OptionParser::InvalidArgument, '--sort-threads must be positive' unless value.positive?
+
+    options[:sort_threads] = value
+  end
+  opts.on('--unique-rows EXE', 'Sampling executable, default unique_rows') do |value|
+    options[:unique_rows] = value
+  end
+  opts.on('--max-per-reaction N', Integer, 'Retain at most N smallest products per reaction; default all') do |value|
+    raise OptionParser::InvalidArgument, '--max-per-reaction must be positive' unless value.positive?
+
+    options[:max_per_reaction] = value
+  end
   opts.on('--keep', 'Keep temporary found/notfound files') { options[:keep] = true }
   opts.on('-v', '--verbose', 'Verbose execution') { options[:verbose] = true }
 end
@@ -507,6 +528,57 @@ def parse_command_line(argv)
   [mode, options, parser, argv]
 end
 
+# Keep the lookup output intact until sorting has completed successfully. The
+# same notfound path is then used by external scorers and generate-mode users.
+def sort_notfound_molecules(options)
+  notfound = options.fetch(:notfound)
+  threads = options.fetch(:sort_threads)
+  # msort_parallel requires at least one molecule per thread. We only need to
+  # count up to the requested thread count, not scan a potentially huge file.
+  records = 0
+  File.foreach(notfound) do |line|
+    next if line.strip.empty?
+
+    records += 1
+    break if records == threads
+  end
+  return if records.zero?
+
+  original_size = File.size(notfound)
+  threads = [threads, records].min
+  command = [options.fetch(:msort_parallel), '-k', 'natoms', '-h', threads.to_s,
+             '-i', 'smi', notfound]
+  Tempfile.create(['mcta_sorted_', '.smi'], File.dirname(notfound)) do |sorted|
+    run_command(command, verbose: options.fetch(:verbose), stdout: sorted)
+    sorted.close
+    sorted_size = File.size(sorted.path)
+    if sorted_size != original_size
+      die "Sorted file size mismatch for #{notfound}: #{original_size} bytes before sorting, #{sorted_size} bytes after sorting"
+    end
+    File.rename(sorted.path, notfound)
+  end
+end
+
+# Sorting puts the smallest products first. Sample by reaction alone, while
+# preserving the complete identifier for subsequent scoring and analysis.
+def sample_notfound_molecules(options)
+  limit = options[:max_per_reaction]
+  return unless limit
+
+  notfound = options.fetch(:notfound)
+  return if File.zero?(notfound)
+
+  subset = ".*#{Regexp.escape(NAME_SEPARATOR)}(.*)"
+  # -whash avoids unique_rows' legacy quick exit, which can hide read errors.
+  command = [options.fetch(:unique_rows), '-c', '2', '-r', limit.to_s,
+             '-subset', subset, '-whash', notfound]
+  Tempfile.create(['mcta_sampled_', '.smi'], File.dirname(notfound)) do |sampled|
+    run_command(command, verbose: options.fetch(:verbose), stdout: sampled)
+    sampled.close
+    File.rename(sampled.path, notfound)
+  end
+end
+
 def generate_transformed_molecules(smiles, options)
   # Index the starting molecules, then stream wizard products into the lookup.
   # Lookup writes matching products to found and unmatched products to notfound;
@@ -523,6 +595,8 @@ def generate_transformed_molecules(smiles, options)
   ]
   validator = [RbConfig.ruby, File.expand_path(__FILE__), '--validate-generated-names']
   run_pipeline([medchem, validator, lookup], verbose: options.fetch(:verbose))
+  sort_notfound_molecules(options)
+  sample_notfound_molecules(options)
 end
 
 def analyse_transformations(options, activity_ids = nil)
