@@ -139,6 +139,13 @@ Command_Line::Command_Line(int argc, char ** argv, const char * options)
   {
     if ('?' == o)
     {
+#if defined(__APPLE__)
+      // BSD getopt can advance optind past argc when a required value is
+      // missing. In that case argv[optind - 1] is the terminating nullptr.
+      if (optind > argc || argv[optind - 1] == nullptr)
+        cerr << "Command_Line: unrecognised option '-" << static_cast<char>(optopt) << "'\n";
+      else
+#endif
       cerr << "Command_Line: unrecognised option '" << argv[optind - 1] << "'\n";
       _unrecognised_options_encountered++;
     }
@@ -148,6 +155,13 @@ Command_Line::Command_Line(int argc, char ** argv, const char * options)
       _options.add(tmp);
     }
   }
+
+#if defined(__APPLE__)
+  // With a missing required value, BSD getopt advances one past parse_argc.
+  // Operands permuted behind the option prefix begin at parse_argc.
+  if (optind > parse_argc)
+    optind = parse_argc;
+#endif
 
   resize (argc - optind);
 
