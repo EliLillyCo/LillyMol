@@ -1030,11 +1030,10 @@ class Dicer_Arguments {
 
   resizable_array_p<FixedBitVector> _stored_bit_vectors;
 
-  //  At every step of the recursion, we need to keep track of
-  //  the correspondence between the atom numbers in the fragment
-  //  molecules, and the atom number of that atom in the initial molecule
+  // Parent-to-current atom mapping, with a separate slice per recursive
+  // invocation. Unlike _xref, this remains unchanged while cuts are explored.
 
-  int* _atom_number_in_initial_molecule;
+  int* _parent_to_current;
 
   //  The xref array is used by create_subset()
 
@@ -1200,14 +1199,16 @@ class Dicer_Arguments {
     return _recursion_depth < _max_recursion_depth_this_molecule;
   }
 
+  // process() runs one depth deeper than the invocation that built the map.
   const int*
-  parent_atom_number_in_initial_molecule() const {
-    return _atom_number_in_initial_molecule + (_recursion_depth - 1) * _atoms_in_molecule;
+  parent_to_current_mapping_for_cut() const {
+    assert(_recursion_depth > 0);
+    return _parent_to_current + (_recursion_depth - 1) * _atoms_in_molecule;
   }
 
   int*
-  atom_number_in_initial_molecule() {
-    return _atom_number_in_initial_molecule + _recursion_depth * _atoms_in_molecule;
+  parent_to_current_mapping() {
+    return _parent_to_current + _recursion_depth * _atoms_in_molecule;
   }
 
   int*
@@ -1266,7 +1267,7 @@ Dicer_Arguments::Dicer_Arguments(int mrd) {
 
   _max_recursion_depth_this_molecule = mrd;
 
-  _atom_number_in_initial_molecule = nullptr;
+  _parent_to_current = nullptr;
 
   _xref = nullptr;
 
@@ -1298,8 +1299,8 @@ Dicer_Arguments::~Dicer_Arguments() {
   }
 
 
-  if (nullptr != _atom_number_in_initial_molecule) {
-    delete[] _atom_number_in_initial_molecule;
+  if (nullptr != _parent_to_current) {
+    delete[] _parent_to_current;
   }
 
   if (nullptr != _atom_type) {
@@ -1331,13 +1332,7 @@ Dicer_Arguments::set_array_size(int s) {
 
   // cerr << "array_size " << array_size << '\n';
 
-  _atom_number_in_initial_molecule = new int[array_size];
-
-  // Set the first chunk of the atom number array
-
-  for (int i = 0; i < s; i++) {
-    _atom_number_in_initial_molecule[i] = i;
-  }
+  _parent_to_current = new int[array_size];
 
   _xref = new_int(array_size, -1);
 
@@ -5588,43 +5583,6 @@ do_write_to_stream_for_post_breakage(
   return 1;
 }
 
-static int
-convert_to_atom_numbers_in_current_molecule(const Molecule& m, const atom_number_t a1,
-                                            atom_number_t& t1, const atom_number_t a2,
-                                            atom_number_t& t2) {
-  t1 = INVALID_ATOM_NUMBER;
-  t2 = INVALID_ATOM_NUMBER;
-
-  for (int i = m.natoms() - 1; i >= 0; i--) {
-    const Atom* a = m.atomi(i);
-
-    const void* v = a->user_specified_void_ptr();
-    if (nullptr == v) {
-      continue;
-    }
-
-    atom_number_t x = *(reinterpret_cast<const atom_number_t*>(v));
-    //  cerr << "Atom " << i << " was atom " << x << '\n';
-
-    if (x == a1) {
-      t1 = i;
-      if (INVALID_ATOM_NUMBER != t2) {
-        return 1;
-      }
-    } else if (x == a2) {
-      t2 = i;
-      if (INVALID_ATOM_NUMBER != t1) {
-        return 1;
-      }
-    }
-  }
-
-  // cerr << "Gack, no match for atom numbers " << a1 << " (" << t1 << ") and/or " << a2
-  // << " (" << t2 << ")\n";
-
-  return 0;
-}
-
 #ifdef NOT_NEEDED_HERE
 atom_number_t
 atom_number_in_current_molecule(const Molecule& m, const int* xref, atom_number_t a) {
@@ -5695,9 +5653,10 @@ Chain_Bond_Breakage::_process(Molecule& m0, Dicer_Arguments& dicer_args,
     return 0;
   }
 
-  atom_number_t j1, j2;
-  // Not in this fragment.
-  if (!convert_to_atom_numbers_in_current_molecule(m0, a1(), j1, a2(), j2)) {
+  const int* parent_to_current = dicer_args.parent_to_current_mapping_for_cut();
+  const atom_number_t j1 = parent_to_current[a1()];
+  const atom_number_t j2 = parent_to_current[a2()];
+  if (j1 < 0 || j2 < 0) {  // An endpoint is absent from this fragment.
     return 0;
   }
 
@@ -6428,7 +6387,12 @@ dicer(Molecule& m, Dicer_Arguments& dicer_args, Breakages& breakages,
        << " iterator " << bi.state() << '\n';
 #endif
 
-  const Dicer_Transformation* dt = bi.current_transformation(breakages);
+  const Dicer_Transformation* dt = bi.current_transformation(breakages);  if (dt != nullptr) {
+    // Build once for this molecule, before process() increments the depth.
+    // Descendants use later slices; ring transformations use separate scratch.
+    initialise_xref(m, dicer_args, dicer_args.parent_to_current_mapping());
+  }
+
   while (nullptr != dt) {
 #ifdef DEBUG_DICER
     std::cerr << "####" << dicer_args.recursion_depth() << "  --  " << bi.state()
