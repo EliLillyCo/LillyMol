@@ -45,7 +45,8 @@ if [[ -d '/node/scratch' ]] ; then
 else
   # except='except (//Vendor:all union //Obsolete:all union //Duplicates:all)'
   # Install Vendor targets that have been built.
-  except='except (//Obsolete:all union //Duplicates:all)'
+  # pybind is still in the repo, will be discarded eventually.
+  except='except (//Obsolete:all union //Duplicates:all union pybind:all)'
 fi
 
 targets=$(bazelisk ${bazel_options} query "$@" "kind(cc_binary, //...:all ${except} ) union kind(go_binary, //...:all ${except} )")
