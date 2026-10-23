@@ -465,11 +465,12 @@ if [[ -v BUILD_PYTHON ]] ; then
         python_targets+=(//nanobind:lillymol_depict)
     fi
     ${bazel} ${bazel_options} build ${build_options} "${python_targets[@]}"
-    ${bazel} ${bazel_options} test ${build_options} //nanobind:all
+    ${bazel} ${bazel_options} test ${build_options} --test_env=LILLYMOL_HOME=${LILLYMOL_HOME} //nanobind:all
     if [[ -v BUILD_SCHRODINGER_2D ]] ; then
         ${bazel} ${bazel_options} test ${build_options} //nanobind:lillymol_nb_depict_test
     fi
     ./copy_shared_libraries.sh $REPO_HOME/lib 
 
+    # This is really not needed, the unit tests are run via Bazel.
     ./run_python_unit_tests.sh
 fi
