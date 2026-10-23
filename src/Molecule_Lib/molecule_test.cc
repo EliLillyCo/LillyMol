@@ -807,7 +807,9 @@ TEST(DeleteAllFragmentsExcept, KeepsSelectedFragmentAndReturnsRemovedAtomCount) 
 TEST(DeleteAllFragmentsExcept, RejectsInvalidInputWithoutChangingMolecule) {
   for (const char* smiles : {"", "CC", "CC.O.N"}) {
     Molecule mol;
-    if (*smiles) ASSERT_TRUE(mol.build_from_smiles(smiles));
+    if (*smiles) {
+      ASSERT_TRUE(mol.build_from_smiles(smiles));
+    }
     mol.set_name("invalid_input");
     const IWString before = mol.unique_smiles();
     const int natoms = mol.natoms();
