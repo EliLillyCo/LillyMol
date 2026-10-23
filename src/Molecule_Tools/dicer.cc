@@ -5695,17 +5695,19 @@ Chain_Bond_Breakage::_process(Molecule& m0, Dicer_Arguments& dicer_args,
     return 0;
   }
 
-  Molecule m(m0);
-
   atom_number_t j1, j2;
   // Not in this fragment.
-  if (!convert_to_atom_numbers_in_current_molecule(m, a1(), j1, a2(), j2)) {
+  if (!convert_to_atom_numbers_in_current_molecule(m0, a1(), j1, a2(), j2)) {
     return 0;
   }
 
-  if (!m.are_bonded(j1, j2)) [[unlikely]] {  // should not happen
+  if (!m0.are_bonded(j1, j2)) [[unlikely]] {  // should not happen
     return 0;
   }
+
+  // Many proposed cuts refer to atoms absent from a recursive fragment.
+  // Copy only after confirming that this cut can apply. Atom indices are retained.
+  Molecule m(m0);
 
 #ifdef DEBUG_BOND_BREAKING
   cerr << "Before breaking bond '" << m.smiles() << "', level "
