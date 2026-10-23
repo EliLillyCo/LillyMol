@@ -1,0 +1,33 @@
+cc_library(
+    name = "multi_arm_fingerprint_lib",
+    srcs = ["multi_arm_fingerprint.cc"],
+    hdrs = ["multi_arm_fingerprint.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Molecule_Lib:iwmolecule",
+    ],
+)
+
+cc_binary(
+    name = "multi_arm_fingerprint",
+    srcs = ["multi_arm_fingerprint_main.cc"],
+    deps = [
+        ":multi_arm_fingerprint_lib",
+        ":fingerprint_writer",
+        "//Foundational/accumulator",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_test(
+    name = "multi_arm_fingerprint_test",
+    srcs = ["multi_arm_fingerprint_test.cc"],
+    deps = [
+        ":multi_arm_fingerprint_lib",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
