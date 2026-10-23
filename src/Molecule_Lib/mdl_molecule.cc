@@ -1309,8 +1309,10 @@ MDL_Molecule::mdl_bond_between_atoms (atom_number_t a1,
 int
 MDL_Molecule::add (const Element * e)
 {
-  if (! Molecule::add(e))
+  // Molecule::add returns an atom index; zero is success for the first atom.
+  if (const atom_number_t added = Molecule::add(e); added == kInvalidAtomNumber) {
     return 0;
+  }
 
   if (! arrays_allocated())
     return 1;
