@@ -1,0 +1,220 @@
+{
+  "executable": "fingerprint_substructure",
+  "test": [
+    {
+      "name": "down_the_bond_isosmi",
+      "args": [
+        "-z i -O isosmi -s 'cOC' -d 0-1 #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "basic_subset_natag",
+      "args": [
+        "-z i -s C -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "break_at_first_match",
+      "args": [
+        "-z i -z f -s C -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "shell_expansion_natag",
+      "args": [
+        "-z i -s C -x 1 -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "per_match_basic",
+      "args": [
+        "-z i -z e -s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "per_match_down_the_bond",
+      "args": [
+        "-z i -z e -s 'cOC' -d 0-1 #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "atom_pair_natag",
+      "args": [
+        "-z i -s C -M -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "no_match_default_fails",
+      "args": [
+        "-s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "no_match_ignore_writes_empty",
+      "args": [
+        "-z i -s C -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "per_match_no_match_ignore_writes_empty",
+      "args": [
+        "-z i -z e -s C -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "filter_no_match_default_fails",
+      "args": [
+        "-f -s C -O NATAG=NAT - < #{indir}/input.gfp"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "filter_no_match_ignore_writes_empty",
+      "args": [
+        "-f -z i -s C -O NATAG=NAT - < #{indir}/input.gfp"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "filter_all_matches",
+      "args": [
+        "-f -z i -s C -O NATAG=NAT - < #{indir}/input.gfp"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "filter_break_at_first_match",
+      "args": [
+        "-f -z i -z f -s C -O NATAG=NAT - < #{indir}/input.gfp"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "reject_fingerprint_each_and_first_match",
+      "args": [
+        "-z e -z f -s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "down_the_bond_no_match_default_fails",
+      "args": [
+        "-s cOC -d 0-1 -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "down_the_bond_no_match_ignore_writes_empty",
+      "args": [
+        "-z i -s cOC -d 0-1 -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "down_the_bond_invalid_matched_atoms_fails",
+      "args": [
+        "-s COc -d 5-6 -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "ec_fingerprint_basic",
+      "args": [
+        "-z i -C 2 -s C -O NATAG=NAT #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "filter_ec_fingerprint",
+      "args": [
+        "-f -z i -C 2 -s C -O NATAG=NAT - < #{indir}/input.gfp"
+      ],
+      "ignore_file": [
+        "stderr"
+      ]
+    },
+    {
+      "name": "reject_ec_and_atom_pair",
+      "args": [
+        "-C 2 -M -s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "reject_ec_and_per_match",
+      "args": [
+        "-C 2 -z e -s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "reject_ec_and_standard_fingerprint",
+      "args": [
+        "-C 2 -Y help -s C #{indir}/input.smi"
+      ],
+      "ignore_file": [
+        "stderr"
+      ],
+      "non_zero_rc_expected": true
+    }
+  ]
+}

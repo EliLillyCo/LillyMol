@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "Foundational/iwmisc/misc.h"
 #include "circular_fingerprint.h"
 
@@ -60,7 +62,7 @@ Circular_Fingerprint_Generator::_free_dynamic_arrays ()
 
 int
 Circular_Fingerprint_Generator::_initialise_molecule (const Molecule & m,
-                                                const int * atype,
+                                                const uint32_t * atype,
                                                 const int * include_these_atoms)
 {
   if (m.natoms() > _allocated)
@@ -70,7 +72,7 @@ Circular_Fingerprint_Generator::_initialise_molecule (const Molecule & m,
   {
     _matoms = m.natoms();
     _allocated = _matoms + _matoms;
-    _atype = new int[_allocated];
+    _atype = new uint32_t[_allocated];
     _atom = new const Atom * [_allocated];
     _processing_status = new int[_allocated];
   }
@@ -91,7 +93,7 @@ Circular_Fingerprint_Generator::_initialise_molecule (const Molecule & m,
 
 int
 Circular_Fingerprint_Generator::generate_fingerprint(const Molecule & m,
-                                                     const int * atype,
+                                                     const uint32_t * atype,
                                                      const int * include_these_atoms,
                                                      Sparse_Fingerprint_Creator & sfc)
 {
@@ -100,7 +102,7 @@ Circular_Fingerprint_Generator::generate_fingerprint(const Molecule & m,
 
   for (int i = 0; i < _matoms; i++)
   {
-    unsigned int e = _atype[i];
+    uint32_t e = _atype[i];
 
     if (0 == e)
       continue;
@@ -112,7 +114,7 @@ Circular_Fingerprint_Generator::generate_fingerprint(const Molecule & m,
 
     sfc.hit_bit(e);
 
-    set_vector(_processing_status, _matoms, 0);
+    std::fill_n(_processing_status, _matoms, 0);
 
     _processing_status[i] = PROCESSING_FINISHED;
 
@@ -136,7 +138,7 @@ Circular_Fingerprint_Generator::generate_fingerprint(const Molecule & m,
 void
 Circular_Fingerprint_Generator::_increment(unsigned int & sum_so_far,
           int bc,
-          int atom_constant) const
+          uint32_t atom_constant) const
 {
   if (_additive)
     sum_so_far += bc * atom_constant;

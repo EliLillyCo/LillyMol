@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ ! -v LILLYMOL_HOME || ! -d "${LILLYMOL_HOME}"  ]]; then
   echo "LILLYMOL_HOME not set" >&2

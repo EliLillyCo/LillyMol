@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <cstdint>
+#include <string>
 
 #include "iwstring.h"
 
@@ -15,6 +17,14 @@ IWString::change (int istart,
   if (0 == len_new_data)
     return remove_from_to (istart, istop);
 
+  std::string stable_source;
+  const auto source = reinterpret_cast<std::uintptr_t>(new_data);
+  const auto storage = reinterpret_cast<std::uintptr_t>(_things);
+  if (source >= storage && source - storage < static_cast<std::uintptr_t>(_elements_allocated)) {
+    stable_source.assign(new_data, len_new_data);
+    new_data = stable_source.data();
+  }
+
   int size_difference = len_new_data - (istop - istart + 1);
 
 #ifdef DEBUG_CHANGE
@@ -23,7 +33,7 @@ IWString::change (int istart,
 
   if (size_difference < 0)    // shrinking
   {
-    ::memmove (_things + istart + len_new_data, _things + istop + 1, _number_elements - istop);
+    ::memmove (_things + istart + len_new_data, _things + istop + 1, _number_elements - istop - 1);
   }
   else if (size_difference > 0)    // growing
   {

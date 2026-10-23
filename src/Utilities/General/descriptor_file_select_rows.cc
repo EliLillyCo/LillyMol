@@ -12,7 +12,6 @@
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
 using std::cerr;
-using std::endl;
 
 const char* prog_name = NULL;
 
@@ -22,9 +21,9 @@ static int identifier_column = 0;
 
 static int strip_leading_zeros_from_identifiers = 0;
 
-static int records_read = 0;
+static uint64_t records_read = 0;
 
-static int records_written = 0;
+static uint64_t records_written = 0;
 
 static int invert_selection = 0;
 
@@ -33,13 +32,16 @@ static IWString_and_File_Descriptor stream_for_identifiers_not_written;
 
 static int allow_multiple_record_dataitems = 0;
 
-static char token_separator = ' ';
+// There are two input token separators.
+// If identifiers are read from a file, that can have a separator.
+// And then within the main file.
+static char identifier_file_token_separator = ' ';
+static char descriptor_file_token_separator = ' ';
 
 static int identifier_column_in_descriptor_file = 0;
 
 static void
-usage(int rc)
-{
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
@@ -48,18 +50,23 @@ usage(int rc)
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Selects rows from a descriptor file: <idfile> <descriptor file>\n";
-  cerr << " -c <col>       identifiers are in column <col> of identifier file\n";
-  cerr << " -C <col>       identifiers are in column <col> of descriptor file (default 1)\n";
-  cerr << " -K <id>        fetch individual ID's\n";
-  cerr << " -z             strip leading zero's from identifiers\n";
-  cerr << " -Y <fname>     file for descriptor file records not written\n";
-  cerr << " -X <fname>     file for identifiers not written\n";
-  cerr << " -m             write all instances of identifiers, not just first\n";
-  cerr << " -x             invert selection, write records NOT in identifier file\n";
-  cerr << " -i <char>      input token separator (space by default)\n";
-  cerr << " -t             input is tab separated\n";
-  cerr << " -v             verbose output\n";
+  cerr << R"(Selects rows from a descriptor file: <idfile> <descriptor file>.
+descriptor_file_select_rows <idfile> <descriptor_file> 
+descriptor_file_select_rows -K id1,id2 <descriptor_file>
+
+ -c <col>       Identifiers are in column <col> of identifier file (default 1)
+ -C <col>       Identifiers are in column <col> of descriptor file (default 1)
+ -K <id>        Fetch individual identifiers. Use '-K id1,id2' or '-K id1 -K id2'.
+ -z             Strip leading zero's from identifiers
+ -Y <fname>     File for descriptor file records not written
+ -X <fname>     File for identifiers not written
+ -m             Write all instances of identifiers, not just first
+ -x             Invert selection, write records NOT in identifier file
+ -i <char>      Input file token separator (space by default).
+                <idfile> and <descriptor_file> can have separate token separators.
+                If separate identifiers needed, use '-i idfile=comma -i dfile=tab'.
+ -v             Verbose output
+)";
   // clang-format on
 
   exit(rc);
@@ -67,29 +74,29 @@ usage(int rc)
 
 static int
 process_items_in_hash(const IWString_STL_Hash_Set& ids_to_select,
-                      IWString_and_File_Descriptor& output)
-{
+                      IWString_and_File_Descriptor& output) {
   if (allow_multiple_record_dataitems) {  // ids_to_select will be unchanged
     return 1;
   }
 
-  if (0 == ids_to_select.size()) {
+  if (ids_to_select.empty()) {
     return 1;
   }
 
   if (verbose) {
     cerr << ids_to_select.size() << " identifiers not found in descriptor file\n";
   }
+
   if (stream_for_identifiers_not_written.is_open()) {
     for (IWString_STL_Hash_Set::const_iterator f = ids_to_select.begin();
          f != ids_to_select.end(); ++f) {
       stream_for_identifiers_not_written << (*f) << '\n';
       stream_for_identifiers_not_written.write_if_buffer_holds_more_than(32768);
     }
-  } else if (verbose) {
+  } else if (verbose > 1) {
     for (IWString_STL_Hash_Set::const_iterator f = ids_to_select.begin();
          f != ids_to_select.end(); ++f) {
-      cerr << (*f) << endl;
+      cerr << (*f) << '\n';
     }
   }
 
@@ -99,8 +106,7 @@ process_items_in_hash(const IWString_STL_Hash_Set& ids_to_select,
 static int
 write_header_if_needed_and_record(const IWString& header, const const_IWSubstring& buffer,
                                   int& header_written,
-                                  IWString_and_File_Descriptor& output)
-{
+                                  IWString_and_File_Descriptor& output) {
   if (!header_written) {
     output << header << '\n';
     header_written = 1;
@@ -116,8 +122,7 @@ write_header_if_needed_and_record(const IWString& header, const const_IWSubstrin
 static int
 descriptor_file_select_rows(iwstring_data_source& input,
                             IWString_STL_Hash_Set& ids_to_select,
-                            IWString_and_File_Descriptor& output)
-{
+                            IWString_and_File_Descriptor& output) {
   IWString header;
 
   if (!input.next_record(header) || 0 == header.length()) {
@@ -138,8 +143,9 @@ descriptor_file_select_rows(iwstring_data_source& input,
     const_IWSubstring id;
     if (0 == identifier_column_in_descriptor_file) {
       id = buffer;
-      id.truncate_at_first(token_separator);
-    } else if (!buffer.word(identifier_column_in_descriptor_file, id, token_separator)) {
+      id.truncate_at_first(descriptor_file_token_separator);
+    } else if (!buffer.word(identifier_column_in_descriptor_file, id,
+                            descriptor_file_token_separator)) {
       cerr << "Cannot extract identifier from column "
            << (identifier_column_in_descriptor_file + 1) << " in '" << buffer << "'\n";
       return 0;
@@ -187,10 +193,10 @@ descriptor_file_select_rows(iwstring_data_source& input,
         stream_for_identifiers_not_written << (*f) << '\n';
         stream_for_identifiers_not_written.write_if_buffer_holds_more_than(32768);
       }
-    } else if (verbose) {
+    } else if (verbose > 1) {
       for (IWString_STL_Hash_Set::const_iterator f = ids_to_select.begin();
            f != ids_to_select.end(); ++f) {
-        cerr << (*f) << endl;
+        cerr << (*f) << '\n';
       }
     }
   }
@@ -200,8 +206,7 @@ descriptor_file_select_rows(iwstring_data_source& input,
 
 static int
 descriptor_file_select_rows(const char* fname, IWString_STL_Hash_Set& ids_to_fetch,
-                            IWString_and_File_Descriptor& output)
-{
+                            IWString_and_File_Descriptor& output) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -213,11 +218,18 @@ descriptor_file_select_rows(const char* fname, IWString_STL_Hash_Set& ids_to_fet
 }
 
 static int
-read_ids(const const_IWSubstring& buffer, IWString_STL_Hash_Set& ids_to_fetch)
-{
+read_ids(const const_IWSubstring& buffer, IWString_STL_Hash_Set& ids_to_fetch) {
   IWString id;
+  int i = 0;
+  const_IWSubstring token;
+  for (int col = 0; buffer.NextWord(token, i, identifier_file_token_separator); ++col) {
+    if (col == identifier_column) {
+      id = token;
+      break;
+    }
+  }
 
-  if (!buffer.word(identifier_column, id, token_separator)) {
+  if (id.empty()) {
     cerr << "Cannot extract column " << (identifier_column + 1) << " from input\n";
     return 0;
   }
@@ -232,8 +244,7 @@ read_ids(const const_IWSubstring& buffer, IWString_STL_Hash_Set& ids_to_fetch)
 }
 
 static int
-read_ids(iwstring_data_source& input, IWString_STL_Hash_Set& ids_to_fetch)
-{
+read_ids(iwstring_data_source& input, IWString_STL_Hash_Set& ids_to_fetch) {
   const_IWSubstring buffer;
 
   while (input.next_record(buffer)) {
@@ -251,8 +262,7 @@ read_ids(iwstring_data_source& input, IWString_STL_Hash_Set& ids_to_fetch)
 }
 
 static int
-read_ids(const char* fname, IWString_STL_Hash_Set& ids_to_fetch)
-{
+read_ids(const char* fname, IWString_STL_Hash_Set& ids_to_fetch) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -264,8 +274,7 @@ read_ids(const char* fname, IWString_STL_Hash_Set& ids_to_fetch)
 }
 
 static int
-read_identifiers(const const_IWSubstring& k, IWString_STL_Hash_Set& ids_to_fetch)
-{
+read_identifiers(const const_IWSubstring& k, IWString_STL_Hash_Set& ids_to_fetch) {
   int i = 0;
   IWString token;
   while (k.nextword(token, i, ',')) {
@@ -276,9 +285,29 @@ read_identifiers(const const_IWSubstring& k, IWString_STL_Hash_Set& ids_to_fetch
   return ids_to_fetch.size();
 }
 
+// `token` might be either a single character, or a directive recognised
+// to char_name_to_char.
+// Return true if OK.
+static bool
+SeparatorDirectiveToSeparator(const const_IWSubstring& token, char& result) {
+  if (token.length() == 1) {
+    result = token[0];
+    return true;
+  }
+
+  IWString tmp(token);
+  if (!char_name_to_char(tmp)) {
+    cerr << "SeparatorDirectiveToSeparator:invalid directive '" << tmp << "'\n";
+    return false;
+  }
+
+  result = tmp[0];
+
+  return true;
+}
+
 static int
-descriptor_file_select_rows(int argc, char** argv)
-{
+descriptor_file_select_rows(int argc, char** argv) {
   Command_Line cl(argc, argv, "vzi:tc:X:Y:mxK:C:");
 
   if (cl.unrecognised_options_encountered()) {
@@ -303,7 +332,7 @@ descriptor_file_select_rows(int argc, char** argv)
     }
 
     if (verbose) {
-      cerr << "Identifiers in column " << identifier_column << endl;
+      cerr << "Identifiers in column " << identifier_column << '\n';
     }
 
     identifier_column--;
@@ -331,20 +360,32 @@ descriptor_file_select_rows(int argc, char** argv)
   }
 
   if (cl.option_present('i')) {
-    IWString i = cl.string_value('i');
-
-    if (!char_name_to_char(i)) {
-      cerr << "Unrecognised token separator '" << i << "'\n";
-      return 1;
+    const_IWSubstring token;
+    for (int i = 0; cl.value('i', token, i); ++i) {
+      if (token.starts_with("idfile=")) {
+        token.remove_leading_chars(7);
+        if (!SeparatorDirectiveToSeparator(token, identifier_file_token_separator)) {
+          return 1;
+        }
+      } else if (token.starts_with("dfile=")) {
+        token.remove_leading_chars(6);
+        if (!SeparatorDirectiveToSeparator(token, descriptor_file_token_separator)) {
+          return 1;
+        }
+      } else {
+        if (!SeparatorDirectiveToSeparator(token, descriptor_file_token_separator)) {
+          return 1;
+        }
+        identifier_file_token_separator = descriptor_file_token_separator;
+      }
     }
-
-    token_separator = i[0];
-
     if (verbose) {
-      cerr << "Token separator set to '" << token_separator << "'\n";
+      cerr << "identifier file token separator " << identifier_file_token_separator << '\n';
+      cerr << "descriptor_file_token_separator " << descriptor_file_token_separator << '\n';
     }
   } else if (cl.option_present('t')) {
-    token_separator = '\t';
+    identifier_file_token_separator = '\t';
+    descriptor_file_token_separator = '\t';
   }
 
   IWString_STL_Hash_Set ids_to_fetch;
@@ -365,14 +406,14 @@ descriptor_file_select_rows(int argc, char** argv)
     }
 
     file_to_process = 0;
-  } else if (2 != cl.number_elements()) {
-    cerr << "Insufficient arguments, must have identifier file and descriptor file\n";
+  } else if (cl.number_elements() < 2) {
+    cerr << "Insufficient arguments, must have identifier file and descriptor file(s)\n";
     usage(2);
   }
 
   if (ids_to_fetch.size() > 0) {  // read from the -K option
     ;
-  } else if (!read_ids(cl[0], ids_to_fetch) || 0 == ids_to_fetch.size()) {
+  } else if (!read_ids(cl[0], ids_to_fetch) || ids_to_fetch.empty()) {
     cerr << "Cannot read identifiers to be fetched '" << cl[0] << "'\n";
     return 5;
   }
@@ -426,7 +467,12 @@ descriptor_file_select_rows(int argc, char** argv)
 
   IWString_and_File_Descriptor output(1);
 
-  int rc = descriptor_file_select_rows(cl[file_to_process], ids_to_fetch, output);
+  for (int i = file_to_process; i < cl.number_elements(); ++i) {
+    if (!descriptor_file_select_rows(cl[i], ids_to_fetch, output)) {
+      cerr << "Error processing '" << cl[i] << "'\n";
+      return 1;
+    }
+  }
 
   output.flush();
 
@@ -434,16 +480,11 @@ descriptor_file_select_rows(int argc, char** argv)
     cerr << "Wrote " << records_written << " of " << records_read << " records read\n";
   }
 
-  if (rc) {
-    return 0;
-  } else {
-    return 1;
-  }
+  return 0;
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = descriptor_file_select_rows(argc, argv);

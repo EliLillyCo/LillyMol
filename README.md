@@ -1,5 +1,7 @@
 # Welcome to the Eli Lilly LillyMol implementation.
 
+See [BUILD](Build.md) for how to build LillyMol.
+
 ## Background
 LillyMol is a set of Linux executables for Cheminformatics. These tools are built
 on a high performance C++ library for Cheminformatics.
@@ -12,7 +14,7 @@ chemical similarity. These have been developed over many years, driven by the ne
 of Computational and Medicinal Chemists at Lilly and elsewhere.
 
 Recent work has focussed on making *de-novo* molecule construction and there are
-several tools desiged to either support or complement A/I driven molecule
+several tools designed to either support or complement A/I driven molecule
 generation.
 
 LillyMol is fast and scalable, with modest memory requirements.
@@ -27,18 +29,38 @@ This release includes first steps towards more extensive documentation of LillyM
 see the [docs](/docs) directory. More work is needed on this front. Most parts
 of LillyMol have been feature stable for a long time.
 
+## Notes for AI/code agents
+
+This repository includes [AGENTS.md](AGENTS.md), a short orientation file for
+AI/code agents and new contributors working on LillyMol source, tests, and docs.
+
 ## Python
-This release include a python interface to LillyMol via pybind11. This first release
-includes most Molecule related functionality, substructure searching and reaction
-enumeration. In the pybind directory there are some *_test.py files that exemplify
-much of the current functionality. Documentation is in [docs](/docs/python/LillyMolPython.md).
-This should be sufficient support for a great many tasks involving querying
-or manipulation of molecules at the connection table level.
+LillyMol has a Python interface, built with nanobind, and it is no longer just a
+prototyping convenience. Where we have measured against RDKit on the same task,
+LillyMol python has run 3 to 7 times faster, because nearly every call does real
+work in C++ rather than moving python objects about.
 
-The current roadmap for the python interface primarily involves two directions
+Available from python: the Molecule and its connection table, substructure
+searching, reaction enumeration, gfp fingerprints and similarity, chemical
+standardisation, and a growing number of the LillyMol command line tools -
+molecular descriptors, QED, Lipinski, MedchemWizard, unique molecules, and
+lookups against structure and synthetic precedent databases. The `*_test.py`
+files in the `src/nanobind` directory exercise most of this and can be read as
+examples.
+The bindings can also be packaged as a wheel.
 
-* Enabling gfp fingerprints for similarity calculations.
-* Making existing LillyMol applications available.
+Documentation starts at [docs/python](/docs/python/README.md), with the API
+reference in [LillyMolPython.md](/docs/python/LillyMolPython.md). Read the section
+on the lazy Molecule before writing anything substantial - a LillyMol Molecule
+computes derived properties like aromaticity only when asked, which is where the
+speed comes from and is also the one thing that surprises newcomers.
+
+It is now realistic to hand an existing RDKit program to an LLM and have it
+translated to LillyMol python. Bear in mind that RDKit is vast while LillyMol
+deliberately covers core Cheminformatics only, and that the two toolkits will not
+always agree to the last digit - there is no universally accepted definition of
+aromaticity, among other things. See
+[docs/python](/docs/python/README.md#translating-rdkit-code-and-writing-new-code-with-an-llm).
 
 There is already a Julia interface to an earlier version of LillyMol, and this
 release will soon be adapted to support Julia.
@@ -56,12 +78,12 @@ CC ethane
 where the smiles and the name are separated by whitespace - space or tab.
 Generally LillyMol supports spaces as the preferred delimiter.
 Multiple spaces/tabs between smiles and id are ignored.
-Smiles files to not have header records.
+Smiles files do not have header records.
 
 All tokens after the smiles are part of the molecule name.
 ```
 C methane consists of           a Carbon atom
-CC methane has two.
+CC ethane has two.
 ```
 is a Methane molecule whose name consists of 6 words, and an Ethane whose
 name consists of 3 words.
@@ -106,9 +128,9 @@ We do not want isotopes, so `-I 0` does that. We could of course convert them wi
 
 The `-f lod` directive says reduce these molecules to the likely largest fragment of interest.
 
-We alomost certainly do not want molecules with valence errors, `-V` discards those.
+We almost certainly do not want molecules with valence errors, `-V` discards those.
 
-We apply [chemical_standardisation](../docs/Molecule_Lib/chemical_standardisation.md) via the
+We apply [chemical_standardisation](/docs/Molecule_Lib/chemical_standardisation.md) via the
 `-g all` option.
 
 Discard molecules with fewer than 6 or more than 50 atoms. Note that `-g all` will remove
@@ -150,7 +172,7 @@ Generate fingerprints
 gfp_make.sh external.smi > external.gfp
 ```
 The tool `gfp_lnearneighbours` is used to compare two sets of fingerprints.
-Indeed it can be used to compre two large collections, but it will take
+Indeed it can be used to compare two large collections, but it will take
 forever. In this case split up the external file into chunks of (say)
 5000 fingerprints
 ```
@@ -177,7 +199,7 @@ tdt_sort -T DIST all.nn > all.sorted.nn
 so the fingerprints with closest neighbours are at the top of
 the file.
 
-The file creaed with the -H option contains a histogram of nearest
+The file created with the -H option contains a histogram of nearest
 neighbour distances which can be plotted to get an idea of how
 similar are the new molecules compared to existing collections.
 
@@ -195,7 +217,7 @@ unique_molecules -S unique -c -z -l -v -t I=Cl -t Br=Cl external.smi
 ```
 We are not interested in chiral variants, chirality and cis-trans bonding is discarded, -c -z.
 Counterions are discarded (if not already happened) with the -l option. We don't
-really consider the Iodo and Bromo variants of a Chloro group to be "differen
+really consider the Iodo and Bromo variants of a Chloro group to be "different
 enough" so we translate all the heavy halogens to Chlorine. Again
 there is unique_molecules_parallel.sh for larger sets of molecules.
 
@@ -297,8 +319,8 @@ will substantially speed the computation.
 When closely examining larger collections it is usually convenient to use
 a sorted list of molecules
 ```
-msort_parallsl external.smi > external.sorted.smi
-``
+msort_parallel external.smi > external.sorted.smi
+```
 2.3M Chembl molecules can be processed in 3.8 seconds.
 
 There may have been a claim that this set of molecules contains aromatic ring systems
@@ -315,6 +337,7 @@ query {
   }
 }
 ```
+
 Note that the query specifies that on the ring system there should be exactly
 one aniline group and exactly one of the Halogens, and zero occurrences of a Phenol.
 We also restricted attention
@@ -326,8 +349,10 @@ tsubstructure -q PROTO:/path/to/aniline_halogen.qry -m aniline_halogen external.
 ```
 
 or use `tsubstructure_parallel.sh` if the file is large. This might match molecules like
-![CHEMBL27011](Images/CHEMBL27011.png)
-![CHEMBL81588](Images/CHEMBL81588.png)
+
+![CHEMBL27011](docs/Images/CHEMBL27011.png)
+
+![CHEMBL81588](docs/Images/CHEMBL81588.png)
 
 And of course if a query can be specified as smarts, that can be used with the `-s` option.
 
@@ -337,14 +362,13 @@ than five bonds away '...{>5}' from an acid 'C(=O)-[OH]'
 ```
 tsubstructure -j 1 -s '[NH2]-[CX4T1]...{>5}C(=O)-[OH]' -m matches external.smi
 ```
-which might match molecules line
-![CHEMBL2286788](CHEMBL2286788.png)
+which might match molecules like
+![CHEMBL2286788](docs/Images/CHEMBL2286788.png)
 
 Because we use the -j option to tsubstructure, the matched atoms are given isotopic
 labels. Somewhat confusingly matched atom 0, the Nitrogen atom, is assigned isotope
 1 - because isotope 0 is not an isotopic atom. Generally LillyMol uses zero based
 indexing for matched atoms.
-
 
 Or we want to mark a reactive Nitrogen atom in order or likely reactivity
 ```
@@ -354,10 +378,10 @@ tsubstructure -s '[ND1H2]-[CX4]||[ND2H]([CX4])[CX4]||[ND1H2]-a||[ND2H]([CX4])-a|
 The OR type queries in LillyMol, || are evaluated left to right. When one matches
 matching stops, and the matched atoms will be returned and labelled with an
 isotope. This might match molecules like
-![CHEMBL4101550](Images/CHEMBL4101550.png
+![CHEMBL4101550](docs/Images/CHEMBL4101550.png)
 This match is interesting because it shows how the precedence matching has worked.
 The primary amine is a match, and that was detected first
-![CHEMBL70445](Images/CHEMBL70445.png).
+![CHEMBL70445](docs/Images/CHEMBL70445.png).
 
 ## Reactions
 When performing reactions, what is usually the hardest part is selecting the
@@ -386,7 +410,7 @@ tsubstructure -u -s '1[ND2H]([CX4])[CX4]&&0[ND1H2]-[CT1X4]' -m - all.smi | \
 ```
 The first invocation makes a positive match for a secondary amine and the
 second only writes molecules that do **not** contain a primary amine. It is
-upredictable which will be faster - on this system both took about 4.2 seconds
+unpredictable which will be faster - on this system both took about 4.2 seconds
 to process 200k random molecules. The shell is your friend!
 
 As is often the case, there is often no 'right' way of doing a given task,
@@ -414,7 +438,7 @@ sidechain {
 ```
 Remember the amine had been isotopically labelled by tsubstructure, so
 using it in the reaction becomes straightforward. I have seen a great many
-truly incomprensible smarts in reactions written by very clever people trying to express
+truly incomprehensible smarts in reactions written by very clever people trying to express
 complex concepts. That can often be avoided via tricks like this.
 ```
 tsubstructure -j 1 <very complex query> -m R1 start.smi
@@ -422,7 +446,7 @@ trxn -P acid_amine.rxn acid.smi R1.smi
 ```
 
 Of course it can be done in one step if needed by using the `query_file` directive
-rather than `smarts` in the reaction file. See [trxn](/docs/Molecule_Tools/trxn.md).
+rather than `smarts` in the reaction file. See [trxn](docs/Molecule_Tools/trxn.md).
 Using that construct, the exact same query that is used to filter the reagents
 can be used for the reaction.
 
@@ -446,7 +470,7 @@ sure both are rectangular
 tcount train.activity train.smi
 ```
 
-Use [activity_consistency](/docs/Molecule_Tools/activity_consistency.md)
+Use [activity_consistency](docs/Molecule_Tools/activity_consistency.md)
 to explore the nature of duplicates, and possibly generate a more internally consistent
 training set file.
 
@@ -463,7 +487,7 @@ Build an XGBoost model
 xgbd_make.sh -mdir MODEL -A train.activity train.dat
 ```
 Evaluate that model
-``
+```
 xgbd_evaluate.sh -mdir MODEL -smi test.smi > test.pred
 ```
 When given the -smi option, it assumes that the input smiles can be converted
@@ -546,7 +570,7 @@ long_molecules -F long -d 3 -D 4 -m 20 all.smi
 We are looking for molecules where the longest path is at least 20
 bonds, the average distance from that longest path is 3 and the longest
 distance from that path is 4 atoms. This matches molecules like
-![CHEMBL13003](Images/CHEMBL13003.png)
+![CHEMBL13003](docs/Images/CHEMBL13003.png)
 We may wish to filter molecules like this - they might not fail other
 filters, although a rotatable bond filter may get some of them.
 
@@ -558,6 +582,9 @@ So given the smiles
 ```
 ClC(CCl)CO CHEMBL1538584
 ```
+
 it will generate
-![CHEMBL1538585](Images/CHEMBL1538585.png)
+
+![CHEMBL1538585](docs/Images/CHEMBL1538585.png)
+
 A number of other properties can be applied as isotopic labels.

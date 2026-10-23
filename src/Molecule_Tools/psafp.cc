@@ -3,6 +3,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <optional>
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
@@ -40,6 +41,7 @@ extending_resizable_array<int> acc_psa;
 static int flush_after_each_molecule = 0;
 
 static int generate_descriptor_file = 0;
+static nvrtspsa::NovartisPolarSurfaceArea tpsa_calculator;
 static float min_psa = 0.0f;
 static float max_psa = std::numeric_limits<float>::max();
 static uint64_t rejected_for_out_of_range = 0;
@@ -65,6 +67,7 @@ usage(int rc) {
   -z            assign zero contribution to unclassified atoms.
   -T ...        tabular descriptor output, enter '-T help' for info. Can do filtering.
   -X ...        miscellaneous other options, enter '-X help' for info.
+  -W ...        options for controlling the TPSA computation, Enter '-W help' for info.
   -l            reduce to largest fragment.
   -i <type>     input specification.
   -g ...        chemical standardisation options.
@@ -124,7 +127,11 @@ psafp(Molecule& m, IWString_and_File_Descriptor& output) {
 
   m.reduce_to_largest_fragment();  // after we have written the smiles
 
-  double psa = novartis_polar_surface_area(m);
+  std::optional<double> maybe_psa = tpsa_calculator.PolarSurfaceArea(m);
+  if (! maybe_psa) {
+    return 0;
+  }
+  double psa = *maybe_psa;
 
   if (verbose) {
     ++acc_psa[static_cast<int>(psa + 0.49999)];
@@ -270,7 +277,7 @@ DisplayDashTOptions(std::ostream& output) {
 
 static int
 psafp(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lfJ:p:zX:T:");
+  Command_Line cl(argc, argv, "vA:E:i:g:lfJ:p:zX:T:W:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -280,7 +287,7 @@ psafp(int argc, char** argv) {
   verbose = cl.option_count('v');
 
   if (!verbose) {
-    nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
+    tpsa_calculator.set_display_psa_unclassified_atom_messages(0);
   }
 
   if (cl.option_present('A')) {
@@ -321,10 +328,17 @@ psafp(int argc, char** argv) {
   }
 
   if (cl.option_present('z')) {
-    nvrtspsa::set_return_zero_for_unclassified_atoms(1);
+    tpsa_calculator.set_return_zero_for_unclassified_atoms(1);
 
     if (verbose) {
       cerr << "Unclassified atoms assigned zero value in psa computation\n";
+    }
+  }
+
+  if (cl.option_present('W')) {
+    if (! tpsa_calculator.InitialiseOptions(cl, 'W')) {
+      cerr << "Cannot initialise options for Novartis TPSA computation (-W)\n";
+      return 1;
     }
   }
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Implement fragment filtering rules. Collaboration with Teddy Zartler
 

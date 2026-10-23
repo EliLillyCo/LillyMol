@@ -329,7 +329,6 @@ Options::Process(Molecule& m,
   std::unique_ptr<uint32_t[]> atype;
   if (_atype.active()) {
     atype = std::make_unique<uint32_t[]>(matoms);
-    std::fill_n(atype.get(), matoms, 0);
     _atype.assign_atom_types(m, atype.get());
   }
 

@@ -1,0 +1,6 @@
+C1COc2ccccc21 ethoxy
+CC1COc2ccccc21 propoxy
+CC(=O)C1COc2ccccc21 carbonyl_tail
+C[C@H](F)C1COc2ccccc21 remote_chiral
+Cc1ccc2CCOc2c1 asymmetric.0
+Cc1cccc2OCCc12 asymmetric.1

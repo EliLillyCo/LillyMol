@@ -1,0 +1,14 @@
+{
+  "executable": "tcount",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-n 9 -d tab #{indir}/input.txt"
+      ],
+      "difftool_options": "-I records"
+    }
+
+  ]
+
+}

@@ -1,0 +1,7 @@
+default_multiple: passed
+offset_multiple: passed
+offset_chronological: passed
+default_single: passed
+offset_single: passed
+zero_single: passed
+stdout_single: passed

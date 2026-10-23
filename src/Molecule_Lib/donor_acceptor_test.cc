@@ -32,16 +32,16 @@ class TestHbondsProto: public testing::TestWithParam<ProtoMolResult> {
 };
 
 const std::string default_proto = R"pb(
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/carbonyl.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/cyano.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/imine.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/aminunch.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/hydroxyl.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/ether.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/hydroxam.textproto"
-  acceptor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/qminus.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/carbonyl.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/cyano.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/imine.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/aminunch.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/hydroxyl.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/ether.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/hydroxam.textproto"
+  acceptor: "${LILLYMOL_HOME}/queries/hbonds/qminus.textproto"
 
-  donor: "${C3TK_DATA_PERSISTENT}/queries/hbonds/donor.textproto"
+  donor: "${LILLYMOL_HOME}/queries/hbonds/donor.textproto"
 )pb";
 
 TEST_P(TestHbondsProto, TestBuilding) {

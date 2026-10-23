@@ -1,0 +1,4 @@
+id activity
+mol1 1.0
+mol2 2.5
+mol3 4.0

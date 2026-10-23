@@ -1,7 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "michael_rejected")
-# (A C smarts "[$(C);$([!D3]);!$(C[N,S,O])]=[$(C);!$(C[N,S,O])][$(C);$(C[#6,#7,S,O]);!$(C[O;D1])]=[OD1]")
-  (A C smarts "[OD1]=[$(C);$(C[#6,#7,S,O]);!$(C[OD1])][$(C);!$(C[N,S,O])]=[$(C);$([!D3]);!$(C[N,S,O])]")
-# (A C smarts "[OD1]=[$(C);$(C[#6,#7,S,O]);!$(C[OD1])][$(C);!$(C[N,S,O])]=[$([C;D1,D2]);!$(C[N,S,O])]")
-)

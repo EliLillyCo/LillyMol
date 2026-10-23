@@ -50,6 +50,15 @@ class PerMoleculeData {
     // When building the subsets, we need an array for that.
     int* _atoms_in_subset;
 
+    // When pruning regions we prune through 2 connected atoms, but =O bonds are
+    // added to regions, so compute once whether an atom is part of a =O group.
+    // This array is unusual. It will be initialised with kImvalidAtomNumber values.
+    // If it has a different value then it means that atom `i` is the carbon of
+    // a carbonyl group, and the atom number in there is the Oxygen atom.
+    // this does not deal with the case of O=S=O, but I don't think those are
+    // being handled now...
+    atom_number_t* _carbonyl;
+
     // Avoid duplicates
     IW_STL_Hash_Set _seen;
 
@@ -112,6 +121,10 @@ class PerMoleculeData {
 
     int* atoms_in_subset() {
       return _atoms_in_subset;
+    }
+
+    int carbonyl(atom_number_t atom) const {
+      return _carbonyl[atom];
     }
 
     // For ring atoms that are in the scaffold, and which have a non-ring
@@ -178,7 +191,7 @@ class ScaffoldFinder {
     int ApplySubstituentIsotope(Molecule& m, isotope_t iso, const int* spinach) const;
     int ApplyLinkerIsotope(Molecule& m, isotope_t iso, const int* spinach) const;
     int AddBackFirstNonRingAtom(Molecule& m, int* in_system, int flag);
-    int PruneSpinach(Molecule& m, int * atoms_in_subset);
+    int PruneSpinach(Molecule& m, int * atoms_in_subset, const PerMoleculeData& pmd);
 
   public:
     ScaffoldFinder();

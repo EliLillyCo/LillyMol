@@ -107,11 +107,11 @@ TEST(TestDataSource, Grep)
   cerr << "Contents written to " << fname << endl;
 
   iwstring_data_source input(fname);
-  EXPECT_EQ(input.grep("hello"), 2);
+  EXPECT_EQ(input.grep("hello"), 2u);
 
   const_IWSubstring buffer;
   ASSERT_TRUE(input.next_record(buffer));
-  EXPECT_EQ(input.grep("hello"), 1);
+  EXPECT_EQ(input.grep("hello"), 1u);
 }
 
 TEST(TestDataSource, LeadingBlanks)
@@ -157,7 +157,7 @@ TEST(TestDataSource, RecordsRemaining)
     ASSERT_TRUE(input.next_record(buffer));
     EXPECT_EQ(buffer.length(), 1);
     EXPECT_EQ(buffer[0] - '0', i);
-    EXPECT_EQ(input.records_remaining(), 4 - i);
+    EXPECT_EQ(input.records_remaining(), static_cast<uint32_t>(4 - i));
   }
 }
 
@@ -207,19 +207,19 @@ TEST(TestDataSource, CountRecordsStartingWith)
 
   iwstring_data_source input(fname);
 
-  EXPECT_EQ(input.count_records_starting_with("0"), 3);
-  EXPECT_EQ(input.count_records_starting_with("1"), 1);
-  EXPECT_EQ(input.count_records_starting_with("4"), 1);
+  EXPECT_EQ(input.count_records_starting_with("0"), 3u);
+  EXPECT_EQ(input.count_records_starting_with("1"), 1u);
+  EXPECT_EQ(input.count_records_starting_with("4"), 1u);
 
   const_IWSubstring buffer;
   ASSERT_TRUE(input.next_record(buffer));
 
-  EXPECT_EQ(input.count_records_starting_with("0"), 2);
-  EXPECT_EQ(input.count_records_starting_with("1"), 1);
+  EXPECT_EQ(input.count_records_starting_with("0"), 2u);
+  EXPECT_EQ(input.count_records_starting_with("1"), 1u);
 
   ASSERT_TRUE(input.next_record(buffer));
-  EXPECT_EQ(input.count_records_starting_with("0"), 2);
-  EXPECT_EQ(input.count_records_starting_with("4"), 1);
+  EXPECT_EQ(input.count_records_starting_with("0"), 2u);
+  EXPECT_EQ(input.count_records_starting_with("4"), 1u);
 }
 
 TEST(TestDataSource, SkipTo) 

@@ -1,0 +1,12 @@
+$SMI<FC(F)(F)C1=CC=CC=C1C(=O)OC(C)CCC>
+PCN<PBCHM599243>
+FPDSC<.........0TFW.......1;104;10;104;10;1>
+|
+$SMI<FC(F)(F)C1=CC=CC=C1C(=O)OC(C)CCC>
+PCN<empty>
+FPDSC<....................1;104;0;104;0;1>
+|
+$SMI<FC(F)(F)C1=CC=CC=C1C(=O)OC(C)CCC>
+PCN<duplicate>
+FPDSC<.........0TFW.......1;104;10;104;10;1>
+|

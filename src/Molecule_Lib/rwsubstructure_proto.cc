@@ -963,8 +963,8 @@ Substructure_Atom::construct_from_proto(const SubstructureSearch::SubstructureAt
   if (proto.has_fragment_id() && ! AssignValue(proto.fragment_id(), _fragment_id, [](int f) { return f > 0;}, "fragment_id"))
     return 0;
 
-  if (proto.has_global_match_id()) {
-    _global_match_id = proto.global_match_id();
+  if (proto.has_global_id_match()) {
+    _global_id_match = proto.global_id_match();
   }
 
   if (proto.has_fused_system_id())
@@ -1517,7 +1517,7 @@ Substructure_Atom::BuildProto(SubstructureSearch::SubstructureAtom& proto) const
   SET_PROTO_IF_SET(proto, ring_id, 0);  // 9
   SET_PROTO_IF_SET(proto, fused_system_id, 0);  // 10
   SET_PROTO_IF_SET(proto, fragment_id, 0);  // 11
-  SetProtoIfSet(_global_match_id, 0, "global_match_id", proto);  // 34
+  SetProtoIfSet(_global_id_match, 0, "global_id_match", proto);  // 34
 
   double nv;
   if (_numeric_value.value(nv)) {  // 12
@@ -1593,6 +1593,10 @@ Substructure_Atom::BuildProto(SubstructureSearch::SubstructureAtom& proto) const
   }
 
   _environment.BuildProto(proto);
+
+  if (_global_id_match != 0) {
+    proto.set_global_id_match(_global_id_match);
+  }
 
   for (const Substructure_Atom* c : _children) {
     SubstructureSearch::SubstructureAtom* child = proto.add_children();
@@ -1943,7 +1947,7 @@ Substructure_Environment::construct_from_proto(const SubstructureSearch::Substru
     return 0;
   }
 
-  if (INVALID_ATOM_NUMBER != possible_parent)
+  if (kInvalidAtomNumber != possible_parent)
     _add_possible_parent(possible_parent, possible_parent_bond_type, completed);
 
   if (_possible_parents.empty()) {
@@ -2100,8 +2104,8 @@ template void transfer_to_our_array(resizable_array_p<Bond> &, const resizable_a
 template void transfer_to_our_array(resizable_array_p<Link_Atom> &, const resizable_array<Link_Atom *> &);
 
 SeparatedAtoms::SeparatedAtoms() {
-  _a1 = INVALID_ATOM_NUMBER;
-  _a2 = INVALID_ATOM_NUMBER;
+  _a1 = kInvalidAtomNumber;
+  _a2 = kInvalidAtomNumber;
 }
 
 int
@@ -2959,8 +2963,7 @@ Substructure_Query::WriteProto(IWString_and_File_Descriptor& output) const
 }
 
 int
-Substructure_Ring_Base::ConstructFromProto(const SubstructureSearch::SubstructureRingBase& proto)
-{
+Substructure_Ring_Base::ConstructFromProto(const SubstructureSearch::SubstructureRingBase& proto) {
   if (proto.has_match_as_match()) {
     _match_as_match_or_rejection = ! proto.match_as_match();
   }
@@ -2992,6 +2995,15 @@ Substructure_Ring_Base::ConstructFromProto(const SubstructureSearch::Substructur
 
   if (proto.has_ring_extends_to_carbonyl()) {
     _ring_extends_to_carbonyl = proto.ring_extends_to_carbonyl();
+  }
+
+  if (proto.has_environment_sets_global_id()) {
+    _environment_sets_global_id = proto.environment_sets_global_id();
+  }
+
+  if (proto.has_substituents_must_match_distinct_sidechains()) {
+    _substituents_must_match_distinct_sidechains =
+        proto.substituents_must_match_distinct_sidechains();
   }
 
   if (!GETVALUES(proto, hits_needed, 0, no_limit))
@@ -3568,7 +3580,7 @@ Single_Substructure_Query::_build_chirality_specification_from_proto(const Subst
 
   // Top front.
 
-  auto atom_or = proto.top_front();
+//auto atom_or = proto.top_front();
 
   if (! proto.has_top_front()) {
     ++unspecified;
@@ -3761,6 +3773,12 @@ Substructure_Ring_Base::BuildProto(SubstructureSearch::SubstructureRingBase& pro
   if (_ring_extends_to_carbonyl) {
     proto.set_ring_extends_to_carbonyl(true);
   }
+  if (_environment_sets_global_id) {
+    proto.set_environment_sets_global_id(true);
+  }
+  if (! _substituents_must_match_distinct_sidechains) {
+    proto.set_substituents_must_match_distinct_sidechains(false);
+  }
 
   for (const Substituent* substituent : _substituent) {
     substituent->BuildProto(*proto.mutable_substituent()->Add());
@@ -3893,7 +3911,7 @@ Substructure_Chiral_Centre::BuildProto(SubstructureSearch::SubstructureChiralCen
   } else if (_top_front != nullptr) {
     tf = _top_front->initial_atom_number();
   } else {
-    tf = INVALID_ATOM_NUMBER;
+    tf = kInvalidAtomNumber;
     ++unspecified;
   }
 
@@ -3911,11 +3929,11 @@ Substructure_Chiral_Centre::BuildProto(SubstructureSearch::SubstructureChiralCen
   } else if (_top_back != nullptr) {
     tb = _top_back->initial_atom_number();
   } else {
-    tb = INVALID_ATOM_NUMBER;
+    tb = kInvalidAtomNumber;
     ++unspecified;
   }
 
-  if (tb == INVALID_ATOM_NUMBER) {
+  if (tb == kInvalidAtomNumber) {
   } else if (tb == CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN) {
     proto.mutable_top_back()->set_h_or_lp(SubstructureSearch::AtomNumberHydrogenLonePair::HYDROGEN);
   } else if (tb == CHIRAL_CONNECTION_IS_LONE_PAIR) {
@@ -3930,11 +3948,11 @@ Substructure_Chiral_Centre::BuildProto(SubstructureSearch::SubstructureChiralCen
   } else if (_left_down != nullptr) {
     ld = _left_down->initial_atom_number();
   } else {
-    ld = INVALID_ATOM_NUMBER;
+    ld = kInvalidAtomNumber;
     ++unspecified;
   }
 
-  if (ld == INVALID_ATOM_NUMBER) {
+  if (ld == kInvalidAtomNumber) {
   } else if (ld == CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN) {
     proto.mutable_left_down()->set_h_or_lp(SubstructureSearch::AtomNumberHydrogenLonePair::HYDROGEN);
   } else if (ld == CHIRAL_CONNECTION_IS_LONE_PAIR) {
@@ -3949,11 +3967,11 @@ Substructure_Chiral_Centre::BuildProto(SubstructureSearch::SubstructureChiralCen
   } else if (_right_down != nullptr) {
     rd = _right_down->initial_atom_number();
   } else {
-    rd = INVALID_ATOM_NUMBER;
+    rd = kInvalidAtomNumber;
     ++unspecified;
   }
 
-  if (rd == INVALID_ATOM_NUMBER) {
+  if (rd == kInvalidAtomNumber) {
   } else if (rd == CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN) {
     proto.mutable_right_down()->set_h_or_lp(SubstructureSearch::AtomNumberHydrogenLonePair::HYDROGEN);
   } else if (rd == CHIRAL_CONNECTION_IS_LONE_PAIR) {

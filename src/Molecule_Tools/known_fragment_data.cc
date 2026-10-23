@@ -175,8 +175,8 @@ just_acid_and_carbon(Molecule& m, const int* fragment_membership, int f) {
       continue;
     }
 
-    atom_number_t csp = a->other(
-        i, 0);  // The Carbon, Sulphur or Phosphorus atom at the centre of the acid
+    // The Carbon, Sulphur or Phosphorus atom at the centre of the acid
+    const atom_number_t csp = a->other(i, 0);
 
     const Atom* acsp = m.atomi(csp);
 

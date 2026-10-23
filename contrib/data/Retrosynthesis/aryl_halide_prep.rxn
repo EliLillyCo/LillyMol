@@ -1,0 +1,9 @@
+name: "aryl halide"
+scaffold {
+  smarts: "[Cl,Br,I]-c"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 4
+  }
+}

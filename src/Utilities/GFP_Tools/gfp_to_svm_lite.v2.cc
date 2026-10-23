@@ -966,7 +966,7 @@ GFP_to_Feature_Map::_profile_properties(const Molecular_Properties_Integer& mpi,
 {
   _nproperties = mpi.nproperties();
 
-  const int* p = mpi.rawdata();
+  const uint8_t* p = mpi.rawdata();
 
   for (int i = 0; i < _nproperties; i++) {
     if (p[i]) {
@@ -1080,7 +1080,7 @@ GFP_to_Feature_Map::_gather_bits_set_properties(
 {
   int n = mpr.nproperties();
 
-  const int* v = mpr.rawdata();
+  const uint8_t* v = mpr.rawdata();
 
   for (int i = 0; i < n; i++) {
     if (0 == v[i]) {

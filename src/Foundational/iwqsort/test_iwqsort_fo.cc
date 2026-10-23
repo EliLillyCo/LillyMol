@@ -3,14 +3,16 @@
 */
 
 #include <stdlib.h>
+#include <iostream>
+#include <random>
 
-#include "cmdline.h"
-#include "iwrandom.h"
+#include "Foundational/cmdline/cmdline.h"
 #define IWQSORT_FO_IMPLEMENTATION
 #include "iwqsort.h"
 
 using std::cerr;
 using std::ostream;
+using std::endl;
 
 static int verbose = 0;
 
@@ -73,7 +75,9 @@ Foo::Foo ()
 
   (void) _string_rep.null_terminated_chars ();     // force a terminator
 
-  _sort_key = intbtwij (0, range);
+  std::random_device rd;
+  std::uniform_int_distribution<int> u(0, range - 1);
+  _sort_key = u(rd);
 
   return;
 }
@@ -304,8 +308,6 @@ test_iwqsort_fo (int argc, char ** argv)
     if (verbose)
       cerr << "Will process arrays of size " << n << endl;
   }
-
-  iw_random_seed ();
 
   int failures = 0;
   if (! test_array_of_pointers (n))

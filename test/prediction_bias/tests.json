@@ -1,0 +1,17 @@
+{
+  "executable": "prediction_bias",
+  "test": [
+    {
+      "name": "linear_fit",
+      "args": [
+        "-A #{indir}/activity.txt #{indir}/predicted.txt"
+      ]
+    },
+    {
+      "name": "quadratic_plot",
+      "shell_script": {
+        "script_name": "run_quadratic_plot.sh"
+      }
+    }
+  ]
+}

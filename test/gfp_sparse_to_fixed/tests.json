@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_sparse_to_fixed",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-F NCSELW  ${LILLYMOL_HOME}/data//pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

@@ -1,0 +1,77 @@
+# Activate this tool environment by sourcing this file:
+#
+#   source /path/to/activate
+#
+# Then deactivate with:
+#
+#   deactivate_lillymol
+
+# Avoid double-activation without first deactivating.
+if [ -n "${_LILLYMOL_TOOLS_ENV_ACTIVE:-}" ]; then
+  echo "A tools environment is already active. Run 'deactivate_lillymol' first." >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+# Save original environment.
+export _LILLYMOL_TOOLS_ENV_OLD_PATH="${PATH}"
+export _LILLYMOL_TOOLS_ENV_ACTIVE=1
+if [[ -v LILLYMOL_HOME ]] ; then
+  export _LILLYMOL_TOOLS_ENV_OLD_LILLYMOL_HOME="${LILLYMOL_HOME}"
+fi
+
+
+# Directory containing this activate script.
+# Works in bash and zsh.
+if [ -n "${BASH_SOURCE:-}" ]; then
+  _LILLYMOL_TOOLS_ENV_ACTIVATE_DIR="$(dirname $(realpath "${BASH_SOURCE[0]}"))"
+elif [ -n "${ZSH_VERSION:-}" ]; then
+  _LILLYMOL_TOOLS_ENV_ACTIVATE_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+  _LILLYMOL_TOOLS_ENV_ACTIVATE_DIR="$(pwd)"
+fi
+
+# echo $_LILLYMOL_TOOLS_ENV_ACTIVATE_DIR
+
+# Add tool directories to the front of PATH.
+#
+# Adjust these as needed.
+_LILLYMOL_TOOLS_ENV_PATH_ENTRIES="
+${_LILLYMOL_TOOLS_ENV_ACTIVATE_DIR}/bin/$(uname)
+${_LILLYMOL_TOOLS_ENV_ACTIVATE_DIR}/contrib/bin
+"
+
+# echo $_LILLYMOL_TOOLS_ENV_PATH_ENTRIES
+
+for _LILLYMOL_TOOLS_ENV_DIR in ${_LILLYMOL_TOOLS_ENV_PATH_ENTRIES}; do
+  if [ -d "${_LILLYMOL_TOOLS_ENV_DIR}" ]; then
+    PATH="${_LILLYMOL_TOOLS_ENV_DIR}:${PATH}"
+  else
+    echo "${_LILLYMOL_TOOLS_ENV_DIR} not found"
+  fi
+done
+
+export PATH
+
+export LILLYMOL_HOME="${_LILLYMOL_TOOLS_ENV_ACTIVATE_DIR}"
+
+deactivate_lillymol() {
+  if [ -n "${_LILLYMOL_TOOLS_ENV_OLD_PATH:-}" ]; then
+    export PATH="${_LILLYMOL_TOOLS_ENV_OLD_PATH}"
+  fi
+
+  unset _LILLYMOL_TOOLS_ENV_OLD_PATH
+  unset _LILLYMOL_TOOLS_ENV_ACTIVE
+  unset _LILLYMOL_TOOLS_ENV_ACTIVATE_DIR
+  unset _LILLYMOL_TOOLS_ENV_PATH_ENTRIES
+  unset _LILLYMOL_TOOLS_ENV_DIR
+
+  if [[ -v _LILLYMOL_TOOLS_ENV_OLD_LILLYMOL_HOME ]] ; then
+    LILLYMOL_HOME=${_LILLYMOL_TOOLS_ENV_OLD_LILLYMOL_HOME}
+  else
+    uset LILLYMOL_HOME
+  fi
+
+  unset -f deactivate_lillymol
+}
+
+echo "LillyMol environment activated. Enter deactivate_lillymol to deactivate"

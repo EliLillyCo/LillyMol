@@ -1,0 +1,14 @@
+{
+  "executable": "average",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-c 3 -y space -j #{indir}/input.txt"
+      ]
+    }
+
+  ]
+}

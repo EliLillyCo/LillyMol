@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <memory>
 using std::cerr;
@@ -414,7 +415,7 @@ Reaction_Site::_remove_multiple_hits_that_hit_atoms_being_changed (int matoms,
     cerr << "Checking embedding " << i << " " << (*ei) << endl;
 #endif
 
-    set_vector(tmp, matoms, 0);
+    std::fill_n(tmp, matoms, 0);
 
     int n = ei->number_elements();
 
@@ -500,7 +501,7 @@ keep_only_hits_in_original_set (const Substructure_Results & sresults,
 
   for (int i = ne2 - 1; i >= 0; i--)
   {
-    set_vector(tmp, matoms, 0);
+    std::fill_n(tmp, matoms, 0);
     srtmp.embedding(i)->set_vector(tmp, 1);
 
     int found_match = 0;

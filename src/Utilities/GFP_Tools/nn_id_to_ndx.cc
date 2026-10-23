@@ -391,7 +391,7 @@ Main(int argc, char** argv) {
     cerr << "Read " << data.size() << " ids\n";
     auto now = std::chrono::system_clock::now();
     auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(now - tzero);
-    cerr << "Reading smiles/ids took " << elapsed_seconds << " seconds\n";
+    cerr << "Reading smiles/ids took " << elapsed_seconds.count() << " seconds\n";
   }
 
   IWString output_fname = cl.string_value('S');

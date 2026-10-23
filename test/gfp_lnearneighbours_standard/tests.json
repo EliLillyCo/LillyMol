@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_lnearneighbours_standard",
+  "test": [
+
+    {
+      "name": "case_1",
+      "args": [
+        " -p ${LILLYMOL_HOME}/data/pubchem_example.gfp -T 0.5 ${LILLYMOL_HOME}/data/pubchem_example.gfp"
+      ]
+    }
+
+  ]
+
+}

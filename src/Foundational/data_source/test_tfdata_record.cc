@@ -31,7 +31,9 @@ TestWriteRead(const std::string& fname) {
     message.set_u(i);
 
     std::string serialized;
-    message.SerializeToString(&serialized);
+    if (! message.SerializeToString(&serialized)) {
+      cerr << "SerializeToString failed\n";
+    }
     writer.Write(serialized.data(), serialized.size());
   }
   writer.Close();

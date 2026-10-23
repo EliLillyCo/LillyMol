@@ -1,0 +1,14 @@
+name: "ketone_to_ether"
+scaffold {
+  smarts: "[OD1]=[CR0T1]-[CR0G0D2T0]-*"
+  smarts: "[OD1]=[CR0T1]-[CR0G0D3T0]-*"
+  smarts: "[OD1]=[CR0T1]-[CR0G0D1]-*"
+  remove_atom: 0
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+  change_element {
+    atom: 1
+    element: "O"
+  }
+}

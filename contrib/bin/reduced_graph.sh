@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ -v LILLYMOL_HOME ] ; then
   true
@@ -16,7 +16,7 @@ reductions=${LILLYMOL_HOME}/data/reduced_graph/reductions
 # reductions=${LILLYMOL_HOME}/data/reduced_graph/reductions.donor_acceptor
 # Those queries use the isotopic labels applied by the donor acceptor.
 
-exec ${LILLYMOL_HOME}/bin/Linux/reduced_graph -N F:${charges} \
+exec ${LILLYMOL_HOME}/bin/$(uname)/reduced_graph -N F:${charges} \
           -R ${reductions} \
           -H noremove -H a=F:${hbonds}/acceptor -H d=${hbonds}/donor.qry -H label \
           -N noremove -N F:${charges} \

@@ -124,7 +124,7 @@ int
 ISIS_Link_Atom::_adjust_atom_number (const int * xref,
                                      atom_number_t & a)
 {
-  if (INVALID_ATOM_NUMBER == a)     // strange,
+  if (kInvalidAtomNumber == a)     // strange,
     cerr << "ISIS_Link_Atom::_adjust_atom_number:atom not set!\n";
   else if (xref[a] == a)       // no change
     ;

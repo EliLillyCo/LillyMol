@@ -1,0 +1,13 @@
+{
+  "executable": "substitutions",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-s 'CC1CCCNC1' #{indir}/test.smi"
+      ]
+    }
+
+  ]
+
+}

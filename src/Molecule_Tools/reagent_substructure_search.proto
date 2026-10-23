@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package reagent_substructure_search;
+
+message ReagentRx {
+  optional string name = 1;
+
+  optional uint32 x = 2;
+}
+
+message ReagentData {
+  optional string smiles = 1;
+
+  optional string mformula = 2;
+
+  optional uint32 natoms = 3;
+
+  optional uint32 ncon = 4;
+
+  repeated ReagentRx reaction = 5;
+}

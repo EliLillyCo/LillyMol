@@ -49,6 +49,9 @@ message ScaffoldsOptions {
   // When forming a ring combination retain the first atom from
   // either a sidechain or linker with the scaffold.
   optional bool keep_first_nonring_atom = 12;
+  // I like this naming better. Both are recognised for
+  // backwards compatability.
+  optional bool keep_first_non_ring_atom = 13;
 }
 
 message ScaffoldSubset {

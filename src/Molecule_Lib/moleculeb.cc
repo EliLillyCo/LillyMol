@@ -3,6 +3,7 @@
 */
 
 #include <stdlib.h>
+
 #include <iostream>
 #include <memory>
 
@@ -30,8 +31,7 @@ using std::endl;
 static int copy_atom_based_user_specified_void_pointers_during_add_molecule = 0;
 
 void
-set_copy_atom_based_user_specified_void_pointers_during_add_molecule(int s)
-{
+set_copy_atom_based_user_specified_void_pointers_during_add_molecule(int s) {
   copy_atom_based_user_specified_void_pointers_during_add_molecule = s;
 }
 
@@ -44,16 +44,14 @@ Molecule::nbonds() const
 }*/
 
 int
-Molecule::nedges() const
-{
+Molecule::nedges() const {
   assert(ok());
 
   return _bond_list.number_elements();
 }
 
-const Bond *
-Molecule::bondi(int i) const
-{
+const Bond*
+Molecule::bondi(int i) const {
   assert(ok());
   assert(i >= 0);
 
@@ -64,20 +62,18 @@ Molecule::bondi(int i) const
   Return the J'th bond to atom I
 */
 
-const Bond *
-Molecule::bondi(atom_number_t i, int j) const
-{
+const Bond*
+Molecule::bondi(atom_number_t i, int j) const {
   assert(ok_atom_number(i));
 
-  const Atom * a = _things[i];
+  const Atom* a = _things[i];
   assert(a->ok_index(j));
 
   return a->item(j);
 }
 
 int
-Molecule::saturated(atom_number_t i) const
-{
+Molecule::saturated(atom_number_t i) const {
   assert(ok_atom_number(i));
 
   return _things[i]->fully_saturated();
@@ -96,8 +92,7 @@ Molecule::unsaturation(atom_number_t zatom) const {
 */
 
 atom_number_t
-Molecule::other(atom_number_t i, int j) const
-{
+Molecule::other(atom_number_t i, int j) const {
   assert(ok_atom_number(i));
 
   return _things[i]->other(i, j);
@@ -108,26 +103,24 @@ Molecule::other(atom_number_t i, int j) const
 */
 
 bond_type_t
-Molecule::btype_to_connection(atom_number_t i, int j) const
-{
+Molecule::btype_to_connection(atom_number_t i, int j) const {
   assert(ok_atom_number(i));
   assert(j >= 0 && j < _number_elements);
 
-  const Atom * a1 = _things[i];
+  const Atom* a1 = _things[i];
   return a1->btype_to_connection(j);
 }
 
 bond_type_t
-Molecule::btype_between_atoms(atom_number_t myAtomId, atom_number_t otherAtomId) const
-{
+Molecule::btype_between_atoms(atom_number_t myAtomId, atom_number_t otherAtomId) const {
   assert(ok_2_atoms(myAtomId, otherAtomId));
 
   return _things[myAtomId]->btype_to_atom(myAtomId, otherAtomId);
 }
 
 int
-Molecule::other_and_type(atom_number_t i, int j, atom_number_t & a, bond_type_t & bt) const
-{
+Molecule::other_and_type(atom_number_t i, int j, atom_number_t& a,
+                         bond_type_t& bt) const {
   assert(ok_atom_number(i));
 
   return _things[i]->other_and_type(i, j, a, bt);
@@ -138,20 +131,18 @@ Molecule::other_and_type(atom_number_t i, int j, atom_number_t & a, bond_type_t 
 */
 
 int
-Molecule::connections(atom_number_t a, atom_number_t * others, bond_type_t * bt) const
-{
+Molecule::connections(atom_number_t a, atom_number_t* others, bond_type_t* bt) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->connections(a, others, bt);
 }
 
 int
-Molecule::connections(atom_number_t a, Set_of_Atoms & others) const
-{
+Molecule::connections(atom_number_t a, Set_of_Atoms& others) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->connections(a, others);
 }
 
@@ -162,54 +153,51 @@ Molecule::connections(atom_number_t a) const {
 }
 
 int
-Molecule::connections_and_types(atom_number_t a, Set_of_Atoms & others,
-                                resizable_array<bond_type_t> & bt) const
-{
+Molecule::connections_and_types(atom_number_t a, Set_of_Atoms& others,
+                                resizable_array<bond_type_t>& bt) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->connections_and_types(a, others, bt);
 }
 
 int
-Molecule::connections_and_types(atom_number_t a, atom_number_t * others, bond_type_t * bt) const
-{
+Molecule::connections_and_types(atom_number_t a, atom_number_t* others,
+                                bond_type_t* bt) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->connections_and_types(a, others, bt);
 }
 
 int
-Molecule::bond_types(atom_number_t a, resizable_array<bond_type_t> & bt) const
-{
+Molecule::bond_types(atom_number_t a, resizable_array<bond_type_t>& bt) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->bond_types(bt);
 }
 
 int
-Molecule::bond_types(atom_number_t a, bond_type_t * bt) const
-{
+Molecule::bond_types(atom_number_t a, bond_type_t* bt) const {
   assert(ok_atom_number(a));
 
-  const Atom * aa = _things[a];
+  const Atom* aa = _things[a];
   return aa->bond_types(bt);
 }
 
-const Bond *
-Molecule::bond_between_atoms(atom_number_t a1, atom_number_t a2) const
-{
-
+const Bond*
+Molecule::bond_between_atoms(atom_number_t a1, atom_number_t a2) const {
   assert(ok_2_atoms(a1, a2));
 
-  const Bond * rc = _things[a1]->bond_to_atom(a2);
+  const Bond* rc = _things[a1]->bond_to_atom(a2);
 
-  if (nullptr != rc)
+  if (nullptr != rc) {
     return rc;
+  }
 
-  cerr << "Molecule::bond_between_atoms: atoms " << a1 << " and " << a2 << " not bonded\n";
+  cerr << "Molecule::bond_between_atoms: atoms " << a1 << " and " << a2
+       << " not bonded\n";
   assert(0);
   return nullptr;
 }
@@ -219,11 +207,12 @@ Molecule::bond_between_atoms(atom_number_t a1, atom_number_t a2) const
   the two atoms are bonded
 */
 
-const Bond *
-Molecule::bond_between_atoms_if_present(const atom_number_t a1, const atom_number_t a2) const
-{
-  if (a1 == a2)
+const Bond*
+Molecule::bond_between_atoms_if_present(const atom_number_t a1,
+                                        const atom_number_t a2) const {
+  if (a1 == a2) {
     return nullptr;
+  }
 
   assert(ok_2_atoms(a1, a2));
 
@@ -231,12 +220,12 @@ Molecule::bond_between_atoms_if_present(const atom_number_t a1, const atom_numbe
 }
 
 bool
-Molecule::bond_endpoints(int e, atom_number_t & a1, atom_number_t & a2) const
-{
-  if (e > nedges())
+Molecule::bond_endpoints(int e, atom_number_t& a1, atom_number_t& a2) const {
+  if (e > nedges()) {
     return false;
+  }
 
-  const Bond * b = _bond_list[e];
+  const Bond* b = _bond_list[e];
 
   a1 = b->a1();
   a2 = b->a2();
@@ -252,16 +241,14 @@ Molecule::bond_endpoints(int e, atom_number_t & a1, atom_number_t & a2) const
 */
 
 int
-Molecule::are_bonded(atom_number_t a1, atom_number_t a2) const
-{
+Molecule::are_bonded(atom_number_t a1, atom_number_t a2) const {
   assert(ok_2_atoms(a1, a2));
 
   return _things[a1]->is_bonded_to(a2);
 }
 
 int
-Molecule::are_bonded(atom_number_t a1, atom_number_t a2, bond_type_t & bt) const
-{
+Molecule::are_bonded(atom_number_t a1, atom_number_t a2, bond_type_t& bt) const {
   assert(ok_2_atoms(a1, a2));
 
   return _things[a1]->is_bonded_to(a2, bt);
@@ -277,14 +264,13 @@ Molecule::are_adjacent(atom_number_t a1, atom_number_t a2) const {
 */
 
 int
-Molecule::which_bond(atom_number_t a1, atom_number_t a2) const
-{
+Molecule::which_bond(atom_number_t a1, atom_number_t a2) const {
   assert(ok_2_atoms(a1, a2));
 
   return _bond_list.which_bond(a1, a2);
 }
 
-//#define DEBUG_ADD_MOLECULE
+// #define DEBUG_ADD_MOLECULE
 
 Molecule&
 Molecule::operator+=(const Molecule& rhs) {
@@ -306,82 +292,87 @@ Molecule::operator+(const Molecule& rhs) const {
 */
 
 int
-Molecule::add_molecule(const Molecule * m2)
-{
+Molecule::add_molecule(const Molecule* m2) {
   assert(ok());
 
-  const int m2atoms = m2->natoms();    // will call OK_MOLECULE (m2)
+  const int m2atoms = m2->natoms();  // will call OK_MOLECULE (m2)
 
 #ifdef DEBUG_ADD_MOLECULE
   cerr << "add_molecule : add " << m2atoms << " atoms to " << _number_elements << endl;
   cerr << _molecule_name << endl << m2->molecule_name() << endl;
 #endif
 
-  if (m2atoms <= 0)    // wierd
+  if (m2atoms <= 0) {  // wierd
     return 1;
+  }
 
   int m1atoms = _number_elements;
 
-  if (_elements_allocated < m1atoms + m2atoms)
+  if (_elements_allocated < m1atoms + m2atoms) {
     resize(m1atoms + m2atoms);
+  }
 
   int m2_has_charges = m2->has_charges();
-  if (m2_has_charges)
+  if (m2_has_charges) {
     (void)allocate_charges();
+  }
 
-  for (int i = 0; i < m2atoms; i++)
-  {
-    const Atom * a2 = m2->_things[i];
+  for (int i = 0; i < m2atoms; i++) {
+    const Atom* a2 = m2->_things[i];
 
-   // Use copy constructor to preserve as many properties as possible, including coordinates
-    Atom * tmp = new Atom(a2);
+    // Use copy constructor to preserve as many properties as possible, including
+    // coordinates
+    Atom* tmp = new Atom(a2);
 
-    add(tmp, 1);    // extra arg means partial molecule
+    add(tmp, 1);  // extra arg means partial molecule
 
-    if (m2_has_charges)
+    if (m2_has_charges) {
       set_charge(_number_elements - 1, m2->charge_on_atom(i));
+    }
 
     //  cerr << "built atom " << i << ' ';
     //  tmp->debug_print(cerr);
     //  a2->debug_print(cerr);
 
-    //  if (copy_atom_based_user_specified_void_pointers_during_add_molecule)   // redundant, the Atom copy constructor does this always
-    //    tmp->set_user_specified_void_ptr(const_cast<void *>(a2->user_specified_void_ptr()));
+    //  if (copy_atom_based_user_specified_void_pointers_during_add_molecule)   //
+    //  redundant, the Atom copy constructor does this always
+    //    tmp->set_user_specified_void_ptr(const_cast<void
+    //    *>(a2->user_specified_void_ptr()));
   }
 
-  const BondList & m2blist = m2->_bond_list;
+  const BondList& m2blist = m2->_bond_list;
   int m2bonds = m2blist.nbonds();
   _bond_list.resize(_bond_list.number_elements() + m2bonds);
 
-  for (int i = 0; i < m2bonds; i++)
-  {
-    const Bond * oldb = m2blist[i];
+  for (int i = 0; i < m2bonds; i++) {
+    const Bond* oldb = m2blist[i];
     atom_number_t a1 = m1atoms + oldb->a1();
     atom_number_t a2 = m1atoms + oldb->a2();
     bond_type_t btype = oldb->btype();
 
-    add_bond(a1, a2, btype, 1);    // last argument means partial molecule, avoid expensive checking
+    add_bond(a1, a2, btype,
+             1);  // last argument means partial molecule, avoid expensive checking
 
     //  Bond * b = const_cast<Bond *> (bond_between_atoms (a1, a2));   // loss of const OK
-    Bond * b = _bond_list.last_item();
+    Bond* b = _bond_list.last_item();
 
     b->copy_directionality_specifications(oldb);
 
-    if (oldb->is_permanent_aromatic())
+    if (oldb->is_permanent_aromatic()) {
       b->set_permanent_aromatic(1);
+    }
   }
 
   // Copy any chiral centres
 
   int nc = m2->_chiral_centres.number_elements();
-  for (int i = 0; i < nc; i++)
-  {
-    const Chiral_Centre * c2 = m2->_chiral_centres[i];
+  for (int i = 0; i < nc; i++) {
+    const Chiral_Centre* c2 = m2->_chiral_centres[i];
     assert(c2->ok());
 
     atom_number_t a2 = c2->a();
 
-    Chiral_Centre * c1 = new Chiral_Centre(m1atoms + a2);
+    Chiral_Centre* c1 = new Chiral_Centre(m1atoms + a2);
     c1->make_copy(c2);
 
     _chiral_centres.add(c1);
@@ -389,25 +380,25 @@ Molecule::add_molecule(const Molecule * m2)
 
   _set_modified();
 
-  if (! _check_chiral_centres())
-  {
+  if (!_check_chiral_centres()) {
     cerr << "add_molecule: invalid chiral centres\n";
     return 0;
   }
 
-  if (! ok())
-  {
+  if (!ok()) {
     cerr << "Molecule::add_molecule failed\n";
     debug_print(cerr);
     return 0;
   }
 
-  for (int i = 0; i < m2->_text_info.number_elements(); i++)
-  {
-    const IWString * inf = m2->_text_info[i];
+  if (m2->_text_info) {
+    resizable_array_p<IWString>& text_info = _ensure_text_info();
+    for (int i = 0; i < m2->_text_info->number_elements(); i++) {
+      const IWString* inf = (*(m2->_text_info))[i];
 
-    IWString * n = new IWString(*inf);
-    _text_info.add(n);
+      IWString* n = new IWString(*inf);
+      text_info.add(n);
+    }
   }
 
   return 1;
@@ -421,8 +412,7 @@ Molecule::add_molecule(const Molecule * m2)
 */
 
 int
-Molecule::add_molecule_without(const Molecule * m2, atom_number_t except)
-{
+Molecule::add_molecule_without(const Molecule* m2, atom_number_t except) {
   assert(ok());
   assert(OK_ATOM_NUMBER(m2, except));
 
@@ -432,34 +422,35 @@ Molecule::add_molecule_without(const Molecule * m2, atom_number_t except)
 
   // First add atoms from m2 to THIS
 
-  for (int i = 0; i < m2atoms; i++)
-    if (i != except)
-    {
-      Atom * a = m2->_things[i];
+  for (int i = 0; i < m2atoms; i++) {
+    if (i != except) {
+      Atom* a = m2->_things[i];
 
-      Atom * tmp = new Atom(a);    // zero connected
+      Atom* tmp = new Atom(a);  // zero connected
 
       formal_charge_t fc2 = a->formal_charge();
-      if (fc2)
+      if (fc2) {
         tmp->set_formal_charge(fc2);
+      }
 
       Molecule::add(tmp);
       atom_number_t j = ADJUSTED_ATOM_NUMBER_1(i, except);
       set_charge(j, m2->charge_on_atom(i));
     }
+  }
 
   // Now the bonds. Be careful about atom numbering, as EXCEPT is gone
 
   int m2bonds = m2->nedges();
-  for (int i = 0; i < m2bonds; i++)
-  {
-    const Bond * m2bond = m2->bondi(i);
+  for (int i = 0; i < m2bonds; i++) {
+    const Bond* m2bond = m2->bondi(i);
     atom_number_t a1 = m2bond->a1();
     atom_number_t a2 = m2bond->a2();
 
-    if ((except != a1) && (except != a2))
+    if ((except != a1) && (except != a2)) {
       add_bond(m1atoms + ADJUSTED_ATOM_NUMBER_1(a1, except),
                m1atoms + ADJUSTED_ATOM_NUMBER_1(a2, except), m2bond->btype());
+    }
   }
 
   _set_modified();
@@ -469,43 +460,44 @@ Molecule::add_molecule_without(const Molecule * m2, atom_number_t except)
 }
 
 int
-Molecule::add_molecule_without(const Molecule * m2, atom_number_t except1, atom_number_t except2)
-{
+Molecule::add_molecule_without(const Molecule* m2, atom_number_t except1,
+                               atom_number_t except2) {
   assert(OK_2_ATOMS(m2, except1, except2));
 
   int m1atoms = natoms();
   int m2atoms = m2->natoms();
-  resize(m1atoms + m2atoms - 2);    // 2 atoms lost this time
+  resize(m1atoms + m2atoms - 2);  // 2 atoms lost this time
 
   // First add atoms from m2 to THIS
 
-  for (int i = 0; i < m2atoms; i++)
-    if (i != except1 && i != except2)
-    {
-      Atom * a = m2->_things[i];
-      Atom * tmp = new Atom(a);    // zero connected
+  for (int i = 0; i < m2atoms; i++) {
+    if (i != except1 && i != except2) {
+      Atom* a = m2->_things[i];
+      Atom* tmp = new Atom(a);  // zero connected
 
       formal_charge_t fc2 = a->formal_charge();
-      if (fc2)
+      if (fc2) {
         tmp->set_formal_charge(fc2);
+      }
 
       Molecule::add(tmp);
       atom_number_t j = ADJUSTED_ATOM_NUMBER_2(i, except1, except2);
       set_charge(j, m2->charge_on_atom(i));
     }
+  }
 
   // Now the bonds. Be careful about atom numbering, as EXCEPT is gone
 
   int m2bonds = m2->nedges();
-  for (int i = 0; i < m2bonds; i++)
-  {
-    const Bond * m2bond = m2->bondi(i);
+  for (int i = 0; i < m2bonds; i++) {
+    const Bond* m2bond = m2->bondi(i);
     atom_number_t a1 = m2bond->a1();
     atom_number_t a2 = m2bond->a2();
 
-    if ((except1 != a1) && (except1 != a2) && (except2 != a1) && (except2 != a2))
+    if ((except1 != a1) && (except1 != a2) && (except2 != a1) && (except2 != a2)) {
       add_bond(m1atoms + ADJUSTED_ATOM_NUMBER_2(a1, except1, except2),
                m1atoms + ADJUSTED_ATOM_NUMBER_2(a2, except1, except2), m2bond->btype());
+    }
   }
 
   _set_modified();
@@ -521,28 +513,26 @@ Molecule::add_molecule_without(const Molecule * m2, atom_number_t except1, atom_
 */
 
 int
-Molecule::finished_bond_addition()
-{
+Molecule::finished_bond_addition() {
   assert(ok());
 
-  if (! _partially_built)
-  {
+  if (!_partially_built) {
     cerr << "finished_bond_addition: molecule already complete\n";
     return 1;
   }
 
   _partially_built = 0;
 
-  if (0 == _number_elements)
+  if (0 == _number_elements) {
     return 1;
+  }
 
   return 1;
 }
 
 int
-Molecule::remove_bond(int which_bond)
-{
-  const Bond * b = _bond_list[which_bond];
+Molecule::remove_bond(int which_bond) {
+  const Bond* b = _bond_list[which_bond];
 
   return remove_bond_between_atoms(b->a1(), b->a2());
 
@@ -550,8 +540,7 @@ Molecule::remove_bond(int which_bond)
 }
 
 int
-Molecule::remove_bond_between_atoms(atom_number_t a1, atom_number_t a2)
-{
+Molecule::remove_bond_between_atoms(atom_number_t a1, atom_number_t a2) {
   assert(ok_2_atoms(a1, a2));
 
   _things[a1]->remove_bonds_to_atom(a2);
@@ -566,8 +555,9 @@ Molecule::remove_bond_between_atoms(atom_number_t a1, atom_number_t a2)
 
   int nc = _chiral_centres.number_elements();
 
-  if (0 == nc)    // great, none to worry about
+  if (0 == nc) {  // great, none to worry about
     return 1;
+  }
 
   _check_chirality_after_loss_of_bond(a1, a2);
 
@@ -580,11 +570,10 @@ Molecule::remove_bond_between_atoms(atom_number_t a1, atom_number_t a2)
 */
 
 int
-Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom_number_t a2)
-{
-  for (int i = _chiral_centres.number_elements() - 1; i >= 0; i--)
-  {
-    Chiral_Centre * c = _chiral_centres[i];
+Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1,
+                                              const atom_number_t a2) {
+  for (int i = _chiral_centres.number_elements() - 1; i >= 0; i--) {
+    Chiral_Centre* c = _chiral_centres[i];
 
     atom_number_t ca = c->a();
 
@@ -592,38 +581,38 @@ Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom
       ;
     else if (ca == a2 && c->involves(a1))
       ;
-    else
+    else {
       continue;
+    }
 
-    if (_things[ca]->ncon() < 2)    // can happen with chiral C[P@](=O)(-O)-O...
+    if (_things[ca]->ncon() < 2)  // can happen with chiral C[P@](=O)(-O)-O...
     {
       _chiral_centres.remove_item(i);
       continue;
     }
 
-    //  cerr << "Chiral centre at " << c->a() << " has " << implicit_hydrogens(c->a()) << " implicit hydrogens\n";
-    //  c->debug_print(cerr);
+    //  cerr << "Chiral centre at " << c->a() << " has " << implicit_hydrogens(c->a()) <<
+    //  " implicit hydrogens\n"; c->debug_print(cerr);
 
     atomic_number_t z = _things[ca]->atomic_number();
 
     //  N1C(=S)N(C)C2=C(C1=O)C=CC=C2 PBCHM915229
 
     // if ((7 == z) && 2 == _things[ca]->ncon()) change jul 2023
-    if ((z == 7 || z == 6) && 2 == _things[ca]->ncon())
-    {
+    if ((z == 7 || z == 6) && 2 == _things[ca]->ncon()) {
       _chiral_centres.remove_item(i);
       continue;
     }
 
     // after breaking the bond, centre now has an implicit hydrogen
     if (1 == implicit_hydrogens(c->a())) {
-      if (ca == a1)
+      if (ca == a1) {
         c->atom_is_now_implicit_hydrogen(a2);
-      else if (ca == a2)
+      } else if (ca == a2) {
         c->atom_is_now_implicit_hydrogen(a1);
-      else
-      {
-        cerr << "Molecule::remove_bond_between_atoms: huh IH " << a1 << " and " << a2 << endl;
+      } else {
+        cerr << "Molecule::remove_bond_between_atoms: huh IH " << a1 << " and " << a2
+             << endl;
         cerr << "Chiral Centre ";
         c->debug_print(cerr);
       }
@@ -639,16 +628,14 @@ Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom
 
     // C1=CC=CC=C1[S@@](=O)(=N)C PBCHM25036286
 
-    if (((7 == z) || (15 == z)) && _things[ca]->ncon() < _things[ca]->nbonds())
-    {
+    if (((7 == z) || (15 == z)) && _things[ca]->ncon() < _things[ca]->nbonds()) {
       _chiral_centres.remove_item(i);
       continue;
     }
 
     //  cerr << "Atomic number " << z << " ncon " << _things[ca]->ncon() << endl;
 
-    if (16 == z && _things[ca]->ncon() < 4)
-    {
+    if (16 == z && _things[ca]->ncon() < 4) {
       _chiral_centres.remove_item(i);
       continue;
     }
@@ -656,28 +643,26 @@ Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom
     int lp;
 
     // after breaking the bond, the centre atom has a lone pair
-    if (0 == implicit_hydrogens(ca) && lone_pair_count(ca, lp) && 1 == lp)
-    {
-      if (ca == a1)
+    if (0 == implicit_hydrogens(ca) && lone_pair_count(ca, lp) && 1 == lp) {
+      if (ca == a1) {
         c->atom_is_now_lone_pair(a2);
-      else if (ca == a2)
+      } else if (ca == a2) {
         c->atom_is_now_lone_pair(a1);
-      else
-      {
-        cerr << "Molecule::remove_bond_between_atoms: huh LP " << a1 << " and " << a2 << endl;
+      } else {
+        cerr << "Molecule::remove_bond_between_atoms: huh LP " << a1 << " and " << a2
+             << endl;
         cerr << "Chiral Centre ";
         c->debug_print(cerr);
       }
 
-      if (! c->ok())
-      {
+      if (!c->ok()) {
         cerr << "Messed up chiral centre during removal\n";
         c->debug_print(cerr);
       }
       assert(c->ok());
-    }
-    else
+    } else {
       _chiral_centres.remove_item(i);
+    }
   }
 
   // Should do something about cis-trans bonds too
@@ -685,7 +670,7 @@ Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom
   return 1;
 }
 
-//#define DEBUG_REMOVE_BONDS_TO_ATOM
+// #define DEBUG_REMOVE_BONDS_TO_ATOM
 
 /*
   Function used by remove_atom to get rid of all the bonds going
@@ -693,37 +678,35 @@ Molecule::_check_chirality_after_loss_of_bond(const atom_number_t a1, const atom
 */
 
 #ifdef DEBUG_REMOVE_BONDS_TO_ATOM
-extern int
-BAD_BONDS(const Molecule &);
+extern int BAD_BONDS(const Molecule&);
 #endif
 
 int
-Molecule::_remove_bonds_to_atom(atom_number_t zatom, int adjust_atom_numbers)
-{
+Molecule::_remove_bonds_to_atom(atom_number_t zatom, int adjust_atom_numbers) {
   assert(ok_atom_number(zatom));
 
 #ifdef DEBUG_REMOVE_BONDS_TO_ATOM
-  cerr << "Removing bonds to atom " << zatom << " adjust = " << adjust_atom_numbers << endl;
+  cerr << "Removing bonds to atom " << zatom << " adjust = " << adjust_atom_numbers
+       << endl;
 #endif
 
-  Atom * a = _things[zatom];
+  Atom* a = _things[zatom];
 
   const int acon = a->ncon();
-  for (int i = 0; i < acon; i++)
-  {
-    const Bond * b = a->item(i);
+  for (int i = 0; i < acon; i++) {
+    const Bond* b = a->item(i);
     atom_number_t j = b->other(zatom);
 
     _things[j]->remove_bonds_to_atom(zatom);
   }
 
-  for (int i = _bond_list.number_elements() - 1; i >= 0; i--)
-  {
-    Bond * b = _bond_list[i];
-    if (b->involves(zatom))
+  for (int i = _bond_list.number_elements() - 1; i >= 0; i--) {
+    Bond* b = _bond_list[i];
+    if (b->involves(zatom)) {
       _bond_list.remove_item(i);
-    else if (adjust_atom_numbers)
+    } else if (adjust_atom_numbers) {
       b->adjust_for_loss_of_atom(zatom);
+    }
   }
 
 #ifdef DEBUG_PLACE_WEDGE_BOND
@@ -731,7 +714,7 @@ Molecule::_remove_bonds_to_atom(atom_number_t zatom, int adjust_atom_numbers)
   BAD_BONDS(*this);
 #endif
 
-  a->resize(0);    // remove all the bonds
+  a->resize(0);  // remove all the bonds
 
   a->set_modified();
 
@@ -741,27 +724,27 @@ Molecule::_remove_bonds_to_atom(atom_number_t zatom, int adjust_atom_numbers)
 }
 
 int
-Molecule::remove_bonds_to_atom(atom_number_t zatom, int preserve_chirality)
-{
+Molecule::remove_bonds_to_atom(atom_number_t zatom, int preserve_chirality) {
   _atom_being_unbonded_check_directional_bonds(zatom, preserve_chirality);
 
-  if (! _remove_bonds_to_atom(zatom))
+  if (!_remove_bonds_to_atom(zatom)) {
     return 0;
+  }
 
-  for (int i = _chiral_centres.number_elements() - 1; i >= 0; i--)
-  {
-    Chiral_Centre * c = _chiral_centres[i];
+  for (int i = _chiral_centres.number_elements() - 1; i >= 0; i--) {
+    Chiral_Centre* c = _chiral_centres[i];
 
-    if (! c->involves(zatom))
+    if (!c->involves(zatom)) {
       continue;
+    }
 
-    if (! preserve_chirality)
-    {
+    if (!preserve_chirality) {
       _chiral_centres.remove_item(i);
       continue;
     }
 
-    if (c->implicit_hydrogen_count())    // already got an implicit Hydrogen, cannot have another one
+    if (c->implicit_hydrogen_count())  // already got an implicit Hydrogen, cannot have
+                                       // another one
     {
       _chiral_centres.remove_item(i);
       continue;
@@ -774,24 +757,26 @@ Molecule::remove_bonds_to_atom(atom_number_t zatom, int preserve_chirality)
 }
 
 int
-Molecule::remove_bonds_involving_these_atoms(const int * rm, int check_chirality)
-{
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    if (0 == rm[i])
+Molecule::remove_bonds_involving_these_atoms(const int* rm, int check_chirality) {
+  for (int i = 0; i < _number_elements; ++i) {
+    if (0 == rm[i]) {
       continue;
+    }
 
-    Atom * a = _things[i];    // all bonds to atom I will be removed
+    Atom* a = _things[i];  // all bonds to atom I will be removed
 
-    for (int j = a->ncon() - 1; j >= 0; --j)
-    {
+    for (int j = a->ncon() - 1; j >= 0; --j) {
       const atom_number_t k = a->other(i, j);
 
-      if (! rm[k])    // all bonds to atom K is not being removed, so we need to carefully remove the bond to atom I
-        _things[k]->remove_bonds_to_atom(i, 0);    // last arg means do NOT adjust atom numbers
+      if (!rm[k]) {  // all bonds to atom K is not being removed, so we need to carefully
+                     // remove the bond to atom I
+        _things[k]->remove_bonds_to_atom(i,
+                                         0);  // last arg means do NOT adjust atom numbers
+      }
 
-      if (check_chirality)
+      if (check_chirality) {
         _check_chirality_after_loss_of_bond(i, k);
+      }
     }
 
     a->resize(0);
@@ -800,34 +785,35 @@ Molecule::remove_bonds_involving_these_atoms(const int * rm, int check_chirality
 
   _bond_list.remove_bonds_involving_these_atoms(rm);
 
-  _set_modified();    // always
+  _set_modified();  // always
 
   return 1;
 }
 
 int
-Molecule::set_bond_type_between_atoms(atom_number_t a1, atom_number_t a2, bond_type_t bt)
-{
+Molecule::set_bond_type_between_atoms(atom_number_t a1, atom_number_t a2,
+                                      bond_type_t bt) {
   assert(ok_2_atoms(a1, a2));
   assert(OK_BOND_TYPE(bt));
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));    // loss of const OK
-  if (nullptr == b)
-  {
+  Bond* b = const_cast<Bond*>(_things[a1]->bond_to_atom(a2));  // loss of const OK
+  if (nullptr == b) {
     cerr << "Molecule::set_bond_type_between_atoms: atoms " << a1 << " and " << a2
          << ", no bond found\n";
     abort();
   }
 
-  // was directional, now no longer a single bond
-  if (0 == (bt & SINGLE_BOND) && b->is_directional())
-    b->set_not_directional();
+  const bool was_cis_trans = b->part_of_cis_trans_grouping();
 
-  // We don't check whether any cis-trans bond groupings should be broken up...
+  // was directional, now no longer a single bond
+  if (0 == (bt & SINGLE_BOND) && b->is_directional()) {
+    b->set_not_directional();
+  }
 
   // was part of cis/trans, now cannot be
-  if (0 == (bt & DOUBLE_BOND) && b->part_of_cis_trans_grouping())
+  if (0 == (bt & DOUBLE_BOND) && b->part_of_cis_trans_grouping()) {
     b->set_part_of_cis_trans_grouping(0);
+  }
 
   b->set_bond_type(bt);
 
@@ -840,38 +826,43 @@ Molecule::set_bond_type_between_atoms(atom_number_t a1, atom_number_t a2, bond_t
   // Jan 99. If we have just placed a double bond, we need to remove any
   // chiral centres which may have been at either end.
 
-  if (! b->is_single_bond())
-  {
-    if (nullptr != chiral_centre_at_atom(a1))
+  if (!b->is_single_bond()) {
+    if (nullptr != chiral_centre_at_atom(a1)) {
       remove_chiral_centre_at_atom(a1);
+    }
 
-    if (nullptr != chiral_centre_at_atom(a2))
+    if (nullptr != chiral_centre_at_atom(a2)) {
       remove_chiral_centre_at_atom(a2);
+    }
   }
 
   // Check to see if any cis-trans bonds need to be adjusted
 
   // double bond in middle of cis trans group was made into a single bond
-  if (! b->is_double_bond() && b->part_of_cis_trans_grouping())
-  {
+  if (!b->is_double_bond() && b->part_of_cis_trans_grouping()) {
     b->set_part_of_cis_trans_grouping(0);
+  }
+
+  if (was_cis_trans && !(bt & DOUBLE_BOND)) {
+    // Discard only obsolete direction flags; shared bonds may still define
+    // the geometry of a neighbouring double bond.
+    _remove_directionality_from_bonds_not_actually_directional();
   }
 
   return 1;
 }
 
 int
-Molecule::set_all_bonds_to_type(bond_type_t bt)
-{
+Molecule::set_all_bonds_to_type(bond_type_t bt) {
   int rc = _bond_list.set_all_bond_types(bt);
 
-  if (rc)
+  if (rc) {
     invalidate_smiles();
+  }
 
   DELETE_IF_NOT_NULL_ARRAY(_aromaticity);
 
-  for (int i = 0; i < _sssr_rings.number_elements(); i++)
-  {
+  for (int i = 0; i < _sssr_rings.number_elements(); i++) {
     _sssr_rings[i]->invalidate_aromaticity();
   }
 
@@ -879,21 +870,19 @@ Molecule::set_all_bonds_to_type(bond_type_t bt)
 }
 
 int
-Molecule::set_wedge_bond_between_atoms(atom_number_t a1, atom_number_t a2, int dir)
-{
+Molecule::set_wedge_bond_between_atoms(atom_number_t a1, atom_number_t a2, int dir) {
   assert(ok_2_atoms(a1, a2));
 
-  Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));    // loss of const OK
-  if (nullptr == b)
-  {
+  Bond* b = const_cast<Bond*>(_things[a1]->bond_to_atom(a2));  // loss of const OK
+  if (nullptr == b) {
     cerr << "Molecule::set_bond_type_between_atoms: atoms " << a1 << " and " << a2
          << ", no bond found\n";
     abort();
   }
 
-  if (! b->is_single_bond())
-  {
-    cerr << "Molecule::set_wedge_bond_between_atoms: only single bonds can be directional\n";
+  if (!b->is_single_bond()) {
+    cerr << "Molecule::set_wedge_bond_between_atoms: only single bonds can be "
+            "directional\n";
     cerr << "Bond between atoms " << a1 << " and " << a2 << " is not a single bond\n";
     return 0;
   }
@@ -902,27 +891,30 @@ Molecule::set_wedge_bond_between_atoms(atom_number_t a1, atom_number_t a2, int d
   cerr << "SWBBA: Processing bond " << b->a1() << " to " << b->a2() << endl;
 #endif
 
-  if (0 == dir)
-  {
+  if (0 == dir) {
     b->set_not_directional();
 
     return 1;
   }
 
-  // Gets a little more complicated here, because we don't know whether a1 corresponds to a1 in the bond
+  // Gets a little more complicated here, because we don't know whether a1 corresponds to
+  // a1 in the bond
 
 #ifdef DEBUG_PLACE_WEDGE_BOND
-  if (a1 != b->a1())    // reverse the direction
+  if (a1 != b->a1()) {  // reverse the direction
     cerr << "Direction reversed, now " << dir << endl;
+  }
 #endif
 
-  if (a1 != b->a1())    // reverse the direction
+  if (a1 != b->a1()) {  // reverse the direction
     dir = -dir;
+  }
 
-  if (dir > 0)
+  if (dir > 0) {
     b->set_wedge_up();
-  else
+  } else {
     b->set_wedge_down();
+  }
 
   // Don't bother with set modified, this doesn't change anything
 
@@ -930,20 +922,19 @@ Molecule::set_wedge_bond_between_atoms(atom_number_t a1, atom_number_t a2, int d
 }
 
 int
-Molecule::all_atoms_connected(atom_number_t zatom, Set_of_Atoms & connected_atoms) const
-{
+Molecule::all_atoms_connected(atom_number_t zatom, Set_of_Atoms& connected_atoms) const {
   assert(ok_atom_number(zatom));
   connected_atoms.add(zatom);
 
-  const Atom * a = _things[zatom];
+  const Atom* a = _things[zatom];
 
   int rc = 0;
   int acon = a->ncon();
-  for (int i = 0; i < acon; i++)
-  {
+  for (int i = 0; i < acon; i++) {
     atom_number_t j = a->other(zatom, i);
-    if (connected_atoms.contains(j))
+    if (connected_atoms.contains(j)) {
       continue;
+    }
 
     rc++;
     rc += all_atoms_connected(j, connected_atoms);
@@ -953,8 +944,7 @@ Molecule::all_atoms_connected(atom_number_t zatom, Set_of_Atoms & connected_atom
 }
 
 int
-Molecule::chop(int items_removed)
-{
+Molecule::chop(int items_removed) {
   assert(ok());
 
   if (items_removed <= 0) {
@@ -962,7 +952,8 @@ Molecule::chop(int items_removed)
   }
 
   if (items_removed > _number_elements) {
-    cerr << "Molecule::chop:natoms " << _number_elements << " cannot remove " << items_removed << '\n';
+    cerr << "Molecule::chop:natoms " << _number_elements << " cannot remove "
+         << items_removed << '\n';
     return 0;
   }
 
@@ -970,38 +961,33 @@ Molecule::chop(int items_removed)
 }
 
 int
-Molecule::number_up_or_down_wedge_bonds() const
-{
+Molecule::number_up_or_down_wedge_bonds() const {
   int rc = 0;
 
   int nb = _bond_list.number_elements();
 
-  for (int i = 0; i < nb; i++)
-  {
-    if (_bond_list[i]->is_wedge_definitive())
+  for (int i = 0; i < nb; i++) {
+    if (_bond_list[i]->is_wedge_definitive()) {
       rc++;
+    }
   }
 
   return rc;
 }
 
 int
-Molecule::assign_bond_numbers_to_bonds()
-{
+Molecule::assign_bond_numbers_to_bonds() {
   return _bond_list.assign_bond_numbers(0);
 }
 
 int
-Molecule::assign_bond_numbers_to_bonds_if_needed()
-{
+Molecule::assign_bond_numbers_to_bonds_if_needed() {
   return _bond_list.assign_bond_numbers_to_bonds_if_needed();
 }
 
 int
-BondList::assign_bond_numbers(int istart)
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
+BondList::assign_bond_numbers(int istart) {
+  for (int i = 0; i < _number_elements; i++) {
     _things[i]->set_bond_number(i + istart);
   }
 
@@ -1009,32 +995,31 @@ BondList::assign_bond_numbers(int istart)
 }
 
 int
-BondList::assign_bond_numbers_to_bonds_if_needed()
-{
-  if (0 == _number_elements)
+BondList::assign_bond_numbers_to_bonds_if_needed() {
+  if (0 == _number_elements) {
     return 0;
+  }
 
   // If first and last items are assigned, assume OK
 
-  if (_things[0]->bond_number_assigned() && _things[_number_elements - 1]->bond_number_assigned())
+  if (_things[0]->bond_number_assigned() &&
+      _things[_number_elements - 1]->bond_number_assigned()) {
     return 0;
+  }
 
   return assign_bond_numbers(0);
 }
 
 int
-Molecule::unset_all_permanent_aromatic_bonds()
-{
+Molecule::unset_all_permanent_aromatic_bonds() {
   return _bond_list.unset_all_permanent_aromatic_bonds();
 }
 
 int
-BondList::unset_all_permanent_aromatic_bonds()
-{
+BondList::unset_all_permanent_aromatic_bonds() {
   assert(ok());
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     _things[i]->set_permanent_aromatic(0);
   }
 
@@ -1042,28 +1027,25 @@ BondList::unset_all_permanent_aromatic_bonds()
 }
 
 atom_number_t
-Molecule::atom_with_isotope(const isotope_t iso) const
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (iso == _things[i]->isotope())
+Molecule::atom_with_isotope(const isotope_t iso) const {
+  for (int i = 0; i < _number_elements; i++) {
+    if (iso == _things[i]->isotope()) {
       return i;
+    }
   }
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 int
-Molecule::remove_all_bonds()
-{
+Molecule::remove_all_bonds() {
   _set_modified();
 
   _bond_list.resize(0);
 
   _chiral_centres.resize(0);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     _things[i]->resize(0);
     _things[i]->set_modified();
   }
@@ -1072,16 +1054,14 @@ Molecule::remove_all_bonds()
 }
 
 int
-Molecule::remove_all_bonds_keep_storage()
-{
+Molecule::remove_all_bonds_keep_storage() {
   _set_modified();
 
   _bond_list.resize_keep_storage(0);
 
   _chiral_centres.resize_keep_storage(0);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     _things[i]->resize_keep_storage(0);
     _things[i]->set_modified();
   }
@@ -1090,12 +1070,10 @@ Molecule::remove_all_bonds_keep_storage()
 }
 
 int
-Molecule::get_bond_types(bond_type_t * bt) const
-{
+Molecule::get_bond_types(bond_type_t* bt) const {
   int nb = _bond_list.number_elements();
 
-  for (int i = 0; i < nb; i++)
-  {
+  for (int i = 0; i < nb; i++) {
     bt[i] = BOND_TYPE_ONLY_MASK & _bond_list[i]->btype();
   }
 
@@ -1103,12 +1081,10 @@ Molecule::get_bond_types(bond_type_t * bt) const
 }
 
 int
-Molecule::set_bond_types_no_set_modified(const bond_type_t * bt)
-{
+Molecule::set_bond_types_no_set_modified(const bond_type_t* bt) {
   int nb = _bond_list.number_elements();
 
-  for (int i = 0; i < nb; i++)
-  {
+  for (int i = 0; i < nb; i++) {
     _bond_list[i]->set_bond_type(bt[i]);
   }
 
@@ -1134,30 +1110,30 @@ Molecule::quick_bond_hash() {
 
   uint64_t c_single_c = 0;
   uint64_t c_double_c = 0;
-  uint64_t c_triple_c = 0;    // 2 bits
+  uint64_t c_triple_c = 0;  // 2 bits
   uint64_t c_arom_c = 0;
 
   uint64_t c_single_n = 0;
   uint64_t c_double_n = 0;
-  uint64_t c_triple_n = 0;    // 3 bits
+  uint64_t c_triple_n = 0;  // 3 bits
   uint64_t c_arom_n = 0;
 
   uint64_t c_single_o = 0;
   uint64_t c_double_o = 0;
-  uint64_t c_arom_o = 0;    // 3 bits
+  uint64_t c_arom_o = 0;  // 3 bits
 
   uint64_t c_single_s = 0;
-  uint64_t c_double_s = 0;    // 2 bits
-  uint64_t c_arom_s = 0;      // 3 bits
+  uint64_t c_double_s = 0;  // 2 bits
+  uint64_t c_arom_s = 0;    // 3 bits
 
-  uint64_t n_arom_n = 0;      // 2 bits
-  uint64_t n_single_n = 0;    // bug, we are overlooking this
-  uint64_t n_double_n = 0;    // bug, we are overlooking this
-  uint64_t n_triple_n = 0;    // bug, we are overlooking this
+  uint64_t n_arom_n = 0;    // 2 bits
+  uint64_t n_single_n = 0;  // bug, we are overlooking this
+  uint64_t n_double_n = 0;  // bug, we are overlooking this
+  uint64_t n_triple_n = 0;  // bug, we are overlooking this
 
-  uint64_t n_single_o = 0;    // bug, overlooked
+  uint64_t n_single_o = 0;  // bug, overlooked
   uint64_t n_double_o = 0;
-  uint64_t n_arom_o = 0;    // bug, overlooked
+  uint64_t n_arom_o = 0;  // bug, overlooked
 
   uint64_t o_single_s = 0;
   uint64_t o_double_s = 0;
@@ -1166,12 +1142,12 @@ Molecule::quick_bond_hash() {
 
   const int nb = _bond_list.number_elements();
 
-  for (int i = 0; i < nb; ++i)
-  {
-    const Bond * b = _bond_list[i];
+  for (int i = 0; i < nb; ++i) {
+    const Bond* b = _bond_list[i];
 
-    if (b->nrings() && ! b->is_aromatic())
+    if (b->nrings() && !b->is_aromatic()) {
       aliphatic_ring_bond_count++;
+    }
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
@@ -1180,83 +1156,75 @@ Molecule::quick_bond_hash() {
 
     atomic_number_t z2 = _things[a2]->atomic_number();
 
-    if (z1 > z2)
+    if (z1 > z2) {
       std::swap(z1, z2);
+    }
 
-    if (6 == z1)
-    {
-      if (6 == z2)
-      {
-        if (b->is_aromatic())
+    if (6 == z1) {
+      if (6 == z2) {
+        if (b->is_aromatic()) {
           c_arom_c++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           c_single_c++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_c++;
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           c_triple_c++;
-      }
-      else if (7 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (7 == z2) {
+        if (b->is_aromatic()) {
           c_arom_n++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           c_single_n++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_n++;
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           c_triple_n++;
-      }
-      else if (8 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (8 == z2) {
+        if (b->is_aromatic()) {
           c_arom_o++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           c_single_o++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_o++;
-      }
-      else if (16 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (16 == z2) {
+        if (b->is_aromatic()) {
           c_arom_s++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           c_single_s++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_s++;
+        }
       }
-    }
-    else if (7 == z1)
-    {
-      if (7 == z2)
-      {
-        if (b->is_aromatic())
+    } else if (7 == z1) {
+      if (7 == z2) {
+        if (b->is_aromatic()) {
           n_arom_n++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           n_single_n++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           n_double_n++;
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           n_triple_n++;
-      }
-      else if (8 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (8 == z2) {
+        if (b->is_aromatic()) {
           n_arom_o++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           n_single_o++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           n_double_o++;
+        }
       }
-    }
-    else if (8 == z1)
-    {
-      if (16 == z2)
-      {
-        if (b->is_single_bond())
+    } else if (8 == z1) {
+      if (16 == z2) {
+        if (b->is_single_bond()) {
           o_single_s++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           o_double_s++;
+        }
       }
     }
   }
@@ -1294,8 +1262,8 @@ Molecule::quick_bond_hash() {
   bshift -= 4;
 
   assert(bshift >= 0);
-  //if (bshift < 0)
-  //  cerr << "negative bshift\n";
+  // if (bshift < 0)
+  //   cerr << "negative bshift\n";
 
   return rc;
 }
@@ -1303,8 +1271,7 @@ Molecule::quick_bond_hash() {
 // Shift `destination` left by nbits and OR `value`.
 // If `value` is too large for that many bits, truncate and increment `overflows`.
 static void
-ShiftOr(uint64_t value, int nbits, uint64_t &overflows, uint64_t& destination) {
-
+ShiftOr(uint64_t value, int nbits, uint64_t& overflows, uint64_t& destination) {
   static uint64_t maxval[] = {0, 1, 7, 16, 31, 63, 127, 255, 511, 1023};
 
   if (value > maxval[nbits]) {
@@ -1381,8 +1348,9 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
   uint64_t overflow_count = 0;
 
   for (const Bond* b : _bond_list) {
-    if (b->nrings() && ! b->is_aromatic())
+    if (b->nrings() && !b->is_aromatic()) {
       aliphatic_ring_bond_count++;
+    }
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
@@ -1400,8 +1368,7 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
     }
 
     if (6 == z1) {
-      if (6 == z2)
-      {
+      if (6 == z2) {
         if (b->is_aromatic()) {
           c_arom_c++;
         } else if (b->is_single_bond()) {
@@ -1417,14 +1384,12 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
           } else {
             ++biphenyl;
           }
-        }
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_c++;
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           c_triple_c++;
-      }
-      else if (7 == z2)
-      {
+        }
+      } else if (7 == z2) {
         if (b->is_aromatic()) {
           c_arom_n++;
         } else if (b->is_single_bond()) {
@@ -1439,22 +1404,19 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
           } else {
             ++c_single_n;
           }
-        }
-        else if (b->is_double_bond()) {
+        } else if (b->is_double_bond()) {
           if (arom1 == 0) {
             c_double_n++;
           } else {
             ++carom_double_n;
           }
-        }
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           c_triple_n++;
-      }
-      else if (8 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (8 == z2) {
+        if (b->is_aromatic()) {
           c_arom_o++;
-        else if (b->is_single_bond()) {
+        } else if (b->is_single_bond()) {
           if (arom1) {
             if (b->nrings()) {
               ++carom_ring_single_o;
@@ -1464,25 +1426,22 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
           } else {
             c_single_o++;
           }
-        }
-        else if (b->is_double_bond()) {
+        } else if (b->is_double_bond()) {
           if (arom1) {
             ++carom_double_o;
           } else {
             c_double_o++;
           }
         }
-      }
-      else if (16 == z2)
-      {
-        if (b->is_aromatic())
+      } else if (16 == z2) {
+        if (b->is_aromatic()) {
           c_arom_s++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           c_single_s++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           c_double_s++;
-      }
-      else if (z2 == 9) {
+        }
+      } else if (z2 == 9) {
         if (arom1) {
           ++carom_f;
         } else {
@@ -1495,43 +1454,39 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
       }
     }
 
-    else if (7 == z1)
-    {
-      if (7 == z2)
-      {
-        if (b->is_aromatic())
+    else if (7 == z1) {
+      if (7 == z2) {
+        if (b->is_aromatic()) {
           n_arom_n++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           n_single_n++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           n_double_n++;
-        else if (b->is_triple_bond())
+        } else if (b->is_triple_bond()) {
           n_triple_n++;
-      }
-      else if (8 == z2)
-      {
-        if (b->is_aromatic())
+        }
+      } else if (8 == z2) {
+        if (b->is_aromatic()) {
           n_arom_o++;
-        else if (b->is_single_bond())
+        } else if (b->is_single_bond()) {
           n_single_o++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           n_double_o++;
-      }
-      else if (z2 == 16) {
+        }
+      } else if (z2 == 16) {
         if (b->is_double_bond()) {
           ++n_arom_s;
         }
       }
-    }
-    else if (8 == z1)
-    {
+    } else if (8 == z1) {
       if (z2 == 8) {
         ++o_single_o;
       } else if (16 == z2) {
-        if (b->is_single_bond())
+        if (b->is_single_bond()) {
           o_single_s++;
-        else if (b->is_double_bond())
+        } else if (b->is_double_bond()) {
           o_double_s++;
+        }
       }
     } else {
       ++other_bond;
@@ -1596,20 +1551,21 @@ Molecule::QuickBondHash(uint64_t hash[2]) {
   // clang-format on
 }
 
-const_BondIterator::const_BondIterator(const Atom * a, const atom_number_t zatom) : _atnum(zatom)
-{
+const_BondIterator::const_BondIterator(const Atom* a, const atom_number_t zatom)
+    : _atnum(zatom) {
   _b = a->cbegin();
 
   return;
 }
+
 int
 Molecule::CanonicaliseBondList() {
-  for (Bond * b : _bond_list) {
+  for (Bond* b : _bond_list) {
     if (b->a1() > b->a2()) {
       b->set_a1a2(b->a2(), b->a1());
     }
   }
-  _bond_list.iwqsort_lambda([](const Bond * b1, const Bond * b2) {
+  _bond_list.iwqsort_lambda([](const Bond* b1, const Bond* b2) {
     if (b1->a1() < b2->a1()) {
       return -1;
     }

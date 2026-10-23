@@ -1,0 +1,13 @@
+{
+  "executable": "nn_leader_and_jp",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-h -T -t 0.3 #{indir}/input.txt"
+      ]
+    }
+
+  ]
+
+}

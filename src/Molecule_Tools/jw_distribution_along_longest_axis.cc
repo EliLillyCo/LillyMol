@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -296,8 +297,8 @@ compute_distribution_of_queried_properties(Molecule& m,
   }
 
   for (int i = 0; i < number_of_properties; i++) {
-    set_vector(hit_array[i], number_of_regions, 0);
-    set_vector(already_hit[i], n_atoms, 0);
+    std::fill_n(hit_array[i], number_of_regions, 0);
+    std::fill_n(already_hit[i], n_atoms, 0);
   }
 
   if (align_by_longest_distance) {

@@ -55,7 +55,7 @@ end
 
 def trxn_parallel
 
-  cl = IWCmdlineV2.new("-v-thr=ipos-tmpdir=s-S=s-trxn=xfile-R=sfile-P=sfile-nj-log=s-keeplog")
+  cl = IWCmdlineV2.new("-v-verbose-thr=ipos-tmpdir=s-S=s-trxn=xfile-R=sfile-P=sfile-nj-log=s-keeplog")
 
   verbose = cl.option_present('v')
 
@@ -149,13 +149,14 @@ def trxn_parallel
   pids = Array.new
 
   (1...nthreads).each do |i|
-    cmd = "#{trxn} #{common_args} -S #{smiles_files[i]}"
-    cmd << ' -v' if keeplog
-
+    cmd = "#{trxn}"
     cmd << " -i seek=#{offset[i]}"
     cmd << " -i stop=#{offset[i+1]}" if offset[i+1]
 
-    cmd << " #{input_file}"
+    cmd << ' -v' if keeplog
+    cmd << " -S #{smiles_files[i]} #{common_args}"
+
+    # cmd << " #{input_file}"
 
     cmd << " 2> #{log_files[i]}" if log_stem
 
@@ -170,10 +171,11 @@ def trxn_parallel
 
   # Now do thread zero here
 
-  cmd = "#{trxn} #{common_args} -S #{smiles_files[0]}"
+  cmd = "#{trxn}"
   cmd << ' -v' if keeplog
 
-  cmd << " -i stop=#{offset[1]} #{input_file}"
+  cmd << " -i stop=#{offset[1]}"
+  cmd << " -S #{smiles_files[0]} #{common_args}"
 
   cmd << " 2>#{log_files[0]}" if log_stem
 
@@ -191,11 +193,11 @@ def trxn_parallel
 
   exit 0 unless rejoin
 
-  cmd = "cat " << smiles_files.join(' ') << " > #{stem}.smi"
+  cmd = "cat " << smiles_files.join(' ') << " > #{sfile}.smi"
   $stderr << "Executing #{cmd}\n" if verbose
   system(cmd)
 
-  PSupport::remove_files(smiles_files)
+  #PSupport::remove_files(smiles_files)
 end
 
 trxn_parallel

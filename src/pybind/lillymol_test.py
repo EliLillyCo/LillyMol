@@ -1,4 +1,5 @@
 import copy
+import gc
 import math
 import unittest
 
@@ -75,6 +76,28 @@ class TestLillyMol(absltest.TestCase):
     m1.add_atom(6)
     self.assertEqual(m1.smiles(), "C.C")
     self.assertEqual(m2.smiles(), "C")
+
+  def test_add_atom(self):
+    m = MolFromSmiles("C methane")
+    c = m.add_atom(6)
+    m.add_bond(0, c, SINGLE_BOND)
+    self.assertEqual(m.number_fragments(), 1)
+
+  def test_renumber_atoms(self):
+    m = MolFromSmiles("CNO")
+    self.assertEqual(m.renumber_atoms([2, 0, 1]), 1)
+    self.assertEqual(m.atomic_number(0), 7)
+    self.assertEqual(m.atomic_number(1), 8)
+    self.assertEqual(m.atomic_number(2), 6)
+
+    with self.assertRaises(ValueError):
+      m.renumber_atoms([0, 1])
+
+    with self.assertRaises(ValueError):
+      m.renumber_atoms([0, 0, 1])
+
+    with self.assertRaises(ValueError):
+      m.renumber_atoms([0, 1, 3])
 
   def test_copy_constructor_with_name(self):
     m = Molecule()
@@ -301,6 +324,51 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.unsaturation(5), 0)
     self.assertEqual(m.unsaturation(6), 1)
 
+  def test_hybridization(self):
+    m = MolFromSmiles("CC=CC#CCc1ccccc1")
+    self.assertEqual(m.hybridization(0), Hybridization.SP3)
+    self.assertEqual(hybridization_name(m.hybridization(0)), "SP3")
+    self.assertEqual(hybridization(m, 1), Hybridization.SP2)
+    self.assertEqual(m.hybridization(3), Hybridization.SP)
+    self.assertEqual(m.hybridization(6), Hybridization.SP2)
+
+    amide = MolFromSmiles("CC(=O)N")
+    self.assertEqual(amide.hybridization(3), Hybridization.SP2)
+
+    ester = MolFromSmiles("CC(=O)OC")
+    self.assertEqual(ester.hybridization(3), Hybridization.SP2)
+
+    phenol = MolFromSmiles("Oc1ccccc1")
+    self.assertEqual(phenol.hybridization(0), Hybridization.SP2)
+
+    ethanol = MolFromSmiles("CCO")
+    self.assertEqual(ethanol.hybridization(2), Hybridization.SP3)
+
+    oxime = MolFromSmiles("ON=C")
+    self.assertEqual(oxime.hybridization(0), Hybridization.SP2)
+
+    quaternary_nitrogen = MolFromSmiles("C[N+](C)(C)C")
+    self.assertEqual(quaternary_nitrogen.hybridization(1), Hybridization.SP3)
+
+    sulfonamide = MolFromSmiles("CNS(=O)(=O)C")
+    self.assertEqual(sulfonamide.hybridization(1), Hybridization.SP3)
+
+    sulfonamide_amide = MolFromSmiles("CS(=O)(=O)NC(=O)C")
+    self.assertEqual(sulfonamide_amide.hybridization(4), Hybridization.SP3)
+
+    sulfonamide_aniline = MolFromSmiles("C1=CN=C(C=N1)NS(=O)(=O)C1=CC=CC=C1 CHEMBL596295")
+    self.assertEqual(sulfonamide_aniline.hybridization(6), Hybridization.SP2)
+    self.assertEqual(sulfonamide_aniline.hybridization(7), Hybridization.SP3)
+
+    sulfoxide = MolFromSmiles("CS(=O)C")
+    self.assertEqual(sulfoxide.hybridization(1), Hybridization.SP3)
+
+    phosphate = MolFromSmiles("COP(=O)(O)O")
+    self.assertEqual(phosphate.hybridization(2), Hybridization.SP3)
+
+    with self.assertRaises(ValueError):
+      m.hybridization(m.natoms())
+
   def test_remove_atom(self):
     m = Molecule()
     self.assertTrue(m.build_from_smiles("CCC"))
@@ -426,11 +494,17 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(m.bonds_between(0, 2), 2)
 
     self.assertIsNone(m.atoms_on_shortest_path(0, 1));
+    self.assertIsNone(m.all_atoms_between(0, 1));
     # logging.info("atoms_between %s", m.atoms_on_shortest_path(0, 2))
     self.assertCountEqual(m.atoms_on_shortest_path(0, 2), [1])
+    self.assertCountEqual(m.all_atoms_between(0, 2), [1, 3])
     # logging.info("atoms_on_shortest_path - 3 %s", m.atoms_on_shortest_path(0, 3))
     self.assertIsNone(m. atoms_on_shortest_path(0, 3))
+    self.assertIsNone(m.all_atoms_between(0, 3))
     self.assertEqual(m.bonds_between(0, 1), 1)
+
+    self.assertTrue(m.build_from_smiles("C1CCCCC1"))
+    self.assertEqual(list(m.all_atoms_between(0, 3)), [1, 5, 2, 4])
 
     self.assertTrue(m.build_from_smiles("N(CC1=CC=C(OCCCC2=CC=CC=C2)C=C1)(CC1=CC=C(OCCCC2=CC=CC=C2)C=C1)CCCCN CHEMBL349114"))
     self.assertEqual(m.fragment_membership(30), m.fragment_membership(39))
@@ -604,12 +678,12 @@ class TestLillyMol(absltest.TestCase):
     self.assertFalse(m.is_ring_atom(0))
     self.assertTrue(m.is_ring_atom(1))
 
-    self.assertFalse(m.in_ring_of_given_size(0, 3))
-    self.assertTrue(m.in_ring_of_given_size(1, 3))
-    self.assertFalse(m.in_ring_of_given_size(1, 4))
-    self.assertTrue(m.in_ring_of_given_size(2, 3))
-    self.assertTrue(m.in_ring_of_given_size(3, 3))
-    self.assertTrue(m.in_ring_of_given_size(5, 3))
+    self.assertFalse(m.in_ring_of_size(0, 3))
+    self.assertTrue(m.in_ring_of_size(1, 3))
+    self.assertFalse(m.in_ring_of_size(1, 4))
+    self.assertTrue(m.in_ring_of_size(2, 3))
+    self.assertTrue(m.in_ring_of_size(3, 3))
+    self.assertTrue(m.in_ring_of_size(5, 3))
 
     self.assertTrue(m.in_same_ring(1, 2))
     self.assertTrue(m.in_same_ring(1, 5))
@@ -664,6 +738,85 @@ class TestLillyMol(absltest.TestCase):
       if bond.is_aromatic():
         aromatic_bonds += 1
     self.assertEqual(aromatic_bonds, 18)
+
+  def test_ring_membership_forces_bond_ring_membership(self):
+    # A Molecule computes derived properties only when asked, and a Bond knows
+    # nothing about its Molecule, so on a freshly parsed molecule a ring bond
+    # reports no ring membership at all. Not an error, just not yet computed.
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("C1CCCCC1"))
+    bond = next(iter(m[0]))
+    self.assertEqual(bond.nrings(), 0)
+    self.assertFalse(bond.IsInRing())
+
+    # nrings() is not the force call - it does not push ring membership down
+    # onto the bonds.
+    m.nrings()
+    self.assertEqual(bond.nrings(), 0)
+
+    # ring_membership() is. It returns nothing; get_ring_membership returns the
+    # per atom counts.
+    self.assertIsNone(m.ring_membership())
+    self.assertEqual(bond.nrings(), 1)
+    self.assertTrue(bond.IsInRing())
+
+  def test_bond_type_between_atoms(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("c1ccccc1C(=O)NC#CC1CC1"))
+
+    # Neither of these methods requires the caller to perceive aromaticity
+    # first. An aromatic bond reports AROMATIC_BOND rather than the single or
+    # double bond it is stored as.
+    self.assertEqual(m.bond_type_between_atoms(0, 1), BondType.AROMATIC_BOND)
+    self.assertEqual(m.bond_type_between_atoms(6, 7), BondType.DOUBLE_BOND)
+    self.assertEqual(m.bond_type_between_atoms(6, 8), BondType.SINGLE_BOND)
+    self.assertEqual(m.bond_type_between_atoms(9, 10), BondType.TRIPLE_BOND)
+
+    # Not bonded, and the degenerate same atom case. The underlying
+    # bond_between_atoms asserts rather than returning, so these must not reach it.
+    self.assertIsNone(m.bond_type_between_atoms(0, 9))
+    self.assertIsNone(m.bond_type_between_atoms(3, 3))
+
+  def test_bond_between_atoms(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("c1ccccc1C(=O)NC#CC1CC1"))
+
+    b = m.bond_between_atoms(0, 1)
+    self.assertEqual(b.a1(), 0)
+    self.assertEqual(b.a2(), 1)
+    self.assertEqual(b.other(0), 1)
+    self.assertTrue(b.is_aromatic())
+    # Ring membership on a bond is only valid once aromaticity has been
+    # perceived. Molecule.nrings() does not set it. This is why the binding
+    # perceives aromaticity itself.
+    self.assertEqual(b.nrings(), 1)
+    self.assertEqual(b.btype(), BondType.AROMATIC_BOND)
+
+    exocyclic = m.bond_between_atoms(6, 7)
+    self.assertFalse(exocyclic.is_aromatic())
+    self.assertEqual(exocyclic.nrings(), 0)
+
+    self.assertIsNone(m.bond_between_atoms(0, 9))
+    self.assertIsNone(m.bond_between_atoms(3, 3))
+
+    # The two methods must never disagree about a bond.
+    for a in range(m.natoms()):
+      for bond in m[a]:
+        self.assertEqual(m.bond_type_between_atoms(bond.a1(), bond.a2()),
+                         bond.btype())
+
+  def test_bond_outlives_molecule(self):
+    # A Bond belongs to its Molecule. The binding must not let python take
+    # ownership of it, nor let the molecule be collected while a bond is held.
+    def escape():
+      m = Molecule()
+      self.assertTrue(m.build_from_smiles("c1ccncc1"))
+      return m.bond_between_atoms(2, 3)
+
+    b = escape()
+    gc.collect()
+    self.assertTrue(b.is_aromatic())
+    self.assertEqual(b.nrings(), 1)
 
   def test_formal_charge(self):
     m = Molecule()
@@ -787,10 +940,17 @@ class TestLillyMol(absltest.TestCase):
   def test_scaffold(self):
     m = Molecule()
     self.assertTrue(m.build_from_smiles("C"))
+    s = m.scaffold()
+    self.assertEqual(s.smiles(), "C")
+    self.assertEqual(m.smiles(), "C")
     m.to_scaffold()
     self.assertEqual(m.smiles(), "C")
 
     self.assertTrue(m.build_from_smiles("O1N=C(C(=O)N2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1 CHEMBL1589003"))
+    original = m.smiles()
+    s = m.scaffold()
+    self.assertEqual(s.smiles(), "O1N=C(C(=O)N2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1")
+    self.assertEqual(m.smiles(), original)
     m.to_scaffold()
     self.assertEqual(m.smiles(), "O1N=C(C(=O)N2CCCC2)C=C1COC1=CC=C2N=CC=CC2=C1")
 
@@ -950,6 +1110,50 @@ class TestLillyMol(absltest.TestCase):
     self.assertNotEqual(usmi, m.unique_smiles())
     self.assertFalse('@' in m.unique_smiles())
 
+  def test_is_actually_chiral(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("C[C@H](N)F"))
+    self.assertTrue(is_actually_chiral(m, 1))
+    self.assertFalse(is_actually_chiral(m, 0))
+
+    self.assertTrue(m.build_from_smiles("N[C@H]1CCC1"))
+    self.assertIsNotNone(m.chiral_centre_at_atom(1))
+    self.assertFalse(is_actually_chiral(m, 1))
+
+  def test_tetrahedral_chirality(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC"))
+    self.assertIsNone(tetrahedral_chirality(m, 0))
+
+    self.assertTrue(m.build_from_smiles("C[C@H](N)F"))
+    self.assertEqual(tetrahedral_chirality(m, 1), ChiralType.CHI_TETRAHEDRAL_CCW)
+    self.assertIsNone(tetrahedral_chirality(m, 0))
+
+    self.assertTrue(m.build_from_smiles("C[C@@H](N)F"))
+    self.assertEqual(tetrahedral_chirality(m, 1), ChiralType.CHI_TETRAHEDRAL_CW)
+
+    self.assertTrue(m.build_from_smiles("[C@H](N)(F)Cl"))
+    self.assertEqual(tetrahedral_chirality(m, 0), ChiralType.CHI_TETRAHEDRAL_CW)
+
+    self.assertTrue(m.build_from_smiles("[C@@H](N)(F)Cl"))
+    self.assertEqual(tetrahedral_chirality(m, 0), ChiralType.CHI_TETRAHEDRAL_CCW)
+
+    self.assertTrue(m.build_from_smiles("F[C@](Cl)(Br)I"))
+    self.assertEqual(tetrahedral_chirality(m, 1), ChiralType.CHI_TETRAHEDRAL_CCW)
+
+    self.assertTrue(m.build_from_smiles("F[C@@](Cl)(Br)I"))
+    self.assertEqual(tetrahedral_chirality(m, 1), ChiralType.CHI_TETRAHEDRAL_CW)
+
+    self.assertTrue(m.build_from_smiles("N[C@H]1CCC1"))
+    self.assertIsNotNone(tetrahedral_chirality(m, 1))
+    self.assertIsNone(tetrahedral_chirality(m, 1, check_is_chiral=True))
+
+  def test_revert_all_directional_bonds_to_non_directional(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles(r"C\C=C\F"))
+    m.revert_all_directional_bonds_to_non_directional()
+    self.assertEqual(m.smiles(), "CC=CF")
+
   def test_iterate_chiral_centres(self):
     m = Molecule();
     self.assertTrue(m.build_from_smiles("O[C@H]1[C@@H](O)C[C@@H](N)[C@H]1O CHEMBL268037"))
@@ -972,6 +1176,56 @@ class TestLillyMol(absltest.TestCase):
     m.set_formal_charge(3, -1)
     self.assertEqual(m.formal_charge(3), -1)
     self.assertEqual(m.net_formal_charge(), -1)
+
+  def test_charge_assigner(self):
+    chg = ChargeAssigner()
+    m = Molecule();
+    self.assertTrue(m.build_from_smiles("CC(=O)O"))
+    self.assertEqual(chg.process(m), 1)
+    self.assertEqual(m.smiles(), "CC(=O)[O-]")
+
+    self.assertTrue(m.build_from_smiles("CCN(CC)C"))
+    self.assertEqual(chg.process(m), 1)
+    self.assertEqual(m.smiles(), "CC[NH+](C)CC")
+
+  def test_donor_acceptor(self):
+    smiles = [
+      "NC1=CC=NN1 CHEMBL3217770",
+      "O(C)C(=O)NN CHEMBL3183780",
+      "N#CCC(=O)NN CHEMBL2106008"
+    ]
+    expected = [
+      "[2NH2]c1[3nH][1n]cc1",
+      "[1O]=C(OC)[3NH][2NH2]",
+      "[1O]=C([3NH][2NH2])CC#[1N]"
+    ]
+    donor_acceotor = DonorAcceptor();
+    for smi, result in zip(smiles, expected):
+      mol = MolFromSmiles(smi)
+      donor_acceotor.process(mol)
+      self.assertEqual(mol.unique_smiles(), result)
+
+  def test_lipinski_hba_hbd(self):
+    # Lipinski wrote donors as "the sum of OHs and NHs", so a donor count is a
+    # count of Hydrogens, not of the heteroatoms bearing them. An NH2 is two
+    # donors. RDKit's NumHDonors counts matching atoms and would say one - that
+    # is a refinement of Lipinski, not what he specified, and it is available
+    # separately as the rdkit variant.
+    cases = [
+      ("C", 0, 0),
+      ("CN", 1, 2),
+      ("CNC", 1, 1),
+      ("NCCN", 2, 4),
+      ("CO", 1, 1),
+      ("COC", 1, 0),
+    ]
+
+    for smiles, hba, hbd in cases:
+      mol = MolFromSmiles(smiles)
+      self.assertEqual(NumHAcceptors(mol), hba)
+      self.assertEqual(NumHDonors(mol), hbd)
+      self.assertEqual(mol.lipinski_num_h_acceptors(), hba)
+      self.assertEqual(mol.lipinski_num_h_donors(), hbd)
 
   def test_xlogp(self):
     m = Molecule()
@@ -999,6 +1253,33 @@ class TestLillyMol(absltest.TestCase):
     self.assertTrue(m.build_from_smiles("C1CC1C"))
     self.assertEqual(rotbond_calc.rotatable_bonds(m), 0)
 
+  def test_rotatable_bond_atoms(self):
+    m = Molecule()
+    rotbond_calc = RotatableBonds()
+    rotbond_calc.set_calculation_type(EXPENSIVE)
+
+    self.assertTrue(m.build_from_smiles("CCCC"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 1)
+    self.assertEqual(rotbond_calc.rotatable_bond_atoms(m), [(1, 2)])
+
+    self.assertTrue(m.build_from_smiles("CCCCC"))
+    self.assertEqual(rotbond_calc.rotatable_bonds(m), 2)
+    self.assertEqual(rotbond_calc.rotatable_bond_atoms(m), [(1, 2), (2, 3)])
+
+    self.assertTrue(m.build_from_smiles("C1CC1C"))
+    self.assertEqual(rotbond_calc.rotatable_bond_atoms(m), [])
+
+  def test_rotatable_bond_atoms_calculation_type(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CC(=O)NCC"))
+
+    rotbond_calc = RotatableBonds()
+    rotbond_calc.set_calculation_type(QUICK)
+    self.assertEqual(rotbond_calc.rotatable_bond_atoms(m), [(1, 3), (3, 4)])
+
+    rotbond_calc.set_calculation_type(EXPENSIVE)
+    self.assertEqual(rotbond_calc.rotatable_bond_atoms(m), [(3, 4)])
+
   def test_down_the_bond(self):
     m = Molecule();
     self.assertTrue(m.build_from_smiles("CCC"))
@@ -1007,6 +1288,33 @@ class TestLillyMol(absltest.TestCase):
     self.assertTrue(m.build_from_smiles("C1CC1C"))
     self.assertCountEqual(m.down_the_bond(2, 3), [])
     self.assertIsNone(m.down_the_bond(0, 1))
+
+  def test_atoms_by_radius_single_starting_atom(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCCC"))
+    shells = m.atoms_by_radius(Set_of_Atoms([2]), 3)
+    self.assertLen(shells, 4)
+    self.assertCountEqual(shells[0], [2])
+    self.assertCountEqual(shells[1], [1, 3])
+    self.assertCountEqual(shells[2], [0, 4])
+    self.assertEmpty(shells[3])
+
+  def test_atoms_by_radius_multiple_starting_atoms(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCCCC"))
+    shells = m.atoms_by_radius(Set_of_Atoms([0, 4]), 3)
+    self.assertCountEqual(shells[0], [0, 4])
+    self.assertCountEqual(shells[1], [1, 3])
+    self.assertCountEqual(shells[2], [2])
+    self.assertEmpty(shells[3])
+
+  def test_atoms_by_radius_validation(self):
+    m = Molecule()
+    self.assertTrue(m.build_from_smiles("CCC"))
+    with self.assertRaises(ValueError):
+      m.atoms_by_radius(Set_of_Atoms([3]), 1)
+    with self.assertRaises(ValueError):
+      m.atoms_by_radius(Set_of_Atoms([0]), -1)
 
   def test_resize(self):
     # Note that resizing a molecule is potentially dangerous since it

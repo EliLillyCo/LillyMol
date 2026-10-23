@@ -1,0 +1,228 @@
+{
+  "executable": "fetch_smiles_quick",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-j -c 1 -C 2 -X notInRecord -Y notInIdentifier #{indir}/record.w  #{indir}/structures.smi"
+      ]
+    },
+
+    {
+      "comment": [
+        "Default behaviour: output is in the order records appear in the smiles",
+        "file, NOT the order of the identifier file. data/ids.txt is deliberately",
+        "in a different order (ethanol, methane, benzene, propane) so that this",
+        "is distinguishable from the identifier-order mode in subset_S_order."
+      ],
+      "name": "default",
+      "args": [ "#{datadir}/ids.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-C selects the identifier column in the smiles file." ],
+      "name": "column_C3",
+      "args": [ "-C 3 #{datadir}/ids.txt #{datadir}/haystack_col3.smi" ]
+    },
+
+    {
+      "comment": [
+        "-I declares the column separator in the smiles file. Because a separator",
+        "was given, the tabs in the file are significant and are NOT translated to",
+        "spaces, so the records are echoed with their tabs intact.",
+        "Contrast with separator_I_tab_default below."
+      ],
+      "name": "separator_II_tab",
+      "difftool": "diff",
+      "difftool_options": "",
+      "args": [ "-I tab #{datadir}/ids.txt #{datadir}/haystack_tab.smi" ]
+    },
+
+    {
+      "comment": [
+        "A tab separated smiles file works with no -I at all: when no separator",
+        "has been declared the reader translates tabs to spaces. Note the output",
+        "records therefore contain spaces, not the original tabs.",
+        "This is long standing behaviour and must not change."
+      ],
+      "name": "separator_II_tab_default",
+      "difftool": "diff",
+      "difftool_options": "",
+      "args": [ "#{datadir}/ids.txt #{datadir}/haystack_tab.smi" ]
+    },
+
+    {
+      "comment": [ "-i declares the column separator in the identifier file." ],
+      "name": "separator_i_tab",
+      "args": [ "-i tab #{datadir}/ids_tab.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "A tab separated identifier file with no -i. Tabs are translated to spaces",
+        "so this works. Previously the identifier reader did not translate tabs and",
+        "this case silently wrote nothing while still exiting 0."
+      ],
+      "name": "separator_i_tab_default",
+      "args": [ "#{datadir}/ids_tab.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-d reports duplicate identifiers in the identifier file but continues." ],
+      "name": "duplicate_ids_d",
+      "args": [ "-d #{datadir}/ids_dup.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-q ignores duplicate identifiers silently." ],
+      "name": "duplicate_ids_q",
+      "args": [ "-q #{datadir}/ids_dup.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "Without -d or -q a duplicate identifier in the identifier file is fatal.",
+        "Exits 6 and writes nothing."
+      ],
+      "name": "duplicate_ids_fail",
+      "args": [ "#{datadir}/ids_dup.txt #{datadir}/haystack.smi" ],
+      "non_zero_rc_expected": true
+    },
+
+    {
+      "comment": [
+        "By default only the first occurrence of an identifier in the smiles file",
+        "is written, even though haystack_dup.smi holds three records named methane."
+      ],
+      "name": "first_instance_only",
+      "args": [ "#{datadir}/ids.txt #{datadir}/haystack_dup.smi" ]
+    },
+
+    {
+      "comment": [ "-a writes every occurrence of an identifier in the smiles file." ],
+      "name": "all_instances_a",
+      "args": [ "-a #{datadir}/ids.txt #{datadir}/haystack_dup.smi" ]
+    },
+
+    {
+      "comment": [ "-x inverts the selection: writes the records NOT requested." ],
+      "name": "invert_x",
+      "args": [ "-x #{datadir}/ids.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-z strips leading zeros so 000123 matches 123." ],
+      "name": "strip_zeros_z",
+      "args": [ "-z #{datadir}/ids_zeros.txt #{datadir}/haystack_zeros.smi" ]
+    },
+
+    {
+      "comment": [
+        "-j skips the header record of a descriptor-style identifier file.",
+        "Note the remaining descriptor column is appended to each output record."
+      ],
+      "name": "descriptor_header_j",
+      "args": [ "-j #{datadir}/ids_descriptor.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "By default any extra columns from the identifier file are appended",
+        "to the output record."
+      ],
+      "name": "annotate_default",
+      "args": [ "#{datadir}/ids_with_data.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-k suppresses the extra information from the identifier file." ],
+      "name": "suppress_info_k",
+      "args": [ "-k #{datadir}/ids_with_data.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-n sets the string placed before the identifier file information." ],
+      "name": "info_separator_n",
+      "args": [ "-n : #{datadir}/ids_with_data.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "-K names identifiers on the command line INSTEAD of reading an identifier",
+        "file, so only the smiles file is passed. Supplying an identifier file as",
+        "well makes that file be treated as the haystack."
+      ],
+      "name": "explicit_ids_K",
+      "args": [ "-K methane -K benzene #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "-X collects smiles records that were not requested; -Y collects requested",
+        "identifiers absent from the smiles file.",
+        "Uses a shell script because the -Y file is produced by iterating a hash,",
+        "so its order is not guaranteed and must be sorted before comparison.",
+        "Note the other_commands field of the test proto is NOT implemented by",
+        "run_all_test.rb, so a shell script is the only way to post-process."
+      ],
+      "name": "unmatched_X_Y",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    },
+
+    {
+      "comment": [
+        "-w writes the -Y file as a smiles file, appending .smi to the name.",
+        "Sorted before comparison for the same reason as unmatched_X_Y."
+      ],
+      "name": "unmatched_Y_smiles_w",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    },
+
+    {
+      "comment": [
+        "-C RX= makes the identifier whichever column matches the regexp.",
+        "Only methane matches ^meth among the requested identifiers; methanol",
+        "matches the regexp but was never requested."
+      ],
+      "name": "regexp_C_RX",
+      "args": [ "-C 'RX=^meth' #{datadir}/ids.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "THE IDENTIFIER-ORDER MODE. -S hashes the smiles file and streams the",
+        "identifier file, so output follows identifier-file order",
+        "(ethanol, methane, benzene, propane) rather than smiles-file order.",
+        "This is the same behaviour the separate fetch_smiles tool provides.",
+        "",
+        "-S formerly returned exit code 1 on success. It now returns 0, matching",
+        "the rest of the tool."
+      ],
+      "name": "subset_S_order",
+      "args": [ "-S subset -u .smi #{datadir}/ids.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [ "-g sets the starting index for the files created by -S." ],
+      "name": "subset_S_g1",
+      "args": [ "-S subset -u .smi -g 1 #{datadir}/ids.txt #{datadir}/haystack.smi" ]
+    },
+
+    {
+      "comment": [
+        "With -S every leading file is an identifier file and the last is the",
+        "haystack, producing one subset per identifier file."
+      ],
+      "name": "subset_S_multiple",
+      "args": [ "-S subset -u .smi #{datadir}/ids.txt #{datadir}/ids_missing.txt #{datadir}/haystack.smi" ]
+    }
+
+  ]
+
+}

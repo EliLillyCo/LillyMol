@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <memory>
 #include <random>
@@ -256,7 +257,7 @@ fill_intra_pool_histogram_nearest_neighbour(IWHistogram& histogram,
   similarity_type_t* minval = new float[nfingerprints];
   std::unique_ptr<similarity_type_t> free_minval(minval);
 
-  set_vector(minval, nfingerprints, static_cast<similarity_type_t>(1.0));
+  std::fill_n(minval, nfingerprints, static_cast<similarity_type_t>(1.0));
 
   for (int i = 0; i < nfingerprints; i++) {
     if (report_progress_intra && i > 0 && 0 == i % report_progress_intra) {
@@ -392,7 +393,7 @@ fill_intra_pool_histogram_till_converged(IWHistogram& histogram,
   double* current_value = new double[histogram.nbuckets()];
   std::unique_ptr<double> free_current_value(current_value);
 
-  set_vector(current_value, histogram.nbuckets(), static_cast<double>(0.0));
+  std::fill_n(current_value, histogram.nbuckets(), static_cast<double>(0.0));
 
   int idelta, jdelta;
 

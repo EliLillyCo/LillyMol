@@ -241,6 +241,11 @@ INSTANTIATE_TEST_SUITE_P(TestAlogpP, TestAlogpP, testing::Values(
   // Aromaticity differences prevent this matching RDKit (0.220)
   SmilesExpected{"C1=CC=CC(=C1)NC(=O)C(=O)NCC1=CC=C(O1)C=C1C(=O)N2C(=NCC2)S1 CHEMBL221991", 1.820, "[18cH]1[18cH][18cH][18cH][22c]([18cH]1)[37NH][5C](=[57O])[5C](=[57O])[35NH][10CH2][21c]1[18cH][18cH][21c]([49o]1)[26CH]=[6C]1[5C](=[57O])[40N]2[5C](=[39N][3CH2][3CH2]2)[68S]1"},
   SmilesExpected{"C1(=S)C=CSS1 CHEMBL368700", 2.539, "[28c]1(=[68S])[18cH][18cH][70s][70s]1"}
+
+  // Fix bug with =C=C=O molecules
+  // TODO:ianwatson this showed up as an atom ordering dependency in iwdescr.
+//  SmilesExpected{"C1=CC=CC=C1P(=C=C=O)(C1=CC=CC=C1)C1=CC=CC=C1 CHEMBL1980626", 2.736, "[56O]=[4C]=[4C]=[66P]([12c]1[17cH][17cH][17cH][17cH][17cH]1)([12c]1[17cH][17cH][17cH][17cH][17cH]1)[12c]1[17cH][17cH][17cH][17cH][17cH]1"},
+//  SmilesExpected{"C(=C=O)=P(C1=CC=CC=C1)(C1=CC=CC=C1)C1=CC=CC=C1 CHEMBL1980626", 2.736, "[56O]=[4C]=[4C]=[66P]([12c]1[17cH][17cH][17cH][17cH][17cH]1)([12c]1[17cH][17cH][17cH][17cH][17cH]1)[12c]1[17cH][17cH][17cH][17cH][17cH]1"}
 ));
 
 struct SmilesValue {

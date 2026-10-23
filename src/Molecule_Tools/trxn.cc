@@ -16,6 +16,7 @@
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwstring/string_with_commas.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/etrans.h"
@@ -652,7 +653,8 @@ do_write(Molecule_and_Embedding* sidechain, Molecule& product, int nhits,
   }
 
   if (report_progress()) {
-    cerr << "trxn read " << molecules_processed << " scaffolds,  generated " << products_written << " products\n";
+    cerr << "trxn read " << molecules_processed << " scaffolds,  generated "
+         << iwstring::with_commas(products_written) << " products\n";
   }
 
   return output.write(product);
@@ -869,7 +871,6 @@ process_no_reagents(Molecule& m, IWReaction& reaction,
   int rc;
 
   const Scaffold_Match_Conditions& smc = reaction.scaffold_match_conditions();
-  ;
 
   if (smc.process_hit_number() >= 0) {
     uint32_t mdo = smc.process_hit_number();
@@ -1500,6 +1501,19 @@ trxn(const char* fname, IWReaction& rxn, FileType input_type,
 }
 
 static void
+DisplayDashMOptions(int rc) {
+  cerr << R"(The -M option deals with multiple sidechain matches. The folling -M qualifiers are recognised.
+ -M all         generate all regio-isomers from multiple sidechain matches
+ -M do=number   process site number <number> in the sidechains
+ -M mskip=text  append <text> to names where just one possible sidechain attachment chosen
+ -M write=file  write non-reacting sidechains to <file>
+ -M RMX         ignore any sidechains with multiple substructure matches
+ -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)
+)";
+  ::exit(rc);
+}
+
+static void
 display_dash_j_qualifiers(std::ostream& os) {
   // clang-format off
   os << R"(
@@ -1523,6 +1537,7 @@ display_dash_j_qualifiers(std::ostream& os) {
  -H BCMINSEP=<n>    only 3d bump check atoms if they are more than <n> bonds apart.
  -J keepatmn    retain any atom map numbers in output molecules.
  -J larf        in smirks, if an atom is lost, remove the fragment.
+ -J rmsmkele    in smirks, remove all elements that are in the LHS but not in RHS.
  -J rmhsqb      remove unnecessary [] in product molecules.
  -J rmxhbv      remove explicit hydrogens causing bad valences.
  -J coords      include coordinates with smiles output.
@@ -1579,6 +1594,17 @@ ReadReaction(IWString& fname, IWReaction& rxn,
   }
 
   return 1;
+}
+
+static void
+DisplayDashzOptions(int rc) {
+  cerr << R"(The following -z qualifiers are recognised
+ -z i                   ignore scaffolds not reacting.
+ -z w                   write non reaction scaffolds to normal output.
+ -z write=<fname>       write non reacting scaffolds to <fname>.
+)";
+
+  ::exit(rc);
 }
 
 static int
@@ -1877,6 +1903,11 @@ trxn(int argc, char** argv) {
         if (verbose) {
           cerr << "In smirks, lost atoms mean remove fragment\n";
         }
+      } else if (j == "rmsmkele") {
+        set_smirks_remove_elements_in_lhs_but_missing_in_rhs(1);
+        if (verbose) {
+          cerr << "Will remove elements appearing on LHS of smirks but not on rhs\n";
+        }
       } else if (j == "rmhsqb") {
         unset_unnecessary_implicit_hydrogens_known_values = 1;
         if (verbose) {
@@ -2038,9 +2069,11 @@ trxn(int argc, char** argv) {
       sidechain_match_conditions.set_ignore_not_reacting(1);
     } else if ("RMX" == m) {
       sidechain_match_conditions.set_ignore_multiple_substucture_matches(1);
+    } else if (m == "help") {
+      DisplayDashMOptions(0);
     } else {
       cerr << "Unrecognised -M qualifier '" << m << "'\n";
-      usage(23);
+      DisplayDashMOptions(1);
     }
 
     sidechain_match_conditions.set_active(1);
@@ -2427,9 +2460,11 @@ trxn(int argc, char** argv) {
         if (verbose) {
           cerr << "Scaffolds not reacting written to '" << z << "'\n";
         }
+      } else if (z == "help") {
+        DisplayDashzOptions(0);
       } else {
         cerr << "Unrecognised -z directive '" << z << "'\n";
-        usage(19);
+        DisplayDashzOptions(1);
       }
     }
   }

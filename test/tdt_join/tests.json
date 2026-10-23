@@ -1,0 +1,13 @@
+{
+  "executable": "tdt_join",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-d #{indir}/part1.gfp #{indir}/part2.gfp"
+      ]
+    }
+
+  ]
+
+}

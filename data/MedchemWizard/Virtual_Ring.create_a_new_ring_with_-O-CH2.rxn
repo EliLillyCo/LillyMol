@@ -1,0 +1,23 @@
+name: "Virtual_Ring.create_a_new_ring_with_-O-CH2"
+scaffold {
+  id: 0
+  smarts: "[/IWfss1cH1]:[a]!@[/IWfss1a]:[a;H1]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  smarts: "OC"
+  reagent: "OC"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

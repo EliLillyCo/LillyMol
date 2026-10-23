@@ -1,0 +1,24 @@
+name: "alkyne_to_bcp"
+scaffold {
+  smarts: "[R0]-C#C-[R0]"
+  remove_atom: [1, 2]
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C12CC(C1)C2"
+  smarts: "[CD3]12CC(C1)C2"
+  match_conditions {
+    max_matches_to_find: 1
+  }
+  join {
+    a1: 0
+    a2: 0
+  }
+  join {
+    a1: 3
+    a2: 2
+  }
+}

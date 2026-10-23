@@ -1,3 +1,5 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 
 # Note that we have dependencies on Distance_Matrix which is now
 # Obsolete. This directory needs to be re-implemented.
@@ -54,20 +56,23 @@ cc_library(
 cc_library(
     name = "iwpvalue",
     srcs = [
-        "dq1da.c",
-        "idamax.c",
         "iwpvalue.cc",
-        "machcon.c",
-        "uni.c",
-        "xerror.c",
     ],
     hdrs = [
         "iwpvalue.h",
     ],
-    deps = [
-        "@third_party//:f2c",
-    ],
     visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "iwpvalue_test",
+    srcs = [
+        "iwpvalue_test.cc",
+    ],
+    deps = [
+        ":iwpvalue",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_library(

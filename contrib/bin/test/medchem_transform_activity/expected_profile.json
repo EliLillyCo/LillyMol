@@ -1,0 +1,76 @@
+{
+  "profile": [
+    {
+      "transformation": "add_carbon",
+      "reactionFile": "add_carbon.rxn",
+      "effect": [
+        {
+          "property": "activity",
+          "source": "OBSERVED_ACTIVITY",
+          "delta": {
+            "n": 2,
+            "min": 1.5,
+            "max": 1.5,
+            "mean": 1.5,
+            "median": 1.5
+          }
+        },
+        {
+          "property": "activity",
+          "source": "PREDICTED_ACTIVITY",
+          "delta": {
+            "n": 0
+          }
+        }
+      ]
+    },
+    {
+      "transformation": "add_nitrogen",
+      "reactionFile": "PROTO:add_nitrogen.textproto",
+      "effect": [
+        {
+          "property": "activity",
+          "source": "OBSERVED_ACTIVITY",
+          "delta": {
+            "n": 0
+          }
+        },
+        {
+          "property": "activity",
+          "source": "PREDICTED_ACTIVITY",
+          "delta": {
+            "n": 1,
+            "min": -1.0,
+            "max": -1.0,
+            "mean": -1.0,
+            "median": -1.0
+          }
+        }
+      ]
+    },
+    {
+      "transformation": "add_oxygen",
+      "reactionFile": "add_oxygen.rxn",
+      "effect": [
+        {
+          "property": "activity",
+          "source": "OBSERVED_ACTIVITY",
+          "delta": {
+            "n": 0
+          }
+        },
+        {
+          "property": "activity",
+          "source": "PREDICTED_ACTIVITY",
+          "delta": {
+            "n": 1,
+            "min": 2.0,
+            "max": 2.0,
+            "mean": 2.0,
+            "median": 2.0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 */
 
 #include <algorithm>
+#include <cstdint>
 #include <cctype>
 #include <iostream>
 #include <memory>
@@ -363,7 +364,7 @@ preprocess(Molecule & m)
   return;
 }
 
-typedef unsigned int atype_t;
+typedef uint32_t atype_t;
 
 /*
   Avoid passing too many arguments between functions by putting a bunch of things in a class.
@@ -567,7 +568,7 @@ produce_product_fingerprint(ISIS_RXN_FILE_Molecule & p,
                             const int rad,
                             int * changed,
                             int * tmp,
-                            int * atype,
+                            uint32_t * atype,
                             Sparse_Fingerprint_Creator & sfc)
 {
   const int matoms = p.natoms();
@@ -832,14 +833,13 @@ do_fingerprint_changing_product_atoms(RXN_File & rxn,
   if (0 == max_atoms)    // hard to imagine
     return 0;
 
-  int * changed = new_int(max_atoms + max_atoms + max_atoms); std::unique_ptr<int[]> free_changed(changed);
+  int * changed = new_int(max_atoms + max_atoms); std::unique_ptr<int[]> free_changed(changed);
   int * tmp     = changed + max_atoms;
 
-  int * atype;
-  if (atom_typing_specification.active())
-    atype = changed + max_atoms + max_atoms;
-  else
-    atype = nullptr;
+  std::unique_ptr<uint32_t[]> atype;
+  if (atom_typing_specification.active()) {
+    atype = std::make_unique<uint32_t[]>(max_atoms);
+  }
 
   Changing_Atom_Conditions cac;
   if (any_changing_bond_means_a_changing_atoms)
@@ -873,18 +873,15 @@ do_fingerprint_changing_product_atoms(RXN_File & rxn,
     (void) c;
 //  cerr << " found " << c << " changing atoms in product\n";
 
-    if (atom_typing_specification.active())
-    {
-      std::fill_n(atype, max_atoms, 0);          // is this necessary?
-      if (! atom_typing_specification.assign_atom_types(rxn.product(p), atype))
-      {
+    if (atom_typing_specification.active()) {
+      std::fill_n(atype.get(), max_atoms, 0);          // is this necessary?
+      if (! atom_typing_specification.assign_atom_types(rxn.product(p), atype.get())) {
         cerr << "Cannot assign atom types '" << rxn.name() << "'\n";
         return 0;
       }
 
-      for (int j = 0; j < nr; ++j)
-      {
-        if (! produce_product_fingerprint(rxn.product(p), radius[j], changed, tmp, atype, sfc[j]))
+      for (int j = 0; j < nr; ++j) {
+        if (! produce_product_fingerprint(rxn.product(p), radius[j], changed, tmp, atype.get(), sfc[j]))
           return 0;
       }
     }
@@ -892,14 +889,13 @@ do_fingerprint_changing_product_atoms(RXN_File & rxn,
     {
       for (int j = 0; j < nr; ++j)
       {
-        if (! produce_product_fingerprint(rxn.product(p), radius[j], changed, tmp, atype, sfc[j]))
+        if (! produce_product_fingerprint(rxn.product(p), radius[j], changed, tmp, atype.get(), sfc[j]))
           return 0;
       }
     }
   }
 
-  for (int r = 0; r < nr; ++r)
-  {
+  for (int r = 0; r < nr; ++r) {
     IWString tmp;
 
     sfc[r].daylight_ascii_form_with_counts_encoded(tmp);

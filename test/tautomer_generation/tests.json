@@ -1,0 +1,13 @@
+{
+  "executable": "tautomer_generation",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "#{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

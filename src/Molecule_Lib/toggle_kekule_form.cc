@@ -852,7 +852,7 @@ next_atom_in_ring(const Atom* a, int rid, const int* process_these,
 
   cerr << "Did not find next atom in ring for Kekule Toggle\n";
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 void
@@ -1195,8 +1195,8 @@ Toggle_Kekule_Form::_process_ring_system(Molecule& m, const Set_of_Atoms& embedd
   }
 #endif
 
-  atom_number_t astart1 = INVALID_ATOM_NUMBER;
-  atom_number_t astart2 = INVALID_ATOM_NUMBER;
+  atom_number_t astart1 = kInvalidAtomNumber;
+  atom_number_t astart2 = kInvalidAtomNumber;
 
   for (int i = 0; i < _bond.number_elements(); i++) {
     atom_number_t a1 = embedding[_bond[i]->a1()];
@@ -1222,10 +1222,10 @@ Toggle_Kekule_Form::_process_ring_system(Molecule& m, const Set_of_Atoms& embedd
     break;
   }
 
-  if (astart1 == INVALID_ATOM_NUMBER) {
+  if (astart1 == kInvalidAtomNumber) {
     return 0;
   }
-  assert(INVALID_ATOM_NUMBER != astart1);
+  assert(kInvalidAtomNumber != astart1);
 
 #ifdef DEBUG_PROCESS_RING_SYSTEM
   cerr << "Starting with atoms " << astart1 << " and " << astart2 << '\n';
@@ -1260,7 +1260,7 @@ Toggle_Kekule_Form::_process_ring_system(Molecule& m, const Set_of_Atoms& embedd
     //  process_these[i] << '\n';
   }
 
-  if (_process_ring_system(m, atoms_to_process, rid, 0, INVALID_ATOM_NUMBER, tkfta)) {
+  if (_process_ring_system(m, atoms_to_process, rid, 0, kInvalidAtomNumber, tkfta)) {
     return 1;
   }
 

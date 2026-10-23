@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Set up queries for ghose_crippen logp calculation
 # Note: the results are not very good. We don't use

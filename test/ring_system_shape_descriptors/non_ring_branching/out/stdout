@@ -1,0 +1,8 @@
+Name nringsys nringsys_terminal nringsys_applicable nringsys_rodlike nringsys_not_rodlike nringsys_multisub nringsys_invalid non_ring_branch_count ring_atom_branch_count rodlike_molecule rod_deficit_min rod_deficit_max rod_deficit_ave
+straight_alkane 0 0 0 0 0 0 0 0 0 0 0 0 0
+neopentane 0 0 0 0 0 0 0 0 0 0 0 0 0
+amide 0 0 0 0 0 0 0 0 0 0 0 0 0
+sulfone 0 0 0 0 0 0 0 0 0 0 0 0 0
+trifluoromethyl 0 0 0 0 0 0 0 0 0 0 0 0 0
+substantial_branch 0 0 0 0 0 0 0 1 0 0 0 0 0
+ring_atom_branch 1 1 0 0 0 0 0 0 0 1 0 0 0

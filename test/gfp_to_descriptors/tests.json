@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_to_descriptors",
+  "difftool": "jfilecompare",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-b -n 50 -f -F FPDSC ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

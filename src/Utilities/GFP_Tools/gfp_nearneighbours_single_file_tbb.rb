@@ -1,17 +1,16 @@
 #!/usr/bin/env ruby
 
 # Write code for gfp_nearneighbours_single_file_tbb.
-# THis version hard coded for 16 cores.
 
+nthreads = 32
 # We need to do all pairs.
 todo = []
-(0...15).each do |i|
-  (i + 1...15).each do |j|
+(0...nthreads).each do |i|
+  (i + 1...nthreads).each do |j|
     todo << [i,j]
   end
 end
 
-# Observe that for 16 cores, all groups are size 7
 # Write a group of tasks that are independent.
 def write_group(group, this_group, active_this_group, diagonal_done)
   $stderr << this_group << "\n"
@@ -36,14 +35,12 @@ def write_group(group, this_group, active_this_group, diagonal_done)
   $stdout << "  }\n"
 end
 
-# With 16 cores, we end up with a bunch of groups of size 7, and we
-# append the diagonal computation to each list of tasks. We therefore
-# need to keep track of which diagonals have been done.
-
-diagonal_done = Array.new(16, false)
+# Diagonals actually get done all together at the end.
+diagonal_done = Array.new(nthreads, false)
+pair_done = Hash.new
 group = 0
 while todo.size > 0
-  active_this_group = Array.new(16, false)
+  active_this_group = Array.new(nthreads, false)
   this_group = []
   this_group << todo.shift
   active_this_group[this_group[0][0]] = true
@@ -59,16 +56,33 @@ while todo.size > 0
     this_group << todo.delete_at(ndx)
     active_this_group[i] = true
     active_this_group[j] = true
-    break if this_group.size == 8   # seems to never happen
+    break if this_group.size == 16   # seems to never happen
   end
   $stderr << "Found group of size #{this_group.size} items, active #{active_this_group.count(true)}\n"
   write_group(group, this_group, active_this_group, diagonal_done)
   group += 1
 end
 
+# Diagonals will be left over.
+group_size = 0
+grp = ""
 diagonal_done.each_with_index do |d, ndx|
   next if d
-  $stdout << "  gfp_nearneighbours_diagonal(pool, p[#{ndx}], p[#{ndx+1}]);\n";
+  if group_size == 0
+    group += 1
+    grp = "g#{group}"
+    $stdout << "  tbb::task_group #{grp};\n"
+  end
+  $stdout << "  #{grp}.run([&] { gfp_nearneighbours_diagonal(pool, p[#{ndx}], p[#{ndx+1}]); });\n"
+
+  group_size += 1
+  if group_size == nthreads / 2
+    $stdout << "  #{grp}.wait();\n"
+    $stdout << "  if (verbose) {\n"
+    $stdout << "    cerr << \" end #{grp}\\n\";"
+    $stdout << "  }\n"
+    group_size = 0
+  end
 end
 
 exit

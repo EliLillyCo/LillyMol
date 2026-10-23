@@ -1,0 +1,12 @@
+{
+  "executable": "scaffolds",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "cyclopropyl_urea_linker",
+      "args": [
+        "-G #{indir}/scaffolds.textproto #{indir}/in.smi"
+      ]
+    }
+  ]
+}

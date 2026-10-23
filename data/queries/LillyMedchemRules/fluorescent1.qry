@@ -1,0 +1,5 @@
+name: "fluorescent1"
+query {
+  numeric_value: 5
+  smarts: "[/IWfss2c]12s:[cD3]:n:n1:c:[cD3]:n2"
+}

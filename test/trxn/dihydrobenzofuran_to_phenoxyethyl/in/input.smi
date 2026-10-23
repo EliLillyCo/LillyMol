@@ -1,0 +1,7 @@
+C1COc2ccccc21 ethoxy
+CC1COc2ccccc21 propoxy
+CC(=O)[C@H]1COc2ccccc21 lost_ring_chirality
+C[C@H](F)[C@H]1COc2ccccc21 remote_chiral
+c1ccc2occc2c1 aromatic_benzofuran
+CC1Cc2ccccc2O1 substituted_C2
+C1CCOc2ccccc21 six_membered_ring

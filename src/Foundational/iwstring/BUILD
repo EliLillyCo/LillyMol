@@ -1,3 +1,5 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+
 cc_library(
     name = "absl_hash",
     hdrs = [
@@ -28,6 +30,7 @@ cc_library(
         "remove_suffix.cc",
         "string_change.cc",
         "string_relationals.cc",
+        "string_to_float.cc",
         "tokenise_with_quotes.cc",
         "unhtml.cc",
     ],
@@ -47,8 +50,17 @@ cc_library(
         # not  implemented yet "@fast_float//:fast_float",
         "//Foundational/iwaray",
         "//Foundational/iwmisc:iwconfig",
+        # "@third_party//:dragonbox",
         "@zlib",
     ],
+)
+
+cc_library(
+    name = "string_with_commas",
+    hdrs = [
+        "string_with_commas.h",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(
@@ -88,6 +100,18 @@ cc_test(
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
+)
+
+cc_test(
+    name = "string_with_commas_test",
+    srcs = [
+        "string_with_commas_test.cc",
+    ],
+    deps = [
+        ":string_with_commas",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ]
 )
 
 cc_test(

@@ -1,0 +1,2 @@
+smi: "[1CH]1=CC=[1CH]C=C1" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D3]:[ax2r6D2]:[ax2r6D2]:1" id: "preserve" n: 1 conn: true usmi: "[1cH]1cc[1cH]cc1"
+smi: "[1CH]1=NC=[1CH]C=C1" smt: "[ax2r6D3]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D3]:[ax2r6D2]:[ax2r6D2]:1" id: "change" n: 1 conn: false usmi: "[n]1[1cH]cc[1cH]c1"

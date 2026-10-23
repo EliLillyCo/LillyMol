@@ -389,13 +389,21 @@ Molecule::InChI(IWString & inchi_string)      // maybe this could be a const met
 }
 
 int
-Molecule::write_molecule_inchi (std::ostream & output)
+Molecule::write_molecule_inchi (std::ostream & output, bool write_key)
 {
   IWString tmp;
 
   InChI (tmp);   // generate string version of InChI
 
-  output << tmp << ' ' << _molecule_name << '\n';
+  if (! write_key) {
+    output << tmp << ' ' << _molecule_name << '\n';
+    return 1;
+  }
+
+  IWString key;
+  InChIToInChIKey(tmp.null_terminated_chars(), key);
+
+  output << key << ' ' << _molecule_name << '\n';
 
   return 1;
 }

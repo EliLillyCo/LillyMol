@@ -15,7 +15,7 @@ TEST(TestRing, Unfused) {
   ASSERT_TRUE(m.build_from_smiles("C1CC1"));
   EXPECT_EQ(m.nrings(), 1);
   const Ring* r = m.ringi(0);
-  EXPECT_EQ(r->size(), 3);
+  EXPECT_EQ(r->size(), 3u);
   EXPECT_FALSE(r->is_fused());
   // Ring numbers are not guaranteed.
   EXPECT_EQ(r->ring_number(), 0);
@@ -28,7 +28,7 @@ TEST(TestRing, Fused1) {
   ASSERT_TRUE(m.build_from_smiles("C1C2CC12"));
   EXPECT_EQ(m.nrings(), 2);
   for (const Ring* r : m.sssr_rings()) {
-    EXPECT_EQ(r->size(), 3);
+    EXPECT_EQ(r->size(), 3u);
     EXPECT_TRUE(r->is_fused());
     EXPECT_EQ(r->fused_ring_neighbours(), 1);
   }

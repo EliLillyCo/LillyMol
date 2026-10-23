@@ -42,7 +42,7 @@ Reaction_Iterator::ok () const
 int
 Reaction_Iterator::debug_print (std::ostream & os) const
 {
-  os << "Iterator for " << _number_sidechains << " sidechains\n";
+  os << "Iterator for " << _number_sidechains << " sidechains, active " << _active << '\n';
   for (int i = 0; i < _number_sidechains; i++)
   {
     os << _reagents_in_sidechain[i] << " reagents, current " << _reagent[i] << '\n';
@@ -123,4 +123,5 @@ Reaction_Iterator::randomise(std::mt19937_64 & rng)
 void
 Reaction_Iterator::reset() {
   std::fill_n(_reagent, _number_sidechains, 0);
+  _active = 1;
 }

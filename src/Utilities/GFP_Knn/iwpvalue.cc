@@ -1,157 +1,116 @@
 /*
-  Define the function to be integrated for the P distribution
-*/
+  Student t two-sided p-value calculation.
 
-#include <stdlib.h>
-#include <assert.h>
-#include <math.h>
-#include <iostream>
+  Historically this used f2c-translated adaptive quadrature code.  All we need
+  here is the survival probability for a Student t statistic, which can be
+  computed deterministically via the regularized incomplete beta function.
+*/
 
 #include "iwpvalue.h"
 
+#include <cmath>
+#include <iostream>
+#include <limits>
+
 using std::cerr;
-using std::endl;
 
-static int dof = 0;
-static double double_dof = 0.0;
-static double dof_plus_one_divided_by_two = 0.0;
-static double prefactor = 0.0;
+namespace {
 
-/*
-  In order to avoid dealing with potentially large numbers (but at the expense of numerical
-  accuracy, we can compute the ratio of the gamma functions as a series of ratios
-*/
+constexpr int kMaxIterations = 200;
+constexpr double kEpsilon = 3.0e-14;
+constexpr double kFpMin = std::numeric_limits<double>::min() / kEpsilon;
 
-static double
-gamma_ratio_even (int n)
-{
-  double rc = 0.50 * sqrt (M_PI);
-
-  for (int i = n - 1; i > 1; i -= 2)
-  {
-    rc = rc * static_cast<double> (i) / static_cast<double> (i - 1);
-  }
-
-  return rc;
-}
-
-static double
-gamma_ratio_odd (int n)
-{
-  if (1 == n)
-    return 1.0 / sqrt (M_PI);
-
-  double rc = 2.0 / sqrt (M_PI);
-
-  for (int i = n - 1; i > 2; i -= 2)
-  {
-    rc = rc * static_cast<double> (i) / static_cast<double> (i - 1);
-  }
-
-  return rc;
-}
-
-static double
-gamma_ratio (int n)
-{
-  if (n == (n / 2) * 2)
-    return gamma_ratio_even (n);
-  else
-    return gamma_ratio_odd (n);
-}
-
-/*
-  Return the gamma function of n + 0.5
-*/
-
-#ifdef NOT_BEING_USED
-static double
-gamma_half (int n)
-{
-  int n2m1 = 2 * n - 1;
-
-  double numerator = 1.0;
-  for (int i = 3; i <= n2m1; i += 2)
-  {
-    numerator = numerator * static_cast<double> (i);
-  }
-
-  double rc = numerator * sqrt (M_PI) / pow (2.0, static_cast<double> (n));
-
-//cerr << "Gamma (" << n << " + 0.5) = " << rc << " numerator " << numerator << endl;
-
-  return rc;
-}
-#endif
-
-void
-set_pvalue_degrees_of_freedom (int d)
-{
-  dof = d;
-
-  double_dof = static_cast<double> (d);
-
-  dof_plus_one_divided_by_two = static_cast<double> (d + 1) / 2.0;
-
-  prefactor = gamma_ratio (d) / sqrt (dof * M_PI);
-
-//cerr << "Dof = " << dof << " numerator " << numerator << " denominator " << denominator << " prefactor " << prefactor << endl;
-
-  return;
-}
-
+// Continued fraction for the incomplete beta function. Based on the standard
+// Lentz algorithm formulation used in Numerical Recipes.
 double
-for_p_distribution (const double * x)
-{
-  assert (dof > 0);
+BetaContinuedFraction(double a, double b, double x) {
+  const double qab = a + b;
+  const double qap = a + 1.0;
+  const double qam = a - 1.0;
 
-  double dx = *x;
+  double c = 1.0;
+  double d = 1.0 - qab * x / qap;
+  if (std::fabs(d) < kFpMin) {
+    d = kFpMin;
+  }
+  d = 1.0 / d;
+  double h = d;
 
-  double d1 = 1.0 + dx * dx / double_dof;
+  for (int m = 1; m <= kMaxIterations; ++m) {
+    const int m2 = 2 * m;
 
-  double rc = prefactor / pow (d1, dof_plus_one_divided_by_two);
+    double aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1.0 + aa * d;
+    if (std::fabs(d) < kFpMin) {
+      d = kFpMin;
+    }
+    c = 1.0 + aa / c;
+    if (std::fabs(c) < kFpMin) {
+      c = kFpMin;
+    }
+    d = 1.0 / d;
+    h *= d * c;
 
-//cerr << " x = " << (*x) << " value " << rc << endl;
-  return rc;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1.0 + aa * d;
+    if (std::fabs(d) < kFpMin) {
+      d = kFpMin;
+    }
+    c = 1.0 + aa / c;
+    if (std::fabs(c) < kFpMin) {
+      c = kFpMin;
+    }
+    d = 1.0 / d;
+    const double del = d * c;
+    h *= del;
+
+    if (std::fabs(del - 1.0) <= kEpsilon) {
+      return h;
+    }
+  }
+
+  cerr << "BetaContinuedFraction:failed to converge for a " << a << " b " << b << " x "
+       << x << '\n';
+  return h;
 }
 
-//    SUBROUTINE Q1DA(F,A,B,EPS,R,E,KF,IFLAG)
-
-extern "C" void dq1da_ (double (*) (const double *), 
-                  const double *,      // A
-                  const double *,      // B
-                  const double *,      // EPS
-                  double *,            // RESULT
-                  double *,            // ABSERR
-                  int *,              // NEVAL
-                  int *);             // IFLAG
-
+// Returns I_x(a,b), the regularized incomplete beta function.
 double
-iwpvalue (int d, double x)
-{
-  if (d != dof)
-    set_pvalue_degrees_of_freedom (d);
+RegularizedIncompleteBeta(double a, double b, double x) {
+  if (x <= 0.0) {
+    return 0.0;
+  }
+  if (x >= 1.0) {
+    return 1.0;
+  }
 
-  double a = 0.0;
-  double eps = 1.0e-10;
-  double rc;
-  double abserr;
-  int neval;
-  int iflag;
+  const double bt = std::exp(std::lgamma(a + b) - std::lgamma(a) - std::lgamma(b) +
+                             a * std::log(x) + b * std::log1p(-x));
 
-  dq1da_ (for_p_distribution, &a, &x, &eps, &rc, &abserr, &neval, &iflag);
+  if (x < (a + 1.0) / (a + b + 2.0)) {
+    return bt * BetaContinuedFraction(a, b, x) / a;
+  }
 
-  if (0 != iflag)
-  {
-    cerr << "Yipes, error " << iflag << " from dq1da\n";
+  return 1.0 - bt * BetaContinuedFraction(b, a, 1.0 - x) / b;
+}
+
+}  // namespace
+
+// Return the two-sided p-value for a Student t statistic with `d` degrees of
+// freedom. `x` may be signed; only its magnitude matters.
+double
+iwpvalue(int d, double x) {
+  if (d <= 0) {
+    cerr << "iwpvalue:invalid degrees of freedom " << d << '\n';
     return 0.0;
   }
 
-// The value from -inf to zero is always 0.5
+  const double t = std::fabs(x);
+  if (t == 0.0) {
+    return 1.0;
+  }
 
-  rc += 0.50;
-
-  rc = 2.0 * (1.0 - rc);
-
-  return rc;
+  const double df = static_cast<double>(d);
+  const double beta_x = df / (df + t * t);
+  return RegularizedIncompleteBeta(0.5 * df, 0.5, beta_x);
 }

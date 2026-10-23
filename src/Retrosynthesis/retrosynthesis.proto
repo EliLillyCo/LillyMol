@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package retrosynthesis;
+
+// Reagents are specified as fingerprint files.
+// They must all have a single isotope.
+message FingerprintData {
+  // The file name containing the fingerprints.
+  optional string fname = 1;
+  // The name of this reagent set 'acid', 'amine'...
+  optional string name = 2;
+  // If this is set, it will over-ride whatever isotope is in the file.
+  optional uint32 isotope = 3;
+}
+
+// A reversed reaction generated isotopically labelled fragments.
+// For each isotope, we need to know where to lookup those fragments.
+
+message ReactionData {
+  // The reversed reaction.
+  // Each reaction must break the starting molecule and must place different
+  // isotopes on each fragment.
+  repeated string reaction_file = 1;
+
+  // The building blocks.
+  repeated FingerprintData fingerprints = 2;
+
+  // If not specified, it will be the name of the first reaction.
+  optional string name = 3;
+}
+
+message RetrosynthesisData {
+  repeated ReactionData reaction = 1;
+}

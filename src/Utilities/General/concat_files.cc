@@ -40,6 +40,12 @@ static char output_separator = ' ';
 // input separators. The test is an nwords check on the output.
 static uint32_t output_must_be_tabular = 0;
 
+// The -J option allows a list of column names that are allowed.
+static IW_STL_Hash_Set ok_identifier_column_names;
+
+// Possibly set by the -J option.
+static bool numeric_identifier_column_name_ok = true;
+
 /*
   since the records may be ordered differently in each file, we need to determine
   up front, for each file, where is each identifier.
@@ -70,6 +76,9 @@ class AFile : public iwstring_data_source, public IW_STL_Hash_Map<IWString, off_
   int _duplicate_identifiers;
 
   int _quoted_fields;
+
+  // The header for the identifier column.
+  IWString _identifier_column_header;
 
   char _input_separator;
 
@@ -111,6 +120,10 @@ class AFile : public iwstring_data_source, public IW_STL_Hash_Map<IWString, off_
     _input_separator = c;
   }
 
+  void set_quoted_fields(int s) {
+    _quoted_fields = s;
+  }
+
   int initialise(const char*);
 
   int columns_in_file() const {
@@ -139,6 +152,10 @@ class AFile : public iwstring_data_source, public IW_STL_Hash_Map<IWString, off_
 
   int missing_records() const {
     return _missing_records;
+  }
+
+  const IWString& identifier_column_header() const {
+    return _identifier_column_header;
   }
 
   int& missing_records() {
@@ -429,6 +446,7 @@ AFile::initialise(const char* fname) {
 
   for (; iwt.next_token(token); ++_columns_in_file) {
     if (_columns_in_file == _identifier_column) {
+      _identifier_column_header = token;
       continue;
     }
 
@@ -842,27 +860,28 @@ File names can be annotated with per-file specifications of the input separator
 and the identifier column. For example
 concat_files file1,sep=comma,col=2 file2,sep=space,col=1 > combined.txt
 
- -u               truncate identifiers at first '_' char
- -a               write all identifiers (includes those not in first file)
- -M <missing>     missing value string (default " << missing_value << ")
- -d               skip duplicate identifiers in the first file
- -f               first file may contain duplicate ID's
- -g               ignore duplicate identifiers in files
- -c <column>      identifier column(s) (default 1)
- -z               trim leading zero's from identifiers
- -I               only write records for which identifier is present in every file
- -K <fname>       write identifiers discarded by -I option to <fname>
- -n               input files are NOT descriptor files - header records not special
- -k               skip blank lines in all files
- -s               ignore case when comparing identifiers
- -D die           stop processing if duplicate descriptor names are encountered
- -D rm            remove duplicate descriptors
- -D disambiguate  assign new unique names to duplicate descriptors
- -i <sep>         input  file separator (default space)
- -o <sep>         output file separator (default space)
- -q               input consists of quoted fields
- -Y ...           other options, enter '-Y help' for info
- -v               verbose output
+ -u               truncate identifiers at first '_' char.
+ -a               write all identifiers (includes those not in first file).
+ -M <missing>     missing value string (default " << missing_value << ").
+ -d               skip duplicate identifiers in the first file.
+ -f               first file may contain duplicate ID's.
+ -g               ignore duplicate identifiers in files.
+ -c <column>      identifier column(s) (default 1).
+ -z               trim leading zero's from identifiers.
+ -I               only write records for which identifier is present in every file.
+ -K <fname>       write identifiers discarded by -I option to <fname>.
+ -n               input files are NOT descriptor files - header records not special.
+ -k               skip blank lines in all files.
+ -s               ignore case when comparing identifiers.
+ -D die           stop processing if duplicate descriptor names are encountered.
+ -D rm            remove duplicate descriptors.
+ -D disambiguate  assign new unique names to duplicate descriptors.
+ -J ...           optional conditions that can be imposed on the join identifier. Enter '-J help' for info.
+ -i <sep>         input  file separator (default space).
+ -o <sep>         output file separator (default space).
+ -q               input consists of quoted fields.
+ -Y ...           other options, enter '-Y help' for info.
+ -v               verbose output.
 )";
   // clang-format on
 
@@ -1038,11 +1057,99 @@ do_all_identifiers(int columns_so_far, int records_written, AFile* files,
   return 1;
 }
 
+static bool
+GetIdentifier(const const_IWSubstring& buffer,
+              char input_separator,
+              int identifier_column,
+              int quoted_fields,
+              IWString& identifier) {
+  IWTokeniser iwt(buffer);
+  iwt.set_sep(input_separator);
+  if (input_separator != ' ') {
+    iwt.set_empty_fields_valid(1);
+  }
+  if (quoted_fields) {
+    iwt.set_quoted_tokens(1);
+  }
+
+  const_IWSubstring token;
+  for (int col = 0; iwt.next_token(token); ++col) {
+    if (col == identifier_column) {
+      identifier = token;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static bool
+IsNumeric(const IWString& name,
+          int ndx,
+          const AFile* files) {
+  double d;
+  if (name.numeric_value(d)) {
+    cerr << "Numeric identifier column header '" << name << "' in file '"
+         << files[ndx].fname() << "'\n";
+    return true;
+  }
+
+  return false;
+}
+
+static bool
+OkJoinColumnNames(const const_IWSubstring& buffer,
+                  const char input_separator,
+                  int identifier_column, const int quot,
+                  const AFile* files, int nfiles) {
+  // If nothing to do, we are done.
+  if (ok_identifier_column_names.empty() && numeric_identifier_column_name_ok) {
+    return true;
+  }
+
+  IWString id;
+  if (! GetIdentifier(buffer, input_separator, identifier_column, quot, id)) {
+    cerr << "OkJoinColumnNames:cannot extract identifier column "
+         << (identifier_column + 1) << " from file '" << files[0].fname() << "'\n";
+    return false;
+  }
+
+  if (ok_identifier_column_names.empty()) {
+  } else if (ok_identifier_column_names.contains(id)) {
+  } else {
+    cerr << "OkJoinColumnNames:invalid join column name '" << id << "' in file '"
+         << files[0].fname() << "'\n";
+    return false;
+  }
+
+  if (numeric_identifier_column_name_ok) {
+  } else if (IsNumeric(id, 0, files)) {
+    return false;
+  }
+
+  for (int i = 1; i < nfiles; ++i) {
+    if (ok_identifier_column_names.empty()) {
+    } else if (! ok_identifier_column_names.contains(files[i].identifier_column_header())) {
+      cerr << "OkJoinColumnNames:invalid join column name '"
+           << files[i].identifier_column_header() << "' in file '" << files[i].fname()
+           << "'\n";
+      return false;
+    }
+
+    if (numeric_identifier_column_name_ok) {
+    } else if (IsNumeric(files[i].identifier_column_header(), i, files)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static int
 concat_files(iwstring_data_source& input, const char input_separator,
              const int identifier_column, const int quot, AFile* files, const int nfiles,
              IWString_and_File_Descriptor& output) {
-  output.resize(30000);
+  output.reserve(30000);
 
   const_IWSubstring buffer;
   if (!input.next_record(buffer)) {
@@ -1084,6 +1191,10 @@ concat_files(iwstring_data_source& input, const char input_separator,
         return 0;
       }
     }
+  }
+
+  if (! OkJoinColumnNames(buffer, input_separator, identifier_column, quot, files, nfiles)) {
+    return 0;
   }
 
   // If there are no header records present, then push this record back.
@@ -1226,14 +1337,52 @@ DisplayDashYOptions() {
   ::exit(0);
 }
 
+static void
+DisplayDashJOptions() {
+  cerr << R"(The following options controlling the join key are recognised.
+ -J okid=id1,id2...  Specify a list of acceptable values for the join column name.
+    likely something like '-J okid=Id' or '-J okid=ID,Id,id', or '-J okid=Id,Name'.
+ -J nonumeric   the identifier column name must NOT be a numeric value.
+                helps guard against processing files that lack a header record.
+)";
+
+  ::exit(0);
+}
+
+static int
+AddOkIds(const IWString& s, IW_STL_Hash_Set& ok_identifier_column_names) {
+  if (s.empty()) {
+    return 0;
+  }
+
+  int i = 0;
+  int identifiers_added = 0;
+  IWString token;
+  while (s.nextword(token, i, ',')) {
+    if (token.empty()) {
+      return 0;
+    }
+
+    if (verbose) {
+      cerr << "Adding OK column name '" << token << "'\n";
+    }
+    ok_identifier_column_names.emplace(token);
+    ++identifiers_added;
+  }
+
+  return identifiers_added;
+}
+
 static int
 concat_files(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vuM:adgzc:IK:nksX:qQbi:o:fD:Y:");
+  Command_Line cl(argc, argv, "vuM:adgzc:IK:nksX:qQbi:o:fD:Y:J:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options present\n";
     usage(1);
   }
+
+  DisplayDashHelpIfRequested(cl, 'J', DisplayDashJOptions);
 
   verbose = cl.option_count('v');
 
@@ -1494,6 +1643,38 @@ concat_files(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('n') && cl.option_present('J')) {
+    cerr << "The -n (no header records) and -J (header record values) options are incompatible\n";
+    usage(1);
+  }
+
+  if (cl.option_present('J')) {
+    const_IWSubstring j;
+    for (int i = 0; cl.value('J', j, i); ++i) {
+      if (j.starts_with("okid=")) {
+        j.remove_leading_chars(5);
+        if (! AddOkIds(j, ok_identifier_column_names)) {
+          cerr << "Invalid -J okid=' directive '" << j << "'\n";
+          return 1;
+        }
+      } else if (j == "nonumeric") {
+        numeric_identifier_column_name_ok = false;
+        if (verbose) {
+          cerr << "Numeric join column names not allowed\n";
+        }
+      } else if (j == "help") {
+        DisplayDashJOptions();
+      } else {
+        cerr << "Unrecognised -J qualifier '" << j << "'\n";
+        DisplayDashJOptions();
+      }
+    }
+
+    if (verbose && ok_identifier_column_names.size() > 0) {
+      cerr << "Defined " << ok_identifier_column_names.size() << " allowed identifier column names\n";
+    }
+  }
+
   missing_dataitem = new_int(nfiles);
   std::unique_ptr<int[]> free_missing_dataitem(missing_dataitem);
 
@@ -1507,6 +1688,11 @@ concat_files(int argc, char** argv) {
 
   AFile* files = new AFile[nfiles];  // number 0 is not used
 
+  const int quot = cl.option_present('q');
+  if (quot && verbose) {
+    cerr << "Input may contain quoted fields\n";
+  }
+
   for (int i = 1; i < nfiles; i++) {
     if (!suffix_exclusion_list) {
       ;
@@ -1516,6 +1702,7 @@ concat_files(int argc, char** argv) {
 
     files[i].set_identifier_column(identifier_columns[i]);
     files[i].set_input_separator(input_separator);
+    files[i].set_quoted_fields(quot);
 
     if (!files[i].initialise(cl[i])) {
       cerr << "Cannot initialise file '" << cl[i] << "'\n";
@@ -1529,16 +1716,6 @@ concat_files(int argc, char** argv) {
         cerr << ", " << files[i].duplicate_identifiers() << " duplicates";
       }
       cerr << '\n';
-    }
-  }
-
-  int quot = 0;
-
-  if (cl.option_present('q')) {
-    quot = 1;
-
-    if (verbose) {
-      cerr << "Input may contain quoted fields\n";
     }
   }
 

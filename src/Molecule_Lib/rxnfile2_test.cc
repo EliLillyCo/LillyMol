@@ -140,9 +140,9 @@ TEST(TestChemAxonFragmentData, OneGroup)
   ChemAxonFragmentData cxfd;
   EXPECT_EQ(cxfd.Build("f:1.2.3"), 1);
   const auto& groups = cxfd.connected_group();
-  EXPECT_EQ(groups.size(), 1);
+  EXPECT_EQ(groups.size(), 1u);
   const auto& group0 = *groups[0];
-  EXPECT_EQ(group0.size(), 3);
+  EXPECT_EQ(group0.size(), 3u);
   for (int i = 0; i < 3; ++i) {
     EXPECT_EQ(i + 1, group0[i]);
   }
@@ -166,14 +166,14 @@ TEST(TestChemAxonFragmentData, TwoGroup)
   ChemAxonFragmentData cxfd;
   EXPECT_EQ(cxfd.Build("f:1.2.3,0.4"), 1);
   const auto& groups = cxfd.connected_group();
-  EXPECT_EQ(groups.size(), 2);
+  EXPECT_EQ(groups.size(), 2u);
   const auto& group0 = *groups[0];
-  EXPECT_EQ(group0.size(), 3);
+  EXPECT_EQ(group0.size(), 3u);
   for (int i = 0; i < 3; ++i) {
     EXPECT_EQ(i + 1, group0[i]);
   }
   const auto & group1 = *groups[1];
-  EXPECT_EQ(group1.size(), 2);
+  EXPECT_EQ(group1.size(), 2u);
   EXPECT_EQ(group1[0], 0);
   EXPECT_EQ(group1[1], 4);
 }

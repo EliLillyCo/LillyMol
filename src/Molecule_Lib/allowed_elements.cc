@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include <algorithm>
 #include <iostream>
 
@@ -13,7 +14,7 @@ using std::cerr;
 void
 Allowed_Elements::_default_values()
 {
-  set_vector(_allowed_element, HIGHEST_ATOMIC_NUMBER + 1, 0);
+  std::fill_n(_allowed_element, HIGHEST_ATOMIC_NUMBER + 1, 0);
 
   _allowed_element[1] = 1;
   _allowed_element[6] = 1;

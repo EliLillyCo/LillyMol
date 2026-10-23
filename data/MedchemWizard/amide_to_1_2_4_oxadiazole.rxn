@@ -1,0 +1,24 @@
+# [*:1]C(=O)N[*:2] -> [*:1]c1noc([*:2])n1
+# Secondary acyclic amides only: deleting a tertiary/cyclic amide nitrogen
+# would otherwise lose an attachment or alter an existing ring.
+name: "amide_to_1_2_4_oxadiazole"
+scaffold {
+  smarts: "[*:1]-[CD3R0](=[OD1])-[ND2H1,OD1;R0]-[!#8:2]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  remove_atom: [1, 2, 3]
+}
+sidechain {
+  id: 1
+  reagent: "c1nocn1"
+  smarts: "c1nocn1"
+  join {
+    a1: 0
+    a2: 0
+  }
+  join {
+    a1: 4
+    a2: 3
+  }
+}

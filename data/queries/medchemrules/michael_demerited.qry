@@ -1,7 +1,0 @@
-(0 Query
-  (A C Comment "michael_demerited")
-  (A I Version 2)
-  (A D numeric_value 50)
-# (A C smarts "[$(C);$([!D3])]=C[$(C);$(C[#6,#7,S,O]);!$(C[O;D1])]=[OD1]")
-  (A C smarts "[OD1]=[$(C);$(C[#6,#7,S,O]);!$(C[O;D1])]C=[$(C);$([!D3])]")
-)

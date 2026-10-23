@@ -1,0 +1,98 @@
+{
+  "executable": "make_2d_coordinates",
+  "test": [
+    {
+      "comment": [
+        "The generated coordinates themselves are not regression tested. They are",
+        "the output of a floating point minimisation and vary in the last digit",
+        "with compiler, platform and optimisation level, so golden molfiles would",
+        "fail spuriously - the same reason the repo warns to build -c opt before",
+        "running these tests. The layout geometry is tested instead by the unit",
+        "tests in src/Depict/coords_2d_test.cc, which assert properties (bond",
+        "lengths, no coincident atoms, benzene is a regular hexagon) rather than",
+        "coordinate values. What is regression tested here is the tool's file",
+        "level behaviour.",
+        "",
+        "A molfile that cannot be read back is useless, so the structures are",
+        "round tripped through fileconv and the smiles compared. Note that this",
+        "shows a round trip within LillyMol, not that stereochemistry is conveyed",
+        "to other software: nicotine keeps its chirality because LillyMol carries",
+        "it in the MDL atom parity field and reads that back, whereas other",
+        "toolkits ignore parity on a 2D record and want wedge bonds. Wedges are",
+        "what the wedge_bonds case below is about."
+      ],
+      "name": "roundtrip",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    },
+
+    {
+      "comment": [
+        "LillyMol's default molfile counts line is abbreviated, and some toolkits",
+        "refuse to read it. Since the whole point of generating coordinates is",
+        "that other software can use them, this tool writes full V2000 records,",
+        "and -t restores the terse form. Guards against a change in the option",
+        "processing order silently dropping the full records: the -t flag has to",
+        "be examined before the -o options are processed."
+      ],
+      "name": "counts_line",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    },
+
+    {
+      "comment": [
+        "Chirality reaches other software only through wedge bonds, so this checks",
+        "the wedges written for a set of stereocentres - acyclic, in a ring,",
+        "quaternary, bridged, and five in one molecule - reading them straight out",
+        "of the molfile rather than through another toolkit's interpretation.",
+        "",
+        "Two properties matter and both are visible in the golden file. A wedge's",
+        "narrow end has to be its first atom in the bond block, otherwise readers",
+        "that take the first atom as the stereocentre, RDKit among them, discard",
+        "it; that is cross checked against the parity field, which says which",
+        "atoms LillyMol considers chiral. And the sense has to be derived from the",
+        "layout rather than guessed, which is why both enantiomers of alanine are",
+        "here: they are drawn identically and so must be wedged oppositely.",
+        "",
+        "cis_dimethylcyclohexane is marked chiral in its smiles but is not",
+        "stereogenic, both ring branches from each centre being identical. Drawing",
+        "no wedge is the right answer, not a failure."
+      ],
+      "name": "wedge_bonds",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    },
+
+    {
+      "comment": [
+        "Cis/trans is the one piece of stereochemistry a molfile has no field for:",
+        "it lives only in which side of the double bond each substituent is drawn",
+        "on. The layout engine left to itself draws every double bond trans, so",
+        "without the constraint every Z double bond is silently written as E. This",
+        "lays the structures out, reads the configuration back out of the",
+        "coordinates with fileconv -i dctb, and compares the smiles.",
+        "",
+        "The -z output is in the golden file as the control: it is the raw engine",
+        "layout, where the cis structures come back as their trans isomers. And",
+        "the third block reads the same file without -i dctb, which is how",
+        "LillyMol reads a molfile by default and shows that it derives no",
+        "cis/trans at all - the depiction is correct either way, but a reader has",
+        "to ask for it."
+      ],
+      "name": "cis_trans",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [ "#{datadir}" ]
+      }
+    }
+
+  ]
+
+}

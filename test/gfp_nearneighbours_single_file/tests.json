@@ -1,0 +1,46 @@
+{
+  "executable": "gfp_nearneighbours_single_file",
+  "test": [
+    {
+      "comment": [
+        "Use -T 0.205 to avoid pairs sitting on a floating-point threshold.",
+        "Fraction_as_String formats distances with -j 3 decimal places.",
+        "Linux and Mac use the same expected output."
+      ],
+      "name": "case_1",
+      "args": [
+        "-p -z -T 0.205 -F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -V a=0.3 -V b=1.7 -j 3 ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    },
+    {
+      "name": "pairwise_precision",
+      "args": [
+        "-F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -p -j 2 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "neighbors_and_average",
+      "args": [
+        "-F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -n 2 -A AVDIST -j 3 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "default_precision",
+      "args": [
+        "-F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -n 2 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "distance_endpoints",
+      "args": [
+        "-p -F FPDSC #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "selected_queries",
+      "shell_script": {
+        "script_name": "run.rb"
+      }
+    }
+  ]
+}

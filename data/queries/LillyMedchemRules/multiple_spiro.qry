@@ -1,0 +1,12 @@
+(0 Query
+  (A I Version 2)
+  (A C Comment "multiple_spiro")
+  (A I min_nrings 3)
+  (A D numeric_value 20)
+  (1 Ring_Specifier
+    (A I max_heteroatom_count 1)
+    (A I ring_size 4)
+    (A I fused 0)
+    (A C environment "2[/IWspiro]")
+  )
+)

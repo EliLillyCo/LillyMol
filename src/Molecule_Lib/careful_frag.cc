@@ -686,7 +686,7 @@ Molecule::_is_nitro(atom_number_t n, int* already_done) const {
     return 0;
   }
 
-  atom_number_t o1 = INVALID_ATOM_NUMBER;  // the first doubly bonded oxygen found
+  atom_number_t o1 = kInvalidAtomNumber;  // the first doubly bonded oxygen found
 
   for (int i = 0; i < 3; i++) {
     const Bond* b = an->item(i);
@@ -701,7 +701,7 @@ Molecule::_is_nitro(atom_number_t n, int* already_done) const {
       continue;
     }
 
-    if (INVALID_ATOM_NUMBER == o1) {
+    if (kInvalidAtomNumber == o1) {
       o1 = o;
     } else  // already got o1, so 'o' is the second doubly bonded oxygen
     {

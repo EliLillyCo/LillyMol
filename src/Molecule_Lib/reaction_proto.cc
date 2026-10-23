@@ -1383,8 +1383,7 @@ Reaction_Site::ConstructFromProto(const P& proto, const IWString& fname)
 
 int
 Scaffold_Reaction_Site::ConstructFromProto(const ReactionProto::ScaffoldReactionSite& proto,
-                                           const IWString& fname)
-{
+                                           const IWString& fname) {
   if (proto.has_id()) {
     _unique_id = proto.id();
   } else {
@@ -1586,7 +1585,6 @@ int
 Sidechain_Reaction_Site::_add_reagent(const std::string& smiles)
 {
   const_IWSubstring mysmiles(smiles.data(), smiles.length());
-  cerr << "Addomg reagent " << mysmiles << '\n';
 
   Molecule_and_Embedding * mae = new Molecule_and_Embedding();
   if (! mae->build_from_smiles(mysmiles)) {
@@ -1862,10 +1860,12 @@ IWReaction::BuildProto(ReactionProto::Reaction& proto) const {
   if (! _append_to_name.empty()) {
     proto.set_append_to_name(_append_to_name.data(), _append_to_name.size());
   }
-  if (_query_files_in_current_directory) {
-    proto.set_query_files_in_current_directory(true);
+  if (! _query_files_in_current_directory) {
+    proto.set_query_files_in_current_directory(false);
   }
-  if (! _reaction_directory.empty()) {
+  if (_reaction_directory.empty()) {
+  } else if (_reaction_directory == "./") {
+  } else {
     proto.set_reaction_directory(_reaction_directory.data(), _reaction_directory.size());
   }
   if (_find_kekule_forms_for_bad_valence) {

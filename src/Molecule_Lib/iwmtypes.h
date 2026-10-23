@@ -311,6 +311,7 @@ enum FileType
   FILE_TYPE_RDF,
   FILE_TYPE_QRY,
   FILE_TYPE_INCHI,
+  FILE_TYPE_INCHIKEY,
   FILE_TYPE_RSMI,
   FILE_TYPE_SMT,
   FILE_TYPE_UTDT,
@@ -365,7 +366,5 @@ enum class CahnIngoldPrelog {
 };
 
 #define ATOM_TYPE_SYBYL "SYBYL"
-
-#define NOT_COMPUTED -117
 
 #endif  // MOLECULE_LIB_IWMTYPES_H_

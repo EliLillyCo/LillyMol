@@ -1,0 +1,5 @@
+bucket total leaders cluster_members previously_selected available
+bucket0 5 1 0 0 4
+bucket1 5 1 0 0 4
+bucket2 5 1 0 0 4
+bucket3 5 1 0 0 4

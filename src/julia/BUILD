@@ -1,3 +1,4 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test", "cc_shared_library")
 cc_library(
     name = "lillymol_julia",
     srcs = [

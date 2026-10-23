@@ -2667,7 +2667,7 @@ Substructure_Atom::create_from_molecule(
   if (_parent) {
     parent_atom_number = _parent->unique_id();
   } else {
-    parent_atom_number = INVALID_ATOM_NUMBER;
+    parent_atom_number = kInvalidAtomNumber;
   }
 
   _unique_id = my_atom_number;
@@ -2679,7 +2679,7 @@ Substructure_Atom::create_from_molecule(
 
 #ifdef DEBUG_CREATE_FROM_MOLECULE
   cerr << "create from molecule atom " << my_atom_number << " unique id " << _unique_id;
-  if (INVALID_ATOM_NUMBER != parent_atom_number) {
+  if (kInvalidAtomNumber != parent_atom_number) {
     cerr << ". Parent " << parent_atom_number;
   }
   cerr << endl;
@@ -3032,7 +3032,7 @@ Substructure_Atom::create_from_molecule(
   // Because of cyclic structures, we need to be very careful how we build the query.
   // Add the bond to the parent first
 
-  if (INVALID_ATOM_NUMBER != parent_atom_number) {
+  if (kInvalidAtomNumber != parent_atom_number) {
     Substructure_Bond *sb = new Substructure_Bond;
 
     const Bond *b = m.bond_between_atoms(my_atom_number, parent_atom_number);
@@ -3546,7 +3546,7 @@ first_isotopically_labelled_atom_in_fragment(Molecule &m, int f) {
     }
   }
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 static atom_number_t
@@ -3576,7 +3576,7 @@ first_allowed_atom_in_fragment(
     return i;
   }
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 int
@@ -3668,7 +3668,7 @@ Single_Substructure_Query::_create_from_molecule(MDL_Molecule &m,
     for (int i = 0; i < nf; i++) {
       atom_number_t astart = first_isotopically_labelled_atom_in_fragment(m, i);
 
-      if (INVALID_ATOM_NUMBER == astart) {
+      if (kInvalidAtomNumber == astart) {
         continue;
       }
 
@@ -3693,7 +3693,7 @@ Single_Substructure_Query::_create_from_molecule(MDL_Molecule &m,
 #endif
     for (int i = 0; i < nf; ++i) {
       atom_number_t astart;
-      while (INVALID_ATOM_NUMBER !=
+      while (kInvalidAtomNumber !=
              (astart = first_allowed_atom_in_fragment(m, i, tmp, include_these_atoms))) {
         Substructure_Atom *r = new Substructure_Atom;
 
@@ -4419,7 +4419,7 @@ Substructure_Environment::construct_from_msi_object(
     return 0;
   }
 
-  if (INVALID_ATOM_NUMBER != possible_parent) {
+  if (kInvalidAtomNumber != possible_parent) {
     _add_possible_parent(possible_parent, possible_parent_bond_type, completed);
   }
 
@@ -4839,7 +4839,7 @@ fetch_heteroatom_definitions(const msi_attribute *att,
 
 static int
 fetch_heteroatom_definitions(const msi_attribute &att, int *heteroatm) {
-  set_vector(heteroatm, HIGHEST_ATOMIC_NUMBER + 1, 0);
+  std::fill_n(heteroatm, HIGHEST_ATOMIC_NUMBER + 1, 0);
 
   int z;
   int ndx = 0;
@@ -4862,7 +4862,7 @@ Single_Substructure_Query::_construct_from_msi_object(const msi_object &msi,
   assert(ok());
   assert(_root_atoms.empty());
 
-  int version_attribute_found = 0;
+//int version_attribute_found = 0;
 
   _numeric_value.resize(0);
 
@@ -4884,7 +4884,7 @@ Single_Substructure_Query::_construct_from_msi_object(const msi_object &msi,
                 "version 2 queries\n";
         return 0;
       }
-      version_attribute_found = 1;
+//    version_attribute_found = 1;
       attribute_recognised[i] = 1;
     } else if (NAME_OF_DEFINE_HETEROATOMS_ATTRIBUTE == att->name()) {
       if (!fetch_heteroatom_definitions(att, _heteroatoms)) {
@@ -5195,12 +5195,15 @@ Single_Substructure_Query::_construct_from_msi_object(const msi_object &msi,
     return 0;
   }
 
+#ifdef WARN_NO_QUERY_VERSION_ATTRIBUTE
+  turned off, this format is legacy only
   // For now, this is just a warning. Perhaps it should be fatal
 
   if (0 == version_attribute_found) {
     cerr << "Single_Substructure_Query::_construct_from_msi_object: no version "
             "attribute\n";
   }
+#endif
 
   int nat = 0;
   if (!really_gruesome(_attached_heteroatom_count, msi,
@@ -5833,9 +5836,8 @@ Single_Substructure_Query::create_from_smarts(const IWString &smarts) {
   const_IWSubstring mysmarts = smarts;  // we may want to change it
 
   if (!_parse_and_consume_optional_leading_numeric_qualifiers(mysmarts)) {
-    cerr
-        << "Single_Substructure_Query::create_from_smarts:invalid numeric specification '"
-        << smarts << "'\n";
+    cerr << "Single_Substructure_Query::create_from_smarts:invalid numeric specification '"
+         << smarts << "'\n";
     return 0;
   }
 
@@ -5849,8 +5851,7 @@ Single_Substructure_Query::create_from_smarts(const IWString &smarts) {
     return 0;
   }
 
-  if ('!' == smarts[0])  // hmmm, why not use a leading 0. Is this correct?
-  {
+  if ('!' == smarts[0]) {  // hmmm, why not use a leading 0. Is this correct?
     _rejection = 1;
     mysmarts++;
   }
@@ -7157,5 +7158,46 @@ Substructure_Query::CreateFromSmarts(const std::string& smt) {
 }
 
 namespace lillymol {
+
+bool
+LooksLikeTextproto(iwstring_data_source& input) {
+  // Cannot seek on standard input.
+  if (input.fd() == 1) {
+    return false;
+  }
+
+  const off_t start_pos = input.tellg();
+
+  const_IWSubstring line;
+  // Empty file, who knows
+  if (! input.next_record(line)) {
+    return false;
+  }
+
+  input.seekg(start_pos);
+
+  if (line.starts_with("(0 Query")) {
+    return false;
+  }
+  if (line.starts_with("name:")) {
+    return true;
+  }
+  if (line.starts_with("query {") || line.starts_with("query{")) {
+    return true;
+  }
+
+  return false;
+}
+
+bool
+LooksLikeTextproto(IWString& fname) {
+  iwstring_data_source input;
+  if (! input.open(fname)) {
+    cerr << "LooksLikeTextproto:cannot open '" << fname << "'\n";
+    return false;
+  }
+
+  return LooksLikeTextproto(input);
+}
 
 }  // namespace lillymol

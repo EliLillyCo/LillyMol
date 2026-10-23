@@ -1,4 +1,6 @@
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 
@@ -350,7 +352,7 @@ ISIS_Atom_List::invert_to_normal_list_based_on_organics ()
 {
   int include_in_list[54];    // Iodine, 53 is the last organic
 
-  set_vector(include_in_list, 54, 0);
+  std::fill_n(include_in_list, 54, 0);
 
   include_in_list[6] = 1;
   include_in_list[7] = 1;

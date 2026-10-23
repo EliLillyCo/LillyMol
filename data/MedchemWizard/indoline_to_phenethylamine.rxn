@@ -1,0 +1,12 @@
+# Open only the N-to-aromatic-carbon bond; preserve the N substituent.
+# Two unsubstituted methylene atoms and a neutral N-substituted ring nitrogen
+# ensure the product matches the forward acyclic-chain motif.
+name: "indoline_to_phenethylamine"
+scaffold {
+  smarts: "[cD3]1:[cD3]-[CH2D2R1]-[CH2D2R1]-[ND3H0R1+0]-1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  break_bond { a1: 0 a2: 4 }
+}

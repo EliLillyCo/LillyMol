@@ -986,7 +986,12 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     // for each atom. If requested, we can only match with an atom that has a given
     // global match id.
     // Note that in smarts, these are restricted to single digits.
-    int _global_match_id;
+    // Note that this is a signed value here. Negative values are interpreted as
+    // do NOT match an atom that has an given value.
+    // So if a ring specifies 'global_id: 3' a substructure atom
+    // might specify 'global_match_id: -3' which means do NOT match
+    // an atom which has a global id of 3.
+    int _global_id_match;
 
     resizable_array_p<Substructure_Atom> _children;
 
@@ -1201,7 +1206,7 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     int  add_ncon_preference_object (int n, int p);
 
     int atom_map_number() const { return _atom_map_number;}
-    int global_match_id() const { return _global_match_id;}
+    int global_id_match() const { return _global_id_match;}
 
     int number_descendants () const;
 
@@ -1217,6 +1222,8 @@ class Substructure_Atom : public Substructure_Atom_Specifier
     unsigned int atom_type_group() const {
       return _atom_type_group;
     }
+
+    int number_fragment_ids() const;
 
     int spinach_match_specified () const;
 
@@ -1281,6 +1288,7 @@ class Substructure_Atom : public Substructure_Atom_Specifier
 
     int construct_from_smarts_token (const const_IWSubstring & smarts);
     int construct_from_smarts_token (const char * smarts, int nchars);
+    int ParseIWDirective(const_IWSubstring c);
     int smarts (IWString &) const;
     int add_bond (const msi_object *, int, int, int, extending_resizable_array<Substructure_Atom *> &);
 
@@ -1566,11 +1574,11 @@ class Substructure_Environment : public resizable_array_p<Substructure_Atom>
 
     int construct_from_msi_object(const msi_object & msi,
                                extending_resizable_array<Substructure_Atom *> & completed,
-                               atom_number_t possible_parent = INVALID_ATOM_NUMBER,
+                               atom_number_t possible_parent = kInvalidAtomNumber,
                                bond_type_t possible_parent_bond_type = INVALID_BOND_TYPE);
     int construct_from_proto(const SubstructureSearch::SubstructureEnvironment& proto,
                                extending_resizable_array<Substructure_Atom *> & completed,
-                               atom_number_t possible_parent = INVALID_ATOM_NUMBER,
+                               atom_number_t possible_parent = kInvalidAtomNumber,
                                bond_type_t possible_parent_bond_type = INVALID_BOND_TYPE);
 
     int write_msi(std::ostream & os, int & object_id, int indentation);
@@ -1809,7 +1817,8 @@ class Substituent {
     int RunQueries(Molecule_to_Match& target, const int * storage, int flag,
                        int& got_required_match,
                        int& got_rejected_match);
-    int MatchesInner(Molecule_to_Match& target, const int * ring_atoms, int * storage);
+    int MatchesInner(Molecule_to_Match& target, const int * ring_atoms, int * storage,
+                     int* used_sidechain);
     void SetTargetGlobalIds(int * storage, int flag, Molecule_to_Match& target) const;
     void FillMatchedAtomsArray(std::unique_ptr<int[]>& matched_by_global_specs,
                         const int matoms,
@@ -1831,7 +1840,8 @@ class Substituent {
     // `storage` is an array of m.natoms() that each Substituent uses to
     // hold the identities of the atoms it is processing.
     int Matches(Molecule_to_Match& target, const int * ring_atoms, int * storage,
-                std::unique_ptr<int[]>& matched_by_global_specs);
+                std::unique_ptr<int[]>& matched_by_global_specs,
+                int* used_sidechain = nullptr);
 };
 
 // In processing inter-ring regions, there are a number of attributes
@@ -1984,6 +1994,12 @@ class Substructure_Ring_Base
 
     // May 2022. Extend atoms covered by a global id to attached carbonyl and similar.
     bool _ring_extends_to_carbonyl;
+    // May 2026. Environment matches can also set the global id.
+    bool _environment_sets_global_id;
+
+    // If true, repeated Substituent specifications greedily claim distinct
+    // sidechains in proto order.
+    bool _substituents_must_match_distinct_sidechains;
 
     // June 2022. Implement substituent idea.
     resizable_array_p<Substituent> _substituent;
@@ -1993,6 +2009,9 @@ class Substructure_Ring_Base
 //  private functions
 
     int _construct_environment(const const_IWSubstring &);
+    int SetEnvMatchGlobalId(Molecule_to_Match& target, 
+                        const Query_Atoms_Matched& matched_query_atoms,
+                        std::unique_ptr<int[]>& matched_by_global_specs);
 
   protected:
     int ExtendToCarbonyl(const Molecule& m, int* in_system) const;
@@ -2015,22 +2034,28 @@ class Substructure_Ring_Base
     int ConstructFromProto(const SubstructureSearch::SubstructureRingBase& proto);
     int BuildProto(SubstructureSearch::SubstructureRingBase& proto) const;
 
-    int _environment_matches(Molecule_to_Match &, int *);
-    int _environment_matches(Molecule_to_Match & target,
+//  int _environment_matchesy(Molecule_to_Match &, int *);
+    int _environment_matchesx(Molecule_to_Match & target,
+                                             int * ring,
+                                             std::unique_ptr<int[]>& matched_by_global_specs);
+    int _environment_matches2(Molecule_to_Match & target,
                              int * ring,
-                             int * already_matched);
+                             int * already_matched,
+                             std::unique_ptr<int[]>& matched_by_global_specs);
     int _environment_matches(Molecule_to_Match &, const int *, Substructure_Atom &);
     int _environment_matches(Molecule_to_Match & target,
                              const int * ring,
                              Substructure_Atom & root_atom,
                              int * already_matched);
-    int _environment_matches(Molecule_to_Match & target,
+    int _environment_matches3(Molecule_to_Match & target,
                              Substructure_Atom & root_atom,
                              const int * ring,
-                             int * already_matched);
-    int _environment_matches(Molecule_to_Match & target,
+                             int * already_matched,
+                             std::unique_ptr<int[]>& matched_by_global_specs);
+    int _environment_matches4(Molecule_to_Match & target,
                              Query_Atoms_Matched & matched_query_atoms,
-                             int * previously_matched_atoms);
+                             int * previously_matched_atoms,
+                             std::unique_ptr<int[]>& matched_by_global_specs);
 
 };
 
@@ -2062,7 +2087,8 @@ class Substructure_Ring_Specification : public Substructure_Ring_Base
 
 //  private functions
 
-    int _environment_matches(Molecule_to_Match &, const Ring &);
+    int _environment_matches(Molecule_to_Match &, const Ring &,
+                                             std::unique_ptr<int[]>& matched_by_global_specs);
 
   // private functions.
     int OkSpiroFusionCount(Molecule& m, const Ring& ring) const;
@@ -2463,7 +2489,7 @@ class Substructure_Results
     extending_resizable_array<int> _hits_per_fragment;
 
 //  When we have atoms that are excluded from embeddings, we can get embeddings that
-//  contain INVALID_ATOM_NUMBER. We can optionally remove those as we get the embeddings
+//  contain kInvalidAtomNumber. We can optionally remove those as we get the embeddings
 
     int _remove_invalid_atom_numbers_from_new_embeddings;
 
@@ -3304,6 +3330,7 @@ class Single_Substructure_Query
     void _determine_if_symmetry_groups_present();
     void _determine_if_unmatched_atom_counts_are_present();
     void _determine_if_atom_type_groups_are_present();
+    void _determine_if_fragment_ids_present();
     int _one_time_initialisations();
 
     int _match_elements_needed(Molecule_to_Match & target_molecule) const;
@@ -3987,6 +4014,11 @@ int AllQueriesMatch(Molecule_to_Match& m, resizable_array_p<Substructure_Query> 
 // Return true if any of the queries in `queries` matches `m`.
 int AnyQueryMatches(Molecule& m, resizable_array_p<Substructure_Query> & queries);
 int AnyQueryMatches(Molecule_to_Match& m, resizable_array_p<Substructure_Query> & queries);
+
+// Peeks at the first line of a file and returns true if that looks like a textproto query.
+// `fname` is not const only because it calls null_terminated_chars.
+bool LooksLikeTextproto(IWString& fname);
+bool LooksLikeTextproto(iwstring_data_source& input);
 
 }  // namespace lillymol
 

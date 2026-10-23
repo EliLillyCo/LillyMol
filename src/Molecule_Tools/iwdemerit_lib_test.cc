@@ -23,7 +23,7 @@ TEST_F(MCDemeritTest, TestHardLowerAtomCountCutoffLower) {
   ASSERT_TRUE(_m.build_from_smiles("CC"));
   Demerit demerit = _mcdemerit.Process(_m, 0);
   EXPECT_TRUE(demerit.rejected());
-  EXPECT_EQ(demerit.demerits().size(), 1);
+  EXPECT_EQ(demerit.demerits().size(), 1u);
   EXPECT_EQ(demerit.demerits()[0]->reason(), "too_few_atoms");
 }
 
@@ -96,7 +96,7 @@ TEST_F(MCDemeritTest, TestRejectedAtUpper) {
   ASSERT_TRUE(_m.build_from_smiles("CCCCCCCCC"));
   Demerit demerit = _mcdemerit.Process(_m, 0);
   EXPECT_TRUE(demerit.rejected());
-  EXPECT_EQ(demerit.demerits().size(), 1);
+  EXPECT_EQ(demerit.demerits().size(), 1u);
   EXPECT_EQ(demerit.demerits()[0]->reason(), "too_many_atoms");
 }
 TEST_F(MCDemeritTest, TestAboveUpperThreshold) {
@@ -106,7 +106,7 @@ TEST_F(MCDemeritTest, TestAboveUpperThreshold) {
   ASSERT_TRUE(_m.build_from_smiles("CCCCCCCCCCCCCC"));
   Demerit demerit = _mcdemerit.Process(_m, 0);
   EXPECT_TRUE(demerit.rejected());
-  EXPECT_EQ(demerit.demerits().size(), 1);
+  EXPECT_EQ(demerit.demerits().size(), 1u);
   EXPECT_EQ(demerit.score(), 130);
   EXPECT_EQ(demerit.demerits()[0]->reason(), "too_many_atoms");
 }

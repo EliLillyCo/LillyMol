@@ -1,0 +1,4 @@
+Name amw
+ethanol 46.07
+methane 16.04
+benzene 78.11

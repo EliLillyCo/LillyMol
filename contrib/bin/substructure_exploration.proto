@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package substructure_exploration;
+
+message Query {
+  oneof query_spec {
+    string smarts = 1;
+    string fname = 2;
+  }
+  // This will over-ride anything in the smarts or query file.
+  optional string name = 3;
+
+  repeated uint32 ncon = 4;
+
+  // True if the query depends on having first run a charge assigner.
+  optional bool charge_assigner = 5;
+}
+
+message SubstructureExploration {
+  repeated Query query = 1;
+}

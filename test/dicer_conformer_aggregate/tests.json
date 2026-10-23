@@ -1,0 +1,19 @@
+{
+  "executable": "dicer_conformer_aggregate",
+  "test": [
+    {
+      "name": "deduplicate_rigid_transform",
+      "args": [ "#{indir}/in.textproto" ],
+      "difftool": "diff",
+      "difftool_options": "-w",
+      "comment": [ "rigidly transformed linker geometries collapse to one conformer" ]
+    },
+    {
+      "name": "attachment_identity",
+      "args": [ "#{indir}/in.textproto" ],
+      "difftool": "diff",
+      "difftool_options": "-w",
+      "comment": [ "external elements do not affect grouping, atom types control deduplication, and repeated sites are permutable" ]
+    }
+  ]
+}

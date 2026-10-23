@@ -1,3 +1,4 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
 # load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 cc_library(
@@ -10,7 +11,11 @@ cc_library(
 
 cc_library(
     name = "berkeley_shared",
-    srcs = ["BDB/lib/libdb_cxx.so", "BDB/lib/libdb.so"],
+    srcs = select({
+        "@platforms//os:macos": ["BDB/lib/libdb_cxx.dylib", "BDB/lib/libdb.dylib"],
+        "@platforms//os:linux": ["BDB/lib/libdb_cxx-18.1.so", "BDB/lib/libdb-18.1.so"],
+        "//conditions:default": [],
+    }),
     hdrs = ["BDB/include/db_cxx.h", "BDB/include/db.h" ],
     strip_include_prefix = "BDB/include",
     visibility = ["//visibility:public"],
@@ -34,9 +39,11 @@ cc_library(
 
 cc_library(
     name = "xgboost",
-    srcs = [
-        "lib/libxgboost.so",
-    ],
+    srcs = select({
+        "@platforms//os:macos": ["lib/libxgboost.dylib"],
+        "@platforms//os:linux": ["lib/libxgboost.so"],
+        "//conditions:default": [],
+    }),
     hdrs =
         glob(
             ["include/xgboost/**"],
@@ -53,6 +60,18 @@ cc_library(
     srcs = ["libf2c/libf2c.a"],
     hdrs = ["libf2c/f2c.h"],
     strip_include_prefix = "libf2c",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "coordgen",
+    srcs = ["lib/libcoordgen.a"],
+    defines = ["STATIC_COORDGEN"],
+    hdrs = glob(
+        ["include/coordgen/**"],
+        allow_empty = True,
+    ),
+    strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )
 
@@ -97,7 +116,7 @@ cc_library (
 cc_library(
     name = "inchi",
     srcs = glob(
-               ["InChI/INCHI-1-SRC/INCHI_API/bin/Linux/libinchi.so*"],
+               ["InChI/build/lib/*.so"],
                allow_empty=True,
           ),
     hdrs = glob (
@@ -107,3 +126,31 @@ cc_library(
     strip_include_prefix = "InChI/INCHI-1-SRC/INCHI_BASE/src",
     visibility = ["//visibility:public"],
 )
+
+#  cc_library(
+#      name = "planarity_static",
+#      srcs = [
+#          "lib/libplanarity.a",
+#      ],
+#      hdrs = glob(
+#              ["include/planarity/**"],
+#              allow_empty=False,
+#          ),
+#      strip_include_prefix = "include/planarity/",
+#      visibility = ["//visibility:public"],
+#  )
+#  
+#  cc_library(
+#      name = "planarity_shared",
+#      srcs = select({
+#          "@platforms//os:macos": ["lib/libplanarity.dylib"],
+#          "@platforms//os:linux": ["lib/libplanarity.so"],
+#          "//conditions:default": [],
+#      }),
+#      hdrs = glob(
+#              ["include/planarity/**"],
+#              allow_empty=False,
+#          ),
+#      strip_include_prefix = "include/planarity/",
+#      visibility = ["//visibility:public"],
+#  )

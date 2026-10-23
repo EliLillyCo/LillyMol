@@ -165,14 +165,9 @@ Set_of_Fingerprints::_build_fingerprint(Molecule& m, GFP_Standard& gfp)
 {
   _preprocess(m);
 
-  _mpr(m, gfp.molecular_properties());
-
-  for (int i = 0; i < 8; ++i) {
-    if (gfp.molecular_properties()[i] < 0 || gfp.molecular_properties()[i] > 255) {
-      cerr << "out of range molecular property " << i << " value "
-           << gfp.molecular_properties()[i] << '\n';
-    }
-  }
+  int molecular_properties[8];
+  _mpr(m, molecular_properties);
+  gfp.build_molecular_properties(molecular_properties, 8);
 
   IWMFingerprint iwfp;
   iwfp.construct_fingerprint(m);  // _iwfp is a bit vector

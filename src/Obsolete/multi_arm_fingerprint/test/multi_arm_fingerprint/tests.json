@@ -1,0 +1,4 @@
+{
+  "executable": "multi_arm_fingerprint",
+  "test": [{"name": "cli", "shell_script": {"script_name": "run.rb"}}]
+}

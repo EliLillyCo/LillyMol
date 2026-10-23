@@ -108,6 +108,14 @@ Molecule::_read_molecule_mdl_ds(T& input, int return_on_m_end,
 template <typename T>
 int
 Molecule::read_molecule_mdl_ds(T& input, int return_on_m_end) {
+  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
+  return read_molecule_mdl_ds(input, *mdlfos, return_on_m_end);
+}
+
+template <typename T>
+int
+Molecule::read_molecule_mdl_ds(T& input, MDL_File_Supporting_Material& mdlfos,
+                               int return_on_m_end) {
   assert(ok());
 
   resize(0);
@@ -117,11 +125,9 @@ Molecule::read_molecule_mdl_ds(T& input, int return_on_m_end) {
     return 0;
   }
 
-  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
+  mdlfos.reset_for_next_molecule();
 
-  mdlfos->reset_for_next_molecule();
-
-  if (!_read_molecule_mdl_ds(input, return_on_m_end, *mdlfos)) {
+  if (!_read_molecule_mdl_ds(input, return_on_m_end, mdlfos)) {
     return 0;
   }
 
@@ -133,7 +139,7 @@ Molecule::read_molecule_mdl_ds(T& input, int return_on_m_end) {
 
   if (moleculeio::ignore_all_chiral_information_on_input()) {
     _chiral_centres.resize(0);
-  } else if (mdlfos->discern_chirality_from_wedge_bonds()) {
+  } else if (mdlfos.discern_chirality_from_wedge_bonds()) {
     (void)discern_chirality_from_wedge_bonds();
   } else if (0 == _chiral_centres.number_elements() && number_up_or_down_wedge_bonds()) {
     (void)discern_chirality_from_wedge_bonds();
@@ -152,7 +158,7 @@ Molecule::read_molecule_mdl_ds(T& input, int return_on_m_end) {
 
   if (0 == _chiral_centres.number_elements()) {  // none to worry about
     ;
-  } else if (_complete_chiral_centres_from_mdl_files(*mdlfos)) {  // good
+  } else if (_complete_chiral_centres_from_mdl_files(mdlfos)) {  // good
     ;
   } else  // OOPS, bad chirality info
   {
@@ -349,6 +355,11 @@ Molecule::_read_mdl_bond_list(T& input, int nb, int* aromatic_atoms, int* aromat
 
 extern int looks_like_sdf_tag(const const_IWSubstring& buffer);
 
+static int
+MdlReadExtraTextInfo(const MDL_File_Supporting_Material& mdlfos) {
+  return mdlfos.read_extra_text_info() || moleculeio::read_extra_text_info();
+}
+
 template <typename T>
 int
 Molecule::_read_mdl_data_following_tag(T& input,
@@ -365,8 +376,8 @@ Molecule::_read_mdl_data_following_tag(T& input,
       buffer.gsub(' ', mdlfos.gsub_mdl_file_data());
     }
 
-    if (moleculeio::read_extra_text_info()) {  // even if buffer is empty
-      _text_info.add(new IWString(buffer));
+    if (MdlReadExtraTextInfo(mdlfos)) {  // even if buffer is empty
+      _ensure_text_info().add(new IWString(buffer));
     }
 
     static constexpr char kNewLine = 13;  // Ascii encoding.
@@ -405,11 +416,12 @@ template <typename T>
 int
 Molecule::_read_molecule_mdl_trailing_records(
     T& input, int return_on_m_end,
-    MDL_File_Supporting_Material& mdlfos)  // non const because of rx match
-{
-  if (moleculeio::read_extra_text_info() && 0 == _text_info.number_elements()) {
-    _text_info.resize(10);
+    MDL_File_Supporting_Material& mdlfos) {  // non const because of rx match
+  if (MdlReadExtraTextInfo(mdlfos)) {
+    _ensure_text_info().resize(10);
   }
+
+  // std::cerr << "After reading connection table '" << _molecule_name << " _text_info " << _text_info << '\n';
 
   // Aprop atom_properties[MAX_PAIRS];
 
@@ -431,11 +443,11 @@ Molecule::_read_molecule_mdl_trailing_records(
 
   if (mdlfos.name_to_json() && ! _molecule_name.empty()) {
     IWString tmp;
-    tmp << "{ \"name\": " << _molecule_name << '"';
+    tmp << "{ \"name\": \"" << _molecule_name << '"';
     _molecule_name = tmp;
     json_open_brace_written = 1;
   } else if (mdlfos.name_to_json() || mdlfos.sdf_tags_to_json()) {
-    _molecule_name << '{';
+    _molecule_name.append_with_spacer("{", ' ');
     json_open_brace_written = 1;
   }
 
@@ -491,6 +503,13 @@ Molecule::_read_molecule_mdl_trailing_records(
     }
 
     if (buffer.starts_with("M  S")) {
+      continue;
+    }
+
+    // ChemFinder extension that we do not process.
+    if (buffer.starts_with("M  CFW")) {
+      std::cerr << "Molecule::_read_molecule_mdl_trailing_records:ignoring ChemFinder "
+                << buffer << '\n';
       continue;
     }
 
@@ -557,8 +576,8 @@ Molecule::_read_molecule_mdl_trailing_records(
       continue;
     }
 
-    if (moleculeio::read_extra_text_info()) {
-      add_to_text_info(_text_info, buffer);
+    if (MdlReadExtraTextInfo(mdlfos)) {
+      add_to_text_info(_ensure_text_info(), buffer);
     }
 
     //  std::cerr << read_extra_text_info() << " now contains " <<
@@ -576,8 +595,8 @@ Molecule::_read_molecule_mdl_trailing_records(
 
       EXTRA_STRING_RECORD(input, buffer, "read mol mdl");
 
-      if (moleculeio::read_extra_text_info()) {
-        add_to_text_info(_text_info, buffer);
+      if (MdlReadExtraTextInfo(mdlfos)) {
+        add_to_text_info(_ensure_text_info(), buffer);
       }
 
       IWString tmp;
@@ -786,10 +805,14 @@ Molecule::write_molecule_mdl(T& os, const IWString& comments) {
 template <typename T>
 int
 Molecule::write_extra_text_info(T& os) const {
-  int ne = _text_info.number_elements();
+  if (! _text_info) {
+    return 1;
+  }
+
+  int ne = _text_info->number_elements();
 
   for (int i = 0; i < ne; i++) {
-    const IWString* info = _text_info[i];
+    const IWString* info = (*_text_info)[i];
     os << (*info) << moleculeio::newline_string();
   }
 

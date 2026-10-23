@@ -1,0 +1,13 @@
+{
+  "executable": "temperature",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-a #{indir}/test.smi" 
+      ]
+    }
+
+  ]
+
+}

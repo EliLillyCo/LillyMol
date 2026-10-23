@@ -47,7 +47,7 @@ Molecule::InChI(IWString & inchi_string)      // maybe this could be a const met
 }
 
 int
-Molecule::write_molecule_inchi(std::ostream & output)
+Molecule::write_molecule_inchi(std::ostream & output, bool write_key)
 {
   IWString tmp;
 

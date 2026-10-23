@@ -63,7 +63,7 @@ bool kabsch(const vector<Vector3d>& _src, const vector<Vector3d>& _tgt, Affine3d
     }
     scale = mean_dist_tgt / mean_dist_src;
     centroid_tgt /= scale;
-    cerr << "Kabsch: scale=" << scale << '\n';
+//  cerr << "Kabsch: scale=" << scale << '\n';
   }
 
   /*
@@ -111,7 +111,7 @@ bool kabsch(const vector<Vector3d>& _src, const vector<Vector3d>& _tgt, Affine3d
   _residual_rms /= n;
   _residual_rms = sqrt(_residual_rms);
 
-  cerr << "Kabsch: RMSD=" << _residual_rms << '\n';
+//cerr << "Kabsch: RMSD=" << _residual_rms << '\n';
 
   return true;
 }

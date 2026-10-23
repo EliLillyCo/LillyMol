@@ -21,6 +21,8 @@ message MispredictedContinuous {
   optional float average_difference = 6;
   // The standard deviation of the differencs.
   optional float std_difference = 7;
+  // Distance to the nearest non-self neighbour in the supplied reference dataset.
+  optional float nearest_neighbour_distance = 8;
 }
 
 message MispredictedClassification {
@@ -28,4 +30,5 @@ message MispredictedClassification {
   optional string label = 2;
   optional uint32 npred = 3;
   optional uint32 times_correct = 4;
+  optional float nearest_neighbour_distance = 5;
 }

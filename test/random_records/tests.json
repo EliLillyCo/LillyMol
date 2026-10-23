@@ -1,0 +1,14 @@
+{
+  "executable": "random_records",
+  "difftool": "${LILLYMOL_HOME}/test/same_number_lines.sh",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-n 25 ${LILLYMOL_HOME}/data/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

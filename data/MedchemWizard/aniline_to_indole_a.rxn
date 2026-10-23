@@ -1,0 +1,25 @@
+name: "aniline_to_indole_a"
+scaffold {
+  id: 0
+  smarts: "[/IWfss1cD3](!@[ND1H2])(:[$([cD2]:[cD2])]):[$([cD2]:[cD2])]"
+  smarts: "[/IWfss1cD3](!@[ND1H2])(:[cD2]):[cD2]"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C=C"
+  smarts: "C=C"
+  join {
+    a1: 1
+    a2: 0
+  }
+  join {
+    a1: 2
+    a2: 1
+  }
+  match_conditions {
+    max_matches_to_find: 1
+  }
+}

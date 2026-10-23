@@ -2,227 +2,282 @@
   "executable": "molecule_filter",
   "difftool": "same_structures",
   "default_command_components": [
-      "-F #{indir}/config.textproto #{indir}/in.smi"
+      "-F #{indir}/config.textproto"
   ],
   "test": [
 
     {
       "name": "exclude_isotopes",
       "args": [
-         ""
+         "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "exclude_non_organic",
       "args": [
-        "-E autocreate"
+        "-E autocreate #{indir}/in.smi"
       ]
     },
 
     {
       "name": "largest_ring_size",
       "args": [
-         ""
+         "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_aliphatic_ring_count",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_aromatic_ring_count",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_aromatic_density",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_aromatic_rings_in_system",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_chiral",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_distance",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_halogen_count",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_hba",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_hbd",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_heteroatom_fraction",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_natoms",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_nrings",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_number_fragments",
       "args": [
-         "-B rejected"
+         "-B rejected #{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_ring_system_size",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_rotatable_bonds",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_tpsa",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_xlogp",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "max_alogp",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_hba",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_hbd",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_heteroatom_count",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_heteroatom_fraction",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_natoms",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_nrings",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_rotatable_bonds",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_sp3_carbon",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_tpsa",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
     },
 
     {
       "name": "min_xlogp",
       "args": [
-        ""
+        "#{indir}/in.smi"
       ]
-    }
+    },
 
+    {
+      "name": "utility_mode",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_weighted_sum",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_product",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_min",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_max",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_with_computed_filter",
+      "args": [
+        "#{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    },
+
+    {
+      "name": "utility_smiles_output",
+      "args": [
+        "-u #{indir}/in.smi"
+      ],
+      "difftool": "diff"
+    }
 
   ]
 }

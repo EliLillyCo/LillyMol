@@ -1,7 +1,8 @@
-#include <iostream>
-#include <iomanip>
-#include <memory>
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <queue>
 
 #include "Foundational/iwmisc/iwminmax.h"
 #include "Foundational/iwmisc/misc.h"
@@ -29,14 +30,12 @@ using std::endl;
 static int full_distance_matrix = 1;
 
 void
-set_full_distance_matrix(const int s)
-{
+set_full_distance_matrix(const int s) {
   full_distance_matrix = s;
 }
 
 int
-Molecule::_initialise_distance_matrix()
-{
+Molecule::_initialise_distance_matrix() {
   assert(nullptr == _distance_matrix);
   assert(_number_elements > 0);
 
@@ -51,117 +50,119 @@ Molecule::_initialise_distance_matrix()
 */
 
 int
-Molecule::_bonds_between (atom_number_t a1, atom_number_t a2)
-{
+Molecule::_bonds_between(atom_number_t a1, atom_number_t a2) {
   assert(a1 < a2);
 
-  if (nullptr == _distance_matrix)
+  if (nullptr == _distance_matrix) {
     _initialise_distance_matrix();
+  }
 
-  int * row = &_distance_matrix[_number_elements * a1];
+  int* row = &_distance_matrix[_number_elements * a1];
 
-//#define DEBUG_BONDS_BETWEEN
+// #define DEBUG_BONDS_BETWEEN
 #ifdef DEBUG_BONDS_BETWEEN
   cerr << "Qbonds_between: between " << a1 << " and " << a2 << endl;
 
   int precision = 2;
-  if (_number_elements > 9)
+  if (_number_elements > 9) {
     precision = 3;
-  else
+  } else {
     precision = 4;
+  }
 
   cerr << "MX is ";
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     cerr << setw(precision) << row[i];
   }
   cerr << endl;
 #endif
 
-// If it is already known, or is on the leading edge, grab it.
+  // If it is already known, or is on the leading edge, grab it.
 
-//cerr << "Atom " << a1 << " to " << a2 << " row = " << row[a2] << endl;
+  // cerr << "Atom " << a1 << " to " << a2 << " row = " << row[a2] << endl;
 
-  if (row[a2] > 0)
+  if (row[a2] > 0) {
     return row[a2];
-  else if (row[a2] < 0)
-    return - row[a2];
-
-//cerr << "Yipes, DM incomplete, atoms " << a1 << " and " << a2 << ", d = " << row[a2] << " continuing...\n";
-
-// The distance has not been computed. Work it out. Identify the
-// most positive, negative distance along the row (if present).
-
-  const int invalid_dist_value = - (nedges() + 1);   // longer than longest path in molecule
-
-  int dist = invalid_dist_value;
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (row[i] < 0 && row[i] > dist)
-      dist = row[i];
+  } else if (row[a2] < 0) {
+    return -row[a2];
   }
 
-// If there were no negative numbers along the row, initialise some
+  // cerr << "Yipes, DM incomplete, atoms " << a1 << " and " << a2 << ", d = " << row[a2]
+  // << " continuing...\n";
 
-  if (invalid_dist_value == dist)
-  {
-    const Atom * a = _things[a1];
+  // The distance has not been computed. Work it out. Identify the
+  // most positive, negative distance along the row (if present).
+
+  const int invalid_dist_value = -(nedges() + 1);  // longer than longest path in molecule
+
+  int dist = invalid_dist_value;
+  for (int i = 0; i < _number_elements; i++) {
+    if (row[i] < 0 && row[i] > dist) {
+      dist = row[i];
+    }
+  }
+
+  // If there were no negative numbers along the row, initialise some
+
+  if (invalid_dist_value == dist) {
+    const Atom* a = _things[a1];
 
     int a1con = a->ncon();
-    for (int i = 0; i < a1con; i++)
-    {
+    for (int i = 0; i < a1con; i++) {
       atom_number_t j = a->other(a1, i);
       row[j] = -1;
     }
     dist = -1;
 
-    if (-1 == row[a2])
+    if (-1 == row[a2]) {
       return 1;
+    }
   }
 
   int nb = nedges();
 
-  while (1)
-  {
-    int positive_dist = - dist;
-    for (int i = 0; i < _number_elements; i++)
-    {
-      if (row[i] != dist)
+  while (1) {
+    int positive_dist = -dist;
+    for (int i = 0; i < _number_elements; i++) {
+      if (row[i] != dist) {
         continue;
+      }
 
 #ifdef DEBUG_BONDS_BETWEEN
       cerr << "At distance " << dist << " processing " << i << endl;
 #endif
 
-      const Atom * a = _things[i];
+      const Atom* a = _things[i];
 
       int icon = a->ncon();
-      for (int j = 0; j < icon; j++)
-      {
+      for (int j = 0; j < icon; j++) {
         atom_number_t k = a->other(i, j);
 
 #ifdef DEBUG_BONDS_BETWEEN
         cerr << "  Attached to atom " << j << " current = " << row[k] << endl;
-#endif       
-        if (0 == row[k])
+#endif
+        if (0 == row[k]) {
           row[k] = dist - 1;
-        else if (row[k] > positive_dist + 1)
+        } else if (row[k] > positive_dist + 1) {
           row[k] = dist - 1;
-        else if (row[k] < dist - 1)
+        } else if (row[k] < dist - 1) {
           row[k] = dist - 1;
+        }
 
-        if (k == a2)
+        if (k == a2) {
           return positive_dist + 1;
+        }
       }
 
-      row[i] = positive_dist;    // only change it when all connections processed.
+      row[i] = positive_dist;  // only change it when all connections processed.
     }
 
     dist--;
-    if (- dist > nb)
-    {
-      cerr << "Fatal, error, cannot find dist " << a1 << " to " << a2 << ' ' << smiles() << endl;
-      cerr << "Fragments " << fragment_membership(a1) << " and " << fragment_membership(a2) << endl;
+    if (-dist > nb) {
+      cerr << "Fatal, error, cannot find dist " << a1 << " to " << a2 << ' ' << smiles()
+           << endl;
+      cerr << "Fragments " << fragment_membership(a1) << " and "
+           << fragment_membership(a2) << endl;
       debug_print(cerr);
       iwabort();
     }
@@ -169,113 +170,176 @@ Molecule::_bonds_between (atom_number_t a1, atom_number_t a2)
 }
 
 int
-Molecule::bonds_between (atom_number_t a1, atom_number_t a2)
-{
-  if (a1 == a2)
+Molecule::bonds_between(atom_number_t a1, atom_number_t a2) {
+  if (a1 == a2) {
     return 0;
-
-//cerr << "Molecule::bonds_between: atoms " << a1 << " and " << a2 << " dm = " << _distance_matrix << endl;
-
-  if (nullptr == _distance_matrix)
-    _initialise_distance_matrix();
-  else
-  {
-    if (a1 > a2)
-      return _bonds_between(a2, a1);
-    else
-      return _bonds_between(a1, a2);
   }
 
-// The atoms must be in the same fragment
+  // cerr << "Molecule::bonds_between: atoms " << a1 << " and " << a2 << " dm = " <<
+  // _distance_matrix << endl;
 
-  if (! _fragment_information.contains_valid_data())
-    (void) number_fragments();
+  if (nullptr == _distance_matrix) {
+    _initialise_distance_matrix();
+  } else {
+    if (a1 > a2) {
+      return _bonds_between(a2, a1);
+    } else {
+      return _bonds_between(a1, a2);
+    }
+  }
 
-//assert(_fragment_information.fragment_membership (a1) == _fragment_information.fragment_membership (a2));
-  if( _fragment_information.fragment_membership(a1) != _fragment_information.fragment_membership(a2) )
+  // The atoms must be in the same fragment
+
+  if (!_fragment_information.contains_valid_data()) {
+    (void)number_fragments();
+  }
+
+  // assert(_fragment_information.fragment_membership (a1) ==
+  // _fragment_information.fragment_membership (a2));
+  if (_fragment_information.fragment_membership(a1) !=
+      _fragment_information.fragment_membership(a2)) {
     return ATOMS_NOT_BONDED;
+  }
 
-  if (a1 > a2)
+  if (a1 > a2) {
     return _bonds_between(a2, a1);
-  else
+  } else {
     return _bonds_between(a1, a2);
+  }
 }
 
-//#define DEBUG_ATOMS_BETWEEN
+// #define DEBUG_ATOMS_BETWEEN
 
 int
-Molecule::atoms_between(atom_number_t a1,
-                        atom_number_t a2,
-                        Set_of_Atoms & s)
-{
+Molecule::atoms_between(atom_number_t a1, atom_number_t a2, Set_of_Atoms& s) {
   int d = bonds_between(a1, a2);
 
-  if (1 == d)
-  {
+  if (1 == d) {
     s.resize(0);
     return 0;
   }
 
-  if (s.number_elements())
+  if (s.number_elements()) {
     s.resize_keep_storage(0);
-  else
+  } else {
     s.resize(d - 1);
+  }
 
 #ifdef DEBUG_ATOMS_BETWEEN
-  cerr << "Molecule::atoms_between:atoms " << a1 << " '" << smarts_equivalent_for_atom(a1) << "' and " << a2 << " '" << smarts_equivalent_for_atom(a2) << " are " << d << " bonds apart\n";
+  cerr << "Molecule::atoms_between:atoms " << a1 << " '" << smarts_equivalent_for_atom(a1)
+       << "' and " << a2 << " '" << smarts_equivalent_for_atom(a2) << " are " << d
+       << " bonds apart\n";
 #endif
 
   return _atoms_between(a1, a2, d - 1, s);
 }
 
 int
-Molecule::_atoms_between(atom_number_t a1,
-                         atom_number_t a2,
-                         int distance_needed,
-                         Set_of_Atoms & s)
-{
+Molecule::AllAtomsBetween(atom_number_t a1, atom_number_t a2, Set_of_Atoms& between) {
+  const int d12 = bonds_between(a1, a2);
+  if (d12 <= 1) {
+    between.resize_keep_storage(0);
+    return 0;
+  }
+
+  between.resize_keep_storage(0);
+
+  struct AtomAndDistance {
+    atom_number_t atom;
+    int distance;
+  };
+
+  std::queue<AtomAndDistance> to_process;
+  std::unique_ptr<int[]> visited = std::make_unique<int[]>(_number_elements);
+  visited[a1] = 1;
+  visited[a2] = 1;
+
+  const auto maybe_add = [&](atom_number_t atom, int distance) {
+    if (visited[atom]) {
+      return;
+    }
+    if (distance >= d12) {
+      return;
+    }
+    if (distance + bonds_between(atom, a2) != d12) {
+      return;
+    }
+
+    visited[atom] = 1;
+    between.add(atom);
+    to_process.push(AtomAndDistance{atom, distance});
+  };
+
+  const Atom* start = _things[a1];
+  for (const Bond* b : *start) {
+    maybe_add(b->other(a1), 1);
+  }
+
+  while (! to_process.empty()) {
+    const AtomAndDistance current = to_process.front();
+    to_process.pop();
+
+    const Atom* atom = _things[current.atom];
+    const int next_distance = current.distance + 1;
+    for (const Bond* b : *atom) {
+      maybe_add(b->other(current.atom), next_distance);
+    }
+  }
+
+  return between.number_elements();
+}
+
+int
+Molecule::_atoms_between(atom_number_t a1, atom_number_t a2, int distance_needed,
+                         Set_of_Atoms& s) {
 #ifdef DEBUG_ATOMS_BETWEEN
-  cerr << "Molecule::_atoms_between:contine to atom " << a1 << " '" << smarts_equivalent_for_atom(a1) << "' and " << a2 << " '" << smarts_equivalent_for_atom(a2) << "' d = " << distance_needed << endl;
+  cerr << "Molecule::_atoms_between:contine to atom " << a1 << " '"
+       << smarts_equivalent_for_atom(a1) << "' and " << a2 << " '"
+       << smarts_equivalent_for_atom(a2) << "' d = " << distance_needed << endl;
 #endif
 
   assert(nullptr != _distance_matrix);
 
-  const Atom * a = _things[a1];
+  const Atom* a = _things[a1];
 
   for (const Bond* b : *a) {
     atom_number_t j = b->other(a1);
 
-    if (j == a2) {     // done, we got to A2
+    if (j == a2) {  // done, we got to A2
       return 1;
     }
 
 #ifdef DEBUG_ATOMS_BETWEEN
-    cerr << "Distance between " << j << " and " << a2 << " is " << _distance_matrix[j * _number_elements + a2] << endl;
+    cerr << "Distance between " << j << " and " << a2 << " is "
+         << _distance_matrix[j * _number_elements + a2] << endl;
 #endif
 
     int d;
-    if (j < a2)
+    if (j < a2) {
       d = _bonds_between(j, a2);
-    else
+    } else {
       d = _bonds_between(a2, j);
+    }
 
-    if (d != distance_needed)
+    if (d != distance_needed) {
       continue;
+    }
 
     s.add(j);
 
     return 1 + _atoms_between(j, a2, distance_needed - 1, s);
   }
 
-  cerr << "Molecule::_atoms_between:yipes, from " << a1 << " '" << smarts_equivalent_for_atom(a1) << "' nothing " << distance_needed << " bonds to " << a2 << " '" << smarts_equivalent_for_atom(a2) << "'\n";
+  cerr << "Molecule::_atoms_between:yipes, from " << a1 << " '"
+       << smarts_equivalent_for_atom(a1) << "' nothing " << distance_needed
+       << " bonds to " << a2 << " '" << smarts_equivalent_for_atom(a2) << "'\n";
   iwabort();
 
   return 0;
 }
 
 int
-Molecule::longest_path()
-{
+Molecule::longest_path() {
   iwmax<int> rc(0);
 
   for (int i = 0; i < _number_elements; i++) {
@@ -287,7 +351,7 @@ Molecule::longest_path()
   return rc.maxval();
 }
 
-//#define DEBUG_COMPUTE_ROW_DM
+// #define DEBUG_COMPUTE_ROW_DM
 
 /*
   We have two versions of _compute_row_of_distance_matrix.
@@ -301,8 +365,8 @@ Molecule::_compute_row_of_distance_matrix (int * row_of_distance_matrix,
                                  int distance)
 {
 #ifdef DEBUG_COMPUTE_ROW_DM
-  cerr << "_compute_row_of_distance_matrix: atom " << current_atom << " (" << atomic_symbol (current_atom) << ") at distance " << distance << endl;
-#endif
+  cerr << "_compute_row_of_distance_matrix: atom " << current_atom << " (" <<
+atomic_symbol (current_atom) << ") at distance " << distance << endl; #endif
 
   row_of_distance_matrix[current_atom] = distance;
 
@@ -327,59 +391,53 @@ Molecule::_compute_row_of_distance_matrix (int * row_of_distance_matrix,
 
 #ifdef SLOW_BUT_AVOIDS_CT_ARRAY
 void
-Molecule::_compute_distance_matrix()
-{
+Molecule::_compute_distance_matrix() {
   int nb = _bond_list.number_elements();
 
-  set_vector(_distance_matrix, _number_elements * _number_elements, _number_elements + _number_elements);
+  std::fill_n(_distance_matrix, _number_elements * _number_elements,
+              _number_elements + _number_elements);
 
-  const Bond * const * allbonds = _bond_list.rawdata();
+  const Bond* const* allbonds = _bond_list.rawdata();
 
-  for (int i = 0; i < _number_elements; i++)   // diagonals are zero
+  for (int i = 0; i < _number_elements; i++)  // diagonals are zero
   {
     _distance_matrix[i * _number_elements + i] = 0;
   }
 
-  for (int i = 0; i < nb; i++)
-  {
-    const Bond * b = allbonds[i];
+  for (int i = 0; i < nb; i++) {
+    const Bond* b = allbonds[i];
 
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
 
-    int * row1 = _distance_matrix + (a1 * _number_elements);
-    int * row2 = _distance_matrix + (a2 * _number_elements);
+    int* row1 = _distance_matrix + (a1 * _number_elements);
+    int* row2 = _distance_matrix + (a2 * _number_elements);
 
     row1[a2] = 1;
     row2[a1] = 1;
   }
 
-  while (1)
-  {
+  while (1) {
     int keep_going = 0;
 
-    for (int i = 0; i < nb; i++)
-    {
-      const Bond * b = allbonds[i];
+    for (int i = 0; i < nb; i++) {
+      const Bond* b = allbonds[i];
 
       atom_number_t a1 = b->a1();
       atom_number_t a2 = b->a2();
 
-      int * row1 = _distance_matrix + (a1 * _number_elements);
-      int * row2 = _distance_matrix + (a2 * _number_elements);
+      int* row1 = _distance_matrix + (a1 * _number_elements);
+      int* row2 = _distance_matrix + (a2 * _number_elements);
 
       int tmp;
-      for (int j = 0; j < _number_elements; j++)
-      {
+      for (int j = 0; j < _number_elements; j++) {
         tmp = row2[j] + 1;
-        if (tmp < row1[j])
-        {
+        if (tmp < row1[j]) {
           row1[j] = tmp;
           keep_going = 1;
         }
         tmp = row1[j] + 1;
-        if (tmp < row2[j])
-        {
+        if (tmp < row2[j]) {
           row2[j] = tmp;
           keep_going = 1;
         }
@@ -388,43 +446,41 @@ Molecule::_compute_distance_matrix()
 
 #ifdef DEBUG_DISTANCE_MATRIX
     cerr << "End of cycle, kg " << keep_going << endl;
-    for (int j = 0; j < _number_elements; j++)
-    {
+    for (int j = 0; j < _number_elements; j++) {
       cerr << " Atom " << j << ':';
-      const int * r = _distance_matrix + (j * _number_elements);
+      const int* r = _distance_matrix + (j * _number_elements);
 
-      for (int k = 0; k < _number_elements; k++)
-      {
+      for (int k = 0; k < _number_elements; k++) {
         cerr << ' ' << r[k];
       }
       cerr << endl;
     }
 #endif
 
-    if (0 == keep_going)
+    if (0 == keep_going) {
       break;
+    }
   }
 
   return;
 
-//when I was writing this I wanted a check with new and old versions
+// when I was writing this I wanted a check with new and old versions
 #ifdef CHECK_DM_VS_NEW
 
-  int * tmp = new int[_number_elements*_number_elements]; std::unique_ptr<int[]> free_tmp(tmp);
-  copy_vector(tmp, _distance_matrix, _number_elements*_number_elements);
+  int* tmp = new int[_number_elements * _number_elements];
+  std::unique_ptr<int[]> free_tmp(tmp);
+  copy_vector(tmp, _distance_matrix, _number_elements * _number_elements);
   _compute_distance_matrix_large_mem();
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    for (int j = 0; j < _number_elements; ++j)
-    {
-      if (tmp[i * _number_elements + j] != _distance_matrix[i * _number_elements + j])
-      {
-        cerr << "Distance matrix mismatch, atoms " << i << " and " << j << " old " << tmp[i * _number_elements + j] << " new " << _distance_matrix[i * _number_elements + j] << endl;
+  for (int i = 0; i < _number_elements; ++i) {
+    for (int j = 0; j < _number_elements; ++j) {
+      if (tmp[i * _number_elements + j] != _distance_matrix[i * _number_elements + j]) {
+        cerr << "Distance matrix mismatch, atoms " << i << " and " << j << " old "
+             << tmp[i * _number_elements + j] << " new "
+             << _distance_matrix[i * _number_elements + j] << endl;
       }
     }
   }
 #endif
-
 }
 #endif
 
@@ -432,43 +488,40 @@ Molecule::_compute_distance_matrix()
   Faster larger memory version
 */
 
-//#define PREVIOUS_BEST_VERSION
+// #define PREVIOUS_BEST_VERSION
 #ifdef PREVIOUS_BEST_VERSION
 void
-Molecule::_compute_distance_matrix()
-{
+Molecule::_compute_distance_matrix() {
   const int distance_not_set = _number_elements + _number_elements;
 
-  set_vector(_distance_matrix, _number_elements * _number_elements, distance_not_set);
+  std::fill_n(_distance_matrix, _number_elements * _number_elements, distance_not_set);
 
   int maxcon = 0;
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    _distance_matrix[i * _number_elements + i] = 0;    // diagonals are zero
+  for (int i = 0; i < _number_elements; ++i) {
+    _distance_matrix[i * _number_elements + i] = 0;  // diagonals are zero
 
-    if (_things[i]->ncon() > maxcon)
+    if (_things[i]->ncon() > maxcon) {
       maxcon = _things[i]->ncon();
+    }
   }
 
   maxcon++;
 
-  int * ct = new int[_number_elements * maxcon]; std::unique_ptr<int[]> free_ct(ct);
+  int* ct = new int[_number_elements * maxcon];
+  std::unique_ptr<int[]> free_ct(ct);
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
+  for (int i = 0; i < _number_elements; ++i) {
     ct[i * maxcon] = _things[i]->connections(i, ct + i * maxcon + 1);
   }
 
-  for (auto i = 0; i < _number_elements; ++i)
-  {
-//  _distance_matrix[i * _number_elements + i] = 0;    already done above
+  for (auto i = 0; i < _number_elements; ++i) {
+    //  _distance_matrix[i * _number_elements + i] = 0;    already done above
 
     const auto icon = ct[i * maxcon];
-    const int * cti = ct + i * maxcon + 1;
+    const int* cti = ct + i * maxcon + 1;
 
-    for (auto j = 0; j < icon; ++j)
-    {
+    for (auto j = 0; j < icon; ++j) {
       const auto k = cti[j];
 
       _distance_matrix[i * _number_elements + k] = 1;
@@ -476,31 +529,28 @@ Molecule::_compute_distance_matrix()
     }
   }
 
-  for (auto d = 2; d < _number_elements; ++d)
-  {
+  for (auto d = 2; d < _number_elements; ++d) {
     bool keep_going = false;
 
-    for (auto i = 0; i < _number_elements; ++i)
-    {
-      int * distance_to_i  = _distance_matrix + i * _number_elements;
+    for (auto i = 0; i < _number_elements; ++i) {
+      int* distance_to_i = _distance_matrix + i * _number_elements;
 
-      for (auto j = 0; j < _number_elements; ++j)
-      {
-        if (j == i)
+      for (auto j = 0; j < _number_elements; ++j) {
+        if (j == i) {
           continue;
+        }
 
-        if (distance_to_i[j] > _number_elements)    // obviously not set
+        if (distance_to_i[j] > _number_elements) {  // obviously not set
           continue;
+        }
 
         const auto jcon = ct[j * maxcon];
-        const int * ctj = ct + j * maxcon + 1;
+        const int* ctj = ct + j * maxcon + 1;
 
-        for (auto k = 0; k < jcon; ++k)
-        {
+        for (auto k = 0; k < jcon; ++k) {
           const auto l = ctj[k];
 
-          if (distance_to_i[j] + 1 < distance_to_i[l])
-          {
+          if (distance_to_i[j] + 1 < distance_to_i[l]) {
             distance_to_i[l] = distance_to_i[j] + 1;
             _distance_matrix[l * _number_elements + i] = distance_to_i[l];
             keep_going = true;
@@ -509,8 +559,9 @@ Molecule::_compute_distance_matrix()
       }
     }
 
-    if (! keep_going)
+    if (!keep_going) {
       break;
+    }
   }
 
   return;
@@ -521,80 +572,72 @@ Molecule::_compute_distance_matrix()
 #ifdef VERSION_WITH_FRONTIER
 #ifdef FOR_DEBUGGING
 static void
-print_frontier(const int zatom,
-               const int d,
-               const int * frontier,
-               const int atoms_on_frontier)
-{
-  cerr << "Frontier information relative to atom " << zatom << ", dist " << d << " " << atoms_on_frontier << " on frontier\n";
+print_frontier(const int zatom, const int d, const int* frontier,
+               const int atoms_on_frontier) {
+  cerr << "Frontier information relative to atom " << zatom << ", dist " << d << " "
+       << atoms_on_frontier << " on frontier\n";
 
-  for (int i = 0; i < atoms_on_frontier; ++i)
-  {
+  for (int i = 0; i < atoms_on_frontier; ++i) {
     cerr << ' ' << frontier[i];
   }
 
   cerr << endl;
-  
+
   return;
 }
 #endif
 
 void
-Molecule::_compute_distance_matrix()
-{
+Molecule::_compute_distance_matrix() {
   const int distance_not_set = _number_elements + _number_elements;
 
-  set_vector(_distance_matrix, _number_elements * _number_elements, distance_not_set);
+  std::fill_n(_distance_matrix, _number_elements * _number_elements, distance_not_set);
 
   int maxcon = 0;
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    _distance_matrix[i * _number_elements + i] = 0;    // diagonals are zero
+  for (int i = 0; i < _number_elements; ++i) {
+    _distance_matrix[i * _number_elements + i] = 0;  // diagonals are zero
 
-    if (_things[i]->ncon() > maxcon)
+    if (_things[i]->ncon() > maxcon) {
       maxcon = _things[i]->ncon();
+    }
   }
 
   maxcon++;
 
-  int * ct = new int[_number_elements * maxcon]; std::unique_ptr<int[]> free_ct(ct);
+  int* ct = new int[_number_elements * maxcon];
+  std::unique_ptr<int[]> free_ct(ct);
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
+  for (int i = 0; i < _number_elements; ++i) {
     ct[i * maxcon] = _things[i]->connections(i, ct + i * maxcon + 1);
   }
 
-  int * frontier = new int[2 * _number_elements]; std::unique_ptr<int[]> free_frontier(frontier);
-  int * next_frontier = frontier + _number_elements;
+  int* frontier = new int[2 * _number_elements];
+  std::unique_ptr<int[]> free_frontier(frontier);
+  int* next_frontier = frontier + _number_elements;
 
-// rather than copy data from arrays, we just swap pointers...
+  // rather than copy data from arrays, we just swap pointers...
 
-  int * p_frontier = frontier;
-  int * p_next_frontier = next_frontier;
+  int* p_frontier = frontier;
+  int* p_next_frontier = next_frontier;
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    int * distance_to_i = _distance_matrix + i * _number_elements;
+  for (int i = 0; i < _number_elements; ++i) {
+    int* distance_to_i = _distance_matrix + i * _number_elements;
 
     p_frontier[0] = i;
     int atoms_on_current_frontier = 1;
 
-    for (int d = 1; d < _number_elements; ++d)
-    {
+    for (int d = 1; d < _number_elements; ++d) {
       int atoms_on_next_frontier = 0;
-      for (int j = atoms_on_current_frontier - 1; j >= 0; --j)
-      {
+      for (int j = atoms_on_current_frontier - 1; j >= 0; --j) {
         const atom_number_t k = p_frontier[j];
 
-        const int * ctk = ct + k * maxcon + 1;
+        const int* ctk = ct + k * maxcon + 1;
 
-        for (auto l = ct[k*maxcon] - 1; l >= 0; --l)
-        {
+        for (auto l = ct[k * maxcon] - 1; l >= 0; --l) {
           const auto x = ctk[l];
 
-          if (distance_to_i[k] + 1 < distance_to_i[x])
-          {
+          if (distance_to_i[k] + 1 < distance_to_i[x]) {
             distance_to_i[x] = d;
 
             p_next_frontier[atoms_on_next_frontier] = x;
@@ -603,8 +646,9 @@ Molecule::_compute_distance_matrix()
         }
       }
 
-      if (0 == atoms_on_next_frontier)
+      if (0 == atoms_on_next_frontier) {
         break;
+      }
 
       std::swap(p_frontier, p_next_frontier);
       atoms_on_current_frontier = atoms_on_next_frontier;
@@ -615,42 +659,38 @@ Molecule::_compute_distance_matrix()
 }
 #endif
 
-//#define THIS_IS_WAY_SLOWER_NOT_SURE_WHY
+// #define THIS_IS_WAY_SLOWER_NOT_SURE_WHY
 #ifdef THIS_IS_WAY_SLOWER_NOT_SURE_WHY
 
 void
-Molecule::_compute_distance_matrix()
-{
+Molecule::_compute_distance_matrix() {
   const int distance_not_set = _number_elements + _number_elements;
 
   std::fill_n(_distance_matrix, _number_elements * _number_elements, distance_not_set);
 
-  for (int i = 0; i < _number_elements; ++i)
-  {
-    _distance_matrix[i * _number_elements + i] = 0;    // diagonals are zero
+  for (int i = 0; i < _number_elements; ++i) {
+    _distance_matrix[i * _number_elements + i] = 0;  // diagonals are zero
   }
 
-  int * to_check = new_int(_number_elements + _number_elements); std::unique_ptr<int[]> free_to_check(to_check);
+  int* to_check = new_int(_number_elements + _number_elements);
+  std::unique_ptr<int[]> free_to_check(to_check);
 
   const int ne = nedges();
 
-  int * b1 = new int[ne + ne]; std::unique_ptr<int[]> free_b1(b1);
-  int * b2 = b1 + ne;
+  int* b1 = new int[ne + ne];
+  std::unique_ptr<int[]> free_b1(b1);
+  int* b2 = b1 + ne;
 
-  for (int i = 0; i < ne; ++i)
-  {
-    const Bond * bi = _bond_list[i];
+  for (int i = 0; i < ne; ++i) {
+    const Bond* bi = _bond_list[i];
 
     const atom_number_t a1 = bi->a1();
     const atom_number_t a2 = bi->a2();
 
-    if (a1 < a2)
-    {
+    if (a1 < a2) {
       b1[i] = a1;
       b2[i] = a2;
-    }
-    else
-    {
+    } else {
       b1[i] = a2;
       b2[i] = a1;
     }
@@ -662,34 +702,27 @@ Molecule::_compute_distance_matrix()
     _distance_matrix[a2 * _number_elements + a1] = 1;
   }
 
-  int * next_to_check = to_check + _number_elements;
+  int* next_to_check = to_check + _number_elements;
 
-  for (auto d = 2; d < _number_elements; ++d)
-  {
+  for (auto d = 2; d < _number_elements; ++d) {
     cerr << " d = " << d << endl;
 
     bool keep_going = false;
 
-    for (int i = 0; i < ne; ++i)
-    {
+    for (int i = 0; i < ne; ++i) {
       const atom_number_t a1 = b1[i];
       const atom_number_t a2 = b2[i];
 
-      for (int j = 0; j < _number_elements; ++j)
-      {
-        if (d - 1 == _distance_matrix[a1 * _number_elements + j])
-        {
-          if (_distance_matrix[j * _number_elements + a2] > d)
-          {
+      for (int j = 0; j < _number_elements; ++j) {
+        if (d - 1 == _distance_matrix[a1 * _number_elements + j]) {
+          if (_distance_matrix[j * _number_elements + a2] > d) {
             _distance_matrix[j * _number_elements + a2] = d;
             _distance_matrix[a2 * _number_elements + j] = d;
             keep_going = true;
           }
         }
-        if (d - 1 == _distance_matrix[j * _number_elements + a2])
-        {
-          if (_distance_matrix[a1 * _number_elements + j] > d)
-          {
+        if (d - 1 == _distance_matrix[j * _number_elements + a2]) {
+          if (_distance_matrix[a1 * _number_elements + j] > d) {
             _distance_matrix[j * _number_elements + a1] = d;
             _distance_matrix[a1 * _number_elements + j] = d;
             keep_going = true;
@@ -698,14 +731,14 @@ Molecule::_compute_distance_matrix()
       }
     }
 
-    if (! keep_going)
+    if (!keep_going) {
       break;
+    }
   }
 
   return;
 }
 #endif
-
 
 /*
   _compute_row_of_distance_matrix has identified a ring closure.
@@ -749,68 +782,78 @@ found_ring (atom_number_t astop,
   To avoid passing a lot of arguments, we put them in a class
 */
 
-class CRDM_args
-{
-//friend
-//  void Molecule::_compute_row_of_distance_matrix (CRDM_args &,
-//             int (Molecule::*identify_next_atom) (const int *, atom_number_t, atom_number_t &));
-  private:
-    int * _row_of_distance_matrix;
-    int   _distance;
-    int * _atom_stack;
-    int   _stack_ptr;
-    int   _smiles_order;
+class CRDM_args {
+  // friend
+  //   void Molecule::_compute_row_of_distance_matrix (CRDM_args &,
+  //              int (Molecule::*identify_next_atom) (const int *, atom_number_t,
+  //              atom_number_t &));
+ private:
+  int* _row_of_distance_matrix;
+  int _distance;
+  int* _atom_stack;
+  int _stack_ptr;
+  int _smiles_order;
 
-    resizable_array_p<Ring> _raw_rings_found;
+  resizable_array_p<Ring> _raw_rings_found;
 
-//  private functions
+  //  private functions
 
-    int _is_sssr_ring (const Ring * r, const int * ring_membership);
+  int _is_sssr_ring(const Ring* r, const int* ring_membership);
 
-  public:
-    CRDM_args (int);
-    ~CRDM_args();
+ public:
+  CRDM_args(int);
+  ~CRDM_args();
 
-    int debug_print (std::ostream &) const;
+  int debug_print(std::ostream&) const;
 
-    void push (atom_number_t a) { _atom_stack[_stack_ptr++] = a;}
-    void pop() { _stack_ptr--;}
+  void
+  push(atom_number_t a) {
+    _atom_stack[_stack_ptr++] = a;
+  }
 
-    atom_number_t current_atom() const { return _atom_stack[_stack_ptr - 1];}
+  void
+  pop() {
+    _stack_ptr--;
+  }
 
-    int smiles_order();
+  atom_number_t
+  current_atom() const {
+    return _atom_stack[_stack_ptr - 1];
+  }
 
-    void set_row (int * r) { _row_of_distance_matrix = r;}
+  int smiles_order();
 
-    void found_ring (atom_number_t, int *);
+  void
+  set_row(int* r) {
+    _row_of_distance_matrix = r;
+  }
 
-    int  look_for_sssr_rings (int * ring_membership,
-             resizable_array_p<Ring> & sssr_rings,
-             resizable_array_p<Ring> & raw_rings);
+  void found_ring(atom_number_t, int*);
+
+  int look_for_sssr_rings(int* ring_membership, resizable_array_p<Ring>& sssr_rings,
+                          resizable_array_p<Ring>& raw_rings);
 };
 
-CRDM_args::CRDM_args (int matoms)
-{
+CRDM_args::CRDM_args(int matoms) {
   _distance = 0;
   _atom_stack = new int[matoms];
   _stack_ptr = 0;
   _smiles_order = 0;
 }
 
-CRDM_args::~CRDM_args()
-{
+CRDM_args::~CRDM_args() {
   DELETE_IF_NOT_NULL_ARRAY(_atom_stack);
 }
 
 int
-CRDM_args::debug_print (std::ostream & os) const
-{
-  os << "details on CRDM_args object, smiles order " << _smiles_order << " distance " << _distance << endl;
+CRDM_args::debug_print(std::ostream& os) const {
+  os << "details on CRDM_args object, smiles order " << _smiles_order << " distance "
+     << _distance << endl;
 
-  if (0 == _stack_ptr)
+  if (0 == _stack_ptr) {
     os << "Stack empty\n";
-  for (int i = 0; i < _stack_ptr; i++)
-  {
+  }
+  for (int i = 0; i < _stack_ptr; i++) {
     os << "Stack level " << i << " atom " << _atom_stack[i] << endl;
   }
 
@@ -818,8 +861,7 @@ CRDM_args::debug_print (std::ostream & os) const
 }
 
 int
-CRDM_args::smiles_order()
-{
+CRDM_args::smiles_order() {
   int rc = _smiles_order;
 
   _smiles_order++;
@@ -830,12 +872,10 @@ CRDM_args::smiles_order()
 #define DEBUG_FOUND_RING
 
 void
-CRDM_args::found_ring (atom_number_t astop,
-                       int * ring_membership)
-{
+CRDM_args::found_ring(atom_number_t astop, int* ring_membership) {
   int distance = _row_of_distance_matrix[astop] + 1;
 
-  Ring * s = new Ring;
+  Ring* s = new Ring;
   s->resize(8);
 
   _raw_rings_found.add(s);
@@ -844,24 +884,27 @@ CRDM_args::found_ring (atom_number_t astop,
   cerr << "Found new ring\n";
 #endif
 
-  for (int i = _stack_ptr - 1; i >= 0; i--)
-  {
+  for (int i = _stack_ptr - 1; i >= 0; i--) {
     atom_number_t a = _atom_stack[i];
 
     ring_membership[a]++;
-    if (s->array_is_full())
+    if (s->array_is_full()) {
       s->resize(s->number_elements() + 5);
+    }
 
     s->add(a);
 
-    if (a == astop)
+    if (a == astop) {
       return;
+    }
 
-    if (_row_of_distance_matrix[a] > distance)
+    if (_row_of_distance_matrix[a] > distance) {
       _row_of_distance_matrix[a] = distance;
+    }
 
 #ifdef DEBUG_FOUND_RING
-    cerr << "i = " << i << " ring atom " << a << " distance set to " << _row_of_distance_matrix[a] << endl;
+    cerr << "i = " << i << " ring atom " << a << " distance set to "
+         << _row_of_distance_matrix[a] << endl;
 #endif
 
     distance++;
@@ -871,44 +914,38 @@ CRDM_args::found_ring (atom_number_t astop,
 }
 
 int
-CRDM_args::_is_sssr_ring (const Ring * r, const int * ring_membership)
-{
+CRDM_args::_is_sssr_ring(const Ring* r, const int* ring_membership) {
   int ring_size = r->number_elements();
-  for (int i = 0; i < ring_size; i++)
-  {
+  for (int i = 0; i < ring_size; i++) {
     atom_number_t j = r->item(i);
 
     assert(ring_membership[j] > 0);
 
-    if (ring_membership[j] > 1)
+    if (ring_membership[j] > 1) {
       return 0;
+    }
   }
 
   return 1;
 }
 
 int
-CRDM_args::look_for_sssr_rings (int * ring_membership,
-             resizable_array_p<Ring> & sssr_rings,
-             resizable_array_p<Ring> & raw_rings)
-{
+CRDM_args::look_for_sssr_rings(int* ring_membership, resizable_array_p<Ring>& sssr_rings,
+                               resizable_array_p<Ring>& raw_rings) {
   int rc = 0;
 
   int nr = _raw_rings_found.number_elements();
-  for (int i = nr - 1; i >= 0; i--)
-  {
-    Ring * r = _raw_rings_found[i];
-    if (_is_sssr_ring(r, ring_membership))
-    {
+  for (int i = nr - 1; i >= 0; i--) {
+    Ring* r = _raw_rings_found[i];
+    if (_is_sssr_ring(r, ring_membership)) {
       _raw_rings_found.remove_no_delete(i);
       sssr_rings.add(r);
       rc++;
     }
   }
 
-  for (int i = 0; i < _raw_rings_found.number_elements(); i++)
-  {
-    const Ring * r = _raw_rings_found[i];
+  for (int i = 0; i < _raw_rings_found.number_elements(); i++) {
+    const Ring* r = _raw_rings_found[i];
     r->set_vector(ring_membership, kRingMembershipIsRingAtom);
   }
 
@@ -919,7 +956,8 @@ CRDM_args::look_for_sssr_rings (int * ring_membership,
 
 /*void
 Molecule::_compute_row_of_distance_matrix (CRDM_args & crdm,
-               int (Molecule::*identify_next_atom) (const int *, atom_number_t, atom_number_t &))
+               int (Molecule::*identify_next_atom) (const int *, atom_number_t,
+atom_number_t &))
 {
   atom_number_t current_atom = crdm.current_atom();
 
@@ -934,8 +972,8 @@ Molecule::_compute_row_of_distance_matrix (CRDM_args & crdm,
 //_smiles_order[current_atom] = crdm.smiles_order();
 
 #ifdef DEBUG_CRDM
-  cerr << "_compute_row_of_distance_matrix: atom " << current_atom << " (" << atomic_symbol (current_atom) << ") at distance " << distance << endl;
-#endif
+  cerr << "_compute_row_of_distance_matrix: atom " << current_atom << " (" <<
+atomic_symbol (current_atom) << ") at distance " << distance << endl; #endif
 
   int acon = a->ncon();
   if (1 == acon)
@@ -957,8 +995,8 @@ Molecule::_compute_row_of_distance_matrix (CRDM_args & crdm,
     atom_number_t j = a->other (current_atom, i);
 
 #ifdef DEBUG_CRDM
-    cerr << "From atom " << current_atom << " try atom " << j << " dist = " << row_of_distance_matrix[j] << endl;
-#endif
+    cerr << "From atom " << current_atom << " try atom " << j << " dist = " <<
+row_of_distance_matrix[j] << endl; #endif
 
     if (row_of_distance_matrix[j] < initial_distance - 1)
     {
@@ -981,8 +1019,8 @@ Molecule::_compute_row_of_distance_matrix (CRDM_args & crdm,
 //  _bonds_in_fragment[_number_fragments]++;
 
 #ifdef DEBUG_CRDM
-    cerr << "From atom " << current_atom << " to atom " << next_atom << " dist = " << row_of_distance_matrix[next_atom] << endl;
-#endif
+    cerr << "From atom " << current_atom << " to atom " << next_atom << " dist = " <<
+row_of_distance_matrix[next_atom] << endl; #endif
 
     crdm.push (next_atom);
     crdm.debug_print (cerr);
@@ -997,24 +1035,25 @@ Molecule::_compute_row_of_distance_matrix (CRDM_args & crdm,
 }*/
 
 /*int
-Molecule::_recompute_distance_matrix (int (Molecule::*identify_first_atom) (const int *, atom_number_t &),
-               int (Molecule::*identify_next_atom) (const int *, atom_number_t, atom_number_t &))
+Molecule::_recompute_distance_matrix (int (Molecule::*identify_first_atom) (const int *,
+atom_number_t &), int (Molecule::*identify_next_atom) (const int *, atom_number_t,
+atom_number_t &))
 {
   cerr << "Entering _recompute_distance_matrix\n";
   if (nullptr == _smiles_order)
     _smiles_order = new_int (_number_elements, -1);
   else
-    set_vector (_smiles_order, _number_elements, -1);
+    std::fill_n (_smiles_order, _number_elements, -1);
 
   if (nullptr == _ring_membership)
     _ring_membership = new_int (_number_elements);
   else
-    set_vector (_ring_membership, _number_elements, 0);
+    std::fill_n (_ring_membership, _number_elements, 0);
 
   if (nullptr == _distance_matrix)
-    _distance_matrix = new_int (_number_elements * _number_elements, _number_elements + 9);
-  else
-    set_vector (_distance_matrix, _number_elements * _number_elements, _number_elements + 9);
+    _distance_matrix = new_int (_number_elements * _number_elements, _number_elements +
+9); else std::fill_n (_distance_matrix, _number_elements * _number_elements,
+_number_elements + 9);
 
   CRDM_args crdm_args (_number_elements);
 
@@ -1081,71 +1120,79 @@ Molecule::_recompute_distance_matrix (int (Molecule::*identify_first_atom) (cons
   return 1;
 }*/
 
-//#define CHECK_DISTANCE_MATRIX
+int
+Molecule::ComputeDistanceMatrixIfNeeded() {
+  if (_distance_matrix != nullptr) {
+    return 0;
+  }
+
+  return recompute_distance_matrix();
+}
+
+// #define CHECK_DISTANCE_MATRIX
 
 int
-Molecule::recompute_distance_matrix()
-{
-  if (! _fragment_information.contains_valid_data())
-    (void) number_fragments();
+Molecule::recompute_distance_matrix() {
+  if (!_fragment_information.contains_valid_data()) {
+    (void)number_fragments();
+  }
 
-  if (nullptr == _distance_matrix)
+  if (nullptr == _distance_matrix) {
     _distance_matrix = new_int(_number_elements * _number_elements, _number_elements + 9);
-  else
-    set_vector(_distance_matrix, _number_elements * _number_elements, _number_elements + 9);
+  } else {
+    std::fill_n(_distance_matrix, _number_elements * _number_elements,
+                _number_elements + 9);
+  }
 
-  if (1 == _number_elements)
+  if (1 == _number_elements) {
     return 1;
+  }
 
-  if (2 == _number_elements)
-  {
+  if (2 == _number_elements) {
     _distance_matrix[1] = 1;
     _distance_matrix[3] = 1;
 
     return 1;
   }
 
-//cerr << "_compute_distance_matrix....\n";
+  // cerr << "_compute_distance_matrix....\n";
 
   _compute_distance_matrix();
 
   int rc = 1;
 
 #ifdef CHECK_DISTANCE_MATRIX
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (0 != _distance_matrix[_number_elements * i + i])
-    {
-      cerr << "Non zero diagonal on distance matrix, i = " << i << " value = " << _distance_matrix[_number_elements * i + i] << endl;
+  for (int i = 0; i < _number_elements; i++) {
+    if (0 != _distance_matrix[_number_elements * i + i]) {
+      cerr << "Non zero diagonal on distance matrix, i = " << i
+           << " value = " << _distance_matrix[_number_elements * i + i] << endl;
       rc = 0;
     }
 
-    for (int j = i + 1; j < _number_elements; j++)
-    {
-      if (_distance_matrix[_number_elements * i + j] != _distance_matrix[_number_elements * j + i])
-      {
-        cerr << "Distance matrix error, from " << i << " to " << j << " is " << _distance_matrix[_number_elements * i + j] << endl;
-        cerr << "Distance matrix error, from " << j << " to " << i << " is " << _distance_matrix[_number_elements * j + i] << endl;
+    for (int j = i + 1; j < _number_elements; j++) {
+      if (_distance_matrix[_number_elements * i + j] !=
+          _distance_matrix[_number_elements * j + i]) {
+        cerr << "Distance matrix error, from " << i << " to " << j << " is "
+             << _distance_matrix[_number_elements * i + j] << endl;
+        cerr << "Distance matrix error, from " << j << " to " << i << " is "
+             << _distance_matrix[_number_elements * j + i] << endl;
         rc = 0;
-      }
-      else if (0 == _distance_matrix[_number_elements * i + j])
-      {
+      } else if (0 == _distance_matrix[_number_elements * i + j]) {
         cerr << "Zero distance matrix entry " << i << ", " << j << endl;
         rc = 0;
-      }
-      else if (_distance_matrix[_number_elements * i + j] < 0)
-      {
-        cerr << "Incomplete distance matrix determinations, atoms " << i << " and " << j << endl;
-      }
-      else
-      {
-//      cerr << "Bonds between " << i << " and " << j << " is " << _distance_matrix[_number_elements * i + j] << endl;
+      } else if (_distance_matrix[_number_elements * i + j] < 0) {
+        cerr << "Incomplete distance matrix determinations, atoms " << i << " and " << j
+             << endl;
+      } else {
+        //      cerr << "Bonds between " << i << " and " << j << " is " <<
+        //      _distance_matrix[_number_elements * i + j] << endl;
       }
     }
   }
 
-  if (0 == rc)
+  if (0 == rc) {
     iwabort();
+  }
 #endif
 
   return rc;
@@ -1154,11 +1201,8 @@ Molecule::recompute_distance_matrix()
 static constexpr int kStartingAtom = 309;
 
 static int
-DownTheBondInternal(const Molecule & m,
-                atom_number_t zatom,
-                atom_number_t previous_atom,
-                int* down_the_bond,
-                int flag) {
+DownTheBondInternal(const Molecule& m, atom_number_t zatom, atom_number_t previous_atom,
+                    int* down_the_bond, int flag) {
   down_the_bond[zatom] = flag;
   int rc = 1;
 
@@ -1182,7 +1226,8 @@ DownTheBondInternal(const Molecule & m,
 }
 
 std::optional<int>
-Molecule::DownTheBond(atom_number_t from, atom_number_t to, int* down_the_bond, int flag) const {
+Molecule::DownTheBond(atom_number_t from, atom_number_t to, int* down_the_bond,
+                      int flag) const {
   down_the_bond[from] = kStartingAtom;
   const int rc = DownTheBondInternal(*this, to, from, down_the_bond, flag);
   down_the_bond[from] = 0;

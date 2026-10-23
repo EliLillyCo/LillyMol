@@ -1,0 +1,13 @@
+{
+  "executable": "ring_trimming",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-u -c -w parent -w rings -w scaffold -m 1 -J 2 -j 1 #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

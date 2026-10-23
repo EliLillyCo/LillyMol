@@ -1,8 +1,10 @@
-#ifndef MACCSKEYS_FN2_H
-#define MACCSKEYS_FN2_H
+#ifndef MOLECULE_TOOLS_MACCSKEYS_FN5_H_
+#define MOLECULE_TOOLS_MACCSKEYS_FN5_H_
 
 #define NUMBER_MACCS_KEYS 192
 
+class Molecule;
+class Set_of_Atoms;
 class MK_Molecular_Properties;
 class MACCSKeys
 {
@@ -229,4 +231,4 @@ class MACCSKeys
     int operator () (Molecule &, int *) const;
 };
 
-#endif
+#endif  // MOLECULE_TOOLS_MACCSKEYS_FN5_H_

@@ -1,8 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "3_valent_iodine")
-  (0 Query_Atom
-    (A I atomic_number 53)
-    (A I nbonds 3)
-  )
-)

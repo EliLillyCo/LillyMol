@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "Foundational/iwmisc/misc.h"
 #include "iwrcb.h"
 
@@ -150,7 +152,7 @@ Ring_Closure_Bonds::activate(int s)
 int
 Ring_Closure_Bonds::reset()
 {
-  set_vector(_present, _atoms_in_molecule, -1);
+  std::fill_n(_present, _atoms_in_molecule, -1);
 
   resizable_array<int>::resize_keep_storage(0);
 

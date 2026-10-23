@@ -24,3 +24,4 @@ core.*
 *ruby-version
 lib64
 MODULE.bazel.lock
+.bazelrc.local

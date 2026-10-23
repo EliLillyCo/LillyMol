@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 #if (__GNUC_MINOR__ == 95)
 #include <strstream>
@@ -15,6 +16,7 @@
 #include <google/protobuf/text_format.h>
 
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/charge_assigner.h"
@@ -72,6 +74,8 @@ static uint64_t molecules_with_abnormal_valences = 0;
 
 static resizable_array_p<Substructure_Hit_Statistics> queries;
 
+using DemeritOverrides = std::unordered_map<std::string, int>;
+
 /*
   For molecules that lie between the hard and low atom count cutoffs, we apply demerits
 */
@@ -91,6 +95,119 @@ static int upper_atom_count_demerit = 100;
 static int demerit_numeric_value_index = 0;
 
 static int make_implicit_hydrogens_explicit = 0;
+
+// Write all results as
+// smiles id demerit
+// where `demerit` will be '0' for non demerited molecules.
+static int tabular_output = 0;
+
+static int
+ReadDemeritOverrides(const const_IWSubstring& fname,
+                     DemeritOverrides& overrides) {
+  iwstring_data_source input(fname);
+  if (! input.good()) {
+    cerr << "ReadDemeritOverrides:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  const_IWSubstring buffer;
+  while (input.next_record(buffer)) {
+    buffer.strip_leading_blanks();
+    buffer.strip_trailing_blanks();
+
+    if (buffer.empty() || buffer.starts_with('#')) {
+      continue;
+    }
+
+    if (buffer.contains('#')) {
+      buffer.truncate_at_first('#');
+      buffer.strip_trailing_blanks();
+      if (buffer.empty()) {
+        continue;
+      }
+    }
+
+    const_IWSubstring name, value_token;
+    int i = 0;
+    if (! buffer.nextword(name, i) || ! buffer.nextword(value_token, i)) {
+      cerr << "ReadDemeritOverrides:" << fname << ':' << input.lines_read()
+           << ":expected '<query_name> <demerit_value>', got '" << buffer << "'\n";
+      return 0;
+    }
+
+    const_IWSubstring extra;
+    if (buffer.nextword(extra, i)) {
+      cerr << "ReadDemeritOverrides:" << fname << ':' << input.lines_read()
+           << ":extra tokens in '" << buffer << "'\n";
+      return 0;
+    }
+
+    int value;
+    if (! value_token.numeric_value(value) || value < 0) {
+      cerr << "ReadDemeritOverrides:" << fname << ':' << input.lines_read()
+           << ":invalid demerit value '" << value_token << "'\n";
+      return 0;
+    }
+
+    IWString tmp(name);
+    std::string key(tmp.null_terminated_chars());
+    if (! overrides.emplace(key, value).second) {
+      cerr << "ReadDemeritOverrides:" << fname << ':' << input.lines_read()
+           << ":duplicate query name '" << name << "'\n";
+      return 0;
+    }
+  }
+
+  if (verbose) {
+    cerr << "Read " << overrides.size() << " demerit override values from '" << fname << "'\n";
+  }
+
+  return 1;
+}
+
+static int
+ApplyDemeritOverrides(resizable_array_p<Substructure_Hit_Statistics>& queries,
+                      const DemeritOverrides& overrides) {
+  if (overrides.empty()) {
+    return 1;
+  }
+
+  DemeritOverrides unused(overrides);
+  int changed = 0;
+  int removed = 0;
+
+  for (int i = queries.number_elements() - 1; i >= 0; --i) {
+    Substructure_Hit_Statistics* q = queries[i];
+    IWString tmp(q->comment());
+    std::string key(tmp.null_terminated_chars());
+
+    auto iter = overrides.find(key);
+    if (iter == overrides.end()) {
+      continue;
+    }
+
+    unused.erase(key);
+    const int value = iter->second;
+    if (value == 0) {
+      queries.remove_item(i);
+      ++removed;
+      continue;
+    }
+
+    q->set_numeric_value(static_cast<double>(value), demerit_numeric_value_index);
+    ++changed;
+  }
+
+  if (verbose) {
+    cerr << "Applied " << changed << " demerit overrides and removed " << removed
+         << " zero-demerit queries\n";
+    for (const auto& [name, value] : unused) {
+      cerr << "Demerit override for query '" << name << "' was not used\n";
+    }
+  }
+
+  return 1;
+}
 
 static void
 do_atom_count_demerits(Molecule & m,
@@ -327,13 +444,13 @@ do_append_demerit_text_to_name(Molecule & m,
   else if (write_rejection_reason_like_tsubstructure)
   {
     new_name << " : D(" << score << ")";
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
       new_name << " (1 matches to 'D" << demerits[i]->demerit() << ' ' << demerits[i]->reason() << "')";
     }
   }
-  else
-  {
+  else if (tabular_output) {
+    new_name << ' ' << score;
+  } else {
     new_name << " : D(" << score << ") ";
     for (int i = 0; i < n; ++i)
     {
@@ -379,7 +496,10 @@ WriteAsProto(Molecule& m,
   google::protobuf::TextFormat::Printer printer;
   printer.SetSingleLineMode(true);
   std::string as_string;
-  printer.PrintToString(proto, &as_string);
+  if (!printer.PrintToString(proto, &as_string)) {
+    cerr << "PrintToString failed\n";
+    return 0;
+  }
   output.write(as_string.data(), as_string.size());
   output << '\n';
   output.write_if_buffer_holds_more_than(8192);
@@ -416,6 +536,8 @@ iwdemerit(Molecule & m,
 
     if (append_demerit_text_to_name)
       do_append_demerit_text_to_name(m, demerit);
+  } else if (tabular_output) {
+    do_append_demerit_text_to_name(m, demerit);
   }
 
 //cerr << m.name() << " rejected? " << demerit.rejected() << " stream is " << stream_for_non_rejected_molecules.active() << '\n';
@@ -557,36 +679,35 @@ usage(int rc)
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
 // clang-format on
-  cerr << "Usage : " << prog_name << " options file1 file2 file3 ....\n";
-  cerr << "  -q <file>      specify substructure query file\n";
-  cerr << "  -R <stem>      write rejected structures to 'stem.otype'\n";
-  cerr << "  -G <stem>      write non rejected (good) structures to 'stem.otype'\n";
-  cerr << "  -S <stem>      specify stem for .demerit file\n";
-  cerr << "  -M <stem>      write molecules rejected by cumulative demerits to <stem>\n";
-  cerr << "  -P <fname>     write results in proto form to <fname>\n";
-  cerr << "  -k             check all criteria even if a molecule is already rejected\n";
-  cerr << "  -c <number>    atom count cutoffs - enter -c help for info\n";
-  cerr << "  -O hard        skip all the hard coded substructure queries\n";
-  cerr << "  -V             reject molecules containing unusual valences\n";
-  cerr << "  -t             append demerit text to molecule names\n";
-  cerr << "  -f <n>         molecules are rejected when they have <n> demerits\n";
-  cerr << "  -x             atom count demerits remain scaled to 100\n";
-//cerr << "  -I <nrings>    set threshold for too many rings rejection\n";  deprecated
-  cerr << "  -Z <rsize>     set threshold for C7 ring size (default 7)\n";
-  cerr << "  -z <length>    set threshold for long carbon chain (default 7)\n";
-  cerr << "  -C <file>      control file for what demerits to apply\n";
-  cerr << "  -r             only do rejection rules - no demerits\n";
-  cerr << "  -u             write rejection reasons like tsubstructure\n";
-  cerr << "  -y             collate individual demerits into name\n";
-  cerr << "  -d <number>    set all demerit numeric values to <number>\n";
-  cerr << "  -N ...         charge assigner specifications, enter '-N help' for info\n";
-  cerr << "  -W ...         miscellaneous options, enter -W for help\n";
-  cerr << "  -E <symbol>    create element with symbol\n";
-  cerr << "  -X <symbol>    before processing, delete all <symbol> atoms\n";
-  cerr << "  -o <type>      file type for structures written\n";
-  cerr << "  -i <type>      specify input file type\n";
-  display_standard_aromaticity_options(cerr);
-  cerr << "  -v             verbose output\n";
+  cerr << R"(Applies demerits as part of Lilly Medchem Rules.
+ -q <file>      specify substructure query file.
+ -R <stem>      write rejected structures to 'stem.otype'.
+ -G <stem>      write non rejected (good) structures to 'stem.otype'.
+ -S <stem>      specify stem for .demerit file.
+ -M <stem>      write molecules rejected by cumulative demerits to <stem>.
+ -P <fname>     write results in proto form to <fname>.
+ -k             check all criteria even if a molecule is already rejected.
+ -c <number>    atom count cutoffs - enter -c help for info.
+ -O hard        skip all the hard coded substructure queries.
+ -V             reject molecules containing unusual valences.
+ -t             append demerit text to molecule names.
+ -f <n>         molecules are rejected when they have <n> demerits.
+ -x             atom count demerits remain scaled to 100.
+ -Z <rsize>     set threshold for C7 ring size (default 7).
+ -z <length>    set threshold for long carbon chain (default 7).
+ -C <file>      control file for what demerits to apply.
+ -r             only do rejection rules - no demerits.
+ -u             write rejection reasons like tsubstructure.
+ -y             collate individual demerits into name.
+ -d <number>    set all demerit numeric values to <number>.
+ -N ...         charge assigner specifications, enter '-N help' for info.
+ -W ...         miscellaneous options, enter -W for help.
+ -E <symbol>    create element with symbol.
+ -X <symbol>    before processing, delete all <symbol> atoms.
+ -o <type>      file type for structures written.
+ -i <type>      specify input file type.
+ -v             verbose output.
+)";
 
   exit(rc);
 }
@@ -622,6 +743,8 @@ display_dash_W_options(std::ostream & os)
   os << " -W imp2exp           make implicit Hydrogens explicit\n";
   os << " -W nokekule          aromatic bonds no longer remember their Kekule forms\n";
   os << " -W slist             write a sorted list of demerit values and reasons\n";
+  os << " -W demerits=<fname>  read query name/demerit value overrides from <fname>\n";
+  os << " -W tabular           create a tabular output of 'smiles id demerit'\n";
 
   exit(1);
 }
@@ -1003,6 +1126,7 @@ iwdemerit(int argc, char ** argv)
   }
 
   int max_embeddings = 0;
+  DemeritOverrides demerit_overrides;
 
   if (cl.option_present('W'))
   {
@@ -1054,9 +1178,18 @@ iwdemerit(int argc, char ** argv)
         append_demerit_text_to_name = 1;
         if (verbose)
           cerr << "Will write a sorted list of demerits and reasons\n";
-      }
-      else if ("help" == w)
-      {
+      } else if (w == "tabular") {
+        tabular_output = 1;
+        if (verbose) {
+          cerr << "Will write tabular output 'smiles id demerit' including 0 demerit molecules\n";
+        }
+      } else if (w.starts_with("demerits=")) {
+        w.remove_leading_chars(9);
+        if (! ReadDemeritOverrides(w, demerit_overrides)) {
+          cerr << "Cannot read demerit override file '" << w << "'\n";
+          return 1;
+        }
+      } else if ("help" == w) {
         display_dash_W_options(cerr);
       }
       else
@@ -1162,6 +1295,10 @@ iwdemerit(int argc, char ** argv)
           sq->set_numeric_value(static_cast<double>(all_demerits_same_numeric_value), 0);
       }
     }
+  }
+
+  if (! ApplyDemeritOverrides(queries, demerit_overrides)) {
+    return 1;
   }
 
   set_remove_hits_not_in_largest_fragment_behaviour(1);    // to get reproducible behaviour with multiple instances of largest fragment

@@ -4,36 +4,29 @@ package gfp_server;
 
 import "Utilities/GFP_Tools/nearneighbours.proto";
 
-// A nearneighbour request can specify either a number of neighbours to
+// A near-neighbour request can specify either a number of neighbours to
 // find, or a maximum distance.
+//
+// The same message is used by both the binary protobuf HTTP endpoint and the
+// JSON endpoint. For JSON, the protobuf JSON representation can be used, for
+// example:
+//   {"smiles":"CCO", "id":"ethanol", "nbrs":10}
+// or:
+//   {"smiles":"CCO", "id":"ethanol", "distance":0.25}
 message NnRequest {
-  optional string smiles = 2;
-  optional string id = 3;
+  string smiles = 1;
+  string id = 2;
 
   oneof request {
-    uint32 nbrs = 4;
-    float distance = 5;
+    uint32 nbrs = 3;
+    float distance = 4;
   }
 }
 
-// An incoming message can request various actions from the server
-message ServerRequest {
-  enum Request {
-    NONE = 0;
-    SHUTDOWN = 1;
-    RELOAD = 2;
-  }
-
-  optional Request request = 1;
-}
-
-// An incoming request will be either a request for the server to do
-// something, or to find some nearest neighbours.
-message Request {
-  oneof request {
-    ServerRequest server_request = 1;
-    NnRequest nn_request = 2;
-  }
+// Multiple independent near-neighbour requests in one HTTP call.
+// This avoids per-request HTTP overhead when searching many query molecules.
+message NnBatchRequest {
+  repeated NnRequest request = 1;
 }
 
 enum Status {
@@ -41,19 +34,21 @@ enum Status {
   NO_DIRECTIVE = 1;
   NO_SMILES = 2;
   BAD_SMILES = 3;
-  RELOAD_FAILED = 4;
+  SERVER_ERROR = 4;
 }
 
-message Reply {
-  // Will be true if this processing was successful.
-  // Note that `result` could be empty even if `status` is true,
-  // Asking for neighbours within a given distance and there are none,
-  // or a server request.
-  optional Status status = 1;
+message NnReply {
+  // OK means the request was processed successfully. The result may still have
+  // no neighbours, for example when a distance cutoff finds no matches.
+  Status status = 1;
 
-  optional nnbr.NearNeighbours result = 2;
+  // Human-readable detail for errors and diagnostics. Intended for logs, curl,
+  // and simple client error messages.
+  string message = 2;
+
+  nnbr.NearNeighbours result = 3;
 }
 
-service Grpcnnreq {
-  rpc GetNeighbours(NnRequest) returns(Reply) {}
+message NnBatchReply {
+  repeated NnReply reply = 1;
 }

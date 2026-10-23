@@ -1,34 +1,33 @@
-#include <stdlib.h>
+#include "tokenise_atomic_smarts.h"
+
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "Foundational/iwmisc/logical_expression.h"
-#include "tokenise_atomic_smarts.h"
 
 using std::cerr;
 
 static constexpr const char* kDollarOpenParen = "$(";
 
-Atomic_Smarts_Component::Atomic_Smarts_Component ()
-{
-  _unary_operator = 1;         // the default
-  _op = IW_LOGEXP_UNDEFINED;   
+Atomic_Smarts_Component::Atomic_Smarts_Component() {
+  _unary_operator = 1;  // the default
+  _op = IW_LOGEXP_UNDEFINED;
 
   _next = nullptr;
-      
+
   _from_primitive = 0;
 }
 
-Atomic_Smarts_Component::~Atomic_Smarts_Component()
-{
-  if (nullptr != _next)
+Atomic_Smarts_Component::~Atomic_Smarts_Component() {
+  if (nullptr != _next) {
     delete _next;
+  }
 
   return;
 }
 
 int
-Atomic_Smarts_Component::ok() const
-{
+Atomic_Smarts_Component::ok() const {
   if (_next != nullptr && _next->empty()) {
     return 0;
   }
@@ -37,22 +36,22 @@ Atomic_Smarts_Component::ok() const
 }
 
 static int
-write_operator(std::ostream & os, int op)
-{
+write_operator(std::ostream& os, int op) {
   os << ' ';
 
-  if (IW_LOGEXP_AND == op)
+  if (IW_LOGEXP_AND == op) {
     os << '&';
-  else if (IW_LOGEXP_OR == op)
+  } else if (IW_LOGEXP_OR == op) {
     os << ',';
-  else if (IW_LOGEXP_XOR == op)
+  } else if (IW_LOGEXP_XOR == op) {
     os << '^';
-  else if (IW_LOGEXP_LOW_PRIORITY_AND == op)
+  } else if (IW_LOGEXP_LOW_PRIORITY_AND == op) {
     os << ';';
-  else if (IW_LOGEXP_UNDEFINED == op)
+  } else if (IW_LOGEXP_UNDEFINED == op) {
     os << "undefined operator";
-  else
+  } else {
     os << "What operator is this " << op;
+  }
 
   os << ' ';
 
@@ -60,9 +59,8 @@ write_operator(std::ostream & os, int op)
 }
 
 int
-Atomic_Smarts_Component::debug_print(std::ostream & os) const
-{
-  if (! ok()) {
+Atomic_Smarts_Component::debug_print(std::ostream& os) const {
+  if (!ok()) {
     cerr << "NOT OK\n";
   }
 
@@ -86,16 +84,15 @@ Atomic_Smarts_Component::debug_print(std::ostream & os) const
   return _next->debug_print(os);
 }
 
-std::ostream &
-operator << (std::ostream & os, const Atomic_Smarts_Component & rhs)
-{
+std::ostream&
+operator<<(std::ostream& os, const Atomic_Smarts_Component& rhs) {
   write_operator(os, rhs.op());
 
   if (0 == rhs.unary_operator()) {
     os << '!';
   }
 
-  os.write (rhs.rawchars(), rhs.nchars());
+  os.write(rhs.rawchars(), rhs.nchars());
 
   if (nullptr == rhs.next()) {
     os << " _";
@@ -123,23 +120,22 @@ Atomic_Smarts_Component::ConvertToEnvironment() {
 }
 
 static int
-characters_in_environment(const_IWSubstring & smarts)
-{
+characters_in_environment(const_IWSubstring& smarts) {
   if (smarts.nchars() <= 3) {
     cerr << "Atomic environment too short, must be at least '$(*)'\n";
     return 0;
   }
 
-  assert (smarts.starts_with("$("));
+  assert(smarts.starts_with("$("));
 
   int paren_level = 1;
   for (int i = 2; i < smarts.nchars(); i++) {
-/// cerr << "in env '" << smarts[i] << "'\n";
+    /// cerr << "in env '" << smarts[i] << "'\n";
     if ('(' == smarts[i]) {
       paren_level++;
     } else if (')' == smarts[i]) {
       paren_level--;
-      if (0 == paren_level){
+      if (0 == paren_level) {
         return i + 1;
       }
     }
@@ -150,17 +146,15 @@ characters_in_environment(const_IWSubstring & smarts)
 }
 
 static int
-number_repeated_characters(const const_IWSubstring & smarts,
-                           char c)
-{
-  assert (c == smarts[0]);
+number_repeated_characters(const const_IWSubstring& smarts, char c) {
+  assert(c == smarts[0]);
 
   int rc = 1;
 
-  for (int i = 1; i < smarts.length(); i++)
-  {
-    if (c != smarts[i])
+  for (int i = 1; i < smarts.length(); i++) {
+    if (c != smarts[i]) {
       return rc;
+    }
 
     rc++;
   }
@@ -170,39 +164,35 @@ number_repeated_characters(const const_IWSubstring & smarts,
 
 /*
   We are looking at something like 'R2' or '#35' and need to know how many
-  numeric characters there are after 
+  numeric characters there are after
 */
 
 static int
-number_numeric_characters (const const_IWSubstring & smarts,
-                           int istart)
-{
-//cerr << "Counting numeric characters '" << smarts << "' starting at " << istart << '\n';
+number_numeric_characters(const const_IWSubstring& smarts, int istart) {
+  // cerr << "Counting numeric characters '" << smarts << "' starting at " << istart <<
+  // '\n';
 
   int rc = 0;
 
   char c = smarts[istart];
-  if ('<' == c)
-  {
+  if ('<' == c) {
     rc++;
     istart++;
-  }
-  else if ('>' == c)
-  {
+  } else if ('>' == c) {
     rc++;
     istart++;
   }
 
-  for (int i = istart; i < smarts.length(); i++)
-  {
+  for (int i = istart; i < smarts.length(); i++) {
     char c = smarts[i];
-    if (c >= '0' && c <= '9')
+    if (c >= '0' && c <= '9') {
       rc++;
-    else
+    } else {
       break;
+    }
   }
 
-//cerr << "Found " << rc << " numeric characters\n";
+  // cerr << "Found " << rc << " numeric characters\n";
   return rc;
 }
 
@@ -212,31 +202,30 @@ number_numeric_characters (const const_IWSubstring & smarts,
 */
 
 static int
-characters_in_next_primitive(const const_IWSubstring & smarts,
-                             const int istart)
-{
+characters_in_next_primitive(const const_IWSubstring& smarts, const int istart) {
   // Just one character.
   if (istart == smarts.length() - 1) {
     return 1;
   }
 
   // "Cl" for example.
-  if (isupper (smarts[istart]) && islower(smarts[istart + 1])) {
+  if (isupper(smarts[istart]) && islower(smarts[istart + 1])) {
     return 2;
   }
 
-// All the single character elements
+  // All the single character elements
 
   char c = smarts[istart];
 
-  if ('a' == c || 'A' == c || 'B' == c || 'C' == c || 'F' == c || 'I' == c ||
-      'N' == c || 'O' == c || 'P' == c || 'S' == c || 'U' == c || 'K' == c ||
-      'V' == c || 'W' == c || 'c' == c || 'o' == c || 'n' == c || 's' == c || 'p' == c)
+  if ('a' == c || 'A' == c || 'B' == c || 'C' == c || 'F' == c || 'I' == c || 'N' == c ||
+      'O' == c || 'P' == c || 'S' == c || 'U' == c || 'K' == c || 'V' == c || 'W' == c ||
+      'c' == c || 'o' == c || 'n' == c || 's' == c || 'p' == c) {
     return 1;
+  }
 
   int numeric_characters = number_numeric_characters(smarts, istart + 1);
 
-//cerr << " contains " << numeric_characters << " numeric characters\n";
+  // cerr << " contains " << numeric_characters << " numeric characters\n";
 
   if ('#' == c) {
     return 1 + numeric_characters;
@@ -254,39 +243,46 @@ characters_in_next_primitive(const const_IWSubstring & smarts,
     return 1 + numeric_characters;
   }
 
-  if ('R' == c)
+  if ('R' == c) {
     return 1 + numeric_characters;
+  }
 
-  if ('r' == c)
+  if ('r' == c) {
     return 1 + numeric_characters;
+  }
 
-  if ('T' == c)
+  if ('T' == c) {
     return 1 + numeric_characters;
+  }
 
-  if ('X' == c)
+  if ('X' == c) {
     return 1 + numeric_characters;
+  }
 
-  if ('v' == c)
+  if ('v' == c) {
     return 1 + numeric_characters;
+  }
 
-  if ('*' == c)     // what are they thinking    !*
+  if ('*' == c) {  // what are they thinking    !*
     return 1;
+  }
 
-  if (c >= '0' && c <= '9')
+  if (c >= '0' && c <= '9') {
     return number_numeric_characters(smarts, 0);
+  }
 
-  if ('+' == c)
-  {
-    if (numeric_characters)
+  if ('+' == c) {
+    if (numeric_characters) {
       return 1 + numeric_characters;
+    }
 
     return number_repeated_characters(smarts, '+');
   }
 
-  if ('-' == c)
-  {
-    if (numeric_characters)
+  if ('-' == c) {
+    if (numeric_characters) {
       return 1 + numeric_characters;
+    }
 
     return number_repeated_characters(smarts, '-');
   }
@@ -295,43 +291,38 @@ characters_in_next_primitive(const const_IWSubstring & smarts,
 }
 
 static int
-characters_in_next_token(const_IWSubstring & smarts)
-{
+characters_in_next_token(const_IWSubstring& smarts) {
   if ('$' == smarts[0]) {
     return characters_in_environment(smarts);
   }
 
   int square_bracket_level = 0;
   int curly_brace_level = 0;
-  for (int i = 0; i < smarts.nchars(); i++)
-  {
+  for (int i = 0; i < smarts.nchars(); i++) {
     char c = smarts[i];
 
-//  cerr << "Examining '" << c << "' sqbrklvl = " << square_bracket_level << '\n';
+    //  cerr << "Examining '" << c << "' sqbrklvl = " << square_bracket_level << '\n';
 
-    if ('[' == c)
-    {
+    if ('[' == c) {
       square_bracket_level++;
       continue;
     }
 
-    if (']' == c)
-    {
+    if (']' == c) {
       square_bracket_level--;
-      if (0 == square_bracket_level)
+      if (0 == square_bracket_level) {
         return i + 1;
+      }
 
       continue;
     }
 
-    if ('{' == c)
-    {
+    if ('{' == c) {
       curly_brace_level++;
       continue;
     }
 
-    if ('}' == c)
-    {
+    if ('}' == c) {
       curly_brace_level--;
       continue;
     }
@@ -357,24 +348,24 @@ characters_in_next_token(const_IWSubstring & smarts)
   return smarts.nchars();
 }
 
-//#define DEBUG_PARSE
+// #define DEBUG_PARSE
 
 int
-Atomic_Smarts_Component::parse(const_IWSubstring smarts)      // our own copy
+Atomic_Smarts_Component::parse(const_IWSubstring smarts)  // our own copy
 {
-//cerr << "Last char to process is '" << smarts[characters_to_process - 1] << "'\n";
+  // cerr << "Last char to process is '" << smarts[characters_to_process - 1] << "'\n";
 
 #ifdef DEBUG_PARSE
   cerr << "Begin atomis smarts component parse '" << smarts << "'\n";
 #endif
-  
+
   int rc = _parse(smarts);
 
   if (0 == rc) {
     return 0;
   }
 
-// If there is a mixture of primitive and $() tokens, conver them to the same form.
+  // If there is a mixture of primitive and $() tokens, conver them to the same form.
   int dollar_count = 0;
   int primitive_count = 0;
   for (const Atomic_Smarts_Component* asc = this; asc != nullptr; asc = asc->next()) {
@@ -398,15 +389,16 @@ Atomic_Smarts_Component::parse(const_IWSubstring smarts)      // our own copy
   // THis is no longer needed.
 
   return rc;
-// Because of limitations of the implentation, we need to "fix" some special
-// cases. Mainly we need to remove any operator which follows an atom and
-// which preceeds an environment. For example, '[N;$(C-O)]'
+  // Because of limitations of the implentation, we need to "fix" some special
+  // cases. Mainly we need to remove any operator which follows an atom and
+  // which preceeds an environment. For example, '[N;$(C-O)]'
 
-  Atomic_Smarts_Component * a = this;
-  while (a->_next)
-  {
-    if (a->starts_with("$("))    // we assume that all environments follow all the atoms specifications :-(
+  Atomic_Smarts_Component* a = this;
+  while (a->_next) {
+    if (a->starts_with("$(")) {  // we assume that all environments follow all the atoms
+                                 // specifications :-(
       return rc;
+    }
 
     if (a->_next->starts_with("$(")) {
       a->_op = IW_LOGEXP_UNDEFINED;
@@ -420,9 +412,8 @@ Atomic_Smarts_Component::parse(const_IWSubstring smarts)      // our own copy
 }
 
 int
-Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
-{
-  assert (smarts.length());
+Atomic_Smarts_Component::_parse(const_IWSubstring& smarts) {
+  assert(smarts.length());
 
 #ifdef DEBUG_PARSE
   cerr << "Atomic smarts component parsing '" << smarts << "'\n";
@@ -434,31 +425,23 @@ Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
 
   // First extract any operator specification.
 
-  if ('&' == smarts[0])
-  {
+  if ('&' == smarts[0]) {
     _op = IW_LOGEXP_AND;
     smarts++;
     characters_processed++;
-  }
-  else if (',' == smarts[0])
-  {
+  } else if (',' == smarts[0]) {
     _op = IW_LOGEXP_OR;
     smarts++;
     characters_processed++;
-  }
-  else if ('^' == smarts[0])
-  {
+  } else if ('^' == smarts[0]) {
     _op = IW_LOGEXP_XOR;
     smarts++;
     characters_processed++;
-  }
-  else if (';' == smarts[0])
-  {
+  } else if (';' == smarts[0]) {
     _op = IW_LOGEXP_LOW_PRIORITY_AND;
     smarts++;
     characters_processed++;
-  }
-  else           // no operator present
+  } else  // no operator present
   {
     _op = IW_LOGEXP_UNDEFINED;
   }
@@ -489,14 +472,17 @@ Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
       return 0;
     }
 
-// The ! operator binds tightly to a primitive    !#6H   gets treated differently from !$(CC)
+    // The ! operator binds tightly to a primitive    !#6H   gets treated differently from
+    // !$(CC)
 
     if (smarts.starts_with("$(")) {
       length_of_our_token = characters_in_next_token(smarts);
     } else {
       length_of_our_token = characters_in_next_primitive(smarts, 0);
       if (0 == length_of_our_token) {
-        cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following negation - contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
+        cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following "
+                "negation - contact LillyMol on github "
+                "(https://github.com/EliLillyCo/LillyMol)\n";
         return 0;
       }
     }
@@ -511,7 +497,9 @@ Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
   } else {
     length_of_our_token = characters_in_next_primitive(smarts, 0);
     if (0 == length_of_our_token) {
-      cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following negation - contact LillyMol on github (https://github.com/EliLillyCo/LillyMol)\n";
+      cerr << "Atomic_Smarts_Component::_parse: no recognised primitive following "
+              "negation - contact LillyMol on github "
+              "(https://github.com/EliLillyCo/LillyMol)\n";
       return 0;
     }
     cerr << "NEw determination of length_of_our_token " << length_of_our_token << '\n';
@@ -520,24 +508,25 @@ Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
 
   characters_processed = characters_processed + length_of_our_token;
 
-  IWString::operator=(smarts);    // copy the smarts
+  IWString::operator=(smarts);  // copy the smarts
 
   if (0 == length_of_our_token) {
     return 0;
   }
 
-  iwtruncate(length_of_our_token);     // keep the number we used
+  iwtruncate(length_of_our_token);  // keep the number we used
 
 #ifdef DEBUG_PARSE
   cerr << "Consumed " << length_of_our_token << " characters '";
   cerr.write(rawchars(), nchars());
   cerr << '\'';
-  if (0 == _unary_operator)
+  if (0 == _unary_operator) {
     cerr << " unary op = " << _unary_operator;
+  }
   cerr << '\n';
 #endif
 
-  smarts += (length_of_our_token);      // get rid of the characters we consume
+  smarts += (length_of_our_token);  // get rid of the characters we consume
 
   characters_processed += length_of_our_token;
 
@@ -546,7 +535,7 @@ Atomic_Smarts_Component::_parse(const_IWSubstring & smarts)
     return 1;
   }
 
-  assert (nullptr == _next);
+  assert(nullptr == _next);
 
   _next = new Atomic_Smarts_Component;
 
@@ -565,22 +554,19 @@ static int parse_as_atomic_smarts = 0;
 #include "iwstring_data_source.h"
 
 static int
-test_composite_query (const_IWSubstring & buffer, std::ostream & output)
-{
-  assert (buffer.starts_with('[') && buffer.ends_with(']'));
+test_composite_query(const_IWSubstring& buffer, std::ostream& output) {
+  assert(buffer.starts_with('[') && buffer.ends_with(']'));
 
   return 1;
 }
-  
+
 static int
-test_atomic_smarts (const_IWSubstring & buffer, std::ostream & output)
-{
-//assert (buffer.starts_with('[') && buffer.ends_with(']'));
+test_atomic_smarts(const_IWSubstring& buffer, std::ostream& output) {
+  // assert (buffer.starts_with('[') && buffer.ends_with(']'));
 
   Atomic_Smarts_Component asc;
 
-  if (! asc.parse(buffer))
-  {
+  if (!asc.parse(buffer)) {
     cerr << "Cannot parse smarts\n";
     return 0;
   }
@@ -591,22 +577,19 @@ test_atomic_smarts (const_IWSubstring & buffer, std::ostream & output)
 }
 
 static int
-test_tokenise_atomic_smarts (const_IWSubstring & buffer, std::ostream & output)
-{
-  if (parse_as_composite_query)
+test_tokenise_atomic_smarts(const_IWSubstring& buffer, std::ostream& output) {
+  if (parse_as_composite_query) {
     return test_composite_query(buffer, output);
-  else if (parse_as_atomic_smarts)
+  } else if (parse_as_atomic_smarts) {
     return test_atomic_smarts(buffer, output);
+  }
 }
 
 static int
-test_tokenise_atomic_smarts (iwstring_data_source & input, std::ostream & output)
-{
+test_tokenise_atomic_smarts(iwstring_data_source& input, std::ostream& output) {
   const_IWSubstring buffer;
-  while (input.next_record(buffer))
-  {
-    if (! test_tokenise_atomic_smarts(buffer, output))
-    {
+  while (input.next_record(buffer)) {
+    if (!test_tokenise_atomic_smarts(buffer, output)) {
       cerr << "Cannot parse '" << buffer << "', line " << input.lines_read() << '\n';
       return 0;
     }
@@ -616,14 +599,11 @@ test_tokenise_atomic_smarts (iwstring_data_source & input, std::ostream & output
 }
 
 static int
-test_tokenise_atomic_smarts (const char * fname, std::ostream & output)
-{
-  if (::strlen(fname) > 2 && 'F' == fname[0] && ':' == fname[1])
-  {
+test_tokenise_atomic_smarts(const char* fname, std::ostream& output) {
+  if (::strlen(fname) > 2 && 'F' == fname[0] && ':' == fname[1]) {
     fname += 2;
     iwstring_data_source input(fname);
-    if (! input.ok())
-    {
+    if (!input.ok()) {
       cerr << "Cannot open '" << fname << "'\n";
       return 0;
     }
@@ -637,8 +617,7 @@ test_tokenise_atomic_smarts (const char * fname, std::ostream & output)
 }
 
 static void
-usage (int rc)
-{
+usage(int rc) {
   cerr << "Tester for smarts tokeniser\n";
 
   cerr << "  -m                  tokenise as composite query 'C#N&&CO'\n";
@@ -650,48 +629,43 @@ usage (int rc)
 }
 
 static int
-test_tokenise_atomic_smarts (int argc, char ** argv)
-{
+test_tokenise_atomic_smarts(int argc, char** argv) {
   Command_Line cl(argc, argv, "mav");
 
   verbose = cl.option_count('v');
 
-  if (cl.unrecognised_options_encountered())
-  {
+  if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
-  if (cl.number_elements().empty())
-  {
+  if (cl.number_elements().empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
 
   parse_as_atomic_smarts = 1;
 
-  if (cl.option_present('m'))
-  {
+  if (cl.option_present('m')) {
     parse_as_composite_query = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Will parse as a composite query\n";
+    }
   }
 
-  for (int i = 0; i < cl.number_elements(); i++)
-  {
-    if (! test_tokenise_atomic_smarts(cl[i], cout))
+  for (int i = 0; i < cl.number_elements(); i++) {
+    if (!test_tokenise_atomic_smarts(cl[i], cout)) {
       return i + 1;
+    }
   }
 
   return 0;
 }
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char** argv) {
   int rc = test_tokenise_atomic_smarts(argc, argv);
 
   return rc;
 }
 #endif
-

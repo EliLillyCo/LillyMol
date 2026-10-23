@@ -49,9 +49,7 @@ is_actually_chiral(Molecule& m, atom_number_t zatom, resizable_array_p<Path_Scor
 
   ps.resize(acon);
 
-  for (int i = 0; i < acon; i++) {
-    const Bond* b = a->item(i);
-
+  for (const Bond* b : *a) {
     atom_number_t j = b->other(zatom);
 
     Path_Scoring* p = new Path_Scoring;
@@ -83,7 +81,9 @@ is_actually_chiral(Molecule& m, atom_number_t zatom, resizable_array_p<Path_Scor
   // m.smarts_equivalent_for_atom(zatom) << '\n';
 
   for (int iterations = 0; iterations < max_iterations; ++iterations) {
+    //cerr << "Begin iteration " << acon << " connections\n";
     for (int i = 0; i < acon; i++) {
+      // cerr << i << " from atom " << ps[i]->start_atom() << " active " << ps[i]->active() << '\n';
       if (ps[i]->active()) {
         ps[i]->advance(atom, claimed);
       }
@@ -91,9 +91,11 @@ is_actually_chiral(Molecule& m, atom_number_t zatom, resizable_array_p<Path_Scor
 
     int stopped;
     if (resolved(ps, stopped)) {
+      //cerr << "Resolved\n";
       return 1;
     }
 
+    //cerr << "Not resolved stopped " << stopped << '\n';
     if (stopped) {  // not resolved, but cannot go any further
       return 0;
     }
@@ -107,6 +109,8 @@ is_actually_chiral(Molecule& m, atom_number_t zatom, resizable_array_p<Path_Scor
       ps[i]->update_claimed(claimed);
       number_active++;
     }
+
+    //cerr << "number_active " << number_active << '\n';
 
     if (number_active < 2) {
       return 0;
@@ -355,7 +359,6 @@ Molecule::CahnIngoldPrelogValue(const Chiral_Centre* c, int top_front, int top_b
 
   // Atom needs to be resolved by expansion.
   std::unique_ptr<int[]> tmp = std::make_unique<int[]>(4 * _number_elements);
-  std::fill_n(tmp.get(), 4 * _number_elements, 0);
   // For each expansion, mark the centre atom.
   for (int i = 0; i < 4; ++i) {
     tmp.get()[i * _number_elements + c->a()] = kCentre;
@@ -503,6 +506,7 @@ ChiralityStatus(Molecule& m) {
     }
 
     const Chiral_Centre* c = m.chiral_centre_at_atom(i);
+    // cerr << "Atom " << i << m.smarts_equivalent_for_atom(i) << " AnySymmetry " << AnySymmetry(m, i, symm.get()) << '\n';
     if (AnySymmetry(m, i, symm.get())) {
       if (c) {
         result[i] = ChiralStatus::kInvalid;

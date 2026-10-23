@@ -140,7 +140,7 @@ class Needle {
     // It is simple to compute so it is always included, but may not get used.
     int WriteNeighbours(uint32_t max_genes_in_common, IWString_and_File_Descriptor& output);
 
-    int number_neighbours() const {
+    uint32_t number_neighbours() const {
       return _nbr_list.number_elements();
     }
     const Neighbour* nbr(int ndx) const {

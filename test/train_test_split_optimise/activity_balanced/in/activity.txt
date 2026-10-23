@@ -1,0 +1,9 @@
+id activity
+butane 0
+pentane 0
+hexane 0
+heptane 0
+pyridazine 100
+pyridine 100
+pyrimidine 100
+pyrazine 100

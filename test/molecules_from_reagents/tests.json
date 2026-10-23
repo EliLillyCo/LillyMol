@@ -1,0 +1,14 @@
+{
+  "executable": "molecules_from_reagents",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-M NN -v -R #{indir}/set1.smi",
+           " -R #{indir}/set2.smi #{indir}/seeds.smi"
+      ]
+    }
+
+  ]
+
+}

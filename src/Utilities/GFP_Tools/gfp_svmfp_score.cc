@@ -172,6 +172,9 @@ static float report_neighbours_within = 0.0;
 
 static int gather_influence_data = 0;
 
+// By default we write only the first token of the name.
+static int write_all_id_tokens = 0;
+
 // As an optimisation, we can skip evaluating any support vector
 // that has an absolute weight less than a given threshold.
 // The assumption is that a partial model evaluation might be good
@@ -1110,6 +1113,8 @@ write_identifier(const IW_TDT& tdt, const IWString& smiles, const IWString& id,
     append_first_token_of_name(id, output);
     output << ">\n";
     return;
+  } else if (write_all_id_tokens) {
+    output << id;
   } else {
     append_first_token_of_name(id, output);
   }
@@ -1474,6 +1479,7 @@ DisplayDashYOptions(std::ostream& output) {
   output << " -Y flush         flush output after each molecule\n";
   output << " -Y wcutoff=<f>   support vector weight cutoff. Only use support vectors with abs weight values\n";
   output << "                  greater than <f>. Will definitely speed up run times, but at the expense of accuracy\n";
+  output << " -Y writeall      outout will include all tokens of the name - by default only the first is written\n";
   // clang-format on
 
   ::exit(0);
@@ -1717,6 +1723,11 @@ svmfp_score(int argc, char** argv) {
 
         if (verbose) {
           cerr << "Kernel scaling function read from '" << y << "'\n";
+        }
+      } else if (y == "writeall") {
+        write_all_id_tokens = 1;
+        if (verbose) {
+          cerr << "Output will include all tokens in the name\n";
         }
       } else if (y == "help") {
         DisplayDashYOptions(cerr);

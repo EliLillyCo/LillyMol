@@ -1,4 +1,6 @@
 (0 Query
+# Oct 2026. 'double|aromatic_bond' so that aromatic ring nitrogens are found whether or not aromatic bonds keep
+# their Kekule forms (tsubstructure -M nokekule). Previously the answer depended on which Kekule form the input had.
   (A I Version 2)
   (A C Comment "Imine")
   (0 Query_Atom
@@ -10,6 +12,6 @@
     (A I atomic_number (6 7))
     (A I include_in_embedding 0)
     (A I unsaturation 1)
-    (A I double_bond 0)
+    (A I double|aromatic_bond 0)
   )
 )

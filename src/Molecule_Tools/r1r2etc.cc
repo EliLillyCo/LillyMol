@@ -8,6 +8,7 @@
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
@@ -31,6 +32,8 @@ using std::cerr;
 using std::endl;
 
 const char * prog_name = nullptr;
+
+static nvrtspsa::NovartisPolarSurfaceArea tpsa_calculator;
 
 /*
   Need to compute the following descriptors
@@ -581,7 +584,8 @@ Query_and_R_Atoms::_append_smiles_and_molecular_descriptors (Molecule & m,
       break;
     }
 
-    buffer << _output_separator << static_cast<float>(novartis_polar_surface_area(mcopy));
+    std::optional<double> maybe_psa = tpsa_calculator.PolarSurfaceArea(mcopy);
+    buffer << _output_separator << static_cast<float>(maybe_psa.value_or(0.0));
 
     buffer << _output_separator << compute_halogen(m);
 

@@ -4,7 +4,7 @@ if [[ ! -v LILLYMOL_HOME ]] ; then
   LILLYMOL_HOME="$(dirname $(realpath $0))/../../"
 fi
 
-executable="${LILLYMOL_HOME}/bin/Linux/jwmorse"
+executable="${LILLYMOL_HOME}/bin/$(uname)/jwmorse"
 
 if [[ ! -x ${executable} ]] ; then
   executable='jwmorse'

@@ -1,504 +1,751 @@
 # Ring Replacement
 
-## Motivation
-Given a molecule of interest, frequently there is interest in variants of
-that molecule. While similarity searching can identify existing molecules
-that might be similar to a molecule, that does not answer the question
-of what plausible variants might exist?
+## Contents
 
-`ring_replacement` takes a starting molecule, a database of known rings,
-and generates molecules that have the existing rings replaced by rings
-from the database. The way the database is constructed, ring sizes and
-substitution patterns are preserved. So if the starting molecule
-is a para substituted benzene ring, the results will also be para
-substituted 6 membered aromatic rings.
+- [Overview](#overview)
+- [Quick start](#quick-start)
+- [How ring replacement works](#how-ring-replacement-works)
+- [Worked example and output](#worked-example-and-output)
+- [Choosing breadth versus confidence](#choosing-breadth-versus-confidence)
+- [Using `ring_replacement`](#using-ring_replacement)
+- [Atom typing attachment context](#atom-typing-attachment-context)
+- [Controlling molecular-formula difference](#controlling-molecular-formula-difference)
+- [Preserving 3D coordinates](#preserving-3d-coordinates)
+- [Python](#python)
+- [Using `ring_replacement_inexact`](#using-ring_replacement_inexact)
+- [Building replacement-ring collections](#building-replacement-ring-collections)
+  - [Extracting rings](#extracting-rings-with-ring_extraction)
+  - [Replacement-file naming](#replacement-file-naming)
+  - [Administrator wrapper](#administrator-wrapper)
+  - [File format](#file-format)
+  - [Spiro systems and exocyclic double bonds](#spiro-systems-and-exocyclic-double-bonds)
+  - [Extracting several source collections](#extracting-several-source-collections)
+  - [Aggregating collections](#aggregating-collections)
 
-For example of the starting molecule is
+## Overview
+
+`ring_replacement` generates analogues by replacing a ring or ring system in an
+input molecule with rings observed in existing molecular collections. This is a
+form of **scaffold hopping**: the central ring framework changes while the
+surrounding substituents are retained.
+
+For example, an indole ring system might be replaced by a benzofuran,
+benzothiophene, indazole, or another fused five- and six-membered aromatic
+heterocycle. Bonds from the original ring system to the rest of the molecule are
+retained, preserving the substituents attached to the original scaffold.
+
+Unlike a similarity search, this operation proposes new structures rather than
+retrieving existing molecules. The replacement collections record both the ring
+structure and an exemplar count, allowing frequently observed rings to be
+preferred over unusual or potentially erroneous structures.
+
+The standard replacement operation preserves ring size, aromaticity, and
+substitution pattern. A para-disubstituted six-membered aromatic ring is therefore
+replaced by other para-disubstituted six-membered aromatic rings.
+
+## Quick start
+
+This section assumes that a collection of replacement rings is already
+available. LillyMol includes replacement rings derived from ChEMBL under
+`${LILLYMOL_HOME}/data/ring_replacement`. The following command replaces
+six-membered aromatic rings using replacements with at least five precedents:
+
+```shell
+ring_replacement \
+  -R "${LILLYMOL_HOME}/data/ring_replacement/rings_6a.smi" \
+  -n 5 -u -I . input.smi > variants.smi
 ```
+
+The important options are:
+
+- `-R` specifies a replacement-ring collection produced by `ring_extraction`.
+  It may be specified more than once.
+- `-n 5` considers only rings observed in at least five source molecules.
+- `-u` suppresses duplicate products.
+- `-I .` removes the temporary isotopic labels used while assembling products.
+
+Without `-s` or `-q`, every compatible ring in each input molecule can be
+replaced. Use `-s` or `-q` when only particular rings should be considered:
+
+```shell
+ring_replacement \
+  -R "${LILLYMOL_HOME}/data/ring_replacement/rings_6a.smi" \
+  -s '[/IWfss1cr6]' -z i -n 5 -u -I . input.smi > variants.smi
+```
+
+Here the SMARTS restricts replacement to isolated six-membered aromatic ring
+systems. `-z i` quietly skips input molecules that do not match the selection
+query.
+
+## How ring replacement works
+
+A replacement-ring record contains two aligned representations: a query that
+identifies a compatible ring in the input molecule and a replacement structure
+whose atoms can be substituted one-for-one. This alignment allows the tool to
+retain bonds from the ring to the rest of the parent molecule.
+
+By default, ring size, aromaticity pattern, and substitution pattern are
+preserved. For example, replacing a para-disubstituted six-membered aromatic
+ring produces other para-disubstituted six-membered aromatic rings. The
+replacement changes the ring framework while retaining the surrounding
+substituents.
+
+A typical run therefore consists of:
+
+1. Choose replacement files for the ring or ring-system classes of interest.
+2. Optionally use `-s` or `-q` to select which parent rings may be replaced.
+3. Restrict candidate rings by precedent, formula difference, or structural
+   filters.
+4. Generate products and optionally filter them with `-Y` and `-N` queries.
+
+The support value stored with each replacement is the number of source
+molecules containing that ring. It is evidence that the ring has occurred in a
+real molecular collection, not proof that every generated product is
+synthetically accessible.
+
+## Worked example and output
+
+Given the input molecule:
+
+```text
 Clc1ccc(F)cc1 p-benzene
 ```
-requesting replacement of the 6 membered aromatic
+
+a basic replacement using the six-membered aromatic collection is:
+
+```shell
+ring_replacement \
+  -R "${LILLYMOL_HOME}/data/ring_replacement/rings_6a.smi" \
+  -u -w p-benzene.smi > variants.smi
 ```
-ring_replacement -R rings_6a.smi p-benzene.smi
-```
-generates 185 new molecules. The first 10 (from Chembl) of those are
-```
+
+Example output includes:
+
+```text
 Cl[1c]1cc[1c](F)cc1 p-benzene %% CHEMBL503634.6a 1496512
 Cl[1c]1c[n][1c](F)cc1 p-benzene %% CHEMBL156037.6a 83606
-Cl[1c]1[n]c[1c](F)cc1 p-benzene %% CHEMBL156037.6a 83606
 Cl[1c]1[n]c[1c](F)c[n]1 p-benzene %% CHEMBL1171471.6a 19926
-Cl[1c]1c[n][1c](F)[n]c1 p-benzene %% CHEMBL1171471.6a 19926
 Cl[1c]1[n][n][1c](F)cc1 p-benzene %% CHEMBL600052.6a 10360
-Cl[1c]1[n]c[1c](F)[n]c1 p-benzene %% CHEMBL268339.6a 7938
-Cl[1c]1cc[1n+](F)cc1 p-benzene %% CHEMBL505408.6a 6908
-Cl[1n+]1cc[1c](F)cc1 p-benzene %% CHEMBL505408.6a 6908
 ```
-The output consists of the smiles of the new molecule.  The name of
-the starting molecule.  Then follows the name of an exemplar molecule,
-that contains an example of the ring that has been
-inserted.  The `6a` suffix indicates that the replacement is a six
-membered aromatic.  The last token is the number of these rings found
-in the knowledge base.  The output is sorted by occurrence.
 
-Note that due to symmetry, many of the replacement rings are used twice.
+Each output record contains:
 
-Clearly the larger the number of examples of a ring in the
-knowledge base, the higher the probability that this ring
-might be synthietically feasible. Experience tells us that rings 
-with low numbers of exemplars should be treated with caution.
-While some may represent real molecules that have been made,
-many seem more likely to have been drawing errors, or aspirations.
+1. The product SMILES.
+2. The name of the starting molecule.
+3. `%%`, separating parent and replacement metadata.
+4. The identifier of an exemplar containing the replacement ring. The `6a`
+   suffix denotes a six-membered aromatic ring.
+5. The number of source molecules containing that ring.
+
+The isotopes in this output identify attachment atoms used during replacement.
+Specify `-I .` to remove them. Symmetry can allow one replacement ring to produce
+more than one distinct product, and `-u` removes products that are identical.
+
+The support count is a useful confidence signal. Rings with many precedents are
+more likely to represent established chemistry; rings with very low counts may
+be valid rare structures, drawing errors, or speculative chemistry. Use `-n` to
+set an appropriate minimum for the application.
+
+## Choosing breadth versus confidence
+
+Ring replacement offers a progression from conservative generation to broad
+scaffold exploration. In this discussion, *lower risk* or *safer* means that a
+product is more strongly supported by precedents and therefore more likely to be
+chemically realistic and makable. It does not refer to laboratory or toxicological
+safety, and no setting guarantees synthetic accessibility.
+
+From most conservative to most exploratory:
+
+1. **Atom-typed exact replacement.** The ring-system topology and observed
+   substitution pattern must match, and the atom types of the attached
+   substituents must also be compatible. A 1,3-disubstituted ring is replaced
+   only by a 1,3-disubstituted ring observed with the same kinds of substituents.
+   This generally produces the fewest, best-supported products.
+2. **Default exact replacement.** The topology and observed substitution pattern
+   are preserved, but the kinds of substituents may differ from those in the
+   precedent. This produces more products with less contextual evidence.
+3. **Exact replacement with `-d`.** The basic ring-system topology is preserved,
+   but the replacement need not have been observed with the product's
+   substitution pattern. This increases product count and the risk of proposing
+   unrealistic substitution patterns.
+4. **Inexact replacement with attachment constraints.**
+   `ring_replacement_inexact` permits a different ring-system shape or size. Its
+   `-e` option preserves available same-ring attachment relationships from the
+   starting scaffold while the possible placements are enumerated.
+5. **Unconstrained inexact replacement.** A different ring-system topology is
+   inserted and the possible substituent placements are enumerated without
+   preserving those initial attachment relationships. This gives the broadest
+   scaffold hopping and the largest, highest-risk product set.
+
+The appropriate level depends on the purpose. Conservative modes are suitable
+when synthetic plausibility is paramount. Less constrained modes are useful when
+exploration and structural novelty justify reviewing a larger number of weaker
+proposals.
+
+## Using `ring_replacement`
+
+`ring_replacement` performs exact replacement: the basic topology of the parent
+ring or ring system and the replacement ring is the same. Its default behavior
+also requires the observed substitution pattern to be preserved.
+
+### Replacement-ring input
+
+- `-R <file>` reads a replacement-ring collection generated by
+  `ring_extraction`. The option may be repeated to use multiple collections.
+- `-n <count>` considers only replacement rings with at least this many source
+  examples.
+- `-P <atype>` applies atom typing to attachment points. The same atom typing
+  must have been used when the replacement collection was generated.
+
+### Selecting rings in the starting molecule
+
+- `-s <SMARTS>` selects rings containing atoms matched by the SMARTS. It may be
+  specified more than once.
+- `-q <query>` provides queries using the standard LillyMol query syntax.
+- `-z i` ignores input molecules that do not match any `-s` or `-q` query.
+- `-z w` writes nonmatching input molecules unchanged. It is normally combined
+  with `-z i`.
+- `-d` stops requiring preservation of an observed substitution pattern. The
+  ring-system topology is still preserved.
+
+If neither `-s` nor `-q` is specified, every ring compatible with the supplied
+replacement collections can be considered.
+
+### Filtering replacement candidates
+
+- `-F <query>` requires candidate replacement rings to match a query.
+- `-D <query>` rejects candidate replacement rings that match a query.
+- `-f <difference>` limits the molecular-formula difference between the parent
+  ring and replacement ring.
+
+`-F` and `-D` operate on the replacement rings before products are generated.
+They are useful for requirements such as retaining or excluding particular ring
+heteroatoms.
+
+### Filtering generated products
+
+- `-Y <query>` requires generated products to match a query.
+- `-N <query>` rejects generated products that match a query.
+
+These options operate on complete product molecules. The same filtering could be
+performed by a subsequent `tsubstructure` invocation, but applying it during
+replacement avoids writing unwanted products.
+
+### Output control
+
+- `-u` writes unique products only.
+- `-p` writes each parent molecule as well as its generated products.
+- `-w` orders products by replacement-ring precedent count.
+- `-I .` removes isotopic attachment labels from products.
+- `-I <n>` changes existing isotopes to `<n>`.
+- `-B <file>` writes molecules for which no replacement was generated to a
+  separate SMILES file.
+- `-3` transfers coordinates from corresponding parent-ring atoms to replacement
+  atoms and writes coordinates in LillyMol SMILES form.
+
+### Input preprocessing and diagnostics
+
+- `-c` removes chirality before replacement.
+- `-l` reduces input molecules to their largest fragment.
+- `-g ...` applies chemical standardization.
+- `-A ...`, `-E ...`, and `-i ...` provide the standard LillyMol aromaticity,
+  element, and input-type controls.
+- `-v` increases diagnostic output and may be repeated.
+- `-X help` lists miscellaneous controls.
+
+
+## Atom typing attachment context
+
+The most conservative exact replacement uses atom typing to preserve not only
+the substitution pattern, but also the kinds of atoms attached to the ring. The
+atom type stored at a ring attachment point is the type of the **exocyclic atom**
+that was attached there in the source molecule; it is not the type of the ring
+atom itself.
+
+For example, without atom typing, a replacement ring known with a 1,3
+substitution pattern can be used for any compatible 1,3-disubstituted parent.
+With atom typing, a parent bearing oxygen and carbon substituents at those
+positions matches only precedents observed with compatible oxygen and carbon
+attachments. This produces fewer products, but gives stronger evidence for the
+local chemical context of each proposed attachment.
+
+Atom typing must be enabled with the identical `-P` specification during both
+ring extraction and replacement:
+
+```shell
+ring_extraction -A 2 -S RINGS -P UST:CY -k -c -l -v chembl.smi
+
+ring_replacement \
+  -R RINGS_5a6a.smi -P UST:CY -n 5 -u -I . \
+  input.smi > variants.smi
+```
+
+If the specifications differ, the isotopic atom-type labels in the replacement
+collection will not correspond to the types calculated for the input molecule,
+and expected replacements will not match.
+
+`UST:CY` is a useful starting point:
+
+- `C` records the number of connections to the exocyclic atom.
+- `Y` records a compressed atomic number in which related heavy halogens are
+  treated equivalently.
+
+A more restrictive type such as `UST:ABCHY` additionally records aromaticity,
+unsaturation, and hydrogen count. Greater specificity increases contextual
+confidence but can sharply reduce coverage, particularly when the source
+collection is small. Atom typing is described in
+[atom typing](/docs/Molecule_Lib/atom_typing.md).
+
+## Controlling molecular-formula difference
+
+The `-f <difference>` option limits how far the replacement ring may diverge
+from the ring being removed. This can be important for common rings and ring
+systems, where a large replacement collection can otherwise generate very many
+products.
+
+A small threshold emphasizes **exploitation** around the starting molecule. This
+is useful when the parent is already interesting—for example, a hit from a
+biological screen—and the goal is to explore nearby scaffold variants without
+changing composition substantially. A larger threshold permits more
+**exploration** of chemically different scaffold forms, increasing both product
+count and structural diversity.
+
+The difference is calculated for the ring or ring system, not for the complete
+molecule. LillyMol counts changes across atom categories, including aromatic and
+aliphatic forms, hydrogen environments, and ring atoms, and sums the absolute
+count differences. For example, changing benzene to pyridine has a difference of
+three: one fewer aromatic carbon, one additional aromatic nitrogen, and one fewer
+aromatic carbon bearing hydrogen.
+
+The tool rejects a threshold of one; use a value of at least two. A typical
+invocation that keeps pyridine replacements relatively close is:
+
+```shell
+ring_replacement \
+  -R "${LILLYMOL_HOME}/data/ring_replacement/rings_6a.smi" \
+  -s '[/IWfss1c]1ncccc1' -z i -f 4 -p -u -I . \
+  input.smi > variants.smi
+```
+
+Here `-f 4` accepts replacement rings whose calculated difference is no greater
+than four. It should be interpreted as a distance threshold, not simply as the
+number of atoms changed. Run with several thresholds to determine an appropriate
+balance between product count and scaffold diversity for a particular collection.
+
+## Preserving 3D coordinates
+
+If input molecules contain 3D coordinates, `-3` transfers the coordinates of the
+corresponding parent-ring atoms to the replacement atoms. This can be useful when
+exploring analogues of a docked or otherwise positioned molecule. It is a
+coordinate transfer, not a geometry optimization; new products may still require
+relaxation or minimization.
+
+With `-3`, coordinates are written using LillyMol's coordinate-bearing SMILES
+syntax. A record begins like this:
+
+```text
+O{{0.0021,-0.0041,0.002}}=[N+]{{-0.0158,1.3128,0.0093}}([O-]{{1.1157,1.9867,0.0021}})C{{-1.3076,2.0354,0.0193}}...
+```
+
+The ellipsis deliberately truncates the example, so the text shown above is not
+a valid SMILES record. A complete coordinate-bearing output file can be converted
+to SDF form with:
+
+```shell
+fileconv -i smi -o sdf variants.smi
+```
+
+## Python
+
+The `lillymol_tools` module exposes the common exact-replacement controls through
+the `RingReplacement` class. `LILLYMOL_HOME` must be set so that a replacement
+filename such as `rings_6a.smi` can be resolved under
+`${LILLYMOL_HOME}/data/ring_replacement`.
+
+```python
+from lillymol import MolFromSmiles
+from lillymol_tools import RingReplacement
+
+molecule = MolFromSmiles("Oc1ccc(OC)cc1 start")
+
+replacement = RingReplacement()
+replacement.set_ring_atom_smarts("c")
+replacement.set_min_support_requirement(100)
+replacement.set_unique_molecules_only(True)
+replacement.set_remove_isotopes(True)
+# Optional: broaden replacement to substitution patterns not observed in the
+# replacement collection. This is the Python equivalent of command-line -d.
+replacement.set_preserve_connectivity(False)
+
+number_read = replacement.read_replacement_rings("rings_6a.smi")
+if number_read == 0:
+  raise RuntimeError("Cannot read replacement rings")
+
+products = replacement.process(molecule)
+for product in products:
+  print(product.smiles(), product.name())
+```
+
+`set_ring_atom_smarts("c")` means that rings containing a matched aromatic
+carbon may be replaced. Use a more selective SMARTS when only a particular ring
+or ring environment should be processed.
+
+Configuration that filters replacement records, especially
+`set_min_support_requirement`, should be applied before
+`read_replacement_rings`. The Python API currently reads one replacement-ring
+collection per `RingReplacement` object. `number_replacement_rings()` reports how
+many records were retained from that collection.
+
+By default, `set_preserve_connectivity(True)` requires replacement records to
+preserve an observed substitution pattern. Calling
+`set_preserve_connectivity(False)` is equivalent to command-line `-d`: it admits
+records marked `conn: false`, broadening the generated structures and potentially
+producing less plausible substitution patterns. This setting determines which
+records are retained while the replacement collection is read, so it must be set
+before `read_replacement_rings()`. Calling it after the collection has been read
+raises `RuntimeError`.
+
+`process` returns a Python list of generated `Molecule` objects. The parent
+molecule is **not** included, and an empty list means that no product was
+generated. A generated product can still be structurally identical to the parent
+if the collection contains the same ring framework.
+
+When `set_unique_molecules_only(True)` is active, duplicate tracking persists
+across calls to `process` on the same object. This provides global uniqueness
+when processing a molecular collection. Call `clear_unique_molecule_cache()` to
+forget previously generated structures. Clearing before each call gives
+per-parent uniqueness while retaining the configured replacement collection.
+
+The following controls are currently exposed:
+
+- `set_ring_atom_smarts(smarts)` selects rings in the parent molecule.
+- `set_unique_molecules_only(value)` controls duplicate suppression.
+- `clear_unique_molecule_cache()` forgets products retained for duplicate suppression.
+- `set_min_support_requirement(count)` sets the minimum precedent count.
+- `set_max_formula_difference(value)` limits formula divergence.
+- `set_remove_isotopes(value)` controls removal of attachment labels.
+- `set_preserve_connectivity(value)` controls whether replacement records must
+  preserve an observed substitution pattern; call it before reading rings.
+- `read_replacement_rings(filename)` reads the replacement collection.
+- `number_replacement_rings()` reports the retained collection size.
+- `process(molecule)` generates and returns products.
+
+For global uniqueness across a stream, configure and load the object once, then
+reuse it without clearing:
+
+```python
+for molecule in molecules:
+  for product in replacement.process(molecule):
+    # Each structure is returned at most once across the stream.
+    pass
+```
+
+To suppress duplicates independently for each parent:
+
+```python
+for molecule in molecules:
+  replacement.clear_unique_molecule_cache()
+  for product in replacement.process(molecule):
+    # Duplicates are suppressed only among products of this parent.
+    pass
+```
+
+The Python binding does not currently expose `ring_replacement_inexact`.
+
+## Using `ring_replacement_inexact`
+
+`ring_replacement_inexact` performs topology-changing scaffold hopping. It can,
+for example, replace a fused `5a6a` aromatic system with a fused `6a6a` system,
+or replace a fused bicyclic system with a single ring. The replacement need not
+have the same number, sizes, or arrangement of rings as the parent scaffold.
+
+The tool removes the selected ring system, retains its external substituents,
+and enumerates ways of attaching those substituents to the replacement system.
+This resolves the ambiguity introduced by changing topology, but can generate
+many regioisomers and many more products than exact replacement.
+
+### Quick start
+
+The ring system to remove must be selected with `-s` or `-q`. For example:
+
+```shell
+ring_replacement_inexact \
+  -R "${LILLYMOL_HOME}/data/ring_replacement/rings_6a6a.smi" \
+  -s '[/IWfss2cr5r6]' -z i -e -n 5 -x 500 -I . -V -c \
+  input.smi > variants.smi
+```
+
+This selects fused aromatic systems containing five- and six-membered rings and
+tries fused `6a6a` replacements. `-e` retains same-ring attachment relationships
+where possible, while `-x 500` limits combinatorial growth.
+
+### Attachment placement and `-e`
+
+By default, substituents are enumerated across allowed attachment positions on
+the replacement scaffold. If several substituents were attached to the same
+ring in the starting fused system, their relationship to one another may be lost
+when the topology changes.
+
+`-e` requires substituents that shared a ring in the starting scaffold to share
+a ring in the product scaffold. It preserves this same-ring relationship, not an
+exact ortho, meta, or para distance. Relationships involving different starting
+rings are not constrained. Some transformations, such as reducing a fused
+system to one ring, satisfy the same-ring requirement automatically.
+
+Replacement records normally identify permitted attachment atoms. `-X any`
+allows attachment to any available atom in the replacement ring system, further
+increasing coverage and risk.
+
+### Controlling product growth and risk
+
+- `-n <count>` excludes replacement systems with fewer than `<count>` source
+  examples.
+- `-e` preserves same-ring attachment relationships from the parent.
+- `-x <count>` approximately limits the number of products generated from each
+  starting molecule. Enumeration checks the limit periodically, so it may be
+  exceeded slightly.
+- `-o` suppresses products with ortho substituent placement.
+- `-V` discards products with invalid valence.
+- `-Y <query>` requires complete products to match a query.
+- `-N <query>` rejects complete products that match a query.
+
+Because topology-changing replacements can produce a combinatorial number of
+attachment arrangements, begin with a meaningful `-n` threshold, use `-e` when
+same-ring relationships matter, and set `-x` during exploratory runs.
+
+### Other options
+
+- `-R <file>` reads a replacement collection and may be repeated. Use
+  `-R F:<file>` when `<file>` contains a list of replacement-ring filenames.
+- `-s <SMARTS>` and `-q <query>` identify the ring system to remove; at least one
+  selection query is required.
+- `-z i` ignores input molecules that do not match a selection query.
+- `-p` writes the parent molecule before its products.
+- `-I .` removes isotopic attachment labels from products. The argument is
+  required; its value is currently not otherwise interpreted.
+- `-c`, `-l`, and `-g ...` provide chirality removal, largest-fragment reduction,
+  and chemical standardization.
+- `-A ...`, `-E ...`, and `-i ...` provide standard aromaticity, element, and
+  input-type controls.
+- `-v` enables progress and summary information.
+
+The `-F`, `-D`, `-d`, and `-f` options described for exact replacement are not
+options of `ring_replacement_inexact`.
+
+
+## Building replacement-ring collections
+
+Most users can use the ChEMBL-derived collections distributed under
+`${LILLYMOL_HOME}/data/ring_replacement`. Build a new collection when proprietary
+chemistry, a different source corpus, alternative standardization, or atom-typed
+attachment context is required.
+
+Collection construction has two stages:
+
+1. Run `ring_extraction` over each molecular corpus.
+2. Optionally combine corresponding files from several corpora with
+   `aggregate_replacement_rings`.
+
+Extraction can be expensive for very large corpora but is performed only when a
+collection is created or refreshed, not during normal ring replacement.
+
+### Extracting rings with `ring_extraction`
+
+A representative extraction is:
+
+```shell
+mkdir chembl_rings
+cd chembl_rings
+
+ring_extraction \
+  -A 2 -S rings -R 7 -Z 3 -k -c -l -g all -r 100000 -v \
+  /path/to/chembl.smi
+```
+
+This creates files named `rings_<class>.smi` in the current directory. Important
+controls are:
+
+- `-S <stem>` sets the required output stem; `-S rings` produces names beginning
+  with `rings_`.
+- `-R <size>` sets the largest individual ring size retained. The default is 7.
+- `-Z <count>` sets the largest number of rings in a ring system. The default is
+  3. Increase it when larger fused or spiro systems are important.
+- `-k` also writes replacement records that do not constrain the observed
+  substitution pattern. These records are used by `ring_replacement -d`.
+- `-P <atype>` stores the atom type of each exocyclic atom attached to a ring.
+  The same `-P` specification must be supplied to `ring_replacement`.
+- `-a` changes aliphatic double bonds within rings to query bond type “any”.
+- `-c`, `-l`, and `-g ...` remove chirality, retain the largest fragment, and
+  standardize molecules before extraction.
+- `-r <count>` reports progress periodically.
+- `-X list=<file>` writes the names of all generated files to `<file>`.
+- `-X noarom` generates aromaticity-independent queries, allowing aromatic and
+  aliphatic ring forms to match one another.
+- `-X sss` checks generated queries by searching the source molecule. This is
+  primarily a validation option.
+
+`-A 2` is a LillyMol aromaticity setting commonly used for these collections. It
+allows rings with two pi electrons, notably some four-membered rings, to be
+handled as aromatic.
+
+Use consistent aromaticity, standardization, element, and atom-typing settings
+when generating collections that will later be combined.
+
+### Replacement-file naming
+
+The class suffix describes the sizes and aromaticity of the component rings. On
+case-sensitive filesystems, the default follows the SMARTS convention:
+
+- lowercase `a` means aromatic;
+- uppercase `A` means aliphatic.
+
 For example:
-```
-Fc1[c+]c[n+](Cl)cc1 pbenzene %% PBCHM59575064.6a 2
-Fc1ccc(Cl)[p][p]1 pbenzene %% PBCHM159136080.6a 2
-Fc1c[nH][n](Cl)so1 pbenzene %% PBCHM144506470.6a 2
-Fc1[c-][o+]c(Cl)cc1 pbenzene %% PBCHM139100082.6a 2
-```
-are rings that have only two examples in the knowledge base.
 
-## Usage
-In order to make ring replacement work, two procedures are required.
-1. Scan one or more collections of known molecules and extract the rings.
-2. Use those knowledge bases to perform replacements.
+| Filename | Contents |
+| --- | --- |
+| `rings_5a.smi` | five-membered aromatic rings |
+| `rings_5A.smi` | five-membered aliphatic rings |
+| `rings_5a6a.smi` | fused systems containing aromatic five- and six-membered rings |
+| `rings_3A6a6A.smi` | systems containing aliphatic 3-, aromatic 6-, and aliphatic 6-membered rings |
 
-# ring_extraction
-ring_extraction is the tool that gathers data on the existing collections.
-The following options are recognised.
+Component ring descriptors are placed in a canonical order, primarily by ring
+size. Spiro and fused systems use the same filename convention; the filename
+describes the component rings, not their fusion type.
 
-```
-Extracts rings and ring systems creating ReplacementRing protos that can be used by ring_replacement
- -S <stem>         create ring data files with <stem>
- -R <rsize>        max ring size to process (def 7)
- -Z <size>         max ring system size to process (def 3)
- -k                also generate smarts with connectivity not specified
- -a                transform within ring aliphatic double bonds to type any\n";
- -P <atype>        label atoms by atom type of exocyclic attached atom
- -X ...            more options
- -c                remove chirality
- -g ...            chemical standardisation
- -l                strip to largest fragment
- -v                verbose output
-```
-A common usage might be
-```
-ring_extraction -A 2 -S collection -k -c -l -g all -v collection.smi
-```
-for several different collections (corporate, chembl, pubchem, ...). Might be a good
-idea to do each one in a separate directory.
+The default names are unsuitable for the commonly used case-insensitive macOS
+filesystem because `rings_5a.smi` and `rings_5A.smi` cannot coexist. Generate
+portable names by specifying:
 
-The `-A 2` option combination tells the tool to consider rings that have
-only 2 pi electrons to be aromatic. This is usually 4 membered rings, that
-can usefully be considered aromatic.
-
-```
-mkdir corporate
-cd corporate
-ring_extraction -A 2 -S rings -k -c -l -g all -v /path/to/corporate.smi
-cd ..
-mkdir chembl
-cd chembl
-ring_extraction -A 2 -S rings -k -c -l -g all -v /path/to/chembl.smi
-cd ..
-mkdir ...
+```shell
+ring_extraction -X Ar:Al -S rings ... input.smi
 ```
 
+With this convention, `Ar` means aromatic and `Al` means aliphatic:
 
-## Naming convention.
-We adopt an idea from smarts in that aromatic atoms are represented
-as lowercase and aliphatic as uppercase. So the file containing data
-on 6 membered aromatic rings will be `rings_6a.smi` and the file containing
-data on 6 membered aliphatic rings will be `rings_6A.smi`.
+| Case-sensitive name | Case-insensitive name |
+| --- | --- |
+| `rings_5a.smi` | `rings_5Ar.smi` |
+| `rings_5A.smi` | `rings_5Al.smi` |
+| `rings_5a6a.smi` | `rings_5Ar6Ar.smi` |
 
-In the case of fused rings, there will be multiple ring sizes and aromaticity,
-so a benzimidazole ring would be found in `rings_5a6a.smi`. Names are always
-sorted from smallest to largest ring. The file `3A6a6A.smi` contains
-fused (or possibly spiro fused) systems consisting of a
-. 3 membered aliphatic
-. 6 membered aromatic
-. 6 membered aliphatic
+The distributed data directory includes `to_mac.sh` and `to_linux.sh` for
+converting an existing set of filenames. These scripts rename files; they do not
+change their contents.
 
-Such a dataitem might be
-```
-smi: "[1CH]1=C2CCC3(CC3)OC2=N[1CH]=N1"
-     smt: "[ax2r6D3]1:[ax3r6r6D3]2:[ax2r6D2]:[ax2r6D2]:[ax4r3r6D4]3(:[ax2r3D2]:[ax2r3D2]:3):[ax2r6D2]:[ax3r6r6D3]:2:[ax2r6D2]:[ax2r6D3]:[ax2r6D2]:1"
-     id: "SCHEMBL2706866" n: 126 conn: true usmi: "O1C2(CCc3c1[n][1cH][n][1cH]3)CC2"
-```
-which includes a spiro fused 3 membered ring.
+### Administrator wrapper
 
-Note that the default setting of imposing a maximum ring system size of 3
-will exclude a common motif of four rings, with a spiro fusion in the
-middle. Adjust the -Z option as needed.
+`contrib/bin/ring_replacement.py` is a small front-end intended for administrators
+who maintain replacement-ring collections. It is not the primary user interface
+for ring replacement. The wrapper lets an administrator choose a collection and
+ring class by logical name and then constructs the corresponding `-R` arguments
+for `ring_replacement`.
 
-The letters 'a' and 'A' can be changed via the `-X` option
-to `ring_extraction`. This may be important on file systems where file names
-are case insensitive, where the files 'rings_5a.smi' and 'rings_5A.smi' cannot
-coexist. See the '-X' option.
+The `--ring` option uses canonical logical ring names regardless of the local
+filesystem naming convention. Names are one to three component descriptors, each
+consisting of a ring size followed by `a` for aromatic or `A` for aliphatic.
+Components must be sorted by increasing ring size; when sizes are equal, `a`
+precedes `A`. Examples include:
 
-On a fairly old computer (2014), running ring extraction on 2.2M Chembl molecules
-takes 5 minutes. Newer hardware will see that done in under 2 minutes.
+| Input | Meaning | Status |
+| --- | --- | --- |
+| `6a` | six-membered aromatic ring | canonical |
+| `5a6a` | fused aromatic five- and six-membered rings | canonical |
+| `6a6A` | aromatic and aliphatic six-membered rings | canonical |
+| `6A6a` | same rings as `6a6A` | rejected; wrapper suggests `6a6A` |
+| `6a5a` | same rings as `5a6a` | rejected; wrapper suggests `5a6a` |
 
-## Details - TLDR, for geeks only.
+On a case-sensitive filesystem, the wrapper looks for files such as
+`<collection>_6a.smi` and `<collection>_6a6A.smi`. On a macOS-style collection
+using `Ar`/`Al` filenames, the same user input is translated automatically; for
+example `--ring 6a6A` resolves to `<collection>_6Ar6Al.smi`. The wrapper probes
+for the common six-membered aromatic collection, `6a` or `6Ar`, to determine the
+preferred filename convention, with a fallback based on the files present.
 
-In each directory there will be a number of files of the form `rings_*.smi`.
-The naming describes what kind of rings are in that file. For
-example `rings_6a.smi` contains the 6 membered rings from the collection. That
-file might contain entries that look like
-```
-smi: "[1CH]1=[1CH]C(=O)[1CH]=C[1NH]1" smt: "[ax2r6D>2]1:[ax2r6D>2]:[ax2r6D3](:[A]):[ax2r6D>2]:[ax2r6D2]:[ax2r6D>2]:1" 
-     id: "CHEMBL4552407.6a" n: 186 conn: true usmi: "O=c1[1cH]c[1nH][1cH][1cH]1" 
-```
-where we have split what will be a single line in that file.
-
-The magic of ring replacement is the first two tokens, 'smi' and 'smt'. These
-are aligned with each other. So if 'smt' is used to identify the atoms in
-a ring system, the atoms from 'smi' can replace those atoms one-per-one and
-get a replacement ring that preserves the connectivity pattern.
-
-The 'id' field will be the first molecule in the input that exemplified this
-particular ring. The 'n' field contains the number of molecules in the
-collection that exemplify this ring. The final 'usmi' field is a unique
-smiles, whose only purpose is to enable merging data generated across multiple
+`--list-rings` reports canonical logical names, even if the underlying files use
+`Ar`/`Al` names. This keeps administrator commands the same on Linux and macOS
 collections.
 
-Note that if the `-k` option was used you will also have entries like
-```
-smi: "O=N1=CC=NN=C1" smt: "[A]=[ax2r6]1:[ax2r6]:[ax2r6]:[ax2r6]:[ax2r6]:[ax2r6]:1"
-     id: "CHEMBL1457335.6a" n: 12 usmi: "O=[n]1cc[n][n]c1" 
-```
-where the unique smiles does not contain isotopic labels. Notice too that
-the query atoms of the second query do not contain 'D' directives and
-so can match any substitution pattern. Note too that the 'conn' (connections) 
-attribute is not set.
+### File format
 
-### Spiro Fused Rungs
-Unlike other LillyMol tools, this one generates rings that span sipro
-fusions. Normally this will be seamless, and if you specify a sprio fused
-system to be replaced, it will be replaced. But spiro rings are not
-called out specifically in how the rings are stored.
+Despite the historical `.smi` suffix, each file contains one
+`RplRing::ReplacementRing` textproto per line, not an ordinary SMILES file. The
+suffix remains for compatibility with existing workflows.
 
-### Exocyclic Double Bonds
-Earlier versions of this tool did not handle exocyclic double bonds. With this
-new version, for example
-'O=C1NC=CC=C1F CHEMBL4558322' can replace the ring in 'N(C)(C)C1=CC=NC=C1 CHEMBL3561645'
-to generate 'N(C)(C)[1C]1=CC=CNC1=O CHEMBL3561645 %% CHEMBL4558322.6a'. This new
-functionality may introduce some undesirable changes as well, but is generally
-desirable.
+A record, formatted across several lines here for readability, resembles:
 
-The proto data for these rings with exocyclic double bonds will be somewhat
-different, possibly looking like
-```
-smi: "[CH2:70]1NC=CC=[1CH]1" smt: "[ax2r6D2]1:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D2]:[ax2r6D>2]:1"
-        id: "CHEMBL4558322.6a" n: 1 conn: true exo: "[70O]" usmi: "O=c1[nH]ccc[1cH]1"
-```
-The exocyclic atoms are specified as a separate molecule with an isotopic label near
-70. Somewhere within the replacement ring 'smi:', there will be an atom with atom map number
-corresponding to this isotopic label. That is where the doubly bonded exocyclic
-atom will be joined. The corresponding atom within the smarts does still have 'D2'
-so we can not yet do fully flexibile ring replacement. Getting there...
-
-This distribution does include rings extracted from a recent version of Chembl. See
-[data](/contrib/data/ring_replacement) where you will find some 'hidden' files.
-
-This version also expands coverage to ring systems of size 3 by default, but
-currently there is really no limit to what can now be processed - see the '-Z'
-option.
-
-## Aggregating Across Collections
-There is a C++ executable that can be used to aggregate data from multiple collections
-into a single collection.
-```
-aggregate_replacement_rings  -S ALL -v corporate/rings chembl/rings ...
-```
-will aggregate all the data in the individual collections and create a unified set
-of protos in the current directory. The example used will be the first example
-encountered during the collation process. 
-
-## Ring Replacement
-Once a set of replacement rings has been assembled, those can be used to
-perform ring replacement on molecules with existing ring/ring systems.
-```
- -R <fname>    file of labelled rings created by ring_extraction
- -s <smarts>   only replace rings matched by <smarts>
- -q <query>    only replace rings matched by <query>
- -u            unique molecules only
- -p            write parent molecule
- -n <ex>       only process replacement rings with <ex> or more examples
- -w            sort output by precedent count
- -d            do NOT preserve substitution patterns. Replacement rings may
-               not have had the same substition pattern as they do here
- -Y <query>    product molecules MUST     match a query in <query>.
- -N <query>    product molecules must NOT match any queries in <query>.
- -F <query>    only consider replacements rings that match <query>.
- -D <query>    discard any replacement ring that matches <query>.
-
- -I .          remove isotopes from product molecules
- -I <n>        change all existing isotopes to <n> (useful if atom types used)
- -B <fname>    write molecules not transformed to <fname>
- -X ...        miscellaneous options, enter '-X help' for info\n";
- -c            remove chirality
- -l            strip to largest fragment
- -v            verbose output
+```textproto
+smi: "[1CH]1=[1CH]C(=O)[1CH]=C[1NH]1"
+smt: "[ax2r6D>2]1:[ax2r6D>2]:[ax2r6D3](:[A]):[ax2r6D>2]:[ax2r6D2]:[ax2r6D>2]:1"
+id: "CHEMBL4552407.6a"
+n: 186
+conn: true
+usmi: "O=c1[1cH]c[1nH][1cH][1cH]1"
 ```
 
-So if you wanted to replace a 6 membered aromatic ring in some starting molecules
-that might be done via
-```
-ring_replacement -u -v -R RINGS_6a.smi -s '[/IWfss1cr6]' ... input.smi
-```
-which for 2k input molecules, generates 22k new structures in 18 seconds. Only
-1450 molecules had an isolated six membered aromatic, so for those molecules
-that could be changed, we generated an average of 15 new structures. Note that
-the `-u` option significantly reduced the number of molecules generated by
-removing duplicates, so the actual number of new variants per starting ring
-is larger.
+The fields are:
 
-### Which ring
-If specified, only rings matched by the -s or -q options are considered for
-replacement. Once the query match is made, any ring that contains a matched
-atom is considered for replacement.
+- `smi`: the replacement ring structure.
+- `smt`: the query used to locate a compatible parent ring. Its atom order is
+  aligned with `smi`, enabling one-for-one replacement.
+- `id`: the first source molecule retained as an exemplar.
+- `label`: an optional descriptive class field; current extraction primarily records the class in the filename.
+- `n`: the number of source molecules containing this ring.
+- `conn`: whether the record constrains observed attachment connectivity.
+- `usmi`: a canonical key used to combine equivalent records across corpora.
+- `exo`: optional isotopically labelled atoms used to reconstruct exocyclic
+  double bonds.
 
-### Filtering
-The -Y and -N filters apply filters to the generated molecules. The same
-effect could be achieved by passing the results to `tsubstructure`, but
-this is more efficient.
+When `-k` is used, extraction also creates records without attachment-degree
+constraints. Their `conn` field is false, and they are ignored by default exact
+replacement but become available with `ring_replacement -d`.
 
-### Precedent
-There is no 'right' answer to what value to use. If the -n option is omitted
-all replacement rings are considered, regardless of precedent. This might be
-what you want. Again, rings with very few examples might be risky in terms
-of whether the proposed new molecule can actually be made.
+### Spiro systems and exocyclic double bonds
 
-## Atom types.
-You may wish to preserve the context of the ring. For example if the starting
-molecule has an OH group, you might only want to consider replacements where
-the donor/replacement ring also had an OH group at that position too. In that
-case we need to build the exemplar collection with atom typing and then use that same
-atom typing when doing replacements.
+`ring_extraction` processes spiro as well as conventionally fused ring systems.
+The class name records the component ring sizes and aromaticity, while the record
+itself contains the topology needed for replacement.
 
-In this case, we use an atom typing that consists of just number of connections and
-atomic number, although generally I think there might be better choices.
+Exocyclic double bonds require additional information because including the
+external atom directly in `smt` could prevent the query from matching a simpler
+parent ring. Such atoms are stored separately in `exo`. Isotopes in `exo`
+correspond to atom-map numbers in `smi`, allowing `ring_replacement` to restore
+the double bonds when constructing a product.
 
-```
-ring_extraction -k -c -A 2 -S RINGS -P UST:CY -l -v chembl.smi
-```
-```
-ring_replacement -A 2 -R RINGS_5a6a.smi -P UST:CY flubendazole.smi
-```
-Things will silently fail, no matches, unless the atom types used during
-database building and querying are the same. Clearly it would be desirable
-to make this more robust.
+### Extracting several source collections
 
-A useful atom typing might be `UST:ABCHY`. This consists of five atomic properties,
-and as such, is likely over-specified. The comonents are
+Run unrelated corpora into separate directories so their counts and intermediate
+files remain distinct:
 
-* A aromatic
-* B unsaturation (excluding aromatic)
-* C number of connections
-* H number of hydrogens
-* Y compressed atomic number - heavy halogens equivalent.
+```shell
+mkdir corporate_rings chembl_rings
 
-Using a very precise atom typing like this should raise the probability of your
-newly generated molecules being synthetically feasible, but at the cost of generating
-potentially many fewer new molecules.
+(cd corporate_rings && \
+  ring_extraction -A 2 -S rings -k -c -l -g all -v \
+  /path/to/corporate.smi)
 
-Atom typing is described in [atom typing](/docs/Molecule_Lib/atom_typing.md).
-
-## Major Changes
-While the original ring replacement tool described above works well, many people
-have requested the ability to replace a ring/ring system with ring systems that
-are different sizes. For example, remove the substituents from a 6 membered aromatic
-and try placing them on a five membered aromatic - if possible. The reverse is likely
-much easier. Or even remove the substituents from a Napthalene and try to place them
-onto a 6 membered isolated aromatic. Again, the opposite will be easier.
-
-The initial implementation enables these cases, but there are limitations.
-
-In a flat ring system, there may be a notion of directionality, ortho, meta, para, etc.
-But when substituents are removed from an existing ring/ring system, any information
-about their relative arrangement is lost. Of course this only matters if there are
-more than two substituents involved.
-
-Same if we are transforming, say a 6/6 fused aromatic to a 5/6 fused aromatic.
-All the substituents are removed, and placed on the new ring system in all
-possible locations - regardless of whether they started off in the same ring.
-This may be a bug or a feature - depending. It is likely fairly easy to
-impose a constraint that substituents that start off sharing a ring should
-share a ring in the product molecule.
-
-### HowTo
-The usage message is
-```
- -R <fname>     one or more RplRing::ReplacementRing textproto files, such as what is generated
-                by ring_extraction.
- -n <n>         minimum support level for replacement rings, the 'n:' value in the proto.
- -j <n>         discard replacements with more than <n> points of attachment.
- -s <smarts>    specify one or more ring atoms that define the ring(s) to be removed
-                and replaced.
- -q <query>     query file specification of the atoms to be removed - same as the -s option.
- -z i           ignore molecules that do not match any of the -s/-q queries.
- -x <n>         max number of products per starting molecule. Arbitrary variants will be generated.
- -o             disallow ortho substitions of rings.
- -I             remove the isotopic labels from product molecules.
- -p             write the parent molecule before writing the variants.
- -V             discard any product with an invalid valence.
- -e             preserve the same-ring attachment patterns of the starting molecule.
- -Y <query>     queries that product molecules must contain.
-                tsubstructure -q syntax, so smarts is '-Y SMARTS:n'   
-                query file is '-Y PROTO:/path/to/file/qry`
- -N <query>     queries for features that must NOT be in product molecules.
- -c             remove chirality from input molecules.
- -v             verbose output
+(cd chembl_rings && \
+  ring_extraction -A 2 -S rings -k -c -l -g all -v \
+  /path/to/chembl.smi)
 ```
 
-The tool takes the same textproto input files as `ring_replacement`. Any
-number of replacement ring files are specified via the -R option.
+Use the same filename convention in each directory. If atom typing is required,
+use the same `-P` specification for every corpus.
 
-In this case we are looking to replace a fuxed 5a6a ring with 6a6a type
-rings.
+### Aggregating collections
+
+`aggregate_replacement_rings` combines equivalent records by `usmi`, sums their
+support counts, and retains the first exemplar encountered. Aggregate
+corresponding ring classes, one output file at a time:
+
+```shell
+mkdir combined_rings
+
+aggregate_replacement_rings \
+  -S combined_rings/rings_6a.smi -v \
+  corporate_rings/rings_6a.smi \
+  chembl_rings/rings_6a.smi
 ```
-ring_replacement_inexact -R /path/to/ring_replacement/rings_6a6a.smi \
-        -I -o -V -n 5 -s '[/IWfss2cr5r6]' -z i -p -c input.smi
-```
-The options are
 
-`-R` one or more replacement ring files generated by `ring_extraction`.
-
-`-I` during processing isotopic atoms are applied in order to keep track
-of atoms. Without the -I option, those isotopes will remain.
-
-`-o` means do not generate products where the substituents are placed
-ortho each other in the product molecule. This is part of a long term
-plan to be able to preserve distance around the ring constraints from
-the starting molecule. Not sure how how useful this option will be.
-
-`-V` discard product molecules that have valence errors. The tool tries
-hard to ensure this does happen, but it can.
-
-`-n 5` in order to keep the size of the job down, limit replacement
-ring/ring systems to those with at least 5 instances.
-
-`-s smarts` this particular smarts specifies an aromatic carbon atom,
-that is in both a 5 and 6 membered ring, and in a fused system size of 2.
-
-`-z i` means ignore any molecules in the input that do not match the -s
-smarts.
-
-`-p` write the parent molecule before writing the variants.
-
-`-c` chirality is removed from the input molecules. Mostly chirality really does
-not impact processing, but there may be some cases where chirality gets
-destroyed as atoms and bonds are temporarily switched around.
-
-The invocation above, starting with 11.3k molecules containing 5a6a type
-systems, found 152 replacement ring candidates and generated 1.84M new
-molecules in two minutes 18 seconds. The 6a6a file of replacement rings 
-had 2465 possible ring systems, so the support requirement, `-n 5` made
-a dramatic difference on the number of molecules generated.
-
-An example of how substituents can be scrambled. Given the parent
-molecule
-![CHEMBL7372](Images/CHEMBL7372_PARENT.png)
-the following molecules can be generated
-![generated](Images/CHEMBL7372_p1.png)
-![generated](Images/CHEMBL7372_p2.png)
-
-where we see that one product has preserved the original same ring
-associations, and the other product has scrambled them.
-
-There are means of limiting the number of variants generated. If there
-is a replacement ring with a lot of points of substitution a large
-number of products can be generated. The previous invocation reported
-```
-197 molecules generated 286 products
-191 molecules generated 304 products
-1 molecules generated 339 products
-2 molecules generated 375 products
-4 molecules generated 438 products
-6 molecules generated 456 products
-1 molecules generated 536 products
-Generated 1832187 molecules
-2313930 duplicates discarded
-```
-Use the `-x <n>` option to limit the number of product molecules generated
-from any given starting molecule. This cutoff is approximate since the tool
-only periodically checks that the limit has been exceeded.
-
-Use the -Y and -N options to enforce constraints on substructures that
-must be present in the product molecule (-Y) or not present in the
-product molecules (-N). To use a smarts
-```
--Y SMARTS:[c;R2]:[aD3x2]
-```
-to require a substition at one of the atoms adjacent to the
-ring fusion. Or use the -N option to suppress these molecules. Or
-pipe the results to `tsubstructure`. The -Y and -N options use
-the same syntax as the -q option of `tsubstructure`.
-
-The replacement rings considered for use can be filtered by use of the
--F and -D options. The -F option specifies queries that the replacement
-rings must contain, and the -D option specifies queries that the replacement
-rings must not contain. Note that
-```
--F 'SMARTS:0[n]'      # only match rings with zero occurrences of an aromatic nitrogen.
-```
-is the same as
-```
--D 'SMARTS:[n]'     # discard any ring that contains an aromatic nitrogen.
-```
-Although the second form is much more direct.
-
-A more complex example might be
-```
-... -s 'c12nccc1cccn2' -z i -d -F 'SMARTS:[cr5r6]:[nr5]'
-```
-where a particular heterocycle is being replaced, but the replacement ring
-should preserve the aromatic Nitrogen in the five membered ring. So if one
-started with
-![CHEMBL4202835](Images/CHEMBL4202835.png) 
-one would produce only molecules that might look like
-![CHEMBL4202835](Images/CHEMBL4202835_r1.png) 
-![CHEMBL4202835](Images/CHEMBL4202835_r2.png) 
-
-## Formula Difference
-Another means of limiting the scope of replacement is to place limits on the
-number of differences in the molecular formula. This is specified via the `-f`
-option. Note that it is impossible to have a formula diffeence of 1. For example
-if we are replacing benzene, c6, with pyridine c5n, the difference between
-those two formulae is 3 - different by one Carbon and different by one Nitrogen, as
-well as different by one Hydrogen.
-
-A typical invocaton, replacing a pyridine with something not that different, might look like
-```
-ring_replacement -z i -R 6a.smi -f 4 -p -s '[/IWfss1c]1ncccc1' file.smi > new.smi
-```
-The `-z i` combination says skip any input molecules not matching the query.
-
-The `-R` option gives a file containing the possible replacement rings, in this
-case all 6 membered aromatic rings, presumably from ring_extraction.
-
-Allow as many as two changes in the formula between the starting ring and the
-replacement ring - remember each change causes a difference in 2 in the computed
-difference.
-
-Specifying `-p` means write the starting molecule as well as the variants to the
-output.
-
-The smarts specifies an atom in the ring that will be replaced. In this case, it
-is a very specific specification for an unfused pyridine. `[/IWfss1c]` is an
-aroamtic carbon in a fused system size of one ring.
-
-## 3D
-Note that if your input molecule contains 3D information, add the -3 option
-and the atoms in the replacement ring will be translated to the exact position
-as the corresponding atom in the startign molecule. This can greatly facilitate
-structural explorations in cases of docked molecules.
-
-Note that output is in LillyMol smiles with coordinates embedded
-```
-O{{0.0021,-0.0041,0.002}}=[N+]{{-0.0158,1.3128,0.0093}}([O-]{{1.1157,1.9867,0.0021}})C{{-1.3076,2.0354,0.0193}}1=C{{-2.4963,1.3227,0.0211}}C{{-3.7023,1.9881,0.0353}}=C{{-3.7254,3.3879,0.0377}}(C{{-2.5206,4.1008,0.0305}}=C{{-1.3224,3.4213,0.0211}}1)S{{-5.2631,4.248,0.049}}S{{-6.4708,2.7683,0.0553}}C{{-6.5355,2.4335,1.784}}1=C{{-7.3306,1.3883,2.2688}}C{{-7.3724,1.1295,3.6212}}=C{{-6.6376,1.9074,4.5021}}(C{{-5.8526,2.9476,4.0302}}=C{{-5.7966,3.2151,2.68}}1)[N+]{{-6.692,1.6262,5.9543}}(=O{{-5.9956,2.3635,6.7944}})[O-]{{-7.4369,0.6386,6.4063}} 000000003986
-```
-which can be converted to .sdf form with
-```
-fileconv -o sdf in.smi
-```
+Repeat this for each desired ring-system class. Do not combine different classes
+such as `5a` and `6a` into the same output file. The resulting files can be passed
+directly to `ring_replacement` with `-R`.

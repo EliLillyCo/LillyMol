@@ -1,11 +1,11 @@
 (0 Reaction
   (A C Comment "Simple_H_Replacement.add_F")
   (0 Scaffold
-    (A C smarts "[CH>0]")
+    (A C smarts "[CH>0D<3]")
   )
   (1 Sidechain
-    (A C smiles "[C:1]F SHR.add_F")
-    (A C smarts "C")
+    (A C smiles "F SHR.add_F")
+    (A C smarts "F")
     (A I join (0 0))
   )
 )

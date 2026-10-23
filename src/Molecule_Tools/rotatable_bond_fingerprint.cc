@@ -3,9 +3,11 @@
   of rotatable bonds
 */
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <limits>
+
 using std::cerr;
 using std::endl;
 
@@ -376,8 +378,8 @@ rotatable_bond_fingerprint(Molecule & m,
   int * rotatable_bonds_between = all_needed + matoms*matoms;
   int * connections = all_needed + matoms*matoms + matoms* matoms;
 
-  set_vector(bonds_between, matoms*matoms, distance_not_set);
-  set_vector(rotatable_bonds_between, matoms*matoms, -1);*/
+  std::fill_n(bonds_between, matoms*matoms, distance_not_set);
+  std::fill_n(rotatable_bonds_between, matoms*matoms, -1);*/
 
   for (auto i = 0; i < matoms; ++i)
   {

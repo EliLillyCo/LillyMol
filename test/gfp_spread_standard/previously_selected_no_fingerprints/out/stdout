@@ -1,0 +1,6 @@
+empty.gfp exit_status nonzero
+empty.gfp records_written 0
+empty.gfp diagnostic_lines 1
+not_tdt.gfp exit_status nonzero
+not_tdt.gfp records_written 0
+not_tdt.gfp diagnostic_lines 1

@@ -1,3 +1,4 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
 
 cc_binary(
     name = "fetch_tdt",
@@ -70,6 +71,11 @@ cc_binary(
 
 cc_library(
     name = "iw_tdt",
+    # Linked whole into //Molecule_Lib:molecule_lib_shared, which claims to export
+    # it. Without this the linker drops the members Molecule_Lib does not itself
+    # reference, and extensions resolving against the shared library cannot find
+    # them at load time.
+    alwayslink = 1,
     srcs = [
         "_iw_tdt_double.cc",
         "_iw_tdt_float.cc",

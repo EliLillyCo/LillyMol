@@ -58,6 +58,8 @@ Usage(int rc) {
 // separately.
 class Options {
   private:
+    XLogPCalc _xlogp;
+
     int _verbose = 0;
 
     int _reduce_to_largest_fragment = 0;
@@ -122,6 +124,10 @@ class Options {
       return _verbose;
     }
 
+    XLogPCalc& xlogp_calc() {
+      return _xlogp;
+    }
+
     const IWString& smiles_tag() const {
       return _smiles_tag;
     }
@@ -165,6 +171,7 @@ DisplayDashJOptions(std::ostream& output) {
 void
 DisplayDashYOptions(std::ostream& output) {
   output << " -Y flush          flush output after each molecule\n";
+  output << " -Y nocorrections  do not apply xlogp corrections, atomic assignments only\n";
   ::exit(0);
 }
 
@@ -195,6 +202,31 @@ Options::Initialise(Command_Line& cl) {
     _remove_chirality = 1;
     if (_verbose) {
       cerr << "Will remove all chirality\n";
+    }
+  }
+
+  if (cl.option_present('X')) {
+    IWString fname = cl.string_value('X');
+    if (! _xlogp.ReadNewFragmentParameters(fname)) {
+      cerr << "Cannot process new fragment parameters (-X) '" << fname << "'\n";
+      return 1;
+    }
+  }
+
+  if (cl.option_present('y')) {
+    _xlogp.SetDisplayAtomAssignments(true);
+    if (_verbose) {
+      cerr << "Will write atom assigments\n";
+    }
+  }
+
+  if (cl.option_present('C')) {
+    const_IWSubstring c;
+    for (int i = 0; cl.value('C', c, i); ++i) {
+      _xlogp.SetApplyNitroxide(false);
+    }
+    if (_verbose) {
+      cerr << "Will not apply the nitroxide correction\n";
     }
   }
 
@@ -239,6 +271,8 @@ Options::Initialise(Command_Line& cl) {
     for (int i = 0; cl.value('Y', y, i); ++i) {
       if (y == "help") {
         DisplayDashYOptions(cerr);
+      } else if (y == "nocorrections") {
+        _xlogp.ForTestingSetApplyCorrections(false);
       } else if (y == "flush") {
         _flush_after_every_molecule = 1;
         if (_verbose) {
@@ -515,6 +549,12 @@ Options::Process(Molecule& m, IWString_and_File_Descriptor& output) {
 
   ++_molecules_read;
 
+  // The per atom status array below is indexed against `m`, and XLogPCalc::LogP
+  // needs the Hydrogen suppressed graph. Suppress them here, before sizing the
+  // array, so that the indices line up. Were this left to LogP it would work on
+  // a copy and the indices would refer to that copy instead.
+  m.RemoveAllHydrogenAtoms();
+
   std::unique_ptr<int[]> status(new_int(m.natoms()));
   std::optional<double> x;
   if (_mannhold) {
@@ -522,7 +562,7 @@ Options::Process(Molecule& m, IWString_and_File_Descriptor& output) {
     const int heteroatoms = m.natoms() - ncarbon;
     x = 1.46 + 0.11 * ncarbon - 0.11 * heteroatoms;
   } else {
-    x = XLogP(m, status.get());
+    x = _xlogp.LogP(m, status.get());
   }
 
   if (! x) {
@@ -651,6 +691,8 @@ Main(int argc, char** argv) {
 
   const int verbose = cl.option_count('v');
 
+  Options options;
+
   if (!process_standard_aromaticity_options(cl, verbose)) {
     Usage(5);
   }
@@ -660,22 +702,6 @@ Main(int argc, char** argv) {
     Usage(1);
   }
 
-  if (cl.option_present('X')) {
-    IWString fname = cl.string_value('X');
-    if (! ReadNewFragmentParameters(fname)) {
-      cerr << "Cannot process new fragment parameters (-X) '" << fname << "'\n";
-      return 1;
-    }
-  }
-
-  if (cl.option_present('y')) {
-    SetDisplayAtomAssignments(1);
-    if (verbose) {
-      cerr << "Will write atom assigments\n";
-    }
-  }
-
-  Options options;
   if (! options.Initialise(cl)) {
     cerr << "Cannot initialise options\n";
     return 1;
@@ -700,13 +726,6 @@ Main(int argc, char** argv) {
     input_type = FILE_TYPE_SMI;
   } else if (! all_files_recognised_by_suffix(cl)) {
     return 1;
-  }
-
-  if (cl.option_present('C')) {
-    const_IWSubstring c;
-    for (int i = 0; cl.value('C', c, i); ++i) {
-      TurnOffNitroxide();
-    }
   }
 
   if (cl.empty()) {

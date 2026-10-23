@@ -1,0 +1,9 @@
+name: "benzofuran_to_dihydro_benzofuran"
+scaffold {
+  smarts: "[/IWfss2o]1c2aaaa[cD3]2cc1"
+  change_bond {
+    a1: 7
+    a2: 8
+    btype: SS_SINGLE_BOND
+  }
+}

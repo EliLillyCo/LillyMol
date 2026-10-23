@@ -2,6 +2,7 @@
   Tester for symmetry determinations.
 */
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -455,7 +456,7 @@ do_include_centre_atoms_with_symmetry_groupings(Molecule & m,
 {
   const int matoms = m.natoms();
 
-  set_vector(is_in_symmetry_group, matoms, 0);
+  std::fill_n(is_in_symmetry_group, matoms, 0);
 
   const int groups = symmetry_info.symmetry_groupings();
 

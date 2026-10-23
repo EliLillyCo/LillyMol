@@ -1,14 +1,23 @@
 # builder stage
-FROM python:3.11.8 AS build
+ARG PYTHON_VERSION='3.12'
+FROM python:${PYTHON_VERSION}-trixie AS build
 
-RUN apt-get update && \ 
-    apt-get upgrade -y
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y \
+        cmake \
+        golang \
+        libblas-dev \
+        liblapack-dev \
+        npm \
+        protobuf-compiler \
+        xz-utils && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install npm -y && \
-    npm install -g @bazel/bazelisk && \
-    apt-get install libblas-dev liblapack-dev libzmq3-dev -y
+RUN npm install -g @bazel/bazelisk && \
+    npm cache clean --force
 
-RUN pip install pandas scipy absl-py pybind11 protobuf
+RUN pip install pandas scipy absl-py nanobind protobuf
 
 COPY . ./LillyMol
 
@@ -18,9 +27,8 @@ ENV LILLYMOL_HOME=/LillyMol \
     BUILD_DIR=Linux \
     BUILD_BDB=1 \
     BUILD_PYTHON=1 \
-    BUILD_GO=1
-
-RUN apt-get install -y golang
+    BUILD_GO=1 \
+    PYTHON_VERSION=${PYTHON_VERSION}
 
 RUN ./build_linux.sh
 
@@ -28,17 +36,17 @@ RUN ./build_linux.sh
 RUN ./uninstall.sh
 
 # final stage
-FROM python:3.11.8-slim AS final
+ARG PYTHON_VERSION='3.12'
+FROM python:${PYTHON_VERSION}-slim-trixie AS final
 
-RUN apt-get update && \ 
+RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install build-essential libgomp1 ruby-dev protobuf-compiler -y && \
     rm -rf /var/lib/apt/lists/*
 
 RUN gem install google-protobuf -v 3.21.12
 
-# Note to Xuyan - this line might be a duplicate of line 11
-RUN pip install pandas scipy absl-py pybind11 protobuf
+RUN pip install pandas scipy absl-py nanobind protobuf
 
 COPY --from=build /LillyMol /LillyMol
 
@@ -46,6 +54,3 @@ ENV LILLYMOL_HOME=/LillyMol \
     BUILD_DIR=Linux
 
 WORKDIR /LillyMol
-
-RUN protoc -I=. --ruby_out=. test/lillymol_tests.proto
-

@@ -57,7 +57,13 @@ def rf_evaluate_smiles(fname, mdir, proto, cl)
     cmd << " -j #{j}"
   end
 
-  tmpfile = File.join(ENV['TMPDIR'], "rf_evaluate_smiles_#{Process.uid}.#{Process.pid}.dat")
+  tmpdir = if ENV.key?('TMPDIR')
+             ENV['TMPDIR']
+           else
+             '/tmp/'
+           end
+
+  tmpfile = File.join(tmpdir, "rf_evaluate_smiles_#{Process.uid}.#{Process.pid}.dat")
 
   descriptors.each do |d|
     cmd << " -#{d}"
@@ -77,15 +83,7 @@ def rf_evaluate_smiles(fname, mdir, proto, cl)
 end
 
 def rf_evaluate_descriptors(fname, mdir, proto, cl)
-  cmd = "rf_evaluate_sklearn.sh -mdir #{mdir}"
-
-  rescaling = File.join(mdir, 'rescaling.textproto')
-  if File.size?(rescaling)
-    # TODO ianwatson finish implementation
-    # cmd << 
-  end
-
-  cmd << " #{fname}"
+  cmd = "python #{__dir__}/rf_evaluate.py --mdir #{mdir} #{fname}"
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
   system(cmd)

@@ -10,6 +10,8 @@
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iw_tdt/iw_tdt.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/iwstring/string_with_commas.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
@@ -19,11 +21,13 @@ const char* prog_name = nullptr;
 
 static int verbose = 0;
 
-static int tdts_read = 0;
+static uint64_t tdts_read = 0;
 
-static extending_resizable_array<int> dataitem_count;
+static extending_resizable_array<uint64_t> dataitem_count;
 
 static int check_for_numeric_values = 0;
+
+static int human_readable = 0;
 
 static IW_STL_Hash_Set tags_to_check;
 static IW_STL_Hash_Set tags_to_ignore;
@@ -33,10 +37,10 @@ static IW_STL_Hash_Map_int duplicate_tags_encountered;
 class TDT_Tag {
  private:
   IWString _name;
-  uint32_t _times_found;
-  uint32_t _times_empty;
+  uint64_t _times_found;
+  uint64_t _times_empty;
   int _numeric_values;
-  Accumulator_Int<int> _size;
+  Accumulator_Int<uint64_t> _size;
 
  public:
   TDT_Tag(const const_IWSubstring&);
@@ -74,7 +78,13 @@ TDT_Tag::extra(const const_IWSubstring& zdata) {
 
 int
 TDT_Tag::report(std::ostream& os) const {
-  os << "Tag '" << _name << "' encountered " << _times_found << " times";
+  os << "Tag '" << _name << "' encountered ";
+  if (human_readable) {
+    os << iwstring::with_commas(_times_found);
+  } else {
+    os << _times_found;
+  }
+  os << " times";
 
   if (_times_found) {
     if (_size.minval() == _size.maxval()) {
@@ -111,6 +121,7 @@ usage(int rc) {
   cerr << " -O <tag>       only check <tag>\n";
   cerr << " -X <tag>       do not check <tag>\n";
   cerr << " -n             try to interpret data as numeric\n";
+  cerr << " -h             human readable output, 1,000,000 for numbers\n";
   cerr << " -v             verbose output\n";
   // clang-format on
 
@@ -256,7 +267,7 @@ process_tags(Command_Line& cl, char flag, IW_STL_Hash_Set& h) {
 
 static int
 tdt_stats(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vnO:X:");
+  Command_Line cl(argc, argv, "vnO:X:h");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -298,7 +309,14 @@ tdt_stats(int argc, char** argv) {
     }
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.option_present('h')) {
+    human_readable = 1;
+    if (verbose) {
+      cerr << "Will write data in human readalbe forms\n";
+    }
+  }
+
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }

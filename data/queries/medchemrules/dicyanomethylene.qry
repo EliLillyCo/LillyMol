@@ -1,6 +1,0 @@
-(0 Query
-  (A C Comment "dicyanomethylene")
-  (A I version 2)
-# (A C smarts "C(-C#N)(-C#N)")
-  (A C smarts "[ND1]#C-C-C#N")
-)

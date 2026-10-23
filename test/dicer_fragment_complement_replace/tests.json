@@ -1,0 +1,50 @@
+{
+  "executable": "dicer_fragment_complement_replace",
+  "test": [
+    {
+      "name": "benzene",
+      "difftool": "same_structures -s",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    },
+
+    {
+      "name": "disubstituted_benzene",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    },
+
+    {
+      "name": "atom_types_ARZ",
+      "difftool": "same_structures -s",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    },
+
+    {
+      "name": "atom_types_degenerate",
+      "difftool": "same_structures -s",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    },
+
+    {
+      "name": "atype_fragmentradius0",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    },
+
+    {
+      "name": "atype_fragmentradius1",
+      "shellScript": {
+        "scriptName": "benzene.sh"
+      }
+    }
+
+  ]
+}

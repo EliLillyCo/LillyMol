@@ -1,0 +1,14 @@
+{
+  "executable": "remove_and_label",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-p -e 1 -E anylength -E autocreate -R nonorganic=0",
+           " -i ignore_bad_m -i sdf #{indir}/test.mdl"
+      ]
+    }
+
+  ]
+
+}

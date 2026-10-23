@@ -1,0 +1,42 @@
+laid out to match the molecule:
+C\C=C\C trans_butene
+C\C=C/C cis_butene
+CC\C=C\CC trans_hexene
+CC\C=C/CC cis_hexene
+OC\C=C\CO trans_butenediol
+OC\C=C/CO cis_butenediol
+OC(=O)\C=C\C(=O)O fumaric
+OC(=O)\C=C/C(=O)O maleic
+C\C=C\C=C\C trans_trans_hexadiene
+C\C=C/C=C\C cis_cis_hexadiene
+C\C=C\C=C/C trans_cis_hexadiene
+CC\C(\C)=C(\C)/CC tetrasubstituted
+C\C=C\C unspecified
+with -z, the raw layout:
+C\C=C\C trans_butene
+C\C=C\C cis_butene
+CC\C=C\CC trans_hexene
+CC\C=C\CC cis_hexene
+OC\C=C\CO trans_butenediol
+OC\C=C\CO cis_butenediol
+OC(=O)\C=C\C(=O)O fumaric
+OC(=O)\C=C\C(=O)O maleic
+C\C=C\C=C\C trans_trans_hexadiene
+C\C=C\C=C\C cis_cis_hexadiene
+C\C=C\C=C\C trans_cis_hexadiene
+CC\C(\C)=C(/C)\CC tetrasubstituted
+C\C=C\C unspecified
+read back without -i dctb, so no cis/trans is derived at all:
+CC=CC trans_butene
+CC=CC cis_butene
+CCC=CCC trans_hexene
+CCC=CCC cis_hexene
+OCC=CCO trans_butenediol
+OCC=CCO cis_butenediol
+OC(=O)C=CC(=O)O fumaric
+OC(=O)C=CC(=O)O maleic
+CC=CC=CC trans_trans_hexadiene
+CC=CC=CC cis_cis_hexadiene
+CC=CC=CC trans_cis_hexadiene
+CCC(C)=C(C)CC tetrasubstituted
+CC=CC unspecified

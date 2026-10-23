@@ -108,7 +108,7 @@ wrapper script like the tools being discussed here.
 
 The call to msort_parallel might look like
 ```
-msort_parallel.sh -p -D /a/temp/file -M nc=16 -k formula large.smi
+msort_parallel -p -D /a/temp/file -M nc=16 -k formula large.smi
 ```
 which divides the input into 16 chunks, grouped by molecular formula.
 unique_molecules is then invoked on each of the files

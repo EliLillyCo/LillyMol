@@ -1,0 +1,44 @@
+ClC1=C(N2C([H])([H])C([H])([H])OC([H])([H])C2([H])[H])C(=C([H])C(=C1[H])N([H])C([H])([H])C1=C([H])C(=C(OC([H])([H])C(=C([H])[H])[H])C(=C1[H])[H])[H])[H] PBCHM2214928 : D(110) 110:110|anil_di_alk_A
+ClC1=C([H])C(=C(N=C2SC(=C(N2N=C([H])C2=C([H])C(=C(C([H])([H])[H])S2)[H])C2=C([H])C(=C(N(=O)=O)C(=C2[H])[H])[H])[H])C(=C1[H])[H])[H] PBCHM2385700 : D(60) 60:60|thiaz_ene_A
+O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(C(=C1[H])[H])C(=C(C(=O)N([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC([H])([H])[H])C#N)[H])[H] PBCHM5937157 : D(90) 90:90|anil_di_alk_B
+S1C(=NC(=O)C1=C([H])C1=C([H])N(N=C1C1=C([H])C(=C(OC([H])([H])C2=C([H])C(=C(C([H])([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])N1C([H])([H])C([H])(C([H])([H])[H])C([H])([H])C([H])([H])C1([H])[H] PBCHM6197496 : D(190) 190:190|ene_five_het_B
+S(=O)(=O)(C([H])([H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])N([H])N=C1C2=C(C(=C([H])C1=O)[H])C(=C([H])C(=C2N([H])C(=O)OC([H])([H])[H])[H])[H] PBCHM6337280 : D(20) 20:20|imine_one_A
+FC1=C(N([H])[H])C2=C(N(C3([H])C([H])([H])C3([H])[H])C(=C(C2=O)C(=O)O[H])[H])C(=C1N1C([H])([H])[C@@]([H])(N([H])C([H])([H])[H])C([H])([H])C1([H])[H])C([H])([H])[H] PBCHM10833216
+S(C([H])([H])[H])C(=NC(=C1C(=O)OC(C([H])([H])[H])(C([H])([H])[H])OC1=O)[H])N([H])N=C(C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H] PBCHM10927997 : D(70) 70:70|ene_six_het_A
+S1(=O)(=O)N(C([H])([H])C([H])([H])C([H])([H])C([H])([H])[H])C(=O)C(=C1C1=C([H])C(=C([H])C(=C1[H])[H])[H])N([H])C1=C([H])C(=C(N2C([H])([H])C([H])([H])N(C([H])([H])C2([H])[H])C([H])([H])C2=C([H])C(=C([H])C(=C2[H])[H])[H])C(=C1[H])[H])[H] PBCHM11706422 : D(110) 110:110|anil_di_alk_A
+O(C([H])([H])C(=O)C(=C1N(C([H])([H])[H])C2=C([H])C(=C([H])C(=C2N1C([H])([H])[H])[H])[H])C#N)C(=O)C1=C([H])C2=C(N([H])C(=C2C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H] PBCHM24520602 : D(80) 80:80|indol_3yl_alk
+O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(C(=C1[H])[H])C(=C([H])C1=NC2=C(C(=C(C([H])([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])[H] PBCHM27103272 : D(90) 90:90|anil_di_alk_B
+O=C(N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C(N(=O)=O)C(=C1[H])[H])[H])C([H])([H])OC(=O)C(=C(C([H])([H])[H])C([H])([H])[H])[H] PBCHM41932526 : D(110) 110:110|anil_di_alk_A
+[I-].S1C(=[N+](C2=C1C(=C([H])C1=C([H])C(=C([H])C(=C12)[H])[H])[H])C([H])([H])C([H])([H])[H])C(=C1C([H])([H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])C(=C1[H])C(=C([H])C1=C([H])C(=C(N(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H])[H])[H] PBCHM44669698 : D(90) 90:90|anil_di_alk_B
+ClC1=C([H])C(=C([H])C(=C1C(=O)N([H])C1=C([H])C(=C(N2C([H])([H])C([H])([H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H])N([H])C(=O)N([H])C1=C(OC([H])([H])[H])C(=C([H])C(=C1[H])C([H])([H])[H])[H])[H])[H] PBCHM46326603 : D(110) 110:110|anil_di_alk_A
+O1[C@@]([H])([C@]([H])(O[H])[C@@]2([H])O[C@]([H])(O[C@@]12[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])[C@@]([H])(N=N#N)C([H])([H])O[H] PBCHM46833046 : D(260) 260:260|azo_A
+O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C(=O)C(=O)N([H])C([H])([H])C1=C2N([H])C(=C(C([H])([H])[H])C2=C([H])C(=C1[H])C([H])([H])[H])C([H])([H])C([H])([H])[H] PBCHM56880957 : D(80) 80:80|indol_3yl_alk
+O1C([H])(N([H])C2=C([H])C(=C([H])C(=C2C2=C1N=C(OC([H])([H])C([H])([H])C([H])([H])[H])N=N2)[H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])O[H] PBCHM60014145 : D(110) 110:110|catechol_A
+S(=O)(=O)(O[H])O[H].O1[C@@]([H])([C@]([H])(O[H])C([H])([H])C2=C(O[H])C(=C(O[H])C(=C12)[H])[H])C1=C([H])C(=C(O[H])C(=C1[H])[H])O[H] PBCHM67898546 : D(110) 110:110|catechol_A
+O([H])C1=C(O[H])C(=C2C(=C1[H])C([H])(C([H])([H])N(C([H])([H])C2([H])[H])C([H])([H])C([H])(C([H])([H])[H])C([H])([H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])[H] PBCHM71585840 : D(110) 110:110|catechol_A
+O([H])C([H])(C([H])(N([H])C([H])([H])C([H])([H])O[H])C([H])([H])C(=O)OC([H])([H])[H])C1=C([H])C(=C(N(C([H])([H])[H])C([H])([H])[H])C(=C1[H])[H])[H] PBCHM82349145 : D(120) 120:120|anil_di_alk_D
+N1(C([H])([H])C([H])([H])N([H])C([H])([H])C1([H])[H])C1=C([H])C2=C(N(C([H])([H])[H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H] PBCHM82538169 : D(110) 110:110|anil_di_alk_A
+O(C1=C([H])C(=C(N([H])C([H])([H])C([H])([H])C([H])([H])C2=C([H])C(=C(N3C([H])([H])C([H])([H])C([H])([H])C3([H])[H])C(=C2[H])[H])[H])C(=C1[H])[H])[H])C([H])([H])C([H])([H])C([H])([H])[H] PBCHM83462400 : D(230) 230:120|anil_di_alk_C:110|anil_di_alk_E
+BrC1=C([H])C(=C(C2=C(C([H])([H])[H])SC(=C2C(=O)OC([H])([H])C([H])([H])[H])N([H])C(=O)C([H])([H])C([H])([H])C([H])([H])C([H])([H])[H])C(=C1[H])[H])[H] PBCHM84380412 : D(80) 80:80|thiophene_amino_Ab
+O=C1C2=C(C(=C([H])C(=C2N(=O)=O)C2([H])C([H])([H])C([H])([H])C([H])(C([H])([H])C2([H])[H])C([H])([H])C([H])([H])C([H])([H])[H])[H])C(=O)C2=C1C(=C([H])C(=C2N(=O)=O)C([H])([H])[H])[H] PBCHM88756156 : D(250) 250:250|quinone_A
+O(C1([H])C([H])(O[H])C([H])(O[H])C([H])(OC1([H])OC([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])C(=O)N=N#N)C([H])([H])O[H])C1([H])OC([H])(C([H])(O[H])C([H])(O[H])C1([H])O[H])C([H])([H])O[H] PBCHM89849633 : D(260) 260:260|azo_A
+O1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=NC(=C1[H])OC([H])([H])C([H])([H])N([H])C([H])([H])[H])C([H])([H])N([H])N=C1C(=C([H])C(=O)C(=C1[H])[H])[H] PBCHM91193977 : D(250) 250:250|quinone_A
+S1[C@@]([H])(N=NC2=C([H])C(=C([H])C(=C2C(=O)O[H])[H])[H])C(=O)N(C2=C([H])C(=C([H])C(=C2[H])[H])[H])C1=S PBCHM95239954 : D(490) 490:260|azo_A:230|rhod_sat_A
+IC1=C([H])C(=C(N2C(=O)[C@@]3([H])[C@@](N([H])[C@]([H])([C@@]3([H])C2=O)C2=C(O[H])C(Cl)=C([H])C(Cl)=C2[H])(C([H])([H])C([H])(C([H])([H])[H])C([H])([H])[H])C(=O)O[H])C(=C1[H])[H])[H] PBCHM97973690 : D(130) 130:130|mannich_A
+O([H])C(=O)C1([H])C([H])([H])C([H])([H])C(C([H])([H])[H])(C([H])([H])[H])N(C1([H])[H])C1=C([H])C(=C(OC([H])([H])[H])C(=C1[H])[H])[H] PBCHM117021259 : D(120) 120:120|anil_di_alk_C
+FC1=C(F)C(=C([H])C(=C1[H])N=NC(=O)N([H])C([H])([H])C([H])([H])C([H])([H])C([H])([H])N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H])[H] PBCHM122181327 : D(260) 260:260|azo_A
+O=C(N([H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C([H])(C([H])([H])N([H])N=C1C(=C([H])C(=O)C(=C1[H])[H])[H])C(=O)C([H])([H])[H] PBCHM123266931 : D(250) 250:250|quinone_A
+ClC1=C(N([H])C2=NC(=O)C(=C([H])C3=C(OC([H])([H])[H])C(=C(N4C([H])([H])C([H])([H])OC([H])([H])C4([H])[H])C(=C3[H])[H])[H])S2)C(=C([H])C(=C1Cl)[H])[H] PBCHM126227590 : D(280) 280:190|ene_five_het_B:90|anil_di_alk_B
+ClC1=C(Cl)C(=C([H])C(=C1[H])N1C(=O)C(=C([H])C2=C([H])C(=C([H])C(=C2[H])[H])OC([H])([H])C(=O)N([H])C2=C([H])C(=C([H])C(=C2[H])C([H])([H])[H])C([H])([H])[H])SC1=S)[H] PBCHM126261253 : D(260) 260:260|ene_rhod_A
+BrC1=C(C([H])([H])[H])C(=C(N=NN([H])[H])C(=C1C([H])([H])[H])[H])[H] PBCHM129016465 : D(260) 260:260|azo_A
+ClC1=C(C([H])([H])C([H])(C([H])([H])[H])C([H])([H])C1=C([H])C(=C1C2=C(N(C(=C1[H])[H])C([H])([H])C([H])([H])[H])C(=C([H])C(=C2[H])C([H])([H])[H])[H])[H])C(=C([H])C1=C2C(=[N+](C(=C1[H])[H])C([H])([H])C([H])([H])[H])C(=C([H])C(=C2[H])C([H])([H])[H])[H])[H] PBCHM132347258 : D(250) 250:250|het_pyridiniums_A
+S(P(=O)(OC([H])(C([H])(C([H])([H])[H])C([H])([H])[H])C#N)OC([H])([H])C([H])([H])[H])C([H])(C([H])([H])[H])C([H])([H])C([H])([H])[H] PBCHM179291
+S=C(N([H])C1=C([H])C(=C(C([H])([H])N2C([H])([H])C([H])([H])C([H])([H])C2([H])[H])C(=C1[H])[H])[H])N([H])C(=O)C1=C([H])C(=C([H])O1)[H] PBCHM925587
+S1C(=S)N([C@]([H])(C([H])([H])C([H])([H])C(=O)O[H])C(=O)O[H])C(=O)C1=C([H])C1=C([H])C(=C(OC([H])([H])C([H])([H])[H])C(=C1[H])[H])OC([H])([H])[H] PBCHM1873271 : D(260) 260:260|ene_rhod_A
+S(C1=NC2=C([H])C(=C([H])C(=C2C(=O)N1C1=C(C([H])([H])[H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H])[H])[H])C([H])([H])C(=O)N([H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])[H] PBCHM2583913
+S=C(N(C([H])([H])C([H])([H])N1C([H])([H])C([H])([H])C([H])([H])C1([H])[H])C([H])([H])C1=C([H])C2=C(N([H])C1=O)C(=C([H])C(=C2[H])OC([H])([H])C([H])([H])[H])[H])N([H])C([H])([H])C([H])([H])C([H])([H])[H] PBCHM3186412
+O([H])C(=O)C1=NN(C(=C1[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H] PBCHM3269941
+S(=O)(=O)(C1=C(OC(=N1)C([H])(C1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C([H])C(=C1[H])[H])[H])N([H])C([H])([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC1=C([H])C(=C([H])C(=C1[H])[H])[H])C1=C([H])C(=C(C([H])([H])[H])C(=C1[H])[H])[H] PBCHM4486165
+O([C@]([H])(C(=O)N1C([H])([H])C([H])([H])N(C([H])([H])C1([H])[H])C([H])([H])C([H])([H])[H])C([H])([H])C([H])([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H] PBCHM9173128
+O(C(=O)N1[C@@]([H])(C([H])([H])[C@@]([H])(C1([H])[H])C1=C([H])C(=C([H])C(=C1OC([H])([H])[H])[H])[H])C(=O)O[H])C(C([H])([H])[H])(C([H])([H])[H])C([H])([H])[H] PBCHM10496006
+O=C(N([H])C1=C([H])C(=C([H])C(=C1[H])[H])OC([H])([H])[H])C([H])(C([H])([H])C([H])([H])C([H])([H])[H])C([H])([H])C([H])([H])C([H])([H])[H] PBCHM11841482

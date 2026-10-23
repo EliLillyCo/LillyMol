@@ -83,7 +83,5 @@
           "args": [ "-W rxsep='>>' -W rgsep='+' -A D -u -T #{indir}/SidechainRxnBothSidesNeededFromFiles.config -z i -m all -Z -M all" ],
           "comment": [ "test of a reaction with two sidechains,both of which require smiles input, and smiles are in files" ]
         }
-      ]
-    }
-  }
+    ]
 }

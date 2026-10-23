@@ -46,7 +46,14 @@ struct DicerData {
   std::string par;
   uint32_t n;
   uint32_t natoms;
+
+  DicerData();
 };
+
+DicerData::DicerData() {
+  n = 0;
+  natoms = 0;
+}
 
 class DicerFragmentsCollate {
   private:
@@ -390,6 +397,7 @@ DicerFragmentsCollate::InsertIntoDataHash(dicer_data::DicerFragment& proto,
   }
   data.par = proto.par();
   data.n = proto.n();
+  data.natoms = proto.nat();
 
   _hash_data.insert(std::make_pair(proto.smi(), std::move(data)));
 
@@ -584,8 +592,8 @@ DicerFragmentsCollate::WriteDicerData(const IWString& usmi, const DicerData& dic
     output << dicer_data.smiles;
   }
 
-  output << " smi: " << usmi;
-  output << " par: " << dicer_data.par;
+  output << " smi: \"" << usmi << '"';
+  output << " par: \"" << dicer_data.par << '"';
   output << " n: " << dicer_data.n;
   output << " nat: " << dicer_data.natoms;
   output << '\n';

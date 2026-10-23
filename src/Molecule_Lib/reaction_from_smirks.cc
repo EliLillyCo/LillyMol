@@ -24,6 +24,21 @@ set_smirks_lost_atom_means_remove_frgment(int s) {
   smirks_lost_atom_means_remove_frgment = s;
 }
 
+// Deal with smirks like [U]-[c:1]>>[*:1]
+static int remove_elements_in_lhs_but_missing_in_rhs = 0;
+
+void
+set_smirks_remove_elements_in_lhs_but_missing_in_rhs(int s) {
+  remove_elements_in_lhs_but_missing_in_rhs = s;
+}
+
+// This can also deal with [U]-[C:1>>[*:1]
+static int remove_unmapped_atoms_in_lhs = 0;
+void
+set_smirks_remove_unmapped_atoms_in_lhs(int s) {
+  remove_unmapped_atoms_in_lhs = s;
+}
+
 int
 IWReaction::construct_from_smirks(const const_IWSubstring& smirks) {
   if (!smirks.starts_with("F:")) {
@@ -285,7 +300,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
     return 0;
   }
 
-// #define DEBUG_SMIRKS_TOKENISING
+//#define DEBUG_SMIRKS_TOKENISING
 #ifdef DEBUG_SMIRKS_TOKENISING
   cerr << "From '" << reagents << "' generate\n";
   for (auto i = 0; i < smarts.number_elements(); ++i) {
@@ -303,16 +318,16 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
   }
 
   for (auto i = 1; i < smarts.number_elements(); ++i) {
-    Sidechain_Reaction_Site* r = new Sidechain_Reaction_Site;
+    std::unique_ptr<Sidechain_Reaction_Site>r = std::make_unique<Sidechain_Reaction_Site>();
 
+    // cerr << "Building sidechain from " << *smarts[i] << '\n';
     if (!r->create_from_smarts(*smarts[i])) {
       cerr << "IWReaction::construct_from_smirks:invalid sidechain smarts '"
            << (*smarts[i]) << "'\n";
-      delete r;
       return 0;
     }
 
-    _sidechains.add(r);
+    _sidechains << r.release();
   }
 
   Substructure_Query product_molecule;
@@ -331,7 +346,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
           return 0;
         }
       })) {
-    cerr << "IWReaction::_identify_changes_from_smirks:RHS has multiple elements, "
+    cerr << "IWReaction::construct_from_smirks:RHS has multiple elements, "
             "impossible\n";
     return 0;
   }
@@ -347,6 +362,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
     _sidechains[i]->identify_atom_map_numbers(ramn);
   }
 
+//#define DEBUG_CONSTRUCT_FROM_SMIRKS
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
   cerr << "Reagent atom numbers";
   for (int i = 0; i < ramn.number_elements(); ++i) {
@@ -423,8 +439,7 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
       continue;
     }
 
-    if (ramn[i] == pamn[i])  // equal, but not 1, bad
-    {
+    if (ramn[i] == pamn[i]) {  // equal, but not 1, bad
       cerr << "IWReaction::construct_from_smirks:atom map " << i << " used " << ramn[i]
            << " in reagents and " << pamn[i] << " in products\n";
       return 0;
@@ -447,24 +462,23 @@ IWReaction::construct_from_smirks(const const_IWSubstring& reagents,
   Molecule orphan_molecule;
 
   if (orphan_atoms.number_elements()) {
-    Sidechain_Reaction_Site* x = new Sidechain_Reaction_Site();
+    std::unique_ptr<Sidechain_Reaction_Site> x = std::make_unique<Sidechain_Reaction_Site>();
 
     if (!_create_orphan_molecule(orphan_atoms, orphan_molecule, product_molecule, *x)) {
       cerr << "IWReaction::_identify_changes_from_smirks:cannot construct orphan "
               "molecule, has "
            << orphan_atoms.number_elements() << " orphan atoms\n";
-      delete x;
       return 0;
     }
 
-    _sidechains.add(x);
+    _sidechains << x.release();
   }
 
   for (int i = 0; i < _sidechains.number_elements(); ++i) {
     _sidechains[i]->set_sidechain_number(i);
   }
 
-  // IWString foo ("FOO.qry");
+  // IWString foo ("RHS.qry");
   // product_molecule.write_msi(foo);
 
   return _identify_changes_from_smirks(ramn, h + 1, orphan_molecule, product_molecule);
@@ -622,13 +636,14 @@ IWReaction::_identify_changes_from_smirks(
   product_molecule.print_connectivity_graph(cerr);
 #endif
 
-  resizable_array<int> atoms_lost;
+  resizable_array<int> atoms_lost;  // an array of atom map numbers.
 
   for (int i = 0; i < istop; i++) {
     //  cerr << "Atom map i " << i << " mapped in reagents " <<
     //  atom_map_numbers_in_reagents[i] << '\n';
-    if (atom_map_numbers_in_reagents[i] <=
-        0) {  // atom map number not present on LHS, orphan
+
+    // atom map number not present on LHS, orphan
+    if (atom_map_numbers_in_reagents[i] <= 0) {
       continue;
     }
 
@@ -666,6 +681,24 @@ IWReaction::_identify_changes_from_smirks(
       }
     }
   }
+
+  resizable_array<atomic_number_t> atomic_numbers_lost;
+
+  if (remove_elements_in_lhs_but_missing_in_rhs) {
+    IdentifyMissingElements(*product_molecule[0]->root_atom(0), atomic_numbers_lost);
+  }
+
+  if (atomic_numbers_lost.size() > 0) {
+    for (int z : atomic_numbers_lost) {
+      SetRemoveAtomicNumber(z);
+    }
+  }
+
+// Not yet implemented.
+//if (remove_unmapped_atoms_in_lhs) {
+//  IdentifyUnmappedAtomsThatDisappear(*(product_molecule[0]->root_atom(0)), atoms_lost);
+//}
+
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMIRKS
   for (int i = 1; i < istop; ++i) {
@@ -794,6 +827,98 @@ IWReaction::_identify_changes_from_smirks(
 
   return 1;
 }
+
+// Traverse a query structure, and for every unmapped atom, identify the first 
+// elemental specification and add the atomic number to `result`.
+// This function is used for both the LHS and RHS of the smirks.
+// That leaves open the possibility for error. We might have multiple elements
+// on the LHS, but only one on the RHS  [U,Np]-[C:1]>>[Np]-[*:1].
+// The LHS would not see U as the element and we would conclude that the
+// atom was being removed. Wrong. Address this by using an atom map
+// number    [U,Np:2]-[C:1]>>[Np:2]-[*:1]
+static void
+IdentifyElementsInQuery(const Substructure_Atom& qry, resizable_array<atomic_number_t>& result) {
+  if (qry.atom_map_number() > 0) {
+  } else if (const Element*e = qry.first_specified_element()) {
+    result.add_if_not_already_present(e->atomic_number());
+  }
+
+  for (int i = 0; i < qry.number_children(); ++i) {
+    IdentifyElementsInQuery(*qry.child(i), result);
+  }
+}
+
+// We have atomic numbers in the LHS that are not in the RHS. Add them to `atoms_lost`.
+void
+IWReaction::IdentifyMissingElements(const Substructure_Atom& product_molecule,
+                resizable_array<atomic_number_t>& atomic_numbers_lost) {
+  resizable_array<atomic_number_t> lhs;
+  IdentifyElementsInQuery(*(this->item(0)->root_atom(0)), lhs);
+  for (const Sidechain_Reaction_Site* srs : _sidechains) {
+    IdentifyElementsInQuery(*(srs->item(0)->root_atom(0)), lhs);
+  }
+
+  resizable_array<atomic_number_t> rhs;
+  IdentifyElementsInQuery(product_molecule, rhs);
+
+  cerr << "LHS elements";
+  for (atomic_number_t z : lhs) {
+    cerr << ' ' << z;
+  }
+  cerr << '\n';
+
+  cerr << "RHS elements";
+  for (atomic_number_t z : rhs) {
+    cerr << ' ' << z;
+  }
+  cerr << '\n';
+
+  for (atomic_number_t z : lhs) {
+    if (rhs.contains(z)) {
+      continue;
+    }
+    atomic_numbers_lost << z;
+  }
+}
+
+// If the query specifies atomic number `z`, add a matched atom remove
+// directive to `srs`.
+// THe logic here should mirror what was used in identifying the atomic numbers.
+void
+SetRemoveAtomicNumberInner(Reaction_Site& srs,
+                      const Substructure_Atom& a,
+                      atomic_number_t z) {
+  if (a.atom_map_number() > 0) {
+  } else {
+    const Element* e = a.first_specified_element();
+    if (e != nullptr && e->atomic_number() == z) {
+      srs.add_atom_to_be_removed(a.initial_atom_number());
+    }
+  }
+
+  for (int i = 0; i < a.number_children(); ++i) {
+    SetRemoveAtomicNumberInner(srs, *a.child(i), z);
+  }
+}
+
+// For every query atom that specifies atomic number `z` mark that
+// atom as being removed.
+int
+IWReaction::SetRemoveAtomicNumber(atomic_number_t z) {
+  Reaction_Site& me = *this;
+  SetRemoveAtomicNumberInner(me, *(this->item(0)->root_atom(0)), z);
+  for (Sidechain_Reaction_Site* srs : _sidechains) {
+    SetRemoveAtomicNumberInner(*srs, *(srs->item(0)->root_atom(0)), z);
+  }
+
+  return 1;
+}
+
+#ifdef IdentifyUnmappedAtomsThatDisappear_NOT_IMPLEMENTED
+void
+IWReaction::IdentifyUnmappedAtomsThatDisappear(const Substructure_Atom& product_molecule, resizable_array<int>& atoms_lost) {
+}
+#endif
 
 /*
   This is complicated, because we do not know which reaction component

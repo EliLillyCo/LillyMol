@@ -297,17 +297,18 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
     m = nullptr;
   }
 
-  // If substituents are active, we need two arrays for them.
+  // If substituents are active, we need two arrays for them. If repeated
+  // Substituent specifications must match distinct sidechains, the final
+  // matoms entries track sidechains already claimed by earlier specs.
   std::unique_ptr<int[]> ring_flag;
   if (! _substituent.empty()) {
     const int matoms = target.natoms();
-    ring_flag.reset(new int[matoms + matoms]);
+    ring_flag.reset(new int[matoms + matoms + matoms]);
   }
 
   int nhits = 0;
 
-  for (int i = 0; i < nr; i++)
-  {
+  for (int i = 0; i < nr; i++) {
     const Ring * r = target.ringi(i);
 
     int rsize = r->number_elements();
@@ -357,8 +358,7 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
       int rcon   = 0;
       int rh     = 0;
       int ahc    = 0;
-      for (int j = 0; j < rsize; j++)
-      {
+      for (int j = 0; j < rsize; j++) {
         atom_number_t k = r->item(j);
   
         Target_Atom & a = target[k];
@@ -371,35 +371,38 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
         if (acon > 2)        // if only 2 connections, all nbrs in ring
           rcon += acon - 2;    // two of its neighbours must be in the ring
 
-        if (_attached_heteroatom_count.is_set())    // only compute if needed
-        {
-          for (int l = 0; l < acon; l++)
-          {
+        if (_attached_heteroatom_count.is_set()) {    // only compute if needed
+          for (int l = 0; l < acon; l++) {
             const Bond_and_Target_Atom & bata = a.other(l);
 
             const Target_Atom * n = bata.other();
 
-            if (r->contains(n->atom_number()))
+            if (r->contains(n->atom_number())) {
               continue;
+            }
 
-            if (_is_heteroatom[n->atomic_number()])
+            if (_is_heteroatom[n->atomic_number()]) {
               ahc++;
+            }
           }
         }
       }
 
-      if (_ncon.is_set() && ! _ncon.matches(rcon))
+      if (_ncon.is_set() && ! _ncon.matches(rcon)) {
         continue;
+      }
   
-      if (_attached_heteroatom_count.is_set() && ! _attached_heteroatom_count.matches(ahc))
+      if (_attached_heteroatom_count.is_set() && ! _attached_heteroatom_count.matches(ahc)) {
         continue;
+      }
   
 #ifdef DEBUG_SS_RING_MATCHES
       cerr << "rh = " << rh << " match " << _heteroatom_count.matches(rh) << '\n';
 #endif
 
-      if (_heteroatom_count.is_set() && ! _heteroatom_count.matches(rh))
+      if (_heteroatom_count.is_set() && ! _heteroatom_count.matches(rh)) {
         continue;
+      }
     }
 
     if (_fused_aromatic_neighbours.is_set()) {
@@ -437,16 +440,23 @@ Substructure_Ring_Specification::matches(Molecule_to_Match & target,
         continue;
     }
 
-    if (_environment_atom.number_elements() && ! _environment_matches(target, *r)) {
+    if (_environment_atom.number_elements() &&
+        ! _environment_matches(target, *r, matched_by_global_specs)) {
       continue;
     }
 
     if (! _substituent.empty()) {
       const int matoms = target.natoms();
       std::fill_n(ring_flag.get(), matoms, 0);
+      int* used_sidechain = nullptr;
+      if (_substituents_must_match_distinct_sidechains && _substituent.number_elements() > 1) {
+        used_sidechain = ring_flag.get() + matoms + matoms;
+        std::fill_n(used_sidechain, matoms, 0);
+      }
       r->set_vector(ring_flag.get(), 1);
       for (Substituent* s : _substituent) {
-        if (! s->Matches(target, ring_flag.get(), ring_flag.get() + matoms, matched_by_global_specs)) {
+        if (! s->Matches(target, ring_flag.get(), ring_flag.get() + matoms,
+                         matched_by_global_specs, used_sidechain)) {
           return 0;
         }
       }
@@ -536,12 +546,12 @@ Substructure_Ring_Specification::OkSpiroFusionCount(Molecule& m, const Ring& rin
 
 int
 Substructure_Ring_Specification::_environment_matches(Molecule_to_Match & target,
-                                   const Ring & r)
-{
+                                   const Ring & r,
+                                   std::unique_ptr<int[]>& matched_by_global_specs) {
   int * tmp = new_int(target.natoms()); std::unique_ptr<int[]> free_tmp(tmp);
 
   r.set_vector(tmp, 1);
-  int nhits = Substructure_Ring_Base::_environment_matches(target, tmp);
+  int nhits = Substructure_Ring_Base::_environment_matchesx(target, tmp, matched_by_global_specs);
 
 //cerr << "Substructure_Ring_Specification::_environment_matches:ring " << r <<  " nhits " << nhits << '\n';
 

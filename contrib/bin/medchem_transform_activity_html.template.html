@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>@@TITLE@@</title>
+<style>
+:root{font:15px system-ui,sans-serif;color:#243347;background:#f4f6fa}body{margin:0}header{padding:24px 30px;background:#142b43;color:white}h1{margin:0 0 8px;font-size:26px}header p{max-width:1100px;line-height:1.6;margin:6px 0}.controls{position:sticky;top:0;background:#fff;z-index:2;padding:14px 24px;border-bottom:1px solid #ccd5df;display:flex;flex-wrap:wrap;align-items:end;gap:12px}label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600}input,select,button{font:inherit;padding:7px;border:1px solid #bcc8d5;border-radius:5px}input[type=number]{width:75px}button{cursor:pointer;background:#e8eef5}main{padding:14px 24px}#status{margin:0 0 12px;color:#52647a}.row{background:#fff;border:1px solid #d8e0e9;border-radius:8px;margin:12px 0;padding:18px;display:grid;grid-template-columns:minmax(380px,1.15fr) minmax(400px,1fr);gap:18px}h2{font-size:18px;margin:0 0 10px;overflow-wrap:anywhere}.heading{display:flex;align-items:center;gap:10px}.heading input{width:18px;height:18px}.pair{display:flex;align-items:center;justify-content:center;gap:4px}.mol{width:46%;max-width:230px}.mol svg{width:100%;height:auto}.arrow{font-size:24px}.caption{font-size:12px;color:#52647a;line-height:1.6;overflow-wrap:anywhere}.evidence{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stat{padding:10px;border-radius:5px;background:#f2f5f9;line-height:1.7}.observed{border-top:3px solid #167d82}.predicted{border-top:3px solid #b56a22}.small{font-size:12px;color:#52647a}.distribution{width:100%;height:auto;display:block}details{margin-top:12px;border-top:1px solid #e2e7ee;padding-top:10px}summary{cursor:pointer;font-weight:600}.example{border-top:1px solid #e2e7ee;padding-top:10px;margin-top:10px}.legend{font-size:12px;color:#52647a}#empty{padding:30px;text-align:center}@media(max-width:950px){.row{grid-template-columns:1fr}.controls{position:static}.pair{max-width:480px}}
+</style>
+<header><h1>@@TITLE@@</h1><p>Explore activity changes by transformation. Positive means a higher numerical response, not necessarily an improvement. Experimental and predicted evidence remain separate.</p><p id="explanation"></p></header>
+<div class="controls">
+<label>Find transformation<input id="search" type="search"></label>
+<label>Min experimental records<input id="minObs" type="number" min="0" step="1" value="0"></label>
+<label>Min predicted records<input id="minPred" type="number" min="0" step="1" value="0"></label>
+<label>Count filters<select id="match"><option value="all">Both requirements</option><option value="any">Either active requirement</option></select></label>
+<label>Rank using<select id="source"><option value="observed">Experimental</option><option value="predicted">Predicted</option></select></label>
+<label>Measure<select id="metric"><option value="median">Median change</option><option value="mean">Mean change</option><option value="q25">25th percentile</option><option value="q75">75th percentile</option><option value="positive">Fraction increasing</option><option value="negative">Fraction decreasing</option><option value="n">Record count</option><option value="parents">Distinct starting molecules</option></select></label>
+<label>Order<select id="direction"><option value="-1">Higher first</option><option value="1">Lower first</option></select></label><button id="export" title="Export all shortlisted transformations, including hidden rows">Export shortlist CSV</button>
+</div>
+<main><p id="status" role="status"></p><div id="rows"></div><p id="empty" hidden>No transformations meet these filters.</p></main>
+<script id="data" type="application/json">@@DATA@@</script>
+<script>
+'use strict';
+const DATA=JSON.parse(document.getElementById('data').textContent);
+const $=id=>document.getElementById(id), selected=new Set();
+const fmt=v=>v===undefined||v===null?'—':Number(v).toLocaleString(undefined,{maximumSignificantDigits:4});
+function el(tag,text,cls){const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x;}
+function svgEl(tag,attrs){const x=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))x.setAttribute(k,v);return x;}
+function plot(row){
+ const s=svgEl('svg',{viewBox:'0 0 500 160',role:'img','aria-label':`Activity change distributions for ${row.name}`});s.classList.add('distribution');
+ const x=v=>35+(v/DATA.extent+1)*220;
+ if(DATA.neutral_width>0){const w=Math.min(DATA.neutral_width,DATA.extent);s.append(svgEl('rect',{x:x(-w),y:4,width:x(w)-x(-w),height:128,fill:'#eef1f5'}));}
+ s.append(svgEl('line',{x1:x(0),x2:x(0),y1:8,y2:132,stroke:'#64748b','stroke-dasharray':'3 3'}));
+ for(const [source,y,color]of [['observed',48,'#167d82'],['predicted',112,'#b56a22']]){
+  const d=row[source];s.append(svgEl('line',{x1:35,x2:475,y1:y,y2:y,stroke:'#cbd5e1'}));
+  if(source==='observed'&&d.dots.length){
+   const occupied=new Map();for(const value of d.dots){const bucket=Math.round(x(value)/5),level=occupied.get(bucket)||0;occupied.set(bucket,level+1);s.append(svgEl('circle',{cx:x(value),cy:y-5-(level%5)*6,r:2.7,fill:color,opacity:.8}));}
+  }else{const peak=Math.max(1,...d.hist);d.hist.forEach((n,i)=>{if(n){const bar=svgEl('rect',{x:35+i*11,y:y-35*n/peak,width:10,height:35*n/peak,fill:color,opacity:.75});const title=svgEl('title',{});title.textContent=`${n} records in this interval`;bar.append(title);s.append(bar);}});}
+  if(d.n)s.append(svgEl('line',{x1:x(d.median),x2:x(d.median),y1:y-39,y2:y+4,stroke:color,'stroke-width':2}));
+  const text=svgEl('text',{x:35,y:y-43,fill:color,'font-size':11});text.textContent=`${source==='observed'?'Experimental':'Predicted'} · ${d.n} records`;s.append(text);
+ }
+ for(const [value,anchor]of [[-DATA.extent,'start'],[0,'middle'],[DATA.extent,'end']]){const t=svgEl('text',{x:x(value),y:153,'text-anchor':anchor,'font-size':11,fill:'#52647a'});t.textContent=fmt(value);s.append(t);}
+ return s;
+}
+function pair(example){
+ const box=el('div',undefined,'pair');
+ for(const field of ['before_svg','after_svg']){if(field==='after_svg')box.append(el('span','→','arrow'));const image=el('div',undefined,'mol');image.innerHTML=DATA.drawings[example[field]];box.append(image);}
+ return box;
+}
+function caption(e){
+ let text=`${e.source==='observed'?'Experimental':'Predicted'} example · ${e.parent} → ${e.product_id||'generated product'} · product atoms: ${e.atoms}. Starting activity ${fmt(e.starting_activity)}.`;
+ if(e.ambiguous)text+=' Several products share this prediction ID; a score cannot be assigned uniquely to this pair.';
+ else if(e.delta!==null)text+=` Product ${e.source==='observed'?'activity':'mean predicted activity'} ${fmt(e.product_activity)}; change ${fmt(e.delta)}.`;
+ return el('div',text,'caption');
+}
+function evidence(d,label,cls){const x=el('div',undefined,`stat ${cls}`);x.append(el('strong',label),el('div',`${d.n} records · ${d.parents} starting molecules`));if(d.n){x.append(el('div',`Mean ${fmt(d.mean)} · Median ${fmt(d.median)}`),el('div',`Middle 50%: ${fmt(d.q25)} to ${fmt(d.q75)}`),el('div',`Range: ${fmt(d.min)} to ${fmt(d.max)}`),el('div',`Increase ${fmt(100*d.positive)}% · Decrease ${fmt(100*d.negative)}%`));}return x;}
+function card(row){
+ const box=el('article',undefined,'row'),left=el('div'),right=el('div'),heading=el('div',undefined,'heading'),checkbox=el('input');checkbox.type='checkbox';checkbox.checked=selected.has(row.name);checkbox.setAttribute('aria-label',`Shortlist ${row.name}`);checkbox.onchange=()=>{if(checkbox.checked)selected.add(row.name);else selected.delete(row.name);updateStatus();};heading.append(checkbox,el('h2',row.name));left.append(heading);
+ if(row.examples.length){left.append(pair(row.examples[0]),caption(row.examples[0]));if(row.examples.length>1){const details=el('details'),summary=el('summary',`More examples (${row.examples.length-1}; cap ${DATA.max_examples} including the main pair)`);details.append(summary);details.addEventListener('toggle',()=>{if(!details.open||details.dataset.loaded)return;details.dataset.loaded='1';for(const e of row.examples.slice(1)){const entry=el('div',undefined,'example');entry.append(pair(e),caption(e));details.append(entry);}});left.append(details);}}
+ const stats=el('div',undefined,'evidence');stats.append(evidence(row.observed,'Experimental','observed'),evidence(row.predicted,'Predicted','predicted'));right.append(stats,plot(row),el('div','Shared scale across all rows. Vertical marks: medians. Histogram heights are normalized within each track; compare counts separately.','legend'));box.append(left,right);return box;
+}
+let visible=[];
+function updateStatus(){$('status').textContent=`${visible.length} of ${DATA.rows.length} transformations · ${selected.size} shortlisted`;}
+function render(){
+ const search=$('search').value.toLowerCase(),minObs=Math.max(0,Number($('minObs').value)||0),minPred=Math.max(0,Number($('minPred').value)||0),source=$('source').value,metric=$('metric').value,direction=Number($('direction').value);
+ visible=DATA.rows.filter(r=>{if(!r.name.toLowerCase().includes(search))return false;const tests=[];if(minObs>0)tests.push(r.observed.n>=minObs);if(minPred>0)tests.push(r.predicted.n>=minPred);return !tests.length||($('match').value==='all'?tests.every(Boolean):tests.some(Boolean));});
+ visible.sort((a,b)=>{const x=a[source][metric],y=b[source][metric];if(x===undefined&&y!==undefined)return 1;if(y===undefined&&x!==undefined)return -1;return (x===undefined?0:direction*(x-y))||(a.name<b.name?-1:a.name>b.name?1:0);});
+ const fragment=document.createDocumentFragment();for(const row of visible)fragment.append(card(row));$('rows').replaceChildren(fragment);$('empty').hidden=visible.length!==0;updateStatus();
+}
+for(const id of ['search','minObs','minPred','match','source','metric','direction'])$(id).addEventListener('input',render);
+$('explanation').textContent=`Predicted change = predicted product activity − measured starting activity. Increase/decrease fractions exclude changes within ±${fmt(DATA.neutral_width)}. Examples are capped at ${DATA.max_examples} pairs per transformation and selected by smallest product atom count, not by effect. ${DATA.unscored_products} unscored product records were excluded.`;
+$('export').onclick=()=>{const fields=['transformation','observed_n','observed_parents','observed_mean','observed_median','observed_fraction_increase','observed_fraction_decrease','predicted_n','predicted_parents','predicted_mean','predicted_median','predicted_fraction_increase','predicted_fraction_decrease'];const csv=[fields];for(const r of DATA.rows.filter(r=>selected.has(r.name))){const values=[r.name];for(const source of ['observed','predicted'])for(const key of ['n','parents','mean','median','positive','negative'])values.push(r[source][key]??'');csv.push(values);}const quote=x=>`"${String(x).replaceAll('"','""')}"`;const blob=new Blob([csv.map(r=>r.map(quote).join(',')).join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'}),a=el('a');a.href=URL.createObjectURL(blob);a.download='transformation_shortlist.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+render();
+</script></html>

@@ -107,7 +107,7 @@ Element_to_Remove::_process(Molecule& m) {
     int icon = m.ncon(i);
     if (_maxcon_to_remove < 0 || (_maxcon_to_remove >= 0 && icon <= _maxcon_to_remove)) {
       atom_number_t a1, a2;
-      a1 = a2 = INVALID_ATOM_NUMBER;
+      a1 = a2 = kInvalidAtomNumber;
       if (2 == icon && _add_bond_after_two_connected_removals) {
         a1 = m.other(i, 0);
         a2 = m.other(i, 1);
@@ -119,7 +119,7 @@ Element_to_Remove::_process(Molecule& m) {
         }
       }
       m.remove_atom(i);
-      if (INVALID_ATOM_NUMBER != a1) {
+      if (kInvalidAtomNumber != a1) {
         m.add_bond(a1, a2, SINGLE_BOND);
       }
 
@@ -164,7 +164,7 @@ Element_to_Remove::_process(Molecule& m, const int* process_these, int id) {
     int icon = m.ncon(i);
     if (_maxcon_to_remove < 0 || (_maxcon_to_remove >= 0 && icon <= _maxcon_to_remove)) {
       atom_number_t a1, a2;
-      a1 = a2 = INVALID_ATOM_NUMBER;
+      a1 = a2 = kInvalidAtomNumber;
       if (2 == icon && _add_bond_after_two_connected_removals) {
         a1 = m.other(i, 0);
         a2 = m.other(i, 1);
@@ -177,7 +177,7 @@ Element_to_Remove::_process(Molecule& m, const int* process_these, int id) {
       }
 
       m.remove_atom(i);
-      if (INVALID_ATOM_NUMBER != a1) {
+      if (kInvalidAtomNumber != a1) {
         m.add_bond(a1, a2, SINGLE_BOND);
       }
 
@@ -244,7 +244,7 @@ Elements_to_Remove::construct_from_command_line(Command_Line& cl, int verbose,
         }*/
 
     if ("help" == ele) {
-      cerr << "Removes elements, specify atomic symbol or atomic number\n";
+      cerr << "Elements_to_Remove:removes elements, must specify atoms to be removed\n";
       display_element_matcher_syntax(cerr);
       exit(0);
     }

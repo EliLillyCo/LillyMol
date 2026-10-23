@@ -1,0 +1,20 @@
+name: "nitro_to_sulfonamide"
+scaffold {
+  smarts: "[ND3](=O)=O"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  change_element {
+    atom: 0
+    element: "S"
+  }
+}
+sidechain {
+  id: 1
+  reagent: "N"
+  smarts: "N"
+  join {
+    a1: 0
+    a2: 0
+  }
+}

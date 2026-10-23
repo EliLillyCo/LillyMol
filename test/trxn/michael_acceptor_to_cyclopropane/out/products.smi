@@ -1,0 +1,10 @@
+O=C(NC)C1CC1 terminal_acrylamide +
+O=C(OC)C1CC1 enoate +
+O=C(C)C1CC1 enone +
+O=CC1CC1 enal +
+CC1CC1C(=O)NC E_input +
+CC1CC1C(=O)NC Z_input +
+O=C(NC)C1(C)CC1 alpha_substituted +
+O=C(N[C@H](C)F)C1CC1 remote_chiral +
+O=C(NCC/C=C/C)C1CC1 remote_alkene_geometry +
+C/C=C/C1CC1C(=O)NC conjugated_diene +

@@ -61,6 +61,7 @@ static float relative_error_threshold = static_cast<float>(0.0);
 static int range_normal_relative_error = 0;
 
 static char input_separator = ' ';
+static char activity_data_file_input_separator = ' ';
 
 static IWString activity_name;
 
@@ -186,7 +187,8 @@ Can have the experimental data in a separate file, or as a column in the predict
  -C <fname>     write slope and intercept for line of best fit to <fname>.  Enter '-C help' for info.
  -H <fname>     write coverage data - prediction error vs coverage - to <fname>.txt. Also creates <fname>.jl for plotting.
  -Y ...         miscellaneous and obscure options, enter '-Y help' for info
- -i <char>      input column separator (default ' ') use '-i tab' for tsv
+ -i <char>      input column separator in predicted file (default ' ') use '-i tab' for tsv
+    expt=<char> input column separator in -E file.
  -v             verbose output
 )";
   // clang-format on
@@ -461,7 +463,7 @@ establish_column_titles(const const_IWSubstring& buffer, int experimental_column
   int col = 0;
   int i = 0;
   const_IWSubstring token;
-  while (buffer.nextword(token, i, input_separator)) {
+  while (buffer.NextWord(token, i, input_separator)) {
     column_titles[col] = token;
 
     // expt column doesn't really mean the same thing when just a name cross reference.
@@ -599,7 +601,7 @@ Predicted_Values::parse_buffer(const const_IWSubstring& buffer, int experimental
   IWString token;
   int col = 0;
 
-  while (buffer.nextword(token, i, input_separator)) {
+  while (buffer.NextWord(token, i, input_separator)) {
     int prediction_index = -1;
 
     if (col == experimental_column) {
@@ -1133,7 +1135,7 @@ compute_b_squared(int number_records, int experimental_column,
       n++;
     }
   } else {
-    set_vector(tmp1, number_records, static_cast<float>(0.0));
+    std::fill_n(tmp1, number_records, static_cast<float>(0.0));
     n = number_records;
   }
 
@@ -1603,9 +1605,12 @@ ReportMSRDefaults(uint32_t number_records, const float* expt, const float* pred,
 
   cerr << "MSR " << msr << " all predictions average " << ave << " within " << m << '\n';
 
+  static std::random_device rd;
+  static std::mt19937 rng(rd());
+
   std::copy_n(pred, number_records, tmp.get());
   for (int i = 0; i < 3; ++i) {
-    std::random_shuffle(tmp.get(), tmp.get() + number_records);
+    std::shuffle(tmp.get(), tmp.get() + number_records, rng);
     float m = WithinRange(number_records, expt, tmp.get(), msr);
     cerr << " shuffled " << m << '\n';
   }
@@ -2301,7 +2306,7 @@ read_id_activity_hash_record(const const_IWSubstring& buffer,
   int i = 0;
   IWString id;
 
-  if (!buffer.nextword(id, i, input_separator)) {
+  if (! buffer.NextWord(id, i, activity_data_file_input_separator)) {
     cerr << "Cannot extract identifier from input '" << buffer << "'\n";
     return 0;
   }
@@ -2312,21 +2317,21 @@ read_id_activity_hash_record(const const_IWSubstring& buffer,
 
   IWString act;
 
-  if (!buffer.nextword(act, i, input_separator)) {
+  if (! buffer.NextWord(act, i, activity_data_file_input_separator)) {
     cerr << "Cannot extract second token from record '" << buffer << "'\n";
     return 0;
   }
 
   if (experimental_column > 1) {
-    for (auto col = 1; col < experimental_column; ++col) {
-      if (!buffer.nextword(act, i, input_separator)) {
+    for (int col = 1; col < experimental_column; ++col) {
+      if (! buffer.NextWord(act, i, activity_data_file_input_separator)) {
         cerr << "Cannot find experimental data column '" << buffer << "'\n";
         return 0;
       }
     }
   }
 
-  if (0 == id_activity_hash.size()) {
+  if (id_activity_hash.empty()) {
     activity_name = act;
   }
 
@@ -2533,7 +2538,6 @@ parameters are set and will apply the inverse equation to the predicted values.
 )";
 
   exit(0);
-
 }
 
 static int
@@ -2548,13 +2552,24 @@ iwstats(int argc, char** argv) {
   verbose = cl.option_count('v');
 
   if (cl.option_present('i')) {
-    IWString i = cl.string_value('i');
-    if (!char_name_to_char(i)) {
-      cerr << "Unrecognised input separator specification '" << i << "'\n";
-      return 2;
+    IWString opt;
+    for (int i = 0; cl.value('i', opt, i); ++i) {
+      if (opt.starts_with("expt=")) {
+        opt.remove_leading_chars(5);
+        if (! char_name_to_char(opt)) {
+          cerr << "Unrecognised experimental file input separator '" << opt << "'\n";
+          return 1;
+        }
+        activity_data_file_input_separator = opt[0];
+      }
+      else {
+        if (! char_name_to_char(opt)) {
+          cerr << "Unrecognised input separator specification '" << opt << "'\n";
+          return 1;
+        }
+        input_separator = opt[0];
+      }
     }
-
-    input_separator = i[0];
   }
 
   if (cl.option_present('j')) {
@@ -3090,6 +3105,9 @@ iwstats(int argc, char** argv) {
 
   if (cl.option_present('C')) {
     fname_for_correction_formula = cl.string_value('C');
+    if (fname_for_correction_formula == "help") {
+      DisplayDashCOptions(cerr);
+    }
 
     if (verbose) {
       cerr << "Formula for linear corrections written to '" << fname_for_correction_formula << "'\n";

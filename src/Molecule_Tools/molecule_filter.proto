@@ -10,66 +10,126 @@ message Requirements {
   optional int32 max_natoms = 2;
 
   optional int32 min_heteroatom_count = 3;
+  optional int32 max_heteroatom_count = 4;
 
-  optional float min_heteroatom_fraction = 4;
-  optional float max_heteroatom_fraction = 5;
+  optional float min_heteroatom_fraction = 5;
+  optional float max_heteroatom_fraction = 6;
 
-  optional int32 min_nrings = 6;
-  optional int32 max_nrings = 7;
+  optional int32 min_nrings = 7;
+  optional int32 max_nrings = 8;
 
-  optional int32 min_aromatic_ring_count = 8;
-  optional int32 max_aromatic_ring_count = 9;
+  optional int32 min_aromatic_ring_count = 9;
+  optional int32 max_aromatic_ring_count = 10;
 
-  optional int32 min_aliphatic_ring_count = 10;
-  optional int32 max_aliphatic_ring_count = 11;
+  optional int32 min_aliphatic_ring_count = 11;
+  optional int32 max_aliphatic_ring_count = 12;
 
-  optional int32 min_rotatable_bonds = 12;
-  optional int32 max_rotatable_bonds = 13;
+  optional int32 min_rotatable_bonds = 13;
+  optional int32 max_rotatable_bonds = 14;
 
-  optional int32 max_ring_system_size = 14;
+  optional int32 min_ring_system_size = 15;
+  optional int32 max_ring_system_size = 16;
 
-  optional int32 max_aromatic_rings_in_system = 15;
+  optional int32 min_aromatic_rings_in_system = 17;
+  optional int32 max_aromatic_rings_in_system = 18;
 
-  optional float min_tpsa = 16;
-  optional float max_tpsa = 17;
+  optional float min_tpsa = 19;
+  optional float max_tpsa = 20;
 
-  optional float min_alogp = 18;
-  optional float max_alogp = 19;
+  optional float min_alogp = 21;
+  optional float max_alogp = 22;
 
-  optional float min_xlogp = 20;
-  optional float max_xlogp = 21;
+  optional float min_xlogp = 23;
+  optional float max_xlogp = 24;
 
   // Lipinski definitions
-  optional int32 min_hba = 22;
-  optional int32 max_hba = 23;
-  optional int32 min_hbd = 24;
-  optional int32 max_hbd = 25;
+  optional int32 min_hba = 25;
+  optional int32 max_hba = 26;
+  optional int32 min_hbd = 27;
+  optional int32 max_hbd = 28;
 
   // Note that this does NOT span spiro fusions.
-  optional int32 largest_ring_size = 26;
+  optional int32 min_largest_ring_size = 29;
+  optional int32 max_largest_ring_size = 30;
 
   // These are not implemented. Likely more efficient to
   // run this tool and pipe the results to tsubstructure.
   // If there were a small number of queries, this might make
   // sense. For now, not implemented.
-  repeated string required_smarts = 27;
-  repeated string must_not_have_smarts = 28;
+  repeated string required_smarts = 31;
+  repeated string must_not_have_smarts = 32;
 
-  optional bool exclude_non_organic = 29;
-  optional bool exclude_isotopes = 30;
+  optional bool exclude_non_organic = 33;
+  optional bool exclude_isotopes = 34;
 
-  optional int32 max_halogen_count = 31;
+  optional int32 min_halogen_count = 35;
+  optional int32 max_halogen_count = 36;
 
   // Longest distance between any pair of atoms.
   // Requires computation of distance matrix.
-  optional int32 max_distance = 32;
+  optional int32 min_distance = 37;
+  optional int32 max_distance = 38;
 
-  optional int32 min_sp3_carbon = 33;
+  optional int32 min_sp3_carbon = 39;
+  optional int32 max_sp3_carbon = 40;
 
-  optional float max_aromatic_density = 34;
+  optional float min_sp3_carbon_fraction = 41;
+  optional float max_sp3_carbon_fraction = 42;
 
-  optional int32 max_chiral = 35;
+  optional float min_aromatic_density = 43;
+  optional float max_aromatic_density = 44;
 
-  optional int32 max_number_fragments = 36;
+  optional int32 min_chiral = 45;
+  optional int32 max_chiral = 46;
+
+  optional int32 min_number_fragments = 47;
+  optional int32 max_number_fragments = 48;
+
+  // Optional utility functions. Not used by the filtering mode.
+  repeated Utility utility = 49;
+  optional UtilityCombination utility_combination = 50;
+
+  // Average molecular weight, hydrogens included.
+  // Note that unlike atom count, this is not free - it needs the element
+  // count and the implicit hydrogen count. It is only computed if one of
+  // these is set, or if an 'amw' Utility is present.
+  optional float min_amw = 51;
+  optional float max_amw = 52;
+
+  // RDKit compatible hydrogen bond counts. These are NOT Lipinski counts -
+  // they use a refined definition that excludes amide nitrogen and includes
+  // sulfur. Use min_hba/max_hba for the rule of five.
+  optional int32 min_hba_rdkit = 53;
+  optional int32 max_hba_rdkit = 54;
+  optional int32 min_hbd_rdkit = 55;
+  optional int32 max_hbd_rdkit = 56;
 }
 
+message Point {
+  // X values define the domain of the utility function.
+  float x = 1;
+  // Y values will be between 0 and 1.
+  float y = 2;
+}
+
+message Utility {
+  // The name of the feature, 'natoms', 'nrings'..
+  optional string name = 1;
+
+  // When Utility values are combined, they can each have their own weight.
+  optional float weight = 2;
+
+  // Must be at least two of these in order to form a line. They do not
+  // to be ordered by X, but most people using this would choose to do that.
+  // The tool will sort by X values if needed.
+  repeated Point point = 3;
+}
+
+enum UtilityCombination {
+  UTILITY_COMBINATION_UNSPECIFIED = 0;
+  UTILITY_COMBINATION_WEIGHTED_AVERAGE = 1;
+  UTILITY_COMBINATION_WEIGHTED_SUM = 2;
+  UTILITY_COMBINATION_PRODUCT = 3;
+  UTILITY_COMBINATION_MIN = 4;
+  UTILITY_COMBINATION_MAX = 5;
+}

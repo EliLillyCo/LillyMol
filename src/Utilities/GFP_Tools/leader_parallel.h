@@ -5,6 +5,7 @@
 #include <memory>
 #include <random>
 
+#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/iwmisc/iwre2.h"
 #include "Foundational/iwmisc/set_or_unset.h"
 
@@ -16,8 +17,7 @@
 
 typedef float score_t;
 
-class GFP_PL : public IW_General_Fingerprint
-{
+class GFP_PL : public IW_General_Fingerprint {
   private:
     similarity_type_t _distance;
 

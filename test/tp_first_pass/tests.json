@@ -1,0 +1,13 @@
+{
+  "executable": "tp_first_pass",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-C 20 -i smi -o smi -a -L bad0 -S ok0 #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package dicer_conformers;
+
+enum AtomRole {
+  ATOM_ROLE_UNSPECIFIED = 0;
+  FRAGMENT_HEAVY = 1;
+  ATTACHMENT = 2;
+}
+
+message Conformer {
+  // xyz triples in the atom order of `smiles`.
+  repeated float xyz = 1 [packed = true];
+}
+
+// A hydrogen-suppressed dicer fragment and its distinct 3D conformations.
+message FragmentConformerSet {
+  // Hydrogen-suppressed unique smiles of the dicer fragment alone.
+  string usmi = 1;
+
+  // Coordinate-free smiles of the augmented molecule. Attachment atoms are
+  // bonded to the retained fragment atoms.
+  string smiles = 2;
+
+  string first_parent = 3;
+
+  // Sum of DicerFragment.n over all input records in this group.
+  uint64 occurrences = 4;
+
+  // Number of input geometries considered, including duplicates.
+  uint64 geometries_seen = 5;
+
+  repeated AtomRole atom_role = 6 [packed = true];
+  repeated Conformer conformer = 7;
+
+  // For each atom encountered in `smiles`, its index in the coordinate and
+  // atom_role arrays.
+  repeated uint32 smiles_atom_order = 8 [packed = true];
+}

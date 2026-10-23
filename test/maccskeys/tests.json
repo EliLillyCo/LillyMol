@@ -1,9 +1,41 @@
 {
   "executable": "maccskeys",
   "test": [
-      {
-        "name": "case_1",
-        "args": [ "#{indir}/test.smi" ]
-      }
+    {
+      "name": "case_1",
+      "args": [
+        "#{indir}/test.smi"
+      ]
+    },
+    {
+      "name": "fingerprint_output",
+      "args": [
+        "-J FPMK #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "filter_mode",
+      "args": [
+        "-J FPMK -f #{indir}/in.tdt"
+      ]
+    },
+    {
+      "name": "statistics",
+      "args": [
+        "-S stats -n #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "non_colliding_fingerprint",
+      "args": [
+        "-J NC=NCFPMK #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "fixed_counted_fingerprint",
+      "args": [
+        "-J FC=FCFPMK #{indir}/in.smi"
+      ]
+    }
   ]
 }

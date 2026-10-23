@@ -1,0 +1,45 @@
+{
+  "executable": "tp1_summarise",
+  "test": [
+    {
+      "name": "markdown_combined",
+      "args": [
+        "-n -k -B #{indir}/bad -T tfile -M -b #{indir}/ok.smi"
+      ],
+      "ignore_file": [
+        "stderr",
+        "stdout"
+      ]
+    },
+    {
+      "name": "latex_combined",
+      "args": [
+        "-n -k -B #{indir}/bad -T tfile -X -b #{indir}/ok.smi"
+      ],
+      "ignore_file": [
+        "stderr",
+        "stdout"
+      ]
+    },
+    {
+      "name": "asciidoc_combined",
+      "args": [
+        "-n -k -B #{indir}/bad -T tfile -A -b #{indir}/ok.smi"
+      ],
+      "ignore_file": [
+        "stderr",
+        "stdout"
+      ]
+    },
+    {
+      "name": "markdown_single",
+      "args": [
+        "-n -k -B #{indir}/bad -T tfile -M #{indir}/ok.smi"
+      ],
+      "ignore_file": [
+        "stderr",
+        "stdout"
+      ]
+    }
+  ]
+}

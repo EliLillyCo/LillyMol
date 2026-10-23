@@ -1,0 +1,448 @@
+Key statistics for 150 molecules
+Key 0 19 molecules 131 misses max hits = 6 ave = 2.210526316
+Key 1 24 molecules 126 misses max hits = 3 ave = 1.416666667
+Key 2 44 molecules 106 misses max hits = 4 ave = 1.386363636
+Key 3 50 molecules 100 misses max hits = 6 ave = 1.36
+Key 4 20 molecules 130 misses max hits = 2 ave = 1.5
+Key 5 33 molecules 117 misses max hits = 2 ave = 1.090909091
+Key 6 86 molecules 64 misses max hits = 4 ave = 1.779069767
+Key 7 18 molecules 132 misses max hits = 4 ave = 1.722222222
+Key 8 11 molecules 139 misses max hits = 1 ave = 1
+Key 9 8 molecules 142 misses max hits = 4 ave = 1.75
+Key 10 40 molecules 110 misses max hits = 3 ave = 1.175
+Key 11 4 molecules 146 misses max hits = 1 ave = 1
+Key 12 38 molecules 112 misses max hits = 7 ave = 2.157894737
+Key 13 64 molecules 86 misses max hits = 4 ave = 1.4375
+Key 14 29 molecules 121 misses max hits = 4 ave = 1.24137931
+Key 15 38 molecules 112 misses max hits = 3 ave = 1.473684211
+Key 16 27 molecules 123 misses max hits = 3 ave = 1.333333333
+Key 17 17 molecules 133 misses max hits = 1 ave = 1
+Key 18 79 molecules 71 misses max hits = 7 ave = 1.746835443
+Key 19 6 molecules 144 misses max hits = 1 ave = 1
+Key 20 34 molecules 116 misses max hits = 8 ave = 2.529411765
+Key 21 26 molecules 124 misses max hits = 2 ave = 1.230769231
+Key 22 7 molecules 143 misses max hits = 1 ave = 1
+Key 23 4 molecules 146 misses max hits = 1 ave = 1
+Key 24 9 molecules 141 misses max hits = 2 ave = 1.111111111
+Key 25 8 molecules 142 misses max hits = 4 ave = 1.5
+Key 26 11 molecules 139 misses max hits = 2 ave = 1.272727273
+Key 27 19 molecules 131 misses max hits = 4 ave = 1.736842105
+Key 28 13 molecules 137 misses max hits = 4 ave = 1.461538462
+Key 29 15 molecules 135 misses max hits = 2 ave = 1.133333333
+Key 30 11 molecules 139 misses max hits = 1 ave = 1
+Key 31 18 molecules 132 misses max hits = 4 ave = 2.333333333
+Key 32 49 molecules 101 misses max hits = 4 ave = 1.285714286
+Key 33 11 molecules 139 misses max hits = 2 ave = 1.181818182
+Key 34 25 molecules 125 misses max hits = 2 ave = 1.2
+Key 35 22 molecules 128 misses max hits = 8 ave = 2.909090909
+Key 36 16 molecules 134 misses max hits = 4 ave = 1.3125
+Key 37 5 molecules 145 misses max hits = 1 ave = 1
+Key 38 33 molecules 117 misses max hits = 3 ave = 1.242424242
+Key 39 16 molecules 134 misses max hits = 2 ave = 1.125
+Key 40 14 molecules 136 misses max hits = 2 ave = 1.142857143
+Key 41 51 molecules 99 misses max hits = 4 ave = 1.352941176
+Key 42 29 molecules 121 misses max hits = 6 ave = 2.068965517
+Key 43 14 molecules 136 misses max hits = 8 ave = 2.071428571
+Key 44 85 molecules 65 misses max hits = 5 ave = 1.988235294
+Key 45 95 molecules 55 misses max hits = 6 ave = 2.442105263
+Key 46 9 molecules 141 misses max hits = 3 ave = 1.333333333
+Key 47 12 molecules 138 misses max hits = 2 ave = 1.583333333
+Key 48 9 molecules 141 misses max hits = 2 ave = 1.111111111
+Key 49 34 molecules 116 misses max hits = 3 ave = 1.264705882
+Key 50 120 molecules 30 misses max hits = 10 ave = 2.516666667
+Key 51 2 molecules 148 misses max hits = 2 ave = 1.5
+Key 52 20 molecules 130 misses max hits = 2 ave = 1.15
+Key 53 17 molecules 133 misses max hits = 8 ave = 2.176470588
+Key 54 22 molecules 128 misses max hits = 4 ave = 1.545454545
+Key 55 3 molecules 147 misses max hits = 1 ave = 1
+Key 56 6 molecules 144 misses max hits = 2 ave = 1.333333333
+Key 57 40 molecules 110 misses max hits = 3 ave = 1.25
+Key 58 114 molecules 36 misses max hits = 10 ave = 2.236842105
+Key 59 20 molecules 130 misses max hits = 8 ave = 1.65
+Key 60 17 molecules 133 misses max hits = 6 ave = 2.352941176
+Key 61 27 molecules 123 misses max hits = 2 ave = 1.111111111
+Key 62 56 molecules 94 misses max hits = 12 ave = 2.857142857
+Key 63 7 molecules 143 misses max hits = 4 ave = 2.428571429
+Key 64 20 molecules 130 misses max hits = 2 ave = 1.25
+Key 65 70 molecules 80 misses max hits = 10 ave = 3.185714286
+Key 66 32 molecules 118 misses max hits = 2 ave = 1.15625
+Key 67 10 molecules 140 misses max hits = 2 ave = 1.1
+Key 68 32 molecules 118 misses max hits = 6 ave = 1.625
+Key 69 20 molecules 130 misses max hits = 4 ave = 1.45
+Key 70 9 molecules 141 misses max hits = 2 ave = 1.222222222
+Key 71 16 molecules 134 misses max hits = 4 ave = 1.6875
+Key 72 35 molecules 115 misses max hits = 9 ave = 2
+Key 73 22 molecules 128 misses max hits = 4 ave = 1.954545455
+Key 74 33 molecules 117 misses max hits = 6 ave = 1.878787879
+Key 75 49 molecules 101 misses max hits = 3 ave = 1.326530612
+Key 76 141 molecules 9 misses max hits = 14 ave = 4.964539007
+Key 77 53 molecules 97 misses max hits = 24 ave = 3.886792453
+Key 78 76 molecules 74 misses max hits = 9 ave = 2.539473684
+Key 79 65 molecules 85 misses max hits = 6 ave = 1.830769231
+Key 80 42 molecules 108 misses max hits = 8 ave = 2.404761905
+Key 81 37 molecules 113 misses max hits = 8 ave = 1.891891892
+Key 82 30 molecules 120 misses max hits = 4 ave = 1.2
+Key 83 64 molecules 86 misses max hits = 3 ave = 1.25
+Key 84 23 molecules 127 misses max hits = 2 ave = 1.130434783
+Key 85 57 molecules 93 misses max hits = 3 ave = 1.403508772
+Key 86 46 molecules 104 misses max hits = 3 ave = 1.456521739
+Key 87 1 molecules 149 misses max hits = 1
+Key 88 39 molecules 111 misses max hits = 4 ave = 1.333333333
+Key 89 39 molecules 111 misses max hits = 9 ave = 1.923076923
+Key 90 43 molecules 107 misses max hits = 9 ave = 2.186046512
+Key 91 43 molecules 107 misses max hits = 8 ave = 2.279069767
+Key 92 55 molecules 95 misses max hits = 4 ave = 1.345454545
+Key 93 45 molecules 105 misses max hits = 4 ave = 1.577777778
+Key 94 44 molecules 106 misses max hits = 4 ave = 1.954545455
+Key 95 57 molecules 93 misses max hits = 4 ave = 1.771929825
+Key 96 68 molecules 82 misses max hits = 6 ave = 1.323529412
+Key 97 67 molecules 83 misses max hits = 6 ave = 2.268656716
+Key 98 72 molecules 78 misses max hits = 3 ave = 1.291666667
+Key 99 32 molecules 118 misses max hits = 3 ave = 1.3125
+Key 100 66 molecules 84 misses max hits = 7 ave = 2.303030303
+Key 101 8 molecules 142 misses max hits = 1 ave = 1
+Key 102 35 molecules 115 misses max hits = 6 ave = 2.428571429
+Key 103 31 molecules 119 misses max hits = 4 ave = 1.35483871
+Key 104 45 molecules 105 misses max hits = 6 ave = 1.933333333
+Key 105 65 molecules 85 misses max hits = 12 ave = 3.2
+Key 106 41 molecules 109 misses max hits = 4 ave = 1.341463415
+Key 107 52 molecules 98 misses max hits = 4 ave = 1.557692308
+Key 108 36 molecules 114 misses max hits = 8 ave = 2.388888889
+Key 109 39 molecules 111 misses max hits = 4 ave = 1.615384615
+Key 110 62 molecules 88 misses max hits = 4 ave = 1.5
+Key 111 71 molecules 79 misses max hits = 7 ave = 2.563380282
+Key 112 59 molecules 91 misses max hits = 3 ave = 1.322033898
+Key 113 50 molecules 100 misses max hits = 4 ave = 1.6
+Key 114 21 molecules 129 misses max hits = 2 ave = 1.19047619
+Key 115 34 molecules 116 misses max hits = 7 ave = 1.941176471
+Key 116 37 molecules 113 misses max hits = 7 ave = 2.108108108
+Key 117 68 molecules 82 misses max hits = 4 ave = 1.632352941
+Key 118 70 molecules 80 misses max hits = 15 ave = 2.871428571
+Key 119 82 molecules 68 misses max hits = 6 ave = 1.670731707
+Key 120 115 molecules 35 misses max hits = 6 ave = 2.27826087
+Key 121 98 molecules 52 misses max hits = 6 ave = 1.948979592
+Key 122 54 molecules 96 misses max hits = 10 ave = 2.166666667
+Key 123 41 molecules 109 misses max hits = 4 ave = 1.219512195
+Key 124 53 molecules 97 misses max hits = 7 ave = 2.264150943
+Key 125 46 molecules 104 misses max hits = 2 ave = 1.108695652
+Key 126 57 molecules 93 misses max hits = 4 ave = 1.456140351
+Key 127 37 molecules 113 misses max hits = 4 ave = 1.351351351
+Key 128 62 molecules 88 misses max hits = 24 ave = 4.935483871
+Key 129 64 molecules 86 misses max hits = 14 ave = 4.484375
+Key 130 28 molecules 122 misses max hits = 4 ave = 1.321428571
+Key 131 108 molecules 42 misses max hits = 8 ave = 2.092592593
+Key 132 74 molecules 76 misses max hits = 10 ave = 2.567567568
+Key 133 61 molecules 89 misses max hits = 4 ave = 1.62295082
+Key 134 61 molecules 89 misses max hits = 6 ave = 1.885245902
+Key 135 21 molecules 129 misses max hits = 6 ave = 1.619047619
+Key 136 100 molecules 50 misses max hits = 8 ave = 1.92
+Key 137 115 molecules 35 misses max hits = 1 ave = 1
+Key 138 92 molecules 58 misses max hits = 7 ave = 2.47826087
+Key 139 47 molecules 103 misses max hits = 4 ave = 1.744680851
+Key 140 127 molecules 23 misses max hits = 12 ave = 3.204724409
+Key 141 104 molecules 46 misses max hits = 9 ave = 2.201923077
+Key 142 136 molecules 14 misses max hits = 10 ave = 2.727941176
+Key 143 67 molecules 83 misses max hits = 5 ave = 1.910447761
+Key 144 59 molecules 91 misses max hits = 8 ave = 1.610169492
+Key 145 143 molecules 7 misses max hits = 7 ave = 2.48951049
+Key 146 16 molecules 134 misses max hits = 2 ave = 1.0625
+Key 147 25 molecules 125 misses max hits = 2 ave = 1.12
+Key 148 85 molecules 65 misses max hits = 5 ave = 1.529411765
+Key 149 36 molecules 114 misses max hits = 2 ave = 1.194444444
+Key 150 84 molecules 66 misses max hits = 8 ave = 2.178571429
+Key 151 83 molecules 67 misses max hits = 8 ave = 1.734939759
+Key 152 87 molecules 63 misses max hits = 7 ave = 2.126436782
+Key 153 115 molecules 35 misses max hits = 38 ave = 3.904347826
+Key 154 84 molecules 66 misses max hits = 4 ave = 1.583333333
+Key 155 90 molecules 60 misses max hits = 20 ave = 2.977777778
+Key 156 127 molecules 23 misses max hits = 14 ave = 3.543307087
+Key 157 95 molecules 55 misses max hits = 12 ave = 3.389473684
+Key 158 107 molecules 43 misses max hits = 12 ave = 3.345794393
+Key 159 19 molecules 131 misses max hits = 4 ave = 1.578947368
+Key 160 57 molecules 93 misses max hits = 10 ave = 2.649122807
+Key 161 18 molecules 132 misses max hits = 2 ave = 1.166666667
+Key 162 139 molecules 11 misses max hits = 46 ave = 13.64748201
+Key 163 5 molecules 145 misses max hits = 1 ave = 1
+Key 164 64 molecules 86 misses max hits = 4 ave = 1.4375
+Key 165 147 molecules 3 misses max hits = 9 ave = 3.163265306
+Key 166 33 molecules 117 misses max hits = 3 ave = 1.515151515
+Key 167 148 molecules 2 misses max hits = 44 ave = 15.02027027
+Key 168 49 molecules 101 misses max hits = 4 ave = 1.306122449
+Key 169 12 molecules 138 misses max hits = 8 ave = 3
+Key 170 11 molecules 139 misses max hits = 2 ave = 1.090909091
+Key 171 18 molecules 132 misses max hits = 1 ave = 1
+Key 172 53 molecules 97 misses max hits = 4 ave = 1.547169811
+Key 173 17 molecules 133 misses max hits = 2 ave = 1.117647059
+Key 174 104 molecules 46 misses max hits = 12 ave = 2.134615385
+Key 175 76 molecules 74 misses max hits = 12 ave = 1.75
+Key 176 6 molecules 144 misses max hits = 1 ave = 1
+Key 177 48 molecules 102 misses max hits = 5 ave = 1.729166667
+Key 178 32 molecules 118 misses max hits = 4 ave = 1.46875
+Key 179 11 molecules 139 misses max hits = 1 ave = 1
+Key 180 61 molecules 89 misses max hits = 4 ave = 1.573770492
+Key 181 19 molecules 131 misses max hits = 2 ave = 1.315789474
+Key 182 2 molecules 148 misses max hits = 1 ave = 1
+Key 183 9 molecules 141 misses max hits = 1 ave = 1
+Key 184 22 molecules 128 misses max hits = 2 ave = 1.227272727
+Key 185 26 molecules 124 misses max hits = 2 ave = 1.038461538
+Key 186 64 molecules 86 misses max hits = 12 ave = 2.765625
+Key 187 16 molecules 134 misses max hits = 1 ave = 1
+Key 188 40 molecules 110 misses max hits = 4 ave = 1.425
+Key 189 8 molecules 142 misses max hits = 1 ave = 1
+Key 190 7 molecules 143 misses max hits = 1 ave = 1
+Key 191 34 molecules 116 misses max hits = 6 ave = 2.029411765
+1 molecules had 18 keys hit
+2 molecules had 25 keys hit
+1 molecules had 26 keys hit
+1 molecules had 27 keys hit
+1 molecules had 28 keys hit
+1 molecules had 29 keys hit
+2 molecules had 31 keys hit
+1 molecules had 33 keys hit
+1 molecules had 34 keys hit
+2 molecules had 38 keys hit
+2 molecules had 39 keys hit
+1 molecules had 40 keys hit
+1 molecules had 41 keys hit
+2 molecules had 42 keys hit
+3 molecules had 43 keys hit
+4 molecules had 44 keys hit
+3 molecules had 45 keys hit
+2 molecules had 46 keys hit
+3 molecules had 47 keys hit
+2 molecules had 48 keys hit
+3 molecules had 49 keys hit
+2 molecules had 50 keys hit
+2 molecules had 51 keys hit
+5 molecules had 52 keys hit
+3 molecules had 53 keys hit
+4 molecules had 54 keys hit
+1 molecules had 55 keys hit
+5 molecules had 56 keys hit
+6 molecules had 57 keys hit
+5 molecules had 58 keys hit
+3 molecules had 59 keys hit
+3 molecules had 60 keys hit
+3 molecules had 61 keys hit
+7 molecules had 62 keys hit
+3 molecules had 63 keys hit
+5 molecules had 64 keys hit
+10 molecules had 65 keys hit
+6 molecules had 66 keys hit
+3 molecules had 67 keys hit
+3 molecules had 68 keys hit
+2 molecules had 69 keys hit
+2 molecules had 70 keys hit
+1 molecules had 71 keys hit
+4 molecules had 72 keys hit
+2 molecules had 73 keys hit
+2 molecules had 74 keys hit
+2 molecules had 75 keys hit
+3 molecules had 76 keys hit
+2 molecules had 77 keys hit
+1 molecules had 78 keys hit
+1 molecules had 79 keys hit
+1 molecules had 80 keys hit
+1 molecules had 81 keys hit
+1 molecules had 83 keys hit
+2 molecules had 85 keys hit
+1 molecules had 86 keys hit
+1 molecules had 88 keys hit
+1 molecules had 92 keys hit
+1 molecules had 93 keys hit
+1 molecules had 95 keys hit
+58.45333333 average bits hit per molecule
+static int level2_threshold [] = {
+  2,     // key 0   2.210526
+  1,     // key 1   1.416667
+  1,     // key 2   1.386364
+  1,     // key 3   1.36
+  1,     // key 4   1.5
+  1,     // key 5   1.090909
+  2,     // key 6   1.77907
+  2,     // key 7   1.722222
+  1,     // key 8   1
+  2,     // key 9   1.75
+  1,     // key 10   1.175
+  1,     // key 11   1
+  2,     // key 12   2.157895
+  1,     // key 13   1.4375
+  1,     // key 14   1.241379
+  1,     // key 15   1.473684
+  1,     // key 16   1.333333
+  1,     // key 17   1
+  2,     // key 18   1.746835
+  1,     // key 19   1
+  3,     // key 20   2.529412
+  1,     // key 21   1.230769
+  1,     // key 22   1
+  1,     // key 23   1
+  1,     // key 24   1.111111
+  1,     // key 25   1.5
+  1,     // key 26   1.272727
+  2,     // key 27   1.736842
+  1,     // key 28   1.461538
+  1,     // key 29   1.133333
+  1,     // key 30   1
+  2,     // key 31   2.333333
+  1,     // key 32   1.285714
+  1,     // key 33   1.181818
+  1,     // key 34   1.2
+  3,     // key 35   2.909091
+  1,     // key 36   1.3125
+  1,     // key 37   1
+  1,     // key 38   1.242424
+  1,     // key 39   1.125
+  1,     // key 40   1.142857
+  1,     // key 41   1.352941
+  2,     // key 42   2.068965
+  2,     // key 43   2.071429
+  2,     // key 44   1.988235
+  2,     // key 45   2.442105
+  1,     // key 46   1.333333
+  2,     // key 47   1.583333
+  1,     // key 48   1.111111
+  1,     // key 49   1.264706
+  3,     // key 50   2.516667
+  1,     // key 51   1.5
+  1,     // key 52   1.15
+  2,     // key 53   2.176471
+  2,     // key 54   1.545455
+  1,     // key 55   1
+  1,     // key 56   1.333333
+  1,     // key 57   1.25
+  2,     // key 58   2.236842
+  2,     // key 59   1.65
+  2,     // key 60   2.352941
+  1,     // key 61   1.111111
+  3,     // key 62   2.857143
+  2,     // key 63   2.428571
+  1,     // key 64   1.25
+  3,     // key 65   3.185714
+  1,     // key 66   1.15625
+  1,     // key 67   1.1
+  2,     // key 68   1.625
+  1,     // key 69   1.45
+  1,     // key 70   1.222222
+  2,     // key 71   1.6875
+  2,     // key 72   2
+  2,     // key 73   1.954545
+  2,     // key 74   1.878788
+  1,     // key 75   1.326531
+  5,     // key 76   4.964539
+  4,     // key 77   3.886792
+  3,     // key 78   2.539474
+  2,     // key 79   1.830769
+  2,     // key 80   2.404762
+  2,     // key 81   1.891892
+  1,     // key 82   1.2
+  1,     // key 83   1.25
+  1,     // key 84   1.130435
+  1,     // key 85   1.403509
+  1,     // key 86   1.456522
+  1,     // key 87   1
+  1,     // key 88   1.333333
+  2,     // key 89   1.923077
+  2,     // key 90   2.186047
+  2,     // key 91   2.27907
+  1,     // key 92   1.345455
+  2,     // key 93   1.577778
+  2,     // key 94   1.954545
+  2,     // key 95   1.77193
+  1,     // key 96   1.323529
+  2,     // key 97   2.268657
+  1,     // key 98   1.291667
+  1,     // key 99   1.3125
+  2,     // key 100   2.30303
+  1,     // key 101   1
+  2,     // key 102   2.428571
+  1,     // key 103   1.354839
+  2,     // key 104   1.933333
+  3,     // key 105   3.2
+  1,     // key 106   1.341463
+  2,     // key 107   1.557692
+  2,     // key 108   2.388889
+  2,     // key 109   1.615385
+  1,     // key 110   1.5
+  3,     // key 111   2.56338
+  1,     // key 112   1.322034
+  2,     // key 113   1.6
+  1,     // key 114   1.190476
+  2,     // key 115   1.941176
+  2,     // key 116   2.108108
+  2,     // key 117   1.632353
+  3,     // key 118   2.871428
+  2,     // key 119   1.670732
+  2,     // key 120   2.278261
+  2,     // key 121   1.94898
+  2,     // key 122   2.166667
+  1,     // key 123   1.219512
+  2,     // key 124   2.264151
+  1,     // key 125   1.108696
+  1,     // key 126   1.45614
+  1,     // key 127   1.351351
+  5,     // key 128   4.935484
+  4,     // key 129   4.484375
+  1,     // key 130   1.321429
+  2,     // key 131   2.092592
+  3,     // key 132   2.567568
+  2,     // key 133   1.622951
+  2,     // key 134   1.885246
+  2,     // key 135   1.619048
+  2,     // key 136   1.92
+  1,     // key 137   1
+  2,     // key 138   2.478261
+  2,     // key 139   1.744681
+  3,     // key 140   3.204724
+  2,     // key 141   2.201923
+  3,     // key 142   2.727941
+  2,     // key 143   1.910448
+  2,     // key 144   1.61017
+  2,     // key 145   2.489511
+  1,     // key 146   1.0625
+  1,     // key 147   1.12
+  2,     // key 148   1.529412
+  1,     // key 149   1.194444
+  2,     // key 150   2.178571
+  2,     // key 151   1.73494
+  2,     // key 152   2.126437
+  4,     // key 153   3.904348
+  2,     // key 154   1.583333
+  3,     // key 155   2.977778
+  4,     // key 156   3.543307
+  3,     // key 157   3.389474
+  3,     // key 158   3.345794
+  2,     // key 159   1.578947
+  3,     // key 160   2.649123
+  1,     // key 161   1.166667
+  14,     // key 162   13.64748
+  1,     // key 163   1
+  1,     // key 164   1.4375
+  3,     // key 165   3.163265
+  2,     // key 166   1.515152
+  15,     // key 167   15.02027
+  1,     // key 168   1.306122
+  3,     // key 169   3
+  1,     // key 170   1.090909
+  1,     // key 171   1
+  2,     // key 172   1.54717
+  1,     // key 173   1.117647
+  2,     // key 174   2.134615
+  2,     // key 175   1.75
+  1,     // key 176   1
+  2,     // key 177   1.729167
+  1,     // key 178   1.46875
+  1,     // key 179   1
+  2,     // key 180   1.573771
+  1,     // key 181   1.315789
+  1,     // key 182   1
+  1,     // key 183   1
+  1,     // key 184   1.227273
+  1,     // key 185   1.038462
+  3,     // key 186   2.765625
+  1,     // key 187   1
+  1,     // key 188   1.425
+  1,     // key 189   1
+  1,     // key 190   1
+  2     // key 191   2.029412
+};

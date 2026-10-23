@@ -286,7 +286,7 @@ class AtomPropertiesForRanking {
 AtomPropertiesForRanking::AtomPropertiesForRanking() {
   _hash = 0;
   _ring_size_hash = 0;
-  _atom_number = INVALID_ATOM_NUMBER;
+  _atom_number = kInvalidAtomNumber;
 }
 
 AtomPropertiesForRanking::AtomPropertiesForRanking(Molecule& m, atom_number_t zatom,
@@ -1721,8 +1721,8 @@ Atom_and_Rank::_identify_two_unresolved_connections(const unsigned int* rank,
 
   // Now, identify the matched pair.
 
-  a1 = INVALID_ATOM_NUMBER;  // assist checking later
-  a2 = INVALID_ATOM_NUMBER;
+  a1 = kInvalidAtomNumber;  // assist checking later
+  a2 = kInvalidAtomNumber;
 
   if (rank_top_front == rank_top_back) {
     a1 = _chiral_centre->top_front();
@@ -3451,7 +3451,7 @@ Unique_Determination::_expand_around_cis_trans_bond(atom_number_t a1, atom_numbe
     nw = bnw->other(a1);
     rnw = _get_rank(nw);
   } else {
-    nw = INVALID_ATOM_NUMBER;
+    nw = kInvalidAtomNumber;
     rnw = -1;
   }
 
@@ -3461,7 +3461,7 @@ Unique_Determination::_expand_around_cis_trans_bond(atom_number_t a1, atom_numbe
     se = bsw->other(a1);
     rsw = _get_rank(se);
   } else {
-    sw = INVALID_ATOM_NUMBER;
+    sw = kInvalidAtomNumber;
     rsw = -1;
   }
 
@@ -3471,7 +3471,7 @@ Unique_Determination::_expand_around_cis_trans_bond(atom_number_t a1, atom_numbe
     ne = bne->other(a1);
     rne = _get_rank(ne);
   } else {
-    ne = INVALID_ATOM_NUMBER;
+    ne = kInvalidAtomNumber;
     rne = -1;
   }
 
@@ -3481,7 +3481,7 @@ Unique_Determination::_expand_around_cis_trans_bond(atom_number_t a1, atom_numbe
     se = bse->other(a1);
     rse = _get_rank(se);
   } else {
-    se = INVALID_ATOM_NUMBER;
+    se = kInvalidAtomNumber;
     rse = -1;
   }
 
@@ -3515,8 +3515,8 @@ int
 Unique_Determination::_identify_directionally_attached_atoms(const Atom_and_Rank* ar,
                                                              atom_number_t& nw,
                                                              atom_number_t& sw) const {
-  nw = INVALID_ATOM_NUMBER;
-  sw = INVALID_ATOM_NUMBER;
+  nw = kInvalidAtomNumber;
+  sw = kInvalidAtomNumber;
 
   atom_number_t zatom = ar->atom_number();
 
@@ -3556,7 +3556,7 @@ Unique_Determination::_identify_directionally_attached_atoms(const Atom_and_Rank
     }
   }
 
-  if (INVALID_ATOM_NUMBER == nw && INVALID_ATOM_NUMBER == sw) {
+  if (kInvalidAtomNumber == nw && kInvalidAtomNumber == sw) {
     return 0;
   }
 
@@ -4082,7 +4082,7 @@ Unique_Determination::_adjust_initial_ranks_for_cis_trans_bonds ()
 
 int
 Unique_Determination::_get_rank(atom_number_t a) const {
-  if (INVALID_ATOM_NUMBER == a) {
+  if (kInvalidAtomNumber == a) {
     return -1;
   }
 

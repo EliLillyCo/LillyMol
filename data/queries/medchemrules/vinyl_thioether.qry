@@ -1,6 +1,0 @@
-(0 Query
-  (A C Comment "vinyl_thioether")
-  (A I version 2)
-# (A C smarts "[C;!R]=[C;!R]-[S;!R]")
-  (A C smarts "[SR0D2]-[CR0]=[CR0]")
-)

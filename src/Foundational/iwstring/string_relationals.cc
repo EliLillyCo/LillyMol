@@ -12,7 +12,7 @@ common_less_than (const char * s1,
   if (n2 < n1)
     chars_to_compare = n2;
 
-  int rc = ::strncmp (s1, s2, chars_to_compare);
+  int rc = chars_to_compare == 0 ? 0 : ::strncmp (s1, s2, chars_to_compare);
 
   if (0 != rc)    // they differ
     return rc < 0;
@@ -62,7 +62,7 @@ common_greater_than (const char * s1,
   if (n2 < n1)
     chars_to_compare = n2;
 
-  int rc = ::strncmp (s1, s2, chars_to_compare);
+  int rc = chars_to_compare == 0 ? 0 : ::strncmp (s1, s2, chars_to_compare);
 
   if (0 != rc)    // they differ
     return rc > 0;

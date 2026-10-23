@@ -32,9 +32,6 @@ AverageInterAtomicDistance(const Molecule& m) {
   return tot / n;
 }
 
-// THis fails when run with --config=asan.
-// Fails in kabsch::kabsch
-// TODO:ianwatson investigate
 TEST(TestSameAtoms, NoChange) {
   Molecule m1;
   ASSERT_TRUE(m1.build_from_smiles("C(C)(C)C"));

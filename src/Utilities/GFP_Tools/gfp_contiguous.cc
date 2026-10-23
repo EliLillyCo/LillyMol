@@ -19,7 +19,7 @@ IW_General_Fingerprint::bytes_needed_for_contiguous_storage() const
   int rc = 4 * sizeof(int);
 
   if (_molecular_properties_integer.active())
-    rc += sizeof(Molecular_Properties<int>) + _molecular_properties_integer.nproperties() * sizeof(int);
+    rc += sizeof(Molecular_Properties_Integer);
 
   if (_molecular_properties_continuous.active())
     rc += sizeof(Molecular_Properties<float>) + _molecular_properties_continuous.nproperties() * sizeof(float);
@@ -93,7 +93,7 @@ IW_General_Fingerprint::bytes_needed_for_contiguous_storage_gpu() const
   int rc = 4 * sizeof(int);
 
   if (_molecular_properties_integer.active())
-    rc += sizeof(int) + _molecular_properties_integer.nproperties() * sizeof(int);
+    rc += sizeof(int) + _molecular_properties_integer.nproperties() * sizeof(uint8_t);
 
   if (_molecular_properties_continuous.active())
     rc += sizeof(int) + _molecular_properties_continuous.nproperties() * sizeof(float);

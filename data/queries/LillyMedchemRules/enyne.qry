@@ -1,0 +1,6 @@
+name: "enyne"
+comment: "Terminal variants of these are worse, perhaps subdivide"
+query {
+  numeric_value: 70
+  smarts: "C#C-C=C"
+}

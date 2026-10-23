@@ -91,4 +91,21 @@ TEST_F(TestSymmetry, TestSymmetryClasses) {
   EXPECT_EQ(symm[1], symm[2]);
 }
 
+// A seemingly problematic molecule.
+TEST_F(TestSymmetry, TestP1) {
+  ASSERT_TRUE(_m.build_from_smiles("ClC1=CC(=C(C(OCCN2CCCC(C(=O)O)C2)C2=C(C)C=C(Cl)C=C2)C=C1)C CHEMBL553153"));
+  ASSERT_TRUE(_m.build_from_smiles("ClC1=CC=[2C](C(=C1)C)[1CH](OCCN1CCCC(C(=O)O)C1)[3C]1=C(C)C=C(Cl)C=C1 CHEMBL553153"));
+  atom_number_t centre = _m.atom_with_isotope(1);
+  atom_number_t arom1 = _m.atom_with_isotope(2);
+  atom_number_t arom2 = _m.atom_with_isotope(3);
+  ASSERT_NE(centre, kInvalidAtomNumber);
+  ASSERT_NE(arom1, kInvalidAtomNumber);
+  ASSERT_NE(arom2, kInvalidAtomNumber);
+  _m.transform_to_non_isotopic_form();
+  _m.compute_aromaticity();  // so we get aromaticity in any unique smiles
+  const int * symm = _m.symmetry_classes();
+  EXPECT_EQ(symm[arom1], symm[arom1]) << _m.smarts_equivalent_for_atom(arom1) <<
+                                         ' ' << _m.smarts_equivalent_for_atom(arom2);
+}
+
 }  // namespace

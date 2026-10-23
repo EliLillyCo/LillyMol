@@ -1,3 +1,20 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "iwstring_bdb",
+    srcs = [
+        "iwstring_bdb.cc",
+    ],
+    hdrs = [
+        "iwstring_bdb.h",
+    ],
+    deps = [
+        "//Foundational/iwstring",
+        "@third_party//:berkeley_static",
+    ]
+)
 
 cc_binary(
     name = "enough_inventory_bdb",
@@ -37,6 +54,7 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        ":iwstring_bdb",
         ":unpack_data",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",

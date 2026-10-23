@@ -2,6 +2,7 @@
   Identify the scaffold(s) in a molecule
 */
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -258,7 +259,7 @@ molecular_scaffold(Molecule& m, O& output) {
   // Finad all combination of ring_systems
   for (int N = (1 << number_ring_systems) - 2; N > 0; N--) {
     int sub_ringsys = number_ring_systems;
-    set_vector(subset, matoms, 0);
+    std::fill_n(subset, matoms, 0);
     for (int i = 0; i < number_ring_systems; ++i) {
       if (1 == ((N >> i) & 1)) {  // ith ring_system is included in subset
         continue;

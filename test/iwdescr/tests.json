@@ -1,5 +1,8 @@
 {
   "executable": "iwdescr",
+  "default_command_components": [
+    "-g all -E autocreate -B quiet"
+  ],
   "test": [
     {
       "name": "default",
@@ -8,8 +11,109 @@
       ],
       "args": [ "-N F:${queries_dir}/charges/queries -H a=F:${queries_dir}/hbonds/acceptor",
                 " -H d=${queries_dir}/hbonds/donor.qry -H label",
-                " -l -g all -A D -u 0 -b 5 -O complex -O dm -B quiet -E autocreate #{indir}/in.smi"
+                " -l -u 0 -b 5 -O complex -O dm #{indir}/in.smi"
+              ]
+    },
+
+    {
+      "name": "filter1eq",
+      "preamble": [
+         "queries_dir=${LILLYMOL_HOME}/data/queries"
+      ],
+      "args": [ "-N F:${queries_dir}/charges/queries -H a=F:${queries_dir}/hbonds/acceptor",
+                " -H d=${queries_dir}/hbonds/donor.qry -H label",
+                " -F w_natoms.eq.3",
+                " -l -u 0 -b 5 -O complex -O dm #{indir}/in.smi"
+              ]
+    },
+
+    {
+      "comment": [
+        "An isotopic label in LillyMol is usually arbitrary - 37C is a labelled",
+        "carbon, not a real isotope. w_amw uses set_ignore_isotopes, so the",
+        "label must not change the weight. Every labelled molecule here must",
+        "report the same w_amw as its unlabelled twin. The isotopic atom used to",
+        "be dropped from the weight entirely, ether_13c reporting 31.034."
+      ],
+      "name": "isotopes",
+      "args": [
+        " -g all -E autocreate -O none -u 0 #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "filter1gt",
+      "args": [
+                " -F w_natoms.gt.3",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+
+    {
+      "name": "filter1lt",
+      "args": [
+                " -F w_natoms.lt.4",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+    {
+       "name": "filter_inconsistent1",
+      "preamble": [
+         "queries_dir=${LILLYMOL_HOME}/data/queries"
+      ],
+      "args": [ "-N F:${queries_dir}/charges/queries -H a=F:${queries_dir}/hbonds/acceptor",
+                " -H d=${queries_dir}/hbonds/donor.qry -H label",
+                " -F w_natoms.eq.3 -F w_natoms.eq.4",
+                " -l -u 0 -b 5 -O complex -O dm #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "filter_inconsistent2",
+      "preamble": [
+         "queries_dir=${LILLYMOL_HOME}/data/queries"
+      ],
+      "args": [ "-N F:${queries_dir}/charges/queries -H a=F:${queries_dir}/hbonds/acceptor",
+                " -H d=${queries_dir}/hbonds/donor.qry -H label",
+                " -F w_natoms.eq.3 -F w_amw.gt.100",
+                " -l -u 0 -b 5 -O complex -O dm #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "namexref",
+      "args": [ " -B namexref=#{indir}/namexref.textproto -u 0",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "filter_and_prefix",
+      "args": [ " -B prefix=Q -F nrings.gt.0",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "fingerprint_default",
+      "args": [ " -G natoms -G w_nrings",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "prefix_none",
+      "args": [ " -B prefix=none -u 0",
+                " -O none #{indir}/in.smi"
+              ]
+    },
+
+    {
+       "name": "write_pipeline",
+      "args": [ " -B prefix=none -B wpipe",
+                " -O none #{indir}/in.smi"
               ]
     }
+
   ]
 }

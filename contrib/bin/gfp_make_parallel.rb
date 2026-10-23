@@ -7,9 +7,8 @@ $expert = false
 
 def usage(rc)
   $stderr << "Multi-threaded version of gfp_make\n"
-  $stderr << "gfp_make_parallel -thr 16 -S out ... file1\n"
+  $stderr << "gfp_make_parallel -thr 16 ... file.smi > file.gfp\n"
   $stderr << "Note that only one input file can be processed\n";
-  $stderr << " -S <stem>        output stem - mandatory\n"
   $stderr << " -thr <nthreads>  number of threads to use\n"
   $stderr << " -gfp_make <exe>  gfp_make executable to use (default gfp_make.sh)\n"
   $stderr << " -tmpdir <dir>    directory for temporary files\n" if ($expert)

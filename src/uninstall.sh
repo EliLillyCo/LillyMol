@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The default build can generate executables that may not be needed.
 # This scipt is designed to be run from the Docker container after the
@@ -66,6 +66,7 @@ to_remove+=('tsmiles')
 to_remove+=('tspassbyref')
 to_remove+=('tstandardise')
 to_remove+=('unique_molecules_sorted')
+to_remove+=('gfp_svmfp_score_pthread')
 
 for file in "${to_remove[@]}" ; do
   fname="${install_dir}/${file}"

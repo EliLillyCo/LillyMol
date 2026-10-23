@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "proto": "Molecule_Tools/molecule_filter.proto",
+  "relative_cost_basis": "Approximate normalized cost. Values are initial estimates and can be refined from timing data.",
+  "features": [
+    {
+      "name": "natoms",
+      "label": "Atom count",
+      "category": "size",
+      "type": "int",
+      "min_field": "min_natoms",
+      "max_field": "max_natoms",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of atoms in the molecule."
+    },
+    {
+      "name": "amw",
+      "label": "Average molecular weight",
+      "category": "size",
+      "type": "float",
+      "min_field": "min_amw",
+      "max_field": "max_amw",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Average molecular weight, implicit hydrogens included. Isotopic atoms are treated as their natural abundance form. Unlike atom count this is not free, but it is only computed when requested."
+    },
+    {
+      "name": "nrings",
+      "label": "Ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_nrings",
+      "max_field": "max_nrings",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of SSSR rings."
+    },
+    {
+      "name": "heteroatom_count",
+      "label": "Heteroatom count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_heteroatom_count",
+      "max_field": "max_heteroatom_count",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Number of atoms whose atomic number is not carbon."
+    },
+    {
+      "name": "heteroatom_fraction",
+      "label": "Heteroatom fraction",
+      "category": "composition",
+      "type": "float",
+      "min_field": "min_heteroatom_fraction",
+      "max_field": "max_heteroatom_fraction",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Fraction of atoms whose atomic number is not carbon."
+    },
+    {
+      "name": "aromatic_ring_count",
+      "label": "Aromatic ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aromatic_ring_count",
+      "max_field": "max_aromatic_ring_count",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Number of aromatic rings."
+    },
+    {
+      "name": "aliphatic_ring_count",
+      "label": "Aliphatic ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aliphatic_ring_count",
+      "max_field": "max_aliphatic_ring_count",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Number of non-aromatic rings."
+    },
+    {
+      "name": "rotatable_bonds",
+      "label": "Rotatable bonds",
+      "category": "topology",
+      "type": "int",
+      "min_field": "min_rotatable_bonds",
+      "max_field": "max_rotatable_bonds",
+      "relative_cost": 12,
+      "utility": true,
+      "description": "Quick rotatable bond count using the molecule_filter rotatable-bond settings."
+    },
+    {
+      "name": "max_ring_system_size",
+      "label": "Largest ring system size",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_ring_system_size",
+      "max_field": "max_ring_system_size",
+      "relative_cost": 15,
+      "utility": true,
+      "description": "Largest fused ring system, measured as number of rings in the system."
+    },
+    {
+      "name": "aromatic_rings_in_system",
+      "label": "Aromatic rings in largest system",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aromatic_rings_in_system",
+      "max_field": "max_aromatic_rings_in_system",
+      "relative_cost": 15,
+      "utility": true,
+      "description": "Largest number of aromatic rings found in a fused ring system."
+    },
+    {
+      "name": "tpsa",
+      "label": "TPSA",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_tpsa",
+      "max_field": "max_tpsa",
+      "relative_cost": 25,
+      "utility": true,
+      "description": "Novartis topological polar surface area."
+    },
+    {
+      "name": "alogp",
+      "label": "ALogP",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_alogp",
+      "max_field": "max_alogp",
+      "relative_cost": 35,
+      "utility": true,
+      "description": "ALogP value computed by the LillyMol ALogP implementation."
+    },
+    {
+      "name": "xlogp",
+      "label": "XLogP",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_xlogp",
+      "max_field": "max_xlogp",
+      "relative_cost": 45,
+      "utility": true,
+      "description": "XLogP value computed by the LillyMol XLogP implementation."
+    },
+    {
+      "name": "hba",
+      "label": "HBA",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hba",
+      "max_field": "max_hba",
+      "relative_cost": 6,
+      "utility": true,
+      "description": "Hydrogen-bond acceptor count using molecule_filter Rule-of-Five logic."
+    },
+    {
+      "name": "hbd",
+      "label": "HBD",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hbd",
+      "max_field": "max_hbd",
+      "relative_cost": 6,
+      "utility": true,
+      "description": "Hydrogen-bond donor count using molecule_filter Rule-of-Five logic."
+    },
+    {
+      "name": "hba_rdkit",
+      "label": "HBA (RDKit compatible)",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hba_rdkit",
+      "max_field": "max_hba_rdkit",
+      "relative_cost": 10,
+      "utility": true,
+      "description": "Hydrogen-bond acceptor count matching RDKit's NumHAcceptors. NOT a Lipinski count - amide and sulfonamide nitrogen are excluded, aromatic nitrogen must be unsubstituted and two-connected, the hydroxyl of a carboxylic acid is excluded, and sulfur participates. Use hba for the rule of five."
+    },
+    {
+      "name": "hbd_rdkit",
+      "label": "HBD (RDKit compatible)",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hbd_rdkit",
+      "max_field": "max_hbd_rdkit",
+      "relative_cost": 10,
+      "utility": true,
+      "description": "Hydrogen-bond donor count matching RDKit's NumHDonors. NOT a Lipinski count - this counts heteroatoms carrying a hydrogen rather than hydrogens, and sulfur participates. Use hbd for the rule of five."
+    },
+    {
+      "name": "largest_ring_size",
+      "label": "Largest ring size",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_largest_ring_size",
+      "max_field": "max_largest_ring_size",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Size of the largest ring. This does not span spiro fusions."
+    },
+    {
+      "name": "halogen_count",
+      "label": "Halogen count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_halogen_count",
+      "max_field": "max_halogen_count",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Number of F, Cl, Br, and I atoms."
+    },
+    {
+      "name": "max_distance",
+      "label": "Longest path",
+      "category": "topology",
+      "type": "int",
+      "min_field": "min_distance",
+      "max_field": "max_distance",
+      "relative_cost": 30,
+      "utility": true,
+      "description": "Longest topological distance between any pair of atoms."
+    },
+    {
+      "name": "sp3_carbon",
+      "label": "sp3 carbon count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_sp3_carbon",
+      "max_field": "max_sp3_carbon",
+      "relative_cost": 5,
+      "utility": true,
+      "description": "Number of fully saturated carbon atoms."
+    },
+    {
+      "name": "sp3_carbon_fraction",
+      "label": "sp3 carbon fraction",
+      "category": "composition",
+      "type": "float",
+      "min_field": "min_sp3_carbon_fraction",
+      "max_field": "max_sp3_carbon_fraction",
+      "relative_cost": 5,
+      "utility": true,
+      "description": "Fraction of carbon atoms that are fully saturated sp3 carbons. The denominator is the number of carbon atoms."
+    },
+    {
+      "name": "aromatic_density",
+      "label": "Aromatic atom fraction",
+      "category": "rings",
+      "type": "float",
+      "min_field": "min_aromatic_density",
+      "max_field": "max_aromatic_density",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Fraction of atoms that are aromatic."
+    },
+    {
+      "name": "chiral",
+      "label": "Chiral centre count",
+      "category": "stereochemistry",
+      "type": "int",
+      "min_field": "min_chiral",
+      "max_field": "max_chiral",
+      "relative_cost": 2,
+      "utility": true,
+      "description": "Number of chiral centres."
+    },
+    {
+      "name": "number_fragments",
+      "label": "Fragment count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_number_fragments",
+      "max_field": "max_number_fragments",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of disconnected fragments in the input smiles."
+    }
+  ],
+  "boolean_filters": [
+    {
+      "field": "exclude_non_organic",
+      "label": "Exclude non-organic molecules",
+      "category": "composition",
+      "relative_cost": 3,
+      "description": "Reject molecules containing atoms outside LillyMol's organic subset."
+    },
+    {
+      "field": "exclude_isotopes",
+      "label": "Exclude isotopic molecules",
+      "category": "composition",
+      "relative_cost": 2,
+      "description": "Reject molecules containing isotopically labelled atoms."
+    }
+  ],
+  "utility_combinations": [
+    {
+      "name": "UTILITY_COMBINATION_WEIGHTED_AVERAGE",
+      "label": "Weighted average",
+      "description": "Sum weight_i * utility_i divided by sum weight_i. This is the default."
+    },
+    {
+      "name": "UTILITY_COMBINATION_WEIGHTED_SUM",
+      "label": "Weighted sum",
+      "description": "Sum weight_i * utility_i without normalization."
+    },
+    {
+      "name": "UTILITY_COMBINATION_PRODUCT",
+      "label": "Product",
+      "description": "Product of all utility values."
+    },
+    {
+      "name": "UTILITY_COMBINATION_MIN",
+      "label": "Minimum",
+      "description": "Overall utility is the smallest individual utility value."
+    },
+    {
+      "name": "UTILITY_COMBINATION_MAX",
+      "label": "Maximum",
+      "description": "Overall utility is the largest individual utility value."
+    }
+  ]
+}

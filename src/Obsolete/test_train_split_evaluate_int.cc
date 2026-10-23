@@ -6,6 +6,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <memory>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
@@ -458,11 +460,11 @@ test_train_split_evaluate_N (const IWDistanceMatrixBase<int> & dm,
                                 
 {
   int acc_across[NPARTS];
-  set_vector (acc_across, NPARTS, 0);
+  std::fill_n (acc_across, NPARTS, 0);
   int acc_set0[NPARTS];
-  set_vector (acc_set0, NPARTS, 0);
+  std::fill_n (acc_set0, NPARTS, 0);
   int acc_set1[NPARTS];
-  set_vector (acc_set1, NPARTS, 0);
+  std::fill_n (acc_set1, NPARTS, 0);
 
   resizable_array<int> nbr;    // scope here for efficiency
 
@@ -510,11 +512,11 @@ test_train_split_evaluate (const IWDistanceMatrixBase<int> & dm,
                                 
 {
   int acc_across[NPARTS];
-  set_vector (acc_across, NPARTS, 0);
+  std::fill_n (acc_across, NPARTS, 0);
   int acc_set0[NPARTS];
-  set_vector (acc_set0, NPARTS, 0);
+  std::fill_n (acc_set0, NPARTS, 0);
   int acc_set1[NPARTS];
-  set_vector (acc_set1, NPARTS, 0);
+  std::fill_n (acc_set1, NPARTS, 0);
 
   int nr = dm.number_molecules ();
 
@@ -552,11 +554,11 @@ test_train_split_evaluate_N (const NN_Results & nn_results,
   assert (neighbours_to_consider > 0);
 
   int acc_across[NPARTS];
-  set_vector (acc_across, NPARTS, 0);
+  std::fill_n (acc_across, NPARTS, 0);
   int acc_set0[NPARTS];
-  set_vector (acc_set0, NPARTS, 0);
+  std::fill_n (acc_set0, NPARTS, 0);
   int acc_set1[NPARTS];
-  set_vector (acc_set1, NPARTS, 0);
+  std::fill_n (acc_set1, NPARTS, 0);
 
   int nacross = 0;
 
@@ -602,11 +604,11 @@ test_train_split_evaluate (const NN_Results & nn_results,
                            ostream & output)
 {
   int acc_across[NPARTS];
-  set_vector (acc_across, NPARTS, 0);
+  std::fill_n (acc_across, NPARTS, 0);
   int acc_set0[NPARTS];
-  set_vector (acc_set0, NPARTS, 0);
+  std::fill_n (acc_set0, NPARTS, 0);
   int acc_set1[NPARTS];
-  set_vector (acc_set1, NPARTS, 0);
+  std::fill_n (acc_set1, NPARTS, 0);
 
   int nacross = 0;
 
@@ -670,7 +672,7 @@ identify_items_in_subset (iwstring_data_source & input,
                           int nr,
                           int * in_set)
 {
-  set_vector (in_set, nr, 0);
+  std::fill_n (in_set, nr, 0);
 
   int items_in_set = 0;
 
@@ -927,7 +929,7 @@ test_train_split_evaluate (int argc, char ** argv)
 
   if (cl.option_present ('t'))
   {
-    set_vector (indices_to_check, NPARTS, 0);
+    std::fill_n (indices_to_check, NPARTS, 0);
 
     int i = 0;
     const_IWSubstring t;

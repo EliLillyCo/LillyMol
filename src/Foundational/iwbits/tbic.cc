@@ -4,12 +4,8 @@
 
 #include <stdlib.h>
 
-#include <values.h>
-#ifdef linux
-#else
 #include <limits.h>
-#endif
-
+#include <float.h>
 #include <iomanip>
 
 #include "cmdline.h"

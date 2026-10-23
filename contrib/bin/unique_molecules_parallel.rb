@@ -6,19 +6,21 @@ require_relative "lib/parallel_support.rb"
 $expert = false
 
 def usage(rc)
-  $stderr << "Multi-threaded version of unique_molecules\n"
+  $stderr << "Multi-threaded version of unique_molecules, can also do common_names via the -exe option\n"
   $stderr << "unique_molecules_parallel -thr 16 -S out ... file1\n"
   $stderr << "Note that only one input file can be processed\n";
-  $stderr << " -S <stem>        output stem - mandatory\n"
-  $stderr << " -thr <nthreads>  number of threads to use\n"
-  $stderr << " -nj              do NOT join the output files, leave in split form\n"
-  $stderr << " -unique_molecules <exe>  unique_molecules executable to use (default unique_molecules.sh)\n"
-  $stderr << " -tmpdir <dir>    directory for temporary files\n" if ($expert)
-  $stderr << " -log <stem>      redirect stderr to individual log files - which are removed\n"
-  $stderr << "                  you probably want this to avoid screens full of warning messages\n"
-  $stderr << "                  but make sure your reaction is well behaved and that warnings can actually be ignored\n";
-  $stderr << " -keeplog         do NOT remove the logfiles\n"
-  $stderr << " -v               verbose output\n"
+  $stderr << "Uses msort_parallel to first sort the file into disparate chunks\n";
+  $stderr << " -S <stem>          output stem - mandatory\n"
+  $stderr << " -thr <nthreads>    number of threads to use\n"
+  $stderr << " -nj                do NOT join the output files, leave in split form\n"
+  $stderr << " -exe <exe>         unique_molecules executable to use (default unique_molecules.sh)\n" if $expert
+  $stderr << "                    use '-exe common_names.sh' to do common names\n" if $expert
+  $stderr << " -msort ... -msort  additional options passed to msort_parallel\n" if $expert
+  $stderr << " -tmpdir <dir>      directory for temporary files\n" if ($expert)
+  $stderr << " -log <stem>        redirect stderr to individual log files - which are removed\n"
+  $stderr << "                    you probably want this to avoid screens full of warning messages\n"
+  $stderr << " -keeplog           do NOT remove the logfiles\n"
+  $stderr << " -v                 verbose output\n"
   $stderr << "All other options are passed directly to unique_molecules\n"
 
   exit(rc)
@@ -26,12 +28,12 @@ end
 
 def unique_molecules_parallel
 
-  cl = IWCmdlineV2.new("-v-thr=ipos-tmpdir=s-S=s-unique_molecules=xfile-nj-log=s-keeplog")
+  cl = IWCmdlineV2.new("-v-thr=ipos-tmpdir=s-S=s-exe=xfile-nj-log=s-keeplog-msort=close")
 
   verbose = cl.option_present('v')
 
-  unique_molecules = if cl.option_present('unique_molecules') 
-            cl.value('unique_molecules')
+  unique_molecules = if cl.option_present('exe') 
+            cl.value('exe')
           else
             'unique_molecules.sh'
           end
@@ -83,7 +85,12 @@ def unique_molecules_parallel
   dstem = File.join(tmpdir, "D#{File.basename(sfile)}")
 
   # First task is to sort the file
-  cmd = "msort_parallel.sh -p -D #{dstem} -M nc=#{nthreads} -k formula #{input_file}"
+  msort_options = if cl.option_present('msort')
+                   cl.value('msort')
+                 else
+                   ""
+                 end
+  cmd = "msort_parallel #{msort_options} -h #{nthreads} -p -D #{dstem} -M nc=#{nthreads} -k formula #{input_file}"
   $stderr << "Executing #{cmd}\n" if verbose
   system(cmd)
 

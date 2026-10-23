@@ -1,6 +1,22 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 
 package(default_visibility = ["//visibility:public"])
+
+proto_library(
+    name = "conformer_database_proto",
+    srcs = [
+        "conformer_database.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "conformer_database_cc_proto",
+    deps = [
+        ":conformer_database_proto",
+    ],
+)
 
 proto_library(
     name = "dicer_fragment_complement_proto",
@@ -66,7 +82,39 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        "//Foundational/iwstring:string_with_commas",
         ":storage_conditions",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "conformer_database_lookup",
+    srcs = [
+        "conformer_database_lookup.cc",
+    ],
+    deps = [
+        "conformer_database_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
+    name = "conformer_database_store",
+    srcs = [
+        "conformer_database_store.cc",
+    ],
+    deps = [
+        "//Foundational/iwstring:string_with_commas",
+        "conformer_database_cc_proto",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
@@ -104,7 +152,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:molecular_formula_lib",
+        "//Molecule_Lib:moleculeio",
         "//Molecule_Tools:dicer_fragments_cc_proto",
         "//Molecule_Tools:mformula",
         "@third_party//:berkeley_static",
@@ -119,6 +167,7 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        "//Foundational/iwstring:string_with_commas",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwtfdata_record",
         "//Molecule_Lib:iwmolecule",
@@ -184,6 +233,7 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        "//Foundational/iwstring:string_with_commas",
         ":iwecfp_database",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
@@ -200,6 +250,7 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        "//Foundational/iwstring:string_with_commas",
         ":iwecfp_database",
         ":iwecfp_database_lookup_lib",
         "//Foundational/cmdline:iwcmdline",
@@ -235,7 +286,12 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        "//Foundational/iwstring:string_with_commas",
         ":smi2rings_cc_proto",
+        ":ring_database_lookup",
+        ":ring_database_builder",
+        ":ring_extraction",
+        ":ring_preprocessing",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/iwmisc",
         "//Foundational/iwstring:absl_hash",
@@ -277,6 +333,54 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "substituent_identification_lib",
+    srcs = [
+        "substituent_identification_lib.cc",
+    ],
+    hdrs = [
+        "substituent_identification_lib.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/iwstring:string_with_commas",
+        ":substituent_identification_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:mformula",
+        "//Molecule_Tools:smarts_for_atom_subset",
+        "@third_party//:berkeley_static",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "substituent_identification_lib_shared",
+    srcs = [
+        "substituent_identification_lib.cc",
+    ],
+    hdrs = [
+        "substituent_identification_lib.h",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        "//Foundational/iwstring:string_with_commas",
+        ":substituent_identification_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:mformula",
+        "//Molecule_Tools:smarts_for_atom_subset",
+        "@third_party//:berkeley_shared",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
 cc_binary(
     name = "substituent_identification",
     srcs = [
@@ -284,14 +388,35 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
+        ":substituent_identification_lib",
+    ],
+)
+
+cc_test(
+    name = "substituent_identification_lib_test",
+    srcs = [
+        "substituent_identification_lib_test.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":substituent_identification_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "substituent_identification_extract",
+    srcs = [
+      "substituent_identification_extract.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
         ":substituent_identification_cc_proto",
+        "//Foundational/accumulator:accumulator",
         "//Foundational/cmdline:iwcmdline",
-        "//Foundational/iwmisc",
-        "//Molecule_Lib:iwmolecule",
-        "//Molecule_Lib:moleculeio",
-        "//Molecule_Tools:mformula",
+        "@com_google_absl//absl/strings:string_view",
         "@third_party//:berkeley_static",
-        "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -421,5 +546,150 @@ cc_library(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "@third_party//:berkeley_shared",
+    ],
+)
+
+cc_library(
+    name = "ring_database_lookup",
+    srcs = ["ring_database_lookup.cc"],
+    hdrs = ["ring_database_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwaray",
+        "//Foundational/iwstring",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ring_database_lookup_shared",
+    srcs = ["ring_database_lookup.cc"],
+    hdrs = ["ring_database_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwaray",
+        "//Foundational/iwstring",
+        "@third_party//:berkeley_shared",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "ring_database_lookup_test",
+    srcs = ["ring_database_lookup_test.cc"],
+    tags = ["berkeleydb"],
+    deps = [
+        ":ring_database_lookup",
+        ":smi2rings_cc_proto",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ring_extraction",
+    srcs = ["ring_extraction.cc"],
+    hdrs = ["ring_extraction.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Foundational/iwmisc",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_library(
+    name = "ring_preprocessing",
+    srcs = ["ring_preprocessing.cc"],
+    hdrs = ["ring_preprocessing.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+    ],
+)
+
+cc_library(
+    name = "ring_system_lookup",
+    srcs = ["ring_system_lookup.cc"],
+    hdrs = ["ring_system_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ring_database_lookup",
+        ":ring_extraction",
+        ":ring_preprocessing",
+    ],
+)
+
+cc_library(
+    name = "ring_system_lookup_shared",
+    srcs = ["ring_system_lookup.cc"],
+    hdrs = ["ring_system_lookup.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ring_database_lookup_shared",
+        ":ring_extraction",
+        ":ring_preprocessing",
+    ],
+)
+
+cc_test(
+    name = "ring_system_lookup_test",
+    srcs = ["ring_system_lookup_test.cc"],
+    tags = ["berkeleydb"],
+    deps = [
+        ":ring_system_lookup",
+        ":smi2rings_cc_proto",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ring_database_builder",
+    srcs = ["ring_database_builder.cc"],
+    hdrs = ["ring_database_builder.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwstring:absl_hash",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ring_database_builder_shared",
+    srcs = ["ring_database_builder.cc"],
+    hdrs = ["ring_database_builder.h"],
+    tags = ["berkeleydb"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":smi2rings_cc_proto",
+        "//Foundational/iwstring:absl_hash",
+        "@third_party//:berkeley_shared",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "ring_database_builder_test",
+    srcs = ["ring_database_builder_test.cc"],
+    tags = ["berkeleydb"],
+    deps = [
+        ":ring_database_builder",
+        ":ring_database_lookup",
+        "@third_party//:berkeley_static",
+        "@googletest//:gtest_main",
     ],
 )

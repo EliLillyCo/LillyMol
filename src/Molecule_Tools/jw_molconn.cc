@@ -23,6 +23,9 @@
 
 using std::cerr;
 
+using lillymol_estate::value_of_Kier_and_Hall_atom_intrinsic_state;
+using lillymol_estate::determine_atom_e_state_index;
+
 // DEBUG_SWITCH is used to print out debugging msgs
 #ifndef DEBUG_SWITCH
 #define DEBUG_SWITCH 0

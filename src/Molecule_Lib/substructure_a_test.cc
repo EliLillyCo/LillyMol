@@ -36,11 +36,11 @@ query {
 
   Molecule m1;
   ASSERT_TRUE(m1.build_from_smiles("C"));
-  EXPECT_EQ(query.substructure_search(&m1), 1);
+  EXPECT_EQ(query.substructure_search(&m1), 1u);
 
   Molecule m2;
   ASSERT_TRUE(m2.build_from_smiles("N"));
-  EXPECT_EQ(query.substructure_search(&m2), 1);
+  EXPECT_EQ(query.substructure_search(&m2), 1u);
 }
 
 TEST(TestSubstructureAtom, TestAnd) {
@@ -66,11 +66,11 @@ query {
 
   Molecule m1;
   ASSERT_TRUE(m1.build_from_smiles("C"));
-  EXPECT_EQ(query.substructure_search(&m1), 0);
+  EXPECT_EQ(query.substructure_search(&m1), 0u);
 
   Molecule m2;
   ASSERT_TRUE(m2.build_from_smiles("c1ccccc1"));
-  EXPECT_EQ(query.substructure_search(&m2), 6);
+  EXPECT_EQ(query.substructure_search(&m2), 6u);
 }
 
 TEST(TestSubstructureAtom, TestImpossibleAnd) {
@@ -96,19 +96,19 @@ query {
 
   Molecule m1;
   ASSERT_TRUE(m1.build_from_smiles("C"));
-  EXPECT_EQ(query.substructure_search(&m1), 0);
+  EXPECT_EQ(query.substructure_search(&m1), 0u);
 
   Molecule m2;
   ASSERT_TRUE(m2.build_from_smiles("CN"));
-  EXPECT_EQ(query.substructure_search(&m2), 0);
+  EXPECT_EQ(query.substructure_search(&m2), 0u);
 
   Molecule m3;
   ASSERT_TRUE(m3.build_from_smiles("c1ccccc1"));
-  EXPECT_EQ(query.substructure_search(&m3), 0);
+  EXPECT_EQ(query.substructure_search(&m3), 0u);
 
   Molecule m4;
   ASSERT_TRUE(m4.build_from_smiles("c1ncccc1"));
-  EXPECT_EQ(query.substructure_search(&m4), 0);
+  EXPECT_EQ(query.substructure_search(&m4), 0u);
 }
 
 TEST(TestSubstructureAtom, TestXor) {
@@ -134,11 +134,11 @@ query {
 
   Molecule m1;
   ASSERT_TRUE(m1.build_from_smiles("C"));
-  EXPECT_EQ(query.substructure_search(&m1), 1);
+  EXPECT_EQ(query.substructure_search(&m1), 1u);
 
   Molecule m2;
   ASSERT_TRUE(m2.build_from_smiles("c1ccccc1"));
-  EXPECT_EQ(query.substructure_search(&m2), 0);
+  EXPECT_EQ(query.substructure_search(&m2), 0u);
 }
 
 }  // namespace

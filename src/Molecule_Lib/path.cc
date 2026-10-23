@@ -16,8 +16,7 @@
 
 #define RING_FRAGMENT_MEMBERSHIP_UNKNOWN -8
 
-Ring::Ring()
-{
+Ring::Ring() {
   _is_fused = 0;
   _fused_system_identifier = -1;
   _aromaticity = AROMATICITY_NOT_DETERMINED;
@@ -27,8 +26,7 @@ Ring::Ring()
   _number_strongly_fused_neighbours = 0;
 }
 
-Ring::Ring(const Ring & rhs)
-{
+Ring::Ring(const Ring& rhs) {
   _is_fused = rhs._is_fused;
   _fused_system_identifier = rhs._fused_system_identifier;
   _aromaticity = rhs._aromaticity;
@@ -61,8 +59,7 @@ Ring::Ring(const Ring & rhs)
 */
 
 int
-Ring::ok() const
-{
+Ring::ok() const {
   return resizable_array<atom_number_t>::ok();
 }
 
@@ -90,39 +87,39 @@ Ring::DebugPrint(std::ostream& output) const {
 }
 
 int
-Ring::set_fused_to(Ring * r, int bic)
-{
+Ring::set_fused_to(Ring* r, int bic) {
   assert(ok());
   assert(r->ok());
 
-  // std::cerr << "ring::set_fused_to: lhs " << *this << " rhs " << *r << " bic " << bic << '\n';
+  // std::cerr << "ring::set_fused_to: lhs " << *this << " rhs " << *r << " bic " << bic
+  // << '\n';
 
   _fused_neighbours.add_if_not_already_present(r);
 
-  if (bic > _largest_number_of_bonds_shared_with_another_ring)
+  if (bic > _largest_number_of_bonds_shared_with_another_ring) {
     _largest_number_of_bonds_shared_with_another_ring = bic;
-  if (bic > 1)
+  }
+  if (bic > 1) {
     _number_strongly_fused_neighbours++;
+  }
 
   return 1;
 }
 
 int
 Ring::is_fused_to(const Ring* r) const {
-  return _fused_neighbours.contains ((Ring *) r);   // loss of const OK
+  return _fused_neighbours.contains((Ring*)r);  // loss of const OK
 }
 
-const Ring *
-Ring::fused_neighbour(int n) const
-{
+const Ring*
+Ring::fused_neighbour(int n) const {
   assert(ok());
 
   return _fused_neighbours[n];
 }
 
 int
-Ring::propagate_fused_system_identifier(int fsid)
-{
+Ring::propagate_fused_system_identifier(int fsid) {
   _fused_system_identifier = fsid;
   _is_fused = 1;
 
@@ -131,21 +128,20 @@ Ring::propagate_fused_system_identifier(int fsid)
   int nf = _fused_neighbours.number_elements();
   assert(nf > 0);
 
-  for (int i = 0; i < nf; i++)
-  {
-    Ring * ri = _fused_neighbours[i];
+  for (int i = 0; i < nf; i++) {
+    Ring* ri = _fused_neighbours[i];
     assert(ri->ok());
 
-    if (! ri->is_fused())
+    if (!ri->is_fused()) {
       rc += ri->propagate_fused_system_identifier(fsid);
+    }
   }
 
   return rc;
 }
 
 int
-Ring::set_aromaticity(aromaticity_type_t arom)
-{
+Ring::set_aromaticity(aromaticity_type_t arom) {
   assert(AROMATIC == arom || NOT_AROMATIC == arom);
 
   _aromaticity = arom;
@@ -164,40 +160,38 @@ Ring::set_aromaticity(aromaticity_type_t arom)
 */
 
 int
-Ring::update_ring_membership(int * ring_membership, int increment, int floor) const
-{
+Ring::update_ring_membership(int* ring_membership, int increment, int floor) const {
   assert(nullptr != ring_membership);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
+  for (int i = 0; i < _number_elements; i++) {
     atom_number_t j = _things[i];
-    if (ring_membership[j] < floor)
+    if (ring_membership[j] < floor) {
       ring_membership[j] = floor + increment;
-    else
+    } else {
       ring_membership[j] += increment;
+    }
   }
 
   return _number_elements;
 }
 
 /*
-  We need to know if an isolated ring is spiro fused. 
+  We need to know if an isolated ring is spiro fused.
   We look at ring_membership and see if any of the atoms hit are in more
   than 1 rings
 */
 
 int
-Ring::spiro_fused(const int * ring_membership) const
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
+Ring::spiro_fused(const int* ring_membership) const {
+  for (int i = 0; i < _number_elements; i++) {
     atom_number_t j = _things[i];
 
-    if (ring_membership[j] > 1)
+    if (ring_membership[j] > 1) {
       return 1;
+    }
   }
 
-  return 0;    // nope, all ring_membership items must have been 0 or 1
+  return 0;  // nope, all ring_membership items must have been 0 or 1
 }
 
 /*
@@ -207,8 +201,7 @@ Ring::spiro_fused(const int * ring_membership) const
 */
 
 int
-Ring::fused_ring_check_for_spiro_fusion(const int * ring_membership) const
-{
+Ring::fused_ring_check_for_spiro_fusion(const int* ring_membership) const {
   return any_members_set_in_array(ring_membership);
 
   /*for (int i = 0; i < _number_elements; i++)
@@ -222,36 +215,38 @@ Ring::fused_ring_check_for_spiro_fusion(const int * ring_membership) const
   return 0;
 }
 
-std::ostream &
-operator<<(std::ostream & os, const Ring & r)
-{
+std::ostream&
+operator<<(std::ostream& os, const Ring& r) {
   os << "Ring " << r._ring_number;
-  if (r.is_fused() || r.fused_system_identifier() >= 0 || r.fused_ring_neighbours())
-  {
+  if (r.is_fused() || r.fused_system_identifier() >= 0 || r.fused_ring_neighbours()) {
     os << " (";
-    if (r.is_fused())
+    if (r.is_fused()) {
       os << "FSysId " << r.fused_system_identifier();
-    if (r.fused_ring_neighbours())
+    }
+    if (r.fused_ring_neighbours()) {
       os << " fused " << r.fused_ring_neighbours();
-    if (r.strongly_fused_ring_neighbours() > 0)
+    }
+    if (r.strongly_fused_ring_neighbours() > 0) {
       os << ", " << r.strongly_fused_ring_neighbours() << " strongly";
+    }
     os << ')';
   }
 
-  if (r.is_aromatic())
+  if (r.is_aromatic()) {
     os << " arom";
-  else if (r.is_non_aromatic())
+  } else if (r.is_non_aromatic()) {
     os << " non-arom";
-  else
+  } else {
     os << " unk-arom";
+  }
 
-  if (RING_FRAGMENT_MEMBERSHIP_UNKNOWN != r.fragment_membership())
+  if (RING_FRAGMENT_MEMBERSHIP_UNKNOWN != r.fragment_membership()) {
     os << " in fragment " << r.fragment_membership();
+  }
 
   os << " has " << r.number_elements() << " atoms :";
 
-  for (int i = 0; i < r.number_elements(); i++)
-  {
+  for (int i = 0; i < r.number_elements(); i++) {
     os << " " << r[i];
   }
 
@@ -259,50 +254,49 @@ operator<<(std::ostream & os, const Ring & r)
 }
 
 int
-path_length_comparitor_longer(Path * const * pp1, Path * const * pp2)
-{
+path_length_comparitor_longer(Path* const* pp1, Path* const* pp2) {
   assert(nullptr != pp1);
   assert(nullptr != pp2);
 
-  const Path * p1 = *pp1;
-  const Path * p2 = *pp2;
+  const Path* p1 = *pp1;
+  const Path* p2 = *pp2;
 
   const int n1 = p1->number_elements();
   const int n2 = p2->number_elements();
 
-  if (n1 > n2)
+  if (n1 > n2) {
     return 1;
-  else if (n1 == n2)
+  } else if (n1 == n2) {
     return 0;
-  else
+  } else {
     return -1;
+  }
 }
 
 int
-path_length_comparitor_shorter(const void * p1, const void * p2)
-{
+path_length_comparitor_shorter(const void* p1, const void* p2) {
   assert(nullptr != p1);
   assert(nullptr != p2);
 
-  const Path ** pp1 = (const Path **)p1;
-  const Path ** pp2 = (const Path **)p2;
+  const Path** pp1 = (const Path**)p1;
+  const Path** pp2 = (const Path**)p2;
 
   const int n1 = (*pp1)->number_elements();
   const int n2 = (*pp2)->number_elements();
 
-  if (n1 < n2)
+  if (n1 < n2) {
     return 1;
-  else if (n1 == n2)
+  } else if (n1 == n2) {
     return 0;
-  else
+  } else {
     return -1;
+  }
 }
 
-//#define DEBUG_SET_BONDS_IN_RING
+// #define DEBUG_SET_BONDS_IN_RING
 
 int
-Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
-{
+Molecule::_set_bonds_in_ring(int* zbonds, const Ring* r) {
 #ifdef DEBUG_SET_BONDS_IN_RING
   cerr << "Finding bonds for ring " << (*r) << '\n';
   cerr << "Hits bonds";
@@ -310,8 +304,7 @@ Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
 
   int n = r->number_elements();
   atom_number_t prev = r->last_item();
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
     atom_number_t j = r->item(i);
     int k = _bond_list.which_bond(prev, j);
     assert(k >= 0);
@@ -320,7 +313,7 @@ Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
     prev = j;
 
 #ifdef DEBUG_SET_BONDS_IN_RING
-    const Bond * b = _bond_list[k];
+    const Bond* b = _bond_list[k];
     cerr << " (" << b->a1() << "," << b->a2() << ") " << k;
 #endif
   }
@@ -333,12 +326,10 @@ Molecule::_set_bonds_in_ring(int * zbonds, const Ring * r)
 }
 
 int
-Molecule::_set_bonds_in_ring(IW_Bits_Base * bits, const Ring * r)
-{
+Molecule::_set_bonds_in_ring(IW_Bits_Base* bits, const Ring* r) {
   int n = r->number_elements();
   atom_number_t prev = r->last_item();
-  for (int i = 0; i < n; i++)
-  {
+  for (int i = 0; i < n; i++) {
     atom_number_t j = r->item(i);
     int k = _bond_list.which_bond(prev, j);
     bits->set(k, 1);
@@ -346,7 +337,7 @@ Molecule::_set_bonds_in_ring(IW_Bits_Base * bits, const Ring * r)
     prev = j;
 
 #ifdef DEBUG_SET_BONDS_IN_RING
-    const Bond * b = _bond_list[k];
+    const Bond* b = _bond_list[k];
     cerr << " (" << b->a1() << "," << b->a2() << ") " << k;
 #endif
   }
@@ -359,24 +350,27 @@ Molecule::_set_bonds_in_ring(IW_Bits_Base * bits, const Ring * r)
 }
 
 int
-Ring::contains_bond(atom_number_t a1, atom_number_t a2) const
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (a1 != _things[i])
+Ring::contains_bond(atom_number_t a1, atom_number_t a2) const {
+  for (int i = 0; i < _number_elements; i++) {
+    if (a1 != _things[i]) {
       continue;
+    }
 
-    if (i < _number_elements - 1 && a2 == _things[i + 1])
+    if (i < _number_elements - 1 && a2 == _things[i + 1]) {
       return 1;
+    }
 
-    if (i > 0 && a2 == _things[i - 1])
+    if (i > 0 && a2 == _things[i - 1]) {
       return 1;
+    }
 
-    if (i == _number_elements - 1)
+    if (i == _number_elements - 1) {
       return a2 == _things[0];
+    }
 
-    if (0 == i)
+    if (0 == i) {
       return a2 == _things[_number_elements - 1];
+    }
 
     return 0;
   }
@@ -385,25 +379,21 @@ Ring::contains_bond(atom_number_t a1, atom_number_t a2) const
 }
 
 int
-Ring::contains_both(atom_number_t a1, atom_number_t a2) const
-{
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (_things[i] == a1)
-    {
-      for (int j = i + 1; j < _number_elements; j++)
-      {
-        if (_things[j] == a2)
+Ring::contains_both(atom_number_t a1, atom_number_t a2) const {
+  for (int i = 0; i < _number_elements; i++) {
+    if (_things[i] == a1) {
+      for (int j = i + 1; j < _number_elements; j++) {
+        if (_things[j] == a2) {
           return 1;
+        }
       }
       return 0;
     }
-    if (_things[i] == a2)
-    {
-      for (int j = i + 1; j < _number_elements; j++)
-      {
-        if (_things[j] == a1)
+    if (_things[i] == a2) {
+      for (int j = i + 1; j < _number_elements; j++) {
+        if (_things[j] == a1) {
           return 1;
+        }
       }
       return 0;
     }
@@ -413,8 +403,8 @@ Ring::contains_both(atom_number_t a1, atom_number_t a2) const
 }
 
 int
-Ring::_compute_bonds_shared_with(const Ring & rhs, int my_direction, int lhs_ndx, int rhs_ndx) const
-{
+Ring::_compute_bonds_shared_with(const Ring& rhs, int my_direction, int lhs_ndx,
+                                 int rhs_ndx) const {
   assert(_things[lhs_ndx] == rhs._things[rhs_ndx]);
 
   atom_number_t a1 = next_after_wrap(lhs_ndx, my_direction);
@@ -423,53 +413,55 @@ Ring::_compute_bonds_shared_with(const Ring & rhs, int my_direction, int lhs_ndx
 
   int rhs_direction = 0;
 
-  if (a1 == rhs.next_after_wrap(rhs_ndx, 1))
+  if (a1 == rhs.next_after_wrap(rhs_ndx, 1)) {
     rhs_direction = 1;
-  else
-  {
+  } else {
     rhs_ndx = initial_rhs_ndx;
-    if (a1 == rhs.next_after_wrap(rhs_ndx, -1))
+    if (a1 == rhs.next_after_wrap(rhs_ndx, -1)) {
       rhs_direction = -1;
+    }
   }
 
-  if (0 == rhs_direction)
+  if (0 == rhs_direction) {
     return 0;
+  }
 
   int rc = 1;
 
-  while (rc < _number_elements)    // guard against the same ring as both lhs and rhs
-  {
+  while (rc < _number_elements) {  // guard against the same ring as both lhs and rhs
     a1 = next_after_wrap(lhs_ndx, my_direction);
-    if (a1 != rhs.next_after_wrap(rhs_ndx, rhs_direction))
+    if (a1 != rhs.next_after_wrap(rhs_ndx, rhs_direction)) {
       return rc;
+    }
 
     rc++;
   }
 
-  return rc;    // probably should not come to here
+  return rc;  // probably should not come to here
 }
 
 int
-Ring::compute_bonds_shared_with(const Ring & rhs) const
-{
+Ring::compute_bonds_shared_with(const Ring& rhs) const {
   atom_number_t lhs_ndx;
   atom_number_t rhs_ndx = -1;
 
-  for (lhs_ndx = 0; lhs_ndx < _number_elements; lhs_ndx++)
-  {
+  for (lhs_ndx = 0; lhs_ndx < _number_elements; lhs_ndx++) {
     rhs_ndx = rhs.index(_things[lhs_ndx]);
-    if (rhs_ndx < 0)
+    if (rhs_ndx < 0) {
       continue;
+    }
 
-    if (lhs_ndx ==
-        _number_elements - 1)    // only one atom in common, so obviously zero bonds in common
+    // only one atom in common, so obviously zero bonds in common
+    if (lhs_ndx == _number_elements - 1) {
       return 0;
+    }
 
     break;
   }
 
-  if (rhs_ndx < 0)    // didn't find anything
+  if (rhs_ndx < 0) {  // didn't find anything
     return 0;
+  }
 
   // At this stage, we have a match, but we don't know the directions.
   // We need to match backwards and forwards since we might have a case like
@@ -488,15 +480,14 @@ Ring::compute_bonds_shared_with(const Ring & rhs) const
 */
 
 int
-Molecule::_transfer_from_non_sssr_to_sssr_ring_set(int nssr_ndx, int sssr_ndx)
-{
-  Ring * rfrom = _sssr_rings[sssr_ndx];
-  Ring * rto = _non_sssr_rings[nssr_ndx];
+Molecule::_transfer_from_non_sssr_to_sssr_ring_set(int nssr_ndx, int sssr_ndx) {
+  Ring* rfrom = _sssr_rings[sssr_ndx];
+  Ring* rto = _non_sssr_rings[nssr_ndx];
 
-  for (int i = 0; i < _sssr_rings.number_elements(); i++)
-  {
-    if (i == sssr_ndx)
+  for (int i = 0; i < _sssr_rings.number_elements(); i++) {
+    if (i == sssr_ndx) {
       continue;
+    }
 
     _sssr_rings[i]->ring_moving_from_non_sssr_to_sssr(rfrom, rto);
   }
@@ -516,10 +507,10 @@ Molecule::_transfer_from_non_sssr_to_sssr_ring_set(int nssr_ndx, int sssr_ndx)
 }
 
 int
-Ring::ring_moving_from_non_sssr_to_sssr(Ring * rfrom, Ring * rto)
-{
-  if (! _fused_neighbours.remove_first(rfrom))
+Ring::ring_moving_from_non_sssr_to_sssr(Ring* rfrom, Ring* rto) {
+  if (!_fused_neighbours.remove_first(rfrom)) {
     return 0;
+  }
 
   _fused_neighbours.add(rto);
 
@@ -527,14 +518,13 @@ Ring::ring_moving_from_non_sssr_to_sssr(Ring * rfrom, Ring * rto)
 }
 
 Ring_Atom_Iterator
-Ring::find(atom_number_t a) const
-{
+Ring::find(atom_number_t a) const {
   Ring_Atom_Iterator rc(*this);
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    if (_things[i] != a)
+  for (int i = 0; i < _number_elements; i++) {
+    if (_things[i] != a) {
       continue;
+    }
 
     rc.set_index(i);
     return rc;

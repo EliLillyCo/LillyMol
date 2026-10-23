@@ -12,7 +12,7 @@ using std::endl;
 
 Atom_Alias::Atom_Alias ()
 {
-  _atom = INVALID_ATOM_NUMBER;
+  _atom = kInvalidAtomNumber;
 
   return;
 }

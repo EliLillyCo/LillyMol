@@ -5,6 +5,7 @@ import os
 import subprocess
 
 import joblib
+import numpy as np
 import pandas as pd
 import random_forest_model_pb2
 from absl import app, flags, logging
@@ -91,7 +92,6 @@ def keywords_from(proto):
     result['verbose'] = True
 
   return result
-
 def classification(x, y, options: Options):
   """build a classification model
   """
@@ -147,11 +147,13 @@ def build_random_forest_model(descriptor_fname: str,
 
   descriptors.rename(columns={descriptors.columns[0]: "Id"}, inplace=True)
   activity.rename(columns={activity.columns[0]: "Id"}, inplace=True)
-  combined = pd.concat([activity.set_index("Id"),
-                        descriptors.set_index("Id")], axis=1, join='inner').reset_index() 
+# combined = pd.concat([activity.set_index("Id"),
+#                       descriptors.set_index("Id")], axis=1, join='inner').reset_index() 
+  combined = pd.merge(activity.set_index("Id"),
+                        descriptors.set_index("Id"), how='inner', on=["Id"]).reset_index() 
   if len(combined) != len(descriptors):
     logging.error("Combined set has %d rows, need %d", len(combined), len(descriptors))
-    return 1
+#   return 1
 
   if not os.path.isdir(options.mdir):
     os.mkdir(options.mdir)
@@ -160,7 +162,9 @@ def build_random_forest_model(descriptor_fname: str,
 
   x = combined.iloc[:,2:]
   features = x.columns
-  x.apply(pd.to_numeric).to_numpy()
+  x.apply(pd.to_numeric).to_numpy(dtype=np.float64)
+  # Suppress values that overflow float32.
+  x[x>1.0e+37] = 1.0e+37
 
   rc = False
   if options.classification:

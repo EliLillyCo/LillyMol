@@ -4,13 +4,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <cstdlib>
 #include <iostream>
 #include <optional>
 #include <random>
+#include <type_traits>
+#include <utility>
 #include <unistd.h>
 
 #include "re2/re2.h"
 
+#include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 
@@ -25,6 +29,28 @@
 /*
   various useful functions, some templates, others just functions
 */
+
+// Some command line options support a special "help" directive, for example
+// "-q help". Tools with complex option dependencies should call this early,
+// before validating unrelated options that might otherwise fail first.
+template <typename F>
+void
+DisplayDashHelpIfRequested(const Command_Line& cl, char option, F&& display_help) {
+  const_IWSubstring value;
+  const int noptions = cl.option_count(option);
+  for (int i = 0; i < noptions; ++i) {
+    if (! cl.value(option, value, i) || value != "help") {
+      continue;
+    }
+
+    if constexpr (std::is_invocable_v<F, int>) {
+      std::forward<F>(display_help)(0);
+    } else {
+      std::forward<F>(display_help)();
+    }
+    std::exit(0);
+  }
+}
 
 template <typename T>
 int
@@ -127,6 +153,7 @@ index_of_largest(int n, const T * items)
 }
 
 template <typename T>
+[[deprecated("Use std::fill_n")]]
 void
 set_vector(T * values, int n, T new_value)
 {

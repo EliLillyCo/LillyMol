@@ -75,6 +75,8 @@ class StructureDatabase {
 
     int Lookup(Molecule& m, enum Lookup params, IWString& ids_matched);
     int Lookup(Molecule& m, uint32_t mask, IWString& ids_matched);
+
+    int close();
 };
 
 }  // namespace structure_database

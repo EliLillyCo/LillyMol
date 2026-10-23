@@ -1,0 +1,12 @@
+name: "oxetane_to_gem_dimethyl"
+scaffold {
+  smarts: "[OD2r4]1@[C;x2X4]@[C;x2X4]@[C;x2X4]1"
+  remove_atom: 0
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}

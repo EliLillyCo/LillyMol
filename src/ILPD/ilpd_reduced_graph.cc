@@ -37,8 +37,9 @@ Usage(int rc) {
 // clang-format off
 cerr << R"(Transforms Ionisable Lipid molecules into reduced grah forms
 -C <fname>              read paramaters from <fname> - always needed
--S <fname>              write descriptors to <fname>
--F <fname>              write fragmented lipids to <fname>
+-S <fname>              write descriptors to <fname>.
+-F <fname>              write fragmented lipids to <fname>.
+-l                      reduce to largest fragment.
 -v                      verbose output\n";
 )";
 // clang-format on
@@ -916,7 +917,6 @@ DiscernSymmetryRelated(Molecule& m, PerMoleculeData& pmd) {
   m.recompute_distance_matrix();
 
   std::unique_ptr<int[]> sdone = std::make_unique<int[]>(nsymm + 1);
-  std::fill_n(sdone.get(), nsymm + 1, 0);
 
   int atoms_in_largest_symmetry_class = 0;
   Accumulator_Int<uint32_t> acc_size;

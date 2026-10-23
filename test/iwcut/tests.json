@@ -10,7 +10,7 @@
     },
 
     {
-      "name": "dashD",
+      "name": "descriptors_in_file",
       "args": [
         "-k . -D #{indir}/file1.dat #{indir}/file2.dat"
       ]

@@ -13,6 +13,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -189,11 +191,11 @@ Molecule_Proc::initialise (Set_of_Queries & queries)
 
   if (0 == nq)
   {
-    set_vector (_process_these_atoms, matoms, 1);
+    std::fill_n (_process_these_atoms, matoms, 1);
     return matoms;
   }
 
-  set_vector(_process_these_atoms, matoms, 0);
+  std::fill_n(_process_these_atoms, matoms, 0);
 
   Molecule_to_Match target(this);
 

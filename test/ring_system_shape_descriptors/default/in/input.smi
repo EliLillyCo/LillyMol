@@ -1,0 +1,9 @@
+CC ethane
+Cc1ccccc1 toluene
+Cc1ccccc1C ortho_xylene
+Cc1cccc(C)c1 meta_xylene
+Cc1ccc(C)cc1 para_xylene
+Cc1cc(C)cc(C)c1 trimethylbenzene
+c1ccccc1-c1ccccc1 biphenyl
+O=C1CCCCC1 cyclohexanone
+CC1CCC(C)CC1=O dimethyl_cyclohexanone

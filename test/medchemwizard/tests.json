@@ -6,7 +6,25 @@
       "args": [
         "-R ${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS -W space -v #{indir}/in.smi"
       ]
+    },
+    {
+      "name": "protect_all_atoms",
+      "args": [
+        "-R ${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS -W space -M 3 -s '[*]' #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "protect_no_match_ignore",
+      "args": [
+        "-R ${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS -W space -M 3 -s '[Cl]' -z i #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "protect_no_match_fatal",
+      "args": [
+        "-R ${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS -W space -M 3 -s '[Cl]' #{indir}/in.smi"
+      ],
+      "non_zero_rc_expected": true
     }
   ]
-
 }

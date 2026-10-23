@@ -3,6 +3,7 @@
   Write molecules and their transformed forms
 */
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 
@@ -19,15 +20,17 @@ using std::cerr;
 
 static int verbose = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
 static int ntest = 10;
 
-static int failures = 0;
+static uint64_t failures = 0;
 
-static int molecules_with_no_changes = 0;
+static uint64_t molecules_with_no_changes = 0;
 
-static int molecules_changed = 0;
+static uint64_t molecules_changed = 0;
+
+static uint64_t valence_errors_introduced = 0;
 
 static int reduce_to_largest_fragment = 0;
 
@@ -212,8 +215,12 @@ tstandardise(Molecule& m, IWString_and_File_Descriptor& output)
   }
 
   IWString initial_smiles = m.unique_smiles();
+  // If called with '-g APP=EACH' the names of standardisations that change the
+  // molecule will be appended to the name.
+  IWString initial_name = m.name();
 
   int failures_this_molecule = 0;
+  IWString first_reason;
 
   for (int i = 0; i < ntest; i++) {
     IWString smiles = mcopy.random_smiles();
@@ -231,7 +238,7 @@ tstandardise(Molecule& m, IWString_and_File_Descriptor& output)
       //    cerr << tmp.smiles() << '\n';
     }
 
-    int changes = chemical_standardisation.process(tmp);
+    const int changes = chemical_standardisation.process(tmp);
 
     if (changes != starting_structure_changed_by_chemical_standardisation) {
       cerr << "Potential problems for '" << m.name() << "', parent "
@@ -252,6 +259,13 @@ tstandardise(Molecule& m, IWString_and_File_Descriptor& output)
            << tmp.name() << '\n';
       cerr << usmi << " unique_smiles\n";
       failures_this_molecule++;
+      if (first_reason.empty()) {
+        IWString current_name = tmp.name();
+        if (current_name != initial_name) {
+          first_reason = current_name;
+          first_reason.remove_leading_words(1);
+        }
+      }
 
       if (break_on_error) {
         break;
@@ -265,6 +279,10 @@ tstandardise(Molecule& m, IWString_and_File_Descriptor& output)
       cerr << tmp.unique_smiles() << ' ' << m.name()
            << " STANDARDISED FROM RANDOM - VALENCE ERROR\n";
       failures_this_molecule++;
+      if (first_reason.empty()) {
+        first_reason = "valence";
+      }
+      ++valence_errors_introduced;
 
       if (break_on_error) {
         break;
@@ -308,8 +326,12 @@ tstandardise(Molecule& m, IWString_and_File_Descriptor& output)
 
   if (failures_this_molecule) {
     if (stream_for_failures.is_open()) {
-      stream_for_failures << mcopy.smiles() << ' ' << m.name() << '\n';
-      stream_for_failures.write_if_buffer_holds_more_than(4096);
+      stream_for_failures << mcopy.smiles() << ' ' << m.name();
+      if (! first_reason.empty()) {
+        stream_for_failures << ' ' << first_reason;
+      }
+      stream_for_failures << '\n';
+      stream_for_failures.flush();
     }
 
     failures++;
@@ -548,14 +570,14 @@ tstandardise(int argc, char** argv)
     cerr << molecules_changed << " molecules changed, " << molecules_with_no_changes
          << " unchanged\n";
     cerr << failures << " molecules with failures\n";
+    cerr << valence_errors_introduced << " valence errors introduced\n";
   }
 
   return rc;
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   int rc = tstandardise(argc, argv);
 
   return rc;

@@ -1,6 +1,8 @@
 #ifndef CIRCULAR_FINGERPRINT_GENERATOR_H
 #define CIRCULAR_FINGERPRINT_GENERATOR_H
 
+#include <cstdint>
+
 #include "Foundational/iwmisc/sparse_fp_creator.h"
 #include "Molecule_Lib/molecule.h"
 
@@ -19,15 +21,15 @@ class Circular_Fingerprint_Generator
     int _min_radius;
     int _max_radius;
     const Atom ** _atom;
-    int * _atype;
+    uint32_t * _atype;
     int * _processing_status;
 
 //  private functions
 
     void _free_dynamic_arrays ();
-    int _initialise_molecule (const Molecule & m, const int * atype, const int * include_these_atoms);
+    int _initialise_molecule (const Molecule & m, const uint32_t * atype, const int * include_these_atoms);
     int _generate_shells (int radius, unsigned int sum_so_far, Sparse_Fingerprint_Creator & sfc);
-    void _increment (unsigned int & sum_so_far, int bc, int atom_constant) const;
+    void _increment (unsigned int & sum_so_far, int bc, uint32_t atom_constant) const;
 
   public:
     Circular_Fingerprint_Generator();
@@ -38,7 +40,7 @@ class Circular_Fingerprint_Generator
 
     void set_additive (int s) { _additive = s;}
 
-    int generate_fingerprint (const Molecule & m, const int * atype, const int * include_these_atoms, Sparse_Fingerprint_Creator &);
+    int generate_fingerprint (const Molecule & m, const uint32_t * atype, const int * include_these_atoms, Sparse_Fingerprint_Creator &);
 };
 
 void set_default_circular_fingerprint_additive (int);

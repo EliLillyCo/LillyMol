@@ -23,6 +23,10 @@ using std::endl;
 
 #include "cmdline.h"
 
+#if defined(__APPLE__)
+#include "argv_permutation.h"
+#endif
+
 #define CL_MAGIC 97531
 #define OV_MAGIC 97532
 
@@ -104,6 +108,13 @@ Command_Line::Command_Line(int argc, char ** argv, const char * options)
 
 #endif
 
+#if defined(__APPLE__)
+  // BSD getopt stops at the first operand. Match GNU's default ordering before
+  // parsing, then reset BSD's internal state for repeated Command_Line objects.
+  const int parse_argc = cmdline_internal::PermuteArguments(argc, argv, options);
+  optreset = 1;
+#endif
+
   optarg = nullptr;
 
 #if defined(_WIN32) || defined(NEED_EXTERN_OPT)
@@ -119,12 +130,22 @@ Command_Line::Command_Line(int argc, char ** argv, const char * options)
   _unrecognised_options_encountered = 0;
 
   int o;
+#if !defined(__APPLE__)
+  const int parse_argc = argc;
+#endif
 
 
-  while ((o = getopt(argc, argv, options)) != EOF)
+  while ((o = getopt(parse_argc, argv, options)) != EOF)
   {
     if ('?' == o)
     {
+#if defined(__APPLE__)
+      // BSD getopt can advance optind past argc when a required value is
+      // missing. In that case argv[optind - 1] is the terminating nullptr.
+      if (optind > argc || argv[optind - 1] == nullptr)
+        cerr << "Command_Line: unrecognised option '-" << static_cast<char>(optopt) << "'\n";
+      else
+#endif
       cerr << "Command_Line: unrecognised option '" << argv[optind - 1] << "'\n";
       _unrecognised_options_encountered++;
     }
@@ -134,6 +155,13 @@ Command_Line::Command_Line(int argc, char ** argv, const char * options)
       _options.add(tmp);
     }
   }
+
+#if defined(__APPLE__)
+  // With a missing required value, BSD getopt advances one past parse_argc.
+  // Operands permuted behind the option prefix begin at parse_argc.
+  if (optind > parse_argc)
+    optind = parse_argc;
+#endif
 
   resize (argc - optind);
 

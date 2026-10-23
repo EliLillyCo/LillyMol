@@ -84,12 +84,11 @@ usage(int rc) {
   // clang-format off
   cerr << DB_VERSION_STRING << '\n';
 
-  cerr << "Loads records from a iwbdb database\n";
+  cerr << "Loads records into a iwbdb database\n";
   cerr << prog_name << " -d dbname identifier_file\n";
   cerr << " -d <db>         database\n";
   cerr << " -a <char>       append new data to existing data, separated by <char>\n";
-  cerr
-      << " -A              only append new data if it is different from already stored\n";
+  cerr << " -A              only append new data if it is different from already stored\n";
   cerr << " -o              overwrite existing database entries\n";
   cerr << " -B <file>       file for identifiers already in the database\n";
   cerr << " -c <column>     column for identifiers (default 1)\n";

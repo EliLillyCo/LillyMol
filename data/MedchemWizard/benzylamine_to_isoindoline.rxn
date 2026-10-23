@@ -1,0 +1,16 @@
+# Bridge a secondary benzylamine nitrogen to an available ortho carbon with CH2.
+name: "benzylamine_to_isoindoline"
+scaffold {
+  smarts: "[cD2H1]:[cD3]-[CH2D2R0]-[ND2H1R0+0]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join { a1: 0 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 3 a2: 0 btype: SS_SINGLE_BOND }
+}

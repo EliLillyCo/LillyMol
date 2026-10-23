@@ -2,7 +2,8 @@
 # [#6:1][S:2](=O)(=O)-[N:3]-[#6:4]>>[#6:4][S:2](=O)(=O)-[N:3]-[#6:1] reverse amide
   (A C Comment "Switches.reverse_amide")
   (0 Scaffold
-    (A C smarts "[#6]-C(=O)-!@[N]-[#6]")
+    (A C smarts "[#6]-[CR0T2](=O)-!@[NR0]-[#6]")
+    (A I embeddings_do_not_overlap 1)
     (A I break_bond (0 1))
     (A I break_bond (3 4))
     (A I single_bond (1 4))

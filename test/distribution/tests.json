@@ -1,0 +1,14 @@
+{
+  "executable": "distribution",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-H stats -s 1 -d marvin_logd074 #{indir}/input.txt"
+      ]
+    }
+
+  ]
+}

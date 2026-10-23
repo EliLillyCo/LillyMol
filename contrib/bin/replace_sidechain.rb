@@ -9,7 +9,7 @@ def usage
 Adds Chembl aromatic substituents to molecules.
 LillyMol includes a file of aromatic substituents extracted from Chembl 35
 
-data/chembl_sidechains.smi
+data/chembl_sidechains.textproto
 
 That file includes isotopically labelled sidechains as well as the number of times the
 sidechain is found in Chembl.

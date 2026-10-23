@@ -1,0 +1,47 @@
+{
+  "executable": "gfp_leader_buckets",
+  "test": [
+    {
+      "name": "external_bucket_file",
+      "args": [
+        "-t 0.3 -n 4 -B #{indir}/buckets.txt #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "bucket_column",
+      "args": [
+        "-t 0.3 -n 4 -B col=2 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "previously_selected",
+      "args": [
+        "-t 0.3 -a 0.0 -n 2 -B #{indir}/buckets.txt -A #{indir}/previous.gfp #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "external_bucket_file_threaded",
+      "args": [
+        "-t 0.3 -j 3 -n 4 -B #{indir}/buckets.txt #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "bucket_summary_text",
+      "args": [
+        "-t 0.3 -n 4 -Y summary.txt -B #{indir}/buckets.txt #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "bucket_summary_csv",
+      "args": [
+        "-t 0.0 -n 4 -Y summary.csv -B #{indir}/buckets.txt #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "report_progress",
+      "args": [
+        "-t 0.3 -r 2 -n 4 -B #{indir}/buckets.txt #{indir}/input.gfp"
+      ]
+    }
+  ]
+}

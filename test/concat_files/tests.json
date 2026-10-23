@@ -40,8 +40,55 @@
           "name": "case_8",
           "args": [ "-a #{indir}/t8.1 #{indir}/t8.2" ],
           "comment": [ "Concatenates two files. -a = write all identifiers (includes those not in first file)." ]
+        },
+        {
+          "name": "valid_join_column_names",
+          "args": [ "-J okid=Id,ID -a #{indir}/a.txt #{indir}/b.txt" ],
+          "comment": [ "Specify OK identifiers for the join column" ]
+        },
+        {
+          "name": "join_column_2",
+          "args": [ "-c 2 -J okid=ID,Name #{indir}/a.txt #{indir}/b.txt" ],
+          "comment": [ "Validate and join on column 2 in both files" ]
+        },
+        {
+          "name": "different_join_columns",
+          "args": [ "-c 2 -c 3 -J okid=ID,Name #{indir}/a.txt #{indir}/b.txt" ],
+          "comment": [ "Validate different identifier columns in each file" ]
+        },
+        {
+          "name": "qualified_join_columns",
+          "args": [ "-J okid=ID,Name #{indir}/a.txt,col=2 #{indir}/b.txt,col=3" ],
+          "comment": [ "Validate identifier columns supplied as per-file qualifiers" ]
+        },
+        {
+          "name": "invalid_join_column_2",
+          "args": [ "-c 2 -J okid=ID,Name #{indir}/a.txt #{indir}/b.txt" ],
+          "non_zero_rc_expected": true,
+          "comment": [ "Reject an invalid selected header even when column 1 has an allowed name" ]
+        },
+        {
+          "name": "numeric_join_column_2",
+          "args": [ "-c 2 -J nonumeric #{indir}/a.txt #{indir}/b.txt" ],
+          "non_zero_rc_expected": true,
+          "comment": [ "Reject a numeric identifier header outside column 1" ]
+        },
+        {
+          "name": "numeric_later_join_column",
+          "args": [ "-c 2 -J nonumeric #{indir}/a.txt #{indir}/b.txt" ],
+          "non_zero_rc_expected": true,
+          "comment": [ "Reject a numeric identifier header in a later input file" ]
+        },
+        {
+          "name": "empty_okid",
+          "args": [ "-J okid=ID -J okid= #{indir}/a.txt #{indir}/b.txt" ],
+          "non_zero_rc_expected": true,
+          "comment": [ "Reject an empty okid directive even after a valid directive" ]
+        },
+        {
+          "name": "quoted_join_column_2",
+          "args": [ "-q -c 2 -J okid=ID,Name #{indir}/a.txt #{indir}/b.txt" ],
+          "comment": [ "Validate a non-default identifier column after a quoted field containing spaces" ]
         }
-      ]
-    }
-  }
+    ]
 }

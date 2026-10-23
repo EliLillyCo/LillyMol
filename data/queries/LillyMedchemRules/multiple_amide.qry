@@ -1,0 +1,8 @@
+(0 Query
+  (A C Comment "multiple_amide")
+  (A D numeric_value 50)
+  (A I Version 2)
+  (A C smarts "[OD1]=[CD3R0T2]!@[NX3]")
+  (A I min_distance_between_hits 2)
+  (A I subtract_from_rc 2)
+)

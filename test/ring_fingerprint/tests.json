@@ -1,0 +1,13 @@
+{
+  "executable": "ring_fingerprint",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "#{indir}/test.smi"
+      ]
+    }
+
+  ]
+
+}

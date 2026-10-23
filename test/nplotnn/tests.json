@@ -40,6 +40,13 @@
     {
       "name": "case_10",
       "args": [ "-v -L def #{datadir}/leader.nn" ]
+    },
+    {
+      "name": "tfdata",
+      "shell_script": {
+        "script_name": "run_tfdata.sh",
+        "args": [ "#{datadir}" ]
+      }
     }
   ]
 }

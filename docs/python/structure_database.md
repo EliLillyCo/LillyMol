@@ -32,7 +32,7 @@ where a vertical bar appears between data retrieved from different databases.
 
 The first 'CHEMBL25' is an exact match to the starting molecule. The others
 all match with an 'F%' qualifier, which means they matched because those
-starting molecules have lost one or more smaller fragments, leaving someting
+starting molecules have lost one or more smaller fragments, leaving something
 that matches our smiles.
 
 Longer term, a protocol buffer will be returned which avoids awkward, and

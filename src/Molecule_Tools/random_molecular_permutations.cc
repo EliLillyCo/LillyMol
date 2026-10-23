@@ -1229,8 +1229,7 @@ Probabilities(const Config& config) {
   for (const FieldDescriptor* f : fields) {
     // cerr << f->name() << '\n';
     float tmp = reflection->GetFloat(config.probability(), f);
-    std::string key(f->name());
-    result[key] = tmp;
+    result[std::string(f->name())] = tmp;
   }
 
   return result;
@@ -6562,7 +6561,6 @@ random_molecular_permutations(int argc, char** argv) {
       usage(1);
     }
 
-    initialise_properties_ratios();
 
     if (!set_of_target_molecules.build(fname.null_terminated_chars())) {
       cerr << "Cannot build set of target molecules '" << fname << "'\n";

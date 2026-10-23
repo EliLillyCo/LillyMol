@@ -27,6 +27,7 @@ class iwstring_data_source;
 #include "Foundational/iwbits/iwbits.h"
 
 #include "iwmtypes.h"
+#include "mdl.h"
 
 #include "atom.h"
 #include "bond.h"
@@ -38,6 +39,21 @@ class iwstring_data_source;
 #include "iwrcb.h"
 #include "mol2graph.h"
 #include "set_of_atoms.h"
+
+class Molecule_Read_Options {
+  private:
+    MDL_File_Supporting_Material _mdl_file_supporting_material;
+
+  public:
+    Molecule_Read_Options();
+
+    MDL_File_Supporting_Material& mdl_file_supporting_material() {
+      return _mdl_file_supporting_material;
+    }
+    const MDL_File_Supporting_Material& mdl_file_supporting_material() const {
+      return _mdl_file_supporting_material;
+    }
+};
 
 // forward declaration
 
@@ -504,7 +520,7 @@ class Make_Implicit_Hydrogens_Explicit {
   Make_Implicit_Hydrogens_Explicit();
 
   void reset() {
-    _a = INVALID_ATOM_NUMBER;
+    _a = kInvalidAtomNumber;
   }
 
   isotope_t isotope() const {
@@ -602,7 +618,7 @@ enum BondedStatus {
   kOkNotBonded
 };
 
-class __attribute__((visibility("default"))) Molecule : private resizable_array_p<Atom> {
+class __attribute__((visibility("default"))) Molecule : protected resizable_array_p<Atom> {
  private:
   BondList _bond_list;
 
@@ -654,16 +670,18 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   //  Fractional atomic charges
 
-  Set_of_Charges* _charges;  // not yet implemented, using old way
+  Set_of_Charges* _charges;
 
   //  The set of atom types can be used to hold any information
 
   Atom_Types* _atom_type;
 
   //  When reading an MDL MOLFILE or a TDT file we can optionally bring
-  //  along the text info from the file
+  //  along the text info from the file. Rarely used, so allocate lazily.
 
-  resizable_array_p<IWString> _text_info;
+  std::unique_ptr<resizable_array_p<IWString>> _text_info;
+
+  resizable_array_p<IWString>& _ensure_text_info();
 
   void* _user_specified_void_ptr;
 
@@ -793,6 +811,9 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   int _add_chiral_centre_checking_for_duplicate(Chiral_Centre* c);
 
+  int AddChiralCentre(const Chiral_Centre& in_parent, const int* subset_membership, int flag,
+                          const int* xref, int parent_natoms);
+
   int _check_chirality_after_loss_of_bond(const atom_number_t a1, const atom_number_t a2);
 
   int _write_molecule_tdt_pcn(std::ostream& os, const IWString&) const;
@@ -865,9 +886,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   // ownership of `a`.
   // Setting partial_molecule sidesteps invalidation steps
   // and may be more efficient while building molecules.
-  int add(Atom* a, int partial_molecule = 0);
+  // Returns the atom number of the newly added atom. 
+  // If adding to an empty molecule, this returns 0.
+  // Will return kInvalidAtomNumber if an error, but currently no errors are possible.
+  atom_number_t add(Atom* a, int partial_molecule = 0);
 
-  int add(const Element*);
+  atom_number_t add(const Element*);
   // If `new_size` is smaller than `natoms` atoms are removed.
   // If larger than `natoms` space is allocated to make sure `new_size`
   // atoms can be allocated.
@@ -1066,7 +1090,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   void set_isotope_to_atom_number_no_perturb_canonical_ordering();
 
-  // changed 2016. The set the isotope to the value in the array
+  // changed 2016. Set the isotope to the value in the array
   template <typename T> int set_isotopes(const T*);
 
   int userAtomType(atom_number_t) const;
@@ -1079,7 +1103,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   // For each atomic number (key) number of instances (value);
   std::unordered_map<atomic_number_t, int> ElementCount() const;
 
-  int ncon(int*) const;  // all ncon values
+  int ncon(int*) const;  // ncon for each atom
   int ncon(resizable_array<int>&) const;
   int nbonds(int*) const;  // all nbonds values
   // Max connectivity of any atom.
@@ -1091,7 +1115,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  of SSSR rings computed by Euler's formula.
   //
   int nrings();                   // number of rings in molecule
-  int nrings_no_compute() const;  // number of rings in molecule without performing ring
+  std::optional<int> nrings_no_compute() const;  // number of rings in molecule without performing ring
                                   // perception (assumes has already been performed)
   int number_sssr_rings();
 
@@ -1323,7 +1347,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int write_molecule_smarts(std::ostream&);
 
   int write_molecule_mrv(std::ostream&);
-  int write_molecule_inchi(std::ostream&);
+  int write_molecule_inchi(std::ostream&, bool write_key=false);
 
   int write_molecule_xyz(std::ostream&) const;
 
@@ -1343,9 +1367,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
                                                std::ostream& output) const;
 
   int read_molecule_ds(iwstring_data_source&, FileType);
+  int read_molecule_ds(iwstring_data_source&, FileType, Molecule_Read_Options&);
   int read_molecule_pdb_ds(iwstring_data_source&);
   template <typename T>
   int read_molecule_mdl_ds(T&, int = 0);
+  template <typename T>
+  int read_molecule_mdl_ds(T&, MDL_File_Supporting_Material&, int = 0);
   int read_molecule_rdf_ds(iwstring_data_source&);
   int read_molecule_smi_ds(iwstring_data_source&);
   int read_molecule_tdt_ds(iwstring_data_source&);
@@ -1409,7 +1436,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   int attached_heteroatom_count(atom_number_t) const;
   int multiple_bond_to_heteroatom(atom_number_t,
-                                  atom_number_t = INVALID_ATOM_NUMBER) const;
+                                  atom_number_t = kInvalidAtomNumber) const;
   int multiple_bond_to_heteroatom(atom_number_t, const int*) const;
   int doubly_bonded_oxygen_count(atom_number_t) const;
 
@@ -1471,7 +1498,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  When setting a bond length the option parameter is the identity of the atom to move
 
   int set_bond_length(atom_number_t, atom_number_t, distance_t,
-                      atom_number_t = INVALID_ATOM_NUMBER);
+                      atom_number_t = kInvalidAtomNumber);
 
   // By examining the geometry of the connected atoms, does this atom appear to be
   // planar. Returns 1 if the atom looks planar sp2, 0 if not, and -1 if it is hard to
@@ -1508,7 +1535,10 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
     invalidate_charges();
   }
 
-  //  Set_of_Charges * partial_charges() const;
+  // This will fail badly if _charges has not been allocated.
+  const Set_of_Charges& partial_charges() const {
+    return *_charges;
+  }
 
   const IWString& partial_charge_type() const;
 
@@ -1572,11 +1602,35 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //     Delete a set of fragment numbers.
   int delete_fragments(const int*);
   int remove_fragment_containing_atom(atom_number_t);
-  int delete_all_fragments_except(int);
+  // Keep one zero-based fragment, returning the number of atoms removed.
+  // Empty/single-fragment molecules and invalid indices emit a diagnostic and return 0.
+  int delete_all_fragments_except(int frag);
   int remove_all(atomic_number_t);
   int remove_all(const Element*);
   int remove_all_non_natural_elements();
   int remove_explicit_hydrogens();  // need to be treated specially because of H property
+
+  // Remove every Hydrogen atom, regardless of isotope or formal charge.
+  // remove_all(1) does NOT do this - it retains an isotopic or charged
+  // Hydrogen, which is right when the label carries information and wrong when
+  // a calculation needs the Hydrogen suppressed graph. Use this for the latter.
+  // A bridging Hydrogen is still retained; removing it would disconnect the
+  // molecule. See the commentary in molecule.cc.
+  int RemoveAllHydrogenAtoms();
+
+  // True if remove_explicit_hydrogens() would remove at least one atom.
+  // Note that not every Hydrogen atom is removable - an isotopic or charged
+  // Hydrogen carries information and is retained, as is a bridging one.
+  // Useful for deciding whether a molecule needs protecting from a calculation
+  // that suppresses Hydrogens. Keep in step with remove_explicit_hydrogens.
+  bool ContainsRemovableExplicitHydrogen() const;
+
+  // True if this molecule contains an isotope, or a Hydrogen that
+  // remove_explicit_hydrogens would remove. One pass over the atoms, for the
+  // benefit of calculations that suppress Hydrogens and strip isotopes and
+  // need to know whether they must work on a copy. Cheaper than asking
+  // ContainsIsotopicAtoms and ContainsRemovableExplicitHydrogen separately.
+  bool ContainsIsotopeOrRemovableHydrogen() const;
                                     // of adjacent atoms
 
   // Remove the last `items_removed` atoms.
@@ -1592,6 +1646,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   molecular_weight_t molecular_weight() const;
   molecular_weight_t molecular_weight_count_isotopes() const;
   molecular_weight_t molecular_weight_ignore_isotopes() const;
+
 
   int molecular_weight(const Molecular_Weight_Control&,
                        Molecular_Weight_Calculation_Result&) const;
@@ -1698,6 +1753,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   // same, but anything already set in SPINACH will also be included
   int identify_spinach_preset(int* spinach) const;
 
+  // Atoms that are in the spinach will be set in `spinach`.
+  // =O, and =[D1] atoms will NOT be part of the spinach.
+  // If `iso` is non zero, that isotope will be applied to both
+  // atoms of a bond that joins spinach to scaffold.
+  int IdentifySpinachLabel(int* spinach, isotope_t iso);
+
   int atoms_in_fragment(Set_of_Atoms&, int);  // Set_of_Atoms must start empty
   int add_atoms_in_fragment(Set_of_Atoms&,
                             int);  // Set_of_Atoms may initially contain atoms
@@ -1725,11 +1786,28 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   //  Different calls to create subset depending on whether the caller
   //  provides an array of length natoms() or not
 
-  int create_subset(Molecule&, const int*, int = 1) const;
-  int create_subset(Molecule&, const int*, int, int*) const;
+  // Create a subset where atoms are included if `process_these[i] == flag`.
+  int create_subset(Molecule& subset, const int* process_these, int flag = 1) const;
+
+  // Creat a subset of the parent molecule.
+  // Includes those atoms for which process_these[i] == flag.
+  // xref will contain a mapping from atom number in the starting molecule
+  // to an atom number in the subset.
+  // If an atom is not in the subset, xref[i] = -1.
+  int create_subset(Molecule& subset, const int* process_these, int flag, int* xref) const;
+
   Molecule create_subset(const Set_of_Atoms& these_atoms) const;
   int create_subset_by_bond(Molecule& subset, const int* these_bonds_only,
                             int flag) const;
+
+
+  // `subset_membership` must contain 0 and 1's only. Atoms for which
+  // `subset_membership[i]` == 0 are placed in `f0`...
+  // xref will be a cross reference from atom numbers in `this` to an atom
+  // in either `f0` or `f1`. Since subset_membership will be available,
+  // it is known the destination of each starting atom.
+  int create_subsets(const int* subset_membership, Molecule& f0, Molecule& f1,
+                     int* xref);
 
   int reduce_to_largest_fragment();
   int reduce_to_largest_organic_fragment();
@@ -1752,7 +1830,12 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
 
   int longest_path();
   int bonds_between(atom_number_t, atom_number_t);
-  int atoms_between(atom_number_t, atom_number_t, Set_of_Atoms&);
+  // Places into `between` a set of atoms that are on a shortest path between `a1` and `a2`.
+  // If multiple such paths exist, the choice will be arbitrary.
+  int atoms_between(atom_number_t a1, atom_number_t a2, Set_of_Atoms& between);
+  // All atoms that are on a shortest path between `a1` and `a2` are placed in `between`
+  // in breadth first order.
+  int AllAtomsBetween(atom_number_t a1, atom_number_t a2, Set_of_Atoms& between);
 
   //  Asking for the implicit hydrogens attached to an atom may force
   //  computation of all implicit hydrogens, so no const here.
@@ -1789,6 +1872,31 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   // while preserving their relative ordering.
   // Returns 1 if any number of H atoms are moved.
   int MoveToEndOfConnectionTable(atomic_number_t z);
+
+  // The rule of five hydrogen bond counts, exactly as Lipinski specified:
+  // donors are the sum of OHs and NHs (a count of HYDROGENS, so NH2 is 2),
+  // acceptors are the sum of Ns and Os with no exclusions. The names mimic
+  // RDKit but the definitions are Lipinski's, matching RDKit's NHOHCount and
+  // NOCount rather than its NumHDonors and NumHAcceptors.
+  // These are the single source of truth for the whole of LillyMol. Anything
+  // computing a rule of five count must call these rather than open coding a
+  // loop. See the commentary in moleculeh.cc before changing them.
+  // The donors call is not const because it needs to determine implicit hydrogens.
+  int LipinskiNumHDonors();
+  int LipinskiNumHAcceptors() const;
+  // Convenience for callers that want both.
+  void LipinskiHbaHbd(int& hba, int& hbd);
+
+  // RDKit compatible hydrogen bond counts - what RDKit's NumHAcceptors and
+  // NumHDonors return, which is a refined, pharmacophore flavoured definition
+  // and NOT a rule of five count. Provided for interoperability only. Never
+  // substitute these into a rule of five; the thresholds were fitted against
+  // the Lipinski counts above. Unlike those, these include sulfur, and they
+  // depend on aromaticity perception, so exact agreement with RDKit is not
+  // achievable. See the commentary in moleculeh.cc.
+  int RDKitNumHDonors();
+  int RDKitNumHAcceptors();
+  void RDKitHbaHbd(int& hba, int& hbd);
 
   //  It is often handy to be able to place atoms around another atom. Both A1 and A2 must
   //  be singly connected atoms that are bonded to a common anchor. This is used by
@@ -1857,6 +1965,7 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   distance_t longest_intra_molecular_distance() const;
 
   int recompute_distance_matrix();
+  int ComputeDistanceMatrixIfNeeded();
 
   const int* distance_matrix_warning_may_change() {
     if (nullptr == _distance_matrix) {
@@ -1955,15 +2064,17 @@ class __attribute__((visibility("default"))) Molecule : private resizable_array_
   int discern_chirality_from_wedge_bonds();
 
   int number_records_text_info() const {
-    return _text_info.number_elements();
+    return _text_info ? _text_info->number_elements() : 0;
   }
 
   const IWString& text_info(int i) const {
-    return *(_text_info.item(i));
+    assert(_text_info);
+    return *(_text_info->item(i));
   }
 
   IWString& text_info(int i) {
-    return *(_text_info.item(i));
+    assert(_text_info);
+    return *(_text_info->item(i));
   }
 
   template <typename T>
@@ -2614,6 +2725,12 @@ int count_atoms_in_smiles(const const_IWSubstring& smiles);
 
 // Also discern the number of rings. Does NOT handle %nn forms.
 int count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings);
+
+// As above, but also reports how many of the atoms counted are explicit
+// Hydrogen ATOMS - [H], [2H] and the like, as opposed to a hydrogen count
+// inside a bracket such as [nH]. Subtract to get a heavy atom count.
+int count_atoms_in_smiles(const const_IWSubstring& smiles, int& nrings,
+                          int& explicit_hydrogens);
 }  // namespace lillymol
 
 extern void set_copy_name_in_molecule_copy_constructor(int);
@@ -2720,6 +2837,17 @@ int Position3D(Molecule& m, atom_number_t atom1, float distance, atom_number_t a
 // impacts on trxn.
 int embedding_symmetry_perception_status();
 void set_simplistic_embedding_symmetry_perception(int s);
+
+// Average molecular weight with any isotopic label erased - the mass and the
+// Hydrogen count both - so [37C]OC weighs the same as COC. In LillyMol an
+// isotope is usually an arbitrary atom marker, and a marker should not change
+// the weight, nor be read as a statement that the atom has no Hydrogens.
+//
+// This is what molecule_filter, iwdescr, fileconv and the python bindings all
+// use, so that they agree. Molecule has three other molecular weight functions
+// and each does something different with an isotope - one refuses outright - so
+// read the commentary in molecule.cc before reaching for one of those.
+molecular_weight_t MolecularWeightIsotopesAsLabels(const Molecule& m);
 
 }  // namespace lillymol
 

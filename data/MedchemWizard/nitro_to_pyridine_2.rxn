@@ -1,0 +1,17 @@
+name: "nitro_to_pyridine_2"
+scaffold {
+  smarts: "[ND3](=O)(=O)-[*:3]"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  remove_atom: [0, 1, 2]
+}
+sidechain {
+  id: 1
+  reagent: "n1ccccc1"
+  smarts: "n1ccccc1"
+  join {
+    a1: 3
+    a2: 1
+  }
+}

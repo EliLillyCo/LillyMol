@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -1011,7 +1012,7 @@ PD_Molecule_Data::PD_Molecule_Data(Molecule& m)
   _identify_valid_start_atoms(m);
 
   _bond_symbol = new char[_matoms * _matoms];
-  set_vector(_bond_symbol, _matoms * _matoms, ' ');
+  std::fill_n(_bond_symbol, _matoms * _matoms, ' ');
 
   assert(nullptr != _bond_symbol);
 
@@ -2353,7 +2354,7 @@ Path_so_Far::_add_ring_opening_and_closing_characters(const PD_Molecule_Data& pd
 {
   assert(_indices_in_smiles.number_elements() == _atoms_in_path);
 
-  set_vector(_ring_closure_needed, _atoms_in_path * _atoms_in_path, 0);
+  std::fill_n(_ring_closure_needed, _atoms_in_path * _atoms_in_path, 0);
 
   for (int i = 0; i < _atoms_in_path; i++) {
     int j = _indices_in_smiles[i];
@@ -4920,7 +4921,7 @@ Disubstituted_Ring_Builder::_form_centre_ring_smiles(PD_Molecule_Data& pdmd, con
 
   s.resize_keep_storage(0);
 
-  set_vector(ring_closures, pdmd.natoms(), 0);
+  std::fill_n(ring_closures, pdmd.natoms(), 0);
 
   int next_ring_to_assign = 2;
 
@@ -6951,7 +6952,7 @@ path_descriptors(int argc, char** argv)
   for (int i = 0; i < molecule_and_paths.number_elements(); i++) {
     const Molecule_and_Paths* mpi = molecule_and_paths[i];
 
-    set_vector(tmp, n, 0);
+    std::fill_n(tmp, n, 0);
 
     mpi->get_path_counts(tmp);
 

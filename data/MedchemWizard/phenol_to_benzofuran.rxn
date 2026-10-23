@@ -1,0 +1,26 @@
+# Add a two-carbon bridge at either available ortho C-H position.
+# The phenolic aromatic ring must belong to a single-ring fused system.
+name: "phenol_to_benzofuran"
+scaffold {
+  smarts: "[/IWfss1cD3](-[OD1H1+0]):[cD2H1]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C=C"
+  smarts: "C=C"
+  join {
+    a1: 1
+    a2: 0
+  }
+  join {
+    a1: 2
+    a2: 1
+  }
+  match_conditions {
+    max_matches_to_find: 1
+  }
+}

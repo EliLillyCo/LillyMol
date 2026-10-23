@@ -2,7 +2,7 @@
   Spread implementation
 */
 
-#include <omp.h>
+#include "omp.h"
 #include <stdlib.h>
 
 #include <iostream>

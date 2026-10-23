@@ -38,7 +38,6 @@ Groups identical molecules and compares activities
   -U <fname>    tabular output format
   -b <natoms>   lower atom count cutoff
   -B <natoms>   lower atom count cutoff
-  -z            remove leading 0's from identifiers
   -l            reduce to largest fragment
   -i <type>     input specification
   -g ...        chemical standardisation options
@@ -56,7 +55,7 @@ with no `-X` option.
 ## TLDR
 A common use of this tool might look like
 ```
-activity_consistency -E train.activity -e 2 -l -c -x -g all -T I=Cl -T Br=Cl
+activity_consistency -X train.activity -e 2 -l -c -x -g all -T I=Cl -T Br=Cl
         -M max -M merged -v train.smi
 ```
 New files `merged.activity` and `merged.smi` are created, containing
@@ -64,6 +63,22 @@ merged information about structural duplicates.
 
 Where there are multiple molecules with equivalent smiles, the maximum
 value of the observed activity is written to `merged.activity`..
+
+`train.activity` should be a space separated tabular file.
+```
+ID Activity
+ID1 2.3
+ID2 0.3
+
+```
+
+Or if the activity is in the smiles file
+```
+C methane 3.5
+CC ethane 0.4
+
+```
+and use -e 2 since the activity is the second token in the name 'methane 3.5'.
 
 ## Options
 
@@ -165,6 +180,13 @@ Write multiple instances to \<fname\>.
 When writing a file containing duplicate identifiers, concatenate
 the identifiers.
 
+#### -V rmzerodiff
+We often find duplicate measurements that are exactly the same as other
+measurements. Real biological assays exhibit considerable variability, so
+an exact duplicate value is more likely an indication of data processing
+artifact than a actual duplicate measurement. With this setting activated
+exact duplicate values are discarded.
+
 ### -K \<ele\>
 Remove elements of type \<ele\>. This is an obscure option. It might be
 useful for removing explicit Hydrogens, but those can also be removed
@@ -194,8 +216,25 @@ usually find it useful to suppress them.
 Upper atom count cutoff.
 
 ### -z
+This is deprecated, use '-Y rmlz' instead.
+
 Remove leading 0's from identifiers. This may be useful in an environment
 where sometimes identifiers are present as '000000123456' and sometimes as '123456'.
 
 ### -l
 reduce to largest fragment.
+
+## -Y
+Various options
+### -Y ignore_no_activity
+If a molecule has no activity data, ignore the molecule.
+
+### -Y rmlz
+This was previously the -z option.
+
+Remove leading 0's from identifiers. This may be useful in an environment
+where sometimes identifiers are present as '000000123456' and sometimes as '123456'.
+
+### -Y sep=\<char\>
+Output file separator when creating tabular files.
+

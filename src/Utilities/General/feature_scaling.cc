@@ -35,6 +35,8 @@ int header_records = 1;
 int activity_column = 1;
 
 char input_separator = ' ';
+// We can discern the input separator from the file name.
+int input_separator_from_file_name = 0;
 
 char output_separator = ' ';
 
@@ -50,6 +52,14 @@ Fraction_as_String fraction_as_string;
 
 void
 Usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Scale an unscale a numeric data column\n";
   cerr << " -C <fname>        profile the input, create a scaling and apply\n";
   cerr << " -bin              create both .txt and .dat proto files with scaling information\n";
@@ -59,7 +69,10 @@ Usage(int rc) {
   cerr << " -subset <fname>   only process the identifiers in <fname>\n";
   cerr << " -scol <col>       the identifiers in the -subset file are in <col> (use 2 for a smiles file)\n";
   cerr << " -11               scale and unscale to the [-1,1] range (default is [0,1]\n";
+  cerr << " -i <char>         input file column separator\n";
   cerr << " -v                verbose output\n";
+  // clang-format on
+
   exit(rc);
 }
 
@@ -83,7 +96,10 @@ UseScalingLine(const const_IWSubstring& buffer,
   int i = 0;
   const_IWSubstring token;
   IWString id;
-  for(int col = 0; buffer.nextword(token, i, input_separator); ++col) {
+  // If we discard a calculation, just resize output to this size.
+  const uint32_t initial_size = output.size();
+
+  for(int col = 0; buffer.NextWord(token, i, input_separator); ++col) {
     if (col == 0) {
       id = token;
     } else {
@@ -102,7 +118,8 @@ UseScalingLine(const const_IWSubstring& buffer,
 
     if (identifiers_to_process.empty()) {
     } else if (! identifiers_to_process.contains(id)) {
-      continue;
+      output.resize_keep_storage(initial_size);
+      return 1;
     }
 
     if (action == Action::kScaleToRange) {
@@ -154,6 +171,10 @@ UseScaling(const char * fname,
   if (! input.good()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
+  }
+
+  if (input_separator_from_file_name) {
+    input_separator = iwstring::SeparatorFromFileName(fname);
   }
 
   return UseScaling(input, scaling, action, output);
@@ -226,7 +247,7 @@ OkSubset(const const_IWSubstring& buffer,
 
   const_IWSubstring token;
   int i = 0;
-  for (int col = 0; buffer.nextword(token, i, kSep); ++col) {
+  for (int col = 0; buffer.NextWord(token, i, kSep); ++col) {
     if (col != kIdentifierColumn) {
       continue;
     }
@@ -250,7 +271,7 @@ GatherRangeLine(const const_IWSubstring& buffer,
 
   int i = 0;
   const_IWSubstring token;
-  for (int col = 0; buffer.nextword(token, i, input_separator); ++col) {
+  for (int col = 0; buffer.NextWord(token, i, input_separator); ++col) {
     if (col != activity_column) {
       continue;
     }
@@ -317,7 +338,7 @@ GetIdentiferSubsetLine(const_IWSubstring& line,
   static constexpr char kSep = ' ';
   IWString token;
   int i = 0;
-  for (int col = 0; line.nextword(token, i, kSep); ++col) {
+  for (int col = 0; line.NextWord(token, i, kSep); ++col) {
     if (col != scol) {
       continue;
     }
@@ -391,7 +412,7 @@ GatherRange(const Command_Line_v2& cl,
 
 int
 FeatureScaling(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-C=s-U=s-c=ipos-action=s-hdr=ipos-prec=ipos-bin-subset=sfile-11-scol=ipos");
+  Command_Line_v2 cl(argc, argv, "-v-C=s-U=s-c=ipos-action=s-hdr=ipos-prec=ipos-bin-subset=sfile-11-scol=ipos-i=s");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);
@@ -421,6 +442,18 @@ FeatureScaling(int argc, char** argv) {
   if (cl.option_present('C') && cl.option_present('U')) {
     cerr << "Cannot specify both create (-C) and use (-U) options\n";
     Usage(1);
+  }
+
+  if (cl.option_present('i')) {
+    IWString sep = cl.string_value('i');
+      input_separator_from_file_name = 1;
+    if (sep == "auto") {
+    } else if (! char_name_to_char(sep)) {
+      cerr << "Invalue input token separator '" << sep << "'\n";
+      return 1;
+    } else {
+      input_separator = sep[0];
+    }
   }
 
   Action action = Action::kScaleToRange;

@@ -14,6 +14,7 @@
 #include <math.h>
 #include <memory>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 
@@ -1537,7 +1538,7 @@ int Molecule :: find_mcs_atom_type_similar_to_sybyl(int atom_type[])
 {
   int n_atoms = natoms();
 
-  set_vector ((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
+  std::fill_n ((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
 
   for (int i=0; i<n_atoms; i++)
     {
@@ -1713,7 +1714,7 @@ int Molecule :: find_simplified_sybyl_atom_type_sybyl_style(atom_type_t atom_typ
 {
   int n_atoms = natoms();
 
-  set_vector((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
+  std::fill_n((int *) atom_type, n_atoms, UNDEFINED_TRIPOS_ATOM_TYPE);
 
   for (int i=0; i<n_atoms; i++)
     {

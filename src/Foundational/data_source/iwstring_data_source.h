@@ -2,6 +2,7 @@
 #define FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_
 
 #include <sys/types.h>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 
@@ -178,26 +179,26 @@ protected:
     void set_translate_tabs (int s) { _translate_tabs = s;}
 
     int  longest_record () const { return _longest_record; }
-    int  records_remaining (int = 0);
+    uint64_t  records_remaining (uint64_t = 0);
 
-    int  at_least_X_records_remaining (int x);
+    int  at_least_X_records_remaining (uint64_t x);
 
-    int  grep (char);
-    int  grep (const const_IWSubstring &);
-    int  grep (RE2 &);
-    int  grep (int n, RE2 *, int *);   // look for N regular expressions at once
+    uint64_t  grep (char);
+    uint64_t  grep (const const_IWSubstring &);
+    uint64_t  grep (RE2 &);
+    uint64_t  grep (int n, RE2 *, int *);   // look for N regular expressions at once
 
-    int  count_records_starting_with(const const_IWSubstring &);   // the most common thing we do with regexps
+    uint64_t  count_records_starting_with(const const_IWSubstring &);   // the most common thing we do with regexps
 
     int  echo (std::ostream &, size_t);    // echo's bytes
     int  echo (IWString_and_File_Descriptor &, size_t);    // echo's bytes
 
-    int echo_records (std::ostream & os, int necho);    // echo's records
-    int echo_records (IWString_and_File_Descriptor & os, int necho);    // echo's records
+    int echo_records (std::ostream & os, uint64_t necho);    // echo's records
+    int echo_records (IWString_and_File_Descriptor & os, uint64_t necho);    // echo's records
 
-    int skip_records (int nskip);
+    int skip_records (uint64_t nskip);
 
-    int skip_records (RE2& rx, int nskip);
+    int skip_records (RE2& rx, uint64_t nskip);
 
     int read_bytes (void *, size_t);
 

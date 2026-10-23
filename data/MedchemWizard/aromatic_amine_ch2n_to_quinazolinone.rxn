@@ -1,0 +1,17 @@
+name: "aromatic_amine_ch2n_to_quinazolinone"
+scaffold {
+  smarts: "[/IWfss1cD2]:c-!@[CD3](=O)-[ND2]-[CR0D2]"
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+  make_bond {
+    a1: 0
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+  change_bond {
+    a1: 4
+    a2: 5
+    btype: SS_DOUBLE_BOND
+  }
+}

@@ -1,0 +1,12 @@
+name: "aromatic_ethyl_amide_to_pyrrolidinone"
+scaffold {
+  smarts: "[/IWfss1cD2]:c-[CD2H2]-C(=O)-[ND2HT0]-[R0]"
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+  make_bond {
+    a1: 0
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+}

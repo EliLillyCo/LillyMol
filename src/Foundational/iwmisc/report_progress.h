@@ -11,34 +11,65 @@
   into a programme
 */
 
+namespace report_progress_internal {
+  void DisplayHelpMessage(std::ostream& output);
+}
+
 class Command_Line;
 
 template <typename T>
-class Report_Progress_Template
-{
-  private:
-    T _times_called;
-    T _report_every;
-    T _report_next;
-    time_t _tzero;
-    time_t _tprev;
+class Report_Progress_Template {
+ private:
+  T _times_called;
+  T _report_every;
+  T _report_next;
+  time_t _tzero;
+  time_t _tprev;
 
-  public:
-    Report_Progress_Template ();
+  // If set, write counts with commas.
+  bool _human;
 
-    template <typename C> int initialise (C & cl, char, int verbose);
+ public:
+  Report_Progress_Template();
 
-    int operator ()();
+  template <typename C>
+  int initialise(C& cl, char, int verbose);
 
-    T times_called() const { return _times_called;}
+  int operator()();
 
-    int active () const { return _report_every > 0;}
+  T
+  times_called() const {
+    return _times_called;
+  }
 
-    int set_report_every(T);
+  int
+  active() const {
+    return _report_every > 0;
+  }
 
-    int report (const char * leading, const char * trailing, std::ostream &);
+  bool human() const {
+    return _human;
+  }
 
-    void initialise (const Report_Progress_Template<T> & rhs);
+  T
+  report_every() const {
+    return _report_every;
+  }
+
+  // In two phases of a programme, the first phase might read some molecules
+  // into a hash, and the progress reporter would be used then. In the
+  // second phase, the molecules in the hash get processed, and we want to
+  // keep track of progress there.
+  void
+  reset() {
+    _times_called = 0;
+  }
+
+  int set_report_every(T);
+
+  int report(const char* leading, const char* trailing, std::ostream&);
+
+  void initialise(const Report_Progress_Template<T>& rhs);
 };
 
 typedef Report_Progress_Template<uint64_t> Report_Progress;
@@ -48,15 +79,16 @@ typedef Report_Progress_Template<uint64_t> Report_Progress;
 #include <limits>
 
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwstring/string_with_commas.h"
 
 template <typename T>
-Report_Progress_Template<T>::Report_Progress_Template()
-{
+Report_Progress_Template<T>::Report_Progress_Template() {
   _times_called = 0;
   _report_every = 0;
   _report_next = std::numeric_limits<T>::max();
   _tzero = static_cast<time_t>(0);
   _tprev = static_cast<time_t>(0);
+  _human = false;
 
   return;
 }
@@ -67,90 +99,95 @@ Report_Progress_Template<T>::Report_Progress_Template()
 
 template <typename T>
 int
-Report_Progress_Template<T>::operator()()
-{
-  if (0 == _report_every)
+Report_Progress_Template<T>::operator()() {
+  if (0 == _report_every) {
     return 0;
+  }
 
   _times_called++;
 
-  if (_times_called <= _report_next)
+  if (_times_called <= _report_next) [[likely]] {
     return 0;
+  }
 
   _report_next += _report_every;
 
   return 1;
 }
 
-template<typename T>
+template <typename T>
 int
-Report_Progress_Template<T>::report(const char * leading,
-                                    const char * trailing,
-                                    std::ostream & output)
-{
-  if (! operator()())
+Report_Progress_Template<T>::report(const char* leading, const char* trailing,
+                                    std::ostream& output) {
+  if (!operator()()) {
     return 0;
+  }
 
-  if (nullptr != leading)
+  if (nullptr != leading) {
     output << leading;
+  }
 
-  output << _times_called;
+  if (_human) {
+    output << iwstring::with_commas(_times_called);
+  } else {
+    output << _times_called;
+  }
 
-  if (0 != _tzero)
-  {
+  if (0 != _tzero) {
     time_t tnow = time(NULL);
     output << " t=" << (tnow - _tzero) << " (" << (tnow - _tprev) << ")";
     _tprev = tnow;
   }
 
-  if (nullptr != trailing)
+  if (nullptr != trailing) {
     output << trailing;
+  }
 
   return 1;
 }
 
-template <typename T> template<typename C>
+template <typename T>
+template <typename C>
 int
-Report_Progress_Template<T>::initialise(C & cl, char flag, int verbose)
-{
+Report_Progress_Template<T>::initialise(C& cl, char flag, int verbose) {
   const_IWSubstring s;
 
-  for (int i = 0; cl.value(flag, s, i); ++i)
-  {
-    if ("time" == s)
-    {
+  for (int i = 0; cl.value(flag, s, i); ++i) {
+    if ("time" == s) {
       _tzero = time(NULL);
       _tprev = _tzero;
-    }
-    else if (! cl.value(flag, _report_every) || 0 == _report_every)
-    {
-      std::cerr << "Report_Progress::initialise:the report every option (-" << flag << ") must be a whole +ve number\n";
+    } else if (s == "human") {
+      _human = true;
+    } else if (s == "help") {
+      report_progress_internal::DisplayHelpMessage(std::cerr);
+      ::exit(0);
+    } else if (!cl.value(flag, _report_every) || 0 == _report_every) {
+      std::cerr << "Report_Progress::initialise:the report every option (-" << flag
+                << ") must be a whole +ve number\n";
       return 0;
     }
   }
 
   _report_next = _report_every;
 
-  if (verbose)
+  if (verbose) {
     std::cerr << "Will report progress every " << _report_every << " items\n";
+  }
 
   return 1;
 }
 
 template <typename T>
 int
-Report_Progress_Template<T>::set_report_every(T s)
-{
+Report_Progress_Template<T>::set_report_every(T s) {
   _report_every = s;
 
-  if (0 == _times_called)
+  if (0 == _times_called) {
     _report_next = s;
-  else
-  {
+  } else {
     _report_next = s + s;
 
-    while (_report_next <= _times_called)
-    {
+    while (_report_next <= _times_called) {
       _report_next += s;
     }
   }
@@ -159,13 +196,12 @@ Report_Progress_Template<T>::set_report_every(T s)
 }
 
 /*
-  We do not transfer all the properties, 
+  We do not transfer all the properties,
 */
 
 template <typename T>
 void
-Report_Progress_Template<T>::initialise(const Report_Progress_Template<T> & rhs)
-{
+Report_Progress_Template<T>::initialise(const Report_Progress_Template<T>& rhs) {
   _times_called = 0;
   _report_every = rhs._report_every;
   _report_next = _report_every;

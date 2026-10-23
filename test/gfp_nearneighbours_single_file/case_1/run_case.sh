@@ -29,24 +29,12 @@ golden=out/stdout
 stdout='stdout'
 stderr='stderr'
 
-# Support linux and mac 
-if [[ "${UNAME}" == "Linux" ]]; then
-  golden="out/${UNAME}/stdout"
-elif [[ "${UNAME}" == "darwin"* ]]; then
-  golden="out/osx/stdout"
-else
-  echo "${UNAME} is not supported"
-  golden="out/${UNAME}/stdout"  # Might work...
-fi
+# Distance formatting now uses the same expected output on Linux and Mac.
 
 diff_tool='../../fileDiff.sh'
 
-# Need to remove neighbours with a distance of 0.2 because that can vary across
-# library versions - the -T 0.2 is an exact floating point comparison.
-# This does not really solve the problem, but lessens the probability
-# of issues. 
-# Alternative would be to write a custom diff tool
-${command} -p -z -T 0.2 -F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -V a=0.3 -V b=1.7 -j 3 ${shared_data_dir}/pubchem.gfp 2>${stderr} | sed -e '/ 0\.2$/d' > ${stdout}
+# Match tests.json: avoid pairs on a floating-point selection threshold.
+${command} -p -z -T 0.205 -F FPDSC,w=0.2 -F NCSELW,nc,w=0.8 -V a=0.3 -V b=1.7 -j 3 ${shared_data_dir}/pubchem.gfp > ${stdout} 2>${stderr}
 ${diff_tool} ${stdout} ${golden}
 
 if [ $? -eq 1 ]

@@ -1,8 +1,15 @@
 {
   "executable": "dicer",
-  "difftool": "same_structures",
-  "difftool_options": "-S 1",
+  "difftool": "same_structures -s",
+  "default_command_components": [
+      "-c"
+    ],
     "test": [
+        {
+          "name": "chiral_dummy",
+          "shell_script": {"script_name": "run.rb"},
+          "difftool": "diff"
+        },
         {
           "name": "case_1",
           "args": [ "-k 2 -B atype=sb -B MAXFF=0.50001 -C auto -s 'ClC' -s 'BrC' -s 'FC' -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
@@ -37,8 +44,79 @@
           "name": "case_9",
           "args": [ "-k 2 -X 5000 -B nbamide -m 5 -M 20 #{datadir}/rand.smi" ],
           "comment": [ "nbamide" ]
+        },
+        {
+          "name": "increment_isotope_one_time",
+          "args": [ "-I inc=10 -B bCCD3 -B brcb #{indir}/in.smi"]
+        },
+        {
+          "name": "always_increment_isotope",
+          "args": [ "-I INC=1 -B bCCD3 -B brcb #{indir}/in.smi"]
+        },
+        {
+          "name": "fragatype_proto",
+          "args": [ "-B proto -k 2 -m 0 -M 10 -C fragatype -P UST:Z #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "comment": [ "fragment-local atom typing for complementary fragment proto output" ]
+        },
+        {
+          "name": "fragatype_hydrogen_text",
+          "args": [ "-k 2 -m 0 -M 10 -C fragatype -P UST:Z #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "comment": [ "fragment-local atom typing for hydrogen complementary fragments" ]
+        },
+        {
+          "name": "conflicting_c_labelling_options",
+          "args": [ "-C auto -C fragatype -P UST:Z #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "non_zero_rc_expected": true,
+          "comment": [ "reject multiple complementary fragment labelling options" ]
+        },
+        {
+          "name": "conflicting_i_labelling_options",
+          "args": [ "-I z -I atype -P UST:Z #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "non_zero_rc_expected": true,
+          "comment": [ "reject multiple join point labelling options" ]
+        },
+        {
+          "name": "fragstat_textproto",
+          "args": [ "-i do=75 -B nbamide -I 1 -k 3 -B fragstat=fragstat.textproto -B fragstatproto -B brcb -c -B bCCD3 -B nooutput -M 12 -M maxnr=10 #{datadir}/rand.smi" ],
+          "comment": [ "fragstat file should be textproto" ]
+        },
+        {
+          "name": "attachment_geometry",
+          "args": [ "-i smi -B proto -s CC -I 1 -I geom #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "comment": [ "3D attachment geometry is emitted in canonical fragment atom order" ]
+        },
+        {
+          "name": "attachment_geometry_atom_type",
+          "args": [ "-i smi -B proto -s CC -I 1 -I geom -P UST:Z #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "comment": [ "attachment geometry explicitly records parent atom types and their specification" ]
+        },
+        {
+          "name": "attachment_geometry_requires_proto",
+          "args": [ "-i smi -s CC -I 1 -I geom #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "non_zero_rc_expected": true,
+          "comment": [ "attachment geometry is only supported for per-molecule proto output" ]
+        },
+        {
+          "name": "attachment_geometry_requires_3d",
+          "args": [ "-i smi -B proto -s CC -I 1 -I geom - < #{indir}/in.smi" ],
+          "difftool": "diff",
+          "difftool_options": "-w",
+          "non_zero_rc_expected": true,
+          "comment": [ "attachment geometry requires 3D input" ]
         }
-      ]
-    }
-  }
+    ]
 }

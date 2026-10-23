@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ ! -v LILLYMOL_HOME ]] ; then
   echo "Must set $LILLYMOL_HOME" >&2

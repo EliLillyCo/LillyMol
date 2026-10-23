@@ -1,19 +1,20 @@
 #include <stdlib.h>
-#include <iostream>
+
 #include <fstream>
+#include <iostream>
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/proto_support.h"
 
 #include "Molecule_Lib/iwreaction.h"
-#include "Molecule_Lib/rxn_file.h"
 #include "Molecule_Lib/molecule_to_query.h"
+#include "Molecule_Lib/rxn_file.h"
 
 using std::cerr;
 using std::endl;
 
-const char * prog_name = nullptr;
+const char* prog_name = nullptr;
 
 static int verbose = 0;
 
@@ -25,43 +26,48 @@ static int
 EchoRxnProto(IWReaction& rxn, const char* fname) {
   ReactionProto::Reaction proto;
 
-  if (! rxn.BuildProto(proto)) {
+  if (!rxn.BuildProto(proto)) {
     cerr << "EchoRxnProto:cannot create proto\n";
     return 0;
   }
 
-  IWString tmp(output_filename);
-  return iwmisc::WriteTextProto<ReactionProto::Reaction>(proto, tmp);
+  IWString myfname;
+  if (output_filename.empty()) {
+    myfname << fname;
+    if (myfname.ends_with(".rxn")) {
+      myfname.chop(4);
+    }
+    myfname << "_echo.rxn";
+  } else {
+    myfname << output_filename;
+  }
+
+  return iwmisc::WriteTextProto<ReactionProto::Reaction>(proto, myfname);
 }
 
 static int
-echorxn (IWReaction & rxn,
-         const char * fname)
-{
+echorxn(IWReaction& rxn, const char* fname) {
   if (output_as_textproto) {
     return EchoRxnProto(rxn, fname);
   }
 
   std::ofstream output;
 
-  if (output_filename.length())
-  {
-    output.open (output_filename.null_terminated_chars());
-  }
-  else
-  {
+  if (output_filename.empty()) {
     IWString newfname = fname;
 
-    if (newfname.ends_with(".rxn"))
+    if (newfname.ends_with(".rxn")) {
       newfname.chop(4);
+    }
 
     newfname += "_echo.rxn";
 
     output.open(newfname.null_terminated_chars());
+  } else {
+    output.open(output_filename.null_terminated_chars());
   }
 
-  if (! output.good())
-  {
+  if (!output.good()) {
     cerr << "Looks like I cannot open the output file\n";
     return 0;
   }
@@ -70,35 +76,31 @@ echorxn (IWReaction & rxn,
 }
 
 static int
-echorxn (const char * fname, int query_files_in_reaction_directory)
-{
+echorxn(const char* fname, int query_files_in_reaction_directory) {
   iwstring_data_source input(fname);
-  if (! input.ok())
-  {
+  if (!input.ok()) {
     cerr << "Cannot open reaction file '" << fname << "'\n";
     return 0;
   }
 
   IWReaction rxn;
 
-  if (query_files_in_reaction_directory)
+  if (query_files_in_reaction_directory) {
     rxn.set_query_files_in_current_directory(0);
+  }
 
   Sidechain_Match_Conditions sidechain_match_conditions;
-  if (! rxn.do_read(fname, sidechain_match_conditions))
-  {
+  if (!rxn.do_read(fname, sidechain_match_conditions)) {
     cerr << "Cannot read reaction from '" << fname << "'\n";
     return 0;
   }
 
-  if (verbose > 1)
-  {
+  if (verbose > 1) {
     cerr << "Reaction from '" << fname << "'\n";
     rxn.debug_print(cerr);
   }
 
-  if (! rxn.ok())
-  {
+  if (!rxn.ok()) {
     cerr << "Yipes, ok fails for newly created reaction!!!\n";
   }
 
@@ -106,47 +108,44 @@ echorxn (const char * fname, int query_files_in_reaction_directory)
 }
 
 static int
-do_echo_isis_reaction_file(RXN_File & ISIS_rxn,
-                            int remove_fragments)
-{
-  if (remove_fragments)
+do_echo_isis_reaction_file(RXN_File& ISIS_rxn, int remove_fragments) {
+  if (remove_fragments) {
     ISIS_rxn.set_remove_product_fragments(1);
- 
+  }
+
   RXN_File_Create_Reaction_Options rxnfcro;
   Molecule_to_Query_Specifications mqs;
 
   IWReaction rxn;
 
-  if (! ISIS_rxn.create_reaction(rxn, rxnfcro, mqs))
-  {
+  if (!ISIS_rxn.create_reaction(rxn, rxnfcro, mqs)) {
     cerr << "OOPs, could not convert intermediate representation to reaction object\n";
     return 5;
   }
 
-  if (verbose > 1)
+  if (verbose > 1) {
     rxn.debug_print(cerr);
+  }
 
   IWString output_name;
-  if (output_filename.length() > 0)
-  {
+  if (output_filename.length() > 0) {
     output_name = output_filename;
-    if (! output_name.ends_with(".rxn"))
+    if (!output_name.ends_with(".rxn")) {
       output_name << ".rxn";
-  }
-  else
-  {
+    }
+  } else {
     output_name = ISIS_rxn.fname();
 
-    if (output_name.ends_with(".rxn"))
+    if (output_name.ends_with(".rxn")) {
       output_name.chop(4);
+    }
 
     output_name << "_echo.rxn";
   }
 
   std::ofstream output(output_name.null_terminated_chars(), std::ios::out);
 
-  if (! output.good())
-  {
+  if (!output.good()) {
     cerr << "Cannot open output file '" << output_name << "'\n";
     return 0;
   }
@@ -155,8 +154,7 @@ do_echo_isis_reaction_file(RXN_File & ISIS_rxn,
 }
 
 static void
-usage (int rc)
-{
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
@@ -178,8 +176,7 @@ usage (int rc)
 }
 
 static int
-echorxn(int argc, char ** argv)
-{
+echorxn(int argc, char** argv) {
   Command_Line cl(argc, argv, "vD:S:ht");
 
   if (cl.unrecognised_options_encountered()) {
@@ -197,37 +194,34 @@ echorxn(int argc, char ** argv)
   }
 
   int query_files_in_reaction_directory = 0;
-  if (cl.option_present('h'))
-  {
+  if (cl.option_present('h')) {
     query_files_in_reaction_directory = 1;
-    if (verbose)
+    if (verbose) {
       cerr << "Query files in same directory as reaction file\n";
+    }
   }
 
-  if (cl.option_present('S'))
-  {
+  if (cl.option_present('S')) {
     if (1 == cl.number_elements())
       ;
     else if (0 == cl.number_elements() && cl.option_present('D'))
       ;
-    else
-    {
+    else {
       cerr << "When used with the -S option, only one reaction file is allowed\n";
       usage(4);
     }
 
     cl.value('S', output_filename);
-    if (verbose)
+    if (verbose) {
       cerr << "Echo'd reaction will be written to '" << output_filename << "'\n";
+    }
   }
 
-  if (cl.option_present('D'))
-  {
+  if (cl.option_present('D')) {
     set_auto_create_new_elements(1);
 
     RXN_File ISIS_rxn;
-    if (! parse_isis_rxn_file_options(cl, 'D', ISIS_rxn))
-    {
+    if (!parse_isis_rxn_file_options(cl, 'D', ISIS_rxn)) {
       cerr << "Cannot parse -D option\n";
       usage(4);
     }
@@ -245,7 +239,7 @@ echorxn(int argc, char ** argv)
   }
 
   for (const char* fname : cl) {
-    if (! echorxn(fname, query_files_in_reaction_directory)) {
+    if (!echorxn(fname, query_files_in_reaction_directory)) {
       cerr << "Error processing '" << fname << "'\n";
       return 1;
     }
@@ -255,8 +249,7 @@ echorxn(int argc, char ** argv)
 }
 
 int
-main (int argc, char ** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = echorxn(argc, argv);

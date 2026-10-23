@@ -18,6 +18,7 @@
 #include "Molecule_Lib/numass.h"
 #include "Molecule_Lib/rmele.h"
 
+#include "elements_matched.h"
 #include "fix_structures.h"
 #include "known_fragment_data.h"
 
@@ -345,6 +346,8 @@ struct FileconvConfig {
   // elements which are in fact OK
 
   Set_of_Element_Matches ok_non_organics;
+
+  elements_matched::ElementsMatched _elements_matched;
 
   // Dec 2008. I want to be able to reject anything that contains certain elements
   // Enabled by '-O def'

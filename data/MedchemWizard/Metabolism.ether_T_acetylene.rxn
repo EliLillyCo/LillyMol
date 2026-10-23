@@ -1,0 +1,10 @@
+(0 Reaction
+  (A C Comment "Metabolism.ether_T_acetylene")
+  (0 Scaffold
+    (A C smarts "[R0G0D2]-[OD2]-[R0G0D2]")
+    (A I max_matches 1)
+    (A I unique_embeddings_only 1)
+    (A C change_element "1 C")
+    (A I triple_bond (0 1))
+  )
+)

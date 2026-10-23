@@ -24,7 +24,7 @@ then
 fi
 
 name1=log.txt
-name1_out=out/log.txt
+name1_out=out/stdout
 diff_tool=../../fileDiff.sh
 $command -t 50 -f train -c 2 -F FPIW -C 2/50 -A in/train.act in/train.gfp >>$name1 2>>err.txt
 $diff_tool $name1 $name1_out

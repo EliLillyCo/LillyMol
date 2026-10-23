@@ -18,6 +18,13 @@
       "args": [
         "-Z #{indir}/rescaling.textproto #{indir}/in.gfp"
       ]
+    },
+
+    {
+      "name": "write_all_name_tokens",
+      "args": [
+        "-Y writeall #{indir}/in.gfp"
+      ]
     }
 
   ]

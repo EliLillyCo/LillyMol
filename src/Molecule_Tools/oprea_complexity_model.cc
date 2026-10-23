@@ -4,6 +4,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -199,10 +201,10 @@ static double aromatic_bond_parameter[(HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATO
 static int
 initialise_bond_parameter()
 {
-  set_vector(single_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
-  set_vector(double_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
-  set_vector(triple_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
-  set_vector(aromatic_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
+  std::fill_n(single_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
+  std::fill_n(double_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
+  std::fill_n(triple_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
+  std::fill_n(aromatic_bond_parameter, (HIGHEST_ATOMIC_NUMBER + 1) * (HIGHEST_ATOMIC_NUMBER + 1), 0.0);
 
   single_bond_parameter[6 * (HIGHEST_ATOMIC_NUMBER + 1) + 6] = 1.0;
   single_bond_parameter[6 * (HIGHEST_ATOMIC_NUMBER + 1) + 7] = 0.857;

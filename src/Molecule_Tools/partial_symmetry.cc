@@ -314,7 +314,6 @@ PartialSymmetry::SortAndAssign(int radius) {
   });
 
   // All items that have the same score are symmetric at this radius.
-
   if (_score[0].score == _score[1].score) {
     AssignIfGreater(radius, _symmetric_at_radius[_score[0].atom]);
     _next_shell << _score[0].atom;
@@ -325,6 +324,34 @@ PartialSymmetry::SortAndAssign(int radius) {
       _next_shell << _score[i].atom;
     }
   }
+
+
+#ifdef NEW_VERSION_BUT_PROBLEMATIChhh
+  for (int i = 0; i < ndx; ++i) {
+    const int iscore = _score[i].score;
+    // Look for a sequence of items with the same score.
+    int length_of_sequence = 1;
+    for (int j = i + 1 ; j < ndx; ++j) {
+      if (_score[j].score != iscore) {
+        length_of_sequence = j - i;
+        break;
+      }
+    }
+    // If `i + 1` is different from `i`, that is a sequence of length 1.
+    if (length_of_sequence == 1) {
+      continue;
+    }
+
+    for (int j = 0; j < length_of_sequence; ++j) {
+      int k = i + j;
+      AssignIfGreater(radius, _symmetric_at_radius[_score[k].atom]);
+      _next_shell << _score[k].atom;
+    }
+
+    // `i` will be incremented by the loop, so subtract one
+    i += (length_of_sequence - 1);
+  }
+#endif
 
   return 1;
 }

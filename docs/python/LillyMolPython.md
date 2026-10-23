@@ -1,58 +1,15 @@
-# LillyMol Python
-This release contains experimental python bindings for some parts of LillyMol.
+# LillyMol Python API Reference
 
-We find that using LillyMol from python can be a very effective means of prototyping
-an idea, or doing things that are not time sensitive.
+This document is the API reference for the public LillyMol Python modules. For an
+orientation to the Python interface, performance model, and common workflows, see
+[README.md](README.md). For build and packaging instructions, see
+[Build.md](Build.md).
 
-This first release comprises three main components
-
-1. The Molecule object
-2. Substructure Searching
-3. Reaction Handling
-
-More functionality will become available.
-
-The current python bindings may not reflect final names or functionality, this
-is a work in progress, but has already proven useful.
-
-## Background
-Python bindings for LillyMol were implemented at Google in 2019 using 
-[Clif](https://google.github.io/clif/clif/python/). While this appeared to work
-well, and Clif was easy to use inside Google, it proved to be very difficult
-outside Google. Instead [pybind11](https://github.com/pybind/pybind11) has been
-used here. It is an amazing template metaprogramming tour-de-force, which
-ultimately seems to work well.
-
-Unfortunately there do appear to be many instances of needless copies happening
-between C++ and Python. Perhaps these could be lessened via careful inspection,
-but for now, there is no claim that this is as fast as things could be.
-
-## Building
-Your python environment *must* include pybind11. Normally
-```
-pip install pybind11
-```
-will accomplish this.
-
-Normally the python bindings are built as part of the default build,
-the script [build_linux.sh](/src/build_linux.sh), but if
-you wish to compile separately that can be done via
-```
-bazelisk --output_user_root=/local/disk/ian build --cxxopt=-DTODAY=\"$(date +%Y-%b-%d)\" --cxxopt=-DGIT_HASH=\"$(git rev-parse --short --verify HEAD)\" --local_cpu_resources=10 -c opt pybind:all
-```
-This generates several `*.so` files in bazel-bin/pybind. In addition, LillyMol
-now has several run-time dependencies, and these also need to be made available.
-For now, the script `copy_shared_libraries.sh` in the `src` directory will copy
-the needed files out of bazel-bin and into lib.
-
-See `WORKSPACE` for how we configured the local python and pybind11 installs.
-This was quite difficult to get right. Normally these will be auto
-configured for you by the build script,
-which in turn calls [update_python_in_workspace](/src/update_python_in_workspace.py)
-which interrogates the python installation. 
-
-Once the shared libraries are copied to `LillyMol/lib`, a script, `run_python.sh` in
-the top level directory can be used to invoke python with those libraries avaialble.
+The current Python bindings are built with nanobind. Earlier LillyMol Python
+bindings used CLIF internally and then pybind11; those are historical details for
+most users. The primary public module is `lillymol`. Compatibility modules such
+as `lillymol_io`, `lillymol_tools`, and `lillymol_tsubstructure` re-export from
+`lillymol` for older split-module imports.
 
 ## Philosophy
 LillyMol has no concept of changeable and unchangeable molecules. Any molecule
@@ -61,12 +18,12 @@ python implementation it does raise some risks of errors, while making certain o
 easier. Read on...
 
 This works because the LillyMol Molecule is a very lazy object. It never computes
-things like fragment membership, ring membership, aromaticity or canononical
+things like fragment membership, ring membership, aromaticity or canonical
 ordering unless requested. So if you remove an atom, or bond, it will destroy any
 information it has about those derived quantities. Only if requested will any
 be recomputed.
 
-This has many advantages. For example if a molecle is built from a smiles
+This has many advantages. For example if a molecule is built from a smiles
 and then the only thing ever requested is the number of atoms, that will be
 very cheap. If the number of fragments is requested, then only fragment membership
 is computed. Even if the most expensive derived property, the canonical order,
@@ -75,17 +32,19 @@ is requested, the actual unique smiles will not be generated unless requested.
 While this generally works well, there is one caveat. Because of this, things
 like Rings and Bonds, by default, do not know if they are aromatic or not, or
 if they are in a ring or not. Since neither one knows anything about being in
-a Molecule, the following will fail
+a Molecule, the following does *not* do what it looks like
 ```
 benzene.build_from_smiles('c1ccccc1')
-benzene.ring(0).is_aromatic()    # Is the first ring aromatic?
+benzene.ring(0).is_aromatic()    # False. Aromaticity has not been perceived.
 ```
-But this will work
+Note that it does not raise - it returns a plausible wrong answer, quietly.
+After anything that perceives aromaticity, it is right
 ```
-if benzene.is_aromatic(0):    # Is the first atom aromatic?
+if benzene.is_aromatic(0):       # Asking the Molecule perceives aromaticity
   ....
-benzene.ring(0).is_aromatic()  # Is the first ring aromatic?
+benzene.ring(0).is_aromatic()    # True
 ```
+See [The lazy Molecule](README.md#the-lazy-molecule) for which call forces what.
 In this case `benzene.is_aromatic(0)` meant that the Molecule needed to 
 compute fragment membership, ring membership and aromaticity. Then
 when the first ring, `ring(0)` was queried, it now knew that it was
@@ -160,30 +119,155 @@ for m in reader:
 ```
 This will print the smiles and name of each molecule. If reading a 
 .sdf file, use `FileType.SDF`. LillyMol has a wide variety of directives
-for reading .sdf files, those need to be made available via Python.
+for reading .sdf files, many of which are now available via python.
 
 Note that there will never be a None molecule returned. If a connection
 table error is encountered, reading will cease. The Reader class has
-a 'set_set_connection_table_errors_allowed' method, which allows you
+a `set_ignore_connection_table_errors` method, which allows you
 to set the number of otherwise fatal errors that are ignored. Warnings
 will flash by on stderr, but nothing will show up in python. 
 
-Lillymol has always operated on the principle that your input should
+LillyMol has always operated on the principle that your input should
 be correct. That said, it would not be hard to add an option to return
 a None molecule in the event of an otherwise ignored error.
 
 Note that in LillyMol a molecule with an invalid valence is a valid molecule.
-If you don't want molecules with valence errors, use the valence_ok() method
-to check each molecule and skip those having an invalid valence.
+If you don't want molecules with valence errors, use `skip_invalid_valence=True`
+in `MolReaderContext`, or call `valence_ok()` yourself when more detailed control
+is needed.
 
 A more pythonic way of reading structures is available as
 ```
-  with ReaderContext('/path/to/file.sdf') as reader:
+  with MolReaderContext('/path/to/file.sdf') as reader:
     for mol in reader:
       for atom in mol:
         ...
 ```
-This last example shows that a molecule is iterable, and a stream
+`MolReaderContext` is itself the iterator returned by the context manager. It also
+has a `next()` method that returns a molecule or `None`, plus methods such as
+`molecules_read()` and `set_ignore_connection_table_errors()`.
+
+Common preprocessing can be applied while molecules are read. This uses the same
+`MoleculePreprocessing` object used by LillyMol command line tools.
+```
+from lillymol_io import MolReaderContext
+
+with MolReaderContext('/path/to/file.smi', largest_fragment=True,
+                   remove_chirality=True, remove_isotopes=True) as reader:
+  for mol in reader:
+    ...
+```
+The preprocessing keyword options are `largest_fragment`, `remove_chirality`,
+`remove_cis_trans_bonds`, and `remove_isotopes`. They default to `False`, so a
+plain `MolReaderContext(fname)` preserves the input molecule as before.
+
+`MolReaderContext` can also skip molecules that are syntactically readable but
+not wanted in a downstream workflow:
+
+```python
+with MolReaderContext('/path/to/file.smi',
+                      skip_invalid_valence=True,
+                      skip_non_organic=True,
+                      skip_non_periodic_table_elements=True) as reader:
+  for mol in reader:
+    ...
+
+  print(reader.skipped_invalid_valence())
+  print(reader.skipped_non_organic())
+  print(reader.skipped_non_periodic_table_elements())
+  print(reader.molecules_skipped())
+```
+
+Preprocessing is applied before the skip tests, matching tools such as
+`fileconv`. For example, `largest_fragment=True` can remove a metal counterion
+before `skip_non_organic=True` is checked. If more than one skip condition
+matches a molecule after preprocessing, it is counted against the first matching
+condition in this order: invalid valence, non-organic atoms,
+non-periodic-table elements. The
+`skip_non_periodic_table_elements` option temporarily enables LillyMol's
+process-global auto-creation of element symbols and arbitrary-length atomic
+symbols while the reader is active, so tokens such as `[Qq]` can be read and then
+rejected by the filter.
+
+SDF naming can also be controlled from `MolReaderContext`. By default LillyMol uses
+the first SDF header line as the molecule name. To use a specific SD data tag as
+the identifier:
+```
+with MolReaderContext('/path/to/file.sdf', sdf_identifier='CHEMBL_ID') as reader:
+  for mol in reader:
+    print(mol.name())
+```
+By default this produces names like `CHEMBL_ID:CHEMBL123`; use
+`prepend_sdfid=False` if only the tag value should become the molecule name.
+
+To retain SD tag data in the molecule name, ask for JSON form. With
+`all_sdf_tags=True`, every SD tag is included in the JSON object.
+```
+with MolReaderContext('/path/to/file.sdf', sdf_tags_to_json=True,
+                   all_sdf_tags=True) as reader:
+  for mol in reader:
+    print(mol.name())
+```
+There is also a `first_sdf_tag=True` option for using the first SD data item as
+the molecule name.
+
+If you want SD tag data as structured Python data, keep the SDF tags while
+reading and call `sdf_tags()` on the molecule. Multi-line SD values are returned
+as one string with embedded newline characters.
+```
+with MolReaderContext('/path/to/file.sdf', keep_sdf_tags=True) as reader:
+  for mol in reader:
+    tags = mol.sdf_tags()
+    print(tags.get('CHEMBL_ID'))
+```
+Without `keep_sdf_tags=True`, `mol.sdf_tags()` returns an empty dictionary.
+
+When the same read settings are reused, collect them in a `ReaderOptions` object.
+This is often clearer than passing several keyword arguments repeatedly.
+```
+from lillymol_io import MolReaderContext, ReaderOptions
+
+options = ReaderOptions(largest_fragment=True,
+                        sdf_identifier='CHEMBL_ID',
+                        prepend_sdfid=False)
+
+with MolReaderContext('/path/to/first.sdf', options=options) as reader:
+  for mol in reader:
+    ...
+
+with MolReaderContext('/path/to/second.sdf', options=options) as reader:
+  for mol in reader:
+    ...
+```
+`ReaderOptions` has the same fields as the keyword arguments: `largest_fragment`,
+`remove_chirality`, `remove_cis_trans_bonds`, `remove_isotopes`,
+`keep_sdf_tags`, `sdf_identifier`, `sdf_tags_to_json`, `all_sdf_tags`,
+`first_sdf_tag`, `prepend_sdfid`, `mdlquiet`, `skip_invalid_valence`,
+`skip_non_organic`, and `skip_non_periodic_table_elements`. The fields are
+mutable, and an existing
+`MolReaderContext` can be updated with `reader.apply_options(options)`.
+
+`MolReaderContext` stores these SDF naming options on the reader, so separate
+`MolReaderContext` objects can use different SDF identifiers at the same time. The
+older module-level SDF functions still change the global MDL/SDF defaults used
+by raw `Reader` objects and by newly created reader-local options.
+
+`ReaderContext` remains available as a compatibility alias for `MolReaderContext`.
+`ContextWriter` remains available as a compatibility alias for `MolWriterContext`.
+
+`MoleculePreprocessing` can also be used directly when you want explicit control.
+`process()` changes the molecule supplied, while `process_copy()` leaves the
+original molecule unchanged.
+```
+from lillymol import MolFromSmiles
+from lillymol_io import MoleculePreprocessing
+
+mol = MolFromSmiles('C.CC example')
+prep = MoleculePreprocessing(largest_fragment=True)
+fragment = prep.process_copy(mol)
+```
+
+The loop above also shows that a molecule is iterable, and a stream
 of Atom objects is returned. In LillyMol, Atoms know nothing about
 a Molecule, so if you want the atom number something like
 ```
@@ -225,13 +309,14 @@ The most common methods for a Molecule currently implemented are
 | empty() | True if there are no atoms in the molecule |
 | GetNumAtoms() | Number of atoms (explicit atoms only) |
 | resize(n) | keep only the first n atoms |
+| add_atom(z) | add an atom with atomic number z. Returns the atom number |
 | nedges() | Number of bonds |
 | bonds() | Iterable collection of Bonds |
 | nrings() | Number of SSSR rings |
 | nrings(atom) | Ring membership of 'atom' |
 | is_ring_atom(atom) | True if 'atom' is in a ring |
 | IsInRing(atom) | True if 'atom' is in a ring |
-| in_ring_of_given_size(atom, rsize) | True if 'atom' is in a ring of size 'rsize' |
+| in_ring_of_size(atom, rsize) | True if 'atom' is in a ring of size 'rsize' |
 | IsAtomInRingOfSize(atom, rsize) | True if 'atom' is in a ring of size 'rsize' |
 | ring_bond_count(atom) | Number of ring bonds involving 'atom' |
 | get_ring_membership() | Ring membership for each atom |
@@ -254,6 +339,7 @@ The most common methods for a Molecule currently implemented are
 | exact_mass() | Exact Mass |
 | ncon(atom) | Number of edges (bonds) to 'atom' |
 | connections(atom) | List of all atoms attached to 'atom' |
+| other_atom(atom, n) | Atom number of n'th connection to 'atom' |
 | attached_heteroatom_count(atom) | Number of heteroatoms attached to 'atom ' |
 | is_aromatic(atom) | True if 'atom' is aromatic |
 | compute_aromaticity_if_needed() | Compute fragments, rings and aromaticity |
@@ -291,16 +377,19 @@ The most common methods for a Molecule currently implemented are
 | remove_bond_between_atoms(a1, a2) | Remove bond between atoms |
 | remove_all_bonds() | All atoms become their own fragment |
 | smarts_equivalent_for_atom(atom) | Smarts for 'atom' |
+| hybridization(atom) | RDKit-like computed atom hybridization; see [hybridisation](/docs/Molecule_Lib/hybridisation.md) |
 | number_fragments() | number of fragments |
 | fragment_membership(atom) | Fragment number for 'atom' |
 | atoms_in_fragment(frag) | Number of atoms in a fragment |
 | delete_fragment(frag) | Delete a fragment |
+| delete_all_fragments_except(frag) | Keep only zero-based fragment `frag`, in place; return atoms removed. Empty/single-fragment molecules and invalid indices raise `ValueError`. |
 | remove_fragment_containing_atom(atom) | Remove fragment containing atom |
 | reduce_to_largest_fragment() | Discard all but the largest fragment |
 | reduce_to_largest_fragment_carefully() | Contains heuristics to do a better selection |
 | get_fragment_membership() | Return a list of fragment memberships |
 | create_components() | Return a list of Molecules from a multi fragment molecule |
-| to_scaffold() | Remove all non-scaffold atoms |
+| to_scaffold() | Remove all non-scaffold atoms in place |
+| scaffold() | Return a new molecule containing the scaffold |
 | canonical_rank(atom) | Canonical rank for 'atom' |
 | canonical_ranks() | Canonical rank of each atom |
 | symmetry_class(atom) | Symmetry class for 'atom' |
@@ -315,10 +404,11 @@ The most common methods for a Molecule currently implemented are
 | smarts() | Molecule as smarts - does not work for searching |
 | smiles_starting_with_atom(atom) | smiles where 'atom' is the first atom |
 | smiles_atom_order() | atom order in must recent smiles produced |
+| renumber_atoms(new_number) | Renumber atoms in place. `new_number[i]` is the new atom number for current atom `i` |
 | are_bonded(a1, a2) | True if a1 and a2 are bonded |
 | add(Molecule other) | Add the atoms and bonds of 'other' |
 | remove_hydrogens_known_flag_to_fix_valence_errors | Remove problematic square brackets |
-| unset_unnecessary_implicit_hydrogens_known_values() | Try to fix certain valence problems |
+| unset_all_implicit_hydrogen_information(atom) | Discard the implicit Hydrogen count held for 'atom' |
 | formal_charge(atom) | Formal charge on atom |
 | set_formal_charge(atom) | Set formal charge on atom |
 | has_formal_charges() | True if any atom has a formal charge |
@@ -326,7 +416,7 @@ The most common methods for a Molecule currently implemented are
 | net_formal_charge() | Net formal charge |
 | number_chiral_centres() | Number of chiral centres |
 | remove_all_chiral_centres() | Remove all chiral centres |
-| chiral_centre(atom) | Return the Chiral_Centre on 'atom' |
+| chiral_centre_at_atom(atom) | Return the Chiral_Centre on 'atom' |
 | invert_chirality_on_atom(atom) | Invert chirality |
 | chiral_centres() | Iterable list of Chiral_Centre |
 | isotope(atom) | Isotope on 'atom' |
@@ -337,8 +427,10 @@ The most common methods for a Molecule currently implemented are
 | number_isotopic_atoms() | Number of atoms with non zero isotopes |
 | bonds_between(a1, a2) | Bonds between atoms |
 | longest_path() | Longest through bond path |
-| atoms_on_shortest_path(a1, a2) | Set_of_Atoms holding atoms on shortest path between a1 and a2 |
+| atoms_on_shortest_path(a1, a2) | Set_of_Atoms holding atoms on one shortest path between a1 and a2. May return None |
+| all_atoms_between(a1, a2) | Set_of_Atoms holding all atoms on shortest paths between a1 and a2, in breadth-first order. May return None |
 | down_the_bond(a1, a2) | Return all atoms found by looking down the a1->a2 bond. May return None |
+| atoms_by_radius(starting_atoms, max_radius) | List of Set_of_Atoms grouped by exact minimum bond distance |
 | atom_map_number(atom) | Atom map number on 'atom' |
 | set_atom_map_number(atom, nbr) | Set atom map number |
 | reset_atom_map_numbers() | Remove all atom map numbers |
@@ -359,18 +451,16 @@ The most common methods for a Molecule currently implemented are
 | translate(x, y, z) | Translate atoms |
 | highest_coordinate_dimensionality() | Will be 3 of 3D coordinates available |
 | discern_chirality_from_3d_structure() | Use geometry to discern chiral centres |
-| dihedral_scan(atom, atom, angle, bump_check | return list of coordinate sets |
+| dihedral_scan(a2, a3, angle, bump_check=0.0) | Return a list of flat float32 NumPy coordinate arrays for rotations around the a2-a3 bond |
 | non_sssr_rings() | Number of non Smallest Set of Smallest Rings rings |
 | non_sssr_ring(i) | The i'th non-SSSR ring |
-| has_partial_charges() | True if the molecule has partial charges |
-| invalidate_charges() | Discard any partial charge information stored |
+| invalidate_partial_charges() | Discard any partial charge information stored |
 | partial_charge_type() | The kind of partial charges stored |
+| partial_charge(atom) | Partial charge on 'atom' |
 | compute_Abraham_partial_charges() | Abraham partial charges |
 | compute_Gasteiger_partial_charges() | Gasteiger partial charges |
 | compute_Huckel_partial_charges() | Huckel partial charges |
 | compute_Gasteiger_Huckel_partial_charges() | Gasteiger Huckel partial charges |
-| compute_Del_Re_partial_charges() | Del Re partial charges |
-| compute_Pullman_partial_charges() | Del Re partial charges |
 | \__eq__ | True if m1 == m2. Will use unique smiles if necessary |
 | m1 += m2 | Adds atoms and bonds from m2 to m1 |
 | m1 + m2 | Returns a new molecule containing m1 and m2 |
@@ -384,9 +474,141 @@ The most common methods for a Molecule currently implemented are
 | debug_string() | String representation of internal state: print(m.debug_string())|
 | ----- | ----- |
 
+
+## Chirality
+
+LillyMol stores chiral centres on the `Molecule`, not on `Atom` objects.
+An `Atom` only becomes a chiral centre because of its relationship to 
+other atoms in a `Molecule`.
+`chiral_centre_at_atom(atom)` returns the stored `Chiral_Centre` for an atom,
+if one is present. A stored chiral centre records molecular annotation; it does
+not by itself prove that the atom is actually stereogenic.
+
+A LillyMol ChiralCentre object has a central atom, and other atoms called
+`top_front`, `top_back`, `left_down` and `right_down`.
+```
+m = MolFromSmiles("F[C@H](N)O")
+m.number_chiral_centres()
+1
+c = m.chiral_centre_at_atom(1)
+<Chiral_Centre atom 1 tf 0 tb H ld 2 rd 3>
+```
+These attachments can be accessed with `c.top_front()`, `c.top_back()`,
+`c.left_down()` and `c.right_down()`. `c.atoms()` returns the same four values as
+`[top_front, top_back, left_down, right_down]`, and `Chiral_Centre` objects can
+be iterated in that same order. Each value is an atom number for an explicit
+atom. For non-atom attachments it returns one of the module constants
+`CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN` or
+`CHIRAL_CONNECTION_IS_LONE_PAIR`. The helper predicates
+`is_chiral_implicit_hydrogen(value)` and `is_chiral_lone_pair(value)` are also
+available when code wants to avoid comparing sentinel values directly.
+
+`chiral_centre_at_atom(atom)` and `chiral_centres()` return copies of the stored
+`Chiral_Centre` objects. This avoids lifetime problems if the parent `Molecule`
+is a temporary. In Python, `Chiral_Centre` is intended as an inspection object;
+operations that change chirality are exposed on `Molecule`, such as
+`invert_chirality_on_atom(atom)`, `remove_chiral_centre_at_atom(atom)`, and
+`remove_all_chiral_centres()`.
+
+```python
+from lillymol import MolFromSmiles, CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN
+
+c = MolFromSmiles("F[C@H](Cl)Br").chiral_centre_at_atom(1)
+print(c.top_back() == CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN)
+for position, atom in enumerate(c):
+    print(position, atom)
+```
+
+`is_actually_chiral(mol, atom)` performs the more expensive check for whether an
+atom is actually chiral.
+
+`tetrahedral_chirality(mol, atom, check_is_chiral=False)` returns a `ChiralType`
+value for a stored tetrahedral centre, or `None` if there is no chiral centre at
+that atom. Values include `ChiralType.CHI_TETRAHEDRAL_CW`,
+`ChiralType.CHI_TETRAHEDRAL_CCW`, `ChiralType.CHI_UNSPECIFIED`, and
+`ChiralType.CHI_OTHER`.
+
+The CW/CCW designator is LillyMol-defined. It is computed relative to ascending
+explicit atom numbers, with an implicit Hydrogen ordered after all explicit
+atoms. This makes the result deterministic and independent of input bond order;
+it is not intended to reproduce RDKit's bond-order-dependent `ChiralTag`.
+
+If `check_is_chiral=True`, `tetrahedral_chirality` first calls
+`is_actually_chiral`, which may trigger a more expensive scan of the molecule.
+This is useful for filtering stored chiral annotations that are not actually
+stereogenic.
+
+```python
+from lillymol import MolFromSmiles, ChiralType, tetrahedral_chirality
+
+mol = MolFromSmiles("C[C@H](N)F")
+print(tetrahedral_chirality(mol, 1) == ChiralType.CHI_TETRAHEDRAL_CCW)
+
+mol = MolFromSmiles("N[C@H]1CCC1")
+print(tetrahedral_chirality(mol, 1) is not None)                     # stored
+print(tetrahedral_chirality(mol, 1, check_is_chiral=True) is None)   # checked
+```
+
+
+## Atom Hybridization
+
+`hybridization(atom)` returns a `Hybridization` enum value computed from the
+current molecular graph. There is also a module-level `hybridization(mol, atom)`
+function and `hybridization_name(value)` for converting enum values to strings
+such as `SP2` and `SP3`.
+
+This is a small RDKit-compatibility convenience for Python workflows, not a
+substructure-search feature. The detailed behaviour and known limits are in
+[Molecule_Lib/hybridisation.md](/docs/Molecule_Lib/hybridisation.md).
+
+```python
+from lillymol import MolFromSmiles, Hybridization, hybridization_name
+
+mol = MolFromSmiles("CC(=O)N")
+print(mol.hybridization(3) == Hybridization.SP2)
+print(hybridization_name(mol.hybridization(3)))
+```
+
+## Through-Bond Paths
+
+`bonds_between(a1, a2)` returns the topological distance between two atoms.
+`atoms_on_shortest_path(a1, a2)` returns atoms on one shortest path between the
+endpoints. If multiple shortest paths exist, the path chosen is arbitrary.
+
+`all_atoms_between(a1, a2)` returns all intermediate atoms that lie on shortest
+paths between the endpoints. The atoms are returned in breadth-first order from
+`a1`. Both path methods omit the endpoint atoms and return `None` when there are
+no intermediate atoms.
+
+`renumber_atoms(new_number)` changes atom numbering in place. The list must be a
+permutation of `range(mol.natoms())`; `new_number[i]` is the new atom number for
+the atom currently numbered `i`. Invalid length, duplicate atom numbers, or atom
+numbers outside `[0, natoms)` raise `ValueError`.
+
+```python
+mol = MolFromSmiles("CNO")
+mol.renumber_atoms([2, 0, 1])
+print([mol.atomic_number(i) for i in range(mol.natoms())])  # [7, 8, 6]
+```
+
+```python
+from lillymol import MolFromSmiles
+
+mol = MolFromSmiles("C1CCC1")
+
+# 0 and 2 are opposite atoms in cyclobutane. There are two shortest paths.
+print(list(mol.atoms_on_shortest_path(0, 2)))  # one of [1] or [3]
+print(sorted(mol.all_atoms_between(0, 2)))     # [1, 3]
+
+mol = MolFromSmiles("C1CCCCC1")
+
+# Opposite atoms in cyclohexane. Breadth-first order from atom 0.
+print(list(mol.all_atoms_between(0, 3)))       # [1, 5, 2, 4]
+```
+
 ## Atom Methods
-As mentioned previously, LillyMol Atoms are faily simple, and have no idea
-that they are part of a Molecule. The only atributes an atom has is
+As mentioned previously, LillyMol Atoms are fairly simple, and have no idea
+that they are part of a Molecule. The only attributes an atom has is
 
 * Pointer to an Element
 * Isotope
@@ -412,14 +634,16 @@ The Atom object supports
 | is_bonded_to(atom) | True if atom is bonded to 'atom' |
 | valence_ok(atom) | True if valence ok |
 | fully_saturated() | True if nbonds() == ncon() |
-| atom_map() | atom map number |
-| connections(atom) | iterable list of atoms attached |
+| connections() | iterable list of atoms attached |
 | implicit_hydrogens | number of implicit hydrogens attached |
 | \__iter__ | List of Bonds attached |
 | \__contains__ | True if atom is bonded to |
 | \__len__ | Number of connections |
 
-In additon an Atom object inherits from an object that holds coordinates. Subsequent
+It is important to note that `ncon()` returns the number of explicit atoms in
+connected to an atom. Implicit Hydrogen atoms are not counted.
+
+In addition an Atom object inherits from an object that holds coordinates. Subsequent
 versions will enable more of that functionality. For now the subtraction operator
 returns the distance between two atoms, although long term this must be changed
 so that subtraction of two atoms returns the vector between them.
@@ -427,18 +651,23 @@ so that subtraction of two atoms returns the vector between them.
 m.build_from_smiles("C{{0,0,0}}C{{1,1,1}}"))
 m[0] - m[1]
 ```
-reports sqrt(3). For now...
+reports sqrt(3). For now... Use `m.distance_between_atoms(atom1, atom2)` to
+reliably obtain the geometric distance between two atoms in a molecule.
+The same result will be obtained by the atom based method `m[atom1].distance(m[atom2])`.
+That latter invocation would be very inefficient, since two `Atom` objects
+would need to be instantiated in Python, whereas the `Molecule` based
+method avoids that conversion entirely.
 
 A common construct might be (count the number of carbon=,#nitrogen bonds)
 ```
   result = 0
-  for i,atom in enumerate(mol):
-    if not atom.atomic_number() == 7:
+  for i, atom in enumerate(m):
+    if atom.atomic_number() != 7:
       continue
     for bond in atom:
-      if b.is_single_bond():
+      if bond.is_single_bond():
         continue
-      other = b.other(i)
+      other = bond.other(i)
       if m.atomic_number(other) == 6:
         result += 1
 ```
@@ -447,14 +676,14 @@ above will visit each Bond twice - since each atom knows about all Bonds.
 Traversing the bond list results in each Bond being examined only once.
 ```
   result = 0
-  for bond in m.bond_list():
-    if b.is_single_bond():
+  for bond in m.bonds():
+    if bond.is_single_bond():
       continue
-    a1 = b.a1()
-    a2 = b.a2()
-    if m.atomic_number(a1) == 6 && m.atomic_number(a2) == 7:
+    a1 = bond.a1()
+    a2 = bond.a2()
+    if m.atomic_number(a1) == 6 and m.atomic_number(a2) == 7:
       result += 1
-    elif m.atomic_number(a1) == 7 && m.atomic_number(a2) == 6:
+    elif m.atomic_number(a1) == 7 and m.atomic_number(a2) == 6:
       result += 1
 ```
 Knowing when to solve a problem by traversing atoms and when to traverse
@@ -482,8 +711,8 @@ And a couple of other things.
 | is_triple_bond() | True if the bond is a triple bond |
 | is_aromatic() | True if the bond is aromatic |
 | nrings() | The number of rings involving this bond |
-| is_directional(() | True if bond is directional |
 | IsInRing() | True if bond is in a ring |
+| is_directional(() | True if bond is directional |
 | GetBeginAtomIdx() | Same as a1() |
 | GetEndAtomIdx() | Same as a2() |
 | GetBondType() | Same as btype() |
@@ -499,14 +728,17 @@ Set_of_Atoms contained duplicate atom numbers.
 | ------ | ----------- |
 | empty() | True of the set is empty |
 | size() | Number of items |
-| scatter(list, value) | Set values to 'value' |
+| set_vector(list, value) | Set list[i] to `value` for each atom i in the set |
+| scatter(list, value) | Alias for `set_vector(list, value)` |
+| increment_vector(list, value) | Increment list[i] by `value` for each atom i in the set |
 | \__len__ | Number of items |
 | \__getitem__ | Access via [i] |
 | \__iter__ | Access atoms via iterators |
 | \__contains__ | Is atom included |
 
-The C++ version contains several gather and scatter type methods. Other methods may
-be added.
+`set_vector`, `scatter`, and `increment_vector` mutate normal Python lists.
+They are useful for turning an embedding into per-atom flags without constructing
+an intermediate molecule-sized array in Python.
 
 ## Ring Methods
 A Molecule may have rings. Ring's are just Set_of_Atoms's that have some
@@ -585,7 +817,7 @@ Any work with molecules should ensure that molecules are represented in a consis
 manner. For example, are all the acids in charged or neutral forms? How are the nitro
 groups represented? Etc...
 
-Trying to formulate substruecture queries that can accommodate these variations is
+Trying to formulate substructure queries that can accommodate these variations is
 challenging, and inefficient. LillyMol has a module that enforces consistent
 molecular representations.
 
@@ -606,7 +838,7 @@ for transforming certain forms from LillyMol standard forms back to other forms;
 transforming `N(=O)=O` to `[N+](=O)-[O-]` for example.
 
 ## Substructure Searching
-LillyMol supports a rich set of substructure query capabilities. All invove a
+LillyMol supports a rich set of substructure query capabilities. All involve a
 `Substructure_Query` object that can be instantiate from
 
 * smarts
@@ -620,10 +852,24 @@ Enable substructure searching via
 ```
 from lillymol_query import *
 ```
-Instantiate a new query for a para substituted methoxy group via
+Instantiate a new query for a para substituted methoxy group via the
+one-line helper
+```
+query = QueryFromSmarts('[CH3]-[OD2]-c:c:c:[cD3]')
+if query is None:
+  logging.error('Invalid smarts')
+```
+
+This will generally be the most convenient way to build a query from SMARTS.
+It returns a `SubstructureQuery` object on success and `None` if the SMARTS
+cannot be parsed.
+
+The equivalent two-step form is also available, which can be useful if you want
+to allocate the object first and configure it explicitly
 ```
 query = SubstructureQuery()
-query.build_from_smarts('[CH3]-[OD2]-c:c:c:[cD3]')
+if not query.build_from_smarts('[CH3]-[OD2]-c:c:c:[cD3]'):
+  logging.error('Invalid smarts')
 ```
 
 To read a query from a textproto query specification
@@ -642,11 +888,19 @@ query.substructure_search(m)
 The number of matches will be returned. In this case it will frequently be 2 since
 the query will match two times in a benzene like ring.
 
-To get the matched atoms, as a List of List's,
+For a simple boolean test, use Python's `in` operator with the query on the
+left and the molecule on the right
 ```
-matches = q.substructure_search_matches(m)
+if query in m:
+  print('matched')
 ```
-and then the matches object (type SubstructureResults) can be iterated.
+This is equivalent to asking whether `query.substructure_search(m)` finds at
+least one match, but it does not return the match count or matched atoms.
+
+To get the matched atoms directly as a list of `Set_of_Atoms` objects, use:
+```python
+matches = query.substructure_search_matches(m)
+```
 
 For example if you wanted to place an isotope on each set of matched atoms that might look like
 ```
@@ -655,7 +909,7 @@ for match in query.substructure_search_matches(m):
   m.set_isotopes(match, 1)
   print(m)
 ```
-Omit the `remove_isotopes` call to add the new isotopes to whatever might have already been there.
+Omit the `remove_isotopes` call to overwrite the new isotopes onto whatever isotopes might have already been there.
 
 On the other hand if you need to know which matched atom is which, that might look like
 ```
@@ -666,6 +920,33 @@ for match in query.substructure_search_matches(m):
   print(m)
 ```
 Note that the isotope placed is incremented by 1 since isotope 0 does not mean anything.
+
+For one-off SMARTS searches there are convenience functions whose names are
+close to the common RDKit spelling. These build a temporary query, apply any
+keyword options, search the molecule, and discard the query.
+
+```python
+m = MolFromSmiles("CCOC ethoxyethane")
+
+if HasSubstructMatch(m, "[OD2]-C"):
+  print("ether oxygen")
+
+print(CountSubstructMatches(m, "C", max_matches_to_find=2))
+
+for embedding in GetSubstructMatches(m, "[OD2]-C",
+                                     unique_embeddings_only=True):
+  print(embedding)
+```
+
+`GetSubstructMatches` returns a Python list of embeddings, where each embedding
+is a list of atom numbers. The atom numbers within each embedding follow the atom
+order in the query.
+
+The keyword options accepted by these transient SMARTS helpers are
+`max_matches_to_find`, `unique_embeddings_only`, `one_embedding_per_start_atom`,
+and `perceive_symmetry_equivalent_matches`. Reusable `SubstructureQuery` objects
+do not accept per-call overrides; their match policy remains a property of the
+query and is controlled by the setter methods below.
 
 The Substructure_Query class has a wide variety of options that control the matching. Those
 are described in the `trxn` usage document. Here they are just listed
@@ -679,6 +960,380 @@ are described in the `trxn` usage document. Here they are just listed
 * set_min_atoms_to_match
 * set_max_atoms_to_match
 * max_query_atoms_matched_in_search
+
+### Examining atoms around a substructure match
+
+A substructure search can populate an explicit `SubstructureResults` object. It
+contains one or more embeddings, each represented by a `Set_of_Atoms` containing
+the molecule atom numbers matched by the query. These embeddings can be passed
+directly to `atoms_by_radius`:
+
+```python
+m = MolFromSmiles("CCOC")
+query = QueryFromSmarts("[OD2]")
+sresults = SubstructureResults()
+
+if query.substructure_search(m, sresults):
+  for matched_atoms in sresults:
+    shells = m.atoms_by_radius(matched_atoms, 2)
+    print("matched", list(shells[0]))
+    print("one bond away", list(shells[1]))
+    print("two bonds away", list(shells[2]))
+```
+
+`atoms_by_radius` performs one graph traversal and returns a list indexed by exact
+minimum bond distance. Element zero is the starting set, element one contains
+atoms one bond away, and so on. Each atom occurs in only one shell, even when it
+is reachable from several matched atoms. Empty outer shells are retained. This
+operation can therefore be embedded in a larger loop over molecules and query
+embeddings without recomputing the inner shells for each radius.
+
+## GFP fingerprint files and similarity search
+
+`GFPList` provides read/search access to LillyMol GFP fingerprints. It can read
+precomputed `.gfp`/TDT fingerprint files, and it can also generate the standard
+LillyMol GFP fingerprint directly from Python `Molecule` objects. For a shorter
+orientation, see the [GFP quickstart](fingerprints.md#gfp-quickstart).
+
+### Reading an existing GFP file
+
+```python
+from lillymol import GFPList
+
+gfp = GFPList.from_file("collection.gfp")
+
+print(len(gfp))
+print(gfp.tags())
+print(gfp.smiles(0), gfp.id(0))
+
+print(gfp.distance(0, 1))
+```
+
+The fingerprint schema is discovered from the tags in the first TDT in the file.
+All subsequent fingerprints are interpreted with that same schema. Tag order in
+the TDT is not significant, but all fingerprints in a `GFPList` must contain the
+same components. Common tags include `MPR<` for molecular properties, `FP...<`
+for fixed binary fingerprints, `NC...<` for sparse non-colliding fingerprints,
+and `FC...<` for fixed counted fingerprints.
+
+### Generating standard GFP fingerprints
+
+The standard LillyMol GFP fingerprint can be generated directly from molecules.
+This currently creates the long-standing standard GFP components:
+
+- `FPIW<` path fingerprint
+- `FPMK<` MACCS keys
+- `FPMK2<` level-2 MACCS keys
+- `MPR<` molecular properties
+
+Use a `GFPContext` when you want standalone query fingerprints:
+
+```python
+from lillymol import Molecule
+from lillymol import GFPContext
+
+ctx = GFPContext.standard()
+
+mol = Molecule()
+mol.build_from_smiles("CCO ethanol")
+fp = ctx.fingerprint(mol)
+
+print(ctx.distance(fp, fp))
+```
+
+The same standard context can also be built explicitly from immutable generator
+specifications. This is the extension point for adding more fingerprint
+generators while keeping the context schema explicit.
+
+```python
+from lillymol import GFP, GFPContext
+
+ctx = GFPContext.from_specs([
+    GFP.iw(),
+    GFP.maccs(level2=True),
+    GFP.mpr(),
+])
+```
+
+The component tags are generated by C++ from the full specification. Duplicate
+tags are rejected, because a `GFPContext` cannot contain two indistinguishable
+fingerprint components. The order of the specs is not significant; components
+are canonicalized before the context hash is computed.
+
+`GFP.maccs(level2=False)` generates only `FPMK<`; the default generates both
+`FPMK<` and `FPMK2<`.
+
+`GFP.alogp(replicates=9)` adds a sparse counted alogp component. The tag
+contains the replicate count, for example `NCALOGP9<`, so contexts built with
+different replicate counts are not compatible. The replicated bits all carry the
+same bucketized alogp value as their count, matching the command-line alogp
+fingerprint convention.
+
+`GFP.xlogp(replicates=9)` adds the analogous sparse counted xlogp component
+with tags such as `NCXLOGP9<`. It uses the xlogp command-line fingerprint
+bucketization convention.
+
+`GFP.tpsa(replicates=9)` adds a sparse counted topological polar surface area
+component with tags such as `NCTPSA9<`. It preserves the command-line `psafp`
+convention: TPSA is divided by 10, rounded to an integer bucket, and stored as
+the count on each replicated bit, with a minimum count of 1.
+
+`GFP.formula()` adds a fixed-size counted molecular formula fingerprint with
+tag `FCFML<`. It uses the formula fingerprint log scaling defaults
+recommended by the command-line tool, preserving the nonlinear count
+scaling that emphasizes low element-count differences and compresses
+differences among more abundant elements. The change going from one Oxygen
+atom to two Oxygen atoms is much more important than going from 15 to 16
+Carbon atoms.
+
+`GFP.cats(max_path_length=10, include_hydrophobic_pairs=True)` adds the sparse
+counted CATS pharmacophore-pair fingerprint. The tag is `NCCATS10<` when
+hydrophobic-hydrophobic pairs are included and `NCCATSP10<` when they are
+suppressed. The `P` suffix preserves the long-standing command-line convention
+where the `jwcats -p` option suppresses hydrophobic-hydrophobic pairs. CATS
+initialization requires `LILLYMOL_HOME` so the default charge and
+donor/acceptor assigners can be loaded.
+
+`GFP.atom_pair(min_separation=1, max_separation=10, atom_type="UST:Y",
+include_out_of_range=False)` adds the newer sparse counted atom-pair
+fingerprint. The default atom type matches the command-line tool. Setting
+`min_separation=0` includes the single-atom atom-type bits. When
+`include_out_of_range=True`, atom pairs beyond `max_separation` are collected in
+the truncated out-of-range bucket, matching the command-line `-t` behavior.
+
+`GFP.ec(radius=3, atom_type="UST:Z")` adds a sparse counted extended
+connectivity fingerprint. The default atom type is atomic number (`UST:Z`). The
+radius and atom-type specification are encoded in the tag, for example
+`NCEC3USTZ<` or `NCEC3USTAY<`. Colons in atom-type specifications are omitted
+from tags; other non-alphanumeric characters are rejected. Multiple EC
+fingerprints with different atom types can be combined in one context.
+
+`GFP.substructure(smarts, radius=0, atom_type="UST:ARY", no_match="empty")`
+adds a fixed-width binary path fingerprint over the atoms matched by one SMARTS
+query, optionally expanded by `radius` bonds around all matched atoms. The tag
+starts with `FPSUB` and includes the radius, atom type, and a stable hash of the
+query specification. When `no_match="empty"`, molecules that do not match the
+query receive an empty fingerprint component. When `no_match="error"`,
+fingerprint generation fails for non-matching molecules.
+
+```python
+ctx = GFPContext.from_specs([
+    GFP.substructure("n1cncc1", radius=4),
+])
+```
+
+`GFP.ring_substitution()` adds the ring-substitution fingerprint with tag
+`NCRS<`. It uses the defaults used by `gfp_make.pl`: full substituent atom
+typing and single-feature bits.
+
+`GFP.spinach(label_join_points=False)` adds a fixed-width binary path
+fingerprint over the molecular spinach, the atoms outside the scaffold. The tag
+is `FPSPIN<`. When `label_join_points=True`, atoms at the scaffold/spinach join
+are isotope-labelled before atom typing and the tag is `FPSPINI<`.
+
+`GFP.scaffold(label_join_points=False)` adds the corresponding fixed-width
+binary path fingerprint over the scaffold atoms. The tag is `FPSCAF<`, or
+`FPSCAFI<` when join points are labelled. Both scaffold and spinach
+fingerprints use the same `IdentifySpinachLabel` perception and the
+`IWMFingerprint` atom include mask, so they can be combined in one context
+without changing the input molecule.
+
+For example:
+
+```python
+from lillymol import GFP, GFPContext
+
+ctx = GFPContext.from_specs([
+    GFP.spinach(label_join_points=True),
+    GFP.scaffold(label_join_points=True),
+])
+```
+
+Use `GFPList.standard()` when you want to build a searchable collection from
+Python molecules:
+
+```python
+from lillymol import Molecule
+from lillymol import GFPContext, GFPList
+
+gfp = GFPList.standard()
+
+for smiles in ["CC ethane", "CCC propane", "CCCC butane"]:
+  mol = Molecule()
+  mol.build_from_smiles(smiles)
+  gfp.add(mol)
+
+query = Molecule()
+query.build_from_smiles("CCC query")
+query_fp = GFPContext.standard().fingerprint(query)
+
+hits = gfp.nearest_neighbours(query_fp, 3)
+for hit in hits:
+  print(hit.index, hit.distance, gfp.id(hit.index))
+```
+
+If the molecules are already available as a Python list, build the list in one
+call. By default this does not store smiles/id metadata because the caller
+already owns the molecules and can keep whatever metadata structure is most
+convenient. Set `store_metadata=True` if the `GFPList` should retain smiles and
+ids for later `smiles(index)` and `id(index)` calls.
+
+```python
+from lillymol import GFPContext, GFPList, MolFromSmiles
+
+molecules = MolFromSmiles([
+    "CC ethane",
+    "CCC propane",
+    "CCCC butane",
+])
+
+gfp = GFPList.standard_from_molecules(molecules, store_metadata=True)
+
+# Later additions can also be batched. This defaults to not storing smiles/id
+# metadata unless store_metadata=True is supplied.
+gfp.add_molecules(more_molecules, store_metadata=True)
+```
+
+When an explicit context is useful, construct the list from that context and add
+molecules in one batch:
+
+```python
+ctx = GFPContext.standard()
+gfp = GFPList(ctx)
+gfp.add_molecules(molecules, store_metadata=True)
+```
+
+If the input is a list of SMILES strings from another toolkit and no identifiers
+are needed, use `add_smiles()`:
+
+```python
+gfp = GFPList.standard()
+gfp.add_smiles(["CC", "CCC", "CCCC"])
+```
+
+`add_smiles()` never stores smiles/id metadata. Use `MolFromSmiles()` plus
+`add_molecules(..., store_metadata=True)` when ids should be retained.
+
+A `GFPList` either stores metadata for every entry or for none. Mixing the two
+modes is rejected. Lists read from `.gfp` files and lists built with
+`GFPList.add(mol)` store metadata. Batch construction defaults to no metadata.
+
+Batch construction and `add_molecules()` pass pointers to the existing Python
+`Molecule` objects into C++ rather than copying the molecules into a temporary
+`std::vector<Molecule>`. This matters for large collections. Fingerprint
+generation follows the standard GFP preprocessing used by the existing C++ GFP
+server path, and may update normal LillyMol cached/perceived state on the input
+molecule. It should not make destructive structural changes. If molecules have
+already been standardised and preprocessed, this step can be skipped:
+
+```python
+ctx = GFPContext.standard(preprocess=False)
+gfp = GFPList.standard(preprocess=False)
+```
+
+### Context compatibility
+
+A `GFPFingerprint` is only meaningful with the `GFPContext` that generated it,
+or with another context that has the same fingerprint schema. The Python binding
+checks this compatibility before list/query distance calculations. Combining a
+fingerprint generated by one context with a list using a different schema raises
+`ValueError`.
+
+This means a query fingerprint used against a `GFPList.standard()` collection
+should be generated with `GFPContext.standard()` using the same settings. A
+fingerprint generated with the standard context is not compatible with a list
+read from a file that contains a different set of fingerprint tags.
+
+### Nearest neighbours
+
+Nearest-neighbour searches return `GFPNearestNeighbour` objects. The `index` is
+the row number in the `GFPList`; use `smiles(index)` and `id(index)` to retrieve
+the original molecule metadata.
+
+```python
+hits = gfp.nearest_neighbours(0, 10)
+for hit in hits:
+  print(hit.index, hit.distance, gfp.id(hit.index))
+
+close = gfp.nearest_neighbours_within_distance(0, 0.25)
+for hit in close:
+  print(hit.index, hit.distance, gfp.smiles(hit.index), gfp.id(hit.index))
+```
+
+`nearest_neighbours(query, k)` returns up to `k` neighbours sorted by increasing
+distance. `nearest_neighbours_within_distance(query, max_distance)` returns all
+neighbours within the threshold, also sorted by increasing distance. When
+`query` is a row number, the query fingerprint itself is not included in either
+result. When `query` is a standalone `GFPFingerprint`, all list entries are
+eligible neighbours.
+
+### Component selection and weights
+
+Fingerprint components can be selected and weighted by tag name.
+
+```python
+gfp.use_only(["FPIW<", "FPMK<"])
+gfp.set_weight("FPMK<", 0.25)
+gfp.use_all()
+```
+
+Weights affect subsequent distance and nearest-neighbour calculations. Changing
+weights does not change the context compatibility hash, since the underlying
+fingerprint schema is unchanged.
+
+### Error handling
+
+The Python API is designed to fail loudly in notebooks:
+
+- unreadable GFP files raise `RuntimeError`
+- trying to generate a fingerprint from a context that cannot generate
+  fingerprints raises `RuntimeError`
+- invalid row indices raise `IndexError`
+- incompatible fingerprint contexts raise `ValueError`
+- negative distance thresholds raise `ValueError`
+- unknown component tags in `use_only` or `set_weight` raise `RuntimeError`
+
+Repeated calls to `distance(i, j)` perform repeated distance computations. For
+large all-against-all or repeated-nearest-neighbour workflows, prefer the
+nearest-neighbour methods.
+
+### Precomputed truncated distance matrices
+
+`lillymol_tools.TruncatedDistanceMatrix` loads a TFDataRecord file of serialized
+near-neighbour protos, normally produced by
+`gfp_nearneighbours_single_file_tbb -S`, and provides repeated lookup of stored
+pair-wise distances. Distances not present in the file are treated as omitted
+long-range pairs: `distance(i, j)`
+returns `None`, while `distance_or_default(i, j)` returns the matrix default
+distance.
+
+```python
+from lillymol_tools import (
+    TruncatedDistanceMatrix, TruncatedDistanceMatrixStorage,
+    TruncatedDistanceMatrixProto,
+)
+
+dm = TruncatedDistanceMatrix(
+    "file.nn.tfdata",
+    storage=TruncatedDistanceMatrixStorage.ROW_SPARSE,
+)
+
+indexed_dm = TruncatedDistanceMatrix(
+    "file.indexed.nn.tfdata",
+    storage=TruncatedDistanceMatrixStorage.ROW_SPARSE,
+    proto_type=TruncatedDistanceMatrixProto.NEARNEIGHBOURS_INDICES,
+)
+
+print(dm.index("CHEMBL123"))
+print(dm.name(17))
+print(dm.distance(10, 17))
+print(dm.distance_or_default(10, 17))
+```
+
+Use `distances_or_default(i_values, j_values)` for batch lookup from Python.
+See [Truncated Distance Matrix](/docs/GFP/truncated_distance_matrix.md) for the
+file-generation requirements, storage modes, default-distance behaviour, and C++
+API.
 
 ## Reactions
 Enable reactions via
@@ -740,7 +1395,7 @@ iterator class. This workflow looks like
 
 1. Instantiate Reaction
 2. Add reagents to the reaction
-3. Process scaffols, generating multiple products for each scaffold.
+3. Process scaffolds, generating multiple products for each scaffold.
 
 In python, for a reaction with a single sidechain, processing a set of
 molecules might look like
@@ -768,6 +1423,86 @@ The loop involving 'iter.active()' will loop over the reagents stored
 in the reaction. For each such reagent, a product will be formed for
 each embedding of the query in 'm', generating `number_reagents * number_matches`
 products. Some molecules may have differing numbers of matches...
+
+## Formal Charge Assignment
+LillyMol contains a set of formal charge rules primarily developed by Robert F Bruns
+at Lilly during the 1990's. These rules have proven robust over the years, with strong
+concordance with other rule sets, with seemingly better results in many cases. From
+the command line the script assign_formal_charges.sh assigns formal charges to a file
+of molecules.
+
+In order to access this functionality from python, a ChargeAssigner object must
+be instantiated.
+```
+chg = ChargeAssigner()
+for mol in mols:
+  chg.process(mol)
+```
+If needed, the return code from `chg.process` is the number of formal charges assigned
+to the molecule.
+
+## Donor Acceptor Assignment.
+LillyMol contains a set of donor acceptor rules primarily developed by Robert F Bruns
+at Lilly during the 1990's. Acknowledge that definitions of donors and acceptors is
+very complex with instances of various weak forms being found in various circumstances.
+The rules apply mostly to strong donors and acceptors. One possibly novel concept is
+the idea of a dual mode atom - something that can function either as a donor or an
+acceptor. An OH atom is the most common example.
+
+Results are returned by placing isotopic labels on the atoms. By convention isotope
+1 is applied for acceptors, isotope 3 for donors, and isotope 2 to atoms which
+can function as either.
+
+A typical use might be
+```
+donor_acceptor = DonorAcceptor()
+for mol in mols:
+  donor_acceptor.process(mol)
+```
+The `process` method returns the number of assignments made. Note that if an atom
+is both acceptor and donor, it will count twice in the return code value.
+
+## Ring precedent with BerkeleyDB
+
+`RingDatabase` in the optional BerkeleyDB-dependent `lillymol_bdb` module can
+identify molecules containing unprecedented or minimally precedented ring
+systems. Build the ring database with `smi2rings_bdb`, then open it once for
+repeated molecule lookups:
+
+```python
+from lillymol_bdb import RingDatabase
+
+minimum_count = 4
+with RingDatabase("rings.bdb", bare_ring_fallback=True) as ring_database:
+    for mol in mols:
+        count = ring_database.rarest_ring_count(mol)
+        if count is not None and count < minimum_count:
+            continue
+        # Retain this molecule.
+```
+
+`rarest_ring_count(mol)` returns:
+
+- `0` if any eligible ring system has no database precedent.
+- A positive integer giving the count of the least common eligible ring system.
+- `None` if there are no eligible ring systems, either because the molecule is
+  acyclic or because extraction limits exclude all its rings.
+
+This example retains molecules returning `None`; callers can instead discard
+those molecules explicitly. Lookups preserve the input molecule. Database and
+processing failures raise `RuntimeError` rather than returning a missing-ring
+count. The context manager closes database handles automatically.
+
+The constructor also accepts a sequence of database path strings. Across multiple
+databases, the count for each matched ring key is the maximum, not the sum.
+Preprocessing and extraction settings are keyword-only, for example
+`standardize=True`, `remove_isotopes=True`, and `max_ring_size=8`. Settings should
+match those used to build the database. `bare_ring_fallback=True` broadens
+precedent to include a ring whose particular attachment pattern is unseen; it is
+disabled by default.
+
+See [smi2rings Python documentation](../Molecule_Tools/smi2rings.md#python-filtering-by-ring-precedent)
+for the complete constructor options and matching semantics.
 
 ## Speed Comparisons
 One speed comparison is described in [tsubstructure](/docs/Workflows/substructure_comparison.md).

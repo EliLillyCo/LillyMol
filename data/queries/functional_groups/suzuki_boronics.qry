@@ -1,6 +1,8 @@
 (0 Query
+# Oct 2026. '=,:' so that a double bond in the Kekule form, or an aromatic bond, will match, giving the same
+# answer whether or not aromatic bonds keep their Kekule forms (tsubstructure -M nokekule).
   (A I Version 2)
   (A C Comment "suzuki_boronics")
   (A I one_embedding_per_start_atom 1)
-  (A C smarts "[BD3](!@[#6]=[#6])(-O)-O")
+  (A C smarts "[BD3](!@[#6]=,:[#6])(-O)-O")
 )

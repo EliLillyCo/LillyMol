@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_spread",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-A ${LILLYMOL_HOME}/data/pubchem_10.gfp ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

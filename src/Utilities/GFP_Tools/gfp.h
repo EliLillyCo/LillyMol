@@ -2,6 +2,7 @@
 #define IWGFP_H
 
 #include <sys/types.h>
+#include <cstdint>
 #include <iostream>
 
 #include "Foundational/cmdline/cmdline.h"
@@ -122,13 +123,31 @@ Molecular_Properties<T>::build_from_contiguous_storage (const void * p,
 extern int set_number_integer_molecular_properties (int);
 extern int set_number_continuous_molecular_properties (int);
 extern int number_integer_molecular_properites();
-extern int initialise_properties_ratios();
 
-class Molecular_Properties_Integer : public Molecular_Properties<int>
+class Molecular_Properties_Integer
 {
   private:
+    static constexpr int kMaxProperties = 8;
+
+    int _nproperties = 0;
+    uint8_t _property[kMaxProperties] = {0};
+
   public:
     Molecular_Properties_Integer ();
+
+    int active () const { return _nproperties > 0;}
+
+    int nproperties() const { return _nproperties;}
+
+    const uint8_t * rawdata() const { return _property;}
+
+    void create_subset (const int *);
+
+    int sum () const;
+
+    const void * build_from_contiguous_storage (const void *, int);
+    void * copy_to_contiguous_storage (void *) const;
+    void * copy_to_contiguous_storage_gpu (void *) const;
 
     int construct_from_tdt_fp_record (const const_IWSubstring &);
 

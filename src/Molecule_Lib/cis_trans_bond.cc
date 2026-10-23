@@ -44,6 +44,10 @@ Molecule::revert_all_directional_bonds_to_non_directional() {
     }
   }
 
+  if (rc) {
+    invalidate_smiles();
+  }
+
   return rc;
 }
 
@@ -563,7 +567,7 @@ Molecule::_process_directional_system(atom_number_t lhs1, atom_number_t db1,
   const Bond* lhsb1 = nullptr;
   const Bond* lhsb2 = nullptr;
   const Bond* double_bond = nullptr;
-  atom_number_t db2 = INVALID_ATOM_NUMBER;
+  atom_number_t db2 = kInvalidAtomNumber;
 
   for (int i = 0; i < acon; i++) {
     const Bond* b = a->item(i);
@@ -582,7 +586,7 @@ Molecule::_process_directional_system(atom_number_t lhs1, atom_number_t db1,
 
   assert(nullptr != lhsb1);
   assert(lhsb1->is_directional());
-  assert(INVALID_ATOM_NUMBER != db2);
+  assert(kInvalidAtomNumber != db2);
 
   a = _things[db2];
 
@@ -1047,7 +1051,7 @@ Molecule::_identify_linked_cis_trans_bonds(
     return 0;
   }
 
-  atom_number_t atom_at_end_of_double_bond = INVALID_ATOM_NUMBER;
+  atom_number_t atom_at_end_of_double_bond = kInvalidAtomNumber;
 
   int double_bonds_encountered = 0;
 
@@ -1099,7 +1103,7 @@ Molecule::_identify_linked_cis_trans_bonds(
     _identify_linked_cis_trans_bonds(bonds_to_be_flipped, zatom, j, bond_already_done);
   }
 
-  if (INVALID_ATOM_NUMBER == atom_at_end_of_double_bond || double_bonds_encountered > 1) {
+  if (kInvalidAtomNumber == atom_at_end_of_double_bond || double_bonds_encountered > 1) {
     return 1;
   }
 

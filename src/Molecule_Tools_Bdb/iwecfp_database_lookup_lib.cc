@@ -526,6 +526,15 @@ SP_Database::determine_if_examples_present()
   return _contains_examples;
 }
 
+int
+SP_Database::close() {
+  if (_db != nullptr) {
+    _db->close(0);
+  }
+
+  return 1;
+}
+
 Set_of_Databases::Set_of_Databases() : _dbenv(0u)
 {
   _user_wants_example_structures = 1;
@@ -1016,6 +1025,15 @@ Set_of_Databases::BuildSubtractionDatabase(IWString& fname,
 }
 
 int
+Set_of_Databases::close() {
+  for (SP_Database* db : _db) {
+    db->close();
+  }
+
+  return 1;
+}
+
+int
 Subtraction_Set::_adjust_count_for_subtraction(const DBKey& dbkey, int& count) const
 {
   Subtract::const_iterator f = _subtract.find(dbkey);
@@ -1151,6 +1169,11 @@ SP_Set_of_Databases::PerShellData(Molecule& m, std::vector<int>& result) {
   }
 
   return 1;
+}
+
+int
+SP_Set_of_Databases::close() {
+  return _dbs.close();
 }
 
 }  // namespace iwecfp_database_lookup

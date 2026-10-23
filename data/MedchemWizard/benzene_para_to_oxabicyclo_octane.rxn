@@ -1,0 +1,21 @@
+name: "benzene_para_to_oxabicyclo_octane"
+scaffold {
+  smarts: "[!F;!Cl;!Br;!I;!$(N(=O)=O);!$([OD2]);!$([S]);!$([NH>0])]-[/IWfss1cD3]1:[cD2]:[cD2]:[cD3](-[!F;!Cl;!Br;!I]):[cD2]:[cD2]1"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  remove_atom: [1, 2, 3, 4, 6, 7]
+}
+sidechain {
+  id: 1
+  reagent: "C12CC(CC1)CO2"
+  smarts: "C12CC(CC1)CO2"
+  join {
+    a1: 0
+    a2: 0
+  }
+  join {
+    a1: 5
+    a2: 2
+  }
+}

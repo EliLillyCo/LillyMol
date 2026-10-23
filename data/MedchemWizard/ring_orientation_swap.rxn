@@ -1,0 +1,25 @@
+name: "ring_orientation_swap"
+scaffold {
+  smarts: "[/IWhr>0cD3]1(-!@*):a:a:[cD3](-!@*):a:a1"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 4
+    a2: 5
+  }
+  make_bond {
+    a1: 0
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 4
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

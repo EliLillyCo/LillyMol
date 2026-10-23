@@ -40,6 +40,7 @@ END
   $stderr << "                  But note that if output is to stdout, `make` will run silently\n"
   $stderr << "                  That is because `make` echo's commands to stdout\n"
   $stderr << " -j <n>           degree of parellelism 'make -j <n>\n"
+  $stderr << " -smi3d           input is a LillyMol 3D smiles - do NOT run through rcorina for 3d descriptors\n"
   $stderr << " -speed           do nothing, but report the relative speed of each descriptor computation\n"
   $stderr << " -okmissing       by default, molecules with missing values are discarded\n"
   $stderr << " -keep            do NOT delete the temporary directory when done, keep it\n"
@@ -141,7 +142,7 @@ def do_single_descriptor(d, fname, cl)
 
   cmd << "rcorina.sh #{corina_options(cl)} -u #{input_for_next_stage}|" if d.threed
 
-  cmd << "#{d.programme} -i smi -"
+  cmd << "#{d.programme} #{d.extra} -i smi -"
   cmd << ' > ' << cl.value('o') if cl.option_present('o')
 
   $stderr << cmd << "\n" if cl.option_present('v')
@@ -157,6 +158,8 @@ def create_makefile(to_compute, tmpdir, cl)
   d3 = to_compute.filter { |d|  d.threed }
 
   $stderr << "Have #{d2.size} 2D and #{d3.size} 3D descriptors\n" if cl.option_present('v')
+
+  lillymol_smi3d = cl.option_present('smi3d')
 
   makefile = File.open(File.join(tmpdir, 'Makefile'), "w")
   makefile << "all:"
@@ -180,7 +183,15 @@ def create_makefile(to_compute, tmpdir, cl)
     makefile << "	fileconv.sh #{verbose} #{fileconv_options} -S std $<\n"
   end
 
-  if ! d3.empty?
+  if d3.empty?
+    # No 3d things to worry about
+  elsif lillymol_smi3d
+    # Smiles already has coordinates.
+    d3.each do |d|
+      makefile << "std.#{d.name}: start.smi\n"
+      makefile << "	#{d.programme} #{d.extra} $< > $@\n"
+    end
+  else
     makefile << "std.sdf: std.smi\n"
     makefile << "	rcorina.sh #{verbose} #{corina_options(cl)} $< > $@\n"
     d3.each do |d|
@@ -277,12 +288,14 @@ def main
   descriptors = {}
   descriptors['abr'] = Descriptor.new('abraham.sh', false, 17)
   descriptors['ap'] = Descriptor.new('ap.sh', false, 10.6)
+  descriptors['asa'] = Descriptor.new('labute.sh', false, 2.1)
   descriptors['chgfp'] = Descriptor.new('chgfp.sh', false, 8.2)
   descriptors['cip'] = Descriptor.new('cip_labeler.sh --descriptors', false, 11.3)
   descriptors['cmi'] = Descriptor.new('cmi.sh', false, 24.4)
   descriptors['cnk'] = Descriptor.new('cnk.sh', false, 23.1)
   descriptors['comma'] = Descriptor.new('comma.sh', true, 31.1)
   descriptors['dbf'] = Descriptor.new('dbf.sh', true, 12.2)
+  descriptors['ecfp'] = Descriptor.new('iwecfp_fixed.sh', false, 3.2)
   descriptors['estate'] = Descriptor.new('jwestate.sh', false, 4.4)
   descriptors['ghose'] = Descriptor.new('ghose_crippen.sh -a -a', false, 16.6)
   descriptors['ha'] = Descriptor.new('ha.sh', false, 14.8)
@@ -294,14 +307,14 @@ def main
   descriptors['jwdp'] = Descriptor.new('jwdip.sh', true, 3.9)
   descriptors['jwmc'] = Descriptor.new('jwmolconn.sh', false, 62.1)
   descriptors['marvin'] = Descriptor.new('marvin.v2.sh', false, 461)
-  descriptors['medv'] = Descriptor.new('jwmedv.sh', false, 7.1)
+  descriptors['medv'] = Descriptor.new('jwmedv.sh -f', false, 7.1)
   descriptors['mk'] = Descriptor.new('maccskeys.sh', false, 5.4)
   descriptors['morse'] = Descriptor.new('jwmorse.sh -f', true, 95.1)
   # descriptors['ms'] = Descriptor.new('unknown.sh', true)
-  descriptors['pd'] = Descriptor.new('pd.sh', false, 252)
+  descriptors['pd'] = Descriptor.new('iwpathd.sh', false, 252)
   descriptors['sh'] = Descriptor.new('tshadow.sh', true, 11.9)
   descriptors['tt'] = Descriptor.new('topotorsion.sh -H 1600', false, 2.25)
-  descriptors['w'] = Descriptor.new('w.sh', false, 15.2)
+  descriptors['w'] = Descriptor.new('iwdescr.sh', false, 15.2)
 
   # Set the name field of each descriptor
   descriptors.each do |k, v|
@@ -313,7 +326,7 @@ def main
   descriptors.each do |key, v|
     opts << "-#{key}-#{key.upcase}=close"
   end
-  opts <<"-o=s-c=s-all-v-nostd-keep-tmpdir=s-j=ipos-speed-dfile=sfile-dlist=sfile-okmissing-C=ipos-CORINA=close-no=s-2d-3d"
+  opts << "-o=s-c=s-all-v-nostd-keep-tmpdir=s-j=ipos-speed-dfile=sfile-dlist=sfile-smi3d-okmissing-C=ipos-CORINA=close-no=s-2d-3d"
 
   # $stderr << opts << "\n"
 
@@ -324,9 +337,7 @@ def main
     usage(descriptors)
   end
 
-  if cl.option_present('speed')
-    show_relative_speeds(descriptors)
-  end
+  show_relative_speeds(descriptors) if cl.option_present('speed')
 
   verbose = cl.option_present('v')
 
@@ -378,6 +389,8 @@ def main
       to_compute << v
     elsif cl.option_present(k.upcase)
       # don't bother checking duplicates, too rare.
+      already_present.add(k)
+      to_compute << v
       v.extra = cl.value(k.upcase)
     end
   end
@@ -409,7 +422,7 @@ def main
 
   # If just one descriptor being computed, no need for a Makefile, just
   # a single command.
-  if to_compute.size == 1
+  if to_compute.size == 1 && ! cl.option_present('smi3d')
     return do_single_descriptor(to_compute[0], ARGV[0], cl)
   end
 

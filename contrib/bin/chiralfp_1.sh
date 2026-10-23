@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Version 1 of a chirality fingerprint.
 # Crude

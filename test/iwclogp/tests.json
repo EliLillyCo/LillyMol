@@ -61,7 +61,5 @@
               "-J NCCLP -f - < #{indir}/in.gfp"
           ]
         }
-      ]
-    }
-  
+    ]
 }

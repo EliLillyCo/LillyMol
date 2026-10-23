@@ -1,0 +1,42 @@
+{
+  "executable": "gfp_diverse_subset",
+  "test": [
+    {
+      "name": "serial",
+      "args": [
+        "-t 0.2 -h 1 -r 100 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "parallel",
+      "args": [
+        "-t 0.2 -x 1 -h 4 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "max_size",
+      "args": [
+        "-t 0.2 -s 10 -h 1 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "threshold_zero",
+      "args": [
+        "-t 0 -h 1 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "threshold_positive",
+      "args": [
+        "-t 0.01 -x 1 -h 4 #{indir}/input.gfp"
+      ]
+    },
+    {
+      "name": "invalid_size",
+      "args": [
+        "-t 0.2 -s 0 #{indir}/input.gfp"
+      ],
+      "non_zero_rc_expected": true
+    }
+  ]
+}

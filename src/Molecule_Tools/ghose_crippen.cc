@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -711,7 +712,7 @@ ghose_crippin(Molecule& m, std::ostream& output)
   }
 
   if (nullptr != frequency_vector) {
-    set_vector(frequency_vector, queries.number_elements(), 0);
+    std::fill_n(frequency_vector, queries.number_elements(), 0);
   }
 
   int* tmp = new_int(matoms);

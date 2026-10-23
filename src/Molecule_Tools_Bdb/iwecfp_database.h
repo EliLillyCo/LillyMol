@@ -268,7 +268,7 @@ increment (uint64_t & sum_so_far,
 }
 #endif
 
-static unsigned int 
+static inline unsigned int 
 bond_constant(const Bond * bondi)
 {
   if (bondi->is_aromatic())

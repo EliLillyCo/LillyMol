@@ -62,6 +62,9 @@ class Command_Line;
 class Set_of_Element_Matches : public resizable_array_p<Element_Matcher>
 {
   private:
+
+    int ConstructFromList(const IWString& list, char sep);
+
   public:
 
     int construct_from_command_line (Command_Line &, int, char);

@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -326,7 +327,7 @@ Molecular_Abstraction_Base_Class::_parse_isotope_directive(const const_IWSubstri
 }
 
 /*
-  We have begun a request, but it cannot process the molecle. What should we do?
+  We have begun a request, but it cannot process the molecule. What should we do?
 */
 
 int
@@ -388,8 +389,8 @@ Molecular_Abstraction_Base_Class::_do_any_writing_needed(
     IWMFingerprint fp;
 
     if (_atom_typing_specification.active()) {
-      int* atype = new int[matoms];
-      std::unique_ptr<int[]> free_atype(atype);
+      uint32_t* atype = new uint32_t[matoms];
+      std::unique_ptr<uint32_t[]> free_atype(atype);
       _atom_typing_specification.assign_atom_types(m, atype);
       fp.construct_fingerprint(m, atype, nullptr);
     } else {
@@ -1133,6 +1134,143 @@ Molecular_Abstraction_Scaffold::process(Molecule_With_Info_About_Parent& m,
   }
 
   return _do_any_writing_needed(m, 1, output);
+}
+
+Molecular_Abstraction_CScaffold::Molecular_Abstraction_CScaffold() {
+  _keep_attached_heteroatom = 0;
+
+  return;
+}
+
+// We need a marker for scaffold atoms that have been assigned during processing.
+static constexpr int kProcessedHere = 9;
+
+int
+Molecular_Abstraction_CScaffold::build(const Molecular_Abstraction_Directives_Node& madn) {
+  const IWString& s = madn.args();
+  int i = 0;
+  const_IWSubstring token;
+
+  while (s.nextword(token, i)) {
+    int fatal;
+    if (Molecular_Abstraction_Base_Class::_process(token, "CSCAFFOLD", fatal)) {
+      continue;
+    } else if (fatal) {
+      return 0;
+    } else if ("keepattached" == token) {
+      _keep_attached_heteroatom = 1;
+    } else {
+      cerr << "Molecular_Abstraction_CScaffold::build:unrecognised directive '" << token
+           << "'\n";
+      return 0;
+    }
+  }
+
+  if (_isotope) {
+    _keep_attached_heteroatom = 1;
+  }
+
+  return 1;
+}
+
+// Expand from `zatom` into unclaimed areas of `spinach`. Include all carbon atoms,
+// and if _keep_attached_heteroatom is set, set heteroatoms, but do not pass through them.
+// Note that we pass through = and # bonds. Not sure if that is
+// a bug or a feature.
+int
+Molecular_Abstraction_CScaffold::ExtendCarbonFromScaffold(Molecule& m, atom_number_t prev, atom_number_t zatom,
+                int* spinach) {
+  int rc = 1;
+
+  spinach[zatom] = kProcessedHere;
+  for (const Bond* b : m[zatom]) {
+    atom_number_t o = b->other(zatom);
+    if (o == prev) {
+      continue;
+    }
+
+    if (m.atomic_number(o) != 6) {  // do not extend this way.
+      if (_keep_attached_heteroatom) {
+        spinach[o] = kProcessedHere;
+      }
+      if (_isotope) {
+        m.set_isotope(o, _isotope);
+      }
+      continue;
+    }
+
+    if (spinach[o]) [[unlikely]] {  // not sure this can happen.
+      continue;
+    }
+
+    // cerr << "ExtendCarbonFromScaffold from " << zatom << ' ' << m.smarts_equivalent_for_atom(zatom) << " to " << o << ' ' << m.smarts_equivalent_for_atom(o) << '\n';
+    rc += ExtendCarbonFromScaffold(m, zatom, o, spinach);
+  }
+
+  return rc;
+}
+
+int
+Molecular_Abstraction_CScaffold::process(Molecule_With_Info_About_Parent& m,
+                                        IWString_and_File_Descriptor& output) {
+  _molecules_processed++;
+
+  const int matoms = m.natoms();
+  std::unique_ptr<int[]> tmp = std::make_unique<int[]>(matoms);
+  m.identify_spinach(tmp.get());
+
+  // Invert, we want tmp to be the scaffold atoms.
+  for (int i = 0; i < matoms; ++i) {
+    tmp[i] = ! tmp[i];
+  }
+
+  int rc = 0;
+
+  // Look over scaffold atoms, and extend into spinach through carbon atoms.
+  for (int i = 0; i < matoms; ++i) {
+    // cerr << "Upper loop atom " << i << " tmp " << tmp[i] << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
+    if (tmp[i] == 0 || tmp[i] == kProcessedHere) {
+      continue;
+    }
+
+    const Atom& a = m[i];
+    if (a.ncon() == 2) {
+      continue;
+    }
+
+    for (const Bond* b : a) {
+      atom_number_t o = b->other(i);
+      if (tmp[o]) {  // in the scaffold, do not process
+        continue;
+      }
+
+      if (m.atomic_number(o) != 6) {
+        if (_keep_attached_heteroatom) {
+          tmp[o] = kProcessedHere;
+        }
+        if (_isotope) {
+          m.set_isotope(o, _isotope);
+        }
+        ++rc;
+        continue;
+      }
+
+      if (ExtendCarbonFromScaffold(m, i, o, tmp.get())) {
+        ++rc;
+      }
+    }
+  }
+
+  if (rc == 0) {
+    return _do_any_writing_needed(m, rc, output);
+  }
+
+  // Remove all atoms for which tmp is zero.
+  m.remove_atoms(tmp.get(), 0);
+
+  _molecules_changed++;
+
+  return _do_any_writing_needed(m, rc, output);
 }
 
 /*
@@ -2177,7 +2315,7 @@ Molecular_Abstraction_Abstract_Ring_Form::_place_abstract_rings(
   for (int i = 0; i < nr; i++) {
     const Ring* ri = m.ringi(i);
 
-    set_vector(tmp, matoms, 0);
+    std::fill_n(tmp, matoms, 0);
 
     ri->set_vector(tmp, 1);
 
@@ -2359,7 +2497,7 @@ Molecular_Abstraction_Abstract_Ring_Form::_spread_apart_any_spiro_rings(
   for (int i = 0; i < nr; i++) {
     const Ring* ri = m.ringi(i);
 
-    set_vector(tmp, matoms, 0);
+    std::fill_n(tmp, matoms, 0);
     ri->set_vector(tmp, 1);
 
     for (int j = i + 1; j < nr; j++) {
@@ -3770,6 +3908,8 @@ Set_of_Molecular_Abstractions::build(const Molecular_Abstraction_Directives_Node
       _a[i] = new Molecular_Abstraction_Inverse_Scaffold();
     } else if (MAD_TYPE_GRAPH == t) {
       _a[i] = new Molecular_Abstraction_Graph();
+    } else if (MAD_TYPE_CSCAFFOLD == t) {
+      _a[i] = new Molecular_Abstraction_CScaffold();
     } else {
       cerr << "Set_of_Molecular_Abstractions::build:unrecognised form " << t << '\n';
       return 0;
@@ -4210,7 +4350,7 @@ Molecular_Abstraction_Remove_Ring_CH2::process(Molecule_With_Info_About_Parent& 
          << " and " << rhs << '\n';
 #endif
 
-    set_vector(to_remove, matoms, 0);
+    std::fill_n(to_remove, matoms, 0);
 
     //  If we have an isolated ring, we may need to shrink it
 

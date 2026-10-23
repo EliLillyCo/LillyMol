@@ -66,7 +66,12 @@ static int also_write_small_fragments = 0;
 // this distance.
 static distance_t include_atoms_within = static_cast<distance_t>(0.0);
 
-// We can extract all atoms that are within range of a given 
+// If we are writing each query match separately, we can place an isotopic
+// label on each matched atom, thereby enabling comparison across the
+// molecules written.
+static int isotopes_on_matched_atoms = 0;
+
+// We can extract all atoms that are within range of a given
 // point in space. This only works for molecules that are spatially
 // aligned.
 
@@ -150,30 +155,32 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
-  cerr << "usage: " << prog_name << " -i <input type> -o <output type> file1 file2...\n";
-  cerr << "Creates subsets of molecules defined by query matches\n";
-  cerr << "  -q <query>     specify substructure query\n";
-  cerr << "  -s <smarts>    specify smarts (ss)\n";
-  cerr << "  -n             write the molecule subset which does not match the query\n";
-  cerr << "  -b             create the subsets by bond rather than by atom\n";
-  cerr << "  -m <number>    only process the first <number> hits for any query\n";
-  cerr << "  -m do=<nn>     process embedding number <nn> (starts with 0)\n";
-  cerr << "  -m each        process each embedding separately\n";
-  cerr << "  -z i           ignore molecules not matching any query\n";
-  cerr << "  -z w           write molecules not matching any query\n";
-  cerr << "  -z b           blank line to stdout for non-matching molecules\n";
-  cerr << "  -z nmapp=xxx   append 'xxx' to the names of non-matching molecules\n";
-  cerr << "  -f             also write small fragments with selected atoms\n";
-  cerr << "  -T <dist>      with 3D input, include atoms within <dist> of any matched "
-          "atom\n";
-  cerr << "  -C x,y,z,rad   with 3D input, only search atoms within <rad> of <x,y,z>\n";
-  cerr << "  -i <type>      specify input file type\n";
-  cerr << "  -o <type>      specify output file type(s)\n";
-  cerr << "  -S <string>    create output files with name stem <string>\n";
-  cerr << "  -M ...         various miscellaneous options, enter '-M help' for info\n";
-  cerr << "  -E ...         element specifications, enter '-E help' for details\n";
-  cerr << "  -A ...         standard aromaticity options, enter '-A help' for details\n";
-  cerr << "  -v             verbose output\n";
+  // clang-format off
+  cerr << R"(Writes subsets of molecules defined by query matches.
+Useful for examining the spatial arrangements of matched atoms across a series of 3D molecules.
+  -s <smarts>    smarts defining the matched atoms.
+  -q <query>     matched atoms in query form.
+  -n             write the molecule subset which does not match the query.
+  -b             create the subsets by bond rather than by atom.
+  -m <number>    only process the first <number> hits for any query
+  -m do=<nn>     process embedding number <nn> (starts with 0)
+  -m each        process each embedding separately
+  -z i           ignore molecules not matching any query
+  -z w           write molecules not matching any query
+  -z b           blank line to stdout for non-matching molecules
+  -z nmapp=xxx   append 'xxx' to the names of non-matching molecules
+  -f             also write small fragments with selected atoms
+  -T <dist>      with 3D input, include atoms within <dist> of any matched atom.
+  -C x,y,z,rad   with 3D input, only search atoms within <rad> of <x,y,z>
+  -i <type>      specify input file type
+  -o <type>      specify output file type(s)
+  -S <string>    create output files with name stem <string>
+  -M ...         various miscellaneous options, enter '-M help' for info
+  -E ...         element specifications, enter '-E help' for details
+  -A ...         standard aromaticity options, enter '-A help' for details
+  -v             verbose output.
+)";
+  // clang-format on
 
   exit(rc);
 }
@@ -279,7 +286,7 @@ static int
 write_bond_subsets(Molecule& m, int nhits, const Substructure_Results& sresults,
                    int* include_bond, const int* hits_in_fragment,
                    Molecule_Output_Object& output) {
-  set_vector(include_bond, m.nedges(), 0);
+  std::fill_n(include_bond, m.nedges(), 0);
 
   for (int i = 0; i < nhits; i++) {
     const Set_of_Atoms* e = sresults.embedding(i);
@@ -398,6 +405,16 @@ molecule_subset_by_bond(Molecule& m, int* hits_in_fragment,
   return do_write_subset(m, include_bond, hits_in_fragment, output);
 }
 
+// Place isotopic labels on the matched atoms in `m`.
+static void
+IsotopesOnMatchedAtoms(Molecule& m, const Set_of_Atoms& embedding) {
+  const int n = embedding.number_elements();
+  for (int i = 0; i < n; ++i) {
+    atom_number_t j = embedding[i];
+    m.set_isotope(j, i + 1);
+  }
+}
+
 static int
 do_isotope_at_break_points(Molecule& m, const int* remove_atom) {
   int nb = m.nedges();
@@ -427,8 +444,8 @@ do_isotope_at_break_points(Molecule& m, const int* remove_atom) {
 // #define DEBUG_REMOVE_ATOMS
 
 static int
-do_output(Molecule& m, int* remove_atom, const int* hits_in_fragment,
-          Molecule_Output_Object& output) {
+do_output(Molecule& m, const Set_of_Atoms& embedding, int* remove_atom,
+          const int* hits_in_fragment, Molecule_Output_Object& output) {
   assert(nullptr != remove_atom);
 
 #ifdef DEBUG_REMOVE_ATOMS
@@ -450,10 +467,14 @@ do_output(Molecule& m, int* remove_atom, const int* hits_in_fragment,
     do_isotope_at_break_points(m, remove_atom);
   }
 
-  if (number_atoms_removed) {
-    m.remove_atoms(remove_atom);
-  } else {
+  if (isotopes_on_matched_atoms) {
+    IsotopesOnMatchedAtoms(m, embedding);
+  }
+
+  if (number_atoms_removed == 0) {
     cerr << "Warning, no atoms removed\n";
+  } else {
+    m.remove_atoms(remove_atom);
   }
 
   int matoms = m.natoms();
@@ -527,8 +548,7 @@ identify_atoms_proximal_to_retained_atoms(const Molecule& m, int* remove_atom,
 }
 
 int
-OkSpatialConstraints(const Molecule& m,
-                     Set_of_Atoms& embedding,
+OkSpatialConstraints(const Molecule& m, Set_of_Atoms& embedding,
                      const resizable_array_p<SpatialPosition>& position) {
   for (const SpatialPosition* p : position) {
     if (p->RemoveNonMatchingAtoms(m, embedding) == 0) {
@@ -552,7 +572,7 @@ do_write_each_hit_as_separate_molecule(Molecule& m,
 
   for (int i = 0; i < nhits; i++) {
     Set_of_Atoms e = *sresults.embedding(i);
-    if (! OkSpatialConstraints(m, e, spatial_position)) {
+    if (!OkSpatialConstraints(m, e, spatial_position)) {
       continue;
     }
 
@@ -561,9 +581,9 @@ do_write_each_hit_as_separate_molecule(Molecule& m,
     mcopy.set_name(m.name());
 
     if (invert_subset) {
-      set_vector(remove_atom, matoms, 0);
+      std::fill_n(remove_atom, matoms, 0);
     } else {
-      set_vector(remove_atom, matoms, 1);
+      std::fill_n(remove_atom, matoms, 1);
     }
 
     identify_atoms_to_be_removed(e, remove_atom);
@@ -573,7 +593,7 @@ do_write_each_hit_as_separate_molecule(Molecule& m,
       identify_atoms_proximal_to_retained_atoms(m, remove_atom, include_atoms_within);
     }
 
-    do_output(mcopy, remove_atom, hits_in_fragment, output);
+    do_output(mcopy, e, remove_atom, hits_in_fragment, output);
   }
 
   return output.good();
@@ -597,9 +617,9 @@ molecule_subset(Molecule& m, int* hits_in_fragment, Molecule_Output_Object& outp
   if (write_each_hit_as_separate_molecule) {
     ;
   } else if (invert_subset) {
-    set_vector(remove_atom, matoms, 0);
+    std::fill_n(remove_atom, matoms, 0);
   } else {
-    set_vector(remove_atom, matoms, 1);
+    std::fill_n(remove_atom, matoms, 1);
   }
 
   Molecule_to_Match target(&m);
@@ -654,7 +674,7 @@ molecule_subset(Molecule& m, int* hits_in_fragment, Molecule_Output_Object& outp
 
     for (int i = 0; i < nhits; i++) {
       Set_of_Atoms e = *sresults.embedding(i);
-      if (! OkSpatialConstraints(m, e, spatial_position)) {
+      if (!OkSpatialConstraints(m, e, spatial_position)) {
         continue;
       }
       if (e.empty()) {
@@ -687,7 +707,8 @@ molecule_subset(Molecule& m, int* hits_in_fragment, Molecule_Output_Object& outp
     return 1;
   }
 
-  return do_output(m, remove_atom, hits_in_fragment, output);
+  Set_of_Atoms notused;
+  return do_output(m, notused, remove_atom, hits_in_fragment, output);
 }
 
 static int
@@ -742,12 +763,15 @@ molecule_subset(const char* fname, FileType input_type, Molecule_Output_Object& 
 
 static int
 display_standard_dash_M_options(std::ostream& os) {
-  os << "  -M aeuao       Atom Environments match Unmatched Atoms Only\n";
-  os << "  -M imp2exp     make implicit Hydrogens explicit\n";
+  os << " -M aeuao       Atom Environments match Unmatched Atoms Only\n";
+  os << " -M imp2exp     make implicit Hydrogens explicit\n";
 #ifdef NO_LONGER_WORKS
-  os << "  -M onlysubiso  isotopic atoms in query molecules indicate subsitution points\n";
+  os << " -M onlysubiso  isotopic atoms in query molecules indicate subsitution points\n";
 #endif
-  os << "  -M iso=nn      apply isotope <nn> to the points of breakage\n";
+  os << " -M iso=nn      apply isotope <nn> to the points of breakage\n";
+  os << " -M isomatch    place an isotope for the query atom number on each atom "
+        "written\n";
+
 
   return os.good();
 }
@@ -769,11 +793,6 @@ molecule_subset(int argc, char** argv) {
 
   if (!process_standard_aromaticity_options(cl, verbose)) {
     usage(5);
-  }
-
-  if (!cl.option_present('q') && !cl.option_present('s')) {
-    cerr << "Must specify one or more queries via the -q or -s option(s)\n";
-    usage(8);
   }
 
   if (cl.option_present('M')) {
@@ -808,6 +827,11 @@ molecule_subset(int argc, char** argv) {
         if (verbose) {
           cerr << "Will append coordinates after each atom in smiles\n";
         }
+      } else if (m == "isomatch") {
+        isotopes_on_matched_atoms = 1;
+        if (verbose) {
+          cerr << "Will place the matched atom number as isotope\n";
+        }
       } else if ("help" == m) {
         display_standard_dash_M_options(cerr);
         return 0;
@@ -816,6 +840,11 @@ molecule_subset(int argc, char** argv) {
         usage(4);
       }
     }
+  }
+
+  if (!cl.option_present('q') && !cl.option_present('s')) {
+    cerr << "Must specify one or more queries via the -q or -s option(s)\n";
+    usage(8);
   }
 
   if (cl.option_present('q')) {
@@ -859,7 +888,7 @@ molecule_subset(int argc, char** argv) {
     const_IWSubstring token;
     for (int i = 0; cl.value('C', token, i); ++i) {
       std::unique_ptr<SpatialPosition> pos = std::make_unique<SpatialPosition>();
-      if (! pos->Build(token)) {
+      if (!pos->Build(token)) {
         cerr << "Invalid spatial position specification '-C " << token << "'\n";
         return 1;
       }
@@ -1023,7 +1052,7 @@ molecule_subset(int argc, char** argv) {
     }
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -375,7 +376,7 @@ MFingerprint::MFingerprint (Molecule & m,
   m.ring_membership(_nrings);
 
   copy_vector(_atom_hash_value, atype, _matoms);
-  set_vector(_unsaturation, _matoms, 0);
+  std::fill_n(_unsaturation, _matoms, 0);
 
   _molecule_contains_fused_rings = 0;
 
@@ -1658,7 +1659,7 @@ MFingerprint::build (atom_number_t astart,
 
   _path_length = 0;
 
-  set_vector(_in_path, _matoms, 0);
+  std::fill_n(_in_path, _matoms, 0);
 
   if (! include_these_atoms[astart])
   {

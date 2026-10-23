@@ -212,7 +212,6 @@ template <typename O>
 int
 Sparse_Fingerprint_Creator::WriteAsDescriptors(int ncols, O & output) const {
   std::unique_ptr<int[]> count = std::make_unique<int[]>(ncols);
-  std::fill_n(count.get(), ncols, 0);
   return WriteAsDescriptors(ncols, count.get(), output);
 }
 
@@ -238,7 +237,6 @@ Sparse_Fingerprint_Creator::write_constant_width_fingerprint(unsigned int nb,
                                  O& output) const
 {
   std::unique_ptr<int[]> tmp = std::make_unique<int[]>(nb);
-  std::fill_n(tmp.get(), nb, 0);
 
   return _write_constant_width_fingerprint(nb, tmp.get(), tag, output);
 }

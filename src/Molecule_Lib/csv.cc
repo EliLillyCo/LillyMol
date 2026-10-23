@@ -7,7 +7,6 @@
 #include "rwmolecule.h"
 
 using std::cerr;
-using std::endl;
 
 namespace lillymol_csv {
 
@@ -65,7 +64,7 @@ int
 ok_header_record(const const_IWSubstring& header) {
   const_IWSubstring token;
   int i = 0;
-  for (int col = 0; header.nextword(token, i, csv_separator); ++col) {
+  for (int col = 0; header.nextword_single_delimiter(token, i, csv_separator); ++col) {
     if (token == smiles_column_name) {
       smiles_column = col;
     } else if (token == id_column_name) {
@@ -112,7 +111,7 @@ Molecule::read_molecule_csv_ds(iwstring_data_source & input) {
   const_IWSubstring token;
   const_IWSubstring smi;
   int i = 0;
-  for (int col = 0; buffer.nextword(token, i, lillymol_csv::csv_separator); ++col) {
+  for (int col = 0; buffer.nextword_single_delimiter(token, i, lillymol_csv::csv_separator); ++col) {
     if (col == lillymol_csv::smiles_column) {
       smi = token;
       if (_molecule_name.length() > 0 && ! lillymol_csv::all_tokens_to_name) {
@@ -144,14 +143,45 @@ Molecule::read_molecule_csv_ds(iwstring_data_source & input) {
 // included in this file because the file is not big.
 namespace lillymol_textproto {
 
-IWString smiles_tag("smi:");
+// Since csv reading is rare, do not initialise.
+resizable_array_p<IWString> smiles_tag;
 
 void
 set_smiles_tag(const_IWSubstring s) {
-  smiles_tag = s;
-  if (! smiles_tag.ends_with(':')) {
-    smiles_tag << ':';
+  smiles_tag << new IWString(s);
+  smiles_tag.back()->EnsureEndsWith(':');
+}
+
+void
+InitialiseSmilesTags() {
+  if (smiles_tag.empty()) {
+    smiles_tag << new IWString("smi:");
+    smiles_tag << new IWString("smiles:");
   }
+}
+
+const IWString&
+SmilesTag() {
+  if (smiles_tag.empty()) {
+    InitialiseSmilesTags();
+  }
+
+  return *smiles_tag[0];
+}
+
+bool
+IsSmilesTag(const const_IWSubstring& s) {
+  if (smiles_tag.empty()) {
+    InitialiseSmilesTags();
+  }
+
+  for (const IWString *tag : smiles_tag) {
+    if (s == *tag) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace lillymol_textproto
@@ -161,7 +191,7 @@ set_smiles_tag(const_IWSubstring s) {
 // of just writing the name field, assuming it is a proper textproto.
 int
 Molecule::write_molecule_textproto(std::ostream& output) {
-  output << lillymol_textproto::smiles_tag << " \"" << smiles() << "\" " << _molecule_name;
+  output << lillymol_textproto::SmilesTag() << " \"" << smiles() << "\" " << _molecule_name;
   output << '\n';
 
   return output.good();
@@ -186,7 +216,7 @@ Molecule::read_molecule_textproto_ds(iwstring_data_source & input) {
     if (next_is_smiles) {
       smi = token;
       next_is_smiles = false;
-    } else if (token == lillymol_textproto::smiles_tag) {
+    } else if (lillymol_textproto::IsSmilesTag(token)) {
       next_is_smiles = true;
     } else {
       _molecule_name.append_with_spacer(token);

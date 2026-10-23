@@ -148,8 +148,19 @@ PCN<methane 50>
 and then specifying `-M col=2`.
 
 ### -S tag -S col=nn
-The relative score for each molecule is in a TDT tag. Usually it is easier
-to sort the input file by score ahead of time.
+This is only supported in gfp_leader_tbb. Obscure, perhaps should
+be deprecated.
+
+This can be used to increase diversity. By default, the next cluster center is
+the first unselected item. With this setting in effect, the next cluster center
+is the fingerprint is determined by the max of this formula
+```
+fp.score() + scale * fp.shortest_distance_to_cluster_centre()
+```
+If this factor is zero, then the highest scoring molecule is selected.
+But if greater than zero, a fingerprint becomes more desirable as it
+is more distant from a previous cluster center. This met an important
+project need once upon a time...
 
 ### -A fname
 Specify a file of fingerprints containing molecules that are to be treated as

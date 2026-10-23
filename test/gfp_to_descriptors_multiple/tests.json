@@ -1,6 +1,6 @@
 {
   "executable": "gfp_to_descriptors_multiple",
-  "difftool": "${LILLYMOL_HOME}/test/same_lines.py",
+  "difftool": "jfilecompare",
     "test": [
         {
           "name": "case_1",
@@ -11,7 +11,5 @@
           "name": "case_2",
           "args": [ "-v -x 0.5 -F FPIW ${LILLYMOL_HOME}/data/chembl10.gfp" ]
         }
-      ]
-    }
-  }
+    ]
 }

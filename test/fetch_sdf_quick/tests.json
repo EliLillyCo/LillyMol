@@ -1,0 +1,14 @@
+{
+  "executable": "fetch_sdf_quick",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-c 2 -v #{indir}/in.smi #{indir}/in1.sdf"
+      ]
+    }
+
+  ]
+}

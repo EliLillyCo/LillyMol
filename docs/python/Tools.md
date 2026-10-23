@@ -1,17 +1,168 @@
 # Tools
 
 The python bindings come with a small number of tools, mostly derived
-from tools otherwise avaialble as c++ executables.
+from tools otherwise available as c++ executables.
+
+## Molecular Descriptors
+
+`IWDescr` computes the complete descriptor set provided by `iwdescr.sh` and
+returns NumPy arrays. `MolecularDescriptors` wraps the same calculation with
+friendlier `names()`, `compute()`, and `compute_array()` methods. Common scalar
+helpers such as `molecular_weight`, `alogp`, `xlogp`, `tpsa`, and `qed_score`
+are also available from `lillymol_tools`. See
+[Molecular Descriptors](descriptors.md) for usage, requirements, descriptor
+ordering, and performance information.
+
+## QED
+
+The `QED` class computes the LillyMol implementation of the quantitative
+estimate of drug-likeness score. It is exposed from the `lillymol_tools` module
+and uses the same query files as the command-line `QED.sh` wrapper.
+
+By default, construction initialises from
+`${LILLYMOL_HOME}/data/queries/QED`. Make sure `LILLYMOL_HOME` points to a
+LillyMol installation or source tree before constructing the object.
+
+```python
+from lillymol import MolFromSmiles
+from lillymol_tools import QED
+
+mol = MolFromSmiles("CC(=O)Oc1ccccc1C(=O)O aspirin")
+if mol is None:
+    raise ValueError("Invalid SMILES")
+
+qed = QED()
+score = qed.qed(mol)
+if score is None:
+    raise ValueError("QED calculation failed")
+
+print(score)
+```
+
+`qed.qed(mol)` returns a floating point value between 0 and 1, or `None` if the
+calculation fails. The Python binding computes on an internal copy of the
+molecule, so the supplied `Molecule` is not modified.
+
+For tests, non-standard installations, or packaged data, construct without
+automatic environment initialisation and load the query directory explicitly:
+
+```python
+qed = QED(initialise_from_environment=False)
+if not qed.initialise_from_directory("/path/to/LillyMol/data/queries/QED"):
+    raise ValueError("Cannot initialise QED")
+
+score = qed.qed(mol)
+```
+
+The object also provides `initialise_from_environment()`, which reloads the
+standard `${LILLYMOL_HOME}/data/queries/QED` configuration.
+
+See also the command-line [QED documentation](/docs/Molecule_Tools/QED.md).
+
+## Lipinski Hydrogen Bond Counts
+
+The `lillymol` module provides RDKit-compatible function names for simple
+Lipinski hydrogen-bond acceptor and donor counts:
+
+```python
+from lillymol import MolFromSmiles, NumHAcceptors, NumHDonors
+
+mol = MolFromSmiles("CN methylamine")
+if mol is None:
+    raise ValueError("Invalid SMILES")
+
+hba = NumHAcceptors(mol)
+hbd = NumHDonors(mol)
+```
+
+These names mirror `rdkit.Chem.Lipinski.NumHAcceptors` and
+`rdkit.Chem.Lipinski.NumHDonors`. The same calculations are also available as
+methods on `Molecule` when the more explicit LillyMol naming is useful:
+
+```python
+hba = mol.lipinski_num_h_acceptors()
+hbd = mol.lipinski_num_h_donors()
+```
+
+The acceptor count follows the simple Lipinski definition: nitrogen and oxygen
+atoms are counted as acceptors. The donor count is the number of nitrogen or
+oxygen atoms with at least one hydrogen.
+
+## MedchemWizard
+
+The `MedchemWizard` class applies the LillyMol MedchemWizard transformation set
+to a `Molecule` and returns generated products as Python `Molecule` objects. It
+is useful when analogue generation needs to be embedded in a Python workflow
+rather than run as a command-line text pipeline.
+
+```python
+from lillymol import MolFromSmiles
+from lillymol_tools import MedchemWizard
+
+mol = MolFromSmiles("CCO ethanol")
+
+wizard = MedchemWizard()
+wizard.initialise_from_environment()
+wizard.set_append_names(True)
+wizard.set_name_separator(" ")
+wizard.set_max_atoms(25)
+
+products = wizard.process(mol)
+for product in products:
+    print(product.smiles(), product.name())
+```
+
+`initialise_from_environment()` loads
+`${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS`. Use `read_reactions(fname)` for
+a custom reaction-list file. The input molecule is copied internally and is not
+modified.
+
+The Python interface also supports protected-atom queries:
+
+```python
+wizard.add_do_not_change_smarts("[CX3](=O)[OH]")
+wizard.set_ignore_do_not_change_queries_not_matching(True)
+products = wizard.process(mol)
+```
+
+See the command-line [medchemwizard documentation](/docs/Molecule_Tools/medchemwizard.md)
+for option details and the full Python method list.
+
+## Ring Replacement
+
+`RingReplacement` generates scaffold-hopping analogues from Python using
+replacement-ring collections produced by `ring_extraction`. It exposes controls
+for selecting parent rings, filtering candidates by support or formula
+difference, suppressing duplicate products, removing isotopic attachment labels,
+and allowing replacement patterns that do not preserve observed connectivity.
+
+See the [ring replacement Python documentation](/docs/Molecule_Tools/ring_replacement.md#python)
+for a complete example, method list, replacement-file requirements, and the
+broader chemistry implications of disabling connectivity preservation.
+
+## Substituent Identification
+
+`SubstituentIdentificationLookup` exposes the molecule-generation side of the
+command-line [`substituent_identification`](/docs/Molecule_Tools/substituent_identification.md)
+tool. Build the BerkeleyDB database with the command-line tool, then open it from
+Python and call `generate_replacements(mol)` to get `SubstituentReplacement`
+objects containing the generated molecule, product smiles, donor identifier,
+matching radius, support count, and fragments lost/added.
+
+See [Substituent Identification](substituent_identification.md) for the Python
+workflow and field descriptions.
 
 ## Selimsteg
-Selimsteg is an anadrome if getsmiles. At Lilly a variety of selimsteg
+Selimsteg is an anadrome of getsmiles. At Lilly a variety of selimsteg
 tools are used to fetch the smiles for an identifier, from BerkeleyDB
 databases which store key/value relationships between identifier and
 smiles. For example
 ```
 selimsteg_chembl -K CHEMBL45466
 ```
-returns `C(=O)NCCCC CHEMBL45466'. Giving a file containing a list of id's
+returns `C(=O)NCCCC CHEMBL45466'.
+
+Giving a file containing a list of id's
 will result in a list of smiles being returned.
 
 There is a python binding that can be used with such databases.
@@ -219,7 +370,7 @@ me greatly, so perhaps there is something not performant in this
 implementation.
 
 ## Dicer
-[dicer](docs/Molecule_Tools/dicer.md) is one of the more interesting and useful
+[dicer](/docs/Molecule_Tools/dicer.md) is one of the more interesting and useful
 tools in LillyMol, able to efficiently implement a recursive fragment generation
 that has proven useful across a variety of contexts. Python bindings for some
 rudimentary dicer-like functionality is available via python bindings. While

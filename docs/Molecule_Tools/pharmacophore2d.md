@@ -1,5 +1,31 @@
 # Pharmacophore_2d
 
+## Whole-molecule isotope output
+
+Use `-M` to write complete molecules as labelled SMILES instead of generating
+query files. Output goes to stdout, or to `<stem>.smi` with `-S <stem>`.
+
+```shell
+pharmacophore_2d -M -s 'N' -s 'O' -I 1 -X 2 input.smi > labelled.smi
+```
+
+All selected pharmacophore atoms receive isotope 1 (the default with `-M`).
+An optional `-X 2` overrides this with isotope 2 on selected atoms bonded to
+unselected atoms. The outside neighbors remain unlabelled; a bond between two
+selected groups is not an exit. Both isotope values must be positive and, when
+an exit isotope is supplied, distinct. Without `-X`, all selected atoms receive
+the same isotope.
+
+Labeling overwrites existing isotopes on selected atoms and preserves isotopes
+elsewhere. Molecules with no selected atoms are written unchanged, and molecules
+with only one functional group are also written. `-l` still reduces the molecule
+to its largest fragment before selection and output. `-t` and `-G` cannot be
+combined with `-M`.
+
+For query generation with an additional labelled SMILES file, use
+`-Y fname=labelled -I 1 -X 2` alongside the usual query options. The existing
+`-Y iso` without `-I` or `-X` retains labels based on functional-group number.
+
 ## Objective
 Given a set of active molecules, generate a set of substructure queries that describe the
 pharmacophoric features in that set of molecules.

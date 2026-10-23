@@ -1,0 +1,20 @@
+{
+  "executable": "dbf",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+         "queries_dir=${LILLYMOL_HOME}/data/queries"
+      ],
+      "args": [
+         "-N F:${queries_dir}/charges/queries",
+         " -H a=F:${queries_dir}/hbonds/acceptor",
+         " -H d=${queries_dir}/hbonds/donor.qry",
+         " -H label -s '[*+]' -s '[*-]' -s '[1*,2*]' -s '[2*,3*]'",
+         " -u 0 -p 2d -p 3d -r -A D -A I -A C",
+         " -i ignore_bad_chiral -i sdf #{indir}/test.sdf"
+      ]
+    }
+
+  ]
+}

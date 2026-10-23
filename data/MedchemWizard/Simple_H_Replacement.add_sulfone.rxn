@@ -1,11 +1,11 @@
 (0 Reaction
   (A C Comment "Simple_H_Replacement.add_sulfone")
   (0 Scaffold
-    (A C smarts "[CH>0]")
+    (A C smarts "[CH>0D<3]")
   )
   (1 Sidechain
-    (A C smiles "CS(=O)C SHR.add_sulfone")
-    (A C smarts "CS(=O)C")
+    (A C smiles "S(=O)C SHR.add_sulfone")
+    (A C smarts "S(=O)C")
     (A I join (0 0))
   )
 )

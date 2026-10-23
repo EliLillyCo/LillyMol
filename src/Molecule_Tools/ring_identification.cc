@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <memory>
 
 #include "cmdline.h"
@@ -228,7 +230,7 @@ Ring_Identification::process (Molecule & m,
     if (ring_already_done[i])
       continue;
 
-    set_vector(_rs, matoms, 0);
+    std::fill_n(_rs, matoms, 0);
 
     const Ring * ri = m.ringi(i);
 

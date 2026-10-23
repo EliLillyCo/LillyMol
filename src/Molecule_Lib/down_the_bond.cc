@@ -798,6 +798,9 @@ DownTheBond::Matches(Molecule_to_Match& target,
   std::fill_n(visited, m.natoms(), 0);
 
   visited[a1] = 1;
+  // Setting `a2` as visited might be feature or a bug.
+  // Today it is a feature, but I am thinking more that it is a bug.
+  // Maybe it should be settable...
   visited[a2] = 1;
   int number_visited = 1;
   while (! atom_stack.empty()) {
@@ -911,6 +914,11 @@ DownTheBond::Matches(Molecule_to_Match& target,
       if (!visited[i]) {
         continue;
       }
+
+      if (i == a1) {  // we do not consider the anchor atom for substructure matches.
+        continue;
+      }
+
       std::fill_n(already_matched.get(), matoms, 0);
       if (qm->ss_atom().matches(target[i], already_matched.get())) {
         ++nhits;

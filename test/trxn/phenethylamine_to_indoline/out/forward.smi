@@ -1,0 +1,6 @@
+CN1CCc2ccccc21 secondary_amine
+CC(=O)N1CCc2ccccc21 amide
+CS(=O)(=O)N1CCc2ccccc21 sulfonamide
+C[C@H](F)N1CCc2ccccc21 chiral_substituent
+Cc1ccc2N(C)CCc2c1 two_ortho_positions.0
+Cc1cccc2CCN(C)c12 two_ortho_positions.1

@@ -46,7 +46,7 @@ TEST_F(TestMinorChanges, TestSingleToDouble_1) {
 
   EXPECT_EQ(_options.Process(_m, _results), 1);
 
-  EXPECT_EQ(_results.size(), 1);
+  EXPECT_EQ(_results.size(), 1u);
 
   EXPECT_EQ(_results[0]->smiles(), "C=CC");
 }
@@ -64,7 +64,7 @@ TEST_F(TestMinorChanges, TestDoubleTosingle_1) {
 
   EXPECT_EQ(_options.Process(_m, _results), 1);
 
-  ASSERT_EQ(_results.size(), 1);
+  ASSERT_EQ(_results.size(), 1u);
 
   EXPECT_EQ(_results[0]->smiles(), "CCC");
 }
@@ -82,7 +82,7 @@ TEST_F(TestMinorChanges, TestNoProcessAmide) {
 
   EXPECT_EQ(_options.Process(_m, _results), 0);
 
-  ASSERT_EQ(_results.size(), 0);
+  ASSERT_EQ(_results.size(), 0u);
 }
 
 struct InputData {
@@ -109,7 +109,7 @@ TEST_P(TestMinorChangesP, Tests) {
   ASSERT_TRUE(TextFormat::ParseFromString(params.proto, &_proto));
   // std::cerr << "Starting with " << params.smiles << '\n';
   _options.SetConfig(_proto);
-  EXPECT_EQ(_options.Process(_mol, _results), params.expected.size()) << params.smiles 
+  EXPECT_EQ(_options.Process(_mol, _results), static_cast<int>(params.expected.size())) << params.smiles 
         << " proto " << params.proto;
   if (params.expected.empty()) {
     return;

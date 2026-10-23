@@ -1,0 +1,38 @@
+name: "nitro_to_cf3"
+scaffold {
+  smarts: "[ND3](=O)=O"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  change_element {
+    atom: 0
+    element: "C"
+  }
+  change_element {
+    atom: 1
+    element: "F"
+  }
+  change_element {
+    atom: 2
+    element: "F"
+  }
+  change_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  change_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}
+sidechain {
+  id: 1
+  reagent: "F"
+  smarts: "F"
+  join {
+    a1: 0
+    a2: 0
+  }
+}

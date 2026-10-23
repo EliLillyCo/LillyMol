@@ -35,7 +35,6 @@ Atom_Typing_Specification atom_typing;
 
 int reduce_to_largest_fragment = 0;
 
-
 bool function_as_tdt_filter = false;
 
 bool check_for_collisions = false;
@@ -286,10 +285,10 @@ DoAtomPairFingerprint(int argc, char** argv) {
     }
   }
 
-  int min_separation = 0;
+  int min_separation = 1;
   if (cl.option_present('r')) {
-    if (cl.value('r', min_separation) || min_separation < 1) {
-      cerr << "The min atom pair separation (-r) must be > 0\n";
+    if (!cl.value('r', min_separation) || min_separation < 0) {
+      cerr << "The min atom pair separation (-r) must be >= 0\n";
       return 1;
     }
 

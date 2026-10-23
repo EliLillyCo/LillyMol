@@ -1,0 +1,13 @@
+{
+  "executable": "mol2qry",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-S output #{indir}/input.smi"
+      ]
+    }
+
+  ]
+
+}

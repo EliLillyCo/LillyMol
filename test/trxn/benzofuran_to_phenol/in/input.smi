@@ -1,0 +1,12 @@
+o1ccc2c1cccc2 phenol
+Cc1cccc2ccoc12 one_ortho_available
+Cc1ccc2ccoc2c1 two_inequivalent_ortho.0
+Cc1cccc2occc12 two_inequivalent_ortho.1
+Cc1ccc2occc2c1 symmetric_ortho
+C[C@H](F)c1ccc2occc2c1 chiral_substituent
+O1C=CC2=CC=CC=C12 kekule_input
+Cc1oc2ccccc2c1 substituted_C2
+Cc1coc2ccccc12 substituted_C3
+C1COc2ccccc21 dihydrobenzofuran
+c1ccc2[nH]ccc2c1 indole
+c1ccoc1 furan

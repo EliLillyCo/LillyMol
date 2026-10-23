@@ -1,0 +1,10 @@
+Name nringsys nringsys_terminal nringsys_applicable nringsys_rodlike nringsys_not_rodlike nringsys_multisub nringsys_invalid non_ring_branch_count ring_atom_branch_count rodlike_molecule rod_deficit_min rod_deficit_max rod_deficit_ave
+ethane 0 0 0 0 0 0 0 0 0 0 0 0 0
+toluene 1 1 0 0 0 0 0 0 0 1 0 0 0
+ortho_xylene 1 0 1 0 1 0 0 0 0 0 2 2 2
+meta_xylene 1 0 1 0 1 0 0 0 0 0 1 1 1
+para_xylene 1 0 1 1 0 0 0 0 0 1 0 0 0
+trimethylbenzene 1 0 0 0 0 1 0 0 0 0 0 0 0
+biphenyl 2 2 0 0 0 0 0 0 0 1 0 0 0
+cyclohexanone 1 1 0 0 0 0 0 0 0 1 0 0 0
+dimethyl_cyclohexanone 1 0 1 1 0 0 0 0 0 1 0 0 0

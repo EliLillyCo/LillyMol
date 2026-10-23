@@ -1,0 +1,20 @@
+name: "gem_dimethyl_to_oxetane"
+scaffold {
+  id: 0
+  smarts: "[CD4](-[CH3])-[CH3]"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "O"
+  join {
+    a1: 1
+    a2: 0
+  }
+  join {
+    a1: 2
+    a2: 0
+  }
+}

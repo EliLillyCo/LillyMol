@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lillymol"
+version = "0.1.0"
+description = "Python bindings for LillyMol"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy",
+  "protobuf",
+]
+
+[project.optional-dependencies]
+http = [
+  "fastapi",
+  "uvicorn",
+]

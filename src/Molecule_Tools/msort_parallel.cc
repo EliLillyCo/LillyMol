@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include <algorithm>
 #include <fstream>
@@ -2595,7 +2596,7 @@ msort(int argc, char** argv)
   }
 
   if (cl.option_present('d')) {
-    ascending_order = 1;
+    ascending_order = 0;
 
     if (verbose) {
       cerr << "Descending order sort\n";

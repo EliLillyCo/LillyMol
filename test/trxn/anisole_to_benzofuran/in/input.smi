@@ -1,0 +1,11 @@
+COc1ccccc1 anisole
+COc1ccccc1C one_ortho_available
+COc1cccc(C)c1 two_inequivalent_ortho
+COc1ccc(C)cc1 symmetric_ortho
+C[C@H](F)c1ccc(OC)cc1 chiral_substituent
+[13CH3]Oc1ccccc1 labelled_methoxy
+COc1c(C)cccc1C blocked_ortho
+CCOc1ccccc1 ethoxy
+Oc1ccccc1 phenol
+COc1ccc2ccccc2c1 fused_aromatic
+COC1CCCCC1 non_aromatic

@@ -103,6 +103,15 @@ static uint32_t fixed_width_fingerprint = 0;
 
 static resizable_array_p<Substructure_Query> start_atom_query;
 
+// In attempt to deal with chirality, introduce a kind of strange idea.
+// Only generate shells at atoms that have an isotopic label.
+// Generate the shells and set the bits as usual.
+// But every time a bit is set, set another bit with the starting atom
+// isotope added.
+// The idea is that the molecule would be run through cip_labeler to
+// apply R/S isotopes.
+static int central_atom_possible_chiral = 0;
+
 // In order to increase the weight given to a fingerprint we can increase
 // the bit count values.
 static int bit_count_multiplier = 0;
@@ -367,6 +376,9 @@ static Molecule* current_molecule;
 static atom_number_t centre_of_shell = INVALID_ATOM_NUMBER;
 static IWString smarts_for_centre_of_shell;
 
+// Used if central_atom_possible_chiral is in effect.
+static isotope_t centre_atom_isotope = 0;
+
 #define PROCESSING_FINISHED 1
 #define READY_TO_PROCESS 2
 #define NEXT_TIME 3
@@ -413,8 +425,7 @@ generate_shells(const int matoms, int radius, const int max_radius, const Atom* 
 
       atom_number_t k = b->other(i);
 
-      if (PROCESSING_FINISHED == processing_status[k])  // we are extending the shell
-      {
+      if (PROCESSING_FINISHED == processing_status[k]) {  // we are extending the shell
         int bc = bond_constant(b);
         //      cerr << "     BC " << bc << " atom " << i << " atype " << atom_constant[i]
         //      << " begin " << sum_so_far << " extra " << (bc * atom_constant[i]) << "
@@ -433,12 +444,16 @@ generate_shells(const int matoms, int radius, const int max_radius, const Atom* 
     }
   }
 
-  if (radius > min_shell_radius) {
+  if (radius >= min_shell_radius) {
 #ifdef DEBUG_ECFP_BITS
     cerr << "Hit bit " << sum_so_far << " at radius " << radius << '\n';
 #endif
     if (!only_set_bits_for_max_radius_shell || radius == max_radius) {
       sfc->hit_bit(sum_so_far);
+      if (centre_atom_isotope) {
+        // cerr << "centre_atom_isotope " << centre_atom_isotope << ' ' << m.name() << '\n';
+        sfc->hit_bit(sum_so_far + centre_atom_isotope);
+      }
     }
 
     if (looking_for_bit_meanings) {
@@ -531,7 +546,7 @@ WriteFixedWidthFingerprint(Molecule& m, uint32_t nbits,
 static int
 WriteDescriptorFileRow(Molecule& m, uint32_t ncols, const Sparse_Fingerprint_Creator& sfc,
                        IWString_and_File_Descriptor& output) {
-  output << m.name();
+  append_first_token_of_name(m.name(), output);
   // We assume that `ncols` will not change from on invocation to the next.
   static std::unique_ptr<int[]> count = std::make_unique<int[]>(ncols);
 
@@ -1047,6 +1062,10 @@ iwecfp(Molecule& m, IWString_and_File_Descriptor& output)
     }
   }
 
+  if (central_atom_possible_chiral) {
+    set_centre_atom_global_variable = 1;
+  }
+
   int* processing_status = new int[matoms];
   std::unique_ptr<int[]> free_processing_status(processing_status);
 
@@ -1082,6 +1101,9 @@ iwecfp(Molecule& m, IWString_and_File_Descriptor& output)
     if (set_centre_atom_global_variable) {
       smarts_for_centre_of_shell = m.smarts_equivalent_for_atom(i);
       centre_of_shell = i;
+      centre_atom_isotope = m.isotope(i);
+    } else {
+      centre_atom_isotope = 0;
     }
 
     if (0 == min_shell_radius) {
@@ -1463,6 +1485,11 @@ iwecfp(int argc, char** argv) {
           cerr << "Invalid replicates directive '" << y << "'\n";
           return 1;
         }
+      } else if (y == "pchiral") {
+        central_atom_possible_chiral = 1;
+        if (verbose) {
+          cerr << "Central atoms will only be CD4 or CD3H types\n";
+        }
       } else if (y == "help") {
         DisplayDashYOptions(cerr);
       } else {
@@ -1484,7 +1511,7 @@ iwecfp(int argc, char** argv) {
     }
 
     if (verbose) {
-      cerr << "Defined " << start_atom_query.size() << " start aotm queries\n";
+      cerr << "Defined " << start_atom_query.size() << " start atom queries\n";
     }
   }
 

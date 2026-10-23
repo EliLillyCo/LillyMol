@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LillyMol molecule_filter builder</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --line: #d6dbe1;
+      --text: #1f2933;
+      --muted: #5f6b7a;
+      --accent: #1769aa;
+      --danger: #a61b1b;
+      --ok: #1b7f3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+    h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+    h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+    p { margin: 0.25rem 0; }
+    button, select, input, textarea { font: inherit; }
+    button {
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      padding: 0.35rem 0.65rem;
+      cursor: pointer;
+    }
+    button.secondary { background: white; color: var(--accent); }
+    button.danger { background: white; color: var(--danger); border-color: var(--danger); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0.3rem 0.4rem;
+      min-width: 0;
+    }
+    textarea {
+      width: 100%;
+      min-height: 22rem;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9rem;
+      background: #fbfcfd;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(18rem, 24rem) minmax(28rem, 1fr) minmax(24rem, 34rem);
+      gap: 1rem;
+      padding: 1rem;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .stack { display: grid; gap: 0.75rem; }
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .field-row { display: grid; grid-template-columns: 5rem 1fr; gap: 0.5rem; align-items: center; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .small { font-size: 0.85rem; }
+    .feature-list { display: grid; gap: 0.4rem; max-height: 46rem; overflow: auto; }
+    .feature-button {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.4rem;
+      text-align: left;
+      background: white;
+      color: var(--text);
+      border-color: var(--line);
+    }
+    .feature-button:hover { border-color: var(--accent); }
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.05rem 0.45rem;
+      color: var(--muted);
+      background: #f9fafb;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.85rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: start;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .point-table { width: 100%; border-collapse: collapse; }
+    .point-table th, .point-table td { padding: 0.25rem; text-align: left; }
+    .point-table input { width: 100%; }
+    .curve {
+      width: 100%;
+      height: 180px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+    }
+    .output-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .warning { color: var(--danger); }
+    .ok { color: var(--ok); }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LillyMol molecule_filter config builder</h1>
+    <p class="muted">Build <code>molecule_filter.proto</code> configuration files as textproto or JSON.</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel stack">
+      <div>
+        <h2>Available properties</h2>
+        <p class="muted">Add a property, then specify hard filter limits and optional utility curves.</p>
+      </div>
+      <div class="field-row">
+        <label for="feature-search">Search</label>
+        <input id="feature-search" type="search" placeholder="ring, logp, atom...">
+      </div>
+      <div class="field-row">
+        <label for="category-filter">Category</label>
+        <select id="category-filter"></select>
+      </div>
+      <div id="feature-list" class="feature-list"></div>
+      <hr>
+      <div class="stack">
+        <h2>Boolean filters</h2>
+        <div id="boolean-filters" class="stack"></div>
+      </div>
+      <hr>
+      <div class="stack">
+        <h2>Metadata</h2>
+        <p class="muted small">The built-in metadata is embedded. Load a replacement JSON if needed.</p>
+        <input id="metadata-file" type="file" accept="application/json,.json">
+      </div>
+    </section>
+
+    <section class="panel stack">
+      <div class="row" style="justify-content: space-between;">
+        <div>
+          <h2>Configuration</h2>
+          <p class="muted">X values in utility curves are sorted before output.</p>
+        </div>
+        <button id="clear-all" class="danger" type="button">Clear all</button>
+      </div>
+      <div class="field-row">
+        <label for="combination">Utility combination</label>
+        <select id="combination"></select>
+      </div>
+      <div id="selected-features" class="stack"></div>
+      <p id="empty-message" class="muted">No properties selected yet.</p>
+    </section>
+
+    <section class="panel stack">
+      <div>
+        <h2>Output</h2>
+        <p id="validation-message" class="muted"></p>
+      </div>
+      <div class="output-actions">
+        <label for="output-format">Format</label>
+        <select id="output-format">
+          <option value="textproto">textproto</option>
+          <option value="json">json</option>
+        </select>
+        <button id="download" type="button">Save</button>
+        <button id="copy-output" class="secondary" type="button">Copy</button>
+      </div>
+      <textarea id="output" spellcheck="false"></textarea>
+    </section>
+  </main>
+
+  <script id="default-metadata" type="application/json">{
+  "schema_version": 1,
+  "proto": "Molecule_Tools/molecule_filter.proto",
+  "relative_cost_basis": "Approximate normalized cost. Values are initial estimates and can be refined from timing data.",
+  "features": [
+    {
+      "name": "natoms",
+      "label": "Atom count",
+      "category": "size",
+      "type": "int",
+      "min_field": "min_natoms",
+      "max_field": "max_natoms",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of atoms in the molecule."
+    },
+    {
+      "name": "nrings",
+      "label": "Ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_nrings",
+      "max_field": "max_nrings",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of SSSR rings."
+    },
+    {
+      "name": "heteroatom_count",
+      "label": "Heteroatom count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_heteroatom_count",
+      "max_field": "max_heteroatom_count",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Number of atoms whose atomic number is not carbon."
+    },
+    {
+      "name": "heteroatom_fraction",
+      "label": "Heteroatom fraction",
+      "category": "composition",
+      "type": "float",
+      "min_field": "min_heteroatom_fraction",
+      "max_field": "max_heteroatom_fraction",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Fraction of atoms whose atomic number is not carbon."
+    },
+    {
+      "name": "aromatic_ring_count",
+      "label": "Aromatic ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aromatic_ring_count",
+      "max_field": "max_aromatic_ring_count",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Number of aromatic rings."
+    },
+    {
+      "name": "aliphatic_ring_count",
+      "label": "Aliphatic ring count",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aliphatic_ring_count",
+      "max_field": "max_aliphatic_ring_count",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Number of non-aromatic rings."
+    },
+    {
+      "name": "rotatable_bonds",
+      "label": "Rotatable bonds",
+      "category": "topology",
+      "type": "int",
+      "min_field": "min_rotatable_bonds",
+      "max_field": "max_rotatable_bonds",
+      "relative_cost": 12,
+      "utility": true,
+      "description": "Quick rotatable bond count using the molecule_filter rotatable-bond settings."
+    },
+    {
+      "name": "max_ring_system_size",
+      "label": "Largest ring system size",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_ring_system_size",
+      "max_field": "max_ring_system_size",
+      "relative_cost": 15,
+      "utility": true,
+      "description": "Largest fused ring system, measured as number of rings in the system."
+    },
+    {
+      "name": "aromatic_rings_in_system",
+      "label": "Aromatic rings in largest system",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_aromatic_rings_in_system",
+      "max_field": "max_aromatic_rings_in_system",
+      "relative_cost": 15,
+      "utility": true,
+      "description": "Largest number of aromatic rings found in a fused ring system."
+    },
+    {
+      "name": "tpsa",
+      "label": "TPSA",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_tpsa",
+      "max_field": "max_tpsa",
+      "relative_cost": 25,
+      "utility": true,
+      "description": "Novartis topological polar surface area."
+    },
+    {
+      "name": "alogp",
+      "label": "ALogP",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_alogp",
+      "max_field": "max_alogp",
+      "relative_cost": 35,
+      "utility": true,
+      "description": "ALogP value computed by the LillyMol ALogP implementation."
+    },
+    {
+      "name": "xlogp",
+      "label": "XLogP",
+      "category": "physchem",
+      "type": "float",
+      "min_field": "min_xlogp",
+      "max_field": "max_xlogp",
+      "relative_cost": 45,
+      "utility": true,
+      "description": "XLogP value computed by the LillyMol XLogP implementation."
+    },
+    {
+      "name": "hba",
+      "label": "HBA",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hba",
+      "max_field": "max_hba",
+      "relative_cost": 6,
+      "utility": true,
+      "description": "Hydrogen-bond acceptor count using molecule_filter Rule-of-Five logic."
+    },
+    {
+      "name": "hbd",
+      "label": "HBD",
+      "category": "physchem",
+      "type": "int",
+      "min_field": "min_hbd",
+      "max_field": "max_hbd",
+      "relative_cost": 6,
+      "utility": true,
+      "description": "Hydrogen-bond donor count using molecule_filter Rule-of-Five logic."
+    },
+    {
+      "name": "largest_ring_size",
+      "label": "Largest ring size",
+      "category": "rings",
+      "type": "int",
+      "min_field": "min_largest_ring_size",
+      "max_field": "max_largest_ring_size",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Size of the largest ring. This does not span spiro fusions."
+    },
+    {
+      "name": "halogen_count",
+      "label": "Halogen count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_halogen_count",
+      "max_field": "max_halogen_count",
+      "relative_cost": 3,
+      "utility": true,
+      "description": "Number of F, Cl, Br, and I atoms."
+    },
+    {
+      "name": "max_distance",
+      "label": "Longest path",
+      "category": "topology",
+      "type": "int",
+      "min_field": "min_distance",
+      "max_field": "max_distance",
+      "relative_cost": 30,
+      "utility": true,
+      "description": "Longest topological distance between any pair of atoms."
+    },
+    {
+      "name": "sp3_carbon",
+      "label": "sp3 carbon count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_sp3_carbon",
+      "max_field": "max_sp3_carbon",
+      "relative_cost": 5,
+      "utility": true,
+      "description": "Number of fully saturated carbon atoms."
+    },
+    {
+      "name": "aromatic_density",
+      "label": "Aromatic atom fraction",
+      "category": "rings",
+      "type": "float",
+      "min_field": "min_aromatic_density",
+      "max_field": "max_aromatic_density",
+      "relative_cost": 8,
+      "utility": true,
+      "description": "Fraction of atoms that are aromatic."
+    },
+    {
+      "name": "chiral",
+      "label": "Chiral centre count",
+      "category": "stereochemistry",
+      "type": "int",
+      "min_field": "min_chiral",
+      "max_field": "max_chiral",
+      "relative_cost": 2,
+      "utility": true,
+      "description": "Number of chiral centres."
+    },
+    {
+      "name": "number_fragments",
+      "label": "Fragment count",
+      "category": "composition",
+      "type": "int",
+      "min_field": "min_number_fragments",
+      "max_field": "max_number_fragments",
+      "relative_cost": 1,
+      "utility": true,
+      "description": "Number of disconnected fragments in the input smiles."
+    }
+  ],
+  "boolean_filters": [
+    {
+      "field": "exclude_non_organic",
+      "label": "Exclude non-organic molecules",
+      "category": "composition",
+      "relative_cost": 3,
+      "description": "Reject molecules containing atoms outside LillyMol's organic subset."
+    },
+    {
+      "field": "exclude_isotopes",
+      "label": "Exclude isotopic molecules",
+      "category": "composition",
+      "relative_cost": 2,
+      "description": "Reject molecules containing isotopically labelled atoms."
+    }
+  ],
+  "utility_combinations": [
+    {
+      "name": "UTILITY_COMBINATION_WEIGHTED_AVERAGE",
+      "label": "Weighted average",
+      "description": "Sum weight_i * utility_i divided by sum weight_i. This is the default."
+    },
+    {
+      "name": "UTILITY_COMBINATION_WEIGHTED_SUM",
+      "label": "Weighted sum",
+      "description": "Sum weight_i * utility_i without normalization."
+    },
+    {
+      "name": "UTILITY_COMBINATION_PRODUCT",
+      "label": "Product",
+      "description": "Product of all utility values."
+    },
+    {
+      "name": "UTILITY_COMBINATION_MIN",
+      "label": "Minimum",
+      "description": "Overall utility is the smallest individual utility value."
+    },
+    {
+      "name": "UTILITY_COMBINATION_MAX",
+      "label": "Maximum",
+      "description": "Overall utility is the largest individual utility value."
+    }
+  ]
+}</script>
+  <script>
+    let metadata = JSON.parse(document.getElementById('default-metadata').textContent);
+    const state = {
+      selected: new Map(),
+      booleans: new Map(),
+      utilityCombination: '',
+      outputFormat: 'textproto'
+    };
+
+    const el = id => document.getElementById(id);
+
+    function escapeTextProto(value) {
+      return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    function numericValue(value, type) {
+      if (value === '' || value === null || value === undefined) return null;
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return null;
+      return type === 'int' ? Math.trunc(parsed) : parsed;
+    }
+
+    function sortedPoints(points) {
+      return points
+        .map(p => ({ x: Number(p.x), y: Number(p.y) }))
+        .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y))
+        .sort((a, b) => a.x - b.x);
+    }
+
+    function validPoints(points) {
+      const sorted = sortedPoints(points);
+      if (sorted.length < 2) return false;
+      for (const p of sorted) {
+        if (p.y < 0 || p.y > 1) return false;
+      }
+      for (let i = 1; i < sorted.length; ++i) {
+        if (sorted[i].x === sorted[i - 1].x) return false;
+      }
+      return true;
+    }
+
+    function selectedFeature(name) {
+      return state.selected.get(name);
+    }
+
+    function addFeature(feature) {
+      if (state.selected.has(feature.name)) return;
+      state.selected.set(feature.name, {
+        feature,
+        minEnabled: false,
+        maxEnabled: false,
+        min: '',
+        max: '',
+        utilities: []
+      });
+      render();
+    }
+
+    function removeFeature(name) {
+      state.selected.delete(name);
+      render();
+    }
+
+    function addUtility(name) {
+      const entry = selectedFeature(name);
+      if (!entry) return;
+      entry.utilities.push({
+        weight: '1',
+        points: [{ x: '', y: '' }, { x: '', y: '' }]
+      });
+      render();
+    }
+
+    function addPoint(name, utilityIndex) {
+      selectedFeature(name).utilities[utilityIndex].points.push({ x: '', y: '' });
+      render();
+    }
+
+    function removePoint(name, utilityIndex, pointIndex) {
+      selectedFeature(name).utilities[utilityIndex].points.splice(pointIndex, 1);
+      render();
+    }
+
+    function removeUtility(name, utilityIndex) {
+      selectedFeature(name).utilities.splice(utilityIndex, 1);
+      render();
+    }
+
+    function renderFeatureList() {
+      const list = el('feature-list');
+      const search = el('feature-search').value.trim().toLowerCase();
+      const category = el('category-filter').value;
+      list.innerHTML = '';
+      const features = metadata.features.filter(f => {
+        if (category && f.category !== category) return false;
+        if (!search) return true;
+        return [f.name, f.label, f.category, f.description].join(' ').toLowerCase().includes(search);
+      });
+      for (const feature of features) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'feature-button';
+        button.disabled = state.selected.has(feature.name);
+        button.innerHTML = `
+          <span><strong>${feature.label}</strong><br><span class="muted small">${feature.name}</span></span>
+          <span class="badge">cost ${feature.relative_cost}</span>`;
+        button.title = feature.description;
+        button.addEventListener('click', () => addFeature(feature));
+        list.appendChild(button);
+      }
+    }
+
+    function renderCategories() {
+      const select = el('category-filter');
+      const current = select.value;
+      const categories = [...new Set(metadata.features.map(f => f.category))].sort();
+      select.innerHTML = '<option value="">All</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+      select.value = categories.includes(current) ? current : '';
+    }
+
+    function renderBooleans() {
+      const container = el('boolean-filters');
+      container.innerHTML = '';
+      for (const filter of metadata.boolean_filters || []) {
+        const row = document.createElement('label');
+        row.className = 'row';
+        const checked = state.booleans.get(filter.field) ? 'checked' : '';
+        row.innerHTML = `<input type="checkbox" data-boolean="${filter.field}" ${checked}> <span>${filter.label}</span> <span class="badge">cost ${filter.relative_cost}</span>`;
+        row.title = filter.description;
+        container.appendChild(row);
+      }
+      container.querySelectorAll('[data-boolean]').forEach(input => {
+        input.addEventListener('change', e => {
+          state.booleans.set(e.target.dataset.boolean, e.target.checked);
+          updateOutput();
+        });
+      });
+    }
+
+    function renderCombination() {
+      const select = el('combination');
+      const options = metadata.utility_combinations || [];
+      if (!state.utilityCombination && options.length) {
+        state.utilityCombination = options[0].name;
+      }
+      select.innerHTML = options.map(o => `<option value="${o.name}">${o.label}</option>`).join('');
+      select.value = state.utilityCombination;
+    }
+
+    function featureCard(entry) {
+      const feature = entry.feature;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <h3>${feature.label}</h3>
+            <p class="muted small">${feature.description}</p>
+            <p class="muted small"><code>${feature.name}</code> · ${feature.type} · relative cost ${feature.relative_cost}</p>
+          </div>
+          <button type="button" class="danger" data-remove-feature="${feature.name}">Remove</button>
+        </div>
+        <div class="two-col">
+          <label class="row"><input type="checkbox" data-min-enabled="${feature.name}" ${entry.minEnabled ? 'checked' : ''}> Min</label>
+          <input type="number" step="${feature.type === 'int' ? '1' : 'any'}" data-min-value="${feature.name}" value="${entry.min}" ${entry.minEnabled ? '' : 'disabled'}>
+          <label class="row"><input type="checkbox" data-max-enabled="${feature.name}" ${entry.maxEnabled ? 'checked' : ''}> Max</label>
+          <input type="number" step="${feature.type === 'int' ? '1' : 'any'}" data-max-value="${feature.name}" value="${entry.max}" ${entry.maxEnabled ? '' : 'disabled'}>
+        </div>
+        <div class="row">
+          <button type="button" class="secondary" data-add-utility="${feature.name}">Add utility curve</button>
+        </div>
+        <div class="stack" data-utilities="${feature.name}"></div>`;
+      const utilities = card.querySelector('[data-utilities]');
+      entry.utilities.forEach((utility, i) => utilities.appendChild(utilityCard(feature.name, i, utility)));
+      return card;
+    }
+
+    function utilityCard(featureName, utilityIndex, utility) {
+      const div = document.createElement('div');
+      div.className = 'card';
+      const rows = utility.points.map((point, pointIndex) => `
+        <tr>
+          <td><input type="number" step="any" data-point-x="${featureName}:${utilityIndex}:${pointIndex}" value="${point.x}"></td>
+          <td><input type="number" min="0" max="1" step="any" data-point-y="${featureName}:${utilityIndex}:${pointIndex}" value="${point.y}"></td>
+          <td><button type="button" class="danger" data-remove-point="${featureName}:${utilityIndex}:${pointIndex}">Remove</button></td>
+        </tr>`).join('');
+      div.innerHTML = `
+        <div class="card-header">
+          <div>
+            <h3>Utility curve</h3>
+            <p class="muted small">Points are sorted by X in the generated config. Y must be between 0 and 1.</p>
+          </div>
+          <button type="button" class="danger" data-remove-utility="${featureName}:${utilityIndex}">Remove curve</button>
+        </div>
+        <div class="field-row">
+          <label>Weight</label>
+          <input type="number" step="any" min="0" data-weight="${featureName}:${utilityIndex}" value="${utility.weight}">
+        </div>
+        <table class="point-table">
+          <thead><tr><th>X</th><th>Y</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="row"><button type="button" class="secondary" data-add-point="${featureName}:${utilityIndex}">Add point</button></div>
+        <canvas class="curve" data-curve="${featureName}:${utilityIndex}" width="500" height="180"></canvas>`;
+      setTimeout(() => drawCurve(div.querySelector('canvas'), utility.points, featureName), 0);
+      return div;
+    }
+
+    function renderSelected() {
+      const container = el('selected-features');
+      container.innerHTML = '';
+      for (const entry of state.selected.values()) {
+        container.appendChild(featureCard(entry));
+      }
+      el('empty-message').style.display = state.selected.size ? 'none' : 'block';
+      attachSelectedHandlers(container);
+    }
+
+    function attachSelectedHandlers(container) {
+      container.querySelectorAll('[data-remove-feature]').forEach(b => b.addEventListener('click', e => removeFeature(e.target.dataset.removeFeature)));
+      container.querySelectorAll('[data-add-utility]').forEach(b => b.addEventListener('click', e => addUtility(e.target.dataset.addUtility)));
+      container.querySelectorAll('[data-remove-utility]').forEach(b => b.addEventListener('click', e => {
+        const [name, ui] = e.target.dataset.removeUtility.split(':');
+        removeUtility(name, Number(ui));
+      }));
+      container.querySelectorAll('[data-add-point]').forEach(b => b.addEventListener('click', e => {
+        const [name, ui] = e.target.dataset.addPoint.split(':');
+        addPoint(name, Number(ui));
+      }));
+      container.querySelectorAll('[data-remove-point]').forEach(b => b.addEventListener('click', e => {
+        const [name, ui, pi] = e.target.dataset.removePoint.split(':');
+        removePoint(name, Number(ui), Number(pi));
+      }));
+      container.querySelectorAll('[data-min-enabled]').forEach(input => input.addEventListener('change', e => {
+        selectedFeature(e.target.dataset.minEnabled).minEnabled = e.target.checked;
+        render();
+      }));
+      container.querySelectorAll('[data-max-enabled]').forEach(input => input.addEventListener('change', e => {
+        selectedFeature(e.target.dataset.maxEnabled).maxEnabled = e.target.checked;
+        render();
+      }));
+      container.querySelectorAll('[data-min-value]').forEach(input => input.addEventListener('input', e => {
+        selectedFeature(e.target.dataset.minValue).min = e.target.value;
+        updateOutput();
+      }));
+      container.querySelectorAll('[data-max-value]').forEach(input => input.addEventListener('input', e => {
+        selectedFeature(e.target.dataset.maxValue).max = e.target.value;
+        updateOutput();
+      }));
+      container.querySelectorAll('[data-weight]').forEach(input => input.addEventListener('input', e => {
+        const [name, ui] = e.target.dataset.weight.split(':');
+        selectedFeature(name).utilities[Number(ui)].weight = e.target.value;
+        updateOutput();
+      }));
+      container.querySelectorAll('[data-point-x]').forEach(input => input.addEventListener('input', e => {
+        const [name, ui, pi] = e.target.dataset.pointX.split(':');
+        selectedFeature(name).utilities[Number(ui)].points[Number(pi)].x = e.target.value;
+        redrawCurves();
+        updateOutput();
+      }));
+      container.querySelectorAll('[data-point-y]').forEach(input => input.addEventListener('input', e => {
+        const [name, ui, pi] = e.target.dataset.pointY.split(':');
+        selectedFeature(name).utilities[Number(ui)].points[Number(pi)].y = e.target.value;
+        redrawCurves();
+        updateOutput();
+      }));
+    }
+
+    function drawCurve(canvas, points, featureName) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+      const margin = 28;
+      ctx.strokeStyle = '#d6dbe1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(margin, margin);
+      ctx.lineTo(margin, height - margin);
+      ctx.lineTo(width - margin, height - margin);
+      ctx.stroke();
+      ctx.fillStyle = '#5f6b7a';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('1', 8, margin + 4);
+      ctx.fillText('0', 8, height - margin + 4);
+      ctx.fillStyle = '#1f2933';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(featureName || '', margin + 6, margin - 8);
+
+      const sorted = sortedPoints(points);
+      if (sorted.length === 0) return;
+      const xs = sorted.map(p => p.x);
+      let xmin = Math.min(...xs);
+      let xmax = Math.max(...xs);
+      if (xmin === xmax) { xmin -= 1; xmax += 1; }
+      const xscale = x => margin + (x - xmin) / (xmax - xmin) * (width - 2 * margin);
+      const yscale = y => height - margin - y * (height - 2 * margin);
+
+      ctx.strokeStyle = validPoints(points) ? '#1769aa' : '#a61b1b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      sorted.forEach((p, i) => {
+        const x = xscale(p.x);
+        const y = yscale(Math.max(0, Math.min(1, p.y)));
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      for (const p of sorted) {
+        const x = xscale(p.x);
+        const y = yscale(Math.max(0, Math.min(1, p.y)));
+        ctx.fillStyle = p.y >= 0 && p.y <= 1 ? '#1769aa' : '#a61b1b';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#5f6b7a';
+      ctx.fillText(String(xmin), margin, height - 8);
+      ctx.textAlign = 'right';
+      ctx.fillText(String(xmax), width - margin, height - 8);
+      ctx.textAlign = 'left';
+    }
+
+    function redrawCurves() {
+      document.querySelectorAll('[data-curve]').forEach(canvas => {
+        const [name, ui] = canvas.dataset.curve.split(':');
+        const entry = selectedFeature(name);
+        if (entry) drawCurve(canvas, entry.utilities[Number(ui)].points, name);
+      });
+    }
+
+    function buildConfigObject() {
+      const config = {};
+      for (const [field, enabled] of state.booleans.entries()) {
+        if (enabled) config[field] = true;
+      }
+      const utilities = [];
+      for (const entry of state.selected.values()) {
+        const f = entry.feature;
+        if (entry.minEnabled) {
+          const value = numericValue(entry.min, f.type);
+          if (value !== null) config[f.min_field] = value;
+        }
+        if (entry.maxEnabled) {
+          const value = numericValue(entry.max, f.type);
+          if (value !== null) config[f.max_field] = value;
+        }
+        for (const utility of entry.utilities) {
+          if (!validPoints(utility.points)) continue;
+          const u = { name: f.name };
+          const weight = numericValue(utility.weight, 'float');
+          if (weight !== null && weight !== 1) u.weight = weight;
+          u.point = sortedPoints(utility.points).map(p => ({ x: p.x, y: p.y }));
+          utilities.push(u);
+        }
+      }
+      if (utilities.length) {
+        config.utility = utilities;
+        if (state.utilityCombination) config.utility_combination = state.utilityCombination;
+      }
+      return config;
+    }
+
+    function toTextProto(config) {
+      const lines = [];
+      const scalarKeys = Object.keys(config).filter(k => k !== 'utility' && k !== 'utility_combination').sort();
+      for (const key of scalarKeys) {
+        const value = config[key];
+        lines.push(`${key}: ${value === true ? 'true' : value}`);
+      }
+      if (config.utility_combination) {
+        lines.push(`utility_combination: ${config.utility_combination}`);
+      }
+      for (const utility of config.utility || []) {
+        lines.push('utility {');
+        lines.push(`  name: "${escapeTextProto(utility.name)}"`);
+        if (utility.weight !== undefined) lines.push(`  weight: ${utility.weight}`);
+        for (const point of utility.point) {
+          lines.push('  point {');
+          lines.push(`    x: ${point.x}`);
+          lines.push(`    y: ${point.y}`);
+          lines.push('  }');
+        }
+        lines.push('}');
+      }
+      return lines.join('\n') + (lines.length ? '\n' : '');
+    }
+
+    function validationMessages() {
+      const messages = [];
+      for (const entry of state.selected.values()) {
+        const f = entry.feature;
+        if (entry.minEnabled && numericValue(entry.min, f.type) === null) messages.push(`${f.label} has enabled min with no numeric value.`);
+        if (entry.maxEnabled && numericValue(entry.max, f.type) === null) messages.push(`${f.label} has enabled max with no numeric value.`);
+        const min = numericValue(entry.min, f.type);
+        const max = numericValue(entry.max, f.type);
+        if (entry.minEnabled && entry.maxEnabled && min !== null && max !== null && min > max) messages.push(`${f.label} min is greater than max.`);
+        entry.utilities.forEach((utility, i) => {
+          const weight = numericValue(utility.weight, 'float');
+          if (weight === null || weight <= 0) messages.push(`${f.label} utility ${i + 1} has invalid weight.`);
+          if (!validPoints(utility.points)) messages.push(`${f.label} utility ${i + 1} needs at least two points, unique X values, and Y values in [0, 1].`);
+        });
+      }
+      return messages;
+    }
+
+    function updateOutput() {
+      const config = buildConfigObject();
+      el('output').value = state.outputFormat === 'json'
+        ? JSON.stringify(config, null, 2) + '\n'
+        : toTextProto(config);
+      const messages = validationMessages();
+      const msg = el('validation-message');
+      if (messages.length) {
+        msg.className = 'warning';
+        msg.textContent = messages.join(' ');
+      } else {
+        msg.className = 'ok';
+        msg.textContent = 'Configuration is syntactically complete.';
+      }
+    }
+
+    function render() {
+      renderCategories();
+      renderFeatureList();
+      renderBooleans();
+      renderCombination();
+      renderSelected();
+      updateOutput();
+    }
+
+    function downloadOutput() {
+      const suffix = state.outputFormat === 'json' ? 'json' : 'textproto';
+      const blob = new Blob([el('output').value], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `molecule_filter_config.${suffix}`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }
+
+    function clearAll() {
+      state.selected.clear();
+      state.booleans.clear();
+      render();
+    }
+
+    el('feature-search').addEventListener('input', renderFeatureList);
+    el('category-filter').addEventListener('change', renderFeatureList);
+    el('combination').addEventListener('change', e => { state.utilityCombination = e.target.value; updateOutput(); });
+    el('output-format').addEventListener('change', e => { state.outputFormat = e.target.value; updateOutput(); });
+    el('download').addEventListener('click', downloadOutput);
+    el('clear-all').addEventListener('click', clearAll);
+    el('copy-output').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(el('output').value);
+    });
+    el('metadata-file').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      metadata = JSON.parse(await file.text());
+      clearAll();
+    });
+
+    render();
+  </script>
+</body>
+</html>

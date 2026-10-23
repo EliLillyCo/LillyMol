@@ -1,0 +1,17 @@
+name: "sulfonamide_r2_to_sulfonimidamide"
+scaffold {
+  smarts: "[SD4R0](=O)(=O)-[ND3R0](-[R0])-[R0]"
+  change_element {
+    atom: 2
+    element: "N"
+  }
+  break_bond {
+    a1: 3
+    a2: 4
+  }
+  make_bond {
+    a1: 2
+    a2: 4
+    btype: SS_SINGLE_BOND
+  }
+}

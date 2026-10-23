@@ -493,7 +493,6 @@ numbered_smiles(Molecule& m, Molecule_Output_Object& output)
   }
 
   std::unique_ptr<isotope_t[]> isotope = std::make_unique<isotope_t[]>(matoms);
-  std::fill_n(isotope.get(), matoms, 0);
 
   return numbered_smiles(m, isotope.get(), output);
 }
@@ -537,10 +536,10 @@ numbered_smiles(const char* fname, FileType input_type, Molecule_Output_Object& 
 
   static int first_call = 1;
 
-  if (0 == output_file_name.length()) {
+  if (output_file_name.empty()) {
     IWString ofname = fname;
     int i = ofname.index('.');
-    if (i) {
+    if (i > 0) {
       ofname.iwtruncate(i);
     }
 

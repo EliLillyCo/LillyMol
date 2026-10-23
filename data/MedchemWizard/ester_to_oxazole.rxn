@@ -1,0 +1,23 @@
+name: "ester2oxazole"
+scaffold {
+  smarts: "[OD1]=[CR0D3]-[OD2]-[D2R0]"
+  change_element {
+    atom: 0
+    element: "N"
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 0
+    btype: SS_DOUBLE_BOND
+  }
+}

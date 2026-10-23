@@ -1,0 +1,6 @@
+min_heteroatom_count: 1
+utility {
+  name: "natoms"
+  point { x: 0 y: 0 }
+  point { x: 10 y: 1 }
+}

@@ -2,6 +2,8 @@
 #define  NN_RESULTS_IMPL
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <memory>
 
 #include "Foundational/iwmisc/misc.h"
@@ -348,7 +350,7 @@ NN_Results_Base<N>::build_from_distance_matrix (iwstring_data_source & input,
   }
   else
   {
-    set_vector (ndx, _number_items, -1);
+    std::fill_n (ndx, _number_items, -1);
 
     int n = 0;
     for (int i = 0; i < _number_items; i++)
@@ -454,7 +456,7 @@ NN_Results_Base<N>::_build_from_distance_matrix (IWDistanceMatrixFloat & dm,
     if (ndx[i] < 0)
       continue;
 
-    set_vector (closest_distances, dmc.max_neighbours (), static_cast<similarity_type_t> (1.0));
+    std::fill_n (closest_distances, dmc.max_neighbours (), static_cast<similarity_type_t> (1.0));
      
     N & ni = _results[i];
 

@@ -843,7 +843,9 @@ read_data_randomly(iwstring_data_source& input, T* column_data)
 
   std::random_device rd;
   std::default_random_engine rng(rd());
-  std::uniform_int_distribution<off_t> u(startpos, filesize - 11);  // 11 is just a number
+  off_t tmp_start = static_cast<off_t>(startpos);
+  off_t tmp_size = static_cast<off_t>(filesize);
+  std::uniform_int_distribution<off_t> u(tmp_start, tmp_size - 11);  // 11 is just a number
 
   while (records_sampled < sample_records_randomly) {
     number_attempts++;

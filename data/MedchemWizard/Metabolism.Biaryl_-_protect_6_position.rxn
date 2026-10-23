@@ -1,7 +1,7 @@
 (0 Reaction
 # [cH1$(c1[c,n][c,n]2[c,n]([c,n][c,n]1)[c,n]([c,n][c,n][c,n]2)*):1]>>[c:1]Br Biaryl - protect 6 position
 
-  (A C Comment "Metabolism.Biaryl_-_protect_6_position_F")
+  (A C Comment "Metabolism.Biaryl_-_protect_6_position")
   (0 Scaffold
     (A C smarts "[cx2D3]1aaaa2a[cD2]aaa12")
   )

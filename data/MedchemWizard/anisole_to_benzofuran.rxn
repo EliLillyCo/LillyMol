@@ -1,0 +1,17 @@
+# Retain Ar-O-CH3 and add one carbon to close an aromatic five-membered ring.
+# Either available ortho C-H position can be used; symmetry duplicates are skipped.
+name: "anisole_to_benzofuran"
+scaffold {
+  smarts: "[/IWfss1cD3](-[OD2R0+0]-[CD1H3R0+0]):[cD2H1]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join { a1: 2 a2: 0 btype: SS_DOUBLE_BOND }
+  join { a1: 3 a2: 0 btype: SS_SINGLE_BOND }
+}

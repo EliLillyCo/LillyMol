@@ -8,9 +8,11 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <numbers>
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/histogram/iwhistogram.h"
@@ -133,7 +135,7 @@ write_fingerprint_precise(Molecule& m, const atomic_number_t* z, const double* x
 static double
 normal_function(double mean, double std, double x)
 {
-  return exp(-(x - mean) * (x - mean) / (std * std + std * std)) / std / sqrt(2.0 * M_PI);
+  return exp(-(x - mean) * (x - mean) / (std * std + std * std)) / std / sqrt(2.0 * std::numbers::pi);
 }
 
 static int
@@ -142,7 +144,7 @@ write_fingerprint_dist(Molecule& m, const atomic_number_t* z, const double* xsta
 {
   double* ovector = new double[output_vector_size];
   std::unique_ptr<double[]> free_ovector(ovector);
-  set_vector(ovector, output_vector_size, 0.0);
+  std::fill_n(ovector, output_vector_size, 0.0);
 
   const auto matoms = m.natoms();
 
@@ -388,7 +390,7 @@ determine_e_state_atom_type(Molecule& m, int e_state_atom_type[],
 {
   int n_atoms = m.natoms();
 
-  set_vector(e_state_atom_type, n_atoms, UNDEFINED_E_STATE_ATOM_TYPE);
+  std::fill_n(e_state_atom_type, n_atoms, UNDEFINED_E_STATE_ATOM_TYPE);
 
   for (int i = 0; i < n_atoms; i++) {
     if (UNDEFINED_E_STATE_ATOM_TYPE != e_state_atom_type[i]) {
@@ -561,11 +563,11 @@ compute_min_max_sum_average(int n_atoms, int NUMBER_OF_TYPE,
                             int count[])
 {
   // initialization
-  set_vector(sum, NUMBER_OF_TYPE, 0.0);
-  set_vector(max, NUMBER_OF_TYPE, 0.0);
-  set_vector(min, NUMBER_OF_TYPE, std::numeric_limits<double>::max());
-  set_vector(avg, NUMBER_OF_TYPE, 0.0);
-  set_vector(count, NUMBER_OF_TYPE, 0);
+  std::fill_n(sum, NUMBER_OF_TYPE, 0.0);
+  std::fill_n(max, NUMBER_OF_TYPE, 0.0);
+  std::fill_n(min, NUMBER_OF_TYPE, std::numeric_limits<double>::max());
+  std::fill_n(avg, NUMBER_OF_TYPE, 0.0);
+  std::fill_n(count, NUMBER_OF_TYPE, 0);
 
   for (int i = 0; i < n_atoms; i++) {
     int atom_type = e_state_atom_type[i];
@@ -732,7 +734,7 @@ determine_h_e_state_atom_type(Molecule& m, int h_e_state_atom_type[],
 {
   int n_atoms = m.natoms();
 
-  set_vector(h_e_state_atom_type, n_atoms, UNDEFINED_E_STATE_ATOM_TYPE);
+  std::fill_n(h_e_state_atom_type, n_atoms, UNDEFINED_E_STATE_ATOM_TYPE);
 
   for (int i = 0; i < n_atoms; i++) {
     int h_count = m.hcount(i);

@@ -1,0 +1,17 @@
+Experimental/Measured values in column 2 w_natoms. Range 10 and 15 ave 13.5789
+Predicted values in column 3 w_nrings. Range 1 and 2 ave 1.42105 N = 19
+Errors between 8 and 14 ave 12.1579
+ w_nrings AAE 12.1579
+ w_nrings RMS = 12.2539
+ w_nrings R2 = -0.00222938
+ w_nrings Q2 = -0.986459
+ w_nrings Bias = 12.1579
+ w_nrings AE50 = 12
+ w_nrings AE75 = 13
+ w_nrings AE95 = 14
+ w_nrings max_error = 14
+ w_nrings cMSR95_sd = 5.56087e+14
+ w_nrings cMSR95_mad = 3.95159e+14
+ w_nrings cMSR90_sd = 1.45089e+14
+ w_nrings cMSR90_mad = 1.11359e+14
+ w_nrings B2.input = -0.291297

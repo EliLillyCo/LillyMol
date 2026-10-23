@@ -4,6 +4,8 @@
 #include <fstream>
 #include <memory>
 #include <random>
+#include <string>
+#include <vector>
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline_v2/cmdline_v2.h"
@@ -66,6 +68,20 @@ static int header_records_to_skip = 0;
 // If this does not match, it is a fatal error.
 static std::unique_ptr<RE2> text_subset;
 
+// Each independent column has its own retained-value counts. The legacy mode
+// below continues to use a single composite key and its original counters.
+struct ColumnRule {
+  int _column = 0;  // Positive: one-based; negative: relative to the end.
+  int _limit = 1;
+  std::unique_ptr<RE2> _subset;
+  IW_STL_Hash_Map_int _retained;
+
+  int Initialise(const const_IWSubstring& specification);
+};
+
+static std::vector<ColumnRule> column_rules;
+
+
 static void
 usage(int rc) {
 // clang-format off
@@ -78,6 +94,7 @@ usage(int rc) {
   // clang-format off
   cerr << R"(Identifies the unique rows in a tabular file\n";
  -c <col>       only consider column(s) <col>
+ -column <spec> independent limit: '1,n=4,subset=(.*)..$'; repeat for each column
  -x <col>       consider all column(s) except <col>
  -P <fname>     read a file of identifiers to be considered previously seen - added to the hash before reading the input file.
  -D <file>      file for duplicate records - by default duplicate records are discarded.
@@ -177,6 +194,83 @@ TruncateToSubset(RE2* text_subset, IWString& text) {
 
   text = submatch;
 
+  return 1;
+}
+
+// Normalise an assembled comparison key, then optionally extract its subset.
+// Leading zeros are handled per token before assembling legacy composite keys.
+static int
+PrepareComparisonText(IWString& text, RE2* subset) {
+  if (ignore_case) {
+    text.to_lowercase();
+  }
+
+  if (truncate_at != '\0') {
+    // Preserve the legacy warning and leave leading-delimiter values intact.
+    if (text.starts_with(truncate_at)) {
+      cerr << "Cannot truncate '" << text << "' at first '" << truncate_at << "'\n";
+    } else {
+      text.truncate_at_first(truncate_at);
+    }
+  }
+
+  if (subset && !TruncateToSubset(subset, text)) {
+    return 0;
+  }
+  return 1;
+}
+
+// subset= consumes the remainder, so regular expressions can contain commas.
+int
+ColumnRule::Initialise(const const_IWSubstring& specification) {
+  const std::string spec(specification.data(), specification.length());
+  const std::string qualifiers = spec.substr(0, spec.find(",subset="));
+  if (qualifiers.empty() || qualifiers.front() == ',' ||
+      qualifiers.find(",,") != std::string::npos || qualifiers.back() == ',') {
+    cerr << "Empty -column qualifier '" << specification << "'\n";
+    return 0;
+  }
+  int offset = 0;
+  const_IWSubstring token;
+  if (!specification.nextword(token, offset, ',') ||
+      !token.numeric_value(_column) || _column == 0) {
+    cerr << "Invalid -column column number '" << specification << "'\n";
+    return 0;
+  }
+  bool have_limit = false;
+  while (offset < specification.length()) {
+    if (!specification.nextword(token, offset, ',')) {
+      break;
+    }
+    if (token.starts_with("subset=")) {
+      // Use the original text rather than token, which stops at commas.
+      const int start = offset - token.length() + 7;
+      const_IWSubstring pattern(specification);
+      pattern.remove_leading_chars(start);
+      _subset = std::make_unique<RE2>(std::string(pattern.data(), pattern.length()));
+      if (!_subset->ok() || _subset->NumberOfCapturingGroups() != 1) {
+        cerr << "The -column subset must be a valid regexp with one capture group: '"
+             << pattern << "'\n";
+        return 0;
+      }
+      return 1;
+    }
+    if (!have_limit && token.starts_with("n=")) {
+      token.remove_leading_chars(2);
+      if (!token.numeric_value(_limit) || _limit < 1) {
+        cerr << "Invalid -column limit '" << specification << "'\n";
+        return 0;
+      }
+      have_limit = true;
+    } else {
+      cerr << "Invalid -column qualifier '" << token << "'\n";
+      return 0;
+    }
+  }
+  if (specification.ends_with(',')) {
+    cerr << "Empty -column qualifier '" << specification << "'\n";
+    return 0;
+  }
   return 1;
 }
 
@@ -296,6 +390,74 @@ get_next_token(const const_IWSubstring& buffer, const_IWSubstring& token, int& i
 }
 
 static int
+IndependentColumns(const const_IWSubstring& buffer,
+                   IWString_and_File_Descriptor& output) {
+  // Descriptor headers are output without consuming any column allowances.
+  if (is_descriptor_file && lines_read == 1) {
+    if (do_write) {
+      output << buffer << '\n';
+      ++lines_written;
+    }
+    return output.good();
+  }
+
+  IWTokeniser tokeniser(buffer);
+  tokeniser.set_sep(token_separator);
+  tokeniser.set_empty_fields_valid(token_separator != ' ');
+  tokeniser.set_quoted_tokens(input_is_quoted_tokens);
+  std::vector<const_IWSubstring> tokens;
+  const_IWSubstring token;
+  while (tokeniser.next_token(token)) {
+    tokens.push_back(token);
+  }
+
+  std::vector<IWString> keys(column_rules.size());
+  bool retain = true;
+  for (size_t i = 0; i < column_rules.size(); ++i) {
+    const ColumnRule& rule = column_rules[i];
+    const int column = rule._column > 0 ? rule._column - 1
+                                        : static_cast<int>(tokens.size()) + rule._column;
+    if (column < 0 || column >= static_cast<int>(tokens.size())) {
+      cerr << "Record " << lines_read << " has " << tokens.size()
+           << " columns, cannot fetch column " << rule._column << '\n';
+      return 0;
+    }
+    IWString& key = keys[i];
+    key = tokens[column];
+    if (strip_leading_zeros) {
+      key.remove_leading_chars('0');
+    }
+    if (!PrepareComparisonText(key, rule._subset.get())) {
+      return 0;
+    }
+    const auto iter = rule._retained.find(key);
+    if (iter != rule._retained.end() && iter->second >= rule._limit) {
+      retain = false;
+    }
+  }
+
+  if (!retain) {
+    ++duplicate_lines_found;
+    if (stream_for_duplicate_lines.is_open()) {
+      stream_for_duplicate_lines << buffer << '\n';
+      stream_for_duplicate_lines.write_if_buffer_holds_more_than(32768);
+      return stream_for_duplicate_lines.good();
+    }
+    return 1;
+  }
+
+  // Commit all counters together: rejected rows consume no allowances.
+  for (size_t i = 0; i < column_rules.size(); ++i) {
+    ++column_rules[i]._retained[keys[i]];
+  }
+  if (do_write) {
+    output << buffer << '\n';
+    ++lines_written;
+  }
+  return output.good();
+}
+
+static int
 unique_rows(const const_IWSubstring& buffer, const int record_number,
             IWString& output_buffer) {
   IWString comparison_text;
@@ -385,23 +547,8 @@ unique_rows(const const_IWSubstring& buffer, const int record_number,
     return 1;
   }
 
-  if (ignore_case) {
-    comparison_text.to_lowercase();
-  }
-
-  if ('\0' == truncate_at) {
-    ;
-  } else if (comparison_text.starts_with(truncate_at)) {
-    cerr << "Cannot truncate '" << comparison_text << "' at first '" << truncate_at
-         << "'\n";
-  } else {
-    comparison_text.truncate_at_first(truncate_at);
-  }
-
-  if (text_subset) {
-    if (!TruncateToSubset(text_subset.get(), comparison_text)) {
-      return 0;
-    }
+  if (!PrepareComparisonText(comparison_text, text_subset.get())) {
+    return 0;
   }
 
   if (!show_counts) {
@@ -547,7 +694,8 @@ unique_rows(iwstring_data_source& input, IWString_and_File_Descriptor& output) {
 
     lines_read++;
 
-    if (!unique_rows(buffer, lines_read, output)) {
+    if (!(column_rules.empty() ? unique_rows(buffer, lines_read, output)
+                              : IndependentColumns(buffer, output))) {
       return 0;
     }
 
@@ -753,7 +901,7 @@ unique_rows(int argc, char** argv) {
   // Command_Line cl (argc, argv, "vc:x:D:R:z");
   Command_Line_v2 cl(argc, argv,
                      "-v-c=s-x=ipos-D=s-R=s-z-nc-o-trunc=s-n-r=ipos-whash-P=sfile-O=s-"
-                     "tab-csv-vbar-comma-s-all-p=f-q-nwz-d=s-h=ipos-j=ipos-i=s-subset=s");
+                     "tab-csv-vbar-comma-s-all-p=f-q-nwz-d=s-h=ipos-j=ipos-i=s-subset=s-column=s");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -761,6 +909,31 @@ unique_rows(int argc, char** argv) {
   }
 
   verbose = cl.option_count('v');
+  if (cl.option_present("column")) {
+    // These options describe the legacy composite key, or bypass hard quotas.
+    for (const char* flag : {"c", "x", "R", "d", "r", "subset", "o", "O",
+                             "P", "p", "all"}) {
+      if (cl.option_present(flag)) {
+        cerr << "-column cannot be combined with -" << flag << '\n';
+        return 1;
+      }
+    }
+    const_IWSubstring specification;
+    for (int i = 0; cl.value("column", specification, i); ++i) {
+      ColumnRule rule;
+      if (!rule.Initialise(specification)) {
+        return 1;
+      }
+      for (const ColumnRule& previous : column_rules) {
+        if (previous._column == rule._column) {
+          cerr << "Repeated -column number " << rule._column << '\n';
+          return 1;
+        }
+      }
+      column_rules.push_back(std::move(rule));
+    }
+  }
+
 
   if (cl.option_present('z')) {
     strip_leading_zeros = 1;
@@ -1098,7 +1271,8 @@ unique_rows(int argc, char** argv) {
   }
 
   if (!cl.option_present("whash")) {
-    _exit(0);
+    // Preserve legacy exit behaviour, but report failures in the new mode.
+    _exit(column_rules.empty() ? 0 : rc);
   }
 
   return rc;

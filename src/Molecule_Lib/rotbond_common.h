@@ -40,7 +40,7 @@ class QuickRotatableBonds {
     // The quickest calculation just counts the number of non ring
     // single bonds that are non terminal.
 
-    int Quickest(Molecule& m);
+    int Quickest(Molecule& m, int* bond_rotatable);
     // the more expensive calculation handles CF3 and amides.
     int Expensive(Molecule& m, int* bond_rotatable);
 

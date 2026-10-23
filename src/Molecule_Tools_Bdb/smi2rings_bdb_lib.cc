@@ -521,7 +521,6 @@ embedding_contains_ring_atom(Molecule& m, const Set_of_Atoms& e) {
 int
 PerMoleculeData::IdentifyFunctionalGroups(Molecule& m) {
   functional_group = std::make_unique<uint32_t[]>(m.natoms());
-  std::fill_n(functional_group.get(), m.natoms(), 0);
 
   Molecule_to_Match target(&m);
 

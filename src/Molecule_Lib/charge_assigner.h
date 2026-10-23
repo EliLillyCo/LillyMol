@@ -33,10 +33,10 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
     int _overwrite_existing_formal_charges;
 
-    int _molecules_examined;
-    int _molecules_changed;
-    int _negative_charges_assigned;
-    int _positive_charges_assigned;
+    uint64_t _molecules_examined;
+    uint64_t _molecules_changed;
+    uint64_t _negative_charges_assigned;
+    uint64_t _positive_charges_assigned;
 
 //  We need to make sure that we don't assign charges too close to each other
 
@@ -88,9 +88,7 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
 
 //  private functions
 
-    int BuildFromDefaultEnvs();
-    int BuildFromEnv(const IWString& env);
-    int BuildFromEnvValue(const IWString& dir);
+    int BuildFromDirInner(const IWString& dir);
 
     void InitialiseWhichAtom();
 
@@ -156,7 +154,15 @@ class Charge_Assigner : public resizable_array_p<Substructure_Hit_Statistics>
     ~Charge_Assigner ();
 
     int construct_from_command_line (Command_Line& cl, int verbose = 0, char flag = 'G');
+
+    // This parses the individual command line tokens found by construct_from_command_line.
+    // Is public because atom typing uses it.
     int build (const const_IWSubstring &);
+
+    // Will build from the query files in LILLYMOL_HOME/data/charges
+    int BuildFromDefaultEnvs();
+    // Will build from dir/data/charges. If empty, uses LILLYMOL_HOME.
+    int BuildFromDir(const IWString& dir);
 
     void set_verbose (int v) { _verbose = v;}
 

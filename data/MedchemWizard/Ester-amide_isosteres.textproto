@@ -1,0 +1,18 @@
+name: "Ester-amide_isosteres"
+comment: "[NX3H1H0,OH0]([CX3](=[OX1])[#6:1])[CX4,c:2]>>[#6:1]c1cncc(n1)[#6:2]"
+scaffold {
+  smarts:  "[NG0D2H1,NG0D1H2,OD1;R0]([CD3R0](=O)[#6:1])[CX4,c:2]"
+  remove_atom: [0, 1, 2]
+}
+sidechain {
+  reagent: "c1cnccn1 ARGA"
+  smarts: "c1cnccn1"
+  join {
+    a1: 3
+    a2: 0
+  }
+  join {
+    a1: 4
+    a2: 4
+  }
+}

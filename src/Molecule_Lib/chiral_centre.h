@@ -11,11 +11,11 @@
 class Molecule;
 class Bond;
 
-#define CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN (INVALID_ATOM_NUMBER - 4)
-#define CHIRAL_CONNECTION_IS_LONE_PAIR         (INVALID_ATOM_NUMBER - 5)
+#define CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN (kInvalidAtomNumber - 4)
+#define CHIRAL_CONNECTION_IS_LONE_PAIR         (kInvalidAtomNumber - 5)
 
-inline constexpr int kChiralConnectionIsImplicitHydrogen = (INVALID_ATOM_NUMBER - 4);
-inline constexpr int kChiralConnectionIsLonePair = (INVALID_ATOM_NUMBER - 5);
+inline constexpr int kChiralConnectionIsImplicitHydrogen = (kInvalidAtomNumber - 4);
+inline constexpr int kChiralConnectionIsLonePair = (kInvalidAtomNumber - 5);
 
 enum class ChiralPoint {
   kTopFront,
@@ -67,8 +67,6 @@ class Chiral_Centre
     atom_number_t a () const { return _a;}
     atom_number_t centre() const { return _a;}
     void set_centre (atom_number_t s) { _a = s;}     // no checking
-
-    int make_copy (const Chiral_Centre &, const int *);
 
     int invert ();
 
@@ -130,16 +128,19 @@ class Chiral_Centre
                          const resizable_array<const Bond *> & ring_opening_bonds,
                          const resizable_array<atom_number_t> & ring_closures) const;
 
-//  add_molecule uses this function to copy chiral centres from one molecule to another
-
+    //  add_molecule uses this function to copy chiral centres from one molecule to another
     int make_copy (const Chiral_Centre *);
+
+    // If we are creating a chiral centre in a newly created subset, then `xref` will contain
+    // a translation from atom numbers in the parent to atom numbers in the subset.
+    int make_copy (const Chiral_Centre &, const int* xref);
 
 //  When we make implicit hydrogens explicit, we need a means of telling
 //  a chiral centre what the new atom number is
 
-    int implicit_hydrogen_is_now_atom_number (atom_number_t);
+    int implicit_hydrogen_is_now_atom_number(atom_number_t);
 
-    int lone_pair_is_now_atom_number (atom_number_t);
+    int lone_pair_is_now_atom_number(atom_number_t);
 
 //  Similarly, when we break a bond, we may have an atom which now becomes an
 //  implicit hydrogen or a lone pair
@@ -157,7 +158,10 @@ class Chiral_Centre
 //  The Molecule::create_subset often needs to know whether or not the
 //  atoms in this chiral centre are all in the subset
 
-    int all_atoms_in_subset (const int *, int id) const;
+    bool all_atoms_in_subset (const int *, int flag) const;
+
+    // Counts the number of explicit atoms for which subset[i] == flag.
+    int atoms_in_subset(const int* subset, int flag) const;
 
 //  Unique smiles with chirality need a means of providing a -1,0,1 ranking
 //  for the atoms involved in a chiral centre

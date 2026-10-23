@@ -115,7 +115,11 @@ static int nworkers = 2;
 
 // If we are writing TFDataRecord protos.
 static int write_as_tfdata_record = 0;
+static int write_indexed_tfdata_record = 0;
 static iw_tf_data_record::TFDataWriter tfdata_writer;
+
+// We can write both a TFDataWriter and to stdout.
+static int also_write_stdout = 0;
 
 /*
   We can encode an integer ID and a floating point distance into a single 64 bit int
@@ -160,8 +164,9 @@ decode_id(const uint64_t did)
 }
 
 template <typename T>
-int 
-NbrsToTFData(const T& target, const T* pool, iw_tf_data_record::TFDataWriter& writer) {
+int
+NbrsToTFDataNameBased(const T& target, const T* pool,
+                      iw_tf_data_record::TFDataWriter& writer) {
   nnbr::NearNeighbours proto;
   const IWString& s = target.smiles();
   proto.set_smiles(s.data(), s.length());
@@ -188,6 +193,43 @@ NbrsToTFData(const T& target, const T* pool, iw_tf_data_record::TFDataWriter& wr
   return writer.WriteSerializedProto<nnbr::NearNeighbours>(proto);
 }
 
+template <typename T>
+int
+NbrsToTFDataIndexed(const T& target, iw_tf_data_record::TFDataWriter& writer) {
+  nnbr::NearNeighboursIndices proto;
+  const IWString& s = target.smiles();
+  proto.set_smiles(s.data(), s.length());
+  const IWString& id = target.id();
+  proto.set_name(id.data(), id.length());
+
+  const resizable_array<uint64_t>& nbrs = target.nbrs();
+
+  if (nbrs.empty() && !write_molecules_with_no_neighbours) {
+    return 1;
+  }
+
+  for (uint64_t i : target.nbrs()) {
+    const uint32_t ndx = decode_id(i);
+    const float d = decode_distance(i);
+
+    auto* nbr = proto.mutable_nbr()->Add();
+    nbr->set_id(ndx);
+    nbr->set_dist(d);
+  }
+
+  return writer.WriteSerializedProto<nnbr::NearNeighboursIndices>(proto);
+}
+
+template <typename T>
+int
+NbrsToTFData(const T& target, const T* pool, iw_tf_data_record::TFDataWriter& writer) {
+  if (write_indexed_tfdata_record) {
+    return NbrsToTFDataIndexed(target, writer);
+  }
+
+  return NbrsToTFDataNameBased(target, pool, writer);
+}
+
 int
 Encoded_Dist_ID_Sorter::operator()(const uint64_t i1, const uint64_t i2) const
 {
@@ -203,11 +245,13 @@ Encoded_Dist_ID_Sorter::operator()(const uint64_t i1, const uint64_t i2) const
 
 template <typename F>
 int
-write_neighbour_list(const F& target, const F* pool, IWString_and_File_Descriptor& output)
-{
+write_neighbour_list(const F& target, const F* pool, IWString_and_File_Descriptor& output) {
   // Ugly use of global variables...
   if (write_as_tfdata_record) {
-    return NbrsToTFData<F>(target, pool, tfdata_writer);
+    int rc = NbrsToTFData<F>(target, pool, tfdata_writer);
+    if (! also_write_stdout) {
+      return rc;
+    }
   }
 
   const resizable_array<uint64_t>& nbrs = target.nbrs();
@@ -703,16 +747,14 @@ gfp_nearneighbours_parallel3(F* pool, const int pool_size) {
 
 template <typename F>
 void
-gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
+gfp_nearneighbours_parallel32_latin_square(F* pool, const int pool_size)
 {
-  int p[17];
-  for (int i = 0; i < 16; ++i) {
-    p[i] = (i * pool_size) / 16;
+  int p[33];
+  for (int i = 0; i < 32; ++i) {
+    p[i] = (i * pool_size) / 32;
   }
 
-  p[16] = pool_size;
-
-  // Written by gfp_nearneighbours_single_file_tbb.rb
+  p[32] = pool_size;
 
   tbb::task_group g0;
   g0.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[1], p[2]); });
@@ -722,7 +764,15 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g0.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[9], p[10]); });
   g0.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[11], p[12]); });
   g0.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[13], p[14]); });
-  gfp_nearneighbours_diagonal(pool, p[14], p[15]);
+  g0.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[15], p[16]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[17], p[18]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[19], p[20]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[21], p[22]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[23], p[24]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[25], p[26]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[26], p[27], p[27], p[28]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[28], p[29], p[29], p[30]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[30], p[31], p[31], p[32]); });
   g0.wait();
   if (verbose) {
     cerr << " end g0\n";
@@ -735,7 +785,15 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g1.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[10], p[11]); });
   g1.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[11], p[12]); });
   g1.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[13], p[14]);
+  g1.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[15], p[16]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[18], p[19]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[19], p[20]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[22], p[23]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[23], p[24]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[26], p[27]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[27], p[28]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[28], p[29], p[30], p[31]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[29], p[30], p[31], p[32]); });
   g1.wait();
   if (verbose) {
     cerr << " end g1\n";
@@ -747,8 +805,16 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g2.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[6], p[7]); });
   g2.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[11], p[12]); });
   g2.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[10], p[11]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[15], p[16]); });
   g2.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[12], p[13]);
+  g2.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[19], p[20]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[18], p[19]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[23], p[24]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[22], p[23]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[27], p[28]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[26], p[27]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[28], p[29], p[31], p[32]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[29], p[30], p[30], p[31]); });
   g2.wait();
   if (verbose) {
     cerr << " end g2\n";
@@ -761,7 +827,15 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g3.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[12], p[13]); });
   g3.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[13], p[14]); });
   g3.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[11], p[12]);
+  g3.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[15], p[16]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[20], p[21]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[21], p[22]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[22], p[23]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[23], p[24]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[28], p[29]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[29], p[30]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[26], p[27], p[30], p[31]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[27], p[28], p[31], p[32]); });
   g3.wait();
   if (verbose) {
     cerr << " end g3\n";
@@ -773,8 +847,16 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g4.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[6], p[7]); });
   g4.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[13], p[14]); });
   g4.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[12], p[13]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[15], p[16]); });
   g4.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[10], p[11]);
+  g4.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[21], p[22]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[20], p[21]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[23], p[24]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[22], p[23]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[29], p[30]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[28], p[29]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[26], p[27], p[31], p[32]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[27], p[28], p[30], p[31]); });
   g4.wait();
   if (verbose) {
     cerr << " end g4\n";
@@ -785,9 +867,17 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g5.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[4], p[5]); });
   g5.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[5], p[6]); });
   g5.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[14], p[15]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[15], p[16]); });
   g5.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[12], p[13]); });
   g5.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[13], p[14]); });
-  gfp_nearneighbours_diagonal(pool, p[9], p[10]);
+  g5.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[22], p[23]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[23], p[24]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[20], p[21]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[21], p[22]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[30], p[31]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[31], p[32]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[26], p[27], p[28], p[29]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[27], p[28], p[29], p[30]); });
   g5.wait();
   if (verbose) {
     cerr << " end g5\n";
@@ -797,10 +887,18 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g6.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[6], p[7]); });
   g6.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[5], p[6]); });
   g6.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[4], p[5]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[15], p[16]); });
   g6.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[14], p[15]); });
   g6.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[13], p[14]); });
   g6.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[12], p[13]); });
-  gfp_nearneighbours_diagonal(pool, p[8], p[9]);
+  g6.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[23], p[24]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[22], p[23]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[21], p[22]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[20], p[21]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[24], p[25], p[31], p[32]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[25], p[26], p[30], p[31]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[26], p[27], p[29], p[30]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[27], p[28], p[28], p[29]); });
   g6.wait();
   if (verbose) {
     cerr << " end g6\n";
@@ -813,7 +911,15 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g7.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[12], p[13]); });
   g7.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[13], p[14]); });
   g7.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[7], p[8]);
+  g7.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[15], p[16]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[24], p[25]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[25], p[26]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[26], p[27]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[27], p[28]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[28], p[29]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[29], p[30]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[30], p[31]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[31], p[32]); });
   g7.wait();
   if (verbose) {
     cerr << " end g7\n";
@@ -825,8 +931,16 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g8.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[10], p[11]); });
   g8.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[13], p[14]); });
   g8.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[12], p[13]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[15], p[16]); });
   g8.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[14], p[15]); });
-  gfp_nearneighbours_diagonal(pool, p[6], p[7]);
+  g8.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[25], p[26]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[24], p[25]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[27], p[28]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[26], p[27]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[29], p[30]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[28], p[29]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[31], p[32]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[30], p[31]); });
   g8.wait();
   if (verbose) {
     cerr << " end g8\n";
@@ -837,9 +951,17 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g9.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[8], p[9]); });
   g9.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[9], p[10]); });
   g9.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[14], p[15]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[15], p[16]); });
   g9.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[12], p[13]); });
   g9.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[13], p[14]); });
-  gfp_nearneighbours_diagonal(pool, p[5], p[6]);
+  g9.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[26], p[27]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[27], p[28]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[24], p[25]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[25], p[26]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[30], p[31]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[31], p[32]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[28], p[29]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[29], p[30]); });
   g9.wait();
   if (verbose) {
     cerr << " end g9\n";
@@ -849,10 +971,18 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g10.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[10], p[11]); });
   g10.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[9], p[10]); });
   g10.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[8], p[9]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[15], p[16]); });
   g10.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[14], p[15]); });
   g10.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[13], p[14]); });
   g10.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[12], p[13]); });
-  gfp_nearneighbours_diagonal(pool, p[4], p[5]);
+  g10.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[27], p[28]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[26], p[27]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[25], p[26]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[24], p[25]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[31], p[32]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[30], p[31]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[29], p[30]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[28], p[29]); });
   g10.wait();
   if (verbose) {
     cerr << " end g10\n";
@@ -861,11 +991,19 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g11.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[12], p[13]); });
   g11.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[13], p[14]); });
   g11.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[14], p[15]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[15], p[16]); });
   g11.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[8], p[9]); });
   g11.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[9], p[10]); });
   g11.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[10], p[11]); });
   g11.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[11], p[12]); });
-  gfp_nearneighbours_diagonal(pool, p[3], p[4]);
+  g11.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[28], p[29]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[29], p[30]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[30], p[31]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[31], p[32]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[24], p[25]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[25], p[26]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[26], p[27]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[27], p[28]); });
   g11.wait();
   if (verbose) {
     cerr << " end g11\n";
@@ -873,30 +1011,47 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   tbb::task_group g12;
   g12.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[13], p[14]); });
   g12.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[12], p[13]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[15], p[16]); });
   g12.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[14], p[15]); });
   g12.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[9], p[10]); });
   g12.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[8], p[9]); });
   g12.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[11], p[12]); });
   g12.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[10], p[11]); });
-  gfp_nearneighbours_diagonal(pool, p[2], p[3]);
+  g12.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[29], p[30]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[28], p[29]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[31], p[32]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[30], p[31]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[25], p[26]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[24], p[25]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[27], p[28]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[26], p[27]); });
   g12.wait();
   if (verbose) {
     cerr << " end g12\n";
   }
   tbb::task_group g13;
   g13.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[14], p[15]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[15], p[16]); });
   g13.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[12], p[13]); });
   g13.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[13], p[14]); });
   g13.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[10], p[11]); });
   g13.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[11], p[12]); });
   g13.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[8], p[9]); });
   g13.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[9], p[10]); });
-  gfp_nearneighbours_diagonal(pool, p[1], p[2]);
+  g13.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[30], p[31]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[31], p[32]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[28], p[29]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[29], p[30]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[26], p[27]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[27], p[28]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[24], p[25]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[25], p[26]); });
   g13.wait();
   if (verbose) {
     cerr << " end g13\n";
   }
   tbb::task_group g14;
+  g14.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[15], p[16]); });
   g14.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[14], p[15]); });
   g14.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[13], p[14]); });
   g14.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[12], p[13]); });
@@ -904,12 +1059,625 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   g14.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[10], p[11]); });
   g14.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[9], p[10]); });
   g14.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[8], p[9]); });
-  gfp_nearneighbours_diagonal(pool, p[0], p[1]);
+  g14.run([&] { gfp_nearneighbours(pool, p[16], p[17], p[31], p[32]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[17], p[18], p[30], p[31]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[18], p[19], p[29], p[30]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[19], p[20], p[28], p[29]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[20], p[21], p[27], p[28]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[21], p[22], p[26], p[27]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[22], p[23], p[25], p[26]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[23], p[24], p[24], p[25]); });
   g14.wait();
   if (verbose) {
     cerr << " end g14\n";
   }
-  gfp_nearneighbours_diagonal(pool, p[15], p[16]);
+  tbb::task_group g15;
+  g15.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[16], p[17]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[17], p[18]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[18], p[19]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[19], p[20]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[20], p[21]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[21], p[22]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[22], p[23]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[23], p[24]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[24], p[25]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[25], p[26]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[26], p[27]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[27], p[28]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[28], p[29]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[29], p[30]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[30], p[31]); });
+  g15.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[31], p[32]); });
+  g15.wait();
+  if (verbose) {
+    cerr << " end g15\n";
+  }
+  tbb::task_group g16;
+  g16.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[17], p[18]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[16], p[17]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[19], p[20]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[18], p[19]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[21], p[22]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[20], p[21]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[23], p[24]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[22], p[23]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[25], p[26]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[24], p[25]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[27], p[28]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[26], p[27]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[29], p[30]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[28], p[29]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[31], p[32]); });
+  g16.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[30], p[31]); });
+  g16.wait();
+  if (verbose) {
+    cerr << " end g16\n";
+  }
+  tbb::task_group g17;
+  g17.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[18], p[19]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[19], p[20]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[16], p[17]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[17], p[18]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[22], p[23]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[23], p[24]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[20], p[21]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[21], p[22]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[26], p[27]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[27], p[28]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[24], p[25]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[25], p[26]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[30], p[31]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[31], p[32]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[28], p[29]); });
+  g17.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[29], p[30]); });
+  g17.wait();
+  if (verbose) {
+    cerr << " end g17\n";
+  }
+  tbb::task_group g18;
+  g18.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[19], p[20]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[18], p[19]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[17], p[18]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[16], p[17]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[23], p[24]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[22], p[23]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[21], p[22]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[20], p[21]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[27], p[28]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[26], p[27]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[25], p[26]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[24], p[25]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[31], p[32]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[30], p[31]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[29], p[30]); });
+  g18.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[28], p[29]); });
+  g18.wait();
+  if (verbose) {
+    cerr << " end g18\n";
+  }
+  tbb::task_group g19;
+  g19.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[20], p[21]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[21], p[22]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[22], p[23]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[23], p[24]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[16], p[17]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[17], p[18]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[18], p[19]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[19], p[20]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[28], p[29]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[29], p[30]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[30], p[31]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[31], p[32]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[24], p[25]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[25], p[26]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[26], p[27]); });
+  g19.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[27], p[28]); });
+  g19.wait();
+  if (verbose) {
+    cerr << " end g19\n";
+  }
+  tbb::task_group g20;
+  g20.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[21], p[22]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[20], p[21]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[23], p[24]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[22], p[23]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[17], p[18]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[16], p[17]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[19], p[20]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[18], p[19]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[29], p[30]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[28], p[29]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[31], p[32]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[30], p[31]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[25], p[26]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[24], p[25]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[27], p[28]); });
+  g20.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[26], p[27]); });
+  g20.wait();
+  if (verbose) {
+    cerr << " end g20\n";
+  }
+  tbb::task_group g21;
+  g21.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[22], p[23]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[23], p[24]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[20], p[21]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[21], p[22]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[18], p[19]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[19], p[20]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[16], p[17]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[17], p[18]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[30], p[31]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[31], p[32]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[28], p[29]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[29], p[30]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[26], p[27]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[27], p[28]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[24], p[25]); });
+  g21.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[25], p[26]); });
+  g21.wait();
+  if (verbose) {
+    cerr << " end g21\n";
+  }
+  tbb::task_group g22;
+  g22.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[23], p[24]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[22], p[23]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[21], p[22]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[20], p[21]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[19], p[20]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[18], p[19]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[17], p[18]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[16], p[17]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[31], p[32]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[30], p[31]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[29], p[30]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[28], p[29]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[27], p[28]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[26], p[27]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[25], p[26]); });
+  g22.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[24], p[25]); });
+  g22.wait();
+  if (verbose) {
+    cerr << " end g22\n";
+  }
+  tbb::task_group g23;
+  g23.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[24], p[25]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[25], p[26]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[26], p[27]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[27], p[28]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[28], p[29]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[29], p[30]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[30], p[31]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[31], p[32]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[16], p[17]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[17], p[18]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[18], p[19]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[19], p[20]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[20], p[21]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[21], p[22]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[22], p[23]); });
+  g23.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[23], p[24]); });
+  g23.wait();
+  if (verbose) {
+    cerr << " end g23\n";
+  }
+  tbb::task_group g24;
+  g24.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[25], p[26]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[24], p[25]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[27], p[28]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[26], p[27]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[29], p[30]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[28], p[29]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[31], p[32]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[30], p[31]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[17], p[18]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[16], p[17]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[19], p[20]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[18], p[19]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[21], p[22]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[20], p[21]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[23], p[24]); });
+  g24.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[22], p[23]); });
+  g24.wait();
+  if (verbose) {
+    cerr << " end g24\n";
+  }
+  tbb::task_group g25;
+  g25.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[26], p[27]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[27], p[28]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[24], p[25]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[25], p[26]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[30], p[31]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[31], p[32]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[28], p[29]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[29], p[30]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[18], p[19]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[19], p[20]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[16], p[17]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[17], p[18]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[22], p[23]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[23], p[24]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[20], p[21]); });
+  g25.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[21], p[22]); });
+  g25.wait();
+  if (verbose) {
+    cerr << " end g25\n";
+  }
+  tbb::task_group g26;
+  g26.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[27], p[28]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[26], p[27]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[25], p[26]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[24], p[25]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[31], p[32]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[30], p[31]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[29], p[30]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[28], p[29]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[19], p[20]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[18], p[19]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[17], p[18]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[16], p[17]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[23], p[24]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[22], p[23]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[21], p[22]); });
+  g26.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[20], p[21]); });
+  g26.wait();
+  if (verbose) {
+    cerr << " end g26\n";
+  }
+  tbb::task_group g27;
+  g27.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[28], p[29]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[29], p[30]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[30], p[31]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[31], p[32]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[24], p[25]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[25], p[26]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[26], p[27]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[27], p[28]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[20], p[21]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[21], p[22]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[22], p[23]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[23], p[24]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[16], p[17]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[17], p[18]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[18], p[19]); });
+  g27.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[19], p[20]); });
+  g27.wait();
+  if (verbose) {
+    cerr << " end g27\n";
+  }
+  tbb::task_group g28;
+  g28.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[29], p[30]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[28], p[29]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[31], p[32]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[30], p[31]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[25], p[26]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[24], p[25]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[27], p[28]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[26], p[27]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[21], p[22]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[20], p[21]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[23], p[24]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[22], p[23]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[17], p[18]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[16], p[17]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[19], p[20]); });
+  g28.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[18], p[19]); });
+  g28.wait();
+  if (verbose) {
+    cerr << " end g28\n";
+  }
+  tbb::task_group g29;
+  g29.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[30], p[31]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[31], p[32]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[28], p[29]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[29], p[30]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[26], p[27]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[27], p[28]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[24], p[25]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[25], p[26]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[22], p[23]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[23], p[24]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[20], p[21]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[21], p[22]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[18], p[19]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[19], p[20]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[16], p[17]); });
+  g29.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[17], p[18]); });
+  g29.wait();
+  if (verbose) {
+    cerr << " end g29\n";
+  }
+  tbb::task_group g30;
+  g30.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[31], p[32]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[30], p[31]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[29], p[30]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[28], p[29]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[27], p[28]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[26], p[27]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[25], p[26]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[24], p[25]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[23], p[24]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[22], p[23]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[21], p[22]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[20], p[21]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[19], p[20]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[18], p[19]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[17], p[18]); });
+  g30.run([&] { gfp_nearneighbours(pool, p[15], p[16], p[16], p[17]); });
+  g30.wait();
+  if (verbose) {
+    cerr << " end g30\n";
+  }
+  tbb::task_group g32;
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[0], p[1]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[1], p[2]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[2], p[3]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[3], p[4]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[4], p[5]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[5], p[6]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[6], p[7]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[7], p[8]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[8], p[9]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[9], p[10]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[10], p[11]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[11], p[12]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[12], p[13]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[13], p[14]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[14], p[15]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[15], p[16]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[16], p[17]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[17], p[18]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[18], p[19]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[19], p[20]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[20], p[21]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[21], p[22]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[22], p[23]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[23], p[24]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[24], p[25]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[25], p[26]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[26], p[27]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[27], p[28]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[28], p[29]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[29], p[30]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[30], p[31]); });
+  g32.run([&] { gfp_nearneighbours_diagonal(pool, p[31], p[32]); });
+  g32.wait();
+  if (verbose) {
+    cerr << " end g32\n";
+  }
+}
+
+template <typename F>
+void
+gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
+{
+  int p[17];
+  for (int i = 0; i < 16; ++i) {
+    p[i] = (i * pool_size) / 16;
+  }
+
+  p[16] = pool_size;
+
+  // Written by gfp_nearneighbours_single_file_tbb.rb
+  tbb::task_group g0;
+  g0.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[1], p[2]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[3], p[4]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[5], p[6]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[7], p[8]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[9], p[10]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[11], p[12]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[13], p[14]); });
+  g0.run([&] { gfp_nearneighbours(pool, p[14], p[15], p[15], p[16]); });
+  g0.wait();
+  if (verbose) {
+    cerr << " end g0\n";
+  }
+  tbb::task_group g1;
+  g1.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[2], p[3]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[3], p[4]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[6], p[7]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[7], p[8]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[10], p[11]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[11], p[12]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[14], p[15]); });
+  g1.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[15], p[16]); });
+  g1.wait();
+  if (verbose) {
+    cerr << " end g1\n";
+  }
+  tbb::task_group g2;
+  g2.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[3], p[4]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[2], p[3]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[7], p[8]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[6], p[7]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[11], p[12]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[10], p[11]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[12], p[13], p[15], p[16]); });
+  g2.run([&] { gfp_nearneighbours(pool, p[13], p[14], p[14], p[15]); });
+  g2.wait();
+  if (verbose) {
+    cerr << " end g2\n";
+  }
+  tbb::task_group g3;
+  g3.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[4], p[5]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[5], p[6]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[6], p[7]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[7], p[8]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[12], p[13]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[13], p[14]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[14], p[15]); });
+  g3.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[15], p[16]); });
+  g3.wait();
+  if (verbose) {
+    cerr << " end g3\n";
+  }
+  tbb::task_group g4;
+  g4.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[5], p[6]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[4], p[5]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[7], p[8]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[6], p[7]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[13], p[14]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[12], p[13]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[15], p[16]); });
+  g4.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[14], p[15]); });
+  g4.wait();
+  if (verbose) {
+    cerr << " end g4\n";
+  }
+  tbb::task_group g5;
+  g5.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[6], p[7]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[7], p[8]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[4], p[5]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[5], p[6]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[14], p[15]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[15], p[16]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[12], p[13]); });
+  g5.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[13], p[14]); });
+  g5.wait();
+  if (verbose) {
+    cerr << " end g5\n";
+  }
+  tbb::task_group g6;
+  g6.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[7], p[8]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[6], p[7]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[5], p[6]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[4], p[5]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[8], p[9], p[15], p[16]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[9], p[10], p[14], p[15]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[10], p[11], p[13], p[14]); });
+  g6.run([&] { gfp_nearneighbours(pool, p[11], p[12], p[12], p[13]); });
+  g6.wait();
+  if (verbose) {
+    cerr << " end g6\n";
+  }
+  tbb::task_group g7;
+  g7.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[8], p[9]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[9], p[10]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[10], p[11]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[11], p[12]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[12], p[13]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[13], p[14]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[14], p[15]); });
+  g7.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[15], p[16]); });
+  g7.wait();
+  if (verbose) {
+    cerr << " end g7\n";
+  }
+  tbb::task_group g8;
+  g8.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[9], p[10]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[8], p[9]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[11], p[12]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[10], p[11]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[13], p[14]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[12], p[13]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[15], p[16]); });
+  g8.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[14], p[15]); });
+  g8.wait();
+  if (verbose) {
+    cerr << " end g8\n";
+  }
+  tbb::task_group g9;
+  g9.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[10], p[11]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[11], p[12]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[8], p[9]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[9], p[10]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[14], p[15]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[15], p[16]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[12], p[13]); });
+  g9.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[13], p[14]); });
+  g9.wait();
+  if (verbose) {
+    cerr << " end g9\n";
+  }
+  tbb::task_group g10;
+  g10.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[11], p[12]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[10], p[11]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[9], p[10]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[8], p[9]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[15], p[16]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[14], p[15]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[13], p[14]); });
+  g10.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[12], p[13]); });
+  g10.wait();
+  if (verbose) {
+    cerr << " end g10\n";
+  }
+  tbb::task_group g11;
+  g11.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[12], p[13]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[13], p[14]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[14], p[15]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[15], p[16]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[8], p[9]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[9], p[10]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[10], p[11]); });
+  g11.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[11], p[12]); });
+  g11.wait();
+  if (verbose) {
+    cerr << " end g11\n";
+  }
+  tbb::task_group g12;
+  g12.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[13], p[14]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[12], p[13]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[15], p[16]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[14], p[15]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[9], p[10]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[8], p[9]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[11], p[12]); });
+  g12.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[10], p[11]); });
+  g12.wait();
+  if (verbose) {
+    cerr << " end g12\n";
+  }
+  tbb::task_group g13;
+  g13.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[14], p[15]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[15], p[16]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[12], p[13]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[13], p[14]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[10], p[11]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[11], p[12]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[8], p[9]); });
+  g13.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[9], p[10]); });
+  g13.wait();
+  if (verbose) {
+    cerr << " end g13\n";
+  }
+  tbb::task_group g14;
+  g14.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[15], p[16]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[1], p[2], p[14], p[15]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[2], p[3], p[13], p[14]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[3], p[4], p[12], p[13]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[4], p[5], p[11], p[12]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[5], p[6], p[10], p[11]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[6], p[7], p[9], p[10]); });
+  g14.run([&] { gfp_nearneighbours(pool, p[7], p[8], p[8], p[9]); });
+  g14.wait();
+  if (verbose) {
+    cerr << " end g14\n";
+  }
+  tbb::task_group g15;
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[0], p[1]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[1], p[2]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[2], p[3]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[3], p[4]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[4], p[5]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[5], p[6]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[6], p[7]); });
+  g15.run([&] { gfp_nearneighbours_diagonal(pool, p[7], p[8]); });
+  g15.wait();
+  if (verbose) {
+    cerr << " end g15\n";  }
+  tbb::task_group g16;
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[8], p[9]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[9], p[10]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[10], p[11]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[11], p[12]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[12], p[13]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[13], p[14]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[14], p[15]); });
+  g16.run([&] { gfp_nearneighbours_diagonal(pool, p[15], p[16]); });
+  g16.wait();
+  if (verbose) {
+    cerr << " end g16\n";
+  }
 
   return;
 }
@@ -1207,6 +1975,8 @@ gfp_nearneighbours(F* pool, const int pool_size, IWString_and_File_Descriptor& o
     gfp_nearneighbours_parallel8_latin_square(pool, pool_size);
   } else if (16 == nworkers) {
     gfp_nearneighbours_parallel16_latin_square(pool, pool_size);
+  } else if (32 == nworkers) {
+    gfp_nearneighbours_parallel32_latin_square(pool, pool_size);
   } else if (1 == nworkers) {
     gfp_nearneighbours_parallel1(pool, pool_size);
   } else {
@@ -1583,6 +2353,7 @@ usage(int rc)
   cerr << " -y               allow arbitrary distances\n";
   cerr << " -u               include number of neighbours with target identifier\n";
   cerr << " -S <fname>       write nnbr::NearNeighbours TFDataRecord serialized protos to <fname>\n";
+  cerr << " -S indexed       write nnbr::NearNeighboursIndices protos, with neighbour indices\n";
   // cerr << " -C <nthreads>    number of TBB threads to use\n";
   cerr << " -v               verbose output\n";
   // clang-format on
@@ -1628,8 +2399,8 @@ nearneighbours(int argc, char** argv)
   }
 
   if (cl.option_present('h')) {
-    if (! cl.value('h', nworkers) || nworkers < 1 || nworkers > 16) {
-      cerr << "The number of workers (-h) must be one of 1, 2, 3, 4, 6, 8, 16\n";
+    if (! cl.value('h', nworkers) || nworkers < 1 || nworkers > 32) {
+      cerr << "The number of workers (-h) must be one of 1, 2, 3, 4, 6, 8, 16, 32\n";
       return 1;
     }
     if (verbose) {
@@ -1727,13 +2498,36 @@ nearneighbours(int argc, char** argv)
       return 1;
     }
 
-    IWString fname = cl.string_value('S');
+    IWString fname;
+    const_IWSubstring s;
+    for (int i = 0; cl.value('S', s, i); ++i) {
+      if (s == "stdout") {
+        also_write_stdout = 1;
+      } else if (s == "indexed") {
+        write_indexed_tfdata_record = 1;
+      } else {
+        fname = s;
+      }
+    }
+
+    if (fname.empty()) {
+      cerr << "Must specify output file name for TFDataRecord output\n";
+      return 1;
+    }
+
     if (! tfdata_writer.Open(fname)) {
       cerr << "Cannot open stream for TFdataRecord output '" << fname << "'\n";
       return 1;
     }
+
     if (verbose) {
-      cerr << "TFdataRecord protos written to '" << fname << "'\n";
+      cerr << "TFdataRecord protos written to '" << fname << "'";
+      if (write_indexed_tfdata_record) {
+        cerr << " as nnbr::NearNeighboursIndices";
+      } else {
+        cerr << " as nnbr::NearNeighbours";
+      }
+      cerr << '\n';
     }
     write_as_tfdata_record = 1;
   }

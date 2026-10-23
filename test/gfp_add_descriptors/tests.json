@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_add_descriptors",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-D FPADD ${LILLYMOL_HOME}/data/pubchem.gfp ${LILLYMOL_HOME}/data/cleaned_descriptor.txt"
+      ]
+    }
+
+  ]
+}

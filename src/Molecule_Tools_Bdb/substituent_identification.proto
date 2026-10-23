@@ -19,6 +19,19 @@ message Replacements {
   repeated Replacement replacement = 1;
 }
 
+// These are stored in the BerkeleyDB containing the mapping from
+// bit number to smarts.
+message BitSmarts {
+  optional uint32 bit = 1;
+
+  optional uint32 radius = 2;
+
+  optional string smarts = 3;
+
+  // Optional names of molecules that exemplify this bit.
+  repeated string name = 4;
+}
+
 // These are provided as output.
 message Result {
   // the starting molecule

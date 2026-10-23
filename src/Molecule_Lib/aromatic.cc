@@ -837,8 +837,8 @@ Molecule::_determine_aromaticity(const Set_of_Atoms & p,
     else if (3 == jcon && 5 == jbonds)    // if both bonds in ring, not aromatic
     {
       // Look for multiple doubly bonded atoms in the system.
-      atom_number_t double_bond_1_in_system = INVALID_ATOM_NUMBER;
-      atom_number_t double_bond_2_in_system = INVALID_ATOM_NUMBER;
+      atom_number_t double_bond_1_in_system = kInvalidAtomNumber;
+      atom_number_t double_bond_2_in_system = kInvalidAtomNumber;
 
       for (int k = 0; k < jcon; k++)
       {
@@ -852,13 +852,13 @@ Molecule::_determine_aromaticity(const Set_of_Atoms & p,
         if (! p.contains(ak))
           break;
 
-        if (INVALID_ATOM_NUMBER == double_bond_1_in_system)
+        if (kInvalidAtomNumber == double_bond_1_in_system)
           double_bond_1_in_system = ak;
         else
           double_bond_2_in_system = ak;
       }
 
-      if (INVALID_ATOM_NUMBER == double_bond_2_in_system)
+      if (kInvalidAtomNumber == double_bond_2_in_system)
         ;
       else if (in_same_ring(double_bond_1_in_system, double_bond_2_in_system))
       {
@@ -1254,8 +1254,8 @@ Molecule::_determine_aromaticity(const Set_of_Atoms & p, aromaticity_type_t & re
     else if (3 == jcon && 5 == jbonds)    // if both bonds in ring, not aromatic
     {
       // Look for multiple doubly bonded atoms in the system.
-      atom_number_t double_bond_1_in_system = INVALID_ATOM_NUMBER;
-      atom_number_t double_bond_2_in_system = INVALID_ATOM_NUMBER;
+      atom_number_t double_bond_1_in_system = kInvalidAtomNumber;
+      atom_number_t double_bond_2_in_system = kInvalidAtomNumber;
 
       for (int k = 0; k < jcon; k++)
       {
@@ -1269,13 +1269,13 @@ Molecule::_determine_aromaticity(const Set_of_Atoms & p, aromaticity_type_t & re
         if (! p.contains(ak))
           break;
 
-        if (INVALID_ATOM_NUMBER == double_bond_1_in_system)
+        if (kInvalidAtomNumber == double_bond_1_in_system)
           double_bond_1_in_system = ak;
         else
           double_bond_2_in_system = ak;
       }
 
-      if (INVALID_ATOM_NUMBER == double_bond_2_in_system)
+      if (kInvalidAtomNumber == double_bond_2_in_system)
         ;
       else if (in_same_ring(double_bond_1_in_system, double_bond_2_in_system))
       {
@@ -3295,7 +3295,7 @@ Molecule::_compute_aromaticity()
   }
   else
   {
-    set_vector(_aromaticity, _number_elements, NOT_AROMATIC);
+    std::fill_n(_aromaticity, _number_elements, NOT_AROMATIC);
 
     return 1;
   }
@@ -4022,7 +4022,7 @@ Kekule_Temporary_Arrays::establish_smallest_ring_size(Molecule & m)
   assert(_nr == m.nrings());
 
   // the non ring atoms will never be changed, OK
-  set_vector(_smallest_ring_size, m.natoms(), m.natoms());
+  std::fill_n(_smallest_ring_size, m.natoms(), m.natoms());
 
   for (auto i = 0; i < _nr; ++i)
   {
@@ -4111,7 +4111,7 @@ Molecule::_identify_continuation_atom(atom_number_t stop_atom, atom_number_t apr
 
   int acon = a->ncon();
 
-  atom_number_t rc = INVALID_ATOM_NUMBER;
+  atom_number_t rc = kInvalidAtomNumber;
 
   for (int i = 0; i < acon; i++)
   {
@@ -4126,8 +4126,8 @@ Molecule::_identify_continuation_atom(atom_number_t stop_atom, atom_number_t apr
     if (aromatic_atom[j] != aromatic_atom[zatom])
       continue;
 
-    if (INVALID_ATOM_NUMBER != rc)    // already found a match, more than one possibility
-      return INVALID_ATOM_NUMBER;
+    if (kInvalidAtomNumber != rc)    // already found a match, more than one possibility
+      return kInvalidAtomNumber;
 
     rc = j;
   }
@@ -4167,7 +4167,7 @@ Molecule::_must_be_single_bond_between(Kekule_Temporary_Arrays & kta, atom_numbe
        << " continue-> " << continuation_atom << '\n';
 #endif
 
-  if (INVALID_ATOM_NUMBER == continuation_atom)
+  if (kInvalidAtomNumber == continuation_atom)
     return 1;
 
   // Can continuation_atom take a double bond?
@@ -4235,7 +4235,7 @@ Molecule::_must_be_single_bond_between(Kekule_Temporary_Arrays & kta, atom_numbe
   atom_number_t c2 =
       _identify_continuation_atom(stop_atom, zatom, continuation_atom, process_these_atoms);
 
-  if (INVALID_ATOM_NUMBER == c2)
+  if (kInvalidAtomNumber == c2)
     return 1;
 
   return _must_be_single_bond_between(kta, stop_atom, continuation_atom, c2);
@@ -4245,9 +4245,9 @@ int
 Molecule::_is_pyrrole_type_nitrogen(atom_number_t zatom, atom_number_t & a1, atom_number_t & a2,
                                     atom_number_t & a3, const int * process_these_atoms) const
 {
-  a1 = INVALID_ATOM_NUMBER;
-  a2 = INVALID_ATOM_NUMBER;
-  a3 = INVALID_ATOM_NUMBER;
+  a1 = kInvalidAtomNumber;
+  a2 = kInvalidAtomNumber;
+  a3 = kInvalidAtomNumber;
 
   Atom * n = _things[zatom];
 
@@ -4281,22 +4281,22 @@ Molecule::_is_pyrrole_type_nitrogen(atom_number_t zatom, atom_number_t & a1, ato
     if (process_these_atoms[j] != process_these_atoms[zatom])
       continue;
 
-    if (INVALID_ATOM_NUMBER == a1)
+    if (kInvalidAtomNumber == a1)
       a1 = j;
-    else if (INVALID_ATOM_NUMBER == a2)    // 3 connections all in the system
+    else if (kInvalidAtomNumber == a2)    // 3 connections all in the system
       a2 = j;
     else
       a3 = j;
   }
 
-  return INVALID_ATOM_NUMBER != a2;
+  return kInvalidAtomNumber != a2;
 }
 
 int
 Molecule::_is_furan_or_thiophene(atom_number_t zatom, atom_number_t & a1, atom_number_t & a2) const
 {
-  a1 = INVALID_ATOM_NUMBER;
-  a2 = INVALID_ATOM_NUMBER;
+  a1 = kInvalidAtomNumber;
+  a2 = kInvalidAtomNumber;
 
   Atom * o = _things[zatom];
 
@@ -4382,10 +4382,10 @@ Molecule::_is_nitrogen_double_bond_to_something_outside_ring(atom_number_t zatom
 int
 Molecule::_is_aromatic_carbonyl(atom_number_t zatom, atom_number_t & a1, atom_number_t & a2) const
 {
-  a1 = INVALID_ATOM_NUMBER;
-  a2 = INVALID_ATOM_NUMBER;
+  a1 = kInvalidAtomNumber;
+  a2 = kInvalidAtomNumber;
 
-  atom_number_t doubly_bonded_oxygen = INVALID_ATOM_NUMBER;
+  atom_number_t doubly_bonded_oxygen = kInvalidAtomNumber;
 
   const Atom * c = _things[zatom];
 
@@ -4409,13 +4409,13 @@ Molecule::_is_aromatic_carbonyl(atom_number_t zatom, atom_number_t & a1, atom_nu
       if (8 == _things[j]->atomic_number())
         doubly_bonded_oxygen = j;
     }
-    else if (INVALID_ATOM_NUMBER == a1)
+    else if (kInvalidAtomNumber == a1)
       a1 = j;
     else
       a2 = j;
   }
 
-  return INVALID_ATOM_NUMBER != doubly_bonded_oxygen;
+  return kInvalidAtomNumber != doubly_bonded_oxygen;
 }
 
 //#define DEBUG_DO_OBVIOUS_BOND_ORDER_SETTINGS
@@ -4625,7 +4625,7 @@ Molecule::_do_obvious_bond_order_settings(Kekule_Temporary_Arrays & kta)
 
     atom_number_t a1, a2, a3;
 
-    a3 = INVALID_ATOM_NUMBER;
+    a3 = kInvalidAtomNumber;
 
     if (_is_furan_or_thiophene(i, a1, a2))
       ;
@@ -4638,14 +4638,14 @@ Molecule::_do_obvious_bond_order_settings(Kekule_Temporary_Arrays & kta)
 
 #ifdef DEBUG_DO_OBVIOUS_BOND_ORDER_SETTINGS
     cerr << "Atom " << i << " is an aromatic carbonyl, a1=" << a1 << " a2=" << a2;
-    if (INVALID_ATOM_NUMBER != a3)
+    if (kInvalidAtomNumber != a3)
       cerr << " a3 = " << a3;
     cerr << '\n';
 #endif
 
     _must_be_single_bond_between(kta, i, i, a1);
     _must_be_single_bond_between(kta, i, i, a2);
-    if (INVALID_ATOM_NUMBER != a3)
+    if (kInvalidAtomNumber != a3)
       _must_be_single_bond_between(kta, i, i, a3);
   }
 
@@ -5255,12 +5255,12 @@ Molecule::_kekule_arom_test_rings(Kekule_Temporary_Arrays & kta,
   aromaticity_type_t * ra = new aromaticity_type_t[nr];
   std::unique_ptr<aromaticity_type_t[]> free_ra(ra);
 
-  set_vector(ra, nr, AROMATICITY_NOT_DETERMINED);
+  std::fill_n(ra, nr, AROMATICITY_NOT_DETERMINED);
 
   aromaticity_type_t * aa = new aromaticity_type_t[_number_elements];
   std::unique_ptr<aromaticity_type_t[]> free_aa(aa);
 
-  set_vector(aa, _number_elements, AROMATICITY_NOT_DETERMINED);
+  std::fill_n(aa, _number_elements, AROMATICITY_NOT_DETERMINED);
 
   int * pi_e = kta.pi_electrons();
 
@@ -6058,7 +6058,7 @@ Molecule::_identify_kekule_search_starting_atom(Kekule_Temporary_Arrays & kta,
   const int * vary_hcount = kta.vary_hcount();
   const int * vary_bonds = kta.vary_bonds();
 
-  astart = INVALID_ATOM_NUMBER;
+  astart = kInvalidAtomNumber;
 
   int system_size = 0;
 
@@ -6072,15 +6072,15 @@ Molecule::_identify_kekule_search_starting_atom(Kekule_Temporary_Arrays & kta,
       {
         if (0 == _things[i]->formal_charge())    // always prefer a neutral starting atom
           astart = i;
-        else if (INVALID_ATOM_NUMBER == astart)
+        else if (kInvalidAtomNumber == astart)
           astart = i;
       }
-      else if (INVALID_ATOM_NUMBER == astart)
+      else if (kInvalidAtomNumber == astart)
         astart = i;
     }
   }
 
-  assert(INVALID_ATOM_NUMBER != astart);
+  assert(kInvalidAtomNumber != astart);
 
   return system_size;
 }
@@ -6242,7 +6242,7 @@ Molecule::_find_kekule_form_ring_system(Kekule_Temporary_Arrays & kta,
       cerr << "Doing " << (*ri) << " separately\n";
 #endif
 
-      set_vector(process_these_atoms, _number_elements, 0);
+      std::fill_n(process_these_atoms, _number_elements, 0);
 
       ri->set_vector(process_these_atoms, 1);
 
@@ -6264,7 +6264,7 @@ Molecule::_find_kekule_form_ring_system(Kekule_Temporary_Arrays & kta,
   for (int i = 0; i < nr; ++i)
   {
     const Ring * ri = rings[i];
-    set_vector(process_these_atoms, _number_elements, 0);
+    std::fill_n(process_these_atoms, _number_elements, 0);
 
     ri->set_vector(process_these_atoms, 1);
 
@@ -6315,7 +6315,7 @@ Molecule::_find_next_ring_or_ring_system(Kekule_Temporary_Arrays & kta, int flag
 {
   int * process_these_atoms = kta.process_these_atoms();
 
-  set_vector(process_these_atoms, _number_elements, 0);
+  std::fill_n(process_these_atoms, _number_elements, 0);
 
   const int * process_these_rings = kta.process_these_rings();
 
@@ -6512,7 +6512,7 @@ Molecule::_kekule_could_be_aromatic(int * process_these_atoms, int & aromatic_at
     else if (aromatic_chain_bonds_are_ok())
     {
       _convert_any_chain_aromatic_atoms_to_permanent_aromatic(process_these_atoms);
-      set_vector(process_these_atoms, _number_elements, 0);
+      std::fill_n(process_these_atoms, _number_elements, 0);
       return 1;    // that's good!
     }
     else
@@ -8464,14 +8464,11 @@ Molecule::set_bond_types_for_isis_aromaticity_matching()
 
       Bond * b = const_cast<Bond *>(_things[a1]->bond_to_atom(a2));
 
-      Connection * c = b;
-
 #ifdef DEBUG_SET_BOND_TYPES_FOR_ISIS_AROMATICITY_MATCHING
       cerr << "Set bond btw " << a1 << " and " << a2 << '\n';
 #endif
 
-      c->set_bond_type(
-          AROMATIC_BOND);    // use the underlying Connection method so we avoid an OK_BOND_TYPE check
+      b->set_bond_type(AROMATIC_BOND);
     }
 
     rc++;

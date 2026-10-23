@@ -1,0 +1,5 @@
+name: "catechol_1-4"
+query {
+  numeric_value: 50
+  smarts: "[OD1H]-c1:c:c:c(-[OD1]):c:c1"
+}

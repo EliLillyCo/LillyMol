@@ -1,0 +1,12 @@
+(0 Query
+  (A C Comment "CF2CF3")
+  (A I Version 2)
+  # note that any molecule with this group will also get a 20 demerit 
+  # for excessive fluorine atoms
+  (A D numeric_value 40)
+  (A C smarts "F-[CD4](-F)-[CD4](-F)(-F)-F")
+  (0 Environment_no_match
+    (A I single_bond 1)
+    (A C smarts "[CD4](-F)-F")
+  )
+)

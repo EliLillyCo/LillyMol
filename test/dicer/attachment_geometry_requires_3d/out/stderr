@@ -1,0 +1,3 @@
+Attachment geometry requested (-I geom), but molecule 'no_coordinates' does not have 3D coordinates
+dicer:error processing no_coordinates
+Error processing '-'

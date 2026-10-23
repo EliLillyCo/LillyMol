@@ -435,8 +435,6 @@ Molecular_Properties<T>::create_subset(const int * s)
   return;
 }
 
-template void Molecular_Properties<int>::create_subset(const int *);
-
 int
 GFP_Bit_Subset::_do_property_subset (Molecular_Properties_Integer & p) const
 {

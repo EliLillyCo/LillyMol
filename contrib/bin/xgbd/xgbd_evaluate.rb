@@ -5,11 +5,8 @@
 require 'set'
 require 'google/protobuf'
 
-c3tk_home = ENV['C3TK_HOME']
-raise 'C3TK_HOME not defined' unless c3tk_home
-
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
-require "#{c3tk_home}/bin/py/pytk/xgbd/xgboost_model_pb"
+require_relative('../lib/iwcmdline')
+require_relative('xgboost_model_pb')
 
 def usage
 msg = <<-END
@@ -73,7 +70,7 @@ def xgbd_evaluate_smiles(fname, mdir, proto, cl)
     cmd << " -#{d}"
   end
   cmd << " #{fname}"
-  cmd << '|' << evaluate_cmd(mdir '-')
+  cmd << '|' << evaluate_cmd(mdir, '-')
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
 

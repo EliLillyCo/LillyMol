@@ -1,0 +1,77 @@
+{
+  "executable": "jwcats",
+  "test": [
+    {
+      "name": "defaults",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "#{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "comma_separator",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "-o comma #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "tab_separator",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "-o tab #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "no_hydrophobe_pairs",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "-p -m 3 #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "fingerprint_output",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "-J NCATS #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "filter_mode",
+      "preamble": [
+        "CHARGES=${LILLYMOL_HOME}/data/queries/charges/queries",
+        "HBONDS=${LILLYMOL_HOME}/data/queries/hbonds"
+      ],
+      "args": [
+        "-N noremove -N F:${CHARGES} -H noremove ",
+        "-H a=F:${HBONDS}/acceptor -H d=${HBONDS}/donor.qry -H label ",
+        "-J NCATS -f #{indir}/in.tdt"
+      ]
+    }
+  ]
+}

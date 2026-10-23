@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "Foundational/iwmisc/misc.h"
 
 #include "distance_scaling.h"
@@ -40,7 +42,7 @@ Distance_Scaling::build (iwstring_data_source & input)
   if (nullptr == _conv)
   {
     _conv = new float[1001];
-    set_vector(_conv, 1001, static_cast<float>(-1.0));
+    std::fill_n(_conv, 1001, static_cast<float>(-1.0));
   }
 
   const_IWSubstring buffer;

@@ -1,0 +1,73 @@
+{
+  "executable": "gfp_group_spread",
+  "test": [
+    {
+      "name": "one_group",
+      "args": [
+         "-G #{indir}/in.grp #{indir}/in.gfp"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "missing_group",
+      "args": [
+         "-G #{indir}/in.grp #{indir}/in.gfp"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "default_2_groups",
+      "args": [
+         "-G #{indir}/in.gfp #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "default_5_groups",
+      "args": [
+         "-G #{indir}/in.grp #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "5_group_desirable",
+      "args": [
+         "-G #{indir}/in.grp -D #{indir}/in.desirability #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "5_group_desirable_weight",
+      "args": [
+         "-G #{indir}/in.grp -D #{indir}/in.desirability -w desr=0.01 #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "low_internal_diversity_no_weight",
+      "args": [
+         "-G #{indir}/in.grp #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "low_internal_diversity_with_weight",
+      "args": [
+         "-w zero -w intra=1.0 -G #{indir}/in.grp #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "group_as_column",
+      "args": [
+         "-G COL=2 #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "default_5_groups_prev",
+      "args": [
+         "-G #{indir}/in.grp -P #{indir}/prev.dat #{indir}/in.gfp"
+      ]
+    },
+    {
+      "name": "default_5_groups_prev_gfp",
+      "args": [
+         "-G #{indir}/in.grp -P #{indir}/prev.gfp #{indir}/in.gfp"
+      ]
+    }
+  ]
+}

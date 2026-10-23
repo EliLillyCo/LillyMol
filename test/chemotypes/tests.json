@@ -1,0 +1,105 @@
+{
+  "executable": "chemotypes",
+  "test": [
+    {
+      "name": "seed_ring_only",
+      "args": [
+        "-s '[N]' -z i -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "adjacent_ring",
+      "args": [
+        "-s '[c]' -n 1 -z first -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "ties_at_cutoff",
+      "args": [
+        "-s '[c]' -n 1 -t -z first -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "write_parent",
+      "args": [
+        "-s '[N]' -p PARENT -z i -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "write_parent_default",
+      "args": [
+        "-s '[N]' -p def -z i -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "atom_typing_attachments",
+      "args": [
+        "-s '[N]' -P Z -z i -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "ambiguous_query",
+      "preamble": [
+        "cp #{indir}/input.smi input.smi"
+      ],
+      "args": [
+        "-s '[c]' -i smi input.smi"
+      ],
+      "non_zero_rc_expected": true
+    },
+    {
+      "name": "summary_textproto",
+      "args": [
+        "-s '[N]' -z i -i smi -F summary.textproto #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "unique_chemotype_id",
+      "args": [
+        "-s '[N]' -z i -i smi -F summary.textproto -U CT #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "fingerprint_fixed",
+      "args": [
+        "-s '[c]' -J FPCTYPE -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "fingerprint_ec_expand",
+      "args": [
+        "-s '[c]' -J NCCTYPE2 -J EXPAND=1 -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "fingerprint_tdt_filter",
+      "args": [
+        "-s '[c]' -J FPCTYPE -f #{indir}/input.tdt"
+      ]
+    },
+    {
+      "name": "hash_output",
+      "args": [
+        "-s '[N]' -z i -i smi -H def #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "hash_xref",
+      "args": [
+        "-s '[N]' -z i -i smi -H xref=xref.txt #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "complement",
+      "args": [
+        "-s '[N]' -I 99 -C complement  -i smi #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "complement_attached",
+      "args": [
+        "-s '[N]' -I 99 -C complement -u -i smi #{indir}/input.smi"
+      ]
+    }
+  ]
+}

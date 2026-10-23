@@ -244,122 +244,122 @@ TEST_F(TestNMAB, TestBadSmarts3) {
 TEST_F(TestNMAB, EstersMatch) {
   ASSERT_TRUE(_query.create_from_smarts("COC(=O)...C(=O)OC"));
   ASSERT_TRUE(_m.build_from_smiles("COC(=O)CCCCCC(=O)OC"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, EstersNoMatch) {
   ASSERT_TRUE(_query.create_from_smarts("COC(=O)...C(=O)OC"));
   ASSERT_TRUE(_m.build_from_smiles("CC(=O)OCCCCCC(=O)OC"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
 }
 
 TEST_F(TestNMAB, Match1) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1Distance) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{1}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1NoMatchDistance) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{2}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
 }
 
 TEST_F(TestNMAB, Match1NoMatchDistanceLongPath) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{3}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsAll) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsCount) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{1[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsGeater) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{>0[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsLess) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{<3[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cc(O)ccc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsNotAllSame1) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{>0[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cnc(O)cc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsNotAllSame2) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{>0[n]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cnc(O)cc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
   ASSERT_TRUE(_m.build_from_smiles("Oc1ccc(O)nc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsNotAllSame3) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{>0[n],>0[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cnc(O)cc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
   ASSERT_TRUE(_m.build_from_smiles("Oc1ccc(O)nc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsExactCount) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{1[n];1[c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cnc(O)cc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
   ASSERT_TRUE(_m.build_from_smiles("Oc1ccc(O)nc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, Match1MatchSmartsOr) {
   ASSERT_TRUE(_query.create_from_smarts("[OH]-c...{[n,c]}c-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("Oc1cnc(O)cc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
   ASSERT_TRUE(_m.build_from_smiles("Oc1ccc(O)nc1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, AtomsOrSeparation) {
   ASSERT_TRUE(_query.create_from_smarts("O...{>5,>2[C]}O"));
   ASSERT_TRUE(_m.build_from_smiles("ONNNNNNO"));
   _query.set_find_unique_embeddings_only(1);
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1u);
   ASSERT_TRUE(_m.build_from_smiles("OCNCCO"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1u);
 }
 
 TEST_F(TestNMAB, AllRingAtoms) {
   ASSERT_TRUE(_query.create_from_smarts("O...{[R]}O"));
   ASSERT_TRUE(_m.build_from_smiles("ONNNNNNO"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
   ASSERT_TRUE(_m.build_from_smiles("OC1C2C(O)C12"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 TEST_F(TestNMAB, AllRingAtomsButNotBonds) {
   ASSERT_TRUE(_query.create_from_smarts("O...{[R]}O"));
   ASSERT_TRUE(_m.build_from_smiles("OC1CC1C2CC2O"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 2u);
 }
 
 // The reason this was confusing is that I was looking for
@@ -370,26 +370,26 @@ TEST_F(TestNMAB, AllRingAtomsButNotBonds) {
 TEST_F(TestNMAB, ConfusingAtFirst) {
   ASSERT_TRUE(_query.create_from_smarts("C#C...{<4;0[R]}[CX4]-[OH]"));
   ASSERT_TRUE(_m.build_from_smiles("OC1(CCN2CCCC12)C#C"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 1u);
 }
 
 TEST_F(TestNMAB, NoRingAtomsBetween) {
   ASSERT_TRUE(_query.create_from_smarts("[R]-!@*...{1;0[R]}*-!@[R]"));
   ASSERT_TRUE(_m.build_from_smiles("C1CC1CCC1CC1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
 }
 
 TEST_F(TestNMAB, ZeroLengthRegion) {
   ASSERT_TRUE(_query.create_from_smarts("[>0]...{[R]}[>0]"));
   ASSERT_TRUE(_m.build_from_smiles("[1CH3][1CH2]C1CC(F)(F)C1"));
-  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_m, _sresults), 0u);
 
 }
 
 struct ProtoMolMatches {
   std::string proto;
   IWString smiles;
-  int expected;
+  uint32_t expected;
 };
 
 class TestRegionsP: public testing::TestWithParam<ProtoMolMatches> {

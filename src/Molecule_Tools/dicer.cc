@@ -19,8 +19,7 @@
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 
-#include "highwayhash/highwayhash_target.h"
-#include "highwayhash/instruction_sets.h"
+#include "xxhash.h"
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 #define IWQSORT_FO_IMPLEMENTATION
@@ -29,13 +28,16 @@
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/fixed_bit_vector.h"
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/iw_time.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwmisc/sparse_fp_creator.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwstring/string_with_commas.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/atom_typing.h"
@@ -60,6 +62,7 @@
 #include "Molecule_Tools/dicer_lib.h"
 
 using std::cerr;
+using fixed_bit_vector::FixedBitVector;
 
 using dicer_lib::InitialAtomNumber;
 using dicer_lib::is_amide;
@@ -162,6 +165,10 @@ static int work_like_recap = 0;
 
 static int write_diced_molecules = 1;
 
+// Write the original atom on the removed side of each cut, with coordinates,
+// to per-molecule DicedMolecule protos.
+static int write_attachment_geometry = 0;
+
 static Accumulator_Base<clock_t, unsigned long> time_acc;
 
 static int collect_time_statistics = 0;
@@ -180,15 +187,29 @@ static IWString_and_File_Descriptor stream_for_post_breakage;
 
 static int record_presence_and_absence_only = 0;
 
+// A fixed isotope that gets attached at join points.
 static isotope_t isotope_for_join_points = 0;
 
+// As initially implemented, for the MCS tool, this will be a one-time
+// increment of an existing isotopic value.
 static int increment_isotope_for_join_points = 0;
 
+// But if we want the isotopic value to be an indication of how many
+// atoms used to be attached to this atom, we need this setting.
+static int always_increment_isotope = 0;
+
+// These atom types are computed on the starting molecule, before any
+// bonds are broken. Best to only use single atom properties since other
+// atomic properties might change during fragmentation.
 static int apply_atom_type_isotopic_labels = 0;
 
 static int isotopic_label_is_recursion_depth = 0;
 
 static int apply_isotopes_to_complementary_fragments = 0;
+
+// If atom types are computed after bonds are broken, then we can
+// have contexts -P UST:ARZ:3
+static int apply_atom_types_to_fragments = 0;
 
 #define ISO_CF_ATYPE -2
 
@@ -243,6 +264,8 @@ static int reject_breakages_that_result_in_fragments_too_small = 0;
 
 static int write_smiles = 1;
 static int write_parent_smiles = 1;
+
+static Report_Progress report_progress;
 
 // We can write fragments in several forms.
 //   1. classical form, smiles one per line
@@ -434,6 +457,9 @@ static IWString_and_File_Descriptor bit_smiles_cross_reference;
 
 static int allow_cc_bonds_to_break = 0;
 
+// All C-[CD>2] bonds can break.
+static int break_cc_bonds_at_highly_connected = 0;
+
 static int use_terminal_atom_type = 0;
 static int perceive_terminal_groups_only_in_original_molecule =
     0;  // misguided, the terminal status is about the complementary fragment...
@@ -467,8 +493,14 @@ static IWString bbrk_tag;
 static int read_bonds_to_be_broken_from_bbrk_file = 0;
 
 static int check_for_lost_chirality = 0;
+static int chiral_dummy = 0;
 
 static Atom_Typing_Specification atom_typing_specification;
+static IWString atom_typing_specification_string;
+
+// When -C fragatype writes hydrogen complementary fragments, this is the
+// synthetic hydrogen fragment token, for example [3001H].
+static IWString hydrogen_complement_atom_type_token;
 
 static Molecule_Output_Object stream_for_fully_broken_parents;
 
@@ -624,13 +656,17 @@ reset_variables() {
   add_new_strings_to_hash = 1;
   accumulate_starting_parent_information = 0;
   work_like_recap = 0;
+  write_attachment_geometry = 0;
   collect_time_statistics = 0;
   record_presence_and_absence_only = 0;
   isotope_for_join_points = 0;
   increment_isotope_for_join_points = 0;
+  always_increment_isotope = 0;
   apply_atom_type_isotopic_labels = 0;
   isotopic_label_is_recursion_depth = 0;
   apply_isotopes_to_complementary_fragments = 0;
+  apply_atom_types_to_fragments = 0;
+  hydrogen_complement_atom_type_token.resize(0);
   number_by_initial_atom_number = 0;
   apply_environment_isotopic_labels = 0;
   add_environment_atoms = 0;
@@ -651,6 +687,7 @@ reset_variables() {
   vf_structures_per_page = 0;
   write_smiles_and_complementary_smiles = 0;
   allow_cc_bonds_to_break = 0;
+  break_cc_bonds_at_highly_connected = 0;
   use_terminal_atom_type = 0;
   perceive_terminal_groups_only_in_original_molecule = 0;
   change_element_for_heteroatoms_with_hydrogens = 0;
@@ -667,6 +704,7 @@ reset_variables() {
   bbrk_file.resize(0);
   bbrk_tag.resize(0);
   check_for_lost_chirality = 0;
+  chiral_dummy = 0;
   fingerprint_uses_hashed_smiles = 0;
   return;
 }
@@ -860,7 +898,7 @@ Fragments_At_Recursion_Depth::initialise(int k, int b) {
 
   _fragments = new uint64_t[k1 * b1];
 
-  set_vector(_fragments, k1 * b1, static_cast<uint64_t>(0));
+  std::fill_n(_fragments, k1 * b1, static_cast<uint64_t>(0));
 
   _fragments[0] = 1;  // for the recurrence relation, need to initialise something
 
@@ -959,6 +997,20 @@ class Dicer_Arguments {
 
   ff_map _fragments_found_this_molecule;
 
+  struct AttachmentGeometry {
+    uint32_t atom;
+    IWString external_smiles;
+    dicer_data::AttachmentGeometry::BondType bond_type;
+    std::optional<uint32_t> external_atom_type;
+  };
+
+  struct FragmentGeometry {
+    IWString usmi;
+    std::vector<AttachmentGeometry> attachment;
+  };
+
+  std::unordered_map<uint32_t, FragmentGeometry> _fragment_geometry;
+
   //  We need a fragment membership array for every recursion depth.
   //  We just allocate a single array and hand out slices of it
 
@@ -976,13 +1028,12 @@ class Dicer_Arguments {
   //  For each subset found, we generate a bit vector based on the atoms in
   //  the subset. Quick way for determining uniqueness.
 
-  resizable_array_p<IW_Bits_Base> _stored_bit_vectors;
+  resizable_array_p<FixedBitVector> _stored_bit_vectors;
 
-  //  At every step of the recursion, we need to keep track of
-  //  the correspondence between the atom numbers in the fragment
-  //  molecules, and the atom number of that atom in the initial molecule
+  // Parent-to-current atom mapping, with a separate slice per recursive
+  // invocation. Unlike _xref, this remains unchanged while cuts are explored.
 
-  int* _atom_number_in_initial_molecule;
+  int* _parent_to_current;
 
   //  The xref array is used by create_subset()
 
@@ -993,7 +1044,6 @@ class Dicer_Arguments {
   //  member just for efficiency
 
   int* _local_xref;
-  int* _local_xref2;
 
   //  For each pair of atoms (bond) we keep track of the largest example of
   //  that bond from the database
@@ -1007,8 +1057,6 @@ class Dicer_Arguments {
 
   uint32_t* _atom_type;
 
-  uint32_t* _isosave;  // for quickly saving and restoring isotopes. Not implemented.
-
   int _lower_atom_count_cutoff_current_molecule;
   int _upper_atom_count_cutoff_current_molecule;
   int _max_non_ring_atoms;
@@ -1019,31 +1067,44 @@ class Dicer_Arguments {
 
   // private functions
 
-  int _write_fragment_and_complement(Molecule& m, const IW_Bits_Base& b,
+  int _write_fragment_and_complement(Molecule& m, const FixedBitVector& b,
                                      int* subset_specification,
-                                     IWString_and_File_Descriptor& output) const;
+                                     IWString_and_File_Descriptor& output);
   int _write_fragment_and_hydrogen(const Molecule& m, int* subset_specification,
                                    IWString_and_File_Descriptor& output) const;
   int _write_fragment_and_hydrogen(Molecule& m, int* subset_specification,
                                    IWString_and_File_Descriptor& output) const;
-  int _do_apply_isotopes_to_complementary_fragments(Molecule& parent, Molecule& subset,
+  int _do_apply_atom_types_to_fragments(Molecule& parent,
+                        const int* subset_specification,
+                        Molecule& s1, int s1_flag,
+                        Molecule& s2, int s2_flag,
+                        const int* xref);
+  int _do_apply_isotopes_to_complementary_fragments(Molecule& parent,
+                                                    const int* subset_specification,
+                                                    int flag, Molecule& subset,
                                                     const int xref[]) const;
-  int _do_apply_isotopes_to_complementary_fragments(Molecule& parent, Molecule& subset,
-                                                    Molecule& comp) const;
+  int _do_apply_isotopes_to_complementary_fragments(Molecule& parent,
+                                                    const int* subset_specification,
+                                                    int fragment_flag, Molecule& fragment,
+                                                    int comp_flag, Molecule& comp,
+                                                    const int* xref) const;
 
   int _do_apply_isotopes_to_complementary_fragments_canonical(Molecule& parent, int n,
-                                                              Molecule& fragment,
-                                                              Molecule& comp) const;
-  int _is_smallest_fragment(const IW_Bits_Base& b) const;
+                                                              const int* subset_specification,
+                                                              int fragment_flag, Molecule& fragment,
+                                                              int comp_flag, Molecule& comp,
+                                                              const int* xref) const;
+  int _is_smallest_fragment(const FixedBitVector& b) const;
   void _add_new_smiles_to_global_hashes(const IWString& smiles);
+  void CaptureAttachmentGeometry(Molecule& fragment, const IWString& smiles);
 
   int WriteAsProto(Molecule& n, int breakable_bonds, DicerFragmentOutput& output) const;
 
   int ToProto(Molecule& m, int breakable_bonds, dicer_data::DicedMolecule& proto) const;
-  int AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
+  int AppendFragmentAndComplement(Molecule& m, const FixedBitVector& b,
                                   int* subset_specification,
-                                  dicer_data::DicedMolecule& proto) const;
-  int WriteFragmentsAndComplementsProto(Molecule& m, DicerFragmentOutput& output) const;
+                                  dicer_data::DicedMolecule& proto);
+  int WriteFragmentsAndComplementsProto(Molecule& m, DicerFragmentOutput& output);
 
   int MaybeAddToHash(const IWString& smiles);
   int MaybeAddToSmilesHash(const IWString& smiles);
@@ -1138,14 +1199,16 @@ class Dicer_Arguments {
     return _recursion_depth < _max_recursion_depth_this_molecule;
   }
 
+  // process() runs one depth deeper than the invocation that built the map.
   const int*
-  parent_atom_number_in_initial_molecule() const {
-    return _atom_number_in_initial_molecule + (_recursion_depth - 1) * _atoms_in_molecule;
+  parent_to_current_mapping_for_cut() const {
+    assert(_recursion_depth > 0);
+    return _parent_to_current + (_recursion_depth - 1) * _atoms_in_molecule;
   }
 
   int*
-  atom_number_in_initial_molecule() {
-    return _atom_number_in_initial_molecule + _recursion_depth * _atoms_in_molecule;
+  parent_to_current_mapping() {
+    return _parent_to_current + _recursion_depth * _atoms_in_molecule;
   }
 
   int*
@@ -1177,14 +1240,13 @@ class Dicer_Arguments {
 
   int produce_fingerprint(Molecule& m, IWString_and_File_Descriptor& output) const;
 
-  int write_fragments_and_complements(Molecule& m, DicerFragmentOutput& output) const;
+  int write_fragments_and_complements(Molecule& m, DicerFragmentOutput& output);
 
   int store_atom_types(Molecule& m, Atom_Typing_Specification& ats);
 
-  const uint32_t*
-  atom_types() const {
-    return _atom_type;
-  }
+  // Will allocate an empty array if not present. That is needed by the function
+  // that computes atom types on the fragments.
+  uint32_t* atom_types();
 
   int
   fragments_found() const {
@@ -1205,12 +1267,11 @@ Dicer_Arguments::Dicer_Arguments(int mrd) {
 
   _max_recursion_depth_this_molecule = mrd;
 
-  _atom_number_in_initial_molecule = nullptr;
+  _parent_to_current = nullptr;
 
   _xref = nullptr;
 
   _local_xref = nullptr;
-  _local_xref2 = nullptr;
 
   _ring_splitting_attempted = 0;
 
@@ -1237,10 +1298,9 @@ Dicer_Arguments::~Dicer_Arguments() {
     delete[] _local_xref;
   }
 
-  delete[] _local_xref2;
 
-  if (nullptr != _atom_number_in_initial_molecule) {
-    delete[] _atom_number_in_initial_molecule;
+  if (nullptr != _parent_to_current) {
+    delete[] _parent_to_current;
   }
 
   if (nullptr != _atom_type) {
@@ -1256,11 +1316,7 @@ Dicer_Arguments::set_array_size(int s) {
 
   _atoms_in_molecule = s;
 
-  if (0 == _atoms_in_molecule % IW_BITS_PER_WORD) {
-    _nbits = _atoms_in_molecule;
-  } else {
-    _nbits = (_atoms_in_molecule / IW_BITS_PER_WORD + 1) * IW_BITS_PER_WORD;
-  }
+  _nbits = ((_atoms_in_molecule + 63) / 64) * 64;
 
   // In many of the arrays, level 0 never gets used, so the arrays need to
   // be one larger than the max recursion depth
@@ -1276,20 +1332,22 @@ Dicer_Arguments::set_array_size(int s) {
 
   // cerr << "array_size " << array_size << '\n';
 
-  _atom_number_in_initial_molecule = new int[array_size];
-
-  // Set the first chunk of the atom number array
-
-  for (int i = 0; i < s; i++) {
-    _atom_number_in_initial_molecule[i] = i;
-  }
+  _parent_to_current = new int[array_size];
 
   _xref = new_int(array_size, -1);
 
   _local_xref = new int[_atoms_in_molecule];
-  _local_xref2 = new int[_atoms_in_molecule];
 
   return (nullptr != _xref && nullptr != _local_xref);
+}
+
+uint32_t*
+Dicer_Arguments::atom_types() {
+  if (_atom_type == nullptr) {
+    _atom_type = new uint32_t[_atoms_in_molecule];
+  }
+
+  return _atom_type;
 }
 
 int
@@ -1318,7 +1376,9 @@ initialise_xref(const Molecule& m, const Dicer_Arguments& dicer_args, int* xref)
   for (int i = 0; i < matoms; ++i) {
     std::optional<atom_number_t> x = InitialAtomNumber(m.atomi(i));
 
-    xref[*x] = i;
+    if (x) {
+      xref[*x] = i;
+    }
   }
 
   return;
@@ -1508,6 +1568,9 @@ Chain_Bond_Breakage::_write_bonds_to_be_broken(std::ostream& os) const {
 
 int
 Chain_Bond_Breakage::_break_bonds(Molecule& m) const {
+  if (chiral_dummy) [[unlikely]] {
+    return dicer_lib::BreakBondWithChiralDummies(m, _a1, _a2);
+  }
   m.remove_bond_between_atoms(_a1, _a2);
 
   return 1;
@@ -2377,11 +2440,93 @@ Dicer_Arguments::contains_fragment(Molecule& m) {
     do_check_for_lost_chirality(m);
   }
 
-  if (fragments_indexed_by_unique_smiles) {
-    return MaybeAddToHash(m.unique_smiles());
-  } else {
-    return MaybeAddToHash(m.smiles());
+  const IWString& smiles =
+      fragments_indexed_by_unique_smiles ? m.unique_smiles() : m.smiles();
+  const int rc = MaybeAddToHash(smiles);
+  if (write_attachment_geometry) {
+    CaptureAttachmentGeometry(m, smiles);
   }
+  return rc;
+}
+
+static dicer_data::AttachmentGeometry::BondType
+ProtoBondType(const Bond& bond) {
+  if (bond.is_aromatic()) {
+    return dicer_data::AttachmentGeometry::BOND_AROMATIC;
+  } else if (bond.is_triple_bond()) {
+    return dicer_data::AttachmentGeometry::BOND_TRIPLE;
+  } else if (bond.is_double_bond()) {
+    return dicer_data::AttachmentGeometry::BOND_DOUBLE;
+  } else if (bond.is_single_bond()) {
+    return dicer_data::AttachmentGeometry::BOND_SINGLE;
+  }
+  return dicer_data::AttachmentGeometry::BOND_UNSPECIFIED;
+}
+
+void
+Dicer_Arguments::CaptureAttachmentGeometry(Molecule& fragment, const IWString& smiles) {
+  const auto iter = smiles_to_id.find(smiles);
+  if (iter == smiles_to_id.end() ||
+      _fragment_geometry.find(iter->second) != _fragment_geometry.end()) {
+    return;
+  }
+
+  FragmentGeometry geometry;
+
+  // Generate a topology-only key while leaving the coordinate-bearing fragment
+  // smiles and the process-wide smiles setting unchanged.
+  Molecule topology(fragment);
+  const int include_coordinates = lillymol::include_coordinates_with_smiles();
+  lillymol::set_include_coordinates_with_smiles(0);
+  geometry.usmi = topology.unique_smiles();
+  lillymol::set_include_coordinates_with_smiles(include_coordinates);
+
+  const resizable_array<atom_number_t>& atom_order = topology.atom_order_in_smiles();
+  std::vector<uint32_t> canonical_atom(fragment.natoms());
+  for (int i = 0; i < atom_order.number_elements(); ++i) {
+    canonical_atom[atom_order[i]] = i;
+  }
+
+  std::vector<int> parent_to_fragment(_atoms_in_molecule, -1);
+  for (int i = 0; i < fragment.natoms(); ++i) {
+    if (const std::optional<atom_number_t> parent = InitialAtomNumber(fragment.atomi(i));
+        parent && *parent < _atoms_in_molecule) {
+      parent_to_fragment[*parent] = i;
+    }
+  }
+
+  for (int parent_atom = 0; parent_atom < _atoms_in_molecule; ++parent_atom) {
+    const int fragment_atom = parent_to_fragment[parent_atom];
+    if (fragment_atom < 0) {
+      continue;
+    }
+    for (const Bond* bond : _current_molecule->atom(parent_atom)) {
+      const atom_number_t external_atom = bond->other(parent_atom);
+      if (parent_to_fragment[external_atom] >= 0) {
+        continue;
+      }
+
+      Molecule external;
+      // The pointer constructor copies atom attributes but not its parent bonds.
+      external.add(new Atom(_current_molecule->atomi(external_atom)));
+      std::optional<uint32_t> external_atom_type;
+      if (atom_typing_specification.active() && _atom_type != nullptr) {
+        external_atom_type = _atom_type[external_atom];
+        external.set_isotope(0, *external_atom_type);
+      } else {
+        external.set_isotope(0, 0);
+      }
+      geometry.attachment.push_back(AttachmentGeometry{
+          canonical_atom[fragment_atom], external.smiles(), ProtoBondType(*bond),
+          external_atom_type});
+    }
+  }
+
+  std::sort(geometry.attachment.begin(), geometry.attachment.end(),
+            [](const AttachmentGeometry& lhs, const AttachmentGeometry& rhs) {
+              return lhs.atom < rhs.atom;
+            });
+  _fragment_geometry.emplace(iter->second, std::move(geometry));
 }
 
 int
@@ -2426,25 +2571,17 @@ Dicer_Arguments::MaybeAddToHash(const IWString& smiles) {
 
 // We are using hashed smiles as bit numbers, so a lot of the global hashes
 // do not need to be updated.
-// Note that we do a very bad thing by taking the first 32 bits of the
-// highwayhash result. That is always a bad idea, but it is expected to be
-// OK for this use.
 int
 Dicer_Arguments::MaybeAddToSmilesHash(const IWString& smiles) {
-  using highwayhash::HHKey;
-  using highwayhash::HighwayHash;
-  using highwayhash::InstructionSets;
 
-  HH_ALIGNAS(32) const HHKey key = {55, 66, 77, 88};
-  highwayhash::HHResult64 result;
-  InstructionSets::Run<HighwayHash>(key, smiles.data(), smiles.length(), &result);
+  static constexpr uint32_t kSeed = 3177520567;
 
-  // Improper treatment of hash result;
-  const uint32_t* h = reinterpret_cast<const uint32_t*>(&result);
+  const XXH32_hash_t h = XXH32(smiles.data(), smiles.length(), kSeed);
+  // cerr << smiles << " hash " << h << '\n';
 
-  auto iter = _fragments_found_this_molecule.find(*h);
+  auto iter = _fragments_found_this_molecule.find(h);
   if (iter == _fragments_found_this_molecule.end()) {
-    _fragments_found_this_molecule[*h] = 1;
+    _fragments_found_this_molecule[h] = 1;
   } else {
     ++iter->second;
   }
@@ -2460,7 +2597,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
   cerr << "Examining '" << m.smiles() << "'\n";
 #endif
 
-  IW_Bits_Base* b = new IW_Bits_Base(_nbits);
+  FixedBitVector* b = new FixedBitVector(_nbits);
 
   for (const Atom* a : m) {
     std::optional<atom_number_t> x = InitialAtomNumber(a);
@@ -2468,7 +2605,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
       continue;
     }
 
-    b->set(*x);
+    b->set_bit(*x);
   }
 
   // assert (b->nset() == matoms);    if we have added environment atoms, this will not be
@@ -2476,7 +2613,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
 
 #ifdef DEBUG_BIT_COMPARISONS
   cerr << "Formed bit   ";
-  b->printon(cerr);
+  b->PrintOn(cerr);
   cerr << '\n';
 #endif
 
@@ -2485,7 +2622,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
   for (int i = 0; i < n; i++) {
 #ifdef DEBUG_BIT_COMPARISONS
     cerr << "Compare with ";
-    _stored_bit_vectors[i]->printon(cerr);
+    _stored_bit_vectors[i]->PrintOn(cerr);
     cerr << " ? " << ((*b) == (*(_stored_bit_vectors[i]))) << '\n';
 #endif
 
@@ -2580,6 +2717,11 @@ Dicer_Arguments::ToProto(Molecule& m, int breakable_bonds,
   }
   proto.set_natoms(m.natoms());
   proto.set_nbonds(breakable_bonds);
+  if (atom_typing_specification.active() &&
+      atom_typing_specification_string.length()) {
+    proto.set_atom_typing(atom_typing_specification_string.data(),
+                          atom_typing_specification_string.length());
+  }
 
   for (const auto& [fragment_number, count] : _fragments_found_this_molecule) {
     const IWString* s = id_to_smiles[fragment_number];
@@ -2589,6 +2731,23 @@ Dicer_Arguments::ToProto(Molecule& m, int breakable_bonds,
     frag->set_nat(lillymol::count_atoms_in_smiles(*s));
     frag->set_n(count);
     frag->set_id(fragment_number);
+    if (write_attachment_geometry) {
+      const auto iter = _fragment_geometry.find(fragment_number);
+      if (iter == _fragment_geometry.end()) {
+        continue;
+      }
+      frag->set_usmi(iter->second.usmi.data(), iter->second.usmi.length());
+      for (const AttachmentGeometry& geometry : iter->second.attachment) {
+        dicer_data::AttachmentGeometry* attachment = frag->add_attachment();
+        attachment->set_atom(geometry.atom);
+        attachment->set_ext(geometry.external_smiles.data(),
+                            geometry.external_smiles.length());
+        attachment->set_btype(geometry.bond_type);
+        if (geometry.external_atom_type) {
+          attachment->set_external_atom_type(*geometry.external_atom_type);
+        }
+      }
+    }
   }
 
   return 1;
@@ -2632,9 +2791,7 @@ Dicer_Arguments::produce_fingerprint(Molecule& m,
 int
 Dicer_Arguments::store_atom_types(Molecule& m, Atom_Typing_Specification& ats) {
   if (nullptr == _atom_type) {
-    const int matoms = m.natoms();
-
-    _atom_type = new uint32_t[matoms];
+    _atom_type = new uint32_t[m.natoms()];
   }
 
   return ats.assign_atom_types(m, _atom_type);
@@ -3632,13 +3789,24 @@ do_apply_atomic_number_isotopic_labels(Molecule& m, const atom_number_t j1,
   return m.set_isotope(j1, z2);
 }
 
+static int
+MaybeIncrementIsotope(Molecule& m, atom_number_t zatom) {
+  isotope_t iso = m.isotope(zatom);
+  if (always_increment_isotope) {
+    return m.set_isotope(zatom, iso + increment_isotope_for_join_points);
+  }
+
+  if (iso >= static_cast<isotope_t>(increment_isotope_for_join_points)) {
+    return 0;
+  }
+
+  return m.set_isotope(zatom, iso + increment_isotope_for_join_points);
+}
 static void
 do_apply_isotopic_labels(Molecule& m, const atom_number_t a1, const atom_number_t a2) {
   if (increment_isotope_for_join_points) {
-    m.set_isotope(
-        a1, m.isotope(a1) + increment_isotope_for_join_points + isotope_for_join_points);
-    m.set_isotope(
-        a2, m.isotope(a2) + increment_isotope_for_join_points + isotope_for_join_points);
+    MaybeIncrementIsotope(m, a1);
+    MaybeIncrementIsotope(m, a2);
   } else {
     m.set_isotope(a1, isotope_for_join_points);
     m.set_isotope(a2, isotope_for_join_points);
@@ -3909,6 +4077,14 @@ IdentifyEnvironment(Molecule& m, const atom_number_t zatom) {
     return Env::kTerminal;
   }
 
+#ifdef DEBUG_IDENTIFYENVIRONMENT
+  m.compute_aromaticity_if_needed();
+  write_isotopically_labelled_smiles(m, true, cerr);
+  cerr << '\n';
+  cerr << "IdentifyEnvironment " << zatom << " " << m.smarts_equivalent_for_atom(zatom) << '\n';
+  cerr << m.aromatic_smiles() << " aromatic " << m.is_aromatic(zatom) << '\n';
+#endif
+
   if (m.is_aromatic(zatom)) {
     return Env::kAromatic;
   }
@@ -3998,13 +4174,32 @@ ApplyAtomTypeIsotopicLabel(Molecule& m, const atom_number_t j1, const atom_numbe
   m.set_isotope(j1, atype[j2]);
 }
 
+// Bonds have been broken, compute atom types on the fragments and store with the
+// complementary atom.
+static int
+ApplyFragmentAtomTypeIsotopes(Molecule& m, atom_number_t a1, atom_number_t a2, 
+                Atom_Typing_Specification& atom_typing_specification,
+                Dicer_Arguments& dicer_args) {
+  uint32_t* atype = dicer_args.atom_types();
+
+  atom_typing_specification.assign_atom_types(m, atype);
+  m.set_isotope(a1, atype[a2]);
+  m.set_isotope(a2, atype[a1]);
+
+  return 1;
+}
+
 int
 set_isotopes_if_needed(Molecule& m, atom_number_t j1, atom_number_t j2,
-                       const Dicer_Arguments& dicer_args) {
+                       Dicer_Arguments& dicer_args) {
   if (isotope_for_join_points > 0 || increment_isotope_for_join_points) {
     do_apply_isotopic_labels(m, j1, j2);
 
     return 1;
+  }
+
+  if (apply_atom_types_to_fragments) {
+    return ApplyFragmentAtomTypeIsotopes(m, j1, j2, atom_typing_specification, dicer_args);
   }
 
   if (apply_environment_isotopic_labels) {
@@ -4045,7 +4240,14 @@ set_isotopes_if_needed(Molecule& m, atom_number_t j1, atom_number_t j2,
 }
 
 int
-Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
+Breakages::do_recap(Molecule& parent, Dicer_Arguments& dicer_args) const {
+  // Keep the normal in-place path. Caps cannot be undone by restoring bonds,
+  // so only the optional mode needs a working copy.
+  std::unique_ptr<Molecule> capped;
+  if (chiral_dummy) [[unlikely]] {
+    capped = std::make_unique<Molecule>(parent);
+  }
+  Molecule& m = capped ? *capped : parent;
   const int n = _transformations.number_elements();
 
   for (int i = 0; i < n; i++) {
@@ -4064,7 +4266,13 @@ Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
       continue;
     }
 
-    m.remove_bond_between_atoms(a0, a1);
+    if (chiral_dummy) [[unlikely]] {
+      if (!dicer_lib::BreakBondWithChiralDummies(m, a0, a1)) {
+        continue;
+      }
+    } else {
+      m.remove_bond_between_atoms(a0, a1);
+    }
 
     set_isotopes_if_needed(m, a0, a1, dicer_args);
   }
@@ -4082,6 +4290,10 @@ Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
     }
 
     dicer_args.is_unique(ci);
+  }
+
+  if (chiral_dummy) [[unlikely]] {
+    return 1;
   }
 
   // Now put things back together. Not sure this is necessary...
@@ -4167,7 +4379,7 @@ Breakages::identify_symmetry_exclusions(Molecule& m) {
 }
 
 int
-Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base& b) const {
+Dicer_Arguments::_is_smallest_fragment(const FixedBitVector& b) const {
   int n = _stored_bit_vectors.number_elements();
 
   for (int i = 0; i < n; i++) {
@@ -4175,7 +4387,7 @@ Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base& b) const {
       continue;
     }
 
-    if (b.is_subset(*_stored_bit_vectors[i])) {
+    if (b.ContainsSubset(*_stored_bit_vectors[i])) {
       return 0;
     }
   }
@@ -4185,7 +4397,7 @@ Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base& b) const {
 
 int
 Dicer_Arguments::write_fragments_and_complements(Molecule& m,
-                                                 DicerFragmentOutput& output) const {
+                                                 DicerFragmentOutput& output) {
   if (output.output_is_proto()) {
     return WriteFragmentsAndComplementsProto(m, output);
   }
@@ -4198,7 +4410,7 @@ Dicer_Arguments::write_fragments_and_complements(Molecule& m,
   // cerr << "Writing " << n << " stored bit vectors\n";
 
   for (int i = 0; i < n; i++) {
-    const IW_Bits_Base* b = _stored_bit_vectors[i];
+    const FixedBitVector* b = _stored_bit_vectors[i];
 
     assert(b->nbits() > 0);
 
@@ -4218,7 +4430,7 @@ Dicer_Arguments::write_fragments_and_complements(Molecule& m,
 
 int
 Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule& m,
-                                                   DicerFragmentOutput& output) const {
+                                                   DicerFragmentOutput& output) {
   std::unique_ptr<int[]> tmp1 = std::make_unique<int[]>(_nbits);
 
   dicer_data::DicedMolecule proto;
@@ -4230,7 +4442,7 @@ Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule& m,
   // We do not know the number of breakable bonds here.
   // proto.set_nbonds(breakable_bonds);
 
-  for (const IW_Bits_Base* b : _stored_bit_vectors) {
+  for (const FixedBitVector* b : _stored_bit_vectors) {
     assert(b->nbits() > 0);
 
     if (write_only_smallest_fragment && (!_is_smallest_fragment(*b))) {
@@ -4243,16 +4455,26 @@ Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule& m,
   return output.Write(proto);
 }
 
+static int
+ParentAtomInFragment(int atom, const int xref[], const int* subset_specification, int flag) {
+  if (subset_specification == nullptr) {
+    return xref[atom] >= 0;
+  }
+
+  return subset_specification[atom] == flag;
+}
+
 static void
 dump_iw_atom_type(Molecule& frag, const Molecule& comp, const int parent_atoms,
                   const int xref[], const uint32_t atypes[],
-                  IWString_and_File_Descriptor& output) {
+                  IWString_and_File_Descriptor& output,
+                  const int* subset_specification = nullptr, int flag = 0) {
   // Molecule mcopy(comp);
   // cerr << "dump_iw_atom_type  processing " << frag.smiles() << " and comp " <<
   // mcopy.smiles() << '\n';
   IWString v[10];
   for (int i = 0; i < parent_atoms; ++i) {
-    if (xref[i] < 0) {
+    if (! ParentAtomInFragment(i, xref, subset_specification, flag)) {
       continue;
     }
 
@@ -4312,13 +4534,14 @@ dump_iw_atom_type(Molecule& frag, const Molecule& comp, const int parent_atoms,
 static void
 dump_atom_type(Molecule& frag, const Molecule& comp, const int parent_atoms,
                const int xref[], const uint32_t atypes[],
-               IWString_and_File_Descriptor& output) {
+               IWString_and_File_Descriptor& output,
+               const int* subset_specification = nullptr, int flag = 0) {
   if (atypes == nullptr) {
     return;
   }
 
   if (ISO_CF_ATYPE == apply_isotopes_to_complementary_fragments) {
-    dump_iw_atom_type(frag, comp, parent_atoms, xref, atypes, output);
+    dump_iw_atom_type(frag, comp, parent_atoms, xref, atypes, output, subset_specification, flag);
     return;
   }
 
@@ -4331,7 +4554,7 @@ dump_atom_type(Molecule& frag, const Molecule& comp, const int parent_atoms,
 
   IWString v[10];
   for (int i = 0; i < parent_atoms; ++i) {
-    if (xref[i] != -1) {
+    if (ParentAtomInFragment(i, xref, subset_specification, flag)) {
       const Atom& atom_i = comp.atom(xref[i]);
       uint32_t atype = atypes[i];
       if (atype > static_cast<uint32_t>(NUMBER_OF_SYBYL_TYPES)) {
@@ -4393,16 +4616,16 @@ Dicer_Arguments::_write_fragment_and_hydrogen(
       continue;
     }
 
-    output << '[';
-
     Molecule s1;
     m.create_subset(s1, subset_specification, 1, _local_xref);
-    if (apply_isotopes_to_complementary_fragments > 0) {
+    if (apply_atom_types_to_fragments) {
+      output << hydrogen_complement_atom_type_token;
+    } else if (apply_isotopes_to_complementary_fragments > 0) {
       s1.set_isotope(_local_xref[i], apply_isotopes_to_complementary_fragments);
-      output << apply_isotopes_to_complementary_fragments << "H]";
+      output << '[' << apply_isotopes_to_complementary_fragments << "H]";
     } else if (apply_isotopes_to_complementary_fragments < 0) {
       s1.set_isotope(_local_xref[i], 1);
-      output << "1H]";
+      output << "[1H]";
     }
 
     output << ' ' << m.name();
@@ -4437,8 +4660,8 @@ Dicer_Arguments::_write_fragment_and_hydrogen(
 
 int
 Dicer_Arguments::_write_fragment_and_complement(
-    Molecule& m, const IW_Bits_Base& b, int* subset_specification,
-    IWString_and_File_Descriptor& output) const {
+    Molecule& m, const FixedBitVector& b, int* subset_specification,
+    IWString_and_File_Descriptor& output) {
   const int matoms = m.natoms();
 
   assert(b.nbits() >= matoms);
@@ -4447,13 +4670,14 @@ Dicer_Arguments::_write_fragment_and_complement(
     return 1;
   }
 
-  if (!ok_atom_count(b.nset())) {
+  if (!chiral_dummy && !ok_atom_count(b.nset())) {
     return 0;
   }
 
-  std::fill_n(subset_specification, matoms, 0);
-
-  b.set_vector(subset_specification);
+  // Copy only real parent atoms, excluding the fixed vector's zero padding.
+  for (int i = 0; i < matoms; ++i) {
+    subset_specification[i] = b.is_set(i);
+  }
 
   // cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   // cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification,
@@ -4471,25 +4695,36 @@ Dicer_Arguments::_write_fragment_and_complement(
   }
 #endif
 
-  Molecule s1;
-  m.create_subset(s1, subset_specification, 1, _local_xref);
-
-  Molecule s2;
-  m.create_subset(s2, subset_specification, 0, _local_xref2);
+  Molecule s1, s2;
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::CreateChiralDummySubsets(m, subset_specification, s1, s2, _local_xref) ||
+        !ok_atom_count(s1.natoms())) {
+      return 1;
+    }
+  } else {
+    m.create_subsets(subset_specification, s2, s1, _local_xref);
+  }
 
   // cerr << "Subsets " << s1.smiles() << " and " << s2.smiles() << "
   // apply_isotopes_to_complementary_fragments " <<
   // apply_isotopes_to_complementary_fragments << '\n';
 
   if (apply_isotopes_to_complementary_fragments > 0) {
-    _do_apply_isotopes_to_complementary_fragments(m, s1, _local_xref);
-    _do_apply_isotopes_to_complementary_fragments(m, s2, _local_xref2);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 1, s1, _local_xref);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 0, s2, _local_xref);
   } else if (apply_isotopes_to_complementary_fragments < 0) {
-    _do_apply_isotopes_to_complementary_fragments(m, s1, s2);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 1, s1, 0, s2, _local_xref);
+  } else if (apply_atom_types_to_fragments) {
+    _do_apply_atom_types_to_fragments(m, subset_specification, s1, 1, s2, 0, _local_xref);
   }
 
   // cerr << "LINE " << __LINE__ << " have " << s1.smiles() << " and " << s2.smiles() <<
   // '\n';
+
+  if (chiral_dummy && check_for_lost_chirality) [[unlikely]] {
+    do_check_for_lost_chirality(s1);
+    do_check_for_lost_chirality(s2);
+  }
 
   output << s1.unique_smiles() << ' ' << m.name();
 
@@ -4499,13 +4734,13 @@ Dicer_Arguments::_write_fragment_and_complement(
   }
 
   if (apply_isotopes_to_complementary_fragments == -1) {
-    dump_atom_type(s1, s2, matoms, _local_xref2, _atom_type, output);
+    dump_atom_type(s1, s2, matoms, _local_xref, _atom_type, output, subset_specification, 0);
   }
 
   output << ' ' << s2.unique_smiles() << " COMP " << m.name();
 
   if (apply_isotopes_to_complementary_fragments < 0) {
-    dump_atom_type(s2, s1, matoms, _local_xref, _atom_type, output);
+    dump_atom_type(s2, s1, matoms, _local_xref, _atom_type, output, subset_specification, 1);
   }
 
   if (append_atom_count) {
@@ -4524,9 +4759,9 @@ Dicer_Arguments::_write_fragment_and_complement(
 // to an array.
 // Maybe should try to share code with _write_fragment_and_complement
 int
-Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
+Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const FixedBitVector& b,
                                              int* subset_specification,
-                                             dicer_data::DicedMolecule& proto) const {
+                                             dicer_data::DicedMolecule& proto) {
   const int matoms = m.natoms();
 
   assert(b.nbits() >= matoms);
@@ -4535,23 +4770,28 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
     return 1;
   }
 
-  if (!ok_atom_count(b.nset())) {
+  if (!chiral_dummy && !ok_atom_count(b.nset())) {
     return 0;
   }
 
-  std::fill_n(subset_specification, matoms, 0);
-
-  b.set_vector(subset_specification);
+  // Copy only real parent atoms, excluding the fixed vector's zero padding.
+  for (int i = 0; i < matoms; ++i) {
+    subset_specification[i] = b.is_set(i);
+  }
 
   // cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   // cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification,
   // matoms) << " atoms\n";
 
-  Molecule s1;
-  m.create_subset(s1, subset_specification, 1, _local_xref);
-
-  Molecule s2;
-  m.create_subset(s2, subset_specification, 0, _local_xref2);
+  Molecule s1, s2;
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::CreateChiralDummySubsets(m, subset_specification, s1, s2, _local_xref) ||
+        !ok_atom_count(s1.natoms())) {
+      return 1;
+    }
+  } else {
+    m.create_subsets(subset_specification, s2, s1, _local_xref);
+  }
 
   if (upper_atom_count_cutoff_complementary_fragment > 0 &&
       s2.natoms() > upper_atom_count_cutoff_complementary_fragment) {
@@ -4559,10 +4799,17 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
   }
 
   if (apply_isotopes_to_complementary_fragments > 0) {
-    _do_apply_isotopes_to_complementary_fragments(m, s1, _local_xref);
-    _do_apply_isotopes_to_complementary_fragments(m, s2, _local_xref2);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 1, s1, _local_xref);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 0, s2, _local_xref);
   } else if (apply_isotopes_to_complementary_fragments < 0) {
-    _do_apply_isotopes_to_complementary_fragments(m, s1, s2);
+    _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 1, s1, 0, s2, _local_xref);
+  } else if (apply_atom_types_to_fragments) {
+    _do_apply_atom_types_to_fragments(m, subset_specification, s1, 1, s2, 0, _local_xref);
+  }
+
+  if (chiral_dummy && check_for_lost_chirality) [[unlikely]] {
+    do_check_for_lost_chirality(s1);
+    do_check_for_lost_chirality(s2);
   }
 
   dicer_data::DicerFragment* frag = proto.add_fragment();
@@ -4578,48 +4825,56 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
   return 1;
 }
 
-/*
-   We have generated two complementary fragments. The _local_xref array
-   contains the cross reference from initial atom numbers
- */
-
-#ifdef VERSION_USING_ATOMS_RATHER_THAN_BONDS
+// `parent` has been divided into fragments `s1` and `s2`.
+// `xref` maps each parent atom to its atom number in whichever fragment contains it.
+// `subset` identifies which fragment contains each parent atom.
 int
-Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule& parent,
-                                                               Molecule& subset,
-                                                               const int xref[]) const {
-  const int matoms = parent.natoms();
+Dicer_Arguments::_do_apply_atom_types_to_fragments(Molecule& parent,
+                        const int* subset,
+                        Molecule& s1, int s1_flag,
+                        Molecule& s2, int s2_flag,
+                        const int* xref) {
 
-  for (int i = 0; i < matoms; i++) {
-    if (xref[i] < 0) {  // atom I not part of subset
+  uint32_t* at1 = atom_types();
+
+  atom_typing_specification.assign_atom_types(s1, at1);
+
+  uint32_t* at2 = at1 + s1.natoms();
+  atom_typing_specification.assign_atom_types(s2, at2);
+
+  for (const Bond* b : parent.bond_list()) {
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+    if (subset[a1] == subset[a2]) {  // Both atoms are in the same fragment.
       continue;
     }
 
-    const Atom* a = parent.atomi(i);
-
-    const int acon = a->ncon();
-
-    for (int j = 0; j < acon; j++)  // are any atoms bonded to I not in the subset
-    {
-      atom_number_t k = a->other(i, j);
-
-      if (xref[k] >= 0) {  // is in the subset
-        continue;
-      }
-
-      //    cerr << "Setting isotope " << xref[i] << " to " <<
-      //    apply_isotopes_to_complementary_fragments << '\n';
-      subset.set_isotope(xref[i], apply_isotopes_to_complementary_fragments);
-      break;
+    // Ensure that a1 is an atom in `s1` and a2 is an atom in `s2`.
+    if (subset[a1] != s1_flag) {
+      std::swap(a1, a2);
     }
+    assert(subset[a1] == s1_flag);
+    assert(subset[a2] == s2_flag);
+
+    atom_number_t x1 = xref[a1];
+    atom_number_t x2 = xref[a2];
+
+    s1.set_isotope(x1, at2[x2]);
+    s2.set_isotope(x2, at1[x1]);
   }
 
   return 1;
 }
-#endif
+
+/*
+   We have generated two complementary fragments. `xref` maps parent atom numbers
+   to atom numbers in the subset identified by `flag`.
+ */
 
 int
 Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule& parent,
+                                                               const int* subset_specification,
+                                                               int flag,
                                                                Molecule& subset,
                                                                const int xref[]) const {
   const int nb = parent.nedges();
@@ -4627,21 +4882,17 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule& parent,
   for (int i = 0; i < nb; ++i) {
     const Bond* b = parent.bondi(i);
 
-    const atom_number_t xrefa1 = xref[b->a1()];  // atom number of atom in subset
-    const atom_number_t xrefa2 = xref[b->a2()];  // atom number of atom in subset
+    const atom_number_t a1 = b->a1();
+    const atom_number_t a2 = b->a2();
 
-    if (xrefa1 < 0 && xrefa2 < 0) {  // neither side of bond is in subset
+    if (subset_specification[a1] == subset_specification[a2]) {
       continue;
     }
 
-    if (xrefa1 >= 0 && xrefa2 >= 0) {  // both sides of bond are in subset
-      continue;
-    }
-
-    if (xrefa1 >= 0) {  // a1 in subset
-      subset.set_isotope(xrefa1, apply_isotopes_to_complementary_fragments);
-    } else {  // if (xref[a2] >= 0) must be true
-      subset.set_isotope(xrefa2, apply_isotopes_to_complementary_fragments);
+    if (subset_specification[a1] == flag) {
+      subset.set_isotope(xref[a1], apply_isotopes_to_complementary_fragments);
+    } else if (subset_specification[a2] == flag) {
+      subset.set_isotope(xref[a2], apply_isotopes_to_complementary_fragments);
     }
   }
 
@@ -4649,95 +4900,69 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule& parent,
 }
 
 /*
-  _local_xref generated FRAGMENT and _local_xref2 generated COMP
+  `subset_specification` identifies whether each parent atom is in `fragment` or `comp`.
+  `xref` maps each parent atom to the corresponding atom number in its fragment.
 */
 
 int
 Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule& parent,
+                                                               const int* subset_specification,
+                                                               int fragment_flag,
                                                                Molecule& fragment,
-                                                               Molecule& comp) const {
+                                                               int comp_flag,
+                                                               Molecule& comp,
+                                                               const int* xref) const {
   const int matoms = parent.natoms();
 
   int n = 0;
 
-  // First identify those atoms that are at a break point
-
+  // First identify those atoms in the complementary fragment that are at a break point.
   int* labels = new_int(matoms);
   std::unique_ptr<int[]> free_labels(labels);
 
   const int nbonds = parent.nedges();
 
-  n = 0;
   for (int i = 0; i < nbonds; ++i) {
     const Bond* b = parent.bondi(i);
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
 
-    const atom_number_t xref2a1 = _local_xref2[a1];
-    const atom_number_t xref2a2 = _local_xref2[a2];
+    if (subset_specification[a1] == subset_specification[a2]) {
+      continue;
+    }
 
-    if (xref2a1 >= 0 && xref2a2 < 0)  // atom a1 is in COMP, atom a2 is not
-    {
-      comp.set_isotope(xref2a1, ++n);
+    if (subset_specification[a1] == comp_flag) {
+      comp.set_isotope(xref[a1], ++n);
       labels[a1] = n;
-    } else if (xref2a1 < 0 && xref2a2 >= 0) {
-      comp.set_isotope(xref2a2, ++n);
+    } else if (subset_specification[a2] == comp_flag) {
+      comp.set_isotope(xref[a2], ++n);
       labels[a2] = n;
     }
   }
 
-  // cerr << "Line " << __LINE__ << " n = " << n << '\n';
   if (n > 1) {
-    return _do_apply_isotopes_to_complementary_fragments_canonical(parent, n, fragment,
-                                                                   comp);
+    return _do_apply_isotopes_to_complementary_fragments_canonical(parent, n,
+                    subset_specification, fragment_flag, fragment, comp_flag, comp, xref);
   }
 
-// The easier case of just one break detected
-// Put isotopes on FRAGMENT
-
-// #define OLD_VERSION_OQUWEQWE
-#ifdef OLD_VERSION_OQUWEQWE
-  for (int i = 0; i < matoms; i++) {
-    if (_local_xref[i] < 0) {  // atom I not part of frag
-      continue;
-    }
-
-    const Atom* a = parent.atomi(i);
-
-    const int acon = a->ncon();
-    int v0 = 0;
-
-    for (int j = 0; j < acon; j++)  // are any atoms bonded to I not in the subset
-    {
-      atom_number_t k = a->other(i, j);
-
-      if (labels[k] > 0) {
-        v0 = v0 * 10 + labels[k];
-      }
-    }
-    fragment.set_isotope(_local_xref[i], v0);
-  }
-#endif
-
-#define NEW_VERSION_QWEQWEQ
-#ifdef NEW_VERSION_QWEQWEQ
+  // The easier case of just one break detected. Put isotopes on FRAGMENT.
   for (int i = 0; i < nbonds; ++i) {
     const Bond* b = parent.bondi(i);
 
     const atom_number_t a1 = b->a1();
     const atom_number_t a2 = b->a2();
 
-    const atom_number_t xref1a1 = _local_xref[a1];
-    const atom_number_t xref1a2 = _local_xref[a2];
+    if (subset_specification[a1] == subset_specification[a2]) {
+      continue;
+    }
 
-    if (xref1a1 >= 0 && xref1a2 < 0) {  // atom a1 is in FRAGMENT, atom a2 is in COMP
-      fragment.set_isotope(xref1a1, 10 * fragment.isotope(xref1a1) + labels[a2]);
-    } else if (xref1a1 < 0 && xref1a2 >= 0) {
-      fragment.set_isotope(xref1a2, 10 * fragment.isotope(xref1a2) + labels[a1]);
+    if (subset_specification[a1] == fragment_flag) {
+      fragment.set_isotope(xref[a1], 10 * fragment.isotope(xref[a1]) + labels[a2]);
+    } else if (subset_specification[a2] == fragment_flag) {
+      fragment.set_isotope(xref[a2], 10 * fragment.isotope(xref[a2]) + labels[a1]);
     }
   }
-#endif
 
   return 1;
 }
@@ -4825,7 +5050,9 @@ class Atom_Rank_Atom_Comparator {
 
 int
 Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(
-    Molecule& parent, int n, Molecule& frag, Molecule& comp) const {
+    Molecule& parent, int n, const int* subset_specification,
+    int fragment_flag, Molecule& frag, int comp_flag, Molecule& comp,
+    const int* xref) const {
   const int matoms = parent.natoms();
 
   Atom_Rank_Atom* ara = new Atom_Rank_Atom[n];
@@ -4834,7 +5061,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(
   int ndx = 0;
 
   for (int i = 0; i < matoms; ++i) {
-    if (_local_xref2[i] < 0) {  // atom I not part of comp
+    if (subset_specification[i] != comp_flag) {
       continue;
     }
 
@@ -4846,8 +5073,8 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(
     {
       atom_number_t k = a->other(i, j);
 
-      if (_local_xref2[k] < 0) {
-        ara[ndx].set(_local_xref[k], parent.canonical_rank(i), _local_xref2[i]);
+      if (subset_specification[k] == fragment_flag) {
+        ara[ndx].set(xref[k], parent.canonical_rank(i), xref[i]);
         ndx++;
         break;
       }
@@ -5356,43 +5583,6 @@ do_write_to_stream_for_post_breakage(
   return 1;
 }
 
-static int
-convert_to_atom_numbers_in_current_molecule(const Molecule& m, const atom_number_t a1,
-                                            atom_number_t& t1, const atom_number_t a2,
-                                            atom_number_t& t2) {
-  t1 = INVALID_ATOM_NUMBER;
-  t2 = INVALID_ATOM_NUMBER;
-
-  for (int i = m.natoms() - 1; i >= 0; i--) {
-    const Atom* a = m.atomi(i);
-
-    const void* v = a->user_specified_void_ptr();
-    if (nullptr == v) {
-      continue;
-    }
-
-    atom_number_t x = *(reinterpret_cast<const atom_number_t*>(v));
-    //  cerr << "Atom " << i << " was atom " << x << '\n';
-
-    if (x == a1) {
-      t1 = i;
-      if (INVALID_ATOM_NUMBER != t2) {
-        return 1;
-      }
-    } else if (x == a2) {
-      t2 = i;
-      if (INVALID_ATOM_NUMBER != t1) {
-        return 1;
-      }
-    }
-  }
-
-  // cerr << "Gack, no match for atom numbers " << a1 << " (" << t1 << ") and/or " << a2
-  // << " (" << t2 << ")\n";
-
-  return 0;
-}
-
 #ifdef NOT_NEEDED_HERE
 atom_number_t
 atom_number_in_current_molecule(const Molecule& m, const int* xref, atom_number_t a) {
@@ -5457,34 +5647,44 @@ PairTransformation::_process(Molecule& mol, Dicer_Arguments& arg, Breakages& bre
 int
 Chain_Bond_Breakage::_process(Molecule& m0, Dicer_Arguments& dicer_args,
                               Breakages& breakages, Breakages_Iterator& bi) const {
-  if (0 !=
-      dicer_args.recursion_depth())  // can only do symmetry suppression at first level
-    ;
-  else if (this->symmetry_equivalent()) {
+  // can only do symmetry suppression at first level
+  if (0 != dicer_args.recursion_depth()) {
+  } else if (this->symmetry_equivalent()) {
     return 0;
   }
 
+  const int* parent_to_current = dicer_args.parent_to_current_mapping_for_cut();
+  const atom_number_t j1 = parent_to_current[a1()];
+  const atom_number_t j2 = parent_to_current[a2()];
+  if (j1 < 0 || j2 < 0) {  // An endpoint is absent from this fragment.
+    return 0;
+  }
+
+  if (!m0.are_bonded(j1, j2)) [[unlikely]] {  // should not happen
+    return 0;
+  }
+
+  // Many proposed cuts refer to atoms absent from a recursive fragment.
+  // Copy only after confirming that this cut can apply. Atom indices are retained.
   Molecule m(m0);
-
-  atom_number_t j1, j2;
-  if (!convert_to_atom_numbers_in_current_molecule(m, a1(), j1, a2(),
-                                                   j2)) {  // not in this fragment
-    return 0;
-  }
-
-  if (!m.are_bonded(j1, j2)) {  // should not happen
-    return 0;
-  }
-
-  set_isotopes_if_needed(m, j1, j2, dicer_args);
 
 #ifdef DEBUG_BOND_BREAKING
   cerr << "Before breaking bond '" << m.smiles() << "', level "
        << dicer_args.recursion_depth() << '\n';
 #endif
 
+  // In order to get atom types correct, remove the old bond
+  // before discerning atom types.
   assert(m.are_bonded(j1, j2));
-  m.remove_bond_between_atoms(j1, j2);
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::BreakBondWithChiralDummies(m, j1, j2)) {
+      return 0;
+    }
+  } else {
+    m.remove_bond_between_atoms(j1, j2);
+  }
+
+  set_isotopes_if_needed(m, j1, j2, dicer_args);
 
   resizable_array<Molecule*> components;
 
@@ -5492,7 +5692,7 @@ Chain_Bond_Breakage::_process(Molecule& m0, Dicer_Arguments& dicer_args,
     do_write_to_stream_for_post_breakage(m, stream_for_post_breakage);
 
     resizable_array_p<Molecule> c;
-    if (2 != m.create_components(c)) {
+    if (2 != m.create_components(c)) [[unlikely]] {
       cerr << "Huh, created " << c.size() << " fragments during chain bond breakage "
            << m.smiles() << '\n';
       return 0;
@@ -5893,10 +6093,9 @@ Ring_Bond_Breakage::_process(Molecule& m, Dicer_Arguments& dicer_args,
   // cerr << "Residual ring contains " << r.size() << " " << r << '\n';
 
   if (isotope_for_join_points > 0) {
-    if (increment_isotope_for_join_points)  // not implemented here
-    {
+    if (increment_isotope_for_join_points) {  // not implemented here
       mcopy.set_isotope(r[0], isotope_for_join_points);
-      mcopy.set_isotope(r.last_item(), isotope_for_join_points);
+      mcopy.set_isotope(r.back(), isotope_for_join_points);
     } else {
       mcopy.set_isotope(r[0], isotope_for_join_points);
       mcopy.set_isotope(r.last_item(), isotope_for_join_points);
@@ -6188,7 +6387,12 @@ dicer(Molecule& m, Dicer_Arguments& dicer_args, Breakages& breakages,
        << " iterator " << bi.state() << '\n';
 #endif
 
-  const Dicer_Transformation* dt = bi.current_transformation(breakages);
+  const Dicer_Transformation* dt = bi.current_transformation(breakages);  if (dt != nullptr) {
+    // Build once for this molecule, before process() increments the depth.
+    // Descendants use later slices; ring transformations use separate scratch.
+    initialise_xref(m, dicer_args, dicer_args.parent_to_current_mapping());
+  }
+
   while (nullptr != dt) {
 #ifdef DEBUG_DICER
     std::cerr << "####" << dicer_args.recursion_depth() << "  --  " << bi.state()
@@ -6566,7 +6770,7 @@ atoms_on_side_of_bond_satisfy_min_frag_size(const Molecule& m,
 
   int matoms = m.natoms();
 
-  set_vector(tmp, matoms, 0);
+  std::fill_n(tmp, matoms, 0);
 
   tmp[b1] = 2;
   tmp[b2] = 3;  // special flag for this atom
@@ -6633,6 +6837,19 @@ Breakages::discard_breakages_that_result_in_fragments_too_small(
   }
 
   return rc;
+}
+
+// Return true if either `a1` or `a2` have connectivity > 2
+static bool
+AtLeastOneHighlyConnected(const Molecule& m, atom_number_t a1, atom_number_t a2) {
+  if (m.ncon(a1) > 2) {
+    return true;
+  }
+  if (m.ncon(a2) > 2) {
+    return true;
+  }
+
+  return false;
 }
 
 /*
@@ -6746,6 +6963,14 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule& m) {
     }
 
     if (allow_cc_bonds_to_break && 6 == z1 && 6 == z2) {
+      Chain_Bond_Breakage* b = new Chain_Bond_Breakage(a1, a2);
+      _transformations.add(b);
+      rc++;
+      continue;
+    }
+
+    if (break_cc_bonds_at_highly_connected && z1 == 6 && z2 == 6 &&
+        AtLeastOneHighlyConnected(m, a1, a2)) {
       Chain_Bond_Breakage* b = new Chain_Bond_Breakage(a1, a2);
       _transformations.add(b);
       rc++;
@@ -7026,6 +7251,15 @@ add_parent_atom_count_to_global_array(const IWString& mname, int matoms,
 
 static int
 dicer(Molecule& m, DicerFragmentOutput& output) {
+  if (write_attachment_geometry) {
+    if (m.highest_coordinate_dimensionality() < 3) {
+      cerr << "Attachment geometry requested (-I geom), but molecule '" << m.name()
+           << "' does not have 3D coordinates\n";
+      return 0;
+    }
+    lillymol::set_include_coordinates_with_smiles(1);
+  }
+
   static bool first_call = true;
   if (first_call) {
     if (m.highest_coordinate_dimensionality() > 1) {
@@ -7151,7 +7385,8 @@ dicer(Molecule& m, DicerFragmentOutput& output) {
     do_change_element_for_heteroatoms_with_hydrogens(m);
   }
 
-  if (atom_typing_specification.active()) {
+  if (apply_atom_types_to_fragments) {
+  } else if (atom_typing_specification.active()) {
     (void)dicer_args.store_atom_types(m, atom_typing_specification);
   }
 
@@ -7235,6 +7470,10 @@ dicer(data_source_and_type<Molecule>& input, DicerFragmentOutput& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
     molecules_read++;
+
+    if (report_progress()) {
+      cerr << "Processed " << iwstring::with_commas(molecules_read) << " molecules\n";
+    }
 
     std::unique_ptr<Molecule> free_m(m);
 
@@ -7356,6 +7595,7 @@ display_misc_B_options(std::ostream& os) {
   os << " -B atype=<tag>    Calculate atom type and dump it in frag/comp pairs\n";
   os << " -B term           perceive terminal groups\n";
   os << " -B bscb           allow Carbon-Carbon single bonds to break\n";
+  os << " -B bCCD3          allow C-[CD>2] bonds to break\n";
   os << " -B eH             change O,N and S with Hydrogens to other elements\n";
   os << " -B xsub           do not report fragments that are exact subsets of others\n";
   os << " -B nosmi          suppress output of fragment smiles\n";
@@ -7392,9 +7632,11 @@ display_misc_B_options(std::ostream& os) {
   os << " -B FMC:heteroatom fragments reported must contain a heteroatom, :n for count\n";
   os << " -B VF=<n>         output will be viewed in vf with <n> structures per page\n";
   os << " -B flush          flush output after each molecule\n";
+  os << " -B chiraldummy    preserve local chirality with one terminal * cap per centre (chain cuts)\n";
   os << " -B lostchiral     check each fragment for lost chirality\n";
   os << " -B recap          work like Recap - break all breakable bonds at once\n";
   os << " -B nooutput       suppress writing diced fragments, useful with the '-B fragstat' option\n";
+  os << " -B rpt=<n>        report progress every <n> molecules processed\n";
   os << " -B help           this message\n";
   // clang-format on
 
@@ -7438,47 +7680,86 @@ dicer(const char* fname, FileType input_type, DicerFragmentOutput& output) {
 }
 
 static void
-display_dash_i_options(std::ostream& os) {
+display_dash_i_options(int rc) {
   // clang-format off
-  os << " -I env           atoms get isotopic labels according to their environment\n";
-  os << " -I enva          specific atoms are added to indicate the environment\n";
-  os << " When the 'env' or 'enva' directives are used, these isotopes or elements are added\n";
-  os << " Descripton               iso element\n";
-  os << " Terminal                 1   Te\n";
-  os << " Aromatic                 2   Ar\n";
-  os << " SaturatedCarbon          3   Cs\n";
-  os << " SaturatedNitrogen        4   Nh\n";
-  os << " SaturatedOxygen          5   Os\n";
-  os << " UnsaturatedCarbon        6   Cu\n";
-  os << " UnsaturatedNitrogen      7   Cu\n";
-  os << " UnsaturatedOxygen        8   Cu\n";
-  os << " AmideCarbon              9   Ac\n";
-  os << " AmideNitrogen           10   Am\n";
-  os << " Halogen                 11   Hg\n";
-  os << " Nitro                   12   No\n";
-  os << " RingCarbonAliphatic     13   Cr\n";
-  os << " RingNitrogenAliphatic   14   Na\n";
-  os << " -I z             atoms labelled by atomic number of neighbour\n";
-  os << " -I ini           atoms labelled by initial atom number (debugging uses)\n";
-  os << " -I <number>      constant isotopic label applied to all join points\n";
-  os << " -I inc=<n>       increment existing isotopic label before labelling join points\n";
-  os << " -I <atype>       the atom typing specified by the -P option\n";
+  cerr << R"( -I env           atoms get isotopic labels according to their environment
+ -I enva          specific atoms are added to indicate the environment
+ When the 'env' or 'enva' directives are used, these isotopes or elements are added
+ Descripton               iso element
+ Terminal                 1   Te
+ Aromatic                 2   Ar
+ SaturatedCarbon          3   Cs
+ SaturatedNitrogen        4   Nh
+ SaturatedOxygen          5   Os
+ UnsaturatedCarbon        6   Cu
+ UnsaturatedNitrogen      7   Cu
+ UnsaturatedOxygen        8   Cu
+ AmideCarbon              9   Ac
+ AmideNitrogen           10   Am
+ Halogen                 11   Hg
+ Nitro                   12   No
+ RingCarbonAliphatic     13   Cr
+ RingNitrogenAliphatic   14   Na
+ -I z             atoms labelled by atomic number of neighbour
+ -I ini           atoms labelled by initial atom number (debugging uses)
+ -I <number>      constant isotopic label applied to all join points
+ -I inc=<n>       increment existing isotopic label before labelling join points (only one increment)
+ -I INC=<n>       increment all isotopic labels - isotope will be number of connections broken
+ -I atype         the atom typing specified by the -P option '-P UST:AY -I atype'.
+                    note that the atom types are computed for the starting molecule.
+ -I fragatype     atom typing is computed on the fragments.
+ -I geom          include 3D attachment geometry in per-molecule proto output.
+)";
   // clang-format on
 
-  exit(0);
+  exit(rc);
 }
 
-static int
-DisplayComplementaryFragmentOptions(std::ostream& output) {
+static void
+DisplayComplementaryFragmentOptions(int rc) {
   // clang-format off
-  output << " -C def            complementary fragments with all default conditions\n";
-  output << " -C auto           complementary fragments have same isotope as fragment\n";
-  output << " -C atype          complementary fragments have isotopes based on atom type\n";
-  output << " -C iso=<iso>      apply isotope <n> to the join point on the complementary fragment\n";
-  output << " -C maxat=<n>      do not write complementary fragments with more than n> atoms\n";
+  cerr << R"(The following options controlling complementary fragment creation are recognised.
+ -C def            complementary fragments with all default conditions.
+ -C auto           complementary fragments have same isotope as fragment.
+ -C atype          complementary fragments have isotopes based on atom type.
+ -C iso=<iso>      apply isotope <n> to the join point on the complementary fragment.
+ -C maxat=<n>      do not write complementary fragments with more than n> atoms.
+ -C fragatype      isotopes are the atom types of the previously joined atom.
+)";
   // clang-format on
 
-  ::exit(0);
+  ::exit(rc);
+}
+
+static void
+DisplayDashMOptions(int rc) {
+  cerr << R"(The -M option controls the size of dicer fragments generated.
+ -M <natoms>            the max size of a fragment.
+ -M naxnr=<n>           the largest number of non ring atoms allowed in a fragment.
+                         you might want to have a max of 15 atoms in a fragment, but you probably
+                         don't want to have a fragment with 15 non-ring atoms.
+)";
+
+  ::exit(rc);
+}
+
+// If applying atom typing to complementary fragments, and Hydrogen is a
+// complementary fragment, initialise the string atom type once.
+static int
+InitialiseHydrogenComplementAtomTypeToken() {
+  hydrogen_complement_atom_type_token.resize(0);  // File scope static variable.
+
+  Molecule hydrogen;
+  hydrogen.add(new Atom(1));
+
+  uint32_t atype[1];
+  if (!atom_typing_specification.assign_atom_types(hydrogen, atype)) {
+    cerr << "Cannot assign atom type to synthetic hydrogen atom\n";
+    return 0;
+  }
+
+  hydrogen_complement_atom_type_token << '[' << atype[0] << "H]";
+  return 1;
 }
 
 static int
@@ -7488,6 +7769,7 @@ ParseComplementaryFragmentOptions(Command_Line& cl) {
   }
 
   const_IWSubstring c;
+  int complementary_fragment_labelling_options = 0;
   for (int i = 0; cl.value('C', c, i); ++i) {
     if (c.starts_with("maxat=") || c.starts_with("maxat:")) {
       c.remove_leading_chars(6);
@@ -7503,16 +7785,19 @@ ParseComplementaryFragmentOptions(Command_Line& cl) {
       }
     } else if (c == "def") {
     } else if (c == "auto") {
+      ++complementary_fragment_labelling_options;
       apply_isotopes_to_complementary_fragments = -1;
       if (verbose) {
         cerr << "Same isotope will be set to the fragments and complementary fragments\n";
       }
     } else if (c == "atype") {
+      ++complementary_fragment_labelling_options;
       apply_isotopes_to_complementary_fragments = ISO_CF_ATYPE;
       if (verbose) {
         cerr << "Isotopes at complementary atoms will be initial molecule atom type\n";
       }
     } else if (c.starts_with("iso=") || c.starts_with("iso:")) {
+      ++complementary_fragment_labelling_options;
       c.remove_leading_chars(4);
 
       if (!c.numeric_value(apply_isotopes_to_complementary_fragments) ||
@@ -7524,12 +7809,23 @@ ParseComplementaryFragmentOptions(Command_Line& cl) {
         cerr << "Isotope " << apply_isotopes_to_complementary_fragments
              << " applied to join points of complementary fragments\n";
       }
+    } else if (c == "fragatype") {
+      ++complementary_fragment_labelling_options;
+      apply_atom_types_to_fragments = 1;
+      if (verbose) {
+        cerr << "Atom types generated on fragments - enables context matching\n";
+      }
     } else if (c == "help") {
-      DisplayComplementaryFragmentOptions(cerr);
+      DisplayComplementaryFragmentOptions(0);
     } else {
       cerr << "Unrecognised -C qualifier '" << c << "'\n";
-      DisplayComplementaryFragmentOptions(cerr);
+      DisplayComplementaryFragmentOptions(1);
     }
+  }
+
+  if (complementary_fragment_labelling_options > 1) {
+    cerr << "Only one complementary fragment labelling option can be specified via -C\n";
+    return 0;
   }
 
   write_smiles_and_complementary_smiles = 1;
@@ -7634,31 +7930,38 @@ dicer(int argc, char** argv) {
 
   if (cl.option_present('I')) {
     const_IWSubstring i;
+    int join_point_labelling_options = 0;
 
     for (int j = 0; cl.value('I', i, j); ++j) {
       if ("env" == i) {
+        ++join_point_labelling_options;
         apply_environment_isotopic_labels = 1;
         if (verbose) {
           cerr << "Broken bonds marked with isotopes to indicate environment\n";
         }
       } else if ("ini" == i) {
+        ++join_point_labelling_options;
         number_by_initial_atom_number = 1;
         if (verbose) {
           cerr << "Will apply isotopic labels according to initial atom numbers\n";
         }
       } else if ('z' == i) {
+        ++join_point_labelling_options;
         apply_atomic_number_isotopic_labels = 1;
         if (verbose) {
           cerr << "Will label cut points by atomic number of removed atom\n";
         }
       } else if ("enva" == i) {
+        ++join_point_labelling_options;
         add_environment_atoms = 1;
       } else if ("depth" == i) {
+        ++join_point_labelling_options;
         isotopic_label_is_recursion_depth = 1;
         if (verbose) {
           cerr << "Isotopic labels will be according to bonds cut\n";
         }
       } else if (i.starts_with("inc=")) {
+        ++join_point_labelling_options;
         i.remove_leading_chars(4);
         if (!i.numeric_value(increment_isotope_for_join_points) ||
             increment_isotope_for_join_points < 1) {
@@ -7669,16 +7972,44 @@ dicer(int argc, char** argv) {
 
         if (verbose) {
           cerr << "Will add " << increment_isotope_for_join_points
+               << " to existing isotopic labels at join points - one time addition\n";
+        }
+      } else if (i.starts_with("INC=")) {
+        ++join_point_labelling_options;
+        i.remove_leading_chars(4);
+        if (!i.numeric_value(increment_isotope_for_join_points) ||
+            increment_isotope_for_join_points < 1) {
+          cerr << "The increment isotope values for attachment points directive (-I "
+                  "INC=) must be a whole +ve number\n";
+          return 2;
+        }
+
+        if (verbose) {
+          cerr << "Will add " << increment_isotope_for_join_points
                << " to existing isotopic labels at join points\n";
         }
+        always_increment_isotope = 1;
       } else if ("atype" == i) {
+        ++join_point_labelling_options;
         apply_atom_type_isotopic_labels = 1;
         if (verbose) {
           cerr << "Isotopic labels will be atom types\n";
         }
+      } else if (i == "fragatype") {
+        ++join_point_labelling_options;
+        apply_atom_types_to_fragments = 1;
+        if (verbose) {
+          cerr << "Atom types generated on fragments - enables context matching\n";
+        }
+      } else if (i == "geom") {
+        write_attachment_geometry = 1;
+        if (verbose) {
+          cerr << "Will write attachment geometry to per-molecule protos\n";
+        }
       } else if ("help" == i) {
-        display_dash_i_options(cerr);
+        display_dash_i_options(0);
       } else {
+        ++join_point_labelling_options;
         if (!i.numeric_value(isotope_for_join_points) || isotope_for_join_points < 0) {
           cerr << "The isotope for join points value (-I) must be a whole +ve number '"
                << i << "' invalid\n";
@@ -7692,10 +8023,10 @@ dicer(int argc, char** argv) {
       }
     }
 
-    if (add_environment_atoms && apply_environment_isotopic_labels) {
-      cerr
-          << "Adding environment atoms and applying isotopic labels doesn't make sense\n";
-      usage(4);
+
+    if (join_point_labelling_options > 1) {
+      cerr << "Only one join point labelling option can be specified via -I\n";
+      return 4;
     }
 
     if (add_environment_atoms) {
@@ -7777,6 +8108,8 @@ dicer(int argc, char** argv) {
           cerr << "Invalid maxnr= qualifier '" << m << "'\n";
           return 1;
         }
+      } else if (m == "help") {
+        DisplayDashMOptions(0);
       } else if (!m.numeric_value(upper_atom_count_cutoff) ||
                  upper_atom_count_cutoff < 1 ||
                  upper_atom_count_cutoff < lower_atom_count_cutoff) {
@@ -7829,6 +8162,11 @@ dicer(int argc, char** argv) {
         allow_cc_bonds_to_break = 1;
         if (verbose) {
           cerr << "Will allow Carbon-Carbon single bonds to break\n";
+        }
+      } else if (b == "bCCD3") {
+        break_cc_bonds_at_highly_connected = 1;
+        if (verbose) {
+          cerr << "C-C bonds at highly connected Carbon atoms will be broken\n";
         }
       } else if ("eH" == b) {
         change_element_for_heteroatoms_with_hydrogens = 1;
@@ -7913,6 +8251,11 @@ dicer(int argc, char** argv) {
           cerr << "User specified bond breaking queries will be run in addition to the "
                   "default set\n";
         }
+      } else if (b == "chiraldummy") {
+        chiral_dummy = 1;
+        if (verbose) {
+          cerr << "Will replace removed chiral neighbours with terminal * atoms\n";
+        }
       } else if ("lostchiral" == b) {
         check_for_lost_chirality = 1;
         if (verbose) {
@@ -7995,6 +8338,7 @@ dicer(int argc, char** argv) {
           cerr << "Invalid atom typing specification '" << b << "'\n";
           return 2;
         }
+        atom_typing_specification_string = b;
       } else if (b.starts_with("MAXAL=")) {
         b.remove_leading_chars(6);
         if (!b.numeric_value(max_atoms_lost_from_parent) ||
@@ -8115,6 +8459,17 @@ dicer(int argc, char** argv) {
           cerr << "Fragments will NOT be indexed by unique smiles - do not use "
                   "fragstat!\n";
         }
+      } else if (b.starts_with("rpt=")) {
+        b.remove_leading_chars(4);
+        uint64_t rpt;
+        if (! b.numeric_value(rpt)) {
+          cerr << "Invalid rpt= qualifier '" << b << "'\n";
+          return 1;
+        }
+        report_progress.set_report_every(rpt);
+        if (verbose) {
+          cerr << "Will report progress every " << rpt << " molecules\n";
+        }
       } else if ("help" == b) {
         display_misc_B_options(cerr);
       } else {
@@ -8165,6 +8520,11 @@ dicer(int argc, char** argv) {
     return 1;
   }
 
+  if (write_attachment_geometry && !output.output_is_proto()) {
+    cerr << "The -I geom directive requires -B proto or -B serialized_proto\n";
+    return 1;
+  }
+
   if (cl.option_present('P')) {
     const_IWSubstring p = cl.string_value('P');
 
@@ -8172,6 +8532,7 @@ dicer(int argc, char** argv) {
       cerr << "Cannot initialise atom typing '" << p << "'\n";
       return 1;
     }
+    atom_typing_specification_string = p;
   }
 
   if (cl.option_present('a')) {
@@ -8179,72 +8540,25 @@ dicer(int argc, char** argv) {
   }
 
   if (cl.option_present('C')) {
-    // will exit if it fails.
-    ParseComplementaryFragmentOptions(cl);
-  }
-
-#ifdef NOW_IN_FUNCTION
-  if (cl.option_present('C')) {
-    const_IWSubstring c;
-    for (int i = 0; cl.value('C', c, i); ++i) {
-      if (c.starts_with("maxat=") || c.starts_with("maxat:")) {
-        c.remove_leading_chars(6);
-        if (!c.numeric_value(upper_atom_count_cutoff_complementary_fragment) ||
-            upper_atom_count_cutoff_complementary_fragment < 1) {
-          cerr << "The upper atom count limit for complementary fragments must be a +ve "
-                  "whole number\n";
-          return 0;
-        }
-        if (verbose) {
-          cerr << "Will not write complementary fragmes with more than "
-               << upper_atom_count_cutoff_complementary_fragment << " atoms\n";
-        }
-      } else if (c == "def") {
-      } else if (c == "auto") {
-        apply_isotopes_to_complementary_fragments = -1;
-        if (verbose) {
-          cerr << "Same isotope will be set to the fragments and complementary "
-                  "fragments\n";
-        }
-      } else if (c == "atype") {
-        apply_isotopes_to_complementary_fragments = ISO_CF_ATYPE;
-        if (verbose) {
-          cerr << "Isotopes at complementary atoms will be initial molecule atom type\n";
-        }
-      } else if (c.starts_with("iso=") || c.starts_with("iso:")) {
-        c.remove_leading_chars(4);
-
-        if (!c.numeric_value(apply_isotopes_to_complementary_fragments) ||
-            apply_isotopes_to_complementary_fragments < 0) {
-          cerr << "Invalid complementary set isotope specification '" << c << "'\n";
-          return 0;
-        }
-        if (verbose) {
-          cerr << "Isotope " << apply_isotopes_to_complementary_fragments
-               << " applied to join points of complementary fragments\n";
-        }
-      } else if (c == "help") {
-        DisplayComplementaryFragmentOptions(cerr);
-      } else {
-        cerr << "Unrecognised -C qualifier '" << c << "'\n";
-        DisplayComplementaryFragmentOptions(cerr);
-      }
-    }
-
-    write_smiles_and_complementary_smiles = 1;
-    if (verbose) {
-      cerr << "Will write smiles and complementary smiles\n";
+    if (!ParseComplementaryFragmentOptions(cl)) {
+      return 1;
     }
   }
-#endif  // NOW_IN_FUNCTION
+
+  if (apply_atom_types_to_fragments && !atom_typing_specification.active()) {
+    cerr << "Fragment atom type isotopes require an atom typing specification, "
+            "for example '-P UST:Z'\n";
+    return 1;
+  }
+  if (apply_atom_types_to_fragments && !InitialiseHydrogenComplementAtomTypeToken()) {
+    return 1;
+  }
 
   if (cl.option_present('s')) {
-    int i = 0;
     const_IWSubstring smarts;
-    while (cl.value('s', smarts, i++)) {
-      Substructure_Hit_Statistics* q = new Substructure_Hit_Statistics;
+    for (int i = 0;cl.value('s', smarts, i); ++i) {
+      std::unique_ptr<Substructure_Hit_Statistics> q = std::make_unique<Substructure_Hit_Statistics>();
       if (!q->create_from_smarts(smarts)) {
-        delete q;
         return 60 + i;
       }
 
@@ -8252,7 +8566,7 @@ dicer(int argc, char** argv) {
         cerr << "Created query from smarts '" << smarts << "'\n";
       }
 
-      queries.add(q);
+      queries << q.release();
     }
   }
 
@@ -8343,6 +8657,13 @@ dicer(int argc, char** argv) {
   } else {
     cerr << "NO output specified\n";
     usage(4);
+  }
+
+  if (chiral_dummy && (break_ring_bonds || break_fused_rings || break_spiro_rings ||
+                      dearomatise_aromatic_rings || add_environment_atoms ||
+                      apply_atom_types_to_fragments)) [[unlikely]] {
+    cerr << "-B chiraldummy does not support ring transformations, -I enva, or fragment-local atom typing\n";
+    return 1;
   }
 
   FileType input_type = FILE_TYPE_INVALID;
@@ -8504,7 +8825,7 @@ dicer(int argc, char** argv) {
   }
 
   if (verbose) {
-    cerr << "Read " << molecules_read << " molecules\n";
+    cerr << "Read " << iwstring::with_commas(molecules_read) << " molecules\n";
 
     for (int i = 0; i < global_counter_bonds_to_be_broken.number_elements(); i++) {
       if (global_counter_bonds_to_be_broken[i]) {
@@ -8543,7 +8864,7 @@ dicer(int argc, char** argv) {
     cerr << "Computation took " << (tend - tstart) << " seconds\n";
   }
 
-  if (0 == molecules_containing.size())
+  if (molecules_containing.empty())
     ;
   else if (name_for_fragment_statistics_file.empty()) {
   } else if (write_fragstat_as_binary_proto) {

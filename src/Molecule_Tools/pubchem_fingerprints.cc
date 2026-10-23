@@ -1198,7 +1198,7 @@ static int pair_xref[SIZE_OF_PAIR_XREF];
 
 static void
 initialise_pair_xref() {
-  set_vector(pair_xref, SIZE_OF_PAIR_XREF, -1);
+  std::fill_n(pair_xref, SIZE_OF_PAIR_XREF, -1);
 
   pair_xref[3 * HIGHEST_ATOMIC_NUMBER + 3] = 264;
   pair_xref[3 * HIGHEST_ATOMIC_NUMBER + 3] = 264;
@@ -1783,7 +1783,7 @@ process_fused_system(Molecule &m, const atomic_number_t *z,
     else if (r.compute_bonds_shared_with(*rj) > 1)
       strongly_fused = 1;
 
-    set_vector(tmp, matoms, 0);
+    std::fill_n(tmp, matoms, 0);
     r.set_vector(tmp, 1);
     rj->increment_vector(tmp, 1);
 
@@ -1821,7 +1821,7 @@ process_fused_system(Molecule &m, const atomic_number_t *z,
 
 static int
 pubchem_fingerprints(Molecule &m, int *fp) {
-  set_vector(fp, PUBCHEM_NBITS, 0);
+  std::fill_n(fp, PUBCHEM_NBITS, 0);
 
   int *ecount = new_int(HIGHEST_ATOMIC_NUMBER + 1);
   std::unique_ptr<int[]> free_ecount(ecount);

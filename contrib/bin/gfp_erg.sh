@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Set up queries for gfp_erg
 here=$(dirname $(realpath $0))

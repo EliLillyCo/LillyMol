@@ -111,7 +111,7 @@ TEST_F(TestSubstructureEnv, TestEnvAttachmentPoint)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   EXPECT_TRUE(_DoPerumationsTests(1));
 }
@@ -140,7 +140,7 @@ TEST_F(TestSubstructureEnv, TestEnvAttachmentPointMultipleBonds)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   const Set_of_Atoms matches = _FirstAtomEachEmbedding();
 
@@ -171,7 +171,7 @@ TEST_F(TestSubstructureEnv, TestEnvAttachmentPointSubstructureBond)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   const Set_of_Atoms matches = _FirstAtomEachEmbedding();
 
@@ -203,7 +203,7 @@ TEST_F(TestSubstructureEnv, TestEnvironmentMustMatchUnmatchedAtomsEasy)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   const Set_of_Atoms matches = _FirstAtomEachEmbedding();
 
@@ -235,7 +235,7 @@ TEST_F(TestSubstructureEnv, TestEnvironmentMustMatchUnmatchedAtomsNoMatch)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 }
@@ -263,7 +263,7 @@ TEST_F(TestSubstructureEnv, TestEnvironmentMustMatchUnmatchedAtomsMatchesAlready
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -297,7 +297,7 @@ TEST_F(TestSubstructureEnv, TestEnvMatchesShareAttachmentPoints)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   EXPECT_TRUE(_DoPerumationsTests(1));
 }
@@ -331,7 +331,7 @@ TEST_F(TestSubstructureEnv, TestEnvMatchesShareAttachmentPointsTrue)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   EXPECT_TRUE(_DoPerumationsTests(1));
 }
@@ -360,7 +360,7 @@ TEST_F(TestSubstructureEnv, TestHitsNeeded)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   EXPECT_TRUE(_DoPerumationsTests(1));
 }
@@ -390,7 +390,7 @@ TEST_F(TestSubstructureEnv, TestHitsNeededMultipleSites)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 }
@@ -420,7 +420,7 @@ TEST_F(TestSubstructureEnv, TestHitsNeededMultipleSitesCorrect)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -451,7 +451,7 @@ TEST_F(TestSubstructureEnv, TestHitsNeededMultipleSitesCorrectEnv)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -481,7 +481,7 @@ TEST_F(TestSubstructureEnv, TestNoOtherSubstituentsAllowed)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 }
@@ -511,7 +511,7 @@ TEST_F(TestSubstructureEnv, TestNoOtherSubstituentsAllowedEnvMatchesOK)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -541,7 +541,7 @@ TEST_F(TestSubstructureEnv, TestHydrogenOnlyH)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -572,7 +572,7 @@ TEST_F(TestSubstructureEnv, TestHydrogenNotHydrogen)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 }
@@ -602,7 +602,7 @@ TEST_F(TestSubstructureEnv, Testmax_env_matches_per_anchor)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -645,7 +645,7 @@ TEST_F(TestSubstructureEnv, TestMultipleAnd)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -688,7 +688,7 @@ TEST_F(TestSubstructureEnv, TestMultipleOr)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   EXPECT_TRUE(_DoPerumationsTests(1));
 
@@ -696,7 +696,7 @@ TEST_F(TestSubstructureEnv, TestMultipleOr)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -724,7 +724,7 @@ TEST_F(TestSubstructureEnv, TestRejection)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 
@@ -732,7 +732,7 @@ TEST_F(TestSubstructureEnv, TestRejection)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -759,7 +759,7 @@ TEST_F(TestSubstructureEnv, TestNumericEnv1) {
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 
@@ -767,7 +767,7 @@ TEST_F(TestSubstructureEnv, TestNumericEnv1) {
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 }
@@ -794,7 +794,7 @@ TEST_F(TestSubstructureEnv, TestNumericEnv2) {
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 
@@ -802,7 +802,7 @@ TEST_F(TestSubstructureEnv, TestNumericEnv2) {
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 2u);
 
   EXPECT_TRUE(_DoPerumationsTests(2));
 
@@ -810,7 +810,7 @@ TEST_F(TestSubstructureEnv, TestNumericEnv2) {
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   EXPECT_TRUE(_DoPerumationsTests(0));
 

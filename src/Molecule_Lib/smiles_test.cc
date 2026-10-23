@@ -51,6 +51,9 @@ class TestAromaticSmiles : public testing::TestWithParam<SmilesAndExpected> {
     void SetUp() {
       set_include_aromaticity_in_smiles(1);
     }
+    void TearDown() {
+      set_include_aromaticity_in_smiles(0);
+    }
 };
 
 TEST_P(TestAromaticSmiles, AromaticSmiles) {
@@ -201,5 +204,76 @@ INSTANTIATE_TEST_SUITE_P(TestRemoveH, TestRemoveH, testing::Values(
   RemoveHTest{"C[C@@](N)(F)[H]", "F[C@H](N)C"}
 
 ));
+
+struct SmilesResult {
+  IWString smiles;
+  int expected_ok;
+  IWString echo_smiles;
+  std::vector<atomic_number_t> atomic_number;
+};
+
+class TestAnyLength : public testing::TestWithParam<SmilesResult> {
+  protected:
+    Molecule _mol;
+
+  void SetUp() {
+    set_atomic_symbols_can_have_arbitrary_length(1);
+    set_include_aromaticity_in_smiles(0);
+  }
+  void TearDown() {
+    set_atomic_symbols_can_have_arbitrary_length(0);
+  }
+};
+TEST_P(TestAnyLength, Test) {
+  const auto params = GetParam();
+  if (_mol.build_from_smiles(params.smiles)) {
+    EXPECT_EQ(params.expected_ok, 1) << params.smiles << " not ok";
+  } else {
+    EXPECT_EQ(params.expected_ok, 0) << params.smiles << " should not be ok";
+  }
+
+  if (! params.expected_ok) {
+    return;
+  }
+
+  EXPECT_EQ(params.echo_smiles, _mol.smiles()) << params.smiles << ' ' << _mol.smiles();
+
+  for (int i = 0; i < _mol.natoms(); ++i) {
+    EXPECT_EQ(_mol.atomic_number(i), params.atomic_number[i]) << params.smiles;
+  }
+
+}
+INSTANTIATE_TEST_SUITE_P(TestAnyLength, TestAnyLength, testing::Values(
+  SmilesResult{"C", 1, "C", {6}},
+  SmilesResult{"1", 0, "", {}},
+  SmilesResult{"[]", 0, "", {}},
+  SmilesResult{"[1]", 0, "", {}},
+  SmilesResult{"[C]", 1, "[C]", {6}},
+  SmilesResult{"[CH4]", 1, "C", {6}},
+  SmilesResult{"[NH3]", 1, "N", {7}},
+  SmilesResult{"[OH2]", 1, "O", {8}},
+  SmilesResult{"[F]", 1, "[F]", {9}},
+  SmilesResult{"[1F]", 1, "[1F]", {9}},
+  SmilesResult{"[K]", 1, "[K]", {19}},
+  SmilesResult{"[Fr]", 1, "[Fr]", {87}},
+  SmilesResult{"[Ca]", 1, "[Ca]", {20}},
+  SmilesResult{"[Na]", 1, "[Na]", {11}},
+
+  SmilesResult{"[1]", 0, "", {}},
+  SmilesResult{"[12]", 0, "", {}},
+  SmilesResult{"[+]", 0, "", {}},
+  SmilesResult{"[-]", 0, "", {}},
+
+  SmilesResult{"[O-]", 1, "[O-]", {8}},
+  SmilesResult{"[N+]", 1, "[N+]", {7}},
+  SmilesResult{"[NH+]", 1, "[NH+]", {7}},
+
+  SmilesResult{"[Foo]", 1, "[Foo]", {kInvalidAtomicNumber}},
+  SmilesResult{"[1Foo]", 1, "[1Foo]", {kInvalidAtomicNumber}},
+  SmilesResult{"[1Foo+]", 1, "[1Foo+]", {kInvalidAtomicNumber}},
+  SmilesResult{"[1FooH+]", 1, "[1FooH+]", {kInvalidAtomicNumber}},
+  SmilesResult{"c2nnn[nH]2", 1, "C1=NN=NN1", {6, 7, 7, 7, 7}}
+));
+
 
 }  // namespace

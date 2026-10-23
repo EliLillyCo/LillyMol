@@ -73,7 +73,7 @@ Usage(int rc) {
 }
 
 Fragment::Fragment() {
-  _attach = INVALID_ATOM_NUMBER;
+  _attach = kInvalidAtomNumber;
   _number_exemplars = 0;
 
   _atype = 0;
@@ -161,7 +161,7 @@ Fragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
       continue;
     }
 
-    if (_attach == INVALID_ATOM_NUMBER) {
+    if (_attach == kInvalidAtomNumber) {
       _attach = i;
       _atype = iso;
     } else {
@@ -170,7 +170,7 @@ Fragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
     }
   }
 
-  if (_attach != INVALID_ATOM_NUMBER) {
+  if (_attach != kInvalidAtomNumber) {
     return 1;
   }
 
@@ -193,8 +193,8 @@ Fragment::OkForJoining() const {
 }
 
 BivalentFragment::BivalentFragment() {
-  _attach1 = INVALID_ATOM_NUMBER;
-  _attach2 = INVALID_ATOM_NUMBER;
+  _attach1 = kInvalidAtomNumber;
+  _attach2 = kInvalidAtomNumber;
 
   _bonds_between = -1;
 
@@ -250,10 +250,10 @@ BivalentFragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
       continue;
     }
 
-    if (_attach1 == INVALID_ATOM_NUMBER) {
+    if (_attach1 == kInvalidAtomNumber) {
       _attach1 = i;
       _atype1 = iso;
-    } else if (_attach2 == INVALID_ATOM_NUMBER) {
+    } else if (_attach2 == kInvalidAtomNumber) {
       _attach2 = i;
       _atype2 = iso;
     } else {
@@ -262,7 +262,7 @@ BivalentFragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
     }
   }
 
-  if (_attach1 == INVALID_ATOM_NUMBER) {
+  if (_attach1 == kInvalidAtomNumber) {
     cerr << "BivalentFragment::BuildFromSmiles:no isotopes '" << proto.smi() << "'\n";
     return 0;
   }
@@ -270,7 +270,7 @@ BivalentFragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
   // If only 1 isotope, this will be a simple insertion, with maybe
   // a sidechain. But now this join point will need to accept two
   // bonds, so there must be at least two implicit hydrogens.
-  if (_attach2 == INVALID_ATOM_NUMBER) {
+  if (_attach2 == kInvalidAtomNumber) {
     if (_m.hcount(_attach1) < 2) {
       return 0;
     }
@@ -2212,14 +2212,14 @@ Options::DestroyAromaticRingSystems(Molecule& m,
 }
 
 // If there is an atom that is bonded to both `a1` and `a2`
-// return it. Otherwise INVALID_ATOM_NUMBER.
+// return it. Otherwise kInvalidAtomNumber.
 atom_number_t
 AtomBetween(const Molecule& m,
         atom_number_t a1,
         atom_number_t a2) {
   const Atom& atom2 = m.atom(a2);
 
-  atom_number_t result = INVALID_ATOM_NUMBER;
+  atom_number_t result = kInvalidAtomNumber;
 
   for (const Bond* b : m.atom(a1)) {
     if (! b->is_single_bond()) {
@@ -2229,7 +2229,7 @@ AtomBetween(const Molecule& m,
     atom_number_t j = b->other(a1);
     // Fail if the atoms are bonded.
     if (j == a2) {
-      return INVALID_ATOM_NUMBER;
+      return kInvalidAtomNumber;
     }
 
     if (atom2.is_bonded_to(j)) {
@@ -2275,7 +2275,7 @@ Options::MakeThreeRing(Molecule& m,
       }
       const atom_number_t k = AtomBetween(m, i, j);
       // cerr << "Atoms " << i << " and " << j << " btw " << k << '\n';
-      if (k == INVALID_ATOM_NUMBER || m.atomic_number(k) != 6) {
+      if (k == kInvalidAtomNumber || m.atomic_number(k) != 6) {
         continue;
       }
       if (! molecule_data.CanChange(k)) {
@@ -2396,23 +2396,23 @@ DoSwapAdjacentAtoms(Molecule & m,
                     const atom_number_t j,
                     const atom_number_t a2,
                     const atom_number_t a3) {
-  if (a1 != INVALID_ATOM_NUMBER) {
+  if (a1 != kInvalidAtomNumber) {
     m.remove_bond_between_atoms(a1, j);
   }
 
   m.remove_bond_between_atoms(j, a2);
 
-  if (a3 != INVALID_ATOM_NUMBER) {
+  if (a3 != kInvalidAtomNumber) {
     m.remove_bond_between_atoms(a2, a3);
   }
 
-  if (a1 != INVALID_ATOM_NUMBER) {
+  if (a1 != kInvalidAtomNumber) {
     m.add_bond(a1, a2, SINGLE_BOND);
   }
 
   m.add_bond(a2, j, SINGLE_BOND);
 
-  if (a3 != INVALID_ATOM_NUMBER) {
+  if (a3 != kInvalidAtomNumber) {
     m.add_bond(j, a3, SINGLE_BOND);
   }
 
@@ -2466,12 +2466,12 @@ AnyUndesirableAdjacencies(Molecule & m,
                           const atom_number_t a2,
                           const atom_number_t a3)
 {
-  if (a1 == INVALID_ATOM_NUMBER) {
+  if (a1 == kInvalidAtomNumber) {
   } else if (AnyUndesirableAdjacencies(m, a1, a2)) {
     return 1;
   }
 
-  if (a3 == INVALID_ATOM_NUMBER) {
+  if (a3 == kInvalidAtomNumber) {
   } else if (AnyUndesirableAdjacencies(m, j, a3)) {
     return 1;
   }
@@ -2489,12 +2489,12 @@ Options::SwapAdjacentAtoms(Molecule& m,
                            atom_number_t a3,
                            resizable_array_p<Molecule>& results) {
   // Avoid three membered rings.
-  if (a0 == INVALID_ATOM_NUMBER) {
+  if (a0 == kInvalidAtomNumber) {
   } else if (m.are_bonded(a0, a2)) {
     return 0;
   }
 
-  if (a3 == INVALID_ATOM_NUMBER) {
+  if (a3 == kInvalidAtomNumber) {
   } else if (m.are_bonded(a1, a3)) {
     return 0;
   }
@@ -2525,7 +2525,7 @@ GetConnectedAtom(const Atom& atom,
     return j;
   }
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 // Adapted from random_molecular_permutations.
@@ -2601,31 +2601,31 @@ GetRingMembers(const Atom& atom, atom_number_t zatom, const int* in_ring,
                atom_number_t& r1a, atom_number_t& r1b) {
   assert(in_ring[zatom]);
 
-  r1a = INVALID_ATOM_NUMBER;
-  r1b = INVALID_ATOM_NUMBER;
+  r1a = kInvalidAtomNumber;
+  r1b = kInvalidAtomNumber;
 
   for (const Bond* b : atom) {
     atom_number_t j = b->other(zatom);
     if (! in_ring[j]) {
       continue;
     }
-    if (r1a == INVALID_ATOM_NUMBER) {
+    if (r1a == kInvalidAtomNumber) {
       r1a = j;
-    } else if (r1b == INVALID_ATOM_NUMBER) {
+    } else if (r1b == kInvalidAtomNumber) {
       r1b = j;
     } else {  // not sure this can happen.
       return 0;
     }
   }
 
-  return r1b != INVALID_ATOM_NUMBER;
+  return r1b != kInvalidAtomNumber;
 }
 
 // If there is just a single atom in `ring` that is marked in `in_ring`,
-// return that atom. If not, return INVALID_ATOM_NUMBER.
+// return that atom. If not, return kInvalidAtomNumber.
 atom_number_t 
 SingleAtomShared(const Ring& ring, const int* in_ring) {
-  atom_number_t result = INVALID_ATOM_NUMBER;
+  atom_number_t result = kInvalidAtomNumber;
 
   const int ring_size = ring.number_elements();
   for (int i = 0; i < ring_size; ++i) {
@@ -2636,8 +2636,8 @@ SingleAtomShared(const Ring& ring, const int* in_ring) {
     }
 
     // If we have already found a shared atom, the rings are fused. Fail.
-    if (result != INVALID_ATOM_NUMBER) {
-      return INVALID_ATOM_NUMBER;
+    if (result != kInvalidAtomNumber) {
+      return kInvalidAtomNumber;
     }
 
     result = a;
@@ -2676,7 +2676,7 @@ Options::Unspiro(Molecule& m,
     for (int j = i + 1; j < nrings; ++j) {
       const Ring* rj = m.ringi(j);
       atom_number_t spiro = SingleAtomShared(*rj, in_ring.get());
-      if (spiro == INVALID_ATOM_NUMBER) {
+      if (spiro == kInvalidAtomNumber) {
         continue;
       }
 
@@ -3305,7 +3305,7 @@ GetRemainingNbr(const Molecule& m,
     return j;
   }
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 /*
@@ -3345,11 +3345,11 @@ Options::FuseBiphenyl(Molecule& m,
   }
 
   atom_number_t x1 = GetRemainingNbr(m, a1, a2, n1);
-  if (x1 == INVALID_ATOM_NUMBER) {
+  if (x1 == kInvalidAtomNumber) {
     return 0;
   }
   atom_number_t x2 = GetRemainingNbr(m, a2, a1, n2);
-  if (x2 == INVALID_ATOM_NUMBER) {
+  if (x2 == kInvalidAtomNumber) {
     return 0;
   }
 

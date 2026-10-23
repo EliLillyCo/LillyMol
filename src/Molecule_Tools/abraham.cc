@@ -10,7 +10,6 @@
 #include <iostream>
 #include <memory>
 using std::cerr;
-using std::endl;
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 
@@ -193,7 +192,7 @@ abraham_logp (const double * v)
 static float
 abraham_logp(const double r2, const double pi2h, const double alpha2h,
              const double beta2o, const double vx) {
-  // cerr << r2 << ' ' << pi2h << ' ' << alpha2h << ' ' << beta2o << ' ' << vx << endl;
+  // cerr << r2 << ' ' << pi2h << ' ' << alpha2h << ' ' << beta2o << ' ' << vx << '\n';
 
   // clang-format off
   return    0.562   * r2
@@ -221,12 +220,12 @@ mcgowan(Molecule & m)
 
     rc += mcgowan_coefficient[z];
 
-//  cerr << "z = " << z << " mcgowan_coefficient " << mcgowan_coefficient[z] << " sum " << rc << endl;
+//  cerr << "z = " << z << " mcgowan_coefficient " << mcgowan_coefficient[z] << " sum " << rc << '\n';
 
     hcount += m.hcount(i);
   }
 
-//cerr << rc << " sum so far, hcount " << hcount << " edged " << m.nedges() << endl;
+//cerr << rc << " sum so far, hcount " << hcount << " edged " << m.nedges() << '\n';
 
   return rc + hcount * mcgowan_coefficient[1] - m.nedges() * 6.56;
 }
@@ -505,7 +504,7 @@ Abraham_Substructure_Query::build(const const_IWSubstring & buffer,
     cerr << "Abraham_Substructure_Query::build:one or more models not recognised\n";
     for (auto i : mname_to_ndx)
     {
-      cerr << i.first << ' ' << recognised[i.second] << endl;
+      cerr << i.first << ' ' << recognised[i.second] << '\n';
     }
 
     return 0;
@@ -613,7 +612,7 @@ Abraham_Substructure_Query::all_atoms_unmatched(const Set_of_Atoms &e,
     atom_number_t j = e[i];
 
 #ifdef DEBUG_ALL_ATOMS_UNMATCHED
-    cerr << "Matched atom i = " << i << " j = " << j << endl;
+    cerr << "Matched atom i = " << i << " j = " << j << '\n';
 #endif
 
     if (INVALID_ATOM_NUMBER == j) {
@@ -877,7 +876,7 @@ Queries_and_Additive_Models::_parse_intercept_record(const const_IWSubstring &bu
 
 #ifdef ECHO_INTERCEPTS
   for (auto i = 0; i < _nmodels; ++i) {
-    cerr << "Model " << i << " intercept " << _intercept[i] << endl;
+    cerr << "Model " << i << " intercept " << _intercept[i] << '\n';
   }
 #endif
 
@@ -932,8 +931,8 @@ Queries_and_Additive_Models::build(iwstring_data_source &input) {
   } else if (!_parse_global_min_max(global_max, _global_max) ||
              !_parse_global_min_max(global_min, _global_min)) {
     cerr << "Queries_and_Additive_Models::build:cannot determine model global min/max\n";
-    cerr << "MIN: " << global_min << endl;
-    cerr << "MAX: " << global_max << endl;
+    cerr << "MIN: " << global_min << '\n';
+    cerr << "MAX: " << global_max << '\n';
     return 0;
   }
 
@@ -957,7 +956,7 @@ Queries_and_Additive_Models::build(iwstring_data_source &input) {
 
     if (!q->build(buffer, _model_name_to_number, recognised)) {
       cerr << "Queries_and_Additive_Models::build:invalid query '" << buffer << "', line "
-           << input.lines_read() << endl;
+           << input.lines_read() << '\n';
       delete q;
 
       return 0;
@@ -1031,7 +1030,7 @@ Queries_and_Additive_Models::process(Molecule &m, Molecule_to_Match &target,
     /*  for (int i = 0; i < matoms; ++i)
         {
           cerr << " atom " << i << " already_hit " << already_hit[i] << ' ' <<
-       m.smarts_equivalent_for_atom(i) << endl;
+       m.smarts_equivalent_for_atom(i) << '\n';
         }
         cerr << unclassified << " unclassified\n"; */
 
@@ -1050,7 +1049,7 @@ Queries_and_Additive_Models::process(Molecule &m, Molecule_to_Match &target,
 #ifdef DEBUG_PROCESS
   cerr << "Queries_and_Additive_Models::process: finished\n";
   for (auto i = 0; i < _nmodels; ++i) {
-    cerr << " model " << i << " value " << v[i] << endl;
+    cerr << " model " << i << " value " << v[i] << '\n';
   }
 #endif
 
@@ -1111,7 +1110,7 @@ Abraham_Substructure_Query::mark_matched_atoms(const Set_of_Atoms &e, int *alrea
     atom_number_t j = e[i];
 
 #ifdef DEBUG_MARK_MATCHED_ATOMS
-    cerr << "How about i = " << i << " j = " << j << endl;
+    cerr << "How about i = " << i << " j = " << j << '\n';
 #endif
 
     if (INVALID_ATOM_NUMBER == j) {
@@ -1191,7 +1190,7 @@ Queries_and_Additive_Models::examine_query_overlap_behaviour(Molecule &m) {
         _hit_matrix[q2 * nq + q1]++;
 
         //      cerr << "Queries " << q1 << " and " << q2 << " both hit atom " << i <<
-        //      endl;
+        //      '\n';
       }
     }
   }
@@ -1228,9 +1227,9 @@ Queries_and_Additive_Models::_process(Molecule_to_Match &target, int *already_hi
 
 #ifdef DEBUG_PROCESS
   cerr << "On entry, processing " << nq << " queries " << target.molecule()->smiles()
-       << " mih " << make_implicit_hydrogens_implicit << endl;
+       << " mih " << make_implicit_hydrogens_implicit << '\n';
   for (auto k = 0; k < _nmodels; ++k) {
-    cerr << " " << k << " " << results[k] << endl;
+    cerr << " " << k << " " << results[k] << '\n';
   }
 #endif
 
@@ -1256,7 +1255,7 @@ Queries_and_Additive_Models::_process(Molecule_to_Match &target, int *already_hi
            << " matches\n";
     } else if (_show_all_query_non_matches && 0 == nhits) {
       cerr << "Query " << i << ' ' << _queries[i]->comment() << " only matched "
-           << sresults.max_query_atoms_matched_in_search() << endl;
+           << sresults.max_query_atoms_matched_in_search() << '\n';
     }
 
     for (int j = 0; j < nhits; j++) {
@@ -1264,7 +1263,7 @@ Queries_and_Additive_Models::_process(Molecule_to_Match &target, int *already_hi
           const_cast<Set_of_Atoms *>(sresults.embedding(j));  // loss of const OK
 
       if (verbose > 1) {
-        cerr << " hit " << j << ' ' << *e << endl;
+        cerr << " hit " << j << ' ' << *e << '\n';
       }
 
       if (!_queries[i]->all_atoms_unmatched(*e, already_hit)) {
@@ -1278,7 +1277,7 @@ Queries_and_Additive_Models::_process(Molecule_to_Match &target, int *already_hi
 #ifdef DEBUG_PROCESS
       cerr << i << " after nit " << j << " to '" << _queries[i]->comment() << "'\n";
       for (auto k = 0; k < _nmodels; ++k) {
-        cerr << " " << k << " " << results[k] << endl;
+        cerr << " " << k << " " << results[k] << '\n';
       }
 #endif
     }
@@ -1296,7 +1295,7 @@ Queries_and_Additive_Models::convert_to_int_count(const double *v, int *b) const
 
   for (auto i = 0; i < _nmodels; ++i) {
     //  cerr << "line " << __LINE__ << " i = " << i << " cmp " << _global_min[i] << " max
-    //  " << _global_max[i] << endl;
+    //  " << _global_max[i] << '\n';
 
     if (v[i] <= _global_min[i]) {
       b[i] = 1;
@@ -1332,7 +1331,7 @@ run_a_set_of_queries(const resizable_array_p<Abraham_Substructure_Query> & q,
 
     if (0 == nhits && verbose > 2)
       cerr << "Query " << q[i]->comment() << " only matched " <<
-sresults.max_query_atoms_matched_in_search() << endl;
+sresults.max_query_atoms_matched_in_search() << '\n';
 
     if (verbose > 1 && nhits)
       cerr << ' ' << nhits << " hits to query " << i << " '" << q[i]->comment() << "'\n";
@@ -1343,7 +1342,7 @@ sresults.max_query_atoms_matched_in_search() << endl;
 const OK
 
       if (verbose > 1)
-        cerr << " hit " << j << ' ' << *e << endl;
+        cerr << " hit " << j << ' ' << *e << '\n';
 
       if (! q[i]->all_atoms_unmatched(*e, already_hit))
         continue;
@@ -1353,7 +1352,7 @@ const OK
 
       ap += api;
 //    cerr << "After '" << q[i]->comment() << "' value R2 " << ap.r2() << " alpha2H " <<
-ap.alpha2h() << ", pi2H " << ap.pi2h() << endl;
+ap.alpha2h() << ", pi2H " << ap.pi2h() << '\n';
     }
   }
 
@@ -1420,9 +1419,9 @@ abraham(Molecule &m, int *already_hit, int *isotope, Queries_and_Additive_Models
   }
 
   // cerr << "Indices " << ap_r2 << ' ' << ap_pi2h << ' ' << ap_alpha2h << ' ' <<
-  // ap_beta2o << " ndx " << ndx << endl;
+  // ap_beta2o << " ndx " << ndx << '\n';
 
-  // cerr << "Setting logp at " << ap_logp << endl;
+  // cerr << "Setting logp at " << ap_logp << '\n';
   v[ap_logp] = abraham_logp(v[ap_r2], v[ap_pi2h], v[ap_alpha2h], v[ap_beta2o], v[ap_vx]);
 
   if (nullptr != int_output_for_fingerprints) {
@@ -1949,7 +1948,7 @@ abraham(int argc, char **argv) {
       table[i].remove_leading_chars(7);
 
       if (0 == table[i].length()) {
-        cerr << "No specification for Constantinou Gani table " << i << endl;
+        cerr << "No specification for Constantinou Gani table " << i << '\n';
         return 2;
       }
 
@@ -2023,7 +2022,7 @@ abraham(int argc, char **argv) {
 
   const auto nresults = tmp;
 
-  // cerr << "Have " << nresults << " results, nmodels " << nmodels << endl;
+  // cerr << "Have " << nresults << " results, nmodels " << nmodels << '\n';
 
   v = new double[nresults];
   std::unique_ptr<double[]> free_v(v);
@@ -2069,7 +2068,7 @@ abraham(int argc, char **argv) {
       }
 
       if (verbose) {
-        cerr << "Each replicate will scale to " << bit_count_dynamic_range << endl;
+        cerr << "Each replicate will scale to " << bit_count_dynamic_range << '\n';
       }
     }
 

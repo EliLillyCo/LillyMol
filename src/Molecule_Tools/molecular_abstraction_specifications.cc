@@ -31,6 +31,7 @@ DisplayAbstractionNames(std::ostream& output) {
   output << " rmspinach   same as scaffold\n";
   output << " rplink      replace a linker\n";
   output << " scaffold    reduce the molecule to scaffold atoms\n";
+  output << " cscaffold   reduce the molecule to scaffold + carbon extensions atoms\n";
   output << " sss         perform substructure search\n";
   output << " translate   translate all atoms of a type to another element\n";
   return;
@@ -336,6 +337,8 @@ Molecular_Abstraction_Directives_Node::directive_recognised()
     _type = MAD_TYPE_RMSCAFFOLD;
   else if (MAD_SCAFFOLD == _directive)
     _type = MAD_TYPE_SCAFFOLD;
+  else if (MAD_CSCAFFOLD == _directive)
+    _type = MAD_TYPE_CSCAFFOLD;
   else if (MAD_RINGS == _directive)
     _type = MAD_TYPE_RINGS;
   else if (MAD_BIGRING == _directive)

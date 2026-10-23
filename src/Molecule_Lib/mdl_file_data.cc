@@ -11,7 +11,7 @@ using std::endl;
 void
 MDL_Atom_Data::_default_values()
 {
-  _atom_number = INVALID_ATOM_NUMBER;
+  _atom_number = kInvalidAtomNumber;
 
   _hcount = 0;
   _h0designator = 0;

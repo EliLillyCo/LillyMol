@@ -1,0 +1,10 @@
+C methane
+OCC ethanol
+c1ccccc1 benzene
+CC(=O)Oc1ccccc1C(=O)O aspirin
+CN1CCC[C@H]1c1cccnc1 nicotine
+[NH3+]CC(=O)[O-] glycine_zwitterion
+c1ccccc1.c1ccccc1 two_benzenes
+C1CCCCCCCCCCC1 cyclododecane
+O=C1CCC(=O)N1c1ccccc1 phenylsuccinimide
+CC1=C(C(=O)Nc2ccccc2)N(c2ccc(F)cc2)N=C1c1ccc(S(=O)(=O)N)cc1 pyrazole_sulfonamide

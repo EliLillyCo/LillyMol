@@ -4,8 +4,8 @@
     (A C smarts "[NH>0]")
   )
   (1 Sidechain
-    (A C smiles "[N:1](C)C(=O)N(C)C SHR.amine_to_urea")
-    (A C smarts "N(C)C(=O)N(C)C")
+    (A C smiles "C(=O)N(C)C SHR.amine_to_urea")
+    (A C smarts "C(=O)N(C)C")
     (A I join (0 0))
   )
 )

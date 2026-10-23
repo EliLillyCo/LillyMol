@@ -1,0 +1,23 @@
+{
+  "executable": "descriptor_file_sort",
+  "test": [
+    {
+      "name": "descriptor_mixed_direction",
+      "args": [
+        "-d natoms/r -d amw #{datadir}/input.txt"
+      ]
+    },
+    {
+      "name": "global_reverse_overridden",
+      "args": [
+        "-r -d natoms/a -d amw/r #{datadir}/input.txt"
+      ]
+    },
+    {
+      "name": "column_mixed_direction",
+      "args": [
+        "-c 2/r -c 3 #{datadir}/input.txt"
+      ]
+    }
+  ]
+}

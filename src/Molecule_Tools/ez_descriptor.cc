@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -382,7 +384,7 @@ ez_descriptor (Molecule & m,
     return 0;
   }
 
-  set_vector (result_vector, nq, 0);
+  std::fill_n (result_vector, nq, 0);
 
   if (m.natoms() < 4)    // cannot have a cis-trans bond
     ;

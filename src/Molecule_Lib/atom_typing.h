@@ -18,29 +18,29 @@
 #include "charge_assigner.h"
 #include "donor_acceptor.h"
 
-#define IWATTYPE_Z 1
-#define IWATTYPE_COMPLEX 2
-#define IWATTYPE_TT 4
-#define IWATTYPE_SYBYL 8
-#define IWATTYPE_BASIC 16
-#define IWATTYPE_EXPT 32
-#define IWATTYPE_HB 64
-#define IWATTYPE_SF 128
-#define IWATTYPE_NONE 256
-#define IWATTYPE_SFX 512
-#define IWATTYPE_CH 1024
-#define IWATTYPE_CC 2048
-#define IWATTYPE_PP 4096
-#define IWATTYPE_ZA 8192
-#define IWATTYPE_ZP 16384
+inline constexpr uint32_t IWATTYPE_Z = 1;
+inline constexpr uint32_t IWATTYPE_COMPLEX = 2;
+inline constexpr uint32_t IWATTYPE_TT = 4;
+inline constexpr uint32_t IWATTYPE_SYBYL = 8;
+inline constexpr uint32_t IWATTYPE_BASIC = 16;
+inline constexpr uint32_t IWATTYPE_EXPT = 32;
+inline constexpr uint32_t IWATTYPE_HB = 64;
+inline constexpr uint32_t IWATTYPE_SF = 128;
+inline constexpr uint32_t IWATTYPE_NONE = 256;
+inline constexpr uint32_t IWATTYPE_SFX = 512;
+inline constexpr uint32_t IWATTYPE_CH = 1024;
+inline constexpr uint32_t IWATTYPE_CC = 2048;
+inline constexpr uint32_t IWATTYPE_PP = 4096;
+inline constexpr uint32_t IWATTYPE_ZA = 8192;
+inline constexpr uint32_t IWATTYPE_ZP = 16384;
 
 // Realised that all the choices above are mutually exclusive, so no need to keep
 // them as separate bits
 
-#define IWATTYPE_NOX 73
+inline constexpr uint32_t IWATTYPE_NOX = 73;
 
-#define DIFFERENTIATE_RINGS 32768
-#define PERFORM_SHELL_ITERATION 65536
+inline constexpr uint32_t DIFFERENTIATE_RINGS = 32768;
+inline constexpr uint32_t PERFORM_SHELL_ITERATION = 65536;
 
 /*
   Oct 2009. We introduce an entirely flexible atom typing that can come
@@ -50,67 +50,72 @@
     and an int that holds the components
 */
 
-#define IWATTYPE_USP 131072
+inline constexpr uint32_t IWATTYPE_USP = 131072;
 
 // atomic numbers
-#define IWATTYPE_USP_Z one_bit_32[0]
+inline constexpr uint32_t IWATTYPE_USP_Z = one_bit_32[0];
 // atomic numbers halogens equivalent
-#define IWATTYPE_USP_Y one_bit_32[1]
+inline constexpr uint32_t IWATTYPE_USP_Y = one_bit_32[1];
 // Hydrogen count
-#define IWATTYPE_USP_H one_bit_32[2]
+inline constexpr uint32_t IWATTYPE_USP_H = one_bit_32[2];
 // pi electrons
-#define IWATTYPE_USP_P one_bit_32[3]
+inline constexpr uint32_t IWATTYPE_USP_P = one_bit_32[3];
 // aromatic
-#define IWATTYPE_USP_A one_bit_32[4]
+inline constexpr uint32_t IWATTYPE_USP_A = one_bit_32[4];
 // ncon
-#define IWATTYPE_USP_C one_bit_32[5]
+inline constexpr uint32_t IWATTYPE_USP_C = one_bit_32[5];
 // ring bond count
-#define IWATTYPE_USP_R one_bit_32[6]
+inline constexpr uint32_t IWATTYPE_USP_R = one_bit_32[6];
 // no type
-#define IWATTYPE_USP_N one_bit_32[7]
+inline constexpr uint32_t IWATTYPE_USP_N = one_bit_32[7];
 // carbon or heteroatom
-#define IWATTYPE_USP_E one_bit_32[8]
+inline constexpr uint32_t IWATTYPE_USP_E = one_bit_32[8];
 // unsaturated - for now, includes arom
-#define IWATTYPE_USP_U one_bit_32[9]
+inline constexpr uint32_t IWATTYPE_USP_U = one_bit_32[9];
 // include isotope information in the atom type
-#define IWATTYPE_USP_I one_bit_32[10]
+inline constexpr uint32_t IWATTYPE_USP_I = one_bit_32[10];
 // isolated or fused ring
-#define IWATTYPE_USP_F one_bit_32[11]
+inline constexpr uint32_t IWATTYPE_USP_F = one_bit_32[11];
 
 // Y atom typing, but all aromatic atoms the same
-#define IWATTYPE_USP_M one_bit_32[12]
+inline constexpr uint32_t IWATTYPE_USP_M = one_bit_32[12];
 
 // Same as Y, but all possibly tautomeric aromatic nitrogens get same type
 
-#define IWATTYPE_USP_T one_bit_32[13]
+inline constexpr uint32_t IWATTYPE_USP_T = one_bit_32[13];
 
 // Concept of centrality of an atom
-#define IWATTYPE_USP_X one_bit_32[14]
+inline constexpr uint32_t IWATTYPE_USP_X = one_bit_32[14];
 
 // Smallest ring size containing the atom
-#define IWATTYPE_USP_S one_bit_32[15]
+inline constexpr uint32_t IWATTYPE_USP_S = one_bit_32[15];
 // Largest ring size containing the atom
-#define IWATTYPE_USP_L one_bit_32[16]
+inline constexpr uint32_t IWATTYPE_USP_L = one_bit_32[16];
 
 // the atomic numbers of the connected atoms
-#define IWATTYPE_USP_K one_bit_32[17]
+inline constexpr uint32_t IWATTYPE_USP_K = one_bit_32[17];
 
 // Boolean pi electron
-#define IWATTYPE_USP_Q one_bit_32[18]
+inline constexpr uint32_t IWATTYPE_USP_Q = one_bit_32[18];
 
 // formal charge
 
-#define IWATTYPE_USP_O one_bit_32[19]
+inline constexpr uint32_t IWATTYPE_USP_O = one_bit_32[19];
 
 // Unsaturated, but aromatic NOT included.
 
-#define IWATTYPE_USP_B one_bit_32[20]
+inline constexpr uint32_t IWATTYPE_USP_B = one_bit_32[20];
 
-#define IWATTYPE_PPHORE 262144
+inline constexpr uint32_t IWATTYPE_PPHORE = 262144;
 
 // The atomic symbol hash value - useful for non periodic table elements
 
-#define IWATTYPE_USP_G one_bit_32[17]
+inline constexpr uint32_t IWATTYPE_USP_G = one_bit_32[21];
+
+static_assert(IWATTYPE_USP_Z == one_bit_32[0]);
+static_assert(IWATTYPE_USP_B == one_bit_32[20]);
+static_assert(IWATTYPE_USP_G == one_bit_32[21]);
+static_assert(IWATTYPE_USP_G != IWATTYPE_USP_K);
 
 class Molecule;
 
@@ -135,8 +140,8 @@ class QueryAndValue {
 
 class Atom_Typing_Specification {
  private:
-  int _type;
-  unsigned int _user_specified_type;
+  uint32_t _type;
+  uint32_t _user_specified_type;
   int _differentiate_rings;
   int _perform_shell_iteration;
 
@@ -234,15 +239,18 @@ class Atom_Typing_Specification {
 
   int active() const;
 
-  void set_atom_type(int s) {
+  void set_atom_type(uint32_t s) {
     _type = s;
   }  // should probably check validity
 
-  int atom_type() const {
+  uint32_t atom_type() const {
     return _type;
   }
 
   void set_user_specified_type(unsigned int);
+  uint32_t user_specified_type() const {
+    return _user_specified_type;
+  }
 
   int append_to_tag(IWString&) const;
   int string_representation(IWString&) const;
@@ -288,5 +296,12 @@ int assign_atom_types(Molecule& m, int typing_to_use, T* atype,
 extern void set_assign_arbitrary_values_to_unclassified_atoms(int s);
 
 extern void set_use_version_2_augmented_atom_algorithm(int s);
+
+namespace lillymol {
+
+// Given the atom types turned on in `atype` return a smarts for `zatom`.
+IWString SmartsForAtomType(Molecule& m, atom_number_t zatom, uint32_t atype);
+
+}  // namespace lillymol
 
 #endif  // MOLECULE_LIB_ATOM_TYPING_H_

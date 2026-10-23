@@ -324,28 +324,28 @@ NColumn::establish_range_from_pre_existing_data(const IWString& buffer) {
   int i = 0;
   const_IWSubstring token;
 
-  do_nextword(buffer, i, token);
+  buffer.NextWord(token, i, input_separator);
 
   if (!token.numeric_value(_minval)) {
     cerr << "NColumn::establish_ranges:invalid _minval\n";
     return 0;
   }
 
-  do_nextword(buffer, i, token);
+  buffer.NextWord(token, i, input_separator);
 
   if (!token.numeric_value(_maxval)) {
     cerr << "NColumn::establish_ranges:invalid _maxval\n";
     return 0;
   }
 
-  do_nextword(buffer, i, token);
+  buffer.NextWord(token, i, input_separator);
 
   if (!token.numeric_value(_average)) {
     cerr << "NColumn::establish_ranges:invalid _ave\n";
     return 0;
   }
 
-  do_nextword(buffer, i, token);
+  buffer.NextWord(token, i, input_separator);
 
   if (!token.numeric_value(_variance)) {
     cerr << "NColumn::establish_ranges:invalid _variance\n";
@@ -549,16 +549,6 @@ initialise_ranges_for_scaling() {
 
 static NColumn* column = nullptr;
 
-template <typename S1, typename S2>
-int
-do_nextword(const S1& buffer, int& i, S2& token) {
-  if (' ' != input_separator) {
-    return buffer.nextword_single_delimiter(token, i, input_separator);
-  } else {
-    return buffer.nextword(token, i);
-  }
-}
-
 static int
 determine_tokens_per_line_and_allocate_arrays(iwstring_data_source& input) {
   const_IWSubstring buffer;
@@ -602,11 +592,11 @@ determine_tokens_per_line_and_allocate_arrays(iwstring_data_source& input) {
 
   for (int i = 0; i < initial_columns_to_skip; i++) {
     column[i].set_skip(1);
-    do_nextword(buffer, ndx, token);
+    buffer.NextWord(token, ndx, input_separator);
   }
 
   for (int i = initial_columns_to_skip; i < columns_in_input; i++) {
-    do_nextword(buffer, ndx, token);
+    buffer.NextWord(token, ndx, input_separator);
     if (translate_descriptor_names_to_lowercase) {
       token.to_lowercase();
     }
@@ -648,7 +638,7 @@ read_record(iwstring_data_source& input, Data_Item* d, int& fatal) {
   const_IWSubstring token;
   int col = 0;
 
-  while (do_nextword(buffer, i, token)) {
+  while (buffer.NextWord(token, i, input_separator)) {
     Data_Item& di = d[col];
 
     //  cerr << "Reading column " << col << " skip = " << column[col].skip() << " i = " <<
@@ -682,12 +672,12 @@ do_write_record(const const_IWSubstring& buffer, IWString_and_File_Descriptor& o
   int col = 0;
 
   for (int i = 0; i < initial_columns_to_skip; i++, col++) {
-    do_nextword(buffer, ndx, token);
+    buffer.NextWord(token, ndx, input_separator);
 
     output.append_with_spacer(token, output_separator);
   }
 
-  while (do_nextword(buffer, ndx, token)) {
+  while (buffer.NextWord(token, ndx, input_separator)) {
     if (!column[col].skip()) {
       output.append_with_spacer(token);
     }

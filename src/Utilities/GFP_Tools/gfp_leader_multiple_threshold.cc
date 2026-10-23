@@ -3,8 +3,10 @@
 */
 
 #include <stdlib.h>
-#include <values.h>
+#include <limits.h>
+#include <float.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -364,7 +366,7 @@ Leader_Item::Leader_Item()
 
   if (number_threshold_tags) {
     _threshold = new similarity_type_t[number_threshold_tags];
-    set_vector(_threshold, number_threshold_tags, static_cast<similarity_type_t>(-1.0));
+    std::fill_n(_threshold, number_threshold_tags, static_cast<similarity_type_t>(-1.0));
   } else {
     _threshold = nullptr;
   }

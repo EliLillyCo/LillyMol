@@ -14,6 +14,8 @@ const char *prog_name = nullptr;
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/iwstring/string_with_commas.h"
 
 #include "tokens_in_quoted_string.h"
 
@@ -72,6 +74,12 @@ static Accumulator_Int<uint32_t> *acc_token_length = nullptr;
 static int *zero_length = nullptr;
 
 static int contains_backslashed_separators = 0;
+
+// We can optionally write large numbers with commas.
+static int human_readable_output = 0;
+
+// Accumulated across all files.
+static uint64_t total_lines_read = 0;
 
 /*
   When writing different column counts to different files, we need a
@@ -199,6 +207,7 @@ usage(int rc, int showDelimiterOptions = 0) {
   cerr << "  -g                report non rectangular files\n";
   cerr << "  -q                data is quoted tokens\n";
   cerr << "  -k                data may contain backslashed token separators\n";
+  cerr << "  -h                human readable output, 1000000 written as 1,000,000\n";
   cerr << "  -v                verbose output\n";
   if (showDelimiterOptions) {
     cerr << "  -d <delim>        delimiter is any character, or one of these token "
@@ -443,7 +452,14 @@ tcount(iwstring_data_source &input) {
       continue;
     }
 
-    cerr << token_counts[i] << " records had " << i << " tokens";
+    total_lines_read += token_counts[i];
+
+    if (human_readable_output) {
+      cerr << iwstring::with_commas(token_counts[i]);
+    } else {
+      cerr << token_counts[i];
+    }
+    cerr << " records had " << i << " tokens";
     if (i == tokens_on_first_record && looks_like_R) {
       cerr << " HEADER";
     }
@@ -492,7 +508,13 @@ tcount(const char *fname) {
 
   int rc = tcount(input);
 
-  cerr << input.lines_read() << " records read from '" << fname << "'";
+  if (human_readable_output) {
+    cerr << iwstring::with_commas(input.lines_read());
+  } else {
+    cerr << input.lines_read();
+  }
+
+  cerr << " records read from '" << fname << "'";
   if (verbose) {
     cerr << " records between " << record_length.minval() << " and "
          << record_length.maxval();
@@ -507,7 +529,7 @@ tcount(const char *fname) {
 
 static int
 tcount(int argc, char **argv) {
-  Command_Line cl(argc, argv, "c:d:wt:T:U:R:fbrvn:e:guqC:o:L:k");
+  Command_Line cl(argc, argv, "c:d:wt:T:U:R:fbrvn:e:guqC:o:L:kh");
 
   if (cl.unrecognised_options_encountered()) {
     usage(2);
@@ -557,6 +579,13 @@ tcount(int argc, char **argv) {
     data_is_quoted_tokens = 1;
     if (verbose) {
       cerr << "Data is quoted tokens\n";
+    }
+  }
+
+  if (cl.option_present('h')) {
+    human_readable_output = 1;
+    if (verbose) {
+      cerr << "Numbers of records written in human readable form\n";
     }
   }
 
@@ -753,6 +782,11 @@ tcount(int argc, char **argv) {
 
   if (report_non_rectangular_files) {
     cerr << non_rectangular_files_found << " non rectangular files found\n";
+  }
+
+  if (verbose && cl.size() > 1) {
+    cerr << "Read " << iwstring::with_commas(total_lines_read) << " lines from "
+         << cl.size() << " files\n";
   }
 
   return 0;

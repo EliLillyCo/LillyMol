@@ -1,0 +1,42 @@
+name: "benzene_para_to_bcp"
+scaffold {
+  smarts: "[/IWfss1cD3]1:[cD2]:[cD2]:[cD3]:[cD2]:[cD2]1"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  remove_atom: [4]
+  break_bond {
+    a1: 1
+    a2: 2
+  }
+  change_bond {
+    a1: 0
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 1
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  change_bond {
+    a1: 0
+    a2: 5
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 5
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  change_bond {
+    a1: 2
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

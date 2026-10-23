@@ -1,0 +1,4 @@
+name: "CD4CD3H"
+query {
+  smarts: "[CD4,CD3H]"
+}

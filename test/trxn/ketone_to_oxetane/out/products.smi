@@ -1,0 +1,6 @@
+CC1(C)COC1 acetone +
+CC1(c2ccccc2)COC1 acetophenone +
+O1CC(C1)(c1ccccc1)c1ccccc1 benzophenone +
+C1CCC2(CC1)COC2 cyclic_ketone +
+CC1(c2ccccc2)C[18O]C1 labelled_oxygen +
+C[C@H](F)C1(C)COC1 remote_chiral +

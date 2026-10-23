@@ -1,0 +1,11 @@
+min_natoms: 3
+utility {
+  name: "natoms"
+  point { x: 0 y: 0 }
+  point { x: 10 y: 1 }
+}
+utility {
+  name: "heteroatom_count"
+  point { x: 0 y: 0 }
+  point { x: 2 y: 1 }
+}

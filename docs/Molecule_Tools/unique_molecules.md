@@ -1,202 +1,202 @@
 # Unique Molecules
 
+## Quick Start
+
+Check for duplicates (ignoring chirality) in a set of molecules.
+
+```bash
+unique_molecules -c input.smi
+```
+
+Remove duplicate molecules while ignoring chirality, fragments and isotopes.
+
+```bash
+unique_molecules -v -l -c -I -S unique input.smi
+```
+duplicate molecules are discarded and unique molecules written to 'unique.smi'.
+
 ## Background
 A common task in Cheminformatics is the identification of unique or
-duplicate structures. The unique smiles is commonly used for this.
+duplicate structures. A hash of unique smiles is commonly used for this.
 
-`unique_molecules` reads a stream of molecules, and if any have been
-seen before, that molecule is discarded.
+`unique_molecules` reads a stream of molecules, performs any requested
+transformations on the molecule and forms a canonical smiles of the
+possibly transformed molecule.  If that smiles has been encountered
+before, that molecule is discarded, leaving only unique molecules in
+the output stream. The new unique smiles is added to the internal hash.
+
+## Limitations
+
+`unique_molecules` keeps all unique structures in memory.
+For extremely large datasets, use [unique_molecules_parallel](unique_molecules_parallel.md)
+or partition the dataset first.
 
 ## HOWTO
 The usage message is
+
+## Structural Equivalence Options
 ```
-  -l             strip to largest fragment
-  -a             compare as tautomers - skeleton and Hcount
-  -c             exclude chiral info - optical isomers will be duplicates
-  -z             exclude cis/trans bonding information
-  -I             ignore isotopic labels
-  -y             all non-zero isotopic values considered equivalent
-  -f             function as filter (TDT input)
-  -p <fname>     specify previously collected molecules
-  -G <tag>       identifier tag when working as a filter
-  -s <size>      specify primary hash size (default 1000)
-  -S <name>      specify output file name stem
-  -D <name>      write duplicate structures to <name>
-  -R <rxn>       perform reaction(s) on molecules before comparing
-  -T             discard molecular changes after comparison
-  -r <number>    report progress every <number> molecules
-  -e             report all molecules together with counts
-  -d             gather data as DicerFragment protos, -U file is more informative
-  -U <fname>     write molecules and counts to <fname>, add '-U csv' for csv
-  -d             use '-U smiles' to write smiles + textproto
-  -j             items are the same only if both structure and name match
-  -t E1=E2       element transformations, enter '-t help' for details
-  -i <type>      specify input type
-  -o <type>      specify output type(s)
-  -A <qualifier> Aromaticity, enter "-A help" for options
-  -K ...         standard smiles options, enter '-K help' for info
-  -g <qualifier> chemical standardisations, enter "-g help" for usage
-  -v             verbose output
-
-Typical usage might be
-
-unique_molecules -l -c -z -I -S /tmp/unique -v /home/ian/rand50k.smi
-
-To generate DicerFragment protos in the -U file.
-unique_molecules -l -c -z -I -U Ufile.textproto -d -U smiles -v /home/ian/rand50k.smi
+ -l             strip to largest fragment.
+ -a             compare as graph/tautomers - concatenate molecular skeleton and formula.
+ -c             exclude chiral info - optical isomers will be duplicates.
+ -z             exclude cis/trans bonding information - true by default.
+ -I             ignore isotopic labels.
+ -y             all non-zero isotopic values considered equivalent.
+ -R <rxn>       perform reaction(s) on molecules before comparing.
+ -t E1=E2       element transformations, enter '-t help' for details.
+ -j             items are the same only if both structure and name match.
+ ```
+ ## Output Options
+ ```
+ -S <fname>     specify output file name stem - the unique molecules.
+ -D <fname>     write duplicate structures to <fname>.smi.
+ -U <fname>     write molecules and counts to <fname>.
+ -U csv         write the -U file a csv form.
+ -U textproto   write the -U file as dicer_data::DicerFragment textproto
+ -U smiles      when writing textprotos, write smiles + textproto
+ ```
+ ## Other Options
+ ```
+ -p <fname>     specify previously collected molecules.
+ -T             discard molecular changes after comparison - writes initial molecule.
+ -r <number>    report progress every <number> molecules.
+ ```
+ ## Common LillyMol options
+ ```
+ -i <type>      specify input type. All LillyMol input formats supported, including stdin.
+ -o <type>      specify output type(s).
+ -E ...         standard element options, enter '-E help' for info.
+ -A ...         standard aromaticity options, enter '-A help' for info.
+ -K ...         standard smiles options, enter '-K help' for info.
+ -g ...         chemical standardisation options, enter '-g help' for info.
+ -v             verbose output.
 ```
 
 There are a great many ways by which two molecules can be considered identical.
-`unique_molecules` provides a wide variaty of structural modifiers that can
+`unique_molecules` provides a wide variety of structural modifiers that can
 be applied to molecules before their unique smiles are generated.
 
-* -l strip to the largest fragment
-* -c discard chirality
-* -z discard cis/trans bonding information
+* -l strip to the largest fragment.
+* -c discard chirality.
+* -z discard cis/trans bonding information - true by default.
 * -I discard isotopic labels.
 * -y all non zero isotopic labels compared as equivalent
 * -R \<rxn\> apply a transformation reaction to the molecules.
-* -t E1=E2 transform all elements E1 to E2 (suggest -T I=Cl -T Br=Cl)
+* -t E1=E2 transform all elements E1 to E2 (suggest -t I=Cl -t Br=Cl)
 
-Once these transformations are applied, the unique smiles is generate
+Once these transformations are applied, the unique smiles is generated
 and compared to what has been encountered previously. If this is
 the first instance of the smiles, that molecule is written to the output
-strea, otherwise it is classified as a duplicate, and if specified,
+stream, otherwise it is classified as a duplicate, and if specified,
 written to the -D file for duplicates.
 
 By default, the changed molecule will be written, but the original form
 can be written if the -T option is used. That should probably be the
-default.
+default. This only applies if the -l, -t or -R options are used.
+
+It is important to note that unique_molecules operates by discarding
+duplicates. If the -c (ignore chirality) option is present, and there
+are chiral duplicates in the input, the *first* variant is what will
+be written. If you need to identify the actual duplicate molecules
+use [common_names](common_names.md).
 
 If there is a previous set of molecules (`-p`) that should be considered,
 which will establish the unique smiles hash, without writing anything.
 
 By default, smiles are accumulated in a C++ set, which has only keys. If
-you wish to get a summary of smiles and counts, use the -e option,
+you wish to get a summary of smiles and counts, use the -U option,
 which will use a map for the unique smiles, and counts can be accumulated.
 
 # Options
 Some of the other options modify how this works.
 ## -p \<fname\>
 Specify a file of previously selected molecules. The unique smiles hash
-is first populated with these molecles, and then the input is compared.
-
-## -G \<tag\>
-Obscure.  Identifier tag when working as a TDT filter - GFP files.
-
-## -s \<size\>
-Ignore. Specify primary hash size (default 1000). Usually not needed these
-days.
+is first populated with these molecules, and then the input is compared.
+All structure modification options are applied.
 
 ### -S \<name\>
 Specify output file name stem.
 
-### -D \<name\>
-Write duplicate structures to \<name\>. By default, duplicate structures
-are just discarded.
+### -j
+Only consider structures the same if their names also match.
 
 ### -T
-Discard molecular changes after comparison. This is important. For example
-if chirality is discarded during unique smiles comparison, by default,
-there will be no chirality in the ouput. With the -T option, the original
-molecule is retained. This should be the default.
+By default, any transformations applied for duplicate comparison are retained in the output molecule.
 
+Use `-T` to restore the original molecule before writing output.
+This is often desirable when using `-c`, `-I`, `-R`, or `-t`.
+
+### -D \<name\>
+Write duplicate structures to \<name\>. By default, duplicate structures
+are just discarded. The default output of the -D option file is
+just a smiles file with the smiles and id of all duplicates encountered.
+
+### -U ...
+At the end of processing write a file containing summary information
+on the internal hash structures. By default, this will be a list of
+unique smiles and number of times it has been found, '-U fname'.
+```
+NS(=O)(=O)OC1CCCC1 1
+N#Cc1sc(N(=O)=O)cc1 1
+O=C(OC)C1C(CC2N(C)C1CC2)c1ccc(Br)cc1 2
+Clc1cc(c2ccoc2)c2N3CCCC3NS(=O)(=O)c2c1 2
+```
+That file can be written as csv form via '-U fname -U csv'.
+
+It can be written as a dicer_data::DicerFragment textproto form by
+'-U fname -U textproto' which might look like
+```
+smi: "N[C@@H]1NCC(C)C([C@@H]1O)O" par: "CHEMBL85218" nat: 10 n: 2 
+smi: "Brc1cc(C)c[n+](C)c1Cl" par: "CHEMBL44713" nat: 10 n: 2 
+smi: "CN(Cc1ccccc1)C" par: "CHEMBL45591" nat: 10 n: 2 
+smi: "O=C(C)CCCN(=O)(C)C" par: "CHEMBL25004" nat: 10 n: 2 
+smi: "N=C(N)Nc1[n]cc[n]c1" par: "CHEMBL54990" nat: 10 n: 2 
+```
 ### -r \<number\>
 Report progress every \<number\> molecules processed. Or just look
 at what is getting written.
 
-### -e
-It can be helpful to get a summary of unique smiles and counts 
-written to the log.
+### -g ...
+Apply chemical standardisation. This is likely very important if you
+are dealing with disparate sources of molecules. For example if
+one data source writes Nitro groups as 'O=[N+]-[O-]' and the
+other writes them as 'O=N=O', the unique smiles of the starting
+molecules will be different. If '-g all' is specified, they become
+the same. See [chemical_standardisation](/docs/Molecule_Lib/chemical_standardisation.md)
 
-### -U \<fname\>
-Formalise what the `-e` option does, writing the data to a
-separate file - rather than mixed in with stderr.
+# Algorithm.
+Internally the tool uses an array of hash_set's to keep track of
+the unique smiles encountered by atom count. The reason for segregating
+by atom count comes from the observation that performance seemed
+to degrade as the hash became larger. So segregating the dataset
+by atom count provided a means of mitigating that problem. It is
+not clear whether today's hash implementations suffer from that
+issue, but the current implementation should not be deleterious.
 
-### -j
-Only consider structures the same if their names also match.
+For discussion of large-scale parallel processing, see
+[unique_molecules_parallel](unique_molecules_parallel.md).
 
-# Large Datasets
-Some thoughts on handling larger datasetsdatasets.
+## Example Invocations.
+In each case, add '-S output' in order to write the unique molecules
+to 'output.smi'. Also, adding chemical standardisation '-g all' is
+usually a good idea.
 
-A tool like unique molecules must necessarily scale with the
-number of molecules in the input, and the memory requirments
-will scale with the number of distinct structures encountered.
 
-Up to several tens of millions of molecules, this will be OK.
+| Task | Command |
+|---|---|
+| Ignore chirality | `unique_molecules -c input.smi` |
+| Ignore isotopes | `unique_molecules -I input.smi` |
+| Keep duplicates | `unique_molecules -D dups.smi input.smi` |
+| Use prior molecule set | `unique_molecules  -c -p existing.smi input.smi` |
+| Match name and structure | `unique_molecules -j input.smi` |
 
-For example, running unique_molecules on 34M molecules generated
-by making changes to Chembl, runs in about 29 minutes, while consuming
-as much as 7GB of RAM. This may be just fine.
-
-The process can be sped up in a number of ways.
-
-The most straightforward is to split the dataset into different
-streams, that are guaranteed to be different. For example if the
-input is split into files, each of which has molecules with a given
-number of heavy atoms, those files can be processed separately. Clearly
-a molecule with 10 atoms need not be compared with a molecule with 11 in 
-order to find duplicates.
-
-Obviously these separate files can be processed in parallel, and the memory requirements
-for each job will be modest.
-
-Taking this concept one step further, perhaps the file could be
-divided by molecular formula, with files containing only molecules
-with the same molecular formula. Again, files can be processed independently
-and memory requirements will be lower.
-
-# A Failed Idea.
-Rather than creating separate files, how about we just sort the file
-by molecular formula and write something to do uniqueness, but aware
-of the molecular formula from one line to the next - and never compare any two molecules with
-different formulae.
-
-Given the set of 34M molecules, we can run
-```
-fileconv -g all -p noname -p MF -S with_formula file.smi
-```
-which appends the molecular formula to the names in `with_formula`.
-```
-NC1=CC=C(N(CCF)CCF)C=C1 CHEMBL148945 C10N2F2H14
-```
-This can be sorted with standard unix `sort`. This is done in about 25 seconds,
-but consumes 7.6 GB of RAM.
-```
-sort -k 3,3 --parallel 8 ...
-```
-`sort` is very sophisticated, and has options for specifying the buffer
-size to use. For larger datasets, this could be used for limiting the
-RAM used, and using temporary files.
-
-Once the sorted file is available, the tool `unique_molecules_sorted` can
-be used to look for duplicates. If the molecular formula is different from
-one row to the next, smiles interpretation is not needed. But if there
-are consecutive lines with the same formula, smiles interpretation is
-needed. If that is done, the file can be processed in just under 12 minutes.
-This could of course be overlapped
-```
-sort -k 3,3 -parallel 8 file.smi | unique_molecules_sorted -C 3 -v -
-```
-which would avoid the need for a large temporary file.
-
-Overall, this is not worth it. We can process the original file in 29
-minutes using `unique_molecules`. The alternative is a three step process
-1. 13 minutes - use fileconv to append the molecular formula
-2. 25 seconds - sort the resulting file
-3. 12 minutes - unique molecules using the molecular formula as a guard.
-
-For a total run time of about 26 minutes. Not much different from the
-29 minutes used by unique_molecules. And the highest RAM requirement
-is about the same - this time with 'sort'.
-
-The best way to do approach this problem is likely to create separate
-files, split by formula, and process those separately and in parallel.
-There is no existing LillyMol tool to do this, but it would be easy to 
-do.
+Note too that like most LillyMol tools, unique_molecules usually works
+silently. Add the -v option to get diagnostic information about
+processing.
 
 ## Inchi
 Note that if LillyMol has been built to include Inchi functionality,
 unique_molecules will respond to the -C option by doing all comparisons
 via the Inchi key. This can be quite expensive, but may yield important
 equivalence relationships that would not otherwise happen.
+

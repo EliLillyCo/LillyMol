@@ -424,7 +424,9 @@ be done in `tsubstructure`.
 Extract/remove all atoms of type \<symbol\>. No bonds changed.
 Most frequently this is used for removing explicit Hydrogens. Note
 however that explicit Hydrogens are also removed in chemical
-standardisation.
+standardisation. Note that removal by atomic number is not
+supported, since '-X 1` is interpeted as remove all atoms with
+isotope 1. Enter `-X help` for other options.
 
 ### -Q \<type\>
 Compute partial charges - enter '-Q help' for info. LillyMol

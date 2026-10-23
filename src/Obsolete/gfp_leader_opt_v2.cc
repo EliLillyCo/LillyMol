@@ -4,8 +4,10 @@
 */
 
 #include <stdlib.h>
-#include <values.h>
+
+#include <algorithm>
 #include <iostream>
+#include <limits>
 #include <memory>
 
 #include "Foundational/cmdline/cmdline.h"
@@ -511,7 +513,7 @@ compute_intra_cluster_distances (const Cluster & cluster,
 {
   int cluster_size = cluster.number_elements();
 
-  set_vector (tmp, cluster_size, static_cast<similarity_type_t> (0.0));
+  std::fill_n (tmp, cluster_size, static_cast<similarity_type_t> (0.0));
 
   for (int i = 0; i < cluster_size; i++)
   {
@@ -783,7 +785,7 @@ build_pool (const const_IWSubstring & fname,
 static int
 set_thresholds_via_factor (score_t mvieth_factor)
 {
-  score_t global_max_score = -FLT_MAX;
+  score_t global_max_score = -std::numeric_limits<float>::max();
   for (int i = 0; i < pool_size; i++)
   {
     score_t s = pool[i].score();

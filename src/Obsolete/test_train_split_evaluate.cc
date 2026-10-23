@@ -4,6 +4,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <memory>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
@@ -533,7 +535,7 @@ identify_items_in_subset (iwstring_data_source & input,
                           int nr,
                           int * in_set)
 {
-  set_vector (in_set, nr, 0);
+  std::fill_n (in_set, nr, 0);
 
   int items_in_set = 0;
 

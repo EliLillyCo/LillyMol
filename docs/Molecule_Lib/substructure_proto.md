@@ -1,72 +1,340 @@
 # Substructure Queries as Protos
 
-As explained in [substructure](substructure.md) LillyMol
-contains a great many concepts beyond simple atom mapping.
-While a great deal can be expressed in a smarts, many
-concepts are not related to any particular atom.
+LillyMol has two ways to describe substructure queries beyond command line
+SMARTS:
 
-Refer to [why protos](why_protos.md) for why Protcol Buffers
-are the preferred choice for specifying complex query conditions.
+- the original LillyMol query-file format, which still works;
+- protocol buffer query files, which are the preferred format for new work.
 
-In all cases when dealing with protos, the definitive answer to
-any question is to look at the proto definition file. For substructure
-queries, that is [substructure.proto](/src/Molecule_Lib/substructure.proto).
-If there is any divergence between what is written here and the proto file,
-the proto file is right - since that is what the code is using.
-The main proto used here is the `SubstructureSearch::SubstructureQuery`
-proto.
+All new substructure features are exposed only through protocol buffers. The reason
+for having query files at all is that some chemically useful ideas are awkward,
+fragile, or effectively impossible to express as plain SMARTS. Protocol buffers
+make those ideas explicit and maintainable.
 
-For substructure searching, one or more queries are created as
-text proto files and used by any of the tools that do substructure
-searching.
+The schema is the authority. If this document and the schema disagree, trust
+[substructure.proto](/src/Molecule_Lib/substructure.proto). The main message is
+`SubstructureSearch::SubstructureQuery`, usually written as textproto.
 
-## Usage
-`tsubstructure` is the most common substructure searching use
-case, although most tools that consume substructure queries use the
-same functions, so this explanation applies to a great many tools.
+For background on why LillyMol uses protocol buffers, see
+[why_protos.md](why_protos.md). For SMARTS syntax and LillyMol SMARTS
+extensions, see [substructure.md](substructure.md).
 
-To use a text proto file as a query in tsubstructure, use
-```
-tsubstructure -q PROTO:file1 -q PROTO:file2 ...
-```
+## Quick Start
 
-If you have many text proto query files, put the file names into another
-file and use that.
-```
-ls *.textproto > all_queries
-tsubstructure -q PROTOFILE:all_queries ...
-```
-Although seldom useful `tsubstructure` can also consume a text proto
-directly on the command line
-```
-tsubstructure -q 'proto:query { smarts: "n" }' ...
-```
-For circumstances with a large number of queries, tools can consume
-serialized `SubstructureSearch::SubstructureQuery` protos in a TFDataRecord
-format via
-```
-tsubstructure -q TFPROTO:file ...
-```
-If there are a large number of queries, this is preferred.
+A minimal textproto query wraps a SMARTS in a `query` block:
 
-## Examples.
-While smarts are often used with `tsubstructure` via the `-s` or `-q S:...` options,
-a smarts can also be the only part of a substructure query proto.
-```
+```textproto
 name: "aromatic nitrogen"
 query {
   smarts: "n"
 }
 ```
-This would be the same as `-s n` when using `tsubstructure`. As such, the
-proto offers no real advantage - although if this was part of a larger
-series of proto queries they can all be consumed by `tsubstructure` via the
-`-q PROTOFILE:all_queries` construct shown above
 
-As mentioned in [substructure](substructure.md) a substructure query actually
-consists of multiple individual queries, linked via logical operators. The
-smarts `C||N` is actually equivalent to
+Run it with `tsubstructure`:
+
+```shell
+tsubstructure -q PROTO:aromatic_nitrogen.textproto molecules.smi
 ```
+Recently LillyMol query reading was updated so that the `PROTO:` prefix is no longer
+always needed. The first few lines of the file are examined, and if the file looks
+like textproto form, it is interpreted as textproto. For certainty and to avoid
+any ambiguity, use `PROTO:`. For convenience, omit `PROTO:`.
+
+A file containing many query-file names can be supplied with `PROTOFILE`:
+
+```shell
+ls *.textproto > all_queries
+tsubstructure -q PROTOFILE:all_queries molecules.smi
+```
+
+For very large query collections, serialized
+`SubstructureSearch::SubstructureQuery` protos can be read from TFDataRecord
+files:
+
+```shell
+tsubstructure -q TFPROTO:queries.tfrecord molecules.smi
+```
+
+A textproto can also be supplied directly on the command line, although this is
+usually only useful for small tests:
+
+```shell
+tsubstructure -q 'proto:query { smarts: "n" }' molecules.smi
+```
+
+## Drafting A Query With Codex
+
+Tools like Codex or Claude can be useful for drafting proto query files,
+especially when the desired query can first be stated in ordinary chemical
+language. Treat the generated query as a starting point, not as an authority.
+Always inspect the SMARTS or proto fields, then test the query against small
+positive and negative examples.
+
+### Simple Example: Phenolic Oxygen
+
+**User**
+
+Write a LillyMol substructure proto query that matches phenolic oxygen.
+
+**Codex**
+
+A phenolic oxygen is an oxygen directly attached to an aromatic carbon. A minimal
+query is:
+
+```textproto
+name: "phenolic oxygen"
+query {
+  smarts: "[OD1]-c"
+}
+```
+
+`[OD1]-c` matches a singly connected oxygen attached to an aromatic carbon. If
+the query should require a hydrogen on the oxygen, use `[OD1H1]-c`.
+
+Save the query as `phenolic_oxygen.textproto` and test it with a few small
+examples:
+
+```shell
+cat > phenol_examples.smi <<'EOF'
+Oc1ccccc1 phenol
+COc1ccccc1 anisole
+CCO ethanol
+O=C(O)c1ccccc1 benzoic_acid
+EOF
+
+tsubstructure -q PROTO:phenolic_oxygen.textproto phenol_examples.smi
+```
+
+The expected match is `phenol`. `anisole` should not match because its oxygen has
+two heavy-atom connections, `ethanol` should not match because the carbon is not
+aromatic, and `benzoic_acid` should not match because the oxygen is attached to a
+carbonyl carbon rather than an aromatic carbon.
+
+To help visualize the matched atoms in a more complex query, write the matched
+molecules and place isotopic labels on the matched atoms.
+
+```shell
+tsubstructure -m matches -j 1 -q PROTO:phenolic_oxygen ...
+```
+
+### More Complex Example: Aniline With An Electron-Withdrawing Group
+
+**User**
+
+I want a query for anilines where the aromatic ring also has an
+electron-withdrawing group. The group should be on the same isolated aromatic
+ring as the aniline nitrogen. Examples of electron-withdrawing groups are nitro,
+cyano, carbonyl, fluoro, chloro, bromo, and iodo.
+
+**Codex**
+
+The local aniline part is simple SMARTS:
+
+```smarts
+[ND1H2]-c
+```
+
+The harder part is making sure the electron-withdrawing group is on the same
+ring. If we tried to do this as ordinary SMARTS, we would need to encode ring
+position and each allowed substituent pattern directly. A narrow para-nitro
+example is readable:
+
+```smarts
+[ND1H2]-c1ccc([N+](=O)[O-])cc1
+```
+
+But that only covers one substituent at one ring position. A broader SMARTS-only
+version quickly becomes difficult to maintain because ortho, meta, and para
+positions, and all allowed electron-withdrawing groups, must be enumerated.
+
+A LillyMol SMARTS expression could use the LillyMol `||` extension to combine
+alternatives, but `||` is not standard SMARTS. For a portable SMARTS-only query,
+those alternatives would need to be expanded explicitly. In a LillyMol proto
+query, we can instead separate the concepts:
+
+- find an isolated aromatic ring with one of the electron-withdrawing
+  environments;
+- assign a global id to that ring;
+- require the aniline nitrogen to be attached to an atom on that same ring.
+
+```textproto
+name: "aniline same isolated aromatic ring as EWG"
+query {
+  ring_specifier {
+    aromatic: true
+    fused: 0
+    base {
+      environment: "a-[N+](=O)[O-]||a-C#N||a-C(=O)[#6,O,N]||a-[F,Cl,Br,I]"
+      set_global_id: 1
+    }
+  }
+
+  smarts: "[ND1H2]-[/IWgid1a]"
+}
+```
+
+`environment` describes what must be attached somewhere to the ring. The
+`set_global_id: 1` directive labels the atoms in the ring that satisfied the ring
+specifier. `/IWgid1` in the SMARTS then makes the aniline match use an atom from
+that same ring.
+
+**User**
+
+Does the environment become part of the returned match? I only want the aniline
+N and the ring atom in the embedding.
+
+**Codex**
+
+No. In this query, the ring environment is a requirement on the ring, but the
+environment atoms are not returned as matched atoms. The returned embedding comes
+from the final SMARTS:
+
+```textproto
+smarts: "[ND1H2]-[/IWgid1a]"
+```
+
+This is useful for reactions or matched-atom reporting because the proto can use
+rich context to decide whether a molecule matches, while still returning only the
+atoms specified by the main SMARTS.
+
+Test it with simple positive and negative examples:
+
+```shell
+cat > aniline_ewg_examples.smi <<'EOF'
+Nc1ccc([N+](=O)[O-])cc1 p_nitroaniline
+Nc1ccccc1 aniline
+Nc1ccc(C#N)cc1 p_cyanoaniline
+Nc1ccccc1c1ccc([N+](=O)[O-])cc1 different_ring_same_molecule
+CCN ethylamine
+EOF
+
+tsubstructure -q PROTO:aniline_same_ring_ewg.textproto aniline_ewg_examples.smi
+```
+
+The expected matches are `p_nitroaniline` and `p_cyanoaniline`. Plain `aniline`
+lacks the electron-withdrawing environment, `different_ring_same_molecule` contains
+an aniline and a nitro-substituted ring but not on the same ring, and
+`ethylamine` lacks the aromatic ring.
+
+### Complex Example: Meta Substitution On A Constrained Ring
+
+**User**
+
+I need a query for a six-membered aromatic ring where fluorine and hydroxy are
+meta to each other. A simple SMARTS for the positional relationship might be
+`F-c:c:c-[OH]`, but I also want the ring to have no other halogen substituent.
+How would I express that as a proto query?
+
+**Codex**
+
+Start with the part that really is local SMARTS. We want to return the fluorine,
+the fluorinated ring atom, the hydroxy oxygen, and the hydroxy-bearing ring atom:
+
+```smarts
+F-c.[OH]-c
+```
+
+The two ring atoms are matched atoms 1 and 3 in that SMARTS. On a six-membered
+aromatic ring, meta substitution means those two ring atoms are separated by two
+bonds around the ring. We can express that with `separated_atoms` instead of
+making the ring path part of the SMARTS:
+
+```textproto
+name: "meta fluoro phenol"
+query {
+  smarts: "F-c.[OH]-c"
+  separated_atoms {
+    a1: 1
+    a2: 3
+    bonds_between: 2
+  }
+}
+```
+
+This is already easier to maintain than spelling out every atom in the ring, but
+it still does not constrain the ring itself. To add ring requirements, define the
+ring independently and give it a global id. Then require the two matched aromatic
+atoms to be on that ring.
+
+```textproto
+name: "meta fluoro phenol, only two ring substituents"
+query {
+  ring_specifier {
+    ring_size: 6
+    aromatic: true
+    fused: 0
+    base {
+      ncon: 2
+      set_global_id: 1
+    }
+  }
+
+  smarts: "F-[/IWgid1a].[OH]-[/IWgid1a]"
+
+  separated_atoms {
+    a1: 1
+    a2: 3
+    bonds_between: 2
+  }
+}
+```
+
+Here the ring specifier says there must be an isolated six-membered aromatic
+ring with exactly two exocyclic connections. The SMARTS then requires both
+substituted ring atoms to come from that same ring. Because `ncon: 2` allows only
+two connections from the ring to atoms outside the ring, this excludes any
+additional halogen substituent. It also excludes any other extra substituent,
+such as methyl or nitro. If other non-halogen substituents should be allowed,
+the query would need a more specific negative condition rather than the simple
+`ncon: 2` constraint.
+
+**User**
+
+So `F-c:c:c-[OH]` is still a useful way to explain the idea, but the proto query
+is separating the positional relationship from the ring constraints?
+
+**Codex**
+
+Yes. The SMARTS names the two substituents and their attachment atoms. The
+`separated_atoms` block says those attachment atoms must be meta. The
+`ring_specifier` block says what kind of ring they must be attached to. That
+division is the main advantage of a query file: each chemical idea is visible as
+its own condition.
+
+Test it with:
+
+```shell
+cat > meta_fluoro_phenol_examples.smi <<'EOF'
+Oc1cccc(F)c1 m_fluorophenol
+Oc1ccc(F)cc1 p_fluorophenol
+Oc1c(F)cccc1 o_fluorophenol
+Oc1cccc(F)c1Cl extra_chloro
+Oc1cccc(F)c1C extra_methyl
+EOF
+
+tsubstructure -q PROTO:meta_fluoro_phenol.textproto meta_fluoro_phenol_examples.smi
+```
+
+The expected match is `m_fluorophenol`. The ortho and para examples fail the
+bond-separation constraint. `extra_chloro` and `extra_methyl` fail because the
+ring has more than two exocyclic connections.
+
+## Mental Model
+
+A substructure proto has two levels.
+
+`SubstructureQuery` is the outer container. It has a `name`, optional comments,
+one or more `query` blocks, and optional logical operators connecting those
+query blocks.
+
+`SingleSubstructureQuery` is each `query` block. This is where the actual SMARTS,
+ring specifications, environments, hit-count requirements, and other matching
+constraints live.
+
+For example:
+
+```textproto
+name: "carbon or nitrogen"
 query {
   smarts: "C"
 }
@@ -74,9 +342,14 @@ query {
   smarts: "N"
 }
 ```
-there being an implied **or** operator between the two query components.
-Similarly `C&&N` is the same as
-```
+
+With two `query` blocks and no `logexp`, the default relationship is OR. This is
+like the SMARTS expression `C||N`.
+
+To require both components, use `logexp`:
+
+```textproto
+name: "carbon and nitrogen"
 query {
   smarts: "C"
 }
@@ -85,11 +358,10 @@ query {
 }
 logexp: SS_AND
 ```
-where the queries are linked via an **and** operator rather than the
-default **or** operator. Just as arbitrarily long expressions can be
-constructed as smarts, so can they with protos. So `C&&N||F` is the same
-as
-```
+
+With three components, provide two operators:
+
+```textproto
 query {
   smarts: "C"
 }
@@ -99,65 +371,53 @@ query {
 query {
   smarts: "F"
 }
-logexp: SS_AND
-logexp: SS_OR
-```
-which since in the proto definition file, logexp is a repeated field,
-the last two lines can be written as
-```
 logexp: [SS_AND, SS_OR]
 ```
 
-It is very important to note that the `smarts` directive in a
-`query` block cannot contain logical operators. The `query` block
-is an individual query. A collection of `query` blocks is a
-composite query - which contains operators relating the individual
-`query` objects.
+The `smarts` field inside one `query` block must not contain top-level `&&` or
+`||` operators. Put each component in its own `query` block and connect them with
+`logexp`.
 
-For most of the rest of this document, composite queries such as the
-above will not be discussed. But any of the single query component
-ideas discussed below can be made part of a composite query.
+Avoid making a single huge composite query when you really have many independent
+queries. Separate query files are easier to test, easier to name, and usually
+easier to maintain.
 
-Note that it is possible to create a very large composite query,
-which might fulfull the role of having multiple queries in a file.
-That is discouraged due to lack of ability to individually test
-query components. Also on occasions when it has accidentially
-happened, the performance seemed unfavourable, although not sure
-about that.
+## When To Use A Proto
 
-## Query Match Specifications
-Within a query object, many settings are available which govern
-how the matching takes place. These are copied directly from
-the proto definition file.
+Use plain SMARTS when the query is naturally expressed as atom and bond
+relationships:
 
-* optional bool one_embedding_per_start_atom = 4;
-* optional uint32 normalise_rc_per_hits_needed = 5;
-* optional uint32 subtract_from_rc = 6;
-* optional uint32 max_matches_to_find = 8;
-* optional bool embeddings_do_not_overlap = 15;
-* optional bool sort_by_preference_value = 16;
-
-* optional bool save_matched_atoms = 9;
-
-In the [proto definition file](/src/Molecule_Lib/substructure.proto),
-each of these is defined, so that is not repeated here (maybe one of
-the automatic documentation generators would be interesting).
-
-## Global Conditions
-Individual queries can contain pre-conditions on molecules. For example, if 
-your query requires two different aromatic rings, you can impose a
-required molecular property of at least two aromatic rings. If the
-molecule does not contain the requisite number, no atom matching is
-attempted. This may help with efficiency.
-
-The message describing these required properties is `SubstructureSearch::RequiredMolecularProperties`
-and the documentation is found in the definition of that message. A typical usage might be
-
+```shell
+tsubstructure -s 'Nc1ccccc1 aniline' molecules.smi
 ```
-name: "Two furan-like oxygens"
+
+Use a proto when you need one or more of these:
+
+| Need | Proto construct |
+| ---- | --------------- |
+| Whole-molecule prefilter before atom matching | `required_molecular_properties` |
+| Ring constraints not tied to a specific SMARTS atom | `ring_specifier` |
+| Ring-system constraints | `ring_system_specifier` |
+| Link a ring/ring-system prefilter to atoms in the returned embedding | `set_global_id` plus `/IWgidN` |
+| Require context next to matched atoms | `environment` |
+| Reject context next to matched atoms | `environment_no_match` |
+| Constrain a substituent attached to a ring or matched atom | `substituent` |
+| Require a matched atom to satisfy one of several rooted SMARTS | `matched_atom_must_be` |
+| Require or reject a motif within a bond range of matched atoms | `nearby_atoms` |
+| Constrain the path or region between matched atoms | `link_atoms`, `separated_atoms`, `region`, `inter_ring_region` |
+| Need a complex down the bond directive | `down_the_bond` |
+
+## Whole-Molecule Prefilters
+
+`required_molecular_properties` checks simple molecular properties before atom
+matching starts. It is mainly an expressive and sometimes efficient way to say
+"do not even try this query unless the molecule has the required global shape".
+
+```textproto
+name: "oxygen rich aromatic molecules"
 query {
   required_molecular_properties {
-    min_natoms: 30
+    min_natoms: 20
     min_aromatic_rings: 2
     elements_needed {
       atomic_number: 8
@@ -168,71 +428,75 @@ query {
       hits_needed: 0
     }
   }
-  smarts: "[/IWrid1o].[/IWrid2o]"
+  smarts: "o"
 }
 ```
-While this was initially implemented as an efficiency tool, generally we find that it
-does not make much of a difference on speed, but can be a very useful expressive
-device.
 
-Currently the following properties are supported, together with their min_ and max_ variations.
-```
-natoms
-nrings
-heteroatoms_in_molecule
-fused_rings
-strongly_fused_rings
-isolated_rings
-ring_systems
-aromatic_rings
-aromatic_atoms
-non_aromatic_rings
-number_isotopic_atoms
-number_fragments
-atoms_in_spinach
-inter_ring_atoms
-net_formal_charge
-any_net_formal_charge
-elements_needed
-required_bond
-```
-More simple to compute properties could be added. It is a pre-match filter and there
-is no connection between any of the atoms used to satisfy these criteria and
-the subsequent atom matching.
+These prefilters are independent of the later atom match. In the example above,
+the oxygen atoms counted by `elements_needed` are not necessarily the atom matched
+by `smarts: "o"`.
 
-For access to a more complete set of molecular properties, it may be useful to
-use `iwdescr`.
-```
-iwdescr.sh -s . -F 'w_natoms<30' -F 'w_nrings<4' file.smi | tsubstructure.sh -s 'O' -
-```
-which should be functionally equivalent to many of the attributes specified
-via required_molecular_properties.
+Commonly used whole-molecule properties include:
 
-### RequiredBond
-The required_bond attribute of a required_molecular_properties message
-allows specification of a particular bond somewhere in the molecule.
-Since this is done via a scan over the bond list, rather than via
-atom matching, it can help with efficiency.
+- `natoms`
+- `nrings`
+- `heteroatoms_in_molecule`
+- `ring_systems`
+- `aromatic_rings`
+- `aromatic_atoms`
+- `non_aromatic_rings`
+- `number_isotopic_atoms`
+- `number_fragments`
+- `atoms_in_spinach`
+- `inter_ring_atoms`
+- `net_formal_charge`
+- `any_net_formal_charge`
+- `elements_needed`
+- `required_bond`
 
-```
-required_bond {
-  atomic_number_1: 6
-  btype: SS_SINGLE_BOND
-  atomic_number_2: 8
+Most count properties support exact, minimum, and maximum forms such as
+`nrings`, `min_nrings`, and `max_nrings`. See the schema for the complete list.
+
+### Required Bonds
+
+`required_bond` checks whether a bond exists anywhere in the molecule. It does
+not identify a bond that must participate in the later atom embedding.
+
+```textproto
+query {
+  required_molecular_properties {
+    required_bond {
+      atomic_number_1: 6
+      btype: SS_SINGLE_BOND
+      atomic_number_2: 8
+    }
+  }
+  smarts: "N"
 }
 ```
-means that somewhere in the molecule there is a Carbon Oxygen
-single bond. Again, there is no relationship between this bond any any
-subsequent atom matching. This is just for efficiency.
 
-## Ring Systems
-One of the most common use cases for beyond smarts queries are queries
-that involve specification of a ring system. In standard smarts it
-would be difficult to express a concept like 'an Aniline like Nitrogen
-attached to a 6 membered isolated aromatic ring with an electron withdrawing group'
-By using a ring specifier message in a proto, we can do things like that.
-```
-name: "Aniline EWD"
+This says "only search molecules that contain a carbon-oxygen single bond, and
+then look for nitrogen".
+
+## Ring And Ring-System Specifications
+
+Ring and ring-system specifiers are among the most useful proto features. They
+allow queries such as:
+
+- an isolated aromatic six-membered ring;
+- a fused 6-6 aromatic ring system;
+- a ring system with one heteroatom and two substituent groups;
+- a ring with a particular environment attached somewhere;
+- logical combinations of ring or ring-system environment requirements;
+- the total connectivity to a ring or ring system;
+
+A ring specifier searches for a ring satisfying the conditions. A ring-system
+specifier searches for a fused or isolated ring system satisfying the conditions.
+By themselves, these constructs are preconditions. They do not automatically say
+that subsequent SMARTS within a query block match must occur in that same ring.
+
+```textproto
+name: "aniline and an EWG somewhere"
 query {
   ring_specifier {
     aromatic: true
@@ -244,25 +508,18 @@ query {
   smarts: "[ar6]-[ND1H2]"
 }
 ```
-This only matches molecules that contain an unfused aromatic ring, with at least
-one electron withdrawing group.
 
-The reason for the use of the `base` message for the environment is that there is
-also ring system 
-specifier, and it uses the same mechanism, so `base` is shared between them.
+This requires an unfused aromatic ring with an electron-withdrawing group, and it
+also requires an aniline-like nitrogen. But those two conditions are independent:
+the aniline nitrogen might be attached to a different ring.
 
-Unfortunately the query above matches molecules like
-![CHEMBL3637787](Images/CHEMBL3637787.png)
+## Global IDs
 
-since there is no link between the ring that is matched and the smarts atom matching. Indeed
-the molecule does contain the ring we describe, and it does contain an Aniline like
-Nitrogen atom, but that was not the intent.
-Like `required_molecular_properties`, the ring and ring system filtering is done prior to
-atom matching.
-The `global_id` concept is introduced to enable a linkage between the atoms matched
-in a ring, or ring system specification and the subsequent matching of atoms.
-```
-name: "Aniline EWD"
+Use global ids when atoms found by a ring, ring-system, substituent, or other
+non-SMARTS construct must be the same atoms used by the SMARTS match.
+
+```textproto
+name: "aniline EWG on the same ring"
 query {
   ring_specifier {
     aromatic: true
@@ -275,25 +532,26 @@ query {
   smarts: "[/IWgid5a]-[ND1H2]"
 }
 ```
-Within the `base` message of the `ring_specifier` we set a global id of 5. All
-atoms that comprise the ring match, are assigned that global id. Later in the
-atom matching smarts, we specify that we want to match atoms that have been
-assigned global id 5. Now we only get matches where the Amine is attached
-to the same ring as the electron withdrawing groups.
 
-Note that while we could have added `[ND1H2]` as another `environment` component,
-that would still not establish a link to the matched atoms to be returned - needed
-for a reaction for example.
+`set_global_id: 5` labels all atoms in the ring that satisfied the ring
+specifier. `/IWgid5` in the SMARTS then requires the matched aromatic atom to be
+one of those labelled atoms. Same for a ring system specifier.
 
-Again, the `SubstructureRingSpecification` message contains several settable
-attributes. In addition, properties can be specified via the `base` message
-which is shared by the analogous `SubstructureRingSystemSpecification` which
-specifies ring systems.
+A negative global id in SMARTS, such as `/IWgid-3`, means do NOT match any atom
+having global id 3. The form `/IWgid!3` is also recognised.
 
-In this example, we specify exactly two connections to the ring, so there
-can be the aniline and one other connection.
-```
-name: "Aniline EWD"
+This is the single most important rule for proto ring queries: if a ring or
+ring-system condition must be tied to the returned atom embedding, use a global
+id.
+
+## Ring Base Conditions
+
+`ring_specifier` and `ring_system_specifier` both contain a `base` message. The
+base describes properties common to rings and ring systems, such as environment,
+substitution, and global-id assignment.
+
+```textproto
+name: "disubstituted aniline EWG"
 query {
   ring_specifier {
     aromatic: true
@@ -307,21 +565,75 @@ query {
   smarts: "[/IWgid5a]-[ND1H2]"
 }
 ```
-which results in matches like
-![CHEMBL1736001](Images/CHEMBL1736001.png)
 
-where there are exactly two substitutions on the ring. Again, there are many different
-base properties that can be specified, which are described in the proto definiton file.
+This matches an unfused aromatic ring with exactly two connections to atoms
+outside the ring, one of which is the aniline nitrogen matched by the SMARTS.
 
+See the `SubstructureRingBase` message in the proto definition file
+[substructure.proto](/src/Molecule_Lib/substructure.proto) for information
+about what matching attributes are available in the base ring specification.
 
-# Substituents
-While the environment is a convenient means of specifying what is joined to a ring
-or ring system, the `Substituent` message contains more flexibility.
+## Ring Systems
 
-For example if one were looking for fused 6-6 aromatic bi-cycle, that had some specific
-substituents - contains an amide, but not certain other groups.
+Use `ring_system_specifier` when the chemically meaningful object is the whole
+fused system rather than one SSSR ring.
+
+```textproto
+name: "fused 6-6 aromatic system"
+query {
+  ring_system_specifier {
+    rings_in_system: 2
+    aromatic_ring_count: 2
+    ring_size_requirement {
+      ring_size: 6
+      count: 2
+    }
+    base {
+      set_global_id: 1
+    }
+  }
+  smarts: "[/IWgid1]-O-[CH3]"
+}
 ```
-name: "descriptive name"
+with an attached methoxy. Note that the attached methoxy could have been specified as
+an environment for the ring system, but then the matched atoms would not have been
+available via the query match.
+
+Useful ring-system and ring-system `base` fields include:
+
+- `rings_in_system`, `min_rings_in_system`, `max_rings_in_system`
+- `ring_size_requirement`
+- `aromatic_ring_count`
+- `non_aromatic_ring_count`
+- `degree_of_fusion`
+- `atoms_in_system`
+- `number_spinach_groups`
+- `number_non_spinach_groups`
+- `atoms_in_spinach_group`
+- `length_of_spinach_group`
+- `distance_to_another_ring`
+- `strongly_fused_ring_count`
+- `ring_systems_extend_across_spiro_fusions`
+- `environment_sets_global_id`
+
+By default, atoms matched by a ring or ring-system environment do not set any
+associated global id; only the atoms that are part of the ring or ring system are
+assigned global ids. That can be changed with `environment_sets_global_id: true`.
+Note however that if the environment is an OR condition, only the atoms associated
+with the first matching condition will be marked. If it is an AND condition, the
+environment atoms associated with the matching conditions are marked.
+
+Setting `number_non_spinach_groups: 1` identifies a terminal ring system,
+setting a larger number implies an "internal" ring.
+
+## Substituents
+
+A `substituent` describes a group attached to a ring, ring system, or matched
+atom. It can constrain size, ring count, length from the attachment point,
+heteroatom count, unsaturation, and required or disqualifying SMARTS.
+
+```textproto
+name: "fused aromatic system with amide substituent"
 query {
   ring_system_specifier {
     rings_in_system: 2
@@ -349,170 +661,27 @@ query {
   smarts: "[/IWgid1]!@[/IWgid2D2]"
 }
 ```
-The atom matching matches an atom in the ring system (which was assigned global id 1)
-and an atom in the substituent (which was assigned global id 2).
 
-Further levels of complexity can be added
-```
-name: ""
-query {
-  ring_system_specifier {
-    rings_in_system: 2
-    aromatic_ring_count: 2
-    ring_size_requirement {
-      ring_size: 6
-      count: 2
-    }
-    base {
-      set_global_id: 1
-      min_heteroatom_count: 4
-      substituent {
-        min_natoms: 3
-        max_natoms: 12
-        max_nrings: 1
-        hits_needed: 1
-        max_length: 8
-        required_smarts: "[ND2H]-C(=O)[#6]"
-        disqualifying_smarts: "[Cl,Br,I,OH]||O=N=O"
-        set_global_id: 2
-      }
-      environment: "a-[D1]&&0a-N(=O)=O"
-    }
-  }
+The ring system atoms receive global id 1. The substituent receives global id 2.
+The final SMARTS requires a non-ring bond between the ring system and the matched
+substituent atom.
 
-  smarts: "[/IWgid1]!@[/IWgid2D2]"
-}
-```
-Not saying this is a realistic example, but certainly individually each of these
-conditions has been used.
+`substituent_no_match` is the corresponding rejection form.
 
-Whether one uses a `ring_system_specifier` or `ring_specifier` will vary on the task
-at hand.
+## Environments
+The concept of environment was introduced in with ring and ring systems
+specifications: atoms that sprout from the atoms in the ring system.
+The environment concept described here relates to the atoms matched by
+the overall smarts of the query.
 
-## NoMatchedAtomsBetween
-The `...{}` construct in smarts can also be specified in a proto with the `no_matched_atoms_between`
-directive.
-```
-query {
-  smarts: "[OH]-C(=O).c-C(=O)-[OH]"
-  no_matched_atoms_between {
-    a1: 1
-    a2: 3
-    qualifier: "{>6}"
-  }
-}
-```
-This can avoid problems where specifying multiple no matched atoms between directives
-in a smiles becomes impossible.
+An environment is a small query attached to an already matched atom. The
+environment atoms are used to accept or reject the embedding, but they are not
+returned as matched atoms.
 
-## Region
-A region is defined by two matched atoms. All atoms that are in the
-contiguous region defined by these two atoms comprise the region.
-Obviously if the two matched atoms
-that define the region are in a ring, this will fail. But as long as
-at least one of the atoms that define the region is in a chain, the
-region can be defined.
-We can specify various attributes of
-such a region. This is a new functionality that has not been fully developed. The
-initial application was to identify linker groups - all atoms between two rings,
-but excluding those cases where there might be another ring.
-```
-query {
-  smarts: "[D3R]-!@*...{<5;0[R]}*-!@[D3R]"
-  region {
-    atom: [1, 2]
-    max_natoms: 12
-    nrings: 0
-  }
-}
-```
-identifies molecules containing two separated rings, and in between those two rings
-there is a region with at most 12 atoms and no rings. And of course more complex
-conditions could be placed on the atoms in the smarts.
+Use `environment` for required context and `environment_no_match` for rejecting
+context.
 
-The concept of a between-ring group of atoms was later implemented via the
-InterRingAtoms message, but the Region concept remained useful otherwise.
-
-A common task in de-novo molecule generation is to try to replace a core
-piece of a molecule. If that chunk is a linker group between two rings,
-the tool `get_linkers` can be used. It is designed for this task,
-although currently of somewhat limited functionality.
-
-But the region functionality within substructure searching might offer
-certain flexibilities. Imagine we need to replace a region of a molecule
-that is between two six membered aromatic rings. We have a constraint
-that the number of bonds between the two groups must remain between 5 and
-7 bonds. In addition, the replacement group can have a max of 1 ring,
-and have no more than 2 atoms that are not on the shortest path between
-the join points - not too much branching.
-
-A query that can do that might be
-```
-query {
-  smarts: "a-!@*...{3-5}*-!@a"
-  unique_embeddings_only: true
-  region {
-    atom: [1, 2]
-    max_nrings: 1
-    max_atoms_not_on_shortest_path: 2
-  }
-}
-```
-This will match groups of atoms that are
-. in between two aromatic rings.
-. contain a max of 1 ring
-. have a max of 2 atoms that are *not* on the shortest path.
-
-Fragments matching this query might be attractive candidates for
-replacing a region in a molecule.
-
-Currently only
-. natoms
-. nrings
-. atoms_not_on_shortest_path
-are implemented.  When or if other needs are identified, the `region` concept can be expanded.
-
-## LinkAtoms
-The `NoMatchedAtomsBetween` idea is related to the idea of link atoms, but
-as implemented, link atoms can pass through matched atoms. It is implemented
-by computing the shortest distance bond between the two atoms, without
-regard to any other matched atoms.
-```
-query {
-  smarts: "[NH>0].O=c"
-  link_atoms {
-    a1: 0
-    a2: 1
-    max_distance: 8
-  }
-}
-```
-
-## DownTheBond
-The down the bond construct in smarts `[Cx>0]-!@<4a}N` is implemented in the proto as
-```
-query {
-  smarts: "[Cx>0]-N"
-  down_the_bond {
-    a1: 0
-    a2: 1
-    max_natoms: 3
-  }
-}
-```
-There is strong conceptual overlap between the `DownTheBond` idea and the `Substituent` idea
-and they should probably be merged.
-
-## SubstructureEnvironment
-We have already seen that ring and ring system specifiers had the concept of an
-environment - a requirement that needed to be satisfied somewhere on a group of ring
-atoms. This concept extends to matched atoms in the query. We can have environments
-that are requried for a match, or environments, which if present, cause matching
-to fail. The atoms in the environment are not returned to the caller as matched
-query atoms.
-
-For example, in looking for likely charged amines, that query might look like
-```
+```textproto
 query {
   smarts: "[ND<4G0T0]"
   environment_no_match {
@@ -529,20 +698,18 @@ query {
   }
 }
 ```
-Rather than making a complex recursive smarts with all these exclusions built in
-the proto representation is easier to understand and maintain.
 
-Note that when environments were specified for rings and ring systems, the first
-atom in the environments query was an atom in the ring. These kinds of environments
-are different, with the first query atom being an unmatched atom.
+By default, environment atoms must match atoms that are not already part of the
+main embedding. That can be changed with
+`environment_must_match_unmatched_atoms`. This is different from the environment
+concept within a ring or ring system. In that case, the first matched atom in
+the environment must be part of the ring. Here the first atom of the environment
+must be an unmatched atom attached to a matched atom.
 
-Generally environment atoms only match unmatched atoms, although that can be changed with
-the `environment_must_match_unmatched_atoms` directive - which defaults to true.
+`attachment_point` is repeated, so one environment can be allowed at multiple
+matched atoms:
 
-The `attachment_point` attribute is a repeated field, so we can specify an environment
-to be at any matched atom. To look for an aniline like Nitrogen with an ortho or para
-halogen, that might be
-```
+```textproto
 query {
   smarts: "[ND1H2][/IWfsid1ar6]:a:a:a"
   environment {
@@ -554,19 +721,18 @@ query {
   }
 }
 ```
-If there are multiple environments specified, all of them must match. For
-flexibility an environment can have an `and_id` or `or_id` attribute
-which can be used to create more complex logic. It would be better
-to use the more general logical operator construct used elsewhere.
 
-## MatchedAtomMatch
-This is a newly added feature which is mostly a means of avoiding
-needlessly complex smarts. It is similar in functioning to environments, but
-starts with a matched atom.
+If multiple environments are specified, they must all match unless `and_id` or
+`or_id` is used. Those fields exist for more complex logic, but they are harder
+to read than separate well-named query files.
 
-For example, if we wanted a matched carbon atom to be either [CH3] or to extend to a
-CF3, OH or OCH3, that can be specified as
-```
+## Matched-Atom Constraints
+
+`matched_atom_must_be` applies one or more rooted SMARTS to a specific matched
+atom. The first atom in each SMARTS is matched against the already matched atom.
+This is often easier to read than recursive SMARTS.
+
+```textproto
 query {
   smarts: "[Cx0]"
   matched_atom_must_be {
@@ -578,11 +744,11 @@ query {
   }
 }
 ```
-Perhaps this query could be done with an `environment`, but I am not sure. What makes
-it hard is the possibility of there being no substituent at all.
 
-An example with a lot of negative exclusions might be a primary amine.
-```
+Positive SMARTS entries are ORed: at least one must match. Entries beginning
+with `!` are rejections: if any rejection matches, the embedding fails.
+
+```textproto
 query {
   smarts: "[ND1H2]"
   matched_atom_must_be {
@@ -590,28 +756,20 @@ query {
     smarts: "!N-C=O"
     smarts: "!N-S=O"
     smarts: "!N-C=S"
-    smarts: "!N-C=S"
     smarts: "!N-a"
     smarts: "!N-[!#6]"
     smarts: "!N...{<3}N"
   }
 }
 ```
-Again, this could all be accomplished with a fairly gruesome recursive smarts, or an
-`environment_no_match`, this
-construct is just a notational convenience. And of course the original smarts can
-have arbitrary complexity as well, so there is considerable flexibility here.
 
 ## Nearby Atoms
-When working with lead optimisation projects there may be some fairly non
-specific requirements to be investigated. For example 'an x kind of ring,
-and within two bonds we need both a donor and an acceptor'. Or 'from this
-point on the aromatic ring, we need a primary amine within 2 bonds'. Or 
-'no nitro group within 2 bonds of the ring'.
 
-The NearbyAtoms concept was introduced to enable these kinds of minimally
-specified query types. A fairly complex example might be
-```
+`nearby_atoms` describes motifs that must, or must not, occur within a bond
+range of matched atoms. It is useful for less specific lead optimisation ideas
+such as "a donor within three bonds of this ring system".
+
+```textproto
 query {
   ring_system_specifier {
     rings_in_system: 2
@@ -637,46 +795,250 @@ query {
   }
 }
 ```
-which matches a
 
-* two-aromatic-ring ring system with at least one heteroatom
-* somewhere in that ring system is an acceptor
-* somewhere in the ring system there is a 3 connected carbon with a non ring bond
-* the smarts defines all atoms in that ring system
-* within 3 bonds of a ring atom, there must be exactly one OH or SH
-* fail if there is a primary amine within 2 bonds of the ring.
+This matches a two-aromatic-ring system with at least one heteroatom, requires an
+OH or SH within three bonds of the matched ring-system atom, and rejects a primary
+amine within two bonds.
 
-The first condition is already covered by the second matching criterion, and
-so is not strictly necessary.
+By default, nearby-atom matches cannot overlap the main matched atoms. Use
+`can_overlap_matched_atoms` if overlap is intended. Use `matched_atom` to limit
+distance checks to particular matched atoms; otherwise distances are checked
+against any matched atom.
 
-The smarts matches all atoms in the ring system, and so the required OH or SH
-can be anywhere near the ring system.
+## Atom Queries Without SMARTS
 
-You can also restrict the nearby atoms matches to specific matched atoms by use
-of the matched_atom directive. But note the potential overlap with the
-`link_atoms` directive. By default, the atoms in the nearby_atoms block
-must be distinct from the matched atoms, but that can be changed if
-`can_overlap_matched_atoms` is set.
+Most proto queries use SMARTS, but `query_atom` can describe atoms and bonds
+structurally with proto fields. This is verbose, but useful for generated queries
+or where explicit field constraints are clearer than SMARTS.
 
-If there are no constraints on distance, then a simple '&&' smarts can be
-used, which describes two (possibly overlapping) separate smarts matches.
+```textproto
+query {
+  query_atom {
+    id: 0
+    atom_properties {
+      atomic_number: 7
+      ncon: 2
+      hcount: 1
+    }
+    single_bond: 1
+  }
+  query_atom {
+    id: 1
+    atom_properties {
+      atomic_number: 6
+    }
+  }
+}
+```
+
+Each `SubstructureAtom` must have a unique `id`. Bonds can be specified with
+fields such as `single_bond`, `double_bond`, `aromatic_bond`, `bond`, or with
+`bond_smarts`.
+
+Most hand-written queries should use SMARTS unless the proto form makes the
+intent substantially clearer.
+
+## Match-Count And Embedding Controls
+
+Common controls within a `query` block include:
+
+| Field | Effect |
+| ----- | ------ |
+| `hits_needed`, `min_hits_needed`, `max_hits_needed` | Require a number of embeddings. |
+| `max_matches_to_find` | Stop searching after this many embeddings. |
+| `one_embedding_per_start_atom` | Keep at most one embedding for each starting atom. |
+| `unique_embeddings_only` | Discard duplicate embeddings. |
+| `embeddings_do_not_overlap` | Discard embeddings that overlap earlier embeddings. |
+| `save_matched_atoms` | Store matched atoms in the result. Defaults to true. |
+| `perceive_symmetric_equivalents` | Include symmetric equivalents. Defaults to true. |
+| `compress_embeddings` | Merge all embeddings into one embedding. |
+| `sort_by_preference_value` | Sort rather than discard low-preference matches. |
+
+Be careful with options that discard embeddings based on discovery order,
+especially `embeddings_do_not_overlap` and distance-between-hit constraints.
+They can introduce atom-ordering dependence.
+
+## Distances, Paths, And Regions
+
+### No Matched Atoms Between
+
+The SMARTS `...{}` construct can be written as `no_matched_atoms_between` when
+multiple such constraints would make the SMARTS unreadable.
+
+```textproto
+query {
+  smarts: "[OH]-C(=O).c-C(=O)-[OH]"
+  no_matched_atoms_between {
+    a1: 1
+    a2: 3
+    qualifier: "{>6}"
+  }
+}
+```
+
+### Link Atoms
+
+`link_atoms` constrains shortest-path distance between two matched atoms. Unlike
+`no_matched_atoms_between`, link atoms can pass through matched atoms.
+
+```textproto
+query {
+  smarts: "[NH>0].O=c"
+  link_atoms {
+    a1: 0
+    a2: 1
+    max_distance: 8
+  }
+}
+```
 
 ### Separated Atoms
-This message started as redundant with the Linker message. It describes bond
-separations between pairs of matched atoms. In addition, the number of rotatable
-bonds found on the shortest path between the two matched atoms can be specified.
 
-## Smarts
-I have heard smarts referred to as a 'write only' language. Several of these
-constructs in the proto representation are specifically designed to lessen the
-need for complex recursive smarts.
+`separated_atoms` also constrains bond separation between matched atoms and can
+constrain the number of rotatable bonds on the shortest path.
 
-That said, as part of this distribution, you will find the `mkbenzene.py` which
-creates recursive smarts of arbitrary depth. Enjoy...
+```textproto
+query {
+  smarts: "N.c"
+  separated_atoms {
+    a1: 0
+    a2: 1
+    min_bonds_between: 3
+    max_bonds_between: 7
+    max_rotbond: 4
+  }
+}
+```
+
+### Down The Bond
+
+The SMARTS down-the-bond construct can be represented as `down_the_bond`:
+
+```textproto
+query {
+  smarts: "[Cx>0]-N"
+  down_the_bond {
+    a1: 0
+    a2: 1
+    max_natoms: 3
+  }
+}
+```
+
+There is conceptual overlap between `down_the_bond` and `substituent`. Prefer the
+construct that makes the query easiest to review.
+
+### Region
+
+A `region` is defined by two matched atoms. The region consists of the contiguous
+atoms between those two atoms and can be constrained by size, ring count, and
+branching. If both defining atoms are in a ring, the region usually cannot be
+unambiguously defined.
+
+```textproto
+query {
+  smarts: "[D3R]-!@*...{<5;0[R]}*-!@[D3R]"
+  region {
+    atom: [1, 2]
+    max_natoms: 12
+    nrings: 0
+  }
+}
+```
+
+This identifies a linker-like region of at most 12 atoms between two rings, with
+no rings in the region.
+
+A more permissive replacement-linker query might be:
+
+```textproto
+query {
+  smarts: "a-!@*...{3-5}*-!@a"
+  unique_embeddings_only: true
+  region {
+    atom: [1, 2]
+    max_nrings: 1
+    max_atoms_not_on_shortest_path: 2
+  }
+}
+```
+
+Currently the most important implemented region attributes are atom count, ring
+count, and atoms not on the shortest path. Check the schema and tests before
+relying on less common fields.
+
+### Inter-Ring Regions
+
+`inter_ring_region` describes connected scaffold atoms between rings. This is
+usually a better fit than `region` when the concept is specifically "atoms
+between rings".
+
+It can constrain the number of atoms, ring connections, and distances between
+ring atoms, and can require or reject SMARTS within the region.
+
+## Writing Maintainable Query Files
+
+Prefer small, named query files over one giant query. Good names matter because
+many LillyMol tools report the query name as the reason for a match.
+
+Practical conventions:
+
+- include a `name` field in every top-level query;
+- keep one chemically meaningful idea per file;
+- use global ids whenever a precondition must be tied to the matched embedding;
+- use environments and matched-atom constraints to avoid unreadable recursive SMARTS;
+- test each query against a few positive and negative example molecules;
+- keep comments in the textproto when a field is present for a non-obvious reason.
+
+## Troubleshooting
+
+If a query matches too much, first check whether a ring, ring-system, required
+molecular property, or substituent condition is independent of the SMARTS match.
+If it must identify the same atoms, add `set_global_id` and match those atoms with
+`/IWgidN`.
+
+If a query does not match, simplify it until the SMARTS alone works, then add one
+proto construct at a time. Whole-molecule filters and ring specifiers are
+preconditions; environment and matched-atom constraints act after an embedding is
+found.
+
+If multiple embeddings appear because of symmetry, consider
+`unique_embeddings_only`, `one_embedding_per_start_atom`, or more specific SMARTS.
+Be aware that some embedding filters are order dependent.
+
+If the query is slow, try cheap whole-molecule preconditions such as
+`min_nrings`, `elements_needed`, or `required_bond`. This is not always a large
+speed win, but it can avoid obviously impossible atom matching.
+
+## Schema Reference Map
+
+The most useful schema messages are:
+
+| Message | Purpose |
+| ------- | ------- |
+| `SubstructureQuery` | Top-level container and logical expression across query components. |
+| `SingleSubstructureQuery` | One query component: SMARTS, hit controls, environments, ring specs, etc. |
+| `RequiredMolecularProperties` | Whole-molecule prefilters. |
+| `SubstructureRingSpecification` | One ring satisfying constraints. |
+| `SubstructureRingSystemSpecification` | One ring system satisfying constraints. |
+| `SubstructureRingBase` | Shared ring/ring-system base constraints such as environment and substituent. |
+| `Substituent` | Constraints on a substituent group. |
+| `SubstructureEnvironment` | Required or rejected context around matched atoms. |
+| `MatchedAtomMatch` | Rooted SMARTS constraints on a matched atom. |
+| `NearbyAtoms` | Motifs within a bond range of matched atoms. |
+| `SeparatedAtoms` | Bond and rotatable-bond separation between matched atoms. |
+| `Region` | Connected region defined by matched atoms. |
+| `InterRingAtoms` | Connected scaffold region between rings. |
+| `SubstructureAtom` and `SubstructureAtomSpecifier` | Proto-native atom and bond query construction. |
+
+The schema contains many fields not described here. That does not mean they are
+unsupported, only that they are less commonly used or more specialized. For exact
+field names, numeric types, defaults, and implementation comments, inspect
+[substructure.proto](/src/Molecule_Lib/substructure.proto).
 
 ## Conclusion
-Protocol Buffers enable the expression of fairly complex substructure
-searching concepts. But after working with these tools for many years,
-we are still encountering quite reasonable substructure query ideas that
-cannot be processed readily. There will be an ongoing effort to decide
-which of those unmet needs are worth addressing in LillyMol.
+
+Protocol buffer queries are the right LillyMol format when a chemical idea is
+larger than a local atom/bond SMARTS pattern. They are especially useful for
+ring-system logic, whole-molecule preconditions, environment exclusions,
+substituent constraints, and readable decomposition of complex matching logic.

@@ -1,4 +1,6 @@
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -637,7 +639,7 @@ Set_of_NA_Substructure_Query::_find_circular_dependencies (int * already_hit)
     if (needs.empty())
       continue;
       
-    set_vector(already_hit, _number_elements, 0);
+    std::fill_n(already_hit, _number_elements, 0);
 
     already_hit[i] = 1;
 
@@ -679,7 +681,7 @@ Set_of_NA_Substructure_Query::substructure_search (Molecule & m,
     }
   }
 
-  set_vector(result, _number_elements, NASS_NOT_EVALUATED);
+  std::fill_n(result, _number_elements, NASS_NOT_EVALUATED);
 
   for (int i = 0; i < _number_elements; i++)
   {

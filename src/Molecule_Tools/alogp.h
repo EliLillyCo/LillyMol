@@ -201,6 +201,10 @@ class ALogP {
 
     std::optional<float> LogPInner(Molecule& m, PerMoleculeData& pmd);
 
+    // The destructive form. LogP arranges that `m` is either a copy or a
+    // molecule that this will not alter.
+    std::optional<float> LogPDestructive(Molecule& m);
+
     std::optional<double> SingleAtomSpecialCase(Molecule& m);
 
     int ParametersFromProto(const alogp::AlogpParameters& proto);
@@ -250,10 +254,23 @@ class ALogP {
     template <typename T>
     int SetWeights(uint32_t n, const T* values);
 
+    // Does NOT modify `m`.
+    //
+    // The calculation itself is destructive - it needs the Hydrogen suppressed
+    // graph, and it strips isotopes, which resets the implicit Hydrogen count
+    // of those atoms. A molecule that would be affected by either is copied
+    // first, so the caller's molecule is left alone. Molecules with neither a
+    // removable Hydrogen nor an isotope, which is nearly all of them once
+    // chemical standardisation has run, are scored in place and pay only for
+    // the two scans that establish this.
+    //
+    // Before this was so, any property computed after a call to LogP could
+    // differ from the same property computed before it. The molecular weight
+    // of an isotopic molecule was the visible case.
+    //
     // Note that molecules must have formal charges assigned.
     // This class does not check that. Things will silently yield
     // bad values if charges have not been applied.
-    // Note that explicit Hydrogen atoms are removed from `m`.
     std::optional<float> LogP(Molecule& m);
 
     // During alogp_optimise the same molecules are repeatedly

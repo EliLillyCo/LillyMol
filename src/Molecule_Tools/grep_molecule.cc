@@ -33,6 +33,7 @@ Usage(int rc) {
   cerr << R"(Look for one or molecules as exact matches in another set
 Designed to work like grep, where the first argument is a patten and subsequent arguments
 are files to be searched.
+Only smiles files are supported.
 Multiple patterns (smiles) can be specified on the command line separated by commas
   'C methane,CC ethane,CCC propane'
 will search for methane, ethane and propane in subsequent files. Quotes are essential.
@@ -518,7 +519,7 @@ Options::MatchesSmilesAsText(const_IWSubstring buffer, IWString_and_File_Descrip
 }
 
 int
-ApplicationName(Options& options,
+GrepMolecule(Options& options,
                 iwstring_data_source& input,
                 IWString_and_File_Descriptor& output) {
   const_IWSubstring buffer;
@@ -531,18 +532,18 @@ ApplicationName(Options& options,
 }
 
 int
-ApplicationName(Options& options,
+GrepMolecule(Options& options,
              const char * fname,
              IWString_and_File_Descriptor& output) {
 
   iwstring_data_source input(fname);
 
   if (! input.good()) {
-    cerr << "ApplicationName:cannot open '" << fname << "'\n";
+    cerr << "GrepMolecule:cannot open '" << fname << "'\n";
     return 0;
   }
 
-  return ApplicationName(options, input, output);
+  return GrepMolecule(options, input, output);
 }
 
 int
@@ -586,8 +587,8 @@ Main(int argc, char** argv) {
   }
   for (int i = istart; i < cl.number_elements(); ++i) {
     const char* fname = cl[i];
-    if (! ApplicationName(options, fname, output)) {
-      cerr << "ApplicationName::fatal error processing '" << fname << "'\n";
+    if (! GrepMolecule(options, fname, output)) {
+      cerr << "GrepMolecule::fatal error processing '" << fname << "'\n";
       return 1;
     }
   }

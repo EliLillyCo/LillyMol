@@ -1,6 +1,0 @@
-(0 Query
-  (A C Comment "isothioamide_cyclicS")
-  (A I version 2)
-  (A D numeric_value 50)
-  (A C smarts "[SR]-C=N")
-)

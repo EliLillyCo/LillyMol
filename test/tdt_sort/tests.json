@@ -1,0 +1,13 @@
+{
+  "executable": "tdt_sort",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-T FPADD,col=4 -r #{indir}/unsorted.gfp"
+      ]
+    }
+
+  ]
+
+}

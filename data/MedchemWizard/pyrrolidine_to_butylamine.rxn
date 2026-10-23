@@ -1,0 +1,12 @@
+# Open the N-to-C2 bond; retain a C2 substituent and remove lost C2 chirality.
+name: "pyrrolidine_to_butylamine"
+scaffold {
+  smarts: "[ND3H0R1+0]1-[CH2D2R1]-[CH2D2R1]-[CH2D2R1]-[CD<4H>0R1+0]-1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  break_bond { a1: 0 a2: 4 }
+  remove_chirality: 4
+  unfix_implicit_hydrogens: 4
+}

@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <sys/types.h>
@@ -32,6 +34,8 @@
 #include "mispredicted.pb.h"
 #endif
 
+#include "Utilities/GFP_Tools/nearest_neighbour_data.h"
+
 using std::cerr;
 
 const char* prog_name = NULL;
@@ -53,6 +57,9 @@ static int fault_tolerant_mode = 0;
 static int take_absolute_differences = 1;
 
 static int write_worst_predicted = 0;
+
+// Count valid prediction records, including repeated IDs within one file.
+static int minimum_predictions = 1;
 
 static float write_differences_threshold = -1.0f;
 
@@ -162,6 +169,8 @@ class Entity
  protected:
   const IWString _id;
   int _times_predicted;
+  bool _report_nearest_distance = false;
+  std::optional<float> _nearest_distance;
 
  public:
   Entity(const IWString&);
@@ -176,6 +185,24 @@ class Entity
   times_predicted() const
   {
     return _times_predicted;
+  }
+
+  void SetNearestDistance(std::optional<float> distance) {
+    _report_nearest_distance = true;
+    _nearest_distance = distance;
+  }
+
+  void AppendNearestDistance(IWString_and_File_Descriptor& output,
+                             bool labelled = false) const {
+    if (!_report_nearest_distance) return;
+    output << (labelled ? " NN_DIST " : " ");
+    if (_nearest_distance) output << *_nearest_distance;
+    else output << '.';
+  }
+
+  template <typename P>
+  void AddNearestDistance(P& proto) const {
+    if (_nearest_distance) proto.set_nearest_neighbour_distance(*_nearest_distance);
   }
 
   //  virtual int append_details(IWString_and_File_Descriptor &) const;
@@ -270,6 +297,7 @@ Entity_Classification::report(IWString_and_File_Descriptor& output) const
     }
   }
 
+  AppendNearestDistance(output, !produce_descriptor_file);
   output << '\n';
 
   return 1;
@@ -281,7 +309,9 @@ Entity_Classification::write_summary_data(IWString_and_File_Descriptor& output) 
   output << _id << ' '
          << static_cast<float>(_correct_predictions) /
                 static_cast<float>(_times_predicted)
-         << " . " << _times_predicted << '\n';
+         << " . " << _times_predicted;
+  AppendNearestDistance(output);
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(4096);
 
@@ -297,7 +327,10 @@ MPWriteProto(const P& proto,
 
   std::string buffer;
 
-  printer.PrintToString(proto, &buffer);
+  if (!printer.PrintToString(proto, &buffer)) {
+    cerr << "PrintToString failed\n";
+    return 0;
+  }
 
   output << buffer << '\n';
 
@@ -314,6 +347,7 @@ Entity_Classification::write_textproto_data(IWString_and_File_Descriptor& output
   proto.set_npred(_times_predicted);
   proto.set_times_correct(_correct_predictions);
 
+  AddNearestDistance(proto);
   return MPWriteProto<mispredicted::MispredictedClassification>(proto, output);
 }
 
@@ -346,6 +380,10 @@ class Entity_Continuous : public Entity
   int prediction_and_distance(const const_IWSubstring&, const const_IWSubstring&);
 
   T accuracy() const;
+  double DifferenceStandardDeviation() const {
+    // A single observation has no estimable spread; report zero by convention.
+    return _diffs.n() > 1 ? sqrt(_diffs.variance()) : 0.0;
+  }
 
   int report(IWString_and_File_Descriptor&) const;
 
@@ -451,6 +489,7 @@ Entity_Continuous<T>::report(IWString_and_File_Descriptor& output) const
     }
   }
 
+  AppendNearestDistance(output, !produce_descriptor_file);
   output << '\n';
 
   return 1;
@@ -471,8 +510,10 @@ Entity_Continuous<T>::write_summary_data(IWString_and_File_Descriptor& output) c
             static_cast<float>(_predictions.average()) << kSep <<
             static_cast<float>(_diffs.average()) <<  kSep <<
             _diffs.maxval() << kSep <<
-            static_cast<float>(sqrt(_diffs.variance())) << "\n";
+            static_cast<float>(DifferenceStandardDeviation());
   // clang-format on
+  AppendNearestDistance(output);
+  output << '\n';
 
   output.write_if_buffer_holds_more_than(4096);
 
@@ -490,8 +531,9 @@ Entity_Continuous<T>::write_textproto_data(IWString_and_File_Descriptor& output)
   proto.set_minpred(_predictions.minval());
   proto.set_maxpred(_predictions.maxval());
   proto.set_average_difference(_diffs.average());
-  proto.set_std_difference(sqrt(_diffs.variance()));
+  proto.set_std_difference(DifferenceStandardDeviation());
 
+  AddNearestDistance(proto);
   return MPWriteProto<mispredicted::MispredictedContinuous>(proto, output);
 }
 
@@ -532,7 +574,7 @@ Classification_Data_Comparator::operator()(const Entity_Classification* e1,
   const IWString& c2 = e2->correct_class();
 
   if (c1 == c2) {
-    return 0;
+    return e1->id().strcmp(e2->id());
   }
 
   if (c1.length() < c2.length()) {
@@ -575,7 +617,7 @@ Continuous_Data_Comparator::operator()(const Entity_Continuous<float>* e1,
     return -1;
   }
 
-  return 0;
+  return e1->id().strcmp(e2->id());
 }
 
 static void
@@ -590,6 +632,7 @@ usage(int rc)
   // clang-format on
   // clang-format off
   cerr << R"(Identifies molecules that are poorly predicted across multiple prediction files.
+Continuous errors default to mean absolute error, including with -w and -W.
  -E <fname>     experimental (Correct) results in <fname>
  -g             ignore missing experimental data
  -h             ignore duplicate entries in the -E file.
@@ -598,19 +641,21 @@ usage(int rc)
  -C             classification problem
  -c <float>     cutoff for recomputing class membership using raw score
  -X -1,1        convert class labels to -1,1 based on prevalence (svmfp_calibrate)
- -F             run in a fault tolerant mode - skip seemingly incorrect files
- -s             consider signed differences rather than absolute
- -w <number>    only write the <number> worst predicted values
- -b             'balance' numeric filtering - approximately equal large and small values
- -W <value>     only write items with prediction errors above <value>
- -d             produce a 'descriptor' like file, just id and ave activity diff
+ -F             ignore invalid prediction records and continue reading the file
+ -s             use mean signed error (observed minus predicted); filters use its magnitude
+ -n <count>     require at least <count> valid prediction records per ID (default 1)
+ -w <number>    write at most <number> molecules with the largest mean errors
+ -b             with -w, balance under/over-predictions by signed error; implies -s
+ -W <value>     write molecules with mean error magnitude >= <value>
+ -N <fname>     nearest-neighbour NearNeighbours TFDataRecord file
+ -d             write a headered table (continuous: ID EXPT AVDIFF)
  -k             input files were produced by svmfp_evaluate with the -c option (dist to SV)
- -D <fname>     produce file of distance vs abs prediction error
- -Y <fname>     produce file 'id ave_diff N'
+ -D <fname>     distance/error output (not implemented)
+ -Y <fname>     continuous summary: ID Expt N minpred maxpred avepred avediff maxdiff stddiff
  -R <regex>     process all files that match <regex> in current directory
- -S <fname>     file of smiles - output will include the smiles
- -T <fname>     output as Mispredicted textproto\n";
- -r             reverse sort order, sort output from worst (top of file) to best (bottom)
+ -S <fname>     SMILES input; prepends SMILES to continuous output
+ -T <fname>     continuous Mispredicted textproto output; appends .textproto
+ -r             reverse default output order; continuous: smallest mean error first
  -v             verbose output
 )";
   // clang-format on
@@ -660,6 +705,32 @@ ReadSmiles(const char* fname, IW_STL_Hash_Map_String& id_to_smiles) {
 
 typedef IW_STL_Hash_Map<IWString, Entity_Classification*> ID_to_Classification_Data;
 typedef IW_STL_Hash_Map<IWString, Entity_Continuous<float>*> ID_to_Continuous_Data;
+
+// Attach context without changing prediction ranking or selection. Coverage is
+// over all identifiers with predictions, before output filters are applied.
+template <typename T>
+void AnnotateNeighbours(const T& entities,
+    const nearest_neighbour_data::NearestNeighbourData& neighbours) {
+  uint64_t available = 0, missing = 0, empty = 0;
+  for (const auto& [id, entity] : entities) {
+    if (entity->times_predicted() == 0) continue;
+    const nnbr::NearNeighbours* proto = neighbours.Lookup(id.AsString());
+    if (!proto) {
+      ++missing;
+      entity->SetNearestDistance(std::nullopt);
+    } else if (proto->nbr_size() == 0) {
+      ++empty;
+      entity->SetNearestDistance(std::nullopt);
+    } else {
+      ++available;
+      entity->SetNearestDistance(proto->nbr(0).dist());
+    }
+  }
+  if (verbose) {
+    cerr << "Nearest-neighbour coverage: " << available << " prediction identifiers with distances, "
+         << missing << " absent IDs, " << empty << " empty neighbour lists\n";
+  }
+}
 
 template <typename T>
 int
@@ -711,10 +782,15 @@ report_classification_results(const ID_to_Classification_Data& idcd,
   std::unique_ptr<Entity_Classification*[]> free_ec(ec);
 
   int ndx = 0;
+  bool any_predictions = false;
   for (ID_to_Classification_Data::const_iterator i = idcd.begin(); i != idcd.end(); ++i) {
     ec[ndx] = (*i).second;
 
     if (0 == ec[ndx]->times_predicted()) {
+      continue;
+    }
+    any_predictions = true;
+    if (ec[ndx]->times_predicted() < minimum_predictions) {
       continue;
     }
 
@@ -724,7 +800,11 @@ report_classification_results(const ID_to_Classification_Data& idcd,
   n = ndx;
 
   if (0 == n) {
-    return 0;
+    if (any_predictions && verbose) {
+      cerr << "No identifiers meet the minimum prediction count " << minimum_predictions << '\n';
+    }
+    // No eligible identifiers is a successful filter; no predictions is an error.
+    return any_predictions;
   }
 
   Classification_Data_Comparator cdc;
@@ -760,144 +840,57 @@ report_classification_results(const ID_to_Classification_Data& idcd,
   return report_data(ec, n, output);
 }
 
+// The input is sorted by mean error, largest to smallest. Absolute errors
+// need only a prefix; signed errors select from both ends.
 static int
-filter_to_worst_with_balancing(Entity_Continuous<float>** ec, unsigned int& n,
-                               int write_worst_predicted)
+filter_to_worst(Entity_Continuous<float>** ec, unsigned int& n, int requested,
+                bool balance = false)
 {
-#ifdef DEBUG_FILTER_TO_WORST
-  cerr << "Filtering " << n << " items\n";
-
-  for (int i = 0; i < n; i++) {
-    cerr << ec[i]->accuracy() << '\n';
+  const unsigned int limit = std::min(n, static_cast<unsigned int>(requested));
+  if (take_absolute_differences) {
+    n = limit;
+    return 1;
   }
-#endif
-
-  double low_sum = ec[0]->accuracy();
-  double high_sum = -ec[n - 1]->accuracy();
-
-  // cerr << "Highsum " << high_sum << '\n';
-
-  int low_index = 1;
-  int high_index = n - 2;
-
-  int nsel = 2;
-
-  // cerr << "low_index " << low_index << " high_index " << high_index << '\n';
-
-  while (low_index < high_index && nsel < write_worst_predicted) {
-    if (low_sum < high_sum) {
-      if (ec[low_index]->accuracy() < 0.0F) {
-        break;
-      }
-
-      low_sum += ec[low_index]->accuracy();
-      low_index++;
+  unsigned int left = 0;
+  unsigned int right = n;
+  double positive_sum = 0.0;
+  double negative_sum = 0.0;
+  for (unsigned int selected = 0; selected < limit; ++selected) {
+    const float positive = ec[left]->accuracy();
+    const float negative = ec[right - 1]->accuracy();
+    bool take_left;
+    if (balance && selected > 0 && positive > 0.0f && negative < 0.0f) {
+      // Balance total error magnitudes while both directions remain available.
+      take_left = positive_sum <= negative_sum;
     } else {
-      if (ec[high_index]->accuracy() > 0.0F) {
-        break;
-      }
-
-      high_sum -= ec[high_index]->accuracy();
-      high_index--;
+      take_left = fabs(positive) > fabs(negative);
     }
-
-    nsel++;
-    //  cerr << "End of loop, high_sum " << high_sum << " low_sum " << low_sum << '\n';
-  }
-
-  // balance
-
-  if (verbose > 1) {
-    cerr << "Balancing        low " << low_index << " sum " << low_sum << " high "
-         << (n - high_index) << " sum " << high_sum << '\n';
-  }
-
-  if (low_sum < high_sum) {
-    while (low_sum + ec[low_index]->accuracy() < high_sum) {
-      low_sum += ec[low_index]->accuracy();
-      low_index++;
-      if (low_index >= high_index) {
-        break;
-      }
-    }
-  } else {
-    while (high_sum - ec[high_index]->accuracy() < low_sum) {
-      high_sum -= ec[high_index]->accuracy();
-      high_index--;
-      if (high_index <= low_index) {
-        break;
-      }
+    if (take_left) {
+      positive_sum += fabs(positive);
+      ++left;
+    } else {
+      negative_sum += fabs(negative);
+      --right;
     }
   }
-
-  if (verbose > 1) {
-    cerr << "After balancing, low " << low_index << " sum " << low_sum << " high "
-         << (n - high_index) << " sum " << high_sum << '\n';
+  const unsigned int original_n = n;
+  for (unsigned int i = right; i < original_n; ++i) {
+    ec[left++] = ec[i];
   }
-
-  // now shift things down;
-
-  // low_index++;
-
-  for (unsigned int i = high_index + 1; i < n; i++) {
-    ec[low_index] = ec[i];
-    low_index++;
-  }
-
-  n = low_index;
-
-  return n;
+  n = left;
+  return 1;
 }
 
 static int
-filter_to_worst(Entity_Continuous<float>** ec, unsigned int& n, int write_worst_predicted)
+filter_to_threshold(Entity_Continuous<float>** ec, unsigned int& n, float threshold)
 {
-  int low_index = 0;
-  int high_index = n - 1;
-
-  for (int nsel = 0; nsel < write_worst_predicted; nsel++) {
-    if (ec[low_index]->accuracy() > fabs(ec[high_index]->accuracy())) {
-      low_index++;
-    } else {
-      high_index--;
+  unsigned int kept = 0;
+  for (unsigned int i = 0; i < n; ++i) {
+    if (fabs(ec[i]->accuracy()) >= threshold) {
+      ec[kept++] = ec[i];
     }
   }
-
-  for (unsigned int i = high_index + 1; i < n; i++) {
-    ec[low_index] = ec[i];
-    low_index++;
-  }
-
-  n = low_index;
-
-  return n;
-}
-
-static int
-filter_to_threshold(Entity_Continuous<float>** ec, unsigned int& n,
-                    float write_differences_threshold)
-{
-  int low_index = 0;
-  while (ec[low_index]->accuracy() >= write_differences_threshold) {
-    low_index++;
-  }
-
-  unsigned int high_index = n - 1;
-
-  while (-ec[high_index]->accuracy() >= write_differences_threshold) {
-    high_index--;
-  }
-
-  high_index++;
-
-  while (high_index < n) {
-    ec[low_index] = ec[high_index];
-    low_index++;
-    high_index++;
-  }
-
-  n = low_index;
-
+  n = kept;
   return 1;
 }
 
@@ -917,6 +910,7 @@ report_continuous_results(const ID_to_Continuous_Data& idcd,
   std::unique_ptr<Entity_Continuous<float>*[]> free_ec(ec);
 
   int ndx = 0;
+  bool any_predictions = false;
   for (ID_to_Continuous_Data::const_iterator i = idcd.begin(); i != idcd.end(); ++i) {
     ec[ndx] = (*i).second;
 
@@ -924,6 +918,10 @@ report_continuous_results(const ID_to_Continuous_Data& idcd,
     //  " times\n";
 
     if (0 == ec[ndx]->times_predicted()) {
+      continue;
+    }
+    any_predictions = true;
+    if (ec[ndx]->times_predicted() < minimum_predictions) {
       continue;
     }
 
@@ -935,7 +933,11 @@ report_continuous_results(const ID_to_Continuous_Data& idcd,
   //  cerr << n << " items with non-zero observations\n";
 
   if (0 == n) {
-    return 0;
+    if (any_predictions && verbose) {
+      cerr << "No identifiers meet the minimum prediction count " << minimum_predictions << '\n';
+    }
+    // No eligible identifiers is a successful filter; no predictions is an error.
+    return any_predictions;
   }
 
   Continuous_Data_Comparator cdc;
@@ -944,12 +946,18 @@ report_continuous_results(const ID_to_Continuous_Data& idcd,
 
   if (write_worst_predicted > 0) {
     if (balance_numeric_filtering) {
-      filter_to_worst_with_balancing(ec, n, write_worst_predicted);
+      filter_to_worst(ec, n, write_worst_predicted, true);
     } else {
       filter_to_worst(ec, n, write_worst_predicted);
     }
   } else if (write_differences_threshold > 0.0F) {
     filter_to_threshold(ec, n, write_differences_threshold);
+  }
+
+  // Filtering needs descending signed errors. Reverse only after selection,
+  // so -r changes every output's display order without changing membership.
+  if (!sort_best_to_worst) {
+    std::reverse(ec, ec + n);
   }
 
   if (stream_for_summary.active()) {
@@ -998,6 +1006,7 @@ parse_experimental_data_record(const const_IWSubstring& buffer,
     // new value, great
   } else if (ignore_duplicate_experimental_values) {
     ++duplicate_experimental_values_ignored;
+    return idd.size();
   } else {
     cerr << "Duplicate experimental data for '" << id << "', cannot continue\n";
     return 0;
@@ -1072,6 +1081,10 @@ parse_experimental_data_record(const const_IWSubstring& buffer,
   buffer.nextword(id, i);
 
   if (idd.contains(id)) {
+    if (ignore_duplicate_experimental_values) {
+      ++duplicate_experimental_values_ignored;
+      return idd.size();
+    }
     cerr << "Duplicate experimental data for '" << id << "', cannot continue\n";
     return 0;
   }
@@ -1205,7 +1218,10 @@ gather_predicted_data_classification(iwstring_data_source& input,
     if (!process_classification_prediction(buffer, idd, xref)) {
       cerr << "Bad predicted data record '" << buffer << "'\n";
       cerr << "From " << input.fname() << '\n';
-      return fault_tolerant_mode;
+      if (!fault_tolerant_mode) {
+        return 0;
+      }
+      // Preserve valid observations and continue after a malformed record.
     }
   }
 
@@ -1255,13 +1271,13 @@ process_continuous_prediction(const const_IWSubstring& buffer, ID_to_Continuous_
     return 0;
   }
 
-  predicted_values_read++;
-
   Entity_Continuous<float>* e = (*f).second;
 
   if (!data_includes_distance_to_support_vector) {
-    e->predicted_as(predicted);
-
+    if (! e->predicted_as(predicted)) {
+      return 0;
+    }
+    ++predicted_values_read;
     return 1;
   }
 
@@ -1272,7 +1288,11 @@ process_continuous_prediction(const const_IWSubstring& buffer, ID_to_Continuous_
     return 0;
   }
 
-  return e->prediction_and_distance(predicted, dist);
+  if (! e->prediction_and_distance(predicted, dist)) {
+    return 0;
+  }
+  ++predicted_values_read;
+  return 1;
 }
 
 static int
@@ -1287,7 +1307,10 @@ gather_predicted_data_continuous(iwstring_data_source& input, ID_to_Continuous_D
   while (input.next_record(buffer)) {
     if (!process_continuous_prediction(buffer, idd)) {
       cerr << "Bad predicted data record '" << buffer << "'\n";
-      return fault_tolerant_mode;
+      if (!fault_tolerant_mode) {
+        return 0;
+      }
+      // Preserve valid observations and continue after a malformed record.
     }
   }
 
@@ -1519,10 +1542,82 @@ report_coverage(const ID_to_Classification_Data& idcd, std::ostream& os)
   return os.good();
 }
 
+static bool
+SameFile(const IWString& a, const IWString& b) {
+  namespace fs = std::filesystem;
+  const fs::path pa(a.AsString()), pb(b.AsString());
+  std::error_code error;
+  if (fs::equivalent(pa, pb, error)) {
+    return true;
+  }
+  error.clear();
+  const auto ca = fs::weakly_canonical(pa, error);
+  if (error) return pa.lexically_normal() == pb.lexically_normal();
+  const auto cb = fs::weakly_canonical(pb, error);
+  return !error && ca == cb;
+}
+
+static int
+CheckOutputFiles(const Command_Line& cl) {
+  if (!cl.option_present('Y') && !cl.option_present('T')) {
+    return 1;
+  }
+  std::vector<IWString> inputs;
+  for (char flag : {'E', 'S', 'N'}) {
+    if (cl.option_present(flag)) inputs.emplace_back(cl.string_value(flag));
+  }
+  for (const char* arg : cl) {
+    if (strncmp(arg, "F:", 2) != 0) {
+      inputs.emplace_back(arg);
+      continue;
+    }
+    inputs.emplace_back(arg + 2);
+    iwstring_data_source list(arg + 2);
+    IWString line;
+    while (list.next_record(line)) {
+      line.strip_trailing_blanks();
+      if (!line.empty() && !line.starts_with('#')) inputs.push_back(line);
+    }
+  }
+  if (cl.option_present('R')) {
+    std::unique_ptr<re2::RE2> regex;
+    if (!iwre2::RE2Reset(regex, cl.string_value('R'))) {
+      cerr << "Invalid file name regular expression\n";
+      return 0;
+    }
+    std::error_code error;
+    for (const auto& entry : std::filesystem::directory_iterator(".", error)) {
+      IWString name(entry.path().filename().string());
+      if (iwre2::RE2PartialMatch(name, *regex)) inputs.push_back(name);
+    }
+  }
+  std::vector<IWString> outputs;
+  for (char flag : {'Y', 'T'}) {
+    if (!cl.option_present(flag)) continue;
+    IWString output = cl.string_value(flag);
+    if (flag == 'T') output.EnsureEndsWith(".textproto");
+    if (output == "-") continue;
+    for (const IWString& input : inputs) {
+      if (SameFile(input, output)) {
+        cerr << "Output '" << output << "' would overwrite input '" << input << "'\n";
+        return 0;
+      }
+    }
+    for (const IWString& previous : outputs) {
+      if (SameFile(previous, output)) {
+        cerr << "Output files must use different paths\n";
+        return 0;
+      }
+    }
+    outputs.push_back(output);
+  }
+  return 1;
+}
+
 static int
 Mispredicted(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:hT:D:");
+  Command_Line cl(argc, argv, "vgCE:e:p:c:Fsw:W:dbY:R:kX:rS:hT:D:n:N:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1530,6 +1625,34 @@ Mispredicted(int argc, char** argv)
   }
 
   verbose = cl.option_count('v');
+  if (! CheckOutputFiles(cl)) {
+    return 1;
+  }
+
+  std::unique_ptr<nearest_neighbour_data::NearestNeighbourData> neighbours;
+  if (cl.option_present('N')) {
+    if (cl.option_count('N') != 1) {
+      cerr << "Specify one nearest-neighbour file with -N\n";
+      return 1;
+    }
+    neighbours = std::make_unique<nearest_neighbour_data::NearestNeighbourData>();
+    const char* fname = cl.option_value('N');
+    if (!neighbours->SetNeighboursToRetain(1) || !neighbours->Read(fname)) {
+      cerr << "Cannot read nearest-neighbour data '" << fname << "'\n";
+      return 1;
+    }
+    if (verbose) cerr << "Read " << neighbours->size() << " nearest-neighbour records\n";
+  }
+
+  if (cl.option_present('n')) {
+    if (!cl.value('n', minimum_predictions) || minimum_predictions < 1) {
+      cerr << "Minimum prediction count (-n) must be a positive integer\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Require at least " << minimum_predictions << " valid prediction records per identifier\n";
+    }
+  }
 
   if (cl.option_present('g')) {
     ignore_missing_experimental_data = 1;
@@ -1589,6 +1712,11 @@ Mispredicted(int argc, char** argv)
     }
   }
 
+  if (cl.option_present('b') && !cl.option_present('w')) {
+    cerr << "Balanced selection (-b) requires a count (-w)\n";
+    return 1;
+  }
+
   if (cl.option_present('w')) {
     if (!cl.value('w', write_worst_predicted) || write_worst_predicted < 1) {
       cerr << "The write worst predicted items (-w) must be a whole +ve number\n";
@@ -1599,10 +1727,9 @@ Mispredicted(int argc, char** argv)
       cerr << "Will write the " << write_worst_predicted << " worst predicted items\n";
     }
 
-    take_absolute_differences = 0;
-
     if (cl.option_present('b')) {
       balance_numeric_filtering = 1;
+      take_absolute_differences = 0;
 
       if (verbose) {
         cerr << "Will produce approximately balanced samples of high and low "
@@ -1623,7 +1750,6 @@ Mispredicted(int argc, char** argv)
            << " from obs\n";
     }
 
-    take_absolute_differences = 0;
   }
 
   if (cl.option_present('d')) {
@@ -1705,6 +1831,7 @@ Mispredicted(int argc, char** argv)
     } else {
       output << "ID EXPT AVDIFF";
     }
+    if (neighbours) output << " NN_DIST";
     output << '\n';
   }
 
@@ -1725,14 +1852,16 @@ Mispredicted(int argc, char** argv)
       cerr << "Summary data written to '" << y << "'\n";
     }
 
-    stream_for_summary << "ID Expt N minpred maxpred avepred avediff maxdiff stddiff\n";
+    stream_for_summary << "ID Expt N minpred maxpred avepred avediff maxdiff stddiff";
+    if (neighbours) stream_for_summary << " NN_DIST";
+    stream_for_summary << '\n';
   }
 
   if (cl.option_present('r')) {
     sort_best_to_worst = 0;
 
     if (verbose) {
-      cerr << "Will sort worst to best in output file\n";
+      cerr << "Will reverse default output order\n";
     }
   }
 
@@ -1751,8 +1880,10 @@ Mispredicted(int argc, char** argv)
     const const_IWSubstring r = cl.string_value('R');
 
     if (!iwre2::RE2Reset(fname_rx, r)) {
-      fname_rx_active = true;
+      cerr << "Invalid file name regular expression '" << r << "'\n";
+      return 1;
     }
+    fname_rx_active = true;
     if (verbose) {
       cerr << "File name regular expression initialised '" << r << "'\n";
     }
@@ -1803,8 +1934,10 @@ Mispredicted(int argc, char** argv)
     }
 
     if (0 == rc) {
-      report_classification_results(idcd, output);
-      output.flush();
+      if (neighbours) AnnotateNeighbours(idcd, *neighbours);
+      if (! report_classification_results(idcd, output) || ! output.flush()) {
+        return 1;
+      }
       report_coverage(idcd, cerr);
     }
   } else {
@@ -1837,8 +1970,10 @@ Mispredicted(int argc, char** argv)
     }
 
     if (0 == rc) {
-      report_continuous_results(idcd, output);
-      output.flush();
+      if (neighbours) AnnotateNeighbours(idcd, *neighbours);
+      if (! report_continuous_results(idcd, output) || ! output.flush()) {
+        return 1;
+      }
     }
   }
 

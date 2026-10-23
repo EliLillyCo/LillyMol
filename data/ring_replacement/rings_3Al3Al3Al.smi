@@ -1,0 +1,1 @@
+smi: "[1CH2]1C2(CC2)C12CC2" smt: "[Ax2r3D>2]1[Ax4r3D4]2([Ax2r3D2][Ax2r3D2]2)[Ax4r3D4]12[Ax2r3D2][Ax2r3D2]2" id: "CHEMBL5807811.3A3A3A" n: 10 conn: true usmi: "[1CH2]1C2(C13CC3)CC2" 

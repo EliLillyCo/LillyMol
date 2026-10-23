@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 
@@ -258,7 +259,7 @@ distance_matrix(IW_General_Fingerprint *pool1, int n1, IW_General_Fingerprint *p
   } else if (0 == lower_triangular_form) {
     stored_result = new similarity_type_t[n1 * n2];
     assert(nullptr != stored_result);
-    set_vector(stored_result, n1 * n2, static_cast<similarity_type_t>(8.0));
+    std::fill_n(stored_result, n1 * n2, static_cast<similarity_type_t>(8.0));
   }
 
   if (fast_io) {

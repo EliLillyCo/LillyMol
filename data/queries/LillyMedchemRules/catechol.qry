@@ -1,0 +1,4 @@
+name: "catechol"
+query {
+  smarts: "[OD1H]-c1:c(-[OD1]):c:c:c:c1"
+}

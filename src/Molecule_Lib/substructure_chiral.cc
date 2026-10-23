@@ -349,7 +349,7 @@ Substructure_Chiral_Centre::is_matched(const Molecule* m) const {
   atom_number_t what_to_add_if_not_matched;
 
   if (4 == m->ncon(centre_atom)) {
-    what_to_add_if_not_matched = INVALID_ATOM_NUMBER;
+    what_to_add_if_not_matched = kInvalidAtomNumber;
   } else if (const_cast<Molecule*>(m)->hcount(centre_atom)) {
     what_to_add_if_not_matched = CHIRAL_CONNECTION_IS_IMPLICIT_HYDROGEN;
   } else {
@@ -1019,7 +1019,7 @@ zatom << "'\n"; return 0;
 
   c->set_centre(centre_query_atom);
 
-#define DEBUG_INITIALISE_CHIRALITY_INFO
+//#define DEBUG_INITIALISE_CHIRALITY_INFO
 #ifdef DEBUG_INITIALISE_CHIRALITY_INFO
   cerr << "Initialising from ";
   numeric->debug_print(cerr);

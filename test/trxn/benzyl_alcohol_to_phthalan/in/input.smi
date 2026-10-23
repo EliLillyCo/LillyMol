@@ -1,0 +1,7 @@
+OCc1ccccc1 alcohol
+OCc1cccc(C)c1 asymmetric
+C[C@H](F)c1ccc(CO)cc1 remote_chiral
+COCc1ccccc1 benzyl_ether
+OCc1c(C)cccc1C blocked_ortho
+OCCc1ccccc1 too_long
+OC1CCCCC1 non_aromatic

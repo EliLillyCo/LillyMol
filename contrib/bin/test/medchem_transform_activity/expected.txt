@@ -1,0 +1,4 @@
+transformation observed_n observed_min observed_max observed_mean observed_median predicted_n predicted_min predicted_max predicted_mean predicted_median
+add_carbon 2 1.5 1.5 1.5 1.5 0 . . . .
+add_nitrogen 0 . . . . 1 -1 -1 -1 -1
+add_oxygen 0 . . . . 1 2 2 2 2

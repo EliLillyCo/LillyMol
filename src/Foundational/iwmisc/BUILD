@@ -1,4 +1,6 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 
 proto_library(
     name = "for_testing_proto",
@@ -23,6 +25,7 @@ proto_library(
     deps = [
         "//Foundational/accumulator:accumulator_proto",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
@@ -63,6 +66,11 @@ cc_library(
 
 cc_library(
     name = "iwmisc",
+    # Linked whole into //Molecule_Lib:molecule_lib_shared, which claims to export
+    # it. Without this the linker drops the members Molecule_Lib does not itself
+    # reference, and extensions resolving against the shared library cannot find
+    # them at load time.
+    alwayslink = 1,
     srcs = [
         "_iw_write_array_int.cc",
         "_iwmaxid_double_int.cc",
@@ -125,7 +133,9 @@ cc_library(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwqsort",
+        "//Foundational/iwstring:string_with_commas",
         "@com_google_protobuf//:protobuf",
+        "@fmt//:fmt",
     ],
 )
 
@@ -256,8 +266,8 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":normalisation_cc_proto",
         ":iwmisc",
+        ":normalisation_cc_proto",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
     ],
@@ -311,6 +321,18 @@ cc_test(
 )
 
 cc_test(
+    name = "display_dash_help_test",
+    srcs = [
+        "display_dash_help_test.cc",
+    ],
+    deps = [
+        ":iwmisc",
+        "//Foundational/cmdline:iwcmdline",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "logical_expression_test",
     srcs = [
         "logical_expression_test.cc",
@@ -343,20 +365,6 @@ cc_test(
         "@benchmark//:benchmark_main",
     ],
 )
-
-cc_test(
-    name = "normalisation_test",
-    srcs = [
-        "normalisation_test.cc",
-    ],
-    deps = [
-        ":normalisation",
-        ":normalisation_cc_proto",
-        "//Foundational/accumulator",
-        "@googletest//:gtest_main",
-    ],
-)
-
 
 cc_test(
     name = "sorted_list_test",

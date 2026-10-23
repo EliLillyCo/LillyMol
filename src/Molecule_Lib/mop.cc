@@ -68,7 +68,7 @@ Molecule::_write_molecule_mop (ofstream & output,
   assert (nullptr != ordering);
 
   atom_number_t start_atom = 0;
-  if (INVALID_ATOM_NUMBER != mopac_output_control.start_atom ())
+  if (kInvalidAtomNumber != mopac_output_control.start_atom ())
     start_atom = mopac_output_control.start_atom ();
 
   return 1;

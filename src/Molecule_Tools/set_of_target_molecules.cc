@@ -85,7 +85,9 @@ void
 Set_of_Target_Molecules<F>::_compute_fingerprint(Molecule & m,
                                                  F & fp)
 {
-  _mpr(m, fp.molecular_properties());
+  int molecular_properties[8];
+  _mpr(m, molecular_properties);
+  fp.build_molecular_properties(molecular_properties, 8);
 
   _mk(m, _tmp);
   fp.build_mk(_tmp, _mk.nbits());

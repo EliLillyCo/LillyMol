@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_single_linkage",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-t 0.25 ${LILLYMOL_HOME}/data//pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

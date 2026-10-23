@@ -1,5 +1,6 @@
 // Generate pharmacophore-like queries for 2D molecules
 
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -54,6 +55,10 @@ Usage(int rc) {
 Queries define pharmacophore features and query files are generated that describe the topological relationships
 between the pharmacophoric features in the starting molecules. One query per starting molecule.
 Parameters should most be specified via the -C option, but some are also available via command line options.
+ -M               write whole labelled molecules only; no query files are generated.
+ -I <isotope>     uniform pharmacophore isotope (default 1 with -M).
+ -X <isotope>     optional distinct isotope for pharmacophore atoms bonded to unselected atoms.
+                  With -M, -S names the SMILES output stem (default stdout).
  -C <fname>       pharmacophore2d::Pharmacophore2DConfig configuration textproto
  -S <stem>        file name stem for generated query files - multiple textproto files are generated.
  -G <fname>       write names of query files generated to <fname> - use with -q PROTOFILE:<fname>
@@ -100,7 +105,7 @@ class PerMoleculeData {
   quick_rotbond::QuickRotatableBonds _rotbond;
 
  public:
-  PerMoleculeData(Molecule& m);
+  PerMoleculeData(Molecule& m, bool query_data = true);
   ~PerMoleculeData();
 
   int*
@@ -121,16 +126,21 @@ class PerMoleculeData {
   }
 };
 
-PerMoleculeData::PerMoleculeData(Molecule& m) : _m(m), _matoms(m.natoms()) {
-  _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
-
-  _rotbond_between = _rotbond.RotatableBondsBetween(m).release();
+PerMoleculeData::PerMoleculeData(Molecule& m, bool query_data) : _m(m), _matoms(m.natoms()) {
+  _rotbond_between = nullptr;
+  // Whole-molecule labels need only feature membership, not the pairwise
+  // rotatable-bond matrix used to construct query distance constraints.
+  if (query_data) {
+    _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
+    _rotbond_between = _rotbond.RotatableBondsBetween(m).release();
+  }
 
   _functional_group = new_int(_matoms, -1);
 }
 
 PerMoleculeData::~PerMoleculeData() {
   delete[] _rotbond_between;
+  delete[] _functional_group;
 }
 
 class Output {
@@ -282,6 +292,9 @@ class Options {
   // If writing labelled smiles, we can write as either atom map numbers, default
   // or as isotopic labels. This variable controls that behaviour.
   int _label_with_isotopes = 0;
+  int _molecules_only = 0;
+  int _pharmacophore_isotope = 0;
+  int _exit_isotope = 0;
 
   // The atomic properties that will be transferred to the query atom.
   // These are or'd values of the various kProp* variables.
@@ -324,6 +337,8 @@ class Options {
   int Process(Molecule& m, IWString& output_fname);
   int Process(Molecule& m, IWString_and_File_Descriptor& output);
   std::optional<SubstructureSearch::SubstructureQuery> Process(Molecule& m);
+
+  bool molecules_only() const { return _molecules_only; }
 
   int verbose() const {
     return _verbose;
@@ -374,6 +389,41 @@ Options::DisplayDashYOptions(std::ostream& output) {
 int
 Options::Initialise(Command_Line& cl) {
   _verbose = cl.option_present('v');
+  _molecules_only = cl.option_present('M');
+  if (_molecules_only) {
+    _pharmacophore_isotope = 1;
+    _label_with_isotopes = 1;
+    if (cl.option_present('t') || cl.option_present('G')) {
+      cerr << "-t and -G apply to query output, not -M molecule output\n";
+      return 0;
+    }
+  }
+  if (cl.option_present('I')) {
+    if (!cl.value('I', _pharmacophore_isotope) || _pharmacophore_isotope <= 0) {
+      cerr << "-I requires a positive isotope\n";
+      return 0;
+    }
+    _label_with_isotopes = 1;
+  }
+  if (cl.option_present('X')) {
+    if (!cl.value('X', _exit_isotope) || _exit_isotope <= 0) {
+      cerr << "-X requires a positive isotope\n";
+      return 0;
+    }
+    if (!_pharmacophore_isotope) {
+      _pharmacophore_isotope = 1;
+    }
+    _label_with_isotopes = 1;
+    if (_exit_isotope == _pharmacophore_isotope) {
+      cerr << "Pharmacophore and exit isotopes must differ\n";
+      return 0;
+    }
+  }
+  if (!_molecules_only && (cl.option_present('I') || cl.option_present('X')) &&
+      !cl.option_present('Y')) {
+    cerr << "-I/-X require -M or labelled output via -Y fname=...\n";
+    return 0;
+  }
 
   if (cl.option_present('l')) {
     _reduce_to_largest_fragment = 1;
@@ -533,8 +583,14 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('Y')) {
+  if (cl.option_present('Y') || _molecules_only) {
     IWString fname;
+    if (_molecules_only) {
+      fname = "-";
+      if (cl.option_present('S')) {
+        fname = cl.string_value('S');
+      }
+    }
     const_IWSubstring y;
     for (int i = 0; cl.value('Y', y, i); ++i) {
       if (y == "iso") {
@@ -558,7 +614,16 @@ Options::Initialise(Command_Line& cl) {
       return 0;
     }
 
-    fname.EnsureEndsWith(".smi");
+    if (fname != "-") {
+      fname.EnsureEndsWith(".smi");
+      for (const char* input : cl) {
+        std::error_code error;
+        if (std::filesystem::equivalent(fname.null_terminated_chars(), input, error)) {
+          cerr << "Labelled output would overwrite input '" << input << "'\n";
+          return 0;
+        }
+      }
+    }
     if (!_stream_for_labelled_smiles.open(fname.null_terminated_chars())) {
       cerr << "Cannot open stream for labelled smiles '" << fname << "'\n";
       return 0;
@@ -1092,7 +1157,18 @@ Options::WriteLabelledSmiles(const Molecule& m, const int* functional_group) {
       continue;
     }
     if (_label_with_isotopes) {
-      mcopy.set_isotope(i, functional_group[i] + 1);
+      int isotope = _pharmacophore_isotope ? _pharmacophore_isotope : functional_group[i] + 1;
+      // Exits belong to the selected set. Bonds between selected groups do not
+      // define exits, and the unselected neighbor does not receive a label.
+      if (_exit_isotope) {
+        for (const Bond* bond : m.atom(i)) {
+          if (functional_group[bond->other(i)] < 0) {
+            isotope = _exit_isotope;
+            break;
+          }
+        }
+      }
+      mcopy.set_isotope(i, isotope);
     } else {
       mcopy.set_atom_map_number(i, functional_group[i] + 1);
     }
@@ -1120,7 +1196,7 @@ Options::Process(Molecule& m) {
     IdentifyAtomsToIgnore(m, ignore_atoms.get());
   }
 
-  PerMoleculeData pmd(m);
+  PerMoleculeData pmd(m, !_molecules_only);
 
   const auto [number_functional_groups, atoms_in_functional_groups] =
       IdentifyFunctionalGroups(m, pmd.functional_group(), ignore_atoms.get());
@@ -1132,6 +1208,14 @@ Options::Process(Molecule& m) {
 
   if (number_functional_groups == 0) {
     ++_no_functional_groups;
+    if (_molecules_only) {
+      // A failed all-functional-groups-must-match condition rejects the entire
+      // selection, even if individual queries left partial atom assignments.
+      for (int i = 0; i < matoms; ++i) {
+        pmd.functional_group(i) = -1;
+      }
+      WriteLabelledSmiles(m, pmd.functional_group());
+    }
     return std::nullopt;
   }
 
@@ -1141,6 +1225,9 @@ Options::Process(Molecule& m) {
 
   if (number_functional_groups == 1) {
     ++_only_one_functional_group;
+    return std::nullopt;
+  }
+  if (_molecules_only) {
     return std::nullopt;
   }
 
@@ -1242,7 +1329,7 @@ Pharmacophore2d(Options& options, data_source_and_type<Molecule>& input, Output&
     output.Write(*maybe_qry);
   }
 
-  if (options.verbose()) {
+  if (options.verbose() && !options.molecules_only()) {
     cerr << "Generated " << output.nfiles() << " valid files\n";
   }
 
@@ -1266,7 +1353,7 @@ Pharmacophore2d(Options& options, const char* fname, FileType input_type,
 
 int
 Pharmacophore2d(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vi:A:lS:td:D:nY:s:q:C:G:");
+  Command_Line cl(argc, argv, "vi:A:lS:td:D:nY:s:q:C:G:MI:X:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);
@@ -1282,7 +1369,7 @@ Pharmacophore2d(int argc, char** argv) {
   }
 
   Output output;
-  if (!output.Initialise(cl)) {
+  if (!options.molecules_only() && !output.Initialise(cl)) {
     cerr << "Cannot initialise output\n";
     return 1;
   }
@@ -1298,13 +1385,10 @@ Pharmacophore2d(int argc, char** argv) {
     return 4;
   }
 
-  IWString output_stem;
-  if (!cl.option_present('S')) {
+  if (!options.molecules_only() && !cl.option_present('S')) {
     cerr << "Must specify the output stem (-S)\n";
     Usage(1);
   }
-
-  cl.value('S', output_stem);
 
   if (cl.empty()) {
     cerr << "Insufficient arguments\n";

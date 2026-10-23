@@ -1,0 +1,11 @@
+name: "cyclopropane_to_gem_dimethyl"
+scaffold {
+  smarts: "[C;r3]1-[CD2]-[CD2]1"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  break_bond {
+    a1: 1
+    a2: 2
+  }
+}

@@ -31,8 +31,8 @@ golden='out/out.txt'
 # Support linux and mac 
 if [[ "${UNAME}" == "Linux" ]]; then
   golden=out/${UNAME}/stdout
-elif [[ "${UNAME}" == "darwin"* ]]; then
-  golden=out/osx/stdout
+elif [[ "${UNAME}" == "Darwin"* ]]; then
+  golden=out/Darwin/stdout
 else
   echo "${UNAME} is not supported"
   golden=out/${UNAME}/stdout

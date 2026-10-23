@@ -890,6 +890,11 @@ but it can also be convenient to just have `trxn` remove small
 fragments when done. Just make sure that your desired product molecule is
 larger than anything else that might be produced!
 
+## -X <ele>
+Removes elements from products. For example if an input smirks contains something
+like [U]-[C:1], using `-X U` will remove all Uranium atoms from products.
+Note that this uses the Elements_to_Remove object, which is based on the
+Element_Matcher class [Element_Matcher](/docs/Molecule_Lib/elements.md#element_matcher)
 
 
 # Output
@@ -945,6 +950,7 @@ The `-J` option hides several special optional forms.
  -J marvin      the input reaction file (-D) has come from Marvin
  -J keepatmn    retain any atom map numbers in output molecules
  -J larf        in smirks, if an atom is lost, remove the fragment
+ -J rmsmkele    in smirks, remove all elements that are in the LHS but not in RHS.
  -J rmhsqb      remove unnecessary [] in product molecules
  -J rmxhbv      remove explicit hydrogens causing bad valences
  -J minpfs=<n>  discard products with a fragment with < minpfs atoms
@@ -1027,6 +1033,11 @@ Retain any atom map numbers in output molecules.
 
 ## -J larf
 In smirks, if an atom is lost, remove the fragment.
+
+## -J rmsmkele
+In a smirks like [U]-[C:1].[U]-[C:2]>>[C:1]-[C:2] remove the U atoms
+since those atomic numbers appear on the LHS but do not appear on the
+RHS.
 
 ## -J rmhsqb
 Remove unnecessary [] in product molecules.

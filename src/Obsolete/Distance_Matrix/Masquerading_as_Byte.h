@@ -8,6 +8,7 @@
 
 #include "Foundational/data_source/iwstring_data_source.h"
 
+#include <algorithm>
 #include <iostream>
 
 template <typename T>
@@ -79,7 +80,7 @@ Masquerading_as_Byte<T>::Masquerading_as_Byte ()
   _missing0   = static_cast<T> (0);
   _missing255 = static_cast<T> (0);
 
-  set_vector (_byte_to_T, 256, static_cast<T> (0.0));
+  std::fill_n (_byte_to_T, 256, static_cast<T> (0.0));
 }
 
 template <typename T>
@@ -349,7 +350,7 @@ template <typename T>
 int
 Masquerading_as_Byte<T>::initialise_from_distance_matrix_header_records (iwstring_data_source & input)
 {
-  set_vector (_byte_to_T, 256, static_cast<T> (0.0));
+  std::fill_n (_byte_to_T, 256, static_cast<T> (0.0));
 
   _minval = -9.8;    // just some arbitrary number
   _maxval = -9.8;

@@ -1,167 +1,291 @@
-# A population for training a deep learning model.
+# Generating Molecules for Pretraining
 
-Many deep learning generative models need to be trained on a
-large corpus of valid molecules. Preferably molecules that have
-actually been made, since this should maximise the likelihood
-that the model will then generate plausible molecules.
+This HOWTO describes LillyMol workflows for generating virtual molecules from a
+starting set of known molecules. The examples are aimed at data augmentation and
+pretraining workflows, where the goal is not to enumerate every possible analogue
+but to generate a large, chemically plausible population around molecules of
+interest.
 
-Because of the desire to process exemplified molecules, collections
-like the Lilly collection and Chembl are to be preferred over
-things like Pubchem, Enamine Real or Zinc, each of which has
-a great many virtual molecules. It is quite possible that
-many of those molecules could be made, but there are too
-many of them anyway...
+Chemprop's Chemeleon pretraining work has shown that pretraining can be useful.
+The question addressed here is how LillyMol tools can generate additional
+molecules that might be useful for similar learning tasks.
 
-## Do Not Want - Simple Filters
-For our purposes, we will restrict attention to molecules containing only
-the 'organic' subset of elements, 'C, N, O, F, P, S, Cl, Br, I'. We choose to 
-exclude elements such as B, Si and Se that are sometimes considered.
+The workflows below assume that you already have a starting SMILES file,
+`start.smi`, containing molecules worth augmenting.
 
-We restrict attention to molecules having between 10 and 50 heavy atoms, since
-it is very likely that all atomic arrangments of interest are exemplified
-in molecules of that size range. If we were to change this range, perhaps
-[15,40] would be a better choice.
+## Choosing a Generator
 
-We exclude molecules with apparent valence errors, isotopes and only consider
-the largest fragment.
+Several LillyMol tools can generate new molecules from a starting set. They use
+very different strategies, and it is usually worth trying more than one method.
 
-## Halogens
-It is extremely rare for a QSAR model to be improved by differentiating the
-heavy halogens, so we commonly consider all heavy halogens to be equivalent.
-Many LillyMol tools have an element transformation option, (typically `-t` or `-T`)
-which specify element transformations. That is done here. Usually we
-consider Cl more desirable than Br -> more desirable than I, so the usual
-invocation might be
-```
--t I=Cl -t Br=Cl
-```
-which converts all I and Br to Cl.
+| Tool | Strategy | Typical scale |
+| ---- | -------- | ------------- |
+| [medchem_wizard](/docs/Molecule_Tools/medchemwizard.md) | reaction-driven transformations | moderate |
+| [minor_changes](/docs/Molecule_Tools/minor_changes.md) | small local edits to one molecule | moderate |
+| [sidechain_switcheroo](/docs/Molecule_Tools/sidechain_switcheroo.md) | swaps sidechains found within the input set | high, input-size dependent |
+| [random_molecular_permutations](/docs/Molecule_Tools/random_molecular_permutations.md) | larger random edits from fragment rules | tunable |
+| [safe_generate](/docs/Molecule_Tools/SAFE.md) | text-based SAFE fragment replacement and breeding | high, library dependent |
+| [ring_replacement](/docs/Molecule_Tools/ring_replacement.md) | exact ring replacement from a ring library | moderate |
+| [ring_replacement_inexact](/docs/Molecule_Tools/ring_replacement.md) | broader ring replacement from a ring library | moderate to high |
+| [substituent_identification](/docs/Molecule_Tools/substituent_identification.md) | local matched-pair-like substituent replacement | library dependent |
 
-## Smiles
-If the learner is learning from smiles strings, it would seem likely that
-the presence of Chlorine might make the learning process harder - since the
-model will need to learn that 'Cl' is different from 'C'. For that reason,
-we replace all heavy halogens with 'I' since it is a single letter. We are
-not looking to generate molecules containing Iodine, but when molecules are
-generated 'I' atoms can be replaced with 'Cl'.
-```
--t Cl=I -t Br=I
-```
-will do that. Note that changing an existing unique smiles via text manipulation
-may not work.
+Tools that make intermolecular combinations, such as `sidechain_switcheroo` and
+`safe_generate`, can grow rapidly with the diversity and size of the input set.
+For those tools, splitting the input can change the products generated. For tools
+that operate primarily on each molecule independently, splitting large inputs is
+usually a good way to manage long runs.
 
-We may choose to discard molecules containing too many halogens. For example
-from a 100k random sample from Pubchem we find this many 'Iodine' atoms
-```
- 29101 molecules had 1 hits
- 5106 molecules had 2 hits
- 1283 molecules had 3 hits
- 247 molecules had 4 hits
- 42 molecules had 5 hits
- 21 molecules had 6 hits
- 9 molecules had 7 hits
- 3 molecules had 8 hits
- 1 molecules had 9 hits
- 1 molecules had 10 hits
- 1 molecules had 12 hits
- 1 molecules had 13 hits
- 1 molecules had 14 hits
-```
-This includes things like
-```
-ClC12C3C4C(C5(Cl)C(Cl)(Cl)C4(Cl)C(Cl)=C5Cl)C4=CC(=C(S(=O)(=O)O)C=C4C3C(Cl)(C1(Cl)Cl)C(Cl)=C2Cl)C(=O)O PBCHM5771665
-```
-which has 12 actual Chlorine atoms!
+The tools do not all produce identical output conventions. Product names may
+contain different annotations, duplicate suppression varies by tool, and some
+outputs may contain residual isotopic labels. Treat the raw output as an
+intermediate file and use a common cleanup step before combining products.
 
-In order to speed processing, it may be convenient to use 'grep' to remove
-molecules with too many 'Iodine' atoms, or `tsubstructure -s '>3I' -n ok -m toomanyhalogen ...`.
-We really don't want our generative model thinking that molecules with 12 heavy halogen
-atoms are OK. Remember, we have not considered F atoms here, just the heavy halogens.
+Many generators will briefly form products with impossible valence states while
+searching. Most such products are discarded, but warnings can still be noisy. For
+large runs, redirect standard error to a log file.
 
-### Aromatic Nitrogens
-In an aromatic smiles, aromatic Nitrogen atoms are marked with the number
-of implicit Hydrogens - otherwise the smiles can be ambiguous across tautomeric forms.
-Smiles will contain a mixture of '[n]' and '[nH]' symbols. Perhaps it might be
-desirable to remove this complexity, as long as there are tools to read
-those possibly ambiguous smiles. This remains to be tested.
-
-## Unique Smiles
-It is unclear whether training a model on canonical smiles is beneficial or not. We
-should examine the efficacy of learning a represention on
-
-- 1M different, unique smiles
-- 500k different molecules, two non unique smiles of each
-- Other??
-
-## Chirality
-Many parmaceutically relevant molecules contain chirality markers.
-
-| Collection | Fraction |
-| ---- | ---- |
-| LLY | 0.21 |
-| Chembl | 0.24 |
-| Pubchem | 0.22 |
-
-a surprisingly consistent fraction across disparate collections. However
-the quality of this information is very uncertain. Some of us take a quite
-skeptical view of chirality information and would generally prefer to discard
-it. While we have a pretty good idea of the accuracy of the chirality information
-in the corporate collection, we assume that the external collections are
-even less precise.
-
-There may be a case to be made for retaining chirality if a generative model
-is to be built with 3D targets in mind, although even then, just trying all
-plausible enatiomeric forms would seem worth trying.
-
-### Filters
-Applying molecular desirability filters can be expensive. Applying the
-Lilly Medchem Rules to 100k random Pubchem molecules takes 15 seconds, or about
-2.5 minutes per million. If many millions of molecules are to be processed
-parallel processing should be used. 
-
-I was going to recommend that the the `-nodemerit` option be used, but
-that would suppress things like the Nitro rule, which allows one, but not
-more instances of a Nitro group. We do not want our learner to think that
-molecules with 3 Nitro groups are OK.
-
-Filters based on ML models may be too slow to be practical, although
-even if a subset of the molecules were processed, that might be
-beneficial.
-
-# HowTo
-
-If you are going to filter with the Lilly Medchem Rules, that may need to
-be done first. The Halogen transformations described above will violate
-certain rules, depending on how many Halogens you retained.
-You can also impose size limits here if required.
-
-The following protocol seems to work - medchem rules done later...
-
-For large collections from which a subset is needed, use `random_records`
-to extract a random set. We anticipate this being faster than a combination 
-of 'shuf' and 'tail', but not sure. Certainly less memory intensive.
-
-Once the subset is identified, filter with fileconv, enforcing the various filters
-and transformations described previously.
-```
-fileconv -c 15 -C 40 -O def -t Cl=I -t Br=I -K nonH -I 0 -f lod -s 0 -V -E autocreate -g all -v -o usmi -S collection.norm collection.smi
-```
-should do that, generating 'collection.norm.smi' from 'collection.smi'. Running this
-on 100k random Pubchem molecules takes about 5 seconds, so less than a minute
-per million.
-
-If this is done for each collection, `unique_rows` can be used to eliminate
-the duplicates.
-
-```
-unique_rows -c 1 -v collection1.norm.smi collection2.norm.smi ... > unique.smi
-```
-should do that, or to handle excess heavy halogens
-```
-grep -v 'I.*I.*I' collection*norm.smi | unique_rows -c 1 -v - > unique.smi
+```bash
+command ... input.smi > products.smi 2> products.log
 ```
 
-# Summary
-Using LillyMol tools to assemble a set of molecules useful for training a
-large language model seems feasible.
+All tools have many additional options. The commands below are starting points;
+consult the linked tool documentation before large production runs.
 
+## Immediate Generators
+
+These tools are the easiest to run because they do not require a precomputed
+fragment or ring database.
+
+### Medchem Wizard
+
+`medchem_wizard` applies reaction-like medicinal chemistry transformations.
+
+```bash
+medchem_wizard.sh -U all -m 20 -M 50 -c -V . -y -l -v start.smi > products.smi
+```
+
+Adjust the lower and upper atom-count thresholds with `-m` and `-M`. The
+`-U all` option suppresses duplicate products across all starting molecules;
+this is useful, but memory use increases with the number of products retained.
+
+### Minor Changes
+
+`minor_changes` makes small, chemically conservative changes to each input
+molecule.
+
+```bash
+minor_changes.sh -x start.smi > products.smi
+```
+
+This tool currently does not discard duplicate products, so post-process with
+[unique_molecules](/docs/Molecule_Tools/unique_molecules.md) or the common
+cleanup workflow below.
+
+```bash
+minor_changes.sh -c -l -x start.smi | unique_molecules -g all -S - - > products.smi
+```
+
+### Random Molecular Permutations
+
+`random_molecular_permutations` makes more substantial changes than
+`minor_changes`. It uses installed fragment libraries, and additional libraries
+can be supplied when needed.
+
+```bash
+random_molecular_permutations.sh -r 5 -R 7 -c 15 -C 50 -y 1 -Y 6 -G +1 -G -1 start.smi > products.smi
+```
+
+This example constrains the generated molecules by ring count, atom count, and
+other molecular properties. Tighten these limits if the output becomes too broad
+for the intended learning task.
+
+## Collection-Dependent Generators
+
+These tools use relationships among molecules or fragments. They can generate
+many more products, but the product set depends strongly on the input collection
+or on a prebuilt library.
+
+### Sidechain Switcheroo
+
+`sidechain_switcheroo` identifies sidechains and swaps them among molecules in
+the input set.
+
+```bash
+sidechain_switcheroo -s '[R]!@-*' -z i -x 2 -I -V -c -v start.smi > products.smi
+```
+
+This can generate very large numbers of molecules from large, diverse input
+sets. Because the fundamental operation is exchanging sidechains within the
+input, splitting the input changes the accessible sidechain combinations and is
+not advised unless that is intentional.
+
+### SAFE Generate
+
+`safe_generate` works on SAFE SMILES, where isotopically marked connection
+points make fragment replacement a text operation. First convert the starting
+molecules to SAFE form and write a fragment-library summary.
+
+```bash
+mol2SAFE -I 1 -S start.lib.textproto start.smi > start.safe.smi
+```
+
+It is possible to run only on the starting set, but output is usually more
+interesting when external fragments and linkers are also supplied. LillyMol ships
+with dicer fragment summaries that can be converted into a SAFE fragment library.
+
+```bash
+dicer_fragments_collate -p 10 -nosmi -v \
+        ${LILLYMOL_HOME}/data/dicer_fragments/FRAG_1_[1-5].textproto > frag.textproto
+
+fileconv -S - frag.textproto | mol2SAFE -I 1 -S frag.lib.textproto - > frag.safe.smi
+```
+
+This gathers single-attachment-point ChEMBL fragments up to five heavy atoms and
+writes `frag.lib.textproto`, a library that `safe_generate` can use.
+
+```bash
+safe_generate -n 1000 -b 1000 -e 0 -C safe_generate.textproto \
+  -L frag.lib.textproto -L start.lib.textproto start.safe.smi > products.smi
+```
+
+In this example, `-n 1000` requests up to 1000 products from each starting
+molecule by replacing SAFE fragments with library fragments. `-b 1000` requests
+up to 1000 products by breeding fragments between input molecules. The `-e 0`
+setting disables exhaustive library replacement; increase it if you want that
+mode.
+
+### Substituent Identification
+
+`substituent_identification` is a local matched-pair-like generator. During a
+database build, it fragments known molecules and stores substituents keyed by
+the circular-fingerprint context in which each substituent occurred. During
+lookup, a starting molecule is fragmented in the same way and compatible
+substituents from the database are proposed as replacements.
+
+Build the database from a large collection of real molecules, such as ChEMBL or
+an internal collection.
+
+```bash
+substituent_identification -B -d chembl.frags.bdb -R 5 -w 10 -M 12 -v \
+  -Y dbproto -Y rpt=10000 chembl.smi
+```
+
+This may take a while. The `-Y rpt=10000` directive reports progress every
+10,000 molecules. The database size depends strongly on the maximum radius
+specified with `-R` and the maximum substituent size specified with `-M`.
+
+Once the fragment database has been built, use it to replace substituents in the
+starting set. This example breaks a bond between a ring atom and an exocyclic
+atom and replaces the removed fragment with database fragments seen in similar
+contexts.
+
+```bash
+substituent_identification -d chembl.frags.bdb -s '[r]-!@*' -k -I \
+  -Y maxgen=100 start.smi > products.smi
+```
+
+Use more specific SMARTS when you want to replace only particular substituents.
+The `-I` option removes isotopic labels from products before writing. The
+`-Y maxgen=100` limit is a useful guard for broad queries and large databases.
+
+## Ring Generators
+
+These tools replace ring systems using curated ring libraries. They are often a
+good way to generate realistic scaffold variants, but their products may look
+farther away by fingerprint similarity than the chemical change suggests.
+
+### Ring Replacement
+
+`ring_replacement` performs precise replacement of rings matched by a query. A
+very generic ring query plus a broad replacement-ring library can generate many
+plausible variants.
+
+The file [common_rings](/data/ring_replacement/common_rings.txt) contains
+replacement rings that can be used with both `ring_replacement` and
+`ring_replacement_inexact`.
+
+```bash
+ring_replacement -R F:${LILLYMOL_HOME}/data/ring_replacement/common_rings.txt -s '[R]' \
+        -z i -u -d -I . start.smi > products.smi
+```
+
+### Ring Replacement Inexact
+
+`ring_replacement_inexact` allows broader replacement than exact ring
+replacement.
+
+```bash
+ring_replacement_inexact -R F:${LILLYMOL_HOME}/data/ring_replacement/common_rings.txt -s '[R]' \
+        -z i -I . start.smi > products.smi
+```
+
+If you plan to run `ring_replacement_inexact`, running exact `ring_replacement`
+may be unnecessary because exact replacements should generally be a subset of
+the inexact output.
+
+### Others
+[trxn](/docs/Molecule_Tools/trxn.md) performs reactions. For a given set of
+starting molecules there may be project specific transformations that could
+be applied, generating variants of the starting set.
+
+## Common Cleanup
+
+Generated products from different tools can be identical. They can also contain
+residual isotopic labels, multiple fragments, or structures that should be
+rejected by normal LillyMol standardisation and valence checks.
+
+Run each raw product file through `fileconv` before combining product streams.
+
+```bash
+fileconv -V -g all -I change -v -f lod -S products_ok products.smi
+```
+
+This removes structures with valence errors, applies chemical standardisation,
+keeps the largest fragment, and changes isotopic atoms to non-isotopic form. You
+may also want atom-count limits with `-c` and `-C`, or ring limits with `-r` and
+`-R`.
+
+If you want to retain the generator identity, add that label before combining
+all product files.
+
+These virtual molecules were not generated with a general reactivity or
+undesirable-functionality filter, so this is also a good stage to apply Medchem
+Rules or project-specific filters.
+
+After cleanup, combine all product files and deduplicate them. For large files,
+use `unique_molecules_parallel.sh`.
+
+```bash
+unique_molecules_parallel.sh -thr 16 -S unique generated.smi
+```
+
+Use a thread count appropriate for the machine. Depending on how many molecules
+were generated, this may be the longest step in the workflow.
+
+## Proximity to Starting Molecules
+
+Some workflows require generated molecules to remain close to the starting set.
+This is project-dependent. For example, exact ring replacements may be chemically
+conservative even when a fingerprint Tanimoto distance changes substantially.
+`ring_replacement` also has options that limit molecular formula changes during
+replacement.
+
+Use `gfp_distance_filter` to remove products that are too far from every
+starting molecule.
+
+```bash
+gfp_make.sh starting_molecules.smi > starting_molecules.gfp
+gfp_make.sh products.smi | gfp_distance_filter -T 0.25 -N 1 -f - > okdistance.smi
+```
+
+This keeps products within 0.25 distance of at least one starting molecule. The
+right threshold depends on the objective of the enumeration and should be tuned
+empirically.
+
+## Summary
+
+The generators discussed here take different approaches to molecule generation.
+Some operate on each molecule independently, some depend on the whole input
+collection, and some require prebuilt fragment or ring libraries. Expect overlap
+between methods, and plan on a common cleanup and deduplication pass before using
+the generated molecules for training.

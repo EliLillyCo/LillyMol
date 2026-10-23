@@ -366,4 +366,17 @@ StructureDatabase::DoLookup(Db* database, const IWString& key, IWString& ids_mat
   return 1;
 }
 
+int
+StructureDatabase::close() {
+  cerr << "Closing databases\n";
+  if (_database != nullptr) {
+    _database->close(0);
+  }
+  if (_graph_database != nullptr) {
+    _graph_database->close(0);
+  }
+
+  return 1;
+}
+
 }  // namespace structure_database

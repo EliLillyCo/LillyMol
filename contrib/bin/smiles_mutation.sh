@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 here=$(dirname $(realpath $0))
 
 if [[ ! -v LILLYMOL_HOME ]] ; then

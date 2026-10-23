@@ -23,10 +23,15 @@ class TSubstructure_FP
     // then only the _extra_bit_total_hits bit will be set.
     int _each_query_writes_bit;
 
+    // If set, we write fixed size counted features.
+    // Initial implementation strictly limited, not all other features implemented.
+    int _write_counted_bits = 0;
+
 //  private functions
 
     template <typename OUTPUT> int _do_fingerprint_output(int nq, const int * hits, OUTPUT& output) const ;
     template <typename OUTPUT> int _do_sparse_fingerprint_output (int nq, const int * hits, OUTPUT& output) const ;
+    template <typename OUTPUT> int _do_fixed_counted_fingerprint_output(int nq, const int* hits, OUTPUT& output) const;
 
   public:
     TSubstructure_FP();
@@ -45,6 +50,10 @@ class TSubstructure_FP
       if (s == 0 &&  _extra_bit_total_hits) {
         _extra_bit_total_hits = 1;
       }
+    }
+
+    void set_write_counted_bits(int s) {
+      _write_counted_bits = s;
     }
 
     template <typename OUTPUT>

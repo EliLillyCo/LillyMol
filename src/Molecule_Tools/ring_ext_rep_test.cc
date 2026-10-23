@@ -13,57 +13,57 @@ using ring_replacement::RingHash;
 TEST(TestRingSizeHash, Test4A) {
   extending_resizable_array<int> aliph, arom;
   aliph[4] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 40);
+  EXPECT_EQ(RingHash(aliph, arom), 40u);
 }
 
 TEST(TestRingSizeHash, Test5A) {
   extending_resizable_array<int> aliph, arom;
   aliph[5] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 50);
+  EXPECT_EQ(RingHash(aliph, arom), 50u);
 }
 
 TEST(TestRingSizeHash, Test6A) {
   extending_resizable_array<int> aliph, arom;
   aliph[6] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 60);
+  EXPECT_EQ(RingHash(aliph, arom), 60u);
 }
 
 TEST(TestRingSizeHash, Test7A) {
   extending_resizable_array<int> aliph, arom;
   aliph[7] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 70);
+  EXPECT_EQ(RingHash(aliph, arom), 70u);
 }
 
 TEST(TestRingSizeHash, Test4a) {
   extending_resizable_array<int> aliph, arom;
   arom[4] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 41);
+  EXPECT_EQ(RingHash(aliph, arom), 41u);
 }
 
 TEST(TestRingSizeHash, Test5a) {
   extending_resizable_array<int> aliph, arom;
   arom[5] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 51);
+  EXPECT_EQ(RingHash(aliph, arom), 51u);
 }
 
 TEST(TestRingSizeHash, Test4A4A) {
   extending_resizable_array<int> aliph, arom;
   aliph[4] = 2;
-  EXPECT_EQ(RingHash(aliph, arom), 4040);
+  EXPECT_EQ(RingHash(aliph, arom), 4040u);
 }
 
 TEST(TestRingSizeHash, Test4A4a) {
   extending_resizable_array<int> aliph, arom;
   aliph[4] = 1;
   arom[4] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 4041);
+  EXPECT_EQ(RingHash(aliph, arom), 4041u);
 }
 
 TEST(TestRingSizeHash, Test4A5a) {
   extending_resizable_array<int> aliph, arom;
   aliph[4] = 1;
   arom[5] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 4051);
+  EXPECT_EQ(RingHash(aliph, arom), 4051u);
 }
 
 TEST(TestRingSizeHash, Test4A5a6A) {
@@ -71,7 +71,7 @@ TEST(TestRingSizeHash, Test4A5a6A) {
   aliph[4] = 1;
   aliph[6] = 1;
   arom[5] = 1;
-  EXPECT_EQ(RingHash(aliph, arom), 405160);
+  EXPECT_EQ(RingHash(aliph, arom), 405160u);
 }
 
 }  // namespace

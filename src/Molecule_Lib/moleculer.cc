@@ -1,7 +1,9 @@
 #include <string.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
+
 using std::cerr;
 using std::endl;
 
@@ -472,18 +474,18 @@ Molecule::_compute_number_sssr_rings_by_eulers_formula() {
   return _number_sssr_rings;
 }
 
-int
+std::optional<int>
 Molecule::nrings_no_compute() const {
   if (_nrings >= 0) {  // already computed
     return _nrings;
   } else {
-    return NOT_COMPUTED;  // not computed
+    return std::nullopt;  // not computed
   }
 }
 
 int
 Molecule::nrings() {
-  if (nrings_no_compute() >= 0) {  // already computed
+  if (_nrings >= 0) { // already computed
     return _nrings;
   }
 
@@ -592,7 +594,7 @@ Molecule::ring_membership() {
   }
 
   if (0 == nrings()) {
-    set_vector(_ring_membership, _number_elements, 0);
+    std::fill_n(_ring_membership, _number_elements, 0);
   } else {
     _force_complete_sssr_determination();
   }
@@ -603,7 +605,7 @@ Molecule::ring_membership() {
 int
 Molecule::ring_or_non_ring(int* result) {
   if (0 == nrings()) {
-    set_vector(result, _number_elements, 0);
+    std::fill_n(result, _number_elements, 0);
     return 1;
   }
 
@@ -617,7 +619,7 @@ Molecule::ring_or_non_ring(int* result) {
 int
 Molecule::ring_membership(int* rm) {
   if (0 == nrings()) {
-    set_vector(rm, _number_elements, 0);
+    std::fill_n(rm, _number_elements, 0);
     return 1;
   }
 
@@ -788,7 +790,7 @@ const Ring*
 Molecule::ringi_no_compute(int i) const {
   assert(ok());
 
-  if (nrings_no_compute() <= 0) {
+  if (_nrings <= 0) {  // not computed
     return nullptr;
   }
 
@@ -1036,7 +1038,7 @@ Molecule::_find_sssr_for_these_fused_raw_rings(int fused_sys_id, int* tmp) {
   cerr << "Finding SSSR for fsid " << fused_sys_id << endl;
 #endif
 
-  set_vector(tmp, _number_elements, 0);
+  std::fill_n(tmp, _number_elements, 0);
 
   int nraw = _raw_rings.number_elements();
 
@@ -1293,7 +1295,7 @@ Molecule::get_fused_system(int fsid, Set_of_Atoms& result) {
 
 int
 Molecule::label_atoms_by_ring_system_no_compute(int* r) const {
-  set_vector(r, _number_elements, 0);
+  std::fill_n(r, _number_elements, 0);
 
   int nr = _sssr_rings.number_elements();
 
@@ -1372,7 +1374,7 @@ int
 Molecule::label_atoms_by_ring_system_including_spiro_fused(int* r) {
   (void)ring_membership();
 
-  set_vector(r, _number_elements, 0);
+  std::fill_n(r, _number_elements, 0);
 
   const int nr = _sssr_rings.number_elements();
 
@@ -1684,7 +1686,7 @@ Molecule::_easy_case_two_rings(int fused_sys_id, int* tmp) {
   other_ring.set_is_fused(1);
   other_ring.set_fragment_membership(r1->fragment_membership());
 
-  atom_number_t first_2 = INVALID_ATOM_NUMBER;
+  atom_number_t first_2 = kInvalidAtomNumber;
 
   for (int i = 0; i < _number_elements; i++) {
     if (1 != tmp[i]) {
@@ -1704,7 +1706,7 @@ Molecule::_easy_case_two_rings(int fused_sys_id, int* tmp) {
       break;
     }
 
-    if (INVALID_ATOM_NUMBER != first_2) {
+    if (kInvalidAtomNumber != first_2) {
       break;
     }
   }
@@ -1716,7 +1718,7 @@ Molecule::_easy_case_two_rings(int fused_sys_id, int* tmp) {
   // Build up the rest of the tmp[] == 1 ring in bonded order
 
   atom_number_t start_atom = other_ring[0];
-  atom_number_t second_2 = INVALID_ATOM_NUMBER;
+  atom_number_t second_2 = kInvalidAtomNumber;
   while (1) {
 #ifdef DEBUG_EASY_CASE_TWO_RINGS
     cerr << "start atom is " << start_atom << endl;
@@ -1726,7 +1728,7 @@ Molecule::_easy_case_two_rings(int fused_sys_id, int* tmp) {
     const Atom* a = _things[start_atom];
     int acon = a->ncon();
     int found_connection_with_tmp1 = 0;  // is the ring continuing
-    atom_number_t connected_atom_with_tmp2 = INVALID_ATOM_NUMBER;
+    atom_number_t connected_atom_with_tmp2 = kInvalidAtomNumber;
     for (int i = 0; i < acon; i++) {
       atom_number_t j = a->other(start_atom, i);
       if (0 == tmp[j]) {
@@ -1886,7 +1888,7 @@ Molecule::identify_spinach_preset(int* spinach) const {
 int
 Molecule::identify_spinach(int* spinach) {
   if (0 == nrings()) {
-    set_vector(spinach, _number_elements, 1);
+    std::fill_n(spinach, _number_elements, 1);
     return _number_elements;
   }
 
@@ -1894,7 +1896,7 @@ Molecule::identify_spinach(int* spinach) {
     return 0;
   }
 
-  set_vector(spinach, _number_elements, 0);
+  std::fill_n(spinach, _number_elements, 0);
 
   Set_of_Atoms stack;
   stack.resize(_number_elements);
@@ -1956,6 +1958,33 @@ Molecule::_identify_spinach(int* spinach, Set_of_Atoms& stack) const {
   }
 
   return rc;
+}
+
+int
+Molecule::IdentifySpinachLabel(int* spinach, isotope_t iso) {
+  identify_spinach(spinach);
+
+  for (const Bond* b : _bond_list) {
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+    if (spinach[a1] == spinach[a2]) {
+      continue;
+    }
+
+    if (! b->is_double_bond()) {
+    } else if (_things[a1]->ncon() == 1) {
+      spinach[a1] = 0;
+    } else if (_things[a2]->ncon() == 1) {
+      spinach[a2] = 0;
+    }
+
+    if (iso > 0 && spinach[a1] != spinach[a2]) {
+      _things[a1]->set_isotope(iso);
+      _things[a2]->set_isotope(iso);
+    }
+  }
+
+  return 1;
 }
 
 int
@@ -2181,7 +2210,7 @@ Molecule::sssr_rings() {
 atom_number_t
 FirstLowConnectedAtom(const Molecule& m) {
   const int natoms = m.natoms();
-  atom_number_t a_doubly_bonded = INVALID_ATOM_NUMBER;
+  atom_number_t a_doubly_bonded = kInvalidAtomNumber;
   for (int i = 0; i < natoms; ++i) {
     const Atom* a = m.atomi(i);
     if (a->ncon() == 1) {
@@ -2192,24 +2221,24 @@ FirstLowConnectedAtom(const Molecule& m) {
     }
   }
 
-  if (a_doubly_bonded != INVALID_ATOM_NUMBER) {
+  if (a_doubly_bonded != kInvalidAtomNumber) {
     return a_doubly_bonded;
   }
 
   if (natoms == 0) {
-    return INVALID_ATOM_NUMBER;
+    return kInvalidAtomNumber;
   }
 
   return 0;
 }
 
 // A variant of the above that checks an already processed array.
-// If it cannot find any unvisited atoms, it will return INVALID_ATOM_NUMBER.
+// If it cannot find any unvisited atoms, it will return kInvalidAtomNumber.
 atom_number_t
 FirstLowConnectedAtom(const Molecule& m, const int* visited) {
   const int natoms = m.natoms();
-  atom_number_t a_doubly_bonded_atom = INVALID_ATOM_NUMBER;
-  atom_number_t an_unvisited_atom = INVALID_ATOM_NUMBER;
+  atom_number_t a_doubly_bonded_atom = kInvalidAtomNumber;
+  atom_number_t an_unvisited_atom = kInvalidAtomNumber;
   for (int i = 0; i < natoms; ++i) {
     if (visited[i]) {
       continue;
@@ -2224,7 +2253,7 @@ FirstLowConnectedAtom(const Molecule& m, const int* visited) {
     }
   }
 
-  if (a_doubly_bonded_atom != INVALID_ATOM_NUMBER) {
+  if (a_doubly_bonded_atom != kInvalidAtomNumber) {
     return a_doubly_bonded_atom;
   }
 
@@ -2472,12 +2501,12 @@ Molecule::_compute_ring_bond_count() {
   atom_number_t starting_atom = 0;
   int counter_start = 1;
   do {
-    RingFinder(*this, INVALID_ATOM_NUMBER, starting_atom, data, counter_start);
+    RingFinder(*this, kInvalidAtomNumber, starting_atom, data, counter_start);
     counter_start += _update_fragment_information(data.visited, fragment_number,
                                                   data.visited[starting_atom]);
     fragment_number++;
     starting_atom = FirstUnvisited(data.visited, _number_elements);
-  } while (starting_atom != INVALID_ATOM_NUMBER);
+  } while (starting_atom != kInvalidAtomNumber);
 
   _fragment_information.set_number_fragments(fragment_number);
 

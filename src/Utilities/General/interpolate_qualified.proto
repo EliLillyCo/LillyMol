@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package interpolate_qualified;
+
+import "xgboost/xgboost_model.proto";
+
+message InterpolateQualifiedConfig {
+  // Number of boosting steps.
+  optional uint32 num_iterations = 1;
+
+  optional xgboost_model.XGBoostParameters xgboost_params = 2;
+}

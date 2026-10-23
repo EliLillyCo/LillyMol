@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include <iostream>
 
 /*
@@ -30,7 +31,7 @@ static int reuse_ring_closure_numbers = 1;
 
 void
 set_smiles_reuse_ring_closure_numbers(int i) {
-  assert (i >= 0);
+  assert(i >= 0);
 
   reuse_ring_closure_numbers = i;
 
@@ -38,11 +39,9 @@ set_smiles_reuse_ring_closure_numbers(int i) {
 }
 
 int
-smiles_reuse_ring_closure_numbers()
-{
+smiles_reuse_ring_closure_numbers() {
   return reuse_ring_closure_numbers;
 }
-
 
 static int include_aromaticity_in_smiles = 0;
 static int _write_bonds_as_aromatic = 0;
@@ -71,53 +70,48 @@ include_bond_aromaticity_in_smiles() {
   return _write_bonds_as_aromatic;
 }
 
-void set_include_bond_aromaticity_in_smiles(int s) {
+void
+set_include_bond_aromaticity_in_smiles(int s) {
   _write_bonds_as_aromatic = s;
 }
 
 static int _include_cis_trans_in_smiles = 1;
 
 void
-set_include_cis_trans_in_smiles(int i)
-{
+set_include_cis_trans_in_smiles(int i) {
   _include_cis_trans_in_smiles = i;
 
   return;
 }
 
 int
-include_cis_trans_in_smiles()
-{
+include_cis_trans_in_smiles() {
   return _include_cis_trans_in_smiles;
 }
 
 static int _include_chiral_info_in_smiles = 1;
 
 void
-set_include_chiral_info_in_smiles(int i)
-{
+set_include_chiral_info_in_smiles(int i) {
   _include_chiral_info_in_smiles = i;
 }
 
 int
-include_chiral_info_in_smiles()
-{
+include_chiral_info_in_smiles() {
   return _include_chiral_info_in_smiles;
 }
 
 static int _ignore_chiral_info_on_input = 0;
 
 void
-set_ignore_chiral_info_on_input(int i)
-{
+set_ignore_chiral_info_on_input(int i) {
   _ignore_chiral_info_on_input = i;
 
   return;
 }
 
 int
-ignore_chiral_info_on_input()
-{
+ignore_chiral_info_on_input() {
   return _ignore_chiral_info_on_input;
 }
 
@@ -130,13 +124,15 @@ set_include_coordinates_with_smiles(int s) {
   _include_coordinates_with_smiles = s;
 }
 
-int include_coordinates_with_smiles() {
+int
+include_coordinates_with_smiles() {
   return _include_coordinates_with_smiles;
 }
 
 }  // namespace lillymol
 
 static int append_coordinate_box_after_each_atom = 0;
+
 void
 set_append_coordinate_box_after_each_atom(int s) {
   append_coordinate_box_after_each_atom = s;
@@ -145,94 +141,83 @@ set_append_coordinate_box_after_each_atom(int s) {
 static int _write_smiles_with_smarts_atoms = 0;
 
 void
-set_write_smiles_with_smarts_atoms(int s)
-{
+set_write_smiles_with_smarts_atoms(int s) {
   _write_smiles_with_smarts_atoms = s;
 
   return;
 }
 
 int
-write_smiles_with_smarts_atoms()
-{
+write_smiles_with_smarts_atoms() {
   return _write_smiles_with_smarts_atoms;
 }
 
 static int include_implicit_hydrogens_on_aromatic_n_and_p = 1;
 
 void
-set_include_implicit_hydrogens_on_aromatic_n_and_p(int s)
-{
+set_include_implicit_hydrogens_on_aromatic_n_and_p(int s) {
   include_implicit_hydrogens_on_aromatic_n_and_p = s;
 }
 
 static int _add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens = 0;
 
 void
-set_add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens(int s)
-{
+set_add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens(int s) {
   _add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens = s;
 }
 
 int
-add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens()
-{
+add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens() {
   return _add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens;
 }
 
 static int _write_single_bonds_in_smiles = 0;
 
 int
-write_single_bonds_in_smiles()
-{
+write_single_bonds_in_smiles() {
   return _write_single_bonds_in_smiles;
 }
 
 void
-set_write_single_bonds_in_smiles(int s)
-{
+set_write_single_bonds_in_smiles(int s) {
   _write_single_bonds_in_smiles = s;
 }
 
 static int include_hcount_in_smiles = 1;
 
 void
-set_include_hcount_in_smiles(int s)
-{
+set_include_hcount_in_smiles(int s) {
   include_hcount_in_smiles = s;
 }
 
 static int file_scope_display_unusual_hcount_warning_messages = 1;
 
 void
-set_display_unusual_hcount_warning_messages(int s)
-{
+set_display_unusual_hcount_warning_messages(int s) {
   file_scope_display_unusual_hcount_warning_messages = s;
 }
 
 int
-display_unusual_hcount_warning_messages()
-{
+display_unusual_hcount_warning_messages() {
   return file_scope_display_unusual_hcount_warning_messages;
 }
 
 static int _include_atom_map_with_smiles = 1;
 
 void
-set_include_atom_map_with_smiles(const int s)
-{
+set_include_atom_map_with_smiles(const int s) {
   _include_atom_map_with_smiles = s;
 }
 
 int
-include_atom_map_with_smiles()
-{
+include_atom_map_with_smiles() {
   return _include_atom_map_with_smiles;
 }
 
 static int _write_formal_charge_as_consecutive_signs = 1;
 
-void set_write_formal_charge_as_consecutive_signs(int s) {
+void
+set_write_formal_charge_as_consecutive_signs(int s) {
   _write_formal_charge_as_consecutive_signs = s;
 }
 
@@ -255,18 +240,19 @@ void set_write_formal_charge_as_consecutive_signs(int s) {
 static char sflag = 'K';
 
 int
-display_standard_smiles_options(std::ostream & os)
-{
+display_standard_smiles_options(std::ostream& os) {
+  // clang-format off
   os << "  -" << sflag << " <...>       Enter \"-" << sflag << " help\" for SMILES options\n";
+  // clang-format on
 
   return os.good();
 }
 
 int
-display_all_smiles_options(char flag, std::ostream & os)
-{
-  assert (os.good());
+display_all_smiles_options(char flag, std::ostream& os) {
+  assert(os.good());
 
+  // clang-format off
   os << "  -" << flag << " nru         do not reuse ring closure numbers when outputting smiles\n";
   os << "  -" << flag << " ctb         include cis-trans bonds in the smiles\n";
   os << "  -" << flag << " <number>    use <number> as a seed for random smiles\n";
@@ -287,139 +273,97 @@ display_all_smiles_options(char flag, std::ostream & os)
   os << "  -" << flag << " rcsbd       include directionality in ring closure single bonds\n";
   os << "  -" << flag << " nd4h        four connected neutral Nitrogen atoms have a Hydrogen\n";
   os << "  -" << flag << " fcnum       write formal charges as +[number] rather than ++\n";
+  // clang-format on
 
   return 1;
 }
 
 int
-process_standard_smiles_options(Command_Line & cl, int verbose,
-                                const char sflag)
-{
+process_standard_smiles_options(Command_Line& cl, int verbose, const char sflag) {
   int i = 0;
   IWString tmp;
-  while (cl.value(sflag, tmp, i))
-  {
+  while (cl.value(sflag, tmp, i)) {
     long seed;
 
-    if ("nru" == tmp)
-    {
+    if ("nru" == tmp) {
       set_smiles_reuse_ring_closure_numbers(0);
-      if (verbose)
+      if (verbose) {
         cerr << "Smiles will not re-use ring closure numbers\n";
-    }
-    else if ("ctb" == tmp)
-    {
+      }
+    } else if ("ctb" == tmp) {
       set_include_cis_trans_in_smiles(1);
-      if (verbose)
+      if (verbose) {
         cerr << "Cis trans bonds will be included in the smiles\n";
-    }
-    else if ("xtb" == tmp)
-    {
+      }
+    } else if ("xtb" == tmp) {
       set_include_cis_trans_in_smiles(0);
-      if (verbose)
+      if (verbose) {
         cerr << "Cis trans bonds will be excluded from smiles\n";
-    }
-    else if ("nochiral" == tmp)
-    {
+      }
+    } else if ("nochiral" == tmp) {
       set_include_chiral_info_in_smiles(0);
-      if (verbose)
+      if (verbose) {
         cerr << "Will exclude chiral info from any smiles produced\n";
-    }
-    else if ("coords" == tmp)
-    {
+      }
+    } else if ("coords" == tmp) {
       lillymol::set_include_coordinates_with_smiles(1);
-      if (verbose)
+      if (verbose) {
         cerr << "Will add coordinates to each atom in a smiles\n";
-    }
-    else if ("cbox" == tmp)
-    {
+      }
+    } else if ("cbox" == tmp) {
       set_append_coordinate_box_after_each_atom(1);
-      if (verbose)
+      if (verbose) {
         cerr << "Will add boxed coordinates to each atom in a smiles\n";
-    }
-    else if ("random" == tmp)
-    {
+      }
+    } else if ("random" == tmp) {
       random_number_seed_t tmp = set_smiles_random_number_seed_random();
-      if (verbose)
+      if (verbose) {
         cerr << "Smiles generated with a random seed " << tmp << '\n';
-    }
-    else if ("iusmi" == tmp)
-    {
-       set_include_isotopic_information_in_unique_smiles(1);
-    }
-    else if ("niusmi" == tmp)
-    {
+      }
+    } else if ("iusmi" == tmp) {
+      set_include_isotopic_information_in_unique_smiles(1);
+    } else if ("niusmi" == tmp) {
       set_include_isotopic_information_in_unique_smiles(0);
-    }
-    else if ("dbusmi" == tmp)
-    {
+    } else if ("dbusmi" == tmp) {
       set_include_directional_bonding_information_in_unique_smiles(1);
-    }
-    else if ("ndbusmi" == tmp)
-    {
+    } else if ("ndbusmi" == tmp) {
       set_include_directional_bonding_information_in_unique_smiles(0);
-    }
-    else if (tmp.starts_with("rnoff="))
-    {
+    } else if (tmp.starts_with("rnoff=")) {
       tmp.remove_leading_chars(6);
       int o;
-      if (! tmp.numeric_value(o) || o < 0)
-      {
+      if (!tmp.numeric_value(o) || o < 0) {
         cerr << "Invalid ring number offset '" << tmp << "'\n";
         return 0;
       }
 
       set_smiles_ring_number_offset(o);
-    }
-    else if ("nonH" == tmp)
-    {
+    } else if ("nonH" == tmp) {
       include_implicit_hydrogens_on_aromatic_n_and_p = 0;
-    }
-    else if ("nihc" == tmp)
-    {
+    } else if ("nihc" == tmp) {
       set_consider_implicit_hydrogens_in_unique_smiles(0);
-    }
-    else if ("esssr" == tmp)
-    {
+    } else if ("esssr" == tmp) {
       set_perceive_sssr_rings(0);
-    }
-    else if ("noD" == tmp)
-    {
+    } else if ("noD" == tmp) {
       set_include_D_in_smarts(0);
-    }
-    else if ("Hiso" == tmp)
-    {
+    } else if ("Hiso" == tmp) {
       set_add_implicit_hydrogens_to_isotopic_atoms_needing_hydrogens(1);
-    }
-    else if ("nhis" == tmp)
-    {
+    } else if ("nhis" == tmp) {
       set_include_hcount_in_smiles(0);
-    }
-    else if ("iso01" == tmp)
-    {
+    } else if ("iso01" == tmp) {
       set_consider_isotopes_as_zero_and_non_zero(1);
-    }
-    else if ("rcsbd" == tmp)
-    {
+    } else if ("rcsbd" == tmp) {
       set_include_directionality_in_ring_closure_bonds(1);
-    }
-    else if ("nd4h" == tmp)
-    {
+    } else if ("nd4h" == tmp) {
       set_four_connected_neutral_nitrogen_has_h(1);
-    }
-    else if ("help" == tmp)
-    {
+    } else if ("help" == tmp) {
       display_all_smiles_options(sflag, cerr);
-      exit(5);    // note very different behaviour for help!
-    }
-    else if (cl.value(sflag, seed, i))
-    {
+      exit(5);  // note very different behaviour for help!
+    } else if (cl.value(sflag, seed, i)) {
       set_smiles_random_number_seed(random_number_seed_t(seed));
-      if (verbose)
+      if (verbose) {
         cerr << "Random smiles generated with seed " << seed << '\n';
-    }
-    else
-    {
+      }
+    } else {
       cerr << "Unrecognised smiles specifier '" << tmp << "'\n";
       return 0;
     }
@@ -455,9 +399,8 @@ Molecule::_smiles_write_directional_bond (atom_number_t a,
     smiles += '/';
   else
   {
-    cerr << "Molecule::_smiles_write_directional_bond: anchor = " << anchor << " a = " << a << '\n';
-    ctb->debug_print(cerr);
-    assert (nullptr == "What's going on here");
+    cerr << "Molecule::_smiles_write_directional_bond: anchor = " << anchor << " a = " <<
+a << '\n'; ctb->debug_print(cerr); assert (nullptr == "What's going on here");
   }
 
   return 1;
@@ -469,26 +412,25 @@ Molecule::_smiles_write_directional_bond (atom_number_t a,
 */
 
 int
-Molecule::_process_directional_bond_for_smiles(IWString & smiles,
-                                               const Bond * b,
-                                               atom_number_t next_atom)
-{
+Molecule::_process_directional_bond_for_smiles(IWString& smiles, const Bond* b,
+                                               atom_number_t next_atom) {
 #ifdef DEBUG_PROCESS_DIRECTIONAL_BOND_FOR_SMILES
   cerr << "Directional bond from " << b->a1() << " to " << b->a2() << '\n';
-  cerr << " up " << b->is_directional_up() << " down " << b->is_directional_down() << '\n';
+  cerr << " up " << b->is_directional_up() << " down " << b->is_directional_down()
+       << '\n';
 #endif
 
-  if (b->is_directional_up() && next_atom == b->a2())
+  if (b->is_directional_up() && next_atom == b->a2()) {
     smiles += '/';
-  else if (b->is_directional_up() && next_atom == b->a1())
+  } else if (b->is_directional_up() && next_atom == b->a1()) {
     smiles += '\\';
-  else if (b->is_directional_down() && next_atom == b->a2())
+  } else if (b->is_directional_down() && next_atom == b->a2()) {
     smiles += '\\';
-  else if (b->is_directional_down() && next_atom == b->a1())
+  } else if (b->is_directional_down() && next_atom == b->a1()) {
     smiles += '/';
-  else
-  {
-    cerr << "Molecule::_process_directional_bond_for_smiles: bad directional bond to " << next_atom << '\n';
+  } else {
+    cerr << "Molecule::_process_directional_bond_for_smiles: bad directional bond to "
+         << next_atom << '\n';
     cerr << (*b) << '\n';
     return 0;
   }
@@ -510,8 +452,7 @@ do_append_coordinate_box(const Atom& a, IWString& smiles) {
 }
 
 static void
-do_append_coordinates(IWString & smiles, const Atom * a)
-{
+do_append_coordinates(IWString& smiles, const Atom* a) {
   smiles += "{{";
   smiles.append_number(a->x(), 5);
   smiles += ',';
@@ -524,30 +465,26 @@ do_append_coordinates(IWString & smiles, const Atom * a)
 }
 
 static void
-finish_smiles_atom(IWString & smiles,
-                   atomic_number_t z,
-                   int hcount,
-                   formal_charge_t fc)
-{
-//cerr << "finish_smiles_atom atomic number " << z << " with hcount " << hcount << '\n';
+finish_smiles_atom(IWString& smiles, atomic_number_t z, int hcount, formal_charge_t fc) {
+  // cerr << "finish_smiles_atom atomic number " << z << " with hcount " << hcount <<
+  // '\n';
 
-  if (hcount > 0 && 1 != z)
-  {
-     smiles += 'H';
-     if (hcount > 1)
-       smiles += hcount;
+  if (hcount > 0 && 1 != z) {
+    smiles += 'H';
+    if (hcount > 1) {
+      smiles += hcount;
+    }
   }
 
   if (fc == 0)
     ;
-  else if (fc == 1)
+  else if (fc == 1) {
     smiles += '+';
-  else if (fc == -1)
+  } else if (fc == -1) {
     smiles += '-';
-  else if (fc > 0) {
+  } else if (fc > 0) {
     if (_write_formal_charge_as_consecutive_signs) {
-      for (int i = 0; i < fc; i++)
-      {
+      for (int i = 0; i < fc; i++) {
         smiles += '+';
       }
     } else {
@@ -556,8 +493,7 @@ finish_smiles_atom(IWString & smiles,
     }
   } else if (fc < 0) {
     if (_write_formal_charge_as_consecutive_signs) {
-      for (int i = 0; i < -fc; i++)
-      {
+      for (int i = 0; i < -fc; i++) {
         smiles += '-';
       }
     } else {
@@ -579,17 +515,14 @@ finish_smiles_atom(IWString & smiles,
 */
 
 int
-Molecule::_append_smarts_equivalent(Smiles_Formation_Info & sfi,
-                                    IWString & s)
-{
+Molecule::_append_smarts_equivalent(Smiles_Formation_Info& sfi, IWString& s) {
   atom_number_t zatom = sfi.zatom();
 
-  const IWString * const user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
+  const IWString* const user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
 
-  if (nullptr == user_specified_atomic_smarts)   // ignore
+  if (nullptr == user_specified_atomic_smarts)  // ignore
     ;
-  else if (0 != user_specified_atomic_smarts[zatom].length())
-  {
+  else if (0 != user_specified_atomic_smarts[zatom].length()) {
     s << user_specified_atomic_smarts[zatom];
     return 1;
   }
@@ -599,12 +532,13 @@ Molecule::_append_smarts_equivalent(Smiles_Formation_Info & sfi,
 
   set_make_smarts_embedding(sfi.make_smarts_embedding(zatom));
 
-//append_smarts_equivalent_for_atom(zatom, s, sfi);
+  // append_smarts_equivalent_for_atom(zatom, s, sfi);
 
-  if (nullptr != sfi.include_atom())
+  if (nullptr != sfi.include_atom()) {
     append_smarts_equivalent_for_atom(zatom, s, sfi.include_atom());
-  else
+  } else {
     append_smarts_equivalent_for_atom(zatom, s);
+  }
 
   set_make_smarts_embedding(restore_make_smarts_embedding);
 
@@ -612,38 +546,39 @@ Molecule::_append_smarts_equivalent(Smiles_Formation_Info & sfi,
 }
 
 static int
-append_permanent_aromatic(IWString & smiles,
-                          const Atom * a)
-{
-  const IWString & s = a->element()->aromatic_symbol();
+append_permanent_aromatic(IWString& smiles, const Atom* a) {
+  const IWString& s = a->element()->aromatic_symbol();
 
   int needs_square_brackets;
-  if (a->isotope() > 0 || a->element()->needs_square_brackets())
-  {
+  if (a->isotope() > 0 || a->element()->needs_square_brackets()) {
     needs_square_brackets = 1;
     smiles << '[';
+  } else {
+    needs_square_brackets = 0;
   }
-  else
-   needs_square_brackets = 0;
 
-  if (a->isotope() > 0)
+  if (a->isotope() > 0) {
     smiles << a->isotope();
+  }
 
-  if (s.length())
+  if (s.length()) {
     smiles << s;
-  else
+  } else {
     smiles << a->element()->symbol();
+  }
 
-  if (needs_square_brackets)
+  if (needs_square_brackets) {
     smiles << ']';
+  }
 
-  if (lillymol::include_coordinates_with_smiles())
+  if (lillymol::include_coordinates_with_smiles()) {
     do_append_coordinates(smiles, a);
+  }
 
   return 1;
 }
 
-//#define DEBUG_PROCESS_ATOM_FOR_SMILES
+// #define DEBUG_PROCESS_ATOM_FOR_SMILES
 
 /*
   This is really a const function, but the signature of in_same_aromatic_ring
@@ -658,100 +593,106 @@ append_permanent_aromatic(IWString & smiles,
 */
 
 int
-Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
-                     const int * zorder,
-                     const resizable_array<const Bond *> & ring_opening_bonds,
-                     const resizable_array<atom_number_t> & ring_closures,
-                     const Chiral_Centre * c,
-                     IWString & smiles)
-{
-  if (! sfi.write_smiles())
+Molecule::_process_atom_for_smiles(Smiles_Formation_Info& sfi, const int* zorder,
+                                   const resizable_array<const Bond*>& ring_opening_bonds,
+                                   const resizable_array<atom_number_t>& ring_closures,
+                                   const Chiral_Centre* c, IWString& smiles) {
+  if (!sfi.write_smiles()) {
     return _append_smarts_equivalent(sfi, smiles);
+  }
 
   atom_number_t zatom = sfi.zatom();
 
-  const IWString * const user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
+  const IWString* const user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
 
-  if (nullptr == user_specified_atomic_smarts)   // ignore it
+  if (nullptr == user_specified_atomic_smarts)  // ignore it
     ;
-  else if (user_specified_atomic_smarts[zatom].length() > 0)
-  {
+  else if (user_specified_atomic_smarts[zatom].length() > 0) {
     smiles << user_specified_atomic_smarts[zatom];
     return 1;
   }
 
-  Atom * a = _things[zatom];
+  Atom* a = _things[zatom];
 
-  const Element * e = a->element();
+  const Element* e = a->element();
 
-  if (a->permanent_aromatic())
+  if (a->permanent_aromatic()) {
     return append_permanent_aromatic(smiles, a);
+  }
 
   atom_number_t anchor = sfi.previous_atom();
 
 #ifdef DEBUG_PROCESS_ATOM_FOR_SMILES
-  cerr << "Processing atom " << zatom << "(" << a->atomic_symbol() << ") ncon " << a->ncon() << " nbonds " << nbonds(zatom);
-  if (a->formal_charge())
+  cerr << "Processing atom " << zatom << "(" << a->atomic_symbol() << ") ncon "
+       << a->ncon() << " nbonds " << nbonds(zatom);
+  if (a->formal_charge()) {
     cerr << " charge " << a->formal_charge();
+  }
   cerr << " IH " << a->implicit_hydrogens();
-  if (a->implicit_hydrogens_known())
+  if (a->implicit_hydrogens_known()) {
     cerr << " ihknown";
-  if (c)
+  }
+  if (c) {
     cerr << " chiral";
+  }
   cerr << " anchor is " << anchor << '\n';
   a->debug_print(cerr);
 #endif
 
-//assert (ok_atom_number (zatom));
+  // assert (ok_atom_number (zatom));
 
-  int hcount = -1;     // initialised to a negative number
+  int hcount = -1;  // initialised to a negative number
 
-// Look for unusual H counts. Remember, we must specify the H count for any charged atoms
+  // Look for unusual H counts. Remember, we must specify the H count for any charged
+  // atoms
 
   const formal_charge_t fc = a->formal_charge();
 
   const int stored_hcount = include_hcount_in_smiles ? a->implicit_hydrogens() : 0;
 
 #ifdef DEBUG_PROCESS_ATOM_FOR_SMILES
-  cerr << "Atom type " << a->atomic_symbol() << " stored_hcount " << stored_hcount << " include_hcount_in_smiles " << include_hcount_in_smiles << '\n';
-  cerr << "has " << a->implicit_hydrogens() << " IH, known? " << a->implicit_hydrogens_known() << '\n';
+  cerr << "Atom type " << a->atomic_symbol() << " stored_hcount " << stored_hcount
+       << " include_hcount_in_smiles " << include_hcount_in_smiles << '\n';
+  cerr << "has " << a->implicit_hydrogens() << " IH, known? "
+       << a->implicit_hydrogens_known() << '\n';
 #endif
 
-  if (! include_hcount_in_smiles)
+  if (!include_hcount_in_smiles)
     ;
-  else if (0 == fc)
-  {
-    if (stored_hcount == _compute_implicit_hydrogens(zatom))    // the most common case - normal
+  else if (0 == fc) {
+    if (stored_hcount ==
+        _compute_implicit_hydrogens(zatom))  // the most common case - normal
       ;
-    else if (a->implicit_hydrogens_known())     // probably a radical
+    else if (a->implicit_hydrogens_known())  // probably a radical
       ;
-    else
-    {
-      if (e->organic() && file_scope_display_unusual_hcount_warning_messages)
-        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " nbonds " << a->nbonds() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << '\n';
+    else {
+      if (e->organic() && file_scope_display_unusual_hcount_warning_messages) {
+        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol()
+             << ") ncon = " << a->ncon() << " nbonds " << a->nbonds()
+             << " stored = " << stored_hcount << " implicit is "
+             << _compute_implicit_hydrogens(zatom) << '\n';
+      }
       hcount = stored_hcount;
     }
-  }
-  else if (stored_hcount)
+  } else if (stored_hcount) {
     hcount = stored_hcount;
+  }
 
-// Daylight needs to include non zero hcount with aromatic nitrogens and phosphorus.
-// Actually, Daylight seems never to aromatise phosphorus...
+  // Daylight needs to include non zero hcount with aromatic nitrogens and phosphorus.
+  // Actually, Daylight seems never to aromatise phosphorus...
 
-//cerr << __LINE__ << " hcount " << hcount << '\n';
+  // cerr << __LINE__ << " hcount " << hcount << '\n';
 
-  if (hcount >= 0)            // already set
+  if (hcount >= 0)  // already set
     ;
-  else if (! include_aromaticity_in_smiles)     // nothing to worry about
+  else if (!include_aromaticity_in_smiles)  // nothing to worry about
     ;
-  else if (! include_implicit_hydrogens_on_aromatic_n_and_p)   // don't worry about anything
+  else if (!include_implicit_hydrogens_on_aromatic_n_and_p)  // don't worry about anything
     ;
-  else
-  {
+  else {
     const atomic_number_t z = e->atomic_number();
 
-    if (7 == z || 15 == z || z == 16)
-    {
+    if (7 == z || 15 == z || z == 16) {
       aromaticity_type_t arom;
       if (aromaticity(zatom, arom) && is_aromatic_atom(arom)) {
         hcount = stored_hcount;
@@ -768,56 +709,64 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     }
   }
 
-// Real problems if we are excluding chirality from the smiles. Argument C will be nullptr if we are
-// excluding chirality from smiles, so we need to fetch the value again
+  // Real problems if we are excluding chirality from the smiles. Argument C will be
+  // nullptr if we are excluding chirality from smiles, so we need to fetch the value
+  // again
 
   int ihknown = a->implicit_hydrogens_known();
-  if (! _include_chiral_info_in_smiles && ihknown && (nullptr != chiral_centre_at_atom(zatom)) &&
-      hcount < 0 && 0 == a->formal_charge() && 0 == a->isotope() && e->organic())
+  if (!_include_chiral_info_in_smiles && ihknown &&
+      (nullptr != chiral_centre_at_atom(zatom)) && hcount < 0 &&
+      0 == a->formal_charge() && 0 == a->isotope() && e->organic()) {
     ihknown = 0;
+  }
 
   int need_to_close_square_bracket = 0;
 
-// Whenever a square bracket atom is encountered, the H count must always be explicit. 
+  // Whenever a square bracket atom is encountered, the H count must always be explicit.
 
 #ifdef DEBUG_PROCESS_ATOM_FOR_SMILES
-  cerr << "Atom " << zatom << " z = " << a->atomic_number() << " ncon " << a->ncon() << " c is " << c << " hcount " << hcount << ", ihknown " << ihknown << " stored_hcount " << stored_hcount << '\n';
+  cerr << "Atom " << zatom << " z = " << a->atomic_number() << " ncon " << a->ncon()
+       << " c is " << c << " hcount " << hcount << ", ihknown " << ihknown
+       << " stored_hcount " << stored_hcount << '\n';
   cerr << "Line " << __LINE__ << ", length " << smiles.length() << '\n';
 #endif
 
-  if (c || 
-      hcount >= 0 ||
-      0 != fc ||
-      e->needs_square_brackets() ||
-      a->isotope() ||
+  if (c || hcount >= 0 || 0 != fc || e->needs_square_brackets() || a->isotope() ||
       ihknown ||
-      (a->atom_map() > 0 && _include_atom_map_with_smiles))       // implicit_hydrogens_known() - possibly adjusted above
+      (a->atom_map() > 0 && _include_atom_map_with_smiles))  // implicit_hydrogens_known()
+                                                             // - possibly adjusted above
   {
     smiles += '[';
-    // cerr << "Appended square bracket '" << smiles << "' hcount " << hcount << " ihknown " << ihknown << '\n';
+    // cerr << "Appended square bracket '" << smiles << "' hcount " << hcount << " ihknown
+    // " << ihknown << '\n';
     need_to_close_square_bracket = 1;
-    if (hcount < 0)
+    if (hcount < 0) {
       hcount = stored_hcount;
+    }
   }
 
   aromaticity_type_t arom = NOT_AROMATIC;
-  if (include_aromaticity_in_smiles)
-    (void) aromaticity(zatom, arom);
+  if (include_aromaticity_in_smiles) {
+    (void)aromaticity(zatom, arom);
+  }
 
   int rc = e->append_smiles_symbol(smiles, arom, a->isotope());
 
-  if (c)
-    c->append_smiles_chirality_symbol(smiles, zorder, anchor, 
-                                       ring_opening_bonds, ring_closures);
+  if (c) {
+    c->append_smiles_chirality_symbol(smiles, zorder, anchor, ring_opening_bonds,
+                                      ring_closures);
+  }
 
   finish_smiles_atom(smiles, a->atomic_number(), hcount, fc);
 
-  if (_include_atom_map_with_smiles && a->atom_map() > 0)
+  if (_include_atom_map_with_smiles && a->atom_map() > 0) {
     smiles << ':' << a->atom_map();
+  }
 
-//cerr << "Square bracket needed " << need_to_close_square_bracket << '\n';
-  if (need_to_close_square_bracket)
+  // cerr << "Square bracket needed " << need_to_close_square_bracket << '\n';
+  if (need_to_close_square_bracket) {
     smiles += ']';
+  }
 
   if (lillymol::include_coordinates_with_smiles()) {
     do_append_coordinates(smiles, a);
@@ -825,7 +774,7 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
     do_append_coordinate_box(a, smiles);
   }
 
-//cerr << "After addition, length " << smiles.length() << '\n';
+  // cerr << "After addition, length " << smiles.length() << '\n';
 
   return rc;
 }
@@ -836,57 +785,59 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
 */
 
 int
-Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
-                                   IWString & smiles)
-{
-  if (! sfi.write_smiles())
+Molecule::_process_atom_for_smiles(Smiles_Formation_Info& sfi, IWString& smiles) {
+  if (!sfi.write_smiles()) {
     return _append_smarts_equivalent(sfi, smiles);
+  }
 
   atom_number_t zatom = sfi.zatom();
 
-  const IWString * user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
+  const IWString* user_specified_atomic_smarts = sfi.user_specified_atomic_smarts();
 
   if (nullptr == user_specified_atomic_smarts)
     ;
-  else if (user_specified_atomic_smarts[zatom].length() > 0)
-  {
+  else if (user_specified_atomic_smarts[zatom].length() > 0) {
     smiles << user_specified_atomic_smarts[zatom];
     return 1;
   }
 
-  Atom * a = _things[zatom];
+  Atom* a = _things[zatom];
 
-  const Element * e = a->element();
+  const Element* e = a->element();
 
-  if (a->permanent_aromatic())
+  if (a->permanent_aromatic()) {
     return append_permanent_aromatic(smiles, a);
+  }
 
-// Look for unusual H counts. Remember, we must specify the H count for any
-// charged atoms
+  // Look for unusual H counts. Remember, we must specify the H count for any
+  // charged atoms
 
-  int hcount = -1;     // initialised to a negative number
+  int hcount = -1;  // initialised to a negative number
 
   const int stored_hcount = include_hcount_in_smiles ? a->implicit_hydrogens() : 0;
 
   const formal_charge_t fc = a->formal_charge();
 
-  if (! include_hcount_in_smiles)
+  if (!include_hcount_in_smiles)
     ;
-  else if (0 == fc)
-  {
-    if (stored_hcount == _compute_implicit_hydrogens(zatom))     // the most common and normal case
+  else if (0 == fc) {
+    if (stored_hcount ==
+        _compute_implicit_hydrogens(zatom))  // the most common and normal case
       ;
-    else if (a->implicit_hydrogens_known())      // probably a radical or something
+    else if (a->implicit_hydrogens_known())  // probably a radical or something
       ;
-    else
-    {
-      if (e->organic() && a->ncon() && file_scope_display_unusual_hcount_warning_messages)
-        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol() << ") ncon = " << a->ncon() << " stored = " << stored_hcount << " implicit is " << _compute_implicit_hydrogens(zatom) << '\n';
+    else {
+      if (e->organic() && a->ncon() &&
+          file_scope_display_unusual_hcount_warning_messages) {
+        cerr << "Unusual hcount, atom " << zatom << "(" << a->atomic_symbol()
+             << ") ncon = " << a->ncon() << " stored = " << stored_hcount
+             << " implicit is " << _compute_implicit_hydrogens(zatom) << '\n';
+      }
       hcount = stored_hcount;
     }
-  }
-  else if (stored_hcount)
+  } else if (stored_hcount) {
     hcount = stored_hcount;
+  }
 
   int need_to_close_square_bracket = 0;
 
@@ -894,25 +845,28 @@ Molecule::_process_atom_for_smiles(Smiles_Formation_Info & sfi,
   cerr << "Smiles so far '" << smiles << "'\n";
 #endif
 
-// Whenever a square bracket atom is encountered, the H count must always be explicit. 
+  // Whenever a square bracket atom is encountered, the H count must always be explicit.
 
-  if (hcount >= 0 || 0 != fc || e->needs_square_brackets() || a->isotope() || a->implicit_hydrogens_known() || (a->atom_map() && _include_atom_map_with_smiles))
-  {
+  if (hcount >= 0 || 0 != fc || e->needs_square_brackets() || a->isotope() ||
+      a->implicit_hydrogens_known() || (a->atom_map() && _include_atom_map_with_smiles)) {
     smiles += '[';
     need_to_close_square_bracket = 1;
-    if (hcount < 0)
+    if (hcount < 0) {
       hcount = stored_hcount;
+    }
   }
 
   int rc = e->append_smiles_symbol(smiles, NOT_AROMATIC, a->isotope());
 
   finish_smiles_atom(smiles, a->atomic_number(), hcount, fc);
 
-  if (a->atom_map() && _include_atom_map_with_smiles)
+  if (a->atom_map() && _include_atom_map_with_smiles) {
     smiles << ':' << a->atom_map();
+  }
 
-  if (need_to_close_square_bracket)
+  if (need_to_close_square_bracket) {
     smiles += ']';
+  }
 
   if (lillymol::include_coordinates_with_smiles()) {
     do_append_coordinates(smiles, a);
@@ -941,23 +895,25 @@ include_atom_in_smiles (const Molecule * m, atom_number_t a)
 }*/
 
 int
-Molecule::_unset_implicit_hydrogens_known_if_computed_matches()
-{
+Molecule::_unset_implicit_hydrogens_known_if_computed_matches() {
   int rc = 0;
 
-  for (int i = 0; i < _number_elements; i++)
-  {
-    Atom * a = _things[i];
+  for (int i = 0; i < _number_elements; i++) {
+    Atom* a = _things[i];
 
-    if (! a->implicit_hydrogens_known())
+    if (!a->implicit_hydrogens_known()) {
       continue;
+    }
 
     int h;
-    if (! a->compute_implicit_hydrogens(h))
+    if (!a->compute_implicit_hydrogens(h)) {
       continue;
+    }
 
-    if (a->implicit_hydrogens() != h)    // computed and actual differ, must remain a special case
+    if (a->implicit_hydrogens() !=
+        h) {  // computed and actual differ, must remain a special case
       continue;
+    }
 
     a->set_implicit_hydrogens_known(0);
     rc++;
@@ -967,38 +923,36 @@ Molecule::_unset_implicit_hydrogens_known_if_computed_matches()
 }
 
 int
-Molecule::_unset_all_implicit_hydrogens_known_attributes()
-{
+Molecule::_unset_all_implicit_hydrogens_known_attributes() {
   int rc = 0;
 
-//cerr << "Searching " << _number_elements << " atoms\n";
-  for (int i = 0; i < _number_elements; i++)
-  {
-    Atom * a = _things[i];
+  // cerr << "Searching " << _number_elements << " atoms\n";
+  for (int i = 0; i < _number_elements; i++) {
+    Atom* a = _things[i];
 
-    if (! a->implicit_hydrogens_known())
+    if (!a->implicit_hydrogens_known()) {
       continue;
+    }
 
     a->set_implicit_hydrogens_known(0);
     int notused;
-    (void) a->recompute_implicit_hydrogens(notused);
+    (void)a->recompute_implicit_hydrogens(notused);
     rc++;
   }
 
-//cerr << "Processed " << rc << " atoms\n";
+  // cerr << "Processed " << rc << " atoms\n";
 
   return rc;
 }
 
-Smiles_Formation_Info::Smiles_Formation_Info(int na, int nr) : _rnm (nr)
-{
+Smiles_Formation_Info::Smiles_Formation_Info(int na, int nr) : _rnm(nr) {
   _natoms = na;
 
   _already_done = nullptr;
 
-  _previous_atom = INVALID_ATOM_NUMBER;
+  _previous_atom = kInvalidAtomNumber;
 
-  _zatom = INVALID_ATOM_NUMBER;
+  _zatom = kInvalidAtomNumber;
 
   _include_atom = nullptr;
 
@@ -1011,22 +965,20 @@ Smiles_Formation_Info::Smiles_Formation_Info(int na, int nr) : _rnm (nr)
   return;
 }
 
-Smiles_Formation_Info::~Smiles_Formation_Info()
-{
+Smiles_Formation_Info::~Smiles_Formation_Info() {
   return;
 }
 
 int
-Smiles_Formation_Info::ok() const
-{
+Smiles_Formation_Info::ok() const {
   return _rnm.ok();
 }
 
 int
-Smiles_Formation_Info::make_smarts_embedding(atom_number_t zatom) const
-{
-  if (nullptr == _make_smarts_embedding)
+Smiles_Formation_Info::make_smarts_embedding(atom_number_t zatom) const {
+  if (nullptr == _make_smarts_embedding) {
     return 0;
+  }
 
   return _make_smarts_embedding[zatom];
 }
@@ -1043,8 +995,8 @@ Smiles_Formation_Info::set_create_embedding_smarts (atom_number_t zatom,
   return;
 */
 
-Temporarily_Set_Include_Chiral_Info_in_Smiles::Temporarily_Set_Include_Chiral_Info_in_Smiles (int c)
-{
+Temporarily_Set_Include_Chiral_Info_in_Smiles::
+    Temporarily_Set_Include_Chiral_Info_in_Smiles(int c) {
   _initial_value = include_chiral_info_in_smiles();
 
   set_include_chiral_info_in_smiles(c);
@@ -1052,16 +1004,15 @@ Temporarily_Set_Include_Chiral_Info_in_Smiles::Temporarily_Set_Include_Chiral_In
   return;
 }
 
-Temporarily_Set_Include_Chiral_Info_in_Smiles::~Temporarily_Set_Include_Chiral_Info_in_Smiles()
-{
+Temporarily_Set_Include_Chiral_Info_in_Smiles::
+    ~Temporarily_Set_Include_Chiral_Info_in_Smiles() {
   set_include_chiral_info_in_smiles(_initial_value);
 
   return;
 }
 
 void
-reset_smiles_support_file_scope_variables()
-{
+reset_smiles_support_file_scope_variables() {
   reuse_ring_closure_numbers = 1;
   include_aromaticity_in_smiles = 0;
   _write_bonds_as_aromatic = 0;

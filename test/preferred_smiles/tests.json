@@ -1,0 +1,13 @@
+{
+  "executable": "preferred_smiles",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "#{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

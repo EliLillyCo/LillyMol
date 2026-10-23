@@ -302,6 +302,17 @@ TSubstructure::NumberMatches(const std::vector<std::string>& smiles) {
 
 std::vector<std::vector<uint32_t>>
 TSubstructure::NumberMatches(std::vector<Molecule>& mols) {
+  std::vector<Molecule*> as_pointers;
+  as_pointers.reserve(mols.size());
+  for (Molecule& m : mols) {
+    as_pointers.push_back(&m);
+  }
+
+  return NumberMatches(as_pointers);
+}
+
+std::vector<std::vector<uint32_t>>
+TSubstructure::NumberMatches(const std::vector<Molecule*>& mols) {
   const uint32_t nmols = mols.size();
 
   std::vector<std::vector<uint32_t>> result(nmols);
@@ -309,9 +320,9 @@ TSubstructure::NumberMatches(std::vector<Molecule>& mols) {
   const int nq = query.size();
 
   for (uint32_t i = 0; i < nmols; ++i) {
-    Preprocess(mols[i]);
+    Preprocess(*mols[i]);
 
-    Molecule_to_Match target(&(mols[i]));
+    Molecule_to_Match target(mols[i]);
 
     result[i].reserve(nq);
     for (int j = 0; j < nq; ++j) {
@@ -328,7 +339,9 @@ TSubstructure::NumberMatches(std::vector<Molecule>& mols) {
 
 std::vector<std::string>
 TSubstructure::query_names() const {
-  std::vector<std::string> result(query.size());
+  std::vector<std::string> result;
+  result.reserve(query.size());
+
   for (const Substructure_Query* q : query) {
     result.push_back(q->comment().AsString());
   }

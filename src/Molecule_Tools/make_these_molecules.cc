@@ -293,6 +293,12 @@ class Make_These_Molecules {
    */
   Sidechain_Reaction_Site* _get_current_sidechain();
 
+  void AppendName(const IWReaction& rxn, IWString& output) const;
+  void AppendName(const std::vector<Molecule_and_Embedding*>& reagents,
+                IWString& output) const;
+  void AppendSingleReactionNames(const std::vector<Molecule_and_Embedding*>& reagents,
+                IWString& output) const;
+
  public:
   Make_These_Molecules();
   ~Make_These_Molecules();
@@ -401,6 +407,64 @@ Make_These_Molecules::_preprocess(Molecule& m) {
   return;
 }
 
+// Called only when we have a unimolecular reaction.
+// We need a name to append to the product molecule.
+// If there are sidechains with a single named reagent, append those names.
+// Otherwise use the name of the reaction.
+void
+Make_These_Molecules::AppendName(const IWReaction& rxn, IWString& output) const {
+  if (rxn.number_sidechains() == 0) {
+    output << _component_separator << rxn.name();
+    return;
+  }
+
+  bool wrote_something = false;
+  for (int i = 0; i < rxn.number_sidechains(); ++i) {
+    const Sidechain_Reaction_Site* s = rxn.sidechain(i);
+
+    // Single reagent sidechains only.
+    if (s->number_reagents() != 1) {
+      continue;
+    }
+
+    const Molecule_and_Embedding* mae = s->reagent(0);
+    if (mae->name().empty()) {
+      continue;
+    }
+
+    output << _component_separator << mae->name();
+    wrote_something = true;
+  }
+
+  if (wrote_something) {
+    return;
+  }
+
+  output << _component_separator << rxn.name();
+}
+
+// We have a single reaction where the product is the result of some combination of
+// Molecule_and_Embedding* from `reagents` and some number of sidechains with names.
+void
+Make_These_Molecules::AppendSingleReactionNames(const std::vector<Molecule_and_Embedding*>& reagents,
+                IWString& output) const {
+  // An index into `reagents`.
+  uint32_t j = 1;  // the first item in `reagents` is the scaffold
+  for (int i = 0; i < _reaction[0].number_sidechains(); ++i) {
+    const Sidechain_Reaction_Site* s = _reaction[0].sidechain(i);
+    if (s->number_reagents() == 1) {
+      const Molecule_and_Embedding* mae = s->reagent(0);
+      output << _component_separator << mae->name();
+      continue;
+    }
+
+    if (j < reagents.size()) {
+      output << _component_separator << reagents[j]->name();
+      ++j;
+    }
+  }
+}
+
 /*
   Here is the guts of things.
 
@@ -440,9 +504,11 @@ Make_These_Molecules::_make_these_molecules(
     // Single reaction
     // All the reaction is done and for single reaction
     // Each reagent id will be appended to the new molecule name
-    for (unsigned int ui = 1; ui < reagents.size(); ++ui) {
-      mname << _component_separator << reagents[ui]->name();
-    }
+    AppendSingleReactionNames(reagents, mname);
+  } else if (_number_sidechains == 1) {
+    // Must be a single reaction, perhaps with its own reagents, or maybe just a modifier.
+    AppendName(_reaction[0], mname);
+//  AppendName(reagents, mname);
   } else {
     // Multiple reactions
     // Append molecule name for the first reaction
@@ -521,6 +587,8 @@ ReadReagents(const const_IWSubstring& buffer, resizable_array_p<IWString>& reage
   return reagent_names.size();
 }
 
+// `buffer` contains a space separated list of reagents to use in this reaction,
+// or a textproto description of the same.
 int
 Make_These_Molecules::_make_these_molecules(const const_IWSubstring& buffer,
                                             Molecule_Output_Object& output) {
@@ -570,6 +638,10 @@ Make_These_Molecules::_make_these_molecules(const const_IWSubstring& buffer,
   _current_sidechain_id = 0;
   Sidechain_Reaction_Site* site_ptr = _get_current_sidechain();
   while (site_ptr != nullptr) {
+    if (current_reagent_id >= reagent_names.number_elements()) {
+      break;
+    }
+
     const IWString& token = *reagent_names[current_reagent_id];
 
     // Use backup sidechain data as footprint

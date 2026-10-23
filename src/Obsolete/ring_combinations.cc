@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -328,7 +330,7 @@ form_subset (Molecule & m,
              int * xref,
              IW_STL_Hash_Set & usmiles)
 {
-  set_vector(tmp, m.natoms(), 0);
+  std::fill_n(tmp, m.natoms(), 0);
 
 #ifdef DEBUG_DO_OUTPUT
   cerr << "Bit vector creating subset " << b.nset() << " atoms, molecule contains " << m.natoms() << " atoms\n";

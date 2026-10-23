@@ -497,7 +497,6 @@ OkMaxRingsInSystem(Molecule& m, int max_rings_in_system_to_consider) {
   const int nr = m.nrings();
 
   std::unique_ptr<int[]> ring_already_done = std::make_unique<int[]>(nr);
-  std::fill_n(ring_already_done.get(), nr, 0);
   for (int i = 0; i < nr; ++i) {
     if (ring_already_done[i]) {
       continue;

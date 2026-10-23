@@ -2,6 +2,7 @@
   Remove matched atoms from molecules
 */
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -235,7 +236,7 @@ remove_matched_atoms(Molecule & m,
                      const Set_of_Atoms & e,
                      Molecule_Output_Object & output)
 {
-  set_vector(to_be_removed, m.natoms(), 0);
+  std::fill_n(to_be_removed, m.natoms(), 0);
   e.set_vector(to_be_removed, 1);
 
   const int initial_atoms = m.natoms();

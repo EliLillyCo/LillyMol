@@ -1,7 +1,10 @@
 (6 Query
+# Oct 2026. Bonds in aromatic rings are written as 'bond' (any type) so that the query gives the same
+# answer whether or not aromatic bonds keep their Kekule forms (tsubstructure -M nokekule).
   (A C Comment "imidazole_basic")
   (A I Version 2)
   (0 Query_Atom
+    (A I aromatic 1)
     (A I atomic_number 7)
     (A I ncon 2)
     (A I hcount 0)
@@ -10,25 +13,29 @@
     (A D numeric_value 1.1)
   )
   (1 Query_Atom
+    (A I aromatic 1)
     (A I atomic_number 6)
     (A I max_nrings 1)
-    (A I single_bond 0)
+    (A I bond 0)
   )
   (2 Query_Atom
+    (A I aromatic 1)
     (A I atomic_number 6)
     (A I max_nrings 1)
-    (A I double_bond 1)
+    (A I bond 1)
   )
   (3 Query_Atom
+    (A I aromatic 1)
     (A I atomic_number 7)
     (A I min_nrings 1)
-    (A I single_bond 2)
+    (A I bond 2)
   )
   (4 Query_Atom
+    (A I aromatic 1)
     (A I atomic_number 6)
     (A I max_nrings 1)
-    (A I single_bond 3)
-    (A I double_bond 0)
+    (A I bond 3)
+    (A I bond 0)
   )
   (5 Environment_No_Match
     (A I single_bond (1 2 4))

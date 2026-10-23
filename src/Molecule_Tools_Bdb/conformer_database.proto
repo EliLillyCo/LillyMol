@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package conformer_database;
+
+message Conformer {
+  optional float energy = 1;
+  // the coordinates of each atom - in smiles order.
+  repeated float xyz = 2;
+}
+
+message Conformers {
+  optional string id = 1;
+  optional string smiles = 2;
+  repeated Conformer conformers = 3;
+}

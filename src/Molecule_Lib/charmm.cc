@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
+
 #include "Foundational/iwmisc/misc.h"
 
 #include "molecule.h"
@@ -248,7 +250,7 @@ Molecule::write_molecule_psf (std::ostream & os)
   int n_improper = 0;
   int * improper_center = new int [n_atoms];  // deleted at the end of the program
 
-  set_vector(improper_center, n_atoms, 0);
+  std::fill_n(improper_center, n_atoms, 0);
 
   for (int i=0; i<n_atoms; i++)
     if ((6==atomic_number(i)) && (3==ncon(i)) && (4==nbonds(i)))

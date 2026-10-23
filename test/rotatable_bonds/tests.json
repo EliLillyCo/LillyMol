@@ -1,0 +1,30 @@
+{
+  "executable": "rotatable_bonds",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "#{indir}/pubchem_example.smi"
+      ]
+    },
+
+    {
+      "name": "mMoptions",
+      "args": [
+            "-m 3 -M 5 -a ${LILLYMOL_HOME}/data/Pubchem1000.smi"
+      ]
+    },
+
+    {
+      "name": "Coption",
+      "args": [
+            "-C 8 -B Bfile ${LILLYMOL_HOME}/data/Pubchem1000.smi"
+      ]
+    }
+
+
+
+
+  ]
+
+}

@@ -1,0 +1,14 @@
+{
+  "executable": "descriptors_to_fingerprint",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-S #{indir}/pubchem.smi -D w_natoms:10,40,1 -D w_nelem:1,8,1 #{indir}/pubchem.w"
+      ]
+    }
+
+  ]
+}

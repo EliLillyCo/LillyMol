@@ -1069,7 +1069,7 @@ Options::LogD(Molecule& m, double logp) {
     }
   }
 
-  cerr << "Find nneg " << nneg << " npos " << npos << " logp " << logp << '\n';
+  // cerr << "Find nneg " << nneg << " npos " << npos << " logp " << logp << '\n';
 
   if (0 == npos && 0 == nneg) [[unlikely]] {  // really should have been picked up before
     return logp - kNeutralUncharged;
@@ -1128,7 +1128,7 @@ Options::LogD(Molecule& m, double logp) {
     }
   }
 
-  cerr << "Offset " << offset << " returning " << (logp + offset) << '\n';
+  // cerr << "Offset " << offset << " returning " << (logp + offset) << '\n';
 
   return logp + offset;
 }
@@ -1260,7 +1260,7 @@ Options::Process(Molecule& m, IWString_and_File_Descriptor& output) {
   }
 
   if (_stream_for_labelled_molecules.is_open()) {
-    _stream_for_labelled_molecules << m.smiles() << ' ' << m.name() << ' ' << *x << '\n';
+    _stream_for_labelled_molecules << m.aromatic_smiles() << ' ' << m.name() << ' ' << *x << '\n';
     _stream_for_labelled_molecules.write_if_buffer_holds_more_than(4096);
   }
 

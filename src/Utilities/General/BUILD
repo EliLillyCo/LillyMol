@@ -1,5 +1,12 @@
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:osx"]
+)
 
 proto_library(
     name = "class_label_translation_proto",
@@ -15,6 +22,26 @@ cc_proto_library(
     ],
     deps = [
         "class_label_translation_proto",
+    ],
+)
+
+proto_library(
+    name = "interpolate_qualified_proto",
+    srcs = [
+        "interpolate_qualified.proto",
+    ],
+    deps = [
+        "//xgboost:xgboost_model_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "interpolate_qualified_cc_proto",
+    deps = [
+        "interpolate_qualified_proto",
+    ],
+    visibility = [
+        "//visibility:public",
     ],
 )
 
@@ -216,6 +243,23 @@ cc_library(
     ],
 )
 
+
+cc_library(
+    name = "proto_collator",
+    hdrs = [
+        "proto_collator.h",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwstring",
+        "@com_google_protobuf//:protobuf",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
 cc_library(
     name = "ttitem",
     srcs = [
@@ -235,8 +279,9 @@ cc_binary(
         "class_label_translation.cc",
     ],
     deps = [
+        ":class_label_translation_cc_proto",
         "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/cmdline_v2:cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwqsort",
@@ -352,6 +397,7 @@ cc_binary(
         "//Foundational/iwstring",
         "//Molecule_Tools:dicer_fragments_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_protobuf//:protobuf",
         "@com_google_absl//absl/log:initialize",
     ],
 )
@@ -396,16 +442,6 @@ cc_binary(
         "//Foundational/cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwstring",
-    ],
-)
-
-py_binary(
-    name = "feature_scaling_create",
-    srcs = [
-        "feature_scaling_create.py",
-    ],
-    deps = [
-        "feature_scaling_py_proto",
     ],
 )
 
@@ -518,22 +554,36 @@ cc_binary(
 )
 
 cc_binary(
-    name = "isolation_forest",
+    name = "interpolate_qualified",
     srcs = [
-        "isolation_forest.cc",
-    ],
-    copts = [
-        "-fopenmp",
-    ],
-    linkopts = [
-        "-lgomp",
+        "interpolate_qualified.cc",
     ],
     deps = [
+        ":interpolate_qualified_cc_proto",
         "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/cmdline_v2",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwbits",
         "//Foundational/iwmisc",
+        "//Foundational/iwstring:absl_hash",
+        "//Foundational/iwstring",
+        "//xgboost:xgboost_model_cc_proto",
+        "@third_party//:xgboost",
+    ] + 
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
+    tags = [
+        "xgboost",
+        "omp",
     ],
 )
 
@@ -610,6 +660,7 @@ cc_binary(
     ],
     deps = [
         ":mispredicted_cc_proto",
+        "//Utilities/GFP_Tools:nearest_neighbour_data",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
@@ -670,6 +721,7 @@ cc_binary(
         "//Foundational/accumulator",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
+        "//Foundational/iwmisc:normalisation_cc_proto",
         "//Foundational/iwmisc:normalisation",
         "//Foundational/iwstring",
     ],
@@ -705,18 +757,13 @@ cc_binary(
     name = "prediction_bias",
     srcs = [
         "prediction_bias.cc",
-        "sgefa.c",
-        "sgesl.c",
-    ],
-    linkopts = [
-        "-lblas",
     ],
     deps = [
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@third_party//:f2c",
+        "@com_gitlab_libeigen_eigen//:eigen",
     ],
 )
 
@@ -871,6 +918,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
+        "//Foundational/iwstring:string_with_commas",
     ],
 )
 
@@ -972,6 +1020,19 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
+    ],
+)
+
+
+cc_test(
+    name = "proto_collator_test",
+    srcs = [
+        "proto_collator_test.cc",
+    ],
+    deps = [
+        ":proto_collator",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 

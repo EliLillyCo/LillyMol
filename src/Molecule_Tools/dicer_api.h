@@ -94,10 +94,21 @@ class Dicer {
     // Do we allow C-C bonds to break.
     int _break_cc_bonds;
 
+    // We can break C-[CD>2] chain bonds.
+    int _break_cc_bonds_at_highly_connected;
+
     // Break any bond to a ring.
     int _break_ring_chain_bonds;
 
+    // Place this isotope on all join points.
+    // Note that if this is set AND _increment_isotope_for_join_points is also
+    // set, this takes precedence.
     isotope_t _label_join_points;
+
+    // Rather than set a fixed isotope at join points, increment any existing
+    // isotopic value that might be present. It is signed, but cannot imagine
+    // a usage where a negative offset would be desirable.
+    int _increment_isotope_for_join_points;
 
     Atom_Typing_Specification _atom_typing;
 
@@ -137,6 +148,8 @@ class Dicer {
     int Recap(Molecule& m, PerMoleculeData& pmd,
             std::unordered_map<std::string, uint32_t>& fragments);
 
+    int MaybeIncrementIsotope(Molecule& m, atom_number_t zatom) const;
+
   public:
     Dicer();
 
@@ -155,6 +168,11 @@ class Dicer {
     void set_break_cc_bonds(bool s) {
       _break_cc_bonds = s;
     }
+
+    void set_break_cc_bonds_at_highly_connected(int s) {
+      _break_cc_bonds_at_highly_connected = s;
+    }
+
     void set_break_amide_bonds(int s) {
       _break_amide_bonds = s;
     }
@@ -163,8 +181,14 @@ class Dicer {
       _determine_fragment_counts = s;
     }
 
+    // Should check that _increment_isotope_for_join_points is NOT set.
     void set_label_join_points(int s) {
       _label_join_points = s;
+    }
+
+    // Should check that _label_join_points is NOT set.
+    void set_increment_isotope_for_join_points(int s) {
+      _increment_isotope_for_join_points = s;
     }
 
     void set_accumulate_global_fragment_count(bool s) {

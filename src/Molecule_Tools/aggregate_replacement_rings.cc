@@ -46,7 +46,10 @@ Write(const std::unordered_map<std::string, RplRing::ReplacementRing>& smi2proto
   std::string buffer;
 
   for (const auto& [_, proto] : smi2proto) {
-    printer.PrintToString(proto, &buffer);
+    if (!printer.PrintToString(proto, &buffer)) {
+      cerr << "PrintToString failed\n";
+      return 0;
+    }
     output << buffer << '\n';
 
     output.write_if_buffer_holds_more_than(8192);

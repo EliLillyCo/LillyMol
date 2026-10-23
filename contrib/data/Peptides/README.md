@@ -70,7 +70,7 @@ Aspartic Acid `[#{Asp}D2]` wwill work. `[DD2]` is an invalid smarts.
 Matched with some of the range based queries in LillyMol this enables
 queries like
 ```
-[Ser]...{8-12}[Ala][Leu][Glu]
+[#{Ser}]...{8-12}[#{Ala}][#{Leu}][#{Glu}]
 ```
 which is a Serine, between 8 and 12 atoms to a sequence of [Ala][Leu][Glu].
 
@@ -79,7 +79,8 @@ for which there is no information about atomic number, valence, mass...
 ```
 [Ala]NC(=O)(Cc1ccccc1)[Leu][Gly]
 ```
-is handled properly, although whether this is useful or not is an open question.
+
+is handled properly as a smiles, although whether this is useful or not is an open question.
 
 Note too that these "molecules" can be fingerprinted. Atomic properties
 referred to as "atomic number" actually use a unique hash associated with each

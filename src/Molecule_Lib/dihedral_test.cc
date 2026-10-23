@@ -135,7 +135,7 @@ TEST(TestDihedralScan, TestDihedralScan) {
   EXPECT_NEAR(m.y(3), 1.0, kAbsDiff);
   EXPECT_NEAR(m.z(3), 0.0, kAbsDiff);
 
-  EXPECT_EQ(coords.size(), 7);
+  EXPECT_EQ(coords.size(), 7u);
 
   std::vector<float> expected{-45.0, -90.0, -135.0, 180, 135.0, 90.0, 45.0};
 

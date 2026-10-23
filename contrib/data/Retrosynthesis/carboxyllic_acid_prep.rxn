@@ -1,0 +1,9 @@
+name: "carboxyllic acid"
+scaffold {
+  smarts: "[OD1H]-C=O"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 1
+  }
+}

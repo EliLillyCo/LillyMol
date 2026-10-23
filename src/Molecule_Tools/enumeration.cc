@@ -1,4 +1,4 @@
-// Systematic enumeration around a set of molecles.
+// Systematic enumeration around a set of molecules.
 // Takes a set of molecules and a fragment library,
 // and adds all members of the fragment library to
 // available sites in the molecules.
@@ -383,7 +383,6 @@ Fragment::DetermineFormalCharges(Charge_Assigner& charge_assigner) {
   const int matoms = _frag->natoms();
 
   std::unique_ptr<formal_charge_t[]> q = std::make_unique<formal_charge_t[]>(matoms);
-  std::fill_n(q.get(), matoms, 0);
 
   if (charge_assigner.process(*_frag, q.get()) == 0) {
     return 1;

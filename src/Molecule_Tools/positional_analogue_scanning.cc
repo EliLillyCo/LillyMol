@@ -902,7 +902,6 @@ Options::Process(Molecule& m,
 
   const int matoms = m.natoms();
   std::unique_ptr<int[]> label = std::make_unique<int[]>(matoms);
-  std::fill_n(label.get(), matoms, 0);
 
   Molecule_to_Match target(&m);
 

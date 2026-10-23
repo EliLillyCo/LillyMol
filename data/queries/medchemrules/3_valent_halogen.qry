@@ -1,8 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "3_valent_halogen")
-  (0 Query_Atom
-    (A I atomic_number (9 17 35 53))
-    (A I nbonds 3)
-  )
-)

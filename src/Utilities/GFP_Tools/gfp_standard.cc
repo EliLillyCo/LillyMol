@@ -4,33 +4,33 @@
 #include <stdafx.h>
 #endif
 
-#include <nmmintrin.h>
+#include "Foundational/iwbits/popcount.h"
 #include <algorithm>
 
 #include <iostream>
 #include <limits>
 
+#include "Foundational/iwbits/iwbits.h"
 #include "Foundational/iwmisc/misc.h"
 #include "gfp_standard.h"
-
-extern float *precomputed_ratio;
+#include "molecular_property_ratio.h"
 
 using std::cerr;
 
 int
 GFP_Standard::DebugPrint(std::ostream& output) const {
   output << "GFP_Standard::DebugPrint\n";
-  const uint64_t * x = (const uint64_t*) _iw;
+  const uint64_t * x = _iw;
   output << "IW\n";
   for (int i = 0; i < 32; ++i) {
     output << i << ' ' << x[i] << '\n';
   }
-  x = (const uint64_t*) _mk;
+  x = _mk;
   output << "MK\n";
   for (int i = 0; i < 4; ++i) {
     output << i << ' ' << x[i] << '\n';
   }
-  x = (const uint64_t*) _mk2;
+  x = _mk2;
   output << "MK2\n";
   for (int i = 0; i < 4; ++i) {
     output << i << ' ' << x[i] << '\n';
@@ -41,7 +41,36 @@ GFP_Standard::DebugPrint(std::ostream& output) const {
 
 void
 GFP_Standard::build_molecular_properties(const Molecular_Properties_Integer &mpr) {
-  copy_vector(_molecular_properties, mpr.rawdata(), 8);
+  build_molecular_properties(mpr.rawdata(), mpr.nproperties());
+}
+
+void
+GFP_Standard::build_molecular_properties(const uint8_t* properties, int nproperties) {
+  if (nproperties != 8) {
+    cerr << "GFP_Standard::build_molecular_properties:expected 8 properties, got "
+         << nproperties << '\n';
+    abort();
+  }
+
+  memcpy(_molecular_properties, properties, 8 * sizeof(uint8_t));
+}
+
+void
+GFP_Standard::build_molecular_properties(const int* properties, int nproperties) {
+  if (nproperties != 8) {
+    cerr << "GFP_Standard::build_molecular_properties:expected 8 properties, got "
+         << nproperties << '\n';
+    abort();
+  }
+
+  for (int i = 0; i < 8; ++i) {
+    if (properties[i] < 0 || properties[i] > 255) {
+      cerr << "GFP_Standard::build_molecular_properties:property " << i
+           << " out of range " << properties[i] << '\n';
+      abort();
+    }
+    _molecular_properties[i] = static_cast<uint8_t>(properties[i]);
+  }
 }
 
 static const unsigned int max_uint = std::numeric_limits<unsigned int>::max();
@@ -80,9 +109,9 @@ GFP_Standard::build_mk(IWDYFP &fp) {
   _nset_mk = fp.nset();
   memcpy(_mk, fp.bits(), bits_in_mk / 8);
 
-  for (int i = bits_in_mk / 8; i < 32; i++) {
-    _mk[i] = static_cast<unsigned char>(0);
-  }
+  // Byte access is valid for the object representation of word storage.
+  auto* bytes = reinterpret_cast<unsigned char*>(_mk);
+  std::fill(bytes + bits_in_mk / 8, bytes + sizeof(_mk), 0);
 
   return;
 }
@@ -94,9 +123,9 @@ GFP_Standard::build_mk2(IWDYFP &fp) {
   _nset_mk2 = fp.nset();
   memcpy(_mk2, fp.bits(), bits_in_mk / 8);
 
-  for (int i = bits_in_mk / 8; i < 32; i++) {
-    _mk2[i] = static_cast<unsigned char>(0);
-  }
+  // Byte access is valid for the object representation of word storage.
+  auto* bytes = reinterpret_cast<unsigned char*>(_mk2);
+  std::fill(bytes + bits_in_mk / 8, bytes + sizeof(_mk2), 0);
 
   return;
 }
@@ -138,10 +167,11 @@ void
 GFP_Standard::build_iwfp(const T *b, const int nset) {
   _nset_iw = nset;
 
-  std::fill_n(_iw, sizeof(_iw), 0);
+  std::fill_n(_iw, 32, uint64_t{0});
+  auto* bytes = reinterpret_cast<unsigned char*>(_iw);
 
   for (unsigned int i = 0; i < sizeof(_iw); ++i) {
-    unsigned char u = _iw[i];
+    unsigned char u = bytes[i];
 
     for (int j = 0; j < IW_BITS_PER_BYTE; ++j) {
       if (*b) {
@@ -149,7 +179,7 @@ GFP_Standard::build_iwfp(const T *b, const int nset) {
       }
       b++;
     }
-    _iw[i] = u;
+    bytes[i] = u;
   }
 
   return;
@@ -164,9 +194,9 @@ GFP_Standard::build_mk(const int *b, uint32_t nbits) {
 
   _nset_mk = 0;
 
-  std::fill_n(_mk, sizeof(_mk), 0);
+  std::fill_n(_mk, 4, uint64_t{0});
 
-  bits_from_array(b, nbits, _mk, _nset_mk);
+  bits_from_array(b, nbits, reinterpret_cast<unsigned char*>(_mk), _nset_mk);
 
   return;
 }
@@ -177,9 +207,9 @@ GFP_Standard::build_mk2(const int *b, uint32_t nbits) {
 
   _nset_mk2 = 0;
 
-  std::fill_n(_mk2, sizeof(_mk2), 0);
+  std::fill_n(_mk2, 4, uint64_t{0});
 
-  bits_from_array(b, nbits, _mk2, _nset_mk2);
+  bits_from_array(b, nbits, reinterpret_cast<unsigned char*>(_mk2), _nset_mk2);
 
   return;
 }
@@ -198,43 +228,27 @@ GFP_Standard::build_iw(IWDYFP &fp) {
 */
 
 static inline int
-popcount_2fp(const unsigned *bufA, const unsigned *bufB, const int nwords) {
-  int count = 0;
-  assert(nwords % 8 == 0);
-
-#if defined(__x86_64__)
-  int nquads = nwords / 2;
-  const uint64_t *a64 = (uint64_t *)bufA;
-  const uint64_t *b64 = (uint64_t *)bufB;
-  for (int i = 0; i < nquads; i += 4) {
-    count += _mm_popcnt_u64(a64[i] & b64[i]) + _mm_popcnt_u64(a64[i + 1] & b64[i + 1]) +
-             _mm_popcnt_u64(a64[i + 2] & b64[i + 2]) +
-             _mm_popcnt_u64(a64[i + 3] & b64[i + 3]);
-  }
+popcount_word(uint64_t word) {
+#ifdef __i386__
+  return POPCOUNT(static_cast<uint32_t>(word)) +
+         POPCOUNT(static_cast<uint32_t>(word >> 32));
 #else
-  const uint32_t *a32 = (const uint32_t *)bufA;
-  const uint32_t *b32 = (const uint32_t *)bufB;
-  for (int i = 0; i < nwords; i += 4) {
-    count += _mm_popcnt_u32(a32[i] & b32[i]) + _mm_popcnt_u32(a32[i + 1] & b32[i + 1]) +
-             _mm_popcnt_u32(a32[i + 2] & b32[i + 2]) +
-             _mm_popcnt_u32(a32[i + 3] & b32[i + 3]);
-  }
+  return POPCOUNT(word);
 #endif
-  return count;
 }
 
 static inline int
-popcount(const unsigned char *b, const int nwords) {
-  const int nquads = nwords / 2;
+popcount_2fp(const uint64_t* lhs, const uint64_t* rhs, int nwords) {
   int count = 0;
-
-  const uint64_t *b64 = reinterpret_cast<const uint64_t *>(b);
-
+  // Callers specify the historical number of 32-bit words.
+  assert(nwords % 8 == 0);
+  const int nquads = nwords / 2;
   for (int i = 0; i < nquads; i += 4) {
-    count += _mm_popcnt_u64(b64[i]) + _mm_popcnt_u64(b64[i + 1]) +
-             _mm_popcnt_u64(b64[i + 2]) + _mm_popcnt_u64(b64[i + 3]);
+    count += popcount_word(lhs[i] & rhs[i]) +
+             popcount_word(lhs[i + 1] & rhs[i + 1]) +
+             popcount_word(lhs[i + 2] & rhs[i + 2]) +
+             popcount_word(lhs[i + 3] & rhs[i + 3]);
   }
-
   return count;
 }
 
@@ -245,19 +259,18 @@ GFP_Standard::tanimoto(const GFP_Standard &rhs) const {
   float rc = static_cast<float>(0.0);
 
   int ndiv = 1;
-  for (int i = 0; i < 8; ++i) {
-    const int j = _molecular_properties[i] * 256 + rhs._molecular_properties[i];
-    rc += precomputed_ratio[j];
-    
-  }
+  rc += gfp_internal::molecular_property_ratio_table().similarity(_molecular_properties,
+                                                         rhs._molecular_properties, 8);
 
 #ifdef DEBUG_GFP_STANDARD_TANIMOTO
   cerr << "Properties " << rc << " _nset_iw " << _nset_iw << ' ' << rhs._nset_iw <<
           " mk " << _nset_mk << ' ' << rhs._nset_mk << " mk2 " << _nset_mk2 << ' ' << rhs._nset_mk2 << '\n';
 #endif
 
+  // Using AVX does not seem to make any difference.
   if (_nset_iw || rhs._nset_iw) {
-    int bic = popcount_2fp((const unsigned *)_iw, (const unsigned *)rhs._iw, 64);
+    int bic = popcount_2fp(_iw, rhs._iw, 64);
+//  int bic = iwbits::BitsInCommonAvx((const uint64_t *)_iw, (const uint64_t *)rhs._iw, 32);
     rc += (static_cast<float>(bic) / static_cast<float>(_nset_iw + rhs._nset_iw - bic));
     ++ndiv;
     assert(rc <= 2.0f);
@@ -268,7 +281,7 @@ GFP_Standard::tanimoto(const GFP_Standard &rhs) const {
 #endif
 
   if (_nset_mk || rhs._nset_mk) {
-    int bic = popcount_2fp((const unsigned *)_mk, (const unsigned *)rhs._mk, 8);
+    int bic = popcount_2fp(_mk, rhs._mk, 8);
 
     rc += (static_cast<float>(bic) / static_cast<float>(_nset_mk + rhs._nset_mk - bic));
     ++ndiv;
@@ -279,7 +292,7 @@ GFP_Standard::tanimoto(const GFP_Standard &rhs) const {
 #endif
 
   if (_nset_mk2 || rhs._nset_mk2) {
-    int bic = popcount_2fp((const unsigned *)_mk2, (const unsigned *)rhs._mk2, 8);
+    int bic = popcount_2fp(_mk2, rhs._mk2, 8);
 
     rc += (static_cast<float>(bic) / static_cast<float>(_nset_mk2 + rhs._nset_mk2 - bic));
     assert(rc <= 4.0f);
@@ -302,51 +315,47 @@ GFP_Standard::tanimoto_distance_2(GFP_Standard const &fp1, GFP_Standard const &f
   float rc1 = static_cast<float>(0.0);
   float rc2 = static_cast<float>(0.0);
 
-  int j;
-  for (int i = 0; i < 8; i++) {
-    j = _molecular_properties[i] * 256 + fp1._molecular_properties[i];
-    rc1 += precomputed_ratio[j];
-
-    j = _molecular_properties[i] * 256 + fp2._molecular_properties[i];
-    rc2 += precomputed_ratio[j];
-  }
+  rc1 += gfp_internal::molecular_property_ratio_table().similarity(_molecular_properties,
+                                                           fp1._molecular_properties, 8);
+  rc2 += gfp_internal::molecular_property_ratio_table().similarity(_molecular_properties,
+                                                           fp2._molecular_properties, 8);
 
   int ndiv1 = 1;
   int ndiv2 = 1;
 
   if (_nset_iw || fp1._nset_iw) {
-    int bic = popcount_2fp((const unsigned *)_iw, (const unsigned *)fp1._iw, 64);
+    int bic = popcount_2fp(_iw, fp1._iw, 64);
     rc1 += (static_cast<float>(bic) / static_cast<float>(_nset_iw + fp1._nset_iw - bic));
     ++ndiv1;
   }
 
   if (_nset_iw || fp2._nset_iw) {
-    int bic = popcount_2fp((const unsigned *)_iw, (const unsigned *)fp2._iw, 64);
+    int bic = popcount_2fp(_iw, fp2._iw, 64);
     rc2 += (static_cast<float>(bic) / static_cast<float>(_nset_iw + fp2._nset_iw - bic));
     ++ndiv2;
   }
 
   if (_nset_mk || fp1._nset_mk) {
-    int bic = popcount_2fp((const unsigned *)_mk, (const unsigned *)fp1._mk, 8);
+    int bic = popcount_2fp(_mk, fp1._mk, 8);
     rc1 += (static_cast<float>(bic) / static_cast<float>(_nset_mk + fp1._nset_mk - bic));
     ++ndiv1;
   }
 
   if (_nset_mk || fp2._nset_mk) {
-    int bic = popcount_2fp((const unsigned *)_mk, (const unsigned *)fp2._mk, 8);
+    int bic = popcount_2fp(_mk, fp2._mk, 8);
     rc2 += (static_cast<float>(bic) / static_cast<float>(_nset_mk + fp2._nset_mk - bic));
     ++ndiv2;
   }
 
   if (_nset_mk2 || fp1._nset_mk2) {
-    int bic = popcount_2fp((const unsigned *)_mk2, (const unsigned *)fp1._mk2, 8);
+    int bic = popcount_2fp(_mk2, fp1._mk2, 8);
     rc1 +=
         (static_cast<float>(bic) / static_cast<float>(_nset_mk2 + fp1._nset_mk2 - bic));
     ++ndiv1;
   }
 
   if (_nset_mk2 || fp2._nset_mk2) {
-    int bic = popcount_2fp((const unsigned *)_mk2, (const unsigned *)fp2._mk2, 8);
+    int bic = popcount_2fp(_mk2, fp2._mk2, 8);
     rc2 +=
         (static_cast<float>(bic) / static_cast<float>(_nset_mk2 + fp2._nset_mk2 - bic));
     ++ndiv2;
@@ -366,17 +375,15 @@ GFP_Standard::tanimoto_distance_if_less(const GFP_Standard &rhs,
 
   float rc = static_cast<float>(0.0);
 
-  for (int i = 0; i < 8; ++i) {
-    const int j = _molecular_properties[i] * 256 + rhs._molecular_properties[i];
-    rc += precomputed_ratio[j];
-  }
+  rc += gfp_internal::molecular_property_ratio_table().similarity(_molecular_properties,
+                                                         rhs._molecular_properties, 8);
 
   if ((rc + 3.0f) / 4.0f < similarity_needed) {
     return std::nullopt;
   }
 
   if (_nset_mk2 || rhs._nset_mk2) {
-    int bic = popcount_2fp((const unsigned *)_mk2, (const unsigned *)rhs._mk2, 8);
+    int bic = popcount_2fp(_mk2, rhs._mk2, 8);
     rc += iwmisc::Fraction<float>(bic, _nset_mk2 + rhs._nset_mk2 - bic);
     if ((rc + 2.0) / 4.0 < similarity_needed) {
       return std::nullopt;
@@ -384,14 +391,14 @@ GFP_Standard::tanimoto_distance_if_less(const GFP_Standard &rhs,
   }
 
   if (_nset_mk || rhs._nset_mk) {
-    int bic = popcount_2fp((const unsigned *)_mk, (const unsigned *)rhs._mk, 8);
+    int bic = popcount_2fp(_mk, rhs._mk, 8);
     rc += iwmisc::Fraction<float>(bic, _nset_mk + rhs._nset_mk - bic);
     if ((rc + 1.0) / 3.0 < similarity_needed) {
       return std::nullopt;
     }
   }
 
-  int bic = popcount_2fp((const unsigned *)_iw, (const unsigned *)rhs._iw, 64);
+  int bic = popcount_2fp(_iw, rhs._iw, 64);
   rc += iwmisc::Fraction<float>(bic, _nset_iw + rhs._nset_iw - bic);
 
   rc = rc * 0.25;

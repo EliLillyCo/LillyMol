@@ -1,0 +1,18 @@
+# [*:1]C(=O)N[*:2] -> [*:1]c1ncc([*:2])s1
+# Secondary acyclic amides only; retain both external attachment atoms.
+# Carbonyl-side attachment becomes C2, nitrogen-side attachment becomes C5.
+name: "amide_to_thiazole"
+scaffold {
+  smarts: "[*:1]-[CD3R0](=[OD1])-[ND2H1R0]-[!#8:2]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  remove_atom: [1, 2, 3]
+}
+sidechain {
+  id: 1
+  reagent: "c1nccs1"
+  smarts: "c1nccs1"
+  join { a1: 0 a2: 0 }
+  join { a1: 4 a2: 3 }
+}

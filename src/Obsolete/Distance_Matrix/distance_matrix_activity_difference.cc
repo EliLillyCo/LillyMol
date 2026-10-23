@@ -3,6 +3,9 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
+#include <iostream>
 #include <iostream>
 
 #include "Foundational/cmdline/cmdline.h"
@@ -438,7 +441,7 @@ distance_matrix_activity_difference (int argc, char ** argv)
 
   double * activity = new double[n]; std::unique_ptr<double[]> free_activity(activity);
 
-  set_vector(activity, n, static_cast<double>(NOT_TESTED_VALUE));
+  std::fill_n(activity, n, static_cast<double>(NOT_TESTED_VALUE));
 
   if (cl.option_present('A'))
   {

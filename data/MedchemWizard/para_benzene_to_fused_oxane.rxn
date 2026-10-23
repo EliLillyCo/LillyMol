@@ -1,0 +1,28 @@
+name: "para_benzene_to_fused_oxane"
+scaffold {
+  id: 0
+  smarts: "[/IWfss1cD3]1[cD2][cD2][cD3][cD2][cD2]1"
+  single_bond: [0, 1]
+  single_bond: [1, 2]
+  single_bond: [2, 3]
+  single_bond: [3, 4]
+  single_bond: [4, 5]
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "CO"
+  smarts: "CO"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

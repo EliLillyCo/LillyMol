@@ -358,7 +358,7 @@ TEST_F(TestSeparatedAtoms, TestRespectInitialNumbering) {
 struct ProtoSmilesResult {
   std::string proto;
   IWString smiles;
-  int expected;
+  uint32_t expected;
 };
 
 std::ostream&

@@ -1,0 +1,14 @@
+{
+  "executable": "dfilefilter",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-e 'marvin_logp<4&&marvin_logd074<2' -B reject.txt #{indir}/input.txt"
+      ]
+    }
+
+  ]
+}

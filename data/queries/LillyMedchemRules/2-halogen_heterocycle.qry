@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "2-halogen_heterocycle")
+  (A I Version 2)
+  (A I min_nrings 1)
+  (A C smarts "[F,Cl,Br,I]-c:[n,o,s;D2]")
+)

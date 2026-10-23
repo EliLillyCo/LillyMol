@@ -103,7 +103,7 @@ TEST_F(TestReadWrite, TestMany) {
     EXPECT_FLOAT_EQ(maybe_proto->f(), 10.0f * i + 1);
     EXPECT_EQ(maybe_proto->i(), 10 * i + 2);
     EXPECT_EQ(maybe_proto->s(), "hello world");
-    EXPECT_EQ(maybe_proto->u(), 10 * i + 5);
+    EXPECT_EQ(maybe_proto->u(), static_cast<uint32_t>(10 * i + 5));
   }
 
   EXPECT_TRUE(reader.seek_zero());

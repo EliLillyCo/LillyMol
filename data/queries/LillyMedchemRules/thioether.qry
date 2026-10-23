@@ -1,0 +1,5 @@
+name: "thioether"
+query {
+  numeric_value: 10
+  smarts: "[CG0R0]!@[SD2]!@-[CG0]"
+}

@@ -38,7 +38,7 @@ flags.DEFINE_string('collection', "", "name for the collection generating this d
 flags.DEFINE_string('color', "black", "Line color when this collection is plotted")
 flags.DEFINE_string('stem', "MPP", "name stem for files produced")
 flags.DEFINE_string('sep', " ", "Input token separator, default space")
-flags.DEFINE_boolean('ok_missing', False, "it is OK to skip missing features")
+flags.DEFINE_boolean('okmissing', False, "it is OK to skip missing features")
 flags.DEFINE_boolean('verbose', False, "verbose output")
 
 # The quantiles that will be stored in the output proto file.
@@ -164,7 +164,7 @@ def generate_feature_profile(data: pd.DataFrame,
                              collection: str,
                              collection_color: str,
                              name_stem: str,
-                             verbose: bool):
+                             verbose: bool)->True:
   """Generate a property profile for `feature_name`.
 
   Args:
@@ -177,9 +177,14 @@ def generate_feature_profile(data: pd.DataFrame,
     verbose:
   """
 
+  if not feature_name in data.columns:
+    logging.error("No %s in header", feature_name)
+    return False
+
   column_number = data.columns.get_loc(feature_name)
   if column_number < 0:
-    logging.fatal("No %s in %r", feature_name, data.columns)
+    logging.error("No %s in header", feature_name)
+    return False
 
   feature_type = data.dtypes.iloc[column_number]
 
@@ -192,6 +197,8 @@ def generate_feature_profile(data: pd.DataFrame,
   output_fname = f"{name_stem}_{feature_name}.dat"
   with open(output_fname, "w") as writer:
     writer.write(text_format.MessageToString(proto))
+
+  return True
 
 def generate_profile(args):
   """Generates collection protos from molecular features.
@@ -216,7 +223,7 @@ def generate_profile(args):
     logging.error("Must specify the collection name")
     usage(1)
 
-  ok_missing = FLAGS.ok_missing
+  ok_missing = FLAGS.okmissing
 
   # The names of the feature(s) we will process.
   feature_name = []
@@ -239,6 +246,7 @@ def generate_profile(args):
   if verbose:
     logging.info("Read dataframe with %d rows and %d columns", len(data), len(data.columns))
 
+  # If no specific features specified on command line, process all in the description.
   if len(feature_name) == 0:
     feature_name = data.columns
   else:
@@ -252,8 +260,14 @@ def generate_profile(args):
       sys.exit(1)
 
   for name in feature_name:
-    generate_feature_profile(data, name, feature_descriptions, collection,
-                             collection_color, name_stem, verbose)
+    if not generate_feature_profile(data, name, feature_descriptions, collection,
+                             collection_color, name_stem, verbose):
+      if ok_missing:
+        continue
+      logging.error("Failed feature %s", name)
+      return 1
+
+  return 0
 
 if __name__ == "__main__":
   app.run(generate_profile)

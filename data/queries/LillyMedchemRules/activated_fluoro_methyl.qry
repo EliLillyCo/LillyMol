@@ -1,0 +1,5 @@
+(0 Query
+  (A C comment "activated_fluoro_methyl")
+  (A D numeric_value 30)
+  (A C smarts "F[CD2]!@[a,!#6,G>0]")
+)

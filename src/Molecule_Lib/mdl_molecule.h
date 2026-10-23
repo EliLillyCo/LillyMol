@@ -88,6 +88,7 @@ class MDL_Molecule : public Molecule, public MDL_File_Data
 
     const MDL_Bond_Data * mdl_bond_between_atoms(atom_number_t, atom_number_t) const;
 
+    // Returns success/failure, unlike Molecule::add's zero-based atom index.
     int add (const Element *);
 
     int add_atom_based_on_symbol (const IWString & s);

@@ -27,6 +27,8 @@
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
+#include "Foundational/iwstring/iwstring.h"
+#include "Foundational/iwstring/string_with_commas.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
@@ -47,7 +49,7 @@ static Chemical_Standardisation chemical_standardisation;
 
 static int verbose = 0;
 
-static int molecules_read = 0;
+static uint64_t molecules_read = 0;
 
 static int only_set_bits_for_max_radius_shell = 0;
 
@@ -315,7 +317,6 @@ usage(int rc)
   // clang-format off
   cerr << DB_VERSION_STRING << '\n';
   cerr << "Compute the Extended Connectivity fingerprints for molecules and store\n";
-  cerr << "Warning, does not do updates, use 'iwbdb_cat.sh -p' for updates\n";
   cerr << "  -r <len>       min shell width for writing a fingerprint\n";
   cerr << "  -R <length>    set the maximum step for the connected shell\n";
   cerr << "  -d <dbname>    database(s) to use\n";
@@ -573,8 +574,9 @@ iwecfp(data_source_and_type<Molecule>& input, Fingerprint_Characteristics& fc,
     std::unique_ptr<Molecule> free_m(m);
 
     if (report_progress()) {
-      cerr << "Processed " << molecules_read << " molecules, global fingerprint contains "
-           << global_fingerprint.size() << " items\n";
+      cerr << "Processed " << iwstring::with_commas(molecules_read)
+           << " molecules, global fingerprint contains "
+           << iwstring::with_commas(global_fingerprint.size()) << " items\n";
     }
 
     if (!preprocess_molecule(*m)) {
@@ -907,7 +909,7 @@ iwecfp(int argc, char** argv)
   }
 
   if (verbose) {
-    cerr << "Read " << molecules_read << " molecules\n";
+    cerr << "Read " << iwstring::with_commas(molecules_read) << " molecules\n";
 
     if (nbits_acc.n() > 0) {
       cerr << "Fingerprints had between " << nbits_acc.minval() << " and "

@@ -1,9 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "quaternary_aryl")
-  (0 Query_Atom
-    (A I aromatic 1)
-    (A I formal_charge 1)
-    (A I hcount 0)
-  )
-)

@@ -1878,7 +1878,7 @@ profile_sparse_fingerprint(int f, const activity_type_t *activity,
     const Sparse_Fingerprint &sfp = fpi.sparse_fingerprint(f);
 
     if (show_set_and_nset_averages) {
-      set_vector(set_this_molecule, nbits, 0);
+      std::fill_n(set_this_molecule, nbits, 0);
     }
 
     unsigned int b;

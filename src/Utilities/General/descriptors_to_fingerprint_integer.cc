@@ -4,8 +4,10 @@
 // And it is more modern code.
 
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -19,6 +21,8 @@
 namespace descriptors_to_fingerprint {
 
 using std::cerr;
+
+namespace fs = std::filesystem;
 
 void
 Usage(int rc) {
@@ -50,10 +54,13 @@ Or when adding to an existing fingerprint file
 
  -f             Working as a TDT filter - inserting an extra record into an existing fingerprint file.
  -J <tag>       Tag for fingerprint. If starts with 'FP' will be a fixed width fingerprint, 'NC' sparse, non colliding.
+                Sparse counted fingerprints preserve counts, fixed width fingerprints are binary.
  -D <fname>     If working as a pipeline, must be specified. Values come from here.
  -S <fname>     Smiles file. Identifiers in the descriptor file are retrieved from here. Not needed with -f option.
  -s <dummy>     If no smiles specified, use 'dummy' as the smiles for each molecule.
  -r <replicate> When writing sparse fingerprints, number of bit replicates.
+ -i <char>      Input token separator, '-i tab' for example. Default is space.
+ -w             When processing multiple input files, generate separate output .gfp files with the same prefixes.
  -v             verbose output.
 )";
   // clang-format on
@@ -73,6 +80,7 @@ class Options {
     // The -f option.
     int _function_as_tdt_filter;
 
+    // If we are reading descriptors.
     absl::flat_hash_map<IWString, std::vector<uint32_t>> _id_to_values;
 
     // The -S option.
@@ -90,7 +98,19 @@ class Options {
 
     int _bit_replicates;
 
+    // If dealing with fingerprints in separate files, they need to be processed
+    // via one invocation of this tool,
+    // descriptors_to_fingerprint_integer ... file1.dat file2.dat > all.gfp
+    // but usually we then need to separate them back into file1.gfp and file2.gfp.
+    // If this option is in effect those files are automatically created.
+    // descriptors_to_fingerprint_integer -s C -i tab -W . /path/to/file1.txt /path/to/file2.txt
+    IWString _dir_for_separate_output_files;
+
     char _input_separator;
+
+    // We do not write zero valued features, so we keep track of the bit counts
+    // in the fingerprints.
+    extending_resizable_array<int> _nset;
 
   // Private functions.
     int ReadDescriptors(const char* fname);
@@ -126,6 +146,10 @@ class Options {
       return _columns_in_input;
     }
 
+    const IWString& dir_for_separate_output_files() const {
+      return _dir_for_separate_output_files;
+    }
+
     char input_separator() const {
       return _input_separator;
     }
@@ -143,7 +167,7 @@ class Options {
                          const uint32_t* values,
                          IWString_and_File_Descriptor& output);
 
-    int Report(std::ostream& output);
+    int Report(std::ostream& output) const;
 };
 
 Options::Options() {
@@ -253,12 +277,55 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (_write_fixed_size_fingerprints && _bit_replicates) {
+    cerr << "Options::Initialise:the -r option only applies to sparse counted fingerprints\n";
+    return 0;
+  }
+
   if (cl.option_present('i')) {
     IWString tmp;
     cl.value('i', tmp);
     char_name_to_char(tmp, false);
     _input_separator = tmp[0];
   }
+
+  if (cl.option_present('W')) {
+    if (cl.size() < 2) {
+      cerr << "The separate output files option, -W only makes sense with multiple input files\n";
+      return 0;
+    }
+    _dir_for_separate_output_files = cl.option_value('W');
+
+    fs::path myPath(_dir_for_separate_output_files.null_terminated_chars());
+    if (! fs::is_directory(myPath)) {
+      cerr << "Options::Initialise: -W value not directory '" << myPath << "'\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Separate output files created in directory " << _dir_for_separate_output_files << '\n';
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::Report(std::ostream& output) const {
+  if (_verbose == 0) {
+    return 1;
+  }
+
+  uint64_t items_processed = 0;
+  if (_verbose) {
+    for (int i = 0; i < _nset.number_elements(); ++i) {
+      if (_nset[i] > 0) {
+        output << _nset[i] << " fingerprints set " << i << " bits\n";
+        items_processed += _nset[i];
+      }
+    }
+  }
+
+  output << "Processed " << items_processed << " records\n";
 
   return 1;
 }
@@ -280,6 +347,7 @@ void
 Options::SetNBits() {
   assert(_write_fixed_size_fingerprints);  // does not really matter.
 
+  // when writing fixed width fingerprints _nbits must be a multiple of 8.
   if ((_columns_in_input / 8) * 8 == _columns_in_input) {
     _nbits = _columns_in_input;
   } else {
@@ -301,6 +369,7 @@ Options::ReadDescriptors(iwstring_data_source& input) {
     return 0;
   }
 
+  // When reading a descriptor file, the first column is the identifier.
   _columns_in_input = buffer.nwords(_input_separator) - 1;
 
   if (_write_fixed_size_fingerprints) {
@@ -323,7 +392,7 @@ Options::ReadDescriptorsRecord(const const_IWSubstring& buffer) {
   IWString id;
   int i = 0;
   if (! buffer.nextword(id, i, _input_separator)) {
-    cerr << "Options:;ReadDescriptorsRecord:cannot get identifier\n";
+    cerr << "Options::ReadDescriptorsRecord:cannot get identifier\n";
     return 0;
   }
 
@@ -445,6 +514,10 @@ Options::WriteSparseFingerprint(const IWString& id,
     }
   }
 
+  if (_verbose) {
+    ++_nset[sfc.nset()];
+  }
+
   IWString tmp;
   sfc.daylight_ascii_form_with_counts_encoded(tmp);
   output << _tag << tmp << ">\n";
@@ -473,7 +546,8 @@ Options::WriteFixedSizeFingerprint(const IWString& id,
 
 int
 Options::SetHeader(const const_IWSubstring& header) {
-  _columns_in_input = header.nwords(_input_separator);
+  // Header contains identifier column as well as features.
+  _columns_in_input = header.nwords(_input_separator) - 1;
   if (_columns_in_input < 2) {
     cerr << "Options::SetHeader:invalid header '" << header << "'\n";
     return 0;
@@ -513,7 +587,8 @@ AsIntegers(const const_IWSubstring& buffer,
            const Options& options,
            uint32_t* destination) {
   const_IWSubstring token;
-  for (int col = 0; buffer.nextword(token, i, options.input_separator()); ++col) {
+  int col = 0;
+  for (; buffer.nextword(token, i, options.input_separator()); ++col) {
     if (col >= options.columns_in_input()) {
       cerr << "AsIntegers:column count mismatch " << options.columns_in_input() <<  '\n';
       return 0;
@@ -524,6 +599,12 @@ AsIntegers(const const_IWSubstring& buffer,
       cerr << "AsIntegers:invalid numeric '" << token << "'\n";
       return 0;
     }
+  }
+
+  if (col != options.columns_in_input()) {
+    cerr << "AsIntegers:column count mismatch, got " << col
+         << " expected " << options.columns_in_input() << '\n';
+    return 0;
   }
 
   return 1;
@@ -572,6 +653,10 @@ DescriptorsToFingerprintsRecord(const const_IWSubstring& buffer,
     return 0;
   }
 
+  // Static for efficiency. ChatGPT says a static variable is surprising, but otherwise
+  // we would need to re-allocate this for every record.
+  // It could be allocated in the calling function, but then it wold
+  // need to be passed as an argument.
   static std::unique_ptr<uint32_t[]> data = std::make_unique<uint32_t[]>(options.columns_in_input());
 
   if (! AsIntegers(buffer, i, options, data.get())) {
@@ -618,6 +703,24 @@ DescriptorsToFingerprints(iwstring_data_source& input, Options& options,
   return 1;
 }
 
+std::string
+MakePath(const IWString& dirname,
+         const std::string& filename,
+         const char* suffix) {
+  std::filesystem::path p(filename);
+
+  // Remove any existing extension.
+  p.replace_extension();
+
+  std::filesystem::path result(dirname.cbegin(), dirname.cend());
+  result /= p.filename();
+
+  result += ".";
+  result += suffix;
+
+  return result.string();
+}
+
 int
 DescriptorsToFingerprints(const char* fname, Options& options,
                           IWString_and_File_Descriptor& output) {
@@ -629,14 +732,28 @@ DescriptorsToFingerprints(const char* fname, Options& options,
 
   if (options.function_as_tdt_filter()) {
     return DescriptorsToFingerprintsFilter(input, options, output);
-  } else {
+  }
+
+  const IWString& dir_for_separate_output_files = options.dir_for_separate_output_files();
+
+  if (dir_for_separate_output_files.empty()) {
     return DescriptorsToFingerprints(input, options, output);
   }
+
+  std::string new_fname = MakePath(dir_for_separate_output_files, fname, "gfp");
+
+  IWString_and_File_Descriptor my_output;
+  if (! my_output.open(new_fname.c_str())) {
+    cerr << "DescriptorsToFingerprints::cannot open '" << new_fname << "'\n";
+    return 0;
+  }
+
+  return DescriptorsToFingerprints(input, options, my_output);
 }
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vD:fS:J:s:r:i:");
+  Command_Line cl(argc, argv, "vD:fS:J:s:r:i:W:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -668,6 +785,7 @@ Main(int argc, char** argv) {
   output.flush();
 
   if (verbose) {
+    options.Report(cerr);
   }
 
   return 0;

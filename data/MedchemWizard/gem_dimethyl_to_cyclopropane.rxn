@@ -1,0 +1,12 @@
+name: "gem_dimethyl_to_cyclopropane"
+scaffold {
+  smarts: "[CR0](-[CD1])-[CD1]"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  make_bond {
+    a1: 1
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

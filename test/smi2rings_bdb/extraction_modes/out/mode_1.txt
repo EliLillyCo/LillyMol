@@ -1,0 +1,8 @@
+CC1=CC=CC=C1 methylbenzene URS:3 methylbenzene
+OC1=CC=CC=C1 phenol URS:3 methylbenzene
+CC1CCCCC1 substituted URS:3 substituted
+C1CCCCC1 bare URS:3 substituted
+C1CCC2(CC1)CCCC2 spiro URS:1 spiro
+C1=CC=C2C=CC=CC2=C1 fused URS:1 fused
+O=C1CCCCC1 ketone URS:3 substituted
+C1=CC=CC=C1CCC1=CC=CC=C1 linked URS:3 methylbenzene 3

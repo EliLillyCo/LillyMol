@@ -1,7 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "ring_system_too_large")
-  (0 Ring_System_Specifier
-    (A I min_nrings 6)
-  )
-)

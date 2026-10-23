@@ -149,8 +149,8 @@ Charge_Assigner::construct_from_command_line(Command_Line& cl, int verbose, char
 
   int simple_flag = 0;
 
-  // If the ENV directive is given.
-  std::optional<IWString> env;
+  // If the DIR directive is given.
+  std::optional<IWString> dir;
   const_IWSubstring opt;
   int i = 0;
   while (cl.value(cflag, opt, i++)) {
@@ -225,11 +225,11 @@ Charge_Assigner::construct_from_command_line(Command_Line& cl, int verbose, char
         cerr << "Charge_Assigner::invalid min distance '" << opt << "'\n";
         return 0;
       }
-    } else if (opt == "ENV") {
-      env = "";
-    } else if (opt.starts_with("ENV=")) {
+    } else if (opt == "DIR") {
+      dir = "";
+    } else if (opt.starts_with("DIR=")) {
       opt.remove_leading_chars(4);
-      env = opt;
+      dir = opt;
     } else if ("help" == opt) {
       display_all_charge_assigner_options(cerr, cflag);
       exit(7);  // note exit!
@@ -252,15 +252,15 @@ Charge_Assigner::construct_from_command_line(Command_Line& cl, int verbose, char
     }
   }
 
-  if (env) {
-    if (! BuildFromEnv(*env)) {
-      cerr << "Charge_Assigner::construct_from_command_line:cannot initialise from env '"
-           << *env << "'\n";
+  if (dir) {
+    if (! BuildFromDir(*dir)) {
+      cerr << "Charge_Assigner::construct_from_command_line:cannot initialise from dir '"
+           << *dir << "'\n";
       return 0;
     }
   }
 
-  if (_number_elements == 0) {
+  if (empty()) {
     cerr << "Charge_Assigner::construct_from_command_line: no queries specified\n";
     return 0;
   }
@@ -281,53 +281,54 @@ Charge_Assigner::construct_from_command_line(Command_Line& cl, int verbose, char
 }
 
 int
-Charge_Assigner::BuildFromEnv(const IWString& env) {
-  if (env.empty()) {
+Charge_Assigner::BuildFromDir(const IWString& dir) {
+  // cerr << "Charge_Assigner::BuildFromDir:dir '" << dir << "'\n";
+  if (dir.empty() || dir == "DEF") {
     return BuildFromDefaultEnvs();
   }
 
-  return BuildFromEnvValue(env);
+  return BuildFromDirInner(dir);
 }
 
 int
 Charge_Assigner::BuildFromDefaultEnvs() {
   if (const char* s = getenv("C3TK_DATA_PERSISTENT"); s != nullptr) {
-    // cerr << "C3TK_DATA_PERSISTENT\n";
     IWString path(s);
     path << "/queries/charges";
-    if (BuildFromEnvValue(path)) {
+    if (BuildFromDirInner(path)) {
       return 1;
     }
   }
 
   if (const char *s = getenv("LILLYMOL_HOME"); s != nullptr) {
-    // cerr << "LILLYMOL_HOME\n";
     IWString path(s);
     path << "/data/queries/charges";
-    if (BuildFromEnvValue(path)) {
+    if (BuildFromDirInner(path)) {
       return 1;
     }
   }
 
+  cerr << "Charge_Assigner::BuildFromDirInner:no shell variables contain charge assigner\n";
   return 0;
 }
 
 int
-Charge_Assigner::BuildFromEnvValue(const IWString& dir) {
+Charge_Assigner::BuildFromDirInner(const IWString& dir) {
   IWString charges(dir);
-  charges << "/queries";
+  charges << std::filesystem::path::preferred_separator << "queries";
   // cerr << "Checking '" << charges << "'\n";
   if (! std::filesystem::exists(charges.AsString())) {
+    cerr << "Charge_Assigner::BuildFromDirInner:no charges dir " << charges << '\n';
     return 0;
   }
 
   resizable_array_p<Substructure_Hit_Statistics>& me = *this;
 
-  static constexpr int kVerbose = 1;
+  static constexpr int kVerbose = 0;
   static constexpr int kInheritDirectoryPath = 1;
 
   if (!queries_from_file(charges, me, kInheritDirectoryPath, kVerbose)) {
-    cerr << "Charge_Assigner::BuildFromEnvValue:cannot read queries from " << charges << '\n';
+    cerr << "Charge_Assigner::BuildFromDirInner:cannot read queries from " << charges << '\n';
     return 0;
   }
 
@@ -522,7 +523,7 @@ atom_with_numeric_value(const Query_Atoms_Matched& qami, const Set_of_Atoms* e) 
 
   cerr << "No matched atom has a numeric value\n";
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 /*
@@ -558,7 +559,7 @@ Charge_Assigner::_remove_lower_preference_hits(Molecule& m,
     cerr << " i = " << i << " atom " << ai << '\n';
 #endif
 
-    if (INVALID_ATOM_NUMBER == ai) {  // huh
+    if (kInvalidAtomNumber == ai) {  // huh
       continue;
     }
 
@@ -580,7 +581,7 @@ Charge_Assigner::_remove_lower_preference_hits(Molecule& m,
 
       atom_number_t aj = atom_with_numeric_value(*qamj, sresults.embedding(j));
 
-      if (INVALID_ATOM_NUMBER == aj) {
+      if (kInvalidAtomNumber == aj) {
         continue;
       }
 
@@ -796,7 +797,7 @@ advance_shell(const Molecule& m, int* tmp, int flag) {
 
 static atom_number_t
 identify_survivor(Molecule& m, atom_number_t a1, atom_number_t a2, int* tmp) {
-  set_vector(tmp, m.natoms(), 0);
+  std::fill_n(tmp, m.natoms(), 0);
 
   tmp[a1] = 1;  // some non overlapping bits
   tmp[a2] = 8;
@@ -879,7 +880,7 @@ Charge_Assigner::_identify_charged_atoms_too_close(Molecule& m, const Set_of_Ato
     return 0;
   }
 
-  set_vector(times_too_close, m.natoms(), 0);
+  std::fill_n(times_too_close, m.natoms(), 0);
 
   too_close.increment_vector(times_too_close);
 
@@ -1552,7 +1553,7 @@ Charge_Assigner::_process(Molecule& m, resizable_array_p<Molecule>& charged_form
 
   formal_charge_t* charges_assigned = new formal_charge_t[matoms];
   std::unique_ptr<formal_charge_t[]> free_charges_assigned(charges_assigned);
-  set_vector(charges_assigned, matoms, static_cast<formal_charge_t>(0));
+  std::fill_n(charges_assigned, matoms, static_cast<formal_charge_t>(0));
 
   Set_of_Atoms negative_charges_assigned, positive_charges_assigned;
 
@@ -1572,8 +1573,7 @@ Charge_Assigner::_process(Molecule& m, resizable_array_p<Molecule>& charged_form
        << " +ve and " << negative_charges_assigned.number_elements() << " -ve charges\n";
 #endif
 
-  if (positive_charges_assigned.number_elements() < 2)  // no enumeration possible
-  {
+  if (positive_charges_assigned.number_elements() < 2) {  // no enumeration possible
     Molecule* t = new Molecule(m);
     t->set_name(m.name());
 
@@ -1591,7 +1591,7 @@ Charge_Assigner::_process(Molecule& m, resizable_array_p<Molecule>& charged_form
   int n = set_of_positive_charges.number_elements();
 
   for (int i = 0; i < n; i++) {
-    set_vector(charges_assigned, matoms, static_cast<formal_charge_t>(0));
+    std::fill_n(charges_assigned, matoms, static_cast<formal_charge_t>(0));
 
     const Set_of_Atoms* p = set_of_positive_charges[i];
 
@@ -1662,17 +1662,15 @@ Charge_Assigner::build(const const_IWSubstring& s) {
   for (auto i = 0; s.nextword(token, i);) {
     if (token.starts_with("F:")) {
       token.remove_leading_chars(2);
-      if (!queries_from_file(
-              token, tmp, 1,
-              verbose))  // queries always in same directory as control file
-      {
+      static constexpr int kSameDirectory = 1;
+      if (!queries_from_file(token, tmp, kSameDirectory, verbose)) {
         cerr << "Charge_Assigner: cannot read queries from file specifier 'F:" << token
              << "'\n";
         return 0;
       }
-    } else if (token.starts_with("ENV=") || token.starts_with("ENV:")) {
+    } else if (token.starts_with("DIR=") || token.starts_with("DIR:")) {
       token.remove_leading_chars(4);
-      if (! BuildFromEnvValue(token)) {
+      if (! BuildFromDirInner(token)) {
         cerr << "Charge_Assigner::build:invalid ENV specification '" << token << "'\n";
         return 0;
       }

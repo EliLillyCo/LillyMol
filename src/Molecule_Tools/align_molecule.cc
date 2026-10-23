@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <memory>
+#include <numbers>
 
 #include "Foundational/cmdline/cmdline.h"
 
@@ -85,8 +86,7 @@ static angle_t final_z_rotation = static_cast<angle_t>(0.0);
 static int discern_embedding_via_spatial_location = 0;
 
 static void
-usage(int rc)
-{
+usage(int rc) {
 // clang-format off
 #if defined(GIT_HASH) && defined(TODAY)
   cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
@@ -133,8 +133,7 @@ usage(int rc)
 }
 
 static int
-shift_to_average_coordinate(Molecule& m)
-{
+shift_to_average_coordinate(Molecule& m) {
   const Atom* a = m.atomi(0);
 
   coord_t xsum = a->x();
@@ -159,8 +158,7 @@ shift_to_average_coordinate(Molecule& m)
 
 static int
 do_matched_atoms_in_quadrant(Molecule& m, const Set_of_Atoms& e, int dimensionality,
-                             Molecule_Output_Object& output)
-{
+                             Molecule_Output_Object& output) {
   if (3 == dimensionality) {
     cerr << "Sorry, quadrant processing set up for 2D only\n";
     return 0;
@@ -202,11 +200,11 @@ do_matched_atoms_in_quadrant(Molecule& m, const Set_of_Atoms& e, int dimensional
   ymin = ymin / static_cast<coord_t>(n);
 
   if (xmin < 0.0 && (1 == matched_atoms_in_quadrant || 4 == matched_atoms_in_quadrant)) {
-    m.rotate_atoms(yaxis, M_PI);
+    m.rotate_atoms(yaxis, std::numbers::pi);
   }
 
   if (ymin < 0.0 && (1 == matched_atoms_in_quadrant || 2 == matched_atoms_in_quadrant)) {
-    m.rotate_atoms(xaxis, M_PI);
+    m.rotate_atoms(xaxis, std::numbers::pi);
   }
 
   return output.write(m);
@@ -214,8 +212,7 @@ do_matched_atoms_in_quadrant(Molecule& m, const Set_of_Atoms& e, int dimensional
 
 static int
 align_molecule_single_atom(Molecule& m, atom_number_t zatom,
-                           Molecule_Output_Object& output)
-{
+                           Molecule_Output_Object& output) {
   Space_Vector<coord_t> o = *(m.atomi(zatom));
 
   m.translate_atoms(-o.x(), -o.y(), -o.z());
@@ -271,8 +268,7 @@ align_molecule_single_atom(Molecule& m, atom_number_t zatom,
 
 static int
 handle_non_matching_molecules(Molecule& m, const int max_query_atoms_matched,
-                              Molecule_Output_Object& output)
-{
+                              Molecule_Output_Object& output) {
   if (verbose > 1) {
     cerr << "Zero hits to query, " << max_query_atoms_matched << " query atoms matched\n";
   }
@@ -299,8 +295,7 @@ handle_non_matching_molecules(Molecule& m, const int max_query_atoms_matched,
 
 static int
 fetch_coordinates(const Molecule& m, const Set_of_Atoms& e,
-                  const resizable_array<int>& ndx, Space_Vector<coord_t>& xyz)
-{
+                  const resizable_array<int>& ndx, Space_Vector<coord_t>& xyz) {
   for (int i = 0; i < ndx.number_elements(); i++) {
     int j = ndx[i];
 
@@ -325,8 +320,7 @@ fetch_coordinates(const Molecule& m, const Set_of_Atoms& e,
 // #define DEBUG_ALIGN_MOLECULE
 
 static int
-align_molecule(Molecule& m, const Set_of_Atoms& e)
-{
+align_molecule(Molecule& m, const Set_of_Atoms& e) {
   if (0 == x_atom.size()) {
     Space_Vector<coord_t> y;
 
@@ -424,7 +418,7 @@ align_molecule(Molecule& m, const Set_of_Atoms& e)
     theta = -theta;
   }
 
-  m.rotate_atoms(rotation_axis, theta + M_PI);
+  m.rotate_atoms(rotation_axis, theta + std::numbers::pi);
 
   // By convention, y_atom should have a positive Y coordinate
 
@@ -444,8 +438,7 @@ align_molecule(Molecule& m, const Set_of_Atoms& e)
 }
 
 static void
-set_all_z_coordinates_to_zero(Molecule& m)
-{
+set_all_z_coordinates_to_zero(Molecule& m) {
   int matoms = m.natoms();
   for (int i = 0; i < matoms; i++) {
     m.setz(i, static_cast<coord_t>(0.0));
@@ -461,8 +454,7 @@ set_all_z_coordinates_to_zero(Molecule& m)
 
 static int
 align_molecule_(Molecule& m, const Set_of_Atoms& e, int dimensionality,
-                Molecule_Output_Object& output)
-{
+                Molecule_Output_Object& output) {
   assert(origin_atom.size() > 0);
 
   Space_Vector<coord_t> o;
@@ -506,8 +498,7 @@ align_molecule_(Molecule& m, const Set_of_Atoms& e, int dimensionality,
 }
 
 static int
-do_apply_isotopic_labels(Molecule& m, const Set_of_Atoms& e, int iso)
-{
+do_apply_isotopic_labels(Molecule& m, const Set_of_Atoms& e, int iso) {
   int n = e.number_elements();
 
   for (int i = 0; i < n; i++) {
@@ -521,8 +512,7 @@ do_apply_isotopic_labels(Molecule& m, const Set_of_Atoms& e, int iso)
 
 static int
 align_molecule(Molecule& m, const Set_of_Atoms& e, int dimensionality,
-               Molecule_Output_Object& output)
-{
+               Molecule_Output_Object& output) {
   if (apply_isotopic_labels) {
     do_apply_isotopic_labels(m, e, apply_isotopic_labels);
   }
@@ -545,8 +535,7 @@ align_molecule(Molecule& m, const Set_of_Atoms& e, int dimensionality,
 }
 
 static int
-align_molecule(Molecule& m, Molecule_Output_Object& output)
-{
+align_molecule(Molecule& m, Molecule_Output_Object& output) {
   const int dimensionality = m.highest_coordinate_dimensionality();
 
   const int nq = queries.number_elements();
@@ -601,8 +590,7 @@ align_molecule(Molecule& m, Molecule_Output_Object& output)
 
 static int
 align_molecule(resizable_array_p<Molecule>& molecules,
-               const Substructure_Results* sresults, Molecule_Output_Object& output)
-{
+               const Substructure_Results* sresults, Molecule_Output_Object& output) {
   const int n = molecules.number_elements();
 
   for (int i = 0; i < n; ++i) {
@@ -620,8 +608,7 @@ align_molecule(resizable_array_p<Molecule>& molecules,
 
 static int
 do_discern_embedding_via_spatial_location(data_source_and_type<Molecule>& input,
-                                          Molecule_Output_Object& output)
-{
+                                          Molecule_Output_Object& output) {
   const int n = input.molecules_remaining();
 
   resizable_array_p<Molecule> molecules;
@@ -661,8 +648,7 @@ do_discern_embedding_via_spatial_location(data_source_and_type<Molecule>& input,
 }
 
 static int
-align_molecule(data_source_and_type<Molecule>& input, Molecule_Output_Object& output)
-{
+align_molecule(data_source_and_type<Molecule>& input, Molecule_Output_Object& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
     std::unique_ptr<Molecule> free_m(m);
@@ -678,8 +664,7 @@ align_molecule(data_source_and_type<Molecule>& input, Molecule_Output_Object& ou
 }
 
 static int
-align_molecule(const char* fname, FileType input_type, Molecule_Output_Object& output)
-{
+align_molecule(const char* fname, FileType input_type, Molecule_Output_Object& output) {
   assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
@@ -738,8 +723,7 @@ align_molecule(const char* fname, FileType input_type, Molecule_Output_Object& o
 
 static int
 get_atom_and_coordinates(const const_IWSubstring& token,
-                         resizable_array<int>& matched_atoms, Space_Vector<coord_t>& v)
-{
+                         resizable_array<int>& matched_atoms, Space_Vector<coord_t>& v) {
   int a;
 
   if (token.numeric_value(a))  // just a number
@@ -816,8 +800,7 @@ get_atom_and_coordinates(const const_IWSubstring& token,
 
 #ifdef NOT_BEING_USED
 static int
-read_query_from_molecule(Substructure_Hit_Statistics& query, const_IWSubstring& fname)
-{
+read_query_from_molecule(Substructure_Hit_Statistics& query, const_IWSubstring& fname) {
   FileType input_type = discern_file_type_from_name(fname);
   if (input_type == FILE_TYPE_INVALID) {
     cerr << "Cannot discern file type '" << fname << "'\n";
@@ -852,8 +835,7 @@ read_query_from_molecule(Substructure_Hit_Statistics& query, const_IWSubstring& 
 
 static int
 report_which_matched_atoms(std::ostream& os, const resizable_array<int>& matched_atoms,
-                           const char* s)
-{
+                           const char* s) {
   os << "Matched atom";
   if (matched_atoms.size() > 1) {
     os << 's';
@@ -869,8 +851,7 @@ report_which_matched_atoms(std::ostream& os, const resizable_array<int>& matched
 }
 
 static int
-align_molecule(int argc, char** argv)
-{
+align_molecule(int argc, char** argv) {
   Command_Line cl(argc, argv, "S:i:o:q:e:A:E:vO:X:Y:kus:z:n:r:x:y:p:f:2F:Q:w:");
 
   if (cl.unrecognised_options_encountered()) {
@@ -1281,8 +1262,7 @@ align_molecule(int argc, char** argv)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   prog_name = argv[0];
 
   int rc = align_molecule(argc, argv);

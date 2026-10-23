@@ -86,7 +86,7 @@ operator<<(std::ostream& os, const Set_of_Atoms* s) {
 
 int
 Set_of_Atoms::increment_vector(int* v, int increment) const {
-  for (int i = 0; i < _number_elements; i++)  // should we worry about INVALID_ATOM_NUMBER
+  for (int i = 0; i < _number_elements; i++)  // should we worry about kInvalidAtomNumber
   {
     const atom_number_t a = _things[i];
     v[a] += increment;
@@ -225,7 +225,7 @@ Set_of_Atoms::adjust_for_loss_of_atom(atom_number_t lost_atom,
     } else if (a < lost_atom) {  // no change
       ;
     } else if (keep_lost_atom_in_list) {
-      _things[i] = INVALID_ATOM_NUMBER;
+      _things[i] = kInvalidAtomNumber;
     } else {
       remove_item(i);
     }
@@ -305,7 +305,7 @@ Set_of_Atoms::first_member_in_common(const Set_of_Atoms& rhs) const {
       return j;
     }
   }
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 int

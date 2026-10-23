@@ -1,0 +1,3 @@
+ethanol	x
+methane	y
+benzene	z

@@ -1,0 +1,16 @@
+name: "isothiazole_3h_ewd"
+query {
+  smarts: "s1n[cD2]cc1"
+  environment {
+    attachment {
+      attachment_point: [3, 4]
+      btype: SS_SINGLE_BOND
+    }
+    smarts: "N(=O)=O"
+    smarts: "C=O"
+    smarts: "C#N"
+    smarts: "S=O"
+    smarts: "[OD2]"
+    smarts: "[Cl,Br,I]"
+  }
+}

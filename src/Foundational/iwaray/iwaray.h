@@ -3,8 +3,10 @@
 
 //#include <tbb/scalable_allocator.h>
 
+#include <cstdint>
 #include <iostream>
 #include <initializer_list>
+#include <span>
 
 #include "Foundational/iwmisc/iwconfig.h"
 
@@ -67,7 +69,7 @@ class resizable_array_base
     inline int number_elements  () const { return _number_elements; }
     inline unsigned int size    () const { return _number_elements; }
     inline int elements_allocated () const { return _elements_allocated;}
-    inline int capacity () const { return _elements_allocated;}
+    inline uint32_t capacity () const { return _elements_allocated;}
 
     bool empty() const { return 0 == _number_elements;}
 
@@ -156,6 +158,8 @@ class resizable_array_base
     void set_number_elements(int s) {
       _number_elements = s;
     }
+
+    std::span<T> ToSpan() const;
 };
 
 template <typename T>
@@ -2288,6 +2292,12 @@ resizable_array_p<T>::each_lambda(F f) const
   }
 
   return;
+}
+
+template <typename T>
+std::span<T>
+resizable_array_base<T>::ToSpan() const {
+  return std::span(_things, _number_elements);
 }
 
 #endif  // IW_IMPLEMENTATIONS_EXPOSED

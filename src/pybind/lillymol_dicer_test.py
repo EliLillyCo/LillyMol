@@ -25,6 +25,19 @@ class TestDicer(absltest.TestCase):
     frags = dicer.dice(m)
     self.assertDictEqual(frags, {'CC': 2, 'CCC': 2, 'C': 2})
 
+  def test_break_ccd3_not_set(self):
+    dicer = Dicer()
+    m = MolFromSmiles("CCC(CCO)CCN")
+    frags = dicer.dice(m)
+    self.assertDictEqual(frags,  {'N': 1, 'NCCC(CC)CC': 1, 'O': 1, 'OCCC(CC)CC': 1})
+
+  def test_break_ccd3(self):
+    dicer = Dicer()
+    m = MolFromSmiles("CCC(CCO)CCN")
+    dicer.set_break_cc_bonds_at_highly_connected(True)
+    frags = dicer.dice(m)
+    self.assertDictEqual(frags, {'CC': 1, 'N': 1, 'NCC': 1, 'NCCC(CC)CC': 1, 'NCCCCC': 1, 'O': 1, 'OCC': 1, 'OCCC(CC)CC': 1, 'OCCCCC': 1, 'OCCCCCN': 1})
+
   def test_1313430(self):
     dicer = Dicer()
     m = MolFromSmiles("NOC1CCC(N)CC1 CHEMBL1213430")
@@ -37,6 +50,13 @@ class TestDicer(absltest.TestCase):
     m = MolFromSmiles("NOC1CCC(N)CC1 CHEMBL1213430")
     frags = dicer.dice(m)
     self.assertDictEqual(frags, {'NOC1CC[1CH2]CC1': 1, 'NC1CC[1CH2]CC1': 1, '[1OH]N': 1, '[1OH]C1CCC(N)CC1': 1, '[1NH3]': 2})
+
+  def test_increment_join_points(self):
+    dicer = Dicer()
+    dicer.set_increment_isotope_for_join_points(100)
+    m = MolFromSmiles("CC[23CH2]NCC")
+    frags = dicer.dice(m)
+    self.assertDictEqual(frags, {'[100CH3]C': 1, '[100NH2]CC': 1, '[100NH2][100CH2]CC': 1, '[123CH3]CC': 1})
 
   def test_2354634Recap(self):
     dicer = Dicer()

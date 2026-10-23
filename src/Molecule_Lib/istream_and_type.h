@@ -1,12 +1,16 @@
 #ifndef IW_ISTREAM_AND_TYPE
 #define IW_ISTREAM_AND_TYPE
 
+#include <memory>
 #include <string>
+#include <type_traits>
 
 #include "Foundational/data_source/iwstring_data_source.h"
 
 #include "iwmtypes.h"
 #include "moleculeio.h"
+
+class Molecule_Read_Options;
 
 template <typename T>
 class data_source_and_type : public iwstring_data_source {
@@ -27,6 +31,8 @@ class data_source_and_type : public iwstring_data_source {
   uint64_t _do_only;
 
   IWString_and_File_Descriptor _stream_for_connection_table_errors;
+
+  std::unique_ptr<Molecule_Read_Options> _molecule_read_options;
 
   //  If we are logging connection table errors, we need to know where the
   //  most recently read molecule started
@@ -84,10 +90,16 @@ class data_source_and_type : public iwstring_data_source {
   void set_connection_table_errors_allowed(int i);
   int set_connection_table_error_file(const IWString&);
 
+  Molecule_Read_Options& mutable_molecule_read_options();
+  void reset_molecule_read_options();
+  const Molecule_Read_Options* molecule_read_options() const {
+    return _molecule_read_options.get();
+  }
+
   int next_molecule(T&);
   T* next_molecule();
 
-  int molecules_remaining();
+  uint64_t molecules_remaining();
 
   int
   connection_table_errors_encountered() const {
@@ -107,6 +119,22 @@ class data_source_and_type : public iwstring_data_source {
 #include <iostream>
 
 #include "molecule.h"
+
+template <typename T>
+Molecule_Read_Options&
+data_source_and_type<T>::mutable_molecule_read_options() {
+  if (! _molecule_read_options) {
+    _molecule_read_options = std::make_unique<Molecule_Read_Options>();
+  }
+
+  return *_molecule_read_options;
+}
+
+template <typename T>
+void
+data_source_and_type<T>::reset_molecule_read_options() {
+  _molecule_read_options.reset(nullptr);
+}
 
 template <typename T>
 int
@@ -356,7 +384,18 @@ data_source_and_type<T>::next_molecule() {
     }
 
     T* m = new T;
-    if (m->read_molecule_ds(*this, _input_type)) {
+    int read_ok;
+    if constexpr (std::is_same_v<T, Molecule>) {
+      if (_molecule_read_options) {
+        read_ok = m->read_molecule_ds(*this, _input_type, *_molecule_read_options);
+      } else {
+        read_ok = m->read_molecule_ds(*this, _input_type);
+      }
+    } else {
+      read_ok = m->read_molecule_ds(*this, _input_type);
+    }
+
+    if (read_ok) {
       _molecules_read++;
       if (_verbose) {
         std::cerr << _molecules_read;
@@ -463,7 +502,18 @@ data_source_and_type<T>::next_molecule(T& m) {
       }
     }
 
-    if (m.read_molecule_ds(*this, _input_type)) {
+    int read_ok;
+    if constexpr (std::is_same_v<T, Molecule>) {
+      if (_molecule_read_options) {
+        read_ok = m.read_molecule_ds(*this, _input_type, *_molecule_read_options);
+      } else {
+        read_ok = m.read_molecule_ds(*this, _input_type);
+      }
+    } else {
+      read_ok = m.read_molecule_ds(*this, _input_type);
+    }
+
+    if (read_ok) {
       _molecules_read++;
       if (_verbose) {
         std::cerr << _molecules_read;
@@ -591,7 +641,7 @@ data_source_and_type<T>::_rx_for_input_type() const {
 }
 
 template <typename T>
-int
+uint64_t
 data_source_and_type<T>::molecules_remaining() {
   if (FILE_TYPE_INVALID == _input_type) {
     std::cerr << "data_source_and_type::molecules_remaining: no type specified\n";

@@ -226,6 +226,18 @@ safe_generate ... -L library.textproto -C generate.config file.safe.smi > new_mo
  -v                     verbose output
 ```
 
+In addition to the fragments found during conversion from smiles to SAFE
+you can add other fragments to the library. For example, to use some dicer
+fragments something like
+
+```bash
+dicer_fragments_collate -p 10 -nosmi -v \
+        ${LILLYMOL_HOME}/data/dicer_fragments/FRAG_1_[1-5].textproto > frag.textproto
+
+fileconv -S - frag.textproto | mol2SAFE -I 1 - > frag.safe.smi
+```
+and then add that as another -L option to safe_generate.
+
 ## Examples
 Given
 

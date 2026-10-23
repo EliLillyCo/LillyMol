@@ -1,0 +1,29 @@
+{
+  "executable": "iwstats",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-j -e 2 -p 3 ${LILLYMOL_HOME}/data/descriptor.txt"
+      ]
+    },
+
+    {
+      "name": "comma",
+      "args": [
+           "-j -e 2 -p 3 -i comma -c 10 -w -Y allequals #{indir}/in.csv"
+      ]
+    },
+
+    {
+      "name": "comma_space",
+      "args": [
+           "-j -e 2 -p 3 -i expt=comma -i space -c 10 -w -Y allequals -E #{indir}/expt.csv #{indir}/pred.txt"
+      ]
+    }
+
+
+
+  ]
+
+}

@@ -1,5 +1,6 @@
 #include "donor_acceptor.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -16,7 +17,6 @@
 #include "target.h"
 
 using std::cerr;
-using std::endl;
 
 void
 display_standard_donor_acceptor_assigner_options(std::ostream& os, char cflag) {
@@ -58,11 +58,11 @@ Donor_Acceptor_Assigner::construct_from_command_line(Command_Line& cl, char cfla
 
   IWString fname_for_labelled_molecules;
 
-  std::optional<IWString> env;
+  // If the DIR directive is specified.
+  std::optional<IWString> dir;
 
-  int i = 0;
   const_IWSubstring c;
-  while (cl.value(cflag, c, i++)) {
+  for (int i = 0; cl.value(cflag, c, i); ++i) {
     if (_temp_detach_hydrogens.recognised_directive(c)) {
       continue;
     }
@@ -95,32 +95,29 @@ Donor_Acceptor_Assigner::construct_from_command_line(Command_Line& cl, char cfla
       }
     } else if (c.starts_with("write=") || c.starts_with("stream=")) {
       fname_for_labelled_molecules = c.after('=');
-    } else if (c == "ENV") {
-      env = "";
-    } else if (c.starts_with("ENV=")) {
+    } else if (c.starts_with("DIR=")) {
       c.remove_leading_chars(4);
-      env = c;
+      dir = c;
     } else if ("help" == c) {
       display_standard_donor_acceptor_assigner_options(cerr, cflag);
       exit(0);
     } else {
       cerr << "Donor_Acceptor_Assigner::construct_from_command_line: unrecognised "
-              "qualifier '"
-           << c << "'\n";
+              "qualifier '" << c << "'\n";
       display_standard_donor_acceptor_assigner_options(cerr, cflag);
       exit(1);
     }
   }
 
-  if (env) {
-    if (! BuildFromEnv(*env, verbose)) {
-      cerr << "Donor_Acceptor_Assigner::construct_from_command_line:cannot build from env '"
-           << *env << "'\n";
+  if (dir) {
+    if (! BuildFromDir(*dir, verbose)) {
+      cerr << "Donor_Acceptor_Assigner::construct_from_command_line:cannot build from dir '"
+           << *dir << "'\n";
       return 0;
     }
   }
 
-  if (0 == fname_for_labelled_molecules.length()) {
+  if (fname_for_labelled_molecules.empty()) {
     return 1;
   }
 
@@ -144,12 +141,12 @@ Donor_Acceptor_Assigner::construct_from_command_line(Command_Line& cl, char cfla
 }
 
 int
-Donor_Acceptor_Assigner::BuildFromEnv(const IWString& env, int verbose) {
-  if (env.empty()) {
+Donor_Acceptor_Assigner::BuildFromDir(const IWString& dir, int verbose) {
+  if (dir.empty() || dir == "DEF") {
     return BuildFromDefaultEnv(verbose);
   }
 
-  return BuildFromEnvValue(env, verbose);
+  return BuildFromDirValue(dir, verbose);
 }
 
 int
@@ -158,7 +155,7 @@ Donor_Acceptor_Assigner::BuildFromDefaultEnv(int verbose) {
     // cerr << "C3TK_DATA_PERSISTENT\n";
     IWString path(s);
     path << "/queries/hbonds";
-    if (BuildFromEnvValue(path, verbose)) {
+    if (BuildFromDirValue(path, verbose)) {
       return 1;
     }
   }
@@ -167,7 +164,7 @@ Donor_Acceptor_Assigner::BuildFromDefaultEnv(int verbose) {
     // cerr << "LILLYMOL_HOME\n";
     IWString path(s);
     path << "/data/queries/hbonds";
-    if (BuildFromEnvValue(path, verbose)) {
+    if (BuildFromDirValue(path, verbose)) {
       return 1;
     }
   }
@@ -177,24 +174,23 @@ Donor_Acceptor_Assigner::BuildFromDefaultEnv(int verbose) {
 
 // In the directory we need to find two files, 'donor.qry' and 'acceptor'
 int
-Donor_Acceptor_Assigner::BuildFromEnvValue(const IWString & env, int verbose) {
+Donor_Acceptor_Assigner::BuildFromDirValue(const IWString & env, int verbose) {
   IWString donor(env);
   donor << std::filesystem::path::preferred_separator << "donor.qry";
   IWString acceptor(env);
   acceptor << std::filesystem::path::preferred_separator << "acceptor";
   if (! std::filesystem::exists(donor.AsString()) ||
       ! std::filesystem::exists(acceptor.AsString())) {
-    cerr << "donor::BuildFromEnvValue:required file(s) not found\n";
+    cerr << "donor::BuildFromDirValue:required file(s) not found\n";
     cerr << donor << '\n';
     cerr << acceptor << '\n';
     return 0;
   }
 
-  cerr << "Checking '" << donor << "'\n";
   IWString fname;
   fname << "a=F:" << acceptor;
   if (! _fetch_queries(fname, _acceptor_queries)) {
-    cerr << "Donor_Acceptor_Assigner::BuildFromEnvValue:cannot process acceptor\n";
+    cerr << "Donor_Acceptor_Assigner::BuildFromDirValue:cannot process acceptor\n";
     cerr << fname << '\n';
     return 0;
   }
@@ -203,7 +199,7 @@ Donor_Acceptor_Assigner::BuildFromEnvValue(const IWString & env, int verbose) {
   fname << "d=" << donor;
 
   if (! _fetch_queries(fname, _donor_queries)) {
-    cerr << "Donor_Acceptor_Assigner::BuildFromEnvValue:cannot process donor\n";
+    cerr << "Donor_Acceptor_Assigner::BuildFromDirValue:cannot process donor\n";
     cerr << fname << '\n';
     return 0;
   }
@@ -265,7 +261,7 @@ Donor_Acceptor_Assigner::_assign_donors(Molecule_to_Match& target, int* isotope)
     }
 
 #ifdef DEBUG_ASSIGN_DONORS
-    cerr << nhits << " hits to query " << i << endl;
+    cerr << nhits << " hits to query " << i << '\n';
 #endif
 
     for (int j = 0; j < nhits; j++) {
@@ -311,7 +307,7 @@ Donor_Acceptor_Assigner::__process(Molecule& m, int* isotope) {
   int rc = _process(target, isotope);
 
   // cerr << "Donor_Acceptor_Assigner::__process:finished " << m.smiles() << "
-  // _apply_isotopic_labels " << _apply_isotopic_labels << endl;
+  // _apply_isotopic_labels " << _apply_isotopic_labels << '\n';
   if (_apply_isotopic_labels) {
     _do_apply_isotopic_labels(m, isotope);
 
@@ -351,7 +347,7 @@ Donor_Acceptor_Assigner::process(Molecule& m, int* isotope) {
     i_own_the_vector = 0;
   }
 
-  set_vector(isotope, matoms, 0);
+  std::fill_n(isotope, matoms, 0);
 
   int rc = _process(m, isotope);
 
@@ -545,25 +541,25 @@ ReadQuery(IWString& fname, resizable_array_p<Substructure_Hit_Statistics>& queri
   std::optional<SubstructureSearch::SubstructureQuery> proto =
       iwmisc::ReadTextProto<SubstructureSearch::SubstructureQuery>(fname);
   if (!proto) {
-    cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot read query '" << fname
-         << "'\n";
+    cerr << "ReadQuery:cannot read query '" << fname << "'\n";
     return 0;
   }
   std::unique_ptr<Substructure_Hit_Statistics> query =
       std::make_unique<Substructure_Hit_Statistics>();
   if (!query->ConstructFromProto(*proto)) {
-    cerr << "Donor_Acceptor_Assigner::BuildFromProto:cannot parse proto "
+    cerr << "ReadQuery:cannot parse proto "
          << proto->ShortDebugString() << '\n';
     return 0;
   }
 
   queries << query.release();
+
   return 1;
 }
 
 int
 Donor_Acceptor_Assigner::BuildFromProto(
-    const BrunsDonorAcceptor::BrunsDonorAcceptor& proto, const IWString& dirname) {
+    const bruns_donor_acceptor::BrunsDonorAcceptor& proto, const IWString& dirname) {
   // IAW: open question as to whether both donors and acceptors are required,
   // or should it valid to have just one.
   if (proto.donor_size() == 0 || proto.acceptor_size() == 0) {

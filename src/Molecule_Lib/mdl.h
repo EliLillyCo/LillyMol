@@ -41,6 +41,7 @@ class MDL_File_Supporting_Material
     int _prepend_sdfid;
     int _sdf_tags_to_json;
     int _name_to_json;
+    int _read_extra_text_info;
     int _discard_sdf_molecule_name;
     int _multi_record_tag_data_present;
     int _mdl_write_aromatic_bonds;
@@ -64,6 +65,7 @@ class MDL_File_Supporting_Material
     IWString _change_long_symbols_to;
     IWString _insert_between_sdf_name_tokens;
     std::unique_ptr<RE2> _sdf_identifier;
+    IWString _sdf_identifier_string;
     IWString _name_in_m_tag;
     IWString _replace_first_sdf_tag;
     int * _input_bond_type_translation_table;
@@ -125,6 +127,7 @@ class MDL_File_Supporting_Material
     void set_prepend_sdfid (int s) { _prepend_sdfid = s;}
     void set_sdf_tags_to_json(int s) { _sdf_tags_to_json = s;}
     void set_name_to_json(int s) { _name_to_json = s;}
+    void set_read_extra_text_info(int s) { _read_extra_text_info = s;}
     void set_discard_sdf_molecule_name (int s) { _discard_sdf_molecule_name = s;}
     void set_multi_record_tag_data_present (int s) { _multi_record_tag_data_present = s;}
     void set_mdl_write_aromatic_bonds (int s) { _mdl_write_aromatic_bonds = s;}
@@ -169,6 +172,7 @@ class MDL_File_Supporting_Material
     int prepend_sdfid () const { return _prepend_sdfid;}
     int sdf_tags_to_json() const { return _sdf_tags_to_json;}
     int name_to_json() const { return _name_to_json;}
+    int read_extra_text_info() const { return _read_extra_text_info;}
     int discard_sdf_molecule_name () const { return _discard_sdf_molecule_name;}
     int multi_record_tag_data_present () const { return _multi_record_tag_data_present;}
     int mdl_write_aromatic_bonds () const { return _mdl_write_aromatic_bonds;}
@@ -196,6 +200,7 @@ class MDL_File_Supporting_Material
     const IWString & name_in_m_tag () const { return _name_in_m_tag;}
     const IWString & replace_first_sdf_tag () { return _replace_first_sdf_tag;}
     int sdf_identifier_matches (const IWString &);
+    const IWString& sdf_identifier() const { return _sdf_identifier_string;}
      
     template <typename T> int write_atoms_and_bonds (int, int, T &);
 
@@ -236,6 +241,27 @@ class MDL_File_Supporting_Material
 };
 
 extern MDL_File_Supporting_Material * global_default_MDL_File_Supporting_Material ();
+
+// Temporarily changes the global SDF naming options and restores the previous
+// values when the scope ends. This is a bridge while MDL/SDF input options are
+// still held in global state.
+class MDL_SDF_Naming_Options_Scope {
+  private:
+    IWString _sdf_identifier;
+    int _sdf_tags_to_json;
+    int _all_sdf_tags;
+    int _first_sdf_tag;
+    int _prepend_sdfid;
+    int _active;
+
+  public:
+    MDL_SDF_Naming_Options_Scope();
+    ~MDL_SDF_Naming_Options_Scope();
+
+    int set_options(const const_IWSubstring& sdf_identifier, int sdf_tags_to_json,
+                    int all_sdf_tags, int first_sdf_tag, int prepend_sdfid);
+    void restore();
+};
 
 /*
   A couple of supporting functions used by the various mdl routines

@@ -1,9 +1,9 @@
 // Holds the global settings defined in moleculeio.h
 
+#include "moleculeio.h"
+
 #include <iostream>
 #include <limits>
-
-#include "moleculeio.h"
 
 namespace moleculeio {
 
@@ -59,8 +59,7 @@ set_flush_files_after_writing_each_molecule(int i) {
 static int _read_extra_text_info = 0;
 
 void
-set_read_extra_text_info(int r)
-{
+set_read_extra_text_info(int r) {
   _read_extra_text_info = r;
 }
 
@@ -73,7 +72,8 @@ read_extra_text_info() {
 
 static int _write_extra_text_info = 0;
 
-void set_write_extra_text_info(int w) {
+void
+set_write_extra_text_info(int w) {
   _write_extra_text_info = w;
 }
 
@@ -86,7 +86,7 @@ write_extra_text_info() {
 
 char record_delimiter = '\n';
 
-char 
+char
 input_file_delimiter() {
   return record_delimiter;
 }
@@ -96,9 +96,9 @@ set_record_delimiter(char s) {
   record_delimiter = s;
 }
 
-int dos_mode = 1;    // Mar 2005. Change to default
+int dos_mode = 1;  // Mar 2005. Change to default
 
-int 
+int
 input_is_dos_mode() {
   return dos_mode;
 }
@@ -111,26 +111,25 @@ set_dos_mode(int s) {
 IWString file_scope_newline_string('\n');
 
 void
-generate_newline_string(IWString & newline_string)
-{
+generate_newline_string(IWString& newline_string) {
   if (write_DOS_records()) {
     newline_string.resize_keep_storage(0);
-    newline_string << static_cast<char>(13) << '\n';   // cannot put newline in src
-  }
-  else 
+    newline_string << static_cast<char>(13) << '\n';  // cannot put newline in src
+  } else {
     newline_string = '\n';
+  }
 
   return;
 }
 
-const IWString & 
+const IWString&
 newline_string() {
   return file_scope_newline_string;
 }
 
 static int _write_DOS_records = 0;
 
-void 
+void
 set_write_DOS_records(int s) {
   _write_DOS_records = s;
 
@@ -150,33 +149,30 @@ write_DOS_records() {
 int _discern_cis_trans_bonds = 0;
 
 int
-discern_cis_trans_bonds()
-{
+discern_cis_trans_bonds() {
   return _discern_cis_trans_bonds;
 }
 
 void
-set_discern_cis_trans_bonds(int s)
-{
+set_discern_cis_trans_bonds(int s) {
   _discern_cis_trans_bonds = s;
 }
 
 int _discern_chirality_from_3d_coordinates = 0;
 
 void
-set_discern_chirality_from_3d_coordinates(int s)
-{
+set_discern_chirality_from_3d_coordinates(int s) {
   _discern_chirality_from_3d_coordinates = s;
 }
 
 int
-discern_chirality_from_3d_coordinates()
-{
+discern_chirality_from_3d_coordinates() {
   return _discern_chirality_from_3d_coordinates;
 }
 
 int _ignore_bad_cis_trans_input = 0;
-int 
+
+int
 ignore_bad_cis_trans_input() {
   return _ignore_bad_cis_trans_input;
 }
@@ -193,25 +189,30 @@ set_discard_directional_bonds_on_input(int s) {
   _discard_directional_bonds_on_input = s;
 }
 
-int discard_directional_bonds_on_input() {
+int
+discard_directional_bonds_on_input() {
   return _discard_directional_bonds_on_input;
 }
 
 int _number_connection_table_errors_to_skip = 0;
+
 void
 set_number_connection_table_errors_to_skip(int s) {
   _number_connection_table_errors_to_skip = s;
 }
 
-int number_connection_table_errors_to_skip() {
+int
+number_connection_table_errors_to_skip() {
   return _number_connection_table_errors_to_skip;
 }
 
 int _skip_first_molecules = 0;
+
 void
 set_skip_first_molecules(int s) {
   _skip_first_molecules = s;
 }
+
 int
 skip_first_molecules() {
   return _skip_first_molecules;
@@ -231,31 +232,27 @@ do_only_n_molecules() {
 
 static off_t _seek_to_from_command_line = 0;
 
-void set_seek_to(off_t o)
-{
+void
+set_seek_to(off_t o) {
   _seek_to_from_command_line = o;
 }
 
 off_t
-seek_to_from_command_line()
-{
+seek_to_from_command_line() {
   return _seek_to_from_command_line;
 }
 
 static off_t _max_offset_from_command_line = std::numeric_limits<off_t>::max();
 
 off_t
-max_offset_from_command_line()
-{
+max_offset_from_command_line() {
   return _max_offset_from_command_line;
 }
 
 void
-set_max_offset_from_command_line(off_t s)
-{
+set_max_offset_from_command_line(off_t s) {
   _max_offset_from_command_line = s;
 }
-
 
 SeekAndMax
 UnsetSeekMax() {
@@ -282,93 +279,118 @@ UnsetSeekMax() {
 int _unconnect_covalently_bonded_non_organics_on_read = 0;
 
 int
-unconnect_covalently_bonded_non_organics_on_read()
-{
+unconnect_covalently_bonded_non_organics_on_read() {
   return _unconnect_covalently_bonded_non_organics_on_read;
 }
 
 void
-set_unconnect_covalently_bonded_non_organics_on_read(int s)
-{
+set_unconnect_covalently_bonded_non_organics_on_read(int s) {
   _unconnect_covalently_bonded_non_organics_on_read = s;
 }
 
-//  Converts a string to one of our known file types. 
+//  Converts a string to one of our known file types.
 //  Does its work silently.
 //  Returns FILE_TYPE_INVALID if a match is not found.
 
 FileType
-_string_to_file_type(const const_IWSubstring & file_type)
-{
-  assert (file_type.nchars());
+_string_to_file_type(const const_IWSubstring& file_type) {
+  assert(file_type.nchars());
 
-  if ("mdl" == file_type)
+  if ("mdl" == file_type) {
     return FILE_TYPE_MDL;
-  if ("pdb" == file_type)
+  }
+  if ("pdb" == file_type) {
     return FILE_TYPE_PDB;
-  if ("mmod" == file_type)
+  }
+  if ("mmod" == file_type) {
     return FILE_TYPE_MMOD;
-  if ("smi" == file_type)
+  }
+  if ("smi" == file_type) {
     return FILE_TYPE_SMI;
-  if ("usmi" == file_type)
+  }
+  if ("usmi" == file_type) {
     return FILE_TYPE_USMI;
-  if ("msi" == file_type)
+  }
+  if ("msi" == file_type) {
     return FILE_TYPE_MSI;
-  if ("tdt" == file_type)
+  }
+  if ("tdt" == file_type) {
     return FILE_TYPE_TDT;
-  if ("gfp" == file_type)
+  }
+  if ("gfp" == file_type) {
     return FILE_TYPE_TDT;
-  if ("utdt" == file_type)
+  }
+  if ("utdt" == file_type) {
     return FILE_TYPE_UTDT;
-  if ("tdtnausmi" == file_type)
+  }
+  if ("tdtnausmi" == file_type) {
     return FILE_TYPE_TDT_NAUSMI;
-  if ("rdf" == file_type)
+  }
+  if ("rdf" == file_type) {
     return FILE_TYPE_RDF;
-  if ("qry" == file_type)
+  }
+  if ("qry" == file_type) {
     return FILE_TYPE_QRY;
-  if ("rsmi" == file_type)
+  }
+  if ("rsmi" == file_type) {
     return FILE_TYPE_RSMI;
-  if ("sdf" == file_type)
+  }
+  if ("sdf" == file_type) {
     return FILE_TYPE_SDF;
-  if ("mol" == file_type)
+  }
+  if ("mol" == file_type) {
     return FILE_TYPE_SDF;
-  if ("mol2" == file_type)
+  }
+  if ("mol2" == file_type) {
     return FILE_TYPE_MOL2;
-  if ("chm" == file_type)
+  }
+  if ("chm" == file_type) {
     return FILE_TYPE_CHM;
-  if ("moe" == file_type)
+  }
+  if ("moe" == file_type) {
     return FILE_TYPE_MOE;
-  if ("mrk" == file_type)
+  }
+  if ("mrk" == file_type) {
     return FILE_TYPE_MRK;
-  if ("wchm" == file_type)
+  }
+  if ("wchm" == file_type) {
     return FILE_TYPE_WCHM;
-  if ("nausmi" == file_type)
+  }
+  if ("nausmi" == file_type) {
     return FILE_TYPE_NAUSMI;
-  if ("cif" == file_type)
+  }
+  if ("cif" == file_type) {
     return FILE_TYPE_CIF;
-  if ("smt" == file_type)
+  }
+  if ("smt" == file_type) {
     return FILE_TYPE_SMT;
-  if ("mrv" == file_type)
+  }
+  if ("mrv" == file_type) {
     return FILE_TYPE_MRV;
-  if ("inchi" == file_type)
+  }
+  if ("inchi" == file_type) {
     return FILE_TYPE_INCHI;
-  if ("csv" == file_type)
+  }
+  if ("inchikey" == file_type) {
+    return FILE_TYPE_INCHIKEY;
+  }
+  if ("csv" == file_type) {
     return FILE_TYPE_CSV;
-  if ("textproto" == file_type ||
-      "txtproto" == file_type ||
-      "txt" == file_type)
+  }
+  if ("textproto" == file_type || "txtproto" == file_type || "txt" == file_type) {
     return FILE_TYPE_TXTPROTO;
-  if ("xyz" == file_type)
+  }
+  if ("xyz" == file_type) {
     return FILE_TYPE_XYZ;
-  
+  }
+
   return FILE_TYPE_INVALID;
 }
 
 // Complains if unrecognised
 FileType
-string_to_file_type(const const_IWSubstring & file_type)
-{
-  assert (file_type.nchars());
+string_to_file_type(const const_IWSubstring& file_type) {
+  assert(file_type.nchars());
 
   FileType rc = _string_to_file_type(file_type);
   if (rc != FILE_TYPE_INVALID) {
@@ -376,7 +398,7 @@ string_to_file_type(const const_IWSubstring & file_type)
   }
 
   cerr << "string_to_file_type: unrecognised type '" << file_type << "'\n";
-  
+
   return rc;
 }
 

@@ -1,0 +1,6 @@
+CN1Cc2ccccc2C1 amine +
+CC(=O)N1Cc2ccccc2C1 amide +
+CS(=O)(=O)N1Cc2ccccc2C1 sulfonamide +
+C[C@H](F)N1Cc2ccccc2C1 remote_chiral +
+Cc1ccc2c(c1)CN(C)C2 asymmetric.0 +
+Cc1cccc2c1CN(C)C2 asymmetric.1 +

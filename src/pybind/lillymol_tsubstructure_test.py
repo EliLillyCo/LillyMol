@@ -142,5 +142,45 @@ class TestLillyMol(absltest.TestCase):
     self.assertEqual(ts.label_matched_atoms(mol), 4)
     self.assertEqual(mol.unique_smiles(), "[5F][2c]1[2cH][2c]([1CH3])[2cH][2c]([4OH])[2cH]1")
 
+  def test_label_matched_atoms_multiple_molecule(self):
+    """The batch form labels the caller's molecules, in place.
+
+    It could not do that while the binding took a std::vector<Molecule>, because
+    pybind copied the list and the labels went onto the copies.
+    """
+    ts = TSubstructure()
+    self.assertTrue(ts.add_query_from_smarts("c1ccccc1 benzene"))
+    ts.isotope = 5
+
+    mols = [MolFromSmiles(smi) for smi in ("c1ccccc1C", "CCO", "c1ccccc1N")]
+    self.assertEqual(ts.label_matched_atoms(mols), 2)
+
+    self.assertIn("5", mols[0].smiles())
+    self.assertEqual(mols[1].smiles(), "CCO")   # no match, untouched
+    self.assertIn("5", mols[2].smiles())
+
+  def test_none_in_list_raises_rather_than_crashing(self):
+    """The batch entry points take Molecule*, and pybind turns None into nullptr.
+
+    Without an explicit check that would be dereferenced, which takes the
+    interpreter down rather than raising.
+    """
+    ts = TSubstructure()
+    self.assertTrue(ts.add_query_from_smarts("C carbon"))
+    good = MolFromSmiles("CC")
+
+    for call in (lambda arg: ts.substructure_search(arg),
+                 lambda arg: ts.num_matches(arg),
+                 lambda arg: ts.label_matched_atoms(arg)):
+      with self.assertRaises(ValueError):
+        call([good, None])
+
+  def test_empty_list(self):
+    ts = TSubstructure()
+    self.assertTrue(ts.add_query_from_smarts("C carbon"))
+    self.assertEqual(ts.substructure_search([]), [])
+    self.assertEqual(ts.num_matches([]), [])
+    self.assertEqual(ts.label_matched_atoms([]), 0)
+
 if __name__ == '__main__':
   absltest.main()

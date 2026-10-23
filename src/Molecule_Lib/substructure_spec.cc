@@ -16,6 +16,8 @@ using std::cerr;
 
 static constexpr char kOpenBrace = '{';
 static constexpr char kCloseBrace = '}';
+static constexpr char kOpenSquareBracket = '[';
+static constexpr char kCloseSquareBracket = ']';
 
 /*
   Feb 2005. Want to be able to modify the behaviour of the H
@@ -51,6 +53,7 @@ Substructure_Atom_Specifier::atomic_number(atomic_number_t& z) const {
 // regardless of configuration.
 static constexpr int kMustBeChiral = 3;
 static constexpr int kMustNotBeChiral = 4;
+static constexpr char kNvWithOpenBrace[] = "Nv{";
 
 void
 Substructure_Atom_Specifier::_default_values() {
@@ -772,7 +775,7 @@ Substructure_Atom_Specifier::_match_scaffold_bonds_attached_to_ring(
   any rejections
 */
 
-// #define DEBUG_ATOM_MATCHES
+//#define DEBUG_ATOM_MATCHES
 
 int
 Substructure_Atom_Specifier::_matches(Target_Atom& target) {
@@ -1719,61 +1722,6 @@ fetch_environment(const_IWSubstring& env) {
   return 0;  // yipes, no closing paren found!
 }
 
-/*static int
-fetch_environment (const const_IWSubstring & env, int & characters_processed,
-                   IWString & result)
-{
-  assert (0 == result.nchars());
-  assert ('$' == env[characters_processed]);
-
-  int chars_remaining = env.nchars() - characters_processed;
-
-  if (chars_remaining < 4)
-  {
-    cerr << "fetch_environment: the environment must have at least $(.)\n";
-    return 0;
-  }
-
-  result.resize (chars_remaining);
-
-  if ('(' != env[characters_processed + 1])
-  {
-    cerr << "fetch_environment: environment must start with '$('\n";
-    return 0;
-  }
-
-  int paren_level = 1;
-
-  result = "$(";
-
-  for (int i = characters_processed + 2; i < env.nchars(); i++)
-  {
-    result += env[i];
-//  cerr << "Env is now '" << result << "'\n";
-
-    if ('(' == env[i])
-      paren_level++;
-    else if (')' == env[i])
-    {
-      paren_level--;
-      if (0 == paren_level)
-      {
-        if (3 == result.nchars())
-        {
-          cerr << "fetch_environment: empty environment\n";
-          return 0;
-        }
-
-        characters_processed += result.nchars();
-        return 1;
-      }
-    }
-  }
-
-  cerr << "fetch_environment: mismatched parentheses\n";
-  return 0;
-}*/
-
 /*
   Jul 99. Change the default value to 1. Why did I ever do it differently?
 */
@@ -1831,7 +1779,85 @@ FetchNumericFromBraces(const const_IWSubstring& token, Set_or_Unset<double>& res
   return 0;
 }
 
-//#define DEBUG_ATOM_CONSTRUCT_FROM_SMARTS_TOKEN
+// Parsing atomic properties is much easier if we can separate out Hydrogen.
+static bool
+IsAtomicHydrogen(const const_IWSubstring& smarts,
+                 iwmatcher::Matcher<uint32_t>& isotope_matcher) {
+  // The caller should guard against too short.
+  assert(smarts.length() >= 3);
+
+  if (smarts.length() == 3 && smarts.strncmp("[H]", 3) == 0) {
+    return true;
+  }
+
+  // any other H in the smarts is not recognised.
+  // [H+] not recognised - although that would be safe to do...
+  if (smarts[1] == 'H') {
+    return false;
+  }
+
+  // We only recognise isotopes here, smarts must end with 'H]'.
+  if (smarts[smarts.length() - 2] != 'H') {
+    return false;
+  }
+
+  // And before the H there can only be a digit.
+  if (! std::isdigit(smarts[smarts.length() - 3])) {
+    return false;
+  }
+
+  // Substring with squar brackets removed.
+  const_IWSubstring mysmarts(smarts.data() + 1, smarts.length() - 2);
+
+  // We permit relational operations on isotopes [>2H]
+
+  int ltgt;
+  if (mysmarts[0] == '<') [[unlikely]] {
+    ltgt = -1;
+    ++mysmarts;
+  } else if (mysmarts[0] == '>') [[unlikely]] {
+    ltgt = 1;
+    ++mysmarts;
+  } else {
+    ltgt = 0;
+  }
+
+  // '>H' and '<H' are invalid.
+  if (smarts[0] == 'H') [[ unlikely]] {
+    return false;
+  }
+
+  if (! std::isdigit(mysmarts[0])) {
+    return false;
+  }
+
+  // Numeric isotope can only be followed by H
+  uint32_t isotope = 0;
+  for (int i = 0; i < mysmarts.length(); ++i) {
+    int c = mysmarts[i] - '0';
+    if (c >= 0 && c <= 9) {
+      isotope = 10 * isotope + c;
+    } else if (mysmarts[i] != 'H') {
+      return false;
+    } else if (i != mysmarts.length() - 1) {
+      return false;
+    }
+  }
+
+  if (ltgt == 0) {
+    isotope_matcher.add(isotope);
+  } else if (ltgt < 0) {
+    isotope_matcher.set_max(isotope);
+  } else {
+    isotope_matcher.set_min(isotope);
+  }
+
+  // cerr << "IsAtomicHydrogen true ltgt " << ltgt << " isotope " << isotope << '\n';
+
+  return true;
+}
+
+// #define DEBUG_ATOM_CONSTRUCT_FROM_SMARTS_TOKEN
 
 /*
   this turned out to be surprisingly difficult, and revealed some interesting
@@ -1885,8 +1911,15 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
   cerr << "Atom parsing smarts '" << smarts << "' nchars = " << smarts.length() << "\n";
 #endif
 
-  if ('[' != smarts[0]) {
+  if (kOpenSquareBracket != smarts[0]) {
     return construct_from_smiles_token(smarts);
+  }
+
+  // Atomic Hydrogen must be at least [H]
+  if (smarts.length() >= 3 && IsAtomicHydrogen(smarts, _isotope)) {
+    _add_element(1);
+    // cerr << "Smarts detected as atomic hydrogen '" << smarts << "'\n";
+    return smarts.length();
   }
 
   int characters_to_process = smarts.length();
@@ -1911,10 +1944,9 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
   int ncolon = 0;
   int curly_brace_level = 0;
 
-  for (int i = 1; i < characters_to_process;
-       i++)  // smarts[0] is the opening square bracket
-  {
-    if ('[' == smarts[i]) {
+  // smarts[0] is the opening square bracket
+  for (int i = 1; i < characters_to_process; ++i) {
+    if (kOpenSquareBracket == smarts[i]) {
       square_bracket_level++;
       continue;
     }
@@ -1929,7 +1961,7 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
       continue;
     }
 
-    if (']' == smarts[i]) {
+    if (kCloseSquareBracket == smarts[i]) {
       square_bracket_level--;
       if (0 == paren_level && 0 == square_bracket_level) {
         right_square_bracket = i;
@@ -2009,85 +2041,9 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
 
     const_IWSubstring c(mysmarts.rawchars() + i + 3, mysmarts.length() - i - 3);
 
-    if ('x' == c[0]) {
-      _include_in_embedding = 0;
-    } else if (c.starts_with("fsid")) {
-      c.remove_leading_chars(4);
-      if (!isdigit(c[0]))  // only single digit ring ids are allowed in smarts
-      {
-        cerr << "Substructure_Atom::construct_from_smarts_token:invalid fsid qualifier '"
-             << c << "'\n";
-        return 0;
-      }
-      _fused_system_id = c[0] - '0';
-    } else if (c.starts_with("rid")) {
-      c.remove_leading_chars(3);
-      if (!isdigit(c[0])) {  // only single digit ring ids are allowed in smarts
-        cerr << "Substructure_Atom::construct_from_smarts_token:invalid rid qualifier '"
-             << c << "'\n";
-        return 0;
-      }
-      _ring_id = c[0] - '0';
-      _ring_bond_count.set_min(2);
-    } else if (c.starts_with("gid")) {
-      c.remove_leading_chars(3);
-      if (!isdigit(c[0])) {  // only single digit global ids are allowed in smarts
-        cerr << "Substructure_Atom::construct_from_smarts_token:invalid gid qualifier '"
-             << c << "'\n";
-        return 0;
-      }
-      _global_match_id = c[0] - '0';
-    } else if (c.starts_with("fss"))
-      ;
-    else if (c.starts_with("Vy"))
-      ;
-    else if (c.starts_with("Ar"))
-      ;
-    else if (c.starts_with("spch") || c.starts_with("scaf"))
-      ;
-    else if (c.starts_with("hr") || c.starts_with("rh"))
-      ;
-    else if (c.starts_with("rscb"))
-      ;
-    else if (c.starts_with("symd"))
-      ;
-    else if (c.starts_with("symg"))
-      ;
-    else if (c.starts_with("Kl"))
-      ;
-    else if (c.starts_with("organic"))
-      ;
-    else if (c.starts_with("nonorganic"))
-      ;
-    else if (c.starts_with("spiro"))
-      ;
-    else if (c.starts_with("chiral"))
-      ;
-    else if (c.starts_with("cipR") || c.starts_with("cipS"))
-      ;
-    else if (c.starts_with("Nv{")) {
-      c.remove_leading_chars(3);
-      if (!FetchNumericFromBraces(c, _numeric_value)) {
-        cerr << "Substructure_Atom::construct_from_smarts_token:invalid Nv '" << c
-             << "'\n";
-        return 0;
-      }
-    } else if (c.starts_with("Nv"))  // positive integers only
-    {
-      c.remove_leading_chars(2);
-      int nv;
-      if (!isdigit(c[0])) {
-        cerr << "Substructure_Atom::construct_from_smarts_token:invalid Numeric Value "
-                "specifier '"
-             << c << "'\n";
-        return 0;
-      }
-      fetch_numeric(c, nv, c.length());
-      _numeric_value = static_cast<double>(nv);
-    } else {
-      cerr << "Substructure_Atom::construct_from_smiles_token: unrecognised /IW "
-              "qualifier '"
-           << c << "'\n";
+    if (! ParseIWDirective(c)) {
+      cerr << "Substructure_Atom::construct_from_smiles_token:invalid IW directive '" 
+              << c << "'\n";
       return 0;
     }
   }
@@ -2183,6 +2139,116 @@ Substructure_Atom::construct_from_smarts_token(const const_IWSubstring& smarts) 
   assert(ok());
 
   return right_square_bracket + 1;
+}
+
+int
+Substructure_Atom::ParseIWDirective(const_IWSubstring c) {  // note local copy
+  // cerr << "ParseIWDirective with '" << c << "'\n";
+  if (c.starts_with("fragid")) {
+    c.remove_leading_chars(6);
+    if (! std::isdigit(c[0])) {  // opnly single digit fragid's are allowed in smarts.
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid fragid " <<
+              c << '\n';
+      return 0;
+    }
+
+    _fragment_id = c[0] - '0';
+
+    return 1;
+  }
+
+  if ('x' == c[0]) {
+    _include_in_embedding = 0;
+  } else if (c.starts_with("fsid")) {
+    c.remove_leading_chars(4);
+    if (!isdigit(c[0])) {  // only single digit ring ids are allowed in smarts
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid fsid qualifier '"
+           << c << "'\n";
+      return 0;
+    }
+    _fused_system_id = c[0] - '0';
+  } else if (c.starts_with("rid")) {
+    c.remove_leading_chars(3);
+    if (!isdigit(c[0])) {  // only single digit ring ids are allowed in smarts
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid rid qualifier '"
+           << c << "'\n";
+      return 0;
+    }
+    _ring_id = c[0] - '0';
+    _ring_bond_count.set_min(2);
+  } else if (c.starts_with("gid")) {
+    c.remove_leading_chars(3);
+    int gsign;
+    if (c[0] == '-' || c[0] == '!') {
+      gsign = -1;
+      ++c;
+    } else {
+      gsign = 1;
+    }
+    if (!isdigit(c[0])) {  // only single digit global ids are allowed in smarts
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid gid qualifier '"
+           << c << "'\n";
+      return 0;
+    }
+    _global_id_match = c[0] - '0';
+    if (gsign < 0) {
+      _global_id_match = - _global_id_match;
+    }
+    // cerr << "Global id set to " << _global_id_match << '\n';
+  } else if (c.starts_with("fss"))
+    ;
+  else if (c.starts_with("Vy"))
+    ;
+  else if (c.starts_with("Ar"))
+    ;
+  else if (c.starts_with("spch") || c.starts_with("scaf"))
+    ;
+  else if (c.starts_with("hr") || c.starts_with("rh"))
+    ;
+  else if (c.starts_with("rscb"))
+    ;
+  else if (c.starts_with("symd"))
+    ;
+  else if (c.starts_with("symg"))
+    ;
+  else if (c.starts_with("Kl"))
+    ;
+  else if (c.starts_with("organic"))
+    ;
+  else if (c.starts_with("nonorganic"))
+    ;
+  else if (c.starts_with("spiro"))
+    ;
+  else if (c.starts_with("chiral"))
+    ;
+  else if (c.starts_with("cipR") || c.starts_with("cipS")) 
+    ;
+  else if (c.starts_with(kNvWithOpenBrace)) {
+    c.remove_leading_chars(3);
+    if (!FetchNumericFromBraces(c, _numeric_value)) {
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid Nv '" << c
+           << "'\n";
+      return 0;
+    }
+  } else if (c.starts_with("Nv")) {  // positive integers only
+    c.remove_leading_chars(2);
+    int nv;
+    if (!isdigit(c[0])) {
+      cerr << "Substructure_Atom::construct_from_smarts_token:invalid Numeric Value "
+              "specifier '"
+           << c << "'\n";
+      return 0;
+    }
+    fetch_numeric(c, nv, c.length());
+    _numeric_value = static_cast<double>(nv);
+  } else {
+    cerr << "Substructure_Atom::construct_from_smiles_token: unrecognised /IW "
+            "qualifier '"
+         << c << "'\n";
+    return 0;
+  }
+
+  return 1;
 }
 
 /*
@@ -2614,8 +2680,6 @@ Substructure_Atom_Specifier::AddNonOrganicElements() {
 int
 Substructure_Atom_Specifier::construct_from_smarts_token(
     const const_IWSubstring& zsmarts) {
-  int not_operator = 0;  // Not being handled here, remove sometime.
-
   const int characters_to_process = zsmarts.length();
 
 #ifdef DEBUG_CONSTRUCT_FROM_SMARTS_TOKEN
@@ -2628,19 +2692,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
     return 0;
   }
 
-  // Special case of H by itself. Treating it out here keeps the loop below a little
-  // simpler
-
-  if (1 == characters_to_process && 'H' == zsmarts[0]) {
-    if (_h_means_exactly_one_hydrogen) {
-      _hcount.add(1);
-    } else {
-      _hcount.set_min(1);
-    }
-    // Apr 2025, this was always wrong
-    // return _add_element(1);
-  }
-
   const char* initial_smarts_ptr = zsmarts.rawchars();
   const char* smarts = zsmarts.rawchars();
 
@@ -2648,23 +2699,8 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
 
   int previous_token_was = SMARTS_PREVIOUS_TOKEN_UNSPECIFIED;
 
-  // We keep track of the formal charge.
-  // Feb 99. In order to recognise '+0' and '-0' we need to keep track of
-  // whether or not a formal charge specifier has been encountered;
-
   int fc = 0;
   int fc_encountered = 0;
-
-  // Dec 97, communication from Dave Weininger.
-
-  // To make SMILES and SMARTS rules as similar as possible, there is an
-  // important exception to the above rule: H in brackets is taken to be a
-  // hydrogen atomic symbol if it is the *first* elemental primitive in the
-
-  // May 98. Look at how v4.52 software manual, I'm not sure this is correct.
-  // Change to make hydrogen never recognised as an element (use #1 if you want it)
-
-  int first_elemental_primitive_encountered = 0;
 
   // Non organic matches are hard. That is because when the query is formed, likely
   // the non organic atoms will not have been defined yet.
@@ -2688,7 +2724,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
     int next_char_is_lowercase_letter = 0;
     int next_char_is_digit = 0;
     int next_char_is_relational = 0;
-    int next_char_is_charge = 0;
 
     // cerr << "characters_processed " << characters_processed << " characters_to_process
     // " << characters_to_process << " char " << s << '\n';
@@ -2701,23 +2736,21 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
         next_char_is_digit = 1;
       } else if ('>' == cnext || '<' == cnext || kOpenBrace == cnext) {
         next_char_is_relational = 1;
-      } else if ('+' == cnext || '-' == cnext) {
-        next_char_is_charge = 1;
       }
     }
-
-    //  Oct 97. Change parsing rules for better consistency with Daylight.
-    //  Try to consume leading characters as an element specifier
-    //  Quickly ran into 'H' and 'D', which would otherwise be considered Hydrogen and
-    //  Deuterium Make the change that D and T are no longer recognised as elements But
-    //  then, what about He and Hf (and Ha if that's what Hahnium ends up as)
 
     if ('H' == s && (next_char_is_digit || next_char_is_relational)) {
       nchars = substructure_spec::SmartsNumericQualifier(
           smarts + 1, characters_to_process - characters_processed - 1, _hcount);
-      if (nchars == 0) {
+      if (nchars > 0) [[likely]] {  // should always be true.
+        // qualified by something
+      } else if (_h_means_exactly_one_hydrogen) {
         _hcount.add(1);
+      } else {
+        _hcount.set_min(1);
       }
+      // decrement nchars??
+      previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     } else if ('H' == s && next_char_is_lowercase_letter &&
                (nchars = element_from_smarts_string(
                     smarts, characters_to_process - characters_processed, e))) {
@@ -2725,46 +2758,20 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
       _element.add(e);
       _element_unique_id.add(e->unique_id());
       _element_uid[e->unique_id()] = 1;
-      first_elemental_primitive_encountered = 1;
-    }
-
-    //  May 98, remove this conditional
-
-    //  else if ('H' == s && 0 == first_elemental_primitive_encountered)
-    //  {
-    //    _atomic_number.add(1);
-    //    first_elemental_primitive_encountered = 1;
-    //  }
-
-    //  The Daylight site says that H+ and H- mean Explicit Hydrogen
-
-    else if ('H' == s && next_char_is_charge && !first_elemental_primitive_encountered) {
-      _add_element(1);
-      first_elemental_primitive_encountered = 1;
-    }
-
-    //  Isotopic Hydrogen must be detected
-
-    else if ('H' == s && SMARTS_PREVIOUS_TOKEN_MASS == previous_token_was) {
-      _add_element(1);
-      first_elemental_primitive_encountered = 1;
-      previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
-    }
-
-    else if ('H' == s) {
+    } else if ('H' == s) {
+      // cerr << "Hcount detected _h_means_exactly_one_hydrogen " << _h_means_exactly_one_hydrogen << '\n';
       if (_h_means_exactly_one_hydrogen) {
         _hcount.add(1);
       } else {
         _hcount.set_min(1);
       }
+      previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     } else if (isupper(s) && characters_to_process >= 2 &&
                (nchars = element_from_smarts_string(
                     smarts, characters_to_process - characters_processed,
-                    e)))  // beware autocreate
-    {
+                    e))) {  // beware autocreate
       nchars--;
       _add_element(e);
-      first_elemental_primitive_encountered = 1;
       if (respect_aliphatic_smarts && e->organic() && e->can_be_aromatic()) {
         _aromaticity = NOT_AROMATIC;
       }
@@ -2780,7 +2787,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
 
       nchars--;  // remember, we are looking at the base character
       _add_element(e);
-      first_elemental_primitive_encountered = 1;
       if (respect_aliphatic_smarts && e->organic() && e->can_be_aromatic()) {
         _aromaticity = NOT_AROMATIC;
       }
@@ -2798,7 +2804,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
              ('r' == smarts[1] || 'v' == smarts[1] || 'x' == smarts[1]) &&
              (nullptr != (e = get_element_from_symbol_no_case_conversion(s)))) {
       _add_element(e);
-      first_elemental_primitive_encountered = 1;
       if (e->can_be_aromatic()) {
         _aromaticity = NOT_AROMATIC;
       }
@@ -2843,7 +2848,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
       assert(_isotope.ok());
     } else if ('*' == s) {  // any atom specifier, don't do anything
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
-      first_elemental_primitive_encountered = 1;
     } else if ('a' == s) {  // an aromatic atom
       if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity) {
         _aromaticity = AROMATIC;
@@ -2851,7 +2855,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
         add_aromatic(_aromaticity);
       }
 
-      first_elemental_primitive_encountered = 1;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     } else if ('A' == s) {  // an aliphatic atom
       if (SUBSTRUCTURE_NOT_SPECIFIED == _aromaticity) {
@@ -2859,7 +2862,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
       } else {
         add_aliphatic(_aromaticity);
       }
-      first_elemental_primitive_encountered = 1;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     } else if ('c' == s) {
       _add_element(6);
@@ -2992,7 +2994,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
         return 0;
       }
 
-      first_elemental_primitive_encountered = 1;
       previous_token_was = SMARTS_PREVIOUS_TOKEN_ELEMENT;
     } else if ('@' == s) {  // chirality specifier
       if (_chirality != SUBSTRUCTURE_NOT_SPECIFIED) {
@@ -3044,7 +3045,6 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
 
     else if ('!' == s) {  // negation (tight bonding)
       previous_token_was = SMARTS_PREVIOUS_TOKEN_OPERATOR_NOT;
-      not_operator = 1;
       smiles_error_message(initial_smarts_ptr, characters_to_process,
                            characters_processed, "! operator not supported");
       return 0;
@@ -3112,6 +3112,11 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
         nchars = 3 + 4 + 1 - 1;  // will fail if more than two digits for fsid
       } else if (c.length() > 3 && c.starts_with("gid")) {
         nchars = 3 + 3 + 1 - 1;  // will fail if more than two digits for gid
+        if (c.contains('-') || c.contains('!')) {
+          ++nchars;
+        }
+      } else if (c.length() > 3 && c.starts_with("fragid")) {
+        nchars = 3 + 6 + 1 - 1;
       } else if (c.length() > 4 && (c.starts_with("spch") || c.starts_with("scaf"))) {
         const int is_spch = c.starts_with("spch");
         c.remove_leading_chars(4);
@@ -3252,6 +3257,9 @@ Substructure_Atom_Specifier::construct_from_smarts_token(
 
     //  cerr << "_match_spinach_only " << _match_spinach_only << '\n';
   }
+
+  // After removal of H from the loop, this is not needed, but maybe useful so suppress compiler warnings.
+  (void) previous_token_was;
 
   if (fc_encountered) {
     _formal_charge.add(fc);
@@ -3629,7 +3637,7 @@ Substructure_Atom_Specifier::count_attributes_specified() {
     _chirality = 0;
   }
 
-// #define DEBUG_ATTRIBUTES_SPECIFIED
+//#define DEBUG_ATTRIBUTES_SPECIFIED
 #ifdef DEBUG_ATTRIBUTES_SPECIFIED
   cerr << "After counting everything " << rc << '\n';
 

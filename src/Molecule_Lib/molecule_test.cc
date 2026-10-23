@@ -1,5 +1,10 @@
 // Tests for Molecule
 
+#include <fstream>
+#include <memory>
+#include <span>
+#include <string>
+#include <vector>
 #include <unordered_map>
 
 #include "gmock/gmock.h"
@@ -7,7 +12,10 @@
 #include "google/protobuf/text_format.h"
 
 
+#include "Foundational/data_source/iwstring_data_source.h"
+
 #include "molecule.h"
+#include "moleculeio.h"
 #include "path.h"
 
 namespace {
@@ -15,6 +23,169 @@ namespace {
 using testing::UnorderedElementsAreArray;
 using testing::FloatNear;
 using testing::DoubleNear;
+using testing::ElementsAre;
+using testing::UnorderedElementsAre;
+
+class ExtraTextInfoScope {
+  private:
+    int _read_extra_text_info;
+    int _write_extra_text_info;
+
+  public:
+    ExtraTextInfoScope() :
+        _read_extra_text_info(moleculeio::read_extra_text_info()),
+        _write_extra_text_info(moleculeio::write_extra_text_info()) {
+    }
+
+    ~ExtraTextInfoScope() {
+      moleculeio::set_read_extra_text_info(_read_extra_text_info);
+      moleculeio::set_write_extra_text_info(_write_extra_text_info);
+    }
+};
+
+std::vector<std::string>
+ExtraTextInfo(const Molecule& m) {
+  std::vector<std::string> result;
+  result.reserve(m.number_records_text_info());
+  for (int i = 0; i < m.number_records_text_info(); ++i) {
+    result.push_back(m.text_info(i).AsString());
+  }
+
+  return result;
+}
+
+static std::string
+WriteSdfFixture(const char* stem) {
+  static constexpr char kSdf[] = R"(methane
+  LillyMol  0808262D
+
+  1  0  0  0  0  0            999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0
+M  END
+>  <ID>
+CHEMBL123
+
+$$$$
+)";
+
+  const std::string fname = testing::TempDir() + stem;
+  std::ofstream output(fname);
+  EXPECT_TRUE(output.good());
+  output << kSdf;
+  return fname;
+}
+
+TEST(MoleculeExtraTextInfo, ReaderLocalSdfTextInfo) {
+  ExtraTextInfoScope scope;
+  moleculeio::set_read_extra_text_info(0);
+
+  const std::string keep_fname = WriteSdfFixture("/keep_extra_text_info.sdf");
+  iwstring_data_source keep_input(keep_fname.c_str());
+  ASSERT_TRUE(keep_input.good());
+
+  Molecule_Read_Options keep_options;
+  keep_options.mdl_file_supporting_material().set_read_extra_text_info(1);
+
+  Molecule keep;
+  ASSERT_TRUE(keep.read_molecule_ds(keep_input, FILE_TYPE_SDF, keep_options));
+  EXPECT_THAT(ExtraTextInfo(keep), ElementsAre(">  <ID>", "CHEMBL123", ""));
+
+  const std::string discard_fname = WriteSdfFixture("/discard_extra_text_info.sdf");
+  iwstring_data_source discard_input(discard_fname.c_str());
+  ASSERT_TRUE(discard_input.good());
+
+  Molecule_Read_Options discard_options;
+  discard_options.mdl_file_supporting_material().set_read_extra_text_info(0);
+
+  Molecule discard;
+  ASSERT_TRUE(discard.read_molecule_ds(discard_input, FILE_TYPE_SDF, discard_options));
+  EXPECT_EQ(discard.number_records_text_info(), 0);
+}
+
+TEST(MoleculeExtraTextInfo, SdfTextInfoRoundTripAndManipulation) {
+  static constexpr char kSdf[] = R"(methane
+  LillyMol  0808262D
+
+  1  0  0  0  0  0            999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0
+M  END
+>  <ID>
+CHEMBL123
+
+>  <MULTI LINE>
+first line
+second line
+
+$$$$
+)";
+
+  ExtraTextInfoScope scope;
+  moleculeio::set_read_extra_text_info(1);
+
+  const std::string fname = testing::TempDir() + "/extra_text_info.sdf";
+  {
+    std::ofstream output(fname);
+    ASSERT_TRUE(output.good());
+    output << kSdf;
+  }
+
+  iwstring_data_source input(fname.c_str());
+  ASSERT_TRUE(input.good());
+
+  Molecule m;
+  ASSERT_TRUE(m.read_molecule_ds(input, FILE_TYPE_SDF));
+  EXPECT_THAT(ExtraTextInfo(m), ElementsAre(
+      ">  <ID>",
+      "CHEMBL123",
+      "",
+      ">  <MULTI LINE>",
+      "first line",
+      "second line",
+      ""));
+
+  IWString written;
+  EXPECT_GT(m.write_extra_text_info(written), 0);
+  EXPECT_EQ(written.AsString(),
+            ">  <ID>\nCHEMBL123\n\n>  <MULTI LINE>\nfirst line\nsecond line\n\n");
+
+  Molecule copied(m);
+  EXPECT_THAT(ExtraTextInfo(copied), ElementsAre(
+      ">  <ID>",
+      "CHEMBL123",
+      "",
+      ">  <MULTI LINE>",
+      "first line",
+      "second line",
+      ""));
+
+  Molecule assigned;
+  assigned = m;
+  EXPECT_THAT(ExtraTextInfo(assigned), ElementsAre(
+      ">  <ID>",
+      "CHEMBL123",
+      "",
+      ">  <MULTI LINE>",
+      "first line",
+      "second line",
+      ""));
+
+  Molecule moved;
+  moved = std::move(assigned);
+  EXPECT_THAT(ExtraTextInfo(moved), ElementsAre(
+      ">  <ID>",
+      "CHEMBL123",
+      "",
+      ">  <MULTI LINE>",
+      "first line",
+      "second line",
+      ""));
+
+  moved.discard_extra_text_info();
+  EXPECT_EQ(moved.number_records_text_info(), 0);
+
+  EXPECT_EQ(moved.add_extra_text_info("added text"), 1);
+  EXPECT_THAT(ExtraTextInfo(moved), ElementsAre("added text"));
+}
 
 class TestSubstructure : public testing::Test
 {
@@ -49,6 +220,24 @@ TEST_F(TestSubstructure, TestSwapAtomsChiral) {
   EXPECT_EQ(initial_usmi, _m.unique_smiles());
   _m.swap_atoms(2, 3);
   EXPECT_EQ(initial_usmi, _m.unique_smiles());
+}
+
+TEST_F(TestSubstructure, TestRenumberAtoms) {
+  _smiles = "CNO";
+  ASSERT_TRUE(_m.build_from_smiles(_smiles));
+
+  // new_number[i] is the new atom number for atom i in the starting molecule.
+  static constexpr int kNewNumber[] = {2, 0, 1};
+  EXPECT_EQ(_m.renumber_atoms(kNewNumber), 1);
+  EXPECT_EQ(_m.atomic_number(0), 7);
+  EXPECT_EQ(_m.atomic_number(1), 8);
+  EXPECT_EQ(_m.atomic_number(2), 6);
+
+  static constexpr int kDuplicate[] = {0, 0, 1};
+  EXPECT_EQ(_m.renumber_atoms(kDuplicate), 0);
+
+  static constexpr int kOutOfRange[] = {0, 1, 3};
+  EXPECT_EQ(_m.renumber_atoms(kOutOfRange), 0);
 }
 
 // Tests the "ok_atom_number" method which tells if a given atom index is valid for a given molecule
@@ -411,6 +600,37 @@ INSTANTIATE_TEST_SUITE_P(TestBondsBetween, TestBondsBetween, testing::Values(
   SmilesAtomsBonds{"CCC", 0, 2, 2}
 ));
 
+TEST(TestAllAtomsBetween, DifferentiatesMultipleShortestPaths) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("C1CCC1"));
+
+  Set_of_Atoms one_path;
+  EXPECT_EQ(m.atoms_between(0, 2, one_path), 2);
+  ASSERT_EQ(one_path.number_elements(), 1);
+
+  Set_of_Atoms all_paths;
+  EXPECT_EQ(m.AllAtomsBetween(0, 2, all_paths), 2);
+  EXPECT_THAT(all_paths, UnorderedElementsAre(1, 3));
+}
+
+TEST(TestAllAtomsBetween, BreadthFirstOrder) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("C1CCCCC1"));
+
+  Set_of_Atoms all_paths;
+  EXPECT_EQ(m.AllAtomsBetween(0, 3, all_paths), 4);
+  EXPECT_THAT(all_paths, ElementsAre(1, 5, 2, 4));
+}
+
+TEST(TestAllAtomsBetween, AdjacentAtomsReturnEmptySet) {
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("CCC"));
+
+  Set_of_Atoms all_paths;
+  EXPECT_EQ(m.AllAtomsBetween(0, 1, all_paths), 0);
+  EXPECT_TRUE(all_paths.empty());
+}
+
 TEST(TestFsid, TestFsid) {
   Molecule m;
   ASSERT_TRUE(m.build_from_smiles("C12CC2C1C1C2CC12.C12CC2C1C1C2CC12.C1CC1"));
@@ -420,7 +640,7 @@ TEST(TestFsid, TestFsid) {
     fsid[f] += 1;
   }
 
-  EXPECT_EQ(fsid.size(), 5);
+  EXPECT_EQ(fsid.size(), 5u);
 }
 
 TEST(TestNameConcat, TestNameConcat1) {
@@ -497,5 +717,113 @@ INSTANTIATE_TEST_SUITE_P(TestSaturation, TestSaturation, testing::Values(
   SmilesAtomValue{"CNC(=O)C", {0, 1, 2, 3, 4}, {1, 1, 0, 0, 1}},
   SmilesAtomValue{"CNS(=O)(=O)C", {0, 1, 2, 3, 4, 5}, {1, 1, 0, 0, 0, 1}}
 ));
+
+TEST(TestAtomOrderInSmiles, Test1) {
+  Molecule m;
+  EXPECT_TRUE(m.build_from_smiles("CN"));
+  const int matoms = m.natoms();
+
+  EXPECT_EQ(m.smiles(), "CN");
+
+  const resizable_array<atom_number_t>& aoit1 = m.atom_order_in_smiles();
+  for (int i = 0; i < matoms; ++i) {
+    EXPECT_EQ(aoit1[i], i);
+  }
+
+  EXPECT_EQ(m.smiles_starting_with_atom(1), "NC");
+  const resizable_array<atom_number_t>& aoit2 = m.atom_order_in_smiles();
+  EXPECT_EQ(aoit2[0], 1);
+  EXPECT_EQ(aoit2[1], 0);
+}
+
+struct SmilesAndSpinach {
+  IWString smiles;
+  isotope_t isotope;
+  std::vector<int> expected_spinach;
+  // If `isotope` is specified.
+  IWString expected_smiles;
+};
+
+class TestSpinach : public testing::TestWithParam<SmilesAndSpinach> {
+  protected:
+    Molecule _m;
+};
+TEST_P(TestSpinach, TestSpinach) {
+  const auto params = GetParam();
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+
+  const int matoms = _m.natoms();
+
+  std::unique_ptr<int[]> spinach = std::make_unique<int[]>(matoms);
+  _m.IdentifySpinachLabel(spinach.get(), params.isotope);
+  const std::span<int> gotspan(spinach.get(), spinach.get() + matoms);
+  EXPECT_THAT(gotspan, testing::ElementsAreArray(params.expected_spinach));
+  EXPECT_EQ(_m.smiles(), params.expected_smiles) << " got " << _m.smiles();
+}
+INSTANTIATE_TEST_SUITE_P(TestSpinach, TestSpinach, testing::Values(
+  SmilesAndSpinach{"CC", 1, {1, 1}, "CC"},
+  SmilesAndSpinach{"C1CC1", 1, {0, 0, 0}, "C1CC1"},
+  SmilesAndSpinach{"C1CC1=O", 1, {0, 0, 0, 0}, "C1CC1=O"},
+  SmilesAndSpinach{"CC1CC1=O", 1, {1, 0, 0, 0, 0}, "[1CH3][1CH]1CC1=O"} 
+));
+
+TEST(BondTypeChange, RemoveObsoleteAlkeneDirectionFlags) {
+  for (const char* smiles : {"C/C=C/C", "C/C=C\\C"}) {
+    Molecule mol;
+    ASSERT_TRUE(mol.build_from_smiles(smiles));
+    ASSERT_TRUE(mol.set_bond_type_between_atoms(1, 2, SINGLE_BOND));
+    Molecule expected;
+    ASSERT_TRUE(expected.build_from_smiles("CCCC"));
+    EXPECT_EQ(mol.unique_smiles(), expected.unique_smiles());
+    EXPECT_FALSE(mol.bond_between_atoms(0, 1)->is_directional());
+    EXPECT_FALSE(mol.bond_between_atoms(2, 3)->is_directional());
+  }
+}
+
+TEST(BondTypeChange, PreserveNeighbouringAlkeneGeometry) {
+  Molecule mol;
+  ASSERT_TRUE(mol.build_from_smiles("C/C=C/C=C/C"));
+  ASSERT_TRUE(mol.set_bond_type_between_atoms(1, 2, SINGLE_BOND));
+  Molecule expected;
+  ASSERT_TRUE(expected.build_from_smiles("CCC/C=C/C"));
+  EXPECT_EQ(mol.unique_smiles(), expected.unique_smiles());
+  EXPECT_FALSE(mol.bond_between_atoms(0, 1)->is_directional());
+  EXPECT_TRUE(mol.bond_between_atoms(2, 3)->is_directional());
+  EXPECT_TRUE(mol.bond_between_atoms(3, 4)->part_of_cis_trans_grouping());
+}
+
+TEST(DeleteAllFragmentsExcept, KeepsSelectedFragmentAndReturnsRemovedAtomCount) {
+  for (int frag = 0; frag < 3; ++frag) {
+    Molecule mol;
+    ASSERT_TRUE(mol.build_from_smiles("CC.O.N mixture"));
+    const char* expected[] = {"CC", "O", "N"};
+    EXPECT_EQ(mol.delete_all_fragments_except(frag), frag == 0 ? 2 : 3);
+    EXPECT_EQ(mol.unique_smiles(), expected[frag]);
+    EXPECT_EQ(mol.number_fragments(), 1);
+    EXPECT_EQ(mol.name(), "mixture");
+  }
+}
+
+TEST(DeleteAllFragmentsExcept, RejectsInvalidInputWithoutChangingMolecule) {
+  for (const char* smiles : {"", "CC", "CC.O.N"}) {
+    Molecule mol;
+    if (*smiles) {
+      ASSERT_TRUE(mol.build_from_smiles(smiles));
+    }
+    mol.set_name("invalid_input");
+    const IWString before = mol.unique_smiles();
+    const int natoms = mol.natoms();
+    const int nf = mol.number_fragments();
+    for (int frag : {-1, nf}) {
+      EXPECT_EQ(mol.delete_all_fragments_except(frag), 0);
+      EXPECT_EQ(mol.unique_smiles(), before);
+      EXPECT_EQ(mol.natoms(), natoms);
+    }
+    if (nf <= 1) {
+      EXPECT_EQ(mol.delete_all_fragments_except(0), 0);
+      EXPECT_EQ(mol.unique_smiles(), before);
+    }
+  }
+}
 
 }  // namespace

@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "acetal_acyclic")
+  (A C Comment "acetal_acyclic")
+  (A I Version 2)
+  (A C smarts "[ND2,OD2,S;R0]-[CR0X4]-[ND2,OD2,S;R0]")
+)

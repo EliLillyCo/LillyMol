@@ -9,6 +9,7 @@ will see things that seem duplicative. Work is ongoing to clean deprecate
 obsolete tools and replace with their more modern counterparts.
 
 ## abraham
+Implements an Abraham atomic contribution method.
 
 ## activity_consistency
 [activity_consistency](/docs/Molecule_Tools/activity_consistency.md)
@@ -150,6 +151,7 @@ not used, because the reliability/presence of such information can be low.
 
 ## ez_fingerprint
 Fingerprint based on E/Z bond specifications. See previous comment.
+
 ## ez_fingerprint_v2
 Newer generation of E/Z fingerprinting. Still unsatisfactory. E/Z
 data is not robustly handled in LillyMol.
@@ -335,7 +337,7 @@ Databases are built with buildsmidb_bdb.
 
 ## in_lilly_database_bdb
 ## _inventory
-Special purpose tools, only relevant inside Lilly.
+Special purpose tools, only relevant inside Lilly. Deprecated.
 
 ## isolation_forest
 Early implementation of Isolation Forest. The version in sklearn is better today.
@@ -364,7 +366,7 @@ Descriptor generator. Generates 250+ mostly interpretable molecular descriptors.
 [iwdescr](Molecule_Tools/iwdescr.md)
 
 ## iwecfp
-Generates EC fingerprints, the -EC to gfp_make.
+Generates EC fingerprints, this implements the -EC option to gfp_make.
 
 ## iwecfp_database_load
 ## iwecfp_database_lookup
@@ -433,6 +435,10 @@ dimesions.
 ## maccskeys
 Descriptor and fingerprint generator.
 
+## make_2d_coordinates
+Generate 2D coordinates for depiction, writing a molfile that other software can
+draw [make_2d_coordinates](/docs/Depict/make_2d_coordinates.md).
+
 ## make_descriptors.sh
 A descriptor generator [make_descriptors](Molecule_Tools/make_descriptors.md).
 
@@ -446,11 +452,13 @@ Post process output from Marvin pKa calculations.
 
 ## medchemwizard
 Implementation of Abbot paper. The shell wrapper in contrib/bin is set
-up to read the reactions from the paper.
+up to read the reactions from the paper. Makes isosteric replacements of
+functional groups.
 
 ## mispredicted
-Across a set of train/test splits, examine the predicted files and identify those
-molecules that are always predicted poorly. 
+Across prediction files, identify molecules with large average prediction errors.
+See [mispredicted](Utilities/mispredicted.md) for input formats, minimum prediction
+counts, selection, and output options.
 
 ## mkfrag
 Convert a multi-fragment molecule to separate molecules.
@@ -470,6 +478,7 @@ Generate a grid around one or more molecules [molecular_grid](Molecule_Tools/mol
 
 ## molecular_merge
 Concatentate a file of molecules into one molecule - mostly useful for testing.
+Does the opposite of mkfrag.
 
 ## molecular_scaffold
 Convert the molecule to scaffold form - molecular_abstraction also does this.
@@ -480,6 +489,10 @@ Apply multiple reactions to a molecule.
 ## molecular_variants
 Useful for identifying smaller pharmacaphore equivalents. Driven by external reaction
 files that specify transformations.
+
+## molecule_filter
+Filters sets of molecules based on computed properties, natoms, nrings, TPSA,
+RO5, etc. See also molecule_filter_parallel.sh for a parallel version.
 
 ## molecules_from_reagents
 
@@ -505,7 +518,7 @@ Jarvis Patric clustering and other capabilities.
 Merge multiple nearest neighbour files.
 
 ## nn_merge_from_smiles
-Mergest nearest neighbour files.
+Merges nearest neighbour files.
 
 ## nn_training
 ## nn_predictions
@@ -558,7 +571,7 @@ Pubchem Fingerprints
 Command line version for computing QED [QED](Molecule_Tools/QED.md).
 
 ## QupKake.sh
-Consumes output from atom contribution methods like QupKake and Epok
+Consumes output from atom contribution methods like QupKake and Epik
 for pKa computations. [QupKake](Molecule_Tools/QupKake.md).
 
 ## r1r2etc
@@ -660,7 +673,9 @@ String mutations on smiles. Mostly generates bad smiles, but sometimes
 interesting. More efficient to use random_molecular_permutations.
 
 ## sp3_filter
-Identify and filter on sp3 character. Can now do the same within iwdescr.
+Identify and filter on sp3 character. Can now do the same within iwdescr,
+but at the cost of computing many more descriptors. molecule_filter can
+also filter by number of sp3 carbon atoms.
 
 ## spearman_rank
 Compute Spearman rank for tabular data.

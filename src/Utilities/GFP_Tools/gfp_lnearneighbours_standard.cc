@@ -12,7 +12,7 @@
 
 #define USE_OMP
 #ifdef USE_OMP
-#include <omp.h>
+#include "omp.h"
 #endif
 
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
@@ -567,6 +567,7 @@ process the output with nplotnn.
  -k               generate nnbr::NearNeighbours textproto output
  -S <fname>       write serialised nnbr::NearNeighbours protos to TFDataRecord file <fname>
                   '-S NOSMI -S fname'    will omit neighbour smiles - much smaller file.
+ -x <nthreads>    number of OMP threads to use - default 1.
  -v               verbose output
 )";
 // clang-format on
@@ -587,7 +588,7 @@ UpdateCounters(const Needle& needle, extending_resizable_array<int>& neighbours,
 
 static int
 nearneighbours(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vn:p:t:T:r:V:hB:N:m:zk");
+  Command_Line cl(argc, argv, "vn:p:t:T:r:V:hB:N:m:zkx:S:");
 
   if (cl.unrecognised_options_encountered()) {
     if (cl.option_present('F') || cl.option_present('P')) {
@@ -604,7 +605,6 @@ nearneighbours(int argc, char** argv) {
 
   // initialise_string_distances();
 
-  initialise_properties_ratios();
 
   set_default_iwstring_float_concatenation_precision(4);
 
@@ -717,9 +717,24 @@ nearneighbours(int argc, char** argv) {
     usage(6);
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(1);
+  }
+
+  if (cl.option_present('x')) {
+    int nthreads;
+    if (! cl.value('x', nthreads) || nthreads < 1) {
+      cerr << "The number of OMP threads (-s) must be a whole +ve number\n";
+      return 1;
+    }
+    if (verbose)  {
+      cerr << "Running with " << nthreads << " OMP threads\n";
+    }
+
+    omp_set_num_threads(nthreads);
+  } else {
+    omp_set_num_threads(1);
   }
 
   set_include_newlines_in_tdt(0);

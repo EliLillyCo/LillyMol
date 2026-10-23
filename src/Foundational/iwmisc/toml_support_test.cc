@@ -47,7 +47,7 @@ ui1 = 12
   std::optional<TestMessage> msg = iwmisc::ParseFromToml<TestMessage>(toml);
   EXPECT_NE(msg, std::nullopt);
 
-  EXPECT_EQ(msg->ui1(), 12);
+  EXPECT_EQ(msg->ui1(), 12u);
 }
 
 TEST(Test, TestFloat) {

@@ -237,3 +237,155 @@ You can use the tool as a filter with the '-f' option. This allows specifying
 a minimum 'URS' value for output. Note again that most collections contain
 likely data entry errors. In practice, we have found a value of 5 or 10 for '-f' to
 be a reasonable compromise. Adjust to taste.
+
+## C++ library
+
+The command-line tool now uses shared ring extraction and preprocessing code,
+with separate database-building and molecule-lookup objects. Stored keys and
+`Smi2Rings::Ring` values retain their existing format. Python bindings are a
+separate next step; these interfaces provide the reusable C++ implementation.
+
+### Molecule lookup
+
+`Molecule_Tools_Bdb/ring_system_lookup.h` provides `smi2rings_bdb::RingSystemLookup`:
+
+```cpp
+smi2rings_bdb::RingSystemLookup lookup;
+// Attachment-labelled keys are enabled by default. Enable bare-ring fallback:
+lookup.extractor().options().set_always_process_unsubstituted_ring(1);
+if (!lookup.Open({"rings.bdb"})) {
+  return false;
+}
+std::vector<smi2rings_bdb::RingSystemMatch> results;
+if (!lookup.Lookup(molecule, results)) {
+  return false;
+}
+```
+
+Configure the object once and reuse it. Extraction settings must match those
+used to build the database; the database does not infer those settings.
+`Lookup` preserves the input by making one working molecule copy.
+`LookupInPlace` avoids that whole-molecule copy and can modify the supplied
+molecule. Both still construct ring subsets when generating keys.
+
+Each result describes an eligible ring system, whether it was found, the
+representation and key that matched, and its database count and exemplar.
+Missing keys are ordinary results with `_found == false`. Acyclic molecules,
+or molecules whose ring systems are all excluded by extraction limits, succeed
+with an empty result vector. Errors return false and clear the result vector.
+Sorting, URS filtering, formatting, and reporting remain CLI responsibilities.
+
+### Preprocessing and extraction
+
+`ring_preprocessing.h` provides `RingPreprocessor`. Standardisation is disabled
+by default. To explicitly activate the existing all-standardisations profile:
+
+```cpp
+if (!lookup.preprocessor().SetStandardisation(IWString("all"))) {
+  return false;
+}
+lookup.preprocessor().options().set_remove_isotopes(true);
+```
+
+Other standardisation directives can be supplied in the same way. Preprocessing
+runs in this order: optional largest-fragment selection, element transformations,
+standardisation, optional input-isotope removal, directional-bond stripping, and
+optional chirality removal. Largest-fragment selection, isotope removal, and
+chirality removal are disabled by default; directional-bond stripping is enabled
+to preserve the CLI default. Input-isotope removal happens before extraction and
+does not remove attachment labels subsequently generated for database keys.
+
+`ring_extraction.h` provides `RingExtractor` and `RingExtractionOptions` for both
+building and lookup. Atom typing and functional-group queries belong to the
+extractor. Key generation retains the existing ordering: environmental context,
+existing isotopes where requested for lookup, attachment labels, then bare rings.
+Only enabled representations are attempted, and lookup stops at the first match.
+The existing CLI flags configure these shared objects.
+
+### Database access and building
+
+`ring_database_lookup.h` also exposes the lower-level `RingDatabaseReader` for
+looking up an already generated unique-SMILES key. It owns read-only database
+handles and never creates databases. `LookupStatus` distinguishes `kFound`,
+`kNotFound`, and `kError`; missing keys and errors clear the result. Database
+access errors and malformed stored textprotos are errors rather than misses.
+Across multiple databases, counts use the maximum rather than the sum; equal
+maxima retain the last database's exemplar. Failed replacement opens leave the
+previous collection available, and handles close on destruction.
+
+`ring_database_builder.h` provides `RingDatabaseBuilder`. It can own a database
+opened with `Open`, or borrow a CLI-owned handle. `Store(key, exemplar)` updates
+a key; the caller must suppress duplicate keys within each input molecule.
+Call `Finish` explicitly to flush cached records and synchronise the database.
+Successful repeated `Finish` calls are harmless, and cached memory is released.
+
+Direct builds increment existing counts. Cached builds preserve the historical
+CLI behaviour: cached counts replace existing counts for the affected keys.
+Use a fresh database for cached builds when replacement is not intended.
+The first exemplar is retained within each build's accumulated records.
+
+Each object owns its configuration and working resources. Do not use the same
+object concurrently. The legacy coordinate-SMILES formatting setting is restored
+after extraction, but it remains a process-wide setting.
+
+### Build and tests
+
+Public Bazel targets include `:ring_extraction`, `:ring_preprocessing`,
+`:ring_system_lookup`, `:ring_database_lookup`, and `:ring_database_builder` under
+`//Molecule_Tools_Bdb`. Database-dependent libraries also have `_shared` variants
+for consumers using shared BerkeleyDB, including Python bindings.
+
+The three unit-test targets are `:ring_database_lookup_test`,
+`:ring_system_lookup_test`, and `:ring_database_builder_test`. The executable
+regressions under `test/smi2rings_bdb` build temporary databases rather than
+checking binary database files into the repository. They cover direct and cached
+builds, multiple-database fallback, and eight extraction configurations with text
+and proto output checked against the pre-refactor optimised executable.
+
+## Python: filtering by ring precedent
+
+The optional BerkeleyDB-dependent `lillymol_bdb` module provides `RingDatabase`.
+Open the database once, then query the least common eligible ring system in each
+molecule:
+
+```python
+from lillymol_bdb import RingDatabase
+
+with RingDatabase("rings.bdb", bare_ring_fallback=True) as ring_database:
+    for mol in molecules:
+        count = ring_database.rarest_ring_count(mol)
+        if count is not None and count < 4:
+            continue
+        # Retain this molecule, including acyclic molecules in this example.
+```
+
+`rarest_ring_count(mol)` returns zero if any eligible ring system is missing,
+a positive integer for the minimum precedent count, or `None` if there are no
+eligible ring systems. Both acyclic molecules and molecules whose rings are all
+excluded by the extraction limits return `None`. Counts across multiple databases
+use the maximum for each matched ring key, then the minimum across ring systems.
+The input molecule is preserved. Processing and database errors raise
+`RuntimeError`; invalid option values raise `ValueError`.
+
+The first argument accepts a database path string or a sequence of path strings.
+All other arguments are keyword-only and configure the object at construction:
+
+| Keyword | Default | Meaning |
+|---|---|---|
+| `standardize` | `False` | `True` activates `all`; a directive string or sequence of strings selects explicit standardisations. |
+| `remove_isotopes` | `False` | Remove input isotope labels before extraction. |
+| `remove_chirality` | `False` | Remove chirality before extraction. |
+| `largest_fragment` | `False` | Process only the largest fragment. |
+| `attachment_labels` | `True` | Query attachment-labelled ring keys. |
+| `bare_ring_fallback` | `False` | Also query unsubstituted ring keys after more specific keys miss. |
+| `max_ring_size` | Maximum integer | Exclude systems containing a ring larger than this limit; minimum 3. |
+| `max_rings_per_system` | Maximum integer | Exclude systems with more component rings; minimum 1. |
+| `atom_typing` | `""` | LillyMol atom-typing specification enabling environmental attachment labels. |
+
+Choose settings compatible with the database build. In particular, enabling
+bare-ring fallback broadens the definition of precedent: a ring may have
+precedent even when its particular attachment pattern does not.
+
+`close()` releases database handles and is idempotent. The context manager closes
+them automatically, including when its body raises an exception. Queries after
+closing raise `RuntimeError`. There are no database-building Python methods.

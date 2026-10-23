@@ -1,0 +1,12 @@
+# Remove only an unsubstituted two-carbon bridge, retaining the phenolic oxygen.
+# Require a two-ring fused system, matching the scope of phenol_to_benzofuran.
+name: "benzofuran_to_phenol"
+scaffold {
+  smarts: "[/IWfss2cD3]1:[cD3]:[cD2H1R1]:[cD2H1R1]:[oD2R1+0]:1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  remove_atom: [2, 3]
+  change_bond { a1: 0 a2: 4 btype: SS_SINGLE_BOND }
+}

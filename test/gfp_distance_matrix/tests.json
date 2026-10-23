@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_distance_matrix",
+  "test": [
+
+    {
+      "name": "case_1",
+      "args": [
+        "${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

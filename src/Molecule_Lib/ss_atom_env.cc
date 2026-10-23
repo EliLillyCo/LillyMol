@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -207,7 +208,7 @@ Substructure_Atom_Environment::_matches(Target_Atom& target_atom, int atoms_in_t
          << '\n';
 #endif
 
-    set_vector(already_matched, atoms_in_target, 0);
+    std::fill_n(already_matched, atoms_in_target, 0);
 
     if (_match_component(target_atom, i, already_matched_by_query, already_matched)) {
 #ifdef DEBUG_SS_ATOM_ENV_MATCHES

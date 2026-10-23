@@ -10,7 +10,7 @@
 
 #define USE_OMP
 #ifdef USE_OMP
-#include <omp.h>
+#include "omp.h"
 #endif
 
 #define REPORT_PROGRESS_IMPLEMENTATION
@@ -94,6 +94,11 @@ class SSpread_Item : public GFP_Standard {
 
   float distance() const {
     return _distance;
+  }
+  // This is only called when previously selected fingerprints are in effect.
+  // Note that it does not set _nearest_previously_selected.
+  void set_distance(float d) {
+    _distance = d;
   }
 
   int nearest_previously_selected() const {
@@ -312,7 +317,9 @@ do_output(const F* pool, const int isel, const int nsn, const float d,
   const int ini = pool[isel].initial_ndx();
 
   if (brief_output) {
-    output << smiles[ini] << ' ' << pcn[ini] << ' ' << d << "\n";
+    output << smiles[ini] << ' ' << pcn[ini] << ' ';
+    fraction_as_string.append_number(output, d);
+    output << '\n';
   } else {
     output << smiles_tag << smiles[isel] << ">\n";
     output << identifier_tag << pcn[isel] << ">\n";
@@ -322,7 +329,9 @@ do_output(const F* pool, const int isel, const int nsn, const float d,
 
       output << smiles_tag << smiles[n] << ">\n";
       output << identifier_tag << pcn[n] << ">\n";
-      output << distance_tag << d << ">\n";
+      output << distance_tag;
+      fraction_as_string.append_number(output, d);
+      output << ">\n";
     } else {
       output << smiles_tag << "*>\n";
       output << identifier_tag << "*>\n";
@@ -405,13 +414,24 @@ spread_with_weights(F* fingerprints, const int pool_size, const float* weight,
                     Selected_Item* selected_item) {
   int s;
 
+  // Everywhere else in this function distances[] holds *weighted* values - see
+  // the update in the selection loop below. The -A seed distances arrive
+  // unweighted, so scale them once here and the seed is then on the same footing
+  // as every subsequent update. Done before the branch so that -S rand -A gets
+  // weighted seeds too.
+  if (previously_selected_file_specified) {
+    for (int i = 0; i < pool_size; ++i) {
+      distances[i] *= weight[i];
+    }
+  }
+
   if (choose_first_point_randomly) {
     s = RandomPoolMember(pool_size);
   } else if (previously_selected_file_specified) {
-    s = 1;
+    s = 0;
     float dmax = distances[0];
     for (int i = 1; i < pool_size; i++) {
-      if (weight[i] * distances[i] > dmax) {
+      if (distances[i] > dmax) {
         dmax = distances[i];
         s = i;
       }
@@ -434,13 +454,23 @@ spread_with_weights(F* fingerprints, const int pool_size, const float* weight,
     //  iw_write_array(distances, pool_size, "initial distances", cerr);
   }
 
+  int items_written = 0;
+
   for (int items_selected = 0; items_selected < nsel; items_selected++) {
     //  cerr << " s = " << s << '\n';
     //  iw_write_array(spread_order, pool_size, "selected", cerr);
 
+    // nearest_previously_selected[] is initialised to -1, and with -A in effect
+    // the first selection has no in-pool neighbour, so it stays -1. Indexing
+    // fingerprints[-1] would be out of bounds; pass -1 through instead and let
+    // the writer emit '*' for the neighbour, as it already does for that case.
+    const int nps = nearest_previously_selected[s];
+
     set_selected_item(selected_item[items_selected], fingerprints[s].initial_ndx(),
-                      fingerprints[nearest_previously_selected[s]].initial_ndx(),
+                      nps >= 0 ? fingerprints[nps].initial_ndx() : -1,
                       distances[s]);
+
+    items_written = items_selected + 1;
 
     selected[s] = 1;
 
@@ -492,7 +522,9 @@ spread_with_weights(F* fingerprints, const int pool_size, const float* weight,
     }
   }
 
-  return 1;
+  // The caller writes selected_item[0 .. return value); the loop above can stop
+  // early, and the untouched tail of the array is uninitialised.
+  return items_written;
 }
 
 template <typename T>
@@ -575,7 +607,9 @@ template <typename T>
 int
 WriteSelectedBrief(const T* pool, int selected, IWString_and_File_Descriptor& output) {
   const T& sel = pool[selected];
-  output << sel.smiles(smiles) << ' ' << sel.pcn(pcn) << ' ' << sel.distance() << '\n';
+  output << sel.smiles(smiles) << ' ' << sel.pcn(pcn) << ' ';
+  fraction_as_string.append_number(output, sel.distance());
+  output << '\n';
   output.write_if_buffer_holds_more_than(4096);
   return 1;
 }
@@ -596,11 +630,15 @@ WriteSelected(T* pool, int selected, IWString_and_File_Descriptor& output) {
     int ndx = sel.nearest_previously_selected();
     output << smiles_tag << smiles[ndx] << ">\n";
     output << identifier_tag << pcn[ndx] << ">\n";
-    output << distance_tag << sel.distance() << ">\n";
+    output << distance_tag;
+    fraction_as_string.append_number(output, sel.distance());
+    output << ">\n";
   } else {
     output << smiles_tag << "*>\n";
     output << identifier_tag << "*>\n";
-    output << distance_tag << "1>\n";
+    output << distance_tag;
+    fraction_as_string.append_number(output, sel.distance());
+    output << ">\n";
   }
 
   output << "|\n";
@@ -608,6 +646,22 @@ WriteSelected(T* pool, int selected, IWString_and_File_Descriptor& output) {
   output.write_if_buffer_holds_more_than(4096);
 
   return 1;
+}
+
+// Return the index of the member of `pool` with the longest distance.
+int
+MaxInitialDistance(const SSpread_Item* pool, int pool_size) {
+  float max_dist = -1.0f;
+  int rc = -1;
+
+  for (int i = 0; i < pool_size; ++i) {
+    if (pool[i].distance() > max_dist) {
+      max_dist = pool[i].distance();
+      rc = i;
+    }
+  }
+
+  return rc;
 }
 
 template <typename F>
@@ -618,10 +672,7 @@ spread4(F* pool, int& pool_size, IWString_and_File_Descriptor& output) {
   if (choose_first_point_randomly) {
     s = RandomPoolMember(pool_size);
   } else if (previously_selected_file_specified) {
-    s = std::max_element(
-            pool, pool + pool_size,
-            [](const F& fp1, const F& fp2) { return fp1.distance() > fp2.distance(); }) -
-        pool;
+    s = MaxInitialDistance(pool, pool_size);
   } else {
     s = 0;
   }
@@ -1126,12 +1177,13 @@ do_previously_selected(const IW_General_Fingerprint& gfp) {
   sgfp.build_mk(gfp[1]);
   sgfp.build_mk2(gfp[2]);
 
-#pragma omp parallel for schedule(dynamic, 256)
+#pragma omp parallel for schedule(static)
   for (int i = 0; i < pool_size; i++) {
     float d = sgfp.tanimoto_distance(fingerprints[i]);
 
     assert(d >= 0.0f);
 
+//  cerr << " cmp " << d << " distances[i] " << distances[i] << " i = " << i << '\n';
     if (d < distances[i]) {
       distances[i] = d;
     }
@@ -1146,6 +1198,13 @@ static int
 do_previously_selected(iwstring_data_source& input) {
   IW_TDT tdt;
 
+  Report_Progress my_report_progress;
+  if (report_progress.active()) {
+    my_report_progress.set_report_every(report_progress.report_every());
+  }
+
+  int fingerprints_read = 0;
+
   while (tdt.next(input)) {
     IW_General_Fingerprint gfp;
 
@@ -1156,6 +1215,24 @@ do_previously_selected(iwstring_data_source& input) {
     }
 
     do_previously_selected(gfp);
+
+    ++fingerprints_read;
+
+    if (my_report_progress()) {
+      cerr << "Processed " << my_report_progress.times_called() << " previously selected fingerprints\n";
+    }
+  }
+
+  // A file that yields no fingerprints - empty, or not TDT at all - leaves every
+  // initial distance at 1.0, which is indistinguishable from -A never having been
+  // specified. Fail rather than silently ignore the option.
+  if (fingerprints_read == 0) {
+    cerr << "do_previously_selected:no fingerprints read\n";
+    return 0;
+  }
+
+  if (verbose) {
+    cerr << "Read " << fingerprints_read << " previously selected fingerprints\n";
   }
 
   return 1;
@@ -1303,7 +1380,7 @@ gfp_spread_standard(int argc, char** argv) {
     }
   }
 
-  if (0 == cl.number_elements()) {
+  if (cl.empty()) {
     cerr << "Insufficient arguments\n";
     usage(2);
   }
@@ -1496,11 +1573,11 @@ gfp_spread_standard(int argc, char** argv) {
   if (cl.option_present('A')) {
     const char* fname = cl.option_value('A');
 
-    set_vector(distances, pool_size, 1.0f);
+    std::fill_n(distances, pool_size, 1.0f);
 
     if (!do_previously_selected(fname)) {
       cerr << "Cannot process previously selected file '" << fname << "'\n";
-      return 0;
+      return 3;
     }
 
     if (verbose) {
@@ -1508,6 +1585,10 @@ gfp_spread_standard(int argc, char** argv) {
     }
 
     previously_selected_file_specified = 1;
+
+    for (int i = 0; i < pool_size; ++i) {
+      fingerprints[i].set_distance(distances[i]);
+    }
   }
 
   if (cl.option_present('S')) {
@@ -1571,15 +1652,33 @@ gfp_spread_standard(int argc, char** argv) {
     }
   }
 
-  fraction_as_string.initialise(0.0, 1.0, 4);
-  fraction_as_string.set_leading_string("DIST<");
-  fraction_as_string.append_to_each_stored_string(">\n");
+  // Share raw numeric strings across DIST, SCALE, and brief output. Values
+  // outside [0, 1] use Fraction_as_String's stable formatting fallback.
+  if (!fraction_as_string.initialise(0.0f, 1.0f, 4)) {
+    cerr << "Cannot initialise distance and scale formatting\n";
+    return 1;
+  }
 
   IWString_and_File_Descriptor output(1);
 
+  // Must be set before either spread is run: spread4 writes as it selects, via
+  // WriteSelected, which consults brief_output.
+  if (cl.option_present('b')) {
+    brief_output = 1;
+
+    if (verbose) {
+      cerr << "Brief output\n";
+    }
+  }
+
   cerr.flush();
+
+  // spread4 writes each selection as it makes it. spread_with_weights instead
+  // fills selected_item[] and leaves the writing to the block below.
+  int items_selected = 0;
   if (scaling_factor_specified) {
-    spread_with_weights(fingerprints, pool_size, weight, selected_item);
+    items_selected =
+        spread_with_weights(fingerprints, pool_size, weight, selected_item);
   } else {
     spread4(fingerprints, pool_size, output);
   }
@@ -1596,25 +1695,23 @@ gfp_spread_standard(int argc, char** argv) {
     cerr << "Writing results\n";
   }
 
-  if (cl.option_present('b')) {
-    brief_output = 1;
-
-    if (verbose) {
-      cerr << "Brief output\n";
-    }
-  }
-
-  return 0;
-
-  if (brief_output) {
-    for (int i = 0; i < nsel; ++i) {
+  // Only the weighted path defers its output. Bounded by items_selected rather
+  // than nsel: the spread can stop early and the rest of the array is
+  // uninitialised. (An unconditional `return 0` used to sit here, which meant
+  // -p produced no output at all.)
+  if (!scaling_factor_specified) {
+    // spread4 has already written everything.
+  } else if (brief_output) {
+    for (int i = 0; i < items_selected; ++i) {
       const Selected_Item& s = selected_item[i];
 
-      output << smiles[s._sel] << ' ' << pcn[s._sel] << ' ' << s._dist << '\n';
+      output << smiles[s._sel] << ' ' << pcn[s._sel] << ' ';
+      fraction_as_string.append_number(output, s._dist);
+      output << '\n';
       output.write_if_buffer_holds_more_than(4096);
     }
   } else {
-    for (int i = 0; i < nsel; ++i) {
+    for (int i = 0; i < items_selected; ++i) {
       const Selected_Item& s = selected_item[i];
 
       const int id = s._sel;
@@ -1625,14 +1722,20 @@ gfp_spread_standard(int argc, char** argv) {
       if (nsn >= 0) {
         output << smiles_tag << smiles[nsn] << ">\n";
         output << identifier_tag << pcn[nsn] << ">\n";
-        output << scale_tag << weight[id] << ">\n";
-        output << distance_tag << s._dist << ">\n";
+        output << scale_tag;
+        fraction_as_string.append_number(output, weight[id]);
+        output << ">\n";
+        output << distance_tag;
+        fraction_as_string.append_number(output, s._dist);
+        output << ">\n";
       } else {
         output << smiles_tag << "*>\n";
         output << identifier_tag << "*>\n";
         output << scale_tag << "*>\n";
         if (s._dist > 0.0f) {
-          output << distance_tag << s._dist << ">\n";
+          output << distance_tag;
+          fraction_as_string.append_number(output, s._dist);
+          output << ">\n";
         } else {
           output << distance_tag << "1>\n";
         }

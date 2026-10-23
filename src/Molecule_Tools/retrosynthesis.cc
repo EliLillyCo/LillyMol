@@ -1674,7 +1674,10 @@ Set_of_Reactions::WriteLhsQueryProto(IWString& name_stem, int radius) const
     Substructure_Query& q = *rxn;
     SubstructureSearch::SubstructureQuery proto = q.BuildProto();
     std::string buffer;
-    google::protobuf::TextFormat::PrintToString(proto, &buffer);
+    if (! google::protobuf::TextFormat::PrintToString(proto, &buffer)) {
+      cerr << "PrintToString failed\n";
+      return 0;
+    }
     txtproto_output << buffer;
   }
 

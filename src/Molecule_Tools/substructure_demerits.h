@@ -1,12 +1,11 @@
-#ifndef SUBSTRUCTURE_DEMERIT_H
-#define SUBSTRUCTURE_DEMERIT_H
+#ifndef MOLECULE_TOOLS_SUBSTRUCTURE_DEMERIT_H
+#define MOLECULE_TOOLS_SUBSTRUCTURE_DEMERIT_H
 
 class Molecule;
 class Demerit;
 class Charge_Assigner;
 
-namespace substructure_demerits
-{
+namespace substructure_demerits {
 void set_verbose (int);
 
 void set_keep_going_after_rejection (int);
@@ -35,9 +34,8 @@ int initialise_charge_assigner(const char *);
 void set_substructure_demerits_too_many_rings (int s);
 void set_substructure_demerits_ring_size_too_large (int s);
 
-
 void set_cx_chain_rejection_length(int s);
 void set_all_numeric_demerit_values (int s);
-};
+}  // namespace substructure_demerits
 
-#endif
+#endif  // MOLECULE_TOOLS_SUBSTRUCTURE_DEMERIT_H

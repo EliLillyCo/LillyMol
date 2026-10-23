@@ -418,34 +418,40 @@ slow compared with bit comparison operations.
 
 ### Tversky
 Many tools support a '-V' option, which allows specification of Tversky
-parameters. It is always super confusion which way the parameters go, and
-it is often easiest to try ot both ways and see.
+parameters. It is always super confusing which way the parameters go, and
+it is often easiest to try to both ways and see.
 
-For example, start with benzene and do a similarity search into a larger
+For example, start with aspirin and do a similarity search into a larger
 set with the opposite Tversky settings.
 ```
-gfp_make -NCIW benzene.smi > benzene.gfp
+gfp_make -NCIW aspirin.smi > aspirin.gfp
 gfp_make -NCIW haystack.smi > haystack.gfp
-gfp_lnearneighbours -n 10 -p benzene.smi -V a=2 -V b=0 haystack > benzene.nn
+gfp_lnearneighbours -n 10 -p aspirin.gfp -V a=2 -V b=0 haystack.gfp > aspirin.nn
 ```
-we find that any molecule that contains a benzene atom matches with
-zero distance. These might include
-```
-COC1=C2C(=CC(=C1)N)SC(N)=N2 CHEMBL587076
-C1=C(O)C=CC(=C1)[C@H]1C[C@@H]1CN CHEMBL492304
-C(=N)(N)NN=CC1=CC=CC=C1 CHEMBL1183425
-N(C)(C1=CC=CC=C1)CCCBr CHEMBL2380319
-C1CC2=CC(=CC=C2C(=O)C1)O CHEMBL3288306
-C1(=CC=CC(=C1C(=O)CC)O)O CHEMBL3274338
-C1=CC=C2C(=C1)[C@@H]1C(C2)[C@H]1N CHEMBL4302026
-N(=O)(=O)C1=C(N)C=CC=C1N CHEMBL167321
-N(O)(C1=CC=CC=C1)CCC CHEMBL358605
-C1=CC=C2C(=C1)NC(N)S2 CHEMBL568765
-```
-Essentially we are doing a substructure search for benzene.
+we find molecules that are subsets of aspirin at zero distance. These might
+include
 
-If on the other hand we reverse the parameters,  we might find as matches
+![aspirin](Images/aspirin.png)
 
+![CHEMBL9113](Images/CHEMBL9113.png)
+
+![CHEMBL46931](Images/CHEMBL46931.png)
+
+![CHEMBL2105241](Images/CHEMBL2105241.png)
+
+Essentially we are looking for molecules that are subsets of aspirin.
+
+If on the other hand when we reverse the parameters, `-V a=0 -V b=2`, we find
+matches such as
+
+![CHEMBL228226](Images/CHEMBL228226.png)
+
+![CHEMBL246709](Images/CHEMBL246709.png)
+
+![CHEMBL4907684](Images/CHEMBL4907684.png)
+
+where we are finding molecules that contain aspirin embedded within them, or
+approximately embedded - the last example.
 
 ## Tools
 All programmes that deal with gfp fingerprint files are prefixed with 'gfp_',
@@ -454,6 +460,7 @@ so tab completion is your friend.
 The tool families include:
 
 * gfp_make      makes fingerprint files
+* gfp_compare_collections      approximate distribution of distances between collections
 * gfp_distance_matrix   compute a distance matrix
 * gfp_distance_filter   filter fingerprints by similarity to another set
 * gfp_flatten_counted   turn counted bits to a max of 1

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <nmmintrin.h>
+#include "popcount.h"
 
 #include "Foundational/iwbits/dy_fingerprint.h"
 #include "Foundational/iwbits/iwbits.h"
@@ -180,7 +180,6 @@ FixedBitVector::FixedBitVector(FixedBitVector&& rhs) {
   _nbits = rhs._nbits;
   _bits = rhs._bits;
 
-  delete [] rhs._bits;
   rhs._bits = nullptr;
   rhs._nwords = 0;
   rhs._nbits = 0;
@@ -254,7 +253,7 @@ int
 FixedBitVector::nset() const {
   int rc = 0;
   for (int i = 0; i < _nwords; ++i) {
-    rc +=  _mm_popcnt_u64(_bits[i]);
+    rc +=  POPCOUNT(_bits[i]);
   }
   return rc;
 }
@@ -272,7 +271,7 @@ int
 FixedBitVector::BitsInCommon(const FixedBitVector& rhs) const {
   int rc = 0;
   for (int i = 0; i < _nwords; ++i) {
-    rc +=  _mm_popcnt_u64(_bits[i] & rhs._bits[i]);
+    rc +=  POPCOUNT(_bits[i] & rhs._bits[i]);
   }
   return rc;
 }
@@ -454,6 +453,19 @@ FixedBitVector::operator== (const FixedBitVector& rhs) const {
   }
 
   return std::equal(_bits, _bits + _nwords, rhs._bits);
+}
+
+bool
+FixedBitVector::ContainsSubset(const FixedBitVector& subset) const {
+  if (_nwords != subset._nwords) {
+    return false;
+  }
+  for (int i = 0; i < _nwords; ++i) {
+    if ((_bits[i] & subset._bits[i]) != subset._bits[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 IWString
@@ -824,5 +836,25 @@ FixedBitVector::ConstructFromArray(const T * bits, int nbits) {
 }
 
 template int FixedBitVector::ConstructFromArray(const int * bits, int nbits);
+
+template <typename T>
+int
+FixedBitVector::ConstructFromArrayIWBitsOrder(const T * bits, int nbits) {
+  if (_nwords) {
+    resize(0);
+  }
+  _allocate_bits(nbits);
+
+  unsigned char* destination = reinterpret_cast<unsigned char*>(_bits);
+  for (int i = 0; i < nbits; ++i) {
+    if (bits[i]) {
+      destination[i / IW_BITS_PER_BYTE] |= one_bit_8[i % IW_BITS_PER_BYTE];
+    }
+  }
+
+  return nbits;
+}
+
+template int FixedBitVector::ConstructFromArrayIWBitsOrder(const int * bits, int nbits);
 
 }  // namespace fixed_bit_vector

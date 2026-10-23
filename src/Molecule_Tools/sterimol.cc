@@ -14,8 +14,10 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
+#include <numbers>
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/iwmisc/misc.h"
@@ -25,7 +27,7 @@
 
 using std::cerr;
 
-static angle_t rotation_angle = 5.0 * M_PI / 180.0;
+static angle_t rotation_angle = 5.0 * std::numbers::pi / 180.0;
 
 angle_t
 default_sterimol_rotation_angle() {
@@ -445,9 +447,9 @@ Sterimol::Sterimol() {
 
 void
 Sterimol::reset() {
-  set_vector(_b, NSTERIMOL, static_cast<sterimol_t>(0.0));
+  std::fill_n(_b, NSTERIMOL, static_cast<sterimol_t>(0.0));
 
-  set_vector(_partial_charge_descriptor, NSTERIMOL_PARTIAL_CHARGE,
+  std::fill_n(_partial_charge_descriptor, NSTERIMOL_PARTIAL_CHARGE,
              static_cast<charge_t>(0.0));
   _from_base_atom.reset();
 

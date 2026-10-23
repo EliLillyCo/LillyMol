@@ -1,0 +1,10 @@
+\begin{center}
+\begin{tabular}{r c r c}
+Molecules & Reason Rej & Molecules & Reason Demerit \\
+\hline
+1 & hard\_reject\_reason & 2 & \\
+1 &  & 1 & first\_reason\\
+ &  & 1 & reason with | pipe\\
+\hline
+\end{tabular}
+\end{center}

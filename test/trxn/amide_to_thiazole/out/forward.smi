@@ -1,0 +1,7 @@
+Cc1ncc(C)s1 aliphatic +
+c1ccccc1c1ncc(C)s1 ring_on_carbonyl_side +
+Cc1ncc(c2ccccc2)s1 ring_on_nitrogen_side +
+c1ccccc1c1ncc(Cc2ccccc2)s1 two_ring_substituents +
+C[C@H](O)c1ncc([C@@H](F)Cl)s1 chiral_attachments +
+Cc1ncc(CC(=O)NC)s1 two_amides.0 +
+CC(=O)NCc1ncc(C)s1 two_amides.1 +

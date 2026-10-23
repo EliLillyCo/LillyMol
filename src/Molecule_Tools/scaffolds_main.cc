@@ -178,6 +178,7 @@ LocalOptions::Preprocess(Molecule& m) {
 
   if (_remove_chirality) {
     m.remove_all_chiral_centres();
+    m.revert_all_directional_bonds_to_non_directional();
   }
 
   if (_chemical_standardisation.active()) {
@@ -214,7 +215,10 @@ LocalOptions::Write(Molecule& parent,
 
   std::string buffer;
 
-  printer.PrintToString(result, &buffer);
+  if (!printer.PrintToString(result, &buffer)) {
+    cerr << "PrintToString failed\n";
+    return 0;
+  }
   output << buffer << '\n';
   output.write_if_buffer_holds_more_than(8192);
 
@@ -281,7 +285,10 @@ LocalOptions::WriteAccumulated(const std::string& usmi,
 
   std::string buffer;
 
-  printer.PrintToString(proto, &buffer);
+  if (!printer.PrintToString(proto, &buffer)) {
+    cerr << "PrintToString failed\n";
+    return 0;
+  }
   _stream_for_all_scaffolds << buffer << '\n';
 
   return 1;
@@ -322,6 +329,8 @@ R1-R2-R3 the output will be {R1 R2 R3 R1-R2 R2-R3 R1-R2-R3}.
  -W <fname>             write dicer_data::DicerFragment data on all scaffolds.
  -p                     write the parent molecule.
  -y                     output as scaffolds::ScaffoldData textproto.
+ -c                     remove all chirality.
+ -l                     reduce to largest fragment.
  -v                     verbose output.
 )";
 

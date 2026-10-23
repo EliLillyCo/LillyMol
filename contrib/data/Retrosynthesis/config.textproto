@@ -1,0 +1,10 @@
+reaction {
+  reaction_file: "acid_amine.rxn"
+  fingerprint_file: "carboxyllic_acid.gfp"
+  fingerprint_file: "primary_amine.gfp"
+}
+reaction {
+  reaction_file: "aryl_halide.rxn"
+  fingerprint_file: "aryl_halide.gfp"
+  fingerprint_file: "primary_amine.gfp"
+}

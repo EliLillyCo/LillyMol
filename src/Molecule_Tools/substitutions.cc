@@ -1315,7 +1315,7 @@ process_join_points_that_form_rings(Molecule & m,
 
 //    Just because the anchor points are in the same ring, doesn't mean that the substitutents are
 
-      set_vector(in_fragment, matoms, 0);
+      std::fill_n(in_fragment, matoms, 0);
       embedding.set_vector(in_fragment, EMBEDDING_ISO);
 
       int found_ring = 0;
@@ -1472,7 +1472,7 @@ identify_substituent_between (Molecule & m,
   atom_number_t zatom1 = embedding[ndx1];
   atom_number_t zatom2 = embedding[ndx2];
 
-  set_vector(in_fragment, m.natoms(), 0);
+  std::fill_n(in_fragment, m.natoms(), 0);
 
   int fragment_size = identify_atoms_between(m, zatom1, zatom2, in_fragment, 1);
 
@@ -1585,7 +1585,7 @@ identify_substituent (Molecule & m,
   cerr << "Substituent starting with atom " << zatom << ' ' << m.smarts_equivalent_for_atom(zatom) << endl;
 #endif
 
-  set_vector(in_fragment, m.natoms(), 0);
+  std::fill_n(in_fragment, m.natoms(), 0);
 
   embedding.set_vector(in_fragment, EMBEDDING_ISO);
 

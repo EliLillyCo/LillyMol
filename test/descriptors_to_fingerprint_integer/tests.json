@@ -14,7 +14,15 @@
       "args": [
          "-f -v -J NCDSCQ -D #{indir}/in.dat #{indir}/in.gfp"
       ]
+    },
+
+    {
+      "name": "dash_W",
+      "args": [
+         "-s C -W . -v -i , #{indir}/prototype.csv #{indir}/synthetic.csv"
+      ]
     }
+
 
 
   ]

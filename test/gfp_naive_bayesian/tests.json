@@ -1,0 +1,15 @@
+{
+  "executable": "gfp_naive_bayesian",
+  "difftool": "${LILLYMOL_HOME}/test/same_number_lines.sh",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-t 50 -f train -c 2 -F FPIW -C 2/50 -A #{indir}/train.act #{indir}/train.gfp"
+      ]
+    }
+
+  ]
+}

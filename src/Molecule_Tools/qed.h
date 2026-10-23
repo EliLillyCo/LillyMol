@@ -65,19 +65,39 @@ class Qed {
     // Used for externally supplied donor and/or acceptor queries
     int ExternalQueryCount(Molecule& m,
                 resizable_array_p<Substructure_Query>& queries);
+    int ReadQueryFile(const IWString& fname,
+                resizable_array_p<Substructure_Query>& destination,
+                const char* description);
+    int FinishInitialisation();
 
   public:
     Qed();
 
     int Initialise(Command_Line& cl, char flag);
+    int InitialiseFromDirectory(const IWString& qed_dir);
+    int InitialiseFromEnvironment();
 
+    // WARNING - THIS MODIFIES `m`. It suppresses Hydrogens and reduces to the
+    // largest organic fragment. Intended for use via qed() below, which
+    // arranges for a copy where one is needed.
     bool CalculateProperties(Molecule& m, QEDProperties& result);
 
     // The main entry point. Compute QED.
+    //
+    // Does NOT modify `m`. The calculation itself is destructive - it
+    // suppresses Hydrogens, reduces to the largest organic fragment, and
+    // computes alogp, which strips isotopes. A molecule that any of those would
+    // alter is copied first. A single organic fragment with no removable
+    // Hydrogen and no isotope is scored in place.
     std::optional<float> qed(Molecule& m);
 
     // If the user has computed the properties, convert that to a QED score.
     float ComputeQed(const QEDProperties& properties) const;
+
+  private:
+    // The destructive form. qed() arranges that `m` is either a copy or a
+    // molecule that this will not alter.
+    std::optional<float> QedDestructive(Molecule& m);
 };
 
 std::optional<float> qed(Molecule& m);

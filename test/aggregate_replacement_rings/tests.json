@@ -1,0 +1,11 @@
+{
+  "executable": "aggregate_replacement_rings",
+  "test": [
+    {
+      "name": "combine_counts",
+      "args": [
+        "-S aggregated.textproto #{indir}/first.textproto #{indir}/second.textproto"
+      ]
+    }
+  ]
+}

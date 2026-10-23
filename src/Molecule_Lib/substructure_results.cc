@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -300,7 +301,7 @@ Substructure_Results::add_embedding(Set_of_Atoms * e,
     return 1;
 
   if (_remove_invalid_atom_numbers_from_new_embeddings)
-    e->remove_all(INVALID_ATOM_NUMBER);
+    e->remove_all(kInvalidAtomNumber);
 
   _embedding.add(e);
 
@@ -803,7 +804,7 @@ Substructure_Results::_remove_hits_not_in_largest_fragment_multiple_largest(Mole
 
     if (a > atoms_in_largest_fragment)
     {
-      set_vector(is_largest, nf, 0);
+      std::fill_n(is_largest, nf, 0);
       is_largest[i] = 1;
       atoms_in_largest_fragment = a;
     }
@@ -1201,13 +1202,20 @@ EmbeddingMatchesGlobalIds(const Set_of_Atoms& embedding,
 
   for (int i = 0; i < n; ++i) {
     const Substructure_Atom * a = qam[i];
-    int gmid = a->global_match_id();
-    if (gmid <= 0) {
+    int gmid = a->global_id_match();
+    if (gmid == 0) {
       continue;
     }
     const atom_number_t matched_atom = embedding[i];
-    if (matched_by_global_conditions[matched_atom] != gmid) {
-      return 0;
+    // Treat positive and negative matches differently
+    if (gmid > 0) {  // positive match
+      if (matched_by_global_conditions[matched_atom] != gmid) {
+        return 0;
+      }
+    } else {  // negative match.
+      if (matched_by_global_conditions[matched_atom] == gmid) {
+        return 0;
+      }
     }
   }
 

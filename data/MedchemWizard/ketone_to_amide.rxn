@@ -1,0 +1,13 @@
+name: "ketone_to_amide"
+scaffold {
+  smarts: "[OD1]=[CR0T1]-[CR0G0D2T0]"
+  smarts: "[OD1]=[CR0T1]-[CR0G0D3T0]"
+  smarts: "[OD1]=[CR0T1]-[CR0G0D1]"
+  change_element {
+    atom: 2
+    element: "N"
+  }
+  match_conditions {
+    embeddings_can_overlap: false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "executable": "tshadow",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-L -G #{indir}/in.sdf"
+      ]
+    }
+
+  ]
+
+}

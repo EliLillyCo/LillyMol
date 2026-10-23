@@ -99,14 +99,17 @@ Element_Matcher::operator_less_less(std::ostream& os) const {
 void
 display_element_matcher_syntax(std::ostream& os) {
   // clang-format off
-  os << "Element_Matcher recognised syntax options\n";
-  os << " RX=<regexp>      elements whose symbols match <regexp>, e.g. 'RX=^[C,O]$'\n";
-  os << " norganic         organic elements\n";
-  os << " nonorganic       non organic elements\n";
-  os << " nonperiodic      elements not in the periodic table\n";
-  os << " <sym>            match the element with symbol <sym>\n";
-  os << " <n><sym>         match isotope <n> of <sym>\n";
-//os << " *<sym>           match all isotopic variants of <sym>\n";   not sure this works properly, it just converts to atomic number match, which isn't what should happen
+  os << R"(Element_Matcher recognised syntax options
+ norganic           organic elements.
+ nonorganic         non organic elements.
+ nonperiodic        elements not in the periodic table.
+ <sym>              match the element with symbol <sym>:        C
+ CSV:<sym1>,<sym2>  multiple specifications in one token:       CSV:F,Cl,Br,I
+ RX=<regexp>        elements whose symbols match <regexp>:      'RX=^[C,O]$'
+ <n>                atoms with isotope <n>:                     1
+ <n><sym>           match isotope <n> of <sym>:                 3C
+)";
+
   // clang-format on
 
   return;
@@ -356,33 +359,52 @@ Set_of_Element_Matches::construct_from_command_line(Command_Line& cl, int verbos
   IWString ele;
   int i = 0;
   while (cl.value(mflag, ele, i++)) {
-    if (0 == ele.length() || "none" == ele) {  // special case(s) for fileconv
+    if (ele.empty() || "none" == ele) {  // special case(s) for fileconv
       continue;
     }
 
-    if (1 == ele.nwords()) {
-      Element_Matcher* em = new Element_Matcher(ele);
-
-      if (verbose) {
-        cerr << "Element '" << ele << "' included in element matches\n";
+    cerr << "Examining '" << ele << "'\n";
+    if (ele.starts_with("CSV:")) {
+      ele.remove_leading_chars(4);
+      if (! ConstructFromList(ele, ',')) {
+        return 0;
       }
-
-      add(em);
+    } else if (1 == ele.nwords()) {
+      // The list works fine if there is just one token.
+      if (! ConstructFromList(ele, ' ')) {
+        return 0;
+      }
     } else {
-      int j = 0;
-      const_IWSubstring token;
-      while (ele.nextword(token, j)) {
-        Element_Matcher* em = new Element_Matcher(token);
-        if (verbose) {
-          cerr << "Element '" << (*em) << "' included in element matches\n";
-        }
-
-        add(em);
+      if (! ConstructFromList(ele, ' ')) {
+        return 0;
       }
     }
   }
 
   return _number_elements + 1;
+}
+
+int
+Set_of_Element_Matches::ConstructFromList(const IWString& list,
+                char sep) {
+  int rc = 0;
+
+  int i = 0;
+  const_IWSubstring token;
+  while (list.nextword(token, i, sep)) {
+    std::unique_ptr<Element_Matcher> ele = std::make_unique<Element_Matcher>();
+    if (! ele->construct_from_string(token)) {
+      cerr << "Set_of_Element_Matches::construct_from_command_line:invalid element '" <<
+              token << "'\n";
+      return 0;
+    }
+
+    add(ele.release());
+
+    ++rc;
+  }
+
+  return rc;
 }
 
 int

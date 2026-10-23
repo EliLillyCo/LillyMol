@@ -1,0 +1,16 @@
+# Bridge facing ortho C-H positions of a biaryl with CH2 to form a five-membered ring.
+name: "biphenyl_to_fluorene"
+scaffold {
+  smarts: "[cD2H1R1]:[cD3R1]-!@[cD3R1]:[cD2H1R1]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join { a1: 0 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 3 a2: 0 btype: SS_SINGLE_BOND }
+}

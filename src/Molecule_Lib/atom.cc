@@ -1452,7 +1452,7 @@ Atom::next_atom_for_smiles(atom_number_t my_atom_number, int* already_done,
                            int* canonical_order, atom_number_t& next_atom) const {
   (void)canonical_order;  // not used
 
-  atom_number_t zdefault = INVALID_ATOM_NUMBER;
+  atom_number_t zdefault = kInvalidAtomNumber;
 
   for (int i = 0; i < _number_elements; i++) {
     const Bond* b = _things[i];
@@ -1465,12 +1465,12 @@ Atom::next_atom_for_smiles(atom_number_t my_atom_number, int* already_done,
     if (!b->is_single_bond()) {
       next_atom = j;
       return 1;
-    } else if (INVALID_ATOM_NUMBER == zdefault) {
+    } else if (kInvalidAtomNumber == zdefault) {
       zdefault = j;
     }
   }
 
-  if (INVALID_ATOM_NUMBER == zdefault) {
+  if (kInvalidAtomNumber == zdefault) {
     return 0;
   }
 
@@ -1481,7 +1481,7 @@ Atom::next_atom_for_smiles(atom_number_t my_atom_number, int* already_done,
 int
 Atom::next_atom_for_unique_smiles(atom_number_t my_atom_number, int* already_done,
                                   int* canonical_order, atom_number_t& next_atom) const {
-  atom_number_t zdefault = INVALID_ATOM_NUMBER;
+  atom_number_t zdefault = kInvalidAtomNumber;
   int rsave = 0;  // initialised to shut gcc up
 
   int highest_bond_count = 0;  // initialised to shut gcc up
@@ -1520,7 +1520,7 @@ Atom::next_atom_for_unique_smiles(atom_number_t my_atom_number, int* already_don
 
     int rj = canonical_order[j];
 
-    if (INVALID_ATOM_NUMBER == zdefault || bcount > highest_bond_count) {
+    if (kInvalidAtomNumber == zdefault || bcount > highest_bond_count) {
       highest_bond_count = bcount;
       zdefault = j;
       rsave = rj;
@@ -1534,7 +1534,7 @@ Atom::next_atom_for_unique_smiles(atom_number_t my_atom_number, int* already_don
     }
   }
 
-  if (INVALID_ATOM_NUMBER != zdefault) {
+  if (kInvalidAtomNumber != zdefault) {
     next_atom = zdefault;
 
 #ifdef DEBUG_UNIQUE_SMILES_ORDERING
@@ -1558,8 +1558,8 @@ Atom::next_atom_for_random_smiles(atom_number_t my_atom_number, int* already_don
                                   int* canonical_order, atom_number_t& next_atom) const {
   (void)canonical_order;  // not used
 
-  atom_number_t zdefault = INVALID_ATOM_NUMBER;
-  atom_number_t multiple_bond = INVALID_ATOM_NUMBER;
+  atom_number_t zdefault = kInvalidAtomNumber;
+  atom_number_t multiple_bond = kInvalidAtomNumber;
 
   for (int i = 0; i < _number_elements; i++) {
     const Bond* b = _things[i];
@@ -1570,24 +1570,24 @@ Atom::next_atom_for_random_smiles(atom_number_t my_atom_number, int* already_don
     }
 
     if (!b->is_single_bond()) {
-      if (INVALID_ATOM_NUMBER == multiple_bond) {
+      if (kInvalidAtomNumber == multiple_bond) {
         multiple_bond = j;
       } else if (zero_or_one(generator)) {
         multiple_bond = j;
       }
-    } else if (INVALID_ATOM_NUMBER == zdefault) {
+    } else if (kInvalidAtomNumber == zdefault) {
       zdefault = j;
     } else if (zero_or_one(generator)) {
       zdefault = j;
     }
   }
 
-  if (INVALID_ATOM_NUMBER != multiple_bond) {
+  if (kInvalidAtomNumber != multiple_bond) {
     next_atom = multiple_bond;
     return 1;
   }
 
-  if (INVALID_ATOM_NUMBER != zdefault) {
+  if (kInvalidAtomNumber != zdefault) {
     next_atom = zdefault;
     return 1;
   }

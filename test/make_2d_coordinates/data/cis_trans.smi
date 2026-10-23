@@ -1,0 +1,13 @@
+C/C=C/C trans_butene
+C/C=C\C cis_butene
+CC/C=C/CC trans_hexene
+CC/C=C\CC cis_hexene
+OC/C=C/CO trans_butenediol
+OC/C=C\CO cis_butenediol
+OC(=O)/C=C/C(=O)O fumaric
+OC(=O)/C=C\C(=O)O maleic
+C/C=C/C=C/C trans_trans_hexadiene
+C/C=C\C=C/C cis_cis_hexadiene
+C/C=C/C=C\C trans_cis_hexadiene
+CC/C(C)=C(/C)CC tetrasubstituted
+CC=CC unspecified

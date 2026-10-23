@@ -1,0 +1,10 @@
+name: "strongly_fused_4_ring"
+query {
+  numeric_value: 20
+  ring_specifier {
+    base {
+      min_strongly_fused_ring_neighbours: 1
+    }
+    ring_size: 4
+  }
+}

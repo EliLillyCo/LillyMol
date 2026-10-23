@@ -83,9 +83,11 @@ Dicer::Dicer() {
 
   _break_amide_bonds = 0;
   _break_cc_bonds = 0;
+  _break_cc_bonds_at_highly_connected = 0;
   _break_ring_chain_bonds = 1;
 
   _label_join_points = 0;
+  _increment_isotope_for_join_points = 0;
 
   _determine_fragment_counts = 1;
 
@@ -207,6 +209,19 @@ Dicer::IdentifyBondsToBreakViaQueries(Molecule& m, int* can_break) {
   return rc;
 }
 
+// Return true if either `a1` or `a2` have connectivity > 2
+static bool
+AtLeastOneHighlyConnected(const Molecule& m, atom_number_t a1, atom_number_t a2) {
+  if (m.ncon(a1) > 2) {
+    return true;
+  }
+  if (m.ncon(a2) > 2) {
+    return true;
+  }
+
+  return false;
+}
+
 /*
    The hard coded rules are
    aromatic - *
@@ -309,6 +324,15 @@ Dicer::IdentifyBondsToBreakHardCodedRules(Molecule& m, int* can_break) {
       rc++;
       continue;
     }
+
+    if (_break_cc_bonds_at_highly_connected && z1 == 6 && z2 == 6 &&
+        AtLeastOneHighlyConnected(m, a1, a2)) {
+      can_break[a1 * matoms + a2] = 1;
+      can_break[a2 * matoms + a1] = 1;
+      rc++;
+      continue;
+    }
+
   }
 
 // #define ECHO_BONDS_BROKEN
@@ -466,6 +490,16 @@ PerMoleculeData::AlreadyFound(std::unique_ptr<FixedBitVector>& fp) {
   return 0;
 }
 
+int
+Dicer::MaybeIncrementIsotope(Molecule& m, atom_number_t zatom) const {
+  isotope_t iso = m.isotope(zatom);
+  if (iso >= static_cast<isotope_t>(_increment_isotope_for_join_points)) {
+    return 0;
+  }
+
+  return m.set_isotope(zatom, iso + _increment_isotope_for_join_points);
+}
+
 std::tuple<isotope_t, isotope_t>
 Dicer::BreakTheBond(Molecule& m, atom_number_t a1, atom_number_t a2) const {
   m.remove_bond_between_atoms(a1, a2);
@@ -475,6 +509,9 @@ Dicer::BreakTheBond(Molecule& m, atom_number_t a1, atom_number_t a2) const {
   if (_label_join_points) {
     m.set_isotope(a1, _label_join_points);
     m.set_isotope(a2, _label_join_points);
+  } else if (_increment_isotope_for_join_points) {
+    MaybeIncrementIsotope(m, a1);
+    MaybeIncrementIsotope(m, a2);
   }
 
   return result;
@@ -487,6 +524,9 @@ Dicer::Restore(Molecule& m, atom_number_t a1, atom_number_t a2,
   if (_label_join_points) {
     m.set_isotope(a1, std::get<0>(iso));
     m.set_isotope(a2, std::get<1>(iso));
+  } else if (_increment_isotope_for_join_points) {
+    m.set_isotope(a1, m.isotope(a1) - std::get<0>(iso));
+    m.set_isotope(a2, m.isotope(a2) - std::get<1>(iso));
   }
 }
 
@@ -542,6 +582,9 @@ Dicer::Recap(Molecule& m, PerMoleculeData& pmd,
     if (_label_join_points) {
       m.set_isotope(b->a1(), _label_join_points);
       m.set_isotope(b->a2(), _label_join_points);
+    } else if (_increment_isotope_for_join_points) {
+      MaybeIncrementIsotope(m, b->a1());
+      MaybeIncrementIsotope(m, b->a2());
     }
 
     m.remove_bond_between_atoms(b->a1(), b->a2());

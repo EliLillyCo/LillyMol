@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 
@@ -79,11 +80,11 @@ Topological_Sterimol::compute_descriptors(Molecule& m, const int* don_acc,
   Accumulator_Int<int> acc_rad, acc_arom, acc_heteroatom;
 
   int atoms_at_distance[4];
-  set_vector(atoms_at_distance, 4, 0);
+  std::fill_n(atoms_at_distance, 4, 0);
 
   const int matoms = m.natoms();
 
-  set_vector(in_fragment, matoms, 0);
+  std::fill_n(in_fragment, matoms, 0);
 
   in_fragment[a1] = 9;
   in_fragment[a2] = 1;
@@ -102,9 +103,9 @@ Topological_Sterimol::compute_descriptors(Molecule& m, const int* don_acc,
     return 0;
   }
 
-  set_vector(_descriptor, NTOPOLOGICAL_STERIMOL, 0);
+  std::fill_n(_descriptor, NTOPOLOGICAL_STERIMOL, 0);
 
-  set_vector(_partial_charge_descriptor, NTOPO_STERIMOL_CHARGE,
+  std::fill_n(_partial_charge_descriptor, NTOPO_STERIMOL_CHARGE,
              static_cast<charge_t>(0.0));
 
   _descriptor[TOPOLOGICAL_STERIMOL_NATOMS] = n;

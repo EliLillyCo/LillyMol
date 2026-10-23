@@ -13,7 +13,7 @@ namespace {
 struct Data {
   IWString smiles;
   std::string proto;
-  int nhits;
+  uint32_t nhits;
 };
 
 class TestRingSys: public testing::TestWithParam<Data> {
@@ -283,6 +283,142 @@ query {
 }
 )pb";
 
+const std::string environment_sets_global_id_single_atom = R"pb(
+query {
+  ring_specifier {
+    base {
+      max_heteroatom_count: 0
+      environment_sets_global_id: true
+      set_global_id: 2
+      environment: "cO"
+      max_ncon: 1
+    }
+    fused: 0
+    aromatic: true
+  }
+  smarts: "[/IWgid2O]"
+}
+)pb";
+
+const std::string environment_sets_global_id_two_atoms = R"pb(
+query {
+  ring_specifier {
+    base {
+      max_heteroatom_count: 0
+      environment_sets_global_id: true
+      set_global_id: 2
+      environment: "cOC"
+      max_ncon: 1
+    }
+    fused: 0
+    aromatic: true
+  }
+  smarts: "[/IWgid2R0]"
+}
+)pb";
+
+const std::string environment_sets_global_id_branched = R"pb(
+query {
+  ring_specifier {
+    base {
+      max_heteroatom_count: 0
+      environment_sets_global_id: true
+      set_global_id: 2
+      environment: "C(C)O"
+    }
+    fused: 0
+    aromatic: false
+  }
+  smarts: "[/IWgid2R0]"
+}
+)pb";
+
+const std::string substituent_sets_global_id = R"pb(
+query {
+]
+)pb";
+
+const std::string smarts_no_match_global_id = R"pb(
+query {
+  ring_specifier {
+    base {
+      set_global_id: 1
+    }
+    aromatic: 1
+  }
+  smarts: "[/IWgid-1R]"
+}
+)pb";
+
+
+// By default repeated Substituent specifications must match distinct
+// sidechains. Phenol has only one sidechain, so the second specification
+// cannot reuse the phenolic oxygen matched by the first.
+const std::string multiple_substituents_match_one_sidechain = R"pb(
+query {
+  ring_specifier {
+    base {
+      set_global_id: 1
+      substituent {
+        length: 1
+        heteroatom_count: 1
+      }
+      substituent {
+        length: 1
+        required_smarts: "[OD1]"
+      }
+    }
+    aromatic: 1
+  }
+}
+)pb";
+
+// The legacy sidechain-sharing behaviour remains available as an explicit
+// opt-out.
+const std::string multiple_substituents_can_share_one_sidechain = R"pb(
+query {
+  ring_specifier {
+    base {
+      set_global_id: 1
+      substituents_must_match_distinct_sidechains: false
+      substituent {
+        length: 1
+        heteroatom_count: 1
+      }
+      substituent {
+        length: 1
+        required_smarts: "[OD1]"
+      }
+    }
+    aromatic: 1
+  }
+}
+)pb";
+
+// But now we insist that the two substituents match different sidechains
+// It should not match phenol, but should match catechol
+const std::string multiple_substituents_matched_separately = R"pb(
+query {
+  ring_specifier {
+    base {
+      set_global_id: 1
+      substituent {
+        length: 1
+        heteroatom_count: 1
+        set_global_id: 2
+      }
+      substituent {
+        length: 1
+        required_smarts: "[/IWgid-2OD1]"
+        set_global_id: 3
+      }
+    }
+    aromatic: 1
+  }
+  smarts: "[/IWgid1c].[/IWgid2R0].[/IWgid3R0]"
+}
+)pb";
+
 TEST_P(TestRingSys, TestOperators) {
   const auto params = GetParam();
   ASSERT_TRUE(_mol.build_from_smiles(params.smiles));
@@ -389,7 +525,19 @@ INSTANTIATE_TEST_SUITE_P(TestRingSys, TestRingSys, testing::Values(
   Data{"FC1CC(F)CCC1", f_ring_size, 0},
   Data{"FC1CC(F)C1", f_ring_size, 0},
 
-  Data{"OC(=O)c1ccc(cc1F)c2ccccc2[N+](=O)[O-]", two_ring_sys, 1}
+  Data{"OC(=O)c1ccc(cc1F)c2ccccc2[N+](=O)[O-]", two_ring_sys, 1},
+
+  Data{"Oc1ccccc1 phenol", environment_sets_global_id_single_atom, 1},
+  Data{"COc1ccccc1 methoxy", environment_sets_global_id_two_atoms, 2},
+  Data{"OC1(C)CCC1 branched", environment_sets_global_id_branched, 2},
+
+  Data{"c1ccccc1C1CC1", smarts_no_match_global_id, 3},
+
+  Data{"Oc1ccccc1", multiple_substituents_match_one_sidechain, 0},
+  Data{"Oc1ccccc1", multiple_substituents_can_share_one_sidechain, 1},
+
+  Data{"Oc1ccccc1", multiple_substituents_matched_separately, 0}
+
 ));
 
 const std::string ring_includes_carbonyl = R"pb(
@@ -491,7 +639,7 @@ TEST_P(TestRingSysCarbonyl, TestMatches) {
   ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(params.proto, &_proto));
   ASSERT_TRUE(_query.ConstructFromProto(_proto));
   // std::cerr << "Testing " << params.smiles << ' ' << params.proto << "\n expecting " << params.nhits << '\n';
-  ASSERT_GT(_query.substructure_search(&_mol, _sresults), 0);
+  ASSERT_GT(_query.substructure_search(&_mol, _sresults), 0u);
   EXPECT_EQ(_sresults.embedding(0)->size(), params.nhits);
 }
 // Note that only tests that generate matches can be tested here.

@@ -1,0 +1,13 @@
+{
+  "executable": "iwecfp_intermolecular",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-J NCECB3 -T 3 -R 3 -k #{indir}/protein.sdf #{indir}/ligand.sdf"
+      ]
+    }
+
+  ]
+
+}

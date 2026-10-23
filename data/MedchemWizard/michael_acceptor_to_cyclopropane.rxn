@@ -1,0 +1,21 @@
+# Cyclopropanate an acyclic C=C directly conjugated to a carbonyl.
+# Includes terminal acrylamides, enoates, enones and enals; retain all substituents.
+name: "michael_acceptor_to_cyclopropane"
+scaffold {
+  smarts: "[CR0+0]=[CR0+0]-[C+0](=[OD1+0])"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  change_bond { a1: 0 a2: 1 btype: SS_SINGLE_BOND }
+  remove_chirality: [0, 1]
+  unfix_implicit_hydrogens: [0, 1]
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join { a1: 0 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 1 a2: 0 btype: SS_SINGLE_BOND }
+  match_conditions { max_matches_to_find: 1 }
+}

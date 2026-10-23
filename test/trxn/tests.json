@@ -350,9 +350,278 @@
     },
 
     {
+      "name": "smirks_disappearing_element",
+      "args": [
+        "-J rmsmkele -J larf -K F:#{indir}/test.smirks #{indir}/r1.smi #{indir}/r2.smi"
+      ]
+    },
+
+    {
       "name": "smarts_in_rxn_file",
       "args": [
         "-D #{indir}/acid_amine.rxn #{indir}/r1.smi #{indir}/r2.smi"
+      ]
+    },
+    {
+      "name": "amide_to_1_2_4_oxadiazole",
+      "args": [
+        "-P ${LILLYMOL_HOME}/data/MedchemWizard/amide_to_1_2_4_oxadiazole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "1_2_4_oxadiazole_to_amide",
+      "args": [
+        "-P ${LILLYMOL_HOME}/data/MedchemWizard/1_2_4_oxadiazole_to_amide.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "amide_oxadiazole_roundtrip",
+      "shell_script": {"script_name": "run.sh"}
+    },
+    {
+      "name": "textproto_leading_comments",
+      "args": [
+        "-r #{indir}/reaction.rxn -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "amide_to_thiazole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/amide_to_thiazole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "thiazole_to_amide",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/thiazole_to_amide.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "amide_thiazole_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenethylamine_to_indoline",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indoline.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "indoline_to_phenethylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/indoline_to_phenethylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenethylamine_indoline_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenethylamine_to_indole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indole.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "indole_to_phenethylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/indole_to_phenethylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenethylamine_indole_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenol_to_benzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzofuran_to_phenol",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_phenol.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenol_benzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "anisole_to_benzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/anisole_to_benzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzofuran_to_anisole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_anisole.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "anisole_benzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenoxyethyl_to_dihydrobenzofuran",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenoxyethyl_to_dihydrobenzofuran.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "dihydrobenzofuran_to_phenoxyethyl",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/dihydrobenzofuran_to_phenoxyethyl.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenoxyethyl_dihydrobenzofuran_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "benzylamine_to_isoindoline",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzylamine_to_isoindoline.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "isoindoline_to_benzylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/isoindoline_to_benzylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzylamine_isoindoline_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "benzyl_alcohol_to_phthalan",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/benzyl_alcohol_to_phthalan.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phthalan_to_benzyl_alcohol",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phthalan_to_benzyl_alcohol.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "benzyl_alcohol_phthalan_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "phenylpropylamine_to_tetrahydroquinoline",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenylpropylamine_to_tetrahydroquinoline.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "tetrahydroquinoline_to_phenylpropylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/tetrahydroquinoline_to_phenylpropylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenylpropylamine_tetrahydroquinoline_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "butylamine_to_pyrrolidine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/butylamine_to_pyrrolidine.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "pyrrolidine_to_butylamine",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/pyrrolidine_to_butylamine.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "butylamine_pyrrolidine_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "biphenyl_to_fluorene",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/biphenyl_to_fluorene.rxn -m each -z i -o usmi -S forward #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "fluorene_to_biphenyl",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/fluorene_to_biphenyl.rxn -m each -z i -o usmi -S reverse #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "biphenyl_fluorene_roundtrip",
+      "shell_script": {
+        "script_name": "run.sh"
+      }
+    },
+    {
+      "name": "catechol_to_benzodioxole",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxole.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "catechol_to_benzodioxane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "vicinal_diol_to_methylene_acetal",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_methylene_acetal.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "vicinal_diol_to_acetonide",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "phenol_to_benzoxazolone",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzoxazolone.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "ketone_to_oxetane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/ketone_to_oxetane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "michael_acceptor_to_cyclopropane",
+      "args": [
+        "-r ${LILLYMOL_HOME}/data/MedchemWizard/michael_acceptor_to_cyclopropane.rxn -m each -z i -o usmi -S products #{indir}/input.smi"
       ]
     }
   ]

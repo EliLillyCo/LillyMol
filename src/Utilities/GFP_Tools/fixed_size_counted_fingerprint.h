@@ -1,6 +1,11 @@
 #ifndef FXDSZSPFP_H
 #define FXDSZSPFP_H
 
+#include <algorithm>
+#include <ostream>
+
+#include "Foundational/iwbits/iwbits.h"
+
 class Tversky;
 class const_IWSubstring;
 
@@ -33,6 +38,12 @@ class Fixed_Size_Counted_Fingerprint_Base
   public:
     Fixed_Size_Counted_Fingerprint_Base ();
     ~Fixed_Size_Counted_Fingerprint_Base ();
+
+    Fixed_Size_Counted_Fingerprint_Base(const Fixed_Size_Counted_Fingerprint_Base<T>& rhs);
+    Fixed_Size_Counted_Fingerprint_Base<T>& operator=(const Fixed_Size_Counted_Fingerprint_Base<T>& rhs);
+
+    Fixed_Size_Counted_Fingerprint_Base(Fixed_Size_Counted_Fingerprint_Base<T>&& rhs) noexcept;
+    Fixed_Size_Counted_Fingerprint_Base<T>& operator=(Fixed_Size_Counted_Fingerprint_Base<T>&& rhs) noexcept;
 
     int size () const { return _n;}
     int nset () const { return _nset;}
@@ -123,9 +134,93 @@ Fixed_Size_Counted_Fingerprint_Base<T>::~Fixed_Size_Counted_Fingerprint_Base ()
   _n = -3;
 
   if (nullptr != _count)
-    delete _count;
+    delete [] _count;
 
   return;
+}
+
+template <typename T>
+Fixed_Size_Counted_Fingerprint_Base<T>::Fixed_Size_Counted_Fingerprint_Base(
+    const Fixed_Size_Counted_Fingerprint_Base<T>& rhs)
+{
+  _n = rhs._n;
+  _nset = rhs._nset;
+  _nbits = rhs._nbits;
+
+  if (nullptr == rhs._count || _n == 0)
+  {
+    _count = nullptr;
+    return;
+  }
+
+  _count = new T[_n];
+  std::copy_n(rhs._count, _n, _count);
+}
+
+template <typename T>
+Fixed_Size_Counted_Fingerprint_Base<T>&
+Fixed_Size_Counted_Fingerprint_Base<T>::operator=(
+    const Fixed_Size_Counted_Fingerprint_Base<T>& rhs)
+{
+  if (this == &rhs)
+    return *this;
+
+  if (nullptr != _count)
+  {
+    delete [] _count;
+    _count = nullptr;
+  }
+
+  _n = rhs._n;
+  _nset = rhs._nset;
+  _nbits = rhs._nbits;
+
+  if (nullptr != rhs._count && _n > 0)
+  {
+    _count = new T[_n];
+    std::copy_n(rhs._count, _n, _count);
+  }
+
+  return *this;
+}
+
+template <typename T>
+Fixed_Size_Counted_Fingerprint_Base<T>::Fixed_Size_Counted_Fingerprint_Base(
+    Fixed_Size_Counted_Fingerprint_Base<T>&& rhs) noexcept
+{
+  _n = rhs._n;
+  _count = rhs._count;
+  _nset = rhs._nset;
+  _nbits = rhs._nbits;
+
+  rhs._n = 0;
+  rhs._count = nullptr;
+  rhs._nset = 0;
+  rhs._nbits = 0;
+}
+
+template <typename T>
+Fixed_Size_Counted_Fingerprint_Base<T>&
+Fixed_Size_Counted_Fingerprint_Base<T>::operator=(
+    Fixed_Size_Counted_Fingerprint_Base<T>&& rhs) noexcept
+{
+  if (this == &rhs)
+    return *this;
+
+  if (nullptr != _count)
+    delete [] _count;
+
+  _n = rhs._n;
+  _count = rhs._count;
+  _nset = rhs._nset;
+  _nbits = rhs._nbits;
+
+  rhs._n = 0;
+  rhs._count = nullptr;
+  rhs._nset = 0;
+  rhs._nbits = 0;
+
+  return *this;
 }
 
 template <typename T>
@@ -156,7 +251,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::resize (int s)
     return 1;
 
   if (nullptr != _count)
-    delete _count;
+    delete [] _count;
 
   if (0 == s)
   {
@@ -176,7 +271,7 @@ Fixed_Size_Counted_Fingerprint_Base<T>::resize (int s)
 
   _n = s;
 
-  set_vector (_count, _n, static_cast<T> (0));
+  std::fill_n (_count, _n, static_cast<T> (0));
 
   return _n;
 }

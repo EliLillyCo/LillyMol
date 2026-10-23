@@ -1,0 +1,7 @@
+c1ccccc1-c1ccccc1 biphenyl
+Cc1cccc(-c2ccccc2)c1 asymmetric
+C[C@H](F)c1ccc(-c2ccccc2)cc1 remote_chiral
+c1ccccc1 benzene
+c1ccc(Cc2ccccc2)cc1 diphenylmethane
+Cc1cccc(C)c1-c1ccccc1 blocked_one_ring
+c1ccc2ccccc2c1 fused_naphthalene

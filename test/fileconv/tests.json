@@ -1,0 +1,36 @@
+
+
+{
+  "executable": "fileconv",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "charge_assigner",
+      "args": [
+        "-o usmi -N DIR=DEF -S - #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "name": "donor_acceptor",
+      "args": [
+        "-o usmi -H label -H DIR=DEF -S - #{indir}/in.smi"
+      ]
+    },
+
+    {
+      "comment": [
+        "-p AMWI is the isotopically aware molecular weight, which uses the",
+        "isotope number as the mass of the atom. Pins two things: that an",
+        "isotopic atom contributes at all, and that its Hydrogens are counted.",
+        "Both were previously dropped - ether_13c used to report 44.034 rather",
+        "than 47.058, short by its three Hydrogens."
+      ],
+      "name": "isotopes",
+      "args": [
+        "-o usmi -p AMWI -E autocreate -S - #{indir}/in.smi"
+      ]
+    }
+
+  ]
+}

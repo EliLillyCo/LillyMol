@@ -1,4 +1,4 @@
-name: "CF2 to Alcohol"
+name: "CF2_to_alcohol"
 scaffold {
   id: 0
   smarts: "F-[CD3](F)-*"

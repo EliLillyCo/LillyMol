@@ -540,6 +540,8 @@ template <typename T>
 MolecularFormula<T>::MolecularFormula() :_digits(100) {
   _hash_valid = 0;
   _enable_hash_computation = 1;
+
+  std::fill_n(_count, kOther + 1, 0);
 }
 
 template <typename T>
@@ -800,6 +802,73 @@ MolecularFormula<T>::ToSparseFingerprint(IWString& destination) const {
   }
 
   return sfc.daylight_ascii_form_with_counts_encoded(destination);
+}
+
+template <typename T>
+int
+MolecularFormula<T>::Diff(const MolecularFormula<T>& rhs) const {
+  int rc = 0;
+
+  for (int i = 0; i < kNTypes; ++i) {
+    if (_count[i] > rhs._count[i]) {
+      rc += _count[i] - rhs._count[i];
+    } else if (_count[i] < rhs._count[i]) {
+      rc += rhs._count[i] - _count[i];
+    }
+  }
+
+  return rc;
+}
+
+template <typename T>
+void
+MolecularFormula<T>::Add(atomic_number_t z) {
+  if (z == kCarbon) {
+    ++_count[kCarbon];
+    return;
+  }
+
+  if (z == kNitrogen) {
+    ++_count[kNitrogen];
+    return;
+  }
+
+  if (z == kOxygen) {
+    ++_count[kOxygen];
+    return;
+  }
+
+  if (z == kFluorine) {
+    ++_count[kFluorine];
+    return;
+  }
+
+  if (z == kPhosphorus) {
+    ++_count[kPhosphorus];
+    return;
+  }
+
+  if (z == kSulphur) {
+    ++_count[kSulphur];
+    return;
+  }
+
+  if (z == kChlorine) {
+    ++_count[kChlorine];
+    return;
+  }
+
+  if (z == kBromine) {
+    ++_count[kBromine];
+    return;
+  }
+
+  if (z == kIodine) {
+    ++_count[kIodine];
+    return;
+  }
+
+  ++_count[kOther];
 }
 
 }  // namespace molecular_formula

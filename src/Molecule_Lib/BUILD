@@ -1,5 +1,7 @@
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_shared_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 # load("@rules_python//python:defs.bzl", "py_library")
 
 
@@ -299,6 +301,7 @@ cc_library(
         "etrans.cc",
         "frag.cc",
         "geometric_constraints.cc",
+        "hybridization.cc",
         "is_actually_chiral.cc",
         "iwrcb.cc",
         "iwrnm.cc",
@@ -310,6 +313,7 @@ cc_library(
         "mol2graph.cc",
         "mol2graph_proto.cc",
         "molecule.cc",
+        "molecule_preprocessing.cc",
         "molecule_smarts.cc",
         "molecule_to_query.cc",
         "moleculeb.cc",
@@ -356,6 +360,7 @@ cc_library(
         "tokenise_atomic_smarts.cc",
         "u3b.c",
         "unique.cc",
+        "util.cc",
     ],
     hdrs = [
         "allowed_elements.h",
@@ -373,6 +378,7 @@ cc_library(
         "collection_template.h",
         "coordinate_box.h",
         "coordinates.h",
+        "create_components.h",
         "dihedral.h",
         "donor_acceptor.h",
         "element.h",
@@ -380,6 +386,7 @@ cc_library(
         "etrans.h",
         "f2c.h",
         "geometric_constraints.h",
+        "hybridization.h",
         "is_actually_chiral.h",
         "istream_and_type.h",
         "iwmtypes.h",
@@ -396,6 +403,7 @@ cc_library(
         "molecule.h",
         "molecule_arom.h",
         "molecule_mdl.h",
+        "molecule_preprocessing.h",
         "molecule_smi.h",
         "molecule_to_query.h",
         "moleculeio.h",
@@ -424,6 +432,7 @@ cc_library(
         "toggle_kekule_form.h",
         "tokenise_atomic_smarts.h",
         "u3b.h",
+        "util.h",
     ],
     visibility = [
         "//visibility:public",
@@ -628,6 +637,7 @@ cc_library(
         "//Foundational/iwmisc:sparse_fp_creator",
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
+        "//Foundational/cmdline:iwcmdline",
     ],
 )
 
@@ -658,6 +668,17 @@ cc_test(
     name = "atom_test",
     timeout = "short",
     srcs = ["atom_test.cc"],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "atom_typing_test",
+    timeout = "short",
+    srcs = ["atom_typing_test.cc"],
     deps = [
         ":iwmolecule",
         ":moleculeio",
@@ -727,6 +748,19 @@ cc_test(
     timeout = "short",
     srcs = [
         "element_hits_needed_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "is_actually_chiral_test",
+    timeout = "short",
+    srcs = [
+        "is_actually_chiral_test.cc",
     ],
     deps = [
         ":iwmolecule",
@@ -838,10 +872,51 @@ cc_test(
 )
 
 cc_test(
+    name = "molecule_preprocessing_test",
+    timeout = "short",
+    srcs = [
+        "molecule_preprocessing_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "util_test",
+    timeout = "short",
+    srcs = [
+        "util_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "molecule_test",
     timeout = "short",
     srcs = [
         "molecule_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        ":substructure_cc_proto",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mdl_wedge_chirality_test",
+    timeout = "short",
+    srcs = [
+        "mdl_wedge_chirality_test.cc",
     ],
     deps = [
         ":iwmolecule",
@@ -861,6 +936,30 @@ cc_test(
         ":iwmolecule",
         ":moleculeio",
         ":substructure_cc_proto",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "moleculeh_test",
+    srcs = [
+        "moleculeh_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "rotbond_common_test",
+    srcs = [
+        "rotbond_common_test.cc",
+    ],
+    deps = [
+        ":iwmolecule",
+        ":moleculeio",
         "@googletest//:gtest_main",
     ],
 )
@@ -1262,6 +1361,19 @@ cc_library(
     ],
 )
 
+
+cc_test(
+    name = "iwmfingerprint_test",
+    timeout = "short",
+    srcs = ["iwmfingerprint_test.cc"],
+    deps = [
+        ":iwmfingerprint",
+        ":iwmolecule",
+        ":moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "iw_vdw",
     srcs = [
@@ -1275,15 +1387,54 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "ring_data",
-    srcs = [
-        "ring_data.cc",
+# One shared copy of Molecule_Lib, for the python extension modules to link
+# against dynamically.
+#
+# Each pybind_extension used to link Molecule_Lib statically, so every module got
+# its own copy of all of its global state - the element table, the aromaticity
+# model, the smiles parsing flags. In a single process that means
+# lillymol.set_auto_create_new_elements(True) configured lillymol.so and had no
+# effect on lillymol_tsubstructure.so, so a molecule built inside one module was
+# not the same as a molecule built inside another, and the same query could match
+# one and not the other. The -Wl,-Bsymbolic that pybind_extension adds makes each
+# module prefer its own copy, so nothing unified them at load time.
+#
+# Extensions declare this in dynamic_deps and keep their existing deps; bazel then
+# resolves those libraries against this one .so instead of copying them in.
+# Anything holding Molecule_Lib global state belongs here rather than being linked
+# statically into a module.
+cc_shared_library(
+    name = "molecule_lib_shared",
+    shared_lib_name = "libmolecule_lib.so",
+    # Everything absorbed into this .so is genuinely exported from it - there is no
+    # version script and the symbols have default visibility - so declare that, or
+    # bazel refuses to let an extension resolve them here.
+    # Everything absorbed into this .so is exported from it, so extensions resolve
+    # against it rather than linking their own copy. The libraries named here carry
+    # alwayslink, which they must: the linker only pulls the archive members
+    # something references, so without it a library can be "in" this .so with most
+    # of its object files omitted, and an extension that stopped linking it
+    # statically then fails to resolve them at load time.
+    exports_filter = [
+        "//Foundational:__subpackages__",
+        "//Molecule_Lib:__subpackages__",
+        "//Molecule_Tools:__subpackages__",
+        "@com_google_absl//:__subpackages__",
+        "@fmt//:__subpackages__",
+        "@com_google_protobuf//:__subpackages__",
+        "@re2//:__subpackages__",
     ],
-    hdrs = [
-        "ring_data.h",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         ":iwmolecule",
+        ":iwreaction",
+        ":moleculeio",
+        # Anything two or more extensions link must live here, not just anything
+        # holding global state. These two carry generated protobuf descriptors, and
+        # a descriptor may be registered only once per process; with a private
+        # protobuf runtime per module that was invisible, with one shared runtime it
+        # aborts at load.
+        "//Molecule_Tools:alogp_lib",
+        "//Molecule_Tools:xlogp_lib",
     ],
 )

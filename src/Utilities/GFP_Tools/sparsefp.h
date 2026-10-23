@@ -96,6 +96,9 @@ class Sparse_Fingerprint
 
     int  count_for_bit(unsigned int b) const;   // will return 0 if not present
 
+    // Build bits [0, replicates) with each bit having `count`.
+    int build_from_replicates(int replicates, int count);
+
     int build_from_sparse_fingerprint_creator(Sparse_Fingerprint_Creator & sfc);
 
     int remove_bit(unsigned int b);

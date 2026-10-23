@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -174,9 +176,9 @@ check_matrix_product (const Molecule & m,
   float * tmp2 = new float[3 * 3]; std::unique_ptr<float[]>free_tmp2(tmp2);
   float * tmp3 = new float[matoms * 3]; std::unique_ptr<float[]>free_tmp3(tmp3);
 
-  set_vector(tmp1, 9, static_cast<float>(0.0));
-  set_vector(tmp2, 9, static_cast<float>(0.0));
-  set_vector(tmp3, matoms * 3, static_cast<float>(0.0));
+  std::fill_n(tmp1, 9, static_cast<float>(0.0));
+  std::fill_n(tmp2, 9, static_cast<float>(0.0));
+  std::fill_n(tmp3, matoms * 3, static_cast<float>(0.0));
 
   tmp1[0] = d[0];
   tmp1[3] = e[0];

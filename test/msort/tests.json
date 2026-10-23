@@ -1,0 +1,13 @@
+{
+  "executable": "msort",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-a -k w #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

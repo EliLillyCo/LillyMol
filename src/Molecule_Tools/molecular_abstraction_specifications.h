@@ -111,6 +111,9 @@ class Molecule_With_Info_About_Parent : public Molecule
 #define MAD_GRAPH "graph"
 #define MAD_TYPE_GRAPH 24
 
+#define MAD_CSCAFFOLD "cscaffold"
+#define MAD_TYPE_CSCAFFOLD 25
+
 extern void DisplayAbstractionNames(std::ostream& output);
 extern void DisplayUsageExamples(std::ostream& output);
 

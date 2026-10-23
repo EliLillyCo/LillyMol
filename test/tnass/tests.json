@@ -1,0 +1,14 @@
+{
+  "executable": "tnass",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-q F:${LILLYMOL_HOME}/data/queries/heteroatoms/unique_queries_tnass",
+           " -x 255 -a -a -A D -i smi #{indir}/test.smi"
+      ]
+    }
+
+  ]
+
+}

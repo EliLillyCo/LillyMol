@@ -657,7 +657,6 @@ bb_clogp(Molecule& m, IWString_and_File_Descriptor& output) {
 
   if (apply_clogp_to_charged_molecule) {
     std::unique_ptr<formal_charge_t[]> fc = std::make_unique<formal_charge_t[]>(matoms);
-    std::fill_n(fc.get(), matoms, 0);
     if (! charge_assigner.process(m, fc.get())) {
       cerr << "iwclogp:cannot assign formal charges " << m.smiles() << ' ' << m.name()
            << '\n';

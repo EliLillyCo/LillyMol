@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_profile_activity_by_bits",
+  "test": [
+
+    {
+      "name": "case_1",
+      "args": [
+           "-E #{indir}/activityFile.txt ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

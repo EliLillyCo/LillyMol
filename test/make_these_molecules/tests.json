@@ -19,7 +19,7 @@
         },
         {
           "name": "case_4",
-          "args": [ "-E autocreate -R #{indir}/4.3.9_Benzothiazole_synthesis_FROM_amines_aromatic_primary_AND_o_amino_thiophenols.rxn -A D -z i -z f -l -v -s -M #{indir}/id.lbl #{indir}/scaffold.smi #{indir}/sidechain1.smi" ],
+          "args": [ "-E autocreate -R #{indir}/4.3.9_Benzothiazole_synthesis_FROM_amines_aromatic_primary_AND_o_amino_thiophenols.rxn -s -A D -z i -z f -l -v -M #{indir}/id.lbl #{indir}/scaffold.smi #{indir}/sidechain1.smi" ],
           "comment": [ "Simple test" ]
         },
         {
@@ -38,7 +38,5 @@
                    " -M #{indir}/products.lbl #{indir}/amines.smi #{indir}/enamine_bb.smi #{indir}/acids.smi " ],
           "comment": [ "Simple test" ]
         }
-      ]
-    }
-  }
+    ]
 }

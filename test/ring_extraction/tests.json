@@ -1,0 +1,13 @@
+{
+  "executable": "ring_extraction",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-X Ar:Al -R 7 -k -c -v -S ring #{indir}/rings.smi"
+      ]
+    }
+
+  ]
+
+}

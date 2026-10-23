@@ -47,7 +47,37 @@ message DicerFragment {
 
   // If we are generating complement fragments.
   optional string comp = 7;
+
+  // Attachment geometry for each bond cut to form this fragment. Records are
+  // ordered by `atom`, which is a zero-based atom ordinal in `usmi`.
+  repeated AttachmentGeometry attachment = 8;
+
+  // Coordinate-free unique smiles. When attachment geometry is requested,
+  // `smi` retains the coordinates and this field provides a topology key.
+  optional string usmi = 9;
 };
+
+message AttachmentGeometry {
+  // Zero-based atom ordinal of the retained atom in DicerFragment.usmi.
+  uint32 atom = 1;
+
+  // Coordinate-bearing one-atom smiles for the atom on the removed side of
+  // the cut. If atom typing is active, its isotope is the parent atom type.
+  string ext = 2;
+
+  enum BondType {
+    BOND_UNSPECIFIED = 0;
+    BOND_SINGLE = 1;
+    BOND_DOUBLE = 2;
+    BOND_TRIPLE = 3;
+    BOND_AROMATIC = 4;
+  }
+  BondType btype = 3;
+
+  // Atom type of the atom on the removed side of the cut. Present only when
+  // atom typing was active while dicer processed the parent molecule.
+  optional uint32 external_atom_type = 4;
+}
 
 // For each pair of fragments, the number of atoms in common.
 message FragmentOverlap {
@@ -67,6 +97,10 @@ message DicedMolecule {
   repeated DicerFragment fragment = 5;
 
   repeated FragmentOverlap overlap = 6;
+
+  // Atom typing specification used to populate
+  // AttachmentGeometry.external_atom_type.
+  optional string atom_typing = 7;
 }
 
 // Deliberately shortened names to help textproto representations.
@@ -87,6 +121,8 @@ message FragmentAndComplements {
 message ComplementaryFragment {
   optional string smi = 1;
   optional string id = 2;
+  // The number of instances.
+  optional uint32 n = 3;
 }
 
 message ComplementaryFragments {

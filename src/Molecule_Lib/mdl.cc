@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -47,6 +48,7 @@ MDL_File_Supporting_Material::_default_values() {
   _prepend_sdfid = 1;
   _sdf_tags_to_json = 0;
   _name_to_json = 0;
+  _read_extra_text_info = 0;
   _discard_sdf_molecule_name = 0;
   _multi_record_tag_data_present = 1;
   _mdl_write_aromatic_bonds = 0;
@@ -61,6 +63,7 @@ MDL_File_Supporting_Material::_default_values() {
   _read_isotopes_as_numbers_rather_than_differences_from_normal = 0;
   _read_M_isotopes_as_numbers_rather_than_differences_from_normal = 1;
   _replace_first_sdf_tag.resize(0);
+  _sdf_identifier_string.resize(0);
   _allow_deuterium = 0;
   _allow_tritium = 0;
   if (nullptr != _input_bond_type_translation_table) {
@@ -119,6 +122,53 @@ static MDL_File_Supporting_Material default_mdl_file_optional_settings;
 MDL_File_Supporting_Material*
 global_default_MDL_File_Supporting_Material() {
   return &default_mdl_file_optional_settings;
+}
+
+MDL_SDF_Naming_Options_Scope::MDL_SDF_Naming_Options_Scope() {
+  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
+  _sdf_identifier = mdlfos->sdf_identifier();
+  _sdf_tags_to_json = mdlfos->sdf_tags_to_json();
+  _all_sdf_tags = mdlfos->fetch_all_sdf_identifiers();
+  _first_sdf_tag = mdlfos->take_first_tag_as_name();
+  _prepend_sdfid = mdlfos->prepend_sdfid();
+  _active = 1;
+}
+
+MDL_SDF_Naming_Options_Scope::~MDL_SDF_Naming_Options_Scope() {
+  restore();
+}
+
+int
+MDL_SDF_Naming_Options_Scope::set_options(const const_IWSubstring& sdf_identifier,
+                                          int sdf_tags_to_json, int all_sdf_tags,
+                                          int first_sdf_tag, int prepend_sdfid) {
+  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
+  if (! mdlfos->set_sdf_identifier(sdf_identifier)) {
+    return 0;
+  }
+
+  mdlfos->set_sdf_tags_to_json(sdf_tags_to_json);
+  mdlfos->set_fetch_all_sdf_identifiers(all_sdf_tags);
+  mdlfos->set_take_first_tag_as_name(first_sdf_tag);
+  mdlfos->set_prepend_sdfid(prepend_sdfid);
+
+  return 1;
+}
+
+void
+MDL_SDF_Naming_Options_Scope::restore() {
+  if (! _active) {
+    return;
+  }
+
+  MDL_File_Supporting_Material* mdlfos = global_default_MDL_File_Supporting_Material();
+  const_IWSubstring sdfid(_sdf_identifier.data(), _sdf_identifier.length());
+  mdlfos->set_sdf_identifier(sdfid);
+  mdlfos->set_sdf_tags_to_json(_sdf_tags_to_json);
+  mdlfos->set_fetch_all_sdf_identifiers(_all_sdf_tags);
+  mdlfos->set_take_first_tag_as_name(_first_sdf_tag);
+  mdlfos->set_prepend_sdfid(_prepend_sdfid);
+  _active = 0;
 }
 
 int
@@ -522,7 +572,7 @@ int
 Molecule::_identify_atoms_at_ends_of_aromatic_bonds(const int* aromatic_bond,
                                                     int* aromatic_connections,
                                                     int* ab) const {
-  set_vector(aromatic_connections, _number_elements, 0);
+  std::fill_n(aromatic_connections, _number_elements, 0);
 
   const int nb = nedges();
 
@@ -599,7 +649,7 @@ Molecule::process_delocalised_carbonyl_bonds(int* aromatic_atoms, int* aromatic_
   int* ab = new int[_number_elements * _number_elements];
   std::unique_ptr<int[]> free_ab(ab);
 
-  set_vector(ab, _number_elements * _number_elements, 0);
+  std::fill_n(ab, _number_elements * _number_elements, 0);
 
   _identify_atoms_at_ends_of_aromatic_bonds(aromatic_bonds, number_aromatic_connections,
                                             ab);
@@ -1716,10 +1766,14 @@ Molecule::write_molecule_mdl(const char* fname, const char* comments) {
 
 int
 Molecule::write_extra_text_info(IWString& buffer) const {
-  int ne = _text_info.number_elements();
+  if (! _text_info) {
+    return buffer.length();
+  }
+
+  int ne = _text_info->number_elements();
 
   for (int i = 0; i < ne; i++) {
-    const IWString* info = _text_info[i];
+    const IWString* info = (*_text_info)[i];
 
     buffer << (*info) << moleculeio::newline_string();
   }
@@ -2158,9 +2212,9 @@ Molecule::discern_chirality_from_wedge_bonds() {
     int tmprc;
 
     if (b->is_wedge_up()) {
-      tmprc = _discern_chirality_from_wedge_bond(a1, a2, -1);
-    } else if (b->is_wedge_down()) {
       tmprc = _discern_chirality_from_wedge_bond(a1, a2, 1);
+    } else if (b->is_wedge_down()) {
+      tmprc = _discern_chirality_from_wedge_bond(a1, a2, -1);
     } else if (b->is_wedge_any()) {
       tmprc = _create_unspecified_chirality_object(a1);
     } else {
@@ -2208,27 +2262,18 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1, atom_number_t a2,
   cerr << "ncon = " << aa1->ncon() << '\n';
 #endif
 
-  if (4 == aa1->ncon()) {
+  if (3 == aa1->ncon() || 4 == aa1->ncon()) {
     return _discern_chirality_from_wedge_bond_4(a1, a2, direction);
   }
 
-  // We assume that the Hydrogen or lone lair is on the opposite side of the
-  // page from the atom at the end of the wedge bond, so we reverse the direction
-
-  if (3 == aa1->ncon()) {
-    return _discern_chirality_from_wedge_bond_4(a1, INVALID_ATOM_NUMBER, -direction);
-  }
-
-  // Connectivity is low, maybe we are just at the wrong end of the bond
+  // Connectivity is low, maybe we are just at the wrong end of the bond. The
+  // wedge records the position of a2 relative to a1, so from a2's point of
+  // view a1 sits on the opposite side of the plane - hence -direction.
 
   const Atom* aa2 = _things[a2];
 
-  if (4 == aa2->ncon()) {
+  if (3 == aa2->ncon() || 4 == aa2->ncon()) {
     return _discern_chirality_from_wedge_bond_4(a2, a1, -direction);
-  }
-
-  if (3 == aa2->ncon()) {
-    return _discern_chirality_from_wedge_bond_4(a2, INVALID_ATOM_NUMBER, direction);
   }
 
   const MDL_File_Supporting_Material* mdlfos =
@@ -2243,213 +2288,188 @@ Molecule::_discern_chirality_from_wedge_bond(atom_number_t a1, atom_number_t a2,
 }
 
 /*
-  Atom ZATOM is 4 connected and has a wedge bond to atom A2
+  Atom ZATOM has a wedge bond to WEDGE_ATOM. `direction` is +1 if the wedge
+  shows WEDGE_ATOM above the plane of the page (towards the viewer) and -1 if
+  below (away from the viewer).
 
-  THis is buggy and not correct. I need to figure out how to parse
-  wedge bonds.
+  The previous implementation reduced ZATOM's *other* neighbours - WEDGE_ATOM
+  was excluded from the loop below and never consulted again - to a single 2D
+  "rotation" sign via a majority vote over their three pairwise cross
+  products. That vote only has a well defined answer when those neighbours
+  span more than 180 degrees around ZATOM, i.e. when ZATOM sits inside their
+  triangle; only then do all three cross products agree in sign. At a ring
+  fusion or bridgehead, where two ring bonds leave on the same side, the
+  neighbours span less than 180 degrees, the cross products can disagree, and
+  the handedness genuinely depends on which neighbour is wedged - exactly the
+  information the old code discarded by never passing WEDGE_ATOM in.
+
+  Fix: synthesise a z coordinate for every neighbour - `direction` for
+  WEDGE_ATOM, 0 for all the others, who are assumed drawn in the plane of the
+  page.
+
+  With 3 explicit neighbours (the common case, the 4th position being an
+  implicit H or lone pair), that is a complete specification: the sign of
+  det[v0, v1, v2], the three neighbour vectors measured from ZATOM, is the
+  same signed-volume test used for genuine 3D structures in
+  _discern_chirality_from_3d_structure().
+
+  With 4 explicit neighbours there is no position left for a 4th, implicit
+  direction, so all four real neighbours must enter the test. Dropping one of
+  them - as the 3D routine does, relying on a true 4th position being
+  redundant given the other three - is not safe here: two substituents of a
+  fused or spiro ring system are routinely drawn directly opposite each other
+  through the centre, and whether that near-degenerate pair ends up as the
+  two *used* vectors depends only on bond-list order, not on any real
+  property of the molecule. Instead use the general orientation test for four
+  points: the sign of det[v1-v0, v2-v0, v3-v0], which folds in all four
+  positions and is unaffected by which one happens to be WEDGE_ATOM.
 */
 
-// #define DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-
 int
-Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom, atom_number_t a2,
+Molecule::_discern_chirality_from_wedge_bond_4(atom_number_t zatom,
+                                               atom_number_t wedge_atom,
                                                int direction) {
-  // Aug 2022 change making these optional.
   if (chiral_centre_at_atom(zatom) != nullptr) {
     return 1;
   }
 
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  cerr << "From " << zatom << ' ' << smarts_equivalent_for_atom(zatom) << " to " << a2
-       << " direction " << direction << '\n';
-#endif
-
   const Atom* centre = _things[zatom];
 
-  // The other 3 atoms connected
+  const int acon = centre->ncon();
 
-  Coordinates c[3];
-  atom_number_t a[3];
+  Coordinates c[4];
+  atom_number_t a[4];
 
-  int nfound = 0;
-  for (int i = 0; i < centre->ncon(); i++) {
-    atom_number_t j = centre->other(zatom, i);
+  a[0] = wedge_atom;
+  c[0] = *(_things[wedge_atom]) - *centre;
+  c[0].set_z(static_cast<coord_t>(direction));
 
-    if (a2 == j) {
+  int nfound = 1;
+  for (int i = 0; i < acon; ++i) {
+    const atom_number_t j = centre->other(zatom, i);
+    if (j == wedge_atom) {
       continue;
     }
 
     a[nfound] = j;
-
     c[nfound] = *(_things[j]) - *centre;
-    c[nfound].normalise();
-
     nfound++;
-
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-    cerr << " atom " << j << " attached " << smarts_equivalent_for_atom(j) << '\n';
-#endif
   }
 
-  assert(3 == nfound);
-
-  // I observed that a positive dot product means anti-clockwise rotation from c[0]
-
-  angle_t theta1 = c[0].angle_between_unit_vectors(c[1]);
-  angle_t theta2 = c[0].angle_between_unit_vectors(c[2]);
-
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  cerr << "Angles " << theta1 << " and " << theta2 << '\n';
-#endif
-
-  if (0.0 == theta1 && 0.0 == theta2) {
-    cerr
-        << "Molecule::_discern_chirality_from_wedge_bond_4: two zero angles encountered '"
-        << _molecule_name << "'\n";
-    return 1;  // ignore the problem
-  }
-
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  cerr << c[0] << '\n';
-  cerr << c[1] << '\n';
-  cerr << c[2] << '\n';
-#endif
-
-  Coordinates x01(c[0]);
-  x01.cross_product(c[1]);
-  Coordinates x12(c[1]);
-  x12.cross_product(c[2]);
-  Coordinates x20(c[2]);
-  x20.cross_product(c[0]);
-
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  cerr << x01 << '\n';
-  cerr << x12 << '\n';
-  cerr << x20 << '\n';
-#endif
-
-  coord_t z01 = x01.z();
-  coord_t z12 = x12.z();
-  coord_t z20 = x20.z();
-
-  /*
-  OK, there are bugs in this, but I don't have the time to chase them down.
-  If there are multiple wedge bonds to an atom, we will get multiple chiral
-  centres. This example shows a case where the two chiral centre objects are
-  incompatible - file was called t9b.mol
-
-
-  -ISIS-  10300013162D
-
-  5  4  0  0  0  0  0  0  0  0999 V2000
-    1.4417   -3.2708    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-    5.8292   -7.6583    0.0000 C   0  0  1  0  0  0  0  0  0  0  0  0
-    5.8000  -13.8833    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
-    6.1583   -1.6583    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
-   11.2000   -4.5250    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
-  2  3  1  1  0  0  0
-  1  2  1  0  0  0  0
-  2  4  1  6  0  0  0
-  2  5  1  0  0  0  0
-M  END
-
-  resolve this sometime if it ever matters.
-*/
-
-  int rotation;  // clockwise is positive - going 0 -> 1 -> 2
-
-  // cerr << "Z values z01 " << z01 << " z12 " << z12 << " z20 " << z20 << '\n';
-  if (z01 >= 0.0 && z12 >= 0.0) {
-    rotation = 1;
-  } else if (z01 < 0.0 && z12 < 0.0) {
-    rotation = -1;
-  } else if (z12 >= 0.0 && z20 >= 0.0) {
-    rotation = 1;
-  } else if (z12 < 0.0 && z20 < 0.0) {
-    rotation = -1;
-  } else if (z20 >= 0.0 && z01 >= 0.0) {
-    rotation = 1;
-  } else if (z20 < 0.0 && z01 < 0.0) {
-    rotation = -1;
-  } else {
-    cerr << "Molecule::_discern_chirality_from_wedge_bond_4: unusual geometry z01 = "
-         << z01 << " z12 = " << z12 << " z20 = " << z20 << '\n';
-    assert(nullptr == "this should not happen");
+  if (nfound != acon) {
+    cerr << "Molecule::_discern_chirality_from_wedge_bond_4: wedge atom " << wedge_atom
+         << " not bonded to " << zatom << '\n';
     return 0;
   }
 
+  for (int i = 0; i < acon; ++i) {
+    if (c[i].length() < 1.0e-03) {
+      cerr << "Molecule::_discern_chirality_from_wedge_bond_4: zero length bond at atom "
+           << zatom << ", '" << _molecule_name << "'\n";
+      return 1;  // ignore the problem
+    }
+  }
+
+  bool do_invert;
+
+  if (4 == acon) {
+    Coordinates e1(c[1]);
+    e1 -= c[0];
+    Coordinates e2(c[2]);
+    e2 -= c[0];
+    Coordinates e3(c[3]);
+    e3 -= c[0];
+
+    Coordinates cross12(e1);
+    cross12.cross_product(e2);
+
+    if (cross12.length() < 1.0e-03) {
+      cerr << "Molecule::_discern_chirality_from_wedge_bond_4: degenerate geometry at "
+              "atom "
+           << zatom << ", '" << _molecule_name << "'\n";
+      return 1;  // ignore the problem
+    }
+
+    // Empirically calibrated against known examples.
+    e3.negate();
+    do_invert = cross12.angle_between(e3) > M_PI * 0.5;
+  } else {
+    // With only 3 explicit neighbours, embedding WEDGE_ATOM's synthetic z and
+    // taking det[c0, c1, c2] reduces exactly to direction * cross_2d(c1, c2)
+    // - WEDGE_ATOM's own (x, y) cancels out of that formula entirely. That is
+    // fine, and is the formula used below, as long as c1 and c2 (the two
+    // neighbours left in the plane) are not collinear through ZATOM - but it
+    // is a real, not merely numerical, degeneracy whenever they are, and two
+    // substituents drawn directly opposite each other through a stereocentre
+    // is an everyday occurrence in an ordinary zig-zag chain, not a rare
+    // pathology.
+    const coord_t origin_cross = c[1].x() * c[2].y() - c[1].y() * c[2].x();
+
+    if (fabs(origin_cross) >= 1.0e-02) {
+      do_invert = (direction * origin_cross) < 0.0;
+    } else {
+      // c1 and c2 are (anti)collinear through ZATOM, so fall back to the 2D
+      // orientation of the triangle (WEDGE_ATOM, c1, c2) - the standard
+      // "which side" test, which only degenerates when all three neighbours
+      // are themselves collinear, a much rarer condition. Calibrated
+      // separately from the formula above: the two are different
+      // geometric quantities and do not share a sign convention.
+      const coord_t area = (c[1].x() - c[0].x()) * (c[2].y() - c[0].y()) -
+                           (c[1].y() - c[0].y()) * (c[2].x() - c[0].x());
+
+      if (fabs(area) < 1.0e-03) {
+        cerr << "Molecule::_discern_chirality_from_wedge_bond_4: degenerate geometry at "
+                "atom "
+             << zatom << ", '" << _molecule_name << "'\n";
+        return 1;  // ignore the problem
+      }
+
+      do_invert = (direction * area) > 0.0;
+    }
+  }
+
 #ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BOND_4
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < acon; i++) {
     cerr << i << " is atom " << a[i] << ' ' << _things[a[i]]->atomic_symbol() << '\n';
   }
-  cerr << "z01 = " << z01 << " z12 = " << z12 << " z20 = " << z20 << " rotation "
-       << rotation << '\n';
+  cerr << "do_invert " << do_invert << '\n';
 #endif
 
-  if (rotation > 0) {
-    return _create_chiral_centre(zatom, a[0], a[1], a[2], a2, direction);
-  }
+  Chiral_Centre* c4 = new Chiral_Centre(zatom);
+  c4->set_chirality_known(1);
+  c4->set_top_front(a[0]);
+  c4->set_top_back(a[1]);
+  c4->set_left_down(a[2]);
 
-  return _create_chiral_centre(zatom, a[0], a[2], a[1], a2, direction);
-}
-
-int
-Molecule::_create_chiral_centre(atom_number_t zatom, atom_number_t a1, atom_number_t a2,
-                                atom_number_t a3, atom_number_t a4, int direction) {
-#ifdef DEBUG_DISCERN_CHIRALITY_FROM_WEDGE_BONDS
-  cerr << "Molecule::_create_chiral_centre: " << zatom << " a1 = " << a1 << " a2 = " << a2
-       << " a3 = " << a3 << " a3 = " << a3 << " a4 = " << a4 << " direction " << direction
-       << '\n';
-#endif
-
-  Chiral_Centre* c = new Chiral_Centre(zatom);
-  c->set_top_front(a1);
-  c->set_chirality_known(1);
-
-  if (INVALID_ATOM_NUMBER == a4) {
+  if (4 == acon) {
+    c4->set_right_down(a[3]);
+  } else {
     int lp;
 
     if (1 == _things[zatom]->implicit_hydrogens()) {
-      c->set_top_back(kChiralConnectionIsImplicitHydrogen);
+      c4->set_right_down(kChiralConnectionIsImplicitHydrogen);
     } else if (_things[zatom]->lone_pair_count(lp) && 1 == lp) {
-      c->set_top_back(kChiralConnectionIsLonePair);
+      c4->set_right_down(kChiralConnectionIsLonePair);
     } else {
-      delete c;
+      delete c4;
 
       const MDL_File_Supporting_Material* mdlfos =
           global_default_MDL_File_Supporting_Material();
 
       if (mdlfos->mdl_display_invalid_chiral_connectivity()) {
-        cerr << "Molecule::_create_chiral_centre: atom " << zatom
+        cerr << "Molecule::_discern_chirality_from_wedge_bond_4: atom " << zatom
              << " strange chemistry, '" << _molecule_name << "' "
              << smarts_equivalent_for_atom(zatom) << '\n';
       }
       return return_code_depending_on_ignore_incorrect_chiral_input();
     }
-  } else {
-    c->set_top_back(a4);
   }
 
-#define CORRECT
-#ifdef CORRECT
-  if (direction > 0) {
-    c->set_left_down(a2);
-    c->set_right_down(a3);
-  } else {
-    c->set_left_down(a3);
-    c->set_right_down(a2);
+  if (do_invert) {
+    c4->invert();
   }
-#else
-  if (direction > 0) {
-    c->set_left_down(a3);
-    c->set_right_down(a2);
-  } else {
-    c->set_left_down(a2);
-    c->set_right_down(a3);
-  }
-#endif
 
-  _chiral_centres.add(c);
+  _chiral_centres.add(c4);
 
   return 1;
 }
@@ -2903,9 +2923,11 @@ MDL_File_Supporting_Material::set_sdf_identifier(const const_IWSubstring& sdfid)
     if (_sdf_identifier) {
       _sdf_identifier.reset(nullptr);
     }
+    _sdf_identifier_string.resize(0);
     return 1;
   }
 
+  IWString user_sdfid = sdfid;
   IWString mysdfid = sdfid;
 
   if (mysdfid.starts_with('^')) {
@@ -2927,6 +2949,8 @@ MDL_File_Supporting_Material::set_sdf_identifier(const const_IWSubstring& sdfid)
     cerr << "Cannot set sdfid pattern to '" << mysdfid << "'\n";
     return 0;
   }
+
+  _sdf_identifier_string = user_sdfid;
 
   // cerr << "Pattern set to '" << mysdfid << "'\n";
 

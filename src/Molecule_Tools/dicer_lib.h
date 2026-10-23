@@ -42,6 +42,16 @@ initialise_atom_pointers(Molecule & m,
                          const uint32_t * atype,
                          USPVPTR * uspvptr);
 
+// Cut a bond, replacing a departing neighbour at each specified chiral
+// endpoint with a terminal *. Caps have no parent identity. Returns false,
+// without changing m, if a chiral endpoint already has a cap or needs a non-single cap bond.
+bool BreakBondWithChiralDummies(Molecule& m, atom_number_t a1, atom_number_t a2);
+
+// Rebuild a parent partition with the same capping semantics as recursive cuts.
+// xref has space for the original parent atoms only. False discards the pair.
+bool CreateChiralDummySubsets(Molecule& parent, const int* subset,
+                             Molecule& fragment, Molecule& complement, int* xref);
+
 // Return true if `b` is the bond leading to a CF3 or t-butyl group.
 int is_cf3_like(const Molecule & m, const Bond & b);
 int is_amide(const Molecule & m, atom_number_t a1, atom_number_t a2);

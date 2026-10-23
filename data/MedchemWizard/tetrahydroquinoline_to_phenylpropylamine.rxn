@@ -1,0 +1,10 @@
+# Open only the N-to-aryl bond, preserving the saturated chain and N substituent.
+name: "tetrahydroquinoline_to_phenylpropylamine"
+scaffold {
+  smarts: "[cD3]1:[cD3]-[CH2D2R1]-[CH2D2R1]-[CH2D2R1]-[ND3H0R1+0]-1"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  break_bond { a1: 0 a2: 5 }
+}

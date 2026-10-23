@@ -13,23 +13,47 @@ enum TreeMethod {
 }
 
 message XGBoostParameters {
-  optional float eta = 1;
+  oneof learning_rate_aliases {
+    float eta = 1;
+    float learning_rate = 2;
+  }
 
-  optional uint32 max_depth = 2;
+  oneof min_split_loss_aliases {
+    float gamma = 3;
+    float min_split_loss = 4;
+  }
 
-  optional uint32 n_estimators = 3;
+  optional uint32 max_depth = 5;
 
-  optional uint32 min_samples_split = 4;
+  optional float min_child_weight = 6;
 
-  optional float subsample = 5;
+  optional float max_delta_step = 7;
 
-  optional float colsample_bytree = 6;
-  optional float colsample_bylevel = 7;
-  optional float colsample_bynode = 8;
+  optional float subsample = 8;
 
-  optional TreeMethod tree_method = 9;
+  optional string sampling_method = 9;
 
-  optional float scale_pos_weight = 10;
+  optional float colsample_bytree = 10;
+  optional float colsample_bylevel = 11;
+  optional float colsample_bynode = 12;
+
+  oneof lambda_aliases {
+    float lambda = 13;
+    float reg_lambda = 14;
+  }
+
+  oneof alpha_aliases {
+    float alpha = 15;
+    float reg_alpha = 16;
+  }
+
+  optional TreeMethod tree_method = 17;
+
+  optional float scale_pos_weight = 18;
+
+  optional uint32 n_estimators = 19;
+
+//optional uint32 min_samples_split = 5;
 }
 
 message LightGbmParameters {

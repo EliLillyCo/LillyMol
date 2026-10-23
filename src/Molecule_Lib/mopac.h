@@ -10,7 +10,7 @@ class Mopac_Output_Control_Object
     IWString        _comments;
 
   public:
-    Mopac_Output_Control_Object (atom_number_t = INVALID_ATOM_NUMBER);
+    Mopac_Output_Control_Object (atom_number_t = kInvalidAtomNumber);
 
     int            add_keyword (const char *);
     void           set_keywords (const char * c) { _keywords = c;}

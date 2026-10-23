@@ -365,6 +365,21 @@ message SubstructureRingBase {
   // Optionally we can extend the ring to things like =O and =N
   optional bool ring_extends_to_carbonyl = 25;
 
+  // By default, the environment matched atoms do not set
+  // the global id. We can change that behaviour.
+  // Note that if the environment is a composite
+  //   2cF&&1cOC
+  // Then both the F and OC atoms will be included.
+  // And if it is an OR match, then only the first match
+  // will be recorded.
+  optional bool environment_sets_global_id = 36;
+
+  // By default, repeated Substituent specifications match distinct
+  // sidechains. Matching is greedy in proto order; more specific
+  // Substituent specifications should appear first. Set false to allow
+  // multiple Substituent specifications to match the same sidechain.
+  optional bool substituents_must_match_distinct_sidechains = 37;
+
 // Not supported from proto. Seems unnecessary.
 //optional string define_heteroatoms = 24;
 //optional string heteroatoms = 25;
@@ -904,7 +919,12 @@ message SubstructureAtom {
 
   // Per atom global match id value, used for matching query atoms
   // to atoms marked by global match conditions.
-  optional uint32 global_match_id = 34;
+  // Note that this is a signed quantity. Negative values will be
+  // interpreted as do NOT match a given global_id.
+  // So if a ring specifies 'global_id: 3' a substructure atom
+  // might specify 'global_match_id: -3' which means do NOT match
+  // an atom which has a global id of 3.
+  optional int32 global_id_match = 34;
 
   repeated SubstructureAtom children = 35;
 }

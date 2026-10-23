@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package MedchemTransform;
+
+message TransformationProfileCollection {
+  repeated TransformationProfile profile = 1;
+}
+
+// Describes the observed or expected effects of applying one medchem_wizard
+// transformation. A downstream chooser can rank transformations by one property
+// while showing likely movement in other properties.
+message TransformationProfile {
+  // Human readable transformation name, as emitted by medchem_wizard.
+  optional string transformation = 1;
+
+  // Reaction file that implements this transformation. This is the value a GUI
+  // or downstream selector should emit for medchem_wizard.
+  optional string reaction_file = 2;
+
+  repeated PropertyEffect effect = 3;
+}
+
+message PropertyEffect {
+  // Property being changed, for example activity, natoms, nrings, alogp, tpsa,
+  // rotbond, hba, hbd, qed. Use lower case names for new properties.
+  optional string property = 1;
+
+  optional EffectSource source = 2;
+
+  // Summary of product - starting_molecule for this property.
+  optional Summary delta = 3;
+}
+
+enum EffectSource {
+  EFFECT_SOURCE_UNSPECIFIED = 0;
+
+  // Experimental activity difference when the generated molecule was present in
+  // the starting set.
+  OBSERVED_ACTIVITY = 1;
+
+  // Activity difference from model predictions for generated molecules absent
+  // from the starting set.
+  PREDICTED_ACTIVITY = 2;
+
+  // Exact structural delta from the transformation, such as atom or ring count.
+  EXACT_STRUCTURE = 3;
+
+  // Computed molecular property delta, such as ALogP, TPSA, rotatable bonds or
+  // QED.
+  COMPUTED_PROPERTY = 4;
+}
+
+message Summary {
+  optional uint32 n = 1;
+  optional double min = 2;
+  optional double max = 3;
+  optional double mean = 4;
+  optional double median = 5;
+}

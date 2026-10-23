@@ -123,8 +123,10 @@ ReadTextProtoJson(const IWString& fname) {
     return std::nullopt;
   }
 
-  // suppress comments
-  input.set_ignore_pattern("^# ");
+  // Suppress comments. Any line whose first non-blank character is '#',
+  // whether or not a space follows. Unlike TextFormat, the json parser has
+  // no comment syntax, so this is the only thing removing them.
+  input.set_ignore_pattern("^[[:space:]]*#");
 
   IWString file_contents;
   const_IWSubstring buffer;
@@ -197,9 +199,20 @@ ReadTextProtoPtr(IWString& fname) {
   return result;
 }
 
-// TextFormat does not allow comments. We can enable them.
-// Note that it is possible to imagine a failure where a text
-// value gets wrapped onto a separate line??? Probably not.
+// Read a textproto in which comment lines are allowed.
+//
+// Note that TextFormat's own tokenizer already treats '#' as a comment to
+// end of line, and it does so correctly - a '#' inside a quoted string, as
+// in `smarts: "[#6]-[#7]"`, is not treated as a comment. So the line
+// stripping below is belt and braces rather than load bearing. What IS load
+// bearing is that records are rejoined with newlines. Joining onto a single
+// line, as this function used to do, meant any surviving '#' anywhere in the
+// file commented out the entire remainder of it - silently, since a
+// truncated textproto is usually still a valid one.
+//
+// Whole line comments are dropped here rather than left to TextFormat so
+// that the behaviour is identical for the .json path, where the parser has
+// no comment syntax of its own.
 template <typename Proto>
 std::optional<Proto>
 ReadTextProtoCommentsOK(IWString& fname) {
@@ -216,13 +229,17 @@ ReadTextProtoCommentsOK(IWString& fname) {
     return std::nullopt;
   }
 
-  input.set_ignore_pattern("^# ");
+  // Any line whose first non-blank character is '#' is a comment. A following
+  // space is not required. '^#' is the comment convention used elsewhere in
+  // LillyMol, and leading whitespace is tolerated so that comments can be
+  // indented to match the block they document.
+  input.set_ignore_pattern("^[[:space:]]*#");
 
   std::string file_contents;
   const_IWSubstring line;
   while (input.next_record(line)) {
     file_contents.append(line.data(), line.length());
-    file_contents.append(" ");
+    file_contents.append("\n");
   }
 
   Proto result;

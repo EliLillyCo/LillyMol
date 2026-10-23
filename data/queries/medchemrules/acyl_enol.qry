@@ -1,6 +1,0 @@
-(0 Query
-  (A C Comment "acyl_enol")
-  (A I version 2)
-# (A C smarts "C=C-O-C(=O)")
-  (A C smarts "O=[CR0]-O-C=C")
-)

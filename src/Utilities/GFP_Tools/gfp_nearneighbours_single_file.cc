@@ -8,6 +8,9 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
@@ -269,7 +272,9 @@ write_average_neighbour_distance(IW_GFP_D_ID** neighbours, int number_neighbours
     acc.extra(n->distance());
   }
 
-  output << tag_for_average_distance << acc.average_if_available_minval_if_not() << ">\n";
+  output << tag_for_average_distance;
+  fraction_as_string.append_number(output, acc.average_if_available_minval_if_not());
+  output << ">\n";
 
   return output.good();
 }
@@ -347,7 +352,7 @@ write_neighbour_list(const IW_GFP_D_ID& target, IW_GFP_D_ID** neighbours,
     similarity_type_t d = n->distance();
 
     output << distance_tag;
-    output.append_number(d, 3);
+    fraction_as_string.append_number(output, d);
     output << ">\n";
 
     UpdateGlobalStatistics(i, d);
@@ -528,7 +533,9 @@ three_column_output_all_pairs(IWString_and_File_Descriptor& output) {
         continue;
       }
 
-      output << fpi.id() << ' ' << pool[j].id() << ' ' << d << '\n';
+      output << fpi.id() << ' ' << pool[j].id() << ' ';
+      fraction_as_string.append_number(output, d);
+      output << '\n';
       output.write_if_buffer_holds_more_than(32768);
     }
   }
@@ -646,9 +653,53 @@ nearneighbours(IW_GFP_D_ID& fp, IW_GFP_D_ID** neighbours,
   return neighbours_found;
 }
 
+// Resolve requested query IDs once, keeping input order and the entire pool as
+// possible neighbours. An empty result with no -O means process every query.
+static int
+SelectQueries(Command_Line& cl, std::vector<int>& queries) {
+  if (!cl.option_present('O')) return 1;
+  std::unordered_map<std::string, int> requested;
+  IWString argument;
+  for (int i = 0; cl.value('O', argument, i); ++i) {
+    // nextword skips repeated delimiters, so reject empty fields first.
+    if (argument.empty() || argument.starts_with(',') || argument.ends_with(',') ||
+        argument.contains(",,")) {
+      cerr << "Empty query identifier in -O '" << argument << "'\n";
+      return 0;
+    }
+    int j = 0;
+    const_IWSubstring token;
+    while (argument.nextword(token, j, ',')) {
+      requested.emplace(token.AsString(), 0);
+    }
+  }
+  for (int i = 0; i < pool_size; ++i) {
+    const auto iter = requested.find(pool[i].id().AsString());
+    if (iter == requested.end()) continue;
+    if (++iter->second > 1) {
+      cerr << "Requested identifier '" << iter->first
+           << "' matches multiple fingerprints in the pool\n";
+      return 0;
+    }
+    queries.push_back(i);
+  }
+  bool missing = false;
+  for (const auto& [id, count] : requested) {
+    if (count != 0) continue;
+    cerr << "Requested identifier '" << id << "' not found in the fingerprint pool\n";
+    missing = true;
+  }
+  if (missing) return 0;
+  if (verbose) {
+    cerr << "Will process " << queries.size() << " selected queries from " << pool_size
+         << " fingerprints\n";
+  }
+  return 1;
+}
+
 static int
 nearneighbours(std::unique_ptr<iw_tf_data_record::TFDataWriter>& tfdata,
-               IWString_and_File_Descriptor& output) {
+               const std::vector<int>& queries, IWString_and_File_Descriptor& output) {
   int nbrs = neighbours_to_find;
   if (std::numeric_limits<float>::max() != upper_distance_threshold) {
     nbrs = pool_size;
@@ -659,7 +710,9 @@ nearneighbours(std::unique_ptr<iw_tf_data_record::TFDataWriter>& tfdata,
   IW_GFP_D_ID** neighbours = new IW_GFP_D_ID*[nbrs];
   std::unique_ptr<IW_GFP_D_ID*[]> free_neighbours(neighbours);
 
-  for (int i = 0; i < pool_size; i++) {
+  const int nqueries = queries.empty() ? pool_size : static_cast<int>(queries.size());
+  for (int query = 0; query < nqueries; ++query) {
+    const int i = queries.empty() ? query : queries[query];
     int nn = nearneighbours(pool[i], neighbours, nbrs);
 
     neighbour_count[nn]++;
@@ -674,7 +727,7 @@ nearneighbours(std::unique_ptr<iw_tf_data_record::TFDataWriter>& tfdata,
     }
 
     if (report_progress()) {
-      cerr << "Processed " << i << " computations\n";
+      cerr << "Processed " << query + 1 << " computations\n";
     }
   }
 
@@ -696,6 +749,7 @@ usage(int rc) {
   // clang-format off
   cerr << R"(Finds near neighbours of a set of fingerprints\n";
 Usage <options> <input_file>\n";
+ -O <id[,id...]>  report only these query IDs (repeatable); search the full pool
  -n <number>      specify how many neighbours to find
  -t <dis>         discard distances shorter than <dis>
  -h               do NOT find self neighbours
@@ -707,7 +761,7 @@ Usage <options> <input_file>\n";
  -N <tag>         write number neighbours as <tag>
  -A <TAG>         write average neighbour distance to <TAG>
  -p               write all pair-wise distances in 3 column form
- -j <precision>   output precision for distances
+ -j <digits>      decimal places for text distances (default 4)
  -y               allow arbitrary distances
  -R <number>      report progress every <number> items processed
  -S <fname>       write nnbr::NearNeighbours TFDataRecord serialized protos to <fname>
@@ -737,7 +791,7 @@ do_write_histogram(std::ostream& output) {
 
 static int
 nearneighbours(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vs:n:I:t:T:P:F:W:Q:X:V:A:zr:hoK:xH:N:bypj:R:S:d");
+  Command_Line cl(argc, argv, "vs:n:I:t:T:P:F:W:Q:X:V:A:zr:hoK:xH:N:bypj:R:S:dO:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -745,6 +799,10 @@ nearneighbours(int argc, char** argv) {
   }
 
   verbose = cl.option_count('v');
+  if (cl.option_present('O') && cl.option_present('p')) {
+    cerr << "Query selection (-O) cannot be combined with all-pairs output (-p)\n";
+    return 1;
+  }
 
   if (cl.option_present('V')) {
     if (!tversky.parse_command_line(cl, 'V', verbose)) {
@@ -828,6 +886,9 @@ nearneighbours(int argc, char** argv) {
     cerr << "No fingerprints\n";
     return 5;
   }
+
+  std::vector<int> queries;
+  if (!SelectQueries(cl, queries)) return 1;
 
   if (cl.option_present('y')) {
     allow_arbitrary_distances = 1;
@@ -1033,6 +1094,8 @@ nearneighbours(int argc, char** argv) {
     histogram_nearnest_neighbour_distances.initialise(0.0, 1.0, 0.01);
   }
 
+  // Match the TBB tool's lookup-based, platform-stable distance formatting.
+  int distance_precision = 4;
   if (cl.option_present('j')) {
     int j;
     if (!cl.value('j', j) || j < 2) {
@@ -1040,11 +1103,17 @@ nearneighbours(int argc, char** argv) {
       usage(3);
     }
 
+    distance_precision = j;
     set_default_iwstring_float_concatenation_precision(j);
 
     if (verbose) {
       cerr << "Default float concatenation precision " << j << '\n';
     }
+  }
+
+  if (!fraction_as_string.initialise(0.0f, 1.0f, distance_precision)) {
+    cerr << "Cannot initialise distance formatting\n";
+    return 1;
   }
 
   int rc = 0;
@@ -1078,7 +1147,7 @@ nearneighbours(int argc, char** argv) {
       cerr << "Cannot create three column output form\n";
       rc = 4;
     }
-  } else if (!nearneighbours(tfdata, output)) {
+  } else if (!nearneighbours(tfdata, queries, output)) {
     cerr << "Fatal error during neighbour determination\n";
     rc = 3;
   }

@@ -1,0 +1,35 @@
+{
+  "executable": "ring_substitution",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "#{indir}/test.smi"
+      ]
+    },
+    {
+      "name": "custom_tag",
+      "args": [
+        "-J RST #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "filter_mode",
+      "args": [
+        "-J RST -f #{indir}/in.tdt"
+      ]
+    },
+    {
+      "name": "simple_atom_types",
+      "args": [
+        "-M simp #{indir}/in.smi"
+      ]
+    },
+    {
+      "name": "full_atom_types",
+      "args": [
+        "-M full #{indir}/in.smi"
+      ]
+    }
+  ]
+}

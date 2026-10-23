@@ -1997,7 +1997,8 @@ JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
 
   mod.method("xlogp",
     [](Molecule& m) ->std::tuple<float, bool>{
-      auto rc = xlogp::XLogP(m);
+      xlogp::XLogPCalc calc;
+      auto rc = calc.LogP(m);
       if (rc) {
         return std::make_tuple<float, bool>(*rc, true);
       }
@@ -2072,7 +2073,6 @@ JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
     .method("each_embedding_set_vector",
       [](const Substructure_Results& sresults, int n, int value)->jlcxx::ArrayRef<int> {
         std::unique_ptr<int[]>tmp = std::make_unique<int[]>(n);
-        std::fill_n(tmp.get(), n, 0);
         sresults.each_embedding_set_vector(tmp.get(), value);
 
         jlcxx::ArrayRef<int> result(true, tmp.get(), n);

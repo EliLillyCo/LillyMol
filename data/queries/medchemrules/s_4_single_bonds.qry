@@ -1,9 +1,0 @@
-(0 Query
-  (A C Comment "s_4_single_bonds")
-  (A I Version 2)
-  (0 Query_Atom
-    (A I atomic_number 16)
-    (A I ncon 4)
-    (A I nbonds 4)
-  )
-)

@@ -101,7 +101,7 @@ Temp_Detach_Atoms::detach_atoms(Molecule& m, atomic_number_t z) {
 
       _chiral_centre.add(m.remove_no_delete_chiral_centre_at_atom(o));
     } else {
-      _connection[i] = INVALID_ATOM_NUMBER;
+      _connection[i] = kInvalidAtomNumber;
     }
   }
 
@@ -114,7 +114,7 @@ Temp_Detach_Atoms::detach_atoms(Molecule& m, atomic_number_t z) {
   int* rmb = _connection + matoms;  // remember, we over-allocated it
 
   for (int i = 0; i < matoms; ++i) {
-    if (INVALID_ATOM_NUMBER != _connection[i]) {
+    if (kInvalidAtomNumber != _connection[i]) {
       rmb[i] = 1;
     } else {
       rmb[i] = 0;

@@ -1,0 +1,5 @@
+name: "thioanisole"
+query {
+  numeric_value: 30
+  smarts: "[SD2R0](-c)-[CD1]"
+}

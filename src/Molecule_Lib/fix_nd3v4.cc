@@ -182,7 +182,7 @@ nh2ohsh_four_bonds_away (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t alpha = INVALID_ATOM_NUMBER;
+  atom_number_t alpha = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -198,12 +198,12 @@ nh2ohsh_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == alpha)
+  if (kInvalidAtomNumber == alpha)
     return 0;
 
   const Atom * aa = m.atomi (alpha);
 
-  atom_number_t beta = INVALID_ATOM_NUMBER;
+  atom_number_t beta = kInvalidAtomNumber;
 
   ncon = aa->ncon ();
 
@@ -230,14 +230,14 @@ nh2ohsh_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == beta)
+  if (kInvalidAtomNumber == beta)
     return 0;
 
   const Atom * ab = m.atomi (beta);
 
   ncon = ab->ncon ();
 
-  atom_number_t gamma = INVALID_ATOM_NUMBER;
+  atom_number_t gamma = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -261,14 +261,14 @@ nh2ohsh_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == gamma)
+  if (kInvalidAtomNumber == gamma)
     return 0;
 
   const Atom * ag = m.atomi (gamma);
 
   ncon = ag->ncon ();
 
-  atom_number_t delta = INVALID_ATOM_NUMBER;
+  atom_number_t delta = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -304,7 +304,7 @@ nh2ohsh_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == delta)
+  if (kInvalidAtomNumber == delta)
     return 0;
 
   m.set_bond_type_between_atoms (n, alpha, SINGLE_BOND);
@@ -401,7 +401,7 @@ is_nh2_ortho_nitrogen (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t alpha = INVALID_ATOM_NUMBER;
+  atom_number_t alpha = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -425,14 +425,14 @@ is_nh2_ortho_nitrogen (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == alpha)
+  if (kInvalidAtomNumber == alpha)
     return 0;
 
   const Atom * aa = m.atomi (alpha);
 
   ncon = aa->ncon ();
 
-  atom_number_t amine = INVALID_ATOM_NUMBER;
+  atom_number_t amine = kInvalidAtomNumber;
    
   for (int i = 0; i < ncon; i++)
   {
@@ -456,7 +456,7 @@ is_nh2_ortho_nitrogen (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == amine)
+  if (kInvalidAtomNumber == amine)
     return 0;
 
   m.set_bond_type_between_atoms (n, alpha, SINGLE_BOND);
@@ -491,7 +491,7 @@ is_ohsh_ortho_nitrogen (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t alpha = INVALID_ATOM_NUMBER;
+  atom_number_t alpha = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -515,14 +515,14 @@ is_ohsh_ortho_nitrogen (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == alpha)
+  if (kInvalidAtomNumber == alpha)
     return 0;
 
   const Atom * aa = m.atomi (alpha);
 
   ncon = aa->ncon ();
 
-  atom_number_t oxygen = INVALID_ATOM_NUMBER;
+  atom_number_t oxygen = kInvalidAtomNumber;
    
   for (int i = 0; i < ncon; i++)
   {
@@ -550,7 +550,7 @@ is_ohsh_ortho_nitrogen (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == oxygen)
+  if (kInvalidAtomNumber == oxygen)
     return 0;
 
   m.set_bond_type_between_atoms (n, alpha, SINGLE_BOND);
@@ -581,7 +581,7 @@ is_n_oxide (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t singly_bonded_oxygen = INVALID_ATOM_NUMBER;
+  atom_number_t singly_bonded_oxygen = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -605,7 +605,7 @@ is_n_oxide (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == singly_bonded_oxygen)
+  if (kInvalidAtomNumber == singly_bonded_oxygen)
     return 0;
 
   m.set_formal_charge (n, 1);
@@ -636,7 +636,7 @@ hydrogen_four_bonds_away (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t alpha = INVALID_ATOM_NUMBER;
+  atom_number_t alpha = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -652,12 +652,12 @@ hydrogen_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == alpha)
+  if (kInvalidAtomNumber == alpha)
     return 0;
 
   const Atom * aa = m.atomi (alpha);
 
-  atom_number_t beta = INVALID_ATOM_NUMBER;
+  atom_number_t beta = kInvalidAtomNumber;
 
   ncon = aa->ncon ();
 
@@ -680,14 +680,14 @@ hydrogen_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == beta)
+  if (kInvalidAtomNumber == beta)
     return 0;
 
   const Atom * ab = m.atomi (beta);
 
   ncon = ab->ncon ();
 
-  atom_number_t gamma = INVALID_ATOM_NUMBER;
+  atom_number_t gamma = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -708,14 +708,14 @@ hydrogen_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == gamma)
+  if (kInvalidAtomNumber == gamma)
     return 0;
 
   const Atom * ag = m.atomi (gamma);
 
   ncon = ag->ncon ();
 
-  atom_number_t delta = INVALID_ATOM_NUMBER;
+  atom_number_t delta = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -742,7 +742,7 @@ hydrogen_four_bonds_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == delta)
+  if (kInvalidAtomNumber == delta)
     return 0;
 
   m.set_bond_type_between_atoms (n, alpha, SINGLE_BOND);
@@ -783,7 +783,7 @@ hydrogen_one_bond_away (Molecule & m,
 
   int ncon = an->ncon ();
 
-  atom_number_t doubly_bonded_connection = INVALID_ATOM_NUMBER;
+  atom_number_t doubly_bonded_connection = kInvalidAtomNumber;
 
   for (int i = 0; i < ncon; i++)
   {
@@ -813,14 +813,14 @@ hydrogen_one_bond_away (Molecule & m,
   cerr << "Doubly bonded connection is " << doubly_bonded_connection << endl;
 #endif
 
-  if (INVALID_ATOM_NUMBER == doubly_bonded_connection)
+  if (kInvalidAtomNumber == doubly_bonded_connection)
     return 0;
 
 // Now look for an atom singly bonded
 
   const Atom * alpha = m.atomi (doubly_bonded_connection);
 
-  atom_number_t beta = INVALID_ATOM_NUMBER;
+  atom_number_t beta = kInvalidAtomNumber;
 
   ncon = alpha->ncon ();
 
@@ -852,7 +852,7 @@ hydrogen_one_bond_away (Molecule & m,
     break;
   }
 
-  if (INVALID_ATOM_NUMBER == beta)
+  if (kInvalidAtomNumber == beta)
     return 0;
 
   m.set_bond_type_between_atoms (n, doubly_bonded_connection, SINGLE_BOND);
@@ -886,8 +886,8 @@ is_half_nitro (Molecule & m,
   if (m.is_ring_atom (n))
     return 0;
 
-  atom_number_t doubly_bonded_oxygen = INVALID_ATOM_NUMBER;
-  atom_number_t singly_bonded_oxygen = INVALID_ATOM_NUMBER;
+  atom_number_t doubly_bonded_oxygen = kInvalidAtomNumber;
+  atom_number_t singly_bonded_oxygen = kInvalidAtomNumber;
 
   const Atom * an = m.atomi (n);
 
@@ -902,13 +902,13 @@ is_half_nitro (Molecule & m,
     if (8 != m.atomic_number (o))
       continue;
 
-    if (b->is_double_bond () && INVALID_ATOM_NUMBER == doubly_bonded_oxygen)
+    if (b->is_double_bond () && kInvalidAtomNumber == doubly_bonded_oxygen)
       doubly_bonded_oxygen = o;
-    else if (b->is_single_bond () && INVALID_ATOM_NUMBER == singly_bonded_oxygen)
+    else if (b->is_single_bond () && kInvalidAtomNumber == singly_bonded_oxygen)
       singly_bonded_oxygen = o;
   }
 
-  if (INVALID_ATOM_NUMBER == singly_bonded_oxygen || INVALID_ATOM_NUMBER == doubly_bonded_oxygen)
+  if (kInvalidAtomNumber == singly_bonded_oxygen || kInvalidAtomNumber == doubly_bonded_oxygen)
     return 0;
 
   m.set_formal_charge (n, 1);

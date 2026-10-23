@@ -475,10 +475,14 @@ Substructure_Ring_System_Specification::_matches(
   // of which substituents have matched.
   std::unique_ptr<int[]> storage;
   std::unique_ptr<int[]> substituent_matched;
+  std::unique_ptr<int[]> used_sidechain;
 
   if (_substituent.size() > 0) {
     storage.reset(new int[target.natoms()]);
     substituent_matched.reset(new_int(_substituent.size()));
+    if (_substituents_must_match_distinct_sidechains && _substituent.number_elements() > 1) {
+      used_sidechain.reset(new int[target.natoms()]);
+    }
   }
 
   resizable_array<int> rings_in_system;
@@ -636,7 +640,7 @@ Substructure_Ring_System_Specification::_matches(
     }
 #endif
     if (_environment_atom.number_elements()) {
-      if (!_environment_matches(target, atoms_in_system)) {
+      if (!_environment_matchesx(target, atoms_in_system, matched_by_global_specs)) {
         continue;
       }
     }
@@ -655,15 +659,17 @@ Substructure_Ring_System_Specification::_matches(
     }
 
     if (!_substituent.empty()) {
+      if (used_sidechain) {
+        std::fill_n(used_sidechain.get(), target.natoms(), 0);
+      }
       bool got_match = false;
       for (int i = 0; i < _substituent.number_elements(); ++i) {
         if (!_substituent[i]->Matches(target, atoms_in_system, storage.get(),
-                                      matched_by_global_specs)) {
+                                      matched_by_global_specs, used_sidechain.get())) {
           continue;
         }
         ++substituent_matched[i];
         got_match = true;
-        break;
       }
       if (!got_match) {
         continue;
@@ -1058,7 +1064,7 @@ Substructure_Ring_System_Specification::_match_distance_to_another_ring(
           continue;
         }
 
-        set_vector(already_done, matoms, 0);
+        std::fill_n(already_done, matoms, 0);
 
         already_done[i] = 1;
 

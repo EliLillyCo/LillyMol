@@ -1,0 +1,3 @@
+query {
+  smarts: "[CD3]-[CD3]"
+}

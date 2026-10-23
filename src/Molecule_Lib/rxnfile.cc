@@ -677,11 +677,11 @@ ISIS_RXN_FILE_Molecule::which_is_mapped_atom(int m) const {
 int
 ISIS_RXN_FILE_Molecule::identify_unmapped_neighbour(
     int m, atom_number_t &n, int &single_bond_preferentially_chosen) {
-  n = INVALID_ATOM_NUMBER;
+  n = kInvalidAtomNumber;
 
   atom_number_t a = which_is_mapped_atom(m);
 
-  if (INVALID_ATOM_NUMBER == a) {
+  if (kInvalidAtomNumber == a) {
     cerr << "ISIS_RXN_FILE_Molecule::identify_unmapped_neighbour:gack, we don't have "
             "mapped atom "
          << m << '\n';
@@ -699,7 +699,7 @@ ISIS_RXN_FILE_Molecule::identify_unmapped_neighbour(
        << " " << aa->ncon() << " connections\n";
 #endif
 
-  atom_number_t unmapped_singly_bonded_neighbour = INVALID_ATOM_NUMBER;
+  atom_number_t unmapped_singly_bonded_neighbour = kInvalidAtomNumber;
 
   int mapped_connections_found = 0;
 
@@ -716,25 +716,25 @@ ISIS_RXN_FILE_Molecule::identify_unmapped_neighbour(
 
     if (!_use_as_representative[j]) {
       if (is_three_connected_aromatic &&
-          INVALID_ATOM_NUMBER == unmapped_singly_bonded_neighbour &&
+          kInvalidAtomNumber == unmapped_singly_bonded_neighbour &&
           b->is_single_bond() && is_aromatic(j)) {
         unmapped_singly_bonded_neighbour = j;
       }
       continue;
     }
 
-    if (INVALID_ATOM_NUMBER != n) {  // have found > 1 unmapped neighbours
+    if (kInvalidAtomNumber != n) {  // have found > 1 unmapped neighbours
       return 0;
     }
 
     n = j;
   }
 
-  if (INVALID_ATOM_NUMBER == n) {
+  if (kInvalidAtomNumber == n) {
     return 0;
   }
 
-  if (INVALID_ATOM_NUMBER != unmapped_singly_bonded_neighbour &&
+  if (kInvalidAtomNumber != unmapped_singly_bonded_neighbour &&
       1 == mapped_connections_found) {
     single_bond_preferentially_chosen = 1;
     n = unmapped_singly_bonded_neighbour;
@@ -747,7 +747,7 @@ int
 ISIS_RXN_FILE_Molecule::identify_unmapped_neighbours(int m, Set_of_Atoms &nbr) {
   atom_number_t a = which_is_mapped_atom(m);
 
-  if (INVALID_ATOM_NUMBER == a) {
+  if (kInvalidAtomNumber == a) {
     cerr << "ISIS_RXN_FILE_Molecule::identify_unmapped_neighbours:gack, we don't have "
             "mapped atom "
          << m << '\n';
@@ -768,8 +768,8 @@ ISIS_RXN_FILE_Molecule::identify_unmapped_neighbours(int m, Set_of_Atoms &nbr) {
        << " " << aa->ncon() << " connections\n";
 #endif
 
-  atom_number_t unmapped_singly_bonded_neighbour = INVALID_ATOM_NUMBER;
-  atom_number_t unmapped_doubly_bonded_neighbour = INVALID_ATOM_NUMBER;
+  atom_number_t unmapped_singly_bonded_neighbour = kInvalidAtomNumber;
+  atom_number_t unmapped_doubly_bonded_neighbour = kInvalidAtomNumber;
 
   int mapped_connections_found = 0;
 
@@ -786,7 +786,7 @@ ISIS_RXN_FILE_Molecule::identify_unmapped_neighbours(int m, Set_of_Atoms &nbr) {
 
     if (!_use_as_representative[j]) {
       if (is_three_connected_aromatic &&
-          INVALID_ATOM_NUMBER == unmapped_singly_bonded_neighbour &&
+          kInvalidAtomNumber == unmapped_singly_bonded_neighbour &&
           b->is_single_bond() && is_aromatic(j)) {
         unmapped_singly_bonded_neighbour = j;
       }
@@ -798,9 +798,9 @@ ISIS_RXN_FILE_Molecule::identify_unmapped_neighbours(int m, Set_of_Atoms &nbr) {
     }
   }
 
-  if (INVALID_ATOM_NUMBER != unmapped_singly_bonded_neighbour) {
+  if (kInvalidAtomNumber != unmapped_singly_bonded_neighbour) {
     nbr.add(unmapped_singly_bonded_neighbour);
-  } else if (INVALID_ATOM_NUMBER != unmapped_doubly_bonded_neighbour) {
+  } else if (kInvalidAtomNumber != unmapped_doubly_bonded_neighbour) {
     nbr.add(unmapped_doubly_bonded_neighbour);
   }
 
@@ -1280,8 +1280,8 @@ ISIS_RXN_FILE_Molecule::mapped_atoms_are_bonded(int m1, int m2) const {
 
   int matoms = Molecule::natoms();
 
-  atom_number_t a1 = INVALID_ATOM_NUMBER;
-  atom_number_t a2 = INVALID_ATOM_NUMBER;
+  atom_number_t a1 = kInvalidAtomNumber;
+  atom_number_t a2 = kInvalidAtomNumber;
 
 #ifdef DEBUG_MAPPED_ATOMS_ARE_BONDED
   cerr << "Searching " << matoms << " atoms for mapped atoms " << m1 << " and " << m2
@@ -1290,16 +1290,16 @@ ISIS_RXN_FILE_Molecule::mapped_atoms_are_bonded(int m1, int m2) const {
 
   for (int i = 0; i < matoms; i++) {
     if (m1 == _atom_map[i]) {
-      assert(INVALID_ATOM_NUMBER == a1);
+      assert(kInvalidAtomNumber == a1);
       a1 = i;
-      if (INVALID_ATOM_NUMBER != a2) {
+      if (kInvalidAtomNumber != a2) {
         break;
       }
     }
     if (m2 == _atom_map[i]) {
-      assert(INVALID_ATOM_NUMBER == a2);
+      assert(kInvalidAtomNumber == a2);
       a2 = i;
-      if (INVALID_ATOM_NUMBER != a1) {
+      if (kInvalidAtomNumber != a1) {
         break;
       }
     }
@@ -1309,13 +1309,13 @@ ISIS_RXN_FILE_Molecule::mapped_atoms_are_bonded(int m1, int m2) const {
   cerr << "Atom numbers " << a1 << " and " << a2 << '\n';
 #endif
 
-  if (INVALID_ATOM_NUMBER == a1 &&
-      INVALID_ATOM_NUMBER == a2) {  // must be in different fragments
+  if (kInvalidAtomNumber == a1 &&
+      kInvalidAtomNumber == a2) {  // must be in different fragments
     return 0;
   }
 
-  if (INVALID_ATOM_NUMBER == a1 ||
-      INVALID_ATOM_NUMBER == a2)  // must be in different fragments
+  if (kInvalidAtomNumber == a1 ||
+      kInvalidAtomNumber == a2)  // must be in different fragments
   {
     cerr << "ISIS_RXN_FILE_Molecule::mapped_atoms_are_bonded: atom map error " << m1
          << " and " << m2 << '\n';
@@ -2792,7 +2792,7 @@ RXN_File::_map_symmetry_equivalent_atoms(int &highest_atom_map_number, int r,
       //    cerr << "j = " << j << " atom " << pa << " in product fragment " <<
       //    aipf->fragment() << '\n';
 
-      if (INVALID_ATOM_NUMBER == pa) {  // already matched
+      if (kInvalidAtomNumber == pa) {  // already matched
         continue;
       }
 
@@ -2831,12 +2831,12 @@ RXN_File::_map_symmetry_equivalent_atoms(int &highest_atom_map_number, int r,
     int best_j = -1;
 
     for (int i = 0; i < n1; i++) {
-      if (INVALID_ATOM_NUMBER == s1[i]->atom()) {  // already paired
+      if (kInvalidAtomNumber == s1[i]->atom()) {  // already paired
         continue;
       }
 
       for (int j = 0; j < n2; j++) {
-        if (INVALID_ATOM_NUMBER == s2[j]->atom()) {  // already paired
+        if (kInvalidAtomNumber == s2[j]->atom()) {  // already paired
           continue;
         }
 
@@ -2868,8 +2868,8 @@ RXN_File::_map_symmetry_equivalent_atoms(int &highest_atom_map_number, int r,
     _set_atom_map(highest_atom_map_number, s1[best_i]->fragment(), s1[best_i]->atom(),
                   s2[best_j]->fragment(), s2[best_j]->atom());
 
-    s1[best_i]->set_atom(INVALID_ATOM_NUMBER);
-    s2[best_j]->set_atom(INVALID_ATOM_NUMBER);
+    s1[best_i]->set_atom(kInvalidAtomNumber);
+    s2[best_j]->set_atom(kInvalidAtomNumber);
 
     pair_wise_score[best_i * n1 + best_j] = -2;
   }
@@ -3204,7 +3204,7 @@ RXN_File::__map_unmapped_atoms(int &highest_atom_map_number) {
     for (int j = 0; j < unmapped_neighbour_reagent.number_elements(); j++) {
       atom_number_t aj = unmapped_neighbour_reagent[j];
 
-      atom_number_t matching_product_atom = INVALID_ATOM_NUMBER;
+      atom_number_t matching_product_atom = kInvalidAtomNumber;
       int item_to_remove = -1;
 
       for (int k = 0; k < unmapped_neighbour_product.number_elements(); k++) {
@@ -3219,10 +3219,10 @@ RXN_File::__map_unmapped_atoms(int &highest_atom_map_number) {
           continue;
         }
 
-        if (INVALID_ATOM_NUMBER !=
+        if (kInvalidAtomNumber !=
             matching_product_atom)  // already got a match, can't handle multiple matches
         {
-          matching_product_atom = INVALID_ATOM_NUMBER;
+          matching_product_atom = kInvalidAtomNumber;
           break;
         }
 
@@ -3230,7 +3230,7 @@ RXN_File::__map_unmapped_atoms(int &highest_atom_map_number) {
         item_to_remove = k;
       }
 
-      if (INVALID_ATOM_NUMBER != matching_product_atom) {
+      if (kInvalidAtomNumber != matching_product_atom) {
         _map_symmetry_equivalent_atoms(highest_atom_map_number, ri, aj, pi,
                                        matching_product_atom);
         return highest_atom_map_number;
@@ -3337,7 +3337,7 @@ RXN_File::_identify_product_with_same_mapped_neighbours(
 #endif
 
   pm = -1;
-  pa = INVALID_ATOM_NUMBER;
+  pa = kInvalidAtomNumber;
 
   for (int i = 0; i < _np; i++) {
     const ISIS_RXN_FILE_Molecule &m = _product[i];
@@ -3367,7 +3367,7 @@ RXN_File::_identify_product_with_same_mapped_neighbours(
         continue;
       }
 
-      if (INVALID_ATOM_NUMBER != pa) {
+      if (kInvalidAtomNumber != pa) {
         return 0;
       }
 
@@ -3376,7 +3376,7 @@ RXN_File::_identify_product_with_same_mapped_neighbours(
     }
   }
 
-  return INVALID_ATOM_NUMBER != pa;
+  return kInvalidAtomNumber != pa;
 }
 
 int
@@ -3420,7 +3420,7 @@ RXN_File::_map_corresponding_atom_list (int highest_atom_map_number,
                                         const ISIS_Atom_List & als)
 {
   int rcp = -1;
-  atom_number_t rca = INVALID_ATOM_NUMBER;
+  atom_number_t rca = kInvalidAtomNumber;
 
   for (int i = 0; i < _np; i++)
   {
@@ -3461,7 +3461,7 @@ int
 RXN_File::_identify_corresponding_list_in_products(const ISIS_Atom_List &als, int &pf,
                                                    atom_number_t &pa) const {
   pf = -1;
-  pa = INVALID_ATOM_NUMBER;
+  pa = kInvalidAtomNumber;
 
   for (int i = 0; i < _np; i++) {
     const ISIS_RXN_FILE_Molecule &pi = _product[i];
@@ -3801,8 +3801,8 @@ RXN_File::create_reaction(IWReaction &rxn,
   _initial_bond_type = new bond_type_t[t];
   _final_bond_type = new bond_type_t[t];
 
-  set_vector(_initial_bond_type, t, static_cast<bond_type_t>(INVALID_BOND_TYPE));
-  set_vector(_final_bond_type, t, static_cast<bond_type_t>(INVALID_BOND_TYPE));
+  std::fill_n(_initial_bond_type, t, static_cast<bond_type_t>(INVALID_BOND_TYPE));
+  std::fill_n(_final_bond_type, t, static_cast<bond_type_t>(INVALID_BOND_TYPE));
 
   // cerr << "RXN_File::create_reaction:input has " << _nr << " reagents and " << _np << "
   // products\n";
@@ -5463,7 +5463,7 @@ RXN_File::_identify_square_bonding_changes(int highest_atom_map) {
 
     k = pm.which_is_mapped_atom(i);
 
-    assert(INVALID_ATOM_NUMBER != k);
+    assert(kInvalidAtomNumber != k);
 
     resizable_array<int> ultimately_connected_to;
 

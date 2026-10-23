@@ -13,10 +13,10 @@ class const_IWSubstring;
   Byte values in which different bits are turned on
 */
 
-static const unsigned char one_bit_8[8] = {128, 64, 32, 16, 8, 4, 2, 1};
+inline constexpr unsigned char one_bit_8[8] = {128, 64, 32, 16, 8, 4, 2, 1};
 
 #if defined(__i386__) || defined(__x86_64)
-static const unsigned int one_bit_32[] = {
+inline constexpr unsigned int one_bit_32[] = {
   0x00000080,
   0x00000040,
   0x00000020,
@@ -51,7 +51,7 @@ static const unsigned int one_bit_32[] = {
   0x01000000
 };
 #else
-static const unsigned int one_bit_32[] = {
+inline constexpr unsigned int one_bit_32[] = {
   0x80000000,
   0x40000000,
   0x20000000,
@@ -84,6 +84,22 @@ static const unsigned int one_bit_32[] = {
   0x00000004,
   0x00000002,
   0x00000001 };
+#endif
+
+static_assert(sizeof(one_bit_8) / sizeof(one_bit_8[0]) == 8);
+static_assert(one_bit_8[0] == 0x80);
+static_assert(one_bit_8[7] == 0x01);
+static_assert(sizeof(one_bit_32) / sizeof(one_bit_32[0]) == 32);
+#if defined(__i386__) || defined(__x86_64)
+static_assert(one_bit_32[0] == 0x00000080);
+static_assert(one_bit_32[7] == 0x00000001);
+static_assert(one_bit_32[24] == 0x80000000);
+static_assert(one_bit_32[31] == 0x01000000);
+#else
+static_assert(one_bit_32[0] == 0x80000000);
+static_assert(one_bit_32[7] == 0x01000000);
+static_assert(one_bit_32[24] == 0x00000080);
+static_assert(one_bit_32[31] == 0x00000001);
 #endif
 
 static const char hex_char [] = {

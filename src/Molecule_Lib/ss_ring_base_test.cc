@@ -44,7 +44,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_EQ(_sresults.embedding(0)->item(0), 3);
 }
 
@@ -67,7 +67,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, TestAtomCountMultipleMatches) {
@@ -89,7 +89,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "CC1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 2);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 2u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAre(0));
   EXPECT_THAT(*_sresults.embedding(1), UnorderedElementsAre(4));
 }
@@ -114,7 +114,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "CCC1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({0, 1, 5}));
 }
 
@@ -138,7 +138,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "CC(C)C1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({0, 1, 2}));
 }
 
@@ -162,7 +162,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "CC(C)C1CC1C";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({0, 1, 2, 6}));
 }
 
@@ -187,7 +187,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c12ccccc1cc(CC)cc2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({8, 9}));
 }
 
@@ -212,7 +212,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c12ccccc1cc(CCC1CC1)cc2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 
@@ -237,7 +237,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c12ccccc1cc(CCC1CC1)cc2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({8, 9, 10, 11, 12}));
 }
 
@@ -262,7 +262,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c12ccccc1cc(CCC1CC1)cc2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, TestNrings1NoMatchTooManyRings) {
@@ -286,7 +286,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c12ccccc1cc(CCC1CC1C1CC1)cc2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, TestNrings1NoSubstituents) {
@@ -308,7 +308,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "S1N=NC2=C1SC=C2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, TestNringsNoMatchNoRing) {
@@ -330,7 +330,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "N1=C2C=NNC2=C(C)N1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, TestNringsSeparateRings) {
@@ -355,7 +355,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c1cncc1C(C1CC1)(C1CC1)";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({5, 6, 7, 8, 9, 10, 11}));
 }
 TEST_F(TestSubstituent, TestNringsFusedRingsShouldNotMatch) {
@@ -380,7 +380,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "c1cncc1CC12CC1C2";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, InterRingRegion1) {
@@ -398,7 +398,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3}));
 }
 
@@ -417,7 +417,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1CCC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, InterRingRegionOkLength2) {
@@ -435,7 +435,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3}));
 }
 
@@ -454,7 +454,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3, 7}));
 }
 
@@ -473,7 +473,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3, 7}));
 }
 
@@ -492,7 +492,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, InterRingRegionRingConnections) {
@@ -510,7 +510,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)CC1CC1CCCC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({11, 12, 13}));
 }
 
@@ -530,7 +530,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)C1CC1CC1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({10, 14}));
 }
 
@@ -550,7 +550,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)C1CC1CC1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, InterRingRegionRingHitsNeededTooLarge) {
@@ -569,7 +569,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)C1CC1CC1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 0u);
 }
 
 TEST_F(TestSubstituent, InterRingRegionRingRequiredSmarts) {
@@ -589,7 +589,7 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)C1CC1CC1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({10, 14}));
 }
 
@@ -608,14 +608,14 @@ query {
   EXPECT_TRUE(_query.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
   _smiles = "C1CC1C(C1CC1)C1CC1CC1CC1CC1CC1";
   ASSERT_TRUE(_mol.build_from_smiles(_smiles));
-  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1);
+  EXPECT_EQ(_query.substructure_search(&_mol, _sresults), 1u);
   EXPECT_THAT(*_sresults.embedding(0), UnorderedElementsAreArray({3}));
 }
 
 struct ProtoSmilesExpected {
   std::string proto;
   IWString smiles;
-  int expected;
+  uint32_t expected;
 };
 
 std::ostream&

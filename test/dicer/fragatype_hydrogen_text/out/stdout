@@ -1,0 +1,8 @@
+CCO ethanol B=1
+[3001OH2] ethanol FRAGID=1 N= 1
+[9001CH3]C ethanol FRAGID=0 N= 1
+[9001CH3]C ethanol [3001OH2] COMP ethanol
+[3001OH2] ethanol [9001CH3]C COMP ethanol
+[33014H] ethanol OCC COMP ethanol
+[33014H] ethanol OCC COMP ethanol
+[33014H] ethanol OCC COMP ethanol

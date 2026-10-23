@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_spread_buckets",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           " -B NATOMS #{indir}/pubchem_with_natom.gfp"
+      ]
+    }
+
+  ]
+
+}

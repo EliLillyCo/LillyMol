@@ -290,10 +290,10 @@ Options::Process(Molecule& m,
       bond_length_distribution::BondLengthDistribution proto;
       proto.set_atomic_number1(z1);
       proto.set_atomic_number2(z2);
-      proto.mutable_single()->Resize(101, 0);
-      proto.mutable_double_()->Resize(101, 0);
-      proto.mutable_triple()->Resize(101, 0);
-      proto.mutable_aromatic()->Resize(101, 0);
+      proto.mutable_single()->resize(101, 0);
+      proto.mutable_double_()->resize(101, 0);
+      proto.mutable_triple()->resize(101, 0);
+      proto.mutable_aromatic()->resize(101, 0);
       AddBond(*b, bucket, proto);
       _bonds[key] = std::move(proto);
     } else {

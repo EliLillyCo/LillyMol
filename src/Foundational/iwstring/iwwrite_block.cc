@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <cerrno>
 #include <sys/types.h>
 #ifdef _WIN32
 #else
@@ -24,16 +25,23 @@ IWString::write_whole_blocks_shift_unwritten (int fd)
 
   int blocks_to_write = _number_elements / IWWRITE_BLKSIZE;
 
-  int chars_written = IW_FD_WRITE (fd, _things, blocks_to_write * IWWRITE_BLKSIZE);
-
-  if (chars_written != blocks_to_write * IWWRITE_BLKSIZE)
-  {
-    cerr << "IWString::write_whole_blocks_shift_unwritten:cannot write " << blocks_to_write << " blocks to " << fd << endl;
-    return 0;
+  const int requested = blocks_to_write * IWWRITE_BLKSIZE;
+  int chars_written = 0;
+  while (chars_written < requested) {
+    const ssize_t rc = IW_FD_WRITE(fd, _things + chars_written, requested - chars_written);
+    if (rc < 0 && errno == EINTR) {
+      continue;
+    }
+    if (rc <= 0) {
+      if (chars_written > 0) {
+        ::memmove(_things, _things + chars_written, _number_elements - chars_written);
+        _number_elements -= chars_written;
+      }
+      return 0;
+    }
+    chars_written += rc;
   }
-
-  ::memcpy (_things, _things + chars_written, _number_elements - chars_written);
-
+  ::memmove(_things, _things + chars_written, _number_elements - chars_written);
   _number_elements -= chars_written;
 
   return chars_written;

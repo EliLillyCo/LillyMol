@@ -1,6 +1,98 @@
 #include "Molecule_Tools/dicer_lib.h"
 
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "Molecule_Lib/chiral_centre.h"
+
 namespace dicer_lib {
+
+namespace {
+bool
+HasChiralDummy(const Molecule& m, atom_number_t centre) {
+  for (const Bond* bond : m[centre]) {
+    const atom_number_t neighbour = bond->other(centre);
+    if (m.atomic_number(neighbour) == 0 && !InitialAtomNumber(m.atomi(neighbour))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+atom_number_t
+AddChiralDummy(Molecule& m) {
+  const atom_number_t result = m.add(new Atom(0));
+  m.set_implicit_hydrogens(result, 0, 1);
+  return result;
+}
+}  // namespace
+
+bool
+BreakBondWithChiralDummies(Molecule& m, atom_number_t a1, atom_number_t a2) {
+  const Bond* bond = m.bond_between_atoms(a1, a2);
+  if (bond == nullptr) {
+    return false;
+  }
+  Chiral_Centre* c1 = m.chiral_centre_at_atom(a1);
+  Chiral_Centre* c2 = m.chiral_centre_at_atom(a2);
+  if (!c1 && !c2) {
+    m.remove_bond_between_atoms(a1, a2);
+    return true;
+  }
+  // Preflight both ends before adding atoms or changing connections.
+  if (!bond->is_single_bond() || (c1 && HasChiralDummy(m, a1)) ||
+      (c2 && HasChiralDummy(m, a2))) {
+    return false;
+  }
+  if (!c1) {
+    std::swap(a1, a2);
+    std::swap(c1, c2);
+  }
+  const atom_number_t dummy1 = AddChiralDummy(m);
+  if (!m.stereo_preserving_substitute(a1, a2, dummy1)) {
+    return false;
+  }
+  if (c2) {
+    // The substitution has already detached the shared bond at its other end.
+    // Replace that end's saved neighbour slot directly, then add its own cap.
+    const atom_number_t dummy2 = AddChiralDummy(m);
+    // add_bond would otherwise replace an implicit-H stereo slot. Detach the
+    // centre temporarily, then restore the explicitly substituted ordering.
+    std::unique_ptr<Chiral_Centre> second(m.remove_no_delete_chiral_centre_at_atom(a2));
+    second->change_atom_number(a1, dummy2);
+    m.add_bond(a2, dummy2, SINGLE_BOND);
+    m.add_chiral_centre(second.release());
+  } else {
+    m.unset_all_implicit_hydrogen_information(a2);
+  }
+  return true;
+}
+
+bool
+CreateChiralDummySubsets(Molecule& parent, const int* subset, Molecule& fragment,
+                         Molecule& complement, int* xref) {
+  Molecule capped(parent);
+  // Only capped is modified; the parent's bond list remains safe to traverse.
+  for (const Bond* bond : parent.bond_list()) {
+    if (subset[bond->a1()] == subset[bond->a2()]) {
+      continue;
+    }
+    if (!BreakBondWithChiralDummies(capped, bond->a1(), bond->a2())) {
+      return false;
+    }
+  }
+  std::vector<int> membership(capped.natoms());
+  std::copy_n(subset, parent.natoms(), membership.begin());
+  for (int i = parent.natoms(); i < capped.natoms(); ++i) {
+    membership[i] = membership[capped.other(i, 0)];
+  }
+  std::vector<int> full_xref(capped.natoms());
+  capped.create_subsets(membership.data(), complement, fragment, full_xref.data());
+  std::copy_n(full_xref.begin(), parent.natoms(), xref);
+  return true;
+}
 
 USPVPTR::USPVPTR() {
   _atom_number_in_parent = -1;

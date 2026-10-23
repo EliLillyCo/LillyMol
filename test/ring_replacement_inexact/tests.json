@@ -1,0 +1,12 @@
+{
+  "executable": "ring_replacement_inexact",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "topology_change",
+      "args": [
+        "-R #{indir}/rings_6a.textproto -s '[r5]' -I . -V -c #{indir}/in.smi"
+      ]
+    }
+  ]
+}

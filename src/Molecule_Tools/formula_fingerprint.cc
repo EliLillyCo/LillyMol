@@ -28,6 +28,11 @@ Usage() {
   cerr << R"(Fingerprint based on the molecular formula.
  -J <tag>       tag to use.
  -f             function as a TDT filter.
+ -L s,d         apply log scaling to counts. Emphasises rarer elements. 
+                see header file for discussion. Suggest -L 200,41 as a default.
+ -i ...         standard input       control options.
+ -E ....        standard Element     control options.
+ -A ....        standard Aromaticity control options.
  -v             verbose output.
 )";
   // clang-format off
@@ -40,6 +45,10 @@ class Options {
     int _verbose;
 
     int _function_as_tdt_filter;
+
+    // The -L option
+    float _log_s = 0.0f;
+    float _log_d = 0.0f;
 
     IWString _smiles_tag;
     IWString _identifier_tag;
@@ -83,6 +92,27 @@ Options::Initialise(Command_Line& cl) {
     _tag.EnsureEndsWith('<');
   }
 
+  if (cl.option_present('L')) {
+    const_IWSubstring l = cl.string_value('L');
+
+    const_IWSubstring s, d;
+    if (! l.split(s, ',', d) || s.empty() || d.empty()) {
+      cerr << "Options::Initialise:invalid -L specifier '" << l << "' must be <float>,<float>\n";
+      return 0;
+    }
+    if (! s.numeric_value(_log_s) || _log_s <= 0.0f) {
+      cerr << "Options::Initialise:invalid log S value '" << l << "'\n";
+      return 0;
+    }
+    if (! d.numeric_value(_log_d) || _log_d <= 0.0f) {
+      cerr << "Options::Initialise:invalid log D value '" << l << "'\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Log scaling enabled with s=" << _log_s << " d=" << _log_d << '\n';
+    }
+  }
+
   return 1;
 }
 
@@ -91,6 +121,9 @@ Options::WriteFingerprint(Molecule& m,
                           IWString_and_File_Descriptor& output) {
   
   MFormula mf;
+  if (_log_s > 0.0f) {
+    mf.set_log_scaling_factors(_log_s, _log_d);
+  }
 
   mf.Build(m);
 
@@ -180,6 +213,8 @@ FormulaFingerprint(data_source_and_type<Molecule>& input,
                          IWString_and_File_Descriptor& output) {
   Molecule* m;
   while ((m = input.next_molecule()) != nullptr) {
+    std::unique_ptr<Molecule> free_m(m);
+
     FormulaFingerprint(*m, options, output);
     output.write_if_buffer_holds_more_than(4096);
   }
@@ -204,7 +239,7 @@ FormulaFingerprint(const char* fname,
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:EJ:fi:");
+  Command_Line cl(argc, argv, "vA:EJ:fi:L:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";

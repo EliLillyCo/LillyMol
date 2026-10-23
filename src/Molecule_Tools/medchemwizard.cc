@@ -2,67 +2,24 @@
   Implementation of Medchem Wizard tool
 */
 
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <memory>
 
-#include "google/protobuf/text_format.h"
-
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
-#include "Foundational/iwstring/iw_stl_hash_set.h"
 
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
-#include "Molecule_Lib/iwreaction.h"
-#include "Molecule_Lib/standardise.h"
-#include "Molecule_Lib/target.h"
+#include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/substructure.h"
+
+#include "Molecule_Tools/medchemwizard_lib.h"
 
 using std::cerr;
 
 const char* prog_name = nullptr;
-
-static int verbose = 0;
-
-static int molecules_read = 0;
-
-static Chemical_Standardisation chemical_standardisation;
-
-static int reduce_to_largest_fragment = 0;
-
-static int max_depth = 0;
-
-static int molecules_produced = 0;
-
-static int max_hits = std::numeric_limits<int>::max();
-static int truncated_to_max_hits = 0;
-
-static int report_multiple_hits_truncated = 1;
-
-static int unique_across_all_molecules = 0;
-static int unique_within_molecule = 0;
-
-static int duplicate_molecules_suppressed = 0;
-
-static int postprocess_molecules_produced = 0;
-
-static int discard_bad_balences = 0;
-
-static int bad_valences_discarded = 0;
-
-static IWString_and_File_Descriptor stream_for_bad_valence;
-
-static int max_atoms = std::numeric_limits<int>::max();
-static int min_atoms = 1;
-
-static int discarded_for_too_many_atoms = 0;
-static int discarded_for_too_few_atoms = 0;
-
-static int remove_all_chiral_centres = 0;
-
-static int append_names = 0;
-
-static IWString sep;
 
 static void
 usage(int rc) {
@@ -73,330 +30,52 @@ usage(int rc) {
   cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
 #endif
   // clang-format on
-  cerr << "  -R <fname>    file with list of reactions\n";
-  cerr << "  -D <maxdepth> recursively generated transformed molecules to <maxdepth> "
-          "(def 0 - no recursion)\n";
-  cerr << "  -x <max_hits> allow no more than <max_hits> matches to any reaction\n";
-  cerr << "  -x quiet      do NOT report when multiple hits are truncated\n";
-  cerr << "  -U ...        uniqueness. Either 'all' or 'each'\n";
-  cerr << "  -m <natoms>   discard products having fewer than <natoms> atoms\n";
-  cerr << "  -M <natoms>   discard products having more  than <natoms> atoms\n";
-  cerr << "  -c            remove chirality from all input molecules\n";
-  cerr << "  -W <sep>      append reaction names to products\n";
-  cerr << "  -V .          discard molecules with bad valences\n";
-  cerr << "  -V <fname>    discard molecules with bad valences, write to <fname>\n";
-  cerr << "  -y            standardise molecules produced\n";
-  cerr << "  -l            reduce to largest fragment\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(  -R <fname>    file with list of reactions
+  -D <maxdepth> recursively generated transformed molecules to <maxdepth> (def 0 - no recursion)
+  -x <max_hits> allow no more than <max_hits> matches to any reaction
+  -x quiet      do NOT report when multiple hits are truncated
+  -U ...        uniqueness. Either 'all' or 'each'
+  -m <natoms>   discard products having fewer than <natoms> atoms
+  -M <natoms>   discard products having more  than <natoms> atoms
+  -c            remove chirality from all input molecules
+  -W <sep>      append reaction names to products
+  -q <query>    atoms matching query must not be changed
+  -s <smarts>   atoms matching SMARTS must not be changed
+  -z i          ignore molecules not matching any -q/-s query
+  -V .          discard molecules with bad valences
+  -V <fname>    discard molecules with bad valences, write to <fname>
+  -y            standardise molecules produced
+  -l            reduce to largest fragment
+  -i <type>     input specification
+  -g ...        chemical standardisation options
+  -E ...        standard element specifications
+  -A ...        standard aromaticity specifications
+  -v            verbose output
+)";
 
   exit(rc);
 }
 
 static int
-ReadTextProtoReaction(const IWString& dirname, iwstring_data_source& input,
-                      resizable_array_p<IWReaction>& destination) {
-  IWString file_contents;
-  input.ReadAllRecords(file_contents);
-  if (file_contents.empty()) {
-    cerr << "ReadTextProtoReaction:empty file\n";
-    return 0;
-  }
-
-  const std::string_view tmp(file_contents.data(), file_contents.length());
-
-  ReactionProto::Reaction proto;
-
-  if (!google::protobuf::TextFormat::ParseFromString(tmp, &proto)) {
-    cerr << "ReadTextProtoReaction:cannot parse textproto\n";
-    cerr << file_contents << '\n';
-    return 0;
-  }
-
-  Sidechain_Match_Conditions smc;
-
-  std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
-  if (!rxn->ConstructFromProto(proto, dirname, smc)) {
-    cerr << "ReadTextProtoReaction:cannot build reaction from proto\n";
-    cerr << proto.ShortDebugString() << '\n';
-    return 0;
-  }
-
-  destination << rxn.release();
-
-  return 1;
-}
-
-static int
-read_reaction(const_IWSubstring& buffer, const IWString& dir,
-              const Sidechain_Match_Conditions& smc, resizable_array_p<IWReaction>& rxn) {
-  bool reaction_is_textproto;
-  if (buffer.starts_with("PROTO:")) {
-    buffer.remove_leading_chars(6);
-    reaction_is_textproto = true;
-  } else {
-    reaction_is_textproto = false;
-  }
-
-  IWString fname;
-  fname << dir << '/' << buffer;
-
-  iwstring_data_source input(fname.null_terminated_chars());
-
-  if (!input.good()) {
-    cerr << "Cannot open reaction '" << fname << "'\n";
-    return 0;
-  }
-
-  if (verbose > 2) {
-    cerr << "Reading '" << fname << "'\n";
-  }
-
-  if (reaction_is_textproto) {
-    return ReadTextProtoReaction(dir, input, rxn);
-  }
-
-  msi_object msi;
-  msi.set_display_no_data_error_message(0);
-
-  while (msi.read(input)) {
-    IWReaction* r = new IWReaction();
-    if (!r->construct_from_msi_object(msi, smc)) {
-      cerr << "Cannot build reaction\n";
-      cerr << msi;
-      delete r;
-
-      return 0;
-    }
-
-    rxn.add(r);
-  }
-
-  return 1;
-}
-
-static int
-read_reactions(iwstring_data_source& input, const IWString& dir,
-               const Sidechain_Match_Conditions& smc,
-               resizable_array_p<IWReaction>& rxn) {
-  const_IWSubstring buffer;
-
-  while (input.next_record(buffer)) {
-    if (0 == buffer.length() || buffer.starts_with('#')) {
-      continue;
-    }
-
-    if (!read_reaction(buffer, dir, smc, rxn)) {
-      cerr << "Cannot read reaction '" << buffer << "'\n";
-      return 0;
-    }
-  }
-
-  return rxn.number_elements();
-}
-
-static int
-read_reactions(const char* fname, const Sidechain_Match_Conditions& smc,
-               resizable_array_p<IWReaction>& rxn) {
-  iwstring_data_source input(fname);
-
-  if (!input.good()) {
-    cerr << "read_reactions:cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  IWString dir;
-
-  const_IWSubstring tmp(fname);
-
-  const int slash = tmp.rindex('/');
-
-  if (slash >= 0) {
-    dir = fname;
-    dir.iwtruncate(slash);
-  } else {
-    dir = "./";
-  }
-
-  return read_reactions(input, dir, smc, rxn);
-}
-
-static void
-preprocess(Molecule& m) {
-  if (reduce_to_largest_fragment) {
-    m.reduce_to_largest_fragment();
-  }
-
-  if (remove_all_chiral_centres) {
-    m.remove_all_chiral_centres();
-  }
-
-  if (chemical_standardisation.active()) {
-    chemical_standardisation.process(m);
-  }
-
-  return;
-}
-
-static int
-check_uniqueness(Molecule& m, const resizable_array_p<IWReaction>& rxn,
-                 const int query_just_run, IW_STL_Hash_Set& smiles_hash) {
-  if (postprocess_molecules_produced) {
-    preprocess(m);
-  }
-
-  if (discard_bad_balences && !m.valence_ok()) {
-    if (verbose > 2) {
-      cerr << "bad valence " << m.smiles() << ' ' << m.name() << ", last rxn "
-           << query_just_run << ' ' << rxn[query_just_run]->comment() << '\n';
-    }
-    bad_valences_discarded++;
-
-    if (stream_for_bad_valence.is_open()) {
-      stream_for_bad_valence << m.smiles() << ' ' << m.name() << '\n';
-      stream_for_bad_valence.write_if_buffer_holds_more_than(8192);
-    }
-
-    return 0;
-  }
-
-  const int matoms = m.natoms();
-
-  if (matoms > max_atoms) {
-    discarded_for_too_many_atoms++;
-
-    return 0;
-  }
-
-  if (matoms < min_atoms) {
-    discarded_for_too_few_atoms++;
-
-    return 0;
-  }
-
-  if (0 == unique_across_all_molecules && 0 == unique_within_molecule) {
-    return 1;
-  }
-
-  const auto& usmi = m.unique_smiles();
-
-  if (smiles_hash.contains(usmi)) {
-    duplicate_molecules_suppressed++;
-    return 0;
-  }
-
-  smiles_hash.insert(usmi);
-
-  return 1;
-}
-
-/*
-  Here's where you do whatever you want to do with the molecule
-  In this case, we count the number of nitrogen atoms
-*/
-
-static int
-medchem_wizard(Molecule& m, const IWString& mname, resizable_array_p<IWReaction>& rxn,
-               int* molecules_hitting_reaction, const int depth,
-               IW_STL_Hash_Set& smiles_hash, IWString_and_File_Descriptor& output) {
-  Molecule_to_Match target(&m);
-
-  const int n = rxn.number_elements();
-
-  IWString product_molecule_name(mname);
-  int initial_name_length = mname.length();
-
-  for (int i = 0; i < n; ++i) {
-    const auto r = rxn[i];
-
-    Substructure_Results sresults;
-
-    int nhits = r->substructure_search(target, sresults);
-
-    if (0 == nhits) {
-      continue;
-    }
-
-    molecules_hitting_reaction[i]++;
-
-    if (nhits > max_hits) {
-      if (report_multiple_hits_truncated) {
-        cerr << nhits << " matches to " << r->comment() << " in " << m.name() << " in "
-             << m.name() << " truncated\n";
-      }
-      nhits = max_hits;
-      truncated_to_max_hits++;
-    }
-    // cerr << "Begin " << nhits << " for " << r->name() << '\n';
-
-    for (int j = 0; j < nhits; ++j) {
-      Molecule product;
-      if (!r->perform_reaction(&m, sresults.embedding(j), product)) {
-        continue;
-      }
-
-      molecules_produced++;
-
-      if (!check_uniqueness(product, rxn, i, smiles_hash)) {
-        continue;
-      }
-
-      if (append_names) {
-        product_molecule_name << sep << r->comment();
-      }
-
-      output << product.smiles() << ' ' << product_molecule_name << '\n';
-
-      output.write_if_buffer_holds_more_than(8192);
-
-      if (depth < max_depth) {
-        medchem_wizard(product, product_molecule_name, rxn, molecules_hitting_reaction,
-                       depth + 1, smiles_hash, output);
-      }
-
-      product_molecule_name.resize_keep_storage(initial_name_length);
-    }
-  }
-
-  return output.good();
-}
-
-static int
-medchem_wizard(data_source_and_type<Molecule>& input, resizable_array_p<IWReaction>& rxn,
-               int* molecules_hitting_reaction, IWString_and_File_Descriptor& output) {
-  IW_STL_Hash_Set smiles_hash;
-
+MedchemWizard(medchemwizard::MedchemWizard& wizard, data_source_and_type<Molecule>& input,
+              IWString_and_File_Descriptor& output) {
   Molecule* m;
   while (nullptr != (m = input.next_molecule())) {
-    molecules_read++;
-
     std::unique_ptr<Molecule> free_m(m);
 
-    preprocess(*m);
-
-    IWString mname(m->name());
-
-    if (!medchem_wizard(*m, mname, rxn, molecules_hitting_reaction, 0, smiles_hash,
-                        output)) {
+    if (! wizard.ProcessToStream(*m, output)) {
       return 0;
     }
 
     output.write_if_buffer_holds_more_than(32768);
-
-    if (unique_within_molecule) {
-      smiles_hash.clear();
-    }
   }
 
   return 1;
 }
 
 static int
-medchem_wizard(const char* fname, FileType input_type, resizable_array_p<IWReaction>& rxn,
-               int* molecules_hitting_reaction, IWString_and_File_Descriptor& output) {
+MedchemWizard(medchemwizard::MedchemWizard& wizard, const char* fname,
+              FileType input_type, IWString_and_File_Descriptor& output, int verbose) {
   assert(nullptr != fname);
 
   if (input_type == FILE_TYPE_INVALID) {
@@ -414,19 +93,22 @@ medchem_wizard(const char* fname, FileType input_type, resizable_array_p<IWReact
     input.set_verbose(1);
   }
 
-  return medchem_wizard(input, rxn, molecules_hitting_reaction, output);
+  return MedchemWizard(wizard, input, output);
 }
 
 static int
-medchem_wizard(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vA:E:i:g:lR:D:x:U:yV:cm:M:W:");
+MedchemWizard(int argc, char** argv) {
+  Command_Line cl(argc, argv, "vA:E:i:g:lR:D:x:U:yV:cm:M:W:q:s:z:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     usage(1);
   }
 
-  verbose = cl.option_count('v');
+  medchemwizard::MedchemWizard wizard;
+  medchemwizard::Options& options = wizard.options();
+  options.verbose = cl.option_count('v');
+  const int verbose = options.verbose;
 
   if (cl.option_present('A')) {
     if (!process_standard_aromaticity_options(cl, verbose, 'A')) {
@@ -445,14 +127,14 @@ medchem_wizard(int argc, char** argv) {
   }
 
   if (cl.option_present('g')) {
-    if (!chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
+    if (!options.chemical_standardisation.construct_from_command_line(cl, verbose > 1, 'g')) {
       cerr << "Cannot process chemical standardisation options (-g)\n";
       usage(32);
     }
   }
 
   if (cl.option_present('l')) {
-    reduce_to_largest_fragment = 1;
+    options.reduce_to_largest_fragment = 1;
 
     if (verbose) {
       cerr << "Will reduce to largest fragment\n";
@@ -460,45 +142,45 @@ medchem_wizard(int argc, char** argv) {
   }
 
   if (cl.option_present('c')) {
-    remove_all_chiral_centres = 1;
+    options.remove_all_chiral_centres = 1;
     if (verbose) {
       cerr << "Will remove all chirality from input molecules\n";
     }
   }
 
   if (cl.option_present('W')) {
-    append_names = 1;
+    options.append_names = 1;
 
-    cl.value('W', sep);
+    cl.value('W', options.sep);
 
-    char_name_to_char(sep, false /* no error messages */ );
+    char_name_to_char(options.sep, false /* no error messages */ );
 
     if (verbose) {
-      cerr << " Will append reaction names, separtor '" << sep << "'\n";
+      cerr << " Will append reaction names, separtor '" << options.sep << "'\n";
     }
   }
 
   if (cl.option_present('m')) {
-    if (!cl.value('m', min_atoms) || min_atoms < 1) {
+    if (!cl.value('m', options.min_atoms) || options.min_atoms < 1) {
       cerr << "The minimum number of atoms option (-m) must be a whole +ve number\n";
       usage(1);
     }
 
     if (verbose) {
-      cerr << "Will discard products having fewer than " << min_atoms << " atoms\n";
+      cerr << "Will discard products having fewer than " << options.min_atoms << " atoms\n";
     }
   }
 
   if (cl.option_present('M')) {
-    if (!cl.value('M', max_atoms) || max_atoms < min_atoms) {
+    if (!cl.value('M', options.max_atoms) || options.max_atoms < options.min_atoms) {
       cerr << "The maximum number of atoms option (-M) must be a whole +ve number "
               "greater than "
-           << min_atoms << '\n';
+           << options.min_atoms << '\n';
       usage(1);
     }
 
     if (verbose) {
-      cerr << "Will discard products having more than " << max_atoms << " atoms\n";
+      cerr << "Will discard products having more than " << options.max_atoms << " atoms\n";
     }
   }
 
@@ -507,31 +189,14 @@ medchem_wizard(int argc, char** argv) {
     usage(1);
   }
 
-  Sidechain_Match_Conditions smc;
-
-  resizable_array_p<IWReaction> rxn;
-
-  if (cl.option_present('R')) {
-    const char* r = cl.option_value('R');
-
-    if (!read_reactions(r, smc, rxn)) {
-      cerr << "Cannot read reactions from '" << r << "'\n";
-      return 1;
-    }
-
-    if (verbose) {
-      cerr << "Read " << rxn.size() << " reactions from '" << r << "'\n";
-    }
-  }
-
   if (cl.option_present('D')) {
-    if (!cl.value('D', max_depth) || max_depth < 1) {
+    if (!cl.value('D', options.max_depth) || options.max_depth < 1) {
       cerr << "The maximum depth option (-D) must be a whole +ve number\n";
       usage(1);
     }
 
     if (verbose) {
-      cerr << "max depth " << max_depth << '\n';
+      cerr << "max depth " << options.max_depth << '\n';
     }
   }
 
@@ -539,16 +204,16 @@ medchem_wizard(int argc, char** argv) {
     const_IWSubstring x;
     for (int i = 0; cl.value('x', x, i); ++i) {
       if ("quiet" == x) {
-        report_multiple_hits_truncated = 0;
+        options.report_multiple_hits_truncated = 0;
         if (verbose) {
           cerr << "Will suppress warnings about too many substructure matches\n";
         }
-      } else if (!x.numeric_value(max_hits) || max_hits < 1) {
+      } else if (!x.numeric_value(options.max_hits) || options.max_hits < 1) {
         cerr << "The maximum number of substructure matches (-x) must be a whole +ve "
                 "number\n";
         usage(1);
       } else if (verbose) {
-        cerr << "A maximum of " << max_hits << " substructure matches will be used\n";
+        cerr << "A maximum of " << options.max_hits << " substructure matches will be used\n";
       }
     }
   }
@@ -557,27 +222,64 @@ medchem_wizard(int argc, char** argv) {
     const_IWSubstring u = cl.string_value('U');
 
     if ("all" == u) {
-      unique_across_all_molecules = 1;
+      options.unique_across_all_molecules = 1;
     } else if ("each" == u) {
-      unique_within_molecule = 1;
+      options.unique_within_molecule = 1;
     } else {
       cerr << "Unrecognised -U qualifier '" << u << "'\n";
       usage(1);
     }
   }
 
+  if (cl.option_present('q')) {
+    if (! process_queries(cl, wizard.do_not_change_queries(), verbose, 'q')) {
+      cerr << "Cannot read do-not-change queries (-q)\n";
+      return 1;
+    }
+  }
+
+  if (cl.option_present('s')) {
+    const_IWSubstring smarts;
+    for (int i = 0; cl.value('s', smarts, i); ++i) {
+      std::unique_ptr<Substructure_Query> query = std::make_unique<Substructure_Query>();
+      if (! query->create_from_smarts(smarts)) {
+        cerr << "Invalid do-not-change SMARTS (-s) '" << smarts << "'\n";
+        return 1;
+      }
+      wizard.do_not_change_queries() << query.release();
+    }
+  }
+
+  if (verbose && ! wizard.do_not_change_queries().empty()) {
+    cerr << "Read " << wizard.do_not_change_queries().number_elements()
+         << " do-not-change queries\n";
+  }
+
+  if (cl.option_present('z')) {
+    const_IWSubstring z;
+    for (int i = 0; cl.value('z', z, i); ++i) {
+      if (z == 'i' || z == "ignore") {
+        options.ignore_do_not_change_queries_not_matching = 1;
+      } else {
+        cerr << "Unrecognised -z qualifier '" << z << "'\n";
+        usage(1);
+      }
+    }
+  }
+
   if (cl.option_present('y')) {
-    postprocess_molecules_produced = 1;
+    options.postprocess_molecules_produced = 1;
 
     if (verbose) {
       cerr << "Will post process molecules produced just like input molecules\n";
     }
   }
 
+  IWString_and_File_Descriptor stream_for_bad_valence;
   if (cl.option_present('V')) {
     IWString v = cl.string_value('V');
 
-    discard_bad_balences = 1;
+    options.discard_bad_valences = 1;
 
     if ('.' != v) {
       if (!v.ends_with(".smi")) {
@@ -590,9 +292,21 @@ medchem_wizard(int argc, char** argv) {
       }
 
       if (verbose) {
-        cerr << "MOlecules with bad valences discarded, written to '" << v << "'\n";
+        cerr << "Molecules with bad valences discarded, written to '" << v << "'\n";
       }
     }
+  }
+
+  wizard.set_bad_valence_stream(&stream_for_bad_valence);
+
+  const char* r = cl.option_value('R');
+  if (! wizard.ReadReactions(r)) {
+    cerr << "Cannot read reactions from '" << r << "'\n";
+    return 1;
+  }
+
+  if (verbose) {
+    cerr << "Read " << wizard.number_reactions() << " reactions from '" << r << "'\n";
   }
 
   FileType input_type = FILE_TYPE_INVALID;
@@ -613,16 +327,11 @@ medchem_wizard(int argc, char** argv) {
     usage(2);
   }
 
-  const int nr = rxn.number_elements();
-
-  int* molecules_hitting_reaction = new_int(nr);
-  std::unique_ptr<int[]> free_molecules_hitting_reaction(molecules_hitting_reaction);
-
   IWString_and_File_Descriptor output(1);
 
   int rc = 0;
   for (int i = 0; i < cl.number_elements(); i++) {
-    if (!medchem_wizard(cl[i], input_type, rxn, molecules_hitting_reaction, output)) {
+    if (!MedchemWizard(wizard, cl[i], input_type, output, verbose)) {
       rc = i + 1;
       break;
     }
@@ -631,29 +340,39 @@ medchem_wizard(int argc, char** argv) {
   output.flush();
 
   if (verbose) {
-    cerr << "Read " << molecules_read << " molecules, produced " << molecules_produced
+    const medchemwizard::Stats& stats = wizard.stats();
+    cerr << "Read " << stats.molecules_read << " molecules, produced " << stats.molecules_produced
          << '\n';
-    if (truncated_to_max_hits > 0) {
-      cerr << truncated_to_max_hits << " substructure searches truncated to " << max_hits
-           << '\n';
+    if (stats.truncated_to_max_hits > 0) {
+      cerr << stats.truncated_to_max_hits << " substructure searches truncated to "
+           << options.max_hits << '\n';
     }
-    if (duplicate_molecules_suppressed) {
-      cerr << duplicate_molecules_suppressed << " duplicate molecules suppressed\n";
+    if (stats.duplicate_molecules_suppressed) {
+      cerr << stats.duplicate_molecules_suppressed << " duplicate molecules suppressed\n";
     }
 
-    for (int i = 0; i < nr; ++i) {
+    const int* molecules_hitting_reaction = wizard.molecules_hitting_reaction();
+    for (int i = 0; i < wizard.number_reactions(); ++i) {
       float f = static_cast<float>(molecules_hitting_reaction[i]) /
-                static_cast<float>(molecules_read);
+                static_cast<float>(stats.molecules_read);
 
-      cerr << molecules_hitting_reaction[i] << " molecules hit " << rxn[i]->comment()
+      cerr << molecules_hitting_reaction[i] << " molecules hit " << wizard.reaction(i)->comment()
            << ' ' << f << '\n';
     }
-    cerr << bad_valences_discarded << " products with bad valences discarded\n";
-    if (discarded_for_too_many_atoms) {
-      cerr << discarded_for_too_many_atoms << " discarded_for_too_many_atoms\n";
+    cerr << stats.bad_valences_discarded << " products with bad valences discarded\n";
+    if (stats.discarded_for_too_many_atoms) {
+      cerr << stats.discarded_for_too_many_atoms << " discarded_for_too_many_atoms\n";
     }
-    if (discarded_for_too_few_atoms) {
-      cerr << discarded_for_too_few_atoms << " discarded_for_too_few_atoms\n";
+    if (stats.discarded_for_too_few_atoms) {
+      cerr << stats.discarded_for_too_few_atoms << " discarded_for_too_few_atoms\n";
+    }
+    if (stats.molecules_not_matching_do_not_change_queries) {
+      cerr << stats.molecules_not_matching_do_not_change_queries
+           << " molecules did not match do-not-change queries\n";
+    }
+    if (stats.embeddings_rejected_for_changing_protected_atoms) {
+      cerr << stats.embeddings_rejected_for_changing_protected_atoms
+           << " reaction embeddings rejected for changing protected atoms\n";
     }
   }
 
@@ -664,7 +383,7 @@ int
 main(int argc, char** argv) {
   prog_name = argv[0];
 
-  int rc = medchem_wizard(argc, argv);
+  int rc = MedchemWizard(argc, argv);
 
   return rc;
 }

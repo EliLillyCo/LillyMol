@@ -1,0 +1,4 @@
+name: "thiourea_unsubstituted"
+query {
+  smarts: "[SD1]=C(-[ND1H2])-[ND>1]"
+}

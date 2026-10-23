@@ -1118,8 +1118,8 @@ The optional parameter, STOP_COUNTING_WHEN, is just used by
 at_least_X_records_remaining.
 */
 
-int
-iwstring_data_source::records_remaining(int stop_counting_when) {
+uint64_t
+iwstring_data_source::records_remaining(uint64_t stop_counting_when) {
   if (_isstringbuffer) {
     // TODO:
     return _stringbuffer_size;
@@ -1162,7 +1162,7 @@ iwstring_data_source::records_remaining(int stop_counting_when) {
       stop_counting_when = std::numeric_limits<int>::max();
     }
 
-    int rc = 0;
+    uint64_t rc = 0;
 
     // #define DEBUG_RECORDS_REMAINING
 #ifdef DEBUG_RECORDS_REMAINING
@@ -1247,7 +1247,7 @@ iwstring_data_source::records_remaining(int stop_counting_when) {
 }
 
 int
-iwstring_data_source::at_least_X_records_remaining(int n) {
+iwstring_data_source::at_least_X_records_remaining(uint64_t n) {
   assert(n > 0);
 
   return records_remaining(n);
@@ -1259,7 +1259,7 @@ iwstring_data_source::at_least_X_records_remaining(int n) {
   grep() do that before attempting a match? Well, it doesn't
 */
 
-int
+uint64_t
 iwstring_data_source::grep(RE2& rx) {
   assert(ok());
   assert(rx.ok());
@@ -1286,7 +1286,7 @@ iwstring_data_source::grep(RE2& rx) {
   Note that we do NOT initialise the count array
 */
 
-int
+uint64_t
 iwstring_data_source::grep(int n, RE2* rx, int* count) {
   assert(ok());
 
@@ -1310,7 +1310,7 @@ iwstring_data_source::grep(int n, RE2* rx, int* count) {
   return rc;
 }
 
-int
+uint64_t
 iwstring_data_source::grep(const const_IWSubstring& c) {
   const std::string_view tmp(c.data(), c.length());
   RE2 rx(tmp);
@@ -1322,7 +1322,7 @@ iwstring_data_source::grep(const const_IWSubstring& c) {
   return grep(rx);
 }
 
-int
+uint64_t
 iwstring_data_source::count_records_starting_with(const const_IWSubstring& s) {
   assert(ok());
 
@@ -1565,13 +1565,13 @@ iwstring_data_source::echo(IWString_and_File_Descriptor& output, size_t nbytes) 
 }
 
 int
-iwstring_data_source::skip_records(int nskip) {
+iwstring_data_source::skip_records(uint64_t nskip) {
   assert(ok());
   assert(nskip >= 0);
 
   const_IWSubstring buffer;
 
-  for (int i = 0; i < nskip; i++) {
+  for (uint64_t i = 0; i < nskip; i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::skip_records: EOF at record " << i << " of " << nskip
            << '\n';
@@ -1583,13 +1583,13 @@ iwstring_data_source::skip_records(int nskip) {
 }
 
 int
-iwstring_data_source::skip_records(RE2& rx, int nskip) {
+iwstring_data_source::skip_records(RE2& rx, uint64_t nskip) {
   assert(ok());
   assert(nskip >= 0);
 
   const_IWSubstring buffer;
 
-  int nfound = 0;
+  uint64_t nfound = 0;
 
   while (nfound < nskip) {
     if (!next_record(buffer)) {
@@ -1610,13 +1610,13 @@ iwstring_data_source::skip_records(RE2& rx, int nskip) {
 }
 
 int
-iwstring_data_source::echo_records(std::ostream& os, int necho) {
+iwstring_data_source::echo_records(std::ostream& os, uint64_t necho) {
   assert(ok());
   assert(necho >= 0);
 
   const_IWSubstring buffer;
 
-  for (int i = 0; i < necho && os.good(); i++) {
+  for (uint64_t i = 0; i < necho && os.good(); i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::echo_records: EOF at record " << i << " of " << necho
            << '\n';
@@ -1630,13 +1630,13 @@ iwstring_data_source::echo_records(std::ostream& os, int necho) {
 }
 
 int
-iwstring_data_source::echo_records(IWString_and_File_Descriptor& os, int necho) {
+iwstring_data_source::echo_records(IWString_and_File_Descriptor& os, uint64_t necho) {
   assert(ok());
   assert(necho >= 0);
 
   const_IWSubstring buffer;
 
-  for (int i = 0; i < necho && os.good(); i++) {
+  for (uint64_t i = 0; i < necho && os.good(); i++) {
     if (!next_record(buffer)) {
       cerr << "iwstring_data_source::echo_records: EOF at record " << i << " of " << necho
            << '\n';

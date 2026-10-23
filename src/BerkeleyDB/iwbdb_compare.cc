@@ -9,12 +9,15 @@
 #include <memory>
 #include <numeric>
 
+#include "db_cxx.h"
+
+#include "BerkeleyDB/iwstring_bdb.h"
+
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/report_progress.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
-#include "db_cxx.h"
 #include "unpack_data.h"
 
 using std::cerr;
@@ -23,13 +26,18 @@ static int verbose = 0;
 
 static int strip_blanks = 0;
 
-static int items_matching_only_with_blank_removal = 0;
+static uint32_t items_matching_only_with_blank_removal = 0;
 
-static int keys_with_no_data_in_other_database = 0;
+static uint32_t keys_with_no_data_in_other_database = 0;
 
 static IWString_and_File_Descriptor stream_for_keys_only_in_reference_database;
 
 static IWString_and_File_Descriptor stream_for_new_and_changed_keys;
+
+static IWString_and_File_Descriptor stream_for_new_keys;
+static IWString_and_File_Descriptor stream_for_changed_data;
+
+static int swap_new_kv_column_order = 0;
 
 static int write_key_of_updates_first = 1;
 
@@ -39,7 +47,7 @@ static int perhaps_data_appended_in_different_order = 0;
 
 static char concatenated_data_separator;
 
-static int same_data_different_order = 0;
+static uint32_t same_data_different_order = 0;
 
 static Unpack_Binary_Data key_unpack_format, data_unpack_format;
 
@@ -64,6 +72,9 @@ usage(int rc) {
   cerr << "                 and try the comparison again\n";
   cerr << " -R <fname>      write keys only found in reference database to <fname>\n";
   cerr << " -D <fname>      write new and changed keys to <fname>\n";
+  cerr << " -K <fname>      write new keys to <fname>\n";
+  cerr << " -V <fname>      write keys with new values to <fname>\n";
+  cerr << " -x              swap order of columns in the -K and -V files, useful for selimsteg type db's\n";
   cerr << " -u <pattern>    unpack pattern for the data\n";
   cerr << " -U <pattern>    unpack pattern for the key\n";
   cerr << " -r <number>     report progess every <number> comparisons done\n";
@@ -76,9 +87,9 @@ usage(int rc) {
   exit(rc);
 }
 
-static int records_in_database = 0;
+static uint32_t records_in_database = 0;
 
-static int records_matching = 0;
+static uint32_t records_matching = 0;
 
 static int break_on_first_difference = 0;
 
@@ -134,9 +145,14 @@ write_datum(const char* header, const Dbt& d, const Unpack_Binary_Data& unpack_f
   return;
 }
 
+// Must always return 0.
 static int
 report_difference(const Dbt& dkey, const Dbt& reference_value, const Dbt& fromdb,
                   IWString_and_File_Descriptor& output) {
+  if (! display_no_match_message) {
+    return 0;
+  }
+
   write_datum("key", dkey, key_unpack_format, output);
 
   write_datum("reference", reference_value, data_unpack_format, output);
@@ -249,13 +265,9 @@ static int
 write_new_or_changed_value(const Dbt& zkey, const Dbt& zdata,
                            IWString_and_File_Descriptor& os) {
   if (write_key_of_updates_first) {
-    os.strncat(reinterpret_cast<const char*>(zkey.get_data()), zkey.get_size());
-    os << ' ';
-    os.strncat(reinterpret_cast<const char*>(zdata.get_data()), zdata.get_size());
+    os << zkey << zdata;
   } else {
-    os.strncat(reinterpret_cast<const char*>(zdata.get_data()), zdata.get_size());
-    os << ' ';
-    os.strncat(reinterpret_cast<const char*>(zkey.get_data()), zkey.get_size());
+    os << zdata << ' ' << zkey;
   }
 
   os << '\n';
@@ -291,6 +303,40 @@ process_no_match_for(const Dbt& zkey, const Dbt& zdata, std::ostream& os) {
 }
 
 static int
+process_new_value_for_key(const Dbt& zkey, const Dbt& reference_value, const Dbt& zdata) {
+  if (stream_for_changed_data.is_open()) {
+    if (swap_new_kv_column_order) {
+      stream_for_changed_data << reference_value << ' ' << zkey << '\n';
+    } else {
+      stream_for_changed_data << zkey << ' ' << reference_value << '\n';
+    }
+    stream_for_changed_data.write_if_buffer_holds_more_than(32768);
+  }
+
+  if (stream_for_new_and_changed_keys.is_open()) {
+    write_new_or_changed_value(zkey, reference_value,
+                               stream_for_new_and_changed_keys);
+    stream_for_new_and_changed_keys.write_if_buffer_holds_more_than(32768);
+  }
+
+  return 1;
+}
+
+static int
+process_new_key(const Dbt& zkey, const Dbt& zdata) {
+  if (stream_for_new_keys.is_open()) {
+    if (swap_new_kv_column_order) {
+      stream_for_new_keys << zdata << ' ' << zkey << '\n';
+    } else {
+      stream_for_new_keys << zkey << ' ' << zdata << '\n';
+    }
+    stream_for_new_keys.write_if_buffer_holds_more_than(32768);
+  }
+
+  return 1;
+}
+
+static int
 iwbdb_compare(int ndb, Db** db, IWString_and_File_Descriptor& output) {
   Db* first_database = db[0];
 
@@ -318,15 +364,23 @@ iwbdb_compare(int ndb, Db** db, IWString_and_File_Descriptor& output) {
 
       found_key_in_another_database++;
 
-      int c = iwbdb_compare(zkey, reference_value, fromdb, output);
+#ifdef DEBUG_IWBDB_COMPARE
+      cerr.write((const char*)zkey.get_data(), zkey.get_size());
+      cerr << " reference_value ";
+      cerr.write((const char*)reference_value.get_data(), reference_value.get_size());
+      cerr << " fetched ";
+      cerr.write((const char*)fromdb.get_data(), fromdb.get_size());
+      cerr << '\n';
+#endif
 
-      if (0 == c)  // data values are different
-      {
+      int c = iwbdb_compare(zkey, reference_value, fromdb, output);
+#ifdef DEBUG_IWBDB_COMPARE
+      cerr << " cmp " << c << '\n';
+#endif
+
+      if (0 == c) {  // data values are different
         different_records[i]++;
-        if (stream_for_new_and_changed_keys.is_open()) {
-          write_new_or_changed_value(zkey, reference_value,
-                                     stream_for_new_and_changed_keys);
-        }
+        process_new_value_for_key(zkey, reference_value, fromdb);
         if (break_on_first_difference) {
           return 1;
         }
@@ -337,6 +391,7 @@ iwbdb_compare(int ndb, Db** db, IWString_and_File_Descriptor& output) {
 
     if (0 == found_key_in_another_database) {
       process_no_match_for(zkey, reference_value, cerr);
+      process_new_key(zkey, reference_value);
     }
 
     if (report_progress()) {
@@ -353,7 +408,7 @@ iwbdb_compare(int ndb, Db** db, IWString_and_File_Descriptor& output) {
 
 static int
 iwbdb_compare(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vbwR:D:squ:U:r:o:");
+  Command_Line cl(argc, argv, "vbwR:D:squ:U:r:o:K:V:x");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -467,7 +522,9 @@ iwbdb_compare(int argc, char** argv) {
     if (verbose) {
       cerr << "Keys only in reference database written to '" << r << "'\n";
     }
-  } else if (cl.option_present('D')) {
+  } 
+  
+  if (cl.option_present('D')) {
     const char* d = cl.option_value('D');
 
     if (!stream_for_new_and_changed_keys.open(d)) {
@@ -478,12 +535,43 @@ iwbdb_compare(int argc, char** argv) {
     if (verbose) {
       cerr << "New keys and keys with different data written to '" << d << "'\n";
     }
+  }
 
-    if (cl.option_present('s')) {
-      write_key_of_updates_first = 0;
-      if (verbose) {
-        cerr << "In delta file will write data then key\n";
-      }
+  if (cl.option_present('s')) {
+    write_key_of_updates_first = 0;
+    if (verbose) {
+      cerr << "In delta file will write data then key\n";
+    }
+  }
+
+  if (cl.option_present('K')) {
+    const char* fname = cl.option_value('K');
+    if (! stream_for_new_keys.open(fname)) {
+      cerr << "Cannot open stream for new keys '" << fname << "'\n";
+      return 1;
+    }
+
+    if (verbose) {
+      cerr << "Items with new keys written to '" << fname << "'\n";
+    }
+  }
+
+  if (cl.option_present('V')) {
+    const char* fname = cl.option_value('V');
+    if (! stream_for_changed_data.open(fname)) {
+      cerr << "Cannot open stream for new data '" << fname << "'\n";
+      return 1;
+    }
+
+    if (verbose) {
+      cerr << "Items with changed data written to '" << fname << "'\n";
+    }
+  }
+
+  if (cl.option_present('x')) {
+    swap_new_kv_column_order = 1;
+    if (verbose) {
+      cerr << "Will swap the order of columns in the new -K and -V files\n";
     }
   }
 

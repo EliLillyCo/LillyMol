@@ -1,5 +1,0 @@
-(0 Query
-  (A I Version 2)
-  (A C Comment "non_ring_ketal")
-  (A C smarts "[O,N,S;!$(S~O)]!@[C;H0;X4](!@[O,N,S;!$(S~O)])(C)")
-)

@@ -78,6 +78,13 @@ will write those molecules that have one instance of a carboxyllic acid to
 `carboxyllic_acid.smi`. The `-v` option means it will report the results of
 the matching. Normally LillyMol tools work silently.
 
+The full set of options is described in the
+[tsubstructure](/docs/Molecule_Tools/tsubstructure.md) documentation. One thing worth
+knowing before writing queries that contain aromatic bonds: by default a single bond
+`-` in a query also matches the single bonds inside aromatic rings, so `a-a` matches
+benzene. See
+[Aromatic bonds and Kekule forms](/docs/Molecule_Tools/tsubstructure.md#aromatic-bonds-and-kekule-forms).
+
 If you care about the molecules that did NOT match any of the queries, use
 the `-n` option to specify a file for non matches.
 

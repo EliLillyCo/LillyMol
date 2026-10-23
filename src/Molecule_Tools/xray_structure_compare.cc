@@ -1200,7 +1200,7 @@ compute_geometric_match(const Molecule& m1,
 
   fill_inter_atom_distance_array(m1, d);
 
-  set_vector(xref, matoms, -1);
+  std::fill_n(xref, matoms, -1);
 
   fill_cross_reference_array(e, qam, xref);
 
@@ -1531,7 +1531,7 @@ xray_structure_compare2(Molecule& m, const Atom_Names& atom_names,
     const Set_of_Atoms* e = sresults.embedding(best_embedding);
     const Query_Atoms_Matched* qam = sresults.query_atoms_matching(best_embedding);
 
-    set_vector(xref, matoms, -1);
+    std::fill_n(xref, matoms, -1);
 
     fill_cross_reference_array(*e, *qam, xref);
 

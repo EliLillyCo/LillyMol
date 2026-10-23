@@ -1,0 +1,21 @@
+L-alanine: 2-3 up
+D-alanine: 2-3 down
+phenylalanine: 2-3 up
+two_centres: 2-3 up 4-5 down
+aminocyclohexanol: 2-3 up 7-8 down
+quaternary_acyclic: 2-3 down
+bicyclic: 2-3 down 4-5 up 7-8 down
+glucose: 3-4 up 5-6 up 7-8 down 9-10 up 11-12 down
+cis_dimethylcyclohexane: no wedges
+no_chirality: no wedges
+with -w:
+L-alanine: no wedges
+D-alanine: no wedges
+phenylalanine: no wedges
+two_centres: no wedges
+aminocyclohexanol: no wedges
+quaternary_acyclic: no wedges
+bicyclic: no wedges
+glucose: no wedges
+cis_dimethylcyclohexane: no wedges
+no_chirality: no wedges

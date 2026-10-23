@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "Molecule_Lib/molecule.h"
+#include "Molecule_Lib/aromatic.h"
 #include "Molecule_Tools/xlogp.h"
 
 namespace {
@@ -43,16 +44,17 @@ struct SmilesExpected {
 class TestXlogpP: public testing::TestWithParam<SmilesExpected> {
   protected:
     Molecule _m;
+    xlogp::XLogPCalc _xlogp;
     std::unique_ptr<int[]> _atype;
 };
 
 TEST_P(TestXlogpP, WithoutCorrections) {
   const auto& params = GetParam();
-  xlogp::ForTestingSetApplyCorrections(0);
+  _xlogp.ForTestingSetApplyCorrections(0);
 
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
   _atype.reset(new int[_m.natoms()]);
-  std::optional<double> x = xlogp::XLogP(_m, _atype.get());
+  std::optional<double> x = _xlogp.LogP(_m, _atype.get());
   ASSERT_NE(x, std::nullopt);
   EXPECT_NEAR(*x, params.expected, 0.001) << _m.smiles() << 
         " got " << *x << " expect " << params.expected;
@@ -179,17 +181,18 @@ INSTANTIATE_TEST_SUITE_P(TestXlogpPNoCorrections, TestXlogpP, testing::Values(
 class TestXlogpPWithCorrections: public testing::TestWithParam<SmilesExpected> {
   protected:
     Molecule _m;
+    xlogp::XLogPCalc _xlogp;
     std::unique_ptr<int[]> _atype;
 };
 
 TEST_P(TestXlogpPWithCorrections, WithCorrections) {
   const auto& params = GetParam();
 
-  xlogp::ForTestingSetApplyCorrections(1);
+  _xlogp.ForTestingSetApplyCorrections(1);
 
   ASSERT_TRUE(_m.build_from_smiles(params.smiles));
   _atype.reset(new int[_m.natoms()]);
-  std::optional<double> x = xlogp::XLogP(_m, _atype.get());
+  std::optional<double> x = _xlogp.LogP(_m, _atype.get());
   ASSERT_NE(x, std::nullopt);
   EXPECT_NEAR(*x, params.expected, 0.001) << _m.smiles() << 
         " got " << *x << " expect " << params.expected << " C " << _m.name();
@@ -449,5 +452,19 @@ INSTANTIATE_TEST_SUITE_P(TestXlogpPWithCorrections, TestXlogpPWithCorrections,  
   SmilesExpected{"C1CN(CCC1(O)C1=CC=C(Cl)C=C1)CCCC(=O)C1=CC=C(F)C=C1 haloperidol 3.57", 4.365, {4, 6, 51, 6, 4, 14, 38, 29, 26, 26, 30, 73, 26, 26, 6, 4, 5, 24, 44, 29, 26, 26, 30, 72, 26, 26}}
 ));
 
+
+TEST(XLogPCalc, RestoresAromaticitySetting) {
+  const auto saved = global_aromaticity_type();
+  set_global_aromaticity_type(Daylight);
+
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles("c1ccccc1"));
+  xlogp::XLogPCalc calc;
+  EXPECT_TRUE(calc.LogP(m));
+
+  const auto after = global_aromaticity_type();
+  set_global_aromaticity_type(saved);
+  EXPECT_EQ(after, Daylight);
+}
 
 }  // namespace

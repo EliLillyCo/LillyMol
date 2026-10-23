@@ -77,6 +77,9 @@ class CollectionData {
     int _collect_pairwise_fixed_bits;
     int _collect_pairwise_sparse_bits;
 
+    // We can optionally detect when new bits are formed.
+    int _detect_new_bits;
+
     Sparse_Fingerprint_Creator _sfc;
 
     IWString _fixed_tag, _fixed_pairwise_tag;
@@ -85,8 +88,11 @@ class CollectionData {
   // private functions
     int AllocateFingerprintArrays(IW_General_Fingerprint& fp);
     int ProfileFixed(const IWDYFP& fp, std::vector<uint32_t>& collect);
+    uint32_t ProfileFixedDetectNew(const IWDYFP& fp, std::vector<uint32_t>& collect);
     int ProfilePairwiseFixed(const IWDYFP& fp, std::vector<uint32_t>& collect);
     int ProfileSparse(const Sparse_Fingerprint& fp,
+                       absl::flat_hash_map<uint32_t, uint32_t>& acc);
+    uint32_t ProfileSparseDetectNew(const Sparse_Fingerprint& fp,
                        absl::flat_hash_map<uint32_t, uint32_t>& acc);
     int ProfilePairwiseSparse(const Sparse_Fingerprint& fp,
                        absl::flat_hash_map<uint32_t, uint32_t>& acc);
@@ -127,6 +133,8 @@ CollectionData::CollectionData() {
   _collect_pairwise_sparse_bits = 0;
 
   _support = 1;
+
+  _detect_new_bits = 0;
 
   _fixed_tag = "NCFIX";
   _sparse_tag = "NCSPA";
@@ -175,6 +183,13 @@ CollectionData::Initialise(Command_Line& cl) {
 
     if (_verbose) {
       cerr << "Will ignore bits and bit combinations occurring less than " << _support << " times\n";
+    }
+  }
+
+  if (cl.option_present('e')) {
+    _detect_new_bits = 1;
+    if (_verbose) {
+      cerr << "Will detect new bits\n";
     }
   }
 
@@ -245,18 +260,40 @@ CollectionData::Profile(IW_General_Fingerprint& fp) {
 
 int
 CollectionData::ProfileFixed(const IWDYFP& fp, std::vector<uint32_t>& collect) {
-  cerr << "Fingerprint with " << fp.nbits() << " bits being profiled\n";
   int ndx = 0;
   while (true) {
     int bit = fp.next_on_bit(ndx);
     // cerr << " Bit " << bit << '\n';
-    if (bit < 0) {
+    if (bit < 0) [[ unlikely]] {
       break;
     }
     ++collect[bit];
   }
 
   return 1;
+}
+
+// return the number of new bits found
+uint32_t
+CollectionData::ProfileFixedDetectNew(const IWDYFP& fp, std::vector<uint32_t>& collect) {
+  uint32_t rc = 0;
+
+  int ndx = 0;
+  while (true) {
+    int bit = fp.next_on_bit(ndx);
+    // cerr << " Bit " << bit << '\n';
+    if (bit < 0) [[ unlikely]] {
+      break;
+    }
+    if (collect[bit] == 0) {
+      collect[bit] = 1;
+      ++rc;
+    } else {
+      ++collect[bit];
+    }
+  }
+
+  return rc;
 }
 
 int
@@ -285,6 +322,7 @@ CollectionData::ProfilePairwiseFixed(const IWDYFP& fp, std::vector<uint32_t>& co
 
   return 1;
 }
+
 int
 CollectionData::ProfileSparse(const Sparse_Fingerprint& fp,
                        absl::flat_hash_map<uint32_t, uint32_t>& acc) {
@@ -296,6 +334,27 @@ CollectionData::ProfileSparse(const Sparse_Fingerprint& fp,
   }
 
   return 1;
+}
+
+uint32_t
+CollectionData::ProfileSparseDetectNew(const Sparse_Fingerprint& fp,
+                       absl::flat_hash_map<uint32_t, uint32_t>& acc) {
+  uint32_t rc = 0;
+
+  uint32_t bit;
+  int count;
+  int i = 0;
+  while (fp.next_bit_set(i, bit, count)) {
+    auto iter = acc.find(bit);
+    if (iter == acc.end()) {
+      acc[bit] = 1;
+      ++rc;
+    } else {
+      ++iter->second;
+    }
+  }
+
+  return rc;
 }
 
 int
@@ -532,7 +591,7 @@ ProfileCollection(const char* fname, CollectionData& data) {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vF:P:p:s:u:T:");
+  Command_Line cl(argc, argv, "vF:P:p:s:u:T:e:");
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     Usage(1);

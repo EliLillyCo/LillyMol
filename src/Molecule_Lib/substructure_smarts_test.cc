@@ -107,7 +107,7 @@ TEST_F(TestSubstructureSmarts, TestD0)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 1;
+  constexpr uint32_t expected_matches = 1;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -134,7 +134,7 @@ TEST_F(TestSubstructureSmarts, TestD1)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 9;
+  constexpr uint32_t expected_matches = 9;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -161,7 +161,7 @@ TEST_F(TestSubstructureSmarts, TestD2)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 2;
+  constexpr uint32_t expected_matches = 2;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -188,7 +188,7 @@ TEST_F(TestSubstructureSmarts, TestD3)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 1;
+  constexpr uint32_t expected_matches = 1;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -215,7 +215,7 @@ TEST_F(TestSubstructureSmarts, TestD4)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 1;
+  constexpr uint32_t expected_matches = 1;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -242,7 +242,7 @@ TEST_F(TestSubstructureSmarts, TestNotD2)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 1;
+  constexpr uint32_t expected_matches = 1;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -269,7 +269,7 @@ TEST_F(TestSubstructureSmarts, TestNotD2Recursive)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 13;
+  constexpr uint32_t expected_matches = 13;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -296,7 +296,7 @@ TEST_F(TestSubstructureSmarts, TestCarbonNotDegree2)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 11;
+  constexpr uint32_t expected_matches = 11;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -323,7 +323,7 @@ TEST_F(TestSubstructureSmarts, TestCarbonOrDegree2)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 9;
+  constexpr uint32_t expected_matches = 9;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -350,7 +350,7 @@ TEST_F(TestSubstructureSmarts, TestCarbonXOrDegree2)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  constexpr int expected_matches = 6;
+  constexpr uint32_t expected_matches = 6;
 
   ASSERT_EQ(_query.substructure_search(_m, _sresults), expected_matches);
 
@@ -382,25 +382,25 @@ TEST_F(TestSubstructureSmarts, TestCr5)
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  ASSERT_EQ(_query.substructure_search(_m, _sresults), 0);
+  ASSERT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   _smiles = "C1CCCC1[Cr]";
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  ASSERT_EQ(_query.substructure_search(_m, _sresults), 0);
+  ASSERT_EQ(_query.substructure_search(_m, _sresults), 0u);
 
   _smiles = "C1CCCC1[5Cr]";
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  ASSERT_EQ(_query.substructure_search(_m, _sresults), 1);
+  ASSERT_EQ(_query.substructure_search(_m, _sresults), 1u);
 
   _smiles = "C1CCCC1[5Cr]";
 
   ASSERT_TRUE(_m.build_from_smiles(_smiles));
 
-  ASSERT_EQ(_query.substructure_search(_m, _sresults), 1);
+  ASSERT_EQ(_query.substructure_search(_m, _sresults), 1u);
   _string_proto = R"(
 
     query {
@@ -414,7 +414,7 @@ TEST_F(TestSubstructureSmarts, TestCr5)
 
   EXPECT_TRUE(query2.ConstructFromProto(_proto)) << "Cannot parse proto " << _proto.ShortDebugString();
 
-  ASSERT_EQ(query2.substructure_search(_m, _sresults), 5);
+  ASSERT_EQ(query2.substructure_search(_m, _sresults), 5u);
 }
 
 }  // namespace

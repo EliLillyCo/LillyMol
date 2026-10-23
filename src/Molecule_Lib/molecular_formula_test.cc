@@ -12,7 +12,7 @@ using molecular_formula::MolecularFormula;
 struct SmilesMf {
   IWString smiles;
   int expected;
-  int mf[molecular_formula::kNTypes];
+  uint32_t mf[molecular_formula::kNTypes];
 };
 
 class TestMfFail: public testing::TestWithParam<SmilesMf> {

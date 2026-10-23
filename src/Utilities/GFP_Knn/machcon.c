@@ -25,7 +25,7 @@ doublereal r1mach_(integer *i__)
     static struct {
 	real e_1[5];
 	integer fill_2[1];
-	} equiv_4 = { 1.18e-38f, 3.4e38f, 5.95e-8f, 1.19e-7f, .30102999566f };
+	} equiv_4 = { {1.18e-38f, 3.4e38f, 5.95e-8f, 1.19e-7f, .30102999566f}, {0} };
 
 
     /* System generated locals */
@@ -194,8 +194,8 @@ doublereal d1mach_(integer *i__)
     static struct {
 	doublereal e_1[5];
 	doublereal fill_2[1];
-	} equiv_4 = { 2.23e-308, 1.79e308, 1.11e-16, 2.22e-16, 
-		.301029995663981195 };
+	} equiv_4 = { {2.23e-308, 1.79e308, 1.11e-16, 2.22e-16, 
+		.301029995663981195}, {0} };
 
 
     /* System generated locals */
@@ -424,8 +424,8 @@ integer i1mach_(integer *i__)
 
     static struct {
 	integer e_1[16];
-	} equiv_0 = { 5, 6, 0, 6, 32, 4, 2, 31, 2147483647, 2, 24, -125, 127, 
-		53, -1021, 1023 };
+	} equiv_0 = { {5, 6, 0, 6, 32, 4, 2, 31, 2147483647, 2, 24, -125, 127, 
+		53, -1021, 1023} };
 
 
     /* System generated locals */

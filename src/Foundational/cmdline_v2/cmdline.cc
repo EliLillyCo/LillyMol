@@ -170,6 +170,7 @@ template int CmdLine_Option_and_Value::value(unsigned long &) const;
 template int CmdLine_Option_and_Value::value(float &) const;
 template int CmdLine_Option_and_Value::value(double &) const;
 template int CmdLine_Option_and_Value::value(long long &) const;
+template int CmdLine_Option_and_Value::value(unsigned long long &) const;
 
 /*
   For each of the options, we need a structure to hold the
@@ -648,6 +649,7 @@ template int Command_Line_v2::value(int, const char *, float &, int) const;
 template int Command_Line_v2::value(int, const char *, double &, int) const;
 template int Command_Line_v2::value(int, const char *, long long &, int) const;
 template int Command_Line_v2::value(int, const char *, unsigned long &, int) const;
+template int Command_Line_v2::value(int, const char *, unsigned long long &, int) const;
 
 #ifdef IW_STD_STRING_DEFINED
 template int Command_Line_v2::value(int, const char *, std::string &, int) const;

@@ -1,0 +1,3 @@
+ethanol 46.07 polar
+methane 16.04 nonpolar
+benzene 78.11 aromatic

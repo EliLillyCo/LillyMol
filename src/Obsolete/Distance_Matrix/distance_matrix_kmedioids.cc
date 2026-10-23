@@ -2,6 +2,7 @@
   k-Medioids implementation
 */
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <random>
@@ -250,7 +251,7 @@ Cluster_Data<T>::_do_assign_clusters_spread (const IWDistanceMatrixBase<T> & dm)
 
   T * distance_from_medoid = new T[_n]; std::unique_ptr<T[]> free_d(distance_from_medoid);
 
-  set_vector(distance_from_medoid, _n, std::numeric_limits<T>::max());
+  std::fill_n(distance_from_medoid, _n, std::numeric_limits<T>::max());
 
   for (int i = 0; i < _n; i++)
   {
@@ -443,7 +444,7 @@ Cluster_Data<T>::do_remove_singletons (IWDistanceMatrixBase<T> & dm,
 
   _n = _n - items_removed;
 
-  set_vector(_cluster, _n, 1);   // not sure what to set it to...
+  std::fill_n(_cluster, _n, 1);   // not sure what to set it to...
 
   return items_removed;
 }
@@ -505,7 +506,7 @@ template <typename T>
 void
 Cluster_Data<T>::_assign_to_closest_medioid (const IWDistanceMatrixBase<T> & dm)
 {
-  set_vector(_longest_distance_in_cluster, _n, static_cast<T>(0));
+  std::fill_n(_longest_distance_in_cluster, _n, static_cast<T>(0));
 
   for (int i = 0; i < _n; i++)
   {
@@ -836,7 +837,7 @@ template <typename T>
 void
 Cluster_Data<T>::_compute_per_class_score (const IWDistanceMatrixBase<T> & dm)
 {
-  set_vector(_per_class_score, _n, static_cast<T>(0));
+  std::fill_n(_per_class_score, _n, static_cast<T>(0));
 
   for (int i = 0; i < _n; i++)
   {
@@ -916,7 +917,7 @@ T
 Cluster_Data<T>::_outer_loop_optimise (const IWDistanceMatrixBase<T> & dm,
                                        T global_lowest_score)
 {
-  set_vector(_cluster, _n, _n + 1);
+  std::fill_n(_cluster, _n, _n + 1);
 
   if (assign_clusters_randomly)
     _do_assign_clusters_randomly(dm);

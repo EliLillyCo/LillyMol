@@ -60,7 +60,11 @@ usage(int rc)
   // clang-format on
   // clang-format off
   cerr << R"(
-Performs model averaging for regression models. All values in one file
+Performs model averaging for regression models. All values in one file.
+If values in multiple files try something like
+concat_files *.dat | model_average ... -
+
+
  -c <col>       model in column <col>. c1,c2,c3 and c1-c4 also recognised.
  -c <col>,w=0.2 model in column <col>, specify relative weight
  -a ...         type of averaging to do
@@ -398,18 +402,19 @@ MaxVal::final_result() const
 
 template <typename T>
 int
-MaxVal::write_range_ave_std(T& output)
-{
+MaxVal::write_range_ave_std(T& output) {
   output << output_separator << _acc.minval() << output_separator << _acc.maxval()
-         << output_separator << static_cast<float>(_acc.maxval() - _acc.minval())
-         << output_separator << static_cast<float>(_acc.average()) << output_separator
-         << static_cast<float>(sqrt(_acc.variance()));
+         << output_separator << static_cast<float>(_acc.range())
+         << output_separator << static_cast<float>(_acc.average())
+         << output_separator << static_cast<float>(sqrt(_acc.variance()));
 
   return 1;
 }
 
+#ifdef NO_LONGER_NEEDED
 template int
 MaxVal::write_range_ave_std(IWString_and_File_Descriptor&);
+#endif
 
 class Voting
 {
@@ -550,21 +555,17 @@ int
 Sum::write_range_ave_std(T& output)
 {
   output << output_separator << _acc.minval() << output_separator << _acc.maxval()
-         << output_separator << static_cast<float>(_acc.maxval() - _acc.minval())
+         << output_separator << static_cast<float>(_acc.range())
          << output_separator << static_cast<float>(_acc.average()) << output_separator
          << static_cast<float>(sqrt(_acc.variance()));
 
   return 1;
 }
 
-//template int
-//Sum::write_range_ave_std(IWString_and_File_Descriptor&);
-
 template <typename T>
 int
 model_average2(const const_IWSubstring& buffer, T& c,
-               IWString_and_File_Descriptor& output)
-{
+               IWString_and_File_Descriptor& output) {
   c.reset();
 
   const_IWSubstring token;
@@ -572,7 +573,7 @@ model_average2(const const_IWSubstring& buffer, T& c,
 
   int n = 0;
 
-  for (int col = 0; buffer.nextword(token, i, input_separator); col++) {
+  for (int col = 0; buffer.NextWord(token, i, input_separator); col++) {
     int ndx = col_to_model[col];
 
     if (ndx < 0) {
@@ -597,7 +598,7 @@ model_average2(const const_IWSubstring& buffer, T& c,
   }
 
   if (0 == n) {
-    output << ' ' << missing_value;
+    output << output_separator << missing_value;
 
     return 1;
   }
@@ -609,7 +610,7 @@ model_average2(const const_IWSubstring& buffer, T& c,
   if (include_range_average_std) {
     c.write_range_ave_std(output);
   } else {
-    output << ' ' << static_cast<float>(result);
+    output << output_separator << static_cast<float>(result);
   }
 
   if (!classification_model) {  // no class label to write
@@ -703,7 +704,7 @@ static int
 do_discern_class_labels_from_input_file(iwstring_data_source& input,
                                         IWString* class_label)
 {
-  off_t o = input.tellg();
+  const off_t o = input.tellg();
 
   int rc = do_discern_class_labels_from_input_file2(input, class_label);
 
@@ -714,6 +715,32 @@ do_discern_class_labels_from_input_file(iwstring_data_source& input,
   }
 
   return rc;
+}
+
+// common code for writing the numeric parts of the header.
+template <typename C>
+int
+WriteHeaderSpecifics(const C& c, IWString_and_File_Descriptor& output) {
+  output << output_separator;
+
+  if (classification_model) {
+    output << "C.CLASS";
+    return 1;
+  }
+
+  if (include_range_average_std) {
+    output << "MA.min MA.max MA.range MA.ave MA.std";
+    return 1;
+  }
+
+  if (just_write_composite_prediction) {
+    output << c.text_description();
+    return 1;
+  }
+
+  output << "COMPOSITE";
+
+  return 1;
 }
 
 template <typename C>
@@ -733,37 +760,21 @@ model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& o
   if (write_composite_prediction_first) {
     const_IWSubstring token;
     int i = 0;
-    buffer.nextword(token, i, input_separator);
+    buffer.NextWord(token, i, input_separator);
 
     output << token;
-    if (just_write_composite_prediction) {
-      output << ' ' << c.text_description();
-    } else if (include_range_average_std) {
-      output << " MA.min MA.max MA.range MA.ave MA.std";
-    } else {
-      output << " COMPOSITE";
-    }
-    if (classification_model) {
-      output << " C.CLASS";
-    }
+    WriteHeaderSpecifics(c, output);
 
     if (just_write_composite_prediction) {
       ;
     } else {
-      while (buffer.nextword(token, i, input_separator)) {
-        output << ' ' << token;
+      while (buffer.NextWord(token, i, input_separator)) {
+        output << output_separator << token;
       }
     }
   } else {
-    output << buffer << ' ';
-    if (just_write_composite_prediction) {
-      output << c.text_description();
-    } else if (include_range_average_std) {
-      output << "MA.min MA.max MA.range MA.ave MA.std";
-    }
-    if (classification_model) {
-      output << " C.CLASS";
-    }
+    output << buffer;
+    WriteHeaderSpecifics(c, output);
   }
 
   output << '\n';
@@ -783,7 +794,7 @@ model_average(iwstring_data_source& input, C& c, IWString_and_File_Descriptor& o
       if (just_write_composite_prediction) {
         output << '\n';
       } else {
-        output << ' ' << buffer << '\n';
+        output << output_separator << buffer << '\n';
       }
 
       output.write_if_buffer_holds_more_than(32768);
@@ -1012,7 +1023,7 @@ model_average_many_class_one_vs_all2(const const_IWSubstring& buffer,
     return 0;
   }
 
-  output << token << ' ';
+  output << token << output_separator;
 
   float max_pred = -std::numeric_limits<float>::max();
   IWString pred;
@@ -1048,9 +1059,9 @@ model_average_many_class_one_vs_all2(const const_IWSubstring& buffer,
   }
 
   if (0 == pred.length()) {
-    output << class_cutoff << " NO_PREDICTION\n";
+    output << class_cutoff << output_separator << "NO_PREDICTION\n";
   } else {
-    output << (class_cutoff + max_pred) << ' ' << pred << '\n';
+    output << (class_cutoff + max_pred) << output_separator << pred << '\n';
   }
 
   return 1;
@@ -1068,7 +1079,7 @@ model_average_many_class_pairs2(const const_IWSubstring& buffer,
     return 0;
   }
 
-  output << token << ' ';
+  output << token << output_separator;
 
   float max_pred = -std::numeric_limits<float>::max();
   IWString pred;
@@ -1100,7 +1111,7 @@ model_average_many_class_pairs2(const const_IWSubstring& buffer,
     pred = token;
   }
 
-  output << (class_cutoff + max_pred) << ' ' << pred << '\n';
+  output << (class_cutoff + max_pred) << output_separator << pred << '\n';
 
   return 1;
 }

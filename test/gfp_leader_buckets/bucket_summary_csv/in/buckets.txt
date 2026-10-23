@@ -1,0 +1,4 @@
+dup0 bucket0
+dup1 bucket1
+dup2 bucket2
+dup3 bucket3

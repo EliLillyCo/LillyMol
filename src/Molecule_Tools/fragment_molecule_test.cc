@@ -14,7 +14,7 @@ TEST(TestFragmentMolecule, TestNoBreakCC) {
   fragment_molecule::MoleculeFragmenter fragmenter;
   resizable_array<int> bonds;
   EXPECT_EQ(fragmenter.IdentifyBreakableBonds(m, bonds), 0);
-  EXPECT_EQ(bonds.size(), 0);
+  EXPECT_EQ(bonds.size(), 0u);
 }
 
 TEST(TestFragmentMolecule, TestBreakCC) {
@@ -25,7 +25,7 @@ TEST(TestFragmentMolecule, TestBreakCC) {
   EXPECT_EQ(fragmenter.IdentifyBreakableBonds(m, bonds), 0);
   fragmenter.set_break_carbon_carbon_bonds(1);
   EXPECT_EQ(fragmenter.IdentifyBreakableBonds(m, bonds), 4);
-  EXPECT_EQ(bonds.size(), 4);
+  EXPECT_EQ(bonds.size(), 4u);
 }
 
 TEST(TestFragmentMolecule, TestCAmide) {
@@ -34,7 +34,7 @@ TEST(TestFragmentMolecule, TestCAmide) {
   fragment_molecule::MoleculeFragmenter fragmenter;
   resizable_array<int> bonds;
   EXPECT_EQ(fragmenter.IdentifyBreakableBonds(m, bonds), 2);
-  EXPECT_EQ(bonds.size(), 2);
+  EXPECT_EQ(bonds.size(), 2u);
 }
 
 TEST(TestFragmentMolecule, TestSAmide1) {
@@ -43,7 +43,7 @@ TEST(TestFragmentMolecule, TestSAmide1) {
   fragment_molecule::MoleculeFragmenter fragmenter;
   resizable_array<int> bonds;
   EXPECT_EQ(fragmenter.IdentifyBreakableBonds(m, bonds), 2);
-  EXPECT_EQ(bonds.size(), 2);
+  EXPECT_EQ(bonds.size(), 2u);
 }
 
 }  // namespace

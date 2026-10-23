@@ -117,9 +117,16 @@ struct TSubstructure {
 
   // For each molecule return the number of matches in each query.
   std::vector<std::vector<uint32_t>> NumberMatches(const std::vector<std::string>& smiles);
-  // The argument is non-const because preprocessing may change the molecule - strip
+  // The molecules are non-const because preprocessing may change them - strip
   // to largest fragment, add implicit hydrogens ...
   // and substructure searching a molecule is non-const.
+  //
+  // The pointer form holds the implementation and is what the python binding
+  // calls. Binding the vector<Molecule> form to python instead makes pybind copy
+  // construct every molecule at the boundary, which cost more than the search
+  // itself and, because it happens under the GIL, capped threaded scaling at
+  // under 3x. See the note in lillymol_pybind_tsubstructure.cc.
+  std::vector<std::vector<uint32_t>> NumberMatches(const std::vector<Molecule*>& mols);
   std::vector<std::vector<uint32_t>> NumberMatches(std::vector<Molecule>& mols);
 
   // For each query, lists of the matched atoms.

@@ -5,12 +5,14 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <random>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/histogram/iwhistogram.h"
 #include "Foundational/iwmisc/iwdigits.h"
 #include "Foundational/iwstring/iw_stl_hash_map.h"
@@ -20,6 +22,12 @@
 #include "Molecule_Lib/smiles.h"
 #include "distance_scaling.h"
 #include "smiles_id_dist.h"
+
+#ifdef BUILD_BAZEL
+#include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 using std::cerr;
 
@@ -58,6 +66,8 @@ static IWString cluster(" CLUSTER ");
 
 static IWDigits iwdigits;  // used for neighbour numbers
 static Fraction_as_String fraction_as_string;
+static Fraction_as_String number_as_string;
+static Fraction_as_String bare_number_as_string;
 
 /*
   We may want to only write (say) the first token in the names
@@ -99,6 +109,10 @@ static int initial_nbr_list_size = 100;
 
 static int take_first_token_of_name_field = 0;
 
+// Output will look like
+// smiles id PARENT distance
+static int append_needle_to_each_neighbour = 0;
+
 static Distance_Scaling distance_scaling;
 
 /*
@@ -106,6 +120,8 @@ static Distance_Scaling distance_scaling;
 */
 
 static int distances_present_in_input = 1;
+
+static int input_is_tfdata = 0;
 
 // Used for tabular output.
 static char output_separator = ' ';
@@ -194,15 +210,16 @@ display_dash_x_options(std::ostream & os)
 {
 // clang-format off
   os << " -X nonnum          suppress printing of neighbour number with each neighbour\n";
+  os << " -X tfdata          input is TFDataRecord serialised nnbr::NearNeighbours protos\n";
   os << " -X tcol=<col>      just write column <col> from the target molecules\n";
   os << " -X ncol=<col>      just write column <col> from the neighbour molecules\n";
   os << " -X ftn             take the first token of both target and neighbour molecules\n";
-//os << " -X TABS            create tab separated output rather than space separated\n";
   os << " -X minextra=n      neighbours must have at least     <n> atoms more than target\n";
   os << " -X maxextra=n      neighbours must have no more than <n> atoms more than target\n";
   os << " -X nosmi           input does not contain smiles\n";
   os << " -X random          random subset of neighbours (requires -n option)\n";
   os << " -X brs             biased random subset of neighbours (requires -n option)\n";
+  os << " -X appneedle       append the name of the needle to each neighbour record\n";
   os << " -X SMITAG=<tag>    Set smiles     tag to <tag>, default " << smiles_tag << '\n';
   os << " -X IDTAG=<tag>     Set identifier tag to <tag>, default " << identifier_tag << '\n';
   os << " -X DISTAG=<tag>    Set distance   tag to <tag>, default " << distance_tag << '\n';
@@ -455,6 +472,28 @@ passes_number_needed_within_distance(
   return 0;
 }
 
+static void
+AppendNumberWithSeparator(IWString& output, float value) {
+  number_as_string.append_number(output, value);
+}
+
+static void
+AppendNumberWithSeparator(IWString& output, double value) {
+  number_as_string.append_number(output, static_cast<float>(value));
+}
+
+static void
+AppendBareNumber(IWString& output, float value) {
+  bare_number_as_string.append_number(output, value);
+}
+
+static void
+WriteBareNumber(std::ostream& output, float value) {
+  IWString tmp;
+  bare_number_as_string.append_number(tmp, value);
+  output << tmp;
+}
+
 static int
 AppendAfterId(const IWString& id,
               const IW_STL_Hash_Map_String& append_to_id,
@@ -472,7 +511,8 @@ AppendAfterId(const IWString& id,
 }
 
 static int
-write_neighbour_list(const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
+write_neighbour_list(const IWString& needle_id,
+                     const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
                      const IWString &target_smiles,
                      const IW_STL_Hash_Map_String& append_to_id,
                      IWString_and_File_Descriptor &output) {
@@ -507,6 +547,10 @@ write_neighbour_list(const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
     }
     output << output_separator;
 
+    if (append_needle_to_each_neighbour) {
+      output << needle_id << output_separator;
+    }
+
     if (append_neighbour_number_to_each_neighbour) {
       output << (i + 1) << output_separator;
     }
@@ -525,8 +569,7 @@ write_neighbour_list(const resizable_array_p<Smiles_ID_Dist_UID> &neighbours,
       if (fraction_as_string.active()) {
         fraction_as_string.append_number(output, d);
       } else {
-        output.append_number(d, output_precision);
-
+        AppendBareNumber(output, d);
         output += neighbour_separator;
       }
     } else {
@@ -583,8 +626,7 @@ write_statistics_for_neighbour_list(const resizable_array_p<T> &neighbours,
     if (d < censor_distances_shorter_than) {
       output << output_separator << '0';
     } else {
-      output << output_separator;
-      output.append_number(d, output_precision);
+      AppendNumberWithSeparator(output, d);
     }
 
     return;
@@ -600,9 +642,7 @@ write_statistics_for_neighbour_list(const resizable_array_p<T> &neighbours,
       output << output_separator << "N=" << n;
     }
 
-    output << output_separator;
-
-    output.append_number(neighbours[0]->distance(), output_precision);
+    AppendNumberWithSeparator(output, neighbours[0]->distance());
 
     return;
   }
@@ -617,22 +657,20 @@ write_statistics_for_neighbour_list(const resizable_array_p<T> &neighbours,
 
   if (tabular_output) {
     if (from_gfp_leader) {
-      output << output_separator << (n + 1) << output_separator;
+      output << output_separator << (n + 1);
     } else {
-      output << output_separator << n << output_separator;
+      output << output_separator << n;
     }
   } else {
-    output << output_separator << "N=" << n << output_separator;
+    output << output_separator << "N=" << n;
   }
 
-  output.append_number(d.minval(), output_precision);
-  output << output_separator;
-  output.append_number(d.maxval(), output_precision);
-  output << output_separator;
+  AppendNumberWithSeparator(output, d.minval());
+  AppendNumberWithSeparator(output, d.maxval());
   if (d.n() > 0) {
-    output.append_number(static_cast<float>(d.average()), output_precision);
+    AppendNumberWithSeparator(output, d.average());
   } else {
-    output << output_separator;
+    output << output_separator << '0';
   }
 
   return;
@@ -778,11 +816,7 @@ do_three_column_output(const IWString &id,
   for (int i = 0; i < nn; ++i) {
     output << first_token_id << output_separator << neighbours[i]->id();
 
-    if (fraction_as_string.active()) {
-      fraction_as_string.append_number(output, neighbours[i]->distance());
-    } else {
-      output << output_separator << neighbours[i]->distance();
-    }
+    AppendNumberWithSeparator(output, neighbours[i]->distance());
 
     output << '\n';
 
@@ -890,7 +924,7 @@ process_molecule(const IWString &smiles, const IWString &id,
     molecules_written++;
   }
 
-  int rc = write_neighbour_list(neighbours, smiles, append_to_id, output);
+  int rc = write_neighbour_list(id, neighbours, smiles, append_to_id, output);
 
   // cerr << "After write_neighbour_list '" << output << "'\n";
 
@@ -1524,8 +1558,12 @@ process_molecule_gfp_leader(iwstring_data_source &input, int &fatal,
   } else if (!distances_present_in_input && tabular_leader_output) {
     id << output_separator << clusters_found << output_separator << 'P';
   } else if (tabular_leader_output) {
-    id << output_separator << clusters_found << output_separator << 'P'
-       << output_separator << '0';
+    id << output_separator << clusters_found << output_separator << 'P';
+    if (neighbours.empty()) {
+      output  << output_separator << (neighbours.number_elements() + 1);
+    } else {
+      output  << output_separator << '0';
+    }
   } else {
     id << cluster << clusters_found << output_separator << "("
        << (neighbours_initially_found + 1) << output_separator << "members)";
@@ -1584,9 +1622,131 @@ plotnn(iwstring_data_source &input,
 }
 
 static int
+process_proto_neighbours(const nnbr::NearNeighbours& proto,
+                       const IW_STL_Hash_Map_String& append_to_id,
+                       IWString_and_File_Descriptor& output) {
+  IWString smiles(proto.smiles());
+  IWString id(proto.name());
+
+  if (id.empty()) {
+    cerr << "process_proto_neighbours:proto has no name\n";
+    cerr << proto.ShortDebugString() << '\n';
+    return 0;
+  }
+
+  if (smiles_tag.length() && smiles.empty()) {
+    cerr << "process_proto_neighbours:proto for '" << id << "' has no smiles\n";
+    return 0;
+  }
+
+  if (target_column_to_write >= 0) {
+    reduce_to_token(id, target_column_to_write);
+  } else if (take_first_token_of_name_field) {
+    id.truncate_at_first(' ');
+  }
+
+  resizable_array_p<Smiles_ID_Dist_UID> neighbours;
+  neighbours.resize(proto.nbr_size());
+
+  for (const nnbr::Nbr& nbr : proto.nbr()) {
+    IWString nsmiles(nbr.smi());
+    IWString nid(nbr.id());
+
+    if (nid.empty()) {
+      cerr << "process_proto_neighbours:neighbour of '" << id << "' has no id\n";
+      cerr << nbr.ShortDebugString() << '\n';
+      return 0;
+    }
+
+    if (smiles_tag.length() && nsmiles.empty()) {
+      cerr << "process_proto_neighbours:neighbour '" << nid << "' of '" << id
+           << "' has no smiles\n";
+      return 0;
+    }
+
+    if (take_first_token_of_name_field) {
+      nid.truncate_at_first(' ');
+    }
+
+    if (neighbour_columns_to_write.size() > 0) {
+      reduce_to_token(nid, neighbour_columns_to_write);
+    }
+
+    const float distance = nbr.dist();
+    if (distances_present_in_input &&
+        (distance < 0.0f || distance > max_possible_distance)) {
+      cerr << "process_proto_neighbours:invalid distance " << distance << " for '"
+           << nid << "' of '" << id << "'\n";
+      return 0;
+    }
+
+    create_neighbour_item(id, neighbours, nsmiles, nid, distance, 1.0f);
+  }
+
+  if (from_gfp_spread) {
+    if (neighbours.empty()) {
+      cerr << "Output from spread, but no neighbours, ignored\n";
+    } else {
+      spread_distances << neighbours[0]->distance();
+    }
+  }
+
+  if (neighbours_per_structure > 0 &&
+      neighbours_per_structure < neighbours.number_elements()) {
+    if (choose_neighbours_at_random) {
+      random_subset(neighbours, neighbours_per_structure);
+    } else if (biased_subset) {
+      do_biased_subset(neighbours, neighbours_per_structure);
+    } else {
+      neighbours.resize(neighbours_per_structure);
+    }
+  }
+
+  if (check_distance_ordering) {
+    do_check_distance_ordering(neighbours);
+  }
+
+  return process_molecule(smiles, id, neighbours, append_to_id, output);
+}
+
+static int
+plotnn_tfdata(const char* fname,
+              const IW_STL_Hash_Map_String& append_to_id,
+              IWString_and_File_Descriptor& output) {
+  iw_tf_data_record::TFDataReader reader(fname);
+  if (! reader.good()) {
+    cerr << "plotnn_tfdata:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  while (true) {
+    std::optional<nnbr::NearNeighbours> maybe_proto =
+        reader.ReadProto<nnbr::NearNeighbours>();
+    if (maybe_proto) {
+    } else if (reader.eof()) {
+      return 1;
+    } else {
+      cerr << "plotnn_tfdata:error reading TFDataRecord input '" << fname << "'\n";
+      return 0;
+    }
+
+    if (! process_proto_neighbours(*maybe_proto, append_to_id, output)) {
+      cerr << "plotnn_tfdata:cannot process proto from '" << fname << "'\n";
+      return 0;
+    }
+
+    output.write_if_buffer_holds_more_than(IW_FLUSH_BUFFER);
+  }
+}
+
+static int
 plotnn(const char *fname, 
        const IW_STL_Hash_Map_String& append_to_id,
        IWString_and_File_Descriptor &output) {
+  if (input_is_tfdata) {
+    return plotnn_tfdata(fname, append_to_id, output);
+  }
+
   iwstring_data_source input(fname);
 
   if (!input.ok()) {
@@ -1672,7 +1832,10 @@ write_normalised_histogram(const IWHistogram &nearest_neighbour_histogram,
 
     float y = static_cast<float>(raw_counts[i]) / float_max_count;
 
-    stream_for_nearest_neighbour_histogram << d << output_separator << y << '\n';
+    WriteBareNumber(stream_for_nearest_neighbour_histogram, d);
+    stream_for_nearest_neighbour_histogram << output_separator;
+    WriteBareNumber(stream_for_nearest_neighbour_histogram, y);
+    stream_for_nearest_neighbour_histogram << '\n';
   }
 
   return 1;
@@ -2020,8 +2183,7 @@ plotnn(int argc, char **argv) {
     }
   }
 
-  if (cl.option_present('x'))  // must be handled after the -n option
-  {
+  if (cl.option_present('x')) {  // must be handled after the -n option
     print_target_molecules = 0;
 
     if (verbose) {
@@ -2239,6 +2401,12 @@ plotnn(int argc, char **argv) {
         if (verbose) {
           cerr << "No neighbour numbers with each neighbour\n";
         }
+      } else if ("tfdata" == x) {
+        input_is_tfdata = 1;
+
+        if (verbose) {
+          cerr << "Input is TFDataRecord serialised nnbr::NearNeighbours protos\n";
+        }
       } else if (x.starts_with("tcol=")) {
         x.remove_leading_chars(5);
         if (!x.numeric_value(target_column_to_write) || target_column_to_write < 1) {
@@ -2309,6 +2477,11 @@ plotnn(int argc, char **argv) {
         if (verbose) {
           cerr << "Will choose a random set of neighbours, biased toward close "
                   "neighbours\n";
+        }
+      } else if (x == "appneedle") {
+        append_needle_to_each_neighbour = 1;
+        if (verbose) {
+          cerr << "Will append the needle id to each output record\n";
         }
       } else if ("random" == x) {
         choose_neighbours_at_random = 1;
@@ -2530,15 +2703,37 @@ plotnn(int argc, char **argv) {
     }
   }
 
+  if (input_is_tfdata) {
+    if (from_gfp_leader) {
+      cerr << "The -L option is not compatible with -X tfdata\n";
+      return 3;
+    }
+    if (! distances_present_in_input) {
+      cerr << "The -X nodist option is not compatible with -X tfdata\n";
+      return 3;
+    }
+    if (scale_tag.length()) {
+      cerr << "The -X SCALE option is not compatible with -X tfdata\n";
+      return 3;
+    }
+  }
+
   if (append_neighbour_number_to_each_neighbour) {
     iwdigits.initialise(200);
     iwdigits.append_to_each_stored_string(output_separator);
   }
 
+  IWString output_separator_string(output_separator);
+  number_as_string.set_leading_string(output_separator_string);
+  if (!number_as_string.initialise(0.0, 1.0, output_precision) ||
+      !bare_number_as_string.initialise(0.0, 1.0, output_precision)) {
+    cerr << "Cannot initialise fractional output caches\n";
+    return 1;
+  }
+
   if (!cl.option_present('w')) {
     if (three_column_output) {
-      IWString tmp(output_separator);
-      fraction_as_string.set_leading_string(tmp);
+      fraction_as_string.set_leading_string(output_separator_string);
     }
 
     fraction_as_string.initialise(0.0, 1.0, output_precision);
@@ -2641,7 +2836,10 @@ plotnn(int argc, char **argv) {
     constexpr char kSep = ',';
     stream_for_spread_distances << "sel,distance\n";
     for (uint32_t i = 0; i < spread_distances.size(); ++i) {
-      stream_for_spread_distances << i << kSep << spread_distances[i] << '\n';
+      stream_for_spread_distances << i << kSep;
+      IWString tmp;
+      AppendBareNumber(tmp, spread_distances[i]);
+      stream_for_spread_distances << tmp << '\n';
       stream_for_spread_distances.write_if_buffer_holds_more_than(IW_FLUSH_BUFFER);
     }
   }
@@ -2672,16 +2870,18 @@ plotnn(int argc, char **argv) {
 
     cerr << zero_distance_neighbours << " exact matches\n";
 
-    cerr << "Furthest distances between " << furthest_neighbour_stats.minval() << " and "
-         << furthest_neighbour_stats.maxval();
-    if (furthest_neighbour_stats.n() > 1) {
-      cerr << " ave " << furthest_neighbour_stats.average();
-    }
-    cerr << '\n';
+    if (neighbours_per_structure > 1) {
+      cerr << "Furthest distances between " << furthest_neighbour_stats.minval() << " and "
+           << furthest_neighbour_stats.maxval();
+      if (furthest_neighbour_stats.n() > 1) {
+        cerr << " ave " << furthest_neighbour_stats.average();
+      }
+      cerr << '\n';
 
-    for (int i = 0; i < neighbour_count.number_elements(); i++) {
-      if (neighbour_count[i]) {
-        cerr << neighbour_count[i] << " molecules had " << i << " neighbours\n";
+      for (int i = 0; i < neighbour_count.number_elements(); i++) {
+        if (neighbour_count[i]) {
+          cerr << neighbour_count[i] << " molecules had " << i << " neighbours\n";
+        }
       }
     }
 

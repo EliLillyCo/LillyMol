@@ -79,6 +79,8 @@ static int prevalence_column = -1;
 static IWString prevalence_column_name;
 static double prevalence_multiplier = 1.0;
 
+static char input_separator = ' ';
+
 static void
 usage(int rc) {
 // clang-format off
@@ -406,21 +408,12 @@ ResetFileScopeStaticParams() {
 }
 
 static int
-get_next_token(const const_IWSubstring& buffer, const_IWSubstring& token, int& i) {
-  if (' ' == word_delimeter) {
-    return buffer.nextword(token, i);
-  } else {
-    return buffer.nextword_single_delimiter(token, i, word_delimeter);
-  }
-}
-
-static int
 fetch_prevalence_value(const const_IWSubstring& buffer, const int prevalence_column,
                        int& prevalence) {
   int i = 0;
   const_IWSubstring token;
 
-  for (int col = 0; get_next_token(buffer, token, i); ++col) {
+  for (int col = 0; buffer.NextWord(token, i, input_separator); ++col) {
     if (col != prevalence_column) {
       continue;
     }
@@ -465,10 +458,10 @@ average(const const_IWSubstring& buffer) {
     }
   }
 
-  while (get_next_token(buffer, token, i)) {
+  while (buffer.NextWord(token, i, input_separator)) {
     if (column_rx) {
       if (iwre2::RE2PartialMatch(token, *column_rx)) {
-        if (get_next_token(buffer, token, i)) {
+        if (buffer.NextWord(token, i, input_separator)) {
           if (!acolumn[0].extra(token, prevalence)) {
             return 0;
           }
@@ -615,7 +608,7 @@ assign_column_names(extending_resizable_array<int>& columns_to_process,
   const_IWSubstring token;
 
   for (int i = 0;
-       get_next_token(buffer, token, i) && col < columns_to_process.number_elements();
+       buffer.NextWord(token, i, input_separator) && col < columns_to_process.number_elements();
        col++) {
     if (columns_to_process[col]) {
       acolumn[col].set_name(token);

@@ -1,0 +1,6 @@
+(0 Query
+  (A C Comment "di-alkyl_sulfoxide")
+  (A I Version 2)
+  (A D numeric_value 20)
+  (A C smarts "[OD1]=[SD3T1](-A)-A")
+)

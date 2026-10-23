@@ -1,5 +1,6 @@
 // Support fragment additive model.
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -792,7 +793,7 @@ set_active(int after_h, int before_h) {
 static int
 substituent_model(Molecule& m, float* zresult, int* already_hit, float* each_atom,
                   float* per_query_contribution) {
-  set_vector(hits_to_query, nq, 0);
+  std::fill_n(hits_to_query, nq, 0);
 
   Molecule_to_Match target(&m);
 

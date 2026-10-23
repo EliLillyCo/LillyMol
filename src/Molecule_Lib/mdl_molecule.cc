@@ -856,7 +856,7 @@ MDL_Molecule::remove_atoms (const int * to_remove)
   {
     if (to_remove[i])
     {
-      atom_cross_reference[i] = INVALID_ATOM_NUMBER;
+      atom_cross_reference[i] = kInvalidAtomNumber;
       continue;
     }
 
@@ -1309,8 +1309,10 @@ MDL_Molecule::mdl_bond_between_atoms (atom_number_t a1,
 int
 MDL_Molecule::add (const Element * e)
 {
-  if (! Molecule::add(e))
+  // Molecule::add returns an atom index; zero is success for the first atom.
+  if (const atom_number_t added = Molecule::add(e); added == kInvalidAtomNumber) {
     return 0;
+  }
 
   if (! arrays_allocated())
     return 1;

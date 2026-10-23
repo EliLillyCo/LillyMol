@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -254,7 +256,7 @@ Resolve::compute_resolution (const Molecule & m,
                              int * processed,
                              const int * atype)
 {
-  set_vector(processed, m.natoms(), 0);
+  std::fill_n(processed, m.natoms(), 0);
 
   processed[_start] = (COMPLETED1 | COMPLETED2);
 
@@ -365,7 +367,7 @@ ez_fingerprint_v2 (Molecule & m,
                    int * processed,
                    Sparse_Fingerprint_Creator & sfp)
 {
-  set_vector(processed, m.natoms(), 0);
+  std::fill_n(processed, m.natoms(), 0);
 
   int * atype = new int[m.natoms()]; std::unique_ptr<int[]> free_atype(atype);
 

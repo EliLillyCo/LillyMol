@@ -1,7 +1,7 @@
 (0 Reaction
 # [C$(Ca);H2:1]>>[C$(Ca);H0:1](C)(C) Benzylic substitution
 
-  (A C Comment "Metabolism.Benzylic_substitution")
+  (A C Comment "Metabolism.Benzylic_substitution_C2")
   (0 Scaffold
     (A C smarts "[CH2]-a")
   )

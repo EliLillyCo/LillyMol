@@ -1,20 +1,7 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
-load("//build_deps:install.bzl", "local_install")
 
 gazelle(name = "gazelle")
-
-local_install(
-    name = "install",
-    srcs = [
-        ":grep_sdf",
-        ":no_spaces_in_file_name",
-        ":parallel_process_file",
-        ":regression_to_classification",
-        ":rxn_reverse",
-        ":rxnsmiles2smi",
-    ],
-)
 
 # gazelle:prefix xgboost
 

@@ -1,8 +1,17 @@
+# Useful for Mac builds inside Lilly
+
+try-import %workspace%/.bazelrc.local
+
+build --enable_platform_specific_config
+# https://groups.google.com/g/bazel-discuss/c/5cbRuLuTwNg
+build:linux --per_file_copt=external/.*@-Wno-error=maybe-uninitialized
+
 build --cxxopt=-std=c++23 --cxxopt=-DBUILD_BAZEL
 
+build --macos_minimum_os=10.15
+build --host_macos_minimum_os=10.15
+
 build --enable_bzlmod 
-# https://groups.google.com/g/bazel-discuss/c/5cbRuLuTwNg
-build --per_file_copt=external/.*@-Wno-error=maybe-uninitialized
 
 build:asan --strip=never
 build:asan --copt -fsanitize=address
@@ -15,6 +24,8 @@ build:asan --copt -g
 build:asan --cxxopt -g
 build:asan --copt -fno-omit-frame-pointer
 build:asan --linkopt -fsanitize=address
+
+build:inchi --define BUILD_INCHI=1
 
 build:debug -c dbg
 build:debug --javacopt="-g"
@@ -31,6 +42,27 @@ build:msan --copt=-DGPR_NO_DIRECT_SYSCALLS
 build:msan --linkopt=-fsanitize=memory
 build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
 
+# If you want a more convenient way of building against a
+# specific version of python (see [MODULE.bazel](MODULE.bazel))
+
+# A default setting
+# build --@rules_python//python/config_settings:python_version=3.13
+# For a specific version, we assign a meaningful name, py311, but can be anything.
+# build:py311 --@rules_python//python/config_settings:python_version=3.11
+# which enables
+# bazel build ... --config=py311
+
+# --- Local native builds / Hardware Optimizations ---
+# Use this for command-line builds where binaries only need to run on the
+# machine that built them. This enables CPU features such as POPCNT where the
+# local compiler supports them. Do not use this for portable/container builds.
+build:native --copt=-march=native
+build:native --cxxopt=-march=native
+build:native --cxxopt=-mtune=native
+
+# Use this to pass specific SIMD instructions to your C++ compiler
+# build:avx512 --copt=-mavx512f --copt=-mavx512cd
+
 
 # Taken from https://docs.bazel.build/versions/main/tutorial/cc-toolchain-config.html
 # No longer works. TODO:ianwatson re-enable clang as a compiler.
@@ -41,3 +73,11 @@ build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
 # https://github.com/bazelbuild/bazel/issues/13186
 # test inherits from build, so this was causing recompiles.
 # test --cxxopt=-std=c++20 --cxxopt=-march=sandybridge --cxxopt=-mtune=sandybridge 
+
+# These are needed for MacOS builds inside Lilly.
+# There are several ways in wich you can deal with this.
+#   1. Uncomment these line here, but that creates friction between the local and remote repositories.
+#   2. Place these in ${HOME}/.bazelrc which is always read by Bazel
+#   3. Put these in .bazelrc.local which is imported at the top of this file.
+# startup --host_jvm_args=-Djavax.net.ssl.trustStore=/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home/lib/security/cacerts
+# startup --host_jvm_args=-Djavax.net.ssl.trustStorePassword=changeit

@@ -1,6 +1,7 @@
 #ifndef GFP_STANDARD_H
 #define GFP_STANDARD_H
 
+#include <cstdint>
 #include <optional>
 
 /*
@@ -17,10 +18,12 @@ inline constexpr int kIwFp = 0;
 class GFP_Standard
 {
   private:
-    int _molecular_properties[8];
-    unsigned char _iw[256];
-    unsigned char _mk[32];
-    unsigned char _mk2[32];
+    uint8_t _molecular_properties[8];
+    // Word storage guarantees alignment in individual objects, arrays, and
+    // derived spread items, and permits direct word reads without alias casts.
+    uint64_t _iw[32];
+    uint64_t _mk[4];
+    uint64_t _mk2[4];
 
     int _nset_mk;
     int _nset_mk2;
@@ -32,13 +35,15 @@ class GFP_Standard
 
   public:
     void build_molecular_properties (const Molecular_Properties_Integer &);
+    void build_molecular_properties (const int* properties, int nproperties);
+    void build_molecular_properties (const uint8_t* properties, int nproperties);
     void build_iw  (IWDYFP &);
     void build_mk  (IWDYFP &);   // only non const because it calls nset()
     void build_mk2 (IWDYFP &);
 
     int DebugPrint(std::ostream& output) const;
 
-    int * molecular_properties () { return _molecular_properties;}
+    const uint8_t* molecular_properties () const { return _molecular_properties;}
 
     void build_iwfp(const unsigned char *, int nset);             // note last param is bits set
     template <typename T> void build_iwfp(const T *, int nset);   // note last param is bits set

@@ -13,14 +13,9 @@
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/path.h"
-#include "Molecule_Lib/rotbond_common.h"
 #include "Molecule_Lib/standardise.h"
-#include "Molecule_Lib/target.h"
 
-#include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/molecule_filter_lib.h"
-#include "Molecule_Tools/nvrtspsa.h"
-#include "Molecule_Tools/xlogp.h"
 
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_filter.pb.h"
@@ -49,6 +44,7 @@ computationally efficient way possible.
  -c             remove chirality
  -l             reduce to largest fragment
  -B <fname>     write rejected molecules to <fname>
+ -u             with utilities, write smiles id overall_utility instead of descriptor table
  -v             verbose output
   )";
 // clang-format on
@@ -69,16 +65,18 @@ class Options {
 
     int _remove_chirality = 0;
 
-    alogp::ALogP _alogp;
+    int _write_smiles_with_utility = 0;
 
     Chemical_Standardisation _chemical_standardisation;
 
     uint64_t _molecules_read = 0;
     uint64_t _molecules_passed = 0;
+    uint64_t _molecules_with_explicit_hydrogens = 0;
+    uint64_t _molecules_with_isotopes_rehydrogenated = 0;
 
     molecule_filter_data::Requirements _requirements;
 
-    quick_rotbond::QuickRotatableBonds _rotbond;
+    molecule_filter_lib::MoleculeFilter _filter;
 
     IWString_and_File_Descriptor _reject_stream;
 
@@ -88,14 +86,18 @@ class Options {
     uint64_t _too_few_rings = 0;
     uint64_t _too_many_rings = 0;
     uint64_t _too_few_heteroatoms = 0;
+    uint64_t _too_many_heteroatoms = 0;
     uint64_t _min_heteroatom_fraction = 0;
     uint64_t _max_heteroatom_fraction = 0;
     uint64_t _too_few_aromatic_rings = 0;
     uint64_t _too_many_aromatic_rings = 0;
     uint64_t _too_few_aliphatic_rings = 0;
     uint64_t _too_many_aliphatic_rings = 0;
+    uint64_t _ring_system_too_small = 0;
     uint64_t _ring_system_too_large = 0;
+    uint64_t _too_few_aromatic_rings_in_system = 0;
     uint64_t _too_many_aromatic_rings_in_system = 0;
+    uint64_t _ring_too_small = 0;
     uint64_t _ring_too_large = 0;
     uint64_t _non_organic = 0;
     uint64_t _isotope = 0;
@@ -107,15 +109,29 @@ class Options {
     uint64_t _high_xlogp = 0;
     uint64_t _low_alogp = 0;
     uint64_t _high_alogp = 0;
+    uint64_t _low_amw = 0;
+    uint64_t _high_amw = 0;
+    uint64_t _too_few_hba_rdkit = 0;
+    uint64_t _too_many_hba_rdkit = 0;
+    uint64_t _too_few_hbd_rdkit = 0;
+    uint64_t _too_many_hbd_rdkit = 0;
     uint64_t _too_few_hba = 0;
     uint64_t _too_many_hba = 0;
     uint64_t _too_few_hbd = 0;
     uint64_t _too_many_hbd = 0;
+    uint64_t _too_few_halogens = 0;
     uint64_t _too_many_halogens = 0;
+    uint64_t _too_short = 0;
     uint64_t _too_long = 0;
     uint64_t _too_few_csp3 = 0;
+    uint64_t _too_many_csp3 = 0;
+    uint64_t _fcsp3_too_low = 0;
+    uint64_t _fcsp3_too_high = 0;
+    uint64_t _aromdens_too_low = 0;
     uint64_t _aromdens_too_high = 0;
+    uint64_t _too_few_chiral = 0;
     uint64_t _too_many_chiral = 0;
+    uint64_t _too_few_fragments = 0;
     uint64_t _too_many_fragments = 0;
 
     uint64_t _matches_exclusion_smarts = 0;
@@ -126,9 +142,16 @@ class Options {
     off_t _stop_at;
 
   // Private functions
-    int Process(Molecule& m);
-    int Process(Molecule& m, int matoms, int nrings);
+    int Process(Molecule& m, int matoms, int nrings,
+                std::vector<double>& utility_values, double& overall_utility);
     int MaybeWriteToRejectStream(const const_IWSubstring& line);
+    int WriteUtilityValues(const std::vector<double>& utility_values,
+                           double overall_utility,
+                           const const_IWSubstring& smiles,
+                           const const_IWSubstring& id,
+                           IWString_and_File_Descriptor& output);
+
+    void NoteRejection(molecule_filter_lib::RejectionReason rejection_reason);
 
   public:
     Options();
@@ -140,11 +163,17 @@ class Options {
       return _verbose;
     }
 
-    // After each molecule is read, but before any processing
-    // is attempted, do any preprocessing transformations.
-    int Preprocess(Molecule& m);
-
     int Process(const const_IWSubstring& buffer, IWString_and_File_Descriptor& output);
+
+    int has_utilities() const {
+      return _filter.has_utilities();
+    }
+
+    int write_smiles_with_utility() const {
+      return _write_smiles_with_utility;
+    }
+
+    int WriteUtilityHeader(IWString_and_File_Descriptor& output) const;
 
     // If we are seeking and stopping.
     // If _seek_to is set, seek to that offset in `input`.
@@ -160,14 +189,8 @@ Options::Options() {
   _verbose = 0;
   _reduce_to_largest_fragment = 0;
   _remove_chirality = 0;
+  _write_smiles_with_utility = 0;
   _molecules_read = 0;
-  _rotbond.set_calculation_type(quick_rotbond::QuickRotatableBonds::RotBond::kExpensive);
-  nvrtspsa::set_display_psa_unclassified_atom_mesages(0);
-  xlogp::SetIssueUnclassifiedAtomMessages(0);
-
-  _alogp.set_use_alcohol_for_acid(1);
-  _alogp.set_use_alcohol_for_acid(1);
-  _alogp.set_apply_zwitterion_correction(1);
 
   _seek_to = 0;
   _stop_at = 0;
@@ -198,6 +221,13 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('u')) {
+    _write_smiles_with_utility = 1;
+    if (_verbose) {
+      cerr << "Will write smiles plus overall utility in utility mode\n";
+    }
+  }
+
   if (! cl.option_present('F')) {
     cerr << "Options::Initialise:must specify Requirements proto via the -F option\n";
     return 0;
@@ -221,16 +251,23 @@ Options::Initialise(Command_Line& cl) {
     return 0;
   }
 
-  if (_remove_chirality && _requirements.has_max_chiral()) {
+  if (_remove_chirality &&
+      ((_requirements.has_min_chiral() && _requirements.min_chiral() > 0) ||
+       _requirements.has_max_chiral())) {
     cerr << "Options::Initialise:removing chirality has been specified (-c)\n";
-    cerr << "But the config file contains 'max_chiral'. Impossible\n";
+    cerr << "But the config file contains a chiral-centre filter. Impossible\n";
     return 0;
   }
 
-  if (_requirements.has_max_distance() && ! _reduce_to_largest_fragment) {
-    cerr << "Options::Initialise:max distance specified, but largest fragment not selected (-l)\n";
+  if ((_requirements.has_min_distance() || _requirements.has_max_distance()) && ! _reduce_to_largest_fragment) {
+    cerr << "Options::Initialise:distance specified, but largest fragment not selected (-l)\n";
     cerr << "Automatically enabling largest fragment selection\n";
     _reduce_to_largest_fragment = 1;
+  }
+
+  if (! _filter.Build(_requirements)) {
+    cerr << "Options::Initialise:cannot initialise MoleculeFilter\n";
+    return 0;
   }
 
   if (cl.option_present('B')) {
@@ -297,6 +334,9 @@ Options::Report(std::ostream& output) const {
   if (_requirements.has_min_heteroatom_count()) {
     output << _too_few_heteroatoms << " too few heteroatoms " << _requirements.min_heteroatom_count() << '\n';
   }
+  if (_requirements.has_max_heteroatom_count()) {
+    output << _too_many_heteroatoms << " too many heteroatoms " << _requirements.max_heteroatom_count() << '\n';
+  }
   if (_requirements.has_min_heteroatom_fraction()) {
     output << _min_heteroatom_fraction << " min heteroatom fraction " << _requirements.min_heteroatom_fraction() << '\n';
   }
@@ -318,15 +358,24 @@ Options::Report(std::ostream& output) const {
     output << _too_many_aliphatic_rings << " too many aliphatic rings " << _requirements.max_aliphatic_ring_count() << '\n';
   }
 
+  if (_requirements.has_min_ring_system_size()) {
+    output << _ring_system_too_small << " ring systems too small " << _requirements.min_ring_system_size() << '\n';
+  }
   if (_requirements.has_max_ring_system_size()) {
     output << _ring_system_too_large << " ring systems too large " << _requirements.max_ring_system_size() << '\n';
+  }
+  if (_requirements.has_min_aromatic_rings_in_system()) {
+    output << _too_few_aromatic_rings_in_system << " too few aromatic rings in system " << _requirements.min_aromatic_rings_in_system() << '\n';
   }
   if (_requirements.has_max_aromatic_rings_in_system()) {
     output << _too_many_aromatic_rings_in_system << " too many aromatic rings in system " << _requirements.max_aromatic_rings_in_system() << '\n';
   }
 
-  if (_requirements.has_largest_ring_size()) {
-    output << _ring_too_large << " ring too large " << _requirements.largest_ring_size() << '\n';
+  if (_requirements.has_min_largest_ring_size()) {
+    output << _ring_too_small << " ring too small " << _requirements.min_largest_ring_size() << '\n';
+  }
+  if (_requirements.has_max_largest_ring_size()) {
+    output << _ring_too_large << " ring too large " << _requirements.max_largest_ring_size() << '\n';
   }
 
   if (_requirements.has_min_rotatable_bonds()) {
@@ -341,6 +390,36 @@ Options::Report(std::ostream& output) const {
   }
   if (_requirements.has_max_tpsa()) {
     output << _high_tpsa << " high TPSA " << _requirements.max_tpsa() << '\n';
+  }
+
+  if (_molecules_with_explicit_hydrogens) {
+    output << _molecules_with_explicit_hydrogens <<
+              " molecules had explicit Hydrogens removed before computing properties\n";
+  }
+
+  if (_molecules_with_isotopes_rehydrogenated) {
+    output << _molecules_with_isotopes_rehydrogenated <<
+              " isotopic molecules had their Hydrogen count recomputed\n";
+  }
+
+  if (_requirements.has_min_hba_rdkit()) {
+    output << _too_few_hba_rdkit << " too few HBA_RDKIT " << _requirements.min_hba_rdkit() << '\n';
+  }
+  if (_requirements.has_max_hba_rdkit()) {
+    output << _too_many_hba_rdkit << " too many HBA_RDKIT " << _requirements.max_hba_rdkit() << '\n';
+  }
+  if (_requirements.has_min_hbd_rdkit()) {
+    output << _too_few_hbd_rdkit << " too few HBD_RDKIT " << _requirements.min_hbd_rdkit() << '\n';
+  }
+  if (_requirements.has_max_hbd_rdkit()) {
+    output << _too_many_hbd_rdkit << " too many HBD_RDKIT " << _requirements.max_hbd_rdkit() << '\n';
+  }
+
+  if (_requirements.has_min_amw()) {
+    output << _low_amw << " low AMW " << _requirements.min_amw() << '\n';
+  }
+  if (_requirements.has_max_amw()) {
+    output << _high_amw << " high AMW " << _requirements.max_amw() << '\n';
   }
 
   if (_requirements.has_min_alogp()) {
@@ -371,10 +450,16 @@ Options::Report(std::ostream& output) const {
     output << _too_many_hbd << " too many HBD " << _requirements.max_hbd() << '\n';
   }
 
+  if (_requirements.has_min_halogen_count()) {
+    output << _too_few_halogens << " too few halogens " << _requirements.min_halogen_count() << '\n';
+  }
   if (_requirements.has_max_halogen_count()) {
     output << _too_many_halogens << " too many halogens " << _requirements.max_halogen_count() << '\n';
   }
 
+  if (_requirements.has_min_distance()) {
+    output << _too_short << " molecules too short " << _requirements.min_distance() << '\n';
+  }
   if (_requirements.has_max_distance()) {
     output << _too_long << " molecules too long " << _requirements.max_distance() << '\n';
   }
@@ -382,15 +467,33 @@ Options::Report(std::ostream& output) const {
   if (_requirements.has_min_sp3_carbon()) {
     output << _too_few_csp3 << " too few CSP3 " << _requirements.min_sp3_carbon() << '\n';
   }
+  if (_requirements.has_max_sp3_carbon()) {
+    output << _too_many_csp3 << " too many CSP3 " << _requirements.max_sp3_carbon() << '\n';
+  }
+  if (_requirements.has_min_sp3_carbon_fraction()) {
+    output << _fcsp3_too_low << " fraction CSP3 too low " << _requirements.min_sp3_carbon_fraction() << '\n';
+  }
+  if (_requirements.has_max_sp3_carbon_fraction()) {
+    output << _fcsp3_too_high << " fraction CSP3 too high " << _requirements.max_sp3_carbon_fraction() << '\n';
+  }
 
+  if (_requirements.has_min_aromatic_density()) {
+    output << _aromdens_too_low << " aromatic density too low " << _requirements.min_aromatic_density() << '\n';
+  }
   if (_requirements.has_max_aromatic_density()) {
     output << _aromdens_too_high << " aromatic density too high " << _requirements.max_aromatic_density() << '\n';
   }
 
+  if (_requirements.has_min_chiral()) {
+    output << _too_few_chiral << " too few chiral centres " << _requirements.min_chiral() << '\n';
+  }
   if (_requirements.has_max_chiral()) {
     output << _too_many_chiral << " too many chiral centres " << _requirements.max_chiral() << '\n';
   }
 
+  if (_requirements.has_min_number_fragments()) {
+    output << _too_few_fragments << " too few fragments " << _requirements.min_number_fragments() << '\n';
+  }
   if (_requirements.has_max_number_fragments()) {
     output << _too_many_fragments << " too many fragments " << _requirements.max_number_fragments() << '\n';
   }
@@ -399,59 +502,22 @@ Options::Report(std::ostream& output) const {
 }
 
 int
-CountHeteroatoms(const Molecule& m) {
-  int rc = 0;
-  m.each_atom_lambda([&rc](const Atom& a) {
-    if (a.atomic_number() != 6) {
-      ++rc;
-    }
-  });
-
-  return rc;
-}
-
-int
-AromaticRingCount(Molecule& m) {
-  m.compute_aromaticity_if_needed();
-
-  int rc = 0;
-  for (const Ring* r : m.sssr_rings()) {
-    if (r->is_aromatic()) {
-      ++rc;
-    }
+Options::WriteUtilityHeader(IWString_and_File_Descriptor& output) const {
+  if (! _filter.has_utilities() || _write_smiles_with_utility) {
+    return 1;
   }
 
-  return rc;
+  output << "Name";
+  for (int i = 0; i < _filter.number_utilities(); ++i) {
+    output << ' ' << _filter.utility(i).name();
+  }
+  output << " overall_utility\n";
+
+  return 1;
 }
 
-// Return true if we examine multiple fragments, which
-// means that `largest_frag` will be different from `smiles`.
-bool
-LargestFragment(const const_IWSubstring& smiles,
-                const_IWSubstring& largest_frag,
-                int& natoms, int& nrings) {
-  int max_atoms = 0;
-  int i = 0;
-  const_IWSubstring token;
-  int fragments_examined = 0;
-  while (smiles.nextword(token, i, '.')) {
-    ++fragments_examined;
-    int nri;
-    int nat = lillymol::count_atoms_in_smiles(token, nri);
-    if (nat > max_atoms) {
-      max_atoms = nat;
-      nrings = nri;
-      largest_frag = token;
-    }
-  }
-  
-  natoms = max_atoms;
-
-  if (fragments_examined == 1) {
-    return false;
-  }
-  return true;
-}
+// LargestFragment used to be duplicated here, identical to the one in
+// molecule_filter_lib. Use the library version.
 
 // If chemical standardisation is in effect
 int
@@ -464,24 +530,36 @@ Options::Process(const const_IWSubstring& line,
 
   bool smiles_changed = false;
 
-  if (_requirements.has_max_number_fragments()) {
+  if (_requirements.has_min_number_fragments() || _requirements.has_max_number_fragments()) {
     const int nfrag = smiles.ccount('.') + 1;
-    if (nfrag > _requirements.max_number_fragments()) {
+    if (_requirements.has_min_number_fragments() && nfrag < _requirements.min_number_fragments()) {
+      ++_too_few_fragments;
+      MaybeWriteToRejectStream(line);
+      return 0;
+    }
+    if (_requirements.has_max_number_fragments() && nfrag > _requirements.max_number_fragments()) {
       ++_too_many_fragments;
       MaybeWriteToRejectStream(line);
       return 0;
     }
   }
 
+  // The atom counts below are HEAVY atom counts. The min_natoms/max_natoms
+  // requirements are about heavy atoms, so an explicit Hydrogen must not
+  // count towards them. Determining this costs nothing - the smiles scan that
+  // counts atoms is happening anyway.
   const_IWSubstring largest_frag;
   int matoms = 0;
   int nrings = 0;
+  int explicit_hydrogens = 0;
   if (_reduce_to_largest_fragment) {
-    if (LargestFragment(smiles, largest_frag, matoms, nrings)) {
+    if (molecule_filter_lib::LargestFragment(smiles, largest_frag, matoms,
+                                            nrings, explicit_hydrogens)) {
       smiles_changed = true;
     }
   } else {
-    matoms = lillymol::count_atoms_in_smiles(smiles, nrings);
+    matoms = lillymol::count_atoms_in_smiles(smiles, nrings, explicit_hydrogens) -
+             explicit_hydrogens;
     largest_frag = smiles;
   }
 
@@ -524,10 +602,47 @@ Options::Process(const const_IWSubstring& line,
     return 0;
   }
 
-  if (_requirements.has_max_chiral() &&
-      m.chiral_centres() > _requirements.max_chiral()) {
-    ++_too_many_chiral;
-    return 0;
+  // Every property here is intended to be about the heavy atom graph, and
+  // several of the calculators behave differently, or quietly discard them,
+  // when explicit Hydrogens are present. Remove them so the answer does not
+  // depend on how the input happened to be written. The smiles scan above has
+  // already told us whether there are any, so the common case costs nothing.
+  // The output line is left as the caller supplied it - this is a filter, and
+  // rewriting structures is reserved for the options that ask for it.
+  if (explicit_hydrogens > 0) {
+    m.remove_all(1);
+    ++_molecules_with_explicit_hydrogens;
+  }
+
+  // In LillyMol an isotopic label is usually arbitrary - [1C] is a labelled
+  // carbon, not a statement that the atom has no Hydrogens. A strict smiles
+  // reading of a bracket atom says otherwise, so let the Hydrogen count be
+  // recomputed, which is what transform_to_non_isotopic_form and set_isotopes
+  // already do. Doing it here, once, means a property does not depend on
+  // whether something else in the pipeline happened to trigger the recompute
+  // first - notably ALogP::LogP, which round trips the isotopes and so used to
+  // silently change the molecular weight of every isotopic molecule that
+  // reached it.
+  if (m.ContainsIsotopicAtoms()) {
+    const int matoms_now = m.natoms();
+    for (int i = 0; i < matoms_now; ++i) {
+      if (m.isotope(i) > 0) {
+        m.unset_all_implicit_hydrogen_information(i);
+      }
+    }
+    ++_molecules_with_isotopes_rehydrogenated;
+  }
+
+  if (_requirements.has_min_chiral() || _requirements.has_max_chiral()) {
+    const int chiral_centres = m.chiral_centres();
+    if (_requirements.has_min_chiral() && chiral_centres < _requirements.min_chiral()) {
+      ++_too_few_chiral;
+      return 0;
+    }
+    if (_requirements.has_max_chiral() && chiral_centres > _requirements.max_chiral()) {
+      ++_too_many_chiral;
+      return 0;
+    }
   }
 
   if (_remove_chirality) {
@@ -542,14 +657,25 @@ Options::Process(const const_IWSubstring& line,
     }
   }
 
-  if (Process(m, matoms, nrings)) {
+  std::vector<double> utility_values;
+  double overall_utility = 0.0;
+
+  if (Process(m, matoms, nrings, utility_values, overall_utility)) {
     ++_molecules_passed;
 
-    // If the structure was altered, write the smiles, otherwise the original line
-    if (smiles_changed) {
-      output << m.smiles() << ' ' << m.name() << '\n';
+    if (_filter.has_utilities()) {
+      const const_IWSubstring output_smiles = smiles_changed ? const_IWSubstring(m.smiles()) : smiles;
+      if (! WriteUtilityValues(utility_values, overall_utility, output_smiles, id, output)) {
+        MaybeWriteToRejectStream(line);
+        return 0;
+      }
     } else {
-      output << line << '\n';
+      // If the structure was altered, write the smiles, otherwise the original line
+      if (smiles_changed) {
+        output << m.smiles() << ' ' << id << '\n';
+      } else {
+        output << line << '\n';
+      }
     }
 
     output.write_if_buffer_holds_more_than(4092);
@@ -560,6 +686,28 @@ Options::Process(const const_IWSubstring& line,
   MaybeWriteToRejectStream(line);
 
   return 0;
+}
+
+// The values are computed alongside the filtering, in Process, so that
+// descriptors common to both are computed once per molecule.
+int
+Options::WriteUtilityValues(const std::vector<double>& utility_values,
+                            const double overall_utility,
+                            const const_IWSubstring& smiles,
+                            const const_IWSubstring& id,
+                            IWString_and_File_Descriptor& output) {
+  if (_write_smiles_with_utility) {
+    output << smiles << ' ' << id << ' ' << overall_utility << '\n';
+    return 1;
+  }
+
+  output << id;
+  for (double value : utility_values) {
+    output << ' ' << value;
+  }
+  output << ' ' << overall_utility << '\n';
+
+  return 1;
 }
 
 int
@@ -575,241 +723,207 @@ Options::MaybeWriteToRejectStream(const const_IWSubstring& line) {
   return 1;
 }
 
+void
+Options::NoteRejection(molecule_filter_lib::RejectionReason rejection_reason) {
+  using molecule_filter_lib::RejectionReason;
+
+  switch (rejection_reason) {
+    case RejectionReason::kPass:
+      return;
+    case RejectionReason::kZeroAtoms:
+      return;
+    case RejectionReason::kTooFewAtoms:
+      ++_too_few_atoms;
+      return;
+    case RejectionReason::kTooManyAtoms:
+      ++_too_many_atoms;
+      return;
+    case RejectionReason::kTooFewRings:
+      ++_too_few_rings;
+      return;
+    case RejectionReason::kTooManyRings:
+      ++_too_many_rings;
+      return;
+    case RejectionReason::kTooFewHeteroatoms:
+      ++_too_few_heteroatoms;
+      return;
+    case RejectionReason::kTooManyHeteroatoms:
+      ++_too_many_heteroatoms;
+      return;
+    case RejectionReason::kMinHeteroatomFraction:
+      ++_min_heteroatom_fraction;
+      return;
+    case RejectionReason::kMaxHeteroatomFraction:
+      ++_max_heteroatom_fraction;
+      return;
+    case RejectionReason::kNonOrganic:
+      ++_non_organic;
+      return;
+    case RejectionReason::kIsotope:
+      ++_isotope;
+      return;
+    case RejectionReason::kTooManyChiral:
+      ++_too_many_chiral;
+      return;
+    case RejectionReason::kTooFewAromaticRings:
+      ++_too_few_aromatic_rings;
+      return;
+    case RejectionReason::kTooManyAromaticRings:
+      ++_too_many_aromatic_rings;
+      return;
+    case RejectionReason::kTooFewAliphaticRings:
+      ++_too_few_aliphatic_rings;
+      return;
+    case RejectionReason::kTooManyAliphaticRings:
+      ++_too_many_aliphatic_rings;
+      return;
+    case RejectionReason::kTooFewHba:
+      ++_too_few_hba;
+      return;
+    case RejectionReason::kTooManyHba:
+      ++_too_many_hba;
+      return;
+    case RejectionReason::kTooFewHbd:
+      ++_too_few_hbd;
+      return;
+    case RejectionReason::kTooManyHbd:
+      ++_too_many_hbd;
+      return;
+    case RejectionReason::kTooFewSp3Carbon:
+      ++_too_few_csp3;
+      return;
+    case RejectionReason::kTooManySp3Carbon:
+      ++_too_many_csp3;
+      return;
+    case RejectionReason::kSp3CarbonFractionTooLow:
+      ++_fcsp3_too_low;
+      return;
+    case RejectionReason::kSp3CarbonFractionTooHigh:
+      ++_fcsp3_too_high;
+      return;
+    case RejectionReason::kTooFewHalogen:
+      ++_too_few_halogens;
+      return;
+    case RejectionReason::kTooManyHalogen:
+      ++_too_many_halogens;
+      return;
+    case RejectionReason::kRingTooSmall:
+      ++_ring_too_small;
+      return;
+    case RejectionReason::kRingTooLarge:
+      ++_ring_too_large;
+      return;
+    case RejectionReason::kTooFewRotatableBonds:
+      ++_too_few_rotbond;
+      return;
+    case RejectionReason::kTooManyRotatableBonds:
+      ++_too_many_rotbond;
+      return;
+    case RejectionReason::kAromaticDensityTooLow:
+      ++_aromdens_too_low;
+      return;
+    case RejectionReason::kAromaticDensityTooHigh:
+      ++_aromdens_too_high;
+      return;
+    case RejectionReason::kTooShort:
+      ++_too_short;
+      return;
+    case RejectionReason::kTooLong:
+      ++_too_long;
+      return;
+    case RejectionReason::kLowTpsa:
+      ++_low_tpsa;
+      return;
+    case RejectionReason::kHighTpsa:
+      ++_high_tpsa;
+      return;
+    case RejectionReason::kRingSystemTooSmall:
+      ++_ring_system_too_small;
+      return;
+    case RejectionReason::kRingSystemTooLarge:
+      ++_ring_system_too_large;
+      return;
+    case RejectionReason::kTooFewAromaticRingsInSystem:
+      ++_too_few_aromatic_rings_in_system;
+      return;
+    case RejectionReason::kTooManyAromaticRingsInSystem:
+      ++_too_many_aromatic_rings_in_system;
+      return;
+    case RejectionReason::kLowAlogp:
+      ++_low_alogp;
+      return;
+    case RejectionReason::kHighAlogp:
+      ++_high_alogp;
+      return;
+    case RejectionReason::kLowXlogp:
+      ++_low_xlogp;
+      return;
+    case RejectionReason::kHighXlogp:
+      ++_high_xlogp;
+      return;
+    case RejectionReason::kTooFewChiral:
+      ++_too_few_chiral;
+      return;
+    case RejectionReason::kTooFewFragments:
+      ++_too_few_fragments;
+      return;
+    case RejectionReason::kTooManyFragments:
+      ++_too_many_fragments;
+      return;
+    case RejectionReason::kLowQed:
+      return;
+    case RejectionReason::kHighQed:
+      return;
+    case RejectionReason::kLowAmw:
+      ++_low_amw;
+      return;
+    case RejectionReason::kHighAmw:
+      ++_high_amw;
+      return;
+    case RejectionReason::kTooFewHbaRdkit:
+      ++_too_few_hba_rdkit;
+      return;
+    case RejectionReason::kTooManyHbaRdkit:
+      ++_too_many_hba_rdkit;
+      return;
+    case RejectionReason::kTooFewHbdRdkit:
+      ++_too_few_hbd_rdkit;
+      return;
+    case RejectionReason::kTooManyHbdRdkit:
+      ++_too_many_hbd_rdkit;
+      return;
+  }
+}
+
+// Returns 1 if `m` passes the filters, in which case `utility_values` and
+// `overall_utility` have been filled in if any utilities are configured.
+// Returns 0 if rejected by a filter, or if a utility could not be computed.
 int
 Options::Process(Molecule& m,
                  const int matoms,
-                 const int nrings) {
-  // cerr << "Processing " << m.smiles() << ' ' << m.name() << ' ' << matoms << '\n';
+                 const int nrings,
+                 std::vector<double>& utility_values,
+                 double& overall_utility) {
   if (m.natoms() != matoms) {
     cerr << "Atom count mismatch " << m.natoms() << " vs " << matoms << '\n';
   }
 
-  if (_requirements.has_min_heteroatom_count() ||
-      _requirements.has_min_heteroatom_fraction() ||
-      _requirements.has_max_heteroatom_fraction()) {
-    const int hac = CountHeteroatoms(m);
-
-    if (_requirements.has_min_heteroatom_count() && hac < _requirements.min_heteroatom_count()) {
-      ++_too_few_heteroatoms;
-      return 0;
-    }
-
-    if (_requirements.has_min_heteroatom_fraction() ||
-        _requirements.has_max_heteroatom_fraction()) {
-      const float haf = iwmisc::Fraction<float>(hac, matoms);
-      if (_requirements.has_min_heteroatom_fraction() && haf < _requirements.min_heteroatom_fraction()) {
-        ++_min_heteroatom_fraction;
-        return 0;
-      }
-      if (_requirements.has_max_heteroatom_fraction() && haf > _requirements.max_heteroatom_fraction()) {
-        ++_max_heteroatom_fraction;
-        return 0;
-      }
-    }
+  molecule_filter_lib::RejectionReason rejection_reason;
+  const int rc = _filter.OkAndUtilities(m, matoms, nrings, rejection_reason,
+                                        utility_values, overall_utility);
+  if (rc == 1) {
+    return 1;
   }
 
-  if (_requirements.has_exclude_non_organic() && ! m.organic_only()) {
-    ++_non_organic;
+  if (rc < 0) {
+    cerr << "Options::Process:cannot evaluate utility values\n";
     return 0;
   }
 
-  if (_requirements.has_exclude_isotopes() && m.number_isotopic_atoms() > 0) {
-    ++_isotope;
-    return 0;
-  }
-
-  if (_requirements.has_max_chiral() &&
-      m.chiral_centres() > _requirements.max_chiral()) {
-    ++_too_many_chiral;
-    return 0;
-  }
-
-  int arc = 0;
-  int need_to_compute_aromatic_rings = 0;
-  if (_requirements.has_min_aromatic_ring_count() ||
-      _requirements.has_max_aromatic_ring_count() ||
-      _requirements.has_max_aromatic_rings_in_system()) {
-    need_to_compute_aromatic_rings = 1;
-  }
-
-  if (need_to_compute_aromatic_rings) {
-    // Check nrings first. If not enough rings if all were aromatic...
-    if (_requirements.has_min_aromatic_ring_count() && nrings < _requirements.min_aromatic_ring_count()) {
-      ++_too_few_aromatic_rings;
-      return 0;
-    }
-
-    arc = AromaticRingCount(m);
-    if (_requirements.has_min_aromatic_ring_count() && arc < _requirements.min_aromatic_ring_count()) {
-      ++_too_few_aromatic_rings;
-      return 0;
-    }
-    if (_requirements.has_max_aromatic_ring_count() && arc > _requirements.max_aromatic_ring_count()) {
-      ++_too_many_aromatic_rings;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_aliphatic_ring_count() ||
-      _requirements.has_max_aliphatic_ring_count()) {
-    if (_requirements.has_min_aliphatic_ring_count() && nrings < _requirements.min_aliphatic_ring_count()) {
-      ++_too_few_aliphatic_rings;
-      return 0;
-    }
-    const int alring = nrings - AromaticRingCount(m);
-    if (_requirements.has_min_aliphatic_ring_count() && alring < _requirements.min_aliphatic_ring_count()) {
-      ++_too_few_aliphatic_rings;
-      return 0;
-    }
-    if (_requirements.has_max_aliphatic_ring_count() && alring > _requirements.max_aliphatic_ring_count()) {
-      ++_too_many_aliphatic_rings;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_hba() || _requirements.has_max_hba() ||
-      _requirements.has_min_hbd() || _requirements.has_max_hbd()) {
-    int hba, hbd;
-    molecule_filter_lib::RuleOfFive(m, hba, hbd);
-    if (_requirements.has_min_hba() && hba < _requirements.min_hba()) {
-      ++_too_few_hba;
-      return 0;
-    }
-    if (_requirements.has_max_hba() && hba > _requirements.max_hba()) {
-      ++_too_many_hba;
-      return 0;
-    }
-    if (_requirements.has_min_hbd() && hbd < _requirements.min_hbd()) {
-      ++_too_few_hbd;
-      return 0;
-    }
-    if (_requirements.has_max_hbd() && hbd > _requirements.max_hbd()) {
-      ++_too_many_hbd;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_sp3_carbon()) {
-    const int csp3 = molecule_filter_lib::Sp3Carbon(m);
-    if (csp3 < _requirements.min_sp3_carbon()) {
-      ++_too_few_csp3;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_max_halogen_count()) {
-    const int h = molecule_filter_lib::HalogenCount(m);
-    if (h > _requirements.max_halogen_count()) {
-      ++_too_many_halogens;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_largest_ring_size()) {
-    int rsze = m.ringi(nrings - 1)->number_elements();
-    if (rsze > _requirements.largest_ring_size()) {
-      ++_ring_too_large;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_rotatable_bonds() || _requirements.has_max_rotatable_bonds()) {
-    int rotb = _rotbond.Process(m);
-    if (_requirements.has_min_rotatable_bonds() && rotb < _requirements.min_rotatable_bonds()) {
-      ++_too_few_rotbond;
-      return 0;
-    }
-    if (_requirements.has_max_rotatable_bonds() && rotb > _requirements.max_rotatable_bonds()) {
-      ++_too_many_rotbond;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_max_aromatic_density()) {
-    const float aromdens = iwmisc::Fraction<float>(m.aromatic_atom_count(), matoms);
-    if (aromdens > _requirements.max_aromatic_density()) {
-      ++_aromdens_too_high;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_max_distance() && matoms > _requirements.max_distance()) {
-    const int d = m.longest_path();
-    if (d > _requirements.max_distance()) {
-      ++_too_long;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_tpsa() || _requirements.has_max_tpsa()) {
-    float tpsa = novartis_polar_surface_area(m);
-    if (_requirements.has_min_tpsa() && tpsa < _requirements.min_tpsa()) {
-      ++_low_tpsa;
-      return 0;
-    }
-    if (_requirements.has_max_tpsa() && tpsa > _requirements.max_tpsa()) {
-      ++_high_tpsa;
-      return 0;
-    }
-  }
-
-  // A temporary array that some external functions might need.
-  std::unique_ptr<int[]> tmp;
-
-  if (_requirements.has_max_ring_system_size() ||
-      _requirements.has_max_aromatic_rings_in_system()) {
-    if (nrings < _requirements.max_ring_system_size() &&
-        nrings < _requirements.max_aromatic_rings_in_system()) {
-      // no need to compute.
-    }  else {
-      const auto [max_ring_system_size, max_aromatic_rings_in_system] = 
-          molecule_filter_lib::MaxRingSystemSize(m, tmp);
-      if (_requirements.has_max_ring_system_size() && max_ring_system_size > _requirements.max_ring_system_size()) {
-        ++_ring_system_too_large;
-        return 0;
-      }
-      if (_requirements.has_max_aromatic_rings_in_system() &&
-          max_aromatic_rings_in_system > _requirements.max_aromatic_rings_in_system()) {
-        ++_too_many_aromatic_rings_in_system;
-      }
-    }
-  }
-
-  if (_requirements.has_min_xlogp() || _requirements.has_max_alogp()) {
-    std::optional<double> x = _alogp.LogP(m);
-    if (! x) {
-    } else if (_requirements.has_min_alogp() && *x < _requirements.min_alogp()) {
-      ++_low_alogp;
-      return 0;
-    }
-    if (!x) {
-    } else if (_requirements.has_max_alogp() && *x > _requirements.max_alogp()) {
-      ++_high_alogp;
-      return 0;
-    }
-  }
-
-  if (_requirements.has_min_xlogp() || _requirements.has_max_xlogp()) {
-    if (! tmp) {
-      tmp.reset(new int[matoms]);
-    }
-    std::fill_n(tmp.get(), matoms, 0);
-    std::optional<double> x = xlogp::XLogP(m, tmp.get());
-    if (! x) {
-    } else if (_requirements.has_min_xlogp() && *x < _requirements.min_xlogp()) {
-      ++_low_xlogp;
-      return 0;
-    }
-    if (!x) {
-    } else if (_requirements.has_max_xlogp() && *x > _requirements.max_xlogp()) {
-      ++_high_xlogp;
-      return 0;
-    }
-  }
-
-
-  return 1;
+  NoteRejection(rejection_reason);
+  return 0;
 }
+
 
 int
 Options::SeekIfNeeded(iwstring_data_source& input) const {
@@ -880,7 +994,7 @@ MoleculeFilter(Options& options,
 
 int
 MoleculeFilter(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:A:lcg:F:B:i:");
+  Command_Line cl(argc, argv, "vE:A:lcg:F:B:i:u");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -910,6 +1024,10 @@ MoleculeFilter(int argc, char** argv) {
   }
 
   IWString_and_File_Descriptor output(1);
+
+  if (options.has_utilities() && ! options.write_smiles_with_utility()) {
+    options.WriteUtilityHeader(output);
+  }
 
   for (const char * fname : cl) {
     if (! MoleculeFilter(options, fname, output)) {

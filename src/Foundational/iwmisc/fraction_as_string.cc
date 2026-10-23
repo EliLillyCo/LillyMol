@@ -1,11 +1,41 @@
 #include <stdlib.h>
 
+#include <string>
+
+#include "fmt/format.h"
+
 #include "iwdigits.h"
+
+namespace {
+
+void
+AppendStableFloat(IWString& destination, float value, int precision) {
+  std::string text = fmt::format("{:.{}f}", value, precision);
+
+  const size_t decimal = text.find('.');
+  if (decimal != std::string::npos) {
+    while (!text.empty() && text.back() == '0') {
+      text.pop_back();
+    }
+    if (!text.empty() && text.back() == '.') {
+      text.pop_back();
+    }
+  }
+
+  if (text == "-0") [[unlikely]] {
+    text = "0";
+  }
+
+  destination << text;
+}
+
+}  // namespace
 
 Fraction_as_String::Fraction_as_String()
 {
   _fraction = nullptr;
 
+  _digits = 0;
   _nbuckets = 0;
 
   return;
@@ -69,25 +99,14 @@ Fraction_as_String::_fill_string_data()
     if (_leading_space.length())
       f << _leading_space;
 
-    f.append_number(d, _digits);
-
-    if (0.0F != d)
-    {
-      if (! f.contains('.'))
-        f << '.';
-
-      while (f.length() < (_digits + 2 + _leading_space.length()))
-      {
-        f << '0';
-      }
-    }
+    AppendStableFloat(f, d, _digits);
 //  std::cerr << " i = " << i << " string '" << _fraction[i] << "'\n";
   }
 
   if (_leading_space.length())
     _fraction[_nbuckets] << _leading_space;
 
-  _fraction[_nbuckets].append_number(_maxval, _digits);
+  AppendStableFloat(_fraction[_nbuckets], _maxval, _digits);
 
   return 1;
 }
@@ -100,7 +119,7 @@ Fraction_as_String::_append_number_no_string_rep(IWString & s,
     s += _leading_space;
 
   if (_digits > 0)
-    s.append_number(f, _digits);
+    AppendStableFloat(s, f, _digits);
   else
     s.append_number(f);
 

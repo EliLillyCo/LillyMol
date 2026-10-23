@@ -124,6 +124,7 @@ The directives currently recognised are:
 * **rmrd2** remove all two connected ring atoms - compresses rings
 * **rplink** Replace inter-ring Linker atoms 
 * **scaffold** Form the molecular scaffold
+* **cscaffold** Molecular scaffold, but extended through attached carbon atoms
 * **sss** filter by substructure 
 * **translate** Change specified atom types 
 
@@ -419,6 +420,13 @@ as some doubly bonded atoms.
 
 The `keepfirst` qualifier retains atoms that are directly attached to
 scaffold atoms.
+
+### CScaffold
+Retains scaffold atoms, as well as all carbon atoms linked to the scaffold.
+With the 'keepattached' qualifier, it will retain the heteroatom that terminates
+the contiguous carbon atoms.
+
+The 'isotope' directive places the isotope on the heteroatoms.
 
 ### sss
 Substructure search. Molecules not matching the query have all their

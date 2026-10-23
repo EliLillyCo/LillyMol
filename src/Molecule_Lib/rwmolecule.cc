@@ -20,6 +20,58 @@ using std::cerr;
 
 static int _put_formal_charges_on_neutral_ND3v4 = 0;
 
+Molecule_Read_Options::Molecule_Read_Options() {
+  MDL_File_Supporting_Material* global = global_default_MDL_File_Supporting_Material();
+
+  _mdl_file_supporting_material.set_ignore_unrecognised_mdl_m_records(
+      global->ignore_unrecognised_m_records());
+  _mdl_file_supporting_material.set_report_unrecognised_records(
+      global->report_unrecognised_records());
+  _mdl_file_supporting_material.set_die_on_erroneous_m_input(
+      global->die_on_erroneous_m_input());
+  _mdl_file_supporting_material.set_ignore_self_bonds(global->ignore_self_bonds());
+  _mdl_file_supporting_material.set_mdl_read_h_correct_chiral_centres(
+      global->mdl_read_h_correct_chiral_centres());
+  _mdl_file_supporting_material.set_extract_isis_extregno(global->extract_isis_extregno());
+  _mdl_file_supporting_material.set_fetch_all_sdf_identifiers(
+      global->fetch_all_sdf_identifiers());
+  _mdl_file_supporting_material.set_take_first_tag_as_name(global->take_first_tag_as_name());
+  _mdl_file_supporting_material.set_prepend_sdfid(global->prepend_sdfid());
+  _mdl_file_supporting_material.set_sdf_tags_to_json(global->sdf_tags_to_json());
+  _mdl_file_supporting_material.set_name_to_json(global->name_to_json());
+  _mdl_file_supporting_material.set_read_extra_text_info(
+      moleculeio::read_extra_text_info());
+  _mdl_file_supporting_material.set_discard_sdf_molecule_name(
+      global->discard_sdf_molecule_name());
+  _mdl_file_supporting_material.set_multi_record_tag_data_present(
+      global->multi_record_tag_data_present());
+  _mdl_file_supporting_material.set_display_non_organic_chirality_messages(
+      global->display_non_organic_chirality_messages());
+  _mdl_file_supporting_material.set_mdl_display_invalid_chiral_connectivity(
+      global->mdl_display_invalid_chiral_connectivity());
+  _mdl_file_supporting_material.set_truncate_long_symbols(global->truncate_long_symbols());
+  _mdl_file_supporting_material.set_discern_chirality_from_wedge_bonds(
+      global->discern_chirality_from_wedge_bonds());
+  _mdl_file_supporting_material.set_read_isotopes_as_numbers_rather_than_differences_from_normal(
+      global->read_isotopes_as_numbers_rather_than_differences_from_normal());
+  _mdl_file_supporting_material.set_read_M_isotopes_as_numbers_rather_than_differences_from_normal(
+      global->read_M_isotopes_as_numbers_rather_than_differences_from_normal());
+  _mdl_file_supporting_material.set_allow_deuterium(global->allow_deuterium());
+  _mdl_file_supporting_material.set_allow_tritium(global->allow_tritium());
+  _mdl_file_supporting_material.set_mdl_g_records_hold_atom_symbols(
+      global->mdl_g_records_hold_atom_symbols());
+  _mdl_file_supporting_material.set_set_elements_based_on_atom_aliases(
+      global->set_elements_based_on_atom_aliases());
+  _mdl_file_supporting_material.set_convert_single_atom_sgroup_to_element(
+      global->convert_single_atom_sgroup_to_element());
+  _mdl_file_supporting_material.set_gsub_mdl_file_data(global->gsub_mdl_file_data());
+  _mdl_file_supporting_material.set_mdl_insert_between_sdf_name_tokens(
+      global->insert_between_sdf_name_tokens());
+  _mdl_file_supporting_material.set_replace_first_sdf_tag(global->replace_first_sdf_tag());
+  _mdl_file_supporting_material.set_mdl_name_in_m_tag(global->name_in_m_tag());
+  _mdl_file_supporting_material.set_sdf_identifier(global->sdf_identifier());
+}
+
 void
 set_put_formal_charges_on_neutral_ND3v4(int s) {
   _put_formal_charges_on_neutral_ND3v4 = s;
@@ -214,6 +266,10 @@ suffix_for_file_type(FileType file_type) {
       return "inchi";
       break;
 
+    case FILE_TYPE_INCHIKEY:
+      return "inchikey";
+      break;
+
     case FILE_TYPE_TDT_NAUSMI:
       return "tdt";
       break;
@@ -239,116 +295,6 @@ suffix_for_file_type(FileType file_type) {
   return nullptr;  // should never come here
 }
 
-#ifdef NOLONGER_NEEDED_ASDASD
-const char*
-suffix_for_file_type(int file_type) {
-  switch (file_type) {
-    case MDL:
-      return "mdl";
-      break;
-
-    case PDB:
-      return "pdb";
-      break;
-
-    case MMOD:
-      return "mmod";
-      break;
-
-    case SMI:
-      return "smi";
-      break;
-
-    case USMI:
-      return "smi";
-      break;
-
-    case MSI:
-      return "msi";
-      break;
-
-    case TDT:
-      return "tdt";
-      break;
-
-    case UTDT:
-      return "tdt";
-      break;
-
-    case RDF:
-      return "rdf";
-      break;
-
-    case QRY:
-      return "qry";
-      break;
-
-    case RSMI:
-      return "smi";
-      break;
-
-    case SDF:
-      return "sdf";
-      break;
-
-    case MOL2:
-      return "mol2";
-      break;
-
-    case IWMTYPE_PSF:
-      return "psf";
-      break;
-
-    case IWMTYPE_CRD:
-      return "crd";
-      break;
-
-    case IWMTYPE_MOE:
-      return "moe";
-      break;
-
-    case IWMTYPE_MRK:
-      return "mrk";
-      break;
-
-    case IWMTYPE_NAUSMI:
-      return "smi";
-      break;
-
-    case IWMTYPE_WCHM:
-      return "chm";
-      break;
-
-    case IWMTYPE_CIF:
-      return "cif";
-      break;
-
-    case IWMTYPE_SMT:
-      return "smt";
-      break;
-
-    case IWMTYPE_MRV:
-      return "mrv";
-      break;
-
-    case IWMTYPE_INCHI:
-      return "inchi";
-      break;
-
-    case IWMTYPE_TDT_NAUSMI:
-      return "tdt";
-      break;
-
-    default:
-      return nullptr;
-      break;
-  }
-
-  iwabort();
-  return nullptr;  // should never come here
-}
-#endif
-
 /*
   We must be careful stripping off old prefixes in case the directory name
   contains a period.
@@ -370,6 +316,11 @@ remove_suffix(IWString& fname) {
 
   if (fname.ends_with('.')) {
     fname.chop();
+    return;
+  }
+
+  // Happens if someone is writing with a stem like ./foo
+  if (fname.starts_with("./") && fname.count('.') == 1) {
     return;
   }
 
@@ -526,6 +477,7 @@ discern_file_type_from_name(const IWString& file_name) {
   if (file_name.ends_with(".inchi")) {
     return FILE_TYPE_INCHI;
   }
+  // Inchi keys cannot be read so not recognised here.
   if (file_name.ends_with(".cif")) {
     return FILE_TYPE_CIF;
   }
@@ -595,117 +547,6 @@ valid_file_type(FileType ftype) {
   return ftype != FILE_TYPE_INVALID;
 }
 
-#ifdef NOLONGERUSED_QWE
-int
-valid_file_type(int ftype) {
-  switch (ftype) {
-    case MDL:
-      return 1;
-      break;
-
-    case PDB:
-      return 1;
-      break;
-
-    case MMOD:
-      return 1;
-      break;
-
-    case SMI:
-      return 1;
-      break;
-
-    case USMI:
-      return 1;
-      break;
-
-    case MSI:
-      return 1;
-      break;
-
-    case TDT:
-      return 1;
-      break;
-
-    case UTDT:
-      return 1;
-      break;
-
-    case RDF:
-      return 1;
-      break;
-
-    case RSMI:
-      return 1;
-      break;
-
-    case SDF:
-      return 1;
-      break;
-
-    case MOL2:
-      return 1;
-      break;
-
-    case FILE_TYPE_PSF:
-      return 1;
-      break;
-
-    case FILE_TYPE_CRD:
-      return 1;
-      break;
-
-    case FILE_TYPE_CHM:
-      return 1;
-      break;
-
-    case FILE_TYPE_MOE:
-      return 1;
-      break;
-
-    case FILE_TYPE_MRK:
-      return 1;
-      break;
-
-    case FILE_TYPE_WCHM:
-      return 1;
-      break;
-
-    case FILE_TYPE_NAUSMI:
-      return 1;
-      break;
-
-    case FILE_TYPE_CIF:
-      return 1;
-      break;
-
-    case FILE_TYPE_SMT:
-      return 1;
-      break;
-
-    case FILE_TYPE_MRV:
-      return 1;
-      break;
-
-    case FILE_TYPE_INCHI:
-      return 1;
-      break;
-
-    case FILE_TYPE_TDT_NAUSMI:
-      return 1;
-      break;
-
-    case FILE_TYPE_XYZ:
-      return 1;
-      break;
-
-    default:
-      return 0;
-      break;
-  }
-}
-#endif
-
 /*
   We have read a molecule with aromatic atoms. Before doing Kekule perception
   we need to remove any covalently bonded non-organics
@@ -741,83 +582,122 @@ Molecule::_do_unconnect_covalently_bonded_non_organics() {
   return rc;
 }
 
-int
-Molecule::read_molecule_ds(iwstring_data_source& input, FileType input_type) {
-  assert(ok());
-  assert(input.good());
+namespace {
 
+int
+ReadMolecule(iwstring_data_source& input, FileType input_type, Molecule& mol,
+             Molecule_Read_Options* options) {
   int rc = 0;
   if (FILE_TYPE_MDL == input_type || FILE_TYPE_SDF == input_type) {
-    rc = read_molecule_mdl_ds(input);
+    if (options) {
+      rc = mol.read_molecule_mdl_ds(input, options->mdl_file_supporting_material());
+    } else {
+      Molecule_Read_Options default_options;
+      rc = mol.read_molecule_mdl_ds(input,
+                                    default_options.mdl_file_supporting_material());
+    }
   }
 
   else if (FILE_TYPE_PDB == input_type) {
-    rc = read_molecule_pdb_ds(input);
+    rc = mol.read_molecule_pdb_ds(input);
   }
 
   else if (FILE_TYPE_MMOD == input_type) {
-    rc = read_molecule_mmod_ds(input);
+    rc = mol.read_molecule_mmod_ds(input);
   }
 
   else if (FILE_TYPE_SMI == input_type ||
            FILE_TYPE_USMI == input_type) {  // why would we input USMI?
-    rc = read_molecule_smi_ds(input);
+    rc = mol.read_molecule_smi_ds(input);
   }
 
   else if (FILE_TYPE_MSI == input_type) {
-    rc = read_molecule_msi_ds(input);
+    rc = mol.read_molecule_msi_ds(input);
   }
 
   else if (FILE_TYPE_TDT == input_type) {
-    rc = read_molecule_tdt_ds(input);
+    rc = mol.read_molecule_tdt_ds(input);
   }
 
   else if (FILE_TYPE_RDF == input_type) {
-    rc = read_molecule_rdf_ds(input);
+    rc = mol.read_molecule_rdf_ds(input);
   }
 
   else if (FILE_TYPE_MOL2 == input_type) {
-    rc = read_molecule_mol2_ds(input);
+    rc = mol.read_molecule_mol2_ds(input);
   }
 
   else if (FILE_TYPE_MOE == input_type) {
-    rc = read_molecule_moe_ds(input);
+    rc = mol.read_molecule_moe_ds(input);
   }
 
   else if (FILE_TYPE_MRK == input_type) {
-    rc = read_molecule_mrk_ds(input);
+    rc = mol.read_molecule_mrk_ds(input);
   }
 
   else if (FILE_TYPE_MRV == input_type) {
-    rc = read_molecule_mrv_ds(input);
+    rc = mol.read_molecule_mrv_ds(input);
   }
 
   else if (FILE_TYPE_INCHI == input_type) {
-    rc = read_molecule_inchi_ds(input);
+    rc = mol.read_molecule_inchi_ds(input);
   }
 
   else if (FILE_TYPE_CIF == input_type) {
-    rc = read_molecule_cif_ds(input);
+    rc = mol.read_molecule_cif_ds(input);
   }
 
   else if (FILE_TYPE_CSV == input_type) {
-    rc = read_molecule_csv_ds(input);
+    rc = mol.read_molecule_csv_ds(input);
   }
 
   else if (FILE_TYPE_TXTPROTO == input_type) {
-    rc = read_molecule_textproto_ds(input);
+    rc = mol.read_molecule_textproto_ds(input);
   }
 
   else if (FILE_TYPE_XYZ == input_type) {
-    rc = read_molecule_xyz_ds(input);
+    rc = mol.read_molecule_xyz_ds(input);
   }
 
   else {
     cerr << "read_molecule_ds: Unknown type " << input_type << "\n";
     iwabort();
   }
-  // cerr << "Having read molecule name is " << _molecule_name << "'\n";
-  // cerr << Name() << '\n';
+
+  return rc;
+}
+
+}  // namespace
+
+int
+Molecule::read_molecule_ds(iwstring_data_source& input, FileType input_type) {
+  assert(ok());
+  assert(input.good());
+
+  int rc = ReadMolecule(input, input_type, *this, nullptr);
+
+  if (rc == 0) {
+    return 0;
+  }
+
+  if (coordinate_scaling > 0.0f) {
+    ScaleCoordinates(coordinate_scaling);
+  }
+
+  if (moleculeio::unconnect_covalently_bonded_non_organics_on_read()) {
+    _do_unconnect_covalently_bonded_non_organics();
+  }
+
+  return rc;
+}
+
+int
+Molecule::read_molecule_ds(iwstring_data_source& input, FileType input_type,
+                           Molecule_Read_Options& options) {
+  assert(ok());
+  assert(input.good());
+
+  int rc = ReadMolecule(input, input_type, *this, &options);
 
   if (rc == 0) {
     return 0;
@@ -899,6 +779,8 @@ Molecule::write_molecule(std::ostream& os, FileType output_type,
     rc = write_molecule_mrv(os);
   } else if (FILE_TYPE_INCHI == output_type) {
     rc = write_molecule_inchi(os);
+  } else if (FILE_TYPE_INCHIKEY == output_type) {
+    rc = write_molecule_inchi(os, true);
   } else if (FILE_TYPE_CSV == output_type) {
     rc = write_molecule_csv(os);
   } else if (FILE_TYPE_TXTPROTO == output_type) {

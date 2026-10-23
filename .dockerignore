@@ -1,3 +1,4 @@
 # Exclude all unnecessary folders from docker
-docs/
+docs/*
+!docs/python
 example/

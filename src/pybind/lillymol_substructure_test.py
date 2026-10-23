@@ -1,11 +1,12 @@
 # Tests for substructure searching
 
 import os
+import sys
 import tempfile
 
-from absl import app
-from absl import logging
-from absl.testing import absltest
+import unittest
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 from google.protobuf import text_format
 
@@ -14,7 +15,7 @@ from Molecule_Lib import substructure_pb2
 from lillymol import *
 from lillymol_query import *
 
-class TestLillyMolSubstructure(absltest.TestCase):
+class TestLillyMolSubstructure(unittest.TestCase):
   def test_carbon(self):
     mol = Molecule()
     self.assertTrue(mol.build_from_smiles("C methane"))
@@ -22,6 +23,22 @@ class TestLillyMolSubstructure(absltest.TestCase):
     self.assertTrue(qry.build_from_smarts("C"))
     self.assertEqual(qry.substructure_search(mol), 1)
     self.assertIn(qry, mol)
+
+  def test_query_from_smarts(self):
+    mol = Molecule()
+    self.assertTrue(mol.build_from_smiles("CCO ethanol"))
+    qry = QueryFromSmarts("CO")
+    self.assertIsNotNone(qry)
+    self.assertIsInstance(qry, SubstructureQuery)
+    self.assertEqual(qry.substructure_search(mol), 1)
+
+  def test_query_from_smarts_single_step(self):
+    phenol_query = QueryFromSmarts("[OH]-c")
+    phenol = MolFromSmiles("Oc1ccccc1 phenol")
+    self.assertTrue(phenol_query in phenol)
+
+  def test_query_from_smarts_invalid(self):
+    self.assertIsNone(QueryFromSmarts("["))
 
   def test_ethane_c(self):
     mol = Molecule()
@@ -72,7 +89,7 @@ class TestLillyMolSubstructure(absltest.TestCase):
     matched = [0, 0]
 
     for embedding in sresults:
-      self.assertLen(embedding, 2)
+      self.assertEqual(len(embedding), 2)
       for a in embedding:
         matched[a] += 1
     self.assertEqual(matched, [2, 2])
@@ -96,6 +113,45 @@ class TestLillyMolSubstructure(absltest.TestCase):
     for match in matches:
       mol.set_isotopes(match, 1)
     self.assertEqual(mol.aromatic_smiles(), "[1OH][1c]1[1cH]ccc[1cH]1")
+
+  def test_has_substruct_match_from_smarts(self):
+    mol = MolFromSmiles("CCO ethanol")
+    self.assertTrue(HasSubstructMatch(mol, "CO"))
+    self.assertFalse(HasSubstructMatch(mol, "N"))
+
+  def test_count_substruct_matches_from_smarts(self):
+    mol = MolFromSmiles("CC ethane")
+    self.assertEqual(CountSubstructMatches(mol, "C"), 2)
+    self.assertEqual(CountSubstructMatches(
+        mol, "C", perceive_symmetry_equivalent_matches=False), 1)
+
+  def test_count_substruct_matches_max_matches(self):
+    mol = MolFromSmiles("CCCC butane")
+    self.assertEqual(CountSubstructMatches(mol, "C"), 4)
+    self.assertEqual(CountSubstructMatches(mol, "C", max_matches_to_find=2), 2)
+
+  def test_get_substruct_matches_from_smarts(self):
+    mol = MolFromSmiles("CC ethane")
+    matches = GetSubstructMatches(mol, "CC")
+    self.assertEqual(len(matches), 2)
+    self.assertEqual(matches, [[0, 1], [1, 0]])
+
+  def test_get_substruct_matches_unique_embeddings_only(self):
+    mol = MolFromSmiles("CC ethane")
+    matches = GetSubstructMatches(mol, "CC", unique_embeddings_only=True)
+    self.assertEqual(len(matches), 1)
+    self.assertEqual(matches[0], [0, 1])
+
+  def test_get_substruct_matches_query_atom_order(self):
+    mol = MolFromSmiles("Oc1ccccc1 phenol")
+    matches = GetSubstructMatches(mol, "Occ", max_matches_to_find=1)
+    self.assertEqual(len(matches), 1)
+    self.assertEqual(matches[0], [0, 1, 2])
+
+  def test_get_substruct_matches_invalid_smarts_raises(self):
+    mol = MolFromSmiles("CC ethane")
+    with self.assertRaises(ValueError):
+      GetSubstructMatches(mol, "[")
 
   def test_from_proto(self):
     mol = Molecule()
@@ -121,8 +177,7 @@ query {
   unique_embeddings_only: true
 }
 """
-    dir = absltest.TEST_TMPDIR.value
-    tmpdir = tempfile.mkdtemp(dir=dir)
+    tmpdir = tempfile.mkdtemp()
     fname = os.path.join(tmpdir, "qry.textproto")
     with open(fname, "w") as writer:
       writer.write(proto_string)
@@ -132,5 +187,4 @@ query {
     self.assertIn(qry, mol)
 
 if __name__ == '__main__':
-  #app.run(absltest.main)
-  absltest.main()
+  unittest.main()

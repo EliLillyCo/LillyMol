@@ -27,15 +27,15 @@ if [ ! -x "$command" ]; then
 fi
 
 in="$test_cmd_top/$case/in/seeds.smi"
-out=seeds_found.smi
-cmp_out="$test_cmd_top/$case/out/seeds_found.smi"
+out='stdout'
+cmp_out="$test_cmd_top/$case/out/stdout"
 
 echo "Testing: $command"
 
 queries_dir="$LILLYMOL_HOME/contrib/data/queries"
 
 $command -M NN -v -R $test_cmd_top/$case/in/set1.smi \
-    -R $test_cmd_top/$case/in/set2.smi "$in" 1>> "$out" 2>> err.txt
+    -R $test_cmd_top/$case/in/set2.smi "$in" 1> "$out" 2> err.txt
 $diff_tool "$out" "$cmp_out"
 ret=$?
 
@@ -47,7 +47,7 @@ else
 fi
 
 
-rm -f "$out"
-rm -f err.txt
-rm -f NN0.smi
-rm -f NN1.smi
+#rm -f "$out"
+#rm -f err.txt
+#rm -f NN0.smi
+#rm -f NN1.smi

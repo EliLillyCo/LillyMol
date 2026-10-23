@@ -11,9 +11,20 @@ Selimsteg::Selimsteg() {
 }
 
 Selimsteg::~Selimsteg() {
-  if (_database) {
-    delete _database;
+  Close();
+}
+
+void
+Selimsteg::Close() {
+  if (_database == nullptr) {
+    return;
   }
+
+  // Berkeley DB expects close() before the handle is discarded; deleting without
+  // it leaks the underlying DB. This used to just delete.
+  _database->close(0);
+  delete _database;
+  _database = nullptr;
 }
 
 bool
@@ -41,6 +52,14 @@ Selimsteg::OpenDatabase(const std::string& dbname) {
 
 std::optional<std::string>
 Selimsteg::Lookup(const std::string& key) {
+  // Without this, a lookup before OpenDatabase - or after Close - dereferences
+  // null and takes the process down. GetMolecule and GetMolecules both come
+  // through here, so one check covers all three.
+  if (_database == nullptr) {
+    cerr << "Selimsteg::Lookup:no database open\n";
+    return std::nullopt;
+  }
+
   Dbt dbkey;
 
   dbkey.set_data((void*)(key.data()));  // loss of const OK

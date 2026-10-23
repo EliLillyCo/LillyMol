@@ -1,4 +1,6 @@
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -64,7 +66,7 @@ MACCSKeys::set_nbits (int s)
   return 1;
 }
 
-static int level2_threshold [] = {
+static constexpr int level2_threshold [] = {
   2,     // key 0   2.32637
   1,     // key 1   1.29712
   1,     // key 2   1.282324
@@ -381,7 +383,7 @@ MK_Molecular_Properties::MK_Molecular_Properties(Molecule & m)
   }
   else
   {
-    set_vector(_aromatic, _natoms, 0);
+    std::fill_n(_aromatic, _natoms, 0);
     _ring_already_done = nullptr;
   }
 
@@ -405,7 +407,7 @@ MK_Molecular_Properties::MK_Molecular_Properties(Molecule & m)
     }
   }
   else
-    set_vector(_ring_bond_count, _natoms, 0);
+    std::fill_n(_ring_bond_count, _natoms, 0);
 
   _initialise_implicit_hydrogens(m);
 
@@ -2069,7 +2071,7 @@ MACCSKeys::_key27 (Molecule & m,
     return 0;
 
   int * ring_already_done = mpr.ring_already_done();
-  set_vector(ring_already_done, nr, 0);
+  std::fill_n(ring_already_done, nr, 0);
 
   for (int i = 0; i < nr; ++i)
   {
@@ -9381,7 +9383,7 @@ MACCSKeys::_key174 (Molecule & m,
 
   int nr = m.nrings();
 
-  set_vector(keys_i_set, 5, 0);
+  std::fill_n(keys_i_set, 5, 0);
 
   if (nr < 2)
     return;
@@ -9698,7 +9700,7 @@ MACCSKeys::_key182 (Molecule & m,
 {
   const auto nr = m.nrings();
 
-  set_vector(keys_i_set, 2, 0);
+  std::fill_n(keys_i_set, 2, 0);
 
   if (0 == nr)
     return;

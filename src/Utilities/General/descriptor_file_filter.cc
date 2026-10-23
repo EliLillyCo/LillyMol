@@ -180,23 +180,13 @@ Column_Data::new_value(const const_IWSubstring& rhs)
 }
 
 static int
-get_next_token(const const_IWSubstring& buffer, const_IWSubstring& token, int& i)
-{
-  if (' ' == input_separator) {
-    return buffer.nextword(token, i);
-  } else {
-    return buffer.nextword_single_delimiter(token, i, input_separator);
-  }
-}
-
-static int
 tokenise(const const_IWSubstring& buffer, int ncol, Column_Data* cd)
 {
   const_IWSubstring token;
   int i = 0;
   int col = 0;
 
-  while (get_next_token(buffer, token, i)) {
+  while (buffer.NextWord(token, i, input_separator)) {
     cd[col].new_value(token);
 
     col++;
@@ -429,7 +419,7 @@ Column_Condition::determine_column_number(const const_IWSubstring& header)
   int i = 0;
   int c = 0;
   const_IWSubstring token;
-  while (get_next_token(header, token, i)) {
+  while (header.NextWord(token, i, input_separator)) {
     if (token == _column_name) {
       _column = c;
       return 1;
@@ -607,9 +597,9 @@ identify_first_non_reagent_column(const const_IWSubstring& header)
   int i = 0;
   const_IWSubstring token;
 
-  get_next_token(header, token, i);  // skip over identifier column
+  header.NextWord(token, i, input_separator);  // skip over identifier column
 
-  for (int col = 1; get_next_token(header, token, i); col++) {
+  for (int col = 1; header.NextWord(token, i, input_separator); col++) {
     if (token == first_non_reagent_column_header) {
       number_columns_reagent_types = col;
 

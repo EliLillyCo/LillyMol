@@ -1,6 +1,7 @@
+// proto2 used because we have [default] values
 syntax = "proto2";
 
-package BrunsDonorAcceptor;
+package bruns_donor_acceptor;
 
 // Description of the Bruns Hbond donor acceptor assignment class.
 message BrunsDonorAcceptor {

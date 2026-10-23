@@ -116,7 +116,7 @@ doublereal uni_0_(int n__, integer *iseed, integer *kk)
 
 /*   Basic generator is Fibonacci */
 
-    ret_val = u[(0 + (0 + (i__ - 1 << 2))) / 4] - u[(0 + (0 + (j - 1 << 2))) /
+    ret_val = u[(0 + (0 + ((i__ - 1) << 2))) / 4] - u[(0 + (0 + ((j - 1) << 2))) /
 	     4];
     if (ret_val < 0.f) {
 	ret_val += 1.f;

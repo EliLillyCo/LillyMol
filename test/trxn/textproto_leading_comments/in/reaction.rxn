@@ -1,0 +1,11 @@
+# A textproto reaction supplied through -r, which must detect its format.
+# These comments precede the name field used for textproto detection.
+# Replace a terminal hydroxyl oxygen with nitrogen.
+name: "alcohol_to_amine"
+scaffold {
+  smarts: "[C]-[OD1H1]"
+  change_element {
+    atom: 1
+    element: "N"
+  }
+}

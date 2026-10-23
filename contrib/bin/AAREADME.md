@@ -124,6 +124,25 @@ The -jwmedv descriptor in  [make_descriptors](/docs/Molecule_Tools/make_descript
 The -jwmc descriptor in  [make_descriptors](/docs/Molecule_Tools/make_descriptors.md). These
 are molecular connectivity and graph theory features.
 
+## kekule_query_audit.sh
+Finds substructure queries whose answers depend on how aromatic bonds are matched.
+By default a query bond can match an aromatic bond through its Kekule form, so a
+single bond `-` matches the bonds inside an aromatic ring. With `tsubstructure -M nokekule`
+it does not. See [Aromatic bonds and Kekule forms](/docs/Molecule_Tools/tsubstructure.md#aromatic-bonds-and-kekule-forms).
+The script runs every query in a set of query files over a set of molecules in both modes
+and lists the queries that differ
+```
+kekule_query_audit.sh --every 100 --jobs 16 all.smi > audit.tsv
+kekule_query_audit.sh --labels --used-in molecules.smi data/queries/hbonds
+```
+`--labels` compares the atoms that were matched, not just the number of molecules, which finds
+queries that match the same molecules but different atoms. `--used-in` adds the query lists, such
+as `data/queries/charges/positive`, that name each query, to show which tools a query affects.
+A difference is not necessarily a bug, some queries depend on the default deliberately. A query that is
+meant to be independent of the mode should come out as `same`, and `--fail-on-change` makes the
+exit status 1 if one does not. The script uses only the python standard library and runs
+tsubstructure as a subprocess. A test is in `contrib/test/kekule_query_audit`.
+
 ## maccskeys.sh
 An evolution of the original MACCS keys. Many of the original definitions have been changed
 and new queries added. Currently there are 6*32 = 192 features defined. This is the -mk
@@ -175,9 +194,10 @@ necessary.
 A 'wild and crazy' molecule generator. Randomly permuts smiles strings as text, and then attempts
 molecular interpretation on the results. Mostly of theoretical interest.
 
-## speadplot.jl
-Generate plots showing the distances encountere during any of the gfp_spread* variants. Generate 
-fingerprints, run gfp_spread*, post-process with nplotnn -S <fname> and send <fname> to spreadplot.
+## spreadplot.jl
+Generate plots showing the distances encountered during any of the `gfp_spread*` variants. Generate
+fingerprints, run `gfp_spread*`, post-process with `nplotnn -S <fname>`, and send `<fname>` to
+[spreadplot.jl](/docs/GFP/spreadplot.md).
 
 ## svmfp_summarise_results
 Given multiple outputs from iwstats, summarise and aggregate those results.

@@ -25,7 +25,7 @@ of the original molecules.
 The `evidence` tool reads an activity file and a nearest neighbours file
 and, for each molecule, gathers statistics about the molecule, its activity
 and the activity of its neighbours. The tool is designed for use in an
-interactive structure examination tool like Spotfile, DataWarrior or similar.
+interactive structure examination tool like Spotfire, DataWarrior or similar.
 
 In addition to reporting minimal statistics about the nearest neighbours,
 the tool calculates a number of pseudo knn 'models' for each target molecule,
@@ -42,6 +42,7 @@ The following arguments are recognised
  -config <fname>     an EvidenceData::Options textproto file with options
  -A <fname>          descriptor file containing activity values for each molecule
  -smiles <fname>     smiles for each molecule, will be included in the output
+ -addsmi             add the smiles, id and distance of nearest neighbours to the output - needs -smiles.
  -C                  data is classlfication type (not implemented)
  -diff               for each column generated, insert an extra column with difference from actual
  -v                  verbose output
@@ -52,7 +53,7 @@ of the textproto configuration file provided by the `-config` option. See the
 proto definition to see what options you might like. For testing I have found
 this configuration useful.
 ```
-knn: [1, 2, 5, 10]
+knn: [2, 5, 10]
 closest_value: [1, 2, 5, 10]
 piecewise_linear {
   min: 0.15
@@ -60,14 +61,18 @@ piecewise_linear {
 }
 ```
 
-This builds 4 different KNN models, reports the closest activity to the
-target within the 1, 2, 5, 10 neighbours, and explores a piecewise linear
+This builds 3 different KNN models, reports the closest activity to the
+target within the 2, 5, 10 neighbours, and explores a piecewise linear
 weighting function.
 
 The `-A` option is mandatory and is a descriptor file containing the activity data.
 
 If you would like smiles in the output, add the `-smiles` option to provide
 a smiles file with the smiles for every identifier.
+
+The `-addsmi` option can be both helpful and problematic. If this is specified,
+the smiles, id and distance of the nearest neighbour molecules are included
+with the output. But that will 
 
 The tool will ultimately support classification data, but that is not there yet.
 
@@ -80,15 +85,10 @@ outliers.
 
 During testing and development, I used this sequence of commands.
 ```
-gfp_make -STD data.smi > data.gfp
-gfp_nearneighbours_single_file -n 10 data.gfp > data.nn
-nn2proto -T Tfile -v data.nn
-evidence -smiles data.smi -v -A data.activity -config evidence.textproto Tfile
+gfp_make.sh data.smi > data.gfp
+gfp_nearneighbours_single_file_tbb -n 10 -S data.nndata -h 8 data.gfp
+evidence -smiles data.smi -v -A data.activity -config evidence.textproto data.nndata
 ```
-
-Now gfp_nearneighbours_single_file and gfp_nearneighbours_single_file_tbb can
-both generate the required TFDataRecord files via the -S option, so using
-nn2proto is no longer necessary.
 
 A typical output (for knn: [1, 2, 3]) might look like
 ```
@@ -107,3 +107,19 @@ a significant activity cliff, or more likely, an experimental error.
 If a knn2 model is built, the predicted activity is -2.00, which again is
 a very large difference from observed (diff -3.392). The knn3 model just
 enhances the divergence with a difference of -3.492 from observed.
+
+Using the -addsmi option can be useful with the first couple of nearest
+neighbours, but really does not work when processing more complex models,
+which will lead to non tabular outputs.
+
+## Smiles
+Examining the output from 'evidence' can be complex, and it is often
+useful to see the nearest neighbour structures. It is possible to combine the
+output from 'nn2csv' with that of 'evidence' to get a more informative output.
+```
+gfp_make.sh data.smi > data.gfp
+gfp_nearneighbours_single_file_tbb -n 10 -S data.nndata -h 8 data.gfp
+evidence -smiles data.smi -v -A data.activity -config evidence.textproto data.nndata > evidence.txt
+nn2csv -o space -D -b data.nndata > data.nn.smi
+concat_files evidence.txt,col=2 data.nn.smi,col=2
+```

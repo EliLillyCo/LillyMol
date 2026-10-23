@@ -1,0 +1,10 @@
+# RuleClass 
+# SubClass ester
+
+# Fred Bruns Dec 2003
+(0 Query
+  (A C Comment "ester_aromatic")
+  (A I Version 2)
+  (A D numeric_value 50)
+  (A C smarts "[OD1]=[CD3R0T2]-[OD2]-a")
+)

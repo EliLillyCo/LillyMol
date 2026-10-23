@@ -45,6 +45,9 @@ class IW_Tabular_Data
     int resize (const int nr, const int nc);
 
     void set(const int r, const int c, T v) { _zdata[r * _ncols + c] = v;}
+    T value(int r, int c) {
+      return _zdata[r * _ncols + c];
+    }
 
     const T * data () const { return _zdata;}
     T * data () { return _zdata;}

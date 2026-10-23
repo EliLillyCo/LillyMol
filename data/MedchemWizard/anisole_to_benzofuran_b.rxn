@@ -1,0 +1,25 @@
+name: "anisole_to_benzofuran_b"
+scaffold {
+  smarts: "[/IWfss1cD3](!@[OD2]-[CD1])(:[$([cD2]:[cD2])]):[$([cD2]:[cD2])]"
+  smarts: "[/IWfss1cD3](!@[OD2]-[CD1])(:[cD2]):[cD2]"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+}
+sidechain {
+  id: 1
+  reagent: "C"
+  smarts: "C"
+  join {
+    a1: 3
+    a2: 0
+  }
+  join {
+    a1: 2
+    a2: 0
+    btype: SS_DOUBLE_BOND
+  }
+  match_conditions {
+    max_matches_to_find: 1
+  }
+}

@@ -1,0 +1,21 @@
+name: "nitro_to_cyano"
+scaffold {
+  smarts: "[ND3](=O)=O"
+  match_conditions {
+    one_embedding_per_start_atom: true
+  }
+  remove_atom: 2
+  change_element {
+    atom: 0
+    element: "C"
+  }
+  change_element {
+    atom: 1
+    element: "N"
+  }
+  make_bond {
+    a1: 0
+    a2: 1
+    btype: SS_TRIPLE_BOND
+  }
+}

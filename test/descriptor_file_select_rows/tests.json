@@ -1,0 +1,47 @@
+{
+  "executable": "descriptor_file_select_rows",
+  "test": [
+
+    {
+      "name": "default",
+      "args": [
+        "#{indir}/id.txt #{datadir}/in.txt"
+      ]
+    },
+
+    {
+      "name": "allcomma",
+      "args": [
+        "-c 2 -i comma #{indir}/id.csv #{datadir}/in.csv"
+      ]
+    },
+
+    {
+      "name": "allcomma_directive",
+      "args": [
+        "-c 2 -i idfile=comma -i dfile=comma #{indir}/id.csv #{datadir}/in.csv"
+      ]
+    },
+
+    {
+      "name": "comma_tab",
+      "args": [
+        "-c 2 -i idfile=comma -i dfile=tab #{indir}/id.csv #{datadir}/in.tsv"
+      ]
+    },
+
+    {
+      "name": "dash_k",
+      "args": [
+        "-K ID2,ID9 -K ID0 -i dfile=tab #{datadir}/in.tsv"
+      ]
+    },
+
+    {
+      "name": "dash_x",
+      "args": [
+        "-K ID2,ID9 -K ID0 -x -i dfile=tab #{datadir}/in.tsv"
+      ]
+    }
+  ]
+}

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
 #include <memory>
 #include <random>
 
@@ -78,6 +80,9 @@ static IW_STL_Hash_Map_String id_to_smiles;
 
 static int seq_start = 0;
 
+// Explicit -b also requests numbered activity filenames for a single split.
+static bool number_output_files = false;
+
 static int produce_chronological_split = 0;
 
 /*
@@ -101,7 +106,7 @@ usage(int rc)
   cerr << R"(Performs multiple stratified samplings of a file.
 Given all.smi and all.activity, generate 10 splits with 80% train:
 
-stratified_samples -v -E TEST -R TRAIN -N 10 -p 80 -s 1 -S .activity -M all.smiles all.activity
+stratified_samples -v -R TRAIN -E TEST -N 10 -p 80 -s 1 -S .activity -M all.smiles all.activity
 
 Generates files
 TRAIN0.activity
@@ -110,6 +115,10 @@ TEST0.activity
 TEST0.smi
 TRAIN1.activity
 etc.
+
+Add -b 7 to start all numbered outputs at TRAIN7 and TEST7.
+With -N 1, -b also enables numbered activity filenames; without -b,
+the activity filenames are exactly those supplied with -R and -E.
 
  -R <fname>     write training set records to <fname> (TRAIN above)
  -E <fname>     write test set records to <fname> (TEST above)
@@ -124,11 +133,11 @@ etc.
  -a sample=<x>  within the most active items selected above, randomly sample fraction <x> of them
  -a expand=<x>  rather than an equal number of less active items, multiply the number active by <x>
  -i             just write the identifiers, not whole records
- -S <suffix>    create files with suffix <suffix>
+ -S <suffix>    create activity files with suffix <suffix>
  -M <fname>     smiles file, if specified, smiles files will be generated for each split.
  -K             drop input values for which smiles not available
- -b <start>     normally files produced start with 0, start with <start> instead
- -C             produce an extra chronological split
+ -b <start>     first split number (default 0); also numbers a single split
+ -C             produce an extra chronological split - non numeric characters removed from the name.
  -v             verbose output
 )";
   // clang-format on
@@ -155,7 +164,9 @@ class ID_Stratum_Selected
 
   int _times_selected_across_splits;
 
-  int _id_converted_to_number;
+  // We could make this unsigned. The comparison with -1 would still be OK,
+  // just a very unlikely collision. Or we could make it std::optional<uint64_t>.
+  int64_t _id_converted_to_number;
 
  public:
   ID_Stratum_Selected();
@@ -213,7 +224,7 @@ class ID_Stratum_Selected
   int
   do_write(IWString_and_File_Descriptor&) const;
 
-  int
+  int64_t
   id_converted_to_number() const
   {
     return _id_converted_to_number;
@@ -262,10 +273,15 @@ ID_Stratum_Selected::initialise(const const_IWSubstring& buffer)
 
   _id_converted_to_number = -1;
 
-  if (_id.numeric_value(_id_converted_to_number)) {  // breat
+  if (_id.numeric_value(_id_converted_to_number)) {  // great
     ;
   } else {
-    const_IWSubstring tmp(_id);
+    IWString tmp;
+    for (char c : _id) {
+      if (std::isdigit(c)) {
+        tmp << c;
+      }
+    }
     tmp.remove_leading_chars('0');
     if (!tmp.numeric_value(_id_converted_to_number)) {
       _id_converted_to_number = -1;
@@ -278,10 +294,7 @@ ID_Stratum_Selected::initialise(const const_IWSubstring& buffer)
     buffer.nextword(c, i);
   } else {
     const_IWSubstring token;
-    int col = 1;
-    while (buffer.nextword(token, i)) {
-      col++;
-
+    for (int col = 0; buffer.nextword(token, i); ++col) {
       if (col == activity_column) {
         c = token;
         break;
@@ -289,8 +302,9 @@ ID_Stratum_Selected::initialise(const const_IWSubstring& buffer)
     }
   }
 
-  if (0 == c.length()) {
+  if (c.empty()) {
     cerr << "ID_Stratum_Selected::initialise:no activity data for '" << _id << "'\n";
+    cerr << buffer << '\n';
     return 0;
   }
 
@@ -482,13 +496,14 @@ do_chronological_split(resizable_array_p<ID_Stratum_Selected>& idds,
 {
   const int n = idds.number_elements();
 
-  const int ntrain = n - records_to_select;
-  for (int i = 0; i < ntrain; ++i) {
+  training_set_output << *header_records[0] << '\n';
+  for (int i = 0; i < records_to_select; ++i) {
     idds[i]->do_write(training_set_output);
   }
 
+  training_set_output << *header_records[0] << '\n';
   if (test_set_output.is_open()) {
-    for (int i = ntrain; i < n; ++i) {
+    for (int i = records_to_select; i < n; ++i) {
       idds[i]->do_write(test_set_output);
     }
   }
@@ -497,10 +512,30 @@ do_chronological_split(resizable_array_p<ID_Stratum_Selected>& idds,
 }
 
 static int
-do_chronological_split(resizable_array_p<ID_Stratum_Selected>& idds, const int ndx)
-{
+write_smiles(const resizable_array_p<ID_Stratum_Selected>& idds,
+             int istart, int istop,
+             IWString_and_File_Descriptor& output) {
+  for (int i = istart; i < istop; ++i) {
+    const auto f = id_to_smiles.find(idds[i]->id());
+
+    output << f->second << ' ' << f->first << '\n';
+
+    output.write_if_buffer_holds_more_than(4096);
+  }
+
+  return 1;
+}
+
+static int
+do_chronological_split(resizable_array_p<ID_Stratum_Selected>& idds, const int ndx) {
   idds.iwqsort_lambda([](const ID_Stratum_Selected* s1, const ID_Stratum_Selected* s2) {
-    return s1->id_converted_to_number() < s2->id_converted_to_number();
+    if (s1->id_converted_to_number() < s2->id_converted_to_number()) {
+      return -1;
+    } else if (s1->id_converted_to_number() > s2->id_converted_to_number()) {
+      return 1;
+    } else {
+      return 0;
+    }
   });
 
   IWString fname;
@@ -522,7 +557,34 @@ do_chronological_split(resizable_array_p<ID_Stratum_Selected>& idds, const int n
     }
   }
 
-  return do_chronological_split(idds, training_set_output, test_set_output);
+  do_chronological_split(idds, training_set_output, test_set_output);
+
+  if (id_to_smiles.empty()) {
+    return 1;
+  }
+
+  fname = stem_for_training_set;
+  fname << ndx << ".smi";
+  IWString_and_File_Descriptor train_set_smiles;
+  if (! train_set_smiles.open(fname.c_str())) {
+    cerr << "Cannot open chronological training set output '" << fname << "'\n";
+    return 0;
+  }
+  write_smiles(idds, 0, records_to_select, train_set_smiles);
+  
+  if (stem_for_test_set.empty()) {
+    return 1;
+  }
+
+  fname = stem_for_test_set;
+  fname << ndx << ".smi";
+  IWString_and_File_Descriptor test_set_smiles;
+  if (! test_set_smiles.open(fname)) {
+    cerr << "Cannot open chronological set output '" << fname << "'\n";
+    return 0;
+  }
+  
+  return write_smiles(idds, records_to_select, idds.number_elements(), test_set_smiles);
 }
 
 static int
@@ -591,7 +653,7 @@ _do_split(resizable_array_p<ID_Stratum_Selected>& idss, int ndx,
 
   IWString fname;
 
-  if (1 == nsplit) {
+  if (!number_output_files) {
     fname = stem_for_test_set;
   } else {
     fname << stem_for_test_set << ndx << suffix;
@@ -926,10 +988,10 @@ stratified_sample(iwstring_data_source& input)
 
   // Handle the case of just one split specially
 
-  if (1 == nsplit) {
+  if (1 == nsplit && (!number_output_files || stem_for_training_set.empty())) {
     if (0 == stem_for_training_set.length()) {
       IWString_and_File_Descriptor output(1);
-      do_split(idss, 0, stratum_start, stratum_stop, output);
+      do_split(idss, seq_start, stratum_start, stratum_stop, output);
     } else {
       IWString_and_File_Descriptor output;
 
@@ -939,7 +1001,7 @@ stratified_sample(iwstring_data_source& input)
         return 0;
       }
 
-      do_split(idss, 0, stratum_start, stratum_stop, output);
+      do_split(idss, seq_start, stratum_start, stratum_stop, output);
     }
   } else {
     for (int i = 0; i < nsplit; i++) {
@@ -954,7 +1016,8 @@ stratified_sample(iwstring_data_source& input)
         return 0;
       }
 
-      if (!do_split(idss, i, stratum_start, stratum_stop, training_set_output)) {
+      // Use the same sequence number for activity and SMILES files in both sets.
+      if (!do_split(idss, i + seq_start, stratum_start, stratum_stop, training_set_output)) {
         return 0;
       }
     }
@@ -1005,13 +1068,14 @@ read_smiles(iwstring_data_source& input, IW_STL_Hash_Map_String& id_to_smiles)
   while (input.next_record(buffer)) {
     IWString smiles, id;
 
-    if (!buffer.split(smiles, ' ', id) || 0 == smiles.length() || 0 == id.length()) {
+    int i = 0;
+    if (! buffer.nextword(smiles, i) || ! buffer.nextword(id, i) ||
+          smiles.empty() || id.empty()) {
       cerr << "Cannot split into smiles and id '" << buffer << "'\n";
       return 0;
     }
 
-    id.truncate_at_first(' ');
-
+    // cerr << "id '" << id << "' smiles '" << smiles << "'\n";
     id_to_smiles[id] = smiles;
   }
 
@@ -1301,6 +1365,8 @@ stratified_sample(int argc, char** argv)
       cerr << "Output files start at " << seq_start << '\n';
     }
   }
+
+  number_output_files = nsplit > 1 || cl.option_present('b');
 
   if (cl.option_present('C')) {
     produce_chronological_split = 1;

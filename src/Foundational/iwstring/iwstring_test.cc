@@ -2,6 +2,12 @@
 #include <stdlib.h>
 
 #include <optional>
+#include <limits>
+#include <cstdio>
+#ifndef _WIN32
+#include <unistd.h>
+#include <fcntl.h>
+#endif
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -89,6 +95,18 @@ TEST(TestEqualsOperator, TestStd) {
   IWString hello = "hello";
   std::string world;
   EXPECT_FALSE(iwstring::Equals(hello, world));
+}
+
+TEST(TestEqualsOperator, TestStdString) {
+  IWString hello = "hello";
+  std::string x = "hello";
+  EXPECT_TRUE(hello == x);
+
+  x = "world";
+  EXPECT_FALSE(hello == x);
+ 
+  hello = "world";
+  EXPECT_TRUE(hello == x);
 }
 
 TEST(TestIWString, TestExpandEnvironmentVariablesNothing) {
@@ -1145,6 +1163,29 @@ TEST(TestPrevword, TestAll) {
   EXPECT_EQ(result, "world hello");
 }
 
+TEST(TestNextword, TestAdaptive) {
+  std::vector<std::string> data{"hello", "world", "from", "foo"};
+  IWString foo;
+  for (const std::string& t : data) {
+    foo.append_with_spacer(t, ' ');
+  }
+
+  int i = 0;
+  IWString token;
+  for (int ndx = 0; foo.NextWord(token, i); ++ndx) {
+    EXPECT_TRUE(iwstring::Equals(token, data[ndx])) << " got '" << token << " expected '" << data[ndx] << "'";
+  }
+
+  foo.resize_keep_storage(0);
+  for (const std::string& t : data) {
+    foo.append_with_spacer(t, ',');
+  }
+
+  for (int ndx = 0; foo.NextWord(token, i); ++ndx) {
+    EXPECT_TRUE(iwstring::Equals(token, data[ndx])) << " got '" << token << " expected '" << data[ndx] << "'";
+  }
+}
+
 TEST(TestNextword, TestAll) {
   IWString foo = "hello world from foo";
   int i = 0;
@@ -1857,20 +1898,284 @@ TEST(TestKMG, TestAll) {
   IWString foo = "42";
   uint64_t i;
   ASSERT_TRUE(foo.NumericValueKMG(i));
-  EXPECT_EQ(i, 42);
+  EXPECT_EQ(i, static_cast<uint64_t>(42));
 
   foo = "42k";
   ASSERT_TRUE(foo.NumericValueKMG(i));
-  EXPECT_EQ(i, 42000);
+  EXPECT_EQ(i, static_cast<uint64_t>(42000));
 
   foo = "42M";
   ASSERT_TRUE(foo.NumericValueKMG(i));
-  EXPECT_EQ(i, 42000000);
+  EXPECT_EQ(i, static_cast<uint64_t>(42000000));
 
   foo = "42G";
   ASSERT_TRUE(foo.NumericValueKMG(i));
-  EXPECT_EQ(i, 42000000000);
+  EXPECT_EQ(i, static_cast<uint64_t>(42000000000));
 }
 
 
+// Exercise every public unsigned conversion overload for owning strings and
+// substring views. Failure on empty input must not overwrite the caller's value.
+template <typename T>
+class UnsignedNumericConversion : public testing::Test {};
+using UnsignedNumericTypes = testing::Types<unsigned char, unsigned short,
+    unsigned int, unsigned long, unsigned long long>;
+TYPED_TEST_SUITE(UnsignedNumericConversion, UnsignedNumericTypes);
+
+TYPED_TEST(UnsignedNumericConversion, RejectsDefaultConstructedStrings) {
+  const IWString owned;
+  const const_IWSubstring view;
+  TypeParam value = 17;
+  EXPECT_EQ(owned.numeric_value(value), 0);
+  EXPECT_EQ(value, static_cast<TypeParam>(17));
+  EXPECT_EQ(view.numeric_value(value), 0);
+  EXPECT_EQ(value, static_cast<TypeParam>(17));
+}
+
+TYPED_TEST(UnsignedNumericConversion, RejectsExplicitEmptyStrings) {
+  const IWString owned("");
+  const const_IWSubstring view("");
+  TypeParam value = 17;
+  EXPECT_EQ(owned.numeric_value(value), 0);
+  EXPECT_EQ(value, static_cast<TypeParam>(17));
+  EXPECT_EQ(view.numeric_value(value), 0);
+  EXPECT_EQ(value, static_cast<TypeParam>(17));
+}
+
+TYPED_TEST(UnsignedNumericConversion, RejectsViewEmptiedByRemovingCharacters) {
+  IWString owned("42");
+  const_IWSubstring view(owned);
+  view.remove_leading_chars(view.length());
+  TypeParam value = 17;
+  EXPECT_EQ(view.numeric_value(value), 0);
+  EXPECT_EQ(value, static_cast<TypeParam>(17));
+}
+
+TYPED_TEST(UnsignedNumericConversion, AcceptsZeroAndNonzeroDigits) {
+  for (const char* text : {"0", "42"}) {
+    const IWString owned(text);
+    const const_IWSubstring view(text);
+    TypeParam value = 17;
+    const TypeParam expected = text[0] == '0' ? 0 : 42;
+    ASSERT_NE(owned.numeric_value(value), 0);
+    EXPECT_EQ(value, expected);
+    value = 17;
+    ASSERT_NE(view.numeric_value(value), 0);
+    EXPECT_EQ(value, expected);
+  }
+}
+
+}  // namespace
+
+namespace {
+TEST(StringMemorySafety, AliasedMutations) {
+  for (bool spare : {false, true}) {
+    IWString s("abcdef");
+    if (spare) s.resize(64);
+    s += s;
+    EXPECT_EQ(s, "abcdefabcdef");
+    s = "abcdef";
+    const_IWSubstring tail(s.rawchars() + 2, 4);
+    s.strncat(tail.rawchars(), tail.length());
+    EXPECT_EQ(s, "abcdefcdef");
+    s = "abcdef";
+    s.resize(spare ? 64 : 6);
+    s.insert(s, 2);
+    EXPECT_EQ(s, "ababcdefcdef");
+    s = "abcdef";
+    s = const_IWSubstring(s.rawchars() + 2, 4);
+    EXPECT_EQ(s, "cdef");
+    s = "abcdef";
+    s = s.null_terminated_chars() + 2;
+    EXPECT_EQ(s, "cdef");
+  }
+}
+TEST(StringMemorySafety, ExactStorageShrinkAndAliasedChange) {
+  IWString s("abcdef");
+  s.resize(6);
+  s.change(1, 3, "x", 1);
+  EXPECT_EQ(s, "axef");
+  s = "abcdef";
+  s.change(1, 2, s.rawchars() + 2, 4);
+  EXPECT_EQ(s, "acdefdef");
+  s = "abcdef";
+  s.overwrite(const_IWSubstring(s.rawchars(), 4), 2);
+  EXPECT_EQ(s, "ababcd");
+  s = "abc";
+  s.append(2, s);
+  EXPECT_EQ(s, "abcabcabc");
+}
+
+template <typename T>
+void CheckInteger(const char* text, bool valid, T expected = 0) {
+  IWString owned(text);
+  const_IWSubstring view(owned);
+  T a = 0, b = 0;
+  EXPECT_EQ(owned.numeric_value(a) != 0, valid) << text;
+  EXPECT_EQ(view.numeric_value(b) != 0, valid) << text;
+  if (valid) {
+    EXPECT_EQ(a, expected) << text;
+    EXPECT_EQ(b, expected) << text;
+  }
+}
+TEST(IntegerSafety, UnsignedBoundariesAndMalformedDigits) {
+  CheckInteger<unsigned int>("4294967295", true, std::numeric_limits<unsigned int>::max());
+  for (const char* s : {"4294967296", "4999999999", "123456789x", "-1", "+1", "", " 1", "1 "}) {
+    CheckInteger<unsigned int>(s, false);
+  }
+  CheckInteger<unsigned int>("0000000000", true, 0);
+  CheckInteger<unsigned long long>("18446744073709551615", true,
+                                  std::numeric_limits<unsigned long long>::max());
+  CheckInteger<unsigned long long>("18446744073709551616", false);
+  CheckInteger<unsigned long long>("1234567890123456789x", false);
+  CheckInteger<unsigned long long>("-1", false);
+}
+TEST(IntegerSafety, SignedBoundariesAndPlus) {
+  CheckInteger<int>("2147483647", true, std::numeric_limits<int>::max());
+  CheckInteger<int>("-2147483648", true, std::numeric_limits<int>::min());
+  CheckInteger<int>("2147483648", false);
+  CheckInteger<int>("-2147483649", false);
+  CheckInteger<int>("+123", true, 123);
+  CheckInteger<int>("+-1", false);
+  CheckInteger<long long>("9223372036854775807", true, std::numeric_limits<long long>::max());
+  CheckInteger<long long>("-9223372036854775808", true, std::numeric_limits<long long>::min());
+  CheckInteger<long long>("9223372036854775808", false);
+  CheckInteger<long long>("-9223372036854775809", false);
+}
+TEST(FormattingSafety, WideFields) {
+  IWString s;
+  append_number(s, 42, 20);
+  EXPECT_EQ(s, "                  42");
+  s = "";
+  append_number(s, -42, 10);
+  EXPECT_EQ(s, "       -42");
+  s = "";
+  s.append_number(1.0f, "%100f");
+  EXPECT_EQ(s.length(), 100);
+  EXPECT_TRUE(s.ends_with("1.000000"));
+  s = "";
+  s.append_number(1.25, 100);
+  EXPECT_EQ(s, "1.25");
+}
+TEST(ComparisonSafety, HighBytes) {
+  const char a[] = {static_cast<char>(0xff)};
+  const char b[] = {static_cast<char>(0xfe)};
+  EXPECT_GT(iwstrncasecmp(a, b, 1), 0);
+  EXPECT_LT(iwstrncasecmp(b, a, 1), 0);
+  EXPECT_EQ(iwstrncasecmp("A", "a", 1), 0);
+}
+#ifndef _WIN32
+TEST(OutputSafety, FailedFlushRetainsDataAndCloseReportsFailure) {
+  // A read-only descriptor fails writes on both Linux and macOS.
+  char name[] = "/tmp/iwstring_readonly_XXXXXX";
+  int writable = mkstemp(name);
+  ASSERT_GE(writable, 0);
+  ::close(writable);
+  int fd = ::open(name, O_RDONLY);
+  ::unlink(name);
+  ASSERT_GE(fd, 0);
+  IWString_and_File_Descriptor output(fd);
+  output << "preserve me";
+  EXPECT_EQ(output.flush(), 0);
+  EXPECT_EQ(output, "preserve me");
+  output.append(5000, "x");
+  const int before = output.length();
+  EXPECT_EQ(output.write_if_buffer_holds_more_than(1), 0);
+  EXPECT_EQ(output.length(), before);
+  EXPECT_EQ(output.close(), 0);
+  EXPECT_EQ(output.length(), before);
+}
+TEST(OutputSafety, PartialFlushPreservesOnlyUnwrittenTail) {
+  int pipefd[2];
+  ASSERT_EQ(pipe(pipefd), 0);
+  ASSERT_NE(fcntl(pipefd[1], F_SETFL, O_NONBLOCK), -1);
+  char fill[4096] = {};
+  while (::write(pipefd[1], fill, sizeof(fill)) > 0) {}
+  // Free one atomic-write block, leaving insufficient space for the full flush.
+  ASSERT_EQ(::read(pipefd[0], fill, sizeof(fill)), ssize_t{4096});
+  IWString_and_File_Descriptor output(pipefd[1]);
+  output.append(16384, "x");
+  EXPECT_EQ(output.flush(), 0);
+  EXPECT_GT(output.length(), 0);
+  EXPECT_LT(output.length(), 16384);
+  EXPECT_EQ(output.ccount('x'), output.length());
+  output.resize_keep_storage(0);
+  EXPECT_NE(output.close(), 0);
+  ::close(pipefd[0]);
+}
+TEST(OutputSafety, SuccessfulFlushWritesBytes) {
+  FILE* file = tmpfile();
+  ASSERT_NE(file, nullptr);
+  int fd = dup(fileno(file));
+  ASSERT_GE(fd, 0);
+  IWString_and_File_Descriptor output(fd);
+  output << "hello";
+  EXPECT_NE(output.flush(IWSFD_KEEP_STORAGE_ON_FLUSH), 0);
+  EXPECT_TRUE(output.empty());
+  rewind(file);
+  char buffer[6] = {};
+  EXPECT_EQ(fread(buffer, 1, 5, file), size_t{5});
+  EXPECT_STREQ(buffer, "hello");
+  EXPECT_NE(output.close(), 0);
+  fclose(file);
+}
+#endif
+}  // namespace
+
+namespace {
+TEST(AfterDelimiter, OwnedAndSubstringBoundaryCases) {
+  for (const auto& [input, expected] : std::vector<std::pair<const char*, const char*>>{
+           {":abc", "abc"}, {"a:bc", "bc"}, {"abc:", ""},
+           {":", ""}, {"", ""}, {"abc", ""}, {"::abc", ":abc"}}) {
+    IWString owned(input);
+    const_IWSubstring view(owned);
+    EXPECT_EQ(owned.after(':'), expected) << input;
+    EXPECT_EQ(view.after(':'), expected) << input;
+  }
+}
+}  // namespace
+
+namespace {
+TEST(FreeIsInt, WhitespaceSignsAndRange) {
+  struct Case { const char* text; bool valid; int value; };
+  for (const Case& c : std::vector<Case>{
+       {"", false, 0}, {"   ", false, 0}, {"+", false, 0}, {"-", false, 0},
+       {"  +123", true, 123}, {" \t-009", true, -9}, {"+-1", false, 0},
+       {"2147483647", true, std::numeric_limits<int>::max()},
+       {"-2147483648", true, std::numeric_limits<int>::min()},
+       {"2147483648", false, 0}, {"-2147483649", false, 0},
+       {"999999999999999999999999", false, 0}, {"12x", false, 0}}) {
+    IWString owned(c.text);
+    const_IWSubstring view(owned);
+    int a = 42, b = 42, d = 42;
+    EXPECT_EQ(is_int(c.text, &a) != 0, c.valid) << c.text;
+    EXPECT_EQ(is_int(owned, b) != 0, c.valid) << c.text;
+    EXPECT_EQ(is_int(view, d) != 0, c.valid) << c.text;
+    if (c.valid) {
+      EXPECT_EQ(a, c.value);
+      EXPECT_EQ(b, c.value);
+      EXPECT_EQ(d, c.value);
+    } else {
+      EXPECT_EQ(a, 42);
+      EXPECT_EQ(b, 42);
+      EXPECT_EQ(d, 42);
+    }
+  }
+}
+TEST(FreeIsInt, NonTerminatedWhitespaceAndSlice) {
+  const char whitespace[] = {' ', '\t', ' '};
+  int value = 17;
+  EXPECT_EQ(is_int(const_IWSubstring(whitespace, 3), value), 0);
+  const char digits[] = {' ', '-', '1', '2', 'x'};
+  ASSERT_NE(is_int(const_IWSubstring(digits, 4), value), 0);
+  EXPECT_EQ(value, -12);
+}
+TEST(FreeIsInt, CStringTokenBehavior) {
+  int value = 0;
+  ASSERT_NE(is_int("  -12 other", &value), 0);
+  EXPECT_EQ(value, -12);
+  EXPECT_EQ(is_int(const_IWSubstring("  -12 other"), value), 0);
+  EXPECT_EQ(is_int(nullptr, &value), 0);
+  EXPECT_EQ(is_int("12", nullptr), 0);
+}
 }  // namespace

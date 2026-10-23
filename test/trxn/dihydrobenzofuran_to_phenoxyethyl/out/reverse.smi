@@ -1,0 +1,4 @@
+CCOc1ccccc1 ethoxy
+CCCOc1ccccc1 propoxy
+CC(=O)CCOc1ccccc1 lost_ring_chirality
+C[C@H](F)CCOc1ccccc1 remote_chiral

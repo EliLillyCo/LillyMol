@@ -1,0 +1,669 @@
+# medchemwizard
+
+## Overview
+
+`medchemwizard` generates analogues by applying a configured set of medicinal
+chemistry transformations to each input molecule. The standard LillyMol
+configuration contains more than 200 reactions under
+`${LILLYMOL_HOME}/data/MedchemWizard`. Some transformations are additive, such
+as adding a methyl group, while others perform molecular rearrangements or
+isostere-style replacements.
+
+The tool writes every product that passes filtering. It does not rank products,
+estimate synthetic accessibility, or choose a preferred transformation. The
+output is intended for downstream filtering, scoring, database lookup, or
+inspection.
+
+The original transformation set was derived from medicinal chemistry transform
+work from Abbott Laboratories, but the original literature reference is not
+currently known. The implementation should therefore be treated as a practical
+LillyMol transformation library rather than a formally cited reproduction.
+
+## Quick Start
+
+Apply the standard reaction set and append the transformation name to each
+product record:
+
+```shell
+medchemwizard \
+  -R "${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS" \
+  -W space input.smi > products.smi
+```
+Specifying the default reaction file is built into the convenience wrapper medchemwizard.sh
+found in ${LILLYMOL_HOME}/contrib/bin
+
+```shell
+medchemwizard.sh -W space input.smi > products.smi
+```
+
+Input is any LillyMol-supported molecule format. SMILES input is commonly used:
+
+```text
+CCO ethanol
+```
+
+Output is SMILES followed by the product name. With `-W space`, the reaction
+name is appended to the parent name as another space-separated token:
+
+```text
+CCCO ethanol add_propyl
+```
+
+The exact product set depends on the reaction files in the selected
+configuration.
+
+## Reaction Configuration
+
+`-R <fname>` specifies a file containing the reactions to apply. This option is
+required by the command-line tool. The standard file is:
+
+```text
+${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS
+```
+
+Each non-comment record in that file names a reaction file in the same
+directory. Records beginning with `PROTO:` name textproto/json reaction files;
+other records name the older LillyMol reaction format.
+
+A custom configuration can be built by making a different reaction-list file
+that contains only the reaction files desired for a particular workflow. This is
+often preferable to applying the full standard set when only a narrow class of
+changes is wanted.
+
+## Amide / 1,2,4-oxadiazole pair
+
+The standard reaction set includes `amide_to_1_2_4_oxadiazole` and
+`1_2_4_oxadiazole_to_amide`:
+
+```text
+[*:1]C(=O)N[*:2] <-> [*:1]c1noc([*:2])n1
+```
+
+The carbonyl-side attachment becomes C3 of the 1,2,4-oxadiazole (between
+its two nitrogen atoms); the nitrogen-side attachment becomes C5. The reverse
+reaction preserves this orientation. Forward matching requires a secondary
+acyclic amide, excluding primary amides, tertiary amides and lactams. Attachment
+atoms may belong to rings, but ring attachment is not required. Reverse matching
+requires a non-fused, disubstituted ring with no additional heteroatom attachments.
+
+These are textproto reactions, so use `trxn -P` to apply either individually:
+
+```shell
+trxn -P "${LILLYMOL_HOME}/data/MedchemWizard/amide_to_1_2_4_oxadiazole.rxn" \
+  -m each -z i -S products input.smi
+```
+
+This writes `products.smi`, generating a product for each matching site and
+ignoring input molecules without a match. `-r` also recognises textproto files
+whose first non-comment record starts with `name:`.
+
+## Amide / thiazole pair
+
+The standard reaction set includes `amide_to_thiazole` and `thiazole_to_amide`:
+
+```text
+[*:1]C(=O)N[*:2] <-> [*:1]c1ncc([*:2])s1
+```
+
+Forward matching requires a secondary acyclic amide: both the carbonyl carbon
+and the amide nitrogen must be outside rings. Primary amides, tertiary amides,
+lactams, and esters do not match. The external attachment atoms may belong to
+rings. The carbonyl-side attachment becomes thiazole C2; the nitrogen-side
+attachment becomes C5. Reverse matching requires a non-fused 2,5-disubstituted
+thiazole with an unsubstituted C4, preserving the same attachment orientation.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/amide_to_thiazole.rxn" \
+  -m each -z i -S thiazoles input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/thiazole_to_amide.rxn" \
+  -m each -z i -S amides thiazoles.smi
+```
+
+## Phenethylamine / indoline pair
+
+`phenethylamine_to_indoline` closes the bond between the nitrogen of
+`Ar-CH2-CH2-NH-R` and an available ortho aromatic carbon. The reverse reaction,
+`indoline_to_phenethylamine`, breaks that N-to-aromatic-carbon bond while
+retaining the ethyl chain and the nitrogen substituent:
+
+```text
+CNCCc1ccccc1 <-> CN1CCc2ccccc21
+CC(=O)NCCc1ccccc1 <-> CC(=O)N1CCc2ccccc21
+```
+
+The forward scaffold SMARTS is:
+
+```text
+[cD2H1]:[cD3]-[CH2R0]-[CH2R0]-[ND2H1R0+0]
+```
+
+The two methylene atoms and the neutral secondary nitrogen must be acyclic.
+Amide and sulfonamide nitrogens are allowed. Both ortho aromatic atoms must be
+carbon; the remaining aromatic ring atoms are unrestricted. Fully blocked ortho
+positions, primary or tertiary amines, and charged nitrogens do not match.
+Symmetry-equivalent sites are suppressed; inequivalent available ortho sites
+can generate two products.
+
+The reverse requires two unsubstituted methylene atoms and a neutral,
+N-substituted five-membered ring nitrogen belonging to just one ring. It excludes
+NH indolines, indoles, substituted methylene positions, and six-membered nitrogen
+rings. Substituents on the aromatic ring and the external nitrogen substituent
+are retained in both directions.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indoline.rxn" \
+  -m each -z i -S indolines input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indoline_to_phenethylamine.rxn" \
+  -m each -z i -S open_chain indolines.smi
+```
+
+## Phenethylamine / indole pair
+
+`phenethylamine_to_indole` uses the same starting motif and ortho-site
+requirements as `phenethylamine_to_indoline`, but also changes the bond between
+the two methylene carbons to a double bond, forming an indole-like aromatic ring:
+
+```text
+CNCCc1ccccc1 <-> Cn1ccc2ccccc21
+CC(=O)NCCc1ccccc1 <-> CC(=O)n1ccc2ccccc21
+```
+
+Nitrogen substituents, including acyl and sulfonyl groups, are retained.
+Symmetry-equivalent closures are suppressed; inequivalent available ortho sites
+can generate two products. This direct transformation does not require recursive
+application of the separate indoline-to-indole reaction.
+
+`indole_to_phenethylamine` opens the N-to-aromatic-carbon bond and explicitly
+sets all three bonds of the opened side chain to single bonds, restoring the
+saturated `Ar-CH2-CH2-NH-R` motif. It requires a neutral N-substituted aromatic
+nitrogen and unsubstituted C2 and C3 atoms belonging to just one ring. NH indoles,
+C2/C3-substituted indoles, and indolines do not match. Both aromatic and Kekule
+SMILES representations are accepted.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenethylamine_to_indole.rxn" \
+  -m each -z i -S indoles input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/indole_to_phenethylamine.rxn" \
+  -m each -z i -S open_chain indoles.smi
+```
+
+## Phenol / benzofuran pair
+
+`phenol_to_benzofuran` adds a two-carbon unsaturated bridge from a phenolic oxygen
+to an available ortho aromatic carbon, forming a fused aromatic oxygen ring:
+
+```text
+Oc1ccccc1 <-> c1ccc2occc2c1
+```
+
+Only one ortho C-H position is required. This broadens the previous reaction,
+which required both ortho positions to be available and processed one embedding
+per starting atom. The updated reaction generates both regioisomers when the
+available positions are inequivalent and suppresses symmetry-equivalent matches.
+It can therefore produce more products than the previous definition. The
+original single-ring fused-system restriction on the phenolic aromatic ring is
+retained; naphthols are excluded. Phenolic oxygen must be neutral and carry a
+hydrogen; ethers and phenoxide ions do not match.
+
+`benzofuran_to_phenol` removes the two added carbons and retains the oxygen as a
+phenolic OH. It requires unsubstituted C2 and C3 atoms and a two-ring fused
+system, so attached groups or additional fused rings cannot be discarded.
+Aromatic-ring substituents and their stereochemistry are retained. Aromatic and
+Kekule SMILES are accepted; dihydrobenzofurans do not match this reverse reaction.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzofuran.rxn" \
+  -m each -z i -S benzofurans input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_phenol.rxn" \
+  -m each -z i -S phenols benzofurans.smi
+```
+
+## Anisole / benzofuran pair
+
+`anisole_to_benzofuran` retains the oxygen and methyl carbon of an aromatic
+methoxy group and adds one carbon to form a benzofuran at an available ortho C-H:
+
+```text
+COc1ccccc1 <-> c1ccc2occc2c1
+```
+
+The oxygen remains an ether oxygen in both structures. The forward reaction
+requires only one available ortho position, generates both regioisomers when
+positions are inequivalent, and suppresses symmetry-equivalent matches. It
+requires a neutral methoxy group on an aromatic ring in a single-ring fused
+system. Ethoxy groups, phenols, and methoxynaphthalenes do not match.
+
+This consolidated forward reaction replaces `anisole_to_benzofuran_a` and
+`anisole_to_benzofuran_b` in the standard `REACTIONS` list. Those files remain
+available for custom lists. The consolidated reaction removes their duplicate
+coverage and broadens their requirement that both ortho positions be free.
+Standard output now uses the name `anisole_to_benzofuran`.
+
+`benzofuran_to_anisole` retains the ring oxygen and C2 as the methoxy group,
+removing C3. It requires unsubstituted C2/C3 positions and a two-ring fused system
+to avoid discarding substituents or breaking additional fused rings. Aromatic
+substituents, stereochemistry, and isotopes on retained atoms are preserved.
+Both aromatic and Kekule SMILES are accepted. This reverse is separate from
+`benzofuran_to_phenol`, which removes both C2 and C3 and produces a phenolic OH.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/anisole_to_benzofuran.rxn" \
+  -m each -z i -S benzofurans input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzofuran_to_anisole.rxn" \
+  -m each -z i -S anisoles benzofurans.smi
+```
+
+## Additional saturated-ring closures and openings
+
+The standard set includes the following six bidirectional analogue-generation
+pairs. These transformations introduce no stereochemical assignments at newly
+created stereocentres. Existing stereochemistry on retained, unaffected atoms
+is preserved. Opening a ring clears stereochemistry at a carbon that becomes a
+methylene and recalculates its hydrogen count.
+
+| Forward reaction | Reverse reaction | Example |
+| --- | --- | --- |
+| `phenoxyethyl_to_dihydrobenzofuran` | `dihydrobenzofuran_to_phenoxyethyl` | `CCCOc1ccccc1` <-> `CC1COc2ccccc21` |
+| `benzylamine_to_isoindoline` | `isoindoline_to_benzylamine` | `CNCc1ccccc1` <-> `CN1Cc2ccccc2C1` |
+| `benzyl_alcohol_to_phthalan` | `phthalan_to_benzyl_alcohol` | `OCc1ccccc1` <-> `O1Cc2ccccc2C1` |
+| `phenylpropylamine_to_tetrahydroquinoline` | `tetrahydroquinoline_to_phenylpropylamine` | `CNCCCc1ccccc1` <-> `CN1CCCc2ccccc21` |
+| `butylamine_to_pyrrolidine` | `pyrrolidine_to_butylamine` | `CNCCCCC` <-> `CN1CCCC1C` |
+| `biphenyl_to_fluorene` | `fluorene_to_biphenyl` | `c1ccccc1-c1ccccc1` <-> `C1c2ccccc2c2ccccc12` |
+
+All aromatic closures require an available aromatic carbon bearing a hydrogen
+at the proposed bridge position. Inequivalent available ortho positions can
+produce distinct regioisomers. The names describe the benzenoid examples;
+carbon-only SMARTS at the bridge positions also permit heteroatoms elsewhere
+in the aromatic rings.
+
+The phenoxyethyl closure retains the oxygen and both chain carbons, forming a
+new C-to-aryl bond. The starting O-CH2-CH2-R chain must be acyclic; ethoxy groups
+(R = H, terminal CH3) are also accepted. The reverse requires an unsubstituted
+O-adjacent methylene and allows a substituent on the other saturated carbon.
+That substituent is retained when the C-to-aryl bond is opened. Benzofurans and
+six-membered oxygen rings do not match this reverse.
+
+The benzylamine and benzyl-alcohol closures add a CH2 bridge between the
+nitrogen or oxygen and an ortho aromatic carbon. A secondary neutral nitrogen
+is required, including amide and sulfonamide nitrogens. Alcohols must be free OH
+groups; ethers are excluded. The reverse removes an unsubstituted methylene
+bridge and requires both saturated ring carbons to be methylenes. **For an
+asymmetric isoindoline or phthalan, either methylene can be removed and both
+distinct openings are generated.** A round trip may therefore include additional
+positional isomers of the starting molecule.
+
+The phenylpropylamine closure retains the three-carbon saturated chain and
+connects its nitrogen to an ortho aromatic carbon. The starting chain and neutral
+secondary nitrogen must be acyclic, and all three chain carbons must be
+methylenes. Nitrogen substituents, including acyl and sulfonyl groups, are
+retained. The reverse opens only the N-to-aryl bond and excludes NH rings and
+substitution on those three saturated carbons.
+
+The butylamine closure joins a secondary neutral nitrogen to the fourth carbon
+of an acyclic saturated chain. The first three carbons must be methylenes; the
+fourth can be CH3 or CH2-R. Its external substituent is retained in the
+pyrrolidine and in the reverse reaction. The reverse accepts unsubstituted or
+2-substituted N-substituted pyrrolidines, but excludes substitution on the other
+three ring carbons, NH rings, and other ring sizes. Amide and sulfonamide
+nitrogens are allowed.
+
+The biphenyl closure adds CH2 between facing ortho C-H positions across a
+non-ring biaryl bond. The four matched aromatic atoms must each belong to one
+ring before closure. The reverse removes only an unsubstituted methylene bridge;
+9-substituted fluorenes, fluorenones and carbazoles do not match. Equivalent
+bridge placements can produce duplicate products even with symmetry filtering.
+Use `medchemwizard -U each` to suppress duplicate products per parent. Use
+`trxn -u` for duplicate suppression when applying an individual reaction.
+
+Apply any pair with the same command structure as the earlier examples:
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/benzylamine_to_isoindoline.rxn" \
+  -m each -z i -S cyclic input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/isoindoline_to_benzylamine.rxn" \
+  -m each -z i -S open_chain cyclic.smi
+```
+
+## Forward-only catechol and vicinal-diol alternatives
+
+These four transformations bridge two free hydroxyl oxygens while retaining the
+original carbon skeleton, substituents, oxygen isotopes, and existing
+stereochemistry. No reverse reactions are registered for these pairs.
+
+| Transformation | Added bridge | Example |
+| --- | --- | --- |
+| `catechol_to_benzodioxole` | O-CH2-O | `Oc1ccccc1O` -> `c1ccc2OCOc2c1` |
+| `catechol_to_benzodioxane` | O-CH2-CH2-O | `Oc1ccccc1O` -> `c1ccc2OCCOc2c1` |
+| `vicinal_diol_to_methylene_acetal` | O-CH2-O | `OCCO` -> `C1OCCO1` |
+| `vicinal_diol_to_acetonide` | O-C(CH3)2-O | `OCCO` -> `CC1(C)OCCO1` |
+
+The catechol query requires two neutral, free OH groups attached to adjacent
+aromatic carbons. Resorcinols, hydroquinones, partially or fully methylated
+catechols, and phenoxide ions do not match. The remainder of the aromatic system
+is unrestricted. `catechol_to_benzodioxole` replaces the legacy
+`Metabolism.Catechol_T_methylenedioxy` entry in the default list, eliminating
+symmetry-equivalent duplicate matches. The legacy file remains available for
+custom lists; standard output now uses `catechol_to_benzodioxole`.
+
+The aliphatic query requires two neutral, free OH groups attached to adjacent,
+saturated carbon atoms (`[OD1H1+0]-[CX4+0]-[CX4+0]-[OD1H1+0]`). It accepts
+acyclic and cyclic diols and primary, secondary or tertiary alcohol carbons.
+Non-vicinal diols, ethers, alkoxides, carbonyl groups and catechols do not match.
+Polyols can give a separate product for each inequivalent eligible OH pair.
+The added bridges introduce no stereocentres; existing specified or unspecified
+stereochemistry is retained. No geometric feasibility check is performed.
+
+These are analogue-generation hypotheses rather than guaranteed improvements
+in metabolism or safety. They replace both OH donors with ether/acetal oxygens.
+Methylenedioxyphenyl compounds can inhibit CYP enzymes, and cyclic acetals can
+hydrolyse to regenerate diols. The original liability and the properties of the
+new analogue still need experimental assessment.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/catechol_to_benzodioxane.rxn" \
+  -m each -z i -S alternatives input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/vicinal_diol_to_acetonide.rxn" \
+  -m each -z i -S acetals diols.smi
+```
+
+## Forward-only phenol, ketone and Michael-acceptor alternatives
+
+These transformations propose alternatives to motifs associated with particular
+metabolic or reactivity concerns. Their presence does not establish that the
+input is problematic, and the transformations do not predict improved safety,
+metabolism or activity. No reverse reactions are registered.
+
+| Transformation | Example | Structural effect |
+| --- | --- | --- |
+| `phenol_to_benzoxazolone` | `Oc1ccccc1` -> `O=C1Oc2ccccc2N1` | Replace a free phenolic OH with a fused cyclic carbamate, retaining the original oxygen. |
+| `ketone_to_oxetane` | `CC(=O)c1ccccc1` -> `CC1(c2ccccc2)COC1` | Retain the carbonyl carbon, oxygen and both carbon substituents; insert two methylenes to make a 3,3-disubstituted oxetane. |
+| `michael_acceptor_to_cyclopropane` | `C=CC(=O)NC` -> `O=C(NC)C1CC1` | Add CH2 across a carbonyl-conjugated alkene, retaining the carbonyl and all existing substituents. |
+
+The phenol reaction requires a neutral free OH and an available adjacent
+aromatic C-H position. Each inequivalent ortho position can give a product;
+symmetry-equivalent matches are suppressed. Fully blocked ortho positions,
+ethers, phenoxide ions and aliphatic alcohols do not match. The product replaces
+the OH donor with a cyclic-carbamate NH donor and adds a carbonyl acceptor, with
+corresponding changes in donor position, size and geometry.
+
+The ketone reaction requires two carbon substituents attached by single bonds
+to the carbonyl carbon. Aliphatic, aryl and cyclic ketones are accepted; cyclic
+ketones give spiro oxetanes. Aldehydes, amides, esters and carboxylic acids are
+excluded. The original oxygen is retained at the opposite position of the new
+four-membered ring, including its isotope label. Both external attachment
+points remain at the original carbonyl carbon, which becomes tetrahedral;
+the oxygen acceptor's position changes.
+
+The Michael-acceptor reaction requires an acyclic C=C directly conjugated to a
+carbonyl. It includes terminal acrylamides, substituted alkenes, enoates, enones,
+enals and unsaturated carboxylic acids. Ordinary alkenes, non-conjugated alkenes,
+cyclic enones and acrylonitriles do not match. The existing generic
+`Metabolism.alkene_T_cyclopropyl` reaction remains registered; there can be
+overlap for internally substituted alkenes, while this targeted rule also
+handles terminal acrylamide-like groups. This suggestion is intended for cases
+where electrophilic reactivity is unwanted, rather than intentional covalent
+warheads.
+
+Newly created stereocentres are left unspecified. Existing unaffected
+stereochemistry and isotope labels are retained. The Michael-acceptor reaction
+discards the transformed alkene's E/Z information; obsolete directional-bond
+flags are cleared while unrelated alkene geometry is preserved.
+
+```shell
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/phenol_to_benzoxazolone.rxn" \
+  -m each -z i -S alternatives input.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/ketone_to_oxetane.rxn" \
+  -m each -z i -S oxetanes ketones.smi
+trxn -r "${LILLYMOL_HOME}/data/MedchemWizard/michael_acceptor_to_cyclopropane.rxn" \
+  -m each -z i -S cyclopropanes acceptors.smi
+```
+
+## Checking proposed reactions for overlap
+
+`contrib/bin/medchem_reaction_overlap.py` compares a proposed reaction with every
+entry in a MedchemWizard reaction list, using the LillyMol Python bindings:
+
+```shell
+"${LILLYMOL_HOME}/run_python.sh" \
+  "${LILLYMOL_HOME}/contrib/bin/medchem_reaction_overlap.py" \
+  proposed.rxn representative.smi --json overlap.json
+```
+
+Supply one or more SMILES files covering the proposed motif, asymmetric
+attachments, multiple sites, stereochemistry, and neighbouring motifs that
+should or should not match. Use `--library custom/REACTIONS` for another library.
+New proposed files default to textproto; use `--format msi` for a legacy file.
+If the proposed file is already listed, its format is taken from that entry and
+it is excluded from comparison with itself.
+
+Each reaction runs separately through `MedchemWizard`, without recursion,
+standardisation, product-count limits, or uniqueness filtering across parents.
+All matching sites are processed. Products are compared using LillyMol unique
+SMILES and the input record position. Duplicate names are allowed, repeated
+products from one parent count once, and identical products from different
+parents count separately. Products equal to their parent are included.
+
+The console table lists reactions sharing at least one product, sorted by shared
+count. `candidate_overlap` is the fraction of proposed products also generated
+by the existing reaction; `existing_overlap` is the corresponding fraction of
+existing products generated by the proposal. Labels distinguish identical sets,
+containment in either direction, and partial overlap **on this corpus**.
+A finite input set cannot establish universal equivalence or rule out overlap.
+
+The JSON report also includes reactions without overlap and examples of shared,
+proposal-only, and existing-only products, with parent names, SMILES and source
+locations. `--max-examples N` limits each example category per reaction (default
+5). A proposal producing no products is an error, rather than evidence of no
+overlap. Unreadable library reactions are recorded as errors and make the report
+incomplete. Exit status is 0 for a complete comparison, 1 for an input or proposal
+error, and 2 for an incomplete library comparison. Overlap itself is not an error.
+
+After updating the bindings, rebuild `//nanobind:lillymol` and stage the modules
+with `src/copy_shared_libraries.sh` before using `run_python.sh`.
+
+## Product Names
+
+Use `-W <sep>` to append the reaction name to each product name:
+
+```shell
+medchemwizard.sh -W space input.smi > products.smi
+```
+
+The separator is passed through LillyMol's standard character-name conversion,
+so `space` is a convenient way of producing a three-token output suitable for
+text processing:
+
+```text
+product_smiles parent_id reaction_name
+```
+
+Without `-W`, products retain the parent molecule name.
+
+## Recursion
+
+By default, each transformation is applied only to the input molecule. Use
+`-D <depth>` to recursively apply transformations to generated products:
+
+```shell
+medchemwizard.sh \
+  -D 1 -W space input.smi > recursive_products.smi
+```
+
+Recursive generation can increase output size very rapidly. Size filters,
+uniqueness filters, and maximum-hit limits are usually advisable when using
+`-D`.
+
+## Controlling Product Count
+
+Use atom-count limits to discard products outside the useful size range:
+
+```shell
+medchemwizard.sh -m 8 -M 45 -W space input.smi > products.smi
+```
+
+Use `-x <n>` to limit how many embeddings of any one reaction are processed per
+molecule:
+
+```shell
+medchemwizard.sh -x 5 -W space input.smi > products.smi
+```
+
+By default, the tool reports when reaction matches are truncated. Add `-x quiet`
+to suppress those warnings.
+
+Use `-U each` to suppress duplicate products generated from the same parent
+molecule, or `-U all` to suppress duplicate products across the entire run:
+
+```shell
+medchemwizard.sh -U each -W space input.smi > products.smi
+```
+
+Uniqueness is based on LillyMol unique SMILES after any requested product
+postprocessing.
+
+## Preprocessing and Product Filtering
+
+Input molecules can be preprocessed with common LillyMol options:
+
+```shell
+medchemwizard.sh -l -c -g all -W space input.smi > products.smi
+```
+
+Important options are:
+
+| Option | Meaning |
+| --- | --- |
+| `-l` | Reduce input molecules to the largest fragment before transformation. |
+| `-c` | Remove all chirality from input molecules. |
+| `-g ...` | Apply standard LillyMol chemical standardisation to input molecules. |
+| `-y` | Apply the same preprocessing to products before uniqueness and atom-count checks. |
+| `-V .` | Discard products with invalid valence. |
+| `-V <fname>` | Discard products with invalid valence and write them to `<fname>`, adding `.smi` if needed. |
+
+`-A`, `-E`, and `-i` are the standard LillyMol aromaticity, element, and input
+type options. If no aromaticity option is specified, Daylight aromaticity is
+used.
+
+## Protecting Parts of the Molecule
+
+Use `-s <smarts>` or `-q <query>` to mark atoms that must not be changed. Any
+reaction embedding that touches a protected atom is skipped. This is useful when
+a known pharmacophore, binding motif, or other important substructure should be
+kept fixed while transformations are explored elsewhere.
+
+```shell
+medchemwizard.sh \
+  -s '[CX3](=O)[OH]' -z i -W space input.smi > products.smi
+```
+
+If protected-atom queries are specified, the default behaviour is to fail when
+none of them match an input molecule. Use `-z i` or `-z ignore` when it is
+acceptable for a molecule to contain no protected atoms.
+
+The protection currently applies to atoms in the reaction embedding. It is not a
+full bond-change or radius-based protection model. If neighbouring atoms must
+also be protected, include them in the SMARTS or query definition.
+
+## Option Summary
+
+| Option | Meaning |
+| --- | --- |
+| `-R <fname>` | Reaction-list file. Required for the CLI. |
+| `-D <depth>` | Recursively transform generated products to `depth`; default is no recursion. |
+| `-x <n>` | Use no more than `n` matches to any reaction in a molecule. |
+| `-x quiet` | Suppress warnings when matches are truncated. |
+| `-U each` | Suppress duplicate products within each parent molecule. |
+| `-U all` | Suppress duplicate products across the whole run. |
+| `-m <natoms>` | Discard products with fewer than `natoms` atoms. |
+| `-M <natoms>` | Discard products with more than `natoms` atoms. |
+| `-W <sep>` | Append reaction names to product names using separator `sep`. |
+| `-q <query>` | Protect atoms matching a LillyMol query file. |
+| `-s <smarts>` | Protect atoms matching SMARTS. |
+| `-z i`, `-z ignore` | Ignore molecules that do not match any protected-atom query. |
+| `-V .` | Discard products with bad valences. |
+| `-V <fname>` | Write discarded bad-valence products to a SMILES file. |
+| `-y` | Postprocess generated products as input molecules are processed. |
+| `-l` | Reduce input molecules to largest fragment. |
+| `-c` | Remove chirality from input molecules. |
+| `-g ...` | Chemical standardisation. |
+| `-i <type>` | Input type. |
+| `-A ...` | Aromaticity specification. |
+| `-E ...` | Element specification. |
+| `-v` | Verbose output, including per-reaction hit counts. |
+
+## Python Interface
+
+`MedchemWizard` is also available from the `lillymol_tools` Python module. The
+Python object stores the reaction set and options, and `process(mol)` returns a
+list of generated `Molecule` objects. The input molecule is copied internally
+and is not modified.
+
+```python
+from lillymol import MolFromSmiles
+from lillymol_tools import MedchemWizard
+
+mol = MolFromSmiles("CCO ethanol")
+if mol is None:
+    raise ValueError("invalid SMILES")
+
+wizard = MedchemWizard()
+wizard.initialise_from_environment()
+wizard.set_append_names(True)
+wizard.set_name_separator(" ")
+wizard.set_max_atoms(25)
+
+products = wizard.process(mol)
+for product in products:
+    print(product.smiles(), product.name())
+
+print(wizard.stats())
+```
+
+`initialise_from_environment()` reads:
+
+```text
+${LILLYMOL_HOME}/data/MedchemWizard/REACTIONS
+```
+
+For custom reaction sets, use `read_reactions(fname)`.
+
+```python
+wizard = MedchemWizard()
+wizard.read_reactions("/path/to/REACTIONS")
+```
+
+Available Python methods are:
+
+| Method | Meaning |
+| --- | --- |
+| `initialise_from_environment()` | Load the standard reaction set from `LILLYMOL_HOME`. |
+| `read_reactions(fname)` | Load a reaction-list file. |
+| `read_reaction(fname, textproto=True)` | Append one reaction file (possibly multiple reactions in legacy MSI); failed reads leave the reaction set unchanged. |
+| `number_reactions()` | Return the number of loaded reactions. |
+| `process(mol)` | Return generated products as a list of `Molecule` objects. |
+| `add_do_not_change_smarts(smarts)` | Protect atoms matching SMARTS. |
+| `add_do_not_change_query(fname)` | Protect atoms matching a LillyMol query file. |
+| `set_ignore_do_not_change_queries_not_matching(value)` | Allow molecules with no protected-query match. |
+| `set_max_depth(value)` | Set recursive transformation depth. |
+| `set_max_hits(value)` | Set maximum matches processed for each reaction. |
+| `set_max_atoms(value)` | Set maximum product atom count. |
+| `set_min_atoms(value)` | Set minimum product atom count. |
+| `set_unique_within_molecule(value)` | Suppress duplicate products per parent. |
+| `set_unique_across_all_molecules(value)` | Suppress duplicate products across the object lifetime. |
+| `set_append_names(value)` | Append reaction names to product names. |
+| `set_name_separator(sep)` | Set the product-name separator used with appended names. |
+| `set_discard_bad_valences(value)` | Discard products with invalid valence. |
+| `stats()` | Return processing counters as a Python dictionary. |
+
+Protected-atom behaviour mirrors the command-line tool:
+
+```python
+wizard.add_do_not_change_smarts("[CX3](=O)[OH]")
+wizard.set_ignore_do_not_change_queries_not_matching(True)
+products = wizard.process(mol)
+```
+
+`stats()` includes counters such as `molecules_read`, `molecules_produced`,
+`duplicate_molecules_suppressed`, `bad_valences_discarded`,
+`molecules_not_matching_do_not_change_queries`, and
+`embeddings_rejected_for_changing_protected_atoms`.

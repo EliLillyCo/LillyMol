@@ -63,6 +63,7 @@ Mol2Graph::TurnOnMostUsefulOptions() {
   _revert_all_directional_bonds_to_non_directional = 1;
   _preserve_cc_double_bonds_no_heteroatoms = 1;
   _preserve_cc_double_bonds_saturated = 1;
+  _active = true;
 
   return;
 }

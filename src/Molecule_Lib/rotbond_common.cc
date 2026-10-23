@@ -319,6 +319,13 @@ IsCf3(const Molecule& m,
     }
 
     atomic_number_t jz = m.atomic_number(j);
+
+    // Explicit Hydrogens are invisible here. Including them would make the
+    // attached atoms look inhomogeneous and hide a real CF3 or t-butyl.
+    if (jz == 1) {
+      continue;
+    }
+
     if (attached < 0) {
       attached = jz;
       count = 1;
@@ -335,36 +342,83 @@ IsCf3(const Molecule& m,
 
 // Return true if `carbon` is doubly bonded to one or more =O or =S
 // A previous check has verified that `carbon` is attached to a Nitrogen.
-int
-IsAmide(const Molecule& m,
-        atom_number_t carbon) {
-  int doubly_bonded_oxygen = 0;
+/*
+  How many double bonds are there from `centre` to a Nitrogen, Oxygen or
+  Sulphur?
 
-  const Atom& ac = m.atom(carbon);
+  Ring double bonds do not count. Aromatic rings are held in a Kekule form, so
+  an aromatic carbon really does have a double bond to an aromatic ring
+  Nitrogen, and counting those would make the exocyclic bond of every
+  aminopyridine look conjugated. The linkages this is used to recognise -
+  carbonyl, thiocarbonyl, imine - all have the double bond outside any ring,
+  including in a lactam, where the C=O is exocyclic even though the carbon is
+  not.
+*/
+
+static int
+DoublyBondedToHeteroatom(const Molecule& m,
+        atom_number_t centre) {
+  int rc = 0;
+
+  const Atom& ac = m.atom(centre);
   for (const Bond * b : ac) {
     if (! b->is_double_bond()) {
       continue;
     }
 
-    const atomic_number_t o = m.atomic_number(b->other(carbon));
-    if (o == 8 || o == 16) {
-      ++doubly_bonded_oxygen;
+    if (b->nrings()) {
+      continue;
+    }
+
+    const atomic_number_t z = m.atomic_number(b->other(centre));
+    if (z == 7 || z == 8 || z == 16) {
+      ++rc;
     }
   }
 
-  return doubly_bonded_oxygen;
+  return rc;
 }
 
+/*
+  Is `b` a conjugated linkage - a single bond that is not freely rotatable
+  because one end is a carbonyl like centre and the other a heteroatom?
+
+  Covers amides and thioamides, esters and thioesters, amidines, carbamates and
+  sulfonamides. This is what RDKit's strict rotatable bond definition excludes
+  with
+
+    [CD3](=[N,O,S])-!@[#7,O,S!D1]
+
+  with one deliberate difference. RDKit requires the doubly bonded centre to be
+  carbon, so it counts a sulfonamide S-N bond as rotatable. That bond does have
+  restricted rotation, so a Sulphur centre is accepted here.
+
+  This was called IsAmide and required the partner to be Nitrogen, so ester,
+  thioester and amidine linkages were treated as rotatable. Over
+  data/Pubchem1000.smi that put the count above RDKit's on 17% of molecules.
+  Agreement went from 754/1000 to 903/1000, and of the 97 that still differ, 84
+  are the sulfonamides above.
+*/
+
 int
-IsAmide(Molecule& m,
+IsConjugatedLinkage(Molecule& m,
         const Bond* b) {
-  const atomic_number_t z1 = m.atomic_number(b->a1());
-  const atomic_number_t z2 = m.atomic_number(b->a2());
-  if (z2 == 7 && (z1 == 6 || z1 == 16)) {
-    return IsAmide(m, b->a1());
+  const atom_number_t a1 = b->a1();
+  const atom_number_t a2 = b->a2();
+  const atomic_number_t z1 = m.atomic_number(a1);
+  const atomic_number_t z2 = m.atomic_number(a2);
+
+  // One end must be the heteroatom, the other the centre.
+  if ((z2 == 7 || z2 == 8 || z2 == 16) && (z1 == 6 || z1 == 16)) {
+    if (DoublyBondedToHeteroatom(m, a1)) {
+      return 1;
+    }
   }
-  if (z1 == 7 && (z2 == 6 || z2 == 16)) {
-    return IsAmide(m, b->a2());
+
+  if ((z1 == 7 || z1 == 8 || z1 == 16) && (z2 == 6 || z2 == 16)) {
+    if (DoublyBondedToHeteroatom(m, a2)) {
+      return 1;
+    }
   }
 
   return 0;
@@ -394,7 +448,7 @@ QuickRotatableBonds::Process(Molecule& m, int* bond_rotatable) {
       cerr << "QuickRotatableBonds::Process:no calculation defined\n";
       return 0;
     case RotBond::kQuick:
-      return Quickest(m);
+      return Quickest(m, bond_rotatable);
     case RotBond::kExpensive:
       return Expensive(m, bond_rotatable);
     default:
@@ -419,6 +473,38 @@ AtomsWithTripleBonds(const Molecule& m) {
   return result;
 }
 
+/*
+  ncon() counts an explicit Hydrogen, and the terminal atom test in both
+  calculations is a connectivity of one. So writing the Hydrogen of a hydroxyl or
+  an amine explicitly would make that heteroatom non terminal and the bond to it
+  rotatable - CCO has no rotatable bonds, CCO[H] appeared to have one. Both
+  calculations therefore work with the heavy atom degree, and skip bonds to
+  Hydrogen outright.
+
+  Nothing here copies or modifies the molecule, which matters because the
+  optional bond_rotatable array is indexed by the caller's bond numbering.
+*/
+
+static std::unique_ptr<int[]>
+HeavyAtomDegree(const Molecule& m) {
+  const int matoms = m.natoms();
+
+  std::unique_ptr<int[]> result(new_int(matoms));
+
+  for (int i = 0; i < matoms; ++i) {
+    const Atom& a = m.atom(i);
+    int heavy = 0;
+    for (const Bond* b : a) {
+      if (m.atomic_number(b->other(i)) != 1) {
+        ++heavy;
+      }
+    }
+    result[i] = heavy;
+  }
+
+  return result;
+}
+
 int
 QuickRotatableBonds::Expensive(Molecule& m, int* bond_rotatable) {
   const int matoms = m.natoms();
@@ -434,6 +520,10 @@ QuickRotatableBonds::Expensive(Molecule& m, int* bond_rotatable) {
   std::unique_ptr<int[]> terminal_atom_count(new_int(matoms));
   std::unique_ptr<int[]> in_triple_bond = AtomsWithTripleBonds(m);
 
+  // See HeavyAtomDegree above. Bonds to Hydrogen are skipped entirely below so
+  // they neither become candidates nor inflate terminal_atom_count.
+  std::unique_ptr<int[]> heavy_ncon = HeavyAtomDegree(m);
+
   const int nedges = m.nedges();
   for (int i = 0; i < nedges; ++i) {
     const Bond* b = m.bondi(i);
@@ -445,21 +535,26 @@ QuickRotatableBonds::Expensive(Molecule& m, int* bond_rotatable) {
     }
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
+
+    if (m.atomic_number(a1) == 1 || m.atomic_number(a2) == 1) {
+      continue;
+    }
+
     if (in_triple_bond[a1] || in_triple_bond[a2]) {
       continue;
     }
 
-    if (IsAmide(m, b)) {
+    if (IsConjugatedLinkage(m, b)) {
       continue;
     }
 
-    const int a1con = m.ncon(b->a1());
-    const int a2con = m.ncon(b->a2());
+    const int a1con = heavy_ncon[a1];
+    const int a2con = heavy_ncon[a2];
     if (a1con == 1) {
-      ++terminal_atom_count[b->a2()];
+      ++terminal_atom_count[a2];
       continue;
     } else if (a2con == 1) {
-      ++terminal_atom_count[b->a1()];
+      ++terminal_atom_count[a1];
       continue;
     }
 
@@ -514,10 +609,13 @@ QuickRotatableBonds::Expensive(Molecule& m, int* bond_rotatable) {
 }
 
 int
-QuickRotatableBonds::Quickest(Molecule& m) {
+QuickRotatableBonds::Quickest(Molecule& m, int* bond_rotatable) {
   int rc = 0;
 
   std::unique_ptr<int[]> in_triple_bond = AtomsWithTripleBonds(m);
+
+  // See HeavyAtomDegree above.
+  std::unique_ptr<int[]> heavy_ncon = HeavyAtomDegree(m);
 
   const int nedges = m.nedges();
 
@@ -532,15 +630,24 @@ QuickRotatableBonds::Quickest(Molecule& m) {
 
     atom_number_t a1 = b->a1();
     atom_number_t a2 = b->a2();
+
+    if (m.atomic_number(a1) == 1 || m.atomic_number(a2) == 1) {
+      continue;
+    }
+
     if (in_triple_bond[a1] || in_triple_bond[a2]) {
       continue;
     }
 
-    if (m.ncon(a1) == 1 || m.ncon(a2) == 1) {
+    if (heavy_ncon[a1] == 1 || heavy_ncon[a2] == 1) {
       continue;
     }
 
     ++rc;
+
+    if (bond_rotatable != nullptr) {
+      bond_rotatable[b->bond_number()] = 1;
+    }
 
     if (_isotope) {
       m.set_isotope(b->a1(), _isotope);

@@ -1,0 +1,10 @@
+C[C@H](N)C(=O)O L-alanine
+C[C@@H](N)C(=O)O D-alanine
+N[C@@H](Cc1ccccc1)C(=O)O phenylalanine
+C[C@H](N)[C@@H](C)O two_centres
+O[C@@H]1CCCC[C@H]1N aminocyclohexanol
+C[C@](N)(O)CC quaternary_acyclic
+C[C@H]1C[C@@H]2CC[C@H]1C2 bicyclic
+OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O glucose
+C[C@H]1CC[C@@H](C)CC1 cis_dimethylcyclohexane
+CC(N)C(=O)O no_chirality

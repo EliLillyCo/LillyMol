@@ -10,21 +10,21 @@
     },
 
     {
-      "name": "D_option",
+      "name": "exclude_replacement",
       "args": [
           "-D 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
       ]
     },
 
     {
-      "name": "F_option",
+      "name": "include_replacement",
       "args": [
           "-F 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
       ]
     },
 
     {
-      "name": "N_option",
+      "name": "products_must_not_contain",
       "args": [
           " -N 'SMARTS:c=[D1]' -R #{indir}/para.textproto -s '[r6c]' #{indir}/in.smi"
       ]
@@ -72,6 +72,13 @@
       "args": [
         "-v -R #{indir}/6a.textproto -s '[r6c]' #{indir}/in.smi"
       ]
+    },
+
+    {
+      "name": "atype_simple",
+      "shellScript": {
+        "scriptName": "atype_simple.sh"
+      }
     }
 
 

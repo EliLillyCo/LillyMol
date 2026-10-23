@@ -4,6 +4,7 @@
 
 #include <time.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -584,7 +585,7 @@ digits_must_match(IWString& s) {
 
   int dcount[10];
 
-  set_vector(dcount, 10, 0);
+  std::fill_n(dcount, 10, 0);
 
   const char* r = s.rawchars();
 
@@ -1012,7 +1013,7 @@ smiles_mutation(resizable_array_p<IWString>& smiles,
            << smiles_written << " written\n";
     }
 
-    set_vector(changed_this_iteration, n, 0);
+    std::fill_n(changed_this_iteration, n, 0);
 
     if (0 == iteration)
       ;

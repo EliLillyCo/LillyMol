@@ -26,6 +26,10 @@ static int header_records_to_skip = 1;
 
 static resizable_array<int> sort_column;
 
+// One entry for each sort key, in sort key order. 1 means ascending,
+// -1 means descending.
+static resizable_array<int> sort_direction;
+
 static resizable_array_p<IWString> sort_by_descriptor;
 
 static int columns_in_input = 0;
@@ -36,10 +40,9 @@ static float missing_value_replacement_value = static_cast<float>(0.0);
 
 static int discard_records_with_missing_data = 0;
 
-// Controls the directionality of the sort. 
-// Should set up a per-column reverse ordering.
-static int greater_than = 1;
-static int less_than = -1;
+// Default direction for sort keys with no per-key direction suffix.
+// 1 means ascending, -1 means descending.
+static int default_sort_direction = 1;
 
 static int take_absolute_values = 0;
 
@@ -238,15 +241,15 @@ usage(int rc) {
   // clang-format on
   // clang-format off
   cerr << "Sorts descriptor files\n";
-  cerr << " -d <desc>      sort by the value of descriptor <desc>\n";
-  cerr << " -c <col>       sort by the value in column <col>\n";
+  cerr << " -d <desc>      sort by descriptor <desc>. Use <desc>/r for descending\n";
+  cerr << " -c <col>       sort by column <col>. Use <col>/r for descending\n";
   cerr << " -s <number>    header records to skip (default 1)\n";
   cerr << " -M <string>    missing value string\n";
   cerr << " -m <float>     replace missing values with <float> (default " << missing_value_replacement_value << ")\n";
   cerr << " -z             discard records with missing data\n";
   cerr << " -i <char>      column separator (space by default)\n";
 //cerr << " -t             input is tab separated\n";
-  cerr << " -r             reverse sort\n";
+  cerr << " -r             reverse sort by default. Per-key /a or /r overrides\n";
   cerr << " -a             take asbolute values of input values\n";
   cerr << " -y             enable sorting by string values. Does not sort, but groups by common values\n";
   cerr << " -v             verbose output\n";
@@ -593,6 +596,36 @@ initialise_sort_conditions(const const_IWSubstring& header) {
 }
 
 static int
+ParseSortSpecification(const const_IWSubstring& token, IWString& key, int& direction) {
+  key = token;
+  direction = default_sort_direction;
+
+  if (key.ends_with("/r") || key.ends_with("/R")) {
+    key.chop(2);
+    direction = -1;
+  } else if (key.ends_with("/d")) {
+    key.chop(2);
+    direction = -1;
+  } else if (key.ends_with("/desc")) {
+    key.chop(5);
+    direction = -1;
+  } else if (key.ends_with("/a") || key.ends_with("/A")) {
+    key.chop(2);
+    direction = 1;
+  } else if (key.ends_with("/asc")) {
+    key.chop(4);
+    direction = 1;
+  }
+
+  if (key.empty()) {
+    cerr << "Invalid empty sort key in '" << token << "'\n";
+    return 0;
+  }
+
+  return 1;
+}
+
+static int
 read_data(iwstring_data_source& input, resizable_array_p<IWString>& header,
           resizable_array_p<Descriptor_File_Record>& zdata) {
   int reading_header = (0 == header.number_elements());
@@ -644,9 +677,11 @@ read_data(const char* fname, resizable_array_p<IWString>& header,
 class Descriptor_File_Record_Comparitor {
  private:
   const int _ncols;
+  const resizable_array<int>& _direction;
 
  public:
-  Descriptor_File_Record_Comparitor(const int c) : _ncols(c){};
+  Descriptor_File_Record_Comparitor(const int c, const resizable_array<int>& direction) :
+      _ncols(c), _direction(direction){};
 
   int operator()(const Descriptor_File_Record*, const Descriptor_File_Record*);
 };
@@ -661,12 +696,13 @@ Descriptor_File_Record_Comparitor::operator()(const Descriptor_File_Record* d1,
     const float v1 = f1[i];
     const float v2 = f2[i];
 
+    const int direction = _direction[i];
     if (v1 < v2) {
-      return less_than;
+      return -direction;
     }
 
     if (v1 > v2) {
-      return greater_than;
+      return direction;
     }
   }
 
@@ -754,6 +790,14 @@ descriptor_file_sort(int argc, char** argv) {
     }
   }
 
+  if (cl.option_present('r')) {
+    default_sort_direction = -1;
+
+    if (verbose) {
+      cerr << "Reverse sort by default\n";
+    }
+  }
+
   if (!cl.option_present('c') && !cl.option_present('d') && !cl.option_present('D')) {
     cerr << "Must specify descriptors (-d), columns (-c) or differences (-D) on which to "
             "sort\n";
@@ -764,16 +808,27 @@ descriptor_file_sort(int argc, char** argv) {
     int i = 0;
     const_IWSubstring c;
     while (cl.value('c', c, i++)) {
+      IWString column;
+      int direction;
+      if (! ParseSortSpecification(c, column, direction)) {
+        return 4;
+      }
+
       int col;
-      if (!c.numeric_value(col) || col < 1) {
+      if (!column.numeric_value(col) || col < 1) {
         cerr << "Invalid sort column '" << c << "'\n";
         return 4;
       }
 
       sort_column.add(col - 1);
+      sort_direction.add(direction);
 
       if (verbose) {
-        cerr << "Will sort on column " << col << "\n";
+        cerr << "Will sort on column " << col;
+        if (direction < 0) {
+          cerr << " descending";
+        }
+        cerr << "\n";
       }
     }
   }
@@ -782,12 +837,23 @@ descriptor_file_sort(int argc, char** argv) {
     int i = 0;
     const_IWSubstring d;
     while (cl.value('d', d, i++)) {
-      IWString* tmp = new IWString(d);
+      IWString descriptor;
+      int direction;
+      if (! ParseSortSpecification(d, descriptor, direction)) {
+        return 4;
+      }
+
+      IWString* tmp = new IWString(descriptor);
 
       sort_by_descriptor.add(tmp);
+      sort_direction.add(direction);
 
       if (verbose) {
-        cerr << "Will sort by descriptor '" << d << "'\n";
+        cerr << "Will sort by descriptor '" << descriptor << "'";
+        if (direction < 0) {
+          cerr << " descending";
+        }
+        cerr << "\n";
       }
     }
   }
@@ -796,9 +862,15 @@ descriptor_file_sort(int argc, char** argv) {
     int i = 0;
     const_IWSubstring d;
     while (cl.value('D', d, i++)) {
+      IWString difference;
+      int direction;
+      if (! ParseSortSpecification(d, difference, direction)) {
+        return i + 1;
+      }
+
       Pair_of_Columns* p = new Pair_of_Columns;
 
-      if (!p->build(d)) {
+      if (!p->build(difference)) {
         cerr << "invalid descriptor difference specification '" << d << "'\n";
         return i + 1;
       }
@@ -808,15 +880,6 @@ descriptor_file_sort(int argc, char** argv) {
     if (verbose) {
       cerr << "Will sort by " << column_differences.number_elements()
            << " column difference specifications\n";
-    }
-  }
-
-  if (cl.option_present('r')) {
-    greater_than = -1;
-    less_than = 1;
-
-    if (verbose) {
-      cerr << "Reverse sort\n";
     }
   }
 
@@ -892,7 +955,7 @@ descriptor_file_sort(int argc, char** argv) {
          << " records for missing data\n";
   }
 
-  Descriptor_File_Record_Comparitor dfrc(nsort);
+  Descriptor_File_Record_Comparitor dfrc(nsort, sort_direction);
 
   zdata.iwqsort(dfrc);
 

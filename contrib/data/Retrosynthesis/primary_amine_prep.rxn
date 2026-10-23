@@ -1,0 +1,8 @@
+name: "primary amine"
+scaffold {
+  smarts: "[ND1H2+0]-[CX4]"
+  isotope {
+    atom: 0
+    isotope: 2
+  }
+}

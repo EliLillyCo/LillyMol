@@ -1,0 +1,18 @@
+{
+  "executable": "iwbdb_compare",
+  "test": [
+    {
+      "name": "test_KV",
+      "preamble": [
+        "iwbdb_load -d db1.bdb #{indir}/in1.txt",
+        "iwbdb_load -d db2.bdb #{indir}/in2.txt"
+      ],
+      "args": [
+           "-K Kfile -V Vfile db2.bdb db1.bdb"
+      ],
+      "non_zero_rc_expected": true
+    }
+
+  ]
+
+}

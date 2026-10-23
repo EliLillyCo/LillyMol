@@ -1,0 +1,8 @@
+smiles: "CC1=CC=CC=C1" id: "methylbenzene" result { urs: 2 ex: "methylbenzene" } 
+smiles: "OC1=CC=CC=C1" id: "phenol" result { urs: 2 ex: "methylbenzene" } 
+smiles: "CC1CCCCC1" id: "substituted" result { urs: 3 ex: "substituted" } 
+smiles: "C1CCCCC1" id: "bare" result { urs: 3 ex: "substituted" } 
+smiles: "C1CCC2(CC1)CCCC2" id: "spiro" result { urs: 1 ex: "spiro" } 
+smiles: "C1=CC=C2C=CC=CC2=C1" id: "fused" result { urs: 1 ex: "fused" } 
+smiles: "O=C1CCCCC1" id: "ketone" result { urs: 3 ex: "substituted" } 
+smiles: "C1=CC=CC=C1CCC1=CC=CC=C1" id: "linked" result { urs: 1 ex: "linked" } 

@@ -30,10 +30,20 @@ TEST_P(TestPartialSymmetryP, TestMolecule) {
   PartialSymmetry p(_m);
   const int * symmetric = p.SymmetricAtRadius();
   EXPECT_TRUE(symmetric);
-//cerr << "Processing " << params.smiles << '\n';
+  std::cerr << "Processing " << params.smiles << '\n';
+  std::cerr << "Found   ";
+  for (int i = 0; i < params.expected.number_elements(); ++i) {
+    std::cerr << ' ' << symmetric[i];
+  }
+  std::cerr << '\n';
+  std::cerr << "Expected";
+  for (int i = 0; i < params.expected.number_elements(); ++i) {
+    std::cerr << ' ' << params.expected[i];
+  }
+  std::cerr << '\n';
   for (int i = 0; i < params.expected.number_elements(); ++i) {
 //  cerr << "Checking atom " << i << " expected " << params.expected[i] << " got " << symmetric[i] << '\n';
-    EXPECT_EQ(params.expected[i], symmetric[i]);
+    EXPECT_EQ(params.expected[i], symmetric[i]) << _m.smiles() << " atom " << i << ' ' << _m.smarts_equivalent_for_atom(i);
   }
 }
 INSTANTIATE_TEST_SUITE_P(TestPartialSymmetryP, TestPartialSymmetryP, testing::Values(

@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 #include <math.h>
+
+#include <algorithm>
 #include <iostream>
 #include <utility>
 
@@ -1075,8 +1077,8 @@ Prediction_Categorical_Response::compute_predicted_values (int number_neighbours
 
   int neighbours_used_in_estimate = 0;
 
-  set_vector (_category_sumw, highest_category_number + 1, static_cast<weight_t> (0.0));
-  set_vector (_category_confidence, highest_category_number + 1, static_cast<confidence_t> (0.0));
+  std::fill_n (_category_sumw, highest_category_number + 1, static_cast<weight_t> (0.0));
+  std::fill_n (_category_confidence, highest_category_number + 1, static_cast<confidence_t> (0.0));
 
   for (int i = 0; i < number_neighbours; i++)
   {

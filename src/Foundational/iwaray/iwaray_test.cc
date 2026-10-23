@@ -13,10 +13,10 @@ namespace {
 using testing::ElementsAreArray;
 
 TEST(iwaray, test_reserve) {
-  constexpr int n = 10;
+  constexpr uint32_t n = 10;
   resizable_array<float> v(n);
-  EXPECT_EQ(v.size(), 0);
-  for (int i = 0; i < n; ++i) {
+  EXPECT_EQ(v.size(), 0u);
+  for (uint32_t i = 0; i < n; ++i) {
     v.add(static_cast<float>(i));
   }
   EXPECT_EQ(v.size(), n);
@@ -29,10 +29,10 @@ TEST(iwaray, test_reserve) {
 }
 
 TEST(iwaray, test_make_room) {
-  constexpr int n = 10;
+  constexpr uint32_t n = 10;
   resizable_array<int> v(n);
-  EXPECT_EQ(v.size(), 0);
-  for (int i = 0; i < n; ++i) {
+  EXPECT_EQ(v.size(), 0u);
+  for (uint32_t i = 0; i < n; ++i) {
     v.add(i);
   }
   EXPECT_EQ(v.size(), n);
@@ -84,7 +84,7 @@ TEST(iwaray, test_swap) {
 }
 
 TEST(iwaray, test_add_non_duplicated_elements) {
-  constexpr int n = 11;
+  constexpr uint32_t n = 11;
   resizable_array<int> v1 = ArrayOfScalars<int>(n);
   resizable_array<int> v2 = v1;
   EXPECT_EQ(v1.add_non_duplicated_elements(v2), 0);
@@ -93,7 +93,7 @@ TEST(iwaray, test_add_non_duplicated_elements) {
   for (int& i : v2) {
     i = n + i;
   }
-  EXPECT_EQ(v1.add_non_duplicated_elements(v2), v2.size());
+  EXPECT_EQ(v1.add_non_duplicated_elements(v2), static_cast<int>(v2.size()));
   v1.resize(n);
   EXPECT_EQ(v1.size(), n);
 
@@ -122,14 +122,14 @@ TEST(iwaray, Pointers) {
     v.add(f);
   }
   EXPECT_EQ(v.number_elements(), n);
-  EXPECT_GE(v.capacity(), n);
+  EXPECT_GE(v.capacity(), static_cast<uint32_t>(n));
 
   v.resize(n / 2);
   EXPECT_EQ(v.number_elements(), n / 2);
 }
 
 TEST(iwaray, test_remove_no_delete) {
-  constexpr int n = 10;
+  constexpr uint32_t n = 10;
   resizable_array_p<ForTesting> v = ArrayOfObjects<ForTesting>(n);
   EXPECT_EQ(v.size(), n);
 
@@ -142,11 +142,11 @@ TEST(resizable_array, operator_ltlt) {
   for (int i = 0; i < 5; ++i) {
     x << i;
     EXPECT_EQ(x.back(), i);
-    EXPECT_EQ(x.size(), i + 1);
+    EXPECT_EQ(x.size(), static_cast<uint32_t>(i + 1));
   }
 
   x << 99 << 100;
-  EXPECT_EQ(x.size(), 5 + 2);
+  EXPECT_EQ(x.size(), static_cast<uint32_t>(5 + 2));
   EXPECT_EQ(x.back(), 100);
 }
 

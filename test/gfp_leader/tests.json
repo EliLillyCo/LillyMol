@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_leader",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           " -t 0.3 ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+
+}

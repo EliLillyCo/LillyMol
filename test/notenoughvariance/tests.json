@@ -1,0 +1,13 @@
+{
+  "executable": "notenoughvariance",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-s 1 -i 1 -n 1000 -d 100 -v ${LILLYMOL_HOME}/data/Pubchem1000.dat"
+      ]
+    }
+
+  ]
+
+}

@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -462,7 +463,7 @@ ghose_crippen_procedure(Molecule& m, double hydrophobicity_index[]) {
   int* already_hit = new_int(n_atoms);
   std::unique_ptr<int[]> free_already_hit(already_hit);
 
-  set_vector(hydrophobicity_index, n_atoms, 0.0);
+  std::fill_n(hydrophobicity_index, n_atoms, 0.0);
 
   int rc = ghose_crippin_procedure(m, already_hit, hydrophobicity_index);
 
@@ -1212,7 +1213,7 @@ atomic_comma2_related_descriptor_computation_procedure(Molecule& m,
     geometry_moment_of_inertia_axis[i] = new double[3];
   }
 
-  set_vector(geometry_field, n_atoms, 1.0);
+  std::fill_n(geometry_field, n_atoms, 1.0);
 
   compute_field_center(n_atoms, coordinate, geometry_center, geometry_field);
   compute_moment_of_inertia(m, n_atoms, coordinate, geometry_center, geometry_field,
@@ -1308,7 +1309,7 @@ compute_hydrophobic_jurs_procedure(Molecule& m, area_t atom_area[],
   // cerr<<"Atom "<<i<<"   atomic_symbol "<<m.atomi(i)->atomic_symbol()<<"  Surface
   // area="<<atom_area[i]<<"  hydro="<<hydrophobicity_index[i]<<endl;
 
-  set_vector(hydrophobic_jurs, NUMBER_OF_HYDROPHOBIC_JURS, 0.0);
+  std::fill_n(hydrophobic_jurs, NUMBER_OF_HYDROPHOBIC_JURS, 0.0);
 
   double total_hydrophobic_constant = 0.0;
   double total_hydrophilic_constant = 0.0;

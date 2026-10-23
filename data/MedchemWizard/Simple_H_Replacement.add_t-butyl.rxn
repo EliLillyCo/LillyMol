@@ -1,10 +1,10 @@
 (0 Reaction
   (A C Comment "Simple_H_Replacement.add_t-butyl")
   (0 Scaffold
-    (A C smarts "[CH>0]")
+    (A C smarts "[CH>0D<3]")
   )
   (1 Sidechain
-    (A C smiles "[C](C)(C)(C) SHR.add_t-butyl")
+    (A C smiles "C(C)(C)(C) SHR.add_t-butyl")
     (A C smarts "C(C)(C)C")
     (A I join (0 0))
   )

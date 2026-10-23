@@ -1,0 +1,14 @@
+{
+  "executable": "random_smiles",
+  "difftool": "${LILLYMOL_HOME}/test/same_number_lines.sh",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-n 5 -a -e -A D #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

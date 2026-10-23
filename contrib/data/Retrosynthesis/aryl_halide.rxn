@@ -1,0 +1,16 @@
+name: "aryl_halide"
+scaffold {
+  smarts: "[NR0G0]-a"
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  isotope {
+    atom: 0
+    isotope: 2
+  }
+  isotope {
+    atom: 1
+    isotope: 4
+  }
+}

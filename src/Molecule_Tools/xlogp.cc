@@ -129,7 +129,7 @@ constexpr int kPsingleS = 87;
 // Always 1 larger than the highest defined index.
 constexpr int kMaxArrayIndex = 88;
 
-double type_to_score[] = {
+constexpr std::array<double, kMaxArrayIndex> kDefaultTypeToScore = {
    0.0,    // 0
    0.484,  // 1
    0.168,  // 2
@@ -246,32 +246,25 @@ double type_to_score[] = {
 
 constexpr int kFailed = -1;
 
-bool display_unclassified_atom_messages = 1;
-
-void
-SetIssueUnclassifiedAtomMessages(int s) {
-  display_unclassified_atom_messages = s;
-}
-
 int
-ProcessNewFragmentParameter(const XLogP::XlogpParameter& proto) {
+XLogPCalc::ProcessNewFragmentParameter(const XLogP::XlogpParameter& proto) {
   if (! proto.has_index() || ! proto.has_value()) {
     cerr << "ProcessNewFragmentParameter:must have both index and value\n";
     return 0;
   }
 
-  if (proto.index() == 0 || proto.index() > kMaxArrayIndex) {
+  if (proto.index() == 0 || proto.index() >= kMaxArrayIndex) {
     cerr << "ProcessNewFragmentParameter::invalid index\n";
     return 0;
   }
 
-  type_to_score[proto.index()] = proto.value();
+  _type_to_score[proto.index()] = proto.value();
 
   return 1;
 }
 
 int
-ReadNewFragmentParameters(const XLogP::XlogpParameters& proto) {
+XLogPCalc::ReadNewFragmentParameters(const XLogP::XlogpParameters& proto) {
   for (const auto& contribution : proto.contribution()) {
     if (! ProcessNewFragmentParameter(contribution)) {
       cerr << "ReadNewFragmentParameters:cannot process " << contribution.ShortDebugString() << '\n';
@@ -283,7 +276,7 @@ ReadNewFragmentParameters(const XLogP::XlogpParameters& proto) {
 }
 
 int
-ReadNewFragmentParameters(IWString& fname) {
+XLogPCalc::ReadNewFragmentParameters(IWString& fname) {
   std::optional<XLogP::XlogpParameters> maybe_proto =
         iwmisc::ReadTextProto<XLogP::XlogpParameters>(fname);
   if (! maybe_proto) {
@@ -294,32 +287,13 @@ ReadNewFragmentParameters(IWString& fname) {
   return ReadNewFragmentParameters(*maybe_proto);
 }
 
-// By default we apply the corrections, but for testing it may be helpful
-// to be able to turn them off.
-int apply_corrections = 1;
-int apply_nitroxide = 1;
-
-void
-TurnOffNitroxide() {
-  apply_nitroxide = 0;
-}
-
-// for debugging it is helpful to get a detailed dump of what got assigned
-// to each atom.
-int display_assignments = 0;
-
-void
-SetDisplayAtomAssignments(int s) {
-  display_assignments = s;
-}
-
-void
-ForTestingSetApplyCorrections(int s) {
-  apply_corrections = s;
-}
-
 struct PerMoleculeData {
   public:
+    const std::array<double, 88>& type_to_score;
+    const bool apply_corrections;
+    const bool apply_nitroxide;
+    const bool display_unclassified_atom_messages;
+    const bool display_assignments;
     const int natoms;
 
     atomic_number_t* atomic_number;
@@ -338,7 +312,7 @@ struct PerMoleculeData {
     int DearomatizePyrroles(Molecule& m);
 
   public:
-    PerMoleculeData(Molecule& m);
+    PerMoleculeData(Molecule& m, const XLogPCalc& xlogp);
     ~PerMoleculeData();
 
     // return true if any of the neighbours of `zatom` have pi electrons.
@@ -376,7 +350,13 @@ PerMoleculeData::NbrsWithPiElectrons(const Molecule& m,
   return rc;
 }
 
-PerMoleculeData::PerMoleculeData(Molecule& m) : natoms(m.natoms()) {
+PerMoleculeData::PerMoleculeData(Molecule& m, const XLogPCalc& calc)
+    : type_to_score(calc._type_to_score),
+      apply_corrections(calc._apply_corrections),
+      apply_nitroxide(calc._apply_nitroxide),
+      display_unclassified_atom_messages(calc._display_unclassified_atom_messages),
+      display_assignments(calc._display_assignments),
+      natoms(m.natoms()) {
   atomic_number = new atomic_number_t[natoms];
   ncon = new int[natoms];
   aromatic = new int[natoms];
@@ -805,7 +785,10 @@ MoreThanOneRingBond(Molecule& m, atom_number_t a1, atom_number_t a2,
   for (const Bond * b : m[a1]) {
     atom_number_t o = b->other(a1);
     if (o == a2) {
-      return 0;
+      if (b->nrings()) {
+        ++ring_bonds_found;
+      }
+      return ring_bonds_found > 1;
     }
 
     if (m.bonds_between(o, a2) != d) {
@@ -827,6 +810,30 @@ MoreThanOneRingBond(Molecule& m, atom_number_t a1, atom_number_t a2,
   return 0;
 }
 
+//Place into `result` all atoms that are between `a1` and `a2`
+int
+AllAtomsBetween(Molecule& m, atom_number_t a1, atom_number_t a2,
+                Set_of_Atoms& result) {
+  result.reserve(8);  // a guess
+
+  int dist = m.bonds_between(a1, a2);
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    int d1 = m.bonds_between(i, a1);
+    int d2 = m.bonds_between(i, a2);
+    if (d1 >= dist || d2 >= dist) {
+      continue;
+    }
+    if ((d1 + d2) == dist) {
+      result << i;
+    }
+  }
+
+  return result.number_elements();
+}
+
+// This has atom ordering dependencies which show up in iwdescr.
+// TODO:ianwatson investigate.
 double
 IntraMolecularHBondCorrection(Molecule& m,
             PerMoleculeData& per_molecule_data,
@@ -859,6 +866,7 @@ IntraMolecularHBondCorrection(Molecule& m,
       if (per_molecule_data.atomic_number[i] == per_molecule_data.atomic_number[j]) {
         continue;
       }
+
       if (per_molecule_data.atomic_number[j] == 9) {
       } else if (per_molecule_data.atomic_number[j] == 8 &&
                  per_molecule_data.unsaturation[j] == 1) {
@@ -869,7 +877,7 @@ IntraMolecularHBondCorrection(Molecule& m,
       }
 
       Set_of_Atoms between;
-      m.atoms_between(i, j, between);
+      AllAtomsBetween(m, i, j, between);
       if (between.any_members_set_in_array(already_used.get(), 1)) {
         continue;
       }
@@ -883,7 +891,8 @@ IntraMolecularHBondCorrection(Molecule& m,
       ++rc;
       // We only allow each atom to be in 1 internal intramolecular hbond.
       // Not great, but it would be hard to fix this...
-      break;
+      // This introduces an atom ordering problem. Allow multiple.
+      // break;
     }
   }
 
@@ -1263,13 +1272,12 @@ Nitroxide(Molecule& m,
   return rc * -2.9;
 }
 
+#ifdef THIS_IS_NOT_SSSR_STABLE
 // Look for ortho OH and C[OH] groups in `ring`.
 double
 CatecholLike(Molecule& m,
              const Ring& ring,
              const PerMoleculeData& per_molecule_data) {
-  int ring_size = ring.size();
-
   int previous_was_oh = 0;
 
   atom_number_t last_in_ring = ring.back();
@@ -1282,9 +1290,7 @@ CatecholLike(Molecule& m,
 
   int rc = 0;
 
-  for (int i = 0; i < ring_size; ++i) {
-    atom_number_t zatom = ring[i];
-
+  for (atom_number_t zatom : ring) {
     if (per_molecule_data.ncon[zatom] == 2) {
       previous_was_oh = 0;
       continue;
@@ -1295,16 +1301,20 @@ CatecholLike(Molecule& m,
       continue;
     }
 
-    if (! previous_was_oh) {
+    if (previous_was_oh) {
+      ++rc;
+    } else {
       previous_was_oh = 1;
-      continue;
     }
 
-    ++rc;
     // Deliberate choice to reset - so we do not perceive too many of these.
-    previous_was_oh = 0;
+    // No, this introduces bugs
+    // C1[C@H](O)[C@@H](O)[C@H](O)[C@@H](C)N1CCN CHEMBL270037
+    // Depending on how the ring is traversed, this will cause different results.
+    // previous_was_oh = 0;
   }
 
+  cerr << "Ring size " << ring.size() << " contains " << rc << " catechol\n";
   return rc * 0.53;
 }
 
@@ -1320,6 +1330,34 @@ CatecholLike(Molecule& m,
   }
 
   return rc;
+}
+#endif
+
+// Look for ring bonds with OH or CH2-OH attachments.
+double
+CatecholLike(Molecule& m,
+             const PerMoleculeData& per_molecule_data,
+             const int* status) {
+  const int* ncon = per_molecule_data.ncon;
+
+  int rc = 0;
+
+  for (const Bond* b : m.bond_list()) {
+    if (b->nrings() == 0) {
+      continue;
+    }
+
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+    if (ncon[a1] <= 2 || ncon[a2] <= 2) {
+      continue;
+    }
+    if (IsOh(m, a1, per_molecule_data) && IsOh(m, a2, per_molecule_data)) {
+      ++rc;
+    }
+  }
+
+  return rc * 0.53;
 }
 
 // Note that this deliberately matches guanidine forms.
@@ -1377,14 +1415,16 @@ AmidineCorrection(Molecule& m,
     }
   }
 
-  return rc * type_to_score[kAmidine];  // 84
+  return rc * per_molecule_data.type_to_score[kAmidine];  // 84
 }
+
+// #define DEBUG_CORRECTIONS
 
 double
 Corrections(Molecule& m,
             PerMoleculeData& per_molecule_data,
             const int* status) {
-  if (! apply_corrections) {
+  if (! per_molecule_data.apply_corrections) {
     return 0.0;
   }
   // cerr << "Corrections being applied\n";
@@ -1392,18 +1432,34 @@ Corrections(Molecule& m,
   double rc = HydropphobicCarbonCorrection(m, per_molecule_data, status);
   rc += AminoAcidCorrection(m, per_molecule_data, status);
   rc += IntraMolecularHBondCorrection(m, per_molecule_data, status);
+#ifdef DEBUG_CORRECTIONS
+  cerr << " rc1 " << rc << '\n';
+#endif
   // IAW corrections.
   rc += HalogenCorrection(m, per_molecule_data, status);
   rc += AmidineCorrection(m, per_molecule_data, status);
+#ifdef DEBUG_CORRECTIONS
+  cerr << " rc2 " << rc << '\n';
+#endif
   rc += CatecholLike(m, per_molecule_data, status);
+#ifdef DEBUG_CORRECTIONS
+  cerr << " rc3 " << rc << '\n';
+#endif
   rc += Nitro(m, per_molecule_data, status);
   rc += TButyl(m, per_molecule_data, status);
   rc += Biphenyl(m, per_molecule_data, status);
   rc += BenzoTriazole(m, per_molecule_data, status);
   rc += Nitroxide(m, per_molecule_data, status);
-  if (apply_nitroxide) {
+#ifdef DEBUG_CORRECTIONS
+  cerr << " rc4 " << rc << '\n';
+#endif
+  if (per_molecule_data.apply_nitroxide) {
     rc += ZwitterionCorrection(m, per_molecule_data, status);
   }
+
+#ifdef DEBUG_CORRECTIONS
+  cerr << " rcf " << rc << '\n';
+#endif
 
   return rc;
 }
@@ -1442,7 +1498,7 @@ IdentifyNO(Molecule& m,
     ++rc;
   }
 
-  return rc * type_to_score[kNO];
+  return rc * per_molecule_data.type_to_score[kNO];
 }
 
 double
@@ -1494,7 +1550,7 @@ IdentifyNO2(Molecule& m,
     }
   }
 
-  return rc * type_to_score[kNitro];
+  return rc * per_molecule_data.type_to_score[kNitro];
 }
 
 
@@ -1549,7 +1605,7 @@ IdentifyNCS(Molecule& m,
     }
   }
 
-  return rc * type_to_score[kNCS];
+  return rc * per_molecule_data.type_to_score[kNCS];
 }
 
 double
@@ -1579,7 +1635,7 @@ IdentifyCyano(Molecule& m,
     status[a2] = kCyano;
   }
 
-  return rc * type_to_score[kCyano];
+  return rc * per_molecule_data.type_to_score[kCyano];
 }
 
 bool
@@ -1642,13 +1698,13 @@ IdentifyAmideNitrogens(const Molecule& m,
 
     if (per_molecule_data.hcount[i] == 2) {
       status[i] = kAmideNitrogenNH2;
-      rc += type_to_score[kAmideNitrogenNH2];  // 63
+      rc += per_molecule_data.type_to_score[kAmideNitrogenNH2];  // 63
     } else if (per_molecule_data.hcount[i] == 1) {
       status[i] = kAmideNitrogenNH;
-      rc += type_to_score[kAmideNitrogenNH];  // 64
+      rc += per_molecule_data.type_to_score[kAmideNitrogenNH];  // 64
     } else {
       status[i] = kAmideNitrogen;
-      rc += type_to_score[kAmideNitrogen];  // 65
+      rc += per_molecule_data.type_to_score[kAmideNitrogen];  // 65
     }
   }
 
@@ -1665,7 +1721,7 @@ ClassifyNSP2(Molecule& m,
   if (per_molecule_data.ncon[zatom] == 1 ||
       per_molecule_data.attached_carbons[zatom] == 2) {
     status[zatom] = kNitrogenSp2RdblNH;
-    return type_to_score[kNitrogenSp2RdblNH];  // 53
+    return per_molecule_data.type_to_score[kNitrogenSp2RdblNH];  // 53
   }
 
   bool heteratom_at_end_of_double_bond = false;
@@ -1680,16 +1736,16 @@ ClassifyNSP2(Molecule& m,
 
   if (! heteratom_at_end_of_double_bond) {
     status[zatom] = kNitrogenSp2RdblNX;
-    return type_to_score[kNitrogenSp2RdblNX];  // 54
+    return per_molecule_data.type_to_score[kNitrogenSp2RdblNX];  // 54
   }
 
   if (per_molecule_data.attached_carbons[zatom] == 1) {
     status[zatom] = kNitrogenSp2XdblNR;
-    return type_to_score[kNitrogenSp2XdblNR];  // 55
+    return per_molecule_data.type_to_score[kNitrogenSp2XdblNR];  // 55
   }
 
   status[zatom] = kNitrogenSp2XdblNX;
-  return type_to_score[kNitrogenSp2XdblNX];  // 56
+  return per_molecule_data.type_to_score[kNitrogenSp2XdblNX];  // 56
 }
 
 double
@@ -1732,39 +1788,39 @@ ClassifyNSP3(const Molecule& m,
   if (per_molecule_data.hcount[zatom] == 2) {
     if (per_molecule_data.attached_carbons[zatom] == 0) {
       status[zatom] = kNitrogenSp3X;
-      return type_to_score[kNitrogenSp3X];   // 48
+      return per_molecule_data.type_to_score[kNitrogenSp3X];   // 48
     }
 
     if (per_molecule_data.NbrsHavePiElectrions(m, zatom)) {
       status[zatom] = kNitrogenSp3NH2Rpi;
-      return type_to_score[kNitrogenSp3NH2Rpi];  // 47
+      return per_molecule_data.type_to_score[kNitrogenSp3NH2Rpi];  // 47
     } else {
       status[zatom] = kNitrogenSp3NH2Rnopi;
-      return type_to_score[kNitrogenSp3NH2Rnopi];  // 46
+      return per_molecule_data.type_to_score[kNitrogenSp3NH2Rnopi];  // 46
     }
   }
 
   if (per_molecule_data.attached_carbons[zatom] == 3) {
     status[zatom] = kNitrogenNSp3NR3;
-    return type_to_score[kNitrogenNSp3NR3];   // 51
+    return per_molecule_data.type_to_score[kNitrogenNSp3NR3];   // 51
   }
 
   if (per_molecule_data.hcount[zatom] == 1) {
     if (per_molecule_data.attached_carbons[zatom] == 2) {
       status[zatom] = kNitrogenNS2RNHR;
-      return type_to_score[kNitrogenNS2RNHR];  // 49
+      return per_molecule_data.type_to_score[kNitrogenNS2RNHR];  // 49
     }
 
     status[zatom] = kNitrogenNSp3RNH;
-    return type_to_score[kNitrogenNSp3RNH];  // 50
+    return per_molecule_data.type_to_score[kNitrogenNSp3RNH];  // 50
   }
 
   if (per_molecule_data.ncon[zatom] == 3) {
     status[zatom] = kNitrogenNSp3NR2X;
-    return type_to_score[kNitrogenNSp3NR2X];  // 51
+    return per_molecule_data.type_to_score[kNitrogenNSp3NR2X];  // 51
   }
 
-  if (display_unclassified_atom_messages) {
+  if (per_molecule_data.display_unclassified_atom_messages) {
     cerr << "xlogp::ClassifyNSP3:Unrecognised atom " << m.name() << '\n';
   }
 
@@ -1812,13 +1868,13 @@ ClassifyTrigonalPlanarNitrogen(Molecule& m,
       per_molecule_data.ncon[zatom] == 2 &&
       per_molecule_data.attached_carbons[zatom] == 2) {
     status[zatom] = kNitrogenTrigonalPlanarRNHR;
-    return type_to_score[kNitrogenTrigonalPlanarRNHR];  // 58
+    return per_molecule_data.type_to_score[kNitrogenTrigonalPlanarRNHR];  // 58
   }
 
   if (per_molecule_data.ncon[zatom] == 2 &&
       per_molecule_data.hcount[zatom] == 1) {
     status[zatom] = kNitrogenTrigonalPlanarRNHX;
-    return type_to_score[kNitrogenTrigonalPlanarRNHX];  // 59
+    return per_molecule_data.type_to_score[kNitrogenTrigonalPlanarRNHX];  // 59
   }
 
   // The paper says only 5 membered rings, but things do not match with
@@ -1828,13 +1884,13 @@ ClassifyTrigonalPlanarNitrogen(Molecule& m,
       (m.in_ring_of_given_size(zatom, 5) ||
        m.in_ring_of_given_size(zatom, 6)) ) {
     status[zatom] = kNitrogenTrigonalPlanarNA3ring;
-    return type_to_score[kNitrogenTrigonalPlanarNA3ring];  // 62
+    return per_molecule_data.type_to_score[kNitrogenTrigonalPlanarNA3ring];  // 62
   }
 
   if (per_molecule_data.ncon[zatom] == 3 &&
       per_molecule_data.ring_bond_count[zatom] == 0) {
     status[zatom] = kNitrogenTrigonalPlanarNA3nonring;
-    return type_to_score[kNitrogenTrigonalPlanarNA3nonring];  // 61
+    return per_molecule_data.type_to_score[kNitrogenTrigonalPlanarNA3nonring];  // 61
   }
 
   // This does not make much sense. But the paper says that the ring version
@@ -1846,15 +1902,15 @@ ClassifyTrigonalPlanarNitrogen(Molecule& m,
   if (per_molecule_data.ncon[zatom] == 3 &&
       per_molecule_data.ring_bond_count[zatom]) {
     status[zatom] = kNitrogenTrigonalPlanarNA3nonring;
-    return type_to_score[kNitrogenTrigonalPlanarNA3nonring];  // 61
+    return per_molecule_data.type_to_score[kNitrogenTrigonalPlanarNA3nonring];  // 61
   }
 
   if (m.formal_charge(zatom) == 1) {
     status[zatom] = kPositiveNitrogenJoinedN;  // 83
-    return type_to_score[kPositiveNitrogenJoinedN];
+    return per_molecule_data.type_to_score[kPositiveNitrogenJoinedN];
   }
 
-  if (display_unclassified_atom_messages) {
+  if (per_molecule_data.display_unclassified_atom_messages) {
     cerr << "xlogp::ClassifyTrigonalPlanarNitrogen:unrecognised form '" << m.name() << "'\n";
   }
 
@@ -1925,7 +1981,7 @@ IdentifyTrigonalPlanarNitrogenAromatic(Molecule& m,
       continue;
     }
     status[i] = kNitrogenTrigonalPlanarAromatic;
-    rc += type_to_score[kNitrogenTrigonalPlanarAromatic];  // 60
+    rc += per_molecule_data.type_to_score[kNitrogenTrigonalPlanarAromatic];  // 60
   }
 
   return rc;
@@ -1948,7 +2004,7 @@ IdentifyNitrogenAromatic(Molecule& m,
       continue;
     }
     status[i] = kNitrogenAromatic;
-    rc += type_to_score[kNitrogenAromatic];  // 57
+    rc += per_molecule_data.type_to_score[kNitrogenAromatic];  // 57
   }
 
   return rc;
@@ -1981,13 +2037,13 @@ IdentifyChargedNitrogen(const Molecule& m,
       } else {
       }
       status[i] = kQuatNitrogen;  // 81
-      rc += type_to_score[kQuatNitrogen];
+      rc += per_molecule_data.type_to_score[kQuatNitrogen];
     } else if (per_molecule_data.ncon[i] == per_molecule_data.attached_carbons[i]) {
       status[i] = kPositiveAromaticNitrogen;  // 82
-      rc += type_to_score[kPositiveAromaticNitrogen];
+      rc += per_molecule_data.type_to_score[kPositiveAromaticNitrogen];
     } else {
       status[i] = kPositiveNitrogenJoinedN;  // 83
-      rc += type_to_score[kPositiveNitrogenJoinedN];
+      rc += per_molecule_data.type_to_score[kPositiveNitrogenJoinedN];
     }
   }
 
@@ -2011,22 +2067,22 @@ IdentifyHalogens(const Molecule& m,
 
     if (z == 9) {
       status[i] = kFluorine;
-      rc += type_to_score[kFluorine];
+      rc += per_molecule_data.type_to_score[kFluorine];
       continue;
     }
     if (z == 17) {
       status[i] = kChlorine;
-      rc += type_to_score[kChlorine];
+      rc += per_molecule_data.type_to_score[kChlorine];
       continue;
     }
     if (z == 35) {
       status[i] = kBromine;
-      rc += type_to_score[kBromine];
+      rc += per_molecule_data.type_to_score[kBromine];
       continue;
     }
     if (z == 53) {
       status[i] = kIodine;
-      rc += type_to_score[kIodine];
+      rc += per_molecule_data.type_to_score[kIodine];
       continue;
     }
   }
@@ -2042,30 +2098,30 @@ ClassifySulphur(Molecule& m,
   if (per_molecule_data.ncon[zatom] == 1 &&
       per_molecule_data.hcount[zatom] == 1) {
     status[zatom] = kSulphurSH;
-    return type_to_score[kSulphurSH];  // 66
+    return per_molecule_data.type_to_score[kSulphurSH];  // 66
   }
 
   if (per_molecule_data.ncon[zatom] == 1 &&
       per_molecule_data.unsaturation[zatom] == 1) {
     status[zatom] = kSulphurSdbleR;
-    return type_to_score[kSulphurSdbleR];  // 69
+    return per_molecule_data.type_to_score[kSulphurSdbleR];  // 69
   }
 
   if (per_molecule_data.aromatic[zatom]) {
     status[zatom] = kSulphurArom;
-    return type_to_score[kSulphurArom];  // 68
+    return per_molecule_data.type_to_score[kSulphurArom];  // 68
   }
 
   if (per_molecule_data.ncon[zatom] == 2 &&
       per_molecule_data.NbrsWithPiElectrons(m, zatom) == 2 &&
       m.in_ring_of_given_size(zatom, 5)) {
     status[zatom] = kSulphurArom;
-    return type_to_score[kSulphurArom];  // 68
+    return per_molecule_data.type_to_score[kSulphurArom];  // 68
   }
 
   if (per_molecule_data.ncon[zatom] == 2) {
     status[zatom] = kSulphurD2;
-    return type_to_score[kSulphurD2];  // 67
+    return per_molecule_data.type_to_score[kSulphurD2];  // 67
   }
 
   int doubly_bonded_oxygens = 0;
@@ -2082,15 +2138,15 @@ ClassifySulphur(Molecule& m,
 
   if (doubly_bonded_oxygens == 1) {
     status[zatom] = kSulphurSulfoxide;
-    return type_to_score[kSulphurSulfoxide];  // 70
+    return per_molecule_data.type_to_score[kSulphurSulfoxide];  // 70
   }
 
   if (doubly_bonded_oxygens == 2) {
     status[zatom] = kSulphurSulfone;
-    return type_to_score[kSulphurSulfone];  // 71
+    return per_molecule_data.type_to_score[kSulphurSulfone];  // 71
   }
 
-  if (display_unclassified_atom_messages) {
+  if (per_molecule_data.display_unclassified_atom_messages) {
     cerr << "xlogp::ClassifySulphur:unrecognised form " << m.name() << '\n';
   }
 
@@ -2116,7 +2172,7 @@ IdentifySulphur(Molecule& m,
     if (x) {
       rc += *x;
     } else {
-      if (display_unclassified_atom_messages) {
+      if (per_molecule_data.display_unclassified_atom_messages) {
         cerr << "xlogp::IdentifySulphur:unrecognised Sulphur form '" << m.name() << "'\n";
       }
       status[i] = kFailed;
@@ -2139,7 +2195,7 @@ ClassifyUnsaturatedPhosphorus(const Molecule& m,
   }
 
   status[zatom] = kPdoubleO;
-  return type_to_score[kPdoubleO];
+  return per_molecule_data.type_to_score[kPdoubleO];
 }
 
 std::optional<double>
@@ -2169,13 +2225,13 @@ ClassifyPhosphorus(const Molecule& m,
 
   if (doubly_bonded_sulphur != kInvalidAtomNumber) {
     status[zatom] = kPdoubleS;
-    return  type_to_score[kPdoubleS];
+    return  per_molecule_data.type_to_score[kPdoubleS];
   }
 
   if (double_bond.size()) {
     if (singly_bonded_sulphur != kInvalidAtomNumber) {
       status[zatom] = kPsingleS;
-      return type_to_score[kPsingleS];
+      return per_molecule_data.type_to_score[kPsingleS];
     }
 
     return ClassifyUnsaturatedPhosphorus(m, zatom, double_bond, per_molecule_data, status);
@@ -2186,7 +2242,7 @@ ClassifyPhosphorus(const Molecule& m,
   for (atom_number_t o : single_bond) {
     if (per_molecule_data.atomic_number[o] == 8) {
       status[zatom] = kPhosphorus;
-      return  type_to_score[kPhosphorus];
+      return  per_molecule_data.type_to_score[kPhosphorus];
     }
   }
 
@@ -2228,30 +2284,34 @@ ClassifyAromaticCarbon(Molecule& m,
   if (per_molecule_data.attached_carbons[zatom] == 2 &&
      per_molecule_data.hcount[zatom] == 1) {
     status[zatom] = kCaromRCHR;
-    return type_to_score[kCaromRCHR];  // 26
+    return per_molecule_data.type_to_score[kCaromRCHR];  // 26
   } 
   
   if (per_molecule_data.attached_carbons[zatom] == 1 &&
       per_molecule_data.hcount[zatom] == 1) {
     status[zatom] = kCaromRCHX;
-    return type_to_score[kCaromRCHX];  // 27
+    return per_molecule_data.type_to_score[kCaromRCHX];  // 27
   } 
   
   if (per_molecule_data.attached_carbons[zatom] == 0 &&
              per_molecule_data.hcount[zatom] == 1) {
     status[zatom] = kCaromXCHX;
-    return type_to_score[kCaromXCHX];  // 28
+    return per_molecule_data.type_to_score[kCaromXCHX];  // 28
   } 
   
   if (per_molecule_data.ncon[zatom] == 3 &&
       per_molecule_data.ring_bond_count[zatom] == 2 &&
       per_molecule_data.attached_carbons[zatom] == 3) {
     status[zatom] = kCaromRCRR;
-    return type_to_score[kCaromRCRR];  // 29
+    return per_molecule_data.type_to_score[kCaromRCRR];  // 29
   }
 
   if (m.ncon(zatom) != 3) {
-    cerr << "xlogp::ClassifyAromaticCarbon: invalid aromatic carbon " << m.name() << '\n';
+    if (per_molecule_data.display_unclassified_atom_messages) {
+      cerr << m.smiles() << ' ' << m.name() <<
+              " xlogp::ClassifyAromaticCarbon: invalid aromatic carbon " <<
+              m.smarts_equivalent_for_atom(zatom) << '\n';
+    }
     return std::nullopt;
   }
 
@@ -2280,31 +2340,31 @@ ClassifyAromaticCarbon(Molecule& m,
 
   if (aromatic_bonds == 3) {
     status[zatom] = kCaromACAA;
-    return type_to_score[kCaromACAA];   // 34
+    return per_molecule_data.type_to_score[kCaromACAA];   // 34
   }
 
   if (heteroatoms_in_ring == 0 && heteroatom_outside_ring) {
     status[zatom] = kCaromRCXR;  // 30
-    return type_to_score[kCaromRCXR];
+    return per_molecule_data.type_to_score[kCaromRCXR];
   }
 
   if ( heteroatoms_in_ring == 1 && ! heteroatom_outside_ring) {
     status[zatom] = kCaromRCRX;
-    return type_to_score[kCaromRCRX];   // 31
+    return per_molecule_data.type_to_score[kCaromRCRX];   // 31
   }
 
   if ( heteroatoms_in_ring == 1 && heteroatom_outside_ring) {
     status[zatom] = kCaromRCXX;
-    return type_to_score[kCaromRCXX];   // 32
+    return per_molecule_data.type_to_score[kCaromRCXX];   // 32
   }
 
   if (heteroatoms_in_ring == 2) {
     status[zatom] = kCaromXCAX;
-    return type_to_score[kCaromXCAX];  // 33
+    return per_molecule_data.type_to_score[kCaromXCAX];  // 33
   }
 
   status[zatom] = kCaromRCRR;
-  return type_to_score[kCaromRCRR];
+  return per_molecule_data.type_to_score[kCaromRCRR];
 }
 
 std::optional<double>
@@ -2325,25 +2385,25 @@ ClassifySinglyConnectedOxygen(const Molecule& m,
   if (per_molecule_data.unsaturation[zatom] == 1) {
     if (per_molecule_data.attached_carbons[zatom] == 1) {
       status[zatom] = kOxygenOdblR;
-      return type_to_score[kOxygenOdblR];  // 44
+      return per_molecule_data.type_to_score[kOxygenOdblR];  // 44
     } else {
       status[zatom] = kOxygenOdblX;
-      return type_to_score[kOxygenOdblX];  // 45
+      return per_molecule_data.type_to_score[kOxygenOdblX];  // 45
     }
   }
 
   if (per_molecule_data.attached_carbons[zatom] == 1) {
     if (per_molecule_data.NbrsHavePiElectrions(m, zatom)) {
       status[zatom] = kOxygenROHpi;
-      return type_to_score[kOxygenROHpi];  // 39
+      return per_molecule_data.type_to_score[kOxygenROHpi];  // 39
     } else {
       status[zatom] = kOxygenROHnopi;
-      return type_to_score[kOxygenROHnopi];  // 38
+      return per_molecule_data.type_to_score[kOxygenROHnopi];  // 38
     }
   } 
 
   status[zatom] = kOxygenXOH;
-  return type_to_score[kOxygenXOH];  // 40
+  return per_molecule_data.type_to_score[kOxygenXOH];  // 40
 }
 
 double
@@ -2357,12 +2417,12 @@ ClassifyDoublyConnectedOxygen(const Molecule& m,
   if (per_molecule_data.ring_bond_count[zatom] == 2 &&
       per_molecule_data.NbrsWithPiElectrons(m, zatom) == 2) {
     status[zatom] = kOxygenAromatic;
-    return type_to_score[kOxygenAromatic];  // 43
+    return per_molecule_data.type_to_score[kOxygenAromatic];  // 43
   }
 
   if (per_molecule_data.attached_carbons[zatom] == 2) {
     status[zatom] = kOxygenROR;
-    return type_to_score[kOxygenROR];  // 41
+    return per_molecule_data.type_to_score[kOxygenROR];  // 41
   }
 
   status[zatom] = kOxygenROX;
@@ -2390,7 +2450,7 @@ IdentifyOxygen(Molecule& m,
       rc += ClassifyDoublyConnectedOxygen(m, i, per_molecule_data, status);
     } else {
       status[i] = kFailed;
-      if (display_unclassified_atom_messages) {
+      if (per_molecule_data.display_unclassified_atom_messages) {
         cerr << "xlogp::IdentifyOxygen:unrecognised oxygen " << m.name() << '\n';
       }
     }
@@ -2449,7 +2509,7 @@ IdentifyAromaticAtoms(Molecule& m,
       status[i] = kSulphurArom;
       rc += 0.964;  // 68
     } else {
-      if (display_unclassified_atom_messages) {
+      if (per_molecule_data.display_unclassified_atom_messages) {
         cerr << "xlogp::IdentifyAromaticAtoms:unrecognised aromatic type " << m.name() << 
              m.smarts_equivalent_for_atom(i) << '\n';
         status[i] = kFailed;
@@ -2629,11 +2689,11 @@ ClassifyCarbonSp(Molecule& m,
       per_molecule_data.ncon[zatom] == 1 &&
       per_molecule_data.atomic_number[end_of_triple_bond] == 6) {
     status[zatom] = kCarbonSpRCH;
-    return type_to_score[kCarbonSpRCH];  // 35
+    return per_molecule_data.type_to_score[kCarbonSpRCH];  // 35
   } 
 
   status[zatom] = kCarbonSpRCR;
-  return type_to_score[kCarbonSpRCR];  // 36
+  return per_molecule_data.type_to_score[kCarbonSpRCR];  // 36
 }
 
 double
@@ -2717,22 +2777,22 @@ ClassifyCarbonSp2(Molecule& m,
     if (per_molecule_data.attached_carbons[zatom] == 1 &&
         per_molecule_data.hcount[zatom] == 1) {
       status[zatom] = kCarbonSp2RdblCHX;
-      return type_to_score[kCarbonSp2RdblCHX];  // 20
+      return per_molecule_data.type_to_score[kCarbonSp2RdblCHX];  // 20
     } else {
       status[zatom] = kCarbonSp2RdbkCRX;
-      return type_to_score[kCarbonSp2RdbkCRX];  // 23
+      return per_molecule_data.type_to_score[kCarbonSp2RdbkCRX];  // 23
     }
   } else {
     if (per_molecule_data.hcount[zatom] == 1) {
       status[zatom] = kCarbonSp2XdblCHR;
-      return type_to_score[kCarbonSp2XdblCHR];  // 21
+      return per_molecule_data.type_to_score[kCarbonSp2XdblCHR];  // 21
     } else {
       status[zatom] = kCarbonSp2XdblCR2;
-      return type_to_score[kCarbonSp2XdblCR2];  // 24
+      return per_molecule_data.type_to_score[kCarbonSp2XdblCR2];  // 24
     }
   }
 
-  if (display_unclassified_atom_messages) {
+  if (per_molecule_data.display_unclassified_atom_messages) {
     cerr << "xlogp::ClassifyCarbonSp2:unrecognised type " << m.name() << '\n';
   }
 
@@ -2785,8 +2845,7 @@ IdentifyTerminalGroups(Molecule& m,
 
 // Runs under the assumption that WFL aromaticity has been set.
 std::optional<double>
-XLogPWFL(Molecule& m,
-      int* status) {
+XLogPWFL(Molecule& m, int* status, const XLogPCalc& xlogp) {
   // Always remove any explicit Hydrogen atoms, Sorry, this might change `m`.
   m.remove_all(1);
 
@@ -2794,7 +2853,7 @@ XLogPWFL(Molecule& m,
 
   std::fill_n(status, matoms, 0);
 
-  PerMoleculeData per_molecule_data(m);
+  PerMoleculeData per_molecule_data(m, xlogp);
 
   double rc = IdentifyTerminalGroups(m, per_molecule_data, status);
 
@@ -2823,7 +2882,7 @@ XLogPWFL(Molecule& m,
   rc += IdentifyNitrogenSP3(m, per_molecule_data, status);
   rc += IdentifyNitrogenSP2(m, per_molecule_data, status);
 
-  rc += m.implicit_hydrogens() * type_to_score[kHydrogen];  // 37
+  rc += m.implicit_hydrogens() * per_molecule_data.type_to_score[kHydrogen];  // 37
 
   rc += Corrections(m, per_molecule_data, status);
 
@@ -2846,7 +2905,7 @@ XLogPWFL(Molecule& m,
     }
   }
 
-  if (! display_assignments) {
+  if (! per_molecule_data.display_assignments) {
     return rc;
   }
 
@@ -2854,13 +2913,13 @@ XLogPWFL(Molecule& m,
   cerr << mcopy.aromatic_smiles() << ' ' << m.name() << '\n';
   double sum = 0.0;
   for (const auto& [k, v] : count) {
-    cerr << " type " << k << " count " << v << ' ' << type_to_score[k] << ' ' << (v * type_to_score[k]) << '\n';
-    sum += (v * type_to_score[k]);
+    cerr << " type " << k << " count " << v << ' ' << per_molecule_data.type_to_score[k] << ' ' << (v * per_molecule_data.type_to_score[k]) << '\n';
+    sum += (v * per_molecule_data.type_to_score[k]);
   }
 
   const int ih = m.implicit_hydrogens();
-  cerr << ih << " imph " << type_to_score[kHydrogen] << ' ' << (ih * type_to_score[kHydrogen]) << '\n';
-  sum += (ih * type_to_score[kHydrogen]);
+  cerr << ih << " imph " << per_molecule_data.type_to_score[kHydrogen] << ' ' << (ih * per_molecule_data.type_to_score[kHydrogen]) << '\n';
+  sum += (ih * per_molecule_data.type_to_score[kHydrogen]);
   cerr << sum << '\n';
   for (int i = 0; i < matoms; ++i) {
     if (i > 0) {
@@ -2874,30 +2933,68 @@ XLogPWFL(Molecule& m,
   return rc;
 }
 
+class ScopedAromaticity {
+  private:
+    decltype(global_aromaticity_type()) _saved;
+
+  public:
+    explicit ScopedAromaticity(decltype(global_aromaticity_type()) aromaticity)
+        : _saved(global_aromaticity_type()) {
+      set_global_aromaticity_type(aromaticity);
+    }
+
+    ~ScopedAromaticity() {
+      set_global_aromaticity_type(_saved);
+    }
+};
+
+/*
+  Does not modify `m`.
+
+  XLogPWFL needs the Hydrogen suppressed graph and removes explicit Hydrogens to
+  get it, which used to happen to the caller's molecule. A molecule carrying any
+  is copied first.
+
+  Note what this means for `status`. It is filled per atom, and removing
+  Hydrogens renumbers the atoms, so when a copy is made the indices refer to the
+  Hydrogen suppressed molecule and not to `m` as the caller has it. A caller
+  that wants `status` aligned with its own molecule should suppress the
+  Hydrogens itself before calling, which xlogp_main does. Callers that ignore
+  `status`, or that pass a molecule with no explicit Hydrogens, are unaffected.
+*/
+
 std::optional<double>
-XLogP(Molecule& m,
-      int* status) {
+XLogPCalc::LogP(Molecule& m, int* status) const {
+  if (m.natoms(1) > 0) [[unlikely]] {
+    Molecule mcopy(m);
+    mcopy.RemoveAllHydrogenAtoms();
+    return LogPHSuppressed(mcopy, status);
+  }
 
-  const auto aromsave = global_aromaticity_type();
-  // Aromaticity definitions seem quite problematic, need more test
-  // cases to figure out what is closest to their implementation.
-  set_global_aromaticity_type(WangFuLai);
+  return LogPHSuppressed(m, status);
+}
+
+// `m` must have no explicit Hydrogens, or be a copy that may be altered.
+std::optional<double>
+XLogPCalc::LogPHSuppressed(Molecule& m, int* status) const {
+  std::optional<double> rc;
+  {
+    ScopedAromaticity aromaticity(WangFuLai);
+    m.compute_aromaticity();
+    rc = XLogPWFL(m, status, *this);
+  }
+
   m.compute_aromaticity();
-
-  auto rc = XLogPWFL(m, status);
-
-  set_global_aromaticity_type(aromsave);
-  // Potentially wasted computation, need to do something about this...
-  m.compute_aromaticity();
-
   return rc;
 }
 
 std::optional<double>
-XLogP(Molecule& m) {
+XLogPCalc::LogP(Molecule& m) const {
   std::unique_ptr<int[]> status = std::make_unique<int[]>(m.natoms());
+  return LogP(m, status.get());
+}
 
-  return XLogP(m, status.get());
+XLogPCalc::XLogPCalc() : _type_to_score(kDefaultTypeToScore) {
 }
 
 } // namespace xlogp

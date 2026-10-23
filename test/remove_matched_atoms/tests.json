@@ -1,0 +1,13 @@
+{
+  "executable": "remove_matched_atoms",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-s 'CC1CCCNC1' -S stripped_matches #{indir}/test.smi"
+      ]
+    }
+
+  ]
+
+}

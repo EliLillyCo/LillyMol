@@ -7,14 +7,13 @@
 
 #include "absl/container/flat_hash_map.h"
 
-#include "google/protobuf/io/zero_copy_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline_v2/cmdline_v2.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/iwre2.h"
+#include "Utilities/General/proto_collator.h"
 
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/replacement_ring.pb.h"
@@ -46,7 +45,52 @@ Usage(int rc) {
 // We keep track of rings by type. And within each type there are protos
 // describing the rings found.
 
-using RingData = absl::flat_hash_map<std::string, absl::flat_hash_map<std::string, RplRing::ReplacementRing>>;
+struct ReplacementRingTraits {
+  using Proto = RplRing::ReplacementRing;
+  using Value = RplRing::ReplacementRing;
+
+  bool IsValid(const Proto& proto, std::ostream& err) const {
+    if (proto.usmi().empty()) {
+      err << "empty usmi " << proto.ShortDebugString() << '\n';
+      return false;
+    }
+
+    return true;
+  }
+
+  const std::string& Key(const Proto& proto) const {
+    return proto.usmi();
+  }
+
+  Value MakeValue(Proto&& proto, const std::string&) const {
+    return std::move(proto);
+  }
+
+  void Merge(Value& destination, Proto&& incoming) const {
+    destination.set_n(destination.n() + incoming.n());
+  }
+
+  int Write(const std::string&, const Value& proto,
+            IWString_and_File_Descriptor& output) const {
+    static google::protobuf::TextFormat::Printer printer;
+    printer.SetSingleLineMode(true);
+
+    std::string buffer;
+    if (! printer.PrintToString(proto, &buffer)) {
+      cerr << "ReplacementRingTraits::Write:cannot write '" <<
+              proto.ShortDebugString() << "'\n";
+      return 0;
+    }
+
+    output << buffer << '\n';
+    output.write_if_buffer_holds_more_than(8192);
+
+    return 1;
+  }
+};
+
+using RingCollator = proto_collator::ProtoCollator<ReplacementRingTraits>;
+using RingData = absl::flat_hash_map<std::string, RingCollator>;
 
 class Options {
   private:
@@ -63,14 +107,10 @@ class Options {
                         const std::filesystem::directory_entry& fname,
                         RingData& rings);
     int AggregateRings(iwstring_data_source& input,
-                        absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings);
-    int AggregateRings(const RplRing::ReplacementRing& ring,
-                        absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings);
-    int WriteRings(const absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings,
+                        RingCollator& rings);
+    int WriteRings(const RingCollator& rings,
                     const std::string name_stem,
                     const std::string ring_type);
-    int WriteRings(const absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings,
-                    IWString_and_File_Descriptor& output);
 
   public:
     Options();
@@ -148,8 +188,7 @@ Options::AggregateRings(const char* dirname,
     return _ignore_errors;
   }
 
-  fs::path full_path_name(dirname);
-  full_path_name /= fname;
+  fs::path full_path_name(fname.path());
 
   iwstring_data_source input(full_path_name.c_str());
   if (! input.good()) {
@@ -157,59 +196,15 @@ Options::AggregateRings(const char* dirname,
     return 0;
   }
 
-  auto iter = rings.find(ring_type);
-  if (iter != rings.end()) {
-     return AggregateRings(input, iter->second);
-  }
+  auto [iter, _] = rings.try_emplace(ring_type);
 
-  // New ring type, create;
-  absl::flat_hash_map<std::string, RplRing::ReplacementRing> proto;
-  auto iter2 = rings.emplace(ring_type, std::move(proto));
-
-  return AggregateRings(input, std::get<1>(*iter2.first));
+  return AggregateRings(input, iter->second);
 }
 
 int
 Options::AggregateRings(iwstring_data_source& input,
-                        absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings) {
-  const_IWSubstring buffer;
-  while (input.next_record(buffer)) {
-    RplRing::ReplacementRing proto;
-    google::protobuf::io::ArrayInputStream zero_copy_array(buffer.data(), buffer.nchars());
-    if (!google::protobuf::TextFormat::Parse(&zero_copy_array, &proto)) {
-      cerr << "Options::AggregateRings:cannot parse " << buffer << "'\n";
-      return 0;
-    }
-
-    if (! AggregateRings(proto, rings)) {
-      cerr << "Options::AggregateRings:cannot parse proto " << buffer << '\n';
-      return 0;
-    }
-  }
-
-  // cerr << "At end of " << input.fname() << " hrve " << rings.size() << " lines_read " << input.lines_read() << '\n';
-
-  return 1;
-}
-
-int
-Options::AggregateRings(const RplRing::ReplacementRing& ring,
-                        absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings) {
-  if (ring.usmi().size() == 0) {
-    cerr << "EMpty usmi " << ring.ShortDebugString() << '\n';
-    return 0;
-  }
-
-  auto iter = rings.find(ring.usmi());
-  if (iter != rings.end()) {
-    const auto n = ring.n();
-    iter->second.set_n(n + ring.n());
-    return 1;
-  }
-
-  rings.emplace(ring.usmi(), ring);
-
-  return 1;
+                        RingCollator& rings) {
+  return rings.AccumulateTextProtoRecords(input, cerr);
 }
 
 int
@@ -230,7 +225,7 @@ Options::WriteRings(const RingData& rings, const std::string& name_stem) {
 }
 
 int
-Options::WriteRings(const absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings,
+Options::WriteRings(const RingCollator& rings,
                     const std::string destdir,
                     const std::string ring_type) {
   IWString full_path_name;
@@ -242,36 +237,13 @@ Options::WriteRings(const absl::flat_hash_map<std::string, RplRing::ReplacementR
     return 0;
   }
 
-  return WriteRings(rings, output);
-}
-
-int
-Options::WriteRings(const absl::flat_hash_map<std::string, RplRing::ReplacementRing>& rings,
-                    IWString_and_File_Descriptor& output) {
-  static google::protobuf::TextFormat::Printer printer;
-  printer.SetSingleLineMode(true);
-
-  std::string buffer;
-
-  for (const auto& [_, proto] : rings) {
-    if (! printer.PrintToString(proto, &buffer)) {
-      cerr << "Options::WriteRings write '" << proto.ShortDebugString() << "'\n";
-      return 0;
-    }
-
-    output << buffer;
-    output << '\n';
-
-    output.write_if_buffer_holds_more_than(8192);
-  }
-
-  return 1;
+  return rings.Write(output);
 }
                         
 
 int
 Main(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v--destdir=s-ignore_errors-prefix=s");
+  Command_Line_v2 cl(argc, argv, "-v-destdir=s-ignore_errors-prefix=s");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
@@ -329,7 +301,7 @@ Main(int argc, char** argv) {
     cerr << "Writing " << rings.size() << " ring types\n";
     Accumulator_Int<int32_t> acc;
     for (const auto& [_, ring_type] : rings) {
-      for (const auto& [_, proto] : ring_type) {
+      for (const auto& [_, proto] : ring_type.items()) {
         acc.extra(proto.n());
       }
     }

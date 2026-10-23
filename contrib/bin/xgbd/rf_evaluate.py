@@ -1,4 +1,4 @@
-# Evaluate an xgboost descriptor model built with xgboost_make
+# Evaluate a random forest descriptor model built with rf_make_make
 
 import os
 import sys
@@ -9,7 +9,7 @@ import random_forest_model_pb2
 from absl import app, flags, logging
 from google.protobuf import text_format
 
-from pytk.xgbd.linear_scaling_pb2 import LinearScalingData
+from xgbd.linear_scaling_pb2 import LinearScalingData
 
 FLAGS = flags.FLAGS
 
@@ -63,7 +63,7 @@ def get_model(mdir: str)->tuple:
   else:
     rescaling = None
 
-  return model, proto.response, rescaling
+  return model, proto, rescaling
 
 def random_forest_evaluate(mdir: str, fname: str)->bool:
   """Read `fname` as descriptors for a model in `mdir`
@@ -72,7 +72,7 @@ def random_forest_evaluate(mdir: str, fname: str)->bool:
     logging.error("Model directory %s not found", mdir)
     return False
 
-  model, response, rescaling_fname = get_model(mdir)
+  model, proto, rescaling_fname = get_model(mdir)
   if not model:
     logging.error("Invalid mode in %s", mdir)
     return False
@@ -87,8 +87,11 @@ def random_forest_evaluate(mdir: str, fname: str)->bool:
 
   logging.info("Evaluating %d rows", len(data))
   results = model.predict(data.iloc[:,1:])
-  print(f"Id RF_{response}")
-  if rescaling is None:
+  print(f"Id RF_{proto.response}")
+  if proto.classification:
+    for i in range(len(results)):
+      print(f"{data.iloc[i,0]} {results[i]}")
+  elif rescaling is None:
     for i in range(len(results)):
       print(f"{data.iloc[i,0]} {results[i]:.4f}")
   else:
@@ -109,7 +112,10 @@ def main(argv):
     logging.error("must specify model directory via the --mdir option")
     return 1
 
-  return random_forest_evaluate(FLAGS.mdir, argv[1])
+  if not random_forest_evaluate(FLAGS.mdir, argv[1]):
+    return 1
+
+  return 0
 
 if __name__ == '__main__':
   app.run(main)

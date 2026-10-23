@@ -92,6 +92,8 @@ class SP_Database
 
   int do_lookup(Dbt& zkey, const DBKey& dbkey, int& radius, int& count, IWString& example);
   int get(DbTxn*, Dbt&, Dbt&, u_int32_t);
+
+  int close();
 };
 
 class Count_Example {
@@ -249,6 +251,8 @@ class Set_of_Databases {
   int lookup_bit(const DBKey& dbkey, int& count, IWString& example_structure);
   int lookup_bit(const DBKey& dbkey, resizable_array_p<Count_Example>& ce);
   int lookup_bit_threaded(const DBKey& dbkey);
+
+  int close();
 };
 
 // Needed for the python interface, and a more generally useful class.
@@ -281,6 +285,8 @@ class SP_Set_of_Databases {
     }
 
     int PerShellData(Molecule& m, std::vector<int>& result);
+
+    int close();
 };
 
 

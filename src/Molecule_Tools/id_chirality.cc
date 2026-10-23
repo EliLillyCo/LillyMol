@@ -120,7 +120,7 @@ usage(int rc) {
   cerr << "                 appends total chiral count and number unlabelled\n";
   cerr << "  -q <query>     queries for which atoms to process\n";
   cerr << "  -s <smarts>    smarts for which atoms to process\n";
-  cerr << "  -h .....       hard coded queries - for speed\n";
+  cerr << "  -h .....       hard coded queries - for speed. Use '-h all' to take all default types\n";
   cerr << "  -h CD4         aliphatic 4 connected Carbon\n";
   cerr << "  -h CD3H        aliphatic 3 connected Carbon with an implicit Hydrogen\n";
   cerr << "  -X <query>     queries to NOT process\n";

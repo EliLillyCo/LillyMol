@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -171,8 +173,7 @@ Substructure_Environment_Rejection::Substructure_Environment_Rejection()
 
 int
 Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
-                                      int * previously_matched_atoms)
-{
+                                      int * previously_matched_atoms) {
   assert (matched_query_atoms.empty());
 
   int nc = _children.number_elements();
@@ -183,14 +184,12 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
 
   int rc = 0;       // the number of hits
 
-  while (move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms))
-  {
+  while (move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms)) {
 #ifdef DEBUG_ENVIRONMENT_SEARCH
   cerr << "Env base atom matches atom " << _current_hold_atom->atom_number() << '\n';
 #endif
 
-    if (0 == nc)    // no children, have a match right here
-    {
+    if (0 == nc) {    // no children, have a match right here
       rc++;
       continue;
     }
@@ -199,16 +198,14 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
     add_your_children(matched_query_atoms);
     int atom_to_process = 0;
 
-    while (atom_to_process >= 0)
-    {
+    while (atom_to_process >= 0) {
       Substructure_Atom * a = (Substructure_Atom *) matched_query_atoms[atom_to_process];
 
 #ifdef DEBUG_ENVIRONMENT_SEARCH
       cerr << "Atom to process is " << atom_to_process << " which is " << a->unique_id() << '\n';
 #endif
 
-      if (! a->move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms))
-      {
+      if (! a->move_to_next_match_from_current_anchor(previously_matched_atoms, matched_query_atoms)) {
 #ifdef DEBUG_ENVIRONMENT_SEARCH
         cerr << "Move to next failed for query environment atom " << a->unique_id() << '\n';
 #endif
@@ -236,8 +233,7 @@ Substructure_Atom::environment_search(Query_Atoms_Matched & matched_query_atoms,
 
         atom_to_process++;
 
-        if (atom_to_process >= matched_query_atoms.number_elements())      // the == condition is the only one which should ever happen
-        {
+        if (atom_to_process >= matched_query_atoms.number_elements()) {      // the == condition is the only one which should ever happen
           rc++;
           break;        // break from while (atom_to_process >= 0) loop, we are only interested in one embedding per start atom
         }
@@ -257,7 +253,7 @@ GlobalIdentifiersAlsoMatched(const Query_Atoms_Matched& qam,
                              const int* matched_by_global_specs)
 {
   for (const Substructure_Atom * a : qam) {
-    int gmid = a->global_match_id();
+    int gmid = a->global_id_match();
     if (gmid <= 0) {
       continue;
     }
@@ -282,7 +278,7 @@ Substructure_Environment::matches(int * previously_matched_atoms,
                                   int * anchor_atom_available)
 {
   Query_Atoms_Matched qam;
-  qam.resize(20);    // 20 seems pretty large
+  qam.reserve(20);    // 20 seems pretty large
 
   int nhits = 0;
   int np = _possible_parents.number_elements();
@@ -293,8 +289,7 @@ Substructure_Environment::matches(int * previously_matched_atoms,
   cerr << "Environment object " << _unique_id << " with " << np << " attach points and " << _number_elements << " components matching\n";
 #endif
 
-  for (int i = 0; i < np; i++)    // loop over possible parents
-  {
+  for (int i = 0; i < np; i++) {    // loop over possible parents
     Substructure_Atom * p = _possible_parents[i];
     Target_Atom * a = p->current_hold_atom();
     if (nullptr == a) {
@@ -304,8 +299,7 @@ Substructure_Environment::matches(int * previously_matched_atoms,
 #ifdef DEBUG_SS_ENV_MATCHES
     cerr << "Trying possible parent " << i << " atom " << a->atom_number() << " uc = " << p->unmatched_connections(previously_matched_atoms) << " anchor avail " << anchor_atom_available[a->atom_number()] << " avail " << anchor_atom_available[a->atom_number()] << '\n';
     const Molecule * m = a->m();
-    for (int x = 0; x < m->natoms(); ++x)
-    {
+    for (int x = 0; x < m->natoms(); ++x) {
       cerr << " previously_matched_atoms[" << x << "] = " << previously_matched_atoms[x] << '\n';
     }
 #endif
@@ -316,13 +310,15 @@ Substructure_Environment::matches(int * previously_matched_atoms,
 
     const int parent_unmatched_connections = p->unmatched_connections(previously_matched_atoms);
 
+    // cerr << "parent_unmatched_connections " << parent_unmatched_connections << '\n';
     if (0 == parent_unmatched_connections) {
 #ifdef DEBUG_SS_ENV_MATCHES
       if (_hydrogen_ok_as_environment_match && a->hcount())
         cerr << "HYDROGEN matches as environment match\n";
 #endif
-      if (_hydrogen_ok_as_environment_match && a->hcount())
+      if (_hydrogen_ok_as_environment_match && a->hcount()) {
         nhits++;
+      }
       continue;
     }
 
@@ -355,8 +351,9 @@ Substructure_Environment::matches(int * previously_matched_atoms,
         continue;
       }
 
-      if (matched_by_global_specs && ! GlobalIdentifiersAlsoMatched(qam, matched_by_global_specs.get())) 
+      if (matched_by_global_specs && ! GlobalIdentifiersAlsoMatched(qam, matched_by_global_specs.get()))  {
         continue;
+      }
 
       if (esearch > _max_environment_matches_per_attachment_point) {
         esearch = _max_environment_matches_per_attachment_point;
@@ -434,11 +431,11 @@ Single_Substructure_Query::_query_environment_or_group_matched(int * previously_
 
 //cerr << "Single_Substructure_Query::_query_environment_or_group_matched:checking or group with " << no << " components\n";
 
-  for (int i = 0; i < no; i++)
-  {
+  for (int i = 0; i < no; i++) {
     Substructure_Environment * e = or_group[i];
-    if (e->matches(previously_matched_atoms, matched_by_global_specs, anchor_atom_available))
+    if (e->matches(previously_matched_atoms, matched_by_global_specs, anchor_atom_available)) {
       return 1;
+    }
   }
 
   return 0;    // none of them matched.
@@ -581,7 +578,7 @@ Single_Substructure_Query::_environment_rejections_matched(const int atoms_in_ta
   return 0;   // none of the group matched
 }
 
-//#define DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
+// #define DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
 
 /*
   By default, every component of the environment must match.
@@ -603,37 +600,43 @@ Single_Substructure_Query::_query_environment_also_matched(const int atoms_in_ta
 
   int * anchor_atom_available = new_int(atoms_in_target_molecule, 1); std::unique_ptr<int[]> free_anchor_atom_available(anchor_atom_available);
 
-  for (int i = 0; i < ne; i++)
-  {
-    if (env_already_done[i])
+  int matches_found = 0;
+
+  for (int i = 0; i < ne; i++) {
+    if (env_already_done[i]) {
       continue;
+    }
 
     resizable_array<Substructure_Environment *> z_group;
 
     Substructure_Environment * e = _environment[i];
     z_group.add(e);
 
-    if (e->or_id())
-    {
-      for (int j = i + 1; j < ne; j++)
-      {
-        if (env_already_done[j])
+    if (e->or_id()) {
+      for (int j = i + 1; j < ne; j++) {
+        if (env_already_done[j]) {
           continue;
+        }
 
         Substructure_Environment * ej = _environment[j];
-        if (ej->or_id() == e->or_id())
-        {
+        if (ej->or_id() == e->or_id()) {
           z_group.add(ej);
           env_already_done[j] = 1;
         }
       }
     }
 
-    if (! _query_environment_or_group_matched(previously_matched_atoms, matched_by_global_specs, z_group, anchor_atom_available))
+    //cerr << "OR group contains " << z_group.size() << " items\n";
+
+    if (! _query_environment_or_group_matched(previously_matched_atoms, matched_by_global_specs,
+                        z_group, anchor_atom_available)) {
       return 0;
+    }
+    ++matches_found;
   }
 
-  return 1;
+  // cerr << "Find " << matches_found << " matches found\n";
+  return matches_found;
 }
 
 /*
@@ -649,8 +652,9 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
 
   int nr = _environment_rejections.number_elements();
 
-  if (0 == ne && 0 == nr)
+  if (0 == ne && 0 == nr) {
     return 1;
+  }
 
 #ifdef DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
   cerr << "Single_Substructure_Query::_query_environment_also_matched:checking " << ne << " match and " << nr << " environment rejections\n";
@@ -660,11 +664,9 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
 
 //cerr << "Single_Substructure_Query::_query_environment_also_matched: _environment_must_match_unmatched_atoms " << _environment_must_match_unmatched_atoms << '\n';
 
-  if (_environment_must_match_unmatched_atoms)
-  {
+  if (_environment_must_match_unmatched_atoms) {
     int na = matched_query_atoms.number_elements();
-    for (int i = 0; i < na; i++)
-    {
+    for (int i = 0; i < na; i++) {
       const Substructure_Atom * a = matched_query_atoms[i];
       const int j = a->atom_number_matched();
 
@@ -688,10 +690,9 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
   cerr << " number env matches " << ne << " and number env rejections " << nr << '\n';
 #endif
 
-  if (ne)
-  {
-    if (! _query_environment_also_matched(atoms_in_target_molecule, previously_matched, matched_by_global_specs, env_already_done))
-    {
+  if (ne) {
+    if (! _query_environment_also_matched(atoms_in_target_molecule, previously_matched,
+                                          matched_by_global_specs, env_already_done)) {
 #ifdef DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
       cerr << "Matching query env did not match\n";
 #endif
@@ -700,13 +701,13 @@ Single_Substructure_Query::_query_environment_also_matched(Query_Atoms_Matched &
     }
   }
 
-  if (nr)   // either no environment matches, or we matched the environment
-  {
-    if (ne)                                 // if already used, reset to 0
-      set_vector(env_already_done, nr, 0);
+  if (nr) {   // either no environment matches, or we matched the environment
+    if (ne) {                                 // if already used, reset to 0
+      std::fill_n(env_already_done, nr, 0);
+    }
 
-    if (_environment_rejections_matched(atoms_in_target_molecule, previously_matched, matched_by_global_specs, env_already_done))
-    {
+    if (_environment_rejections_matched(atoms_in_target_molecule, previously_matched,
+                        matched_by_global_specs, env_already_done)) {
 #ifdef DEBUG_QUERY_ENVIRONMENT_ALSO_MATCHED
       cerr << "No match to _environment_rejections_matched\n";
 #endif

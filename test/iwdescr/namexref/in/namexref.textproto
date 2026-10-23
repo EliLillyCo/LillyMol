@@ -1,0 +1,5 @@
+feature {
+  computed_name: "amw"
+  name: "molecular_weight"
+  description: "always ignored"
+}

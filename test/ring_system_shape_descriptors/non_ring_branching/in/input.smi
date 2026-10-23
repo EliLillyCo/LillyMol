@@ -1,0 +1,7 @@
+CCCCCC straight_alkane
+CC(C)(C)C neopentane
+CC(=O)NC amide
+CS(=O)(=O)C sulfone
+CC(F)(F)F trifluoromethyl
+CCC(CC)CC substantial_branch
+C1(C)(C)CCCCC1 ring_atom_branch

@@ -2,3 +2,7 @@ module(
     name = "third_party",
     version = "1.0.0"
 )
+
+# Needed by third_party/BUILD.bazel select() on OS constraints.
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.9")

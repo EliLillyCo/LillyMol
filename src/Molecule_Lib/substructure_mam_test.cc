@@ -12,7 +12,7 @@ namespace {
 struct ProtoSmilesResult {
   std::string proto_string;
   IWString smiles;
-  int expected;
+  uint32_t expected;
 };
 
 class TestMam : public testing::TestWithParam<ProtoSmilesResult> {

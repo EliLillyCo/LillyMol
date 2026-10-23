@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <optional>
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
@@ -41,6 +42,7 @@ static int append_violations_to_name = 0;
 static int reading_input_from_biobyte_clogp = 0;
 
 static int include_psa = 0;
+static nvrtspsa::NovartisPolarSurfaceArea tpsa_calculator;
 
 // Do we write the pass/fail value for each component of the score.
 static int write_per_property_violations = 0;
@@ -369,7 +371,8 @@ RO5_Attributes::_initialise(Molecule& m, int* isotope) {
   }
 
   if (include_psa) {
-    _nvrtspsa = novartis_polar_surface_area(m);
+    std::optional<double> maybe_psa = tpsa_calculator.PolarSurfaceArea(m);
+    _nvrtspsa = maybe_psa.value_or(0.0);
   }
 
   if (_alogp) {

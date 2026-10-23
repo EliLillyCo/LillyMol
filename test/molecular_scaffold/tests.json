@@ -1,0 +1,13 @@
+{
+  "executable": "molecular_scaffold",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-x -g all -t -c #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

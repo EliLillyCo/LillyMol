@@ -1,0 +1,14 @@
+{
+  "executable": "gfp_distance_filter",
+  "test": [
+    {
+      "name": "case_1",
+      "preamble": [
+      ],
+      "args": [
+           "-p ${LILLYMOL_HOME}/data//pubchem_10.gfp -t 0.5 -n 3 -U U1 ${LILLYMOL_HOME}/data/pubchem.gfp"
+      ]
+    }
+
+  ]
+}

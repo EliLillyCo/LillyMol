@@ -1,0 +1,35 @@
+{
+  "executable": "pharmacophore_2d",
+  "test": [
+    {
+      "name": "whole_molecule",
+      "args": [
+        "-M -s CO -I 7 -X 9 -S labelled #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "uniform_isotope",
+      "args": [
+        "-M -s CO -I 7 #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "selected_neighbors",
+      "args": [
+        "-M -s N -s O -I 7 -X 9 #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "default_isotope",
+      "args": [
+        "-M -s O #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "required_groups",
+      "args": [
+        "-M -I 1 -X 2 -C #{indir}/config.textproto #{indir}/input.smi"
+      ]
+    }
+  ]
+}

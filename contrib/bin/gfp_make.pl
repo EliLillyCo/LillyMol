@@ -17,7 +17,7 @@ chomp $uname;
 my @bindir;
 
 unshift (@bindir, "$ianhome/contrib/bin/");
-unshift (@bindir, "$ianhome/bin/Linux/");
+unshift (@bindir, "$ianhome/bin/$uname/");
 
 # Flags for each kind of fingerprint possible
 
@@ -66,8 +66,10 @@ my $need3d = 0;
 my $jurs = 0;
 
 my $formula = 0;
+my $formula_options = "";
 
 my $tsubstructure_fingerprints_non_colliding = 0;
+my $tsubstructure_fingerprints_counted = 0;
 my $tsubstructure_bitrep = 0;
 
 my $molecular_abstraction_options = "";
@@ -210,6 +212,8 @@ my $join_existing_file = "";
 my $chirality_fingerprint_opts = "";
 my $chirality_fingerprint_default_options = "-e 5 -r 2 -y 1 -M fpnochiral";
 
+my $cip = "";
+
 my $seek_to = 0;
 my $stop_at = 0;
 
@@ -272,14 +276,13 @@ sub usage
   print STDERR " -SIM <fname>   FP fingerprint  of similarity to molecules in <fname>\n" if ($expert);
   print STDERR " -simopt ... -simopt passed directly to similarity_to_fingerprint (def -T 0.5)\n" if ($expert);
 # print STDERR " -nspch         FP fingerprints of spinach trimmed form\n" if ($expert);
-  print STDERR " -SCF0          FP fingerprint of the molecular scaffold\n";
+  print STDERR " -SCF0          FP fingerprint of the molecular scaffold, -SCFI to differentiate substitution patterns\n";
   print STDERR " -SPINACH       spinach fingerprint\n" if ($expert);
   print STDERR " -MABS ... -MABS FP options for molecular abstractions\n" if ($expert);
-  print STDERR " -TSUB ...      FP query/queries for tsubstructure, S:file for smarts\n" if ($expert);
-  print STDERR " -tsubnc        generate tsubstructure fingerprints as counted\n" if ($expert);
+  print STDERR " -TSUB ...      FP query/queries for the -q option of tsubstructure: S:file.smt for file of smarts\n" if ($expert);
+  print STDERR " -tsubnc        generate tsubstructure fingerprints as counted, -tsubfixed for fixed width counted\n" if ($expert);
   print STDERR " -ts ... -ts    options for tsubstructure\n" if ($expert);
-  print STDERR " -FPS ...       FP query/queries for fingerprint_substructure, S:file for smarts DNU\n" if ($expert);
-  print STDERR " -fpsopt ... -fpsopt extra options for -FPS (suggest -x 3)\n" if ($expert);
+  print STDERR " -FPS ... -FPS  FP query/queries for fingerprint_substructure, S:file for smarts DNU\n" if ($expert);
   print STDERR " -W <dname>     include fingerprint of descriptor <dname>\n";
   print STDERR " -R <rxn>       isostere reaction DNU\n" if ($expert);
   print STDERR " -R FRED        transform to isosteric form based on Fred's rules DNU\n" if ($expert);
@@ -309,6 +312,7 @@ sub usage
   print STDERR " -JOIN <fname>  use tdt_join to merge in the contents of an existing .gfp file\n" if ($expert);
   print STDERR " -CHIRAL ... -CHIRAL  chirality fingerprint, use -CHIRAL DEF -CHIRAL for default '$chirality_fingerprint_default_options'.\n" if $expert;
   print STDERR "                Options between -CHIRAL flags are passed to chirality_fingerprint.sh\n" if $expert;
+  print STDERR " -CIP <rad>     Use RDKit to apply R/S labels and generate EC type fingerrpint to radius <rad>\n" if $expert;
   print STDERR " -bindir <dir>  search in <dir> for binaries\n" if ($expert);
   print STDERR " -flush         flush after each molecule\n" if ($expert);
   print STDERR " -i <qualifier> input qualifiers to the first pipe stage\n" if ($expert);
@@ -1036,17 +1040,13 @@ OPTION: while ($argptr < @ARGV)
   }
   elsif ($opt eq "-FPS")
   {
-    $fingerprint_substructure_options = $ARGV[$argptr++];
     $fingerprints_specified++;
-  }
-  elsif ($opt eq "-fpsopt")
-  {
     my $gotclose;
     $gotclose = 0;
 
     GET_FPS: while (1)
     {
-      if ($ARGV[$argptr] eq "-fpsopt")
+      if ($ARGV[$argptr] eq "-FPS")
       {
         $gotclose = 1;
         $argptr++;
@@ -1060,7 +1060,7 @@ OPTION: while ($argptr < @ARGV)
       last GET_FPS if ($argptr >= @ARGV);
     }
 
-    die "The -fpsopt option grouping must be closed" unless ($gotclose);
+    die "The -FPS option grouping must be closed" unless ($gotclose);
 #   print STDERR "Options '${tsubstructure_fingerprint_options}'\n";
   }
   elsif ($opt =~ /^-NCTSUB(\d*)$/ || $opt =~ /^-TSUBNC(\d*)$/)
@@ -1105,6 +1105,10 @@ OPTION: while ($argptr < @ARGV)
   elsif ($opt eq "-bitrep")
   {
     $tsubstructure_bitrep = $ARGV[$argptr++];
+  }
+  elsif ($opt eq "-tsubfixed")
+  {
+    $tsubstructure_fingerprints_counted = 1;
   }
   elsif ($opt eq "-MABS")
   {
@@ -1814,7 +1818,31 @@ OPTION: while ($argptr < @ARGV)
     $formula = 1;
     $fingerprints_specified++;
   }
+  elsif ($opt eq "-formula")
+  {
+    my $gotclose;    # do we find a closing -formula
 
+    $gotclose = 0;
+
+    GET_FCLOSE: while (1)
+    {
+      if ($ARGV[$argptr] eq "-formula") {
+        $gotclose = 1;
+        $argptr++;
+        last GET_FCLOSE;
+      }
+
+      $formula_options .= " $ARGV[$argptr]";
+
+      $argptr++;
+
+      last GET_FCLOSE if ($argptr >= @ARGV);
+    }
+
+    die "The -formula option grouping must be closed" unless ($gotclose);
+    $formula = 1;
+    $fingerprints_specified++;
+  }
   elsif ($opt eq "-tmpdir")
   {
     $tmpdir = $ARGV[$argptr++];
@@ -1861,11 +1889,16 @@ OPTION: while ($argptr < @ARGV)
     $chirality_fingerprint_opts =~ s/^ *//;  # no leading spaces
     $fingerprints_specified++;
   }
+  elsif ($opt =~ /^-CIP(\d+)$/)
+  {
+    $cip = $1;
+    $fingerprints_specified++;
+  }
   elsif ($opt =~ /^-seek=(\d+)/)
   {
     $seek_to = $1;
   }
-  elsif ($opt =~ /^stop=(\d+)/)
+  elsif ($opt =~ /^-stop=(\d+)/)
   {
     $stop_at = $1;
   }
@@ -1883,6 +1916,8 @@ OPTION: while ($argptr < @ARGV)
 $fingerprints_specified++ if length($reactions);
 
 $fingerprints_specified++ if (@EZ);
+
+# print STDERR "${fingerprints_specified} fingerprints_specified\n";
 
 #print STDERR "extra iwfp options '$extra_iwfp_options'\n" if ($verbose);
 
@@ -1902,7 +1937,7 @@ if ($seek_to > 0 || $stop_at > 0)
     $seek_stop = " -i seek=${seek_to}";
   }
   if ($stop_at > 0) {
-    $seek_to .= " -i stop=${stop_at}";
+    $seek_stop .= " -i stop=${stop_at}";
   }
 }
 else
@@ -2651,9 +2686,9 @@ if (length($fingerprint_substructure_options))
     $input_file_specification = "$aromatic_smiles $input_qualifiers ";
   }
 
-  my $fingerprint_substructure_cmd_common = "$fingerprint_substructure -z i -A D -Y nbits=1024 -q $fingerprint_substructure_options";
+  my $fingerprint_substructure_cmd_common = "$fingerprint_substructure -z i -Y nbits=1024 $fingerprint_substructure_options";
 
-  $fingerprint_substructure_cmd_first = "$fingerprint_substructure_cmd_common $dash_g $input_file_specification FILE";
+  $fingerprint_substructure_cmd_first = "$fingerprint_substructure_cmd_common $dash_g ${input_qualifiers} $input_file_specification FILE";
   $fingerprint_substructure_cmd_pipe  = "$fingerprint_substructure_cmd_common $input_file_specification -f -";
 }
 
@@ -2755,6 +2790,10 @@ if (length($tsubstructure_fingerprint_options))
   if ($tsubstructure_fingerprints_non_colliding)
   {
     $tsubstructure_command .= "-J NCTS ";
+  }
+  elsif ($tsubstructure_fingerprints_counted)
+  {
+    $tsubstructure_command .= "-J FPTS ";
   }
   else
   {
@@ -3457,7 +3496,11 @@ my $formula_cmd_pipe;
 if ($formula)
 {
   my $formula_exe = "formula_fingerprint.sh";
-  my $formula_cmd = "${formula_exe}";
+  if ($formula_options eq "")
+  {
+    $formula_options = "-L 200,41";
+  }
+  my $formula_cmd = "${formula_exe} ${formula_options}";
 
   if ($work_as_filter)
   {
@@ -3465,7 +3508,7 @@ if ($formula)
   }
   elsif ($work_as_tdt_filter)
   {
-    $formula_first = "${formula_cmd} -f -";
+    $formula_first = "${formula_cmd} ${seek_stop} ${input_qualifiers} -f -";
   }
   else
   {
@@ -3522,6 +3565,16 @@ if (length($chirality_fingerprint_opts) > 0)
   }
 
   $chirality_fingerprint_pipe = "${chirality_fingerprint_exe} -f -";
+}
+
+my $cip_fingerprint_first = "false";  # Do not allow this, too complicated.
+my $cip_fingerprint_pipe;
+
+if (length($cip) > 0) 
+{
+  my $iwecfp = find_executable('iwecfp');
+  $cip_fingerprint_pipe = "cip_labeler.py -R 8 -S 9 -f - |" .+
+                         "${iwecfp} -Y pchiral -g all -R ${cip} -J NCIP -P UST:ARY -m -q PROTO:$ENV{LILLYMOL_HOME}/data/queries/89.qry -f -";
 }
 
 my $first = 1;
@@ -4338,6 +4391,20 @@ while ($fingerprints_specified > 0)
       $cmd .= "|${chirality_fingerprint_pipe}";
     }
     $chirality_fingerprint_first = "";
+    $fingerprints_specified--;
+  }
+  elsif (length($cip_fingerprint_pipe) > 0)
+  {
+    if ($first)
+    {
+      print STDERR "Sorry, -CIP fingerprint cannot be the only fingerprint\n";
+      exit 2;
+    }
+    else
+    {
+      $cmd .= "|${cip_fingerprint_pipe}";
+    }
+    $cip_fingerprint_pipe = "";
     $fingerprints_specified--;
   }
   elsif ($user_insert)

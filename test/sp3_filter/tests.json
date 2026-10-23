@@ -1,0 +1,13 @@
+{
+  "executable": "sp3_filter",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-c 2 -x 2 -U rejected #{indir}/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

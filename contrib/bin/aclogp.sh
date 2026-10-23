@@ -6,4 +6,4 @@ fi
 
 config="${LILLYMOL_HOME}/data/alogp/aclogp.textproto"
 
-exec ${LILLYMOL_HOME}/bin/Linux/alogp -C "${config}" "$@"
+exec ${LILLYMOL_HOME}/bin/$(uname)/alogp -C "${config}" "$@"

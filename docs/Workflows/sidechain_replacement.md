@@ -65,10 +65,10 @@ that this will introduce products with n-N bonds, which may be
 undesirable.
 
 ### Sidechain Replacement
-If you with to remove an existing sidechain, that is necessarily more
+If you wish to remove an existing sidechain, that is necessarily more
 complex. The tool has a default smarts, which is a three connected aromatic
 carbon attached to a sidechain with fewer than 10 heavy atoms. The existing
-sidechain is removed and the replacement inserted.
+sidechain is removed and replacements from the Chembl derived file are inserted.
 
 ```
 replace_sidechain.sh -smarts2 def -support 10 -v file.smi > new.smi

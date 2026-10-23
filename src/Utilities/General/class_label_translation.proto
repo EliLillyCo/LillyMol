@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ClassLabelTranslation;
+package class_label_translation;
 
 message ClassLabelTranslation {
   map<string, int32> to_numeric = 1;

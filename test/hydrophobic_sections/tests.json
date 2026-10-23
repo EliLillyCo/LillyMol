@@ -1,0 +1,13 @@
+{
+  "executable": "hydrophobic_sections",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "#{indir}/test.smi"
+      ]
+    }
+
+  ]
+
+}

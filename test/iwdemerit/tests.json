@@ -1,0 +1,23 @@
+{
+  "executable": "iwdemerit",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "-A D -A I -S foo -G - -f 99999  -t -W imp2exp -W maxe=1 -E autocreate -q F:#{indir}/PAINS/queries_latest -O hard -W dnv=0 -W slist  -i smi #{indir}/pubchem_example.smi"
+      ]
+    },
+    {
+      "name": "case_2",
+      "args": [
+        "-A D -S result.out -i smi -q F:#{indir}/queries -O hard -W demerits=#{indir}/demerits_override_100.txt #{indir}/input.smi"
+      ]
+    },
+    {
+      "name": "case_3",
+      "args": [
+        "-A D -S result.out -i smi -q F:#{indir}/queries -O hard -W demerits=#{indir}/demerits_override_0.txt #{indir}/input.smi"
+      ]
+    }
+  ]
+}

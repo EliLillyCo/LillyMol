@@ -1,0 +1,2 @@
+name: "ethanol" smiles: "OCC" natoms: 3 fragment { smi: "[9001CH3]C" nat: 2 comp: "[3001OH2]" } fragment { smi: "[3001OH2]" nat: 1 comp: "[9001CH3]C" } 
+name: "ethylamine" smiles: "NCC" natoms: 3 fragment { smi: "[6007CH3]C" nat: 2 comp: "[3001NH3]" } fragment { smi: "[3001NH3]" nat: 1 comp: "[6007CH3]C" } 

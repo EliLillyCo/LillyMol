@@ -1,14 +1,23 @@
-(0 Reaction
-# [a;H1:1][a:2]!@[a:3][a;H1:4]>>[a:1]1[a:2][a:3][a:4]CO1 create a new ring with O-CH2
-
-  (A C Comment "Virtual_Ring.create_a_new_ring_with_O-CH2")
-  (0 Scaffold
-    (A C smarts "[aH1][a]!@[a][aH1]")
-  )
-  (1 Sidechain
-    (A C smiles "OC")
-    (A C smarts "OC")
-    (A I join (0 0))
-    (A I join (3 1))
-  )
-)
+name: "Virtual_Ring.create_a_new_ring_with_O-CH2"
+scaffold {
+  id: 0
+  smarts: "[/IWfss1cHT0]:[a]!@[/IWfss1a]:[aH]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}
+sidechain {
+  id: 1
+  smarts: "OC"
+  reagent: "OC"
+  join {
+    a1: 0
+    a2: 0
+    btype: SS_SINGLE_BOND
+  }
+  join {
+    a1: 3
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

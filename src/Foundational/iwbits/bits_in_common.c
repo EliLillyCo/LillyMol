@@ -125,7 +125,7 @@ bits_in_common (const unsigned int * b1, const unsigned int * b2,
 #else
 //  rc += eight_bit_count[c & IW_LAST_BYTE] + eight_bit_count[(c >> 16) & IW_LAST_BYTE] + eight_bit_count[(c >> 8) & IW_LAST_BYTE] + eight_bit_count[c >> 24];
 //  rc += eight_bit_count[cp[0]] + eight_bit_count[cp[1]] + eight_bit_count[cp[2]] + eight_bit_count[cp[3]];
-    rc += __builtin_popcount (c);
+    rc += POPCOUNT(c);
 #endif
 
     b1++;

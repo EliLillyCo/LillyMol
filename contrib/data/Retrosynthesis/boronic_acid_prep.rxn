@@ -1,0 +1,12 @@
+name: "boronic acid"
+scaffold {
+  smarts: "[OD1]-B([OD1])-a"
+  remove_atom: [0, 1, 2]
+  isotope {
+    atom: 3
+    isotope: 3
+  }
+  match_conditions {
+    find_unique_embeddings: true
+  }
+}

@@ -30,6 +30,7 @@
 #include "Foundational/iwaray/iwaray.h"
 
 #ifdef OBSOLETE_STRING_FUNCTIONS_NO_LONGER_USED
+[[deprecated("Use IWString::strip_leading_blanks or const_IWSubstring::strip_leading_blanks instead")]]
 extern void strip_leading_blanks (char *);
 extern void strip_trailing_blanks (char *);
 extern void to_lowercase (char *, int = 0);
@@ -157,6 +158,9 @@ class const_IWSubstring
     int numeric_value (unsigned long &) const;
     int numeric_value (unsigned long long &) const;
 
+    // Suffixes k(thousand), m(million) and g(giga) are recognised;
+    template <typename T> int NumericValueKMG(T& result) const;
+
     int starts_with (char) const;
     int starts_with (const char *) const;
     int starts_with (const const_IWSubstring &) const;
@@ -261,7 +265,9 @@ class const_IWSubstring
     int prevword (IWString &, int &, char = ' ') const;
     int prevword (const_IWSubstring &, int &, char = ' ') const;
 
-    template <typename T> int nextword_single_delimiter(T &, int &, char = '	') const;
+    template <typename T> int nextword_single_delimiter(T& result, int& i, char separator = '	') const;
+    // If `separator` is space, calls nextword, otherwise nextword_single_delimiter.
+    template <typename T> int NextWord(T& result, int& i, char separator = ' ') const;
 
     int expand_environment_variables(IWString & destination) const;
 
@@ -298,6 +304,7 @@ class const_IWSubstring
     bool operator > (const IWString &) const;
 
 #ifdef THESE_WERE_NEVER_IMPLEMENTED_AND_A_BAD_IDEA
+
     int operator <= (int) const;
     int operator > (int) const;
     int operator >= (int) const;
@@ -497,7 +504,9 @@ class IWString : public resizable_array<char>
     int nextword (const_IWSubstring &, int &, char = ' ') const;
     int prevword (IWString &, int &, char = ' ') const;
 
-    template <typename T> int nextword_single_delimiter(T &, int &, char = '	') const;
+    template <typename T> int nextword_single_delimiter(T& result, int& i, char separator = '	') const;
+    // If `separator` is space, calls nextword, otherwise nextword_single_delimiter.
+    template <typename T> int NextWord(T& result, int& i, char separator = ' ') const;
 
     const_IWSubstring substr (int, int = -1) const;
 
@@ -526,6 +535,7 @@ class IWString : public resizable_array<char>
     int numeric_value (double &) const;
     int numeric_value (long long &) const;
     int numeric_value (unsigned long &) const;
+    int numeric_value (unsigned long long &) const;
 
     int numeric_value_fast(int &) const;
 
@@ -626,6 +636,12 @@ class IWString : public resizable_array<char>
     void append_number (double, int);      // 2nd arg is the precision
     void append_number (float, const char *);
 
+#ifdef USE_DRAGONBOX
+    // Too hard to control precision.
+    void append_number_dragonbox(float f);
+    void append_number_dragonbox(double f);
+#endif
+
     // Moved const around to match calls in tsclass and descriptor_file_to_01_fingerprints
     // int append_hex(const unsigned char * v, const int n);
     int append_hex(unsigned char const * v, const int n);
@@ -711,29 +727,6 @@ class IWString : public resizable_array<char>
     IWString & operator << (const std::string_view & s) { this->operator+=(s); return *this;}
 #endif
 
-#ifdef NEVER_A_GOOD_IDEA_AND_NEVER_IMPLEMENTED
-    int operator < (int) const;
-    int operator <= (int) const;
-    int operator > (int) const;
-    int operator >= (int) const;
-    int operator == (int) const;
-    int operator != (int) const;
-
-    int operator < (float) const;
-    int operator <= (float) const;
-    int operator > (float) const;
-    int operator >= (float) const;
-    int operator == (float) const;
-    int operator != (float) const;
-
-    int operator < (double) const;
-    int operator <= (double) const;
-    int operator > (double) const;
-    int operator >= (double) const;
-    int operator == (double) const;
-    int operator != (double) const;
-#endif
-
 //  Change characters between (and including) istart to istop to a new string. Grow or shorten as needed
 
     int change (int istart, int istop, const char * s, int len_s);
@@ -755,16 +748,16 @@ IWString::operator == (const char * rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (_number_elements != (int) std::strlen (rhs))    // cannot be the same if different lengths
-    return 0;
+    return false;
 
-  return 0 == ::strncmp (_things, rhs, _number_elements);    // loss of const OK for strcmp
+  return _number_elements == 0 || 0 == ::strncmp (_things, rhs, _number_elements);    // loss of const OK for strcmp
 }
 
 inline bool
 operator != (char lhs, const const_IWSubstring & rhs)
 {
   if (1 != rhs.length ())
-    return 1;
+    return true;
 
   return lhs != rhs[0];
 }
@@ -775,12 +768,12 @@ const_IWSubstring::operator != (const const_IWSubstring & rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
   int l2 = rhs._nchars;
   if (_nchars != l2)
-    return 1;
+    return true;
 
-  if (0 == ::strncmp (_data, rhs._data, _nchars))
-    return 0;
+  if (_nchars == 0 || 0 == ::strncmp (_data, rhs._data, _nchars))
+    return false;
   else
-    return 1;
+    return true;
 }
 
 inline bool
@@ -789,12 +782,12 @@ const_IWSubstring::operator != (const IWString & rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (_nchars != rhs.nchars ())
-    return 1;
+    return true;
 
-  if (0 == ::strncmp (_data, rhs.rawchars (), _nchars))
-    return 0;
+  if (_nchars == 0 || 0 == ::strncmp (_data, rhs.rawchars (), _nchars))
+    return false;
   else
-    return 1;
+    return true;
 }
 
 inline bool
@@ -802,10 +795,10 @@ IWString::operator == (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
   if (_number_elements != rhs._number_elements)
-    return 0;
+    return false;
 
 //return (0 == ::strncmp (_things, rhs._things, _number_elements));
-  return (0 == ::memcmp (_things, rhs._things, _number_elements));
+  return (_number_elements == 0 || 0 == ::memcmp (_things, rhs._things, _number_elements));
 }
 
 inline bool
@@ -814,9 +807,9 @@ IWString::operator != (const IWString & rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (_number_elements != rhs._number_elements)
-    return 1;
+    return true;
 
-  return (0 != ::strncmp (_things, rhs._things, _number_elements));
+  return (_number_elements != 0 && 0 != ::strncmp (_things, rhs._things, _number_elements));
 }
 
 
@@ -824,9 +817,9 @@ inline bool
 const_IWSubstring::operator == (const const_IWSubstring & rhs) const
 {
   if (_nchars != rhs._nchars)
-    return 0;
+    return false;
 
-  return (0 == ::strncmp (_data, rhs._data, _nchars));
+  return (_nchars == 0 || 0 == ::strncmp (_data, rhs._data, _nchars));
 }
 
 inline bool
@@ -834,9 +827,9 @@ const_IWSubstring::operator == (const IWString & rhs) const
 {
 //cerr << "invoked at line " << __LINE__ << endl;
   if (_nchars != rhs._number_elements)
-    return 0;
+    return false;
 
-  return (0 == ::strncmp (_data, rhs._things, _nchars));
+  return (_nchars == 0 || 0 == ::strncmp (_data, rhs._things, _nchars));
 }
 
 inline bool
@@ -845,7 +838,7 @@ IWString::operator == (char rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (1 != _number_elements)
-    return 0;
+    return false;
 
   return rhs == _things[0];
 }
@@ -856,9 +849,9 @@ operator == (const char * lhs, const IWString & rhs)
 //cerr << "invoked at line " << __LINE__ << endl;
   int lchars = static_cast<int>(std::strlen (lhs));
   if (lchars != rhs._number_elements)
-    return 0;
+    return false;
 
-  return 0 == ::strncmp (lhs, rhs._things, lchars);
+  return lchars == 0 || 0 == ::strncmp (lhs, rhs._things, lchars);
 }
 
 inline bool
@@ -867,9 +860,9 @@ operator != (const char * lhs, const IWString & rhs)
 //cerr << "invoked at line " << __LINE__ << endl;
   int lchars = static_cast<int>(std::strlen (lhs));
   if (lchars != rhs._number_elements)
-    return 1;
+    return true;
 
-  return 0 != ::strncmp (lhs, rhs._things, lchars);
+  return lchars != 0 && 0 != ::strncmp (lhs, rhs._things, lchars);
 }
 
 inline bool
@@ -878,9 +871,9 @@ operator == (const char * lhs, const const_IWSubstring & rhs)
 //cerr << "invoked at line " << __LINE__ << endl;
   int lchars = static_cast<int>(std::strlen (lhs));
   if (lchars != rhs._nchars)
-    return 0;
+    return false;
 
-  return (0 == ::strncmp (lhs, rhs._data, lchars));
+  return (lchars == 0 || 0 == ::strncmp (lhs, rhs._data, lchars));
 }
 
 inline bool
@@ -889,9 +882,9 @@ operator != (const char * lhs, const const_IWSubstring & rhs)
 //cerr << "invoked at line " << __LINE__ << endl;
   int lchars = static_cast<int>(std::strlen (lhs));
   if (lchars != rhs._nchars)
-    return 1;
+    return true;
 
-  return (0 != ::strncmp (lhs, rhs._data, lchars));
+  return (lchars != 0 && 0 != ::strncmp (lhs, rhs._data, lchars));
 }
 
 inline bool 
@@ -899,7 +892,7 @@ operator != (char lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
   if (1 != rhs._number_elements)
-    return 1;
+    return true;
 
   return lhs != rhs._things[0];
 }
@@ -910,9 +903,9 @@ const_IWSubstring::operator == (const char * rhs) const
   int l2 = static_cast<int>(std::strlen (rhs));
 
   if (_nchars != l2)
-    return 0;
+    return false;
 
-  return 0 == ::strncmp (_data, rhs, _nchars);
+  return _nchars == 0 || 0 == ::strncmp (_data, rhs, _nchars);
 }
 
 inline bool 
@@ -922,9 +915,9 @@ IWString::operator == (const const_IWSubstring & rhs) const
 
   int l2 = rhs.nchars ();
   if (_number_elements != l2)
-    return 0;
+    return false;
 
-  return 0 == ::strncmp (_things, rhs.rawchars (), _number_elements);
+  return _number_elements == 0 || 0 == ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
 inline bool 
@@ -933,9 +926,9 @@ IWString::operator != (const const_IWSubstring & rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (_number_elements != rhs.nchars ())
-    return 1;
+    return true;
 
-  return 0 != ::strncmp (_things, rhs.rawchars (), _number_elements);
+  return _number_elements != 0 && 0 != ::strncmp (_things, rhs.rawchars (), _number_elements);
 }
 
 inline bool
@@ -943,7 +936,7 @@ operator == (char lhs, const IWString & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
   if (1 != rhs._number_elements)
-    return 0;
+    return false;
 
   return lhs == rhs._things[0];
 }
@@ -953,7 +946,7 @@ operator == (char lhs, const const_IWSubstring & rhs)
 {
 //cerr << "invoked at line " << __LINE__ << endl;
   if (1 != rhs._nchars)
-    return 0;
+    return false;
 
   return lhs == rhs._data[0];
 }
@@ -986,9 +979,9 @@ IWString::operator != (const char * rhs) const
 //cerr << "invoked at line " << __LINE__ << endl;
 
   if (_number_elements != (int) std::strlen (rhs))    // indeed they are different if different lengths
-    return 1;
+    return true;
 
-  return 0 != ::strncmp (_things, rhs, _number_elements);
+  return _number_elements != 0 && 0 != ::strncmp (_things, rhs, _number_elements);
 }
 
 inline bool
@@ -998,9 +991,9 @@ const_IWSubstring::operator != (const char * rhs) const
 
   int l2 = static_cast<int>(std::strlen (rhs));
   if (l2 != _nchars)    // the two strings are definitely not equal
-    return 1;
+    return true;
 
-  return 0 != ::strncmp (_data, rhs, l2);
+  return l2 != 0 && 0 != ::strncmp (_data, rhs, l2);
 }
 
 namespace iwstring {
@@ -1012,28 +1005,28 @@ Equals(const IWString& lhs, const std::string& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const const_IWSubstring& lhs, const std::string& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const IWString& lhs, const std::string_view& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 inline bool
 Equals(const const_IWSubstring& lhs, const std::string_view& rhs) {
   if (static_cast<std::string::size_type>(lhs.length()) != rhs.size()) {
     return false;
   }
-  return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
+  return lhs.length() == 0 || 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 
 // Used for reading records from tabular files where there might
@@ -1115,7 +1108,7 @@ class IWString_and_File_Descriptor : public IWString
     ~IWString_and_File_Descriptor();
 
     int write_whole_blocks_shift_unwritten();
-    int write_if_buffer_holds_more_than (int s) { if (_number_elements > s) write_whole_blocks_shift_unwritten(); return 1;}
+    int write_if_buffer_holds_more_than (int s) { if (_number_elements > s) return write_whole_blocks_shift_unwritten(); return 1;}
     int flush(int keep_storage = 0);   // by default, we size our buffer back to 0
 
     int good () const { return (-1 != _fd && IWString::ok());}  // failed open sets _fd to -1
@@ -1153,10 +1146,6 @@ operator += (std::string & lhs, const const_IWSubstring & rhs)
   return;
 }
 
-#endif
-
-#ifdef _DB_CXX_H_
-extern IWString & operator << (const Dbt &, IWString_and_File_Descriptor &);
 #endif
 
 //extern IWString & operator << (IWString &, const IWString &);
@@ -1200,6 +1189,13 @@ extern void set_default_iwstring_double_concatenation_precision (int s);
 extern int char_name_to_char(IWString & s, int message_if_unrecognised=1);
 
 extern void char_name_to_char_usage(const IWString & s);
+
+// Return a likely token separator given a file name.
+// For example if `fname` ends with ".csv", return ','.
+// Returns ' ' by default.
+namespace iwstring {
+extern char SeparatorFromFileName(const const_IWSubstring& fname);
+}   // namespace iwstring
 
 /*
   Append a number to an ostream or IWString with a given width

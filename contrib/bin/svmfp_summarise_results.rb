@@ -12,6 +12,7 @@ def usage (rc)
   $stderr << "                split that was split number 10: svmfp_summarise_results -NO '\\.10$' ....\n"
   $stderr << " -F <fname>     read files to be processed from <fname>\n"
   $stderr << " -R B2          result of interest is Bsquared\n"
+  $stderr << " -R B2.input    result of interest is B2.input\n" if $expert
   $stderr << " -R AE          result of interest is average absolute error\n"
   $stderr << " -R RMS         result of interest is root mean square error\n"
   $stderr << " -R R2          result of interest is R squared\n"
@@ -172,6 +173,10 @@ if cl.option_present('R')
 
     if 'B2' == r
       rx.push(Regexp.new(' (Bsquared|B2.unbiased) '))
+      rxname.push('B2')
+      reverse.push(false)
+    elsif 'B2.input' == r
+      rx.push(Regexp.new(' (B2.input) '))
       rxname.push('B2')
       reverse.push(false)
     elsif 'R2' == r

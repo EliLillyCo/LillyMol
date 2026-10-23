@@ -1,0 +1,7 @@
+[width="30%", options="header"]
+|===============
+|N |Rejected |N |Demerits
+|1 | hard_reject_reason |2 | 
+|1 |  |1 | first_reason
+|.|. |1 | reason with | pipe
+|===============

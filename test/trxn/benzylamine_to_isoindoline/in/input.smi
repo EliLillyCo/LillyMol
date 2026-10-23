@@ -1,0 +1,10 @@
+CNCc1ccccc1 amine
+CC(=O)NCc1ccccc1 amide
+CS(=O)(=O)NCc1ccccc1 sulfonamide
+C[C@H](F)NCc1ccccc1 remote_chiral
+CNCc1cccc(C)c1 asymmetric
+NCc1ccccc1 primary_amine
+CN(C)Cc1ccccc1 tertiary_amine
+C[NH+]Cc1ccccc1 charged_N
+CNCc1c(C)cccc1C blocked_ortho
+CNCCc1ccccc1 too_long

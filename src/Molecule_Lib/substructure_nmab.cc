@@ -316,9 +316,9 @@ Single_Substructure_Query::_distance_between_root_atoms_satisfied(
 
 Link_Atom::Link_Atom()
 {
-  _a1 = INVALID_ATOM_NUMBER;
+  _a1 = kInvalidAtomNumber;
   _bt = INVALID_BOND_TYPE;
-  _a2 = INVALID_ATOM_NUMBER;
+  _a2 = kInvalidAtomNumber;
 
   _bond_topology = -1;
 
@@ -383,8 +383,8 @@ Link_Atom::debug_print(std::ostream& os) const
 
 Link_Atom_Current_State::Link_Atom_Current_State()
 {
-  _lhs = INVALID_ATOM_NUMBER;
-  _rhs = INVALID_ATOM_NUMBER;
+  _lhs = kInvalidAtomNumber;
+  _rhs = kInvalidAtomNumber;
   _bt = INVALID_BOND_TYPE;
 
   return;

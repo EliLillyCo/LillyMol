@@ -1,0 +1,25 @@
+name: "ortho_swap"
+scaffold {
+  smarts: "[/IWsymg1cD3](-!@*):[/IWsymg2cD3]-!@*"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  break_bond {
+    a1: 0
+    a2: 1
+  }
+  break_bond {
+    a1: 2
+    a2: 3
+  }
+  make_bond {
+    a1: 0
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+  make_bond {
+    a1: 2
+    a2: 1
+    btype: SS_SINGLE_BOND
+  }
+}

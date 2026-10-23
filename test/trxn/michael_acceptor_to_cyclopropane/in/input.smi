@@ -1,0 +1,14 @@
+C=CC(=O)NC terminal_acrylamide
+C=CC(=O)OC enoate
+C=CC(=O)C enone
+C=CC=O enal
+C/C=C/C(=O)NC E_input
+C/C=C\C(=O)NC Z_input
+C=C(C)C(=O)NC alpha_substituted
+C=CC(=O)N[C@H](C)F remote_chiral
+C=CC(=O)NCC/C=C/C remote_alkene_geometry
+C/C=C/C=C/C(=O)NC conjugated_diene
+CC=C ordinary_alkene
+C=CCC(=O)NC non_conjugated
+O=C1C=CCCC1 cyclic_enone
+C=CC#N nitrile

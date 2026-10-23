@@ -1,0 +1,112 @@
+{
+  "executable": "gfp_spread_standard",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+        "-h 4 ${LILLYMOL_HOME}/data/pubchem_example.gfp"
+      ]
+    },
+    {
+      "comment": [
+        "Regression: -A (previously selected fingerprints) was read but never",
+        "applied, so output was byte identical to omitting -A, and the first",
+        "record reported the DIST<1> placeholder instead of a real distance.",
+        "data/prior.gfp and data/pool.gfp are disjoint halves of",
+        "data/pubchem_example.gfp, so no pair is at distance zero and every",
+        "seeded distance is meaningful. -h 1 because selection order among",
+        "equidistant candidates is not reproducible with multiple threads."
+      ],
+      "name": "previously_selected",
+      "args": [
+        "-h 1 -A #{datadir}/prior.gfp #{datadir}/pool.gfp"
+      ]
+    },
+    {
+      "comment": [
+        "Regression: a -A file yielding no fingerprints used to be reported as",
+        "success, silently leaving every initial distance at 1.0 - which is",
+        "indistinguishable from -A never having been given. It must fail now.",
+        "Driven by a shell script so the exit status and the diagnostic can be",
+        "asserted without embedding absolute paths in the golden output.",
+        "Covers an empty file and a file that is not TDT at all."
+      ],
+      "name": "previously_selected_no_fingerprints",
+      "shell_script": {
+        "script_name": "run_case.sh",
+        "args": [
+          "#{datadir}"
+        ]
+      }
+    },
+    {
+      "comment": [
+        "Regression: with -p (distance scaling factors) the tool selects via",
+        "spread_with_weights, which fills selected_item[] rather than writing",
+        "as it goes. An unconditional early return sat in front of the code",
+        "that wrote that array, so -p produced no output whatsoever.",
+        "Weights are all 1.0, so this must reproduce the unweighted ordering."
+      ],
+      "name": "weights_uniform",
+      "args": [
+        "-h 1 -p FILE=#{datadir}/weights_uniform.txt #{datadir}/pool.gfp"
+      ]
+    },
+    {
+      "comment": [
+        "-p together with -A. Exercises two further faults in that path: the",
+        "first selection has no in-pool neighbour so nearest_previously_selected",
+        "stays -1, which used to be used to index fingerprints[-1]; and the -A",
+        "seed distances arrived unweighted while every later update was weighted.",
+        "Weights are all 1.0 here, so the distances must match those of",
+        "previously_selected."
+      ],
+      "name": "weights_previously_selected",
+      "args": [
+        "-h 1 -A #{datadir}/prior.gfp -p FILE=#{datadir}/weights_uniform.txt #{datadir}/pool.gfp"
+      ]
+    },
+    {
+      "comment": [
+        "Non-uniform weights must steer the first selection under -A: the pick",
+        "is argmax(weight * seed distance). PBCHM129016465 has weight 1.0 and",
+        "every other pool member 0.001, so it has to be selected first. Before",
+        "the fix the first-point scan compared a weighted value against an",
+        "unweighted running maximum, and seeded its index at 1 rather than 0."
+      ],
+      "name": "weights_skewed_previously_selected",
+      "args": [
+        "-h 1 -A #{datadir}/prior.gfp -p FILE=#{datadir}/weights_skewed.txt #{datadir}/pool.gfp"
+      ]
+    },
+    {
+      "comment": [
+        "Regression: -b was parsed after the spread had already run and written",
+        "its output, so brief output was silently ignored and full TDT was",
+        "emitted instead of 'smiles id dist'."
+      ],
+      "name": "brief",
+      "args": [
+        "-h 1 -b #{datadir}/pool.gfp"
+      ]
+    },
+    {
+      "name": "weights_skewed_brief",
+      "args": [
+        "-h 1 -b -A #{datadir}/prior.gfp -p FILE=#{datadir}/weights_skewed.txt #{datadir}/pool.gfp"
+      ],
+      "comment": [
+        "Weighted brief output uses the same four-decimal distance formatting as TDT output."
+      ]
+    },
+    {
+      "name": "weights_above_one",
+      "args": [
+        "-h 1 -A #{datadir}/prior.gfp -p FILE=#{indir}/weights.txt #{datadir}/pool.gfp"
+      ],
+      "comment": [
+        "Weights and weighted distances above one use stable fallback formatting."
+      ]
+    }
+  ]
+}

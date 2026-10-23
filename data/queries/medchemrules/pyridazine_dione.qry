@@ -1,6 +1,0 @@
-(0 Query
-  (A C Comment "pyridazine_dione")
-  (A I Version 2)
-  (A C smarts "[OD1]=[cR1]1:n:n:[cD3](=[OD1]):[cR1]:c1")
-  (A I min_nrings 1)
-)

@@ -1,2 +1,2 @@
-#! /bin/bash
+#!/usr/bin/env bash
 trxn -u -P boc-deprotection.rxn boc_amine.smi acid.smi 

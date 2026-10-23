@@ -1,6 +1,0 @@
-(5 Query
-  (A C Comment "cyanohydrin")
-
-  (A I Version 2)
-  (A C smarts "[ND1]#C-[CG0]-[$([OD1]),$(O-C=O)]")
-)

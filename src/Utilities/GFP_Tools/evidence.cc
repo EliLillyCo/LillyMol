@@ -37,6 +37,9 @@ namespace evidence {
 using std::cerr;
 using iw_tf_data_record::TFDataReader;
 
+constexpr float kUndefinedValue = -7.231e-24;
+constexpr char kMissing = '.';
+
 // when dealing with values that need to be sorted, use this to
 // keep track of the id of the computed value.
 template <typename T>
@@ -58,17 +61,36 @@ Usage(int rc) {
 #endif
   // clang-format on
   // clang-format off
-  cerr << "Computes measures of internal consistency for a series of measured values based on how\n";
-  cerr << "consistent the values are across the neighbours\n";
-  cerr << "Takes a single argument, a TFDataRecord serialized nnbr::NearNeighbours protos, such as\n";
-  cerr << "might be produced by the -T option to nn2proto\n";
-  cerr << "The following arguments are recognised\n";
-  cerr << " -config <fname>     an EvidenceData::Options textproto file with options\n";
-  cerr << " -A <fname>          descriptor file containing activity values for each molecule\n";
-  cerr << " -smiles <fname>     smiles for each molecule, will be included in the output\n";
-  cerr << " -C                  data is classlfication type (not implemented)\n";
-  cerr << " -diff               for each column generated, insert an extra column with difference from actual\n";
-  cerr << " -v                  verbose output\n";
+  cerr << R"(Computes measures of internal consistency for a series of measured values based on how
+consistent the values are across the neighbours.
+Takes a single argument, a TFDataRecord serialized nnbr::NearNeighbours protos, such as
+might be produced by the -S option to gfp_nearneighbours_single_file_tbb.
+
+Control is governed by an EvidenceData::Options textproto file. A useful set of options
+might be
+
+knn: [2, 5, 10]
+closest_value: [1, 2, 5, 10]
+piecewise_linear {
+  min: 0.15
+  max: 0.4
+}
+
+Place this in a file called 'config.textproto' and use that as the -config option
+
+gfp_make.sh file.smi > file.gfp
+gfp_nearneighbours_single_file_tbb -h 8 -n 10 -S file.nndata file.gfp
+evidence -config config.textproto -smiles file.smi -A file.activity -diff file.nndata
+
+The following arguments are recognised:
+ -config <fname>     an EvidenceData::Options textproto file with options.
+ -A <fname>          descriptor file containing activity values for each molecule\
+ -smiles <fname>     smiles for each molecule, will be included in the output\
+ -addsmi             add the smiles, id and distance of nearest neighbours to the output - needs -smiles.
+ -C                  data is classlfication type (not implemented).
+ -diff               for each column generated, insert an extra column with difference from actual.
+ -v                  verbose output.
+)";
   // clang-format on
 
   ::exit(rc);
@@ -258,10 +280,10 @@ Item<T>::AddNbr(int ndx, float distance, T activity, int uid) {
 template <typename T>
 void
 Item<T>::AppendUndefined(bool append_diff) {
-  _results << _undefined_value;
+  _results << kUndefinedValue;
 
   if (append_diff) {
-    _results << _undefined_value;
+    _results << kUndefinedValue;
   }
 }
 
@@ -275,8 +297,8 @@ Item<T>::MaybeAppendDiff(bool append_diff) {
   }
 
   const float last_result = _results.back();
-  if (last_result == _undefined_value) {
-    _results << _undefined_value;
+  if (last_result == kUndefinedValue) {
+    _results << kUndefinedValue;
     return;
   }
 
@@ -402,7 +424,7 @@ Item<T>::AddPiecewiseLinear(bool append_diff,
   }
 
   if (sum_weights == 0.0f) {
-    _results << _undefined_value;
+    _results << kUndefinedValue;
   } else {
     _results << (tot / sum_weights);
   }
@@ -444,7 +466,7 @@ int
 Item<T>::WriteResults(char sep, IWString_and_File_Descriptor& output) const {
   for (float r : _results) {
     output << sep;
-    if (r == _undefined_value) {
+    if (r == kUndefinedValue) {
       output << kMissing;
     } else {
       output << r;
@@ -461,8 +483,6 @@ class Evidence {
     EvidenceData::Options _config;
 
     // We need some hashes while ingesting the data.
-    //IW_STL_Hash_Map_float _id_to_activity;
-    //IW_STL_Hash_Map_int _id_to_ndx;
     absl::flat_hash_map<std::string, float> _id_to_activity;
     absl::flat_hash_map<std::string, int> _id_to_ndx;
 
@@ -481,6 +501,9 @@ class Evidence {
 
     // If a smiles file has been specified.
     absl::flat_hash_map<IWString, IWString> _id_to_smiles;
+
+    // We can optionally write some number of neighbours.
+    int _nbrs_to_write;
 
     char _input_separator;
     char _output_separator;
@@ -525,7 +548,7 @@ class Evidence {
     int WeightedAverage();
     int WeightedAverage(int nbrs);
 
-    int Process(float* values);
+    int Process2();
 
   public:
     Evidence();
@@ -548,6 +571,8 @@ Evidence::Evidence() {
 
   _item = nullptr;
   _number_items = 0;
+
+  _nbrs_to_write = 0;
 
   _input_separator = ' ';
   _output_separator = ' ';
@@ -594,6 +619,17 @@ Evidence::Initialise(Command_Line_v2& cl) {
   if (! cl.option_present('A')) {
     cerr << "Evidence::Initialise:must specify the activity file via the -A option\n";
     Usage(1);
+  }
+
+  if (cl.option_present("nbrs")) {
+    if (! cl.value("nbrs", _nbrs_to_write) || _nbrs_to_write <= 0) {
+      cerr << "Evidence::Initialise:the -nbrs option must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Will include " << _nbrs_to_write << " neighbours with each output record\n";
+    }
   }
 
   IW_STL_Hash_Map_String id_to_activity_string;
@@ -772,13 +808,15 @@ Evidence::SetupItems() {
     cerr << "Evidence::SetupItems:HUH range is zero " << min_activity << " to " << max_activity << '\n';
   }
 
+  // Apr 2026. Change to using a fixed value for the undefined value.
+  // TODO:ianwatson clean this up to get rid of setting the undefined value.
   const float undefined_value = min_activity - range;
   if (_verbose) {
     cerr << "Range " << min_activity << ',' << max_activity << " undefined value " <<
             undefined_value << '\n';
   }
   for (int i = 0; i < _number_items; ++i) {
-    _item[i].set_undefined_value(undefined_value);
+    _item[i].set_undefined_value(kUndefinedValue);
   }
 
   return _id_to_ndx.size();
@@ -836,6 +874,7 @@ Evidence::ReadNbrList(TFDataReader& input) {
     }
   }
 
+#define ECHO_NBRS
 #ifdef ECHO_NBRS
   if (_verbose) {
     PrintNbrs(cerr);
@@ -845,17 +884,79 @@ Evidence::ReadNbrList(TFDataReader& input) {
   return 1;
 }
 
+// These next two functions should be combined, but I could never get
+// template <typename T>
+// std::optional<absl::flat_hash_map<std::string, T>::const_iterator>
+// to compile. I am not sure why. TODO:ianwatson figure this out one day...
+
+// Lookup `name` in `zhash` and if it is found, return the iterator.
+// If not found, lookup the first token in `name` instead.
+std::optional<absl::flat_hash_map<std::string, float>::const_iterator >
+GetItem(const std::string& name, absl::flat_hash_map<std::string, float>& zhash) {
+  auto iter = zhash.find(name);
+  if (iter != zhash.end()) {
+    return iter;
+  }
+
+  auto f = name.find(' ');
+  if (f < 0) {
+    return std::nullopt;
+  }
+
+  std::string tmp(name);
+  tmp.resize(f);
+
+  iter = zhash.find(tmp);
+  if (iter != zhash.end()) {
+    return iter;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<absl::flat_hash_map<std::string, int>::const_iterator >
+GetItem(const std::string& name, absl::flat_hash_map<std::string, int>& zhash) {
+  auto iter = zhash.find(name);
+  if (iter != zhash.end()) {
+    return iter;
+  }
+
+  auto f = name.find(' ');
+  if (f < 0) {
+    return std::nullopt;
+  }
+
+  std::string tmp(name);
+  tmp.resize(f);
+
+  iter = zhash.find(tmp);
+  if (iter != zhash.end()) {
+    return iter;
+  }
+
+  return std::nullopt;
+}
+
 int
 Evidence::Initialise(const nnbr::NearNeighbours& proto) {
-  const auto iter_ndx = _id_to_ndx.find(proto.name());
-  if (iter_ndx == _id_to_ndx.end()) {
+  auto maybe_iter = GetItem(proto.name(), _id_to_ndx);
+
+  if (! maybe_iter) {
     cerr << "Evidence::Initialise:no index for '" << proto.name() << "'\n";
     return 0;
   }
 
-  Item<float>& item = _item[iter_ndx->second];
+//cerr << "Initialise: ";
+//cerr << proto.ShortDebugString() << '\n';
+//cerr << "index " << maybe_iter.value()->second << '\n';
+  Item<float>& item = _item[maybe_iter.value()->second];
 
   const uint32_t nbrs = proto.nbr().size();
+
+  // Cannot do anything with these.
+  if (nbrs == 0) {
+    return 1;
+  }
 
   item.AllocateNbrs(nbrs);
 
@@ -867,18 +968,19 @@ Evidence::Initialise(const nnbr::NearNeighbours& proto) {
       return 1;
     }
 
-    const auto iter_ndx = _id_to_ndx.find(nbr.id());
-    if (iter_ndx == _id_to_ndx.end()) {
+    auto maybe_iter_ndx = GetItem(nbr.id(), _id_to_ndx);
+    if (! maybe_iter_ndx) {
       cerr << "Evidence::Initialise:cannot find '" << nbr.id() << "'\n";
       return 0;
     }
-    const auto iter_activity = _id_to_activity.find(nbr.id());
-    if (iter_activity == _id_to_activity.end()) {
+    auto maybe_iter_activity = GetItem(nbr.id(), _id_to_activity);
+    if (! maybe_iter_activity) {
       cerr << "Evidence::Initialise:no activity for '" << nbr.id() << "'\n";
       return 0;
     }
 
-    item.AddNbr(i, nbr.dist(), iter_activity->second, iter_ndx->second);
+//  cerr << "nbr " << _item[maybe_iter_ndx.value()->second].id() << " act " << maybe_iter_activity.value()->second << '\n';
+    item.AddNbr(i, nbr.dist(), maybe_iter_activity.value()->second, maybe_iter_ndx.value()->second);
   }
 
   return 1;
@@ -903,6 +1005,11 @@ Evidence::PrintNbrs(std::ostream& output) const {
 
 int
 Evidence::Process() {
+#ifdef DEBUG_PROCESS
+  for (int i = 0; i < _number_items; ++i) {
+    cerr << "Process: " << i << ' ' << _item[i].id() << '\n';
+  }
+#endif
   // The first result is always the shortest distance.
   ShortestDistance();
 
@@ -926,10 +1033,7 @@ Evidence::Process() {
     WeightedAverage();
   }
 
-  // This is not needed...
-  std::unique_ptr<float[]> values = std::make_unique<float[]>(_header.size());
-
-  return Process(values.get());
+  return Process2();
 }
 
 // `ndx_and_value` must be sorted by value.
@@ -952,24 +1056,29 @@ AssignPercentileRanks(NdxValue<float>* ndx_and_value,
   return;
 }
 
+// Note this is not fully implemented...
 int
-Evidence::Process(float* values) {
+Evidence::Process2() {
   std::unique_ptr<NdxValue<float>[]> ndx_and_value = std::make_unique<NdxValue<float>[]>(_number_items);
 
+  // cerr << "Sorgint " << _header.size() << " columns and " << _number_items << " items\n";
   int number_columns = _header.size();
   for (int i = 0; i < number_columns; ++i) {
     for (int j = 0; j < _number_items; ++j) {
       ndx_and_value[j].ndx = j;
       ndx_and_value[j].value = _item[j].result(i);
+      // cerr << j << " B4 sort " << _item[j].id() << '\n';
     }
 
     std::sort(ndx_and_value.get(), ndx_and_value.get() + _number_items,
                         [](const NdxValue<float>& nv1,
                                 const NdxValue<float>& nv2) {
+                // cerr << " cmp " << nv1.value << " and " << nv2.value << '\n';
                 return nv1.value < nv2.value;
               });
     AssignPercentileRanks(ndx_and_value.get(), _number_items);
     for (int j = 0; j < _number_items; ++j) {
+      // cerr << "after sort " << j << ' ' << _item[j].id() << '\n';
       Item<float>& item = _item[ndx_and_value[j].ndx];
       item.AddPercentile(ndx_and_value[j].percentile);
     }
@@ -1103,13 +1212,19 @@ Evidence::WriteResults(IWString_and_File_Descriptor& output) const {
   }
 
   output << "ID" << _output_separator << "Activity";
+
+  if (_nbrs_to_write) {
+  }
+
   for (const IWString* h : _header) {
     output << _output_separator << *h;
   }
   output << '\n';
 
+  cerr << "Writing " << _number_items << " items\n";
   for (int i = 0; i < _number_items; ++i) {
     MaybeWriteSmiles(_item[i].id(), output);
+    // cerr << i << " id " << _item[i].id() << '\n';
 
     output << _item[i].id() << _output_separator << _item[i].activity();
 
@@ -1141,7 +1256,7 @@ Evidence::MaybeWriteSmiles(const IWString& id, IWString_and_File_Descriptor& out
 
 int
 Main(int argc, char** argv) {
-  Command_Line_v2 cl(argc, argv, "-v-A=s-C-config=sfile-diff-smiles=sfile");
+  Command_Line_v2 cl(argc, argv, "-v-A=s-C-config=sfile-diff-smiles=sfile-nbrs=ipos");
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     Usage(1);

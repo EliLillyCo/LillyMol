@@ -1,5 +1,6 @@
 {
   "executable": "abraham",
+  "difftool": "${LILLYMOL_HOME}/test/numerically_equivalent.rb",
   "test": [
     {
       "name": "case_1",
@@ -9,8 +10,7 @@
       "args": [
         " -l -F ${QUERY_DIR}/abraham/Abraham -P ${QUERY_DIR}/abraham/Alpha2H -g all #{indir}/pubchem_example.smi"
       ]
+    }
 
-   }
-
-   ]
+  ]
 }

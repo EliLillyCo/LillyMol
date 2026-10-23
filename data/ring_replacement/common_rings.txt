@@ -1,0 +1,44 @@
+# A subset of known rings that are both relatively common and
+# which mostly avoid 4 and 7 membered rings.
+# This subset is designed for use with generative uses of ring_replacement
+# where large numbers of plausible, but relatively attractive variants
+# are needed.
+rings_3A.smi 40
+rings_3A5A5A.smi 62
+rings_3A5A6A.smi 103
+rings_3A5A6a.smi 110
+rings_3A6A6A.smi 129
+rings_3A6a6A.smi 141
+rings_5a5a6A.smi 148
+rings_5a5A6A.smi 229
+rings_3A5A.smi 232
+rings_5a5a.smi 306
+rings_3A6A.smi 309
+rings_5A5A5A.smi 345
+rings_5a6A6A.smi 401
+rings_5a.smi 493
+rings_5A5A6A.smi 511
+rings_5a5A.smi 553
+rings_6a.smi 629
+rings_5a5a6a.smi 641
+rings_5a5A6a.smi 742
+rings_6A6A6A.smi 836
+rings_5A5A6a.smi 870
+rings_5A6a6a.smi 1008
+rings_5A6A6A.smi 1121
+rings_5A5A.smi 1320
+rings_6a6a6a.smi 1649
+rings_5A.smi 1663
+rings_5a6A.smi 1860
+rings_5A6a.smi 2108
+rings_6a6A6A.smi 2236
+rings_6a6a6A.smi 2284
+rings_6A.smi 2295
+rings_5A6a6A.smi 2369
+rings_5a6a6A.smi 2453
+rings_6A6A.smi 2473
+rings_6a6a.smi 2686
+rings_5a6a6a.smi 3185
+rings_5A6A.smi 3188
+rings_6a6A.smi 4218
+rings_5a6a.smi 4837

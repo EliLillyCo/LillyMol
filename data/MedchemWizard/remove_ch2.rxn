@@ -1,0 +1,14 @@
+name: "remove_ch2"
+scaffold {
+  smarts: "C-[CD2H2R0]-[#6]"
+  smarts: "C-[CD2H2r>5]-[#6]"
+  match_conditions {
+    find_unique_embeddings: true
+  }
+  remove_atom: 1
+  make_bond {
+    a1: 0
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+}

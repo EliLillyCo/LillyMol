@@ -8,8 +8,11 @@
 #include "sys/types.h"
 
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
+
+#include "google/protobuf/text_format.h"
 
 #include "absl/container/flat_hash_map.h"
 
@@ -18,6 +21,10 @@
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/string_with_commas.h"
+
+#include "Molecule_Lib/molecule.h"
 
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
@@ -46,6 +53,16 @@ dicer -B serialized_proto -S /tmp/rand.dc -C iso=9 -I 9 -m 4 -M 17 -k 2 -X 500 f
 dicer_to_complement_db -d /tmp/rand.bdb /tmp/rand.dc
 
  -d <dbname>            The database to generate.
+ -f <natoms>            Minimum fragment size.
+ -F <natoms>            maximum fragment size.
+ -c <natoms>            Minimum complement size.
+ -C <natoms>            maximum complement size.
+ -x <natoms>            When comparing the fragment with the complement, the complement can lose at most <natoms>
+ -X <natoms>            When comparing the fragment with the complement, the complement can gain at most <natoms>
+ -w                     Write the stored data before writing to db. Beware may be very large.
+ -r <n>                 Report progress every <n> molecules processed.
+ -v                     Verbose output.
+                
 )";
   // clang-format on
   ::exit(rc);
@@ -73,6 +90,8 @@ class Complements {
 
     int Extra(const std::string& parent_name, const dicer_data::DicerFragment& proto);
 
+    int ToProto(dicer_data::ComplementaryFragments& proto) const;
+
     int WriteAsText(const std::string& lhs, IWString_and_File_Descriptor& output) const;
 };
 
@@ -87,6 +106,7 @@ Complements::Initialise(const std::string& parent_name, const dicer_data::DicerF
   // Make a copy since we need to set the parent attribute.
   dicer_data::DicerFragment tmp(proto);
   tmp.set_par(parent_name);
+  tmp.set_n(1);
   _complement[proto.comp()] = std::move(tmp);
 
   return 1;
@@ -105,6 +125,7 @@ Complements::Extra(const std::string& parent_name, const dicer_data::DicerFragme
   frag.set_smi(proto.comp());
   frag.set_n(1);
   frag.set_par(parent_name);
+  cerr << "New fragment " << frag.ShortDebugString() << '\n';
 
   _complement[proto.comp()] = std::move(frag);
 
@@ -113,10 +134,34 @@ Complements::Extra(const std::string& parent_name, const dicer_data::DicerFragme
 
 int
 Complements::WriteAsText(const std::string& lhs, IWString_and_File_Descriptor& output) const {
+  google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(1);
+
+  std::string buffer;
+
   for (const auto& [k, v] : _complement) {
     output << lhs << ' ';
-    output << v.ShortDebugString() << '\n';
+    if (! printer.PrintToString(v, &buffer)) {
+      cerr << "PrintToString failed\n";
+      return 0;
+    }
+
+    output << buffer << '\n';
+
     output.write_if_buffer_holds_more_than(8192);
+  }
+
+  return 1;
+}
+
+int
+Complements::ToProto(dicer_data::ComplementaryFragments& proto) const {
+ 
+  for (const auto& [smi, v] : _complement) {
+    dicer_data::ComplementaryFragment* f = proto.mutable_frag()->Add();
+    f->set_smi(smi);
+    f->set_id(v.par());
+    f->set_n(v.n());
   }
 
   return 1;
@@ -128,7 +173,17 @@ class Options {
 
     std::unique_ptr<Db> _database;
 
-    uint64_t _molecules_read;
+    uint64_t _molecules_read = 0;
+
+    // The size of fragments can be controlled by dicer, but that is expensive.
+    // We can cheaply filter things here.
+    uint64_t _atom_count_fail = 0;
+
+    // In order to keep database sizes down, impose size limits on what gets stored.
+    int _min_fragment_size = 0;
+    int _max_fragment_size = std::numeric_limits<int>::max();
+    int _min_complement_size = 0;
+    int _max_complement_size = std::numeric_limits<int>::max();
 
     // When storing complementary fragments, we control how different
     // the atom count can be. For example if we examine C as a fragment,
@@ -137,12 +192,20 @@ class Options {
     int _max_extra_atoms;
     int _max_fewer_atoms;
 
+    Report_Progress _report_progress;
+
 //  absl::flat_hash_map<std::string, dicer_data::DicerFragment> _fragment;
     absl::flat_hash_map<std::string, Complements> _fragment;
 
+    // Useful for debugging and development.
+    uint32_t _stop_after_processing = 0;
+
   // Private functions.
-    int Process(const std::string& parent_name, const dicer_data::DicerFragment& frag);
-    int OkAtomCountDifference(int n1, int n2) const;
+    int Process(const dicer_data::DicedMolecule& proto, const dicer_data::DicerFragment& frag);
+
+    int OkAtomCounts(int n1, int n2) const;
+
+    int StoreInDb(const IWString& smiles, const Complements& complements);
 
   public:
     Options();
@@ -153,6 +216,9 @@ class Options {
     int Process(const dicer_data::DicedMolecule& proto);
 
     int WriteAsText(IWString_and_File_Descriptor& output) const;
+
+    // Write the contents of _fragment t- _database.
+    int StoreInDb();
 };
 
 Options::Options() {
@@ -179,8 +245,52 @@ Options::Initialise(Command_Line& cl) {
     return 0;
   }
 
+  if (cl.option_present('f')) {
+    if (! cl.value('f', _min_fragment_size) || _min_fragment_size < 1) {
+      cerr << "The minimum fragment atom count (-c) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Min fragment size " << _min_fragment_size << '\n';
+    }
+  }
+
+  if (cl.option_present('F')) {
+    if (! cl.value('F', _max_fragment_size) || _max_fragment_size < _min_fragment_size) {
+      cerr << "The maximum fragment atom count (-C) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Max fragment size " << _max_fragment_size << '\n';
+    }
+  }
+
   if (cl.option_present('c')) {
-    if (! cl.value('c', _max_fewer_atoms) || _max_fewer_atoms < 0) {
+    if (! cl.value('c', _min_complement_size) || _min_complement_size < 1) {
+      cerr << "The minimum complement atom count (-c) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Min complement size " << _min_complement_size << '\n';
+    }
+  }
+
+  if (cl.option_present('C')) {
+    if (! cl.value('C', _max_complement_size) || _max_complement_size < _min_complement_size) {
+      cerr << "The maximum complement atom count (-C) must be a whole +ve number\n";
+      return 0;
+    }
+
+    if (_verbose) {
+      cerr << "Max complement size " << _max_complement_size << '\n';
+    }
+  }
+
+  if (cl.option_present('x')) {
+    if (! cl.value('x', _max_fewer_atoms) || _max_fewer_atoms < 0) {
       cerr << "The maximum fewer atoms in the complement (-c) option must be a whole +ve number\n";
       return 0;
     }
@@ -190,14 +300,21 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('C')) {
-    if (! cl.value('C', _max_extra_atoms) || _max_extra_atoms < 0) {
+  if (cl.option_present('X')) {
+    if (! cl.value('X', _max_extra_atoms) || _max_extra_atoms < 0) {
       cerr << "The maximum examine atoms in the complement (-C) option must be a whole +ve number\n";
       return 0;
     }
 
     if (_verbose) {
       cerr << "Will not store a complementary fragment if it has " << _max_extra_atoms << " extra atoms\n";
+    }
+  }
+
+  if (cl.option_present('r')) {
+    if (! _report_progress.initialise(cl, 'r', _verbose)) {
+      cerr << "Cannot initialise progress reporting (-r)\n";
+      return 0;
     }
   }
 
@@ -239,15 +356,17 @@ Options::Initialise(Command_Line& cl) {
 int
 Options::Process(const dicer_data::DicedMolecule& proto) {
 
+  ++_molecules_read;
+
   for (const dicer_data::DicerFragment& frag : proto.fragment()) {
-    Process(proto.name(), frag);
+    Process(proto, frag);
   }
 
   return 1;
 }
 
 int
-Options::Process(const std::string& parent_name, const dicer_data::DicerFragment& frag) {
+Options::Process(const dicer_data::DicedMolecule& proto, const dicer_data::DicerFragment& frag) {
 #ifdef THIS_NEVER_HAPPENS
   if (! frag.has_comp()) {
     cerr << "Options::Process:no complementary fragment\n";
@@ -255,24 +374,56 @@ Options::Process(const std::string& parent_name, const dicer_data::DicerFragment
   }
 #endif
 
-  auto iter = _fragment.find(frag.smi());
-  if (iter != _fragment.end()) {
-    return iter->second.Extra(parent_name, frag);
+  if (_report_progress()) {
+    cerr << "Read " << iwstring::with_commas(_molecules_read)
+         << " molecules, hash contains " << iwstring::with_commas(_fragment.size())
+         << " complements\n";
+
   }
 
-  Complements comp;
-  comp.Initialise(parent_name, frag);
+  const int atoms_in_parent = proto.natoms();
+  const int atoms_in_frag = frag.nat();
+  if (! OkAtomCounts(atoms_in_parent, atoms_in_frag)) {
+    ++_atom_count_fail;
+    return 1;
+  }
 
-  _fragment[frag.smi()] = std::move(comp);
+  auto iter = _fragment.find(frag.smi());
+  if (iter != _fragment.end()) {
+    iter->second.Extra(proto.name(), frag);
+  } else {
+    Complements comp;
+    comp.Initialise(proto.name(), frag);
+    _fragment[frag.smi()] = std::move(comp);
+  }
 
   return 1;
 }
 
-// We are processing a fragment with `n1` atoms and are thinking about
-// adding a complementary fragment with `n2` atoms.
-// Return 1 if this is consistent with the atom count difference constraints.
+// We have a fragmentation with `atoms_in_parent` atoms in the parent
+// and `atoms_in_fragment` atoms in the fragment.
+// Return true if this is an OK scenario
 int
-Options::OkAtomCountDifference(int n1, int n2) const {
+Options::OkAtomCounts(int atoms_in_parent, int atoms_in_fragment) const {
+  assert (atoms_in_parent > atoms_in_fragment);
+
+  int atoms_in_complement = atoms_in_parent - atoms_in_fragment;
+
+  if (atoms_in_fragment < _min_fragment_size) {
+    return 0;
+  }
+  if (atoms_in_fragment > _max_fragment_size) {
+    return 0;
+  }
+
+  if (atoms_in_complement < _min_complement_size) {
+    return 0;
+  }
+  if (atoms_in_complement > _max_complement_size) {
+    return 0;
+  }
+
+#ifdef NOT_IMPLEMENTED
   if (_max_extra_atoms > 0) {
     if (n1 < n2) {
       if ((n2 - n1) > _max_extra_atoms) {
@@ -288,12 +439,14 @@ Options::OkAtomCountDifference(int n1, int n2) const {
       }
     }
   }
+#endif
 
   return 1;
 }
 
 int
 Options::WriteAsText(IWString_and_File_Descriptor& output) const {
+  cerr << "Options::WriteAsText called\n";
   for (const auto& [k, v] : _fragment) {
     v.WriteAsText(k, output);
     output.write_if_buffer_holds_more_than(8192);
@@ -303,8 +456,59 @@ Options::WriteAsText(IWString_and_File_Descriptor& output) const {
 }
 
 int
+Options::StoreInDb() {
+  if (_report_progress.active()) {
+    _report_progress.reset();
+  }
+
+  for (const auto& [k, v] : _fragment) {
+    if (! StoreInDb(k, v)) {
+      cerr << "Error processing '" << k << "'\n";
+      return 0;
+    }
+
+    if (_report_progress()) {
+      cerr << "Stored " << iwstring::with_commas(_report_progress.times_called())
+           << " items\n";
+    }
+  }
+
+  if (_verbose) {
+    cerr << "Stored " << iwstring::with_commas(_fragment.size()) << " fragments\n";
+  }
+
+  return 1;
+}
+
+int
+Options::StoreInDb(const IWString& smiles, const Complements& complements) {
+  Dbt zkey((char*)smiles.data(), smiles.length());
+
+  dicer_data::ComplementaryFragments proto;
+  complements.ToProto(proto);
+
+  std::string buffer;
+  if (! proto.SerializeToString(&buffer)) {
+    cerr << "SerializeToString failed\n";
+    return 0;
+  }
+
+  Dbt zdata((char*)buffer.data(), buffer.size());
+
+  if (int rc = _database->put(NULL, &zkey, &zdata, 0); rc != 0) {
+    cerr << "Options::StoreInDb:store failed ";
+    _database->err(rc, "");
+    return 0;
+  }
+
+  return 1;
+}
+
+int
 DicerToComplmentDb(iw_tf_data_record::TFDataReader& input,
+                   uint32_t stop_after_processing,
                    Options& options) {
+  uint32_t items_read = 0;
   while (1) {
     std::optional<dicer_data::DicedMolecule> maybe_proto = input.ReadProto<dicer_data::DicedMolecule>();
     if (! maybe_proto) {
@@ -313,13 +517,20 @@ DicerToComplmentDb(iw_tf_data_record::TFDataReader& input,
 
     // cerr << maybe_proto->ShortDebugString() << '\n';
     options.Process(*maybe_proto);
+    ++items_read;
+    if (items_read > stop_after_processing) {
+      cerr << "Processing stopped after " << items_read << " items\n";
+      return 1;
+    }
   }
 
   return 1;
 }
 
 int
-DicerToComplmentDb(const char* fname, Options& options) {
+DicerToComplmentDb(const char* fname,
+                   uint32_t stop_after_processing,
+                   Options& options) {
   iw_tf_data_record::TFDataReader input(fname);
 
   if (! input.good()) {
@@ -327,12 +538,12 @@ DicerToComplmentDb(const char* fname, Options& options) {
     return 0;
   }
 
-  return DicerToComplmentDb(input, options);
+  return DicerToComplmentDb(input, stop_after_processing, options);
 }
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vd:c:C:");
+  Command_Line cl(argc, argv, "vd:f:F:c:Cx:X::r:ws:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -352,15 +563,31 @@ Main(int argc, char** argv) {
     Usage(1);
   }
 
+  uint32_t stop_after_processing = std::numeric_limits<uint32_t>::max();
+
+  if (cl.option_present('s')) {
+    if (! cl.value('s', stop_after_processing)) {
+      cerr << "The stop processing option (-s) must be a whole +ve number\n";
+      return 0;
+    }
+  }
+
   for (const char* fname: cl) {
-    if (! DicerToComplmentDb(fname, options)) {
+    if (! DicerToComplmentDb(fname, stop_after_processing, options)) {
       cerr << "Fatal error processing '" << fname << "'\n";
       return 1;
     }
   }
 
   IWString_and_File_Descriptor output(1);
-  options.WriteAsText(output);
+  if (cl.option_present('w')) {
+    options.WriteAsText(output);
+  }
+
+  if (! options.StoreInDb()) {
+    cerr << "DB store failed\n";
+    return 1;
+  }
 
   return 0;
 }

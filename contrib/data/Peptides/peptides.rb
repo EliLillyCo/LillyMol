@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 lillymol_home = ENV['LILLYMOL_HOME']
-require "#{lillymol_home}/contrib/bin/lib/iwcmdline.rb"
+require_relative('lib/iwcmdline')
 
 $expert = false
 

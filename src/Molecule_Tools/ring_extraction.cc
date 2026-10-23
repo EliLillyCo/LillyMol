@@ -100,6 +100,10 @@ struct Exocyclic {
   bond_type_t btype;
 };
 
+// Each atom in the parent can be in one of these states with respect to
+// rings.
+//  kIsBase: the atom is part of a ring
+//  kIsExocyclic: the atom is doubly bonded to a ring atom.
 enum class ExocyclicStatus {
   kNotInvolved = 0,
   kIsBase = 1,
@@ -109,7 +113,10 @@ enum class ExocyclicStatus {
 struct PerMoleculeArrays {
   public:
     int* ring_sys;
+
+    // A mapping from atom number in parent to atom number in a ring.
     int* xref;
+
     int* include_atom;
     uint32_t* atype;
     ExocyclicStatus* exocyclic_status;
@@ -313,12 +320,16 @@ ExtractRings::ExtractRings() {
 
 void
 DisplayDashXOption(std::ostream& output) {
-  output << " -X sss     substructure search the starting molecule as a check\n";
-  output << " -X a:A     letters assigned to aromatic and aliphatic rings\n";
-  output << " -X noarom  generate smarts that do not specify aromaticity,\n";
-  output << "            this enables replacing aromatic with aliphatic rings and vice verse\n";
-  output << " -X degsqb  write the degree designator as a bracketed range rather than >\n";
-  output << " -X list=<fname>  write a list of all files generated to <fname\n";
+  // clang-format off
+  output << R"( -X sss     substructure search the starting molecule as a check
+ -X a:A     strings assigned to aromatic and aliphatic rings
+            -X Ar:Al is used for generating the files in the LillyMol distribution
+ -X noarom  generate smarts that do not specify aromaticity,
+            this enables replacing aromatic with aliphatic rings and vice verse
+ -X degsqb  write the degree designator as a bracketed range rather than >
+ -X list=<fname>  write a list of all files generated to <fname>
+)";
+  // clang-format on
 
   ::exit(0);
 }
@@ -878,7 +889,7 @@ ExtractRings::IsotopeOfExocyclicAtom(Molecule& m,
 // We are applying some kind of isotope to an atom. If we have atom types
 // use that, otherwise _isotope.
 isotope_t
-ExtractRings::IsotopeForAtom(Molecule& m, atom_number_t zatom, 
+ExtractRings::IsotopeForAtom(Molecule& m, atom_number_t zatom,
                              int sys_num,
                              const PerMoleculeArrays& data) const {
 //cerr << "IsotopeForAtom " << atom_number << " atypes " << atypes.get() << " value " << atypes[atom_number] << '\n';
@@ -886,7 +897,7 @@ ExtractRings::IsotopeForAtom(Molecule& m, atom_number_t zatom,
   if (data.atype) {
     return IsotopeOfExocyclicAtom(m, zatom, data.ring_sys, sys_num, data.atype);
   }
-  
+
   return _isotope;
 }
 
@@ -922,7 +933,7 @@ AnyMultiplyConnectedAtoms(Molecule& m,
 
 int
 ExtractRings::LabelAttachmentPoints(Molecule& parent,
-                              Molecule& r,
+                              Molecule& abstract_ring,
                               int sys_num,
                               const PerMoleculeArrays& data) const {
   const int matoms = parent.natoms();
@@ -970,7 +981,7 @@ ExtractRings::LabelAttachmentPoints(Molecule& parent,
         continue;
       }
 
-      r.set_isotope(data.xref[i], IsotopeForAtom(parent, i, sys_num, data));
+      abstract_ring.set_isotope(data.xref[i], IsotopeForAtom(parent, i, sys_num, data));
       ++rc;
       //cerr << "ring set isotope on atom " << xref[i] << " value " << _isotope << '\n';
     }
@@ -1293,6 +1304,7 @@ ExtractRings::GenerateSmarts(Molecule& parent,
     } else if (m.ncon(i) > 1) {
       smt << 'D' << m.ncon(i);
     }
+
     smt << kCloseSquareBracket;
     smiles_information.set_user_specified_atomic_smarts(i, smt);
   }
@@ -1409,7 +1421,7 @@ ExtractRings::GenerateRing(Molecule& parent,
     const auto n = iter_usmi->second.n();
     iter_usmi->second.set_n(n + 1);
   }
-  
+ 
   return 1;
 }
 
@@ -1506,14 +1518,20 @@ ExtractRings::WriteRings(IWString_and_File_Descriptor& output,
   std::string buffer;
 
   for (const RplRing::ReplacementRing* r : for_sorting) {
-    printer.PrintToString(*r, &buffer);
+    if (! printer.PrintToString(*r, &buffer)) {
+      cerr << "PrintToString failed\n";
+      return 0;
+    }
     output << buffer << '\n';
     output.write_if_buffer_holds_more_than(8192);
   }
   return 1;
 
   for (const auto& [usmi, r] : rings) {
-    printer.PrintToString(r, &buffer);
+    if (!printer.PrintToString(r, &buffer)) {
+      cerr << "PrintToString failed\n";
+      return 0;
+    }
     output << buffer << '\n';
     output.write_if_buffer_holds_more_than(8192);
   }

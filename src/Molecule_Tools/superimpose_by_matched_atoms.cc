@@ -2,6 +2,7 @@
   superimpose molecules by best fit to matched atoms
 */
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <limits>
@@ -244,7 +245,7 @@ Template_Molecule::identify_query_matches (::resizable_array_p<Substructure_Quer
     _a2 = new double[array_size * 3];
     _weight = new double[array_size];
 
-    set_vector(_weight, array_size, 1.0);
+    std::fill_n(_weight, array_size, 1.0);
     if (0.0 != special_processing_for_jibo)
     {
       _weight[1] = special_processing_for_jibo;

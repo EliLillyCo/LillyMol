@@ -9,7 +9,6 @@
 #include "Foundational/iwmisc/misc.h"
 
 using std::cerr;
-using std::endl;
 
 static int verbose = 0;
 

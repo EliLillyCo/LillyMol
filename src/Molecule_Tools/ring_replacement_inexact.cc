@@ -255,6 +255,10 @@ class SubstituentsForRing : public resizable_array_p<Substituent> {
       return _number_elements;
     }
 
+    int ring_number() const {
+      return _ring_number;
+    }
+
     // We know the isotopic atoms used for attachment points,
     // look for those isotopes in `m` and return the corresponding
     // atom numbers.
@@ -292,6 +296,8 @@ SubstituentsForRing::BreakBonds(Molecule& m) const {
 class SubstituentsForRingSystem : public 
                 resizable_array_p<SubstituentsForRing> {
   private:
+    // For each substituent added, keep track of the unique ring id's.
+    resizable_array<int> _rids;
 
   public:
     int AddSubstituent(Substituent* s);
@@ -301,6 +307,10 @@ class SubstituentsForRingSystem : public
     }
 
     int number_attachment_points() const;
+
+    int number_rids() const {
+      return _rids.number_elements();
+    }
 
     int RemoveRingSystem(Molecule& m) const;
 
@@ -324,6 +334,8 @@ SubstituentsForRingSystem::AddSubstituent(Substituent* s) {
   new_ring->AddSubstituent(s);
 
   this->add(new_ring.release());
+
+  _rids.add_if_not_already_present(rnumber);
 
   return 1;
 }
@@ -1410,7 +1422,6 @@ ExtendMatchedAtomsAcrossFusions(Molecule& m,
   m.ring_membership();  // Force sssr
 
   std::unique_ptr<int[]> visited = std::make_unique<int[]>(matoms);
-  std::fill_n(visited.get(), matoms, 0);
 
   int system_number = 0;
   for (int i = 0; i < matoms; ++i) {
@@ -1455,7 +1466,6 @@ Options::ProcessInner(Molecule& m, IWString_and_File_Descriptor& output) {
   const int matoms = m.natoms();
 
   std::unique_ptr<int[]> matched_atoms = std::make_unique<int[]>(matoms);
-  std::fill_n(matched_atoms.get(), matoms, 0);
 
   if (! IdentifyMatchedAtoms(m, matched_atoms.get())) {
     ++_molecules_not_matching_queries;
@@ -1561,7 +1571,8 @@ Options::ReplaceRingSystem(Molecule& m,
   m.add_molecule(&replacement.molecule());
 
   int rc;
-  if (_preserve_ring_substitutions) {
+  // cerr << "_preserve_ring_substitutions " << _preserve_ring_substitutions << '\n';
+  if (_preserve_ring_substitutions && substituents.number_rids() > 1) {
     rc = ReplaceRingSystemPreserveRingSubstitution(m, initial_matoms, substituents, replacement, output);
   } else {
     rc = ReplaceRingSystemSubstituentsAnywhere(m, initial_matoms, substituents, replacement, output);
@@ -1574,12 +1585,15 @@ Options::ReplaceRingSystem(Molecule& m,
 
 // For each ring, we need to add the substituents to that ring, and
 // then iterate over rings.
+// The number of different ring id's must be > 1
 int
 Options::ReplaceRingSystemPreserveRingSubstitution(Molecule& m,
                 int initial_matoms,
                 const SubstituentsForRingSystem& substituents,
                 const Replacement& replacement,
                 IWString_and_File_Descriptor& output) {
+
+  // TODO: ianwatson implement this.
   return 1;
 }
 

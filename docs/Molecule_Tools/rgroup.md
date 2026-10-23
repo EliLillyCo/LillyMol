@@ -1,7 +1,7 @@
 # rgroup
 
 `rgroup` is one of a series that identifies substituents at specific points
-in a molecle, or in a series of molecules. It can be the precursor for an R group
+in a molecule, or in a series of molecules. It can be the precursor for an R group
 analysis. See also `remove_and_label`, `get_substituents` and others.
 
 The tool is complex since it evolved over time to satisfy several different needs.

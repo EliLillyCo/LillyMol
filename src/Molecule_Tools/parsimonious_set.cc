@@ -633,7 +633,6 @@ Candidates::Process(IWString_and_File_Descriptor& output) {
 
   // How many times has a fragment been selected.
   std::unique_ptr<uint32_t[]> selected = std::make_unique<uint32_t[]>(nfrag);
-  std::fill_n(selected.get(), nfrag, 0);
 
   // The number selected.
   uint32_t nsel = 0;

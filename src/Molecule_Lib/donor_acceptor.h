@@ -6,15 +6,17 @@
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 
-#ifdef BUILD_BAZEL
-#include "Molecule_Lib/donor_acceptor.pb.h"
-#else
-#include "donor_acceptor.pb.h"
-#endif
 #include "output.h"
 #include "temp_detach_atoms.h"
 
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/donor_acceptor.pb.h"
 #include "Molecule_Lib/pharmacophore.pb.h"
+#else
+#include "donor_acceptor.pb.h"
+#include "pharmacophore.pb.h"
+#endif
+
 
 class Molecule_to_Match;
 class Substructure_Hit_Statistics;
@@ -42,9 +44,7 @@ class Donor_Acceptor_Assigner
 
 //  private functions
 
-    int BuildFromEnvValue(const IWString & env, int verbose);
-    int BuildFromDefaultEnv(int verbose);
-    int BuildFromEnv(const IWString& env, int verbose);
+    int BuildFromDirValue(const IWString & dir, int verbose);
 
     int  _assign_acceptors(Molecule_to_Match & target, int * isotope);
     int  _assign_donors(Molecule_to_Match & target, int * isotope);
@@ -74,12 +74,20 @@ class Donor_Acceptor_Assigner
     void set_apply_isotopic_labels(int s) { _apply_isotopic_labels = s;}
 
     int construct_from_command_line(Command_Line &, char, int = 0);
+    // A single command line token
     int build(const const_IWSubstring &);
+
     int BuildFromProto(const Pharmacophore::DonorAcceptor& proto);
+
+    // Usually LILLYMOL_HOME/data/queries/hbonds
+    int BuildFromDir(const IWString& dir, int verbose);
+
+    // Use LILLYMOL_HOME to locate the default donor/acceptor queries.
+    int BuildFromDefaultEnv(int verbose);
 
     // Construct from proto files.
     int BuildFromProto(const IWString& fname);
-    int BuildFromProto(const BrunsDonorAcceptor::BrunsDonorAcceptor& proto, const IWString& dirname);
+    int BuildFromProto(const bruns_donor_acceptor::BrunsDonorAcceptor& proto, const IWString& dirname);
 
     int process(Molecule &, int * = nullptr);
 };

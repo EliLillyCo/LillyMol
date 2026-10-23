@@ -6,7 +6,7 @@ tool_home = ".."
 
 require_relative "lib/iwcmdline"
 
-cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-parallel=ipos-l=s-V-j-q-submit=xfile-noeval")
+cl = IWCmdline.new("-v-a=i-o=i-e=i-w=ipos-k-ks-dry-start=i-stop=i-do=s-stem=s-rx=s-suffix=s-dsc=sfile-qsub-cluster-cluster.seq-sync-qsubopt=close-file=sfile-col=s-echo-echon-f=s-rxdir=dir-subdir-s-array=s-sleep=ipos-sortrx-expert-parallel=ipos-xargs=ipos-l=s-V-j-q-submit=xfile-noeval")
 
 verbose = cl.option_present('v')
 
@@ -19,8 +19,7 @@ qsub = cl.option_present('qsub') || cl.option_present('cluster') || cl.option_pr
 doitfilename = "DOPATTERNTMP#{Process.pid}"
 doitfile = false
 
-#GH Parallel is removed
-if qsub || cl.option_present('parallel')
+if qsub || cl.option_present('parallel') || cl.option_present('xargs')
   dry_run = true
   doitfile = File.open(doitfilename, mode='w')
   unless doitfile
@@ -69,6 +68,7 @@ def usage (rc)
   $stderr.print " -qsubopt ... -qsubopt options passed to qsub (Cluster setup is required)\n" if $expert
   $stderr.print " -l ...          cluster resource specification(s) (Cluster setup is required)\n" if $expert
   $stderr.print " -parallel <j>   use gnu parallel to process <j> tasks at a time\n" if $expert
+  $stderr.print " -xargs <j>      use xargs to process <j> tasks at a time\n" if $expert
   $stderr.print " -submit <fname> specify your own job submitter (default iwqb.rb) (Cluster setup is required)\n" if $expert
   $stderr.print " -echo           echo % before each command\n"
   $stderr.print " -sleep <sec>    sleep between commands\n" if $expert
@@ -468,7 +468,10 @@ failures = 0
   sleep(sleeptime) if (sleeptime > 0)
 end
 
-$stderr << "#{failures} of #{items_to_do.size} commands failed\n" if ((verbose || failures > 0) && report_failures)
+if dry_run
+elsif (verbose || failures > 0) && report_failures
+  $stderr << "#{failures} of #{items_to_do.size} commands failed\n"
+end
 
 if doitfile
   doitfile.close
@@ -481,6 +484,9 @@ if doitfile
   if cl.option_present('parallel')
     j = cl.value('parallel')
     cmd = "parallel -j #{j} < #{doitfilename}" # TODO: we may want to relocate parallel to a lib/p path instead
+  elsif cl.option_present('xargs')
+    j = cl.value('xargs')
+    cmd = "xargs -I{} -P #{j} bash -c '{}' < #{doitfilename}"
   else
     cmd = "#{iwqb} "
     cmd << "-qsub #{qsub_options} -qsub " if qsub_options.length > 0
@@ -501,7 +507,7 @@ if doitfile
   $stderr.print "Executing '#{cmd}'\n" if (verbose)
   system(cmd)
 
-  if cl.option_present('sync') || cl.option_present('parallel')
+  if cl.option_present('sync') || cl.option_present('parallel') || cl.option_present('xargs')
     File.unlink(doitfilename)
   end
   if cl.option_present('sync')

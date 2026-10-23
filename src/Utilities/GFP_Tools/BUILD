@@ -1,7 +1,14 @@
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
-# load("@rules_proto_grpc_cpp//:defs.bzl", "cpp_grpc_compile")
-
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+load("@rules_python//python:defs.bzl", "py_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:osx"]
+)
 
 proto_library(
     name = "evidence_proto",
@@ -30,6 +37,20 @@ cc_proto_library(
         ":gfp_model_proto",
     ],
 )
+
+#proto_library(
+#    name = "gfp_server_proto",
+#    srcs = [
+#        "gfp_server.proto",
+#    ],
+#)
+
+#cc_proto_library(
+#    name = "gfp_server_cc_proto",
+#    deps = [
+#        ":gfp_server_proto",
+#    ],
+#)
 
 proto_library(
     name = "gfp_to_svm_lite_proto",
@@ -74,6 +95,9 @@ cc_proto_library(
 
 py_proto_library(
     name = "nearneighbours_py_proto",
+    visibility = [
+        "//visibility:public",
+    ],
     deps = [
         ":nearneighbours_proto",
     ],
@@ -98,18 +122,41 @@ cc_proto_library(
 
 py_proto_library(
     name = "nn_request_py_proto",
+    visibility = [
+        "//visibility:public",
+    ],
     deps = [
         ":nn_request_proto",
         ":nearneighbours_proto",
     ],
 )
 
-#grpc_proto_library(
-#  name = "nn_request_grpc",
-#  srcs = [
-#      "nn_request.proto",
-#  ],
-#)
+py_library(
+    name = "gfp_http_server",
+    srcs = [
+        "gfp_http_server.py",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":nn_request_py_proto",
+        "//nanobind:lillymol_gfp_server",
+    ],
+)
+
+py_library(
+    name = "gfp_http_client",
+    srcs = [
+        "gfp_client_app.py",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":nn_request_py_proto",
+    ],
+)
 
 cc_binary(
     name = "evidence",
@@ -155,6 +202,81 @@ cc_binary(
 #         "//Utilities/General:scaler",
 #     ],
 # )
+
+cc_binary(
+    name = "gfp_collection_fingerprint",
+    srcs = [
+        "gfp_collection_fingerprint.cc",
+    ],
+    deps = [
+        ":gfp",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+    ],
+)
+
+cc_binary(
+    name = "gfp_compare_collections",
+    srcs = [
+        "gfp_compare_collections.cc",
+    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
+    deps = [
+        ":gfp",
+        ":gfp_standard",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
+    tags = [
+        "omp",
+    ],
+)
+
+cc_binary(
+    name = "gfp_diverse_subset",
+    srcs = [
+        "gfp_diverse_subset.cc",
+    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
+    deps = [
+        "//Foundational/iwstring:string_with_commas",
+        ":gfp",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
+    tags = [
+        "omp",
+    ],
+)
 
 cc_binary(
     name = "gfp_distance_filter",
@@ -262,22 +384,40 @@ cc_binary(
 )
 
 cc_binary(
+    name = "gfp_leader_buckets",
+    srcs = [
+        "gfp_leader_buckets.cc",
+    ],
+    deps = [
+        ":gfp",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+    ],
+)
+
+cc_binary(
     name = "gfp_leader_standard",
     srcs = [
         "gfp_leader_standard.cc",
     ],
-    copts = [
-        #       "-fopenmp=libiomp5",  llvm
-        "-fopenmp",
-    ],
-    linkopts = [
-        #       "-L/usr/lib/llvm-11/lib/",  # clang
-        "-lgomp",
-    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
     tags = [
         "omp",
     ],
-    deps = [
+    deps = select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    })
+      + [
         ":gfp",
         ":gfp_standard",
         "//Foundational/iw_tdt",
@@ -289,7 +429,6 @@ cc_binary(
     name = "gfp_leader_tbb",
     srcs = [
         "gfp_leader_tbb.cc",
-        "leader_parallel.cc",
         "leader_parallel.h",
     ],
     linkopts = [
@@ -359,31 +498,36 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "gfp_server",
+cc_library(
+    name = "gfp_server_lib",
     srcs = [
-        "gfp_server.cc",
+        "gfp_server_lib.cc",
     ],
-    tags = [
-        "gfp_server",
-        "zeromq",
+    hdrs = [
+        "gfp_server_lib.h",
+    ],
+    visibility = [
+        "//visibility:public",
     ],
     deps = [
-        "nn_request_cc_proto",
-        "//Foundational/cmdline:iwcmdline",
+        ":gfp_standard",
+        ":nearneighbours_cc_proto",
+        ":nn_request_cc_proto",
         "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwbits",
         "//Molecule_Lib:iwmfingerprint",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Tools:maccskeys_fn5_lib",
         "//Molecule_Tools:mpr",
-        "//Utilities/GFP_Tools:gfp_standard",
-        "//Utilities/GFP_Tools:nearneighbours_cc_proto",
         "@com_google_protobuf//:protobuf",
-        "@third_party//:cppzmq",
-        "@third_party//:libzmq",
     ],
 )
+
+# The former ZeroMQ-based gfp_server target has been removed from the build.
+# The replacement service will use the transport-neutral nn_request.proto schema
+# and expose the search engine through the Python HTTP binding.
 
 # cc_binary(
 #   name = "gfp_server_grpc",
@@ -456,10 +600,14 @@ cc_binary(
     srcs = [
         "gfp_spread_omp.cc",
     ],
-    copts = ["-fopenmp"],
-    linkopts = [
-        "-lgomp",
-    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
     tags = [
         "omp",
     ],
@@ -470,7 +618,11 @@ cc_binary(
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:spread",
-    ],
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    })
 )
 
 cc_binary(
@@ -478,14 +630,14 @@ cc_binary(
     srcs = [
         "gfp_spread_standard.cc",
     ],
-    copts = [
-        #       "-fopenmp=libiomp5", llvm
-        "-fopenmp",
-    ],
-    linkopts = [
-        #       "-L/usr/lib/llvm-11/lib/",  # clang
-        "-lgomp",
-    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
     tags = [
         "omp",
     ],
@@ -494,7 +646,11 @@ cc_binary(
         ":gfp_standard",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-    ],
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    })
 )
 
 cc_binary(
@@ -545,7 +701,18 @@ cc_binary(
     srcs = [
         "gfp_nearneighbours_single_file_tbb.cc",
     ],
+    visibility = ["//visibility:public"],
+
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp", "-ldl"],
+        "//conditions:default": ["-ldl", "-lgomp"]
+    }),
     tags = [
+        "omp",
         "tbb",
     ],
     deps = [
@@ -560,7 +727,11 @@ cc_binary(
         "//Foundational/iwqsort",
         "//Utilities/GFP_Tools:gfp",
         "@onetbb//:tbb",
-    ],
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    })
 )
 
 cc_binary(
@@ -581,14 +752,14 @@ cc_binary(
         "fp_and_smiles.cc",
         "gfp_lnearneighbours_standard.cc",
     ],
-    copts = [
-        #       "-fopenmp=libiomp5",  llvm
-        "-fopenmp",
-    ],
-    linkopts = [
-        #       "-L/usr/lib/llvm-11/lib/",  # clang
-        "-lgomp",
-    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
     tags = [
         "omp",
     ],
@@ -598,7 +769,11 @@ cc_binary(
         ":nearneighbours_cc_proto",
         ":neighbour_list",
         "//Foundational/data_source:iwtfdata_record",
-    ],
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    })
 )
 
 cc_binary(
@@ -609,6 +784,22 @@ cc_binary(
     deps = [
         ":gfp",
         "//Foundational/histogram:iwhistogram",
+    ],
+)
+cc_binary(
+    name = "gfp_group_spread",
+    srcs = [
+        "gfp_group_spread.cc",
+    ],
+    deps = [
+        ":gfp_standard",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/iwstring:absl_hash",
+        "//Foundational/iwmisc",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
 
@@ -654,6 +845,37 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "pthread_barrier",
+    srcs = ["pthread_barrier.c"],
+    hdrs = ["pthread_barrier.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "gfp_svmfp_score_pthread",
+    srcs = [
+        "gfp_svmfp_score_pthread.cc",
+    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp", "-Drestrict=__restrict__"],
+        "//conditions:default": ["-fopenmp"],
+    }),
+    deps = [
+        ":gfp_bit_subset",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Foundational/iwmisc:normalisation",
+        "//Utilities/GFP_Tools:gfp",
+    ] + select({
+        ":darwin": [":pthread_barrier"],
+        "//conditions:default": [],
+    }),
+)
+
 cc_binary(
     name = "gfp_svmfp_score_tbb",
     srcs = [
@@ -695,6 +917,7 @@ cc_binary(
         "//Foundational/iwmisc:sparse_fp_creator",
         "//Foundational/iwqsort",
         "//Utilities/General:class_label_translation_cc_proto",
+        "//Utilities/General:linear_scaling",
         "//Utilities/General:scaler",
         "//Utilities/GFP_Tools:gfp",
     ],
@@ -820,9 +1043,12 @@ cc_binary(
         "nn2csv.cc",
     ],
     deps = [
+        ":nearneighbours_cc_proto",
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwstring:absl_hash",
         "//Foundational/iwqsort",
     ],
 )
@@ -844,17 +1070,36 @@ cc_binary(
 )
 
 cc_binary(
+    name = "nndata2bdb",
+    srcs = [
+        "nndata2bdb.cc",
+    ],
+    tags = ["berkeleydb"],
+    deps = [
+        ":nearneighbours_cc_proto",
+        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Foundational/iwmisc",
+        "@third_party//:berkeley_static",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_binary(
     name = "nplotnn",
     srcs = [
         "nplotnn.cc",
     ],
     deps = [
         ":distance_scaling",
+        ":nearneighbours_cc_proto",
         ":smiles_id_dist",
+        "//Foundational/data_source:iwtfdata_record",
         "//Foundational/histogram:iwhistogram",
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -893,15 +1138,19 @@ cc_binary(
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwtfdata_record",
-    ],
-    copts = [
-        #       "-fopenmp=libiomp5",  llvm
-        "-fopenmp",
-    ],
-    linkopts = [
-        #       "-L/usr/lib/llvm-11/lib/",  # clang
-        "-lgomp",
-    ],
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
     tags = [
         "omp",
     ],
@@ -969,12 +1218,74 @@ cc_binary(
     srcs = [
         "train_test_split_optimise.cc",
     ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp -fopt-info-omp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp -fopt-info-omp"]
+    }),
     deps = [
         ":nearneighbours_cc_proto",
-        "//Foundational/accumulator",
+        ":train_test_split_activity",
         "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwmisc",
+        "//Foundational/iwstring:absl_hash",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
+)
+
+cc_library(
+    name = "truncated_distance_matrix",
+    srcs = ["truncated_distance_matrix.cc"],
+    hdrs = ["truncated_distance_matrix.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":nearneighbours_cc_proto",
+        "//Foundational/data_source:iwtfdata_record",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_test(
+    name = "truncated_distance_matrix_test",
+    timeout = "short",
+    srcs = ["truncated_distance_matrix_test.cc"],
+    deps = [
+        ":nearneighbours_cc_proto",
+        ":truncated_distance_matrix",
+        "//Foundational/data_source:iwtfdata_record",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "train_test_split_activity",
+    srcs = ["train_test_split_activity.cc"],
+    hdrs = ["train_test_split_activity.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Foundational/iwmisc:iw_tabular_data",
+        "//Foundational/iwstring",
+        "//Foundational/iwstring:absl_hash",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_test(
+    name = "train_test_split_activity_test",
+    timeout = "short",
+    srcs = ["train_test_split_activity_test.cc"],
+    deps = [
+        ":train_test_split_activity",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -1105,6 +1416,7 @@ cc_library(
         "dyfp.cc",
         "fixed_size_counted_fingerprint_uchar.cc",
         "gfp.cc",
+        "molecular_property_ratio.cc",
         "multi_conformer.cc",
         "nndata.cc",
         "sparse_collection.cc",
@@ -1118,6 +1430,7 @@ cc_library(
         "fixed_size_counted_fingerprint.h",
         "gfp.h",
         "leader.h",
+        "molecular_property_ratio.h",
         "multi_conformer.h",
         "nndata.h",
         "sparse_collection.h",
@@ -1298,6 +1611,18 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "mpr_similarity_benchmark",
+    srcs = [
+        "mpr_similarity_benchmark.cc",
+    ],
+    deps = [
+        ":gfp",
+        "//Foundational/data_source:iwstring_data_source",
+        "@benchmark",
+    ],
+)
+
 #cc_test(
 #    name = "bit_subset_test",
 #    srcs = [
@@ -1310,6 +1635,59 @@ cc_binary(
 #    ],
 #)
 
+cc_library(
+    name = "gfp_context",
+    srcs = ["gfp_context.cc"],
+    hdrs = ["gfp_context.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gfp",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwbits",
+        "//Foundational/iwstring",
+        "//Molecule_Lib:atom_pair_fingerprint",
+        "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:alogp_lib",
+        "//Molecule_Tools:iwecfp_lib",
+        "//Molecule_Tools:jwcats_lib",
+        "//Molecule_Tools:maccskeys_fn5_lib",
+        "//Molecule_Tools:mformula",
+        "//Molecule_Tools:mpr",
+        "//Molecule_Tools:nvrtspsa",
+        "//Molecule_Tools:ring_substitution_lib",
+        "//Molecule_Tools:xlogp_lib",
+    ],
+)
+
+cc_test(
+    name = "fixed_size_counted_fingerprint_test",
+    timeout = "short",
+    srcs = ["fixed_size_counted_fingerprint_test.cc"],
+    deps = [
+        ":gfp",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gfp_context_test",
+    timeout = "short",
+    srcs = ["gfp_context_test.cc"],
+    data = [
+        "testdata/rand10.standard.gfp",
+    ],
+    deps = [
+        ":gfp_context",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "@googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "sparsefp_test",
     timeout = "short",
@@ -1318,6 +1696,37 @@ cc_test(
     ],
     deps = [
         ":gfp",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gfp_standard_test",
+    size = "small",
+    srcs = ["gfp_standard_test.cc"],
+    deps = [
+        ":gfp_standard",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "nearest_neighbour_data",
+    srcs = ["nearest_neighbour_data.cc"],
+    hdrs = ["nearest_neighbour_data.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":nearneighbours_cc_proto",
+        "//Foundational/data_source:iwtfdata_record",
+    ],
+)
+
+cc_test(
+    name = "nearest_neighbour_data_test",
+    srcs = ["nearest_neighbour_data_test.cc"],
+    deps = [
+        ":nearest_neighbour_data",
+        "//Foundational/data_source:iwtfdata_record",
         "@googletest//:gtest_main",
     ],
 )

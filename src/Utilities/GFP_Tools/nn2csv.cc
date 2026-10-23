@@ -5,13 +5,23 @@
 #include <limits>
 #include <memory>
 
+#include "absl/container/flat_hash_map.h"
+
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
+#include "Foundational/data_source/tfdatarecord.h"
+#include "Foundational/iwstring/absl_hash.h"
 #include "Foundational/iwqsort/iwqsort.h"
+
+#ifdef BUILD_BAZEL
+#include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 namespace nn2csv {
 using std::cerr;
@@ -31,13 +41,16 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Converts a .nn file to csv form\n";
-  cerr << " -o <sep>      set token separator (default ,)\n";
-  cerr << " -n <nbrs>     only write <nbrs> neighbours\n";
-  cerr << " -s ...        sort the targets, enter '-s help' for info\n";
-  cerr << " -z            do not write molecules with no neighbours\n";
-  cerr << " -l            strip trailing neighbour count from needle names\n";
-  cerr << " -v            verbose output\n";
+  cerr << R"(Converts a .nn file to csv form
+ -o <sep>      set token separator (default ,)
+ -n <nbrs>     only write <nbrs> neighbours
+ -s ...        sort the targets, enter '-s help' for info
+ -z            do not write molecules with no neighbours
+ -l            strip trailing neighbour count from needle names
+ -D            reading TFDataRecord serialised nnbr::NearNeighbours protos.
+ -b            brief output - do not include min/ave/max distance.
+ -v            verbose output
+)";
 // clang-format on
 
   exit(rc);
@@ -56,6 +69,11 @@ class Neighbour {
   // If `reading_nbr_indices` is set, look for nbr_tag in the input
   // and store in `_nbr_index`.
   int Build(iwstring_data_source& input, int reading_nbr_indices);
+
+  int Build(const nnbr::Nbr& proto);
+
+  // When building from TFdataRecord, the protos may not have smiles.
+  int AssignNeighbourSmiles(const absl::flat_hash_map<IWString, IWString>& id_to_smiles);
 
   float distance() const {
     return _distance;
@@ -151,6 +169,41 @@ Neighbour::Build(iwstring_data_source& input,
   return 0;
 }
 
+int
+Neighbour::Build(const nnbr::Nbr& nbr) {
+  // cerr << "Building from " << nbr.ShortDebugString() << '\n';
+  _smiles = nbr.smi();
+  _id = nbr.id();
+  _distance = nbr.dist();
+
+  return 1;
+}
+
+int
+Neighbour::AssignNeighbourSmiles(const absl::flat_hash_map<IWString, IWString>& id_to_smiles) {
+  if (const auto iter = id_to_smiles.find(_id); iter != id_to_smiles.end()) {
+    _smiles = iter->second;
+    return 1;
+  }
+
+  // Look for the first token of the name.
+  if (! _smiles.contains(' ')) {
+    cerr << "Neighbour::AssignNeighbourSmiles:no smiles for '" << _id << "'\n";
+    return 0;
+  }
+
+  IWString tmp(_smiles);
+  tmp.truncate_at_first(' ');
+
+  if (auto iter = id_to_smiles.find(tmp); iter != id_to_smiles.end()) {
+    _smiles = iter->second;
+    return 1;
+  }
+
+  cerr << "Neighbour::AssignNeighbourSmiles:no smiles for '" << _id << "'\n";
+  return 0;
+}
+
 // An individual entry in the NN file.
 // smiles, id and a list of neighbours.
 class NNData {
@@ -165,6 +218,10 @@ class NNData {
   // If `reading_nbr_indices` is set, look for nbr_tag and store with nbrs.
   int Build(iwstring_data_source& input, int reading_nbr_indices);
 
+  int Build(const nnbr::NearNeighbours& proto);
+
+  int AssignNeighbourSmiles(const absl::flat_hash_map<IWString, IWString>& id_to_smiles);
+
   int number_neighbours() const {
     return _neighbour.number_elements();
   }
@@ -177,7 +234,7 @@ class NNData {
   // Remove that if present.
   int RemoveTrailingNumberFromName();
 
-  int Write(int max_nbrs, char sep, IWString_and_File_Descriptor& output) const;
+  int Write(int max_nbrs, int brief_output, char sep, IWString_and_File_Descriptor& output) const;
   int WriteIndices(int max_nbrs, char sep, IWString_and_File_Descriptor& output) const;
 
 };
@@ -227,26 +284,49 @@ NNData::Build(iwstring_data_source& input,
   return 1;
 }
 
+int
+NNData::Build(const nnbr::NearNeighbours& proto) {
+  _smiles = proto.smiles();
+  _id = proto.name();
+
+  for (const nnbr::Nbr& proto_nbr : proto.nbr()) {
+    std::unique_ptr<Neighbour> nbr = std::make_unique<Neighbour>();
+    if (! nbr->Build(proto_nbr)) {
+      cerr << "NNData::Build:error processing nbr\n";
+      cerr << proto_nbr.ShortDebugString() << '\n';
+      return 0;
+    }
+    _neighbour << nbr.release();
+  }
+
+  return 1;
+}
+
 // Write the neighbour data. Tokens separated by `sep`
 // and we must produce `max_nbrs` columns.
 int
-NNData::Write(int max_nbrs, char sep, IWString_and_File_Descriptor& output) const {
+NNData::Write(int max_nbrs,
+              int brief_output,
+              char sep, IWString_and_File_Descriptor& output) const {
   static constexpr char kMissing = '*';
 
   output << _smiles;
   output << sep << _id;
-  output << sep << max_nbrs;
 
-  Accumulator<float> acc;
-  for (const Neighbour* nbr : _neighbour) {
-    acc.extra(nbr->distance());
-  }
-  if (acc.n() > 0) {
-    output << sep << static_cast<float>(acc.average());
-    output << sep << acc.maxval();
-  } else {
-    output << sep << kMissing;
-    output << sep << kMissing;
+  if (! brief_output) {
+    output << sep << max_nbrs;
+
+    Accumulator<float> acc;
+    for (const Neighbour* nbr : _neighbour) {
+      acc.extra(nbr->distance());
+    }
+    if (acc.n() > 0) {
+      output << sep << static_cast<float>(acc.average());
+      output << sep << acc.maxval();
+    } else {
+      output << sep << kMissing;
+      output << sep << kMissing;
+    }
   }
 
   int nwrite = max_nbrs;
@@ -320,6 +400,17 @@ NNData::RemoveTrailingNumberFromName() {
   return 0;
 }
 
+int
+NNData::AssignNeighbourSmiles(const absl::flat_hash_map<IWString, IWString>& id_to_smiles) {
+  for (Neighbour* nbr : _neighbour) {
+    if (! nbr->AssignNeighbourSmiles(id_to_smiles)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 enum class SortType {
   kNone = 0,
   kShortestDistance = 1,
@@ -350,6 +441,14 @@ class NN2Csv {
 
   int _reading_nbr_indices;
 
+  // If the -D option is specified.
+  int _reading_tfdata;
+
+  // If the -b option is used, we omit the stats on distances.
+  int _brief_output;
+
+  absl::flat_hash_map<IWString, IWString> _id_to_smiles;
+
   // private functions.
 
   int Sort(SortType& s);
@@ -358,6 +457,10 @@ class NN2Csv {
 
   int WriteIndices(int max_nbrs, IWString_and_File_Descriptor& output) const;
 
+  // private functions.
+  int AccumulateTFdata(const nnbr::NearNeighbours& proto);
+  int AccumulateTFdata(iw_tf_data_record::TFDataReader& reader);
+
  public:
   NN2Csv();
 
@@ -365,6 +468,7 @@ class NN2Csv {
 
   int Accumulate(const char* fname);
   int Accumulate(iwstring_data_source& input);
+  int AccumulateTFdata(const char* fname);
 
   int number_targets() const {
     return _nn_data.number_elements();
@@ -384,6 +488,8 @@ NN2Csv::NN2Csv() {
   _write_molecules_with_zero_neighbours = 1;
   _strip_trailing_neighbour_count_in_name = 0;
   _reading_nbr_indices = 0;
+  _reading_tfdata = 0;
+  _brief_output = 0;
 }
 
 void
@@ -459,8 +565,27 @@ NN2Csv::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('D')) {
+    if (_reading_nbr_indices) {
+      cerr << "NN2Csv:cannot use both -x and -D options\n";
+      return 0;
+    }
+
+    _reading_tfdata = 1;
+    if (_verbose) {
+      cerr << "Reading TFDataRecord serialised nnbr::NearNeighbours protos\n";
+    }
+  }
+
   if (cl.option_present('l')) {
     _strip_trailing_neighbour_count_in_name = 1;
+  }
+
+  if (cl.option_present('b')) {
+    _brief_output = 1;
+    if (_verbose) {
+      cerr << "Brief output - no min/max distance values\n";
+    }
   }
 
   return 1;
@@ -468,6 +593,10 @@ NN2Csv::Initialise(Command_Line& cl) {
 
 int
 NN2Csv::Accumulate(const char* fname) {
+  if (_reading_tfdata) {
+    return AccumulateTFdata(fname);
+  }
+
   iwstring_data_source input(fname);
   if (!input.good()) {
     cerr << "NN2Csv::Accumulate:cannot open '" << fname << "'\n";
@@ -475,6 +604,68 @@ NN2Csv::Accumulate(const char* fname) {
   }
 
   return Accumulate(input);
+}
+
+int
+NN2Csv::AccumulateTFdata(const char* fname) {
+  iw_tf_data_record::TFDataReader reader(fname);
+  if (! reader.good()) {
+    cerr << "NN2Csv::AccumulateTFdata:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return AccumulateTFdata(reader);
+}
+
+int
+NN2Csv::AccumulateTFdata(iw_tf_data_record::TFDataReader& reader) {
+  while (1) {
+    std::optional<nnbr::NearNeighbours> maybe_proto = reader.ReadProto<nnbr::NearNeighbours>();
+    if (maybe_proto) {
+      // great, got data
+    } else if (reader.eof()) {
+      break;
+    } else {
+      cerr << "NN2Csv::AccumulateTFdata:error reading data\n";
+      return 0;
+    }
+
+    if (! AccumulateTFdata(*maybe_proto)) {
+      cerr << "NN2Csv::AccumulateTFdata:cannot process\n";
+      cerr << maybe_proto->ShortDebugString() << '\n';
+      return 0;
+    }
+  }
+
+  // assign smiles to neighbours.
+  for (NNData* nndata : _nn_data) {
+    if (! nndata->AssignNeighbourSmiles(_id_to_smiles)) {
+      cerr << "NN2Csv::AccumulateTFdata:failed to assign nbr smiles\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+NN2Csv::AccumulateTFdata(const nnbr::NearNeighbours& proto) {
+  std::unique_ptr<NNData> nn = std::make_unique<NNData>();
+  if (! nn->Build(proto)) {
+    return 0;
+  }
+
+  _nn_data << nn.release();
+
+  IWString name(proto.name());
+  IWString smiles(proto.smiles());
+  if (name.contains(' ')) {
+    name.truncate_at_first(' ');
+  }
+
+  _id_to_smiles[name] = smiles;
+
+  return 1;
 }
 
 int
@@ -585,9 +776,12 @@ NN2Csv::Write(IWString_and_File_Descriptor& output) const {
 
   output << "smiles";
   output << _sep << "id";
-  output << _sep << "nbrs";
-  output << _sep << "avedist";
-  output << _sep << "maxdist";
+  if (!_brief_output) {
+    output << _sep << "nbrs";
+    output << _sep << "avedist";
+    output << _sep << "maxdist";
+  }
+
   constexpr char kJoin = '_';
   for (int i = 0; i < max_nbrs; ++i) {
     output << _sep << "smiles" << kJoin << (i + 1);
@@ -604,7 +798,7 @@ NN2Csv::Write(IWString_and_File_Descriptor& output) const {
       ++targets_with_no_neighbours;
       continue;
     }
-    nn_data->Write(max_nbrs, _sep, output);
+    nn_data->Write(max_nbrs, _brief_output, _sep, output);
   }
 
   if (_verbose && !_write_molecules_with_zero_neighbours) {
@@ -641,7 +835,7 @@ NN2Csv::WriteIndices(int max_nbrs, IWString_and_File_Descriptor& output) const {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vo:s:n:zx:l");
+  Command_Line cl(argc, argv, "vo:s:n:zx:lDb");
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
     Usage(1);

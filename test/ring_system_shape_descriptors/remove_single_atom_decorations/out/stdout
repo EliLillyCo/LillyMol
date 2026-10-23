@@ -1,0 +1,6 @@
+Name nringsys nringsys_terminal nringsys_applicable nringsys_rodlike nringsys_not_rodlike nringsys_multisub nringsys_invalid non_ring_branch_count ring_atom_branch_count rodlike_molecule rod_deficit_min rod_deficit_max rod_deficit_ave
+toluene 1 1 0 0 0 0 0 0 0 1 0 0 0
+methyl_plus_ethyl_para 1 1 0 0 0 0 0 0 0 1 0 0 0
+xylene 1 0 1 0 1 0 0 0 0 0 2 2 2
+fluoro_plus_ethyl_para 1 1 0 0 0 0 0 0 0 1 0 0 0
+hydroxy_plus_ethyl_para 1 1 0 0 0 0 0 0 0 1 0 0 0

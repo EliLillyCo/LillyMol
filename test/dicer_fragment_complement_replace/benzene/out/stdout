@@ -1,0 +1,5 @@
+OC1=CC=CC=C1 phenol PARENT
+[1C]1(=CC=CC=C1)[1F] phenol %% c6F 1
+[1C]1(=CC=CC=C1)[1NH2] phenol %% aniline 1
+[1C]1(=CC=CC=C1)[1OH] phenol %% phenol 1
+[1C]1(=CC=CC=C1)[1CH3] phenol %% toluene 1

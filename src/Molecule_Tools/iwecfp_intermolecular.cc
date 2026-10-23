@@ -323,7 +323,7 @@ generate_shells(int matoms,
                 int central_atom,
                 int radius,
                 const Atom * const * a,
-                const int * atom_constant,
+                const uint32_t * atom_constant,
                 int * processing_status,
                 unsigned int sum_so_far,
                 const int * atom_weight,
@@ -440,7 +440,7 @@ add_radius_fingerprints (const std::vector<distance_t> & radii,
 
 static int
 generate_atom_paths (Molecule & m,
-                     const int * atype,
+                     const uint32_t * atype,
                      const int ligand_matoms,
                      const bool only_fingerprint_isotopic_atoms,
                      const int * atom_weight,
@@ -464,7 +464,7 @@ generate_atom_paths (Molecule & m,
 }
 
 static void
-form_atom_pair_bonded (int t1, int t2,
+form_atom_pair_bonded (uint32_t t1, uint32_t t2,
                        const Bond & b,
                        Sparse_Fingerprint_Creator & sfc)
 {
@@ -497,7 +497,7 @@ form_atom_pair_not_bonded(int t1, int t2,
 
 static int
 generate_atom_pairs (Molecule & m,
-                     const int * atype,
+                     const uint32_t* atype,
                      const int ligand_matoms,
                      const bool only_fingerprint_isotopic_atoms,
                      const int * atom_weight,
@@ -535,7 +535,7 @@ generate_atom_pairs (Molecule & m,
 static int
 produce_fingerprint (Molecule & m,
                      bool only_fingerprint_isotopic_atoms,
-                     const int * atom_constant,
+                     const uint32_t * atom_constant,
                      const int ligand_matoms,
                      const std::vector<distance_t> & radii,
                      const int * atom_weight,
@@ -567,7 +567,7 @@ produce_fingerprint (Molecule & m,
       if (only_fingerprint_isotopic_atoms && 0 == m.isotope(i))
         continue;
     
-      unsigned int e = atom_constant[i];
+      uint32_t e = atom_constant[i];
 
 #ifdef DEBUG_ECFP_BITS
       if (0 == min_shell_radius)
@@ -576,7 +576,7 @@ produce_fingerprint (Molecule & m,
       if (0 == min_shell_radius)
         set_bit(sfc, e, atom_weight[i]);
 
-      set_vector(processing_status, matoms, 0);
+      std::fill_n(processing_status, matoms, 0);
 
       processing_status[i] = PROCESSING_FINISHED;
 
@@ -873,7 +873,7 @@ place_isotopes_on_matched_atoms (Molecule & m,
 static int
 remove_non_participating_atoms (Molecule & m,
                                 int & ligand_matoms,
-                                int * atom_constant,
+                                uint32_t * atom_constant,
                                 int * atom_weight,
                                 int * can_be_part_of_shell)
 {
@@ -1094,7 +1094,7 @@ identify_atoms_within_range_of_interacting_atoms (const Molecule & m,    // /lig
 static int
 do_atom_typing (Molecule & ligand,
                 Molecule & protein,
-                int * atom_constant,
+                uint32_t * atom_constant,
                 Atom_Typing_Specification & ligand_atom_type,
                 Atom_Typing_Specification & protein_atom_type)
 {
@@ -1146,10 +1146,9 @@ iwecfp_intermolecular (Molecule & protein,
   if (verbose)
     cerr << "Ligand contains " << ligand_matoms << " atoms, protein " << protein.natoms() << endl;
 
-  int * atom_constant = new_int(ligand_matoms + protein.natoms()); std::unique_ptr<int[]> free_atom_constant(atom_constant);
+  std::unique_ptr<uint32_t[]> atom_constant = std::make_unique<uint32_t[]>(ligand_matoms + protein.natoms());
 
-  if (! do_atom_typing (ligand, protein, atom_constant, ligand_atom_type, protein_atom_type))
-  {
+  if (! do_atom_typing (ligand, protein, atom_constant.get(), ligand_atom_type, protein_atom_type)) {
     cerr << "Cannot assign atom types '" << ligand.name() << "'\n";
     return 0;
   }
@@ -1168,12 +1167,10 @@ iwecfp_intermolecular (Molecule & protein,
   std::fill_n(atom_weight, ligand_matoms, 1);
 
   if (ligand_tag.length())
-    produce_fingerprint(ligand, false, atom_constant, ligand_matoms, radii, atom_weight, ligand_tag, buffer);
+    produce_fingerprint(ligand, false, atom_constant.get(), ligand_matoms, radii, atom_weight, ligand_tag, buffer);
 
-  if (protein_atom_query.number_elements())
-  {
-    if (0 == place_isotopes_on_matched_atoms (protein, protein_atom_query, 1))   // applies isotope 1 to all matched atoms
-    {
+  if (protein_atom_query.number_elements()) {
+    if (0 == place_isotopes_on_matched_atoms (protein, protein_atom_query, 1))  {  // applies isotope 1 to all matched atoms
       cerr << "None of " << protein_atom_query.number_elements() << " protein atom queries matched, cannot continue\n";
       return 0;
     }
@@ -1266,12 +1263,12 @@ iwecfp_intermolecular (Molecule & protein,
   if (verbose > 2)
     cerr << "Atoms in fp " << std::count(can_be_part_of_shell, can_be_part_of_shell + ligand.natoms(), 1) << " atoms\n";
 
-  remove_non_participating_atoms (ligand, ligand_matoms, atom_constant, atom_weight, can_be_part_of_shell);
+  remove_non_participating_atoms (ligand, ligand_matoms, atom_constant.get(), atom_weight, can_be_part_of_shell);
 
   if (verbose > 2)
     cerr << "After remove_non_participating_atoms, have " << ligand.natoms() << " atoms, in ligand " << ligand_matoms << endl;
 
-  produce_fingerprint(ligand, true, atom_constant, ligand_matoms, radii, atom_weight, composite_tag, output);
+  produce_fingerprint(ligand, true, atom_constant.get(), ligand_matoms, radii, atom_weight, composite_tag, output);
 
   output << "|\n";
 

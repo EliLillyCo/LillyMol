@@ -1,0 +1,23 @@
+# R-C(=O)-R' -> R-C1(R')-CH2-O-CH2-1, retaining carbonyl C and O.
+# Both carbonyl substituents must be carbon; cyclic ketones give spiro oxetanes.
+name: "ketone_to_oxetane"
+scaffold {
+  smarts: "[#6]-[CD3+0](=[OD1+0])-[#6]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  break_bond { a1: 1 a2: 2 }
+  unfix_implicit_hydrogens: [1, 2]
+}
+sidechain {
+  id: 1
+  # Two initially disconnected carbons become the two oxetane methylenes.
+  reagent: "C.C"
+  smarts: "C.C"
+  join { a1: 1 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 2 a2: 0 btype: SS_SINGLE_BOND }
+  join { a1: 1 a2: 1 btype: SS_SINGLE_BOND }
+  join { a1: 2 a2: 1 btype: SS_SINGLE_BOND }
+  match_conditions { max_matches_to_find: 1 }
+}

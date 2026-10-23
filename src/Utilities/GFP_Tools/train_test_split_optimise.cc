@@ -2,6 +2,7 @@
 // the distances across a train/test split one or more train/test splits.
 
 #include <stdlib.h>
+#include <omp.h>
 
 #include <algorithm>
 #include <ctime>
@@ -13,14 +14,21 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
+
+#include "absl/container/flat_hash_map.h"
 
 #define REPORT_PROGRESS_IMPLEMENTATION
 
-#include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/report_progress.h"
+#include "Foundational/iwstring/absl_hash.h"
+#include "Foundational/iwstring/iwstring.h"
+
+#include "Utilities/GFP_Tools/train_test_split_activity.h"
 
 #ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
@@ -42,21 +50,41 @@ Usage(int rc) {
 #endif
 // clang-format on
 // clang-format off
-  cerr << "Uses TFDataRecord nn data to generate optimized train/test splits\n";
-  cerr << " -f <train_fraction> fraction of data in the train split\n";
-  cerr << " -n <nsplit>         number of splits needed\n";
-  cerr << " -S <stem>           write splits to <stem>, <stem>R and <stem>E\n";
-  // Interesting/necessary idea, TODO:ianwatson figure something out.
-  //cerr << " -s ...              stratified sampling...\n";
-  cerr << " -o <nopt>           number of optimisation steps to try per split\n";
-  cerr << " -t <sec>            run each split for <sec> seconds\n";
-  cerr << " -r <n>              report progress every <n> steps\n";
-//  enable once I figure out why this does not work.
-//  cerr << " -T <dist>           discard neighbours <dist>\n";
-  cerr << " -x <n>              abandon optimisation of <n> steps since last switch accepted\n";
-  cerr << " -v                  verbose output\n";
+  cerr << R"(Uses TFDataRecord nn data to generate optimized train/test splits
+Randomly assigns train and test. Then iteratively swaps pairs if the sawp increases the inter-set distance.
+Reads a set of precomputed nearest neighbours, computed to a fixed distance.
+Make this as large as can reasonably be computed, but do not include unrealistic distances.
+gfp_nearneighbours_single_file_tbb -T 0.35 -h 16 -S file.nn.tfdata file.gfp
+train_test_split_opt -f 0.85 -n 1 -S OPT -o 2000000 -r 20000 -x 20000 -h 8 file.nn.tfdata.
+
+ -f <train_fraction> fraction of data in the train split
+ -n <nsplit>         number of splits needed.
+ -S <stem>           write splits to <stem>, <stem>R<n> and <stem>E<n>.
+ -c                  optimise for closness between train and test - the easiest possible split.
+ -X                  also write cross split summary stats - expensive to compute.
+ -C <fname>          weighted samples. A mapping from ID to number of instances.
+ -A <fname>          activity file with header and id/activity columns. Repeat for multiple profiles.
+ -A buckets=<n>      set default activity bucket count for subsequent -A files.
+ -A <fname>:buckets=<n>[:quantile|:width] per-file activity bucketisation.
+ -Y <weight>         weight for activity distribution optimisation; required with -A.
+ -o <nopt>           number of optimisation steps to try per split.
+ -s <sec>            run each split for <sec> seconds.
+ -r <n>              report progress every <n> steps.
+ -x <n>              abandon optimisation of <n> steps since last switch accepted.
+ -h <n>              number of OMP threads to use during exact calculation.
+ -Z ...              miscellaneous options, enter '-Z help' for info.
+ -v                  verbose output.
+)";
 // clang-format on
   
+  ::exit(rc);
+}
+
+void
+DisplayMiscOptions(int rc) {
+  cerr << R"( -Z seed=<n>        seed the random number generator for reproducible splits.
+)";
+
   ::exit(rc);
 }
 
@@ -83,6 +111,8 @@ class Needle {
     uint32_t _number_nbrs;
     Nbr* _nbrs;
 
+    uint32_t _count;
+
   public:
     Needle();
     ~Needle();
@@ -104,6 +134,13 @@ class Needle {
 
     void invert_train() {
       _train = !_train;
+    }
+
+    uint32_t count() const {
+      return _count;
+    }
+    void set_count(uint32_t s) {
+      _count = s;
     }
 
     uint32_t Neighbour(uint32_t ndx) const {
@@ -129,6 +166,7 @@ Needle::Needle() {
   _train = 0;
   _number_nbrs = 0;
   _nbrs = nullptr;
+  _count = 1;
 }
 
 Needle::~Needle() {
@@ -197,14 +235,26 @@ Needle::Build(const nnbr::NearNeighbours& proto,
 
 
 // For each neighbour update the distance stored in `nbrdist`
+
 void
 Needle::SetNbrDistances(uint32_t* nbrdist) const {
-  for (uint32_t i = 0; i < _number_nbrs; ++i) {
-    const Nbr& nbr = _nbrs[i];
-    uint32_t id = nbr._id;
-    nbrdist[id] = nbr._dist;
+  // For efficiency we duplicate the two loops so we do not
+  // have an if statement deep inside the loop.
+  if (_count == 1) [[ likely ]] {
+    for (uint32_t i = 0; i < _number_nbrs; ++i) {
+      const Nbr& nbr = _nbrs[i];
+      uint32_t id = nbr._id;
+      nbrdist[id] = nbr._dist;
+    }
+  } else {
+    for (uint32_t i = 0; i < _number_nbrs; ++i) {
+      const Nbr& nbr = _nbrs[i];
+      uint32_t id = nbr._id;
+      nbrdist[id] = nbr._dist * _count;
+    }
   }
 }
+
 
 #ifdef NO_LONGER_USED
 // For each neighbour update the distance stored in `nbrdist`
@@ -240,6 +290,11 @@ Needle::ClosestDistance() const {
   return _nbrs[0]._dist;
 }
 
+class Metropolis {
+  private:
+  public:
+};
+
 // Handle the overall optimisation of train/test splits.
 class Optimise {
   private:
@@ -257,6 +312,8 @@ class Optimise {
     // The -f option.
     float _fraction_train;
 
+    absl::flat_hash_map<IWString, uint32_t> _id_to_count;
+
     std::mt19937 _rng;
 
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _uniform;
@@ -273,6 +330,9 @@ class Optimise {
     // If running for a fixed time per split, the -t option.
     uint32_t _seconds;
 
+    // Are we optimising for separation between train and test or closeness
+    bool _optimise_for_separation;
+
     // For each pair of items where we know a distance, store that.
     // Key will be i * _number_needles + j where i > j.
     std::unordered_map<uint64_t, uint32_t> _distance;
@@ -280,17 +340,31 @@ class Optimise {
     // One more than the max value of the values in _distance
     uint32_t _max_distance;
 
+    int _nthreads;
+
     // Rather than storing smiles and id with the Needle, we deliberately
     // make a global array of both, hoping to keep the Needle class very
     // small.
     std::string* _smiles;
     std::string* _name;
 
+    // If the -A option is specified.
+    ActivityProfileSet _activity;
+
+    // Global weight for mixing activity-bucket balance into the objective.
+    uint32_t _activity_objective_weight;
+
+    // Per-molecule multiplicity from the -C option. Usually all values are 1.
+    std::vector<uint32_t> _sample_weight;
+
     // Keep track of how many times each needle appears in train.
     int* _times_in_train;
 
     // The file name stem for the output files, the -S option.
     IWString _stem;
+
+    // This can be expensive so it is optional.
+    int _write_cross_split_summary;
 
     // Activated by the -r option.
     Report_Progress _report_progress;
@@ -303,6 +377,12 @@ class Optimise {
                             std::unordered_map<std::string, std::uint32_t>& id_to_ndx);
     uint32_t ReadNeighbours(const char* fname,
                             const std::unordered_map<std::string, uint32_t>& id_to_ndx);
+    int ReadCounts(IWString& fname);
+    int ReadCounts(iwstring_data_source& input);
+    int ReadCount(const const_IWSubstring& buffer);
+
+    uint32_t GetCount(const IWString& id) const;
+
     int RandomSplit();
 
     uint64_t FormKey(uint32_t i, uint32_t j) const;
@@ -317,6 +397,10 @@ class Optimise {
 
     std::tuple<uint32_t, uint32_t> ChooseTwo();
 
+    int64_t CombinedObjectiveDelta(int64_t distance_delta, uint32_t out_of_train,
+                                   uint32_t into_train) const;
+    uint64_t ScoreAfterDelta(uint64_t score, int64_t delta) const;
+
     int MakeSplit(int split);
 
     int WriteSplit(int split) const;
@@ -329,6 +413,9 @@ class Optimise {
     int WriteRandomSplitStatus() const;
     void AccumulateStats();
 
+    int MaybeReportActivityDistribution(std::ostream& output) const;
+    std::vector<int> CurrentTrainMembership() const;
+
   public:
     Optimise();
     ~Optimise();
@@ -338,6 +425,7 @@ class Optimise {
     int ReportSize(std::ostream& output) const;
 
     int ReadFingerprints(const char* fname);
+    int BuildActivityProfiles();
 
     int Doit();
 
@@ -354,14 +442,22 @@ Optimise::Optimise() {
 
   _max_distance = 0;
 
+  _optimise_for_separation = true;
+
   _number_needles = 0;
   _needle = nullptr;
+
+  _nthreads = 0;
+
+  _activity_objective_weight = 0;
 
   _smiles = nullptr;
   _name = nullptr;
   _times_in_train = nullptr;
 
   _abandon_if = 0;
+
+  _write_cross_split_summary = 0;
 
   std::random_device rd;
   _rng.seed(rd());
@@ -408,7 +504,20 @@ Optimise::Initialise(const Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('o') && cl.option_present('s')) {
+  if (cl.option_present('c')) {
+    _optimise_for_separation = false;
+    if (_verbose) {
+      cerr << "Will optimise for closeness between train and test\n";
+    }
+  }
+
+  const int seconds_option_present = cl.option_present('s') || cl.option_present('t');
+  if (cl.option_present('s') && cl.option_present('t')) {
+    cerr << "The -s and -t options both specify seconds, use only one\n";
+    return 0;
+  }
+
+  if (cl.option_present('o') && seconds_option_present) {
     cerr << "The -o (nopt) and -s (seconds) options are mutually incompatible\n";
     return 0;
   }
@@ -434,9 +543,10 @@ Optimise::Initialise(const Command_Line& cl) {
     }
   }
 
-  if (cl.option_present('s')) {
-    if (! cl.value('s', _seconds) || _seconds < 1) {
-      cerr << "Optimise::Initialise:Invalid seconds (-s)\n";
+  if (seconds_option_present) {
+    const char seconds_option = cl.option_present('s') ? 's' : 't';
+    if (! cl.value(seconds_option, _seconds) || _seconds < 1) {
+      cerr << "Optimise::Initialise:Invalid seconds (-" << seconds_option << ")\n";
       return 0;
     }
 
@@ -465,11 +575,103 @@ Optimise::Initialise(const Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('C')) {
+    IWString fname = cl.string_value('C');
+    if (! ReadCounts(fname)) {
+      cerr << "Cannot read count data '" << fname << "'\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Read " << _id_to_count.size() << " count data records from '" << fname << "'\n";
+    }
+  }
+
   if (cl.option_present('S')) {
     cl.value('S', _stem);
     if (_verbose) {
       cerr << "Split files created with stem '" << _stem << "'\n";
     }
+  }
+
+  if (cl.option_present('h')) {
+    if (! cl.value('h', _nthreads) || _nthreads < 1) {
+      cerr << "The number of OMP threads (-h) must be a whole +ve number\n";
+      return 0;
+    }
+    omp_set_num_threads(_nthreads);
+    if (_verbose) {
+      cerr << "Will use " << _nthreads << " OMP threads for exact calculation\n";
+    }
+  }
+
+  if (cl.option_present('X')) {
+    _write_cross_split_summary = 1;
+    if (_verbose) {
+      cerr << "Will write cross split summary files\n";
+    }
+  }
+
+  if (cl.option_present('Z')) {
+    const_IWSubstring z;
+    for (int i = 0; cl.value('Z', z, i); ++i) {
+      if (z == "help") {
+        DisplayMiscOptions(0);
+      }
+
+      if (z.starts_with("seed=")) {
+        z.remove_leading_chars(5);
+        uint32_t seed;
+        if (! z.numeric_value(seed)) {
+          cerr << "Invalid random number seed (-Z seed=) '" << z << "'\n";
+          return 0;
+        }
+        _rng.seed(seed);
+        if (_verbose) {
+          cerr << "Random number seed " << seed << '\n';
+        }
+      } else {
+        cerr << "Unrecognised -Z qualifier '" << z << "'\n";
+        DisplayMiscOptions(1);
+      }
+    }
+  }
+
+  if (cl.option_present('A')) {
+    for (int i = 0; i < cl.option_count('A'); ++i) {
+      const const_IWSubstring directive = cl.string_value('A', i);
+      if (! _activity.AddDirective(directive)) {
+        cerr << "Cannot process activity directive '" << directive << "'\n";
+        return 0;
+      }
+    }
+    if (_verbose) {
+      cerr << "Read " << cl.option_count('A') << " activity directives\n";
+    }
+  }
+
+  if (cl.option_present('Y')) {
+    if (! cl.value('Y', _activity_objective_weight) || _activity_objective_weight == 0) {
+      cerr << "The activity objective weight (-Y) must be a whole positive number\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Activity distribution objective weight " << _activity_objective_weight << '\n';
+    }
+  }
+
+  if (cl.option_present('A') && ! _activity.has_pending()) {
+    cerr << "The activity option (-A) must specify at least one activity file\n";
+    return 0;
+  }
+
+  if (_activity.has_pending() && _activity_objective_weight == 0) {
+    cerr << "Activity files specified with -A, but no activity objective weight specified with -Y\n";
+    return 0;
+  }
+
+  if (_activity_objective_weight > 0 && ! _activity.has_pending()) {
+    cerr << "The activity objective weight (-Y) requires at least one activity file (-A)\n";
+    return 0;
   }
 
   return 1;
@@ -490,7 +692,61 @@ Optimise::ReportSize(std::ostream& output) const {
     }
   }
 
-  output << "Distance matrix holds " << _distance.size() << " items, max " << _max_distance << '\n';
+  output << "Distance matrix holds " << _distance.size() << " items, max dist " << _max_distance << '\n';
+
+  return 1;
+}
+
+int
+Optimise::ReadCounts(IWString& fname) {
+  iwstring_data_source input(fname.null_terminated_chars());
+  if (! input.good()) {
+    cerr << "Optimise::ReadCounts:cannot open '" << fname << "'\n";
+    return 0;
+  }
+
+  return ReadCounts(input);
+}
+
+int
+Optimise::ReadCounts(iwstring_data_source& input) {
+  const_IWSubstring buffer;
+  if (! input.next_record(buffer)) {
+    cerr << "Optimise::ReadCounts:cannot read header record\n";
+    return 0;
+  }
+
+  while (input.next_record(buffer)) {
+    if (! ReadCount(buffer)) {
+      cerr << "Optimise::ReadCounts:invalid data '" << buffer << "'\n";
+      return 0;
+    }
+  }
+
+  return _id_to_count.size();
+}
+
+int
+Optimise::ReadCount(const const_IWSubstring& buffer) {
+  static constexpr char kInputSeparator = ' ';
+
+  int i = 0;
+  IWString id;
+  const_IWSubstring scount;
+  if (! buffer.nextword(id, i, kInputSeparator) ||
+      ! buffer.nextword(scount, i, kInputSeparator) ||
+      id.empty() || scount.empty()) {
+    cerr << "Optimise::ReadCount:cannot split\n";
+    return 0;
+  }
+
+  uint32_t count;
+  if (! scount.numeric_value(count) || count == 0) {
+    cerr << "Optimise::ReadCount:invalid count " << count << '\n';
+    return 0;
+  }
+
+  _id_to_count[id] = count;
 
   return 1;
 }
@@ -562,6 +818,7 @@ Optimise::RandomSplit() {
       }
     }
   }
+
   if (_verbose) {
     cerr << "RandomSplit after balancing " << in_train << " in train\n";
   }
@@ -578,6 +835,10 @@ Optimise::RandomSplit() {
 uint64_t
 Optimise::RecomputeCurrentScore() {
   _current_score = 0;
+
+  uint64_t accumulate = 0;
+  cerr << " Begin RecomputeCurrentScore\n";
+#pragma omp parallel for reduction(+:accumulate)
   for (uint32_t i = 0; i < _number_needles; ++i) {
     const int itrain = _needle[i].in_train();
     for (uint32_t j = i + 1; j < _number_needles; ++j) {
@@ -589,11 +850,12 @@ Optimise::RecomputeCurrentScore() {
       const uint32_t d = DistanceOrMax(i, j);
       // cerr << " " << i << " and " << j << " opposite, dist " << d << '\n';
 
-      _current_score += d;
+      accumulate += d;
     }
   }
+  _current_score = accumulate;
 
-  // cerr << "Current score " << _current_score << '\n';
+  cerr << "Current score " << _current_score << '\n';
 
   return _current_score;
 }
@@ -665,6 +927,21 @@ Optimise::ChooseTwo() {
   return std::make_tuple(i1, i2);
 }
 
+uint32_t
+Optimise::GetCount(const IWString& id) const {
+  if (_id_to_count.empty()) {
+    return 1;
+  }
+
+  const auto iter = _id_to_count.find(id);
+  if (iter == _id_to_count.end()) {
+    cerr << "Optimise::GetCount:no count for '" << id << "'\n";
+    return 1;
+  }
+
+  return iter->second;
+}
+
 
 uint32_t
 Optimise::ReadNeighbours(const char* fname,
@@ -680,6 +957,7 @@ Optimise::ReadNeighbours(const char* fname,
   _smiles = new std::string[_number_needles];
   _name = new std::string[_number_needles];
   _times_in_train = new_int(_number_needles);
+  _sample_weight.resize(_number_needles, 1);
 
   _uniform = std::make_unique<std::uniform_int_distribution<uint32_t>>(0, _number_needles - 1);
 
@@ -700,10 +978,16 @@ Optimise::ReadNeighbours(const char* fname,
       return 0;
     }
 
+    const uint32_t count1 = GetCount(tmp);
+    _needle[ndx].set_count(count1);
+    _sample_weight[ndx] = count1;
+
     for (const nnbr::Nbr& nbr : needle->nbr()) {
       const auto iter = id_to_ndx.find(nbr.id());
       uint64_t key = FormKey(ndx, iter->second);
-      _distance[key] = DistanceToInt(nbr.dist());
+      const uint64_t count2 = GetCount(nbr.id());
+
+      _distance[key] = DistanceToInt(nbr.dist()) * (count1 * count2);
     }
   }
 
@@ -737,6 +1021,40 @@ Optimise::ReadNeighbours(const char* fname,
   return _number_needles;
 }
 
+int
+Optimise::BuildActivityProfiles() {
+  if (! _activity.has_pending()) {
+    return 1;
+  }
+
+  std::vector<std::string> id;
+  id.reserve(_number_needles);
+  for (uint32_t i = 0; i < _number_needles; ++i) {
+    id.push_back(_name[i]);
+  }
+
+  if (! _activity.Build(id, _sample_weight, _verbose)) {
+    cerr << "Optimise::BuildActivityProfiles:cannot build activity profiles\n";
+    return 0;
+  }
+
+  if (_verbose) {
+    cerr << "Read " << _activity.number_profiles() << " activity profiles\n";
+  }
+
+  return 1;
+}
+
+std::vector<int>
+Optimise::CurrentTrainMembership() const {
+  std::vector<int> result(_number_needles);
+  for (uint32_t i = 0; i < _number_needles; ++i) {
+    result[i] = _needle[i].in_train();
+  }
+
+  return result;
+}
+
 // Return true if we are now > `seconds` seconds from `tzero`.
 bool
 BreakForTime(std::time_t tzero, uint32_t seconds) {
@@ -762,7 +1080,37 @@ Diff(const uint64_t v1, const uint64_t v2) {
   return - static_cast<int64_t>(v2 - v1);
 }
 
+int64_t
+Optimise::CombinedObjectiveDelta(int64_t distance_delta, uint32_t out_of_train,
+                                 uint32_t into_train) const {
+  if (_activity_objective_weight == 0) {
+    return distance_delta;
+  }
+
+  const int64_t activity_delta = _activity.DeltaForSwap(out_of_train, into_train);
+  return CombinedActivityDistanceDelta(distance_delta, activity_delta,
+                                       _activity_objective_weight);
+}
+
+uint64_t
+Optimise::ScoreAfterDelta(uint64_t score, int64_t delta) const {
+  if (delta >= 0) {
+    return score + delta;
+  }
+
+  return score - static_cast<uint64_t>(-delta);
+}
+
+// #define DEBUG_MAKE_SPLIT
+
 // Starting with a random split, optimize it and write when done.
+// This is still not correct.
+// If run with verbose, after the optimisation the full score is recomputed
+// and there are differences.
+// Failures are rare, I cannot generate any failures with a random set of
+// 10k molecules from Chembl.
+// But 100k reliably generates failures.
+// The resulting splits seem to be just fine.
 int
 Optimise::MakeSplit(int split) {
   std::time_t tzero = 0;
@@ -771,16 +1119,31 @@ Optimise::MakeSplit(int split) {
   }
 
   RandomSplit();
+  if (_activity.active()) {
+    const std::vector<int> in_train = CurrentTrainMembership();
+    uint64_t total_sample_weight = 0;
+    uint64_t train_sample_weight = 0;
+    for (uint32_t i = 0; i < _number_needles; ++i) {
+      total_sample_weight += _sample_weight[i];
+      if (in_train[i]) {
+        train_sample_weight += _sample_weight[i];
+      }
+    }
+    if (! _activity.InitialiseSplit(in_train, _sample_weight, total_sample_weight, train_sample_weight)) {
+      return 0;
+    }
+  }
   uint64_t score = RecomputeCurrentScore();
   const uint64_t starting_score = score;
-  const auto [across_split, number_at_max] = AveDistNumberMax();
   if (_verbose) {
+    const auto [across_split, number_at_max] = AveDistNumberMax();
     cerr << "Split " << split << " starting score " << score <<
             " ave dist " << across_split << " at max " << number_at_max << '\n';
   }
 
   // FIrst split, write the random split.
-  if (split == 0) {
+  if (split == 0 && _verbose) {
+    cerr << "WRiting random split status\n";
     WriteRandomSplitStatus();
   }
 
@@ -788,6 +1151,7 @@ Optimise::MakeSplit(int split) {
 
   uint32_t steps_accepted = 0;
   uint32_t last_successful_switch = 0;
+  cerr << "Begin " << _nopt << " optimisation steps\n";
 #ifdef DEBUG_MAKE_SPLIT
   cerr << "Will perform " << _nopt << " optimisations\n";
   for (int i = 0; i < _number_needles; ++i) {
@@ -797,6 +1161,8 @@ Optimise::MakeSplit(int split) {
 
   for (uint32_t j = 0; j < _nopt; ++j) {
     auto [i1, i2] = ChooseTwo();
+    const uint32_t out_of_train = _needle[i1].in_train() ? i1 : i2;
+    const uint32_t into_train = _needle[i1].in_train() ? i2 : i1;
     _needle[i1].invert_train();
     _needle[i2].invert_train();
 
@@ -804,13 +1170,15 @@ Optimise::MakeSplit(int split) {
     const int train2 = _needle[i2].in_train();
 #ifdef DEBUG_MAKE_SPLIT
     cerr << "Selected " << i1 << " and " << i2 << '\n';
-    for (int i = 0; i < _number_needles; ++i) {
+    for (uint32_t i = 0; i < _number_needles; ++i) {
       cerr << i << " train " << _needle[i].in_train() << '\n';
     }
 #endif
 
     std::fill_n(id_dist.get(), _number_needles, _max_distance);
     _needle[i1].SetNbrDistances(id_dist.get());
+    id_dist[i1] = 0;
+    id_dist[i2] = 0;
 #ifdef DEBUG_MAKE_SPLIT
     cerr << "After setting needle1 ";
     for (uint32_t q = 0; q < _number_needles; ++q) {
@@ -820,16 +1188,17 @@ Optimise::MakeSplit(int split) {
 #endif
 
     int64_t delta = 0;   // a signed quantity
+#pragma omp parallel for reduction(+:delta)
     for (uint32_t i = 0; i < _number_needles; ++i) {
-      if (i == i1 || i == i2) {
-        continue;
-      }
+//    if (i == i1 || i == i2) [[ unlikely ]] {   not needed because the id_dist entries have been zero'd
+//      continue;
+//    }
 
-      uint32_t d = id_dist[i];
+      int32_t d = id_dist[i];
 
       // If both on the same side now, were previously on opposite sides.
       if (_needle[i].in_train() == train1) {
-        delta -= d;
+        delta += -d;
       } else  {  // different sides now, previously same.
         delta += d;
       }
@@ -841,6 +1210,8 @@ Optimise::MakeSplit(int split) {
 
     std::fill_n(id_dist.get(), _number_needles, _max_distance);
     _needle[i2].SetNbrDistances(id_dist.get());
+    id_dist[i1] = 0;
+    id_dist[i2] = 0;
 #ifdef DEBUG_MAKE_SPLIT
     cerr << "After setting needle2 ";
     for (uint32_t q = 0; q < _number_needles; ++q) {
@@ -849,16 +1220,18 @@ Optimise::MakeSplit(int split) {
     cerr << '\n';
 #endif
 
+#pragma omp parallel for reduction(+:delta)
     for (uint32_t i = 0; i < _number_needles; ++i) {
-      if (i == i1 || i == i2) {
-        continue;
-      }
-      uint32_t d = id_dist[i];
+//    if (i == i1 || i == i2) [[ unlikely ]] {
+//      continue;
+//    }
+
+      int32_t d = id_dist[i];
       // cerr <<  "  adj " << i2 << " to " << n << " dist " << d << " train2 " << train2 << " nbr " << _needle[n].in_train() << '\n';
 
       // If both on the same side now, were previously on opposite sides.
       if (_needle[i].in_train() == train2) {
-        delta -= d;
+        delta += -d;
       } else  {  // different sides now, previously same.
         delta += d;
       }
@@ -868,30 +1241,48 @@ Optimise::MakeSplit(int split) {
     cerr << "At end of i2 delta " << delta << '\n';
 #endif
 
-    uint64_t new_score = score + delta;
+    const int64_t combined_delta = CombinedObjectiveDelta(delta, out_of_train, into_train);
+    const uint64_t new_score = ScoreAfterDelta(score, delta);
 #ifdef DEBUG_SWAP_ITEMS
-    cerr << "new_score " << new_score << " cmp " << score << '\n';
+    cerr << "new_score " << new_score << " cmp " << score << " distance_delta " << delta <<
+            " combined_delta " << combined_delta << '\n';
     for (uint32_t y = 0; y < _number_needles; ++y) {
       cerr << " needle " << y << " train " << _needle[y].in_train() << '\n';
     }
 #endif
 
     if (_report_progress() && j > 0) {
+      static uint32_t accepted_last_report = 0;
+      uint32_t accepted_this_period = steps_accepted - accepted_last_report;
+      accepted_last_report = steps_accepted;
+
       cerr << split << ' ' << j << " score " << new_score << " cmp " << starting_score <<
-      " accepted " << steps_accepted << " " << iwmisc::Fraction<float>(steps_accepted, j) << 
-      " last successful " << last_successful_switch << '\n';
-    }
-
-    // Heuristics to stop this being checked too often.
-    if (_seconds > 0 && j > 500 && j % 1000 == 0 && BreakForTime(tzero, _seconds)) {
-      break;
-    }
-
-    if (_abandon_if > 0 && (j - last_successful_switch > _abandon_if)) {
-      if (_verbose) {
-        cerr << "Abandon optimisation, steps " << j << " last successful " << last_successful_switch << '\n';
+      " accepted " << steps_accepted << " delta " << accepted_this_period <<
+      " distance_delta " << delta;
+      if (_activity.active()) {
+        cerr << " combined_delta " << combined_delta;
       }
-      break;
+      cerr << ' ' << iwmisc::Fraction<float>(steps_accepted, j) <<
+      " last successful " << last_successful_switch << '\n';
+      MaybeReportActivityDistribution(cerr);
+    }
+
+    bool accept_change = false;
+    if (_optimise_for_separation && combined_delta > 0) {
+      accept_change = true;
+    } else if (! _optimise_for_separation && combined_delta < 0) {
+      accept_change = true;
+    }
+    if (accept_change) {
+      score = new_score;
+      if (_activity.active()) {
+        _activity.ApplySwap(out_of_train, into_train);
+      }
+      ++steps_accepted;
+      last_successful_switch = j;
+    } else {
+      _needle[i1].invert_train();
+      _needle[i2].invert_train();
     }
 
 #ifdef DEBUG_SWAP_ITEMS
@@ -900,27 +1291,26 @@ Optimise::MakeSplit(int split) {
     new_score = r;
 #endif
 
-    if (new_score == score) {
-      continue;
+    // Heuristics to stop this being checked too often.
+    if (_seconds > 0 && j > 500 && j % 1000 == 0 && BreakForTime(tzero, _seconds)) [[ unlikely ]] {
+      cerr << "Stopped for  timeout " << j << " steps completed\n";
+      break;
     }
-    // If better, sets more separated, always accept.
-    if (new_score > score) {
-      score = new_score;
-      ++steps_accepted;
-      last_successful_switch = j;
-      continue;
-    }
-    // Worse, revert.
-    if (new_score < score) {
-      _needle[i1].invert_train();
-      _needle[i2].invert_train();
-      continue;
+
+    if (_abandon_if > 0 && (j - last_successful_switch > _abandon_if)) [[ unlikely ]] {
+      cerr << "Abandon optimisation, steps " << j << " last successful " << last_successful_switch << '\n';
+      cerr << "Accepted " << steps_accepted << " switches\n";
+      break;
     }
   }
 
   if (_verbose) {
-    RecomputeCurrentScore();
-    cerr << "Writing split " << split << " score " << score << " computed " << _current_score << " diff " << Diff(score, _current_score) << '\n';
+    if (_activity.active()) {
+      // If activity data is present, the score includes the influence of activity, so recomputation is not meaningful.
+    } else {
+      RecomputeCurrentScore();
+      cerr << "Writing split " << split << " score " << score << " computed " << _current_score << " diff " << Diff(score, _current_score) << '\n';
+    }
 
     const auto [across_split, number_at_max] = AveDistNumberMax();
     cerr << "starting_score " << starting_score << " score " << _current_score <<
@@ -944,6 +1334,17 @@ Optimise::AccumulateStats() {
   }
 }
 
+int
+Optimise::MaybeReportActivityDistribution(std::ostream& output) const {
+  if (! _activity.active()) {
+    return 1;
+  }
+
+  output << "activity penalty " << _activity.current_penalty() << '\n';
+
+  return output.good();
+}
+
 // Write the various split files, train and test identifiers, and smiles files.
 // Distribution file as well.
 int
@@ -964,15 +1365,21 @@ Optimise::WriteSplit(int split) const {
   fname << _stem << 'E' << split << ".smi";
   WriteSmiles(0, fname);
 
-  fname.resize_keep_storage(0);
-  fname << _stem << "_stats" << split << ".txt";
-  WriteCrossSplitSummary(fname);
+  if (_write_cross_split_summary) {
+    fname.resize_keep_storage(0);
+    fname << _stem << "_stats" << split << ".txt";
+    WriteCrossSplitSummary(fname);
+  }
 
   return 1;
 }
 
 int
 Optimise::WriteRandomSplitStatus() const {
+  if (! _write_cross_split_summary) {
+    return 1;
+  }
+
   IWString fname;
   fname << _stem << "_stats_rand.txt";
   return WriteCrossSplitSummary(fname);
@@ -1038,7 +1445,12 @@ Optimise::WriteCrossSplitSummary(IWString& fname) const {
 
 int
 Optimise::WriteCrossSplitSummary(IWString_and_File_Descriptor& output) const {
+
   extending_resizable_array<int> count;
+
+  count.reserve(_max_distance + 1);
+
+  cerr << "WriteCrossSplitSummary\n";
   for (uint32_t i = 0; i < _number_needles; ++i) {
     int itrain = _needle[i].in_train();
     for (uint32_t j = i + 1; j < _number_needles; ++j) {
@@ -1049,6 +1461,7 @@ Optimise::WriteCrossSplitSummary(IWString_and_File_Descriptor& output) const {
       ++count[d];
     }
   }
+  cerr << "WriteCrossSplitSummary finished\n";
 
   constexpr char kSep = ' ';
 
@@ -1067,7 +1480,10 @@ Optimise::WriteCrossSplitSummary(IWString_and_File_Descriptor& output) const {
 
 float
 Optimise::AveDistanceAcrossSplit() const {
-  Accumulator_Int<uint64_t> acc;
+  uint64_t sum = 0;
+  uint64_t n = 1;
+
+#pragma omp parallel for reduction(+:sum, n)
   for (uint64_t i = 0; i < _number_needles; ++i) {
     const int itrain = _needle[i].in_train();
     for (uint64_t j = i + 1; j <_number_needles; ++j) {
@@ -1075,19 +1491,24 @@ Optimise::AveDistanceAcrossSplit() const {
         continue;
       }
       uint32_t d = DistanceOrMax(i, j);
-      acc.extra(d);
+      sum += d;
+      ++n;
     }
   }
 
-  return acc.average();
+  // Do the calc as a double, will be cast to float on return.
+  return iwmisc::Fraction<double>(sum, n);
 }
 
 // Return the average distance of cross-split pairs that are not at the
 // maximum distance, and the number that are at the maximum distance.
 std::tuple<float, uint32_t>
 Optimise::AveDistNumberMax() const {
-  Accumulator_Int<uint64_t> acc;
   uint64_t number_max = 0;
+  uint64_t sum = 0;
+  uint64_t n = 0;
+
+#pragma omp parallel for reduction(+:sum, number_max)
   for (uint64_t i = 0; i < _number_needles; ++i) {
     const int itrain = _needle[i].in_train();
     for (uint64_t j = i + 1; j <_number_needles; ++j) {
@@ -1098,13 +1519,15 @@ Optimise::AveDistNumberMax() const {
       if (d == _max_distance) {
         ++number_max;
       } else {
-        acc.extra(d);
+        sum += d;
+        ++n;
       }
     }
   }
 
-  return std::tuple(acc.average(), number_max);
+  float ave = iwmisc::Fraction<double>(sum, n);
 
+  return std::tuple(ave, number_max);
 }
 
 int
@@ -1123,7 +1546,7 @@ Optimise::Report(std::ostream& output) const {
 
 int
 Main(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:t:x:");
+  Command_Line cl(argc, argv, "vf:S:n:o:r:T:s:t:x:C:h:XA:Y:Z:c");
   if (cl.unrecognised_options_encountered()) {
     cerr << "unrecognised_options_encountered\n";
     Usage(1);
@@ -1149,6 +1572,11 @@ Main(int argc, char** argv) {
 
   if (! optimise.ReadFingerprints(cl[0])) {
     cerr << "Cannot read TFDataRecord nearneighbour proto data '" << cl[0] << "'\n";
+    return 1;
+  }
+
+  if (! optimise.BuildActivityProfiles()) {
+    cerr << "Cannot build activity profiles\n";
     return 1;
   }
 

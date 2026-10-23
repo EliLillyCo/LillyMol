@@ -1,0 +1,13 @@
+{
+  "executable": "iwsplit",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-n 10 -stem split ${LILLYMOL_HOME}/data/pubchem_example.smi"
+      ]
+    }
+
+  ]
+
+}

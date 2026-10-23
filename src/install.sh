@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Use bazel query to identify all cc_binary targets, and for
 # those that are newer than what is in the target directory, copy
@@ -7,12 +7,16 @@
 # be the destination. All other arguments are passed to the `bazel query`
 # command.
 
+# The script returns --output_user_root=<dir> if a suitable
+# directory can be found
+bazel_options=$(./output_user_root.sh)
+
 files_not_present=0
 files_copied=0
 already_copied=0
 
 if [[ -z "$1" ]] ; then
-  destination='../bin/Linux'
+  destination="../bin/$(uname)"
   echo "No argument, using default destinaton ${destination}" >&2
 elif [[ -d "$1" ]] ; then
   destination="$1"
@@ -41,17 +45,11 @@ if [[ -d '/node/scratch' ]] ; then
 else
   # except='except (//Vendor:all union //Obsolete:all union //Duplicates:all)'
   # Install Vendor targets that have been built.
-  except='except (//Obsolete:all union //Duplicates:all)'
+  # pybind is still in the repo, will be discarded eventually.
+  except='except (//Obsolete:all union //Duplicates:all union pybind:all)'
 fi
 
-# If inside Lilly locate the user's root area.
-if [[ -d "/node/scratch/${USER}" ]] ; then
-  output_user_root="--output_user_root=/node/scratch/${USER}"
-else
-  output_user_root=""
-fi
-
-targets=$(bazelisk ${output_user_root} query "$@" "kind(cc_binary, //...:all ${except} ) union kind(go_binary, //...:all ${except} )")
+targets=$(bazelisk ${bazel_options} query "$@" "kind(cc_binary, //...:all ${except} ) union kind(go_binary, //...:all ${except} )")
 echo "Targets are"
 echo ${targets}
 echo "Installing"

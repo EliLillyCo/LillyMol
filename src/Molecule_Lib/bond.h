@@ -10,11 +10,12 @@
 
 class Molecule;
 
+#ifdef NO_LONGER_USED_ASDASD
 class Connection
 {
   protected:
-    atom_number_t _a2;
-    bond_type_t   _btype;
+//  atom_number_t _a2;
+//  bond_type_t   _btype;
 
   public:
     Connection();
@@ -23,13 +24,11 @@ class Connection
 
     int debug_print(std::ostream &) const;
 
-    atom_number_t a2() const { return _a2; }
-
-    bond_type_t btype() const { return _btype; }
-
-    void set_atom(atom_number_t s) {
-      _a2 = s;
-    }
+//  atom_number_t a2() const { return _a2; }
+//
+//  void set_atom(atom_number_t s) {
+//    _a2 = s;
+//  }
     void set_bond_type(bond_type_t);
 
     void set_aromatic();
@@ -37,6 +36,7 @@ class Connection
 
     void set_permanent_aromatic(int);    // 0 or 1 values only
 };
+#endif
 
 #define BOND_PROPERTY_UNKNOWN -3
 
@@ -77,13 +77,15 @@ class Connection
 
 #define IW_BOND_CIS_TRANS_DIRECTIONAL_EITHER 0x40
 
-class Bond: public Connection
-{
+class Bond {
   friend
     std::ostream & operator << (std::ostream &, const Bond &);
 
   private:
     atom_number_t    _a1;
+    atom_number_t    _a2;
+
+    bond_type_t   _btype;
 
 //  This single variable holds info on wedge bonding and directional
 //  bonding for cis-trans bonds.
@@ -110,9 +112,6 @@ class Bond: public Connection
     ~Bond ();
 
     int ok () const;
-#ifdef BONDS_SHOULD_NOT_KNOW_ABOUT_MOLECULES
-    int ok (const Molecule *) const;
-#endif
 
     void copy_directionality_specifications (const Bond *);
 
@@ -128,6 +127,11 @@ class Bond: public Connection
 
       return _a1;
     }
+
+    void set_aromatic();
+    void set_non_aromatic();
+
+    void set_permanent_aromatic(int);    // 0 or 1 values only
 
     // Enable structured bindings.
     std::tuple<atom_number_t, atom_number_t> atoms() const {

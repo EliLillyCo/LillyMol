@@ -1,0 +1,9 @@
+name: "reductive amination ketone aldehyde"
+scaffold {
+  smarts: "[OD1]=[CT1]"
+  remove_atom: 0
+  isotope {
+    atom: 1
+    isotope: 5
+  }
+}

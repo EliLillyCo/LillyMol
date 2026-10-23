@@ -1,0 +1,13 @@
+{
+  "executable": "gfp_pairwise_distances",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           " -p ${LILLYMOL_HOME}/data/pubchem.gfp -T 0.5 #{indir}/100PairIds"
+      ]
+    }
+
+  ]
+
+}

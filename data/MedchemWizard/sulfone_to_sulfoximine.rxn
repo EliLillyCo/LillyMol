@@ -1,0 +1,23 @@
+name: "sulfone_to_sulfoximine"
+scaffold {
+  id: 0
+  smarts: "[OD1]=[SR0T2](=O)-*"
+  change_element {
+    atom: 2
+    element: "N"
+  }
+  change_bond {
+    a1: 1
+    a2: 2
+    btype: SS_SINGLE_BOND
+  }
+  break_bond {
+    a1: 1
+    a2: 3
+  }
+  make_bond {
+    a1: 2
+    a2: 3
+    btype: SS_SINGLE_BOND
+  }
+}

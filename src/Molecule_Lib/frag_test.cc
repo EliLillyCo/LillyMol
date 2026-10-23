@@ -1,5 +1,6 @@
 // Tester for fragment related things.
 #include <iostream>
+#include <memory>
 
 #include "molecule.h"
 
@@ -11,6 +12,7 @@
 namespace {
 
 using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 TEST(TestFrags, NoAtoms) {
   Molecule m;
@@ -121,6 +123,64 @@ TEST(TestRingsInFragment, TestRingsInFragment) {
   EXPECT_EQ(m.rings_in_fragment(1), 1);
   EXPECT_EQ(m.rings_in_fragment(2), 2);
 }
+
+struct ForCreateSubsets {
+  IWString smiles;
+  std::vector<int> subset;
+  std::vector<IWString> expected;
+  int f0_chiral_centres = 0;
+  int f1_chiral_centres = 0;
+  int f0_implicit_hydrogen_count = 0;
+  int f1_implicit_hydrogen_count = 0;
+};
+class TestCreateSubsets : public testing::TestWithParam<ForCreateSubsets> {
+};
+
+TEST_P(TestCreateSubsets, TestCreateSubsets) {
+  const auto params = GetParam();
+  Molecule m;
+  ASSERT_TRUE(m.build_from_smiles(params.smiles));
+  const int matoms = m.natoms();
+  ASSERT_EQ(static_cast<int>(params.subset.size()), m.natoms());
+
+  std::unique_ptr<int[]> subset = std::make_unique<int[]>(matoms);
+  for (int i = 0; i < matoms; ++i) {
+    subset[i] = params.subset[i];
+  }
+
+  std::unique_ptr<int[]> xref = std::make_unique<int[]>(matoms);
+
+  Molecule f0, f1;
+  EXPECT_TRUE(m.create_subsets(subset.get(), f0, f1, xref.get()));
+
+  std::vector<IWString> fragment_smiles;
+  fragment_smiles.push_back(f0.smiles());
+  fragment_smiles.push_back(f1.smiles());
+
+  EXPECT_THAT(fragment_smiles, UnorderedElementsAreArray(params.expected)) << f0.smiles() << ' ' << f1.smiles();
+  EXPECT_EQ(f0.chiral_centres(), params.f0_chiral_centres);
+  EXPECT_EQ(f1.chiral_centres(), params.f1_chiral_centres);
+  if (params.f0_chiral_centres > 0) {
+    ASSERT_NE(f0.chiral_centre_in_molecule_not_indexed_by_atom_number(0), nullptr);
+    EXPECT_EQ(f0.chiral_centre_in_molecule_not_indexed_by_atom_number(0)->implicit_hydrogen_count(),
+              params.f0_implicit_hydrogen_count);
+  }
+  if (params.f1_chiral_centres > 0) {
+    ASSERT_NE(f1.chiral_centre_in_molecule_not_indexed_by_atom_number(0), nullptr);
+    EXPECT_EQ(f1.chiral_centre_in_molecule_not_indexed_by_atom_number(0)->implicit_hydrogen_count(),
+              params.f1_implicit_hydrogen_count);
+  }
+}
+INSTANTIATE_TEST_SUITE_P(TestCreateSubsets, TestCreateSubsets, testing::Values(
+   ForCreateSubsets{"CC", {0, 1}, {"C", "C"}},
+   ForCreateSubsets{"CCC", {0, 0, 1}, {"CC", "C"}},
+   ForCreateSubsets{"CCCO", {0, 1, 1, 0}, {"C.O", "CC"}},
+   ForCreateSubsets{"F[C@](Cl)(Br)I", {0, 0, 0, 0, 0}, {"F[C@](Cl)(Br)I", "."}, 1, 0},
+   ForCreateSubsets{"F[C@](Cl)(Br)I", {0, 0, 0, 0, 1}, {"F[C@H](Cl)Br", "I"}, 1, 0, 1, 0},
+   ForCreateSubsets{"F[C@](Cl)(Br)I", {1, 1, 1, 1, 0}, {"I", "F[C@H](Cl)Br"}, 0, 1, 0, 1},
+   ForCreateSubsets{"F[C@](Cl)(Br)I", {0, 1, 1, 1, 1}, {"F", "Cl[C@@H](Br)I"}, 0, 1, 0, 1},
+   ForCreateSubsets{"CCCC[C@](F)(Cl)Br", {1, 1, 1, 1, 0, 0, 0, 0}, {"F[C@@H](Cl)Br", "CCCC"}, 1, 0, 1, 0}
+));
 
 }  // namespace
 

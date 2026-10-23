@@ -708,7 +708,7 @@ write_topotorsion_descriptors(const resizable_array<int>& mt,
                               const resizable_array<int>& mtc, int* tmp,
                               IWString_and_File_Descriptor& output)
 {
-  set_vector(tmp, torsion_hash.size(), 0);
+  std::fill_n(tmp, torsion_hash.size(), 0);
 
   int n = mt.number_elements();
   assert(n == mtc.number_elements());
@@ -965,7 +965,7 @@ topotorsion(Molecule& m, const atomic_number_t* z, const IWString& asymbol,
 {
   if (fixed_ncols) {
   } else if (nullptr != output_vector) {
-    set_vector(output_vector, number_torsions_wanted, 0);
+    std::fill_n(output_vector, number_torsions_wanted, 0);
   }
 
   resizable_array_p<TopoTorsion> tt;

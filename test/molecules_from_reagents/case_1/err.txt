@@ -1,0 +1,11 @@
+read mol smi eof
+Read 5 reagents from '/home/ian/LillyMol_IWFORK/test/molecules_from_reagents/case_1/in/set1.smi'
+read mol smi eof
+Read 5 reagents from '/home/ian/LillyMol_IWFORK/test/molecules_from_reagents/case_1/in/set2.smi'
+IDentifying isotopes in 2 sets of reagents
+2 reagent sets, using 1 isotopes, can generate 25 product molecules
+read mol smi eof
+Read 3 molecules to generate
+Computed molecular properties for 3 target molecules
+Reagent set 0 started with 5 reagents, 0 could match a product
+Reagent set 0 does not match any of the proposed product molecules

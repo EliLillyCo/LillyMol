@@ -2,6 +2,7 @@
 #include <limits>
 
 #include "Foundational/iwbits/iwbits.h"
+#include "Foundational/iwbits/fixed_bit_vector.h"
 #include "Foundational/iwmisc/sparse_fp_creator.h"
 
 #include "tsubstructure_fp.h"
@@ -20,7 +21,7 @@ TSubstructure_FP::TSubstructure_FP() {
 }
 
 template <typename OUTPUT> int
-TSubstructure_FP::do_fingerprint_output(Molecule & m, const int nq, const int * hits, OUTPUT & output) const {
+TSubstructure_FP::do_fingerprint_output(Molecule & m, int nq, const int * hits, OUTPUT & output) const {
   if (_tag.empty()) {
     cerr << "TSubstructure_FP::do_fingerprint_output:no tag\n";
     return 0;
@@ -34,6 +35,9 @@ TSubstructure_FP::do_fingerprint_output(Molecule & m, const int nq, const int * 
     return _do_fingerprint_output(nq, hits, output);
   if (_tag.starts_with("NC"))
     return _do_sparse_fingerprint_output(nq, hits, output);
+  if (_tag.starts_with("FC")) {
+    return _do_fixed_counted_fingerprint_output(nq, hits, output);
+  }
 
   cerr << "TSubstructure_FP::do_fingerprint_output:unknown tag type " << _tag << '\n';
   return 0;
@@ -149,6 +153,80 @@ TSubstructure_FP::_do_fingerprint_output(const int nq, const int * hits, OUTPUT&
   IWString tmp;
   fp.daylight_ascii_representation_including_nset_info(tmp);
   output << _tag << tmp << ">\n";
+  if (! _work_as_filter) {
+    output << "|\n";
+  }
+
+  return 1;
+}
+
+static inline uint8_t
+ToByte(int v) {
+  static constexpr int kMaxuint8 = std::numeric_limits<uint8_t>::max();
+
+  if (v > kMaxuint8) {
+    return std::numeric_limits<uint8_t>::max();
+  } else {
+    return static_cast<uint8_t>(v);
+  }
+
+}
+
+template <typename OUTPUT>
+int
+TSubstructure_FP::_do_fixed_counted_fingerprint_output(int nq,
+                const int* hits,
+                OUTPUT& output) const {
+  int bits_needed = IW_BITS_PER_BYTE * nq;
+  if (_extra_bit_total_hits > 0) {
+    ++bits_needed;
+  }
+
+  int nbits;
+  if (bits_needed % 64 == 0) {
+    nbits = bits_needed;
+  } else {
+    nbits = (bits_needed / 64 + 1) * 64;
+  }
+
+  fixed_bit_vector::FixedBitVector fp(nbits);
+
+  // Old style cast, casting const and reinterpret.
+  uint8_t* bits = (uint8_t*)fp.bits();
+
+  int queries_matching = 0;
+  for (int i = 0; i < nq; ++i) {
+    if (hits[i] == 0) {
+      bits[i] = 0;
+    } else {
+      bits[i] = ToByte(hits[i]);
+      ++queries_matching;
+    }
+  }
+
+  if (_extra_bit_total_hits) {
+    if (queries_matching == 0) {
+      bits[bits_needed - 1] = 0;
+    } else {
+      bits[bits_needed - 1] = ToByte(queries_matching);
+    }
+  }
+  
+  IWString as_daylight = fp.DaylightAsciiRepresentation();
+  // If we are encoding for a fixed size counted fingerprint nbits and nset
+  // are for the number of features counted here - not the number of bits that
+  // would be set if it were interpreted as a bitvector.
+  if (_extra_bit_total_hits) {
+    ++nq;
+    if (queries_matching > 0) {
+      ++queries_matching;
+    }
+  }
+  as_daylight << ';' << nq << ';' << queries_matching;
+  as_daylight << ';' << nq << ';' << queries_matching;
+
+  output << _tag << as_daylight << ">\n";
+
   if (! _work_as_filter) {
     output << "|\n";
   }

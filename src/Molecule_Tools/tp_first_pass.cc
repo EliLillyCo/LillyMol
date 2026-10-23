@@ -455,7 +455,10 @@ Parameters::WriteProtoRejection(Molecule& m,
   google::protobuf::TextFormat::Printer printer;
   printer.SetSingleLineMode(true);
   std::string as_string;
-  printer.PrintToString(proto, &as_string);
+  if (!printer.PrintToString(proto, &as_string)) {
+    cerr << "PrintToString failed\n";
+    return 0;
+  }
   output.write(as_string.data(), as_string.size());
   output << '\n';
   output.write_if_buffer_holds_more_than(8192);

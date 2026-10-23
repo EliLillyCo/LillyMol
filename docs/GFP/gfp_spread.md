@@ -128,8 +128,8 @@ sel,distance
 ...
 ```
 which can be imported into your favourite plotting package. The contrib
-directory contains [spreadplot](/contrib/bin/spreadplot.jl) which is already
-set up to generate plots using this file.
+directory contains [spreadplot.jl](/docs/GFP/spreadplot.md), which is set up to
+generate and interpret diversity plots from this file.
 
 ## First Item
 By default, spread will choose the first item in the file to select first. The
@@ -328,6 +328,14 @@ While gfp_spread does support a -V option for Tversky similarities,
 I don't think there has ever been a use case for this.
 
 # gfp_spread_standard gfp_spread_omp.sh
+
+`gfp_spread_standard` formats output distances and numeric scale factors with
+`Fraction_as_String` to give consistent text on Linux and Mac. Values are rounded
+to four decimal places with trailing zeros removed, including distances in brief
+(`-b`) output. For example, `0.0005791` is written as `0.0006`. Scale factors and
+weighted distances above one use the formatter's stable fallback. Selection uses
+the original floating-point values; output rounding does not affect ordering.
+
 These are parallel versions that enable large collections to be run
 in reasonable times. `gfp_spread_standard` only works with the 
 standard set of fingerprints, while `gfp_spread_omp` works with any

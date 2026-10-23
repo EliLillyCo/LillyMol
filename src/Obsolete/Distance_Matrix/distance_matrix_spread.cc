@@ -3,6 +3,8 @@
 */
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <memory>
 #include <random>
 
@@ -600,11 +602,11 @@ distance_matrix_spread (Command_Line & cl,
   T * tmp = new T[n]; std::unique_ptr<T[]> free_tmp(tmp);
   int * itmp = new int[n]; std::unique_ptr<int[]> free_itmp(itmp);
 
-  set_vector(tmp, n, static_cast<T>(1.0));
+  std::fill_n(tmp, n, static_cast<T>(1.0));
 
   distance_scale = new float[n];
 
-  set_vector(distance_scale, n, -1.0f);
+  std::fill_n(distance_scale, n, -1.0f);
 
   if (cl.option_present('p'))
   {
@@ -667,7 +669,7 @@ distance_matrix_spread (Command_Line & cl,
     distance_scale_specified = 1;
   }
   else
-    set_vector(distance_scale, dm.number_molecules(), 1.0f);
+    std::fill_n(distance_scale, dm.number_molecules(), 1.0f);
 
   initialise_arrays(tmp, itmp, n);
 

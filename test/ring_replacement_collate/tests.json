@@ -1,0 +1,11 @@
+{
+  "executable": "ring_replacement_collate",
+  "test": [
+    {
+      "name": "duplicate_counts",
+      "args": [
+        "-destdir . #{indir}"
+      ]
+    }
+  ]
+}

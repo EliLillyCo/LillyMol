@@ -1,0 +1,19 @@
+{
+  "executable": "train_test_split_optimise",
+  "difftool": "same_structures",
+  "test": [
+    {
+      "name": "distance_only",
+      "shell_script": {
+        "script_name": "run_pipeline.sh"
+      }
+    },
+    {
+      "name": "activity_balanced",
+      "shell_script": {
+        "script_name": "run_pipeline.sh",
+        "args": ["activity"]
+      }
+    }
+  ]
+}

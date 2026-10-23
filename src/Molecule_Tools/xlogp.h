@@ -1,6 +1,7 @@
 #ifndef MOLECULE_TOOLS_XLOGP_H_
 #define MOLECULE_TOOLS_XLOGP_H_
 
+#include <array>
 #include <optional>
 
 #ifdef BUILD_BAZEL
@@ -74,27 +75,62 @@ is the winner. But this xlogp appears to be competitive with Marvin.
 
 namespace xlogp {
 
-// Read updated parameter values from a textproto file.
-// Note that these over-write only the values specified in the proto.
-int ReadNewFragmentParameters(IWString& fname);
+struct PerMoleculeData;
 
-// For debugging it can be handy to see in detail which types get
-// assigned to each atom.
-void SetDisplayAtomAssignments(int s);
+class XLogPCalc {
+  private:
+    friend struct PerMoleculeData;
 
-// It can be useful to suppress unclassified atom warning messages.
-void SetIssueUnclassifiedAtomMessages(int s);
+    static constexpr int kNumberFragmentTypes = 88;
+    std::array<double, kNumberFragmentTypes> _type_to_score;
 
-// If all atoms are classified, return xlogp.
-std::optional<double> XLogP(Molecule& m);
-// The user can have the atom types returned.
-std::optional<double> XLogP(Molecule& m, int* status);
+    bool _apply_corrections = true;
+    bool _apply_nitroxide = true;
+    bool _display_unclassified_atom_messages = true;
+    bool _display_assignments = false;
 
-// For testing, it can be convenient to turn off the corrections.
-// Do not use.
+    // `m` must have no explicit Hydrogens, or be a copy that may be altered.
+    std::optional<double> LogPHSuppressed(Molecule& m, int* status) const;
 
-void ForTestingSetApplyCorrections(int s);
-void TurnOffNitroxide();
+    int ProcessNewFragmentParameter(const XLogP::XlogpParameter& proto);
+    int ReadNewFragmentParameters(const XLogP::XlogpParameters& proto);
+
+  public:
+    XLogPCalc();
+
+    // Read updated parameter values from a textproto file.
+    // Only values specified in the proto are overwritten.
+    int ReadNewFragmentParameters(IWString& fname);
+
+    void SetIssueUnclassifiedAtomMessages(bool s) {
+      _display_unclassified_atom_messages = s;
+    }
+    void SetDisplayAtomAssignments(bool s) {
+      _display_assignments = s;
+    }
+
+    // The calculation mutates `m`: explicit hydrogen atoms are removed,
+    // aromaticity is recomputed with the Wang-Fu-Lai model, and then
+    // recomputed after restoring the previous global aromaticity model.
+    // Neither of these modifies `m`. The calculation needs the Hydrogen
+    // suppressed graph, so a molecule carrying explicit Hydrogens is copied and
+    // stripped first.
+    //
+    // `status` is filled per atom. When a copy is made its indices refer to the
+    // Hydrogen suppressed molecule, not to `m` as the caller has it, since
+    // removing Hydrogens renumbers the atoms. A caller wanting them aligned
+    // should suppress the Hydrogens itself first - see xlogp_main.
+    std::optional<double> LogP(Molecule& m, int* status) const;
+    std::optional<double> LogP(Molecule& m) const;
+
+    // For testing and diagnostics.
+    void ForTestingSetApplyCorrections(bool s) {
+      _apply_corrections = s;
+    }
+    void SetApplyNitroxide(bool s) {
+      _apply_nitroxide = s;
+    }
+};
 
 }  // namespace xlogp
 

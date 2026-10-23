@@ -1,0 +1,12 @@
+{
+  "executable": "in_database_bdb",
+    "test": [
+        {
+          "name": "case_1",
+          "preamble": [
+             "buildsmidb_bdb -d test.bdb -c -l #{indir}/in.smi"
+          ],
+          "args": [ "-d test.bdb -c -l -F found -U notfound #{indir}/query.smi"]
+        }
+    ]
+}

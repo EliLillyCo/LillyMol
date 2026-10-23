@@ -10,6 +10,29 @@
 
 #include "molecular_abstraction_specifications.h"
 
+class Connection {
+  private:
+    atom_number_t _a2;
+    bond_type_t _btype;
+
+  public:
+    Connection() {
+      _a2 = kInvalidAtomNumber;
+      _btype = INVALID_BOND_TYPE;
+    }
+    Connection(atom_number_t atom, bond_type_t bt) {
+      _a2 = atom;
+      _btype = bt;
+    }
+
+    atom_number_t a2() const {
+      return _a2;
+    }
+    bond_type_t btype() const {
+      return _btype;
+    }
+};
+
 class Molecular_Abstraction_Base_Class {
  protected:
   int _molecules_processed;
@@ -201,6 +224,23 @@ class Molecular_Abstraction_Scaffold : public Molecular_Abstraction_Base_Class {
 
  public:
   Molecular_Abstraction_Scaffold();
+
+  int debug_print(std::ostream&) const;
+
+  int build(const Molecular_Abstraction_Directives_Node&);
+
+  int process(Molecule_With_Info_About_Parent&, IWString_and_File_Descriptor&);
+};
+
+class Molecular_Abstraction_CScaffold : public Molecular_Abstraction_Base_Class {
+  int _keep_attached_heteroatom;
+
+ private:
+  //  private function
+    int ExtendCarbonFromScaffold(Molecule& m, atom_number_t prev, atom_number_t zatom, int* spinach);
+
+ public:
+  Molecular_Abstraction_CScaffold();
 
   int debug_print(std::ostream&) const;
 

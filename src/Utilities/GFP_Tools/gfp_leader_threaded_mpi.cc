@@ -1236,7 +1236,7 @@ do_previously_selected_file(const IWString& fname, similarity_type_t t)
 static int
 set_thresholds_via_factor(score_t mvieth_factor)
 {
-  score_t global_max_score = -FLT_MAX;
+  score_t global_max_score = -std::numeric_limits<float>::max();
   for (int i = 0; i < pool_size; i++) {
     score_t s = pool[i].score();
     if (s > global_max_score) {

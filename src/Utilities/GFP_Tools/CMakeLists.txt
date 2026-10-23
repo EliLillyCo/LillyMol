@@ -153,6 +153,16 @@ target_include_directories(gfp_flatten_counted
 target_link_libraries(gfp_flatten_counted LINK_PUBLIC ${gfp_flatten_counted_libs})
 
 
+# gfp_diverse_subset
+set(gfp_diverse_subset_srcs
+  ${CMAKE_CURRENT_SOURCE_DIR}/gfp_diverse_subset.cc
+)
+set(gfp_diverse_subset_libs
+  ${common_libs}
+)
+add_executable(gfp_diverse_subset ${gfp_diverse_subset_srcs})
+target_link_libraries(gfp_diverse_subset LINK_PUBLIC ${gfp_diverse_subset_libs} -fopenmp)
+
 set(gfp_leader_srcs
   ${CMAKE_CURRENT_SOURCE_DIR}/gfp_leader_v2.cc
 )
@@ -284,6 +294,7 @@ set(nplotnn_srcs
 )
 set(nplotnn_libs
   smiles_id_dist
+  gfp_proto_lib
   moleculeio
   iwmolecule
   tfdatarecord

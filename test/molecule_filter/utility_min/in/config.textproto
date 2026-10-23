@@ -1,0 +1,12 @@
+utility_combination: UTILITY_COMBINATION_MIN
+utility {
+  name: "natoms"
+  weight: 2
+  point { x: 0 y: 0 }
+  point { x: 10 y: 1 }
+}
+utility {
+  name: "heteroatom_count"
+  point { x: 0 y: 0 }
+  point { x: 2 y: 1 }
+}

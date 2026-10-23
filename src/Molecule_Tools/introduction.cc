@@ -465,7 +465,6 @@ DemoSetOfAtoms() {
   // These have a convenient `scatter` operation.
 
   std::unique_ptr<int[]> arbitrary = std::make_unique<int[]>(10);
-  std::fill_n(arbitrary.get(), 10, 0);
   // For every atom number in `s`, set the corresponding array index to '2'.
   s.set_vector(arbitrary.get(), 2);
   // this also works with a std::vector.
@@ -523,7 +522,6 @@ DemoRemoveAtom() {
   // If you have an array with the atoms to be removed set, use that.
   const int matoms = mol.natoms();
   std::unique_ptr<int[]> to_remove = std::make_unique<int[]>(matoms);
-  std::fill_n(to_remove.get(), matoms, 0);
   for (int i = 0; i < matoms; i += 2) {
     to_remove[i] = 1;
   }
@@ -785,7 +783,6 @@ DemoCreateSubset() {
   const int matoms = mol.natoms();
 
   std::unique_ptr<int[]> subset = std::make_unique<int[]>(matoms);
-  std::fill_n(subset.get(), matoms, 0);
 
   // The first 6 atoms are the benzene ring. That is the subset.
   // Mark the first 6 entries with a non-zero integer.
@@ -1422,7 +1419,6 @@ DemoIdentifySideOfBond() {
 
   const int matoms = mol.natoms();
   std::unique_ptr<int[]> sides = std::make_unique<int[]>(matoms);
-  std::fill_n(sides.get(), matoms, 0);
 
   // We define two sides of the bond. In this case, the Boron and the
   // Carbon atoms.

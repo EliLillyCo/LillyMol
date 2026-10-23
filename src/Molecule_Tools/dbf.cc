@@ -329,14 +329,13 @@ Distances<T>::append_results(IWString& buffer) const {
     return;
   }
 
-  buffer << ' ' << this->minval() << ' ' << this->maxval();
-
-  buffer << ' ';
+  fraction_as_string.append_number(buffer, this->minval());
+  fraction_as_string.append_number(buffer, this->maxval());
 
   if (1 == number_samples) {
-    buffer << this->minval();
+    fraction_as_string.append_number(buffer, this->minval());
   } else {
-    buffer << static_cast<float>(this->average());
+    fraction_as_string.append_number(buffer, this->average());
   }
 
   if (0 == nkeep) {
@@ -348,7 +347,7 @@ Distances<T>::append_results(IWString& buffer) const {
   for (int i = 1; i < _number_elements;
        i++)  // the first sample stored is the minimum value - we already wrote that
   {
-    buffer << ' ' << _things[i];
+    fraction_as_string.append_number(buffer, _things[i]);
   }
 
   int nextra = nkeep - _number_elements + 1;
@@ -391,9 +390,7 @@ Distances<T>::write_all_results(IWString_and_File_Descriptor& buffer) {
   this->iwqsort(c);
 
   for (int i = 0; i < _number_elements; i++) {
-    buffer << ' ';
-
-    buffer << _things[i];
+    fraction_as_string.append_number(buffer, _things[i]);
   }
 
   return;
@@ -420,7 +417,7 @@ Distances<T>::append_results_integer(IWString& buffer) const {
   if (1 == number_samples) {
     iwdigits.append_number(buffer, static_cast<int>(this->minval()));
   } else {
-    buffer << ' ' << static_cast<float>(this->average());
+    fraction_as_string.append_number(buffer, this->average());
   }
 
   if (0 == nkeep) {

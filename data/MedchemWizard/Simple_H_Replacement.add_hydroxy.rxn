@@ -1,11 +1,11 @@
 (0 Reaction
   (A C Comment "Simple_H_Replacement.add_hydroxy")
   (0 Scaffold
-    (A C smarts "[CH>0]")
+    (A C smarts "[CH>0D<3]")
   )
   (1 Sidechain
-    (A C smiles "[C]O SHR.add_hydroxy")
-    (A C smarts "C")
+    (A C smiles "O SHR.add_hydroxy")
+    (A C smarts "O")
     (A I join (0 0))
   )
 )

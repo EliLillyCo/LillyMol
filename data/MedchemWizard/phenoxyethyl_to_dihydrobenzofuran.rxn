@@ -1,0 +1,10 @@
+# Close an acyclic Ar-O-CH2-CH2(R) chain at an available ortho carbon; R may be H.
+name: "phenoxyethyl_to_dihydrobenzofuran"
+scaffold {
+  smarts: "[cD2H1]:[cD3]-[OD2R0+0]-[CH2D2R0]-[CD<3H>1R0+0]"
+  match_conditions {
+    find_unique_embeddings: true
+    ignore_symmetry_related_matches: true
+  }
+  make_bond { a1: 0 a2: 4 btype: SS_SINGLE_BOND }
+}

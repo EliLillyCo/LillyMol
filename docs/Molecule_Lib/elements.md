@@ -61,3 +61,13 @@ Automatically create \<symbol\>. Generally it is easier to just use
 elements it encounters. But for more control, the set of acceptable
 extra elements can be specified via the `-E` option.
 
+## Element_Matcher
+Several tools use the Element_Matcher class to specify atoms to
+be matched, based on their element. For example, the '-X' option
+to fileconv removes atoms with a specified element. The Elements_to_Remove
+object uses an Element_Matcher in order to identify the atoms to
+remove. In order to see the functionality try
+```
+fileconv -X help
+```
+Other tools containing this functionality should respond similarly.

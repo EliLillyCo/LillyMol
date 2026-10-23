@@ -1,3 +1,11 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_proto_library", "cc_library", "cc_test")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:osx"]
+)
+
 proto_library(
     name = "gfp_linear_model_proto",
     srcs = [
@@ -250,6 +258,22 @@ cc_binary(
 )
 
 cc_binary(
+    name = "gfp_distance_matrix_iwdm",
+    srcs = [
+        "gfp_distance_matrix_iwdm.cc",
+    ],
+    deps = [
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Utilities/GFP_Tools:gfp",
+        "//Obsolete/Distance_Matrix:distance_matrix_base",
+    ],
+)
+
+cc_binary(
     name = "gfp_linear_model_optimise",
     srcs = [
         "gfp_linear_model_optimise.cc",
@@ -268,23 +292,6 @@ cc_binary(
     ],
     tags = [
         "nlopt",
-    ],
-)
-
-cc_binary(
-    name = "gfp_svmfp_score_pthread",
-    srcs = [
-        "gfp_svmfp_score_pthread.cc",
-    ],
-    deps = [
-        "//Foundational/accumulator",
-        "//Foundational/cmdline:iwcmdline",
-        "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iw_tdt",
-        "//Foundational/iwmisc",
-        "//Foundational/iwmisc:normalisation",
-        "//Utilities/GFP_Tools:gfp_bit_subset",
-        "//Utilities/GFP_Tools:gfp",
     ],
 )
 
@@ -496,6 +503,32 @@ cc_binary(
         "//Foundational/iwmisc:sparse_fp_creator",
         "//Utilities/GFP_Tools:gfp",
     ],
+)
+
+cc_binary(
+    name = "isolation_forest",
+    srcs = [
+        "isolation_forest.cc",
+    ],
+    copts = select({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-fopenmp"]
+    }),
+    linkopts = select ({
+        ":darwin": ["-Xclang", "-fopenmp"],
+        "//conditions:default": ["-lgomp"]
+    }),
+    deps = [
+        "//Foundational/accumulator",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
+    ] +
+      select( {
+      "darwin": [ "@homebrew_openmp"],
+      "//conditions:default": []
+    }),
 )
 
 cc_binary(

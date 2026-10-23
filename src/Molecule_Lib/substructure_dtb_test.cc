@@ -11,7 +11,7 @@ namespace {
 struct SmilesSmartsNhits {
   IWString smiles;
   IWString smarts;
-  int nhits;
+  uint32_t nhits;
 };
 
 class TestDTB : public testing::TestWithParam<SmilesSmartsNhits> {
@@ -87,7 +87,7 @@ query {
 struct SmilesProtoNhits {
   IWString smiles;
   std::string proto;
-  int nhits;
+  uint32_t nhits;
 };
 
 std::ostream&

@@ -1,0 +1,4 @@
+name: "beta-lactam"
+query {
+  smarts: "[OD1]=[r4]1-[#7D3R2]@[D3R2]@[C]1"
+}

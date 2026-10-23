@@ -1,0 +1,4 @@
+name: "89"
+query {
+  smarts: "[8,9]"
+}

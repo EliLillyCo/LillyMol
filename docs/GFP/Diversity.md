@@ -70,7 +70,7 @@ We run 8 OMP threads, and report progress to stderr every 10k
 molecules selcted.  On fairly recent hardware, this takes
 about 6 hours. The number of computations performed is large:
 N for the first molecule, N-1 for the second, N-2 for the
-third, so 2.24M factorial.
+third, so something on the order of $2.2M^2/2$.
 
 But the molecules are selected sequentially, so if smaller numbers
 of molecules are needed, that can be relatively fast. For example
@@ -123,7 +123,7 @@ ease of understanding.
 
 On a large set of molecules, it may make sense to terminate
 the calculation once the distance has dropped to a given
-value, which can substantially shorted the computation.
+value, which can substantially shorten the computation.
 
 ## Other Measures
 Something that people often find informative is the notion of
@@ -237,7 +237,7 @@ about 50*6 minutes or 300 minutes or 5 hours. Not that different from
 what the spread run took. The advantage here is that these chunks can
 be run in parallel.
 
-Within dopattern that might look like
+Using dopattern that might look like
 ```
 dopattern.sh -o 50 'gfp_lnearneighbours_standard -p iwsplit%.gfp -n 1 chembl.gfp > iwsplit%.nn'
 ```
@@ -254,7 +254,10 @@ which may be of particular interest.
 
 Other approaches might include subsampling either collection. But the
 problem here is that it is often the closest distances that are the most
-important when comparing two collections, so that is generally not preferred.
+important when comparing two collections. Unless allowance is made for
+focussing attention on shorter distances, that may be misleading.
+[gfp_compare_collections](gfp_compare_collections.md) is a tool specifically designed as a sampling
+approach to comparing two collections.
 
 If the intent is to add one collection to an existing collection, gfp_spread
 can do that. The previous collection is provided as the -A option and the
@@ -271,4 +274,5 @@ to many `gfp_*` tools does.
 Clearly these N^2 algorithms are much slower than algorithms that work by
 projecting molecules into a common representation. If you have a space that
 can reliably minic expected similarities, that will clearly be more scalable.
-The real challenge is whether or not such a satisfactory space exists.
+The real challenge is whether or not such a satisfactory space exists. I
+believe that the "inherent dimensionality" of most chemical spaces is large.

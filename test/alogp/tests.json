@@ -9,6 +9,4 @@
           "args": [ "-N F:${CHARGES} -d  -Y alcacid -Y RDKIT.N+ #{indir}/in.smi" ]
         }
       ]
-    }
-  }
 }

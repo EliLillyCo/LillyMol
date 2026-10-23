@@ -57,6 +57,9 @@ static char smiles_file_column_separator = ' ';
 
 static int flush_output = 0;
 
+// Useful for fetching things out of textproto files.
+static int tokens_are_quoted = 0;
+
 static void
 usage(int rc) {
 // clang-format off
@@ -93,6 +96,7 @@ usage(int rc) {
   cerr << " -S <stem>      first files are identifier files, last is haystack. Create many subsets\n";
   cerr << " -u <suffix>    suffix for -S files created\n";
   cerr << " -g <ndx>       start number for files created (-g 1 for dopattern)\n";
+  cerr << " -e             tokens may be quoted\n";
   cerr << " -v             verbose output\n";
   // clang-format on
 
@@ -142,21 +146,11 @@ separate_into_id_and_data_2(const const_IWSubstring& buffer, int col, const char
   int j = 0;
   const_IWSubstring token;
 
-  if (' ' == sep) {
-    for (auto c = 0; buffer.nextword(token, j); ++c) {
-      if (c == col) {
-        id = token;
-      } else if (include_identifier_file_info) {
-        zdata.append_with_spacer(token);
-      }
-    }
-  } else {
-    for (auto c = 0; buffer.nextword_single_delimiter(token, j); ++c) {
-      if (c == col) {
-        id = token;
-      } else if (include_identifier_file_info) {
-        zdata.append_with_spacer(token);
-      }
+  for (int c = 0; buffer.NextWord(token, j, sep); ++c) {
+    if (c == col) {
+      id = token;
+    } else if (include_identifier_file_info) {
+      zdata.append_with_spacer(token);
     }
   }
 
@@ -238,15 +232,22 @@ read_identifiers_to_fetch(iwstring_data_source& input,
   return identifiers_to_fetch.size();
 }
 
+// `translate_tabs` should be set when the caller has not specified a column
+// separator for this file. Tabs are then converted to spaces, which makes a
+// tab separated file work without any extra options. When a separator has been
+// specified with -i the tabs in the file are significant and must be preserved.
 static int
 read_identifiers_to_fetch(const char* fname,
-                          IW_STL_Hash_Map_String& identifiers_to_fetch) {
+                          IW_STL_Hash_Map_String& identifiers_to_fetch,
+                          int translate_tabs) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
     cerr << "Cannot open '" << fname << "'\n";
     return 0;
   }
+
+  input.set_translate_tabs(translate_tabs);
 
   return read_identifiers_to_fetch(input, identifiers_to_fetch);
 }
@@ -267,18 +268,29 @@ handle_record_not_in_identifier_file(const const_IWSubstring& buffer,
   return 1;
 }
 
+template <typename T> void
+Unquote(T& token) {
+  token.remove_leading_chars(1);
+  token.chop();
+}
+
 static int
 fetch_smiles_quick(const const_IWSubstring& buffer, const IWString& id,
                    const IWString& zdata, IW_STL_Hash_Map_String& identifiers_to_fetch,
                    IWString& output_buffer) {
   IW_STL_Hash_Map_String::const_iterator f = identifiers_to_fetch.find(id);
 
-  bool is_match;
+  bool is_match = false;
 
-  if (f == identifiers_to_fetch.end()) {
-    is_match = false;
-  } else {
+  if (f != identifiers_to_fetch.end()) {
     is_match = true;
+  } else if (tokens_are_quoted && id[0] == '"') {
+    IWString tmp(id);
+    Unquote(tmp);
+    f = identifiers_to_fetch.find(tmp);
+    if (f != identifiers_to_fetch.end()) {
+      is_match = true;
+    }
   }
 
   // if (is_match)
@@ -333,7 +345,12 @@ fetch_smiles_quick(const const_IWSubstring& buffer,
         continue;
       }
 
-      if (!identifiers_to_fetch.contains(token)) {
+      if (identifiers_to_fetch.contains(token)) {
+        ;  // good
+      } else if (tokens_are_quoted && token[0] == '"') {
+        Unquote(token);
+        cerr << "unquoted to '" << token << "'\n";
+      } else {
         continue;
       }
 
@@ -564,9 +581,12 @@ fetch_smiles_quick_multiple_files(const Command_Line& cl, const IWString& stem,
   return 1;
 }
 
+// See the comment on read_identifiers_to_fetch for the meaning of
+// `translate_tabs`. Note that because this was previously unconditional, a tab
+// separated smiles file has always worked without needing -I.
 static int
 fetch_smiles_quick(const char* fname, IW_STL_Hash_Map_String& identifiers_to_fetch,
-                   IWString_and_File_Descriptor& output) {
+                   IWString_and_File_Descriptor& output, int translate_tabs) {
   iwstring_data_source input(fname);
 
   if (!input.good()) {
@@ -575,7 +595,7 @@ fetch_smiles_quick(const char* fname, IW_STL_Hash_Map_String& identifiers_to_fet
   }
 
   input.set_dos(1);
-  input.set_translate_tabs(1);
+  input.set_translate_tabs(translate_tabs);
 
   if (verbose > 0) {
     cerr << "Processing '" << fname << "'\n";
@@ -600,7 +620,7 @@ determine_inter_column_separator(const Command_Line& cl, const char flag, char& 
 
 static int
 fetch_smiles_quick(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vc:C:X:Y:wkdzB:an:xF:qbjK:S:u:g:fi:I:h");
+  Command_Line cl(argc, argv, "vc:C:X:Y:wkdzB:an:xF:qbjK:S:u:g:fi:I:he");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -627,15 +647,31 @@ fetch_smiles_quick(int argc, char** argv) {
     }
   }
 
+  // Tabs are translated to spaces only when the column separator for that file
+  // has not been specified. Specifying -i or -I means the tabs in that file are
+  // significant, and translating them would defeat the option.
+
+  int translate_tabs_in_identifier_file = 1;
+  int translate_tabs_in_smiles_file = 1;
+
   if (cl.option_present('i')) {
     if (!determine_inter_column_separator(cl, 'i', identifier_file_column_separator)) {
       return 1;
     }
+    translate_tabs_in_identifier_file = 0;
   }
 
   if (cl.option_present('I')) {
     if (!determine_inter_column_separator(cl, 'I', smiles_file_column_separator)) {
       return 1;
+    }
+    translate_tabs_in_smiles_file = 0;
+  }
+
+  if (cl.option_present('e')) {
+    tokens_are_quoted = 1;
+    if (verbose) {
+      cerr << "Will strip quotes from tokens\n";
     }
   }
 
@@ -783,7 +819,8 @@ fetch_smiles_quick(int argc, char** argv) {
 
   if (cl.option_present('F')) {  // nobody uses this any more
     const char* f = cl.option_value('F');
-    if (!read_identifiers_to_fetch(f, identifiers_to_fetch)) {
+    if (!read_identifiers_to_fetch(f, identifiers_to_fetch,
+                                   translate_tabs_in_identifier_file)) {
       cerr << "Cannot read identifiers to fetch from '" << f << "'\n";
       return 6;
     }
@@ -792,7 +829,11 @@ fetch_smiles_quick(int argc, char** argv) {
   } else if (cl.option_present('K')) {
     IWString k;
     for (int i = 0; cl.value('K', k, i); ++i) {
-      identifiers_to_fetch[k] = "";
+      int j = 0;
+      IWString token;
+      while (k.nextword(token, j, '.')) {
+        identifiers_to_fetch[token] = "";
+      }
     }
     clstart = 0;
   } else if (cl.number_elements() < 2) {
@@ -800,7 +841,8 @@ fetch_smiles_quick(int argc, char** argv) {
     usage(2);
   } else if (cl.option_present('S')) {
     ;
-  } else if (read_identifiers_to_fetch(cl[0], identifiers_to_fetch)) {
+  } else if (read_identifiers_to_fetch(cl[0], identifiers_to_fetch,
+                                     translate_tabs_in_identifier_file)) {
     ;
   } else if (fail_if_read_identifiers_to_fetch_fails ||
              0 == identifiers_to_fetch.size()) {
@@ -866,9 +908,9 @@ fetch_smiles_quick(int argc, char** argv) {
 
     if (!fetch_smiles_quick_multiple_files(cl, stem, seq_begin, suffix, xstem, ystem)) {
       return 2;
-    } else {
-      return 1;
     }
+
+    return 0;
   }
 
   if (cl.option_present('X')) {
@@ -923,7 +965,8 @@ fetch_smiles_quick(int argc, char** argv) {
 
   int rc = 0;
   for (int i = clstart; i < cl.number_elements(); i++) {
-    if (!fetch_smiles_quick(cl[i], identifiers_to_fetch, output)) {
+    if (!fetch_smiles_quick(cl[i], identifiers_to_fetch, output,
+                            translate_tabs_in_smiles_file)) {
       rc = i + 1;
       break;
     }

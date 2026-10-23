@@ -469,7 +469,7 @@ Space_Vector<T>::angle_between_unit_vectors(const Space_Vector<T> & v1) const
                static_cast<double>(_y) * static_cast<double>(v1._y) +
                static_cast<double>(_z) * static_cast<double>(v1._z);    // the dot product
 
-  if (tmp >= -1.0 && tmp <= 1.0) {
+  if (tmp >= -1.0 && tmp <= 1.0) [[likely]] {
     // Good.
   } else if (tmp > 1.0 && tmp < 1.00001) {
     // std::cerr << "Space_Vector::angle_between_unit_vectors:numerical roundoff discarded " << (fabs(tmp) - 1.0) << '\n';

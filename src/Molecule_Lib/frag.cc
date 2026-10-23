@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #ifdef IW_USE_TBB_SCALABLE_ALLOCATOR
 #include "tbb/scalable_allocator.h"
@@ -11,6 +12,7 @@
 #define COMPILING_SMILES_CC
 
 #include "chiral_centre.h"
+#include "create_components.h"
 #include "molecule.h"
 #include "path.h"
 
@@ -458,7 +460,7 @@ Molecule::split_off_fragments(const atom_number_t zatom, Molecule& frags) {
   int* tmp = new_int(_number_elements);
   std::unique_ptr<int[]> free_tmp(tmp);
 
-  identify_side_of_bond(tmp, zatom, 1, INVALID_ATOM_NUMBER);
+  identify_side_of_bond(tmp, zatom, 1, kInvalidAtomNumber);
 
   const int initial_natoms = _number_elements;
 
@@ -499,7 +501,7 @@ Molecule::excise_fragment(const atom_number_t zatom, Molecule& frag) {
   std::unique_ptr<int[]> free_tmp(tmp);
 
   // just doing a cheap fragment membership. tmp = 1 means being removed
-  identify_side_of_bond(tmp, zatom, 1, INVALID_ATOM_NUMBER);
+  identify_side_of_bond(tmp, zatom, 1, kInvalidAtomNumber);
 
   const int initial_natoms = _number_elements;
 
@@ -802,8 +804,7 @@ Molecule::create_subset(Molecule& subset, const int* process_these, int id,
       continue;
     }
 
-    atom_number_t j =
-        xref[c->a()];  // atom number of the chiral centre in the subset molecule
+    atom_number_t j = xref[c->a()];  // atom number of the chiral centre in the subset molecule
 
     //  cerr << "in subset " << c->all_atoms_in_subset(process_these, id) << '\n';
     //  c->debug_print(cerr);
@@ -852,6 +853,121 @@ Molecule::create_subset(Molecule& subset, const int* process_these, int id) cons
   return create_subset(subset, process_these, id, tmp);
 }
 
+int
+Molecule::create_subsets(const int* subset_membership, Molecule& f0, Molecule& f1,
+                         int* xref) {
+
+  f0.resize_keep_storage(0);
+  f1.resize_keep_storage(0);
+
+  for (int i = 0; i < _number_elements; ++i) {
+    Atom* as = new Atom(_things[i]);
+
+    if (subset_membership[i] == 0) {
+      xref[i] = f0.natoms();
+      f0.Molecule::add(as);
+    } else {  // should check that the value is 1, but not enforcing that.
+      xref[i] = f1.natoms();
+      f1.Molecule::add(as);
+    }
+  }
+
+  for (const Bond* b : _bond_list) {
+    atom_number_t a1 = b->a1();
+    atom_number_t a2 = b->a2();
+
+    atom_number_t x1 = xref[a1];
+    atom_number_t x2 = xref[a2];
+
+    // Atoms are in the same fragment, make a bond
+    if (subset_membership[a1] == subset_membership[a2]) {
+      if (subset_membership[a1] == 0) {
+        f0.add_bond(x1, x2, b->btype());
+      } else {
+        f1.add_bond(x1, x2, b->btype());
+      }
+    } else {  // different fragments, unset cached Hydrogen atoms
+      if (subset_membership[a1] == 0) {
+        f0.unset_all_implicit_hydrogen_information(x1);
+        f1.unset_all_implicit_hydrogen_information(x2);
+      } else {
+        f0.unset_all_implicit_hydrogen_information(x2);
+        f1.unset_all_implicit_hydrogen_information(x1);
+      }
+    }
+  }
+
+  for (const Chiral_Centre* c : _chiral_centres) {
+    if (f0.AddChiralCentre(*c, subset_membership, 0, xref, _number_elements)) {
+    } else if (f1.AddChiralCentre(*c, subset_membership, 1, xref, _number_elements)) {
+    }
+  }
+
+  return 1;
+}
+
+// `in_parent` is a chiral centre from a parent molecule of which we are a subset.
+// The subset specification is `subset_membership[i] == flag`. and `xref` is a mapping
+// from atoms in the parent to atoms in the subset.
+int
+Molecule::AddChiralCentre(const Chiral_Centre& in_parent, const int* subset_membership, int flag,
+                          const int* xref, int parent_natoms) {
+  if (subset_membership[in_parent.a()] != flag) {
+    return 0;
+  }
+
+  if (in_parent.all_atoms_in_subset(subset_membership, flag)) {
+    std::unique_ptr<Chiral_Centre> newc = std::make_unique<Chiral_Centre>(kInvalidAtomNumber);
+    if (newc->make_copy(in_parent, xref)) {
+      _chiral_centres << newc.release();
+      return 1;
+    }
+  }
+
+  // Not all atoms from `in_parent` are in our subset. Unless it has 4 explicit
+  // atoms, it cannot transfer to the subset.
+  if (in_parent.number_atoms_specified() != 4) {
+    return 0;
+  }
+
+  // If we are missing exactly one atom attached to the chiral centre, convert
+  // that atom to an implicit Hydrogen in the subset.
+  if (in_parent.atoms_in_subset(subset_membership, flag) != 3) {
+    return 0;
+  }
+
+  atom_number_t missing = kInvalidAtomNumber;
+  for (atom_number_t a : {in_parent.top_front(), in_parent.top_back(),
+                          in_parent.left_down(), in_parent.right_down()}) {
+    if (a >= 0 && subset_membership[a] != flag) {
+      missing = a;
+      break;
+    }
+  }
+
+  if (missing == kInvalidAtomNumber) {
+    return 0;
+  }
+
+  // might be OK to just use xref, TODO:ianwatson investigate.
+  std::vector<int> xref_copy(xref, xref + parent_natoms);
+  xref_copy[missing] = kChiralConnectionIsImplicitHydrogen;
+
+  std::unique_ptr<Chiral_Centre> newc = std::make_unique<Chiral_Centre>(kInvalidAtomNumber);
+  if (! newc->make_copy(in_parent, xref_copy.data())) {
+    return 0;
+  }
+
+  // Tell the centre atom that implicit Hydrogens are not known so it recomputes.
+  atom_number_t centre = xref[in_parent.a()];
+
+  _things[centre]->unset_all_implicit_hydrogen_information();
+
+  _chiral_centres << newc.release();
+
+  return 1;
+}
+
 Molecule
 Molecule::create_subset(const Set_of_Atoms& these_atoms) const {
   Molecule result;
@@ -862,6 +978,7 @@ Molecule::create_subset(const Set_of_Atoms& these_atoms) const {
     cerr << "Molecule::create_subset:failed\n";
     return result;
   }
+
   return result;
 }
 
@@ -897,6 +1014,7 @@ Molecule::create_components(const int* fragID,
   return fcntr;
 }
 
+#ifdef NOW_IN_SEPARATEFILE
 template <typename T>
 int
 Molecule::create_components(resizable_array_p<T>& components) {
@@ -942,6 +1060,7 @@ Molecule::create_components(resizable_array_p<T>& components) {
 
   return nf;
 }
+#endif
 
 template int Molecule::create_components(resizable_array_p<Molecule>&);
 
@@ -1178,7 +1297,7 @@ Molecule::first_atom_in_fragment(int f) {
   cerr << "Molecule::first_atom_in_fragment:no atom found in fragment " << f
        << "\n";  // how could this happen
 
-  return INVALID_ATOM_NUMBER;
+  return kInvalidAtomNumber;
 }
 
 int
@@ -1396,7 +1515,7 @@ Fragment_Information::initialise(int matoms) {
       return 0;
     }
   } else {
-    set_vector(_fragment_membership, matoms, kFragmentMembershipNotSet);
+    std::fill_n(_fragment_membership, matoms, kFragmentMembershipNotSet);
   }
 
   _number_fragments = -1;
@@ -1815,7 +1934,7 @@ Molecule::_compute_fragment_information_subset(Fragment_Information& fragment_in
     const int f1 = fragment_membership[a1];
     const int f2 = fragment_membership[a2];
 
-    if (f1 == f2) {
+    if (f1 >= 0 && f1 == f2) {
       bonds_in_fragment[f1]++;
     }
   }

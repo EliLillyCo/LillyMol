@@ -384,7 +384,7 @@ Sparse_to_Fixed_Bit_Mapping::do_write(const Sparse_Fingerprint &sfp, const IWStr
   int icount;
 
   for (int i = 0; i < _number_thresholds; i++) {
-    set_vector(_btmp, _nbits[i], 0);
+    std::fill_n(_btmp, _nbits[i], 0);
 
     int j = 0;
     while (sfp.next_bit_set(j, b, icount)) {

@@ -218,7 +218,5 @@
           ],
           "args": [  "-X igbad -D fmap #{indir}/Rxn_Standardize_Test.rxnsmi" ]
         }
-      ]
-    }
-  }
+    ]
 }

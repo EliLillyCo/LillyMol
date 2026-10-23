@@ -1,5 +1,5 @@
 (0 Reaction
-  (A C Comment "Simple_H_Replacement.add_Me")
+  (A C Comment "Aryl_substituent_Scan.add_Me")
   (0 Scaffold
     (A C smarts "[cH1]")
   )

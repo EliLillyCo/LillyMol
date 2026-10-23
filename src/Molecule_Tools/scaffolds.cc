@@ -36,7 +36,7 @@ constexpr isotope_t kInLinker = 29931418;
 
 // When two rings are adjacent, like biphenyl, there is
 // an empty linker between them
-constexpr int kEmptyLinker = -1;
+constexpr int kEmptyLinker = -2;
 
 // Return the number of connections to `zatom` that are set in `in_system`.
 int
@@ -201,9 +201,11 @@ AddBackFromLinker(Molecule& m, int* in_set) {
 }
 
 // Update `spinach` to include any singly connected, doubly bonded atoms.
+// For those atoms that are the C of a C=O mark that atom in `carbonyl`.
 int
 AddDoublyBonded(const Molecule& m,
-                int* spinach) {
+                int* spinach,
+                int* carbonyl) {
   const int matoms = m.natoms();
 
   int rc = 0;
@@ -223,6 +225,7 @@ AddDoublyBonded(const Molecule& m,
       atom_number_t o = b->other(i);
       if (m.ncon(o) == 1) {
         spinach[o] = 0;
+        carbonyl[i] = o;  // The carbonyl oxygen atom at atom `i` is atom `o`.
         ++rc;
       }
     }
@@ -240,8 +243,8 @@ PerMoleculeData::PerMoleculeData(Molecule& m, int classify_spinach) {
   _nsys = m.label_atoms_by_ring_system_including_spiro_fused(_ring_sys);
 
   // This array gets indexed by the region number, which starts at _nsys + 1
-  // 3*_nsys is more than what is needed...
-  _atoms_in_region = new_int(_nsys + _nsys + _nsys);
+  // 3*_nsys should be OK, but add _matoms to be sure.
+  _atoms_in_region = new_int(_nsys + _nsys + _nsys + _matoms);
 
   ExtendToSinglyAttachedDoublyBonded(m, _ring_sys);
 
@@ -251,9 +254,11 @@ PerMoleculeData::PerMoleculeData(Molecule& m, int classify_spinach) {
 
   _between = new_int((_nsys + 1) * (_nsys + 1));
 
+  _carbonyl = new_int(_matoms, kInvalidAtomNumber);
+
   m.identify_spinach(_tmp);
 
-  AddDoublyBonded(m, _tmp);
+  AddDoublyBonded(m, _tmp, _carbonyl);
 
   ClassifyRegions(m, _tmp, classify_spinach);
 }
@@ -266,6 +271,7 @@ PerMoleculeData::~PerMoleculeData() {
   delete [] _atoms_in_subset;
   delete [] _between;
   delete [] _atoms_in_region;
+  delete [] _carbonyl;
 }
 
 int
@@ -494,6 +500,7 @@ ScaffoldFinder::ScaffoldFinder() {
 int
 ScaffoldFinder::AddBackFirstNonRingAtom(Molecule& m, int* in_system, int flag) {
   const int matoms = m.natoms();
+  cerr << m.smiles() << ' ' << m.name() << " AddBackFirstNonRingAtom\n";
 
   Set_of_Atoms added_here;
 
@@ -701,6 +708,12 @@ ScaffoldFinder::Initialise(Command_Line& cl, char flag) {
 int 
 ScaffoldFinder::Initialise(const scaffolds::ScaffoldsOptions& proto) {
   _config = proto;
+
+  // Recognise both forms of keep_first_nonring_atom
+  if (_config.keep_first_non_ring_atom()) {
+    _config.set_keep_first_nonring_atom(true);
+  }
+
   // cerr << _config.ShortDebugString() << '\n';
 
   return 1;
@@ -1023,26 +1036,60 @@ BondedToRing(Molecule& m, atom_number_t zatom, const int* atoms_in_subset) {
   return false;
 }
 
+// Scan atoms around `zatom` looking for a =[D1] atom.
+// If found, mark that atom as 0 in `atoms_in_subset`.
+bool
+IsCarbonyl(const Molecule& m, atom_number_t zatom,
+           int* atoms_in_subset) {
+  for (const Bond* b : m[zatom]) {
+    if (! b->is_double_bond()) {
+      continue;
+    }
+
+    const atom_number_t o = b->other(zatom);
+    // If already excluded, do not care
+    if (atoms_in_subset[o] == 0) {
+      continue;
+    }
+
+    if (m.ncon(o) == 1) {
+      atoms_in_subset[o] = 0;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // `zatom` has been identified as part of a spinach group.
 // Remove it from `atoms_in_subset` and then go looking for
 // a two connected nearest neighbour. If found, recurse to that
 // atom.
 int
-DoPruning(const Molecule& m, atom_number_t zatom, int* atoms_in_subset) {
+DoPruning(const Molecule& m, atom_number_t zatom, int* atoms_in_subset,
+          const PerMoleculeData& pmd) {
   int rc = 1;
+  // cerr << "DoPruning processing atom " << zatom << '\n';
 
   atoms_in_subset[zatom] = 0;
   for (const Bond* b : m[zatom]) {
-    atom_number_t o = b->other(zatom);
+    const atom_number_t o = b->other(zatom);
     if (atoms_in_subset[o] == 0) {
       continue;
     }
 
-    if (m.ncon(o) != 2) {
+    if (const int ncon = m.ncon(o); ncon == 3) {
+      const atom_number_t carbonyl_oxygen = pmd.carbonyl(o);
+      if (carbonyl_oxygen == kInvalidAtomNumber) {
+        continue;
+      }
+
+      atoms_in_subset[carbonyl_oxygen] = 0;
+    } else if (ncon != 2) {
       continue;
     }
 
-    return 1 + DoPruning(m, o, atoms_in_subset);
+    return 1 + DoPruning(m, o, atoms_in_subset, pmd);
   }
 
   return rc;
@@ -1054,9 +1101,9 @@ DoPruning(const Molecule& m, atom_number_t zatom, int* atoms_in_subset) {
 // chain from `atoms_in_subset`
 // The molecule `m` is not changed, we just call some non-const methods.
 int
-ScaffoldFinder::PruneSpinach(Molecule& m, int * atoms_in_subset) {
+ScaffoldFinder::PruneSpinach(Molecule& m, int * atoms_in_subset,
+                const PerMoleculeData& pmd) {
   int rc = 0;
-
 
   const int matoms = m.natoms();
   for (int i = 0; i < matoms; ++i) {
@@ -1073,12 +1120,13 @@ ScaffoldFinder::PruneSpinach(Molecule& m, int * atoms_in_subset) {
     if (MatchedConnections(m, i, atoms_in_subset) != 1) {
       continue;
     }
+
     if (_config.keep_first_nonring_atom() && BondedToRing(m, i, atoms_in_subset)) {
       continue;
     }
 
     // cerr << "Start pruning with atom " << i << '\n';
-    rc += DoPruning(m, i, atoms_in_subset);
+    rc += DoPruning(m, i, atoms_in_subset, pmd);
   }
 
   return rc;
@@ -1173,7 +1221,7 @@ ScaffoldFinder::Process(Molecule& m,
 #endif
 
   if (nsys > 1) {
-    PruneSpinach(m, atoms_in_subset);
+    PruneSpinach(m, atoms_in_subset, pmd);
   }
   if (_config.keep_first_nonring_atom()) {
     AddBackFirstNonRingAtom(m, atoms_in_subset, kFlag);
@@ -1191,6 +1239,7 @@ ScaffoldFinder::Process(Molecule& m,
   m.create_subset(subset, atoms_in_subset, kFlag);
   Molecule mcopy(m);
   if (subset.number_fragments() > 1) {
+    cerr << subset.smiles() << " multi fragment subset\n";
     return 0;
   }
 #ifdef DEBUG_SCAFFOLD_FINDER

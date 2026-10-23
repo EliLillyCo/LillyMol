@@ -52,14 +52,8 @@
 
     int _discern_chirality_from_wedge_bond (atom_number_t a1, atom_number_t a2,
                           int direction);
-    int _discern_chirality_from_wedge_bond_4 (atom_number_t zatom, atom_number_t a2,
+    int _discern_chirality_from_wedge_bond_4 (atom_number_t zatom, atom_number_t wedge_atom,
                           int direction);
-    int _create_chiral_centre (atom_number_t zatom,
-                                 atom_number_t a1,
-                                 atom_number_t a2,
-                                 atom_number_t a3,
-                                 atom_number_t a4,
-                                 int direction);
     int _create_unspecified_chirality_object (atom_number_t zatom);
 
     int _discern_chirality_from_up_down_wedge_bond(atom_number_t zatom,

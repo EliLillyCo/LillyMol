@@ -1820,7 +1820,7 @@ ExtendedAtomPairs(int argc, char** argv) {
 
     fuzziness_profile = new Fuzziness_Profile*[max_distance + 1];
     std::unique_ptr<Fuzziness_Profile*[]> free_fuzziness_profile(Fuzziness_Profile);
-    set_vector(fuzziness_profile, max_distance + 1,
+    std::fill_n(fuzziness_profile, max_distance + 1,
                static_cast<Fuzziness_Profile*>(nullptr));
 
     int number_fuzziness_profiles = cl.option_count('F');

@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package lillymol_tests;
 
+message ShellScriptAndArgs {
+  // The shell_script attribute of a TestCase contains the name
+  // of a shell script, and any arguments beyond the defaults that are passed.
+  string script_name = 1;
+  repeated string args = 2;
+}
+
 message TestCase {
   // We assume that the directory layout looks like
   // lillymol/test
@@ -30,32 +37,54 @@ message TestCase {
   //  args = "-i smi -o smi -S correct ... #{indir}/input.smi"
   repeated string args = 3;
 
-  // By default the test driver uses diff to discern differences between
-  // files. That can be changed.
+  // By default, each test inherits the diff tool from the outer TestCases
+  // message, but each test can specify its own diff.
   optional string difftool = 4;
-  // Sometimes the difftool needs options.
+  // Specific test needs difftool options.
+  optional string difftool_options = 5;
+
+  // After the command is issued and before difftool is issued, arbitrary
+  // commands are executed. They know about #{indir}
+  // These commands must succeed - the test fails otherwise.
+  // This was introduced for dealing with some fingerprint related
+  // tests where the bit ordering might be problematic for a test, but
+  // the overall similarities/distances generated should be the same.
+  repeated string other_commands = 6;
 
   // Ignored by the test driver.
-  repeated string comment = 5;
+  repeated string comment = 7;
 
   // Files that might be in the out directory, but which will not
   // be compared with newly generated files. Typically that might
   // be stderr.
-  repeated string ignore_file = 6;
+  repeated string ignore_file = 8;
 
   // Some tests may be expected to exit with a nonzero return code.
-  optional bool non_zero_rc_expected = 7;
+  optional bool non_zero_rc_expected = 9;
 
   // We can sidestep temporarily broken tests.
-  optional bool broken_do_not_evaluate = 8;
+  optional bool broken_do_not_evaluate = 10;
 
-  // The tool that does the needs a way of passing the name of
+  // The tool that implements the test needs a way of passing the name of
   // the executable around, and for convenience it stores it here.
   // Do not enter data for this value - it will be ignored.
   optional string executable = 14;
 
   // This is also just used for passing around information in the driver.
   repeated string default_command_components = 15;
+
+  // Some tools involve orchestration of multiple commands and are not
+  // amenable to the simple command line and options scheme generally assumed
+  // by this framework. If shell_script is present, this script is executed
+  // instead of the default executable command line.
+  // The first argument will be the path to the executable being tested.
+  // Second argument will be the 'in' directory.
+  // Third argument will be the 'out' directory.
+  // Any arguments specified in the ShellScriptAndArgs message are then appended.
+  // If other executables are needed, the script can get the directory from the
+  // first argument to get bindir and find other executables in that location.
+  // This is different from `other_commands` which is less structured.
+  optional ShellScriptAndArgs shell_script = 16;
 }
 
 message TestCases {
@@ -65,6 +94,8 @@ message TestCases {
   repeated TestCase test = 2;
 
   // Individual tests can "inherit" this difftool.
+  // The script run_all_tests.sh adds LILLYMOL_HOME/bin/$(UNAME) to PATH
+  // so this can be any LillyMol executable.
   optional string difftool = 3;
   optional string difftool_options = 6;
 

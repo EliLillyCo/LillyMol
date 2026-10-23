@@ -1,0 +1,14 @@
+{
+  "executable": "molecule_subset",
+  "test": [
+    {
+      "name": "case_1",
+      "args": [
+           "-s 'c1ccccc1' #{indir}/pubchem_example.smi"
+      ],
+      "non_zero_rc_expected": true
+    }
+
+  ]
+
+}
