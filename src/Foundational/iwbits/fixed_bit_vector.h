@@ -140,6 +140,10 @@ class FixedBitVector {
     const uint64_t* bits() const { return _bits;}
 
     bool operator== (const FixedBitVector& rhs) const;
+    // True if every bit set in subset is also set in this vector. Equality
+    // counts as containment. Different allocated widths return false, as in ==.
+    bool ContainsSubset(const FixedBitVector& subset) const;
+
 
     // Or this with `rhs`.
     void iwor(const FixedBitVector & rhs);

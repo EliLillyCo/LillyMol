@@ -28,6 +28,7 @@
 
 #include "Foundational/accumulator/accumulator.h"
 #include "Foundational/cmdline/cmdline.h"
+#include "Foundational/iwbits/fixed_bit_vector.h"
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/iw_time.h"
 #include "Foundational/iwmisc/misc.h"
@@ -61,6 +62,7 @@
 #include "Molecule_Tools/dicer_lib.h"
 
 using std::cerr;
+using fixed_bit_vector::FixedBitVector;
 
 using dicer_lib::InitialAtomNumber;
 using dicer_lib::is_amide;
@@ -1026,7 +1028,7 @@ class Dicer_Arguments {
   //  For each subset found, we generate a bit vector based on the atoms in
   //  the subset. Quick way for determining uniqueness.
 
-  resizable_array_p<IW_Bits_Base> _stored_bit_vectors;
+  resizable_array_p<FixedBitVector> _stored_bit_vectors;
 
   //  At every step of the recursion, we need to keep track of
   //  the correspondence between the atom numbers in the fragment
@@ -1066,7 +1068,7 @@ class Dicer_Arguments {
 
   // private functions
 
-  int _write_fragment_and_complement(Molecule& m, const IW_Bits_Base& b,
+  int _write_fragment_and_complement(Molecule& m, const FixedBitVector& b,
                                      int* subset_specification,
                                      IWString_and_File_Descriptor& output);
   int _write_fragment_and_hydrogen(const Molecule& m, int* subset_specification,
@@ -1093,14 +1095,14 @@ class Dicer_Arguments {
                                                               int fragment_flag, Molecule& fragment,
                                                               int comp_flag, Molecule& comp,
                                                               const int* xref) const;
-  int _is_smallest_fragment(const IW_Bits_Base& b) const;
+  int _is_smallest_fragment(const FixedBitVector& b) const;
   void _add_new_smiles_to_global_hashes(const IWString& smiles);
   void CaptureAttachmentGeometry(Molecule& fragment, const IWString& smiles);
 
   int WriteAsProto(Molecule& n, int breakable_bonds, DicerFragmentOutput& output) const;
 
   int ToProto(Molecule& m, int breakable_bonds, dicer_data::DicedMolecule& proto) const;
-  int AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
+  int AppendFragmentAndComplement(Molecule& m, const FixedBitVector& b,
                                   int* subset_specification,
                                   dicer_data::DicedMolecule& proto);
   int WriteFragmentsAndComplementsProto(Molecule& m, DicerFragmentOutput& output);
@@ -1313,11 +1315,7 @@ Dicer_Arguments::set_array_size(int s) {
 
   _atoms_in_molecule = s;
 
-  if (0 == _atoms_in_molecule % IW_BITS_PER_WORD) {
-    _nbits = _atoms_in_molecule;
-  } else {
-    _nbits = (_atoms_in_molecule / IW_BITS_PER_WORD + 1) * IW_BITS_PER_WORD;
-  }
+  _nbits = ((_atoms_in_molecule + 63) / 64) * 64;
 
   // In many of the arrays, level 0 never gets used, so the arrays need to
   // be one larger than the max recursion depth
@@ -2604,7 +2602,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
   cerr << "Examining '" << m.smiles() << "'\n";
 #endif
 
-  IW_Bits_Base* b = new IW_Bits_Base(_nbits);
+  FixedBitVector* b = new FixedBitVector(_nbits);
 
   for (const Atom* a : m) {
     std::optional<atom_number_t> x = InitialAtomNumber(a);
@@ -2612,7 +2610,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
       continue;
     }
 
-    b->set(*x);
+    b->set_bit(*x);
   }
 
   // assert (b->nset() == matoms);    if we have added environment atoms, this will not be
@@ -2620,7 +2618,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
 
 #ifdef DEBUG_BIT_COMPARISONS
   cerr << "Formed bit   ";
-  b->printon(cerr);
+  b->PrintOn(cerr);
   cerr << '\n';
 #endif
 
@@ -2629,7 +2627,7 @@ Dicer_Arguments::is_unique(Molecule& m) {
   for (int i = 0; i < n; i++) {
 #ifdef DEBUG_BIT_COMPARISONS
     cerr << "Compare with ";
-    _stored_bit_vectors[i]->printon(cerr);
+    _stored_bit_vectors[i]->PrintOn(cerr);
     cerr << " ? " << ((*b) == (*(_stored_bit_vectors[i]))) << '\n';
 #endif
 
@@ -4386,7 +4384,7 @@ Breakages::identify_symmetry_exclusions(Molecule& m) {
 }
 
 int
-Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base& b) const {
+Dicer_Arguments::_is_smallest_fragment(const FixedBitVector& b) const {
   int n = _stored_bit_vectors.number_elements();
 
   for (int i = 0; i < n; i++) {
@@ -4394,7 +4392,7 @@ Dicer_Arguments::_is_smallest_fragment(const IW_Bits_Base& b) const {
       continue;
     }
 
-    if (b.is_subset(*_stored_bit_vectors[i])) {
+    if (b.ContainsSubset(*_stored_bit_vectors[i])) {
       return 0;
     }
   }
@@ -4417,7 +4415,7 @@ Dicer_Arguments::write_fragments_and_complements(Molecule& m,
   // cerr << "Writing " << n << " stored bit vectors\n";
 
   for (int i = 0; i < n; i++) {
-    const IW_Bits_Base* b = _stored_bit_vectors[i];
+    const FixedBitVector* b = _stored_bit_vectors[i];
 
     assert(b->nbits() > 0);
 
@@ -4449,7 +4447,7 @@ Dicer_Arguments::WriteFragmentsAndComplementsProto(Molecule& m,
   // We do not know the number of breakable bonds here.
   // proto.set_nbonds(breakable_bonds);
 
-  for (const IW_Bits_Base* b : _stored_bit_vectors) {
+  for (const FixedBitVector* b : _stored_bit_vectors) {
     assert(b->nbits() > 0);
 
     if (write_only_smallest_fragment && (!_is_smallest_fragment(*b))) {
@@ -4667,7 +4665,7 @@ Dicer_Arguments::_write_fragment_and_hydrogen(
 
 int
 Dicer_Arguments::_write_fragment_and_complement(
-    Molecule& m, const IW_Bits_Base& b, int* subset_specification,
+    Molecule& m, const FixedBitVector& b, int* subset_specification,
     IWString_and_File_Descriptor& output) {
   const int matoms = m.natoms();
 
@@ -4681,9 +4679,10 @@ Dicer_Arguments::_write_fragment_and_complement(
     return 0;
   }
 
-  std::fill_n(subset_specification, matoms, 0);
-
-  b.set_vector(subset_specification);
+  // Copy only real parent atoms, excluding the fixed vector's zero padding.
+  for (int i = 0; i < matoms; ++i) {
+    subset_specification[i] = b.is_set(i);
+  }
 
   // cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   // cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification,
@@ -4765,7 +4764,7 @@ Dicer_Arguments::_write_fragment_and_complement(
 // to an array.
 // Maybe should try to share code with _write_fragment_and_complement
 int
-Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
+Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const FixedBitVector& b,
                                              int* subset_specification,
                                              dicer_data::DicedMolecule& proto) {
   const int matoms = m.natoms();
@@ -4780,9 +4779,10 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
     return 0;
   }
 
-  std::fill_n(subset_specification, matoms, 0);
-
-  b.set_vector(subset_specification);
+  // Copy only real parent atoms, excluding the fixed vector's zero padding.
+  for (int i = 0; i < matoms; ++i) {
+    subset_specification[i] = b.is_set(i);
+  }
 
   // cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   // cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification,

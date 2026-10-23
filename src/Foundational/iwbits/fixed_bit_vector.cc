@@ -455,6 +455,19 @@ FixedBitVector::operator== (const FixedBitVector& rhs) const {
   return std::equal(_bits, _bits + _nwords, rhs._bits);
 }
 
+bool
+FixedBitVector::ContainsSubset(const FixedBitVector& subset) const {
+  if (_nwords != subset._nwords) {
+    return false;
+  }
+  for (int i = 0; i < _nwords; ++i) {
+    if ((_bits[i] & subset._bits[i]) != subset._bits[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 IWString
 FixedBitVector::DaylightAsciiRepresentation() const {
   int nchars = 0;

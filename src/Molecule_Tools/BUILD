@@ -694,6 +694,7 @@ cc_binary(
     ],
     deps = [
         ":dicer_fragments_cc_proto",
+        "//Foundational/iwbits",
         ":dicer_lib",
         "//Foundational/accumulator",
         "//Foundational/cmdline_v2",

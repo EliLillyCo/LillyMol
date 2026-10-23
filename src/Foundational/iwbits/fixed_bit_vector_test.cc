@@ -11,6 +11,58 @@
 namespace {
 using fixed_bit_vector::FixedBitVector;
 
+TEST(TestFixedBitVector, ContainsSubsetDirectionAndEquality) {
+  FixedBitVector larger(128), smaller(128);
+  larger.set_bit(0);
+  larger.set_bit(63);
+  larger.set_bit(64);
+  larger.set_bit(127);
+  smaller.set_bit(63);
+  smaller.set_bit(64);
+  EXPECT_TRUE(larger.ContainsSubset(smaller));
+  EXPECT_FALSE(smaller.ContainsSubset(larger));
+  EXPECT_TRUE(larger.ContainsSubset(larger));
+  EXPECT_TRUE(smaller.ContainsSubset(smaller));
+}
+
+TEST(TestFixedBitVector, ContainsSubsetRejectsMissingBitsInAnyWord) {
+  FixedBitVector candidate(192), subset(192);
+  candidate.set_bit(1);
+  candidate.set_bit(65);
+  candidate.set_bit(129);
+  for (int missing : {0, 63, 64, 127, 128, 191}) {
+    subset.reset();
+    subset.set_bit(1);
+    subset.set_bit(missing);
+    EXPECT_FALSE(candidate.ContainsSubset(subset)) << missing;
+  }
+}
+
+TEST(TestFixedBitVector, ContainsSubsetEmptyAndDisjoint) {
+  FixedBitVector first(64), second(64);
+  EXPECT_TRUE(first.ContainsSubset(second));
+  first.set_bit(1);
+  EXPECT_TRUE(first.ContainsSubset(second));
+  EXPECT_FALSE(second.ContainsSubset(first));
+  second.set_bit(2);
+  EXPECT_FALSE(first.ContainsSubset(second));
+  EXPECT_FALSE(second.ContainsSubset(first));
+  FixedBitVector empty1, empty2;
+  EXPECT_TRUE(empty1.ContainsSubset(empty2));
+}
+
+TEST(TestFixedBitVector, ContainsSubsetUsesAllocatedWidth) {
+  FixedBitVector rounded(33), same_width(64), wider(65), empty;
+  rounded.set_bit(32);
+  same_width.set_bit(32);
+  wider.set_bit(32);
+  EXPECT_TRUE(rounded.ContainsSubset(same_width));
+  EXPECT_FALSE(rounded.ContainsSubset(wider));
+  EXPECT_FALSE(wider.ContainsSubset(rounded));
+  EXPECT_FALSE(rounded.ContainsSubset(empty));
+  EXPECT_FALSE(empty.ContainsSubset(rounded));
+}
+
 // Really just a test that nothing crashes.
 TEST(TestFixedBitVector, Empty) {
   FixedBitVector foo;
