@@ -411,8 +411,7 @@ BindMolecule(nb::module_& m) {
              if (element == nullptr) {
                throw std::invalid_argument("Invalid atomic number");
              }
-             mol.add(element);
-             return mol.natoms() - 1;
+             return mol.add(element);
            },
            nb::arg("atomic_number"))
       .def("atom", &Molecule::atomi, nb::arg("atom"), nb::rv_policy::reference_internal)

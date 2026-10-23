@@ -886,6 +886,9 @@ class __attribute__((visibility("default"))) Molecule : protected resizable_arra
   // ownership of `a`.
   // Setting partial_molecule sidesteps invalidation steps
   // and may be more efficient while building molecules.
+  // Returns the atom number of the newly added atom. 
+  // If adding to an empty molecule, this returns 0.
+  // Will return kInvalidAtomNumber if an error, but currently no errors are possible.
   atom_number_t add(Atom* a, int partial_molecule = 0);
 
   atom_number_t add(const Element*);

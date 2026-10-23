@@ -698,7 +698,7 @@ Molecule::add(Atom* a, int partial_molecule) {
     _set_modified();
   }
 
-  return _number_elements;
+  return _number_elements - 1;
 }
 
 int
