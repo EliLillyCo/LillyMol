@@ -491,6 +491,7 @@ static IWString bbrk_tag;
 static int read_bonds_to_be_broken_from_bbrk_file = 0;
 
 static int check_for_lost_chirality = 0;
+static int chiral_dummy = 0;
 
 static Atom_Typing_Specification atom_typing_specification;
 static IWString atom_typing_specification_string;
@@ -701,6 +702,7 @@ reset_variables() {
   bbrk_file.resize(0);
   bbrk_tag.resize(0);
   check_for_lost_chirality = 0;
+  chiral_dummy = 0;
   fingerprint_uses_hashed_smiles = 0;
   return;
 }
@@ -1381,7 +1383,9 @@ initialise_xref(const Molecule& m, const Dicer_Arguments& dicer_args, int* xref)
   for (int i = 0; i < matoms; ++i) {
     std::optional<atom_number_t> x = InitialAtomNumber(m.atomi(i));
 
-    xref[*x] = i;
+    if (x) {
+      xref[*x] = i;
+    }
   }
 
   return;
@@ -1571,6 +1575,9 @@ Chain_Bond_Breakage::_write_bonds_to_be_broken(std::ostream& os) const {
 
 int
 Chain_Bond_Breakage::_break_bonds(Molecule& m) const {
+  if (chiral_dummy) [[unlikely]] {
+    return dicer_lib::BreakBondWithChiralDummies(m, _a1, _a2);
+  }
   m.remove_bond_between_atoms(_a1, _a2);
 
   return 1;
@@ -4240,7 +4247,14 @@ set_isotopes_if_needed(Molecule& m, atom_number_t j1, atom_number_t j2,
 }
 
 int
-Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
+Breakages::do_recap(Molecule& parent, Dicer_Arguments& dicer_args) const {
+  // Keep the normal in-place path. Caps cannot be undone by restoring bonds,
+  // so only the optional mode needs a working copy.
+  std::unique_ptr<Molecule> capped;
+  if (chiral_dummy) [[unlikely]] {
+    capped = std::make_unique<Molecule>(parent);
+  }
+  Molecule& m = capped ? *capped : parent;
   const int n = _transformations.number_elements();
 
   for (int i = 0; i < n; i++) {
@@ -4259,7 +4273,13 @@ Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
       continue;
     }
 
-    m.remove_bond_between_atoms(a0, a1);
+    if (chiral_dummy) [[unlikely]] {
+      if (!dicer_lib::BreakBondWithChiralDummies(m, a0, a1)) {
+        continue;
+      }
+    } else {
+      m.remove_bond_between_atoms(a0, a1);
+    }
 
     set_isotopes_if_needed(m, a0, a1, dicer_args);
   }
@@ -4277,6 +4297,10 @@ Breakages::do_recap(Molecule& m, Dicer_Arguments& dicer_args) const {
     }
 
     dicer_args.is_unique(ci);
+  }
+
+  if (chiral_dummy) [[unlikely]] {
+    return 1;
   }
 
   // Now put things back together. Not sure this is necessary...
@@ -4653,7 +4677,7 @@ Dicer_Arguments::_write_fragment_and_complement(
     return 1;
   }
 
-  if (!ok_atom_count(b.nset())) {
+  if (!chiral_dummy && !ok_atom_count(b.nset())) {
     return 0;
   }
 
@@ -4678,7 +4702,14 @@ Dicer_Arguments::_write_fragment_and_complement(
 #endif
 
   Molecule s1, s2;
-  m.create_subsets(subset_specification, s2, s1, _local_xref);
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::CreateChiralDummySubsets(m, subset_specification, s1, s2, _local_xref) ||
+        !ok_atom_count(s1.natoms())) {
+      return 1;
+    }
+  } else {
+    m.create_subsets(subset_specification, s2, s1, _local_xref);
+  }
 
   // cerr << "Subsets " << s1.smiles() << " and " << s2.smiles() << "
   // apply_isotopes_to_complementary_fragments " <<
@@ -4695,6 +4726,11 @@ Dicer_Arguments::_write_fragment_and_complement(
 
   // cerr << "LINE " << __LINE__ << " have " << s1.smiles() << " and " << s2.smiles() <<
   // '\n';
+
+  if (chiral_dummy && check_for_lost_chirality) [[unlikely]] {
+    do_check_for_lost_chirality(s1);
+    do_check_for_lost_chirality(s2);
+  }
 
   output << s1.unique_smiles() << ' ' << m.name();
 
@@ -4740,7 +4776,7 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
     return 1;
   }
 
-  if (!ok_atom_count(b.nset())) {
+  if (!chiral_dummy && !ok_atom_count(b.nset())) {
     return 0;
   }
 
@@ -4753,7 +4789,14 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
   // matoms) << " atoms\n";
 
   Molecule s1, s2;
-  m.create_subsets(subset_specification, s2, s1, _local_xref);
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::CreateChiralDummySubsets(m, subset_specification, s1, s2, _local_xref) ||
+        !ok_atom_count(s1.natoms())) {
+      return 1;
+    }
+  } else {
+    m.create_subsets(subset_specification, s2, s1, _local_xref);
+  }
 
   if (upper_atom_count_cutoff_complementary_fragment > 0 &&
       s2.natoms() > upper_atom_count_cutoff_complementary_fragment) {
@@ -4767,6 +4810,11 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m, const IW_Bits_Base& b,
     _do_apply_isotopes_to_complementary_fragments(m, subset_specification, 1, s1, 0, s2, _local_xref);
   } else if (apply_atom_types_to_fragments) {
     _do_apply_atom_types_to_fragments(m, subset_specification, s1, 1, s2, 0, _local_xref);
+  }
+
+  if (chiral_dummy && check_for_lost_chirality) [[unlikely]] {
+    do_check_for_lost_chirality(s1);
+    do_check_for_lost_chirality(s2);
   }
 
   dicer_data::DicerFragment* frag = proto.add_fragment();
@@ -5667,7 +5715,13 @@ Chain_Bond_Breakage::_process(Molecule& m0, Dicer_Arguments& dicer_args,
   // In order to get atom types correct, remove the old bond
   // before discerning atom types.
   assert(m.are_bonded(j1, j2));
-  m.remove_bond_between_atoms(j1, j2);
+  if (chiral_dummy) [[unlikely]] {
+    if (!dicer_lib::BreakBondWithChiralDummies(m, j1, j2)) {
+      return 0;
+    }
+  } else {
+    m.remove_bond_between_atoms(j1, j2);
+  }
 
   set_isotopes_if_needed(m, j1, j2, dicer_args);
 
@@ -7612,6 +7666,7 @@ display_misc_B_options(std::ostream& os) {
   os << " -B FMC:heteroatom fragments reported must contain a heteroatom, :n for count\n";
   os << " -B VF=<n>         output will be viewed in vf with <n> structures per page\n";
   os << " -B flush          flush output after each molecule\n";
+  os << " -B chiraldummy    preserve local chirality with one terminal * cap per centre (chain cuts)\n";
   os << " -B lostchiral     check each fragment for lost chirality\n";
   os << " -B recap          work like Recap - break all breakable bonds at once\n";
   os << " -B nooutput       suppress writing diced fragments, useful with the '-B fragstat' option\n";
@@ -8230,6 +8285,11 @@ dicer(int argc, char** argv) {
           cerr << "User specified bond breaking queries will be run in addition to the "
                   "default set\n";
         }
+      } else if (b == "chiraldummy") {
+        chiral_dummy = 1;
+        if (verbose) {
+          cerr << "Will replace removed chiral neighbours with terminal * atoms\n";
+        }
       } else if ("lostchiral" == b) {
         check_for_lost_chirality = 1;
         if (verbose) {
@@ -8631,6 +8691,13 @@ dicer(int argc, char** argv) {
   } else {
     cerr << "NO output specified\n";
     usage(4);
+  }
+
+  if (chiral_dummy && (break_ring_bonds || break_fused_rings || break_spiro_rings ||
+                      dearomatise_aromatic_rings || add_environment_atoms ||
+                      apply_atom_types_to_fragments)) [[unlikely]] {
+    cerr << "-B chiraldummy does not support ring transformations, -I enva, or fragment-local atom typing\n";
+    return 1;
   }
 
   FileType input_type = FILE_TYPE_INVALID;

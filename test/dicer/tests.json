@@ -6,6 +6,11 @@
     ],
     "test": [
         {
+          "name": "chiral_dummy",
+          "shell_script": {"script_name": "run.rb"},
+          "difftool": "diff"
+        },
+        {
           "name": "case_1",
           "args": [ "-k 2 -B atype=sb -B MAXFF=0.50001 -C auto -s 'ClC' -s 'BrC' -s 'FC' -B addq -B bscb -m 0 -M 15 -X 5000 -i smi -A I -A D #{datadir}/rand.smi" ],
           "comment": [ "to be added" ]

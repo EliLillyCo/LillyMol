@@ -4180,3 +4180,14 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "dicer_chiral_dummy_test",
+    srcs = ["dicer_chiral_dummy_test.cc"],
+    deps = [
+        ":dicer_lib",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@googletest//:gtest_main",
+    ],
+)

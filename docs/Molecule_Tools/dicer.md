@@ -799,3 +799,44 @@ The dicing stragety used in building the starting 'fragstat' files must be
 exactly the same as what is used when dicing the molecules for lookup. For
 example, atom count limits must not exceed that of the database, and any
 breaking rules must be the same.
+
+## Preserving local chirality with dummy atoms
+
+`-B chiraldummy` replaces a departing neighbour at a specified chiral centre with
+an atomic-number-zero dummy atom, written as `*` in SMILES:
+
+```shell
+dicer -B chiraldummy -s 'C-Cl' -k 2 -m 1 -M 20 input.smi
+```
+
+For example, cutting the carbon–chlorine bond in `Cl[C@H](F)Br` retains a capped
+fragment equivalent to `*[C@H](F)Br`, instead of replacing the chlorine with an
+implicit hydrogen. The substitution preserves the departing neighbour's position
+in the stored chiral ordering. It does not promise the same R/S assignment,
+since the replacement changes substituent priorities.
+
+The option is disabled by default. It currently supports chain-bond cuts,
+including RECAP (`-B recap`), and reconstructs the corresponding caps for both
+text and proto fragment/complement output. When both endpoints of a cut are
+specified chiral centres, each gets its own cap. Other cuts add no dummy atoms.
+Dummy atoms have no implicit hydrogens or parent-atom identity and are not
+candidates for subsequent fragmentation.
+
+A centre can receive at most one added cap. If a proposed cut would add a second
+cap at either endpoint, the entire cut is skipped without modifying the fragment.
+Cuts elsewhere in that fragment can still proceed. Added caps count as atoms for
+fragment-size limits and reported atom counts. RECAP can therefore leave a
+proposed bond unbroken when another cut has already capped the same centre.
+
+This preserves local orientation, not necessarily genuine chirality throughout
+a fragment. Fragmentation farther from a centre can make substituents equivalent.
+Use the existing `-B lostchiral` option to remove invalid chiral designations;
+it does not discard the entire fragment. Input chirality removal (`-c`) leaves
+no specified centres to cap. A reconstruction reaction should replace the dummy
+using a stereo-preserving substitution.
+
+This initial implementation rejects combinations with ring transformations
+(`-B BRB`, `-B BRF`, `-B BRS`, and dearomatisation), environment-atom addition
+(`-I enva`), and fragment-local atom typing (`-I fragatype` or `-C fragatype`).
+Those modes need separate handling to preserve the capping semantics. No
+replacement-element selection is offered: the cap is always `*`.
